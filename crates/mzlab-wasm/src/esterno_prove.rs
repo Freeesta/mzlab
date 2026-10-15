@@ -24,7 +24,9 @@ impl Modulo for Finto {
         Ok(r#"[{"id":"TIC","kind":"Tic","unit":"u"},{"id":"x","kind":"Nuovo","unit":""}]"#.into())
     }
     fn cromatogramma(&mut self, _: usize, id: &str) -> Result<String> {
-        Ok(format!(r#"{{"id":"{id}","kind":"Srm","q1":300.1,"q3":null,"unit":"u","time":[0.0,1.5],"intensity":[3.0,4.0]}}"#))
+        Ok(format!(
+            r#"{{"id":"{id}","kind":"Srm","q1":300.1,"q3":null,"unit":"u","time":[0.0,1.5],"intensity":[3.0,4.0]}}"#
+        ))
     }
     fn metodo(&mut self, _: usize) -> Result<String> {
         Ok("{}".into())
@@ -44,23 +46,42 @@ fn le_risposte_diventano_i_tipi_del_contratto() {
     // the numbers come back exactly (the index of the file is made of them)
     assert_eq!(i[0].rt, 0.1234567890123);
     assert_eq!(i[0].tic, 1e300);
-    assert_eq!(i[0].posizione, Some(Posizione { membro: 0, offset: 4096, lunghezza: 77 }));
-    assert_eq!((i[0].picco_base, i[0].precursore, i[0].polarita), (None, Some(445.5), -1));
+    assert_eq!(
+        i[0].posizione,
+        Some(Posizione {
+            membro: 0,
+            offset: 4096,
+            lunghezza: 77
+        })
+    );
+    assert_eq!(
+        (i[0].picco_base, i[0].precursore, i[0].polarita),
+        (None, Some(445.5), -1)
+    );
     assert_eq!((i[1].picco_base, i[1].posizione), (Some(200.25), None));
     assert_eq!(l.indice(1).err().map(|e| e.key), Some("error.badIndex"));
     let s = l.scansione(0, 1).unwrap();
     assert_eq!((s.index, s.level, s.profile, s.mz.len()), (1, 1, true, 2));
     // 16777217 does not fit a 32-bit float: the scan keeps the 64-bit intensities
     assert_eq!(s.wide.as_deref(), Some(&[1.5, 16777217.0][..]));
-    assert_eq!(l.intestazione(0, 0).unwrap()[0].unita.as_deref(), Some("volt"));
+    assert_eq!(
+        l.intestazione(0, 0).unwrap()[0].unita.as_deref(),
+        Some("volt")
+    );
     let c = l.cromatogrammi(0).unwrap();
     assert_eq!((c[0].tipo, c[1].tipo), (ChromKind::Tic, ChromKind::Other));
     let x = l.cromatogramma(0, "SRM").unwrap();
-    assert_eq!((x.kind, x.q1, x.q3, x.intensity), (ChromKind::Srm, Some(300.1), None, vec![3.0, 4.0]));
+    assert_eq!(
+        (x.kind, x.q1, x.q3, x.intensity),
+        (ChromKind::Srm, Some(300.1), None, vec![3.0, 4.0])
+    );
     assert_eq!(l.metodo(0).unwrap(), "{}");
     let t = l.testata_mzml(0).unwrap().unwrap();
     assert_eq!(t.instrument, Some(("MS:1".into(), "Orbitrap".into())));
-    assert_eq!((t.software, t.sample, t.serial, t.centroided), (("mzLab".into(), "1.0".into()), None, None, true));
+    assert_eq!(
+        (t.software, t.sample, t.serial, t.centroided),
+        (("mzLab".into(), "1.0".into()), None, None, true)
+    );
     assert_eq!(t.run_params, vec![("k".to_string(), "v".to_string())]);
 }
 
@@ -74,7 +95,13 @@ fn le_intensita_di_32_bit_non_diventano_larghe() {
 #[test]
 fn l_errore_del_modulo_conserva_chiave_e_parametri() {
     let e = errore_del_modulo(r#"{"error_key":"err.file.raw","params":{"detail":"member"}}"#);
-    assert_eq!((e.key, e.params), ("err.file.raw", vec![("detail", "member".to_string())]));
+    assert_eq!(
+        (e.key, e.params),
+        ("err.file.raw", vec![("detail", "member".to_string())])
+    );
     assert_eq!(errore_del_modulo("boom").key, "err.file.notAccepted");
-    assert_eq!(statica("err.file.raw").as_ptr(), statica("err.file.raw").as_ptr());
+    assert_eq!(
+        statica("err.file.raw").as_ptr(),
+        statica("err.file.raw").as_ptr()
+    );
 }

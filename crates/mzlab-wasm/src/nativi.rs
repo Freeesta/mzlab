@@ -133,10 +133,12 @@ impl Membri {
         let sessione = match f.call3(&JsValue::NULL, &names, &sizes, &self.read) {
             Ok(v) if v.is_null() || v.is_undefined() => return None,
             Ok(v) => v,
-            Err(e) => return Some(Err(e.as_string().map_or_else(
-                || mzlab_core::Error::new("err.file.notAccepted"),
-                |t| errore_del_modulo(&t),
-            ))),
+            Err(e) => {
+                return Some(Err(e.as_string().map_or_else(
+                    || mzlab_core::Error::new("err.file.notAccepted"),
+                    |t| errore_del_modulo(&t),
+                )))
+            }
         };
         Some(LettoreEsterno::new(ModuloJs::new(sessione)).map(|l| Box::new(l) as Box<dyn Lettore>))
     }

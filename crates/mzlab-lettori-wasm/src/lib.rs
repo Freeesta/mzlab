@@ -77,7 +77,7 @@ impl ReadAt for JsMember {
         if !dentro {
             let n = LETTURA.min(self.dim.saturating_sub(off) as usize);
             if buf.len() >= LETTURA || n < buf.len() {
-                self.da_js(off, buf.len())?.copy_to(buf);              // big (or past the end, for JS to refuse): as asked
+                self.da_js(off, buf.len())?.copy_to(buf); // big (or past the end, for JS to refuse): as asked
                 return Ok(());
             }
             let a = self.da_js(off, n)?;

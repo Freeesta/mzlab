@@ -112,7 +112,11 @@ fn opzionale(v: Option<&Value>) -> Option<f64> {
 }
 
 fn numeri(v: Option<&Value>) -> Vec<f64> {
-    v.map(Value::arr).unwrap_or_default().iter().map(|x| x.f64().unwrap_or(f64::NAN)).collect()
+    v.map(Value::arr)
+        .unwrap_or_default()
+        .iter()
+        .map(|x| x.f64().unwrap_or(f64::NAN))
+        .collect()
 }
 
 /// The conversions of the answers of a module into the types of the contract.
@@ -161,7 +165,6 @@ impl Risposte {
             })
             .collect())
     }
-
 }
 
 /// The answers about the scans and their headers.
@@ -223,7 +226,6 @@ impl RisposteScansioni {
             })
             .collect())
     }
-
 }
 
 /// The answers about the chromatograms and the header of the mzML.
@@ -368,10 +370,11 @@ impl ModuloJs {
             .and_then(|f| f.dyn_into().ok())
             .ok_or_else(|| guasto(nome))?;
         let a: Array = args.iter().collect();
-        f.apply(&self.sessione, &a).map_err(|e| match e.as_string() {
-            Some(t) => errore_del_modulo(&t),
-            None => guasto(nome),
-        })
+        f.apply(&self.sessione, &a)
+            .map_err(|e| match e.as_string() {
+                Some(t) => errore_del_modulo(&t),
+                None => guasto(nome),
+            })
     }
 
     fn testo(&self, nome: &str, args: &[JsValue]) -> Result<String> {

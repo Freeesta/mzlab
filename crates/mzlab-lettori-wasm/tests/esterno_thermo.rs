@@ -13,8 +13,15 @@ use mzlab_lettori_wasm::sessione::{Scansione, Sessioni};
 use mzlab_wasm::esterno::{LettoreEsterno, Modulo};
 
 fn raw_files() -> Vec<PathBuf> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI").map(PathBuf::from).into_iter().collect();
-    for up in Path::new(env!("CARGO_MANIFEST_DIR")).ancestors().skip(1).take(3) {
+    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
+        .map(PathBuf::from)
+        .into_iter()
+        .collect();
+    for up in Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .skip(1)
+        .take(3)
+    {
         cands.push(up.join("mzlab-dati"));
     }
     let Some(d) = cands.into_iter().find(|p| p.join("HRMS").is_dir()) else {
@@ -39,7 +46,13 @@ fn raw_files() -> Vec<PathBuf> {
 fn set(path: &Path) -> FileSet {
     let bytes = std::fs::read(path).unwrap();
     let nome = path.file_name().unwrap().to_string_lossy().to_string();
-    FileSet { membri: vec![Membro { nome, dim: bytes.len() as u64, dati: Box::new(bytes) }] }
+    FileSet {
+        membri: vec![Membro {
+            nome,
+            dim: bytes.len() as u64,
+            dati: Box::new(bytes),
+        }],
+    }
 }
 
 /// The session of the module as the `Modulo` the engine sees (what `ModuloJs` does through the JS functions).
@@ -56,7 +69,11 @@ impl Modulo for ViaSessione {
         self.s.indice(self.h, c)
     }
     fn scansione(&mut self, c: usize, k: usize) -> Result<(Vec<f64>, Vec<f64>, String)> {
-        let Scansione { mz, intensita, meta } = self.s.scansione(self.h, c, k)?;
+        let Scansione {
+            mz,
+            intensita,
+            meta,
+        } = self.s.scansione(self.h, c, k)?;
         Ok((mz, intensita, meta))
     }
     fn intestazione(&mut self, c: usize, k: usize) -> Result<String> {
@@ -97,6 +114,49 @@ fn mzml(l: &mut dyn Lettore) -> (u64, u64) {
     (w.0, w.1)
 }
 
+/// Scan `k` and its header, from the external reader and from the linked one.
+fn same_scan(ext: &mut dyn Lettore, diretto: &mut dyn Lettore, k: usize, nome: &str) {
+    let (a, b) = (
+        ext.scansione(0, k).unwrap(),
+        diretto.scansione(0, k).unwrap(),
+    );
+    assert_eq!(
+        (
+            a.index,
+            &a.id,
+            a.level,
+            a.rt,
+            a.polarity,
+            a.profile,
+            &a.filter,
+            a.precursor,
+            &a.mz
+        ),
+        (
+            k,
+            &b.id,
+            b.level,
+            b.rt,
+            b.polarity,
+            b.profile,
+            &b.filter,
+            b.precursor,
+            &b.mz
+        ),
+        "{nome}: scan {k}"
+    );
+    assert_eq!(
+        (&a.intensity, &a.wide),
+        (&b.intensity, &b.wide),
+        "{nome}: scan {k} intensities"
+    );
+    assert_eq!(
+        ext.intestazione(0, k).unwrap(),
+        diretto.intestazione(0, k).unwrap(),
+        "{nome}: header {k}"
+    );
+}
+
 #[test]
 fn the_external_reader_gives_what_the_linked_one_gives() {
     let files = raw_files();
@@ -116,18 +176,23 @@ fn the_external_reader_gives_what_the_linked_one_gives() {
         assert_eq!(ext.indice(0).unwrap(), &indice[..], "{nome}: index");
         let passo = (indice.len() / 20).max(1);
         for k in (0..indice.len()).step_by(passo) {
-            let (a, b) = (ext.scansione(0, k).unwrap(), diretto.scansione(0, k).unwrap());
-            assert_eq!(
-                (a.index, &a.id, a.level, a.rt, a.polarity, a.profile, &a.filter, a.precursor, &a.mz),
-                (k, &b.id, b.level, b.rt, b.polarity, b.profile, &b.filter, b.precursor, &b.mz),
-                "{nome}: scan {k}"
-            );
-            assert_eq!((&a.intensity, &a.wide), (&b.intensity, &b.wide), "{nome}: scan {k} intensities");
-            assert_eq!(ext.intestazione(0, k).unwrap(), diretto.intestazione(0, k).unwrap(), "{nome}: header {k}");
+            same_scan(&mut ext, &mut *diretto, k, &nome.to_string());
         }
-        assert_eq!(ext.cromatogrammi(0).unwrap(), diretto.cromatogrammi(0).unwrap(), "{nome}");
-        assert_eq!(ext.cromatogramma(0, "TIC").unwrap(), diretto.cromatogramma(0, "TIC").unwrap(), "{nome}: TIC");
-        assert_eq!(ext.metodo(0).unwrap(), diretto.metodo(0).unwrap(), "{nome}: metodo/1");
+        assert_eq!(
+            ext.cromatogrammi(0).unwrap(),
+            diretto.cromatogrammi(0).unwrap(),
+            "{nome}"
+        );
+        assert_eq!(
+            ext.cromatogramma(0, "TIC").unwrap(),
+            diretto.cromatogramma(0, "TIC").unwrap(),
+            "{nome}: TIC"
+        );
+        assert_eq!(
+            ext.metodo(0).unwrap(),
+            diretto.metodo(0).unwrap(),
+            "{nome}: metodo/1"
+        );
         assert_eq!(
             format!("{:?}", ext.testata_mzml(0).unwrap()),
             format!("{:?}", diretto.testata_mzml(0).unwrap()),
@@ -135,6 +200,10 @@ fn the_external_reader_gives_what_the_linked_one_gives() {
         );
         let (a, b) = (mzml(&mut ext), mzml(&mut *diretto));
         assert_eq!(a, b, "{nome}: the mzML");
-        eprintln!("{nome}: {} scans, mzML of {} bytes identical", indice.len(), a.1);
+        eprintln!(
+            "{nome}: {} scans, mzML of {} bytes identical",
+            indice.len(),
+            a.1
+        );
     }
 }
