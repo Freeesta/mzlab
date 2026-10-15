@@ -128,9 +128,14 @@ impl Building {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, PartialEq)]
 struct Key(f64);
 impl Eq for Key {}
+impl PartialOrd for Key {
+    fn partial_cmp(&self, o: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(o))
+    }
+}
 impl Ord for Key {
     fn cmp(&self, o: &Self) -> std::cmp::Ordering {
         self.0.total_cmp(&o.0)
@@ -354,7 +359,12 @@ pub fn build_slabs(scans: &[Ms1Scan], p: &AdapParams, budget_bytes: usize) -> Ve
 }
 
 /// `build_slabs` handing each slab to `f` as soon as it is built, so a caller that reduces the chromatograms (the resolver) never holds them all.
-pub fn each_slab(scans: &[Ms1Scan], p: &AdapParams, budget_bytes: usize, mut f: impl FnMut(Vec<Chrom>)) {
+pub fn each_slab(
+    scans: &[Ms1Scan],
+    p: &AdapParams,
+    budget_bytes: usize,
+    mut f: impl FnMut(Vec<Chrom>),
+) {
     let cuts = cuts(scans, p, (budget_bytes / POINT_BYTES).max(1));
     for w in cuts.windows(2) {
         f(run(gather(scans, Some((w[0], w[1]))), scans.len(), p));
