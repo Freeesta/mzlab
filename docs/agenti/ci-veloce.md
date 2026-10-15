@@ -9,6 +9,4 @@
 - Cache: cargo (`registry`, `git`, `target`), `wasm-bindgen`, browser Playwright e pip, con chiave su `Cargo.lock` + `rust-toolchain.toml` (Playwright: `pyproject.toml`) e `restore-keys` sul prefisso, così un `Cargo.lock` nuovo parte dalla cache più recente invece che da zero.
   Pyodide (file con SHA-256 fissato in `tools/build_site.py`) è in cache in `.pyodide-cache` in `pages`, `release` e `sito-rust`, con chiave sull'hash di `build_site.py`.
   Le librerie spettrali MassBank e l'indice dei sospetti mzFinder (`genera_sospetti.py`) sono salvati in cache in `site/static/librerie` e `site/static/mzfinder/sospetti`. Le cache salvate da `main` sono visibili alle PR.
-
-
-
+- **Proposta di accelerazione**: misure, guadagni attesi, rischi e ordine di applicazione in `docs/studi/CI_VELOCE.md`; i workflow pronti da incollare (stessi nomi di job e controlli) sono in `docs/studi/ci_veloce/`.
