@@ -38,7 +38,7 @@ jobs:
         run: |
           rustup show
           rustup target add wasm32-unknown-unknown
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -73,14 +73,14 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: pyproject.toml
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-chromium-${{ hashFiles('pyproject.toml') }}
           restore-keys: playwright-${{ runner.os }}-chromium-
       - name: Toolchain for the site of the e2e tests (rust-toolchain.toml, tools/prepara_sito.py)
         run: rustup show
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry

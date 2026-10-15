@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: .pyodide-cache
           key: pyodide-${{ hashFiles('tools/build_site.py') }}
@@ -43,7 +43,7 @@ jobs:
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
       # every run restores the newest cache and saves a new one right after the builds (the runs are on main only)
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cargo/registry
@@ -69,7 +69,7 @@ jobs:
       - name: Build the mzFinder WASM engines (the .wasm of their own, under 500 KB each, with their SHA-256; never committed)
         run: tools/build_feat_wasm.sh site/static
       - name: Save the Rust cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             ~/.cargo/registry
@@ -79,7 +79,7 @@ jobs:
           key: pages-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.sha }}
       - name: Restore the spectral-library packages from the cache (pinned MassBank release, built with the Rust builder, never committed)
         id: libcache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: site/static/librerie
           key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
@@ -88,13 +88,13 @@ jobs:
         run: python tools/librerie_pacchetti.py --out site/static/librerie
       - name: Save the packages in the cache
         if: steps.libcache.outputs.cache-hit != 'true' && hashFiles('site/static/librerie/catalogo.json') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: site/static/librerie
           key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
       - name: Restore the suspect index from the cache (pinned CC BY sources, never committed)
         id: suscache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: site/static/mzfinder/sospetti
           key: sospetti-${{ hashFiles('tools/genera_sospetti.py') }}
@@ -103,7 +103,7 @@ jobs:
         run: python tools/genera_sospetti.py --pacchetto site/static/mzfinder/sospetti
       - name: Save the suspect index in the cache
         if: steps.suscache.outputs.cache-hit != 'true' && hashFiles('site/static/mzfinder/sospetti/catalogo.json') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: site/static/mzfinder/sospetti
           key: sospetti-${{ hashFiles('tools/genera_sospetti.py') }}

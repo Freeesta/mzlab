@@ -31,7 +31,7 @@ jobs:
           python-version: "3.13"
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -96,7 +96,7 @@ jobs:
       - name: Targets of the universal binary
         if: runner.os == 'macOS'
         run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
