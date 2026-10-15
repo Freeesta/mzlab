@@ -29,11 +29,11 @@ const step = (name, f) => {
 step('apri', () => { h = m.apri(names, sizes, read); });
 let camp = null;
 step('campioni', () => { const s = m.campioni(h); camp = JSON.parse(s); return { bytes: s.length, sha256: sha(s) }; });
-step('indice', () => { const s = m.indice(h, 0); return { bytes: s.length, sha256: sha(s) }; });
+step('indice', () => { const s = m.indice(h, 0); return { bytes: s.length, sha256: sha(Buffer.from(s.buffer, s.byteOffset, s.byteLength)) }; });
 step('scansione', () => {
-  const n = camp.campioni[0].scans, hash = crypto.createHash('sha256'); let pts = 0;
-  for (let k = 0; k < n; k++) { const r = m.scansione(h, 0, k); pts += r[0].length; hash.update(Buffer.from(r[0].buffer, r[0].byteOffset, r[0].byteLength)); hash.update(Buffer.from(r[1].buffer, r[1].byteOffset, r[1].byteLength)); hash.update(r[2]); }
-  return { scans: n, points: pts, sha256: hash.digest('hex') };
+  const n = camp.campioni[0].scans, hash = crypto.createHash('sha256'); let pts = 0, ns = 0n;
+  for (let k = 0; k < n; k++) { const t = process.hrtime.bigint(); const r = m.scansione(h, 0, k); ns += process.hrtime.bigint() - t; pts += new DataView(r.buffer, r.byteOffset).getUint32(4, true); hash.update(r); }
+  return { scans: n, points: pts, us_per_scan: Math.round(Number(ns) / n / 100) / 10, sha256: hash.digest('hex') };
 });
 step('intestazione', () => { const n = camp.campioni[0].scans, hash = crypto.createHash('sha256'); let b = 0; for (let k = 0; k < n; k += Math.max(1, Math.floor(n / 500))) { const s = m.intestazione(h, 0, k); b += s.length; hash.update(s); } return { bytes: b, sha256: hash.digest('hex') }; });
 step('testata', () => { const s = m.testata(h, 0); return { bytes: s.length, sha256: sha(s) }; });

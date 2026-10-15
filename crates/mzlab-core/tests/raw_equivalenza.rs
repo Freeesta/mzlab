@@ -151,3 +151,80 @@ fn la_memoria_compatta_non_cambia_nessun_risultato() {
         );
     }
 }
+
+/// RV-05: `scansione_dati` (what the module sends: points, level, polarity, profile, RT and precursor from the index row) gives the same scan as `scansione`, and the transport
+/// (`trasporto`) returns it as it is, for a sample of the scans of each file.
+#[test]
+fn scansione_dati_e_il_trasporto_danno_la_stessa_scansione() {
+    let Some(d) = dati() else {
+        eprintln!("SKIP raw_equivalenza: no data repository (MZLAB_DATI)");
+        return;
+    };
+    for caso in ["LAB-A", "PXD077492", "BAF"] {
+        let Some(p) = file(&d, caso) else {
+            eprintln!("SKIP raw_equivalenza {caso}: file not found");
+            continue;
+        };
+        let nome = p.file_name().unwrap().to_string_lossy().into_owned();
+        let dim = std::fs::metadata(&p).unwrap().len();
+        let fs = FileSet {
+            membri: vec![Membro {
+                nome,
+                dim,
+                dati: Box::new(std::fs::File::open(&p).unwrap()),
+                sha1: None,
+            }],
+        };
+        let mut l = lettori::apri(fs, &Limiti::sito()).unwrap();
+        let indice = l.indice(0).unwrap().to_vec();
+        let riletto =
+            mzlab_core::trasporto::decode_indice(&mzlab_core::trasporto::encode_indice(&indice))
+                .unwrap();
+        assert_eq!(riletto, indice, "{caso}: index through the transport");
+        let passo = (indice.len() / 300).max(1);
+        for k in (0..indice.len()).step_by(passo) {
+            let a = l.scansione(0, k).unwrap();
+            let b = l.scansione_dati(0, k).unwrap();
+            assert_eq!(
+                (
+                    a.index,
+                    a.level,
+                    a.rt,
+                    a.polarity,
+                    a.profile,
+                    a.precursor,
+                    &a.mz,
+                    &a.intensity,
+                    &a.wide
+                ),
+                (
+                    b.index,
+                    b.level,
+                    b.rt,
+                    b.polarity,
+                    b.profile,
+                    b.precursor,
+                    &b.mz,
+                    &b.intensity,
+                    &b.wide
+                ),
+                "{caso}: scan {k}"
+            );
+            assert_eq!(
+                (&a.id, &a.filter),
+                (&indice[k].id, &indice[k].filtro),
+                "{caso}: row {k}"
+            );
+            let t = mzlab_core::trasporto::decode_scansione(
+                k,
+                &mzlab_core::trasporto::encode_scansione(&b),
+            )
+            .unwrap();
+            assert_eq!(
+                (&t.mz, &t.intensity, t.rt, t.profile),
+                (&b.mz, &b.intensity, b.rt, b.profile),
+                "{caso}: transport {k}"
+            );
+        }
+    }
+}
