@@ -244,24 +244,8 @@ fn tipo_evento(filtro: &str) -> &'static str {
     }
 }
 
-/// The `metodo/1` document. `con_identita` false leaves out the operator and the fields that name a person, a computer, a serial or a path (the one inside an mzML).
-pub(super) fn documento(
-    (nome, dim, sha1): (&str, u64, &str),
-    fam: Fam,
-    d: &Dati,
-    m: &Meta,
-    con_identita: bool,
-) -> String {
-    let src = Source {
-        format: "shimadzu",
-        files: vec![SrcFile {
-            name: nome.to_string(),
-            sha1: Some(sha1.to_string()),
-            bytes: dim,
-        }],
-        sample: None,
-    };
-    let s = |t: &Option<String>| t.as_deref().and_then(text);
+/// The experiments of the `ms` section: one per event seen, then one MRM experiment with the transitions.
+fn esperimenti(d: &Dati) -> Vec<Option<V>> {
     let mut esperimenti: Vec<Option<V>> = d
         .eventi
         .iter()
@@ -295,6 +279,45 @@ pub(super) fn documento(
             ("transizioni", Some(V::Arr(tr.collect()))),
         ]));
     }
+    esperimenti
+}
+
+/// The `strumento` section: maker, model and the software that wrote the file.
+fn strumento(fam: Fam, m: &Meta) -> Option<V> {
+    let s = |t: &Option<String>| t.as_deref().and_then(text);
+    obj(vec![
+        ("produttore", Some(V::s("Shimadzu"))),
+        ("modello", s(&m.modello)),
+        (
+            "software",
+            obj(vec![
+                ("nome", Some(V::s(software(fam)))),
+                ("versione", s(&m.software)),
+            ])
+            .map(|v| V::Arr(vec![v])),
+        ),
+    ])
+}
+
+/// The `metodo/1` document. `con_identita` false leaves out the operator and the fields that name a person, a computer, a serial or a path (the one inside an mzML).
+pub(super) fn documento(
+    (nome, dim, sha1): (&str, u64, &str),
+    fam: Fam,
+    d: &Dati,
+    m: &Meta,
+    con_identita: bool,
+) -> String {
+    let src = Source {
+        format: "shimadzu",
+        files: vec![SrcFile {
+            name: nome.to_string(),
+            sha1: Some(sha1.to_string()),
+            bytes: dim,
+        }],
+        sample: None,
+    };
+    let s = |t: &Option<String>| t.as_deref().and_then(text);
+    let esperimenti = esperimenti(d);
     let avvisi = m.avvisi.iter().filter_map(|dove| {
         obj(vec![
             ("chiave", Some(V::s("meta.nonDecodificato"))),
@@ -304,21 +327,7 @@ pub(super) fn documento(
     let doc = obj(vec![
         ("schema", Some(V::s(metodo::SCHEMA))),
         ("origine", metodo::origin(&src, m.creato.as_deref())),
-        (
-            "strumento",
-            obj(vec![
-                ("produttore", Some(V::s("Shimadzu"))),
-                ("modello", s(&m.modello)),
-                (
-                    "software",
-                    obj(vec![
-                        ("nome", Some(V::s(software(fam)))),
-                        ("versione", s(&m.software)),
-                    ])
-                    .map(|v| V::Arr(vec![v])),
-                ),
-            ]),
-        ),
+        ("strumento", strumento(fam, m)),
         (
             "campione",
             obj(vec![

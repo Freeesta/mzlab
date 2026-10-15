@@ -39,9 +39,26 @@ fn voce(v: &Voce) -> Vec<u8> {
     e
 }
 
-/// The container holding `flussi` (path, bytes).
-pub fn ole(flussi: &[(&str, Vec<u8>)]) -> Vec<u8> {
-    // directory entries: the root, then storages and streams in order of appearance
+/// The 512-byte header: `nf` FAT sectors from sector 0, the directory at `dir0`, the mini-stream cutoff at 0.
+fn intestazione(nf: usize, dir0: usize) -> Vec<u8> {
+    let mut h = vec![0u8; 512];
+    h[..8].copy_from_slice(&MAGIC);
+    h[0x18..0x1A].copy_from_slice(&0x3Eu16.to_le_bytes());
+    h[0x1A..0x1C].copy_from_slice(&3u16.to_le_bytes());
+    h[0x1C..0x1E].copy_from_slice(&0xFFFEu16.to_le_bytes());
+    h[0x1E..0x20].copy_from_slice(&9u16.to_le_bytes());
+    h[0x20..0x22].copy_from_slice(&6u16.to_le_bytes());
+    put(&mut h, 0x2C, nf as u32);
+    put(&mut h, 0x30, dir0 as u32);
+    put(&mut h, 0x38, 0);
+    put(&mut h, 0x3C, END);
+    put(&mut h, 0x44, END);
+    (0..109).for_each(|i| put(&mut h, 0x4C + 4 * i, if i < nf { i as u32 } else { FREE }));
+    h
+}
+
+/// The directory entries (the root, then storages and streams in order of appearance) and the bytes of each stream.
+fn voci<'a>(flussi: &'a [(&str, Vec<u8>)]) -> (Vec<Voce>, Vec<&'a Vec<u8>>) {
     let mut v = vec![Voce {
         nome: "Root Entry".into(),
         tipo: 5,
@@ -80,6 +97,12 @@ pub fn ole(flussi: &[(&str, Vec<u8>)]) -> Vec<u8> {
             };
         }
     }
+    (v, dati)
+}
+
+/// The container holding `flussi` (path, bytes).
+pub fn ole(flussi: &[(&str, Vec<u8>)]) -> Vec<u8> {
+    let (mut v, dati) = voci(flussi);
     // siblings: the first child of a parent is its `figlio`, each next one the `destro` of the one before
     let mut ultimo: std::collections::HashMap<usize, usize> = Default::default();
     for j in 1..v.len() {
@@ -124,19 +147,7 @@ pub fn ole(flussi: &[(&str, Vec<u8>)]) -> Vec<u8> {
             at += n;
         }
     }
-    let mut h = vec![0u8; 512];
-    h[..8].copy_from_slice(&MAGIC);
-    h[0x18..0x1A].copy_from_slice(&0x3Eu16.to_le_bytes());
-    h[0x1A..0x1C].copy_from_slice(&3u16.to_le_bytes());
-    h[0x1C..0x1E].copy_from_slice(&0xFFFEu16.to_le_bytes());
-    h[0x1E..0x20].copy_from_slice(&9u16.to_le_bytes());
-    h[0x20..0x22].copy_from_slice(&6u16.to_le_bytes());
-    put(&mut h, 0x2C, nf as u32);
-    put(&mut h, 0x30, dir0 as u32);
-    put(&mut h, 0x38, 0);
-    put(&mut h, 0x3C, END);
-    put(&mut h, 0x44, END);
-    (0..109).for_each(|i| put(&mut h, 0x4C + 4 * i, if i < nf { i as u32 } else { FREE }));
+    let h = intestazione(nf, dir0);
     let mut out = h;
     out.extend(fat.iter().flat_map(|x| x.to_le_bytes()));
     let mut d: Vec<u8> = v.iter().flat_map(voce).collect();

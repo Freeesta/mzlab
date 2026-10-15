@@ -161,18 +161,9 @@ fn tlm(
     Ok(male)
 }
 
-/// The scan records of `.qgd` and `Mass Raw Data` into `d.pos`/`d.indice` (MRM records of a `.qgd` into `srm`); returns the hash of the m/z list and the m/z range of each scan.
-fn scansioni(
-    d: &mut Dati,
-    (fam, raw, idx, rt, tic): (Fam, &[u8], &[u8], &[u8], &[u8]),
-    n: usize,
-    srm: &mut Tracce,
-    limiti: &Limiti,
-) -> Result<Vec<(u64, (f64, f64))>> {
-    let offs = rec::offset(idx, n).ok_or_else(|| {
-        Error::new("err.file.shimadzu").with("detail", "Spectrum Index does not fit the records")
-    })?;
-    let ko = [20, 24]
+/// Where `kind` and the point count sit in a `.qgd` record (20 or 24): the one under which most of the first records are valid.
+fn offset_ko(offs: &[u64], raw: &[u8], n: usize) -> usize {
+    [20, 24]
         .into_iter()
         .max_by_key(|&ko| {
             (0..n.min(16))
@@ -186,7 +177,21 @@ fn scansioni(
                 })
                 .count()
         })
-        .unwrap_or(20);
+        .unwrap_or(20)
+}
+
+/// The scan records of `.qgd` and `Mass Raw Data` into `d.pos`/`d.indice` (MRM records of a `.qgd` into `srm`); returns the hash of the m/z list and the m/z range of each scan.
+fn scansioni(
+    d: &mut Dati,
+    (fam, raw, idx, rt, tic): (Fam, &[u8], &[u8], &[u8], &[u8]),
+    n: usize,
+    srm: &mut Tracce,
+    limiti: &Limiti,
+) -> Result<Vec<(u64, (f64, f64))>> {
+    let offs = rec::offset(idx, n).ok_or_else(|| {
+        Error::new("err.file.shimadzu").with("detail", "Spectrum Index does not fit the records")
+    })?;
+    let ko = offset_ko(&offs, raw, n);
     let mut impronte = Vec::new();
     for i in 0..n {
         let a = usize::try_from(offs[i]).unwrap_or(usize::MAX);
