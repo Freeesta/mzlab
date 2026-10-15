@@ -238,3 +238,7 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 
 ## Profilo `desktop` (`Cargo.toml`, `opt-level = 3` contro `"z"`)
 - `mzlab_wasm.wasm` con `cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm`: SHA-256 `d5cca2b7…d00da` prima e dopo l'aggiunta del profilo (identico). Tempi del `.raw` nativo con `raw_tempi` e profilo `desktop` (studio `docs/studi/RAW_VELOCE.md`, DDA da 595 MB): tabella 8,33 → 5,30 s, `.mzidx` 7,07 → 3,59 s, mzML 13,99 → 12,15 s.
+
+## Tabella e `.mzidx` con una decodifica (righe dirette da `Spectrum`)
+- `upload::indicizza_lettore` decodifica ogni scansione una volta sola per la tabella e la prima passata di `build`, senza testa mzML né rilettura; passate successive solo se il budget è superato. `.mzidx` identico byte per byte alla strada via mzML (`tests/mzidx_righe_dirette.rs`). SHA-1 della testata non nel percorso dell'indice (`indicizza_lettore` usa lo SHA-256 già calcolato). Peso di `mzlab_wasm.wasm` prima di `wasm-opt`: 3 409 576 → 3 438 828 B.
+- Tempi sui dati veri (BAF, LAB-A, PXD077492, `.wiff`, `.D`): da misurare in locale con `cargo run --release --example raw_tempi -p mzlab-core -- FILE.raw` (fase «table + .mzidx (one call)»); obiettivo tabella ≤ 1,3 s e `.mzidx` ≤ 3 s sul BAF. Senza dati veri: `cargo run --release --example mzidx_tempi -p mzlab-core`.
