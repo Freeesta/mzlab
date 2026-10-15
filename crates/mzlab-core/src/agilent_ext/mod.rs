@@ -9,6 +9,9 @@ mod doc;
 pub mod info;
 mod lcdoc;
 mod lcmethod;
+mod lcmodules;
+mod lccal;
+mod lcprofile;
 pub mod lcms;
 pub mod lettore;
 #[path = "../agilent/meta.rs"]

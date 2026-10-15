@@ -4,6 +4,73 @@
 //! Nothing is guessed: a table is what its column names say, and a cell that is not a number stays a text in `campi`.
 
 use std::collections::BTreeMap;
+impl LcMethod {
+    /// Reads `AcqMethod.xml`; None when the text has neither of the two documents.
+    pub fn parse(text: &str) -> Option<LcMethod> {
+        let mut m = LcMethod {
+            name: tag(text, "MethodName"),
+            ..Default::default()
+        };
+        let rc = between(text, "<RCDevicesXml>", "</RCDevicesXml>").map(unescape);
+        let ms = between(text, "<SCICDevicesXml>", "</SCICDevicesXml>").map(unescape);
+        if rc.is_none() && ms.is_none() {
+            return None;
+        }
+        if let Some(x) = rc {
+            m.rc = parse_rc(&x);
+        }
+        if let Some(x) = ms {
+            parse_ms(&x, &mut m);
+        }
+        Some(m)
+    }
+
+    /// A table by name, the first of the segment `seg` (any segment when None).
+    pub fn table(&self, name: &str, seg: Option<u32>) -> Option<&MsTable> {
+        self.tables
+            .iter()
+            .find(|t| t.name == name && seg.is_none_or(|s| t.seg == s))
+    }
+
+    /// The first scalar parameter called `name`.
+    pub fn param(&self, name: &str) -> Option<&str> {
+        self.ms
+            .iter()
+            .find(|p| p.name == name)
+            .and_then(|p| p.value.as_deref())
+    }
+
+    /// The first LC parameter of a module kind called `name`, outside any table.
+    pub fn rc_param(&self, kind: &str, name: &str) -> Option<&Rc> {
+        self.rc
+            .iter()
+            .find(|p| p.kind == kind && p.name == name && p.table.is_none() && p.value.is_some())
+    }
+
+    /// The segments of the method (the `Time Segments` table says how many; a method without it has the segments its parameters name).
+    pub fn segments(&self) -> Vec<u32> {
+        let mut v: Vec<u32> = self
+            .tables
+            .iter()
+            .map(|t| t.seg)
+            .chain(self.ms.iter().map(|p| p.seg))
+            .filter(|s| *s > 0)
+            .collect();
+        v.sort_unstable();
+        v.dedup();
+        v
+    }
+}
+
+impl MsTable {
+    pub fn column(&self, name: &str) -> Option<usize> {
+        self.columns.iter().position(|c| c == name)
+    }
+
+    pub fn cell(&self, row: usize, name: &str) -> Option<&str> {
+        self.rows.get(row)?.get(self.column(name)?)?.as_deref()
+    }
+}
 
 /// A parameter of an LC module.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -203,110 +270,6 @@ fn parse_ms(xml: &str, m: &mut LcMethod) {
     }
 }
 
-impl LcMethod {
-    /// Reads `AcqMethod.xml`; None when the text has neither of the two documents.
-    pub fn parse(text: &str) -> Option<LcMethod> {
-        let mut m = LcMethod {
-            name: tag(text, "MethodName"),
-            ..Default::default()
-        };
-        let rc = between(text, "<RCDevicesXml>", "</RCDevicesXml>").map(unescape);
-        let ms = between(text, "<SCICDevicesXml>", "</SCICDevicesXml>").map(unescape);
-        if rc.is_none() && ms.is_none() {
-            return None;
-        }
-        if let Some(x) = rc {
-            m.rc = parse_rc(&x);
-        }
-        if let Some(x) = ms {
-            parse_ms(&x, &mut m);
-        }
-        Some(m)
-    }
-
-    /// A table by name, the first of the segment `seg` (any segment when None).
-    pub fn table(&self, name: &str, seg: Option<u32>) -> Option<&MsTable> {
-        self.tables
-            .iter()
-            .find(|t| t.name == name && seg.is_none_or(|s| t.seg == s))
-    }
-
-    /// The first scalar parameter called `name`.
-    pub fn param(&self, name: &str) -> Option<&str> {
-        self.ms
-            .iter()
-            .find(|p| p.name == name)
-            .and_then(|p| p.value.as_deref())
-    }
-
-    /// The first LC parameter of a module kind called `name`, outside any table.
-    pub fn rc_param(&self, kind: &str, name: &str) -> Option<&Rc> {
-        self.rc
-            .iter()
-            .find(|p| p.kind == kind && p.name == name && p.table.is_none() && p.value.is_some())
-    }
-
-    /// The segments of the method (the `Time Segments` table says how many; a method without it has the segments its parameters name).
-    pub fn segments(&self) -> Vec<u32> {
-        let mut v: Vec<u32> = self
-            .tables
-            .iter()
-            .map(|t| t.seg)
-            .chain(self.ms.iter().map(|p| p.seg))
-            .filter(|s| *s > 0)
-            .collect();
-        v.sort_unstable();
-        v.dedup();
-        v
-    }
-}
-
-impl MsTable {
-    pub fn column(&self, name: &str) -> Option<usize> {
-        self.columns.iter().position(|c| c == name)
-    }
-
-    pub fn cell(&self, row: usize, name: &str) -> Option<&str> {
-        self.rows.get(row)?.get(self.column(name)?)?.as_deref()
-    }
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn unescape_entities() {
-        assert_eq!(
-            unescape("a &lt;b&gt; &amp;&#228;&#xE4; &bogus; &"),
-            "a <b> &ää &bogus; &"
-        );
-    }
-
-    #[test]
-    fn the_two_documents_become_rows() {
-        let rc = "<DSRdlReport><Section><ModuleDisplayName>Binary Pump</ModuleDisplayName><DeviceType>Binary Pump</DeviceType><ParentSectionName>Stop Time</ParentSectionName><ParameterName>Stoptime</ParameterName><ParameterValue>10.00</ParameterValue><ParameterUnit>min</ParameterUnit></Section></DSRdlReport>";
-        let ms = "<NewDataSet><SectionInfo><SectionType>Repeater</SectionType><Name>Time Segment 1</Name></SectionInfo><SectionInfo><SectionType>Table</SectionType><Name>Scan Segments</Name></SectionInfo><SectionInfo><SectionType>Column</SectionType><Name>Prec Ion</Name><RowIndex>0</RowIndex><ColumnIndex>0</ColumnIndex><Value>399.1</Value></SectionInfo><SectionInfo><SectionType>Column</SectionType><Name>Prod Ion</Name><RowIndex>1</RowIndex><ColumnIndex>1</ColumnIndex><Value>250.2</Value></SectionInfo><SectionInfo><SectionType>Parameter</SectionType><Name>Ion Source</Name><Value>ESI</Value></SectionInfo></NewDataSet>";
-        let esc = |s: &str| {
-            s.replace('&', "&amp;")
-                .replace('<', "&lt;")
-                .replace('>', "&gt;")
-        };
-        let text = format!(
-            "<DataFileMethodReport><MethodReport><MethodName>a.m</MethodName><RCDevicesXml>{}</RCDevicesXml><SCICDevicesXml>{}</SCICDevicesXml></MethodReport></DataFileMethodReport>",
-            esc(rc),
-            esc(ms)
-        );
-        let m = LcMethod::parse(&text).unwrap();
-        assert_eq!(m.name.as_deref(), Some("a.m"));
-        assert_eq!(m.rc[0].name, "Stoptime");
-        assert_eq!(m.rc[0].section, "Stop Time");
-        let t = m.table("Scan Segments", Some(1)).unwrap();
-        assert_eq!(t.rows.len(), 2);
-        assert_eq!(t.cell(0, "Prec Ion"), Some("399.1"));
-        assert_eq!(t.cell(1, "Prod Ion"), Some("250.2"));
-        assert_eq!(t.cell(0, "Prod Ion"), None);
-        assert_eq!(m.param("Ion Source"), Some("ESI"));
-        assert!(LcMethod::parse("<x/>").is_none());
-    }
-}
+#[path = "lcmethod_tests.rs"]
+mod tests;
