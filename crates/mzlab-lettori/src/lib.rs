@@ -4,9 +4,13 @@
 use mzlab_core::error::{Error, Result};
 use mzlab_core::lettori::{self, Fiducia, FileSet, Lettore, Limiti, VoceLettore};
 
+#[cfg(any(feature = "aperti", feature = "tutte"))]
+pub mod aperti;
 pub mod srm;
 
 // The readers of each family, one `static` per `VoceLettore` of the registry; a family without readers yet is born with its own package.
+#[cfg(any(feature = "aperti", feature = "tutte"))]
+static VOCE_MZML_NUMPRESS: VoceLettore = aperti::mzml_numpress::VOCE;
 #[cfg(any(feature = "agilent", feature = "tutte"))]
 static VOCE_AGILENT: VoceLettore = mzlab_core::agilent::lettore::VOCE;
 #[cfg(any(feature = "sciex", feature = "tutte"))]
@@ -40,6 +44,8 @@ pub fn famiglia() -> &'static str {
 /// The formats of the families that are on: `agilent` and `sciex` repeat the ones of the engine's registry (and serve their variants), `thermo` is the only home of the `.raw` reader of the web engine (the desktop app has it in the core with the default features).
 pub fn registro() -> Vec<&'static VoceLettore> {
     let voci: &[Option<&'static VoceLettore>] = &[
+        #[cfg(any(feature = "aperti", feature = "tutte"))]
+        Some(&VOCE_MZML_NUMPRESS),
         #[cfg(any(feature = "agilent", feature = "tutte"))]
         Some(&VOCE_AGILENT),
         #[cfg(any(feature = "sciex", feature = "tutte"))]

@@ -2031,6 +2031,8 @@ dependencies = [
 name = "mzlab-lettori"
 version = "1.0.1"
 dependencies = [
+ "base64 0.23.1",
+ "flate2",
  "mzlab-core",
 ]
 

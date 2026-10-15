@@ -12,7 +12,7 @@ waters 327680
 shimadzu 327680
 bruker 524288"
 # the families that have readers (a family without readers is skipped and is born with its own package)
-con_lettori="agilent sciex thermo"
+con_lettori="agilent sciex thermo aperti"
 out=${1:-site/static}/wasm-lettori
 mkdir -p "$out"
 built=""
