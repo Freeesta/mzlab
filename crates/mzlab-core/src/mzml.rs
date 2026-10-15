@@ -2,10 +2,11 @@
 //! Spectra: level, RT (minutes), polarity, precursor, filter string, m/z `f64`, intensity `f32`. Chromatograms: TIC/BPC/SRM/PDA.
 //! Numpress is not supported (an error with a key, as in the Python reader).
 
+use crate::mzmlarray::{decode_array, Inflate, Want};
 use crate::numarray::Num;
+use std::borrow::Cow;
 use std::io::{BufReader, Read};
 
-use base64::Engine;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 
@@ -119,70 +120,26 @@ enum Scope {
     Chromatogram,
 }
 
-fn attrs(e: &BytesStart) -> Vec<(String, String)> {
-    e.attributes()
-        .with_checks(false)
-        .filter_map(|a| a.ok())
-        .map(|a| {
-            let v = a
-                .normalized_value(quick_xml::XmlVersion::Implicit1_0)
-                .map(|c| c.into_owned())
-                .unwrap_or_default();
-            (a.key.as_ref().to_string(), v)
-        })
-        .collect()
+/// The attributes of an element as borrowed text (no allocation when the value has no escapes).
+fn attrs<'a>(e: &'a BytesStart) -> Vec<(&'a str, Cow<'a, str>)> {
+    let mut out = Vec::with_capacity(8);
+    for a in e.attributes().with_checks(false).filter_map(|a| a.ok()) {
+        let v = a
+            .normalized_value(quick_xml::XmlVersion::Implicit1_0)
+            .unwrap_or_default();
+        // `Attribute::key` borrows the element's buffer, not the temporary `a`
+        let key = a.key.into_inner();
+        out.push((key, v));
+    }
+    out
 }
 
-fn get<'a>(a: &'a [(String, String)], name: &str) -> Option<&'a str> {
-    a.iter().find(|(k, _)| k == name).map(|(_, v)| v.as_str())
+fn get<'a>(a: &'a [(&str, Cow<str>)], name: &str) -> Option<&'a str> {
+    a.iter().find(|(k, _)| *k == name).map(|(_, v)| v.as_ref())
 }
 
 fn xml_error(e: impl std::fmt::Display) -> Error {
     Error::new("err.file.xml").with("detail", e)
-}
-
-fn decode_array(a: &Array, expected: usize) -> Result<(Vec<f64>, Vec<f32>)> {
-    let clean: String = a.text.chars().filter(|c| !c.is_whitespace()).collect();
-    if clean.is_empty() {
-        return Ok((Vec::new(), Vec::new()));
-    }
-    let raw = base64::engine::general_purpose::STANDARD
-        .decode(clean.as_bytes())
-        .map_err(|e| Error::new("err.file.base64").with("detail", e))?;
-    let bytes = if a.zlib {
-        // an array inflates to what the spectrum declares (64 MB when it declares nothing): a zlib stream may claim far more than the file holds
-        let limit = match expected.saturating_mul(a.num.width()) {
-            0 => 64 << 20,
-            n => n,
-        };
-        let mut out = Vec::new();
-        out.try_reserve(limit.min(raw.len().saturating_mul(1032)))
-            .map_err(|_| Error::memory_budget())?;
-        flate2::read::ZlibDecoder::new(&raw[..])
-            .take((limit as u64).saturating_add(1))
-            .read_to_end(&mut out)
-            .map_err(|e| Error::new("err.file.zlib").with("detail", e))?;
-        if out.len() > limit {
-            return Err(Error::memory_budget());
-        }
-        out
-    } else {
-        raw
-    };
-    let width = a.num.width();
-    let n = bytes.len() / width;
-    let mut f64s: Vec<f64> = Vec::new();
-    let mut f32s: Vec<f32> = Vec::new();
-    f64s.try_reserve_exact(n)
-        .map_err(|_| Error::memory_budget())?;
-    f32s.try_reserve_exact(n)
-        .map_err(|_| Error::memory_budget())?;
-    for c in bytes.chunks_exact(width) {
-        let v = a.num.value(c);
-        f64s.push(v);
-        f32s.push(v as f32);
-    }
-    Ok((f64s, f32s))
 }
 
 struct Spec {
@@ -212,15 +169,20 @@ struct Chrom {
     ms_term: bool,
 }
 
-fn finish_spectrum(s: Spec) -> Result<Spectrum> {
+fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<Spectrum> {
     let (mut mz, mut it, mut wide) = (Vec::new(), Vec::new(), None);
     for a in &s.arrays {
         match a.kind {
-            ArrayKind::Mz => mz = decode_array(a, s.len)?.0,
+            ArrayKind::Mz => mz = decode_array(a.num, a.zlib, &a.text, s.len, inf, Want::F64)?.0,
             ArrayKind::Intensity => {
-                let (w, f) = decode_array(a, s.len)?;
-                it = f;
-                wide = if a.num == Num::F32 { None } else { Some(w) };
+                if a.num == Num::F32 {
+                    it = decode_array(a.num, a.zlib, &a.text, s.len, inf, Want::F32)?.1;
+                    wide = None;
+                } else {
+                    let (w, f) = decode_array(a.num, a.zlib, &a.text, s.len, inf, Want::Both)?;
+                    it = f;
+                    wide = Some(w);
+                }
             }
             _ => {}
         }
@@ -255,16 +217,18 @@ fn number_after(id: &str, key: &str) -> Option<f64> {
     rest[..end].parse().ok()
 }
 
-fn finish_chromatogram(c: Chrom) -> Result<Chromatogram> {
+fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
     let (mut t, mut y) = (Vec::new(), Vec::new());
     let mut seconds = false;
     for a in &c.arrays {
         match a.kind {
             ArrayKind::Time => {
-                t = decode_array(a, c.len)?.0;
+                t = decode_array(a.num, a.zlib, &a.text, c.len, inf, Want::F64)?.0;
                 seconds = a.seconds;
             }
-            ArrayKind::Intensity => y = decode_array(a, c.len)?.0,
+            ArrayKind::Intensity => {
+                y = decode_array(a.num, a.zlib, &a.text, c.len, inf, Want::F64)?.0
+            }
             _ => {}
         }
     }
@@ -314,6 +278,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
     let mut in_binary = false;
     let mut in_precursor_list = false;
     let mut in_analyzer = false;
+    let mut inf = Inflate::new();
 
     loop {
         let ev = xml.read_event_into(&mut buf).map_err(xml_error)?;
@@ -321,8 +286,8 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
             Event::Eof => break,
             Event::Start(ref e) | Event::Empty(ref e) => {
                 let empty = matches!(ev, Event::Empty(_));
-                let name = e.name().as_ref().to_string();
-                match name.as_str() {
+                let name = e.name().into_inner();
+                match name {
                     "spectrum" => {
                         let a = attrs(e);
                         spec = Some(Spec {
@@ -452,8 +417,8 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                 }
             }
             Event::End(ref e) => {
-                let name = e.name().as_ref().to_string();
-                match name.as_str() {
+                let name = e.name().into_inner();
+                match name {
                     "binary" => in_binary = false,
                     "binaryDataArray" => {
                         if let Some(arr) = array.take() {
@@ -468,14 +433,14 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                     "analyzer" => in_analyzer = false,
                     "spectrum" => {
                         if let Some(s) = spec.take() {
-                            f(Item::Spectrum(finish_spectrum(s)?));
+                            f(Item::Spectrum(finish_spectrum(s, &mut inf)?));
                             n_spec += 1;
                         }
                         scope = Scope::None;
                     }
                     "chromatogram" => {
                         if let Some(c) = chrom.take() {
-                            f(Item::Chromatogram(finish_chromatogram(c)?));
+                            f(Item::Chromatogram(finish_chromatogram(c, &mut inf)?));
                             n_chrom += 1;
                         }
                         scope = Scope::None;
@@ -489,3 +454,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "mzml_tests.rs"]
+mod tests;

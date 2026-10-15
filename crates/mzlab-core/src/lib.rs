@@ -69,6 +69,7 @@ pub mod metodo_raw;
 pub mod metodo_wiff;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzml;
+mod mzmlarray;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzmlhead;
 pub mod numarray;

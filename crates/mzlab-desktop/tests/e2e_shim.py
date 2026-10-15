@@ -115,7 +115,7 @@ try:
             sess = pg.evaluate(JSON, "api/session")["j"]
             ref["names"] = [it["file"] for it in sess["session"]]
             pg.wait_for_function("fetch('api/notebook').then(r => r.json()).then(n => (n.session || []).length >= %d)" % len(LR_FILES), timeout=30000)      # saved a moment after the last change
-            nb = pg.evaluate("fetch('api/notebook').then(r => r.json())")["session"]
+            nb = pg.evaluate("JSON.parse(JSON.stringify(E.files.filter(f => !f.gone).map(f => ({ file: f.file, label: f.label, time: f.time, type: f.type, conc: f.conc ?? null, cunit: f.cunit ?? null, rep: f.rep || undefined }))))")      # the samples as the page holds them, in the shape the Python reference knows (the notebook is campioni/2)
             ref["py"] = PyRef([str(EX / n.split("#")[0]) for n in dict.fromkeys(ref["names"])], nb)
             py = {"state": ref["py"].get("api/state")["j"], "session": ref["py"].get("api/session")["j"]}
             st = pg.evaluate(JSON, "api/state")["j"]
