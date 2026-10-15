@@ -26,3 +26,15 @@ mzlab-lib = { path = "../mzlab-lib", optional = true }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 sha2 = { version = "0.11", default-features = false }
 mzlab-lib = { path = "../mzlab-lib" }
+
+[[test]]
+name = "untargeted_join"
+required-features = ["untargeted"]
+
+[[test]]
+name = "untargeted_gapfill"
+required-features = ["untargeted"]
+
+[[test]]
+name = "untargeted_join_dati"
+required-features = ["untargeted"]
