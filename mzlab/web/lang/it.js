@@ -488,7 +488,7 @@ I18N.add("it", {
   "method.doc.source": "Sorgente",
   "method.doc.pmax": "Pressione massima",
   "method.doc.fields": "Tutti i campi del file ({n})",
-  "method.doc.log": "Registro dello strumento",
+  "method.doc.log": "Registro dello strumento", "method.doc.btn.xic": "XIC", "method.doc.btn.xic.tip": "Estrai l'XIC di m/z {mz} (finestra di una unità o in ppm, come negli altri XIC)", "method.doc.btn.ms2": "MS2", "method.doc.btn.ms2.tip": "Apri la scansione MS² del precursore m/z {mz} più vicina a RT {rt} min", "method.doc.btn.ms2.none": "Nessuna scansione MS² di questo precursore dentro la finestra di RT della voce", "method.doc.btn.ms2.nodda": "Questo file non ha scansioni MS² da aprire", "method.doc.incl.title": "Lista di inclusione", "method.doc.incl.note": "Come è scritta nel metodo: i precursori che lo strumento doveva frammentare, non un elenco di composti trovati.", "method.doc.incl.rt": "RT (min)", "method.doc.incl.pol": "Polarità", "method.doc.incl.pos": "positiva", "method.doc.incl.neg": "negativa", "method.doc.incl.ce": "NCE", "method.doc.incl.name": "Nome", "method.doc.incl.formula": "Formula", "method.doc.incl.species": "Specie", "method.doc.incl.act": "Azioni", "method.doc.isol": "Finestra di isolamento", "method.doc.solvent": "Solvente {ch}",
   "cart.ignored": "{n} file ignorati (formato non riconosciuto).",
   "cart.ignored.one": "1 file ignorato (formato non riconosciuto).",
   "cartp.forget": "Dimentica la cartella",

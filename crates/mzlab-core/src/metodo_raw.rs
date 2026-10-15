@@ -4,11 +4,15 @@
 //! The status log is in `campi` (`campi/status.rs`); when its schema is not found `avvisi` says so.
 
 pub(crate) mod campi;
+mod impostazioni;
+mod inclusione;
 mod lock;
+mod ole_raw;
 mod rivelatori;
 mod script;
 pub(crate) mod tsq;
 
+use crate::agilent;
 use crate::metodo::{self, lc_sections, num, obj, text, Source, V};
 use campi::Ident;
 use opentfraw::RawFileReader;
@@ -85,6 +89,7 @@ fn ms<R: Read + Seek>(
     source: &mut R,
     exps: Vec<V>,
     lock: Option<V>,
+    settings: Option<V>,
 ) -> Option<V> {
     obj(vec![
         (
@@ -92,6 +97,7 @@ fn ms<R: Read + Seek>(
             obj(vec![("tipo", source_type(raw, source).map(V::s))]),
         ),
         ("calibrazione", obj(vec![("lock_mass", lock)])),
+        ("impostazioni", settings),
         (
             "periodi",
             obj(vec![("esperimenti", Some(V::Arr(exps)))]).map(|p| V::Arr(vec![p])),
@@ -186,6 +192,64 @@ fn tsq_experiment(blocks: &[String], exps: &mut Vec<V>, warn: &mut Vec<Option<V>
     }
 }
 
+/// The inclusion list of the readable text goes to the last experiment (the data dependent one follows the survey scan), or to an experiment of its own.
+fn inclusion_list(texts: &[&str], exps: &mut Vec<V>) {
+    let Some(list) = texts.iter().find_map(|t| inclusione::parse(t)) else {
+        return;
+    };
+    let section = inclusione::section(&list);
+    match exps.last_mut() {
+        Some(V::Obj(f)) => f.push(("inclusione", section)),
+        _ => exps.extend(obj(vec![
+            ("indice", num(Some(1.0))),
+            ("inclusione", Some(section)),
+        ])),
+    }
+}
+
+/// The texts of the embedded method: those of its OLE container and the ones the scan adds; a method read only by the scan carries a warning.
+fn method_blocks<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+) -> (Vec<String>, Vec<Option<V>>) {
+    let container = ole_raw::streams(raw, source);
+    let scanned = raw.instrument_method_blocks(source);
+    let Some(c) = container else {
+        let lost = raw.raw_file_info.preamble.method_file_present && !scanned.is_empty();
+        let w = lost.then(|| {
+            obj(vec![
+                ("chiave", Some(V::s("meta.nonDecodificato"))),
+                (
+                    "dove",
+                    Some(V::s(
+                        "Method: OLE container not found (texts found by scanning)",
+                    )),
+                ),
+            ])
+        });
+        return (scanned, w.into_iter().collect());
+    };
+    (ole_raw::merge(&c, scanned), Vec::new())
+}
+
+/// The experiments of `ms`: the scan events of the XML completed by the settings of the text, the TSQ table and the inclusion list; and those settings.
+fn experiments_of(
+    blocks: &[String],
+    items: &[agilent::meta::Item],
+    warn: &mut Vec<Option<V>>,
+) -> (Vec<V>, Vec<impostazioni::Setting>) {
+    let texts: Vec<&str> = blocks
+        .iter()
+        .filter(|b| script::classify(b) == Block::Text)
+        .map(String::as_str)
+        .collect();
+    let settings = impostazioni::parse(&texts);
+    let mut exps = impostazioni::refine(script::experiments(items), &settings);
+    tsq_experiment(blocks, &mut exps, warn);
+    inclusion_list(&texts, &mut exps);
+    (exps, settings)
+}
+
 /// The `metodo/1` document of a `.raw` already opened as `raw` (`source` is the same file, read again for the texts of the method). Never an error: what is missing is absent.
 pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Source) -> String {
     let s = &raw.seq_row;
@@ -197,7 +261,7 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
             .collect(),
         ..Default::default()
     };
-    let blocks = raw.instrument_method_blocks(source);
+    let (blocks, mut warn) = method_blocks(raw, source);
     let traces = raw.analog_traces(source).unwrap_or_default();
     let by = |b: Block| blocks.iter().find(|t| script::classify(t) == b);
     let script_text = by(Block::Script).map(String::as_str).unwrap_or("");
@@ -207,14 +271,14 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
         .unwrap_or_default();
     let (lc, _) = script::lc_of(script_text).map_or((None, None), |l| lc_sections(&l));
     let lc = lc.map(|mut v| {
-        if let (V::Obj(f), Some(p)) = (&mut v, pressure(&pairs)) {
-            f.push(("pressione_max", p));
+        if let V::Obj(f) = &mut v {
+            f.extend(pressure(&pairs).map(|p| ("pressione_max", p)));
+            f.extend(impostazioni::solvents(&pairs).map(|s| ("solventi", s)));
         }
         v
     });
-    let mut warn = status_warning(raw);
-    let mut exps = script::experiments(&items);
-    tsq_experiment(&blocks, &mut exps, &mut warn);
+    warn.extend(status_warning(raw));
+    let (exps, settings) = experiments_of(&blocks, &items, &mut warn);
     if rivelatori::has_3d_field(&blocks) {
         warn.push(obj(vec![
             ("chiave", Some(V::s("meta.nonDecodificato"))),
@@ -243,7 +307,10 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
                 ("computer", text(&raw.raw_file_info.computer_name)),
             ]),
         ),
-        ("ms", ms(raw, source, exps, lock)),
+        (
+            "ms",
+            ms(raw, source, exps, lock, impostazioni::section(&settings)),
+        ),
         ("lc", lc),
         ("rivelatori", rivelatori::section(&blocks)),
         ("campionatore", sampler(&pairs)),

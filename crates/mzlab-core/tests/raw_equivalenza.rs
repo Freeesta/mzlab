@@ -29,6 +29,7 @@ fn hashes(path: &Path) -> (String, String, String, String) {
             nome: nome.clone(),
             dim,
             dati: Box::new(std::fs::File::open(path).unwrap()),
+            sha1: None,
         }],
     };
     let mut fs = set();
