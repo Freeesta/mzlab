@@ -22,7 +22,7 @@
   "crates/mzlab-lib/src/build.rs": 542,
   "crates/mzlab-lib/src/parse.rs": 783,
   "crates/mzlab-lib/src/read.rs": 672,
-  "crates/mzlab-wasm/src/lib.rs": 667,
+  "crates/mzlab-wasm/src/lib.rs": 985,
   "mzlab/app.py": 612,
   "mzlab/explore.py": 1058,
   "mzlab/ionfamily.py": 1752,
@@ -208,6 +208,10 @@
   "mzlab/web/workflow.js::WORKFLOW": 379,
   "tools/bench_mirino.py::run": 85,
   "tools/controlla_teoria.py::public_errors": 94,
-  "tools/dati_sintetici.py::hr_dda": 103
+  "tools/dati_sintetici.py::hr_dda": 103,
+  "crates/mzlab-core/src/mzidx.rs::Prima": 140,
+  "crates/mzlab-core/src/mzmlwrite.rs::Opzioni": 184,
+  "crates/mzlab-core/src/mzmlwrite.rs::esc": 128,
+  "crates/mzlab-core/tests/mzidx_righe_dirette.rs::prova_con": 106
  }
 }
