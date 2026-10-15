@@ -50,7 +50,7 @@ try:
         c.close()
         pg = r.page(p); pg.set_viewport_size({"width": 1280, "height": 900})
         def app():
-            pg.click("#nav [data-v=theory]"); pg.wait_for_selector("#stbar [data-tcmd=cerca]", timeout=15000); pg.click("#np-set")
+            pg.click("#nav [data-v=theory]"); pg.wait_for_selector("#stbar [data-tcmd=cerca]", timeout=15000); pg.click("#stbar [data-tcmd=impostazioni]")
             pg.wait_for_function("!document.getElementById('tframe').contentDocument.getElementById('a11y-panel').hidden", timeout=5000)
             assert pg.locator("#uipset").count() == 0
             pg.click("#nav [data-v=data]"); pg.click("#np-set"); pg.wait_for_selector("#uipset")

@@ -26,6 +26,15 @@
   const PD_TEXT = { 1: "confirmed by the data", 2: "observed in the literature", 3: "specific to the class", 4: "generic rule" };
   const predBadge = r => r.pred ? `<span class="lvb pd-${r.pred}" title="prediction scale (Löffler et al. 2025), not the Schymanski level: Prev. ${r.pred}, ${esc(PD_TEXT[r.pred])}">Prev. ${r.pred}</span>` : "";
   const simBar = sim => sim ? `<span class="sim-bar" role="img" aria-label="cosine: equal ${sim.cos[0]}, shifted ${sim.cos[1]}, neutral losses ${sim.cos[2]}" title="cosine: equal ${sim.cos[0]} · shifted ${sim.cos[1]} · common neutral losses ${sim.cos[2]}">${sim.cos.map((v, i) => `<i style="width:${Math.round(100 * v)}%;background:var(${SIM_VAR[i]})"></i>`).join("")}</span>` : "";
+  /** The three components of the similarity of a product's MS2 with the parent's (also used by 20_tpmine.js for the low-resolution detail). */
+  function simCard(sim) {
+    const row = i => { const k = ["equal", "shifted", "loss"][i]; return `<span><span class="sw" style="border-color:var(${SIM_VAR[i]});border-top-style:${i === 0 ? "solid" : i === 1 ? "dashed" : "dotted"}"></span>${SIM_LABEL[i]}</span>
+      <span class="bar3" title="cosine ${sim.cos[k].toFixed(3)}"><i style="width:${Math.round(100 * sim.cos[k])}%;background:var(${SIM_VAR[i]})"></i></span>
+      <span class="bar3" title="entropy ${sim.ent[k].toFixed(3)}"><i style="width:${Math.round(100 * sim.ent[k])}%;background:var(${SIM_VAR[i]})"></i></span><span class="n">${sim.n[k]}</span>`; };
+    return `<div class="sim3"><b></b><b>cosine</b><b>entropy</b><b title="matched peaks">n</b>${[0, 1, 2].map(row).join("")}
+      <b>total</b><span class="n">${sim.cos.total.toFixed(3)} <span class="mut">(modified cosine)</span></span><span class="n">${sim.ent.total.toFixed(3)}</span><span></span></div>
+      <div class="mut">Mass difference of the precursors ${sim.delta >= 0 ? "+" : ""}${sim.delta.toFixed(4)}. Equal: the fragment does not contain the modification. Shifted: it moved with the precursor, so it contains it. Common neutral losses: shifted fragments close to the precursor (the same small neutral is lost by both).</div>`;
+  }
   const lvBadge = (r, title) => `<span class="lvb lv-${r.level}" title="${esc(title)}">L${r.level}${r.diagnostic ? " ◆" : ""}</span>`;
 
   // Shift of the apex of the anchor features in every file against the median over the files (piecewise linear between the nodes of the curve).
@@ -170,14 +179,6 @@
       host.querySelectorAll("g.mn").forEach(g => { const go = () => { if (g.dataset.id !== "progenitore") show(+g.dataset.id); }; g.onclick = go; g.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }; });
     }
 
-    function simCard(sim) {
-      const row = i => { const k = ["equal", "shifted", "loss"][i]; return `<span><span class="sw" style="border-color:var(${SIM_VAR[i]});border-top-style:${i === 0 ? "solid" : i === 1 ? "dashed" : "dotted"}"></span>${SIM_LABEL[i]}</span>
-        <span class="bar3" title="cosine ${sim.cos[k].toFixed(3)}"><i style="width:${Math.round(100 * sim.cos[k])}%;background:var(${SIM_VAR[i]})"></i></span>
-        <span class="bar3" title="entropy ${sim.ent[k].toFixed(3)}"><i style="width:${Math.round(100 * sim.ent[k])}%;background:var(${SIM_VAR[i]})"></i></span><span class="n">${sim.n[k]}</span>`; };
-      return `<div class="sim3"><b></b><b>cosine</b><b>entropy</b><b title="matched peaks">n</b>${[0, 1, 2].map(row).join("")}
-        <b>total</b><span class="n">${sim.cos.total.toFixed(3)} <span class="mut">(modified cosine)</span></span><span class="n">${sim.ent.total.toFixed(3)}</span><span></span></div>
-        <div class="mut">Mass difference of the precursors ${sim.delta >= 0 ? "+" : ""}${sim.delta.toFixed(4)}. Equal: the fragment does not contain the modification. Shifted: it moved with the precursor, so it contains it. Common neutral losses: shifted fragments close to the precursor (the same small neutral is lost by both).</div>`;
-    }
     async function detail(id) { return st.det[id] || (st.det[id] = await call("detail", id)); }
     /** opens the row of a candidate (its sheet is shown right under it); a row hidden by the filters brings them back to "all" */
     function show(id) {
@@ -281,5 +282,5 @@
     massNet();
   }
 
-  window.TPHR = { render };
+  window.TPHR = { render, simCard };
 })();

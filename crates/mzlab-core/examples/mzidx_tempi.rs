@@ -72,4 +72,40 @@ fn main() {
         st.bytes as f64 / 1e6,
         st.passes
     );
+    con_scratch(&mut l, budget);
+}
+
+/// The same with a scratch file (a temporary file): the scans are decoded once whatever the budget.
+fn con_scratch(l: &mut finto::Finto, budget: usize) {
+    let mut out = Nulla;
+    let path = std::env::temp_dir().join(format!("mzidx_tempi_{}.sp", std::process::id()));
+    let mut sp = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&path)
+        .expect("scratch");
+    let t = Instant::now();
+    let st = upload::indicizza_lettore_con(
+        l,
+        0,
+        &mut || Ok(vec![]),
+        "x.mzML",
+        &mut out,
+        budget << 20,
+        Some(&mut sp),
+        &mut |_| {},
+    )
+    .expect("index")
+    .0;
+    println!(
+        "table + .mzidx + scratch   {:>8.3} s ({:.1} MB, {} passes, scratch {:.1} MB)",
+        t.elapsed().as_secs_f64(),
+        st.bytes as f64 / 1e6,
+        st.passes,
+        sp.metadata().map_or(0.0, |m| m.len() as f64 / 1e6)
+    );
+    drop(sp);
+    let _ = std::fs::remove_file(&path);
 }

@@ -567,7 +567,9 @@ window.MAPPA = (() => {
     addPoint(p, px, py); return true;
   }
   function delPoint(p, i) { const list = pts(p); if (i == null || i < 0 || i >= list.length) return; list.splice(i, 1); st(p).psel = null; ptsSave(p); overlay(p); table(p); }
-  const MX = { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, GRP0, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt }, { grpShape, drawPoints, shapePath, ...forms } = MAPFORME(MX), { table, tableNow } = MAPTAB(MX, forms);
+  // tolerance of the RT groups: the student's value, else about one peak width (5 scans, between 0.02 and 0.15 min)
+  const grpTol = () => PREF.grp ?? Math.min(0.15, Math.max(GRP0, +(5 * scanStep()).toFixed(3)));
+  const MX = { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, grpTol, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt }, { grpShape, drawPoints, shapePath, ...forms } = MAPFORME(MX), { table, tableNow } = MAPTAB(MX, forms);
   async function spectrumAt(p, rt, k) {
     const f = k != null && E.files[k] ? E.files[k] : p._a.f; let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
     const n = await nearScan(f.k, rt); if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; }
