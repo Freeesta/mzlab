@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./mzlab/web/vendor/**)",
+      "Read(./mzlab/web/teoria/pratica/ei-dati.js)",
+      "Read(./mzlab/web/elements.js)",
+      "Read(./mzlab/web/teoria/glossario-dati.js)",
+      "Read(./mzlab/web/tpmine.enc)",
+      "Read(./mzlab/web/esempi/**)",
+      "Read(./tests_e2e/shots/**)",
+      "Read(./.verifica/cache_massbank/**)",
+      "Read(./site/static/vendor/**)",
+      "Read(./site/static/elements.js)",
+      "Read(./site/static/teoria/pratica/ei-dati.js)",
+      "Read(./site/static/teoria/glossario-dati.js)",
+      "Read(./site/static/tpmine.enc)",
+      "Read(./site/static/esempi/**)",
+      "Read(./site/static/mzfinder/**)",
+      "Read(./site/static/librerie/**)",
+      "Read(./.git/**)",
+      "Read(./**/__pycache__/**)",
+      "Read(./.pytest_cache/**)",
+      "Read(./**/*.egg-info/**)",
+      "Read(./docs/agenti/misure-diario.md)"
+    ]
+  },
+  "autoCompactWindow": 350000
+}
