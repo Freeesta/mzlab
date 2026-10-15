@@ -7,7 +7,7 @@ set -eu
 tetti="aperti 393216
 andi 262144
 thermo 458752
-agilent 393216
+agilent 458752
 sciex 327680
 waters 327680
 shimadzu 327680
