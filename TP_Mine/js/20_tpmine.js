@@ -20,7 +20,7 @@
 .tp tr.sel{background:var(--sel)}.tp tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}.tp tr.clk{cursor:pointer}.tp tr.clk:hover{background:var(--sel)}
 .tp input.tp-est{background:color-mix(in srgb,var(--warn) 18%,transparent);border-color:var(--warn)}
 .tp .badge{display:inline-block;padding:0 6px;border-radius:9px;font-size:11px;font-weight:600;border:1px solid var(--line)}
-.tp .b-forte{background:#e7f6ee;color:var(--ok);border-color:#b7e1c9}.tp .b-possibile{background:#fdf3e0;color:var(--warn);border-color:#f1d9a8}.tp .b-debole{color:var(--muted)}
+.tp .b-forte{background:color-mix(in srgb,var(--ok) 14%,var(--panel));color:var(--ink);border-color:var(--ok)}.tp .b-possibile{background:color-mix(in srgb,var(--warn) 14%,var(--panel));color:var(--ink);border-color:var(--warn)}.tp .b-debole{color:var(--muted)}
 
 .tp .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}.tp .bar i{display:block;height:100%;background:var(--accent);width:0}
 .tp .tbl{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:6px}.tp canvas{width:100%;height:210px;display:block}

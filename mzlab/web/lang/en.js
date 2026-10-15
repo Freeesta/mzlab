@@ -1254,7 +1254,7 @@ I18N.add("en", {
   "method.pol.mixed": "mixed",
   "method.pol.unknown": "not stated",
   "method.scanParamsNote": "The complete method is not in the mzML file: these are the parameters of the scans.",
-  "method.missing": "<b>The acquisition method is missing.</b> The mzML files do not contain the source parameters, the collision energies and the gradient: I read them from the method's <b>.dam</b> file (the one from Analyst).",
+  "method.missing": "<b>The acquisition method is missing.</b> The mzML files have no source, collision energies or gradient: I read them from the <b>.dam</b> of Analyst.",
   "method.loadDam": "Load the method (.dam)",
   "method.how.q1": "<b>Q1 scan</b>: the first quadrupole (Q1) scans the <i>m/z</i> range and the collision cell does not fragment (no collision energy): the spectrum of all the intact ions is recorded.",
   "method.how.ems": "<b>Enhanced MS (EMS)</b>: the ions pass through Q1 and the cell without fragmenting and are accumulated in the linear trap (Q3), which scans them: more sensitivity than the Q1 scan, same type of spectrum (intact ions).",
