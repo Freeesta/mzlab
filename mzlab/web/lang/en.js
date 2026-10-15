@@ -2574,6 +2574,8 @@ I18N.add("en", {
   "ctx.spec.noCont": "Remove contaminants",
   "ctx.spec.noCont.aria": "Remove from the shown peaks those compatible with the Keller contaminant list",
   "disp.menu.aria": "Open the display options of the spectrum",
+  "disp.dots": "Points only",
+  "disp.dots.title": "Show only the points of the spectrum, with no line or sticks: isolated peaks stay isolated",
   "disp.marker": "Scan markers (triangles) on the peaks",
   "disp.marker.title": "Off, the triangle shows only on the peak under the mouse or the finger; by default they switch on by themselves up to 20 peaks",
   "disp.noCont": "Remove contaminants (Keller list)",

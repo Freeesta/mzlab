@@ -2574,6 +2574,8 @@ I18N.add("it", {
   "ctx.spec.noCont": "Togli i contaminanti",
   "ctx.spec.noCont.aria": "Togli dai picchi mostrati quelli compatibili con la lista dei contaminanti Keller",
   "disp.menu.aria": "Apri le opzioni di visualizzazione dello spettro",
+  "disp.dots": "Solo punti",
+  "disp.dots.title": "Mostra solo i punti dello spettro, senza linea né bastoncini: i picchi isolati restano isolati",
   "disp.marker": "Marker (triangoli) delle scansioni sui picchi",
   "disp.marker.title": "Spenti, il triangolo compare solo sul picco sotto il mouse o il dito; di base si accendono da soli fino a 20 picchi",
   "disp.noCont": "Togli i contaminanti (lista Keller)",

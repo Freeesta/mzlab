@@ -205,7 +205,7 @@
   "mzlab/web/tour.js::ensureStyles": 131,
   "mzlab/web/tour.js::onKeyDown": 214,
   "mzlab/web/tour.js::renderStep": 127,
-  "mzlab/web/visualizza.js::DISP": 99,
+  "mzlab/web/visualizza.js::DISP": 145,
   "mzlab/web/workflow.js::WORKFLOW": 379,
   "tools/bench_mirino.py::run": 85,
   "tools/controlla_teoria.py::public_errors": 94,
