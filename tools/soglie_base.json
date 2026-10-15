@@ -37,6 +37,7 @@
   "mzlab/web/pannelli.js": 860,
   "mzlab/web/picchi.js": 557,
   "mzlab/web/tour.js": 719,
+  "tools/attributio_riferimento.py": 720,
   "tools/genera_ei.py": 751
  },
  "funzioni": {

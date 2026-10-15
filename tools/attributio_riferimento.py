@@ -335,6 +335,159 @@ def stadio_formule():
     return {"items": items, "fits": fits, "names": [{"in": n, "out": norm_name(n)} for n in names]}
 
 
+def _gauss(rt, c, w, h):
+    return [h * math.exp(-0.5 * ((t - c) / w) ** 2) for t in rt]
+
+
+def stadio_spiegazioni():
+    """Review proofs: sub-formula explanation, isotope pattern and comparison, MS2 purity, raw proofs and RT versus logP (AT-06)."""
+    import numpy as np
+    from attributio.review import explain as X
+    from attributio.review import isotopes as ISO
+    from attributio.review import purity as PU
+    from attributio.review import raw as RAW
+    from attributio.review import rtlogp as RL
+    from attributio.review.settings import ReviewSettings
+    S = ReviewSettings()
+    losses = [18.010565, 27.994915, 17.026549, 46.005479, 44.026215, 28.0313, 56.0626, 31.98983, 79.9568, 14.01565]
+    cases = [("C10H12N2O", "POS"), ("C17H19NO3", "POS"), ("C8H10N4O2", "POS"), ("C15H15ClN2O", "POS"), ("C9H8O4", "NEG"),
+             ("C12H10N2O3S", "POS"), ("C6H5NO3", "NEG"), ("C21H23ClN2O3", "POS"), ("C16H16Br2O2", "NEG"), ("C9H13N5O3", "POS")]
+    expl = []
+    for k, (f, pol) in enumerate(cases):
+        fd = X.parse_formula(f)
+        ion = X.ion_mass(fd, pol)
+        mz = ion * (1 + (k % 3 - 1) * 1.5e-6)
+        raw_mz, raw_it = [], []
+        for j, loss in enumerate(losses):
+            m = ion - loss
+            if m > 40:
+                raw_mz.append(m * (1 + (j % 4 - 1.5) * 2e-6))
+                raw_it.append(1000.0 / (j + 1) + 7 * k)
+        raw_mz += [ion, ion + 1.00335, 61.0123 + k * 0.01, 77.04 + k, 151.5 + k, 90.0002 + k * 3.1]
+        raw_it += [800.0, 120.0, 40.0, 9.0, 30.0, 0.5]
+        order = np.argsort(raw_mz)
+        raw_mz = [round(float(raw_mz[i]), 6) for i in order]
+        raw_it = [float(raw_it[i]) for i in order]
+        em, ei, idx = X.prep_ms2(raw_mz, raw_it, mz)
+        ex = X.explain(fd, mz, pol, (em, ei), S)
+        expl.append({"formula": f, "pol": pol, "mz": mz, "raw_mz": raw_mz, "raw_it": raw_it,
+                     "prep_mz": [float(v) for v in em], "prep_it": [float(v) for v in ei],
+                     "removed": sorted([i, w] for i, w in X.removed_reasons(raw_mz, raw_it, mz).items()),
+                     "iso": list(X.iso_pattern(ex["ion"])) if ex["ion"] else None,
+                     "adduct": ex["adduct"], "ion_formula": ex["ion_formula"], "ion_ppm": ex["ion_ppm"],
+                     "n_expl": ex["n_expl"], "frac_expl": ex["frac_expl"], "decoy_frac": ex["decoy_frac"],
+                     "frags": [None if h is None else h for h in ex["frags"]]})
+    iso = []
+    for f, pol in cases + [("C6H12O6", "POS"), ("C24H40N6O12S2", "POS")]:
+        fd = X.parse_formula(f)
+        ion = X.ion_mass(fd, pol)
+        ionf = dict(fd)
+        ionf["H"] = ionf.get("H", 0) + (1 if pol == "POS" else -1)
+        sticks = ISO.pattern(ionf, pol)
+        obs_mz = [m + 0.0006 for m, _ in sticks[:5]]
+        obs_it = [a * (1 + 0.04 * i) * 1000 for i, (_, a) in enumerate(sticks[:5])]
+        cmp_ = ISO.compare(ionf, pol, obs_mz, obs_it, sticks[0][0] + 0.0006, 0.06, 0.35, 10.0, 12.0)
+        iso.append({"ion": ionf, "pol": pol, "sticks": [list(x) for x in sticks], "clusters": ISO.clusters(sticks),
+                    "obs_mz": obs_mz, "obs_it": obs_it, "prec": sticks[0][0] + 0.0006, "cmp": cmp_})
+    return {"spiegazioni": expl, "isotopi": iso, "purezza": _spiegazioni_purezza(PU, RAW, ISO, X, S),
+            "rtlogp": _spiegazioni_rtlogp(RL)}
+
+
+def _spiegazioni_purezza(PU, RAW, ISO, X, S):
+    import numpy as np
+    prec = 301.1415
+    mz = [299.12, 300.1389, prec, prec + 1.00336, prec + 2.0067, 302.35, 303.0102, 301.6]
+    it = [12.0, 3.0, 1000.0, 168.0, 21.0, 90.0, 150.0, 4.0]
+    iso = PU.isolation_purity(mz, it, prec, prec, 1.0, 1.0, [(prec, 100.0), (prec + 1.00336, 17.0)], "POS")
+    iso2 = PU.isolation_purity(mz, it, prec, prec, 1.5, 1.5, None, "POS")
+    pm = [41.04, 55.05, 77.04, 91.054, 105.07, 119.086, 133.1, 150.2, 195.1, 226.3, 301.14, 340.0]
+    pi = [20.0, 30.0, 100.0, 80.0, 60.0, 10.0, 5.0, 50.0, 3.0, 40.0, 500.0, 70.0]
+    imp = PU.impossible_losses(pm, pi, prec, 0.05, 0.005, None)
+    em, ei = [77.04, 91.054, 105.07, 119.086, 150.2], [100.0, 80.0, 60.0, 10.0, 50.0]
+    rm, ri = [77.0402, 91.0541, 105.0702, 133.0999, 150.19, 280.0], [90.0, 100.0, 40.0, 30.0, 20.0, 15.0]
+    expl = [True, False, True, False, False]
+    qs = [PU.candidate_scores((em, ei, prec), (rm, ri, prec), 0.02, low, sh, expl) for low, sh in ((None, 0.0), (70.0, 0.0), (70.0, 14.01565))]
+    unex = [PU.unexplained(ei, expl, None), PU.unexplained(ei, expl, np.array([False, True, False, False, False]))]
+    chance = [PU.chance_probability(n, r, m, 0.02, 400.0) for n, r, m in ((5, 6, 3), (30, 40, 12), (8, 8, 8), (1, 1, 0))]
+    coel = [{"mz": 302.35, "rel": 0.09, "r": 0.93, "offset": 0.02}, {"mz": 303.01, "rel": 0.15, "r": 0.2, "offset": 0.4}]
+    bad = PU.badge(iso, coel, 0.55, imp, qs[0])
+    good = PU.badge(None, [], 0.1, [], qs[1])
+    low = [PU.low_information(q) for q in qs]
+    rt = [4.0 + 0.01 * i for i in range(61)]
+    g1, g2 = _gauss(rt, 4.3, 0.04, 1e5), _gauss(rt, 4.34, 0.05, 4e4)
+    co = [RAW.coelution(rt, g1, g2, 4.3), RAW.coelution(rt, g1, [0.0] * 61, 4.3), RAW.coelution(rt[:3], g1[:3], g2[:3], 4.3)]
+    y = [v + 300 * (1 + (i % 3)) for i, v in enumerate(_gauss(rt, 4.3, 0.04, 1e5))]
+    br = [v * 0.001 for v in y]
+    pq = [RAW.peak_quality(rt, y, 4.3, rt, br), RAW.peak_quality(rt, y, 4.3), RAW.peak_quality(rt, [0.0] * 61, 4.3)]
+    ion = {"C": 17, "H": 20, "N": 1, "O": 3}
+    info = {"low": 50.0, "high": 700.0, "target": prec, "lo": 1.0, "hi": 1.0,
+            "ms1_mz": [p for p in ISO.pattern(ion, "POS")[0:1] for p in [prec]] + [prec + 1.00336, prec + 2.0067, 302.2, 301.6],
+            "ms1_it": [1000.0, 190.0, 25.0, 130.0, 70.0]}
+    m1 = [RAW.ms1_metrics(info, prec, ion, S), RAW.ms1_metrics(info, 400.0, ion, S), RAW.ms1_metrics(info, prec, None, S)]
+    return {"iso": iso, "iso2": iso2, "imposs": imp, "qs": qs, "unexplained": unex, "chance": chance, "coel_rows": coel,
+            "badge_bad": bad, "badge_good": good, "low": low, "coelution": co, "peak_quality": pq, "ms1_info": info,
+            "ms1_ion": ion, "ms1": m1, "inputs": {"mz": mz, "it": it, "prec": prec, "pm": pm, "pi": pi, "em": em, "ei": ei, "rm": rm,
+                                                    "ri": ri, "expl": expl, "rt": rt, "g1": g1, "g2": g2, "y": y, "blank": br}}
+
+
+def _spiegazioni_rtlogp(RL):
+    x = [0.2 + 0.31 * i for i in range(24)]
+    y = [1.1 + 0.9 * v + 0.15 * math.sin(3 * i) for i, v in enumerate(x)]
+    X = [[v, 150 + 12 * i, 20 + (i * 7) % 40, i % 6, i % 4, (i * 3) % 7] for i, v in enumerate(x)]
+    pts = [{"xlogp3": v, "crippen": v + 0.2 * math.cos(i), "y": y[i], "class": ("acid", "base", "neutral")[i % 3],
+            "mw": X[i][1], "tpsa": X[i][2], "nrot": X[i][3], "hbd": X[i][4], "hba": X[i][5]} for i, v in enumerate(x)]
+    model = RL.calibrate(pts, 3.0, 0.0)
+    model_small = RL.calibrate(pts[:10], 3.0, 0.0)
+    lp = {"xlogp3": 2.5, "crippen": 2.4, "class": "base", "mw": 220, "tpsa": 30, "nrot": 3, "hbd": 1, "hba": 4}
+    checks = [RL.check(model, lp, 3.6, 3.0, 0.0), RL.check(model, lp, 9.0, 3.0, 0.0), RL.check(model, {"xlogp3": None, "crippen": None}, 3.0, 3.0, 0.0),
+              RL.check(model_small, lp, 3.0, 3.0, 0.0)]
+    grad = [[0.0, 5.0], [2.0, 5.0], [12.0, 95.0], [14.0, 95.0], [14.1, 5.0]]
+    return {"line": RL.fit_line(x, y), "line_short": RL.fit_line(x[:2], y[:2]), "mlr": RL.fit_mlr(X, y), "mlr_short": RL.fit_mlr(X[:5], y[:5]),
+            "points": pts, "model": model, "model_small": model_small, "lp": lp, "checks": checks,
+            "organic": [[t, RL.organic_fraction(t, grad, 0.4)] for t in (0.1, 1.0, 2.0, 5.5, 13.0, 14.05, 20.0)], "gradient": grad}
+
+
+FRAGMENTI_SMILES = [
+    "Cn1cnc2c1c(=O)n(C)c(=O)n2C", "CC(C)Cc1ccc(cc1)C(C)C(=O)O", "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl", "NC(=O)N1c2ccccc2C=Cc2ccccc12",
+    "CCNc1nc(Cl)nc(NC(C)C)n1", "CC(C)NCC(O)COc1cccc2ccccc12", "Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1", "CC(=O)Nc1ccc(O)cc1",
+    "COc1ccc2cc(ccc2c1)C(C)C(=O)O", "CC(C(=O)c1cccc(c1)C(=O)c1ccccc1)c1ccccc1", "CC(C)(c1ccc(O)cc1)c1ccc(O)cc1",
+    "NCCc1ccccc1", "COc1ccccc1OCC(O)CN", "COCCc1ccc(OCC(O)CNC(C)C)cc1", "CCN(CC)CC(=O)Nc1c(C)cccc1C",
+    "[O-][N+](=O)NC1=NCCN1Cc1ccc(Cl)nc1", "CN(C)CC1CCCCC1(O)c1cccc(OC)c1", "CC(C)NCC(O)c1ccc(O)c(O)c1",
+    "OC(=O)c1ccccc1OC(C)=O", "Clc1ccc(Cl)c(c1)Oc1ccc(Cl)cc1O", "CCOC(=O)c1ccc(N)cc1", "NC(=O)c1cccnc1",
+    "OC(=O)CCCCC(=O)O", "CCCCOC(=O)c1ccc(O)cc1", "COC(=O)c1ccccc1C(=O)OC", "CC(=O)OCC(=O)C1CCC2C1(C)CCC1C2CCC2=CC(=O)CCC12C",
+    "c1ccc(cc1)-c1ccccc1", "OC(=O)C(O)C(O)C(O)=O", "CC(N)Cc1ccccc1", "O=C(O)c1ccccc1-c1ccccc1", "CN1CCC(CC1)Oc1ccccc1",
+    "Nc1ccc(cc1)S(N)(=O)=O", "CC(C)(C)NCC(O)c1ccc(O)c(CO)c1", "OCCN(CCO)c1ccccc1", "CCCN(CCC)c1c(cc(cc1[N+](=O)[O-])C(F)(F)F)[N+](=O)[O-]",
+    "c1ccc2c(c1)[nH]c1ccccc12", "Oc1ccc(cc1)C(=O)OCC", "NC1=NC(=O)c2[nH]cnc2N1", "CC1=C(C(=O)NC2=CC=CC=C2)SCCO1",
+]
+
+
+def stadio_frammenti():
+    """Systematic bond cleavage of 40 structures against peaks built from their own fragments (AT-06; needs RDKit)."""
+    from attributio.review.fragmenter import fragment_molecule
+    out = []
+    for k, smi in enumerate(FRAGMENTI_SMILES):
+        pol = "POS" if k % 4 else "NEG"
+        base = fragment_molecule(smi, pol=pol, exp_peaks=[], ppm_tol=10.0)
+        if not base.get("ok"):
+            out.append({"smiles": smi, "pol": pol, "ok": False})
+            continue
+        sides = [fr for b in base["bonds"] for fr in (b["frag1"], b["frag2"]) if fr]
+        peaks = []
+        for j, fr in enumerate(sides):
+            if j % 2 == 0 or not peaks:
+                mz = fr["mz_pos"] if pol == "POS" else fr["mz_neg"]
+                if "O" in fr["formula"] and j % 3 == 0:
+                    mz -= 18.010565
+                peaks.append(round(mz * (1 + ((j % 5) - 2) * 1.8e-6), 5))
+        peaks += [round(103.7 + k * 1.3, 4), round(251.234 + k, 4)]
+        peaks = sorted(set(peaks))
+        r = fragment_molecule(smi, pol=pol, exp_peaks=peaks, ppm_tol=10.0)
+        out.append({"smiles": smi, "pol": pol, "ok": True, "peaks": peaks, "n_bonds": len(r["bonds"]),
+                    "bonds": [[b["label"], (b["frag1"] or {}).get("formula"), (b["frag2"] or {}).get("formula")] for b in r["bonds"]],
+                    "explained": [[e["peak"], e["formula"], e["mz_th"], e["ppm"], e["loss"], e["bond_label"]] for e in r["explained_peaks"]]})
+    return {"molecole": out}
+
+
 def controlla(uscita: Path, campagna: Path) -> int:
     got = json.loads((uscita / "livelli.json").read_text(encoding="utf-8"))["features"]
     with open(campagna / "livelli_attesi.csv", encoding="utf-8", newline="") as fh:
@@ -360,6 +513,7 @@ def main() -> int:
     ap.add_argument("--uscita", type=Path, default=USCITA)
     ap.add_argument("--sorbenti", type=Path, default=SORBENTI)
     ap.add_argument("--uscita-sorbenti", type=Path, default=USCITA_SORBENTI)
+    ap.add_argument("--solo", nargs="+", metavar="STADIO", help="write only these stages (e.g. spiegazioni frammenti)")
     ap.add_argument("--controlla", action="store_true",
                     help="compare livelli.json with livelli_attesi.csv (exit 1 on difference)")
     a = ap.parse_args()
@@ -367,21 +521,28 @@ def main() -> int:
     if not src:
         print("ATTRIBUTIO_SRC=<path of Attributio's src/> is required", file=sys.stderr)
         return 2
-    C = carica(Path(src).expanduser().resolve(), a.campagna.resolve())
+    root = Path(src).expanduser().resolve()
+    C = carica(root, a.campagna.resolve())
     from attributio.annotate import load_annotations
     feat = load_annotations(C)
-    scrivi(a.uscita, "campagna.json", stadio_campagna(C))
-    scrivi(a.uscita, "letture.json", stadio_letture(C))
-    scrivi(a.uscita, "rilevazione.json", stadio_rilevazione(C))
-    scrivi(a.uscita, "livelli.json", stadio_livelli(feat))
-    scrivi(a.uscita, "identita.json", stadio_identita(feat, C))
-    scrivi(a.uscita, "proposte.json", stadio_proposte(C))
-    scrivi(a.uscita, "decisioni.json", stadio_decisioni(C, feat))
-    scrivi(a.uscita, "abbinamenti.json", stadio_abbinamenti())
-    scrivi(a.uscita, "formule.json", stadio_formule())
-    scrivi(a.uscita, "sirius.json", stadio_sirius(C))
-    scrivi(a.uscita, "standard.json", stadio_standard(C))
-    scrivi(a.uscita_sorbenti, "sorbenti.json", stadio_sorbenti(carica(Path(src).expanduser().resolve(), a.sorbenti.resolve())))
+    stadi = {
+        "campagna": lambda: scrivi(a.uscita, "campagna.json", stadio_campagna(C)),
+        "letture": lambda: scrivi(a.uscita, "letture.json", stadio_letture(C)),
+        "rilevazione": lambda: scrivi(a.uscita, "rilevazione.json", stadio_rilevazione(C)),
+        "livelli": lambda: scrivi(a.uscita, "livelli.json", stadio_livelli(feat)),
+        "identita": lambda: scrivi(a.uscita, "identita.json", stadio_identita(feat, C)),
+        "proposte": lambda: scrivi(a.uscita, "proposte.json", stadio_proposte(C)),
+        "decisioni": lambda: scrivi(a.uscita, "decisioni.json", stadio_decisioni(C, feat)),
+        "abbinamenti": lambda: scrivi(a.uscita, "abbinamenti.json", stadio_abbinamenti()),
+        "formule": lambda: scrivi(a.uscita, "formule.json", stadio_formule()),
+        "sirius": lambda: scrivi(a.uscita, "sirius.json", stadio_sirius(C)),
+        "standard": lambda: scrivi(a.uscita, "standard.json", stadio_standard(C)),
+        "spiegazioni": lambda: scrivi(a.uscita, "spiegazioni.json", stadio_spiegazioni()),
+        "frammenti": lambda: scrivi(a.uscita, "frammenti.json", stadio_frammenti()),
+        "sorbenti": lambda: scrivi(a.uscita_sorbenti, "sorbenti.json", stadio_sorbenti(carica(root, a.sorbenti.resolve()))),
+    }
+    for nome in a.solo or list(stadi):
+        stadi[nome]()
     return controlla(a.uscita, a.campagna) if a.controlla else 0
 
 

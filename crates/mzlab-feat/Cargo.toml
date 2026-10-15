@@ -13,7 +13,7 @@ crate-type = ["rlib"]
 default = ["chem"]
 chem = []
 # `attributio`: reading of the campaign folders of Attributio (campaign.toml, mzMine/SIRIUS/GNPS2 tables, decisions), its review matching on top of `mzlab-lib` (`docs/agenti/attributio.md`) and, in the next packages, its level cascade. Off by default: no `.wasm` carries it yet.
-attributio = ["dep:mzlab-lib"]
+attributio = ["dep:mzlab-lib", "chem"]
 # `untargeted`: detection of the features from the raw data after the algorithms of mzmine 3.9.0 (`src/untargeted/`), rewritten from scratch. Off by default.
 untargeted = []
 

@@ -125,7 +125,7 @@ impl Mol {
     }
 
     /// Neutral formula of the atoms in `keep` (heavy atoms and the hydrogens they carry).
-    pub(super) fn formula_of(&self, keep: &[bool]) -> Formula {
+    pub fn formula_of(&self, keep: &[bool]) -> Formula {
         let mut f: Formula = Vec::new();
         let mut add = |el: &str, n: u64| match f.iter_mut().find(|(e, _)| e == el) {
             Some(x) => x.1 += n,
@@ -178,7 +178,7 @@ impl Mol {
     }
 
     /// Bonds on a ring: cutting one does not split the molecule.
-    pub(super) fn ring_bonds(&self) -> Vec<bool> {
+    pub fn ring_bonds(&self) -> Vec<bool> {
         (0..self.bonds.len())
             .map(|k| {
                 let (a, b) = (self.bonds[k].a, self.bonds[k].b);
@@ -241,7 +241,7 @@ impl Mol {
     }
 
     /// The atoms on the side of `bond.a` and of `bond.b` when the (non-ring) bond is cut.
-    pub(super) fn sides(&self, k: usize) -> (Vec<bool>, Vec<bool>) {
+    pub fn sides(&self, k: usize) -> (Vec<bool>, Vec<bool>) {
         let mut a = vec![false; self.atoms.len()];
         a[self.bonds[k].a] = true;
         let mut st = vec![self.bonds[k].a];
