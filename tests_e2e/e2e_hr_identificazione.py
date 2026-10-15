@@ -19,8 +19,8 @@ try:
                 LIB.assess([{name:'x',ent:.3,shared:9,dprec:1}],{nScans:3}).proposed, LIB.assess([],{}).proposed,
                 LIB.groupAssess({n:1,best:{name:'x',ent:.9,shared:8,dprec:1}}).proposed, LIB.groupAssess({n:3,best:{name:'x',ent:.9,shared:8,dprec:1}}).proposed,
                 LIB.groupAssess({n:3,best:{name:'x',ik:'AAAAAAAAAAAAAA-A',ent:.9,shared:8,dprec:1,alt:{name:'y',ik:'BBBBBBBBBBBBBB-A',ent:.88,shared:8,dprec:1}}}).proposed]""")
-            assert v == ["2a", "3", "3", "5", "5", "3", "2a", "3"], v
-        step("levels: library match 2a, thresholds, a single scan or a close competitor gives 3, nothing 5", verdicts)
+            assert v == ["2a", "3a", "3a", "5", "5", "3a", "2a", "3a"], v
+        step("levels: library match 2a, thresholds, a single scan or a close competitor gives 3a, nothing 5", verdicts)
         def grouping():
             g = pg.evaluate("""LIB.groupRows([{prec:300.0000,rt:1.00,ent:.5,name:'a'},{prec:300.0010,rt:1.10,ent:.9,name:'a'},{prec:300.0020,rt:3.00,ent:.4,name:'a'},{prec:400,rt:1.0,ent:null,name:''}]).map(x=>[x.n,Math.round(x.rt*100)/100,x.best.ent])""")
             assert g == [[2, 1.1, 0.9], [1, 1.0, None], [1, 3.0, 0.4]] or sorted(map(tuple, g)) == sorted([(2, 1.1, 0.9), (1, 1.0, None), (1, 3.0, 0.4)]), g

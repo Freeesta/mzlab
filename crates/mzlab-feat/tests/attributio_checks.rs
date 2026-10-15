@@ -334,7 +334,7 @@ fn check_campaign(dir: &Path, oro: Option<&Path>) {
             f.id
         );
         assert_eq!(
-            f.level == 2,
+            f.level == 2 || f.level == 3,
             !f.level_sub.is_empty(),
             "{} {} {}: sub-level",
             c.id,

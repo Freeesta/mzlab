@@ -9,6 +9,7 @@ pub mod labels;
 pub mod mrm;
 pub mod ms2;
 pub mod ms2link;
+pub mod ms2target;
 pub mod peak1d;
 pub mod plan;
 pub mod rows;
@@ -63,6 +64,8 @@ pub struct Entry {
     pub criteria: Vec<Crit>,
     pub isotope_of: Option<i64>,
     pub generation: Option<&'static str>,
+    /// A row made from an MS2 experiment whose ion the Dig does not list (`ms2target`).
+    pub ms2_target: bool,
 }
 
 /// The whole Dig, kept by the worker for `detail`.
@@ -79,6 +82,8 @@ pub struct LrDig {
     pub isf: Vec<(i64, crate::legacy::lrisf::IsfVerdict)>,
     /// The MS2 matches (`ms2link::ms2_link`; `None` until computed: the pools are empty).
     pub links: Option<ms2link::Links>,
+    /// The aligned table of the columns, for the rows that `ms2target` makes from the MS2 experiments.
+    pub table: std::sync::Arc<Aligned>,
 }
 
 /// `+X-Y`: atoms gained and lost from the parent (empty without both formulas).
@@ -108,7 +113,7 @@ pub fn delta(formula: &str, parent: &str) -> String {
     format!("{}{}", part(true), part(false))
 }
 
-fn evaluate(e: &mut Entry, t: &Aligned, lc: &[FileIn], p: labels::Persist) {
+pub(super) fn evaluate(e: &mut Entry, t: &Aligned, lc: &[FileIn], p: labels::Persist) {
     e.cells = match e.row {
         Some(r) => rows::cells(t, r),
         None => vec![Cell::default(); lc.len()],
@@ -119,6 +124,25 @@ fn evaluate(e: &mut Entry, t: &Aligned, lc: &[FileIn], p: labels::Persist) {
     (e.score, e.label, e.criteria) = (sc.score, sc.label, sc.criteria);
 }
 
+/// Isotope check and kinetic generation of one entry (`snapshot` = the entries the isotope is looked for in).
+pub(super) fn finish_one(
+    e: &mut Entry,
+    snapshot: &[Entry],
+    lc: &[FileIn],
+    s: &Settings,
+    gens: &Gens,
+) {
+    let hit = rows::isotope_of(e, snapshot, s.tol_da, s.rt_tol_min);
+    rows::isotope_crit(e, hit);
+    if status(&e.criteria, GROWS) == "pass" {
+        if let Some((v, text)) = gen_of(gens, &kinetics(lc, &e.cells)) {
+            e.criteria
+                .push(labels::crit("kinetic generation", "n/a", text));
+            e.generation = Some(v);
+        }
+    }
+}
+
 /// Isotope check and kinetic generation of every entry but the parent.
 fn finish(entries: &mut [Entry], lc: &[FileIn], s: &Settings, gens: &Gens) {
     let snapshot: Vec<Entry> = entries.to_vec();
@@ -126,15 +150,7 @@ fn finish(entries: &mut [Entry], lc: &[FileIn], s: &Settings, gens: &Gens) {
         .iter_mut()
         .filter(|e| e.id != 0 && e.score.is_some())
     {
-        let hit = rows::isotope_of(e, &snapshot, s.tol_da, s.rt_tol_min);
-        rows::isotope_crit(e, hit);
-        if status(&e.criteria, GROWS) == "pass" {
-            if let Some((v, text)) = gen_of(gens, &kinetics(lc, &e.cells)) {
-                e.criteria
-                    .push(labels::crit("kinetic generation", "n/a", text));
-                e.generation = Some(v);
-            }
-        }
+        finish_one(e, &snapshot, lc, s, gens);
     }
 }
 
@@ -229,5 +245,6 @@ pub fn dig(
         entries,
         isf: Vec::new(),
         links: None,
+        table: std::sync::Arc::new(t),
     })
 }

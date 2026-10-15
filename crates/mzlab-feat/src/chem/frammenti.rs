@@ -132,8 +132,8 @@ pub fn apply_delta(f: &Formula, d: &[(i64, Formula)]) -> Result<Formula> {
         .collect())
 }
 
-/// `parz/1`: a partial structure (a drawn piece whose exact position of a change is unknown) as `{"format","formula","mass","mz","delta","level":3}`:
-/// the formula of the molfile plus the delta, its neutral mass and the m/z of [M+H]+. Level 3 of Schymanski: a candidate class, never one structure.
+/// `parz/1`: a partial structure (a drawn piece whose exact position of a change is unknown) as `{"format","formula","mass","mz","delta","level":"3b"}`:
+/// the formula of the molfile plus the delta, its neutral mass and the m/z of [M+H]+. Level 3b of Schymanski: a generic class with many plausible isomers, never one structure.
 pub fn partial_json(molfile: &str, delta: &str) -> Result<String> {
     let m = Mol::from_molfile(molfile)?;
     let d = parse_delta(delta)?;
@@ -147,7 +147,7 @@ pub fn partial_json(molfile: &str, delta: &str) -> Result<String> {
     o.raw(",\"mz\":").num(mzlab_core::json::round(mz, 4));
     o.raw(",\"delta\":")
         .str(&fmt_delta(&d))
-        .raw(",\"level\":3}");
+        .raw(",\"level\":\"3b\"}");
     Ok(o.0)
 }
 
@@ -186,7 +186,7 @@ mod molfile_tests {
         let j = partial_json(ETHANOL, "+O -H2").unwrap();
         assert!(j.contains("\"formula\":\"C2H4O2\""), "{j}");
         assert!(
-            j.contains("\"level\":3") && j.contains("\"delta\":\"+O -H2\""),
+            j.contains("\"level\":\"3b\"") && j.contains("\"delta\":\"+O -H2\""),
             "{j}"
         );
         assert_eq!(

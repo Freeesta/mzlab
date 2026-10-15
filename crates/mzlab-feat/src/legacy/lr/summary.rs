@@ -156,7 +156,11 @@ fn row_json(o: &mut Out, r: &Row, p_mz: f64) {
     }
     o.raw(",\"insource\":")
         .raw(if r.insource { "true" } else { "false" });
-    o.raw(",\"ms2\":").int(r.ms2 as i64).raw("}");
+    o.raw(",\"ms2\":").int(r.ms2 as i64);
+    if e.ms2_target {
+        o.raw(",\"ms2_target\":true");
+    }
+    o.raw("}");
 }
 
 fn rank(label: &str) -> u8 {

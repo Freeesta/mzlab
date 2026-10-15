@@ -79,6 +79,8 @@ pub struct Decision {
     pub feature_decision: String,
     pub group_override: Option<String>,
     pub decision_2b: bool,
+    /// The chemist wrote `3b` (a generic class with many plausible isomers): the Level 3 is 3b instead of 3a.
+    pub sub_3b: bool,
     /// `evidence_*` columns of a 2b decision.
     pub evidence: Vec<(String, String)>,
 }

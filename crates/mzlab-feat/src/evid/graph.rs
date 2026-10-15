@@ -16,10 +16,12 @@ pub const SOURCE_FEATURES: &str = "mzlab-feat/evid";
 pub const HYPOTHESIS_PPM: f64 = 5.0;
 pub const HYPOTHESIS_RT: f64 = 0.3;
 pub const RT_MARGIN: f64 = 0.05;
-/// The highest level reachable with and without an MS2 proof (no library match without an MS2).
+/// The highest level reachable: 2a only with the MS2 spectrum matched to an experimental library (mzCloud, MassBank, MoNA); 2b is the chemist's, never the
+/// programme's. A match to an in-silico library stays a candidate (3a); without a library MS2 proof, 4.
 pub const MAX_LEVEL_WITH_MS2: &str = "2a";
-/// At unit resolution a library match on nominal masses is never above 3.
-pub const MAX_LEVEL_UNIT: &str = "3";
+pub const MAX_LEVEL_IN_SILICO: &str = "3a";
+/// At unit resolution a library match on nominal masses is not above 4: an MS2 does not raise a level (decision D6 of Tabui).
+pub const MAX_LEVEL_UNIT: &str = "4";
 pub const MAX_LEVEL_WITHOUT_MS2: &str = "4";
 
 /// Measurements that need the data of the files and are made by the caller; absent = not measured.
@@ -45,6 +47,8 @@ pub struct LibHit {
     pub shared: u32,
     /// Error on the precursor, ppm.
     pub ppm: f64,
+    /// The entry comes from an experimental spectrum (mzCloud, MassBank, MoNA); false for a library of in-silico spectra.
+    pub experimental: bool,
 }
 
 /// A result of another program on a row (SIRIUS/COSMIC, MetFrag, GNPS2, mzmine): `score` is the confidence it gives.
@@ -140,7 +144,7 @@ pub struct Identity {
     pub edges: Vec<Edge>,
     /// Largest area of the row over the files: the tie-break of equal totals (then the order of the rows).
     pub area_max: f64,
-    /// The highest level the cascade can reach with these proofs: without an MS2 there is no library match, so never above 4.
+    /// The highest level the cascade can reach with these proofs: 2a only with an experimental library MS2 (3a with an in-silico one), never above 4 without it.
     pub max_level: &'static str,
 }
 
@@ -439,6 +443,7 @@ pub(super) fn identity_of(
     let has_ms2 =
         g.ev.iter()
             .any(|e| e.kind == Kind::Ms2 && !e.value.is_nan());
+    let experimental = lib.is_some_and(|l| inp.libs[l].experimental);
     let mut breakdown = breakdown(inp.table, g.ev, n);
     let undetermined = edges
         .iter()
@@ -467,8 +472,10 @@ pub(super) fn identity_of(
         area_max: area_max(inp.aligned, row),
         max_level: if has_ms2 && inp.table.unit {
             MAX_LEVEL_UNIT
-        } else if has_ms2 {
+        } else if has_ms2 && experimental {
             MAX_LEVEL_WITH_MS2
+        } else if has_ms2 {
+            MAX_LEVEL_IN_SILICO
         } else {
             MAX_LEVEL_WITHOUT_MS2
         },

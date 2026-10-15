@@ -11,7 +11,7 @@ mod rules;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Value;
 
-use super::LrDig;
+use super::{ms2target, LrDig};
 use crate::legacy::Res;
 pub use exp::{Exp, PeakL};
 pub use json::json;
@@ -162,12 +162,24 @@ pub fn compute<R: ReadAt>(
     rules::link(d, exps, polarity, ov, open)
 }
 
-/// `compute` and keep the result in `d` (`pool`, `summary` and `detail` read it).
+/// `compute` and keep the result in `d` (`pool`, `summary` and `detail` read it). The peaks that no row got and that have a feature in the table
+/// make a row each (`ms2target`) and the matches are computed again with them.
 pub fn ms2_link<R: ReadAt>(
     d: &mut LrDig,
     ov: &[Override],
     open: &mut dyn FnMut(usize) -> Res<Index<R>>,
 ) -> Res<()> {
-    d.links = Some(compute(d, ov, open)?);
+    ms2target::clear(d);
+    let mut l = compute(d, ov, open)?;
+    let had_isf = !d.isf.is_empty();
+    let made = ms2target::make(d, &l);
+    if !made.is_empty() {
+        if had_isf {
+            ms2target::verdicts(d, open)?;
+        }
+        l = compute(d, ov, open)?;
+    }
+    ms2target::finish_links(d, &mut l, &made);
+    d.links = Some(l);
     Ok(())
 }

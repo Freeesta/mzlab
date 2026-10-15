@@ -42,7 +42,8 @@
   "mzlab/web/picchi.js": 557,
   "mzlab/web/tour.js": 719,
   "tools/attributio_riferimento.py": 720,
-  "tools/genera_ei.py": 751
+  "tools/genera_ei.py": 751,
+  "crates/mzlab-core/src/rawlettore.rs": 680
  },
  "funzioni": {
   "TP_Mine/js/20_tpmine.js::open": 488,
@@ -200,6 +201,9 @@
   "mzlab/web/workflow.js::WORKFLOW": 379,
   "tools/bench_mirino.py::run": 85,
   "tools/controlla_teoria.py::public_errors": 94,
-  "tools/dati_sintetici.py::hr_dda": 103
+  "tools/dati_sintetici.py::hr_dda": 103,
+  "crates/mzlab-core/src/rawlettore.rs::field": 115,
+  "crates/mzlab-lettori-wasm/src/sessione.rs::Sessioni": 123,
+  "crates/mzlab-wasm/src/esterno.rs::ModuloJs": 106
  }
 }

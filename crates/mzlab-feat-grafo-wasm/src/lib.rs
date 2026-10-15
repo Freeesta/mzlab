@@ -36,7 +36,7 @@ pub fn fragments(molfile: &str, a: i32, b: i32) -> std::result::Result<String, J
     mzlab_feat::chem::frammenti::fragments_json(molfile, a, b).map_err(js_err)
 }
 
-/// `parz/1` of a V2000 molfile and a delta «+O -H2»: formula, mass and m/z of [M+H]+ of the partial structure, `level` 3
+/// `parz/1` of a V2000 molfile and a delta «+O -H2»: formula, mass and m/z of [M+H]+ of the partial structure, `level` 3b
 /// (see `mzlab_feat::chem::frammenti::partial_json`).
 #[wasm_bindgen]
 pub fn partial(molfile: &str, delta: &str) -> std::result::Result<String, JsValue> {
