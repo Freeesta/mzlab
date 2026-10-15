@@ -206,10 +206,13 @@ async function lrOp(m) {
     }
     case "lr_put": return lrPut(m);
     case "lr_index": try {                                                    // the scan table (Rust), the index (a short-lived worker of the pool), then the index is opened
-      const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.indexJob(m.name), part = m.name + ".mzidx.part";
+      const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.indexJob(m.name), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
       const onProgress = p => postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase });
-      const res = await idxPool().build(job ? { name: m.name, nat: job, part, onProgress }
+      const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, onProgress }
         : { name: m.name, blob: f, inputs: Array.from(prepare_upload(f.size, readerFor(f), m.name)).slice(0, 8), part, onProgress });      // frac: how far the builder has read
+      if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
+        if (res.ok && res.stats && res.stats.cen) await ARCH.promote("idx", partCen, m.name + ".cen.mzidx"); else await ARCH.remove("idx", partCen);
+      }
       if (!res.ok) {                                                                // the true cause reaches the page: the error of the builder (a key), else its text
         await ARCH.remove("idx", part);
         if (res.reason === "memory") jerr("error.memoryBudget");

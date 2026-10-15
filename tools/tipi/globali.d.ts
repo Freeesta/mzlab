@@ -45,6 +45,7 @@ declare var MZLAB_BROWSER: any;
 declare var MZLAB_LR: any;
 declare var MZLAB_LR_ERR: any;
 declare var MZLAB_LR_MISS: any;
+declare var MZLAB_CEN_IDX: boolean;
 declare var MZLAB_RUST: any;
 declare var MZLAB_RUST_ERR: any;
 declare var MZLAB_RUST_READY: any;

@@ -291,7 +291,8 @@
       const unmount = typeof PROGRESSO !== "undefined" ? PROGRESSO.mount(box) : () => {};      // the same bar as the Data tab (progresso.js): one model, forward only
       msg(`Preparing ${fs.length} file${fs.length === 1 ? "" : "s"} in the Data tab...`);
       try {
-        if (folder) await CartCarica.fromInput(fs); else await upload(fs, "data");
+        window.MZLAB_CEN_IDX = true;      // the Data tab builds the centroid index of a profile sample in the same decoding as its own (rust-worker.js lr_index)
+        try { if (folder) await CartCarica.fromInput(fs); else await upload(fs, "data"); } finally { window.MZLAB_CEN_IDX = false; }
         const fresh = new Set((ST.files || []).map(f => f.name).filter(n => !before.has(n)));
         const got = (await pageFiles()).filter(x => fresh.has(x.name));
         if (!got.length) return msg("No new sample was added: the files are already in the Data tab, or they cannot be read (see the notice there).", true);
