@@ -48,7 +48,8 @@ try:
             pg.keyboard.press("Escape")
         step("palette searches the Teoria commands", palette)
         def gear():
-            pg.click("#np-set"); pg.wait_for_timeout(300)
+            assert not pg.locator("#np-set").is_visible()      # the Teoria has its own settings on the right: the gear of the program is gone
+            pg.click("#stbar [data-tcmd=impostazioni]"); pg.wait_for_timeout(300)
             assert pg.locator("#uipset").count() == 0
             pg.wait_for_function("!document.getElementById('tframe').contentDocument.getElementById('a11y-panel').hidden", timeout=5000)
         step("gear in the Teoria does not open the data settings", gear)

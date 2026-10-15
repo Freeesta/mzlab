@@ -5,6 +5,8 @@ I18N.add("en", {
   "nav.theory": "Theory",
   "nav.theory.title": "Theory: not available in English yet",
   "theory.onlyItalian": "Sorry! For now the theory is only in Italian.",
+  "theory.editor": "Edit chapter",
+  "theory.editor.title": "Edit the chapter (administrator only)",
   "theory.sorry.openItalian": "Open the Italian version anyway",
   "settings.language.label": "Lingua / Language",
   "settings.language.title": "Lingua dell'interfaccia / Interface language",
