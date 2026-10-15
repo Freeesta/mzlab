@@ -42,6 +42,7 @@ declare var METODO_REGISTRO: any;
 declare var MIRINO: any;
 declare var MOLUI: any;
 declare var MZLAB_BROWSER: any;
+declare var MZLAB_CEN_IDX: any;
 declare var MZLAB_LR: any;
 declare var MZLAB_LR_ERR: any;
 declare var MZLAB_LR_MISS: any;

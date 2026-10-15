@@ -12,9 +12,33 @@ pub struct Centroidato {
     l: Box<dyn Lettore>,
     params: Vec<Option<Params>>,
     buf: Buf,
+    /// The scan last given by `grezza`, kept for the `scansione` that asks for the same one (the two versions of an index from one decoding).
+    ultima: Option<(usize, usize, Spectrum)>,
 }
 
 impl Centroidato {
+    pub fn nuovo(l: Box<dyn Lettore>) -> Centroidato {
+        let n = l.campioni().len();
+        Centroidato {
+            l,
+            params: vec![None; n],
+            buf: Buf::default(),
+            ultima: None,
+        }
+    }
+
+    /// The reader underneath: the one of the version with the scans as the file has them (profile stays profile).
+    pub fn semplice(&mut self) -> &mut dyn Lettore {
+        &mut *self.l
+    }
+
+    /// Scan `k` of sample `c` as the reader gives it, decoded now and kept: the next `scansione(c, k)` centroids this one instead of decoding it again.
+    pub fn grezza(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        let s = self.l.scansione(c, k)?;
+        self.ultima = Some((c, k, s.clone()));
+        Ok(s)
+    }
+
     fn params(&mut self, c: usize) -> Result<Params> {
         if let Some(Some(p)) = self.params.get(c) {
             return Ok(p.clone());
@@ -58,7 +82,10 @@ impl Lettore for Centroidato {
         self.l.indice(c)
     }
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        let mut s = self.l.scansione(c, k)?;
+        let mut s = match self.ultima.take() {
+            Some((cc, kk, s)) if cc == c && kk == k => s,
+            _ => self.l.scansione(c, k)?,
+        };
         if !s.profile {
             return Ok(s);
         }
@@ -102,12 +129,7 @@ impl Lettore for Centroidato {
 
 /// `l` with its profile scans as centroids.
 pub fn centroidato(l: Box<dyn Lettore>) -> Box<dyn Lettore> {
-    let n = l.campioni().len();
-    Box::new(Centroidato {
-        l,
-        params: vec![None; n],
-        buf: Buf::default(),
-    })
+    Box::new(Centroidato::nuovo(l))
 }
 
 #[cfg(test)]

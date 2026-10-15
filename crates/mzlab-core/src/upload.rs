@@ -295,6 +295,53 @@ pub fn indicizza_lettore_con(
     Ok((st, p.sha256))
 }
 
+/// The two `.mzidx` of a sample whose scans may be profile, from ONE decoding of them: `out` gets the index with the scans as the file has them (what
+/// `indicizza_lettore_con` writes) and `out_cen` the one with the profile scans as centroids (what it writes for a reader wrapped by `centroidato`).
+/// The bytes are those of the two separate builds; the budget is shared (half each) and so is the scratch file (`mzidx_spill::Meta`).
+#[allow(clippy::too_many_arguments)]
+pub fn indicizza_lettore_doppio(
+    l: &mut crate::lettori_centroidi::Centroidato,
+    c: usize,
+    membri: &mut dyn FnMut() -> Result<Vec<Impronta>>,
+    name: &str,
+    out: &mut dyn crate::mzidx::Output,
+    out_cen: &mut dyn crate::mzidx::Output,
+    budget: usize,
+    spill: Option<&mut dyn crate::mzidx_spill::Spill>,
+    fase: &mut dyn FnMut(u32),
+) -> Result<((crate::mzidx::Stats, String), (crate::mzidx::Stats, String))> {
+    use crate::mzidx_spill::{Meta, Spill};
+    let meta = budget / 2;
+    let cell = spill.map(std::cell::RefCell::new);
+    let mut m0 = cell.as_ref().map(|sp| Meta { sp, quale: 0 });
+    let mut m1 = cell.as_ref().map(|sp| Meta { sp, quale: 1 });
+    let mut prima = crate::mzidx::Prima::new(meta, m0.as_mut().map(|m| m as &mut dyn Spill));
+    let mut prima_cen = crate::mzidx::Prima::new(meta, m1.as_mut().map(|m| m as &mut dyn Spill));
+    let (t, t_cen) = mzidx_lettore::righe_prima_doppie(l, c, &mut prima, &mut prima_cen)?;
+    let membri = membri()?;
+    let p = dalla_tabella(t, l.semplice(), c, &membri, name)?;
+    let p_cen = dalla_tabella(t_cen, l.semplice(), c, &membri, name)?;
+    fase(3);
+    let n = l.indice(c)?.len();
+    let st = crate::mzidx::build_dopo(
+        &p.table,
+        prima,
+        &mut |on| (0..n).try_for_each(|k| mzidx_lettore::spettro(l.semplice(), c, k).map(&mut *on)),
+        out,
+        meta,
+        true,
+    )?;
+    let st_cen = crate::mzidx::build_dopo(
+        &p_cen.table,
+        prima_cen,
+        &mut |on| (0..n).try_for_each(|k| mzidx_lettore::spettro(l, c, k).map(&mut *on)),
+        out_cen,
+        meta,
+        true,
+    )?;
+    Ok(((st, p.sha256), (st_cen, p_cen.sha256)))
+}
+
 /// Native only: the fingerprints of the members are taken by a second thread (`ricetta` makes its own file set, since a reader does not cross threads)
 /// while `lavoro` decodes the scans. `lavoro` gets the function that waits for them (to hand to `indicizza_lettore_con`); the members of the set
 /// it opens carry an empty SHA-1 (`senza_sha1`): the table does not read it. SHA-256 and SHA-1 are the same as `impronte` gives.

@@ -54,7 +54,7 @@ export function createPool({ workerUrl, size, budget = 64, notify = /** @type {(
     w.onmessage = ev => {
       const m = ev.data;
       if (job.done) return;
-      if (m.op === "ready") { job.inited = true; w.postMessage(job.msg || { blob: job.blob, inputs: job.inputs, part: job.part, budget: job.budget || budget, nat: job.nat, name: job.name }, job.transfer || []); return; }
+      if (m.op === "ready") { job.inited = true; w.postMessage(job.msg || { blob: job.blob, inputs: job.inputs, part: job.part, partCen: job.partCen, budget: job.budget || budget, nat: job.nat, name: job.name }, job.transfer || []); return; }
       if (m.op === "progress") { if (job.onProgress) job.onProgress(m); return; }
       if (m.op === "unavailable") { end(); off = true; finish(job, { ok: false, reason: "unavailable", text: m.text }); wake(); return; }
       if (m.op === "done") { end(); finish(job, { ok: true, stats: m.stats, ms: m.ms, parts: m.parts }); wake(); return; }

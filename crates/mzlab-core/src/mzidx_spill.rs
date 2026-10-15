@@ -29,6 +29,28 @@ impl<T: Read + Write + Seek> Spill for T {
     }
 }
 
+/// Half of a scratch file shared by two builders (`quale` 0 or 1): the slots of the two alternate, so each sees its own file and neither knows about the other.
+pub struct Meta<'a, 'b> {
+    pub sp: &'a std::cell::RefCell<&'b mut dyn Spill>,
+    pub quale: u64,
+}
+
+impl Meta<'_, '_> {
+    fn dove(&self, offset: u64) -> u64 {
+        let c = CHUNK as u64;
+        (offset / c * 2 + self.quale) * c + offset % c
+    }
+}
+
+impl Spill for Meta<'_, '_> {
+    fn put(&mut self, offset: u64, data: &[u8]) -> Result<()> {
+        self.sp.borrow_mut().put(self.dove(offset), data)
+    }
+    fn get(&mut self, offset: u64, buf: &mut [u8]) -> Result<()> {
+        self.sp.borrow_mut().get(self.dove(offset), buf)
+    }
+}
+
 /// Bytes of one slot of the scratch file.
 const CHUNK: usize = 128 << 10;
 /// One peak: m/z (f64), intensity (f64), number of the scan (u32), little endian.
