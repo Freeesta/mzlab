@@ -8,6 +8,8 @@
 /** @type {Record<string, { ext: string[], membri: string[], errori: string[], soloModulo: string[], sonda?: boolean }>} */
 const FAM = /** @type {any} */ (window).LETTORI_FAM;
 
+/** the arrays of an mzML that only the module decodes: MS-Numpress alone (MS:1002312/13/14) and followed by zlib (MS:1002746/47/48) */
+const NUMPRESS = /accession="MS:(1002312|1002313|1002314|1002746|1002747|1002748)"/;
 /** @type {Worker | null} */ let worker = null;
 let seq = 0;
 /** @type {Map<number, { ok: (r: any) => void, no: (e: any) => void, tell?: (p: any) => void }>} */
@@ -47,6 +49,11 @@ const LETTORI_MOD = {
   extensions: () => Object.values(FAM).flatMap(f => f.soloModulo),
   /** the family whose module takes an error of the engine (`err.file.agilent` -> "agilent"), or "" */
   retriable: (/** @type {string | undefined} */ key) => Object.keys(FAM).find(k => FAM[k].errori.includes(String(key))) || "",
+  /** the family whose module takes an mzML the engine cannot decode ("aperti" for numpress arrays in the first 64 KB), or "" */
+  async variante(/** @type {Blob & { name?: string }} */ f) {
+    if (!/\.mzml$/i.test(f.name || "")) return "";
+    try { return NUMPRESS.test(await f.slice(0, 65536).text()) ? "aperti" : ""; } catch (_) { return ""; }
+  },
   /** the family of a dataset from the names of its members (extension, or a part of the path), or "" */
   famigliaDi(/** @type {string[]} */ names) {
     const n = names.map(x => x.toLowerCase());

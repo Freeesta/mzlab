@@ -6,7 +6,7 @@
 // The pure parts (dir, kind, split, pairKey, uniqueNames, readEntries) have no DOM and are tested in node (tests/test_cartella_carica.py).
 
 const CartCarica = (() => {
-  const OK = /\.(mzml|dam|raw|wiff|wiff\.scan)$/i;
+  const OK = /\.(mzml|mzxml|dam|raw|wiff|wiff\.scan)$/i;
   const HIDDEN = n => n[0] === "." || n === "__MACOSX";
 
   // folder of a file: «a/b/» (empty for a file chosen alone); webkitRelativePath starts with the chosen folder, a dropped entry sets `_dir` itself

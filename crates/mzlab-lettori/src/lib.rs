@@ -4,9 +4,15 @@
 use mzlab_core::error::{Error, Result};
 use mzlab_core::lettori::{self, Fiducia, FileSet, Lettore, Limiti, VoceLettore};
 
+#[cfg(any(feature = "aperti", feature = "tutte"))]
+pub mod aperti;
 pub mod srm;
 
 // The readers of each family, one `static` per `VoceLettore` of the registry; a family without readers yet is born with its own package.
+#[cfg(any(feature = "aperti", feature = "tutte"))]
+static VOCE_MZML_NUMPRESS: VoceLettore = aperti::mzml_numpress::VOCE;
+#[cfg(any(feature = "aperti", feature = "tutte"))]
+static VOCE_MZXML: VoceLettore = aperti::mzxml::VOCE;
 #[cfg(any(feature = "agilent", feature = "tutte"))]
 static VOCE_AGILENT: VoceLettore = mzlab_core::agilent::lettore::VOCE;
 #[cfg(any(feature = "sciex", feature = "tutte"))]
@@ -40,6 +46,10 @@ pub fn famiglia() -> &'static str {
 /// The formats of the families that are on: `agilent` and `sciex` repeat the ones of the engine's registry (and serve their variants), `thermo` is the only home of the `.raw` reader of the web engine (the desktop app has it in the core with the default features).
 pub fn registro() -> Vec<&'static VoceLettore> {
     let voci: &[Option<&'static VoceLettore>] = &[
+        #[cfg(any(feature = "aperti", feature = "tutte"))]
+        Some(&VOCE_MZML_NUMPRESS),
+        #[cfg(any(feature = "aperti", feature = "tutte"))]
+        Some(&VOCE_MZXML),
         #[cfg(any(feature = "agilent", feature = "tutte"))]
         Some(&VOCE_AGILENT),
         #[cfg(any(feature = "sciex", feature = "tutte"))]
@@ -65,7 +75,8 @@ pub fn riconosci(fs: &mut FileSet) -> Option<&'static VoceLettore> {
     best.map(|(_, v)| v)
 }
 
-/// Opens `fs` with the reader that recognises it, as it is (the sessions of the modules: the engine decides itself what it does with SRM scans).
+/// Opens `fs` with the reader that recognises it, as it is (the sessions of the modules: the engine decides itself what it does with SRM scans), except
+/// a Thermo `.raw`: a TSQ keeps its SRM transitions only as scans, so its reader is wrapped to give them as chromatograms (`srm::SrmDaScansioni`).
 pub fn apri_nudo(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let name = fs
         .membri
@@ -74,7 +85,11 @@ pub fn apri_nudo(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         .unwrap_or_default();
     let v =
         riconosci(&mut fs).ok_or_else(|| Error::new("err.file.notAccepted").with("name", name))?;
-    (v.apri)(fs, limiti)
+    let mut l = (v.apri)(fs, limiti)?;
+    if l.formato() == lettori::Formato::ThermoRaw && srm::ha_scansioni_srm(&mut *l, 0) {
+        l = Box::new(srm::SrmDaScansioni::new(l));
+    }
+    Ok(l)
 }
 
 /// Opens `fs` with the reader that recognises it; the SRM traces of scans with an SRM filter become chromatograms (`srm::SrmDaScansioni`).

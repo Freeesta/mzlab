@@ -19,3 +19,7 @@ tutte = ["aperti", "thermo", "agilent", "sciex", "waters", "shimadzu", "bruker"]
 [dependencies]
 # no default features: each family module carries only the readers of its own family (`thermo` turns on the Thermo reader of the core)
 mzlab-core = { path = "../mzlab-core", default-features = false, features = ["estesi"] }
+
+# the decoders of the peaks of an mzXML (base64 and zlib), versions as in mzlab-core
+base64 = "0.23"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
