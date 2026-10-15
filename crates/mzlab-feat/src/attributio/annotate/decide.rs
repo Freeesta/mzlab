@@ -1,5 +1,5 @@
 // Ported from Attributio annotate.py.
-//! The chemist's decisions on single features (`feature_decisions.csv`): `nome` replaces the name, `livello` 3 takes a Level 2 to 3 (`expert review`) and `2b`
+//! The chemist's decisions on single features (`feature_decisions.csv`): `nome` replaces the name, `livello` 3, 3a or 3b takes a Level 2 to 3 (`expert review`; 3b marks a generic class) and `2b`
 //! raises a Level 3 or moves a Level 2a to 2b (`diagnostic evidence`), the only way a feature gets 2b. Also `level_sub` and the `mzlib-only` flag.
 
 use super::curate::Curation;
@@ -8,12 +8,19 @@ use super::types::Feature;
 use crate::attributio::campaign::Campaign;
 use crate::attributio::readers::feature_decisions::{match_decisions, DecisionTable, FeatureKey};
 
-/// `a` / `b` for the Level 2 features (b = the chemist's 2b decision, also when it counts as Level 3 because `count_2b_as_2 = false`), empty otherwise.
+/// `a` / `b` for the Level 2 features (b = the chemist's 2b decision, also when it counts as Level 3 because `count_2b_as_2 = false`) and for the Level 3
+/// ones (3a: few positional/isomeric candidates; b = the chemist's 3b decision, a generic class), empty otherwise.
 pub fn level_sub(f: &Feature) -> &'static str {
     if f.decision.decision_2b && (f.level == 2 || f.level == 3) {
         "b"
     } else if f.level == 2 {
         "a"
+    } else if f.level == 3 {
+        if f.decision.sub_3b {
+            "b"
+        } else {
+            "a"
+        }
     } else {
         ""
     }
@@ -82,10 +89,14 @@ pub fn apply_decisions(
             f.cec = cur.match_cec(&[Some(&rec.nome)]);
         }
         let l = rec.livello.as_str();
-        if (l == "2" || l == "3") && f.decision.decision_2b {
+        let three = matches!(l, "3" | "3a" | "3b");
+        if (l == "2" || three) && f.decision.decision_2b {
             undo_2b(f, &mut before, i);
         }
-        if l == "3" && f.level == 2 {
+        if three {
+            f.decision.sub_3b = l == "3b";
+        }
+        if three && f.level == 2 {
             f.level = 3;
             f.level_basis = "expert review".into();
             f.level_label = s.label("expert review");

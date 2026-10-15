@@ -71,24 +71,24 @@ impl AnnotationSettings {
     /// The text of a basis, with the thresholds filled in.
     pub fn label(&self, basis: &str) -> String {
         match basis {
-            "reference standard" => "Confirmed by reference standard: mass + RT + MS/MS (Lvl 1)".into(),
-            "spectral library" => "Spectral library match (Lvl 2a)".into(),
-            "putative library" => "Putative library match (analog/in-silico, Lvl 3)".into(),
+            "reference standard" => "Confirmed by reference standard: mass + RT + MS/MS (L1)".into(),
+            "spectral library" => "Spectral library match (L2a)".into(),
+            "putative library" => "Putative library match (analog/in-silico, L3a)".into(),
             "MS2DeepScore" => format!(
-                "AI Structural Similarity (MS2DeepScore ≥ {:.2}, Lvl 3)",
+                "AI Structural Similarity (MS2DeepScore ≥ {:.2}, L3a)",
                 self.engine_dl_sim_min
             ),
             "CSI:FingerID" => format!(
-                "CSI:FingerID structure (COSMIC conf ≥ {:.2}, ~10% FDR, Lvl 3)",
+                "CSI:FingerID structure (COSMIC conf ≥ {:.2}, ~10% FDR, L3a)",
                 self.cosmic_min
             ),
-            "name conflict" => "Spectral library matches of different structures that the spectrum does not tell apart (best match ahead by less than the margin): named by the best match (Lvl 3)".into(),
-            "expert review" => "Spectral library match judged insufficient by the chemist (Lvl 3)".into(),
-            "diagnostic evidence" => "Structure supported by diagnostic evidence, judged by the chemist on the MS/MS spectrum (Lvl 2b)".into(),
-            "isomers not discriminated" => "Spectral library match of the same compound at two or more retention times: the spectrum does not tell the isomers apart (Lvl 3)".into(),
-            "RT isomer" => "Spectral library match at a retention time other than the reference standard's: another isomer (Lvl 3)".into(),
-            "suspect-RT" => "Reference standard, mass + RT only, MS/MS not confirmed (suspect-RT, Lvl 0)".into(),
-            "CANOPUS class" => format!("CANOPUS class only, probability ≥ {:.2} (Lvl 4)", self.canopus_min),
+            "name conflict" => "Spectral library matches of different structures that the spectrum does not tell apart (best match ahead by less than the margin): named by the best match (L3a)".into(),
+            "expert review" => "Spectral library match judged insufficient by the chemist (L3a)".into(),
+            "diagnostic evidence" => "Structure supported by diagnostic evidence, judged by the chemist on the MS/MS spectrum (L2b)".into(),
+            "isomers not discriminated" => "Spectral library match of the same compound at two or more retention times: the spectrum does not tell the isomers apart (L3a)".into(),
+            "RT isomer" => "Spectral library match at a retention time other than the reference standard's: another isomer (L3a)".into(),
+            "suspect-RT" => "Reference standard, mass + RT only, MS/MS not confirmed (suspect-RT, L0)".into(),
+            "CANOPUS class" => format!("CANOPUS class only, probability ≥ {:.2} (L4)", self.canopus_min),
             _ => "Unannotated (DETECTED)".into(),
         }
     }

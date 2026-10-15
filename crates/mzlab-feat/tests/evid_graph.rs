@@ -184,6 +184,7 @@ fn world() -> World {
         entropy,
         shared: 8,
         ppm,
+        experimental: true,
     };
     let rows = rows_of(&reg);
     let arc = RowArc {
@@ -317,6 +318,17 @@ fn a_false_in_source_fragment_is_not_told_from_the_other_reading() {
         .any(|e| e.kind == EdgeKind::Undetermined
             && e.label == "NH4/NH3/FA/HCOOH".replace("/FA", "/FA")));
     assert!(has(isf, R_UNDETERMINED_EDGE));
+}
+
+#[test]
+fn in_silico_library_never_gives_2a() {
+    let t = PointsTable::bundled().unwrap();
+    let mut w = world();
+    for l in &mut w.libs {
+        l.experimental = false;
+    }
+    let ids = graph(&w, &t);
+    assert_eq!(by_row(&ids, 1).max_level, "3a");
 }
 
 #[test]

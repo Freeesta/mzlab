@@ -179,12 +179,12 @@ fn step_2_a_valid_library_source_is_level_2a() {
 #[test]
 fn step_2_libraries_that_name_different_structures_are_settled_by_the_margin() {
     let a = run(&fixture("campagna_sintetica"));
-    is(&a, "POS", 8, (3, "", "name conflict"));
+    is(&a, "POS", 8, (3, "a", "name conflict"));
     assert_eq!(find(&a, "POS", 8).name(), Some("Fictamine isomer"));
     let a = run(&variant("library_conflict_margin = 0.0", "", &[]));
     is(&a, "POS", 8, (2, "a", "spectral library"));
     let a = run(&variant("library_conflict = \"level3\"", "", &[]));
-    is(&a, "POS", 8, (3, "", "name conflict"));
+    is(&a, "POS", 8, (3, "a", "name conflict"));
 }
 
 #[test]
@@ -199,14 +199,14 @@ fn the_chemists_2b_decision_beats_the_library_and_the_structure() {
         &run(&fixture("campagna_sintetica")),
         "POS",
         2,
-        (3, "", "expert review"),
+        (3, "a", "expert review"),
     );
 }
 
 #[test]
 fn step_4_csi_fingerid_gives_level_3_above_cosmic_and_canopus_gives_level_4_above_its_threshold() {
     let a = run(&fixture("campagna_sintetica"));
-    is(&a, "POS", 4, (3, "", "CSI:FingerID"));
+    is(&a, "POS", 4, (3, "a", "CSI:FingerID"));
     is(&a, "POS", 5, (4, "", "CANOPUS class"));
     let a = run(&variant("canopus_min = 0.99", "", &[]));
     is(&a, "POS", 5, (0, "", "none"));
@@ -217,9 +217,9 @@ fn step_4_csi_fingerid_gives_level_3_above_cosmic_and_canopus_gives_level_4_abov
 #[test]
 fn the_same_compound_at_other_retention_times_are_isomers_until_the_rt_tolerance_joins_them() {
     let a = run(&fixture("campagna_sintetica"));
-    is(&a, "POS", 10, (3, "", "isomers not discriminated"));
-    is(&a, "POS", 11, (3, "", "isomers not discriminated"));
-    is(&a, "POS", 14, (3, "", "RT isomer"));
+    is(&a, "POS", 10, (3, "a", "isomers not discriminated"));
+    is(&a, "POS", 11, (3, "a", "isomers not discriminated"));
+    is(&a, "POS", 14, (3, "a", "RT isomer"));
     let a = run(&variant("rt_group_tol_min = 5.0", "", &[]));
     is(&a, "POS", 10, (2, "a", "spectral library"));
     is(&a, "POS", 11, (2, "a", "spectral library"));

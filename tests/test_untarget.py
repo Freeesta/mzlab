@@ -149,12 +149,12 @@ def test_external_name_conflict_and_isomers_not_discriminated():
       const g = t.features[4]; g.ann.push({source: 'GNPS2', type: 'MQScore', score: 0.2, shared: 9, ppm: 0, name: 'Weak', cleanName: 'Weak', ik: 'WEAKWEAKWEAKWE', analog: false, propagated: false, notes: []});
       const a = U.assessExternal(f), b = U.assessExternal(g);
       return {conf: [a.level, a.base, a.best.name], weak: [b.level, b.base, b.valid]}""")
-    assert r["conf"] == ["3", "name conflict", "Caffeine"]          # two valid sources, different structures, 0.85 vs 0.83 < 0.05
+    assert r["conf"] == ["3a", "name conflict", "Caffeine"]          # two valid sources, different structures, 0.85 vs 0.83 < 0.05
     assert r["weak"][:2] == ["2a", "spectral library"] and r["weak"][2] == 1          # a source below the gates does not count
     iso = js("""const t = U.build([F('mzmine/tabella_pos.csv'), F('gnps/biblioteca.tsv')], {pol: 1});
       const mk = (id, rt) => { const f = {key: 'POS:' + id, id, pol: 1, rt, mz: 222.1, ann: [{source: 'GNPS2', type: 'MQScore', score: 0.9, shared: 8, ppm: 0, name: 'Fictazine', cleanName: 'Fictazine', ik: 'IIIIIIIIIIIIII', notes: []}]}; return f; };
       const tt = {features: [mk('10', 5.0), mk('11', 8.0), mk('12', 5.1)]}; const m = U.assessAllExternal(tt); return [...m].map(([k, v]) => [k, v.level, v.base])""")
-    assert iso == [["POS:10", "3", "isomers not discriminated"], ["POS:11", "3", "isomers not discriminated"], ["POS:12", "3", "isomers not discriminated"]]
+    assert iso == [["POS:10", "3a", "isomers not discriminated"], ["POS:11", "3a", "isomers not discriminated"], ["POS:12", "3a", "isomers not discriminated"]]
     same = js("""const mk = (id, rt) => ({key: 'POS:' + id, id, pol: 1, rt, mz: 1, ann: [{source: 'GNPS2', type: 'MQScore', score: 0.9, shared: 8, ppm: 0, name: 'F', cleanName: 'F', ik: 'IIIIIIIIIIIIII', notes: []}]});
       const m = U.assessAllExternal({features: [mk('1', 5.0), mk('2', 5.15)]}); return [...m.values()].map(v => v.level)""")
     assert same == ["2a", "2a"]          # inside the RT tolerance of the group

@@ -237,6 +237,7 @@ fn library_hits(
                 entropy: h.entropy,
                 shared: h.shared as u32,
                 ppm: h.dprec,
+                experimental: true,
             });
         }
     }

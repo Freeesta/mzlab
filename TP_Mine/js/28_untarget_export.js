@@ -46,7 +46,7 @@
     for (const f of feats) {
       if (!f.ms2 || !f.ms2.mz.length) continue; const r = res.get(f.key), lv = G.LIVELLI.shown(r.lv);
       out.push("BEGIN IONS", `FEATURE_ID=${f.id}`, `PEPMASS=${(f.ms2.prec > 0 ? f.ms2.prec : f.mz).toFixed(4)}`, `CHARGE=${f.pol < 0 ? "1-" : "1+"}`, "MSLEVEL=2", `RTINSECONDS=${(f.rt * 60).toFixed(1)}`, `IONMODE=${f.pol < 0 ? "Negative" : "Positive"}`, `LEVEL=${lv}`);
-      if (r.name && ["1", "2a", "2b", "3"].includes(lv)) { out.push(`NAME=${String(r.name).replace(/[\r\n]+/g, " ")}`); if (r.accession) out.push(`LIBRARY_RECORD=${String(r.accession).replace(/[\r\n]+/g, " ")}`); out.push(`LIBRARY_LICENSE=${String(r.license || "not stated").replace(/[\r\n]+/g, " ")}`); }
+      if (r.name && ["1", "2a", "2b", "3a", "3b"].includes(lv)) { out.push(`NAME=${String(r.name).replace(/[\r\n]+/g, " ")}`); if (r.accession) out.push(`LIBRARY_RECORD=${String(r.accession).replace(/[\r\n]+/g, " ")}`); out.push(`LIBRARY_LICENSE=${String(r.license || "not stated").replace(/[\r\n]+/g, " ")}`); }
       for (let i = 0; i < f.ms2.mz.length; i++) out.push(`${f.ms2.mz[i]} ${f.ms2.it[i]}`);
       out.push("END IONS");
     }

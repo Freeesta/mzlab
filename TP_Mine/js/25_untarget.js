@@ -137,7 +137,7 @@
     for (const f of table.features) { const r = results.get(f.key); if (!r || r.level !== "2a" || !r.best) continue; const k = f.pol + "|" + bestKey(r.best); if (!by.has(k)) by.set(k, []); by.get(k).push(f); }
     for (const fs of by.values()) {
       if (fs.length < 2) continue; const rts = fs.map(f => f.rt), span = Math.max(...rts) - Math.min(...rts); if (span <= tol) continue;
-      for (const f of fs) { const r = results.get(f.key); r.level = "3"; r.base = "isomers not discriminated"; r.decisive = "The same compound is matched at two or more retention times: the spectrum does not tell the isomers apart."; }
+      for (const f of fs) { const r = results.get(f.key); r.level = "3a"; r.base = "isomers not discriminated"; r.decisive = "The same compound is matched at two or more retention times: the spectrum does not tell the isomers apart."; }
     }
   }
   function assessAllExternal(table, profile = "attributio") {

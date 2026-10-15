@@ -232,7 +232,7 @@ fn decisive(f: &Feature, s: &AnnotationSettings, mut failed: Vec<(usize, String)
         }
         "isomers not discriminated" => "The same compound is matched at two or more retention times: the spectrum does not tell the isomers apart.".into(),
         "RT isomer" => "A reference standard of this compound elutes at another retention time: another isomer.".into(),
-        "putative library" => "The library match is putative (e.g. an analogue search or in-silico spectrum), not a confirmed reference standard (Lvl 3).".into(),
+        "putative library" => "The library match is putative (e.g. an analogue search or in-silico spectrum), not a confirmed reference standard (L3a).".into(),
         "spectral library" => format!(
             "Level 2a: {} {} every gate.",
             valid.join(", "),

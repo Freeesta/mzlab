@@ -58,7 +58,7 @@ try:
         def match():
             pg.click("#unt-go"); pg.wait_for_selector("#unt-res:not([hidden])", timeout=60000)
             lv = pg.evaluate("Object.fromEntries([...document.querySelectorAll('#unt-t tr.row1')].map(tr => [tr.children[1].textContent, tr.children[0].textContent.trim()]))")
-            assert lv == {"1": "2a", "2": "3", "3": "5", "4": "4", "5": "5", "6": "5"}, lv
+            assert lv == {"1": "L2a", "2": "L3a", "3": "L5", "4": "L4", "5": "L5", "6": "L5"}, lv
             r1 = pg.evaluate("[...document.querySelectorAll('#unt-t tr.row1')].find(tr => tr.children[1].textContent === '1').innerText")
             assert "Alpha" in r1 and "1.000" in r1, r1
             assert "Testagel" in pg.evaluate("[...document.querySelectorAll('#unt-t tr.row1')].find(tr => tr.children[1].textContent === '4').innerText")          # evidence of the external source
@@ -77,10 +77,10 @@ try:
         step("click → mirror plot and the «What is it?» window", detail)
         def decide():
             pg.select_option("#unt-dec", "2b"); badge = pg.evaluate("document.querySelector(\"#unt-t tr.row1[data-k='POS:1'] .lvb\").textContent")
-            assert badge.startswith("2b"), badge
+            assert badge.startswith("L2b"), badge
             pg.click("#unt-t tr.row1[data-k='POS:3']")
             pg.select_option("#unt-dec", "2b"); pg.wait_for_function("document.querySelector('#unt-decmsg').textContent.length > 0")
-            assert pg.evaluate("document.querySelector(\"#unt-t tr.row1[data-k='POS:3'] .lvb\").textContent.trim()") == "5"          # refused: the programme never gives 2b
+            assert pg.evaluate("document.querySelector(\"#unt-t tr.row1[data-k='POS:3'] .lvb\").textContent.trim()") == "L5"          # refused: the programme never gives 2b
         step("the chemist's 2b is accepted from 2a and refused from 5", decide)
         def export():
             def get(sel):
