@@ -31,6 +31,7 @@ pub(crate) fn fileset(members: &[(String, PathBuf)]) -> Result<FileSet> {
             nome: nome.clone(),
             dim,
             dati: Box::new(MapAt(Arc::new(map))),
+            sha1: None,
         });
     }
     Ok(FileSet { membri: out })

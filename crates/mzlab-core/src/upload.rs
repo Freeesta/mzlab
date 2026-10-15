@@ -27,29 +27,77 @@ fn hex(b: &[u8]) -> String {
     b.iter().map(|x| format!("{x:02x}")).collect()
 }
 
-/// Reads the whole file once for its SHA-256 and keeps the first and last 64 KB for the probe (SHA-1 of the size, the head and the tail).
-pub fn fingerprint<R: ReadAt + ?Sized>(r: &mut R, size: u64) -> Result<(String, String)> {
-    let mut sha = Sha256::new();
-    let mut head = vec![];
+/// The three fingerprints of one file taken in one pass, fed piece by piece in file order (`aggiorna`): SHA-256 (identity), SHA-1 of every byte (the
+/// `sourceFile` of the mzML) and the `probe` (SHA-1 of the size, the first and the last 64 KB).
+pub struct Passata {
+    size: u64,
+    seen: u64,
+    sha256: Sha256,
+    sha1: Sha1,
+    head: Vec<u8>,
+    tail: Vec<u8>,
+}
+
+impl Passata {
+    pub fn new(size: u64) -> Passata {
+        Passata {
+            size,
+            seen: 0,
+            sha256: Sha256::new(),
+            sha1: Sha1::new(),
+            head: Vec::new(),
+            tail: Vec::new(),
+        }
+    }
+    pub fn aggiorna(&mut self, b: &[u8]) {
+        self.sha256.update(b);
+        self.sha1.update(b);
+        let h = (PROBE as usize)
+            .saturating_sub(self.head.len())
+            .min(b.len());
+        self.head.extend_from_slice(&b[..h]);
+        self.tail
+            .extend_from_slice(&b[b.len().saturating_sub(PROBE as usize)..]);
+        if self.tail.len() > PROBE as usize {
+            self.tail.drain(..self.tail.len() - PROBE as usize);
+        }
+        self.seen += b.len() as u64;
+    }
+    /// `(sha256, sha1, probe)` as lower-case hex; `None` when the pieces given are not exactly `size` bytes.
+    pub fn fine(self) -> Option<(String, String, String)> {
+        if self.seen != self.size {
+            return None;
+        }
+        let mut p = Sha1::new();
+        p.update(self.size.to_string().as_bytes());
+        p.update(&self.head);
+        p.update(&self.tail);
+        Some((
+            hex(&self.sha256.finalize()),
+            hex(&self.sha1.finalize()),
+            hex(&p.finalize()),
+        ))
+    }
+}
+
+/// Reads the whole file once for its three fingerprints (`Passata`): `(sha256, sha1, probe)`.
+pub fn fingerprint3<R: ReadAt + ?Sized>(r: &mut R, size: u64) -> Result<(String, String, String)> {
+    let mut p = Passata::new(size);
     let mut at = 0;
     let mut buf = vec![0u8; STEP as usize];
     while at < size {
         let n = (size - at).min(STEP) as usize;
         r.read_at(at, &mut buf[..n])?;
-        sha.update(&buf[..n]);
-        if head.len() < PROBE as usize {
-            head.extend_from_slice(&buf[..n.min(PROBE as usize - head.len())]);
-        }
+        p.aggiorna(&buf[..n]);
         at += n as u64;
     }
-    let from = size.saturating_sub(PROBE);
-    let mut tail = vec![0u8; (size - from) as usize];
-    r.read_at(from, &mut tail)?;
-    let mut p = Sha1::new();
-    p.update(size.to_string().as_bytes());
-    p.update(&head);
-    p.update(&tail);
-    Ok((hex(&sha.finalize()), hex(&p.finalize())))
+    p.fine().ok_or_else(|| Error::new("err.file.unknown"))
+}
+
+/// `(sha256, probe)` of a file, read once.
+pub fn fingerprint<R: ReadAt + ?Sized>(r: &mut R, size: u64) -> Result<(String, String)> {
+    let (sha256, _, probe) = fingerprint3(r, size)?;
+    Ok((sha256, probe))
 }
 
 /// Everything the index builder and the loading table need of an mzML: the scan table, the metadata objects and the fingerprints.
@@ -109,23 +157,54 @@ pub struct Impronta {
     pub nome: String,
     pub dim: u64,
     pub sha256: String,
+    pub sha1: String,
     pub probe: String,
 }
 
-/// The fingerprints of every member of `fs`, in its order: taken before `lettori::apri`, which consumes the set.
+/// The fingerprints of every member of `fs`, in its order: taken before `lettori::apri`, which consumes the set. The SHA-1 goes to the member too,
+/// so the reader does not read the file again for the header of the mzML.
 pub fn impronte(fs: &mut FileSet) -> Result<Vec<Impronta>> {
     fs.membri
         .iter_mut()
         .map(|m| {
-            let (sha256, probe) = fingerprint(&mut m.dati, m.dim)?;
+            let (sha256, sha1, probe) = fingerprint3(&mut m.dati, m.dim)?;
+            m.sha1 = Some(sha1.clone());
             Ok(Impronta {
                 nome: m.nome.clone(),
                 dim: m.dim,
                 sha256,
+                sha1,
                 probe,
             })
         })
         .collect()
+}
+
+/// The fingerprints of a set already taken (during the copy of the file): `valori` are `(sha256, sha1, probe)` of each member of `fs`, in its order;
+/// the SHA-1 goes to the members. `None` when they do not match the members (the caller takes them with `impronte`).
+pub fn impronte_note(
+    fs: &mut FileSet,
+    valori: &[(String, String, String)],
+) -> Option<Vec<Impronta>> {
+    if valori.len() != fs.membri.len() {
+        return None;
+    }
+    Some(
+        fs.membri
+            .iter_mut()
+            .zip(valori)
+            .map(|(m, (sha256, sha1, probe))| {
+                m.sha1 = Some(sha1.clone());
+                Impronta {
+                    nome: m.nome.clone(),
+                    dim: m.dim,
+                    sha256: sha256.clone(),
+                    sha1: sha1.clone(),
+                    probe: probe.clone(),
+                }
+            })
+            .collect(),
+    )
 }
 
 /// `sha256` and `probe` of a set: those of its member when it has one; otherwise SHA-256 (SHA-1 for the probe) of the members' values, each
