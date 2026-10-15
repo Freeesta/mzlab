@@ -111,7 +111,6 @@ function uipOpen(btn) {
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-hc"> <span>${I18N.t("settings.hc.label")}</span></label>
     <div class="row">${I18N.t("settings.pal.label")} <select id="uip-pal" title="${I18N.t("settings.pal.title")}">${["file", ...Object.keys(PALS).filter(k => k !== "file")].map(k => `<option value="${k}">${I18N.t(`settings.pal.${k}`)}</option>`).join("")}</select></div>
     </details>
-    <div class="row">${I18N.t("settings.etich")} <select id="uip-etich" aria-label="${I18N.t("settings.etich")}"><option value="auto">${I18N.t("settings.etich.auto")}</option><option value="always">${I18N.t("settings.etich.always")}</option><option value="hidden">${I18N.t("settings.etich.hidden")}</option></select></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>${I18N.t("settings.merge")}</span></label>
     ${(typeof E !== "undefined" && E.files && E.files.some(f => window.HR && HR.isHr(f))) ? `
     <div class="row">${I18N.t("settings.libs.label")} <button id="uip-lib" title="${I18N.t("settings.libs.title")}">${I18N.t("settings.libs.button")}</button></div>` : ""}
@@ -157,8 +156,6 @@ function uipOpen(btn) {
     UIP.merge = e.target.checked; uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof redrawAll === "function") redrawAll();
   };
-  const uipEtich = d.querySelector("#uip-etich");
-  if (uipEtich) { uipEtich.value = window.BARRA ? BARRA.labels : "auto"; uipEtich.onchange = e => { if (window.BARRA) BARRA.setLabels(e.target.value); }; }
   const uipTour = d.querySelector("#uip-tour");
   if (uipTour) uipTour.onclick = () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();

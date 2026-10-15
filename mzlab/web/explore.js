@@ -21,6 +21,31 @@ window.toast = function(msg) {
   }, 3000);
 };
 
+/**
+ * An informational notice that stays on the page until it is closed (the reset note, the release notice, the engine notices) goes away by itself after `ms` (20 s):
+ * the timer stands still while the pointer is over it or the focus is inside it, and an X closes it at once (added unless `x` is false: the notice has its own).
+ * Notices that ask for an action are not given this. Returns the function that closes it.
+ * @param {HTMLElement} el the notice, already in the page
+ * @param {{ ms?: number, x?: boolean, onClose?: (by: string) => void }} [o]
+ */
+window.avvisoAuto = function(el, o = {}) {
+  let left = o.ms || 20000, t0 = 0, tm = 0, done = false, over = false, inside = false;
+  /** @param {string} by */
+  const close = by => { if (done) return; done = true; clearTimeout(tm); el.remove(); if (o.onClose) o.onClose(by); };
+  const go = () => { if (done || tm || over || inside) return; t0 = Date.now(); tm = window.setTimeout(() => close("time"), left); };
+  const stop = () => { if (!tm) return; clearTimeout(tm); tm = 0; left = Math.max(1000, left - (Date.now() - t0)); };
+  el.addEventListener("mouseenter", () => { over = true; stop(); });
+  el.addEventListener("mouseleave", () => { over = false; go(); });
+  el.addEventListener("focusin", () => { inside = true; stop(); });
+  el.addEventListener("focusout", e => { if (!el.contains(/** @type {Node | null} */ (e.relatedTarget))) { inside = false; go(); } });
+  if (o.x !== false && !el.querySelector("button.x")) {
+    const b = document.createElement("button"); b.type = "button"; b.className = "x"; b.textContent = "×";       // the shared close X (index.html)
+    b.setAttribute("aria-label", I18N.t("avviso.close")); b.onclick = () => close("x"); el.appendChild(b);
+  }
+  go();
+  return () => close("api");
+};
+
 "use strict";
 // Esplorazione dei dati: si parte dal cromatogramma totale, lo studente decide cosa estrarre.
 // Script classico (usa gli helper di index.html: S, setup, nice, fmt, css, esc, smooth, M, setView, applyView).

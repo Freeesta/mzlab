@@ -97,6 +97,7 @@ window.DESKUPD = (() => {
       bar.append(a, btn); d.append(msg, bar);
       btn.onclick = () => { try { localStorage.setItem("qqq.rel.seen", r.version); } catch (_) { /* optional */ } d.remove(); };
       document.body.appendChild(d);
+      if (window.avvisoAuto) avvisoAuto(d, { x: false });       // not marked as seen: it comes back at the next check
     } catch (_) { /* offline, old binary without the command: no notice */ }
   }
 
