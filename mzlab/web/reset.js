@@ -97,6 +97,7 @@
     n.innerHTML = `<span>${I18N.t("reset.note")}</span><button type="button" data-n="reset">${I18N.t("reset.note.btn")}</button><button type="button" data-n="x" aria-label="${I18N.t("reset.note.close")}">×</button>`;
     n.addEventListener("click", e => { const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("button[data-n]")); if (!b) return; if (b.dataset.n === "reset") ask(); n.remove(); });
     document.body.appendChild(n);
+    if (window.avvisoAuto) avvisoAuto(n, { x: false });                       // goes away by itself after 20 s (the timer waits while the pointer or the focus is on it)
   }
   // the desktop app calls this once at start (desktop-shim.js): the first page of a new run starts clean; a reload of the page in the same run keeps everything.
   // Without sessionStorage nothing is reset (it could never be told apart from a reload).
