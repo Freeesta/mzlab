@@ -21,7 +21,7 @@ Fonte: API di GitHub (`actions/runs`, `actions/runs/{id}/jobs`, log dei job), 15
 | `pages` / `build` | 56 | 4,5 | 25,5 | download dei sospetti 7,4 (fino a 53); MassBank 7,6 (fino a 35) |
 | `test` / `browser` | 323 | 2,3 | 2,6 | e2e di fumo 1,4 |
 
-Misure locali (container a 4 CPU, come i runner): `cargo test --locked --release --no-run` dopo una modifica a `mzlab-core`, `mzlab-lib`, `mzlab-feat` = 582 s col profilo `release` di `Cargo.toml` (`lto = true`, `codegen-units = 1`, `opt-level = "z"`); 189 s con `lto = false`, `codegen-units = 16`, `opt-level = 3` (217 s anche ricompilando tutte le dipendenze). Con il secondo profilo: 629 test passati, 0 falliti, esecuzione 218 s.
+Misure locali (container a 4 CPU, come i runner): `cargo test --locked --release --no-run` dopo una modifica a `mzlab-core`, `mzlab-lib`, `mzlab-feat` = 582 s col profilo `release` di `Cargo.toml` (`lto = true`, `codegen-units = 1`, `opt-level = "z"`); 189 s con `lto = false`, `codegen-units = 16`, `opt-level = 3` (217 s anche ricompilando tutte le dipendenze). Con il secondo profilo: 629 test passati, 0 falliti, esecuzione 218 s. Col profilo attuale `tests/wiff_varianti.rs` fallisce 1 volta su 8 (`riferimento.json` vuoto): i 4 test dello stesso binario scrivono nella stessa cartella `mzlab_wiff_varianti_<pid>` in parallelo; è una corsa del test, indipendente dal profilo, da correggere a parte (una cartella per test).
 Nel log CI il job `rust` ricompila solo le 14 crate dello spazio di lavoro (cache delle dipendenze presente), eppure impiega 10 min 28 s: il tempo è il link LTO a una unità di ~150 binari di test, non una cache mancata.
 
 ### 1.1 Le cache: il tetto di 10 GB le sfratta
