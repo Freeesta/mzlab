@@ -18,4 +18,3 @@ Scelte di prodotto del Coordinatore (già nei prompt): lista di inclusione in so
 - [RV-08](RV-08.md): `.raw` che opentfraw non apre
 - [RV-09](RV-09.md): Tutto il metodo del `.raw` in `metodo/1`
 - [RV-10](RV-10.md): Tutto ciò che il `.raw` registra: status log e trailer nel tempo, error log, autocampionatore, eventi
-- [RV-11](RV-11.md): Tabui: `.raw` scelti direttamente, indice durante il caricamento, riuso da Dati
