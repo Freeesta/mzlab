@@ -4,9 +4,9 @@
 
 use std::io::{Read, Seek, SeekFrom};
 
-use opentfraw::extra::scan_extras;
-use opentfraw::mzml::{extract_spectrum, scan_metadata, ScanMetadata};
-use opentfraw::{ExtraFields, RawFileReader};
+use opentfraw::extra::scan_extras_with;
+use opentfraw::mzml::{extract_spectrum, scan_metadata, scan_metadata_with, ScanMetadata};
+use opentfraw::{ExtraFields, RawFileReader, ScanParams};
 
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
@@ -115,7 +115,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let raw = RawFileReader::open(&mut src).map_err(raw_error)?;
     limiti.voci_ok(u64::from(raw.num_scans))?;
     let indice: Vec<VoceScansione> = (0..raw.num_scans)
-        .filter_map(|k| scan_metadata(&raw, k))
+        .filter_map(|k| scan_metadata(&raw, &mut src, k))
         .map(|m| entry(&raw, &m))
         .collect();
     let stem = nome
@@ -316,8 +316,12 @@ impl Lettore for LettoreRaw {
 
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         self.one(c)?;
-        let m = scan_metadata(&self.raw, self.row(k)?).ok_or_else(|| raw_error("scan metadata"))?;
-        let mut out = header_fields(&self.raw, &m);
+        let idx = self.row(k)?;
+        let first = self.raw.run_header.sample_info.first_scan_number;
+        let params = self.raw.scan_params(&mut self.src, first + idx);
+        let m = scan_metadata_with(&self.raw, idx, params.as_ref().map(|p| p.borrowed()))
+            .ok_or_else(|| raw_error("scan metadata"))?;
+        let mut out = header_fields(&self.raw, params, &m);
         out.extend(noise_fields(&self.raw, &mut self.src, k as u32));
         Ok(out)
     }
@@ -385,7 +389,11 @@ fn noise_fields(raw: &RawFileReader, src: &mut Stream, idx: u32) -> Vec<Campo> {
 }
 
 /// The header fields of a scan: what the isolation and the activation say, the injection time, and every `opentfraw.*` value of the scan (the trailer).
-fn header_fields(raw: &RawFileReader, m: &ScanMetadata) -> Vec<Campo> {
+fn header_fields(
+    raw: &RawFileReader,
+    params: Option<ScanParams<'_>>,
+    m: &ScanMetadata,
+) -> Vec<Campo> {
     let mut out = Vec::new();
     if let Some(p) = &m.precursor {
         let ce = p.collision_energy.map(|ce| {
@@ -435,7 +443,7 @@ fn header_fields(raw: &RawFileReader, m: &ScanMetadata) -> Vec<Campo> {
         )
     }));
     out.extend(
-        scan_extras(raw, m, &ExtraFields::All)
+        scan_extras_with(raw, params, m, &ExtraFields::All)
             .into_iter()
             .map(|(k, v)| field(&k, v, None, None)),
     );

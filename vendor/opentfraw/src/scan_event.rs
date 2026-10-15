@@ -3,7 +3,7 @@ use crate::reader::BinaryReader;
 use std::io::{Read, Seek};
 
 /// Precursor reaction info for MS2+ scans (32 bytes).
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Reaction {
     pub precursor_mz: f64,
     pub unknown_double: f64,
@@ -13,25 +13,107 @@ pub struct Reaction {
 }
 
 /// M/z acquisition range.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FractionCollector {
     pub low_mz: f64,
     pub high_mz: f64,
 }
 
 /// Scan event preamble - byte array encoding scan parameters.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ScanEventPreamble {
     pub bytes: Vec<u8>,
 }
 
 /// Complete scan event.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ScanEvent {
     pub preamble: ScanEventPreamble,
     pub reactions: Vec<Reaction>,
     pub fraction_collectors: Vec<FractionCollector>,
     pub coefficients: Vec<f64>,
+}
+
+/// The scan events of a file, one per scan, kept compactly: the preambles (136 bytes, a handful of distinct ones in a DDA file) once each, and the reactions,
+/// the fraction collectors and the calibration coefficients of all the events in three flat tables with the end of each event's part. [`Self::get`] builds the
+/// event of a scan when asked.
+#[derive(Debug, Clone, Default)]
+pub struct ScanEventTable {
+    presets: Vec<ScanEventPreamble>,
+    preset_of: Vec<u32>,
+    reactions: Vec<Reaction>,
+    reactions_end: Vec<u32>,
+    collectors: Vec<FractionCollector>,
+    collectors_end: Vec<u32>,
+    coefficients: Vec<f64>,
+    coefficients_end: Vec<u32>,
+}
+
+impl ScanEventTable {
+    pub fn with_capacity(n: usize) -> Self {
+        Self {
+            preset_of: Vec::with_capacity(n),
+            reactions_end: Vec::with_capacity(n),
+            collectors_end: Vec::with_capacity(n),
+            coefficients_end: Vec::with_capacity(n),
+            ..Self::default()
+        }
+    }
+
+    /// Appends an event (its preamble is shared with an earlier one that has the same bytes).
+    pub fn push(&mut self, e: ScanEvent) {
+        let i = match self
+            .presets
+            .iter()
+            .rposition(|p| p.bytes == e.preamble.bytes)
+        {
+            Some(i) => i,
+            None => {
+                self.presets.push(e.preamble);
+                self.presets.len() - 1
+            }
+        };
+        self.preset_of.push(i as u32);
+        self.reactions.extend(e.reactions);
+        self.reactions_end.push(self.reactions.len() as u32);
+        self.collectors.extend(e.fraction_collectors);
+        self.collectors_end.push(self.collectors.len() as u32);
+        self.coefficients.extend(e.coefficients);
+        self.coefficients_end.push(self.coefficients.len() as u32);
+    }
+
+    pub fn len(&self) -> usize {
+        self.preset_of.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.preset_of.is_empty()
+    }
+
+    /// Event `i`.
+    pub fn get(&self, i: usize) -> Option<ScanEvent> {
+        let start = |ends: &[u32]| if i == 0 { 0 } else { ends[i - 1] as usize };
+        let preamble = self.presets.get(*self.preset_of.get(i)? as usize)?.clone();
+        Some(ScanEvent {
+            preamble,
+            reactions: self.reactions[start(&self.reactions_end)..self.reactions_end[i] as usize]
+                .to_vec(),
+            fraction_collectors: self.collectors
+                [start(&self.collectors_end)..self.collectors_end[i] as usize]
+                .to_vec(),
+            coefficients: self.coefficients
+                [start(&self.coefficients_end)..self.coefficients_end[i] as usize]
+                .to_vec(),
+        })
+    }
+
+    pub fn first(&self) -> Option<ScanEvent> {
+        self.get(0)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = ScanEvent> + '_ {
+        (0..self.len()).filter_map(|i| self.get(i))
+    }
 }
 
 impl ScanEventPreamble {
