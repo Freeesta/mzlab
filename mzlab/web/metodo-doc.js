@@ -47,10 +47,10 @@ const METODO_DOC = (() => {
     return r ? `<table>${r}</table>` : "";
   }
 
-  function all(/** @type {any} */ d) {
+  function all(/** @type {any} */ d, /** @type {{ k: number }} */ f) {
     const c = d.campi || [], reg = d.registro || [];
     const fields = c.length ? `<table>${c.map((/** @type {any} */ f) => rowOf(`${f.origine || ""} · ${f.chiave || ""}`, String(f.valore ?? "") + (f.unita ? " " + f.unita : ""))).join("")}</table>` : "";
-    const log = reg.length ? `<table>${reg.map((/** @type {any} */ x, /** @type {number} */ i) => rowOf(String(i + 1), x.testo)).join("")}</table>` : "";
+    const log = window.METODO_REGISTRO && METODO_REGISTRO.timed(reg).length ? METODO_REGISTRO.html(reg, f) : reg.length ? `<table>${reg.map((/** @type {any} */ x, /** @type {number} */ i) => rowOf(String(i + 1), x.testo)).join("")}</table>` : "";
     return fold(T("method.doc.fields", { n: c.length }), fields) + fold(T("method.doc.log"), log);
   }
 
@@ -62,7 +62,7 @@ const METODO_DOC = (() => {
     try { d = ((await J("api/metodo?k=" + f.k)) || {}).metodo; } catch (_) { d = null; }
     if (!d) return `<section class="msec">${title}<div class="muted sm">${EH(T("method.doc.none"))}</div></section>`;
     const rows = head(d) + ms(d);
-    return `<section class="msec">${title}${METODO_INCL.html(d, f)}${rows ? `<table>${rows}</table>` : ""}${lc(d)}${detectors(d)}${all(d)}</section>`;
+    return `<section class="msec">${title}${METODO_INCL.html(d, f)}${rows ? `<table>${rows}</table>` : ""}${lc(d)}${detectors(d)}${all(d, f)}</section>`;
   }
   return { html, bind: METODO_INCL.bind };
 })();

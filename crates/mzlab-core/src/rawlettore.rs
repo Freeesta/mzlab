@@ -218,7 +218,25 @@ fn elenco_cromatogrammi(l: &mut LettoreRaw) -> Vec<VoceCromatogramma> {
     v
 }
 
+/// A series of the instrument log (status log or trailer, `metodo_raw/serie.rs`): not in the list above, so neither the mzML nor the `.mzidx` carry it; computed here when asked for.
+fn registro_di(l: &mut LettoreRaw, id: &str) -> Option<Chromatogram> {
+    let s = crate::metodo_raw::serie::serie(&l.raw, &mut l.src, id)?;
+    Some(Chromatogram {
+        index: 0,
+        id: id.into(),
+        kind: ChromKind::Analog,
+        q1: None,
+        q3: None,
+        unit: s.unita,
+        time: s.t,
+        intensity: s.y,
+    })
+}
+
 fn cromatogramma_di(l: &mut LettoreRaw, id: &str) -> Result<Chromatogram> {
+    if let Some(c) = registro_di(l, id) {
+        return Ok(c);
+    }
     if id != "TIC" {
         let (index, (id, kind, t)) = analogiche(l)
             .iter()
