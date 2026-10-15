@@ -2,12 +2,12 @@
 "use strict";
 // Agilent MassHunter .D folders (docs/agenti/agilent.md): a folder loaded with «Load a folder» (cartella-carica.js) holds a run as many files; the ones the Rust engine reads
 // (AcqData/MSScan.bin, MSPeak.bin, ...) are grouped by their .D folder here, read as they are by the engine (rust-nativo.js) and handed to upload() as one sample each.
+// The other files directly under AcqData (module traces, DAD data...) go along under the key «x:» + path: the readers module of the LC/MS variants keeps them as size and SHA-1 (docs/agenti/agilent-lcms.md).
 // The pure parts (locate, group, mzmlName) have no DOM and are tested in node (tests/test_agilent_d.py).
 
 const AgilentD = (() => {
   // the files of a run that the engine takes, by the name of its argument; scan and peak are required unless there is a data.ms (an older run)
   const NEED = { scan: "AcqData/MSScan.bin", peak: "AcqData/MSPeak.bin", xsd: "AcqData/MSScan.xsd", ts: "AcqData/MSTS.xml", devices: "AcqData/Devices.xml", contents: "AcqData/Contents.xml", tree: "AcqData/MSTree2.bin", acqmeth: "acqmeth.txt", datams: "data.ms", profile: "AcqData/MSProfile.bin", masscal: "AcqData/MSMassCal.bin", defcal: "AcqData/DefaultMassCal.xml", acqxml: "AcqData/AcqMethod.xml", sampleinfo: "AcqData/sample_info.xml", sequence: "AcqData/sequence.xml" };
-  // the other files directly under AcqData (module traces, DAD data, audit trail...): the readers module of the LC/MS variants keeps them as size and SHA-1 (docs/agenti/agilent-lcms.md); the key is «x:» + the path
   const OTHER = /^AcqData\/[^/]+$/i, relOf = /** @type {(k: string) => string} */ k => /** @type {any} */ (NEED)[k] || k.slice(2);
   const dirOf = f => (typeof CartCarica !== "undefined" ? CartCarica.dir(f) : (f.webkitRelativePath || "").replace(/[^/]*$/, ""));
 
@@ -28,8 +28,7 @@ const AgilentD = (() => {
       const r = runs.get(loc.root) || { name: loc.name, root: loc.root, files: {}, seen: new Set() };
       runs.set(loc.root, r);
       r.seen.add(loc.rel.toLowerCase());
-      const hit = Object.entries(NEED).find(([, rel]) => rel.toLowerCase() === loc.rel.toLowerCase());
-      if (hit) r.files[hit[0]] = f; else if (OTHER.test(loc.rel) && f.name[0] !== ".") r.files["x:" + loc.rel] = f;
+      const hit = Object.entries(NEED).find(([, rel]) => rel.toLowerCase() === loc.rel.toLowerCase()); if (hit) r.files[hit[0]] = f; else if (OTHER.test(loc.rel) && f.name[0] !== ".") r.files["x:" + loc.rel] = f;
     }
     const list = [...runs.values()].map(r => ({ name: r.name, root: r.root, files: r.files, missing: r.files.datams ? [] : ["scan", "peak"].filter(k => !r.files[k] && !(k === "peak" && r.files.profile)).map(k => NEED[k]) }));
     return { runs: list, rest };
