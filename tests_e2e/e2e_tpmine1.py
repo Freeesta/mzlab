@@ -1,5 +1,6 @@
-"""Tabui (internal name TP Mine, also mzFinder) step (a): the tab is visible in the header from the start like the others (no switch, no badge);
-it survives a reload; the logo egg (5 clicks) only turns the logo gold.
+"""Tabui (internal name TP Mine, also mzFinder) step (a): the tab exists only in the administrator mode (localStorage «qqq.admin» = «1», QTOOLS admin:true of tpmine-loader.js).
+Without it: no tab, no section, the package of Tabui is not downloaded, QTOOLS lists nothing, and the address #/tpmine stays on the Data tab. With it: the tab is in the header
+from the start and survives a reload. Five quick clicks on the logo bring the tab up at once, without a reload.
 Run from the repo root: python3 tests_e2e/e2e_tpmine1.py   (needs Playwright and a built Pyodide dir or internet)"""
 import os, shutil, subprocess, sys, time, tempfile
 from pathlib import Path
@@ -28,33 +29,49 @@ srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("
 time.sleep(1); errs = []; reqs = []
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1400, "height": 900}).new_page()
-        pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.on("request", lambda r: reqs.append(r.url))
-        pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
+        b = p.chromium.launch(); TAB = '#nav button[data-v="tpmine"]'
+        def fresh(admin, hash_=""):
+            c = b.new_context(viewport={"width": 1400, "height": 900}); pg = c.new_page()
+            pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("request", lambda r: reqs.append(r.url))
+            if admin: pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")
+            pg.goto(f"http://127.0.0.1:{PORT}/" + hash_); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_timeout(1500)
+            return pg
+        pg = fresh(False)
+        def absent():
+            assert not pg.query_selector(TAB) and not pg.query_selector("#v-tpmine"), "the tab exists without the administrator mode"
+            assert pg.evaluate("window.QTOOLS.list().length") == 0
+            assert not [u for u in reqs if "/mzfinder/" in u], [u for u in reqs if "/mzfinder/" in u][:3]      # the package is not even downloaded
+            assert pg.evaluate("[...document.querySelectorAll('#nav button')].map(b => b.dataset.v)") == ["data", "draw", "theory"]
+        step("without qqq.admin there is no Tabui tab and nothing is downloaded", absent)
+        def hash_stays():
+            q = fresh(False, "#/tpmine")
+            assert q.evaluate("S.view") == "data" and not q.query_selector("#v-tpmine"), q.evaluate("S.view")
+            q.close()
+        step("without qqq.admin the address #/tpmine opens the normal page", hash_stays)
+        def five_clicks():
+            for _ in range(5): pg.click("header img.logo")
+            pg.wait_for_function("localStorage.getItem('qqq.admin') === '1'", timeout=15000)
+            pg.wait_for_selector(TAB, timeout=30000)                            # no reload: the tab comes up at once
+            pg.wait_for_function("window.QTOOLS.list().some(t => t.id === 'tpmine')", timeout=60000)
+        step("five quick clicks on the logo bring the tab up without a reload", five_clicks)
+        pg.context.close(); reqs.clear()
+        pg = fresh(True)
         def visible():
-            pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
+            pg.wait_for_selector(TAB, timeout=30000)
             assert not pg.query_selector("#mzf-badge")           # no mark next to the logo
             pg.wait_for_function("window.QTOOLS.list().some(t => t.id === 'tpmine')", timeout=60000)      # the tab shows at once; the tool registers when its scripts have loaded
-            txt = pg.inner_text('#nav button[data-v="tpmine"]')
+            txt = pg.inner_text(TAB)
             assert "Tabui" in txt and "mzFinder" not in txt, txt
-            assert pg.evaluate("localStorage.getItem('qqq.mzfinder')") is None      # no switch: nothing to remember
             assert [u for u in reqs if u.endswith("/mzfinder/indice.json")]
-            pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
+            pg.click(TAB); pg.wait_for_selector("#tp-go")
             assert not pg.evaluate("document.getElementById('v-draw').offsetParent")
             pg.click('#nav button[data-v="theory"]'); assert pg.evaluate("document.getElementById('v-tpmine').hidden")
             pg.click('#nav button[data-v="data"]')                           # back to Dati: a reload on #/teoria opens the standalone Teoria page
-            pg.screenshot(path=str(HERE / "shots" / "tpmine1.png")) if (HERE / "shots").exists() else None
-        step("the Tabui tab is in the header at once, no clicks on the logo", visible)
+        step("with qqq.admin the Tabui tab is in the header at once", visible)
         def reload_on():
             pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
-            pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
+            pg.wait_for_selector(TAB, timeout=30000)
         step("after a reload it is still there", reload_on)
-        def logo_apart():
-            for _ in range(5): pg.click("header img.logo")       # the logo egg only turns the logo gold now
-            pg.wait_for_function("document.documentElement.hasAttribute('data-logo-gold')", timeout=15000)
-            assert pg.query_selector('#nav button[data-v="tpmine"]')
-        step("five clicks on the logo only turn it gold: the tab stays", logo_apart)
         b.close()
 finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)

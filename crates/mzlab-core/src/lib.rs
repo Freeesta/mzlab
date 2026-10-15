@@ -3,6 +3,10 @@
 #![forbid(unsafe_code)]
 // the unit tests compare against the standard sorts
 #![cfg_attr(test, allow(clippy::disallowed_methods))]
+#[cfg(not(feature = "estesi"))]
+pub mod agilent;
+#[cfg(feature = "estesi")]
+#[path = "agilent_ext/mod.rs"]
 pub mod agilent;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod analog;

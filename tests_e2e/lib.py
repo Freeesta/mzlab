@@ -75,7 +75,7 @@ def _tempi(self):
     try:
         if not self.evaluate("typeof RUOLI !== 'undefined' && typeof ST !== 'undefined' && !document.getElementById('start').hidden && ST.files.length >= 2"): return
         self.wait_for_function("RUOLI.busy() === 0 && ST.files.every(f => f.prop)", timeout=20000)
-        self.evaluate("""() => { let t = 0; ST.files.forEach(f => { if (RUOLI.timed(f)) { if (f.time == null) { t += 10; f.time = t; } f.gT = false; } }); renderFiles(); }""")
+        self.evaluate("""() => { let t = 0; ST.files.forEach(f => { if (RUOLI.timed(f)) { if (f.time == null) { t += 10; f.time = t; } } }); renderFiles(); }""")
     except Exception: pass
 _real_click = _Page.click
 def _click(self, selector, *a, **k):

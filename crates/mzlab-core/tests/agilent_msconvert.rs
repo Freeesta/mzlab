@@ -121,3 +121,107 @@ fn real_runs_match_msconvert() {
     }
     assert!(done > 0, "no mzML paired with a .D");
 }
+
+fn lc_dir() -> Option<PathBuf> {
+    dati()
+        .map(|d| d.join("dati_formati/agilent_D"))
+        .or_else(|| {
+            let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+            let mut c: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
+                .map(PathBuf::from)
+                .into_iter()
+                .collect();
+            c.extend(
+                root.ancestors()
+                    .skip(1)
+                    .take(3)
+                    .map(|u| u.join("mzlab-dati")),
+            );
+            c.into_iter()
+                .map(|p| p.join("dati_formati/agilent_D"))
+                .find(|p| p.is_dir())
+        })
+}
+
+/// The profile spectra of a Q-TOF run (`MSProfile.bin`: flight times, and the mass calibration of each scan) against the profile mzML of msconvert. The two are not
+/// the same points: msconvert writes a thinned profile (37 000 of 293 000 samples, zeros dropped) with intensities it interpolated. What must agree: the scans (time,
+/// level, polarity), and for the strongest points of msconvert the nearest sample of ours, within 12 ppm in m/z and 10 % in height.
+#[cfg(feature = "estesi")]
+#[test]
+fn qtof_profile_run_matches_msconvert() {
+    let Some(root) = lc_dir() else {
+        eprintln!("SKIP agilent_msconvert: no data repository (MZLAB_DATI)");
+        return;
+    };
+    let mut done = 0;
+    for dir in std::fs::read_dir(&root).unwrap().flatten() {
+        let Some(run) = std::fs::read_dir(dir.path()).ok().and_then(|it| {
+            it.flatten().map(|e| e.path()).find(|p| {
+                p.extension().is_some_and(|e| e == "d") && p.join("AcqData/MSProfile.bin").exists()
+            })
+        }) else {
+            continue;
+        };
+        let Ok(f) = std::fs::File::open(run.with_extension("mzML")) else {
+            continue;
+        };
+        let want = mzml::read(std::io::BufReader::new(f)).unwrap();
+        let acq = run.join("AcqData");
+        let rd = |f: &str| std::fs::read(acq.join(f)).ok();
+        let (scan, xsd, ts) = (rd("MSScan.bin").unwrap(), rd("MSScan.xsd"), rd("MSTS.xml"));
+        let mut peak = std::fs::read(acq.join("MSProfile.bin")).unwrap();
+        let files = Files {
+            ms_scan: &scan,
+            ms_scan_xsd: xsd.as_deref(),
+            ms_peak_len: peak.len() as u64,
+            ms_ts: ts.as_deref(),
+            ..Default::default()
+        };
+        let got = AgilentD::open(&run.file_name().unwrap().to_string_lossy(), &files)
+            .unwrap()
+            .with_calibration(
+                rd("MSMassCal.bin").as_deref(),
+                rd("DefaultMassCal.xml").as_deref(),
+            )
+            .run(&mut peak)
+            .unwrap();
+        assert_eq!(got.spectra.len(), want.spectra.len(), "spectra");
+        let mut worst_ppm = 0.0f64;
+        for (k, (g, w)) in got.spectra.iter().zip(&want.spectra).enumerate() {
+            assert!((g.rt - w.rt).abs() <= 1e-9, "#{k}: rt");
+            assert_eq!((g.level, g.polarity), (w.level, w.polarity), "#{k}");
+            assert!(g.mz.windows(2).all(|p| p[0] <= p[1]), "#{k}: m/z order");
+            let mut idx: Vec<usize> = (0..w.mz.len()).collect();
+            idx.sort_by(|&a, &b| w.intensity_f64(b).total_cmp(&w.intensity_f64(a)));
+            for &i in idx.iter().take(6) {
+                let j = (0..g.mz.len())
+                    .min_by(|&a, &b| {
+                        (g.mz[a] - w.mz[i])
+                            .abs()
+                            .total_cmp(&(g.mz[b] - w.mz[i]).abs())
+                    })
+                    .unwrap();
+                let ppm = (g.mz[j] - w.mz[i]).abs() / w.mz[i] * 1e6;
+                worst_ppm = worst_ppm.max(ppm);
+                assert!(
+                    ppm <= 12.0,
+                    "#{k}: {} is {ppm} ppm from our nearest",
+                    w.mz[i]
+                );
+                // the sample nearest to msconvert's apex is on the same peak: its height is within 10 % of it
+                let b = w.intensity_f64(i);
+                let near = (j.saturating_sub(8)..(j + 9).min(g.mz.len()))
+                    .map(|q| g.intensity_f64(q))
+                    .fold(0.0, f64::max);
+                assert!(near >= 0.9 * b, "#{k}: height {near} against {b}");
+            }
+        }
+        eprintln!(
+            "{}: {} spectra, strongest points within {worst_ppm:.1} ppm",
+            run.display(),
+            got.spectra.len()
+        );
+        done += 1;
+    }
+    assert!(done > 0, "no profile run with an mzML");
+}

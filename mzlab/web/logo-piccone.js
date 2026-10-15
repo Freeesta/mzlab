@@ -88,7 +88,7 @@ header img.logo{cursor:pointer;border-radius:4px}header img.logo:focus-visible{o
   function hit() {
     if (logo.style.opacity === "0") return;                         // the shards are flying: wait for the logo to be whole again
     const n = stage + 1;
-    if (n >= HITS) { try { localStorage.setItem(ADMIN_KEY, "1"); } catch (_) { /* private mode: not unlocked */ } shatter(!root.hasAttribute("data-logo-gold")); return; }
+    if (n >= HITS) { try { localStorage.setItem(ADMIN_KEY, "1"); document.dispatchEvent(new Event("mzlab:admin")); } catch (_) { /* private mode: not unlocked */ } shatter(!root.hasAttribute("data-logo-gold")); return; }
     showStage(n); swing();
   }
   document.addEventListener("click", ev => { const t = /** @type {Element | null} */ (ev.target); if (t && t.closest && t.closest("header img.logo")) hit(); }, true);
