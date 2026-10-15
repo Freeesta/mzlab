@@ -2,7 +2,7 @@
 //
 // Only what the library index needs: a comparable form of an adduct string.
 
-const ELECTRON: f64 = 0.000548579909;
+pub const ELECTRON: f64 = 0.000548579909;
 
 const MASS: [(&str, f64); 36] = [
     ("H", 1.00782503207),
@@ -66,7 +66,8 @@ const ALIASES: [(&str, &str); 9] = [
     ("HAc", "C2H4O2"),
 ];
 
-fn mass_of(el: &str) -> Option<f64> {
+/// The monoisotopic mass of an element of the table of Attributio (36 elements); the formulas of `formula.rs` read it too.
+pub fn mass_of(el: &str) -> Option<f64> {
     MASS.iter().find(|(e, _)| *e == el).map(|(_, m)| *m)
 }
 
