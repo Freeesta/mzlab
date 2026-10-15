@@ -7,12 +7,12 @@ rewritten in Rust (`crates/mzlab-feat/src/untargeted/`); the mzML files are not 
 - **mzmine**: 3.9.0, bioconda package `mzmine-3.9.0-hdfd78af_0.tar.bz2`, sha256 `d596078684c7e23af7c7e350dded437ecbf6b2851aadc856c318c3cac2645504`; license MIT, (c) 2004-2022 The mzmine Development Team (`https://github.com/mzmine/mzmine/blob/master/LICENSE.txt`).
 - **JDK**: openjdk version "20.0.2" 2023-07-18 / OpenJDK Runtime Environment Temurin-20.0.2+9 (build 20.0.2+9) (Adoptium OpenJDK 20, `https://api.adoptium.net/v3/binary/latest/20/ga/linux/x64/jdk/hotspot/normal/eclipse`).
 - **Command**: `bin/MZmine -b fasi.xml -t TMP` and `bin/MZmine -b isotopi.xml -t TMP` (no interface), parameters of `tools/bench/parametri/mzmine/predefinita.json`.
-- **Input files** (sha256 of the mzML written by `oro_mzmine.py`):
+- **Input files** (sha256 of the mzML written by `oro_mzmine.py`, with every array decoded and rounded to 6 significant digits: neither the zlib bytes nor the last bits of the floats depend on the machine):
 
-- `oro_1.mzML`: `b786316637b48cd30d25ffd8b26d3fa485010c10019c5793524aac3792334206`
-- `oro_2.mzML`: `ddf723f5caee156c4fff86a3d5bf17dffdd9ca0ccc1cb5caf5fe20341ed740b1`
-- `oro_3.mzML`: `b603bf796c0b9bb5d34a249a12fd7b0818df7375bf9023508a60c733a205735e`
-- `oro_4.mzML`: `dcd22eba9ac7d0d3510044701b1b4db5ee7ae9e61842a09c0bf5f9cdc4c01655`
+- `oro_1.mzML`: `948314014e6ad2e3bf8d2f522cd18214aee2a5122b3a54ed8dec544aa037c73a`
+- `oro_2.mzML`: `d0184e55228e681cf3b1cda0e45c0e3287fa8268c14922330c384db7a928adf8`
+- `oro_3.mzML`: `809850330d577ff5d24aaaeb86bedaca196e61747c8a14141d3879603476cb18`
+- `oro_4.mzML`: `c15f09494dd6c07e079d0f7252759cc428e33434a68ad2459060483875f14e11`
 
 ## Content of the files
 Four files, 0.2-6 min, one scan every 0.01 min, 60 000 resolving power invented, 20 noise points under 1e4 per scan. Components (m/z, RT of the first file, height of the first file): isolated Gaussians 200.1000 at 1.00 (5e5) and 250.2000 at 1.50 (2e5); two peaks that touch at 300.1500 (RT 2.40 and 2.58, valley 40 % of the apex) and 350.1700 (RT 2.40 and 2.545, valley 70 %); 400.2000 at 3.50 with a hole of one scan (zero) at the apex; 450.3000, a trace present in the whole run (6e4 with a ripple) with a peak at 4.50 (5e5); an isotope pair of charge 1 at 500.2500 (RT 5.00; +1.003355 at 30 %, +2.00671 at 5 %) and one of charge 2 at 600.3000 (RT 5.40; +0.50168 at 60 %, +1.003355 at 20 %). `oro_2` drifts by +0.05 min and `oro_3` by -0.05 min (join); in `oro_3` the peak 250.2000 has height 2.5e4, under the minimum height of the ADAP step (3e4) and so missing (gap filling). Intensities of the files: x1.0, x0.8, x1.2, x0.9.

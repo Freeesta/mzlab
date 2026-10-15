@@ -5,6 +5,22 @@
 // The other files directly under AcqData (module traces, DAD data...) go along under the key «x:» + path: the readers module of the LC/MS variants keeps them as size and SHA-1 (docs/agenti/agilent-lcms.md).
 // The pure parts (locate, group, mzmlName) have no DOM and are tested in node (tests/test_agilent_d.py).
 
+// A Bruker timsTOF `.d` folder shares the extension with Agilent's: its members tell it (analysis.tdf/.tsf with their bin, or only a BAF). The readers module `bruker` reads it; the engine does not.
+const BrukerD = {
+  BRUKER: { tdf: "analysis.tdf", tdfbin: "analysis.tdf_bin", tdfwal: "analysis.tdf-wal", tsf: "analysis.tsf", tsfbin: "analysis.tsf_bin", tsfwal: "analysis.tsf-wal", baf: "analysis.baf" },
+  is: (/** @type {any} */ r) => !!(r.files.tdf || r.files.tsf || r.files.baf),
+  /** the bin file of a database that has none */
+  missing: (/** @type {any} */ r) => [["tdf", "tdfbin"], ["tsf", "tsfbin"]].filter(([a, b]) => r.files[a] && !r.files[b]).map(([, b]) => BrukerD.BRUKER[b]),
+  /** a Bruker run: an error with a key, or a sample the module writes as mzML (shell.js moduloToMzml) */
+  toModulo(/** @type {any} */ r, /** @type {any} */ out, /** @type {any} */ T, /** @type {string} */ nm) {
+    const M = window.LETTORI_MOD, mem = Object.entries(r.files).filter(([n]) => n !== "baf" && BrukerD.BRUKER[n]).map(([n, f]) => ({ name: r.name + "/" + BrukerD.BRUKER[n], blob: f }));
+    if (r.missing.length) out.errs.push([T("err.file.brukerNoBin", { name: r.name, file: r.missing[0] }), r.name]);
+    else if (!mem.length) out.errs.push([T("err.file.brukerBaf"), r.name]);
+    else if (!M) out.errs.push([T("err.file.notAccepted", { name: r.name }), r.name]);
+    else out.files.push(M.stand(nm, mem, 0, "bruker"));
+  },
+};
+
 const AgilentD = (() => {
   // the files of a run that the engine takes, by the name of its argument; scan and peak are required unless there is a data.ms (an older run)
   const NEED = { scan: "AcqData/MSScan.bin", peak: "AcqData/MSPeak.bin", xsd: "AcqData/MSScan.xsd", ts: "AcqData/MSTS.xml", devices: "AcqData/Devices.xml", contents: "AcqData/Contents.xml", tree: "AcqData/MSTree2.bin", acqmeth: "acqmeth.txt", datams: "data.ms", profile: "AcqData/MSProfile.bin", masscal: "AcqData/MSMassCal.bin", defcal: "AcqData/DefaultMassCal.xml", acqxml: "AcqData/AcqMethod.xml", sampleinfo: "AcqData/sample_info.xml", sequence: "AcqData/sequence.xml" };
@@ -28,9 +44,9 @@ const AgilentD = (() => {
       const r = runs.get(loc.root) || { name: loc.name, root: loc.root, files: {}, seen: new Set() };
       runs.set(loc.root, r);
       r.seen.add(loc.rel.toLowerCase());
-      const hit = Object.entries(NEED).find(([, rel]) => rel.toLowerCase() === loc.rel.toLowerCase()); if (hit) r.files[hit[0]] = f; else if (OTHER.test(loc.rel) && f.name[0] !== ".") r.files["x:" + loc.rel] = f;
+      const hit = Object.entries({ ...NEED, ...BrukerD.BRUKER }).find(([, rel]) => rel.toLowerCase() === loc.rel.toLowerCase()); if (hit) r.files[hit[0]] = f; else if (OTHER.test(loc.rel) && f.name[0] !== ".") r.files["x:" + loc.rel] = f;
     }
-    const list = [...runs.values()].map(r => ({ name: r.name, root: r.root, files: r.files, missing: r.files.datams ? [] : ["scan", "peak"].filter(k => !r.files[k] && !(k === "peak" && r.files.profile)).map(k => NEED[k]) }));
+    const list = [...runs.values()].map(r => ({ name: r.name, root: r.root, files: r.files, bruker: BrukerD.is(r), missing: BrukerD.is(r) ? BrukerD.missing(r) : r.files.datams ? [] : ["scan", "peak"].filter(k => !r.files[k] && !(k === "peak" && r.files.profile)).map(k => NEED[k]) }));
     return { runs: list, rest };
   }
 
@@ -66,7 +82,8 @@ const AgilentD = (() => {
     const rb = window.MZLAB_RUST_READY ? await window.MZLAB_RUST_READY : null;
     const taken = (ST.files || []).map(x => x.name);
     for (const r of runs) {
-      if (r.missing.length) out.errs.push([T("err.file.notAgilentD", { name: r.name }), r.name]);
+      if (r.bruker) BrukerD.toModulo(r, out, T, mzmlName(r, [...taken, ...out.files.map(f => f.name)]));
+      else if (r.missing.length) out.errs.push([T("err.file.notAgilentD", { name: r.name }), r.name]);
       else if (!rb || rb.disabled || !rb.nativeSamples) out.errs.push([T("err.file.agilentNoEngine", { name: r.name }), r.name]);
       else {
         // the folder is read as it is: its files are the members, a run is one sample

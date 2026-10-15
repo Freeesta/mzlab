@@ -22,6 +22,10 @@ Regola: nessuna perdita di informazione dei file grezzi (`.wiff`, `.raw`, `.dam`
 - Tipo di campione (`sequence.xml`), metodo GC completo (`acqmeth.txt`, `7890Method.bin`), valori effettivi (`GC.ini`), metodo di quantificazione, audit trail.
 - LC/MS (modulo `agilent`, `agilent-lcms.md`): i dati del rivelatore a diodi (`AcqData/DAD1.cd/.cg/.sd/.sp`), le tracce dei moduli (pressione, flusso, temperatura: `*.cd`/`*.cg`), i valori effettivi per scansione (`MSActual.bin`) e i file binari che non si decodificano (`MSMassCal.bin` si legge, il resto no) sono nominati in `campi` con dimensione e SHA-1 (se sotto 4 MiB) e in `avvisi` (`meta.nonDecodificato`); `rivelatori` viene dal metodo, non dai dati. I file ChemStation `.ch`/`.uv` non esistono nelle corse vere.
 
+## Bruker timsTOF `.d` (modulo «bruker»)
+- Mobilità inversa 1/K0 di ogni punto (indice di scansione TIMS, `TimsCalibration` `ModelType` 2, formula non nota): non calcolata; si conserva l'intervallo di scansioni per spettro e la tabella di calibrazione come nome/valore.
+- TSF/MALDI: posizioni dei punti dell'immagine, regioni e altre tabelle oltre a `Frames`/`GlobalMetadata`; profili con campioni a zero. File accanto: `chromatography-data.sqlite`, `.mcf`, `.baf`.
+
 ## mzML con numpress (modulo «aperti»)
 - Nello spettro riscritto, i cvParam che lo scrittore mzML non conosce passano come userParam «ACC nome» (non come cvParam); `dataProcessing`, `referenceableParamGroup` e `scanSettings` del file originale non sono portati.
 
