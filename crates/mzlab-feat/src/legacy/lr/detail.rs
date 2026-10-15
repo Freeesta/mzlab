@@ -184,7 +184,11 @@ pub fn detail<R: ReadAt>(
     ms2::ms2_json(&mut o, &m);
     o.raw(",\"ms2_links\":");
     ms2::links_json(&mut o, d, e, &mut open)?;
-    if let Some((_, c)) = d.links.as_ref().and_then(|l| l.sims.iter().find(|s| s.0 == e.id)) {
+    if let Some((_, c)) = d
+        .links
+        .as_ref()
+        .and_then(|l| l.sims.iter().find(|s| s.0 == e.id))
+    {
         o.raw(",\"sim\":");
         c.json(&mut o);
     }

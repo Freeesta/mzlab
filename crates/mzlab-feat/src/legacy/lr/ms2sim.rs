@@ -15,7 +15,7 @@ pub const TOL_LR: f64 = 0.5;
 /// The consensus spectrum of a pool: m/z rounded to 0.1, the peaks within `TOL_LR` of a stronger one merged into it (intensity-weighted m/z,
 /// summed intensity), then `prepare` (precursor region, weak peaks, `K` strongest, sqrt, unit norm). `None` without fragments.
 pub fn consensus(frags: &[(f64, f64)], precursor: f64) -> Option<Spec> {
-    let mut left: Vec<(f64, f64)> = frags
+    let mut left: Peaks = frags
         .iter()
         .map(|f| ((f.0 * 10.0).round() / 10.0, f.1))
         .filter(|f| f.1 > 0.0)
@@ -24,7 +24,7 @@ pub fn consensus(frags: &[(f64, f64)], precursor: f64) -> Option<Spec> {
     let (mut mz, mut inten) = (Vec::new(), Vec::new());
     while !left.is_empty() {
         let top = left[0].0;
-        let (near, rest): (Vec<(f64, f64)>, Vec<(f64, f64)>) =
+        let (near, rest): (Peaks, Peaks) =
             left.into_iter().partition(|p| (p.0 - top).abs() <= TOL_LR);
         let w: f64 = near.iter().map(|p| p.1).sum();
         mz.push(near.iter().map(|p| p.0 * p.1).sum::<f64>() / w);
@@ -35,12 +35,16 @@ pub fn consensus(frags: &[(f64, f64)], precursor: f64) -> Option<Spec> {
     (!s.0.is_empty()).then_some(s)
 }
 
+/// A consensus spectrum with its precursor.
+type Consensus = (Spec, f64);
+type Peaks = Vec<(f64, f64)>;
+
 /// The consensus spectrum and precursor of the pool of `e` (`None` without scans).
 fn spectrum<R: ReadAt>(
     d: &LrDig,
     e: &Entry,
     open: &mut dyn FnMut(usize) -> Res<Index<R>>,
-) -> Res<Option<(Spec, f64)>> {
+) -> Res<Option<Consensus>> {
     let p: Pool = pool(d, e, K, open)?;
     let Some(prec) = p.precursor else {
         return Ok(None);

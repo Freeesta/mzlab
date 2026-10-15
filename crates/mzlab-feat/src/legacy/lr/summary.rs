@@ -191,7 +191,11 @@ fn ordered(d: &LrDig) -> Vec<Row<'_>> {
             Row {
                 insource: insource(d, e, p_rt, isf),
                 ms2: d.links.as_ref().map_or(0, |l| l.of(e.id).count()),
-                sim: d.links.as_ref().and_then(|l| l.sims.iter().find(|s| s.0 == e.id)).map(|s| s.1.cos_total()),
+                sim: d
+                    .links
+                    .as_ref()
+                    .and_then(|l| l.sims.iter().find(|s| s.0 == e.id))
+                    .map(|s| s.1.cos_total()),
                 isf,
                 e,
                 kin,

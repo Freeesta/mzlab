@@ -184,7 +184,10 @@ pub fn ms2_link<R: ReadAt>(
     }
     ms2target::finish_links(d, &mut l, &made);
     d.links = Some(l);
-    let sims = d.links.as_ref().map_or(Ok(Vec::new()), |l| super::ms2sim::compute(d, l, open))?;
+    let sims = d
+        .links
+        .as_ref()
+        .map_or(Ok(Vec::new()), |l| super::ms2sim::compute(d, l, open))?;
     if let Some(l) = d.links.as_mut() {
         l.sims = sims;
     }
