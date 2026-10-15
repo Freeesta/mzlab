@@ -9,12 +9,13 @@ use std::cmp::Ordering;
 use std::io::{Cursor, Seek, SeekFrom, Write};
 
 use crate::error::{Error, Result};
+use crate::mzidx_spill::{Parti, Spill};
 use crate::mzml::{self, Item, Spectrum};
 
 pub const BLOCK: u64 = 16384;
 const ALIGN: u64 = 64;
 const HEADER: usize = 64;
-const NB: usize = 10000;
+pub(crate) const NB: usize = 10000;
 /// Default bytes of peaks held in memory (the WASM memory is 256 MB at most).
 pub const DEFAULT_BUDGET: usize = 64 << 20;
 
@@ -117,7 +118,7 @@ fn by_mz<T: Num>(a: &Peak<T>, b: &Peak<T>) -> Ordering {
 /// `floor(x)` clamped to `0..NB` (NaN in the last): for `x > 0` the cast truncates, which is the floor.
 #[inline]
 #[allow(clippy::cast_possible_truncation)] // `x` is in 0..NB here
-fn bucket(x: f64) -> usize {
+pub(crate) fn bucket(x: f64) -> usize {
     if x.is_nan() || x >= (NB - 1) as f64 {
         NB - 1
     } else if x <= 0.0 {
@@ -169,6 +170,8 @@ trait Sect {
     fn cost(&self, b: usize) -> usize;
     fn begin_round(&mut self, lo: usize, hi: usize) -> Result<()>;
     fn fill(&mut self, sp: &Spectrum, pos: u32) -> Result<()>;
+    /// The same for one peak (a peak read back from the scratch file).
+    fn fill_pk(&mut self, mz: f64, it: f64, pos: u32) -> Result<()>;
     /// Sorts what the section holds (the round `[lo, hi)`) and writes it.
     fn flush(&mut self, out: &mut dyn Output, off: &Offsets) -> Result<()>;
     fn finish(&mut self, out: &mut dyn Output, off: &Offsets) -> Result<()>;
@@ -222,14 +225,6 @@ impl<T: Num> Sec<T> {
             totals: Totals::new(n_scans),
             fence: Vec::new(),
             bytes: Vec::new(),
-        }
-    }
-
-    fn peak(sp: &Spectrum, j: usize, pos: u32) -> Peak<T> {
-        Peak {
-            mz: T::from64(sp.mz[j]),
-            it: T::from64(sp.intensity_f64(j)),
-            pos,
         }
     }
 
@@ -332,12 +327,22 @@ impl<T: Num> Sect for Sec<T> {
 
     fn fill(&mut self, sp: &Spectrum, pos: u32) -> Result<()> {
         for j in 0..sp.mz.len() {
-            let p = Self::peak(sp, j, pos);
-            let b = bucket(p.mz.to64());
-            if b >= self.lo && b < self.hi {
-                self.round[self.cursor[b]] = p;
-                self.cursor[b] += 1;
-            }
+            self.fill_pk(sp.mz[j], sp.intensity_f64(j), pos)?;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn fill_pk(&mut self, mz: f64, it: f64, pos: u32) -> Result<()> {
+        let p = Peak {
+            mz: T::from64(mz),
+            it: T::from64(it),
+            pos,
+        };
+        let b = bucket(p.mz.to64());
+        if b >= self.lo && b < self.hi {
+            self.round[self.cursor[b]] = p;
+            self.cursor[b] += 1;
         }
         Ok(())
     }
@@ -413,21 +418,39 @@ struct Gruppo {
     kept: Vec<Peak<f64>>,
 }
 
-/// Pass 1 of the builder: the groups, filled one scan at a time. `budget / 2` bytes of peaks are kept; past that they are dropped and the rounds decode again.
-pub(crate) struct Prima {
+impl Gruppo {
+    fn nuovo(level: u8, polarity: i8) -> Gruppo {
+        Gruppo {
+            level,
+            polarity,
+            counts: vec![0; NB],
+            counts32: if level == 1 { vec![0; NB] } else { Vec::new() },
+            n: 0,
+            kept: Vec::new(),
+        }
+    }
+}
+
+/// Pass 1 of the builder: the groups, filled one scan at a time. `budget / 2` bytes of peaks are kept; past that, with a scratch file (`spill`) they go to it
+/// split by m/z (`mzidx_spill`) and the rounds read them from there; without one they are dropped and the rounds decode again.
+pub(crate) struct Prima<'a> {
     gruppi: Vec<Gruppo>,
     keep: bool,
     budget: usize,
     visti: usize,
+    spill: Option<&'a mut dyn Spill>,
+    parti: Option<Parti>,
 }
 
-impl Prima {
-    pub(crate) fn new(budget: usize) -> Prima {
+impl<'a> Prima<'a> {
+    pub(crate) fn new(budget: usize, spill: Option<&'a mut dyn Spill>) -> Prima<'a> {
         Prima {
             gruppi: Vec::new(),
             keep: true,
             budget,
             visti: 0,
+            spill,
+            parti: None,
         }
     }
 
@@ -441,14 +464,7 @@ impl Prima {
         {
             Some(i) => i,
             None => {
-                self.gruppi.push(Gruppo {
-                    level,
-                    polarity,
-                    counts: vec![0; NB],
-                    counts32: if level == 1 { vec![0; NB] } else { Vec::new() },
-                    n: 0,
-                    kept: Vec::new(),
-                });
+                self.gruppi.push(Gruppo::nuovo(level, polarity));
                 self.gruppi.len() - 1
             }
         };
@@ -466,6 +482,9 @@ impl Prima {
             }
             if self.keep {
                 g.kept.push(Peak { mz, it, pos });
+            } else if let (Some(parti), Some(spill)) = (&mut self.parti, self.spill.as_deref_mut())
+            {
+                parti.push(spill, mz, it, pos)?;
             }
         }
         g.n += n as u64;
@@ -478,11 +497,42 @@ impl Prima {
                 .sum();
             if held > self.budget / 2 {
                 self.keep = false;
+                if let Some(sp) = self.spill.as_deref_mut() {
+                    self.parti = Some(avvia(&mut self.gruppi, sp)?);
+                }
                 self.gruppi.iter_mut().for_each(|g| g.kept = Vec::new());
             }
         }
         Ok(())
     }
+}
+
+/// The budget ran out with a scratch file: what is kept goes to it in the order of the scans (the groups merged by scan number), and the next scans follow it.
+#[allow(clippy::indexing_slicing)] // the indexes come from the groups just counted
+fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
+    let mut counts = vec![0u64; NB];
+    for g in gruppi.iter() {
+        for (c, &x) in counts.iter_mut().zip(&g.counts) {
+            *c += u64::from(x);
+        }
+    }
+    let mut parti = Parti::new(&counts);
+    let mut next = vec![0usize; gruppi.len()];
+    loop {
+        let mut best: Option<usize> = None;
+        for (i, g) in gruppi.iter().enumerate() {
+            if let Some(p) = g.kept.get(next[i]) {
+                if best.is_none_or(|b| p.pos < gruppi[b].kept[next[b]].pos) {
+                    best = Some(i);
+                }
+            }
+        }
+        let Some(i) = best else { break };
+        let p = gruppi[i].kept[next[i]];
+        next[i] += 1;
+        parti.push(sp, p.mz, p.it, p.pos)?;
+    }
+    Ok(parti)
 }
 
 fn pad(n: u64) -> u64 {
@@ -511,7 +561,7 @@ pub fn build(
         return Err(Error::new("err.file.index").with("detail", "scan table"));
     }
     // -- pass 1: count (and keep, while it fits)
-    let mut prima = Prima::new(budget);
+    let mut prima = Prima::new(budget, None);
     let mut failure: Option<Error> = None;
     {
         let mut on = |sp: Spectrum| {
@@ -541,7 +591,7 @@ pub fn build(
 #[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the table, checked against `n_scans`
 pub(crate) fn build_dopo(
     table: &ScanTable,
-    prima: Prima,
+    mut prima: Prima,
     pass: &mut Pass,
     out: &mut dyn Output,
     budget: usize,
@@ -683,6 +733,10 @@ pub(crate) fn build_dopo(
             sec.flush(out, &s.off)?;
         }
     } else {
+        let (mut parti, mut spill) = (prima.parti.take(), prima.spill.take());
+        if let (Some(p), Some(sp)) = (parti.as_mut(), spill.as_deref_mut()) {
+            p.fine(sp)?;
+        }
         let costs: Vec<usize> = (0..NB)
             .map(|b| secs.iter().map(|s| s.cost(b)).sum())
             .collect();
@@ -703,7 +757,15 @@ pub(crate) fn build_dopo(
                 }
                 let mut seen = 0usize;
                 let mut failure: Option<Error> = None;
-                {
+                if let (Some(p), Some(sp)) = (parti.as_ref(), spill.as_deref_mut()) {
+                    // the peaks are in the scratch file: no decoding
+                    p.leggi(sp, lo, hi, &mut |mz, it, pos| {
+                        for &(si, q) in &member[pos as usize] {
+                            secs[si].fill_pk(mz, it, q)?;
+                        }
+                        Ok(())
+                    })?;
+                } else {
                     let mut on = |sp: Spectrum| {
                         if failure.is_some() || seen >= n_scans {
                             return;
