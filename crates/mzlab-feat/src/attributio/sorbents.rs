@@ -212,8 +212,12 @@ fn sorbent_blank_column(
             }
         }
     }
-    Ok(out
-        .iter()
+    Ok(numbers_as_text(&out))
+}
+
+/// The blank abundances as the text of the new column (missing = empty).
+fn numbers_as_text(v: &[f64]) -> Vec<String> {
+    v.iter()
         .map(|v| {
             if v.is_nan() {
                 String::new()
@@ -221,7 +225,7 @@ fn sorbent_blank_column(
                 format!("{v}")
             }
         })
-        .collect())
+        .collect()
 }
 
 /// The ids of the dropped rows and the row each one was joined to.

@@ -5,82 +5,6 @@
 use super::error::{CampaignError, Result};
 use std::collections::HashMap;
 
-/// A value of a result row, for the tables the page shows and for the comparisons with the golden data.
-#[derive(Clone, Debug, PartialEq)]
-pub enum Cell {
-    Null,
-    Bool(bool),
-    Int(i64),
-    Num(f64),
-    Str(String),
-}
-
-impl Cell {
-    pub fn str(v: &Option<String>) -> Cell {
-        v.as_ref().map_or(Cell::Null, |s| Cell::Str(s.clone()))
-    }
-    pub fn num(v: Option<f64>) -> Cell {
-        v.filter(|x| x.is_finite()).map_or(Cell::Null, Cell::Num)
-    }
-}
-
-/// A typed row of a source table: its column names (those of Attributio) and its values in that order.
-pub trait Record {
-    const COLUMNS: &'static [&'static str];
-    fn cells(&self) -> Vec<Cell>;
-}
-
-/// The words pandas reads as missing in every column.
-pub fn is_na(s: &str) -> bool {
-    matches!(
-        s,
-        "" | "#N/A"
-            | "#N/A N/A"
-            | "#NA"
-            | "-1.#IND"
-            | "-1.#QNAN"
-            | "-NaN"
-            | "-nan"
-            | "1.#IND"
-            | "1.#QNAN"
-            | "<NA>"
-            | "N/A"
-            | "NA"
-            | "NULL"
-            | "NaN"
-            | "None"
-            | "n/a"
-            | "nan"
-            | "null"
-    )
-}
-
-/// `pd.to_numeric(s, errors="coerce")` of one cell: `None` for a missing or non-numeric text and for NaN.
-pub fn to_num(s: &str) -> Option<f64> {
-    let t = s.trim();
-    if is_na(t) || !t.is_ascii() {
-        return None;
-    }
-    t.parse::<f64>().ok().filter(|v| !v.is_nan())
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct Frame {
-    columns: Vec<String>,
-    index: HashMap<String, usize>,
-    data: String,
-    cells: Vec<(u32, u32)>,
-    nrows: usize,
-}
-
-fn index_of(columns: &[String]) -> HashMap<String, usize> {
-    let mut m = HashMap::new();
-    for (i, c) in columns.iter().enumerate() {
-        m.entry(c.clone()).or_insert(i);
-    }
-    m
-}
-
 impl Frame {
     /// An empty frame with the given columns.
     pub fn with_columns(columns: &[&str]) -> Frame {
@@ -215,6 +139,82 @@ impl Frame {
         }
         Vec::new()
     }
+}
+
+/// A value of a result row, for the tables the page shows and for the comparisons with the golden data.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Cell {
+    Null,
+    Bool(bool),
+    Int(i64),
+    Num(f64),
+    Str(String),
+}
+
+impl Cell {
+    pub fn str(v: &Option<String>) -> Cell {
+        v.as_ref().map_or(Cell::Null, |s| Cell::Str(s.clone()))
+    }
+    pub fn num(v: Option<f64>) -> Cell {
+        v.filter(|x| x.is_finite()).map_or(Cell::Null, Cell::Num)
+    }
+}
+
+/// A typed row of a source table: its column names (those of Attributio) and its values in that order.
+pub trait Record {
+    const COLUMNS: &'static [&'static str];
+    fn cells(&self) -> Vec<Cell>;
+}
+
+/// The words pandas reads as missing in every column.
+pub fn is_na(s: &str) -> bool {
+    matches!(
+        s,
+        "" | "#N/A"
+            | "#N/A N/A"
+            | "#NA"
+            | "-1.#IND"
+            | "-1.#QNAN"
+            | "-NaN"
+            | "-nan"
+            | "1.#IND"
+            | "1.#QNAN"
+            | "<NA>"
+            | "N/A"
+            | "NA"
+            | "NULL"
+            | "NaN"
+            | "None"
+            | "n/a"
+            | "nan"
+            | "null"
+    )
+}
+
+/// `pd.to_numeric(s, errors="coerce")` of one cell: `None` for a missing or non-numeric text and for NaN.
+pub fn to_num(s: &str) -> Option<f64> {
+    let t = s.trim();
+    if is_na(t) || !t.is_ascii() {
+        return None;
+    }
+    t.parse::<f64>().ok().filter(|v| !v.is_nan())
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct Frame {
+    columns: Vec<String>,
+    index: HashMap<String, usize>,
+    data: String,
+    cells: Vec<(u32, u32)>,
+    nrows: usize,
+}
+
+fn index_of(columns: &[String]) -> HashMap<String, usize> {
+    let mut m = HashMap::new();
+    for (i, c) in columns.iter().enumerate() {
+        m.entry(c.clone()).or_insert(i);
+    }
+    m
 }
 
 fn mangle(cols: Vec<String>) -> Vec<String> {

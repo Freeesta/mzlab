@@ -148,6 +148,49 @@ fn check_values(
     )))
 }
 
+/// The values the chemist may write in the closed columns, and the justification a Level 2b decision needs.
+fn check_decisions(t: &DecisionTable, path: &str) -> Result<()> {
+    check_values(
+        t,
+        path,
+        "livello",
+        &["", "2", "2b", "3"],
+        "livello must be '2b', '3', '2' or empty",
+    )?;
+    check_values(
+        t,
+        path,
+        "group",
+        &["", "ambiguous"],
+        "group must be 'ambiguous' or empty",
+    )?;
+    check_values(
+        t,
+        path,
+        "evidence_type",
+        &["", "library", "analog", "fragments"],
+        "evidence_type must be library, analog, fragments or empty",
+    )?;
+    check_values(
+        t,
+        path,
+        "rt_check",
+        &["", "peak", "isomer"],
+        "rt_check must be 'peak', 'isomer' or empty",
+    )?;
+    let unjustified: Vec<String> = (0..t.len())
+        .filter(|&r| t.get(r, "livello") == "2b" && t.get(r, "motivazione").trim().is_empty())
+        .map(|r| format!("{} {}", t.get(r, "pol"), t.get(r, "feature_id")))
+        .collect();
+    if !unjustified.is_empty() {
+        return Err(CampaignError::value(format!(
+            "{path}: a Level 2b decision needs 'motivazione' ({})",
+            unjustified.join(", ")
+        )));
+    }
+    Ok(())
+}
+
 /// The decisions file, or the empty table when there is no file. `text` is the file, `path` its name in messages.
 pub fn load_feature_decisions(text: Option<&str>, path: &str) -> Result<DecisionTable> {
     let Some(text) = text else {
@@ -197,44 +240,7 @@ pub fn load_feature_decisions(text: Option<&str>, path: &str) -> Result<Decision
             };
         }
     }
-    check_values(
-        &t,
-        path,
-        "livello",
-        &["", "2", "2b", "3"],
-        "livello must be '2b', '3', '2' or empty",
-    )?;
-    check_values(
-        &t,
-        path,
-        "group",
-        &["", "ambiguous"],
-        "group must be 'ambiguous' or empty",
-    )?;
-    check_values(
-        &t,
-        path,
-        "evidence_type",
-        &["", "library", "analog", "fragments"],
-        "evidence_type must be library, analog, fragments or empty",
-    )?;
-    check_values(
-        &t,
-        path,
-        "rt_check",
-        &["", "peak", "isomer"],
-        "rt_check must be 'peak', 'isomer' or empty",
-    )?;
-    let unjustified: Vec<String> = (0..t.len())
-        .filter(|&r| t.get(r, "livello") == "2b" && t.get(r, "motivazione").trim().is_empty())
-        .map(|r| format!("{} {}", t.get(r, "pol"), t.get(r, "feature_id")))
-        .collect();
-    if !unjustified.is_empty() {
-        return Err(CampaignError::value(format!(
-            "{path}: a Level 2b decision needs 'motivazione' ({})",
-            unjustified.join(", ")
-        )));
-    }
+    check_decisions(&t, path)?;
     Ok(t)
 }
 

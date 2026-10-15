@@ -3,147 +3,6 @@
 //! integers, floats, booleans, arrays (also over several lines, with comments and a trailing comma) and inline tables on one line. Anything else (arrays of
 //! tables, multi-line strings, dates, hexadecimal numbers) is an error that names the line.
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum Value {
-    Str(String),
-    Int(i64),
-    Float(f64),
-    Bool(bool),
-    Array(Vec<Value>),
-    Table(Table),
-}
-
-/// A table keeps the order of the file (the order of the sites matters).
-#[derive(Clone, Debug, PartialEq, Default)]
-pub struct Table(pub Vec<(String, Value)>);
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct TomlError {
-    pub line: usize,
-    pub msg: String,
-}
-
-impl Table {
-    pub fn get(&self, key: &str) -> Option<&Value> {
-        self.0.iter().find(|(k, _)| k == key).map(|(_, v)| v)
-    }
-    pub fn table(&self, key: &str) -> Option<&Table> {
-        match self.get(key) {
-            Some(Value::Table(t)) => Some(t),
-            _ => None,
-        }
-    }
-    pub fn keys(&self) -> impl Iterator<Item = &str> {
-        self.0.iter().map(|(k, _)| k.as_str())
-    }
-    fn slot(&mut self, key: &str) -> Option<&mut Value> {
-        self.0.iter_mut().find(|(k, _)| k == key).map(|(_, v)| v)
-    }
-}
-
-impl Value {
-    pub fn as_str(&self) -> Option<&str> {
-        match self {
-            Value::Str(s) => Some(s),
-            _ => None,
-        }
-    }
-    /// An integer or a float as a float (`float(x)`).
-    pub fn as_f64(&self) -> Option<f64> {
-        match self {
-            Value::Int(i) => Some(*i as f64),
-            Value::Float(f) => Some(*f),
-            _ => None,
-        }
-    }
-    pub fn as_bool(&self) -> Option<bool> {
-        match self {
-            Value::Bool(b) => Some(*b),
-            _ => None,
-        }
-    }
-}
-
-struct P<'a> {
-    b: &'a [u8],
-    s: &'a str,
-    i: usize,
-    line: usize,
-}
-
-type R<T> = std::result::Result<T, TomlError>;
-
-pub fn parse(text: &str) -> R<Table> {
-    let text = text.strip_prefix('\u{feff}').unwrap_or(text);
-    let mut p = P {
-        b: text.as_bytes(),
-        s: text,
-        i: 0,
-        line: 1,
-    };
-    let mut root = Table::default();
-    let mut cur: Vec<String> = Vec::new();
-    let mut defined: Vec<Vec<String>> = Vec::new();
-    loop {
-        p.skip_all();
-        match p.peek() {
-            None => return Ok(root),
-            Some(b'[') => {
-                if p.b.get(p.i + 1) == Some(&b'[') {
-                    return Err(p.err("arrays of tables ([[...]]) are not supported"));
-                }
-                p.i += 1;
-                cur = p.key_path(b']')?;
-                p.expect(b']')?;
-                p.end_of_line()?;
-                if defined.contains(&cur) {
-                    return Err(p.err(&format!("table [{}] is defined twice", cur.join("."))));
-                }
-                defined.push(cur.clone());
-                open_table(&mut root, &cur).map_err(|m| p.err(&m))?;
-            }
-            Some(_) => {
-                let keys = p.key_path(b'=')?;
-                p.expect(b'=')?;
-                p.skip_ws();
-                let v = p.value()?;
-                p.end_of_line()?;
-                let mut path = cur.clone();
-                path.extend(keys);
-                insert(&mut root, &path, v).map_err(|m| p.err(&m))?;
-            }
-        }
-    }
-}
-
-/// The table at `path`, created (with the parents) when it is not there.
-fn open_table<'t>(
-    root: &'t mut Table,
-    path: &[String],
-) -> std::result::Result<&'t mut Table, String> {
-    let mut t = root;
-    for k in path {
-        if t.slot(k).is_none() {
-            t.0.push((k.clone(), Value::Table(Table::default())));
-        }
-        t = match t.slot(k) {
-            Some(Value::Table(x)) => x,
-            _ => return Err(format!("key '{k}' is not a table")),
-        };
-    }
-    Ok(t)
-}
-
-fn insert(root: &mut Table, path: &[String], v: Value) -> std::result::Result<(), String> {
-    let (last, parents) = path.split_last().ok_or("empty key")?;
-    let t = open_table(root, parents)?;
-    if t.slot(last).is_some() {
-        return Err(format!("key '{last}' is defined twice"));
-    }
-    t.0.push((last.clone(), v));
-    Ok(())
-}
-
 impl P<'_> {
     fn err(&self, m: &str) -> TomlError {
         TomlError {
@@ -370,4 +229,145 @@ impl P<'_> {
             ))),
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Value {
+    Str(String),
+    Int(i64),
+    Float(f64),
+    Bool(bool),
+    Array(Vec<Value>),
+    Table(Table),
+}
+
+/// A table keeps the order of the file (the order of the sites matters).
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct Table(pub Vec<(String, Value)>);
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TomlError {
+    pub line: usize,
+    pub msg: String,
+}
+
+impl Table {
+    pub fn get(&self, key: &str) -> Option<&Value> {
+        self.0.iter().find(|(k, _)| k == key).map(|(_, v)| v)
+    }
+    pub fn table(&self, key: &str) -> Option<&Table> {
+        match self.get(key) {
+            Some(Value::Table(t)) => Some(t),
+            _ => None,
+        }
+    }
+    pub fn keys(&self) -> impl Iterator<Item = &str> {
+        self.0.iter().map(|(k, _)| k.as_str())
+    }
+    fn slot(&mut self, key: &str) -> Option<&mut Value> {
+        self.0.iter_mut().find(|(k, _)| k == key).map(|(_, v)| v)
+    }
+}
+
+impl Value {
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            Value::Str(s) => Some(s),
+            _ => None,
+        }
+    }
+    /// An integer or a float as a float (`float(x)`).
+    pub fn as_f64(&self) -> Option<f64> {
+        match self {
+            Value::Int(i) => Some(*i as f64),
+            Value::Float(f) => Some(*f),
+            _ => None,
+        }
+    }
+    pub fn as_bool(&self) -> Option<bool> {
+        match self {
+            Value::Bool(b) => Some(*b),
+            _ => None,
+        }
+    }
+}
+
+struct P<'a> {
+    b: &'a [u8],
+    s: &'a str,
+    i: usize,
+    line: usize,
+}
+
+type R<T> = std::result::Result<T, TomlError>;
+
+pub fn parse(text: &str) -> R<Table> {
+    let text = text.strip_prefix('\u{feff}').unwrap_or(text);
+    let mut p = P {
+        b: text.as_bytes(),
+        s: text,
+        i: 0,
+        line: 1,
+    };
+    let mut root = Table::default();
+    let mut cur: Vec<String> = Vec::new();
+    let mut defined: Vec<Vec<String>> = Vec::new();
+    loop {
+        p.skip_all();
+        match p.peek() {
+            None => return Ok(root),
+            Some(b'[') => {
+                if p.b.get(p.i + 1) == Some(&b'[') {
+                    return Err(p.err("arrays of tables ([[...]]) are not supported"));
+                }
+                p.i += 1;
+                cur = p.key_path(b']')?;
+                p.expect(b']')?;
+                p.end_of_line()?;
+                if defined.contains(&cur) {
+                    return Err(p.err(&format!("table [{}] is defined twice", cur.join("."))));
+                }
+                defined.push(cur.clone());
+                open_table(&mut root, &cur).map_err(|m| p.err(&m))?;
+            }
+            Some(_) => {
+                let keys = p.key_path(b'=')?;
+                p.expect(b'=')?;
+                p.skip_ws();
+                let v = p.value()?;
+                p.end_of_line()?;
+                let mut path = cur.clone();
+                path.extend(keys);
+                insert(&mut root, &path, v).map_err(|m| p.err(&m))?;
+            }
+        }
+    }
+}
+
+/// The table at `path`, created (with the parents) when it is not there.
+fn open_table<'t>(
+    root: &'t mut Table,
+    path: &[String],
+) -> std::result::Result<&'t mut Table, String> {
+    let mut t = root;
+    for k in path {
+        if t.slot(k).is_none() {
+            t.0.push((k.clone(), Value::Table(Table::default())));
+        }
+        t = match t.slot(k) {
+            Some(Value::Table(x)) => x,
+            _ => return Err(format!("key '{k}' is not a table")),
+        };
+    }
+    Ok(t)
+}
+
+fn insert(root: &mut Table, path: &[String], v: Value) -> std::result::Result<(), String> {
+    let (last, parents) = path.split_last().ok_or("empty key")?;
+    let t = open_table(root, parents)?;
+    if t.slot(last).is_some() {
+        return Err(format!("key '{last}' is defined twice"));
+    }
+    t.0.push((last.clone(), v));
+    Ok(())
 }

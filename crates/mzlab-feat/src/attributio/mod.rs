@@ -5,6 +5,7 @@
 //! typed rows (`Sources`) that the level cascade uses without opening a file again.
 
 pub mod campaign;
+mod campaign_read;
 pub mod detection;
 pub mod error;
 pub mod frame;
