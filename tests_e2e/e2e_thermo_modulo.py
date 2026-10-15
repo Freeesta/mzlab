@@ -106,6 +106,21 @@ try:
               try { await rb.nativeSamples([{ name: "rotto.raw", blob }]); return { ok: true }; } catch (e) { return { ok: false, key: e.json && e.json.error_key, message: String(e.message) }; } }""", head)
             assert not r["ok"] and str(r["key"]).startswith("err.file."), r
         step("a truncated .raw is refused", broken)
+        def baf():
+            # the big DDA (595 MB, 56 061 scans) opens in the site and the map appears; skipped when the file is not around
+            cands = [os.environ.get("MZLAB_RAW_BAF")] + [str(Path(d) / "dati_formati" / "thermo_raw" / "BAF_GEE_37.raw") for d in (os.environ.get("MZLAB_DATI"), str(ROOT.parent / "mzlab-dati")) if d]
+            big = next((Path(c) for c in cands if c and Path(c).is_file()), None)
+            if big is None:
+                print("   SKIP e2e_thermo_modulo BAF: the big .raw is not around (MZLAB_RAW_BAF)"); return
+            pg4 = page(b, [])
+            pg4.set_input_files("#pick", str(big))
+            pg4.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=600000)
+            pg4.click("#opbtn"); pg4.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=900000)
+            pg4.click("#np-map"); pg4.wait_for_selector(".pnl.map canvas", timeout=600000)
+            pg4.wait_for_function("(() => { const m = E.panels.find(q => q.type === 'map'); return !!m && !!m.cv && m.cv.width > 0; })()", timeout=600000)
+            miss = [m for m in pg4.evaluate("window.MZLAB_LR_MISS || []") if "api/spectrum" not in m]
+            assert not miss, miss
+        step("the big DDA .raw (BAF) opens and the map appears, MZLAB_LR_MISS stays empty", baf)
         b.close()
 finally:
     srv.terminate()

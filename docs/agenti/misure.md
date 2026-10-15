@@ -234,4 +234,4 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 
 ## Moduli lettori (`tools/build_lettori_wasm.sh`, dopo `wasm_opt -Oz`)
 - `.wasm` per famiglia, in byte (tetto): `thermo` 437 515 (458 752), `agilent` 337 567 (393 216), `sciex` 303 705 (327 680). Il `.wasm` del motore pesa 1 439 240 B (senza il lettore Thermo, che sta nel modulo `thermo`).
-- Picco di memoria del modulo `thermo` che indicizza un `.raw` (memoria iniziale 32 MB): 44,4 MB per 7 952 scansioni, 85,1 MB per 16 524.
+- Memoria del modulo `thermo` (`tools/bench_raw.py`, memoria iniziale 32 MB) sul BAF DDA da 595 MB (56 061 scansioni): dopo `apri` 33,5 MB (`apri` 1,0 s), dopo `indice` 48,0 MB (186 ms, JSON da 13,7 MB), picco di tutti i passi 122 MB (`to_mzml` 21,8 s). Il `.wasm` `thermo` pesa 458 740 B (tetto 458 752).
