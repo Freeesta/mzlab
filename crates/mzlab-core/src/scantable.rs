@@ -34,7 +34,7 @@ pub struct Row {
     pub rt: f64,
     pub polarity: i8,
     pub tic: f64,
-    precursor: Option<f64>,
+    pub precursor: Option<f64>,
     ce: Option<f64>,
     pub filter: String,
     pub profile: bool,
@@ -47,7 +47,7 @@ pub struct Row {
     path: Option<Vec<(f64, String, f64)>>,
     precs: Vec<Prec>,
     charge: Option<i64>,
-    native: String,
+    pub native: String,
 }
 
 /// The table, with what the `run` object of the metadata needs.

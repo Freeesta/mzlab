@@ -20,3 +20,6 @@ Regola: nessuna perdita di informazione dei file grezzi (`.wiff`, `.raw`, `.dam`
 
 ## Agilent `.D`
 - Tipo di campione (`sequence.xml`), metodo GC completo (`acqmeth.txt`, `7890Method.bin`), valori effettivi (`GC.ini`), metodo di quantificazione, audit trail.
+
+## mzML con numpress (modulo «aperti»)
+- Nello spettro riscritto, i cvParam che lo scrittore mzML non conosce passano come userParam «ACC nome» (non come cvParam); `dataProcessing`, `referenceableParamGroup` e `scanSettings` del file originale non sono portati.
