@@ -15,6 +15,8 @@ use serde_json::Value;
 
 mod comune;
 use comune::*;
+#[path = "lr_ms2link/mz.rs"]
+mod mz;
 #[path = "lr_ms2link/sim.rs"]
 mod sim;
 #[path = "lr_ms2link/target.rs"]

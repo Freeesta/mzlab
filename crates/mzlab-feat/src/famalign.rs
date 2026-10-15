@@ -87,7 +87,7 @@ impl Sets {
     }
 }
 
-/// What the files say about each group: how often it is the root of a family (or a lone ion) and the count of each role.
+/// What the files say about each group: in how many files it is the root of a family (or a lone ion) and the count of each role.
 struct Votes {
     base: Vec<u16>,
     role: Vec<[u16; 7]>,
@@ -106,6 +106,8 @@ fn collect(
         role: filled(ions.len(), [0; 7])?,
     };
     let mut links = Vec::new();
+    // The last file that voted for each group as a base: a split ion votes once per file.
+    let mut last: Vec<u32> = filled(ions.len(), u32::MAX)?;
     for (k, f) in files.iter().enumerate() {
         for i in 0..f.len() {
             let g = group_of[k][i];
@@ -113,7 +115,8 @@ fn collect(
                 continue;
             }
             votes.role[g as usize][f.role[i].min(6) as usize] += 1;
-            if f.role[i] == ROLE_M || f.role[i] == ROLE_NONE {
+            if (f.role[i] == ROLE_M || f.role[i] == ROLE_NONE) && last[g as usize] != k as u32 {
+                last[g as usize] = k as u32;
                 votes.base[g as usize] += 1;
             }
             if f.family_id[i] == 0 {
