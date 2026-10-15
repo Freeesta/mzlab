@@ -88,7 +88,7 @@ Lo studente acquisisce una MS2 perché ha già visto quello ione: se un picco de
 | M1 | CE dei `.wiff` nell'indice e nell'mzML (`<activation>`) | nulla (parallelo a M2) |
 | M2 | Motore `lr/ms2link.rs`, pool dagli abbinamenti, `ms2_links/1`, `relink`, worker | fatto: `ms2link.rs` e `ms2link/`, `ms2_link`/`relink` in `finder-lr`, `ms2_relink` nel worker; prove `lr_ms2link.rs` e `lr_ms2link_dati.rs`; `finder-lr` 610 796 B (prima 587 098) |
 | M3 | Bersagli MS2 (§6) e diagnosi delle righe mancanti | M2 unita |
-| M4 | Interfaccia: avvio con le MS2, scheda «MS2 matches», correzioni, esportazioni, e2e | M2 unita (parallelo a M3) |
+| M4 | Interfaccia: avvio con le MS2, scheda «MS2 matches», correzioni, esportazioni, e2e | fatto: `TP_Mine/js/22_tpmine_ms2.js` (`docs/agenti/mzfinder-ms2.md`), prova `e2e_tpmine_ms2_lr.py` |
 | M5 | Confronto col genitore come in HR (`pair_components` con tolleranza in Da) e D6 | M4 unita |
 
 ## 11. Trappole
