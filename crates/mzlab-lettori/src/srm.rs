@@ -259,6 +259,7 @@ impl Lettore for SrmDaScansioni {
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
         self.inner.extra_mzml(s)
     }
+    #[cfg(feature = "sciex")]
     fn variante(&mut self, c: usize) -> bool {
         self.inner.variante(c)
     }

@@ -203,7 +203,7 @@ pub trait Lettore {
     }
     /// True when the engine's reader would not read sample `c` as the file is (another instrument model, a scan type it does not know): the readers module is
     /// then the one to open it (`docs/agenti/lettori-modulo.md`).
-    #[cfg(feature = "estesi")]
+    #[cfg(feature = "sciex")]
     fn variante(&mut self, _c: usize) -> bool {
         false
     }

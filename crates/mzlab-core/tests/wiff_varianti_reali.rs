@@ -2,7 +2,7 @@
 //! every sample opens with the TIC of the index or is refused with a cause, the chromatograms and spectra match the ProteoWizard mzML next to the file,
 //! `metodo/1` says what the files say. Skipped without the data repository.
 
-#![cfg(feature = "estesi")]
+#![cfg(feature = "sciex")]
 
 use std::path::{Path, PathBuf};
 

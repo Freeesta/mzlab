@@ -115,6 +115,7 @@ pub fn motivi(l: &mut dyn Lettore, c: usize) -> Vec<&'static str> {
     if srm::ha_scansioni_srm(l, c) {
         m.push("srm");
     }
+    #[cfg(feature = "sciex")]
     if l.variante(c) {
         m.push("variante");
     }

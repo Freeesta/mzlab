@@ -2,7 +2,7 @@
 //! versions 1 and 3 and precursor-ion / neutral-loss scans, and the files that must be refused with `err.file.wiff` (the cause in `detail`), never read as a
 //! full scan. Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
-#![cfg(feature = "estesi")]
+#![cfg(feature = "sciex")]
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
