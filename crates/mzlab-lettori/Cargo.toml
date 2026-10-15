@@ -8,13 +8,14 @@ license.workspace = true
 [features]
 # one feature per family (docs/agenti/lettori-modulo.md); `tutte` is for the desktop app and for cargo test
 aperti = []
+andi = []
 thermo = ["mzlab-core/thermo"]
 agilent = []
 sciex = ["mzlab-core/sciex"]
 waters = []
 shimadzu = []
 bruker = []
-tutte = ["aperti", "thermo", "agilent", "sciex", "waters", "shimadzu", "bruker"]
+tutte = ["aperti", "andi", "thermo", "agilent", "sciex", "waters", "shimadzu", "bruker"]
 
 [dependencies]
 # no default features: each family module carries only the readers of its own family (`thermo` turns on the Thermo reader of the core)
