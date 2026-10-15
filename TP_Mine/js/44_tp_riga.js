@@ -2,7 +2,7 @@
 // TPMINE-PRIVATE  TPRIGA: what the open row of a Tabui table shows. One head (level, prediction, decided, words, actions) and four tabs (Overview, Samples, Identity, Quality), drawn from a
 // row MODEL (`TpRiga`) that every table builds from its own engine. This file shows what the model holds and computes no number; a part that the model lacks is not drawn (one sentence says why).
 // Charts: SVG with title, description and the table of the data (TDATI); colours only from CSS variables (time = viridis, areas = cividis, groups of the blanks grey); no animation. Texts in English;
-// the helps of this file are keys `ft.riga.*` of its own block (it/en), given to the help catalogue when there is one.
+// the helps are keys of the catalogue of Tabui (`ft.tab.*`, `ft.decided`, `ft.adduct`, `ft.q.flags`, `ft.showdata`); `ft.riga.copy` is its own.
 (() => {
   "use strict";
   const G = /** @type {any} */ (window);
@@ -54,34 +54,14 @@
 
   // ------------------------------------------------------------ texts (helps; it/en), given to the catalogue of the helps when there is one
   const TXT = {
-    it: {
-      "ft.riga.tab.overview": "Il segnale di tutti i campioni sovrapposti e lo spettro all'apice del picco.",
-      "ft.riga.tab.samples": "Un quadratino per campione: il colore è l'area (scala log), il simbolo dice se il picco è stato trovato, riempito o cercato.",
-      "ft.riga.tab.identity": "Massa neutra, addotto e candidati con livello e prove.",
-      "ft.riga.tab.quality": "Forma del picco, rapporto segnale/rumore, avvisi e presenza nel bianco e nel t0.",
-      "ft.riga.decided": "Il livello deciso dal chimico. Il programma propone, non decide.",
-      "ft.riga.adduct": "L'addotto è lo ione osservato (per esempio [M+H]+); la massa neutra è quella della molecola senza addotto.",
-      "ft.riga.flags": "Avvisi sulla qualità del picco: forma, rumore, pochi punti.",
-      "ft.riga.showdata": "Apre in Dati il file con il cromatogramma estratto di questo ione.",
-      "ft.riga.copy": "Copia nella clipboard i valori di questa riga.",
-    },
-    en: {
-      "ft.riga.tab.overview": "The signal of all the samples on top of each other and the spectrum at the apex of the peak.",
-      "ft.riga.tab.samples": "One square per sample: the colour is the area (log scale), the symbol says whether the peak was found, filled or searched for.",
-      "ft.riga.tab.identity": "Neutral mass, adduct and candidates with level and proofs.",
-      "ft.riga.tab.quality": "Peak shape, signal-to-noise ratio, warnings and presence in the blank and in t0.",
-      "ft.riga.decided": "The level decided by the chemist. The program proposes, it does not decide.",
-      "ft.riga.adduct": "The adduct is the ion that was observed (for example [M+H]+); the neutral mass is that of the molecule without the adduct.",
-      "ft.riga.flags": "Warnings on the quality of the peak: shape, noise, few points.",
-      "ft.riga.showdata": "Opens in Data the file with the extracted ion chromatogram of this ion.",
-      "ft.riga.copy": "Copies the values of this row to the clipboard.",
-    },
+    it: { "ft.riga.copy": "Copia negli appunti i valori di questa riga." },
+    en: { "ft.riga.copy": "Copies the values of this row to the clipboard." },
   };
   let registered = false;
-  /** gives the helps of this file to the catalogue of the page, when there is one (`TT.add(lang, {key: text})`) */
+  /** gives the few helps of this file (`ft.riga.*`) to the catalogue of Tabui (`TABUI_T`, texts/40_tabui_testi.js) */
   function register() {
-    const T = G.TT;
-    if (T && typeof T.add === "function" && !registered) { registered = true; for (const l of /** @type {("it" | "en")[]} */ (["it", "en"])) T.add(l, TXT[l]); }
+    const T = G.TABUI_T;
+    if (T && !registered) { registered = true; for (const l of /** @type {("it" | "en")[]} */ (["it", "en"])) if (T[l]) Object.assign(T[l], TXT[l]); }
   }
   const tt = (/** @type {string | undefined} */ k) => k && G.TPHELP ? ` data-tt="${k}"` : "";
   const esc = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"]/g, c => /** @type {any} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -186,17 +166,17 @@
     register(); lastHead = box;
     const acts = (m.actions || []).map(a => `<button type="button" class="tpr-act" data-act="${esc(a.key)}"${tt(a.help)}>${esc(a.label)}</button>`).join("");
     box.innerHTML = `<span class="tpr-head">${m.level != null && m.level !== "" && G.TPTAB ? G.TPTAB.level(m.level, { decided: m.decided }) : ""}${fin(m.pred) && G.TPTAB ? G.TPTAB.pred(m.pred) : ""}`
-      + `<span class="tpr-dec" data-slot="decided"${tt("ft.riga.decided")}${G.TPHELP ? ` tabindex="0"` : ""}>Decided: ${m.decided != null && m.decided !== "" ? esc(String(m.decided)) : "—"}</span></span>`
+      + `<span class="tpr-dec" data-slot="decided"${tt("ft.decided")}${G.TPHELP ? ` tabindex="0"` : ""}>Decided: ${m.decided != null && m.decided !== "" ? esc(String(m.decided)) : "—"}</span></span>`
       + (m.words ? `<span class="tpr-words">${esc(m.words)}</span>` : "") + acts;
     box.querySelectorAll("button[data-act]").forEach(b => b.addEventListener("click", () => { const a = (m.actions || []).find(x => x.key === /** @type {HTMLElement} */ (b).dataset.act); if (a) a.run(m); }));
   }
 
   // ------------------------------------------------------------ tabs
   const TABS = [
-    { key: "overview", label: "Overview", help: "ft.riga.tab.overview" },
-    { key: "samples", label: "Samples", help: "ft.riga.tab.samples" },
-    { key: "identity", label: "Identity", help: "ft.riga.tab.identity" },
-    { key: "quality", label: "Quality", help: "ft.riga.tab.quality" },
+    { key: "overview", label: "Overview", help: "ft.tab.overview" },
+    { key: "samples", label: "Samples", help: "ft.tab.samples" },
+    { key: "identity", label: "Identity", help: "ft.tab.identity" },
+    { key: "quality", label: "Quality", help: "ft.tab.quality" },
   ];
 
   /** @param {HTMLElement} panel @param {TpRiga} m */
@@ -243,7 +223,7 @@
     const id = m.identity;
     if (!id) { none(panel, "Identity", m.missing && m.missing.identity); return; }
     const cs = id.candidates || [];
-    panel.insertAdjacentHTML("beforeend", `<p class="tpr-id"><b>Neutral mass</b> ${esc(fin(id.neutral) ? /** @type {number} */ (id.neutral).toFixed(4) : id.neutral ?? "–")} · <span${G.TPHELP ? ` tabindex="0"` : ""}${tt("ft.riga.adduct")}><b>Adduct</b> ${esc(id.adduct || "–")}</span></p>`);
+    panel.insertAdjacentHTML("beforeend", `<p class="tpr-id"><b>Neutral mass</b> ${esc(fin(id.neutral) ? /** @type {number} */ (id.neutral).toFixed(4) : id.neutral ?? "–")} · <span${G.TPHELP ? ` tabindex="0"` : ""}${tt("ft.adduct")}><b>Adduct</b> ${esc(id.adduct || "–")}</span></p>`);
     if (!cs.length) { none(panel, "Candidates", m.missing && m.missing.candidates || "no candidate for this row"); return; }
     const one = (/** @type {TpCand} */ c) => {
       const lv = c.level != null && c.level !== "" && G.TPTAB ? G.TPTAB.level(c.level) : "", pd = fin(c.pred) && G.TPTAB ? G.TPTAB.pred(/** @type {number} */ (c.pred)) : "";
@@ -277,7 +257,7 @@
     if (!q) { none(panel, "Quality", m.missing && m.missing.quality); return; }
     const flags = (q.flags || []).map(f => FLAG[f] || f), dt = (/** @type {string} */ t, /** @type {string} */ v, /** @type {string} */ k) => `<dt${k ? tt(k) + (G.TPHELP ? ` tabindex="0"` : "") : ""}>${t}</dt><dd>${v}</dd>`;
     panel.insertAdjacentHTML("beforeend", `<dl class="tpr-q">${dt("Shape", esc(q.shape == null ? "–" : fin(q.shape) ? fix(q.shape, 2) : q.shape), "")}${dt("S/N", fin(q.snr) ? sci(/** @type {number} */ (q.snr)) : "–", "")}${dt("FWHM", fin(q.fwhm) ? esc(String(q.fwhm)) : "–", "")}`
-      + dt("Warnings", flags.length ? esc(flags.join(", ")) : "none", "ft.riga.flags") + dt("M+1/M", q.isoM1 == null ? "–" : esc(fin(q.isoM1) ? fix(q.isoM1, 2) : q.isoM1), "") + dt("In the blank", esc(presence(q.blank)), "") + dt("In t0", esc(presence(q.t0)), "")
+      + dt("Warnings", flags.length ? esc(flags.join(", ")) : "none", "ft.q.flags") + dt("M+1/M", q.isoM1 == null ? "–" : esc(fin(q.isoM1) ? fix(q.isoM1, 2) : q.isoM1), "") + dt("In the blank", esc(presence(q.blank)), "") + dt("In t0", esc(presence(q.t0)), "")
       + dt("Left out of the view by", (q.rejected || []).length ? esc((q.rejected || []).join(", ")) : "nothing", "") + `</dl>`);
   }
 

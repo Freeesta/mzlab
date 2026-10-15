@@ -198,7 +198,7 @@ try:
           const mk = (n) => ["blank", "t0", "t15", "t30", "t60", "t120"].slice(0, n).map((g, i) => ({ file: g + "_r1", group: g, time: g === "blank" ? null : g === "t0" ? 0 : +g.slice(1), rt, y: G(7.1, g === "blank" || g === "t0" ? 1e3 : 1e5 * (i + 1), 0.12) }));
           const samp = n => Array.from({ length: n }, (_, i) => ({ file: "s" + i + ".mzML", type: i === 0 ? "blank" : i === 1 ? "t0" : "time", time: i < 2 ? (i === 1 ? 0 : null) : i * 15, area: i === 0 ? 0 : 1e4 * Math.pow(2, i), norm: 0.1 * i,
             state: i === 0 ? "absent" : i % 5 === 3 ? "filled" : "detected", apexRt: 7.1, lo: 6.95, hi: 7.31 }));
-          const acts = [{ key: "showdata", label: "Show in Data", help: "ft.riga.showdata", run: () => { window.__act = "showdata"; } }, { key: "copy", label: "Copy", help: "ft.riga.copy", run: () => { window.__act = "copy"; } }];
+          const acts = [{ key: "showdata", label: "Show in Data", help: "ft.showdata", run: () => { window.__act = "showdata"; } }, { key: "copy", label: "Copy", help: "ft.riga.copy", run: () => { window.__act = "copy"; } }];
           const full = { title: "+O", level: "3", pred: 2, decided: null, words: "+O on the parent; MS2 shares 5 fragments; absent in blank and t0", actions: acts, xic: mk(6), apexRt: 7.1, lo: 6.95, hi: 7.31,
             spectrum: { kind: "ms1", mz: [257.059, 258.062, 259.057], y: [100, 11, 5], iso: { exp: { mz: [257.059, 258.062, 259.057], y: [100, 12, 4.5] }, obs: { mz: [257.059, 258.062, 259.057], y: [100, 11, 5] } } },
             line: "RT 7.10 min (6.95-7.31) · FWHM 0.08 min · charge 1 · MS2 from t60_r1 (purity 0.92)", samples: samp(6),

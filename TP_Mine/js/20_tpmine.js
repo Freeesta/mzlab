@@ -26,7 +26,7 @@
 .tp .tbl{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:6px}.tp canvas{width:100%;height:210px;display:block}
 .tp .crit li{margin:2px 0}.tp .crit .pass{color:var(--ok)}.tp .crit .fail{color:var(--bad)}.tp .crit .na{color:var(--muted)}
 .tp .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:1300px){.tp .cols{grid-template-columns:1fr}}
-.tp .err{color:var(--bad)}.tp details>summary{cursor:pointer;color:var(--muted);font-size:12px}.tp textarea{font:12px ui-monospace,monospace;min-height:150px}
+.tp .err{color:var(--bad)}.tp [aria-invalid="true"]{border:2px solid var(--bad);box-shadow:inset 4px 0 0 var(--bad)}.tp .row>.grow-in{flex:1;width:auto;min-width:0}.tp details>summary{cursor:pointer;color:var(--muted);font-size:12px}.tp textarea{font:12px ui-monospace,monospace;min-height:150px}
 .tp .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px}.tp .kv b{color:var(--muted);font-weight:600}
 .tp-wrap{padding:0}
 #qt-nav-tab,nav button[data-v="tpmine"]{background:linear-gradient(135deg,#ffe29a,#f4c95d 55%,#d99a1d)!important;color:#3a2a00!important;border-color:#d99a1d!important;font-weight:700}
@@ -188,6 +188,7 @@
   // ---------------------------------------------------------------- the tab
   function open(sec) {
     if (!document.getElementById("tp-css")) { const st = document.createElement("style"); st.id = "tp-css"; st.textContent = CSS; document.head.appendChild(st); }
+    const W = /** @type {any} */ (window), hb = (k, l, id) => (W.TPHELP ? W.TPHELP.button(k, l, id) : "");
     sec.innerHTML = `<div class="tp-wrap">
 <div class="tp">
 <div id="tp-left">
@@ -196,29 +197,32 @@
   <input type="file" id="tp-in" accept=".mzML,.mzml" multiple hidden>
   <div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
  <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div>
-  <div class="row tp-ac"><input type="text" id="tp-name" placeholder="Name (type 2 letters to search the list)" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false"><ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
-  <div class="row"><input type="text" id="tp-mol" placeholder="Neutral formula (C10H12N2O3S)" aria-label="Neutral molecular formula" spellcheck="false"></div>
-  <div class="row"><input type="text" id="tp-smi" placeholder="SMILES (optional)" aria-label="SMILES" spellcheck="false" style="flex:1"><button id="tp-draw" type="button" title="Draw the molecule in the Draw tab and bring the SMILES back here">Draw</button></div>
+  <div class="row tp-ac"><input type="text" id="tp-name" class="grow-in" placeholder="Name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false">${hb("ft.f.name", "Name")}<ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
+  <div class="row"><input type="text" id="tp-mol" class="grow-in" placeholder="Formula" aria-label="Neutral molecular formula" spellcheck="false">${hb("ft.f.formula", "Formula")}</div>
+  <div class="row"><input type="text" id="tp-smi" class="grow-in" placeholder="SMILES" aria-label="SMILES" spellcheck="false"><button id="tp-draw" type="button" title="Draw the molecule in the Draw tab and bring the SMILES back here">Draw</button>${hb("ft.f.smiles", "SMILES")}</div>
   <div id="tp-warn" role="status"></div>
-  <div class="row"><label class="mut">Adduct</label><select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+HCOO]-</option></select><span class="mut" id="tp-prev"></span></div>
-  <div class="row"><label class="mut grow" for="tp-prt">RT of the parent (min; empty = automatic)</label><input type="number" id="tp-prt" step="0.05" min="0" placeholder="auto" style="width:70px"></div></div>
+  <div class="row"><label class="mut" for="tp-add">Adduct</label>${hb("ft.f.adduct", "Adduct")}<select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+HCOO]-</option></select><span class="mut" id="tp-prev"></span></div>
+  <div class="row"><label class="mut grow" for="tp-prt">RT (min)</label>${hb("ft.f.prt", "RT")}<input type="number" id="tp-prt" step="0.05" min="0" placeholder="auto" style="width:70px"></div></div>
  <div class="card"><h3>3 · Settings</h3>
   <div class="row"><button id="tp-est" type="button" title="Low resolution: propose the XIC window, the RT tolerance and the start of the analysis from the loaded files (yellow values, editable)">Estimate from data</button></div>
-  <div class="row"><label class="mut grow" id="tp-tol-l">XIC window ±Da</label><input type="number" id="tp-tol" value="0.35" step="0.05" min="0.05" style="width:70px"></div>
-  <div class="row"><label class="mut grow">RT tolerance ±min</label><input type="number" id="tp-rtt" value="0.25" step="0.05" min="0.05" style="width:70px"></div>
-  <div class="row"><label class="mut grow">Combined transformations (steps)</label><input type="number" id="tp-steps" value="2" min="1" max="3" style="width:70px"></div>
-  <div class="row"><label class="mut grow" for="tp-minf" title="Low resolution: a peak must appear in at least this many treated samples, or in two consecutive ones at the same RT (fewer when the series is shorter). 0 = off.">Peak in at least (samples)</label><input type="number" id="tp-minf" value="3" min="0" max="20" style="width:70px"></div>
-  <div class="row"><label class="mut grow">Ignore RT before (min)</label><input type="number" id="tp-rtmin" value="0.5" step="0.1" min="0" style="width:70px"></div>
-  <div class="row"><label><input type="checkbox" id="tp-disc" checked> Also look for unexpected ions</label><i class="tp-q" id="tp-disc-h" tabindex="0" role="note" aria-label="About unexpected ions" title="Low resolution only. Besides the candidates from the transformation rules, it searches the whole m/z range for ions that grow over time, are missing at t0 and in the blank, and match no candidate. Slower. With high-resolution files this option is hidden: the HR pipeline is already untargeted.">?</i></div>
+  <div class="row"><label class="mut grow" id="tp-tol-l" for="tp-tol">XIC ±Da</label>${hb("ft.f.tol", "XIC")}<input type="number" id="tp-tol" value="0.35" step="0.05" min="0.05" style="width:70px"></div>
+  <div class="row"><label class="mut grow" for="tp-rtt">RT ±min</label>${hb("ft.f.rtt", "RT tolerance")}<input type="number" id="tp-rtt" value="0.25" step="0.05" min="0.05" style="width:70px"></div>
+  <div class="row"><label class="mut grow" for="tp-steps">Steps</label>${hb("ft.f.steps", "Steps")}<input type="number" id="tp-steps" value="2" min="1" max="3" style="width:70px"></div>
+  <div class="row"><label class="mut grow" for="tp-minf">Min. samples</label>${hb("ft.f.minf", "Min. samples")}<input type="number" id="tp-minf" value="3" min="0" max="20" style="width:70px"></div>
+  <div class="row"><label class="mut grow" for="tp-rtmin">RT from (min)</label>${hb("ft.f.rtmin", "RT from")}<input type="number" id="tp-rtmin" value="0.5" step="0.1" min="0" style="width:70px"></div>
+  <div class="row"><label><input type="checkbox" id="tp-disc" checked> Unexpected ions</label>${hb("ft.f.disc", "Unexpected ions", "tp-disc-h")}</div>
   <details><summary>List of transformations (name;change)</summary><textarea id="tp-tr" spellcheck="false"></textarea></details></div>
  <div class="card" id="tp-minecard"><button id="tp-go" class="imp dig" type="button" aria-busy="false">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : ""}<span id="tp-go-t">Dig</span></button><div class="bar" id="tp-barbox" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" role="status" style="margin-top:4px"></div></div>
  <div class="card" id="tp-untcard"><h3>Feature tables</h3><div class="mut">mzMine, MS-DIAL or GNPS2 tables: match every feature with an MS<sup>2</sup> against the spectral libraries and assign a level.</div><div class="row"><button id="tp-unt" type="button" aria-haspopup="dialog">Match a feature table...</button></div></div>
 </div>
 <div id="tp-right"><div class="card mut" id="tp-empty">Load the files, enter the parent and press <b>Dig</b>: Tabui calibrates the m/z on the parent, generates the candidates, extracts the XICs, looks for peaks that grow over time and are missing from the blank, checks the isotopes, compares the product ions with those of the parent and assigns a confidence level (Schymanski, as far as the resolution allows).</div></div></div></div>`;
     const $ = s => sec.querySelector(s);
+    if (W.TPHELP) W.TPHELP.attach(sec);
+    const FIELD = () => W.TPFIELD, parentFields = () => [$("#tp-mol"), $("#tp-smi")];
+    if (W.TPFIELD) W.TPFIELD.watch(sec, () => { if ($("#tp-msg").dataset.field) msg(""); });       // the group returns to normal on a click or a key in it; so does its message
     /** @type {any} */
     const st = { files: [], showAll: false, summary: null, sel: null, view: "gems", took: 0, filter: { forte: true, possibile: true, unexp: true, debole: false } };
-    const msg = (t, err) => { $("#tp-msg").textContent = t || ""; $("#tp-msg").className = "mut" + (err ? " err" : ""); };
+    const msg = (t, err) => { const m = $("#tp-msg"); m.textContent = t || ""; m.className = "mut" + (err ? " err" : ""); delete m.dataset.field; };
     const bar = f => { const w = Math.round(f * 100); $("#tp-bar").style.width = w + "%"; $("#tp-barbox").setAttribute("aria-valuenow", w); };
     onProgress = (t, f, m) => { if (t) msg(t); if (f != null) bar(f); if (m && window.TPLIVE) TPLIVE.event(m); };
 
@@ -295,11 +299,11 @@
       if (m !== curMode) {
         curMode = m;
         if (m === "hr") {
-          $("#tp-tol-l").textContent = "XIC window ±ppm"; t.value = 5; t.step = 1; t.min = 1;
+          $("#tp-tol-l").textContent = "XIC ±ppm"; t.value = 5; t.step = 1; t.min = 1;
           const span = Math.max(0, ...st.files.filter(f => f.kind === "hr").map(f => f.rt_max || 0));
           r.value = span ? Math.max(0.05, Math.round(span * 0.005 / 0.05) * 0.05).toFixed(2) : "0.10";      // 0.5 % of the gradient length (20 min: 0.10)
           r.title = "From the chromatographic method (0.5 % of the run length)";
-        } else { $("#tp-tol-l").textContent = "XIC window ±Da"; t.value = 0.35; t.step = 0.05; t.min = 0.05; r.value = 0.25; r.title = ""; }
+        } else { $("#tp-tol-l").textContent = "XIC ±Da"; t.value = 0.35; t.step = 0.05; t.min = 0.05; r.value = 0.25; r.title = ""; }
       }
       const n = st.files.length;
       $("#tp-disc").closest(".row").hidden = m === "hr";                // the HR pipeline is already untargeted
@@ -323,6 +327,7 @@
       pvT = setTimeout(async () => {
         const { mol, smi } = parentVals(), ad = $("#tp-add").value;
         $("#tp-warn").textContent = "";
+        FIELD().clear(parentFields());
         if (!mol && !smi) { $("#tp-prev").textContent = ""; structure(""); return; }
         structure(smi);
         let info = null;
@@ -334,6 +339,7 @@
           const mzNew = r.ok ? +r.mz : 0;
           if (mzNew !== parentMz) { parentMz = mzNew; if (parentMz) estimateLr(); }
           $("#tp-prev").innerHTML = r.ok ? `${esc(r.formula)} · M ${r.neutral} · ${esc(ad)} <i>m/z</i> ${r.mz}` : `<span class="err">${esc(r.error)}</span>`;
+          if (!r.ok) FIELD().set([$(mol ? "#tp-mol" : "#tp-smi")], $("#tp-prev"));
           if (r.ok && mol && info) $("#tp-warn").textContent = MOLUI.mismatchText(r.formula, info.formula);       // compositions, not strings: the order of the elements is irrelevant
         } catch (e) { $("#tp-prev").textContent = ""; }
       }, 350);
@@ -405,16 +411,23 @@
     let dbar = document.getElementById("tp-drawbar");
     if (!dbar) {
       dbar = document.createElement("div"); dbar.id = "tp-drawbar"; dbar.hidden = true; dbar.setAttribute("role", "region"); dbar.setAttribute("aria-label", "Tabui: parent structure");
-      dbar.innerHTML = `<span>Drawing the Tabui parent</span><button type="button" id="tp-draw-use" class="imp">Use this structure</button><button type="button" id="tp-draw-no">Cancel</button>`;
+      dbar.innerHTML = `<span>Drawing the Tabui parent</span><span id="tp-draw-st" role="status"></span><button type="button" id="tp-draw-use" class="imp" disabled>Use this structure</button><button type="button" id="tp-draw-no">Cancel</button>`;
       document.body.appendChild(dbar);
     }
     let drawing = false;
     const back = () => { drawing = false; dbar.hidden = true; if (typeof setView === "function") setView("tpmine"); };
-    drawBtn.onclick = () => { drawing = true; dbar.hidden = false; setView("draw"); };
+    const dst = /** @type {HTMLElement} */ (document.getElementById("tp-draw-st")), duse = /** @type {HTMLButtonElement} */ (document.getElementById("tp-draw-use"));
+    const dsay = (/** @type {string} */ t) => { dst.textContent = t; };
+    drawBtn.onclick = async () => {                                        // the editor loads on demand: «Use» waits for it, and the typed SMILES is shown in it
+      drawing = true; dbar.hidden = false; duse.disabled = true; dsay("Loading the editor..."); setView("draw");
+      const smi = $("#tp-smi").value.trim();
+      try { if (smi) await window.TPDraw.load(smi); else await window.TPDraw.when(); duse.disabled = false; dsay(""); }
+      catch (e) { dsay("The editor did not start: " + String((e && e.message) || e)); }
+    };
     document.addEventListener("tpview", /** @type {(e: any) => void} */ e => { dbar.hidden = !(drawing && e.detail.view === "draw"); if (e.detail.view !== "draw" && e.detail.view !== "tpmine") drawing = false; });
     /** @type {any} */ (document.getElementById("tp-draw-no")).onclick = back;
     /** @type {any} */ (document.getElementById("tp-draw-use")).onclick = async () => {
-      let t = ""; try { t = window.TPDraw ? await window.TPDraw.smiles() : ""; } catch (_) { t = ""; }
+      let t = ""; try { t = await window.TPDraw.smiles(); } catch (e) { dsay("Could not read the drawing: " + String((e && e.message) || e)); return; }
       if (!t) { toast("Nothing drawn yet."); return; }
       $("#tp-smi").value = t; $("#tp-mol").value = ""; preview(); back();
     };
@@ -426,8 +439,8 @@
     $("#tp-go").onclick = async () => {
       const pv = parentVals(), mol = pv.mol || pv.smi;      // the engine takes the formula, or the SMILES when the formula is missing
       const hrMode = st.files.some(f => f.kind === "hr");
+      if (!mol) { msg("Enter a formula or SMILES.", true); $("#tp-msg").dataset.field = "1"; FIELD().set(parentFields(), $("#tp-msg")); $("#tp-mol").focus(); return; }
       if (!hrMode && !st.files.some(f => f.kind === "full")) return msg("Full-scan (MS1) sample files are needed.", true);
-      if (!mol) return msg("Enter the neutral molecular formula or the SMILES of the parent.", true);
       const have = new Set(st.files.map(f => String(f.name || "").split(/[\\/]/).pop()));            // files loaded but not in this series: failed to read, or still being opened
       const lost = [...new Set([...(window.QQQ_LOADFAIL || []), ...(((typeof E !== "undefined" && E.pending) || []).filter(x => x.state === "err" || x.state === "wait").map(x => x.file))])].filter(n => !have.has(n));
       $("#tp-warn").textContent = lost.length ? `Warning: ${lost.length} file${lost.length > 1 ? "s" : ""} not read and left out of this run (${lost.slice(0, 4).join(", ")}${lost.length > 4 ? ", ..." : ""}). Load ${lost.length > 1 ? "them" : "it"} again before trusting the series.` : "";
