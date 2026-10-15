@@ -25,14 +25,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
       - id: cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cargo/registry
@@ -55,7 +55,7 @@ jobs:
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
       - name: Desktop folder
         run: python crates/mzlab-desktop/prepare.py
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         if: github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
         with:
           path: |
@@ -94,8 +94,8 @@ jobs:
     env:
       TAURI_CLI: "2.12.3"                 # the version of the Tauri CLI (cargo-tauri); a new one is compiled once and kept in the cache
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - name: Toolchain (version pinned in rust-toolchain.toml)
@@ -111,7 +111,7 @@ jobs:
       # Restored by every run; saved only on main (1-2 GB per system: a cache saved by a pull request is seen by no other pull request
       # and only pushes the caches of main out of the 10 GB of the repository). The Tauri CLI and wasm-bindgen live in it.
       - id: cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cargo/registry
@@ -156,7 +156,7 @@ jobs:
         # profile `desktop` of Cargo.toml (release with opt-level 3); tauri-cli reads `--profile` after `--` and takes the bundles from target/[triple/]desktop/
         run: cargo tauri build --features app ${{ matrix.args }} --verbose -- --profile desktop
       # saved after the installer, so the release build of the app is in it too (main only)
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true' }}
         with:
           path: |
@@ -167,7 +167,7 @@ jobs:
             ~/.cargo/bin/wasm-bindgen.exe
             target
           key: desktop-${{ matrix.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-tauri-${{ env.TAURI_CLI }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: mzlab-desktop-${{ runner.os }}
           path: ${{ matrix.artifact }}

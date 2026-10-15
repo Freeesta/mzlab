@@ -23,7 +23,7 @@ jobs:
     outputs:
       rust: ${{ steps.diff.outputs.rust }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - id: diff
@@ -45,14 +45,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
       - id: rcache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cargo/registry
@@ -84,7 +84,7 @@ jobs:
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features mrm
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-table-wasm
       # saved right after the builds, so a red guard or clippy does not lose the cache (main only)
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
         with:
           path: |
@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check licenses sources

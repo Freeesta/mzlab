@@ -30,8 +30,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -39,7 +39,7 @@ jobs:
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
       - id: rcache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cargo/registry
@@ -67,7 +67,7 @@ jobs:
               print(state, name, *notes[:5])
           sys.exit(any(x[1] == "FAIL" for x in r))
           PY
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: .pyodide-cache
           key: pyodide-${{ hashFiles('tools/build_site.py') }}
@@ -92,7 +92,7 @@ jobs:
           tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries
           tools/build_feat_wasm.sh site/static
       # saved right after the build, so a red e2e does not lose the cache (main only)
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
         with:
           path: |
@@ -114,7 +114,7 @@ jobs:
           for n in $(grep -o '^- FAIL [A-Za-z0-9_]*' .verifica/ultimo.md | awk '{print $3}'); do echo "===== $n"; tail -n 60 ".verifica/log/$n.log"; done
       - name: Logs of the failed tests
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sito-rust
           path: .verifica/

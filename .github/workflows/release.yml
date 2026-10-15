@@ -65,8 +65,8 @@ jobs:
     env:
       TAG: ${{ needs.controllo.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - name: Cargo.toml, tauri.conf.json and CITATION.cff say the same version
@@ -76,7 +76,7 @@ jobs:
         run: |
           python tools/versione.py --tag "$TAG"
           python tools/versione.py --nota "$TAG" > NOTE.md
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: needs.controllo.outputs.crea == 'true'
         with:
           name: note
@@ -89,11 +89,11 @@ jobs:
     env:
       TAG: ${{ needs.controllo.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: .pyodide-cache
           key: pyodide-${{ hashFiles('tools/build_site.py') }}
@@ -108,7 +108,7 @@ jobs:
           fi
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -135,7 +135,7 @@ jobs:
         run: tools/build_feat_wasm.sh site/static
       - name: Restore the spectral-library packages from the cache (pinned MassBank release, built with the Rust builder, never committed)
         id: libcache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: site/static/librerie
           key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
@@ -154,7 +154,7 @@ jobs:
       - name: Restore the MassBank download
         if: steps.libcache.outputs.cache-hit != 'true'
         id: mbcache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .massbank-cache
           key: massbank-zip-${{ steps.pin.outputs.massbank }}
@@ -184,26 +184,26 @@ jobs:
           fi
       - name: Save the MassBank download
         if: steps.libcache.outputs.cache-hit != 'true' && steps.mbcache.outputs.cache-hit != 'true' && hashFiles('.massbank-cache/massbank.zip') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .massbank-cache
           key: massbank-zip-${{ steps.pin.outputs.massbank }}
       - name: Save the packages in the cache
         if: steps.libcache.outputs.cache-hit != 'true' && hashFiles('site/static/librerie/catalogo.json') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: site/static/librerie
           key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
       - name: Restore the suspect index from the cache (pinned CC BY sources, never committed)
         id: suscache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: site/static/mzfinder/sospetti
           key: sospetti-${{ hashFiles('tools/genera_sospetti.py') }}
       - name: Restore the suspect sources
         if: steps.suscache.outputs.cache-hit != 'true'
         id: fonticache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .sospetti-fonti
           key: sospetti-fonti-${{ steps.pin.outputs.fonti }}
@@ -213,13 +213,13 @@ jobs:
         run: python tools/genera_sospetti.py --fonte .sospetti-fonti --pacchetto site/static/mzfinder/sospetti
       - name: Save the suspect sources
         if: steps.suscache.outputs.cache-hit != 'true' && steps.fonticache.outputs.cache-hit != 'true' && hashFiles('site/static/mzfinder/sospetti/catalogo.json') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .sospetti-fonti
           key: sospetti-fonti-${{ steps.pin.outputs.fonti }}
       - name: Save the suspect index in the cache
         if: steps.suscache.outputs.cache-hit != 'true' && hashFiles('site/static/mzfinder/sospetti/catalogo.json') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: site/static/mzfinder/sospetti
           key: sospetti-${{ hashFiles('tools/genera_sospetti.py') }}
@@ -228,7 +228,7 @@ jobs:
         run: |
           cd site && zip -qr "../mzlab-site-${TAG}.zip" . && cd ..
           python tools/sbom.py --out sbom-js.cdx.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sito
           path: |
@@ -255,7 +255,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: pezzi
       - name: Gather the files and compute SHA256SUMS
