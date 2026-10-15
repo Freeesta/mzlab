@@ -110,6 +110,13 @@ export function createDesktopPool(opts = {}) {
     async table(kind, p) { return (await call("feat/table", { kind, ...p })).text(); },
     /** the MS2 text (FBMN `.mgf`, SIRIUS `.ms`) of the table: the best MS2 of each row is read from the index of its file @param {{ samples: string, spec: string, sha: string, pol: number, kind: string, paths: string[] }} a */
     ms2File(a) { return pool.table("ms2", { samples: a.samples, spec: a.spec, sha256: a.sha, polarity: a.pol, export_kind: a.kind, names: a.paths.map(nameOf) }); },
+    /** the table of levels of a campaign folder (admin mode): the app reads the text files the page sends and answers `{summary, text}`; same result as the pool of the browser @param {{ path: string, file: File }[]} files @param {string} root @param {string} [kind] */
+    async attributioAnnotate(files, root, kind = "json") {
+      const texts = [];
+      for (const f of files) if (/\.(csv|tsv|toml|json|jsonl|mgf|txt|ms|msp)$/i.test(f.path)) texts.push({ path: f.path, text: await f.file.text() });
+      const r = await json("feat/attributio/annotate", { root, kind, files: texts });
+      return { summary: r.summary, bytes: new TextEncoder().encode(r.text) };
+    },
     /** a table of another program (mzMine, FBMN/GNPS2, MS-DIAL) from its files: the table as JSON text, the readers are the native route `feat/import` @param {{name: string, sha256: string, text: string}[]} files @param {number} pol @param {number} maxFeatures */
     async importBuild(files, pol, maxFeatures) { return (await call("feat/import", { kind: "build", files, pol, max_features: maxFeatures })).text(); },
     /** `check_structure` of many annotations at once: the list of the answers (`{ok, ppm, adduct}`) @param {{formula: string, precursor: number | null, adduct: string, pol: number, tol: number}[]} calls */

@@ -23,6 +23,7 @@ pub mod readers;
 pub mod rt_logp;
 pub mod sorbents;
 pub mod sources;
+pub mod table;
 pub mod toml;
 pub mod untid;
 
