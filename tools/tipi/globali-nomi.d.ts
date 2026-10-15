@@ -136,6 +136,7 @@ declare var PAL: any;
 declare var PALETTE: any;
 declare var PALS: any;
 declare var PCA: any;
+declare var PEND: any;
 declare var PK: any;
 declare var PK_DEF: any;
 declare var PLAIN: any;
