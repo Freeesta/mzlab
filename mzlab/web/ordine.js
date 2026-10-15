@@ -60,7 +60,7 @@ const numIt = t => parseFloat(String(t).replace(",", "."));
 function parseDecimal(text, signed = false) {
   const s = String(text ?? "").trim().replace(",", ".");
   if (s === "") return null;
-  const m = signed ? /^([-\u2212]?)(.*)$/.exec(s) : null, neg = !!(m && m[1]), body = m ? m[2] : s;
+  const m = signed === true ? /^([-\u2212]?)(.*)$/.exec(s) : null, neg = !!(m && m[1]), body = m ? m[2] : s;
   return /^\d+(\.\d*)?$|^\.\d+$/.test(body) ? (neg ? -Number(body) : Number(body)) : NaN;
 }
 // the time of a dark is the minutes of darkness BEFORE the time zero: always <= 0 (a positive number typed or read is taken as its negative)
