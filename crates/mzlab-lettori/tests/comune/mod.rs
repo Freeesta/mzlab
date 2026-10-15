@@ -186,3 +186,5 @@ pub fn mzml_scritto(l: &mut Box<dyn Lettore>) -> Vec<u8> {
 }
 
 pub mod mzxml;
+pub mod ole;
+pub mod shimadzu;

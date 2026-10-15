@@ -26,3 +26,7 @@ Regola: nessuna perdita di informazione dei file grezzi (`.wiff`, `.raw`, `.dam`
 
 ## mzXML (modulo «aperti»)
 - Non portati: il testo degli elementi della testata (p. es. lo SHA-1 in coda al file), `scanOrigin`, `maldi`, `separation`/`spotting` di una scansione, `processingOperation`; gli attributi di ogni elemento della testata stanno invece tutti in `metodo/1.campi`, quelli di ogni scansione in `intestazione`.
+
+## Shimadzu `.qgd` / `.lcd` (modulo `shimadzu`)
+- Non letti: programma del forno e dell'iniettore (`GC-2010/GC17A Instrument Parameters`), `GCMS Configuration` (solo il nome dello strumento), il metodo `.qgm` incorporato, `Status` e `Status Curve` (pressioni, temperature), `MS Status Data`, `Mass Parameters`, `GUMM_Information`; UV (`LSS Raw Data`, `PDA 3D Raw Data`); l'evento della polarità di `Mass Raw Data`; energia di collisione e tempo di attesa dei record MRM; il Q-TOF/IT-TOF/9030 (`QTFL RawData`) per intero.
+- Non portati nell'mzML: operatore, computer, percorsi e nomi dei file di dati, metodo, tune e batch (`identita`). Dettagli e offset in `docs/agenti/shimadzu.md`.

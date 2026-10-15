@@ -6,6 +6,8 @@ use mzlab_core::lettori::{self, Fiducia, FileSet, Lettore, Limiti, VoceLettore};
 
 #[cfg(any(feature = "aperti", feature = "tutte"))]
 pub mod aperti;
+#[cfg(any(feature = "shimadzu", feature = "tutte"))]
+pub mod shimadzu;
 pub mod srm;
 
 // The readers of each family, one `static` per `VoceLettore` of the registry; a family without readers yet is born with its own package.
@@ -17,6 +19,8 @@ static VOCE_MZXML: VoceLettore = aperti::mzxml::VOCE;
 static VOCE_AGILENT: VoceLettore = mzlab_core::agilent::lettore::VOCE;
 #[cfg(any(feature = "sciex", feature = "tutte"))]
 static VOCE_SCIEX: VoceLettore = mzlab_core::wiff::lettore::VOCE;
+#[cfg(any(feature = "shimadzu", feature = "tutte"))]
+static VOCE_SHIMADZU: VoceLettore = shimadzu::VOCE;
 #[cfg(any(feature = "thermo", feature = "tutte"))]
 static VOCE_THERMO: VoceLettore = mzlab_core::rawlettore::VOCE;
 
@@ -54,6 +58,8 @@ pub fn registro() -> Vec<&'static VoceLettore> {
         Some(&VOCE_AGILENT),
         #[cfg(any(feature = "sciex", feature = "tutte"))]
         Some(&VOCE_SCIEX),
+        #[cfg(any(feature = "shimadzu", feature = "tutte"))]
+        Some(&VOCE_SHIMADZU),
         #[cfg(any(feature = "thermo", feature = "tutte"))]
         Some(&VOCE_THERMO),
     ];

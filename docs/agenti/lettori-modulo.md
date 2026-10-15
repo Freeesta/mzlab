@@ -21,6 +21,8 @@ Un `.wasm` per famiglia (`aperti`, `thermo`, `agilent`, `sciex`, `waters`, `shim
   Il modulo si carica in anticipo (`prepara`, async) perché il motore non può aspettare un download; errore di caricamento: `err.file.wiffLoad`.
 - Il desktop (`mzlab-desktop`: `nativi.rs`, `idxbuild_nat.rs`) usa `mzlab-lettori` con `tutte` e `mzlab_lettori::apri`: nessun tetto, nessun modulo da caricare.
 
+- **Shimadzu** (`crates/mzlab-lettori/src/shimadzu/`, feature `shimadzu`): `.qgd` (scansioni, SIM, MRM) e `.lcd` (LCMS-2020 scansioni/SIM, triplo quadrupolo MRM come cromatogrammi SRM); `riconosci` dai nomi dello storage OLE, Q-TOF/9030 rifiutato con `err.file.shimadzu`; `soloModulo` `.qgd` e `.lcd`. Formato e limiti: `docs/agenti/shimadzu.md`.
+
 ## Costruzione e tetti
 `tools/build_lettori_wasm.sh <site/static>` (ultima riga di `tools/build_feat_wasm.sh`, che `pages.yml`, `release.yml` e `sito-rust.yml` eseguono già) costruisce una famiglia alla volta (`--no-default-features --features <famiglia>`) in `wasm-lettori/<famiglia>/` e scrive `wasm-lettori/manifest.json` `{famiglia: {sha256, byte}}`. Una famiglia senza lettori (`con_lettori` nello script) si salta. `wasm-opt` gira con passi in più (`--converge --low-memory-unused --vacuum --dae …`, in fondo allo script) che tolgono circa il 2,5 % al modulo.
 Tetti dopo `wasm_opt -Oz` (B): `aperti` 393 216, `thermo` 458 752, `agilent` 393 216, `sciex` 327 680, `waters` 327 680, `shimadzu` 327 680, `bruker` 524 288; non salgono (`tests/test_lettori_wasm.py`). Misure: `docs/agenti/misure.md`.

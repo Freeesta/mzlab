@@ -31,35 +31,36 @@ Registro dei lettori nativi: `LETTORI` in `crates/mzlab-core/src/lettori.rs:218`
 | **MGF / MSP / JSON / `.mzlib`** | letto **come libreria**, non come corsa | Rust `crates/mzlab-lib/src/parse.rs` (`detect`, `parse_all`) + `libreria-worker.js` (`formatOf`) | spettri di riferimento (precursore, polarità, metadati); `.lib`/`.mzvault`/`sqlite`/NIST → `lib.err.unsupported` (`libreria-worker.js:93`) | `crates/mzlab-lib/tests/parse.rs`; nessun MGF trattato come file di dati della vista Dati |
 | **Waters `.raw` (cartella MassLynx)** | assente | — | guida di conversione | — |
 | **Bruker `.d`** (TDF/TSF timsTOF, BAF) | assente | — | `.d` va al lettore Agilent, che lo rifiuta senza `MSScan.bin` | — |
-| **Shimadzu `.lcd` / `.qgd`** | assente | — | `.lcd`/`.lcdx` in `UNOPEN_RE`; `.qgd` «non riconosciuto» | — |
+| **Shimadzu `.qgd` / `.lcd`** | P (modulo `shimadzu`; nessun mzML o `.cdf` di riferimento: il TIC del contenitore coincide con la somma dei record) | Rust `crates/mzlab-lettori/src/shimadzu/` + `ole.rs` (`docs/agenti/shimadzu.md`) | `.qgd` scansioni, SIM e MRM (SRM); `.lcd` LCMS-2020 scansioni e SIM per evento; `.lcd` triplo quadrupolo (`TLM Raw Data`) MRM come cromatogrammi SRM; TIC, `metodo/1` senza identità. Q-TOF/IT-TOF/9030 (`QTFL RawData`) rifiutati con `err.file.shimadzu` | `shimadzu_sintetico.rs`, `robustezza_shimadzu.rs`, `shimadzu_dati.rs`, `e2e_shimadzu.py`; **non verificato** contro msconvert |
+| **Shimadzu `.lcdx`** | assente | — | `.lcdx` in `UNOPEN_RE` (non verificato che sia lo stesso formato) | — |
 | **JEOL, LECO (`.peg`, `.smp`), PerkinElmer, Bruker ion trap (`.yep`)** | assente | — | — | — |
 
 Desktop (`crates/mzlab-desktop`): stessi lettori nativi, compilati senza tetto di peso (`docs/agenti/rust-desktop.md`).
 
 ## 2. Matrice formati × esperimenti
 
-Legenda: **L** letto e provato · **P** parziale (si legge, ma manca un pezzo detto nella cella) · **A** assente · **NV** il codice c'è ma nessun file vero l'ha provato · — non esiste nel formato. Le colonne dei formati assenti (Waters, Bruker, Shimadzu, CDF) sono tutte **A** e non sono ripetute.
+Legenda: **L** letto e provato · **P** parziale (si legge, ma manca un pezzo detto nella cella) · **A** assente · **NV** il codice c'è ma nessun file vero l'ha provato · — non esiste nel formato. Le colonne dei formati assenti (Waters, Bruker, CDF) sono tutte **A** e non sono ripetute.
 
-| Esperimento | mzML | Thermo `.raw` | SCIEX `.wiff` (3200) | Agilent `.D` |
-|---|---|---|---|---|
-| Full scan LR | L (`mzidx_parity.rs`) | NV (trappola ionica: codice c'è, nessun file) | L (`wiff_parity.rs`) | L (5977, `agilent_msconvert.rs`) |
-| Full scan HR | L | L (Q Exactive, `raw_parity.rs`) | — | NV (Q-TOF: `agilent.md` «Non verificato», profili non localizzati) |
-| SIM | L (filtro `sim`, `iteminfo.rs:284-290`) | NV (filtro letto, nessun file) | — | L (+ SIC derivato) |
-| SRM/MRM | L (cromatogrammi SRM, `srm.rs::da_voci`) | P: le scansioni SRM si leggono come spettri, ma `cromatogrammi` dà solo TIC (`rawlettore.rs:222`) → nessuna traccia SRM per mzFinder/MRM | L (`wiff/run.rs`) | A (`agilent.md`: «i cromatogrammi SRM no») |
-| Product ion (MS2) | L | L | L (codice 11) | NV (`MSLevel`, `MzOfInterest` nello schema) |
-| Precursor ion / neutral loss | P: letti come spettri, il tipo di scansione (MS:1000341, MS:1000326) non è riconosciuto (nessuna occorrenza nel codice) | NV | A: letti come full scan (`wiff.md`, «Limiti noti») | A |
-| EPI / MS3 su QTRAP | L (come MSn) | — | A (non visti, letti come full scan) | — |
-| DDA | L (`/api/dda`, `hrroutes.rs:61`) | L | — | NV |
-| DIA / SWATH / MSe / AIF | P: classificati (`iteminfo.rs:278-325`: DIA, AIF), nessuna deconvoluzione dedicata | L (eventi DIA dei Tribrid corretti, `MODIFICHE-MZLAB.md`) | — | NV |
-| PRM | P: classificato (`iteminfo.rs:319`) | L come MS2 | — | — |
-| Mobilità ionica / PASEF | A (nessun array di mobilità letto in `mzml.rs`) | — | — | A (campo nello schema, mai letto) |
-| MSn (n ≥ 3) | L (`msnalbero.rs`, `msn_albero.rs`) | L | A | — |
-| UV/PDA | P: solo cromatogrammi PDA (`mzml.rs:280-281`), non gli spettri UV 3D | A (controller `Pda`/`Uv` elencati, non letti) | A (flussi `DAD*`, `grezzi-non-estratti.md`) | A |
-| TIC / BPC / XIC | L | L (TIC dal file; XIC dal `.mzidx`) | L (TIC dell'indice) | L (TIC/BPC dai record) |
-| Tracce accessorie (pressione, analogici) | L (`analog.rs`) | P: pressione solo nell'mzML scritto, non come cromatogramma del lettore | A | A (`GC.ini` come metadati) |
-| Calibrazione / lock mass | — (già applicata) | P: campi del trailer (`opentfraw.lock_mass_*`, `extra.rs:122-125`), nessuna correzione | A (`GLPTables`) | A |
-| Polarità mista | L (`iteminfo.rs`: parti «mixed») | L | L | NV (codice 1 mai visto) |
-| Metodo e metadati (`metodo/1`) | P (solo testata; `metodo/1` solo se scritto da mzLab) | L | P (nome, vial, calibrazione mancanti) | L per GC/MS, A per LC/MS |
+| Esperimento | mzML | Thermo `.raw` | SCIEX `.wiff` (3200) | Agilent `.D` | Shimadzu (`.qgd`, `.lcd`) |
+|---|---|---|---|---|---|
+| Full scan LR | L (`mzidx_parity.rs`) | NV (trappola ionica: codice c'è, nessun file) | L (`wiff_parity.rs`) | L (5977, `agilent_msconvert.rs`) | P (`.qgd`, LCMS-2020) |
+| Full scan HR | L | L (Q Exactive, `raw_parity.rs`) | — | NV (Q-TOF: `agilent.md` «Non verificato», profili non localizzati) | A (`QTFL RawData` rifiutato) |
+| SIM | L (filtro `sim`, `iteminfo.rs:284-290`) | NV (filtro letto, nessun file) | — | L (+ SIC derivato) | P (euristica sulla lista degli m/z) |
+| SRM/MRM | L (cromatogrammi SRM, `srm.rs::da_voci`) | P: le scansioni SRM si leggono come spettri, ma `cromatogrammi` dà solo TIC (`rawlettore.rs:222`) → nessuna traccia SRM per mzFinder/MRM | L (`wiff/run.rs`) | A (`agilent.md`: «i cromatogrammi SRM no») | P (`.qgd` e `.lcd` QqQ → cromatogrammi SRM; CE e dwell no) |
+| Product ion (MS2) | L | L | L (codice 11) | NV (`MSLevel`, `MzOfInterest` nello schema) | A |
+| Precursor ion / neutral loss | P: letti come spettri, il tipo di scansione (MS:1000341, MS:1000326) non è riconosciuto (nessuna occorrenza nel codice) | NV | A: letti come full scan (`wiff.md`, «Limiti noti») | A | A |
+| EPI / MS3 su QTRAP | L (come MSn) | — | A (non visti, letti come full scan) | — | — |
+| DDA | L (`/api/dda`, `hrroutes.rs:61`) | L | — | NV | A |
+| DIA / SWATH / MSe / AIF | P: classificati (`iteminfo.rs:278-325`: DIA, AIF), nessuna deconvoluzione dedicata | L (eventi DIA dei Tribrid corretti, `MODIFICHE-MZLAB.md`) | — | NV | — |
+| PRM | P: classificato (`iteminfo.rs:319`) | L come MS2 | — | — | — |
+| Mobilità ionica / PASEF | A (nessun array di mobilità letto in `mzml.rs`) | — | — | A (campo nello schema, mai letto) | — |
+| MSn (n ≥ 3) | L (`msnalbero.rs`, `msn_albero.rs`) | L | A | — | — |
+| UV/PDA | P: solo cromatogrammi PDA (`mzml.rs:280-281`), non gli spettri UV 3D | A (controller `Pda`/`Uv` elencati, non letti) | A (flussi `DAD*`, `grezzi-non-estratti.md`) | A | A (`LSS`/`PDA 3D` non decodificati) |
+| TIC / BPC / XIC | L | L (TIC dal file; XIC dal `.mzidx`) | L (TIC dell'indice) | L (TIC/BPC dai record) | L (TIC = somma dei record) |
+| Tracce accessorie (pressione, analogici) | L (`analog.rs`) | P: pressione solo nell'mzML scritto, non come cromatogramma del lettore | A | A (`GC.ini` come metadati) | A |
+| Calibrazione / lock mass | — (già applicata) | P: campi del trailer (`opentfraw.lock_mass_*`, `extra.rs:122-125`), nessuna correzione | A (`GLPTables`) | A | — |
+| Polarità mista | L (`iteminfo.rs`: parti «mixed») | L | L | NV (codice 1 mai visto) | A (la polarità degli eventi `.lcd` 2020 non è decodificata; il QqQ la legge dal byte 33) |
+| Metodo e metadati (`metodo/1`) | P (solo testata; `metodo/1` solo se scritto da mzLab) | L | P (nome, vial, calibrazione mancanti) | L per GC/MS, A per LC/MS | P (`metodo/1`: strumento, software, campione, eventi/transizioni; molti flussi non decodificati) |
 
 ### Metodo e metadati (colonna «metodo/metadati» per formato)
 
@@ -72,6 +73,7 @@ Documento unico `metodo/1` (`docs/agenti/metodo.md`, schema `mzlab/web/schemi/me
 | SCIEX `.wiff` | `from_wiff` (`metodo_wiff.rs:200`): Log («Config Table»: modello, seriale), utente e computer, pompe, campionatore, inizio/fine; esperimenti e transizioni da `methodinfo.rs` | `campione.nome`, `vial`, versione di Analyst «DA CONFERMARE» (`metodo.md`); `GLPTables` (calibrazione), `SampleTable`, `MSConfigInfo*`, `MassSpecMethod*` non decodificati (`grezzi-non-estratti.md`); CE e isolamento per scansione non letti (`wiff.md`) (DEV-5) |
 | SCIEX `.dam` | `from_dam` | — |
 | Agilent `.D` GC/MS | `agilent/doc.rs` (`AgilentD::metodo`): `sequence.xml`, `Devices.xml`, `Contents.xml`, `acqmeth.txt` (gruppi SIM, tune, forno, iniettore, colonna), `GC.ini`; cartella `.m` di quantificazione (`agilent/quant.rs`) | tipo di campione, `7890Method.bin`, audit trail; metodo LC/MS (QqQ dMRM, Q-TOF: masse di riferimento, liste) mai visto (DEV-4) |
+| Shimadzu `.qgd` / `.lcd` | `shimadzu/meta.rs`: strumento, software, campione, vial, eventi e transizioni; operatore e percorsi come `identita` | programma del forno, `GCMS Configuration`, UV, `Status`, energia di collisione e dwell (`docs/agenti/grezzi-non-estratti.md`) |
 | formati assenti | — | ogni lettore nuovo nasce con `metodo(c)` = `metodo/1` (vedi prompt) |
 
 ## 3. Le lacune: fattibilità nel browser
