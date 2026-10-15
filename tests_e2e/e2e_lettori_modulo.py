@@ -78,7 +78,7 @@ def cdf_file(path, n=40):
     for k in range(n):
         y = [1000 * (1 + math.sin(i + k)) ** 2 + 50 for i in range(30)]
         y = [struct.unpack(">f", struct.pack(">f", v))[0] for v in y]
-        mz += [100 + 0.37 * i + k * 0.01 for i in range(30)]; it += y; tics.append(sum(y))
+        mz += [100 + 0.37 * i for i in range(30)]; it += y; tics.append(sum(y))
     dims = [("point_number", 0), ("scan_number", n)]
     # (name, dim ids, nc_type, data bytes, record?)
     dbl = lambda v: b"".join(struct.pack(">d", x) for x in v); ints = lambda v: b"".join(struct.pack(">i", x) for x in v)
