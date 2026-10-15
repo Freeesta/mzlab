@@ -5,7 +5,7 @@
 
 use super::AgilentD;
 use crate::metodo::{self, num, obj, text, Source, V};
-use crate::metodo_raw::campi::{Campo, Ident};
+use crate::metodo_campi::{Campo, Ident};
 
 const GRAW_MAX: usize = 256 * 1024;
 /// The files whose text goes whole to `grezzo` (origin, title).

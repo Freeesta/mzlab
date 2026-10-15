@@ -1,27 +1,8 @@
 // @ts-check
 // The worker of the readers modules (crates/mzlab-lettori-wasm, wasm-lettori/<family>/): opens the files of a family that the engine does not read and writes their mzML into OPFS (rust-opfs.js rawSink).
-// The .wasm of a family is fetched on the first message that names it (never the others) and checked against its SHA-256 in wasm-lettori/manifest.json. Messages: probe, toMzml, cancel (the page also ends the worker, a running conversion cannot listen).
+// The .wasm of a family is fetched on the first message that names it (never the others) and checked against its SHA-256 in wasm-lettori/manifest.json (carica-modulo.js). Messages: probe, toMzml, cancel (the page also ends the worker, a running conversion cannot listen).
 import { rawSink } from "./rust-opfs.js";
-
-/** @type {Map<string, Promise<any>>} the modules already asked for, by family */
-const mods = new Map();
-function load(/** @type {string} */ fam) {
-  const had = mods.get(fam);
-  if (had) return had;
-  const p = (async () => {
-    const base = new URL("./wasm-lettori/", import.meta.url), man = await (await fetch(new URL("manifest.json", base))).json(), e = man[fam];
-    if (!e) throw new Error("no module for " + fam);
-    const dir = new URL(fam + "/", base), bytes = await (await fetch(new URL("mzlab_lettori_wasm_bg.wasm", dir))).arrayBuffer();
-    const sha = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)), b => b.toString(16).padStart(2, "0")).join("");
-    if (sha !== e.sha256) throw new Error("sha");
-    const m = await import(new URL("mzlab_lettori_wasm.js", dir).href);
-    await m.default({ module_or_path: bytes });
-    return m;
-  })();
-  mods.set(fam, p);
-  p.catch(() => { mods.delete(fam); });
-  return p;
-}
+import { loadModulo as load } from "./carica-modulo.js";
 
 /** `read(member, offset, length)` over some Blobs, as the bridge wants it */
 function reader(/** @type {Blob[]} */ blobs) {

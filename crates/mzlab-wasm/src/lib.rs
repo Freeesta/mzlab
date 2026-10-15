@@ -15,6 +15,7 @@ use wasm_bindgen::prelude::*;
 mod scans;
 mod cache;
 mod centroidi; mod panic; mod campioni;
+pub mod esterno;
 mod nativi;
 mod nativi_motore;
 

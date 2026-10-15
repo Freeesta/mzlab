@@ -218,6 +218,7 @@ pub struct VoceLettore {
 pub static LETTORI: &[VoceLettore] = &[
     crate::agilent::lettore::VOCE,
     crate::wiff::lettore::VOCE,
+    #[cfg(feature = "thermo")]
     crate::rawlettore::VOCE,
 ];
 

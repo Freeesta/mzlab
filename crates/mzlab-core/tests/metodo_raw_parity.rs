@@ -1,3 +1,4 @@
+#![cfg(feature = "thermo")]
 //! `metodo/1` of the Thermo `.raw` files against what is known of them: the mzML that msconvert made from the same file (instrument, serial number, software version),
 //! the gradient that `chromeleon::parse` reads from the method text, the document that the conversion writes into the mzML.
 //! Needs the private data repository (`MZLAB_DATI`, or `mzlab-dati` beside this one); without it the test is skipped.

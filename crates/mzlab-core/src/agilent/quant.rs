@@ -6,7 +6,7 @@
 
 use super::meta::{self, text_of, tree, Node};
 use crate::metodo::{self, num, obj, text, Source, SrcFile, V};
-use crate::metodo_raw::campi::Campo;
+use crate::metodo_campi::Campo;
 use sha1::{Digest as _, Sha1};
 
 /// The compound-level elements the section carries (the rest stays in `campi` only).

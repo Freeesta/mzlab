@@ -8,7 +8,7 @@ use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::lettori_mzml;
 use wasm_bindgen::prelude::*;
 
-mod sessione;
+pub mod sessione;
 use sessione::Sessioni;
 
 /// Bytes sent to `sink` at a time.
@@ -27,14 +27,31 @@ fn error_json(e: &mzlab_core::Error) -> JsValue {
     ))
 }
 
-/// Member `i` of a dataset, read through `read(i, offset, length) -> Uint8Array`.
+/// Bytes fetched from JS at once for a small read: a reader like `opentfraw` asks for a few bytes at a time (4 for a length), and every call of `read` is a slice of a `File` read
+/// synchronously (about a millisecond), so the member is read ahead in blocks.
+const LETTURA: usize = 256 << 10;
+
+/// Member `i` of a dataset, read through `read(i, offset, length) -> Uint8Array`; the small reads are served from the last block read.
 struct JsMember {
     read: Function,
     i: u32,
+    dim: u64,
+    inizio: u64,
+    blocco: Vec<u8>,
 }
 
-impl ReadAt for JsMember {
-    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
+impl JsMember {
+    fn new(read: Function, i: u32, dim: u64) -> Self {
+        JsMember {
+            read,
+            i,
+            dim,
+            inizio: 0,
+            blocco: Vec::new(),
+        }
+    }
+
+    fn da_js(&self, off: u64, n: usize) -> mzlab_core::Result<js_sys::Uint8Array> {
         let bad = || mzlab_core::Error::new("error.badIndex");
         let v = self
             .read
@@ -42,14 +59,34 @@ impl ReadAt for JsMember {
                 &JsValue::NULL,
                 &self.i.into(),
                 &(off as f64).into(),
-                &(buf.len() as f64).into(),
+                &(n as f64).into(),
             )
             .map_err(|_| bad())?;
         let a: js_sys::Uint8Array = v.dyn_into().map_err(|_| bad())?;
-        if a.length() as usize != buf.len() {
+        if a.length() as usize != n {
             return Err(bad());
         }
-        a.copy_to(buf);
+        Ok(a)
+    }
+}
+
+impl ReadAt for JsMember {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
+        let fine = off + buf.len() as u64;
+        let dentro = off >= self.inizio && fine <= self.inizio + self.blocco.len() as u64;
+        if !dentro {
+            let n = LETTURA.min(self.dim.saturating_sub(off) as usize);
+            if buf.len() >= LETTURA || n < buf.len() {
+                self.da_js(off, buf.len())?.copy_to(buf);              // big (or past the end, for JS to refuse): as asked
+                return Ok(());
+            }
+            let a = self.da_js(off, n)?;
+            self.blocco.resize(n, 0);
+            a.copy_to(&mut self.blocco);
+            self.inizio = off;
+        }
+        let da = (off - self.inizio) as usize;
+        buf.copy_from_slice(&self.blocco[da..da + buf.len()]);
         Ok(())
     }
 }
@@ -89,10 +126,7 @@ impl Membri {
             .map(|(i, (n, &s))| Membro {
                 nome: n.clone(),
                 dim: s as u64,
-                dati: Box::new(JsMember {
-                    read: self.read.clone(),
-                    i: i as u32,
-                }),
+                dati: Box::new(JsMember::new(self.read.clone(), i as u32, s as u64)),
             })
             .collect();
         FileSet { membri }
@@ -209,7 +243,8 @@ fn con<T>(f: impl FnOnce(&mut Sessioni) -> mzlab_core::Result<T>) -> Result<T, J
 #[wasm_bindgen]
 pub fn apri(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<u32, JsValue> {
     let m = Membri::new(names, sizes, read)?;
-    let l = mzlab_lettori::apri(m.fileset(), &Limiti::sito()).map_err(|e| error_json(&e))?;
+    // as it is, without the SRM traces of `mzlab_lettori::apri`: the engine reads the module through `LettoreEsterno` and decides itself what it does with them
+    let l = mzlab_lettori::apri_nudo(m.fileset(), &Limiti::sito()).map_err(|e| error_json(&e))?;
     con(|s| Ok(s.inserisci(l)))
 }
 #[wasm_bindgen]
@@ -245,6 +280,11 @@ pub fn cromatogramma(h: u32, c: u32, id: &str) -> Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn metodo(h: u32, c: u32) -> Result<String, JsValue> {
     con(|s| s.metodo(h, c as usize))
+}
+/// The header of the mzML of the sample as JSON (`null` when the reader has none).
+#[wasm_bindgen]
+pub fn testata(h: u32, c: u32) -> Result<String, JsValue> {
+    con(|s| s.testata(h, c as usize))
 }
 #[wasm_bindgen]
 pub fn chiudi(h: u32) {
