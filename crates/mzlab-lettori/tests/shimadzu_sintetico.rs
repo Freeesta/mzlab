@@ -13,6 +13,7 @@ fn apri(nome: &str, b: Vec<u8>) -> mzlab_core::error::Result<Box<dyn Lettore>> {
                 nome: nome.into(),
                 dim: b.len() as u64,
                 dati: Box::new(b),
+                sha1: None,
             }],
         },
         &Limiti::sito(),

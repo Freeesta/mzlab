@@ -447,6 +447,7 @@ async function showMethod(sel) {
     if (!gradHere && window.GRADIENTE) GRADIENTE.bind(f, again);
     const sl = Q("#m-sel"); if (sl) sl.onchange = () => showMethod(+sl.value);
     const ld = Q("#m-load"); if (ld) ld.onclick = loadDam;
+    METODO_DOC.bind(f);
   });
 }
 // only the Agilent *.m method folders (no data file selected, or the method of the file could not be read): `note` is already escaped HTML

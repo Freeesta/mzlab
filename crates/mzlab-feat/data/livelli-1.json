@@ -316,6 +316,11 @@
     },
     {
      "livello": "3a",
+     "base": "putative library",
+     "regola": "OFF by default (putative_library_level3): a library entry named 'Spectral Match to ...' or propagated, that passes the gates of a source"
+    },
+    {
+     "livello": "3a",
      "base": "CSI:FingerID",
      "regola": "CSI:FingerID structure with COSMIC (ConfidenceScoreApproximate) >= cosmic_min (~10% FDR, Hoffmann et al. 2022); never downgrades a library match"
     },
@@ -366,6 +371,7 @@
     "isomers not discriminated": "Spectral library match of the same compound at two or more retention times: the spectrum does not tell the isomers apart (L3a)",
     "RT isomer": "Spectral library match at a retention time other than the reference standard's: another isomer (L3a)",
     "expert review": "Spectral library match judged insufficient by the chemist (L3a)",
+    "putative library": "Putative library match (analog/in-silico, L3a)",
     "CSI:FingerID": "CSI:FingerID structure (COSMIC conf >= {cosmic}, ~10% FDR, L3a)",
     "CANOPUS class": "CANOPUS class only, probability >= {canopus} (L4)",
     "suspect-RT": "Reference standard, mass + RT only, MS/MS not confirmed (suspect-RT, L0)",

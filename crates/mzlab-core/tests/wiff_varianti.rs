@@ -12,7 +12,13 @@ use mzlab_core::wiff::{container, Wiff};
 use serde_json::Value;
 
 fn reference() -> Option<(PathBuf, Value)> {
-    let out = std::env::temp_dir().join(format!("mzlab_wiff_varianti_{}", std::process::id()));
+    // one folder per call: the tests of this file run in parallel threads of one process and would write the same files
+    static CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let out = std::env::temp_dir().join(format!(
+        "mzlab_wiff_varianti_{}_{}",
+        std::process::id(),
+        CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+    ));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_riferimento.py");
     let ok = Command::new("python3")
         .arg(script)
@@ -52,6 +58,7 @@ fn set(dir: &Path, name: &str) -> FileSet {
             nome: file,
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
+            sha1: None,
         }
     };
     FileSet {

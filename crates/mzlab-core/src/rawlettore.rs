@@ -4,9 +4,9 @@
 
 use std::io::{Read, Seek, SeekFrom};
 
-use opentfraw::extra::scan_extras;
-use opentfraw::mzml::{extract_spectrum, scan_metadata, ScanMetadata};
-use opentfraw::{ExtraFields, RawFileReader};
+use opentfraw::extra::scan_extras_with;
+use opentfraw::mzml::{extract_spectrum, scan_metadata, scan_metadata_with, ScanMetadata};
+use opentfraw::{ExtraFields, RawFileReader, ScanParams};
 
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
@@ -82,7 +82,7 @@ pub struct LettoreRaw {
     nome: String,
     campioni: Vec<Campione>,
     indice: Vec<VoceScansione>,
-    /// SHA-1 of the file, read the first time the mzML header is asked for (`Some(None)`: it could not be read).
+    /// SHA-1 of the file: the one the caller gave (`Membro::sha1`) or read the first time the mzML header is asked for (`Some(None)`: it could not be read).
     sha1: Option<Option<String>>,
     /// The traces of the analog controllers (pressure, temperatures, UV channels), read the first time they are asked for.
     analogiche: Option<Vec<(String, ChromKind, opentfraw::AnalogTrace)>>,
@@ -111,10 +111,11 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         pos: 0,
         len: m.dim,
     };
+    let sha1 = m.sha1.take().map(Some);
     let raw = RawFileReader::open(&mut src).map_err(raw_error)?;
     limiti.voci_ok(u64::from(raw.num_scans))?;
     let indice: Vec<VoceScansione> = (0..raw.num_scans)
-        .filter_map(|k| scan_metadata(&raw, k))
+        .filter_map(|k| scan_metadata(&raw, &mut src, k))
         .map(|m| entry(&raw, &m))
         .collect();
     let stem = nome
@@ -132,7 +133,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         nome,
         campioni,
         indice,
-        sha1: None,
+        sha1,
         analogiche: None,
     }))
 }
@@ -217,7 +218,25 @@ fn elenco_cromatogrammi(l: &mut LettoreRaw) -> Vec<VoceCromatogramma> {
     v
 }
 
+/// A series of the instrument log (status log or trailer, `metodo_raw/serie.rs`): not in the list above, so neither the mzML nor the `.mzidx` carry it; computed here when asked for.
+fn registro_di(l: &mut LettoreRaw, id: &str) -> Option<Chromatogram> {
+    let s = crate::metodo_raw::serie::serie(&l.raw, &mut l.src, id)?;
+    Some(Chromatogram {
+        index: 0,
+        id: id.into(),
+        kind: ChromKind::Analog,
+        q1: None,
+        q3: None,
+        unit: s.unita,
+        time: s.t,
+        intensity: s.y,
+    })
+}
+
 fn cromatogramma_di(l: &mut LettoreRaw, id: &str) -> Result<Chromatogram> {
+    if let Some(c) = registro_di(l, id) {
+        return Ok(c);
+    }
     if id != "TIC" {
         let (index, (id, kind, t)) = analogiche(l)
             .iter()
@@ -297,8 +316,12 @@ impl Lettore for LettoreRaw {
 
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         self.one(c)?;
-        let m = scan_metadata(&self.raw, self.row(k)?).ok_or_else(|| raw_error("scan metadata"))?;
-        let mut out = header_fields(&self.raw, &m);
+        let idx = self.row(k)?;
+        let first = self.raw.run_header.sample_info.first_scan_number;
+        let params = self.raw.scan_params(&mut self.src, first + idx);
+        let m = scan_metadata_with(&self.raw, idx, params.as_ref().map(|p| p.borrowed()))
+            .ok_or_else(|| raw_error("scan metadata"))?;
+        let mut out = header_fields(&self.raw, params, &m);
         out.extend(noise_fields(&self.raw, &mut self.src, k as u32));
         Ok(out)
     }
@@ -366,7 +389,11 @@ fn noise_fields(raw: &RawFileReader, src: &mut Stream, idx: u32) -> Vec<Campo> {
 }
 
 /// The header fields of a scan: what the isolation and the activation say, the injection time, and every `opentfraw.*` value of the scan (the trailer).
-fn header_fields(raw: &RawFileReader, m: &ScanMetadata) -> Vec<Campo> {
+fn header_fields(
+    raw: &RawFileReader,
+    params: Option<ScanParams<'_>>,
+    m: &ScanMetadata,
+) -> Vec<Campo> {
     let mut out = Vec::new();
     if let Some(p) = &m.precursor {
         let ce = p.collision_energy.map(|ce| {
@@ -416,7 +443,7 @@ fn header_fields(raw: &RawFileReader, m: &ScanMetadata) -> Vec<Campo> {
         )
     }));
     out.extend(
-        scan_extras(raw, m, &ExtraFields::All)
+        scan_extras_with(raw, params, m, &ExtraFields::All)
             .into_iter()
             .map(|(k, v)| field(&k, v, None, None)),
     );

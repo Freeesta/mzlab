@@ -26,6 +26,7 @@ fn set_of(dir: &std::path::Path) -> FileSet {
             nome: format!("{name}/{rel}"),
             dim: file.metadata().unwrap().len(),
             dati: Box::new(file),
+            sha1: None,
         });
     }
     FileSet { membri }
@@ -141,6 +142,7 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
         nome: nome.into(),
         dim: b.len() as u64,
         dati: Box::new(b.to_vec()),
+        sha1: None,
     };
     let set = |scan: &[u8], with_peak: bool| FileSet {
         membri: [

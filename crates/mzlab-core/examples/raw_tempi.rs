@@ -85,6 +85,7 @@ fn set(path: &str) -> (FileSet, Counters) {
                 nome,
                 dim,
                 dati: Box::new(b),
+                sha1: None,
             }],
         },
         c,
@@ -196,12 +197,12 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
         ),
     );
 
-    // phase 2: the scan table (`righe`: every scan decoded again)
+    // phase 2: the scan table (`righe`: every scan decoded once, the rows built from the scan with no mzML text)
     let t = Instant::now();
     let p = upload::prepare_lettore(&mut *l, 0, &imp, &format!("{name}.mzML")).expect("table");
     line("scan table (righe)", t.elapsed().as_secs_f64(), &c, "");
 
-    // phase 3: the .mzidx (every scan decoded a third time)
+    // phase 3: the .mzidx by itself (pass 1 and the rounds decode the scans again)
     let t = Instant::now();
     let mut out = Cursor::new(Vec::new());
     let st = mzidx::build_lettore(&p.table, &mut *l, 0, &mut out, 192 << 20).expect("build");
@@ -215,6 +216,26 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
             st.sections,
             st.passes
         ),
+    );
+
+    // phases 2 and 3 in one call, as the site does: the table and pass 1 share one decoding of the scans
+    let t = Instant::now();
+    let mut out = Cursor::new(Vec::new());
+    let (st, _) = upload::indicizza_lettore(
+        &mut *l,
+        0,
+        &imp,
+        &format!("{name}.mzML"),
+        &mut out,
+        192 << 20,
+        &mut |_| {},
+    )
+    .expect("index");
+    line(
+        "table + .mzidx (one call)",
+        t.elapsed().as_secs_f64(),
+        &c,
+        &format!("{:.1} MB, {} passes", st.bytes as f64 / 1e6, st.passes),
     );
 
     if with_mzml {

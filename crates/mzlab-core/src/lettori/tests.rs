@@ -50,6 +50,7 @@ fn insieme(nome: &str, byte: &[u8]) -> FileSet {
             nome: nome.into(),
             dim: byte.len() as u64,
             dati: Box::new(byte.to_vec()),
+            sha1: None,
         }],
     }
 }

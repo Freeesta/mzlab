@@ -63,6 +63,7 @@ fn membro(cartella: &str, nome: &str, byte: Vec<u8>) -> Membro {
         nome: format!("{cartella}/{nome}"),
         dim: byte.len() as u64,
         dati: Box::new(byte),
+        sha1: None,
     }
 }
 

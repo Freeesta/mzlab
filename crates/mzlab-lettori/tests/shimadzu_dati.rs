@@ -36,6 +36,7 @@ fn apri(rel: &str) -> Option<Box<dyn Lettore>> {
             nome: p.file_name().unwrap().to_string_lossy().into(),
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
+            sha1: None,
         }],
     };
     Some(mzlab_lettori::apri_nudo(fs, &Limiti::sito()).unwrap())

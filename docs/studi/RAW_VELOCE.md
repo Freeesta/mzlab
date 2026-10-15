@@ -45,10 +45,20 @@ Il file è letto per intero 3-4 volte prima che l'utente veda la mappa: copia in
 |---|---|---|---|---|---|
 | LAB-A | 266 ms | 790 ms (99 µs/scansione; meta JSON 194 B/scansione) | 960 ms | 276 ms | 6654 ms |
 | PXD077492 | 363 ms | 251 ms | 612 ms | – | 2698 ms |
-| BAF 595 MB | 2597 ms, **240 MB di memoria WASM** | – | – | – | – |
+| BAF 595 MB | 1013 ms, 33,5 MB di memoria WASM (prima 2597 ms, 240 MB) | 3529 ms (63 µs/scansione) | 4519 ms | 1035 ms | 21 777 ms (picco 122 MB) |
 
-**Il DDA da 595 MB oggi non si apre nel sito**: dopo `apri` la memoria del modulo è già 240 MB; `indice` (`crates/mzlab-lettori-wasm/src/sessione.rs:51-61`, un `serde_json::Value` per scansione) supera il tetto di 256 MB (`--max-memory=268435456` in `.cargo/config.toml`) e va in OOM. Causa: `RawFileReader` tiene in memoria tutti i trailer (`scan_parameters: Vec<GenericRecord>`, `vendor/opentfraw/src/reader.rs:334`) e `GenericRecord { values:
-Vec<(String, GenericValue)> }` (`generic_data.rs:38-39`) ripete ogni nome di campo (~70 per scansione) in ogni record: 56 k × 70 × (String + valore) ≈ 150-200 MB; più `scan_events` (preambolo, reazioni, coefficienti) per scansione. Su iPad il rischio raddoppia: motore + modulo + i worker di `idxpool.js`, ognuno con il suo modulo e il suo `.raw` aperto.
+**Il DDA da 595 MB si apre nel sito** (RV-01). I trailer non stanno più in memoria (`GenericRecordStream`: indirizzo, intestazione condivisa e gruppi di 64 record letti dal file), gli eventi di scansione stanno in una tabella compatta con i preamboli condivisi (`ScanEventTable`) e `indice` (`crates/mzlab-lettori-wasm/src/sessione.rs`) scrive il JSON a flusso, byte per byte uguale a quello di `serde_json::json!`. Memoria sul BAF, struttura per struttura:
+
+| Struttura | Prima | Oggi |
+|---|---|---|
+| indice delle scansioni (`scan_index`) | 4,0 MB | 4,0 MB |
+| eventi di scansione (`scan_events`) | 23,1 MB | ~6 MB (stima) |
+| trailer (`scan_parameters`) | > 150 MB (`Vec<GenericRecord>`, nome del campo ripetuto per scansione; stima) | 0 MB (letti dal file, gruppo in cache 64 record) |
+| `Vec<VoceScansione>` di `indice` + testo JSON (13,7 MB) | OOM (un `Value` per scansione) | ~15 MB + 13,7 MB |
+| memoria del modulo dopo `apri` | 240 MB | 33,5 MB |
+| memoria del modulo dopo `apri` + `indice` | OOM (> 256 MB) | 48,0 MB (45,7 MiB) |
+
+Quello che resta è `Vec<VoceScansione>` più il testo JSON: toglierli richiede il formato binario dell'indice (RV-05).
 
 ### 2.4 Correttezza: centroidi del file segnati come profilo
 
@@ -118,12 +128,12 @@ Misurato su 30 `.raw` aperti di `dati_formati/` (sonda temporanea su `RawFileRea
 
 | Misura | Oggi | Obiettivo |
 |---|---|---|
-| BAF 595 MB: si apre nel sito | OOM | sì, memoria del modulo dopo `apri` + `indice` ≤ 48 MB |
+| BAF 595 MB: si apre nel sito | sì: 48,0 MB dopo `apri` + `indice` (prima OOM sopra 256 MB) | sì, memoria del modulo dopo `apri` + `indice` ≤ 48 MB |
 | BAF: dal file scelto alla mappa (nativo, senza copia) | 3,70 + 0,82 + 8,33 + 7,07 = 19,9 s | ≤ 6 s (nel sito ≤ 10 s) |
 | LAB-A: idem | 2,79 s | ≤ 1,0 s |
 | Letture intere del file prima della mappa | 3 (copia, SHA-256, SHA-1) | 1 (la copia; gli hash nella stessa passata) |
 | Tabella (righe) | 9× la decodifica | ≤ 1,5× la decodifica |
-| `.mzidx` del BAF, budget 192 MB | 7,07 s, 2 passate | ≤ 3 s |
+| `.mzidx` del BAF, budget 192 MB | 7,07 s, 2 passate | ≤ 3 s (RV-04: una decodifica, righe dirette; misura in locale con `raw_tempi`) |
 | mzML del BAF (nativo) | 13,99 s | ≤ 6 s con zlib veloce; ≤ 4 s con numpress (opzione) |
 | Centroidi del file segnati come profilo | −82 % dei picchi | 0 scansioni ricentroidate per errore |
 | Modulo per scansione (WASM) | 99 µs | ≤ 40 µs |

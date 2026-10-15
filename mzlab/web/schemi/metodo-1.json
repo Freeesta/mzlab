@@ -220,6 +220,60 @@
                           }
                         }
                       }
+                    },
+                    "nce": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "isolamento_mz": {
+                      "type": "number"
+                    },
+                    "inclusione": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "mz": {
+                            "type": "number"
+                          },
+                          "formula": {
+                            "type": "string"
+                          },
+                          "specie": {
+                            "type": "string"
+                          },
+                          "carica": {
+                            "type": "number"
+                          },
+                          "polarita": {
+                            "type": "string",
+                            "enum": [
+                              "positive",
+                              "negative"
+                            ]
+                          },
+                          "t_inizio_min": {
+                            "type": "number"
+                          },
+                          "t_fine_min": {
+                            "type": "number"
+                          },
+                          "nce": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            }
+                          },
+                          "nome": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mz"
+                        ]
+                      }
                     }
                   }
                 }
@@ -274,6 +328,32 @@
               }
             }
           }
+        },
+        "impostazioni": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "etichetta": {
+                "type": "string"
+              },
+              "valori": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              },
+              "valore": {
+                "type": "string"
+              },
+              "unita": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },
@@ -320,6 +400,20 @@
             },
             "unita": {
               "type": "string"
+            }
+          }
+        },
+        "solventi": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "canale": {
+                "type": "string"
+              },
+              "nome": {
+                "type": "string"
+              }
             }
           }
         }
@@ -398,6 +492,45 @@
           },
           "testo": {
             "type": "string"
+          },
+          "t_min": {
+            "type": "number"
+          },
+          "livello": {
+            "enum": [
+              "Info",
+              "Warning",
+              "Error"
+            ]
+          }
+        }
+      }
+    },
+    "serie_registro": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "gruppo": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "unita": {
+            "type": "string"
+          },
+          "n": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
           }
         }
       }

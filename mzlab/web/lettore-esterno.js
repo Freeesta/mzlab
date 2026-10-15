@@ -20,12 +20,15 @@ export function createEsterno(native_external) {
   /** @type {Map<string, any>} the modules loaded, by family */
   const loaded = new Map();
   let registered = false;
-  const open = (/** @type {string[]} */ names, /** @type {Float64Array} */ sizes, /** @type {Function} */ read) => {
+  /** @type {Map<string, string>} the SHA-1 of the members the page took while it copied them, by name and size (`prepara`) */
+  const known = new Map();
+  const open = (/** @type {string[]} */ names, /** @type {Float64Array} */ sizes, /** @type {Function} */ read, /** @type {string[] | undefined} */ sha1) => {
     const fam = famigliaEsterna(Array.from(names));
     if (!fam) return null;
     const w = loaded.get(fam);
     if (!w) throw loadError(fam, "module not loaded");
-    const h = w.apri(names, sizes, read);                         // the module reads the members with the engine's own `read`
+    const sums = Array.from(names, (n, i) => (sha1 && sha1[i]) || known.get(n + "\0" + sizes[i]) || "");
+    const h = w.apri_con_sha1 && sums.some(Boolean) ? w.apri_con_sha1(names, sizes, read, sums) : w.apri(names, sizes, read);        // the module reads the members with the engine's own `read`; the SHA-1 of a member the page knows is not read again
     return {
       campioni: () => w.campioni(h),
       indice: (/** @type {number} */ c) => w.indice(h, c),
@@ -40,13 +43,16 @@ export function createEsterno(native_external) {
   };
   return {
     /** loads the module of the family that reads the dataset with these members (nothing for the others) and registers `open` on the engine; rejects with the JSON `err.file.wiffLoad` */
-    async prepara(/** @type {string[]} */ names) {
+    async prepara(/** @type {string[]} */ names, /** @type {{ name: string, size: number, sha1?: string }[] | undefined} */ members) {
+      for (const m of members || []) if (m.sha1) known.set(m.name + "\0" + m.size, m.sha1);
       const fam = famigliaEsterna(names);
       if (!fam) return;
       if (!registered) { native_external(open); registered = true; }
       if (loaded.has(fam)) return;
       try { loaded.set(fam, await loadModulo(fam)); } catch (e) { throw loadError(fam, e); }
     },
+    /** a session of the module over the members of a dataset, for the page's own reads (the series of the instrument log); `prepara` first */
+    apri: open,
     loaded: () => [...loaded.keys()],
   };
 }

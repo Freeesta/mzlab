@@ -27,35 +27,76 @@ fn hex(b: &[u8]) -> String {
     b.iter().map(|x| format!("{x:02x}")).collect()
 }
 
-/// Reads the whole file once for its SHA-256 and keeps the first and last 64 KB for the probe (SHA-1 of the size, the head and the tail).
-pub fn fingerprint<R: ReadAt + ?Sized>(r: &mut R, size: u64) -> Result<(String, String)> {
-    let mut sha = Sha256::new();
-    let mut head = vec![];
+/// The three fingerprints of one file taken in one pass, fed piece by piece in file order (`aggiorna`): SHA-256 (identity), SHA-1 of every byte (the
+/// `sourceFile` of the mzML) and the `probe` (SHA-1 of the size, the first and the last 64 KB).
+pub struct Passata {
+    size: u64,
+    seen: u64,
+    sha256: Sha256,
+    sha1: Sha1,
+    head: Vec<u8>,
+    tail: Vec<u8>,
+}
+
+impl Passata {
+    pub fn new(size: u64) -> Passata {
+        Passata {
+            size,
+            seen: 0,
+            sha256: Sha256::new(),
+            sha1: Sha1::new(),
+            head: Vec::new(),
+            tail: Vec::new(),
+        }
+    }
+    pub fn aggiorna(&mut self, b: &[u8]) {
+        self.sha256.update(b);
+        self.sha1.update(b);
+        let n = (PROBE as usize)
+            .saturating_sub(self.head.len())
+            .min(b.len());
+        self.head.extend_from_slice(&b[..n]);
+        let old = self.tail.len();
+        let from = (old + b.len()).saturating_sub(PROBE as usize);
+        self.tail.drain(..from.min(old));
+        self.tail.extend_from_slice(&b[from.saturating_sub(old)..]);
+        self.seen += b.len() as u64;
+    }
+    /// `(sha256, sha1, probe)` as lower-case hex; `None` when the pieces given are not exactly `size` bytes.
+    pub fn fine(self) -> Option<(String, String, String)> {
+        if self.seen != self.size {
+            return None;
+        }
+        let mut p = Sha1::new();
+        p.update(self.size.to_string().as_bytes());
+        p.update(&self.head);
+        p.update(&self.tail);
+        Some((
+            hex(&self.sha256.finalize()),
+            hex(&self.sha1.finalize()),
+            hex(&p.finalize()),
+        ))
+    }
+}
+
+/// Reads the whole file once for its three fingerprints (`Passata`): `(sha256, sha1, probe)`.
+pub fn fingerprint3(r: &mut dyn ReadAt, size: u64) -> Result<(String, String, String)> {
+    let mut p = Passata::new(size);
     let mut at = 0;
     let mut buf = vec![0u8; STEP as usize];
     while at < size {
         let n = (size - at).min(STEP) as usize;
         r.read_at(at, &mut buf[..n])?;
-        sha.update(&buf[..n]);
-        if head.len() < PROBE as usize {
-            head.extend_from_slice(&buf[..n.min(PROBE as usize - head.len())]);
-        }
+        p.aggiorna(&buf[..n]);
         at += n as u64;
     }
-    let from = size.saturating_sub(PROBE);
-    let mut tail = vec![0u8; (size - from) as usize];
-    r.read_at(from, &mut tail)?;
-    let mut p = Sha1::new();
-    p.update(size.to_string().as_bytes());
-    p.update(&head);
-    p.update(&tail);
-    Ok((hex(&sha.finalize()), hex(&p.finalize())))
+    p.fine().ok_or_else(|| Error::new("err.file.unknown"))
 }
 
 /// Everything the index builder and the loading table need of an mzML: the scan table, the metadata objects and the fingerprints.
 pub fn prepare<R: ReadAt>(r: &mut R, size: u64, name: &str) -> Result<Prepared> {
     let t = scantable::read(&mut Windowed::new(r, size), size)?;
-    let (sha256, probe) = fingerprint(r, size)?;
+    let (sha256, _, probe) = fingerprint3(r, size)?;
     let mut source = Out::default();
     source_head(&mut source, name, size, &probe, &sha256);
     source.raw("}");
@@ -109,23 +150,54 @@ pub struct Impronta {
     pub nome: String,
     pub dim: u64,
     pub sha256: String,
+    pub sha1: String,
     pub probe: String,
 }
 
-/// The fingerprints of every member of `fs`, in its order: taken before `lettori::apri`, which consumes the set.
+/// The fingerprints of every member of `fs`, in its order: taken before `lettori::apri`, which consumes the set. The SHA-1 goes to the member too,
+/// so the reader does not read the file again for the header of the mzML.
 pub fn impronte(fs: &mut FileSet) -> Result<Vec<Impronta>> {
     fs.membri
         .iter_mut()
         .map(|m| {
-            let (sha256, probe) = fingerprint(&mut m.dati, m.dim)?;
+            let (sha256, sha1, probe) = fingerprint3(&mut m.dati, m.dim)?;
+            m.sha1 = Some(sha1.clone());
             Ok(Impronta {
                 nome: m.nome.clone(),
                 dim: m.dim,
                 sha256,
+                sha1,
                 probe,
             })
         })
         .collect()
+}
+
+/// The fingerprints of a set already taken (during the copy of the file): `valori` are `(sha256, sha1, probe)` of each member of `fs`, in its order;
+/// the SHA-1 goes to the members. `None` when they do not match the members (the caller takes them with `impronte`).
+pub fn impronte_note(
+    fs: &mut FileSet,
+    valori: &[(String, String, String)],
+) -> Option<Vec<Impronta>> {
+    if valori.len() != fs.membri.len() {
+        return None;
+    }
+    Some(
+        fs.membri
+            .iter_mut()
+            .zip(valori)
+            .map(|(m, (sha256, sha1, probe))| {
+                m.sha1 = Some(sha1.clone());
+                Impronta {
+                    nome: m.nome.clone(),
+                    dim: m.dim,
+                    sha256: sha256.clone(),
+                    sha1: sha1.clone(),
+                    probe: probe.clone(),
+                }
+            })
+            .collect(),
+    )
 }
 
 /// `sha256` and `probe` of a set: those of its member when it has one; otherwise SHA-256 (SHA-1 for the probe) of the members' values, each
@@ -152,7 +224,44 @@ pub fn prepare_lettore(
     membri: &[Impronta],
     name: &str,
 ) -> Result<Prepared> {
-    let mut t = mzidx_lettore::righe(l, c)?;
+    let t = mzidx_lettore::righe(l, c)?;
+    dalla_tabella(t, l, c, membri, name)
+}
+
+/// The table, the index and the SHA-256 of sample `c` of a vendor file set with one decoding of the scans for the table and for pass 1 of the builder
+/// (the later passes, when the peaks do not fit in `budget`, decode again). `fase(3)` is called when the table is done and the index starts.
+/// Returns the statistics of the build and the `sha256` of the set. The index is the one `prepare_lettore` + `mzidx::build_lettore` write.
+pub fn indicizza_lettore(
+    l: &mut dyn Lettore,
+    c: usize,
+    membri: &[Impronta],
+    name: &str,
+    out: &mut dyn crate::mzidx::Output,
+    budget: usize,
+    fase: &mut dyn FnMut(u32),
+) -> Result<(crate::mzidx::Stats, String)> {
+    let (t, prima) = mzidx_lettore::righe_prima(l, c, budget)?;
+    let p = dalla_tabella(t, l, c, membri, name)?;
+    fase(3);
+    let n = l.indice(c)?.len();
+    let st = crate::mzidx::build_dopo(
+        &p.table,
+        prima,
+        &mut |on| (0..n).try_for_each(|k| mzidx_lettore::spettro(l, c, k).map(&mut *on)),
+        out,
+        budget,
+        true,
+    )?;
+    Ok((st, p.sha256))
+}
+
+fn dalla_tabella(
+    mut t: Table,
+    l: &mut dyn Lettore,
+    c: usize,
+    membri: &[Impronta],
+    name: &str,
+) -> Result<Prepared> {
     let scans_json = mzidx_lettore::rows_json(&mut t, l.indice(c)?).into_bytes();
     let campione = l
         .campioni()

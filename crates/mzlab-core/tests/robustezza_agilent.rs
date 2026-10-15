@@ -21,6 +21,7 @@ fn membro(nome: &str, b: &[u8], dim: Option<u64>) -> Membro {
         nome: nome.into(),
         dim: dim.unwrap_or(b.len() as u64),
         dati: Box::new(Letture(b.to_vec())),
+        sha1: None,
     }
 }
 

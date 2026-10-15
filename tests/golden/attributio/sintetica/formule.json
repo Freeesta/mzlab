@@ -1,0 +1,469 @@
+{
+ "fits": [
+  {
+   "adduct": "[M+H]+",
+   "formula": "C10H12N2O",
+   "ok": true,
+   "pol": "POS",
+   "ppm": -0.22284394089857545,
+   "precursor": 177.1022
+  },
+  {
+   "adduct": "[M+Na]+",
+   "formula": "C10H12N2O",
+   "ok": true,
+   "pol": "POS",
+   "ppm": -0.22284394089857545,
+   "precursor": 177.1022
+  },
+  {
+   "adduct": "[M-H]-",
+   "formula": "C9H8O4",
+   "ok": true,
+   "pol": "NEG",
+   "ppm": 0.09896033042368287,
+   "precursor": 179.035
+  },
+  {
+   "adduct": "[M]+",
+   "formula": "C16H36N+",
+   "ok": true,
+   "pol": "POS",
+   "ppm": -0.10970343121506793,
+   "precursor": 242.2842
+  },
+  {
+   "adduct": "[M+H]+",
+   "formula": "C10H12N2O",
+   "ok": false,
+   "pol": "POS",
+   "ppm": 693936.7955159094,
+   "precursor": 300.0
+  },
+  {
+   "adduct": "[M+H]+",
+   "formula": null,
+   "ok": null,
+   "pol": "POS",
+   "ppm": null,
+   "precursor": 100.0
+  },
+  {
+   "adduct": "[M+H]+",
+   "formula": "C10H12N2O",
+   "ok": null,
+   "pol": "POS",
+   "ppm": null,
+   "precursor": null
+  }
+ ],
+ "items": [
+  {
+   "adduct": "[M+H]+",
+   "charge": 0,
+   "closest": [
+    "[M+H]+",
+    2.999999999931232
+   ],
+   "formula": "C10H12N2O",
+   "mass": 176.094963014,
+   "mz": 177.102239466161,
+   "neutral": 176.094963014,
+   "observed": 177.10277077287938,
+   "parsed": [
+    1,
+    1.007276452161,
+    1
+   ],
+   "pol": "POS"
+  },
+  {
+   "adduct": "[M-H]-",
+   "charge": 0,
+   "closest": [
+    "[M-H]-",
+    2.999999999896901
+   ],
+   "formula": "C9H8O4",
+   "mass": 180.0422587348,
+   "mz": 179.034982282639,
+   "neutral": 180.0422587348,
+   "observed": 179.03551938758582,
+   "parsed": [
+    1,
+    -1.007276452161,
+    -1
+   ],
+   "pol": "NEG"
+  },
+  {
+   "adduct": "[M+Na]+",
+   "charge": 0,
+   "closest": [
+    "[M+Na]+",
+    2.999999999991444
+   ],
+   "formula": "C8H10N4O2",
+   "mass": 194.08037557901997,
+   "mz": 217.06959628001096,
+   "neutral": 194.08037557901997,
+   "observed": 217.0702474887998,
+   "parsed": [
+    1,
+    22.989220700990998,
+    1
+   ],
+   "pol": "POS"
+  },
+  {
+   "adduct": "[M+NH4]+",
+   "charge": 0,
+   "closest": [
+    "[M+NH4]+",
+    2.9999999999343707
+   ],
+   "formula": "C17H19NO3",
+   "mass": 285.13649347281,
+   "mz": 303.17031902598103,
+   "neutral": 285.13649347281,
+   "observed": 303.1712285369381,
+   "parsed": [
+    1,
+    18.033825553171,
+    1
+   ],
+   "pol": "POS"
+  },
+  {
+   "adduct": "[M+K]+",
+   "charge": 0,
+   "closest": [
+    "[M+K]+",
+    2.9999999999741687
+   ],
+   "formula": "C12H22O11",
+   "mass": 342.11621152069995,
+   "mz": 381.07936962079094,
+   "neutral": 342.11621152069995,
+   "observed": 381.0805128588998,
+   "parsed": [
+    1,
+    38.963158100091,
+    1
+   ],
+   "pol": "POS"
+  },
+  {
+   "adduct": "[M-H2O+H]+",
+   "charge": 0,
+   "closest": [
+    "[M-H2O+H]+",
+    2.9999999999870437
+   ],
+   "formula": "C6H12O6",
+   "mass": 180.0633881022,
+   "mz": 163.06009987066102,
+   "neutral": 180.0633881022,
+   "observed": 163.06058905096063,
+   "parsed": [
+    1,
+    -17.003288231539003,
+    1
+   ],
+   "pol": "POS"
+  },
+  {
+   "adduct": "[M]+",
+   "charge": 1,
+   "closest": [
+    "[M+H]+",
+    2.9999999999208615
+   ],
+   "formula": "C16H36N+",
+   "mass": 242.28477515932,
+   "mz": 242.28422657941098,
+   "neutral": 241.27695012725,
+   "observed": 242.2849534320907,
+   "parsed": [
+    1,
+    -0.000548579909,
+    1
+   ],
+   "pol": "POS"
+  },
+  {
+   "adduct": "[M+Cl]-",
+   "charge": 0,
+   "closest": [
+    "[M+Cl]-",
+    3.0000000000171614
+   ],
+   "formula": "C7H5NO3S",
+   "mass": 182.99901402383,
+   "mz": 217.968415283739,
+   "neutral": 182.99901402383,
+   "observed": 217.96906918898486,
+   "parsed": [
+    1,
+    34.969401259909,
+    -1
+   ],
+   "pol": "NEG"
+  },
+  {
+   "adduct": "[M+2H]2+",
+   "charge": 0,
+   "closest": [
+    "[M+2H]2+",
+    3.000000000034935
+   ],
+   "formula": "C21H27N7O14P2",
+   "mass": 663.1091218333299,
+   "mz": 332.561837368826,
+   "neutral": 663.1091218333299,
+   "observed": 332.5628350543381,
+   "parsed": [
+    1,
+    2.014552904322,
+    2
+   ],
+   "pol": "POS"
+  },
+  {
+   "adduct": "[M+HCOO]-",
+   "charge": 0,
+   "closest": [
+    "[M+HCOO]-",
+    3.0000000000300417
+   ],
+   "formula": "C2H4O2",
+   "mass": 60.0211293674,
+   "mz": 105.019332218499,
+   "neutral": 60.0211293674,
+   "observed": 105.01964727649566,
+   "parsed": [
+    1,
+    44.998202851099,
+    -1
+   ],
+   "pol": "NEG"
+  },
+  {
+   "adduct": "[M-2H]2-",
+   "charge": 0,
+   "closest": [
+    "[M-2H]2-",
+    3.0000000000579448
+   ],
+   "formula": "C15H10O5",
+   "mass": 270.0528234185,
+   "mz": 134.019135257089,
+   "neutral": 270.0528234185,
+   "observed": 134.01953731449478,
+   "parsed": [
+    1,
+    -2.014552904322,
+    -2
+   ],
+   "pol": "NEG"
+  },
+  {
+   "adduct": "M+H",
+   "charge": 0,
+   "closest": null,
+   "formula": "C6H5Cl",
+   "mass": 112.00797784035,
+   "mz": null,
+   "neutral": 112.00797784035,
+   "observed": null,
+   "parsed": null,
+   "pol": "NEG"
+  },
+  {
+   "adduct": "[2M+H]+",
+   "charge": 0,
+   "closest": [
+    "[M+K]+",
+    313547.39642145054
+   ],
+   "formula": "C4H11N",
+   "mass": 73.08914935757,
+   "mz": 147.18557516730098,
+   "neutral": 73.08914935757,
+   "observed": 147.18601672402647,
+   "parsed": [
+    2,
+    1.007276452161,
+    1
+   ],
+   "pol": "POS"
+  },
+  {
+   "adduct": "[M + H3N + H]+",
+   "charge": 0,
+   "closest": [
+    "[M+NH4]+",
+    3.000000000012836
+   ],
+   "formula": "C14H18N2O5",
+   "mass": 294.12157168466,
+   "mz": 312.15539723783104,
+   "neutral": 294.12157168466,
+   "observed": 312.15633370402276,
+   "parsed": [
+    1,
+    18.033825553171,
+    1
+   ],
+   "pol": "POS"
+  },
+  {
+   "adduct": "[M+CH3COO]-",
+   "charge": 0,
+   "closest": [
+    "[M+CH3COO]-",
+    2.999999999883804
+   ],
+   "formula": "C9H13N5O3",
+   "mass": 239.10183929959,
+   "mz": 298.115692214829,
+   "neutral": 239.10183929959,
+   "observed": 298.1165865619056,
+   "parsed": [
+    1,
+    59.013852915239,
+    -1
+   ],
+   "pol": "NEG"
+  },
+  {
+   "adduct": "[M+ACN+H]+",
+   "charge": 0,
+   "closest": [
+    "[M+K]+",
+    17648.776776814564
+   ],
+   "formula": "C5H5N5",
+   "mass": 135.05449518435,
+   "mz": 177.088320737521,
+   "neutral": 135.05449518435,
+   "observed": 177.0888520024832,
+   "parsed": [
+    1,
+    42.033825553171,
+    1
+   ],
+   "pol": "POS"
+  },
+  {
+   "adduct": "mz_MH_pos",
+   "charge": 0,
+   "closest": [
+    "[M+H]+",
+    2.999999999965354
+   ],
+   "formula": "C3H7NO2S",
+   "mass": 121.01974946841,
+   "mz": 122.02702592057099,
+   "neutral": 121.01974946841,
+   "observed": 122.02739200164875,
+   "parsed": [
+    1,
+    1.007276452161,
+    1
+   ],
+   "pol": "POS"
+  },
+  {
+   "adduct": "[M-H2O-H]-",
+   "charge": 0,
+   "closest": [
+    "[M-H2O-H]-",
+    2.999999999894501
+   ],
+   "formula": "C20H25N3O",
+   "mass": 323.19976243571,
+   "mz": 304.181921299849,
+   "neutral": 323.19976243571,
+   "observed": 304.1828338456129,
+   "parsed": [
+    1,
+    -19.017841135860998,
+    -1
+   ],
+   "pol": "NEG"
+  },
+  {
+   "adduct": "[M-e]+",
+   "charge": 0,
+   "closest": [
+    "[M]+",
+    3.0000000000083036
+   ],
+   "formula": "C8H18O3",
+   "mass": 162.12559443594,
+   "mz": 162.125045856031,
+   "neutral": 162.12559443594,
+   "observed": 162.12553223116856,
+   "parsed": [
+    1,
+    -0.000548579909,
+    1
+   ],
+   "pol": "POS"
+  },
+  {
+   "adduct": "[M-H]-",
+   "charge": 0,
+   "closest": [
+    "[M-H]-",
+    2.999999999934061
+   ],
+   "formula": "C12H10Br2",
+   "mass": 311.91492452069997,
+   "mz": 310.90764806853895,
+   "neutral": 311.91492452069997,
+   "observed": 310.90858079148313,
+   "parsed": [
+    1,
+    -1.007276452161,
+    -1
+   ],
+   "pol": "NEG"
+  }
+ ],
+ "names": [
+  {
+   "in": "Caffeine (standard)",
+   "out": "caffeine"
+  },
+  {
+   "in": "Café au lait",
+   "out": "cafeaulait"
+  },
+  {
+   "in": "2-Methyl-1H-indole",
+   "out": "2methyl1hindole"
+  },
+  {
+   "in": "  Ibuprofen ",
+   "out": "ibuprofen"
+  },
+  {
+   "in": "N,N-Diethyl-m-toluamide (DEET) (x)",
+   "out": "nndiethylmtoluamidedeet"
+  },
+  {
+   "in": "Naïve Zoë",
+   "out": "naivezoe"
+  },
+  {
+   "in": "",
+   "out": ""
+  },
+  {
+   "in": "α-Tocopherol",
+   "out": "tocopherol"
+  }
+ ]
+}

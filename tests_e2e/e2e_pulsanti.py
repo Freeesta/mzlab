@@ -29,7 +29,7 @@ try:
                     if "on" not in (b.get_attribute("class") or "").split(): b.click(); pg.wait_for_timeout(200)
                 pg.mouse.move(5, 5)
                 acc = pg.evaluate("(() => { const c = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); const d = document.createElement('i'); d.style.color = c; document.body.appendChild(d); const v = getComputedStyle(d).color.match(/\\d+/g).slice(0, 3).map(Number); d.remove(); return v; })()")
-                btns = pg.locator(".pnl .bt.on, .pnl .lkb.on")
+                btns = pg.locator(".pnl .bt.on")
                 n = btns.count(); assert n >= 2, n
                 for i in range(n):
                     bx = btns.nth(i); png = bx.screenshot(); im = Image.open(io.BytesIO(png)).convert("RGB"); w, h = im.size; k = max(3, round(3 * dsf))

@@ -1,7 +1,7 @@
 // Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, XIC and single scans as
 // Float64Arrays that are moved (not copied) to the page. The page gives the arrays back ("recycle") once drawn, so a frame
 // allocates nothing. If this worker dies, rust-bridge.js starts a new one (the WASM instance cannot be reused after a trap).
-import init, { Engine, native_samples, native_to_mzml, native_srm, native_external, version, prepare_upload, formula_mz, provenance, composition, stat_post, campioni, mrm_diff_post } from "./wasm/mzlab_wasm.js";
+import init, { Engine, native_samples, native_to_mzml, native_srm, native_external, Passata, version, prepare_upload, formula_mz, provenance, composition, stat_post, campioni, mrm_diff_post } from "./wasm/mzlab_wasm.js";
 import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
@@ -10,6 +10,7 @@ import { infoDi } from "./manifesto.js";
 import { createPool, poolSize, makeGate } from "./idxpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { createNativo } from "./rust-nativo.js";
+import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
 
 let engine = null, wasmMem = null;
@@ -97,7 +98,7 @@ async function fileOf(name) {
   if (!lrFile.has(name)) { const f = await ARCH.get("files", name); if (!f) jerr("err.session.fileNotFound"); lrFile.set(name, f); }
   return lrFile.get(name);
 }
-const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, native_to_mzml, native_srm, native_external });
+const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte: createImpronte({ Passata, workerUrl: new URL("./impronta-worker.js", import.meta.url), module: () => wasmModule }) });
 async function lrOpen(name) {                                             // opens the index of a file in its slot; false when there is none
   const f = await fileOf(name), ix = await ARCH.get("idx", name + ".mzidx");
   if (!ix) return false;
@@ -297,6 +298,7 @@ async function handle(ev) {
         postMessage({ id, op: m.op, n: sink.parts ? sink.parts.length : 1, parts: sink.parts || null, file: sink.file || null }, sink.parts ? sink.parts.map(a => a.buffer) : []);
         return;
       }
+      case "natregistro": info = await nativo.registro(String(m.name).split("#")[0], m.id); break;       // one series of the instrument log of a .raw (status log, scan trailer), on demand
       case "natsrm": {                                                                // the SRM traces of a sample of a maker's file, for mzFinder (no mzML)
         const b = await nativo.srm(m.name);
         postMessage({ id, op: m.op, srm: b }, b ? [b.buffer] : []);

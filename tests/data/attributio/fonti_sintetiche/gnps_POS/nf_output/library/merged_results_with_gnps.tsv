@@ -1,0 +1,5 @@
+#Scan#	SpectrumID	Compound_Name	MQScore	SharedPeaks	SpecMZ	MassDiff	LibMZ	Adduct	Smiles	InChIKey-Planar	Instrument	LibraryName
+1	CCMSLIB00000000001	Massbank:EA255002 Fictazine - 30.0 eV|extra	0.92	7	222.1	0.0	222.1	M+H	CCN	IIIIIIIIIIIIII	Orbitrap	GNPS-LIB
+2	CCMSLIB00000000003	Spectral Match to Analogue one from NIST14	0.71	4	250.13	14.0143	236.1157	M+H	CCCN	KKKKKKKKKKKKKK	QTOF	GNPS-LIB
+3		Fictol_CE15	0.6	3	180.065	0.0	180.065	M+H				GNPS-LIB
+		No scan	0.9	5	100	0	100	M+H				GNPS-LIB

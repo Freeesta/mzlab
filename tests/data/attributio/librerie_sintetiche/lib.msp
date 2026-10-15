@@ -1,0 +1,33 @@
+Name: Fictazine
+PrecursorMZ: 222.1000
+Precursor_type: [M+H]+
+Ion_mode: P
+InChIKey: IIIIIIIIIIIIII-AAAAAAAAAA-N
+Formula: C4H11N
+Instrument_type: Fictional Q-TOF
+DB#: SYNMSP01
+Num Peaks: 4
+80.05 100
+95.06 700
+110.07 1000
+150.10 250
+
+Name: Fictazine analog
+PrecursorMZ: 236.1157
+Precursor_type: [M+H]+
+Ion_mode: Positive
+DB#: SYNMSP02
+Num Peaks: 3
+94.0 400
+110.07 1000
+164.1 200
+
+Name: Fictol
+PrecursorMZ: 180.0650
+Precursor_type: [M-H]-
+Ion_mode: Negative
+DB#: SYNMSP03
+Num Peaks: 3
+60.01 300
+79.957 1000
+97.03 450

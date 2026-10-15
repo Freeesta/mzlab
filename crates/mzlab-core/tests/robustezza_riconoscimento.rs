@@ -24,6 +24,7 @@ fn legge(nome: String, b: Vec<u8>, dim: u64) -> Vec<String> {
             nome: nome.clone(),
             dim,
             dati: Box::new(Letture(b.clone())),
+            sha1: None,
         }],
     };
     let _ = lettori::riconosci(&mut set());
