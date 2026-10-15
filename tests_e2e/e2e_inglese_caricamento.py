@@ -75,7 +75,7 @@ try:
             pg.evaluate("document.getElementById('uip-a11y').open = true")       # the chart colours are in the Accessibility submenu
             t = pg.inner_text("#uipset")
             for w in ("Settings", "Theme", "Like the system", "Chart colors", "Merge the centroids of the same nominal mass"): assert w in t, (w, t)
-            assert "By time (default)" in pg.evaluate("[...document.querySelectorAll('#uip-pal option')].map(o => o.textContent)"), "palette names"
+            assert "By file (default)" in pg.evaluate("[...document.querySelectorAll('#uip-pal option')].map(o => o.textContent)"), "palette names"
         step("gear in English", gear)
         def phrase():
             pg.evaluate("loading(true)"); pg.wait_for_timeout(300)
