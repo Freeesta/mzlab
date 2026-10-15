@@ -33,8 +33,7 @@ fn index_bytes(path: &Path) -> Vec<u8> {
     let mzml = std::fs::read(path).unwrap();
     let mut src = mzml.clone();
     let p = prepare(&mut src, mzml.len() as u64, "x.mzML").unwrap();
-    let bytes = build_mzml_to_vec(&p.table, &mzml, 64 << 20).unwrap().0;
-    bytes
+    build_mzml_to_vec(&p.table, &mzml, 64 << 20).unwrap().0
 }
 
 /// The four indexes of the synthetic series, made once (the tests run in parallel) and opened afresh at every call.

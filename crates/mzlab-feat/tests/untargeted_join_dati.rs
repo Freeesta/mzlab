@@ -36,7 +36,7 @@ fn key(file: &str, mz: f64, rt: f64) -> String {
 fn load_lists(d: &std::path::Path, stems: &[String]) -> Vec<Vec<Feature>> {
     let mut lists: Vec<Vec<Feature>> = Vec::new();
     for s in stems {
-        let p = std::fs::read_dir(&d)
+        let p = std::fs::read_dir(d)
             .unwrap()
             .flatten()
             .map(|e| e.path())
