@@ -241,4 +241,5 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 
 ## Tabella e `.mzidx` con una decodifica (righe dirette da `Spectrum`)
 - `upload::indicizza_lettore` decodifica ogni scansione una volta sola per la tabella e la prima passata di `build`, senza testa mzML né rilettura; passate successive solo se il budget è superato. `.mzidx` identico byte per byte alla strada via mzML (`tests/mzidx_righe_dirette.rs`). SHA-1 della testata non nel percorso dell'indice (`indicizza_lettore` usa lo SHA-256 già calcolato). Peso di `mzlab_wasm.wasm` prima di `wasm-opt`: 3 409 576 → 3 438 828 B.
+- LTO del profilo `desktop` (`mzidx_tempi` sintetico, 570 MB): `lto = "fat"` tabella + `.mzidx` 4,41 s, costruzione 99 s; `"thin"` 4,16 s, 68 s: differenza nel rumore, quindi resta `lto = true` come in `release`.
 - Tempi sui dati veri (BAF, LAB-A, PXD077492, `.wiff`, `.D`): da misurare in locale con `cargo run --release --example raw_tempi -p mzlab-core -- FILE.raw` (fase «table + .mzidx (one call)»); obiettivo tabella ≤ 1,3 s e `.mzidx` ≤ 3 s sul BAF. Senza dati veri: `cargo run --release --example mzidx_tempi -p mzlab-core`.
