@@ -3,10 +3,7 @@ use mzlab_core::mzml::Spectrum;
 use mzlab_core::mzmlwrite::{Header, MzmlWriter, Opzioni};
 use std::time::Instant;
 
-fn main() {
-    let a: Vec<String> = std::env::args().collect();
-    let scans: usize = a.get(1).and_then(|x| x.parse().ok()).unwrap_or(2000);
-    let peaks: usize = a.get(2).and_then(|x| x.parse().ok()).unwrap_or(5000);
+fn spectra(scans: usize, peaks: usize) -> Vec<Spectrum> {
     let mut seed = 12345u64;
     let mut rnd = move || {
         seed = seed
@@ -14,7 +11,7 @@ fn main() {
             .wrapping_add(1442695040888963407);
         (seed >> 33) as f64 / (1u64 << 31) as f64
     };
-    let spectra: Vec<Spectrum> = (0..scans)
+    (0..scans)
         .map(|i| {
             let mut mz = 100.0;
             let mut mzs = Vec::with_capacity(peaks);
@@ -36,7 +33,14 @@ fn main() {
                 ..Default::default()
             }
         })
-        .collect();
+        .collect()
+}
+
+fn main() {
+    let a: Vec<String> = std::env::args().collect();
+    let scans: usize = a.get(1).and_then(|x| x.parse().ok()).unwrap_or(2000);
+    let peaks: usize = a.get(2).and_then(|x| x.parse().ok()).unwrap_or(5000);
+    let spectra = spectra(scans, peaks);
     for (nome, opz) in [
         (
             "zlib1",
