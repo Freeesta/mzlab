@@ -706,6 +706,7 @@ declare var uiSave: any;
 declare var uiTimer: any;
 declare var uipAdminOn: any;
 declare var uipApply: any;
+declare var uipContOn: any;
 declare var uipLoad: any;
 declare var uipOpen: any;
 declare var uipRead: any;

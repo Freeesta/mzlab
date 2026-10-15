@@ -6,7 +6,7 @@ from pathlib import Path
 
 WEB = Path(__file__).resolve().parent.parent / "mzlab" / "web"
 # the tabular exports of the program: file -> number of calls that must carry the provenance
-DLX = {"banco.js": 1, "pannelli.js": 1, "bianco.js": 1, "pca.js": 1, "kmd.js": 1, "pfas.js": 1, "profilo.js": 1, "origine.js": 1, "picchi.js": 1,
+DLX = {"pannelli.js": 1, "bianco.js": 1, "pca.js": 1, "kmd.js": 1, "pfas.js": 1, "profilo.js": 1, "origine.js": 1, "picchi.js": 1,
        "composizione.js": 2, "libreria.js": 3, "riferimento.js": 1, "mappa-tabella.js": 1}
 DL = {"riferimento.js": 1, "liste.js": 1, "campioni-tabella.js": 1}                       # CSV / TSV files
 CLIP = {"banco.js": 1, "mappa-tabella.js": 1, "tdati.js": 1, "libreria.js": 2, "campioni-tabella.js": 1, "profilo.js": 1}      # tables copied to the clipboard

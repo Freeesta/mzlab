@@ -129,6 +129,7 @@ const BARRA = (() => {
     { id: "panel", bar: false, group: "panel", ic: () => ICONS.panel, visible: () => inData(), run: () => toggleDrawer() },
     // search: true = found only by the search (palette, Ctrl/⌘ K): never a button of the bar, never in "Altro"; external links, rare: in "Altro"
     { id: "stat", search: true, group: "tools", ic: () => ICONS.stat, panel: "stat", visible: () => inData(), run: () => toggle("stat") },
+    { id: "labcont", search: true, group: "tools", ic: () => QI("liste"), visible: () => inData(), run: () => window.LISTE && LISTE.openLab() },
     { id: "pubchem", dom: "np-pc", more: true, ic: () => ICONS.ext, run: () => window.open("https://pubchem.ncbi.nlm.nih.gov/", "_blank", "noopener") },
     { id: "bio", dom: "np-bt", more: true, ic: () => ICONS.ext, run: () => window.openBT && window.openBT() }
   ];

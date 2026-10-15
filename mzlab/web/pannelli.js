@@ -308,7 +308,8 @@ function addPanel(type, o, after) {
       }},
       ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.excel"), icon: IC_DL, fn: () => {
         const t = plotSheets(p); if (t) dlx(plotName(p) + ".xlsx", t, { p, table: "plot" }); else info(I18N.t("panel.dl.nodata"));
-      }}])
+      }}]),
+      ...(window.BANCO && BANCO.on() ? [{ label: I18N.t("panel.dl.copyPng"), fn: () => BANCO.copyPng(p) }, ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.copyData"), fn: () => BANCO.copyText(p) }])] : [])
     ]);
   };
   const bZ = el.querySelector('[data-a="izoom"]'), bA = el.querySelector('[data-a="iauto"]'), bM = el.querySelector('[data-a="iman"]'), bD = el.querySelector('[data-a="idel"]'), bT = el.querySelector('[data-a="itab"]'), bX = el.querySelector('[data-a="xic"]');

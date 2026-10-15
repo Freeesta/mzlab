@@ -11,11 +11,11 @@ const BANCO = (() => {
   st.textContent = `.hrw .pnl.act{box-shadow:0 0 0 2px var(--accent)}
 .bfw{display:inline-flex;align-items:center;gap:4px;margin-left:6px}.bfw select{max-width:21em;min-width:9em}.bfw .pin{padding:2px 5px}.bfw .pin.on{background:var(--sel);color:var(--accent);border-color:var(--accent)}
 .hrw #g-add,.hrw .pnl.spec [data-a="par"]{display:none}
-#hrbar{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:0 0 6px}
-#hrbar[hidden]{display:none}#hrbar .sepv{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
-#hrbar button{min-width:32px;height:30px;padding:0 7px;display:inline-flex;align-items:center;justify-content:center;gap:4px}
-#hrbar button.on{background:var(--sel);color:var(--accent);border-color:var(--accent)}#hrbar button:disabled{opacity:.35;cursor:default}
-#hrbar select{height:30px}#hrbar .act{margin-left:auto;font-size:12px;color:var(--muted)}
+#hrbar{display:inline-flex;align-items:center;gap:var(--sp-4)}#hrbar[hidden]{display:none}
+#hrbar [hidden]{display:none!important}#hrbar .hg{display:inline-flex;align-items:center;gap:4px}#hrbar .hg+.hg{border-left:1px solid var(--line);padding-left:8px}
+#hrbar button{min-width:32px;height:30px;padding:0 7px;display:inline-flex;align-items:center;justify-content:center;gap:4px}#hrbar .hcap{font-size:12px;color:var(--muted);white-space:nowrap}
+#hrbar button:disabled{opacity:.35;cursor:default}#tools.nolab #hrbar .hl,#tools.nolab #hrbar .hcap{display:none}
+#tools.one{flex-wrap:nowrap;overflow:hidden;align-items:center}#tools.one .tbx{flex-wrap:nowrap}#tools.one #fsel{min-width:110px;max-width:min(34vw,340px)}#tools.one .sp{flex:1 1 0;min-width:0}#tools.one #navfile{display:inline-flex;align-items:center;gap:var(--sp-2);flex-wrap:nowrap}#tools.one .tbx,#tools.one #hrbar,#tools.one #np-method{flex:none}#tools.one #g-file{flex:0 1 auto}#tools.one #fsel{flex:0 1 auto}
 #hrinfo{margin-top:10px;display:flex;flex-direction:column;resize:vertical;overflow:hidden;height:340px;min-height:170px;max-height:80vh;padding:0}
 #hrinfo[hidden]{display:none}#sb-panels>#hrinfo{height:auto!important;min-height:100%;max-height:none;resize:none;margin:0;border:0;border-radius:0}
 #hri-ttl{padding:4px 8px 0;font-weight:600;font-size:12px}#sb-panels>#hrinfo #hri-ttl{display:none}#hri-body{overflow:auto;flex:1;padding:6px 8px;font-size:12px;user-select:text}
@@ -288,15 +288,12 @@ const BANCO = (() => {
   // ---------------------------------------------------------------- the toolbar of the bench (WP-H3b, master-prompt §3.3): in the place of the tabs of the experiments
   const svg = d => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const ICON = {
-    prev: svg('<path d="M10 3L5 8l5 5"/>'), next: svg('<path d="M6 3l5 5-5 5"/>'),
-    zundo: svg('<path d="M3 7h6a3 3 0 010 6H6"/><path d="M5.5 4.5L3 7l2.5 2.5"/>'), zredo: svg('<path d="M13 7H7a3 3 0 000 6h3"/><path d="M10.5 4.5L13 7l-2.5 2.5"/>'), zall: svg('<path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/>'),
-    norm: svg('<path d="M3 13V8M7 13V4M11 13V6"/><path d="M2 13.5h12"/>'), add: svg('<path d="M8 3v10M3 8h10"/>'), del: svg('<path d="M3 4.5h10M6 4.5V3h4v1.5M5 4.5l.5 8.5h5l.5-8.5"/>'),
-    type: svg('<path d="M3 5h8M3 11h8"/><path d="M9 3l2 2-2 2M7 9l-2 2 2 2"/>'), peaks: svg('<path d="M2 13c2 0 2-8 4-8s2 8 4 8 1.5-4 4-4"/>'), lib: svg('<circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/>'),
-    copy: svg('<rect x="5" y="5" width="8" height="8" rx="1"/><path d="M3 10V3h7"/>'), xls: svg('<path d="M3 2.5h6.5l3 3v8H3z"/><path d="M5.5 8l3 3.5M8.5 8l-3 3.5"/>'), tree: svg('<path d="M8 2v4M8 6H4v3M8 6h4v3M4 9v3M12 9v3"/>'),
+    prev: svg('<path d="M10 3L5 8l5 5"/>'), next: svg('<path d="M6 3l5 5-5 5"/>'), zall: svg('<path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/>'),
+    add: svg('<path d="M8 3v10M3 8h10"/>'), type: svg('<path d="M3 5h8M3 11h8"/><path d="M9 3l2 2-2 2M7 9l-2 2 2 2"/>'), lib: svg('<circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/>'), tree: svg('<path d="M8 2v4M8 6H4v3M8 6h4v3M4 9v3M12 9v3"/>'),
   };
   const act = () => (E.active && E.panels.includes(E.active) ? E.active : E.panels[0] || null);
   const tabOfAct = () => (act() && act().tab) || E.tab;
-  function barBtn(id, tip, ic, fn, label) { return `<button type="button" data-hb="${id}" title="${EH(tip)}" aria-label="${EH(tip)}">${ic}${label ? `<span>${EH(label)}</span>` : ""}</button>`; }
+  function barBtn(id, tip, ic, fn, label) { return `<button type="button" data-hb="${id}" title="${EH(tip)}" aria-label="${EH(tip)}">${ic}${label ? `<span class="hl">${EH(label)}</span>` : ""}</button>`; }
   async function copyPng(p) {
     let cvs; p._exp = true; EXPORTING = true;
     try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; draw(p); }
@@ -328,23 +325,13 @@ const BANCO = (() => {
   const FN = {
     prev: () => { const a = walkTarget(false); if (a) stepScan(a, -1); else info(I18N.t("bn.putCursor")); },
     next: () => { const a = walkTarget(false); if (a) stepScan(a, 1); else info(I18N.t("bn.putCursor")); },
-    zundo: () => { if (STORIA) STORIA.annulla(); },
-    zredo: () => { if (STORIA) STORIA.ripeti(); },
     zall: () => { E.panels.forEach(q => { pushZh(q); q.zoom = null; q.zoomY = null; if (q.type === "spec") q.lock = null; draw(q); }); uiSave(); },
-    norm: () => { const a = act(); if (!a) return; if (a.type === "spec") { a.rel = !specRel(a); draw(a); } else if (a.type === "chrom" || a.type === "xic") { a.norm100 = !a.norm100; draw(a); } uiSave(); sync2(); },
-    pin: () => { const a = act(); if (a && (eligible(a) || a.type === "xic")) setPin(a, !a.pin); sync2(); },
-    del: () => { const a = act(); if (a) a.el.querySelector(".x").click(); },
-    peaks: () => { const a = act(); const b = a && a.el.querySelector('[data-a="iauto"]'); if (b) b.click(); else info(I18N.t("bn.peaksOnly")); sync2(); },
     lib: () => { let a = act(); if (a && a.type !== "spec") a = E.panels.find(q => q.type === "spec" && q.link === a.id); if (a && window.LIB && a.level === 2) LIB.searchFrom(a); else info(I18N.t("bn.pickMs2")); },
-    xls: () => { const a = act(), t = a && plotSheets(a); if (t) dlx(plotName(a) + ".xlsx", t, { p: a, table: "plot" }); else info(I18N.t("bn.noExport")); },
     tree: () => { const f = tabFiles("ms2")[0]; if (f && window.COMP) COMP.tree(f.k); else info(I18N.t("bn.treeOnly")); },
   };
   function sync2() {
-    const b = Q("#hrbar"); if (!b) return; const a = act();
-    const t = (id, on) => { const x = b.querySelector(`[data-hb="${id}"]`); if (x) x.classList.toggle("on", !!on); };
-    t("pin", a && a.pin); t("norm", a && (a.type === "spec" ? specRel(a) : a.norm100)); t("peaks", a && a.imode === "auto");
+    if (!Q("#hrbar")) return;
     renderInfo();
-    const l = b.querySelector(".act"); if (l) l.textContent = "";
   }
   // the starting layout of the bench: the survey on top (the trio for a DDA file); product ions that are not a DDA get their own chromatogram and spectrum under it
   function afterLayout() {
@@ -533,33 +520,51 @@ const BANCO = (() => {
     }
     renderInfo();
   }
+  // one row: when the bench buttons do not fit, first the words go, then the last buttons move into «⋯», each with its name
+  const DROP = ["tree", "lib", "type", "add", "zall"];
+  const nameOf = x => { const l = x.querySelector(".hl"); return l ? l.textContent : (x.getAttribute("aria-label") || x.title); };
+  function fitRow() {
+    const t = Q("#tools"), b = Q("#hrbar"); if (!t || !b || b.hidden) return;
+    t.classList.add("one"); t.classList.remove("nolab");
+    const btns = [...b.querySelectorAll("button[data-hb]")], mg = b.querySelector("#hr-moreg"), groups = [...b.querySelectorAll(".hg:not(#hr-moreg)")];
+    btns.forEach(x => { x.hidden = false; }); mg.hidden = true; groups.forEach(g => { g.hidden = false; });
+    const over = () => t.scrollWidth > t.clientWidth + 1;
+    if (!over()) return;
+    t.classList.add("nolab"); if (!over()) return;
+    mg.hidden = false;
+    for (const id of DROP) { const x = b.querySelector(`[data-hb="${id}"]`); if (x) x.hidden = true; groups.forEach(g => { g.hidden = [...g.querySelectorAll("button")].every(y => y.hidden); }); if (!over()) break; }
+  }
+  function moreMenu(e, mb) {
+    const r = mb.getBoundingClientRect();
+    const items = [...Q("#hrbar").querySelectorAll("button[data-hb]")].filter(x => x.hidden && !x.disabled).map(x => ({ label: nameOf(x), fn: () => x.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: r.left, clientY: r.bottom })) }));
+    if (items.length) menu(e, items);
+  }
   function bar() {
     const host = Q("#tools"); if (!host) return;
     let b = Q("#hrbar");
-    if (!sync()) { if (b) b.hidden = true; const ic = Q("#hrinfo"); if (ic) ic.hidden = true; return; }
+    if (!sync()) { if (b) b.hidden = true; host.classList.remove("one", "nolab"); const ic = Q("#hrinfo"); if (ic) ic.hidden = true; return; }
     if (!b) {
       b = document.createElement("div"); b.id = "hrbar"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", I18N.t("bn.toolbar"));
-      host.insertAdjacentElement("beforebegin", b);
-      b.innerHTML = barBtn("prev", I18N.t("bn.bar.prev"), ICON.prev) + barBtn("next", I18N.t("bn.bar.next"), ICON.next) + `<span class="sepv"></span>` +
-        barBtn("zundo", I18N.t("bn.bar.zundo"), ICON.zundo) + barBtn("zredo", I18N.t("bn.bar.zredo"), ICON.zredo) + barBtn("zall", I18N.t("bn.bar.zall"), ICON.zall) +
-        barBtn("norm", I18N.t("bn.bar.norm"), ICON.norm) + barBtn("pin", I18N.t("bn.bar.pinbtn"), IC_PIN) + `<span class="sepv"></span>` +
-        barBtn("add", I18N.t("bn.bar.addcell"), ICON.add, null, I18N.t("bn.cell")) + barBtn("type", I18N.t("bn.bar.type"), ICON.type) + barBtn("del", I18N.t("bn.bar.del"), ICON.del) + `<span class="sepv"></span>` +
-        barBtn("peaks", I18N.t("bn.bar.peaks"), ICON.peaks) +
-        barBtn("lib", I18N.t("bn.bar.lib"), ICON.lib) + barBtn("tree", I18N.t("bn.bar.tree"), ICON.tree) + `<span class="sepv"></span>` +
-        barBtn("copy", I18N.t("bn.bar.copy"), ICON.copy) + barBtn("xls", I18N.t("bn.bar.xls"), ICON.xls) + `<span class="act"></span>`;
+      const sp = host.querySelector(":scope > .sp"); host.insertBefore(b, sp);       // one row: the buttons of the bench sit in #tools, between the file arrows and «Method»
+      b.innerHTML = h`${raw(`<span class="hg"><span class="hcap" aria-hidden="true">${EH(I18N.t("bn.lab.scan"))}</span>${barBtn("prev", I18N.t("bn.bar.prev"), ICON.prev)}${barBtn("next", I18N.t("bn.bar.next"), ICON.next)}</span>` +
+        `<span class="hg">${barBtn("zall", I18N.t("bn.bar.zall"), ICON.zall, null, I18N.t("bn.lab.zall"))}</span>` +
+        `<span class="hg">${barBtn("add", I18N.t("bn.bar.addcell"), ICON.add, null, I18N.t("bn.cell"))}${barBtn("type", I18N.t("bn.bar.type"), ICON.type, null, I18N.t("bn.lab.type"))}</span>` +
+        `<span class="hg">${barBtn("lib", I18N.t("bn.bar.lib"), ICON.lib, null, I18N.t("bn.lab.lib"))}${barBtn("tree", I18N.t("bn.bar.tree"), ICON.tree, null, I18N.t("bn.lab.tree"))}</span>` +
+        `<span class="hg" id="hr-moreg" hidden><button type="button" id="hr-more" aria-haspopup="menu" title="${EH(I18N.t("bn.more"))}" aria-label="${EH(I18N.t("bn.more"))}">\u22EF</button></span>`)}`;
       b.querySelectorAll("button[data-hb]").forEach(x => {
         const id = x.dataset.hb;
         x.onclick = e => {
           e.stopPropagation();
           if (id === "add") return menu(e, [["chrom", I18N.t("bn.m.chrom")], ["spec", I18N.t("bn.m.spec")], ["map", I18N.t("bn.m.map")], ["xic", I18N.t("bn.m.xic")], ["sub", I18N.t("bn.m.sub")]].map(([t, l]) => ({ label: l, fn: () => (t === "xic" ? openXic() : t === "sub" ? subXicCell() : addCell(t)) })));
           if (id === "type") return menu(e, [["chrom", I18N.t("bn.m.chrom")], ["spec", I18N.t("bn.m.spec")], ["map", I18N.t("bn.m.map")]].map(([t, l]) => ({ label: l, fn: () => retype(t) })));
-          if (id === "copy") { const a = act(); if (!a) return; return menu(e, [{ label: I18N.t("bn.m.png"), fn: () => copyPng(a) }, { label: I18N.t("bn.m.data"), fn: () => copyText(a) }]); }
           if (FN[id]) FN[id]();
         };
       });
     }
-    b.hidden = false; sync2(); infoBar();
+    const mb = b.querySelector("#hr-more"); if (mb && !mb.onclick) mb.onclick = e => { e.stopPropagation(); moreMenu(e, mb); };
+    if (!b._ro && typeof FRAME !== "undefined" && FRAME.ro) { b._ro = true; FRAME.ro(host, fitRow); }
+    b.hidden = false; sync2(); infoBar(); fitRow();
   }
-  return { token: () => ist.tok, infoBar, renderInfo, setInfoTab, afterLayout, bar, sync2, on, sync, header, decorate, groupsOf, setFilter, setPin, eligible, rangeSeries, addRange, dropRange, filesFor };
+  return { token: () => ist.tok, copyPng, copyText, fitRow, infoBar, renderInfo, setInfoTab, afterLayout, bar, sync2, on, sync, header, decorate, groupsOf, setFilter, setPin, eligible, rangeSeries, addRange, dropRange, filesFor };
 })();
 window.BANCO = BANCO;
