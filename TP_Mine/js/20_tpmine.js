@@ -411,16 +411,23 @@
     let dbar = document.getElementById("tp-drawbar");
     if (!dbar) {
       dbar = document.createElement("div"); dbar.id = "tp-drawbar"; dbar.hidden = true; dbar.setAttribute("role", "region"); dbar.setAttribute("aria-label", "Tabui: parent structure");
-      dbar.innerHTML = `<span>Drawing the Tabui parent</span><button type="button" id="tp-draw-use" class="imp">Use this structure</button><button type="button" id="tp-draw-no">Cancel</button>`;
+      dbar.innerHTML = `<span>Drawing the Tabui parent</span><span id="tp-draw-st" role="status"></span><button type="button" id="tp-draw-use" class="imp" disabled>Use this structure</button><button type="button" id="tp-draw-no">Cancel</button>`;
       document.body.appendChild(dbar);
     }
     let drawing = false;
     const back = () => { drawing = false; dbar.hidden = true; if (typeof setView === "function") setView("tpmine"); };
-    drawBtn.onclick = () => { drawing = true; dbar.hidden = false; setView("draw"); };
+    const dst = /** @type {HTMLElement} */ (document.getElementById("tp-draw-st")), duse = /** @type {HTMLButtonElement} */ (document.getElementById("tp-draw-use"));
+    const dsay = (/** @type {string} */ t) => { dst.textContent = t; };
+    drawBtn.onclick = async () => {                                        // the editor loads on demand: «Use» waits for it, and the typed SMILES is shown in it
+      drawing = true; dbar.hidden = false; duse.disabled = true; dsay("Loading the editor..."); setView("draw");
+      const smi = $("#tp-smi").value.trim();
+      try { if (smi) await window.TPDraw.load(smi); else await window.TPDraw.when(); duse.disabled = false; dsay(""); }
+      catch (e) { dsay("The editor did not start: " + String((e && e.message) || e)); }
+    };
     document.addEventListener("tpview", /** @type {(e: any) => void} */ e => { dbar.hidden = !(drawing && e.detail.view === "draw"); if (e.detail.view !== "draw" && e.detail.view !== "tpmine") drawing = false; });
     /** @type {any} */ (document.getElementById("tp-draw-no")).onclick = back;
     /** @type {any} */ (document.getElementById("tp-draw-use")).onclick = async () => {
-      let t = ""; try { t = window.TPDraw ? await window.TPDraw.smiles() : ""; } catch (_) { t = ""; }
+      let t = ""; try { t = await window.TPDraw.smiles(); } catch (e) { dsay("Could not read the drawing: " + String((e && e.message) || e)); return; }
       if (!t) { toast("Nothing drawn yet."); return; }
       $("#tp-smi").value = t; $("#tp-mol").value = ""; preview(); back();
     };
