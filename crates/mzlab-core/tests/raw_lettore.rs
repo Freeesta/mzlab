@@ -48,6 +48,7 @@ fn set(path: &Path) -> FileSet {
             nome,
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
+            sha1: None,
         }],
     }
 }
@@ -113,6 +114,7 @@ fn not_a_raw_is_refused() {
             nome: "x.raw".into(),
             dim: 20,
             dati: Box::new(vec![7u8; 20]),
+            sha1: None,
         }],
     };
     assert!(lettori::riconosci(&mut fs).is_none());
@@ -236,4 +238,26 @@ fn the_mzml_of_a_raw_carries_the_instrument_the_hash_the_start_and_the_method() 
         doc.contains(&format!("\"file_creato\":\"{start}\"")),
         "{start}"
     );
+}
+
+#[test]
+fn the_sha1_given_with_the_member_gives_the_same_header_as_the_one_the_reader_reads() {
+    let files = raw_files();
+    let Some(f) = files.first() else {
+        eprintln!("SKIP raw_lettore: no data repository (MZLAB_DATI)");
+        return;
+    };
+    let header = |mut fs: FileSet| {
+        let mut l = lettori::apri(std::mem::take(&mut fs), &Limiti::sito()).unwrap();
+        let mut head = Head(Vec::new());
+        let _ = lettori_mzml::scrivi(&mut *l, 0, &mut head, &mut |_, _| {});
+        let xml = String::from_utf8_lossy(&head.0).into_owned();
+        xml[..xml.find("<spectrumList").unwrap()].to_string()
+    };
+    let read = header(set(f));
+    let mut fs = set(f);
+    let imp = mzlab_core::upload::impronte(&mut fs).unwrap();
+    assert_eq!(fs.membri[0].sha1.as_deref(), Some(imp[0].sha1.as_str()));
+    assert_eq!(header(fs), read, "SHA-1 given or read: the same header");
+    assert!(read.contains(&imp[0].sha1));
 }

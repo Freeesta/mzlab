@@ -103,6 +103,7 @@ impl Membri {
                     read: self.read.clone(),
                     i: i as u32,
                 }),
+                sha1: None,
             })
             .collect();
         FileSet { membri }
@@ -119,18 +120,25 @@ pub(crate) struct Dataset {
 impl Membri {
     /// The reader of `fs` (this dataset's members): the engine's own, and when none recognises it the one of the readers module the page registered with `native_external`.
     fn apri_fs(&self, fs: FileSet) -> mzlab_core::Result<Box<dyn Lettore>> {
+        let sha1: Vec<String> = fs
+            .membri
+            .iter()
+            .map(|m| m.sha1.clone().unwrap_or_default())
+            .collect();
         match lettori::apri(fs, &Limiti::sito()) {
-            Err(e) if e.key == "err.file.notAccepted" => self.esterno().unwrap_or(Err(e)),
+            Err(e) if e.key == "err.file.notAccepted" => self.esterno(&sha1).unwrap_or(Err(e)),
             r => r,
         }
     }
 
     /// The session of the module for this dataset; `None` when the page registered no function or no module reads it.
-    fn esterno(&self) -> Option<mzlab_core::Result<Box<dyn Lettore>>> {
+    /// `sha1`: the SHA-1 of each member when known (empty text when not), for the header of the mzML.
+    fn esterno(&self, sha1: &[String]) -> Option<mzlab_core::Result<Box<dyn Lettore>>> {
         let f = ESTERNO.with(|f| f.borrow().clone())?;
         let names: js_sys::Array = self.names.iter().map(|n| JsValue::from_str(n)).collect();
         let sizes = js_sys::Float64Array::from(&self.sizes[..]);
-        let sessione = match f.call3(&JsValue::NULL, &names, &sizes, &self.read) {
+        let sha1: js_sys::Array = sha1.iter().map(|n| JsValue::from_str(n)).collect();
+        let sessione = match f.call4(&JsValue::NULL, &names, &sizes, &self.read, &sha1) {
             Ok(v) if v.is_null() || v.is_undefined() => return None,
             Ok(v) => v,
             Err(e) => {
@@ -249,10 +257,32 @@ pub fn native_samples(
     Ok(o.0)
 }
 
+/// The fingerprints of a member taken while it is copied: `aggiorna(piece)` for each piece in file order, then `fine()` gives `[sha256, sha1, probe]`
+/// (`undefined` when the pieces do not add up to `size`). The page passes them on to `build_mzidx_native` and to the reader of the header of the mzML.
+/// The fingerprints of a member taken while it is copied: `aggiorna(piece)` for each piece in file order, then `fine()` gives `[sha256, sha1, probe]`
+/// (`undefined` when the pieces do not add up to `size`). The page passes them on to `build_mzidx_native` and to the reader of the header of the mzML.
+#[wasm_bindgen]
+pub struct Passata(Option<upload::Passata>);
+
+#[wasm_bindgen]
+impl Passata {
+    #[wasm_bindgen(constructor)]
+    pub fn new(size: f64) -> Passata {
+        Passata(Some(upload::Passata::new(size as u64)))
+    }
+    pub fn aggiorna(&mut self, piece: &[u8]) {
+        self.0.as_mut().unwrap().aggiorna(piece);
+    }
+    pub fn fine(self) -> Option<js_sys::Array> {
+        let (a, b, c) = self.0?.fine()?;
+        Some([a, b, c].iter().map(|x| JsValue::from_str(x)).collect())
+    }
+}
+
 /// Builds the `.mzidx` of sample `c` of a dataset straight from its reader (version 2: the rows say where each scan lies in the members) and writes
 /// it with `write(offset, bytes)`; `name` is the name of the item. `phase(n)` is told when a phase begins (1 the members are read for their SHA-256,
 /// 2 the scans are read and indexed, 3 the chromatograms and the index are written); JS follows how far each goes from the bytes it is asked for.
-/// Returns the statistics and the SHA-256 of the dataset as JSON.
+/// Returns the statistics and the SHA-256 of the dataset as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
 pub fn build_mzidx_native(
@@ -265,12 +295,28 @@ pub fn build_mzidx_native(
     write: Function,
     budget_mb: u32,
     phase: Function,
+    prints: Option<js_sys::Array>,
 ) -> Result<String, JsValue> {
     let tell = |n: u32| drop(phase.call1(&JsValue::NULL, &n.into()));
     let m = Membri::new(names, sizes, read)?;
     let mut fs = m.fileset();
-    tell(1);
-    let impronte = upload::impronte(&mut fs).map_err(|e| error_json(&e))?;
+    // the fingerprints taken while the members were copied (`Passata`): [sha256, sha1, probe] of each; without them (or not matching) the members are read here
+    let given: Vec<String> = prints.map_or(vec![], |a| {
+        a.iter()
+            .map(|v| v.as_string().unwrap_or_default())
+            .collect()
+    });
+    let given: Vec<(String, String, String)> = given
+        .chunks_exact(3)
+        .map(|c| (c[0].clone(), c[1].clone(), c[2].clone()))
+        .collect();
+    let impronte = match upload::impronte_note(&mut fs, &given) {
+        Some(i) => i,
+        None => {
+            tell(1);
+            upload::impronte(&mut fs).map_err(|e| error_json(&e))?
+        }
+    };
     let l = m.apri_fs(fs).map_err(|e| error_json(&e))?;
     let mut l = if centroid {
         lettori_centroidi::centroidato(l)

@@ -15,6 +15,7 @@ fn main() {
             nome,
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
+            sha1: None,
         }],
     };
     let mut l = (rawlettore::VOCE.apri)(fs, &Limiti::sito()).expect("open");

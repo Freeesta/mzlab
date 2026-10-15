@@ -51,6 +51,7 @@ fn set(path: &Path) -> FileSet {
             nome,
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
+            sha1: None,
         }],
     }
 }

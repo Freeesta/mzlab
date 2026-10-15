@@ -127,6 +127,7 @@ impl Membri {
                 nome: n.clone(),
                 dim: s as u64,
                 dati: Box::new(JsMember::new(self.read.clone(), i as u32, s as u64)),
+                sha1: None,
             })
             .collect();
         FileSet { membri }
@@ -253,9 +254,27 @@ fn con<T>(f: impl FnOnce(&mut Sessioni) -> mzlab_core::Result<T>) -> Result<T, J
 /// Opens a dataset and keeps it under a handle (`chiudi` frees it); `campioni(h)` says what it holds.
 #[wasm_bindgen]
 pub fn apri(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<u32, JsValue> {
-    let m = Membri::new(names, sizes, read)?;
+    apri_membri(Membri::new(names, sizes, read)?.fileset())
+}
+/// `apri` with the SHA-1 of each member when the page took it while copying the file (empty text: unknown): the header of the mzML uses it instead of
+/// reading the file again. Only the `thermo` module has it (the other readers take their SHA-1 themselves).
+#[cfg(feature = "thermo")]
+#[wasm_bindgen]
+pub fn apri_con_sha1(
+    names: js_sys::Array,
+    sizes: &[f64],
+    read: Function,
+    sha1: js_sys::Array,
+) -> Result<u32, JsValue> {
+    let mut fs = Membri::new(names, sizes, read)?.fileset();
+    for (x, v) in fs.membri.iter_mut().zip(sha1.iter()) {
+        x.sha1 = v.as_string().filter(|t| !t.is_empty());
+    }
+    apri_membri(fs)
+}
+fn apri_membri(fs: FileSet) -> Result<u32, JsValue> {
     // as it is, without the SRM traces of `mzlab_lettori::apri`: the engine reads the module through `LettoreEsterno` and decides itself what it does with them
-    let l = mzlab_lettori::apri_nudo(m.fileset(), &Limiti::sito()).map_err(|e| error_json(&e))?;
+    let l = mzlab_lettori::apri_nudo(fs, &Limiti::sito()).map_err(|e| error_json(&e))?;
     con(|s| Ok(s.inserisci(l)))
 }
 #[wasm_bindgen]

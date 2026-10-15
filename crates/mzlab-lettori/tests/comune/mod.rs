@@ -158,6 +158,7 @@ pub fn insieme(nome: &str, byte: Vec<u8>) -> FileSet {
             nome: nome.into(),
             dim: byte.len() as u64,
             dati: Box::new(byte),
+            sha1: None,
         }],
     }
 }

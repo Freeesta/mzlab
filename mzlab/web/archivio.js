@@ -79,15 +79,15 @@ export async function quotaError(needed) {
 export async function writeAll(ah, data, at) { if (writeFull(ah, data, at) < data.length) throw await quotaError(at + data.length); }
 
 // write `size` bytes produced by chunk(offset, length) -> Uint8Array into kind/name (replacing it); the partial file is removed if something fails
-function write(kind, name, size, chunk) { return locked(kind, name, () => writeNow(kind, name, size, chunk)); }
-async function writeNow(kind, name, size, chunk) {
+function write(kind, name, size, chunk, after) { return locked(kind, name, () => writeNow(kind, name, size, chunk, after)); }
+async function writeNow(kind, name, size, chunk, after) {
   await dropLease(kind, name);
   const d = await dir(kind);
   const fh = await d.getFileHandle(name, { create: true });
   const ah = await fh.createSyncAccessHandle();
   try {
     ah.truncate(0);
-    for (let off = 0; off < size; off += STEP) await writeAll(ah, await chunk(off, Math.min(STEP, size - off)), off);
+    for (let off = 0; off < size; off += STEP) { const b = await chunk(off, Math.min(STEP, size - off)); await writeAll(ah, b, off); if (after) await after(b, off); }
     ah.flush();
     if (ah.getSize() < size) throw await quotaError(size);        // the browser took the writes but the file is shorter (quota reached)
   } catch (e) {
@@ -102,7 +102,8 @@ async function writeNow(kind, name, size, chunk) {
 }
 
 // `size` bytes produced by chunk(offset, length) -> Promise<Uint8Array> -> File in OPFS (the desktop copies the index built by the native side)
-export const putChunks = (kind, name, size, chunk) => write(kind, name, size, chunk);
+// `after(piece, offset)`, when given, is awaited once the piece is written (the page takes the fingerprints of the file there: impronta.js); the piece is its to keep
+export const putChunks = (kind, name, size, chunk, after) => write(kind, name, size, chunk, after);
 
 // a Blob, an ArrayBuffer or a Uint8Array -> File in OPFS
 export async function put(kind, name, data) {

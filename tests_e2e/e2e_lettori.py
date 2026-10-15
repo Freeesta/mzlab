@@ -1,7 +1,7 @@
 """Datasets of a maker read as they are (mzlab/web/rust-nativo.js, nativi.rs): a synthetic Agilent .D folder (tools/agilent_sintetico.py, no laboratory data) is listed as a sample, indexed straight from
 its files (no mzML is made), answers the TIC route, and «Download .mzML» writes its mzML on request (one spectrum per scan); a folder that no reader knows is an error with a key. Needs the site and the
 .wasm: python tools/build_site.py (the .wasm is copied from site/static/wasm or built). MZLAB_PIPE_SITE=<built site> reuses a site. Run from the repo root: python3 tests_e2e/e2e_lettori.py"""
-import base64, os, shutil, subprocess, sys, tempfile, time
+import base64, hashlib, json, os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
@@ -49,6 +49,29 @@ try:
             r = pg.evaluate(LOAD, [members, False]); assert r["ok"], r
             assert r["scans"] == N and r["files"] == ["uno.mzML"] and r["native"], r
         step("an Agilent .D folder is listed as one sample and indexed from its files", folder_ok)
+        def fingerprints_of_the_copy():
+            stub = pg.evaluate("""async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("files"); return await (await (await d.getFileHandle("uno.mzML")).getFile()).text(); }""")
+            st = json.loads(stub); want = {n: base64.b64decode(b) for n, b in members}
+            assert len(st["members"]) == len(members) and all(m["sha256"] and m["sha1"] and m["probe"] for m in st["members"]), st
+            for m in st["members"]:
+                b = want[m["name"]]; head, tail = b[:65536], b[max(0, len(b) - 65536):]
+                assert m["sha256"] == hashlib.sha256(b).hexdigest() and m["sha1"] == hashlib.sha1(b).hexdigest(), m
+                assert m["probe"] == hashlib.sha1(str(len(b)).encode() + head + tail).hexdigest(), m
+        step("the fingerprints are taken during the copy and are those of the members", fingerprints_of_the_copy)
+        def old_stub_without_fingerprints():
+            r = pg.evaluate("""async () => {
+              const rb = await window.MZLAB_RUST_READY, root = await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab");
+              const files = await root.getDirectoryHandle("files"), idx = await root.getDirectoryHandle("idx");
+              const st = JSON.parse(await (await (await files.getFileHandle("uno.mzML")).getFile()).text());
+              for (const m of st.members) { delete m.sha256; delete m.sha1; delete m.probe; }
+              const w = await (await files.getFileHandle("tre.mzML", { create: true })).createWritable(); await w.write(JSON.stringify(st)); await w.close();
+              await rb.rpc({ op: "lr_index", name: "tre.mzML" });
+              const bytes = async n => Array.from(new Uint8Array(await (await (await idx.getFileHandle(n)).getFile()).arrayBuffer()));
+              return [await bytes("uno.mzML.mzidx"), await bytes("tre.mzML.mzidx")];
+            }""")
+            a, c = bytes(r[0]), bytes(r[1]).replace(b"tre.mzML", b"uno.mzML")
+            assert a == c, (len(a), len(c))
+        step("a stub without fingerprints (an older copy) gives the same .mzidx, byte for byte", old_stub_without_fingerprints)
         def mzml_on_request():
             r = pg.evaluate("""async () => { const rb = await window.MZLAB_RUST_READY; const f = await rb.nativeToMzml("uno.mzML", 1 << 20, undefined, undefined); return (await f.text()); }""")
             assert r.startswith("<?xml") and r.rstrip().endswith("</mzML>"), r[:80]

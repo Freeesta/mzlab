@@ -85,6 +85,7 @@ fn set(path: &str) -> (FileSet, Counters) {
                 nome,
                 dim,
                 dati: Box::new(b),
+                sha1: None,
             }],
         },
         c,
