@@ -35,11 +35,9 @@ try:
             pg.click(".pnl.spec [data-a=lock]"); pg.wait_for_timeout(400)
             assert pg.evaluate(f"!!{SPEC}.lock")
             lk = pg.evaluate(f"(()=>{{const s={SPEC};return Object.keys(s.lock)}})()"); assert "x0" not in lk and "ymax" in lk, lk
-            b = pg.evaluate(f"(()=>{{const s={SPEC},r=s.el.querySelector('.lkb').getBoundingClientRect(),c=s.cv.getBoundingClientRect();return {{dx:r.left-c.left,dy:r.top-c.top,w:r.width}}}})()")
-            assert b["dx"] < 90 and b["dy"] < 16 and b["w"] <= 24, b          # small, in the top margin above the plot, near the y axis
-            top = pg.evaluate(f"(()=>{{const s={SPEC},r=s.el.querySelector('.lkb').getBoundingClientRect(),c=s.cv.getBoundingClientRect();return r.bottom-c.top<=14.5}})()"); assert top, "the lock must not cover the numbers of the y axis"
-            assert pg.evaluate(f"!{SPEC}.el.querySelector('.tbs [data-a=lock]')"), "not in the button bar"
-        step("lock: y only, small button near the y axis", lock_y_only)
+            b = pg.evaluate(f"(()=>{{const s={SPEC},e=s.el.querySelector('[data-a=lock]'),c=s.cv.getBoundingClientRect(),r=e.getBoundingClientRect();return {{bar:!!e.closest('.tbs,.hmore'),pressed:e.getAttribute('aria-pressed'),on:e.classList.contains('on'),label:!!e.getAttribute('aria-label'),above:r.bottom<=c.top+1}}}})()")
+            assert b["bar"] and b["pressed"] == "true" and b["on"] and b["label"] and b["above"], b          # in the button bar, never over the plot or the y axis numbers
+        step("lock: y only, button in the panel bar", lock_y_only)
         def no_yz():
             assert pg.evaluate("document.querySelectorAll('[data-a=yz]').length") == 0
         step("no 'y x10' button", no_yz)
