@@ -38,8 +38,8 @@ const KNOWN: [(&str, &str); 14] = [
 fn key(label: &str) -> String {
     label
         .chars()
-        .filter(|c| c.is_alphanumeric())
-        .flat_map(char::to_lowercase)
+        .filter(char::is_ascii_alphanumeric)
+        .map(|c| c.to_ascii_lowercase())
         .collect()
 }
 

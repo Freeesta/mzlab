@@ -14,10 +14,8 @@ const METODO_INCL = (() => {
   const rtText = (/** @type {any} */ v) => (v.t_inizio_min != null || v.t_fine_min != null ? `${n(v.t_inizio_min)}–${n(v.t_fine_min)}` : "");
   const polText = (/** @type {any} */ v) => (v.polarita === "positive" ? T("method.doc.incl.pos") : v.polarita === "negative" ? T("method.doc.incl.neg") : "");
   const noMs2 = () => (cur.f && cur.f.dda ? T("method.doc.btn.ms2.none") : T("method.doc.btn.ms2.nodda"));
-
   // text of an attribute: the Method window writes every "m/z" in italics with a replace over the whole page, which must not reach inside a tag
   const attr = (/** @type {string} */ t) => EH(t).replace(/m\/z/g, "m&#47;z");
-
   function html(/** @type {any} */ d, /** @type {any} */ f) {
     const items = ((d.ms || {}).periodi || []).flatMap((/** @type {any} */ p) => p.esperimenti || []).flatMap((/** @type {any} */ e) => e.inclusione || []);
     cur = { f, items, ms2: new Map() };
@@ -34,7 +32,6 @@ const METODO_INCL = (() => {
     return `<div class="sm" style="margin:2px 0 4px"><b>${EH(T("method.doc.incl.title"))}</b> <span class="muted">${EH(T("method.doc.incl.note"))}</span></div><table id="mincl"><caption class="sr-only">${EH(T("method.doc.incl.title"))}</caption><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`
       + `<div style="margin:4px 0 8px"><button type="button" class="bt" style="min-height:26px" data-ia="tab">${EH(T("tdati.title"))}</button></div>`;
   }
-
   /** The context of the actions of an entry. */
   const ctxOf = (/** @type {number} */ i) => ({ vista: "metodo", f: cur.f, v: cur.items[i], i, ms2: cur.ms2.get(i) || null });
   const closeDlg = () => { const d = /** @type {HTMLDialogElement | null} */ (document.getElementById("bigdlg")); if (d && d.open) d.close(); };
@@ -45,7 +42,6 @@ const METODO_INCL = (() => {
       nome: (/** @type {any} */ c) => (c.ms2 ? T("method.doc.btn.ms2.tip", { mz: n(c.v.mz), rt: n(c.ms2.rt) }) : noMs2()),
       esegui: (/** @type {any} */ c) => { closeDlg(); return DDA.openEntry(c.f, c.v.mz, win(c.v)); } });
   }
-
   /** Wires the buttons, the right-click menu and Shift+F10 of the list once the dialog is on the page; the MS2 buttons wake up when the file says an MS2 scan fits the entry. */
   function bind(/** @type {any} */ f) {
     const root = document.getElementById("mincl");

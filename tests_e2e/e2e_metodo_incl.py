@@ -19,7 +19,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 6000, 2)
-        pg.wait_for_timeout(2000)
+        attendi(pg, "E.files.some(f => f.dda && f.kind === 'full')")
         par = pg.evaluate("(async()=>{const k=E.files.findIndex(f=>f.dda&&f.kind==='full');const d=await DDA.get(k);const i=d.sid.findIndex((_,i)=>d.prec[i]!=null&&d.rt[i]>14&&d.rt[i]<14.6);return {k, mz:d.prec[i], rt:d.rt[i]}})()")
         doc = {"schema": "metodo/1", "origine": {"formato": "thermo-raw"}, "ms": {"periodi": [{"esperimenti": [{"indice": 1, "mz": [100, 1000]}, {"indice": 2, "inclusione": [
             {"mz": par["mz"], "formula": "C10H12N2O", "specie": "[M+H]+", "carica": 1, "polarita": "positive", "t_inizio_min": par["rt"] - 0.5, "t_fine_min": par["rt"] + 0.5, "nce": [20, 35, 60], "nome": "entry one"},
@@ -60,14 +60,14 @@ try:
         step("«Dati del grafico» opens the copyable table of the list", tab)
         def xic():
             n0 = pg.evaluate("E.panels.filter(p => p.type === 'xic').length")
-            pg.click("#mincl tr[data-i='0'] button[data-ia=xic]"); pg.wait_for_timeout(1500)
+            pg.click("#mincl tr[data-i='0'] button[data-ia=xic]"); attendi(pg, "E.panels.filter(p => p.type === 'xic').length > %d" % n0)
             assert pg.evaluate("document.getElementById('xicdlg').open") is False and not pg.evaluate("document.getElementById('bigdlg').open"), "dialogs still open"
             q = pg.evaluate("E.panels.filter(p => p.type === 'xic').map(p => p.traces.map(t => t.mz))")
             assert len(q) == n0 + 1 and abs(q[-1][0] - par["mz"]) < 0.01, (q, par)
         step("XIC: the panel appears at once, without the dialog, on the m/z of the entry", xic)
         def ms2():
             pg.click("#np-method"); pg.wait_for_selector("#mincl"); pg.wait_for_function("!document.querySelector('#mincl tr[data-i=\"0\"] button[data-ia=ms2]').disabled", timeout=30000)
-            pg.click("#mincl tr[data-i='0'] button[data-ia=ms2]"); pg.wait_for_timeout(2500)
+            pg.click("#mincl tr[data-i='0'] button[data-ia=ms2]"); attendi(pg, "E.panels.some(p => p.dda != null && p.sid != null)")
             v = pg.evaluate("(() => { const s2 = E.panels.find(p => p.dda != null); return s2 && { sid: s2.sid, ion: s2.ion } })()")
             assert v and v["sid"] is not None and abs(v["ion"] - par["mz"]) < 0.01, v
             assert pg.evaluate("!document.getElementById('bigdlg').open")
