@@ -209,8 +209,12 @@ impl Engine {
     pub fn open(&mut self, slot: u32, size: f64, read: Function) -> Result<String, JsValue> {
         self.runs.remove(&slot);
         let reader = BufReader::with_capacity(1 << 20, BlockReader::new(read, size as u64));
-        let run = mzml::read(reader).map_err(|e| error_json(&e))?;
+        let mut run = mzml::read(reader).map_err(|e| error_json(&e))?;
         self.fits_work(&run)?;
+        // No `Engine::runs` route reads the 64-bit intensities (tic/xic/spectra use the f32 `intensity`): drop them.
+        for s in &mut run.spectra {
+            s.wide = None;
+        }
         let mut levels: std::collections::BTreeMap<u8, (usize, usize)> = Default::default();
         for s in &run.spectra {
             let e = levels.entry(s.level).or_default();

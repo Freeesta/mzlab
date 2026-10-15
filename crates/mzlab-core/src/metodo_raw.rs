@@ -4,7 +4,10 @@
 //! The status log is in `campi` (`campi/status.rs`); when its schema is not found `avvisi` says so.
 
 pub(crate) mod campi;
+mod lock;
+mod rivelatori;
 mod script;
+pub(crate) mod tsq;
 
 use crate::metodo::{self, lc_sections, num, obj, text, Source, V};
 use campi::Ident;
@@ -77,9 +80,10 @@ fn strumento(raw: &RawFileReader) -> Option<V> {
 }
 
 /// The `ms` section: the source, and the scan events of the XML method.
-fn ms(raw: &RawFileReader, exps: Vec<V>) -> Option<V> {
+fn ms(raw: &RawFileReader, exps: Vec<V>, lock: Option<V>) -> Option<V> {
     obj(vec![
         ("sorgente", obj(vec![("tipo", source_type(raw).map(V::s))])),
+        ("calibrazione", obj(vec![("lock_mass", lock)])),
         (
             "periodi",
             obj(vec![("esperimenti", Some(V::Arr(exps)))]).map(|p| V::Arr(vec![p])),
@@ -151,6 +155,29 @@ fn status_warning(raw: &RawFileReader) -> Vec<Option<V>> {
         .collect()
 }
 
+/// The experiment of the transition table of a TSQ method, appended to `exps`; what the table or the file does not give is a warning.
+fn tsq_experiment(blocks: &[String], exps: &mut Vec<V>, warn: &mut Vec<Option<V>>) {
+    let not_decoded = |dove: &str| {
+        obj(vec![
+            ("chiave", Some(V::s("meta.nonDecodificato"))),
+            ("dove", Some(V::s(dove))),
+        ])
+    };
+    match blocks.iter().find_map(|b| tsq::parse(b)) {
+        Some(t) => {
+            if t.cut {
+                warn.push(not_decoded("Method MS: transitions cut by the file"));
+            }
+            exps.extend(tsq::experiment(&t, exps.len() + 1));
+        }
+        // a method that announces SRM transitions and gives no table that parses: the transitions stay in `grezzo`
+        None if blocks.iter().any(|b| tsq::announces_transitions(b)) => {
+            warn.push(not_decoded("Method MS: transitions"));
+        }
+        None => {}
+    }
+}
+
 /// The `metodo/1` document of a `.raw` already opened as `raw` (`source` is the same file, read again for the texts of the method). Never an error: what is missing is absent.
 pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Source) -> String {
     let s = &raw.seq_row;
@@ -178,6 +205,14 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
         v
     });
     let mut warn = status_warning(raw);
+    let mut exps = script::experiments(&items);
+    tsq_experiment(&blocks, &mut exps, &mut warn);
+    if rivelatori::has_3d_field(&blocks) {
+        warn.push(obj(vec![
+            ("chiave", Some(V::s("meta.nonDecodificato"))),
+            ("dove", Some(V::s("UV 3D field (PDA spectra)"))),
+        ]));
+    }
     if blocks.is_empty() {
         warn.push(obj(vec![
             ("chiave", Some(V::s("meta.mancante"))),
@@ -199,8 +234,9 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
                 ("computer", text(&raw.raw_file_info.computer_name)),
             ]),
         ),
-        ("ms", ms(raw, script::experiments(&items))),
+        ("ms", ms(raw, exps, lock::section(raw, &blocks))),
         ("lc", lc),
+        ("rivelatori", rivelatori::section(&blocks)),
         ("campionatore", sampler(&pairs)),
         (
             "campi",

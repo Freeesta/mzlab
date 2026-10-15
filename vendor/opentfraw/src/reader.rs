@@ -964,13 +964,17 @@ impl RawFileReader {
                 .saturating_sub(u64::from(info.first_scan_number))
                 + 1;
             let is_ms = rh.ntrailer > 0 || rh.data_addr == self.data_addr;
-            if is_ms
-                || info.last_scan_number < info.first_scan_number
-                || n > MAX_SAMPLES
-                || rh.data_addr.checked_add(8 * n) != Some(rh.own_addr)
-            {
+            if is_ms || info.last_scan_number < info.first_scan_number || n > MAX_SAMPLES {
                 continue;
             }
+            // 8 bytes per sample (the value; the time is evenly spaced) or 16 (the value and its time in minutes, the layout of the UV and temperature channels of Dionex devices)
+            let stride = if rh.data_addr.checked_add(8 * n) == Some(rh.own_addr) {
+                8
+            } else if rh.data_addr.checked_add(16 * n) == Some(rh.own_addr) {
+                16
+            } else {
+                continue;
+            };
             let at = r.position();
             let strings = read_inst_id_strings(&mut r, at, 9);
             let name = strings
@@ -986,10 +990,17 @@ impl RawFileReader {
                 .map(|t| t.trim().to_string())
                 .unwrap_or_default();
             r.seek_to(rh.data_addr)?;
-            r.check_count(n, 8)?;
+            r.check_count(n, stride)?;
             let mut values = Vec::with_capacity(n as usize);
+            let mut times = Vec::new();
             for _ in 0..n {
                 values.push(r.read_f64()?);
+                if stride == 16 {
+                    times.push(r.read_f64()?);
+                }
+            }
+            if stride == 16 && !times.iter().all(|t| t.is_finite()) {
+                continue;
             }
             let step = if n > 1 {
                 (info.end_time - info.start_time) / (n - 1) as f64
@@ -1009,7 +1020,11 @@ impl RawFileReader {
                 driver: text(1),
                 model: text(2),
                 serial: text(3),
-                time_min: (0..n).map(|i| info.start_time + i as f64 * step).collect(),
+                time_min: if stride == 16 {
+                    times
+                } else {
+                    (0..n).map(|i| info.start_time + i as f64 * step).collect()
+                },
                 values,
             });
         }

@@ -5,6 +5,7 @@
 set -eu
 # family limit (bytes after wasm-opt -Oz; tests/test_lettori_wasm.py checks the table: no value goes up)
 tetti="aperti 393216
+andi 262144
 thermo 458752
 agilent 393216
 sciex 327680
@@ -12,7 +13,7 @@ waters 327680
 shimadzu 327680
 bruker 524288"
 # the families that have readers (a family without readers is skipped and is born with its own package)
-con_lettori="agilent sciex thermo"
+con_lettori="agilent sciex thermo aperti andi"
 out=${1:-site/static}/wasm-lettori
 mkdir -p "$out"
 built=""
@@ -26,7 +27,7 @@ echo "$tetti" | while read -r fam limit; do
   cp target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm "$tmp/"      # cargo writes the same file for every family: copy it at once
   wasm-bindgen --target web --no-typescript --out-dir "$out/$fam" "$tmp/mzlab_lettori_wasm.wasm" </dev/null
   rm -r "$tmp"
-  tools/wasm_opt.sh "$out/$fam/mzlab_lettori_wasm_bg.wasm" "$limit" "lettori $fam" </dev/null
+  tools/wasm_opt.sh "$out/$fam/mzlab_lettori_wasm_bg.wasm" "$limit" "lettori $fam" --converge --low-memory-unused --strip-producers --vacuum --dae --merge-blocks --reorder-functions --duplicate-function-elimination --const-hoisting --simplify-globals-optimizing </dev/null
 done
 python3 - "$out" <<'P'
 import hashlib, json, os, sys

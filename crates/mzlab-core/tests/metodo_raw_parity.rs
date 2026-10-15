@@ -190,7 +190,8 @@ fn the_pump_pressure_is_the_one_msconvert_wrote_in_the_unit_of_the_file() {
             .unwrap_or(false);
         let k = if psi { 6_894.757_293_168 / 1e5 } else { 1.0 };
         for (t, y) in b.time.iter().zip(&b.intensity) {
-            let j = a.time.partition_point(|x| x < &(t - 1e-6));
+            // channels that store their own times keep them as f32, which differ from msconvert's regular grid by ~1e-6 min
+            let j = a.time.partition_point(|x| x < &(t - 1e-5));
             assert!((a.time[j] - t).abs() < 1e-5, "time {t} of {raw_path:?}");
             let want = y * k;
             assert!(
