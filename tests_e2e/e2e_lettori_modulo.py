@@ -136,7 +136,7 @@ try:
         step("a cancelled conversion stops", cancel)
         # the numpress mzML: the engine refuses it, so the page sends it to the «aperti» module with no parameter
         NP = """async () => { const rb = await window.MZLAB_RUST_READY; await new Promise(r => setTimeout(r, 300));
-          const tic = await (await fetch("api/chrom?k=0&level=1")).json(), sp = await (await fetch("api/spectrum?k=0&scan=20")).json();
+          const tic = await (await fetch("api/chrom?k=0&level=1")).json(), sp = await (await fetch("api/spectrum?k=0&rt0=0.9&rt1=1.1&level=1")).json();
           return { files: ST.files.map(x => x.name), tic, sp, miss: (window.MZLAB_LR_MISS || []).length }; }"""
         def one(folder):
             pg = page(b, ""); pg.set_input_files("#pickdir", str(tmp / folder))
@@ -150,10 +150,14 @@ try:
         step("an mzML with numpress arrays opens (through the «aperti» module) like its zlib twin", numpress_opens)
         def numpress_same():
             a, c = res["npa"], res["npb"]
-            ta = a["tic"].get("i", a["tic"].get("intensity")); tb = c["tic"].get("i", c["tic"].get("intensity"))
+            ta = a["tic"].get("y"); tb = c["tic"].get("y")
             assert ta and tb and len(ta) == len(tb) == 40, (list(a["tic"])[:6], len(ta or []), len(tb or []))
             assert all(abs(x - y) <= 1e-3 * max(abs(y), 1) for x, y in zip(ta, tb)), (ta[:3], tb[:3])
-            assert a["sp"] and a["miss"] == 0 and c["miss"] == 0, (a["miss"], c["miss"])
+            assert a["miss"] == 0 and c["miss"] == 0, (a["miss"], c["miss"])
+            ka = [k for k in a["sp"] if isinstance(a["sp"][k], list) and len(a["sp"][k]) > 5]
+            assert ka and ka == [k for k in c["sp"] if isinstance(c["sp"][k], list) and len(c["sp"][k]) > 5], (list(a["sp"]), list(c["sp"]))
+            for k in ka:   # the spectrum: m/z to 1e-7, intensity to the precision of slof (1e-3 relative)
+                assert len(a["sp"][k]) == len(c["sp"][k]) and all(abs(x - y) <= 1e-3 * max(abs(y), 1) for x, y in zip(a["sp"][k], c["sp"][k])), k
         step("its TIC equals the twin's within the codec precision and nothing misses the engine", numpress_same)
         def aperti_module():
             fams = {u.split("wasm-lettori/")[1].split("/")[0] for u in asked}
