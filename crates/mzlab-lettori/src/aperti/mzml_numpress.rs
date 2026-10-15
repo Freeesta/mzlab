@@ -491,6 +491,9 @@ fn extra_di(spettro: &[u8]) -> SpectrumExtra {
 // ---- the header of the original mzML ----
 
 /// The header of the mzML we write: the instrument, the sources with their SHA-1, the software and the run of the original, and mzLab as the program that wrote this file.
+/// A `referenceableParamGroup` or a component of the instrument: its id and its (accession, name, value) triples.
+type Gruppo = (String, Vec<(String, String, String)>);
+
 fn testata_da(head: &str, nome: &str, limiti: &Limiti) -> Result<Header> {
     let mut h = Header {
         run: nome.rsplit_once('.').map_or(nome, |(s, _)| s).to_string(),
@@ -498,7 +501,7 @@ fn testata_da(head: &str, nome: &str, limiti: &Limiti) -> Result<Header> {
         ..Header::default()
     };
     let mut pila: Vec<String> = Vec::new();
-    let mut gruppi: Vec<(String, Vec<(String, String, String)>)> = Vec::new();
+    let mut gruppi: Vec<Gruppo> = Vec::new();
     let mut ic_visti = 0usize;
     let mut componente_con_cv = false;
     let mut soft: Option<(String, Option<(String, String)>)> = None;

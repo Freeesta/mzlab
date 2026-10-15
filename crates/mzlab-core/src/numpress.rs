@@ -118,7 +118,11 @@ impl Nibbles<'_> {
             .data
             .get(self.at / 2)
             .ok_or_else(|| bad("end of data"))?;
-        let h = if self.at.is_multiple_of(2) { b >> 4 } else { b & 0xf };
+        let h = if self.at.is_multiple_of(2) {
+            b >> 4
+        } else {
+            b & 0xf
+        };
         self.at += 1;
         Ok(u32::from(h))
     }
