@@ -14,12 +14,12 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         tf = lambda: next(x for x in pg.frames if "/teoria/" in x.url)
-        pg.click("#nav [data-v=theory]"); pg.wait_for_selector("#stbar [data-tcmd=cerca]", timeout=15000)
+        pg.click("#nav [data-v=theory]"); pg.wait_for_selector("#stbar [data-tcmd=indice]", timeout=15000)
         def gear():
             assert pg.locator("#np-set").is_hidden(), "the gear of the program must not show in the Teoria"
             assert pg.locator("#stbar [data-tcmd=impostazioni]").is_visible()
             pg.click("#nav [data-v=data]"); assert pg.locator("#np-set").is_visible()
-            pg.click("#nav [data-v=theory]"); pg.wait_for_selector("#stbar [data-tcmd=cerca]")
+            pg.click("#nav [data-v=theory]"); pg.wait_for_selector("#stbar [data-tcmd=indice]")
         step("the gear of the program is hidden in the Teoria, back in Dati", gear)
         def nomode():
             assert pg.locator("#stbar [data-tcmd=editor]").count() == 0, "no editor button without the administrator mode"
