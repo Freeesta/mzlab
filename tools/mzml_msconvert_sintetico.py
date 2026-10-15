@@ -17,6 +17,7 @@ VARIANTI = {
     "senza_checksum": "the wrapper without the SHA-1 of the file",
     "sample_normale": "a sample with a normal id and name",
     "accessione_ignota": "a cvParam with an accession that the program does not know",
+    "location_speciale": "the location of the source file with spaces, an escaped ampersand and accents, as a Windows path can have",
     "id_come_file": "the id of the run equals the file name",
 }
 
@@ -70,6 +71,7 @@ def scrivi(path, scans: int = 2000, peaks1: int = 4000, peaks2: int = 400, varia
     run_id = path.stem if variante == "id_come_file" else "Run_sintetico_ddaPOS"
     sample = '<sample id="1" name="s"/>' if variante == "sample_normale" else '<sample id="_x0038_" name=""/>'
     sample_ref = "1" if variante == "sample_normale" else "_x0038_"
+    loc = "file:///D:/Dati%20Lab/Progetto A&amp;B/Perché strano" if variante == "location_speciale" else "file:///invented"
     avvolto = variante not in ("senza_wrapper",)
     testa = ('<?xml version="1.0" encoding="utf-8"?>\n'
              + (f'<indexedmzML xmlns="{NS}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="{NS} http://psidev.info/files/ms/mzML/xsd/mzML1.1.2_idx.xsd">\n' if avvolto else "")
@@ -77,7 +79,7 @@ def scrivi(path, scans: int = 2000, peaks1: int = 4000, peaks2: int = 400, varia
              '<cvList count="2"><cv id="MS" fullName="Proteomics Standards Initiative Mass Spectrometry Ontology" version="4.1.163" URI="https://raw.githubusercontent.com/HUPO-PSI/psi-ms-CV/master/psi-ms.obo"/>'
              '<cv id="UO" fullName="Unit Ontology" version="09:04:2014" URI="https://raw.githubusercontent.com/bio-ontology-research-group/unit-ontology/master/unit.obo"/></cvList>\n'
              '<fileDescription><fileContent>' + _cv("MS:1000579", "MS1 spectrum") + _cv("MS:1000580", "MSn spectrum") + _cv("MS:1000127", "centroid spectrum") + '</fileContent>'
-             '<sourceFileList count="1"><sourceFile id="RAW1" name="sintetico.raw" location="file:///invented">' + _cv("MS:1000768", "Thermo nativeID format") + _cv("MS:1000563", "Thermo RAW format") + _cv("MS:1000569", "SHA-1", "0" * 40) + '</sourceFile></sourceFileList></fileDescription>\n'
+             f'<sourceFileList count="1"><sourceFile id="RAW1" name="sintetico.raw" location="{loc}">' + _cv("MS:1000768", "Thermo nativeID format") + _cv("MS:1000563", "Thermo RAW format") + _cv("MS:1000569", "SHA-1", "0" * 40) + '</sourceFile></sourceFileList></fileDescription>\n'
              f'<sampleList count="1">{sample}</sampleList>\n'
              '<softwareList count="2"><software id="Xcalibur" version="5.0">' + _cv("MS:1000532", "Xcalibur") + '</software><software id="pwiz" version="3.0.24288">' + _cv("MS:1000615", "ProteoWizard software") + '</software></softwareList>\n'
              '<instrumentConfigurationList count="1"><instrumentConfiguration id="IC1">' + _cv("MS:1003095", "Orbitrap Exploris 120") + _cv("MS:1000529", "instrument serial number", "INVENTED1")

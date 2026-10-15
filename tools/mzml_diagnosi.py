@@ -14,7 +14,7 @@ with open(p, "rb") as f:
     head = f.read(6000)
     print("starts with xml declaration:", head.lstrip()[:5] == b"<?xml", "| BOM:", head[:3] == b"\xef\xbb\xbf", "| indexedmzML wrapper:", b"<indexedmzML" in head)
     print("header (to the list of the spectra):")
-    for line in head.decode("utf8", "replace").splitlines()[:40]:
+    for line in head.decode("utf8", "replace").splitlines()[:80]:
         print("  ", re.sub(r"(/Users|/home|[A-Z]:\\)[^\s\"']*", "<path>", line)[:200])
         if "<spectrumList" in line:
             break
@@ -43,3 +43,24 @@ with open(p, "rb") as f:
             ET.fromstring(blob[i:j + 11]); print(lab, "spectrum well-formed: True, length", j - i)
         except Exception as e:
             print(lab, "spectrum well-formed: False ->", str(e)[:120])
+    # every spectrum: well-formed? how big? (a block of 16 MB at a time, the cut piece goes to the next block)
+    f.seek(0); bad = 0; total = 0; biggest = 0; first_bad = None; buf = b""; arrays = 0
+    while True:
+        b = f.read(1 << 24)
+        if not b and not buf:
+            break
+        buf += b
+        while True:
+            i = buf.find(b"<spectrum ")
+            j = buf.find(b"</spectrum>", i) if i >= 0 else -1
+            if i < 0 or j < 0:
+                buf = buf[i:] if i >= 0 else buf[-20:]
+                break
+            piece = buf[i:j + 11]; buf = buf[j + 11:]; total += 1; biggest = max(biggest, len(piece))
+            try:
+                ET.fromstring(piece)
+            except Exception as e:
+                bad += 1; first_bad = first_bad or (total, str(e)[:100])
+        if not b:
+            break
+    print("all spectra:", total, "| malformed:", bad, "| biggest spectrum (chars):", biggest, "| first malformed:", first_bad)
