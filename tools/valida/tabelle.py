@@ -22,6 +22,7 @@ class Tabella:
     rt: np.ndarray
     area: np.ndarray
     file: np.ndarray | None = None
+    altezza: np.ndarray | None = None      # height (counts) of every cell, the shape of `area`; None when the table has no heights
 
     def __len__(self):
         return len(self.mz)
@@ -45,6 +46,13 @@ class Tabella:
         if self.lungo or not colonne:
             return np.zeros(len(self))
         return self.area[:, colonne].max(1)
+
+    def massimo_altezza(self, colonne) -> np.ndarray:
+        """Largest height of each row over the columns (aligned tables with heights only)."""
+        colonne = list(colonne)
+        if self.altezza is None or self.lungo:
+            raise ValueError(f"table {self.nome}: no heights")
+        return np.nan_to_num(self.altezza[:, colonne]).max(1) if colonne else np.zeros(len(self))
 
 
 def nome_file(path) -> str:
@@ -175,13 +183,18 @@ def leggi_mzmine(path, serie: list[dict]) -> Tabella:
         raise ValueError(f"{path}: column not found ({' / '.join(names)})")
     imz, irt = col("row m/z", "mz"), col("row retention time", "rt")
     pos = {x["nome"].lower(): k for k, x in enumerate(serie)}
-    cols = {}
+    cols, cols_h = {}, {}
     for i, c in enumerate(h):
         m = re.match(r"^datafile:(.+):area$", c, re.I) or re.match(r"^(.*?)\s*Peak area$", c, re.I)
         if m and m.group(1):
             sn = re.sub(r"\.mzml$", "", m.group(1).strip(), flags=re.I).lower()
             if sn in pos:
                 cols[pos[sn]] = i
+        m = re.match(r"^datafile:(.+):height$", c, re.I) or re.match(r"^(.*?)\s*Peak height$", c, re.I)
+        if m and m.group(1):
+            sn = re.sub(r"\.mzml$", "", m.group(1).strip(), flags=re.I).lower()
+            if sn in pos:
+                cols_h[pos[sn]] = i
     if not cols:
         raise ValueError(f"{path}: no area column matches a file of the series")
 
@@ -194,4 +207,9 @@ def leggi_mzmine(path, serie: list[dict]) -> Tabella:
     area = np.zeros((len(body), len(serie)))
     for k, i in cols.items():
         area[:, k] = [num(r[i]) if i < len(r) else 0.0 for r in body]
-    return Tabella("mzmine", [x["nome"] for x in serie], np.array([num(r[imz]) for r in body]), np.array([num(r[irt]) for r in body]), area)
+    altezza = None
+    if cols_h:
+        altezza = np.zeros((len(body), len(serie)))
+        for k, i in cols_h.items():
+            altezza[:, k] = [num(r[i]) if i < len(r) else 0.0 for r in body]
+    return Tabella("mzmine", [x["nome"] for x in serie], np.array([num(r[imz]) for r in body]), np.array([num(r[irt]) for r in body]), area, altezza=altezza)
