@@ -6,6 +6,7 @@
 //   nearest(rts, rt)      index of the scan closest to rt in a sorted RT axis (ties: the earlier scan, like np.argmin in Item.nearest_scan)
 //   latest(fn, schedule)  coalescing: ask(v) any number of times, fn runs for the newest v only, one at a time, at most once per frame
 //   lru(maxBytes)         cache with a memory budget; the least recently used entries leave first
+//   diffPeaks / diffTrace  A − B of two spectra (peak by peak within a tolerance) and of two traces (B interpolated on the RT of A)
 //   trace(v, nmz, nrt, j) / column(...)  the row and the column of the map matrix at a bin: the preview drawn while the sight moves
 (() => {
   function nearest(rts, rt) {
@@ -39,6 +40,7 @@
         for (const [key, e] of m) { if (bytes <= api.max || m.size <= 1) break; bytes -= e.size; m.delete(key); }
       },
       drop(prefix) { for (const [k, e] of m) if (k.startsWith(prefix)) { bytes -= e.size; m.delete(k); } },
+      dropIf(pred) { for (const [k, e] of m) if (pred(k)) { bytes -= e.size; m.delete(k); } },
       clear() { m.clear(); bytes = 0; },
       get bytes() { return bytes; }, get size() { return m.size; }, max: maxBytes,
     };
@@ -65,7 +67,36 @@
     return { x, y };
   }
 
-  const MIRINO = { nearest, latest, lru, budget, trace, column };
+  // A − B of two centroid spectra (sorted m/z): every A peak minus the most intense B peak within tol(mz) Da (a B peak is used once);
+  // the B peaks left over come out negative. Result sorted by m/z; positive = more in A, negative = more in B.
+  function diffPeaks(amz, ay, bmz, by, tol) {
+    const used = new Uint8Array(bmz.length), out = [];
+    let lo = 0;
+    for (let i = 0; i < amz.length; i++) {
+      const t = tol(amz[i]); while (lo < bmz.length && bmz[lo] < amz[i] - t) lo++;
+      let best = -1; for (let j = lo; j < bmz.length && bmz[j] <= amz[i] + t; j++) if (!used[j] && (best < 0 || by[j] > by[best])) best = j;
+      if (best >= 0) used[best] = 1;
+      out.push([amz[i], ay[i] - (best >= 0 ? by[best] : 0)]);
+    }
+    for (let j = 0; j < bmz.length; j++) if (!used[j]) out.push([bmz[j], -by[j]]);
+    out.sort((u, v) => u[0] - v[0]);
+    return { mz: out.map(o => o[0]), y: out.map(o => o[1]) };
+  }
+  // A − B of two traces: B read on the RT of A by linear interpolation (0 outside the RT range of B)
+  function diffTrace(rta, ya, rtb, yb) {
+    if (!rtb.length) return { rt: Array.from(rta), y: Array.from(ya) };
+    const y = new Array(rta.length); let j = 0;
+    for (let i = 0; i < rta.length; i++) {
+      const t = rta[i]; while (j < rtb.length - 2 && rtb[j + 1] < t) j++;
+      let b = 0;
+      if (rtb.length === 1) b = rtb[0] === t ? yb[0] : 0;
+      else if (t >= rtb[0] && t <= rtb[rtb.length - 1]) { const d = rtb[j + 1] - rtb[j]; b = d > 0 ? yb[j] + (yb[j + 1] - yb[j]) * Math.min(1, Math.max(0, (t - rtb[j]) / d)) : yb[j]; }
+      y[i] = ya[i] - b;
+    }
+    return { rt: Array.from(rta), y };
+  }
+
+  const MIRINO = { nearest, latest, lru, budget, trace, column, diffPeaks, diffTrace };
   if (typeof window !== "undefined") window.MIRINO = MIRINO;
   if (typeof module !== "undefined") module.exports = MIRINO;
 })();

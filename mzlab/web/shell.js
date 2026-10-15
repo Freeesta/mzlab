@@ -68,7 +68,7 @@ function sortFiles(){const c=fileComparator(ST.files,f=>f.conc==null?null:f.conc
 const METHOD_FORMATS=[{ext:".dam",maker:"SCIEX"}];
 const isMethodFile=name=>METHOD_FORMATS.some(x=>name.toLowerCase().endsWith(x.ext));
 (()=>{const fm=METHOD_FORMATS.map(x=>x.ext+" "+x.maker).join(", ");$("#pickdam").accept=METHOD_FORMATS.map(x=>x.ext).join(",");
-  $("#dropdam").setAttribute("aria-label",I18N.t("load.method.drop",{formats:fm}));$("#dropdam").innerHTML=`<b>${I18N.t("load.method.drop",{formats:fm})}</b><br>${I18N.t("load.method.dropHint")}`})();
+  $("#dropdam").setAttribute("aria-label",I18N.t("load.method.drop")+" ("+fm+")");$("#dropdam").innerHTML=`<b>${I18N.t("load.method.drop")}</b><br>${I18N.t("load.method.dropHint")}<small class="fmts">${esc(METHOD_FORMATS.map(x=>x.ext).join(" · "))}</small>`})();
 // each method is a chip «Method: name» with ×; the method goes with the data file of the same base name, else with the selected file (api.method)
 function renderMethods(){const el=$("#mlist");
   el.innerHTML=ST.methods.map((m,i)=>`<span class="chip"><span>${I18N.t("load.method.chip",{name:esc(m.name)})}</span> <span class="muted sm">${esc(m.info&&m.info.key?I18N.t(m.info.key,m.info.params):"")} · ${sz(m.size)}</span> <button type="button" data-mrm="${i}" aria-label="${esc(I18N.t("load.method.remove",{name:m.name}))}" title="${I18N.t("load.table.remove")}">&times;</button></span>`).join("");
@@ -113,11 +113,9 @@ let UPBUSY=0;const LOADFAIL=window.QQQ_LOADFAIL=new Set();      // names of the 
 // hook for a progress bar on the loading screen: loadingStato("phase", 40) shows the phase and 40 % in place of the phrase, loadingStato(null) gives the phrases back
 function loadingStato(text,pct){ldMsg=text?{text,pct:pct==null?null:pct}:null;ldRefresh()}
 // the button waits for the files still being read: its click shows the overlay with the phase and the percentage of the whole batch (event mzlab-index), then opens them all
-const LOADP=new Map(),BATCH={tot:0,done:0},IDLE=[];let WAITING=false;
-const PHASE_KEY={read:"load.ph.read",scans:"load.ph.scans",chrom:"load.ph.chrom"};
-function waitStato(){if(!WAITING)return;let sum=0,low=null;for(const v of LOADP.values()){sum+=v.frac;if(!low||v.frac<low.frac)low=v}
-  loadingStato(I18N.t(PHASE_KEY[low&&low.phase]||"load.ph.index"),BATCH.tot?100*Math.min(.99,(BATCH.done+sum)/BATCH.tot):null)}
-addEventListener("mzlab-index",e=>{const d=/** @type {CustomEvent} */(e).detail;LOADP.set(d.name,{frac:d.frac,phase:d.phase});waitStato()});
+const IDLE=[];let WAITING=false;      // the numbers come from PROGRESSO (progresso.js): one model for the card, the overlay and Tabui
+function waitStato(){if(!WAITING)return;const s=PROGRESSO.state();loadingStato(I18N.t(PROG_PHASE_KEY[s.phase]||"load.ph.index"),s.pc)}
+PROGRESSO.subscribe(waitStato);
 const idle=()=>UPBUSY>0?new Promise(ok=>IDLE.push(ok)):Promise.resolve();
 function checkGo(){$("#opbtn").disabled=UPBUSY===0&&!ST.files.some(usable);$("#gomsg").textContent=""}
 // sends a file and returns the JSON answer (progress callback: loaded, total); in the browser version there is no network: it goes to the worker
@@ -141,7 +139,7 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 (()=>{const b=$("#fs-btn"),de=document.documentElement;if(!b||!de.requestFullscreen)return;b.hidden=false;
   const sync=()=>{const on=!!document.fullscreenElement,k=on?"header.fullscreen.exit":"header.fullscreen";b.setAttribute("aria-pressed",on);b.querySelector(".fs-in").hidden=on;b.querySelector(".fs-out").hidden=!on;b.title=I18N.t(k);b.setAttribute("aria-label",b.title);b.dataset.i18nTitle=b.dataset.i18nAriaLabel=k};
   b.onclick=()=>{(document.fullscreenElement?document.exitFullscreen():de.requestFullscreen({navigationUI:"hide"})).catch(()=>{})};document.addEventListener("fullscreenchange",sync)})();
-(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.nativo){d.setAttribute("data-i18n-html","load.dropWiff");d.innerHTML=I18N.t("load.dropWiff");const h=document.querySelector("h3[data-i18n=\"load.step1.title\"]");if(h){h.setAttribute("data-i18n","load.step1.titleNative");h.textContent=I18N.t("load.step1.titleNative")}CONVERT_RAW=true;$("#convhelp").hidden=true
+(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.nativo){d.setAttribute("data-i18n-html","load.dropWiff");d.innerHTML=I18N.t("load.dropWiff");d.title=I18N.t("load.dropWiff.tip");const h=document.querySelector("h3[data-i18n=\"load.step1.title\"]");if(h){h.setAttribute("data-i18n","load.step1.titleNative");h.textContent=I18N.t("load.step1.titleNative")}CONVERT_RAW=true;$("#convhelp").hidden=true
 }})})();   // the .raw note only where the Rust engine can read it
 // a Thermo .raw is read as it is by the Rust engine (rust-nativo.js): each file is a sample `x.mzML` and no mzML is written; without the engine the recipe is shown
 async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.nativo||!files.some(f=>/\.raw$/i.test(f.name)))return files;
@@ -242,24 +240,26 @@ function dropDups(files){const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.fi
   const msg=dups.length===1?I18N.t("load.dup.one",{name:dups[0].name}):I18N.t("load.dup.many",{n:dups.length});CartCarica.note(msg);setTimeout(()=>{const n=$("#cartinfo");if(n&&n.textContent===msg)CartCarica.note("")},5000);
   dups.forEach(f=>{const tr=[...document.querySelectorAll("#flist tr")].find(r=>r.children[1]&&r.children[1].textContent.trim().startsWith(f.name));if(tr){tr.classList.add("dupflash");tr.scrollIntoView({block:"nearest"});setTimeout(()=>tr.classList.remove("dupflash"),1800)}});
   return files.filter(f=>!dups.includes(f))}
-async function upload(files,into){const box=$("#up");fail();files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)));if(!UPBUSY){BATCH.tot=0;BATCH.done=0}BATCH.tot+=files.length;UPBUSY++;checkGo();const mine=files;try{await upload0(files,into,box)}finally{mine.forEach(f=>INFLIGHT.delete(fkey(f)));UPBUSY--;checkGo();if(!UPBUSY)IDLE.splice(0).forEach(ok=>ok())}}
+let UPBAR=null;      // the one bar of the loading card (PROGRESSO.mount), removed when the last loading is over
+async function upload(files,into){const box=$("#up");fail();files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)));UPBUSY++;checkGo();const mine=files;try{await upload0(files,into,box)}finally{mine.forEach(f=>INFLIGHT.delete(fkey(f)));UPBUSY--;checkGo();if(!UPBUSY){if(UPBAR){UPBAR();UPBAR=null}IDLE.splice(0).forEach(ok=>ok())}}}
 async function upload0(files,into,box){
   const rep=/** @type {any} */ ({unopen:[],other:[],errs:{},moved:{dam:[],data:[]},notes:[]}),rejected=/** @type {any[]} */ ([]);
   const one=async f=>{const isDam=isMethodFile(f.name);
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
-    const pn=panel&&CONV.has(f.name)?panel:null,row=document.createElement("div");      // a converted file: its index is the last phase of the bar of the conversion
-    if(!pn){row.innerHTML=`${esc(f.name)} <span class="muted">${sz(NATIVO.size(f))}</span><div class="prog"><i></i></div>`;box.appendChild(row)}
+    const pn=panel&&CONV.has(f.name)?panel:null,QQQ_NET=!window.QQQ_BROWSER,mono=()=>Math.floor(100*PROGRESSO.file(f.name));      // a converted file: its index is the last phase of the bar of the conversion
     CONVROWS.set(f.name,"index",0);if(pn)pn.index(f.name,0);
-    const onIdx=e=>{if(e.detail.name===f.name){const pc=Math.min(99,Math.floor(100*e.detail.frac));CONVROWS.set(f.name,NATIVO.rowState(e.detail.phase),pc);if(pn)pn.index(f.name,pc);else row.querySelector("i").style.width=pc+"%"}};
+    const put=(frac,phase)=>{PROGRESSO.set(f.name,QQQ_NET?PROG_NET.send+(1-PROG_NET.send)*frac:frac,phase);const pc=Math.min(99,mono());CONVROWS.set(f.name,NATIVO.rowState(phase),pc);if(pn)pn.index(f.name,pc)};
+    const onIdx=e=>{if(e.detail.name===f.name)put(e.detail.frac,e.detail.phase)};
     addEventListener("mzlab-index",onIdx);
-    try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{if(!pn)row.querySelector("i").style.width=(100*a/b)+"%";CONVROWS.set(f.name,"index",Math.floor(100*a/b));if(pn)pn.index(f.name,Math.floor(100*a/b))});
-      if(j.error)throw I18N.err(j);CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
+    try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{if(QQQ_NET)PROGRESSO.set(f.name,PROG_NET.send*a/b,"send");const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
+      if(j.error)throw I18N.err(j);CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();
       LOADFAIL.delete(f.name)}
-    catch(e){row.remove();CONVROWS.drop(f.name);LOADFAIL.add(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name);if(!(rep.diag||(rep.diag={}))[e.message])rep.diag[e.message]=DIAG.da(e,{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}finally{removeEventListener("mzlab-index",onIdx);LOADP.delete(f.name);BATCH.done++;waitStato()}};
+    catch(e){CONVROWS.drop(f.name);LOADFAIL.add(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name);if(!(rep.diag||(rep.diag={}))[e.message])rep.diag[e.message]=DIAG.da(e,{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}finally{removeEventListener("mzlab-index",onIdx);PROGRESSO.end(f.name)}};
   let panel=null;
   const wr=await wiffToMzml(files,box);files=await rawToMzml(wr.files,box);files=await moduloToMzml(files,box,rep);panel=files.panel||null;for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
   if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
+  for(const f of files)PROGRESSO.begin(f.name,NATIVO.size(f));if(files.length&&!panel&&!UPBAR)UPBAR=PROGRESSO.mount(box);      // all the files of this loading are in the batch before the first one is read: the total only grows in precision, never goes back
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);   // in the browser the engine builds the indexes of several files at once (pool of workers)
   await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
 function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}

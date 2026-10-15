@@ -430,7 +430,10 @@ async function drawSpec(p, snapped) {
     g.strokeStyle = color; g.lineWidth = 1.4 + LWX();
     if (x.multi) g.globalAlpha = 0.55; else g.globalAlpha = 1.0;
     g.beginPath();
-    if (lineOf(x)) {                                                     // profile: continuous line with a light fill under it
+    if (p.dots && !x.d.diff) {                                           // «only points»: every point is a dot, nothing joins them (isolated peaks stay isolated)
+      const [mz, y] = x.d.pmz ? [x.d.pmz, x.d.py] : [x.d.mz, x.d.y], r = 2.5 + LWX(); g.fillStyle = color;
+      mz.forEach((m, j) => { if (m < x0 || m > x1 || y[j] <= 0) return; g.beginPath(); g.arc(X(m), Y(y[j]), r, 0, 6.2832); g.fill(); });
+    } else if (lineOf(x)) {                                                     // profile: continuous line with a light fill under it
       const pm = x.d.pmz, py = x.d.py; let on = false;
       let curX = -999, minY, maxY, firstY, lastY, minFirst = true;
       const flush = (cx) => { if (curX === -999) return; if (!on) { g.moveTo(cx, firstY); on = true; } else g.lineTo(cx, firstY); if (minFirst) { g.lineTo(cx, minY); g.lineTo(cx, maxY); } else { g.lineTo(cx, maxY); g.lineTo(cx, minY); } g.lineTo(cx, lastY); };

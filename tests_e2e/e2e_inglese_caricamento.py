@@ -37,7 +37,7 @@ try:
         step("header in English", header)
         def start():
             t = pg.inner_text("#start")
-            for w in ("1. Load the data files (.mzML", "Drop .mzML, .raw, .wiff files or .D folders (Agilent) here", "Try the example files", "2. Acquisition method", "OPTIONAL", "Load data"): assert w in t.replace("optional", "OPTIONAL"), (w, t)
+            for w in ("1. Data files", "Drop the files here", ".mzML · .raw · .wiff · .D", "Try the example files", "2. Acquisition method", "OPTIONAL", "Load data"): assert w in t.replace("optional", "OPTIONAL"), (w, t)
             assert not italian_on_screen(pg), italian_on_screen(pg)
         step("start screen in English, no Italian words", start)
         def demo():
@@ -75,7 +75,7 @@ try:
             pg.evaluate("document.getElementById('uip-a11y').open = true")       # the chart colours are in the Accessibility submenu
             t = pg.inner_text("#uipset")
             for w in ("Settings", "Theme", "Like the system", "Chart colors", "Merge the centroids of the same nominal mass"): assert w in t, (w, t)
-            assert "By time (default)" in pg.evaluate("[...document.querySelectorAll('#uip-pal option')].map(o => o.textContent)"), "palette names"
+            assert "By file (default)" in pg.evaluate("[...document.querySelectorAll('#uip-pal option')].map(o => o.textContent)"), "palette names"
         step("gear in English", gear)
         def phrase():
             pg.evaluate("loading(true)"); pg.wait_for_timeout(300)

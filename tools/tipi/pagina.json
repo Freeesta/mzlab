@@ -35,6 +35,7 @@
     "../../mzlab/web/ordine.js",
     "../../mzlab/web/ruoli-carica.js",
     "../../mzlab/web/ruoli-celle.js",
+    "../../mzlab/web/progresso.js",
     "../../mzlab/web/conversione.js",
     "../../mzlab/web/nativo.js",
     "../../mzlab/web/diagnosi.js",
