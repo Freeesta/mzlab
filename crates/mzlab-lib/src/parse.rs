@@ -637,8 +637,13 @@ fn split_key(t: &str, sep: char) -> Option<(&str, &str)> {
     let mut ch = k.chars();
     let first = ch.next()?;
     let ok = (first.is_ascii_alphabetic() || (sep == '=' && first == '_'))
-        && k.chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == ' ' || c == '_' || c == '-' || (sep == ':' && c == '#'));
+        && k.chars().all(|c| {
+            c.is_ascii_alphanumeric()
+                || c == ' '
+                || c == '_'
+                || c == '-'
+                || (sep == ':' && c == '#')
+        });
     ok.then(|| (k.trim_end(), &t[i + sep.len_utf8()..]))
 }
 

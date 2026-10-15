@@ -349,7 +349,15 @@ pub fn gnps_match_prepared(
 pub fn gnps_cosine(sample: &Spec, reference: &Spec, tol: f64, modified: bool) -> GnpsMatch {
     let (am, ai) = gnps_prepare(&sample.mz, &sample.it, sample.prec);
     let (bm, bi) = gnps_prepare(&reference.mz, &reference.it, reference.prec);
-    gnps_match_prepared(&am, &ai, &bm, &bi, sample.prec - reference.prec, tol, modified)
+    gnps_match_prepared(
+        &am,
+        &ai,
+        &bm,
+        &bi,
+        sample.prec - reference.prec,
+        tol,
+        modified,
+    )
 }
 
 #[cfg(test)]
