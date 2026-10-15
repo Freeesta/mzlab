@@ -1,0 +1,102 @@
+{
+ "canopus": [
+  {
+   "_id": 5,
+   "_pol": "POS",
+   "cf_class": "Fictamines",
+   "cf_class_prob": 0.72,
+   "cf_superclass": "Organic nitrogen compounds",
+   "cf_superclass_prob": 0.88,
+   "npc_class": "Fictaline alkaloids",
+   "npc_class_prob": 0.75,
+   "npc_pathway": "Alkaloids",
+   "npc_pathway_prob": 0.92,
+   "npc_superclass": "Pseudoalkaloids",
+   "npc_superclass_prob": 0.81
+  },
+  {
+   "_id": 6,
+   "_pol": "POS",
+   "cf_class": "Fictolipids",
+   "cf_class_prob": 0.31,
+   "cf_superclass": "Lipids and lipid-like molecules",
+   "cf_superclass_prob": 0.52,
+   "npc_class": "Fictanoids",
+   "npc_class_prob": 0.4,
+   "npc_pathway": "Fatty acids",
+   "npc_pathway_prob": 0.61,
+   "npc_superclass": "Fictic lipids",
+   "npc_superclass_prob": 0.55
+  },
+  {
+   "_id": 1,
+   "_pol": "NEG",
+   "cf_class": "Fictacids",
+   "cf_class_prob": 0.9,
+   "cf_superclass": "Organic acids",
+   "cf_superclass_prob": 0.95,
+   "npc_class": "Fictamino acids",
+   "npc_class_prob": 0.45,
+   "npc_pathway": "Amino acids and Peptides",
+   "npc_pathway_prob": 0.55,
+   "npc_superclass": "Fictic acids",
+   "npc_superclass_prob": 0.5
+  }
+ ],
+ "spectral": [
+  {
+   "_id": 8,
+   "_pol": "POS",
+   "spec_inchikey2d": "EEEEEEEEEEEEEE",
+   "spec_name": "Fictamine isomer",
+   "spec_peaks": 6,
+   "spec_sim": 0.88
+  }
+ ],
+ "structure": [
+  {
+   "_id": 4,
+   "_pol": "POS",
+   "conf": 0.5,
+   "cosmic": 0.8,
+   "formula": "C15H20N2O3",
+   "name": "Fictastructin",
+   "sirius_inchikey2d": "BBBBBBBBBBBBBB-UHFFFAOYSA-N",
+   "sirius_smiles": "CCOCCFICT",
+   "xlogp": 2.1
+  },
+  {
+   "_id": 8,
+   "_pol": "POS",
+   "conf": 0.4,
+   "cosmic": 0.75,
+   "formula": "C17H20N2O3",
+   "name": "Fictamine isomer",
+   "sirius_inchikey2d": "EEEEEEEEEEEEEE-UHFFFAOYSA-N",
+   "sirius_smiles": "CCFICTISO",
+   "xlogp": 1.5
+  },
+  {
+   "_id": 9,
+   "_pol": "POS",
+   "conf": 0.5,
+   "cosmic": 0.7,
+   "formula": "C18H22N2O2",
+   "name": "Fictagel",
+   "sirius_inchikey2d": "FFFFFFFFFFFFFF-UHFFFAOYSA-N",
+   "sirius_smiles": "CCFICTMOL",
+   "xlogp": 1.9
+  },
+  {
+   "_id": 13,
+   "_pol": "POS",
+   "conf": 0.6,
+   "cosmic": 0.8,
+   "formula": "C14H29NO2",
+   "name": "Fictolol",
+   "sirius_inchikey2d": "JJJJJJJJJJJJJJ-UHFFFAOYSA-N",
+   "sirius_smiles": "CCFICTOLOL",
+   "xlogp": 2.5
+  }
+ ]
+}
