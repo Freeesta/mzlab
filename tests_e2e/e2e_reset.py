@@ -61,7 +61,7 @@ try:
         step("?reset=files: no files or session, folders and databases removed by name, libraries and preferences stay", partial)
         def full_cmd():
             load_files(); pg.click("#newrun"); pg.wait_for_selector("#resetdlg[open]")
-            txt = pg.inner_text("#resetdlg"); assert "Start a new session?" in txt and "Choose what to delete." in txt and "Full reset" in txt and "Everything, as the first time" in txt and "Files and session only" in txt and "Cancel" in txt, txt
+            txt = pg.inner_text("#resetdlg"); assert "Start a new session?" in txt and "Choose what to delete." not in txt and "Full reset" in txt and "Everything, as the first time" in txt and "Files and session only" in txt and "Cancel" in txt, txt
             hs = pg.evaluate("[...document.querySelectorAll('#resetdlg button')].map(b => b.getBoundingClientRect().height)"); assert all(h >= 44 for h in hs), hs
             assert pg.evaluate("(() => { const p = document.createElement('span'); p.style.color = 'var(--on-accent)'; p.style.background = 'var(--bad)'; document.body.appendChild(p); const c = getComputedStyle(p).backgroundColor; p.remove(); return c === getComputedStyle(document.querySelector('#resetdlg [data-reset=all]')).backgroundColor; })()"), "the wide button is red (CSS variable)"
             pg.click("#resetdlg [data-reset=all]"); pg.wait_for_function("location.search.includes('riparti')", timeout=30000); ready_start(pg)
@@ -97,6 +97,17 @@ try:
             after = pg.evaluate(STATE)["mzlab"]; assert not any(k in n for n in after), ("the file and its index are freed", k, after)
             assert pg.evaluate("E.files.filter(f => !f.gone).length") >= 1
         step("«Remove from the session» also frees the file and its indexes in OPFS", remove_one)
+        def clear_all():
+            pg.goto(base + "?reset=files"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)
+            load_files(); pg.evaluate("STATO.aggiunta(true, 'adding'); applyView()"); pg.wait_for_selector("#clearall")
+            assert pg.inner_text("#clearall") == "Delete all files" and pg.inner_text("#loaded").startswith("Files already loaded ("), pg.inner_text("#loaded")
+            pg.click("#clearall"); assert "Really delete" in pg.inner_text("#clearall") and pg.evaluate("E.files.length") >= 2, "the first press only asks"
+            pg.click("#clearall"); pg.wait_for_function("location.search === '' && window.qqReady && typeof E !== 'undefined' && E.files.length === 0", timeout=60000); pg.wait_for_timeout(800)
+            s = pg.evaluate(STATE)
+            assert s["files"] == 0 and not s["sess"] and s["mzlab"] == [], s                     # memory released: the files and their indexes are gone
+            assert "librerie" in s["opfs"] and "mzlab.lang" in s["ls"], s                         # the same as «Files and session only»
+            stage(pg, [EX / "FullScan_t0.mzML"]); pg.click("#opbtn"); ready(pg); assert pg.evaluate("E.files.length") >= 1, "loading again works"
+        step("«Delete all files» of the card of the loaded files: two presses, empty list, memory released, loading again works", clear_all)
         b.close()
     r.close()
 except Exception as e:

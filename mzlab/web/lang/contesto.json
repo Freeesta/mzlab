@@ -480,6 +480,7 @@
   "cartp.error": "Errore nel leggere un file della cartella; {name} = file, {message} = motivo.",
   "unopen.err.one": "Riga di errore di lettura di un solo file nell'avviso unico; {name} = file, {message} = motivo.",
   "unopen.err.many": "Riga di errore di lettura uguale per più file; {n} = quanti, {names} = primi nomi, {message} = motivo.",
+  "load.loaded.clearSure": "Conferma del pulsante «Cancella tutti i file» della scheda dei file già caricati; {n} = quanti file.",
   "feat.err.lines": "Errore sotto la lista di ioni. {n} = righe non valide, {list} = numeri delle prime righe.",
   "feat.err.many": "Errore: lista troppo lunga. {max} = massimo di ioni.",
   "feat.sum": "Riepilogo della tabella. {n} = feature, {m} = file, {src} = origine (frase).",
