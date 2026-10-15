@@ -1,0 +1,7 @@
+mappingFeatureId	referenceLinks	referenceName	similarity	sharedPeaks	referencePrecursorMz	referenceAdduct	InChIkey2D	referenceSmiles	referenceInstrument	referenceCE	spectralMatchRank	analogHit
+1	public_spectra_2506:(CCMSLIB00000000001)	Fictazine	0.91	6	222.1	[M + H]+	IIIIIIIIIIIIII	CCN	Orbitrap	30	1	false
+1	public_spectra_2506:(CCMSLIB00000000001)	Fictazine	0.80	5	222.1	[M + H]+	IIIIIIIIIIIIII	CCN	Orbitrap	20	2	false
+1	public_spectra_2506:(MSBNK-SYN-0002)	Fictazine isomer	0.74	4	222.1002	[M + H]+	JJJJJJJJJJJJJJ	CCO	QTOF		3	false
+2		No link	0.99	9	100.0	[M + H]+					1	false
+2	public_spectra_2506:(CCMSLIB00000000003)	Analogue one	0.62	3	236.1157	[M + H]+	KKKKKKKKKK	CCCN			1	true
+3	public_spectra_2506:(mzspec:SYN:LIB:accession:SYN0003)	Fictol	0.55	3	180.065	[M + H]+	short	CO	QTOF	25	1	false
