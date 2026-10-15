@@ -322,7 +322,7 @@ pub struct ScanRec {
 }
 
 /// One record of the file read by the layout.
-fn record(layout: &Layout, r: &[u8]) -> ScanRec {
+pub(super) fn record(layout: &Layout, r: &[u8]) -> ScanRec {
     let i = |name: &str| layout.int(r, name).unwrap_or(0);
     let f = |name: &str| layout.real(r, name).unwrap_or(0.0);
     ScanRec {
@@ -412,3 +412,7 @@ pub fn parse(
     }
     Ok(out)
 }
+
+#[cfg(feature = "estesi")]
+#[path = "../agilent_ext/scan_lc.rs"]
+mod lc;

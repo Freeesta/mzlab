@@ -119,6 +119,8 @@ if not reuse:
 N = 120
 folder = agilent_sintetico.write(tmp / "serie", "uno.D", N)
 top = folder.parent
+lc_top = tmp / "lc"
+agilent_sintetico.write_lcms(lc_top, "mrm.D", "mrm"); agilent_sintetico.write_lcms(lc_top, "perfil.D", "profile")
 for nm, flag in (("npa", True), ("npb", False)):   # two folders of one mzML each: numpress and its zlib twin
     (tmp / nm).mkdir(); mzml_file(tmp / nm / "np.mzML", flag)
 (tmp / "xml").mkdir(); XTIC = mzxml_file(tmp / "xml" / "x.mzXML")
@@ -186,6 +188,23 @@ try:
             r = mod.evaluate("""async () => { const c = new AbortController(); c.abort(); try { await LETTORI_MOD.toMzml("agilent", [{ name: "a", blob: new Blob([]) }], 0, "x.mzML", undefined, c.signal); return "no"; } catch (e) { return e.cancelled ? "cancelled" : String(e); } }""")
             assert r == "cancelled", r
         step("a cancelled conversion stops", cancel)
+        def lc_runs():
+            lc = page(b, "&lettori=modulo")
+            lc.set_input_files("#pickdir", str(lc_top))
+            lc.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
+            r = lc.evaluate("""async () => {
+              const rb = await window.MZLAB_RUST_READY, out = {};
+              for (const n of ["mrm.mzML", "perfil.mzML"]) {
+                const f = CONV.files.get(n) || await rb.nativeToMzml(n, 1 << 20, undefined, undefined);
+                out[n] = await f.text();
+              }
+              return { names: [...document.querySelectorAll("#flist tr")].map(t => (t.innerText.match(/\\S+\\.mzML/) || [""])[0]).filter(Boolean).sort(), mrm: out["mrm.mzML"], perfil: out["perfil.mzML"], miss: (window.MZLAB_LR_MISS || []).length };
+            }""")
+            assert r["names"] == ["mrm.mzML", "perfil.mzML"] and r["miss"] == 0, (r["names"], r["miss"])
+            assert "SRM SIC Q1=301.1 Q3=150.05" in r["mrm"] and "SRM SIC Q1=301.1 Q3=200.05" in r["mrm"], "no SRM chromatograms"
+            assert 'MS:1000130' in r["perfil"] and 'profile' in r["perfil"].lower(), "profile spectra, positive"
+            assert 'spectrumList count="40"' in r["perfil"], "profile spectra"
+        step("a QqQ MRM run and a Q-TOF profile run open through the module (SRM chromatograms, profile spectra)", lc_runs)
         # the numpress mzML: the engine refuses it, so the page sends it to the «aperti» module with no parameter
         NP = """async () => { const rb = await window.MZLAB_RUST_READY; await new Promise(r => setTimeout(r, 300));
           const tic = await (await fetch("api/chrom?k=0&level=1")).json(), sp = await (await fetch("api/spectrum?k=0&rt0=0.9&rt1=1.1&level=1")).json();
