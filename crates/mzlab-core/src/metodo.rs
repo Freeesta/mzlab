@@ -277,11 +277,16 @@ pub fn from_dam(m: &Method, src: &Source) -> String {
 
 /// SHA-1 (lower-case hex) of the first `size` bytes of `r`, read in blocks of 1 MB.
 pub fn sha1_hex<R: ReadAt>(r: &mut R, size: u64) -> Result<String> {
-    sha1_dyn(r, size)
+    sha1_of(r, size)
 }
 
-/// `sha1_hex` without a copy of the loop for each reader (the engine of the site carries one for the whole file).
-fn sha1_dyn(r: &mut dyn ReadAt, size: u64) -> Result<String> {
+/// `sha1_hex` as one function for every reader: the engine of the site, which has a single reader of its own, carries one copy of the loop instead of one for each.
+pub fn sha1_dyn(r: &mut dyn ReadAt, size: u64) -> Result<String> {
+    sha1_of(r, size)
+}
+
+#[inline(always)]
+fn sha1_of<R: ReadAt + ?Sized>(r: &mut R, size: u64) -> Result<String> {
     let mut h = Sha1::new();
     let mut buf = vec![0u8; 1 << 20];
     let mut at = 0u64;

@@ -28,7 +28,7 @@ export function createEsterno(native_external) {
     const w = loaded.get(fam);
     if (!w) throw loadError(fam, "module not loaded");
     const sums = Array.from(names, (n, i) => (sha1 && sha1[i]) || known.get(n + "\0" + sizes[i]) || "");
-    const h = w.apri(names, sizes, read, sums.some(Boolean) ? sums : undefined);        // the module reads the members with the engine's own `read`; the SHA-1 of a member the page knows is not read again
+    const h = w.apri_con_sha1 && sums.some(Boolean) ? w.apri_con_sha1(names, sizes, read, sums) : w.apri(names, sizes, read);        // the module reads the members with the engine's own `read`; the SHA-1 of a member the page knows is not read again
     return {
       campioni: () => w.campioni(h),
       indice: (/** @type {number} */ c) => w.indice(h, c),
