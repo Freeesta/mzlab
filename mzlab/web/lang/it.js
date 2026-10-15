@@ -321,6 +321,8 @@ I18N.add("it", {
   "load.ph.scans": "Indice delle scansioni",
   "load.ph.chrom": "Cromatogrammi",
   "load.ph.index": "Indicizzazione",
+  "load.ph.convert": "Conversione",
+  "load.prog.count": "{done} di {n}",
   "load.err.oldBrowser": "questo browser è troppo vecchio: usa una versione recente di Chrome, Edge, Firefox o Safari.",
   "load.err.engineStart": "Non riesco ad avviare il motore di calcolo: ricarica la pagina.",
   "load.err.engineMissing": "Questo browser non può avviare il motore di calcolo: usa una versione recente di Chrome, Edge, Firefox o Safari.",

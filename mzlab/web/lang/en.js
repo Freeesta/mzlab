@@ -321,6 +321,8 @@ I18N.add("en", {
   "load.ph.scans": "Scan index",
   "load.ph.chrom": "Chromatograms",
   "load.ph.index": "Indexing",
+  "load.ph.convert": "Converting",
+  "load.prog.count": "{done} of {n}",
   "load.err.oldBrowser": "this browser is too old: use a recent version of Chrome, Edge, Firefox or Safari.",
   "load.err.engineStart": "Cannot start the calculation engine: reload the page.",
   "load.err.engineMissing": "This browser cannot start the calculation engine: use a recent version of Chrome, Edge, Firefox or Safari.",
