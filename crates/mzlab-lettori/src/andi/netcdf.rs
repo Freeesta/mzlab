@@ -11,22 +11,9 @@ const FINESTRA: u64 = 1 << 16;
 /// The longest name of a dimension, attribute or variable.
 const NOME_MAX: u64 = 1 << 12;
 const TAG_DIM: u32 = 0x0A;
+
 const TAG_VAR: u32 = 0x0B;
 const TAG_ATT: u32 = 0x0C;
-
-fn guasto(why: &str) -> Error {
-    Error::new("err.dam.unreadable").with("message", why)
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Tipo {
-    Byte,
-    Char,
-    Short,
-    Int,
-    Float,
-    Double,
-}
 
 impl Tipo {
     fn da(n: u32) -> Result<Tipo> {
@@ -64,52 +51,6 @@ impl Tipo {
             Tipo::Double => f64::from_be_bytes(a(8)),
         }
     }
-}
-
-pub struct Dim {
-    /// 0: the unlimited (record) dimension.
-    pub lunghezza: u64,
-}
-
-pub enum Val {
-    Testo(String),
-    Num(Vec<f64>),
-}
-
-pub struct Attr {
-    pub nome: String,
-    pub val: Val,
-}
-
-pub struct Var {
-    pub nome: String,
-    pub dims: Vec<usize>,
-    pub att: Vec<Attr>,
-    pub tipo: Tipo,
-    pub vsize: u64,
-    pub begin: u64,
-    /// Its first dimension is the unlimited one.
-    pub record: bool,
-}
-
-pub struct Cdf {
-    pub numrecs: u64,
-    pub dim: Vec<Dim>,
-    pub att: Vec<Attr>,
-    pub var: Vec<Var>,
-    /// Bytes of one record (all the record variables).
-    pub recsize: u64,
-    pub dimensione: u64,
-}
-
-/// The header read through a window over the file.
-struct Cur<'a> {
-    dati: &'a mut dyn ReadAt,
-    dim: u64,
-    pos: u64,
-    buf: Vec<u8>,
-    base: u64,
-    limiti: Limiti,
 }
 
 impl Cur<'_> {
@@ -192,13 +133,6 @@ impl Cur<'_> {
         }
         Ok(out)
     }
-}
-
-/// Elements of a variable per record (the product of its dimensions after the unlimited one).
-fn per_record(dim: &[Dim], v: &Var) -> u64 {
-    v.dims[1..]
-        .iter()
-        .fold(1u64, |a, &d| a.saturating_mul(dim[d].lunghezza))
 }
 
 impl Cdf {
@@ -427,4 +361,71 @@ impl Var {
             _ => None,
         })
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Tipo {
+    Byte,
+    Char,
+    Short,
+    Int,
+    Float,
+    Double,
+}
+
+pub struct Dim {
+    /// 0: the unlimited (record) dimension.
+    pub lunghezza: u64,
+}
+
+pub enum Val {
+    Testo(String),
+    Num(Vec<f64>),
+}
+
+pub struct Attr {
+    pub nome: String,
+    pub val: Val,
+}
+
+pub struct Var {
+    pub nome: String,
+    pub dims: Vec<usize>,
+    pub att: Vec<Attr>,
+    pub tipo: Tipo,
+    pub vsize: u64,
+    pub begin: u64,
+    /// Its first dimension is the unlimited one.
+    pub record: bool,
+}
+
+pub struct Cdf {
+    pub numrecs: u64,
+    pub dim: Vec<Dim>,
+    pub att: Vec<Attr>,
+    pub var: Vec<Var>,
+    /// Bytes of one record (all the record variables).
+    pub recsize: u64,
+    pub dimensione: u64,
+}
+
+/// The header read through a window over the file.
+struct Cur<'a> {
+    dati: &'a mut dyn ReadAt,
+    dim: u64,
+    pos: u64,
+    buf: Vec<u8>,
+    base: u64,
+    limiti: Limiti,
+}
+
+fn guasto(why: &str) -> Error {
+    Error::new("err.dam.unreadable").with("message", why)
+}
+
+/// Elements of a variable per record (the product of its dimensions after the unlimited one).
+fn per_record(dim: &[Dim], v: &Var) -> u64 {
+    v.dims[1..]
+        .iter()
+        .fold(1u64, |a, &d| a.saturating_mul(dim[d].lunghezza))
 }

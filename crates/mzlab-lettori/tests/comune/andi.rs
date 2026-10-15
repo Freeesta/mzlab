@@ -113,6 +113,45 @@ fn dati_di(v: &Vb, da: usize, a: usize) -> Vec<u8> {
     o
 }
 
+/// The header of a file whose variables begin at `begins` and take `vsizes` bytes.
+fn testata_cdf(
+    v2: bool,
+    dims: &[(&str, u32)],
+    globali: &[(String, At)],
+    vars: &[Vb],
+    numrecs: u32,
+    begins: &[u64],
+    vsizes: &[usize],
+) -> Vec<u8> {
+    let mut o = vec![b'C', b'D', b'F', if v2 { 2 } else { 1 }];
+    o.extend(numrecs.to_be_bytes());
+    o.extend(0x0Au32.to_be_bytes());
+    o.extend((dims.len() as u32).to_be_bytes());
+    for (n, l) in dims {
+        nome(&mut o, n);
+        o.extend(l.to_be_bytes());
+    }
+    attributi(&mut o, globali);
+    o.extend(0x0Bu32.to_be_bytes());
+    o.extend((vars.len() as u32).to_be_bytes());
+    for (i, (v, &b)) in vars.iter().zip(begins).enumerate() {
+        nome(&mut o, &v.nome);
+        o.extend((v.dims.len() as u32).to_be_bytes());
+        v.dims
+            .iter()
+            .for_each(|&d| o.extend((d as u32).to_be_bytes()));
+        attributi(&mut o, &v.att);
+        o.extend(v.tipo.to_be_bytes());
+        o.extend((vsizes[i] as u32).to_be_bytes());
+        if v2 {
+            o.extend(b.to_be_bytes());
+        } else {
+            o.extend((b as u32).to_be_bytes());
+        }
+    }
+    o
+}
+
 /// A classic (`v2 == false`) or 64-bit offset file: `dims` are (name, length) with 0 = unlimited, `numrecs` the number of records.
 pub fn cdf(
     v2: bool,
@@ -144,35 +183,9 @@ pub fn cdf(
             (ancora(v) + 3) & !3
         }
     };
-    let intestazione = |begins: &[u64]| -> Vec<u8> {
-        let mut o = vec![b'C', b'D', b'F', if v2 { 2 } else { 1 }];
-        o.extend(numrecs.to_be_bytes());
-        o.extend(0x0Au32.to_be_bytes());
-        o.extend((dims.len() as u32).to_be_bytes());
-        for (n, l) in dims {
-            nome(&mut o, n);
-            o.extend(l.to_be_bytes());
-        }
-        attributi(&mut o, globali);
-        o.extend(0x0Bu32.to_be_bytes());
-        o.extend((vars.len() as u32).to_be_bytes());
-        for (v, &b) in vars.iter().zip(begins) {
-            nome(&mut o, &v.nome);
-            o.extend((v.dims.len() as u32).to_be_bytes());
-            v.dims
-                .iter()
-                .for_each(|&d| o.extend((d as u32).to_be_bytes()));
-            attributi(&mut o, &v.att);
-            o.extend(v.tipo.to_be_bytes());
-            o.extend((vsize(v) as u32).to_be_bytes());
-            if v2 {
-                o.extend(b.to_be_bytes());
-            } else {
-                o.extend((b as u32).to_be_bytes());
-            }
-        }
-        o
-    };
+    let vsizes: Vec<usize> = vars.iter().map(vsize).collect();
+    let intestazione =
+        |begins: &[u64]| testata_cdf(v2, dims, globali, vars, numrecs, begins, &vsizes);
     let mut begins = vec![0u64; vars.len()];
     let mut pos = intestazione(&begins).len() as u64;
     for (i, v) in vars.iter().enumerate().filter(|(_, v)| !record(v)) {
@@ -238,6 +251,35 @@ pub fn punti(k: usize) -> Vec<(f64, f64)> {
 
 pub const SCANSIONI: usize = 6;
 
+fn globali_ms(c: &Corsa) -> Vec<(String, At)> {
+    vec![
+        ("experiment_title".to_string(), t("run one")),
+        (
+            "experiment_date_time_stamp".to_string(),
+            t("20190312141102+0100"),
+        ),
+        ("operator_name".to_string(), t("Some Operator")),
+        (
+            "experiment_type".to_string(),
+            t(if c.profilo {
+                "Continuum Mass Spectrum"
+            } else {
+                "Centroided Mass Spectrum"
+            }),
+        ),
+        ("test_ionization_mode".to_string(), t("Electron Impact")),
+        ("test_ionization_polarity".to_string(), t(c.polarita)),
+        (
+            "test_scan_function".to_string(),
+            t(if c.sim {
+                "Selected Ion Detection"
+            } else {
+                "Mass Scan"
+            }),
+        ),
+    ]
+}
+
 pub fn andi_ms(c: &Corsa) -> Vec<u8> {
     let conti: Vec<usize> = (0..SCANSIONI).map(|k| punti(k).len()).collect();
     let totale: usize = conti.iter().sum();
@@ -293,32 +335,7 @@ pub fn andi_ms(c: &Corsa) -> Vec<u8> {
         car("instrument_model", &[2, 3], "Model 7", 32),
         car("instrument_serial_no", &[2, 3], "SN-0042", 32),
     ];
-    let g = vec![
-        ("experiment_title".to_string(), t("run one")),
-        (
-            "experiment_date_time_stamp".to_string(),
-            t("20190312141102+0100"),
-        ),
-        ("operator_name".to_string(), t("Some Operator")),
-        (
-            "experiment_type".to_string(),
-            t(if c.profilo {
-                "Continuum Mass Spectrum"
-            } else {
-                "Centroided Mass Spectrum"
-            }),
-        ),
-        ("test_ionization_mode".to_string(), t("Electron Impact")),
-        ("test_ionization_polarity".to_string(), t(c.polarita)),
-        (
-            "test_scan_function".to_string(),
-            t(if c.sim {
-                "Selected Ion Detection"
-            } else {
-                "Mass Scan"
-            }),
-        ),
-    ];
+    let g = globali_ms(c);
     let _ = totale;
     cdf(c.v2, &dims, &g, &vars, totale as u32)
 }

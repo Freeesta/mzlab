@@ -1,6 +1,7 @@
 //! What an ANDI file says about itself outside its scans: the global attributes and the `instrument_*` variables. They become the `metodo/1` document and the header of the mzML we write;
 //! every global attribute goes into `campi` (nothing is lost), the ones that identify a person, a serial or a path marked `identita`.
 
+use super::netcdf::{Cdf, Val};
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::Limiti;
@@ -8,48 +9,8 @@ use mzlab_core::metodo::{self, obj, text, Source, SrcFile, V};
 use mzlab_core::metodo_campi::Campo;
 use mzlab_core::mzmlwrite::Header;
 
-use super::netcdf::{Cdf, Val};
-
 /// The most fields kept from a file.
 const CAMPI_MAX: usize = 2000;
-
-#[derive(Default)]
-pub(super) struct Testata {
-    pub(super) campi: Vec<Campo>,
-    pub(super) titolo: Option<String>,
-    pub(super) creato: Option<String>,
-    pub(super) utente: Option<String>,
-    pub(super) produttore: Option<String>,
-    pub(super) modello: Option<String>,
-    pub(super) serie: Option<String>,
-    pub(super) software: Option<String>,
-    pub(super) firmware: Option<String>,
-    pub(super) ionizzazione: Option<String>,
-    pub(super) rivelatore: Option<String>,
-}
-
-/// The attribute names that identify a person, a computer or a path of the acquisition.
-fn identita(nome: &str) -> bool {
-    matches!(
-        nome,
-        "operator_name" | "instrument_serial_no" | "source_file_reference" | "source_file_name"
-    ) || nome.starts_with("external_file_ref")
-        || nome.contains("path")
-}
-
-/// Where a global attribute is also in the document.
-fn mappa(nome: &str) -> Option<&'static str> {
-    match nome {
-        "experiment_title" => Some("campione.nome"),
-        "operator_name" => Some("operatore.utente"),
-        "test_ionization_mode" => Some("ms.sorgente.tipo"),
-        _ => None,
-    }
-}
-
-fn unico(v: Vec<String>) -> Option<String> {
-    v.into_iter().find(|s| !s.is_empty())
-}
 
 impl Testata {
     /// The attributes and the instrument variables of `cdf`.
@@ -179,6 +140,44 @@ impl Testata {
         h.run_params.push((metodo::USERPARAM.to_string(), doc));
         h
     }
+}
+
+#[derive(Default)]
+pub(super) struct Testata {
+    pub(super) campi: Vec<Campo>,
+    pub(super) titolo: Option<String>,
+    pub(super) creato: Option<String>,
+    pub(super) utente: Option<String>,
+    pub(super) produttore: Option<String>,
+    pub(super) modello: Option<String>,
+    pub(super) serie: Option<String>,
+    pub(super) software: Option<String>,
+    pub(super) firmware: Option<String>,
+    pub(super) ionizzazione: Option<String>,
+    pub(super) rivelatore: Option<String>,
+}
+
+/// The attribute names that identify a person, a computer or a path of the acquisition.
+fn identita(nome: &str) -> bool {
+    matches!(
+        nome,
+        "operator_name" | "instrument_serial_no" | "source_file_reference" | "source_file_name"
+    ) || nome.starts_with("external_file_ref")
+        || nome.contains("path")
+}
+
+/// Where a global attribute is also in the document.
+fn mappa(nome: &str) -> Option<&'static str> {
+    match nome {
+        "experiment_title" => Some("campione.nome"),
+        "operator_name" => Some("operatore.utente"),
+        "test_ionization_mode" => Some("ms.sorgente.tipo"),
+        _ => None,
+    }
+}
+
+fn unico(v: Vec<String>) -> Option<String> {
+    v.into_iter().find(|s| !s.is_empty())
 }
 
 /// `20190312141102+0000` as `2019-03-12T14:11:02+00:00` (None when the text is not that).
