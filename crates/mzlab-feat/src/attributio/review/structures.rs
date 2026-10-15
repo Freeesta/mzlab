@@ -37,7 +37,10 @@ impl Structures for GraphStructures {
         if smiles.trim().is_empty() {
             return None;
         }
-        let m = smiles.split('.').filter_map(|p| Mol::parse(p).ok()).max_by_key(|m| m.atoms.len())?;
+        let m = smiles
+            .split('.')
+            .filter_map(|p| Mol::parse(p).ok())
+            .max_by_key(|m| m.atoms.len())?;
         let f: elements::Formula = m.formula();
         Some(f.into_iter().map(|(e, n)| (e, n as i64)).collect())
     }

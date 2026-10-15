@@ -3,8 +3,8 @@
 pub mod adduct;
 pub mod explain;
 pub mod feature;
-pub mod fragmenter;
 mod fields;
+pub mod fragmenter;
 pub mod isotopes;
 pub mod libraries;
 pub mod matching;

@@ -13,6 +13,10 @@
   "crates/mzlab-core/src/scantable.rs": 709,
   "crates/mzlab-core/src/scantable/rows.rs": 700,
   "crates/mzlab-desktop/src/update.rs": 867,
+  "crates/mzlab-feat/src/attributio/review/explain.rs": 725,
+  "crates/mzlab-feat/src/attributio/review/feature.rs": 800,
+  "crates/mzlab-feat/src/attributio/review/propose.rs": 822,
+  "crates/mzlab-feat/tests/attributio_spiegazioni.rs": 855,
   "crates/mzlab-lib/src/build.rs": 542,
   "crates/mzlab-lib/src/parse.rs": 783,
   "crates/mzlab-lib/src/read.rs": 672,
@@ -38,8 +42,7 @@
   "mzlab/web/picchi.js": 557,
   "mzlab/web/tour.js": 719,
   "tools/attributio_riferimento.py": 720,
-  "tools/genera_ei.py": 751,
-  "crates/mzlab-feat/src/attributio/review/feature.rs": 800
+  "tools/genera_ei.py": 751
  },
  "funzioni": {
   "TP_Mine/js/20_tpmine.js::open": 488,
@@ -97,6 +100,17 @@
   "crates/mzlab-desktop/src/scarica.rs::download_package": 126,
   "crates/mzlab-desktop/src/update.rs::serve_override": 414,
   "crates/mzlab-desktop/tests/protocol.rs::tic_xic_chunks_and_errors": 90,
+  "crates/mzlab-feat/src/attributio/review/feature.rs::finish_refs": 150,
+  "crates/mzlab-feat/src/attributio/review/feature.rs::review_feature": 231,
+  "crates/mzlab-feat/src/attributio/review/isotopes.rs::compare": 140,
+  "crates/mzlab-feat/src/attributio/review/proposal.rs::J": 330,
+  "crates/mzlab-feat/src/attributio/review/propose.rs::propose": 107,
+  "crates/mzlab-feat/src/attributio/review/purity.rs::isolation_purity": 128,
+  "crates/mzlab-feat/tests/attributio_spiegazioni.rs::explanations_equal_the_reference_tool": 121,
+  "crates/mzlab-feat/tests/attributio_spiegazioni.rs::isotope_patterns_equal_the_reference_tool": 108,
+  "crates/mzlab-feat/tests/attributio_spiegazioni.rs::purity_and_raw_proofs_equal_the_reference_tool": 193,
+  "crates/mzlab-feat/tests/attributio_spiegazioni.rs::raw_proofs": 120,
+  "crates/mzlab-feat/tests/attributio_spiegazioni.rs::rt_versus_logp_equals_the_reference_tool": 137,
   "crates/mzlab-lib-wasm/src/lib.rs::Importer": 143,
   "crates/mzlab-lib-wasm/src/lib.rs::analog_json": 144,
   "crates/mzlab-lib/src/build.rs::Builder": 354,
@@ -186,9 +200,6 @@
   "mzlab/web/workflow.js::WORKFLOW": 379,
   "tools/bench_mirino.py::run": 85,
   "tools/controlla_teoria.py::public_errors": 94,
-  "tools/dati_sintetici.py::hr_dda": 103,
-  "crates/mzlab-feat/src/attributio/review/feature.rs::finish_refs": 150,
-  "crates/mzlab-feat/src/attributio/review/feature.rs::review_feature": 160,
-  "crates/mzlab-feat/src/attributio/review/proposal.rs::J": 330
+  "tools/dati_sintetici.py::hr_dda": 103
  }
 }

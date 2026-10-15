@@ -11,7 +11,9 @@ use std::collections::BTreeMap;
 pub const C13: f64 = 1.003355;
 
 /// Elements of the review (`ATOM` of the reference tool), in the order they are listed there.
-const ATOMS: [&str; 16] = ["C", "H", "N", "O", "P", "S", "F", "Cl", "Br", "I", "Na", "K", "Si", "B", "As", "Se"];
+const ATOMS: [&str; 16] = [
+    "C", "H", "N", "O", "P", "S", "F", "Cl", "Br", "I", "Na", "K", "Si", "B", "As", "Se",
+];
 
 /// Element → atoms. Sorted by symbol, like `sorted(ion)` of the reference tool.
 pub type Formula = BTreeMap<String, i64>;
@@ -76,7 +78,11 @@ pub fn parse_formula(s: &str) -> Formula {
         while j < b.len() && b[j].is_ascii_digit() {
             j += 1;
         }
-        let n = if j > k { t[k..j].parse().unwrap_or(1) } else { 1 };
+        let n = if j > k {
+            t[k..j].parse().unwrap_or(1)
+        } else {
+            1
+        };
         *d.entry(t[i..k].to_string()).or_insert(0) += n;
         i = j;
     }
@@ -85,8 +91,15 @@ pub fn parse_formula(s: &str) -> Formula {
 
 /// Hill order (C, H, then alphabetical), plain ASCII: `{C: 10, H: 22, O: 6}` → `C10H22O6`. Elements with a count of 0 or less are left out.
 pub fn fmt_formula(d: &Formula) -> String {
-    let mut order: Vec<&str> = ["C", "H"].into_iter().filter(|e| d.get(*e).is_some_and(|n| *n > 0)).collect();
-    order.extend(d.iter().filter(|(e, n)| **n > 0 && *e != "C" && *e != "H").map(|(e, _)| e.as_str()));
+    let mut order: Vec<&str> = ["C", "H"]
+        .into_iter()
+        .filter(|e| d.get(*e).is_some_and(|n| *n > 0))
+        .collect();
+    order.extend(
+        d.iter()
+            .filter(|(e, n)| **n > 0 && *e != "C" && *e != "H")
+            .map(|(e, _)| e.as_str()),
+    );
     let mut s = String::new();
     for e in order {
         s.push_str(e);
@@ -99,10 +112,30 @@ pub fn fmt_formula(d: &Formula) -> String {
 
 /// Signed difference: `{C: 1, H: 2}` → `+CH2`; `{H: -2, O: 1}` → `+O-H2`; empty → `0`.
 pub fn fmt_delta(d: &Formula) -> String {
-    let pos: Formula = d.iter().filter(|(_, n)| **n > 0).map(|(e, n)| (e.clone(), *n)).collect();
-    let neg: Formula = d.iter().filter(|(_, n)| **n < 0).map(|(e, n)| (e.clone(), -*n)).collect();
+    let pos: Formula = d
+        .iter()
+        .filter(|(_, n)| **n > 0)
+        .map(|(e, n)| (e.clone(), *n))
+        .collect();
+    let neg: Formula = d
+        .iter()
+        .filter(|(_, n)| **n < 0)
+        .map(|(e, n)| (e.clone(), -*n))
+        .collect();
     let (p, n) = (fmt_formula(&pos), fmt_formula(&neg));
-    let s = format!("{}{}", if p.is_empty() { String::new() } else { format!("+{p}") }, if n.is_empty() { String::new() } else { format!("-{n}") });
+    let s = format!(
+        "{}{}",
+        if p.is_empty() {
+            String::new()
+        } else {
+            format!("+{p}")
+        },
+        if n.is_empty() {
+            String::new()
+        } else {
+            format!("-{n}")
+        }
+    );
     if s.is_empty() {
         "0".into()
     } else {
@@ -112,7 +145,10 @@ pub fn fmt_delta(d: &Formula) -> String {
 
 /// m/z of the singly charged ion of a formula (electron mass taken off in positive mode and added in negative mode).
 pub fn ion_mass(fd: &Formula, pol: &str) -> f64 {
-    let t: f64 = fd.iter().map(|(e, n)| atom_mass(e).unwrap_or(0.0) * *n as f64).sum();
+    let t: f64 = fd
+        .iter()
+        .map(|(e, n)| atom_mass(e).unwrap_or(0.0) * *n as f64)
+        .sum();
     if pol == "POS" {
         t - ELECTRON
     } else {
@@ -146,7 +182,11 @@ pub fn match_adduct(fd: &Formula, mz: f64, pol: &str) -> Option<AdductMatch> {
         let th = ion_mass(&ion, pol);
         let ppm = (mz - th) / th * 1e6;
         if best.as_ref().is_none_or(|b| ppm.abs() < b.ppm.abs()) {
-            best = Some(AdductMatch { adduct: (*name).to_string(), ion, ppm });
+            best = Some(AdductMatch {
+                adduct: (*name).to_string(),
+                ion,
+                ppm,
+            });
         }
     }
     best
@@ -185,7 +225,11 @@ impl SubTable {
         out
     }
     pub fn formula(&self, row: usize) -> Formula {
-        self.elements.iter().cloned().zip(self.counts(row)).collect()
+        self.elements
+            .iter()
+            .cloned()
+            .zip(self.counts(row))
+            .collect()
     }
 }
 
@@ -215,7 +259,11 @@ pub fn subformula_table(ion: &Formula, pol: &str, adduct: &str, max_n: i64) -> O
         }
         let ok = rdbe >= -0.5 && atoms > 0 && cation.is_none_or(|(k, c)| counts[k] == c);
         if ok {
-            let m = if pol == "POS" { tot - ELECTRON } else { tot + ELECTRON };
+            let m = if pol == "POS" {
+                tot - ELECTRON
+            } else {
+                tot + ELECTRON
+            };
             rows.push((m, cell as u32));
         }
         for k in (0..els.len()).rev() {
@@ -227,7 +275,12 @@ pub fn subformula_table(ion: &Formula, pol: &str, adduct: &str, max_n: i64) -> O
         }
     }
     rows.sort_by(|a, b| a.0.total_cmp(&b.0));
-    Some(SubTable { elements: els, radix, masses: rows.iter().map(|r| r.0).collect(), cells: rows.iter().map(|r| r.1).collect() })
+    Some(SubTable {
+        elements: els,
+        radix,
+        masses: rows.iter().map(|r| r.0).collect(),
+        cells: rows.iter().map(|r| r.1).collect(),
+    })
 }
 
 /// For each m/z: the row of the table and the ppm error of the closest sub-formula within `ppm`, or `None`.
@@ -320,7 +373,12 @@ fn max_of(v: impl Iterator<Item = f64>) -> Option<f64> {
 
 /// Peaks below the precursor - 0.5, ≥ `rel_min` of the base peak, without ¹³C isotope peaks, merge satellites and impossible mass defects.
 /// Returns (m/z, intensity, index in the input).
-pub fn prep_ms2(mz: &[f64], it: &[f64], prec: f64, rel_min: f64) -> (Vec<f64>, Vec<f64>, Vec<usize>) {
+pub fn prep_ms2(
+    mz: &[f64],
+    it: &[f64],
+    prec: f64,
+    rel_min: f64,
+) -> (Vec<f64>, Vec<f64>, Vec<usize>) {
     let mut idx: Vec<usize> = (0..mz.len()).filter(|&i| mz[i] < prec - 0.5).collect();
     let Some(top) = max_of(idx.iter().map(|&i| it[i])) else {
         return (vec![], vec![], vec![]);
@@ -331,14 +389,26 @@ pub fn prep_ms2(mz: &[f64], it: &[f64], prec: f64, rel_min: f64) -> (Vec<f64>, V
     let mut keep = Vec::new();
     for i in 0..m.len() {
         let tol = m[i] * 5e-6 + 0.0005;
-        let iso = max_of((0..m.len()).filter(|&j| (m[j] - (m[i] - C13)).abs() <= tol).map(|j| y[j]));
-        let sat = max_of((0..m.len()).filter(|&j| (m[j] - m[i]).abs() <= m[i] * 25e-6 && y[j] > y[i]).map(|j| y[j]));
+        let iso = max_of(
+            (0..m.len())
+                .filter(|&j| (m[j] - (m[i] - C13)).abs() <= tol)
+                .map(|j| y[j]),
+        );
+        let sat = max_of(
+            (0..m.len())
+                .filter(|&j| (m[j] - m[i]).abs() <= m[i] * 25e-6 && y[j] > y[i])
+                .map(|j| y[j]),
+        );
         let drop = iso.is_some_and(|t| y[i] < 0.5 * t) || sat.is_some_and(|t| y[i] < 0.3 * t);
         if !drop {
             keep.push(i);
         }
     }
-    (keep.iter().map(|&i| m[i]).collect(), keep.iter().map(|&i| y[i]).collect(), keep.iter().map(|&i| idx[i]).collect())
+    (
+        keep.iter().map(|&i| m[i]).collect(),
+        keep.iter().map(|&i| y[i]).collect(),
+        keep.iter().map(|&i| idx[i]).collect(),
+    )
 }
 
 /// `(index in the input, why)` for every peak `prep_ms2` drops, by index.
@@ -356,7 +426,10 @@ pub fn removed_reasons(mz: &[f64], it: &[f64], prec: f64, rel_min: f64) -> Vec<(
             Removed::Below1Percent
         } else if (0.40..=0.60).contains(&frac(mz[i])) && mz[i] < 350.0 {
             Removed::MassDefect
-        } else if mz.iter().any(|&x| (x - (mz[i] - C13)).abs() <= mz[i] * 5e-6 + 0.0005) {
+        } else if mz
+            .iter()
+            .any(|&x| (x - (mz[i] - C13)).abs() <= mz[i] * 5e-6 + 0.0005)
+        {
             Removed::Isotope13C
         } else {
             Removed::MergeSatellite
@@ -416,7 +489,13 @@ impl Explanation {
 }
 
 /// Adduct and sub-formula explanation of the cleaned spectrum `(mz, it)` for one candidate formula (`None` = no formula).
-pub fn explain(fd: Option<&Formula>, mz: f64, pol: &str, exp: (&[f64], &[f64]), s: &ReviewSettings) -> Explanation {
+pub fn explain(
+    fd: Option<&Formula>,
+    mz: f64,
+    pol: &str,
+    exp: (&[f64], &[f64]),
+    s: &ReviewSettings,
+) -> Explanation {
     let n = exp.0.len();
     let mut o = Explanation::empty(n);
     let Some(am) = fd.and_then(|f| match_adduct(f, mz, pol)) else {
@@ -436,19 +515,39 @@ pub fn explain(fd: Option<&Formula>, mz: f64, pol: &str, exp: (&[f64], &[f64]), 
     for (i, h) in assign(exp.0, &table, s.ppm_frag).into_iter().enumerate() {
         let Some((row, ppm)) = h else { continue };
         let cnt = table.formula(row);
-        let loss: Formula = am.ion.iter().map(|(e, v)| (e.clone(), v - cnt.get(e).copied().unwrap_or(0))).collect();
+        let loss: Formula = am
+            .ion
+            .iter()
+            .map(|(e, v)| (e.clone(), v - cnt.get(e).copied().unwrap_or(0)))
+            .collect();
         let l = fmt_formula(&loss);
-        o.frags[i] = Some(FragmentHit { formula: fmt_formula(&cnt), mz_th: table.mass(row), ppm, loss: if l.is_empty() { "-".into() } else { l } });
+        o.frags[i] = Some(FragmentHit {
+            formula: fmt_formula(&cnt),
+            mz_th: table.mass(row),
+            ppm,
+            loss: if l.is_empty() { "-".into() } else { l },
+        });
     }
     o.n_expl = o.frags.iter().flatten().count();
-    let explained: f64 = o.frags.iter().zip(exp.1).filter(|(f, _)| f.is_some()).map(|(_, y)| *y).sum();
+    let explained: f64 = o
+        .frags
+        .iter()
+        .zip(exp.1)
+        .filter(|(f, _)| f.is_some())
+        .map(|(_, y)| *y)
+        .sum();
     o.frac_expl = explained / total;
     let dec: Vec<f64> = s
         .decoy_shifts
         .iter()
         .map(|sh| {
             let shifted: Vec<f64> = exp.0.iter().map(|m| m + sh).collect();
-            let hit: f64 = assign(&shifted, &table, s.ppm_frag).iter().zip(exp.1).filter(|(h, _)| h.is_some()).map(|(_, y)| *y).sum();
+            let hit: f64 = assign(&shifted, &table, s.ppm_frag)
+                .iter()
+                .zip(exp.1)
+                .filter(|(h, _)| h.is_some())
+                .map(|(_, y)| *y)
+                .sum();
             hit / total
         })
         .collect();

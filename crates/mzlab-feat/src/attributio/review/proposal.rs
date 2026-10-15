@@ -160,7 +160,9 @@ impl J {
             J::Null => out.push_str("null"),
             J::Bool(b) => out.push_str(if *b { "true" } else { "false" }),
             J::Num(x) if !x.is_finite() => out.push_str("null"),
-            J::Num(x) if x.fract() == 0.0 && x.abs() < 1e15 => out.push_str(&format!("{}", *x as i64)),
+            J::Num(x) if x.fract() == 0.0 && x.abs() < 1e15 => {
+                out.push_str(&format!("{}", *x as i64))
+            }
             J::Num(x) => out.push_str(&format!("{x}")),
             J::Str(s) => Self::write_str(s, out),
             J::Arr(v) => {
@@ -298,7 +300,15 @@ impl RawEvidence {
                 ("th2", J::Num(m.th2)),
                 ("chim_n", J::Num(m.chim_n as f64)),
                 ("chim_max", J::Num(m.chim_max)),
-                ("chim", J::Arr(m.chim.iter().map(|c| J::Arr(vec![J::Num(c.0), J::Num(c.1)])).collect())),
+                (
+                    "chim",
+                    J::Arr(
+                        m.chim
+                            .iter()
+                            .map(|c| J::Arr(vec![J::Num(c.0), J::Num(c.1)]))
+                            .collect(),
+                    ),
+                ),
             ])
         });
         J::Obj(vec![
@@ -319,12 +329,27 @@ impl PurityEvidence {
         let co = self
             .co
             .iter()
-            .map(|c| J::Obj(vec![("mz", J::Num(c.0)), ("rel", J::Num(c.1)), ("kind", J::s(&c.2)), ("offset", J::on(c.3)), ("r", J::on(c.4))]))
+            .map(|c| {
+                J::Obj(vec![
+                    ("mz", J::Num(c.0)),
+                    ("rel", J::Num(c.1)),
+                    ("kind", J::s(&c.2)),
+                    ("offset", J::on(c.3)),
+                    ("r", J::on(c.4)),
+                ])
+            })
             .collect();
         let imp = self
             .imposs
             .iter()
-            .map(|i| J::Obj(vec![("mz", J::Num(i.mz)), ("rel", J::Num(i.rel)), ("loss", J::Num(i.loss)), ("why", J::s(i.why))]))
+            .map(|i| {
+                J::Obj(vec![
+                    ("mz", J::Num(i.mz)),
+                    ("rel", J::Num(i.rel)),
+                    ("loss", J::Num(i.loss)),
+                    ("why", J::s(i.why)),
+                ])
+            })
             .collect();
         J::Obj(vec![
             ("purity", J::on(self.purity)),
@@ -334,7 +359,10 @@ impl PurityEvidence {
             ("imposs", J::Arr(imp)),
             ("badge", J::s(&self.badge)),
             ("badge_reasons", J::strs(&self.badge_reasons)),
-            ("low_information", self.low_information.map_or(J::Null, J::Bool)),
+            (
+                "low_information",
+                self.low_information.map_or(J::Null, J::Bool),
+            ),
         ])
     }
 }
@@ -350,8 +378,14 @@ impl Evidence {
             ("precursor_present", J::Bool(self.precursor_present)),
             ("precursor_rel", J::on(self.precursor_rel)),
             ("raw", self.raw.as_ref().map_or(J::Null, RawEvidence::json)),
-            ("references", J::Arr(self.references.iter().map(Reference::json).collect())),
-            ("purity", self.purity.as_ref().map_or(J::Null, PurityEvidence::json)),
+            (
+                "references",
+                J::Arr(self.references.iter().map(Reference::json).collect()),
+            ),
+            (
+                "purity",
+                self.purity.as_ref().map_or(J::Null, PurityEvidence::json),
+            ),
         ])
     }
 }
@@ -366,7 +400,10 @@ impl Proposal {
             ("proposed", J::s(&self.proposed)),
             ("reasons", J::strs(&self.reasons)),
             ("best", self.best.json()),
-            ("alternatives", J::Arr(self.alternatives.iter().map(Alternative::json).collect())),
+            (
+                "alternatives",
+                J::Arr(self.alternatives.iter().map(Alternative::json).collect()),
+            ),
             ("evidence", self.evidence.json()),
         ])
     }
