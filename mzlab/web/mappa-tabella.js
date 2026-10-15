@@ -2,12 +2,12 @@
 // The marked points of the RT x m/z map: the shapes drawn on the map, the Excel / copy export and the table under it (sort, groups, reference).
 // Classic script, loaded before mappa.js, which calls MAPFORME(ctx) and MAPTAB(ctx, forms) once inside its closure: ctx carries the helpers that live there.
 const MAPFORME = c => {
-  const { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, GRP0, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt } = c;
+  const { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, grpTol, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt } = c;
   /** @param {string} k @param {any} [o] */ const T = (k, o) => I18N.t(k, o);
   // the shape of a marker (circle, square, triangle, diamond, by turns) is decided when it is created and never changes when others are added or one is moved or removed:
   // a point within the RT window of an earlier one takes its shape, a new RT takes the shape after the one of the last point created. Old points without a shape get it in order.
   function shapeFor(list, rt) {
-    const w = PREF.grp ?? GRP0, near = list.find(q => q.shape && Math.abs(q.rt - rt) <= w);
+    const w = grpTol(), near = list.find(q => q.shape && Math.abs(q.rt - rt) <= w);
     if (near) return near.shape;
     const last = list.length ? list[list.length - 1].shape : null;
     return SHAPES[(SHAPES.indexOf(last) + 1) % SHAPES.length];
@@ -42,7 +42,7 @@ const MAPFORME = c => {
   const headRow = () => COLS.map(c => T(COLK[c][0]));
   function excel(p) {
     const a = p._a, f = a.f, meta = [[T("mappa.meta.fileA"), f.label], [T("mappa.meta.fileB"), a.ref ? a.ref.label : "–"], [T("mappa.meta.level"), f.lv === 2 ? "MS2" : "MS1"],
-      [T("mappa.meta.xic"), isHrF(f) ? `± ${ppmOf(f)} ppm` : "[n − 0,2; n + 0,8]"], [T("mappa.meta.rttol"), `± ${diffOpt().rttol} min`], [T("mappa.meta.grp"), `± ${PREF.grp ?? GRP0} min`],
+      [T("mappa.meta.xic"), isHrF(f) ? `± ${ppmOf(f)} ppm` : "[n − 0,2; n + 0,8]"], [T("mappa.meta.rttol"), `± ${diffOpt().rttol} min`], [T("mappa.meta.grp"), `± ${grpTol()} min`],
       [T("mappa.meta.snap"), "± 0.2 min · ± 1 bin"], [T("mappa.meta.date"), new Date().toLocaleString(LOCALE)]];
     dlx(`${f.label}${a.ref ? "-" + a.ref.label : ""}_punti.xlsx`, [{ name: T("mappa.tab.sheet"), head: headRow(), rows: sheetRows(p), widths: [5, 9, 11, 12, 12, 12, 9, 8, 7, 10, 30] },
       { name: T("mappa.meta.sheet"), head: [T("mappa.meta.what"), T("mappa.meta.value")], rows: meta, widths: [30, 40] }], { p, table: "map-points" });
@@ -54,7 +54,7 @@ const MAPFORME = c => {
   return { grpShape, shapeNew, drawPoints, shapePath, COLS, COLK, excel, copyRows };
 };
 const MAPTAB = (c, f) => {
-  const { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, GRP0, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt } = c;
+  const { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, grpTol, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt } = c;
   /** @param {string} k @param {any} [o] */ const T = (k, o) => I18N.t(k, o);
   const { COLS, COLK, excel, copyRows, grpShape } = f;
   const openDm = (dm, hr, pol) => dmOpen(dm, hr, pol);      // the same recognition and destination as the ruler of the spectrum (spettro.js)
@@ -71,8 +71,13 @@ const MAPTAB = (c, f) => {
     if (!box) { box = s.tab = document.createElement("div"); box.className = "mztab"; s.grid.after(box); }
     const f = a.f, ref = a.ref, mzq = list.map(q => `${(+q.rt).toFixed(4)},${(+q.mz).toFixed(5)}`).join(";");
     let rows = [];
-    try { rows = (await J(`api/mappunti?k=${f.k}&level=${f.lv || 1}${ref ? "&ref=" + ref.k : ""}&ppm=${ppmOf(f)}&grp=${PREF.grp ?? GRP0}&pts=${mzq}`)).rows; } catch (e) { rows = list.map(q => ({ rt: q.rt, mz: q.mz })); }
+    try { rows = (await J(`api/mappunti?k=${f.k}&level=${f.lv || 1}${ref ? "&ref=" + ref.k : ""}&ppm=${ppmOf(f)}&grp=${grpTol()}&pts=${mzq}`)).rows; } catch (e) { rows = list.map(q => ({ rt: q.rt, mz: q.mz })); }
     rows = rows.map((r, i) => ({ ...r, n: i + 1, note: list[i] ? list[i].note || "" : "" }));
+    if (PREF.align && !s.aligning) {                              // «align»: every point of a group takes the RT of its first marked point, so they stand on one vertical line (measures are asked again there)
+      const first = new Map(); let moved = false;
+      rows.forEach((r, i) => { if (r.g && list[i]) { if (!first.has(r.g)) first.set(r.g, list[i].rt); else if (list[i].rt !== first.get(r.g)) { list[i].rt = first.get(r.g); moved = true; } } });
+      if (moved) { ptsSave(p); s.aligning = true; try { return await tableNow(p); } finally { s.aligning = false; } }
+    }
     const ri = list.findIndex(q => q.ref);                      // the point the student chose as the reference of Δm (none: the most intense of each group)
     if (ri >= 0 && rows[ri] && rows[ri].mz != null) rows.forEach(r => { r.dm = r.mz == null ? null : r.mz - rows[ri].mz; r.isref = r.n - 1 === ri; });
     s.rows = rows; overlay(p);                                          // the shape of a point is its own (shapeNew)
@@ -84,13 +89,14 @@ const MAPTAB = (c, f) => {
       `<td>${r.g ? `<span aria-hidden="true">${GLYPH[SHAPES.indexOf(grpShape(p, r.n - 1))]}</span> ` : ""}${r.n}</td><td>${num(r.rt, 2)}</td><td>${num(r.mz, hr ? 4 : 1)}</td><td>${r.ia == null ? "–" : fmt(r.ia)}</td><td>${r.ib == null ? "–" : fmt(r.ib)}</td><td>${r.d == null ? "–" : fmt(r.d)}</td>` +
       `<td>${num(r.ratio, 2)}</td><td>${num(r.sn, 1)}</td><td>${r.g ?? "–"}</td><td>${r.dm == null ? "–" : r.dm === 0 ? "0" : `<a href="#" data-dm="${r.dm}">${(r.dm > 0 ? "+" : "") + r.dm.toFixed(hr ? 4 : 1)}</a>`}</td>` +
       `<td><input data-note="${r.n - 1}" value="${EH(r.note || "")}" placeholder="${T("mappa.tab.note")}"></td><td><button data-ref="${r.n - 1}" aria-pressed="${r.isref ? "true" : "false"}" title="${T("mappa.tab.ref.pick", { n: r.n })}" aria-label="${T("mappa.tab.ref.pick", { n: r.n })}">${r.isref ? "●" : "○"}</button></td><td><button data-xic="${r.n - 1}" title="${T("mappa.tab.xic.title")}">XIC</button></td></tr>`;
-    const html = `<div class="mzt-bar"><b>${T("mappa.tab.title", { n: rows.length })}</b><label class="muted" title="${T("mappa.tab.grp.title")}">${T("mappa.tab.grp")} ± <input data-t="grp" class="mzf" inputmode="decimal" value="${PREF.grp ?? GRP0}"> min</label>` +
+    const html = `<div class="mzt-bar"><b>${T("mappa.tab.title", { n: rows.length })}</b><label class="muted" title="${T("mappa.tab.grp.title")}">${T("mappa.tab.grp")} ± <input data-t="grp" class="mzf" inputmode="decimal" value="${grpTol()}"> min</label><label class="muted" title="${T("mappa.tab.align.title")}"><input type="checkbox" data-t="align"${PREF.align ? " checked" : ""}> ${T("mappa.tab.align")}</label>` +
       `<span class="sp"></span><button data-t="xl" title="${T("mappa.tab.xl.title")}">Excel</button><button data-t="cp" title="${T("mappa.tab.cp.title")}">${T("mappa.tab.cp")}</button><button data-t="clear">${T("mappa.tab.clear")}</button></div>` +
       `<div class="mzt-sc"><table><thead><tr>${head}</tr></thead><tbody>${groupedRows(s, view, rowHtml, !s.sort, r => grpShape(p, r.n - 1))}</tbody></table></div>`;
     box.innerHTML = h`${raw(html)}`;
     box.querySelectorAll("[data-gtog]").forEach(b => b.onclick = () => { const g = +b.dataset.gtog; if (s.gcol.has(g)) s.gcol.delete(g); else s.gcol.add(g); tableNow(p); });
     box.querySelectorAll("th[data-c]").forEach(th => th.onclick = () => { const c = th.dataset.c; s.sort = { c, d: so.c === c ? -so.d : 1 }; tableNow(p); });
     box.querySelector('[data-t="grp"]').onchange = ev => { const v = numIt(ev.target.value); if (v > 0) { PREF.grp = v; prefSave(); } tableNow(p); };
+    box.querySelector('[data-t="align"]').onchange = ev => { PREF.align = ev.target.checked; prefSave(); tableNow(p); };
     box.querySelector('[data-t="xl"]').onclick = () => excel(p);
     box.querySelector('[data-t="cp"]').onclick = () => copyRows(p);
     box.querySelector('[data-t="clear"]').onclick = async () => { if (await yesno(T("mappa.tab.clear.ask"))) { pts(p).splice(0); ptsSave(p); overlay(p); tableNow(p); } };

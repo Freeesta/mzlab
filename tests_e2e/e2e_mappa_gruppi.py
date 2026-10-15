@@ -57,6 +57,16 @@ try:
             last = pg.evaluate(f"MAPPA.pts({M}).slice(-1)[0]"); assert last["rt"] == 14.33 and abs(last["mz"] - (PARENT + 0.004)) < 1e-9, last     # off: where it was put
             pg.click(".pnl.map [data-mz=snap]")
         step("snap: on, the point slides onto the apex of api/mapsnap; off, it stays", snap)
+        def align():
+            pg.click(".pnl.map [data-mz=snap]")                                               # snap off: the points stay where they are put
+            n0 = len(pg.evaluate(f"MAPPA.pts({M})")); pg.evaluate("MAPPA.prefs.grp = 0.1")
+            add(20.0, 400.0); add(20.07, 410.0); add(20.1, 420.0); settle(n0 + 3)
+            g = rows()[-3:]; assert g[0] == g[1] == g[2], g                                   # a wider window groups apexes a few scans apart
+            assert pg.is_visible(".pnl.map .mztab [data-t=align]")
+            pg.check(".pnl.map .mztab [data-t=align]"); attendi(pg, f"MAPPA.pts({M}).slice(-3).every(q => q.rt === 20)"); settle(n0 + 3)
+            rts = pg.evaluate(f"MAPPA.pts({M}).slice(-3).map(q => q.rt)"); assert rts == [20.0, 20.0, 20.0], rts   # all on the RT of the first one
+            pg.uncheck(".pnl.map .mztab [data-t=align]"); pg.click(".pnl.map [data-mz=snap]")
+        step("align: points of a group go to the RT of the first one", align)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

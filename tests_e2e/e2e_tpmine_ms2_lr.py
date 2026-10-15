@@ -1,5 +1,5 @@
 """Tabui, low resolution: the card «MS2 matches» (TP_Mine/js/22_tpmine_ms2.js). A synthetic Full Scan series (TP_Mine/tests/lr_synth.py) and one MS2 file with four
-experiments (write_ms2): two on the first isomer of the +O product and the second isomer (two CE), one at a time with no signal. Opened in the Data tab, dug from
+experiments (write_ms2): two on the first isomer of the +O product and the second isomer (two CE), one at a time with no signal, one on the parent. Opened in the Data tab, dug from
 Tabui: every experiment is in the card with its state or its reason; a menu moves an MS2 to another row (no new Dig), the detail of that row shows its spectra, the
 correction survives a reload and a new Dig, «none» and «Reset matches» work, the Excel export has the sheet «MS2 matches», the card works from the keyboard and has no axe
 violation, no pyodide* request, `MZLAB_LR_MISS` empty. Builds the site and static/wasm-feat (SKIP without cargo, wasm-bindgen or numpy); MZLAB_PIPE_SITE=<built site with
@@ -40,7 +40,8 @@ series = lr_synth.write_series(ser, times=(0, 15, 30, 60), blank=False)
 EXPS = [{"precursor": 257.06, "ce": 10.0, "peaks": [(7.4, 0.07, 6e5)]},                     # the first +O isomer (RT 7.4)
         {"precursor": 257.06, "ce": 25.0, "peaks": [(8.3, 0.07, 6e5)]},                     # the second one, two collision energies
         {"precursor": 257.06, "ce": 40.0, "peaks": [(8.3, 0.07, 6e5)], "fragments": [(-17.0, 0.3), (-44.0, 1.0), (-60.0, 0.4)]},
-        {"precursor": 333.20, "ce": 15.0, "peaks": []}]                                     # a row at 6.8 min, a flat trace: no signal
+        {"precursor": 333.20, "ce": 15.0, "peaks": []},                                     # a row at 6.8 min, a flat trace: no signal
+        {"precursor": 241.06, "ce": 10.0, "peaks": [(9.0, 0.07, 6e5)]}]                     # the parent (RT 9.0): the products are compared with its MS2
 ms2 = lr_synth.write_ms2(ser, EXPS, 30.0, name="lr_MS2-t30.mzML")
 paths = [str(f["path"]) for f in series] + [str(ser / ms2["name"])]
 SMILES = "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O"
@@ -95,6 +96,14 @@ try:
             ms2 = pg.evaluate("[...document.querySelectorAll('#tp-t tr.clk')].map(r => [r.dataset.id, r.lastElementChild.textContent.trim()])")
             assert ["7", "1 MS2 experiment"] in ms2 and ["10007", "2 MS2 experiments"] in ms2, ms2           # the column «MS2» of the table of rows, readable as text
         step("every experiment is in the card with its state or its reason; the table of rows has the column «MS2»", card)
+
+        def similarity():
+            pg.click('#tp-t tr.clk[data-id="7"]'); pg.wait_for_selector("#tp-det .sim3", timeout=60000)
+            assert pg.evaluate("document.querySelectorAll('#tp-det .sim3 .bar3').length") == 6        # three components, cosine and entropy
+            assert "modified cosine" in pg.inner_text("#tp-det .words"), pg.inner_text("#tp-det .words")
+            pg.click('#tp-t tr.clk[data-id="0"]'); pg.wait_for_selector("#tp-det .words", timeout=60000)
+            assert pg.locator("#tp-det .sim3").count() == 0, "the parent is not compared with itself"
+        step("the detail of a row with MS2 shows the similarity to the parent's MS2 (the parent has none)", similarity)
 
         def shots(tag):
             out = os.environ.get("MZLAB_PIPE_SHOTS")
@@ -167,6 +176,7 @@ try:
                 pg.click("#tp-x-xlsx")
             z = zipfile.ZipFile(d.value.path()); wb = z.read("xl/workbook.xml").decode()
             assert 'name="MS2 matches"' in wb and wb.index('name="MS2"') < wb.index('name="MS2 matches"'), wb[:600]
+            assert any(b"Similarity to the parent" in z.read(n) for n in z.namelist() if n.endswith(".xml")), "the sheet MS2 lacks the column of the similarity"
         step("the Excel export has the sheet «MS2 matches» beside «MS2»", xlsx)
 
         AXE = os.environ.get("AXE_JS") or lib.axe_path()

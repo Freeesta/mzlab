@@ -463,10 +463,14 @@ const BARRA = (() => {
   }
 
   // the commands of the Teoria as the bar and the palette use them: {id, teo, etichetta, ic, run, items}
+  // administrator mode: the chapter editor of the Teoria (embedded, the frame has no button of its own: the bar here gives it)
+  const theoryEditor = () => { try { const w = Q1("#tframe").contentWindow; return w.QADMIN && w.QADMIN.on() && w.TEORIA_EDITOR ? w.TEORIA_EDITOR : null; } catch (_) { return null; } };
+  const EDIT_IC = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 3.5l3 3L6.5 16.5l-4 1 1-4L13.5 3.5z"/><path d="M11.5 5.5l3 3"/></svg>';
   function theoryCmds() {
     const T = tcmd(); if (!T) return [];
-    return T.lista.map(c => ({ id: c.id, teo: true, end: c.gruppo === "fine", group: "tools", etichetta: c.etichetta, titolo: c.titolo || c.etichetta, chiave: c.chiave, off: !!c.disabilitato,
-      ic: () => T.icona(c.icona), run: () => c.run(), items: c.figli && c.figli.map(f => ({ id: f.id, teo: true, group: "tools", etichetta: f.etichetta, ic: () => T.icona(c.icona), run: () => f.run() })) }));
+    const ed = theoryEditor();
+    return /** @type {any[]} */ (ed ? [{ id: "editor", teo: true, end: false, group: "tools", etichetta: I18N.t("theory.editor"), titolo: I18N.t("theory.editor.title"), chiave: "Alt+E", off: false, ic: () => EDIT_IC, run: () => ed.toggle() }] : []).concat(T.lista.map(c => ({ id: c.id, teo: true, end: c.gruppo === "fine", group: "tools", etichetta: c.etichetta, titolo: c.titolo || c.etichetta, chiave: c.chiave, off: !!c.disabilitato,
+      ic: () => T.icona(c.icona), run: () => c.run(), items: c.figli && c.figli.map(f => ({ id: f.id, teo: true, group: "tools", etichetta: f.etichetta, ic: () => T.icona(c.icona), run: () => f.run() })) })));
   }
   const theoryAll = () => theoryCmds().flatMap(c => (c.items ? c.items : [c]));       // the palette finds the tools one by one
   function buildTheoryBar(bar) {

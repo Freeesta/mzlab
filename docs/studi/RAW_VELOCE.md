@@ -21,6 +21,7 @@ Scopo: un `.raw` Thermo, anche un DDA da 600 MB, si apre, si indicizza, si navig
 | LAB-A 87 MB, 7952 scansioni, 4,19 M picchi | 0,51 | 0,13 | 0,23 | 1,12 | 1,03 | 3,95 (56,7 MB) | – |
 | PXD077492 32 MB | 0,21 | 0,14 | 0,05 | 0,60 | 0,34 | 1,03 | – |
 
+- **DDA da 1,5 GB** (Exploris, Mac Apple Silicon nativo, 43 100 scansioni, 24,3 M picchi; misura del laboratorio): SHA-256 2,5 s; apertura 0,38 s; decodifica di tutto 1,85 s (49 M letture); tabella 3,3 s; `.mzidx` 7,2 s con 3 passate e 147 M letture (il triplo del necessario); tabella + `.mzidx` in una chiamata 8,0 s; mzML 13,9 s. Sul file da 185 MB (18 038 scansioni) `.mzidx` 0,50 s a una passata, tabella + `.mzidx` 0,86 s. I picchi di quel file (24 B ciascuno nei giri) non entrano nei 192 MB del browser: lo spillover (`docs/agenti/mzidx.md`) li tiene nello scratch e decodifica una volta sola; l'impronta nel sito si calcola durante la copia, sul desktop in un secondo filo.
 - Letture: su LAB-A la decodifica di tutte le scansioni chiede 8,46 M letture (`read_at`) per 270 blocchi da 256 KB: ~1060 per scansione, due per picco, perché `BinaryReader` legge campo per campo (`read_f32`/`read_f64` → `read_exact`). Nel modulo la cache è in Rust (`LETTURA`, `crates/mzlab-lettori-wasm/src/lib.rs:32`): le chiamate a JS sono 270, ma ogni lettura paga la copia e i controlli.
 - La decodifica pura è una piccola parte: la tabella costa 9× la decodifica (BAF 8,33 contro 0,88 s), il `.mzidx` 8×.
 - Con `opt-level = 3`: BAF tabella 5,30, `.mzidx` 3,59, mzML 12,15, SHA-256 3,73; LAB-A tabella 0,82, `.mzidx` 0,81, mzML 3,14. Il codice di mzLab perde 30-50 % con `z`; lo SHA-256 no.
@@ -58,7 +59,7 @@ Il file è letto per intero 3-4 volte prima che l'utente veda la mappa: copia in
 | memoria del modulo dopo `apri` | 240 MB | 33,5 MB |
 | memoria del modulo dopo `apri` + `indice` | OOM (> 256 MB) | 48,0 MB (45,7 MiB) |
 
-Quello che resta è `Vec<VoceScansione>` più il testo JSON: toglierli richiede il formato binario dell'indice (RV-05).
+Quello che resta è `Vec<VoceScansione>` più il testo JSON.
 
 ### 2.4 Correttezza: centroidi del file segnati come profilo
 
@@ -134,6 +135,7 @@ Misurato su 30 `.raw` aperti di `dati_formati/` (sonda temporanea su `RawFileRea
 | Letture intere del file prima della mappa | 3 (copia, SHA-256, SHA-1) | 1 (la copia; gli hash nella stessa passata) |
 | Tabella (righe) | 9× la decodifica | ≤ 1,5× la decodifica |
 | `.mzidx` del BAF, budget 192 MB | 7,07 s, 2 passate | ≤ 3 s (RV-04: una decodifica, righe dirette; misura in locale con `raw_tempi`) |
+| `.mzidx` di un DDA da 1,5 GB (24,3 M picchi), budget 192 MB | 7,2 s, 3 passate (147 M letture); tabella + `.mzidx` 8,0 s | una decodifica (49 M letture) con lo scratch su disco/OPFS (`mzidx_spill`); `.mzidx` ≲ 3 s, tabella + `.mzidx` ≲ 4 s (misura in locale con `raw_tempi`, fasi «table + .mzidx + scratch» e «open + fingerprint \|\| index») |
 | mzML del BAF (nativo) | 13,99 s | ≤ 6 s con zlib veloce; ≤ 4 s con numpress (opzione) |
 | Centroidi del file segnati come profilo | −82 % dei picchi | 0 scansioni ricentroidate per errore |
 | Modulo per scansione (WASM) | 99 µs | ≤ 40 µs |
@@ -151,17 +153,16 @@ Equivalenza: il `.mzidx` e l'mzML restano byte per byte quelli di oggi dove il p
 |---|---|---|---|---|
 | RV-01 | Memoria e apertura di opentfraw: trailer compatti/pigri, indice senza `serde_json::Value`; banco `tools/bench_raw.py` | no (cambia `thermo`) | ondata 1 | – |
 | RV-02 | Centroidi del file segnati come profilo; vecchio `.cen` invalidato | no (cambia `thermo`) | ondata 1 | – |
-| RV-03 | Una sola passata per gli hash, fuori dal percorso critico; tabella senza SHA-1 | sì, catena 1/5 | ondata 1 | – |
-| RV-04 | Tabella e `.mzidx` con una decodifica sola, senza il giro testo mzML | sì, catena 2/5 | ondata 2 | RV-03 |
-| RV-05 | Decodifica a blocchi e indice binario a colonne tra modulo e motore | sì, catena 3/5 | ondata 3 | RV-04, RV-01 |
-| RV-06 | mzML veloce: zlib rapido, numpress opzionale, scrittura a flusso | sì, catena 4/5 | ondata 4 | RV-05, RV-02 |
+| RV-03 | Una sola passata per gli hash, fuori dal percorso critico; tabella senza SHA-1 | sì, catena 1/4 | ondata 1 | – |
+| RV-04 | Tabella e `.mzidx` con una decodifica sola, senza il giro testo mzML | sì, catena 2/4 | ondata 2 | RV-03 |
+| RV-06 | mzML veloce: zlib rapido, numpress opzionale, scrittura a flusso | sì, catena 3/4 | ondata 3 | RV-04, RV-02 |
 | RV-07 | Desktop: profilo `opt-level = 3` per il binario nativo | no | ondata 1 | – |
 | RV-08 | `.raw` che non si aprono; ASInfo e preambolo degli eventi | no (cambia `thermo`) | ondata 2 | RV-01 |
 | RV-09 | Lacune di `metodo/1` (OLE, inclusione con tasti «XIC»/«MS2», NCE, isolamento, globali, LC, LTQ, solventi) | no (cambia `thermo`) | ondata 1 | – |
 | RV-10 | Status log e trailer come serie nel tempo, error log, autocampionatore, Tune | no (cambia `thermo`) | ondata 1 | – |
-| RV-11 | Tabui: `.raw`/`.wiff`/`.D` scelti direttamente, indice durante il caricamento, riuso da Dati | punti 1-3, 5, 6 no; punto 4 sì, catena 5/5 | ondata 2 (punto 4: ondata 5) | RV-02, RV-03 (punto 4: RV-06) |
+| RV-11 | Tabui: `.raw`/`.wiff`/`.D` scelti direttamente, indice durante il caricamento, riuso da Dati | punti 1-3, 5, 6 no; punto 4 sì, catena 4/4 | ondata 2 (punto 4: ondata 5) | RV-02, RV-03 (punto 4: RV-06) |
 
-Ondata 1 (sei chat insieme): RV-01, RV-02, RV-03, RV-07, RV-09, RV-10. Ondata 2: RV-04, RV-08, RV-11 (punti 1-3, 5, 6). Poi la catena del motore in serie, RV-05 → RV-06 → RV-11 punto 4: ogni pacchetto che cambia `mzlab_wasm.wasm` parte dopo il merge del precedente e riporta il peso prima → dopo.
+Ondata 1 (sei chat insieme): RV-01, RV-02, RV-03, RV-07, RV-09, RV-10. Ondata 2: RV-04, RV-08, RV-11 (punti 1-3, 5, 6). Poi la catena del motore in serie, RV-06 → RV-11 punto 4: ogni pacchetto che cambia `mzlab_wasm.wasm` parte dopo il merge del precedente e riporta il peso prima → dopo.
 File condivisi tra chat parallele (funzioni diverse, `git merge origin/main` prima di unire): `rawlettore.rs` (RV-01 chiamate, RV-03 `testata_mzml`, RV-10 cromatogrammi), `sessione.rs` (RV-01, RV-03), `metodo_raw.rs` e `metodo-doc.js` (RV-09; RV-10 una riga), `lang/{it,en}.js` (RV-09, RV-10: chiavi nuove in un blocco proprio), `grezzi-non-estratti.md` (RV-08, RV-09, RV-10). Nessun'altra sovrapposizione: le chat restano al massimo sei alla volta, sotto il tetto di 15.
-La navigazione segue `mappa-fluida.md` (P2-P6) dopo RV-05.
+La navigazione segue `mappa-fluida.md` (P2-P6).
 Scelte di prodotto (Coordinatore): la lista di inclusione va in `metodo/1` e si mostra in sola lettura nella finestra Metodo del file in Dati (m/z, RT/finestra, polarità, CE, nome), esportabile con il metodo, mai trasformata in «TP attesi» in Tabui (RV-09); «Scarica .mzML» ha una casella numpress spenta di default, con una riga che dice che è con perdita, e zlib a livello rapido (RV-06).
