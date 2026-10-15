@@ -25,7 +25,7 @@ Registro dei lettori nativi: `LETTORI` in `crates/mzlab-core/src/lettori.rs:218`
 | **SCIEX `.dam`** (metodo, non dati) | letto | `metodo_wiff*`, `dam_parity.rs` | metodo di acquisizione | `dam_parity.rs`; `mzlab-dati/dam/` |
 | **Agilent MassHunter `.D`** | letto (solo GC/MS 5977 SQ) | Rust `crates/mzlab-core/src/agilent/` (`agilent-d`) | `MSScan.bin` + `MSPeak.bin` (centroidi f64, formato 1), scansione e SIM, SIC per ione SIM, TIC/BPC, metodo GC, file laterali; `data.ms` ChemStation (`datams.rs`) come riserva | `agilent_*.rs`, `robustezza_agilent.rs`, `tests_e2e/e2e_agilent.py`, `e2e_lettori.py`; 3 corse vere 5977. Altre varianti → `err.file.agilent` (`agilent.md`, «Non verificato») |
 | **Agilent ChemStation `.D`** (`DATA.MS` GC/MS) | parziale | `agilent/datams.rs` | solo la variante `01 32` delle tre corse 5977; m/z in ventesimi | stessi test Agilent |
-| **mzXML** | assente | — | solo nell'elenco delle estensioni di progetto (`crates/mzlab-core/src/project.rs:17`) e nei nomi base (`tabella.js:13`, `campioni.js:50`); nessun parser | — |
+| **mzXML** | P (file veri aperti; nessun mzML di riferimento) | Rust `crates/mzlab-lettori/src/aperti/mzxml*.rs` (`mzxml`, modulo `aperti`) | ISB 2.x e 3.x: indice da `<index>` o da una passata, scansioni annidate e piatte, picchi 32/64 bit con zlib o senza, livello, polarità, RT, precursore, `filterLine`, SIM e SRM/MRM (cromatogrammi SRM), TIC/BPC calcolati, `metodo/1` dalla testata | `aperti_mzxml*.rs` (file costruiti nel test, casi ostili), `e2e_lettori_modulo.py`; la parità con l'mzML di msconvert salta senza `MZLAB_DATI` (`lettori-aperti.md`: «Non verificato (nessun file vero)») |
 | **mzData** | assente | — | — | — |
 | **netCDF / ANDI-MS (`.cdf`)** | assente | — | solo estensione in `project.rs:17` | — |
 | **MGF / MSP / JSON / `.mzlib`** | letto **come libreria**, non come corsa | Rust `crates/mzlab-lib/src/parse.rs` (`detect`, `parse_all`) + `libreria-worker.js` (`formatOf`) | spettri di riferimento (precursore, polarità, metadati); `.lib`/`.mzvault`/`sqlite`/NIST → `lib.err.unsupported` (`libreria-worker.js:93`) | `crates/mzlab-lib/tests/parse.rs`; nessun MGF trattato come file di dati della vista Dati |
@@ -38,7 +38,7 @@ Desktop (`crates/mzlab-desktop`): stessi lettori nativi, compilati senza tetto d
 
 ## 2. Matrice formati × esperimenti
 
-Legenda: **L** letto e provato · **P** parziale (si legge, ma manca un pezzo detto nella cella) · **A** assente · **NV** il codice c'è ma nessun file vero l'ha provato · — non esiste nel formato. Le colonne dei formati assenti (Waters, Bruker, Shimadzu, mzXML, CDF) sono tutte **A** e non sono ripetute.
+Legenda: **L** letto e provato · **P** parziale (si legge, ma manca un pezzo detto nella cella) · **A** assente · **NV** il codice c'è ma nessun file vero l'ha provato · — non esiste nel formato. Le colonne dei formati assenti (Waters, Bruker, Shimadzu, CDF) sono tutte **A** e non sono ripetute.
 
 | Esperimento | mzML | Thermo `.raw` | SCIEX `.wiff` (3200) | Agilent `.D` |
 |---|---|---|---|---|

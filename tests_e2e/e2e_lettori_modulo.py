@@ -2,7 +2,7 @@
 (tools/agilent_sintetico.py, no laboratory data) goes to the module, which writes its mzML in OPFS; the file enters the list as any mzML, gives the same TIC as the engine's own path, «Download .mzML» gives it
 byte for byte as the engine writes it and without converting again, and nothing misses the engine (MZLAB_LR_MISS empty). Needs the site and both .wasm: python tools/build_site.py, tools/build_lettori_wasm.sh
 (MZLAB_PIPE_SITE=<built site> reuses a site). Also the «aperti» module: an mzML with MS-Numpress arrays (built here: linear m/z, slof intensity) goes to it without ?lettori=modulo and gives the TIC and a spectrum
-of its zlib twin within the codec's precision. Run from the repo root: python3 tests_e2e/e2e_lettori_modulo.py"""
+of its zlib twin within the codec's precision, and an mzXML (built here: 64-bit zlib peaks, with its index) that opens in the Dati view with its TIC and a spectrum. Run from the repo root: python3 tests_e2e/e2e_lettori_modulo.py"""
 import base64, math, os, shutil, socket, struct, subprocess, sys, tempfile, threading, zlib
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -52,6 +52,21 @@ def mzml_file(path, numpress, n=40):
     out.append('</spectrumList></run></mzML>')
     Path(path).write_text("".join(out), encoding="utf-8")
 
+def mzxml_file(path, n=40):
+    """n MS1 scans, 64-bit big-endian peaks in zlib, with the <index> at the end; returns (rt in minutes, TIC) of each"""
+    body = ['<?xml version="1.0" encoding="ISO-8859-1"?>\n<mzXML xmlns="http://sashimi.sourceforge.net/schema_revision/mzXML_3.2"><msRun scanCount="%d" startTime="PT0S" endTime="PT%dS">\n' % (n, 3 * n),
+            '<parentFile fileName="campione.raw" fileType="RAWData" fileSha1="0123456789abcdef0123456789abcdef01234567"/><msInstrument msInstrumentID="1"><msManufacturer category="msManufacturer" value="Test"/><msModel category="msModel" value="Modello X"/></msInstrument>\n']
+    pos = []; tics = []; text = body[0] + body[1]
+    for k in range(n):
+        mz = [100 + 0.37 * i + 0.001 * (i % 7) for i in range(30)]; it = [1000 * (1 + math.sin(i + k)) ** 2 + 50 for i in range(30)]
+        raw = b"".join(struct.pack(">dd", a, b) for a, b in zip(mz, it)); z = zlib.compress(raw); tics.append(sum(it))
+        pos.append(len(text.encode("latin-1")))
+        text += ('<scan num="%d" msLevel="1" peaksCount="30" polarity="+" scanType="Full" centroided="0" retentionTime="PT%.1fS" totIonCurrent="%r">' % (k + 1, 3.0 * k, sum(it))
+                 + '<peaks precision="64" byteOrder="network" contentType="m/z-int" compressionType="zlib" compressedLen="%d">%s</peaks></scan>\n' % (len(z), b64(z)))
+    text += "</msRun>\n"; ix = len(text.encode("latin-1"))
+    text += '<index name="scan">' + "".join('<offset id="%d">%d</offset>' % (i + 1, o) for i, o in enumerate(pos)) + '</index>\n<indexOffset>%d</indexOffset>\n</mzXML>\n' % ix
+    Path(path).write_bytes(text.encode("latin-1")); return tics
+
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -71,6 +86,7 @@ folder = agilent_sintetico.write(tmp / "serie", "uno.D", N)
 top = folder.parent
 for nm, flag in (("npa", True), ("npb", False)):   # two folders of one mzML each: numpress and its zlib twin
     (tmp / nm).mkdir(); mzml_file(tmp / nm / "np.mzML", flag)
+(tmp / "xml").mkdir(); XTIC = mzxml_file(tmp / "xml" / "x.mzXML")
 
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -159,6 +175,12 @@ try:
             for k in ka:   # the spectrum: m/z to 1e-7, intensity to the precision of slof (1e-3 relative)
                 assert len(a["sp"][k]) == len(c["sp"][k]) and all(abs(x - y) <= 1e-3 * max(abs(y), 1) for x, y in zip(a["sp"][k], c["sp"][k])), k
         step("its TIC equals the twin's within the codec precision and nothing misses the engine", numpress_same)
+        def mzxml_opens():
+            r = one("xml"); assert r["files"] == ["x.mzML"], r["files"]
+            y = r["tic"].get("y"); assert y and len(y) == 40 and all(abs(a - b) <= 1e-4 * b for a, b in zip(y, XTIC)), (y and y[:3], XTIC[:3])
+            assert r["miss"] == 0, r["miss"]
+            ks = [k for k in r["sp"] if isinstance(r["sp"][k], list) and len(r["sp"][k]) > 5]; assert ks and all(len(r["sp"][k]) == 30 for k in ks), list(r["sp"])
+        step("an mzXML opens in the Dati view (through the «aperti» module) with its TIC and a spectrum", mzxml_opens)
         def aperti_module():
             fams = {u.split("wasm-lettori/")[1].split("/")[0] for u in asked}
             assert "aperti" in fams, asked

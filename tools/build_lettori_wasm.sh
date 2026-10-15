@@ -26,7 +26,7 @@ echo "$tetti" | while read -r fam limit; do
   cp target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm "$tmp/"      # cargo writes the same file for every family: copy it at once
   wasm-bindgen --target web --no-typescript --out-dir "$out/$fam" "$tmp/mzlab_lettori_wasm.wasm" </dev/null
   rm -r "$tmp"
-  tools/wasm_opt.sh "$out/$fam/mzlab_lettori_wasm_bg.wasm" "$limit" "lettori $fam" </dev/null
+  tools/wasm_opt.sh "$out/$fam/mzlab_lettori_wasm_bg.wasm" "$limit" "lettori $fam" --converge --low-memory-unused --strip-producers --vacuum --dae --merge-blocks --reorder-functions --duplicate-function-elimination --const-hoisting --simplify-globals-optimizing </dev/null
 done
 python3 - "$out" <<'P'
 import hashlib, json, os, sys
