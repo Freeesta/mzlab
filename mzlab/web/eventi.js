@@ -283,7 +283,7 @@ function specPick(p, px, py) {
 // spectrum of the scan nearest in time to this spectrum
 const ms2OfPeak = (p, m) => p.level === 1 && !(p._a && p._a.hrp) && typeof ms2Exps === "function" ? ms2Exps().find(e => e.prec != null && Math.abs(e.prec - m) <= 0.6) : null;
 async function extractMs2(p, e) {
-  if (E.tab !== "ms2") setTab("ms2", true);
+  setTab("ms2");
   await ms2Goto(e.prec);
   const c = ms2PairOf(e.prec); if (!c) return;
   let sp = E.panels.find(q => q.type === "spec" && q.link === c.id && q.el); if (!sp) { sp = newSpec(c, null, null, e.k ?? tabFiles("ms2")[0].k); sp.level = 2; }      // the chromatogram alone (no spectrum yet): the spectrum is created
