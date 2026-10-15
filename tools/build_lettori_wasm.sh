@@ -5,6 +5,7 @@
 set -eu
 # family limit (bytes after wasm-opt -Oz; tests/test_lettori_wasm.py checks the table: no value goes up)
 tetti="aperti 393216
+andi 262144
 thermo 458752
 agilent 393216
 sciex 327680
@@ -12,7 +13,7 @@ waters 327680
 shimadzu 327680
 bruker 524288"
 # the families that have readers (a family without readers is skipped and is born with its own package)
-con_lettori="agilent sciex thermo aperti"
+con_lettori="agilent sciex thermo aperti andi"
 out=${1:-site/static}/wasm-lettori
 mkdir -p "$out"
 built=""
