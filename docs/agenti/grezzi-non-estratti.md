@@ -24,6 +24,10 @@ Regola: nessuna perdita di informazione dei file grezzi (`.wiff`, `.raw`, `.dam`
 ## Agilent `.D`
 - Tipo di campione (`sequence.xml`), metodo GC completo (`acqmeth.txt`, `7890Method.bin`), valori effettivi (`GC.ini`), metodo di quantificazione, audit trail.
 
+## Bruker timsTOF `.d` (modulo «bruker»)
+- Mobilità inversa 1/K0 di ogni punto (indice di scansione TIMS, `TimsCalibration` `ModelType` 2, formula non nota): non calcolata; si conserva l'intervallo di scansioni per spettro e la tabella di calibrazione come nome/valore.
+- TSF/MALDI: posizioni dei punti dell'immagine, regioni e altre tabelle oltre a `Frames`/`GlobalMetadata`; profili con campioni a zero. File accanto: `chromatography-data.sqlite`, `.mcf`, `.baf`.
+
 ## mzML con numpress (modulo «aperti»)
 - Nello spettro riscritto, i cvParam che lo scrittore mzML non conosce passano come userParam «ACC nome» (non come cvParam); `dataProcessing`, `referenceableParamGroup` e `scanSettings` del file originale non sono portati.
 
