@@ -160,18 +160,16 @@ try:
 
         def preferenza():
             pg.set_viewport_size({"width": 1500, "height": 1000}); pg.wait_for_timeout(400)
-            assert pg.evaluate("BARRA.labels") == "auto" and pg.evaluate(FIT)["lvl"] == "all"
-            pg.click("#np-set"); pg.wait_for_selector("#uip-etich"); pg.select_option("#uip-etich", "hidden"); pg.wait_for_timeout(300)
-            f = pg.evaluate(FIT); assert f["lvl"] == "none" and not f["dropped"] and pg.evaluate("localStorage.getItem('qqq.barra.etichette')") == "hidden", f
-            assert pg.evaluate("[...document.querySelectorAll('#stbar .tb')].filter(b=>!b.hidden&&b.offsetParent).every(b=>b.getAttribute('aria-label')&&b.getBoundingClientRect().width<60)"), "icons only, names kept"
-            pg.select_option("#uip-etich", "always"); pg.wait_for_timeout(300)
+            assert pg.evaluate("typeof BARRA.setLabels") == "undefined" and pg.evaluate(FIT)["lvl"] == "all"
+            pg.click("#np-set"); pg.wait_for_selector("#uip-th"); assert pg.locator("#uip-etich").count() == 0, "no labels option in the settings"
+            pg.keyboard.press("Escape")
+            pg.evaluate("localStorage.setItem('qqq.barra.etichette','hidden')"); pg.reload(); ready(pg); pg.wait_for_timeout(400)
+            assert pg.evaluate(FIT)["lvl"] == "all", "an old saved value is ignored: the labels follow the width"
             pg.set_viewport_size({"width": 1024, "height": 800}); pg.wait_for_timeout(500)
-            f = pg.evaluate(FIT); assert f["lvl"] == "all" and f["dropped"] and not f["clipped"] and f["wrapped"] == 0, f      # words kept, groups move to «Altro»
-            pg.reload(); ready(pg); assert pg.evaluate("BARRA.labels") == "always", "remembered"
-            pg.evaluate("BARRA.setLabels('auto')"); pg.set_viewport_size({"width": 1500, "height": 1000}); pg.wait_for_timeout(400)
-            assert pg.evaluate(FIT)["lvl"] == "all" and pg.evaluate("BARRA.fitStats.max") < 50
-            pg.evaluate("localStorage.setItem('qqq.barra.etichette','bogus')"); pg.reload(); ready(pg); assert pg.evaluate("BARRA.labels") == "auto"
-        step("labels preference (settings): automatic / always / hidden, remembered in qqq.barra.etichette, junk value = automatic", preferenza)
+            f = pg.evaluate(FIT); assert not f["clipped"] and f["wrapped"] == 0, f
+            pg.evaluate("localStorage.removeItem('qqq.barra.etichette')"); pg.set_viewport_size({"width": 1500, "height": 1000}); pg.wait_for_timeout(400)
+            assert pg.evaluate("BARRA.fitStats.max") < 50
+        step("labels are always automatic: no option in the settings, an old saved value is ignored", preferenza)
 
         def disegno():
             pg.click("#nav [data-v=draw]"); pg.wait_for_timeout(800)

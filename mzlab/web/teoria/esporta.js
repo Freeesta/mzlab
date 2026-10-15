@@ -122,32 +122,29 @@
     const cur = getCurrentChapter(), curTitle = `${cur[1] && cur[1] !== '0' ? cur[1] + '. ' : ''}${cur[2]}`;
     m = document.createElement("div"); m.id = "export-modal"; m.className = "exp-backdrop";
     m.innerHTML = `
-      <div class="exp-card">
+      <div class="exp-card" role="dialog" aria-modal="true" aria-labelledby="exp-h">
         <div class="exp-header">
-          <div><h2>📥 Esporta e Scarica la Teoria</h2><p class="exp-sub">Scarica per studiare offline, prendere appunti in Word o stampare.</p></div>
-          <button type="button" class="exp-close" id="exp-btn-close">✕</button>
+          <h2 id="exp-h">📥 Scarica</h2>
+          <button type="button" class="exp-close" id="exp-btn-close" aria-label="Chiudi">✕</button>
         </div>
-        <div class="exp-grid">
-          <div class="exp-sec">
-            <div class="exp-sec-hd"><span class="exp-badge">Questo capitolo</span><h3>${curTitle}</h3></div>
-            <div class="exp-actions">
-              <button type="button" class="exp-item" id="exp-cur-pdf"><span class="exp-ico">📄</span><div class="exp-txt"><b>Salva in PDF (Stampa)</b><span>Layout per stampa o salvataggio PDF</span></div></button>
-              <button type="button" class="exp-item" id="exp-cur-md"><span class="exp-ico">📝</span><div class="exp-txt"><b>Markdown (.md)</b><span>Per Obsidian, Notion o appunti</span></div></button>
-              <button type="button" class="exp-item" id="exp-cur-doc"><span class="exp-ico">📄</span><div class="exp-txt"><b>Word (.doc)</b><span>Modificabile con Word o LibreOffice</span></div></button>
-              <button type="button" class="exp-item" id="exp-cur-html"><span class="exp-ico">🌐</span><div class="exp-txt"><b>HTML autonomo (.html)</b><span>Standalone offline</span></div></button>
-            </div>
-          </div>
-          <div class="exp-sec exp-sec-all">
-            <div class="exp-sec-hd"><span class="exp-badge exp-badge-gold">Pacchetto Completo</span><h3>Tutta la Teoria (23 capitoli)</h3></div>
-            <div class="exp-actions">
-              <button type="button" class="exp-item" id="exp-all-pdf"><span class="exp-ico">📚</span><div class="exp-txt"><b>Dispensa completa PDF</b><span>Libro completo stampabile</span></div></button>
-              <button type="button" class="exp-item" id="exp-all-md"><span class="exp-ico">📝</span><div class="exp-txt"><b>Tutta la Teoria in Markdown</b><span>Un unico file .md con tutti i capitoli</span></div></button>
-              <button type="button" class="exp-item" id="exp-all-doc"><span class="exp-ico">📄</span><div class="exp-txt"><b>Tutta la Teoria in Word (.doc)</b><span>Libro completo in formato Word</span></div></button>
-              <button type="button" class="exp-item" id="exp-all-html"><span class="exp-ico">🌐</span><div class="exp-txt"><b>Tutta la Teoria in HTML</b><span>Unico file HTML leggibile offline</span></div></button>
-            </div>
-          </div>
-        </div>
-        <div id="exp-status" class="exp-status" style="display:none"></div>
+        <table class="exp-tab">
+          <thead><tr><th scope="col"><span class="vh">Formato</span></th><th scope="col">Capitolo</th><th scope="col">Tutta la Teoria</th></tr></thead>
+          <tbody>
+          <tr><th scope="row" class="exp-fmt"><span class="exp-ico" aria-hidden="true">📄</span><b>PDF</b> <span class="d">· per stampare</span></th>
+            <td><button type="button" class="exp-item" id="exp-cur-pdf" aria-label="Capitolo, PDF" title="Scarica il capitolo">↓</button></td>
+            <td><button type="button" class="exp-item" id="exp-all-pdf" aria-label="Tutta la Teoria, PDF" title="Scarica tutta la Teoria">↓</button></td></tr>
+          <tr><th scope="row" class="exp-fmt"><span class="exp-ico" aria-hidden="true">📝</span><b>Markdown</b> <span class="d">· per appunti</span></th>
+            <td><button type="button" class="exp-item" id="exp-cur-md" aria-label="Capitolo, Markdown" title="Scarica il capitolo">↓</button></td>
+            <td><button type="button" class="exp-item" id="exp-all-md" aria-label="Tutta la Teoria, Markdown" title="Scarica tutta la Teoria">↓</button></td></tr>
+          <tr><th scope="row" class="exp-fmt"><span class="exp-ico" aria-hidden="true">📄</span><b>Word</b> <span class="d">· da modificare</span></th>
+            <td><button type="button" class="exp-item" id="exp-cur-doc" aria-label="Capitolo, Word" title="Scarica il capitolo">↓</button></td>
+            <td><button type="button" class="exp-item" id="exp-all-doc" aria-label="Tutta la Teoria, Word" title="Scarica tutta la Teoria">↓</button></td></tr>
+          <tr><th scope="row" class="exp-fmt"><span class="exp-ico" aria-hidden="true">🌐</span><b>HTML</b> <span class="d">· da aprire offline</span></th>
+            <td><button type="button" class="exp-item" id="exp-cur-html" aria-label="Capitolo, HTML" title="Scarica il capitolo">↓</button></td>
+            <td><button type="button" class="exp-item" id="exp-all-html" aria-label="Tutta la Teoria, HTML" title="Scarica tutta la Teoria">↓</button></td></tr>
+          </tbody>
+        </table>
+        <div id="exp-status" class="exp-status" role="status" style="display:none"></div>
       </div>`;
     document.body.appendChild(m);
     bindExportEvents(m, curTitle);
@@ -220,17 +217,4 @@
   }
 
   T().esporta = openExportModal;
-
-  function ensureButtonInBar() {
-    const tbar = document.getElementById("tbar");
-    if (!tbar || document.getElementById("tc-esporta")) return;
-    const btn = document.createElement("button"); btn.type = "button"; btn.className = "tb"; btn.id = "tc-esporta";
-    btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5v9.5M6 9l4 4 4-4M3.5 15.5v1a1.5 1.5 0 0 0 1.5 1.5h10a1.5 1.5 0 0 0 1.5-1.5v-1" /></svg><span class="l">Esporta</span>`;
-    btn.title = "Esporta in PDF, Word, Markdown o HTML"; btn.onclick = openExportModal;
-    const sBtn = document.getElementById("a11y-btn") || document.getElementById("tc-impostazioni");
-    if (sBtn && sBtn.parentNode === tbar) tbar.insertBefore(btn, sBtn); else tbar.appendChild(btn);
-  }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ensureButtonInBar); else ensureButtonInBar();
-  window.addEventListener("load", ensureButtonInBar);
 })();
