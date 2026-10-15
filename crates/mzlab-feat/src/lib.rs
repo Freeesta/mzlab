@@ -42,6 +42,7 @@ pub mod recipe;
 mod recipe_lr;
 pub mod report;
 pub mod resolve;
+pub mod riga;
 pub mod rowident;
 pub mod rowmeta;
 pub mod rtmap;

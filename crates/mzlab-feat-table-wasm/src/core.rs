@@ -7,6 +7,7 @@ use mzlab_feat::export_ms;
 use mzlab_feat::ms2spec;
 use mzlab_feat::qc;
 use mzlab_feat::report;
+use mzlab_feat::riga;
 use mzlab_feat::samples::{self, Sample};
 use mzlab_feat::store::read_table_from;
 use mzlab_feat::table::Aligned;
@@ -126,6 +127,18 @@ pub fn ms2_file<R: ReadAt, I: ReadAt>(
         "sirius" => Ok(export_ms::sirius(&c, &sp)),
         _ => Err(Error::new("error.badView")),
     }
+}
+
+/// The `riga/1` of the row with `id` (`error.rowNotFound` when the table has none).
+pub fn row_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, id: u32) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    riga::row(&t, &s, id)
+}
+
+/// The `riga_tracce/1` of the row with `id`, read from the index of every file (`open(k)`), within `ppm` of its m/z.
+pub fn row_traces_json<R: ReadAt, I: ReadAt>(r: &mut R, size: u64, samples_json: &str, id: u32, ppm: f64, open: impl FnMut(usize) -> Result<Index<I>>) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    riga::traces(&t, &s, id, open, ppm)
 }
 
 /// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy` or `per_tp` (`mzlab_core::campioni::route`).
