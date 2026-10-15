@@ -20,7 +20,7 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
         load(pg, [F], 8000, 1)
         def menu():
-            k = pg.evaluate("E.files.findIndex(f=>f.kind==='ms2')"); assert k >= 0
+            k = pg.evaluate("E.files.findIndex(f=>f.kind==='infusion')"); assert k >= 0
             pg.evaluate(f"COMP.tree({k})"); pg.wait_for_selector("#mt-tbl tr[data-n]", timeout=60000)
             assert "non identificazioni" in pg.inner_text("#bigbody") or "candidati" in pg.inner_text("#bigbody")
             assert pg.locator("#mt-tbl tr[data-n]").count() >= 19, pg.locator("#mt-tbl tr[data-n]").count()
@@ -44,7 +44,7 @@ try:
         step("a node shows its peaks; a peak opens «Formule compatibili» with the sub-formula of the node", node)
         def wrong():
             pg.evaluate("document.querySelector('#bigdlg').close()")
-            pg.evaluate("COMP.tree(E.files.findIndex(f=>f.kind==='ms2'), 'Xx9')"); pg.wait_for_selector("#mt-out .fail", timeout=60000)
+            pg.evaluate("COMP.tree(E.files.findIndex(f=>f.kind==='infusion'), 'Xx9')"); pg.wait_for_selector("#mt-out .fail", timeout=60000)
         step("a wrong formula is said", wrong)
     r.close()
 except Exception as e:
