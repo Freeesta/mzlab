@@ -27,8 +27,8 @@ fn leaf(p: &str) -> &str {
 }
 
 /// The source of the ionisation of the first scan, as its filter says (`FTMS + p ESI Full ms …`).
-fn source_type(raw: &RawFileReader) -> Option<&'static str> {
-    let f = raw.scan_filter(raw.run_header.sample_info.first_scan_number)?;
+fn source_type<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> Option<&'static str> {
+    let f = raw.scan_filter(source, raw.run_header.sample_info.first_scan_number)?;
     ["ESI", "NSI", "APCI", "APPI", "MALDI", "EI", "CI"]
         .into_iter()
         .find(|t| f.split_whitespace().any(|w| w == *t))
@@ -84,9 +84,18 @@ fn strumento(raw: &RawFileReader) -> Option<V> {
 }
 
 /// The `ms` section: the source, and the scan events of the XML method.
-fn ms(raw: &RawFileReader, exps: Vec<V>, lock: Option<V>, settings: Option<V>) -> Option<V> {
+fn ms<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+    exps: Vec<V>,
+    lock: Option<V>,
+    settings: Option<V>,
+) -> Option<V> {
     obj(vec![
-        ("sorgente", obj(vec![("tipo", source_type(raw).map(V::s))])),
+        (
+            "sorgente",
+            obj(vec![("tipo", source_type(raw, source).map(V::s))]),
+        ),
         ("calibrazione", obj(vec![("lock_mass", lock)])),
         ("impostazioni", settings),
         (
@@ -282,6 +291,7 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
             ("dove", Some(V::s("Method"))),
         ]));
     }
+    let lock = lock::section(raw, source, &blocks);
     let doc = obj(vec![
         ("schema", Some(V::s(metodo::SCHEMA))),
         (
@@ -299,19 +309,16 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
         ),
         (
             "ms",
-            ms(
-                raw,
-                exps,
-                lock::section(raw, &blocks),
-                impostazioni::section(&settings),
-            ),
+            ms(raw, source, exps, lock, impostazioni::section(&settings)),
         ),
         ("lc", lc),
         ("rivelatori", rivelatori::section(&blocks)),
         ("campionatore", sampler(&pairs)),
         (
             "campi",
-            Some(V::Arr(campi::fields(raw, &traces, &pairs, &items, &ident))),
+            Some(V::Arr(campi::fields(
+                raw, source, &traces, &pairs, &items, &ident,
+            ))),
         ),
         ("grezzo", Some(V::Arr(raw_texts(&blocks)))),
         ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),
