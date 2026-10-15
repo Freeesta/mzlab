@@ -20,12 +20,18 @@ try:
         def content():
             q.click("#a11y-btn"); q.wait_for_selector("#a11y-panel:not([hidden])")
             legs = q.eval_on_selector_all("#a11y-panel legend", "e=>e.map(x=>x.textContent.trim())")
-            for w in ("Tema", "Carattere", "Sfondo", "Lettura", "Animazioni"): assert w in legs, legs
+            assert legs == ["Tema", "Carattere", "Sfondo", "Lettura"], legs
             assert "Avanzamento" not in legs and q.locator("#a11y-ask,#a11y-forget-pos,#a11y-forget-pratica,[data-k=focus]").count() == 0
             txt = q.inner_text("#a11y-panel")
             for dead in ("Lingua", "Palette", "Etichette", "Unisci", "Librerie", "Alta risoluzione", "Aggiornamenti", "Tour"): assert dead not in txt, dead
             assert q.locator("#a11y-panel .hint").count() == 0, "no explanation lines under the controls"
             assert q.inner_text("#a11y-reset").strip() == "Ripristina predefinite"
+            assert q.locator("#a11y-panel input[name=a11y-tema]").count() == 3 and q.locator("#a11y-panel input[name=a11y-font]").count() == 3 and q.locator("#a11y-panel input[name=a11y-bg]").count() == 4
+            assert q.locator("#a11y-panel input[role=switch]").count() == 4, "four switches: space, nums, ruler, reduced motion"
+            assert q.get_attribute("#a11y-panel", "aria-label") == "Impostazioni" and q.locator("#a11y-prev").count() == 1
+            assert q.evaluate("(()=>{const p=document.querySelector('#a11y-panel');return p.scrollHeight<=p.clientHeight})()"), "the panel fits without scrolling at 900 px"
+            for sel in ("#a11y-panel .opt", "#a11y-panel .swrow", "#a11y-reset", "#a11y-panel .x"):
+                for b in q.locator(sel).all(): bb = b.bounding_box(); assert bb["height"] >= 24 and bb["width"] >= 24, (sel, bb)
         step("one panel: Tema, lettura, animazioni; no Avanzamento, no focus mode, no data settings", content)
         def theme():
             q.check("input[name=a11y-tema][value=dark]"); q.wait_for_function("document.documentElement.dataset.theme==='dark'", timeout=8000)
@@ -35,9 +41,17 @@ try:
         step("Tema is the qqq.prefs of the program and survives a reload", theme)
         def motion():
             q.wait_for_selector("#a11y-btn"); q.click("#a11y-btn") if q.is_hidden("#a11y-panel") else None
-            q.check("input[name=a11y-motion][value=always]"); assert q.get_attribute("html", "data-a11y-reduce") is not None
+            q.check("[data-motion]"); assert q.get_attribute("html", "data-a11y-reduce") is not None
             assert json.loads(ls("qqq.a11y"))["motion"] == "always"
         step("reduced animations set data-a11y-reduce and persist", motion)
+        def preview():
+            q.check("input[name=a11y-font][value=atkinson]"); f = q.evaluate("getComputedStyle(document.querySelector('#a11y-prev')).fontFamily"); assert "Atkinson" in f, f
+            q.check("[data-k=space]"); ls_ = q.evaluate("getComputedStyle(document.querySelector('#a11y-prev')).letterSpacing"); assert ls_ != "normal", ls_
+            q.check("input[name=a11y-bg][value=cream]"); assert q.get_attribute("html", "data-a11y-bg") == "cream"
+            assert q.locator("input[name=a11y-bg][value=cream]").is_checked() and not q.locator("input[name=a11y-bg][value='']").is_checked()
+            q.focus("input[name=a11y-font][value=atkinson]"); q.keyboard.press("ArrowRight"); assert q.get_attribute("html", "data-a11y-font") == "dyslexic", "arrow keys move the choice"
+            q.check("input[name=a11y-bg][value='']"); q.uncheck("[data-k=space]"); q.check("input[name=a11y-font][value='']")
+        step("the preview follows font, spacing and background; arrows move the choice; values saved as before", preview)
         def reset():
             q.evaluate("localStorage.setItem('qqq.pratica','{\"v\":1}');localStorage.setItem('qqq.teoria.pos','{\"last\":\"x\"}')")
             q.check("input[name=a11y-font][value=dyslexic]"); q.check("[data-k=space]"); assert q.get_attribute("html", "data-a11y-space") is not None
@@ -45,7 +59,7 @@ try:
             assert q.get_attribute("html", "data-a11y-font") is None and q.get_attribute("html", "data-a11y-space") is None and q.get_attribute("html", "data-a11y-reduce") is None
             assert json.loads(ls("qqq.a11y")) == {}
             assert ls("qqq.pratica") is not None and ls("qqq.teoria.pos") is not None, "settings only"
-            q.check("input[name=a11y-motion][value=always]")
+            q.check("[data-motion]")
         step("Ripristina predefinite: settings back to the defaults, progress and reading position kept", reset)
         def keys():
             q.evaluate("localStorage.setItem('qqq.pratica','{\"v\":1}')"); q.reload(); q.wait_for_selector("#a11y-btn")
