@@ -136,7 +136,7 @@ fn one(d: lr::LrDig, name: &str, x: X) -> lr::LrDig {
     matched(d, &[(name, None, f)], &[])
 }
 
-fn scans_of(d: &lr::LrDig, id: i64, ms2: &Vec<u8>) -> usize {
+fn scans_of(d: &lr::LrDig, id: i64, ms2: &[u8]) -> usize {
     let cols = &base().0;
     let mut op = |k: usize| {
         Ok(if k < cols.len() {
@@ -217,7 +217,7 @@ fn two_isomers_and_two_peaks_give_one_peak_to_each_row() {
         .iter()
         .map(|k| (k.row, l.exps[0].peaks[k.peak].apex))
         .collect();
-    got.sort_by(|a, b| a.0.cmp(&b.0));
+    got.sort_by_key(|a| a.0);
     assert_eq!(got.len(), 2, "{:?}", l.links);
     assert_eq!((got[0].0, got[1].0), (7, 10007));
     assert!((got[0].1 - 7.4).abs() < 0.05 && (got[1].1 - 8.3).abs() < 0.05);

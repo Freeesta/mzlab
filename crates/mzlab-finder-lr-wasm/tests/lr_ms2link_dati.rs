@@ -139,5 +139,5 @@ fn no_signal_pool(truth: &Value, d: &LrDig, idxs: &[Vec<u8>]) {
         .find(|e| e.unexpected && e.ref_rt.is_some_and(|r| (r - rt).abs() < 0.05))
         .expect("the row of the truth");
     let mut op = |k: usize| Ok(open(&idxs[k]));
-    assert_eq!(pool(&d, row, 6, &mut op).unwrap().scans, 0);
+    assert_eq!(pool(d, row, 6, &mut op).unwrap().scans, 0);
 }

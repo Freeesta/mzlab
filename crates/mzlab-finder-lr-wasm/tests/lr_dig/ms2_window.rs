@@ -100,5 +100,8 @@ fn a_cell_one_minute_away_does_not_move_the_window() {
     assert_eq!(scans(Some(0.0), off), scans(Some(0.0), narrow));
     assert_eq!(scans(Some(1.0), off), 0);
     // the cells say nothing: the peak of the trace at the time of the row is the row's
-    assert_eq!(scans(Some(0.0), |_| vec![cell(1.0e3, 0.1)]), scans(Some(0.0), narrow));
+    assert_eq!(
+        scans(Some(0.0), |_| vec![cell(1.0e3, 0.1)]),
+        scans(Some(0.0), narrow)
+    );
 }

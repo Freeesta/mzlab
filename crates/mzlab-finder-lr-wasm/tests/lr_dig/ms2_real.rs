@@ -55,7 +55,11 @@ fn the_row_without_signal_gets_no_ms2_scans() {
         truth["parent"]["formula"].as_str().unwrap()
     );
     let ms2_idx: Vec<&Vec<u8>> = idxs[full.len()..].iter().collect();
-    let d = linked(dig_for(&files, &parent, &idxs[..full.len()]), &idxs[..full.len()], &ms2_idx);
+    let d = linked(
+        dig_for(&files, &parent, &idxs[..full.len()]),
+        &idxs[..full.len()],
+        &ms2_idx,
+    );
     let mut op = |k: usize| Ok(open(&idxs[k]));
     let want = truth["experiments"]
         .as_array()
