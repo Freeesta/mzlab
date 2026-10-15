@@ -1,0 +1,30 @@
+# campaign.toml -- SYNTHETIC fixture of the per-sorbent feature lists, not a real campaign.
+[campaign]
+id = "SORB"
+name = "Synthetic sorbent test campaign (fixture, not real data)"
+
+[paths]
+data = "data"
+
+[mzmine]
+dir = "mz"
+merged_dir = "DDA_{pol}/merged"
+sorbents = ["OA", "EC"]
+sorbent_table = "DDA_{pol}/{sorbent}/list_{sorbent}.csv"
+collapse_sorbent_twins = true
+twin_mz_ppm = 5.0
+twin_rt_min = 0.1
+polarity_tag = { POS = "ddaPOS", NEG = "ddaNEG" }
+
+[presence]
+blank_fold = 3.0
+
+[sites.S1]
+file_prefix = "S1"
+
+[sites.S2]
+file_prefix = "S2"
+
+[matrices.all]
+sites = ["S1", "S2"]
+dir = "All"

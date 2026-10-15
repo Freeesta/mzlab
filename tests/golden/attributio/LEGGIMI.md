@@ -4,7 +4,7 @@ Scritti da `tools/attributio_riferimento.py` con Attributio 1.12.0:
 
     ATTRIBUTIO_SRC=<percorso di attributio/src> python3 tools/attributio_riferimento.py [--controlla]
 
-Un JSON per stadio in `sintetica/` (campagna, letture, rilevazione, livelli, identita, proposte, decisioni, abbinamenti). Ingresso: `tests/data/attributio/campagna_sintetica/` (sha256 in `tests/data/attributio/LEGGIMI.md`). Un caso che non torna non si risolve cambiando questi file.
+Un JSON per stadio in `sintetica/` (campagna, letture, rilevazione, livelli, identita, proposte, decisioni, sirius, standard, abbinamenti) e un JSON per la campagna dei sorbenti in `sorbenti/` (ingresso `tests/data/attributio/campagna_sorbenti/`). Ingresso: `tests/data/attributio/campagna_sintetica/` (sha256 in `tests/data/attributio/LEGGIMI.md`). Un caso che non torna non si risolve cambiando questi file.
 
 | File | sha256 |
 |---|---|
@@ -14,5 +14,8 @@ Un JSON per stadio in `sintetica/` (campagna, letture, rilevazione, livelli, ide
 | `identita.json` | `2ec61d93274e86c5a1a8d353e5e1b69088fe58375b0eac971d35418cfe6fd6f7` |
 | `letture.json` | `b0759c7406215ef29018a1e100a9e5980cf7a6ebb8081612079b4f909689b54f` |
 | `livelli.json` | `569b3050082163cec9070ed670dfd7f1bfae86188351ae4077408605fb8e9db9` |
+| `sirius.json` | `32974ef3a7d585ba40f7d8435b52526a1498c53dd1114b180d83b3128211ebc8` |
+| `standard.json` | `dfd3d84e9e5bd2de88b802541d71b4fdd69d624d6f4531186ce41b7da2306123` |
 | `proposte.json` | `5a47cd83b538cc5c5ba43704387cf8a21b221a507f74051906638dfcc8de4846` |
 | `rilevazione.json` | `bb17ed23002afb4a8eaecf5d3147da61347bd49be2b02426f899683f422ce64e` |
+| `sorbenti/sorbenti.json` | `0034ebf388572845ac1f684446fea93a180e65ef25a1a16a25e6cb87bac06a98` |

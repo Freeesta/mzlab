@@ -1,0 +1,61 @@
+{
+ "abbinamenti": {
+  "NEG": [],
+  "POS": [
+   {
+    "_id": 1,
+    "_pol": "POS",
+    "std_adduct": "mz_MH_pos",
+    "std_ambiguous": false,
+    "std_candidates": "TestStandardA",
+    "std_category": "fictional",
+    "std_drt": 0.0,
+    "std_formula": "C10H17NO2",
+    "std_ms2_cosine": 1.0,
+    "std_ms2_matched": 6,
+    "std_ms2_reverse": 1.0,
+    "std_n_candidates": 1,
+    "std_name": "TestStandardA",
+    "std_ppm": 0.0,
+    "std_rejected": null,
+    "std_status": "confirmed"
+   }
+  ]
+ },
+ "candidati": {
+  "NEG": [],
+  "POS": [
+   {
+    "_id": 1,
+    "_pol": "POS",
+    "std_adduct": "mz_MH_pos",
+    "std_category": "fictional",
+    "std_drt": 0.0,
+    "std_formula": "C10H17NO2",
+    "std_name": "TestStandardA",
+    "std_ppm": 0.0
+   }
+  ]
+ },
+ "spettri": {
+  "NEG": {
+   "feature": [],
+   "libreria": []
+  },
+  "POS": {
+   "feature": [
+    [
+     1,
+     6,
+     200.102
+    ]
+   ],
+   "libreria": [
+    [
+     "TestStandardA",
+     1
+    ]
+   ]
+  }
+ }
+}

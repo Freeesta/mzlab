@@ -12,7 +12,7 @@ crate-type = ["rlib"]
 # `chem`: the structure graph (SMILES -> groups, cleavages). On by default; the engine of the proofs (`mzlab-feat-wasm`) turns it off so its .wasm does not carry it.
 default = ["chem"]
 chem = []
-# `attributio`: the port of Attributio (cascade of levels, review); off by default and not part of any .wasm yet (`docs/agenti/attributio.md`).
+# `attributio`: reading of the campaign folders of Attributio (campaign.toml, mzMine/SIRIUS/GNPS2 tables, decisions), its review matching on top of `mzlab-lib` (`docs/agenti/attributio.md`) and, in the next packages, its level cascade. Off by default: no `.wasm` carries it yet.
 attributio = ["dep:mzlab-lib"]
 # `untargeted`: detection of the features from the raw data after the algorithms of mzmine 3.9.0 (`src/untargeted/`), rewritten from scratch. Off by default.
 untargeted = []
