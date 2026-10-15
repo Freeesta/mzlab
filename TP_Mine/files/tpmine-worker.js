@@ -106,8 +106,15 @@ async function idxFiles(names) {
 async function openIdx(names) {
   const d = await idxDir(), hs = /** @type {any[]} */ ([]);
   if (!d) throw new Error("no index of the file: open it again");
-  try { for (const n of names) hs.push(await /** @type {any} */ (await d.getFileHandle(idxBase(n) + ".mzidx")).createSyncAccessHandle()); }
-  catch (e) { for (const h of hs) h.close(); throw e; }
+  try {
+    for (const n of names) {
+      const fh = /** @type {any} */ (await d.getFileHandle(idxBase(n) + ".mzidx"));
+      for (let i = 0; ; i++) {          // the index builder of the Data tab (a short-lived worker) releases its handle a moment after it ends
+        try { hs.push(await fh.createSyncAccessHandle()); break; }
+        catch (e) { if (i >= 40 || /** @type {any} */ (e).name !== "NoModificationAllowedError") throw e; await new Promise(r => setTimeout(r, 50)); }
+      }
+    }
+  } catch (e) { for (const h of hs) h.close(); throw e; }
   let buf = new Uint8Array(1 << 16);
   const read = (/** @type {number} */ k, /** @type {number} */ off, /** @type {number} */ len) => {
     if (buf.length < len) buf = new Uint8Array(Math.max(len, buf.length * 2));
