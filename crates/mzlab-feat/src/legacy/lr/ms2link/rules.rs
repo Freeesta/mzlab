@@ -103,11 +103,17 @@ pub(super) fn register(e: &mut Exp, h: &Hit) -> usize {
     e.peaks.len() - 1
 }
 
-pub(super) fn dmz(r: &Entry, p: f64) -> f64 {
-    (p - r.mz).abs().min((p - r.mz_x).abs())
+/// The m/z values of a row that a precursor can match: calculated, extracted (with the offset of the series) and the one read in the table.
+fn mzs(r: &Entry) -> impl Iterator<Item = f64> {
+    [Some(r.mz), Some(r.mz_x), r.observed].into_iter().flatten()
 }
 
-/// Rule 2: the rows whose m/z (calculated or extracted) is within `PREC_TOL` of the precursor. A row that is the isotope peak of another is not one.
+/// The distance of the precursor `p` to the closest m/z of the row.
+pub(super) fn dmz(r: &Entry, p: f64) -> f64 {
+    mzs(r).map(|m| (p - m).abs()).fold(f64::INFINITY, f64::min)
+}
+
+/// Rule 2: the rows whose m/z (calculated, extracted or read) is within `PREC_TOL` of the precursor. A row that is the isotope peak of another is not one.
 pub(super) fn compatible(d: &LrDig, p: f64) -> Vec<&Entry> {
     d.entries
         .iter()
@@ -248,9 +254,7 @@ pub(super) fn isotope<'a, R: ReadAt>(
         .filter(|r| r.ref_rt.is_some() && r.isotope_of.is_none())
     {
         for iso in ISO {
-            let x = (e.precursor - r.mz - iso)
-                .abs()
-                .min((e.precursor - r.mz_x - iso).abs());
+            let x = dmz(r, e.precursor - iso);
             if x <= PREC_TOL && x < near {
                 cand.push((x, iso, r));
             }
@@ -414,7 +418,7 @@ pub(super) fn one<R: ReadAt>(
         c.links
             .push(link_of(x, peak, &p, State::Isotope, vec![], &tail));
         taken.push(peak);
-        pairs.clear();
+        pairs.retain(|q| (q.hit.apex - p.hit.apex).abs() > SAME_PEAK);
     }
     let any_pair = !pairs.is_empty();
     let (isf, gone) = in_source(c, e, x, &mut pairs);

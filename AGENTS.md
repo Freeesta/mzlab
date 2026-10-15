@@ -53,9 +53,11 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | vista Dati in bassa risoluzione: caricamento, schede, TIC/XIC/spettro, integrazione | `docs/agenti/dati.md` |
 | primo caricamento di più file (si apre solo il primo), campi della tabella di carico | `docs/agenti/dati-carico.md` |
 | barra laterale della vista Dati, strumenti, suggerimenti, tour | `docs/agenti/dati-barra.md` |
+| affiancare e spostare i pannelli (maniglia, zone di rilascio, divisori, annulla) | `docs/agenti/pannelli-affianca.md` |
 | azioni dei pannelli (registro `azioni/1`, menu del tasto destro, Maiusc+F10) | `docs/agenti/azioni.md` |
 | animazione di caricamento (`base`) e analizzatori animati spenti (`an-*.js`: quadrupolo, TOF, Orbitrap, ESI, trappola, FT-ICR, QqQ, Paul, settore, IMS, MALDI) | `docs/agenti/analizzatori.md` |
 | header (schermo intero, logo, (i)), area e tabella di caricamento | `docs/agenti/intestazione.md` |
+| barra di caricamento unica per ogni formato (`progresso.js`, `PROGRESSO`, evento `mzlab-index`, pesi delle fasi, prove di monotonia) | `docs/agenti/progresso.md` |
 | carica una cartella, cartella puntata e ricordata (elenco in grigio, «Altri», desktop) | `docs/agenti/dati-cartella.md` |
 | mappa RT×m/z, mirino, navigazione, visore 3D | `docs/agenti/dati-mappa.md` |
 | velocità della mappa: misure dei gesti (`tools/bench_mappa.py`), diagnosi e pacchetti P1-P10 | `docs/agenti/mappa-fluida.md` |
@@ -85,6 +87,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | contratto di memoria dei moduli WASM (`mzlab-core::budget`, uscite a offset, lastre, flusso delle prove) | `docs/agenti/memoria.md` |
 | formato `.mzidx` | `docs/agenti/mzidx.md` |
 | cosa i file grezzi contengono e non estraiamo ancora (regola «nessuna perdita») | `docs/agenti/grezzi-non-estratti.md` |
+| errori di lettura dei file: causa breve, «Dettagli», «Copia diagnosi» (`diagnosi.js`), mzML sintetico stile msconvert | `docs/agenti/diagnosi.md` |
 | lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, fasi di avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`) |
 | misure dei motori (ultima misura per sezione) | `docs/agenti/misure.md` |

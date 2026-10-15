@@ -41,6 +41,7 @@ window.MAPPA = (() => {
     Object.assign(st(p), { ov, sp, xc, grid });
     cv.tabIndex = 0; cv.setAttribute("aria-label", T("mappa.aria"));
     cv.addEventListener("keydown", e => key(p, e));
+    document.addEventListener("keyup", e => { if (p.cv.isConnected) shiftUp(p, e); });
     p.el.addEventListener("keydown", e => { if (isMax(p) && e.target === p.el) key(p, e); });
     const tbs = p.el.querySelector(".tbs"); tbs.insertBefore(navBar(p), tbs.children[1] || null); navSync(p); touchInit(p, cv);
     const wrap = () => {
@@ -60,8 +61,12 @@ window.MAPPA = (() => {
     } else if (fsByUs === p && document.fullscreenElement) { fsByUs = null; document.exitFullscreen().catch(() => {}); }
   }
   document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && fsByUs) { const p = fsByUs; fsByUs = null; if (isMax(p)) p._setMax(false); } });
+  function mirBtn(p) {                                                  // the button shows the real state of the sight (on in full screen, off in the page, until it is clicked or M is pressed)
+    const b = p.el && p.el.querySelector('[data-mz="mir"]'); if (!b) return;
+    const on = !!mirOn(p); b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
+  }
   function layout(p) {
-    const s = st(p); if (!s.grid) return;
+    mirBtn(p); const s = st(p); if (!s.grid) return;
     const m = mirOn(p) && is2dView(p) && wide(p);
     s.grid.classList.toggle("mir", m); s.sp.hidden = !m; s.xc.hidden = !m;
     p.el.classList.toggle("mzmir", m);
@@ -79,7 +84,7 @@ window.MAPPA = (() => {
   // ---------------------------------------------------------------- the difference (extends the one of explore.js): computed by the server in numpy
   // with a tolerance in RT (the reference is replaced by its local maximum over +-0.1 min: background lines and small drifts cancel); what it shows
   // (all | increases only | decreases only) and the noise threshold (fraction of the 99.5th percentile) are choices of this browser
-  const diffOpt = (diff = true) => ({ show: PREF.show || "all", thr: PREF.thr ?? (diff ? 0.02 : 0.004), rttol: PREF.rttol ?? 0.1 });
+  const diffOpt = (diff = true) => ({ show: PREF.neg ? "all" : "up", thr: PREF.thr ?? (diff ? 0.02 : 0.004), rttol: PREF.rttol ?? 0.1 });
   const diffMap = (k, ref, lv, norm) => memo(`mzd${k}|${ref}|${lv}|${norm}|${diffOpt().rttol}`, () => J(`api/map?k=${k}&level=${lv}&ref=${ref}&norm=${norm}&rttol=${diffOpt().rttol}`).then(j => {
     const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
     return new Float32Array(u.buffer);
@@ -195,7 +200,7 @@ window.MAPPA = (() => {
     const pt = point(p), a = p._a; if (!a || !is2d(p)) return;
     if (!pt || !(mirOn(p) || st(p).lock)) return;
     const s = st(p), f = a.f, v = valueAt(p, pt.rt, pt.mz), sp = specFor(p, pt), sc = sp && sp.sid != null ? T("mappa.read.scan", { n: sp.sid + 1 }) + " · " : "";
-    p.rd.textContent = `${f ? f.label + " · " : ""}${sc}RT ${pt.rt.toFixed(2)} min · m/z ${pt.mz.toFixed(mzd(p))} · ${T("mappa.read.int")} ${v == null ? "–" : fmt(v)}${s.lock ? " · " + T("mappa.read.locked") : ""}`;
+    p.rd.textContent = `${f ? f.label + (a.ref ? " − " + a.ref.label : "") + " · " : ""}${sc}RT ${pt.rt.toFixed(2)} min · m/z ${pt.mz.toFixed(mzd(p))} · ${T("mappa.read.int")} ${v == null ? "–" : fmt(v)}${s.lock ? " · " + T("mappa.read.locked") : ""}${s.sl && s.sl.ax ? " · " + T(s.sl.ax === "x" ? "asse.x" : "asse.y") : ""}`;
   }
 
   // ---------------------------------------------------------------- the two plots at the margins: spectrum of the scan (m/z aligned with the map) and XIC (RT aligned)
@@ -204,7 +209,7 @@ window.MAPPA = (() => {
   // point wins (MIRINO.latest, at most once per frame); what has not arrived yet is a preview read from the matrix of the map, marked as such.
   const SIGHT = MIRINO.lru(MIRINO.budget()), AX = new Map(), FLY = new Map();      // spectra and XIC under a memory budget; RT axes; requests in flight
   { const clear = CACHE.clear.bind(CACHE); CACHE.clear = () => { clear(); SIGHT.clear(); AX.clear(); FLY.clear(); }; }   // same moments as the cache of explore.js
-  const dropFile = k => { SIGHT.drop(`s${k}|`); SIGHT.drop(`x${k}|`); SIGHT.drop(`x${k}+`); for (const key of [...AX.keys()]) if (key.startsWith(`${k}|`)) AX.delete(key); };
+  const dropFile = k => { SIGHT.drop(`s${k}|`); SIGHT.drop(`x${k}|`); SIGHT.drop(`x${k}+`); SIGHT.dropIf(key => key[0] === "s" ? key.includes(`-${k}|`) : key.includes(`+${k}|`)); for (const key of [...AX.keys()]) if (key.startsWith(`${k}|`)) AX.delete(key); };
   const MEAS = /[?&]perf\b/.test(location.search), meas = window.__mir = [];     // with ?perf: the cost of the exact answer of each stop of the sight (tools/bench_mirino.py)
   const once = (key, fn) => { if (!FLY.has(key)) FLY.set(key, fn().finally(() => FLY.delete(key))); return FLY.get(key); };
   const axisOf = f => {                                                  // {rt, sid} of the scans of the level; null until it has arrived
@@ -218,11 +223,17 @@ window.MAPPA = (() => {
   const xicKey = (f, a, mz) => `x${f.k}${a.ref ? "+" + a.ref.k : ""}|${xicCentre(f, mz).toFixed(4)}|${xicTol(f, mz).toFixed(5)}|${f.lv || 1}`;
   const specSize = sp => (sp.mz.length + sp.y.length) * 8 + 200, xicSize = xi => (xi.tr || []).reduce((n, t) => n + (t.rt.length + t.y.length) * 8 + 100, 200);
   // what is already in the page for the point: the exact spectrum / XIC, or null
+  // the scan of A (and of B, in a difference) nearest to the point: {f, ax, i, r, rx, j} or null while an RT axis is not in the page
+  function scansAt(p, pt) {
+    const a = p._a, f = a && a.f; if (!f || !pt) return null;
+    const ax = axisOf(f), r = a.ref || null, rx = r ? axisOf(r) : null; if (!ax || (r && !rx)) return null;
+    const i = MIRINO.nearest(ax.rt, pt.rt), j = rx ? MIRINO.nearest(rx.rt, pt.rt) : -1; if (i < 0 || (r && j < 0)) return null;
+    return { f, ax, i, r, rx, j };
+  }
+  const specKeyAt = c => specKey(c.f, c.ax, c.i) + (c.r ? `-${c.r.k}|${c.rx.sid[c.j]}` : "");
   function specFor(p, pt) {
-    const s = st(p), a = p._a, f = a && a.f; if (!f || !pt) return null;
-    const ax = axisOf(f); if (!ax) return null;
-    const i = MIRINO.nearest(ax.rt, pt.rt); if (i < 0) return null;
-    const key = specKey(f, ax, i); if (s.spec && s.spec.key === key) return s.spec;
+    const s = st(p), c = scansAt(p, pt); if (!c) return null;
+    const key = specKeyAt(c); if (s.spec && s.spec.key === key) return s.spec;
     const sp = SIGHT.get(key); if (sp) s.spec = sp; return sp || null;
   }
   function xicFor(p, pt) {
@@ -241,19 +252,26 @@ window.MAPPA = (() => {
     } catch (e) { /* nothing to show */ }
     return s.xic;
   }
+  // one scan by position: the same arrays as /api/spectrum on a window holding only that scan
+  const getScan = (f, ax, i) => {
+    const key = specKey(f, ax, i), hit = SIGHT.get(key); if (hit) return Promise.resolve(hit);
+    return once(key, async () => {
+      const j = await J(`api/spectra?k=${f.k}&i0=${i}&i1=${i}&level=${f.lv || 1}&bin=0.1${MERGE()}`), n = j.scans && j.scans[0];
+      if (!n) throw new Error("no scan");
+      const r = { key, sid: n.sid, rt: n.rt, mz: n.mz, y: n.y }; SIGHT.set(key, r, specSize(r)); return r;
+    });
+  };
   async function fetchSpec(p, rt) {
-    const s = st(p), a = p._a; if (!a) return null; const f = a.f, lv = f.lv || 1;
+    const s = st(p), a = p._a; if (!a) return null; const f = a.f, r = a.ref || null;
     try {
-      const ax = await axisWait(f), i = ax ? MIRINO.nearest(ax.rt, rt) : -1;
-      if (i < 0) return s.spec;
-      const key = specKey(f, ax, i); if (s.spec && s.spec.key === key) return s.spec;
+      const ax = await axisWait(f), rx = r ? await axisWait(r) : null, i = ax ? MIRINO.nearest(ax.rt, rt) : -1, j = rx ? MIRINO.nearest(rx.rt, rt) : -1;
+      if (i < 0 || (r && j < 0)) return s.spec;
+      const key = specKeyAt({ f, ax, i, r, rx, j }); if (s.spec && s.spec.key === key) return s.spec;
       const hit = SIGHT.get(key); if (hit) return (s.spec = hit);
-      const sp = await once(key, async () => {                          // one scan by position: the same arrays as /api/spectrum on a window holding only that scan
-        const j = await J(`api/spectra?k=${f.k}&i0=${i}&i1=${i}&level=${lv}&bin=0.1${MERGE()}`), n = j.scans && j.scans[0];
-        if (!n) throw new Error("no scan");
-        const r = { key, sid: n.sid, rt: n.rt, mz: n.mz, y: n.y }; SIGHT.set(key, r, specSize(r)); return r;
-      });
-      s.spec = sp;
+      if (!r) { s.spec = await getScan(f, ax, i); return s.spec; }
+      const [sa, sb] = await Promise.all([getScan(f, ax, i), getScan(r, rx, j)]);        // A − B over every m/z: peaks of A and B closer than the XIC window are one
+      const d = MIRINO.diffPeaks(sa.mz, sa.y, sb.mz, sb.y, mz => xicTol(f, mz));
+      const sp = { key, sid: sa.sid, rt: sa.rt, rtb: sb.rt, mz: d.mz, y: d.y, signed: true }; SIGHT.set(key, sp, specSize(sp)); s.spec = sp;
     } catch (e) { /* nothing to show */ }
     return s.spec;
   }
@@ -276,8 +294,8 @@ window.MAPPA = (() => {
     if (!m || !pt) return null;
     const i = Math.floor((pt.rt - m.rt0) / (m.rt1 - m.rt0) * m.nrt), j = Math.floor((pt.mz - m.mz0) / m.dmz);
     const out = {};
-    if (i >= 0 && i < m.nrt) { const c = MIRINO.column(m.v, m.nmz, i, m.mz0, m.dmz); out.spec = { mz: c.x, y: c.y, rt: pt.rt }; }
-    if (j >= 0 && j < m.nmz) { const r = MIRINO.trace(m.v, m.nrt, m.nmz, j, m.rt0, m.rt1); out.xic = { c: pt.mz, tol: m.dmz / 2, tr: [{ k: a.f.k, rt: r.x, y: r.y }] }; }
+    if (i >= 0 && i < m.nrt) { const c = MIRINO.column(m.v, m.nmz, i, m.mz0, m.dmz); out.spec = { mz: c.x, y: c.y, rt: pt.rt, signed: !!a.ref }; }
+    if (j >= 0 && j < m.nmz) { const r = MIRINO.trace(m.v, m.nrt, m.nmz, j, m.rt0, m.rt1); out.xic = { c: pt.mz, tol: m.dmz / 2, tr: [{ k: a.f.k, rt: r.x, y: r.y }], signed: !!a.ref }; }
     return out;
   }
   function show(p, pt) {                                                 // exact where the page has it, a preview for the rest
@@ -289,10 +307,20 @@ window.MAPPA = (() => {
     return sp && xi;
   }
   const ask = MIRINO.latest(() => { const p = ask.panel; return p ? exact(p) : null; });
+  const ticKey = a => `${a.f.k}|${a.ref ? a.ref.k : ""}|${a.f.lv || 1}`;
+  // A − B of the TIC of the two files (once per pair): the overall trace of the difference
+  async function fetchTic(p) {
+    const s = st(p), a = p._a; if (!a || !a.ref) return;
+    const key = ticKey(a); if (s.tic && s.tic.key === key) return;
+    try {
+      const lv = a.f.lv || 1, [ca, cb] = await Promise.all([getChrom(a.f.k, "tic", lv), getChrom(a.ref.k, "tic", lv)]), d = MIRINO.diffTrace(ca.rt, ca.y, cb.rt, cb.y);
+      if (p._a && ticKey(p._a) === key) s.tic = { key, rt: d.rt, y: d.y };
+    } catch (e) { /* no TIC */ }
+  }
   async function exact(p) {
     const q = point(p); if (!q) return;
     const s = st(p), t1 = performance.now();
-    await Promise.all([fetchSpec(p, q.rt), fetchXic(p, q.mz)]);
+    await Promise.all([fetchSpec(p, q.rt), fetchXic(p, q.mz), fetchTic(p)]);
     const t2 = performance.now(), r = point(p); if (!r || !p._a) return;
     const done = show(p, r); readout(p);                                 // an answer for a point the sight has left is not drawn: the newest point is already queued
     if (done) { if (MEAS && s.t0) meas.push({ fetch: t2 - t1, draw: performance.now() - t2, total: performance.now() - s.t0 }); s.t0 = 0; prefetch(p, r); }
@@ -350,22 +378,31 @@ window.MAPPA = (() => {
     const Y = v => H - M.b - (v - a.y0) / (a.y1 - a.y0) * (H - M.t - M.b), x0 = 6, x1 = W - 8;
     g.beginPath(); g.moveTo(x0 + .5, M.t); g.lineTo(x0 + .5, H - M.b); g.stroke();
     if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, M.t + 10); return; }
-    let ymax = 0; const vis = []; for (let i = 0; i < sp.mz.length; i++) if (sp.mz[i] >= a.y0 && sp.mz[i] <= a.y1) { vis.push(i); if (sp.y[i] > ymax) ymax = sp.y[i]; }
-    const pr = !prev && sp.pmz && sp.py ? profRange(sp, a.y0, a.y1) : null;       // profile scan: the continuous line (pmz/py) is drawn, the peaks (mz/y) only label it
+    const sg = !!sp.signed, ab = v => sg ? Math.abs(v) : v;                      // difference A − B: bars right (more in A) and left (more in B) of a zero line
+    let ymax = 0; const vis = []; for (let i = 0; i < sp.mz.length; i++) if (sp.mz[i] >= a.y0 && sp.mz[i] <= a.y1) { vis.push(i); if (ab(sp.y[i]) > ymax) ymax = ab(sp.y[i]); }
+    const pr = !prev && !sg && sp.pmz && sp.py ? profRange(sp, a.y0, a.y1) : null;       // profile scan: the continuous line (pmz/py) is drawn, the peaks (mz/y) only label it
     if (pr) ymax = Math.max(ymax, pr.max);
     if (!ymax) { g.fillText(T("mappa.side.empty"), x0 + 4, M.t + 10); return; }
-    if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T("mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) }), true); }
-    g.strokeStyle = a.f.color || css("--accent"); g.globalAlpha = prev ? .5 : 1; g.beginPath();
+    const xz = sg ? (x0 + x1) / 2 : x0, len = v => (sg ? (x1 - x0) / 2 : x1 - x0) * v / ymax;
+    if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T(sg ? "mappa.side.diff" : "mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) })); }
+    g.strokeStyle = a.f.color || css("--accent"); g.globalAlpha = prev ? .5 : 1;
+    if (sg) {
+      g.beginPath(); g.moveTo(xz + .5, M.t); g.lineTo(xz + .5, H - M.b); g.strokeStyle = ink; g.stroke();
+      for (const [sgn, col] of /** @type {[number, string][]} */ ([[1, "--diff-pos"], [-1, "--diff-neg"]])) { g.strokeStyle = css(col); g.beginPath(); for (const i of vis) if (sp.y[i] * sgn > 0) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(xz, y); g.lineTo(xz + len(sp.y[i]), y); } g.stroke(); }
+    } else {
+    g.beginPath();
     if (pr) { const r = profSide(g, sp, pr, Y, x0, x1, ymax, a.f.color || css("--accent")); s.sp.dataset.pts = r.pts; s.sp.dataset.full = r.full; } else { delete s.sp.dataset.pts; }
     if (!pr)
     for (const i of vis) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(x0, y); g.lineTo(x0 + (x1 - x0) * sp.y[i] / ymax, y); }
-    g.stroke(); g.globalAlpha = 1;
+    g.stroke();
+    }
+    g.globalAlpha = 1;
     if (prev) { g.fillStyle = ink; g.fillText(T("mappa.preview"), x0 + 4, H - M.b + 14); return; }       // a preview has bins, not peaks: no m/z labels
-    const top = vis.slice().sort((u, v) => sp.y[v] - sp.y[u]), kept = [];
-    for (const i of top) { if (sp.y[i] < ymax * 0.05) break; if (!kept.some(k => Math.abs(sp.mz[k] - sp.mz[i]) <= GROUP_DA)) kept.push(i); }      // only the highest peak of each group: no M+1 / M+2 or lower neighbours
-    sideLabels(g, W, kept, i => ({ y: Y(sp.mz[i]), tip: x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)) }), x0, s);
+    const top = vis.slice().sort((u, v) => ab(sp.y[v]) - ab(sp.y[u])), kept = [];
+    for (const i of top) { if (ab(sp.y[i]) < ymax * 0.05) break; if (!kept.some(k => Math.abs(sp.mz[k] - sp.mz[i]) <= GROUP_DA)) kept.push(i); }      // only the highest peak of each group: no M+1 / M+2 or lower neighbours
+    sideLabels(g, W, kept, i => ({ y: Y(sp.mz[i]), tip: sg ? xz + Math.max(0, len(sp.y[i])) : x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)) }), x0, s);
     if (pt.mz >= a.y0 && pt.mz <= a.y1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, Y(pt.mz) + .5); g.lineTo(x1, Y(pt.mz) + .5); g.stroke(); g.setLineDash([]); }
-    g.fillStyle = ink; g.fillText(`${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, H - M.b + 14);
+    g.fillStyle = ink; g.fillText(sg ? `A − B · RT ${sp.rt.toFixed(2)}` : `${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, H - M.b + 14);
   }
   function drawBottom(p, pt, xi, prev) {                                          // XIC under the map: the same RT axis
     const s = st(p), a = p._a; if (s.xc.hidden || !a) return;
@@ -374,12 +411,31 @@ window.MAPPA = (() => {
     g.beginPath(); g.moveTo(M.l, H - mb + .5); g.lineTo(W - M.r, H - mb + .5); g.stroke();
     for (const t of nice(a.x0, a.x1, 8)) { const x = X(t); if (x < M.l - 1 || x > W - M.r + 1) continue; g.textAlign = "center"; g.fillText(String(+t.toFixed(2)), x, H - mb + 13); }
     if (!xi || !pt) { g.textAlign = "left"; g.fillText(T("mappa.bot.title"), M.l + 4, mt + 8); return; }
-    let ymax = 0; const tr = xi.tr || [];
-    for (const t of tr) for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1 && t.y[i] > ymax) ymax = t.y[i];
-    if (window.TDATI) { s.xc.setAttribute("aria-label", T("mappa.bot.title")); TDATI.series(s.xc, { title: T("mappa.bot.title"), xl: T("tdati.col.rt"), yl: T("tdati.col.int"), series: tr.map(t => ({ x: t.rt, y: t.y, name: t.label || t.name })) }, true); }
-    const Y = v => H - mb - v / (ymax || 1) * (H - mt - mb);
+    let tr = xi.tr || [], ymax = 0, sg = false;
+    if (a.ref && xi.signed) sg = true;                                              // preview of a difference: the matrix already holds A − B
+    else if (a.ref && tr.length >= 2) { const d = MIRINO.diffTrace(tr[0].rt, tr[0].y, tr[1].rt, tr[1].y); tr = [{ k: tr[0].k, rt: d.rt, y: d.y, label: "A − B" }]; sg = true; }
+    const tic = sg && s.tic && s.tic.key === ticKey(a) ? s.tic : null;               // A − B of the TIC, on its own scale, behind the XIC
+    for (const t of tr) for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1 && Math.abs(t.y[i]) > ymax) ymax = Math.abs(t.y[i]);
+    if (window.TDATI) { s.xc.setAttribute("aria-label", T("mappa.bot.title")); TDATI.series(s.xc, { title: T("mappa.bot.title"), xl: T("tdati.col.rt"), yl: T("tdati.col.int"), series: tr.map(t => ({ x: t.rt, y: t.y, name: t.label || t.name })).concat(tic ? [{ x: tic.rt, y: tic.y, name: "TIC A − B" }] : []) }, true); }
+    const lo0 = sg ? -ymax : 0, Y = v => H - mb - (v - lo0) / ((sg ? 2 * ymax : ymax) || 1) * (H - mt - mb);
     g.beginPath(); g.moveTo(M.l + .5, mt); g.lineTo(M.l + .5, H - mb + .5); g.stroke();      // intensity axis, like the other chromatograms
-    if (ymax) { g.textAlign = "right"; for (const t of nice(0, ymax, Math.max(2, Math.floor((H - mt - mb) / 28)))) { const y = Math.round(Y(t)) + .5; g.beginPath(); g.moveTo(M.l - 4, y); g.lineTo(M.l, y); g.stroke(); g.fillText(fmtA(t), M.l - 6, y + 3.5); } }
+    if (ymax) { g.textAlign = "right"; for (const t of nice(lo0, sg ? ymax : ymax, Math.max(2, Math.floor((H - mt - mb) / 28)))) { const y = Math.round(Y(t)) + .5; g.beginPath(); g.moveTo(M.l - 4, y); g.lineTo(M.l, y); g.stroke(); g.fillText(fmtA(t), M.l - 6, y + 3.5); } }
+    if (sg) {
+      const y0 = Y(0); g.beginPath(); g.moveTo(M.l, y0 + .5); g.lineTo(W - M.r, y0 + .5); g.stroke();
+      if (tic) {                                                                    // TIC A − B: thin dashed line with its own scale (written beside the label)
+        const tm = Math.max(...tic.y.map(Math.abs)) || 1; g.strokeStyle = ink; g.setLineDash([2, 3]); g.beginPath(); let f1 = true;
+        for (let i = 0; i < tic.rt.length; i++) { if (tic.rt[i] < a.x0 || tic.rt[i] > a.x1) continue; const x = X(tic.rt[i]), y = y0 - tic.y[i] / tm * (y0 - mt); if (f1) { g.moveTo(x, y); f1 = false; } else g.lineTo(x, y); }
+        g.stroke(); g.setLineDash([]);
+      }
+      const t = tr[0];
+      for (const [sgn, col] of /** @type {[number, string][]} */ ([[1, "--diff-pos"], [-1, "--diff-neg"]])) {          // area between the curve and zero: vermilion where A is higher, blue where B is
+        g.save(); g.beginPath(); g.rect(M.l, sgn > 0 ? mt : y0, W - M.l - M.r, sgn > 0 ? y0 - mt : H - mb - y0); g.clip();
+        g.fillStyle = css(col); g.strokeStyle = css(col); g.globalAlpha = prev ? .35 : .55; g.beginPath(); g.moveTo(X(Math.max(a.x0, t.rt[0] ?? a.x0)), y0);
+        let lx = M.l; for (let i = 0; i < t.rt.length; i++) { if (t.rt[i] < a.x0 || t.rt[i] > a.x1) continue; lx = X(t.rt[i]); g.lineTo(lx, Y(t.y[i])); }
+        g.lineTo(lx, y0); g.closePath(); g.fill(); g.globalAlpha = 1; g.lineWidth = 1.2; g.stroke(); g.restore();
+      }
+      g.lineWidth = 1;
+    } else
     tr.forEach((t, n) => {
       const f = E.files[t.k]; g.strokeStyle = f ? f.color : ink; g.lineWidth = 1.2; g.globalAlpha = prev ? .5 : 1; if (n) g.setLineDash([4, 3]); g.beginPath(); let first = true;
       for (let i = 0; i < t.rt.length; i++) { if (t.rt[i] < a.x0 || t.rt[i] > a.x1) continue; const x = X(t.rt[i]), y = Y(t.y[i]); if (first) { g.moveTo(x, y); first = false; } else g.lineTo(x, y); }
@@ -387,22 +443,40 @@ window.MAPPA = (() => {
     });
     g.fillStyle = css("--ink"); g.textAlign = "left";
     const lo = xi.c - xi.tol, hi = xi.c + xi.tol;
-    g.fillText(prev ? `XIC · ${T("mappa.preview")}` : `XIC ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}`, M.l + 4, mt + 8);
+    g.fillText(prev ? `XIC · ${T("mappa.preview")}` : `XIC${sg ? " A − B" : ""} ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}${tic ? " · " + T("mappa.bot.tic") : ""}`, M.l + 4, mt + 8);
     if (pt.rt >= a.x0 && pt.rt <= a.x1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(pt.rt) + .5, mt); g.lineTo(X(pt.rt) + .5, H - mb); g.stroke(); g.setLineDash([]); }
   }
 
   // ---------------------------------------------------------------- mouse
-  function move(p, px, py) {
+  // Shift held while the pointer moves with no button down: the sight is held on the line or the column picked by the first pixels (same m/z or same RT),
+  // so the spectrum and the XIC at the margins follow a straight line; releasing Shift frees it. s.sl = { ax, rt, mz, x, y } (anchor point and pixel); s.lpx = last pixel
+  function shiftSight(p, s, px, py) {
+    if (!s.sl) { const h = s.hov || xy2pt(p, px, py); s.sl = { ax: null, rt: h.rt, mz: h.mz, x: s.lpx ? s.lpx[0] : px, y: s.lpx ? s.lpx[1] : py }; }
+    const q = s.sl, dx = px - q.x, dy = py - q.y;
+    if (!q.ax && Math.max(Math.abs(dx), Math.abs(dy)) >= ASSE.THR) q.ax = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+    return q.ax === "x" ? { rt: xOf(p, px), mz: q.mz } : q.ax === "y" ? { rt: q.rt, mz: p._a.mzAt(py) } : { rt: q.rt, mz: q.mz };
+  }
+  const xy2pt = (p, px, py) => ({ rt: xOf(p, px), mz: p._a.mzAt(py) });
+  function move(p, px, py, e) {
     if (!is2d(p)) return; const s = st(p), a = p._a;
     if (s.feat && window.MAPEX && MAPEX.featHover(p, px, py)) return;
     if (s.ex && window.MAPEX && MAPEX.hover(p, px, py)) return;
     if (s.frz) return;                                                  // the menu is open: the sight stays on the clicked point
-    if (px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) { s.hov = null; } else { s.hov = { rt: xOf(p, px), mz: a.mzAt(py) }; s.kp = null; }
+    const held = !!(e && e.shiftKey && !e.buttons && mirOn(p) && !s.lock);
+    if (!held) s.sl = null;
+    if (px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) { s.hov = null; }
+    else { s.hov = held ? shiftSight(p, s, px, py) : xy2pt(p, px, py); s.kp = null; }
+    s.lpx = [px, py];
     if (mirOn(p)) { p.tip.hidden = true; p.vl.hidden = true; }
     if (!s.lock) frame(p); else readout(p);
   }
   function guide(p, q) { const s = st(p); if (!q && !s.guide) return; s.guide = q || null; overlay(p); }
-  function leave(p) { const s = st(p); if (s.frz) return; s.hov = null; if (!s.lock && s.ovg) frame(p); }
+  function shiftUp(p, e) {                                              // Shift released: the sight is free again, at the pointer
+    const s = st(p); if (e.key !== "Shift" || !s.sl) return;
+    s.sl = null; if (s.hov && s.lpx && !s.frz) s.hov = xy2pt(p, s.lpx[0], s.lpx[1]);
+    frame(p);
+  }
+  function leave(p) { const s = st(p); if (s.frz) return; s.sl = null; s.hov = null; if (!s.lock && s.ovg) frame(p); }
   function wheel(p, e, px, py) {
     if (!is2d(p) || e.ctrlKey || e.metaKey) return false;               // Ctrl/Cmd + wheel (a pinch on the trackpad) keeps the zoom of explore.js
     e.preventDefault();
@@ -429,7 +503,7 @@ window.MAPPA = (() => {
   }
   function whole(p) { pushZh(p); p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
   function unlock(p) { const s = st(p); s.lock = null; overlay(p); margins(p); if (!mirOn(p)) p.rd.textContent = ""; }
-  // right click: lock / unlock the point; Maiusc + right click: the XIC of that m/z (the old right-click entry, also in the «⋯» menu)
+  // right click: lock / unlock the point; Maiusc + right click: the XIC of that m/z (the old right-click entry)
   function ctx(p, e, px, py) {
     if (!is2d(p)) return false;
     e.preventDefault(); hideHover(p);
@@ -438,7 +512,7 @@ window.MAPPA = (() => {
     if (Date.now() - (st(p).lpAt || 0) < 900) return true;             // the long press has just opened the menu (Android also sends contextmenu)
     showMenu(ad2(p, inside ? { rt: xOf(p, px), mz: a.mzAt(py) } : null), e); return true;
   }
-  // the «⋯» menu: the old right-click menu, at the point of the sight (locked, keyboard or the middle of the map)
+  // the menu of the Menu key / Shift+F10: the right-click menu, at the point of the sight (locked, keyboard or the middle of the map)
   function menuAt(p, btn, kbd) {
     const a = p._a; if (!a) return; const pt = point(p) || { rt: (a.x0 + a.x1) / 2, mz: (a.y0 + a.y1) / 2 }, r = btn.getBoundingClientRect();
     showMenu(ad2(p, pt), { preventDefault() {}, clientX: r.left + (kbd ? r.width / 2 : 0), clientY: kbd ? r.top + r.height / 2 : r.bottom + 4, kbd: !!kbd });
@@ -523,14 +597,14 @@ window.MAPPA = (() => {
   async function addPoint(p, px, py) {
     const a = p._a, rt = xOf(p, px), mz = a.mzAt(py);
     const q = (await snapAt(p, rt, mz)) || { rt, mz };
-    const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "" }); st(p).psel = list.length - 1;
+    const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "", shape: shapeNew(list, q.rt) }); st(p).psel = list.length - 1;
     ptsSave(p); overlay(p); table(p);
   }
   // from the 3D viewer: a point at (rt, mz), snapped to the local maximum like a click on the map (dmz = width of the cell, in Da)
   async function addPointAt(p, rt, mz, dmz) {
     const a = p._a; if (!a || !a.f) return;
     const q = (await snapAt(p, rt, mz, dmz || 1, 0.2)) || { rt, mz };
-    const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "" }); st(p).psel = list.length - 1;
+    const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "", shape: shapeNew(list, q.rt) }); st(p).psel = list.length - 1;
     ptsSave(p); overlay(p); table(p);
   }
   const markedAt = (p, q) => p._a ? nearPoint(p, p._a.X(q.rt), p._a.Y(q.mz)) : -1;      // index of the marked point under (rt, m/z), -1 if none
@@ -569,7 +643,7 @@ window.MAPPA = (() => {
   function delPoint(p, i) { const list = pts(p); if (i == null || i < 0 || i >= list.length) return; list.splice(i, 1); st(p).psel = null; ptsSave(p); overlay(p); table(p); }
   // tolerance of the RT groups: the student's value, else about one peak width (5 scans, between 0.02 and 0.15 min)
   const grpTol = () => PREF.grp ?? Math.min(0.15, Math.max(GRP0, +(5 * scanStep()).toFixed(3)));
-  const MX = { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, grpTol, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt }, { grpShape, drawPoints, shapePath, ...forms } = MAPFORME(MX), { table, tableNow } = MAPTAB(MX, forms);
+  const MX = { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, grpTol, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt }, { grpShape, shapeNew, drawPoints, shapePath, ...forms } = MAPFORME(MX), { table, tableNow } = MAPTAB(MX, { ...forms, grpShape });
   async function spectrumAt(p, rt, k) {
     const f = k != null && E.files[k] ? E.files[k] : p._a.f; let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
     const n = await nearScan(f.k, rt); if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; }
@@ -719,7 +793,7 @@ window.MAPPA = (() => {
     if (PREF.pal === "cividis") o.push("cividis");
     if (PREF.thr != null && Math.abs(PREF.thr - (corrState(p).now[0] === "f" ? 0.02 : 0.004)) > 1e-9) o.push(`${T("mappa.thr")} ${+(PREF.thr * 100).toFixed(1)} %`);
     if (corrState(p).now[0] === "f" && p.norm && p.norm !== "abs") o.push(T(`ctl.map.norm.${p.norm}`));
-    if (d.show !== "all" && corrState(p).now[0] === "f") o.push(T(`mappa.show.${d.show}`));
+    if (d.show === "all" && corrState(p).now[0] === "f") o.push(T("mappa.show.neg"));
     return o;
   }
   // ---- the box «How it is extracted» (opened by the markers of mzFinder; the module loads the first time)
@@ -787,7 +861,7 @@ window.MAPPA = (() => {
     cv.addEventListener("touchend", end); cv.addEventListener("touchcancel", () => { clearTimeout(lp); g = null; });
   }
 
-  // ---------------------------------------------------------------- buttons in the controls of the map: «⋯» menu, sight, whole view
+  // ---------------------------------------------------------------- buttons in the controls of the map: mark, snap, sight, 3D
   function decorate(p, c) {
     if (p.type !== "map") return;
     const hasRef = corrState(p).now[0] === "f", o = diffOpt(hasRef), pal = PREF.pal === "cividis" ? "cividis" : "viridis";
@@ -795,20 +869,19 @@ window.MAPPA = (() => {
     const col = c.querySelector('[data-mzslot="col"]'), dif = c.querySelector('[data-mzslot="diff"]');
     if (col) col.outerHTML = `<select data-mz="pal" title="${T("mappa.pal.title")}" aria-label="${T("mappa.pal.title")}">${opt("viridis", pal, T("mappa.pal.viridis"))}${opt("cividis", pal, T("mappa.pal.cividis"))}</select>` +
       `<label class="muted" title="${T("mappa.thr.title")}">${T("mappa.thr")} <input data-mz="thr" class="mzf" inputmode="decimal" value="${+(o.thr * 100).toFixed(1)}"> %</label>`;
-    if (dif) dif.outerHTML = hasRef ? `<select data-mz="show" title="${T("mappa.show.title")}">${opt("all", o.show, T("mappa.show.all"))}${opt("up", o.show, T("mappa.show.up"))}${opt("down", o.show, T("mappa.show.down"))}</select>` : "";
+    if (dif) dif.outerHTML = hasRef ? `<label class="muted" title="${T("mappa.show.title")}"><input type="checkbox" data-mz="neg"${PREF.neg ? " checked" : ""}> ${T("mappa.show.neg")}</label>` : "";
     const g = document.createElement("span"); g.className = "mzg"; g.setAttribute("role", "group"); g.setAttribute("aria-label", T("ctl.map.grp.tools"));
-    g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="snap" class="${PREF.snap === false ? "" : "on"}" aria-pressed="${PREF.snap !== false}" title="${T("mappa.btn.snap.title")}">${T("mappa.btn.snap")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button><button data-mz="menu" title="${T("mappa.btn.menu.title")}" aria-label="${T("mappa.btn.menu.title")}">&#8943;</button></span>` +
+    g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="snap" class="${PREF.snap === false ? "" : "on"}" aria-pressed="${PREF.snap !== false}" title="${T("mappa.btn.snap.title")}">${T("mappa.btn.snap")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" aria-pressed="${!!mirOn(p)}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button></span>` +
       `<button data-o="view" data-v="3d" title="${T("ctl.map.open3d.title")}" aria-label="${T("ctl.map.open3d.title")}">${T("ctl.map.open3d")}</button>`;
     c.appendChild(g);
     const Q = k => c.querySelector(`[data-mz="${k}"]`), num = el => numIt(el.value);
     Q("pal").onchange = ev => { PREF.pal = ev.target.value; prefSave(); draw(p); };
     Q("thr").onchange = ev => { const v = num(ev.target); if (v >= 0 && v < 100) { PREF.thr = v / 100; prefSave(); } draw(p); };
-    if (hasRef) Q("show").onchange = ev => { PREF.show = ev.target.value; prefSave(); draw(p); };
+    if (hasRef) Q("neg").onchange = ev => { PREF.neg = ev.target.checked; prefSave(); draw(p); };
     const dc = c.querySelector("details.mzcol"); if (dc) dc.ontoggle = () => { p._colOpen = dc.open; };
     Q("mark").onclick = () => { const s = st(p); s.mark = !s.mark; markBtn(p); };
     Q("snap").onclick = ev => { PREF.snap = PREF.snap === false; prefSave(); ev.currentTarget.classList.toggle("on", PREF.snap !== false); ev.currentTarget.setAttribute("aria-pressed", String(PREF.snap !== false)); };
-    Q("mir").onclick = ev => { const s = st(p); s.mir = !mirOn(p); ev.currentTarget.classList.toggle("on", s.mir); layout(p); draw(p); };
-    Q("menu").onclick = ev => { ev.stopPropagation(); menuAt(p, ev.currentTarget); };     // the click must not reach the document (it closes #ctx)
+    Q("mir").onclick = () => { const s = st(p); s.mir = !mirOn(p); layout(p); draw(p); };
   }
 
   function markBtn(p) { const b = p.el.querySelector('[data-mz="mark"]'); if (b) b.classList.toggle("on", !!st(p).mark); p.cv.style.cursor = st(p).mark ? "copy" : ""; }

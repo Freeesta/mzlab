@@ -68,7 +68,7 @@ function sortFiles(){const c=fileComparator(ST.files,f=>f.conc==null?null:f.conc
 const METHOD_FORMATS=[{ext:".dam",maker:"SCIEX"}];
 const isMethodFile=name=>METHOD_FORMATS.some(x=>name.toLowerCase().endsWith(x.ext));
 (()=>{const fm=METHOD_FORMATS.map(x=>x.ext+" "+x.maker).join(", ");$("#pickdam").accept=METHOD_FORMATS.map(x=>x.ext).join(",");
-  $("#dropdam").setAttribute("aria-label",I18N.t("load.method.drop",{formats:fm}));$("#dropdam").innerHTML=`<b>${I18N.t("load.method.drop",{formats:fm})}</b><br>${I18N.t("load.method.dropHint")}`})();
+  $("#dropdam").setAttribute("aria-label",I18N.t("load.method.drop")+" ("+fm+")");$("#dropdam").innerHTML=`<b>${I18N.t("load.method.drop")}</b><br>${I18N.t("load.method.dropHint")}<small class="fmts">${esc(METHOD_FORMATS.map(x=>x.ext).join(" · "))}</small>`})();
 // each method is a chip «Method: name» with ×; the method goes with the data file of the same base name, else with the selected file (api.method)
 function renderMethods(){const el=$("#mlist");
   el.innerHTML=ST.methods.map((m,i)=>`<span class="chip"><span>${I18N.t("load.method.chip",{name:esc(m.name)})}</span> <span class="muted sm">${esc(m.info&&m.info.key?I18N.t(m.info.key,m.info.params):"")} · ${sz(m.size)}</span> <button type="button" data-mrm="${i}" aria-label="${esc(I18N.t("load.method.remove",{name:m.name}))}" title="${I18N.t("load.table.remove")}">&times;</button></span>`).join("");
@@ -113,11 +113,9 @@ let UPBUSY=0;const LOADFAIL=window.QQQ_LOADFAIL=new Set();      // names of the 
 // hook for a progress bar on the loading screen: loadingStato("phase", 40) shows the phase and 40 % in place of the phrase, loadingStato(null) gives the phrases back
 function loadingStato(text,pct){ldMsg=text?{text,pct:pct==null?null:pct}:null;ldRefresh()}
 // the button waits for the files still being read: its click shows the overlay with the phase and the percentage of the whole batch (event mzlab-index), then opens them all
-const LOADP=new Map(),BATCH={tot:0,done:0},IDLE=[];let WAITING=false;
-const PHASE_KEY={read:"load.ph.read",scans:"load.ph.scans",chrom:"load.ph.chrom"};
-function waitStato(){if(!WAITING)return;let sum=0,low=null;for(const v of LOADP.values()){sum+=v.frac;if(!low||v.frac<low.frac)low=v}
-  loadingStato(I18N.t(PHASE_KEY[low&&low.phase]||"load.ph.index"),BATCH.tot?100*Math.min(.99,(BATCH.done+sum)/BATCH.tot):null)}
-addEventListener("mzlab-index",e=>{const d=/** @type {CustomEvent} */(e).detail;LOADP.set(d.name,{frac:d.frac,phase:d.phase});waitStato()});
+const IDLE=[];let WAITING=false;      // the numbers come from PROGRESSO (progresso.js): one model for the card, the overlay and Tabui
+function waitStato(){if(!WAITING)return;const s=PROGRESSO.state();loadingStato(I18N.t(PROG_PHASE_KEY[s.phase]||"load.ph.index"),s.pc)}
+PROGRESSO.subscribe(waitStato);
 const idle=()=>UPBUSY>0?new Promise(ok=>IDLE.push(ok)):Promise.resolve();
 function checkGo(){$("#opbtn").disabled=UPBUSY===0&&!ST.files.some(usable);$("#gomsg").textContent=""}
 // sends a file and returns the JSON answer (progress callback: loaded, total); in the browser version there is no network: it goes to the worker
@@ -141,7 +139,7 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 (()=>{const b=$("#fs-btn"),de=document.documentElement;if(!b||!de.requestFullscreen)return;b.hidden=false;
   const sync=()=>{const on=!!document.fullscreenElement,k=on?"header.fullscreen.exit":"header.fullscreen";b.setAttribute("aria-pressed",on);b.querySelector(".fs-in").hidden=on;b.querySelector(".fs-out").hidden=!on;b.title=I18N.t(k);b.setAttribute("aria-label",b.title);b.dataset.i18nTitle=b.dataset.i18nAriaLabel=k};
   b.onclick=()=>{(document.fullscreenElement?document.exitFullscreen():de.requestFullscreen({navigationUI:"hide"})).catch(()=>{})};document.addEventListener("fullscreenchange",sync)})();
-(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.nativo){d.setAttribute("data-i18n-html","load.dropWiff");d.innerHTML=I18N.t("load.dropWiff");const h=document.querySelector("h3[data-i18n=\"load.step1.title\"]");if(h){h.setAttribute("data-i18n","load.step1.titleNative");h.textContent=I18N.t("load.step1.titleNative")}CONVERT_RAW=true;$("#convhelp").hidden=true
+(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.nativo){d.setAttribute("data-i18n-html","load.dropWiff");d.innerHTML=I18N.t("load.dropWiff");d.title=I18N.t("load.dropWiff.tip");const h=document.querySelector("h3[data-i18n=\"load.step1.title\"]");if(h){h.setAttribute("data-i18n","load.step1.titleNative");h.textContent=I18N.t("load.step1.titleNative")}CONVERT_RAW=true;$("#convhelp").hidden=true
 }})})();   // the .raw note only where the Rust engine can read it
 // a Thermo .raw is read as it is by the Rust engine (rust-nativo.js): each file is a sample `x.mzML` and no mzML is written; without the engine the recipe is shown
 async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.nativo||!files.some(f=>/\.raw$/i.test(f.name)))return files;
@@ -190,7 +188,7 @@ async function moduloToMzml(files,box,rep){
     CONVROWS.add(nm,"open");const ui=g.start(i,nm),dest=`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.mzML`;
     try{const blob=await M.toMzml(jobs.get(f),mem,lot?lot.c:0,dest,p=>{ui.update(p);CONVROWS.set(nm,"run",p.scansTotal?Math.floor(100*p.scans/p.scansTotal):0)},g.signal);
       ui.done();CONV.add(nm,blob);out.push(new File([blob],nm))}
-    catch(e){ui.done();if(!e.cancelled){const m=e.json?I18N.err(e.json).message:e.message;(rep.errs[m]=rep.errs[m]||[]).push(f.name)}}
+    catch(e){ui.done();if(!e.cancelled){const x=e.json?I18N.err(e.json):e,m=x.message;(rep.errs[m]=rep.errs[m]||[]).push(f.name);if(!(rep.diag||(rep.diag={}))[m])rep.diag[m]=DIAG.da(Object.assign(x,{fase:x.fase||"decode"}),{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}}
     finally{CONVROWS.drop(nm)}}
   out.panel=g;return out}
 let CONVERT_RAW=false;   // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
@@ -203,7 +201,7 @@ function groupHash(files){const s=files.map(f=>f.name+":"+f.size).sort().join("|
 function groupSeen(h){let a=[];try{a=JSON.parse(ssGet("qqq.unopen")||"[]")}catch(e){}return SEEN_GROUPS.has(h)||a.includes(h)}
 function groupMark(h){SEEN_GROUPS.add(h);try{const a=JSON.parse(ssGet("qqq.unopen")||"[]");a.push(h);ssSet("qqq.unopen",JSON.stringify(a.slice(-50)))}catch(e){}}
 function namesCut(a,max){return a.slice(0,max).map(esc).join(", ")+(a.length>max?"…":"")}
-// ONE notice for the whole loading: files that cannot be opened in the browser (count + collapsible list), unknown formats, read errors and big files, one line per kind
+// ONE notice for the whole loading: files that cannot be opened in the browser (count + collapsible list), unknown formats and read errors, one line per kind
 function closeUnopen(){const u=$("#unopen");u.hidden=true;u.textContent=""}
 function openConvHelp(focus){const d=$("#convhelp");d.hidden=false;d.open=true;if(focus){d.scrollIntoView({block:"nearest"});d.querySelector("summary").focus()}}
 function reportLoad(rep){
@@ -214,17 +212,19 @@ function reportLoad(rep){
     L.push(`<p><b>${T(n===1?"unopen.head.one":"unopen.head",{n,types})}</b></p>`);
     L.push(`<details class="unopen-names"><summary>${T("unopen.names")}</summary><ul>${names.slice(0,5).map(x=>`<li>${esc(x)}</li>`).join("")}${names.length>5?`<li class="muted">${T("unopen.more",{n:names.length-5})}</li>`:""}</ul></details>`)}
   if(rep.other.length)L.push(`<p>${T("unopen.other",{n:rep.other.length,names:namesCut(rep.other,3)})}</p>`);
-  for(const [msg,names] of Object.entries(rep.errs))L.push(`<p class="fail">${names.length===1?T("unopen.err.one",{name:esc(names[0]),message:esc(msg)}):T("unopen.err.many",{n:names.length,names:namesCut(names,3),message:esc(msg)})}</p>`);
+  const DG=[];
+  for(const [msg,names] of Object.entries(rep.errs)){const d=(rep.diag||{})[msg],why=d&&d.causa!=="unknown"?` ${I18N.t(`diag.cause.${d.causa}`)}`:"";if(d)DG.push(d);
+    L.push(`<div class="fail"><p>${names.length===1?T("unopen.err.one",{name:esc(names[0]),message:esc(msg)}):T("unopen.err.many",{n:names.length,names:namesCut(names,3),message:esc(msg)})}${esc(why)}</p>${d?DIAG.html(d,esc,T):""}</div>`)}
   if(rep.moved.dam.length)L.push(`<p>${T("load.note.movedToDam",{name:namesCut(rep.moved.dam,3)})}</p>`);
   if(rep.moved.data.length)L.push(`<p>${T("load.note.movedToData",{name:namesCut(rep.moved.data,3)})}</p>`);
   for(const n of rep.notes||[])L.push(`<p>${esc(n)}</p>`);
-  if(rep.big.length)L.push(`<p>${T("load.note.big",{n:rep.big.length})}</p>`);
   if(!L.length)return;
   const needHelp=rep.unopen.length||rep.other.length;
   u.innerHTML=L.join("")+`<div class="row">${needHelp?`<button type="button" class="sec" data-a="help">${T("unopen.how")}</button>`:""}<button type="button" class="sec" data-a="close">${T("common.close")}</button></div>`;
   u.hidden=false;
   u.querySelector('[data-a=close]').onclick=closeUnopen;
   const hb=u.querySelector('[data-a=help]');if(hb)hb.onclick=()=>openConvHelp(true);
+  u.querySelectorAll(".diag").forEach((el,i)=>DIAG.cabla(el,DG[i],window.MZLAB_VERSION,T));
   if(rep.unopen.length){
     const h=$("#convhint");h.textContent=T("conv.help.hint",{types:[...new Set(conv)].join(", ")});h.hidden=false;
     if(!ssGet("qqq.convopen")){ssSet("qqq.convopen","1");openConvHelp(false)}   // opens by itself once per session
@@ -240,27 +240,34 @@ function dropDups(files){const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.fi
   const msg=dups.length===1?I18N.t("load.dup.one",{name:dups[0].name}):I18N.t("load.dup.many",{n:dups.length});CartCarica.note(msg);setTimeout(()=>{const n=$("#cartinfo");if(n&&n.textContent===msg)CartCarica.note("")},5000);
   dups.forEach(f=>{const tr=[...document.querySelectorAll("#flist tr")].find(r=>r.children[1]&&r.children[1].textContent.trim().startsWith(f.name));if(tr){tr.classList.add("dupflash");tr.scrollIntoView({block:"nearest"});setTimeout(()=>tr.classList.remove("dupflash"),1800)}});
   return files.filter(f=>!dups.includes(f))}
-async function upload(files,into){const box=$("#up");fail();files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)));if(!UPBUSY){BATCH.tot=0;BATCH.done=0}BATCH.tot+=files.length;UPBUSY++;checkGo();const mine=files;try{await upload0(files,into,box)}finally{mine.forEach(f=>INFLIGHT.delete(fkey(f)));UPBUSY--;checkGo();if(!UPBUSY)IDLE.splice(0).forEach(ok=>ok())}}
+let UPBAR=null;      // the one bar of the loading card (PROGRESSO.mount), removed when the last loading is over
+async function upload(files,into){const box=$("#up");fail();files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)));UPBUSY++;checkGo();const mine=files;try{await upload0(files,into,box)}finally{mine.forEach(f=>INFLIGHT.delete(fkey(f)));UPBUSY--;checkGo();if(!UPBUSY){if(UPBAR){UPBAR();UPBAR=null}IDLE.splice(0).forEach(ok=>ok())}}}
 async function upload0(files,into,box){
-  const rep=/** @type {any} */ ({unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[],notes:[]}),rejected=/** @type {any[]} */ ([]);
+  const rep=/** @type {any} */ ({unopen:[],other:[],errs:{},moved:{dam:[],data:[]},notes:[]}),rejected=/** @type {any[]} */ ([]);
   const one=async f=>{const isDam=isMethodFile(f.name);
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
-    const pn=panel&&CONV.has(f.name)?panel:null,row=document.createElement("div");      // a converted file: its index is the last phase of the bar of the conversion
-    if(!pn){row.innerHTML=`${esc(f.name)} <span class="muted">${sz(NATIVO.size(f))}</span><div class="prog"><i></i></div>`;box.appendChild(row)}
+    const pn=panel&&CONV.has(f.name)?panel:null,QQQ_NET=!window.QQQ_BROWSER,mono=()=>Math.floor(100*PROGRESSO.file(f.name));      // a converted file: its index is the last phase of the bar of the conversion
     CONVROWS.set(f.name,"index",0);if(pn)pn.index(f.name,0);
-    const onIdx=e=>{if(e.detail.name===f.name){const pc=Math.min(99,Math.floor(100*e.detail.frac));CONVROWS.set(f.name,NATIVO.rowState(e.detail.phase),pc);if(pn)pn.index(f.name,pc);else row.querySelector("i").style.width=pc+"%"}};
+    const put=(frac,phase)=>{PROGRESSO.set(f.name,QQQ_NET?PROG_NET.send+(1-PROG_NET.send)*frac:frac,phase);const pc=Math.min(99,mono());CONVROWS.set(f.name,NATIVO.rowState(phase),pc);if(pn)pn.index(f.name,pc)};
+    const onIdx=e=>{if(e.detail.name===f.name)put(e.detail.frac,e.detail.phase)};
     addEventListener("mzlab-index",onIdx);
-    try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{if(!pn)row.querySelector("i").style.width=(100*a/b)+"%";CONVROWS.set(f.name,"index",Math.floor(100*a/b));if(pn)pn.index(f.name,Math.floor(100*a/b))});
-      if(j.error)throw I18N.err(j);CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
-      LOADFAIL.delete(f.name);if(window.QQQ_BROWSER&&NATIVO.size(f)>300*1048576)rep.big.push(f.name)}
-    catch(e){row.remove();CONVROWS.drop(f.name);LOADFAIL.add(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}finally{removeEventListener("mzlab-index",onIdx);LOADP.delete(f.name);BATCH.done++;waitStato()}};
+    try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{if(QQQ_NET)PROGRESSO.set(f.name,PROG_NET.send*a/b,"send");const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
+      if(j.error)throw I18N.err(j);CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();
+      LOADFAIL.delete(f.name)}
+    catch(e){CONVROWS.drop(f.name);LOADFAIL.add(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name);if(!(rep.diag||(rep.diag={}))[e.message])rep.diag[e.message]=DIAG.da(e,{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}finally{removeEventListener("mzlab-index",onIdx);PROGRESSO.end(f.name)}};
   let panel=null;
   const wr=await wiffToMzml(files,box);files=await rawToMzml(wr.files,box);files=await moduloToMzml(files,box,rep);panel=files.panel||null;for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
   if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
+  for(const f of files)PROGRESSO.begin(f.name,NATIVO.size(f));if(files.length&&!panel&&!UPBAR)UPBAR=PROGRESSO.mount(box);      // all the files of this loading are in the batch before the first one is read: the total only grows in precision, never goes back
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);   // in the browser the engine builds the indexes of several files at once (pool of workers)
   await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
-function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
+function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView();armStuck()}
+// start screen still without files after 10 s: a quiet way out, «Full reset», that opens the same question as «New session» (reset.js)
+let stuckTimer=0;
+function armStuck(){if(stuckTimer||$("#stuck"))return;stuckTimer=setTimeout(()=>{const s=$("#start");if(!s||s.hidden||S.sess||ST.files.length||$("#stuck"))return;
+  const p=document.createElement("p");p.id="stuck";p.className="muted sm";p.style.textAlign="center";p.append(I18N.t("start.stuck")+" ");const bt=document.createElement("button");bt.type="button";bt.className="sec";bt.id="stuckbtn";bt.textContent=I18N.t("start.stuck.btn");bt.onclick=()=>QQRESET.ask();p.append(bt);
+  s.appendChild(p)},10000)}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=e=>{CartCarica.fromInput(e.target.files);e.target.value=""};
 $("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};
@@ -321,8 +328,11 @@ $("#cancadd").onclick=()=>{STATO.aggiunta(false,"adding");applyView()};
 // while adding files the ones already in the session stay visible, with a way back to the data
 function renderLoaded(){const el=$("#loaded"),on=!!(S.sess&&S.adding&&typeof E!=="undefined"&&E.files.some(f=>!f.gone));el.hidden=!on;if(!on)return;
   const fs=E.files.filter(f=>!f.gone);
-  el.innerHTML=`<div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>${I18N.t("load.loaded.title",{n:fs.length})}</b><span class="sp" style="flex:1"></span><button class="go" id="backdata">${I18N.t("load.loaded.back")}</button></div><div class="muted sm" style="margin-top:6px">${fs.map(f=>`<span style="white-space:nowrap;margin-right:12px"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${f.color||"#888"};margin-right:4px"></span>${esc(f.label||f.file)}</span>`).join("")}</div>`;
-  $("#backdata").onclick=()=>{STATO.aggiunta(false,"adding");applyView()}}
+  el.innerHTML=`<div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>${I18N.t("load.loaded.title",{n:fs.length})}</b><span class="sp" style="flex:1"></span><button class="sec" id="clearall" type="button">${I18N.t("load.loaded.clear")}</button><button class="go" id="backdata">${I18N.t("load.loaded.back")}</button></div><div class="muted sm" style="margin-top:6px">${fs.map(f=>`<span style="white-space:nowrap;margin-right:12px"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${f.color||"#888"};margin-right:4px"></span>${esc(f.label||f.file)}</span>`).join("")}</div>`;
+  $("#backdata").onclick=()=>{STATO.aggiunta(false,"adding");applyView()};
+  // two presses (the first asks): the same clean slate as «Files and session only» of «Start a new session?» (reset.js)
+  const ca=$("#clearall");let armed=0;ca.onclick=()=>{if(!armed){armed=setTimeout(()=>{armed=0;ca.textContent=I18N.t("load.loaded.clear")},6000);ca.textContent=I18N.t("load.loaded.clearSure",{n:fs.length});return}
+    clearTimeout(armed);ca.disabled=true;ca.textContent=I18N.t("load.loaded.clearBusy");QQRESET.run("files")}}
 // New session: QQRESET.ask (reset.js) asks once, then clears everything the app keeps in this browser and reloads
 $("#newrun").onclick=()=>QQRESET.ask();
 // "m/z" is always written in italics: any text node that contains it is split and the symbol wrapped in <i> (not inside inputs, options, scripts or an existing <i>)

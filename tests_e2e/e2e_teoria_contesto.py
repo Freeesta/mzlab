@@ -18,11 +18,13 @@ try:
             assert pg.is_visible("#stbar [data-cmd=calc]") or pg.locator("#stbar [data-cmd=calc]").count() > 0
             assert pg.locator("#stbar [data-tcmd]").count() == 0
         step("Dati tab: data commands, no Teoria ones", data_bar)
-        pg.click("#nav [data-v=theory]"); pg.wait_for_selector("#stbar [data-tcmd=cerca]", timeout=15000)
+        pg.click("#nav [data-v=theory]"); pg.wait_for_selector("#stbar [data-tcmd=indice]", timeout=15000)
         def theory_bar():
             ids = pg.eval_on_selector_all("#stbar [data-tcmd]", "e=>e.map(x=>x.dataset.tcmd)")
-            assert ids == ["prec", "succ", "cerca", "glossario", "formule", "esercizi", "strumenti", "impostazioni"], ids
+            assert ids == ["indice", "succ", "impostazioni"], ids
             for dead in ("calc", "losses", "adducts", "lists", "more", "search"): assert pg.locator(f"#stbar [data-cmd={dead}]").count() == 0, dead
+            kinds = pg.eval_on_selector_all("#stbar > *", "e=>e.map(x=>x.classList.contains('tb-sep')?'|':'b')"); j = "".join(kinds)
+            assert "||" not in j and not j.startswith("|") and not j.endswith("|"), j   # no doubled or end separators
             assert not pg.is_visible("#newrun") and not pg.is_visible("#sb-toggle")
             for b in pg.locator("#stbar .tb").all(): bb = b.bounding_box(); assert bb["height"] >= 24 and bb["width"] >= 24, bb
         step("Teoria tab: only the commands of the Teoria; no «Nuova sessione», no side-panel toggle", theory_bar)
@@ -30,16 +32,17 @@ try:
             a = pg.evaluate("document.getElementById('tframe').contentWindow.location.pathname")
             pg.click("#stbar [data-tcmd=succ]"); pg.wait_for_function("(a)=>document.getElementById('tframe').contentWindow.location.pathname!==a", arg=a, timeout=10000)
             pg.wait_for_selector("#stbar [data-tcmd=succ]")
-            assert pg.locator("#stbar [data-tcmd]").count() == 8
+            assert pg.locator("#stbar [data-tcmd]").count() == 4
         step("Successivo changes chapter in the iframe and the bar stays", nxt)
         def menu():
-            pg.click("#stbar [data-tcmd=strumenti]"); pg.wait_for_selector("#stmenu")
-            t = pg.eval_on_selector_all("#stmenu [role=menuitem]", "e=>e.map(x=>x.textContent.trim())")
+            f = pg.frame_locator("#tframe")
+            f.locator("#sc-strumenti summary").click()
+            t = f.locator("#sc-strumenti .sc-sub button").all_inner_texts()
             assert "Frammenta" in t and "Massa e addotti" in t and "Perdite" in t, t
-            pg.keyboard.press("Escape")
-        step("Strumenti menu", menu)
+            assert f.locator("#sc-cerca").is_visible() and f.locator("#sc-esporta").is_visible()
+        step("the tools and the other commands are in the side panel of the Teoria", menu)
         def palette():
-            pg.focus("#stbar [data-tcmd=cerca]"); pg.keyboard.press("Control+k"); pg.wait_for_selector("#paletta:not([hidden])")
+            pg.focus("#stbar [data-tcmd=indice]"); pg.keyboard.press("Control+k"); pg.wait_for_selector("#paletta:not([hidden])")
             pg.fill("#pal-in", "formu"); pg.wait_for_timeout(150)
             t = pg.eval_on_selector_all("#pal-l li", "e=>e.map(x=>x.textContent)")
             assert t and "Formule" in t[0] and not any("Calcolatrice" in x for x in t), t

@@ -81,15 +81,17 @@ export function createLr({ rb }) {
     if (!n) return fail("err.file.notAccepted", { name }, `file type not accepted: ${name}`);
     const nat = /** @type {any} */ (blob).mzlabNat || null;                   // a sample of a maker's file (nativo.js): the members go to the browser storage with it
     if ((nat ? nat.size : blob.size) > 4 * 1024 * 1024 * 1024) return fail("err.memory.over4gb", {}, "file over 4 GB: too big", 500);
+    let fase = "copy";                                                 // where it fails, for the diagnosis (diagnosi.js): copy → index → open
     try {                                                              // lr_put and lr_index report how far they have got: the page shows it (event mzlab-index, shell.js upload)
       const put = await rpc({ op: "lr_put", name: n, blob, nat }, nat ? p => tellIndex(n, W.copy * p.frac, "read") : undefined);
       if (nat && rb.markNative) rb.markNative(n);
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
-      else { await rpc({ op: "lr_index", name: n }, p => tellIndex(n, p.frac, p.phase)); files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); }
+      else { fase = "index"; await rpc({ op: "lr_index", name: n }, p => tellIndex(n, p.frac, p.phase)); fase = "open"; files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); }
     } catch (e) {
       let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (_) { /* not an engine error */ }
-      return fail(key, { name: n, ...params }, `cannot read the file: ${n}`);
+      const raw = String(e && (e.raw || e.message || e) || "").slice(0, 600);      // the original text for the diagnosis (the page cuts paths out)
+      return fail(key, { name: n, ...params, fase, raw }, `cannot read the file: ${n}`);
     }
     return json({ files: sorted(), methods: mr.list() });
   }

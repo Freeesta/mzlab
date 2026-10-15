@@ -82,8 +82,8 @@
   function ask() {
     const T = (k, o) => I18N.t(k, o), btn = (m, cls, lab, sub) => `<button type="button" class="rs-big ${cls}" data-reset="${m}"><b>${lab}</b><span>${sub}</span></button>`;
     document.getElementById("resetdlg")?.remove();
-    const d = document.createElement("dialog"); d.id = "resetdlg"; d.setAttribute("aria-labelledby", "rs-t"); d.setAttribute("aria-describedby", "rs-d");
-    d.innerHTML = `<h3 id="rs-t">${T("reset.title")}</h3><p id="rs-d">${T("reset.choose")}</p>${btn("all", "rs-red", T("reset.all.btn"), T("reset.all.sub"))}${btn("files", "rs-blue", T("reset.files.btn"), T("reset.files.sub"))}<div class="rs-end"><button type="button" class="rs-cancel" data-reset="">${T("reset.cancel")}</button></div>`;
+    const d = document.createElement("dialog"); d.id = "resetdlg"; d.setAttribute("aria-labelledby", "rs-t");
+    d.innerHTML = `<h3 id="rs-t">${T("reset.title")}</h3>${btn("all", "rs-red", T("reset.all.btn"), T("reset.all.sub"))}${btn("files", "rs-blue", T("reset.files.btn"), T("reset.files.sub"))}<div class="rs-end"><button type="button" class="rs-cancel" data-reset="">${T("reset.cancel")}</button></div>`;
     document.body.appendChild(d);
     d.addEventListener("click", e => { const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("button[data-reset]")); if (!b) return; if (b.dataset.reset) { d.querySelectorAll("button").forEach(x => { x.disabled = true; }); run(b.dataset.reset); } else d.close(); });
     d.addEventListener("close", () => d.remove());
@@ -97,6 +97,7 @@
     n.innerHTML = `<span>${I18N.t("reset.note")}</span><button type="button" data-n="reset">${I18N.t("reset.note.btn")}</button><button type="button" data-n="x" aria-label="${I18N.t("reset.note.close")}">×</button>`;
     n.addEventListener("click", e => { const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("button[data-n]")); if (!b) return; if (b.dataset.n === "reset") ask(); n.remove(); });
     document.body.appendChild(n);
+    if (window.avvisoAuto) avvisoAuto(n, { x: false });                       // goes away by itself after 20 s (the timer waits while the pointer or the focus is on it)
   }
   // the desktop app calls this once at start (desktop-shim.js): the first page of a new run starts clean; a reload of the page in the same run keeps everything.
   // Without sessionStorage nothing is reset (it could never be told apart from a reload).

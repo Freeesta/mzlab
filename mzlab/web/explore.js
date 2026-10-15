@@ -21,6 +21,31 @@ window.toast = function(msg) {
   }, 3000);
 };
 
+/**
+ * An informational notice that stays on the page until it is closed (the reset note, the release notice, the engine notices) goes away by itself after `ms` (20 s):
+ * the timer stands still while the pointer is over it or the focus is inside it, and an X closes it at once (added unless `x` is false: the notice has its own).
+ * Notices that ask for an action are not given this. Returns the function that closes it.
+ * @param {HTMLElement} el the notice, already in the page
+ * @param {{ ms?: number, x?: boolean, onClose?: (by: string) => void }} [o]
+ */
+window.avvisoAuto = function(el, o = {}) {
+  let left = o.ms || 20000, t0 = 0, tm = 0, done = false, over = false, inside = false;
+  /** @param {string} by */
+  const close = by => { if (done) return; done = true; clearTimeout(tm); el.remove(); if (o.onClose) o.onClose(by); };
+  const go = () => { if (done || tm || over || inside) return; t0 = Date.now(); tm = window.setTimeout(() => close("time"), left); };
+  const stop = () => { if (!tm) return; clearTimeout(tm); tm = 0; left = Math.max(1000, left - (Date.now() - t0)); };
+  el.addEventListener("mouseenter", () => { over = true; stop(); });
+  el.addEventListener("mouseleave", () => { over = false; go(); });
+  el.addEventListener("focusin", () => { inside = true; stop(); });
+  el.addEventListener("focusout", e => { if (!el.contains(/** @type {Node | null} */ (e.relatedTarget))) { inside = false; go(); } });
+  if (o.x !== false && !el.querySelector("button.x")) {
+    const b = document.createElement("button"); b.type = "button"; b.className = "x"; b.textContent = "×";       // the shared close X (index.html)
+    b.setAttribute("aria-label", I18N.t("avviso.close")); b.onclick = () => close("x"); el.appendChild(b);
+  }
+  go();
+  return () => close("api");
+};
+
 "use strict";
 // Esplorazione dei dati: si parte dal cromatogramma totale, lo studente decide cosa estrarre.
 // Script classico (usa gli helper di index.html: S, setup, nice, fmt, css, esc, smooth, M, setView, applyView).
@@ -260,7 +285,7 @@ function uiSave(now = false) {
         k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
         link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1,
         dda: p.dda != null ? E.panels.findIndex(q => q.id === p.dda) : undefined, dock: p.dock != null ? E.panels.findIndex(q => q.id === p.dock) : undefined, duo: p.duo != null ? E.panels.findIndex(q => q.id === p.duo) : undefined, extra: p.extra || undefined, sid: p.sid ?? undefined, ion: p.ion ?? undefined, avg: p.avg || undefined, imode: p.imode || null, intf: p.intf || "",
-        lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, mk: p.type === "spec" && p.mk != null ? !!p.mk : undefined, noCont: p.type === "spec" && p.noCont ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl === undefined ? undefined : !!p.tl, overlay: p.overlay || undefined, pdaAlign: p.pdaAlign || undefined, pdaDelay: p.pdaDelay ?? undefined, gdelay: p.gdelay || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, fondo: p.fondo && p.fondo.mode !== "none" ? p.fondo : undefined, clipDraw: p.clipDraw || undefined, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" || p.bg === "x" ? p.bg : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, gamma: p.scale === "gamma" ? p.gamma : undefined, norm: p.norm, corr: p.type === "map" ? p.corr : undefined, bgr: p.type === "map" && p.bgr ? p.bgr : undefined, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
+        lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, dots: p.type === "spec" && p.dots ? true : undefined, mk: p.type === "spec" && p.mk != null ? !!p.mk : undefined, noCont: p.type === "spec" && p.noCont ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl === undefined ? undefined : !!p.tl, overlay: p.overlay || undefined, pdaAlign: p.pdaAlign || undefined, pdaDelay: p.pdaDelay ?? undefined, gdelay: p.gdelay || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, fondo: p.fondo && p.fondo.mode !== "none" ? p.fondo : undefined, clipDraw: p.clipDraw || undefined, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" || p.bg === "x" ? p.bg : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, gamma: p.scale === "gamma" ? p.gamma : undefined, norm: p.norm, corr: p.type === "map" ? p.corr : undefined, bgr: p.type === "map" && p.bgr ? p.bgr : undefined, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
       }))
     };
     nbSave(now);
