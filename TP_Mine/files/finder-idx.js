@@ -37,6 +37,9 @@ export async function headIsProfile(blob) {
   return p >= 0 && (c < 0 || p < c);
 }
 
+/** the centroid index `<name>.cen` of a maker's file written before the Thermo reader stopped re-picking the file's own centroid lists (2026-10-15) has wrong peaks and the right recorded size: it is rebuilt */
+const CEN_FROM = 1792022400000;
+
 /** @param {string} name */
 async function idxFile(name) {
   try {
@@ -55,7 +58,7 @@ async function stubIndexed(name, held, natives, cen, ask) {
   if (ix && await recordedSize(ix) === size) {
     if (!(await idxIsProfile(ix))) { cen.delete(name); return true; }
     const cx = await idxFile(name + ".cen");
-    if (!(cx && await recordedSize(cx) === size) && !(ask && await ask("cenidx", name))) throw new Error(`cannot read ${name}`);
+    if (!(cx && cx.lastModified >= CEN_FROM && await recordedSize(cx) === size) && !(ask && await ask("cenidx", name))) throw new Error(`cannot read ${name}`);
     cen.add(name);
     return true;
   }
