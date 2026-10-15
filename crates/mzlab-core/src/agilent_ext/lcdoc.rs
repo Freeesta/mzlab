@@ -680,7 +680,7 @@ impl AgilentD {
             self.file_sha1
                 .push(("AcqData/AcqMethod.xml".into(), hex(b)));
         }
-        listed.retain(|(_, b)| super::shallow(b));
+        listed.retain(|(n, b)| !n.ends_with(".xml") || super::shallow(b));
         self.metadata.extend(meta::collect(&listed));
         self.file_sha1
             .extend(extras.iter().map(|(n, b)| (n.to_string(), hex(b))));

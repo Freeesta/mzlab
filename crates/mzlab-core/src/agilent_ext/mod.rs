@@ -171,7 +171,7 @@ fn metadata(f: &Files) -> Vec<meta::Item> {
         .filter_map(|(n, b)| b.map(|b| (*n, b)))
         .collect();
     list.extend(f.others.iter().copied());
-    list.retain(|(_, b)| shallow(b));
+    list.retain(|(n, b)| !n.ends_with(".xml") || shallow(b));
     let mut items = meta::collect(&list);
     if let (false, Some(b)) = (f.ms_scan.is_empty(), f.data_ms) {
         if let Ok(d) = datams::parse(b) {
