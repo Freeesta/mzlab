@@ -77,6 +77,15 @@ fn a_log_without_time_has_no_series() {
     assert!(indice_stato(&l).is_empty());
 }
 
+/// The records as the rows a file gives: the numeric value of each field by position.
+fn righe(recs: &[GenericRecord]) -> impl FnMut(Riga<'_>) + '_ {
+    move |f| {
+        for (k, r) in recs.iter().enumerate() {
+            f(k, &|i| numero(r, i));
+        }
+    }
+}
+
 fn trailer() -> (GenericDataHeader, Vec<GenericRecord>, Vec<Scansione>) {
     let h = GenericDataHeader {
         fields: vec![
@@ -110,7 +119,7 @@ fn trailer() -> (GenericDataHeader, Vec<GenericRecord>, Vec<Scansione>) {
 #[test]
 fn a_trailer_field_that_changes_at_several_levels_is_one_series_per_level() {
     let (h, recs, scans) = trailer();
-    let v = indice_trailer(&h, &recs, &scans);
+    let v = indice_trailer(&h, &scans, &mut righe(&recs));
     let got: Vec<(&str, &str, usize)> = v
         .iter()
         .map(|x| (x.id.as_str(), x.nome.as_str(), x.n))
@@ -136,14 +145,20 @@ fn a_trailer_field_that_changes_at_several_levels_is_one_series_per_level() {
 #[test]
 fn the_points_of_a_trailer_series_are_the_scans_of_its_level() {
     let (h, recs, scans) = trailer();
-    let s = serie_trailer(&h, &recs, &scans, "trailer:Ion Injection Time@MS2").expect("series");
+    let s = serie_trailer(
+        &h,
+        &scans,
+        &mut righe(&recs),
+        "trailer:Ion Injection Time@MS2",
+    )
+    .expect("series");
     assert_eq!(
         (s.unita.as_str(), s.t, s.y),
         ("ms", vec![0.2, 0.3, 0.5], vec![50.0, 60.0, 70.0])
     );
-    let c = serie_trailer(&h, &recs, &scans, "trailer:Charge State").expect("series");
+    let c = serie_trailer(&h, &scans, &mut righe(&recs), "trailer:Charge State").expect("series");
     assert_eq!((c.t, c.y), (vec![0.2, 0.3, 0.5], vec![2.0, 3.0, 2.0]));
-    assert!(serie_trailer(&h, &recs, &scans, "trailer:AGC Target").is_none());
+    assert!(serie_trailer(&h, &scans, &mut righe(&recs), "trailer:AGC Target").is_none());
 }
 
 /// A stream laid out like a v66 file with two sections: a title, a changing channel, a constant one, a second title, a changing channel.

@@ -6,6 +6,7 @@ use crate::metodo::{num, obj, text, V};
 use opentfraw::generic_data::{GenericDataHeader, GenericRecord, GenericValue};
 use opentfraw::status_log::{split_label, StatusLog};
 use opentfraw::{GenericType, MsPower, RawFileReader};
+use std::io::{Read, Seek};
 
 pub const STATUS: &str = "status:";
 pub const TRAILER: &str = "trailer:";
@@ -75,13 +76,21 @@ impl Statistiche {
     }
 }
 
-fn numero(r: &GenericRecord, campo: usize) -> Option<f64> {
-    let v = &r.values.get(campo)?.1;
+fn numero_di(v: &GenericValue) -> Option<f64> {
     if matches!(v, GenericValue::Bool(_)) {
         return None;
     }
     v.as_f64().filter(|x| x.is_finite())
 }
+
+fn numero(r: &GenericRecord, campo: usize) -> Option<f64> {
+    numero_di(&r.values.get(campo)?.1)
+}
+
+/// The records of the scan trailer, one after the other: the number of the scan and the numeric value of a field of it. The trailer is read from the file a chunk at a time (`GenericRecordStream::for_each`),
+/// so a pass over it holds no more than a chunk; the series ask for two passes (the list, then the points of one series).
+pub type Riga<'a> = &'a mut dyn FnMut(usize, &dyn Fn(usize) -> Option<f64>);
+pub type Righe<'a> = &'a mut dyn FnMut(Riga<'_>);
 
 fn spec(
     id: String,
@@ -148,8 +157,31 @@ fn specs_stato(log: &StatusLog) -> Vec<Spec> {
     out
 }
 
-fn specs_trailer(h: &GenericDataHeader, recs: &[GenericRecord], scans: &[Scansione]) -> Vec<Spec> {
-    let livelli: std::collections::BTreeSet<u8> = scans.iter().map(|s| s.livello).collect();
+fn specs_trailer(h: &GenericDataHeader, scans: &[Scansione], righe: Righe) -> Vec<Spec> {
+    let livelli: Vec<u8> = scans
+        .iter()
+        .map(|s| s.livello)
+        .collect::<std::collections::BTreeSet<u8>>()
+        .into_iter()
+        .collect();
+    let mut stat: Vec<Vec<Statistiche>> = h
+        .fields
+        .iter()
+        .map(|_| livelli.iter().map(|_| Statistiche::default()).collect())
+        .collect();
+    righe(&mut |k, val| {
+        let Some(sc) = scans.get(k).filter(|sc| sc.t_min.is_finite()) else {
+            return;
+        };
+        let Some(li) = livelli.iter().position(|l| *l == sc.livello) else {
+            return;
+        };
+        for (i, row) in stat.iter_mut().enumerate() {
+            if let Some(y) = val(i) {
+                row[li].push(y);
+            }
+        }
+    });
     let (mut out, mut usati) = (Vec::new(), Vec::new());
     for (i, d) in h.fields.iter().enumerate() {
         if d.field_type == GenericType::Gap {
@@ -160,13 +192,8 @@ fn specs_trailer(h: &GenericDataHeader, recs: &[GenericRecord], scans: &[Scansio
             continue;
         }
         let mut per_livello: Vec<(u8, Statistiche)> = Vec::new();
-        for l in livelli.iter() {
-            let mut s = Statistiche::default();
-            for (r, sc) in recs.iter().zip(scans).filter(|(_, sc)| sc.livello == *l) {
-                if let (Some(y), true) = (numero(r, i), sc.t_min.is_finite()) {
-                    s.push(y);
-                }
-            }
+        for (li, l) in livelli.iter().enumerate() {
+            let s = std::mem::take(&mut stat[i][li]);
             if s.n >= 2 && s.diverso {
                 per_livello.push((*l, s));
             }
@@ -200,12 +227,8 @@ pub fn indice_stato(log: &StatusLog) -> Vec<Voce> {
 }
 
 /// The trailer series that vary, in the order of the file.
-pub fn indice_trailer(
-    h: &GenericDataHeader,
-    recs: &[GenericRecord],
-    scans: &[Scansione],
-) -> Vec<Voce> {
-    specs_trailer(h, recs, scans)
+pub fn indice_trailer(h: &GenericDataHeader, scans: &[Scansione], righe: Righe) -> Vec<Voce> {
+    specs_trailer(h, scans, righe)
         .into_iter()
         .map(|s| s.voce)
         .collect()
@@ -231,28 +254,41 @@ pub fn serie_stato(log: &StatusLog, id: &str) -> Option<Serie> {
 /// The points of the trailer series `id`, one per scan of its level.
 pub fn serie_trailer(
     h: &GenericDataHeader,
-    recs: &[GenericRecord],
     scans: &[Scansione],
+    righe: Righe,
     id: &str,
 ) -> Option<Serie> {
-    let s = specs_trailer(h, recs, scans)
+    let s = specs_trailer(h, scans, &mut *righe)
         .into_iter()
         .find(|s| s.voce.id == id)?;
     let (mut t, mut y) = (Vec::new(), Vec::new());
-    for (r, sc) in recs.iter().zip(scans) {
+    righe(&mut |k, val| {
+        let Some(sc) = scans.get(k) else { return };
         if s.livello.is_some_and(|l| l != sc.livello) || !sc.t_min.is_finite() {
-            continue;
+            return;
         }
-        if let Some(v) = numero(r, s.campo) {
+        if let Some(v) = val(s.campo) {
             t.push(sc.t_min);
             y.push(v);
         }
-    }
+    });
     Some(Serie {
         unita: s.voce.unita,
         t,
         y,
     })
+}
+
+/// The trailer of `raw` as rows for `Righe`: read from `source` a chunk at a time.
+fn righe_di<'a, R: Read + Seek>(
+    raw: &'a RawFileReader,
+    source: &'a mut R,
+) -> impl FnMut(Riga<'_>) + 'a {
+    move |f| {
+        raw.scan_parameters.for_each(source, &mut |k, rec| {
+            f(k, &|i| rec.value(i).as_ref().and_then(numero_di));
+        });
+    }
 }
 
 /// The time and the MS level of every scan, from the scan index and the scan events (no scan is read; an SRM run is all level 2).
@@ -275,7 +311,7 @@ fn scansioni(raw: &RawFileReader) -> Vec<Scansione> {
 }
 
 /// Every series of the file: the status log first, then the trailer.
-pub fn indice(raw: &RawFileReader) -> Vec<Voce> {
+pub fn indice<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> Vec<Voce> {
     let mut out = raw
         .status_log
         .as_ref()
@@ -283,8 +319,8 @@ pub fn indice(raw: &RawFileReader) -> Vec<Voce> {
         .unwrap_or_default();
     out.extend(indice_trailer(
         &raw.scan_parameters_header,
-        &raw.scan_parameters,
         &scansioni(raw),
+        &mut righe_di(raw, source),
     ));
     out
 }
@@ -307,14 +343,14 @@ pub fn sezione(voci: &[Voce]) -> Vec<V> {
 }
 
 /// The points of the series `id` of the list (`None` for any other id).
-pub fn serie(raw: &RawFileReader, id: &str) -> Option<Serie> {
+pub fn serie<R: Read + Seek>(raw: &RawFileReader, source: &mut R, id: &str) -> Option<Serie> {
     if id.starts_with(STATUS) {
         serie_stato(raw.status_log.as_ref()?, id)
     } else if id.starts_with(TRAILER) {
         serie_trailer(
             &raw.scan_parameters_header,
-            &raw.scan_parameters,
             &scansioni(raw),
+            &mut righe_di(raw, source),
             id,
         )
     } else {

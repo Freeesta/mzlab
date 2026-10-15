@@ -219,8 +219,8 @@ fn elenco_cromatogrammi(l: &mut LettoreRaw) -> Vec<VoceCromatogramma> {
 }
 
 /// A series of the instrument log (status log or trailer, `metodo_raw/serie.rs`): not in the list above, so neither the mzML nor the `.mzidx` carry it; computed here when asked for.
-fn registro_di(l: &LettoreRaw, id: &str) -> Option<Chromatogram> {
-    let s = crate::metodo_raw::serie::serie(&l.raw, id)?;
+fn registro_di(l: &mut LettoreRaw, id: &str) -> Option<Chromatogram> {
+    let s = crate::metodo_raw::serie::serie(&l.raw, &mut l.src, id)?;
     Some(Chromatogram {
         index: 0,
         id: id.into(),
