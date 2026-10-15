@@ -533,7 +533,6 @@ I18N.add("en", {
   "load.wiffWait": "{name}: waiting for the other file of the pair (.wiff and .wiff.scan with the same name).",
   "load.note.movedToDam": "Methods put in box 2: {name}",
   "load.note.movedToData": "Data files put in box 1: {name}",
-  "load.note.big": "Large files ({n}): the browser does not keep them, after reloading the page they must be loaded again.",
   "load.loaded.title": "Files already loaded ({n})",
   "load.loaded.back": "◀ Back to the data",
   "load.hrmix.replace": "Close the open files and load these",
