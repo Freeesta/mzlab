@@ -39,15 +39,15 @@ pub fn famiglia() -> &'static str {
 
 /// The formats of the families that are on: `agilent` and `sciex` repeat the ones of the engine's registry (and serve their variants), `thermo` repeats the `.raw` reader until it leaves the engine.
 pub fn registro() -> Vec<&'static VoceLettore> {
-    #[allow(unused_mut, clippy::vec_init_then_push)]
-    let mut v: Vec<&'static VoceLettore> = Vec::new();
-    #[cfg(any(feature = "agilent", feature = "tutte"))]
-    v.push(&VOCE_AGILENT);
-    #[cfg(any(feature = "sciex", feature = "tutte"))]
-    v.push(&VOCE_SCIEX);
-    #[cfg(any(feature = "thermo", feature = "tutte"))]
-    v.push(&VOCE_THERMO);
-    v
+    let voci: &[Option<&'static VoceLettore>] = &[
+        #[cfg(any(feature = "agilent", feature = "tutte"))]
+        Some(&VOCE_AGILENT),
+        #[cfg(any(feature = "sciex", feature = "tutte"))]
+        Some(&VOCE_SCIEX),
+        #[cfg(any(feature = "thermo", feature = "tutte"))]
+        Some(&VOCE_THERMO),
+    ];
+    voci.iter().flatten().copied().collect()
 }
 
 /// The reader of `registro` that is surest of `fs` (the first among equals; like `lettori::riconosci_in`, which takes a slice and not this list).
