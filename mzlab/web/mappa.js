@@ -84,7 +84,7 @@ window.MAPPA = (() => {
   // ---------------------------------------------------------------- the difference (extends the one of explore.js): computed by the server in numpy
   // with a tolerance in RT (the reference is replaced by its local maximum over +-0.1 min: background lines and small drifts cancel); what it shows
   // (all | increases only | decreases only) and the noise threshold (fraction of the 99.5th percentile) are choices of this browser
-  const diffOpt = (diff = true) => ({ show: PREF.show || "all", thr: PREF.thr ?? (diff ? 0.02 : 0.004), rttol: PREF.rttol ?? 0.1 });
+  const diffOpt = (diff = true) => ({ show: PREF.neg ? "all" : "up", thr: PREF.thr ?? (diff ? 0.02 : 0.004), rttol: PREF.rttol ?? 0.1 });
   const diffMap = (k, ref, lv, norm) => memo(`mzd${k}|${ref}|${lv}|${norm}|${diffOpt().rttol}`, () => J(`api/map?k=${k}&level=${lv}&ref=${ref}&norm=${norm}&rttol=${diffOpt().rttol}`).then(j => {
     const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
     return new Float32Array(u.buffer);
@@ -742,7 +742,7 @@ window.MAPPA = (() => {
     if (PREF.pal === "cividis") o.push("cividis");
     if (PREF.thr != null && Math.abs(PREF.thr - (corrState(p).now[0] === "f" ? 0.02 : 0.004)) > 1e-9) o.push(`${T("mappa.thr")} ${+(PREF.thr * 100).toFixed(1)} %`);
     if (corrState(p).now[0] === "f" && p.norm && p.norm !== "abs") o.push(T(`ctl.map.norm.${p.norm}`));
-    if (d.show !== "all" && corrState(p).now[0] === "f") o.push(T(`mappa.show.${d.show}`));
+    if (d.show === "all" && corrState(p).now[0] === "f") o.push(T("mappa.show.neg"));
     return o;
   }
   // ---- the box «How it is extracted» (opened by the markers of mzFinder; the module loads the first time)
@@ -818,7 +818,7 @@ window.MAPPA = (() => {
     const col = c.querySelector('[data-mzslot="col"]'), dif = c.querySelector('[data-mzslot="diff"]');
     if (col) col.outerHTML = `<select data-mz="pal" title="${T("mappa.pal.title")}" aria-label="${T("mappa.pal.title")}">${opt("viridis", pal, T("mappa.pal.viridis"))}${opt("cividis", pal, T("mappa.pal.cividis"))}</select>` +
       `<label class="muted" title="${T("mappa.thr.title")}">${T("mappa.thr")} <input data-mz="thr" class="mzf" inputmode="decimal" value="${+(o.thr * 100).toFixed(1)}"> %</label>`;
-    if (dif) dif.outerHTML = hasRef ? `<select data-mz="show" title="${T("mappa.show.title")}">${opt("all", o.show, T("mappa.show.all"))}${opt("up", o.show, T("mappa.show.up"))}${opt("down", o.show, T("mappa.show.down"))}</select>` : "";
+    if (dif) dif.outerHTML = hasRef ? `<label class="muted" title="${T("mappa.show.title")}"><input type="checkbox" data-mz="neg"${PREF.neg ? " checked" : ""}> ${T("mappa.show.neg")}</label>` : "";
     const g = document.createElement("span"); g.className = "mzg"; g.setAttribute("role", "group"); g.setAttribute("aria-label", T("ctl.map.grp.tools"));
     g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="snap" class="${PREF.snap === false ? "" : "on"}" aria-pressed="${PREF.snap !== false}" title="${T("mappa.btn.snap.title")}">${T("mappa.btn.snap")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" aria-pressed="${!!mirOn(p)}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button></span>` +
       `<button data-o="view" data-v="3d" title="${T("ctl.map.open3d.title")}" aria-label="${T("ctl.map.open3d.title")}">${T("ctl.map.open3d")}</button>`;
@@ -826,7 +826,7 @@ window.MAPPA = (() => {
     const Q = k => c.querySelector(`[data-mz="${k}"]`), num = el => numIt(el.value);
     Q("pal").onchange = ev => { PREF.pal = ev.target.value; prefSave(); draw(p); };
     Q("thr").onchange = ev => { const v = num(ev.target); if (v >= 0 && v < 100) { PREF.thr = v / 100; prefSave(); } draw(p); };
-    if (hasRef) Q("show").onchange = ev => { PREF.show = ev.target.value; prefSave(); draw(p); };
+    if (hasRef) Q("neg").onchange = ev => { PREF.neg = ev.target.checked; prefSave(); draw(p); };
     const dc = c.querySelector("details.mzcol"); if (dc) dc.ontoggle = () => { p._colOpen = dc.open; };
     Q("mark").onclick = () => { const s = st(p); s.mark = !s.mark; markBtn(p); };
     Q("snap").onclick = ev => { PREF.snap = PREF.snap === false; prefSave(); ev.currentTarget.classList.toggle("on", PREF.snap !== false); ev.currentTarget.setAttribute("aria-pressed", String(PREF.snap !== false)); };

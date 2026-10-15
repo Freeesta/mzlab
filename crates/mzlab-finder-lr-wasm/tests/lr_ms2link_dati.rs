@@ -87,8 +87,9 @@ fn target_row<'a>(d: &'a LrDig, i: usize, near: &dyn Fn(usize) -> bool) -> Optio
         .find_map(|k| d.entries.iter().find(|e| e.id == k.row && e.ms2_target))
 }
 
-/// One experiment of the truth against what the engine found for it. The truth marks an ion the Dig does not list as `target`: its peak has a row
-/// "MS2 target" at the time of the trace (the isotope-like ions, shown as `isotope`, keep the link of the isotope rule instead).
+/// One experiment of the truth against what the engine found for it. `target` and `isotope` are the ions that the Dig does not list as a product of
+/// its own: a `target` peak is matched (`auto`, `ambiguous` or `user`) to a row of any kind (Dig, hypothesis or MS2 target) whose reference RT is
+/// within 0.1 min of the apex in the full scan; an `isotope` peak keeps the link of the isotope rule.
 fn check(d: &LrDig, t: &Value) {
     let l = d.links.as_ref().unwrap();
     let (file, p) = (
@@ -113,34 +114,48 @@ fn check(d: &LrDig, t: &Value) {
         e.peaks
     );
     if t["expect"] == "no_signal" {
-        assert!(
-            l.unmatched
+        // the trace is flat at the time of the row of the Dig: no link to it (the early maximum may make rows of its own)
+        let rt = t["no_signal_row_rt"].as_f64().unwrap();
+        let at_rt = |id: i64| {
+            d.entries
                 .iter()
-                .any(|u| u.exp == Some(i) && u.reason == "no_signal"),
-            "{:?}",
-            l.unmatched
+                .find(|e| e.id == id)
+                .and_then(|e| e.ref_rt)
+                .is_some_and(|r| (r - rt).abs() < 0.05)
+        };
+        assert!(
+            !l.links.iter().any(|k| k.exp == i && at_rt(k.row)),
+            "{file} {p}: {:?}",
+            l.links
         );
         return;
     }
-    // an ion that is no row of the Dig: not matched to a product (a weak isotope peak of a row is shown, not pooled)
     let near = |k: usize| (e.peaks[k].apex - apex).abs() <= 0.1;
-    let made = target_row(d, i, &near);
-    let ok = made.is_some()
-        || l.unmatched.iter().any(|u| {
-            u.exp == Some(i)
-                && u.peak.is_some_and(near)
-                && matches!(u.reason, "no_row" | "no_row_at_rt")
-        })
-        || l.links
+    let isotope = l
+        .links
+        .iter()
+        .any(|k| k.exp == i && near(k.peak) && k.state == State::Isotope);
+    if t["expect"] == "isotope" {
+        assert!(isotope, "{file} {p}: {:?} {:?}", l.links, l.unmatched);
+        return;
+    }
+    let at = t["full_apex"].as_f64().unwrap_or(apex);
+    let row_at = |id: i64| {
+        d.entries
             .iter()
-            .any(|k| k.exp == i && near(k.peak) && k.state == State::Isotope);
-    assert!(ok, "{file} {p}: {:?} {:?}", l.links, l.unmatched);
+            .find(|e| e.id == id)
+            .and_then(|e| e.ref_rt)
+            .is_some_and(|r| (r - at).abs() <= 0.1)
+    };
+    let matched = l.links.iter().any(|k| {
+        k.exp == i
+            && near(k.peak)
+            && matches!(k.state, State::Auto | State::Ambiguous | State::User)
+            && row_at(k.row)
+    });
+    assert!(matched, "{file} {p}: {:?} {:?}", l.links, l.unmatched);
+    let made = target_row(d, i, &near);
     if let Some(e) = made {
-        assert!(
-            (e.ref_rt.unwrap_or(f64::NAN) - apex).abs() <= 0.1,
-            "{file} {p}: {:?}",
-            e.ref_rt
-        );
         // the cell of the full-scan file with the same sampling time is not empty
         let k =
             d.lc.iter()
@@ -150,8 +165,6 @@ fn check(d: &LrDig, t: &Value) {
             "{file} {p}: {:?}",
             e.cells
         );
-    } else if t["expect"] == "target" {
-        eprintln!("NOTE {file} {p}: target of the truth without a row of its own (isotope link or listed): {:?}", l.links);
     }
 }
 

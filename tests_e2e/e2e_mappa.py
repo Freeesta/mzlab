@@ -101,14 +101,17 @@ try:
             pg.click(".pnl.map [data-a=cpar]"); pg.click(".pnl.map details.mzcol summary")                    # «Options»: the rare controls live in the popover; the colors in «Colors…»
             pg.wait_for_function(f"!!({M}._img && {M}._img.b && {M}._img.key.includes('rttol'))", timeout=20000)     # A - B from the server, with the tolerance in RT
             assert pg.evaluate("[...LUT_DIV.slice(0,3)]") == [213, 94, 0] and pg.evaluate("[...LUT_DIV.slice(1020,1023)]") == [0, 114, 178]   # vermilion <-> blue
-            pg.select_option(".pnl.map [data-mz=show]", "up")
+            assert pg.evaluate("MAPPA.diffOpt().show") == "up" and not pg.is_checked(".pnl.map [data-mz=neg]")      # the 2D map shows the increases only, until the student asks for the decreases
+            pg.check(".pnl.map [data-mz=neg]")
+            pg.wait_for_function(f"MAPPA.diffOpt().show==='all' && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
+            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.mappa')).neg") is True
+            pg.uncheck(".pnl.map [data-mz=neg]")
             pg.wait_for_function(f"MAPPA.diffOpt().show==='up' && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
-            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.mappa')).show") == "up"
             pg.fill(".pnl.map [data-mz=thr]", "5"); pg.dispatch_event(".pnl.map [data-mz=thr]", "change")
             pg.wait_for_function(f"MAPPA.diffOpt().thr===0.05 && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
-            pg.select_option(".pnl.map [data-mz=show]", "all"); pg.fill(".pnl.map [data-mz=thr]", "2"); pg.dispatch_event(".pnl.map [data-mz=thr]", "change"); pg.wait_for_timeout(500)
+            pg.fill(".pnl.map [data-mz=thr]", "2"); pg.dispatch_event(".pnl.map [data-mz=thr]", "change"); pg.wait_for_timeout(500)
             pg.click(".pnl.map [data-a=cpar]"); pg.wait_for_timeout(200)                                   # close «Options»: the popover would cover the map
-        step("difference t30 - t0: tolerance in RT, Okabe-Ito colours, show increases only, noise threshold", diff)
+        step("difference t30 - t0: tolerance in RT, Okabe-Ito colours, increases only and the switch for the decreases, noise threshold", diff)
         def points():
             pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.wait_for_timeout(300)
             pg.click(".pnl.map [data-mz=mark]")
