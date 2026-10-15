@@ -118,7 +118,7 @@ impl Nibbles<'_> {
             .data
             .get(self.at / 2)
             .ok_or_else(|| bad("end of data"))?;
-        let h = if self.at % 2 == 0 { b >> 4 } else { b & 0xf };
+        let h = if self.at.is_multiple_of(2) { b >> 4 } else { b & 0xf };
         self.at += 1;
         Ok(u32::from(h))
     }
@@ -220,7 +220,7 @@ fn pic(data: &[u8], max: usize, expected: usize) -> Result<Vec<f64>> {
 fn slof(data: &[u8], max: usize) -> Result<Vec<f64>> {
     let fp = fixed_point(data)?;
     let body = &data[8..];
-    if body.len() % 2 != 0 {
+    if !body.len().is_multiple_of(2) {
         return Err(bad("odd length"));
     }
     if body.len() / 2 > max {
@@ -310,8 +310,7 @@ pub fn slof_fixed_point(values: &[f64]) -> f64 {
     let max = values.iter().cloned().fold(0.0, f64::max);
     (65535.0 / (max + 1.0).ln().max(1e-9))
         .floor()
-        .min(65535.0)
-        .max(1.0)
+        .clamp(1.0, 65535.0)
 }
 
 #[cfg(test)]
