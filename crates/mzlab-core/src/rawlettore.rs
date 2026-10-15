@@ -84,6 +84,8 @@ pub struct LettoreRaw {
     indice: Vec<VoceScansione>,
     /// SHA-1 of the file, read the first time the mzML header is asked for (`Some(None)`: it could not be read).
     sha1: Option<Option<String>>,
+    /// The traces of the analog controllers (pressure, temperatures, UV channels), read the first time they are asked for.
+    analogiche: Option<Vec<(String, ChromKind, opentfraw::AnalogTrace)>>,
 }
 
 fn raw_error(e: impl std::fmt::Display) -> Error {
@@ -131,6 +133,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         campioni,
         indice,
         sha1: None,
+        analogiche: None,
     }))
 }
 
@@ -162,6 +165,87 @@ fn entry(raw: &RawFileReader, m: &ScanMetadata) -> VoceScansione {
             lunghezza,
         }),
     }
+}
+
+/// The kind of an analog channel: the UV channels of a Dionex detector (`UV_VIS_1`) are PDA traces, a channel with a pressure unit or a pump pressure is a pressure,
+/// the rest (temperatures) are analog. A spectrum of the UV field is never a trace of this list: it is not decoded (`metodo/1.avvisi`).
+fn tipo_analogico(t: &opentfraw::AnalogTrace) -> ChromKind {
+    let n = t.name.to_ascii_lowercase();
+    let u = t.unit.to_ascii_lowercase();
+    if n.starts_with("uv_vis") || n.starts_with("pda") {
+        ChromKind::Pda
+    } else if n.contains("pressure")
+        || matches!(u.as_str(), "psi" | "bar" | "mbar" | "pa" | "kpa" | "mpa")
+    {
+        ChromKind::Pressure
+    } else {
+        ChromKind::Analog
+    }
+}
+
+/// Id, kind and samples of every analog channel; two channels with the same name get the number of their controller after it.
+fn analogiche(l: &mut LettoreRaw) -> &[(String, ChromKind, opentfraw::AnalogTrace)] {
+    if l.analogiche.is_none() {
+        let tracce = l.raw.analog_traces(&mut l.src).unwrap_or_default();
+        let mut out: Vec<(String, ChromKind, opentfraw::AnalogTrace)> = Vec::new();
+        for t in tracce {
+            let doppio = out.iter().any(|(id, ..)| *id == t.name);
+            let id = if doppio {
+                format!("{} #{}", t.name, t.controller)
+            } else {
+                t.name.clone()
+            };
+            out.push((id, tipo_analogico(&t), t));
+        }
+        l.analogiche = Some(out);
+    }
+    l.analogiche.as_deref().unwrap_or_default()
+}
+
+/// The TIC, then the analog channels.
+fn elenco_cromatogrammi(l: &mut LettoreRaw) -> Vec<VoceCromatogramma> {
+    let mut v = vec![VoceCromatogramma {
+        id: "TIC".into(),
+        tipo: ChromKind::Tic,
+        unita: "number of detector counts".into(),
+    }];
+    v.extend(analogiche(l).iter().map(|(id, tipo, t)| VoceCromatogramma {
+        id: id.clone(),
+        tipo: *tipo,
+        unita: t.unit.clone(),
+    }));
+    v
+}
+
+fn cromatogramma_di(l: &mut LettoreRaw, id: &str) -> Result<Chromatogram> {
+    if id != "TIC" {
+        let (index, (id, kind, t)) = analogiche(l)
+            .iter()
+            .enumerate()
+            .find(|(_, (n, ..))| n == id)
+            .ok_or_else(|| Error::new("error.badIndex").with("id", id))?;
+        return Ok(Chromatogram {
+            index: index + 1,
+            id: id.clone(),
+            kind: *kind,
+            q1: None,
+            q3: None,
+            unit: t.unit.clone(),
+            time: t.time_min.clone(),
+            intensity: t.values.clone(),
+        });
+    }
+    let (time, intensity): (Vec<f64>, Vec<f64>) = l.raw.tic_chromatogram().into_iter().unzip();
+    Ok(Chromatogram {
+        index: 0,
+        id: "TIC".into(),
+        kind: ChromKind::Tic,
+        q1: None,
+        q3: None,
+        unit: "number of detector counts".into(),
+        time,
+        intensity,
+    })
 }
 
 impl LettoreRaw {
@@ -221,30 +305,12 @@ impl Lettore for LettoreRaw {
 
     fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         self.one(c)?;
-        Ok(vec![VoceCromatogramma {
-            id: "TIC".into(),
-            tipo: ChromKind::Tic,
-            unita: "number of detector counts".into(),
-        }])
+        Ok(elenco_cromatogrammi(self))
     }
 
     fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.one(c)?;
-        (id == "TIC")
-            .then_some(())
-            .ok_or_else(|| Error::new("error.badIndex").with("id", id))?;
-        let (time, intensity): (Vec<f64>, Vec<f64>) =
-            self.raw.tic_chromatogram().into_iter().unzip();
-        Ok(Chromatogram {
-            index: 0,
-            id: "TIC".into(),
-            kind: ChromKind::Tic,
-            q1: None,
-            q3: None,
-            unit: "number of detector counts".into(),
-            time,
-            intensity,
-        })
+        cromatogramma_di(self, id)
     }
 
     fn metodo(&mut self, c: usize) -> Result<String> {

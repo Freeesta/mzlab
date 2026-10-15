@@ -201,11 +201,75 @@
                           },
                           "nome": {
                             "type": "string"
+                          },
+                          "rf_lens_V": {
+                            "type": "number"
+                          },
+                          "polarita": {
+                            "type": "string",
+                            "enum": [
+                              "positive",
+                              "negative"
+                            ]
+                          },
+                          "t_inizio_min": {
+                            "type": "number"
+                          },
+                          "t_fine_min": {
+                            "type": "number"
                           }
                         }
                       }
                     }
                   }
+                }
+              }
+            }
+          }
+        },
+        "calibrazione": {
+          "type": "object",
+          "properties": {
+            "lock_mass": {
+              "type": "object",
+              "properties": {
+                "modo": {
+                  "type": "string"
+                },
+                "elenchi": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "polarita": {
+                        "type": "string",
+                        "enum": [
+                          "positive",
+                          "negative"
+                        ]
+                      },
+                      "nome": {
+                        "type": "string"
+                      },
+                      "masse_mz": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                },
+                "numero_nel_trailer": {
+                  "type": "number"
+                },
+                "correzione_ppm": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
                 }
               }
             }
@@ -307,6 +371,12 @@
                   "type": "number"
                 },
                 "banda_nm": {
+                  "type": "number"
+                },
+                "riferimento_nm": {
+                  "type": "number"
+                },
+                "banda_riferimento_nm": {
                   "type": "number"
                 }
               }

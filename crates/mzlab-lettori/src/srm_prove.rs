@@ -5,6 +5,7 @@ use mzlab_core::error::Error;
 struct Finto {
     campioni: Vec<Campione>,
     indice: Vec<VoceScansione>,
+    metodo: String,
 }
 
 fn voce(k: usize, rt: f64, filtro: &str, q1: f64) -> VoceScansione {
@@ -63,19 +64,26 @@ impl Lettore for Finto {
         Err(Error::new("error.badIndex"))
     }
     fn metodo(&mut self, _: usize) -> Result<String> {
-        Ok(String::new())
+        Ok(self.metodo.clone())
     }
 }
 
 fn finto(filtro: &str) -> SrmDaScansioni {
+    finto_con(filtro, 1, "")
+}
+
+/// Four scans with `filtro` and polarity `pol`; `metodo` is the `metodo/1` document the reader gives.
+fn finto_con(filtro: &str, pol: i8, metodo: &str) -> SrmDaScansioni {
     let indice = (0..4)
         .map(|k| {
-            voce(
+            let mut v = voce(
                 k,
                 k as f64 * 0.1,
                 filtro,
                 if k.is_multiple_of(2) { 300.0 } else { 400.0 },
-            )
+            );
+            v.polarita = pol;
+            v
         })
         .collect();
     SrmDaScansioni::new(Box::new(Finto {
@@ -85,6 +93,7 @@ fn finto(filtro: &str) -> SrmDaScansioni {
             scansioni: 4,
         }],
         indice,
+        metodo: metodo.into(),
     }))
 }
 
@@ -96,18 +105,77 @@ fn una_traccia_per_transizione() {
     assert_eq!(
         ids,
         [
-            "SRM SIC Q1=300 Q3=100",
-            "SRM SIC Q1=300 Q3=150.001",
-            "SRM SIC Q1=400 Q3=200"
+            "SRM SIC Q1=300 Q3=100 ce=25",
+            "SRM SIC Q1=300 Q3=150.001 ce=25",
+            "SRM SIC Q1=400 Q3=200 ce=25"
         ]
     );
     assert!(v.iter().all(|c| c.tipo == ChromKind::Srm));
-    let t = l.cromatogramma(0, "SRM SIC Q1=300 Q3=100").unwrap();
+    let t = l.cromatogramma(0, "SRM SIC Q1=300 Q3=100 ce=25").unwrap();
     assert_eq!(t.time, [0.0, 0.2]);
     assert_eq!(t.intensity, [10.0, 12.0]);
     assert_eq!((t.q1, t.q3), (Some(300.0), Some(100.0)));
-    let (q1, q3, _, _) = mzlab_core::mzmlhead::srm_id(&t.id);
-    assert_eq!((q1, q3), (Some(300.0), Some(100.0)));
+    let (q1, q3, ce, _) = mzlab_core::mzmlhead::srm_id(&t.id);
+    assert_eq!((q1, q3, ce), (Some(300.0), Some(100.0), Some(25.0)));
+}
+
+/// A TSQ filter as the vendor writes it: no collision energy in it, the product window in brackets.
+const FILTRO_TSQ: &str = "+ c ESI SRM ms2 300.000 [100.000-100.000, 150.000-150.002]";
+
+const METODO_TSQ: &str = r#"{"ms":{"periodi":[{"esperimenti":[{"transizioni":[
+{"q1":300,"q3":100,"ce_eV":18.5,"polarita":"negative"},
+{"q1":300,"q3":150.001,"ce_eV":30,"polarita":"negative"},
+{"q1":400,"q3":200,"ce_eV":22,"polarita":"negative"}]}]}]}}"#;
+
+#[test]
+fn filtro_tsq_senza_ce_prende_ce_e_polarita_dal_metodo() {
+    let mut l = finto_con(FILTRO_TSQ, 1, METODO_TSQ);
+    let ids: Vec<String> = l
+        .cromatogrammi(0)
+        .unwrap()
+        .into_iter()
+        .map(|c| c.id)
+        .collect();
+    assert_eq!(
+        ids,
+        [
+            "SRM SIC Q1=300 Q3=100 ce=18.5 polarity=negative",
+            "SRM SIC Q1=300 Q3=150.001 ce=30 polarity=negative",
+            "SRM SIC Q1=400 Q3=200 ce=22 polarity=negative"
+        ]
+    );
+}
+
+#[test]
+fn filtro_tsq_senza_metodo_non_inventa_il_ce() {
+    let mut l = finto_con(FILTRO_TSQ, 1, "");
+    let ids: Vec<String> = l
+        .cromatogrammi(0)
+        .unwrap()
+        .into_iter()
+        .map(|c| c.id)
+        .collect();
+    assert_eq!(ids[0], "SRM SIC Q1=300 Q3=100");
+    let mut l = finto_con(FILTRO_TSQ, -1, "not json");
+    assert_eq!(
+        l.cromatogrammi(0).unwrap()[0].id,
+        "SRM SIC Q1=300 Q3=100 polarity=negative"
+    );
+}
+
+#[test]
+fn transizione_duplicata_nel_metodo_resta_come_le_scansioni() {
+    let m = r#"{"ms":{"periodi":[{"esperimenti":[{"transizioni":[
+{"q1":300,"q3":100,"ce_eV":10,"polarita":"positive"},
+{"q1":300,"q3":100,"ce_eV":40,"polarita":"negative"}]}]}]}}"#;
+    let mut l = finto_con(FILTRO_TSQ, 1, m);
+    assert_eq!(l.cromatogrammi(0).unwrap()[0].id, "SRM SIC Q1=300 Q3=100");
+}
+
+#[test]
+fn crm_conta_come_srm() {
+    let mut l = finto("+ c ESI CRM ms2 300.0@cid25.0 [100.0-100.0]");
+    assert_eq!(l.cromatogrammi(0).unwrap().len(), 3);
 }
 
 #[test]
