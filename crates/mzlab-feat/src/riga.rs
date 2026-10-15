@@ -13,6 +13,7 @@ use crate::norm::measured;
 use crate::quality::{Q_POINTS, Q_SHAPE, Q_SNR};
 use crate::rowident::{adduct_names, SRC_DETECTED};
 use crate::samples::Sample;
+use crate::table::RowQ;
 
 pub const SCHEMA: &str = "riga/1";
 pub const TRACES_SCHEMA: &str = "riga_tracce/1";
@@ -68,6 +69,25 @@ pub fn row(t: &Aligned, s: &[Sample], id: u32) -> Result<String> {
         Some(q) => o.int(i64::from(q.charge)),
         None => o.raw("null"),
     };
+    write_quality(&mut o, q.as_ref());
+    o.raw(",\"iso_m1\":").opt(q.and_then(|q| fin(q.iso_m1)));
+    o.raw(",\"ms2\":");
+    match q.filter(|q| q.ms2_file != NO_FILE && (q.ms2_file as usize) < t.n_files) {
+        Some(q) => o
+            .raw("{\"file\":")
+            .str(&s[q.ms2_file as usize].file)
+            .raw(",\"purity\":")
+            .opt(fin(q.ms2_purity).filter(|p| *p >= 0.0))
+            .raw("}"),
+        None => o.raw("null"),
+    };
+    write_ident(&mut o, t, r);
+    write_cells(&mut o, t, s, r);
+    Ok(o.0)
+}
+
+/// `"quality":{...}` (`null` when no figure was computed).
+fn write_quality(o: &mut Out, q: Option<&RowQ>) {
     o.raw(",\"quality\":");
     match q
         .filter(|q| fin(q.q_shape).is_some() || fin(q.q_snr).is_some() || fin(q.q_fwhm).is_some())
@@ -90,17 +110,10 @@ pub fn row(t: &Aligned, s: &[Sample], id: u32) -> Result<String> {
         }
         None => o.raw("null"),
     };
-    o.raw(",\"iso_m1\":").opt(q.and_then(|q| fin(q.iso_m1)));
-    o.raw(",\"ms2\":");
-    match q.filter(|q| q.ms2_file != NO_FILE && (q.ms2_file as usize) < t.n_files) {
-        Some(q) => o
-            .raw("{\"file\":")
-            .str(&s[q.ms2_file as usize].file)
-            .raw(",\"purity\":")
-            .opt(fin(q.ms2_purity).filter(|p| *p >= 0.0))
-            .raw("}"),
-        None => o.raw("null"),
-    };
+}
+
+/// `"ident":{...}` (`null` when the table has no identity).
+fn write_ident(o: &mut Out, t: &Aligned, r: usize) {
     o.raw(",\"ident\":");
     if t.ident.is_empty() {
         o.raw("null");
@@ -139,6 +152,10 @@ pub fn row(t: &Aligned, s: &[Sample], id: u32) -> Result<String> {
         }
         o.raw("]}");
     }
+}
+
+/// `"cells":[...]`, one per file.
+fn write_cells(o: &mut Out, t: &Aligned, s: &[Sample], r: usize) {
     o.raw(",\"cells\":[");
     for (k, smp) in s.iter().enumerate() {
         let c = t.cell(r, k);
@@ -167,7 +184,6 @@ pub fn row(t: &Aligned, s: &[Sample], id: u32) -> Result<String> {
             .raw("}");
     }
     o.raw("]}");
-    Ok(o.0)
 }
 
 /// At most `MAX_POINTS` points: the window is cut in equal groups and each keeps its point of highest intensity (the peak is never flattened).
@@ -199,6 +215,42 @@ fn section_pol<R: ReadAt>(index: &Index<R>, level: u8) -> Option<(usize, i8)> {
 
 fn list(o: &mut Out, v: &[f64]) {
     o.floats(v);
+}
+
+/// The apex of the cell of file `k` and the window of the XIC: the edges of the peak (±0.1 min around the apex when the table has none) plus `PAD_WIDTHS` widths on each side.
+fn window(t: &Aligned, r: usize, k: usize, q: Option<&RowQ>) -> (f64, f64, f64) {
+    let c = t.cell(r, k);
+    let apex = fin(t.apex_rt[c])
+        .filter(|_| t.state[c] != CELL_ABSENT)
+        .unwrap_or(t.rt[r]);
+    let edges = q.map(|q| (f64::from(q.rt_lo), f64::from(q.rt_hi)));
+    let (lo, hi) = match edges {
+        Some((lo, hi)) if lo.is_finite() && hi.is_finite() && hi > lo => (lo, hi),
+        _ => (apex - 0.1, apex + 0.1),
+    };
+    let pad = PAD_WIDTHS * (hi - lo);
+    (apex, lo - pad, hi + pad)
+}
+
+/// The scans of section `si` of one file inside `(from, to)` with the summed intensity within `tol` of `mz`: `(rt of every scan, rt kept, intensity kept)`.
+fn xic_of<R: ReadAt>(
+    index: &mut Index<R>,
+    si: usize,
+    mz: f64,
+    tol: f64,
+    (from, to): (f64, f64),
+) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>)> {
+    let (a, b) = (
+        index.search(si, mz - tol, false)?,
+        index.search(si, mz + tol, true)?,
+    );
+    let sum = index.sum_window(si, a, b)?;
+    let rts = index.arrays(si)?.rt.clone();
+    let kept: Vec<usize> = (0..rts.len().min(sum.len()))
+        .filter(|&i| rts[i] >= from && rts[i] <= to)
+        .collect();
+    let (x, y) = kept.iter().map(|&i| (rts[i], sum[i])).unzip();
+    Ok((rts, x, y))
 }
 
 /// One spectrum of `riga_tracce/1`: `{"file", <extra>, "mz", "y"}`.
@@ -304,22 +356,7 @@ pub fn traces<R: ReadAt>(
     let mut pol = 1i8;
     for (k, smp) in s.iter().enumerate() {
         let mut index = open(k)?;
-        let c = t.cell(r, k);
-        let apex = if t.state[c] != CELL_ABSENT {
-            fin(t.apex_rt[c])
-        } else {
-            None
-        }
-        .unwrap_or(t.rt[r]);
-        let (lo, hi) = q.map_or((f64::NAN, f64::NAN), |q| {
-            (f64::from(q.rt_lo), f64::from(q.rt_hi))
-        });
-        let (lo, hi) = if lo.is_finite() && hi.is_finite() && hi > lo {
-            (lo, hi)
-        } else {
-            (apex - 0.1, apex + 0.1)
-        };
-        let pad = PAD_WIDTHS * (hi - lo);
+        let (apex, lo, hi) = window(t, r, k, q.as_ref());
         o.raw(if k > 0 { "," } else { "" })
             .raw("{\"file\":")
             .str(&smp.file)
@@ -329,18 +366,8 @@ pub fn traces<R: ReadAt>(
             if k == 0 {
                 pol = p;
             }
-            let (a, b) = (
-                index.search(si, mz - tol, false)?,
-                index.search(si, mz + tol, true)?,
-            );
-            let sum = index.sum_window(si, a, b)?;
-            let rts = index.arrays(si)?.rt.clone();
-            for (i, &rt) in rts.iter().enumerate().take(sum.len()) {
-                if rt >= lo - pad && rt <= hi + pad {
-                    x.push(rt);
-                    y.push(sum[i]);
-                }
-            }
+            let rts;
+            (rts, x, y) = xic_of(&mut index, si, mz, tol, (lo, hi))?;
             if best == Some(k) && !rts.is_empty() {
                 ms1 = Some((k, ms1_at(&mut index, si, &rts, apex, mz)?));
             }

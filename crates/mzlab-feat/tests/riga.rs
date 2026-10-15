@@ -81,6 +81,73 @@ fn num(v: &Value, k: &str) -> Option<f64> {
     v.get(k).and_then(|x| x.f64())
 }
 
+/// The cells of a row against the line of the sheet (`line`: id, m/z, RT, edges, charge, then area and state of each file).
+fn check_cells(t: &Aligned, s: &[Sample], r: usize, v: &Value, line: &Value) {
+    let cell = |i: usize| line.at(i).unwrap();
+    let cells = v.get("cells").unwrap().arr();
+    assert_eq!(cells.len(), 3);
+    for (k, e) in cells.iter().enumerate() {
+        assert_eq!(e.get("file").unwrap().str(), Some(s[k].file.as_str()));
+        assert_eq!(e.get("type").unwrap().str(), Some(s[k].kind.as_str()));
+        assert_eq!(num(e, "area"), cell(6 + 2 * k).f64());
+        let word = cell(7 + 2 * k).str().unwrap().to_lowercase();
+        let want = if word == "unknown" {
+            "absent"
+        } else {
+            word.as_str()
+        };
+        assert_eq!(e.get("state").unwrap().str(), Some(want));
+        let c = t.cell(r, k);
+        assert_eq!(
+            e.get("height").unwrap().f64(),
+            (want != "absent").then(|| f64::from(t.height[c]))
+        );
+        assert_eq!(
+            e.get("apex_rt").unwrap().f64(),
+            (want != "absent").then(|| f64::from(t.apex_rt[c]))
+        );
+    }
+}
+
+/// The summaries of row `r` (only the last row has none).
+fn check_summaries(t: &Aligned, s: &[Sample], r: usize, v: &Value) {
+    let q = t.meta.get(r);
+    match v.get("quality").unwrap() {
+        n if n.is_null() => assert_eq!(r, 4, "only the row without summaries has no quality"),
+        q2 => {
+            assert_eq!(num(q2, "shape"), Some(f64::from(q.q_shape)));
+            assert_eq!(num(q2, "snr"), Some(f64::from(q.q_snr)));
+            assert_eq!(num(q2, "fwhm"), Some(f64::from(q.q_fwhm)));
+            let flags: Vec<&str> = q2
+                .get("flags")
+                .unwrap()
+                .arr()
+                .iter()
+                .map(|f| f.str().unwrap())
+                .collect();
+            assert_eq!(
+                flags,
+                if r == 2 {
+                    vec!["shape", "points"]
+                } else {
+                    vec![]
+                }
+            );
+        }
+    }
+    assert_eq!(num(v, "iso_m1"), (r != 4).then_some(f64::from(q.iso_m1)));
+    let ms2 = v.get("ms2").unwrap();
+    if r == 4 {
+        assert!(ms2.is_null());
+    } else {
+        assert_eq!(
+            ms2.get("file").unwrap().str(),
+            Some(s[q.ms2_file as usize].file.as_str())
+        );
+        assert_eq!(num(ms2, "purity"), Some(0.75));
+    }
+}
+
 #[test]
 fn the_row_agrees_with_the_sheet_and_with_the_summaries() {
     let (t, s) = (table(), samples());
@@ -117,64 +184,8 @@ fn the_row_agrees_with_the_sheet_and_with_the_summaries() {
         assert_eq!(num(&v, "rt_lo"), cell(3).f64());
         assert_eq!(num(&v, "rt_hi"), cell(4).f64());
         assert_eq!(num(&v, "charge"), cell(5).f64().filter(|c| *c != 0.0));
-        let cells = v.get("cells").unwrap().arr();
-        assert_eq!(cells.len(), 3);
-        for (k, e) in cells.iter().enumerate() {
-            assert_eq!(e.get("file").unwrap().str(), Some(s[k].file.as_str()));
-            assert_eq!(e.get("type").unwrap().str(), Some(s[k].kind.as_str()));
-            assert_eq!(num(e, "area"), cell(6 + 2 * k).f64());
-            let word = cell(7 + 2 * k).str().unwrap().to_lowercase();
-            let want = if word == "unknown" {
-                "absent"
-            } else {
-                word.as_str()
-            };
-            assert_eq!(e.get("state").unwrap().str(), Some(want));
-            let c = t.cell(r, k);
-            assert_eq!(
-                e.get("height").unwrap().f64(),
-                (want != "absent").then(|| f64::from(t.height[c]))
-            );
-            assert_eq!(
-                e.get("apex_rt").unwrap().f64(),
-                (want != "absent").then(|| f64::from(t.apex_rt[c]))
-            );
-        }
-        let q = t.meta.get(r);
-        match v.get("quality").unwrap() {
-            n if n.is_null() => assert_eq!(r, 4, "only the row without summaries has no quality"),
-            q2 => {
-                assert_eq!(num(q2, "shape"), Some(f64::from(q.q_shape)));
-                assert_eq!(num(q2, "snr"), Some(f64::from(q.q_snr)));
-                assert_eq!(num(q2, "fwhm"), Some(f64::from(q.q_fwhm)));
-                let flags: Vec<&str> = q2
-                    .get("flags")
-                    .unwrap()
-                    .arr()
-                    .iter()
-                    .map(|f| f.str().unwrap())
-                    .collect();
-                assert_eq!(
-                    flags,
-                    if r == 2 {
-                        vec!["shape", "points"]
-                    } else {
-                        vec![]
-                    }
-                );
-            }
-        }
-        assert_eq!(num(&v, "iso_m1"), (r != 4).then_some(f64::from(q.iso_m1)));
-        let ms2 = v.get("ms2").unwrap();
-        if r == 4 {
-            assert!(ms2.is_null());
-        } else {
-            assert_eq!(
-                ms2.get("file").unwrap().str(),
-                Some(s[q.ms2_file as usize].file.as_str())
-            );
-            assert_eq!(num(ms2, "purity"), Some(0.75));
-        }
+        check_cells(&t, &s, r, &v, line);
+        check_summaries(&t, &s, r, &v);
         let id = v.get("ident").unwrap();
         assert_eq!(num(id, "neutral"), Some(t.ident.neutral[r]));
     }
@@ -222,8 +233,38 @@ fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-#[test]
-fn the_traces_come_from_the_index_of_every_file() {
+/// A table of one row: the feature at `(mz, rt)` with its edges and the purity of its best MS2 (in file 0).
+fn one_row(mz: f64, rt: f32, (left, right): (f32, f32), purity: f32) -> Aligned {
+    let mut t = Aligned::with_capacity(1, 1);
+    t.mz.push(mz);
+    t.rt.push(f64::from(rt));
+    t.area.push(1e6);
+    t.height.push(1e5);
+    t.apex_rt.push(rt);
+    t.width.push(right - left);
+    t.state.push(CELL_DETECTED);
+    t.meta.push(&RowQ {
+        rt_lo: left,
+        rt_hi: right,
+        ms2_file: 0,
+        ms2_purity: purity,
+        ..RowQ::NONE
+    });
+    t
+}
+
+/// The numbers of the list `key` of `v`.
+fn floats(v: &Value, key: &str) -> Vec<f64> {
+    v.get(key)
+        .unwrap()
+        .arr()
+        .iter()
+        .filter_map(|a| a.f64())
+        .collect()
+}
+
+/// The reference `.mzidx` of the identity series in a temp directory; `None` when python3/numpy are missing.
+fn reference_index() -> Option<std::path::PathBuf> {
     let out = std::env::temp_dir().join(format!("mzlab_feat_riga_{}", std::process::id()));
     let ok = Command::new("python3")
         .arg(root().join("tools/feat_riferimento.py"))
@@ -238,8 +279,15 @@ fn the_traces_come_from_the_index_of_every_file() {
             "python3 or numpy missing"
         );
         eprintln!("skipped: python3/numpy not available");
-        return;
     }
+    ok.then_some(out)
+}
+
+#[test]
+fn the_traces_come_from_the_index_of_every_file() {
+    let Some(out) = reference_index() else {
+        return;
+    };
     let open = |_: usize| {
         let f = std::fs::File::open(out.join("identita.mzidx")).unwrap();
         let size = f.metadata().unwrap().len();
@@ -257,21 +305,7 @@ fn the_traces_come_from_the_index_of_every_file() {
     let i = (0..f.len())
         .find(|&i| f.ms2_n[i] > 0)
         .expect("a feature with an MS2");
-    let mut t = Aligned::with_capacity(1, 1);
-    t.mz.push(f.mz[i]);
-    t.rt.push(f64::from(f.rt[i]));
-    t.area.push(f.area[i]);
-    t.height.push(f.height[i]);
-    t.apex_rt.push(f.rt[i]);
-    t.width.push(f.right[i] - f.left[i]);
-    t.state.push(CELL_DETECTED);
-    t.meta.push(&RowQ {
-        rt_lo: f.left[i],
-        rt_hi: f.right[i],
-        ms2_file: 0,
-        ms2_purity: f.purity[i],
-        ..RowQ::NONE
-    });
+    let mut t = one_row(f.mz[i], f.rt[i], (f.left[i], f.right[i]), f.purity[i]);
     let s = &samples()[..1];
     let text = riga::traces(&t, s, 1, open, 5.0).unwrap();
     assert_eq!(
@@ -282,20 +316,7 @@ fn the_traces_come_from_the_index_of_every_file() {
     let v = parse(text.as_bytes()).unwrap();
     assert_eq!(v.get("schema").unwrap().str(), Some("riga_tracce/1"));
     let xic = v.get("xic").unwrap().at(0).unwrap();
-    let (x, y): (Vec<f64>, Vec<f64>) = (
-        xic.get("rt")
-            .unwrap()
-            .arr()
-            .iter()
-            .filter_map(|a| a.f64())
-            .collect(),
-        xic.get("y")
-            .unwrap()
-            .arr()
-            .iter()
-            .filter_map(|a| a.f64())
-            .collect(),
-    );
+    let (x, y) = (floats(xic, "rt"), floats(xic, "y"));
     assert!(
         x.len() == y.len()
             && x.len() > 3
@@ -310,13 +331,7 @@ fn the_traces_come_from_the_index_of_every_file() {
         "the maximum of the XIC lies inside the edges of the peak"
     );
     let ms1 = v.get("ms1").unwrap();
-    let mz: Vec<f64> = ms1
-        .get("mz")
-        .unwrap()
-        .arr()
-        .iter()
-        .filter_map(|a| a.f64())
-        .collect();
+    let mz = floats(ms1, "mz");
     assert!(
         !mz.is_empty()
             && mz
