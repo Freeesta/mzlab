@@ -6,7 +6,7 @@
 
 #[macro_use]
 mod attributio_comune;
-use mzlab_feat::attributio::annotate::{gnps_comparer, load_annotations, BasicCuration};
+use mzlab_feat::attributio::annotate::{gnps_comparer, load_annotations, BasicCuration, Feature};
 use mzlab_feat::attributio::campaign::{Campaign, Env};
 use mzlab_feat::attributio::checks::*;
 use mzlab_feat::attributio::io::{Entry, Io};
@@ -285,91 +285,94 @@ fn real_campaigns_get_a_level_and_a_basis_for_every_feature() {
     }
     let oro = std::env::var_os("MZLAB_ORO_LIVELLI").map(PathBuf::from);
     for dir in found {
-        let at = |p: &str| {
-            if Path::new(p).is_absolute() {
-                PathBuf::from(p)
-            } else {
-                dir.join(p)
-            }
-        };
-        let read = |p: &str| std::fs::read(at(p)).ok();
-        let list = |d: &str| -> Vec<Entry> {
-            std::fs::read_dir(at(d))
-                .map(|rd| {
-                    rd.flatten()
-                        .map(|e| Entry {
-                            name: e.file_name().to_string_lossy().into_owned(),
-                            is_dir: e.path().is_dir(),
-                        })
-                        .collect()
-                })
-                .unwrap_or_default()
-        };
-        let io = Io::new(&read, &list);
-        let text = String::from_utf8_lossy(
-            &std::fs::read(dir.join("campaign.toml")).expect("campaign.toml"),
-        )
-        .into_owned();
-        let name = dir
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        let c = Campaign::from_toml(&text, "campaign.toml", &name, Env::default())
-            .unwrap_or_else(|e| panic!("{}: {e}", dir.display()));
-        let s = load_sources(&c, &io).unwrap_or_else(|e| panic!("{}: {e}", dir.display()));
-        let a = load_annotations(&c, &s, None, &BasicCuration, &gnps_comparer)
-            .unwrap_or_else(|e| panic!("{}: {e}", dir.display()));
-        let mut per = [0usize; 5];
-        for f in &a.features {
-            assert!(
-                f.level <= 4 && !f.level_basis.is_empty(),
-                "{} {} {}",
-                c.id,
-                f.pol,
-                f.id
-            );
-            assert_eq!(
-                f.level == 2,
-                !f.level_sub.is_empty(),
-                "{} {} {}: sub-level",
-                c.id,
-                f.pol,
-                f.id
-            );
-            per[f.level as usize] += 1;
+        check_campaign(&dir, oro.as_deref());
+    }
+}
+
+/// The cascade on one real campaign: every feature has a level and a basis, and the levels equal the reference tool's when its output is given.
+fn check_campaign(dir: &Path, oro: Option<&Path>) {
+    let at = |p: &str| {
+        if Path::new(p).is_absolute() {
+            PathBuf::from(p)
+        } else {
+            dir.join(p)
         }
-        eprintln!(
-            "REAL {}: {} features, levels 0..4 = {per:?}",
-            c.id,
-            a.features.len()
-        );
-        if let Some(o) = &oro {
-            let g: serde_json::Value = serde_json::from_slice(
-                &std::fs::read(o.join("livelli.json")).expect("livelli.json"),
-            )
-            .expect("JSON");
-            for w in g["features"].as_array().expect("features") {
-                let f = a
-                    .features
-                    .iter()
-                    .find(|f| {
-                        f.pol == w["_pol"].as_str().unwrap_or("")
-                            && f.id == w["_id"].as_i64().unwrap_or(-1)
+    };
+    let read = |p: &str| std::fs::read(at(p)).ok();
+    let list = |d: &str| -> Vec<Entry> {
+        std::fs::read_dir(at(d))
+            .map(|rd| {
+                rd.flatten()
+                    .map(|e| Entry {
+                        name: e.file_name().to_string_lossy().into_owned(),
+                        is_dir: e.path().is_dir(),
                     })
-                    .expect("feature");
-                assert_eq!(
-                    (f.level as i64, f.level_sub.as_str(), f.level_basis.as_str()),
-                    (
-                        w["level"].as_i64().expect("l"),
-                        w["level_sub"].as_str().unwrap_or(""),
-                        w["level_basis"].as_str().expect("b")
-                    ),
-                    "{} {} {}",
-                    c.id,
-                    f.pol,
-                    f.id
-                );
-            }
-        }
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    let io = Io::new(&read, &list);
+    let text =
+        String::from_utf8_lossy(&std::fs::read(dir.join("campaign.toml")).expect("campaign.toml"))
+            .into_owned();
+    let name = dir
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let c = Campaign::from_toml(&text, "campaign.toml", &name, Env::default())
+        .unwrap_or_else(|e| panic!("{}: {e}", dir.display()));
+    let s = load_sources(&c, &io).unwrap_or_else(|e| panic!("{}: {e}", dir.display()));
+    let a = load_annotations(&c, &s, None, &BasicCuration, &gnps_comparer)
+        .unwrap_or_else(|e| panic!("{}: {e}", dir.display()));
+    let mut per = [0usize; 5];
+    for f in &a.features {
+        assert!(
+            f.level <= 4 && !f.level_basis.is_empty(),
+            "{} {} {}",
+            c.id,
+            f.pol,
+            f.id
+        );
+        assert_eq!(
+            f.level == 2,
+            !f.level_sub.is_empty(),
+            "{} {} {}: sub-level",
+            c.id,
+            f.pol,
+            f.id
+        );
+        per[f.level as usize] += 1;
+    }
+    eprintln!(
+        "REAL {}: {} features, levels 0..4 = {per:?}",
+        c.id,
+        a.features.len()
+    );
+    if let Some(o) = oro {
+        same_as_reference(&c.id, &a.features, o);
+    }
+}
+
+/// The levels equal the reference tool's `livelli.json` with no tolerance.
+fn same_as_reference(id: &str, feats: &[Feature], o: &Path) {
+    let g: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(o.join("livelli.json")).expect("livelli.json"))
+            .expect("JSON");
+    for w in g["features"].as_array().expect("features") {
+        let (pol, n) = (
+            w["_pol"].as_str().unwrap_or(""),
+            w["_id"].as_i64().unwrap_or(-1),
+        );
+        let f = feats
+            .iter()
+            .find(|f| f.pol == pol && f.id == n)
+            .expect("feature");
+        let got = (f.level as i64, f.level_sub.as_str(), f.level_basis.as_str());
+        let want = (
+            w["level"].as_i64().expect("l"),
+            w["level_sub"].as_str().unwrap_or(""),
+            w["level_basis"].as_str().expect("b"),
+        );
+        assert_eq!(got, want, "{id} {pol} {n}");
     }
 }

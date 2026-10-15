@@ -153,6 +153,51 @@ fn hit_ppm(mz: Option<f64>, precursor: Option<f64>) -> Option<f64> {
     }
 }
 
+/// The best SIRIUS spectral, GNPS2 and mzMine library hits of a feature.
+fn fill_hits(
+    f: &mut Feature,
+    key: &(String, i64),
+    rm: &Remapped,
+    idx: [&HashMap<(String, i64), usize>; 3],
+) {
+    let [sp, gn, ml] = idx;
+    if let Some(&n) = sp.get(key) {
+        let x = &rm.spectral[n];
+        f.spec = SpecEvidence {
+            name: x.name.clone(),
+            sim: x.sim,
+            peaks: x.peaks,
+            inchikey2d: x.inchikey2d.clone(),
+        };
+    }
+    if let Some(&n) = gn.get(key) {
+        let x = &rm.gnps[n];
+        f.gnps = GnpsEvidence {
+            name: Some(x.name.clone()),
+            score: x.score,
+            peaks: x.peaks,
+            massdiff: x.massdiff,
+            exact: x.exact,
+            inchikey: x.inchikey.clone(),
+            smiles: x.smiles.clone(),
+        };
+    }
+    if let Some(&n) = ml.get(key) {
+        let x = &rm.mzmine[n];
+        f.mzlib = MzlibEvidence {
+            name: Some(x.name.clone()),
+            score: x.score,
+            peaks: x.peaks,
+            precursor_mz: x.precursor_mz,
+            adduct: x.adduct.clone(),
+            formula: x.formula.clone(),
+            inchikey: x.inchikey.clone(),
+            smiles: x.smiles.clone(),
+            ..MzlibEvidence::default()
+        };
+    }
+}
+
 /// One row per detected feature with the evidence of every source.
 pub fn join(
     det: Vec<Detection>,
@@ -196,41 +241,7 @@ pub fn join(
                     smiles: x.smiles.clone(),
                 };
             }
-            if let Some(&n) = sp.get(&key) {
-                let x = &rm.spectral[n];
-                f.spec = SpecEvidence {
-                    name: x.name.clone(),
-                    sim: x.sim,
-                    peaks: x.peaks,
-                    inchikey2d: x.inchikey2d.clone(),
-                };
-            }
-            if let Some(&n) = gn.get(&key) {
-                let x = &rm.gnps[n];
-                f.gnps = GnpsEvidence {
-                    name: Some(x.name.clone()),
-                    score: x.score,
-                    peaks: x.peaks,
-                    massdiff: x.massdiff,
-                    exact: x.exact,
-                    inchikey: x.inchikey.clone(),
-                    smiles: x.smiles.clone(),
-                };
-            }
-            if let Some(&n) = ml.get(&key) {
-                let x = &rm.mzmine[n];
-                f.mzlib = MzlibEvidence {
-                    name: Some(x.name.clone()),
-                    score: x.score,
-                    peaks: x.peaks,
-                    precursor_mz: x.precursor_mz,
-                    adduct: x.adduct.clone(),
-                    formula: x.formula.clone(),
-                    inchikey: x.inchikey.clone(),
-                    smiles: x.smiles.clone(),
-                    ..MzlibEvidence::default()
-                };
-            }
+            fill_hits(&mut f, &key, rm, [&sp, &gn, &ml]);
             f.mzlib.massdiff_ppm = hit_ppm(f.mz, f.mzlib.precursor_mz);
             f.mzlib.exact = f
                 .mzlib
