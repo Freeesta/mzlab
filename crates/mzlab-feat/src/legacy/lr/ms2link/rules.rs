@@ -111,7 +111,9 @@ pub(super) fn dmz(r: &Entry, p: f64) -> f64 {
 pub(super) fn compatible(d: &LrDig, p: f64) -> Vec<&Entry> {
     d.entries
         .iter()
-        .filter(|e| e.ref_rt.is_some() && e.isotope_of.is_none() && dmz(e, p) <= PREC_TOL)
+        .filter(|e| {
+            e.ref_rt.is_some() && (e.isotope_of.is_none() || e.ms2_target) && dmz(e, p) <= PREC_TOL
+        })
         .collect()
 }
 

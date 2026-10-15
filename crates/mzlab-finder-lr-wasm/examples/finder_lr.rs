@@ -2,7 +2,8 @@
 //! compares the two: `cargo run --release -p mzlab-finder-lr-wasm --example finder_lr -- OUT FILES.json PARENT.json RULES.json [--ms2 N] MZML...`.
 //! FILES.json = the files of `api.run` (same order as the mzML). `--ms2 N`: the last N mzML are MS2 files (kind `ms2` in FILES.json): they
 //! are not detected nor aligned, as in the browser, and the matches go to `ms2_links.json`. Writes in OUT the `.mzidx` of every mzML (`<name>.mzidx`), `run.json`
-//! (`timing` = {}) and `detail.json` (the parent and every row that passes the criteria).
+//! (`timing` = {}) and `detail.json` (the parent and every row that passes the criteria). `--diag` prints, for every peak of an MS2 trace that no row of the
+//! Dig gets, the features of the aligned table within 0.5 Da and 0.5 min of it and the step of the Dig that dropped them (numbers of real data: do not commit).
 
 use std::path::Path;
 
@@ -10,6 +11,9 @@ use mzlab_core::idxread::Index;
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::upload::prepare;
 use mzlab_feat::legacy::lr::{self, detail::detail, summary::summary};
+
+#[path = "finder_lr/diag.rs"]
+mod diag;
 use mzlab_feat_wasm::run;
 
 fn index(path: &Path) -> Vec<u8> {
@@ -28,6 +32,11 @@ fn open(idx: &[u8]) -> Index<Vec<u8>> {
 
 fn main() {
     let mut a: Vec<String> = std::env::args().skip(1).collect();
+    let diag = a
+        .iter()
+        .position(|x| x == "--diag")
+        .map(|i| a.remove(i))
+        .is_some();
     let ms2 = match a.iter().position(|x| x == "--ms2") {
         Some(i) => {
             let n = a[i + 1].parse::<usize>().expect("--ms2 N");
@@ -81,6 +90,9 @@ fn main() {
     let h = run::hypotheses(&mut ix, &refs, &rules, "", formula, None, &r).unwrap();
     let table = run::align(&feats, &origin, &r, |k| Ok(open(&idxs[k]))).unwrap();
     let mut d = lr::dig(&files, &parent, "{}", &table, &h.registry.to_json()).unwrap();
+    if diag {
+        diag::print(&d, &mut |k| Ok(open(&idxs[k])));
+    }
     lr::ms2link::ms2_link(&mut d, &[], &mut |k| Ok(open(&idxs[k]))).unwrap();
     let mut o = mzlab_core::json::Out::default();
     lr::ms2link::json(&mut o, d.links.as_ref().unwrap());
