@@ -28,6 +28,6 @@ Campagna INVENTATA (nessun dato vero) con due sorbenti (OA, EC), una lista per s
 | File (in `campagna_sorbenti/`) | sha256 |
 |---|---|
 | `campaign.toml` | `228a7a30bccfcef6f1c58be14406df6105c3068850b86fe56152105384f9ecab` |
-| `data/mz/DDA_POS/EC/list_EC.csv` | `80d1cb2ffe6a8dfd330697ca9d040852bc2ae1307dc328fc2ab12102427f6009` |
-| `data/mz/DDA_POS/OA/list_OA.csv` | `324fb1f8c8159485d8bb19b6b37a5e95fefd37a36490d19d4f0089bfa9c07c0e` |
-| `data/mz/DDA_POS/merged/merged_pos.csv` | `00279653a9782f8ae55e0caacb0d8e0ae5d7a551af5bee5d294597ee40cb90cf` |
+| `data/mz/DDA_POS/EC/list_EC.csv` | `f8ee12386e98e3fa92087aace40c387060eb13b71c77db9e20da8489027b69c3` |
+| `data/mz/DDA_POS/OA/list_OA.csv` | `4369a8e1642c6ff935a5b80b92157745b18e88a5fb7c57b405a8e592e1d884f9` |
+| `data/mz/DDA_POS/merged/merged_pos.csv` | `f77cd19ab5a5c71c46fc5dcc078118367d234aebef972928d48714c21215d9ca` |
