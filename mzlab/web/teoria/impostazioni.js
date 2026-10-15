@@ -1,5 +1,5 @@
-/* Settings of Teoria and Pratica (the gear opens a side panel): theme, easy reading (fonts, spacing, backgrounds, reading ruler, concentration mode,
-   reduced motion, numbers) and progress (forget the Pratica, forget where the reading was). Nothing of the data view lives here. Choices live in localStorage «qqq.a11y» (JSON of codes, written through QA11Y of tema.js, which also
+/* Settings of Teoria and Pratica (the gear opens a side panel): theme, easy reading (fonts, spacing, backgrounds, reading ruler,
+   reduced motion, numbers) and one «Ripristina predefinite» that touches only the settings. Nothing of the data view lives here. Choices live in localStorage «qqq.a11y» (JSON of codes, written through QA11Y of tema.js, which also
    puts them on <html> as data-a11y-* before the page is drawn; the rules are in teoria.css). Loaded by teoria.js; no library. */
 (function () {
   "use strict";
@@ -8,18 +8,18 @@
   const Q = window.QA11Y || { read: () => ({}), apply() {}, write() {} };
   const embedded = window.self !== window.top;
   let S = Q.read();
-  const save = () => Q.write(S);
+  const save = () => Q.write(Object.assign({}, S, { noside: Q.read().noside }));   // «noside» (index hidden) belongs to the toggle of comandi.js
 
   // ------------------------------------------------------------------ panel
   const OPT = {
     font: [["", "Predefinito"], ["atkinson", "Atkinson Hyperlegible Next"], ["dyslexic", "OpenDyslexic"]],
     bg: [["", "Come il tema"], ["cream", "Crema"], ["blue", "Azzurro tenue"], ["hc", "Alto contrasto"]],
-    motion: [["auto", "Automatico (come il sistema)"], ["always", "Sempre ridotte"]],
+    motion: [["auto", "Automatico"], ["always", "Sempre ridotte"]],
   };
   OPT.tema = [["auto", "Come il sistema"], ["light", "Chiaro"], ["dark", "Scuro"]];
   const tema = () => (window.QTEMA ? QTEMA.get() : "auto");
   const radios = (name, cur) => OPT[name].map(([v, t]) => `<label><input type="radio" name="a11y-${name}" value="${v}"${(cur || "") === v ? " checked" : ""}> <span>${t}</span></label>`).join("");
-  const check = (key, text, hint) => `<label><input type="checkbox" data-k="${key}"${S[key] ? " checked" : ""}> <span>${text}</span></label>${hint ? `<div class="hint">${hint}</div>` : ""}`;
+  const check = (key, text, hint) => `<label${hint ? ` title="${hint}"` : ""}><input type="checkbox" data-k="${key}"${S[key] ? " checked" : ""}> <span>${text}</span></label>`;
 
   const btn = document.createElement("button");
   btn.id = "a11y-btn"; btn.type = "button"; btn.textContent = "Aa"; btn.title = "Impostazioni";
@@ -33,18 +33,14 @@
 
   const panel = document.createElement("div");
   panel.id = "a11y-panel"; panel.hidden = true; panel.setAttribute("role", "dialog"); panel.setAttribute("aria-label", "Impostazioni");
-  panel.innerHTML = `<button type="button" class="x" aria-label="Chiudi">&times;</button><h2>Impostazioni</h2>
-    <div class="hint">Per ingrandire il testo usa ⌘+ / Ctrl+ (zoom del browser). Le scelte restano su questo computer.</div>
+  panel.innerHTML = `<button type="button" class="x" aria-label="Chiudi">&times;</button><h2 title="Le scelte restano su questo computer">Impostazioni</h2>
     <fieldset><legend>Tema</legend>${radios("tema", tema())}</fieldset>
     <fieldset><legend>Carattere</legend>${radios("font", S.font)}</fieldset>
-    <fieldset><legend>Spaziatura</legend>${check("space", "Spaziatura ampia", "Righe e lettere più distanziate, testo a sinistra, righe di al massimo 65 caratteri.")}${check("nums", "Numeri più leggibili", "Cifre di larghezza uguale e più spazio nelle equazioni.")}</fieldset>
+    <fieldset><legend>Spaziatura</legend>${check("space", "Spaziatura ampia", "Più aria tra righe e lettere")}${check("nums", "Numeri leggibili", "Cifre della stessa larghezza")}</fieldset>
     <fieldset><legend>Sfondo</legend>${radios("bg", S.bg)}</fieldset>
-    <fieldset><legend>Lettura</legend>${check("ruler", "Righello di lettura", "Una banda segue il mouse o il focus; il resto è attenuato.")}${check("focus", "Modalità concentrazione (tasto F)", "Nasconde indice e menu e mostra l'avanzamento.")}</fieldset>
+    <fieldset><legend>Lettura</legend>${check("ruler", "Righello di lettura", "Attenua il resto della pagina")}</fieldset>
     <fieldset><legend>Animazioni</legend>${radios("motion", S.motion || "auto")}</fieldset>
-    <div class="row"><button type="button" id="a11y-reset">Ripristina</button></div>
-    <fieldset id="a11y-prog-set"><legend>Avanzamento</legend><div class="hint">Resta su questo computer; non si può annullare.</div>
-      <div class="row"><button type="button" id="a11y-forget-pratica">Azzera la Pratica</button><button type="button" id="a11y-forget-pos">Dimentica dove ero</button></div>
-      <div id="a11y-ask" role="alert" hidden><span></span> <button type="button" data-yes>Sì</button> <button type="button" data-no>Annulla</button></div></fieldset>`;
+    <div class="row"><button type="button" id="a11y-reset" title="Riporta testo, tema e colori ai valori iniziali">Ripristina predefinite</button></div>`;
   document.body.appendChild(panel);
 
   let lastFocus = null;
@@ -60,10 +56,6 @@
   });
   document.addEventListener("keydown", e => {
     if (e.key === "Escape" && !panel.hidden) close();
-    // F = concentration mode (not while typing, not with modifiers)
-    if ((e.key === "f" || e.key === "F") && !e.ctrlKey && !e.metaKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || "")) && !e.target.isContentEditable) {
-      S.focus = !S.focus; save(); sync();
-    }
   });
 
   panel.addEventListener("change", e => {
@@ -76,36 +68,22 @@
     save(); sync();
     if (t.name === "a11y-bg") dispatchEvent(new Event("resize"));   // the figures draw again with the new colours
   });
-  $("#a11y-reset", panel).onclick = () => { S = {}; save(); sync(); dispatchEvent(new Event("resize")); };
-  // «Avanzamento»: a short confirmation inside the panel before anything is forgotten
-  const ask = $("#a11y-ask", panel);
-  function confirmThen(text, fn, from) {
-    $("span", ask).textContent = text; ask.hidden = false; ask._from = from; $("[data-yes]", ask).focus();
-    $("[data-yes]", ask).onclick = () => { ask.hidden = true; fn(); from.focus(); };
-    $("[data-no]", ask).onclick = () => { ask.hidden = true; from.focus(); };
-  }
-  const forget = key => { try { localStorage.removeItem(key); } catch (_) { /* not stored */ } };
-  $("#a11y-forget-pratica", panel).onclick = e => confirmThen("Azzerare tutto il progresso della Pratica?", () => { forget("qqq.pratica"); if (/pratica/.test(location.pathname)) location.reload(); }, e.currentTarget);
-  $("#a11y-forget-pos", panel).onclick = e => confirmThen("Dimenticare il punto in cui eri arrivato in ogni capitolo?", () => forget("qqq.teoria.pos"), e.currentTarget);
-  function sync() {   // panel controls follow S (after Reset or the F key)
+  // only the settings go back to the factory values (theme included): the progress of the Pratica and the reading positions are never touched
+  $("#a11y-reset", panel).onclick = () => {
+    S = {}; Q.write({}); if (window.QTEMA && QTEMA.get() !== "auto") QTEMA.set("auto");
+    sync(); document.dispatchEvent(new Event("tcmd-stato")); dispatchEvent(new Event("resize"));
+  };
+  function sync() {   // panel controls follow S (after Reset)
     panel.querySelectorAll("input[type=checkbox]").forEach(c => { c.checked = !!S[c.dataset.k]; });
-    [["font", S.font || ""], ["bg", S.bg || ""], ["motion", S.motion || "auto"]].forEach(([n, v]) => panel.querySelectorAll(`input[name=a11y-${n}]`).forEach(r => { r.checked = r.value === v; }));
-    onScroll();
+    [["font", S.font || ""], ["bg", S.bg || ""], ["motion", S.motion || "auto"], ["tema", tema()]].forEach(([n, v]) => panel.querySelectorAll(`input[name=a11y-${n}]`).forEach(r => { r.checked = r.value === v; }));
   }
 
-  // ------------------------------------------------------------------ reading ruler and progress bar
+  // ------------------------------------------------------------------ reading ruler
   const ruler = document.createElement("div"); ruler.id = "a11y-ruler"; ruler.setAttribute("aria-hidden", "true"); document.body.appendChild(ruler);
-  const prog = document.createElement("div"); prog.id = "a11y-prog"; prog.setAttribute("aria-hidden", "true"); document.body.appendChild(prog);
   function lineH() { const m = $("main"); const lh = parseFloat(getComputedStyle(m || document.body).lineHeight); return isFinite(lh) ? lh : 26; }
   function band(y) { const h = lineH() * 2.5; ruler.style.setProperty("--rh", h + "px"); ruler.style.setProperty("--ry", Math.max(0, y - h / 2) + "px"); }
   addEventListener("mousemove", e => { if (S.ruler) band(e.clientY); }, { passive: true });
   document.addEventListener("focusin", e => { if (S.ruler && !panel.contains(e.target)) { const r = e.target.getBoundingClientRect(); band(r.top + Math.min(r.height, 60) / 2); } });
-  function onScroll() {
-    const m = $("main"); if (!m || !S.focus) { prog.style.width = "0"; return; }
-    const r = m.getBoundingClientRect(), tot = Math.max(1, r.height - innerHeight * 0.6);
-    prog.style.width = Math.max(0, Math.min(100, (-r.top / tot) * 100)) + "%";
-  }
-  addEventListener("scroll", onScroll, { passive: true });
   band(innerHeight / 2);
 
   window.A11Y = { open, close, state: () => S };
