@@ -41,7 +41,12 @@ def model(**k):
 MOUNT = "m => { document.querySelector('#tpp-host')?.remove(); const h = document.createElement('div'); h.id = 'tpp-host'; document.querySelector('.tp').appendChild(h); window.TPPOS.mount(h, m); return !!h.querySelector('.tpp-btn'); }"
 
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1); errs = []; miss = []
+import urllib.request
+_t0 = time.time()
+while time.time() - _t0 < 30:                          # the server is up when it answers
+    try: urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1); break
+    except Exception: pass
+errs = []
 try:
     with sync_playwright() as p:
         b = p.chromium.launch()
@@ -50,7 +55,7 @@ try:
             pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.on("response", lambda r: errs.append(("http%d" % r.status, r.url)) if r.status >= 400 and "logo.svg" not in r.url and "/vendor/" not in r.url else None)
             if admin: pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")
-            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_timeout(2500)
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); lib.attendi(pg, "typeof window.QTOOLS !== 'undefined'", 60000)
             return pg
         pg = fresh(False)
         step("without qqq.admin there is no TPPOS and no button", lambda: (_ for _ in ()).throw(AssertionError("TPPOS exists")) if pg.evaluate("typeof window.TPPOS !== 'undefined' || !!document.querySelector('.tpp-btn')") else None)
@@ -135,7 +140,7 @@ try:
             pg.wait_for_function("document.querySelector('#tp-files table') && document.querySelectorAll('#tp-files tr').length >= 9", timeout=240000)
             pg.fill("#tp-smi", "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('241.0641')", timeout=60000)
             pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=300000)
-            pg.click('.vt[data-v="gems"]'); pg.click(".gem:has-text('hydroxylation')"); pg.wait_for_selector("#tp-c-xic", timeout=60000); pg.wait_for_timeout(500)
+            pg.click('.vt[data-v="gems"]'); pg.click(".gem:has-text('hydroxylation')"); pg.wait_for_selector("#tp-c-xic", timeout=60000)
             has_ms2 = pg.evaluate("!!document.querySelector('#tp-ms2-fr table')")
             btn = pg.evaluate("!!document.querySelector('#tp-det .tpp-btn')")
             assert btn == has_ms2, f"button {btn} but MS2 {has_ms2}"
