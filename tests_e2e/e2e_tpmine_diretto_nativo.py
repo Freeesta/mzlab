@@ -4,7 +4,7 @@ Synthetic pairs of tools/wiff_riferimento.py. Needs the site and the .wasm (pyth
 import shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from lib import ROOT
+from lib import ROOT, attendi
 
 PORT = 8838
 errs = []
@@ -20,7 +20,10 @@ if not (ROOT / "site" / "static" / "wasm" / "mzlab_wasm.js").exists():
 D = Path(tempfile.mkdtemp(prefix="wiff_e2e_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_riferimento.py"), str(D)], check=True, capture_output=True)
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1)
+import urllib.request
+for _ in range(50):
+    try: urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1); break
+    except Exception: __import__("threading").Event().wait(0.2)      # the server is starting
 PAIRS = [str(D / n) for n in ["serie.wiff", "serie.wiff.scan", "prodotto.wiff", "prodotto.wiff.scan"]]
 LIST_IDX = """async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx"), o = {}; for await (const [n, h] of d.entries()) o[n] = (await h.getFile()).lastModified; return o; }"""
 LIST_FILES = """async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("files"), o = []; for await (const [n] of d.entries()) o.push(n); return o.sort(); }"""
@@ -64,7 +67,7 @@ try:
         step("the bars of the phases are gone when Tabui is ready", bar_gone)
         def reuse():
             before = pg.evaluate(LIST_IDX); pg.evaluate("window.__calls = []")
-            pg.click("#tp-page"); pg.wait_for_function("/serie/.test(document.querySelector('#tp-files').innerText)", timeout=60000); time.sleep(1.5)
+            pg.click("#tp-page"); pg.wait_for_function("/serie/.test(document.querySelector('#tp-files').innerText)", timeout=60000); attendi(pg, "document.querySelector('#tp-msg').textContent === ''")
             after = pg.evaluate(LIST_IDX); calls = pg.evaluate("window.__calls")
             assert before == after, (before, after)                                # no index rebuilt
             assert not [x for x in calls if x.startswith("nativeToMzml")], calls
@@ -75,7 +78,8 @@ try:
             c2 = b.new_context(viewport={"width": 1500, "height": 1800}); c2.set_default_timeout(120000)
             p2 = c2.new_page(); p2.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
             p2.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); p2.wait_for_selector("#drop"); p2.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
-            p2.set_input_files("#pick", PAIRS); p2.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000); time.sleep(1.5)
+            p2.set_input_files("#pick", PAIRS); p2.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
+            attendi(p2, "(async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('idx'); let n = 0; for await (const [k] of d.entries()) if (/^(serie|prodotto)\\w*\\.mzML\\.mzidx$/.test(k)) n++; return n >= 3; })()", 60000)
             data = p2.evaluate(HASH); c2.close()
             assert direct and direct == data, (direct, data)
         step("the .mzidx built from Tabui equals the one built from Data, byte for byte", same_bytes)

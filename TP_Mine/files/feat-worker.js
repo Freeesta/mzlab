@@ -160,6 +160,26 @@ export function createFeatPool(opts) {
         return r.bytes;
       })));
     },
+    // The pipeline after mzmine 3.9.0 (admin mode, `.wasm` `untargeted`): the same two steps as `detectAll` and `align`; `params` = JSON string of the recipe {"engine": "untargeted", ...}.
+    async detectAllUnt(files, params) {
+      let done = 0;
+      return Promise.all(files.map(f => submit(async (slot, load) => {
+        await load("untargeted");
+        const t0 = performance.now();
+        const r = await call(slot, { op: "detect_unt", path: f.path, name: f.name, params });
+        if (opts.onProgress) opts.onProgress({ phase: "detect", name: f.name, done: ++done, total: files.length, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
+        return r.bytes;
+      })));
+    },
+    alignUnt(stored, paths, params) {
+      return submit(async (slot, load) => {
+        await load("untargeted");
+        const t0 = performance.now();
+        const r = await call(slot, { op: "align_unt", files: copy(stored), paths, params, budgetMb: opts.budgetMb || 0 });
+        if (opts.onProgress) opts.onProgress({ phase: "align", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
+        return r.bytes;
+      });
+    },
     ...previewOps(submit, call, opts),
     ...driftOps(submit, call, copy),
     ...proofOps(submit, call, copy, opts),
@@ -215,7 +235,7 @@ export function createFeatPool(opts) {
 
 // ---------------------------------------------------------------- worker side
 const WASM_KEYS = ["error.featState"];                  // keys that only the .wasm returns (the page translates them)
-const mods = {}, mems = {};                              // { feat, proofs }: the wasm-bindgen modules
+const mods = {}, mems = {};                              // { feat, proofs, untargeted, ... }: the wasm-bindgen modules
 let hypo = null;                              // Hypotheses of the last run_hypotheses (kept in the memory of this worker for evidence)
 let scratch = new Uint8Array(1 << 16);        // buffer reused by the reads of the .mzidx
 
@@ -281,6 +301,14 @@ const OPS = {
   async detect(m) {
     const f = await openAll([m.path]), out = memSink();
     try { mods.feat.detect_file_to(f.read, f.sizes[0], m.name, m.recipe, out.write); return { bytes: out.bytes() }; } finally { f.close(); }
+  },
+  async detect_unt(m) {
+    const f = await openAll([m.path]), out = memSink();
+    try { mods.untargeted.detect_untargeted_to(f.read, f.sizes[0], m.name, m.params, out.write); return { bytes: out.bytes() }; } finally { f.close(); }
+  },
+  async align_unt(m) {
+    const f = await openAll(m.paths), out = memSink();
+    try { mods.untargeted.align_untargeted_to(arrays(m.files), f.read, f.sizes, m.params, out.write, m.budgetMb || 0); return { bytes: out.bytes() }; } finally { f.close(); }
   },
   async preview(m) {
     const f = await openAll([m.path]);

@@ -66,6 +66,7 @@ pub mod methodcheck;
 pub mod methodinfo;
 pub mod methodjson;
 pub mod lettori;
+pub mod trasporto;
 pub mod lettori_centroidi;
 pub mod lettori_mzml;
 pub mod metodo;

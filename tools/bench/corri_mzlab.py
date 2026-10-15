@@ -20,6 +20,8 @@ def extra(ap) -> None:
     ap.add_argument("--mz-genitore", type=float, default=float("nan"))
     ap.add_argument("--rt-genitore", type=float, default=float("nan"))
     ap.add_argument("--smiles", default="")
+    ap.add_argument("--engine", choices=("mzfinder", "untargeted"), default="mzfinder", help="untargeted = the mzmine-like engine (example `untargeted`, features of mzlab-feat-wasm); --params = its recipe JSON")
+    ap.add_argument("--params", default="")
 
 
 def tabella_semplice(cartella: Path, nomi: list[str], dataset: str, config: str) -> dict:
@@ -40,7 +42,13 @@ def main() -> None:
     nativo.costruisci_esempio()
     idx = nativo.indici(fs, nat / "indici")
     nomi = [Path(x).stem for x in idx]
-    if a.genitore:
+    if a.engine == "untargeted":
+        from valida import cancello_untargeted as U
+        uscita = nat / "uscita"
+        U.esegui(idx, uscita, a.params)
+        t = tabella_semplice(uscita, nomi, a.dataset, a.config)
+        versione = nativo.apri((uscita / "series.mzfeat").read_bytes())[0]["crate"]
+    elif a.genitore:
         serie = nativo.esegui(idx, a.genitore, a.mz_genitore, a.rt_genitore, nat / "uscita", a.smiles)
         t = adatta.da_serie(serie, a.dataset, a.config)
         versione = serie.versione_crate

@@ -231,6 +231,9 @@ impl Lettore for SrmDaScansioni {
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.inner.scansione(c, k)
     }
+    fn scansione_dati(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        self.inner.scansione_dati(c, k)
+    }
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         self.inner.intestazione(c, k)
     }

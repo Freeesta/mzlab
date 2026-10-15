@@ -90,11 +90,11 @@ fn la_sessione_risponde_e_chiude() {
     let c: serde_json::Value = serde_json::from_str(&s.campioni(h).unwrap()).unwrap();
     assert_eq!(c["formato"], "finto");
     assert_eq!(c["campioni"][0]["scans"], 1);
-    let i: serde_json::Value = serde_json::from_str(&s.indice(h, 0).unwrap()).unwrap();
-    assert_eq!(i[0]["id"], "scan=0");
-    let sc = s.scansione(h, 0, 0).unwrap();
-    assert_eq!((sc.mz, sc.intensita), (vec![100.0, 200.0], vec![1.5, 2.5]));
-    assert!(sc.meta.contains("\"level\":1"));
+    let i = mzlab_core::trasporto::decode_indice(&s.indice(h, 0).unwrap()).unwrap();
+    assert_eq!((i[0].id.as_str(), i[0].filtro.as_str()), ("scan=0", "f"));
+    let sc = mzlab_core::trasporto::decode_scansione(0, &s.scansione(h, 0, 0).unwrap()).unwrap();
+    assert_eq!((sc.mz, sc.intensity), (vec![100.0, 200.0], vec![1.5, 2.5]));
+    assert_eq!((sc.level, sc.polarity), (1, 1));
     assert!(s.intestazione(h, 0, 0).unwrap().contains("MS:1"));
     assert!(s.cromatogrammi(h, 0).unwrap().contains("Tic"));
     assert!(s
@@ -107,9 +107,9 @@ fn la_sessione_risponde_e_chiude() {
     assert_eq!(s.campioni(h).err().map(|e| e.key), Some("error.badIndex"));
 }
 
-/// The index is written without a `Value` per scan, but it is the same text that `serde_json::json!` gave (keys in alphabetical order, floats with `.0`, NaN as `null`).
+/// The index crosses as bytes and comes back as it was, with every column (NaN, infinities, 64-bit offsets, the repeated filter once).
 #[test]
-fn l_indice_scritto_a_flusso_e_il_testo_di_serde_json() {
+fn l_indice_in_byte_torna_uguale() {
     use mzlab_core::lettori::Posizione;
     let voci = vec![
         VoceScansione {
@@ -129,7 +129,7 @@ fn l_indice_scritto_a_flusso_e_il_testo_di_serde_json() {
         },
         VoceScansione {
             id: String::new(),
-            rt: f64::NAN,
+            rt: 0.1 + 0.2,
             livello: 1,
             polarita: 0,
             tic: 0.1 + 0.2,
@@ -139,18 +139,11 @@ fn l_indice_scritto_a_flusso_e_il_testo_di_serde_json() {
             posizione: None,
         },
     ];
-    let vecchio: Vec<_> = voci
-        .iter()
-        .map(|r| {
-            let pos = r.posizione.map(|p| serde_json::json!([p.membro, p.offset, p.lunghezza]));
-            serde_json::json!({ "id": r.id, "rt": r.rt, "level": r.livello, "polarity": r.polarita, "tic": r.tic, "base": r.picco_base, "filter": r.filtro, "precursor": r.precursore, "pos": pos })
-        })
-        .collect();
-    let atteso = serde_json::Value::Array(vecchio).to_string();
     let mut s = Sessioni::default();
     let h = s.inserisci(Box::new(Finto {
         campioni: vec![],
-        indice: voci,
+        indice: voci.clone(),
     }));
-    assert_eq!(s.indice(h, 0).unwrap(), atteso);
+    let b = s.indice(h, 0).unwrap();
+    assert_eq!(mzlab_core::trasporto::decode_indice(&b).unwrap(), voci);
 }

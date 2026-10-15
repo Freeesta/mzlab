@@ -27,12 +27,12 @@ impl State {
         Index::open(r, size)
     }
 
-    fn feat_lock(&self) -> std::sync::MutexGuard<'_, FeatState> {
+    pub(crate) fn feat_lock(&self) -> std::sync::MutexGuard<'_, FeatState> {
         self.feat.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     /// The `.mzfeatf` held for each of `names`, in that order.
-    fn feat_stored(&self, names: &[String]) -> Result<Vec<Vec<u8>>> {
+    pub(crate) fn feat_stored(&self, names: &[String]) -> Result<Vec<Vec<u8>>> {
         let g = self.feat_lock();
         names
             .iter()
@@ -252,6 +252,8 @@ impl State {
         match op {
             "feat/detect" => self.feat_detect(p),
             "feat/align" => self.feat_align(p),
+            "feat/untargeted/detect" => self.feat_unt_detect(p),
+            "feat/untargeted/align" => self.feat_unt_align(p),
             "feat/hypotheses" => self.feat_hypotheses(p),
             "feat/evidence" => self.feat_evidence(p),
             "feat/table" => self.feat_table(p),
@@ -277,7 +279,7 @@ pub(crate) fn sha_hex(b: &[u8]) -> String {
 }
 
 /// `{"bytes", "sha256"}`: what a step that wrote bytes answers (the `.wasm` answers the same).
-fn written(b: &[u8]) -> Result<Answer> {
+pub(crate) fn written(b: &[u8]) -> Result<Answer> {
     let mut o = Out::default();
     o.raw("{\"bytes\":")
         .int(b.len() as i64)

@@ -5,7 +5,9 @@
 use std::io::{Read, Seek, SeekFrom};
 
 use opentfraw::extra::scan_extras_with;
-use opentfraw::mzml::{extract_spectrum, scan_metadata, scan_metadata_with, ScanMetadata};
+use opentfraw::mzml::{
+    extract_arrays, extract_spectrum, scan_metadata, scan_metadata_with, ScanMetadata,
+};
 use opentfraw::{ExtraFields, RawFileReader, ScanParams};
 
 use crate::error::{Error, Result};
@@ -312,6 +314,31 @@ impl Lettore for LettoreRaw {
         let rec = extract_spectrum(&self.raw, &mut self.src, idx, false)
             .ok_or_else(|| raw_error("scan cannot be decoded"))?;
         Ok(crate::raw::spectrum(rec))
+    }
+
+    /// The points of the scan and the rest from the row of the index: no trailer, no filter, no precursors read again.
+    fn scansione_dati(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        self.one(c)?;
+        let idx = self.row(k)?;
+        let (mz, intensity, modo) = extract_arrays(&self.raw, &mut self.src, idx)
+            .ok_or_else(|| raw_error("scan cannot be decoded"))?;
+        let v = self
+            .indice
+            .get(k)
+            .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
+        Ok(Spectrum {
+            index: k,
+            id: String::new(),
+            level: v.livello,
+            rt: v.rt,
+            polarity: v.polarita,
+            profile: modo == Some(opentfraw::ScanMode::Profile),
+            filter: String::new(),
+            precursor: v.precursore,
+            mz,
+            intensity,
+            wide: None,
+        })
     }
 
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {

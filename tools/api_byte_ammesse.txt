@@ -8,3 +8,6 @@ lib.rs::state
 finder.rs::finder_transformations
 # the pyramid of map tiles (about 1/8 of the index) is handed once per file to the worker, which writes it to OPFS
 cache.rs::tiles_export
+# RV-05: the readers module hands the index and each scan to the engine as one binary block (`trasporto.rs`), by design
+lib.rs::indice
+lib.rs::scansione

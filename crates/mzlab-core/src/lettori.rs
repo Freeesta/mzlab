@@ -189,6 +189,11 @@ pub trait Lettore {
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]>;
     /// Scan `k` of the index of sample `c`.
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum>;
+    /// Scan `k` for a caller that holds the index already (the module of the readers, `trasporto.rs`): the points, level, polarity, profile, RT and precursor as `scansione`
+    /// gives them; `id` and `filter` may be empty (they are the ones of the row of the index).
+    fn scansione_dati(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        self.scansione(c, k)
+    }
     /// The header fields of scan `k` (collision energy, isolation, trailer): `nome`, `valore`, `unita`, `cv`.
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>>;
     fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>>;

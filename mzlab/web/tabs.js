@@ -144,22 +144,42 @@ function defaultLayoutTab(t) {
   }
 }
 
-// one MS2 experiment = precursor chromatogram (above) + product-ion spectrum (below, linked)
-function addMs2Pair(e, y) {
-  const w = hostWidth(), f0 = tabFiles("ms2")[0], k = e.k ?? f0.k, label = ptMs2(e.prec);
-  const c = addPanel("chrom", { tab: "ms2", prec: e.prec, title: label, x: 0, y, w, h: 250, full: true });
-  const sp = addPanel("spec", { tab: "ms2", link: c.id, k, level: 2, prec: e.prec, title: ptProduct(e.prec), x: 0, y: y + 260, w, h: 280, full: true });
-  apexSpectrum(c, sp); return c;
+// one MS2 experiment = precursor chromatogram (above) + product-ion spectrum (below, linked); the sidebar opens the chromatogram alone (addMs2Chrom), the spectrum comes on a double click
+function addMs2Chrom(e, y) {
+  const w = hostWidth();
+  return addPanel("chrom", { tab: "ms2", prec: e.prec, title: ptMs2(e.prec), x: 0, y, w, h: 250, full: true });
+}
+function addMs2Spec(c, e, y) {
+  const f0 = tabFiles("ms2")[0], k = e.k ?? f0.k;
+  const sp = addPanel("spec", { tab: "ms2", link: c.id, k, level: 2, prec: e.prec, title: ptProduct(e.prec), x: 0, y, w: c.w, h: 280, full: true });
+  apexSpectrum(c, sp); return sp;
+}
+function addMs2Pair(e, y) { const c = addMs2Chrom(e, y); addMs2Spec(c, e, y + 260); return c; }
+// the MS2 files that hold a precursor become visible: a chromatogram of a hidden file would be empty («no file visible»)
+function ms2Show(prec) {
+  const fs = tabFiles("ms2").filter(f => (f.precursors || []).some(v => Math.abs(v - prec) < 0.6) && !f.vis);
+  fs.forEach(f => sibsOf(f).forEach(g => { g.vis = true; })); return fs.length > 0;
 }
 const ms2PairOf = prec => E.panels.find(p => p.tab === "ms2" && p.type === "chrom" && String(p.prec) === String(prec));
-// sidebar of the MS2 tab: tick a precursor to show its two graphs (they are created if missing), untick to close them, click the name to go to them
+// sidebar of the MS2 tab: tick a precursor to show its chromatogram (created if missing; its spectrum comes on a double click on the name or on the chromatogram), untick to close its graphs, click the name to go to them
 function ms2Toggle(prec, on) {
   const c = ms2PairOf(prec);
-  if (on && !c) { const e = ms2Exps().find(x => String(x.prec) === String(prec)); if (e) { addMs2Pair(e, tabPanels().reduce((m, q) => Math.max(m, q.y + q.h + pnlGap()), 0)); relayout(); fitHost(); } }
+  if (on) ms2Show(prec);
+  if (on && !c) { const e = ms2Exps().find(x => String(x.prec) === String(prec)); if (e) { addMs2Chrom(e, tabPanels().reduce((m, q) => Math.max(m, q.y + q.h + pnlGap()), 0)); relayout(); fitHost(); } }
+  if (on) redrawAll();
   if (!on && c) { [...E.panels.filter(q => q.link === c.id || q.src === c.id), c].forEach(q => q.el.querySelector(".x").click()); }
   renderFileList(); uiSave();
 }
 // click on a precursor in the list: if it already has its graphs, go there; otherwise the main pair (the top one) switches to it: no new panels
+// double click on a precursor in the list: its product-ion spectrum (the chromatogram is created too if missing) at the highest scan
+async function ms2Spectrum(prec) {
+  let c = ms2PairOf(prec); if (!c) { ms2Toggle(prec, true); c = ms2PairOf(prec); } if (!c) return;
+  ms2Show(prec); renderFileList();
+  let sp = E.panels.find(q => q.type === "spec" && q.link === c.id);
+  if (!sp) { const e = ms2Exps().find(x => String(x.prec) === String(prec)); if (!e) return; sp = newSpec(c, null, null, e.k ?? tabFiles("ms2")[0].k); sp.level = 2; }
+  await apexSpectrum(c, sp);
+  setActive(sp); front(sp.el);
+}
 function ms2Goto(prec) {
   const c = ms2PairOf(prec); if (!c) return ms2Switch(prec);
   setActive(c); front(c.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + c.y - hdrH() - 12, behavior: "smooth" });
@@ -167,7 +187,7 @@ function ms2Goto(prec) {
 function ms2Switch(prec) {
   const c = tabPanels("ms2").filter(q => q.type === "chrom").sort((a, b) => a.y - b.y)[0];
   if (!c) return ms2Toggle(prec, true);
-  c.prec = prec; c.title = ptMs2(prec); c.sel = null;
+  c.prec = prec; c.title = ptMs2(prec); c.sel = null; ms2Show(prec);
   const live = E.panels.filter(q => q.type === "spec" && q.link === c.id);
   live.forEach(sp => { sp.prec = prec; sp.zoom = null; sp.zoomY = null; sp.lock = null; sp.title = ptProduct(prec); });
   ctl(c); live.forEach(ctl);
