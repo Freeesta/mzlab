@@ -31,3 +31,5 @@ Campagna INVENTATA (nessun dato vero) con due sorbenti (OA, EC), una lista per s
 | `data/mz/DDA_POS/EC/list_EC.csv` | `f8ee12386e98e3fa92087aace40c387060eb13b71c77db9e20da8489027b69c3` |
 | `data/mz/DDA_POS/OA/list_OA.csv` | `4369a8e1642c6ff935a5b80b92157745b18e88a5fb7c57b405a8e592e1d884f9` |
 | `data/mz/DDA_POS/merged/merged_pos.csv` | `f77cd19ab5a5c71c46fc5dcc078118367d234aebef972928d48714c21215d9ca` |
+
+Inoltre `librerie_sintetiche/` (MGF, MSP, JSON a righe, MassBank) e `fonti_sintetiche/` (tabelle di SIRIUS e GNPS2 per POS e NEG): dati inventati per lo stadio `abbinamenti`.

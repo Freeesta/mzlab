@@ -127,6 +127,7 @@ impl Membri {
                 nome: n.clone(),
                 dim: s as u64,
                 dati: Box::new(JsMember::new(self.read.clone(), i as u32, s as u64)),
+                sha1: None,
             })
             .collect();
         FileSet { membri }
@@ -179,11 +180,14 @@ pub fn estensioni() -> String {
 }
 
 /// What the module sees in a dataset: `{formato, campioni:[{id,name,scans}], motivi:[...]}`. The `motivi` say what the engine's reader would not give: `"srm"` (SRM only
-/// as scans), `"pda"` (UV traces), `"variante"` (SCIEX file the 3200 reader of the engine would misread). The module links no reader of the engine, so it cannot say whether the engine would have opened the file: the page knows.
+/// as scans), `"pda"` (UV traces), `"variante"` (a file whose points the engine would misread: an Agilent `.D` QqQ MRM or Q-TOF profile or flight times, a SCIEX file of the 3200 reader). The module links no reader of the engine, so it cannot say whether the engine would have opened the file: the page knows.
 #[wasm_bindgen]
 pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<String, JsValue> {
     let m = Membri::new(names, sizes, read)?;
+    #[cfg_attr(not(any(feature = "agilent", feature = "tutte")), allow(unused_mut))]
     let mut motivi: Vec<&str> = Vec::new();
+    #[cfg(any(feature = "agilent", feature = "tutte"))]
+    motivi.extend(mzlab_lettori::motivi_insieme(&mut m.fileset()));
     let mut l = match mzlab_lettori::apri(m.fileset(), &Limiti::sito()) {
         Ok(l) => l,
         // a SCIEX file the module itself refuses (a TOF, several periods, an unknown scan type) is a variant too: the engine would read it as a 3200 and be wrong
@@ -250,9 +254,27 @@ fn con<T>(f: impl FnOnce(&mut Sessioni) -> mzlab_core::Result<T>) -> Result<T, J
 /// Opens a dataset and keeps it under a handle (`chiudi` frees it); `campioni(h)` says what it holds.
 #[wasm_bindgen]
 pub fn apri(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<u32, JsValue> {
-    let m = Membri::new(names, sizes, read)?;
+    apri_membri(Membri::new(names, sizes, read)?.fileset())
+}
+/// `apri` with the SHA-1 of each member when the page took it while copying the file (empty text: unknown): the header of the mzML uses it instead of
+/// reading the file again. Only the `thermo` module has it (the other readers take their SHA-1 themselves).
+#[cfg(feature = "thermo")]
+#[wasm_bindgen]
+pub fn apri_con_sha1(
+    names: js_sys::Array,
+    sizes: &[f64],
+    read: Function,
+    sha1: js_sys::Array,
+) -> Result<u32, JsValue> {
+    let mut fs = Membri::new(names, sizes, read)?.fileset();
+    for (x, v) in fs.membri.iter_mut().zip(sha1.iter()) {
+        x.sha1 = v.as_string().filter(|t| !t.is_empty());
+    }
+    apri_membri(fs)
+}
+fn apri_membri(fs: FileSet) -> Result<u32, JsValue> {
     // as it is, without the SRM traces of `mzlab_lettori::apri`: the engine reads the module through `LettoreEsterno` and decides itself what it does with them
-    let l = mzlab_lettori::apri_nudo(m.fileset(), &Limiti::sito()).map_err(|e| error_json(&e))?;
+    let l = mzlab_lettori::apri_nudo(fs, &Limiti::sito()).map_err(|e| error_json(&e))?;
     con(|s| Ok(s.inserisci(l)))
 }
 #[wasm_bindgen]

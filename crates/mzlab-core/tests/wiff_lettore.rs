@@ -20,6 +20,7 @@ fn set(dir: &Path, name: &str) -> FileSet {
             nome: file,
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
+            sha1: None,
         }
     };
     FileSet {
@@ -168,6 +169,7 @@ fn a_wiff_alone_is_not_sure_and_not_a_wiff_is_refused() {
             nome: name.into(),
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
+            sha1: None,
         }],
     };
     let mut ole_head = vec![0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];

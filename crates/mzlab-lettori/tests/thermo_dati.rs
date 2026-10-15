@@ -40,6 +40,7 @@ fn apri(p: &Path) -> Box<dyn mzlab_core::lettori::Lettore> {
             nome: p.file_name().unwrap().to_string_lossy().into(),
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
+            sha1: None,
         }],
     };
     mzlab_lettori::apri_nudo(fs, &Limiti::sito()).unwrap()

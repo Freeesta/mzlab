@@ -2394,7 +2394,7 @@ I18N.add("en", {
   "error.fileInUse": "The file «{file}» is in use in another mzLab tab. Try again in a moment.",
   "files.mode.profile": "Profile",
   "settings.cen.btn": "Reduce each peak to a single point (lighter files)",
-  "settings.cen.title": "Centroiding: each profile peak becomes one point with its mass and its area. It makes a copy next to the original, which is not changed. Recommended for Tabui on low-resolution files.",
+  "settings.cen.title": "Centroiding: each profile peak becomes one point with its mass and its area. It makes a copy next to the original, which is not changed.",
   "settings.cen.ask": "Make a reduced copy of {n} files? It takes more space (at most about {size}); the originals do not change.",
   "settings.cen.run": "{n} of {m}: {name}",
   "settings.cen.stop": "Cancel",

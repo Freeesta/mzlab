@@ -99,6 +99,8 @@ pub struct Membro {
     pub nome: String,
     pub dim: u64,
     pub dati: Box<dyn ReadAt>,
+    /// SHA-1 of the whole member when the caller already has it (taken during the copy of the file): the reader that writes the header of an mzML uses it instead of reading the file again.
+    pub sha1: Option<String>,
 }
 
 /// The files that make one dataset: `X.wiff` + `X.wiff.scan`, the members of a `.raw` or `.D` folder, or a single file. The names are logical (relative to the dataset).

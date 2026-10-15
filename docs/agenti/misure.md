@@ -233,7 +233,7 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 - Tabella completa, confronto nativo e diagnosi in `mappa-fluida.md`. Prima mappa: LR 1500×500 791 ms, HRC 3000×3000 (9 M picchi) 6332 ms (nativo 254 ms). Nitido dopo rotella: 176 ms LR, 249 ms HR; zoom solo RT in HR 1617 ms. Cambio di file caldo: 211 ms LR, 441 ms HR. Frame durante la rotella p95 33-50 ms. Picco WASM HR 175 MB.
 
 ## Moduli lettori (`tools/build_lettori_wasm.sh`, dopo `wasm_opt -Oz`)
-- `.wasm` per famiglia, in byte (tetto): `thermo` 437 515 (491 520), `agilent` 337 567 (393 216), `sciex` 303 705 (327 680), `bruker` 416 514 (524 288, con `ruzstd`). Il `.wasm` del motore pesa 1 439 240 B (senza il lettore Thermo, che sta nel modulo `thermo`).
+- `.wasm` per famiglia, in byte (tetto): `aperti` 393 072 (401 408), `thermo` 437 515 (491 520), `agilent` 418 744 (458 752), `sciex` 303 705 (327 680), `bruker` 416 514 (524 288, con `ruzstd`). Il `.wasm` del motore pesa 1 439 240 B (senza il lettore Thermo, che sta nel modulo `thermo`).
 - Picco di memoria del modulo `thermo` che indicizza un `.raw` (memoria iniziale 32 MB): 44,4 MB per 7 952 scansioni, 85,1 MB per 16 524.
 
 ## Profilo `desktop` (`Cargo.toml`, `opt-level = 3` contro `"z"`)

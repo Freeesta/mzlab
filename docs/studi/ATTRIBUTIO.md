@@ -129,7 +129,7 @@ Un pacchetto = una chat DEV = una PR unita a CI verde, pubblicata subito dietro 
 |---|---|---|---|---|---|---|
 | AT-00 | fondamenta: campagna sintetica in `tests/data/attributio/`, `tools/attributio_riferimento.py` e dati d'oro, `docs/agenti/attributio.md`, riga di AGENTS.md §5, riga di `LICENZE-TERZI.md` | 1 | — | nessuno | 1 | fatto: 15 feature, dati d'oro 35 KB, `--controlla` passato al primo colpo |
 | AT-01 | `campaign.toml` (sottoinsieme TOML), lettori (mzMine, SIRIUS, GNPS2, MGF, standard, decisioni), sorbenti e DETECTED, `feature_state` | 2 | AT-00 | nessuno | 2 | fatto: ~4 500 righe in 18 file, 16 prove di parità, nessuna dipendenza nuova, `.wasm` non toccati; righe per fonte sui dati veri non misurate (senza `MZLAB_DATI`) |
-| AT-05 | abbinamento della revisione, indice delle librerie, fonti, Δm, sopra `crates/mzlab-lib` | 2 | AT-00 | nessuno | 1,5 | da fare |
+| AT-05 | abbinamento della revisione, indice delle librerie, fonti, Δm, sopra `crates/mzlab-lib` | 2 | AT-00 | nessuno | 1,5 | fatto (PR aperta): 30 coppie a 1e-9, `.siriusdb` rimandato (non è SQLite) |
 | AT-02 | cascata dei livelli (`annotate.py`) e controlli di formula | 3 | AT-01 | nessuno | 2 | da fare |
 | AT-06 | spiegazione dei frammenti, isotopi, purezza, spettri grezzi, RT-logP, frammentatore; proposte di `build.py` | 3 | AT-01, AT-05 | nessuno | 2,5 | da fare |
 | AT-03 | curazione, nomi, vocabolario, identità | 4 | AT-02 | nessuno | 1 | da fare |

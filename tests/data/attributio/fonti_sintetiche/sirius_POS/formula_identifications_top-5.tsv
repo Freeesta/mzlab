@@ -1,0 +1,5 @@
+mappingFeatureId	formulaRank	molecularFormula	adduct	precursorFormula	SiriusScoreNormalized
+1	2	C4H10N2	[M + H]+	C4H11N2	0.20
+1	1	C4H11N	[M + H]+	C4H12N	0.75
+2	1	C5H13N	[M + H]+	C5H14N	0.5
+3	1	C2H6O	[M + H]+	C2H7O	

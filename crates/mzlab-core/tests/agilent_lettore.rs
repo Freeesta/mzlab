@@ -26,6 +26,7 @@ fn set_of(dir: &std::path::Path) -> FileSet {
             nome: format!("{name}/{rel}"),
             dim: file.metadata().unwrap().len(),
             dati: Box::new(file),
+            sha1: None,
         });
     }
     FileSet { membri }
@@ -141,6 +142,7 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
         nome: nome.into(),
         dim: b.len() as u64,
         dati: Box::new(b.to_vec()),
+        sha1: None,
     };
     let set = |scan: &[u8], with_peak: bool| FileSet {
         membri: [
@@ -189,4 +191,17 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
         byte: 1 << 20,
     };
     assert!(lettori::apri(set(&idx, true), &few).is_err());
+}
+
+/// The GC/MS runs are not a variant: the engine's reader opens and reads them, so the probe of the module does not send them away.
+#[cfg(feature = "estesi")]
+#[test]
+fn a_gc_run_is_not_a_variant() {
+    let Some(all) = folders() else { return };
+    for f in all {
+        assert!(
+            !mzlab_core::agilent::lettore::variante(&mut set_of(&f)),
+            "{f:?}"
+        );
+    }
 }

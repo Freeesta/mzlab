@@ -5,6 +5,9 @@
 // static/mzfinder/indice.json = {js: [names, run in this order], files: [names, given to the scripts as QTOOLS.ctx.files[name]], py: zip name}
 // The scripts register their tools with window.QTOOLS.register(...). A tool registered with nav:true gets its own tab in the page header
 // (next to Teoria) and a full page; others get a button in the floating bar.
+// A tool registered with admin:true exists only in the administrator mode (localStorage «qqq.admin» = «1», five clicks on the logo): without it the package is not
+// even downloaded, no tab or button is made and nothing in the page points to the tool. The five clicks (logo-piccone.js) fire "mzlab:admin" on document and the
+// tab appears at once; leaving the mode (settings.js) reloads the page, which drops the tabs, the results and the workers of the tools.
 (() => {
   "use strict";
   const BASE = new URL(".", document.currentScript ? /** @type {HTMLScriptElement} */ (document.currentScript).src : location.href).href;
@@ -12,10 +15,13 @@
 
   // ---- registry: tools register themselves after the scripts are loaded. {id, name, icon (svg string), desc, open(body, ctx)}
   const tools = [];
+  const adminOn = () => { try { return localStorage.getItem("qqq.admin") === "1" || localStorage.getItem("qqq.teoria.esteso") === "1"; } catch (_) { return false; } };
+  /** a tool with admin:true is shown only in the administrator mode */
+  const shown = t => !t.admin || adminOn();
   const reg = window.QTOOLS = {
     ctx: /** @type {any} */ (null),                                     // set before the scripts run: {pyZip: Uint8Array, base: URL of the site static folder, files}
-    list: () => on ? tools.slice() : [],
-    register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav && on) addTab(t); render(); },
+    list: () => on ? tools.filter(shown) : [],
+    register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav && on && shown(t)) addTab(t); render(); },
   };
 
   function runScript(name) {
@@ -46,7 +52,7 @@
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   function render() {
     if (!bar) return;
-    const floating = tools.filter(t => !t.nav);
+    const floating = tools.filter(t => !t.nav && shown(t));
     bar.hidden = !on || !floating.length;
     bar.innerHTML = floating.map(t => `<button data-t="${esc(t.id)}" title="${esc(t.desc || t.name)}">${t.icon || ""}${esc(t.name)}</button>`).join("");
     bar.querySelectorAll("button").forEach(b => b.onclick = () => openTool(tools.find(t => t.id === b.dataset.t)));
@@ -100,7 +106,7 @@
     for (const n of js) await runScript(n);
   }
   // the tab appears at once with a short loading note; the real tool takes its place when its script registers
-  const PLACEHOLDER = { id: "tpmine", nav: true, ph: true, name: "Tabui", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading…</p>'; } };
+  const PLACEHOLDER = { id: "tpmine", nav: true, admin: true, ph: true, name: "Tabui", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading…</p>'; } };
   async function turnOn() {
     on = true; ensureUi();
     if (!loaded) loaded = load();
@@ -111,9 +117,10 @@
       return;
     }
     if (!on) return;
-    for (const t of tools) if (t.nav) addTab(t);
+    for (const t of tools) if (t.nav && shown(t)) addTab(t);
     render();
   }
-  const start = () => { if (window.MZLAB_BROWSER || window.MZLAB_DESKTOP) turnOn(); };      // only in the built site and the desktop app: the plain web folder has no static/mzfinder/
+  const start = () => { if ((window.MZLAB_BROWSER || window.MZLAB_DESKTOP) && !on && adminOn()) turnOn(); };      // only in the built site and the desktop app (the plain web folder has no static/mzfinder/), only for the administrator
+  document.addEventListener("mzlab:admin", start);
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();

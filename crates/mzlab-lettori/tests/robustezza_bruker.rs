@@ -343,6 +343,7 @@ fn cartella(bin: Vec<u8>, tdf: Vec<u8>) -> FileSet {
         nome: format!("x.d/{n}"),
         dim: b.len() as u64,
         dati: Box::new(b),
+        sha1: None,
     };
     FileSet {
         membri: vec![m("analysis.tdf", tdf), m("analysis.tdf_bin", bin)],
@@ -450,6 +451,7 @@ fn solo_baf_dice_come_esportare() {
             nome: "x.d/analysis.baf".into(),
             dim: 3,
             dati: Box::new(b),
+            sha1: None,
         }],
     };
     let e = mzlab_lettori::apri(fs, &limiti()).err().unwrap();
@@ -462,6 +464,7 @@ fn una_cartella_agilent_non_e_di_bruker() {
         nome: n.into(),
         dim: 16,
         dati: Box::new(vec![0u8; 16]),
+        sha1: None,
     };
     let mut fs = FileSet {
         membri: vec![
