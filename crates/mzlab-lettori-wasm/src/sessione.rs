@@ -1,16 +1,10 @@
 //! The session interface of a module, in plain Rust (the `wasm_bindgen` functions of `lib.rs` only convert): a reader stays open under a handle, and the engine's external reader asks it for the
-//! index, a scan, a chromatogram, the header of a scan and the method. Answers are JSON or typed arrays; an error is `{error_key, params}`.
+//! index, a scan, a chromatogram, the header of a scan and the method. Answers are JSON, or one byte array for the index and a scan (`mzlab_core::trasporto`); an error is `{error_key, params}`.
 use std::collections::HashMap;
 
 use mzlab_core::lettori::Lettore;
+use mzlab_core::trasporto::{encode_indice, encode_scansione};
 use mzlab_core::Result;
-
-/// A scan: m/z and intensities as `f64`, and the rest (id, level, RT, polarity, profile, filter, precursor) as JSON.
-pub struct Scansione {
-    pub mz: Vec<f64>,
-    pub intensita: Vec<f64>,
-    pub meta: String,
-}
 
 #[derive(Default)]
 pub struct Sessioni {
@@ -47,32 +41,14 @@ impl Sessioni {
         Ok(serde_json::json!({ "formato": l.formato().id(), "campioni": c }).to_string())
     }
 
-    /// The index of sample `c`: one object per scan, written straight into the text (the same text as `serde_json::json!` gives, keys in alphabetical order, without a `Value` per scan).
-    pub fn indice(&mut self, h: u32, c: usize) -> Result<String> {
-        let v = self.lettore(h)?.indice(c)?;
-        // room for about 256 bytes an entry (the BAF gives 244): a growing buffer would copy a text of tens of MB, and it still grows if this was short
-        let mut o: Vec<u8> = Vec::with_capacity(v.len() * 256 + 1024);
-        o.push(b'[');
-        for (i, r) in v.iter().enumerate() {
-            if i > 0 {
-                o.push(b',');
-            }
-            voce(&mut o, r);
-        }
-        o.push(b']');
-        // serde_json writes valid UTF-8 only
-        Ok(String::from_utf8(o).unwrap_or_default())
+    /// The index of sample `c` as one block of bytes in columns (`trasporto.rs`).
+    pub fn indice(&mut self, h: u32, c: usize) -> Result<Vec<u8>> {
+        Ok(encode_indice(self.lettore(h)?.indice(c)?))
     }
 
-    pub fn scansione(&mut self, h: u32, c: usize, k: usize) -> Result<Scansione> {
-        let s = self.lettore(h)?.scansione(c, k)?;
-        let meta = serde_json::json!({ "id": s.id, "level": s.level, "rt": s.rt, "polarity": s.polarity, "profile": s.profile, "filter": s.filter, "precursor": s.precursor }).to_string();
-        let intensita = (0..s.mz.len()).map(|i| s.intensity_f64(i)).collect();
-        Ok(Scansione {
-            mz: s.mz,
-            intensita,
-            meta,
-        })
+    /// Scan `k` of sample `c` as one block of bytes: a fixed head, the m/z, the intensities (`trasporto.rs`). The id and the filter are those of the index.
+    pub fn scansione(&mut self, h: u32, c: usize, k: usize) -> Result<Vec<u8>> {
+        Ok(encode_scansione(&self.lettore(h)?.scansione_dati(c, k)?))
     }
 
     pub fn intestazione(&mut self, h: u32, c: usize, k: usize) -> Result<String> {
@@ -84,73 +60,6 @@ impl Sessioni {
             .collect();
         Ok(serde_json::Value::Array(v).to_string())
     }
-}
-
-/// A JSON string, escaped as `serde_json` does (the one place that code is instantiated: the module stays small).
-fn put_str(o: &mut Vec<u8>, v: &str) {
-    let _ = serde_json::to_writer(&mut *o, v);
-}
-
-/// A JSON number, `null` for NaN and infinities (the serialiser of `serde_json`, as `json!` uses).
-fn put_f64(o: &mut Vec<u8>, v: f64) {
-    let _ = serde_json::to_writer(&mut *o, &v);
-}
-
-/// A whole number in decimal (an offset in a file stays far below `i64::MAX`).
-fn put_int(o: &mut Vec<u8>, v: i64) {
-    if v < 0 {
-        o.push(b'-');
-    }
-    let mut n = v.unsigned_abs();
-    let mut d = [0u8; 20];
-    let mut i = d.len();
-    loop {
-        i -= 1;
-        d[i] = b'0' + (n % 10) as u8;
-        n /= 10;
-        if n == 0 {
-            break;
-        }
-    }
-    o.extend_from_slice(&d[i..]);
-}
-
-fn put_opt(o: &mut Vec<u8>, v: Option<f64>) {
-    let _ = serde_json::to_writer(&mut *o, &v);
-}
-
-/// One entry of the index as `{"base":..,"filter":..,"id":..,"level":..,"polarity":..,"pos":..,"precursor":..,"rt":..,"tic":..}`.
-fn voce(o: &mut Vec<u8>, r: &mzlab_core::lettori::VoceScansione) {
-    o.extend_from_slice(b"{\"base\":");
-    put_opt(o, r.picco_base);
-    o.extend_from_slice(b",\"filter\":");
-    put_str(o, &r.filtro);
-    o.extend_from_slice(b",\"id\":");
-    put_str(o, &r.id);
-    o.extend_from_slice(b",\"level\":");
-    put_int(o, r.livello.into());
-    o.extend_from_slice(b",\"polarity\":");
-    put_int(o, r.polarita.into());
-    o.extend_from_slice(b",\"pos\":");
-    match r.posizione {
-        Some(p) => {
-            o.push(b'[');
-            put_int(o, p.membro.into());
-            o.push(b',');
-            put_int(o, p.offset as i64);
-            o.push(b',');
-            put_int(o, p.lunghezza.into());
-            o.push(b']');
-        }
-        None => o.extend_from_slice(b"null"),
-    }
-    o.extend_from_slice(b",\"precursor\":");
-    put_opt(o, r.precursore);
-    o.extend_from_slice(b",\"rt\":");
-    put_f64(o, r.rt);
-    o.extend_from_slice(b",\"tic\":");
-    put_f64(o, r.tic);
-    o.push(b'}');
 }
 
 impl Sessioni {
