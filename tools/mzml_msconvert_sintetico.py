@@ -21,6 +21,8 @@ VARIANTI = {
 }
 
 NS = "http://psi.hupo.org/ms/mzml"
+UN_MZ = ' unitCvRef="MS" unitAccession="MS:1000040" unitName="m/z"'
+UN_MIN = ' unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"'
 
 
 def _cv(acc: str, name: str, value="", unit: str = "") -> str:
@@ -31,7 +33,8 @@ def _array(values: np.ndarray, f64: bool, acc: str, name: str) -> str:
     raw = np.asarray(values, dtype="<f8" if f64 else "<f4").tobytes()
     b64 = base64.b64encode(zlib.compress(raw, 1)).decode()
     bits = _cv("MS:1000523", "64-bit float") if f64 else _cv("MS:1000521", "32-bit float")
-    return f'<binaryDataArray encodedLength="{len(b64)}">{bits}{_cv("MS:1000574", "zlib compression")}{_cv(acc, name, "", " unitCvRef=\"MS\" unitAccession=\"MS:1000040\" unitName=\"m/z\"" if f64 else "")}<binary>{b64}</binary></binaryDataArray>'
+    unit = UN_MZ if f64 else ""
+    return f'<binaryDataArray encodedLength="{len(b64)}">{bits}{_cv("MS:1000574", "zlib compression")}{_cv(acc, name, "", unit)}<binary>{b64}</binary></binaryDataArray>'
 
 
 def _spettro(i: int, rng, peaks1: int, peaks2: int, ms1_ogni: int, strano: bool) -> tuple[str, str]:
@@ -45,15 +48,15 @@ def _spettro(i: int, rng, peaks1: int, peaks2: int, ms1_ogni: int, strano: bool)
     prec = ""
     if livello == 2:
         p = 150 + (i * 7919) % 700
-        prec = (f'<precursorList count="1"><precursor spectrumRef="controllerType=0 controllerNumber=1 scan={i - (i % ms1_ogni) + 1}"><isolationWindow>{_cv("MS:1000827", "isolation window target m/z", p, " unitCvRef=\"MS\" unitAccession=\"MS:1000040\" unitName=\"m/z\"")}</isolationWindow>'
-                f'<selectedIonList count="1"><selectedIon>{_cv("MS:1000744", "selected ion m/z", p, " unitCvRef=\"MS\" unitAccession=\"MS:1000040\" unitName=\"m/z\"")}{_cv("MS:1000041", "charge state", 1)}</selectedIon></selectedIonList>'
+        prec = (f'<precursorList count="1"><precursor spectrumRef="controllerType=0 controllerNumber=1 scan={i - (i % ms1_ogni) + 1}"><isolationWindow>{_cv("MS:1000827", "isolation window target m/z", p, UN_MZ)}</isolationWindow>'
+                f'<selectedIonList count="1"><selectedIon>{_cv("MS:1000744", "selected ion m/z", p, UN_MZ)}{_cv("MS:1000041", "charge state", 1)}</selectedIon></selectedIonList>'
                 f'<activation>{_cv("MS:1000422", "beam-type collision-induced dissociation")}{_cv("MS:1000045", "collision energy", 30)}</activation></precursor></precursorList>')
     extra = _cv("MS:9999999", "an accession from a newer ontology", 1) if strano else ""
     xml = (f'<spectrum index="{i}" id="{sid}" defaultArrayLength="{n}">'
            + _cv("MS:1000511", "ms level", livello) + (_cv("MS:1000579", "MS1 spectrum") if livello == 1 else _cv("MS:1000580", "MSn spectrum")) + _cv("MS:1000127", "centroid spectrum")
            + _cv("MS:1000130", "positive scan") + _cv("MS:1000504", "base peak m/z", f"{mz[int(np.argmax(it))]:.5f}") + _cv("MS:1000505", "base peak intensity", f"{float(it.max()):.4f}")
            + _cv("MS:1000285", "total ion current", f"{float(it.sum()):.4f}") + extra
-           + f'<scanList count="1">{_cv("MS:1000795", "no combination")}<scan>{_cv("MS:1000016", "scan start time", f"{rt:.6f}", " unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"")}'
+           + f'<scanList count="1">{_cv("MS:1000795", "no combination")}<scan>{_cv("MS:1000016", "scan start time", f"{rt:.6f}", UN_MIN)}'
            + _cv("MS:1000512", "filter string", f"FTMS + p NSI Full ms{'' if livello == 1 else '2 %d.0000@hcd30.00' % (150 + (i * 7919) % 700)} [100.0000-1000.0000]")
            + f'<scanWindowList count="1"><scanWindow>{_cv("MS:1000501", "scan window lower limit", 100)}{_cv("MS:1000500", "scan window upper limit", 1000)}</scanWindow></scanWindowList></scan></scanList>'
            + prec + f'<binaryDataArrayList count="2">{_array(mz, True, "MS:1000514", "m/z array")}{_array(it, False, "MS:1000515", "intensity array")}</binaryDataArrayList></spectrum>\n')
