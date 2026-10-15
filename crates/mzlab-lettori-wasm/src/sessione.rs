@@ -105,6 +105,23 @@ impl Sessioni {
     pub fn metodo(&mut self, h: u32, c: usize) -> Result<String> {
         self.lettore(h)?.metodo(c)
     }
+
+    /// The header of the mzML of sample `c` (`Lettore::testata_mzml`), `null` when the reader has none: `{run, sources, instrument:[acc,name]|null, components:[[kind,acc,name]],
+    /// software:[name,version], acquired, serial, source_sha1, source_cv:[[acc,name]], sample:[id,name]|null, run_params:[[name,value]], content:[[acc,name]],
+    /// extra_software:[[acc,name,version]], centroided}`.
+    pub fn testata(&mut self, h: u32, c: usize) -> Result<String> {
+        Ok(match self.lettore(h)?.testata_mzml(c)? {
+            None => "null".into(),
+            Some(t) => serde_json::json!({
+                "run": t.run, "sources": t.sources, "instrument": t.instrument, "components": t.components,
+                "software": [t.software.0, t.software.1], "acquired": t.acquired, "serial": t.serial,
+                "source_sha1": t.source_sha1, "source_cv": t.source_cv, "sample": t.sample,
+                "run_params": t.run_params, "content": t.content, "extra_software": t.extra_software,
+                "centroided": t.centroided,
+            })
+            .to_string(),
+        })
+    }
 }
 
 #[cfg(test)]

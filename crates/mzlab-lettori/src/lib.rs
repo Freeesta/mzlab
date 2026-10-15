@@ -41,7 +41,7 @@ pub fn famiglia() -> &'static str {
     }
 }
 
-/// The formats of the families that are on: `agilent` and `sciex` repeat the ones of the engine's registry (and serve their variants), `thermo` repeats the `.raw` reader until it leaves the engine.
+/// The formats of the families that are on: `agilent` and `sciex` repeat the ones of the engine's registry (and serve their variants), `thermo` is the only home of the `.raw` reader of the web engine (the desktop app has it in the core with the default features).
 pub fn registro() -> Vec<&'static VoceLettore> {
     let voci: &[Option<&'static VoceLettore>] = &[
         #[cfg(any(feature = "aperti", feature = "tutte"))]
@@ -71,8 +71,8 @@ pub fn riconosci(fs: &mut FileSet) -> Option<&'static VoceLettore> {
     best.map(|(_, v)| v)
 }
 
-/// Opens `fs` with the reader that recognises it; the SRM traces of scans with an SRM filter become chromatograms (`srm::SrmDaScansioni`).
-pub fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
+/// Opens `fs` with the reader that recognises it, as it is (the sessions of the modules: the engine decides itself what it does with SRM scans).
+pub fn apri_nudo(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let name = fs
         .membri
         .first()
@@ -80,7 +80,12 @@ pub fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         .unwrap_or_default();
     let v =
         riconosci(&mut fs).ok_or_else(|| Error::new("err.file.notAccepted").with("name", name))?;
-    Ok(Box::new(srm::SrmDaScansioni::new((v.apri)(fs, limiti)?)))
+    (v.apri)(fs, limiti)
+}
+
+/// Opens `fs` with the reader that recognises it; the SRM traces of scans with an SRM filter become chromatograms (`srm::SrmDaScansioni`).
+pub fn apri(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
+    Ok(Box::new(srm::SrmDaScansioni::new(apri_nudo(fs, limiti)?)))
 }
 
 /// Every extension of the registry of this build, without repeats.

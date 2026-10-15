@@ -48,6 +48,8 @@
     "../../mzlab/web/lettori-famiglie.js",
     "../../mzlab/web/lettori-modulo.js",
     "../../mzlab/web/rust-nativo.js",
+    "../../mzlab/web/lettore-esterno.js",
+    "../../mzlab/web/carica-modulo.js",
     "../../mzlab/web/rust-centroidi.js",
     "../../mzlab/web/rust-convert.js",
     "../../mzlab/web/rust-diff.js",

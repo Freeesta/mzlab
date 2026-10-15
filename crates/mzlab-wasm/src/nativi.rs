@@ -12,12 +12,26 @@ use mzlab_core::sorgente::SorgenteLettore;
 use mzlab_core::{lettori_centroidi, lettori_mzml, mzidx, upload};
 use wasm_bindgen::prelude::*;
 
+use crate::esterno::{errore_del_modulo, LettoreEsterno, ModuloJs};
 use crate::{error_json, BlockWriter, JsOutput, JsReader};
 
 /// Readers kept open at once (a `.wiff` holds its container in memory).
 const OPEN: usize = 4;
 /// Bytes of `guscio` kept at once.
 pub(crate) const SHELLS: usize = 32 << 20;
+
+thread_local! {
+    /// The function of the page that opens a dataset on a readers module (`native_external`).
+    static ESTERNO: std::cell::RefCell<Option<Function>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Registers `open(names, sizes, read)`: the page's function that, for a dataset the engine has no reader for (a Thermo `.raw`), opens it on the readers module of its family and
+/// returns the object of the session (`campioni`, `indice`, `scansione`, `intestazione`, `cromatogrammi`, `cromatogramma`, `metodo`, `testata`, `chiudi`), or `null` when no module reads it.
+/// The engine then reads the dataset through `LettoreEsterno` like any other (`Membri::open`, `build_mzidx_native`, `native_srm`, `native_to_mzml`).
+#[wasm_bindgen]
+pub fn native_external(open: Function) {
+    ESTERNO.with(|f| *f.borrow_mut() = Some(open));
+}
 
 /// Member `i` of a dataset, read through `read(i, offset, length) -> Uint8Array`.
 struct JsMember {
@@ -93,16 +107,6 @@ impl Membri {
             .collect();
         FileSet { membri }
     }
-
-    /// The reader of the dataset; with `centroid` its profile scans become centroids (as the conversion of a `.wiff` does by default).
-    pub(crate) fn open(&self, centroid: bool) -> Result<Box<dyn Lettore>, JsValue> {
-        let l = lettori::apri(self.fileset(), &Limiti::sito()).map_err(|e| error_json(&e))?;
-        Ok(if centroid {
-            lettori_centroidi::centroidato(l)
-        } else {
-            l
-        })
-    }
 }
 
 pub(crate) struct Dataset {
@@ -110,6 +114,44 @@ pub(crate) struct Dataset {
     pub(crate) centroid: bool,
     pub(crate) l: Option<Box<dyn Lettore>>,
     pub(crate) used: u64,
+}
+
+impl Membri {
+    /// The reader of `fs` (this dataset's members): the engine's own, and when none recognises it the one of the readers module the page registered with `native_external`.
+    fn apri_fs(&self, fs: FileSet) -> mzlab_core::Result<Box<dyn Lettore>> {
+        match lettori::apri(fs, &Limiti::sito()) {
+            Err(e) if e.key == "err.file.notAccepted" => self.esterno().unwrap_or(Err(e)),
+            r => r,
+        }
+    }
+
+    /// The session of the module for this dataset; `None` when the page registered no function or no module reads it.
+    fn esterno(&self) -> Option<mzlab_core::Result<Box<dyn Lettore>>> {
+        let f = ESTERNO.with(|f| f.borrow().clone())?;
+        let names: js_sys::Array = self.names.iter().map(|n| JsValue::from_str(n)).collect();
+        let sizes = js_sys::Float64Array::from(&self.sizes[..]);
+        let sessione = match f.call3(&JsValue::NULL, &names, &sizes, &self.read) {
+            Ok(v) if v.is_null() || v.is_undefined() => return None,
+            Ok(v) => v,
+            Err(e) => {
+                return Some(Err(e.as_string().map_or_else(
+                    || mzlab_core::Error::new("err.file.notAccepted"),
+                    |t| errore_del_modulo(&t),
+                )))
+            }
+        };
+        Some(LettoreEsterno::new(ModuloJs::new(sessione)).map(|l| Box::new(l) as Box<dyn Lettore>))
+    }
+
+    /// The reader of the dataset; with `centroid` its profile scans become centroids (as the conversion of a `.wiff` does by default).
+    pub(crate) fn open(&self, centroid: bool) -> Result<Box<dyn Lettore>, JsValue> {
+        let l = self.apri_fs(self.fileset()).map_err(|e| error_json(&e))?;
+        Ok(if centroid {
+            lettori_centroidi::centroidato(l)
+        } else {
+            l
+        })
+    }
 }
 
 /// The datasets of the session and which sample of which dataset each slot is.
@@ -229,7 +271,7 @@ pub fn build_mzidx_native(
     let mut fs = m.fileset();
     tell(1);
     let impronte = upload::impronte(&mut fs).map_err(|e| error_json(&e))?;
-    let l = lettori::apri(fs, &Limiti::sito()).map_err(|e| error_json(&e))?;
+    let l = m.apri_fs(fs).map_err(|e| error_json(&e))?;
     let mut l = if centroid {
         lettori_centroidi::centroidato(l)
     } else {

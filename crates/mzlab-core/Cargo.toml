@@ -6,6 +6,9 @@ edition.workspace = true
 license.workspace = true
 
 [features]
+# the Thermo `.raw` reader (`raw`, `rawlettore`, `rawfilter`, `metodo_raw`, the `opentfraw` dependency): the engine (mzlab-wasm) leaves it off and reaches it through the `thermo` readers module
+default = ["thermo"]
+thermo = ["dep:opentfraw"]
 # variants of the readers served only by the readers module (crates/mzlab-lettori), never by the engine (mzlab-wasm leaves it off)
 estesi = []
 
@@ -13,10 +16,18 @@ estesi = []
 quick-xml = "0.42"
 base64 = "0.23"
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
-opentfraw = { path = "../../vendor/opentfraw" }
+opentfraw = { path = "../../vendor/opentfraw", optional = true }
 sha1 = { version = "0.11", default-features = false }
 sha2 = { version = "0.11", default-features = false }
 
 [dev-dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value", "float_roundtrip"] }
+
+[[example]]
+name = "raw2mzml"
+required-features = ["thermo"]
+
+[[example]]
+name = "raw_referenza"
+required-features = ["thermo"]

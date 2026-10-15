@@ -65,6 +65,8 @@ pub mod lettori;
 pub mod lettori_centroidi;
 pub mod lettori_mzml;
 pub mod metodo;
+pub mod metodo_campi;
+#[cfg(feature = "thermo")]
 pub mod metodo_raw;
 pub mod metodo_wiff;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
@@ -87,8 +89,11 @@ pub mod pysum;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 // raw.rs belongs to the formats work: its one std sort stays until that lands (then sortc::slice_ord)
 #[allow(clippy::disallowed_methods)]
+#[cfg(feature = "thermo")]
 pub mod raw;
+#[cfg(feature = "thermo")]
 pub mod rawfilter;
+#[cfg(feature = "thermo")]
 pub mod rawlettore;
 pub mod rng;
 pub mod rois;

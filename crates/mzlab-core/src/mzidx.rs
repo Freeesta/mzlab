@@ -679,6 +679,7 @@ pub fn build_mzml<R: std::io::Read + Seek>(
 }
 
 /// The same for a Thermo `.raw` file.
+#[cfg(feature = "thermo")]
 pub fn build_raw<R: std::io::Read + Seek>(
     table: &ScanTable,
     mut src: R,
