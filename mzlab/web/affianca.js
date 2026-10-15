@@ -73,7 +73,7 @@ function affBar(/** @type {string} */ msg) {
 }
 /** Do a move on the real panels; returns false (and says so) when the move does not fit. */
 function affFai(/** @type {any} */ p, /** @type {any} */ d, /** @type {boolean} */ wide) {
-  const before = affKeys(tabPanels().filter(q => q.full)), grp = wide ? blockOf(p).grp.map((/** @type {any} */ q) => q.id) : [p.id];
+  const before = affKeys(tabPanels().filter(q => q.full)), grp = wide && !d.solo ? blockOf(p).grp.map((/** @type {any} */ q) => q.id) : [p.id];
   const order = affStack(), res = affRifai(order, p.id, grp, d, hostWidth());
   if (!res) { affSay(AFF_T("aff.zone.nospace")); return false; }
   affHist.push({ n: ++HSEQ, s: before }); if (affHist.length > 20) affHist.shift();
@@ -87,10 +87,10 @@ function affAnnulla() {
 }
 const affUltimo = () => affHist.length ? affHist[affHist.length - 1].n : 0;
 
-// ---- destination under the pointer (host coordinates) -> move
+// ---- destination under the pointer (host coordinates) -> move: a cross on the target panel, above / below in its top and bottom 30 %, left / right in the middle band
 function affZona(/** @type {any[]} */ order, /** @type {number[]} */ grp, /** @type {number} */ px, /** @type {number} */ py) {
   const rest = order.filter(q => !grp.includes(q.id)), t = rest.find(q => px >= q.x && px < q.x + q.w && py >= q.y && py < q.y + q.h);
-  if (t) { const fx = (px - t.x) / t.w; return fx < 0.25 ? { k: "sx", t: t.id } : fx > 0.75 ? { k: "dx", t: t.id } : { k: (py - t.y) / t.h < 0.5 ? "su" : "giu", t: t.id }; }
+  if (t) { const fx = (px - t.x) / t.w, fy = (py - t.y) / t.h; return fy < 0.3 ? { k: "su", t: t.id } : fy > 0.7 ? { k: "giu", t: t.id } : { k: fx < 0.5 ? "sx" : "dx", t: t.id }; }
   const next = rest.find(q => q.y > py);
   return next ? { k: "su", t: next.id } : { k: "fine" };
 }
@@ -101,15 +101,16 @@ const affShowPrev = (/** @type {{x:number,y:number,w:number,h:number} | null} */
   affPrev.className = "aff-prev" + (affLabel === AFF_T("aff.zone.nospace") ? " no" : "");
   Object.assign(affPrev.style, { left: r.x + "px", top: r.y + "px", width: r.w + "px", height: r.h + "px" }); affPrev.textContent = affLabel;
 };
-const affLabel = (/** @type {any} */ d) => AFF_T(d.k === "sx" ? "aff.zone.left" : d.k === "dx" ? "aff.zone.right" : "aff.zone.here");
+const affLabel = (/** @type {any} */ d) => AFF_T(d.k === "sx" ? "aff.zone.left" : d.k === "dx" ? "aff.zone.right" : d.k === "su" ? "aff.zone.above" : "aff.zone.below");
 function affDragGrip(/** @type {any} */ p, /** @type {PointerEvent} */ e0, /** @type {any} */ g) {
   const coarse = e0.pointerType !== "mouse", sx = e0.clientX, sy = e0.clientY;
   let on = false, key = "", d = /** @type {any} */ (null);
-  const grpOf = (/** @type {any} */ d0) => (d0 && (d0.k === "sx" || d0.k === "dx") ? [p.id] : blockOf(p).grp.map((/** @type {any} */ q) => q.id));
+  const grpOf = (/** @type {any} */ d0) => (d0 && (d0.k === "sx" || d0.k === "dx" || d0.solo) ? [p.id] : blockOf(p).grp.map((/** @type {any} */ q) => q.id));
   const upd = (/** @type {PointerEvent} */ ev) => {
     const h = Q("#dpanels").getBoundingClientRect(), px = ev.clientX - h.left, py = ev.clientY - h.top, order = affStack();
-    let z = affZona(order, [p.id], px, py); if (z.k !== "sx" && z.k !== "dx") z = affZona(order, grpOf(z), px, py);
-    const kk = z.k + ":" + z.t; if (kk === key) return; key = kk; d = z;
+    let z = affZona(order, [p.id], px, py);
+    if (z.k !== "sx" && z.k !== "dx") { if (z.t != null && grpOf(null).includes(z.t)) z.solo = true; else z = affZona(order, grpOf(z), px, py); }       // dropped on its own spectrum: the panel moves alone, past it
+    const kk = z.k + ":" + z.t + (z.solo ? "s" : ""); if (kk === key) return; key = kk; d = z;
     const cp = affKeys(order), grp = grpOf(z), res = affRifai(cp, p.id, grp, z, hostWidth());
     if (!res) { const t = order.find(q => q.id === z.t); affShowPrev(t ? { x: t.x, y: t.y, w: t.w, h: t.h } : null, AFF_T("aff.zone.nospace")); d = null; return; }
     const gm = LAYOUT.colloca(res, hostWidth(), pnlGap(), minW), r = gm.pos.get(res.find(q => q.id === p.id));
@@ -135,6 +136,8 @@ function affDragGrip(/** @type {any} */ p, /** @type {PointerEvent} */ e0, /** @
 // ---- affMenu of the affGrip (the alternative to dragging) and the keyboard
   function affVertical(/** @type {any} */ p, /** @type {number} */ dir) {         // one row up / down
   const grp = blockOf(p).grp, order = affStack().filter(q => !grp.includes(q)), rows = LAYOUT.righeDi(order), all = affStack();
+  const near = all[all.indexOf(p) + dir];
+  if (near && grp.includes(near) && near.riga !== p.riga) return { k: dir < 0 ? "su" : "giu", t: near.id, solo: true };       // its own spectrum is next to it: swap with it
   const slot = rows.filter(r => all.indexOf(r[0]) < all.indexOf(p)).length, mates = all.filter(q => q !== p && q.riga === p.riga);
   if (mates.length) return { k: dir < 0 ? "su" : "giu", t: mates[0].id };            // leaving its row: right above / below it
   const r = rows[dir < 0 ? slot - 1 : slot]; return r ? { k: dir < 0 ? "su" : "giu", t: r[0].id } : null;
