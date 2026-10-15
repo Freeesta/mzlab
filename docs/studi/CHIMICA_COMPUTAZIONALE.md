@@ -10,9 +10,9 @@ Studio dell'Architetto sulla domanda di Federico: ha senso mettere in mzLab un c
 5. La prova più solida per localizzare un -OH resta la MS2: se un frammento porta +16 Da, l'OH sta in quel pezzo. Questo si può calcolare in Rust con il grafo SMILES che mzLab ha già.
 6. Di solito la MS2 dice «in quale anello o catena», quasi mai «in orto o in para»: il programma deve mostrare le classi di posizioni che lo spettro non sa distinguere (livello 3a), non sceglierne una.
 7. RT previsto e CCS previsto hanno errori più grandi della differenza tra isomeri posizionali: servono a scartare, non a decidere. Il 3200 QTRAP non ha mobilità ionica.
-8. Prove sperimentali economiche e provate: scambio H/D (D2O) per distinguere C-OH da N-ossido, MS3 e rapporti tra ioni a più energie di collisione sul QTRAP, standard di riferimento quando esistono.
+8. Prove sperimentali economiche descritte in letteratura: scambio H/D (D2O) per distinguere C-OH da N-ossido, MS3 e rapporti tra ioni a più energie di collisione, standard di riferimento; Federico ha deciso di non provarle in laboratorio (D5).
 9. Proposta: fase 1 (circa 3 giorni-chat) «posizioni compatibili con lo spettro» in Rust, solo in Tabui (amministratore) e pronto per il Banco 2b; fase 2 facoltativa: una stima di reattività semplice, validata prima su dati veri, e l'importazione di calcoli esterni (xtb).
-10. Niente sale da solo a 2a o 2b: il programma propone classi 3a/3b con le prove; il 2b lo assegna solo il chimico. Nel mondo LR degli studenti non compare nulla.
+10. Niente sale da solo a 2a o 2b: il programma propone classi 3a/3b con le prove; il 2b lo assegna solo il chimico. Nel mondo LR degli studenti non compare nulla, salvo un paragrafo di Teoria (CC-05) voluto da Federico.
 
 ## 1. Cosa c'è già in mzLab (da non rifare)
 - **Grafo SMILES in Rust** (`crates/mzlab-feat/src/chem/smiles.rs`, `grafo.rs`, `gruppi.rs`): lettura di SMILES e molfile, formula, gruppi funzionali, `Mol::cleavages()` (ogni legame singolo fuori dagli anelli, con le formule dei due lati) e `fragment_formulas()`. Gli anelli non si aprono. Nel sito sta nel `.wasm` `grafo` (caricato solo quando l'utente dà un SMILES).
@@ -103,7 +103,7 @@ Licenze verificate sui file del repository a monte: xtb, CREST, tblite, Psi4 LGP
 - **Risoluzione unitaria**: +16 Da si vede, ma un frammento a 1 Da da un altro può confondersi; la tolleranza e il numero di frammenti spiegati si mostrano sempre.
 - **Simmetria**: posizioni equivalenti per simmetria (per esempio 2 e 6 in un anello para-sostituito) sono un solo candidato; un errore qui gonfierebbe il numero di isomeri.
 - **Nomi**: nessun cognome di `nomi_vietati.txt` nei test e nei documenti (`tests/test_esempi_anonimi.py`); i composti di prova vengono dalla letteratura citata.
-- **Teoria**: un capitolo sulla localizzazione dell'OH sarebbe utile, ma Teoria e Pratica si toccano solo con un'istruzione esplicita di Federico (domanda D4).
+- **Teoria**: Teoria e Pratica si toccano solo con un'istruzione esplicita di Federico; per il paragrafo sulla localizzazione dell'OH l'istruzione c'è (D4, pacchetto CC-05) e vale solo per quel paragrafo e le sue domande.
 
 ## 6. Raccomandazione: SÌ ridotto, a gradini
 **Fase 1 (alto valore, basso costo, circa 3 giorni-chat)**
@@ -114,6 +114,9 @@ Licenze verificate sui file del repository a monte: xtb, CREST, tblite, Psi4 LGP
 - **CC-03**: stima di reattività qualitativa in Rust, per reazione: OH• (densità di frontiera di Hückel, classi di BDE per l'astrazione di H) e alogenazione elettrofila (energia di localizzazione di Wheland, il caso meglio validato in letteratura), mostrata come «Prev.»; il P450 alla SMARTCyp resta un'opzione separata (§4 riga O) solo se Federico la chiede. Parte con una prova su almeno 20 composti con regioselettività di OH• misurata in letteratura (DOI per ognuno); si pubblica solo se il sito vero sta tra i primi due in almeno il 70 % dei casi e batte la scelta a caso.
 - **CC-04**: importazione di calcoli esterni (CSV `siti/1` e uscita `--vfukui` di xtb) con la ricetta per farli fuori dal sito; i valori si mostrano accanto alle classi, con metodo e fonte.
 
+**Teoria (D4 = sì)**
+- **CC-05**: nel capitolo 14 (frammentazione in CID) un paragrafo «Dove sta l'OH: cosa dice l'MS2 e cosa no», con una o due domande nella Verifica; indipendente dagli altri pacchetti.
+
 **No**: xtb/DFT/CREST nel browser, RT o CCS previsti per scegliere l'isomero, ML dei siti, frammentatori in silico nel sito.
 
 | Pacchetto | Fase | Dipende da | `.wasm` | Stima (giorni-chat) | Stato |
@@ -122,14 +125,15 @@ Licenze verificate sui file del repository a monte: xtb, CREST, tblite, Psi4 LGP
 | CC-02 | 1 | CC-01 | `grafo` | 1,5 | da fare |
 | CC-03 | 2 | CC-02 + sì di Federico | `grafo` | 2 | da decidere |
 | CC-04 | 2 | CC-02 + sì di Federico | `grafo` | 1 | da decidere |
+| CC-05 | Teoria | — | nessuno | 0,5-1 | da fare |
 
-## 7. Domande per Federico (con la scelta predefinita che i prompt seguono)
-- **D1**: fase 1 solo in Tabui (amministratore)? Predefinito: sì; Attributio la usa quando nasce il Banco 2b (AT-07 legge `posiz/1`).
-- **D2**: trasformazioni della fase 1: +O, −CH2, +O−2H, +Cl−H, +Br−H. Predefinito: sì; altre (+2O, coniugazioni) dopo.
-- **D6**: serve una stima dei siti del P450 (metabolismo, non TiO2) per altre campagne? Predefinito: no.
-- **D3**: fase 2 (CC-03, CC-04): si decide dopo aver visto la fase 1 sui dati veri. Predefinito: ferma.
-- **D4**: un paragrafo in Teoria su «dove sta l'OH: cosa dice la MS2 e cosa no»? Predefinito: no finché non lo chiedi tu.
-- **D5**: in laboratorio, provare lo scambio H/D (D2O nella fase mobile) e una MS3 sul QTRAP per un TP idrossilato? Non è software: è la prova più economica che abbiamo.
+## 7. Decisioni di Federico (domande D1-D6)
+- **D1** (fase 1 solo in Tabui, amministratore): **sì**. Attributio la usa quando nasce il Banco 2b (AT-07 legge `posiz/1`).
+- **D2** (trasformazioni della fase 1: +O, −CH2, +O−2H, +Cl−H, +Br−H): **sì**; altre (+2O, coniugazioni) dopo.
+- **D3** (fase 2, CC-03 e CC-04): **si decide dopo aver visto la fase 1 sui dati veri**; fino ad allora ferma.
+- **D4** (paragrafo in Teoria «dove sta l'OH: cosa dice la MS2 e cosa no»): **sì**, istruzione esplicita di Federico; pacchetto CC-05.
+- **D5** (prove di laboratorio: scambio H/D in D2O e MS3 sul QTRAP): **no**, nessuna prova in laboratorio. I codici `hdx` e `ms3` di `posiz/1` restano come controlli suggeriti dalla letteratura, non come esperimenti in programma.
+- **D6** (stima dei siti del P450 per altre campagne): **no**; la riga O di §4 resta chiusa.
 
 ## 8. Bibliografia (DOI verificati su Crossref)
 - Barrera Y. et al. (2025) Comparative study of predicting radical C–H functionalization sites in nitrogen heteroarenes using a radical general-purpose reactivity indicator and the radical Fukui function. J. Comput. Chem. doi:10.1002/jcc.70130
