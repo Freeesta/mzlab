@@ -6,7 +6,7 @@ const WINDOW = 4;
 
 /** @typedef {{ add: (b: Uint8Array) => Promise<void> | void, end: () => Promise<string[] | null> }} Presa */
 
-/** @param {{ Passata: new (size: number) => { aggiorna: (b: Uint8Array) => void, fine: () => string[] | undefined, free: () => void }, workerUrl: URL, module: () => WebAssembly.Module | null, mode?: string }} h */
+/** @param {{ Passata: new (size: number) => { aggiorna: (b: Uint8Array) => void, fine: () => string[] | undefined }, workerUrl: URL, module: () => WebAssembly.Module | null, mode?: string }} h */
 export function createImpronte({ Passata, workerUrl, module, mode }) {
   /** @type {Worker | null} */ let w = null;
   let dead = mode === "qui", seq = 0;
@@ -49,7 +49,7 @@ export function createImpronte({ Passata, workerUrl, module, mode }) {
       let p = new Passata(size);
       return /** @type {Presa} */ ({
         add(b) { p.aggiorna(b); },
-        async end() { const o = p.fine(); p.free(); return o ? Array.from(o) : null; },
+        async end() { const o = p.fine(); return o ? Array.from(o) : null; },
       });
     },
   };
