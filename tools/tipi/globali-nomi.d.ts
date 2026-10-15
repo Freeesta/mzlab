@@ -520,6 +520,7 @@ declare var ms2Goto: any;
 declare var ms2Near: any;
 declare var ms2OfPeak: any;
 declare var ms2PairOf: any;
+declare var ms2Scans: any;
 declare var ms2Show: any;
 declare var ms2Spectrum: any;
 declare var ms2Switch: any;

@@ -812,6 +812,7 @@ I18N.add("it", {
   "ctl.ms2tr.all": "tutte le transizioni",
   "ctl.ms2tr.opt": "{q1} > {q3}",
   "ctl.prec.all": "tutti i prec.",
+  "ctl.prec.n": "prec. {v} ({n})",
   "ctl.prec.one": "prec. {v}",
   "corr.none": "Nessuna",
   "corr.none.desc": "I dati come sono",
