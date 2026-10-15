@@ -118,8 +118,9 @@ fn qqq_mrm_gives_srm_chromatograms() {
     }
 }
 
+/// The method of every file names Shimadzu, and the document inside the mzML header holds no operator.
 #[test]
-fn tmp_meta() {
+fn the_method_names_the_maker_and_the_mzml_header_has_no_operator() {
     for f in QGD.iter().copied().chain([
         "gcms_tq8040_MTBLS5383/MTBLS5383_GC0270_AtD01_20170530_17.qgd",
         "lcms8060_mrm_MTBLS7425/MTBLS7425_1_16S_Negative.lcd",
@@ -128,11 +129,11 @@ fn tmp_meta() {
         "lcms8030_lcd_zenodo18256551/1_2024-05-21_2.lcd",
     ]) {
         let Some(mut l) = apri(f) else { return };
-        let m = l.metodo(0).unwrap();
-        let a = m.find("\"origine\"").unwrap();
-        let b = m.find("\"operatore\"").unwrap_or(m.find("\"ms\"").unwrap());
-        eprintln!("== {f}\n{}", &m[a..b].replace(&m[a..a + 0], ""));
+        assert!(
+            l.metodo(0).unwrap().contains("\"produttore\":\"Shimadzu\""),
+            "{f}"
+        );
         let h = l.testata_mzml(0).unwrap().unwrap();
-        assert!(!h.run_params[0].1.contains("operatore"));
+        assert!(!h.run_params[0].1.contains("operatore"), "{f}");
     }
 }

@@ -132,11 +132,9 @@ pub fn ole(flussi: &[(&str, Vec<u8>)]) -> Vec<u8> {
         }
     });
     let mut at = nf + nd;
-    let mut k = 0;
     let mut corpo: Vec<u8> = Vec::new();
-    for e in v.iter_mut().skip(1).filter(|e| e.tipo == 2) {
+    for (k, e) in v.iter_mut().skip(1).filter(|e| e.tipo == 2).enumerate() {
         let b = dati[k];
-        k += 1;
         e.dim = b.len() as u32;
         let n = setts(b.len());
         if n > 0 {

@@ -154,6 +154,10 @@ fn a_table_over_the_limit_is_refused_with_a_key() {
         let e = mzlab_lettori::apri_nudo(insieme(b), &l)
             .err()
             .expect("over the limit");
-        assert!(e.key.starts_with("err.") || e.key.starts_with("error."), "{}", e.key);
+        assert!(
+            e.key.starts_with("err.") || e.key.starts_with("error."),
+            "{}",
+            e.key
+        );
     }
 }
