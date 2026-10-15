@@ -59,7 +59,7 @@ const isCal=f=>f.type==="standard";   // concentration exists only for standards
 const concFrom=f=>f.conc==null||f.kind!=="mrm"?null:roundc(f.cunit&&CUF[f.cunit]?f.conc*CUF[f.cunit]/CU[ST.unit][1]:f.conc);   // value from the name, in the unit of the table
 function mergeFiles(list){const old=Object.fromEntries(ST.files.map(f=>[f.name,f]));
   ST.files=list.map(f=>{const o=old[f.name],type=o?o.type:f.type,conc=o?o.conc:concFrom(f),time=type==="blank"?null:o?o.time:f.time;return {...f,time,type,conc,use:o?o.use:true,
-    gT:o?o.gT:time!=null&&type==="sample",gC:o?o.gC:conc!=null,role:o&&o.role,sub:o&&o.sub,prop:o&&o.prop,ed:o&&o.ed}});   // gT/gC: time and concentration read from the name (yellow in the table until the student edits or confirms them)
+    gT:o?o.gT:time!=null&&type==="sample",gC:o?o.gC:conc!=null,role:o&&o.role,prop:o&&o.prop,ed:o&&o.ed}});   // gT/gC: time and concentration read from the name (yellow in the table until the student edits or confirms them)
   sortFiles();renderFiles();RUOLI.propose(()=>ST.files).then(c=>{if(c){sortFiles();renderFiles()}})}   // roles and times proposed from the names by the engine (campioni/2)
 // order of the table: experiment (Full Scan, MS2, MRM, the rest), then blank, standards, samples; inside each, the rule of ordine.js (time, else concentration, else natural name)
 const EXPORD={full:0,ms2:1,mrm:2,infusion:3},TYPORD={blank:0,standard:1,sample:2};
@@ -91,7 +91,7 @@ function renderFiles(){const F=ST.files,el=$("#flist");
   el.innerHTML=F.length||CONVROWS.rows.length?(CONV.size>1?`<div style="margin-top:8px"><button type="button" class="sec sm" id="dlall" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>`:"")+RUOLI.bar(F)+`<table style="margin-top:8px"><tr><th></th><th scope="col">${I18N.t("load.table.file")}</th><th scope="col">${I18N.t("load.table.experiment")}</th><th scope="col">${I18N.t("load.table.type")}</th><th scope="col" class="num">${I18N.t("load.table.time.col")}${hasTime?` ${tuSel}`:""}</th>${hasCal?`<th scope="col" class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th scope="col" class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+rows+`</table>`:"";
   el.querySelectorAll("[data-k]").forEach(x=>{
     x.onchange=()=>{const f=F[+x.dataset.i],k=x.dataset.k,keep=document.activeElement===x?{name:f.name,k}:null;let v=x.value;
-      if(k==="time"||k==="conc"){v=parseDecimal(x.value);if(Number.isNaN(v)){x.setAttribute("aria-invalid","true");x.title=I18N.t("load.table.num.bad");x.classList.add("bad");return}x.removeAttribute("aria-invalid");if(k==="time")v=timeStored(v,tunitGet())}
+      if(k==="time"||k==="conc"){const dk=k==="time"&&RUOLI.roleOf(f)==="dark";v=parseDecimal(x.value,dk);if(Number.isNaN(v)){x.setAttribute("aria-invalid","true");x.title=I18N.t("load.table.num.bad");x.classList.add("bad");return}x.removeAttribute("aria-invalid");if(k==="time")v=dk?darkTime(timeStored(v,tunitGet())):timeStored(v,tunitGet())}
       if(k==="type"){f.ed=1;RUOLI.setRole(f,x.value)}else f[k]=k==="use"?x.checked:v;
       if(k==="time")f.gT=false;if(k==="conc")f.gC=false;
       if(k==="type"){if(isCal(f)&&f.conc==null){f.conc=concFrom(f);f.gC=f.conc!=null}if(!isCal(f)){f.conc=null;f.gC=false}}
@@ -294,7 +294,6 @@ async function openRest(rest,tok){
 $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
   try{if(UPBUSY>0){WAITING=true;waitStato();await idle();WAITING=false;loadingStato(null)}
     if(!ST.files.some(usable)){checkGo();return}
-    if(await RUOLI.gate($("#flist"),ST.files)){loading(false);checkGo();$("#gomsg").textContent=I18N.t("load.time.required");return}      // two or more samples: every time is written and confirmed first
     const rest=await exploreList(ST.files.filter(usable).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find(x=>x.file===f.name)||{}).label})));STATO.aggiunta(false,"adding");await bootSession();RUOLI.commit(ST.files);applyView();window.scrollTo(0,0);await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();if(rest)rest()}
   catch(e){
     if(e.key==="err.hr.mix"){
