@@ -10,7 +10,7 @@ window.MAPPA = (() => {
   const prefSave = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(PREF)); } catch (e) { /* no storage */ } };
   const GRP0 = 0.02, SHAPES = ["circle", "square", "triangle", "diamond"], GLYPH = ["●", "■", "▲", "◆"];
   const SHAPE_KEY = { circle: "mappa.shape.circle", square: "mappa.shape.square", triangle: "mappa.shape.triangle", diamond: "mappa.shape.diamond" };     // literal keys: the i18n check finds them     // RT window of a group (min); the shape of a group's points, by turns
-  const GROUP_DA = 2.5, BOTTOM = 140, NARROW = 700, QUIET = 150;
+  const DENS = { few: { lab: "mappa.dens.few", limit: 4, bands: 2, quota: 1 }, mid: { lab: "mappa.dens.mid", limit: 8, bands: 4, quota: 1 }, many: { lab: "mappa.dens.many", limit: 14, bands: 6, quota: 2 } }, BOTTOM = 140, NARROW = 700, QUIET = 150;
   const st = p => p._mz || (p._mz = { lock: null, kp: null, hov: null, mir: null, reg: null, regT: 0, spec: null, xic: null, xicB: null });
   const is2d = p => p.type === "map" && p._a && p._a.map;
   const isMax = p => p.el && p.el.classList.contains("max");
@@ -39,6 +39,10 @@ window.MAPPA = (() => {
     const sp = document.createElement("canvas"); sp.className = "mzside"; sp.hidden = true; sp.setAttribute("role", "img"); grid.appendChild(sp);
     const xc = document.createElement("canvas"); xc.className = "mzbot"; xc.hidden = true; grid.appendChild(xc);
     Object.assign(st(p), { ov, sp, xc, grid });
+    sp.addEventListener("mousemove", ev => {                        // the tooltip of a label: its m/z and its S/N (intensity over the noise around it)
+      const r = sp.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top, s = st(p), l = (s.lbls || []).find(o => x >= o.x - 2 && x <= o.x + o.w + 2 && y >= o.y - 2 && y <= o.y + o.h + 2), q = l && s.snr ? s.snr.get(l.i) : null;
+      sp.title = q != null ? T("mappa.lbl.tip", { mz: l.t, snr: q >= 100 ? Math.round(q) : q.toFixed(1) }) : "";
+    });
     cv.tabIndex = 0; cv.setAttribute("aria-label", T("mappa.aria"));
     cv.addEventListener("keydown", e => key(p, e));
     document.addEventListener("keyup", e => { if (p.cv.isConnected) shiftUp(p, e); });
@@ -125,9 +129,9 @@ window.MAPPA = (() => {
     if (!p.zoom && !p.zoomY) { s.reg = null; return false; }
     const { A, B, im, x0, x1, y0, y1, pw, ph, norm } = o;
     const r = regionGrid(p, A, x0, x1, y0, y1, pw, ph), w = regionWide(p, A, x0, x1, y0, y1, pw, ph);
-    const pk = `${A.k}|${B ? B.k : ""}|${A.level}|${norm}|${p.scale}${p.scale === "gamma" ? p.gamma || 0.6 : ""}|${mapPal()}|${mapBg(p)}|${JSON.stringify(diffOpt(!!B))}`;
+    const pk = `${A.k}|${B ? B.k : ""}|${A.level}|${norm}|${liscia() ? "s" : "d"}|${p.scale}${p.scale === "gamma" ? p.gamma || 0.6 : ""}|${mapPal()}|${mapBg(p)}|${JSON.stringify(diffOpt(!!B))}`;
     const R = s.reg;
-    const put = R => { g.imageSmoothingEnabled = false; g.drawImage(R.off, (x0 - R.rt0) / (R.rt1 - R.rt0) * R.nrt, (R.mz1 - y1) / R.dmz, (x1 - x0) / (R.rt1 - R.rt0) * R.nrt, (y1 - y0) / R.dmz, M.l, M.t, pw, ph); return true; };
+    const put = R => { g.imageSmoothingEnabled = liscia(); g.drawImage(R.off, (x0 - R.rt0) / (R.rt1 - R.rt0) * R.nrt, (R.mz1 - y1) / R.dmz, (x1 - x0) / (R.rt1 - R.rt0) * R.nrt, (y1 - y0) / R.dmz, M.l, M.t, pw, ph); return true; };
     if (regionFits(R, pk, r, x0, x1, y0, y1)) return put(R);
     clearTimeout(s.regT); const seq = s.regSeq = (s.regSeq || 0) + 1;
     s.regT = setTimeout(async () => {
@@ -136,11 +140,17 @@ window.MAPPA = (() => {
         if (seq !== s.regSeq) return;                                     // a newer view was asked meanwhile: this one is not painted
         const fa = B ? 1 : normFactor(A.m, norm), n = a.m.length, v = new Float32Array(n);
         for (let i = 0; i < n; i++) v[i] = a.m[i] * fa;                    // with a reference the server already gives A - B (normalised, tolerance in RT)
-        s.reg = { pk, v, nrt: a.nrt, nmz: a.nmz, rt0: a.rt0, rt1: a.rt1, mz0: a.mz0, mz1: a.mz1, dmz: a.dmz, off: paint(v, a.nrt, a.nmz, im, !!B) };
+        s.reg = { pk, v, nrt: a.nrt, nmz: a.nmz, rt0: a.rt0, rt1: a.rt1, mz0: a.mz0, mz1: a.mz1, dmz: a.dmz, off: paint(liscia() ? splatOf(A, v, a) : v, a.nrt, a.nmz, im, !!B) };
         draw(p);
       } catch (e) { /* keep the stretched whole map */ }
     }, quiet());
     return !!(R && R.pk === pk && R.off && R.rt0 <= x0 + 1e-9 && R.rt1 >= x1 - 1e-9 && R.mz0 <= y0 + 1e-9 && R.mz1 >= y1 - 1e-9) && put(R);   // meanwhile a coarser region that covers the view is better than the stretched map
+  }
+  // «Liscia» (the default) or «Dettaglio»: only how the zoomed region is drawn; the values the sight and the XIC read are the ones of the matrix
+  const liscia = () => PREF.rend !== "detail", HR_FWHM_PPM = 15, LR_FWHM = 0.7, FWHM = 2.3548;
+  function splatOf(A, v, a) {                                             // a gaussian as wide as the m/z resolution of the instrument and the spacing of the scans
+    const hr = isHrF(E.files[A.k]), mid = (a.mz0 + a.mz1) / 2, wm = hr ? mid * HR_FWHM_PPM * 1e-6 : LR_FWHM;
+    return MAPREND.splat(v, a.nrt, a.nmz, scanStep() / ((a.rt1 - a.rt0) / a.nrt), wm / FWHM / a.dmz);
   }
   function paint(v, nrt, nmz, im, diff) {
     const off = document.createElement("canvas"); off.width = nrt; off.height = nmz;
@@ -343,14 +353,14 @@ window.MAPPA = (() => {
     const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, r.width, r.height); return { g, W: r.width, H: r.height };
   }
   // m/z labels of the sideways spectrum: beyond the tip of the bar (fixed gap) with a halo of the panel colour; if they do not fit they go above the bar,
-  // to the left of the tip, so the bar never crosses its own text. The most intense peaks come first, a label never sits on another (at most 8; one per group of peaks within GROUP_DA). s.lbls keeps the boxes.
-  function sideLabels(g, W, order, get, x0, s) {
+  // to the left of the tip, so the bar never crosses its own text. The most intense peaks come first, a label never sits on another (by S/N, see MAPREND.pick). s.lbls keeps the boxes.
+  function sideLabels(g, W, order, get, x0, s, limit = 8) {
     const out = []; s.lbls = out; g.textAlign = "left"; g.lineJoin = "round"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.fillStyle = css("--ink");
     for (const i of order) {
-      if (out.length >= 8) break; const q = get(i);
+      if (out.length >= limit) break; const q = get(i);
       const w = g.measureText(q.t).width, right = q.tip + 5 + w <= W - 2, x = right ? q.tip + 5 : Math.max(x0 + 2, q.tip - 3 - w), by = right ? q.y + 4 : q.y - 3, bx = { x, y: by - 9, w, h: 11 };
       if (out.some(o => bx.x < o.x + o.w + 2 && o.x < bx.x + bx.w + 2 && bx.y < o.y + o.h + 1 && o.y < bx.y + bx.h + 1)) continue;
-      g.strokeText(q.t, x, by); g.fillText(q.t, x, by); out.push({ t: q.t, ...bx, ly: q.y, tip: q.tip, right });
+      g.strokeText(q.t, x, by); g.fillText(q.t, x, by); out.push({ t: q.t, ...bx, ly: q.y, tip: q.tip, right, i: q.i });
     }
     g.lineWidth = 1;
   }
@@ -398,9 +408,10 @@ window.MAPPA = (() => {
     }
     g.globalAlpha = 1;
     if (prev) { g.fillStyle = ink; g.fillText(T("mappa.preview"), x0 + 4, H - M.b + 14); return; }       // a preview has bins, not peaks: no m/z labels
-    const top = vis.slice().sort((u, v) => ab(sp.y[v]) - ab(sp.y[u])), kept = [];
-    for (const i of top) { if (ab(sp.y[i]) < ymax * 0.05) break; if (!kept.some(k => Math.abs(sp.mz[k] - sp.mz[i]) <= GROUP_DA)) kept.push(i); }      // only the highest peak of each group: no M+1 / M+2 or lower neighbours
-    sideLabels(g, W, kept, i => ({ y: Y(sp.mz[i]), tip: sg ? xz + Math.max(0, len(sp.y[i])) : x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)) }), x0, s);
+    const dn = DENS[PREF.dens] || DENS.mid, cen = xicCentre(a.f, pt.mz), tol = xicTol(a.f, pt.mz);
+    const kept = MAPREND.pick(sp.mz, sp.y, { lo: a.y0, hi: a.y1, bands: dn.bands, quota: dn.quota, act: [cen - tol, cen + tol] });     // best S/N of each slice of the window; the peak of the sight always
+    s.snr = new Map(kept.all.map(c => [c.i, c.snr]));
+    sideLabels(g, W, kept.map(c => c.i), i => ({ y: Y(sp.mz[i]), tip: sg ? xz + Math.max(0, len(sp.y[i])) : x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)), i }), x0, s, dn.limit);
     if (pt.mz >= a.y0 && pt.mz <= a.y1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, Y(pt.mz) + .5); g.lineTo(x1, Y(pt.mz) + .5); g.stroke(); g.setLineDash([]); }
     g.fillStyle = ink; g.fillText(sg ? `A − B · RT ${sp.rt.toFixed(2)}` : `${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, H - M.b + 14);
   }
@@ -868,7 +879,9 @@ window.MAPPA = (() => {
     const opt = (v, cur, lab) => `<option value="${v}" ${cur === v ? "selected" : ""}>${lab}</option>`;
     const col = c.querySelector('[data-mzslot="col"]'), dif = c.querySelector('[data-mzslot="diff"]');
     if (col) col.outerHTML = `<select data-mz="pal" title="${T("mappa.pal.title")}" aria-label="${T("mappa.pal.title")}">${opt("viridis", pal, T("mappa.pal.viridis"))}${opt("cividis", pal, T("mappa.pal.cividis"))}</select>` +
-      `<label class="muted" title="${T("mappa.thr.title")}">${T("mappa.thr")} <input data-mz="thr" class="mzf" inputmode="decimal" value="${+(o.thr * 100).toFixed(1)}"> %</label>`;
+      `<label class="muted" title="${T("mappa.thr.title")}">${T("mappa.thr")} <input data-mz="thr" class="mzf" inputmode="decimal" value="${+(o.thr * 100).toFixed(1)}"> %</label>` +
+      `<select data-mz="rend" title="${T("mappa.rend.title")}" aria-label="${T("mappa.rend.title")}">${opt("smooth", liscia() ? "smooth" : "detail", T("mappa.rend.smooth"))}${opt("detail", liscia() ? "smooth" : "detail", T("mappa.rend.detail"))}</select>` +
+      `<select data-mz="dens" title="${T("mappa.dens.title")}" aria-label="${T("mappa.dens.title")}">${["few", "mid", "many"].map(k => opt(k, DENS[PREF.dens] ? PREF.dens : "mid", T(DENS[k].lab))).join("")}</select>`;
     if (dif) dif.outerHTML = hasRef ? `<label class="muted" title="${T("mappa.show.title")}"><input type="checkbox" data-mz="neg"${PREF.neg ? " checked" : ""}> ${T("mappa.show.neg")}</label>` : "";
     const g = document.createElement("span"); g.className = "mzg"; g.setAttribute("role", "group"); g.setAttribute("aria-label", T("ctl.map.grp.tools"));
     g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="snap" class="${PREF.snap === false ? "" : "on"}" aria-pressed="${PREF.snap !== false}" title="${T("mappa.btn.snap.title")}">${T("mappa.btn.snap")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" aria-pressed="${!!mirOn(p)}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button></span>` +
@@ -876,6 +889,8 @@ window.MAPPA = (() => {
     c.appendChild(g);
     const Q = k => c.querySelector(`[data-mz="${k}"]`), num = el => numIt(el.value);
     Q("pal").onchange = ev => { PREF.pal = ev.target.value; prefSave(); draw(p); };
+    Q("rend").onchange = ev => { PREF.rend = ev.target.value; prefSave(); draw(p); };
+    Q("dens").onchange = ev => { PREF.dens = ev.target.value; prefSave(); const sp = st(p).shown; if (sp && p._a) show(p, sp.pt); };
     Q("thr").onchange = ev => { const v = num(ev.target); if (v >= 0 && v < 100) { PREF.thr = v / 100; prefSave(); } draw(p); };
     if (hasRef) Q("neg").onchange = ev => { PREF.neg = ev.target.checked; prefSave(); draw(p); };
     const dc = c.querySelector("details.mzcol"); if (dc) dc.ontoggle = () => { p._colOpen = dc.open; };
@@ -902,7 +917,7 @@ window.MAPPA = (() => {
     }
   }
 
-  return { guide, dbl, open3d, addPointAt, grpShape, shapePath, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, corrState, corrInit, setCorr, corrQ, corrPick, optChips, explain, grow, redraw: frame, layoutNow: layout, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
+  return { smooth: liscia, guide, dbl, open3d, addPointAt, grpShape, shapePath, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, corrState, corrInit, setCorr, corrQ, corrPick, optChips, explain, grow, redraw: frame, layoutNow: layout, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
 })();
 
 // ---- panels: grips on the top and bottom edge (mouse, touch and pen), double click = default height; the width is always the column's
