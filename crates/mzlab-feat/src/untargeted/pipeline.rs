@@ -3,7 +3,7 @@
 //! licence in their headers; MIT, (c) 2004-2022 The mzmine Development Team; paper MZmine 3, Schmid et al., Nat. Biotechnol. 41:447 (2023),
 //! doi:10.1038/s41587-023-01690-2); this file only connects them, so there is nothing of mzmine to attribute beyond what those headers say.
 //!
-//! The recipe is the JSON `{"engine": "untargeted", "polarity": 1 | -1 | null, "adap": {...}, "resolve": {...}, "join": {...}, "gap": {...}}`; a missing key
+//! The recipe is the JSON `{"engine": "untargeted", "polarity": 1 | -1 | null, "adap": {...}, "resolve": {...}, "join": {...}, "gap": {...}, "iso": {...}, "ident": {...}}` (`"iso": null` leaves out the isotope groups and identities); a missing key
 //! keeps the default of the module (the values of `tools/bench/parametri/mzmine/predefinita.json`). The names inside each object are the Rust fields of the
 //! parameter structs, with the label of mzmine in the comments there. The features of a file travel between the two steps as a `.mzfeatf` (the usual store:
 //! m/z, RT, limits, area in counts x seconds, height); to make that round trip exact the features of `run_file` are already rounded to what the store keeps
@@ -15,6 +15,8 @@ use mzlab_core::json::{self, Value};
 
 use super::adap::{each_slab, AdapParams, Chrom as AdapChrom, Ms1Scan};
 use super::gapfill::{fill, GapParams};
+use super::ident::{ident, IdentParams};
+use super::isotopes::{group, IsoParams, Representative};
 use super::join::{align, JoinParams};
 use super::resolve::{resolve, Chrom as Trace, MinParams};
 use super::table::to_aligned;
@@ -36,6 +38,8 @@ pub struct UntParams {
     pub resolve: MinParams,
     pub join: JoinParams,
     pub gap: GapParams,
+    /// Isotope groups and identities of the rows of the table (`"iso": null` or `false` leaves them out).
+    pub iso: Option<(IsoParams, IdentParams)>,
     /// Bytes of points the ADAP builder holds at once.
     pub slab_bytes: usize,
 }
@@ -52,6 +56,7 @@ impl Default for UntParams {
                 noise: AdapParams::default().noise,
                 ..GapParams::default()
             },
+            iso: Some((IsoParams::default(), IdentParams::default())),
             slab_bytes: SLAB_BYTES,
         }
     }
@@ -134,7 +139,7 @@ impl UntParams {
         num(g, "rt_tol", &mut p.gap.rt_tol)?;
         count(g, "min_points", &mut p.gap.min_points)?;
         num(g, "noise", &mut p.gap.noise)?;
-        Ok(p)
+        read_iso(&v, &mut p).map(|()| p)
     }
 }
 
@@ -151,6 +156,45 @@ impl From<&super::resolve::Feature> for Feature {
             filled: false,
         }
     }
+}
+
+/// The `"iso"` object (`tol_da`, `tol_ppm`, `rt_tol`, `max_charge`, `monotonic`, `representative`: `"most_intense"` or `"lowest_mz"`) and the `"ident"`
+/// object (`rt_tol`, `win`: ppm if positive, Da if negative).
+fn read_iso(v: &Value, p: &mut UntParams) -> Result<()> {
+    if matches!(v.get("iso"), Some(x) if x.is_null() || x.bool() == Some(false)) {
+        p.iso = None;
+    }
+    let Some((ip, dp)) = p.iso.as_mut() else {
+        return Ok(());
+    };
+    let null = Value::Null;
+    let (i, d) = (
+        v.get("iso").unwrap_or(&null),
+        v.get("ident").unwrap_or(&null),
+    );
+    num(i, "tol_da", &mut ip.tol_da)?;
+    num(i, "tol_ppm", &mut ip.tol_ppm)?;
+    num(i, "rt_tol", &mut ip.rt_tol)?;
+    let mut z = f64::from(ip.max_charge);
+    num(i, "max_charge", &mut z)?;
+    ip.max_charge = z.clamp(1.0, 6.0) as u8;
+    if let Some(m) = i.get("monotonic") {
+        ip.monotonic = m.bool().ok_or_else(bad)?;
+    }
+    match i.get("representative").map(Value::str) {
+        None => {}
+        Some(Some("most_intense")) => ip.representative = Representative::MostIntense,
+        Some(Some("lowest_mz")) => ip.representative = Representative::LowestMz,
+        Some(_) => return Err(bad()),
+    }
+    num(d, "rt_tol", &mut dp.rt_tol)?;
+    if let Some(w) = d.get("win") {
+        dp.win = w
+            .f64()
+            .filter(|x| x.is_finite() && *x != 0.0)
+            .ok_or_else(bad)?;
+    }
+    Ok(())
 }
 
 /// The MS1 scans of a section with the peaks at or above `noise` (the centroid mass detector), one `Ms1Scan` per scan of the section, m/z ascending.
@@ -236,7 +280,19 @@ pub fn run_series<R: ReadAt>(
         ..p.gap
     };
     fill(&mut rows, ixs, &gap)?;
-    Ok(to_aligned(&rows, files))
+    let mut t = to_aligned(&rows, files);
+    if let Some((ip, dp)) = &p.iso {
+        let groups = group(&t, ip);
+        let named = ident(&t, &groups, p.polarity.unwrap_or(1), dp);
+        let (id, charge) = groups.per_row(t.len());
+        t.iso = crate::table::IsoBlock {
+            group: id,
+            charge,
+            family: named.family,
+        };
+        t.ident = named.ident;
+    }
+    Ok(t)
 }
 
 /// The features of a file as the table of the store (`.mzfeatf`): area in counts x seconds, the columns that mzmine does not give stay at their neutral value.

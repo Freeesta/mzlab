@@ -8,7 +8,7 @@ use crate::store::{bad, ALIGN, MAGIC, PIECE};
 use crate::facts::FileFacts;
 use crate::store::Origin;
 use crate::tp::TpBlock;
-use crate::table::{Aligned, FileFeatures, RowIdent, RowMeta};
+use crate::table::{Aligned, FileFeatures, IsoBlock, RowIdent, RowMeta};
 
 /// Bytes in memory as a `ReadAt`.
 pub struct Slice<'a>(pub &'a [u8]);
@@ -215,6 +215,15 @@ pub fn read_table_from<R: ReadAt>(r: &mut R, size: u64) -> Result<(Aligned, Valu
             }
         } else {
             RowIdent::default()
+        },
+        iso: if o.meta.get("isotopes").and_then(|v| v.f64()) == Some(1.0) {
+            IsoBlock {
+                group: o.col(r, size, "iso_group", "u32", rows, u32::from_le_bytes)?,
+                charge: o.col(r, size, "iso_charge", "i8", rows, |b: [u8; 1]| b[0] as i8)?,
+                family: o.col(r, size, "family", "u32", rows, u32::from_le_bytes)?,
+            }
+        } else {
+            IsoBlock::default()
         },
     };
     Ok((t, o.meta))

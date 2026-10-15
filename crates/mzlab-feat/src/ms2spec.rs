@@ -15,7 +15,7 @@ use crate::export_ms::Ms2;
 const HALF_WINDOW: f64 = 0.6;
 
 /// The scan (index into `Index::scans`) chosen for an ion of `mz` between `rt_lo` and `rt_hi`, from the MS2 scans `by_rt` sorted by time.
-fn pick<R: ReadAt>(index: &Index<R>, by_rt: &[u32], mz: f64, polarity: i8, rt_lo: f64, rt_hi: f64) -> Option<u32> {
+pub(crate) fn pick<R: ReadAt>(index: &Index<R>, by_rt: &[u32], mz: f64, polarity: i8, rt_lo: f64, rt_hi: f64) -> Option<u32> {
     let a = by_rt.partition_point(|&g| index.scans[g as usize].rt < rt_lo);
     by_rt[a..]
         .iter()
@@ -34,7 +34,7 @@ fn pick<R: ReadAt>(index: &Index<R>, by_rt: &[u32], mz: f64, polarity: i8, rt_lo
 }
 
 /// The peaks of the scans `wanted` (indices into `Index::scans`) of the MS2 section of a polarity, by scan.
-fn read_peaks<R: ReadAt>(index: &mut Index<R>, polarity: i8, wanted: &[u32]) -> Result<HashMap<u32, (Vec<f64>, Vec<f64>)>> {
+pub(crate) fn read_peaks<R: ReadAt>(index: &mut Index<R>, polarity: i8, wanted: &[u32]) -> Result<HashMap<u32, (Vec<f64>, Vec<f64>)>> {
     let mut out = HashMap::new();
     let Some(si) = index.section_of(2, Some(polarity)) else { return Ok(out) };
     let ids = index.arrays(si)?.scan_ids.clone();
