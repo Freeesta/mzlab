@@ -2415,7 +2415,7 @@ I18N.add("it", {
   "error.fileInUse": "Il file «{file}» è in uso in un'altra scheda di mzLab. Riprova tra poco.",
   "files.mode.profile": "Profilo",
   "settings.cen.btn": "Riduci ogni picco a un solo punto (file più leggeri)",
-  "settings.cen.title": "Centroidazione: ogni picco del profilo diventa un punto con la sua massa e la sua area. Crea una copia accanto all'originale, che non viene modificato. Consigliato per Tabui sui file a bassa risoluzione.",
+  "settings.cen.title": "Centroidazione: ogni picco del profilo diventa un punto con la sua massa e la sua area. Crea una copia accanto all'originale, che non viene modificato.",
   "settings.cen.ask": "Creare una copia ridotta di {n} file? Occupa altro spazio (al massimo circa {size}); gli originali non cambiano.",
   "settings.cen.run": "{n} di {m}: {name}",
   "settings.cen.stop": "Annulla",
