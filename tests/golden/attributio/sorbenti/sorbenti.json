@@ -1,0 +1,121 @@
+{
+ "blank_abundance": [
+  [
+   "",
+   0.0
+  ],
+  [
+   "x (abundance 1.3E3)",
+   1300.0
+  ],
+  [
+   "abundance 5)",
+   5.0
+  ],
+  [
+   "(abundance 2) (abundance 7)",
+   2.0
+  ]
+ ],
+ "colonne": [
+  "id",
+  "mz",
+  "rt",
+  "fragment_scans",
+  "blank_subtraction",
+  "datafile:S1_OA_ddaPOS.mzML:feature_state",
+  "datafile:S1_OA_ddaPOS.mzML:area",
+  "datafile:S1_EC_ddaPOS.mzML:feature_state",
+  "datafile:S1_EC_ddaPOS.mzML:area",
+  "datafile:S2_OA_ddaPOS.mzML:feature_state",
+  "datafile:S2_OA_ddaPOS.mzML:area",
+  "datafile:S2_EC_ddaPOS.mzML:feature_state",
+  "datafile:S2_EC_ddaPOS.mzML:area",
+  "blank_abundance:OA",
+  "blank_abundance:EC",
+  "twin_id"
+ ],
+ "gemelli": {
+  "3": 2
+ },
+ "rilevazione": [
+  {
+   "_id": 1,
+   "_pol": "POS",
+   "any_EC": true,
+   "any_OA": true,
+   "in_S1": true,
+   "in_S2": true,
+   "mz": 200.1,
+   "rt": 5.0
+  },
+  {
+   "_id": 2,
+   "_pol": "POS",
+   "any_EC": true,
+   "any_OA": true,
+   "in_S1": true,
+   "in_S2": true,
+   "mz": 300.2,
+   "rt": 6.0
+  },
+  {
+   "_id": 4,
+   "_pol": "POS",
+   "any_EC": false,
+   "any_OA": true,
+   "in_S1": true,
+   "in_S2": false,
+   "mz": 400.0,
+   "rt": 7.0
+  },
+  {
+   "_id": 5,
+   "_pol": "POS",
+   "any_EC": true,
+   "any_OA": false,
+   "in_S1": false,
+   "in_S2": true,
+   "mz": 400.3,
+   "rt": 7.05
+  }
+ ],
+ "tabella": [
+  {
+   "blank_abundance:EC": 0.0,
+   "blank_abundance:OA": 0.0,
+   "fragment_scans": 4,
+   "id": 1,
+   "mz": 200.1,
+   "rt": 5.0,
+   "twin_id": null
+  },
+  {
+   "blank_abundance:EC": 1500.0,
+   "blank_abundance:OA": 10.0,
+   "fragment_scans": 5,
+   "id": 2,
+   "mz": 300.2,
+   "rt": 6.0,
+   "twin_id": 3.0
+  },
+  {
+   "blank_abundance:EC": null,
+   "blank_abundance:OA": 50.0,
+   "fragment_scans": 1,
+   "id": 4,
+   "mz": 400.0,
+   "rt": 7.0,
+   "twin_id": null
+  },
+  {
+   "blank_abundance:EC": 0.0,
+   "blank_abundance:OA": null,
+   "fragment_scans": 0,
+   "id": 5,
+   "mz": 400.3,
+   "rt": 7.05,
+   "twin_id": null
+  }
+ ]
+}

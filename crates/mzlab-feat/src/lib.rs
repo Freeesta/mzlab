@@ -8,6 +8,8 @@ pub mod align;
 mod aligned;
 mod aligned_meta;
 mod aligned_ops;
+#[cfg(feature = "attributio")]
+pub mod attributio;
 pub mod axis;
 mod channels;
 #[cfg(feature = "chem")]
