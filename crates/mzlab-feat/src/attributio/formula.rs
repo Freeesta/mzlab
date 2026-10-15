@@ -105,6 +105,7 @@ pub fn structure_fit(
         let e = ion_mz(n, adduct)
             .filter(|t| *t != 0.0)
             .map_or(f64::NAN, |t| ppm(p, t));
+        #[allow(clippy::neg_cmp_op_on_partial_ord)]
         if !(e.abs() <= tol_ppm) {
             let (_, e2) = best_common_adduct(p, n, pol);
             if e2.abs() <= tol_ppm {

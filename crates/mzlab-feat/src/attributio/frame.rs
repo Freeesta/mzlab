@@ -248,7 +248,7 @@ fn next_record<'t>(
             pos = next;
         } else {
             let end = text[pos..]
-                .find(|c| c == sep || c == '\n' || c == '\r')
+                .find([sep, '\n', '\r'])
                 .map_or(text.len(), |i| pos + i);
             rec.push(text[pos..end].into());
             pos = end;

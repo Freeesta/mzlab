@@ -141,7 +141,7 @@ pub fn clean_library_name(name: &str) -> String {
     let s = drop_collision_energy(&drop_ccs(name));
     let t = s.trim_end();
     if let Some(k) = t.rfind(char::is_whitespace) {
-        if is_adduct_token(&t[k..].trim_start()) && !t[..k].is_empty() {
+        if is_adduct_token(t[k..].trim_start()) && !t[..k].is_empty() {
             return t[..k].trim().to_string();
         }
     }

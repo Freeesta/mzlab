@@ -33,7 +33,11 @@ impl State {
             _ => run.json_to(&mut emit),
         }
         let mut o = Out::default();
-        o.raw("{\"summary\":").raw(&run.summary()).raw(",\"text\":").str(&body).raw("}");
+        o.raw("{\"summary\":")
+            .raw(&run.summary())
+            .raw(",\"text\":")
+            .str(&body)
+            .raw("}");
         text(o.0)
     }
 }
