@@ -80,6 +80,7 @@ fn set_of(dir: &Path) -> FileSet {
                     nome: format!("{name}/{rel}"),
                     dim: file.metadata().unwrap().len(),
                     dati: Box::new(file),
+                    sha1: None,
                 }
             })
             .collect(),
