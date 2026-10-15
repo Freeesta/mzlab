@@ -14,7 +14,6 @@ Scelte di prodotto del Coordinatore (già nei prompt): lista di inclusione in so
 - [RV-02](RV-02.md): Centroidi del file segnati come profilo
 - [RV-03](RV-03.md): Hash in una passata, fuori dal percorso critico
 - [RV-04](RV-04.md): Tabella e `.mzidx` con una decodifica, senza il giro testo mzML
-- [RV-06](RV-06.md): mzML e centroidi veloci
 - [RV-07](RV-07.md): Desktop: profilo `opt-level = 3`
 - [RV-08](RV-08.md): `.raw` che opentfraw non apre
 - [RV-09](RV-09.md): Tutto il metodo del `.raw` in `metodo/1`

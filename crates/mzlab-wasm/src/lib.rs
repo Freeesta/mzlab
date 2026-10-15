@@ -564,6 +564,8 @@ pub fn build_mzidx(
     run_json: String,
     hr1: bool,
     budget_mb: u32,
+    spill_put: Option<Function>,
+    spill_get: Option<Function>,
 ) -> Result<String, JsValue> {
     let table = mzidx::ScanTable {
         level: levels.to_vec(),
@@ -576,11 +578,16 @@ pub fn build_mzidx(
         hr1,
     };
     let mut out = JsOutput { write };
-    let st = mzidx::build_mzml(
+    // peaks that do not fit in the budget go to a scratch file (a second file of OPFS) instead of being decoded again by every round
+    let mut spill = spill_put
+        .zip(spill_get)
+        .map(|(put, get)| nativi::JsSpill { put, get });
+    let st = mzidx::build_mzml_spill(
         &table,
         BlockReader::new(read, size as u64),
         &mut out,
         (budget_mb as usize) << 20,
+        spill.as_mut().map(|s| s as &mut dyn mzlab_core::mzidx_spill::Spill),
     )
     .map_err(|e| error_json(&e))?;
     Ok(format!(

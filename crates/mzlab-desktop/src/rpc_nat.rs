@@ -61,7 +61,11 @@ impl State {
             pr.scans.store(done as u64, Ordering::Relaxed);
             pr.scans_total.store(total as u64, Ordering::Relaxed);
         };
-        lettori_mzml::scrivi(&mut *l, nat.c, &mut out, &mut tell)?;
+        let opz = mzlab_core::mzmlwrite::Opzioni {
+            numpress: p["numpress"].as_bool().unwrap_or(false),
+            ..Default::default()
+        };
+        lettori_mzml::scrivi_con(&mut *l, nat.c, &mut out, &mut tell, opz)?;
         std::io::Write::flush(&mut out).map_err(|e| io_error(&e))?;
         drop(out);
         let size = std::fs::metadata(&tmp).map_err(|e| io_error(&e))?.len();

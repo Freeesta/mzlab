@@ -36,7 +36,7 @@ export function makeNativo(h) {
       if (r.dead || r.error) throw fail(r, "err.engine.index");
     },
     /** the mzML of the sample `name` as a File of OPFS (a Blob without OPFS; in the desktop app an empty Blob that carries `mzlabId`, the number of the mzML on the disk); `onProgress({ scans, scansTotal, written })`; `signal` cancels it (the worker is stopped and started again) */
-    async nativeToMzml(/** @type {string} */ name, /** @type {number} */ size, /** @type {((p: any) => void) | undefined} */ onProgress, /** @type {AbortSignal | undefined} */ signal) {
+    async nativeToMzml(/** @type {string} */ name, /** @type {number} */ size, /** @type {((p: any) => void) | undefined} */ onProgress, /** @type {AbortSignal | undefined} */ signal, /** @type {boolean | undefined} */ numpress) {
       const w = h.current(), cancelled = () => Object.assign(new Error("cancelled"), { cancelled: true });
       if (signal && signal.aborted) throw cancelled();
       if (!window.MZLAB_DESKTOP) {                                                  // the desktop app writes on the disk, not in the browser storage
@@ -47,7 +47,7 @@ export function makeNativo(h) {
       if (signal) signal.addEventListener("abort", onAbort, { once: true });
       const dest = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.mzML`;      // in OPFS mzlab/conv/
       const drop = () => navigator.storage.getDirectory().then(d => d.getDirectoryHandle("mzlab")).then(d => d.getDirectoryHandle("conv")).then(d => d.removeEntry(dest)).catch(() => {});
-      const r = await h.rpc({ op: "nat2mzml", name: h.base(name), dest }, onProgress);
+      const r = await h.rpc({ op: "nat2mzml", name: h.base(name), dest, numpress: !!numpress }, onProgress);
       if (signal) signal.removeEventListener("abort", onAbort);
       if (r.cancelled || signal && signal.aborted) { drop(); throw cancelled(); }
       if (r.dead || r.error) { drop(); throw fail(r, "err.file.mzmlWrite"); }

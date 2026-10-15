@@ -3,7 +3,7 @@ use std::io::Write;
 
 use crate::error::{Error, Result};
 use crate::lettori::Lettore;
-use crate::mzmlwrite::{Header, MzmlWriter};
+use crate::mzmlwrite::{Header, MzmlWriter, Opzioni};
 
 /// The header when the reader gives none: the run is the sample, the program is mzLab.
 fn semplice(l: &dyn Lettore, c: usize) -> Header {
@@ -35,10 +35,21 @@ pub fn scrivi<W: Write>(
     out: W,
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<W> {
+    scrivi_con(l, c, out, progress, Opzioni::default())
+}
+
+/// `scrivi` with the zlib level and the numpress choice of `opz` (`mzmlwrite::Opzioni`).
+pub fn scrivi_con<W: Write>(
+    l: &mut dyn Lettore,
+    c: usize,
+    out: W,
+    progress: &mut dyn FnMut(usize, usize),
+    opz: Opzioni,
+) -> Result<W> {
     if c >= l.campioni().len() {
         return Err(Error::new("error.badIndex").with("c", c));
     }
-    let mut w = MzmlWriter::new(out, &testata(l, c)?)?;
+    let mut w = MzmlWriter::con_opzioni(out, &testata(l, c)?, opz)?;
     let n = l.indice(c)?.len();
     if n > 0 {
         w.open_spectra(n)?;

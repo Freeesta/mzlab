@@ -434,6 +434,8 @@ I18N.add("it", {
   "conv.dl": "Scarica mzML",
   "conv.dl.title": "Salva l'mzML convertito: è quello che il programma usa, e riaperto si legge senza convertire di nuovo",
   "conv.dlall": "Scarica tutti gli mzML",
+  "conv.np": "Comprimi con MS-Numpress (file più piccolo, con perdita)",
+  "conv.np.note": "Numpress è una compressione con perdita: i valori di m/z e intensità sono arrotondati (errore relativo circa 1e-4).",
   "conv.dl.needsApp": "Per salvare l'mzML aggiorna l'app desktop",
   "load.dropWiff": "<b>Trascina qui i file</b><br>oppure <u>clicca per sceglierli dal computer</u><small class=\"fmts\">.mzML · .raw · .wiff · .D</small>",
   "load.dropWiff.tip": "Il .wiff va con il suo .wiff.scan; un .D di Agilent è una cartella",

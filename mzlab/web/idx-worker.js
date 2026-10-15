@@ -30,18 +30,18 @@ onmessage = async ev => {
     const write = (off, data) => { if (writeFull(ah, data, off) < data.length) { fullAt = off + data.length; throw new Error("storage full"); } endAt = Math.max(endAt, off + data.length); };       // a full disk: not a silently short index
     const t0 = performance.now();
     let stats;
+    let spill = null;
+    try {
+      spName = m.part.replace(/(\.part)?$/, ".sp.part");
+      sh = await (await d.getFileHandle(spName, { create: true })).createSyncAccessHandle();
+      sh.truncate(0);
+      spill = {
+        put: (off, data) => { if (writeFull(sh, data, off) < data.length) { fullAt = off + data.length; throw new Error("storage full"); } },
+        get: (off, n) => { const b = new Uint8Array(n); if (sh.read(b, { at: off }) < n) throw new Error("spill read"); return b; }
+      };
+    } catch (_) { spill = null; }                               // no scratch file (a handle that does not open): the rounds decode again, as always
     if (m.nat) {                                                    // a dataset of a maker (rust-nativo.js): the index comes straight from its reader; the progress says the phase
       // the peaks that do not fit in the budget wait in a scratch file of OPFS (`<name>.mzidx.sp.part`: removed at the end, and by the cleaning of the `.part` files if the worker dies) instead of being decoded again by every round
-      let spill = null;
-      try {
-        spName = m.part.replace(/(\.part)?$/, ".sp.part");
-        sh = await (await d.getFileHandle(spName, { create: true })).createSyncAccessHandle();
-        sh.truncate(0);
-        spill = {
-          put: (off, data) => { if (writeFull(sh, data, off) < data.length) { fullAt = off + data.length; throw new Error("storage full"); } },
-          get: (off, n) => { const b = new Uint8Array(n); if (sh.read(b, { at: off }) < n) throw new Error("spill read"); return b; }
-        };
-      } catch (_) { spill = null; }                               // no scratch file (a handle that does not open): the rounds decode again, as always
       stats = await buildNative(build_mzidx_native, ext, m.nat, m.name, write, p => postMessage({ op: "progress", frac: p.frac, phase: p.phase }), m.budget, spill);
     } else {
       const fr = new FileReaderSync(), blob = m.blob;
@@ -52,7 +52,7 @@ onmessage = async ev => {
         return new Uint8Array(fr.readAsArrayBuffer(blob.slice(off, off + len)));
       };
       const [levels, pols, rt, tic, rows, source, run, hr1] = m.inputs;
-      stats = build_mzidx(blob.size, read, write, levels, pols, rt, tic, rows, source, run, hr1, m.budget);
+      stats = build_mzidx(blob.size, read, write, levels, pols, rt, tic, rows, source, run, hr1, m.budget, spill ? spill.put : undefined, spill ? spill.get : undefined);
     }
     ah.flush();
     if (ah.getSize() < endAt) { fullAt = endAt; throw new Error("storage full"); }           // the browser took the writes but the file is shorter (quota reached): never an index that looks complete

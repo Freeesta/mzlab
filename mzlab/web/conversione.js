@@ -6,6 +6,8 @@
 // the mzML files made in this page: mzML name -> Blob (with .mzlabId in the desktop app); they are what the program reads, so a saved copy opens without converting again
 const CONV = {
   files: new Map(),
+  numpress: false,       // «Download .mzML» with MS-Numpress (lossy, smaller): off unless the user ticks it
+  key(name) { return (this.numpress ? "np:" : "") + name; },
   made: new Map(),        // name -> mzML written on request for a sample of a maker's file (nativo.js)
   add(name, blob) { this.files.set(name, blob); },
   // the samples of the maker's files of this page: their mzML is written when it is asked for
@@ -17,12 +19,12 @@ const CONV = {
     const rb = window.MZLAB_RUST, box = document.getElementById("up");
     if (!rb || !rb.nativeToMzml || !rb.isNative(name) || !box) return null;
     const f = (typeof ST !== "undefined" && ST.files || []).find(x => x.name === name), g = ConvUI.group(box, [1]), ui = g.start(1, name);
-    try { const blob = await rb.nativeToMzml(name, f ? f.size : 0, p => ui.update(p), g.signal); ui.done(); g.end(); this.made.set(name, blob); return blob; }
+    try { const blob = await rb.nativeToMzml(name, f ? f.size : 0, p => ui.update(p), g.signal, this.numpress); ui.done(); g.end(); this.made.set(this.key(name), blob); return blob; }
     catch (e) { if (e.cancelled) { ui.done(); g.end(); } else ui.fail(e.json ? I18N.err(e.json).message : e.message); return null; }
   },
   // saves one: the system dialog in the desktop app, a normal download in the browser; resolves to false if the user cancelled or could not save
   async download(name) {
-    let blob = this.files.get(name) || this.made.get(name);
+    let blob = this.files.get(name) || this.made.get(this.key(name));
     if (!blob && this.native().includes(name)) blob = await this.make(name);
     if (!blob) return false;
     if (window.MZLAB_DESKTOP) {

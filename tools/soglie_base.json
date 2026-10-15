@@ -209,6 +209,8 @@
   "mzlab/web/workflow.js::WORKFLOW": 379,
   "tools/bench_mirino.py::run": 85,
   "tools/controlla_teoria.py::public_errors": 94,
-  "tools/dati_sintetici.py::hr_dda": 103
+  "tools/dati_sintetici.py::hr_dda": 103,
+  "crates/mzlab-core/src/mzmlwrite.rs::Opzioni": 184,
+  "crates/mzlab-core/src/mzmlwrite.rs::esc": 128
  }
 }

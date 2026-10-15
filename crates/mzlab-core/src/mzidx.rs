@@ -556,12 +556,25 @@ pub fn build(
     budget: usize,
     nativo: bool,
 ) -> Result<Stats> {
+    build_con_spill(table, pass, out, budget, nativo, None)
+}
+
+/// `build` with a scratch file (`mzidx_spill`) for the peaks that do not fit in `budget`: the stream is decoded once whatever its size.
+#[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the table, checked against `n_scans`
+pub fn build_con_spill(
+    table: &ScanTable,
+    pass: &mut Pass,
+    out: &mut dyn Output,
+    budget: usize,
+    nativo: bool,
+    spill: Option<&mut dyn Spill>,
+) -> Result<Stats> {
     let n_scans = table.level.len();
     if table.polarity.len() != n_scans || table.rt.len() != n_scans || table.tic.len() != n_scans {
         return Err(Error::new("err.file.index").with("detail", "scan table"));
     }
     // -- pass 1: count (and keep, while it fits)
-    let mut prima = Prima::new(budget, None);
+    let mut prima = Prima::new(budget, spill);
     let mut failure: Option<Error> = None;
     {
         let mut on = |sp: Spectrum| {
@@ -857,11 +870,22 @@ pub(crate) fn build_dopo(
 /// Builds from an mzML read through `Read + Seek` (the file is read again from its start for every pass).
 pub fn build_mzml<R: std::io::Read + Seek>(
     table: &ScanTable,
-    mut src: R,
+    src: R,
     out: &mut dyn Output,
     budget: usize,
 ) -> Result<Stats> {
-    build(
+    build_mzml_spill(table, src, out, budget, None)
+}
+
+/// `build_mzml` with a scratch file for the peaks that do not fit in `budget` (the mzML is then decoded once).
+pub fn build_mzml_spill<R: std::io::Read + Seek>(
+    table: &ScanTable,
+    mut src: R,
+    out: &mut dyn Output,
+    budget: usize,
+    spill: Option<&mut dyn Spill>,
+) -> Result<Stats> {
+    build_con_spill(
         table,
         &mut |on| {
             src.seek(SeekFrom::Start(0)).map_err(io_error)?;
@@ -874,6 +898,7 @@ pub fn build_mzml<R: std::io::Read + Seek>(
         out,
         budget,
         false,
+        spill,
     )
 }
 
