@@ -67,6 +67,18 @@ async function samplesDi(native_samples, ext, members) {
   return native_samples(members.map(x => x.name), Float64Array.from(members.map(x => x.blob.size)), rd);
 }
 
+/** one member copied to OPFS unless it is there (or being written for another sample); its fingerprints are taken in the same pass */
+async function copyMember(/** @type {{ ARCH: any, impronte?: { start: (size: number) => import("./impronta.js").Presa }, writing: Map<string, Promise<void>>, taken: Map<string, string[]> }} */ { ARCH, impronte, writing, taken }, /** @type {Blob} */ blob, /** @type {string} */ store, /** @type {(n: number) => void} */ bump) {
+  const have = await ARCH.get("files", store);
+  if (writing.has(store)) { await writing.get(store); bump(blob.size); return; }
+  if (have && have.size === blob.size) { bump(blob.size); return; }
+  const pass = impronte ? impronte.start(blob.size) : null;           // each piece goes to the hash once written
+  const job = putChunks("files", store, blob.size, async (/** @type {number} */ o, /** @type {number} */ n) => { const b = new Uint8Array(await blob.slice(o, o + n).arrayBuffer()); bump(b.length); return b; }, pass ? b => pass.add(b) : undefined)
+    .then(async () => { const o = pass && await pass.end().catch(() => null); if (o) taken.set(store, o); }, async e => { if (pass) pass.end().catch(() => null); throw e; });
+  writing.set(store, job);
+  try { await job; } finally { writing.delete(store); }
+}
+
 /** @param {{ ARCH: any, readerFor: (b: Blob) => (o: number, n: number) => Uint8Array, fileOf: (n: string) => Promise<File>, jerr: (k: string) => never, native_samples: Function, native_to_mzml: Function, native_srm: Function, native_external: Function, impronte?: { start: (size: number) => import("./impronta.js").Presa } }} h */
 export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte }) {
   const ext = createEsterno(native_external);               // a Thermo .raw is read through the `thermo` module (lettore-esterno.js)
@@ -102,16 +114,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
       const store = PREFIX + nat.key + "~" + x.name.replace(/[\\/]/g, "~");
       const member = /** @type {StubMember} */ ({ name: x.name, store, size: x.blob.size });
       members.push(member);
-      const have = await ARCH.get("files", store);
-      if (writing.has(store)) { await writing.get(store); bump(x.blob.size); }
-      else if (have && have.size === x.blob.size) bump(x.blob.size);
-      else {
-        const pass = impronte ? impronte.start(x.blob.size) : null;       // the fingerprints of the member: each piece goes to the hash once written
-        const job = putChunks("files", store, x.blob.size, async (/** @type {number} */ o, /** @type {number} */ n) => { const b = new Uint8Array(await x.blob.slice(o, o + n).arrayBuffer()); bump(b.length); return b; }, pass ? b => pass.add(b) : undefined)
-          .then(async () => { const o = pass && await pass.end().catch(() => null); if (o) taken.set(store, o); }, async e => { if (pass) pass.end().catch(() => null); throw e; });
-        writing.set(store, job);
-        try { await job; } finally { writing.delete(store); }
-      }
+      await copyMember({ ARCH, impronte, writing, taken }, x.blob, store, bump);
       const o = taken.get(store);
       if (o) [member.sha256, member.sha1, member.probe] = o;
     }
