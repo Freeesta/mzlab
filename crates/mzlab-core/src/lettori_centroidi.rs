@@ -109,3 +109,6 @@ pub fn centroidato(l: Box<dyn Lettore>) -> Box<dyn Lettore> {
         buf: Buf::default(),
     })
 }
+
+#[cfg(test)]
+mod prove;

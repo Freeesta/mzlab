@@ -13,8 +13,8 @@ const LETTORI_FAM = {
   thermo: { ext: [".raw"], membri: [], errori: [], soloModulo: [] },
   agilent: { ext: [".d"], membri: ["acqdata/", ".d/"], errori: ["err.file.agilent"], soloModulo: [] },
   sciex: { ext: [".wiff", ".wiff.scan"], membri: [], errori: ["err.file.wiff"], soloModulo: [], sonda: true },
-  waters: { ext: [], membri: [], errori: [], soloModulo: [] },
-  shimadzu: { ext: [], membri: [], errori: [], soloModulo: [] },
+  waters: { ext: [".raw"], membri: ["_func001.dat"], errori: [], soloModulo: [] },
+  shimadzu: { ext: [".qgd", ".lcd"], membri: [], errori: ["err.file.shimadzu"], soloModulo: [".qgd", ".lcd"] },
   bruker: { ext: [], membri: [], errori: [], soloModulo: [] },
 };
 /** @type {any} */ (window).LETTORI_FAM = LETTORI_FAM;

@@ -127,7 +127,7 @@ Un pacchetto = una chat DEV = una PR unita a CI verde, pubblicata subito dietro 
 
 | Pacchetto | Contenuto | Onda | Dipende da | `.wasm` | Stima (giorni-chat) | Stato |
 |---|---|---|---|---|---|---|
-| AT-00 | fondamenta: campagna sintetica in `tests/data/attributio/`, `tools/attributio_riferimento.py` e dati d'oro, `docs/agenti/attributio.md`, riga di AGENTS.md §5, riga di `LICENZE-TERZI.md` | 1 | — | nessuno | 1 | da fare |
+| AT-00 | fondamenta: campagna sintetica in `tests/data/attributio/`, `tools/attributio_riferimento.py` e dati d'oro, `docs/agenti/attributio.md`, riga di AGENTS.md §5, riga di `LICENZE-TERZI.md` | 1 | — | nessuno | 1 | fatto: 15 feature, dati d'oro 35 KB, `--controlla` passato al primo colpo |
 | AT-01 | `campaign.toml` (sottoinsieme TOML), lettori (mzMine, SIRIUS, GNPS2, MGF, standard, decisioni), sorbenti e DETECTED, `feature_state` | 2 | AT-00 | nessuno | 2 | da fare |
 | AT-05 | abbinamento della revisione, indice delle librerie, fonti, Δm, sopra `crates/mzlab-lib` | 2 | AT-00 | nessuno | 1,5 | da fare |
 | AT-02 | cascata dei livelli (`annotate.py`) e controlli di formula | 3 | AT-01 | nessuno | 2 | da fare |
@@ -136,7 +136,7 @@ Un pacchetto = una chat DEV = una PR unita a CI verde, pubblicata subito dietro 
 | AT-04 | `.wasm` `attributio`, voce di amministratore, cartella della campagna, tabella dei livelli, esportazioni di base, rotta desktop | 5 | AT-03 | crea `attributio` | 1,5 | da fare |
 | AT-07 | Banco 2b: revisione, lista di controllo, alternative con la stessa formula, `rules.py`, scrittura delle decisioni | 6 | AT-04, AT-06 | `attributio` (in serie) | 2 | da fare |
 | AT-08 | prove esportate, cartella di Schymanski, tabella per la pubblicazione, quantificazione e gradiente | 7 | AT-07 | `attributio` (in serie) | 1 | da fare |
-| MZ-00 | diagnosi della concordanza con mzmine (protocollo corretto, motivi) e dati d'oro per stadio | 1 | — | nessuno | 1,5 | da fare |
+| MZ-00 | diagnosi della concordanza con mzmine (protocollo corretto, motivi) e dati d'oro per stadio | 1 | — | nessuno | 1,5 | strumenti e dati d'oro fatti (`docs/agenti/attributio.md`); sui 4 sintetici recall 0,538→0,692, |log2| 0,080→0,028; misura sul Timolol vero da fare con il privato |
 | MZ-01 | costruttore ADAP | 2 | MZ-00 | nessuno | 1 | da fare |
 | MZ-02 | risolutore a minimo locale | 2 | MZ-00 | nessuno | 1 | da fare |
 | MZ-03 | join aligner e riempimento | 2 | MZ-00 | nessuno | 1 | da fare |

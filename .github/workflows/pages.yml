@@ -18,6 +18,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     concurrency:
       group: pages-build
       cancel-in-progress: false
@@ -41,14 +42,16 @@ jobs:
           fi
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
-      - uses: actions/cache@v4
+      # every run restores the newest cache; a new one is saved only when the Rust sources (crates/, vendor/, Cargo.lock) changed: the 10 GB of caches of the repository are not filled by copies of the same build
+      - id: rcache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: pages-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          key: pages-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           restore-keys: pages-rust-${{ runner.os }}-
       - name: Build the WASM engine (only in the published site, never committed)
         run: |
@@ -66,15 +69,71 @@ jobs:
           tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries
       - name: Build the mzFinder WASM engines (the .wasm of their own, under 500 KB each, with their SHA-256; never committed)
         run: tools/build_feat_wasm.sh site/static
+      - name: Save the Rust cache
+        uses: actions/cache/save@v4
+        if: steps.rcache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
       - name: Restore the spectral-library packages from the cache (pinned MassBank release, built with the Rust builder, never committed)
         id: libcache
         uses: actions/cache/restore@v4
         with:
           path: site/static/librerie
           key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
+      # The pinned downloads (MassBank 240 MB, the suspect sources 330 MB; 10-25 minutes from Zenodo) are kept in a cache of their own,
+      # keyed by their pinned SHA-256: a new builder or a new package format rebuilds from the cached files in about a minute.
+      - name: Keys of the pinned downloads (their SHA-256 in tools/librerie_pacchetti.py and tools/genera_sospetti.py)
+        id: pin
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import hashlib, sys
+          sys.path.insert(0, "tools")
+          import librerie_pacchetti as l, genera_sospetti as g
+          print("massbank=" + l.ZIP_SHA256[:20])
+          print("fonti=" + hashlib.sha256(" ".join(h for s in g.SOURCES for _, h, _ in s["files"]).encode()).hexdigest()[:20])
+          PY
+      - name: Restore the MassBank download
+        if: steps.libcache.outputs.cache-hit != 'true'
+        id: mbcache
+        uses: actions/cache/restore@v4
+        with:
+          path: .massbank-cache
+          key: massbank-zip-${{ steps.pin.outputs.massbank }}
       - name: Build the packages and the catalog (a network failure only warns, the site is published without packages)
         if: steps.libcache.outputs.cache-hit != 'true'
-        run: python tools/librerie_pacchetti.py --out site/static/librerie
+        run: |
+          # the zip is checked against the pinned SHA-256 here (librerie_pacchetti.py --zip does not check it); a wrong one stops the build
+          python - <<'PY'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, "tools")
+          import librerie_pacchetti as l
+          z = Path(".massbank-cache/massbank.zip")
+          z.parent.mkdir(exist_ok=True)
+          if z.is_file() and l.sha256_file(z) != l.ZIP_SHA256:
+              sys.exit("cached MassBank zip: wrong SHA-256, build stopped")
+          if not z.is_file():
+              print(f"downloading MassBank-data {l.VERSION} (Zenodo {l.ZENODO_RECORD})")
+              try:
+                  l.download(l.ZIP_URL, z, l.ZIP_SHA256)
+              except ConnectionError as e:
+                  z.unlink(missing_ok=True)
+                  print(f"::warning::spectral-library packages not built: the download failed ({e})")
+          PY
+          if [ -f .massbank-cache/massbank.zip ]; then
+            python tools/librerie_pacchetti.py --out site/static/librerie --zip .massbank-cache/massbank.zip
+          fi
+      - name: Save the MassBank download
+        if: steps.libcache.outputs.cache-hit != 'true' && steps.mbcache.outputs.cache-hit != 'true' && hashFiles('.massbank-cache/massbank.zip') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .massbank-cache
+          key: massbank-zip-${{ steps.pin.outputs.massbank }}
       - name: Save the packages in the cache
         if: steps.libcache.outputs.cache-hit != 'true' && hashFiles('site/static/librerie/catalogo.json') != ''
         uses: actions/cache/save@v4
@@ -87,9 +146,23 @@ jobs:
         with:
           path: site/static/mzfinder/sospetti
           key: sospetti-${{ hashFiles('tools/genera_sospetti.py') }}
+      - name: Restore the suspect sources
+        if: steps.suscache.outputs.cache-hit != 'true'
+        id: fonticache
+        uses: actions/cache/restore@v4
+        with:
+          path: .sospetti-fonti
+          key: sospetti-fonti-${{ steps.pin.outputs.fonti }}
+      # genera_sospetti.py checks every file of --fonte against its pinned SHA-256 and downloads only the missing ones
       - name: Build the suspect index of mzFinder (pinned CC BY sources, never committed; a network failure only warns)
         if: steps.suscache.outputs.cache-hit != 'true'
-        run: python tools/genera_sospetti.py --pacchetto site/static/mzfinder/sospetti
+        run: python tools/genera_sospetti.py --fonte .sospetti-fonti --pacchetto site/static/mzfinder/sospetti
+      - name: Save the suspect sources
+        if: steps.suscache.outputs.cache-hit != 'true' && steps.fonticache.outputs.cache-hit != 'true' && hashFiles('site/static/mzfinder/sospetti/catalogo.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .sospetti-fonti
+          key: sospetti-fonti-${{ steps.pin.outputs.fonti }}
       - name: Save the suspect index in the cache
         if: steps.suscache.outputs.cache-hit != 'true' && hashFiles('site/static/mzfinder/sospetti/catalogo.json') != ''
         uses: actions/cache/save@v4
@@ -103,6 +176,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     concurrency:
       group: pages-deploy
       cancel-in-progress: false

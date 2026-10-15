@@ -33,6 +33,8 @@ Il metodo di UN campione (strumento, sorgente, esperimenti, LC, rivelatori, regi
 - Un `.wiff` senza `.wiff.scan` non si apre come dati ma dà il suo metodo.
 - Cartella di metodo `.m` (Agilent MassHunter, solo `DaMethod/Quant/quantitative.xml`): `agilent::quant::metodo_m` (op `lr_metodo_m`, `metodoM` in `rust-convert.js`, UI `metodo-m.js`) dà un `metodo/1` con la sezione `quantificazione` (composti, RT, ioni, livelli come scritti nel file: impostazioni di elaborazione, non risultati). Nessun abbinamento automatico alla corsa `.D` (i nomi differiscono). Test: `crates/mzlab-core/tests/agilent_metodo_m.rs`, `tests_e2e/e2e_metodo_m.py`.
 
+- Shimadzu (`.qgd`, `.lcd`: `crates/mzlab-lettori/src/shimadzu/meta.rs`, `documento`): `strumento` dal nome nel file, `campione` da `File Property`/XML delle proprietà, `ms` dagli eventi visti (SIM/scan con intervallo m/z) e dalle transizioni MRM; operatore, utente e percorsi sono `identita`: stanno nel documento del lettore e non nel `userParam` dell'mzML. Il resto non decodificato è in `avvisi` (`meta.nonDecodificato`); dettagli in `docs/agenti/shimadzu.md`.
+
 ## Abbinare `.wiff` e mzML
 Gli mzML di ProteoWizard hanno in `<sourceFile>` un cvParam SHA-1 (MS:1000569) uguale a quello del `.wiff` (il nome nell'mzML può differire dal file vero); il campione viene dal `nativeID` `sample=N`. `mzml_sources` legge il primo MB dell'mzML; `sha1_file` calcola l'impronta del `.wiff`. Un `.wiff` caricato da solo con mzML già aperti con lo stesso SHA-1 dà a ciascuno il suo documento (nota `load.note.wiffMethod`); senza abbinamento resta l'errore `err.file.wiffNoScan`.
 

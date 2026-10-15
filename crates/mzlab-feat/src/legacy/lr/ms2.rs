@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{round, Out};
 
+use super::plan::Settings;
 use super::{Entry, LrDig};
 use crate::legacy::ms2::read_scans;
 use crate::legacy::Res;
@@ -17,8 +18,12 @@ const PRECURSOR_GAP: f64 = 1.5;
 const BIN: f64 = 0.3;
 /// A fragment of the product matches one of the parent within this, Da.
 const MATCH: f64 = 0.5;
-/// Margin added to the limits of the peak when the scans are picked, minutes.
+/// Margin added to the half width of the window when the scans are picked, minutes.
 const MARGIN: f64 = 0.05;
+/// A file with fewer scans of the precursor outside the window is acquired only around the row: no signal control.
+const MIN_OUTSIDE: usize = 10;
+/// The scans of the window count when their strongest TIC is at least this times the median TIC of the whole trace.
+const SN_MS2: f64 = 3.0;
 /// Fragments kept: product and parent (`top`).
 const TOP: usize = 6;
 const TOP_PARENT: usize = 10;
@@ -56,15 +61,67 @@ fn median(v: &mut [f64]) -> f64 {
     }
 }
 
-/// Limits of the peak of `e` over the full-scan files, widened by `MARGIN`; `None` when it has no peak.
-fn window(e: &Entry) -> Option<(f64, f64)> {
-    let on: Vec<_> = e.cells.iter().filter(|c| c.apex_rt.is_some()).collect();
-    if on.is_empty() || e.ref_rt.is_none() {
+/// Window of the MS2 scans of `e`: centred on its reference RT, as wide as the usual half width of its peak (median over the cells whose
+/// apex lies within `rt_tol_min` of it) plus `rt_tol_min` and `MARGIN`; `None` when no cell is on that peak.
+fn window(e: &Entry, s: &Settings) -> Option<(f64, f64)> {
+    let centre = e.ref_rt?;
+    let mut half: Vec<f64> = e
+        .cells
+        .iter()
+        .filter(|c| {
+            c.apex_rt
+                .is_some_and(|a| (a - centre).abs() <= s.rt_tol_min)
+        })
+        .map(|c| (c.hi - c.lo) / 2.0)
+        .collect();
+    if half.is_empty() {
         return None;
     }
-    let lo = on.iter().map(|c| c.lo).fold(f64::INFINITY, f64::min);
-    let hi = on.iter().map(|c| c.hi).fold(f64::NEG_INFINITY, f64::max);
-    Some((lo - MARGIN, hi + MARGIN))
+    let w = s.rt_tol_min + median(&mut half) + MARGIN;
+    Some((centre - w, centre + w))
+}
+
+/// Whether the trace of the level-2 scans of one precursor has a signal inside `[lo, hi]`: always when the file was acquired only around
+/// the window, else when the strongest TIC inside is `SN_MS2` times the median TIC of the whole trace.
+fn has_signal(trace: &[(f64, f64)], lo: f64, hi: f64) -> bool {
+    let outside = trace.iter().filter(|t| t.0 < lo || t.0 > hi).count();
+    if outside < MIN_OUTSIDE {
+        return true;
+    }
+    let mut all: Vec<f64> = trace.iter().map(|t| t.1).collect();
+    let top = trace
+        .iter()
+        .filter(|t| t.0 >= lo && t.0 <= hi)
+        .map(|t| t.1)
+        .fold(f64::NEG_INFINITY, f64::max);
+    top >= SN_MS2 * median(&mut all)
+}
+
+/// `(scan, precursor, RT)` of the level-2 scans of `ix` for the precursor of `e` that lie in `win`, if the trace has a signal there.
+fn picked_scans<R: ReadAt>(
+    ix: &Index<R>,
+    e: &Entry,
+    tol: f64,
+    win: (f64, f64),
+) -> Vec<(usize, f64, f64)> {
+    let near: Vec<(usize, f64, f64, f64)> = ix
+        .scans
+        .iter()
+        .enumerate()
+        .filter_map(|(i, s)| {
+            let p = s.precursor?;
+            let ok = (p - e.mz_x).abs() <= tol || (p - e.mz).abs() <= tol;
+            (s.level == 2 && ok).then_some((i, p, s.rt, s.tic))
+        })
+        .collect();
+    let trace: Vec<(f64, f64)> = near.iter().map(|x| (x.2, x.3)).collect();
+    if !has_signal(&trace, win.0, win.1) {
+        return vec![];
+    }
+    near.iter()
+        .filter(|x| x.2 >= win.0 && x.2 <= win.1)
+        .map(|x| (x.0, x.1, x.2))
+        .collect()
 }
 
 /// One (weighted m/z, mean intensity per scan) per bin.
@@ -90,7 +147,7 @@ pub fn pool<R: ReadAt>(
     open: &mut dyn FnMut(usize) -> Res<Index<R>>,
 ) -> Res<Pool> {
     let mut out = Pool::default();
-    let Some((lo, hi)) = window(e) else {
+    let Some((lo, hi)) = window(e, &d.settings) else {
         return Ok(out);
     };
     let tol = d.settings.tol_da;
@@ -103,16 +160,7 @@ pub fn pool<R: ReadAt>(
     let skip = d.lc.len();
     for j in 0..d.files.iter().filter(|f| f.kind == "ms2").count() {
         let mut ix = open(skip + j)?;
-        let picked: Vec<(usize, f64, f64)> = ix
-            .scans
-            .iter()
-            .enumerate()
-            .filter_map(|(i, s)| {
-                let p = s.precursor?;
-                let near = (p - e.mz_x).abs() <= tol || (p - e.mz).abs() <= tol;
-                (s.level == 2 && near && s.rt >= lo && s.rt <= hi).then_some((i, p, s.rt))
-            })
-            .collect();
+        let picked = picked_scans(&ix, e, tol, (lo, hi));
         let ces_of: Vec<Option<f64>> = picked
             .iter()
             .map(|p| ix.scans[p.0].collision_energy)
