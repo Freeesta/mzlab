@@ -91,7 +91,7 @@ fn mz_a(r: &[u8]) -> Result<f64> {
 /// The points of one scan: calibrated m/z and intensity. Records without intensity are left out.
 pub(super) fn decodifica(c: Codifica, b: &[u8], t: &Taratura) -> Result<(Vec<f64>, Vec<f32>)> {
     let w = c.larghezza();
-    if b.len() % w != 0 {
+    if !b.len().is_multiple_of(w) {
         return Err(errore("scan size is no multiple of the record"));
     }
     let (mut mz, mut it) = (

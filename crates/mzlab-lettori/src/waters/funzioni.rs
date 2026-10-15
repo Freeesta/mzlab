@@ -53,7 +53,7 @@ pub(super) fn leggi(b: &[u8], limiti: &Limiti) -> Result<Vec<Funzione>> {
     if b.is_empty() {
         return Err(errore("_FUNCTNS.INF is empty"));
     }
-    if b.len() % RECORD != 0 {
+    if !b.len().is_multiple_of(RECORD) {
         return Err(errore("_FUNCTNS.INF size"));
     }
     let n = limiti.voci_ok((b.len() / RECORD) as u64)?;

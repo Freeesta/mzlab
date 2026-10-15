@@ -22,7 +22,7 @@ pub(super) struct Riga {
 
 /// Whether `b` is variant A: only when its size fits and, if it fits both, when every record carries a known mark and the offsets never go back.
 fn variante_a(b: &[u8]) -> bool {
-    match (b.len() % A == 0, b.len() % B == 0) {
+    match (b.len().is_multiple_of(A), b.len().is_multiple_of(B)) {
         (true, false) => true,
         (false, _) => false,
         (true, true) => {
@@ -41,7 +41,7 @@ pub(super) fn leggi(b: &[u8], limiti: &Limiti) -> Result<Vec<Riga>> {
     if b.is_empty() {
         return Ok(Vec::new());
     }
-    if b.len() % A != 0 && b.len() % B != 0 {
+    if !b.len().is_multiple_of(A) && !b.len().is_multiple_of(B) {
         return Err(errore("IDX size"));
     }
     let a = variante_a(b);
@@ -68,7 +68,7 @@ pub(super) fn larghezza(righe: &[Riga], dat_len: u64) -> Option<u64> {
         let fine = righe.get(k + 1).map_or(dat_len, |n| n.offset);
         let d = fine.checked_sub(r.offset)?;
         let c = r.conta as u64;
-        (c > 0 && d > 0 && d % c == 0).then_some(d / c)
+        (c > 0 && d > 0 && d.is_multiple_of(c)).then_some(d / c)
     })
 }
 

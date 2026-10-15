@@ -45,9 +45,9 @@ fn the_mrm_function_is_chromatograms_not_spectra() {
         );
         let c = l.cromatogramma(0, ids[1 + j]).unwrap();
         assert_eq!(c.time.len(), 3);
-        for k in 0..3 {
+        for (k, rt) in RT.iter().enumerate() {
             assert_eq!(c.intensity[k] as u32, canali_mrm(k as u32)[j]);
-            assert!((c.time[k] - f64::from(RT[k])).abs() < 1e-6);
+            assert!((c.time[k] - f64::from(*rt)).abs() < 1e-6);
         }
     }
 }

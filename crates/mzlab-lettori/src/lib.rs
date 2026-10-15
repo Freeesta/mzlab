@@ -8,9 +8,9 @@ use mzlab_core::lettori::{self, Fiducia, FileSet, Lettore, Limiti, VoceLettore};
 pub mod andi;
 #[cfg(any(feature = "aperti", feature = "tutte"))]
 pub mod aperti;
+pub mod srm;
 #[cfg(any(feature = "waters", feature = "tutte"))]
 pub mod waters;
-pub mod srm;
 
 // The readers of each family, one `static` per `VoceLettore` of the registry; a family without readers yet is born with its own package.
 #[cfg(any(feature = "aperti", feature = "tutte"))]
