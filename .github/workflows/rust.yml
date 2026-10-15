@@ -1,5 +1,6 @@
 # Rust engine (crates/): tests, WASM build and a check of the dependencies in the WASM graph.
 # The only check of the protected main branch for the Rust engine is the always-on job `rust-ok`. fmt, clippy and deny block this workflow (clippy and fmt against tools/clippy_base.json, which can only shrink).
+# Cache: every run restores the newest one; only runs on main save a new one (a cache saved on a pull request is not visible to the other pull requests and would only push out the one of main).
 name: rust
 
 on:
@@ -18,6 +19,7 @@ jobs:
   # Decides from the changed paths whether the Rust jobs run (the workflow itself has no path filter, so `rust-ok` always reports).
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       rust: ${{ steps.diff.outputs.rust }}
     steps:
@@ -41,6 +43,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -48,14 +51,14 @@ jobs:
           python-version: "3.13"
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          key: rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.sha }}
           restore-keys: rust-${{ runner.os }}-
       - name: numpy (the parity tests write the synthetic files with tools/golden.py)
         run: python -m pip install numpy
@@ -73,6 +76,16 @@ jobs:
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features proofs
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features mrm
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-table-wasm
+      # saved right after the builds, so a red guard or clippy does not lose the cache (main only)
+      - uses: actions/cache/save@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.sha }}
       - name: No native dependencies in the WASM graph
         run: |
           for p in mzlab-wasm mzlab-lib mzlab-lib-wasm mzlab-feat mzlab-feat-wasm mzlab-feat-table-wasm mzlab-feat-grafo-wasm; do
@@ -95,6 +108,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v2
