@@ -127,7 +127,7 @@ Un pacchetto = una chat DEV = una PR unita a CI verde, pubblicata subito dietro 
 
 | Pacchetto | Contenuto | Onda | Dipende da | `.wasm` | Stima (giorni-chat) | Stato |
 |---|---|---|---|---|---|---|
-| AT-00 | fondamenta: campagna sintetica in `tests/data/attributio/`, `tools/attributio_riferimento.py` e dati d'oro, `docs/agenti/attributio.md`, riga di AGENTS.md §5, riga di `LICENZE-TERZI.md` | 1 | — | nessuno | 1 | da fare |
+| AT-00 | fondamenta: campagna sintetica in `tests/data/attributio/`, `tools/attributio_riferimento.py` e dati d'oro, `docs/agenti/attributio.md`, riga di AGENTS.md §5, riga di `LICENZE-TERZI.md` | 1 | — | nessuno | 1 | fatto: 15 feature, dati d'oro 35 KB, `--controlla` passato al primo colpo |
 | AT-01 | `campaign.toml` (sottoinsieme TOML), lettori (mzMine, SIRIUS, GNPS2, MGF, standard, decisioni), sorbenti e DETECTED, `feature_state` | 2 | AT-00 | nessuno | 2 | da fare |
 | AT-05 | abbinamento della revisione, indice delle librerie, fonti, Δm, sopra `crates/mzlab-lib` | 2 | AT-00 | nessuno | 1,5 | da fare |
 | AT-02 | cascata dei livelli (`annotate.py`) e controlli di formula | 3 | AT-01 | nessuno | 2 | da fare |

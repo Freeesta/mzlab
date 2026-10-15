@@ -79,6 +79,7 @@ declare var TPTR: any;
 declare var TRANS: any;
 declare var UNTUI: any;
 declare var WORKFLOW: any;
+declare var WatersRaw: any;
 declare var XLSX_MIME: any;
 declare var __m3d: any;
 declare var __mir: any;

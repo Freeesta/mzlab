@@ -1,0 +1,335 @@
+{
+ "features": [
+  {
+   "id": 1,
+   "level": 1,
+   "level_basis": "reference standard",
+   "level_sub": "",
+   "name": "TestStandardA",
+   "pol": "POS",
+   "proposed": "1",
+   "reasons": [
+    "Level 1: decided in level1_decisions.csv (attributio livello1)"
+   ],
+   "tier": "1"
+  },
+  {
+   "id": 2,
+   "level": 3,
+   "level_basis": "expert review",
+   "level_sub": "",
+   "name": "Fictacin B",
+   "pol": "POS",
+   "proposed": "3",
+   "reasons": [
+    "no structure/formula to test"
+   ],
+   "tier": "3-keep"
+  },
+  {
+   "id": 3,
+   "level": 2,
+   "level_basis": "spectral library",
+   "level_sub": "a",
+   "name": "Caffeine",
+   "pol": "POS",
+   "proposed": "3",
+   "reasons": [
+    "no structure/formula to test"
+   ],
+   "tier": "2a->3"
+  },
+  {
+   "id": 4,
+   "level": 3,
+   "level_basis": "CSI:FingerID",
+   "level_sub": "",
+   "name": "Caffeine",
+   "pol": "POS",
+   "proposed": "3",
+   "reasons": [
+    "precursor not explained by the named structure within 5 ppm"
+   ],
+   "tier": "3-keep"
+  },
+  {
+   "id": 8,
+   "level": 3,
+   "level_basis": "name conflict",
+   "level_sub": "",
+   "name": "Fictamine",
+   "pol": "POS",
+   "proposed": "3",
+   "reasons": [
+    "fragments explained: 0 of 0 peaks, 0% of intensity (decoy 0%)",
+    "valid sources name different structures: decide which one the fragments support"
+   ],
+   "tier": "3-keep"
+  },
+  {
+   "id": 9,
+   "level": 2,
+   "level_basis": "spectral library",
+   "level_sub": "a",
+   "name": "Fictamol",
+   "pol": "POS",
+   "proposed": "3",
+   "reasons": [
+    "fragments explained: 0 of 0 peaks, 0% of intensity (decoy 0%)"
+   ],
+   "tier": "2a->3"
+  },
+  {
+   "id": 10,
+   "level": 3,
+   "level_basis": "isomers not discriminated",
+   "level_sub": "",
+   "name": "Fictazine",
+   "pol": "POS",
+   "proposed": "3",
+   "reasons": [
+    "no structure/formula to test",
+    "the same spectrum matches peaks at several retention times: the spectrum cannot separate the isomers, so 2b is not reachable from MS/MS"
+   ],
+   "tier": "3-keep"
+  },
+  {
+   "id": 11,
+   "level": 3,
+   "level_basis": "isomers not discriminated",
+   "level_sub": "",
+   "name": "Fictazine",
+   "pol": "POS",
+   "proposed": "3",
+   "reasons": [
+    "no structure/formula to test",
+    "the same spectrum matches peaks at several retention times: the spectrum cannot separate the isomers, so 2b is not reachable from MS/MS"
+   ],
+   "tier": "3-keep"
+  },
+  {
+   "id": 12,
+   "level": 2,
+   "level_basis": "spectral library",
+   "level_sub": "a",
+   "name": "Fictolol",
+   "pol": "POS",
+   "proposed": "3",
+   "reasons": [
+    "no structure/formula to test"
+   ],
+   "tier": "2a->3"
+  },
+  {
+   "id": 13,
+   "level": 3,
+   "level_basis": "CSI:FingerID",
+   "level_sub": "",
+   "name": "Fictolol",
+   "pol": "POS",
+   "proposed": "3",
+   "reasons": [
+    "precursor not explained by the named structure within 5 ppm"
+   ],
+   "tier": "3-keep"
+  },
+  {
+   "id": 14,
+   "level": 3,
+   "level_basis": "RT isomer",
+   "level_sub": "",
+   "name": "TestStandardA",
+   "pol": "POS",
+   "proposed": "3",
+   "reasons": [
+    "no structure/formula to test"
+   ],
+   "tier": "3-keep"
+  }
+ ],
+ "settings": {
+  "analog_window_da": 250.0,
+  "delta_formula_mda": 5.0,
+  "deltas": [
+   [
+    "+H2",
+    2.01565
+   ],
+   [
+    "-H2",
+    -2.01565
+   ],
+   [
+    "+CH2",
+    14.01565
+   ],
+   [
+    "-CH2",
+    -14.01565
+   ],
+   [
+    "+C2H4",
+    28.0313
+   ],
+   [
+    "-C2H4",
+    -28.0313
+   ],
+   [
+    "+O",
+    15.994915
+   ],
+   [
+    "-O",
+    -15.994915
+   ],
+   [
+    "+H2O",
+    18.010565
+   ],
+   [
+    "-H2O",
+    -18.010565
+   ],
+   [
+    "+CO",
+    27.994915
+   ],
+   [
+    "-CO",
+    -27.994915
+   ],
+   [
+    "+CO2",
+    43.989829
+   ],
+   [
+    "-CO2",
+    -43.989829
+   ],
+   [
+    "+C2H2O (acetyl)",
+    42.010565
+   ],
+   [
+    "-C2H2O (acetyl)",
+    -42.010565
+   ],
+   [
+    "+NH3",
+    17.026549
+   ],
+   [
+    "-NH3",
+    -17.026549
+   ],
+   [
+    "+NH",
+    15.010899
+   ],
+   [
+    "+SO3 (sulfate)",
+    79.956815
+   ],
+   [
+    "-SO3",
+    -79.956815
+   ],
+   [
+    "+C6H8O6 (glucuronide)",
+    176.032088
+   ],
+   [
+    "-C6H8O6",
+    -176.032088
+   ],
+   [
+    "+C6H10O5 (hexose)",
+    162.052824
+   ],
+   [
+    "-C6H10O5",
+    -162.052824
+   ],
+   [
+    "+HPO3",
+    79.966331
+   ],
+   [
+    "+CH2O (hydroxymethyl)",
+    30.010565
+   ],
+   [
+    "+Cl-H",
+    33.961028
+   ],
+   [
+    "-Cl+H",
+    -33.961028
+   ],
+   [
+    "+Br-H",
+    77.910511
+   ],
+   [
+    "+CH2O2 (formic)",
+    46.005479
+   ],
+   [
+    "+C3H4O3",
+    88.016044
+   ],
+   [
+    "+O-H2 (oxo)",
+    13.979265
+   ],
+   [
+    "+C2H3NO (glycine)",
+    57.021464
+   ],
+   [
+    "+C5H7NO3 (glutamine)",
+    129.042593
+   ],
+   [
+    "+C3H5NO2S (cysteine)",
+    119.004099
+   ],
+   [
+    "+C10H15N3O6S (glutathione)",
+    305.068156
+   ],
+   [
+    "+C2H4O (ethoxy)",
+    44.026215
+   ],
+   [
+    "+C3H6 (propyl)",
+    42.04695
+   ],
+   [
+    "+C4H8",
+    56.0626
+   ],
+   [
+    "+Na-H",
+    21.981943
+   ],
+   [
+    "+K-H",
+    37.955882
+   ]
+  ],
+  "exact_ppm": 15.0,
+  "hash": "2b098c988fc8",
+  "insource_rt_min": 0.05,
+  "l2a_min_cos_vis": 0.7,
+  "l2a_min_matched_vis": 4,
+  "manifest": {},
+  "ppm_frag": 10.0,
+  "spec_peaks_min": 4,
+  "spec_sim_min": 0.7,
+  "tol_da": 0.02,
+  "used": "tol_da=0.02;ppm_frag=10.0;exact_ppm=15.0;analog_window_da=250.0;spec_sim_min=0.7;spec_peaks_min=4;l2a_min_cos_vis=0.7;l2a_min_matched_vis=4;delta_formula_mda=5.0"
+ }
+}
