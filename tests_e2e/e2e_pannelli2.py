@@ -23,6 +23,16 @@ try:
             assert t.count("Sottrai file:") == 1 and pg.locator(".pnl.chrom .corrm option").count() == 3, t      # one entry, any of the 3 files in its chooser, not only the blank
             pg.keyboard.press("Escape")
         step("Correzione: in the header, one entry and a chooser with the 3 files", corr_out)
+        def corr_icons():
+            b = pg.evaluate("[...document.querySelectorAll('.pnl.chrom .corrb')].map(b=>({svg:b.querySelector('svg').innerHTML,aria:b.getAttribute('aria-label'),on:b.classList.contains('on')}))")
+            assert len(b) == 2 and b[0]["svg"] != b[1]["svg"], "«Subtract a file» and «Subtract the background» have different icons"
+            assert b[0]["aria"] == "Sottrai un file" and b[1]["aria"] == "Sottrai il fondo", b
+            assert "<circle" not in b[0]["svg"] and "<circle" not in b[1]["svg"], "neither idle icon is the «none» ⊘"
+            pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Sottrai file").first.click()
+            attendi(pg, "document.querySelector('.pnl.chrom [data-o=corr]').classList.contains('on')")      # active state is marked
+            pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Nessuna").first.click()
+            attendi(pg, "!document.querySelector('.pnl.chrom [data-o=corr]').classList.contains('on')")
+        step("Correzione: the two subtract buttons have different icons and explicit names", corr_icons)
         def subtract():
             pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_timeout(200)
             pg.locator(".pnl.chrom .corri", has_text="Sottrai file").first.click(); pg.wait_for_timeout(1500)

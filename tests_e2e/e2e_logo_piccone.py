@@ -1,5 +1,5 @@
 """Logo easter egg (logo-piccone.js): 5 hits (click or Enter): the logo turns gold and stays gold after a reload; the next five hits
-give the original logo back (alternation, two rounds, light and dark theme); the cracks close if the hits stop; with and without reduced motion.
+give the original logo back and leave the administrator mode (alternation, two rounds, light and dark theme); the cracks close if the hits stop; with and without reduced motion.
 Run from the repo root: python3 tests_e2e/e2e_logo_piccone.py"""
 import sys
 from pathlib import Path
@@ -37,7 +37,7 @@ def run(p, reduced):
         pg.wait_for_function("document.documentElement.hasAttribute('data-logo-gold')", timeout=8000)
         pg.wait_for_function("getComputedStyle(document.querySelector('header img.logo')).opacity === '1'", timeout=5000)
         g = gold(pg); assert g[1] == "1" and g[2] != "none", g
-        assert pg.evaluate("localStorage.getItem('qqq.admin')") == "1"      # the same gesture is the administrator switch
+        assert pg.evaluate("localStorage.getItem('qqq.admin')") == "1"      # the same gesture switches the administrator mode on
     step(tag + "5 clicks: logo gold", five)
     def reload():
         pg.reload(); pg.wait_for_selector("#drop", timeout=60000); pg.wait_for_timeout(500)
@@ -54,7 +54,8 @@ def run(p, reduced):
         for _ in range(5): pg.keyboard.press("Enter"); pg.wait_for_timeout(80)
         pg.wait_for_function("!document.documentElement.hasAttribute('data-logo-gold') && getComputedStyle(document.querySelector('header img.logo')).opacity === '1'", timeout=8000)
         g = gold(pg); assert g[0] is False and g[1] is None and g[2] == "none", g
-    step(tag + "second round (Enter x5): original logo back", keyboard)
+        pg.wait_for_function("localStorage.getItem('qqq.admin') === null", timeout=5000)      # the same gesture leaves the administrator mode (and reloads the page)
+    step(tag + "second round (Enter x5): original logo back, administrator mode off", keyboard)
     def reload2():
         pg.reload(); pg.wait_for_selector("#drop", timeout=60000); pg.wait_for_timeout(500)
         g = gold(pg); assert g[0] is False and g[2] == "none" and not tab(pg), g

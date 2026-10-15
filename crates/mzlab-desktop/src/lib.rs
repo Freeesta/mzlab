@@ -9,6 +9,7 @@ mod feat_finder;
 mod feat_grafo;
 mod feat_import;
 mod feat_msn;
+mod feat_untargeted;
 pub mod idxbuild;
 mod idxbuild_nat;
 pub mod librerie;

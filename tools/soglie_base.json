@@ -2,7 +2,7 @@
  "doc_kb": {},
  "doc_righe": {},
  "file": {
-  "TP_Mine/js/20_tpmine.js": 638,
+  "TP_Mine/js/20_tpmine.js": 920,
   "TP_Mine/py/tpmine/engine.py": 680,
   "TP_Mine/py/tpmine/hr/engine.py": 552,
   "TP_Mine/tests/test_hr_real.py": 539,
@@ -10,9 +10,11 @@
   "crates/mzlab-core/src/iteminfo.rs": 670,
   "crates/mzlab-core/src/mzidx.rs": 1130,
   "crates/mzlab-core/src/mzmlhead.rs": 577,
+  "crates/mzlab-core/src/rawlettore.rs": 680,
   "crates/mzlab-core/src/scantable.rs": 709,
   "crates/mzlab-core/src/scantable/rows.rs": 700,
   "crates/mzlab-desktop/src/update.rs": 867,
+  "crates/mzlab-feat-wasm/src/lib.rs": 680,
   "crates/mzlab-feat/src/attributio/review/explain.rs": 725,
   "crates/mzlab-feat/src/attributio/review/feature.rs": 800,
   "crates/mzlab-feat/src/attributio/review/propose.rs": 822,
@@ -42,10 +44,11 @@
   "mzlab/web/picchi.js": 557,
   "mzlab/web/tour.js": 719,
   "tools/attributio_riferimento.py": 720,
-  "tools/genera_ei.py": 751,
-  "crates/mzlab-core/src/rawlettore.rs": 680
+  "tools/genera_ei.py": 751
  },
  "funzioni": {
+  "TP_Mine/files/feat-desktop-pool.js::createDesktopPool": 120,
+  "TP_Mine/files/feat-worker.js::createFeatPool": 125,
   "TP_Mine/js/20_tpmine.js::open": 488,
   "TP_Mine/js/21_tpmine_hr.js::render": 196,
   "TP_Mine/js/23_tpmine_albero.js::mount": 193,
@@ -73,6 +76,7 @@
   "crates/mzlab-core/src/mzmlhead.rs::Mzml": 320,
   "crates/mzlab-core/src/mzmlhead.rs::metadata": 117,
   "crates/mzlab-core/src/peakq.rs::valley": 112,
+  "crates/mzlab-core/src/rawlettore.rs::field": 115,
   "crates/mzlab-core/src/rois.rs::build_rois": 218,
   "crates/mzlab-core/src/routes.rs::Routes": 268,
   "crates/mzlab-core/src/scantable.rs::opt": 126,
@@ -112,6 +116,7 @@
   "crates/mzlab-feat/tests/attributio_spiegazioni.rs::purity_and_raw_proofs_equal_the_reference_tool": 193,
   "crates/mzlab-feat/tests/attributio_spiegazioni.rs::raw_proofs": 120,
   "crates/mzlab-feat/tests/attributio_spiegazioni.rs::rt_versus_logp_equals_the_reference_tool": 137,
+  "crates/mzlab-lettori-wasm/src/sessione.rs::Sessioni": 123,
   "crates/mzlab-lib-wasm/src/lib.rs::Importer": 143,
   "crates/mzlab-lib-wasm/src/lib.rs::analog_json": 144,
   "crates/mzlab-lib/src/build.rs::Builder": 354,
@@ -124,6 +129,7 @@
   "crates/mzlab-lib/src/search.rs::flash_scores": 89,
   "crates/mzlab-lib/tests/parita.rs::check_attributio": 100,
   "crates/mzlab-lib/tests/parita.rs::flash_through_the_mzlib_matches_within_1e_4_and_ranks_the_same": 97,
+  "crates/mzlab-wasm/src/esterno.rs::ModuloJs": 106,
   "crates/mzlab-wasm/src/lib.rs::JsReader": 302,
   "mzlab/app.py::App": 553,
   "mzlab/chem/composition.py::compose": 159,
@@ -201,9 +207,6 @@
   "mzlab/web/workflow.js::WORKFLOW": 379,
   "tools/bench_mirino.py::run": 85,
   "tools/controlla_teoria.py::public_errors": 94,
-  "tools/dati_sintetici.py::hr_dda": 103,
-  "crates/mzlab-core/src/rawlettore.rs::field": 115,
-  "crates/mzlab-lettori-wasm/src/sessione.rs::Sessioni": 123,
-  "crates/mzlab-wasm/src/esterno.rs::ModuloJs": 106
+  "tools/dati_sintetici.py::hr_dda": 103
  }
 }

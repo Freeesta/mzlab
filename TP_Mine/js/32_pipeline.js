@@ -64,7 +64,7 @@
     const url = URL.createObjectURL(new Blob([c.files["feat-worker.js"]], { type: "text/javascript" }));
     const mod = await import(url);
     const w = m => ({ jsUrl: u(m.js), wasmUrl: u(m.wasm), sha256: m.sha256 });
-    st.pool = mod.createFeatPool({ workerUrl: url, size: 1, wasm: { feat: w(man.feat), proofs: w(man.proofs), ...(man.table ? { table: w(man.table) } : {}) }, notify: (k, p) => say(msg(k, p)) });
+    st.pool = mod.createFeatPool({ workerUrl: url, size: 1, wasm: { feat: w(man.feat), proofs: w(man.proofs), ...(man.table ? { table: w(man.table) } : {}), ...(man.untargeted ? { untargeted: w(man.untargeted) } : {}) }, notify: (k, p) => say(msg(k, p)) });
     st.crate = await st.pool.crateVersion();
     return st.pool;
   }
@@ -74,6 +74,8 @@
   function apply(p) {
     const set = (id, v) => { if (v != null) $(id).value = v; };
     set("#pipe-ppm", p.ppm); set("#pipe-hmin", p.min_height); set("#pipe-npts", p.min_points); set("#pipe-rt", p.rt_tol); set("#pipe-pol", p.polarity); set("#pipe-mode", p.mode);
+    if (p.engine === "untargeted") { applyUnt(p); return; }
+    if ($("#pipe-engine")) { $("#pipe-engine").value = "finder"; engineChanged(); }
     if (typeof p.fill === "boolean") $("#pipe-fill").checked = p.fill;
     st.auto.floor = p.floor == null; if (p.floor != null) { $("#pipe-floor").value = p.floor; $("#pipe-floor-why").textContent = "chosen"; }
   }
@@ -83,7 +85,25 @@
     v.floor = n("#pipe-floor");
     return v;
   }
-  const recipe = v => { const o = { polarity: v.polarity, mode: v.mode, ppm: v.ppm, min_height: v.min_height, min_points: v.min_points, rt_tol: v.rt_tol, fill: v.fill };
+  // engine «untargeted» (mzmine 3.9.0 algorithms in Rust, crates/mzlab-feat/src/untargeted): [label of mzmine] next to each name; admin only
+  const UNT = [["noise", "adap", "noise", "Noise level [mass detector]", 10000], ["tol_ppm", "adap", "tol_ppm", "Mass tolerance (ppm) [ADAP]", 5], ["min_highest", "adap", "min_highest", "Min. highest intensity [ADAP]", 30000],
+    ["min_group", "adap", "min_group_intensity", "Min. group intensity [ADAP]", 10000], ["min_cons", "adap", "min_consecutive", "Min. consecutive scans [ADAP]", 5],
+    ["chrom", "resolve", "chrom_threshold", "Chromatographic threshold [resolver]", 0.85], ["srt", "resolve", "search_rt", "Search RT range (min) [resolver]", 0.1], ["minratio", "resolve", "min_ratio", "Min. ratio of peak top/edge [resolver]", 1.7],
+    ["minabs", "resolve", "min_abs_height", "Min. absolute height [resolver]", 30000], ["jppm", "join", "tol_ppm", "m/z tolerance (ppm) [join aligner]", 5], ["jrt", "join", "rt_tol", "RT tolerance (min) [join aligner]", 0.2],
+    ["grt", "gap", "rt_tol", "RT tolerance (min) [gap filling]", 0.2]];
+  const untOn = () => !!$("#pipe-engine") && $("#pipe-engine").value === "untargeted";
+  function untValues() {
+    const o = { engine: "untargeted", polarity: +$("#pipe-pol").value, adap: {}, resolve: {}, join: {}, gap: {} };
+    for (const [id, sec, key] of UNT) { const x = parseFloat($("#pipe-u-" + id).value); if (Number.isFinite(x) && x >= 0) o[sec][key] = x; }
+    return o;
+  }
+  function applyUnt(p) {
+    $("#pipe-engine").value = "untargeted"; engineChanged();
+    if (p.polarity != null) $("#pipe-pol").value = p.polarity;
+    for (const [id, sec, key] of UNT) if (p[sec] && p[sec][key] != null) $("#pipe-u-" + id).value = p[sec][key];
+  }
+  function engineChanged() { const u = untOn(); $("#pipe-unt").hidden = !u; $("#pipe-fin").hidden = u; $("#pipe-go").disabled = u; }
+  const recipe = v => { if (untOn()) return JSON.stringify(untValues()); const o = { polarity: v.polarity, mode: v.mode, ppm: v.ppm, min_height: v.min_height, min_points: v.min_points, rt_tol: v.rt_tol, fill: v.fill };
     if (!st.auto.floor && v.floor > 0) o.floor = v.floor; return JSON.stringify(o); };
 
   // ------------------------------------------------------------ charts (SVG, the data in a table through TDATI)
@@ -156,19 +176,23 @@
 
   // ------------------------------------------------------------ panel
   const field = (id, label, val, extra = "", why = "") => `<label>${label}<input id="pipe-${id}" type="number" value="${esc(val)}" step="any" ${extra}><span class="why" id="pipe-${id}-why">${why}</span></label>`;
+  const admin = () => typeof uipAdminOn === "function" && uipAdminOn();
   function build() {
     dlg = document.createElement("dialog"); dlg.id = "pipe"; dlg.setAttribute("aria-label", "Pipeline"); document.body.appendChild(dlg);
     dlg.innerHTML = `<div class="top"><h3>Pipeline</h3><button type="button" id="pipe-x" aria-label="Close">&times;</button></div>
       <div class="row"><label>File <select id="pipe-file" aria-label="Index file"></select></label><button type="button" id="pipe-ref" aria-label="Refresh the list of files">&#8635;</button>
         <button type="button" id="pipe-go" class="imp">Preview</button><span id="pipe-n" class="mut"></span></div>
       <div id="pipe-msg" class="mut" role="status"></div>
-      <div class="par">${field("ppm", "Mass tolerance (ppm)", DEF.ppm, 'min="0.5"')}${field("floor", "Noise floor (intensity)", DEF.floor, 'min="1"', "default")}
+      ${admin() ? `<div class="row"><label>Engine <select id="pipe-engine" aria-label="Engine of the pipeline"><option value="finder">mzFinder</option><option value="untargeted">mzmine-like (Attributio)</option></select></label></div>` : ""}
+      <div id="pipe-unt" hidden><div class="par">${UNT.map(([id, , , label, d]) => field("u-" + id, label, d, 'min="0"')).join("")}</div></div>
+      <div id="pipe-fin" class="par">${field("ppm", "Mass tolerance (ppm)", DEF.ppm, 'min="0.5"')}${field("floor", "Noise floor (intensity)", DEF.floor, 'min="1"', "default")}
         ${field("hmin", "Minimum height", DEF.min_height, 'min="1"')}${field("npts", "Minimum points", DEF.min_points, 'min="2" step="1"')}${field("rt", "RT tolerance of the alignment (min)", DEF.rt_tol, 'min="0.005"')}
         <label>Fill the gaps<input id="pipe-fill" type="checkbox" checked style="width:24px;height:24px"></label></div>
       <details><summary>Advanced</summary><div class="par"><label>Polarity<select id="pipe-pol"><option value="1">positive</option><option value="-1">negative</option></select></label>
         <label>Rows<select id="pipe-mode"><option value="family">one per family of ions</option><option value="ion">one per ion</option></select></label></div></details>
       <div id="pipe-proof"></div><div class="charts" id="pipe-hist"><div class="ch a"></div><div class="ch b"></div></div><div class="charts" id="pipe-ex"></div><div id="pipe-run"></div>`;
     $("#pipe-x").onclick = () => dlg.close();
+    if ($("#pipe-engine")) $("#pipe-engine").onchange = engineChanged;
     $("#pipe-go").onclick = preview; $("#pipe-ref").onclick = refresh;
     $("#pipe-floor").oninput = () => { st.auto.floor = false; $("#pipe-floor-why").textContent = "chosen"; };
     $("#pipe-ppm").oninput = () => { st.auto.ppm = true; };
