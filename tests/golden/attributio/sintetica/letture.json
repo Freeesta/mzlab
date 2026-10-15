@@ -1,0 +1,369 @@
+{
+ "decisioni_colonne": [
+  "pol",
+  "feature_id",
+  "mz",
+  "rt",
+  "livello",
+  "nome",
+  "identita",
+  "decided_on",
+  "decided_by",
+  "motivazione",
+  "group",
+  "evidence_type",
+  "evidence_library",
+  "evidence_entry",
+  "evidence_cosine",
+  "evidence_matched",
+  "evidence_delta_mz",
+  "evidence_delta_formula",
+  "evidence_note",
+  "rt_check",
+  "app_version",
+  "settings_hash",
+  "settings_used",
+  "evidence_ref_hash",
+  "evidence_ref_source"
+ ],
+ "gnps_libreria": {
+  "NEG": {
+   "colonne": [
+    "_pol",
+    "_id",
+    "gnps_name",
+    "gnps_score",
+    "gnps_peaks",
+    "gnps_massdiff",
+    "gnps_exact",
+    "gnps_inchikey",
+    "gnps_smiles"
+   ],
+   "prime5": [],
+   "righe": 0
+  },
+  "POS": {
+   "colonne": [
+    "_pol",
+    "_id",
+    "gnps_name",
+    "gnps_score",
+    "gnps_peaks",
+    "gnps_massdiff",
+    "gnps_exact",
+    "gnps_inchikey",
+    "gnps_smiles"
+   ],
+   "prime5": [
+    {
+     "_id": 12,
+     "_pol": "POS",
+     "gnps_exact": true,
+     "gnps_inchikey": "JJJJJJJJJJJJJJ",
+     "gnps_massdiff": 0.0,
+     "gnps_name": "Fictolol",
+     "gnps_peaks": 9,
+     "gnps_score": 0.91,
+     "gnps_smiles": null
+    },
+    {
+     "_id": 10,
+     "_pol": "POS",
+     "gnps_exact": true,
+     "gnps_inchikey": "IIIIIIIIIIIIII",
+     "gnps_massdiff": 0.0,
+     "gnps_name": "Fictazine",
+     "gnps_peaks": 8,
+     "gnps_score": 0.9,
+     "gnps_smiles": null
+    },
+    {
+     "_id": 11,
+     "_pol": "POS",
+     "gnps_exact": true,
+     "gnps_inchikey": "IIIIIIIIIIIIII",
+     "gnps_massdiff": 0.0,
+     "gnps_name": "Fictazine",
+     "gnps_peaks": 7,
+     "gnps_score": 0.88,
+     "gnps_smiles": null
+    },
+    {
+     "_id": 3,
+     "_pol": "POS",
+     "gnps_exact": true,
+     "gnps_inchikey": "RYYVLZVUVIJVGH",
+     "gnps_massdiff": 0.0,
+     "gnps_name": "Caffeine",
+     "gnps_peaks": 8,
+     "gnps_score": 0.85,
+     "gnps_smiles": "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"
+    },
+    {
+     "_id": 14,
+     "_pol": "POS",
+     "gnps_exact": true,
+     "gnps_inchikey": "KKKKKKKKKKKKKK",
+     "gnps_massdiff": 0.0,
+     "gnps_name": "TestStandardA",
+     "gnps_peaks": 6,
+     "gnps_score": 0.85,
+     "gnps_smiles": null
+    }
+   ],
+   "righe": 5
+  }
+ },
+ "gnps_rete": {
+  "NEG": {
+   "colonne": [
+    "_pol",
+    "_id",
+    "gnps_component",
+    "gnps_component_size"
+   ],
+   "prime5": [],
+   "righe": 0
+  },
+  "POS": {
+   "colonne": [
+    "_pol",
+    "_id",
+    "gnps_component",
+    "gnps_component_size"
+   ],
+   "prime5": [
+    {
+     "_id": 3,
+     "_pol": "POS",
+     "gnps_component": 7,
+     "gnps_component_size": 1
+    }
+   ],
+   "righe": 1
+  }
+ },
+ "mzmine_libreria": {
+  "NEG": {
+   "colonne": [
+    "_pol",
+    "_id",
+    "mzlib_name",
+    "mzlib_score",
+    "mzlib_peaks",
+    "mzlib_method",
+    "mzlib_inchikey",
+    "mzlib_smiles",
+    "mzlib_formula",
+    "mzlib_precursor_mz",
+    "mzlib_adduct",
+    "mzlib_entry",
+    "mzlib_usi"
+   ],
+   "prime5": [],
+   "righe": 0
+  },
+  "POS": {
+   "colonne": [
+    "_pol",
+    "_id",
+    "mzlib_name",
+    "mzlib_score",
+    "mzlib_peaks",
+    "mzlib_method",
+    "mzlib_inchikey",
+    "mzlib_smiles",
+    "mzlib_formula",
+    "mzlib_precursor_mz",
+    "mzlib_adduct",
+    "mzlib_entry",
+    "mzlib_usi"
+   ],
+   "prime5": [
+    {
+     "_id": 2,
+     "_pol": "POS",
+     "mzlib_adduct": "[M+H]+",
+     "mzlib_entry": null,
+     "mzlib_formula": null,
+     "mzlib_inchikey": "AAAAAAAAAAAAAAAAAAAAAAAAAA-UHFFFAOYSA-N",
+     "mzlib_method": "spectral library",
+     "mzlib_name": "Fictacin B",
+     "mzlib_peaks": 5.0,
+     "mzlib_precursor_mz": 250.1234,
+     "mzlib_score": 0.85,
+     "mzlib_smiles": null,
+     "mzlib_usi": null
+    },
+    {
+     "_id": 6,
+     "_pol": "POS",
+     "mzlib_adduct": "[M+H]+",
+     "mzlib_entry": null,
+     "mzlib_formula": null,
+     "mzlib_inchikey": "GGGGGGGGGGGGGG-UHFFFAOYSA-N",
+     "mzlib_method": "spectral library",
+     "mzlib_name": "Fictoxin",
+     "mzlib_peaks": 3.0,
+     "mzlib_precursor_mz": 310.3,
+     "mzlib_score": 0.93,
+     "mzlib_smiles": null,
+     "mzlib_usi": null
+    },
+    {
+     "_id": 8,
+     "_pol": "POS",
+     "mzlib_adduct": "[M+H]+",
+     "mzlib_entry": null,
+     "mzlib_formula": "C17H20N2O3",
+     "mzlib_inchikey": "DDDDDDDDDDDDDD-UHFFFAOYSA-N",
+     "mzlib_method": "spectral library",
+     "mzlib_name": "Fictamine",
+     "mzlib_peaks": 7.0,
+     "mzlib_precursor_mz": 301.1547,
+     "mzlib_score": 0.9,
+     "mzlib_smiles": null,
+     "mzlib_usi": null
+    },
+    {
+     "_id": 9,
+     "_pol": "POS",
+     "mzlib_adduct": "[M+H]+",
+     "mzlib_entry": null,
+     "mzlib_formula": "C18H22N2O2",
+     "mzlib_inchikey": "FFFFFFFFFFFFFF-UHFFFAOYSA-N",
+     "mzlib_method": "spectral library",
+     "mzlib_name": "Fictamol",
+     "mzlib_peaks": 4.0,
+     "mzlib_precursor_mz": 299.1754,
+     "mzlib_score": 0.88,
+     "mzlib_smiles": null,
+     "mzlib_usi": null
+    }
+   ],
+   "righe": 4
+  }
+ },
+ "mzmine_tabella": {
+  "NEG": {
+   "colonne": [
+    "id",
+    "mz",
+    "rt",
+    "datafile:SiteA_OA_ddaNEG.mzML:feature_state",
+    "datafile:SiteA_OA_ddaNEG.mzML:area",
+    "datafile:SiteA_EC_ddaNEG.mzML:feature_state",
+    "datafile:SiteA_EC_ddaNEG.mzML:area",
+    "datafile:SiteB_OA_ddaNEG.mzML:feature_state",
+    "datafile:SiteB_OA_ddaNEG.mzML:area",
+    "datafile:SiteB_EC_ddaNEG.mzML:feature_state",
+    "datafile:SiteB_EC_ddaNEG.mzML:area"
+   ],
+   "prime5": [
+    {
+     "id": 1,
+     "mz": 220.05,
+     "rt": 5.5
+    },
+    {
+     "id": 2,
+     "mz": 230.07,
+     "rt": 6.5
+    }
+   ],
+   "righe": 2
+  },
+  "POS": {
+   "colonne": [
+    "id",
+    "mz",
+    "rt",
+    "datafile:SiteA_OA_ddaPOS.mzML:feature_state",
+    "datafile:SiteA_OA_ddaPOS.mzML:area",
+    "datafile:SiteA_EC_ddaPOS.mzML:feature_state",
+    "datafile:SiteA_EC_ddaPOS.mzML:area",
+    "datafile:SiteB_OA_ddaPOS.mzML:feature_state",
+    "datafile:SiteB_OA_ddaPOS.mzML:area",
+    "datafile:SiteB_EC_ddaPOS.mzML:feature_state",
+    "datafile:SiteB_EC_ddaPOS.mzML:area",
+    "spectral_db_matches:compound_name",
+    "spectral_db_matches:similarity_score",
+    "spectral_db_matches:n_matching_signals",
+    "spectral_db_matches:ion_adduct",
+    "spectral_db_matches:mol_formula",
+    "spectral_db_matches:precursor_mz"
+   ],
+   "prime5": [
+    {
+     "id": 1,
+     "mz": 200.102,
+     "rt": 5.2
+    },
+    {
+     "id": 2,
+     "mz": 250.1234,
+     "rt": 6.0
+    },
+    {
+     "id": 3,
+     "mz": 195.0875,
+     "rt": 4.0
+    },
+    {
+     "id": 4,
+     "mz": 300.15,
+     "rt": 4.1
+    },
+    {
+     "id": 5,
+     "mz": 320.2,
+     "rt": 7.5
+    }
+   ],
+   "righe": 14
+  }
+ },
+ "sirius": {
+  "canopus": {
+   "colonne": [
+    "_pol",
+    "_id"
+   ],
+   "prime5": [],
+   "righe": 0
+  },
+  "spectral": {
+   "colonne": [
+    "_pol",
+    "_id"
+   ],
+   "prime5": [],
+   "righe": 0
+  },
+  "structure": {
+   "colonne": [
+    "_pol",
+    "_id"
+   ],
+   "prime5": [],
+   "righe": 0
+  }
+ },
+ "standard": [
+  {
+   "ESI_neg": "NO",
+   "ESI_pos": "YES",
+   "comment": null,
+   "formula": "C10H17NO2",
+   "molecular_class": "fictional",
+   "mz_M2H_pos2": 100.5546,
+   "mz_MHCOO_neg": null,
+   "mz_MH_neg": null,
+   "mz_MH_pos": 200.102,
+   "mz_MNH4_pos": 217.1285,
+   "mz_MNa_pos": 222.0839,
+   "name": "TestStandardA",
+   "rt": 5.2
+  }
+ ]
+}

@@ -18,6 +18,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     concurrency:
       group: pages-build
       cancel-in-progress: false
@@ -41,14 +42,15 @@ jobs:
           fi
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
-      - uses: actions/cache@v4
+      # every run restores the newest cache and saves a new one right after the builds (the runs are on main only)
+      - uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: pages-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          key: pages-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.sha }}
           restore-keys: pages-rust-${{ runner.os }}-
       - name: Build the WASM engine (only in the published site, never committed)
         run: |
@@ -66,6 +68,15 @@ jobs:
           tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries
       - name: Build the mzFinder WASM engines (the .wasm of their own, under 500 KB each, with their SHA-256; never committed)
         run: tools/build_feat_wasm.sh site/static
+      - name: Save the Rust cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: pages-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.sha }}
       - name: Restore the spectral-library packages from the cache (pinned MassBank release, built with the Rust builder, never committed)
         id: libcache
         uses: actions/cache/restore@v4
@@ -103,6 +114,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     concurrency:
       group: pages-deploy
       cancel-in-progress: false

@@ -1,0 +1,6 @@
+#Scan#	Compound_Name	MQScore	SharedPeaks	SpecMZ	MassDiff	InChIKey-Planar	Smiles
+3	Caffeine	0.85	8	195.0875	0.0	RYYVLZVUVIJVGH	CN1C=NC2=C1C(=O)N(C(=O)N2C)C
+10	Fictazine	0.9	8	222.1	0.0	IIIIIIIIIIIIII	
+11	Fictazine	0.88	7	222.1	0.0	IIIIIIIIIIIIII	
+12	Fictolol	0.91	9	240.2	0.0	JJJJJJJJJJJJJJ	
+14	TestStandardA	0.85	6	200.102	0.0	KKKKKKKKKKKKKK	
