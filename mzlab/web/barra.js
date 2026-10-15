@@ -471,24 +471,25 @@ const BARRA = (() => {
   function theoryCmds() {
     const T = tcmd(); if (!T) return [];
     const ed = theoryEditor();
-    return /** @type {any[]} */ (ed ? [{ id: "editor", teo: true, end: false, group: "tools", etichetta: I18N.t("theory.editor"), titolo: I18N.t("theory.editor.title"), chiave: "Alt+E", off: false, ic: () => EDIT_IC, run: () => ed.toggle() }] : []).concat(T.lista.map(c => ({ id: c.id, teo: true, end: c.gruppo === "fine", group: "tools", etichetta: c.etichetta, titolo: c.titolo || c.etichetta, chiave: c.chiave, off: !!c.disabilitato,
+    return /** @type {any[]} */ (ed ? [{ id: "editor", teo: true, end: false, group: "tools", etichetta: I18N.t("theory.editor"), titolo: I18N.t("theory.editor.title"), chiave: "Alt+E", off: false, ic: () => EDIT_IC, run: () => ed.toggle() }] : []).concat(T.lista.map(c => ({ id: c.id, teo: true, end: c.gruppo === "fine", lat: c.posto === "side", premuto: c.premuto, group: "tools", etichetta: c.etichetta, titolo: c.titolo || c.etichetta, chiave: c.chiave, off: !!c.disabilitato,
       ic: () => T.icona(c.icona), run: () => c.run(), items: c.figli && c.figli.map(f => ({ id: f.id, teo: true, group: "tools", etichetta: f.etichetta, ic: () => T.icona(c.icona), run: () => f.run() })) })));
   }
   const theoryAll = () => theoryCmds().flatMap(c => (c.items ? c.items : [c]));       // the palette finds the tools one by one
   function buildTheoryBar(bar) {
     const sep = '<span class="tb-sep" role="separator"></span>';
-    const cs = theoryCmds().filter(c => !c.end);
+    const cs = theoryCmds().filter(c => !c.end && !c.lat);
     const gear = theoryCmds().find(c => c.end);
-    const one = c => `<button type="button" class="tb" data-tcmd="${c.id}"${c.off ? ' aria-disabled="true"' : ""} title="${EHs(c.titolo)}" aria-label="${EHs(c.etichetta + (c.chiave ? " (" + c.chiave + ")" : ""))}"${c.items ? ' aria-haspopup="menu" aria-expanded="false"' : ""}><span class="ti">${c.ic()}</span><span class="tl">${EHs(c.etichetta)}</span></button>`;
-    bar.innerHTML = cs.filter(c => c.id === "prec" || c.id === "succ").map(one).join("") + sep + cs.filter(c => c.id !== "prec" && c.id !== "succ").map(one).join("") + (gear ? sep + one(gear) : "");
+    const one = c => `<button type="button" class="tb" data-tcmd="${c.id}"${c.off ? ' aria-disabled="true"' : ""}${c.premuto ? ` aria-pressed="${c.premuto()}"` : ""} title="${EHs(c.titolo)}" aria-label="${EHs(c.etichetta + (c.chiave ? " (" + c.chiave + ")" : ""))}"${c.items ? ' aria-haspopup="menu" aria-expanded="false"' : ""}><span class="ti">${c.ic()}</span><span class="tl">${EHs(c.etichetta)}</span></button>`;
+    bar.innerHTML = cs.filter(c => c.id === "indice" || c.id === "prec" || c.id === "succ").map(one).join("") + sep + cs.filter(c => c.id !== "indice" && c.id !== "prec" && c.id !== "succ").map(one).join("") + (gear ? sep + one(gear) : "");
     bar.querySelectorAll("button[data-tcmd]").forEach(b => {
       const c = cs.concat(gear || []).find(x => x.id === b.dataset.tcmd);
       b.tabIndex = -1;
       b.onclick = () => {
         if (c.off) return;
         if (c.items) { if (Q1("#stmenu") && Q1("#stmenu")._anchor === b) return closeMenu(true); openMenu(b, c.items.map(f => ({ label: f.etichetta, ic: f.ic(), dom: null, fn: () => f.run() }))); b.setAttribute("aria-expanded", "true"); }
-        else c.run();
+        else { c.run(); if (c.premuto) b.setAttribute("aria-pressed", String(c.premuto())); }
       };
+      if (c.premuto) { try { Q1("#tframe").contentDocument.addEventListener("tcmd-stato", () => b.setAttribute("aria-pressed", String(c.premuto()))); } catch (_) { /* frame not reachable */ } }
     });
     setRover(firstItem());
     fit();
