@@ -1,6 +1,6 @@
 # Studio: `.raw` Thermo veloci (apertura, centroidi, mzML, navigazione, metadati)
 
-Scopo: un `.raw` Thermo, anche un DDA da 600 MB, si apre, si indicizza, si naviga e si converte in centroidi/mzML nel sito senza attese percepibili; il metodo LC/MS esce intero. I prompt dei pacchetti sono in `docs/studi/PROMPT_RAW_VELOCE/`.
+Scopo: un `.raw` Thermo, anche un DDA da 600 MB, si apre, si indicizza, si naviga e si converte in centroidi/mzML nel sito senza attese percepibili; passa da Dati a Tabui (o entra direttamente in Tabui) senza conversioni manuali; tutto ciò che il file registra esce in `metodo/1` o in una traccia visibile. I prompt dei pacchetti sono in `docs/studi/PROMPT_RAW_VELOCE/`.
 
 ## 1. Come si misura (riproducibile)
 
@@ -82,6 +82,38 @@ La mappa e i suoi gesti hanno già misure e pacchetti in `docs/agenti/mappa-flui
 - la rotta `/api/dda` (albero dei precursori) usa solo i metadati dell'indice: costa O(scansioni) una volta, non è un collo di bottiglia;
 - lo scorrimento MS1/MS2 su un DDA costa una scansione per passo: con 99 µs è fluido; il limite è il primo indice (2.3).
 
+### 2.8 Inventario di tutte le strutture del `.raw`
+
+Misurato su 30 `.raw` aperti di `dati_formati/` (sonda temporanea su `RawFileReader`). Colonne: cosa contiene; se opentfraw la legge; dove arriva oggi in mzLab; pacchetto per ciò che manca. «campi» = `metodo/1.campi` (regola «nessuna perdita», `docs/agenti/grezzi-non-estratti.md`).
+
+| Struttura | Contenuto | opentfraw | mzLab oggi | Manca → pacchetto |
+|---|---|---|---|---|
+| FileHeader | versione, audit tag di creazione/modifica (utente, data) | sì | `origine.file_creato`, `operatore.utente` (identità), campi | – |
+| SeqRow | vial, volume iniettato, diluizione, peso, ISTD, id, commento, 5 etichette utente, metodo strumento/elaborazione, nome e percorso | sì | `campione`, campi (identità per percorsi ed etichette) | le etichette utente possono portare nomi di persone (visto su un file PRIDE): restano identità, mai nell'mzML |
+| ASInfo (autocampionatore) | preambolo di 24 B + stringa | **letto e scartato** (`reader.rs:457-459`) | nulla | RV-10 |
+| RawFileInfo | data/ora d'acquisizione, numero di controller, intestazioni delle etichette, nome del computer | sì | `origine`, `operatore.computer` (identità), campi | – |
+| RunHeader per controller | intervallo di scansioni, m/z min/max, tempi, corrente ionica massima, nomi di file, indirizzi | sì (solo quello MS in dettaglio) | campi (MS e `Controller<N>`) | – |
+| InstID | modello, nome, seriale, software, hardware | sì | `strumento` | posizioni DA CONFERMARE fuori da v66 (`metodo.md`) |
+| Metodo incorporato (OLE2) | `LCQ Header`, `AuditData`, per dispositivo `Text`, `Data` (XML), `Header`, `Comments` | testi con euristica UTF-16 | `lc`, `ms`, `campionatore`, `grezzo` | OLE vero, `AuditData`, `Comments`, lacune di §2.6 → RV-09 |
+| Indice delle scansioni | offset, RT, TIC, picco base, m/z min/max, tipo di pacchetto per scansione | sì | `.mzidx` (TIC e picco base dai picchi) | – |
+| Eventi di scansione | preambolo (polarità, analizzatore, dipendente…), reazioni (precursore, energia, attivazione), finestre, coefficienti di calibrazione | sì (preambolo in parte) | filtro, precursore, attivazione nell'mzML | byte del preambolo non decodificati: elenco in RV-10 |
+| Trailer extra (`ScanParameters`) | 3-76 campi per scansione (iniezione, AGC, risoluzione, isolamento, carica, lock mass, ottica ionica, diagnostica) | sì | mzML (`opentfraw.*`, `opentfraw.trailer.*`), campi (costante o intervallo) | serie per scansione visibili (iniezione, AGC, lock mass) → RV-10 |
+| Status log | 51-287 canali (vuoto, temperature, tensioni, correnti, gas, pompe) × 1-3599 istanti con il tempo | sì | campi: solo valore costante o `min..max` | **serie temporali visibili** → RV-10 |
+| Error log | 0-18 voci con il tempo (instabilità dello spray, calibrazione fallita, avvisi dell'elettronica, configurazione del reagente ETD) in 5 file su 30 | sì | **nulla** | RV-10 |
+| Instrument log per scansione | 0 record in tutti i file visti | sì | `opentfraw.status.*` | – |
+| Controller analogici | pressioni delle pompe, forno, refrigeratore, lampada, UV a una lunghezza d'onda | sì (8 e 16 B per campione) | cromatogrammi `pressure`/`analog`/`pda` (selettore del tipo, `dati-3200.md`) | – |
+| PDA 3D | 572 B per istante | no | avviso | grezzi-non-estratti; fuori da questo studio |
+| Rumore e linea di base | pacchetti per scansione | sì | intestazione della scansione (`noise_fields`) | – |
+| Tune | nei file Orbitrap visti i valori di sorgente stanno nello status log e nel testo del metodo; nessun blocco Tune separato trovato (`unk_addr` = 0 in tutti) | – | campi | RV-10 verifica sui file LTQ (blocco Tune dopo lo status log) |
+| Immagini dello strumento | nessuna (§2.6) | – | – | – |
+
+### 2.9 Percorso Dati → Tabui e caricamento diretto in Tabui
+
+- **Dati → Tabui** («Reload from Data», `TP_Mine/js/20_tpmine.js:125,265`): un campione nativo passa come segnaposto e Tabui legge il `.mzidx` v2 della scheda Dati (`stubIndexed`, `TP_Mine/files/finder-idx.js`): nessun mzML, nessuna rilettura. Se la prima MS1 è segnata come profilo, la pagina costruisce `<nome>.cen.mzidx` (`ask("cenidx")` → `rb.nativeCentroidIndex` → `lr_index_cen`) rileggendo e decodificando il `.raw` da zero.
+  LAB-B: indice a centroidi ≈ 4,8 s nativi (apertura 0,19 + impronta 0,49 + tabella 2,88 + `.mzidx` 1,27), ~8 s nel sito, e con l'82 % dei picchi persi (§2.4). Con RV-02 LAB-B è a centroidi: l'indice di Dati vale, costo 0.
+- **Caricamento diretto in Tabui**: `#tp-in` accetta solo `.mzML` (`TP_Mine/js/20_tpmine.js:196`); un `.raw` va prima aperto in Dati. Il requisito: lo stesso `.raw` (o `.wiff`, `.D`) scelto in Tabui si copia e si indicizza durante il caricamento, con la barra a fasi di `nativo-fasi.js`, senza mzML e senza attese morte.
+- Con un profilo vero (nessuna lista di centroidi nel file) l'indice a centroidi si costruisce nella stessa decodifica dell'indice di Dati quando il file entra da Tabui, non dopo.
+
 ## 3. Obiettivi numerici
 
 | Misura | Oggi | Obiettivo |
@@ -96,6 +128,10 @@ La mappa e i suoi gesti hanno già misure e pacchetti in `docs/agenti/mappa-flui
 | Centroidi del file segnati come profilo | −82 % dei picchi | 0 scansioni ricentroidate per errore |
 | Modulo per scansione (WASM) | 99 µs | ≤ 40 µs |
 | `.raw` di `dati_formati/` aperti | 30/41 | ≥ 38/41 |
+| Dati → Tabui, campione a centroidi | 0 s (indice riusato) | 0 s |
+| Dati → Tabui, LAB-B (oggi segnato profilo) | ~4,8 s nativi, ~8 s nel sito, −82 % picchi | 0 s (RV-02) |
+| `.raw` scelto in Tabui | non accettato | accettato; pronto nel tempo dell'indice di Dati, con barra |
+| Status log ed error log visibili nel tempo | no | sì (selettore del tipo di cromatogramma, finestra Metodo) |
 
 Equivalenza: il `.mzidx` e l'mzML restano byte per byte quelli di oggi dove il pacchetto non cambia il contenuto (stesso SHA-256 su LAB-A, PXD077492, BAF); dove lo cambia (centroidi, livello zlib) la parità è sui valori (`tools/golden.py` e l'mzML di msconvert).
 
@@ -112,6 +148,8 @@ Equivalenza: il `.mzidx` e l'mzML restano byte per byte quelli di oggi dove il p
 | RV-07 | Desktop: profilo `opt-level = 3` per il binario nativo | – | tutti |
 | RV-08 | `.raw` che non si aprono (Exploris, Lumos, trappole, TSQ vecchi) | – | RV-01 (stesso vendor: file diversi) |
 | RV-09 | Lacune di `metodo/1` del `.raw` (OLE, inclusione, NCE, isolamento, globali, LC, LTQ, solventi) | – | tutti tranne RV-08 su `reader.rs` |
+| RV-10 | Tutte le altre strutture: status log e trailer come serie nel tempo, error log, ASInfo, preambolo degli eventi, Tune | – | RV-01 (stesse strutture: merge prima di unire), RV-09 dopo (stesso `campi.rs`) |
+| RV-11 | Tabui: `.raw`/`.wiff`/`.D` scelti direttamente, indice durante il caricamento, riuso da Dati | RV-02 | RV-03, RV-04, RV-05 |
 
-Ordine: prima RV-01 e RV-02 (bloccante e correttezza), con RV-07, RV-08 e RV-09 in parallelo; poi RV-03 → RV-04 e RV-05; poi RV-06. La navigazione segue `mappa-fluida.md` (P2-P6) dopo RV-05.
-Domande di prodotto (al Coordinatore): mostrare la lista di inclusione nell'interfaccia (RV-09); numpress come opzione dell'mzML scaricato (RV-06).
+Ordine: prima RV-01 e RV-02 (bloccante e correttezza), con RV-07, RV-08, RV-09 e RV-10 in parallelo; poi RV-03 → RV-04 e RV-05, RV-11; poi RV-06. La navigazione segue `mappa-fluida.md` (P2-P6) dopo RV-05.
+Scelte di prodotto (Coordinatore): la lista di inclusione va in `metodo/1` e si mostra in sola lettura nella finestra Metodo del file in Dati (m/z, RT/finestra, polarità, CE, nome), esportabile con il metodo, mai trasformata in «TP attesi» in Tabui (RV-09); «Scarica .mzML» ha una casella numpress spenta di default, con una riga che dice che è con perdita, e zlib a livello rapido (RV-06).
