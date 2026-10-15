@@ -116,6 +116,9 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: pyproject.toml
+      # installs the pinned toolchain once, before the pytest workers start (they all call cargo and would race to install it)
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
       - name: Install
         run: python -m pip install -e ".[test]" pytest-xdist
       - name: Checks and pytest (no e2e)
