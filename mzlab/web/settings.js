@@ -130,7 +130,7 @@ function uipOpen(btn) {
     ` : ""}
     `;
   document.body.appendChild(d);
-  const adm = d.querySelector("#uip-admin-exit"); if (adm) adm.onclick = () => { try { localStorage.removeItem("qqq.admin"); localStorage.removeItem("qqq.teoria.esteso"); } catch (_) { /* nothing to clear */ } d.remove(); };
+  const adm = d.querySelector("#uip-admin-exit"); if (adm) adm.onclick = () => { try { localStorage.removeItem("qqq.admin"); localStorage.removeItem("qqq.teoria.esteso"); } catch (_) { /* nothing to clear */ } d.remove(); location.reload(); };
   if (window.DESKUPD) DESKUPD.bind(d);
   const uipLang = d.querySelector("#uip-lang"); uipLang.value = I18N.lang;   // the label is always bilingual: whoever cannot read the current language finds it
   uipLang.onchange = e => I18N.set(e.target.value);                         // remembered in qqq.lang, then the page reloads (open files come back with the session)

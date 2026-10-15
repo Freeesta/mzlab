@@ -38,6 +38,7 @@ try:
         pg = c.new_page()
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
         pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
         pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         pg.set_input_files("#pick", [str(D / n) for n in ["two.wiff", "two.wiff.scan", "serie.wiff", "serie.wiff.scan", "prodotto.wiff", "prodotto.wiff.scan", "one.wiff", "one.wiff.scan"]])

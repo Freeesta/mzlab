@@ -5,7 +5,7 @@ Un solo modello Rust dei ruoli e dei tempi dei file di una serie, per la vista D
 ## Modello
 - Un `Campione` per file, nell'ordine di iniezione. Campi JSON in italiano, valori in inglese: `file`, `sha256` (la chiave; vuoto se non ancora noto), `tipo` ∈ `sample t0 blank dark infusion std calibration qc`, `tipo_bianco` ∈ `solvent procedure` o null (facoltativo: tutti i bianchi si sottraggono allo stesso modo, nessun avviso se manca), `tempo` + `unita_tempo` ∈ `s min h d` (come scritto o confermato),
   `tempo_min` (derivato, l'unico usato nei calcoli), `tempo_confermato`, `serie` (`""` = l'unica, o condivisa da tutte), `replica`, `concentrazione`, `unita`, `ordine_iniezione`, `istd`, `note`, `composto` (per `infusion`, lo riempie mzFinder).
-- `Campione::role()`: un `sample` a 0 minuti conta come `t0`. `set_time` ricava `tempo_min` (`minutes_per`).
+- `Campione::role()`: un `sample` a 0 minuti conta come `t0`. `set_time` ricava `tempo_min` (`minutes_per`). La vista Dati non scrive mai `tipo: t0` né `tipo_bianco` (un campione a 0 minuti e un solo tipo Bianco) e il tempo del `dark` è negativo; il Rust continua a leggere i vecchi `t0` e `tipo_bianco` (`CDOC.fields` li converte).
 - `to_json` è canonico (chiavi in ordine alfabetico, stessi byte) e `digest` ne è lo SHA-256; `from_json` rifiuta schema, tipi, unità e numeri non validi (`error.badCampioni`) e ricalcola `tempo_min`.
 
 ## `proponi(&[(nome, sha256, kind)])`

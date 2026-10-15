@@ -1,0 +1,4 @@
+id,mz,rt,blank_subtraction,datafile:S1_EC_ddaPOS.mzML:feature_state,datafile:S1_EC_ddaPOS.mzML:area,datafile:S2_EC_ddaPOS.mzML:feature_state,datafile:S2_EC_ddaPOS.mzML:area
+1,200.1,5.0,,DETECTED,80000.0,DETECTED,70000.0
+2,300.201,6.05,y (abundance 1.5E3),DETECTED,8000.0,DETECTED,6000.0
+3,400.3,7.05,,RANGE,0.0,DETECTED,900.0
