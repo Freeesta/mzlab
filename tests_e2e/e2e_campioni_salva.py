@@ -34,7 +34,7 @@ try:
             attendi(pg, "fetch('api/notebook').then(r => r.json()).then(j => (j.session || []).some(x => x.file === 'X_t005min.mzML' && x.tempo_min === 7))")
             pg.reload(); pg.wait_for_function("typeof E !== 'undefined' && E.files.length === 6", timeout=90000); ready(pg)
             after = pg.evaluate(SNAP)
-            assert after == snap["a"], (after, snap["a"])
+            assert after == snap["a"], ([x for x in after if x not in snap["a"]], [x for x in snap["a"] if x not in after])
         step("an edit survives a reload: role, time, confirmation", edit_and_reload)
         def one_writer():
             nb = pg.evaluate("NB.session")

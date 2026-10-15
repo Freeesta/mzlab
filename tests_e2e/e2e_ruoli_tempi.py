@@ -68,9 +68,9 @@ try:
             sel = f"{row('X_dark-adsorption')} input[data-k=time]"
             assert "buio" in (pg.get_attribute(sel, "title") or ""), "the dark cell says what its time is"
             pg.fill(sel, "-30"); pg.keyboard.press("Tab")
-            pg.wait_for_function("document.querySelector(\"#flist tr:has(td:text-is('X_dark-adsorption.mzML')) input[data-k=time]\").value === '-30'", timeout=10000)
+            pg.wait_for_function("[...document.querySelectorAll('#flist tr')].some(r => r.textContent.includes('X_dark-adsorption.mzML') && r.querySelector('input[data-k=time]').value === '-30')", timeout=10000)
             pg.fill(sel, "45"); pg.keyboard.press("Tab")                    # a positive number typed in a dark is read as its negative
-            pg.wait_for_function("document.querySelector(\"#flist tr:has(td:text-is('X_dark-adsorption.mzML')) input[data-k=time]\").value === '-45'", timeout=10000)
+            pg.wait_for_function("[...document.querySelectorAll('#flist tr')].some(r => r.textContent.includes('X_dark-adsorption.mzML') && r.querySelector('input[data-k=time]').value === '-45')", timeout=10000)
             pg.fill(f"{row('X_t005min')} input[data-k=time]", "-5"); pg.keyboard.press("Tab")        # a sample takes no sign
             assert pg.eval_on_selector(f"{row('X_t005min')} input[data-k=time]", "e => e.classList.contains('bad')")
             pg.fill(f"{row('X_t005min')} input[data-k=time]", "5"); pg.keyboard.press("Tab")

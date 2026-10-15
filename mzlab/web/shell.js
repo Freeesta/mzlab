@@ -294,6 +294,7 @@ async function openRest(rest,tok){
 $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
   try{if(UPBUSY>0){WAITING=true;waitStato();await idle();WAITING=false;loadingStato(null)}
     if(!ST.files.some(usable)){checkGo();return}
+    ST.files.forEach(f=>{if(RUOLI.roleOf(f)==="dark")f.time=darkTime(f.time)});      // the time of a dark is negative whatever way it got here (name, table, old project)
     const rest=await exploreList(ST.files.filter(usable).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find(x=>x.file===f.name)||{}).label})));STATO.aggiunta(false,"adding");await bootSession();RUOLI.commit(ST.files);applyView();window.scrollTo(0,0);await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();if(rest)rest()}
   catch(e){
     if(e.key==="err.hr.mix"){
