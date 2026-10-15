@@ -5,7 +5,7 @@
 //! any level is exactly the maximum (as float32) of the peaks that `region_map` puts in the same cell of an aligned region. Cells live in sparse
 //! tiles of `TILE` × `TILE`. The pyramid serialises to bytes (`to_bytes` / `from_bytes`, checked against a stamp of the index) to be kept beside the `.mzidx`.
 
-use std::collections::HashMap;
+use crate::hash::Mappa;
 
 use crate::error::Result;
 use crate::idxread::ReadAt;
@@ -39,7 +39,7 @@ impl Pyramid {
         mut each: impl FnMut(&mut dyn FnMut(usize, f64, f64)) -> Result<()>,
     ) -> Result<Self> {
         let nty = n_scans.div_ceil(TILE).max(1);
-        let mut l0: Level = HashMap::new();
+        let mut l0: Level = Mappa::default();
         let mut strip = Strip {
             tx: 0,
             tiles: vec![vec![0.0; TILE * TILE]; nty],
@@ -71,7 +71,7 @@ impl Pyramid {
             if (1usize << (levels.len() - 1)) >= n_scans && prev.keys().all(|k| *k == (0, 0)) {
                 break;
             }
-            let mut next: Level = HashMap::new();
+            let mut next: Level = Mappa::default();
             let mut keys: Vec<(u32, u32)> = prev.keys().map(|&(ty, tx)| (ty / 2, tx / 2)).collect();
             // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
             #[allow(clippy::disallowed_methods)]
@@ -202,7 +202,7 @@ impl Pyramid {
         let mut levels = Vec::with_capacity(n_levels);
         for _ in 0..n_levels {
             let n_tiles = u32_(take(4)?) as usize;
-            let mut lv: Level = HashMap::new();
+            let mut lv: Level = Mappa::default();
             for _ in 0..n_tiles {
                 let (ty, tx, n) = (u32_(take(4)?), u32_(take(4)?), u32_(take(4)?) as usize);
                 let raw = take(n.checked_mul(6)?)?;
@@ -370,7 +370,7 @@ impl<R: ReadAt> Routes<R> {
 
 /// The cells of one tile that are not zero: (`row * TILE + col`, value), in increasing order of position.
 type Tile = Vec<(u16, f32)>;
-type Level = HashMap<(u32, u32), Tile>;
+type Level = Mappa<(u32, u32), Tile>;
 
 pub struct Pyramid {
     pub n_scans: usize,

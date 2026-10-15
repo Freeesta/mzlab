@@ -2,7 +2,7 @@
 //! `api/mappunti3d` (`_map`, `_map_points`, `_map_sticks` of `mzlab/api_aiuti.py`), for unit-resolution and high-resolution files, centroids
 //! or profile points. `Ok(None)` = Python's: a parameter that Python must reject with its own error.
 
-use std::collections::HashMap;
+use crate::hash::Mappa;
 
 use base64::Engine;
 
@@ -20,7 +20,7 @@ const STICKS_MAX: usize = 200_000;
 const REGION_RT_MAX: i64 = 2048;
 const REGION_MZ_MAX: i64 = 1024;
 
-type Table<R> = HashMap<u32, Routes<R>>;
+type Table<R> = Mappa<u32, Routes<R>>;
 
 /// What the page asks of `api/map`.
 struct Ask {

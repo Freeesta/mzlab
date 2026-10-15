@@ -2,7 +2,8 @@
 //! `FileSet` whose members JS reads by offset (`read(member, offset, length)`); the engine opens it with the readers of the registry (`lettori::apri`),
 //! builds the `.mzidx` of one sample straight from the reader, and answers the routes that read the file besides its index from the reader and the
 //! `guscio` of the sample (the mzML without its spectra: header, chromatograms, polarities). «Scarica .mzML» writes the whole mzML on request.
-use std::collections::{HashMap, VecDeque};
+use mzlab_core::hash::Mappa;
+use std::collections::VecDeque;
 use std::rc::Rc;
 
 use js_sys::Function;
@@ -157,9 +158,9 @@ impl Membri {
 /// The datasets of the session and which sample of which dataset each slot is.
 #[derive(Default)]
 pub(crate) struct Nativi {
-    pub(crate) sets: HashMap<String, Dataset>,
-    pub(crate) slots: HashMap<u32, (String, usize)>,
-    pub(crate) shells: HashMap<(String, usize), Rc<Vec<u8>>>,
+    pub(crate) sets: Mappa<String, Dataset>,
+    pub(crate) slots: Mappa<u32, (String, usize)>,
+    pub(crate) shells: Mappa<(String, usize), Rc<Vec<u8>>>,
     pub(crate) order: VecDeque<(String, usize)>,
     pub(crate) clock: u64,
 }

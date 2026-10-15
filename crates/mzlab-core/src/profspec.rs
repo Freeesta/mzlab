@@ -16,7 +16,7 @@ impl<R: ReadAt> Routes<R> {
     /// m/z and intensity of the scans at the section positions `positions`, each in table order (m/z ascending).
     fn scan_points(&mut self, si: usize, positions: &[usize]) -> Result<Vec<(Vec<f64>, Vec<f64>)>> {
         let mut out = vec![(Vec::new(), Vec::new()); positions.len()];
-        let at: std::collections::HashMap<usize, usize> = positions.iter().enumerate().map(|(k, &p)| (p, k)).collect();
+        let at: crate::hash::Mappa<usize, usize> = positions.iter().enumerate().map(|(k, &p)| (p, k)).collect();
         let n = self.idx.sections[si].n_peaks;
         self.idx.each_peak(si, 0, n, |p, mz, y| {
             if let Some(&k) = at.get(&p) {

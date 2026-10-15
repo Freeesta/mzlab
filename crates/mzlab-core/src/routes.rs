@@ -219,7 +219,7 @@ impl<R: ReadAt> Routes<R> {
             pol: i8,
         }
         let mut g: Vec<G> = Vec::new();
-        let mut by: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        let mut by: crate::hash::Mappa<String, usize> = Default::default();
         for s in &self.idx.scans {
             let k = s.key();
             match by.get(&k) {
@@ -378,22 +378,22 @@ pub(crate) fn next_tick() -> u64 {
 }
 
 /// Total bytes of the cached maps of the files.
-pub fn map_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
+pub fn map_cache_bytes<R: ReadAt>(files: &crate::hash::Mappa<u32, Routes<R>>) -> usize {
     files.values().flat_map(|r| r.maps.iter()).map(|m| m.1.len() * 4).sum()
 }
 
 /// Bytes of the whole cache of the engine: the maps plus the arrays and blocks of the indexes (one LRU, see `trim_cache`).
-pub fn cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
+pub fn cache_bytes<R: ReadAt>(files: &crate::hash::Mappa<u32, Routes<R>>) -> usize {
     map_cache_bytes(files) + tiles_cache_bytes(files) + files.values().map(|r| r.idx.cache_bytes()).sum::<usize>()
 }
 
 /// Bytes of the pyramids of map tiles (`maptiles`) of all the files; they go in the same LRU as the maps.
-pub fn tiles_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
+pub fn tiles_cache_bytes<R: ReadAt>(files: &crate::hash::Mappa<u32, Routes<R>>) -> usize {
     files.values().flat_map(|r| r.tiles.iter()).filter_map(|t| t.1.as_ref()).map(|p| p.bytes()).sum()
 }
 
 /// Drops maps, oldest use first, until the maps hold at most `cap` bytes. Returns how many were dropped.
-pub fn trim_map_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R>>, cap: usize) -> usize {
+pub fn trim_map_cache<R: ReadAt>(files: &mut crate::hash::Mappa<u32, Routes<R>>, cap: usize) -> usize {
     let mut dropped = 0;
     while map_cache_bytes(files) > cap {
         let oldest = files.iter().flat_map(|(k, r)| r.maps.iter().enumerate().map(move |(i, m)| (m.2, *k, i))).min();
@@ -408,7 +408,7 @@ pub fn trim_map_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Rout
 
 /// The one LRU of the engine: maps, per-scan arrays and cached blocks of ALL the files go, least recently used first, until the cache holds at most
 /// `cap` bytes (every entry is read again from the index when asked: the answers do not change). Returns how many entries were dropped.
-pub fn trim_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R>>, cap: usize) -> usize {
+pub fn trim_cache<R: ReadAt>(files: &mut crate::hash::Mappa<u32, Routes<R>>, cap: usize) -> usize {
     let mut dropped = 0;
     while cache_bytes(files) > cap {
         let map = files.iter().flat_map(|(k, r)| r.maps.iter().enumerate().map(move |(i, m)| (m.2, *k, i))).min();

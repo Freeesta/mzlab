@@ -2,7 +2,7 @@
 //! functions of the session interface of the module, which the page loads in the same worker (`rust-nativo.js`). The conversion of the answers (JSON, typed arrays) into the types of
 //! the contract is in `Risposte` and does not touch JS, so it is tried natively with a fake `Modulo`; `ModuloJs` is the one that calls the functions.
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use mzlab_core::hash::{Insieme, Mappa};
 
 use js_sys::{Array, Float64Array, Function, Reflect};
 use mzlab_core::error::{Error, Result};
@@ -31,7 +31,7 @@ fn guasto(what: &str) -> Error {
     Error::new("err.file.notAccepted").with("detail", what)
 }
 
-thread_local! { static NOMI: RefCell<HashSet<&'static str>> = RefCell::new(HashSet::new()); }
+thread_local! { static NOMI: RefCell<Insieme<&'static str>> = RefCell::new(Insieme::default()); }
 
 /// The text as a `&'static str` (the keys and the names of the parameters of `Error` are static): each distinct text is kept once.
 fn statica(s: &str) -> &'static str {
@@ -303,7 +303,7 @@ pub struct LettoreEsterno<M: Modulo> {
     m: M,
     formato: Formato,
     campioni: Vec<Campione>,
-    indici: HashMap<usize, Vec<VoceScansione>>,
+    indici: Mappa<usize, Vec<VoceScansione>>,
 }
 
 impl<M: Modulo> LettoreEsterno<M> {
@@ -313,7 +313,7 @@ impl<M: Modulo> LettoreEsterno<M> {
             m,
             formato,
             campioni,
-            indici: HashMap::new(),
+            indici: Mappa::default(),
         })
     }
 }

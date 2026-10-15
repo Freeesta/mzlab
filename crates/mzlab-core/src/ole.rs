@@ -44,7 +44,7 @@ impl Ole {
             .collect::<Result<_>>()?;
         let mut s = dif0;
         // a chain of DIFAT sectors is at most as long as the file has sectors, and never visits a sector twice (a loop would grow `difat` for ever)
-        let mut visited = std::collections::HashSet::new();
+        let mut visited = crate::hash::Insieme::default();
         for _ in 0..(n_dif as usize).min(o.data.len() / ss) {
             if s >= END || !visited.insert(s) {
                 break;
@@ -56,7 +56,7 @@ impl Ole {
             s = u32_at(&sec, ss - 4)?;
         }
         // a FAT sector is listed once: listing one again would make the FAT as large as the DIFAT, which the file does not bound
-        let mut fat_sectors = std::collections::HashSet::new();
+        let mut fat_sectors = crate::hash::Insieme::default();
         for &sid in difat.iter().take(n_fat as usize) {
             if sid == END || sid == FREE || !fat_sectors.insert(sid) {
                 continue;

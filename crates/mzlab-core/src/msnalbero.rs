@@ -3,7 +3,7 @@
 //! (`consensus_arrays`). mzFinder (`mzlab_feat::legacy::msn`) puts formulas, calibration and atoms on it.
 
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use crate::hash::Mappa;
 
 use crate::idxread::Scan;
 
@@ -178,8 +178,8 @@ pub fn node_id(chiave: &[(f64, String, f64)]) -> String {
 /// generation is not in the file. Returns it (empty = the root) and the depth.
 fn find_parent(
     k: &Key,
-    by_nominal: &HashMap<Vec<i64>, Vec<Key>>,
-    groups: &HashMap<Key, Vec<usize>>,
+    by_nominal: &Mappa<Vec<i64>, Vec<Key>>,
+    groups: &Mappa<Key, Vec<usize>>,
 ) -> (Key, usize) {
     let (mut pk, mut depth) = (k[..k.len() - 1].to_vec(), 1);
     loop {
@@ -268,7 +268,7 @@ pub type ScanPath<'a> = (u8, Option<&'a [(f64, String, f64)]>);
 /// The tree of scans given as (level, path of the filter).
 pub fn albero_di<'a>(scans: impl IntoIterator<Item = ScanPath<'a>>, r: &Raggruppa) -> Albero {
     let mut out = Albero::default();
-    let mut groups: HashMap<Key, Vec<usize>> = HashMap::new();
+    let mut groups: Mappa<Key, Vec<usize>> = Mappa::default();
     let scans: Vec<_> = scans.into_iter().collect();
     let usable = |&(level, path): &ScanPath<'a>| {
         path.filter(|p| level > 1 && !p.is_empty() && p.len() + 1 == level as usize)
@@ -286,14 +286,14 @@ pub fn albero_di<'a>(scans: impl IntoIterator<Item = ScanPath<'a>>, r: &Raggrupp
     }
     let mut keys: Vec<Key> = groups.keys().cloned().collect();
     crate::sortc::slice_by(&mut keys, key_cmp);
-    let mut by_nominal: HashMap<Vec<i64>, Vec<Key>> = HashMap::new();
+    let mut by_nominal: Mappa<Vec<i64>, Vec<Key>> = Mappa::default();
     for k in &keys {
         by_nominal
             .entry(k.iter().map(|x| x.0).collect())
             .or_default()
             .push(k.clone());
     }
-    let at: HashMap<&Key, usize> = keys.iter().enumerate().map(|(i, k)| (k, i)).collect();
+    let at: Mappa<&Key, usize> = keys.iter().enumerate().map(|(i, k)| (k, i)).collect();
     for k in &keys {
         let (pk, depth) = find_parent(k, &by_nominal, &groups);
         let chiave: Vec<(f64, String, f64)> = k

@@ -219,7 +219,7 @@ fn immediate<'a>(
     precs: &'a [Prec],
     path: &Option<Vec<(f64, String, f64)>>,
     level: u8,
-    level_of: &std::collections::HashMap<String, u8>,
+    level_of: &crate::hash::Mappa<String, u8>,
 ) -> Option<&'a Prec> {
     if precs.is_empty() {
         return None;

@@ -8,7 +8,7 @@
 //! Infusion = constant RT, or B and C (`blocchi`), or B and a `.raw` method without LC (`metodo_senza_lc`), or B and a name with
 //! `infus`/`fia`/`direct`/`syringe` (`nome`). A targeted LC run (PRM) has B but cycles its precursors (no C); a DDA run has neither.
 
-use std::collections::HashMap;
+use crate::hash::Mappa;
 
 use crate::error::Result;
 use crate::idxread::{ReadAt, Scan};
@@ -55,7 +55,7 @@ fn key(s: &Scan, nominal: bool) -> String {
 
 /// B: few keys, many scans each, the well-populated keys covering almost every MSn scan.
 fn fixed_precursors(keys: &[String]) -> bool {
-    let mut count: HashMap<&str, usize> = HashMap::new();
+    let mut count: Mappa<&str, usize> = Mappa::default();
     for k in keys {
         *count.entry(k.as_str()).or_default() += 1;
     }

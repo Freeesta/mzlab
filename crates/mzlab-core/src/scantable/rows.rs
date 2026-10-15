@@ -1,7 +1,7 @@
 //! The rows of the scan table, one spectrum header at a time: from the headers of an mzML (`read`) or the headers `mzmlwrite` would write
 //! for the scans of a `Lettore` (`mzidx_lettore`).
 
-use std::collections::HashMap;
+use crate::hash::Mappa;
 
 use super::*;
 
@@ -102,8 +102,8 @@ fn analyzer_names(block: &str) -> Vec<String> {
 pub(crate) struct Rows {
     head: Head,
     rows: Vec<Row>,
-    refs: HashMap<usize, String>,
-    level_of: HashMap<String, u8>,
+    refs: Mappa<usize, String>,
+    level_of: Mappa<String, u8>,
 }
 
 /// The retention time of a spectrum header, in minutes.
@@ -125,8 +125,8 @@ impl Rows {
         Rows {
             head,
             rows: Vec::new(),
-            refs: HashMap::new(),
-            level_of: HashMap::new(),
+            refs: Mappa::default(),
+            level_of: Mappa::default(),
         }
     }
 
@@ -160,14 +160,14 @@ impl Rows {
             refs,
             ..
         } = self;
-        let by_native: HashMap<&str, usize> = rows
+        let by_native: Mappa<&str, usize> = rows
             .iter()
             .enumerate()
             .map(|(i, r)| (r.native.as_str(), i))
             .collect();
         let mut parents: Vec<Option<usize>> = vec![None; rows.len()];
-        let mut last: HashMap<i8, usize> = HashMap::new();
-        let mut last_path: HashMap<PathKey, usize> = HashMap::new();
+        let mut last: Mappa<i8, usize> = Mappa::default();
+        let mut last_path: Mappa<PathKey, usize> = Mappa::default();
         for (i, s) in rows.iter().enumerate() {
             if s.level == 1 {
                 last.insert(s.polarity, i);

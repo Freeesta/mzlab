@@ -9,7 +9,7 @@ use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
 use mzlab_core::{analysis, mzidx, mzml, peakq, peaks};
-use std::collections::HashMap;
+use mzlab_core::hash::Mappa;
 use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
 mod scans;
@@ -162,9 +162,9 @@ fn r4(v: f64) -> f64 {
 #[wasm_bindgen]
 #[derive(Default)]
 pub struct Engine {
-    runs: HashMap<u32, mzml::Run>,
+    runs: Mappa<u32, mzml::Run>,
     /// The `.mzidx` of each file: the routes that need only the index are answered from it (no mzML is read).
-    pub(crate) idx: HashMap<u32, Routes<JsReader>>,
+    pub(crate) idx: Mappa<u32, Routes<JsReader>>,
     labs: Vec<(mzlab_core::labmethods::Lab, u64)>,
     /// Bytes the cache (maps, arrays and blocks of the indexes) may hold (`set_budget_mb`; 0 = the default).
     pub(crate) cache_cap: usize, pub(crate) work_cap: usize,    // work_cap: what the files opened whole may hold together

@@ -1,7 +1,7 @@
 //! `api/origin` ("Da dove viene questo ione?") over the files of the session, from their indexes: `App.origin` of Python.
 //! Any full-scan file with an index (unit or high resolution, centroids or profile points); `Ok(None)` = Python's (a file without index).
 
-use std::collections::HashMap;
+use crate::hash::Mappa;
 
 use crate::error::{Error, Result};
 use crate::idxread::{Index, ReadAt};
@@ -44,7 +44,7 @@ fn has_scans<R: ReadAt>(r: &Routes<R>, level: u8) -> bool {
 }
 
 /// The product-ion spectra of X and of P from the first file that has MS2 scans (whole run), `None` if there is no spectrum of P.
-fn find_ms2<R: ReadAt>(items: &[ItemMeta], routes: &mut HashMap<u32, Routes<R>>, a: &Ask) -> Result<Option<Ms2>> {
+fn find_ms2<R: ReadAt>(items: &[ItemMeta], routes: &mut Mappa<u32, Routes<R>>, a: &Ask) -> Result<Option<Ms2>> {
     for it in items {
         let Some(r) = routes.get_mut(&it.slot) else { continue };
         if !has_scans(r, 2) {
@@ -65,7 +65,7 @@ fn find_ms2<R: ReadAt>(items: &[ItemMeta], routes: &mut HashMap<u32, Routes<R>>,
 }
 
 /// The report of `App.origin` for the session `items` (whose indexes are in `routes`, by slot), or `None` when Python must answer.
-pub fn origin_route<R: ReadAt>(items: &[ItemMeta], routes: &mut HashMap<u32, Routes<R>>, a: &Ask) -> Result<Option<Value>> {
+pub fn origin_route<R: ReadAt>(items: &[ItemMeta], routes: &mut Mappa<u32, Routes<R>>, a: &Ask) -> Result<Option<Value>> {
     let mut full: Vec<(usize, &ItemMeta)> = Vec::new();
     let mut hr = false;
     for (i, it) in items.iter().enumerate() {
@@ -86,7 +86,7 @@ pub fn origin_route<R: ReadAt>(items: &[ItemMeta], routes: &mut HashMap<u32, Rou
     let ms2 = find_ms2(items, routes, a)?;
     let pol = full.iter().find_map(|(_, it)| routes.get(&it.slot)?.idx.scans.iter().find(|s| s.polarity != 0).map(|s| s.polarity as i64)).unwrap_or(1);
     let reference = full.iter().position(|(i, _)| *i as i64 == a.k);
-    let mut by_slot: HashMap<u32, &mut Index<R>> = routes.iter_mut().map(|(k, r)| (*k, &mut r.idx)).collect();
+    let mut by_slot: Mappa<u32, &mut Index<R>> = routes.iter_mut().map(|(k, r)| (*k, &mut r.idx)).collect();
     let mut samples: Vec<Sample<R>> = Vec::new();
     for (_, it) in &full {
         let idx = by_slot.remove(&it.slot).expect("slot checked above");
