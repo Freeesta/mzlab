@@ -14,3 +14,8 @@ panic = "abort"
 opt-level = "z"
 lto = true
 codegen-units = 1
+
+# Desktop app only (`cargo tauri build --features app -- --profile desktop`): speed over size; the .wasm builds keep `release`.
+[profile.desktop]
+inherits = "release"
+opt-level = 3

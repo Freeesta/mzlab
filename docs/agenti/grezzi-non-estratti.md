@@ -27,6 +27,11 @@ Regola: nessuna perdita di informazione dei file grezzi (`.wiff`, `.raw`, `.dam`
 ## mzXML (modulo «aperti»)
 - Non portati: il testo degli elementi della testata (p. es. lo SHA-1 in coda al file), `scanOrigin`, `maldi`, `separation`/`spotting` di una scansione, `processingOperation`; gli attributi di ogni elemento della testata stanno invece tutti in `metodo/1.campi`, quelli di ogni scansione in `intestazione`.
 
+## Waters MassLynx `.raw` (modulo `waters`)
+- Mobilità ionica (HDMSe, SONAR, cyclic IMS): gli m/z si sommano su tutti i bin di deriva; il tempo di deriva e la calibrazione di mobilità (`mob_cal.csv`) non sono estratti. Lock mass: la funzione è data come cromatogramma e in `campi`, ma la correzione dell'm/z non è applicata (30-100 ppm).
+- Non decodificati: le righe di `_FUNCnnn.STS`/`.EE` oltre «Set Mass» e «Collision Energy» (stanno solo nei byte), la tabella `_HISTORY.INF`, i parametri di rampa oltre quelli di `_extern.inf`, la codifica a 6 byte (nessun file vero) e le funzioni di tipo MALDI.
+- Identità (`User Name`, `Submitter`, `Laboratory Name`, percorsi del computer): in `metodo/1.campi` marcate `identita`, mai nell'mzML.
+
 ## Shimadzu `.qgd` / `.lcd` (modulo `shimadzu`)
 - Non letti: programma del forno e dell'iniettore (`GC-2010/GC17A Instrument Parameters`), `GCMS Configuration` (solo il nome dello strumento), il metodo `.qgm` incorporato, `Status` e `Status Curve` (pressioni, temperature), `MS Status Data`, `Mass Parameters`, `GUMM_Information`; UV (`LSS Raw Data`, `PDA 3D Raw Data`); l'evento della polarità di `Mass Raw Data`; energia di collisione e tempo di attesa dei record MRM; il Q-TOF/IT-TOF/9030 (`QTFL RawData`) per intero.
 - Non portati nell'mzML: operatore, computer, percorsi e nomi dei file di dati, metodo, tune e batch (`identita`). Dettagli e offset in `docs/agenti/shimadzu.md`.

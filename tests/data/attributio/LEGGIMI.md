@@ -1,0 +1,22 @@
+# Campagna sintetica di Attributio
+
+Campagna INVENTATA (nessun dato vero): uguale alla fixture `tests/fixtures/synthetic_campaign/` di Attributio 1.12.0 più `livelli_attesi.csv` (15 feature: POS 1-6 e 8-14, NEG 1-2). Serve ai dati d'oro di `tests/golden/attributio/sintetica/` e alle prove di parità del passaggio a Rust (`docs/agenti/attributio.md`).
+
+| File (in `campagna_sintetica/`) | sha256 |
+|---|---|
+| `02 Data/Data Synth/1 - mzMine/DDA_NEG/merged/merged_neg.csv` | `ded8120213cf66fe54165a682576f92304ea03120fc130ef7ad537ac0caac0a6` |
+| `02 Data/Data Synth/1 - mzMine/DDA_POS/merged/merged_pos.csv` | `904f369e08b943624b5c5cb6e5ac902a992d7653485ca58ef705fa0bd6ad8346` |
+| `02 Data/Data Synth/1 - mzMine/DDA_POS/merged/merged_pos_annotations.csv` | `d982bd4dad9d86569e5bcfe2ff0389d980966b0450bd65c04fa0ff7e55684baa` |
+| `02 Data/Data Synth/1 - mzMine/DDA_POS/merged/merged_pos_gnps.mgf` | `6e27b3656d2dbcbdbe4af0fedf88015308036eec9c2883d5010f34eecaaf9e28` |
+| `02 Data/Data Synth/2 - SIRIUS/output NEG/canopus_structure_summary.tsv` | `5e4939b8e2cc47b5fed18158e72f7fbbc1bcaa43fbeefed6ff2edbfbb2ab447d` |
+| `02 Data/Data Synth/2 - SIRIUS/output POS/canopus_structure_summary.tsv` | `7affa1dbb3df45035d80b4c4510646460fb1eab23cb977739b2db805b9771216` |
+| `02 Data/Data Synth/2 - SIRIUS/output POS/spectral_matches.tsv` | `ae10178bf74d080b67b809130d573326d7d4d267ef0017f67c39ac0ca5d29bef` |
+| `02 Data/Data Synth/2 - SIRIUS/output POS/structure_identifications.tsv` | `df7dcc6e6f98759416dd5163112603c67ce8877aa315cf8d31251cc113a23a37` |
+| `02 Data/Data Synth/3 - GNPS/GNPS2_output_pos/nf_output/library/merged_results_with_gnps.tsv` | `d45047b5668b10f252b706369067bae9bdd5f23de403b0113f5cc8160a6dd7b1` |
+| `02 Data/Data Synth/3 - GNPS/GNPS2_output_pos/nf_output/networking/clustersummary_with_network.tsv` | `27c584990e38f4e8fb276e1ba427eae81b421dc0328ece329b7bc13a43299af1` |
+| `03 Stats/scripts/qc_expected.toml` | `1d0dd7a1e5dfed0423a077ed19f6dd3568e83d68cef79ef867d39b539398ab62` |
+| `03 Stats/scripts/shared/feature_decisions.csv` | `62282334517709db9b4911b045d618cb5f03adefce37e96b89b9d17a161835dc` |
+| `campaign.toml` | `4b24076dcae543b9c2c2658772d6339adb423b8a11122a4f437eb04580313032` |
+| `library/ms2_pos.json` | `05d845806d09b3c77fe546cd7eca75e579b40f33a21879e272c870bad3f01830` |
+| `library/standards.csv` | `89072ddab2272840b11d7511bbc9c9f3b014dd3119f494352a35084c1bc3b2b2` |
+| `livelli_attesi.csv` | `bd5ec6fa530537be04959a616389a7f5bfab63d5184de5604e9cbfd5f0e53b55` |
