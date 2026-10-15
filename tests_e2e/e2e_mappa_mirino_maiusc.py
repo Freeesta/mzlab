@@ -17,11 +17,11 @@ try:
         pg = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}).new_page()
         pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-        pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
-        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")]); pg.wait_for_timeout(800)
-        pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); pg.wait_for_timeout(600)
+        pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "!!document.querySelector('#pick')")
+        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")]); attendi(pg, "!!document.querySelector('#opbtn')")
+        pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); attendi(pg, f"!!{M}._mz")
         pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
-        settle = lambda: (ready(pg), pg.wait_for_timeout(400))
+        settle = lambda: ready(pg)
         btn = ".pnl.map [data-mz=mir]"
         state = lambda: (pg.get_attribute(btn, "aria-pressed"), "on" in (pg.get_attribute(btn, "class") or "").split(), pg.evaluate(f"!!{M}._mz.grid.classList.contains('mir')"))
         def button():
@@ -30,18 +30,18 @@ try:
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("m"); settle(); assert state()[:2] == ("false", False), state()
             pg.keyboard.press("m"); settle(); assert state()[:2] == ("true", True), state()
             pg.keyboard.press("m"); settle()
-            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); pg.wait_for_timeout(900); ready(pg)
+            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); ready(pg)
             assert state()[:2] == ("true", True), ("full screen: the sight is on and the button says so", state())
-            pg.keyboard.press("f"); pg.wait_for_timeout(900); ready(pg)
+            pg.keyboard.press("f"); ready(pg)
             assert state()[:2] == ("false", False), ("back in the page: off", state())
         step("sight button: aria-pressed and «on» follow the real state (start, click, M, full screen)", button)
         def nomenu():
             assert pg.locator(".pnl.map [data-mz=menu]").count() == 0, "no dropdown next to the sight"
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("m"); settle()
             c = pg.evaluate(f"(()=>{{const c={M}.cv.getBoundingClientRect();return [c.left,c.top,c.width,c.height]}})()")
-            pg.mouse.click(c[0] + c[2] * .5, c[1] + c[3] * .5, button="right"); pg.wait_for_timeout(300)
+            pg.mouse.click(c[0] + c[2] * .5, c[1] + c[3] * .5, button="right"); attendi(pg, "!document.querySelector('#ctx').hidden")
             assert pg.evaluate("!document.querySelector('#ctx').hidden"), "the right click still opens the menu"
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+            pg.keyboard.press("Escape")
         step("no «⋯» button; the right-click menu stays", nomenu)
         def shift():
             c = pg.evaluate(f"(()=>{{const c={M}.cv.getBoundingClientRect();return [c.left,c.top,c.width,c.height]}})()")
@@ -53,7 +53,7 @@ try:
             assert abs(h1["mz"] - h0["mz"]) < 1e-9 and h1["rt"] != h0["rt"], (h0, h1)            # horizontal: same m/z
             pg.mouse.move(x0 + 90, y0 + 120, steps=6); h2 = hov()
             assert abs(h2["mz"] - h0["mz"]) < 1e-9 and h2["rt"] != h1["rt"], (h1, h2)            # the axis stays, even if the pointer wanders vertically
-            pg.keyboard.up("Shift"); pg.wait_for_timeout(200); h3 = hov()
+            pg.keyboard.up("Shift"); attendi(pg, f"Math.abs({M}._mz.hov.mz - {h0['mz']}) > 1e-6"); h3 = hov()
             assert abs(h3["mz"] - h0["mz"]) > 1e-6, ("released: free again", h0, h3)
             pg.mouse.move(x0 + 3, y0 + 3); h4 = hov(); pg.keyboard.down("Shift")
             pg.mouse.move(x0 + 6, y0 + 90, steps=6); h5 = hov()
@@ -67,13 +67,13 @@ try:
             ax = pg.evaluate(f"[{M}._a.x0, {M}._a.x1, {M}._a.y0, {M}._a.y1]")
             r0, r1, r2 = ax[0] + (ax[1] - ax[0]) * .2, ax[0] + (ax[1] - ax[0]) * .5, ax[0] + (ax[1] - ax[0]) * .8
             m = lambda f: ax[2] + (ax[3] - ax[2]) * f
-            add(r0, m(.3)); add(r0, m(.6)); pg.wait_for_timeout(300)
+            add(r0, m(.3)); add(r0, m(.6)); ready(pg)
             s2 = sh(); assert s2[0] == s2[1] == "circle", s2                                      # same RT: same shape
-            add(r1, m(.4)); pg.wait_for_timeout(300)
+            add(r1, m(.4)); ready(pg)
             s3 = sh(); assert s3[:2] == s2 and s3[2] == "square", s3                              # a new RT: the next shape, the old ones are not touched
-            add(r2, m(.5)); add(r1, m(.7)); pg.wait_for_timeout(300)
+            add(r2, m(.5)); add(r1, m(.7)); ready(pg)
             s5 = sh(); assert s5[:3] == s3 and s5[3] == "triangle" and s5[4] == "square", s5
-            pg.evaluate(f"MAPPA.delPoint({M}, 0)"); pg.wait_for_timeout(300)
+            pg.evaluate(f"MAPPA.delPoint({M}, 0)"); ready(pg)
             assert sh() == s5[1:], ("removing a point changes no shape", sh(), s5)
             assert pg.evaluate(f"MAPPA.pts({M}).every(q => q.shape)"), "the shape is stored with the point"
         step("markers: the shape is decided at creation and never changes", shapes)
