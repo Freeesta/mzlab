@@ -93,11 +93,12 @@ const ConvUI = {
     box.appendChild(el);
     const bar = q("bar"), fill = bar.querySelector("i");
     const setBar = pc => { if (pc == null) { bar.removeAttribute("aria-valuenow"); fill.style.width = "0%"; } else { bar.setAttribute("aria-valuenow", String(pc)); fill.style.width = pc + "%"; } };
-    let beatStage = "", cur = -1, last = null, doneFrac = 0, stage = "converting", beat = "", changed = t0, key = "", phaseKey = "", indexed = new Map(), nIdx = 0, timer = null;
+    let beatStage = "", cur = -1, last = null, doneFrac = 0, stage = "converting", beat = "", changed = t0, key = "", phaseKey = "", indexed = new Map(), nIdx = 0, timer = null, maxPc = 0;
     const idxMean = () => nIdx ? [...indexed.values()].reduce((a, b) => a + b, 0) / (100 * nIdx) : 0;
     const show = () => {
       const now = Date.now(), elapsed = convElapsed(now - t0), conv = stage === "indexing" ? 100 : convTotalPercent(sizes, Math.max(0, cur), convFraction(last));
-      const known = last && (last.copied != null || last.scansTotal), pc = (conv == null || !known && cur <= 0) && stage === "converting" ? null : Math.min(100, Math.floor(CONV_W * (conv || 0) + (1 - CONV_W) * 100 * idxMean()));
+      const known = last && (last.copied != null || last.scansTotal); let pc = (conv == null || !known && cur <= 0) && stage === "converting" ? null : Math.min(100, Math.floor(CONV_W * (conv || 0) + (1 - CONV_W) * 100 * idxMean()));
+      if (pc != null) { maxPc = Math.max(maxPc, Math.min(99, pc)); pc = maxPc; }         // forward only and never 100 % before `end()`: the same rules as PROGRESSO
       const lab = T(stage === "indexing" ? "conv.phase.indexing" : "conv.phase.converting");
       if (lab !== phaseKey && !cancel.disabled) { phaseKey = lab; q("phase").textContent = lab; }
       bar.setAttribute("aria-label", lab); setBar(pc);

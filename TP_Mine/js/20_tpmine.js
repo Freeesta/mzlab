@@ -22,7 +22,7 @@
 .tp .badge{display:inline-block;padding:0 6px;border-radius:9px;font-size:11px;font-weight:600;border:1px solid var(--line)}
 .tp .b-forte{background:color-mix(in srgb,var(--ok) 14%,var(--panel));color:var(--ink);border-color:var(--ok)}.tp .b-possibile{background:color-mix(in srgb,var(--warn) 14%,var(--panel));color:var(--ink);border-color:var(--warn)}.tp .b-debole{color:var(--muted)}
 
-.tp .tp-lr{margin:4px 0;font-size:12px}.tp-lr .bar{margin-top:2px}
+.tp .loadbar{margin:4px 0}
 .tp .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}.tp .bar i{display:block;height:100%;background:var(--accent);width:0}
 .tp .tbl{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:6px}.tp canvas{width:100%;height:210px;display:block}
 .tp .crit li{margin:2px 0}.tp .crit .pass{color:var(--ok)}.tp .crit .fail{color:var(--bad)}.tp .crit .na{color:var(--muted)}
@@ -194,7 +194,7 @@
 <div class="tp">
 <div id="tp-left">
  <div class="card"><h3>1 · Files</h3>
-  <div class="row"><button id="tp-page" title="Reload the files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick" title="mzML, or the files of the instrument as they are (.raw, .wiff + .wiff.scan): they are prepared in the Data tab and join the list here">Choose files...</button><button id="tp-pickdir" title="A whole folder, for example an Agilent .D">Choose folder...</button></div>
+  <div class="row"><button id="tp-page" title="Reload the files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick" title=".mzML, .raw, .wiff (+ .wiff.scan)">Choose files...</button><button id="tp-pickdir" title="e.g. an Agilent .D">Choose folder...</button></div>
   <input type="file" id="tp-in" accept=".mzML,.mzml,.raw,.wiff,.scan" multiple hidden><input type="file" id="tp-dir" multiple hidden>
   <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
  <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div>
@@ -285,19 +285,10 @@
       await loadFromData(false); };
     const forAdd = x => x.nat ? { name: x.name, file: x.buf, nat: true } : x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: /** @type {any} */ (x.buf).slice ? /** @type {any} */ (x.buf).slice(0) : x.buf };
     // files of the instrument (.raw, .wiff + .wiff.scan, a .D folder): the Data tab prepares them (one copy in OPFS, the .mzidx v2, the bar of nativo-fasi.js), they appear in its list too, and Tabui takes the stubs as "Reload from Data" does
-    const PHASE = { read: "Reading", scans: "Scans", chrom: "Chromatograms" };
     async function loadMaker(fs, folder) {
       if (typeof upload !== "function" || typeof CartCarica === "undefined" || typeof ST === "undefined") return msg("The Data tab is not ready: try again in a moment.", true);
-      const before = new Set((ST.files || []).map(f => f.name)), rows = new Map(), box = $("#tp-load");
-      const onIdx = ev => {
-        const d = ev.detail || {}; if (!d.name || before.has(d.name)) return;
-        let r = rows.get(d.name);
-        if (!r) { r = document.createElement("div"); r.className = "tp-lr"; r.innerHTML = `<span class="tp-lrn"></span> <span class="mut tp-lrp"></span><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><i></i></div>`; r.querySelector(".tp-lrn").textContent = d.name.replace(/\.mzml$/i, ""); box.appendChild(r); rows.set(d.name, r); }
-        const w = Math.min(100, Math.round(100 * (d.frac || 0)));
-        r.querySelector(".tp-lrp").textContent = `${PHASE[d.phase] || "Indexing"} ${w}%`; r.querySelector("i").style.width = w + "%";
-        const b = r.querySelector(".bar"); b.setAttribute("aria-valuenow", String(w)); b.setAttribute("aria-label", `${d.name}: ${PHASE[d.phase] || "Indexing"}`);
-      };
-      addEventListener("mzlab-index", onIdx);
+      const before = new Set((ST.files || []).map(f => f.name)), box = $("#tp-load");
+      const unmount = typeof PROGRESSO !== "undefined" ? PROGRESSO.mount(box) : () => {};      // the same bar as the Data tab (progresso.js): one model, forward only
       msg(`Preparing ${fs.length} file${fs.length === 1 ? "" : "s"} in the Data tab...`);
       try {
         if (folder) await CartCarica.fromInput(fs); else await upload(fs, "data");
@@ -306,7 +297,7 @@
         if (!got.length) return msg("No new sample was added: the files are already in the Data tab, or they cannot be read (see the notice there).", true);
         await addFiles(got.map(forAdd));
       } catch (e) { msg(String(e.message || e), true); }
-      finally { removeEventListener("mzlab-index", onIdx); box.textContent = ""; }
+      finally { unmount(); box.textContent = ""; }
     }
     // default: the Full Scan / HRMS files already loaded in the Data tab (browser memory) are taken at once
     async function loadFromData(quiet) {
