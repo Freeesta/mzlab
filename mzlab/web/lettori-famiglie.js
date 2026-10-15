@@ -4,7 +4,8 @@
 // (lower case, a part of the path) that tell the family, `errori` = the keys of the engine's errors that send a sample to the module, `soloModulo` = the extensions only the module reads
 // (the engine reads the others as they are): a file with one of these is taken by the module and is not refused as «cannot be opened». The errors a module raises itself reach the page
 // as `{error_key, params}` and are shown through the catalogs (`err.file.netcdf4` for the family `andi`).
-/** @typedef {{ ext: string[], membri: string[], errori: string[], soloModulo: string[] }} Famiglia */
+// `sonda` = the module looks at every file of the family before the engine (its `probe` answers «variante» for the instruments and experiments the engine does not read).
+/** @typedef {{ ext: string[], membri: string[], errori: string[], soloModulo: string[], sonda?: boolean }} Famiglia */
 /** @type {Record<string, Famiglia>} */
 const LETTORI_FAM = {
   aperti: { ext: [".mzml", ".mzxml"], membri: [], errori: ["err.file.numpress"], soloModulo: [".mzxml"] },
@@ -13,7 +14,7 @@ const LETTORI_FAM = {
   // bruker before agilent: both are `.d` folders and `famigliaDi` takes the first family that matches, so the members `analysis.*` decide, never the extension
   bruker: { ext: [], membri: ["analysis.tdf", "analysis.tsf", "analysis.baf"], errori: [], soloModulo: [] },
   agilent: { ext: [".d"], membri: ["acqdata/", ".d/"], errori: ["err.file.agilent"], soloModulo: [] },
-  sciex: { ext: [".wiff", ".wiff.scan"], membri: [], errori: ["err.file.wiff"], soloModulo: [] },
+  sciex: { ext: [".wiff", ".wiff.scan"], membri: [], errori: ["err.file.wiff"], soloModulo: [], sonda: true },
   waters: { ext: [], membri: [], errori: [], soloModulo: [] },
   shimadzu: { ext: [], membri: [], errori: [], soloModulo: [] },
 };

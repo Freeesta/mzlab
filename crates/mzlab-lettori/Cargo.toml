@@ -11,7 +11,7 @@ aperti = []
 andi = []
 thermo = ["mzlab-core/thermo"]
 agilent = []
-sciex = []
+sciex = ["mzlab-core/sciex"]
 waters = []
 shimadzu = []
 # the SQLite reader is written in the crate (bruker/sqlite_min.rs); ruzstd (MIT, pure Rust) decodes the blocks of analysis.tdf_bin

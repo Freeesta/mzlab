@@ -11,6 +11,8 @@ default = ["thermo"]
 thermo = ["dep:opentfraw"]
 # variants of the readers served only by the readers module (crates/mzlab-lettori), never by the engine (mzlab-wasm leaves it off)
 estesi = []
+# what only the SCIEX readers module needs beyond `estesi` and the other families must not carry (their .wasm is under a size limit): the `variante` method of the `Lettore` trait and the `cv:` parameters of the mzML writer
+sciex = ["estesi"]
 
 [dependencies]
 quick-xml = "0.42"

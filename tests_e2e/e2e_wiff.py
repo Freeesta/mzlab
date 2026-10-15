@@ -124,6 +124,21 @@ try:
             try: pg.wait_for_function("document.querySelector('#tp-files') && /serie\\s+Full scan/.test(document.querySelector('#tp-files').innerText)", timeout=60000)
             except Exception: raise AssertionError(pg.evaluate("[document.querySelector('#tp-files').innerText, document.querySelector('#tp-fsum').innerText, (document.querySelector('#tp-msg')||{}).innerText, Array.from(document.querySelectorAll('#flist tr')).length]"))
         step("mzFinder lists the converted Full Scan file", mzfinder)
+        def variante():                                  # a QTRAP 5500 file (survey, EPI, precursor-ion and neutral-loss experiments, two block versions): the engine reads the 3200 QTRAP only, the sciex module takes the pair
+            if not (ROOT / "site" / "static" / "wasm-lettori" / "manifest.json").exists():
+                print("   (variante: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return
+            c3 = b.new_context(viewport={"width": 1500, "height": 1800}); c3.set_default_timeout(120000); asked = []; c3.on("request", lambda r: asked.append(r.url)); pg = c3.new_page()
+            pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
+            pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
+            pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+            pg.set_input_files("#pick", [str(D / "variante.wiff"), str(D / "variante.wiff.scan")])
+            shown(pg, 1)
+            assert names(pg) == ["variante.mzML"], names(pg)
+            assert any("wasm-lettori/sciex" in u for u in asked), "the sciex module was not requested"
+            assert not pyodide(asked) and not pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_MISS || []")
+            assert not errs, errs
+            c3.close()
+        step("a .wiff of another instrument (QTRAP 5500) is read by the sciex module, not by the engine", variante)
         b.close()
 finally:
     srv.terminate()
