@@ -84,8 +84,9 @@ Lo studente acquisisce una MS2 perché ha già visto quello ione: se un picco de
 ## 10. Pacchetti
 | Pacchetto | Cosa | Dipende da |
 |---|---|---|
+| M0 | Correzione del difetto esistente: la finestra di `ms2.rs::window` attacca rumore a una riga (scansioni MS2 solo vicino a `ref_rt` e solo con segnale nella traccia) | nulla: per primo |
 | M1 | CE dei `.wiff` nell'indice e nell'mzML (`<activation>`) | nulla (parallelo a M2) |
-| M2 | Motore `lr/ms2link.rs`, pool dagli abbinamenti, `ms2_links/1`, `relink`, worker | nulla |
+| M2 | Motore `lr/ms2link.rs`, pool dagli abbinamenti, `ms2_links/1`, `relink`, worker | M0 unita |
 | M3 | Bersagli MS2 (§6) e diagnosi delle righe mancanti | M2 unita |
 | M4 | Interfaccia: avvio con le MS2, scheda «MS2 matches», correzioni, esportazioni, e2e | M2 unita (parallelo a M3) |
 | M5 | Confronto col genitore come in HR (`pair_components` con tolleranza in Da) e D6 | M4 unita |
