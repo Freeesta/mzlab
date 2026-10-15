@@ -548,7 +548,7 @@ I18N.add("en", {
   "err.file.unknown": "The program did not receive the file ({detail}): try loading it again.",
   "err.file.raw": "The .raw file (Thermo) or the .raw folder (Waters) cannot be read: the whole file is needed, with all its files ({detail}).",
   "err.file.notAgilentD": "The folder {name} has no AcqData/MSScan.bin and AcqData/MSPeak.bin (nor a data.ms file): the whole .D folder is needed, with its AcqData subfolder.",
-  "err.file.agilentNoEngine": "Agilent .D folders open only with the Rust engine of the program ({name}).",
+  "err.file.agilentNoEngine": "Agilent .D folders open only with the Rust engine of the program ({name}).", "err.file.brukerBaf": "Bruker folders with only analysis.baf cannot be read without Bruker's SDK: export to mzML with Bruker DataAnalysis or msconvert.", "err.file.brukerNoBin": "The folder {name} does not contain {file}: the whole Bruker .d folder is needed.",
   "load.wiffWait": "{name}: waiting for the other file of the pair (.wiff and .wiff.scan with the same name).",
   "load.note.movedToDam": "Methods put in box 2: {name}",
   "load.note.movedToData": "Data files put in box 1: {name}",
