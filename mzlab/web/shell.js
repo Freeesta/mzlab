@@ -190,7 +190,7 @@ async function moduloToMzml(files,box,rep){
     CONVROWS.add(nm,"open");const ui=g.start(i,nm),dest=`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.mzML`;
     try{const blob=await M.toMzml(jobs.get(f),mem,lot?lot.c:0,dest,p=>{ui.update(p);CONVROWS.set(nm,"run",p.scansTotal?Math.floor(100*p.scans/p.scansTotal):0)},g.signal);
       ui.done();CONV.add(nm,blob);out.push(new File([blob],nm))}
-    catch(e){ui.done();if(!e.cancelled){const m=e.json?I18N.err(e.json).message:e.message;(rep.errs[m]=rep.errs[m]||[]).push(f.name)}}
+    catch(e){ui.done();if(!e.cancelled){const x=e.json?I18N.err(e.json):e,m=x.message;(rep.errs[m]=rep.errs[m]||[]).push(f.name);if(!(rep.diag||(rep.diag={}))[m])rep.diag[m]=DIAG.da(Object.assign(x,{fase:x.fase||"decode"}),{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}}
     finally{CONVROWS.drop(nm)}}
   out.panel=g;return out}
 let CONVERT_RAW=false;   // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
@@ -214,7 +214,9 @@ function reportLoad(rep){
     L.push(`<p><b>${T(n===1?"unopen.head.one":"unopen.head",{n,types})}</b></p>`);
     L.push(`<details class="unopen-names"><summary>${T("unopen.names")}</summary><ul>${names.slice(0,5).map(x=>`<li>${esc(x)}</li>`).join("")}${names.length>5?`<li class="muted">${T("unopen.more",{n:names.length-5})}</li>`:""}</ul></details>`)}
   if(rep.other.length)L.push(`<p>${T("unopen.other",{n:rep.other.length,names:namesCut(rep.other,3)})}</p>`);
-  for(const [msg,names] of Object.entries(rep.errs))L.push(`<p class="fail">${names.length===1?T("unopen.err.one",{name:esc(names[0]),message:esc(msg)}):T("unopen.err.many",{n:names.length,names:namesCut(names,3),message:esc(msg)})}</p>`);
+  const DG=[];
+  for(const [msg,names] of Object.entries(rep.errs)){const d=(rep.diag||{})[msg],why=d&&d.causa!=="unknown"?` ${I18N.t(`diag.cause.${d.causa}`)}`:"";if(d)DG.push(d);
+    L.push(`<div class="fail"><p>${names.length===1?T("unopen.err.one",{name:esc(names[0]),message:esc(msg)}):T("unopen.err.many",{n:names.length,names:namesCut(names,3),message:esc(msg)})}${esc(why)}</p>${d?DIAG.html(d,esc,T):""}</div>`)}
   if(rep.moved.dam.length)L.push(`<p>${T("load.note.movedToDam",{name:namesCut(rep.moved.dam,3)})}</p>`);
   if(rep.moved.data.length)L.push(`<p>${T("load.note.movedToData",{name:namesCut(rep.moved.data,3)})}</p>`);
   for(const n of rep.notes||[])L.push(`<p>${esc(n)}</p>`);
@@ -224,6 +226,7 @@ function reportLoad(rep){
   u.hidden=false;
   u.querySelector('[data-a=close]').onclick=closeUnopen;
   const hb=u.querySelector('[data-a=help]');if(hb)hb.onclick=()=>openConvHelp(true);
+  u.querySelectorAll(".diag").forEach((el,i)=>DIAG.cabla(el,DG[i],window.MZLAB_VERSION,T));
   if(rep.unopen.length){
     const h=$("#convhint");h.textContent=T("conv.help.hint",{types:[...new Set(conv)].join(", ")});h.hidden=false;
     if(!ssGet("qqq.convopen")){ssSet("qqq.convopen","1");openConvHelp(false)}   // opens by itself once per session
@@ -252,7 +255,7 @@ async function upload0(files,into,box){
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{if(!pn)row.querySelector("i").style.width=(100*a/b)+"%";CONVROWS.set(f.name,"index",Math.floor(100*a/b));if(pn)pn.index(f.name,Math.floor(100*a/b))});
       if(j.error)throw I18N.err(j);CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
       LOADFAIL.delete(f.name)}
-    catch(e){row.remove();CONVROWS.drop(f.name);LOADFAIL.add(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}finally{removeEventListener("mzlab-index",onIdx);LOADP.delete(f.name);BATCH.done++;waitStato()}};
+    catch(e){row.remove();CONVROWS.drop(f.name);LOADFAIL.add(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name);if(!(rep.diag||(rep.diag={}))[e.message])rep.diag[e.message]=DIAG.da(e,{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}finally{removeEventListener("mzlab-index",onIdx);LOADP.delete(f.name);BATCH.done++;waitStato()}};
   let panel=null;
   const wr=await wiffToMzml(files,box);files=await rawToMzml(wr.files,box);files=await moduloToMzml(files,box,rep);panel=files.panel||null;for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});

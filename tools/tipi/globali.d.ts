@@ -16,6 +16,7 @@ declare var CartPuntDesk: any;
 declare var CartPuntVista: any;
 declare var ConvUI: any;
 declare var DESKUPD: any;
+declare var DIAG: any;
 declare var ERRORI: any;
 declare var EventSource: any;
 declare var FAIR: any;

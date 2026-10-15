@@ -168,7 +168,7 @@
   "mzlab/web/liste.js::LISTE": 807,
   "mzlab/web/liste.js::mount": 176,
   "mzlab/web/livelli.js::LIVELLI": 101,
-  "mzlab/web/lr.js::createLr": 157,
+  "mzlab/web/lr.js::createLr": 175,
   "mzlab/web/mappa3d.js::open": 449,
   "mzlab/web/paletta.js::PALETTE": 118,
   "mzlab/web/pannelli.js::addPanel": 120,
