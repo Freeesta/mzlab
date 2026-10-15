@@ -43,6 +43,7 @@
   "TP_Mine/js/20_tpmine.js::open": 488,
   "TP_Mine/js/21_tpmine_hr.js::render": 196,
   "TP_Mine/js/23_tpmine_albero.js::mount": 193,
+  "TP_Mine/js/42_tp_table.js::mount": 330,
   "TP_Mine/py/tpmine/engine.py::Experiment": 598,
   "TP_Mine/py/tpmine/fragtree.py::mask_smiles": 82,
   "TP_Mine/py/tpmine/hr/edge_evidence.py::edge_evidence": 85,
