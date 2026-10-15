@@ -281,19 +281,20 @@ fn apri_membri(fs: FileSet) -> Result<u32, JsValue> {
 pub fn campioni(h: u32) -> Result<String, JsValue> {
     con(|s| s.campioni(h))
 }
+/// The version of the binary transport of the index and the scans (`mzlab_core::trasporto::PROTOCOLLO`): the engine refuses a module with another.
 #[wasm_bindgen]
-pub fn indice(h: u32, c: u32) -> Result<String, JsValue> {
+pub fn protocollo() -> u32 {
+    mzlab_core::trasporto::PROTOCOLLO
+}
+/// The index of the sample as one `Uint8Array` (`mzlab_core::trasporto::encode_indice`).
+#[wasm_bindgen]
+pub fn indice(h: u32, c: u32) -> Result<Vec<u8>, JsValue> {
     con(|s| s.indice(h, c as usize))
 }
-/// `[mz: Float64Array, intensity: Float64Array, meta: JSON]`.
+/// A scan as one `Uint8Array` (`mzlab_core::trasporto::encode_scansione`).
 #[wasm_bindgen]
-pub fn scansione(h: u32, c: u32, k: u32) -> Result<js_sys::Array, JsValue> {
-    let s = con(|s| s.scansione(h, c as usize, k as usize))?;
-    let a = js_sys::Array::new();
-    a.push(&js_sys::Float64Array::from(&s.mz[..]));
-    a.push(&js_sys::Float64Array::from(&s.intensita[..]));
-    a.push(&JsValue::from_str(&s.meta));
-    Ok(a)
+pub fn scansione(h: u32, c: u32, k: u32) -> Result<Vec<u8>, JsValue> {
+    con(|s| s.scansione(h, c as usize, k as usize))
 }
 #[wasm_bindgen]
 pub fn intestazione(h: u32, c: u32, k: u32) -> Result<String, JsValue> {

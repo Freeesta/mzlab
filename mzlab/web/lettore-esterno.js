@@ -1,6 +1,7 @@
 // @ts-check
 // The readers modules in the workers of the ENGINE (rust-worker.js, idx-worker.js): the engine (mzlab-wasm) has no reader for a Thermo `.raw`; the dataset is opened on the `thermo` module, loaded in the same
 // worker on the first `.raw` (carica-modulo.js, never for other files), and the engine reads it through `LettoreEsterno` (crates/mzlab-wasm/src/esterno.rs): synchronous calls, no mzML in between.
+// The index and the scans cross as one Uint8Array each, read by the engine (`trasporto.rs`); the engine refuses a module whose `protocollo()` is not its own (err.file.wiffLoad).
 // `native_external(open)` of the engine takes `open(names, sizes, read)` -> the object of a session of the module, or null for a dataset no module reads. The module is loaded BEFORE the engine asks
 // (`prepara`, async): the engine cannot wait for a download.
 import { loadModulo } from "./carica-modulo.js";
@@ -30,8 +31,9 @@ export function createEsterno(native_external) {
     const sums = Array.from(names, (n, i) => (sha1 && sha1[i]) || known.get(n + "\0" + sizes[i]) || "");
     const h = w.apri_con_sha1 && sums.some(Boolean) ? w.apri_con_sha1(names, sizes, read, sums) : w.apri(names, sizes, read);        // the module reads the members with the engine's own `read`; the SHA-1 of a member the page knows is not read again
     return {
+      protocollo: () => (w.protocollo ? w.protocollo() : 1),        // the version of the binary transport of the index and the scans (a module of an older build has none)
       campioni: () => w.campioni(h),
-      indice: (/** @type {number} */ c) => w.indice(h, c),
+      indice: (/** @type {number} */ c) => w.indice(h, c),        // one Uint8Array: the columns of the index (crates/mzlab-core/src/trasporto.rs)
       scansione: (/** @type {number} */ c, /** @type {number} */ k) => w.scansione(h, c, k),
       intestazione: (/** @type {number} */ c, /** @type {number} */ k) => w.intestazione(h, c, k),
       cromatogrammi: (/** @type {number} */ c) => w.cromatogrammi(h, c),
@@ -51,6 +53,8 @@ export function createEsterno(native_external) {
       if (loaded.has(fam)) return;
       try { loaded.set(fam, await loadModulo(fam)); } catch (e) { throw loadError(fam, e); }
     },
+    /** a session of the module over the members of a dataset, for the page's own reads (the series of the instrument log); `prepara` first */
+    apri: open,
     loaded: () => [...loaded.keys()],
   };
 }

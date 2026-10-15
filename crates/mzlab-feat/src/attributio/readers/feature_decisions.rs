@@ -2,7 +2,9 @@
 //! The chemist's decisions on single features of a campaign: one `;`-separated file declared in `[curation] feature_decisions`, with the columns
 //! `pol;feature_id;mz;rt;livello;nome;identita;decided_on;decided_by;motivazione` and the optional ones (`group`, the evidence, `rt_check`, the provenance of
 //! the review, and `evidence_checklist`: the checks the chemist ticked before a 2b, separated by `|`; read if there, always written last).
-//! `livello` `2b` (diagnostic evidence, needs `motivazione`), `3` (a Level 2 goes to Level 3; never raises a level), `2` (a record) or empty; `nome` replaces the
+//! `livello` `2b` (probable structure from diagnostic fragments, in-silico spectra or an unambiguous chemical context; only the chemist writes it, needs
+//! `motivazione`), `3a` (few positional/isomeric candidates among homologues), `3b` (a generic class with many plausible isomers), `3` (a Level 2 goes to
+//! Level 3 without saying which; never raises a level), `2` (a record) or empty; `nome` replaces the
 //! feature's name before curation; `group` `ambiguous` takes the identity out of every count. The file is a history: the rows of one feature apply in file
 //! order and a later row supersedes the earlier ones; a decision is per FEATURE (found again by m/z and RT when mzMine is re-run), never per name.
 
@@ -154,8 +156,8 @@ fn check_decisions(t: &DecisionTable, path: &str) -> Result<()> {
         t,
         path,
         "livello",
-        &["", "2", "2b", "3"],
-        "livello must be '2b', '3', '2' or empty",
+        &["", "2", "2b", "3", "3a", "3b"],
+        "livello must be '2b', '3a', '3b', '3', '2' or empty",
     )?;
     check_values(
         t,
@@ -168,8 +170,8 @@ fn check_decisions(t: &DecisionTable, path: &str) -> Result<()> {
         t,
         path,
         "evidence_type",
-        &["", "library", "analog", "fragments"],
-        "evidence_type must be library, analog, fragments or empty",
+        &["", "library", "analog", "fragments", "in_silico", "context"],
+        "evidence_type must be library, analog, fragments, in_silico, context or empty",
     )?;
     check_values(
         t,

@@ -399,7 +399,7 @@
   "update.progress": "Avanzamento dello scaricamento dell'aggiornamento; {done} = file scaricati, {total} = file da scaricare, {size} = megabyte scaricati finora.",
   "workflow.warn.unknownOps": "Avviso all'apertura di un file .mzflow con operazioni sconosciute (ignorate); {ops} = nomi delle operazioni.",
   "workflow.warn.shaMismatch": "Avviso quando l'impronta SHA-256 differisce da quella del flusso; {file} = nome file, {actual} = impronta calcolata, {expected} = impronta attesa.",
-  "lv.sentence": "Frase del livello di confidenza ({lv} = 1, 2a, 2b, 3, 4, 5 o 0; {name} = nome del livello).",
+  "lv.sentence": "Frase del livello di confidenza ({lv} = etichetta della scala di Schymanski: L1, L2a, L2b, L3a, L3b, L4, L5 o L0; {name} = nome del livello).",
   "lv.dec.1": "Frase decisiva del livello 1; {name} = nome dello standard.",
   "lv.dec.2a": "Frase decisiva del livello 2a; {lib} = nome della libreria (con uno spazio davanti, o vuoto), {name} = nome del candidato.",
   "lv.dec.tetto": "Frase decisiva del profilo a risoluzione unitaria: tutti i cancelli superati, ma il livello non va oltre il tetto; {name} = candidato, {lib} = libreria, {lv} = livello massimo.",
@@ -558,5 +558,6 @@
   "fondo.chip.auto": "Etichetta del fondo automatico sotto il grafico. {min} e {max} = minimo e massimo della linea di base tolta, in cps (già formattati).",
   "tip.raw": "Piccolo valore nel riquadro del mouse, accanto a quello corretto. {v} = valore della traccia prima del fondo, già formattato.",
   "load.cell.of": "Nome accessibile di una cella della tabella di caricamento; {f} = nome del file, {col} = nome della colonna.",
-  "inf.skip": "Suggerimento di una riga dell'albero dei precursori: quante generazioni mancano tra il nodo e il suo genitore ({n})."
+  "inf.skip": "Suggerimento di una riga dell'albero dei precursori: quante generazioni mancano tra il nodo e il suo genitore ({n}).",
+  "method.reg.go": "Nome accessibile del pulsante di una voce del registro errori nella finestra del metodo: porta il cursore al suo tempo; {t} = tempo in minuti."
 }

@@ -363,6 +363,32 @@ fn extract_parts_with_params<R: Read + Seek>(
     Some(((meta, mz, intensity, effective_scan_mode), params))
 }
 
+/// The peak arrays of scan `idx` and the mode they are in, exactly as [`extract_spectrum`] gives them (without profile data), but without reading the trailer of the scan or
+/// building its filter, precursors and the rest of its metadata: for a caller that has them already (the index). `None` when the scan cannot be read.
+pub fn extract_arrays<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+    idx: u32,
+) -> Option<(Vec<f64>, Vec<f32>, Option<crate::ScanMode>)> {
+    if idx >= raw.num_scans {
+        return None;
+    }
+    let event = raw.scan_events.get(idx as usize);
+    let nominal = if raw.flat_peaks {
+        Some(crate::ScanMode::Centroid)
+    } else {
+        event.as_ref().and_then(|e| e.preamble.scan_mode())
+    };
+    resolve_scan_arrays(
+        raw,
+        source,
+        raw.run_header.sample_info.first_scan_number + idx,
+        false,
+        event.as_ref(),
+        nominal,
+    )
+}
+
 /// Iterate every scan in `raw` as a [`SpectrumRecord`].
 ///
 /// Skipped scans (those for which the peak arrays cannot be decoded) are

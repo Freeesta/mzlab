@@ -4,7 +4,7 @@
 // the .ket and travels with the molfile. Brackets and text are drawn by parentesi.js over the canvas; formula, mass and m/z with the delta come from the Rust
 // graph (`partial`, parz/1). A multicentre attachment (a substituent on «any of these ring atoms») is a second data S-group, «MZLAB_ENDPTS», on the candidate
 // atoms and the substituent atom; it is exported as a V3000 molfile with ENDPTS written here (Ketcher has no bond with a variable position).
-// The export for mzFinder is {smiles, delta, level: 3} (level 3 of Schymanski: a candidate class, never one structure), plus positionUnknown and the V3000.
+// The export for mzFinder is {smiles, delta, level: "3b"} (level 3b of Schymanski: a generic class with many plausible isomers, never one structure), plus positionUnknown and the V3000.
 import { drawBrackets, drawMulticenter, bracketBox } from "./parentesi.js";
 import { carica } from "./disegno-frammenti.js";
 
@@ -178,7 +178,7 @@ export function addExportPartials(/** @type {any} */ K, /** @type {string} */ sv
 }
 
 /**
- * The drawing for mzFinder: {smiles, delta, level, positionUnknown, molfile}. Level 3 with a delta or a multicentre attachment, otherwise null (a whole
+ * The drawing for mzFinder: {smiles, delta, level, positionUnknown, molfile}. Level 3b with a delta or a multicentre attachment, otherwise null (a whole
  * structure: the level is not the drawing's to say); with a multicentre attachment `molfile` is the V3000 with ENDPTS of every atom drawn, else "".
  * @param {any} K
  * @param {(ids: number[]) => string | null} [molfile] V3000 writer (multiMolfile of all atoms when omitted)
@@ -186,7 +186,7 @@ export function addExportPartials(/** @type {any} */ K, /** @type {string} */ sv
 export async function partialExport(K, molfile) {
   const delta = partials(K).map(p => p.delta).filter(Boolean).join(" "), ms = multis(K), all = [...K.editor.struct().atoms.keys()];
   const mf = ms.length ? (molfile ? molfile(all) : multiMolfile(K, all, ms)) || "" : "";
-  return { smiles: plainSmiles(await K.getSmiles()), delta, level: delta || ms.length ? 3 : null, positionUnknown: ms.length > 0, molfile: mf };
+  return { smiles: plainSmiles(await K.getSmiles()), delta, level: delta || ms.length ? "3b" : null, positionUnknown: ms.length > 0, molfile: mf };
 }
 
 /** @typedef {{ pieces: () => { ids: number[] }[], pieceMolfile: (ids: number[]) => string | null, num: (v: number) => string, t: (k: string, p?: any) => string, copy: (s: string) => void, ask: (title: string, def: string) => Promise<string | null>, note: (s: string) => void }} Helpers */

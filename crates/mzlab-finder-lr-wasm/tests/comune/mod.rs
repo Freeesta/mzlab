@@ -72,7 +72,18 @@ pub fn noise(rng: &mut Lcg, prev: &[f64]) -> Vec<f64> {
 
 /// The `.mzidx` of one file: Q1 scans every 3 s from 0.5 to 14 min, the noise of `noise` and the ions of `pool`.
 pub fn index_of(t: Option<f64>, seed: u64) -> Vec<u8> {
+    index_with(t, seed, &|_| Vec::new())
+}
+
+/// `index_of` with more ions, `(m/z, RT, sigma, amplitude)` by sampling time; they have a generator of their own, so the other ions are the same.
+pub fn index_with(
+    t: Option<f64>,
+    seed: u64,
+    extra: &dyn Fn(Option<f64>) -> Vec<(f64, f64, f64, f64)>,
+) -> Vec<u8> {
     let mut rng = Lcg(seed);
+    let mut rng2 = Lcg(seed + 5000);
+    let more = extra(t);
     let comps = pool(t);
     let name = format!("lr{seed}");
     let mut w = MzmlWriter::new(
@@ -98,6 +109,12 @@ pub fn index_of(t: Option<f64>, seed: u64) -> Vec<u8> {
             let v = a * (-0.5 * ((rt - c) / s).powi(2)).exp() * (1.0 + 0.04 * rng.normal());
             if v > 100.0 {
                 peaks.push((m + SHIFT + 0.03 * rng.normal(), v as f32));
+            }
+        }
+        for &(m, c, s, a) in &more {
+            let v = a * (-0.5 * ((rt - c) / s).powi(2)).exp() * (1.0 + 0.04 * rng2.normal());
+            if v > 100.0 {
+                peaks.push((m + SHIFT + 0.03 * rng2.normal(), v as f32));
             }
         }
         peaks.sort_by(|a, b| a.0.total_cmp(&b.0));
@@ -130,15 +147,22 @@ pub fn open(idx: &[u8]) -> Index<Vec<u8>> {
 
 /// The files as the page passes them (the kind of `classify`) and the indexes of the columns.
 pub fn series() -> (String, Vec<Vec<u8>>) {
+    series_with(&|_| Vec::new())
+}
+
+/// `series` with more ions in every file (`index_with`).
+pub fn series_with(
+    extra: &dyn Fn(Option<f64>) -> Vec<(f64, f64, f64, f64)>,
+) -> (String, Vec<Vec<u8>>) {
     let mut files = Vec::new();
     let mut idxs = Vec::new();
     for (i, t) in TIMES.iter().enumerate() {
         files.push(format!(r#"{{"name": "lr_FullMass-t{t}.mzML", "time": {t:.1}, "type": "sample", "kind": "full"}}"#));
-        idxs.push(index_of(Some(*t), 11 + i as u64));
+        idxs.push(index_with(Some(*t), 11 + i as u64, extra));
     }
     files
         .push(r#"{"name": "lr_blank.mzML", "time": null, "type": "blank", "kind": "full"}"#.into());
-    idxs.push(index_of(None, 99));
+    idxs.push(index_with(None, 99, extra));
     (format!("[{}]", files.join(",")), idxs)
 }
 

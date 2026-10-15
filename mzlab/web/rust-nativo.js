@@ -67,6 +67,33 @@ async function samplesDi(native_samples, ext, members) {
   return native_samples(members.map(x => x.name), Float64Array.from(members.map(x => x.blob.size)), rd);
 }
 
+/** The series of the instrument log (`status:…`, `trailer:…`) of a sample of a maker's file: one session of the module is kept for them and closed when idle (a second copy of a big file is not held longer than it is used). */
+function registroDi(stubOf, memberFiles, ext, jerr) {
+  /** @type {{ name: string, s: any, timer: any } | null} */
+  let log = null;
+  const IDLE = 30000;
+  const close = () => { if (log) { clearTimeout(log.timer); try { log.s.chiudi(); } catch (_) { /* already closed */ } log = null; } };
+  /** one series as the module's chromatogram JSON; the points are computed here, when asked for */
+  async function registro(/** @type {string} */ name, /** @type {string} */ id) {
+    if (!log || log.name !== name) {
+      close();
+      const st = await stubOf(name);
+      if (!st) jerr("err.session.fileNotFound");
+      const files = await memberFiles(st);
+      await ext.prepara(st.members.map(m => m.name));
+      const s = ext.apri(st.members.map(m => m.name), Float64Array.from(files.map(f => f.size)), reader(files, undefined));
+      if (!s) jerr("err.route.unavailable");
+      log = { name, s, timer: 0 };
+    }
+    clearTimeout(log.timer);
+    const cur = log;
+    cur.timer = setTimeout(() => { if (log === cur) close(); }, IDLE);
+    return cur.s.cromatogramma(0, id);
+  }
+  return { registro, forget: (/** @type {string} */ n) => { if (log && log.name === n) close(); } };
+}
+
+
 /** one member copied to OPFS unless it is there (or being written for another sample); its fingerprints are taken in the same pass */
 async function copyMember(/** @type {{ ARCH: any, impronte?: { start: (size: number) => import("./impronta.js").Presa }, writing: Map<string, Promise<void>>, taken: Map<string, string[]> }} */ { ARCH, impronte, writing, taken }, /** @type {Blob} */ blob, /** @type {string} */ store, /** @type {(n: number) => void} */ bump) {
   const have = await ARCH.get("files", store);
@@ -156,6 +183,6 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
   }
 
   const samples = (/** @type {{ name: string, blob: Blob }[]} */ members) => samplesDi(native_samples, ext, members);
-
-  return { stubOf, attach, put, indexJob, toMzml, samples, sweep, srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => stubs.delete(n) };
+  const log = registroDi(stubOf, memberFiles, ext, jerr);
+  return { stubOf, attach, put, indexJob, toMzml, samples, sweep, srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); }, registro: log.registro };
 }

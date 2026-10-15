@@ -4,6 +4,8 @@
 use std::collections::HashMap;
 
 use super::*;
+use crate::mzml::Spectrum;
+use crate::mzmlwrite::{Header, SpectrumExtra};
 
 /// A level and the key of a filter path (`path_key`).
 type PathKey = (u8, Vec<(i64, String, u64)>);
@@ -55,6 +57,44 @@ impl Head {
             ic,
             default_ic,
         }
+    }
+
+    /// What `parse` reads from the header `mzmlwrite` writes for `h`, without writing it: the one instrument configuration `IC1` (the analyzers are the
+    /// `analyzer` components) and `run.nce`. `None` when a name has a character that the text would break on (the caller then goes through the text).
+    pub(super) fn da_testata(h: &Header) -> Option<Head> {
+        let bad = |t: &str| t.contains(['"', '<', '>']);
+        let mut names: Vec<&str> = Vec::new();
+        let mut accs: Vec<&str> = Vec::new();
+        let mut free: Vec<&str> = Vec::new();
+        for (kind, acc, name) in &h.components {
+            if kind == "analyzer" {
+                names.push(name);
+            }
+            free.extend([kind.as_str(), name.as_str()]);
+            accs.push(acc);
+        }
+        let sources = if h.sources.is_empty() {
+            &[][..]
+        } else {
+            &h.source_cv[..]
+        };
+        for (a, n) in h.content.iter().chain(sources).chain(h.instrument.iter()) {
+            accs.push(a);
+            free.push(n);
+        }
+        for (a, _, _) in &h.extra_software {
+            accs.push(a);
+        }
+        if accs.iter().chain(&free).any(|t| bad(t)) {
+            return None;
+        }
+        let has_nce = accs.contains(&"MS:1000768");
+        let names: Vec<String> = names.into_iter().map(String::from).collect();
+        Some(Head {
+            nce: has_nce,
+            ic: vec![("IC1".to_string(), analyzer_from_components(&names))],
+            default_ic: Some("IC1".to_string()),
+        })
     }
 
     fn analyzer(&self, filt: &str, icref: Option<&str>) -> String {
@@ -128,6 +168,16 @@ impl Rows {
             refs: HashMap::new(),
             level_of: HashMap::new(),
         }
+    }
+
+    /// Level and polarity of the row added last: what the `.mzidx` builder groups the scan by (the text of an extra can say more than the scan does).
+    pub(crate) fn ultima(&self) -> Option<(u8, i8)> {
+        self.rows.last().map(|r| (r.level, r.polarity))
+    }
+
+    /// From the header of a run, without writing it (`Head::da_testata`); `None` when the text would be needed.
+    pub(crate) fn da_testata(h: &Header) -> Option<Rows> {
+        Head::da_testata(h).map(Rows::with)
     }
 
     /// From the text of a document up to its first spectrum (the header `mzmlwrite` writes, with its `<run ` tag).
@@ -284,6 +334,123 @@ impl Rows {
             self.level_of.insert(i, level);
         }
         self.rows.push(row);
+    }
+}
+
+/// The accessions `spectrum` looks for in the text of a header (as substrings: `h.contains` too): an extra that carries one of them would change the row.
+const LETTI: [&str; 18] = [
+    "MS:1000511",
+    "MS:1000130",
+    "MS:1000129",
+    "MS:1000016",
+    "MS:1000512",
+    "MS:1000800",
+    "MS:1000285",
+    "MS:1000128",
+    "MS:1000045",
+    "MS:1000744",
+    "MS:1000827",
+    "MS:1000828",
+    "MS:1000829",
+    "MS:1000041",
+    "MS:1000042",
+    "MS:1000422",
+    "MS:1000133",
+    "MS:1000598",
+];
+
+/// True when nothing in the scan or its extras can make the header text say more than the row `lettore` builds: no `MS:1000...` accession in the id, the
+/// filter or the free text of the extras, and no `cv:` extra with an accession `spectrum` reads.
+fn extra_inerte(sp: &Spectrum, extra: &SpectrumExtra) -> bool {
+    let bad = |t: &str| t.contains(['"', '<', '>']);
+    let acc = |t: &str| t.contains("MS:1000");
+    if acc(&sp.id) || acc(&sp.filter) {
+        return false;
+    }
+    extra
+        .params
+        .iter()
+        .all(|(k, v)| match k.strip_prefix("cv:") {
+            Some(a) => !bad(a) && !bad(v) && !acc(v) && !LETTI.iter().any(|l| a.contains(l)),
+            None => !acc(k) && !acc(v),
+        })
+}
+
+/// `&`, `<`, `>` and `"` as the writer escapes them.
+fn esc(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+
+impl Rows {
+    /// One scan of a reader, as `spectrum` would read the header `mzmlwrite::spectrum_head(k, sp, extra)` writes for it, without writing it: the same
+    /// fields from the same values (`sp` with its arrays cut to the shorter one, `tic` the sum of its intensities). `false` and nothing added when an
+    /// extra could change what the text says (`extra_inerte`): the caller then gives `spectrum` the text.
+    pub(crate) fn lettore(&mut self, sp: &Spectrum, extra: &SpectrumExtra, tic: f64) -> bool {
+        if !extra_inerte(sp, extra) {
+            return false;
+        }
+        let native = esc(&sp.id);
+        let filt = esc(&sp.filter);
+        let level = sp.level;
+        let polarity = match sp.polarity {
+            1 => 1,
+            -1 => -1,
+            _ => 0,
+        };
+        let mut m = Msn::default();
+        if level > 1 {
+            m.path = filter_path(&filt);
+            if let Some(p) = sp.precursor {
+                m.precs.push(Prec {
+                    target: Some(p),
+                    selected: Some(p),
+                    ..Prec::default()
+                });
+                m.prec = Some(p);
+                m.iso = Some((p - 0.5, p + 0.5));
+            }
+            if m.act.is_none() {
+                m.act = match &m.path {
+                    Some(p) => Some(p[p.len() - 1].1.clone()),
+                    None => activation_in_filter(&filt),
+                };
+            }
+        }
+        let res = extra
+            .params
+            .iter()
+            .find(|(k, _)| k == "opentfraw.resolution")
+            .and_then(|(_, v)| float(&esc(v)));
+        let row = Row {
+            start: 0,
+            end: 0,
+            k: None,
+            posizione: None,
+            level,
+            rt: sp.rt,
+            polarity,
+            tic: Some(tic).filter(|v| *v != 0.0).unwrap_or(0.0),
+            precursor: m.prec,
+            ce: m.ce,
+            an: self.head.analyzer(&filt, None),
+            filter: filt,
+            profile: sp.profile,
+            parent: None,
+            iso: m.iso,
+            act: m.act,
+            res,
+            pint: m.pint,
+            path: m.path,
+            precs: m.precs,
+            charge: m.charge,
+            native: native.clone(),
+        };
+        self.level_of.insert(native, level);
+        self.rows.push(row);
+        true
     }
 }
 

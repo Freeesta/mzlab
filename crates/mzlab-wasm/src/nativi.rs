@@ -9,7 +9,7 @@ use js_sys::Function;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{self, FileSet, Lettore, Limiti, Membro};
 use mzlab_core::sorgente::SorgenteLettore;
-use mzlab_core::{lettori_centroidi, lettori_mzml, mzidx, upload};
+use mzlab_core::{lettori_centroidi, lettori_mzml, upload};
 use wasm_bindgen::prelude::*;
 
 use crate::esterno::{errore_del_modulo, LettoreEsterno, ModuloJs};
@@ -325,14 +325,20 @@ pub fn build_mzidx_native(
     };
     let c = c as usize;
     tell(2);
-    let p = upload::prepare_lettore(&mut *l, c, &impronte, name).map_err(|e| error_json(&e))?;
-    tell(3);
     let mut out = JsOutput { write };
-    let st = mzidx::build_lettore(&p.table, &mut *l, c, &mut out, (budget_mb as usize) << 20)
-        .map_err(|e| error_json(&e))?;
+    let (st, sha256) = upload::indicizza_lettore(
+        &mut *l,
+        c,
+        &impronte,
+        name,
+        &mut out,
+        (budget_mb as usize) << 20,
+        &mut |n| tell(n),
+    )
+    .map_err(|e| error_json(&e))?;
     Ok(format!(
         "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{},\"sha256\":\"{}\"}}",
-        st.scans, st.peaks, st.sections, st.passes, st.bytes, p.sha256
+        st.scans, st.peaks, st.sections, st.passes, st.bytes, sha256
     ))
 }
 

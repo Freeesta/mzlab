@@ -257,3 +257,47 @@ fn every_channel_of_the_status_log_is_a_field_and_the_log_is_no_longer_a_warning
     }
     eprintln!("status logs decoded: {decoded}");
 }
+
+#[test]
+fn the_instrument_log_is_listed_and_each_series_is_served_on_demand() {
+    let Some(d) = dati() else {
+        eprintln!("skipped: no data repository (MZLAB_DATI)");
+        return;
+    };
+    let mut seen = 0;
+    for (raw_path, _) in pairs(&d) {
+        let reader =
+            opentfraw::RawFileReader::open(BufReader::new(File::open(&raw_path).unwrap())).unwrap();
+        let v = json::parse(doc(&raw_path).as_bytes()).unwrap();
+        let series = v.get("serie_registro").map_or(&[][..], |c| c.arr());
+        // the channels of the status log that take at least two different values are the status series
+        let varying = reader.status_log.as_ref().map_or(0, |log| {
+            log.series()
+                .iter()
+                .filter(|s| s.values.iter().any(|y| *y != s.values[0]))
+                .count()
+        });
+        let status = series
+            .iter()
+            .filter(|s| {
+                s.get("id")
+                    .and_then(|i| i.str())
+                    .is_some_and(|i| i.starts_with("status:"))
+            })
+            .count();
+        assert_eq!(status, varying, "{raw_path:?}: status series");
+        let log = v.get("registro").map_or(&[][..], |c| c.arr());
+        let named = reader
+            .error_log
+            .iter()
+            .filter(|e| !e.message.trim().is_empty())
+            .count();
+        assert_eq!(log.len(), named, "{raw_path:?}: error log");
+        for s in series.iter().take(3) {
+            let n = s.get("n").and_then(|n| n.f64()).unwrap_or(0.0);
+            assert!(n >= 2.0, "{raw_path:?}: a series has at least two points");
+        }
+        seen += 1;
+    }
+    eprintln!("raw files checked: {seen}");
+}

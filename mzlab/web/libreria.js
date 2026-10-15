@@ -294,7 +294,7 @@ const LIB = (() => {
     const lv = LIVELLI.shown(res), b = res.best || res.nearest || res.analog;
     return `<div class="vd" style="margin:6px 0;padding:6px 10px;border-radius:6px;border:1px solid var(--line)"><span class="lvb ${LIVELLI.cls(lv)}">${EHt(LIVELLI.sentence(lv))}</span>${b && res.proposed !== "5" && res.proposed !== "0" ? ` <b>${EHt(b.name || "")}</b>` : ""}
       <div class="sm" style="margin-top:4px"><b>${I18N.t("lv.evidence")}</b>: ${res.lines.length ? res.lines.map(x => EHt(x)).join(" · ") : "–"}</div><div class="sm">${EHt(res.decisive)}</div>
-      <div class="sm" style="margin-top:4px">${I18N.t("lv.proposed")}: <b>${EHt(res.proposed)}</b> · <label>${I18N.t("lv.decided")} <select id="lv-dec"><option value="">${I18N.t("lv.decided.none")}</option>${LIVELLI.ORDER.map(x => `<option value="${x}"${res.decided === x ? " selected" : ""}>${x}</option>`).join("")}</select></label> <span class="sm err" id="lv-msg" role="status"></span></div></div>`;
+      <div class="sm" style="margin-top:4px">${I18N.t("lv.proposed")}: <b>${EHt(LIVELLI.tag(res.proposed))}</b> · <label>${I18N.t("lv.decided")} <select id="lv-dec"><option value="">${I18N.t("lv.decided.none")}</option>${LIVELLI.ORDER.map(x => `<option value="${x}"${res.decided === x ? " selected" : ""}>${LIVELLI.tag(x)}</option>`).join("")}</select></label> <span class="sm err" id="lv-msg" role="status"></span></div></div>`;
   }
   function levelBind(root, res, again) {                       // the chemist's decision: 2b is only written here
     const sel = root.querySelector("#lv-dec"); if (!sel) return;
@@ -509,7 +509,7 @@ const LIB = (() => {
     const b = g.best && g.best.name ? g.best : null;
     return assess(b ? [b, b.alt].filter(Boolean) : [], { nScans: g.n });
   }
-  const lvCell = res => { const lv = LIVELLI.shown(res); return `<span class="lvb ${LIVELLI.cls(lv)}" title="${EHt(LIVELLI.sentence(lv) + " · " + res.decisive)}">${EHt(lv)}</span>`; };
+  const lvCell = res => { const lv = LIVELLI.shown(res); return `<span class="lvb ${LIVELLI.cls(lv)}" title="${EHt(LIVELLI.sentence(lv) + " · " + res.decisive)}">${EHt(LIVELLI.tag(lv))}</span>`; };
   async function identifyAll(k) {
     ensureCss();
     const f = E.files[k]; if (!f) return;

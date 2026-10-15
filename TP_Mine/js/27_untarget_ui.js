@@ -27,7 +27,7 @@
   const say = t => { const e = $("#unt-msg"); if (e) e.textContent = t || ""; };
   const fmtA = v => (v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : v >= 1e3 ? (v / 1e3).toFixed(v >= 1e4 ? 0 : 1) + "k" : String(Math.round(v)));
   const maxArea = f => Math.max(0, ...Object.values(f.areas));
-  const lvBadge = r => { const lv = M().shown(r); return `<span class="lvb lv-${esc(lv)}" title="${esc(L().sentence(lv) + " · " + (r.lv.decisive || ""))}">${esc(lv)}${r.decided ? " ✎" : ""}</span>`; };
+  const lvBadge = r => { const lv = M().shown(r); return `<span class="lvb lv-${esc(lv)}" title="${esc(L().sentence(lv) + " · " + (r.lv.decisive || ""))}">${esc(L().tag(lv))}${r.decided ? " ✎" : ""}</span>`; };
 
   function open() {
     if (!document.getElementById("unt-css")) { const s = document.createElement("style"); s.id = "unt-css"; s.textContent = CSS; document.head.appendChild(s); }
@@ -119,7 +119,7 @@
   function rank(r) { return L().rank(M().shown(r)); }
   function fill() {
     const t = st.table, cnt = {}; for (const f of t.features) { const lv = M().shown(st.res.get(f.key)); cnt[lv] = (cnt[lv] || 0) + 1; }
-    $("#unt-lv").innerHTML = `<option value="all">all (${t.features.length.toLocaleString("en")})</option>` + L().ORDER.filter(l => cnt[l]).map(l => `<option value="${l}">${l} · ${esc(L().name(l))} (${cnt[l].toLocaleString("en")})</option>`).join("");
+    $("#unt-lv").innerHTML = `<option value="all">all (${t.features.length.toLocaleString("en")})</option>` + L().ORDER.filter(l => cnt[l]).map(l => `<option value="${l}">${L().tag(l)} · ${esc(L().name(l))} (${cnt[l].toLocaleString("en")})</option>`).join("");
     $("#unt-lv").value = st.level; $("#unt-res").hidden = false;
     st.order = t.features.map((f, i) => i).sort((a, b) => { const ra = st.res.get(t.features[a].key), rb = st.res.get(t.features[b].key); return rank(ra) - rank(rb) || (rb.ent ?? -1) - (ra.ent ?? -1) || a - b; });
     if (/** @type {any} */ (window).UNTX && !$("#unt-x-xlsx")) { $("#unt-exp").innerHTML = /** @type {any} */ (window).UNTX.buttons(); /** @type {any} */ (window).UNTX.bind(dlg, () => ({ table: st.table, res: st.res, tol: st.tol, all: () => st.order.map(i => st.table.features[i]), visible })); }
@@ -179,7 +179,7 @@
     }
     return out;
   }
-  const idBadge = x => `<span class="lvb lv-${esc(x.level)}" title="${esc(L().sentence(x.level) + " · level of feature " + (st.table.byId.get(x.via.split(":").pop()) || { id: x.via }).id)}">${esc(x.level)}${x.decided ? " ✎" : ""}</span>`;
+  const idBadge = x => `<span class="lvb lv-${esc(x.level)}" title="${esc(L().sentence(x.level) + " · level of feature " + (st.table.byId.get(x.via.split(":").pop()) || { id: x.via }).id)}">${esc(L().tag(x.level))}${x.decided ? " ✎" : ""}</span>`;
   function gtable() {
     const t = st.table, g = st.graph, rows = gvisible(), shown = rows.slice(0, st.nShown), byKey = new Map(t.features.map(f => [f.key, f]));
     $("#unt-cnt").textContent = `${rows.length.toLocaleString("en")} identities · ${g.stats.features.toLocaleString("en")} features`;
@@ -203,7 +203,7 @@
     st.sel = id; const g = st.graph, t = st.table, x = g.identities.find(y => y.id === id); if (!x) return;
     $("#unt-t").querySelectorAll("tr.row1").forEach(tr => tr.classList.toggle("sel", (tr.dataset.k || tr.dataset.i) === id));
     const D = $("#unt-det"); D.hidden = false; const byKey = new Map(t.features.map(f => [f.key, f]));
-    const viaF = byKey.get(x.via), b = x.best, roles = x.members.map(k => { const f = byKey.get(k), ro = x.neutral.roles[k], r = st.res.get(k); return `<li>feature ${esc(f.id)} · <i>m/z</i> ${f.mz.toFixed(4)} · RT ${f.rt.toFixed(2)} · ${ro ? esc(ro.label) : "not explained by this mass"} · level ${esc(M().shown(r))}${r.name ? " · " + esc(r.name) : ""}</li>`; }).join("");
+    const viaF = byKey.get(x.via), b = x.best, roles = x.members.map(k => { const f = byKey.get(k), ro = x.neutral.roles[k], r = st.res.get(k); return `<li>feature ${esc(f.id)} · <i>m/z</i> ${f.mz.toFixed(4)} · RT ${f.rt.toFixed(2)} · ${ro ? esc(ro.label) : "not explained by this mass"} · ${esc(L().tag(M().shown(r)))}${r.name ? " · " + esc(r.name) : ""}</li>`; }).join("");
     const alts = x.alternatives.map(a => `<li>${esc(ID().hypothesisText(a, t))}</li>`).join("");
     const edges = x.edges.map(i => g.edges[i]), ev = edges.map(e => `<li>${esc(byKey.get(e.a).id)} – ${esc(byKey.get(e.b).id)}: ${esc(ID().edgeText(e))}</li>`).join("");
     D.innerHTML = `<div><h3>${esc(x.id)} · ${x.members.length} feature${x.members.length === 1 ? "" : "s"} · RT ${x.rt.toFixed(2)} min ${idBadge(x)}</h3>
@@ -220,7 +220,7 @@
     st.sel = key; const t = st.table, f = t.features.find(x => x.key === key), r = st.res.get(key); if (!f || !r) return;
     $("#unt-t").querySelectorAll("tr.row1").forEach(tr => tr.classList.toggle("sel", tr.dataset.k === key));
     const D = $("#unt-det"); D.hidden = false;
-    const lvOpts = ["", ...L().ORDER].map(l => `<option value="${l}"${(r.decided || "") === l ? " selected" : ""}>${l ? esc(l + " · " + L().name(l)) : "(no decision)"}</option>`).join("");
+    const lvOpts = ["", ...L().ORDER].map(l => `<option value="${l}"${(r.decided || "") === l ? " selected" : ""}>${l ? esc(L().tag(l) + " · " + L().name(l)) : "(no decision)"}</option>`).join("");
     D.innerHTML = `<div><h3>Feature ${esc(f.id)} · <i>m/z</i> ${f.mz.toFixed(4)} · RT ${f.rt.toFixed(2)} min ${lvBadge(r)}</h3>
       <div class="mut">${esc(L().sentence(M().shown(r)))}${r.name ? " · " + esc(r.name) : ""}${r.lib ? " (" + esc(r.lib) + ")" : ""}</div>
       <ul>${r.evidence.map(x => `<li>${esc(x)}</li>`).join("")}</ul>

@@ -29,8 +29,8 @@ pub use device::{DetectedInstrument, DeviceFamily};
 pub use error::{Error, Result};
 pub use extra::ExtraFields;
 pub use mzml::{
-    extract_spectrum, iter_spectra, scan_metadata, write_indexed_mzml, write_mzml, PrecursorInfo,
-    ScanMetadata, SpectrumRecord,
+    extract_arrays, extract_spectrum, iter_spectra, scan_metadata, write_indexed_mzml, write_mzml,
+    PrecursorInfo, ScanMetadata, SpectrumRecord,
 };
 pub use reader::{
     AnalogTrace, ControllerInfo, ControllerType, RawFileReader, ScanParams, StatusLogEntry,

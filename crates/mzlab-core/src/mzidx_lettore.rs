@@ -1,11 +1,12 @@
 //! The `.mzidx` of a vendor file set (`docs/agenti/mzidx.md`, version 2), straight from a `Lettore`, with no mzML written and read again:
-//! the rows are the ones `scantable` reads from the header of each spectrum as `lettori_mzml::scrivi` would write it (the same text, so the
-//! same parser), and the spectra given to the builder are the ones the mzML would give back. Only the first two columns of a row change:
+//! the rows are the ones `scantable` reads from the header of each spectrum as `lettori_mzml::scrivi` would write it (built from the scan itself,
+//! with no text), and the spectra given to the builder are the ones the mzML would give back. Only the first two columns of a row change:
 //! the `Posizione` of the scan in the members of the set and its number `k` in `Lettore::indice`.
 
 use crate::error::Result;
 use crate::lettori::{Lettore, VoceScansione};
 use crate::lettori_mzml;
+use crate::mzidx::Prima;
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{self, MzmlWriter};
 use crate::scantable::{Rows, Table};
@@ -24,16 +25,41 @@ pub(crate) fn spettro(l: &mut dyn Lettore, c: usize, k: usize) -> Result<Spectru
     Ok(s)
 }
 
-/// The scan table of sample `c`: every scan is decoded once, for the header text the writer would give it (TIC, base peak, profile).
+/// The scan table of sample `c`: every scan is decoded once and its row is built from the scan itself (`Rows::lettore`), the row that `Rows::spectrum`
+/// reads from the header text `mzmlwrite::spectrum_head` would write (the writer is only used for a scan whose extras could change that text).
 /// `n_chromatograms` counts, as in the mzML, the chromatograms the writer writes (a kind it knows, at least one point).
 pub fn righe(l: &mut dyn Lettore, c: usize) -> Result<Table> {
-    let head = MzmlWriter::new(Vec::new(), &lettori_mzml::testata(l, c)?)?.finish()?;
-    let mut rows = Rows::from_head(&head);
-    drop(head);
+    tabella(l, c, None)
+}
+
+/// The table and pass 1 of the `.mzidx` builder in one decoding of the scans: what `righe` gives and the groups `mzidx::build_dopo` needs.
+pub(crate) fn righe_prima(l: &mut dyn Lettore, c: usize, budget: usize) -> Result<(Table, Prima)> {
+    let mut prima = Prima::new(budget);
+    let t = tabella(l, c, Some(&mut prima))?;
+    Ok((t, prima))
+}
+
+fn tabella(l: &mut dyn Lettore, c: usize, mut prima: Option<&mut Prima>) -> Result<Table> {
+    let h = lettori_mzml::testata(l, c)?;
+    let mut rows = match Rows::da_testata(&h) {
+        Some(r) => r,
+        None => Rows::from_head(&MzmlWriter::new(Vec::new(), &h)?.finish()?),
+    };
+    drop(h);
     let n = l.indice(c)?.len();
     for k in 0..n {
-        let s = l.scansione(c, k)?;
-        rows.spectrum(0, 0, &mzmlwrite::spectrum_head(k, &s, &l.extra_mzml(&s)));
+        let s = spettro(l, c, k)?;
+        let extra = l.extra_mzml(&s);
+        // the sum `spectrum_head` writes
+        let tic: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
+        if !rows.lettore(&s, &extra, tic) {
+            rows.spectrum(0, 0, &mzmlwrite::spectrum_head(k, &s, &extra));
+        }
+        if let Some(p) = prima.as_deref_mut() {
+            // the level and polarity of the row, as `build` reads them from the table
+            let (level, pol) = rows.ultima().unwrap_or((s.level, 0));
+            p.add(level, pol, &s)?;
+        }
     }
     let mut n_chromatograms = 0;
     for v in l.cromatogrammi(c)? {

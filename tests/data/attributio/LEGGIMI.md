@@ -19,7 +19,7 @@ Campagna INVENTATA (nessun dato vero): uguale alla fixture `tests/fixtures/synth
 | `campaign.toml` | `4b24076dcae543b9c2c2658772d6339adb423b8a11122a4f437eb04580313032` |
 | `library/ms2_pos.json` | `05d845806d09b3c77fe546cd7eca75e579b40f33a21879e272c870bad3f01830` |
 | `library/standards.csv` | `89072ddab2272840b11d7511bbc9c9f3b014dd3119f494352a35084c1bc3b2b2` |
-| `livelli_attesi.csv` | `bd5ec6fa530537be04959a616389a7f5bfab63d5184de5604e9cbfd5f0e53b55` |
+| `livelli_attesi.csv` | `6712b2f1e5ca1ddb489a1c1948fff85a5ea8b439fb0aa6eb439c94e375f4887c` |
 
 ## Campagna dei sorbenti
 

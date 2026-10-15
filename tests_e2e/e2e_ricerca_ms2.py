@@ -54,18 +54,18 @@ try:
         step("entries with the same first InChIKey block are grouped (stereoisomers), expandable", groups)
         def level():
             v = pg.inner_text("#libres #lr-verdict")
-            assert "Candidato · livello" in v and "Prove" in v and "Livello proposto" in v and "Livello deciso" in v, v
+            assert "Candidato · L" in v and "Prove" in v and "Livello proposto" in v and "Livello deciso" in v, v
             assert "entropia" in v and "vs" in v and ("✓" in v or "✗" in v), v
             assert "è " not in pg.inner_text("#libres .vd .lvb"), "never «it is X»"
-            n = pg.evaluate("LIB.assess([{name:'x',ent:.9,shared:8,dprec:1}],{nScans:1}).proposed"); assert n == "3"
-        step("a level badge «Candidato · livello N», one evidence line per gate, proposed and decided level", level)
+            n = pg.evaluate("LIB.assess([{name:'x',ent:.9,shared:8,dprec:1}],{nScans:1}).proposed"); assert n == "3a"
+        step("a level badge «Candidato · LN», one evidence line per gate, proposed and decided level", level)
         def decision():
             prop = pg.evaluate("document.querySelector('#libres #lv-dec').closest('div').innerText")
-            lv = pg.evaluate("(()=>{const m=document.querySelector('#libres .vd .lvb').textContent.match(/livello (\\w+)/);return m&&m[1]})()")
-            assert lv in ("2a", "3"), lv
+            lv = pg.evaluate("(()=>{const m=document.querySelector('#libres .vd .lvb').textContent.match(/Candidato · L(\\w+)/);return m&&m[1]})()")
+            assert lv in ("2a", "3a"), lv
             pg.select_option("#libres #lv-dec", "2b"); pg.wait_for_timeout(300)
-            assert "livello 2b" in pg.inner_text("#libres .vd .lvb"), pg.inner_text("#libres .vd")
-            assert "Livello proposto: " + lv in pg.inner_text("#libres .vd").replace("\n", " "), "the proposal stays"
+            assert "L2b" in pg.inner_text("#libres .vd .lvb"), pg.inner_text("#libres .vd")
+            assert "Livello proposto: L" + lv in pg.inner_text("#libres .vd").replace("\n", " "), "the proposal stays"
             pg.select_option("#libres #lv-dec", "1"); pg.wait_for_timeout(300)
             assert "standard" in pg.inner_text("#libres #lv-msg") and pg.input_value("#libres #lv-dec") == "2b"
             pg.select_option("#libres #lv-dec", ""); pg.wait_for_timeout(200)
@@ -73,7 +73,7 @@ try:
         def thresholds():
             pg.click("#libres #lr-sog summary"); pg.fill("#libres [data-thr=entropia_min]", "0,999"); pg.dispatch_event("#libres [data-thr=entropia_min]", "change"); pg.wait_for_timeout(500)
             assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.lib.soglie')).mzlab.entropia_min") == 0.999
-            assert "livello 3" in pg.inner_text("#libres .vd .lvb") or "livello 2a" not in pg.inner_text("#libres .vd .lvb")
+            assert "L3" in pg.inner_text("#libres .vd .lvb") or "L2a" not in pg.inner_text("#libres .vd .lvb")
             wf = pg.evaluate("LIVELLI.exportState()"); assert wf["soglie"]["entropia_min"] == 0.999 and wf["formato"] == "livelli/1"
             pg.click("#libres #lr-sog-reset"); pg.wait_for_timeout(300)
             assert pg.evaluate("LIVELLI.thresholds().entropia_min") == 0.75

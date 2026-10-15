@@ -1,25 +1,28 @@
 //! A reader that lives in a readers module (`wasm-lettori/<family>/`, docs/agenti/lettori-modulo.md) and not in the engine: `LettoreEsterno` is a `Lettore` over the synchronous
 //! functions of the session interface of the module, which the page loads in the same worker (`rust-nativo.js`). The conversion of the answers (JSON, typed arrays) into the types of
-//! the contract is in `Risposte` and does not touch JS, so it is tried natively with a fake `Modulo`; `ModuloJs` is the one that calls the functions.
+//! the contract is in `Risposte` and does not touch JS, so it is tried natively with a fake `Modulo`; `ModuloJs` is the one that calls the functions. The index and the scans cross as
+//! one byte array each (`mzlab_core::trasporto`), the rest as JSON.
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
-use js_sys::{Array, Float64Array, Function, Reflect};
+use js_sys::{Array, Function, Reflect, Uint8Array};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Value};
-use mzlab_core::lettori::{
-    Campione, Campo, Formato, Lettore, Posizione, VoceCromatogramma, VoceScansione,
-};
+use mzlab_core::lettori::{Campione, Campo, Formato, Lettore, VoceCromatogramma, VoceScansione};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::Header;
+use mzlab_core::trasporto::{decode_indice, decode_scansione, PROTOCOLLO};
 use wasm_bindgen::prelude::*;
 
-/// The session interface of a module, as the engine uses it: JSON texts and the two arrays of a scan. An error is the `Error` of the module (same key).
+/// The session interface of a module, as the engine uses it: JSON texts, and the index and the scans as bytes. An error is the `Error` of the module (same key).
 pub trait Modulo {
+    /// The version of the transport the module speaks (`trasporto::PROTOCOLLO`).
+    fn protocollo(&mut self) -> Result<u32>;
     fn campioni(&mut self) -> Result<String>;
-    fn indice(&mut self, c: usize) -> Result<String>;
-    /// `(m/z, intensity, meta JSON)`.
-    fn scansione(&mut self, c: usize, k: usize) -> Result<(Vec<f64>, Vec<f64>, String)>;
+    /// The index of sample `c` (`trasporto::encode_indice`).
+    fn indice(&mut self, c: usize) -> Result<Vec<u8>>;
+    /// Scan `k` of sample `c` (`trasporto::encode_scansione`).
+    fn scansione(&mut self, c: usize, k: usize) -> Result<Vec<u8>>;
     fn intestazione(&mut self, c: usize, k: usize) -> Result<String>;
     fn cromatogrammi(&mut self, c: usize) -> Result<String>;
     fn cromatogramma(&mut self, c: usize, id: &str) -> Result<String>;
@@ -143,27 +146,9 @@ impl Risposte {
         Ok((formato(&testo(v.get("formato"))), c))
     }
 
-    /// One object per scan: `{id, rt, level, polarity, tic, base, filter, precursor, pos:[member, offset, length]|null}`.
-    pub(crate) fn indice(t: &str) -> Result<Vec<VoceScansione>> {
-        let v = doc(t)?;
-        Ok(v.arr()
-            .iter()
-            .map(|r| VoceScansione {
-                id: testo(r.get("id")),
-                rt: numero(r.get("rt")),
-                livello: numero(r.get("level")) as u8,
-                polarita: numero(r.get("polarity")) as i8,
-                tic: numero(r.get("tic")),
-                picco_base: opzionale(r.get("base")),
-                filtro: testo(r.get("filter")),
-                precursore: opzionale(r.get("precursor")),
-                posizione: r.get("pos").filter(|p| !p.is_null()).map(|p| Posizione {
-                    membro: numero(p.at(0)) as u16,
-                    offset: numero(p.at(1)) as u64,
-                    lunghezza: numero(p.at(2)) as u32,
-                }),
-            })
-            .collect())
+    /// The index as the module wrote it (`trasporto::decode_indice`).
+    pub(crate) fn indice(b: &[u8]) -> Result<Vec<VoceScansione>> {
+        decode_indice(b)
     }
 }
 
@@ -171,32 +156,14 @@ impl Risposte {
 pub struct RisposteScansioni;
 
 impl RisposteScansioni {
-    /// The scan: points as the module sends them and `{id, level, rt, polarity, profile, filter, precursor}`.
-    pub(crate) fn scansione(k: usize, mz: Vec<f64>, y: Vec<f64>, meta: &str) -> Result<Spectrum> {
-        if mz.len() != y.len() {
-            return Err(guasto("scan"));
+    /// The scan as the module sends it, with the id and the filter of its row of the index.
+    pub(crate) fn scansione(k: usize, b: &[u8], riga: Option<&VoceScansione>) -> Result<Spectrum> {
+        let mut s = decode_scansione(k, b)?;
+        if let Some(r) = riga {
+            s.id = r.id.clone();
+            s.filter = r.filtro.clone();
         }
-        let m = doc(meta)?;
-        let intensity: Vec<f32> = y.iter().map(|&x| x as f32).collect();
-        // 64-bit intensities that a 32-bit one cannot hold are kept as they are
-        let wide = y
-            .iter()
-            .zip(&intensity)
-            .any(|(&a, &b)| a != f64::from(b) && !(a.is_nan() && b.is_nan()))
-            .then_some(y);
-        Ok(Spectrum {
-            index: k,
-            id: testo(m.get("id")),
-            level: numero(m.get("level")) as u8,
-            rt: numero(m.get("rt")),
-            polarity: numero(m.get("polarity")) as i8,
-            profile: m.get("profile").and_then(Value::bool).unwrap_or(false),
-            filter: testo(m.get("filter")),
-            precursor: opzionale(m.get("precursor")),
-            mz,
-            intensity,
-            wide,
-        })
+        Ok(s)
     }
 
     /// `[{name, value, unit, cv}]`.
@@ -308,6 +275,12 @@ pub struct LettoreEsterno<M: Modulo> {
 
 impl<M: Modulo> LettoreEsterno<M> {
     pub fn new(mut m: M) -> Result<Self> {
+        // a module cached from another version of the site speaks another transport: the page asks to load it again
+        if m.protocollo()? != PROTOCOLLO {
+            return Err(Error::new("err.file.wiffLoad")
+                .with("family", "thermo")
+                .with("detail", "protocol"));
+        }
         let (formato, campioni) = Risposte::campioni(&m.campioni()?)?;
         Ok(LettoreEsterno {
             m,
@@ -333,8 +306,9 @@ impl<M: Modulo> Lettore for LettoreEsterno<M> {
         Ok(self.indici.get(&c).map_or(&[][..], Vec::as_slice))
     }
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        let (mz, y, meta) = self.m.scansione(c, k)?;
-        RisposteScansioni::scansione(k, mz, y, &meta)
+        let b = self.m.scansione(c, k)?;
+        self.indice(c)?;
+        RisposteScansioni::scansione(k, &b, self.indici.get(&c).and_then(|v| v.get(k)))
     }
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         RisposteScansioni::intestazione(&self.m.intestazione(c, k)?)
@@ -377,6 +351,15 @@ impl ModuloJs {
             })
     }
 
+    /// A `Uint8Array` answer, copied once into the memory of the engine.
+    fn byte(&self, nome: &str, args: &[JsValue]) -> Result<Vec<u8>> {
+        let a: Uint8Array = self
+            .chiama(nome, args)?
+            .dyn_into()
+            .map_err(|_| guasto(nome))?;
+        Ok(a.to_vec())
+    }
+
     fn testo(&self, nome: &str, args: &[JsValue]) -> Result<String> {
         self.chiama(nome, args)?
             .as_string()
@@ -392,21 +375,20 @@ impl Drop for ModuloJs {
 }
 
 impl Modulo for ModuloJs {
+    fn protocollo(&mut self) -> Result<u32> {
+        self.chiama("protocollo", &[])?
+            .as_f64()
+            .map(|v| v as u32)
+            .ok_or_else(|| guasto("protocollo"))
+    }
     fn campioni(&mut self) -> Result<String> {
         self.testo("campioni", &[])
     }
-    fn indice(&mut self, c: usize) -> Result<String> {
-        self.testo("indice", &[(c as f64).into()])
+    fn indice(&mut self, c: usize) -> Result<Vec<u8>> {
+        self.byte("indice", &[(c as f64).into()])
     }
-    fn scansione(&mut self, c: usize, k: usize) -> Result<(Vec<f64>, Vec<f64>, String)> {
-        let r = self.chiama("scansione", &[(c as f64).into(), (k as f64).into()])?;
-        let a: Array = r.dyn_into().map_err(|_| guasto("scansione"))?;
-        let col = |i: u32| -> Result<Vec<f64>> {
-            let f: Float64Array = a.get(i).dyn_into().map_err(|_| guasto("scansione"))?;
-            Ok(f.to_vec())
-        };
-        let meta = a.get(2).as_string().ok_or_else(|| guasto("scansione"))?;
-        Ok((col(0)?, col(1)?, meta))
+    fn scansione(&mut self, c: usize, k: usize) -> Result<Vec<u8>> {
+        self.byte("scansione", &[(c as f64).into(), (k as f64).into()])
     }
     fn intestazione(&mut self, c: usize, k: usize) -> Result<String> {
         self.testo("intestazione", &[(c as f64).into(), (k as f64).into()])

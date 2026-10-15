@@ -2,7 +2,7 @@
 use std::fs::File;
 
 use mzlab_core::lettori::Limiti;
-use mzlab_core::mzidx::{self, Stats, DEFAULT_BUDGET};
+use mzlab_core::mzidx::{Stats, DEFAULT_BUDGET};
 use mzlab_core::{lettori_centroidi, upload, Error};
 
 use crate::idxbuild::{clean, io_error, IdxBuilder};
@@ -23,9 +23,17 @@ impl IdxBuilder {
             } else {
                 l
             };
-            let p = upload::prepare_lettore(&mut *l, nat.c, &impronte, name)?;
             let mut out = File::create(&part).map_err(|e| io_error(&e))?;
-            mzidx::build_lettore(&p.table, &mut *l, nat.c, &mut out, DEFAULT_BUDGET)
+            upload::indicizza_lettore(
+                &mut *l,
+                nat.c,
+                &impronte,
+                name,
+                &mut out,
+                DEFAULT_BUDGET,
+                &mut |_| {},
+            )
+            .map(|(st, _)| st)
         });
         match r {
             Ok(st) => {

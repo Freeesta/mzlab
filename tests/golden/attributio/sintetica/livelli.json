@@ -23,7 +23,7 @@
    "level": 3,
    "level_basis": "expert review",
    "level_decisive": "All gates passed (mzMine library), but the chemist's decision takes it to Level 3.",
-   "level_sub": "",
+   "level_sub": "a",
    "level_why": "SIRIUS spectral: no hit\nGNPS2: no hit\nmzMine library: Fictacin B -- cosine 0.85 vs 0.70 pass; shared ions 5 vs 4 pass; precursor 0.0 ppm vs 15 ppm pass => valid source\nCSI:FingerID: no structure\nchemist's decision: fictional: single library, evidence below 2a",
    "name": null,
    "reasons": "SIRIUS spectral: no hit\nGNPS2: no hit\nmzMine library: Fictacin B -- cosine 0.85 vs 0.70 pass; shared ions 5 vs 4 pass; precursor 0.0 ppm vs 15 ppm pass => valid source\nCSI:FingerID: no structure\nchemist's decision: fictional: single library, evidence below 2a"
@@ -51,7 +51,7 @@
    "level": 3,
    "level_basis": "CSI:FingerID",
    "level_decisive": "No library source passes its gates; the level rests on the CSI:FingerID structure (COSMIC 0.80 ≥ 0.64).",
-   "level_sub": "",
+   "level_sub": "a",
    "level_why": "SIRIUS spectral: no hit\nGNPS2: no hit\nmzMine library: no hit\nCSI:FingerID: Fictastructin -- COSMIC 0.80 vs 0.64 pass\nchemist's decision: fictional: same compound as POS 3",
    "name": "Fictastructin",
    "reasons": "SIRIUS spectral: no hit\nGNPS2: no hit\nmzMine library: no hit\nCSI:FingerID: Fictastructin -- COSMIC 0.80 vs 0.64 pass\nchemist's decision: fictional: same compound as POS 3"
@@ -93,7 +93,7 @@
    "level": 3,
    "level_basis": "name conflict",
    "level_decisive": "Valid libraries name different structures and the best match is ahead by less than 0.05 cosine: the spectrum does not tell them apart (Level 3). best library match: mzMine library 'Fictamine' (cosine 0.90, 7 ions) over SIRIUS spectral 'Fictamine isomer' (cosine 0.88, 6 ions); margin 0.020 < 0.05.",
-   "level_sub": "",
+   "level_sub": "a",
    "level_why": "SIRIUS spectral: Fictamine isomer -- cosine 0.88 vs 0.70 pass; shared ions 6 vs 4 pass => valid source\nGNPS2: no hit\nmzMine library: Fictamine -- cosine 0.90 vs 0.70 pass; shared ions 7 vs 4 pass; precursor 0.0 ppm vs 15 ppm pass => valid source\nCSI:FingerID: Fictamine isomer -- COSMIC 0.75 vs 0.64 pass\nname conflict: valid sources name different structures (InChIKey first blocks DDDDDDDDDDDDDD, EEEEEEEEEEEEEE)\nname: best library match: mzMine library 'Fictamine' (cosine 0.90, 7 ions) over SIRIUS spectral 'Fictamine isomer' (cosine 0.88, 6 ions); margin 0.020 < 0.05",
    "name": "Fictamine isomer",
    "reasons": "SIRIUS spectral: Fictamine isomer -- cosine 0.88 vs 0.70 pass; shared ions 6 vs 4 pass => valid source\nGNPS2: no hit\nmzMine library: Fictamine -- cosine 0.90 vs 0.70 pass; shared ions 7 vs 4 pass; precursor 0.0 ppm vs 15 ppm pass => valid source\nCSI:FingerID: Fictamine isomer -- COSMIC 0.75 vs 0.64 pass\nname conflict: valid sources name different structures (InChIKey first blocks DDDDDDDDDDDDDD, EEEEEEEEEEEEEE)\nname: best library match: mzMine library 'Fictamine' (cosine 0.90, 7 ions) over SIRIUS spectral 'Fictamine isomer' (cosine 0.88, 6 ions); margin 0.020 < 0.05"
@@ -121,7 +121,7 @@
    "level": 3,
    "level_basis": "isomers not discriminated",
    "level_decisive": "The same compound is matched at two or more retention times: the spectrum does not tell the isomers apart.",
-   "level_sub": "",
+   "level_sub": "a",
    "level_why": "SIRIUS spectral: no hit\nGNPS2: Fictazine -- cosine 0.90 vs 0.70 pass; shared ions 8 vs 4 pass; precursor difference 0.0000 Da = 0.0 ppm vs 15 ppm (exact) pass => valid source\nmzMine library: no hit\nCSI:FingerID: no structure\nretention time: the identity is carried by features at 2 retention times (group 0, 0 = reference)",
    "name": null,
    "reasons": "SIRIUS spectral: no hit\nGNPS2: Fictazine -- cosine 0.90 vs 0.70 pass; shared ions 8 vs 4 pass; precursor difference 0.0000 Da = 0.0 ppm vs 15 ppm (exact) pass => valid source\nmzMine library: no hit\nCSI:FingerID: no structure\nretention time: the identity is carried by features at 2 retention times (group 0, 0 = reference)"
@@ -135,7 +135,7 @@
    "level": 3,
    "level_basis": "isomers not discriminated",
    "level_decisive": "The same compound is matched at two or more retention times: the spectrum does not tell the isomers apart.",
-   "level_sub": "",
+   "level_sub": "a",
    "level_why": "SIRIUS spectral: no hit\nGNPS2: Fictazine -- cosine 0.88 vs 0.70 pass; shared ions 7 vs 4 pass; precursor difference 0.0000 Da = 0.0 ppm vs 15 ppm (exact) pass => valid source\nmzMine library: no hit\nCSI:FingerID: no structure\nretention time: the identity is carried by features at 2 retention times (group 1, 0 = reference)",
    "name": null,
    "reasons": "SIRIUS spectral: no hit\nGNPS2: Fictazine -- cosine 0.88 vs 0.70 pass; shared ions 7 vs 4 pass; precursor difference 0.0000 Da = 0.0 ppm vs 15 ppm (exact) pass => valid source\nmzMine library: no hit\nCSI:FingerID: no structure\nretention time: the identity is carried by features at 2 retention times (group 1, 0 = reference)"
@@ -163,7 +163,7 @@
    "level": 3,
    "level_basis": "CSI:FingerID",
    "level_decisive": "No library source passes its gates; the level rests on the CSI:FingerID structure (COSMIC 0.80 ≥ 0.64).",
-   "level_sub": "",
+   "level_sub": "a",
    "level_why": "SIRIUS spectral: no hit\nGNPS2: no hit\nmzMine library: no hit\nCSI:FingerID: Fictolol -- COSMIC 0.80 vs 0.64 pass\nchemist's decision: fictional: not defensible from this feature's evidence\nretention time: the identity is carried by features at 2 retention times (group 1, 0 = reference)",
    "name": "Fictolol",
    "reasons": "SIRIUS spectral: no hit\nGNPS2: no hit\nmzMine library: no hit\nCSI:FingerID: Fictolol -- COSMIC 0.80 vs 0.64 pass\nchemist's decision: fictional: not defensible from this feature's evidence\nretention time: the identity is carried by features at 2 retention times (group 1, 0 = reference)"
@@ -177,7 +177,7 @@
    "level": 3,
    "level_basis": "RT isomer",
    "level_decisive": "A reference standard of this compound elutes at another retention time: another isomer.",
-   "level_sub": "",
+   "level_sub": "a",
    "level_why": "SIRIUS spectral: no hit\nGNPS2: TestStandardA -- cosine 0.85 vs 0.70 pass; shared ions 6 vs 4 pass; precursor difference 0.0000 Da = 0.0 ppm vs 15 ppm (exact) pass => valid source\nmzMine library: no hit\nCSI:FingerID: no structure\nretention time: the identity is carried by features at 2 retention times (group 1, 0 = reference)",
    "name": null,
    "reasons": "SIRIUS spectral: no hit\nGNPS2: TestStandardA -- cosine 0.85 vs 0.70 pass; shared ions 6 vs 4 pass; precursor difference 0.0000 Da = 0.0 ppm vs 15 ppm (exact) pass => valid source\nmzMine library: no hit\nCSI:FingerID: no structure\nretention time: the identity is carried by features at 2 retention times (group 1, 0 = reference)"
