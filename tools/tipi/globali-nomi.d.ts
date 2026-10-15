@@ -12,6 +12,7 @@ declare var BANCO: any;
 declare var BARRA: any;
 declare var BATCH: any;
 declare var BIANCO: any;
+declare var BrukerD: any;
 declare var CACHE: any;
 declare var CAL: any;
 declare var CALC: any;
