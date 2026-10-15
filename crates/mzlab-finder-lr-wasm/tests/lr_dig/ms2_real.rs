@@ -3,25 +3,6 @@
 
 use super::*;
 use mzlab_feat::legacy::lr::ms2::pool;
-use std::path::PathBuf;
-
-fn root() -> Option<PathBuf> {
-    let p = match std::env::var("MZLAB_DATI") {
-        Ok(v) => PathBuf::from(v),
-        Err(_) => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../mzlab-dati"),
-    };
-    p.join("scratchpad/tabui_ms2_lr_truth.json")
-        .exists()
-        .then_some(p)
-}
-
-fn index_of_file(path: &std::path::Path) -> Vec<u8> {
-    let mzml = std::fs::read(path).expect("mzML");
-    let mut src = mzml.clone();
-    let name = path.file_name().unwrap().to_string_lossy().to_string();
-    let p = prepare(&mut src, mzml.len() as u64, &name).unwrap();
-    build_mzml_to_vec(&p.table, &mzml, 64 << 20).unwrap().0
-}
 
 #[test]
 fn the_row_without_signal_gets_no_ms2_scans() {
@@ -73,7 +54,12 @@ fn the_row_without_signal_gets_no_ms2_scans() {
         r#"{{"neutral": "{}"}}"#,
         truth["parent"]["formula"].as_str().unwrap()
     );
-    let d = dig_for(&files, &parent, &idxs[..full.len()]);
+    let ms2_idx: Vec<&Vec<u8>> = idxs[full.len()..].iter().collect();
+    let d = linked(
+        dig_for(&files, &parent, &idxs[..full.len()]),
+        &idxs[..full.len()],
+        &ms2_idx,
+    );
     let mut op = |k: usize| Ok(open(&idxs[k]));
     let want = truth["experiments"]
         .as_array()

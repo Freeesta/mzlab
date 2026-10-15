@@ -76,3 +76,23 @@ def write_series(folder, times=TIMES, n_noise: int = 40, seed: int = 11, scan_st
                      f'<run id="{p.stem}"><spectrumList count="{len(specs)}">' + "".join(specs) + "</spectrumList></run></mzML>", encoding="utf-8")
         out.append({"name": name, "path": str(p), "time": None if is_blank else float(t), "type": "blank" if is_blank else "sample"})
     return out
+
+
+def write_ms2(folder, experiments, times, name: str = "lr_MS2.mzML", step: float = 0.02, run: tuple[float, float] = (0.5, 14.0), noise: float = 200.0) -> dict:
+    """Writes one MS2 mzML (the file of a product-ion injection) and returns its entry for Experiment (the caller gives it the kind ms2). `experiments` = [{"precursor", "ce",
+    "peaks": [(apex RT, sigma, amplitude), ...], "fragments": [(offset from the precursor, relative intensity), ...]}]; a scan every `step` min over
+    the whole `run` for each experiment (the TIC is `noise` plus Gaussian peaks at the given times). Test material only: no logic of the product."""
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    specs = []
+    for e in experiments:
+        frags = e.get("fragments") or [(-17.0, 1.0), (-44.0, 0.5)]
+        for rt in np.arange(run[0], run[1], step):
+            v = noise + sum(a * demo._gauss(rt, c, s) for c, s, a in e["peaks"])
+            mz = np.array([e["precursor"] + o for o, _ in frags])
+            it = np.array([v * r for _, r in frags])
+            specs.append(demo._spectrum(len(specs), 2, float(rt), mz, it, e["precursor"], e.get("ce", 10.0)))
+    p = folder / name
+    p.write_text('<?xml version="1.0" encoding="utf-8"?><mzML xmlns="http://psi.hupo.org/ms/mzml" version="1.1.0">'
+                 f'<run id="{p.stem}"><spectrumList count="{len(specs)}">' + "".join(specs) + "</spectrumList></run></mzML>", encoding="utf-8")
+    return {"name": name, "path": str(p), "time": times, "type": "sample"}

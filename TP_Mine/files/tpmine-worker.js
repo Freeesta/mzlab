@@ -29,7 +29,7 @@ const ask = (what, name) => new Promise(res => { const rid = ++askSeq; asked.set
 let last = "", bigN = 0;                          // the engine of the last run: "rust" | "rust-lr" | "py"
 /** @type {Map<string, Uint8Array>} */ const detected = new Map();   // .mzfeatf of a .mzidx (name, size, date): a second Dig skips the detection
 const ALWAYS = new Set(["formula_info", "identity_graph", "polarity_pairs", "origin_evidence"]);
-const OF_DIG = new Set(["detail", "inclusion_csv", "msn_tree", "frag_tree", "frag_tree_compare"]);
+const OF_DIG = new Set(["detail", "inclusion_csv", "msn_tree", "frag_tree", "frag_tree_compare", "ms2_relink"]);
 // chem.transformations_text() of the Python engine (tests/test_tpmine_worker.py keeps them equal)
 const DEFAULT_TR = `hydroxylation;+O;one extra oxygen (aromatic or aliphatic OH)
 dihydroxylation;+O2;two extra oxygens
@@ -302,6 +302,7 @@ async function call(fn, a) {
     if (lr !== false) { last = "rust-lr"; return lr; }
   }
   if (OF_DIG.has(fn) && last === "rust-lr") return fn === "msn_tree" ? "null" : (await lrMod()).ofDig(lrCtx, fn, a);     // a low-resolution run has no MSn tree
+  if (fn === "ms2_relink" && last !== "rust-lr") throw new Error("MS2 matches need the Rust engine");   // Pyodide and the high-resolution engine have no matches
   if (OF_DIG.has(fn) && last === "rust") {
     if (fn === "detail") return detail(+a[0]);
     if (fn === "inclusion_csv") return dig.inclusion_csv(+(a[0] || 0));

@@ -79,7 +79,7 @@ fn kin_json(o: &mut Out, kin: &[Point]) {
 
 /// With a verdict (`isf`), a lighter ion is in-source when the probability of `isf` is at least one half; without one, an unexpected ion lighter than the
 /// parent that co-elutes with it (within half the RT tolerance) is most likely an in-source fragment.
-fn insource(d: &LrDig, e: &Entry, p_rt: Option<f64>, v: Option<&IsfVerdict>) -> bool {
+pub(super) fn insource(d: &LrDig, e: &Entry, p_rt: Option<f64>, v: Option<&IsfVerdict>) -> bool {
     if let Some(v) = v {
         return e.mz < d.parent.mz && isf::p_isf(v) >= 0.5;
     }
@@ -94,6 +94,7 @@ struct Row<'a> {
     max_area: f64,
     insource: bool,
     isf: Option<&'a IsfVerdict>,
+    ms2: usize,
 }
 
 fn row_json(o: &mut Out, r: &Row, p_mz: f64) {
@@ -154,8 +155,8 @@ fn row_json(o: &mut Out, r: &Row, p_mz: f64) {
         }
     }
     o.raw(",\"insource\":")
-        .raw(if r.insource { "true" } else { "false" })
-        .raw("}");
+        .raw(if r.insource { "true" } else { "false" });
+    o.raw(",\"ms2\":").int(r.ms2 as i64).raw("}");
 }
 
 fn rank(label: &str) -> u8 {
@@ -180,6 +181,7 @@ fn ordered(d: &LrDig) -> Vec<Row<'_>> {
             let isf = d.isf.iter().find(|x| x.0 == e.id).map(|x| &x.1);
             Row {
                 insource: insource(d, e, p_rt, isf),
+                ms2: d.links.as_ref().map_or(0, |l| l.of(e.id).count()),
                 isf,
                 e,
                 kin,
@@ -294,6 +296,10 @@ pub fn summary(d: &LrDig, timing: &str) -> String {
     }
     o.raw("],\"settings\":");
     plan::settings_json(&mut o, &d.settings);
+    if let Some(l) = &d.links {
+        o.raw(",\"ms2_links\":");
+        super::ms2link::json(&mut o, l);
+    }
     let timing = if timing.trim().starts_with('{') {
         timing.trim()
     } else {
