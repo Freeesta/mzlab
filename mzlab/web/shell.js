@@ -323,8 +323,11 @@ $("#cancadd").onclick=()=>{STATO.aggiunta(false,"adding");applyView()};
 // while adding files the ones already in the session stay visible, with a way back to the data
 function renderLoaded(){const el=$("#loaded"),on=!!(S.sess&&S.adding&&typeof E!=="undefined"&&E.files.some(f=>!f.gone));el.hidden=!on;if(!on)return;
   const fs=E.files.filter(f=>!f.gone);
-  el.innerHTML=`<div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>${I18N.t("load.loaded.title",{n:fs.length})}</b><span class="sp" style="flex:1"></span><button class="go" id="backdata">${I18N.t("load.loaded.back")}</button></div><div class="muted sm" style="margin-top:6px">${fs.map(f=>`<span style="white-space:nowrap;margin-right:12px"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${f.color||"#888"};margin-right:4px"></span>${esc(f.label||f.file)}</span>`).join("")}</div>`;
-  $("#backdata").onclick=()=>{STATO.aggiunta(false,"adding");applyView()}}
+  el.innerHTML=`<div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>${I18N.t("load.loaded.title",{n:fs.length})}</b><span class="sp" style="flex:1"></span><button class="sec" id="clearall" type="button">${I18N.t("load.loaded.clear")}</button><button class="go" id="backdata">${I18N.t("load.loaded.back")}</button></div><div class="muted sm" style="margin-top:6px">${fs.map(f=>`<span style="white-space:nowrap;margin-right:12px"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${f.color||"#888"};margin-right:4px"></span>${esc(f.label||f.file)}</span>`).join("")}</div>`;
+  $("#backdata").onclick=()=>{STATO.aggiunta(false,"adding");applyView()};
+  // two presses (the first asks): the same clean slate as «Files and session only» of «Start a new session?» (reset.js)
+  const ca=$("#clearall");let armed=0;ca.onclick=()=>{if(!armed){armed=setTimeout(()=>{armed=0;ca.textContent=I18N.t("load.loaded.clear")},6000);ca.textContent=I18N.t("load.loaded.clearSure",{n:fs.length});return}
+    clearTimeout(armed);ca.disabled=true;ca.textContent=I18N.t("load.loaded.clearBusy");QQRESET.run("files")}}
 // New session: QQRESET.ask (reset.js) asks once, then clears everything the app keeps in this browser and reloads
 $("#newrun").onclick=()=>QQRESET.ask();
 // "m/z" is always written in italics: any text node that contains it is split and the symbol wrapped in <i> (not inside inputs, options, scripts or an existing <i>)
