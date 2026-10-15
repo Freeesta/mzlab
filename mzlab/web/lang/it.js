@@ -554,7 +554,6 @@ I18N.add("it", {
   "settings.pal.hc": "Alto contrasto",
   "settings.pal.rainbow": "Arcobaleno",
   "settings.pal.bw": "Bianco e nero",
-  "settings.admin.exit": "Esci dalla modalità amministratore",
   "settings.merge": "Unisci i centroidi della stessa massa nominale",
   "settings.libs.label": "Librerie di spettri",
   "settings.libs.button": "Librerie…",

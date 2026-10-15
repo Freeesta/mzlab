@@ -1,12 +1,13 @@
 // @ts-strict
 // Easter egg of the header logo: five hits with a small pickaxe turn the logo gold (or back to normal). Each hit shakes the logo and adds a
 // stage of cracks (1-4); the fifth shatters it into pieces and turns the logo GOLDEN (localStorage, as a trophy), the next round
-// of five hits gives the original logo back.
+// of five hits gives the original logo back. Every fifth hit also flips the administrator mode (localStorage «qqq.admin», independent of the gold): on fires "mzlab:admin", off reloads
+// the page once the logo is whole, which drops the tools of the mode (Tabui and the like).
 // No hit for a few seconds: the cracks close again. Reduced motion: no shake, no pickaxe, no shards, only the stages of cracks. Enter / Space on the focused logo = a hit.
 // Pickaxe, cracks and shards are inline SVG/CSS (no asset). The label of the logo (alt/title) never changes.
 (() => {
   "use strict";
-  const HITS = 5, HEAL_MS = 3000, GOLD_KEY = "qqq.logo.gold", ADMIN_KEY = "qqq.admin";
+  const HITS = 5, HEAL_MS = 3000, GOLD_KEY = "qqq.logo.gold", ADMIN_KEY = "qqq.admin", LEGACY_KEY = "qqq.teoria.esteso";
   const logo = document.querySelector("header img.logo");
   if (!logo) return;
   const t = (k, d) => (window.I18N && I18N.t ? I18N.t(k) : d);
@@ -64,8 +65,8 @@ header img.logo{cursor:pointer;border-radius:4px}header img.logo:focus-visible{o
     const k = 1 + stage * 0.35;                                     // the more damaged, the harder it shakes
     logo.animate([{ transform: "translate(0,0)" }, { transform: `translate(${-1.6 * k}px,${0.6 * k}px)`, offset: 0.2 }, { transform: `translate(${1.6 * k}px,${-0.6 * k}px)`, offset: 0.45 }, { transform: `translate(${-1 * k}px,0)`, offset: 0.7 }, { transform: "translate(0,0)" }], { duration: 260 });
   }
-  function shatter(on) {
-    const gold = () => { store.set(on); root.toggleAttribute("data-logo-gold", on); live.textContent = on ? t("logo.gold.live", "Logo turned gold") : t("logo.normal.live", "Logo back to normal"); };
+  function shatter(on, after) {
+    const gold = () => { store.set(on); root.toggleAttribute("data-logo-gold", on); live.textContent = on ? t("logo.gold.live", "Logo turned gold") : t("logo.normal.live", "Logo back to normal"); if (after) after(); };
     if (still()) { showStage(0); gold(); return; }
     const f = overlay(), pk = f.querySelector(".lg-pk"); pk.remove();
     f.querySelectorAll(".lg-cr").forEach(g => g.classList.remove("on"));
@@ -85,10 +86,19 @@ header img.logo{cursor:pointer;border-radius:4px}header img.logo:focus-visible{o
       a.onfinish = () => { if (++done === pieces.length) { f.remove(); fx = null; gold(); logo.style.opacity = ""; logo.animate([{ opacity: 0, transform: "scale(.7)" }, { opacity: 1, transform: "scale(1.15)", offset: 0.6 }, { opacity: 1, transform: "scale(1)" }], { duration: 400 }); } };
     });
   }
+  const adminOn = () => { try { return localStorage.getItem(ADMIN_KEY) === "1" || localStorage.getItem(LEGACY_KEY) === "1"; } catch (_) { return false; } };
+  /** flips the administrator mode; returns what to do once the logo is whole (leaving reloads the page), or null */
+  function flipAdmin() {
+    try {
+      if (adminOn()) { localStorage.removeItem(ADMIN_KEY); localStorage.removeItem(LEGACY_KEY); return () => location.reload(); }
+      localStorage.setItem(ADMIN_KEY, "1"); document.dispatchEvent(new Event("mzlab:admin"));
+    } catch (_) { /* private mode: the mode does not change */ }
+    return null;
+  }
   function hit() {
     if (logo.style.opacity === "0") return;                         // the shards are flying: wait for the logo to be whole again
     const n = stage + 1;
-    if (n >= HITS) { try { localStorage.setItem(ADMIN_KEY, "1"); document.dispatchEvent(new Event("mzlab:admin")); } catch (_) { /* private mode: not unlocked */ } shatter(!root.hasAttribute("data-logo-gold")); return; }
+    if (n >= HITS) { shatter(!root.hasAttribute("data-logo-gold"), flipAdmin()); return; }
     showStage(n); swing();
   }
   document.addEventListener("click", ev => { const t = /** @type {Element | null} */ (ev.target); if (t && t.closest && t.closest("header img.logo")) hit(); }, true);
