@@ -27,33 +27,6 @@ pub struct Run {
     pub counts: BTreeMap<String, usize>,
 }
 
-/// The levels of the campaign whose `campaign.toml` is at the root of `io` (`root` is the name of the folder).
-pub fn run(io: &Io, root: &str) -> Result<Run> {
-    let text = io
-        .text("campaign.toml")
-        .ok_or_else(|| CampaignError::not_found("campaign.toml is not in the folder"))?;
-    let c = Campaign::from_toml(&text, "campaign.toml", root, Env::default())?;
-    let src = load_sources(&c, io)?;
-    let cur = TableCuration::load(&c, io)?;
-    let a = load_annotations(&c, &src, None, &cur, &gnps_comparer)?;
-    let settings = AnnotationSettings::for_campaign(&c)?;
-    let sites: Vec<String> = c.site_keys().iter().map(|s| s.to_string()).collect();
-    let fingerprint = annotations_fingerprint(&c, io, &sites, &settings);
-    let mut counts = BTreeMap::new();
-    for f in &a.features {
-        *counts
-            .entry(format!("{}{}", f.level, f.level_sub))
-            .or_insert(0) += 1;
-    }
-    Ok(Run {
-        features: a.features,
-        warnings: a.warnings,
-        fingerprint,
-        settings,
-        counts,
-    })
-}
-
 impl Run {
     /// `{n_features, by_level, fingerprint, settings, warnings}`: the small answer that goes to the page, the notebook and the `.mzflow` (no data of the campaign).
     pub fn summary(&self) -> String {
@@ -87,7 +60,48 @@ impl Run {
         o.raw("]}");
         o.0
     }
+}
 
+/// The cells of one feature as a JSON array body, closing bracket included.
+fn row_json(o: &mut Out, f: &Feature) {
+    o.str(&f.pol)
+        .raw(",")
+        .int(f.id)
+        .raw(",")
+        .opt(f.mz)
+        .raw(",")
+        .opt(f.rt);
+    o.raw(",").int(f.level as i64).raw(",").str(&f.level_sub);
+    o.raw(",").str(&f.level_basis).raw(",");
+    text_or_null(o, f.name());
+    o.raw(",");
+    text_or_null(o, f.identity());
+    o.raw(",").str(&f.level_why).raw("]");
+}
+
+/// The levels of the campaign whose `campaign.toml` is at the root of `io` (`root` is the name of the folder).
+pub fn run(io: &Io, root: &str) -> Result<Run> {
+    let text = io
+        .text("campaign.toml")
+        .ok_or_else(|| CampaignError::not_found("campaign.toml is not in the folder"))?;
+    let c = Campaign::from_toml(&text, "campaign.toml", root, Env::default())?;
+    let src = load_sources(&c, io)?;
+    let cur = TableCuration::load(&c, io)?;
+    let a = load_annotations(&c, &src, None, &cur, &gnps_comparer)?;
+    let settings = AnnotationSettings::for_campaign(&c)?;
+    let sites: Vec<String> = c.site_keys().iter().map(|s| s.to_string()).collect();
+    let fingerprint = annotations_fingerprint(&c, io, &sites, &settings);
+    let counts = level_counts(&a.features);
+    Ok(Run {
+        features: a.features,
+        warnings: a.warnings,
+        fingerprint,
+        settings,
+        counts,
+    })
+}
+
+impl Run {
     /// `{"columns":[...],"rows":[[...],...]}`, one row at a time.
     pub fn json_to(&self, emit: &mut dyn FnMut(&str)) {
         let mut o = Out::default();
@@ -144,21 +158,15 @@ impl Run {
     }
 }
 
-/// The cells of one feature as a JSON array body, closing bracket included.
-fn row_json(o: &mut Out, f: &Feature) {
-    o.str(&f.pol)
-        .raw(",")
-        .int(f.id)
-        .raw(",")
-        .opt(f.mz)
-        .raw(",")
-        .opt(f.rt);
-    o.raw(",").int(f.level as i64).raw(",").str(&f.level_sub);
-    o.raw(",").str(&f.level_basis).raw(",");
-    text_or_null(o, f.name());
-    o.raw(",");
-    text_or_null(o, f.identity());
-    o.raw(",").str(&f.level_why).raw("]");
+/// Features per level, keyed by level and sublevel ("2a", "3b", "4").
+fn level_counts(features: &[Feature]) -> BTreeMap<String, usize> {
+    let mut counts = BTreeMap::new();
+    for f in features {
+        *counts
+            .entry(format!("{}{}", f.level, f.level_sub))
+            .or_insert(0) += 1;
+    }
+    counts
 }
 
 fn text_or_null(o: &mut Out, v: Option<&str>) {
