@@ -1,0 +1,4 @@
+mappingFeatureId	structurePerIdRank	name	smiles	xlogp	InChIkey2D	molecularFormula
+1	2	Fictazine B	CCNC	0.4	BBBBBBBBBBBBBB	C5H13N
+1	1	Fictazine	CCN	-0.1	IIIIIIIIIIIIII	C4H11N
+3	1	Fictol	CO			CH4O

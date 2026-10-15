@@ -93,6 +93,7 @@ pub fn fileset(membri: &[(String, Vec<u8>)]) -> FileSet {
                 nome: nome.clone(),
                 dim: b.len() as u64,
                 dati: Box::new(Letture(b.clone())),
+                sha1: None,
             })
             .collect(),
     }

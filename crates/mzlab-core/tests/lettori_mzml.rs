@@ -31,6 +31,7 @@ fn agilent_through_lettore_equals_the_direct_converter() {
         nome: nome.into(),
         dim: b.len() as u64,
         dati: Box::new(b.to_vec()),
+        sha1: None,
     };
     let fs = FileSet {
         membri: vec![

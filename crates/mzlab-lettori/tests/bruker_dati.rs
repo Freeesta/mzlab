@@ -35,6 +35,7 @@ fn set_of(dir: &Path) -> FileSet {
                 nome: format!("{name}/{}", p.file_name().unwrap().to_string_lossy()),
                 dim: f.metadata().unwrap().len(),
                 dati: Box::new(f),
+                sha1: None,
             }
         })
         .collect();

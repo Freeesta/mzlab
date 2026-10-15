@@ -1,0 +1,3 @@
+{"compound_name": "Fictazine", "precursor_mz": 222.1, "adduct": "[M+H]+", "polarity": "Positive", "inchikey": "IIIIIIIIIIIIII-AAAAAAAAAA-N", "smiles": "CCN", "formula": "C4H11N", "instrument_type": "Fictional Orbitrap", "lib_id": "SYNJ0001", "peaks": [[80.05, 120], [95.06, 800], [110.07, 1000], [150.1, 300]]}
+{"Compound_Name": "Fictazine isomer", "Precursor_MZ": 222.1002, "Adduct": "[M+H]+", "Ion_Mode": "Positive", "SpectrumID": "SYNJ0002", "peaks_json": "[[81.0, 200], [95.5, 900], [111.0, 1000]]"}
+{"name": "Fictol", "precursor_mz": 180.065, "adduct": "[M-H]-", "polarity": "Negative", "usi": "mzspec:SYN:LIB:accession:SYNJ0003", "peaks": [[60.01, 300], [79.957, 1000], [97.03, 450]]}

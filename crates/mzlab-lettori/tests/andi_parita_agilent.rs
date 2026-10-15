@@ -42,6 +42,7 @@ fn membri(radice: &Path, dir: &Path, out: &mut Vec<Membro>) {
                 nome,
                 dim: b.len() as u64,
                 dati: Box::new(b),
+                sha1: None,
             });
         }
     }

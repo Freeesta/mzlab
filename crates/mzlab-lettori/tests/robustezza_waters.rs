@@ -151,6 +151,7 @@ fn a_folder_without_functions_is_refused_with_a_key() {
                 nome: "X.raw/_FUNC001.DAT".into(),
                 dim: 0,
                 dati: Box::new(Vec::<u8>::new()),
+                sha1: None,
             }],
         },
         &Limiti::sito(),
