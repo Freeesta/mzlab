@@ -138,7 +138,7 @@ impl LettoreBruker {
             let p = decodifica(&b, self.compressione, f.scansioni, f.picchi, &self.limiti)?;
             self.cache = Some((fi, p));
         }
-        Ok(&self
+        Ok(self
             .cache
             .as_ref()
             .map(|c| &c.1)
