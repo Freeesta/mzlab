@@ -9,6 +9,7 @@ pub mod labels;
 pub mod mrm;
 pub mod ms2;
 pub mod ms2link;
+pub mod ms2sim;
 pub mod ms2target;
 pub mod peak1d;
 pub mod plan;

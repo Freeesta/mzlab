@@ -468,5 +468,6 @@ pub fn link<R: ReadAt>(
         unmatched: c.un,
         parent_has_ms2,
         rt_tol: d.settings.rt_tol_min,
+        sims: Vec::new(),
     })
 }

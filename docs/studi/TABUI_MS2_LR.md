@@ -89,7 +89,7 @@ Lo studente acquisisce una MS2 perché ha già visto quello ione: se un picco de
 | M2 | Motore `lr/ms2link.rs`, pool dagli abbinamenti, `ms2_links/1`, `relink`, worker | fatto: `ms2link.rs` e `ms2link/`, `ms2_link`/`relink` in `finder-lr`, `ms2_relink` nel worker; prove `lr_ms2link.rs` e `lr_ms2link_dati.rs`; `finder-lr` 610 796 B (prima 587 098) |
 | M3 | Bersagli MS2 (§6) e diagnosi delle righe mancanti | fatto: `lr/ms2target.rs` (riga «MS2 target», `no_feature`), prove `lr_ms2link/target.rs` e `lr_ms2link_dati.rs`; il Dig non è cambiato. Diagnosi: per costruzione e in sintetico un ione piccolo allo stesso m/z di un'ipotesi ma a un altro tempo non è né isomero (sotto il 10 % o oltre i 4) né inatteso (`rows.rs::unexpected` scarta ogni riga entro `tol_da` da un m/z noto); sui dati veri l'esito va misurato con `finder_lr --diag` (`docs/agenti/mzfinder-lr-bersagli.md`) |
 | M4 | Interfaccia: avvio con le MS2, scheda «MS2 matches», correzioni, esportazioni, e2e | fatto: `TP_Mine/js/22_tpmine_ms2.js` (`docs/agenti/mzfinder-ms2.md`), prova `e2e_tpmine_ms2_lr.py` |
-| M5 | Confronto col genitore come in HR (`pair_components` con tolleranza in Da); la prova resta scritta, il livello no (D6) | M4 unita |
+| M5 | Confronto col genitore come in HR (`pair_components_tol` con 0,5 Da); la prova resta scritta, il livello no (D6) | fatto: `lr/ms2sim.rs` (`detail.sim`, `rows[].sim`), scheda `.sim3` nel dettaglio, colonna Excel; prove `lr_ms2sim.rs`, `lr_ms2link/sim.rs`, `e2e_tpmine_ms2_lr.py` |
 
 ## 11. Trappole
 - Il nome del composto del corso, i suoi TP e i loro m/z non vanno nel repository pubblico: i test con dati veri leggono la verità da `scratchpad/tabui_ms2_lr_truth.json` del repository privato e saltano senza `MZLAB_DATI`.
