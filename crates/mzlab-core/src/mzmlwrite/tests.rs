@@ -20,3 +20,29 @@ fn what_is_written_is_read_back() {
     let c = &run.chromatograms[0];
     assert_eq!((c.kind, c.q1, c.q3, c.time.clone(), c.intensity.clone()), (ChromKind::Srm, Some(300.5), Some(100.25), ch.time.clone(), ch.intensity.clone()));
 }
+
+fn write_one(sp: &Spectrum, opz: Opzioni) -> Vec<u8> {
+    let mut w = MzmlWriter::con_opzioni(Vec::new(), &Header { run: "x".into(), ..Default::default() }, opz).unwrap();
+    w.open_spectra(1).unwrap();
+    w.spectrum(sp).unwrap();
+    w.close_spectra().unwrap();
+    w.finish().unwrap()
+}
+
+#[test]
+fn numpress_is_lossy_but_close_and_off_by_default() {
+    let mz: Vec<f64> = (0..400).map(|i| 100.0 + i as f64 * 0.37 + (i % 7) as f64 * 1e-3).collect();
+    let intensity: Vec<f32> = (0..400).map(|i| 10.0 + ((i * 37) % 1000) as f32).collect();
+    let sp = Spectrum { index: 0, id: "scan=1".into(), level: 1, rt: 1.0, polarity: 1, profile: false, mz: mz.clone(), intensity: intensity.clone(), ..Default::default() };
+    let plain = write_one(&sp, Opzioni::default());
+    let np = write_one(&sp, Opzioni { numpress: true, ..Default::default() });
+    assert!(!String::from_utf8_lossy(&plain).contains("MS:1002312"));
+    assert!(String::from_utf8_lossy(&np).contains("MS:1002312"));
+    assert!(np.len() < plain.len());
+    let g = &mzml::read(&np[..]).unwrap().spectra[0];
+    assert_eq!(g.mz.len(), mz.len());
+    for (a, b) in g.mz.iter().zip(&mz) { assert!((a - b).abs() < 1e-4, "{a} {b}"); }
+    for (a, b) in g.intensity.iter().zip(&intensity) { assert!(((a - b) / b).abs() < 1e-3f32, "{a} {b}"); }
+    let p = &mzml::read(&plain[..]).unwrap().spectra[0];
+    assert!(p.mz == mz && p.intensity == intensity);
+}

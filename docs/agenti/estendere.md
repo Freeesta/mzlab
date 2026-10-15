@@ -11,7 +11,7 @@ Codice: `crates/mzlab-core/src/lettori.rs` (contratto `CONTRATTO = 1`). Lettori:
 - Accesso casuale: lo streaming è `scansione(c, 0..n)`. Un errore è una chiave `err.file.*`, mai un panico; ciò che il file non ha è assente dalla risposta.
 - `FileSet`: i file di un insieme (`X.wiff` + `X.wiff.scan`, i membri di una cartella `.raw`/`.D`, un file solo) con nome logico e `ReadAt`; `testa(i, n)` dà i primi byte.
 - Nel sito: `crates/mzlab-wasm/src/nativi.rs` apre un insieme di file dal registro (`Membri`: nomi, dimensioni, `read(i, offset, lunghezza)`) con `native_samples`, `native_attach` (lettura per le rotte) e `build_mzidx_native` (indice v2).
-- `native_to_mzml(nomi, dimensioni, read, c, centroide, sink, progress)` scrive il campione come mzML a pezzi di circa 64 KB.
+- `native_to_mzml(nomi, dimensioni, read, c, centroide, numpress, sink, progress)` scrive il campione come mzML a pezzi di circa 64 KB (zlib livello 1; `numpress` true = MS-Numpress, con perdita, spento di default).
 - `Limiti { profondita, voci, byte }` (`Limiti::sito()`, `Limiti::desktop()`) passato a ogni `apri`: un lettore confronta con `voci_ok` e `profondita_ok` i numeri letti dal file prima di allocare o ricorrere.
 
 ## Aggiungere un formato

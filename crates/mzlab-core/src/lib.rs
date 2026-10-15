@@ -80,7 +80,6 @@ mod mzmlarray;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzmlhead;
 pub mod numarray;
-#[cfg(feature = "estesi")]
 pub mod numpress;
 pub mod mzmlwrite;
 pub mod peakq;

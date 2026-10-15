@@ -441,6 +441,8 @@ I18N.add("en", {
   "conv.dl": "Download mzML",
   "conv.dl.title": "Save the converted mzML: it is what the program reads, and opened again it needs no new conversion",
   "conv.dlall": "Download all the mzML files",
+  "conv.np": "Compress with MS-Numpress (smaller file, lossy)",
+  "conv.np.note": "Numpress is lossy compression: m/z and intensity values are rounded (relative error about 1e-4).",
   "conv.dl.needsApp": "Update the desktop app to save the mzML",
   "load.dropWiff": "<b>Drop .mzML, .raw, .wiff files or .D folders (Agilent) here</b> (a .wiff with its .wiff.scan)<br>or <u>click to choose them from your computer</u>",
   "conv.help.summary": "Don't have mzML files?",

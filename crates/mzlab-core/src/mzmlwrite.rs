@@ -1,8 +1,10 @@
 //! mzML writer over any `Write`, spectrum by spectrum, for readers of vendor files that have no mzML writer of their own (`wiff::to_mzml`).
 //! What it writes is what `mzml::read` and `mzlab/reader/mzml.py` read: spectra (level, polarity, profile or centroid, RT in minutes, precursor,
 //! m/z as 64-bit floats, intensities as 64-bit when the spectrum has `wide`, otherwise 32-bit, both zlib), and TIC, BPC and SRM chromatograms
-//! (the SRM masses are in the `id`, as msconvert writes them, and as isolation windows). No index, no numpress.
+//! (the SRM masses are in the `id`, as msconvert writes them, and as isolation windows). No index. Numpress only when asked (`Opzioni::numpress`: lossy).
 
+use std::borrow::Cow;
+use std::fmt::Write as _;
 use std::io::Write;
 
 use base64::Engine;
@@ -10,10 +12,35 @@ use flate2::{Compress, Compression, FlushCompress};
 
 use crate::error::{Error, Result};
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
+use crate::numpress::{self, Np};
+
+/// The zlib level of the arrays. Level 1 is the fastest and 6 the default of zlib: on a Q Exactive DDA the level 1 file is 8 % larger and written in 40 % less time.
+pub const LIVELLO_ZLIB: u32 = 1;
+
+/// How the arrays are written.
+#[derive(Debug, Clone, Copy)]
+pub struct Opzioni {
+    /// zlib level 0-9 (`LIVELLO_ZLIB`).
+    pub livello: u32,
+    /// m/z of the spectra with MS-Numpress linear prediction (MS:1002312) and intensities with short logged float (MS:1002314), each followed by zlib (MS:1002746,
+    /// MS:1002748) when that is smaller. Lossy: the relative error of the intensities is about 1e-4 and the m/z are rounded to 1e-7 of their range's fixed point.
+    pub numpress: bool,
+}
+
+impl Default for Opzioni {
+    fn default() -> Self {
+        Opzioni { livello: LIVELLO_ZLIB, numpress: false }
+    }
+}
 
 impl<W: Write> MzmlWriter<W> {
     /// Writes the header and opens `<run>`.
-    pub fn new(mut out: W, h: &Header) -> Result<Self> {
+    pub fn new(out: W, h: &Header) -> Result<Self> {
+        Self::con_opzioni(out, h, Opzioni::default())
+    }
+
+    /// As `new`, with the zlib level and the numpress choice of `opz`.
+    pub fn con_opzioni(mut out: W, h: &Header, opz: Opzioni) -> Result<Self> {
         let mut s = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<mzML xmlns=\"http://psi.hupo.org/ms/mzml\" version=\"1.1.0\" id=\"mzlab\">\n");
         s += "<cvList count=\"2\"><cv id=\"MS\" fullName=\"Proteomics Standards Initiative Mass Spectrometry Ontology\" version=\"4.1.163\" URI=\"https://raw.githubusercontent.com/HUPO-PSI/psi-ms-CV/master/psi-ms.obo\"/><cv id=\"UO\" fullName=\"Unit Ontology\" version=\"09:04:2014\" URI=\"https://raw.githubusercontent.com/bio-ontology-research-group/unit-ontology/master/unit.obo\"/></cvList>\n";
         let content = cv("MS:1000579", "MS1 spectrum", "") + &h.content.iter().map(|(a, n)| cv(a, n, "")).collect::<String>();
@@ -53,7 +80,7 @@ impl<W: Write> MzmlWriter<W> {
             s += &format!("<userParam name=\"{}\" value=\"{}\"/>\n", esc(k), esc(v));
         }
         out.write_all(s.as_bytes()).map_err(io)?;
-        Ok(MzmlWriter { out, spectra: 0, chroms: 0, z: Compress::new(Compression::default(), true), raw: Vec::new(), packed: Vec::new() })
+        Ok(MzmlWriter { out, spectra: 0, chroms: 0, opz, z: Compress::new(Compression::new(opz.livello.min(9)), true), raw: Vec::new(), packed: Vec::new(), np: Vec::new(), text: String::new() })
     }
 
     pub fn open_spectra(&mut self, count: usize) -> Result<()> {
@@ -78,16 +105,34 @@ impl<W: Write> MzmlWriter<W> {
 
     /// As `spectrum`, with the SIM mark, the observed range, the scan window and userParams of `extra`.
     pub fn spectrum_with(&mut self, sp: &Spectrum, extra: &SpectrumExtra) -> Result<()> {
-        let mut s = spectrum_head(self.spectra, sp, extra);
+        let mut s = std::mem::take(&mut self.text);
+        s.clear();
+        s.push_str(&spectrum_head(self.spectra, sp, extra));
         s += "<binaryDataArrayList count=\"2\">\n";
-        self.array(&mut s, "mz", "mz", Data::F64(&sp.mz))?;
-        match &sp.wide {
-            Some(w) => self.array(&mut s, "intensity", "counts", Data::F64(w))?,
-            None => self.array(&mut s, "intensity", "counts", Data::F32(&sp.intensity))?,
-        }
+        let res = self.arrays(&mut s, sp);
         s += "</binaryDataArrayList></spectrum>\n";
         self.spectra += 1;
-        self.out.write_all(s.as_bytes()).map_err(io)
+        let w = self.out.write_all(s.as_bytes()).map_err(io);
+        self.text = s;
+        res.and(w)
+    }
+
+    fn arrays(&mut self, s: &mut String, sp: &Spectrum) -> Result<()> {
+        let np = self.opz.numpress && sp.mz.len() >= 3;
+        if np {
+            self.array(s, "mz", "mz", Data::Np(Np::Linear, Cow::Borrowed(&sp.mz)))?;
+        } else {
+            self.array(s, "mz", "mz", Data::F64(&sp.mz))?;
+        }
+        match (&sp.wide, np) {
+            (Some(w), false) => self.array(s, "intensity", "counts", Data::F64(w)),
+            (None, false) => self.array(s, "intensity", "counts", Data::F32(&sp.intensity)),
+            (Some(w), true) => self.array(s, "intensity", "counts", Data::Np(Np::Slof, Cow::Borrowed(w))),
+            (None, true) => {
+                let v: Vec<f64> = sp.intensity.iter().map(|&x| f64::from(x)).collect();
+                self.array(s, "intensity", "counts", Data::Np(Np::Slof, Cow::Owned(v)))
+            }
+        }
     }
 
     /// TIC, BPC, SIC and SRM chromatograms; other kinds are not written.
@@ -163,16 +208,22 @@ pub struct MzmlWriter<W: Write> {
     out: W,
     spectra: usize,
     chroms: usize,
+    opz: Opzioni,
     /// The zlib state and the two scratch buffers are kept from one array to the next (same bytes as a new encoder each time, without the allocations).
     z: Compress,
     raw: Vec<u8>,
     packed: Vec<u8>,
+    /// The numpress bytes of the array being written, and the text of the spectrum (both kept from one spectrum to the next).
+    np: Vec<u8>,
+    text: String,
 }
 
 /// The values of one binary array: 64-bit or 32-bit floats.
 enum Data<'a> {
     F64(&'a [f64]),
     F32(&'a [f32]),
+    /// 64-bit values written with a numpress codec (`Np::Linear` or `Np::Slof`).
+    Np(Np, Cow<'a, [f64]>),
 }
 
 fn io(_: std::io::Error) -> Error {
@@ -184,24 +235,43 @@ fn esc(s: &str) -> String {
 }
 
 impl<W: Write> MzmlWriter<W> {
-    /// Appends `<binaryDataArray>` to `s`: the values as little-endian floats, zlib (default level) and base64.
+    /// Appends `<binaryDataArray>` to `s`: the values as little-endian floats (or a numpress codec), zlib (level `Opzioni::livello`) and base64.
     fn array(&mut self, s: &mut String, kind: &str, unit: &str, data: Data) -> Result<()> {
         self.raw.clear();
-        let wide = match data {
+        // (accession, name) of the number type or of the numpress codec, and whether zlib follows
+        let (acc, name, zlib): (&str, &str, bool) = match &data {
             Data::F64(v) => {
                 self.raw.reserve(v.len() * 8);
                 v.iter().for_each(|x| self.raw.extend_from_slice(&x.to_le_bytes()));
-                true
+                ("MS:1000523", "64-bit float", true)
             }
             Data::F32(v) => {
                 self.raw.reserve(v.len() * 4);
                 v.iter().for_each(|x| self.raw.extend_from_slice(&x.to_le_bytes()));
-                false
+                ("MS:1000521", "32-bit float", true)
+            }
+            Data::Np(np, v) => {
+                self.np = match np {
+                    Np::Slof => numpress::encode_slof(v, numpress::slof_fixed_point(v)),
+                    _ => numpress::encode_linear(v, numpress::linear_fixed_point(v)),
+                };
+                self.raw.extend_from_slice(&self.np);
+                (if *np == Np::Slof { "MS:1002314" } else { "MS:1002312" }, "", false)
             }
         };
-        self.deflate()?;
+        let is_np = matches!(data, Data::Np(..));
+        let mut zlib = zlib;
+        if is_np {
+            // zlib after the codec only when it makes the array smaller
+            self.deflate()?;
+            zlib = self.packed.len() < self.raw.len();
+            if !zlib {
+                std::mem::swap(&mut self.packed, &mut self.raw);
+            }
+        } else {
+            self.deflate()?;
+        }
         let len = (self.packed.len() + 2) / 3 * 4;
-        let (acc, name) = if wide { ("MS:1000523", "64-bit float") } else { ("MS:1000521", "32-bit float") };
         let (unit_acc, unit_name) = match unit {
             "time" => ("UO:0000031", "minute"),
             "mz" => ("MS:1000040", "m/z"),
@@ -213,9 +283,20 @@ impl<W: Write> MzmlWriter<W> {
             _ => ("MS:1000515", "intensity array"),
         };
         let unit_cv = if unit == "time" { "UO" } else { "MS" };
-        s.push_str(&format!(
-            "<binaryDataArray encodedLength=\"{len}\"><cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"\"/><cvParam cvRef=\"MS\" accession=\"MS:1000574\" name=\"zlib compression\" value=\"\"/><cvParam cvRef=\"MS\" accession=\"{cv}\" name=\"{label}\" value=\"\" unitCvRef=\"{unit_cv}\" unitAccession=\"{unit_acc}\" unitName=\"{unit_name}\"/><binary>"
-        ));
+        let _ = write!(s, "<binaryDataArray encodedLength=\"{len}\">");
+        if is_np {
+            // the values are 64-bit floats once decoded; the codec (and zlib with it) replaces the compression term
+            let (acc, name) = match (acc, zlib) {
+                ("MS:1002314", false) => ("MS:1002314", "MS-Numpress short logged float compression"),
+                ("MS:1002314", true) => ("MS:1002748", "MS-Numpress short logged float compression followed by zlib compression"),
+                (_, false) => ("MS:1002312", "MS-Numpress linear prediction compression"),
+                (_, true) => ("MS:1002746", "MS-Numpress linear prediction compression followed by zlib compression"),
+            };
+            let _ = write!(s, "<cvParam cvRef=\"MS\" accession=\"MS:1000523\" name=\"64-bit float\" value=\"\"/><cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"\"/>");
+        } else {
+            let _ = write!(s, "<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"\"/><cvParam cvRef=\"MS\" accession=\"MS:1000574\" name=\"zlib compression\" value=\"\"/>");
+        }
+        let _ = write!(s, "<cvParam cvRef=\"MS\" accession=\"{cv}\" name=\"{label}\" value=\"\" unitCvRef=\"{unit_cv}\" unitAccession=\"{unit_acc}\" unitName=\"{unit_name}\"/><binary>");
         base64::engine::general_purpose::STANDARD.encode_string(&self.packed, s);
         s.push_str("</binary></binaryDataArray>\n");
         Ok(())

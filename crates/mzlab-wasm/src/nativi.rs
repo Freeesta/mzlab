@@ -375,6 +375,7 @@ pub fn native_to_mzml(
     read: Function,
     c: u32,
     centroid: bool,
+    numpress: bool,
     sink: Function,
     progress: Function,
 ) -> Result<(), JsValue> {
@@ -390,7 +391,12 @@ pub fn native_to_mzml(
             &(total as f64).into(),
         );
     };
-    lettori_mzml::scrivi(&mut *l, c as usize, &mut out, &mut tell).map_err(|e| error_json(&e))?;
+    let opz = mzlab_core::mzmlwrite::Opzioni {
+        numpress,
+        ..Default::default()
+    };
+    lettori_mzml::scrivi_con(&mut *l, c as usize, &mut out, &mut tell, opz)
+        .map_err(|e| error_json(&e))?;
     std::io::Write::flush(&mut out).map_err(|_| {
         error_json(&mzlab_core::Error::new("err.file.notAccepted").with("detail", "write"))
     })

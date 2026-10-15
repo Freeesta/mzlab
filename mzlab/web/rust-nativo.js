@@ -175,7 +175,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
     let written = 0, last = 0, scans = 0, scansTotal = null;
     const tick = (/** @type {boolean} */ force) => { const t = performance.now(); if (force || t - last > TICK) { last = t; post({ written, scans, scansTotal }); } };
     try {
-      native_to_mzml(/** @type {Stub} */ (st).members.map(x => x.name), Float64Array.from(files.map(f => f.size)), reader(files, undefined), /** @type {Stub} */ (st).c, /** @type {Stub} */ (st).centroid,
+      native_to_mzml(/** @type {Stub} */ (st).members.map(x => x.name), Float64Array.from(files.map(f => f.size)), reader(files, undefined), /** @type {Stub} */ (st).c, /** @type {Stub} */ (st).centroid, !!m.numpress,
         (/** @type {Uint8Array} */ piece) => { sink.write(piece); written += piece.length; tick(false); },
         (/** @type {number} */ d, /** @type {number} */ t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); });
     } catch (e) { const q = await sink.error(); await sink.abort(); throw q || e; }
