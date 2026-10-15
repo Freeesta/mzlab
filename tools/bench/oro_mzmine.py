@@ -70,10 +70,13 @@ def componenti(nome: str) -> list[tuple[float, float, float, float]]:
 
 
 def sha_contenuto(dati: bytes) -> str:
-    """sha256 of the mzML with every zlib array decompressed: the compressed bytes change with the zlib of the Python in use, the content does not."""
-    def espandi(m: re.Match) -> bytes:
-        return b"<binary>" + base64.b64encode(zlib.decompress(base64.b64decode(m.group(1)))) + b"</binary>"
-    return hashlib.sha256(re.sub(rb"<binary>([^<]+)</binary>", espandi, dati)).hexdigest()
+    """sha256 of the mzML with every binary array decoded and written as text with 6 significant digits: neither the zlib bytes nor the last bits of the floats (libm and SIMD paths change with the CPU of the machine) enter the hash, the content does."""
+    def arrotonda(m: re.Match) -> bytes:
+        testa, payload = m.group(1), m.group(2)
+        tipo = "<f8" if b"MS:1000523" in testa else "<f4"
+        v = np.frombuffer(zlib.decompress(base64.b64decode(payload)), dtype=tipo)
+        return testa + b"<binary>" + " ".join(f"{x:.5e}" for x in v).encode() + b"</binary>"
+    return hashlib.sha256(re.sub(rb"(<binaryDataArray[^>]*>.*?)<binary>([^<]+)</binary>", arrotonda, dati, flags=re.S)).hexdigest()
 
 
 def scrivi(path: Path) -> str:
@@ -250,7 +253,7 @@ rewritten in Rust (`crates/mzlab-feat/src/untargeted/`); the mzML files are not 
 - **mzmine**: 3.9.0, bioconda package `mzmine-3.9.0-hdfd78af_0.tar.bz2`, sha256 `{corri_mzmine.BIOCONDA_SHA256}`; license MIT, (c) 2004-2022 The mzmine Development Team (`https://github.com/mzmine/mzmine/blob/master/LICENSE.txt`).
 - **JDK**: {java[0]}{' / ' + java[1] if len(java) > 1 else ''} (Adoptium OpenJDK 20, `{corri_mzmine.JDK20_URL}`).
 - **Command**: `bin/MZmine -b fasi.xml -t TMP` and `bin/MZmine -b isotopi.xml -t TMP` (no interface), parameters of `tools/bench/parametri/mzmine/predefinita.json`.
-- **Input files** (sha256 of the mzML written by `oro_mzmine.py`, with the zlib arrays decompressed: the compressed bytes depend on the zlib of Python):
+- **Input files** (sha256 of the mzML written by `oro_mzmine.py`, with every array decoded and rounded to 6 significant digits: neither the zlib bytes nor the last bits of the floats depend on the machine):
 
 {file}
 ## Content of the files
