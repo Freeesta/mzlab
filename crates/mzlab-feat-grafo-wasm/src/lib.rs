@@ -6,7 +6,7 @@ use mzlab_core::json::Out;
 use wasm_bindgen::prelude::*;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
-const BRIDGE: &str = "mzfeat-grafo/3";
+const BRIDGE: &str = "mzfeat-grafo/4";
 
 fn js_err(e: Error) -> JsValue {
     let mut o = Out::default();
@@ -41,4 +41,19 @@ pub fn fragments(molfile: &str, a: i32, b: i32) -> std::result::Result<String, J
 #[wasm_bindgen]
 pub fn partial(molfile: &str, delta: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::frammenti::partial_json(molfile, delta).map_err(js_err)
+}
+
+/// `posiz/1` of a SMILES, a transformation («+O», «-CH2», «+O-2H», «+Cl-H», «+Br-H») and the MS2 of the product (`peaks_json` `[[mz,int],..]`): the classes of positions
+/// the spectrum supports, excludes or cannot tell apart (see `mzlab_feat::chem::posizioni::positions_json`). `tol` in Da (`ppm` false) or ppm; `positive` is the polarity.
+#[wasm_bindgen]
+pub fn positions(
+    smiles: &str,
+    transform: &str,
+    peaks_json: &str,
+    tol: f64,
+    ppm: bool,
+    positive: bool,
+) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::posizioni::positions_json(smiles, transform, peaks_json, tol, ppm, positive)
+        .map_err(js_err)
 }
