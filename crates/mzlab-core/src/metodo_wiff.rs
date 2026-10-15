@@ -198,7 +198,7 @@ pub fn run_facts(ole: &Ole, n: u32) -> (Option<String>, Option<String>) {
 
 /// The document of sample `n` of the `.wiff` in `ole`; never an error: what is missing is absent, what cannot be read is in `avvisi`.
 pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
-    let method = method_of_sample(ole, n); #[cfg(feature = "estesi")] let method = method.or_else(|| crate::wiff::estesi::fallback_method(ole, n));
+    let method = or_fallback(method_of_sample(ole, n), ole, n);
     let sample = format!("SampleSubtree/Sample{n}/");
     let (log, data, cfr, props) = read_parts(ole, &sample);
     let prop = |id| {
@@ -268,7 +268,8 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
                 .map(|g| V::Arr(vec![g])),
         ),
         ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),
-    ]); #[cfg(feature = "estesi")] let doc = estesi::extend(doc, ole, n, &sample);
+    ]);
+    let doc = extended(doc, ole, n, &sample);
     doc.map_or_else(String::new, |d| d.json())
 }
 
@@ -451,3 +452,33 @@ mod tests;
 
 #[cfg(feature = "estesi")]
 mod estesi;
+
+/// The method of the sample, or (readers module) the nearest method below it when the file shares its methods between samples.
+#[cfg(feature = "estesi")]
+fn or_fallback(
+    m: Option<crate::methodinfo::Method>,
+    ole: &Ole,
+    n: u32,
+) -> Option<crate::methodinfo::Method> {
+    m.or_else(|| crate::wiff::estesi::fallback_method(ole, n))
+}
+
+#[cfg(not(feature = "estesi"))]
+fn or_fallback(
+    m: Option<crate::methodinfo::Method>,
+    _: &Ole,
+    _: u32,
+) -> Option<crate::methodinfo::Method> {
+    m
+}
+
+/// The document with what only the readers module adds (`metodo_wiff/estesi.rs`).
+#[cfg(feature = "estesi")]
+fn extended(doc: Option<V>, ole: &Ole, n: u32, sample: &str) -> Option<V> {
+    estesi::extend(doc, ole, n, sample)
+}
+
+#[cfg(not(feature = "estesi"))]
+fn extended(doc: Option<V>, _: &Ole, _: u32, _: &str) -> Option<V> {
+    doc
+}

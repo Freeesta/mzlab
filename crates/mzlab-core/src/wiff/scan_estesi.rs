@@ -21,9 +21,21 @@ fn bad(detail: impl ToString) -> Error {
 }
 
 fn f64_at(b: &[u8], at: usize) -> f64 {
-    let mut t = [0u8; 8];
-    t.copy_from_slice(&b[at..at + 8]);
-    f64::from_le_bytes(t)
+    b.get(at..at + 8)
+        .and_then(|s| <[u8; 8]>::try_from(s).ok())
+        .map_or(0.0, f64::from_le_bytes)
+}
+
+fn u32_at(b: &[u8], at: usize) -> usize {
+    b.get(at..at + 4)
+        .and_then(|s| <[u8; 4]>::try_from(s).ok())
+        .map_or(0, |a| u32::from_le_bytes(a) as usize)
+}
+
+/// A count read from the file as a float (finite and not negative where it matters): saturates, the callers compare it with their limits.
+#[allow(clippy::cast_possible_truncation)]
+fn count(x: f64) -> usize {
+    x as usize
 }
 
 /// The head of a scan block: ranges `[start, end, step, scale]`, the point count and the length of the head. `None` when the block is not a scan.
@@ -34,19 +46,23 @@ struct Head {
 }
 
 fn head<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, end: u64) -> Result<Option<Head>> {
-    let avail = end.min(scan_len).saturating_sub(at).min(HEAD_MAX as u64) as usize;
+    let avail =
+        usize::try_from(end.min(scan_len).saturating_sub(at)).map_or(HEAD_MAX, |a| a.min(HEAD_MAX));
     if avail < 8 {
         return Ok(None);
     }
     let mut b = [0u8; HEAD_MAX];
-    scan.read_at(at, &mut b[..avail])?;
+    let Some(head_bytes) = b.get_mut(..avail) else {
+        return Ok(None);
+    };
+    scan.read_at(at, head_bytes)?;
     if b[..4] == TOF_START {
         return Err(bad("TOF block"));
     }
     if b[..4] != MARKER[..4] {
         return Ok(None);
     }
-    let v = u32::from_le_bytes([b[4], b[5], b[6], b[7]]) as usize;
+    let v = u32_at(&b, 4);
     if !(1..=3).contains(&v) {
         return Err(bad(format!("scan block version {v}")));
     }
@@ -57,7 +73,7 @@ fn head<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, end: u64) -> Result<Opt
     let ranges = (0..v)
         .map(|k| [0, 1, 2, 3].map(|j| f64_at(&b, 8 + 32 * k + 8 * j)))
         .collect();
-    let n = u32::from_le_bytes([b[len - 4], b[len - 3], b[len - 2], b[len - 1]]) as usize;
+    let n = u32_at(&b, len - 4);
     Ok(Some(Head { ranges, n, len }))
 }
 
@@ -74,8 +90,13 @@ pub fn read_scan<R: ReadAt>(
     };
     let end = end.min(scan_len);
     // at most 10 bytes for a long skip and 10 for a long count per point
-    let mut data =
-        vec![0u8; ((end - at) as usize - h.len).min(h.n.saturating_mul(20).saturating_add(16))];
+    let mut data = vec![
+        0u8;
+        usize::try_from(end - at)
+            .unwrap_or(usize::MAX)
+            .saturating_sub(h.len)
+            .min(h.n.saturating_mul(20).saturating_add(16))
+    ];
     if h.n > 0 {
         scan.read_at(at + h.len as u64, &mut data)?;
     }
@@ -84,7 +105,9 @@ pub fn read_scan<R: ReadAt>(
     } else {
         Vec::new()
     };
-    let r0 = h.ranges[0];
+    let Some(&r0) = h.ranges.first() else {
+        return Ok(None);
+    };
     let mz: Vec<f64> = pts.iter().map(|&(b, _)| r0[0] + b as f64 * r0[2]).collect();
     let intensity = pts
         .iter()
@@ -133,15 +156,15 @@ pub fn read_mrm_cols<R: ReadAt>(
     let Some(v) = base::read_mrm(scan, scan_len, at, bytes / 4)? else {
         return Ok(None);
     };
-    if v.first().is_some_and(|x| *x < 0.0) {
-        let width = (-v[0]).floor();
-        if !(v[0].is_finite() && width >= 1.0 && width as usize <= WIDTH_MAX) {
+    if let Some(&first) = v.first().filter(|x| **x < 0.0) {
+        let width = (-first).floor();
+        if !(first.is_finite() && width >= 1.0 && count(width) <= WIDTH_MAX) {
             return Err(bad("sparse MRM block"));
         }
         let (mut pos, mut points) = (0usize, Vec::new());
-        for &x in &v[1..] {
+        for &x in v.iter().skip(1) {
             if x < 0.0 {
-                pos = pos.saturating_add((-x).floor() as usize);
+                pos = pos.saturating_add(count((-x).floor()));
             } else if x.is_finite() {
                 points.push((pos, x));
                 pos += 1;
@@ -149,7 +172,7 @@ pub fn read_mrm_cols<R: ReadAt>(
                 return Err(bad("sparse MRM block"));
             }
         }
-        if pos != width as usize {
+        if pos != count(width) {
             return Err(bad("sparse MRM block"));
         }
         return Ok(Some(Cols { width: pos, points }));

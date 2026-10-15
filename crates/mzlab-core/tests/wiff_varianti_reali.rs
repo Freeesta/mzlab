@@ -69,7 +69,7 @@ fn real_qtrap_files_open_with_the_tic_of_the_index_or_are_refused() {
     };
     let mut files = Vec::new();
     pairs(&d, &mut files);
-    files.sort();
+    mzlab_core::sortc::slice_ord(&mut files);
     let (mut opened, mut refused, mut scans, mut off) = (0, 0, 0, 0);
     for f in &files {
         let name = f.file_name().unwrap().to_string_lossy().to_string();
@@ -144,7 +144,7 @@ fn mzml_files(d: &Path) -> Vec<PathBuf> {
     let mut mzmls = Vec::new();
     walk(&d.join("sciex_wiff"), &mut mzmls);
     walk(&d.join("scansioni_speciali"), &mut mzmls);
-    mzmls.sort();
+    mzlab_core::sortc::slice_ord(&mut mzmls);
     mzmls
 }
 

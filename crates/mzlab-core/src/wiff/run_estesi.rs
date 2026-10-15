@@ -140,8 +140,10 @@ impl Blocks {
             e.cols.resize_with(c.width, Default::default);
         }
         for (j, x) in c.points {
-            e.cols[j].0.push(r.time_min);
-            e.cols[j].1.push(x);
+            if let Some(col) = e.cols.get_mut(j) {
+                col.0.push(r.time_min);
+                col.1.push(x);
+            }
         }
     }
 }

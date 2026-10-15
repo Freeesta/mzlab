@@ -126,7 +126,7 @@ fn field(nome: &str, valore: impl ToString) -> Campo {
     }
 }
 
-impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { self.parti.get(c).is_some_and(|p| p.w.variante()) } #[cfg(feature = "estesi")] fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) }
+#[rustfmt::skip] impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { self.parti.get(c).is_some_and(|p| p.w.variante()) } #[cfg(feature = "estesi")] fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) }
     fn formato(&self) -> Formato {
         Formato::SciexWiff
     }
@@ -296,13 +296,20 @@ fn build(w: Wiff, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -> Res
     })
 }
 
+/// The number after `key` in a spectrum id (`sample=2 ... experiment=1`).
+#[cfg(feature = "estesi")]
+fn id_field(id: &str, key: &str) -> Option<usize> {
+    id.split_whitespace()
+        .find_map(|w| w.strip_prefix(key))
+        .and_then(|v| v.parse::<usize>().ok())
+}
+
 /// The spectrum type (CV term) a spectrum of the readers module carries besides its level: precursor-ion and neutral-loss scans.
 #[cfg(feature = "estesi")]
 fn extra_of(l: &LettoreWiff, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra {
-    let field = |key: &str| s.id.split_whitespace().find_map(|w| w.strip_prefix(key)).and_then(|v| v.parse::<usize>().ok());
-    let code = field("sample=")
+    let code = id_field(&s.id, "sample=")
         .and_then(|n| l.parti.iter().find(|p| p.w.sample as usize == n))
-        .zip(field("experiment="))
+        .zip(id_field(&s.id, "experiment="))
         .and_then(|(p, e)| p.w.experiments.get(e.wrapping_sub(1)))
         .and_then(|e| e.code);
     let mut extra = crate::mzmlwrite::SpectrumExtra::default();
