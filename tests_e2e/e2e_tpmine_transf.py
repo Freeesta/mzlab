@@ -81,6 +81,7 @@ try:
         pg.add_init_script(INIT)
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.context.on("request", lambda r: reqs.append(r.url))
+        pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_function("typeof window.TPCALL === 'function'", timeout=120000)
         pg.set_input_files("#pick", mzml)
