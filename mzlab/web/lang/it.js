@@ -5,6 +5,8 @@ I18N.add("it", {
   "nav.theory": "Teoria",
   "nav.theory.title": "Teoria: TP, fotocatalisi, LC, ESI, quadrupolo, triplo quadrupolo",
   "theory.onlyItalian": "Scusa! Per ora la teoria è solo in italiano.",
+  "theory.editor": "Modifica capitolo",
+  "theory.editor.title": "Modifica il capitolo (solo amministratore)",
   "theory.sorry.openItalian": "Apri comunque la versione italiana",
   "settings.language.label": "Lingua / Language",
   "settings.language.title": "Lingua dell'interfaccia / Interface language",
