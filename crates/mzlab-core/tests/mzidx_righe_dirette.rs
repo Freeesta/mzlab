@@ -109,12 +109,24 @@ fn prova_con(label: &str, mut l: Finto, con_mzml: bool) {
 /// The mzML path with a scratch file (`build_mzml_spill`): the same bytes at every budget, the file decoded once.
 fn mzml_con_scratch(label: &str, table: &mzidx::ScanTable, mzml: &[u8], idx: &[u8]) {
     for budget in [1 << 20, 1 << 16, 1 << 12] {
-        let (mut out, mut sp) = (std::io::Cursor::new(Vec::new()), std::io::Cursor::new(Vec::new()));
-        let Ok(st) = mzidx::build_mzml_spill(table, std::io::Cursor::new(mzml), &mut out, budget, Some(&mut sp)) else {
+        let (mut out, mut sp) = (
+            std::io::Cursor::new(Vec::new()),
+            std::io::Cursor::new(Vec::new()),
+        );
+        let Ok(st) = mzidx::build_mzml_spill(
+            table,
+            std::io::Cursor::new(mzml),
+            &mut out,
+            budget,
+            Some(&mut sp),
+        ) else {
             continue;
         };
         assert_eq!(st.passes, 1, "{label}: one decoding with a scratch file");
-        assert!(out.into_inner() == idx, "{label}: mzML index with a scratch file differs at budget {budget}");
+        assert!(
+            out.into_inner() == idx,
+            "{label}: mzML index with a scratch file differs at budget {budget}"
+        );
     }
 }
 

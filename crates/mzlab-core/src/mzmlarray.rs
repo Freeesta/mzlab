@@ -46,7 +46,10 @@ impl Inflate {
         self.n = 0;
         // never more than `limit + 1` bytes: one over the limit is the proof of a bomb
         let max = limit.saturating_add(1);
-        let first = limit.min(raw.len().saturating_mul(1032)).saturating_add(1).min(max);
+        let first = limit
+            .min(raw.len().saturating_mul(1032))
+            .saturating_add(1)
+            .min(max);
         self.grow(first)?;
         let mut pos = 0usize;
         loop {

@@ -49,17 +49,41 @@ fn main() {
         }
     })
     .expect("parse");
-    println!("parse (decode all)      {:>8.3} s ({n} peaks)", t.elapsed().as_secs_f64());
+    println!(
+        "parse (decode all)      {:>8.3} s ({n} peaks)",
+        t.elapsed().as_secs_f64()
+    );
     let t = Instant::now();
     let mut f = File::open(path).expect("open");
     let p = upload::prepare(&mut f, size, "x.mzML").expect("prepare");
-    println!("prepare (table+prints)  {:>8.3} s ({} scans)", t.elapsed().as_secs_f64(), p.table.level.len());
+    println!(
+        "prepare (table+prints)  {:>8.3} s ({} scans)",
+        t.elapsed().as_secs_f64(),
+        p.table.level.len()
+    );
     // without a spool every round decodes the file again; with a spool (a scratch file next to the mzML) it is decoded once
     for con in [false, true] {
         let spool_path = format!("{path}.spool");
-        let mut spool = con.then(|| std::fs::OpenOptions::new().read(true).write(true).create(true).truncate(true).open(&spool_path).expect("spool"));
+        let mut spool = con.then(|| {
+            std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&spool_path)
+                .expect("spool")
+        });
         let t = Instant::now();
-        let st = mzidx::build_mzml_spill(&p.table, BufReader::new(File::open(path).expect("open")), &mut Nulla, budget << 20, spool.as_mut().map(|f| f as &mut dyn mzlab_core::mzidx_spill::Spill)).expect("index");
+        let st = mzidx::build_mzml_spill(
+            &p.table,
+            BufReader::new(File::open(path).expect("open")),
+            &mut Nulla,
+            budget << 20,
+            spool
+                .as_mut()
+                .map(|f| f as &mut dyn mzlab_core::mzidx_spill::Spill),
+        )
+        .expect("index");
         println!(
             ".mzidx {:<14}  {:>8.3} s ({:.1} MB, {} passes)",
             if con { "(with spool)" } else { "(no spool)" },
