@@ -1,13 +1,12 @@
-//! The MS2 of a row of the low-resolution Dig (`engine.py::ms2`, `transitions`): the product-ion scans of the MS2 files whose precursor is the ion
-//! (within the tolerance, as extracted or as calculated) and whose time lies inside its peak in the full-scan files, pooled by fragment and
-//! compared with the parent's.
+//! The MS2 of a row of the low-resolution Dig (`engine.py::ms2`, `transitions`): the product-ion scans of the peaks of the traces that
+//! `ms2link` matched to the row, pooled by fragment and compared with the parent's.
 
 use std::collections::BTreeMap;
 
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{round, Out};
 
-use super::plan::Settings;
+use super::ms2link::{runs, small, Link, Links};
 use super::{Entry, LrDig};
 use crate::legacy::ms2::read_scans;
 use crate::legacy::Res;
@@ -18,12 +17,6 @@ const PRECURSOR_GAP: f64 = 1.5;
 const BIN: f64 = 0.3;
 /// A fragment of the product matches one of the parent within this, Da.
 const MATCH: f64 = 0.5;
-/// Margin added to the half width of the window when the scans are picked, minutes.
-const MARGIN: f64 = 0.05;
-/// A file with fewer scans of the precursor outside the window is acquired only around the row: no signal control.
-const MIN_OUTSIDE: usize = 10;
-/// The scans of the window count when their strongest TIC is at least this times the median TIC of the whole trace.
-const SN_MS2: f64 = 3.0;
 /// Fragments kept: product and parent (`top`).
 const TOP: usize = 6;
 const TOP_PARENT: usize = 10;
@@ -52,76 +45,13 @@ pub struct Pool {
 }
 
 fn median(v: &mut [f64]) -> f64 {
-    mzlab_core::sortc::by(v, |a, b| a.total_cmp(b));
+    small(v, |a, b| a.total_cmp(b));
     let n = v.len();
     if n % 2 == 1 {
         v[n / 2]
     } else {
         (v[n / 2 - 1] + v[n / 2]) / 2.0
     }
-}
-
-/// Window of the MS2 scans of `e`: centred on its reference RT, as wide as the usual half width of its peak (median over the cells whose
-/// apex lies within `rt_tol_min` of it) plus `rt_tol_min` and `MARGIN`; `None` when no cell is on that peak.
-fn window(e: &Entry, s: &Settings) -> Option<(f64, f64)> {
-    let centre = e.ref_rt?;
-    let mut half: Vec<f64> = e
-        .cells
-        .iter()
-        .filter(|c| {
-            c.apex_rt
-                .is_some_and(|a| (a - centre).abs() <= s.rt_tol_min)
-        })
-        .map(|c| (c.hi - c.lo) / 2.0)
-        .collect();
-    if half.is_empty() {
-        return None;
-    }
-    let w = s.rt_tol_min + median(&mut half) + MARGIN;
-    Some((centre - w, centre + w))
-}
-
-/// Whether the trace of the level-2 scans of one precursor has a signal inside `[lo, hi]`: always when the file was acquired only around
-/// the window, else when the strongest TIC inside is `SN_MS2` times the median TIC of the whole trace.
-fn has_signal(trace: &[(f64, f64)], lo: f64, hi: f64) -> bool {
-    let outside = trace.iter().filter(|t| t.0 < lo || t.0 > hi).count();
-    if outside < MIN_OUTSIDE {
-        return true;
-    }
-    let mut all: Vec<f64> = trace.iter().map(|t| t.1).collect();
-    let top = trace
-        .iter()
-        .filter(|t| t.0 >= lo && t.0 <= hi)
-        .map(|t| t.1)
-        .fold(f64::NEG_INFINITY, f64::max);
-    top >= SN_MS2 * median(&mut all)
-}
-
-/// `(scan, precursor, RT)` of the level-2 scans of `ix` for the precursor of `e` that lie in `win`, if the trace has a signal there.
-fn picked_scans<R: ReadAt>(
-    ix: &Index<R>,
-    e: &Entry,
-    tol: f64,
-    win: (f64, f64),
-) -> Vec<(usize, f64, f64)> {
-    let near: Vec<(usize, f64, f64, f64)> = ix
-        .scans
-        .iter()
-        .enumerate()
-        .filter_map(|(i, s)| {
-            let p = s.precursor?;
-            let ok = (p - e.mz_x).abs() <= tol || (p - e.mz).abs() <= tol;
-            (s.level == 2 && ok).then_some((i, p, s.rt, s.tic))
-        })
-        .collect();
-    let trace: Vec<(f64, f64)> = near.iter().map(|x| (x.2, x.3)).collect();
-    if !has_signal(&trace, win.0, win.1) {
-        return vec![];
-    }
-    near.iter()
-        .filter(|x| x.2 >= win.0 && x.2 <= win.1)
-        .map(|x| (x.0, x.1, x.2))
-        .collect()
 }
 
 /// One (weighted m/z, mean intensity per scan) per bin.
@@ -139,44 +69,44 @@ fn average(bins: &BTreeMap<i64, Vec<(f64, f64)>>, n: usize) -> Vec<(f64, f64)> {
         .collect()
 }
 
-/// Pooled fragments of `e` (without the comparison with the parent). `open(k)` gives the index of file `k` of the columns then the MS2 files.
-pub fn pool<R: ReadAt>(
-    d: &LrDig,
-    e: &Entry,
+/// The scans of a link: (file in the order of `open`, rows of its index) of its experiment inside its peak.
+type Part = (usize, Vec<usize>);
+
+fn part_of(l: &Links, k: &Link) -> Part {
+    let (x, p) = (&l.exps[k.exp], &l.exps[k.exp].peaks[k.peak]);
+    (x.k, x.within(p.lo, p.hi))
+}
+
+/// Pooled fragments of the scans of `parts` (the binning and the cut of the fragments).
+fn pool_of<R: ReadAt>(
+    parts: &[Part],
     top: usize,
     open: &mut dyn FnMut(usize) -> Res<Index<R>>,
 ) -> Res<Pool> {
     let mut out = Pool::default();
-    let Some((lo, hi)) = window(e, &d.settings) else {
-        return Ok(out);
-    };
-    let tol = d.settings.tol_da;
     let (mut bins, mut ces, mut precs, mut n) = (
         BTreeMap::<i64, Vec<(f64, f64)>>::new(),
         vec![],
         vec![],
         0usize,
     );
-    let skip = d.lc.len();
-    for j in 0..d.files.iter().filter(|f| f.kind == "ms2").count() {
-        let mut ix = open(skip + j)?;
-        let picked = picked_scans(&ix, e, tol, (lo, hi));
-        let ces_of: Vec<Option<f64>> = picked
+    for (k, want) in parts.iter().filter(|p| !p.1.is_empty()) {
+        let mut ix = open(*k)?;
+        let found: Vec<(Option<f64>, Option<f64>)> = want
             .iter()
-            .map(|p| ix.scans[p.0].collision_energy)
+            .map(|i| (ix.scans[*i].precursor, ix.scans[*i].collision_energy))
             .collect();
-        let want: Vec<usize> = picked.iter().map(|p| p.0).collect();
-        for ((peaks, p), ce) in read_scans(&mut ix, &want)
+        for (peaks, (prec, ce)) in read_scans(&mut ix, want)
             .map_err(|x| x.to_string())?
             .into_iter()
-            .zip(&picked)
-            .zip(ces_of)
+            .zip(found)
         {
             n += 1;
-            precs.push(p.1);
+            let prec = prec.unwrap_or(f64::NAN);
+            precs.push(prec);
             ces.extend(ce.filter(|c| *c != 0.0));
             for (m, i) in peaks.0.iter().zip(&peaks.1) {
-                if (m - p.1).abs() >= PRECURSOR_GAP {
+                if (m - prec).abs() >= PRECURSOR_GAP {
                     bins.entry((m / BIN).round() as i64)
                         .or_default()
                         .push((*m, *i));
@@ -190,7 +120,7 @@ pub fn pool<R: ReadAt>(
     let mut pooled = average(&bins, n);
     let mx = pooled.iter().map(|p| p.1).fold(f64::NEG_INFINITY, f64::max);
     pooled.retain(|p| p.1 >= MIN_REL * mx);
-    pooled.sort_by(|a, b| b.1.total_cmp(&a.1));
+    small(&mut pooled, |a, b| b.1.total_cmp(&a.1));
     pooled.truncate(top);
     out.scans = n;
     out.precursor = Some(round(median(&mut precs), 2));
@@ -204,6 +134,49 @@ pub fn pool<R: ReadAt>(
         })
         .collect();
     Ok(out)
+}
+
+/// Pooled fragments of `e` (without the comparison with the parent): the scans of its links (`ms2link`), those of the collision energy with the most
+/// scans when it has several. `open(k)` gives the index of file `k` of the columns then the MS2 files.
+pub fn pool<R: ReadAt>(
+    d: &LrDig,
+    e: &Entry,
+    top: usize,
+    open: &mut dyn FnMut(usize) -> Res<Index<R>>,
+) -> Res<Pool> {
+    let Some(l) = &d.links else {
+        return Ok(Pool::default());
+    };
+    let parts: Vec<Part> = l.of(e.id).map(|(_, k)| part_of(l, k)).collect();
+    let mut tagged: Vec<(i64, usize)> = l
+        .of(e.id)
+        .enumerate()
+        .map(|(i, (_, k))| {
+            (
+                l.exps[k.exp]
+                    .ce
+                    .map_or(i64::MIN, |c| (c * 10.0).round() as i64),
+                i,
+            )
+        })
+        .collect();
+    small(&mut tagged, |a, b| a.cmp(b));
+    let size = |g: &Vec<Part>| g.iter().map(|p| p.1.len()).sum::<usize>();
+    let best = runs(&tagged)
+        .into_iter()
+        .map(|(_, ix)| {
+            ix.into_iter()
+                .map(|i| parts[i].clone())
+                .collect::<Vec<Part>>()
+        })
+        .fold(None::<Vec<Part>>, |b, g| match b {
+            Some(x) if size(&x) >= size(&g) => Some(x),
+            _ => Some(g),
+        });
+    match best {
+        Some(g) => pool_of(&g, top, open),
+        None => Ok(Pool::default()),
+    }
 }
 
 /// `engine.ms2(e)`: the pool of `e` annotated against the parent (loss from the precursor, shared or shifted by the mass difference).
@@ -240,22 +213,15 @@ pub fn ms2<R: ReadAt>(
     Ok(res)
 }
 
-/// The `ms2` object of `api.detail`.
-pub fn ms2_json(o: &mut Out, m: &Pool) {
-    let annotated = m.annotated;
-    o.raw("{\"scans\":").int(m.scans as i64);
-    o.raw(",\"precursor\":").opt(m.precursor);
-    if m.scans > 0 {
-        o.raw(",\"collision_energy\":").opt(m.collision_energy);
-    }
-    o.raw(",\"fragments\":[");
+fn fragments_json(o: &mut Out, m: &Pool) {
+    o.raw("\"fragments\":[");
     for (i, f) in m.frags.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"mz\":")
             .num(f.mz)
             .raw(",\"rel\":")
             .num(f.rel);
-        if annotated {
+        if m.annotated {
             o.raw(",\"loss\":")
                 .opt(f.loss)
                 .raw(",\"note\":")
@@ -264,13 +230,64 @@ pub fn ms2_json(o: &mut Out, m: &Pool) {
         o.raw("}");
     }
     o.raw("]");
-    if annotated && !m.frags.is_empty() {
+}
+
+/// The `ms2` object of `api.detail`.
+pub fn ms2_json(o: &mut Out, m: &Pool) {
+    o.raw("{\"scans\":").int(m.scans as i64);
+    o.raw(",\"precursor\":").opt(m.precursor);
+    if m.scans > 0 {
+        o.raw(",\"collision_energy\":").opt(m.collision_energy);
+    }
+    o.raw(",");
+    fragments_json(o, m);
+    if m.annotated && !m.frags.is_empty() {
         o.raw(",\"shared\":")
             .int(m.shared as i64)
             .raw(",\"shifted\":")
             .int(m.shifted as i64);
     }
     o.raw("}");
+}
+
+/// The `ms2_links` array of `api.detail`: one object per match of the row with the fragments of its scans.
+pub fn links_json<R: ReadAt>(
+    o: &mut Out,
+    d: &LrDig,
+    e: &Entry,
+    open: &mut dyn FnMut(usize) -> Res<Index<R>>,
+) -> Res<()> {
+    o.raw("[");
+    if let Some(l) = &d.links {
+        for (n, (_, k)) in l.of(e.id).enumerate() {
+            let (x, p) = (&l.exps[k.exp], &l.exps[k.exp].peaks[k.peak]);
+            let m = pool_of(&[part_of(l, k)], TOP, open)?;
+            o.raw(if n > 0 { "," } else { "" })
+                .raw("{\"file\":")
+                .str(&x.file);
+            o.raw(",\"precursor\":")
+                .num(x.precursor)
+                .raw(",\"ce\":")
+                .opt(x.ce);
+            o.raw(",\"apex\":")
+                .num(round(p.apex, 3))
+                .raw(",\"lo\":")
+                .num(round(p.lo, 3));
+            o.raw(",\"hi\":")
+                .num(round(p.hi, 3))
+                .raw(",\"state\":")
+                .str(k.state.name());
+            o.raw(",\"why\":")
+                .str(&k.why)
+                .raw(",\"scans\":")
+                .int(m.scans as i64)
+                .raw(",");
+            fragments_json(o, &m);
+            o.raw("}");
+        }
+    }
+    o.raw("]");
+    Ok(())
 }
 
 /// `engine.transitions([id])`: one candidate transition (Q1 > Q3) per pooled fragment.
