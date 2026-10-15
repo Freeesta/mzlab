@@ -3,7 +3,7 @@
 
 use mzlab_feat::legacy::lr::ms2::pool;
 use mzlab_feat::legacy::lr::ms2link::{Links, State};
-use mzlab_feat::legacy::lr::LrDig;
+use mzlab_feat::legacy::lr::{Entry, LrDig};
 use serde_json::Value;
 
 mod comune;
@@ -71,15 +71,26 @@ fn the_experiments_of_the_real_series_are_found_and_matched_as_the_truth_says() 
     let exps = truth["experiments"].as_array().unwrap();
     assert_eq!(l.exps.len(), exps.len());
     for t in exps {
-        check(l, t);
+        check(&d, t);
     }
     assert!(!l.parent_has_ms2);
     assert_eq!(l.links.iter().filter(|k| k.row == 0).count(), 0);
     no_signal_pool(&truth, &d, &idxs);
 }
 
-/// One experiment of the truth against what the engine found for it.
-fn check(l: &Links, t: &Value) {
+/// The row made from the MS2 (`ms2_target`) that the peak `near` of experiment `i` got.
+fn target_row<'a>(d: &'a LrDig, i: usize, near: &dyn Fn(usize) -> bool) -> Option<&'a Entry> {
+    let l = d.links.as_ref()?;
+    l.links
+        .iter()
+        .filter(|k| k.exp == i && near(k.peak))
+        .find_map(|k| d.entries.iter().find(|e| e.id == k.row && e.ms2_target))
+}
+
+/// One experiment of the truth against what the engine found for it. The truth marks an ion the Dig does not list as `target`: its peak has a row
+/// "MS2 target" at the time of the trace (the isotope-like ions, shown as `isotope`, keep the link of the isotope rule instead).
+fn check(d: &LrDig, t: &Value) {
+    let l = d.links.as_ref().unwrap();
     let (file, p) = (
         t["mzml"].as_str().unwrap(),
         t["precursor"].as_f64().unwrap(),
@@ -113,7 +124,8 @@ fn check(l: &Links, t: &Value) {
     }
     // an ion that is no row of the Dig: not matched to a product (a weak isotope peak of a row is shown, not pooled)
     let near = |k: usize| (e.peaks[k].apex - apex).abs() <= 0.1;
-    let ok = l.unmatched.iter().any(|u| {
+    let made = target_row(d, i, &near);
+    let ok = made.is_some() || l.unmatched.iter().any(|u| {
         u.exp == Some(i)
             && u.peak.is_some_and(near)
             && matches!(u.reason, "no_row" | "no_row_at_rt")
@@ -122,6 +134,14 @@ fn check(l: &Links, t: &Value) {
         .iter()
         .any(|k| k.exp == i && near(k.peak) && k.state == State::Isotope);
     assert!(ok, "{file} {p}: {:?} {:?}", l.links, l.unmatched);
+    if let Some(e) = made {
+        assert!((e.ref_rt.unwrap_or(f64::NAN) - apex).abs() <= 0.1, "{file} {p}: {:?}", e.ref_rt);
+        // the cell of the full-scan file with the same sampling time is not empty
+        let k = d.lc.iter().position(|f| f.time == l.exps[i].time && f.time.is_some());
+        assert!(k.is_some_and(|k| e.cells[k].detected || e.cells[k].area > 0.0), "{file} {p}: {:?}", e.cells);
+    } else if t["expect"] == "target" {
+        eprintln!("NOTE {file} {p}: target of the truth without a row of its own (isotope link or listed): {:?}", l.links);
+    }
 }
 
 /// A row at the time of an experiment without signal gets no scan in its pool.

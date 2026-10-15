@@ -15,6 +15,8 @@ use serde_json::Value;
 
 mod comune;
 use comune::*;
+#[path = "lr_ms2link/target.rs"]
+mod target;
 
 /// One experiment of an MS2 file: a scan every `step` min over `0.5..14`, the TIC `LEVEL` plus the Gaussian `peaks` (apex, sigma, height).
 struct X {
