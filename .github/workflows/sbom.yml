@@ -13,7 +13,7 @@ jobs:
   sbom:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
       - name: cargo-cyclonedx
