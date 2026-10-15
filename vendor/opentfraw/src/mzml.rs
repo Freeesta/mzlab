@@ -63,7 +63,7 @@ pub struct SpectrumRecord {
     /// Whether broadband isolation is enabled for this scan.
     pub is_wideband: bool,
     pub polarity: Option<Polarity>,
-    /// Effective scan mode after `include_profile` resolution.
+    /// What `mz`/`intensity` really hold: `Profile` only when they are profile points, `Centroid` when they are the file's centroid list.
     pub scan_mode: Option<crate::ScanMode>,
     pub filter: Option<String>,
     /// Retention time in minutes.
@@ -421,28 +421,42 @@ fn resolve_scan_arrays<R: Read + Seek>(
     if include_profile && !raw.flat_peaks {
         let packet = raw.read_scan(source, scan_number).ok()?;
         if let Some(profile) = packet.profile {
-            let coeffs = event.map(|e| e.coefficients.as_slice()).unwrap_or(&[]);
-            let pairs = profile.to_mz_intensity(coeffs);
-            let mz: Vec<f64> = pairs
-                .iter()
-                .filter(|(m, _)| *m > 0.0)
-                .map(|(m, _)| *m)
-                .collect();
-            let int: Vec<f32> = pairs
-                .iter()
-                .filter(|(m, _)| *m > 0.0)
-                .map(|(_, i)| *i as f32)
-                .collect();
-            return Some((mz, int, Some(crate::ScanMode::Profile)));
+            return Some(profile_arrays(&profile, event));
         }
         let mz: Vec<f64> = packet.peaks.iter().map(|p| p.mz).collect();
         let int: Vec<f32> = packet.peaks.iter().map(|p| p.abundance).collect();
-        return Some((mz, int, nominal_scan_mode));
+        return Some((mz, int, Some(crate::ScanMode::Centroid)));
     }
     let peaks = raw.read_peaks_only(source, scan_number).ok()?;
+    if peaks.is_empty() && !raw.flat_peaks && nominal_scan_mode == Some(crate::ScanMode::Profile) {
+        // A profile scan without a centroid list: the profile is all the file holds (msconvert's default).
+        if let Some(profile) = raw.read_scan(source, scan_number).ok()?.profile {
+            return Some(profile_arrays(&profile, event));
+        }
+    }
     let mz: Vec<f64> = peaks.iter().map(|p| p.mz).collect();
     let int: Vec<f32> = peaks.iter().map(|p| p.abundance).collect();
-    Some((mz, int, nominal_scan_mode))
+    Some((mz, int, Some(crate::ScanMode::Centroid)))
+}
+
+/// The profile points of a scan (m/z > 0) and the mode they are in.
+fn profile_arrays(
+    profile: &crate::scan_data::Profile,
+    event: Option<&ScanEvent>,
+) -> (Vec<f64>, Vec<f32>, Option<crate::ScanMode>) {
+    let coeffs = event.map(|e| e.coefficients.as_slice()).unwrap_or(&[]);
+    let pairs = profile.to_mz_intensity(coeffs);
+    let mz: Vec<f64> = pairs
+        .iter()
+        .filter(|(m, _)| *m > 0.0)
+        .map(|(m, _)| *m)
+        .collect();
+    let int: Vec<f32> = pairs
+        .iter()
+        .filter(|(m, _)| *m > 0.0)
+        .map(|(_, i)| *i as f32)
+        .collect();
+    (mz, int, Some(crate::ScanMode::Profile))
 }
 
 // -- Adapter / canonical writer wrappers --

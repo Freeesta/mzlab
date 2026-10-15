@@ -1,0 +1,46 @@
+{
+ "feature_decisions": "03 Stats/scripts/shared/feature_decisions.csv",
+ "id": "SYNTH",
+ "instrument": "Fictional Orbitrap",
+ "matrices": {
+  "all": {
+   "dir": "All",
+   "label": "All sites",
+   "sites": [
+    "SiteA",
+    "SiteB"
+   ]
+  }
+ },
+ "merged": {
+  "NEG": "02 Data/Data Synth/1 - mzMine/DDA_NEG/merged/merged_neg.csv",
+  "POS": "02 Data/Data Synth/1 - mzMine/DDA_POS/merged/merged_pos.csv"
+ },
+ "name": "Synthetic test campaign (fixture, not real data)",
+ "polarity_tag": {
+  "NEG": "ddaNEG",
+  "POS": "ddaPOS"
+ },
+ "site_prefix": {
+  "SiteA": "SiteA",
+  "SiteB": "SiteB"
+ },
+ "sites": {
+  "SiteA": {
+   "color": "#2e7d4f",
+   "file_prefix": "SiteA",
+   "label": "Site A (fictional)",
+   "short": "Site A"
+  },
+  "SiteB": {
+   "color": "#1f4e79",
+   "file_prefix": "SiteB",
+   "label": "Site B (fictional)",
+   "short": "Site B"
+  }
+ },
+ "sorbents": [
+  "OA",
+  "EC"
+ ]
+}

@@ -1,0 +1,127 @@
+{
+ "identity_table": [
+  {
+   "best_level": 2,
+   "best_level_sub": "a",
+   "cec_category": "ppcp",
+   "cec_label": "Caffeine",
+   "group": "contaminant",
+   "identity": "Caffeine",
+   "identity_category": "ppcp",
+   "in_SiteA": true,
+   "in_SiteB": true,
+   "is_cec": true
+  },
+  {
+   "best_level": 3,
+   "best_level_sub": "",
+   "cec_category": null,
+   "cec_label": null,
+   "group": "natural",
+   "identity": "Fictacin B",
+   "identity_category": "natural",
+   "in_SiteA": false,
+   "in_SiteB": true,
+   "is_cec": false
+  },
+  {
+   "best_level": 3,
+   "best_level_sub": "",
+   "cec_category": null,
+   "cec_label": null,
+   "group": "natural",
+   "identity": "Fictamine",
+   "identity_category": "natural",
+   "in_SiteA": true,
+   "in_SiteB": true,
+   "is_cec": false
+  },
+  {
+   "best_level": 2,
+   "best_level_sub": "a",
+   "cec_category": null,
+   "cec_label": null,
+   "group": "natural",
+   "identity": "Fictamol",
+   "identity_category": "natural",
+   "in_SiteA": true,
+   "in_SiteB": false,
+   "is_cec": false
+  },
+  {
+   "best_level": 3,
+   "best_level_sub": "",
+   "cec_category": null,
+   "cec_label": null,
+   "group": "natural",
+   "identity": "Fictazine",
+   "identity_category": "natural",
+   "in_SiteA": true,
+   "in_SiteB": false,
+   "is_cec": false
+  },
+  {
+   "best_level": 3,
+   "best_level_sub": "",
+   "cec_category": null,
+   "cec_label": null,
+   "group": "natural",
+   "identity": "Fictazine isomer, RT 8.0 min",
+   "identity_category": "natural",
+   "in_SiteA": false,
+   "in_SiteB": true,
+   "is_cec": false
+  },
+  {
+   "best_level": 2,
+   "best_level_sub": "a",
+   "cec_category": null,
+   "cec_label": null,
+   "group": "natural",
+   "identity": "Fictolol",
+   "identity_category": "natural",
+   "in_SiteA": true,
+   "in_SiteB": false,
+   "is_cec": false
+  },
+  {
+   "best_level": 1,
+   "best_level_sub": "",
+   "cec_category": null,
+   "cec_label": null,
+   "group": "natural",
+   "identity": "TestStandardA",
+   "identity_category": "natural",
+   "in_SiteA": true,
+   "in_SiteB": false,
+   "is_cec": false
+  },
+  {
+   "best_level": 3,
+   "best_level_sub": "",
+   "cec_category": null,
+   "cec_label": null,
+   "group": "natural",
+   "identity": "TestStandardA isomer, RT 9.0 min",
+   "identity_category": "natural",
+   "in_SiteA": false,
+   "in_SiteB": true,
+   "is_cec": false
+  }
+ ],
+ "level_counts": {
+  "features_L1": 1,
+  "features_L2": 3,
+  "features_L2a": 3,
+  "features_L2b": 0,
+  "features_L2b_as_L3": 0,
+  "features_L3": 7,
+  "identities": 9,
+  "identities_L1": 1,
+  "identities_L2": 3,
+  "identities_L2a": 3,
+  "identities_L2b": 0,
+  "identities_L2b_as_L3": 0,
+  "identities_L3": 5
+ }
+}

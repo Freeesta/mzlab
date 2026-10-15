@@ -24,3 +24,7 @@ mzlab-core = { path = "../mzlab-core", default-features = false, features = ["es
 # the decoders of the peaks of an mzXML (base64 and zlib), versions as in mzlab-core
 base64 = "0.23"
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+
+[dev-dependencies]
+# the tests check the keys of metodo/1 against its schema
+serde_json = { version = "1", features = ["raw_value", "float_roundtrip"] }
