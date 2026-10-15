@@ -1,4 +1,4 @@
-"""«Load data» is never held back by the times: the five example Full Scan files go in with the times 0/5/10/15/30 read from the names (yellow, only a proposal),
+"""«Load data» is never held back by the times: the five example Full Scan files go in with the times 0/5/10/15/30 read from the names,
 the program starts at once with no message under the button; the t0 is the sample at time 0 (no role of its own) and the dark has a negative time that stays out of the gradient."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
@@ -21,12 +21,12 @@ try:
         row = lambda n: f"#flist tr:has(td:text-is('{n}.mzML'))"
         def tval(n): return pg.eval_on_selector(f"{row(n)} input[data-k=time]", "e => e.value")
         def times_in_rows():
-            pg.wait_for_function("document.querySelectorAll('#flist input.guess[data-k=time]').length >= 4", timeout=30000)
+            pg.wait_for_function("[...document.querySelectorAll('#flist input[data-k=time]')].filter(x => x.value).length >= 4", timeout=30000)
             assert [tval(n) for n in NAMES] == ["0", "5", "10", "15", "30"], [tval(n) for n in NAMES]
             roles = pg.eval_on_selector_all("#flist select[data-k=type]", "els => els.map(e => e.value)")
             assert roles == ["sample"] * 5, roles                                   # the t0 is not a role
             assert not pg.is_disabled(f"{row('FullScan_t0')} input[data-k=time]")
-        step("the times 0/5/10/15/30 are in the rows (proposals, yellow)", times_in_rows)
+        step("the times 0/5/10/15/30 are in the rows (editable)", times_in_rows)
         def starts_at_once():
             assert pg.eval_on_selector("#flist", "e => e.querySelectorAll('input[aria-invalid=true]').length") == 0, "no cell marked invalid"
             pg.click("#opbtn")

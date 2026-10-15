@@ -1,18 +1,15 @@
 // @ts-check
 "use strict";
-// Roles and times in the loading table (`campioni/2`, the Rust of mzlab-core). This file packs and shows: the proposals from the file names (`proponi`), the warnings
-// (`valida`) and the two boxes Blank · Infusion come from the engine through `api/campioni/<op>`; nothing is decided here. The time is optional: nothing here holds back «Load data».
-// An entry of ST.files keeps `type` (the base type the other routes know: sample | blank | standard) and, for this table, `role` (campioni/2 `tipo`), `prop` (the proposal was asked), `ed` (the student chose the role: a late proposal does not overwrite it). The time `f.time` is in minutes, `f.gT` is
-// true while it is only proposed from the name. A sample at time 0 is the t0 (no role of its own); the time of a dark is negative (minutes before the time zero).
-// Model part: the roles of an entry, the proposals. The warnings are in ruoli-avvisi.js, the cells and the strip in ruoli-celle.js, the lists of the boxes in ruoli-menu.js (each adds its functions to RUOLI).
+// Roles and times in the loading table (`campioni/2`, the Rust of mzlab-core). The proposals from the file names (`proponi`) come from the engine through `api/campioni/<op>`;
+// nothing is decided here. The time is optional and written in the table: nothing holds back «Load data», which is the confirmation.
+// An entry of ST.files keeps `type` (the base type the other routes know: sample | blank | standard) and, for this table, `role` (campioni/2 `tipo`), `prop` (the proposal was asked), `ed` (the student chose the role: a late proposal does not overwrite it). The time `f.time` is in minutes. A sample at time 0 is the t0 (no role of its own); the time of a dark is negative (minutes before the time zero).
+// The cells are in ruoli-celle.js (it adds its functions to RUOLI).
 const RUOLI = /** @type {any} */ ((() => {
   /** @type {(k: string, p?: any) => string} */
   const t = (k, p) => I18N.t(k, p);
   const OPTS = ["sample", "blank", "dark", "infusion", "std", "qc"];
   const BASE = /** @type {Record<string, string>} */ ({ sample: "sample", blank: "blank", dark: "sample", infusion: "sample", std: "standard", qc: "sample" });
   const TIMED = new Set(["sample", "dark"]);        // roles with a time to write
-  const BOXES = ["blank", "infusion"];
-  const BOX_ROLE = /** @type {Record<string, string>} */ ({ blank: "blank", infusion: "infusion" });
   const eh = (/** @type {any} */ s) => EH(s == null ? "" : s);
   const post = (/** @type {string} */ op, /** @type {any} */ body) => fetch("api/campioni/" + op, { method: "POST", body: JSON.stringify(body) }).then(r => r.json());
 
@@ -27,10 +24,10 @@ const RUOLI = /** @type {any} */ ((() => {
   function setRole(/** @type {Voce} */ f, /** @type {string} */ v) {
     const was = roleOf(f), r = v === "standard" ? "std" : v === "t0" ? "sample" : v;   // the option of the select says «standard» (the value the rest of the program knows); `t0` = a sample at 0
     f.role = r; f.type = BASE[r] || "sample";
-    if (v === "t0") { f.time = 0; f.gT = false; }
-    else if (!TIMED.has(r)) { f.time = null; f.gT = false; }
+    if (v === "t0") f.time = 0;
+    else if (!TIMED.has(r)) f.time = null;
     else if (r === "dark") f.time = darkTime(f.time ?? null);
-    else if (was === "dark" && f.time != null && f.time < 0) { f.time = null; f.gT = false; }
+    else if (was === "dark" && f.time != null && f.time < 0) f.time = null;
   }
 
   let busy = 0;   // proposals under way (the tests wait for 0)
@@ -48,14 +45,14 @@ const RUOLI = /** @type {any} */ ((() => {
       if (!f || f.ed) continue;
       const r = c.tipo === "calibration" ? "std" : c.tipo === "t0" ? "sample" : c.tipo;
       setRole(f, r);
-      if (TIMED.has(r) && c.tempo_min != null) { f.time = r === "dark" ? darkTime(c.tempo_min) : c.tempo_min; f.gT = true; }
+      if (TIMED.has(r) && c.tempo_min != null) f.time = r === "dark" ? darkTime(c.tempo_min) : c.tempo_min;
       changed = true;
     }
     return changed;
   }
-  /** the roles, subtypes and confirmed times of the table go to the files just opened (CAMPIONI.apply is the only writer) */
+  /** the roles and times of the table go to the files just opened (CAMPIONI.apply is the only writer) */
   function commit(/** @type {Voce[]} */ F) {
-    CAMPIONI.apply(F.filter(f => f.use).map(f => { const r = roleOf(f), e = /** @type {any} */ ({ file: f.name, role: r }); if (TIMED.has(r)) { e.time = f.time ?? null; e.tconf = !f.gT; } return e; }), true);
+    CAMPIONI.apply(F.filter(f => f.use).map(f => { const r = roleOf(f), e = /** @type {any} */ ({ file: f.name, role: r }); if (TIMED.has(r)) { e.time = f.time ?? null; e.tconf = true; } return e; }), true);
   }
-  return { commit, t, eh, post, OPTS, BASE, TIMED, BOXES, BOX_ROLE, val, roleOf, timed, label, cellLabel, setRole, propose, busy: () => busy };
+  return { commit, t, eh, post, OPTS, BASE, TIMED, val, roleOf, timed, label, cellLabel, setRole, propose, busy: () => busy };
 })());

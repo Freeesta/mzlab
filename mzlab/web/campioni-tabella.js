@@ -16,10 +16,10 @@
     const none = `<p class="sm">${t("meta.none")}</p>`;
     if (!fs.length) { box.innerHTML = none; return; }
     const body = fs.map((f, k) => {
-      const r = selVal(f), id = `data-f="${eh(f.file)}"`, lab = t("meta.of", { f: f.label || f.file }), guess = f.time != null && f.tconf === false;
+      const r = selVal(f), id = `data-f="${eh(f.file)}"`, lab = t("meta.of", { f: f.label || f.file });
       return `<tr><td><span class="qq-n">${k + 1}</span> ${eh(f.label || f.file)}</td>
 <td><select ${id} data-m="type" aria-label="${eh(lab)} · ${eh(t("qaqc.col.type"))}">${RUOLI.OPTS.map(x => `<option value="${x}"${x === r ? " selected" : ""}>${eh(RUOLI.label(x))}</option>`).join("")}</select></td>
-<td class="num"><input ${id} data-m="time" inputmode="decimal" size="5" value="${eh(timeShown(f.time, u) ?? "")}"${guess ? ` class="guess" title="${eh(t("load.guess.title"))}"` : ""} aria-label="${eh(lab)} · ${eh(t("meta.time"))}"></td>
+<td class="num"><input ${id} data-m="time" inputmode="decimal" size="5" value="${eh(timeShown(f.time, u) ?? "")}" aria-label="${eh(lab)} · ${eh(t("meta.time"))}"></td>
 <td class="num"><input ${id} data-m="conc" inputmode="decimal" size="6" value="${eh(f.conc ?? "")}" aria-label="${eh(lab)} · ${eh(t("meta.conc"))}"><select ${id} data-m="cunit" aria-label="${eh(lab)} · ${eh(t("meta.cunit"))}">${C_UNITS.map(x => `<option${x === (f.cunit || "mg/L") ? " selected" : ""}>${x}</option>`).join("")}</select></td>
 <td><input ${id} data-m="rep" size="8" value="${eh(f.rep || "")}" placeholder="${eh(shownRep(f))}" aria-label="${eh(lab)} · ${eh(t("meta.rep"))}"></td></tr>`;
     }).join("");
