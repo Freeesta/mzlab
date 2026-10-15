@@ -89,7 +89,7 @@ pub fn sites(mol: &Mol, transform: &str) -> Result<Vec<Site>> {
     let cls = symmetry_classes(mol);
     let parent = mol.formula();
     let mut out = Vec::new();
-    for i in 0..mol.atoms.len() {
+    for (i, class) in cls.iter().enumerate() {
         let Some(kind) = kinds.iter().find(|k| can_take(mol, i, k)) else {
             continue;
         };
@@ -97,7 +97,7 @@ pub fn sites(mol: &Mol, transform: &str) -> Result<Vec<Site>> {
         out.push(Site {
             atom: i,
             kind,
-            class: cls[i],
+            class: *class,
             tp_formula: elements::fmt(&tp),
         });
     }

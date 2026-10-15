@@ -4,5 +4,5 @@
 pub mod frammenti;
 pub mod grafo;
 mod gruppi;
-mod smiles;
 pub mod posizioni;
+mod smiles;

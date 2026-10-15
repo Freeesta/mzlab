@@ -29,7 +29,7 @@ fn classes(smiles: &str, tr: &str) -> (Vec<Site>, usize) {
     (s, n)
 }
 
-fn of<'a>(r: &'a Report, atom: usize) -> &'a Class {
+fn of(r: &Report, atom: usize) -> &Class {
     r.classes.iter().find(|c| c.atoms.contains(&atom)).unwrap()
 }
 
