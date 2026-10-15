@@ -8,6 +8,8 @@ use mzlab_core::lettori::{self, Fiducia, FileSet, Lettore, Limiti, VoceLettore};
 pub mod andi;
 #[cfg(any(feature = "aperti", feature = "tutte"))]
 pub mod aperti;
+#[cfg(any(feature = "bruker", feature = "tutte"))]
+pub mod bruker;
 #[cfg(any(feature = "shimadzu", feature = "tutte"))]
 pub mod shimadzu;
 pub mod srm;
@@ -29,6 +31,10 @@ static VOCE_SCIEX: VoceLettore = mzlab_core::wiff::lettore::VOCE;
 static VOCE_SHIMADZU: VoceLettore = shimadzu::VOCE;
 #[cfg(any(feature = "thermo", feature = "tutte"))]
 static VOCE_THERMO: VoceLettore = mzlab_core::rawlettore::VOCE;
+#[cfg(any(feature = "bruker", feature = "tutte"))]
+static VOCE_BRUKER_TDF: VoceLettore = bruker::tdf::VOCE;
+#[cfg(any(feature = "bruker", feature = "tutte"))]
+static VOCE_BRUKER_TSF: VoceLettore = bruker::tdf::VOCE_TSF;
 #[cfg(any(feature = "waters", feature = "tutte"))]
 static VOCE_WATERS: VoceLettore = waters::VOCE;
 
@@ -74,6 +80,10 @@ pub fn registro() -> Vec<&'static VoceLettore> {
         Some(&VOCE_SHIMADZU),
         #[cfg(any(feature = "thermo", feature = "tutte"))]
         Some(&VOCE_THERMO),
+        #[cfg(any(feature = "bruker", feature = "tutte"))]
+        Some(&VOCE_BRUKER_TDF),
+        #[cfg(any(feature = "bruker", feature = "tutte"))]
+        Some(&VOCE_BRUKER_TSF),
         #[cfg(any(feature = "waters", feature = "tutte"))]
         Some(&VOCE_WATERS),
     ];

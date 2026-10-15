@@ -527,7 +527,7 @@ I18N.add("it", {
   "err.file.unknown": "Il programma non ha ricevuto il file ({detail}): riprova a caricarlo.",
   "err.file.raw": "Il file .raw (Thermo) o la cartella .raw (Waters) non si legge: serve il file intero, con tutti i suoi file ({detail}).",
   "err.file.notAgilentD": "La cartella {name} non contiene AcqData/MSScan.bin e AcqData/MSPeak.bin (né il file data.ms): serve la cartella .D intera, con la sua sottocartella AcqData.",
-  "err.file.agilentNoEngine": "Le cartelle Agilent .D si aprono solo con il motore Rust del programma ({name}).",
+  "err.file.agilentNoEngine": "Le cartelle Agilent .D si aprono solo con il motore Rust del programma ({name}).", "err.file.brukerBaf": "Le cartelle Bruker con solo analysis.baf non si leggono senza l'SDK di Bruker: esporta in mzML con Bruker DataAnalysis o msconvert.", "err.file.brukerNoBin": "La cartella {name} non contiene {file}: serve la cartella .d intera di Bruker.",
   "load.wiffWait": "{name}: aspetto l'altro file della coppia (.wiff e .wiff.scan con lo stesso nome).",
   "load.note.movedToDam": "Metodi messi nel riquadro 2: {name}",
   "load.note.movedToData": "File di dati messi nel riquadro 1: {name}",
