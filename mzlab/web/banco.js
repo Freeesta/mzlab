@@ -26,6 +26,11 @@ const BANCO = (() => {
 #hri-list .hd span{cursor:pointer;padding:2px 2px}#hri-list .r{display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;height:20px;line-height:20px;cursor:pointer;white-space:nowrap}
 #hri-list .r:hover{background:var(--sel)}#hri-list .r.cur{background:var(--sel);font-weight:600}
 .hrw #flst{max-height:34vh;overflow:auto}
+.bsp{position:fixed;z-index:10005;width:min(420px,94vw);max-height:70vh;display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.2);font-size:12px}
+.bsp .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.bsp select{min-height:24px;max-width:100%}
+.bsp .lst{position:relative;overflow:auto;height:264px;border:1px solid var(--line);border-radius:4px}.bsp .lst:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.bsp .r{position:absolute;left:0;right:0;height:22px;line-height:22px;padding:0 6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bsp .r:hover,.bsp .r.on{background:var(--sel)}.bsp .r.on{font-weight:600}
 .mslv{margin-left:8px;padding:0 8px;border:1px solid var(--accent);border-radius:4px;color:var(--accent);font-size:14px;line-height:20px}`;
   document.head.appendChild(st);
   const on = () => !!window.HR && E.files.some(f => f && !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2)));
@@ -67,6 +72,69 @@ const BANCO = (() => {
     p.pin = !!v;
     if (p.type === "spec") { if (v && p.link) freezeSpec(p); else if (!v && !p.link && p.src) { const s = E.panels.find(q => q.id === p.src); if (s) liveSpec(p, s); } }
     ctl(p); uiSave();
+  }
+  // ---------------------------------------------------------------- «+ scan»: every scan of the file in time order; the chosen one opens as a TIC with its spectrum under it, at the place the student picks
+  /** @type {HTMLElement | null} */ let scanPop = null;
+  const scanAway = (/** @type {Event} */ e) => { const t = /** @type {Element} */ (e.target); if (scanPop && !scanPop.contains(t) && !t.closest("[data-bf=scan]")) closeScanPop(); };
+  function closeScanPop() { if (scanPop) { scanPop.remove(); scanPop = null; document.removeEventListener("pointerdown", scanAway, true); } }
+  /** @returns {Promise<{sid: number, no: number, rt: number, prec: number | null, level: number}[]>} */
+  const scansOf = (f, gs, filt) => memo(`scn|${f.k}|${filt || ""}`, async () => {
+    const g = filt ? gs.find(x => x.key === filt) : null, levels = g ? [g.level] : [...new Set(gs.map(x => x.level))];
+    const parts = await Promise.all(levels.map(lv => J(`api/scanlist?k=${f.k}&level=${lv}${g ? "&filt=" + encodeURIComponent(g.key) : ""}`)));
+    const out = [];
+    parts.forEach((t, i) => t.sid.forEach((/** @type {number} */ sid, /** @type {number} */ j) => out.push({ sid, no: t.no[j], rt: t.rt[j], prec: t.prec[j], level: levels[i] })));
+    return out.sort((a, b) => a.rt - b.rt || a.no - b.no);
+  });
+  /** Opens the TIC of the experiment of the scan with the scan under it; `where`: top | above | below | end (above / below = the panel the picker was opened from). */
+  function openScan(p, f, s, where) {
+    const nt = s.level > 1 ? "ms2" : "full", fk = E.files.find(x => !x.gone && baseOf(x) === baseOf(f) && x.kind === nt) || f, here = p.tab === nt;
+    if (E.tab !== nt && window.setTab) window.setTab(nt, true, "scan");
+    const w = hostWidth(), c = addPanel("chrom", { tab: nt, x: 0, y: 1e5, w, h: 280, full: true }), sp = addPanel("spec", { tab: nt, link: c.id, k: fk.k, level: s.level, prec: s.prec, x: 0, y: 1e5, w, h: 280, full: true });
+    const rest = stackOrder().filter(q => q !== c && q !== sp), at = !here || where === "end" ? rest.length : where === "top" ? 0 : Math.max(0, rest.indexOf(p) + (where === "below" ? 1 : 0));
+    const base = rest.reduce((m, q) => Math.max(m, q.riga ?? -1), -1) + 1; c.riga = base; sp.riga = base + 1;
+    const order = rest.slice(); order.splice(at, 0, c, sp);
+    placeRows(order); E.panels.sort(LAYOUT.ordine); relayout(); fitHost(); setActive(c);
+    c.ready.then(() => { goScan(c, s.sid, s.rt, fk.k); c.el.scrollIntoView({ block: "center", behavior: "smooth" }); });
+    uiSave();
+  }
+  async function scanPicker(p, btn) {
+    if (scanPop) { closeScanPop(); return; }
+    const f = fileOf(p); if (!f) return;
+    const gs = await groupsOf(f.k).catch(() => null); if (!gs) return;
+    const pop = document.createElement("div"); pop.className = "bsp"; pop.setAttribute("role", "dialog"); pop.setAttribute("aria-label", I18N.t("bn.scan.title"));
+    const opt = (/** @type {string} */ v, /** @type {string} */ l) => `<option value="${EH(v)}">${EH(l)}</option>`;
+    pop.innerHTML = h`<div class="row"><label>${I18N.t("bn.scan.type")} <select data-sp="type">${raw(opt("", I18N.t("bn.filt.all")) + gs.map(g => opt(g.key, `${g.label || g.key} ×${nfmt(g.n)}`)).join(""))}</select></label>
+      <label>${I18N.t("bn.scan.where")} <select data-sp="where">${raw([["below", I18N.t("bn.scan.at.below")], ["above", I18N.t("bn.scan.at.above")], ["end", I18N.t("bn.scan.at.end")], ["top", I18N.t("bn.scan.at.top")]].map(([k, l]) => opt(k, l)).join(""))}</select></label></div>
+      <div class="lst" role="listbox" tabindex="0" aria-label="${EH(I18N.t("bn.scan.list"))}"></div><div class="muted" data-sp="n"></div>`;
+    document.body.appendChild(pop); scanPop = pop;
+    const r = btn.getBoundingClientRect(); pop.style.left = Math.max(4, Math.min(r.left, innerWidth - pop.offsetWidth - 4)) + "px"; pop.style.top = Math.max(4, Math.min(r.bottom + 2, innerHeight - pop.offsetHeight - 4)) + "px";
+    setTimeout(() => document.addEventListener("pointerdown", scanAway, true), 0);
+    const L = /** @type {HTMLElement} */ (pop.querySelector(".lst")), N = /** @type {HTMLElement} */ (pop.querySelector('[data-sp="n"]')), tp = /** @type {HTMLSelectElement} */ (pop.querySelector('[data-sp="type"]')), wh = /** @type {HTMLSelectElement} */ (pop.querySelector('[data-sp="where"]'));
+    const H = 22; /** @type {any[]} */ let rows = []; let cur = 0;
+    const cur0 = () => { const c = p.link != null ? E.panels.find(q => q.id === p.link) : null; return c && c.cur != null ? c.cur : p.r0 != null && p.r1 != null ? (p.r0 + p.r1) / 2 : null; };
+    const txt = (/** @type {any} */ s) => `${s.no} · ${s.rt.toFixed(3)} min · MS${s.level}${s.prec != null ? " → " + s.prec.toFixed(2) : ""}`;
+    const paint = () => {
+      const a = Math.max(0, Math.floor(L.scrollTop / H) - 2), z = Math.min(rows.length, a + Math.ceil(L.clientHeight / H) + 5);
+      L.innerHTML = h`<div style="height:${rows.length * H}px"></div>${raw(rows.slice(a, z).map((s, j) => h`<div class="r${a + j === cur ? " on" : ""}" role="option" id="bsp-${a + j}" aria-selected="${a + j === cur}" data-i="${a + j}" style="top:${(a + j) * H}px">${txt(s)}</div>`).join(""))}`;
+      L.setAttribute("aria-activedescendant", "bsp-" + cur);
+    };
+    const go = (/** @type {number} */ i) => { const s = rows[i]; if (!s) return; closeScanPop(); openScan(p, f, s, wh.value); };
+    const show = (/** @type {number} */ i) => { cur = Math.max(0, Math.min(rows.length - 1, i)); if (cur * H < L.scrollTop) L.scrollTop = cur * H; else if ((cur + 1) * H > L.scrollTop + L.clientHeight) L.scrollTop = (cur + 1) * H - L.clientHeight; paint(); };
+    L.onscroll = paint;
+    L.onclick = e => { const t = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest(".r")); if (t) go(+(t.dataset.i || 0)); };
+    L.onkeydown = e => {
+      if (e.key === "Escape") { e.preventDefault(); closeScanPop(); btn.focus(); }
+      else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(cur); }
+      else if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "PageDown" || e.key === "PageUp") { e.preventDefault(); show(cur + (e.key === "ArrowDown" ? 1 : e.key === "ArrowUp" ? -1 : e.key === "PageDown" ? 10 : -10)); }
+      else if (e.key === "Home") { e.preventDefault(); show(0); } else if (e.key === "End") { e.preventDefault(); show(rows.length - 1); }
+    };
+    pop.onkeydown = e => { if (e.key === "Escape" && e.target !== L) { e.preventDefault(); closeScanPop(); btn.focus(); } };
+    const load = async () => {
+      rows = await scansOf(f, gs, tp.value).catch(() => /** @type {any[]} */ ([])); if (scanPop !== pop) return;
+      N.textContent = I18N.t("bn.scan.count", { n: nfmt(rows.length) });
+      const c0 = cur0(); cur = c0 == null ? 0 : Math.max(0, rows.findIndex(s => s.rt >= c0 - 1e-4)); L.scrollTop = Math.max(0, cur * H - L.clientHeight / 2); paint();
+    };
+    tp.onchange = load; await load(); L.focus();
   }
   // ---------------------------------------------------------------- stacked graphs of a chromatogram cell (the «Ranges» of Xcalibur)
   // p.ranges = [{id, kind: "tic" | "bpc" | "xic" | "sub" (formula, ppm, min), mz, ppm, filt, flv, prec, label}], at most 8. Every range is one row of the stacked chromatogram, with the
@@ -177,7 +245,10 @@ const BANCO = (() => {
   function decorate(p, c) {
     if (!sync() || !c || !(eligible(p) || p.type === "xic")) return;
     const wrap = document.createElement("span"); wrap.className = "bfw";
-    if (eligible(p)) {
+    if (p.type === "spec" && eligible(p) && !(window.INF && fileOf(p) && INF.isInf(fileOf(p)))) {
+      const sb = document.createElement("button"); sb.type = "button"; sb.className = "bt"; sb.dataset.bf = "scan"; sb.textContent = I18N.t("bn.scan.btn");
+      sb.title = I18N.t("bn.scan.title"); sb.setAttribute("aria-haspopup", "dialog"); sb.onclick = e => { e.stopPropagation(); scanPicker(p, sb); }; wrap.appendChild(sb);
+    } else if (eligible(p)) {
       const sel = document.createElement("select"); sel.dataset.bf = "filt"; sel.title = I18N.t("bn.filt.title");
       sel.innerHTML = `<option value="">${I18N.t("bn.filt.all")}</option>`; wrap.appendChild(sel);
       const f = fileOf(p);
