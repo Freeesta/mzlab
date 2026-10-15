@@ -79,6 +79,58 @@ fn rows_of(recs: &[Rec], files: &[String]) -> (Vec<String>, Rows) {
     )
 }
 
+/// Compares the cells filled by Rust with those that `gapfilled.csv` adds to `aligned.csv`; returns the number of cells filled.
+fn check_cells(
+    rows: &Rows,
+    ids: &[String],
+    files: &[String],
+    before: &[Vec<bool>],
+    gold: &[Rec],
+    n: usize,
+) {
+    // gold: the cells of gapfilled.csv that are not in aligned.csv
+    let mut want: BTreeMap<(String, String), &Rec> = BTreeMap::new();
+    for r in gold {
+        let k = files.iter().position(|f| *f == r["file"]).unwrap();
+        let at = ids.iter().position(|i| *i == r["row"]).unwrap();
+        if !before[at][k] {
+            assert_eq!(r["state"], "ESTIMATED");
+            want.insert((r["row"].clone(), r["file"].clone()), r);
+        }
+    }
+    assert!(
+        want.len() >= 3,
+        "the gold data has too few gaps: {}",
+        want.len()
+    );
+    let (mut agree, mut spurious) = (0usize, 0usize);
+    for (at, row) in rows.rows.iter().enumerate() {
+        for (k, c) in row.cells.iter().enumerate() {
+            let Some(f) = c.as_ref().filter(|f| f.filled) else {
+                continue;
+            };
+            match want.get(&(ids[at].clone(), files[k].clone())) {
+                Some(g) => {
+                    let ok = (f.area - num(g, "area")).abs() <= 6e-4 * num(g, "area")
+                        && (f.height - num(g, "height")).abs() <= 6e-4 * num(g, "height")
+                        && (f.rt - num(g, "rt_file")).abs() <= 1e-4
+                        && (f.mz - num(g, "mz_file")).abs() <= 2e-5;
+                    assert!(ok, "row {} file {}: {f:?} against {g:?}", ids[at], files[k]);
+                    agree += 1;
+                }
+                None => spurious += 1,
+            }
+        }
+    }
+    assert_eq!(n, agree + spurious);
+    assert_eq!(spurious, 0, "cells filled that mzmine leaves empty");
+    assert!(
+        agree as f64 >= 0.99 * want.len() as f64,
+        "cells filled like mzmine: {agree} of {}",
+        want.len()
+    );
+}
+
 #[test]
 fn fills_the_cells_like_mzmine() {
     let dir = std::env::temp_dir().join(format!("mzlab_untargeted_gap_{}", std::process::id()));
@@ -119,48 +171,8 @@ fn fills_the_cells_like_mzmine() {
     let n = fill(&mut rows, &mut ixs, &p).unwrap();
     let _ = std::fs::remove_dir_all(&dir);
 
-    // gold: the cells of gapfilled.csv that are not in aligned.csv
     let gold: Vec<Rec> = csv("gapfilled.csv");
-    let mut want: BTreeMap<(String, String), &Rec> = BTreeMap::new();
-    for r in &gold {
-        let k = files.iter().position(|f| *f == r["file"]).unwrap();
-        let at = ids.iter().position(|i| *i == r["row"]).unwrap();
-        if !before[at][k] {
-            assert_eq!(r["state"], "ESTIMATED");
-            want.insert((r["row"].clone(), r["file"].clone()), r);
-        }
-    }
-    assert!(
-        want.len() >= 3,
-        "the gold data has too few gaps: {}",
-        want.len()
-    );
-    let (mut agree, mut spurious) = (0usize, 0usize);
-    for (at, row) in rows.rows.iter().enumerate() {
-        for (k, c) in row.cells.iter().enumerate() {
-            let Some(f) = c.as_ref().filter(|f| f.filled) else {
-                continue;
-            };
-            match want.get(&(ids[at].clone(), files[k].clone())) {
-                Some(g) => {
-                    let ok = (f.area - num(g, "area")).abs() <= 6e-4 * num(g, "area")
-                        && (f.height - num(g, "height")).abs() <= 6e-4 * num(g, "height")
-                        && (f.rt - num(g, "rt_file")).abs() <= 1e-4
-                        && (f.mz - num(g, "mz_file")).abs() <= 2e-5;
-                    assert!(ok, "row {} file {}: {f:?} against {g:?}", ids[at], files[k]);
-                    agree += 1;
-                }
-                None => spurious += 1,
-            }
-        }
-    }
-    assert_eq!(n, agree + spurious);
-    assert_eq!(spurious, 0, "cells filled that mzmine leaves empty");
-    assert!(
-        agree as f64 >= 0.99 * want.len() as f64,
-        "cells filled like mzmine: {agree} of {}",
-        want.len()
-    );
+    check_cells(&rows, &ids, &files, &before, &gold, n);
     // the row RT is the mean again after the filling (row 2: 1.4975 in the gold file)
     for g in gold.iter().filter(|r| r["row"] == "2") {
         let at = ids.iter().position(|i| *i == g["row"]).unwrap();

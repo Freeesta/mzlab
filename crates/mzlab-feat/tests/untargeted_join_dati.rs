@@ -32,28 +32,10 @@ fn key(file: &str, mz: f64, rt: f64) -> String {
     format!("{file}|{mz:.5}|{rt:.3}")
 }
 
-#[test]
-fn rows_like_mzmine_on_the_real_series() {
-    let Some(d) = dir() else {
-        eprintln!("SKIP untargeted_join_dati: no MZLAB_MZMINE_FASI / MZLAB_DATI");
-        return;
-    };
-    let (head, rows) = table(&d.join("join_Aligned_feature_list.csv"));
-    let col = |n: &str| {
-        head.iter()
-            .position(|h| h == n)
-            .unwrap_or_else(|| panic!("column {n}"))
-    };
-    let stems: Vec<String> = head
-        .iter()
-        .filter_map(|h| {
-            h.strip_prefix("datafile:")
-                .and_then(|s| s.strip_suffix(".mzML:area"))
-        })
-        .map(String::from)
-        .collect();
+/// The per-file lists of mzmine (`risolutore_<stem>.mzML_*.csv`) of the files `stems`.
+fn load_lists(d: &std::path::Path, stems: &[String]) -> Vec<Vec<Feature>> {
     let mut lists: Vec<Vec<Feature>> = Vec::new();
-    for s in &stems {
+    for s in stems {
         let p = std::fs::read_dir(&d)
             .unwrap()
             .flatten()
@@ -81,6 +63,30 @@ fn rows_like_mzmine_on_the_real_series() {
                 .collect(),
         );
     }
+    lists
+}
+
+#[test]
+fn rows_like_mzmine_on_the_real_series() {
+    let Some(d) = dir() else {
+        eprintln!("SKIP untargeted_join_dati: no MZLAB_MZMINE_FASI / MZLAB_DATI");
+        return;
+    };
+    let (head, rows) = table(&d.join("join_Aligned_feature_list.csv"));
+    let col = |n: &str| {
+        head.iter()
+            .position(|h| h == n)
+            .unwrap_or_else(|| panic!("column {n}"))
+    };
+    let stems: Vec<String> = head
+        .iter()
+        .filter_map(|h| {
+            h.strip_prefix("datafile:")
+                .and_then(|s| s.strip_suffix(".mzML:area"))
+        })
+        .map(String::from)
+        .collect();
+    let lists = load_lists(&d, &stems);
     let ours: Vec<BTreeSet<String>> = align(&lists, &JoinParams::default())
         .rows
         .iter()
