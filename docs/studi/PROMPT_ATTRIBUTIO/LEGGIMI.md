@@ -1,6 +1,6 @@
 # Prompt delle chat DEV di Attributio (passaggio a Rust e binario MZ)
 
-Un file per pacchetto; ognuno si copia in una chat DEV (Sonnet) da sotto la riga «---». Lo studio è `docs/studi/ATTRIBUTIO.md`: §1 inventario dei moduli di Attributio, §3 luogo e soglie di parità, §4 Banco 2b, §5 binario MZ (mzmine 3.9.0), §6 piano, §8 domande Q1-Q7 con le scelte predefinite che i prompt seguono. Tutto si pubblica subito dietro la modalità amministratore (`uipAdminOn()`, `mzlab/web/settings.js:100`).
+Restano i prompt dei pacchetti non ancora eseguiti (AT-04 → AT-07 → AT-08, MZ-05; stato in §6 dello studio); gli altri sono in `main`. Un file per pacchetto; ognuno si copia in una chat DEV (Sonnet) da sotto la riga «---». Lo studio è `docs/studi/ATTRIBUTIO.md`: §1 inventario dei moduli di Attributio, §3 luogo e soglie di parità, §4 Banco 2b, §5 binario MZ (mzmine 3.9.0), §6 piano, §8 domande Q1-Q7 con le scelte predefinite che i prompt seguono. Tutto si pubblica subito dietro la modalità amministratore (`uipAdminOn()`, `mzlab/web/settings.js:100`).
 
 ## Due binari
 - **AT (priorità)**: Attributio 1.12.0 riscritto in Rust con parità sulla campagna sintetica (`tests/data/attributio/campagna_sintetica/`, riferimento `tools/attributio_riferimento.py`).

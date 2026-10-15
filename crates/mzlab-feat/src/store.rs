@@ -392,12 +392,21 @@ pub fn write_table_tp<W: WriteAt>(
         cols.push(("ion", Col::U8(&t.ident.ion)));
         cols.push(("src", Col::U8(&t.ident.src)));
     }
-    let shape = [
+    let iso = !t.iso.is_empty();
+    if iso {
+        cols.push(("iso_group", Col::U32(&t.iso.group)));
+        cols.push(("iso_charge", Col::I8(&t.iso.charge)));
+        cols.push(("family", Col::U32(&t.iso.family)));
+    }
+    let mut shape = vec![
         ("rows", t.len()),
         ("files", t.n_files),
         ("summaries", usize::from(!t.meta.is_empty())),
         ("identity", usize::from(ident)),
     ];
+    if iso {
+        shape.push(("isotopes", 1));
+    }
     let tp = if tp_cols(tp, &mut cols) { format!(",\"tp\":{}", tp.meta_json()) } else { String::new() };
     write_container(sink, "table", r, o, &shape, &tp, &cols, evid)
 }

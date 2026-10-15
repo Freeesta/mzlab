@@ -122,7 +122,7 @@ Licenze verificate sui file del repository a monte: xtb, CREST, tblite, Psi4 LGP
 | Pacchetto | Fase | Dipende da | `.wasm` | Stima (giorni-chat) | Stato |
 |---|---|---|---|---|---|
 | CC-01 | 1 | — | nessuno | 1,5 | fatto: 781 righe di codice (`chem/posizioni/`), 10 prove |
-| CC-02 | 1 | CC-01 | `grafo` | 1,5 | da fare |
+| CC-02 | 1 | CC-01 | `grafo` | 1,5 | fatto: `positions` nel `.wasm` `grafo` (158 151 → 234 654 B dopo `wasm-opt -Oz`, tetto 512 000 B invariato) e nella rotta `feat/grafo`; pannello `44_posizioni.js`, `e2e_posizioni.py` |
 | CC-03 | 2 | CC-02 + sì di Federico | `grafo` | 2 | da decidere |
 | CC-04 | 2 | CC-02 + sì di Federico | `grafo` | 1 | da decidere |
 | CC-05 | Teoria | — | nessuno | 0,5-1 | da fare |

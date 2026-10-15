@@ -123,6 +123,8 @@ export function createDesktopPool(opts = {}) {
     async checkStructures(calls) { return json("feat/import", { kind: "check_structure", calls }); },
     /** `grafo/1` of a SMILES (formula, groups, cleavages): the text of the native route `feat/grafo` @param {string} smiles */
     async analyse(smiles) { return (await call("feat/grafo", { kind: "analyse", smiles })).text(); },
+    /** `posiz/1` of a product (the classes of positions its MS2 supports): the text of the native route `feat/grafo` @param {string} smiles @param {string} transform @param {string} peaks JSON `[[mz, int], ..]` @param {number} tol @param {boolean} ppm @param {boolean} positive */
+    async positions(smiles, transform, peaks, tol, ppm, positive) { return (await call("feat/grafo", { kind: "positions", smiles, transform, peaks, tol, ppm, positive })).text(); },
     /** an operation of campioni/2 (proponi, valida, per_tp, da_legacy, canonico, digest) of the native engine: the text it answers @param {string} op @param {string} input */
     async campioni(op, input) { return (await call("finder/campioni", { cop: op, input })).text(); },
     cancel() {},

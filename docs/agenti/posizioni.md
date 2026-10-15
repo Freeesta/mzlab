@@ -1,6 +1,6 @@
 # Posizione della sostituzione (classi compatibili con la MS2)
 
-Codice: `crates/mzlab-feat/src/chem/posizioni.rs` e `posizioni/` (feature `chem`, sopra `grafo::Mol`); prove: `crates/mzlab-feat/tests/posizioni.rs`. Nessuna interfaccia e nessun `.wasm`. Studio: `docs/studi/CHIMICA_COMPUTAZIONALE.md`.
+Codice: `crates/mzlab-feat/src/chem/posizioni.rs` e `posizioni/` (feature `chem`, sopra `grafo::Mol`); prove: `crates/mzlab-feat/tests/posizioni.rs`. Il pannello «Substitution position» di Tabui (amministratore) sta in `TP_Mine/js/44_posizioni.js`; prova: `tests_e2e/e2e_posizioni.py`. Studio: `docs/studi/CHIMICA_COMPUTAZIONALE.md`.
 
 ## Scopo
 - Dato un genitore (SMILES), una trasformazione e la MS2 osservata del TP, elenca gli atomi dove la modifica può stare, li raggruppa e dice quali gruppi lo spettro sostiene, esclude o non distingue. Non sceglie mai una posizione e non assegna livelli: `proposal.sublevel` è una proposta 3a/3b per il chimico (nessun campo si chiama `level`).
@@ -25,6 +25,12 @@ Codice: `crates/mzlab-feat/src/chem/posizioni.rs` e `posizioni/` (feature `chem`
 - Classe = candidati con lo stesso insieme di picchi spiegati con la modifica e la stessa esclusione: lo spettro non li distingue.
 - `excluded`: un picco intenso è spiegato con la modifica da altri candidati e il candidato non lo spiega in nessun modo (né con né senza). `supported`: un picco spiegato con la modifica appartiene, tra i candidati non esclusi, esattamente ai membri della classe. Altrimenti `undistinguished`.
 - `proposal.sublevel` = 3a solo se almeno una classe è esclusa e ne restano al più 3; altrimenti 3b. `unexplained`: picchi che nessun candidato spiega (né picco +2 di un frammento alogenato).
+
+## Pannello «Substitution position» (Tabui, solo `uipAdminOn()`)
+- Motore: `positions(smiles, transform, peaks_json, tol, ppm, positive)` del `.wasm` `grafo` (`crates/mzlab-feat-grafo-wasm`, `version()` = `mzfeat-grafo/4`; stesso JSON di `positions_json`, prova `tests/positions.rs`); nell'app la rotta `feat/grafo` con `kind: "positions"` (`smiles`, `transform`, `peaks` come testo JSON, `tol`, `ppm`, `positive`; `feat_grafo.rs`, `positions()` del pool `feat-desktop-pool.js`). Il `.wasm` pesa 158 151 B prima e 234 654 B dopo (`wasm-opt -Oz`), sotto il tetto comune di 512 000 B.
+- Pagina: `TPPOS.mount(host, modello)` aggiunge in fondo alla scheda di una riga un riquadro con il pulsante; `TPPOS.eligible(modello)` è vero solo con modalità amministratore, SMILES del genitore, MS2 con almeno un picco e Δ della riga tra `+O`, `-CH2`, `+O-2H` (anche `+O-H2`), `+Cl-H`, `+Br-H` (spazi e «−» accettati); altrimenti nessun pulsante.
+- Punti d'innesto: LR in `show()` di `20_tpmine.js` (picchi = frammenti `[mz, rel]` di `d.ms2` abbinata da `ms2_links/1`, tolleranza 0,5 Da); HR in `fill()` di `21_tpmine_hr.js` (picchi della MS2 del candidato `d.ms2.candidate`, 10 ppm). Lo SMILES è quello del campo `#tp-smi`, la polarità viene dall'addotto scelto.
+- Contenuto: proposta («Proposal: Schymanski 3a|3b — N position classes remain; the chemist decides», nessun pulsante salva un livello); tabella delle classi (id, atomi come simbolo + indice 1-based dello SMILES, tipo, stato scritto in parole con ✓ ✗ ≈, frammenti a favore e contro con m/z e formula, riga «unexplained»); spettro MS2 a barre con marcatore e tratteggio per classe (colori Okabe-Ito da variabili CSS), tabella `TDATI`, zoom con pulsanti e tasti (+ − ← → Home, niente trascinamento); riquadri «Oxidation type» e «Suggested checks» con DOI.
 
 ## Limiti
 - Nessuna apertura d'anello, nessuna stereochimica; con risoluzione unitaria un m/z coincide per caso più spesso (tolleranza 0,5 Da). Convenzione dei frammenti = quella di `Mol::cleavages()` (ogni lato prende un H), non una previsione del meccanismo.

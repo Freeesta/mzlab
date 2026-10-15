@@ -1,9 +1,10 @@
 //! The route `feat/grafo` of `rpc`: the structure graph of `mzlab_feat::chem` (the same functions as the `.wasm` `grafo`). `{op: "feat/grafo", kind: "analyse", smiles}` gives the
 //! `grafo/1` of a SMILES, `kind: "fragments"` (`molfile`, `a`, `b`) the cuts of a molfile (`frag/1`) and `kind: "partial"` (`molfile`, `delta`) a partial structure (`parz/1`).
+//! `kind: "positions"` (`smiles`, `transform`, `peaks` as JSON text, `tol`, `ppm`, `positive`) gives the `posiz/1` of a product (the classes of positions its MS2 supports).
 //! An error keeps its key (`error.grafo.ring`, `error.grafo.delta.neg`, ...) as the `.wasm` throws it.
 
 use mzlab_core::{Error, Result};
-use mzlab_feat::chem::{frammenti, grafo};
+use mzlab_feat::chem::{frammenti, grafo, posizioni};
 use serde_json::Value;
 
 use crate::engine::State;
@@ -17,6 +18,14 @@ impl State {
             "analyse" => text(grafo::analyse_json(s("smiles"))?),
             "fragments" => text(frammenti::fragments_json(s("molfile"), n("a"), n("b"))?),
             "partial" => text(frammenti::partial_json(s("molfile"), s("delta"))?),
+            "positions" => text(posizioni::positions_json(
+                s("smiles"),
+                s("transform"),
+                s("peaks"),
+                p["tol"].as_f64().unwrap_or(0.5),
+                p["ppm"].as_bool().unwrap_or(false),
+                p["positive"].as_bool().unwrap_or(true),
+            )?),
             _ => Err(Error::new("rpc.unknown")),
         }
     }

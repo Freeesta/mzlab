@@ -234,6 +234,13 @@ impl Aligned {
         }
         b.extend_from_slice(&self.ident.ion);
         b.extend_from_slice(&self.ident.src);
+        for x in &self.iso.group {
+            b.extend_from_slice(&x.to_le_bytes());
+        }
+        b.extend(self.iso.charge.iter().map(|&c| c as u8));
+        for x in &self.iso.family {
+            b.extend_from_slice(&x.to_le_bytes());
+        }
         b
     }
 }

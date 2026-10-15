@@ -39,6 +39,27 @@ pub struct Aligned {
     pub ident: RowIdent,
     /// The view of the transformation products (`tp::build`); empty when not computed.
     pub tp: crate::tp::TpBlock,
+    /// Isotope group, charge and identity (family) of each row (`untargeted::{isotopes,ident}`); empty when not computed.
+    pub iso: IsoBlock,
+}
+
+/// Per-row isotope and identity marks of a per-ion table: the rows stay ions, these are only signs. `group` = 1-based id of the isotope group (0 = alone),
+/// `charge` = charge of that group (0 = alone), `family` = 1-based id of the identity the ion belongs to (0 = alone).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct IsoBlock {
+    pub group: Vec<u32>,
+    pub charge: Vec<i8>,
+    pub family: Vec<u32>,
+}
+
+impl IsoBlock {
+    pub fn is_empty(&self) -> bool {
+        self.group.is_empty()
+    }
+
+    pub fn heap_bytes(&self) -> usize {
+        self.group.capacity() * 4 + self.charge.capacity() + self.family.capacity() * 4
+    }
 }
 
 impl Aligned {
@@ -94,5 +115,6 @@ impl Aligned {
             + self.meta.heap_bytes()
             + self.ident.heap_bytes()
             + self.tp.heap_bytes()
+            + self.iso.heap_bytes()
     }
 }

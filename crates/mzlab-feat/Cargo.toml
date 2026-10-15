@@ -42,3 +42,15 @@ required-features = ["untargeted"]
 [[test]]
 name = "untargeted_pipeline"
 required-features = ["untargeted"]
+
+[[test]]
+name = "untargeted_iso"
+required-features = ["untargeted"]
+
+[[test]]
+name = "untargeted_ident"
+required-features = ["untargeted"]
+
+[[test]]
+name = "untargeted_to_attributio"
+required-features = ["untargeted", "attributio"]

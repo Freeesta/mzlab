@@ -2,7 +2,7 @@
 # The .wasm of mzFinder (crates/mzlab-feat-wasm: detect, proofs, untargeted (the pipeline after mzmine 3.9.0, loaded only when the admin mode picks the mzmine-like engine in the panel Pipeline), mrm, loaded only for a series of MRM files, and finder, loaded by the worker of mzFinder for classify, formula_info, identity_graph, polarity_pairs and the Dig of a high-resolution series, and finder_msn, loaded only when a file of the series is MSn (tree, library, localisation), and attributio, the table of levels of a campaign folder in administrator mode; fetched only when a series is analysed, never committed), each under 500 KB after wasm-opt -Oz,
 # and site/static/wasm-feat/manifest.json with their SHA-256 (the worker checks it): tools/build_feat_wasm.sh <site/static>
 set -eu
-# Limit of every .wasm after wasm-opt -Oz, bytes (raised from 460800 to leave room to grow; the size diet is a package of its own; measured: detect 419435, proofs 458034, mrm 244480).
+# Limit of every .wasm after wasm-opt -Oz, bytes (raised from 460800 to leave room to grow; the size diet is a package of its own; measured: detect 419435, proofs 458034, mrm 244480, grafo 234654).
 limit=512000
 limit_lr=800000   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 610796
 out=${1:-site/static}/wasm-feat
