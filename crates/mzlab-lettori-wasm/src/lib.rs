@@ -183,7 +183,10 @@ pub fn estensioni() -> String {
 #[wasm_bindgen]
 pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<String, JsValue> {
     let m = Membri::new(names, sizes, read)?;
-    let mut motivi: Vec<&str> = mzlab_lettori::motivi_insieme(&mut m.fileset());
+    #[cfg_attr(not(any(feature = "agilent", feature = "tutte")), allow(unused_mut))]
+    let mut motivi: Vec<&str> = Vec::new();
+    #[cfg(any(feature = "agilent", feature = "tutte"))]
+    motivi.extend(mzlab_lettori::motivi_insieme(&mut m.fileset()));
     let mut l = match mzlab_lettori::apri(m.fileset(), &Limiti::sito()) {
         Ok(l) => l,
         // a SCIEX file the module itself refuses (a TOF, several periods, an unknown scan type) is a variant too: the engine would read it as a 3200 and be wrong
