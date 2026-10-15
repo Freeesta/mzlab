@@ -5,7 +5,7 @@ use mzlab_core::lettori::Limiti;
 use mzlab_core::mzidx::{Stats, DEFAULT_BUDGET};
 use mzlab_core::{lettori_centroidi, upload, Error};
 
-use crate::idxbuild::{clean, io_error, IdxBuilder};
+use crate::idxbuild::{clean, io_error, scratch, scratch_remove, IdxBuilder};
 use crate::nativi;
 use crate::store::Nat;
 
@@ -24,16 +24,20 @@ impl IdxBuilder {
                 l
             };
             let mut out = File::create(&part).map_err(|e| io_error(&e))?;
-            upload::indicizza_lettore(
+            let spool = scratch(&part).map(|f| Box::new(f) as Box<dyn mzlab_core::mzidx::Spool>);
+            let r = upload::indicizza_lettore(
                 &mut *l,
                 nat.c,
                 &impronte,
                 name,
                 &mut out,
                 DEFAULT_BUDGET,
+                spool,
                 &mut |_| {},
             )
-            .map(|(st, _)| st)
+            .map(|(st, _)| st);
+            scratch_remove(&part);
+            r
         });
         match r {
             Ok(st) => {

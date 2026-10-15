@@ -62,12 +62,30 @@ fn prova_con(label: &str, mut l: Finto, con_mzml: bool) {
         let mut out = std::io::Cursor::new(Vec::new());
         let mut fasi = Vec::new();
         let Ok((st, sha)) =
-            upload::indicizza_lettore(&mut l, 0, &[], &name, &mut out, budget, &mut |f| {
+            upload::indicizza_lettore(&mut l, 0, &[], &name, &mut out, budget, None, &mut |f| {
                 fasi.push(f)
             })
         else {
             continue;
         };
+        // the same index with the peaks parked in a spool: one decoding, whatever the budget
+        let mut con = std::io::Cursor::new(Vec::new());
+        let (sp, _) = upload::indicizza_lettore(
+            &mut l,
+            0,
+            &[],
+            &name,
+            &mut con,
+            budget,
+            Some(Box::new(mzidx::SpoolMemoria::default())),
+            &mut |_| {},
+        )
+        .unwrap();
+        assert_eq!(sp.passes, 1, "{label}: spool at budget {budget}");
+        assert!(
+            con.into_inner() == b,
+            "{label}: the index with a spool differs at budget {budget}"
+        );
         assert_eq!(fasi, [3], "{label}");
         assert_eq!(sha, pb.sha256, "{label}");
         saw_many |= st.passes > 1;

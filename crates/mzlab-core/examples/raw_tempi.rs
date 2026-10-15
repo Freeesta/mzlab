@@ -228,6 +228,7 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
         &format!("{name}.mzML"),
         &mut out,
         192 << 20,
+        spool(),
         &mut |_| {},
     )
     .expect("index");
@@ -248,5 +249,14 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
             &c,
             &format!("{:.1} MB", sink.0 as f64 / 1e6),
         );
+    }
+}
+
+/// Scratch space for the peaks of pass 1 unless `--senza-spool` is given (the rounds then decode the scans again).
+fn spool() -> Option<Box<dyn mzlab_core::mzidx::Spool>> {
+    if std::env::args().any(|a| a == "--senza-spool") {
+        None
+    } else {
+        Some(Box::new(mzlab_core::mzidx::SpoolMemoria::default()))
     }
 }

@@ -238,9 +238,10 @@ pub fn indicizza_lettore(
     name: &str,
     out: &mut dyn crate::mzidx::Output,
     budget: usize,
+    spool: Option<Box<dyn crate::mzidx::Spool>>,
     fase: &mut dyn FnMut(u32),
 ) -> Result<(crate::mzidx::Stats, String)> {
-    let (t, prima) = mzidx_lettore::righe_prima(l, c, budget)?;
+    let (t, prima) = mzidx_lettore::righe_prima(l, c, budget, spool)?;
     let p = dalla_tabella(t, l, c, membri, name)?;
     fase(3);
     let n = l.indice(c)?.len();

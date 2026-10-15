@@ -17,17 +17,27 @@ onmessage = async ev => {
   const m = ev.data;
   if (m.op === "module") { if (!ready) initWith(m.module); startInit(); return; }
   await waiting; await ready;
-  let ah = null, fullAt = 0, endAt = 0;
+  const dropSpool = async () => { if (sh) { try { sh.close(); } catch (_) { /* already closed */ } sh = null; } if (d) { try { await d.removeEntry(m.part + ".spool"); } catch (_) { /* none */ } } };
+  let ah = null, sh = null, d = null, fullAt = 0, endAt = 0;
   try {
-    const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab", { create: true })).getDirectoryHandle("idx", { create: true });
+    d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab", { create: true })).getDirectoryHandle("idx", { create: true });
     const fh = await d.getFileHandle(m.part, { create: true });
     ah = await fh.createSyncAccessHandle();
     ah.truncate(0);
     const write = (off, data) => { if (writeFull(ah, data, off) < data.length) { fullAt = off + data.length; throw new Error("storage full"); } endAt = Math.max(endAt, off + data.length); };       // a full disk: not a silently short index
+    // scratch file of the builder: the peaks of pass 1 that do not fit in the budget wait here, so that the file is decoded once (without it the rounds decode it again)
+    let spool = [undefined, undefined];
+    try {
+      sh = await (await d.getFileHandle(m.part + ".spool", { create: true })).createSyncAccessHandle();
+      sh.truncate(0);
+      const swrite = (off, data) => { if (writeFull(sh, data, off) < data.length) { fullAt = off + data.length; throw new Error("storage full"); } };
+      const sread = (off, len) => { const b = new Uint8Array(len); if (sh.read(b, { at: off }) < len) throw new Error("spool short"); return b; };
+      spool = [swrite, sread];
+    } catch (_) { if (sh) { try { sh.close(); } catch (__) { /* gone */ } sh = null; } }
     const t0 = performance.now();
     let stats;
     if (m.nat) {                                                    // a dataset of a maker (rust-nativo.js): the index comes straight from its reader; the progress says the phase
-      stats = await buildNative(build_mzidx_native, ext, m.nat, m.name, write, p => postMessage({ op: "progress", frac: p.frac, phase: p.phase }), m.budget);
+      stats = await buildNative(build_mzidx_native, ext, m.nat, m.name, write, p => postMessage({ op: "progress", frac: p.frac, phase: p.phase }), m.budget, spool);
     } else {
       const fr = new FileReaderSync(), blob = m.blob;
       let tp = 0;
@@ -37,14 +47,16 @@ onmessage = async ev => {
         return new Uint8Array(fr.readAsArrayBuffer(blob.slice(off, off + len)));
       };
       const [levels, pols, rt, tic, rows, source, run, hr1] = m.inputs;
-      stats = build_mzidx(blob.size, read, write, levels, pols, rt, tic, rows, source, run, hr1, m.budget);
+      stats = build_mzidx(blob.size, read, write, levels, pols, rt, tic, rows, source, run, hr1, m.budget, spool[0], spool[1]);
     }
     ah.flush();
     if (ah.getSize() < endAt) { fullAt = endAt; throw new Error("storage full"); }           // the browser took the writes but the file is shorter (quota reached): never an index that looks complete
     ah.close(); ah = null;
+    await dropSpool();
     postMessage({ op: "done", stats: JSON.parse(stats), ms: Math.round(performance.now() - t0) });
   } catch (e) {
     if (ah) { try { ah.close(); } catch (_) { /* already closed */ } }
+    await dropSpool();
     let text = typeof e === "string" ? e : String(e && e.message || e);
     if (fullAt) text = await quotaError(fullAt).catch(() => text);
     // a JSON string {"error_key", "params"} is an error of the builder itself; anything else (RuntimeError: unreachable, out of memory) lost the instance

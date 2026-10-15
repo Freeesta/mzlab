@@ -62,6 +62,7 @@ fn main() {
         "x.mzML",
         &mut out,
         budget << 20,
+        Some(Box::new(mzidx::SpoolMemoria::default())),
         &mut |_| {},
     )
     .expect("index")

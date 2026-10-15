@@ -33,8 +33,13 @@ pub fn righe(l: &mut dyn Lettore, c: usize) -> Result<Table> {
 }
 
 /// The table and pass 1 of the `.mzidx` builder in one decoding of the scans: what `righe` gives and the groups `mzidx::build_dopo` needs.
-pub(crate) fn righe_prima(l: &mut dyn Lettore, c: usize, budget: usize) -> Result<(Table, Prima)> {
-    let mut prima = Prima::new(budget);
+pub(crate) fn righe_prima(
+    l: &mut dyn Lettore,
+    c: usize,
+    budget: usize,
+    spool: Option<Box<dyn crate::mzidx::Spool>>,
+) -> Result<(Table, Prima)> {
+    let mut prima = Prima::new(budget).con_spool(spool);
     let t = tabella(l, c, Some(&mut prima))?;
     Ok((t, prima))
 }

@@ -296,6 +296,8 @@ pub fn build_mzidx_native(
     budget_mb: u32,
     phase: Function,
     prints: Option<js_sys::Array>,
+    spool_write: Option<Function>,
+    spool_read: Option<Function>,
 ) -> Result<String, JsValue> {
     let tell = |n: u32| drop(phase.call1(&JsValue::NULL, &n.into()));
     let m = Membri::new(names, sizes, read)?;
@@ -333,6 +335,7 @@ pub fn build_mzidx_native(
         name,
         &mut out,
         (budget_mb as usize) << 20,
+        crate::JsSpool::new(spool_write, spool_read),
         &mut |n| tell(n),
     )
     .map_err(|e| error_json(&e))?;

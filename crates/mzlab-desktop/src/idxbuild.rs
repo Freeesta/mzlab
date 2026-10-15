@@ -101,7 +101,10 @@ impl IdxBuilder {
         let r = self.pool.install(|| -> Result<Stats, Error> {
             let map = Mapped::open(source).map_err(|e| io_error(&e))?;
             let mut out = File::create(&part).map_err(|e| io_error(&e))?;
-            mzidx::build_mzml(table, Cursor::new(map.bytes()), &mut out, DEFAULT_BUDGET)
+            let spool = scratch(&part);
+            let st = mzidx::build_mzml_spool(table, Cursor::new(map.bytes()), &mut out, DEFAULT_BUDGET, spool.map(|f| Box::new(f) as Box<dyn mzidx::Spool>));
+            scratch_remove(&part);
+            st
         });
         match r {
             Ok(st) => {
@@ -141,4 +144,19 @@ impl IdxBuilder {
             .ok()
             .map(|m| m.len())
     }
+}
+
+/// The scratch file of the peaks of pass 1 (`mzidx::Spool`) next to the index being written.
+fn spool_path(part: &Path) -> PathBuf {
+    part.with_extension("spool")
+}
+
+/// Opens the scratch file; `None` when it cannot be created (the builder then decodes the file again for every round).
+pub(crate) fn scratch(part: &Path) -> Option<File> {
+    std::fs::OpenOptions::new().read(true).write(true).create(true).truncate(true).open(spool_path(part)).ok()
+}
+
+/// Removes the scratch file.
+pub(crate) fn scratch_remove(part: &Path) {
+    let _ = std::fs::remove_file(spool_path(part));
 }

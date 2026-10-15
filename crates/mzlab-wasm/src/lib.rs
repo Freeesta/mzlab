@@ -496,6 +496,41 @@ impl mzidx::Output for JsOutput {
     }
 }
 
+/// The scratch file of the builder (a second file of OPFS next to the index): `write(offset, Uint8Array)` and `read(offset, length)` → `Uint8Array`.
+pub(crate) struct JsSpool {
+    write: Function,
+    read: Function,
+}
+
+impl JsSpool {
+    /// `None` unless both functions are given.
+    pub(crate) fn new(write: Option<Function>, read: Option<Function>) -> Option<Box<dyn mzidx::Spool>> {
+        Some(Box::new(JsSpool { write: write?, read: read? }))
+    }
+}
+
+impl mzidx::Spool for JsSpool {
+    fn write_at(&mut self, offset: u64, data: &[u8]) -> mzlab_core::Result<()> {
+        self.write
+            .call2(&JsValue::NULL, &(offset as f64).into(), &Uint8Array::from(data))
+            .map(|_| ())
+            .map_err(|_| mzlab_core::Error::new("err.file.index").with("detail", "spool"))
+    }
+    fn read_at(&mut self, offset: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
+        let bad = || mzlab_core::Error::new("err.file.index").with("detail", "spool");
+        let v = self
+            .read
+            .call2(&JsValue::NULL, &(offset as f64).into(), &(buf.len() as f64).into())
+            .map_err(|_| bad())?;
+        let a = Uint8Array::new(&v);
+        if a.length() as usize != buf.len() {
+            return Err(bad());
+        }
+        a.copy_to(buf);
+        Ok(())
+    }
+}
+
 fn f64s(b: &[u8]) -> Vec<f64> {
     b.chunks_exact(8)
         .map(|c| f64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]]))
@@ -564,6 +599,8 @@ pub fn build_mzidx(
     run_json: String,
     hr1: bool,
     budget_mb: u32,
+    spool_write: Option<Function>,
+    spool_read: Option<Function>,
 ) -> Result<String, JsValue> {
     let table = mzidx::ScanTable {
         level: levels.to_vec(),
@@ -576,11 +613,12 @@ pub fn build_mzidx(
         hr1,
     };
     let mut out = JsOutput { write };
-    let st = mzidx::build_mzml(
+    let st = mzidx::build_mzml_spool(
         &table,
         BlockReader::new(read, size as u64),
         &mut out,
         (budget_mb as usize) << 20,
+        JsSpool::new(spool_write, spool_read),
     )
     .map_err(|e| error_json(&e))?;
     Ok(format!(
