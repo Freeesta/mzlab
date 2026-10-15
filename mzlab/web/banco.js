@@ -130,7 +130,7 @@ const BANCO = (() => {
     };
     pop.onkeydown = e => { if (e.key === "Escape" && e.target !== L) { e.preventDefault(); closeScanPop(); btn.focus(); } };
     const load = async () => {
-      rows = await scansOf(f, gs, tp.value).catch(() => []); if (scanPop !== pop) return;
+      rows = await scansOf(f, gs, tp.value).catch(() => /** @type {any[]} */ ([])); if (scanPop !== pop) return;
       N.textContent = I18N.t("bn.scan.count", { n: nfmt(rows.length) });
       const c0 = cur0(); cur = c0 == null ? 0 : Math.max(0, rows.findIndex(s => s.rt >= c0 - 1e-4)); L.scrollTop = Math.max(0, cur * H - L.clientHeight / 2); paint();
     };
