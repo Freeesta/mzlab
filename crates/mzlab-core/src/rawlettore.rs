@@ -82,7 +82,7 @@ pub struct LettoreRaw {
     nome: String,
     campioni: Vec<Campione>,
     indice: Vec<VoceScansione>,
-    /// SHA-1 of the file, read the first time the mzML header is asked for (`Some(None)`: it could not be read).
+    /// SHA-1 of the file: the one the caller gave (`Membro::sha1`) or read the first time the mzML header is asked for (`Some(None)`: it could not be read).
     sha1: Option<Option<String>>,
     /// The traces of the analog controllers (pressure, temperatures, UV channels), read the first time they are asked for.
     analogiche: Option<Vec<(String, ChromKind, opentfraw::AnalogTrace)>>,
@@ -111,6 +111,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         pos: 0,
         len: m.dim,
     };
+    let sha1 = m.sha1.take().map(Some);
     let raw = RawFileReader::open(&mut src).map_err(raw_error)?;
     limiti.voci_ok(u64::from(raw.num_scans))?;
     let indice: Vec<VoceScansione> = (0..raw.num_scans)
@@ -132,7 +133,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         nome,
         campioni,
         indice,
-        sha1: None,
+        sha1,
         analogiche: None,
     }))
 }

@@ -20,7 +20,7 @@ const HEAD: usize = 1 << 20;
 impl Engine {
     /// SHA-1 (hex) of a file read through `read(offset, length)`.
     pub fn sha1_file(&mut self, size: f64, read: Function) -> Result<String, JsValue> {
-        metodo::sha1_hex(&mut JsReader { read }, size as u64).map_err(|e| error_json(&e))
+        metodo::sha1_dyn(&mut JsReader { read }, size as u64).map_err(|e| error_json(&e))
     }
 
     /// `{"sources":[{"name","sha1"}],"sample":N|null}` from the start of an mzML: the source files it says it was made from and the sample of its first nativeID.

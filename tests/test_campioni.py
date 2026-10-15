@@ -38,9 +38,9 @@ def test_tsv_roundtrip_in_mzmine_columns():
             {"filename": "blank.mzML", "type": "blank", "time": None, "conc": 2.5, "cunit": "µg/L", "rep": ""}]
     tsv = js(f"console.log(JSON.stringify(C.toTsv({json.dumps(rows)},'h')))")
     lines = tsv.rstrip("\n").split("\n")
-    assert lines[0] == "filename\tsample_type\ttime\ttime_unit\tconcentration\tconcentration_unit\treplicate\tblank_type\ttime_confirmed"
-    assert lines[1].split("\t") == ["a_t0.mzML", "sample", "0", "h", "", "", "R1", "", ""]
-    assert lines[2].split("\t") == ["blank.mzML", "blank", "", "", "2.5", "µg/L", "", "", ""]
+    assert lines[0] == "filename\tsample_type\ttime\ttime_unit\tconcentration\tconcentration_unit\treplicate\ttime_confirmed"
+    assert lines[1].split("\t") == ["a_t0.mzML", "sample", "0", "h", "", "", "R1", ""]
+    assert lines[2].split("\t") == ["blank.mzML", "blank", "", "", "2.5", "µg/L", "", ""]
     p = js(f"console.log(JSON.stringify(C.parseTsv({json.dumps(tsv)})))")
     assert p["warnings"] == []
     assert p["rows"][0]["time"] == 0 and p["rows"][0]["type"] == "sample" and p["rows"][0]["rep"] == "R1"
@@ -57,6 +57,20 @@ def test_parse_converts_units_and_reports_unknowns():
     assert r[2]["time"] is None
     assert len(p["warnings"]) == 2
     assert js("console.log(JSON.stringify(C.parseTsv('a\\tb\\n1\\t2')))")["rows"] == []        # no filename column
+
+
+@needs_node
+def test_old_export_t0_and_blank_type_still_import_and_dark_time_is_signed():
+    # an old export: role «t0» (= a sample at 0 min, even with an empty time) and the dropped column blank_type (ignored, no warning)
+    tsv = "filename\tsample_type\ttime\ttime_unit\tblank_type\nx_t0.mzML\tt0\t\tmin\t\nb.mzML\tblank\t\t\tsolvent\nd.mzML\tdark\t-30\tmin\t\nd2.mzML\tdark\t45\tmin\t\n"
+    p = js(f"console.log(JSON.stringify(C.parseTsv({json.dumps(tsv)})))")
+    r = p["rows"]
+    assert p["warnings"] == []
+    assert r[0]["type"] == "sample" and r[0]["time"] == 0
+    assert r[1]["type"] == "blank" and "sub" not in r[1]
+    assert r[2]["type"] == "dark" and r[2]["time"] == -30                  # the dark takes a negative time
+    assert r[3]["time"] == 45                                              # a positive one is read as typed here; CAMPIONI.apply turns it into -45
+    assert js("console.log(JSON.stringify(C.parseTsv('filename\\tsample_type\\ttime\\nx.mzML\\tsample\\t-5')))")["rows"][0]["time"] is None   # a sample takes no sign
 
 
 @needs_node

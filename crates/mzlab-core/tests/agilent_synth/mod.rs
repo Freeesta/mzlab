@@ -2,6 +2,9 @@
 
 #![allow(dead_code)]
 
+#[cfg(feature = "estesi")]
+pub mod lc;
+
 pub fn put_i32(b: &mut Vec<u8>, v: i32) {
     b.extend(v.to_le_bytes());
 }

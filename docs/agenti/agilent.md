@@ -2,6 +2,8 @@
 
 `crates/mzlab-core/src/agilent/`: Rust puro, nessun crate nuovo. Una cartella `.D` si legge dai suoi file: `AcqData/MSScan.bin` (indice, un record per scansione) e `AcqData/MSPeak.bin` (i punti), più i file piccoli (`MSTS.xml`, `Devices.xml`, `Contents.xml`, `MSTree2.bin`, `acqmeth.txt` nella cartella `.D`).
 
+Le corse LC/MS (QqQ, Q-TOF) le legge la variante `crates/mzlab-core/src/agilent_ext/` (feature `estesi`, modulo `agilent`): `agilent-lcms.md`.
+
 Il formato è stato ricavato da tre corse vere di un GC/MS a singolo quadrupolo 5977 (EI, positivo; una in scansione 50-500 m/z, due in SIM) e dallo schema `AcqData/MSScan.xsd` che Agilent mette nella cartella; Riferimento: gli mzML che ProteoWizard msconvert ha fatto dalle stesse tre corse (64 bit, zlib, senza peak picking, SIM come spettri; repository dati, `GC-MS/mzML/`), più controlli interni (sotto). Tutto ciò che non è nelle tre corse è elencato in «Non verificato».
 
 ## File di una cartella `.D` e a cosa servono
@@ -120,8 +122,7 @@ Scansioni numerate 1…N, tempi crescenti, blocchi che coprono `MSPeak.bin` da 6
 - Peso: il lettore sta nel motore (nessun caricamento a richiesta); il limite del `.wasm` è in `pages.yml`.
 - Memoria: `MSScan.bin` intero (184 byte per scansione) più i record (circa 130 byte): 100 000 scansioni = circa 30 MB sui 192 MB di budget; se l'allocazione fallisce l'errore è `error.memoryBudget`. Gli spettri passano uno alla volta; l'mzML non sta in memoria.
 
-## Non verificato (nessun file vero)
-- LC/MS e LC-QTOF MassHunter usano gli stessi nomi di file. Se il loro `MSScan.xsd` ha altri campi (per esempio `UncompressedByteCount`) il layout li segue; se un record ha più `SpectrumParamValues`, se `SpectrumFormatID` non è 1, se i byte per punto non sono 16 o se `UncompressedByteCount` differisce da `ByteCount` (spettri compressi) il lettore si ferma con `err.file.agilent` e i numeri trovati. Non so dove stiano i profili (forse un altro file), con quale precisione né con quale compressione: serve un file vero.
-- Alta risoluzione, MS/MS (`MSLevel`, `MzOfInterest`, `CollisionEnergy`, `Fragmentor`), polarità negativa (codice 1) e mobilità ionica: i campi esistono nello schema e si leggono come sopra, ma nessuna delle tre corse li usa; i significati dei codici (`ScanType` ≠ 1, 2; `IonMode`; `IonPolarity` ≠ 0) sono sconosciuti.
+## Non verificato
+- LC/MS (QqQ MRM e dMRM, Q-TOF profilo, centroidi e MS/MS, polarità negativa, metodo LC/MS) sta in `agilent-lcms.md`: nel motore (senza `estesi`) una `.D` LC/MS dà ancora `err.file.agilent` con i numeri trovati (xsd con tipi annidati, formato dello spettro diverso da 1, byte per punto diversi da 16, `UncompressedByteCount` diverso da `ByteCount`), mai un'ipotesi; la apre il modulo `agilent` (`probe` dice `variante`).
+- Mobilità ionica (6560): nessuna corsa vera; i campi esistono nello schema e si leggono come sopra, i significati dei codici di `IonMode` sono sconosciuti.
 - `data.ms` non è un doppione esatto di `AcqData`: tempi, TIC e numero di scansioni sono uguali, ma gli m/z sono interi in ventesimi (fino a 0.05 dai valori tarati di `MSPeak.bin`) e le abbondanze hanno 14 bit di mantissa; letto da solo (corsa senza `AcqData`) dà questi valori. Il formato è stato verificato solo con le tre corse 5977 (tipo `01 32`); altre varianti (altro tipo di file, record di altra lunghezza) danno `err.file.agilent` con i numeri.
-- Non so come MassHunter scriva MRM triplo quadrupolo (una scansione per transizione o un record con più punti): il TIC si legge, i cromatogrammi SRM no.

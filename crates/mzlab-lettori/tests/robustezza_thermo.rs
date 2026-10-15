@@ -11,6 +11,7 @@ fn insieme(byte: Vec<u8>) -> FileSet {
             nome: "x.raw".into(),
             dim: byte.len() as u64,
             dati: Box::new(byte),
+            sha1: None,
         }],
     }
 }

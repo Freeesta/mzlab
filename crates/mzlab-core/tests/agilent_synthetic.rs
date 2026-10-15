@@ -122,11 +122,15 @@ fn what_it_cannot_read_is_an_error_with_the_numbers() {
         "err.file.agilent",
         "no scans"
     );
-    let mut other = idx.clone();
-    other[160 + 132..160 + 136].copy_from_slice(&3i32.to_le_bytes());
-    let d = open(&other, peak.len() as u64).unwrap();
-    let e = d.run(&mut peak.clone()).err().unwrap();
-    assert!(e.to_string().contains("SpectrumFormatID 3"), "{e}");
+    // the format 3 of the QqQ is read by the LC/MS variant (`estesi`)
+    #[cfg(not(feature = "estesi"))]
+    {
+        let mut other = idx.clone();
+        other[160 + 132..160 + 136].copy_from_slice(&3i32.to_le_bytes());
+        let d = open(&other, peak.len() as u64).unwrap();
+        let e = d.run(&mut peak.clone()).err().unwrap();
+        assert!(e.to_string().contains("SpectrumFormatID 3"), "{e}");
+    }
 }
 
 const XSD: &str = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
@@ -202,18 +206,23 @@ fn the_layout_comes_from_the_xsd_of_the_folder() {
 
 /// Compressed points are refused by name; an unknown type and a missing field are errors that say which.
 #[test]
+#[cfg_attr(feature = "estesi", allow(unused_variables, unused_mut))]
 fn what_the_xsd_cannot_describe_is_an_error() {
     let (idx, peak) = encode_for_xsd();
     let mut d = open_with(&idx, peak.len(), Some(XSD.as_bytes())).unwrap();
-    d.records
-        .iter_mut()
-        .for_each(|r| r.uncompressed = Some(r.bytes + 40));
-    assert!(d
-        .run(&mut peak.clone())
-        .err()
-        .unwrap()
-        .to_string()
-        .contains("compressed"));
+    // a compressed block is a profile for the LC/MS variant (`estesi`)
+    #[cfg(not(feature = "estesi"))]
+    {
+        d.records
+            .iter_mut()
+            .for_each(|r| r.uncompressed = Some(r.bytes + 40));
+        assert!(d
+            .run(&mut peak.clone())
+            .err()
+            .unwrap()
+            .to_string()
+            .contains("compressed"));
+    }
     assert!(Layout::from_xsd(&XSD.replace("xs:short", "xs:dateTime"))
         .err()
         .unwrap()

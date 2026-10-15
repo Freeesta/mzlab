@@ -6,7 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ORO = ROOT / "tests/golden/attributio/sintetica"
 ATTESI = ROOT / "tests/data/attributio/campagna_sintetica/livelli_attesi.csv"
-STADI = ["campagna", "letture", "rilevazione", "livelli", "identita", "proposte", "decisioni"]
+STADI = ["campagna", "letture", "rilevazione", "livelli", "identita", "proposte", "decisioni", "abbinamenti"]
 
 
 def test_stadi_presenti_e_piccoli():

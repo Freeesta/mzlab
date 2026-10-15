@@ -42,6 +42,7 @@ pub fn cartella(rel: &str) -> Option<FileSet> {
             nome: format!("{nome}/{}", p.file_name()?.to_string_lossy()),
             dim: f.metadata().ok()?.len(),
             dati: Box::new(f),
+            sha1: None,
         });
     }
     Some(FileSet { membri })

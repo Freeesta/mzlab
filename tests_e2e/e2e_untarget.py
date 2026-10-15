@@ -41,6 +41,7 @@ try:
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
         pg.on("response", lambda r: errs.append(("http%d" % r.status, r.url)) if r.status >= 400 and "logo.svg" not in r.url and "/vendor/" not in r.url else None)
         def boot():
+            pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.LIB !== undefined && LIB.engine !== undefined", timeout=60000)
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000); pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-unt", timeout=60000)
         step("mzFinder is on and the feature-table button exists", boot)

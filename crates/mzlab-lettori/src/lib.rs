@@ -151,3 +151,14 @@ pub fn motivi(l: &mut dyn Lettore, c: usize) -> Vec<&'static str> {
     }
     m
 }
+
+/// Why the engine does not do for the dataset `fs` (before it is opened): `"variante"` when it is an Agilent `.D` of a variant the engine's reader cannot read the
+/// points of (QqQ MRM, Q-TOF profile or time-of-flight spectra, compressed spectra), so that the page does not try the engine first.
+#[cfg(any(feature = "agilent", feature = "tutte"))]
+pub fn motivi_insieme(fs: &mut FileSet) -> Vec<&'static str> {
+    let mut m = Vec::new();
+    if mzlab_core::agilent::lettore::variante(fs) {
+        m.push("variante");
+    }
+    m
+}
