@@ -9,6 +9,7 @@ and a peak that one file lacks (gap filling: it is below the minimum height ther
 from __future__ import annotations
 
 import argparse
+import base64
 import csv
 import hashlib
 import os
@@ -17,6 +18,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zlib
 from datetime import date
 from pathlib import Path
 
@@ -67,6 +69,13 @@ def componenti(nome: str) -> list[tuple[float, float, float, float]]:
     return [(m * (1 + 0.5e-6 * (k % 3 - 1)), rt + d, w, h * s) for k, (m, rt, w, h) in enumerate(c)]
 
 
+def sha_contenuto(dati: bytes) -> str:
+    """sha256 of the mzML with every zlib array decompressed: the compressed bytes change with the zlib of the Python in use, the content does not."""
+    def espandi(m: re.Match) -> bytes:
+        return b"<binary>" + base64.b64encode(zlib.decompress(base64.b64decode(m.group(1)))) + b"</binary>"
+    return hashlib.sha256(re.sub(rb"<binary>([^<]+)</binary>", espandi, dati)).hexdigest()
+
+
 def scrivi(path: Path) -> str:
     nome = path.stem
     rng = np.random.default_rng([SEME, int(nome[-1])])
@@ -93,7 +102,7 @@ def scrivi(path: Path) -> str:
     chroms = [ds._chrom(0, "TIC", rts, np.array(tic))]
     path.write_text(ds._hr_head("exploris", False, nome) + f'<spectrumList count="{len(specs)}" defaultDataProcessingRef="pwiz_Reader_Thermo_conversion">' + "".join(specs) + "</spectrumList>"
                     + f'<chromatogramList count="{len(chroms)}" defaultDataProcessingRef="pwiz_Reader_Thermo_conversion">' + "".join(chroms) + "</chromatogramList></run></mzML>", encoding="utf-8")
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return sha_contenuto(path.read_bytes())
 
 
 def genera(cartella: Path) -> dict[str, str]:
@@ -241,7 +250,7 @@ rewritten in Rust (`crates/mzlab-feat/src/untargeted/`); the mzML files are not 
 - **mzmine**: 3.9.0, bioconda package `mzmine-3.9.0-hdfd78af_0.tar.bz2`, sha256 `{corri_mzmine.BIOCONDA_SHA256}`; license MIT, (c) 2004-2022 The mzmine Development Team (`https://github.com/mzmine/mzmine/blob/master/LICENSE.txt`).
 - **JDK**: {java[0]}{' / ' + java[1] if len(java) > 1 else ''} (Adoptium OpenJDK 20, `{corri_mzmine.JDK20_URL}`).
 - **Command**: `bin/MZmine -b fasi.xml -t TMP` and `bin/MZmine -b isotopi.xml -t TMP` (no interface), parameters of `tools/bench/parametri/mzmine/predefinita.json`.
-- **Input files** (sha256 of the mzML written by `oro_mzmine.py`):
+- **Input files** (sha256 of the mzML written by `oro_mzmine.py`, with the zlib arrays decompressed: the compressed bytes depend on the zlib of Python):
 
 {file}
 ## Content of the files

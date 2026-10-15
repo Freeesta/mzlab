@@ -110,7 +110,7 @@ def test_reason_below_and_background_and_area():
 
 # ---- gold data of mzmine 3.9.0 ----
 
-def test_the_synthetic_files_are_written_again_byte_for_byte(tmp_path):
+def test_the_synthetic_files_are_written_again_with_the_same_content(tmp_path):
     shas = oro_mzmine.genera(tmp_path)
     testo = (ORO / "LEGGIMI.md").read_text(encoding="utf-8")
     assert len(shas) == 4
