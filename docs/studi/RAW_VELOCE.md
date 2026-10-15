@@ -137,19 +137,21 @@ Equivalenza: il `.mzidx` e l'mzML restano byte per byte quelli di oggi dove il p
 
 ## 4. Pacchetti
 
-| Pacchetto | Cosa | Dipende da | In parallelo con |
-|---|---|---|---|
-| RV-01 | Memoria e apertura di opentfraw: trailer compatti/pigri, indice senza `serde_json::Value`; banco `tools/bench_raw.py` | – | RV-02, RV-07, RV-08 |
-| RV-02 | Centroidi del file segnati come profilo | – | RV-01, RV-07, RV-08 |
-| RV-03 | Una sola passata per gli hash, fuori dal percorso critico; tabella senza SHA-1 | RV-01 (stesso modulo) | RV-04 no (stesso file `nativi.rs`) |
-| RV-04 | Tabella e `.mzidx` con una decodifica sola, senza il giro testo mzML | RV-03 | RV-05 |
-| RV-05 | Trasporto binario per scansione tra modulo e motore | RV-01 | RV-04, RV-06 |
-| RV-06 | mzML veloce: zlib rapido, numpress opzionale, scrittura a flusso | RV-02 | RV-05, RV-07 |
-| RV-07 | Desktop: profilo `opt-level = 3` per il binario nativo | – | tutti |
-| RV-08 | `.raw` che non si aprono (Exploris, Lumos, trappole, TSQ vecchi) | – | RV-01 (stesso vendor: file diversi) |
-| RV-09 | Lacune di `metodo/1` del `.raw` (OLE, inclusione, NCE, isolamento, globali, LC, LTQ, solventi) | – | tutti tranne RV-08 su `reader.rs` |
-| RV-10 | Tutte le altre strutture: status log e trailer come serie nel tempo, error log, ASInfo, preambolo degli eventi, Tune | – | RV-01 (stesse strutture: merge prima di unire), RV-09 dopo (stesso `campi.rs`) |
-| RV-11 | Tabui: `.raw`/`.wiff`/`.D` scelti direttamente, indice durante il caricamento, riuso da Dati | RV-02 | RV-03, RV-04, RV-05 |
+| Pacchetto | Cosa | Motore | Parte | Dopo il merge di |
+|---|---|---|---|---|
+| RV-01 | Memoria e apertura di opentfraw: trailer compatti/pigri, indice senza `serde_json::Value`; banco `tools/bench_raw.py` | no (cambia `thermo`) | ondata 1 | – |
+| RV-02 | Centroidi del file segnati come profilo; vecchio `.cen` invalidato | no (cambia `thermo`) | ondata 1 | – |
+| RV-03 | Una sola passata per gli hash, fuori dal percorso critico; tabella senza SHA-1 | sì, catena 1/5 | ondata 1 | – |
+| RV-04 | Tabella e `.mzidx` con una decodifica sola, senza il giro testo mzML | sì, catena 2/5 | ondata 2 | RV-03 |
+| RV-05 | Decodifica a blocchi e indice binario a colonne tra modulo e motore | sì, catena 3/5 | ondata 3 | RV-04, RV-01 |
+| RV-06 | mzML veloce: zlib rapido, numpress opzionale, scrittura a flusso | sì, catena 4/5 | ondata 4 | RV-05, RV-02 |
+| RV-07 | Desktop: profilo `opt-level = 3` per il binario nativo | no | ondata 1 | – |
+| RV-08 | `.raw` che non si aprono; ASInfo e preambolo degli eventi | no (cambia `thermo`) | ondata 2 | RV-01 |
+| RV-09 | Lacune di `metodo/1` (OLE, inclusione con tasti «XIC»/«MS2», NCE, isolamento, globali, LC, LTQ, solventi) | no (cambia `thermo`) | ondata 1 | – |
+| RV-10 | Status log e trailer come serie nel tempo, error log, autocampionatore, Tune | no (cambia `thermo`) | ondata 1 | – |
+| RV-11 | Tabui: `.raw`/`.wiff`/`.D` scelti direttamente, indice durante il caricamento, riuso da Dati | punti 1-3, 5, 6 no; punto 4 sì, catena 5/5 | ondata 2 (punto 4: ondata 5) | RV-02, RV-03 (punto 4: RV-06) |
 
-Ordine: prima RV-01 e RV-02 (bloccante e correttezza), con RV-07, RV-08, RV-09 e RV-10 in parallelo; poi RV-03 → RV-04 e RV-05, RV-11; poi RV-06. La navigazione segue `mappa-fluida.md` (P2-P6) dopo RV-05.
+Ondata 1 (sei chat insieme): RV-01, RV-02, RV-03, RV-07, RV-09, RV-10. Ondata 2: RV-04, RV-08, RV-11 (punti 1-3, 5, 6). Poi la catena del motore in serie, RV-05 → RV-06 → RV-11 punto 4: ogni pacchetto che cambia `mzlab_wasm.wasm` parte dopo il merge del precedente e riporta il peso prima → dopo.
+File condivisi tra chat parallele (funzioni diverse, `git merge origin/main` prima di unire): `rawlettore.rs` (RV-01 chiamate, RV-03 `testata_mzml`, RV-10 cromatogrammi), `sessione.rs` (RV-01, RV-03), `metodo_raw.rs` e `metodo-doc.js` (RV-09; RV-10 una riga), `lang/{it,en}.js` (RV-09, RV-10: chiavi nuove in un blocco proprio), `grezzi-non-estratti.md` (RV-08, RV-09, RV-10). Nessun'altra sovrapposizione: le chat restano al massimo sei alla volta, sotto il tetto di 15.
+La navigazione segue `mappa-fluida.md` (P2-P6) dopo RV-05.
 Scelte di prodotto (Coordinatore): la lista di inclusione va in `metodo/1` e si mostra in sola lettura nella finestra Metodo del file in Dati (m/z, RT/finestra, polarità, CE, nome), esportabile con il metodo, mai trasformata in «TP attesi» in Tabui (RV-09); «Scarica .mzML» ha una casella numpress spenta di default, con una riga che dice che è con perdita, e zlib a livello rapido (RV-06).
