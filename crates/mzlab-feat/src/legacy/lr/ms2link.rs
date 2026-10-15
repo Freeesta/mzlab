@@ -12,6 +12,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Value;
 
 use super::{ms2target, LrDig};
+use crate::legacy::similarity::Components;
 use crate::legacy::Res;
 pub use exp::{Exp, PeakL};
 pub use json::json;
@@ -97,6 +98,8 @@ pub struct Links {
     pub unmatched: Vec<Unmatched>,
     pub parent_has_ms2: bool,
     pub rt_tol: f64,
+    /// Similarity of the MS2 of each row with the parent's (`ms2sim`), by row id; absent when either has no MS2.
+    pub sims: Vec<(i64, Components)>,
 }
 
 impl Links {
@@ -181,5 +184,9 @@ pub fn ms2_link<R: ReadAt>(
     }
     ms2target::finish_links(d, &mut l, &made);
     d.links = Some(l);
+    let sims = d.links.as_ref().map_or(Ok(Vec::new()), |l| super::ms2sim::compute(d, l, open))?;
+    if let Some(l) = d.links.as_mut() {
+        l.sims = sims;
+    }
     Ok(())
 }

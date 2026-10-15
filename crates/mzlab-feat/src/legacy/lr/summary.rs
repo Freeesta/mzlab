@@ -95,6 +95,8 @@ struct Row<'a> {
     insource: bool,
     isf: Option<&'a IsfVerdict>,
     ms2: usize,
+    /// Total cosine of the MS2 with the parent's (`ms2sim`).
+    sim: Option<f64>,
 }
 
 fn row_json(o: &mut Out, r: &Row, p_mz: f64) {
@@ -157,6 +159,9 @@ fn row_json(o: &mut Out, r: &Row, p_mz: f64) {
     o.raw(",\"insource\":")
         .raw(if r.insource { "true" } else { "false" });
     o.raw(",\"ms2\":").int(r.ms2 as i64);
+    if let Some(v) = r.sim {
+        o.raw(",\"sim\":").num(round(v, 3));
+    }
     if e.ms2_target {
         o.raw(",\"ms2_target\":true");
     }
@@ -186,6 +191,7 @@ fn ordered(d: &LrDig) -> Vec<Row<'_>> {
             Row {
                 insource: insource(d, e, p_rt, isf),
                 ms2: d.links.as_ref().map_or(0, |l| l.of(e.id).count()),
+                sim: d.links.as_ref().and_then(|l| l.sims.iter().find(|s| s.0 == e.id)).map(|s| s.1.cos_total()),
                 isf,
                 e,
                 kin,
