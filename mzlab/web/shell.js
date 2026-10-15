@@ -263,8 +263,8 @@ function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMet
 // start screen still without files after 10 s: a quiet way out, «Full reset», that opens the same question as «New session» (reset.js)
 let stuckTimer=0;
 function armStuck(){if(stuckTimer||$("#stuck"))return;stuckTimer=setTimeout(()=>{const s=$("#start");if(!s||s.hidden||S.sess||ST.files.length||$("#stuck"))return;
-  const p=document.createElement("p");p.id="stuck";p.className="muted sm";p.style.textAlign="center";p.innerHTML=`${I18N.t("start.stuck")} <button type="button" class="sec" id="stuckbtn">${I18N.t("start.stuck.btn")}</button>`;
-  s.appendChild(p);$("#stuckbtn").onclick=()=>QQRESET.ask()},10000)}
+  const p=document.createElement("p");p.id="stuck";p.className="muted sm";p.style.textAlign="center";p.append(I18N.t("start.stuck")+" ");const bt=document.createElement("button");bt.type="button";bt.className="sec";bt.id="stuckbtn";bt.textContent=I18N.t("start.stuck.btn");bt.onclick=()=>QQRESET.ask();p.append(bt);
+  s.appendChild(p)},10000)}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=e=>{CartCarica.fromInput(e.target.files);e.target.value=""};
 $("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};
