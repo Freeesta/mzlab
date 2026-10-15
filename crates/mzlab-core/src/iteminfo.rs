@@ -454,12 +454,14 @@ pub fn item_info<R: ReadAt>(
         "mixed"
     };
     let n1 = all.iter().filter(|s| s.level == 1).count();
+    let msn = crate::infusione::infusione(&idx.scans, facts.lc, &meta.file);
     let kind = match part {
         Some(p) => match p.mode {
             "ms1" => "full",
             "ms2" => "ms2",
             _ => "mrm",
         },
+        None if all.len() > n1 && msn.as_ref().is_some_and(|m| m.motivo != "rt_costante") => "infusion",
         None if all.len() - n1 > 0 => "ms2",
         None if n1 > 0 => "full",
         None if facts.srm > 0 => "mrm",
@@ -477,7 +479,6 @@ pub fn item_info<R: ReadAt>(
                 .collect::<Vec<_>>(),
         )
     };
-    let msn = crate::infusione::infusione(&idx.scans, facts.lc, &meta.file);
     let dda = !phys1.is_empty() && !phys2.is_empty() && phys2.iter().all(|s| s.parent.is_some());
     let mode_of = |v: &[&Scan]| {
         if v.iter().take(50).any(|s| s.profile) {

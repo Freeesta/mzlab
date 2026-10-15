@@ -59,6 +59,13 @@ fn infusion_exception(got: &mut Value, want: &Value) {
             }
         }
     }
+    // an MSn infusion is one item of kind `infusion` (not split into MS1 and MS2 parts, not `ms2`)
+    if o.get("kind").and_then(Value::as_str) == Some("infusion") {
+        o.insert("kind".into(), want["kind"].clone());
+        if want.get("mixed").is_some() {
+            o.insert("mixed".into(), want["mixed"].clone());
+        }
+    }
     if o.get("hint").and_then(Value::as_str) == Some("infusion") {
         o.insert("hint".into(), want["hint"].clone());
     }
@@ -113,6 +120,7 @@ fn session_like_python() {
         let got =
             file_entry(&mut idx, &mut m, &name, size).unwrap_or_else(|e| panic!("{stem}: {e}"));
         let mut got: Value = serde_json::from_str(&got).unwrap();
+        let infusion = got["kind"] == "infusion"; // one item, where Python splits MS1 and MS2
         infusion_exception(&mut got, &want["entry"]);
         same(&format!("{stem} entry"), &got, &want["entry"]);
         let edit = Sample {
@@ -127,6 +135,10 @@ fn session_like_python() {
             let got = open_items(&mut idx, &mut m, &name, &s)
                 .unwrap_or_else(|e| panic!("{stem} {k}: {e}"));
             let w = want[k].as_array().unwrap();
+            if infusion {
+                assert_eq!(got.len(), 1, "{stem} {k}: infusion items");
+                continue;
+            }
             assert_eq!(got.len(), w.len(), "{stem} {k}: items");
             for (i, (g, w)) in got.iter().zip(w).enumerate() {
                 let mut g: Value = serde_json::from_str(&g.info).unwrap();

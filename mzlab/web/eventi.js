@@ -317,6 +317,7 @@ function ctxFor(p, e, x, px, py) {
     p._pm = has ? m : null;
     items.push({ label: has ? `m/z ${lab}` : I18N.t("ctx.spec.noPeak"), dim: true }, "-",
       ...AZIONI.per({ vista: "spec", p, a, m, has, lab, e, px, py, near, pol: a.data[0].f && a.data[0].f.polarity }));
+    if (window.INF) { const im = INF.menuPeak(p, m); if (im.length) items.push("-", ...im); }      // MSn infusion: fragment this ion, back to the precursor, Mean | Sum
   } else {
     const k = nearestFile(p, x);
     items.push({ label: I18N.t("ctx.chrom.where", { rt: x.toFixed(2), file: E.files[k]?.label || "" }), dim: true }, "-",

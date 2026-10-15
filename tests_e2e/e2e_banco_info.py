@@ -80,7 +80,7 @@ if MSN:
     try:
         with sync_playwright() as p:
             pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1500})
-            load(pg, [MSN], 8000, 2)
+            load(pg, [MSN], 8000, 1)
             def msn():
                 pg.wait_for_timeout(2500); pg.evaluate("BARRA.setTab('fil')"); pg.wait_for_timeout(1500)
                 t = pg.inner_text("#hri-body"); assert "MS8" in t or "MS8:" in t.replace(" ", "") or "ms8" in t.lower(), t[:400]

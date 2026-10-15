@@ -145,8 +145,10 @@ pub fn open_items<R: ReadAt, M: ReadAt>(
         });
         Ok(OpenItem { info, hr })
     };
-    if parts.is_empty() {
-        return Ok(vec![one(idx, name.to_string(), None)?]);
+    // a mixed file whose whole is an MSn infusion stays one item
+    let whole = one(idx, name.to_string(), None)?;
+    if parts.is_empty() || whole.info.contains("\"kind\":\"infusion\"") {
+        return Ok(vec![whole]);
     }
     parts
         .iter()
