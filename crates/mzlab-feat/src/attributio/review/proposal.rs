@@ -145,6 +145,9 @@ impl J {
     fn s(v: &str) -> J {
         J::Str(v.to_string())
     }
+    fn strs(v: &[String]) -> J {
+        J::Arr(v.iter().map(|s| J::s(s)).collect())
+    }
     fn os(v: &Option<String>) -> J {
         v.as_ref().map_or(J::Null, |s| J::s(s))
     }
@@ -157,11 +160,9 @@ impl J {
             J::Null => out.push_str("null"),
             J::Bool(b) => out.push_str(if *b { "true" } else { "false" }),
             J::Num(x) if !x.is_finite() => out.push_str("null"),
-            J::Num(x) if x.fract() == 0.0 && x.abs() < 1e15 => {
-                out.push_str(&format!("{}", *x as i64))
-            }
+            J::Num(x) if x.fract() == 0.0 && x.abs() < 1e15 => out.push_str(&format!("{}", *x as i64)),
             J::Num(x) => out.push_str(&format!("{x}")),
-            J::Str(s) => write_str(s, out),
+            J::Str(s) => Self::write_str(s, out),
             J::Arr(v) => {
                 out.push('[');
                 for (i, x) in v.iter().enumerate() {
@@ -178,7 +179,7 @@ impl J {
                     if i > 0 {
                         out.push(',');
                     }
-                    write_str(k, out);
+                    Self::write_str(k, out);
                     out.push(':');
                     x.write(out);
                 }
@@ -186,26 +187,21 @@ impl J {
             }
         }
     }
-}
-
-fn write_str(s: &str, out: &mut String) {
-    out.push('"');
-    for c in s.chars() {
-        match c {
-            '"' => out.push_str("\\\""),
-            '\\' => out.push_str("\\\\"),
-            '\n' => out.push_str("\\n"),
-            '\r' => out.push_str("\\r"),
-            '\t' => out.push_str("\\t"),
-            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
-            c => out.push(c),
+    fn write_str(s: &str, out: &mut String) {
+        out.push('"');
+        for c in s.chars() {
+            match c {
+                '"' => out.push_str("\\\""),
+                '\\' => out.push_str("\\\\"),
+                '\n' => out.push_str("\\n"),
+                '\r' => out.push_str("\\r"),
+                '\t' => out.push_str("\\t"),
+                c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+                c => out.push(c),
+            }
         }
+        out.push('"');
     }
-    out.push('"');
-}
-
-fn strs(v: &[String]) -> J {
-    J::Arr(v.iter().map(|s| J::s(s)).collect())
 }
 
 impl Best {
@@ -278,7 +274,7 @@ impl Reference {
             ("kind", J::s(&self.kind)),
             ("dm", J::on(self.dm)),
             ("dm_ppm", J::on(self.dm_ppm)),
-            ("dm_formulas", strs(&self.dm_formulas)),
+            ("dm_formulas", J::strs(&self.dm_formulas)),
             ("tools", J::Arr(tools)),
             ("cos", J::on(self.cos)),
             ("cos_vis", J::on(self.cos_vis)),
@@ -302,15 +298,7 @@ impl RawEvidence {
                 ("th2", J::Num(m.th2)),
                 ("chim_n", J::Num(m.chim_n as f64)),
                 ("chim_max", J::Num(m.chim_max)),
-                (
-                    "chim",
-                    J::Arr(
-                        m.chim
-                            .iter()
-                            .map(|c| J::Arr(vec![J::Num(c.0), J::Num(c.1)]))
-                            .collect(),
-                    ),
-                ),
+                ("chim", J::Arr(m.chim.iter().map(|c| J::Arr(vec![J::Num(c.0), J::Num(c.1)])).collect())),
             ])
         });
         J::Obj(vec![
@@ -331,27 +319,12 @@ impl PurityEvidence {
         let co = self
             .co
             .iter()
-            .map(|c| {
-                J::Obj(vec![
-                    ("mz", J::Num(c.0)),
-                    ("rel", J::Num(c.1)),
-                    ("kind", J::s(&c.2)),
-                    ("offset", J::on(c.3)),
-                    ("r", J::on(c.4)),
-                ])
-            })
+            .map(|c| J::Obj(vec![("mz", J::Num(c.0)), ("rel", J::Num(c.1)), ("kind", J::s(&c.2)), ("offset", J::on(c.3)), ("r", J::on(c.4))]))
             .collect();
         let imp = self
             .imposs
             .iter()
-            .map(|i| {
-                J::Obj(vec![
-                    ("mz", J::Num(i.mz)),
-                    ("rel", J::Num(i.rel)),
-                    ("loss", J::Num(i.loss)),
-                    ("why", J::s(i.why)),
-                ])
-            })
+            .map(|i| J::Obj(vec![("mz", J::Num(i.mz)), ("rel", J::Num(i.rel)), ("loss", J::Num(i.loss)), ("why", J::s(i.why))]))
             .collect();
         J::Obj(vec![
             ("purity", J::on(self.purity)),
@@ -360,11 +333,8 @@ impl PurityEvidence {
             ("unexplained", J::on(self.unexplained)),
             ("imposs", J::Arr(imp)),
             ("badge", J::s(&self.badge)),
-            ("badge_reasons", strs(&self.badge_reasons)),
-            (
-                "low_information",
-                self.low_information.map_or(J::Null, J::Bool),
-            ),
+            ("badge_reasons", J::strs(&self.badge_reasons)),
+            ("low_information", self.low_information.map_or(J::Null, J::Bool)),
         ])
     }
 }
@@ -380,14 +350,8 @@ impl Evidence {
             ("precursor_present", J::Bool(self.precursor_present)),
             ("precursor_rel", J::on(self.precursor_rel)),
             ("raw", self.raw.as_ref().map_or(J::Null, RawEvidence::json)),
-            (
-                "references",
-                J::Arr(self.references.iter().map(Reference::json).collect()),
-            ),
-            (
-                "purity",
-                self.purity.as_ref().map_or(J::Null, PurityEvidence::json),
-            ),
+            ("references", J::Arr(self.references.iter().map(Reference::json).collect())),
+            ("purity", self.purity.as_ref().map_or(J::Null, PurityEvidence::json)),
         ])
     }
 }
@@ -400,12 +364,9 @@ impl Proposal {
             ("id", J::Num(self.id as f64)),
             ("class", J::s(&self.class)),
             ("proposed", J::s(&self.proposed)),
-            ("reasons", strs(&self.reasons)),
+            ("reasons", J::strs(&self.reasons)),
             ("best", self.best.json()),
-            (
-                "alternatives",
-                J::Arr(self.alternatives.iter().map(Alternative::json).collect()),
-            ),
+            ("alternatives", J::Arr(self.alternatives.iter().map(Alternative::json).collect())),
             ("evidence", self.evidence.json()),
         ])
     }

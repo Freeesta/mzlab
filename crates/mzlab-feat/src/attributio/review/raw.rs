@@ -27,13 +27,7 @@ pub trait RawSource {
     /// Scan window, isolation window and MS1 around the precursor of an MS2 scan.
     fn scan_info(&self, file: &str, scan: i64) -> Option<ScanInfo>;
     /// The XICs `(rt, one trace per m/z)` of `mzs` around `rt` ± `half` minutes of a file; `None` when the raw data cannot give them.
-    fn xic(
-        &self,
-        _file: &str,
-        _rt: f64,
-        _half: f64,
-        _mzs: &[f64],
-    ) -> Option<(Vec<f64>, Vec<Vec<f64>>)> {
+    fn xic(&self, _file: &str, _rt: f64, _half: f64, _mzs: &[f64]) -> Option<(Vec<f64>, Vec<Vec<f64>>)> {
         None
     }
 }
@@ -51,10 +45,7 @@ impl RawSource for NoRaw {
 }
 
 /// The folder (among `candidates`, each with the names of the files it holds) that holds most of `files`; `None` when none holds any.
-pub fn find_raw_dir<'a>(
-    candidates: &'a [(String, Vec<String>)],
-    files: &[String],
-) -> Option<&'a str> {
+pub fn find_raw_dir<'a>(candidates: &'a [(String, Vec<String>)], files: &[String]) -> Option<&'a str> {
     let mut best: Option<(&str, usize)> = None;
     for (dir, held) in candidates {
         let n = files.iter().filter(|f| held.contains(f)).count();
@@ -66,21 +57,9 @@ pub fn find_raw_dir<'a>(
 }
 
 /// (file, scan) of the merged spectrum closest in time to the feature apex, skipping the excluded samples unless nothing else is left.
-pub fn best_scan<R: RawSource>(
-    raw: &R,
-    srcs: &[(String, i64)],
-    rt_min: f64,
-    exclude: &[String],
-) -> Option<(String, i64)> {
-    let kept: Vec<&(String, i64)> = srcs
-        .iter()
-        .filter(|s| !exclude.iter().any(|p| s.0.starts_with(p.as_str())))
-        .collect();
-    let use_: Vec<&(String, i64)> = if exclude.is_empty() || kept.is_empty() {
-        srcs.iter().collect()
-    } else {
-        kept
-    };
+pub fn best_scan<R: RawSource>(raw: &R, srcs: &[(String, i64)], rt_min: f64, exclude: &[String]) -> Option<(String, i64)> {
+    let kept: Vec<&(String, i64)> = srcs.iter().filter(|s| !exclude.iter().any(|p| s.0.starts_with(p.as_str()))).collect();
+    let use_: Vec<&(String, i64)> = if exclude.is_empty() || kept.is_empty() { srcs.iter().collect() } else { kept };
     let mut best: Option<(f64, &(String, i64))> = None;
     for s in use_ {
         let Some(t) = raw.scan_rt(&s.0, s.1) else {
@@ -116,29 +95,18 @@ fn cross(rt: &[f64], y: &[f64], k: usize, level: f64, side: i64) -> (f64, usize)
     let iu = i as usize;
     if j >= 0 && j < n && y[iu] != y[j as usize] {
         let ju = j as usize;
-        return (
-            rt[iu] + (rt[ju] - rt[iu]) * (y[iu] - level) / (y[iu] - y[ju]),
-            iu,
-        );
+        return (rt[iu] + (rt[ju] - rt[iu]) * (y[iu] - level) / (y[iu] - y[ju]), iu);
     }
     (rt[iu], iu)
 }
 
 /// Simple peak-quality numbers of an EIC around `apex_rt`: apex (rt, intensity), FWHM (min), asymmetry at 10 % height (tail / front), points across the peak
 /// (above 5 % of the apex, contiguous) and above half height, signal-to-blank (apex / largest blank intensity within the peak's 10 % width).
-pub fn peak_quality(
-    rt: &[f64],
-    y: &[f64],
-    apex_rt: f64,
-    blank: Option<(&[f64], &[f64])>,
-    window: f64,
-) -> Option<PeakQuality> {
+pub fn peak_quality(rt: &[f64], y: &[f64], apex_rt: f64, blank: Option<(&[f64], &[f64])>, window: f64) -> Option<PeakQuality> {
     if rt.len() < 3 || !y.iter().any(|&v| v > 0.0) {
         return None;
     }
-    let near: Vec<usize> = (0..rt.len())
-        .filter(|&i| (rt[i] - apex_rt).abs() <= window)
-        .collect();
+    let near: Vec<usize> = (0..rt.len()).filter(|&i| (rt[i] - apex_rt).abs() <= window).collect();
     let mut k = *near.first()?;
     for &i in &near {
         if y[i] > y[k] {
@@ -167,10 +135,7 @@ pub fn peak_quality(
         blank_max: None,
     };
     if let Some((brt, b)) = blank {
-        let bm = (0..brt.len())
-            .filter(|&i| brt[i] >= l10 - 0.05 && brt[i] <= r10 + 0.05)
-            .map(|i| b[i])
-            .fold(0.0, f64::max);
+        let bm = (0..brt.len()).filter(|&i| brt[i] >= l10 - 0.05 && brt[i] <= r10 + 0.05).map(|i| b[i]).fold(0.0, f64::max);
         out.blank_max = Some(sig4(bm));
         out.s2b = (bm > 0.0).then(|| round_to(h / bm, 1));
     }
@@ -201,26 +166,12 @@ pub fn coelution(rt: &[f64], prec_trace: &[f64], other_trace: &[f64]) -> Option<
         return None;
     }
     let n = prec_trace.len() as f64;
-    let (ma, mb) = (
-        prec_trace.iter().sum::<f64>() / n,
-        other_trace.iter().sum::<f64>() / n,
-    );
+    let (ma, mb) = (prec_trace.iter().sum::<f64>() / n, other_trace.iter().sum::<f64>() / n);
     let sa = prec_trace.iter().map(|v| (v - ma).powi(2)).sum::<f64>();
     let sb = other_trace.iter().map(|v| (v - mb).powi(2)).sum::<f64>();
-    let r = if sa > 0.0 && sb > 0.0 {
-        prec_trace
-            .iter()
-            .zip(other_trace)
-            .map(|(a, b)| (a - ma) * (b - mb))
-            .sum::<f64>()
-            / (sa * sb).sqrt()
-    } else {
-        0.0
-    };
-    Some(Coelution {
-        offset: round_to(rt[argmax(other_trace)] - rt[argmax(prec_trace)], 3),
-        r: round_to(r, 2),
-    })
+    let r =
+        if sa > 0.0 && sb > 0.0 { prec_trace.iter().zip(other_trace).map(|(a, b)| (a - ma) * (b - mb)).sum::<f64>() / (sa * sb).sqrt() } else { 0.0 };
+    Some(Coelution { offset: round_to(rt[argmax(other_trace)] - rt[argmax(prec_trace)], 3), r: round_to(r, 2) })
 }
 
 /// Observed M+1 / M+2 against the pattern of the ion formula, and the co-isolated ions.
@@ -238,31 +189,15 @@ pub struct Ms1Metrics {
 
 /// Observed M+1 / M+2 against the pattern of `ion` and the co-isolated ions (>= `chim_rel` of the precursor, not the precursor or its M+1/M+2) in the
 /// isolation window. `None` without an MS1 or without the precursor peak in it.
-pub fn ms1_metrics(
-    info: Option<&ScanInfo>,
-    prec: f64,
-    ion: Option<&Formula>,
-    s: &ReviewSettings,
-) -> Option<Ms1Metrics> {
+pub fn ms1_metrics(info: Option<&ScanInfo>, prec: f64, ion: Option<&Formula>, s: &ReviewSettings) -> Option<Ms1Metrics> {
     let info = info.filter(|i| !i.ms1_mz.is_empty())?;
     let (mz, it) = (&info.ms1_mz, &info.ms1_it);
-    let near: Vec<usize> = (0..mz.len())
-        .filter(|&i| (mz[i] - prec).abs() <= prec * 10e-6 + 0.002)
-        .collect();
+    let near: Vec<usize> = (0..mz.len()).filter(|&i| (mz[i] - prec).abs() <= prec * 10e-6 + 0.002).collect();
     if near.is_empty() {
         return None;
     }
-    let m_int = near
-        .iter()
-        .map(|&i| it[i])
-        .fold(f64::NEG_INFINITY, f64::max);
-    let sum_in = |a: f64, b: f64| {
-        (0..mz.len())
-            .filter(|&i| mz[i] >= prec + a && mz[i] <= prec + b)
-            .map(|i| it[i])
-            .sum::<f64>()
-            / m_int
-    };
+    let m_int = near.iter().map(|&i| it[i]).fold(f64::NEG_INFINITY, f64::max);
+    let sum_in = |a: f64, b: f64| (0..mz.len()).filter(|&i| mz[i] >= prec + a && mz[i] <= prec + b).map(|i| it[i]).sum::<f64>() / m_int;
     let (obs1, obs2) = (sum_in(0.999, 1.0085), sum_in(1.993, 2.011));
     let ion = ion.filter(|f| !f.is_empty());
     let (th1, th2) = ion.map_or((f64::NAN, f64::NAN), iso_pattern);
@@ -277,11 +212,7 @@ pub fn ms1_metrics(
         if m < info.target - info.lo || m > info.target + info.hi {
             continue;
         }
-        if (m - prec).abs() <= 0.012
-            || [1.0, 2.0]
-                .iter()
-                .any(|k| (m - (prec + k * C13)).abs() <= 0.012)
-        {
+        if (m - prec).abs() <= 0.012 || [1.0, 2.0].iter().any(|k| (m - (prec + k * C13)).abs() <= 0.012) {
             continue;
         }
         if it[i] / m_int >= s.chim_rel {

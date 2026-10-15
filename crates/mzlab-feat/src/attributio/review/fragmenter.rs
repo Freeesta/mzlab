@@ -72,53 +72,22 @@ impl Fragmentation {
     }
 }
 
-fn variants(
-    f_str: &str,
-    mass: f64,
-    ion_delta: f64,
-) -> Vec<(&'static str, String, f64, &'static str)> {
-    let mut v: Vec<(&'static str, String, f64, &'static str)> = vec![
-        ("ion", f_str.to_string(), mass + ion_delta, ""),
-        ("radical", f_str.to_string(), mass, "(radical)"),
-    ];
+fn variants(f_str: &str, mass: f64, ion_delta: f64) -> Vec<(&'static str, String, f64, &'static str)> {
+    let mut v: Vec<(&'static str, String, f64, &'static str)> =
+        vec![("ion", f_str.to_string(), mass + ion_delta, ""), ("radical", f_str.to_string(), mass, "(radical)")];
     let has = |c: &str| f_str.contains(c);
     if has("O") {
-        v.push((
-            "-H2O",
-            format!("{f_str}-H2O"),
-            mass + ion_delta - LOSS_H2O,
-            "-H2O",
-        ));
-        v.push((
-            "-2H2O",
-            format!("{f_str}-2H2O"),
-            mass + ion_delta - 2.0 * LOSS_H2O,
-            "-2H2O",
-        ));
+        v.push(("-H2O", format!("{f_str}-H2O"), mass + ion_delta - LOSS_H2O, "-H2O"));
+        v.push(("-2H2O", format!("{f_str}-2H2O"), mass + ion_delta - 2.0 * LOSS_H2O, "-2H2O"));
     }
     if has("C") && has("O") {
-        v.push((
-            "-CO",
-            format!("{f_str}-CO"),
-            mass + ion_delta - LOSS_CO,
-            "-CO",
-        ));
+        v.push(("-CO", format!("{f_str}-CO"), mass + ion_delta - LOSS_CO, "-CO"));
     }
     if f_str.matches('O').count() >= 2 && has("C") {
-        v.push((
-            "-CO2",
-            format!("{f_str}-CO2"),
-            mass + ion_delta - LOSS_CO2,
-            "-CO2",
-        ));
+        v.push(("-CO2", format!("{f_str}-CO2"), mass + ion_delta - LOSS_CO2, "-CO2"));
     }
     if has("N") {
-        v.push((
-            "-NH3",
-            format!("{f_str}-NH3"),
-            mass + ion_delta - LOSS_NH3,
-            "-NH3",
-        ));
+        v.push(("-NH3", format!("{f_str}-NH3"), mass + ion_delta - LOSS_NH3, "-NH3"));
     }
     v
 }
@@ -139,10 +108,7 @@ fn atom_label(m: &Mol, i: usize) -> String {
 
 /// The largest piece (heavy atoms) of a SMILES with salts or mixtures.
 fn main_piece(smiles: &str) -> Option<(Mol, String)> {
-    smiles
-        .split('.')
-        .filter_map(|p| Mol::parse(p).ok().map(|m| (m, p.to_string())))
-        .max_by_key(|(m, _)| m.atoms.len())
+    smiles.split('.').filter_map(|p| Mol::parse(p).ok().map(|m| (m, p.to_string()))).max_by_key(|(m, _)| m.atoms.len())
 }
 
 struct Ctx<'a> {
@@ -151,13 +117,7 @@ struct Ctx<'a> {
     ion_delta: f64,
 }
 
-fn side_of(
-    m: &Mol,
-    keep: &[bool],
-    ctx: &Ctx,
-    label: &str,
-    best: &mut Vec<ExplainedPeak>,
-) -> FragmentSide {
+fn side_of(m: &Mol, keep: &[bool], ctx: &Ctx, label: &str, best: &mut Vec<ExplainedPeak>) -> FragmentSide {
     let f = side_formula(m, keep);
     let f_str = elements::fmt(&f);
     let mass = elements::mass(&f);
@@ -193,24 +153,11 @@ fn side_of(
             }
         }
     }
-    FragmentSide {
-        formula: f_str,
-        mass: round_to(mass, 5),
-        mz_pos: round_to(mass + ION_H, 5),
-        mz_neg: round_to(mass - ION_H, 5),
-        atoms,
-        matches,
-    }
+    FragmentSide { formula: f_str, mass: round_to(mass, 5), mz_pos: round_to(mass + ION_H, 5), mz_neg: round_to(mass - ION_H, 5), atoms, matches }
 }
 
 /// Cleaves the acyclic single bonds of `smiles` (the first `max_bonds`), computes the fragments and matches them against `exp_peaks` within `ppm_tol`.
-pub fn fragment_molecule(
-    smiles: &str,
-    pol: &str,
-    exp_peaks: &[f64],
-    ppm_tol: f64,
-    max_bonds: usize,
-) -> Result<Fragmentation, String> {
+pub fn fragment_molecule(smiles: &str, pol: &str, exp_peaks: &[f64], ppm_tol: f64, max_bonds: usize) -> Result<Fragmentation, String> {
     if smiles.trim().is_empty() {
         return Err("No SMILES provided".into());
     }
@@ -222,16 +169,10 @@ pub fn fragment_molecule(
     let (m, _) = main_piece(smiles).ok_or("Invalid SMILES")?;
     let on_ring = m.ring_bonds();
     // an aromatic-looking bond outside a ring (a biaryl bond) is single, as in the reference tool
-    let breakable: Vec<usize> = (0..m.bonds.len())
-        .filter(|&k| !on_ring[k] && (m.bonds[k].order == 1.0 || m.bonds[k].order == 1.5))
-        .take(max_bonds)
-        .collect();
+    let breakable: Vec<usize> =
+        (0..m.bonds.len()).filter(|&k| !on_ring[k] && (m.bonds[k].order == 1.0 || m.bonds[k].order == 1.5)).take(max_bonds).collect();
     let peaks: Vec<f64> = exp_peaks.iter().cloned().filter(|p| *p > 0.0).collect();
-    let ctx = Ctx {
-        peaks: &peaks,
-        ppm_tol,
-        ion_delta: if pol == "POS" { ION_H } else { -ION_H },
-    };
+    let ctx = Ctx { peaks: &peaks, ppm_tol, ion_delta: if pol == "POS" { ION_H } else { -ION_H } };
     let mut out = Fragmentation::default();
     for k in breakable {
         let (a, b) = (m.bonds[k].a, m.bonds[k].b);
@@ -241,16 +182,8 @@ pub fn fragment_molecule(
         let (first, second) = if lowest_first { (&sa, &sb) } else { (&sb, &sa) };
         let f1 = side_of(&m, first, &ctx, &label, &mut out.explained);
         let f2 = side_of(&m, second, &ctx, &label, &mut out.explained);
-        out.bonds.push(BondCut {
-            bond_idx: k,
-            label,
-            atom1: atom_label(&m, a),
-            atom2: atom_label(&m, b),
-            frag1: Some(f1),
-            frag2: Some(f2),
-        });
+        out.bonds.push(BondCut { bond_idx: k, label, atom1: atom_label(&m, a), atom2: atom_label(&m, b), frag1: Some(f1), frag2: Some(f2) });
     }
-    out.explained
-        .sort_by(|x, y| x.peak.partial_cmp(&y.peak).unwrap());
+    out.explained.sort_by(|x, y| x.peak.partial_cmp(&y.peak).unwrap());
     Ok(out)
 }
