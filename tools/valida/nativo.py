@@ -51,6 +51,7 @@ class Serie:
     versione_crate: str = ""
     feat_version: int = 0
     tp: dict | None = None                 # the block tp/1 (status and kinship of every row) when the run had a parent and controls
+    membri: tuple | None = None            # (member_start, member_mz, member_rt) of the rows in "per family" mode; empty starts in "per ion" mode
 
 
 def leggi_serie(cartella, nomi: list[str]) -> Serie:
@@ -62,17 +63,20 @@ def leggi_serie(cartella, nomi: list[str]) -> Serie:
     stato = a["state"].reshape(n, k)
     area = np.where(stato == CELLA_ASSENTE, 0.0, np.nan_to_num(a["area"].reshape(n, k)))
     campioni = [re.sub(r"\.mzidx$", "", x) for x in nomi]
-    tab = Tabella("nativo", campioni, a["mz"].copy(), a["rt"].copy(), area)
+    altezza = np.where(stato == CELLA_ASSENTE, 0.0, np.nan_to_num(a["height"].reshape(n, k).astype(float))) if "height" in a else None
+    tab = Tabella("nativo", campioni, a["mz"].copy(), a["rt"].copy(), area, altezza=altezza)
     ev = json.loads(a["evid"].tobytes()) if len(a["evid"]) else {"identita": []}
     ident = ev["identita"]
     cand = np.array(sorted(i["id"] for i in ident if i["totale"] > 0), dtype=int)
     per_file = []
     for nome in nomi:
         m, f = apri((cartella / f"{nome}.mzfeatf").read_bytes())
-        per_file.append({"nome": nome, "mz": f["mz"].astype(float), "rt": f["rt"].astype(float), "purezza": f["purity"].astype(float), "altezza": f["height"].astype(float)})
+        per_file.append({"nome": nome, "mz": f["mz"].astype(float), "rt": f["rt"].astype(float), "purezza": f["purity"].astype(float), "altezza": f["height"].astype(float),
+                         "area": f["area"].astype(float), "rt_inizio": f["left"].astype(float), "rt_fine": f["right"].astype(float)})
     sha = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(cartella.glob("*.mzfeat*"))}
     tp = {"stato": a["tp_status"].astype(int), "parentela": a["tp_kinship"].astype(int), "note": a["tp_notes"].astype(int)} if "tp_status" in a else None
-    return Serie(tab, stato, ident, cand, per_file, sha, meta["crate"], meta["feat_version"], tp)
+    membri = (a["member_start"].astype(int), a["member_mz"].astype(float), a["member_rt"].astype(float)) if "member_start" in a else None
+    return Serie(tab, stato, ident, cand, per_file, sha, meta["crate"], meta["feat_version"], tp, membri)
 
 
 def indici(mzml: list[Path], cartella: Path) -> list[str]:

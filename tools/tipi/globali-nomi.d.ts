@@ -182,6 +182,7 @@ declare var VIEW_HASH: any;
 declare var VIRIDIS: any;
 declare var VIRIDIS_DARK: any;
 declare var WIFF_WAIT: any;
+declare var WatersRaw: any;
 declare var XIC_ADDUCTS: any;
 declare var XIC_BELOW: any;
 declare var XIC_DRIFT: any;

@@ -2,7 +2,7 @@
 # Runs on pull requests that touch the engine, the page or the build, and by hand. Not a required check of the protected main branch.
 # Three jobs side by side, `sito` is the summary (like rust-ok): `sito-e2e` builds the site + .wasm and runs the e2e;
 # `sito-unit` runs the rest of tools/verifica.py (syntax, i18n, code map, sizes, pytest) with pytest-xdist.
-# The run on main only fills the Rust cache: a cache saved on a pull request is not visible to the other pull requests.
+# The run on main fills the Rust cache (every run restores the newest one); a cache saved on a pull request is not visible to the other pull requests.
 name: sito-rust
 
 on:
@@ -38,7 +38,6 @@ jobs:
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
       - uses: actions/cache/restore@v4
-        id: cache
         with:
           path: |
             ~/.cargo/registry
@@ -46,7 +45,7 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             ~/.cache/ms-playwright
             target
-          key: sito-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'pyproject.toml') }}
+          key: sito-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'pyproject.toml') }}-${{ github.sha }}
           restore-keys: sito-rust-${{ runner.os }}-
       - name: Install
         run: |
@@ -76,9 +75,9 @@ jobs:
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
           tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries
           tools/build_feat_wasm.sh site/static
-      # saved right after the build, so a red e2e does not lose the cache (the automatic save at the end of a job is skipped on failure)
+      # saved right after the build, so a red e2e does not lose the cache (main only)
       - uses: actions/cache/save@v4
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: github.ref == 'refs/heads/main'
         with:
           path: |
             ~/.cargo/registry
@@ -86,7 +85,7 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             ~/.cache/ms-playwright
             target
-          key: sito-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'pyproject.toml') }}
+          key: sito-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'pyproject.toml') }}-${{ github.sha }}
       - name: e2e on the built site
         run: |
           ls -l site/static/wasm/*.wasm | awk '{print "motore .wasm:", $5, "bytes"}'
@@ -117,6 +116,9 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: pyproject.toml
+      # installs the pinned toolchain once, before the pytest workers start (they all call cargo and would race to install it)
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
       - name: Install
         run: python -m pip install -e ".[test]" pytest-xdist
       - name: Checks and pytest (no e2e)

@@ -1,0 +1,100 @@
+# qc_expected.toml -- the key numbers accepted last time (see attributio/qc.py).
+# Do not edit by hand: run the QC script with --accept "reason".
+
+[scope]
+matrix = "all"
+
+[expected]
+"structure | merged POS table" = true
+"structure | SIRIUS POS exported" = true
+"structure | GNPS2 POS library" = true
+"structure | merged NEG table" = true
+"structure | SIRIUS NEG exported" = true
+"structure | GNPS2 NEG library" = false
+"structure | standards library" = true
+"structure | MS/MS library POS" = true
+"structure | MS/MS library NEG" = false
+"detected | POS SiteA" = 8
+"detected | POS SiteB" = 7
+"detected | NEG SiteA" = 1
+"detected | NEG SiteB" = 1
+"features | total" = 15
+"features | Lvl1" = 1
+"features | Lvl2" = 3
+"features | Lvl3" = 7
+"features | Lvl4" = 2
+"features | Lvl0" = 2
+"features | basis: CANOPUS class" = 2
+"features | basis: CSI:FingerID" = 2
+"features | basis: RT isomer" = 1
+"features | basis: expert review" = 1
+"features | basis: isomers not discriminated" = 2
+"features | basis: name conflict" = 1
+"features | basis: none" = 2
+"features | basis: reference standard" = 1
+"features | basis: spectral library" = 3
+"features | standard confirmed" = 1
+"features | GNPS2 network component" = 1
+"content | disp_name hash" = "fc5b3bedb0bd925f"
+"content | cec_label hash" = "851ae5a8b1352d45"
+"identities | total (Lvl 1-3)" = 9
+"identities | Lvl1" = 1
+"identities | Lvl2" = 3
+"identities | Lvl3" = 5
+"identities | contaminants" = 1
+"identities | unique CEC labels (features)" = 1
+"inventory | ambiguous" = 1
+"inventory | contaminant" = 1
+"inventory | natural" = 8
+"hazard | acute Acute 1" = 0
+"hazard | acute Acute 2" = 0
+"hazard | acute Acute 3" = 1
+"hazard | acute Not classified" = 0
+"hazard | acute Not assessable" = 8
+"hazard | acute tier T1" = 0
+"hazard | acute tier T2" = 1
+"hazard | acute tier T3" = 0
+"hazard | acute tier T4" = 0
+"hazard | acute tier T5" = 8
+"hazard | chronic Chronic 1" = 0
+"hazard | chronic Chronic 2" = 0
+"hazard | chronic Chronic 3" = 1
+"hazard | chronic Chronic 4" = 0
+"hazard | chronic Not classified" = 0
+"hazard | chronic Not assessable" = 8
+"hazard | chronic tier T1" = 0
+"hazard | chronic tier T2" = 1
+"hazard | chronic tier T3" = 0
+"hazard | chronic tier T4" = 0
+"hazard | chronic tier T5" = 8
+"hazard | anthropogenic without hazard" = 0
+
+[[history]]
+date = "2026-09-24"
+reason = "first synthetic-campaign baseline"
+moved = "first baseline"
+
+[[history]]
+date = "2026-09-24"
+reason = "Fixture: POS 8 (conflitto di nome, strutture diverse -> L3) e POS 9 (nome commerciale, stessa struttura -> L2) per la regola B4 per InChIKey"
+moved = "detected | POS SiteA: 4 -> 6; detected | POS SiteB: 3 -> 4; features | total: 8 -> 10; features | Lvl2: 2 -> 3; features | Lvl3: 1 -> 2; features | basis: name conflict: None -> 1; features | basis: spectral library: 2 -> 3; content | disp_name hash: 1242fe286330388d -> ec6d14ed1f663e79; identities | total (Lvl 1-3): 4 -> 6; identities | Lvl2: 2 -> 3; identities | Lvl3: 1 -> 2; inventory | natural: 3 -> 5"
+
+[[history]]
+date = "2026-09-24"
+reason = "Fixture: decisioni per feature (POS 2 -> L3 dal chimico, POS 4 rinominata -> Caffeine, una decisione senza feature) e flag mzlib-only"
+moved = "features | Lvl2: 3 -> 2; features | Lvl3: 2 -> 3; features | basis: expert review: None -> 1; features | basis: spectral library: 3 -> 2; content | disp_name hash: ec6d14ed1f663e79 -> 2eccc36f01d7c135; content | cec_label hash: a9a15db4d1c33374 -> 851ae5a8b1352d45; identities | total (Lvl 1-3): 6 -> 5; identities | Lvl2: 3 -> 2; inventory | natural: 5 -> 4"
+
+[[history]]
+date = "2026-09-28"
+reason = "Synthetic RT-coherence cases (core 1.7.0): POS 4 at 4.10 min, new POS 10-14 (same-name peaks at two RTs), D1 ion counts and D2 CANOPUS probabilities"
+moved = "detected | POS SiteA: 6 -> 8; detected | POS SiteB: 4 -> 7; features | total: 10 -> 15; features | Lvl2: 2 -> 3; features | Lvl3: 3 -> 7; features | basis: CSI:FingerID: 1 -> 2; features | basis: RT isomer: None -> 1; features | basis: isomers not discriminated: None -> 2; features | basis: spectral library: 2 -> 3; content | disp_name hash: 2eccc36f01d7c135 -> fc5b3bedb0bd925f; identities | total (Lvl 1-3): 5 -> 10; identities | Lvl2: 2 -> 3; identities | Lvl3: 2 -> 6; inventory | natural: 4 -> 9"
+
+[[history]]
+date = "2026-09-28"
+reason = "Synthetic: POS 13 excluded by a feature decision (group ambiguous, core 1.7.0)"
+moved = "identities | total (Lvl 1-3): 10 -> 9; identities | Lvl3: 6 -> 5; inventory | ambiguous: None -> 1; inventory | natural: 9 -> 8"
+
+[[history]]
+date = "2026-10-05"
+reason = "core 1.12.0: aquatic hazard metrics of the identities (ecotox.hazard)"
+moved = "hazard | acute Acute 1: None -> 0; hazard | acute Acute 2: None -> 0; hazard | acute Acute 3: None -> 1; hazard | acute Not classified: None -> 0; hazard | acute Not assessable: None -> 8; hazard | acute tier T1: None -> 0; hazard | acute tier T2: None -> 1; hazard | acute tier T3: None -> 0; hazard | acute tier T4: None -> 0; hazard | acute tier T5: None -> 8; hazard | chronic Chronic 1: None -> 0; hazard | chronic Chronic 2: None -> 0; hazard | chronic Chronic 3: None -> 1; hazard | chronic Chronic 4: None -> 0; hazard | chronic Not classified: None -> 0; hazard | chronic Not assessable: None -> 8; hazard | chronic tier T1: None -> 0; hazard | chronic tier T2: None -> 1; hazard | chronic tier T3: None -> 0; hazard | chronic tier T4: None -> 0; hazard | chronic tier T5: None -> 8; hazard | anthropogenic without hazard: None -> 0"
