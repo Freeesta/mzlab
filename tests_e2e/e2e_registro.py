@@ -45,7 +45,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.evaluate(FAKE)
-        pg.set_input_files("#pick", [str(F)]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [str(F)]); attendi(pg, "!!document.querySelector('#pick') && E.files !== undefined")
         pg.click("text=Carica dati"); ready(pg)
         TIC = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full')"       # the first chromatogram of the tab, whatever its kind becomes
         def option():
@@ -83,7 +83,7 @@ try:
             assert rows == [["1.5", "Vai a RT 1.5 min"], ["4", "Vai a RT 4 min"], ["7.25", "Vai a RT 7.25 min"]], rows
         step("the Method window lists the error log with its times", method)
         def go():
-            pg.click("#bigdlg button[data-mreg-rt='4']"); pg.wait_for_timeout(500)
+            pg.click("#bigdlg button[data-mreg-rt='4']"); attendi(pg, "!Q('#bigdlg').open")
             assert not pg.evaluate("Q('#bigdlg').open")
             c = pg.evaluate("E.panels.find(p=>p.type==='chrom').cur"); assert abs(c - 4) < 1e-9, c
         step("a click on a time moves the chromatogram cursor", go)
