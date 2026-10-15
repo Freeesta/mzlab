@@ -10,6 +10,7 @@ sys.path.insert(0, str(HERE)); import lib  # noqa: F401,E402  (patches wait_for_
 from lib import axe_path  # noqa: E402
 
 steps = []
+settle = lambda: pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")      # two frames: the scroll handler and the redraw have run
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e:
@@ -28,7 +29,10 @@ else:                                                      # fresh sources of mz
         for f in (ROOT / "TP_Mine" / d).glob("*"): shutil.copy2(f, site / "static" / "mzfinder" / f.name)
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1); errs = []
+errs = []
+for _ in range(50):                                        # the server answers
+    try: __import__("urllib.request").request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1); break
+    except Exception: __import__("threading").Event().wait(0.2)
 AXE = axe_path()
 RUN = "axe.run(%s, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0,3).map(n => n.target.join(' ') + ' :: ' + (n.failureSummary||'').split('\\n').slice(0,3).join(' | '))]))"
 SHOTS = Path(os.environ.get("TMPDIR", "/tmp")) / "tabui_tptab_shots"; SHOTS.mkdir(exist_ok=True)
@@ -77,10 +81,10 @@ try:
         def fixed():
             r0 = pg.evaluate("() => { const w = document.querySelector('%s'); w.scrollLeft = 0; return [w.getBoundingClientRect().left, document.querySelector('#tt-t tbody tr.clk td.tpt-stk').getBoundingClientRect().left, w.scrollWidth - w.clientWidth]; }" % W)
             assert r0[2] > 100, ("the table must be wider than the box", r0)
-            pg.evaluate("() => { document.querySelector('%s').scrollLeft = 300; }" % W); pg.wait_for_timeout(100)
+            pg.evaluate("() => { document.querySelector('%s').scrollLeft = 300; }" % W); settle()
             r1 = pg.evaluate("() => { const w = document.querySelector('%s'), c = [...document.querySelectorAll('#tt-t tbody tr.clk')][1].querySelectorAll('td.tpt-stk'); return [w.getBoundingClientRect().left, c[0].getBoundingClientRect().left, c[1].getBoundingClientRect().left, c[0].getBoundingClientRect().width]; }" % W)
             assert abs(r1[1] - r1[0]) <= 2 and abs(r1[2] - (r1[0] + r1[3])) <= 3, ("the first two columns stay", r1)
-            pg.evaluate("() => { document.querySelector('%s').scrollLeft = 0; document.querySelector('%s').scrollTop = 200; }" % (W, W)); pg.wait_for_timeout(150)
+            pg.evaluate("() => { document.querySelector('%s').scrollLeft = 0; document.querySelector('%s').scrollTop = 200; }" % (W, W)); settle()
             t = pg.evaluate("() => [document.querySelector('%s').getBoundingClientRect().top, document.querySelector('#tt-t thead th').getBoundingClientRect().top]" % W)
             assert abs(t[1] - t[0]) <= 2, ("the header stays on top", t)
             pg.evaluate("() => { document.querySelector('%s').scrollTop = 0; }" % W)
@@ -117,19 +121,19 @@ try:
         def virtual():
             n = pg.locator("#tt-t tbody tr").count(); assert n < 100, n
             assert pg.get_attribute("#tt-t", "aria-rowcount") == "1001"
-            pg.evaluate("() => { document.querySelector('%s').scrollTop = 900 * 30; }" % W); pg.wait_for_timeout(300)
+            pg.evaluate("() => { document.querySelector('%s').scrollTop = 900 * 30; }" % W); settle()
             assert pg.locator('#tt-t tr.clk[data-id="900"]').count() == 1 and pg.locator("#tt-t tbody tr").count() < 100
             pg.click('#tt-t [data-tg="900"]'); pg.wait_for_selector("#tt-t tr.tpt-exp #tp-det #tt-body")
             assert "+O 900" in pg.inner_text("#tt-body")
-            pg.evaluate("() => { document.querySelector('%s').scrollTop = 0; }" % W); pg.wait_for_timeout(300)
+            pg.evaluate("() => { document.querySelector('%s').scrollTop = 0; }" % W); settle()
             assert pg.locator("#tt-t tr.tpt-exp").count() == 1, "the open row stays in the DOM outside the window"
         step("virtual rows: few <tr>, aria-rowcount 1001, the row 900 opens", virtual)
 
         def one_open():
-            pg.evaluate("window.__T.close()"); pg.evaluate("document.querySelector('%s').scrollTop = 0" % W); pg.wait_for_timeout(200)
-            pg.click('#tt-t [data-tg="3"]'); pg.click("#tt-t [data-tab=sm]"); pg.evaluate("document.querySelector('%s').scrollTop = 400" % W); pg.wait_for_timeout(300); assert "Samples" not in pg.inner_text("#tt-body") and "sm" in pg.inner_text("#tt-body")
+            pg.evaluate("window.__T.close()"); pg.evaluate("document.querySelector('%s').scrollTop = 0" % W); settle()
+            pg.click('#tt-t [data-tg="3"]'); pg.click("#tt-t [data-tab=sm]"); pg.evaluate("document.querySelector('%s').scrollTop = 400" % W); settle(); assert "Samples" not in pg.inner_text("#tt-body") and "sm" in pg.inner_text("#tt-body")
             before = pg.evaluate("document.querySelector('#tt-t tr.clk[data-id=\"6\"]').getBoundingClientRect().top")
-            pg.click('#tt-t [data-tg="6"]'); pg.wait_for_timeout(200)
+            pg.click('#tt-t [data-tg="6"]'); settle()
             assert pg.locator("#tt-t tr.tpt-exp").count() == 1 and pg.locator('#tt-t [data-tg="3"]').get_attribute("aria-expanded") == "false"
             assert pg.get_attribute("#tt-t [data-tab=sm]", "aria-selected") == "true" and "sm" in pg.inner_text("#tt-body"), "the same tab"
             after = pg.evaluate("document.querySelector('#tt-t tr.clk[data-id=\"6\"]').getBoundingClientRect().top")
@@ -172,7 +176,7 @@ try:
             def f():
                 if not AXE: print("SKIP axe-core not available"); return
                 pg.evaluate("t => { document.documentElement.dataset.theme = t; }", theme)
-                pg.evaluate('window.__T.open(3)'); pg.wait_for_timeout(200)
+                pg.evaluate('window.__T.open(3)'); settle()
                 if not pg.evaluate("typeof axe") == "object": pg.add_script_tag(path=AXE)
                 v = pg.evaluate(RUN % "'#tt-host'"); assert not v, v
                 pg.locator("#tt-host").screenshot(path=str(SHOTS / f"tptab-{theme}-1280.png"))
@@ -181,7 +185,7 @@ try:
         step("axe: no serious violation, dark theme", axe("dark"))
 
         def narrow():
-            pg.set_viewport_size({"width": 390, "height": 800}); pg.wait_for_timeout(300)
+            pg.set_viewport_size({"width": 390, "height": 800}); settle()
             w = pg.evaluate("[document.querySelector('#tp-det').getBoundingClientRect().width, document.querySelector('%s').clientWidth]" % W)
             assert w[0] <= w[1] + 2, w
             pg.locator("#tt-host").screenshot(path=str(SHOTS / "tptab-dark-390.png")); pg.set_viewport_size({"width": 1280, "height": 900})
