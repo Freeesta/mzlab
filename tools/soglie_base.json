@@ -2,7 +2,7 @@
  "doc_kb": {},
  "doc_righe": {},
  "file": {
-  "TP_Mine/js/20_tpmine.js": 638,
+  "TP_Mine/js/20_tpmine.js": 950,
   "TP_Mine/py/tpmine/engine.py": 680,
   "TP_Mine/py/tpmine/hr/engine.py": 552,
   "TP_Mine/tests/test_hr_real.py": 539,
@@ -40,7 +40,7 @@
   "tools/genera_ei.py": 751
  },
  "funzioni": {
-  "TP_Mine/js/20_tpmine.js::open": 488,
+  "TP_Mine/js/20_tpmine.js::open": 700,
   "TP_Mine/js/21_tpmine_hr.js::render": 196,
   "TP_Mine/js/23_tpmine_albero.js::mount": 193,
   "TP_Mine/py/tpmine/engine.py::Experiment": 598,
