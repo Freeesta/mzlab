@@ -31,7 +31,8 @@ jobs:
           python-version: "3.13"
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
-      - uses: actions/cache@v4
+      - id: cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
@@ -54,6 +55,15 @@ jobs:
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
       - name: Desktop folder
         run: python crates/mzlab-desktop/prepare.py
+      - uses: actions/cache/save@v4
+        if: github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: desktop-shim-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
       - name: Page, shim and worker against the native engine (fake file dialog)
         run: python crates/mzlab-desktop/tests/e2e_shim.py
       - name: mzFinder in the page of the desktop (native routes, no Pyodide, no wasm-feat/)
@@ -68,19 +78,21 @@ jobs:
           - name: macOS universal
             os: macos-latest
             args: --target universal-apple-darwin --bundles app,dmg
-            artifact: "target/universal-apple-darwin/release/bundle/dmg/*.dmg"
+            artifact: "target/universal-apple-darwin/desktop/bundle/dmg/*.dmg"
           - name: Windows
             os: windows-latest
             args: --bundles nsis
-            artifact: "target/release/bundle/nsis/*.exe"
+            artifact: "target/desktop/bundle/nsis/*.exe"
           - name: Linux
             os: ubuntu-22.04                  # the oldest glibc of the runners: the AppImage runs on older systems too
             args: --bundles appimage,deb
             artifact: |
-              target/release/bundle/appimage/*.AppImage
-              target/release/bundle/deb/*.deb
+              target/desktop/bundle/appimage/*.AppImage
+              target/desktop/bundle/deb/*.deb
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    env:
+      TAURI_CLI: "2.12.3"                 # the version of the Tauri CLI (cargo-tauri); a new one is compiled once and kept in the cache
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -96,15 +108,19 @@ jobs:
       - name: Targets of the universal binary
         if: runner.os == 'macOS'
         run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
-      - uses: actions/cache@v4
+      # Restored by every run; saved only on main (1-2 GB per system: a cache saved by a pull request is seen by no other pull request
+      # and only pushes the caches of main out of the 10 GB of the repository). The Tauri CLI and wasm-bindgen live in it.
+      - id: cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin/cargo-tauri*
             ~/.cargo/bin/wasm-bindgen
+            ~/.cargo/bin/wasm-bindgen.exe
             target
-          key: desktop-${{ matrix.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          key: desktop-${{ matrix.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-tauri-${{ env.TAURI_CLI }}
           restore-keys: desktop-${{ matrix.os }}-
       - name: cargo test (the mzlab:// protocol against the golden data)
         env:
@@ -123,14 +139,34 @@ jobs:
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
       - name: Desktop folder
         run: python crates/mzlab-desktop/prepare.py
+      # compiled only when the cache does not have this version (the compile takes 6-10 minutes per system)
       - name: Tauri CLI
-        run: cargo install tauri-cli --version "^2" --locked --force
+        shell: bash
+        run: |
+          if cargo tauri --version 2>/dev/null | grep -qx "tauri-cli $TAURI_CLI"; then
+            echo "tauri-cli $TAURI_CLI from the cache"
+          else
+            cargo install tauri-cli --version "=$TAURI_CLI" --locked --force
+          fi
       - name: Installer
         working-directory: crates/mzlab-desktop
         env:
           APPIMAGE_EXTRACT_AND_RUN: "1"     # Linux: linuxdeploy is an AppImage and the runners have no FUSE
           NO_STRIP: "true"                  # Linux: the strip of the runner does not know every section of the libraries
-        run: cargo tauri build --features app ${{ matrix.args }} --verbose
+        # profile `desktop` of Cargo.toml (release with opt-level 3); tauri-cli reads `--profile` after `--` and takes the bundles from target/[triple/]desktop/
+        run: cargo tauri build --features app ${{ matrix.args }} --verbose -- --profile desktop
+      # saved after the installer, so the release build of the app is in it too (main only)
+      - uses: actions/cache/save@v4
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true' }}
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/cargo-tauri*
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cargo/bin/wasm-bindgen.exe
+            target
+          key: desktop-${{ matrix.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-tauri-${{ env.TAURI_CLI }}
       - uses: actions/upload-artifact@v4
         with:
           name: mzlab-desktop-${{ runner.os }}
