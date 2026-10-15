@@ -10,7 +10,7 @@ use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::methodinfo::Kind;
 use crate::metodo::sha1_hex;
-use crate::mzml::{ChromKind, Chromatogram, Run, Spectrum};
+#[cfg_attr(feature = "estesi", allow(unused_imports))] use crate::mzml::{ChromKind, Chromatogram, Run, Spectrum};
 use crate::mzmlwrite::{Header, MzmlWriter};
 
 impl Wiff {
@@ -33,7 +33,7 @@ impl Wiff {
     }
 
     /// Gives the spectra one at a time to `on` (profile; the empty scans are left out) and returns the chromatograms of the MRM blocks.
-    pub fn visit<R: ReadAt>(&self, scan: &mut R, on: &mut dyn FnMut(Spectrum) -> Result<()>) -> Result<Vec<Chromatogram>> {
+    #[cfg(not(feature = "estesi"))] pub fn visit<R: ReadAt>(&self, scan: &mut R, on: &mut dyn FnMut(Spectrum) -> Result<()>) -> Result<Vec<Chromatogram>> {
         let mut mrm: Vec<Mrm> = (0..self.experiments.len().max(1)).map(|_| Mrm::default()).collect();
         let mut n = 0;
         for r in &self.records {
@@ -64,7 +64,7 @@ impl Wiff {
             id: format!("sample={} period=1 cycle={} experiment={}", self.sample, r.cycle + 1, r.experiment + 1),
             level: e.level.max(1),
             rt: r.time_min,
-            polarity: self.polarity,
+            polarity: self.polarity_of(&e),
             profile: true,
             filter: String::new(),
             precursor: e.precursor,
@@ -75,7 +75,7 @@ impl Wiff {
     }
 
     /// The chromatograms of the MRM blocks only (no scan is decoded).
-    pub fn chromatograms<R: ReadAt>(&self, scan: &mut R) -> Result<Vec<Chromatogram>> {
+    #[cfg(not(feature = "estesi"))] pub fn chromatograms<R: ReadAt>(&self, scan: &mut R) -> Result<Vec<Chromatogram>> {
         let mut mrm: Vec<Mrm> = (0..self.experiments.len().max(1)).map(|_| Mrm::default()).collect();
         for r in &self.records {
             if scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some() {
@@ -201,7 +201,7 @@ impl Wiff {
         }
     }
 
-    fn add_chromatograms(&self, chroms: &mut Vec<Chromatogram>, mrm: Vec<Mrm>) {
+    #[cfg(not(feature = "estesi"))] fn add_chromatograms(&self, chroms: &mut Vec<Chromatogram>, mrm: Vec<Mrm>) {
         let unit = "number of detector counts";
         for (e, Mrm { time, tic, cols }) in mrm.into_iter().enumerate().filter(|(_, m)| !m.time.is_empty()) {
             if chroms.is_empty() {
@@ -222,7 +222,7 @@ impl Wiff {
 }
 
 /// The MRM blocks of one experiment: times (min), TIC, and one column per transition.
-#[derive(Default)]
+#[derive(Default)] #[cfg_attr(feature = "estesi", allow(dead_code))]
 struct Mrm {
     time: Vec<f64>,
     tic: Vec<f64>,
@@ -234,3 +234,7 @@ struct Mrm {
 fn narrow(x: f64) -> f32 {
     x as f32
 }
+
+#[cfg(feature = "estesi")]
+#[path = "run_estesi.rs"]
+mod estesi_run;

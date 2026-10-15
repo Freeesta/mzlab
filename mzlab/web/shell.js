@@ -160,7 +160,9 @@ async function wiffToMzml(files,box){const rb=window.MZLAB_RUST_READY?await wind
     if(!(e.wiff&&e.scan)){if(dropped.has(k)){if(e.wiff)(res.lone=res.lone||[]).push({e,rb});else res.errs.push([T("load.wiffWait",{name:e.scan.name}),e.scan.name])}continue}      // a .wiff alone: after the loading it may turn out to be the method of an mzML (loneWiffs)
     WIFF_WAIT.delete(k);e.row=e.stem+".wiff";pairs.push(e);CONVROWS.add(e.row,"open")}
   for(const e of pairs){      // each sample (injection) is a file of the list: the .wiff and the .wiff.scan are read as they are
-    try{const mem=[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],s=(await rb.nativeSamples(mem)).samples,key=NATIVO.key(e.stem);
+    try{const mem=[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],M0=window.LETTORI_MOD,pr=M0&&window.LETTORI_FAM.sciex.sonda?await M0.probe("sciex",mem).catch(()=>null):null;      // the module looks at every pair first: the engine reads the 3200 QTRAP only, and a file of another instrument or scan type is for the module («variante»)
+      if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}];cs.forEach((x,i)=>{const nm=wiffName(e.stem,x.id,cs.length>1,taken);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex"))});CONVROWS.drop(e.row);continue}
+      const s=(await rb.nativeSamples(mem)).samples,key=NATIVO.key(e.stem);
       s.forEach((x,i)=>{const nm=wiffName(e.stem,x.id,s.length>1,taken);taken.push(nm);res.files.push(NATIVO.sample(nm,key,mem,i,x.id,false))})}
     catch(x){const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam));else res.errs.push([x.json?I18N.err(x.json).message:x.message,e.wiff.name])}
     CONVROWS.drop(e.row)}

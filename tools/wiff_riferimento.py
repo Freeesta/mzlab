@@ -6,6 +6,8 @@ Writes into OUT/ synthetic pairs in the layout of the 3200 QTRAP files (`one.wif
 product-ion scan, with a method; `two.wiff` + `.wiff.scan`: a scan sample and an MRM sample without method; `lonely.wiff`: no `.scan`; `serie.wiff`: 80 profile scans with a chromatographic peak; `prodotto.wiff`: two samples of product-ion scans: one precursor 305.0, and two (229.1, 305.0), no reference entry), built with
 tools/cfb_scrivi.py, and OUT/riferimento.json: what the reader must give (spectra with m/z = start + bin * step, intensity = count * scale; MRM
 chromatograms), computed here from the inputs with an encoder of the nibble stream that shares no code with the reader. No laboratory data is used.
+The variants of the readers module (feature `estesi`): `variante.wiff` (Log model QTRAP 5500; survey scan V1, enhanced product ion V3, precursor-ion scan V1, neutral-loss scan V1,
+under "variante" in the JSON) and the files the module refuses with `err.file.wiff` (under "rifiuti": name -> text of the `detail`): two periods, a TOF scan type, a TOF block, a block version 4.
 """
 import json
 import math
@@ -51,15 +53,19 @@ def encode(points) -> bytes:
     return bytes(nibs[i] << 4 | nibs[i + 1] for i in range(0, len(nibs), 2))
 
 
-def scan_block(points) -> bytes:
+RANGES = {1: [HEAD[:4]], 2: [HEAD[:4], HEAD[4:]], 3: [HEAD[:4], HEAD[4:], [320.02, 500.0, 0.06, 100000.0]]}  # the ranges of the block versions (the 3200 writes 2)
+
+
+def scan_block(points, version=2) -> bytes:
     data = encode(points)
-    block = MARKER + struct.pack("<8d", *HEAD) + struct.pack("<I", len(points)) + data
+    block = MARKER[:4] + struct.pack("<I", version) + b"".join(struct.pack("<4d", *r) for r in RANGES.get(version, RANGES[2])) + struct.pack("<I", len(points)) + data
     return block if points else block + bytes(4)
 
 
-def expected_scan(points):
-    mz = [HEAD[0] + b * HEAD[2] for b, _ in points]
-    return mz, [c * (HEAD[7] if m > HEAD[4] else HEAD[3]) for (_, c), m in zip(points, mz)]
+def expected_scan(points, version=2):
+    rs = RANGES[version]
+    mz = [rs[0][0] + b * rs[0][2] for b, _ in points]
+    return mz, [c * ([rs[0][3]] + [r[3] for r in rs[1:] if m > r[0]])[-1] for (_, c), m in zip(points, mz)]
 
 
 def idx_row(offset, size, time_ms, tic, n) -> bytes:
@@ -81,20 +87,22 @@ class Writer:
     def __init__(self):
         self.scan, self.streams, self.table, self.expect = bytearray(), {}, [], {}
 
-    def sample(self, n, blocks, method=None):
-        """blocks: [("scan", points, time_ms, tic) | ("mrm", values, time_ms, tic)] in file order."""
+    def sample(self, n, blocks, method=None, log=None):
+        """blocks: [("scan", points, time_ms, tic[, version]) | ("mrm", values, time_ms, tic)] in file order; `log`: the model of the Log; a method path that starts with `Period` is taken whole."""
         start = len(self.scan)
         self.scan += bytes(44)
         idx, off = bytearray(32), 0
-        for kind, content, t, tic in blocks:
-            block = scan_block(content) if kind == "scan" else struct.pack(f"<{len(content)}f", *content)
+        for kind, content, t, tic, *ver in blocks:
+            block = scan_block(content, *ver) if kind == "scan" else struct.pack(f"<{len(content)}f", *content)
             idx += idx_row(off, len(block), t, tic, len(content) if kind == "scan" else 0)
             self.scan += block
             off += len(block)
         self.table.append((n, start + 20))
         self.streams[f"SampleSubtree/Sample{n}/Idx"] = bytes(idx)
         for path, data in (method or {}).items():
-            self.streams[f"MethodSubtree/Method{n}/DeviceMethod0/Period0/{path}"] = data
+            self.streams[f"MethodSubtree/Method{n}/DeviceMethod0/{path if path.startswith('Period') else 'Period0/' + path}"] = data
+        if log:
+            self.streams[f"SampleSubtree/Sample{n}/Log"] = b"\0\0" + f"Mass Spectrometer: Config Table, Component ID: {log}, Version: 1".encode("utf-16le") + b"\0\0"
 
     def save(self, out: Path, name: str):
         t = bytearray(32)
@@ -111,9 +119,9 @@ LATE = [(1000, 0xFFFFFF), (1400, 0xFFFF)]
 MRM = [[1.5, 20000.25, 0.0], [3.0, 4.5e6, 12.0], [0.0, 0.0, 0.0], [7.25, 1.0, 99999.0]]
 
 
-def spectrum(id_, level, prec, t_ms, pts):
-    mz, it = expected_scan(pts)
-    return {"id": id_, "level": level, "precursor": prec, "rt": t_ms / 60000.0, "mz": mz, "intensity": it}
+def spectrum(id_, level, prec, t_ms, pts, version=2, term=None):
+    mz, it = expected_scan(pts, version)
+    return {"id": id_, "level": level, "precursor": prec, "rt": t_ms / 60000.0, "mz": mz, "intensity": it, "term": term}
 
 
 def main():
@@ -162,7 +170,54 @@ def main():
                 blocks.append(("scan", pts, t + 200 * e, float(sum(c for _, c in pts))))
         w.sample(n, blocks, {f"Experiment{e}/ExperimentHeader": header(11, pr) for e, pr in enumerate(precs)} | {"Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)})
     w.save(out, "prodotto")
-    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big}))
+    variante, rifiuti = variants(out)
+    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big, "variante": variante, "rifiuti": rifiuti}))
+
+
+def variants(out: Path):
+    """The files of the readers module. A QTRAP 5500 with four experiments (survey V1, enhanced product ion V3, precursor-ion scan V1, neutral-loss scan V1) over two cycles, and the refused files."""
+    ex = {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment1/ExperimentHeader": header(11, 55.5), "Experiment2/ExperimentHeader": header(5, 184.0),
+          "Experiment3/ExperimentHeader": header(7, 217.3), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
+    pts = {1: FULL, 3: PRODUCT, 5: [(5, 4), (6, 9), (400, 12000)], 7: [(70, 1), (71, 2), (72, 7), (900, 300)]}
+    blocks, want = [], []
+    for cycle in range(2):
+        for e, (code, level, prec, version, term) in enumerate([(15, 1, None, 1, None), (11, 2, 55.5, 3, None), (5, 2, 184.0, 1, ("MS:1000341", "precursor ion spectrum")),
+                                                                (7, 2, 217.3, 1, ("MS:1000326", "constant neutral loss spectrum"))]):
+            p = [pts[1], pts[3], pts[5], pts[7]][e]
+            p = p if not (e == 3 and cycle == 1) else []  # an empty block (no spectrum)
+            t = 1000.0 * cycle + 100.0 * e
+            blocks.append(("scan", p, t, float(sum(c for _, c in p)), version))
+            if p:
+                want.append(spectrum(f"sample=1 period=1 cycle={cycle + 1} experiment={e + 1}", level, prec, t, p, version, term))
+    w = Writer()
+    w.sample(1, blocks, ex, log="QTRAP 5500")
+    w.save(out, "variante")
+    variante = {"1": {"polarity": 1, "model": "QTRAP 5500", "spectra": want, "chromatograms": []}}
+    rifiuti = {}
+    one = [("scan", FULL, 1000.0, 1.0)]
+    w = Writer()  # two periods: the reader has no real file with one, so it refuses
+    w.sample(1, one, {"Experiment0/ExperimentHeader": header(15, 30.0), "Period1/Experiment0/ExperimentHeader": header(15, 30.0)}, log="QTRAP 6500+")
+    w.save(out, "periodi")
+    rifiuti["periodi"] = "periods=2"
+    w = Writer()  # a TOF MS experiment
+    w.sample(1, one, {"Experiment0/ExperimentHeader": header(8, 0.0)}, log="TripleTOF 6600")
+    w.save(out, "tof")
+    rifiuti["tof"] = "scan type code 8 (experiment 1)"
+    w = Writer()  # an unknown code
+    w.sample(1, one, {"Experiment0/ExperimentHeader": header(21, 0.0)}, log="QTRAP 5500")
+    w.save(out, "codice")
+    rifiuti["codice"] = "scan type code 21 (experiment 1)"
+    w = Writer()  # a block of the TOF family under a scan experiment
+    w.sample(1, one, {"Experiment0/ExperimentHeader": header(15, 30.0)}, log="QTRAP 5500")
+    w.scan[44:48] = b"\xff\xff\xff\xff"
+    w.save(out, "bloccotof")
+    rifiuti["bloccotof"] = "TOF block"
+    w = Writer()  # a scan block of a version nobody knows
+    w.sample(1, one, {"Experiment0/ExperimentHeader": header(15, 30.0)}, log="QTRAP 5500")
+    w.scan[48:52] = struct.pack("<I", 4)
+    w.save(out, "versione4")
+    rifiuti["versione4"] = "scan block version 4"
+    return variante, rifiuti
 
 
 if __name__ == "__main__":
