@@ -1,0 +1,33 @@
+# Shimadzu `.qgd` e `.lcd` (modulo `shimadzu`)
+
+Codice: `crates/mzlab-lettori/src/shimadzu/` (feature `shimadzu`, tetto 327 680 B), contenitore OLE2 letto con `mzlab-core/src/ole.rs`. Scritto dai file veri (7 `.qgd`/`.lcd` e altri del repository privato dei dati); la crate `openszraw` 0.3.0 (Apache-2.0) è stata letta solo per sapere dove stanno i flussi, non è la verità e non è copiata. Mai nei test o nei documenti: percorsi, nomi di persone o di metodi dei file veri.
+
+## Cosa legge
+- `.qgd` (GC/MS, GCMSsolution): scansioni EI e SIM; record MRM (GC-TQ) come cromatogrammi SRM. `.lcd` di un quadrupolo singolo (LCMS-2020/2050, storage `Mass Raw Data`): scansioni e SIM per evento. `.lcd` di un triplo quadrupolo (8030/8040/8050/8060, storage `TLM Raw Data`): MRM come cromatogrammi SRM, nessuno spettro.
+- `.lcd` Q-TOF / IT-TOF / 9030 (`QTFL RawData`): riconosciuto e rifiutato con `err.file.shimadzu` (`detail`): senza un mzML di msconvert non si può dimostrare che gli m/z siano entro 5 ppm. Un `.lcd` con solo `LSS Raw Data` (PDA) è `Fiducia::Forse` e viene rifiutato come «nessun dato di spettrometro». `.lcdx` non è letto (non verificato che sia lo stesso formato) e resta in `UNOPEN_RE`.
+- `riconosci` guarda i nomi della directory OLE (`dir.rs` legge pochi settori: intestazione, DIFAT, FAT, fino a 256 settori di directory; mai il file intero) e cerca `GCMS Raw Data`, `TLM Raw Data`, `Mass Raw Data` o `QTFL RawData` con la firma OLE: mai l'estensione sola. `scegli` prende il primo storage il cui `MS Raw Data` ha byte (gli altri esistono vuoti in ogni `.lcd`).
+
+## Flussi (stessi nomi in tutti e tre gli storage dei dati)
+`<storage>/MS Raw Data` (i record), `Spectrum Index`, `Retention Time` (u32 millisecondi per record), `TIC Data` (u64 per record). Il numero di record è `Retention Time / 4`.
+- **`.qgd`, `Spectrum Index`**: `4n` byte di u32, oppure `8n+2` byte (2 byte e `n` u64) nei file recenti; `rec::offset`. Il record i va da `off[i]` a `off[i+1]` (l'ultimo fino a fine flusso).
+- **`.qgd`, record**: testata di 32 byte; `kind` (u16) e `npk` (u16) stanno a 20 e 22 nei file con indice a 32 bit, a 24 e 26 negli altri (si sceglie guardando i primi 16 record, `carica::scansioni`). Punto = u16 m/z×20 e intensità di `w` byte little-endian, con `w = kind`; `kind ≥ 100` è MRM: `w = kind-100` e il punto è (u16 Q1×20, u16 Q3×20, intensità). Un record vale solo se la sua lunghezza è `32 + npk × (2 o 4 + w)`; gli altri sono contati in `illeggibili` e segnalati con un avviso.
+- **`.lcd` `Mass Raw Data`**: indice di u32; testata di 64 byte con l'evento (u16 a 8), `w` (u16 a 52), `npk` (u16 a 54); punto = u16 m/z×20 e `w` byte. L'evento è il segmento del metodo; la polarità non è decodificata (0).
+- **`.lcd` `TLM Raw Data`**: `Spectrum Index` di 24 byte per record (lunghezza, numero, offset a 8, …). Record = 12 byte (marcatore, dimensione non compressa, dimensione compressa) e un flusso zlib (`mrm.rs::record`, tetto 16 MB non compressi); dentro, testata di 44 byte (conteggio u32 a 40; byte 33 con i bit 6-7 = polarità: entrambi 1 negativo, entrambi 0 positivo) e `npk` punti di 12 byte (u32 Q1×100, u32 Q3×100, u32 conteggi).
+- Il TIC del flusso è la somma delle intensità decodificate: esatta su tutti i `.qgd` e `.lcd` 2020 provati (`tests/shimadzu_dati.rs`); è la sola prova interna, perché nel repository dei dati non c'è un mzML di msconvert né un `.cdf` di questi file.
+
+## Dall'indice agli spettri
+- Id `scan=<numero del record>`; filtro `EI scan` / `EI SIM` per `.qgd`, `Q1 event N scan` / `Q1 event N SIM` per `.lcd`. Una scansione con al più 64 m/z la cui lista (impronta FNV) si ripete in almeno 3 record è SIM (`carica::segna_sim`); è un'euristica non confermata da un riferimento. m/z = u16/20; `Spectrum.wide` solo se un'intensità supera 2^24.
+- MRM: un cromatogramma `ChromKind::Srm` per (Q1, Q3, polarità) con id `SRM SIC Q1=<q1> Q3=<q3> sample=1 period=1 experiment=1 transition=<j>` (come `wiff/run.rs`) e, se negativo, ` polarity=negative`. `CE` e tempo di attesa non sono decodificati: due transizioni con gli stessi Q1/Q3 e CE diverse si fonderebbero. Il lettore ha già cromatogrammi SRM, quindi `SrmDaScansioni` non ne aggiunge.
+- Tempi in minuti (`ms/60 000`). `Chromatogram` TIC con il flusso `TIC Data`.
+
+## Metodo e testata
+- `metodo/1` (`meta.rs`): `strumento` (modello da `GCMS Configuration/System` o dai flussi di sistema, es. «GCMS-QP2010»: è ciò che il file dichiara, anche per i QP2020NX), `software` (versione da `File Property`), `campione` (nome, id, vial, volume iniettato), `ms` (sorgente EI per il GC, periodi/esperimenti dagli eventi visti con intervallo m/z e, per l'MRM, le transizioni), `campi` (ogni campo letto dalla `File Property` o dall'XML delle proprietà `.lcd`).
+- **Identità**: operatore, «generatedBy», «modifiedBy», percorsi e nomi di file di dati/metodo/tune/batch sono `Campo::id()`: restano nel documento del lettore e **non** passano nell'mzML (`Header::run_params` porta il documento senza identità). Date: FILETIME riportati come il file li dice (`YYYY-MM-DDThh:mm:ss`, fuso sconosciuto).
+- `File Property` di un `.qgd` ha offset fissi (`prop.rs::qgd`): versione a 4, generatedBy a 20, data a 52, modifiedBy a 60, data a 92, versione del software a 148, nome del campione a 204, id a 236, operatore a 300, data di acquisizione a 508, file di dati a 580, di metodo a 836, di tune a 1092, di batch a 1604. Nei `.lcd` le proprietà sono XML (`@StoX@`/`@FtoX@` per i valori codificati).
+
+## Non decodificato (voci di `avvisi`, `meta.nonDecodificato`)
+`GC-2010/GC17A Instrument Parameters` (programma del forno e dell'iniettore), `GCMS Configuration`, `LSS Raw Data` e `PDA 3D Raw Data` (UV), `GUMM_Information`, `<storage>/Status`, `MS Status Data`, `Mass Parameters`, `Status Curve`, il metodo `.qgm` incorporato, i record di tipo 0x0e di un `.lcd` FIA (95 in un file) e 2 record di `kind` 101 di un `.qgd` che non rispettano la formula della lunghezza. Il testo non ASCII (CP932) diventa `?`.
+
+## Prove
+`cargo test -p mzlab-lettori --features shimadzu`: unitari dei moduli; `tests/shimadzu_sintetico.rs` (contenitori costruiti in `tests/comune/ole.rs` e `comune/shimadzu.rs`, numeri inventati); `tests/robustezza_shimadzu.rs` (troncamenti, byte e parole a 0xFFFFFFFF, tetti di `Limiti`); `tests/shimadzu_dati.rs` (file veri, si salta senza `MZLAB_DATI`). Pagina: `tests_e2e/e2e_shimadzu.py` con `tools/shimadzu_sintetico.py`.
+**Non verificato (nessun file vero con riferimento)**: parità degli m/z e delle intensità con msconvert o `.cdf`; polarità degli eventi `Mass Raw Data`; l'euristica SIM; il 9030 (rifiutato).

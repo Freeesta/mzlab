@@ -543,7 +543,7 @@ I18N.add("it", {
   "err.file.wiffNoScan": "Manca il file .wiff.scan di {name}: servono tutti e due, con lo stesso nome.",
   "err.file.wiffLoad": "Il motore di calcolo non si è caricato: ricarica la pagina (Ctrl/Cmd+Maiusc+R) e riprova.",
   "err.file.wiffEngine": "Il motore di calcolo non è pronto per leggere il .wiff: ricarica la pagina (Ctrl+Maiusc+R) e riprova.",
-  "err.file.wiff": "Il file SCIEX .wiff non si legge ({detail}).",
+  "err.file.wiff": "Il file SCIEX .wiff non si legge ({detail}).", "err.file.shimadzu": "Il file Shimadzu non si legge ({detail}).",
   "err.file.mzmlWrite": "Non riesco a scrivere l'mzML.",
   "err.file.unknown": "Il programma non ha ricevuto il file ({detail}): riprova a caricarlo.",
   "err.file.raw": "Il file .raw (Thermo) o la cartella .raw (Waters) non si legge: serve il file intero, con tutti i suoi file ({detail}).",

@@ -195,7 +195,7 @@ async function moduloToMzml(files,box,rep){
     finally{CONVROWS.drop(nm)}}
   out.panel=g;return out}
 let CONVERT_RAW=false;   // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
-const UNOPEN_RE=/\.(raw|wiff2?|wiff\.scan|d|lcd|lcdx)$/i;
+const UNOPEN_RE=/\.(raw|wiff2?|wiff\.scan|d|lcdx)$/i;
 function fileKind(name){const n=name.toLowerCase();if(/\.(mzml|dam)$/.test(n))return null;const M=window.LETTORI_MOD;if(M&&M.extensions().some(e=>n.endsWith(e)))return null;const m=UNOPEN_RE.exec(n);return m?m[0]:"other"}
 function ssGet(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
 function ssSet(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}
