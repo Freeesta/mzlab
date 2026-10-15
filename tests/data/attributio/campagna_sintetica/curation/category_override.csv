@@ -1,0 +1,3 @@
+pattern;canonical_name;category;decided_on;rationale
+fictanoid;Fictanoid (synthetic biomarker);illicit_drug;;Synthetic fixture row.
+fictstd-d3;Fictstd-d3 (synthetic internal standard);lab_artifact;;Synthetic fixture row.

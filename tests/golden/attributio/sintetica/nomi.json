@@ -1,0 +1,1488 @@
+{
+ "audit": {
+  "duplicates": [],
+  "shadow_hazards": []
+ },
+ "names": [
+  {
+   "classify": "natural",
+   "clean": "Caffeine",
+   "clean_canonical": [
+    "Caffeine",
+    "Caffeine"
+   ],
+   "identity": [
+    "Caffeine",
+    "ppcp"
+   ],
+   "identity_formula": [
+    "Caffeine",
+    "ppcp"
+   ],
+   "match_cec": [
+    "Caffeine",
+    "ppcp"
+   ],
+   "name": "Caffeine",
+   "noncec": null,
+   "raw_canonical": [
+    "Caffeine",
+    "Caffeine"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "caffeine",
+   "clean_canonical": [
+    "caffeine",
+    "caffeine"
+   ],
+   "identity": [
+    "Caffeine",
+    "ppcp"
+   ],
+   "identity_formula": [
+    "Caffeine",
+    "ppcp"
+   ],
+   "match_cec": [
+    "Caffeine",
+    "ppcp"
+   ],
+   "name": "caffeine [M+H]+",
+   "noncec": null,
+   "raw_canonical": [
+    "caffeine [M+H]+",
+    "caffeine [M+H]+"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Caffeine",
+   "clean_canonical": [
+    "Caffeine",
+    "Caffeine"
+   ],
+   "identity": [
+    "Caffeine",
+    "ppcp"
+   ],
+   "identity_formula": [
+    "Caffeine",
+    "ppcp"
+   ],
+   "match_cec": [
+    "Caffeine",
+    "ppcp"
+   ],
+   "name": "Caffeine M-H",
+   "noncec": null,
+   "raw_canonical": [
+    "Caffeine M-H",
+    "Caffeine M-H"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Fictacin B",
+   "clean_canonical": [
+    "Fictacin B",
+    "Fictacin B"
+   ],
+   "identity": [
+    "Fictacin B",
+    "natural"
+   ],
+   "identity_formula": [
+    "Fictacin B",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Fictacin B",
+   "noncec": null,
+   "raw_canonical": [
+    "Fictacin B",
+    "Fictacin B"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Fictamine isomer",
+   "clean_canonical": [
+    "Fictamine isomer",
+    "Fictamine isomer"
+   ],
+   "identity": [
+    "Fictamine isomer",
+    "natural"
+   ],
+   "identity_formula": [
+    "Fictamine isomer",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Fictamine isomer",
+   "noncec": null,
+   "raw_canonical": [
+    "Fictamine isomer",
+    "Fictamine isomer"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Fictastructin",
+   "clean_canonical": [
+    "Fictastructin",
+    "Fictastructin"
+   ],
+   "identity": [
+    "Fictastructin",
+    "natural"
+   ],
+   "identity_formula": [
+    "Fictastructin",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Fictastructin",
+   "noncec": null,
+   "raw_canonical": [
+    "Fictastructin",
+    "Fictastructin"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "TestStandardA",
+   "clean_canonical": [
+    "TestStandardA",
+    "TestStandardA"
+   ],
+   "identity": [
+    "TestStandardA",
+    "natural"
+   ],
+   "identity_formula": [
+    "TestStandardA",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "TestStandardA",
+   "noncec": null,
+   "raw_canonical": [
+    "TestStandardA",
+    "TestStandardA"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Fictazine isomer, RT 8.0 min",
+   "clean_canonical": [
+    "Fictazine isomer, RT 8.0 min",
+    "Fictazine isomer, RT 8.0 min"
+   ],
+   "identity": [
+    "Fictazine isomer, RT 8.0 min",
+    "natural"
+   ],
+   "identity_formula": [
+    "Fictazine isomer, RT 8.0 min",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Fictazine isomer, RT 8.0 min",
+   "noncec": null,
+   "raw_canonical": [
+    "Fictazine isomer, RT 8.0 min",
+    "Fictazine isomer, RT 8.0 min"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Caffeine isomer, RT 7.5 min",
+   "clean_canonical": [
+    "Caffeine isomer, RT 7.5 min",
+    "Caffeine isomer, RT 7.5 min"
+   ],
+   "identity": [
+    "Caffeine",
+    "ppcp"
+   ],
+   "identity_formula": [
+    "Caffeine",
+    "ppcp"
+   ],
+   "match_cec": [
+    "Caffeine",
+    "ppcp"
+   ],
+   "name": "Caffeine isomer, RT 7.5 min",
+   "noncec": null,
+   "raw_canonical": [
+    "Caffeine isomer, RT 7.5 min",
+    "Caffeine isomer, RT 7.5 min"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Massbank: Foo acid (LM6)|3-methyl-bar",
+   "clean_canonical": [
+    "Foo acid",
+    "Foo acid"
+   ],
+   "identity": [
+    "Massbank: Foo acid (LM6)|3-methyl-bar",
+    "natural"
+   ],
+   "identity_formula": [
+    "Massbank: Foo acid (LM6)|3-methyl-bar",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Massbank: Foo acid (LM6)|3-methyl-bar",
+   "noncec": null,
+   "raw_canonical": [
+    "Foo acid",
+    "Foo acid"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Foo bar (9CI)",
+   "clean_canonical": [
+    "Foo bar",
+    "Foo bar"
+   ],
+   "identity": [
+    "Foo bar (9CI)",
+    "natural"
+   ],
+   "identity_formula": [
+    "Foo bar (9CI)",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Foo bar (9CI)",
+   "noncec": null,
+   "raw_canonical": [
+    "Foo bar",
+    "Foo bar"
+   ]
+  },
+  {
+   "classify": "ambiguous",
+   "clean": "Foo (tentative) bar",
+   "clean_canonical": [
+    "Foo bar",
+    "Foo bar"
+   ],
+   "identity": [
+    "Foo (tentative) bar",
+    "ambiguous"
+   ],
+   "identity_formula": [
+    "Foo (tentative) bar",
+    "ambiguous"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Foo (tentative) bar",
+   "noncec": null,
+   "raw_canonical": [
+    "Foo bar",
+    "Foo bar"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Atcardil",
+   "clean_canonical": [
+    "Atenolol (beta-blocker)",
+    "Atenolol (beta-blocker)"
+   ],
+   "identity": [
+    "Atcardil",
+    "natural"
+   ],
+   "identity_formula": [
+    "Atcardil",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Atcardil",
+   "noncec": null,
+   "raw_canonical": [
+    "Atenolol (beta-blocker)",
+    "Atenolol (beta-blocker)"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "ATCARDIL",
+   "clean_canonical": [
+    "Atenolol (beta-blocker)",
+    "Atenolol (beta-blocker)"
+   ],
+   "identity": [
+    "ATCARDIL",
+    "natural"
+   ],
+   "identity_formula": [
+    "ATCARDIL",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "ATCARDIL",
+   "noncec": null,
+   "raw_canonical": [
+    "Atenolol (beta-blocker)",
+    "Atenolol (beta-blocker)"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "tudcabil",
+   "clean_canonical": [
+    "Tauroursodeoxycholic acid (bile acid, TUDCA)",
+    "Tauroursodeoxycholic acid (bile acid, TUDCA)"
+   ],
+   "identity": [
+    "tudcabil",
+    "natural"
+   ],
+   "identity_formula": [
+    "tudcabil",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "tudcabil",
+   "noncec": null,
+   "raw_canonical": [
+    "Tauroursodeoxycholic acid (bile acid, TUDCA)",
+    "Tauroursodeoxycholic acid (bile acid, TUDCA)"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "hexaethylene glycol",
+   "clean_canonical": [
+    "Hexaethylene glycol (PEG6)",
+    "Hexaethylene glycol (PEG6)"
+   ],
+   "identity": [
+    "hexaethylene glycol",
+    "natural"
+   ],
+   "identity_formula": [
+    "hexaethylene glycol",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "hexaethylene glycol",
+   "noncec": null,
+   "raw_canonical": [
+    "Hexaethylene glycol (PEG6)",
+    "Hexaethylene glycol (PEG6)"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Polyethylene glycol",
+   "clean_canonical": [
+    "PEG/polyether",
+    "PEG/polyether [C6H14O4]"
+   ],
+   "identity": [
+    "Polyethylene glycol",
+    "natural"
+   ],
+   "identity_formula": [
+    "Polyethylene glycol",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Polyethylene glycol",
+   "noncec": null,
+   "raw_canonical": [
+    "PEG/polyether",
+    "PEG/polyether [C6H14O4]"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "PEG [C12H26O7]",
+   "clean_canonical": [
+    "PEG/polyether [C12H26O7]",
+    "PEG/polyether [C6H14O4]"
+   ],
+   "identity": [
+    "PEG [C12H26O7]",
+    "natural"
+   ],
+   "identity_formula": [
+    "PEG [C12H26O7]",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "PEG [C12H26O7]",
+   "noncec": null,
+   "raw_canonical": [
+    "PEG/polyether [C12H26O7]",
+    "PEG/polyether [C6H14O4]"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "peg diol",
+   "clean_canonical": [
+    "PEG/polyether",
+    "PEG/polyether [C6H14O4]"
+   ],
+   "identity": [
+    "peg diol",
+    "natural"
+   ],
+   "identity_formula": [
+    "peg diol",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "peg diol",
+   "noncec": null,
+   "raw_canonical": [
+    "PEG/polyether",
+    "PEG/polyether [C6H14O4]"
+   ]
+  },
+  {
+   "classify": "ambiguous",
+   "clean": "Oprea1_123",
+   "clean_canonical": [
+    "(unresolved library code: Oprea1_123)",
+    "(unresolved library code: Oprea1_123)"
+   ],
+   "identity": [
+    "Oprea1_123",
+    "ambiguous"
+   ],
+   "identity_formula": [
+    "Oprea1_123",
+    "ambiguous"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Oprea1_123",
+   "noncec": null,
+   "raw_canonical": [
+    "(unresolved library code: Oprea1_123)",
+    "(unresolved library code: Oprea1_123)"
+   ]
+  },
+  {
+   "classify": "ambiguous",
+   "clean": "ncgc00123",
+   "clean_canonical": [
+    "(unresolved library code: ncgc00123)",
+    "(unresolved library code: ncgc00123)"
+   ],
+   "identity": [
+    "ncgc00123",
+    "ambiguous"
+   ],
+   "identity_formula": [
+    "ncgc00123",
+    "ambiguous"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "ncgc00123",
+   "noncec": null,
+   "raw_canonical": [
+    "(unresolved library code: ncgc00123)",
+    "(unresolved library code: ncgc00123)"
+   ]
+  },
+  {
+   "classify": "ambiguous",
+   "clean": "Z1234567",
+   "clean_canonical": [
+    "(unresolved library code: Z1234567)",
+    "(unresolved library code: Z1234567)"
+   ],
+   "identity": [
+    "Z1234567",
+    "ambiguous"
+   ],
+   "identity_formula": [
+    "Z1234567",
+    "ambiguous"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Z1234567",
+   "noncec": null,
+   "raw_canonical": [
+    "(unresolved library code: Z1234567)",
+    "(unresolved library code: Z1234567)"
+   ]
+  },
+  {
+   "classify": "ambiguous",
+   "clean": "Compound 12",
+   "clean_canonical": [
+    "Compound 12",
+    "Compound 12"
+   ],
+   "identity": [
+    "Compound 12",
+    "ambiguous"
+   ],
+   "identity_formula": [
+    "Compound 12",
+    "ambiguous"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Compound 12",
+   "noncec": null,
+   "raw_canonical": [
+    "Compound 12",
+    "Compound 12"
+   ]
+  },
+  {
+   "classify": "ambiguous",
+   "clean": "Compound12",
+   "clean_canonical": [
+    "Compound12",
+    "Compound12"
+   ],
+   "identity": [
+    "Compound12",
+    "ambiguous"
+   ],
+   "identity_formula": [
+    "Compound12",
+    "ambiguous"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Compound12",
+   "noncec": null,
+   "raw_canonical": [
+    "Compound12",
+    "Compound12"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "x",
+   "clean_canonical": [
+    "x",
+    "x"
+   ],
+   "identity": [
+    "x",
+    "natural"
+   ],
+   "identity_formula": [
+    "x",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "x [CCS=123.4] CollisionEnergy:30 [M+H]+",
+   "noncec": null,
+   "raw_canonical": [
+    "x [CCS=123.4] CollisionEnergy:30 [M+H]+",
+    "x [CCS=123.4] CollisionEnergy:30 [M+H]+"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Name",
+   "clean_canonical": [
+    "Name",
+    "Name"
+   ],
+   "identity": [
+    "Name",
+    "natural"
+   ],
+   "identity_formula": [
+    "Name",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Name CollisionEnergy:20",
+   "noncec": null,
+   "raw_canonical": [
+    "Name CollisionEnergy:20",
+    "Name CollisionEnergy:20"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Name",
+   "clean_canonical": [
+    "Name",
+    "Name"
+   ],
+   "identity": [
+    "Name",
+    "natural"
+   ],
+   "identity_formula": [
+    "Name",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Name [M-H]-",
+   "noncec": null,
+   "raw_canonical": [
+    "Name [M-H]",
+    "Name [M-H]"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Name",
+   "clean_canonical": [
+    "Name",
+    "Name"
+   ],
+   "identity": [
+    "Name",
+    "natural"
+   ],
+   "identity_formula": [
+    "Name",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Name M+H+",
+   "noncec": null,
+   "raw_canonical": [
+    "Name M+H+",
+    "Name M+H+"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Name [M+H+]",
+   "clean_canonical": [
+    "Name [M+H+]",
+    "Name [M+H+]"
+   ],
+   "identity": [
+    "Name [M+H+]",
+    "natural"
+   ],
+   "identity_formula": [
+    "Name [M+H+]",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Name [M+H+]",
+   "noncec": null,
+   "raw_canonical": [
+    "Name [M+H+]",
+    "Name [M+H+]"
+   ]
+  },
+  {
+   "classify": "ambiguous",
+   "clean": "Name (tentative)",
+   "clean_canonical": [
+    "Name",
+    "Name"
+   ],
+   "identity": [
+    "Name (tentative)",
+    "ambiguous"
+   ],
+   "identity_formula": [
+    "Name (tentative)",
+    "ambiguous"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Name (tentative)",
+   "noncec": null,
+   "raw_canonical": [
+    "Name",
+    "Name"
+   ]
+  },
+  {
+   "classify": "ambiguous",
+   "clean": "zinc123",
+   "clean_canonical": [
+    "zinc123",
+    "zinc123"
+   ],
+   "identity": [
+    "zinc123",
+    "ambiguous"
+   ],
+   "identity_formula": [
+    "zinc123",
+    "ambiguous"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "zinc123",
+   "noncec": null,
+   "raw_canonical": [
+    "zinc123",
+    "zinc123"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Ketamine",
+   "clean_canonical": [
+    "Ketamine",
+    "Ketamine"
+   ],
+   "identity": [
+    "Ketamine",
+    "pharma"
+   ],
+   "identity_formula": [
+    "Ketamine",
+    "pharma"
+   ],
+   "match_cec": [
+    "Ketamine",
+    "pharma"
+   ],
+   "name": "Ketamine",
+   "noncec": null,
+   "raw_canonical": [
+    "Ketamine",
+    "Ketamine"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "norketamine",
+   "clean_canonical": [
+    "norketamine",
+    "norketamine"
+   ],
+   "identity": [
+    "norketamine",
+    "natural"
+   ],
+   "identity_formula": [
+    "norketamine",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "norketamine",
+   "noncec": null,
+   "raw_canonical": [
+    "norketamine",
+    "norketamine"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "calypsol",
+   "clean_canonical": [
+    "calypsol",
+    "calypsol"
+   ],
+   "identity": [
+    "Ketamine",
+    "pharma"
+   ],
+   "identity_formula": [
+    "Ketamine",
+    "pharma"
+   ],
+   "match_cec": [
+    "Ketamine",
+    "pharma"
+   ],
+   "name": "calypsol",
+   "noncec": null,
+   "raw_canonical": [
+    "calypsol",
+    "calypsol"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "metoprolol",
+   "clean_canonical": [
+    "metoprolol",
+    "metoprolol"
+   ],
+   "identity": [
+    "Metoprolol",
+    "pharma"
+   ],
+   "identity_formula": [
+    "Metoprolol",
+    "pharma"
+   ],
+   "match_cec": [
+    "Metoprolol",
+    "pharma"
+   ],
+   "name": "metoprolol",
+   "noncec": null,
+   "raw_canonical": [
+    "metoprolol",
+    "metoprolol"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "metoprolol acid",
+   "clean_canonical": [
+    "metoprolol acid",
+    "metoprolol acid"
+   ],
+   "identity": [
+    "Beta-blocker acid (synthetic)",
+    "pharma"
+   ],
+   "identity_formula": [
+    "Beta-blocker acid (synthetic)",
+    "pharma"
+   ],
+   "match_cec": [
+    "Beta-blocker acid (synthetic)",
+    "pharma"
+   ],
+   "name": "metoprolol acid",
+   "noncec": null,
+   "raw_canonical": [
+    "metoprolol acid",
+    "metoprolol acid"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "dutoprol",
+   "clean_canonical": [
+    "dutoprol",
+    "dutoprol"
+   ],
+   "identity": [
+    "Metoprolol",
+    "pharma"
+   ],
+   "identity_formula": [
+    "Metoprolol",
+    "pharma"
+   ],
+   "match_cec": [
+    "Metoprolol",
+    "pharma"
+   ],
+   "name": "dutoprol",
+   "noncec": null,
+   "raw_canonical": [
+    "dutoprol",
+    "dutoprol"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "xmetoprolol",
+   "clean_canonical": [
+    "xmetoprolol",
+    "xmetoprolol"
+   ],
+   "identity": [
+    "xmetoprolol",
+    "natural"
+   ],
+   "identity_formula": [
+    "xmetoprolol",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "xmetoprolol",
+   "noncec": null,
+   "raw_canonical": [
+    "xmetoprolol",
+    "xmetoprolol"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "EXP-3174",
+   "clean_canonical": [
+    "EXP-3174",
+    "EXP-3174"
+   ],
+   "identity": [
+    "Carboxylosartan",
+    "pharma"
+   ],
+   "identity_formula": [
+    "Carboxylosartan",
+    "pharma"
+   ],
+   "match_cec": [
+    "Carboxylosartan",
+    "pharma"
+   ],
+   "name": "EXP-3174",
+   "noncec": null,
+   "raw_canonical": [
+    "EXP-3174",
+    "EXP-3174"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "exp3174",
+   "clean_canonical": [
+    "exp3174",
+    "exp3174"
+   ],
+   "identity": [
+    "Carboxylosartan",
+    "pharma"
+   ],
+   "identity_formula": [
+    "Carboxylosartan",
+    "pharma"
+   ],
+   "match_cec": [
+    "Carboxylosartan",
+    "pharma"
+   ],
+   "name": "exp3174",
+   "noncec": null,
+   "raw_canonical": [
+    "exp3174",
+    "exp3174"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "carboxylosartan",
+   "clean_canonical": [
+    "carboxylosartan",
+    "carboxylosartan"
+   ],
+   "identity": [
+    "Carboxylosartan",
+    "pharma"
+   ],
+   "identity_formula": [
+    "Carboxylosartan",
+    "pharma"
+   ],
+   "match_cec": [
+    "Carboxylosartan",
+    "pharma"
+   ],
+   "name": "carboxylosartan",
+   "noncec": null,
+   "raw_canonical": [
+    "carboxylosartan",
+    "carboxylosartan"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "carboxy-losartan acid",
+   "clean_canonical": [
+    "carboxy-losartan acid",
+    "carboxy-losartan acid"
+   ],
+   "identity": [
+    "Carboxylosartan",
+    "pharma"
+   ],
+   "identity_formula": [
+    "Carboxylosartan",
+    "pharma"
+   ],
+   "match_cec": [
+    "Carboxylosartan",
+    "pharma"
+   ],
+   "name": "carboxy-losartan acid",
+   "noncec": null,
+   "raw_canonical": [
+    "carboxy-losartan acid",
+    "carboxy-losartan acid"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "trifloxystrobin cga 321113",
+   "clean_canonical": [
+    "trifloxystrobin cga 321113",
+    "trifloxystrobin cga 321113"
+   ],
+   "identity": [
+    "Trifloxystrobin acid",
+    "fungicide"
+   ],
+   "identity_formula": [
+    "Trifloxystrobin acid",
+    "fungicide"
+   ],
+   "match_cec": [
+    "Trifloxystrobin acid",
+    "fungicide"
+   ],
+   "name": "trifloxystrobin cga 321113",
+   "noncec": null,
+   "raw_canonical": [
+    "trifloxystrobin cga 321113",
+    "trifloxystrobin cga 321113"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "trifloxystrobin cga321113",
+   "clean_canonical": [
+    "trifloxystrobin cga321113",
+    "trifloxystrobin cga321113"
+   ],
+   "identity": [
+    "Trifloxystrobin acid",
+    "fungicide"
+   ],
+   "identity_formula": [
+    "Trifloxystrobin acid",
+    "fungicide"
+   ],
+   "match_cec": [
+    "Trifloxystrobin acid",
+    "fungicide"
+   ],
+   "name": "trifloxystrobin cga321113",
+   "noncec": null,
+   "raw_canonical": [
+    "trifloxystrobin cga321113",
+    "trifloxystrobin cga321113"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "7-oxodehydroabietic",
+   "clean_canonical": [
+    "7-oxodehydroabietic",
+    "7-oxodehydroabietic"
+   ],
+   "identity": [
+    "Resin acid (synthetic)",
+    "industrial"
+   ],
+   "identity_formula": [
+    "Resin acid (synthetic)",
+    "industrial"
+   ],
+   "match_cec": [
+    "Resin acid (synthetic)",
+    "industrial"
+   ],
+   "name": "7-oxodehydroabietic",
+   "noncec": null,
+   "raw_canonical": [
+    "7-oxodehydroabietic",
+    "7-oxodehydroabietic"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "7-oxocallitrisic",
+   "clean_canonical": [
+    "7-oxocallitrisic",
+    "7-oxocallitrisic"
+   ],
+   "identity": [
+    "Resin acid (synthetic)",
+    "industrial"
+   ],
+   "identity_formula": [
+    "Resin acid (synthetic)",
+    "industrial"
+   ],
+   "match_cec": [
+    "Resin acid (synthetic)",
+    "industrial"
+   ],
+   "name": "7-oxocallitrisic",
+   "noncec": null,
+   "raw_canonical": [
+    "7-oxocallitrisic",
+    "7-oxocallitrisic"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "fictbase",
+   "clean_canonical": [
+    "fictbase",
+    "fictbase"
+   ],
+   "identity": [
+    "fictbase",
+    "natural"
+   ],
+   "identity_formula": [
+    "fictbase",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "fictbase",
+   "noncec": null,
+   "raw_canonical": [
+    "fictbase",
+    "fictbase"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "fictbaseine",
+   "clean_canonical": [
+    "fictbaseine",
+    "fictbaseine"
+   ],
+   "identity": [
+    "Fictbase",
+    "herbicide"
+   ],
+   "identity_formula": [
+    "Fictbase",
+    "herbicide"
+   ],
+   "match_cec": [
+    "Fictbase",
+    "herbicide"
+   ],
+   "name": "fictbaseine",
+   "noncec": null,
+   "raw_canonical": [
+    "fictbaseine",
+    "fictbaseine"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "fictbaseineine",
+   "clean_canonical": [
+    "fictbaseineine",
+    "fictbaseineine"
+   ],
+   "identity": [
+    "Fictbase",
+    "herbicide"
+   ],
+   "identity_formula": [
+    "Fictbase",
+    "herbicide"
+   ],
+   "match_cec": [
+    "Fictbase",
+    "herbicide"
+   ],
+   "name": "fictbaseineine",
+   "noncec": null,
+   "raw_canonical": [
+    "fictbaseineine",
+    "fictbaseineine"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Fictanoid x",
+   "clean_canonical": [
+    "Fictanoid x",
+    "Fictanoid x"
+   ],
+   "identity": [
+    "Fictanoid (synthetic biomarker)",
+    "illicit_drug"
+   ],
+   "identity_formula": [
+    "Fictanoid (synthetic biomarker)",
+    "illicit_drug"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Fictanoid x",
+   "noncec": [
+    "Fictanoid (synthetic biomarker)",
+    "illicit_drug"
+   ],
+   "raw_canonical": [
+    "Fictanoid x",
+    "Fictanoid x"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "fictstd-d3",
+   "clean_canonical": [
+    "fictstd-d3",
+    "fictstd-d3"
+   ],
+   "identity": [
+    "Fictstd-d3 (synthetic internal standard)",
+    "lab_artifact"
+   ],
+   "identity_formula": [
+    "Fictstd-d3 (synthetic internal standard)",
+    "lab_artifact"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "fictstd-d3",
+   "noncec": [
+    "Fictstd-d3 (synthetic internal standard)",
+    "lab_artifact"
+   ],
+   "raw_canonical": [
+    "fictstd-d3",
+    "fictstd-d3"
+   ]
+  },
+  {
+   "classify": "ambiguous",
+   "clean": "",
+   "clean_canonical": [
+    "",
+    ""
+   ],
+   "identity": [
+    "Unidentified (no name available)",
+    "ambiguous"
+   ],
+   "identity_formula": [
+    "Unidentified (CSI:FingerID structure, formula C1H2O3)",
+    "ambiguous"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "  ",
+   "noncec": null,
+   "raw_canonical": [
+    "",
+    ""
+   ]
+  },
+  {
+   "classify": "ambiguous",
+   "clean": "",
+   "clean_canonical": [
+    "",
+    ""
+   ],
+   "identity": [
+    "Unidentified (no name available)",
+    "ambiguous"
+   ],
+   "identity_formula": [
+    "Unidentified (CSI:FingerID structure, formula C1H2O3)",
+    "ambiguous"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "",
+   "noncec": null,
+   "raw_canonical": [
+    "",
+    ""
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Atenolol acid",
+   "clean_canonical": [
+    "Atenolol acid",
+    "Atenolol acid"
+   ],
+   "identity": [
+    "Beta-blocker acid (synthetic)",
+    "pharma"
+   ],
+   "identity_formula": [
+    "Beta-blocker acid (synthetic)",
+    "pharma"
+   ],
+   "match_cec": [
+    "Beta-blocker acid (synthetic)",
+    "pharma"
+   ],
+   "name": "Atenolol acid",
+   "noncec": null,
+   "raw_canonical": [
+    "Atenolol acid",
+    "Atenolol acid"
+   ]
+  },
+  {
+   "classify": "ambiguous",
+   "clean": "cid:123",
+   "clean_canonical": [
+    "(unresolved library code: cid:123)",
+    "(unresolved library code: cid:123)"
+   ],
+   "identity": [
+    "cid:123",
+    "ambiguous"
+   ],
+   "identity_formula": [
+    "cid:123",
+    "ambiguous"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "cid:123",
+   "noncec": null,
+   "raw_canonical": [
+    "(unresolved library code: cid:123)",
+    "(unresolved library code: cid:123)"
+   ]
+  },
+  {
+   "classify": "natural",
+   "clean": "Sulfamethoxazole (antibiotic)",
+   "clean_canonical": [
+    "Sulfamethoxazole (antibiotic)",
+    "Sulfamethoxazole (antibiotic)"
+   ],
+   "identity": [
+    "Sulfamethoxazole (antibiotic)",
+    "natural"
+   ],
+   "identity_formula": [
+    "Sulfamethoxazole (antibiotic)",
+    "natural"
+   ],
+   "match_cec": [
+    null,
+    null
+   ],
+   "name": "Sulfamethoxazole (antibiotic)",
+   "noncec": null,
+   "raw_canonical": [
+    "Sulfamethoxazole (antibiotic)",
+    "Sulfamethoxazole (antibiotic)"
+   ]
+  }
+ ],
+ "unnamed": {
+  "blank_given": [
+   "Caffeine",
+   "ppcp"
+  ],
+  "formula": [
+   "Unidentified (CSI:FingerID structure, formula C9H9)",
+   "ambiguous"
+  ],
+  "given": [
+   "Given",
+   "ppcp"
+  ],
+  "none": [
+   "Unidentified (no name available)",
+   "ambiguous"
+  ]
+ }
+}
