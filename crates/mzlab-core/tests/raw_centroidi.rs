@@ -1,6 +1,8 @@
 //! A `.raw` scan that has a centroid list comes out as centroids (`Spectrum::profile` false, every peak of the list kept), also when the acquisition is
 //! profile ("FTMS + p"); a profile scan without a list comes out as its profile. Skipped without `MZLAB_DATI` (private data repository).
 
+#![allow(clippy::disallowed_methods)] // the file names are sorted with the standard sort
+
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
