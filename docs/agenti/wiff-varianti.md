@@ -30,6 +30,6 @@ Il motore del sito legge solo il 3200 QTRAP (`wiff.md`). Le varianti stanno nell
 
 ## Prove
 - `tools/wiff_riferimento.py`: `variants(out)` scrive `variante.wiff` (QTRAP 5500, blocchi V1 e V3, EPI, PIS, NL, un blocco vuoto) e i file da rifiutare (`periodi`, `tof`, `codice`, `bloccotof`, `versione4`), con i valori attesi in `riferimento.json`.
-- `tests/wiff_varianti.rs` (feature `estesi`): sintetici, rifiuti, danni (ogni byte sovrascritto: nessun panico), e con `MZLAB_DATI` i file veri (`dati_formati/sciex_wiff`, `scansioni_speciali`): 32 file, 388 campioni letti, 6 rifiutati (TOF e `.wiff2`), TIC dell'indice sempre uguale; confronto con gli mzML ProteoWizard di PIS/NL (3594 spettri) e MRM (108 cromatogrammi, 94 programmati); `metodo/1` (nome, finestra, `rt_min`, versione, DAD).
+- `tests/wiff_varianti.rs` (feature `estesi`): sintetici, rifiuti, danni (ogni byte sovrascritto: nessun panico); `tests/wiff_varianti_reali.rs`: con `MZLAB_DATI` i file veri (`dati_formati/sciex_wiff`, `scansioni_speciali`): 32 file, 388 campioni letti, 6 rifiutati (TOF e `.wiff2`), TIC dell'indice sempre uguale; confronto con gli mzML ProteoWizard di PIS/NL (3594 spettri) e MRM (108 cromatogrammi, 94 programmati); `metodo/1` (nome, finestra, `rt_min`, versione, DAD).
 - `tests_e2e/e2e_wiff.py`: la coppia sintetica «variante» passa dal modulo `sciex`.
 - Mancano file veri di: periodi multipli, MS3, EMC/ER, scansioni Q1/Q3, EPI con precursore (la massa a +42 è del metodo), TripleTOF/ZenoTOF (codec dei blocchi TOF).

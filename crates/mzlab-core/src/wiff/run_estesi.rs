@@ -6,44 +6,6 @@ use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
 
-/// The MRM blocks of one experiment: per transition, the times (min) and cps of the scans that acquired it.
-#[derive(Default)]
-struct Experiment {
-    cols: Vec<(Vec<f64>, Vec<f64>)>,
-}
-
-/// The blocks of all the MRM experiments: the times and TIC of every block, and the experiments.
-struct Blocks {
-    time: Vec<f64>,
-    tic: Vec<f64>,
-    experiments: Vec<Experiment>,
-}
-
-impl Blocks {
-    fn new(experiments: usize) -> Self {
-        Blocks {
-            time: Vec::new(),
-            tic: Vec::new(),
-            experiments: (0..experiments).map(|_| Experiment::default()).collect(),
-        }
-    }
-
-    fn add(&mut self, r: &Record, c: scan::Cols) {
-        self.time.push(r.time_min);
-        self.tic.push(r.tic);
-        let Some(e) = self.experiments.get_mut(r.experiment) else {
-            return;
-        };
-        if e.cols.len() < c.width {
-            e.cols.resize_with(c.width, Default::default);
-        }
-        for (j, x) in c.points {
-            e.cols[j].0.push(r.time_min);
-            e.cols[j].1.push(x);
-        }
-    }
-}
-
 impl Wiff {
     /// True when block `r` is one of an experiment that has no scans or transitions to give (a scan experiment's row without data).
     fn is_empty_row(&self, r: &Record) -> bool {
@@ -143,5 +105,43 @@ impl Wiff {
             }
         }
         chroms
+    }
+}
+
+/// The MRM blocks of one experiment: per transition, the times (min) and cps of the scans that acquired it.
+#[derive(Default)]
+struct Experiment {
+    cols: Vec<(Vec<f64>, Vec<f64>)>,
+}
+
+/// The blocks of all the MRM experiments: the times and TIC of every block, and the experiments.
+struct Blocks {
+    time: Vec<f64>,
+    tic: Vec<f64>,
+    experiments: Vec<Experiment>,
+}
+
+impl Blocks {
+    fn new(experiments: usize) -> Self {
+        Blocks {
+            time: Vec::new(),
+            tic: Vec::new(),
+            experiments: (0..experiments).map(|_| Experiment::default()).collect(),
+        }
+    }
+
+    fn add(&mut self, r: &Record, c: scan::Cols) {
+        self.time.push(r.time_min);
+        self.tic.push(r.tic);
+        let Some(e) = self.experiments.get_mut(r.experiment) else {
+            return;
+        };
+        if e.cols.len() < c.width {
+            e.cols.resize_with(c.width, Default::default);
+        }
+        for (j, x) in c.points {
+            e.cols[j].0.push(r.time_min);
+            e.cols[j].1.push(x);
+        }
     }
 }
