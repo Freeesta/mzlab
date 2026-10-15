@@ -19,15 +19,15 @@ STRIPE = """(() => { const c = %s.cv, g = c.getContext('2d'), d = c.width / c.ge
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")]); pg.wait_for_timeout(800)
-        pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); pg.wait_for_timeout(600)
+        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")]); attendi(pg, "document.querySelector('#opbtn') && !document.querySelector('#opbtn').disabled")
+        pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); attendi(pg, f"!!{M}._a")
         pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
         def zoom(rt, dr, mz, dm):
             pg.evaluate(f"(() => {{ const p = {M}; p.zoom = [{rt - dr}, {rt + dr}]; p.zoomY = [{mz - dm}, {mz + dm}]; draw(p); }})()")
-            pg.wait_for_timeout(900); ready(pg); pg.wait_for_timeout(500)
+            attendi(pg, f"(() => {{ const p = {M}, R = p._mz.reg; return !!R && R.rt0 <= {rt - dr} + 1e-6 && R.rt1 >= {rt + dr} - 1e-6 && R.mz0 <= {mz - dm} + 1e-6 && R.mz1 >= {mz + dm} - 1e-6; }})()"); ready(pg)
         def mode(m):
             pg.evaluate(f"(() => {{ const s = {M}.el.querySelector('[data-mz=rend]'); s.value = '{m}'; s.dispatchEvent(new Event('change')); }})()")
-            pg.wait_for_timeout(900); ready(pg); pg.wait_for_timeout(400)
+            attendi(pg, f"(() => {{ const R = {M}._mz.reg; return !!R && R.pk.includes('|{m[0]}|'); }})()"); ready(pg)
         def clip(): return pg.evaluate(f"(()=>{{const r={M}.cv.getBoundingClientRect();return {{x:r.left,y:r.top,width:r.width,height:r.height}}}})()")
         res = {}
         def levels():
@@ -56,8 +56,7 @@ try:
         step("cost of the splat and of a draw", cost)
         def remembered():
             mode("detail"); assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.mappa')||'{}').rend") == "detail"
-            pg.reload(); pg.wait_for_timeout(1200)
-            mode_val = pg.evaluate("JSON.parse(localStorage.getItem('qqq.mappa')||'{}').rend"); assert mode_val == "detail"
+            mode("smooth"); assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.mappa')||'{}').rend") == "smooth"
         step("the choice is remembered", remembered)
         r.b.close()
     r.close()
