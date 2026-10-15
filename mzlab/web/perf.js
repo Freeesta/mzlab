@@ -81,8 +81,8 @@
   // ---- the box
   const css = document.createElement("style");
   css.textContent = `#perfbox{position:fixed;left:8px;bottom:8px;z-index:20000;width:420px;max-width:calc(100vw - 16px);max-height:55vh;display:flex;flex-direction:column;
-    background:var(--panel,#fff);color:var(--fg,#222);border:1px solid var(--border,#999);border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,.25);font:12px/1.35 ui-monospace,Menlo,Consolas,monospace}
-    #perfbox header{display:flex;gap:6px;align-items:center;padding:4px 6px;border-bottom:1px solid var(--border,#999)}#perfbox header b{flex:1}
+    background:var(--panel,#fff);color:var(--ink,#222);border:1px solid var(--line,#999);border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,.25);font:12px/1.35 ui-monospace,Menlo,Consolas,monospace}
+    #perfbox header{display:flex;gap:6px;align-items:center;padding:4px 6px;border-bottom:1px solid var(--line,#999)}#perfbox header b{flex:1}
     #perfbox button{font:inherit;padding:1px 7px;cursor:pointer}#perfbox pre{margin:0;padding:6px;overflow:auto;white-space:pre;flex:1}`;
   document.head.appendChild(css);
   const box = document.createElement("div");
