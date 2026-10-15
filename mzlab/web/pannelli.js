@@ -887,6 +887,7 @@ function openXic(panel, pre = {}) {
     if (keep) ff.forEach(f => { if (f !== keep) traces.forEach(t => { np.hid["x|" + f.k + "|" + t.mz] = true; }); });
     if (np === panel) draw(np); else if (!(pre.after && E.panels.includes(pre.after))) reveal(np);
   };
+  if (pre.diretto) return Q("#xic-go").onclick(null);       // no dialog: the same rows, windows and panel as the dialog gives (pre.diretto: a caller that already knows the ion, e.g. the inclusion list of the method)
   d.showModal();
   rows[0].inp.focus();
 }

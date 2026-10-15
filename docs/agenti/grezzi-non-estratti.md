@@ -14,6 +14,9 @@ Regola: nessuna perdita di informazione dei file grezzi (`.wiff`, `.raw`, `.dam`
 - Tune: i valori «Tune Data» e la calibrazione di massa stanno nello schema del trailer (già in `campi`), il file di tune di base nel testo del metodo (`grezzo`, `InitialTuneFile`). Un blocco di tune a parte (LTQ/TSQ) non è stato verificato su file veri: finché non si prova, non si dichiara estratto.
 - Il nome del computer e i percorsi sono scritti nel `<run>` dell'mzML (userParam `opentfraw.*`); il documento `metodo/1` che porta li riporta con `operatore`, `strumento.serie` e i campi marcati `identita`.
 
+- Metodo incorporato, ancora non estratto (nessun file dello strumento sotto mano per misurare il testo): LC di Dionex Chromatography MS Link, Proxeon EASY-nLC, Accela/LegacyDualPump/Surveyor e Waters ACQUITY (`lc` resta vuoto, i testi interi sono in `grezzo` e ogni riga dello script in `campi`); esperimenti delle trappole lineari (LTQ, Velos, Elite, Orbitrap XL: «Scan Event N» e impostazioni dipendenti, solo in `grezzo`); `AuditData` e `Header` dei flussi OLE. Il motivo è lo stesso: il formato del testo si decodifica sul testo vero, mai a indovinare.
+- Colonna cromatografica: i file letti non la portano, quindi `lc.colonna` non esiste e non si inventa.
+
 ## SCIEX `.wiff` / `.dam`
 - Non decodificati: PDA/UV 3D del `.wiff` (flussi `DAD*`: di `DADSampleHeader` è letta l'intestazione, in `campi`; i valori di `DADIdx` e `DADRealTimeData` no, perché manca un file UV di riferimento), tracce `Devices/Device_N/DevData` (analogiche, pressione), `DDERealTimeData` (IDA), blocchi dei TripleTOF/ZenoTOF (altro codec, rifiutati), binari `MSConfigInfo*`, `MassSpecMethod*`, `ExperimentHeader*Ex`, `PeriodStream*`, `CycleDepParam`.
 - Calibrazione di massa e risoluzione (`GLPTables`) e stringhe di `DabsInfo`/`SampleTable`: in `metodo/1.campi` dal modulo `sciex`; stato del Log a inizio e fine corsa, audit CFR, ora di acquisizione per campione: non estratti.

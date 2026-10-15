@@ -488,7 +488,7 @@ I18N.add("en", {
   "method.doc.source": "Source",
   "method.doc.pmax": "Maximum pressure",
   "method.doc.fields": "All fields of the file ({n})",
-  "method.doc.log": "Instrument log",
+  "method.doc.log": "Instrument log", "method.doc.btn.xic": "XIC", "method.doc.btn.xic.tip": "Extract the XIC of m/z {mz} (unit window or ppm, like the other XICs)", "method.doc.btn.ms2": "MS2", "method.doc.btn.ms2.tip": "Open the MS² scan of the precursor m/z {mz} closest to RT {rt} min", "method.doc.btn.ms2.none": "No MS² scan of this precursor inside the RT window of the entry", "method.doc.btn.ms2.nodda": "This file has no MS² scans to open", "method.doc.incl.title": "Inclusion list", "method.doc.incl.note": "As written in the method: the precursors the instrument was asked to fragment, not a list of compounds found.", "method.doc.incl.rt": "RT (min)", "method.doc.incl.pol": "Polarity", "method.doc.incl.pos": "positive", "method.doc.incl.neg": "negative", "method.doc.incl.ce": "NCE", "method.doc.incl.name": "Name", "method.doc.incl.formula": "Formula", "method.doc.incl.species": "Species", "method.doc.incl.act": "Actions", "method.doc.isol": "Isolation window", "method.doc.solvent": "Solvent {ch}",
   "cart.ignored": "{n} files ignored (format not recognised).",
   "cart.ignored.one": "1 file ignored (format not recognised).",
   "cartp.forget": "Forget the folder",
