@@ -170,6 +170,11 @@ impl Rows {
         }
     }
 
+    /// Level and polarity of the row added last: what the `.mzidx` builder groups the scan by (the text of an extra can say more than the scan does).
+    pub(crate) fn ultima(&self) -> Option<(u8, i8)> {
+        self.rows.last().map(|r| (r.level, r.polarity))
+    }
+
     /// From the header of a run, without writing it (`Head::da_testata`); `None` when the text would be needed.
     pub(crate) fn da_testata(h: &Header) -> Option<Rows> {
         Head::da_testata(h).map(Rows::with)

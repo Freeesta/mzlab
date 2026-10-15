@@ -56,12 +56,9 @@ fn tabella(l: &mut dyn Lettore, c: usize, mut prima: Option<&mut Prima>) -> Resu
             rows.spectrum(0, 0, &mzmlwrite::spectrum_head(k, &s, &extra));
         }
         if let Some(p) = prima.as_deref_mut() {
-            let pol = match s.polarity {
-                1 => 1,
-                -1 => -1,
-                _ => 0,
-            };
-            p.add(s.level, pol, &s)?;
+            // the level and polarity of the row, as `build` reads them from the table
+            let (level, pol) = rows.ultima().unwrap_or((s.level, 0));
+            p.add(level, pol, &s)?;
         }
     }
     let mut n_chromatograms = 0;
