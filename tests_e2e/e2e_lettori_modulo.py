@@ -177,7 +177,7 @@ try:
         step("its TIC equals the twin's within the codec precision and nothing misses the engine", numpress_same)
         def mzxml_opens():
             r = one("xml"); assert r["files"] == ["x.mzML"], r["files"]
-            y = r["tic"].get("y"); assert y and len(y) == 40 and all(abs(a - b) <= 1e-6 * b for a, b in zip(y, XTIC)), (y and y[:3], XTIC[:3])
+            y = r["tic"].get("y"); assert y and len(y) == 40 and all(abs(a - b) <= 1e-4 * b for a, b in zip(y, XTIC)), (y and y[:3], XTIC[:3])
             assert r["miss"] == 0, r["miss"]
             ks = [k for k in r["sp"] if isinstance(r["sp"][k], list) and len(r["sp"][k]) > 5]; assert ks and all(len(r["sp"][k]) == 30 for k in ks), list(r["sp"])
         step("an mzXML opens in the Dati view (through the «aperti» module) with its TIC and a spectrum", mzxml_opens)

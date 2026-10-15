@@ -14,7 +14,7 @@ fn testo(o: Opz) -> String {
 }
 
 #[test]
-fn un_offset_dell_indice_fuori_dal_file_o_sbagliato_ricade_sulla_passata() {
+fn gli_offset_dell_indice_non_contano_le_scansioni_vengono_dalla_passata() {
     let buono = testo(PIATTO);
     for danno in [
         ("<offset id=\"1\">", "<offset id=\"1\">9"),
@@ -27,21 +27,6 @@ fn un_offset_dell_indice_fuori_dal_file_o_sbagliato_ricade_sulla_passata() {
     }
     let fuori = buono.replacen("<indexOffset>", "<indexOffset>9999999", 1);
     assert_eq!(apri_mzxml(fuori.into_bytes()).campioni()[0].scansioni, 5);
-}
-
-#[test]
-fn un_offset_che_non_punta_a_una_scansione_e_un_errore_con_chiave() {
-    let b = testo(PIATTO);
-    // ascending but inside scan 2: only reading the scan shows it
-    let valore = |id: u32| {
-        let da = b.find(&format!("<offset id=\"{id}\">")).unwrap() + 15;
-        let fine = da + b[da..].find('<').unwrap();
-        (da, fine, b[da..fine].parse::<usize>().unwrap())
-    };
-    let (_, _, due) = valore(2);
-    let (da, fine, _) = valore(3);
-    let rotto = format!("{}{}{}", &b[..da], due + 3, &b[fine..]);
-    assert_eq!(errore_mzxml(rotto.into_bytes()), "err.file.xml");
 }
 
 #[test]
@@ -239,5 +224,46 @@ fn ogni_mzxml_vero_dice_quello_che_dice_il_suo_mzml() {
                 );
             }
         }
+    }
+}
+
+/// Every real mzXML of the data repository (no mzML beside it): scans counted, peaks sorted and finite, the header read.
+#[test]
+fn i_mzxml_veri_si_aprono_e_i_conti_tornano() {
+    let Some(d) = dati() else {
+        eprintln!("SKIP aperti_mzxml: no data repository (MZLAB_DATI)");
+        return;
+    };
+    for e in std::fs::read_dir(d.join("dati_formati/mzXML"))
+        .into_iter()
+        .flatten()
+        .flatten()
+    {
+        let p = e.path();
+        if !p
+            .extension()
+            .is_some_and(|x| x.eq_ignore_ascii_case("mzxml"))
+        {
+            continue;
+        }
+        let nome = p.file_name().unwrap().to_string_lossy().into_owned();
+        let mut l = apri_mzxml(std::fs::read(&p).unwrap());
+        let n = l.campioni()[0].scansioni;
+        assert!(n > 0, "{nome}");
+        let attese = [("PXD070375", 1096), ("PXD005665", 5344)];
+        if let Some((_, v)) = attese.iter().find(|(k, _)| nome.starts_with(k)) {
+            assert_eq!(n, *v, "{nome}");
+        }
+        let tic: Vec<f64> = l.indice(0).unwrap().iter().map(|v| v.tic).collect();
+        for k in (0..n).step_by((n / 20).max(1)) {
+            let s = l.scansione(0, k).unwrap();
+            assert!(s.mz.windows(2).all(|w| w[0] <= w[1]), "{nome} scan {k}");
+            assert!(
+                (0..s.mz.len()).all(|i| s.intensity_f64(i).is_finite() && s.mz[i] > 0.0),
+                "{nome} scan {k}"
+            );
+            assert!(tic[k].is_finite() && tic[k] >= 0.0, "{nome} scan {k} tic");
+        }
+        assert!(l.metodo(0).unwrap().contains("\"mzxml\""), "{nome}");
     }
 }

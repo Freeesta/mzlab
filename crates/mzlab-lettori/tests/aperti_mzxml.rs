@@ -6,7 +6,7 @@ mod comune;
 
 use comune::mzxml::*;
 use comune::{insieme, mzml_scritto};
-use mzlab_core::lettori::{Fiducia, Lettore};
+use mzlab_core::lettori::Fiducia;
 use mzlab_core::mzml::ChromKind;
 
 fn opzioni() -> Vec<Opz> {

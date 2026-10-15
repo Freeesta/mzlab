@@ -7,7 +7,7 @@ use mzlab_core::metodo::{self, obj, text, Source, SrcFile, V};
 use mzlab_core::metodo_campi::Campo;
 use mzlab_core::mzmlwrite::Header;
 
-use super::mzml_testata::tag_di;
+use super::mzxml_scan::{attr, each, nome, tags, Tag};
 
 /// The most fields kept from a header.
 const CAMPI_MAX: usize = 2000;
@@ -22,8 +22,8 @@ pub(super) struct Cabina {
     pub(super) rivelatore: Option<String>,
     /// (name, version) of the programs that acquired and processed the data.
     pub(super) software: Vec<(String, String)>,
-    /// (name, SHA-1, type) of the `parentFile` elements.
-    pub(super) file: Vec<(String, String, String)>,
+    /// (name, SHA-1) of the `parentFile` elements.
+    pub(super) file: Vec<(String, String)>,
     pub(super) utente: Option<String>,
     /// The `centroided` of `dataProcessing`.
     pub(super) centroidi: Option<bool>,
@@ -49,36 +49,26 @@ fn ultimo(n: &str) -> &str {
 }
 
 /// The fields of one element: `category`/`value` pairs (`msModel`…) are one field, any other attribute is one.
-fn campi_di(o: &str, nome: &str, attr: &[(String, String)], dest: &mut Vec<Campo>) {
-    let identita = nome == "operator";
-    let cat = attr.iter().find(|(k, _)| k == "category");
-    if let (Some((_, c)), Some((_, v))) = (cat, attr.iter().find(|(k, _)| k == "value")) {
-        let f = Campo::new(o, c, v);
-        dest.push(match mappa(c) {
+fn campi_di(o: &str, n: &str, g: Tag, dest: &mut Vec<Campo>) {
+    let (cat, val) = (attr(g, "category"), attr(g, "value"));
+    if !cat.is_empty() && !val.is_empty() {
+        let f = Campo::new(o, cat, val);
+        dest.push(match mappa(cat) {
             Some(m) => f.map(m),
             None => f,
         });
         return;
     }
-    for (k, v) in attr {
+    each(g, &mut |k, v| {
         let f = Campo::new(o, k, v);
-        let f = match (nome, k.as_str()) {
-            ("parentFile", "fileName") if percorso(v) => f.id(),
-            _ if identita => f.id(),
-            _ => f,
-        };
-        dest.push(f);
-    }
+        let identita = n == "operator" || (n == "parentFile" && k == "fileName" && percorso(v));
+        dest.push(if identita { f.id() } else { f });
+    });
 }
 
-fn annota(c: &mut Cabina, nome: &str, g: &[(String, String)]) {
-    let v = |k: &str| {
-        g.iter()
-            .find(|(n, _)| n == k)
-            .map(|(_, v)| v.trim().to_string())
-            .filter(|v| !v.is_empty())
-    };
-    match nome {
+fn annota(c: &mut Cabina, n: &str, g: Tag) {
+    let v = |k: &str| Some(attr(g, k).trim().to_string()).filter(|v| !v.is_empty());
+    match n {
         "msManufacturer" => c.produttore = v("value"),
         "msModel" => c.modello = v("value"),
         "msIonisation" => c.ionizzazione = v("value"),
@@ -92,11 +82,9 @@ fn annota(c: &mut Cabina, nome: &str, g: &[(String, String)]) {
         "parentFile" => c.file.push((
             v("fileName").unwrap_or_default(),
             v("fileSha1").unwrap_or_default(),
-            v("fileType").unwrap_or_default(),
         )),
         "operator" => {
-            let nome = [v("first"), v("last")].into_iter().flatten();
-            let n: Vec<String> = nome.collect();
+            let n: Vec<String> = [v("first"), v("last")].into_iter().flatten().collect();
             c.utente = (!n.is_empty()).then(|| n.join(" "));
         }
         "dataProcessing" => c.centroidi = v("centroided").map(|x| x == "1" || x == "true"),
@@ -107,31 +95,34 @@ fn annota(c: &mut Cabina, nome: &str, g: &[(String, String)]) {
 /// The cabin of `head`, the text of the file before its first scan.
 pub(super) fn leggi(head: &str, limiti: &Limiti) -> Result<Cabina> {
     let mut c = Cabina::default();
-    let mut pila: Vec<String> = Vec::new();
-    for g in tag_di(head) {
-        if g.chiusura {
+    let mut pila: Vec<&str> = Vec::new();
+    let mut errore = None;
+    tags(head, &mut |g, _| {
+        let n = nome(g);
+        if n.starts_with('/') {
             pila.pop();
-            continue;
+            return true;
         }
-        let o = format!(
-            "mzxml:{}",
-            pila.iter()
-                .chain([&g.nome])
-                .cloned()
-                .collect::<Vec<_>>()
-                .join("/")
-        );
-        if c.campi.len() < CAMPI_MAX && g.nome != "mzXML" {
-            campi_di(&o, &g.nome, &g.attr, &mut c.campi);
+        if c.campi.len() < CAMPI_MAX && n != "mzXML" {
+            let mut o = String::from("mzxml:");
+            for p in &pila {
+                o.push_str(p);
+                o.push('/');
+            }
+            o.push_str(n);
+            campi_di(&o, n, g, &mut c.campi);
         }
-        annota(&mut c, &g.nome, &g.attr);
-        if !g.vuoto {
-            limiti.profondita_ok(pila.len() + 1)?;
-            pila.push(g.nome);
+        annota(&mut c, n, g);
+        if !g.ends_with('/') {
+            if let Err(e) = limiti.profondita_ok(pila.len() + 1) {
+                errore = Some(e);
+                return false;
+            }
+            pila.push(n);
         }
-    }
-    mzlab_core::sortc::slice_by_key(&mut c.campi, |f| (f.origine.clone(), f.chiave.clone()));
-    Ok(c)
+        true
+    });
+    errore.map_or(Ok(c), Err)
 }
 
 /// The `metodo/1` document of the file `nome` (`dim` bytes, `sha1` when read).
@@ -198,7 +189,7 @@ pub(super) fn header(c: &Cabina, nome: &str, sha1: Option<String>, doc: String) 
                 .push((k.to_string(), acc.to_string(), format!("{nome_cv}: {v}")));
         }
     }
-    for (n, sha, _) in &c.file {
+    for (n, sha) in &c.file {
         h.sources.push(ultimo(n).to_string());
         h.source_sha1.push(sha.clone());
     }
