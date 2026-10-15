@@ -57,7 +57,7 @@ SHA = """async n => { const rb = await window.MZLAB_RUST_READY, f = CONV.files.g
 res = {}
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None)
+        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None, args=["--unlimited-storage"])       # the big .raw is copied into OPFS: a headless browser can have a small quota
         thermo = []; pg = page(b, thermo)
         def opens():
             pg.set_input_files("#pick", str(raw))
@@ -106,6 +106,25 @@ try:
               try { await rb.nativeSamples([{ name: "rotto.raw", blob }]); return { ok: true }; } catch (e) { return { ok: false, key: e.json && e.json.error_key, message: String(e.message) }; } }""", head)
             assert not r["ok"] and str(r["key"]).startswith("err.file."), r
         step("a truncated .raw is refused", broken)
+        def baf():
+            # the big DDA (595 MB, 56 061 scans) opens in the site and the map appears; skipped when the file is not around
+            cands = [os.environ.get("MZLAB_RAW_BAF")] + [str(Path(d) / "dati_formati" / "thermo_raw" / "BAF_GEE_37.raw") for d in (os.environ.get("MZLAB_DATI"), str(ROOT.parent / "mzlab-dati")) if d]
+            big = next((Path(c) for c in cands if c and Path(c).is_file()), None)
+            if big is None:
+                print("   SKIP e2e_thermo_modulo BAF: the big .raw is not around (MZLAB_RAW_BAF)"); return
+            pg4 = page(b, [])
+            room = pg4.evaluate("navigator.storage.estimate().then(e => e.quota - e.usage)")
+            if room < 1.8 * big.stat().st_size:       # the page copies the file into OPFS and says «not enough space» (the quota of a headless browser can be small): not a fault of the reader
+                print(f"   SKIP e2e_thermo_modulo BAF: the browser has {room >> 20} MB of storage for a file of {big.stat().st_size >> 20} MB"); return
+            pg4.set_input_files("#pick", str(big))
+            pg4.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=600000)
+            pg4.click("#opbtn"); pg4.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=900000)
+            pg4.wait_for_function("(() => { const l = document.querySelector('#loading'); return !l || l.hidden; })()", timeout=600000)
+            pg4.click("#np-map", timeout=600000); pg4.wait_for_selector(".pnl.map canvas", timeout=600000)
+            pg4.wait_for_function("(() => { const m = E.panels.find(q => q.type === 'map'); return !!m && !!m.cv && m.cv.width > 0; })()", timeout=600000)
+            miss = [m for m in pg4.evaluate("window.MZLAB_LR_MISS || []") if "api/spectrum" not in m]
+            assert not miss, miss
+        step("the big DDA .raw (BAF) opens and the map appears, MZLAB_LR_MISS stays empty", baf)
         b.close()
 finally:
     srv.terminate()
