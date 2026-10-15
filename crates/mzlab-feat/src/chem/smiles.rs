@@ -252,7 +252,8 @@ pub(super) fn fill(raw: &[RawAtom], bonds: &[Bond]) -> Vec<Atom> {
         .enumerate()
         .map(|(i, r)| {
             let h = r.h.unwrap_or_else(|| {
-                let extra = if r.arom && (r.el == "C" || r.el == "N") {
+                // a substituted aromatic nitrogen (pyrrole type, three bonds) gives its lone pair, not a ring electron: it carries no hydrogen
+                let extra = if r.arom && (r.el == "C" || (r.el == "N" && used[i] < 3.0)) {
                     1.0
                 } else {
                     0.0
