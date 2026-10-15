@@ -21,8 +21,10 @@ try:
         pg.click("#nav [data-v=theory]"); pg.wait_for_selector("#stbar [data-tcmd=indice]", timeout=15000)
         def theory_bar():
             ids = pg.eval_on_selector_all("#stbar [data-tcmd]", "e=>e.map(x=>x.dataset.tcmd)")
-            assert ids == ["indice", "prec", "succ", "impostazioni"], ids
+            assert ids == ["indice", "succ", "impostazioni"], ids
             for dead in ("calc", "losses", "adducts", "lists", "more", "search"): assert pg.locator(f"#stbar [data-cmd={dead}]").count() == 0, dead
+            kinds = pg.eval_on_selector_all("#stbar > *", "e=>e.map(x=>x.classList.contains('tb-sep')?'|':'b')"); j = "".join(kinds)
+            assert "||" not in j and not j.startswith("|") and not j.endswith("|"), j   # no doubled or end separators
             assert not pg.is_visible("#newrun") and not pg.is_visible("#sb-toggle")
             for b in pg.locator("#stbar .tb").all(): bb = b.bounding_box(); assert bb["height"] >= 24 and bb["width"] >= 24, bb
         step("Teoria tab: only the commands of the Teoria; no «Nuova sessione», no side-panel toggle", theory_bar)

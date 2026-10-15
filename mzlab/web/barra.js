@@ -469,16 +469,16 @@ const BARRA = (() => {
   function theoryCmds() {
     const T = tcmd(); if (!T) return [];
     const ed = theoryEditor();
-    return /** @type {any[]} */ (ed ? [{ id: "editor", teo: true, end: false, group: "tools", etichetta: I18N.t("theory.editor"), titolo: I18N.t("theory.editor.title"), chiave: "Alt+E", off: false, ic: () => EDIT_IC, run: () => ed.toggle() }] : []).concat(T.lista.map(c => ({ id: c.id, teo: true, end: c.gruppo === "fine", lat: c.posto === "side", premuto: c.premuto, group: "tools", etichetta: c.etichetta, titolo: c.titolo || c.etichetta, chiave: c.chiave, off: !!c.disabilitato,
+    return /** @type {any[]} */ (ed ? [{ id: "editor", teo: true, end: false, group: "tools", etichetta: I18N.t("theory.editor"), titolo: I18N.t("theory.editor.title"), chiave: "Alt+E", off: false, ic: () => EDIT_IC, run: () => ed.toggle() }] : []).concat(T.lista.map(c => ({ id: c.id, teo: true, end: c.gruppo === "fine", lat: c.posto === "side", premuto: c.premuto, group: "tools", etichetta: c.etichetta, titolo: c.titolo || c.etichetta, chiave: c.chiave, off: !!c.disabilitato, hide: !!c.nascosto, testo: c.testo, after: !!c.dopo,
       ic: () => T.icona(c.icona), run: () => c.run(), items: c.figli && c.figli.map(f => ({ id: f.id, teo: true, group: "tools", etichetta: f.etichetta, ic: () => T.icona(c.icona), run: () => f.run() })) })));
   }
-  const theoryAll = () => theoryCmds().flatMap(c => (c.items ? c.items : [c]));       // the palette finds the tools one by one
+  const theoryAll = () => theoryCmds().filter(c => !c.hide).flatMap(c => (c.items ? c.items : [c]));       // the palette finds the tools one by one
   function buildTheoryBar(bar) {
     const sep = '<span class="tb-sep" role="separator"></span>';
-    const cs = theoryCmds().filter(c => !c.end && !c.lat);
+    const cs = theoryCmds().filter(c => !c.end && !c.lat && !c.hide);
     const gear = theoryCmds().find(c => c.end);
-    const one = c => `<button type="button" class="tb" data-tcmd="${c.id}"${c.off ? ' aria-disabled="true"' : ""}${c.premuto ? ` aria-pressed="${c.premuto()}"` : ""} title="${EHs(c.titolo)}" aria-label="${EHs(c.etichetta + (c.chiave ? " (" + c.chiave + ")" : ""))}"${c.items ? ' aria-haspopup="menu" aria-expanded="false"' : ""}><span class="ti">${c.ic()}</span><span class="tl">${EHs(c.etichetta)}</span></button>`;
-    bar.innerHTML = cs.filter(c => c.id === "indice" || c.id === "prec" || c.id === "succ").map(one).join("") + sep + cs.filter(c => c.id !== "indice" && c.id !== "prec" && c.id !== "succ").map(one).join("") + (gear ? sep + one(gear) : "");
+    const one = c => `<button type="button" class="tb" data-tcmd="${c.id}"${c.off ? ' aria-disabled="true"' : ""}${c.premuto ? ` aria-pressed="${c.premuto()}"` : ""} title="${EHs(c.titolo)}" aria-label="${EHs(c.testo ? c.titolo : c.etichetta + (c.chiave ? " (" + c.chiave + ")" : ""))}"${c.items ? ' aria-haspopup="menu" aria-expanded="false"' : ""}>${c.after ? `<span class="tl">${EHs(c.testo || c.etichetta)}</span><span class="ti">${c.ic()}</span>` : `<span class="ti">${c.ic()}</span><span class="tl">${EHs(c.testo || c.etichetta)}</span>`}</button>`;
+    bar.innerHTML = cs.filter(c => c.id === "indice" || c.id === "prec" || c.id === "succ").map(one).join("") + [cs.filter(c => c.id !== "indice" && c.id !== "prec" && c.id !== "succ").map(one).join(""), gear ? one(gear) : ""].filter(Boolean).map(g => sep + g).join("");   // one separator between groups, none at the ends or doubled
     bar.querySelectorAll("button[data-tcmd]").forEach(b => {
       const c = cs.concat(gear || []).find(x => x.id === b.dataset.tcmd);
       b.tabIndex = -1;

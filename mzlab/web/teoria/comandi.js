@@ -57,8 +57,8 @@
   const TCMD = {
     lista: [
       { id: "indice", icona: "indice", etichetta: "Indice", titolo: "Mostra/nascondi indice", gruppo: "nav", chiave: "F", premuto: () => (narrow.matches ? !!$("#side.open") : !(window.QA11Y && QA11Y.read().noside)), run: indice },
-      { id: "prec", icona: "prec", etichetta: "Precedente", titolo: prevC ? "Precedente: " + nm(prevC) : "", gruppo: "nav", href: prevC && prevC[0], disabilitato: !prevC, run: () => prevC && go(prevC[0]) },
-      { id: "succ", icona: "succ", etichetta: "Successivo", titolo: nextC ? "Successivo: " + nm(nextC) : "", gruppo: "nav", href: nextC && nextC[0], disabilitato: !nextC, run: () => nextC && go(nextC[0]) },
+      { id: "prec", icona: "prec", etichetta: "Precedente", testo: prevC ? prevC[1] : "", titolo: prevC ? "Precedente: " + nm(prevC) : "", gruppo: "nav", href: prevC && prevC[0], nascosto: !prevC, run: () => prevC && go(prevC[0]) },
+      { id: "succ", icona: "succ", etichetta: "Successivo", testo: nextC ? nextC[1] : "", dopo: true, titolo: nextC ? "Successivo: " + nm(nextC) : "", gruppo: "nav", href: nextC && nextC[0], nascosto: !nextC, run: () => nextC && go(nextC[0]) },
       { id: "cerca", posto: "side", icona: "cerca", etichetta: "Cerca", titolo: "Cerca nella Teoria (" + (mac ? "⌘K" : "Ctrl+K") + ")", gruppo: "uso", chiave: mac ? "⌘K" : "Ctrl K", run: () => T().cerca && T().cerca() },
       { id: "glossario", posto: "side", icona: "glossario", etichetta: "Glossario", titolo: "Glossario e bibliografia", gruppo: "uso", href: "21-glossario.html", run: () => go("21-glossario.html") },
       { id: "formule", posto: "side", icona: "formule", etichetta: "Formule", titolo: "Formulario per l'orale", gruppo: "uso", href: "22-formulario.html", run: () => go("22-formulario.html") },
@@ -112,8 +112,9 @@
     const el = document.createElement(c.href && !c.disabilitato ? "a" : "button");
     if (el.tagName === "BUTTON") el.type = "button"; else el.href = c.href;
     el.className = "tb"; el.id = "tc-" + c.id; el.dataset.cmd = c.id;
-    el.innerHTML = svg(c.icona) + `<span class="l">${c.etichetta}</span>` + (c.figli ? '<span class="l car" aria-hidden="true">▾</span>' : "");
-    el.setAttribute("aria-label", c.etichetta + (c.chiave ? " (" + c.chiave + ")" : "")); el.title = c.titolo || c.etichetta;
+    const l = `<span class="l">${c.testo || c.etichetta}</span>`;
+    el.innerHTML = (c.dopo ? l + svg(c.icona) : svg(c.icona) + l) + (c.figli ? '<span class="l car" aria-hidden="true">▾</span>' : "");
+    el.setAttribute("aria-label", c.testo ? c.titolo : c.etichetta + (c.chiave ? " (" + c.chiave + ")" : "")); el.title = c.titolo || c.etichetta;
     if (c.disabilitato) { el.setAttribute("aria-disabled", "true"); el.tabIndex = -1; }
     if (c.premuto) { el.setAttribute("aria-pressed", String(c.premuto())); document.addEventListener("tcmd-stato", () => el.setAttribute("aria-pressed", String(c.premuto()))); }
     if (!c.figli && el.tagName === "BUTTON") el.onclick = () => { c.run(); if (c.premuto) el.setAttribute("aria-pressed", String(c.premuto())); };
@@ -122,7 +123,7 @@
   const sep = () => { const s = document.createElement("span"); s.className = "tsep"; s.setAttribute("aria-hidden", "true"); return s; };
 
   const cmd = id => TCMD.per(id);
-  const put = (id, parent = bar) => { const el = btn(cmd(id)); parent.appendChild(el); return el; };
+  const put = (id, parent = bar) => { if (cmd(id).nascosto) return null; const el = btn(cmd(id)); parent.appendChild(el); return el; };   // no previous at the first chapter, no next at the last: the button is absent
   if (!phone) {   // on a phone the index button sits in the fixed bar of lettura.js, previous / next too
     const n = document.createElement("span"); n.className = "tgrp"; n.id = "tnav"; ["indice", "prec", "succ"].forEach(id => put(id, n)); bar.appendChild(n); bar.appendChild(sep());
   }
@@ -148,7 +149,7 @@
   function cbar() {
     const cb = $("#cbar"); if (!cb || $("#cb-nav", cb)) return;
     const g = document.createElement("span"); g.id = "cb-nav";
-    ["prec", "succ"].forEach(id => { const c = cmd(id), el = btn(c); el.id = "cb-" + id; g.appendChild(el); });
+    ["prec", "succ"].forEach(id => { const c = cmd(id); if (c.nascosto) return; const el = btn(c); el.id = "cb-" + id; g.appendChild(el); });
     cb.insertBefore(g, $("#prog", cb));
   }
   TCMD.cbar = cbar;
