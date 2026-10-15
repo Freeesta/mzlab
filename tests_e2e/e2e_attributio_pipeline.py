@@ -45,7 +45,11 @@ names = sorted(p.name for p in data.glob("*.mzidx"))
 
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1); errs = []
+errs = []
+import threading, urllib.request
+for _ in range(100):      # ready as soon as the server answers
+    try: urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1).read(); break
+    except Exception: threading.Event().wait(0.1)
 URL = f"http://127.0.0.1:{PORT}/"
 PUT = """async (names) => {
   let d = await navigator.storage.getDirectory();
