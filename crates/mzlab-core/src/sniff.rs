@@ -79,7 +79,8 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
         None,
     )?;
     let v = json::parse(info.as_bytes())?;
-    let parts = file_parts(&idx.scans, facts.srm > 0, crate::infusione::con_msn(&idx.scans, facts.lc, file_name));
+    let kind = v.get("kind").and_then(|x| x.str()).unwrap_or("");
+    let parts = if kind == "infusion" { vec![] } else { file_parts(&idx.scans, facts.srm > 0) };
     let mut prec: Vec<i64> = idx
         .scans
         .iter()
@@ -92,7 +93,7 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
     let hrp = hr_profile(idx, &mut m.r, &facts.instrument)?;
     let mut o = Out::default();
     o.raw("{\"kind\":")
-        .str(v.get("kind").and_then(|x| x.str()).unwrap_or(""))
+        .str(kind)
         .raw(",\"scans\":")
         .int(v.get("scans").and_then(|x| x.f64()).unwrap_or(0.0) as i64);
     o.raw(",\"srm\":")
@@ -106,7 +107,6 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
             .str(match p.mode {
                 "ms1" => "Full Scan",
                 "ms2" => "MS2",
-                "infusion" => "MSn infusion",
                 _ => "MRM",
             });
         o.raw(",\"pol\":");

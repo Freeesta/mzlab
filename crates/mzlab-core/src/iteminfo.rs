@@ -50,14 +50,13 @@ pub struct Meta {
 /// One experiment of a MIXED file.
 #[derive(Debug, Clone)]
 pub struct Part {
-    pub mode: &'static str, // "ms1" | "ms2" | "mrm" | "infusion" (every level of an MSn infusion)
+    pub mode: &'static str, // "ms1" | "ms2" | "mrm"
     pub pol: Option<i8>,
     pub tag: String,
 }
 
 /// The experiments of a mixed file (survey + product ions, MRM + EPI, positive + negative), or empty when the file has only one.
-/// An MSn infusion (`infusion`, see `infusione::con_msn`) is never split into survey and product ions, only by polarity.
-pub fn file_parts(scans: &[Scan], has_srm: bool, infusion: bool) -> Vec<Part> {
+pub fn file_parts(scans: &[Scan], has_srm: bool) -> Vec<Part> {
     let pols: Vec<i8> = {
         let mut v: Vec<i8> = scans
             .iter()
@@ -70,18 +69,10 @@ pub fn file_parts(scans: &[Scan], has_srm: bool, infusion: bool) -> Vec<Part> {
     };
     let split = pols.len() > 1;
     let mut parts = vec![];
-    let groups: &[(&'static str, &str, Option<bool>)] = if infusion {
-        &[("infusion", "MSn", None)]
-    } else {
-        &[("ms1", "MS1", Some(false)), ("ms2", "MS2", Some(true))]
-    };
-    for &(mode, name, level2) in groups {
+    for (mode, name, level2) in [("ms1", "MS1", false), ("ms2", "MS2", true)] {
         let sel: Vec<&Scan> = scans
             .iter()
-            .filter(|s| match level2 {
-                None => true,
-                Some(l2) => (s.level >= 2) == l2 && (l2 || s.level == 1),
-            })
+            .filter(|s| (s.level >= 2) == level2 && (level2 || s.level == 1))
             .collect();
         if sel.is_empty() {
             continue;
@@ -139,7 +130,6 @@ pub fn part_label(part: &Part, scans: &[Scan]) -> String {
     let (name, head) = match part.mode {
         "ms1" => ("Full Scan", "MS1"),
         "mrm" => ("MRM", "MRM"),
-        "infusion" => ("MSn infusion", "MSn"),
         _ if dda => ("DDA", "MS2"),
         _ => ("MS2", "MS2"),
     };
@@ -153,10 +143,10 @@ pub(crate) fn matches(s: &Scan, part: Option<&Part>) -> bool {
     {
         return false;
     }
-    match p.mode {
-        "ms1" => s.level == 1,
-        "infusion" => true,
-        _ => s.level >= 2,
+    if p.mode == "ms1" {
+        s.level == 1
+    } else {
+        s.level >= 2
     }
 }
 
@@ -469,10 +459,9 @@ pub fn item_info<R: ReadAt>(
         Some(p) => match p.mode {
             "ms1" => "full",
             "ms2" => "ms2",
-            "infusion" => "infusion",
             _ => "mrm",
         },
-        None if crate::infusione::con_msn(&idx.scans, facts.lc, &meta.file) => "infusion",
+        None if all.len() > n1 && msn.as_ref().is_some_and(|m| m.motivo != "rt_costante") => "infusion",
         None if all.len() - n1 > 0 => "ms2",
         None if n1 > 0 => "full",
         None if facts.srm > 0 => "mrm",

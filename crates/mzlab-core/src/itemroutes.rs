@@ -11,9 +11,8 @@ use crate::mzmlhead::{Chrom, Mzml};
 use crate::routes::Routes;
 
 /// The scans of the item `file` (`name` or `name#tag`): the experiment of a mixed file, else all.
-fn item_scans<'a, R: ReadAt>(idx: &'a Index<R>, chroms: &[Chrom], file: &str, lc: Option<bool>) -> (Option<Part>, Vec<&'a Scan>) {
-    let infusion = crate::infusione::con_msn(&idx.scans, lc, file);
-    let part = file.split_once('#').and_then(|(_, tag)| file_parts(&idx.scans, chroms.iter().any(|c| c.kind == "srm"), infusion).into_iter().find(|p| p.tag == tag));
+fn item_scans<'a, R: ReadAt>(idx: &'a Index<R>, chroms: &[Chrom], file: &str) -> (Option<Part>, Vec<&'a Scan>) {
+    let part = file.split_once('#').and_then(|(_, tag)| file_parts(&idx.scans, chroms.iter().any(|c| c.kind == "srm")).into_iter().find(|p| p.tag == tag));
     let sc = idx.scans.iter().filter(|s| matches(s, part.as_ref())).collect();
     (part, sc)
 }
@@ -79,17 +78,14 @@ fn polarity_of(sc: &[&Scan]) -> &'static str {
 /// `Item.method()` of a low-resolution item: how the data were acquired, as far as the mzML tells. `file` is the name of the item (with `#tag` for a part).
 pub fn item_method<R: ReadAt, M: ReadAt>(idx: &Index<R>, m: &mut Mzml<M>, file: &str) -> Result<String> {
     let chroms = m.chromatograms(idx.scans.last().map_or(0, |s| s.end))?;
-    let lc = crate::infusione::raw_lc(m)?;
-    let (part, sc) = item_scans(idx, &chroms, file, lc);
+    let (part, sc) = item_scans(idx, &chroms, file);
     let n1 = idx.scans.iter().filter(|s| s.level == 1).count();
     let kind = match &part {
         Some(p) => match p.mode {
             "ms1" => "full",
             "ms2" => "ms2",
-            "infusion" => "infusion",
             _ => "mrm",
         },
-        None if crate::infusione::con_msn(&idx.scans, lc, file) => "infusion",
         None if idx.scans.len() > n1 => "ms2",
         None if n1 > 0 => "full",
         None if chroms.iter().any(|c| c.kind == "srm") => "mrm",

@@ -129,19 +129,10 @@ fn energies_split_keys_but_not_nodes() {
 
 #[test]
 fn an_msn_infusion_is_one_item_not_survey_plus_product_ions() {
-    use crate::iteminfo::{file_parts, matches};
     let v = tune_blocks();
     assert!(con_msn(&v, None, "x.mzML"));
-    assert!(file_parts(&v, false, true).is_empty());
-    assert_eq!(file_parts(&v, false, false).len(), 2, "without the recognition it is split in MS1 and MS2");
     // a file of MS1 scans only, a run of constant RT and an LC run stay what they were
     assert!(!con_msn(&[ms1(0.0), ms1(0.1), ms1(0.2)], None, "x.mzML"));
     assert!(!con_msn(&[msn(1.0, &[(317.2, 25.0)])], None, "x.mzML"));
     assert!(!con_msn(&prm(), None, "x.mzML"));
-    // two polarities: one item per polarity, each with every level
-    let mut w = v.clone();
-    w.iter_mut().enumerate().for_each(|(i, s)| s.polarity = if i % 2 == 0 { 1 } else { -1 });
-    let parts = file_parts(&w, false, true);
-    assert_eq!(parts.iter().map(|p| (p.mode, p.tag.as_str())).collect::<Vec<_>>(), [("infusion", "MSn pos"), ("infusion", "MSn neg")]);
-    assert!(w.iter().all(|s| parts.iter().filter(|p| matches(s, Some(p))).count() == 1));
 }

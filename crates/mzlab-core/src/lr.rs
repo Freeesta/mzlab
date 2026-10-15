@@ -107,7 +107,7 @@ pub fn open_items<R: ReadAt, M: ReadAt>(
         .and_then(Value::str)
         .unwrap_or("")
         .to_string();
-    let parts = file_parts(&idx.scans, facts.srm > 0, crate::infusione::con_msn(&idx.scans, facts.lc, name));
+    let parts = file_parts(&idx.scans, facts.srm > 0);
     let one = |idx: &mut Index<R>,
                file: String,
                part: Option<&crate::iteminfo::Part>|
@@ -145,8 +145,10 @@ pub fn open_items<R: ReadAt, M: ReadAt>(
         });
         Ok(OpenItem { info, hr })
     };
-    if parts.is_empty() {
-        return Ok(vec![one(idx, name.to_string(), None)?]);
+    // a mixed file whose whole is an MSn infusion stays one item
+    let whole = one(idx, name.to_string(), None)?;
+    if parts.is_empty() || whole.info.contains("\"kind\":\"infusion\"") {
+        return Ok(vec![whole]);
     }
     parts
         .iter()
