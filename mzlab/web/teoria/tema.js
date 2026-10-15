@@ -12,7 +12,7 @@
   function a11yApply(o) {
     function set(n, v) { if (v) R.setAttribute("data-a11y-" + n, v === true ? "" : v); else R.removeAttribute("data-a11y-" + n); }
     set("font", A11Y_KEYS.font.indexOf(o.font) >= 0 ? o.font : ""); set("bg", A11Y_KEYS.bg.indexOf(o.bg) >= 0 ? o.bg : "");
-    set("space", !!o.space); set("nums", !!o.nums); set("ruler", !!o.ruler); set("focus", !!o.focus);
+    set("space", !!o.space); set("nums", !!o.nums); set("ruler", !!o.ruler); set("noside", !!o.noside);
     var rm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
     set("reduce", o.motion === "always" || (rm && o.motion !== "never"));
   }
