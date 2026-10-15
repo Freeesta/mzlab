@@ -76,7 +76,7 @@ fn le_estensioni_dei_lettori_stanno_nella_tabella_della_pagina() {
     }
     for v in mzlab_lettori::registro() {
         let in_tabella = [
-            "agilent", "sciex", "thermo", "aperti", "waters", "shimadzu", "bruker",
+            "agilent", "sciex", "thermo", "aperti", "andi", "waters", "shimadzu", "bruker",
         ]
         .iter()
         .any(|f| {

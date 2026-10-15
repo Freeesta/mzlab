@@ -67,6 +67,41 @@ def mzxml_file(path, n=40):
     text += '<index name="scan">' + "".join('<offset id="%d">%d</offset>' % (i + 1, o) for i, o in enumerate(pos)) + '</index>\n<indexOffset>%d</indexOffset>\n</mzXML>\n' % ix
     Path(path).write_bytes(text.encode("latin-1")); return tics
 
+def cdf_file(path, n=40):
+    """an ANDI-MS file (netCDF-3 classic) of n scans of 30 points, float m/z and intensities as record variables; returns the TIC of each scan"""
+    def pad(b): return b + b"\0" * (-len(b) % 4)
+    def nm(t): return struct.pack(">I", len(t)) + pad(t.encode())
+    def atts(a):
+        if not a: return struct.pack(">II", 0, 0)
+        return struct.pack(">II", 0x0C, len(a)) + b"".join(nm(k) + struct.pack(">II", 2, len(v)) + pad(v.encode()) for k, v in a)
+    tics = []; mz = []; it = []
+    for k in range(n):
+        y = [1000 * (1 + math.sin(i + k)) ** 2 + 50 for i in range(30)]
+        y = [struct.unpack(">f", struct.pack(">f", v))[0] for v in y]
+        mz += [100 + 0.37 * i + k * 0.01 for i in range(30)]; it += y; tics.append(sum(y))
+    dims = [("point_number", 0), ("scan_number", n)]
+    # (name, dim ids, nc_type, data bytes, record?)
+    dbl = lambda v: b"".join(struct.pack(">d", x) for x in v); ints = lambda v: b"".join(struct.pack(">i", x) for x in v)
+    flt = lambda v: b"".join(struct.pack(">f", x) for x in v)
+    fixed = [("scan_acquisition_time", 6, dbl([k * 3.0 for k in range(n)])), ("total_intensity", 6, dbl(tics)),
+             ("scan_index", 4, ints([30 * k for k in range(n)])), ("point_count", 4, ints([30] * n))]
+    rec = [("mass_values", flt(mz)), ("intensity_values", flt(it))]
+    def header(begins):
+        h = b"CDF\x01" + struct.pack(">I", 30 * n) + struct.pack(">II", 0x0A, 2) + b"".join(nm(d) + struct.pack(">I", l) for d, l in dims)
+        h += atts([("experiment_type", "Centroided Mass Spectrum"), ("test_ionization_polarity", "Positive Polarity")])
+        h += struct.pack(">II", 0x0B, len(fixed) + len(rec))
+        for (name, ty, data), b in zip(fixed, begins):
+            h += nm(name) + struct.pack(">II", 1, 1) + atts([]) + struct.pack(">III", ty, len(data), b)
+        for (name, data), b in zip(rec, begins[len(fixed):]):
+            h += nm(name) + struct.pack(">II", 1, 0) + atts([]) + struct.pack(">III", 5, 4, b)
+        return h
+    pos = len(header([0] * 6)); begins = []
+    for _, _, data in fixed: begins.append(pos); pos += len(data)
+    begins += [pos, pos + 4]
+    out = header(begins) + b"".join(d for _, _, d in fixed)
+    for r in range(30 * n): out += rec[0][1][4 * r:4 * r + 4] + rec[1][1][4 * r:4 * r + 4]
+    Path(path).write_bytes(out); return tics
+
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -87,6 +122,7 @@ top = folder.parent
 for nm, flag in (("npa", True), ("npb", False)):   # two folders of one mzML each: numpress and its zlib twin
     (tmp / nm).mkdir(); mzml_file(tmp / nm / "np.mzML", flag)
 (tmp / "xml").mkdir(); XTIC = mzxml_file(tmp / "xml" / "x.mzXML")
+(tmp / "cdf").mkdir(); CTIC = cdf_file(tmp / "cdf" / "c.cdf")
 
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -181,6 +217,16 @@ try:
             assert r["miss"] == 0, r["miss"]
             ks = [k for k in r["sp"] if isinstance(r["sp"][k], list) and len(r["sp"][k]) > 5]; assert ks and all(len(r["sp"][k]) == 30 for k in ks), list(r["sp"])
         step("an mzXML opens in the Dati view (through the «aperti» module) with its TIC and a spectrum", mzxml_opens)
+        def cdf_opens():
+            r = one("cdf"); assert r["files"] == ["c.mzML"], r["files"]
+            y = r["tic"].get("y"); assert y and len(y) == 40 and all(abs(a - b) <= 1e-4 * b for a, b in zip(y, CTIC)), (y and y[:3], CTIC[:3])
+            assert r["miss"] == 0, r["miss"]
+            ks = [k for k in r["sp"] if isinstance(r["sp"][k], list) and len(r["sp"][k]) > 5]; assert ks and all(len(r["sp"][k]) == 30 for k in ks), list(r["sp"])
+        step("an ANDI-MS .cdf opens in the Dati view (through the «andi» module) with its TIC and a spectrum", cdf_opens)
+        def andi_module():
+            fams = {u.split("wasm-lettori/")[1].split("/")[0] for u in asked}
+            assert "andi" in fams, asked
+        step("the «andi» module was downloaded", andi_module)
         def aperti_module():
             fams = {u.split("wasm-lettori/")[1].split("/")[0] for u in asked}
             assert "aperti" in fams, asked

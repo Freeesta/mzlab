@@ -1,4 +1,4 @@
-# Modulo «aperti»: formati aperti (mzML con numpress, mzXML, poi netCDF)
+# Modulo «aperti»: formati aperti (mzML con numpress, mzXML)
 
 Famiglia `aperti` (`crates/mzlab-lettori/src/aperti/`, feature `aperti`, tetto 393 216 B, `.wasm` in `wasm-lettori/aperti/`). Contratto dei lettori e caricamento a richiesta: `lettori-modulo.md`, `estendere.md`.
 
