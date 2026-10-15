@@ -138,7 +138,7 @@ Un pacchetto = una chat DEV = una PR unita a CI verde, pubblicata subito dietro 
 | AT-08 | prove esportate, cartella di Schymanski, tabella per la pubblicazione, quantificazione e gradiente | 7 | AT-07 | `attributio` (in serie) | 1 | da fare |
 | MZ-00 | diagnosi della concordanza con mzmine (protocollo corretto, motivi) e dati d'oro per stadio | 1 | — | nessuno | 1,5 | strumenti e dati d'oro fatti (`docs/agenti/attributio.md`); sui 4 sintetici recall 0,538→0,692, |log2| 0,080→0,028; misura sul Timolol vero da fare con il privato |
 | MZ-01 | costruttore ADAP | 2 | MZ-00 | nessuno | 1 | da fare |
-| MZ-02 | risolutore a minimo locale | 2 | MZ-00 | nessuno | 1 | da fare |
+| MZ-02 | risolutore a minimo locale | 2 | MZ-00 | nessuno | 1 | fatto: `untargeted/resolve.rs`, 49 feature su 49 identiche ai dati d'oro di mzmine 3.9.0 (sintetici); dati veri del privato da confrontare |
 | MZ-03 | join aligner e riempimento | 2 | MZ-00 | nessuno | 1 | fatto: `untargeted::{join,gapfill,table}`; sui sintetici d'oro 13 righe su 13 uguali a mzmine e 3 celle su 3 riempite uguali (area e altezza entro 6·10⁻⁴, 4 cifre del CSV); sui dati veri da misurare con il privato (`untargeted_join_dati`, soglia 0,97) |
 | MZ-04 | `.wasm` `untargeted`, ricetta e voce di amministratore | 3 | MZ-01, MZ-02, MZ-03 | crea `untargeted` | 1 | da fare |
 | MZ-05 | isotopi, identità e ingresso della cascata (`to_attributio.rs`) | 4 | MZ-04, AT-01 | `untargeted` (in serie) | 1 | da fare |

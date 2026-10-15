@@ -1,9 +1,10 @@
-//! Detection stages rewritten from scratch after mzmine 3.9.0 (MIT, (c) 2004-2022 The mzmine Development Team; source read at the tag `v3.9.0`):
-//! `join` (join aligner), `gapfill` (peak finder that fills the empty cells) and `table` (the result as the `Aligned` table of mzLab).
-//! No code is copied; the licence line is in `LICENZE-TERZI.md` and the papers are cited in each module.
+//! Detection of the features from the raw data after the algorithms of mzmine 3.9.0 (feature `untargeted`). One module per stage; each opens with the
+//! attribution of the Java file it was rewritten from (MIT, (c) 2004-2022 The mzmine Development Team; source read at the tag `v3.9.0`; licence line in
+//! `LICENZE-TERZI.md`). Here: `join` (join aligner), `gapfill` (peak finder that fills the empty cells) and `table` (the result as the `Aligned` table).
 
 pub mod gapfill;
 pub mod join;
+pub mod resolve;
 pub mod table;
 
 /// One feature of one file in the units of mzmine: RT and its range in minutes, `area` in intensity x minutes (`table::to_aligned` converts it to
