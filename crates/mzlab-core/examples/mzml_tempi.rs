@@ -57,12 +57,9 @@ fn main() {
     // without a spool every round decodes the file again; with a spool (a scratch file next to the mzML) it is decoded once
     for con in [false, true] {
         let spool_path = format!("{path}.spool");
-        let spool = con.then(|| {
-            let f = std::fs::OpenOptions::new().read(true).write(true).create(true).truncate(true).open(&spool_path).expect("spool");
-            Box::new(f) as Box<dyn mzidx::Spool>
-        });
+        let mut spool = con.then(|| std::fs::OpenOptions::new().read(true).write(true).create(true).truncate(true).open(&spool_path).expect("spool"));
         let t = Instant::now();
-        let st = mzidx::build_mzml_spool(&p.table, BufReader::new(File::open(path).expect("open")), &mut Nulla, budget << 20, spool).expect("index");
+        let st = mzidx::build_mzml_spill(&p.table, BufReader::new(File::open(path).expect("open")), &mut Nulla, budget << 20, spool.as_mut().map(|f| f as &mut dyn mzlab_core::mzidx_spill::Spill)).expect("index");
         println!(
             ".mzidx {:<14}  {:>8.3} s ({:.1} MB, {} passes)",
             if con { "(with spool)" } else { "(no spool)" },

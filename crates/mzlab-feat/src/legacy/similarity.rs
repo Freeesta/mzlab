@@ -77,6 +77,7 @@ fn typed_matching(
     b: (&[f64], &[f64]),
     delta: f64,
     prec_a: f64,
+    tol: f64,
     weight: impl Fn(f64, f64) -> f64,
 ) -> Vec<(usize, usize, usize, f64)> {
     let (ma, wa) = a;
@@ -85,8 +86,8 @@ fn typed_matching(
     for i in 0..ma.len() {
         for j in 0..mb.len() {
             let d = mb[j] - ma[i];
-            let eq = d.abs() <= TOL_HR;
-            if eq || (d - delta).abs() <= TOL_HR {
+            let eq = d.abs() <= tol;
+            if eq || (d - delta).abs() <= tol {
                 let v = weight(wa[i], wb[j]);
                 if v > 0.0 {
                     cand.push((i, j, v, eq));
@@ -170,8 +171,13 @@ impl Components {
     }
 }
 
-/// `pair_components(spec_a, prec_a, spec_b, prec_b)`: A is the parent, B the product.
+/// `pair_components(spec_a, prec_a, spec_b, prec_b)`: A is the parent, B the product (high resolution, `TOL_HR`).
 pub fn pair_components(a: &Spec, prec_a: f64, b: &Spec, prec_b: f64) -> Components {
+    pair_components_tol(a, prec_a, b, prec_b, TOL_HR)
+}
+
+/// `pair_components` with the matching tolerance `tol` in Da (0.5 for unit-resolution spectra).
+pub fn pair_components_tol(a: &Spec, prec_a: f64, b: &Spec, prec_b: f64, tol: f64) -> Components {
     let mut r = Components {
         delta: prec_b - prec_a,
         ..Default::default()
@@ -179,7 +185,9 @@ pub fn pair_components(a: &Spec, prec_a: f64, b: &Spec, prec_b: f64) -> Componen
     if a.0.is_empty() || b.0.is_empty() {
         return r;
     }
-    for (i, j, k, v) in typed_matching((&a.0, &a.1), (&b.0, &b.1), r.delta, prec_a, |x, y| x * y) {
+    for (i, j, k, v) in typed_matching((&a.0, &a.1), (&b.0, &b.1), r.delta, prec_a, tol, |x, y| {
+        x * y
+    }) {
         r.cos[k] += v;
         r.n[k] += 1;
         r.pairs.push((a.0[i], b.0[j], k, v));
@@ -193,7 +201,7 @@ pub fn pair_components(a: &Spec, prec_a: f64, b: &Spec, prec_b: f64) -> Componen
             0.0
         }
     };
-    for (_, _, k, v) in typed_matching((&a.0, &qa), (&b.0, &qb), r.delta, prec_a, ent) {
+    for (_, _, k, v) in typed_matching((&a.0, &qa), (&b.0, &qb), r.delta, prec_a, tol, ent) {
         r.ent[k] += v;
     }
     r

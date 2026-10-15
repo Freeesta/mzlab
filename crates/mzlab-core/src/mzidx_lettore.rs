@@ -7,6 +7,7 @@ use crate::error::Result;
 use crate::lettori::{Lettore, VoceScansione};
 use crate::lettori_mzml;
 use crate::mzidx::Prima;
+use crate::mzidx_spill::Spill;
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{self, MzmlWriter};
 use crate::scantable::{Rows, Table};
@@ -33,18 +34,18 @@ pub fn righe(l: &mut dyn Lettore, c: usize) -> Result<Table> {
 }
 
 /// The table and pass 1 of the `.mzidx` builder in one decoding of the scans: what `righe` gives and the groups `mzidx::build_dopo` needs.
-pub(crate) fn righe_prima(
+pub(crate) fn righe_prima<'a>(
     l: &mut dyn Lettore,
     c: usize,
     budget: usize,
-    spool: Option<Box<dyn crate::mzidx::Spool>>,
-) -> Result<(Table, Prima)> {
-    let mut prima = Prima::new(budget).con_spool(spool);
+    spill: Option<&'a mut dyn Spill>,
+) -> Result<(Table, Prima<'a>)> {
+    let mut prima = Prima::new(budget, spill);
     let t = tabella(l, c, Some(&mut prima))?;
     Ok((t, prima))
 }
 
-fn tabella(l: &mut dyn Lettore, c: usize, mut prima: Option<&mut Prima>) -> Result<Table> {
+fn tabella(l: &mut dyn Lettore, c: usize, mut prima: Option<&mut Prima<'_>>) -> Result<Table> {
     let h = lettori_mzml::testata(l, c)?;
     let mut rows = match Rows::da_testata(&h) {
         Some(r) => r,

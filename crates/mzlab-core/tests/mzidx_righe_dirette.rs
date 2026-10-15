@@ -45,9 +45,10 @@ fn prova_con(label: &str, mut l: Finto, con_mzml: bool) {
     let a = con_mzml.then(|| {
         let mzml = lettori_mzml::scrivi(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
         let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, &name).unwrap();
-        mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG)
-            .unwrap_or_else(|e| panic!("{label}: mzML path {e:?}"))
-            .0
+        let (idx, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG)
+            .unwrap_or_else(|e| panic!("{label}: mzML path {e:?}"));
+        mzml_con_scratch(label, &pa.table, &mzml, &idx);
+        idx
     });
 
     let pb = upload::prepare_lettore(&mut l, 0, &[], &name).unwrap();
@@ -62,30 +63,12 @@ fn prova_con(label: &str, mut l: Finto, con_mzml: bool) {
         let mut out = std::io::Cursor::new(Vec::new());
         let mut fasi = Vec::new();
         let Ok((st, sha)) =
-            upload::indicizza_lettore(&mut l, 0, &[], &name, &mut out, budget, None, &mut |f| {
+            upload::indicizza_lettore(&mut l, 0, &[], &name, &mut out, budget, &mut |f| {
                 fasi.push(f)
             })
         else {
             continue;
         };
-        // the same index with the peaks parked in a spool: one decoding, whatever the budget
-        let mut con = std::io::Cursor::new(Vec::new());
-        let (sp, _) = upload::indicizza_lettore(
-            &mut l,
-            0,
-            &[],
-            &name,
-            &mut con,
-            budget,
-            Some(Box::new(mzidx::SpoolMemoria::default())),
-            &mut |_| {},
-        )
-        .unwrap();
-        assert_eq!(sp.passes, 1, "{label}: spool at budget {budget}");
-        assert!(
-            con.into_inner() == b,
-            "{label}: the index with a spool differs at budget {budget}"
-        );
         assert_eq!(fasi, [3], "{label}");
         assert_eq!(sha, pb.sha256, "{label}");
         saw_many |= st.passes > 1;
@@ -100,6 +83,7 @@ fn prova_con(label: &str, mut l: Finto, con_mzml: bool) {
     if l.indice(0).unwrap().len() > 200 {
         assert!(saw_many, "{label}: no budget forced the rounds");
     }
+    con_scratch(label, &mut l, &pb, &name, &b);
 
     let Some(a) = a else { return };
     // against the mzML: the sections, the rows but for their first two columns, the metadata but for source and version
@@ -120,6 +104,49 @@ fn prova_con(label: &str, mut l: Finto, con_mzml: bool) {
         without(&mb, &["source", "version"]),
         "{label}: metadata"
     );
+}
+
+/// The mzML path with a scratch file (`build_mzml_spill`): the same bytes at every budget, the file decoded once.
+fn mzml_con_scratch(label: &str, table: &mzidx::ScanTable, mzml: &[u8], idx: &[u8]) {
+    for budget in [1 << 20, 1 << 16, 1 << 12] {
+        let (mut out, mut sp) = (std::io::Cursor::new(Vec::new()), std::io::Cursor::new(Vec::new()));
+        let Ok(st) = mzidx::build_mzml_spill(table, std::io::Cursor::new(mzml), &mut out, budget, Some(&mut sp)) else {
+            continue;
+        };
+        assert_eq!(st.passes, 1, "{label}: one decoding with a scratch file");
+        assert!(out.into_inner() == idx, "{label}: mzML index with a scratch file differs at budget {budget}");
+    }
+}
+
+/// The same index with a scratch file: the peaks that do not fit go to it, the scans are decoded once, the bytes are the same.
+fn con_scratch(label: &str, l: &mut Finto, pb: &upload::Prepared, name: &str, b: &[u8]) {
+    let mut spilled = false;
+    for budget in [BIG, 1 << 22, 1 << 20, 1 << 18, 1 << 16, 1 << 14, 1 << 12] {
+        let mut out = std::io::Cursor::new(Vec::new());
+        let mut sp = std::io::Cursor::new(Vec::new());
+        let Ok((st, sha)) = upload::indicizza_lettore_con(
+            l,
+            0,
+            &mut || Ok(vec![]),
+            name,
+            &mut out,
+            budget,
+            Some(&mut sp),
+            &mut |_| {},
+        ) else {
+            continue;
+        };
+        assert_eq!(sha, pb.sha256, "{label}");
+        assert_eq!(st.passes, 1, "{label}: one decoding with a scratch file");
+        spilled |= !sp.into_inner().is_empty();
+        assert!(
+            out.into_inner() == b,
+            "{label}: the index with a scratch file differs at budget {budget}"
+        );
+    }
+    if l.indice(0).unwrap().len() > 200 {
+        assert!(spilled, "{label}: no budget used the scratch file");
+    }
 }
 
 fn testata_orbitrap() -> Header {

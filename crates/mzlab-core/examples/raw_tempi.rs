@@ -133,6 +133,107 @@ fn line(what: &str, secs: f64, c: &Counters, extra: &str) {
     println!("{what:<28} {secs:>8.3} s  reads {calls:>10}  blocks {fills:>7}  {extra}");
 }
 
+/// The index with a scratch file (the browser's second OPFS file, a temporary file on the desktop) and the desktop way with the fingerprints in a second thread.
+fn scratch(tmp: &std::path::Path) -> File {
+    std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(tmp)
+        .expect("scratch file")
+}
+
+/// The desktop way, from the open of the file: the fingerprints (SHA-256, SHA-1) in a second thread while the scans are decoded once.
+fn desktop_phase(path: &str, name: &str, tmp: &std::path::Path, c: &Counters) {
+    let t = Instant::now();
+    let (mut fs, _) = set(path);
+    upload::senza_sha1(&mut fs);
+    let l2 = lettori::apri(fs, &Limiti::sito()).expect("open");
+    let mut l2 = l2;
+    let mut out = Cursor::new(Vec::new());
+    let mut sp = scratch(tmp);
+    let file = path.to_string();
+    let (st, _) = upload::con_impronte_parallele(
+        move || {
+            let dim = std::fs::metadata(&file)
+                .map_err(|_| mzlab_core::Error::new("error.badIndex"))?
+                .len();
+            let f = File::open(&file).map_err(|_| mzlab_core::Error::new("error.badIndex"))?;
+            Ok(FileSet {
+                membri: vec![Membro {
+                    nome: file.rsplit('/').next().unwrap_or("").to_string(),
+                    dim,
+                    dati: Box::new(f),
+                    sha1: None,
+                }],
+            })
+        },
+        |imp| {
+            upload::indicizza_lettore_con(
+                &mut *l2,
+                0,
+                imp,
+                &format!("{name}.mzML"),
+                &mut out,
+                192 << 20,
+                Some(&mut sp),
+                &mut |_| {},
+            )
+        },
+    )
+    .expect("index");
+    line(
+        "open + fingerprint || index",
+        t.elapsed().as_secs_f64(),
+        c,
+        &format!("{:.1} MB, {} passes", st.bytes as f64 / 1e6, st.passes),
+    );
+}
+
+fn scratch_phases(
+    path: &str,
+    name: &str,
+    cen: bool,
+    l: &mut dyn Lettore,
+    imp: &[upload::Impronta],
+    c: &Counters,
+) {
+    // the same with a scratch file for the peaks that do not fit in the budget (the browser's second OPFS file, a temporary file on the desktop): the scans are decoded once
+    let tmp = std::env::temp_dir().join(format!("raw_tempi_{}.sp", std::process::id()));
+    let t = Instant::now();
+    let mut out = Cursor::new(Vec::new());
+    let mut sp = scratch(&tmp);
+    let (st, _) = upload::indicizza_lettore_con(
+        &mut *l,
+        0,
+        &mut || Ok(imp.to_vec()),
+        &format!("{name}.mzML"),
+        &mut out,
+        192 << 20,
+        Some(&mut sp),
+        &mut |_| {},
+    )
+    .expect("index");
+    line(
+        "table + .mzidx + scratch",
+        t.elapsed().as_secs_f64(),
+        c,
+        &format!(
+            "{:.1} MB, {} passes, scratch {:.1} MB",
+            st.bytes as f64 / 1e6,
+            st.passes,
+            sp.metadata().map_or(0.0, |m| m.len() as f64 / 1e6)
+        ),
+    );
+    drop(sp);
+
+    if !cen {
+        desktop_phase(path, name, &tmp, c);
+    }
+    let _ = std::fs::remove_file(&tmp);
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let path = args
@@ -228,7 +329,6 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
         &format!("{name}.mzML"),
         &mut out,
         192 << 20,
-        spool(),
         &mut |_| {},
     )
     .expect("index");
@@ -238,6 +338,8 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
         &c,
         &format!("{:.1} MB, {} passes", st.bytes as f64 / 1e6, st.passes),
     );
+
+    scratch_phases(path, name, cen, &mut *l, &imp, &c);
 
     if with_mzml {
         let t = Instant::now();
@@ -249,14 +351,5 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
             &c,
             &format!("{:.1} MB", sink.0 as f64 / 1e6),
         );
-    }
-}
-
-/// Scratch space for the peaks of pass 1 unless `--senza-spool` is given (the rounds then decode the scans again).
-fn spool() -> Option<Box<dyn mzlab_core::mzidx::Spool>> {
-    if std::env::args().any(|a| a == "--senza-spool") {
-        None
-    } else {
-        Some(Box::new(mzlab_core::mzidx::SpoolMemoria::default()))
     }
 }

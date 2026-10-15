@@ -59,6 +59,7 @@ pub mod originroute;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzidx;
 pub mod mzidx_lettore;
+pub mod mzidx_spill;
 pub mod msnalbero;
 pub mod msnroute;
 pub mod msntree;

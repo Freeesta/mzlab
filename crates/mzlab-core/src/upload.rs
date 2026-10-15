@@ -251,11 +251,37 @@ pub fn indicizza_lettore(
     name: &str,
     out: &mut dyn crate::mzidx::Output,
     budget: usize,
-    spool: Option<Box<dyn crate::mzidx::Spool>>,
     fase: &mut dyn FnMut(u32),
 ) -> Result<(crate::mzidx::Stats, String)> {
-    let (t, prima) = mzidx_lettore::righe_prima(l, c, budget, spool)?;
-    let p = dalla_tabella(t, l, c, membri, name)?;
+    indicizza_lettore_con(
+        l,
+        c,
+        &mut || Ok(membri.to_vec()),
+        name,
+        out,
+        budget,
+        None,
+        fase,
+    )
+}
+
+/// `indicizza_lettore` for a caller that gives the fingerprints late and a scratch file:
+/// - `membri` is called once, when the table is done: a desktop build hashes the members in another thread while the scans are decoded (`con_impronte_parallele`);
+/// - `spill`: where the peaks go when they do not fit in `budget` (`mzidx_spill`), so the scans are decoded ONCE whatever the size of the file; without it the later rounds decode again.
+#[allow(clippy::too_many_arguments)]
+pub fn indicizza_lettore_con(
+    l: &mut dyn Lettore,
+    c: usize,
+    membri: &mut dyn FnMut() -> Result<Vec<Impronta>>,
+    name: &str,
+    out: &mut dyn crate::mzidx::Output,
+    budget: usize,
+    spill: Option<&mut dyn crate::mzidx_spill::Spill>,
+    fase: &mut dyn FnMut(u32),
+) -> Result<(crate::mzidx::Stats, String)> {
+    let (t, prima) = mzidx_lettore::righe_prima(l, c, budget, spill)?;
+    let membri = membri()?;
+    let p = dalla_tabella(t, l, c, &membri, name)?;
     fase(3);
     let n = l.indice(c)?.len();
     let st = crate::mzidx::build_dopo(
@@ -267,6 +293,34 @@ pub fn indicizza_lettore(
         true,
     )?;
     Ok((st, p.sha256))
+}
+
+/// Native only: the fingerprints of the members are taken by a second thread (`ricetta` makes its own file set, since a reader does not cross threads)
+/// while `lavoro` decodes the scans. `lavoro` gets the function that waits for them (to hand to `indicizza_lettore_con`); the members of the set
+/// it opens carry an empty SHA-1 (`senza_sha1`): the table does not read it. SHA-256 and SHA-1 are the same as `impronte` gives.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn con_impronte_parallele<R>(
+    ricetta: impl FnOnce() -> Result<FileSet> + Send,
+    lavoro: impl FnOnce(&mut dyn FnMut() -> Result<Vec<Impronta>>) -> Result<R>,
+) -> Result<R> {
+    std::thread::scope(|s| {
+        let mut h = Some(s.spawn(move || ricetta().and_then(|mut fs| impronte(&mut fs))));
+        let mut attendi = || match h.take() {
+            Some(h) => h
+                .join()
+                .unwrap_or_else(|_| Err(Error::new("err.file.unknown"))),
+            None => Err(Error::new("err.file.unknown")),
+        };
+        lavoro(&mut attendi)
+    })
+}
+
+/// Marks the members as having a SHA-1 already (empty), so the reader does not read the whole file for the header of an mzML nobody asked for: the
+/// index never uses it.
+pub fn senza_sha1(fs: &mut FileSet) {
+    for m in &mut fs.membri {
+        m.sha1 = Some(String::new());
+    }
 }
 
 fn dalla_tabella(

@@ -3,19 +3,19 @@
 //! descriptions and the per-scan level, polarity, RT and TIC come from the caller (`ScanTable`): in the browser from the
 //! Python reader, which has already read the headers; this crate only decodes the peaks.
 //! Memory is bounded by `budget` bytes of peaks: if all of them fit they are kept from the first pass; otherwise a first pass
-//! counts the peaks of every 1-unit m/z bucket and the buckets are written in rounds. A round takes its peaks from the `Spool` (the peaks of pass 1
-//! parked on scratch storage in scan order, 20 bytes each) when the caller gives one: the stream is decoded once. Without a spool each round decodes it again.
+//! counts the peaks of every 1-unit m/z bucket and the buckets are written in rounds, each one decoding the stream again.
 
 use std::cmp::Ordering;
 use std::io::{Cursor, Seek, SeekFrom, Write};
 
 use crate::error::{Error, Result};
+use crate::mzidx_spill::{leggi_parti, Parti, Spill};
 use crate::mzml::{self, Item, Spectrum};
 
 pub const BLOCK: u64 = 16384;
 const ALIGN: u64 = 64;
 const HEADER: usize = 64;
-const NB: usize = 10000;
+pub(crate) const NB: usize = 10000;
 /// Default bytes of peaks held in memory (the WASM memory is 256 MB at most).
 pub const DEFAULT_BUDGET: usize = 64 << 20;
 
@@ -32,82 +32,6 @@ impl<W: Write + Seek> Output for W {
     fn write_at(&mut self, offset: u64, data: &[u8]) -> Result<()> {
         self.seek(SeekFrom::Start(offset)).map_err(io_error)?;
         self.write_all(data).map_err(io_error)
-    }
-}
-
-/// Scratch storage for the peaks of pass 1 (a second file next to the index in the browser, a temporary file or memory elsewhere): written once, front to
-/// back, then read back front to back by every round. Its content is private to the builder.
-pub trait Spool {
-    fn write_at(&mut self, offset: u64, data: &[u8]) -> Result<()>;
-    fn read_at(&mut self, offset: u64, buf: &mut [u8]) -> Result<()>;
-}
-
-/// A `Spool` in memory (tests, small files).
-#[derive(Default)]
-pub struct SpoolMemoria(pub Vec<u8>);
-
-impl Spool for SpoolMemoria {
-    fn write_at(&mut self, offset: u64, data: &[u8]) -> Result<()> {
-        let end = offset as usize + data.len();
-        if self.0.len() < end {
-            self.0.resize(end, 0);
-        }
-        self.0[offset as usize..end].copy_from_slice(data);
-        Ok(())
-    }
-    fn read_at(&mut self, offset: u64, buf: &mut [u8]) -> Result<()> {
-        let from = offset as usize;
-        let src = self
-            .0
-            .get(from..from + buf.len())
-            .ok_or_else(|| Error::new("err.file.index").with("detail", "spool"))?;
-        buf.copy_from_slice(src);
-        Ok(())
-    }
-}
-
-/// A `Spool` in a file (the temporary file of the desktop app and of the benchmarks).
-impl Spool for std::fs::File {
-    fn write_at(&mut self, offset: u64, data: &[u8]) -> Result<()> {
-        self.seek(SeekFrom::Start(offset)).map_err(io_error)?;
-        self.write_all(data).map_err(io_error)
-    }
-    fn read_at(&mut self, offset: u64, buf: &mut [u8]) -> Result<()> {
-        use std::io::Read;
-        self.seek(SeekFrom::Start(offset)).map_err(io_error)?;
-        self.read_exact(buf).map_err(io_error)
-    }
-}
-
-/// Bytes of one parked peak: scan number (`u32`), m/z and intensity (`f64`), little-endian.
-const VOCE: usize = 20;
-/// Bytes the spool buffers before writing.
-const PEZZO: usize = 4 << 20;
-
-/// The spool as pass 1 fills it: peaks are buffered and written in pieces.
-struct Parcheggio {
-    sink: Box<dyn Spool>,
-    buf: Vec<u8>,
-    at: u64,
-}
-
-impl Parcheggio {
-    fn push(&mut self, pos: u32, mz: f64, it: f64) -> Result<()> {
-        self.buf.extend_from_slice(&pos.to_le_bytes());
-        self.buf.extend_from_slice(&mz.to_le_bytes());
-        self.buf.extend_from_slice(&it.to_le_bytes());
-        if self.buf.len() >= PEZZO {
-            self.flush()?;
-        }
-        Ok(())
-    }
-    fn flush(&mut self) -> Result<()> {
-        if !self.buf.is_empty() {
-            self.sink.write_at(self.at, &self.buf)?;
-            self.at += self.buf.len() as u64;
-            self.buf.clear();
-        }
-        Ok(())
     }
 }
 
@@ -194,7 +118,7 @@ fn by_mz<T: Num>(a: &Peak<T>, b: &Peak<T>) -> Ordering {
 /// `floor(x)` clamped to `0..NB` (NaN in the last): for `x > 0` the cast truncates, which is the floor.
 #[inline]
 #[allow(clippy::cast_possible_truncation)] // `x` is in 0..NB here
-fn bucket(x: f64) -> usize {
+pub(crate) fn bucket(x: f64) -> usize {
     if x.is_nan() || x >= (NB - 1) as f64 {
         NB - 1
     } else if x <= 0.0 {
@@ -246,8 +170,8 @@ trait Sect {
     fn cost(&self, b: usize) -> usize;
     fn begin_round(&mut self, lo: usize, hi: usize) -> Result<()>;
     fn fill(&mut self, sp: &Spectrum, pos: u32) -> Result<()>;
-    /// One peak of the round (read back from the spool).
-    fn fill_picco(&mut self, mz: f64, it: f64, pos: u32);
+    /// The same for one peak (a peak read back from the scratch file).
+    fn fill_pk(&mut self, mz: f64, it: f64, pos: u32) -> Result<()>;
     /// Sorts what the section holds (the round `[lo, hi)`) and writes it.
     fn flush(&mut self, out: &mut dyn Output, off: &Offsets) -> Result<()>;
     fn finish(&mut self, out: &mut dyn Output, off: &Offsets) -> Result<()>;
@@ -301,14 +225,6 @@ impl<T: Num> Sec<T> {
             totals: Totals::new(n_scans),
             fence: Vec::new(),
             bytes: Vec::new(),
-        }
-    }
-
-    fn peak(sp: &Spectrum, j: usize, pos: u32) -> Peak<T> {
-        Peak {
-            mz: T::from64(sp.mz[j]),
-            it: T::from64(sp.intensity_f64(j)),
-            pos,
         }
     }
 
@@ -411,17 +327,13 @@ impl<T: Num> Sect for Sec<T> {
 
     fn fill(&mut self, sp: &Spectrum, pos: u32) -> Result<()> {
         for j in 0..sp.mz.len() {
-            let p = Self::peak(sp, j, pos);
-            let b = bucket(p.mz.to64());
-            if b >= self.lo && b < self.hi {
-                self.round[self.cursor[b]] = p;
-                self.cursor[b] += 1;
-            }
+            self.fill_pk(sp.mz[j], sp.intensity_f64(j), pos)?;
         }
         Ok(())
     }
 
-    fn fill_picco(&mut self, mz: f64, it: f64, pos: u32) {
+    #[inline]
+    fn fill_pk(&mut self, mz: f64, it: f64, pos: u32) -> Result<()> {
         let p = Peak {
             mz: T::from64(mz),
             it: T::from64(it),
@@ -432,6 +344,7 @@ impl<T: Num> Sect for Sec<T> {
             self.round[self.cursor[b]] = p;
             self.cursor[b] += 1;
         }
+        Ok(())
     }
 
     fn flush(&mut self, out: &mut dyn Output, off: &Offsets) -> Result<()> {
@@ -505,56 +418,40 @@ struct Gruppo {
     kept: Vec<Peak<f64>>,
 }
 
-/// Pass 1 of the builder: the groups, filled one scan at a time. `budget / 2` bytes of peaks are kept; past that they are dropped and the rounds decode again.
-pub(crate) struct Prima {
+impl Gruppo {
+    fn nuovo(level: u8, polarity: i8) -> Gruppo {
+        Gruppo {
+            level,
+            polarity,
+            counts: vec![0; NB],
+            counts32: if level == 1 { vec![0; NB] } else { Vec::new() },
+            n: 0,
+            kept: Vec::new(),
+        }
+    }
+}
+
+/// Pass 1 of the builder: the groups, filled one scan at a time. `budget / 2` bytes of peaks are kept; past that, with a scratch file (`spill`) they go to it
+/// split by m/z (`mzidx_spill`) and the rounds read them from there; without one they are dropped and the rounds decode again.
+pub(crate) struct Prima<'a> {
     gruppi: Vec<Gruppo>,
     keep: bool,
     budget: usize,
     visti: usize,
-    /// Where the peaks go once they no longer fit (`keep` false): every peak of the file, in scan order.
-    spool: Option<Parcheggio>,
+    spill: Option<&'a mut dyn Spill>,
+    parti: Option<Parti>,
 }
 
-impl Prima {
-    pub(crate) fn new(budget: usize) -> Prima {
+impl<'a> Prima<'a> {
+    pub(crate) fn new(budget: usize, spill: Option<&'a mut dyn Spill>) -> Prima<'a> {
         Prima {
             gruppi: Vec::new(),
             keep: true,
             budget,
             visti: 0,
-            spool: None,
+            spill,
+            parti: None,
         }
-    }
-
-    /// Parks on `sink` the peaks that do not fit in the budget, so that the rounds do not decode the stream again.
-    pub(crate) fn con_spool(mut self, sink: Option<Box<dyn Spool>>) -> Prima {
-        self.spool = sink.map(|sink| Parcheggio {
-            sink,
-            buf: Vec::new(),
-            at: 0,
-        });
-        self
-    }
-
-    /// The kept peaks of every group, in scan order, to the spool (`keep` has just turned off).
-    fn travasa(&mut self) -> Result<()> {
-        let Some(sp) = self.spool.as_mut() else {
-            return Ok(());
-        };
-        let mut next = vec![0usize; self.gruppi.len()];
-        loop {
-            let best = (0..self.gruppi.len())
-                .filter(|&i| next[i] < self.gruppi[i].kept.len())
-                .min_by_key(|&i| self.gruppi[i].kept[next[i]].pos);
-            let Some(i) = best else { break };
-            let pos = self.gruppi[i].kept[next[i]].pos;
-            // all the peaks of the scan `pos` (one group holds a scan whole)
-            while let Some(p) = self.gruppi[i].kept.get(next[i]).filter(|p| p.pos == pos) {
-                sp.push(p.pos, p.mz, p.it)?;
-                next[i] += 1;
-            }
-        }
-        Ok(())
     }
 
     /// The next scan of the file, with the level and polarity (+1, -1, 0) of its row.
@@ -567,14 +464,7 @@ impl Prima {
         {
             Some(i) => i,
             None => {
-                self.gruppi.push(Gruppo {
-                    level,
-                    polarity,
-                    counts: vec![0; NB],
-                    counts32: if level == 1 { vec![0; NB] } else { Vec::new() },
-                    n: 0,
-                    kept: Vec::new(),
-                });
+                self.gruppi.push(Gruppo::nuovo(level, polarity));
                 self.gruppi.len() - 1
             }
         };
@@ -592,8 +482,9 @@ impl Prima {
             }
             if self.keep {
                 g.kept.push(Peak { mz, it, pos });
-            } else if let Some(p) = self.spool.as_mut() {
-                p.push(pos, mz, it)?;
+            } else if let (Some(parti), Some(spill)) = (&mut self.parti, self.spill.as_deref_mut())
+            {
+                parti.push(spill, mz, it, pos)?;
             }
         }
         g.n += n as u64;
@@ -606,12 +497,42 @@ impl Prima {
                 .sum();
             if held > self.budget / 2 {
                 self.keep = false;
-                self.travasa()?;
+                if let Some(sp) = self.spill.as_deref_mut() {
+                    self.parti = Some(avvia(&mut self.gruppi, sp)?);
+                }
                 self.gruppi.iter_mut().for_each(|g| g.kept = Vec::new());
             }
         }
         Ok(())
     }
+}
+
+/// The budget ran out with a scratch file: what is kept goes to it in the order of the scans (the groups merged by scan number), and the next scans follow it.
+#[allow(clippy::indexing_slicing)] // the indexes come from the groups just counted
+fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
+    let mut counts = vec![0u64; NB];
+    for g in gruppi.iter() {
+        for (c, &x) in counts.iter_mut().zip(&g.counts) {
+            *c += u64::from(x);
+        }
+    }
+    let mut parti = Parti::new(&counts);
+    let mut next = vec![0usize; gruppi.len()];
+    loop {
+        let mut best: Option<usize> = None;
+        for (i, g) in gruppi.iter().enumerate() {
+            if let Some(p) = g.kept.get(next[i]) {
+                if best.is_none_or(|b| p.pos < gruppi[b].kept[next[b]].pos) {
+                    best = Some(i);
+                }
+            }
+        }
+        let Some(i) = best else { break };
+        let p = gruppi[i].kept[next[i]];
+        next[i] += 1;
+        parti.push(sp, p.mz, p.it, p.pos)?;
+    }
+    Ok(parti)
 }
 
 fn pad(n: u64) -> u64 {
@@ -635,25 +556,25 @@ pub fn build(
     budget: usize,
     nativo: bool,
 ) -> Result<Stats> {
-    build_con(table, pass, out, budget, nativo, None)
+    build_con_spill(table, pass, out, budget, nativo, None)
 }
 
-/// `build` with a `Spool`: the peaks that do not fit in `budget` are parked there in pass 1 and the rounds read them back (one decoding of the stream).
+/// `build` with a scratch file (`mzidx_spill`) for the peaks that do not fit in `budget`: the stream is decoded once whatever its size.
 #[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the table, checked against `n_scans`
-pub fn build_con(
+pub fn build_con_spill(
     table: &ScanTable,
     pass: &mut Pass,
     out: &mut dyn Output,
     budget: usize,
     nativo: bool,
-    spool: Option<Box<dyn Spool>>,
+    spill: Option<&mut dyn Spill>,
 ) -> Result<Stats> {
     let n_scans = table.level.len();
     if table.polarity.len() != n_scans || table.rt.len() != n_scans || table.tic.len() != n_scans {
         return Err(Error::new("err.file.index").with("detail", "scan table"));
     }
     // -- pass 1: count (and keep, while it fits)
-    let mut prima = Prima::new(budget).con_spool(spool);
+    let mut prima = Prima::new(budget, spill);
     let mut failure: Option<Error> = None;
     {
         let mut on = |sp: Spectrum| {
@@ -825,8 +746,9 @@ pub(crate) fn build_dopo(
             sec.flush(out, &s.off)?;
         }
     } else {
-        if let Some(sp) = prima.spool.as_mut() {
-            sp.flush()?;
+        let (mut parti, mut spill) = (prima.parti.take(), prima.spill.take());
+        if let (Some(p), Some(sp)) = (parti.as_mut(), spill.as_deref_mut()) {
+            p.fine(sp)?;
         }
         let costs: Vec<usize> = (0..NB)
             .map(|b| secs.iter().map(|s| s.cost(b)).sum())
@@ -846,44 +768,34 @@ pub(crate) fn build_dopo(
                 for sec in secs.iter_mut() {
                     sec.begin_round(lo, hi)?;
                 }
-                if let Some(sp) = prima.spool.as_mut() {
-                    // the peaks of pass 1, in scan order: what the pass below would hand to `fill`
-                    let (mut buf, mut at) = (vec![0u8; PEZZO / VOCE * VOCE], 0u64);
-                    while at < sp.at {
-                        let n = ((sp.at - at) as usize).min(buf.len());
-                        sp.sink.read_at(at, &mut buf[..n])?;
-                        for v in buf[..n].chunks_exact(VOCE) {
-                            let scan = u32::from_le_bytes([v[0], v[1], v[2], v[3]]) as usize;
-                            let mz = f64::from_le_bytes([v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11]]);
-                            let it = f64::from_le_bytes([v[12], v[13], v[14], v[15], v[16], v[17], v[18], v[19]]);
-                            for &(si, pos) in &member[scan] {
-                                secs[si].fill_picco(mz, it, pos);
-                            }
+                let mut seen = 0usize;
+                let mut failure: Option<Error> = None;
+                if let (Some(p), Some(sp)) = (parti.as_ref(), spill.as_deref_mut()) {
+                    // the peaks are in the scratch file: no decoding
+                    leggi_parti(p, sp, lo, hi, &mut |mz, it, pos| {
+                        for &(si, q) in &member[pos as usize] {
+                            secs[si].fill_pk(mz, it, q)?;
                         }
-                        at += n as u64;
-                    }
+                        Ok(())
+                    })?;
                 } else {
-                    let mut seen = 0usize;
-                    let mut failure: Option<Error> = None;
-                    {
-                        let mut on = |sp: Spectrum| {
-                            if failure.is_some() || seen >= n_scans {
+                    let mut on = |sp: Spectrum| {
+                        if failure.is_some() || seen >= n_scans {
+                            return;
+                        }
+                        for &(si, pos) in &member[seen] {
+                            if let Err(e) = secs[si].fill(&sp, pos) {
+                                failure = Some(e);
                                 return;
                             }
-                            for &(si, pos) in &member[seen] {
-                                if let Err(e) = secs[si].fill(&sp, pos) {
-                                    failure = Some(e);
-                                    return;
-                                }
-                            }
-                            seen += 1;
-                        };
-                        pass(&mut on)?;
-                        passes += 1;
-                    }
-                    if let Some(e) = failure {
-                        return Err(e);
-                    }
+                        }
+                        seen += 1;
+                    };
+                    pass(&mut on)?;
+                    passes += 1;
+                }
+                if let Some(e) = failure {
+                    return Err(e);
                 }
                 for (s, sec) in infos.iter().zip(secs.iter_mut()) {
                     sec.flush(out, &s.off)?;
@@ -962,18 +874,18 @@ pub fn build_mzml<R: std::io::Read + Seek>(
     out: &mut dyn Output,
     budget: usize,
 ) -> Result<Stats> {
-    build_mzml_spool(table, src, out, budget, None)
+    build_mzml_spill(table, src, out, budget, None)
 }
 
-/// The same with a `Spool`: the file is decoded once.
-pub fn build_mzml_spool<R: std::io::Read + Seek>(
+/// `build_mzml` with a scratch file for the peaks that do not fit in `budget` (the mzML is then decoded once).
+pub fn build_mzml_spill<R: std::io::Read + Seek>(
     table: &ScanTable,
     mut src: R,
     out: &mut dyn Output,
     budget: usize,
-    spool: Option<Box<dyn Spool>>,
+    spill: Option<&mut dyn Spill>,
 ) -> Result<Stats> {
-    build_con(
+    build_con_spill(
         table,
         &mut |on| {
             src.seek(SeekFrom::Start(0)).map_err(io_error)?;
@@ -986,7 +898,7 @@ pub fn build_mzml_spool<R: std::io::Read + Seek>(
         out,
         budget,
         false,
-        spool,
+        spill,
     )
 }
 
