@@ -179,27 +179,6 @@ pub struct TableCuration {
     formula_override: HashMap<String, String>,
 }
 
-fn rows3(text: Option<&str>, what: &str, key: &str) -> Result<Vec<(String, String, String)>> {
-    let Some(text) = text else {
-        return Ok(Vec::new());
-    };
-    let f = Frame::parse(text, ';')?;
-    let col = |n: &str| {
-        f.col(n)
-            .ok_or_else(|| CampaignError::campaign(format!("{what}: the column '{n}' is missing")))
-    };
-    let (p, l, c) = (col(key)?, col("canonical_name")?, col("category")?);
-    Ok((0..f.len())
-        .map(|r| {
-            (
-                f.cell(r, p).to_string(),
-                f.cell(r, l).to_string(),
-                f.cell(r, c).to_string(),
-            )
-        })
-        .collect())
-}
-
 impl TableCuration {
     /// From the text of the three tables (`None`: the table is not there).
     pub fn from_texts(
@@ -235,7 +214,30 @@ impl TableCuration {
         let text = |i: usize| c.curation_csv[i].as_ref().and_then(|p| io.text(p));
         Self::from_texts(text(0).as_deref(), text(1).as_deref(), text(2).as_deref())
     }
+}
 
+fn rows3(text: Option<&str>, what: &str, key: &str) -> Result<Vec<(String, String, String)>> {
+    let Some(text) = text else {
+        return Ok(Vec::new());
+    };
+    let f = Frame::parse(text, ';')?;
+    let col = |n: &str| {
+        f.col(n)
+            .ok_or_else(|| CampaignError::campaign(format!("{what}: the column '{n}' is missing")))
+    };
+    let (p, l, c) = (col(key)?, col("canonical_name")?, col("category")?);
+    Ok((0..f.len())
+        .map(|r| {
+            (
+                f.cell(r, p).to_string(),
+                f.cell(r, l).to_string(),
+                f.cell(r, c).to_string(),
+            )
+        })
+        .collect())
+}
+
+impl TableCuration {
     /// Whether any table has a row.
     pub fn is_empty(&self) -> bool {
         self.name_map.is_empty()

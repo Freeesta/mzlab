@@ -32,10 +32,6 @@ pub struct Pattern {
     text: String,
 }
 
-fn is_word(c: char) -> bool {
-    c.is_alphanumeric() || c == '_'
-}
-
 impl Item {
     fn has(&self, c: char) -> bool {
         match *self {
@@ -92,7 +88,13 @@ impl Parser {
         }
         Some(Node::Seq(out))
     }
+}
 
+fn is_word(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
+}
+
+impl Parser {
     fn quantified(&mut self, atom: Node) -> Option<Node> {
         let (lo, hi) = match self.peek() {
             Some('?') => (0, 1),
@@ -128,6 +130,19 @@ impl Parser {
         Some(Node::Rep(Box::new(atom), lo, hi))
     }
 
+    fn escape(&mut self) -> Option<Node> {
+        let c = self.peek()?;
+        self.i += 1;
+        Some(match c {
+            'b' => Node::WordB(true),
+            'B' => Node::WordB(false),
+            'w' | 'W' | 'd' | 'D' | 's' | 'S' => Node::Class(vec![shorthand(c)], false),
+            'n' => Node::Char('\n'),
+            't' => Node::Char('\t'),
+            _ => Node::Char(c),
+        })
+    }
+
     fn group(&mut self) -> Option<Node> {
         let (look, behind, neg) = if self.starts("?:") {
             self.i += 2;
@@ -151,7 +166,20 @@ impl Parser {
             inner
         })
     }
+}
 
+fn shorthand(c: char) -> Item {
+    match c {
+        'w' => Item::Word(false),
+        'W' => Item::Word(true),
+        'd' => Item::Digit(false),
+        'D' => Item::Digit(true),
+        's' => Item::Space(false),
+        _ => Item::Space(true),
+    }
+}
+
+impl Parser {
     fn atom(&mut self) -> Option<Node> {
         let c = self.peek()?;
         self.i += 1;
@@ -163,19 +191,6 @@ impl Parser {
             '$' => Node::End,
             '\\' => self.escape()?,
             '?' | '*' | '+' => return None,
-            _ => Node::Char(c),
-        })
-    }
-
-    fn escape(&mut self) -> Option<Node> {
-        let c = self.peek()?;
-        self.i += 1;
-        Some(match c {
-            'b' => Node::WordB(true),
-            'B' => Node::WordB(false),
-            'w' | 'W' | 'd' | 'D' | 's' | 'S' => Node::Class(vec![shorthand(c)], false),
-            'n' => Node::Char('\n'),
-            't' => Node::Char('\t'),
             _ => Node::Char(c),
         })
     }
@@ -220,17 +235,6 @@ impl Parser {
             }
         }
         Some(Node::Class(items, neg))
-    }
-}
-
-fn shorthand(c: char) -> Item {
-    match c {
-        'w' => Item::Word(false),
-        'W' => Item::Word(true),
-        'd' => Item::Digit(false),
-        'D' => Item::Digit(true),
-        's' => Item::Space(false),
-        _ => Item::Space(true),
     }
 }
 

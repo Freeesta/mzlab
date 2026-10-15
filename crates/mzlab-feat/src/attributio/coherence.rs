@@ -85,6 +85,19 @@ pub fn coherence_report(
         "every Lvl2 has level_sub a or b",
         at(2).all(|f| f.level_sub == "a" || f.level_sub == "b"),
     );
+    fill_info(&mut r, feats, sites, cur, &by_level);
+    r
+}
+
+fn fill_info(
+    r: &mut CoherenceReport,
+    feats: &[Feature],
+    sites: &[String],
+    cur: &dyn Curation,
+    by_level: &BTreeMap<i32, usize>,
+) {
+    let is2b = |f: &&Feature| f.level_sub == "b";
+    let at = |lv: i32| feats.iter().filter(move |f| f.level == lv);
     let mut info = |name: &str, text: String| r.info.push((name.to_string(), text));
     let counts: Vec<String> = by_level.iter().map(|(k, v)| format!("{k}: {v}")).collect();
     info("features per level", format!("{{{}}}", counts.join(", ")));
@@ -116,5 +129,4 @@ pub fn coherence_report(
         "identities: identity_table vs inventory",
         format!("({it}, {inv})"),
     );
-    r
 }
