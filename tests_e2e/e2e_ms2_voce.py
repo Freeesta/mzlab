@@ -15,14 +15,14 @@ try:
         P = "E.panels.filter(p => p.tab === 'ms2')"
         def tick():
             assert pg.evaluate("E.files.find(f => f.label === 'MS2_t15').vis") is False
-            pg.locator("#flst input[data-pr]").first.click(); pg.wait_for_timeout(2500); ready(pg)
+            pg.locator("#flst input[data-pr]").first.click(); attendi(pg, f"{P}.length >= 1"); ready(pg)
             t = pg.evaluate(f"{P}.map(p => p.type)"); assert t == ["chrom"], t
             assert pg.evaluate("E.files.find(f => f.label === 'MS2_t15').vis") is True, "the MS2 file of the precursor is visible"
             n = pg.evaluate(f"(async () => (await rawSeries({P}[0])).filter(s => s.y.some(v => v > 0)).length)()"); assert n >= 1, "the precursor chromatogram has data"
             assert pg.locator("#flst input[data-pr]:checked").count() == 1
         step("tick: only the precursor chromatogram, MS2 file visible, with data", tick)
         def dbl():
-            pg.locator("#flst [data-pg]").first.dblclick(); pg.wait_for_timeout(2500); ready(pg)
+            pg.locator("#flst [data-pg]").first.dblclick(); attendi(pg, f"{P}.length >= 2"); ready(pg)
             t = pg.evaluate(f"{P}.map(p => p.type)"); assert t == ["chrom", "spec"], t
             s = pg.evaluate(f"(() => {{ const s = {P}[1], c = {P}[0]; return [s.level, String(s.prec), s.link === c.id, s.r0 != null]; }})()"); assert s == [2, "229.1", True, True], s
         step("double click on the name: the product-ion spectrum, linked", dbl)
