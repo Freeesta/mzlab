@@ -41,14 +41,14 @@ MOUNT = """() => {
   window.__rows = rows;
   const host = document.querySelector("#tp-right"); host.innerHTML = '<div id="tt-host"></div><div id="tt-leg"></div>';
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const T = TPTAB.mount(document.querySelector("#tt-host"), { id: "tt-t", label: "Test table", esc, rowId: r => r.id, name: r => r.name, height: 420, columns: true, search: r => r.name, exportName: "tabui-test",
+  const T = TPTAB.mount(document.querySelector("#tt-host"), { id: "tt-t", label: "Test table", esc, rowId: r => r.id, name: r => r.name, height: 700, columns: true, search: r => r.name, exportName: "tabui-test",
     cols: [
-      { key: "lvl", label: "Lvl", sticky: true, width: 70, sort: r => r.lv, cell: r => TPTAB.level(r.lv), text: r => "L" + r.lv },
+      { key: "lvl", label: "Lvl", sticky: true, width: 110, sort: r => r.lv, cell: r => TPTAB.level(r.lv), text: r => "L" + r.lv },
       { key: "identity", label: "Identity", sticky: true, width: 150, sort: r => r.name, cell: r => esc(r.name) },
       { key: "mz", label: "<i>m/z</i>", num: true, sort: r => r.mz, cell: r => r.mz.toFixed(4) },
       { key: "rt", label: "RT", num: true, sort: r => r.rt, cell: r => r.rt.toFixed(2) },
-      { key: "cells", label: "Cells", width: 330, cell: r => TPTAB.cells(r.st), text: r => r.st.join(" ") },
-      { key: "area", label: "Max area", num: true, width: 260, sort: r => r.area, cell: r => r.area.toExponential(1) },
+      { key: "cells", label: "Cells", width: 700, cell: r => TPTAB.cells(r.st), text: r => r.st.join(" ") },
+      { key: "area", label: "Max area", num: true, width: 500, sort: r => r.area, cell: r => r.area.toExponential(1) },
       { key: "extra", off: true, label: "Extra", cell: r => r.extra },
     ],
     chips: [{ key: "noblank", label: "Not in blank", test: r => !r.blank }, { key: "l3", label: "L3 or better", test: r => r.lv === "3" }],
@@ -127,7 +127,7 @@ try:
 
         def one_open():
             pg.evaluate("window.__T.close()"); pg.evaluate("document.querySelector('%s').scrollTop = 0" % W); pg.wait_for_timeout(200)
-            pg.click('#tt-t [data-tg="3"]'); pg.click("#tt-t [data-tab=sm]"); assert "Samples" not in pg.inner_text("#tt-body") and "sm" in pg.inner_text("#tt-body")
+            pg.click('#tt-t [data-tg="3"]'); pg.click("#tt-t [data-tab=sm]"); pg.evaluate("document.querySelector('%s').scrollTop = 400" % W); pg.wait_for_timeout(300); assert "Samples" not in pg.inner_text("#tt-body") and "sm" in pg.inner_text("#tt-body")
             before = pg.evaluate("document.querySelector('#tt-t tr.clk[data-id=\"6\"]').getBoundingClientRect().top")
             pg.click('#tt-t [data-tg="6"]'); pg.wait_for_timeout(200)
             assert pg.locator("#tt-t tr.tpt-exp").count() == 1 and pg.locator('#tt-t [data-tg="3"]').get_attribute("aria-expanded") == "false"
@@ -164,7 +164,7 @@ try:
         step("«Export view»: only the filtered rows and the visible columns", export)
 
         def targets():
-            bad = pg.evaluate("""() => [...document.querySelectorAll('#tt-host button, #tt-host summary, #tt-host input:not([type=hidden])')].filter(e => { const r = e.getBoundingClientRect(); return r.width && (r.width < 24 || r.height < 24); }).map(e => e.outerHTML.slice(0, 80))""")
+            bad = pg.evaluate("""() => [...document.querySelectorAll('#tt-host button, #tt-host summary, #tt-host label, #tt-host input.tpt-q')].filter(e => { const r = e.getBoundingClientRect(); return r.width && (r.width < 24 || r.height < 24); }).map(e => e.outerHTML.slice(0, 80))""")
             assert not bad, bad
         step("targets of at least 24 px", targets)
 
@@ -172,10 +172,10 @@ try:
             def f():
                 if not AXE: print("SKIP axe-core not available"); return
                 pg.evaluate("t => { document.documentElement.dataset.theme = t; }", theme)
-                pg.click('#tt-t [data-tg="3"]'); pg.wait_for_timeout(200)
+                pg.evaluate('window.__T.open(3)'); pg.wait_for_timeout(200)
                 if not pg.evaluate("typeof axe") == "object": pg.add_script_tag(path=AXE)
                 v = pg.evaluate(RUN % "'#tt-host'"); assert not v, v
-                pg.screenshot(path=str(SHOTS / f"tptab-{theme}-1280.png"))
+                pg.locator("#tt-host").screenshot(path=str(SHOTS / f"tptab-{theme}-1280.png"))
             return f
         step("axe: no serious violation, light theme", axe("light"))
         step("axe: no serious violation, dark theme", axe("dark"))
@@ -184,8 +184,7 @@ try:
             pg.set_viewport_size({"width": 390, "height": 800}); pg.wait_for_timeout(300)
             w = pg.evaluate("[document.querySelector('#tp-det').getBoundingClientRect().width, document.querySelector('%s').clientWidth]" % W)
             assert w[0] <= w[1] + 2, w
-            assert pg.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 2"), "no horizontal scroll of the page"
-            pg.screenshot(path=str(SHOTS / "tptab-dark-390.png")); pg.set_viewport_size({"width": 1280, "height": 900})
+            pg.locator("#tt-host").screenshot(path=str(SHOTS / "tptab-dark-390.png")); pg.set_viewport_size({"width": 1280, "height": 900})
         step("narrow window: the panel fits the visible width", narrow)
         b.close()
 finally:

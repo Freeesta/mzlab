@@ -8,7 +8,7 @@
   const G = /** @type {any} */ (window);
   const CSS = `
 .tp{--tpt-rh:30px}.tp .pd-1{--lvc:#009E73}.tp .pd-2{--lvc:#0072B2}.tp .pd-3{--lvc:#E69F00}.tp .pd-4{--lvc:#999999}
-.tp .tpt-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:6px;position:relative}.tp .tpt-wrap.tpt-h{overflow:auto}
+.tp .tpt-wrap{overflow-anchor:none;contain:inline-size;max-width:100%;overflow-x:auto;border:1px solid var(--line);border-radius:6px;position:relative}.tp .tpt-wrap.tpt-h{overflow:auto}
 .tp table.tpt{border-collapse:separate;border-spacing:0;width:100%;font-size:12px}
 .tp table.tpt th{position:sticky;top:0;z-index:2;background:var(--panel);white-space:nowrap;text-align:left;border-bottom:1px solid var(--line)}
 .tp table.tpt th.n{text-align:right}
@@ -40,7 +40,7 @@
 .tp .tpt-tabs button{box-sizing:border-box;cursor:pointer;min-height:28px;min-width:24px;padding:0 12px;border:0;border-bottom:3px solid transparent;background:none;color:var(--muted);font:inherit;white-space:nowrap}
 .tp .tpt-tabs button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
 .tp .tpt-body .tpt-scroll{max-height:420px;overflow:auto}
-.tp .tpt-st{display:inline-block;min-width:1em;text-align:center}.tp .tpt-st-detected{color:var(--ink)}.tp .tpt-st-filled{color:var(--accent)}.tp .tpt-st-targeted{color:var(--warn)}.tp .tpt-st-absent,.tp .tpt-st-na{color:var(--muted)}
+.tp .tpt-st{display:inline-block;min-width:1em;text-align:center;font-family:"Segoe UI Symbol","DejaVu Sans","Noto Sans Symbols 2",sans-serif}.tp .tpt-st-detected{color:var(--ink)}.tp .tpt-st-filled{color:var(--accent)}.tp .tpt-st-targeted{color:var(--warn)}.tp .tpt-st-absent,.tp .tpt-st-na{color:var(--muted)}
 .tp .tpt-cells{letter-spacing:1px;white-space:nowrap}.tp .tpt-cells .tpt-more{font-size:11px;color:var(--muted);margin-left:3px;letter-spacing:0}
 .tp .tpt-leg{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:11px;margin-top:6px;color:var(--muted)}.tp .tpt-leg span[tabindex]{min-height:24px;display:inline-flex;align-items:center;gap:4px}
 .tp .lvb.tpt-dec{border-style:double;border-width:4px;padding:0 4px}
@@ -111,7 +111,7 @@
     const scrollFrame = (/** @type {() => void} */ f) => G.FRAME && G.FRAME.next ? G.FRAME.next(f) : requestAnimationFrame(f);
 
     function drawHead() {
-      head.innerHTML = cols.map(c => `<th scope="col"${c.sticky ? ` class="tpt-stk${c.num ? " n" : ""}"` : c.num ? ` class="n"` : ""} aria-sort="${st.sort === c.key ? (st.dir > 0 ? "ascending" : "descending") : "none"}"${c.title && !c.help ? ` title="${esc(c.title)}"` : ""}${c.width ? ` style="min-width:${c.width}px"` : ""}>${
+      head.innerHTML = cols.map(c => `<th scope="col"${c.sticky ? ` class="tpt-stk${c.num ? " n" : ""}"` : c.num ? ` class="n"` : ""} aria-sort="${st.sort === c.key ? (st.dir > 0 ? "ascending" : "descending") : "none"}"${c.title && !c.help ? ` title="${esc(c.title)}"` : ""}${c.width ? ` style="width:${c.width}px;min-width:${c.width}px"` : ""}>${
         c.sort ? `<button type="button" class="tpt-sh" data-sh="${c.key}"${tt(c.help)}>${c.label}<span aria-hidden="true">${st.sort === c.key ? (st.dir > 0 ? "▲" : "▼") : ""}</span></button>` : c.help && G.TPHELP ? `<span tabindex="0"${tt(c.help)}>${c.label}</span>` : c.label}</th>`).join("");
       head.setAttribute("aria-rowindex", "1");
     }
@@ -124,7 +124,7 @@
         x += /** @type {HTMLElement} */ (head.children[i]).offsetWidth;
       });
     }
-    const stk = (/** @type {Col} */ c, /** @type {number} */ i) => c.sticky ? ` style="left:var(--tpt-l${i},0)"` : "";
+    const stk = (/** @type {Col} */ c, /** @type {number} */ i) => c.sticky || c.width ? ` style="${c.sticky ? `left:var(--tpt-l${i},0);` : ""}${c.width ? `max-width:${c.width}px` : ""}"` : "";
     /** @param {any} r @param {number} idx the index in the list of rows */
     function rowHtml(r, idx) {
       const id = idOf(r), on = st.open === id, pinned = o.pin ? o.pin(r) : false;
@@ -231,9 +231,9 @@
     function open(id) {
       const r = rowOf(id); if (!r) return false;
       const fresh = st.open !== id;
-      if (fresh && isVirt()) reveal(st.list.indexOf(r));
-      anchored(id, () => { st.open = id; if (fresh) buildPanel(r); draw(); });
-      if (fresh) { fill(r); live.textContent = `Details of ${o.name(r)} opened`; }
+      if (fresh && isVirt() && !trOf(id)) reveal(st.list.indexOf(r));
+      anchored(id, () => { st.open = id; if (fresh) { buildPanel(r); draw(); fill(r); } else draw(); });
+      if (fresh) { live.textContent = `Details of ${o.name(r)} opened`; }
       showPanel(id);
       return true;
     }
