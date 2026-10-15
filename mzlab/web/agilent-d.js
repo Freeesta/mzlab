@@ -24,8 +24,7 @@ const BrukerD = {
 const AgilentD = (() => {
   // the files of a run that the engine takes, by the name of its argument; scan and peak are required unless there is a data.ms (an older run)
   const NEED = { scan: "AcqData/MSScan.bin", peak: "AcqData/MSPeak.bin", xsd: "AcqData/MSScan.xsd", ts: "AcqData/MSTS.xml", devices: "AcqData/Devices.xml", contents: "AcqData/Contents.xml", tree: "AcqData/MSTree2.bin", acqmeth: "acqmeth.txt", datams: "data.ms", profile: "AcqData/MSProfile.bin", masscal: "AcqData/MSMassCal.bin", defcal: "AcqData/DefaultMassCal.xml", acqxml: "AcqData/AcqMethod.xml", sampleinfo: "AcqData/sample_info.xml", sequence: "AcqData/sequence.xml" };
-  const OTHER = /^AcqData\/[^/]+$/i, relOf = /** @type {(k: string) => string} */ k => /** @type {any} */ (NEED)[k] || k.slice(2);
-  const dirOf = f => (typeof CartCarica !== "undefined" ? CartCarica.dir(f) : (f.webkitRelativePath || "").replace(/[^/]*$/, ""));
+  const OTHER = /^AcqData\/[^/]+$/i, relOf = /** @type {(k: string) => string} */ k => /** @type {any} */ (NEED)[k] || k.slice(2), dirOf = f => (typeof CartCarica !== "undefined" ? CartCarica.dir(f) : (f.webkitRelativePath || "").replace(/[^/]*$/, ""));
 
   // where a file lies in a .D folder: { root: "a/b/x.D/", name: "x.D", rel: "AcqData/MSScan.bin" }, or null when no folder above it is called *.D
   function locate(f) {
