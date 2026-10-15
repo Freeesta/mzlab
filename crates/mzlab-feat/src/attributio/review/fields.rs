@@ -8,6 +8,39 @@ pub enum Value {
     List(Vec<Value>),
 }
 
+macro_rules! settings {
+    ($( $(#[$doc:meta])* $name:ident : $ty:ty = $def:expr ;)*) => {
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct ReviewSettings { $( $(#[$doc])* pub $name: $ty, )* }
+
+        impl Default for ReviewSettings {
+            fn default() -> Self { ReviewSettings { $( $name: $def, )* } }
+        }
+
+        impl ReviewSettings {
+            /// The keys a campaign may set.
+            pub const KEYS: &'static [&'static str] = &[ $( stringify!($name), )* ];
+
+            fn set(&mut self, key: &str, v: &Value) -> Result<(), String> {
+                match key {
+                    $( stringify!($name) => {
+                        self.$name = <$ty as Field>::from_value(v).ok_or_else(|| format!("[review] {key}: wrong type"))?;
+                        Ok(())
+                    } )*
+                    _ => Err(format!("[review]: unknown key {key}")),
+                }
+            }
+
+            /// Every setting with its value, in declaration order.
+            pub fn entries(&self) -> Vec<(&'static str, Value)> {
+                vec![ $( (stringify!($name), Field::to_value(&self.$name)), )* ]
+            }
+        }
+    };
+}
+
+pub(super) use settings;
+
 pub(super) trait Field: Sized {
     fn from_value(v: &Value) -> Option<Self>;
     fn to_value(&self) -> Value;
@@ -64,36 +97,3 @@ impl<T: Field> Field for Vec<T> {
         Value::List(self.iter().map(Field::to_value).collect())
     }
 }
-
-macro_rules! settings {
-    ($( $(#[$doc:meta])* $name:ident : $ty:ty = $def:expr ;)*) => {
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct ReviewSettings { $( $(#[$doc])* pub $name: $ty, )* }
-
-        impl Default for ReviewSettings {
-            fn default() -> Self { ReviewSettings { $( $name: $def, )* } }
-        }
-
-        impl ReviewSettings {
-            /// The keys a campaign may set.
-            pub const KEYS: &'static [&'static str] = &[ $( stringify!($name), )* ];
-
-            fn set(&mut self, key: &str, v: &Value) -> Result<(), String> {
-                match key {
-                    $( stringify!($name) => {
-                        self.$name = <$ty as Field>::from_value(v).ok_or_else(|| format!("[review] {key}: wrong type"))?;
-                        Ok(())
-                    } )*
-                    _ => Err(format!("[review]: unknown key {key}")),
-                }
-            }
-
-            /// Every setting with its value, in declaration order.
-            pub fn entries(&self) -> Vec<(&'static str, Value)> {
-                vec![ $( (stringify!($name), Field::to_value(&self.$name)), )* ]
-            }
-        }
-    };
-}
-
-pub(super) use settings;
