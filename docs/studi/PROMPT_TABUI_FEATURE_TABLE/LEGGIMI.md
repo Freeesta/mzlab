@@ -5,7 +5,6 @@ Studio: `docs/studi/TABUI_FEATURE_TABLE.md`. Decisione di Federico (§1): tabell
 ## File toccati
 | Pacchetto | File toccati | Dipende da |
 |---|---|---|
-| FT-01 testi it/en e aiuto | `TP_Mine/js/{40_tabui_testi.js,41_tabui_aiuto.js}` (nuovi), `TP_Mine/tests/test_tabui_testi.py`, `tests_e2e/e2e_tabui_aiuto.py`, `docs/agenti/mzfinder.md` | — |
 | FT-02 componente `TPTAB` (riga chiusa e cornice della riga espansa) | `TP_Mine/js/42_tp_table.js`, `tests_e2e/e2e_tabui_tptab.py`, `docs/agenti/mzfinder-tabella.md` | — |
 | FT-03 rotta Rust `table_row` (`riga/1`) e tracce | `crates/mzlab-feat/src/riga.rs` (nuovo), `lib.rs`, `crates/mzlab-feat-table-wasm/src/lib.rs`, `TP_Mine/js/36_feature_qc.js`, `docs/agenti/{mzfeat-tabella,mzfeat-wasm}.md` | MZ-05 |
 | FT-04 pannello della riga espansa `TPRIGA` | `TP_Mine/js/44_tp_riga.js` (nuovo), `tests_e2e/e2e_tabui_tptab.py`, `docs/agenti/mzfinder-tabella.md` | FT-02 |
@@ -16,7 +15,7 @@ Studio: `docs/studi/TABUI_FEATURE_TABLE.md`. Decisione di Federico (§1): tabell
 | FT-09 tabelle esterne e Attributio | `TP_Mine/js/{27_untarget_ui.js,29_untarget_identity.js,51_attributio_table.js}`, `tests_e2e/{e2e_untarget,e2e_attributio}.py`, `docs/agenti/{mzfinder-untargeted,attributio}.md` | FT-02, FT-04, MZ-05, AT-04 |
 
 ## Cosa si lancia insieme
-- **Onda 1**: FT-01 e FT-02 insieme (file diversi; FT-02 usa `TPHELP`/`TT` solo se ci sono). FT-03 appena MZ-05 è unita.
+- **Onda 1**: FT-02 (usa `TPHELP`/`TT` di FT-01, già in `main`). FT-03 appena MZ-05 è unita.
 - **Onda 2**: FT-04 dopo FT-02.
 - **Onda 3**: FT-05 (dopo FT-03 e FT-04: è il pacchetto centrale), FT-06 (se M5 non è aperta), FT-07 (dopo M4, con M5 e RV-11 chiuse), FT-08. Toccano file diversi e possono correre insieme; il documento comune `docs/agenti/mzfinder-tabella.md` si unisce con `git merge origin/main` tenendo le righe di tutti.
 - **Onda 4**: FT-09 dopo AT-04.
