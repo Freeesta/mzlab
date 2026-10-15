@@ -195,7 +195,7 @@ fn lc_file_cases() -> Vec<(&'static str, Members<'static>)> {
     let r = lc::record(1, 1, 3, 0, 12, 1, 0);
     let base = || -> Members<'static> {
         vec![
-            (LC_SCAN, lc::index(&[r.clone()]), None),
+            (LC_SCAN, lc::index(std::slice::from_ref(&r)), None),
             (LC_PEAK, vec![0u8; 64], None),
             (LC_XSD, lc::xsd("DataDependentScanParamType"), None),
         ]

@@ -7,12 +7,12 @@ mod datams;
 mod doc;
 #[path = "../agilent/info.rs"]
 pub mod info;
+mod lccal;
 mod lcdoc;
 mod lcmethod;
 mod lcmodules;
-mod lccal;
-mod lcprofile;
 pub mod lcms;
+mod lcprofile;
 pub mod lettore;
 #[path = "../agilent/meta.rs"]
 pub mod meta;
@@ -141,7 +141,10 @@ pub(super) fn shallow(b: &[u8]) -> bool {
         match b.get(i) {
             Some(b'/') => depth = depth.saturating_sub(1),
             Some(c) if c.is_ascii_alphabetic() => {
-                let end = b.get(i..).and_then(|r| r.iter().position(|&c| c == b'>')).map_or(b.len(), |e| i + e);
+                let end = b
+                    .get(i..)
+                    .and_then(|r| r.iter().position(|&c| c == b'>'))
+                    .map_or(b.len(), |e| i + e);
                 if b.get(end.wrapping_sub(1)) != Some(&b'/') {
                     depth += 1;
                     if depth > 256 {
