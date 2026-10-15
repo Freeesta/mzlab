@@ -259,7 +259,12 @@ async function upload0(files,into,box){
   if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);   // in the browser the engine builds the indexes of several files at once (pool of workers)
   await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
-function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
+function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView();armStuck()}
+// start screen still without files after 10 s: a quiet way out, «Full reset», that opens the same question as «New session» (reset.js)
+let stuckTimer=0;
+function armStuck(){if(stuckTimer||$("#stuck"))return;stuckTimer=setTimeout(()=>{const s=$("#start");if(!s||s.hidden||S.sess||ST.files.length||$("#stuck"))return;
+  const p=document.createElement("p");p.id="stuck";p.className="muted sm";p.style.textAlign="center";p.innerHTML=`${I18N.t("start.stuck")} <button type="button" class="sec" id="stuckbtn">${I18N.t("start.stuck.btn")}</button>`;
+  s.appendChild(p);$("#stuckbtn").onclick=()=>QQRESET.ask()},10000)}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=e=>{CartCarica.fromInput(e.target.files);e.target.value=""};
 $("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};
