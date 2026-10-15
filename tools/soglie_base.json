@@ -12,6 +12,7 @@
   "crates/mzlab-core/src/mzmlhead.rs": 577,
   "crates/mzlab-core/src/scantable.rs": 709,
   "crates/mzlab-desktop/src/update.rs": 867,
+  "crates/mzlab-feat-wasm/src/lib.rs": 680,
   "crates/mzlab-lib/src/build.rs": 542,
   "crates/mzlab-lib/src/parse.rs": 783,
   "crates/mzlab-lib/src/read.rs": 672,
@@ -39,6 +40,8 @@
   "tools/genera_ei.py": 751
  },
  "funzioni": {
+  "TP_Mine/files/feat-desktop-pool.js::createDesktopPool": 120,
+  "TP_Mine/files/feat-worker.js::createFeatPool": 125,
   "TP_Mine/js/20_tpmine.js::open": 488,
   "TP_Mine/js/21_tpmine_hr.js::render": 196,
   "TP_Mine/js/23_tpmine_albero.js::mount": 193,

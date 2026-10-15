@@ -140,7 +140,7 @@ Un pacchetto = una chat DEV = una PR unita a CI verde, pubblicata subito dietro 
 | MZ-01 | costruttore ADAP | 2 | MZ-00 | nessuno | 1 | fatto: `untargeted/adap.rs`, 45/45 cromatogrammi uguali a mzmine 3.9.0 sui sintetici, lastre = stessa uscita (≥ 200 000 punti, 1 MB); prova sui dati veri pronta, da girare con il privato |
 | MZ-02 | risolutore a minimo locale | 2 | MZ-00 | nessuno | 1 | fatto: `untargeted/resolve.rs`, 49 feature su 49 identiche ai dati d'oro di mzmine 3.9.0 (sintetici); dati veri del privato da confrontare |
 | MZ-03 | join aligner e riempimento | 2 | MZ-00 | nessuno | 1 | fatto: `untargeted::{join,gapfill,table}`; sui sintetici d'oro 13 righe su 13 uguali a mzmine e 3 celle su 3 riempite uguali (area e altezza entro 6·10⁻⁴, 4 cifre del CSV); sui dati veri da misurare con il privato (`untargeted_join_dati`, soglia 0,97) |
-| MZ-04 | `.wasm` `untargeted`, ricetta e voce di amministratore | 3 | MZ-01, MZ-02, MZ-03 | crea `untargeted` | 1 | da fare |
+| MZ-04 | `.wasm` `untargeted`, ricetta e voce di amministratore | 3 | MZ-01, MZ-02, MZ-03 | crea `untargeted` | 1 | fatto: `untargeted::pipeline`, `.wasm` 256 174 B, rotte `feat/untargeted/*`, scelta «Engine» in modalità amministratore; sui sintetici d'oro 13 righe su 13 e 52 celle su 52; cancello `untargeted` in `cancello.json` con `ok: null` finché Federico non misura i dati veri (`tools/valida/cancello_untargeted.py`) |
 | MZ-05 | isotopi, identità e ingresso della cascata (`to_attributio.rs`) | 4 | MZ-04, AT-01 | `untargeted` (in serie) | 1 | da fare |
 
 Dopo AT-08: istantanee in sola lettura di registri, liste regolatorie ed ecotossicologia (Q5). Fuori: `ms2_engine`, plugin, provenienza, `qc.py`, riga di comando, grafici matplotlib.
