@@ -1,0 +1,2043 @@
+{
+  "metadata": {
+    "titolo": "Ground truth multi-condizione Bentazone (T10)",
+    "descrizione": "Matrice di verita strutturata per validazione del modulo di confronto condizioni di Tabui con 38 file mzML sintetici a bassa risoluzione (full scan Q1, massa nominale, ESI+).",
+    "parent": {
+      "nome": "Bentazone",
+      "formula": "C10H12N2O3S",
+      "mz_nominale": 241,
+      "mz_monoisotopico": 241.0645,
+      "rt_teorico_min": 3.0
+    },
+    "condizioni": [
+      "Air",
+      "O2",
+      "N2",
+      "Ar",
+      "He",
+      "Reference"
+    ],
+    "tempi": [
+      "t0",
+      "t5",
+      "t10"
+    ],
+    "repliche": [
+      "r1",
+      "r2"
+    ],
+    "controlli": [
+      "bianco.mzML",
+      "standard.mzML"
+    ],
+    "totale_file_mzml": 38,
+    "scansioni_per_file": 80,
+    "rt_range_min": [
+      1.0,
+      5.0
+    ],
+    "unita_area": "counts * s"
+  },
+  "composti": {
+    "Parent": {
+      "id": "Parent",
+      "nome": "Bentazone",
+      "formula": "C10H12N2O3S",
+      "mz": 241.0,
+      "rt": 3.0,
+      "fwhm": 0.14,
+      "ruolo": "Parent compound (Bentazone, substrato di partenza)",
+      "descrizione": "Composto bersaglio di partenza; degrada nelle condizioni attive fotocatalitiche e fotolitiche, stabile nel Reference."
+    },
+    "TP1": {
+      "id": "TP1",
+      "nome": "Intermedio mono-idrossilato",
+      "formula": "C10H12N2O4S",
+      "mz": 257.0,
+      "rt": 2.2,
+      "fwhm": 0.13,
+      "ruolo": "Intermedio comune con cinetica a campana",
+      "descrizione": "Intermedio di reazione primario formato in tutte le condizioni con cinetica a campana (massimo a t5, calo a t10)."
+    },
+    "TP2": {
+      "id": "TP2",
+      "nome": "Prodotto di foto-ossigenazione",
+      "formula": "C10H12N2O5S",
+      "mz": 273.0,
+      "rt": 1.8,
+      "fwhm": 0.12,
+      "ruolo": "Marcatore di foto-ossigenazione (specifico O2 e Air)",
+      "descrizione": "Prodotto dipendente dall'ossigeno disciolto; presente solo in atmosfera di O2 e Air, assente in atmosfere inerti."
+    },
+    "TP3": {
+      "id": "TP3",
+      "nome": "Prodotto di fotolisi anaerobica",
+      "formula": "C10H12N2O2S",
+      "mz": 225.0,
+      "rt": 2.6,
+      "fwhm": 0.13,
+      "ruolo": "Marcatore di fotolisi anaerobica (specifico N2, Ar, He)",
+      "descrizione": "Prodotto di degradazione fotochimica anaerobica / deossigenato; formato in N2, Ar e He, assente con O2."
+    },
+    "TP4": {
+      "id": "TP4",
+      "nome": "Contaminante di fondo / plastificante",
+      "formula": "C16H22O4",
+      "mz": 279.0,
+      "rt": 4.2,
+      "fwhm": 0.15,
+      "ruolo": "Contaminante di fondo (scartato dal filtro del bianco)",
+      "descrizione": "Artefatto dell'eluente/sistema a concentrazione costante in tutti i file (inclusi bianco e standard)."
+    },
+    "TP5": {
+      "id": "TP5",
+      "nome": "Frammento in sorgente (ISF)",
+      "formula": "C9H12N2O",
+      "mz": 197.0,
+      "rt": 3.0,
+      "fwhm": 0.14,
+      "ruolo": "In-source fragment del Bentazone (co-eluente, ~18%)",
+      "descrizione": "Frammento generato per dissociazione termica/elettrica in sorgente ESI; co-eluisce perfettamente col parent ed ha altezza pari a circa il 18% del parent."
+    }
+  },
+  "file": {
+    "Air_t0_r1.mzML": {
+      "condizione": "Air",
+      "tempo": "t0",
+      "replica": "r1",
+      "delta_rt_min": 0.0221,
+      "scale_factor": 0.998,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0221,
+          "altezza_attesa": 499017.9,
+          "area_attesa": 4461979.9
+        },
+        "TP1": {
+          "presente": false,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2221,
+          "altezza_attesa": 119764.3,
+          "area_attesa": 1147366.3
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0221,
+          "altezza_attesa": 89823.2,
+          "area_attesa": 803156.4
+        }
+      }
+    },
+    "Air_t0_r2.mzML": {
+      "condizione": "Air",
+      "tempo": "t0",
+      "replica": "r2",
+      "delta_rt_min": 0.0006,
+      "scale_factor": 1.0069,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0006,
+          "altezza_attesa": 503456.7,
+          "area_attesa": 4501669.4
+        },
+        "TP1": {
+          "presente": false,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2006,
+          "altezza_attesa": 120829.6,
+          "area_attesa": 1157572.1
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0006,
+          "altezza_attesa": 90622.2,
+          "area_attesa": 810300.5
+        }
+      }
+    },
+    "Air_t5_r1.mzML": {
+      "condizione": "Air",
+      "tempo": "t5",
+      "replica": "r1",
+      "delta_rt_min": -0.0255,
+      "scale_factor": 1.0188,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9745,
+          "altezza_attesa": 254687.6,
+          "area_attesa": 2277295.3
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.1745,
+          "altezza_attesa": 203750.1,
+          "area_attesa": 1691705.1
+        },
+        "TP2": {
+          "presente": true,
+          "mz_nominale": 273,
+          "rt_atteso": 1.7745,
+          "altezza_attesa": 101875.1,
+          "area_attesa": 780787.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1745,
+          "altezza_attesa": 122250.1,
+          "area_attesa": 1171180.4
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9745,
+          "altezza_attesa": 45843.8,
+          "area_attesa": 409913.1
+        }
+      }
+    },
+    "Air_t5_r2.mzML": {
+      "condizione": "Air",
+      "tempo": "t5",
+      "replica": "r2",
+      "delta_rt_min": -0.0021,
+      "scale_factor": 1.0344,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9979,
+          "altezza_attesa": 258606.4,
+          "area_attesa": 2312335.2
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.1979,
+          "altezza_attesa": 206885.1,
+          "area_attesa": 1717734.7
+        },
+        "TP2": {
+          "presente": true,
+          "mz_nominale": 273,
+          "rt_atteso": 1.7979,
+          "altezza_attesa": 103442.6,
+          "area_attesa": 792800.6
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1979,
+          "altezza_attesa": 124131.1,
+          "area_attesa": 1189200.9
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9979,
+          "altezza_attesa": 46549.2,
+          "area_attesa": 416220.3
+        }
+      }
+    },
+    "Air_t10_r1.mzML": {
+      "condizione": "Air",
+      "tempo": "t10",
+      "replica": "r1",
+      "delta_rt_min": -0.0025,
+      "scale_factor": 0.9694,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9975,
+          "altezza_attesa": 72707.6,
+          "area_attesa": 650116.3
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.1975,
+          "altezza_attesa": 58166.0,
+          "area_attesa": 482943.5
+        },
+        "TP2": {
+          "presente": true,
+          "mz_nominale": 273,
+          "rt_atteso": 1.7975,
+          "altezza_attesa": 145415.1,
+          "area_attesa": 1114485.1
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1975,
+          "altezza_attesa": 116332.1,
+          "area_attesa": 1114485.1
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9975,
+          "altezza_attesa": 13087.4,
+          "area_attesa": 117020.9
+        }
+      }
+    },
+    "Air_t10_r2.mzML": {
+      "condizione": "Air",
+      "tempo": "t10",
+      "replica": "r2",
+      "delta_rt_min": 0.0276,
+      "scale_factor": 1.0053,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0276,
+          "altezza_attesa": 75400.4,
+          "area_attesa": 674194.3
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2276,
+          "altezza_attesa": 60320.3,
+          "area_attesa": 500830.0
+        },
+        "TP2": {
+          "presente": true,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8276,
+          "altezza_attesa": 150800.8,
+          "area_attesa": 1155761.6
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2276,
+          "altezza_attesa": 120640.6,
+          "area_attesa": 1155761.6
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0276,
+          "altezza_attesa": 13572.1,
+          "area_attesa": 121355.0
+        }
+      }
+    },
+    "O2_t0_r1.mzML": {
+      "condizione": "O2",
+      "tempo": "t0",
+      "replica": "r1",
+      "delta_rt_min": 0.032,
+      "scale_factor": 1.034,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.032,
+          "altezza_attesa": 516997.6,
+          "area_attesa": 4622746.2
+        },
+        "TP1": {
+          "presente": false,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.232,
+          "altezza_attesa": 124079.4,
+          "area_attesa": 1188706.2
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.032,
+          "altezza_attesa": 93059.6,
+          "area_attesa": 832094.3
+        }
+      }
+    },
+    "O2_t0_r2.mzML": {
+      "condizione": "O2",
+      "tempo": "t0",
+      "replica": "r2",
+      "delta_rt_min": -0.0299,
+      "scale_factor": 1.0316,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9701,
+          "altezza_attesa": 515794.1,
+          "area_attesa": 4611984.9
+        },
+        "TP1": {
+          "presente": false,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1701,
+          "altezza_attesa": 123790.6,
+          "area_attesa": 1185939.0
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9701,
+          "altezza_attesa": 92842.9,
+          "area_attesa": 830157.3
+        }
+      }
+    },
+    "O2_t5_r1.mzML": {
+      "condizione": "O2",
+      "tempo": "t5",
+      "replica": "r1",
+      "delta_rt_min": 0.0115,
+      "scale_factor": 1.0328,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0115,
+          "altezza_attesa": 258188.2,
+          "area_attesa": 2308595.7
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2115,
+          "altezza_attesa": 206550.6,
+          "area_attesa": 1714956.8
+        },
+        "TP2": {
+          "presente": true,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8115,
+          "altezza_attesa": 185895.5,
+          "area_attesa": 1424733.3
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2115,
+          "altezza_attesa": 123930.3,
+          "area_attesa": 1187277.8
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0115,
+          "altezza_attesa": 46473.9,
+          "area_attesa": 415547.2
+        }
+      }
+    },
+    "O2_t5_r2.mzML": {
+      "condizione": "O2",
+      "tempo": "t5",
+      "replica": "r2",
+      "delta_rt_min": -0.0163,
+      "scale_factor": 1.0289,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9837,
+          "altezza_attesa": 257231.9,
+          "area_attesa": 2300044.8
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.1837,
+          "altezza_attesa": 205785.5,
+          "area_attesa": 1708604.7
+        },
+        "TP2": {
+          "presente": true,
+          "mz_nominale": 273,
+          "rt_atteso": 1.7837,
+          "altezza_attesa": 185207.0,
+          "area_attesa": 1419456.2
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1837,
+          "altezza_attesa": 123471.3,
+          "area_attesa": 1182880.2
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9837,
+          "altezza_attesa": 46301.7,
+          "area_attesa": 414008.1
+        }
+      }
+    },
+    "O2_t10_r1.mzML": {
+      "condizione": "O2",
+      "tempo": "t10",
+      "replica": "r1",
+      "delta_rt_min": -0.0197,
+      "scale_factor": 0.9637,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9803,
+          "altezza_attesa": 72274.0,
+          "area_attesa": 646239.3
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.1803,
+          "altezza_attesa": 57819.2,
+          "area_attesa": 480063.5
+        },
+        "TP2": {
+          "presente": true,
+          "mz_nominale": 273,
+          "rt_atteso": 1.7803,
+          "altezza_attesa": 240913.2,
+          "area_attesa": 1846398.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1803,
+          "altezza_attesa": 115638.3,
+          "area_attesa": 1107838.8
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9803,
+          "altezza_attesa": 13009.3,
+          "area_attesa": 116323.1
+        }
+      }
+    },
+    "O2_t10_r2.mzML": {
+      "condizione": "O2",
+      "tempo": "t10",
+      "replica": "r2",
+      "delta_rt_min": -0.0055,
+      "scale_factor": 1.016,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9945,
+          "altezza_attesa": 76199.5,
+          "area_attesa": 681339.7
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.1945,
+          "altezza_attesa": 60959.6,
+          "area_attesa": 506138.0
+        },
+        "TP2": {
+          "presente": true,
+          "mz_nominale": 273,
+          "rt_atteso": 1.7945,
+          "altezza_attesa": 253998.4,
+          "area_attesa": 1946684.8
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1945,
+          "altezza_attesa": 121919.2,
+          "area_attesa": 1168010.9
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9945,
+          "altezza_attesa": 13715.9,
+          "area_attesa": 122641.1
+        }
+      }
+    },
+    "N2_t0_r1.mzML": {
+      "condizione": "N2",
+      "tempo": "t0",
+      "replica": "r1",
+      "delta_rt_min": -0.0143,
+      "scale_factor": 0.9602,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9857,
+          "altezza_attesa": 480106.1,
+          "area_attesa": 4292879.8
+        },
+        "TP1": {
+          "presente": false,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1857,
+          "altezza_attesa": 115225.5,
+          "area_attesa": 1103883.4
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9857,
+          "altezza_attesa": 86419.1,
+          "area_attesa": 772718.4
+        }
+      }
+    },
+    "N2_t0_r2.mzML": {
+      "condizione": "N2",
+      "tempo": "t0",
+      "replica": "r2",
+      "delta_rt_min": 0.0034,
+      "scale_factor": 1.0001,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0034,
+          "altezza_attesa": 500071.4,
+          "area_attesa": 4471399.8
+        },
+        "TP1": {
+          "presente": false,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2034,
+          "altezza_attesa": 120017.1,
+          "area_attesa": 1149788.5
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0034,
+          "altezza_attesa": 90012.8,
+          "area_attesa": 804852.0
+        }
+      }
+    },
+    "N2_t5_r1.mzML": {
+      "condizione": "N2",
+      "tempo": "t5",
+      "replica": "r1",
+      "delta_rt_min": -0.0133,
+      "scale_factor": 0.9798,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9867,
+          "altezza_attesa": 244955.4,
+          "area_attesa": 2190274.5
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.1867,
+          "altezza_attesa": 195964.3,
+          "area_attesa": 1627061.1
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": true,
+          "mz_nominale": 225,
+          "rt_atteso": 2.5867,
+          "altezza_attesa": 117578.6,
+          "area_attesa": 976236.7
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1867,
+          "altezza_attesa": 117578.6,
+          "area_attesa": 1126426.9
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9867,
+          "altezza_attesa": 44092.0,
+          "area_attesa": 394249.4
+        }
+      }
+    },
+    "N2_t5_r2.mzML": {
+      "condizione": "N2",
+      "tempo": "t5",
+      "replica": "r2",
+      "delta_rt_min": 0.0167,
+      "scale_factor": 0.9881,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0167,
+          "altezza_attesa": 247037.4,
+          "area_attesa": 2208891.0
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2167,
+          "altezza_attesa": 197630.0,
+          "area_attesa": 1640890.4
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": true,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6167,
+          "altezza_attesa": 118578.0,
+          "area_attesa": 984534.3
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2167,
+          "altezza_attesa": 118578.0,
+          "area_attesa": 1136001.1
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0167,
+          "altezza_attesa": 44466.7,
+          "area_attesa": 397600.4
+        }
+      }
+    },
+    "N2_t10_r1.mzML": {
+      "condizione": "N2",
+      "tempo": "t10",
+      "replica": "r1",
+      "delta_rt_min": -0.0102,
+      "scale_factor": 1.0304,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9898,
+          "altezza_attesa": 77282.7,
+          "area_attesa": 691024.6
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.1898,
+          "altezza_attesa": 61826.1,
+          "area_attesa": 513332.6
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": true,
+          "mz_nominale": 225,
+          "rt_atteso": 2.5898,
+          "altezza_attesa": 206087.1,
+          "area_attesa": 1711108.5
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1898,
+          "altezza_attesa": 123652.2,
+          "area_attesa": 1184613.6
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9898,
+          "altezza_attesa": 13910.9,
+          "area_attesa": 124384.4
+        }
+      }
+    },
+    "N2_t10_r2.mzML": {
+      "condizione": "N2",
+      "tempo": "t10",
+      "replica": "r2",
+      "delta_rt_min": -0.0066,
+      "scale_factor": 0.9684,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9934,
+          "altezza_attesa": 72631.6,
+          "area_attesa": 649437.0
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.1934,
+          "altezza_attesa": 58105.3,
+          "area_attesa": 482438.9
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": true,
+          "mz_nominale": 225,
+          "rt_atteso": 2.5934,
+          "altezza_attesa": 193684.2,
+          "area_attesa": 1608129.7
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1934,
+          "altezza_attesa": 116210.5,
+          "area_attesa": 1113320.6
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9934,
+          "altezza_attesa": 13073.7,
+          "area_attesa": 116898.7
+        }
+      }
+    },
+    "Ar_t0_r1.mzML": {
+      "condizione": "Ar",
+      "tempo": "t0",
+      "replica": "r1",
+      "delta_rt_min": -0.0283,
+      "scale_factor": 1.0417,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9717,
+          "altezza_attesa": 520874.5,
+          "area_attesa": 4657410.9
+        },
+        "TP1": {
+          "presente": false,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1717,
+          "altezza_attesa": 125009.9,
+          "area_attesa": 1197620.0
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9717,
+          "altezza_attesa": 93757.4,
+          "area_attesa": 838334.0
+        }
+      }
+    },
+    "Ar_t0_r2.mzML": {
+      "condizione": "Ar",
+      "tempo": "t0",
+      "replica": "r2",
+      "delta_rt_min": 0.0234,
+      "scale_factor": 1.004,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0234,
+          "altezza_attesa": 501982.2,
+          "area_attesa": 4488485.1
+        },
+        "TP1": {
+          "presente": false,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2234,
+          "altezza_attesa": 120475.7,
+          "area_attesa": 1154181.9
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0234,
+          "altezza_attesa": 90356.8,
+          "area_attesa": 807927.3
+        }
+      }
+    },
+    "Ar_t5_r1.mzML": {
+      "condizione": "Ar",
+      "tempo": "t5",
+      "replica": "r1",
+      "delta_rt_min": 0.0293,
+      "scale_factor": 0.9678,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0293,
+          "altezza_attesa": 241950.6,
+          "area_attesa": 2163407.3
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2293,
+          "altezza_attesa": 193560.5,
+          "area_attesa": 1607102.5
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": true,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6293,
+          "altezza_attesa": 116136.3,
+          "area_attesa": 964261.5
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2293,
+          "altezza_attesa": 116136.3,
+          "area_attesa": 1112609.4
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0293,
+          "altezza_attesa": 43551.1,
+          "area_attesa": 389413.3
+        }
+      }
+    },
+    "Ar_t5_r2.mzML": {
+      "condizione": "Ar",
+      "tempo": "t5",
+      "replica": "r2",
+      "delta_rt_min": -0.002,
+      "scale_factor": 1.035,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.998,
+          "altezza_attesa": 258744.7,
+          "area_attesa": 2313571.5
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.198,
+          "altezza_attesa": 206995.7,
+          "area_attesa": 1718653.1
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": true,
+          "mz_nominale": 225,
+          "rt_atteso": 2.598,
+          "altezza_attesa": 124197.4,
+          "area_attesa": 1031191.9
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.198,
+          "altezza_attesa": 124197.4,
+          "area_attesa": 1189836.8
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.998,
+          "altezza_attesa": 46574.0,
+          "area_attesa": 416442.9
+        }
+      }
+    },
+    "Ar_t10_r1.mzML": {
+      "condizione": "Ar",
+      "tempo": "t10",
+      "replica": "r1",
+      "delta_rt_min": -0.0044,
+      "scale_factor": 0.9994,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9956,
+          "altezza_attesa": 74952.5,
+          "area_attesa": 670189.4
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.1956,
+          "altezza_attesa": 59962.0,
+          "area_attesa": 497855.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": true,
+          "mz_nominale": 225,
+          "rt_atteso": 2.5956,
+          "altezza_attesa": 199873.3,
+          "area_attesa": 1659516.6
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1956,
+          "altezza_attesa": 119924.0,
+          "area_attesa": 1148896.1
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9956,
+          "altezza_attesa": 13491.4,
+          "area_attesa": 120634.1
+        }
+      }
+    },
+    "Ar_t10_r2.mzML": {
+      "condizione": "Ar",
+      "tempo": "t10",
+      "replica": "r2",
+      "delta_rt_min": 0.0051,
+      "scale_factor": 0.983,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0051,
+          "altezza_attesa": 73723.8,
+          "area_attesa": 659202.8
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2051,
+          "altezza_attesa": 58979.0,
+          "area_attesa": 489693.5
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": true,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6051,
+          "altezza_attesa": 196596.7,
+          "area_attesa": 1632311.8
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2051,
+          "altezza_attesa": 117958.0,
+          "area_attesa": 1130062.0
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0051,
+          "altezza_attesa": 13270.3,
+          "area_attesa": 118656.5
+        }
+      }
+    },
+    "He_t0_r1.mzML": {
+      "condizione": "He",
+      "tempo": "t0",
+      "replica": "r1",
+      "delta_rt_min": 0.0287,
+      "scale_factor": 0.9703,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0287,
+          "altezza_attesa": 485171.6,
+          "area_attesa": 4338172.8
+        },
+        "TP1": {
+          "presente": false,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2287,
+          "altezza_attesa": 116441.2,
+          "area_attesa": 1115530.2
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0287,
+          "altezza_attesa": 87330.9,
+          "area_attesa": 780871.1
+        }
+      }
+    },
+    "He_t0_r2.mzML": {
+      "condizione": "He",
+      "tempo": "t0",
+      "replica": "r2",
+      "delta_rt_min": -0.0164,
+      "scale_factor": 1.0359,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9836,
+          "altezza_attesa": 517967.7,
+          "area_attesa": 4631420.0
+        },
+        "TP1": {
+          "presente": false,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1836,
+          "altezza_attesa": 124312.2,
+          "area_attesa": 1190936.6
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9836,
+          "altezza_attesa": 93234.2,
+          "area_attesa": 833655.6
+        }
+      }
+    },
+    "He_t5_r1.mzML": {
+      "condizione": "He",
+      "tempo": "t5",
+      "replica": "r1",
+      "delta_rt_min": -0.024,
+      "scale_factor": 0.9655,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.976,
+          "altezza_attesa": 241366.4,
+          "area_attesa": 2158183.4
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.176,
+          "altezza_attesa": 193093.1,
+          "area_attesa": 1603221.9
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": true,
+          "mz_nominale": 225,
+          "rt_atteso": 2.576,
+          "altezza_attesa": 115855.9,
+          "area_attesa": 961933.2
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.176,
+          "altezza_attesa": 115855.9,
+          "area_attesa": 1109922.9
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.976,
+          "altezza_attesa": 43446.0,
+          "area_attesa": 388473.0
+        }
+      }
+    },
+    "He_t5_r2.mzML": {
+      "condizione": "He",
+      "tempo": "t5",
+      "replica": "r2",
+      "delta_rt_min": -0.0111,
+      "scale_factor": 0.9596,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9889,
+          "altezza_attesa": 239909.2,
+          "area_attesa": 2145154.0
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.1889,
+          "altezza_attesa": 191927.4,
+          "area_attesa": 1593543.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": true,
+          "mz_nominale": 225,
+          "rt_atteso": 2.5889,
+          "altezza_attesa": 115156.4,
+          "area_attesa": 956125.8
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1889,
+          "altezza_attesa": 115156.4,
+          "area_attesa": 1103222.1
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9889,
+          "altezza_attesa": 43183.7,
+          "area_attesa": 386127.7
+        }
+      }
+    },
+    "He_t10_r1.mzML": {
+      "condizione": "He",
+      "tempo": "t10",
+      "replica": "r1",
+      "delta_rt_min": 0.0219,
+      "scale_factor": 1.0259,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0219,
+          "altezza_attesa": 76939.2,
+          "area_attesa": 687953.6
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2219,
+          "altezza_attesa": 61551.4,
+          "area_attesa": 511051.3
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": true,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6219,
+          "altezza_attesa": 205171.2,
+          "area_attesa": 1703504.2
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2219,
+          "altezza_attesa": 123102.7,
+          "area_attesa": 1179349.1
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0219,
+          "altezza_attesa": 13849.1,
+          "area_attesa": 123831.7
+        }
+      }
+    },
+    "He_t10_r2.mzML": {
+      "condizione": "He",
+      "tempo": "t10",
+      "replica": "r2",
+      "delta_rt_min": 0.0302,
+      "scale_factor": 0.9749,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0302,
+          "altezza_attesa": 73118.9,
+          "area_attesa": 653794.5
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2302,
+          "altezza_attesa": 58495.1,
+          "area_attesa": 485675.9
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": true,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6302,
+          "altezza_attesa": 194983.8,
+          "area_attesa": 1618919.6
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2302,
+          "altezza_attesa": 116990.3,
+          "area_attesa": 1120790.5
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0302,
+          "altezza_attesa": 13161.4,
+          "area_attesa": 117683.0
+        }
+      }
+    },
+    "Reference_t0_r1.mzML": {
+      "condizione": "Reference",
+      "tempo": "t0",
+      "replica": "r1",
+      "delta_rt_min": 0.0011,
+      "scale_factor": 1.0058,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0011,
+          "altezza_attesa": 502892.8,
+          "area_attesa": 4496627.3
+        },
+        "TP1": {
+          "presente": false,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2011,
+          "altezza_attesa": 120694.3,
+          "area_attesa": 1156275.6
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0011,
+          "altezza_attesa": 90520.7,
+          "area_attesa": 809392.9
+        }
+      }
+    },
+    "Reference_t0_r2.mzML": {
+      "condizione": "Reference",
+      "tempo": "t0",
+      "replica": "r2",
+      "delta_rt_min": -0.0247,
+      "scale_factor": 1.0285,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9753,
+          "altezza_attesa": 514257.3,
+          "area_attesa": 4598243.9
+        },
+        "TP1": {
+          "presente": false,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1753,
+          "altezza_attesa": 123421.8,
+          "area_attesa": 1182405.6
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9753,
+          "altezza_attesa": 92566.3,
+          "area_attesa": 827683.9
+        }
+      }
+    },
+    "Reference_t5_r1.mzML": {
+      "condizione": "Reference",
+      "tempo": "t5",
+      "replica": "r1",
+      "delta_rt_min": 0.005,
+      "scale_factor": 1.0142,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.005,
+          "altezza_attesa": 496958.1,
+          "area_attesa": 4443562.0
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.205,
+          "altezza_attesa": 30426.0,
+          "area_attesa": 252622.3
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.205,
+          "altezza_attesa": 121704.0,
+          "area_attesa": 1165949.2
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.005,
+          "altezza_attesa": 89452.5,
+          "area_attesa": 799841.2
+        }
+      }
+    },
+    "Reference_t5_r2.mzML": {
+      "condizione": "Reference",
+      "tempo": "t5",
+      "replica": "r2",
+      "delta_rt_min": 0.0264,
+      "scale_factor": 1.0006,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0264,
+          "altezza_attesa": 490310.0,
+          "area_attesa": 4384118.6
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2264,
+          "altezza_attesa": 30019.0,
+          "area_attesa": 249242.9
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2264,
+          "altezza_attesa": 120075.9,
+          "area_attesa": 1150351.8
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0264,
+          "altezza_attesa": 88255.8,
+          "area_attesa": 789141.3
+        }
+      }
+    },
+    "Reference_t10_r1.mzML": {
+      "condizione": "Reference",
+      "tempo": "t10",
+      "replica": "r1",
+      "delta_rt_min": -0.0128,
+      "scale_factor": 1.0354,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 2.9872,
+          "altezza_attesa": 497003.3,
+          "area_attesa": 4443966.1
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.1872,
+          "altezza_attesa": 10354.2,
+          "area_attesa": 85969.6
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1872,
+          "altezza_attesa": 124250.8,
+          "area_attesa": 1190348.1
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 2.9872,
+          "altezza_attesa": 89460.6,
+          "area_attesa": 799913.9
+        }
+      }
+    },
+    "Reference_t10_r2.mzML": {
+      "condizione": "Reference",
+      "tempo": "t10",
+      "replica": "r2",
+      "delta_rt_min": 0.0234,
+      "scale_factor": 0.9792,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0234,
+          "altezza_attesa": 470030.6,
+          "area_attesa": 4202789.0
+        },
+        "TP1": {
+          "presente": true,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2234,
+          "altezza_attesa": 9792.3,
+          "area_attesa": 81304.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2234,
+          "altezza_attesa": 117507.6,
+          "area_attesa": 1125747.0
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0234,
+          "altezza_attesa": 84605.5,
+          "area_attesa": 756502.0
+        }
+      }
+    },
+    "bianco.mzML": {
+      "condizione": "bianco",
+      "tempo": "t0",
+      "replica": "r1",
+      "delta_rt_min": -0.0182,
+      "scale_factor": 1.0136,
+      "composti": {
+        "Parent": {
+          "presente": false,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP1": {
+          "presente": false,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.1818,
+          "altezza_attesa": 121629.0,
+          "area_attesa": 1165230.9
+        },
+        "TP5": {
+          "presente": false,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        }
+      }
+    },
+    "standard.mzML": {
+      "condizione": "standard",
+      "tempo": "t0",
+      "replica": "r1",
+      "delta_rt_min": 0.0288,
+      "scale_factor": 0.9768,
+      "composti": {
+        "Parent": {
+          "presente": true,
+          "mz_nominale": 241,
+          "rt_atteso": 3.0288,
+          "altezza_attesa": 488388.4,
+          "area_attesa": 4366935.8
+        },
+        "TP1": {
+          "presente": false,
+          "mz_nominale": 257,
+          "rt_atteso": 2.2,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP2": {
+          "presente": false,
+          "mz_nominale": 273,
+          "rt_atteso": 1.8,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP3": {
+          "presente": false,
+          "mz_nominale": 225,
+          "rt_atteso": 2.6,
+          "altezza_attesa": 0.0,
+          "area_attesa": 0.0
+        },
+        "TP4": {
+          "presente": true,
+          "mz_nominale": 279,
+          "rt_atteso": 4.2288,
+          "altezza_attesa": 117213.2,
+          "area_attesa": 1122926.4
+        },
+        "TP5": {
+          "presente": true,
+          "mz_nominale": 197,
+          "rt_atteso": 3.0288,
+          "altezza_attesa": 87909.9,
+          "area_attesa": 786048.4
+        }
+      }
+    }
+  }
+}
