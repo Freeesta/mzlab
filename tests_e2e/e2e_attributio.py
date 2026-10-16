@@ -9,6 +9,8 @@ HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401
 
 steps = []
+AXE = lib.axe_path()
+RUN = "axe.run(%s, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0,3).map(n => n.target.join(' ') + ' :: ' + (n.failureSummary||'').split('\\n').slice(0,3).join(' | '))]))"
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e)[:900]))
@@ -60,7 +62,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch()
         pg0 = new_page(b, False)
-        attendi(pg0, "typeof uipAdminOn === 'function' && typeof QTOOLS !== 'undefined'")
+        lib.attendi(pg0, "typeof uipAdminOn === 'function' && typeof QTOOLS !== 'undefined'")
         step("without the administrator mode there is no entry", lambda: (_ for _ in ()).throw(AssertionError("entry found")) if pg0.locator("[data-v=attributio], #v-attributio").count() else None)
         pg0.close()
 
@@ -76,27 +78,61 @@ try:
 
         def load():
             pg.set_input_files("#at-dir", str(FOLDER))
-            try: pg.wait_for_function("document.querySelectorAll('#at-table tbody tr').length > 0", timeout=120000)
+            try: pg.wait_for_function("document.querySelectorAll('#at-table tbody tr.clk').length > 0", timeout=120000)
             except Exception: raise AssertionError("no rows: " + pg.inner_text("#at-msg") + " " + str(errs[:3]))
-            rows = pg.evaluate("[...document.querySelectorAll('#at-table tbody tr')].map(tr => [...tr.cells].map(c => c.textContent))")
+            pg.click("#at-out .tpt-colm summary"); pg.check("[data-vc=basis]"); pg.check("[data-vc=id]")          # the optional columns, to compare with the expected levels
+            rows = pg.evaluate("[...document.querySelectorAll('#at-table tbody tr.clk')].map(tr => [...tr.cells].map(c => c.querySelector('.lvb') ? c.querySelector('.lvb').textContent : c.textContent))")
             assert len(rows) == 15, (len(rows), pg.inner_text("#at-msg"))
-            got = {(r[0], r[1]): (r[4][1:], r[6]) for r in rows}
+            got = {(r[4], r[6]): (r[0][1:], r[5]) for r in rows}
             assert got == want, {k: (got.get(k), want.get(k)) for k in want if got.get(k) != want.get(k)}
             txt = pg.inner_text("#at-counts"); assert txt.startswith("15 features") and "L1 1" in txt, txt
-        step("the synthetic folder gives 15 features with the levels of livelli_attesi.csv", load)
+            assert pg.evaluate("document.querySelector('#at-table').tagName") == "TABLE" and pg.evaluate("document.querySelectorAll('#at-table thead th[scope=col]').length") >= 5
+        step("the synthetic folder gives 15 features with the levels of livelli_attesi.csv (rows of the component)", load)
 
-        def filters():
-            pg.select_option("#at-flv", "3a")
-            n = pg.evaluate("document.querySelectorAll('#at-table tbody tr').length")
-            assert n == sum(1 for v in want.values() if v[0] == "3a"), n
-            pg.select_option("#at-flv", ""); pg.select_option("#at-fpol", "NEG")
-            assert pg.evaluate("document.querySelectorAll('#at-table tbody tr').length") == 2
-            pg.select_option("#at-fpol", "")
-            pg.click("#at-table th:nth-child(5) button")
-            assert pg.get_attribute("#at-table th:nth-child(5)", "aria-sort") == "ascending"
-            first = pg.evaluate("document.querySelector('#at-table tbody tr').cells[4].textContent")
-            assert first == "L0", first
-        step("the filters of level and polarity and the sort work", filters)
+        def chips():
+            pg.click("[data-chip=l3]")
+            n = pg.evaluate("document.querySelectorAll('#at-table tbody tr.clk').length")
+            assert n == sum(1 for v in want.values() if v[0] in ("1", "2a", "2b", "3a", "3b")), n
+            assert pg.get_attribute("[data-chip=l3]", "aria-pressed") == "true"
+            pg.click("[data-chip=l3]"); pg.click("[data-chip=neg]")
+            assert pg.evaluate("document.querySelectorAll('#at-table tbody tr.clk').length") == 2
+            assert "2 of 15 rows" in pg.inner_text("#at-out .tpt-n")
+            pg.click("[data-chip=neg]")
+            assert pg.evaluate("document.querySelectorAll('#at-table tbody tr.clk').length") == 15
+        step("the chips of level and polarity filter the rows", chips)
+
+        def sort():
+            pg.click("#at-table th button[data-sh=level]")
+            assert pg.get_attribute("#at-table th:nth-child(1)", "aria-sort") == "ascending"
+            first = pg.evaluate("document.querySelector('#at-table tbody tr.clk .lvb').textContent")
+            assert first == "L1", first
+            pg.click("#at-table th button[data-sh=level]")
+            assert pg.get_attribute("#at-table th:nth-child(1)", "aria-sort") == "descending"
+            assert pg.evaluate("document.querySelector('#at-table tbody tr.clk .lvb').textContent") == "L0"
+        step("the sort works from the header (aria-sort)", sort)
+
+        def expand():
+            pg.click("#at-table tr.clk .tpt-tg >> nth=0")
+            assert pg.evaluate("document.querySelectorAll('#at-table tr.tpt-exp').length") == 1
+            assert pg.evaluate("document.querySelector('#at-table tr.clk + tr.tpt-exp #at-det') !== null"), "the panel is not under its row"
+            panel = pg.inner_text("#at-det"); assert "Basis" in panel and "Reasons" in panel, panel
+            pg.click("#at-table tr.clk >> nth=3 >> .tpt-tg")
+            assert pg.evaluate("document.querySelectorAll('#at-table tr.tpt-exp').length") == 1, "only one row open"
+            pg.keyboard.press("Escape"); assert pg.evaluate("document.querySelectorAll('#at-table tr.tpt-exp').length") == 0
+        step("a row expands under itself, one at a time, with the basis and the reasons", expand)
+
+        def axe(theme):
+            def f():
+                if not AXE: print("SKIP axe-core not available"); return
+                pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", theme)
+                pg.click("#at-table tr.clk .tpt-tg >> nth=0")
+                if not pg.evaluate("typeof axe") == "object": pg.add_script_tag(path=AXE)
+                v = pg.evaluate(RUN % "document.getElementById('at-out')")
+                assert not v, v
+                pg.keyboard.press("Escape")
+            return f
+        step("axe: no serious violation in the table and the open row, light theme", axe("light"))
+        step("axe: no serious violation in the table and the open row, dark theme", axe("dark"))
 
         def exports():
             with pg.expect_download() as d: pg.click("#at-csv")

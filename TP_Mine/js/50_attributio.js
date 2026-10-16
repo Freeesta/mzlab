@@ -113,15 +113,14 @@
   function open(sec) {
     if (!document.getElementById("at-css")) {
       const s = document.createElement("style"); s.id = "at-css";
-      s.textContent = ".at-wrap{padding:14px;max-width:1400px}.at-scroll{overflow:auto;max-height:70vh}#at-table{border-collapse:collapse;font-size:12px}#at-table th,#at-table td{padding:3px 8px;text-align:left;border-bottom:1px solid var(--line)}"
-        + "#at-table th button{background:none;border:0;font:inherit;font-weight:700;color:var(--ink);cursor:pointer;min-height:24px;min-width:24px}.at-why{max-width:60ch;white-space:pre-wrap}.at-wrap .err{color:var(--bad)}.at-rev{min-height:24px;min-width:24px}";
+      s.textContent = ".at-wrap{padding:14px;max-width:1400px}.at-wrap .err{color:var(--bad)}";
       document.head.appendChild(s);
     }
     sec.innerHTML = `<div class="at-wrap"><h2>Attributio</h2>
       <div class="row"><button type="button" class="at-pick" id="at-pick" aria-label="Choose campaign folder">Choose campaign folder</button>
       <input type="file" id="at-dir" webkitdirectory multiple hidden aria-label="Campaign folder">
       <button type="button" class="at-x" id="at-csv" aria-label="Export CSV" disabled>Export CSV</button><button type="button" class="at-x" id="at-xlsx" aria-label="Export XLSX" disabled>Export XLSX</button></div>
-      <p id="at-msg" class="mut" role="status"></p><div id="at-banco-host"></div><div id="at-out"></div></div>`;
+      <p id="at-msg" class="mut" role="status"></p><div id="at-banco-host"></div><div id="at-out" class="tp"></div></div>`;
     const q = (/** @type {string} */ s) => /** @type {any} */ (sec.querySelector(s));
     q("#at-dir").onchange = (/** @type {Event} */ ev) => {
       const list = /** @type {File[]} */ ([...(/** @type {HTMLInputElement} */ (ev.target).files || [])]).slice(0, MAX_FILES);
