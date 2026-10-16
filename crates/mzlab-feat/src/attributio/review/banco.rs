@@ -36,7 +36,10 @@ pub const CHECKLIST: [(&str, &str); 6] = [
     ("isotopes", "Isotopes consistent"),
     ("pure_precursor", "Precursor pure"),
     ("rt_plausible", "RT plausible"),
-    ("alternatives_excluded", "Alternatives with the same formula excluded"),
+    (
+        "alternatives_excluded",
+        "Alternatives with the same formula excluded",
+    ),
 ];
 
 /// A campaign loaded for review: the folder, the cascade and the settings.
@@ -126,7 +129,12 @@ fn walk(io: &Io, dir: &str, rel: &str, depth: usize, out: &mut Vec<(String, Stri
 /// The spectral libraries inside the folder: `library/`, `libraries/` and the paths of `[review] extra_libraries` that lie in the folder.
 pub fn folder_libraries(io: &Io, s: &ReviewSettings) -> LibraryIndex {
     let mut roots: Vec<String> = vec!["library".into(), "libraries".into()];
-    roots.extend(s.extra_libraries.iter().filter(|p| !p.starts_with('/')).cloned());
+    roots.extend(
+        s.extra_libraries
+            .iter()
+            .filter(|p| !p.starts_with('/'))
+            .cloned(),
+    );
     let mut inputs = Vec::new();
     for root in roots {
         let mut files = Vec::new();
@@ -139,11 +147,17 @@ pub fn folder_libraries(io: &Io, s: &ReviewSettings) -> LibraryIndex {
             .iter()
             .map(|(r, p)| {
                 let head = io.read(p).map(|b| b[..b.len().min(4096)].to_vec());
-                (if r.is_empty() { p.clone() } else { r.clone() }, head.unwrap_or_default())
+                (
+                    if r.is_empty() { p.clone() } else { r.clone() },
+                    head.unwrap_or_default(),
+                )
             })
             .collect();
         for (rel, format) in find_library_files(&listing) {
-            let path = files.iter().find(|(r, p)| *r == rel || *p == rel).map(|f| f.1.clone());
+            let path = files
+                .iter()
+                .find(|(r, p)| *r == rel || *p == rel)
+                .map(|f| f.1.clone());
             if let Some(bytes) = path.and_then(|p| io.read(&p)) {
                 inputs.push(LibInput {
                     label: join(&root, &rel).trim_end_matches('/').to_string(),
@@ -201,7 +215,14 @@ fn rt_logp(b: &Bench, f: &Feature) -> Option<(J, Option<bool>)> {
         ("y", num_or_null(y)),
         (
             "y_label",
-            J::Str(if grad.is_empty() { "RT (min)" } else { "organic fraction at elution (%B)" }.into()),
+            J::Str(
+                if grad.is_empty() {
+                    "RT (min)"
+                } else {
+                    "organic fraction at elution (%B)"
+                }
+                .into(),
+            ),
         ),
         ("logp", num_or_null(c.logp)),
         ("pred", num_or_null(c.pred)),
@@ -225,8 +246,15 @@ fn proofs(p: &Proposal, alts: &[Alt], rt: Option<bool>) -> Vec<Option<String>> {
         .map(|f| f.loss.as_str())
         .filter(|l| !l.is_empty())
         .collect();
-    let iso = e.raw.as_ref().and_then(|r| r.ms1.as_ref()).and_then(|m| m.iso_ok);
-    let pur = e.purity.as_ref().and_then(|u| u.purity.map(|v| (v, u.badge.clone())));
+    let iso = e
+        .raw
+        .as_ref()
+        .and_then(|r| r.ms1.as_ref())
+        .and_then(|m| m.iso_ok);
+    let pur = e
+        .purity
+        .as_ref()
+        .and_then(|u| u.purity.map(|v| (v, u.badge.clone())));
     vec![
         (e.n_peaks > 0).then(|| {
             format!(
@@ -237,10 +265,27 @@ fn proofs(p: &Proposal, alts: &[Alt], rt: Option<bool>) -> Vec<Option<String>> {
             )
         }),
         (!losses.is_empty()).then(|| format!("losses: {}", losses.join(", "))),
-        iso.map(|ok| format!("isotope pattern {}", if ok { "consistent" } else { "not consistent" })),
+        iso.map(|ok| {
+            format!(
+                "isotope pattern {}",
+                if ok { "consistent" } else { "not consistent" }
+            )
+        }),
         pur.map(|(v, b)| format!("isolation purity {v:.2} ({b})")),
-        rt.map(|ok| format!("RT versus logP: {}", if ok { "within the window" } else { "outside the window" })),
-        Some(format!("{} alternative(s) with the same formula listed", alts.len())),
+        rt.map(|ok| {
+            format!(
+                "RT versus logP: {}",
+                if ok {
+                    "within the window"
+                } else {
+                    "outside the window"
+                }
+            )
+        }),
+        Some(format!(
+            "{} alternative(s) with the same formula listed",
+            alts.len()
+        )),
     ]
 }
 
@@ -254,7 +299,10 @@ fn alt_json(a: &Alt, best_ik1: Option<&str>) -> J {
         ("score", J::on(a.score)),
         ("matched", a.matched.map_or(J::Null, |m| J::Num(m as f64))),
         ("logp", J::on(a.logp)),
-        ("is_best", J::Bool(a.ik1.is_some() && a.ik1.as_deref() == best_ik1)),
+        (
+            "is_best",
+            J::Bool(a.ik1.is_some() && a.ik1.as_deref() == best_ik1),
+        ),
     ])
 }
 
@@ -281,12 +329,86 @@ fn decision_json(d: &DecisionTable, f: &Feature) -> (J, usize) {
     (j, n)
 }
 
+fn checklist_json(marks: Vec<Option<String>>) -> J {
+    J::Arr(
+        CHECKLIST
+            .iter()
+            .zip(marks)
+            .map(|((key, label), proof)| {
+                J::Obj(vec![
+                    ("key", J::s(key)),
+                    ("label", J::s(label)),
+                    ("proof", proof.map_or(J::Null, J::Str)),
+                ])
+            })
+            .collect(),
+    )
+}
+
+fn current_json(f: &Feature, cur: &Current) -> J {
+    J::Obj(vec![
+        (
+            "level",
+            J::Str(page_level(cur.level, cur.level_sub, cur.decision_2b)),
+        ),
+        ("sub", J::s(&f.level_sub)),
+        ("basis", J::s(&f.level_basis)),
+        ("name", cur.name.map_or(J::Null, J::s)),
+        ("identity", f.identity().map_or(J::Null, J::s)),
+        ("group", cur.group.map_or(J::Null, J::s)),
+    ])
+}
+
+fn libraries_json(lib: &LibraryIndex) -> J {
+    J::Arr(
+        lib.summary()
+            .into_iter()
+            .map(|(l, n)| J::Arr(vec![J::Str(l), J::Num(n as f64)]))
+            .collect(),
+    )
+}
+
+/// The alternatives with the formula of the best proposal: the library entries and the CSI:FingerID candidates of the feature.
+fn same_formula_alts(
+    b: &Bench,
+    f: &Feature,
+    p: &Proposal,
+    texts: &SourceTexts,
+    lib: &LibraryIndex,
+    mgf: Option<&MgfBlock>,
+) -> Vec<Alt> {
+    let (pol, id) = (f.pol.as_str(), f.id);
+    let csi: Vec<StructureCandidate> = csi_top5(texts)
+        .into_iter()
+        .find(|(k, _)| k.0 == pol && k.1 == id)
+        .map(|x| x.1)
+        .unwrap_or_default();
+    let exp = p.evidence.view.as_ref().map(|v| Ms2 {
+        mz: v.peaks.iter().map(|k| k.mz).collect(),
+        it: v.peaks.iter().map(|k| k.rel).collect(),
+        prec: mgf.map_or(f.mz.unwrap_or(0.0), |m| m.prec),
+    });
+    match p.best.formula.as_deref() {
+        Some(formula) => same_formula(
+            formula,
+            lib,
+            &AltSources {
+                csi: &csi,
+                exp: exp.as_ref(),
+                tol: b.settings.tol_da,
+                st: &GraphStructures,
+            },
+        ),
+        None => Vec::new(),
+    }
+}
+
 /// The review of one feature as JSON (see the module).
 pub fn review_json(io: &Io, root: &str, pol: &str, id: i64) -> Result<String> {
     let b = Bench::load(io, root)?;
-    let f = b
-        .feature(pol, id)
-        .ok_or_else(|| CampaignError::not_found(format!("feature {pol} {id} is not in the table")))?;
+    let f = b.feature(pol, id).ok_or_else(|| {
+        CampaignError::not_found(format!("feature {pol} {id} is not in the table"))
+    })?;
     let texts = source_texts(&b.campaign, io);
     let lib = folder_libraries(io, &b.settings);
     let mgf: Option<MgfBlock> = feature_mgf(&b.campaign, io, pol)
@@ -295,7 +417,10 @@ pub fn review_json(io: &Io, root: &str, pol: &str, id: i64) -> Result<String> {
     let (sirius, gnps) = (sirius_hits(&texts), gnps_hits(&texts));
     let inputs = Inputs {
         mgf: mgf.as_ref(),
-        sirius: sirius.iter().filter(|h| h.pol == pol && h.id == id).collect(),
+        sirius: sirius
+            .iter()
+            .filter(|h| h.pol == pol && h.id == id)
+            .collect(),
         gnps: gnps.iter().filter(|h| h.pol == pol && h.id == id).collect(),
     };
     let st = GraphStructures;
@@ -306,35 +431,10 @@ pub fn review_json(io: &Io, root: &str, pol: &str, id: i64) -> Result<String> {
         raw: &NoRaw,
     };
     let p = review_feature(&env, f, &inputs);
-    let csi: Vec<StructureCandidate> = csi_top5(&texts)
-        .into_iter()
-        .find(|(k, _)| k.0 == pol && k.1 == id)
-        .map(|x| x.1)
-        .unwrap_or_default();
-    let exp = p.evidence.view.as_ref().map(|v| Ms2 {
-        mz: v.peaks.iter().map(|k| k.mz).collect(),
-        it: v.peaks.iter().map(|k| k.rel).collect(),
-        prec: mgf.as_ref().map_or(f.mz.unwrap_or(0.0), |m| m.prec),
-    });
-    let alts = match p.best.formula.as_deref() {
-        Some(formula) => same_formula(
-            formula,
-            &lib,
-            &AltSources { csi: &csi, exp: exp.as_ref(), tol: b.settings.tol_da, st: &st },
-        ),
-        None => Vec::new(),
-    };
+    let alts = same_formula_alts(&b, f, &p, &texts, &lib, mgf.as_ref());
     let rt = rt_logp(&b, f);
     let marks = proofs(&p, &alts, rt.as_ref().and_then(|r| r.1));
-    let checklist = J::Arr(
-        CHECKLIST
-            .iter()
-            .zip(marks)
-            .map(|((key, label), proof)| {
-                J::Obj(vec![("key", J::s(key)), ("label", J::s(label)), ("proof", proof.map_or(J::Null, J::Str))])
-            })
-            .collect(),
-    );
+    let checklist = checklist_json(marks);
     let table = b.decisions(io)?;
     let (last, n_rows) = decision_json(&table, f);
     let cur = Current {
@@ -349,36 +449,22 @@ pub fn review_json(io: &Io, root: &str, pol: &str, id: i64) -> Result<String> {
         ("id", J::Num(id as f64)),
         ("mz", J::on(f.mz)),
         ("rt", J::on(f.rt)),
-        (
-            "current",
-            J::Obj(vec![
-                ("level", J::Str(page_level(cur.level, cur.level_sub, cur.decision_2b))),
-                ("sub", J::s(&f.level_sub)),
-                ("basis", J::s(&f.level_basis)),
-                ("name", cur.name.map_or(J::Null, J::s)),
-                ("identity", f.identity().map_or(J::Null, J::s)),
-                ("group", cur.group.map_or(J::Null, J::s)),
-            ]),
-        ),
+        ("current", current_json(f, &cur)),
         ("proposal", J::Raw(p.to_json())),
         ("checklist", checklist),
         (
             "alternatives",
-            J::Arr(alts.iter().map(|a| alt_json(a, p.best.ik1.as_deref())).collect()),
+            J::Arr(
+                alts.iter()
+                    .map(|a| alt_json(a, p.best.ik1.as_deref()))
+                    .collect(),
+            ),
         ),
         ("rtlogp", rt.map_or(J::Null, |r| r.0)),
         ("decision", last),
         ("decision_rows", J::Num(n_rows as f64)),
         ("decisions_path", J::Str(b.decisions_path().0)),
-        (
-            "libraries",
-            J::Arr(
-                lib.summary()
-                    .into_iter()
-                    .map(|(l, n)| J::Arr(vec![J::Str(l), J::Num(n as f64)]))
-                    .collect(),
-            ),
-        ),
+        ("libraries", libraries_json(&lib)),
         ("has_ms2", J::Bool(mgf.is_some())),
         ("warnings", J::strs(&b.warnings)),
     ]);

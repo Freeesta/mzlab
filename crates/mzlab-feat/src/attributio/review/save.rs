@@ -4,6 +4,7 @@
 
 use super::banco::{Bench, CHECKLIST};
 use super::rules::{decision_changes, Current, Rec};
+use crate::attributio::annotate::Feature;
 use crate::attributio::error::{CampaignError, Result};
 use crate::attributio::io::Io;
 use crate::attributio::readers::feature_decisions::{
@@ -52,31 +53,45 @@ fn bad(msg: impl Into<String>) -> CampaignError {
     CampaignError::value(msg)
 }
 
-/// `decision` is `{pol, id, livello, nome, group, motivazione, decided_by, decided_on, rt_check, checklist: [keys], evidence: {type, library, entry, cosine, matched, delta_mz, delta_formula, note}}`.
-pub fn decision_text(io: &Io, root: &str, decision: &str) -> Result<Saved> {
-    let d = json::parse(decision.as_bytes()).map_err(|_| bad("the decision is not valid JSON"))?;
-    let g = |k: &str| text(d.get(k));
-    let (pol, id) = (g("pol"), g("id").parse::<i64>().map_err(|_| bad("the decision has no feature id"))?);
-    let b = Bench::load(io, root)?;
-    let f = b
-        .feature(&pol, id)
-        .ok_or_else(|| bad(format!("feature {pol} {id} is not in the table")))?;
-    let livello = file_level(&g("livello")).ok_or_else(|| bad(format!("livello {:?}", g("livello"))))?;
-    let group = g("group");
-    if !matches!(group.as_str(), "" | "ambiguous") {
-        return Err(bad(format!("group {group:?}")));
+/// `value` when it is one of `allowed`, else an error naming `field`.
+fn choice(field: &str, value: String, allowed: &[&str]) -> Result<String> {
+    if allowed.contains(&value.as_str()) {
+        Ok(value)
+    } else {
+        Err(bad(format!("{field} {value:?}")))
     }
-    let rt_check = g("rt_check");
-    if !matches!(rt_check.as_str(), "" | "peak" | "isomer") {
-        return Err(bad(format!("rt_check {rt_check:?}")));
+}
+
+/// The keys of the checklist the chemist ticked; a key that is not in the checklist is an error.
+fn ticked_items(d: &Value) -> Result<Vec<String>> {
+    let ticked: Vec<String> = d
+        .get("checklist")
+        .map(|c| {
+            c.arr()
+                .iter()
+                .filter_map(|k| k.str())
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+    match ticked
+        .iter()
+        .find(|k| !CHECKLIST.iter().any(|c| c.0 == k.as_str()))
+    {
+        Some(k) => Err(bad(format!("checklist item {k:?}"))),
+        None => Ok(ticked),
     }
-    let ev = d.get("evidence");
-    let ev_text = |k: &str| text(ev.and_then(|e| e.get(k)));
-    let etype = ev_text("type");
-    if !matches!(etype.as_str(), "" | "library" | "analog" | "fragments" | "in_silico" | "context") {
-        return Err(bad(format!("evidence_type {etype:?}")));
-    }
-    let (nome, nota) = (g("nome"), g("motivazione"));
+}
+
+/// The rules of the Banco: a note when the decision changes something, a note for every 2b, no analog as Level 2a.
+fn check_rules(
+    f: &Feature,
+    livello: &str,
+    group: &str,
+    nome: &str,
+    nota: &str,
+    etype: &str,
+) -> Result<()> {
     let cur = Current {
         level: f.level,
         level_sub: &f.level_sub,
@@ -84,7 +99,14 @@ pub fn decision_text(io: &Io, root: &str, decision: &str) -> Result<Saved> {
         name: f.name(),
         group: f.decision.group_override.as_deref(),
     };
-    let changes = decision_changes(&cur, &Rec { livello, group: &group, nome: &nome });
+    let changes = decision_changes(
+        &cur,
+        &Rec {
+            livello,
+            group,
+            nome,
+        },
+    );
     if !changes.is_empty() && nota.is_empty() {
         return Err(bad(format!(
             "a note (motivazione) is required: the decision changes {}",
@@ -97,16 +119,43 @@ pub fn decision_text(io: &Io, root: &str, decision: &str) -> Result<Saved> {
     if etype == "analog" && livello == "2" {
         return Err(bad("an analog is never Level 2a"));
     }
-    let ticked: Vec<String> = d
-        .get("checklist")
-        .map(|c| c.arr().iter().filter_map(|k| k.str()).map(str::to_string).collect())
-        .unwrap_or_default();
-    if let Some(k) = ticked.iter().find(|k| !CHECKLIST.iter().any(|c| c.0 == k.as_str())) {
-        return Err(bad(format!("checklist item {k:?}")));
-    }
+    Ok(())
+}
+
+/// `decision` is `{pol, id, livello, nome, group, motivazione, decided_by, decided_on, rt_check, checklist: [keys], evidence: {type, library, entry, cosine, matched, delta_mz, delta_formula, note}}`.
+pub fn decision_text(io: &Io, root: &str, decision: &str) -> Result<Saved> {
+    let d = json::parse(decision.as_bytes()).map_err(|_| bad("the decision is not valid JSON"))?;
+    let g = |k: &str| text(d.get(k));
+    let (pol, id) = (
+        g("pol"),
+        g("id")
+            .parse::<i64>()
+            .map_err(|_| bad("the decision has no feature id"))?,
+    );
+    let b = Bench::load(io, root)?;
+    let f = b
+        .feature(&pol, id)
+        .ok_or_else(|| bad(format!("feature {pol} {id} is not in the table")))?;
+    let livello =
+        file_level(&g("livello")).ok_or_else(|| bad(format!("livello {:?}", g("livello"))))?;
+    let group = choice("group", g("group"), &["", "ambiguous"])?;
+    let rt_check = choice("rt_check", g("rt_check"), &["", "peak", "isomer"])?;
+    let ev = d.get("evidence");
+    let ev_text = |k: &str| text(ev.and_then(|e| e.get(k)));
+    let etype = choice(
+        "evidence_type",
+        ev_text("type"),
+        &["", "library", "analog", "fragments", "in_silico", "context"],
+    )?;
+    let (nome, nota) = (g("nome"), g("motivazione"));
+    check_rules(f, livello, &group, &nome, &nota, &etype)?;
+    let ticked = ticked_items(&d)?;
     let mut row = DecisionTable::empty();
     row.rows.push(vec![String::new(); row.columns.len()]);
-    let num = |v: Option<f64>| v.filter(|x| x.is_finite()).map_or(String::new(), |x| x.to_string());
+    let num = |v: Option<f64>| {
+        v.filter(|x| x.is_finite())
+            .map_or(String::new(), |x| x.to_string())
+    };
     let cells: Vec<(&str, String)> = vec![
         ("pol", pol),
         ("feature_id", id.to_string()),
@@ -130,7 +179,9 @@ pub fn decision_text(io: &Io, root: &str, decision: &str) -> Result<Saved> {
         ("evidence_note", ev_text("note")),
         ("evidence_checklist", ticked.join("|")),
     ];
-    debug_assert!(EVIDENCE_COLUMNS.iter().all(|c| cells.iter().any(|x| x.0 == *c)));
+    debug_assert!(EVIDENCE_COLUMNS
+        .iter()
+        .all(|c| cells.iter().any(|x| x.0 == *c)));
     for (col, v) in cells {
         row.put(0, col, &v);
     }

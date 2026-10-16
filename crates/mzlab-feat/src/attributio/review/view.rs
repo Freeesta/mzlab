@@ -83,61 +83,55 @@ pub(super) fn build(
     }
 }
 
+fn frag_json(f: &FragView) -> J {
+    J::Obj(vec![
+        ("formula", J::s(&f.formula)),
+        ("mz_th", J::Num(f.mz_th)),
+        ("ppm", J::on(Some(f.ppm))),
+        ("loss", J::s(&f.loss)),
+    ])
+}
+
+fn pair(a: f64, b: f64) -> J {
+    J::Arr(vec![J::Num(a), J::Num(b)])
+}
+
+fn mirror_json(m: &Mirror) -> J {
+    let pairs = m
+        .pairs
+        .iter()
+        .map(|p| J::Arr(vec![J::Num(p.0 as f64), J::Num(p.1 as f64), J::Bool(p.2)]))
+        .collect();
+    J::Obj(vec![
+        ("reference", J::Num(m.reference as f64)),
+        (
+            "peaks",
+            J::Arr(m.peaks.iter().map(|p| pair(p.0, p.1)).collect()),
+        ),
+        ("pairs", J::Arr(pairs)),
+    ])
+}
+
 impl View {
     pub(super) fn json(&self) -> J {
         let peaks = self
             .peaks
             .iter()
             .map(|p| {
-                let frag = p.frag.as_ref().map_or(J::Null, |f| {
-                    J::Obj(vec![
-                        ("formula", J::s(&f.formula)),
-                        ("mz_th", J::Num(f.mz_th)),
-                        ("ppm", J::on(Some(f.ppm))),
-                        ("loss", J::s(&f.loss)),
-                    ])
-                });
                 J::Obj(vec![
                     ("mz", J::Num(p.mz)),
                     ("rel", J::Num(p.rel)),
-                    ("frag", frag),
+                    ("frag", p.frag.as_ref().map_or(J::Null, frag_json)),
                 ])
             })
             .collect();
-        let mirror = self.mirror.as_ref().map_or(J::Null, |m| {
-            J::Obj(vec![
-                ("reference", J::Num(m.reference as f64)),
-                (
-                    "peaks",
-                    J::Arr(
-                        m.peaks
-                            .iter()
-                            .map(|p| J::Arr(vec![J::Num(p.0), J::Num(p.1)]))
-                            .collect(),
-                    ),
-                ),
-                (
-                    "pairs",
-                    J::Arr(
-                        m.pairs
-                            .iter()
-                            .map(|p| {
-                                J::Arr(vec![J::Num(p.0 as f64), J::Num(p.1 as f64), J::Bool(p.2)])
-                            })
-                            .collect(),
-                    ),
-                ),
-            ])
-        });
-        let iso = self
-            .isotopes
-            .iter()
-            .map(|p| J::Arr(vec![J::Num(p.0), J::Num(p.1)]))
-            .collect();
         J::Obj(vec![
             ("peaks", J::Arr(peaks)),
-            ("mirror", mirror),
-            ("isotopes", J::Arr(iso)),
+            ("mirror", self.mirror.as_ref().map_or(J::Null, mirror_json)),
+            (
+                "isotopes",
+                J::Arr(self.isotopes.iter().map(|p| pair(p.0, p.1)).collect()),
+            ),
         ])
     }
 }
