@@ -15,6 +15,8 @@ use serde_json::Value;
 
 mod comune;
 use comune::*;
+#[path = "lr_ms2link/assoc.rs"]
+mod assoc;
 #[path = "lr_ms2link/mz.rs"]
 mod mz;
 #[path = "lr_ms2link/sim.rs"]
@@ -250,7 +252,15 @@ fn a_peak_at_the_time_of_the_parent_with_a_lighter_precursor_is_not_a_product() 
     let p = p_of(&d, 18);
     let rt = row(&d, 0).ref_rt.unwrap();
     // the product-like row 18 coelutes with the parent in this series: not in-source (a candidate, not an unexpected ion)
-    d.entries.iter_mut().find(|e| e.id == 18).unwrap().ref_rt = Some(rt + 0.02);
+    let r18 = d.entries.iter_mut().find(|e| e.id == 18).unwrap();
+    let shift = rt + 0.02 - r18.ref_rt.unwrap();
+    r18.ref_rt = Some(rt + 0.02);
+    // the peak of the feature moves with it (the match reads the start and the end of the peak)
+    for c in &mut r18.cells {
+        c.lo += shift;
+        c.hi += shift;
+        c.apex_rt = c.apex_rt.map(|a| a + shift);
+    }
     let d = one(d, "parent.mzML", x(p, &[(rt, 0.07, 5.0e4)]));
     assert!(links(&d).links.is_empty(), "{:?}", links(&d).links);
     assert!(

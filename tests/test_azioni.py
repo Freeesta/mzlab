@@ -89,3 +89,24 @@ def test_reset_zoom_first_and_annotations_last():
       reg('ann','ann');reg('x','xic');reg('help','help');reg('reset','reset');
       console.log(JSON.stringify(AZIONI.per({vista:'v'}).map(i=>i==='-'?'-':i.id)))""")
     assert r == ["reset", "-", "x", "-", "help", "-", "ann"]
+
+
+def test_icons_of_the_actions_exist_and_are_decorative():
+    """Every key of the id -> icon table is a drawing; the drawings are decorative (aria-hidden) and follow the theme (currentColor); an action gets its icon from the table."""
+    js = (f"const fs=require('fs');const I=new Function(fs.readFileSync({str(WEB / 'azioni-icone.js')!r},'utf8')+';return AZIONI_ICONE;')();"
+          f"const AZIONI=new Function('AZIONI_ICONE',fs.readFileSync({str(WEB / 'azioni.js')!r},'utf8')+';return AZIONI;')(I);"
+          "const a=AZIONI.registra({id:'spec.copy',gruppo:'copy',viste:['v'],nome:()=>'x',esegui:()=>0});const b=AZIONI.registra({id:'zz',gruppo:'copy',viste:['v'],icona:'xic',nome:()=>'x',esegui:()=>0});"
+          "const c=AZIONI.registra({id:'yy',gruppo:'copy',viste:['v'],nome:()=>'x',esegui:()=>0});const m=AZIONI.per({vista:'v'});"
+          "console.log(JSON.stringify({missing:Object.entries(I.POR_ID).filter(([k,v])=>!I.DISEGNI[v]).map(([k])=>k),svg:Object.keys(I.DISEGNI).map(k=>I.svg(k)),got:[a.icona,b.icona,c.icona||null],menu:m.map(i=>i.icon?1:0)}));")
+    r = json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, encoding="utf-8").stdout)
+    assert not r["missing"], r["missing"]
+    assert all('aria-hidden="true"' in v and "currentColor" in v and 'role="img"' not in v and "style=" not in v for v in r["svg"])
+    assert r["got"] == ["copy", "xic", None] and r["menu"] == [1, 1, 0]
+
+
+def test_every_id_of_the_icon_table_is_a_registered_action():
+    src = "\n".join(p.read_text(encoding="utf-8") for p in WEB.glob("*.js") if p.name != "azioni-icone.js")
+    ids = json.loads(subprocess.run(["node", "-e", f"const fs=require('fs');const I=new Function(fs.readFileSync({str(WEB / 'azioni-icone.js')!r},'utf8')+';return AZIONI_ICONE;')();console.log(JSON.stringify(Object.keys(I.POR_ID)))"],
+                                    check=True, capture_output=True, encoding="utf-8").stdout)
+    for i in ids:
+        assert f'"{i}"' in src or f'over("{i.split(".")[-1]}"' in src, f"{i}: no action with this id in mzlab/web"

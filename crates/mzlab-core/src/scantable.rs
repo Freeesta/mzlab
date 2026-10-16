@@ -48,6 +48,8 @@ pub struct Row {
     precs: Vec<Prec>,
     charge: Option<i64>,
     pub native: String,
+    /// Scan type that is not a plain full or product-ion scan (`PREC`, `NL`, `NG`, `EPI`): see `kind_of`.
+    pub kind: Option<&'static str>,
 }
 
 /// The table, with what the `run` object of the metadata needs.
@@ -57,6 +59,32 @@ pub struct Table {
     pub nce: bool,
     pub hr1: bool,
     pub n_chromatograms: usize,
+}
+
+/// The scan type of a spectrum, from the CV term of its header (`MS:1000341` precursor ion, `MS:1000326` constant neutral loss, `MS:1000325`
+/// constant neutral gain, `MS:1000789` enhanced multiply charged and `MS:1000790` time-delayed fragmentation, both shown as `EPI`) or, when the
+/// header says nothing, from a Thermo filter token (`pr`, `cnl`, `cng`). Never from a name.
+pub(crate) fn kind_of(h: &str, filter: &str) -> Option<&'static str> {
+    const TERMS: [(&str, &str); 5] = [
+        ("MS:1000341", "PREC"),
+        ("MS:1000326", "NL"),
+        ("MS:1000325", "NG"),
+        ("MS:1000789", "EPI"),
+        ("MS:1000790", "EPI"),
+    ];
+    for (acc, k) in TERMS {
+        if h.contains(&format!("accession=\"{acc}\"")) {
+            return Some(k);
+        }
+    }
+    filter
+        .split_whitespace()
+        .find_map(|w| match w.to_ascii_lowercase().as_str() {
+            "pr" => Some("PREC"),
+            "cnl" => Some("NL"),
+            "cng" => Some("NG"),
+            _ => None,
+        })
 }
 
 fn float(s: &str) -> Option<f64> {
@@ -554,6 +582,13 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
     Ok(rows.finish(n_chrom))
 }
 
+/// A 21st column only for the scans that have a type, so an index without any stays as it was.
+fn tail_columns(o: &mut Out, r: &Row) {
+    if let Some(k) = r.kind {
+        o.raw(",").str(k);
+    }
+}
+
 fn py_float(o: &mut Out, v: f64) {
     if !v.is_finite() {
         o.raw("null");
@@ -700,7 +735,9 @@ impl Table {
                 Some(c) => o.int(c),
                 None => o.raw("null"),
             };
-            o.raw(",").str(&r.native).raw("]");
+            o.raw(",").str(&r.native);
+            tail_columns(&mut o, r);
+            o.raw("]");
         }
         o.raw("]");
         o.0
