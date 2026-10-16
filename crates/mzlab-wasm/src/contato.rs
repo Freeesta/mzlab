@@ -1,6 +1,7 @@
 //! The reader of a dataset that counts the scans it decodes for the page (`build_mzidx_native` in `nativi.rs`).
 use js_sys::Function;
-use mzlab_core::lettori::{self, Lettore};
+use mzlab_core::lettori::{self, FileSet, Lettore, Limiti};
+use mzlab_core::wiff;
 use wasm_bindgen::JsValue;
 
 /// The reader of a dataset that tells `step(done, total)` how many scans of sample `c` it has decoded, about once per 1 % of them: the page shows how far the index
@@ -58,15 +59,22 @@ impl Lettore for Contato {
     fn extra_mzml(&self, s: &mzlab_core::mzml::Spectrum) -> mzlab_core::mzmlwrite::SpectrumExtra { self.l.extra_mzml(s) }
 }
 
-/// The reader of the dataset for the index of sample `c`: phase 4 (`tell`) begins, `apri` opens it, and it counts its scans for `step` when the page gave one.
+/// The reader of the dataset for the index of sample `c`: phase 4 (`tell`) begins, the dataset opens (a SCIEX pair reads only the blocks of sample `c`, `wiff::lettore::apri_solo`:
+/// a container may hold dozens of samples, one builder each; any other set with `apri_fs`), and it counts its scans for `step` when the page gave one.
 pub(crate) fn apri(
-    apri: impl FnOnce() -> mzlab_core::Result<Box<dyn Lettore>>,
+    mut fs: FileSet,
+    apri_fs: impl FnOnce(FileSet) -> mzlab_core::Result<Box<dyn Lettore>>,
     tell: &dyn Fn(u32),
     step: Option<Function>,
     c: usize,
 ) -> Result<Box<dyn Lettore>, JsValue> {
     tell(4);
-    let l = apri().map_err(|e| crate::error_json(&e))?;
+    let l = if lettori::riconosci(&mut fs).is_some_and(|v| v.id == wiff::lettore::VOCE.id) {
+        wiff::lettore::apri_solo(fs, &Limiti::sito(), Some(c))
+    } else {
+        apri_fs(fs)
+    }
+    .map_err(|e| crate::error_json(&e))?;
     Ok(match step {
         Some(step) => Box::new(Contato::nuovo(l, step, c)),
         None => l,

@@ -88,7 +88,6 @@
     "ft.peak.borders": "Start and end of the peak (median of the files that detected it).",
     "ft.q.flags": "Peak warnings: irregular shape, low signal/noise, few points.",
     "ft.adduct": "Ion the engine chose for this row ([M+H]+, [M+Na]+…) and the neutral mass it gives.",
-    "ft.showdata": "Opens the file in the Data view with the XIC of this m/z.",
     "ft.decided": "The level you decide. Kept in the browser for this series and written in the exports.",
     "ft.more": "Other results of the series, one open at a time.",
     "ft.f.name": "Name of the parent compound: type 2 letters to search the list, or leave it empty and give the formula.",

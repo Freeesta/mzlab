@@ -16,8 +16,8 @@ def step(name, fn):
 if not (ROOT / "site" / "static" / "wasm" / "mzlab_wasm.js").exists():
     print("  ", ("site", "FAIL site/ not built: python tools/build_site.py + wasm")); sys.exit(0)
 D = Path(tempfile.mkdtemp(prefix="wiff_carico_"))
-for name, samples, scans in (("lotto", 4, 700), ("ferma", 4, 900)):
-    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_grande.py"), str(D), "--name", name, "--samples", str(samples), "--scans", str(scans), "--points", "1500"], check=True, capture_output=True)
+for name, samples, scans, points in (("lotto", 4, 700, 1500), ("ferma", 4, 900, 1500), ("molti", 48, 40, 300)):
+    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_grande.py"), str(D), "--name", name, "--samples", str(samples), "--scans", str(scans), "--points", str(points)], check=True, capture_output=True)
 (D / "rotto.wiff").write_bytes(b"\x00not a compound file\x01" * 4000)      # a .wiff that is not an OLE container: the pair cannot be opened
 (D / "rotto.wiff.scan").write_bytes((D / "lotto.wiff.scan").read_bytes())
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -68,6 +68,16 @@ try:
             pg.locator("#flist .cvsum [data-cvact=close]").click()
             assert pg.locator("#flist .cvsum").count() == 0 and pg.evaluate("CONVROWS.rows.length") == 0
         step("each sample keeps «Loaded ✓ (n scans, t s)» until «Close»", loaded)
+
+        def many():                                     # one .wiff with 48 samples: each builder opens only its own sample (wiff::lettore::apri_solo), none waits on the others
+            pg.set_input_files("#pick", [str(D / "molti.wiff"), str(D / "molti.wiff.scan")])
+            seen, still = follow(pg, lambda s: s["busy"] == 0 and sum(n.startswith("molti_s") for n in s["files"]) == 48)
+            assert sum(n.startswith("molti_s") for n in seen[-1]["files"]) == 48, seen[-1]
+            assert still <= 5, f"the loading was still for {still:.1f} s"
+            items = pg.locator("#flist .cvsum li").all_inner_texts()
+            assert len(items) == 48 and all("Loaded ✓ (40 scans," in t for t in items), items[:3]
+            pg.locator("#flist .cvsum [data-cvact=close]").click()
+        step("a container of 48 samples loads them all, never still for more than 5 s", many)
 
         def cancel():
             pg.set_input_files("#pick", [str(D / "ferma.wiff"), str(D / "ferma.wiff.scan")])

@@ -116,8 +116,9 @@ fn contract_and_rows_of_python() {
         let id = r["id"].as_i64().unwrap();
         let det: Value =
             serde_json::from_str(&detail(&d, id, |k| Ok(open(&idxs[k]))).unwrap()).unwrap();
-        let keys = ["specificity", "ms2_links", "ms2_rep", "ms2_text"];
+        let keys = ["specificity", "ms2_links", "ms2_rep", "ms2_text", "candidates"];
         same_shape(&without(&det, &keys), &g["detail"], "detail");
+        own_candidate_first(&det);
         assert!(
             det["criteria"]
                 .as_array()
@@ -294,4 +295,25 @@ fn mrm_files_are_listed_by_the_plan_and_keep_it_in_rust() {
     assert_eq!(plan["rust"], true);
     assert_eq!(plan["mrm"][0], "lr_MRM.mzML");
     assert_eq!(plan["lc"].as_array().unwrap().len(), idxs.len());
+}
+
+/// The candidates of the trace: the row's own first, with its neutral and [M+H]+ formula and the calculated m/z of the row.
+fn own_candidate_first(det: &Value) {
+    let c = det["candidates"].as_array().unwrap();
+    assert!(!c.is_empty() && c[0]["own"] == true, "{c:?}");
+    assert_eq!(c[0]["formula"], det["formula"]);
+    assert_eq!(c[0]["mz"], det["mz"]);
+    assert_eq!(c.len(), 1 + det["alternatives"].as_array().unwrap().len());
+    if let (Some(f), Some(i)) = (c[0]["formula"].as_str(), c[0]["ion_formula"].as_str()) {
+        let h = |t: &str| {
+            let k = t.find('H').unwrap() + 1;
+            t[k..]
+                .chars()
+                .take_while(char::is_ascii_digit)
+                .collect::<String>()
+                .parse::<u32>()
+                .unwrap_or(1)
+        };
+        assert_eq!(h(i), h(f) + 1, "{f} -> {i}");
+    }
 }

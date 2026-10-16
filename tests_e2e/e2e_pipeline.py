@@ -320,7 +320,7 @@ try:
             assert pg.locator("#ft-t tr.tpt-exp").count() == 1 and pg.locator("#pv-det:not([hidden])").count() == 0
             assert "Open " not in pg.inner_text("#tp-det"), pg.inner_text("#tp-det")[:300]
             pg.wait_for_function("document.querySelectorAll('#tp-det .tpr-ov svg path.tr').length >= %d" % len(names), timeout=60000)
-            if re.search(r"RT [\d.]+ min \(", pg.inner_text("#tp-det .tpr-line")):         # the engine gave the borders of this row
+            if re.search(r"RT [\d.]+ min \(", pg.get_attribute("#tp-det .tpr-ov .tpr-ch:first-child svg", "data-tt-text") or ""):         # the engine gave the borders of this row
                 # peak borders are shaded when they fall inside the drawn window, and the description says so only then
                 shaded = pg.locator("#tp-det .tpr-ov svg .band").count() > 0
                 desc = pg.evaluate("[...document.querySelectorAll('#tp-det .tpr-ov')].map(e => e.getAttribute('aria-label') || e.textContent).join(' ')")

@@ -38,6 +38,7 @@ try:
             pg.click("#tp-go"); pg.wait_for_selector("#tp-t", timeout=300000); pg.wait_for_timeout(1300)
             pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk")
             pg.click("#tp-t tbody tr.clk >> nth=0"); pg.click('#tp-det [data-tab="identity"]')          # the parent is the pinned first row; the tree is in its tab Identity
+            pg.wait_for_selector("#tp-det details.tpr-det", state="attached", timeout=60000); pg.evaluate("document.querySelector('#tp-det details.tpr-det').open = true")          # the tree is in «Details», closed by default
             pg.wait_for_selector("#tp-alb svg.alb-svg .nd", timeout=60000)
             n, e = pg.evaluate("[document.querySelectorAll('#tp-alb svg.alb-svg .nd').length, document.querySelectorAll('#tp-alb svg.alb-svg g.vp > path').length]")
             assert n >= 2 and e == n - 1, (n, e)
@@ -54,7 +55,9 @@ try:
             pg.screenshot(path=str(HERE / "shots" / "tpmine_albero_lr.png"), full_page=True)
         step("LR: supposed tree of the parent (N nodes, N-1 edges, structure on click, keyboard, SVG)", lr)
         def lr_cmp():
-            pg.click("#tp-t tr.clk:has-text('hydroxylation @ 7.40')"); pg.wait_for_selector("#tp-alb #alb-cmp", timeout=60000)
+            pg.click("#tp-t tr.clk:has-text('hydroxylation @ 7.40')"); pg.click('#tp-det [data-tab="identity"]')
+            pg.wait_for_selector("#tp-det details.tpr-det", state="attached", timeout=60000); pg.evaluate("document.querySelector('#tp-det details.tpr-det').open = true")          # the tree is in «Details», closed by default
+            pg.wait_for_selector("#tp-alb #alb-cmp", timeout=60000)
             pg.click("#alb-cmp")
             pg.wait_for_function("document.getElementById('alb-leg').textContent.includes('shifted')", timeout=60000)
             assert pg.evaluate("document.querySelectorAll('#tp-alb .nd text').length") > 0 and "Δ" in pg.inner_text("#tp-alb")
