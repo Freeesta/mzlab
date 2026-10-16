@@ -613,8 +613,8 @@
       const pIt = [st.pname ? `<span class="hc hn" data-k="name">${esc(MOLUI.cap(st.pname))}</span>` : "", s.parent_ok === false ? it("pnf", "Status", "Parent not found", "ft.sum.pnf") : "", it("formula", "Neutral formula", esc(s.parent.formula || "—"), "ft.sum.formula"), it("mz", `${esc(s.parent.adduct)} <i>m/z</i>`, s.parent.mz, "ft.sum.mz"),
         par && par.ref_rt ? it("rt", "RT", `${par.ref_rt} min`, "ft.sum.rt") : "", hl != null ? `${it("half", "t½", hl, "ft.sum.half", 1).replace("</b></span>", "</b> min</span>")}` : "",
         off != null ? it("offset", "<i>m/z</i> offset", `${off >= 0 ? "+" : "−"}${Math.abs(off).toFixed(2)} Da`, "ft.sum.offset") : ""].filter(Boolean).join("");
-      const cIt = (k, n, label) => `<span class="hc" data-k="${k}"${dt("ft.chip." + k)} tabindex="0"><b data-count="${n}">${n}</b> ${label}</span>`;
-      const words = [cIt("strong", nF, "strong"), cIt("possible", nP, "possible"), cIt("unexpected", nU, "unexpected"),
+      const cIt = (k, n, label, tip) => `<span class="hc" data-k="${k}"${tip} tabindex="0"><b data-count="${n}">${n}</b> ${label}</span>`;
+      const words = [cIt("strong", nF, "strong", dt("ft.chip.strong")), cIt("possible", nP, "possible", dt("ft.chip.possible")), cIt("unexpected", nU, "unexpected", dt("ft.chip.unexpected")),
         // the weak band is off by default but never out of sight: its count is always here, with the unexpected ions the Dig left out
         `<span class="hc" data-k="weak"${dt("ft.chip.weak")} tabindex="0"><b>${nW}</b> <span id="tp-weak-w">weak evidence hidden</span></span>${nW ? `<button type="button" id="tp-weak-s" class="hero-l"${dt("ft.sum.weakshow")}>show</button>` : ""}`,
         nLeft ? `<span class="hc" data-k="left"${dt("ft.sum.left")} tabindex="0"><b>${nLeft}</b> unexpected not listed</span>` : ""].join("");
