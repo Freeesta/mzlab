@@ -30,7 +30,7 @@ try:
         step("dark theme, English: the sight button", dark)
         def wheel():
             x, y = at(.5, .45); pg.mouse.move(x, y)
-            for _ in range(3): pg.mouse.wheel(0, -200); pg.wait_for_timeout(60)
+            for _ in range(3): ctrl_wheel(pg, 0, -200); pg.wait_for_timeout(60)
             zz = z(); assert zz[0] and zz[1], zz
             pg.wait_for_function(f"!!({M}._mz.reg && {M}._mz.reg.nrt > 1)", timeout=15000)     # true zoom: the region on new bins
             reg = pg.evaluate(f"[{M}._mz.reg.nrt,{M}._mz.reg.nmz,{M}._mz.reg.dmz]"); assert reg[2] <= 1 and reg[1] <= 1000 and reg[0] <= 1000, reg     # never coarser than the 1 Da of the whole map (LR cells are nominal masses)
@@ -48,7 +48,7 @@ try:
             pg.keyboard.press("Control+z"); attendi(pg, M + ".zoom!==null"); assert z() == after, (z(), after)      # Ctrl+Z takes the box zoom back
             pg.keyboard.press("Backspace"); attendi(pg, M + ".zoom===null")
             pg.keyboard.press("0"); pg.wait_for_timeout(200); assert z() == [None, None], z()
-            pg.mouse.move(*at(.5, .5)); pg.mouse.wheel(0, -300); pg.wait_for_timeout(200); assert z()[0]
+            pg.mouse.move(*at(.5, .5)); ctrl_wheel(pg, 0, -300); pg.wait_for_timeout(200); assert z()[0]
             pg.click(".pnl.map [data-a=fit]"); pg.wait_for_timeout(200); assert z() == [None, None], z()
         step("box zoom, Backspace = whole view, 0 and the button = whole view", boxz)
         def full():

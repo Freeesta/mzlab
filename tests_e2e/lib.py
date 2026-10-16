@@ -129,6 +129,9 @@ def saved(pg, timeout=60000):
     pg.wait_for_function("fetch('api/notebook').then(r => r.json()).then(n => (n.session || []).length >= 1)", timeout=timeout)
 
 
+def ctrl_wheel(pg, dx, dy):
+    """Ctrl/⌘ + wheel (the pinch of the trackpad): the zoom of the charts; the wheel alone scrolls the page."""
+    pg.keyboard.down("Control"); pg.mouse.wheel(dx, dy); pg.keyboard.up("Control")
 def ready(pg, timeout=90000, settle=400):
     """Wait until the page is quiet: no loading screen, no request to the server in flight, nothing started or ended for `settle` ms."""
     import time as _t

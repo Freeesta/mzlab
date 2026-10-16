@@ -31,7 +31,7 @@ try:
             pg.click(f"#ctx [role^=menuitem]:has-text('{label}')"); pg.wait_for_timeout(500)
         def zoom_in():
             x, y = at(.5, .45); pg.mouse.move(x, y)
-            for _ in range(3): pg.mouse.wheel(0, -200); pg.wait_for_timeout(60)
+            for _ in range(3): ctrl_wheel(pg, 0, -200); pg.wait_for_timeout(60)
             pg.wait_for_timeout(250); assert z()[0] and z()[1], z()
         def menu():
             x, y = at(.4, .5); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(300)
@@ -109,10 +109,11 @@ try:
             pg.keyboard.down("Shift"); pg.mouse.wheel(0, -300); pg.keyboard.up("Shift"); pg.wait_for_timeout(300); a = z(); assert a[0] and a[1] is None, a        # Shift = RT only
             pg.click(".pnl.map [data-a=fit]"); pg.mouse.move(x, y)
             pg.keyboard.down("Alt"); pg.mouse.wheel(0, -300); pg.keyboard.up("Alt"); pg.wait_for_timeout(300); a = z(); assert a[1] and a[0] is None, a             # Alt = m/z only
-            pg.click(".pnl.map [data-a=fit]"); pg.mouse.move(x, y); pg.mouse.wheel(0, -300); pg.wait_for_timeout(300); a = z(); assert a[0] and a[1], a
-            before = z()[0]; pg.mouse.wheel(120, 0); pg.wait_for_timeout(300); after = z()[0]; assert after[0] > before[0], (before, after)                          # trackpad sideways = move along RT
+            pg.click(".pnl.map [data-a=fit]"); pg.mouse.move(x, y); ctrl_wheel(pg, 0, -300); pg.wait_for_timeout(300); a = z(); assert a[0] and a[1], a
+            before = z(); pg.mouse.wheel(0, -300); pg.mouse.wheel(120, 0); pg.wait_for_timeout(300); assert z() == before, ("the wheel alone does not touch the map", before, z())      # it scrolls the page
+            pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"); x, y = at(.5, .45)
             pg.mouse.dblclick(x, y); pg.wait_for_timeout(300); assert z() == [None, None]                                                                             # double click = reset
-        step("wheel: zoom, Shift = RT, Alt = m/z, sideways = move, double click = reset", wheels)
+        step("wheel: Ctrl/⌘ zoom, Shift = RT, Alt = m/z, the wheel alone leaves the map, double click = reset", wheels)
         cdp = ctx.new_cdp_session(pg)
         def touch(kind, pts):
             cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": [{"x": a, "y": c, "id": i} for i, (a, c) in enumerate(pts)]})
@@ -127,11 +128,12 @@ try:
             for k in range(1, 7): touch("touchMove", [(cx - 40 + k * 15, cy), (cx + 40 + k * 15, cy)]); pg.wait_for_timeout(30)
             touch("touchEnd", []); pg.wait_for_timeout(300); b2 = z(); assert abs((b2[0][1] - b2[0][0]) - span) < span * 0.02 and b2[0][0] < a[0][0], ("two fingers move, same scale", a, b2)
             touch("touchStart", [(cx, cy)]); pg.wait_for_timeout(50)
-            for k in range(1, 7): touch("touchMove", [(cx + k * 10, cy)]); pg.wait_for_timeout(30)
-            touch("touchEnd", []); pg.wait_for_timeout(300); b3 = z(); assert b3[0][0] < b2[0][0], ("one finger moves", b2, b3)
+            for k in range(1, 7): touch("touchMove", [(cx + k * 10, cy + k * 6)]); pg.wait_for_timeout(30)
+            assert pg.evaluate("!document.querySelector('.pnl.map .zr').hidden"), "the box of the finger is drawn"
+            touch("touchEnd", []); pg.wait_for_timeout(300); b3 = z(); assert b3[0][1] - b3[0][0] < (b2[0][1] - b2[0][0]) * 0.8 and pg.evaluate("document.querySelector('.pnl.map .zr').hidden"), ("one finger draws a zoom box", b2, b3)
             for _ in range(2): touch("touchStart", [(cx, cy)]); pg.wait_for_timeout(40); touch("touchEnd", []); pg.wait_for_timeout(80)
             pg.wait_for_timeout(300); assert z() == [None, None], ("double tap = reset", z())
-        step("touch: pinch, two fingers move, one finger moves, double tap = reset", touches)
+        step("touch: pinch, two fingers move, one finger draws the zoom box, double tap = reset", touches)
         def longpress():
             c = box(); cx, cy = c[0] + c[2] * .4, c[1] + c[3] * .5
             touch("touchStart", [(cx, cy)]); pg.wait_for_function("!document.getElementById('ctx').hidden", timeout=4000); touch("touchEnd", []); pg.wait_for_timeout(300)

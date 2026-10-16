@@ -490,12 +490,10 @@ window.MAPPA = (() => {
   function leave(p) { const s = st(p); if (s.frz) return; s.sl = null; s.hov = null; if (!s.lock && s.ovg) frame(p); }
   function wheel(p, e, px, py) {
     if (!is2d(p) || e.ctrlKey || e.metaKey) return false;               // Ctrl/Cmd + wheel (a pinch on the trackpad) keeps the zoom of explore.js
+    if (!e.shiftKey && !e.altKey) return false;                         // the wheel alone scrolls the page, as over every other chart
     e.preventDefault();
     const a = p._a;
     if (!p._wz || Date.now() - p._wz > 600) pushZh(p); p._wz = Date.now();
-    if (!e.shiftKey && !e.altKey && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {          // trackpad, two fingers sideways: move along RT
-      panPx(p, -e.deltaX, 0); draw(p); return true;
-    }
     const dy = e.deltaY || e.deltaX, f = Math.exp(Math.max(-60, Math.min(60, dy)) * 0.004);
     scaleView(p, f, { rt: xOf(p, px), mz: a.mzAt(py) }, e.shiftKey ? "x" : e.altKey ? "y" : "xy");       // Maiusc = RT only, Alt = m/z only
     draw(p); return true;
@@ -836,13 +834,18 @@ window.MAPPA = (() => {
   const activeMap = () => { const q = E.active; if (q && q.type === "map" && is2d(q) && E.panels.includes(q)) return q; return (typeof tabPanels === "function" ? tabPanels() : []).find(x => x.type === "map" && is2d(x)) || null; };
   const paletteOk = c => { const p = activeMap(); return !!p && c.viste.includes("map") && (!c.visibile || c.visibile(ad2(p, null))); };
   const paletteRun = id => { const p = activeMap(); if (p) runCmd(id, ad2(p, null)); };
-  // touch: one finger moves the map, two fingers move and pinch, a double tap = whole view, a long press = the menu
+  // touch: one finger draws the zoom box, two fingers move and pinch, a double tap = whole view, a long press = the menu
   function touchInit(p, cv) {
     cv.style.touchAction = "none";
     /** @type {any} */ let g = null;
     let lastTap = null, lp = 0;
     const at = (t, r) => ({ x: t.clientX - r.left, y: t.clientY - r.top });
     const cen = ts => { const r = cv.getBoundingClientRect(), a = at(ts[0], r), b = ts[1] ? at(ts[1], r) : a; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y), cx: (ts[0].clientX + (ts[1] || ts[0]).clientX) / 2, cy: (ts[0].clientY + (ts[1] || ts[0]).clientY) / 2 }; };
+    const rubber = (/** @type {any} */ a, /** @type {any} */ b = a) => {          // the box of the finger: the same element as the mouse box (eventi.js)
+      const zr = /** @type {HTMLElement | null} */ (p.el.querySelector(".zr")); if (!zr) return;
+      if (!a) { zr.hidden = true; return; }
+      zr.hidden = false; zr.style.left = cv.offsetLeft + Math.min(a.x, b.x) + "px"; zr.style.width = Math.abs(b.x - a.x) + "px"; zr.style.top = cv.offsetTop + Math.min(a.y, b.y) + "px"; zr.style.height = Math.abs(b.y - a.y) + "px";
+    };
     const inside = q => { const a = p._a; return a && q.x >= M.l && q.x <= a.W - M.r && q.y >= M.t && q.y <= a.H - M.b; };
     cv.addEventListener("touchstart", e => {
       if (!is2d(p)) return; clearTimeout(lp); const c = cen(e.touches);
@@ -855,14 +858,15 @@ window.MAPPA = (() => {
       if (!g || !is2d(p)) return; const c = cen(e.touches), a = p._a;
       if (!g.moved && Math.hypot(c.x - g.start.x, c.y - g.start.y) < 8) return;
       if (g.box && e.touches.length === 1) { g.moved = true; st(p).gestAt = Date.now(); clearTimeout(lp); e.preventDefault(); g.box(c.x, c.y); return; }
-      if (!g.two && !g.moved) pushZh(p);
       g.moved = true; st(p).gestAt = Date.now(); clearTimeout(lp); e.preventDefault();
+      if (!g.two && e.touches.length === 1) { g.rb = true; g.last = c; rubber(g.start, c); return; }       // one finger draws the zoom box
       if (g.two && e.touches.length >= 2 && g.last.d > 0 && c.d > 0) pinch(p, g.last, c, g.last.d / c.d);
       else panPx(p, c.x - g.last.x, c.y - g.last.y);
       g.last = c; draw(p);
     }, { passive: false });
     const end = e => {
-      clearTimeout(lp); if (!g) return; const moved = g.moved, two = g.two; g = null;
+      clearTimeout(lp); if (!g) return; const moved = g.moved, two = g.two, rb = g.rb && g.start, last = g.last; g = null;
+      if (rb) { rubber(null); if (Math.abs(last.x - rb.x) > 4 || Math.abs(last.y - rb.y) > 4) boxZoom(p, rb.x, rb.y, last.x, last.y); st(p).gestAt = Date.now(); if (e.cancelable) e.preventDefault(); uiSave(); return; }
       if (e.touches.length) { if (e.cancelable) e.preventDefault(); g = { two: e.touches.length > 1, last: cen(e.touches), start: cen(e.touches), moved: true }; return; }
       if (moved) { st(p).gestAt = Date.now(); if (e.cancelable) e.preventDefault(); uiSave(); return; }       // no mouse events after a gesture (they would be a box zoom)
       const now = Date.now(), c = e.changedTouches[0], r = cv.getBoundingClientRect(), q = at(c, r);
