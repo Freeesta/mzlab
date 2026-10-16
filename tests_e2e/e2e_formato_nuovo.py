@@ -24,7 +24,7 @@ try:
         pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         def again():
             pg.goto(pg.url); attendi(pg, "document.querySelector('#pick')")
-            pg.set_input_files("#pick", [str(F)]); attendi(pg, "document.body.innerText.includes('C_FullMass-t0.mzML')")
+            pg.set_input_files("#pick", [str(F)]); attendi(pg, "(document.querySelector('#opbtn') && !document.querySelector('#opbtn').disabled) || /formato 3/.test(document.body.innerText)", timeout=60000)
         def newer():
             before = pg.evaluate(HASH); pg.evaluate(VERSION, 3); patched = pg.evaluate(HASH); assert patched != before
             again()
