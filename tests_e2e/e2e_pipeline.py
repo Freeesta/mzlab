@@ -213,7 +213,7 @@ try:
             assert "validated" not in pg.inner_text("#pipe-res")
             assert not pg.evaluate("/C21H32N2O2|against|1\\/\\d/.test(document.querySelector('#pipe-res').textContent)")
             pg.wait_for_selector("#pipe-qc .qc #qc-m svg", timeout=60000)
-            pg.wait_for_selector("#pipe-tab #ft-g", timeout=60000)
+            pg.wait_for_selector("#pipe-tab #ft-t", timeout=60000)
             assert "validated" not in pg.inner_text("#pipe-tab"), "the table view is always open, with no gate text"
         step("without cancello.json the run lists rows (traces and families), the table view is open and no candidate is in the DOM without a parent", run_plain)
 
@@ -284,21 +284,55 @@ try:
 
         def table_step():
             pg.wait_for_function("document.querySelector('#ft-n').textContent.includes(' of ')", timeout=60000)
-            txt = pg.inner_text("#ft-n"); kept, total = [int(x.replace(',', '')) for x in re.findall(r"[\d,]+", txt)]
-            assert kept == total > 0, txt
-            assert 0 < pg.locator("#ft-g .ft-win .ft-r").count() < 80
-            pg.select_option("#ft-norm", "somma"); pg.fill("#ft-det", str(len(names) // 2)); pg.wait_for_timeout(600)
-            kept2 = int(re.findall(r"[\d,]+", pg.inner_text("#ft-n"))[0].replace(',', ""))
+            count = lambda: [int(x.replace(',', '')) for x in re.findall(r"[\d,]+", pg.inner_text("#ft-n"))]
+            kept, total = count(); assert kept == total > 0, pg.inner_text("#ft-n")
+            pg.wait_for_selector("#ft-t tbody tr.clk")
+            assert pg.evaluate("document.querySelector('#ft-t').tagName") == "TABLE" and int(pg.get_attribute("#ft-t", "aria-rowcount")) == kept + 1
+            assert 0 < pg.locator("#ft-t tbody tr").count() < 100 and pg.locator("#ft-t thead th").count() <= 8, "virtualised and at most 8 columns"
+            pg.evaluate("document.querySelector('#pv-det').hidden = true")        # the detail of the list of identities, opened by the step before
+            # the first two columns stay while the table scrolls sideways
+            x0 = pg.evaluate("document.querySelectorAll('#ft-t thead th')[1].getBoundingClientRect().left")
+            pg.evaluate("(() => { const w = document.querySelector('#ft-host .tpt-wrap'); w.style.maxWidth = '380px'; w.scrollLeft = 150; })()"); lib.attendi(pg, "document.querySelector('#ft-host .tpt-wrap').scrollLeft > 0 || document.querySelector('#ft-host .tpt-wrap').scrollWidth <= document.querySelector('#ft-host .tpt-wrap').clientWidth")
+            assert abs(pg.evaluate("document.querySelectorAll('#ft-t thead th')[1].getBoundingClientRect().left") - x0) < 2, "Identity stays in place"
+            pg.evaluate("(() => { const w = document.querySelector('#ft-host .tpt-wrap'); w.scrollLeft = 0; w.style.maxWidth = ''; })()")
+            # a chip is the same view as the numeric field
+            def changed(act):                                   # runs `act` and waits for the engine to give the new count
+                prev = pg.inner_text("#ft-n"); act()
+                pg.wait_for_function("p => document.querySelector('#ft-n').textContent !== p", arg=prev, timeout=30000); return count()[0]
+            k1 = changed(lambda: pg.click('[data-fc="det"]'))
+            changed(lambda: pg.click('[data-fc="det"]')); pg.click("#ft-moreb"); k2 = changed(lambda: pg.fill("#ft-det", "2"))
+            assert k1 == k2 <= kept, (k1, k2, kept)
+            # normalisation and filters of the numeric fields (the counts are the engine's)
+            pg.select_option("#ft-norm", "somma"); kept2 = changed(lambda: pg.fill("#ft-det", str(len(names) // 2)))
             assert kept2 < total, (kept2, total, pg.inner_text("#ft-why"), pg.input_value("#ft-det"), pg.input_value("#ft-norm"))
             assert pg.inner_text("#ft-why").startswith("Rejected by each filter"), pg.inner_text("#ft-why")
-            pg.click("#ft-g .ft-win .ft-r >> nth=0")
-            pg.wait_for_selector("#pv-det:not([hidden]) #pv-ch .ch.a", timeout=20000)
-            assert pg.locator("#pv-det h4").inner_text().startswith("Row "), pg.locator("#pv-det h4").inner_text()
+            changed(lambda: pg.fill("#ft-det", "")); pg.select_option("#ft-norm", "nessuna")
+            # sort by m/z
+            pg.click("#ft-t th button[data-sh=mz]"); pg.wait_for_selector("#ft-t th[aria-sort=descending]")
+            mzs = pg.evaluate("[...document.querySelectorAll('#ft-t tbody tr.clk')].map(r => +r.children[2].textContent)")
+            assert len(mzs) > 3 and mzs == sorted(mzs, reverse=True) or mzs == sorted(mzs), mzs[:6]
+            # the click expands the row on the spot, with the XIC of every file and no file open in Data
+            pg.click("#ft-t tbody tr.clk >> nth=1")
+            pg.wait_for_selector("#ft-t tr.tpt-exp #tp-det .tpr-ov svg", timeout=60000)
+            assert pg.locator("#ft-t tr.tpt-exp").count() == 1 and pg.locator("#pv-det:not([hidden])").count() == 0
+            assert "Open " not in pg.inner_text("#tp-det"), pg.inner_text("#tp-det")[:300]
+            pg.wait_for_function("document.querySelectorAll('#tp-det .tpr-ov svg path.tr').length >= %d" % len(names), timeout=60000)
+            assert pg.locator("#tp-det .tpr-ov svg .band").count() >= 1, "peak borders are shaded"
+            pg.locator("#tp-det .tpr-ov svg").first.focus(); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
+            assert pg.locator("#tdati tbody tr").count() >= 3; pg.keyboard.press("Escape"); pg.wait_for_selector("#tdati", state="detached")
             out = os.environ.get("MZLAB_PIPE_SHOTS")
             if out:
                 pg.wait_for_timeout(500)
                 for sel, nm in (("#pipe-qc", "qc"), ("#pipe-tab", "tabella")): pg.locator(sel).screenshot(path=str(Path(out) / f"pipeline_{nm}.png"))
-        step("table: normalisation and filters as a view with «N of M rows», virtualised grid, click opens the row", table_step)
+            pg.click("#tp-det [data-tab=samples]")
+            assert pg.locator("#tp-det table.tpr tbody tr").count() == len(names), pg.inner_text("#tp-det")[:300]
+            pg.click("#tp-det [data-tab=quality]"); qt = pg.inner_text("#tp-det"); assert "S/N" in qt and "FWHM" in qt, qt[:300]
+            pg.click("#tp-det [data-tab=overview]")
+            pg.click("#ft-t tbody tr.clk >> nth=3")                      # another row closes the first one
+            pg.wait_for_function("document.querySelectorAll('#ft-t tr.tpt-exp').length === 1")
+            pg.locator("#ft-t tbody tr.tpt-exp").evaluate("e => e.previousElementSibling.querySelector('[data-tg]').focus()"); pg.keyboard.press("Escape")
+            assert pg.locator("#ft-t tr.tpt-exp").count() == 0 and pg.evaluate("!!document.activeElement.dataset.tg"), "Esc closes and gives back the focus"
+        step("table: engine view with chips and «N of M rows», virtual TPTAB, the click expands the row (XIC of every file, Samples, Quality)", table_step)
 
         def export_step():
             def get(i):

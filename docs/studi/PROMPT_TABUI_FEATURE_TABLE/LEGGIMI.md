@@ -5,7 +5,6 @@ Studio: `docs/studi/TABUI_FEATURE_TABLE.md`. Decisione di Federico (§1): tabell
 ## File toccati
 | Pacchetto | File toccati | Dipende da |
 |---|---|---|
-| FT-05 Feature table della Pipeline | `TP_Mine/js/37_feature_table.js`, una riga di `34_pipeline_run.js`, `tests_e2e/e2e_pipeline.py`, `docs/agenti/mzfeat-wasm.md` | FT-01..FT-04, MZ-04, MZ-05 |
 | FT-06 tabella HR | `TP_Mine/js/21_tpmine_hr.js`, `tests_e2e/{e2e_tpmine_tabella,e2e_tpmine_ms2}.py`, `docs/agenti/{mzfinder,mzfinder-tabella,livelli}.md` | FT-01, FT-02, FT-04; serie con M5 |
 | FT-07 tabella LR | `TP_Mine/js/20_tpmine.js`, `tests_e2e/e2e_tpmine_lr_tabella.py`, selettori degli e2e LR, `docs/agenti/{mzfinder,mzfinder-lr,mzfinder-tabella}.md` | FT-01, FT-02, FT-04, M4; serie con M5 e RV-11 |
 | FT-08 livello deciso | `TP_Mine/js/45_tabui_decisioni.js` (nuovo), una riga di `44_tp_riga.js`, `tests_e2e/e2e_tabui_decisioni.py`, `docs/agenti/mzfinder-tabella.md` | FT-04 e una fra FT-05/06/07 |

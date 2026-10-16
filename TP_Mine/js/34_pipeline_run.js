@@ -155,9 +155,15 @@
       const out = st.out, session = await /** @type {any} */ (window).PIPEQC.open({ base: window.QTOOLS.ctx.base, bytes: out.evid || out.table, names: st.names, inputs: st.data.meta.inputs || [], campioni: st.cs, pol: st.ctx.values().polarity, pool: st.ctx.pool });
       st.session = session; const g = { ...gate, table: gate.table === true };
       await /** @type {any} */ (window).PIPEQC.render($("#pipe-qc"), { session, gate: g, chart });
-      const tab = /** @type {any} */ (window).PIPET.mount($("#pipe-tab"), { session, names: st.names, gate: g, onPick: r => detail(r), say });
+      const tab = /** @type {any} */ (window).PIPET.mount($("#pipe-tab"), { session, names: st.names, gate: g, say, cs: st.cs, ppm: () => st.ctx.values().ppm, levels: levelMap(), identsOf: id => (st.cand ? st.all.filter(x => x.row === id - 1) : []) });
       /** @type {any} */ (window).PIPEX.mount($("#pipe-exp"), { session, spec: () => (tab ? tab.spec() : ""), names: st.names, pool: st.ctx.pool, pol: st.ctx.values().polarity, say, stem: "tabui_" + session.sha.slice(0, 8) });
     } catch (e) { $("#pipe-qc").innerHTML = `<p class="err">${esc(say(e))}</p>`; }
+  }
+  /** level of the best identity of each row of the table (row id = position + 1), none without the gate */
+  function levelMap() {
+    const m = new Map(); if (!st.cand) return m;
+    for (const x of st.all) if (x.row >= 0 && x.level && !m.has(x.row + 1)) m.set(x.row + 1, x.level);
+    return m;
   }
   function refilter() {
     const opt = { text: $("#pv-q").value, discarded: !!(st.cand && $("#pv-dis").checked) };

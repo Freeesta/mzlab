@@ -15,7 +15,7 @@
    * @typedef {{ name?: string, formula?: string, ppm?: number | null, adduct?: string, source?: string, level?: string | number, pred?: number, proofs?: TpProof[] }} TpCand
    * @typedef {{ key: string, label: string, help?: string, run: (m: TpRiga) => void }} TpAction
    * @typedef {{ title?: string, level?: string | number, pred?: number, decided?: string | number | null, words?: string, actions?: TpAction[], xic?: TpXic[], apexRt?: number | null, lo?: number | null, hi?: number | null,
-   *   spectrum?: TpSpec | null, line?: string, samples?: TpSample[], identity?: { neutral?: number | string | null, adduct?: string, candidates?: TpCand[] } | null,
+   *   spectrum?: TpSpec | null, spectrum2?: TpSpec | null, line?: string, samples?: TpSample[], identity?: { neutral?: number | string | null, adduct?: string, candidates?: TpCand[] } | null,
    *   quality?: { shape?: number | string | null, snr?: number | null, fwhm?: number | null, flags?: string[], isoM1?: number | string | null, blank?: any, t0?: any, rejected?: string[] } | null,
    *   missing?: Record<string, string> }} TpRiga
    */
@@ -128,9 +128,9 @@
 
   // spectrum: MS1 with the expected isotopes (hollow) and the observed ones (filled), MS2, or MS2 against a reference (mirror)
   const SW = 340, SH = 150;
-  /** @param {HTMLElement} box @param {TpRiga} m */
-  function specChart(box, m) {
-    const sp = m.spectrum;
+  /** @param {HTMLElement} box @param {TpRiga} m @param {boolean} [second] the second spectrum (`spectrum2`) */
+  function specChart(box, m, second) {
+    const sp = second ? m.spectrum2 : m.spectrum;
     if (!sp || !sp.mz || !sp.mz.length) { none(box, "Spectrum", m.missing && m.missing.spectrum); return; }
     const mirror = sp.kind === "mirror" && sp.ref && sp.ref.mz.length > 0, all = [...sp.mz, ...(mirror && sp.ref ? sp.ref.mz : []), ...(sp.iso && sp.iso.exp ? sp.iso.exp.mz : [])];
     const lo = Math.min(...all), hi = Math.max(...all), pad = (hi - lo || 1) * 0.06, a = lo - pad, b = hi + pad;
@@ -184,6 +184,7 @@
     const g = document.createElement("div"); g.className = "tpr-ov"; panel.appendChild(g);
     const a = document.createElement("div"), b = document.createElement("div"); a.className = b.className = "tpr-ch"; g.append(a, b);
     xicChart(a, m); specChart(b, m);
+    if (m.spectrum2 && m.spectrum2.mz && m.spectrum2.mz.length) { const c = document.createElement("div"); c.className = "tpr-ch"; g.appendChild(c); specChart(c, m, true); }
     if (m.line) { const p = document.createElement("p"); p.className = "tpr-line"; p.textContent = m.line; panel.appendChild(p); }
   }
 
