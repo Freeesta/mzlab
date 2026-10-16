@@ -61,6 +61,8 @@ fn contract_and_rows_of_python() {
     let g = golden();
     let mut shared = s.clone();
     shared.as_object_mut().unwrap().remove("ms2_links");
+    shared.as_object_mut().unwrap().remove("ms2_rep");
+    shared.as_object_mut().unwrap().remove("ms2_text");
     same_shape(&shared, &g["summary"], "summary");
     for row in s["rows"].as_array().unwrap() {
         let mut shared = row.clone();
@@ -102,6 +104,8 @@ fn contract_and_rows_of_python() {
         let mut shared = det.clone();
         shared.as_object_mut().unwrap().remove("specificity");
         shared.as_object_mut().unwrap().remove("ms2_links");
+        shared.as_object_mut().unwrap().remove("ms2_rep");
+        shared.as_object_mut().unwrap().remove("ms2_text");
         same_shape(&shared, &g["detail"], "detail");
         assert!(
             det["criteria"]

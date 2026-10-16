@@ -51,7 +51,8 @@ Lo Scavo («Dig») di mzFinder su una serie a risoluzione unitaria (3200 QTRAP, 
 `lr_tree` e `compare_lr` (moduli `tree`, `compare`) esistono solo con la feature `chem` (usano `fragtree`); il verdetto ISF compila anche senza, come la build del sito.
 
 ## Bersagli MS2
-- Un picco di traccia MS2 senza riga (`no_row`, `no_row_at_rt`) che ha una feature nella tabella allineata (|m/z − P| ≤ 0,5 Da, |RT − apice| ≤ `rt_tol_min`) diventa una riga «MS2 target m/z P @ RT min» (id da 200001, `kind` `unexpected`, `rows[].ms2_target: true`) con criteri e punteggio degli inattesi ma senza il loro filtro, e viene abbinata (`auto`, «row made from this MS2»); senza feature nella tabella il picco è `unmatched` con motivo `no_feature`. Dettagli, casi e diagnosi: `docs/agenti/mzfinder-lr-bersagli.md`.
+- Un picco di traccia MS2 senza riga (`no_row`, `no_row_at_rt`) che ha una feature nella tabella allineata (m/z letto entro la tolleranza di P, apice del picco della traccia dentro il picco della feature: `docs/agenti/mzfinder-ms2-regola.md`) diventa una riga «MS2 target m/z P @ RT min» (id da 200001, `kind` `unexpected`, `rows[].ms2_target: true`) con criteri e punteggio degli inattesi ma senza il loro filtro, e viene abbinata (`auto`, «row made from this MS2»); senza feature nella tabella il picco è `unmatched` con motivo `no_feature`.
+  Dettagli, casi e diagnosi: `docs/agenti/mzfinder-lr-bersagli.md`.
 
 ## Similarità MS2 col genitore (LR)
 - `lr/ms2sim.rs` (`ms2_link` la calcola dopo gli abbinamenti, `Links::sims`): per ogni riga con abbinamenti, se il genitore ha MS2 (`parent.has_ms2`), spettro di consenso della riga e del genitore (`ms2::pool` con `K` = 32 frammenti, m/z a 0,1 e picchi fusi entro `TOL_LR` = 0,5 Da, poi `similarity::prepare`) e `similarity::pair_components_tol(..., TOL_LR)`.

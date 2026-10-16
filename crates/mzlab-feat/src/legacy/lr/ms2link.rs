@@ -4,6 +4,7 @@
 //! `exp` builds the experiments and their traces, `rules` matches them, `json` writes the contract.
 
 mod exp;
+mod feature;
 mod follow;
 mod json;
 mod rules;
@@ -65,7 +66,16 @@ pub struct Link {
     pub row: i64,
     pub state: State,
     pub dmz: f64,
+    /// `dmz` in ppm of the m/z of the feature.
+    pub dppm: f64,
     pub drt: f64,
+    /// The scans of the match: the part of the peak of the trace inside the peak of the feature, minutes, and their number.
+    pub lo: f64,
+    pub hi: f64,
+    pub n_in: usize,
+    /// The tolerance used for the precursor, Da, and whether it is half the isolation window written in the file (else the table tolerance).
+    pub tol: f64,
+    pub tol_window: bool,
     pub alternatives: Vec<i64>,
     pub why: String,
 }
