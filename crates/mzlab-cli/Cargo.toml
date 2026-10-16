@@ -1,0 +1,20 @@
+[package]
+name = "mzlab-cli"
+description = "mzLab on the command line: `mzlab-cli features` runs the feature engine of the app on files and writes the feature table as CSV (native only, never in the WASM graph)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "mzlab-cli"
+path = "src/main.rs"
+
+[dependencies]
+mzlab-core = { path = "../mzlab-core" }
+mzlab-lettori = { path = "../mzlab-lettori", features = ["tutte"] }
+mzlab-feat = { path = "../mzlab-feat" }
+mzlab-feat-wasm = { path = "../mzlab-feat-wasm", default-features = false, features = ["detect"] }
+mzlab-feat-table-wasm = { path = "../mzlab-feat-table-wasm" }
+
+[dev-dependencies]
+mzlab-feat-wasm = { path = "../mzlab-feat-wasm", default-features = false, features = ["detect"] }
