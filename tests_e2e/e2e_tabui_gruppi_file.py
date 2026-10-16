@@ -105,12 +105,12 @@ try:
         def set_two():
             for n in ("G_O2_t30", "G_O2_t60"): pg.locator(f"{G} tr", has_text=n).locator(".tpg-sel").check()
             pg.click(f"{G} button:text-is('Set condition…')")
-            assert pg.evaluate("document.activeElement.getAttribute('aria-label')") == "Condition for the selected files"
+            pg.wait_for_function("document.activeElement && document.activeElement.getAttribute('aria-label') === 'Condition for the selected files'", timeout=20000)
             pg.keyboard.type("Air"); pg.keyboard.press("Enter")
             pg.wait_for_function(f"Object.values({BYNAME}).includes('Air')", timeout=20000)
             c = pg.evaluate(BYNAME); air = sorted(n for n in c if c[n] == "Air")
             assert len(air) == 2 and all(n.startswith("G_O2") for n in air), c
-            assert pg.evaluate("document.activeElement.textContent.trim()") == "Set condition…"
+            pg.wait_for_function("document.activeElement && document.activeElement.textContent.trim() === 'Set condition…'", timeout=20000)
         step("«Set condition…» on two files sets both and returns the focus", set_two)
 
         def reference():
@@ -147,7 +147,7 @@ try:
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-page"); pg.click("#tp-page")
             pg.wait_for_selector(f"{G} table .tpg-cond", timeout=120000)
             assert pg.evaluate(BYNAME) == before, (before, pg.evaluate(BYNAME))
-            assert pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)") == roles
+            now = pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)"); assert now == roles, (roles, now)
             assert pg.input_value(f"{G} select[aria-label='Reference condition']") == "Air"
             assert pg.locator(f"{G} tr.tpg-prop").count() == 0, "the stored conditions come back confirmed"
         step("after a reload the table is the same, from the notebook", reload)
