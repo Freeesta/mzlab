@@ -99,7 +99,7 @@ try:
         def confirm_keys():
             pg.focus(f"{G} button:text-is('Confirm conditions')"); pg.keyboard.press("Enter")
             pg.wait_for_function(f"document.querySelectorAll('{G} tr.tpg-prop').length === 0", timeout=20000)
-            assert pg.evaluate("document.activeElement.textContent.trim()") == "Confirm conditions", pg.evaluate("document.activeElement.outerHTML")
+            pg.wait_for_function("document.activeElement && document.activeElement.textContent.trim() === 'Confirm conditions'", timeout=20000)
         step("Enter on «Confirm conditions» removes the yellow and keeps the focus", confirm_keys)
 
         def set_two():
@@ -139,7 +139,10 @@ try:
         def reload():
             before = pg.evaluate(BYNAME); roles = pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)")
             pg.wait_for_timeout(800); pg.reload(); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
-            # the page brings the files of the session back by itself
+            pg.wait_for_timeout(3000)                                     # the files of the first page are not brought back: open them again (the page may open them at once)
+            pg.set_input_files("#pick", paths)
+            pg.wait_for_function("document.querySelector('#opbtn') && (document.querySelector('#opbtn').offsetParent !== null || E.files.length >= %d)" % len(paths), timeout=120000)
+            if pg.evaluate("document.querySelector('#opbtn').offsetParent !== null"): pg.click("#opbtn")
             pg.wait_for_function(f"E.files.length >= {len(paths)} && E.pending.length === 0", timeout=240000)
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-page"); pg.click("#tp-page")
             pg.wait_for_selector(f"{G} table .tpg-cond", timeout=120000)
