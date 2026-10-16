@@ -22,9 +22,13 @@ const AZIONI = (() => {
   function registra(a) {
     if (voci.some(v => v.id === a.id)) throw new Error("AZIONI: id already registered: " + a.id);
     if (!GRUPPI.includes(a.gruppo)) throw new Error("AZIONI: unknown group " + a.gruppo + " of " + a.id);
+    if (!a.icona && typeof AZIONI_ICONE !== "undefined") a.icona = AZIONI_ICONE.POR_ID[a.id];       // the icon of the action: its own key, else the table of azioni-icone.js
     voci.push(a);
     return a;
   }
+  // the decorative SVG of an action: its own `svg` (the map), else the icon `icona` of the table
+  /** @param {Azione} a @param {Contesto} c @returns {string} */
+  const icona = (a, c) => (a.svg ? a.svg(c) : "") || (a.icona && typeof AZIONI_ICONE !== "undefined" ? AZIONI_ICONE.svg(a.icona) : "");
   /** @param {string} id */
   const voce = id => voci.find(v => v.id === id);
   /** @param {Azione} a @param {Contesto} c */
@@ -49,13 +53,13 @@ const AZIONI = (() => {
         const ok = pronta(a, c), rs = a.voci(c);
         if (rs.length && last && a.gruppo !== last) items.push("-");
         if (rs.length) last = a.gruppo;
-        rs.forEach(r => items.push({ id: a.id, label: r.nome, aria: r.aria || r.nome, tip: r.tip, icon: r.icon, check: r.check ?? null, dim: !ok || !!r.dim, fn: r.esegui }));
+        rs.forEach(r => items.push({ id: a.id, label: r.nome, aria: r.aria || r.nome, tip: r.tip, icon: r.icon || icona(a, c), check: r.check ?? null, dim: !ok || !!r.dim, fn: r.esegui }));
         continue;
       }
       if (last && a.gruppo !== last) items.push("-");
       last = a.gruppo;
       const nome = a.nome ? a.nome(c) : a.id;
-      items.push({ id: a.id, label: a.voce ? a.voce(c) : nome, aria: a.aria ? a.aria(c) : nome, tip: a.tip && a.tip(c), icon: a.svg && a.svg(c),
+      items.push({ id: a.id, label: a.voce ? a.voce(c) : nome, aria: a.aria ? a.aria(c) : nome, tip: a.tip && a.tip(c), icon: icona(a, c),
         check: a.attiva ? a.attiva(c) : null, dim: !pronta(a, c), fn: () => esegui(a.id, c) });
     }
     return items;
@@ -73,5 +77,5 @@ const AZIONI = (() => {
     esegui(l[0].id, c);
     return true;
   }
-  return { formato: "azioni/1", GRUPPI, voci, registra, voce, elenco, per, esegui, pronta, doppio };
+  return { formato: "azioni/1", GRUPPI, voci, registra, voce, elenco, per, esegui, pronta, doppio, icona };
 })();

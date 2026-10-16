@@ -1,0 +1,25 @@
+smiles,atom,quantity,value,method,source
+COc1ccccc1,0,f_plus,-0.027,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,0,f_minus,-0.040,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,0,f_zero,-0.034,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,1,f_plus,0.056,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,1,f_minus,0.156,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,1,f_zero,0.106,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,2,f_plus,0.052,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,2,f_minus,0.047,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,2,f_zero,0.050,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,3,f_plus,0.071,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,3,f_minus,0.048,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,3,f_zero,0.059,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,4,f_plus,0.068,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,4,f_minus,0.029,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,4,f_zero,0.049,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,5,f_plus,0.037,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,5,f_minus,0.073,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,5,f_zero,0.055,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,6,f_plus,0.075,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,6,f_minus,0.036,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,6,f_zero,0.056,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,7,f_plus,0.064,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,7,f_minus,0.035,"GFN2-xTB, gas",anisolo_gas_xtb.out
+COc1ccccc1,7,f_zero,0.049,"GFN2-xTB, gas",anisolo_gas_xtb.out

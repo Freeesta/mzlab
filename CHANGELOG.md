@@ -8,6 +8,7 @@ Prima di mettere il tag `vX.Y.Z`: sposta qui sotto le voci di «Non rilasciato»
 ## [Non rilasciato]
 
 ### Modificato
+- Ogni voce del menu del tasto destro (spettro, cromatogramma, XIC, MRM, mappa) ha la sua icona a sinistra, nei colori del tema.
 - Menu del tasto destro di spettro, cromatogramma, XIC e MRM: le voci che oggi non servono restano al loro posto, grigie, invece di sparire («Ripristina zoom», «Modifica/Elimina annotazione», media dell'intervallo, profilo isotopico, formule disegnate, MS² del picco, esportazioni MassBank/SIRIUS). Restano nascoste solo le voci che non riguardano quel dato (solo HR, solo banco, solo MS²).
 - «Ripristina zoom» è sempre la prima voce, le annotazioni sempre le ultime.
 - «Copia valore» c'è anche negli spettri ad alta risoluzione.
