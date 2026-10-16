@@ -145,6 +145,44 @@ fn the_synthetic_pairs_read_the_same_through_the_registry() {
         .map(|name| same(&out, name))
         .sum();
     assert!(n > 0);
+    one_sample(&out, "two");
+}
+
+/// `apri_solo` (the builder of one index): sample `c` gives the index of the whole opening, the others are listed with 0 scans and give their own index when asked.
+fn one_sample(dir: &Path, name: &str) {
+    let mut all = lettori::apri(set(dir, name), &Limiti::sito()).unwrap();
+    let n = all.campioni().len();
+    assert!(n > 1, "{name}: a container with more samples");
+    for c in 0..n {
+        let mut solo =
+            mzlab_core::wiff::lettore::apri_solo(set(dir, name), &Limiti::sito(), Some(c)).unwrap();
+        let want: Vec<_> = (0..n)
+            .map(|k| all.campioni()[k].scansioni * usize::from(k == c))
+            .collect();
+        let got: Vec<_> = solo.campioni().iter().map(|x| x.scansioni).collect();
+        assert_eq!(got, want, "{name}: counts with sample {c} alone");
+        for k in (c..n).chain(0..c) {
+            let a: Vec<_> = all
+                .indice(k)
+                .unwrap()
+                .iter()
+                .map(|v| (v.id.clone(), v.rt, v.posizione))
+                .collect();
+            let b: Vec<_> = solo
+                .indice(k)
+                .unwrap()
+                .iter()
+                .map(|v| (v.id.clone(), v.rt, v.posizione))
+                .collect();
+            assert_eq!(a, b, "{name}: index of sample {k} opened for {c}");
+            if let Some(s) = a.len().checked_sub(1) {
+                assert_eq!(
+                    all.scansione(k, s).unwrap().mz,
+                    solo.scansione(k, s).unwrap().mz
+                );
+            }
+        }
+    }
 }
 
 #[test]

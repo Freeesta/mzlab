@@ -23,8 +23,8 @@ import { createMethodRoutes } from "./lr-method.js";
 import { mixesResolutions, sessionFiles } from "./lr-sessione.js";
 import { W } from "./nativo-fasi.js";
 
-/** the page shows how far the loading of `name` has got (event mzlab-index, shell.js upload) */
-const tellIndex = (/** @type {string} */ name, /** @type {number} */ frac, /** @type {string | undefined} */ phase) => window.dispatchEvent(new CustomEvent("mzlab-index", { detail: { name, frac, phase } }));
+/** the page shows how far the loading of `name` has got (event mzlab-index, shell.js upload); `p` = { done, total } scans of the sample, `wait` = queued for a free builder */
+const tellIndex = (/** @type {string} */ name, /** @type {number} */ frac, /** @type {string | undefined} */ phase, /** @type {any} */ p = {}) => window.dispatchEvent(new CustomEvent("mzlab-index", { detail: { name, frac, phase, done: p.done || 0, total: p.total || 0, wait: !!p.wait } }));
 export function createLr({ rb }) {
   const files = new Map();               // name -> row of App.files() (as an object)
   let items = null;                      // Item.info() of every item (objects), null = no session
@@ -87,10 +87,11 @@ export function createLr({ rb }) {
       if (nat && rb.markNative) rb.markNative(n);
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
-      else { fase = "index"; await rpc({ op: "lr_index", name: n, cen: !!window.MZLAB_CEN_IDX }, p => tellIndex(n, p.frac, p.phase)); fase = "open"; files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); }
+      else { fase = "index"; await rpc({ op: "lr_index", name: n, cen: !!window.MZLAB_CEN_IDX }, p => tellIndex(n, p.frac, p.phase, p)); fase = "open"; files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); }
     } catch (e) {
       let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (_) { /* not an engine error */ }
       const raw = String(e && (e.raw || e.message || e) || "").slice(0, 600);      // the original text for the diagnosis (the page cuts paths out)
+      if (key === "err.load.cancelled") { try { await rpc({ op: "lr_remove", name: n }); } catch (_) { /* nothing was kept */ } files.delete(n); }      // «Cancel»: no half file stays to be indexed at the next start
       return fail(key, { name: n, ...params, fase, raw }, `cannot read the file: ${n}`);
     }
     return json({ files: sorted(), methods: mr.list() });

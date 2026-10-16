@@ -48,7 +48,7 @@ onmessage = async ev => {
     } catch (_) { spill = null; }                               // no scratch file (a handle that does not open): the rounds decode again, as always
     if (m.nat) {                                                    // a dataset of a maker (rust-nativo.js): the index comes straight from its reader; the progress says the phase
       // the peaks that do not fit in the budget wait in a scratch file of OPFS (`<name>.mzidx.sp.part`: removed at the end, and by the cleaning of the `.part` files if the worker dies) instead of being decoded again by every round
-      stats = await buildNative(build_mzidx_native, ext, m.nat, m.name, write, p => postMessage({ op: "progress", frac: p.frac, phase: p.phase }), m.budget, spill, writeCen);
+      stats = await buildNative(build_mzidx_native, ext, m.nat, m.name, write, p => postMessage({ op: "progress", frac: p.frac, phase: p.phase, done: p.done, total: p.total }), m.budget, spill, writeCen);
     } else {
       const fr = new FileReaderSync(), blob = m.blob;
       let tp = 0;

@@ -31,12 +31,16 @@
 .tp .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px}.tp .kv b{color:var(--muted);font-weight:600}
 .tp-wrap{padding:0}
 #qt-nav-tab,nav button[data-v="tpmine"]{background:linear-gradient(135deg,#ffe29a,#f4c95d 55%,#d99a1d)!important;color:#3a2a00!important;border-color:#d99a1d!important;font-weight:700}
-.hero{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px}
-.tp #tp-files th{position:static}.tp .hero-i{display:inline-flex;color:var(--accent)}.hero-t{display:flex;gap:12px;align-items:center}.hero h2{margin:0;font-size:20px}.hero-s{color:var(--muted);font-size:12px}
+.hero{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:10px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px 18px}
+.tp .hero-b{min-width:0}.tp .hero h2{margin:0 0 4px;font-size:12px;font-weight:600;color:var(--muted)}.tp .hero-i{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:13px}.tp #tp-cnt{display:contents}
+.tp .hero .hc{display:inline-flex;gap:4px;align-items:baseline;box-sizing:border-box;min-height:24px;padding:2px 8px;border:1px solid var(--line);border-radius:12px}.tp .hero .hl{color:var(--muted);font-size:12px}.tp .hero b{font-variant-numeric:tabular-nums}.tp .hero .hn{font-weight:600;border-color:transparent;padding-left:0}
+.tp .hero .hc:focus-visible,.tp .hero button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}.tp .hero-l{box-sizing:border-box;min-height:24px;min-width:24px;padding:0 8px;font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink)}
+.tp .hero-x{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start}@media(max-width:900px){.tp .hero{grid-template-columns:minmax(0,1fr)}}@media(pointer:coarse){.tp .hero-x button,.tp .hero-l{min-height:40px}}
+.tp #tp-files th{position:static}
 .tp #tp-left,.tp #tp-right{min-width:0}.tp #tp-files{max-width:100%;overflow-x:auto}.tp #tp-files table{width:100%;table-layout:auto}.tp #tp-files td:first-child{max-width:min(130px,28vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tp #tp-files select{max-width:100%}.tp .fsum{font-size:12px;color:var(--muted);margin:2px 0 6px}.tp #tp-files td,.tp #tp-files th{padding:1px 6px}.tp #tp-files select,.tp #tp-files input{font-size:11px;padding:0 3px;height:20px}
 .tp .dig{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;font-size:18px;font-weight:700}.tp .dig .qi{display:inline-flex}.tp .tp-q{display:inline-grid;place-items:center;width:16px;height:16px;border:1px solid var(--muted);border-radius:50%;font-size:11px;color:var(--muted);cursor:help;margin-left:4px;font-style:normal}
-.hero{padding:8px 12px}.tp .hero-t{flex-wrap:wrap;gap:4px 10px}.tp .hero h2{font-size:16px}.tp .hero-c{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;justify-content:space-between;margin-top:4px;font-size:13px}
-.tp .hero-c b{font-variant-numeric:tabular-nums}.tp .hero-x{display:inline-flex;gap:6px;flex-wrap:wrap}.tp .hero-x button{min-height:24px;min-width:24px}
+
+.tp .hero-x button{min-height:24px;min-width:24px}
 .tp .tp-mores{margin-top:10px}.tp .tp-mores>details{border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:2px 10px;margin:0 0 4px}.tp .tp-mores>details>summary{min-height:28px;display:flex;align-items:center;color:var(--ink)}
 .tp .tp-mores>details[open]{padding-bottom:8px}.tp .tp-mores .card{border:0;padding:0;margin:0}
 .tp .lr-sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:6px 14px;align-items:start}.tp .lr-sg canvas{display:block;width:100%;height:180px}
@@ -225,7 +229,7 @@
     const FIELD = () => W.TPFIELD, parentFields = () => [$("#tp-mol"), $("#tp-smi")];
     if (W.TPFIELD) W.TPFIELD.watch(sec, () => { if ($("#tp-msg").dataset.field) msg(""); });       // the group returns to normal on a click or a key in it; so does its message
     /** @type {any} */
-    const st = { files: [], showAll: false, summary: null, sel: null, view: "tab", took: 0, cond: null, gnames: /** @type {string[]} */ ([]), gctl: null, gv: null };
+    const st = { files: [], showAll: false, summary: null, sel: null, view: "tab", took: 0, pname: "", weakOn: false, cond: null, gnames: /** @type {string[]} */ ([]), gctl: null, gv: null };
     const msg = (t, err) => { const m = $("#tp-msg"); m.textContent = t || ""; m.className = "mut" + (err ? " err" : ""); delete m.dataset.field; };
     const bar = f => { const w = Math.round(f * 100); $("#tp-bar").style.width = w + "%"; $("#tp-barbox").setAttribute("aria-valuenow", w); };
     onProgress = (t, f, m) => { if (t) msg(t); if (f != null) bar(f); if (m && window.TPLIVE) TPLIVE.event(m); };
@@ -563,7 +567,7 @@
           $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
           running = false; setBusy(false); lagNote(tStart); return;
         }
-        st.hs = null; st.summary = JSON.parse(await callRaw("run", digFiles(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
+        st.hs = null; st.pname = parent.name || ""; st.summary = JSON.parse(await callRaw("run", digFiles(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
         if (window.TPMS2) window.TPMS2.setConditions(st.summary.gruppi ? new Map(st.files.filter(f => f.kind === "ms2").map(f => [f.name, (st.cond && st.cond.campioni[st.gnames.indexOf(f.name)] || {}).serie || ""])) : null);
         st.took = performance.now() - t0; st.sel = null; st.det = {}; if (window.TPLIVE) TPLIVE.stop(true); if (typeof DIAG !== "undefined") DIAG.LONG.marca("render"); render(); $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
       } catch (e) {
@@ -602,21 +606,32 @@
       const par = s.rows.find(r => r.label === "progenitore");
       const cnt = k => s.rows.filter(r => (k === "unexp" ? r.kind === "unexpected" && good(r) : r.kind === "candidate" && r.label === k)).length;
       const nF = cnt("forte"), nP = cnt("possibile"), nU = cnt("unexp"), hl = s.decay && s.decay.half_life_min != null ? s.decay.half_life_min : null;
-      const w = (n, label, dec) => `<span class="hc"><b data-count="${n}"${dec ? ` data-dec="${dec}"` : ""}>${dec ? (+n).toFixed(dec) : n}</b> ${label}</span>`;
-      const words = [w(nF, "strong"), w(nP, "possible"), w(nU, "unexpected"), hl != null ? `parent t½ ${w(hl, "min", 1)}` : "", s.offset && s.offset.applied ? `<i>m/z</i> offset ${s.offset.offset >= 0 ? "+" : "−"}${w(Math.abs(s.offset.offset), "Da", 2)}` : "", w(s.rows.length, "ions"), `${(st.took / 1000).toFixed(1)} s`].filter(Boolean).join(" · ");
+      const nW = s.rows.filter(r => r.kind !== "unexpected" && r.label === "debole" && !notFound(r)).length, off = s.offset && s.offset.applied ? s.offset.offset : null;
+      // the summary card: three blocks (Parent, Output, Download); every item has its help, the numbers count up only without reduced motion
+      const it = (k, label, val, help, dec) => `<span class="hc" data-k="${k}"${dt(help)} tabindex="0"><span class="hl">${label}</span> <b${dec != null ? ` data-count="${val}" data-dec="${dec}"` : ""}>${dec != null ? (+val).toFixed(dec) : val}</b></span>`;
+      const pIt = [st.pname ? `<span class="hc hn" data-k="name">${esc(MOLUI.cap(st.pname))}</span>` : "", it("formula", "Neutral formula", esc(s.parent.formula || "—"), "ft.sum.formula"), it("mz", `${esc(s.parent.adduct)} <i>m/z</i>`, s.parent.mz, "ft.sum.mz"),
+        par && par.ref_rt ? it("rt", "RT", `${par.ref_rt} min`, "ft.sum.rt") : "", hl != null ? `${it("half", "t½", hl, "ft.sum.half", 1).replace("</b></span>", "</b> min</span>")}` : "",
+        off != null ? it("offset", "<i>m/z</i> offset", `${off >= 0 ? "+" : "−"}${Math.abs(off).toFixed(2)} Da`, "ft.sum.offset") : ""].filter(Boolean).join("");
+      const cIt = (k, n, label, help) => `<span class="hc" data-k="${k}"${dt(help)} tabindex="0"><b data-count="${n}">${n}</b> ${label}</span>`;
+      const words = [cIt("strong", nF, "strong", "ft.chip.strong"), cIt("possible", nP, "possible", "ft.chip.possible"), cIt("unexpected", nU, "unexpected", "ft.chip.unexpected"),
+        nW ? `<span class="hc" data-k="weak"${dt("ft.chip.weak")} tabindex="0"><b>${nW}</b> <span id="tp-weak-w">weak evidence hidden</span></span><button type="button" id="tp-weak-s" class="hero-l"${dt("ft.sum.weakshow")}>show</button>` : ""].join("");
+      const oIt = it("ions", "Ions analysed", s.rows.length, "ft.sum.ions") + it("took", "Computed in", `${(st.took / 1000).toFixed(1)} s`, "ft.sum.took");
       const nMs2 = s.ms2_links && s.ms2_links.links ? s.ms2_links.links.length : 0, ms2c = window.TPMS2 ? window.TPMS2.card(s) : "", mrmc = mrmCard(s.mrm);
-      R.innerHTML = `<div class="hero"><div class="hero-t"><span class="hero-i">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : "⛏"}</span>
-        <h2>${nF ? "Vein found!" : nP ? "A few nuggets..." : "Poor vein"}</h2><span class="hero-s">${esc(s.parent.formula || "parent")} · ${esc(s.parent.adduct)} <i>m/z</i> ${s.parent.mz}${par && par.ref_rt ? ` · RT ${par.ref_rt} min` : ""}</span></div>
-        <div class="hero-c"><span id="tp-cnt">${words}</span><span class="hero-x"><button id="tp-x-xlsx">Excel (.xlsx)</button><button id="tp-x-csv">CSV</button><button id="tp-x-json">JSON</button><button id="tp-x-txt" title="Copy a summary to paste into the report">Copy summary</button></span></div></div>
+      R.innerHTML = `<div class="hero" role="region" aria-label="Summary of the results">
+        <section class="hero-b" aria-labelledby="tp-h-par"><h2 id="tp-h-par">Parent</h2><div class="hero-i">${pIt}</div></section>
+        <section class="hero-b" aria-labelledby="tp-h-out"><h2 id="tp-h-out">Output</h2><div class="hero-i"><span id="tp-cnt">${words}</span>${oIt}</div></section>
+        <section class="hero-b" aria-labelledby="tp-h-dl"><h2 id="tp-h-dl">Download</h2><div class="hero-x" role="group" aria-labelledby="tp-h-dl"><button type="button" id="tp-x-xlsx"${dt("ft.sum.xlsx")}>Excel (.xlsx)</button><button type="button" id="tp-x-csv"${dt("ft.sum.csv")}>CSV</button><button type="button" id="tp-x-json"${dt("ft.sum.json")}>JSON</button><button type="button" id="tp-x-txt"${dt("ft.sum.txt")}>Copy summary</button></div></section></div>
         <div class="vtabs">${(s.gruppi ? [...VIEWS, ["cond", "Compare conditions"]] : VIEWS).map(([k, n]) => `<button class="vt${st.view === k ? " on" : ""}" data-v="${k}">${n}</button>`).join("")}</div>
         <div id="tp-view"></div>
         <div class="tp-mores">${ms2c ? `<details name="tp-more" id="tp-m-ms2"><summary>MS2 matches (${nMs2})</summary>${ms2c}</details>` : ""}${mrmc ? `<details name="tp-more" id="tp-m-mrm"><summary>MRM (${s.mrm.rows.length} files)</summary>${mrmc}</details>` : ""}</div>`;
       if (window.TPMS2) window.TPMS2.mount({ st, call, refresh: ms2Refresh, show });
-      if (calmMotion()) R.querySelectorAll(".hero-c b[data-count]").forEach(countUp);
+      if (calmMotion()) R.querySelectorAll(".hero b[data-count]").forEach(countUp);
+      if (W.TPHELP) W.TPHELP.attach(R.querySelector(".hero"));
+      const ws = $("#tp-weak-s"); if (ws) ws.onclick = () => { if (st.view !== "tab") { st.view = "tab"; R.querySelectorAll(".vt").forEach(x => x.classList.toggle("on", x.getAttribute("data-v") === "tab")); view(); } if (T) T.setChip("weak", !weakOn()); weakSync(); };
       R.querySelectorAll(".vt").forEach(b => b.onclick = () => { st.view = b.dataset.v; R.querySelectorAll(".vt").forEach(x => x.classList.toggle("on", x === b)); view(); });
       $("#tp-x-xlsx").onclick = () => exportAll("xlsx"); $("#tp-x-csv").onclick = () => exportAll("csv"); $("#tp-x-json").onclick = () => exportAll("json");
       $("#tp-x-txt").onclick = async () => { try { await navigator.clipboard.writeText(summaryText()); toast("Summary copied to the clipboard"); } catch (_) { dl("summary_Tabui.txt", summaryText(), "text/plain"); } };
-      view();
+      view(); weakSync();
       const mm = $("#tp-m-mrm");           // the chart of the calibration needs the width of an open section
       if (mm) mm.addEventListener("toggle", () => { const cc = $("#tp-c-cal"); if (mm.open && cc) { const c = JSON.parse(cc.dataset.cal); chart(cc, [{ x: [0, c.hi], y: [c.intercept, c.slope * c.hi + c.intercept], color: "#2b5c8a" }, { x: c.points.map(p => p.conc), y: c.points.map(p => p.area), color: "#b42318", dots: true, w: 0 }], { xlabel: "concentration (mg/L)", x0: 0 }); } });
       if (nF && calmMotion()) confetti();
@@ -704,6 +719,12 @@
     }
     /** @type {any} the TPTAB of the results while the view "Table" is shown */
     let T = null;
+    /** the weak band of the table is off by default: the card says how many rows it hides and shows them in one click */
+    const weakOn = () => T ? T.chips.includes("weak") : !!st.weakOn;
+    function weakSync() {
+      const w = $("#tp-weak-w"), b = $("#tp-weak-s"), on = weakOn(); if (!w || !b) return;
+      w.textContent = `weak evidence ${on ? "shown" : "hidden"}`; b.textContent = on ? "hide" : "show"; b.setAttribute("aria-pressed", String(on));
+    }
     const lvSort = r => (r.level ?? 9) * 1000 - (r.score ?? 0);
     const idLabel = r => r.kind === "unexpected" && !r.ms2_target ? `m/z ${r.mz.toFixed(2)} (unexpected)` : MOLUI.cap(r.name);
     /** a hypothesis of the rules with no peak in any sample: searched, not detected (no TP name, no area) */
@@ -755,7 +776,9 @@
         ...(ms2 ? [chip("ms2", "With MS2", "ft.chip.ms2", r => r.ms2 > 0, false)] : [])];
       T = TPTAB.mount(host, { id: "tp-t", label: "Transformation product candidates", cols, rowId: r => r.id, esc, name: r => `${r.tp_name || idLabel(r)}, ${idLabel(r)}, m/z ${r.mz.toFixed(2)}`, columns: true, chips, rowClass: r => notFound(r) ? "tpt-nd" : "", exportName: (s.parent.formula || "parent") + "_Tabui_view",
         search: r => [r.tp_name, r.name, r.formula, String(r.mz), r.delta, r.net_change, r.modification].join(" "), pin: r => r.label === "progenitore",
-        tabs: TPRIGA.tabs, head: (r, box) => TPRIGA.head(box, headModel(r)), onOpen: (r, body, tab) => { void fillTab(r, body, tab); } });
+        tabs: TPRIGA.tabs, head: (r, box) => TPRIGA.head(box, headModel(r)), onOpen: (r, body, tab) => { void fillTab(r, body, tab); },
+        onFilter: keys => { st.weakOn = keys.includes("weak"); weakSync(); } });
+      st.weakOn = T.chips.includes("weak"); weakSync();
       host.insertAdjacentHTML("beforeend", TPTAB.legend(["detected", "absent"], true));
       T.setRows(tableRows()); T.sortBy("level", 1);
       const box = /** @type {HTMLInputElement | null} */ ($("#tp-nd"));
@@ -775,7 +798,11 @@
         Promise.resolve(navigator.clipboard && navigator.clipboard.writeText(text)).then(() => toast("Copied"), () => toast("Copy is not allowed here"));
       } }];
       if (hasMs2(st.summary)) acts.push({ key: "ms2", label: "MS2 matches", help: "ft.lr.ms2link", run: () => { const d = $("#tp-m-ms2"); if (d) { d.open = true; d.scrollIntoView({ behavior: calmMotion() ? "smooth" : "auto", block: "nearest" }); } } });
-      return { title: (r.tp_name && r.tp_name !== "Parent" ? r.tp_name + " · " : "") + idLabel(r), level: r.level ?? undefined, words: r.level_text || "", actions: acts };
+      // the head repeats the closed row (its key cells), not the sentence of the level
+      const summary = [{ label: "TP", value: r.tp_name || "", help: "ft.col.tpname" }, { label: "Identity", value: idLabel(r), help: "ft.col.identity" }, { label: "Net change", value: r.net_change || "", help: "ft.col.net" },
+        { label: "Modification", value: r.modification || "", help: "ft.col.modif" }, { label: "m/z", value: r.mz.toFixed(2), help: "ft.col.mz" }, { label: "RT", value: r.ref_rt == null ? "" : r.ref_rt.toFixed(2) + " min", help: "ft.col.rt" },
+        { label: "Max area", value: notFound(r) ? "" : fmtA(r.max_area), help: "ft.col.maxarea" }];
+      return { title: (r.tp_name && r.tp_name !== "Parent" ? r.tp_name + " · " : "") + idLabel(r), level: r.level ?? undefined, summary, actions: acts };
     }
     const GROUP = r => r.type === "blank" ? "Blank" : r.type === "control" ? "Dark" : r.type === "standard" ? "Other" : r.time === 0 ? "t0" : "Treated";
     /** the model of the panel of a row (TPRIGA) from its detail; nothing is computed here */
@@ -785,16 +812,27 @@
       const m = { ...headModel(r), apexRt: d.ref_rt, lo: pk.length ? Math.min(...pk.map(p => p.left)) : null, hi: pk.length ? Math.max(...pk.map(p => p.right)) : null, missing };
       if (d.traces.length) m.xic = d.traces.map(t => { const x = by.get(t.label); return { file: t.label, group: GROUP(x || t), time: x ? x.time : null, rt: t.rt, y: t.y }; }); else missing.xic = "no trace for this row";
       const rp = d.ms2_rep && d.ms2_rep.mz && d.ms2_rep.mz.length ? d.ms2_rep : null;
-      if (rp) { m.spectrum = { kind: "ms2", mz: rp.mz, y: rp.int, prec: rp.precursor, label: `MS2 at RT ${rp.rt.toFixed(2)} min, precursor m/z ${rp.precursor.toFixed(2)}` }; m.ms2text = d.ms2_text; }
+      // what was the line under the charts is their help now: the window of the XIC, the representative scan and the fragments found
+      m.xicTip = `RT ${d.ref_rt ? d.ref_rt.toFixed(2) : "?"} min${m.lo != null ? ` (${m.lo.toFixed(2)}-${m.hi.toFixed(2)})` : ""}; m/z ${d.mz_extracted} extracted${d.mz_observed ? `, ${d.mz_observed.toFixed(2)} observed` : ""}.`;
+      if (rp) m.spectrum = { kind: "ms2", mz: rp.mz, y: rp.int, prec: rp.precursor, label: `MS2 at RT ${rp.rt.toFixed(2)} min, precursor m/z ${rp.precursor.toFixed(2)}`, tip: [window.TPMS2 ? window.TPMS2.repLine(d) : "", d.ms2_text || ""].filter(Boolean).join(" ") };
       else missing.spectrum = d.ms2_text || "no MS2 matched to this ion";
-      m.line = [`RT ${d.ref_rt ? d.ref_rt.toFixed(2) : "?"} min${m.lo != null ? ` (${m.lo.toFixed(2)}-${m.hi.toFixed(2)})` : ""}`, `m/z ${d.mz_extracted} extracted${d.mz_observed ? `, ${d.mz_observed.toFixed(2)} observed` : ""}`, window.TPMS2 ? window.TPMS2.repLine(d) : ""].filter(Boolean).join(" · ");
+      const R = /** @type {any} */ (window).TPRIGA && /** @type {any} */ (window).TPRIGA.toData;
+      if (R) m.open = { xic: () => R.xic(r.mz), ...(rp ? { ms2: () => R.ms2(rp.precursor, rp.rt, rp.file) } : {}) };
       m.samples = d.rows.map(x => ({ file: x.label, type: GROUP(x), time: x.time, area: x.detected ? x.area : 0, state: x.detected ? "detected" : "absent", apexRt: x.detected ? x.apex_rt : null, lo: m.lo, hi: m.hi }));
-      const proofs = d.criteria.filter(c => c.status === "pass" || c.status === "fail").map(c => ({ ok: c.status === "pass", text: `${c.name}: ${c.text}` }));
-      m.identity = { neutral: null, adduct: st.summary.parent.adduct, candidates: [{ name: idLabel(r), formula: d.formula || "", adduct: st.summary.parent.adduct, source: d.delta || "", level: r.level ?? undefined, proofs }, ...d.alternatives.map(a => ({ name: a, adduct: st.summary.parent.adduct }))] };
+      m.identity = { neutral: null, adduct: st.summary.parent.adduct, candidates: lrCands(r, d) };
       const status = n => { const c = d.criteria.find(x => x.name.toLowerCase().includes(n)); return c ? c.status : null; };
       const best = d.rows.filter(x => x.detected).reduce((a, x) => !a || x.area > a.area ? x : a, null), pres = n => { const v = status(n); return v == null || v === "n/a" ? null : { present: v === "fail" }; };
       m.quality = { snr: best ? best.snr : null, flags: [], blank: pres("blank"), t0: pres("zero"), rejected: [] };
       return m;
+    }
+    /** the column of a criterion of the engine among the proofs of the candidates (TPRIGA): its name says which; the others stay in «Details» */
+    const PF_OF = /** @type {[RegExp, string][]} */ ([[/^persistent/i, "persist"], [/time zero|\bt0\b/i, "t0"], [/grows/i, "grow"], [/isotope/i, "iso"]]);
+    /** the candidates of the trace of a row (`candidates` of the detail: the row's own first, each with its neutral and [M+H]+ formula and Δm/z), all with the proofs of the trace */
+    function lrCands(r, d) {
+      const proofs = d.criteria.filter(c => c.status === "pass" || c.status === "fail").map(c => { const k = PF_OF.find(([re]) => re.test(c.name)); return { key: k ? k[1] : undefined, ok: c.status === "pass", text: `${c.name}: ${c.text}` }; });
+      if (d.ms2 && d.ms2.scans) { const sh = d.ms2.fragments.filter(f => f.note).length; proofs.push({ key: "ms2", ok: sh > 0, text: `${d.ms2.scans} MS2 scans of precursor ${d.ms2.precursor}${window.TPMS2 ? window.TPMS2.from(d) : ""}; ${sh ? `${sh} fragments explained by the parent` : "no fragment matches those of the parent"}.${d.sim ? ` Against the MS2 of the parent: modified cosine ${d.sim.cos.total.toFixed(3)}.` : ""}` }); }
+      const ad = st.summary.parent.adduct, list = d.candidates && d.candidates.length ? d.candidates : [{ name: idLabel(r), formula: d.formula || "", ion_formula: null, dmz: null, own: true }];
+      return list.map(c => ({ name: c.own ? idLabel(r) : c.name, formula: c.formula || "", ion: c.ion_formula, dmz: c.dmz, adduct: ad, source: c.own ? d.delta || "" : "", proofs }));
     }
     /** the tab `tab` of the open row into `body`: TPRIGA draws the four parts, this adds what only the low-resolution Dig has */
     async function fillTab(r, body, tab) {
@@ -822,14 +860,14 @@
       chart(cv, [{ x: kin.map(x => x.time), y: kin.map(x => x.detected ? x.area : 0), color: "#2b5c8a", dots: true }], { xlabel: "time (min)" });
       if (window.TDATI) TDATI.series(cv, { title: "Kinetics of the ion", xl: "treatment time (min)", yl: "peak area", series: [{ name: "area", x: kin.map(x => x.time), y: kin.map(x => x.detected ? x.area : 0) }] });
     }
-    /** under the candidates of the tab Identity: the words, the specificity, the MS2, the similarity, the transitions, the position of the change and the fragmentation tree */
+    /** in «Details» of the tab Identity (closed): the specificity, the MS2, the similarity, the transitions, the position of the change and the fragmentation tree */
     function identityExtras(r, d, body) {
       const par = st.summary.rows.find(x => x.label === "progenitore"), isPar = par && r.id === par.id, box = document.createElement("div");
       box.className = "lr-idx"; box.tabIndex = 0; box.setAttribute("role", "region"); box.setAttribute("aria-label", "More about the candidate");
-      box.innerHTML = `<div class="card words"><h3>In words</h3>${words(d, par)}</div>${specHtml(d.specificity)}
+      box.innerHTML = `${specHtml(d.specificity)}
         <div class="card">${window.TPMS2.detail(d)}${d.sim && window.TPHR ? `<h3 style="margin-top:8px">Similarity to the parent's MS2</h3>${window.TPHR.simCard(d.sim)}` : ""}
         ${d.transitions.length ? `<h3 style="margin-top:8px">Suggested MRM transitions</h3><table><tr><th>Q1</th><th>Q3</th><th>CE</th><th>RT</th></tr>${d.transitions.map(t => `<tr><td class="n">${t.Q1}</td><td class="n">${t.Q3_consigliato}</td><td class="n">${t.CE}</td><td class="n">${t.RT_attesa_min}</td></tr>`).join("")}</table>` : ""}</div>`;
-      body.appendChild(box);
+      (/** @type {any} */ (window).TPRIGA.details ? /** @type {any} */ (window).TPRIGA.details(body) : body).appendChild(box);
       window.TPMS2.bindDetail(box, d);
       if (window.TPPOS && d.ms2 && d.ms2.scans) window.TPPOS.mount(box, { smiles: (($("#tp-smi") || {}).value || "").trim(), delta: d.delta || "", peaks: d.ms2.fragments.map(f => [f.mz, f.rel]), positive: !window.TPPOS.negative((($("#tp-add") || {}).value) || ""), tol: 0.5, ppm: false, label: "Change" });
       if (window.TPALBERO && (isPar || (d.ms2 && d.ms2.scans))) { const a = document.createElement("div"); a.className = "card"; a.id = "tp-alb"; box.appendChild(a); window.TPALBERO.mount(a, { esc, call }, isPar ? {} : { compareId: r.id }); }
@@ -839,20 +877,6 @@
       const iso = d.criteria.filter(c => /isotop/i.test(c.name)), isf = r.isf, P = isf ? Math.round(100 * isf.probs.isf) : null;
       const src = r.insource ? `in-source fragment of the parent${P != null ? ` (P ISF ${P} %${isf.doubtful ? ", doubtful" : ""})` : ""}` : isf && isf.doubtful ? `doubtful origin (P ISF ${P} %)` : "not flagged";
       body.insertAdjacentHTML("beforeend", `<dl class="tpr-q"><dt>Isotope</dt><dd>${iso.length ? iso.map(c => `${c.status === "pass" ? "✓" : c.status === "fail" ? "✗" : "–"} ${esc(c.name)}: ${esc(c.text)}`).join("<br>") : "no isotope peak stronger than this ion in the window"}</dd><dt>In-source</dt><dd>${esc(src)}${isf && isf.explanation ? `<br><span class="mut">${esc(isf.explanation)}</span>` : ""}</dd></dl>`);
-    }
-    function words(d, par) {
-      const kin = d.rows.filter(r => r.type === "sample" && r.time != null).sort((a, b) => a.time - b.time), first = kin.find(r => r.detected && r.area > 0), mx = kin.reduce((m, r) => r.detected && r.area > (m ? m.area : 0) ? r : m, null);
-      const bl = d.rows.filter(r => r.type === "blank" || r.type === "control"), drt = par && par.ref_rt && d.ref_rt ? d.ref_rt - par.ref_rt : null;
-      const P = [];
-      const row = st.summary.rows.find(r => r.id === d.id);
-      P.push(`<b>${esc(MOLUI.cap(d.name))}</b> ${d.delta ? `(${esc(d.delta)}) ` : ""}has <i>m/z</i> ${d.mz}${row && row.delta_mz != null ? `, i.e. ${row.delta_mz >= 0 ? "+" : ""}${row.delta_mz} relative to the parent` : ""}.`);
-      if (first && mx) P.push(`Appears at ${first.time} min and peaks at ${mx.time} min${mx.time === first.time ? "" : ""}; ${bl.length ? (bl.every(b => !b.detected) ? "it is absent from the blank." : "something shows in the blank: be careful.") : "there is no blank to rule out a contaminant."}`);
-      if (drt != null) P.push(`Elutes ${Math.abs(drt).toFixed(2)} min ${drt < 0 ? "before" : "after"} the parent${drt < -0.3 ? ": more polar, as expected for an oxidation" : drt > 0.3 ? ": less polar than the parent, unusual for an oxidation" : ", almost together"}.`);
-      if (d.ms2 && d.ms2.scans) { const sh = d.ms2.fragments.filter(f => f.note); P.push(`${d.ms2.scans} MS2 scans (precursor ${d.ms2.precursor})${window.TPMS2 ? window.TPMS2.from(d) : ""}: ${d.ms2.fragments.slice(0, 3).map(f => f.mz).join(", ")}${sh.length ? `; ${sh.length} fragments are explained by the parent (${sh.map(f => f.note.startsWith("shared") || f.note.startsWith("condiviso") ? "shared" : "shifted by Δ").join(", ")})` : "; no fragment matches those of the parent"}.`); }
-      else P.push("No MS2 with this precursor: a Product Ion Scan on the peak is needed to raise the level.");
-      if (d.sim) P.push(`Against the MS2 of the parent: modified cosine ${d.sim.cos.total.toFixed(3)}, with ${d.sim.n.equal} equal, ${d.sim.n.shifted} shifted and ${d.sim.n.loss} neutral-loss fragments matched within 0.5 Da.`);
-      P.push(d.level_text ? esc(d.level_text) : "");
-      return P.filter(Boolean).map(p => `<p style="margin:4px 0">${p}</p>`).join("");
     }
     async function getDetail(id) { return st.det[id] || (st.det[id] = await call("detail", id)); }
     /** opens the row of a candidate in the table: from the map and the kinetics one click goes back to the view "Table"; a row hidden by the chips gets the chip it needs */
