@@ -52,7 +52,8 @@
    * @typedef {{ key: string, label: string, help?: string }} Tab
    * @typedef {{ id: string, cols: Col[], rowId: (r: any) => number, name: (r: any) => string, onOpen: (id: any, panel: HTMLElement, tab?: string) => void, onSort?: (key: string, dir: number) => void, esc: (s: any) => string, label?: string, panelId?: string,
    *   chips?: Chip[], search?: (r: any) => string, onFilter?: (keys: string[]) => void, onCount?: (shown: number, total: number) => void, pin?: (r: any) => boolean, tabs?: Tab[], head?: (r: any, box: HTMLElement) => void, height?: number, columns?: boolean,
-   *   virtual?: number, rowHeight?: number, exportName?: string, status?: boolean }} Opts
+   *   virtual?: number, rowHeight?: number, exportName?: string, status?: boolean, decide?: Decide }} Opts
+   * @typedef {{ series: () => any, key: (r: any) => string, level: (r: any) => string | number | null }} Decide the level decided by the chemist (45_tabui_decisioni.js): the series of the run, the key of a row and its proposed level
    */
 
   const STATES = /** @type {Record<string, [string, string]>} */ ({ detected: ["●", "detected"], filled: ["◐", "filled"], targeted: ["◌", "targeted"], absent: ["○", "absent"], na: ["–", "n/a"] });
@@ -80,6 +81,8 @@
    * @param {Opts} o
    */
   function mount(host, o) {
+    const dec = o.decide && G.TPDEC ? o.decide : null;
+    if (dec) o = withDecisions(o, dec);
     if (!document.getElementById("tpt-css")) { const s = document.createElement("style"); s.id = "tpt-css"; s.textContent = CSS; document.head.appendChild(s); }
     const coarse = typeof matchMedia !== "undefined" && matchMedia("(pointer:coarse)").matches;
     const rowH = coarse ? 40 : (o.rowHeight || 30), virtualN = o.virtual ?? 300, tabs = o.tabs || [], esc = o.esc;
@@ -299,9 +302,11 @@
     const filtersText = () => `# filters: ${[...chipTests().map(c => c.label), ...(st.q.trim() ? [`search "${st.q.trim()}"`] : [])].join(", ") || "none"}`;
     /** the text of a cell of the view for the export (the model, not the DOM) */
     const textOf = (/** @type {Col} */ c, /** @type {any} */ r) => c.text ? c.text(r) : plain(c.cell(r));
+    /** the columns «Decided level» and «Note» at the end of the view, when the table has decisions @param {{ head: string[], rows: string[][] }} v @param {any[]} list */
+    const withNotes = (v, list) => dec ? { head: [...v.head, "Decided level", "Note"], rows: v.rows.map((r, i) => { const d = G.TPDEC.get(dec.series(), dec.key(list[i])); return [...r, d ? G.TPDEC.text(d.level) : "", d ? d.note : ""]; }) } : v;
     const exported = () => ({ head: cols.map(c => plain(c.label)), rows: st.list.map(r => cols.map(c => textOf(c, r))) });
     host.querySelectorAll("[data-x]").forEach(b => b.addEventListener("click", async () => {
-      const kind = /** @type {HTMLElement} */ (b).dataset.x, v = exported(), name = o.exportName || "table";
+      const kind = /** @type {HTMLElement} */ (b).dataset.x, v = withNotes(exported(), st.list), name = o.exportName || "table";
       if (kind === "csv") {
         const cell = (/** @type {string} */ s) => /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
         G.dl(name + ".csv", "﻿" + [filtersText(), v.head.map(cell).join(";"), ...v.rows.map(r => r.map(cell).join(";"))].join("\r\n") + "\r\n", "text/csv;charset=utf-8", false);
@@ -316,6 +321,12 @@
       if (byUser && o.onSort) o.onSort(key, st.dir);
     }
     drawHead();
+    if (dec) window.addEventListener(G.TPDEC.EVENT, e => {      // a decision of this series changes the badge and the filters; the focus stays where it was
+      if (!host.isConnected) return;
+      if (/** @type {CustomEvent} */ (e).detail.fp !== G.TPDEC.key(dec.series())) return;
+      const a = document.activeElement instanceof HTMLElement && panel.contains(document.activeElement) ? document.activeElement : null;
+      refresh(); if (a && a.isConnected) a.focus();
+    });
     /** @param {string[]} keys */
     function setCols(keys) { cols = o.cols.filter(c => keys.includes(c.key) || c.sticky); draw(); }
     fitSlot();
@@ -371,11 +382,21 @@
   function legend(keys) {
     return `<div class="tpt-leg">${keys.map(k => `<span${G.TPHELP ? ` tabindex="0"` : ""}${tt("ft.state." + k)}>${state(k)} ${(STATES[k] || STATES.na)[1]}</span>`).join("")}</div>`;
   }
+  /** the options of a table with decisions: the badge of the Lvl column shows the decided level, two chips filter by it, the export adds two columns @param {Opts} o @param {Decide} d @returns {Opts} */
+  function withDecisions(o, d) {
+    const get = (/** @type {any} */ r) => G.TPDEC.get(d.series(), d.key(r));
+    const cols = o.cols.map(c => c.key !== "level" ? c : { ...c, cell: (/** @type {any} */ r) => { const x = get(r); return x && x.level ? level(d.level(r) ?? "", { decided: x.level }) : c.cell(r); },
+      text: (/** @type {any} */ r) => { const x = get(r); return x && x.level ? G.TPDEC.text(x.level) : c.text ? c.text(r) : ""; } });
+    const chips = [...(o.chips || []), { key: "decided", label: "Decided", help: "ft.chip.decided", test: (/** @type {any} */ r) => { const x = get(r); return !!(x && x.level); } },
+      { key: "hidenottp", label: "Hide not a TP", help: "ft.chip.hidenottp", test: (/** @type {any} */ r) => { const x = get(r); return !(x && x.level === G.TPDEC.NOT_TP); } }];
+    return { ...o, cols, chips };
+  }
   /** the badge of the Schymanski level («L3», «L2a»); a level decided by the chemist has the double border and the proposed one in the label
    * @param {string | number} lv @param {{ decided?: string | number | null }} [opt] */
   function level(lv, opt) {
     const L = G.LIVELLI, tag = (/** @type {any} */ x) => L ? L.tag(x) : "L" + x, cls = (/** @type {any} */ x) => L ? L.cls(x) : "lv-" + x;
     const d = opt && opt.decided;
+    if (d === "nottp") return `<span class="lvb tpt-nottp" role="img" aria-label="Not a TP, decided by the chemist; proposed ${tag(lv)}"${tt("ft.col.level")}><s>${tag(lv)}</s> not a TP</span>`;
     if (d != null && d !== "") return `<span class="lvb ${cls(d)} tpt-dec" role="img" aria-label="${tag(d)}, decided by the chemist; proposed ${tag(lv)}"${tt("ft.col.level")}>${tag(d)}</span>`;
     return `<span class="lvb ${cls(lv)}" role="img" aria-label="${tag(lv)}, proposed"${tt("ft.col.level")}>${tag(lv)}</span>`;
   }

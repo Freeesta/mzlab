@@ -73,6 +73,11 @@
     return { cols, identText, levelOf };
   }
 
+  /** the decisions of the chemist for this table (TPDEC, 45_tabui_decisioni.js): the series of the run, the key of a row, its proposed level; null without TPDEC @param {any} o @param {(r: FtRow) => any} levelOf */
+  function decisions(o, levelOf) {
+    if (!G.TPDEC) return null;
+    return { series: () => ({ files: o.names, formula: o.formula || "" }), key: (/** @type {FtRow} */ r) => G.TPDEC.rowKey(r.mz, r.rt, true), level: levelOf };
+  }
   /** the open row: `riga/1` and `riga_tracce/1` once per row (cache) and the model TpRiga built from them */
   function rowModels(/** @type {any} */ o, /** @type {any} */ cols, /** @type {(r: FtRow) => string} */ identText, /** @type {(r: FtRow) => any} */ levelOf, /** @type {(t: string) => void} */ warn) {
     /** @type {Map<number, { row?: any, rowErr?: string, tr?: any, trErr?: string, rowP?: Promise<void>, trP?: Promise<void> }>} */ const cache = new Map();
@@ -83,6 +88,7 @@
     /** the cells of the row (typed and timed) by file @param {FtRow} r @param {any} e */
     const sampleOf = (r, e, j) => { const c = e.row && e.row.cells && e.row.cells[j]; return { file: o.names[j], type: c ? c.type : (o.cs && o.cs[j] ? o.cs[j].tipo : undefined), time: c ? c.time : (o.cs && o.cs[j] ? o.cs[j].tempo_min : null), area: c ? c.area : r.areas[j] || null, state: c ? c.state : r.states[j],
       apexRt: c ? c.apex_rt : null, lo: null, hi: null }; };
+    const dec = decisions(o, levelOf);
     const model = (/** @type {FtRow} */ r) => {
       const e = entry(r.id), w = e.row, t = e.tr, idents = o.identsOf(r.id) || [], ii = w && w.ident;
       const missing = /** @type {Record<string, string>} */ ({});
@@ -92,7 +98,7 @@
       const best = r.areas.reduce((b, a, j) => (a > (r.areas[b] || 0) ? j : b), 0);
       const sources = ii && ii.sources && ii.sources.length ? "Found by " + ii.sources.join(", ") : "";
       const m = {
-        title: identText(r), level: levelOf(r) || undefined, words: sources, missing, samples,
+        title: identText(r), level: levelOf(r) || undefined, words: sources, missing, samples, decide: dec ? { series: dec.series(), key: dec.key(r), level: dec.level(r) } : undefined,
         actions: [{ key: "data", label: "Show in Data", help: "ft.showdata", run: () => showInData(o.names[best], r.mz) }],
         xic: t ? t.xic.map((/** @type {any} */ x, /** @type {number} */ j) => ({ file: x.file, group: samples[j].type, time: samples[j].time, rt: x.rt, y: x.y })) : [],
         apexRt: r.rt, lo: w ? w.rt_lo : r.lo, hi: w ? w.rt_hi : r.hi,
@@ -154,7 +160,7 @@
     /** @type {any} */ let T = null;
     const draw = (/** @type {FtRow} */ r, /** @type {() => void} */ again) => { loadRow(r.id).then(() => { if (T && T.openId === r.id) again(); }); };
     T = TT.mount(q("#ft-host"), {
-      id: "ft-t", cols, rowId: (/** @type {FtRow} */ r) => r.id, name: (/** @type {FtRow} */ r) => identText(r), esc, label: "Feature table", columns: true, exportName: "feature_table_view", virtual: 300, height: 520,
+      id: "ft-t", cols, rowId: (/** @type {FtRow} */ r) => r.id, name: (/** @type {FtRow} */ r) => identText(r), esc, label: "Feature table", columns: true, decide: decisions(o, levelOf) || undefined, exportName: "feature_table_view", virtual: 300, height: 520,
       tabs: hook.tabs,
       head: (/** @type {FtRow} */ r, /** @type {HTMLElement} */ box) => { hook.head(r, box); draw(r, () => hook.head(r, box)); },
       onOpen: (/** @type {FtRow} */ r, /** @type {HTMLElement} */ p, /** @type {string} */ tab) => {

@@ -17,7 +17,7 @@
    * @typedef {{ title?: string, level?: string | number, pred?: number, decided?: string | number | null, words?: string, actions?: TpAction[], xic?: TpXic[], apexRt?: number | null, lo?: number | null, hi?: number | null,
    *   spectrum?: TpSpec | null, spectrum2?: TpSpec | null, line?: string, samples?: TpSample[], identity?: { neutral?: number | string | null, adduct?: string, candidates?: TpCand[] } | null,
    *   quality?: { shape?: number | string | null, snr?: number | null, fwhm?: number | null, flags?: string[], isoM1?: number | string | null, blank?: any, t0?: any, rejected?: string[] } | null,
-   *   missing?: Record<string, string> }} TpRiga
+   *   decide?: { series: any, key: string, level?: string | number | null, name?: string }, missing?: Record<string, string> }} TpRiga
    */
 
   const CSS = `
@@ -164,10 +164,22 @@
   /** @param {HTMLElement} box @param {TpRiga} m */
   function head(box, m) {
     register(); lastHead = box;
+    const dd = G.TPDEC && m.decide ? G.TPDEC.get(m.decide.series, m.decide.key) : null, decided = dd && dd.level ? dd.level : m.decided;   // FT-08: the decision of the chemist
     const acts = (m.actions || []).map(a => `<button type="button" class="tpr-act" data-act="${esc(a.key)}"${tt(a.help)}>${esc(a.label)}</button>`).join("");
-    box.innerHTML = `<span class="tpr-head">${m.level != null && m.level !== "" && G.TPTAB ? G.TPTAB.level(m.level, { decided: m.decided }) : ""}${fin(m.pred) && G.TPTAB ? G.TPTAB.pred(m.pred) : ""}`
-      + `<span class="tpr-dec" data-slot="decided"${tt("ft.decided")}${G.TPHELP ? ` tabindex="0"` : ""}>Decided: ${m.decided != null && m.decided !== "" ? esc(String(m.decided)) : "—"}</span></span>`
+    box.innerHTML = `<span class="tpr-head">${m.level != null && m.level !== "" && G.TPTAB ? G.TPTAB.level(m.level, { decided }) : ""}${fin(m.pred) && G.TPTAB ? G.TPTAB.pred(m.pred) : ""}`
+      + `<span class="tpr-dec" data-slot="decided"${tt("ft.decided")}${G.TPHELP ? ` tabindex="0"` : ""}>Decided: ${decided != null && decided !== "" ? esc(String(decided)) : "—"}</span></span>`
       + (m.words ? `<span class="tpr-words">${esc(m.words)}</span>` : "") + acts;
+    if (G.TPDEC && m.decide) { const sl = slot("decided"); if (sl) { sl.removeAttribute("tabindex"); sl.removeAttribute("data-tt"); sl.textContent = ""; sl.appendChild(G.TPDEC.control(m.decide.series, { ...m.decide, name: m.title }, null)); } }
+    if (G.TPDEC && m.decide) {   // a decision (here or in the Identity tab) changes the badge of the head
+      const old = /** @type {any} */ (box)._tpdec; if (old) window.removeEventListener(G.TPDEC.EVENT, old);
+      const on = (/** @type {Event} */ e) => {
+        if (!box.isConnected) { window.removeEventListener(G.TPDEC.EVENT, on); return; }
+        const d = /** @type {CustomEvent} */ (e).detail, dc = m.decide; if (!dc || d.fp !== G.TPDEC.key(dc.series) || d.rowKey !== dc.key) return;
+        const x = G.TPDEC.get(dc.series, dc.key), bd = box.querySelector(".tpr-head > .lvb:not([class*=pd-])");
+        if (bd && G.TPTAB) bd.outerHTML = G.TPTAB.level(m.level, { decided: x && x.level ? x.level : null });
+      };
+      /** @type {any} */ (box)._tpdec = on; window.addEventListener(G.TPDEC.EVENT, on);
+    }
     box.querySelectorAll("button[data-act]").forEach(b => b.addEventListener("click", () => { const a = (m.actions || []).find(x => x.key === /** @type {HTMLElement} */ (b).dataset.act); if (a) a.run(m); }));
   }
 
@@ -222,6 +234,7 @@
   /** @param {HTMLElement} panel @param {TpRiga} m */
   function identity(panel, m) {
     const id = m.identity;
+    if (G.TPDEC && m.decide) { const p = document.createElement("p"); p.className = "tpr-id"; p.append("Decided level ", G.TPDEC.control(m.decide.series, { ...m.decide, name: m.title }, null)); panel.appendChild(p); }
     if (!id) { none(panel, "Identity", m.missing && m.missing.identity); return; }
     const cs = id.candidates || [];
     panel.insertAdjacentHTML("beforeend", `<p class="tpr-id"><b>Neutral mass</b> ${esc(fin(id.neutral) ? /** @type {number} */ (id.neutral).toFixed(4) : id.neutral ?? "–")} · <span${G.TPHELP ? ` tabindex="0"` : ""}${tt("ft.adduct")}><b>Adduct</b> ${esc(id.adduct || "–")}</span></p>`);
