@@ -178,15 +178,18 @@ export function addExportPartials(/** @type {any} */ K, /** @type {string} */ sv
 }
 
 /**
- * The drawing for mzFinder: {smiles, delta, level, positionUnknown, molfile}. Level 3b with a delta or a multicentre attachment, otherwise null (a whole
+ * The drawing for mzFinder: {smiles, delta, level, positionUnknown, molfile, info}. Level 3b with a delta or a multicentre attachment, otherwise null (a whole
  * structure: the level is not the drawing's to say); with a multicentre attachment `molfile` is the V3000 with ENDPTS of every atom drawn, else "".
  * @param {any} K
  * @param {(ids: number[]) => string | null} [molfile] V3000 writer (multiMolfile of all atoms when omitted)
+ * @param {(ids: number[]) => string | null} [v2000] V2000 writer of the drawing, for `info` (formula, mass and m/z of [M+H]+ with the delta; null without a delta)
  */
-export async function partialExport(K, molfile) {
+export async function partialExport(K, molfile, v2000) {
   const delta = partials(K).map(p => p.delta).filter(Boolean).join(" "), ms = multis(K), all = [...K.editor.struct().atoms.keys()];
   const mf = ms.length ? (molfile ? molfile(all) : multiMolfile(K, all, ms)) || "" : "";
-  return { smiles: plainSmiles(await K.getSmiles()), delta, level: delta || ms.length ? "3b" : null, positionUnknown: ms.length > 0, molfile: mf };
+  const flat = delta && v2000 ? v2000(all) : null, r = flat ? await checkDelta(flat, delta) : null;       // formula and m/z of the whole drawing with the delta (the engine, parz/1)
+  const info = r && !r.error ? { formula: r.formula, mass: r.mass, mz: r.mz } : null;
+  return { smiles: plainSmiles(await K.getSmiles()), delta, level: delta || ms.length ? "3b" : null, positionUnknown: ms.length > 0, molfile: mf, info };
 }
 
 /** @typedef {{ pieces: () => { ids: number[] }[], pieceMolfile: (ids: number[]) => string | null, num: (v: number) => string, t: (k: string, p?: any) => string, copy: (s: string) => void, ask: (title: string, def: string) => Promise<string | null>, note: (s: string) => void }} Helpers */
