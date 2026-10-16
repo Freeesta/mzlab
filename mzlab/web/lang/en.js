@@ -1002,6 +1002,8 @@ I18N.add("en", {
   "mappa.pal.cividis": "palette: cividis",
   "ctl.map.follow": "The map follows the file chosen in the bar (one file ticked): choosing another one here changes it there too.",
   "ctl.map.file": "File to show",
+  "ctl.map.prev": "Previous file of the list (same reference and same window)",
+  "ctl.map.next": "Next file of the list (same reference and same window)",
   "ctl.map.scale.title": "Color scale: the square root makes weak signals stand out",
   "ctl.map.scale.sqrt": "square root",
   "ctl.map.scale.lin": "linear",
