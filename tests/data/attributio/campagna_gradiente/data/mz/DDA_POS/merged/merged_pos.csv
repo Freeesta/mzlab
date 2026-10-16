@@ -1,0 +1,10 @@
+id,mz,rt,datafile:S1_OA_ddaPOS.mzML:feature_state,datafile:S1_OA_ddaPOS.mzML:area,datafile:S1_EC_ddaPOS.mzML:feature_state,datafile:S1_EC_ddaPOS.mzML:area,datafile:S2_OA_ddaPOS.mzML:feature_state,datafile:S2_OA_ddaPOS.mzML:area,datafile:S2_EC_ddaPOS.mzML:feature_state,datafile:S2_EC_ddaPOS.mzML:area,spectral_db_matches:compound_name,spectral_db_matches:similarity_score,spectral_db_matches:n_matching_signals,spectral_db_matches:ion_adduct,spectral_db_matches:mol_formula,spectral_db_matches:precursor_mz
+1,201.1,5.0,DETECTED,1000,DETECTED,500,DETECTED,8000,DETECTED,100,Gradientase,0.9,8.0,[M+H]+,,201.1
+2,202.1,6.0,DETECTED,5000,UNKNOWN,0,DETECTED,4000,UNKNOWN,0,Gradienton B,0.9,8.0,[M+H]+,,202.1
+3,203.1,7.0,DETECTED,3000,UNKNOWN,0,UNKNOWN,0,UNKNOWN,0,Gradientyl,0.9,8.0,[M+H]+,,203.1
+4,204.1,8.0,UNKNOWN,0,UNKNOWN,0,UNKNOWN,0,DETECTED,700,Gradientine,0.9,8.0,[M+H]+,,204.1
+5,205.1,9.0,DETECTED,900,UNKNOWN,0,UNKNOWN,0,DETECTED,800,Gradientidine,0.9,8.0,[M+H]+,,205.1
+6,206.1,10.0,DETECTED,10000,UNKNOWN,0,DETECTED,1000,DETECTED,300,Gradientamine,0.9,8.0,[M+H]+,,206.1
+7,207.1,11.0,DETECTED,2000,UNKNOWN,0,DETECTED,1000,UNKNOWN,0,Gradientol,0.9,8.0,[M+H]+,,207.1
+8,207.1,11.05,DETECTED,100,UNKNOWN,0,DETECTED,4000,UNKNOWN,0,Gradientol,0.9,8.0,[M+H]+,,207.1
+9,208.1,12.0,ESTIMATED,99999,UNKNOWN,0,ESTIMATED,99999,UNKNOWN,0,Gradientazole,0.9,8.0,[M+H]+,,208.1

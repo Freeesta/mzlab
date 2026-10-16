@@ -1,0 +1,77 @@
+{
+ "avviso": "quantify_lvl1_environmental(): conc_env_ng_L divides by EF=250 only, WITHOUT recovery correction (RE/ME/PE not validated) -> the true concentration is likely HIGHER. Where below_loq is True it is an extrapolation: report '< LOQ'.",
+ "env": {
+  "head": [
+   "_pol",
+   "_id",
+   "std_name",
+   "site",
+   "adduct",
+   "area",
+   "conc_ng_mL",
+   "r2",
+   "r2_ok",
+   "below_loq",
+   "area_loq",
+   "loq_ratio",
+   "conc_env_ng_L",
+   "ef_spe",
+   "recovery_corrected",
+   "env_note"
+  ],
+  "name": "env",
+  "rows": [
+   [
+    "POS",
+    1,
+    "TestStandardA",
+    "SiteA",
+    "[M+H]+",
+    100000.0,
+    99.5,
+    0.998,
+    true,
+    true,
+    120000.0,
+    0.8333333333333334,
+    398.0,
+    250.0,
+    false,
+    "< LOQ (area below the lowest calibration point): extrapolation, report as '<LOQ'"
+   ]
+  ]
+ },
+ "lvl1": {
+  "head": [
+   "_pol",
+   "_id",
+   "std_name",
+   "site",
+   "adduct",
+   "area",
+   "conc_ng_mL",
+   "r2",
+   "r2_ok",
+   "below_loq",
+   "area_loq",
+   "loq_ratio"
+  ],
+  "name": "lvl1",
+  "rows": [
+   [
+    "POS",
+    1,
+    "TestStandardA",
+    "SiteA",
+    "[M+H]+",
+    100000.0,
+    99.5,
+    0.998,
+    true,
+    true,
+    120000.0,
+    0.8333333333333334
+   ]
+  ]
+ }
+}

@@ -54,6 +54,11 @@ impl Campaign {
         k.review = sec("review").t;
         k.annotation = sec("annotation").t;
         k.quantification = sec("quantification").t;
+        k.gradient_same_sorbent = sec("gradient")
+            .t
+            .get("same_sorbent")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
         k.read_sites(&cfg)?;
         Ok(k)
     }
@@ -96,6 +101,7 @@ impl Campaign {
             library_csv: None,
             calibration_csv: None,
             quantification: Table::default(),
+            gradient_same_sorbent: false,
             count_2b_as_2: true,
             review: Table::default(),
             annotation: Table::default(),

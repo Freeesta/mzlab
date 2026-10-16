@@ -181,6 +181,8 @@ pub struct Campaign {
     pub library_csv: Option<String>,
     pub calibration_csv: Option<String>,
     pub quantification: Table,
+    /// `[gradient] same_sorbent`: the fold change of the gradient compares the same ion with the same sorbent.
+    pub gradient_same_sorbent: bool,
     pub count_2b_as_2: bool,
     pub review: Table,
     pub annotation: Table,
