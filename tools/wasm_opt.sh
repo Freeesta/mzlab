@@ -5,11 +5,10 @@
 set -u
 bg=$1; limit=$2; label=$3; shift 3
 wo="$RUNNER_TEMP/wo/node_modules/.bin/wasm-opt"
-if [ ! -x "$wo" ]; then
-  mkdir -p "$RUNNER_TEMP"
-  ( flock 9; [ -x "$wo" ] || npm install --prefix "$RUNNER_TEMP/wo" wasm-opt@1.4.0 ) 9>"$RUNNER_TEMP/wo.lock"
-fi
-if [ -x "$wo" ]; then
+ok="$RUNNER_TEMP/wo/installato"   # written when npm has finished: the .bin link exists before the postinstall has downloaded the binary
+mkdir -p "$RUNNER_TEMP"
+( flock 9; [ -e "$ok" ] || { npm install --prefix "$RUNNER_TEMP/wo" wasm-opt@1.4.0 && touch "$ok"; } ) 9>"$RUNNER_TEMP/wo.lock"
+if [ -e "$ok" ]; then
   "$wo" -Oz --enable-bulk-memory --enable-sign-ext --enable-mutable-globals --enable-nontrapping-float-to-int "$@" -o "$bg" "$bg" || exit 1
   size=$(stat -c %s "$bg"); echo "$label .wasm (optimised): $size bytes"
   if [ "$size" -ge "$limit" ]; then echo "::error::the $label .wasm is $size bytes (limit $limit)"; exit 1; fi
