@@ -207,6 +207,7 @@
  "tests_e2e/e2e_tpmine_mem.py": 3,
  "tests_e2e/e2e_tpmine_ms2.py": 2,
  "tests_e2e/e2e_tpmine_nativo.py": 1,
+ "tests_e2e/e2e_tpmine_progresso.py": 4,
  "tests_e2e/e2e_tpmine_rtalign.py": 2,
  "tests_e2e/e2e_tpmine_rust.py": 2,
  "tests_e2e/e2e_tpmine_tabella.py": 8,
