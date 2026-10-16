@@ -126,6 +126,7 @@ try:
             pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"0\"]').value !== 'blank'", timeout=20000)
             assert pg.evaluate("document.activeElement.classList.contains('tpg-role')"), "the focus stays on the select after the change"
             pg.keyboard.press("ArrowUp"); pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"0\"]').value === 'blank'", timeout=20000)
+            pg.wait_for_timeout(800)                                      # the table is drawn again after the change
             pg.focus(f"{G} .tpg-cond[data-i='1']"); pg.keyboard.press("Tab")
             assert pg.evaluate("document.activeElement.classList.contains('tpg-time')"), pg.evaluate("document.activeElement.outerHTML")
         step("keyboard: arrows in the role select keep the focus; Tab goes from condition to time", keyboard)
@@ -138,11 +139,7 @@ try:
         def reload():
             before = pg.evaluate(BYNAME); roles = pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)")
             pg.wait_for_timeout(800); pg.reload(); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
-            pg.wait_for_timeout(3000)
-            if pg.evaluate("(window.E && E.files || []).length") < len(paths):          # the page does not bring the files back by itself: open them again
-                pg.wait_for_selector("#drop", state="attached"); pg.set_input_files("#pick", paths)
-                pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(paths)}", timeout=120000)
-                pg.click("#opbtn")
+            # the page brings the files of the session back by itself
             pg.wait_for_function(f"E.files.length >= {len(paths)} && E.pending.length === 0", timeout=240000)
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-page"); pg.click("#tp-page")
             pg.wait_for_selector(f"{G} table .tpg-cond", timeout=120000)
