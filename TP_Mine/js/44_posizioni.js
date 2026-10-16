@@ -2,6 +2,8 @@
 // TPMINE-PRIVATE  TPPOS: the button «Substitution position» in the open row of a TP (administrator mode only) and its panel: the classes of positions the MS2 of the TP supports, excludes or
 // cannot tell apart (`posiz/1`, docs/agenti/posizioni.md), the evidence, the type of oxidation and the checks that would settle it. A proposal 3a/3b is written as a proposal: no button saves a level.
 // The engine is the `positions` of the `.wasm` «grafo» (verified against its SHA-256 in wasm-feat/manifest.json) or, in the app, the native route `feat/grafo`.
+// Column «Prev. f(−)»: with the `reatt/1` of the parent (event «tp-reatt» from TPREATT, or TPPOS.setReatt) the engine adds `prior` (`positions_prior`); a prediction shown next to the
+// classes, never used to reorder, exclude or propose. Until the `reatt/1` arrives the column says «computing…».
 // Colours only from CSS variables (Okabe-Ito); every class also has its own marker shape and dash; the spectrum has its table (TDATI), zoom by buttons and keys, no animation. Texts in English.
 (() => {
   "use strict";
@@ -24,12 +26,15 @@
   // ------------------------------------------------------------ engine
   /** @type {any} */ let grafo = null;
   /** @type {any} */ let pool = null;
-  /** @param {string} smiles @param {string} transform @param {number[][]} peaks @param {number} tol @param {boolean} ppm @param {boolean} positive @returns {Promise<any>} the `posiz/1` */
-  async function compute(smiles, transform, peaks, tol, ppm, positive) {
+  /**
+   * @param {string} smiles @param {string} transform @param {number[][]} peaks @param {number} tol @param {boolean} ppm @param {boolean} positive
+   * @param {string} [reatt] the `reatt/1` text of the parent («» = none) @returns {Promise<any>} the `posiz/1` (with `prior` when `reatt` is given)
+   */
+  async function compute(smiles, transform, peaks, tol, ppm, positive, reatt) {
     const pj = JSON.stringify(peaks);
     if (G.MZLAB_DESKTOP) {                                  // the app: the native route feat/grafo through the pool of the Pipeline
       if (!pool) { const url = URL.createObjectURL(new Blob([G.QTOOLS.ctx.files["feat-desktop-pool.js"]], { type: "text/javascript" })); pool = (await import(url)).createDesktopPool({ notify() {} }); }
-      return JSON.parse(await pool.positions(smiles, transform, pj, tol, ppm, positive));
+      return JSON.parse(await pool.positions(smiles, transform, pj, tol, ppm, positive, reatt || ""));
     }
     if (!grafo) {
       const u = (/** @type {string} */ p) => new URL("wasm-feat/" + p, G.QTOOLS.ctx.base).href, g = (await (await fetch(u("manifest.json"))).json()).grafo;
@@ -38,9 +43,22 @@
       if (g.sha256 && hex(await crypto.subtle.digest("SHA-256", bytes)) !== g.sha256) throw Object.assign(new Error("error.featWasmHash"), { key: "error.featWasmHash" });
       const m = await import(u(g.js)); await m.default({ module_or_path: bytes }); grafo = m;
     }
-    try { return JSON.parse(grafo.positions(smiles, transform, pj, tol, ppm, positive)); }
+    try { return JSON.parse(reatt ? grafo.positions_prior(smiles, transform, pj, tol, ppm, positive, reatt) : grafo.positions(smiles, transform, pj, tol, ppm, positive)); }
     catch (e) { let j = null; try { j = JSON.parse(String(e)); } catch (_) { /* not JSON */ } throw j && j.error_key ? Object.assign(new Error(j.error_key), { key: j.error_key }) : e; }
   }
+
+  // ------------------------------------------------------------ the reactivity of the parent (`reatt/1`), by SMILES
+  /** @type {Map<string, any>} SMILES → the `reatt/1`, or `{state}` («computing», «failed») while there is none */
+  const REATT = new Map();
+  /** @type {Set<(smiles: string) => void>} the open panels, told when the reactivity of a parent changes */
+  const LISTEN = new Set();
+  /** the reactivity of a parent: a `reatt/1`, or `{state: "computing"|"waiting"|"failed"}` @param {string} smiles @param {any} r */
+  function setReatt(smiles, r) {
+    const k = String(smiles || "").trim(); if (!k) return;
+    if (r && r.format === "reatt") REATT.set(k, r); else REATT.set(k, { state: (r && r.state) || "computing" });
+    LISTEN.forEach(f => f(k));
+  }
+  G.addEventListener("tp-reatt", (/** @type {any} */ e) => { const d = e.detail || {}; setReatt(d.smiles, d.reatt || d); });
 
   // ------------------------------------------------------------ atoms of the SMILES (symbols for the table)
   /** the element symbols of a SMILES in the order of its atoms (the order of the indices of `posiz/1`) @param {string} smiles @returns {string[]} */
@@ -66,6 +84,7 @@
 .tp .tpp-ch svg .ax{stroke:var(--muted);fill:none}.tp .tpp-ch svg .pk{stroke-width:2}.tp .tpp-ch svg .o{stroke:var(--muted);stroke-width:1}
 .tp .tpp-ch svg .u{stroke:var(--muted);stroke-width:1;stroke-dasharray:1 2}.tp .tpp-ch svg .sh{stroke:var(--ink)}
 .tp .tpp-zr{display:flex;flex-wrap:wrap;gap:4px;margin:3px 0}.tp .tpp-leg{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:11px;color:var(--muted);margin:2px 0}
+.tp .tpp-prev{margin:4px 0;font-size:12px;color:var(--muted);font-style:italic}.tp .tpp td.pv{white-space:nowrap}
 .tp .tpp-box{margin:6px 0;padding:6px 8px;border:1px solid var(--line);border-radius:5px;font-size:12px}.tp .tpp-box p{margin:2px 0}
 @media (pointer:coarse){.tp .tpp-btn,.tp .tpp-zb,.tp .tpp .tdbtn{min-height:40px;min-width:40px}}
 @media (prefers-reduced-motion:reduce){.tp .tpp *{transition:none!important;animation:none!important}}`;
@@ -91,13 +110,33 @@
     const MARK = /** @type {Record<string, string>} */ ({ supported: "✓", excluded: "✗", undistinguished: "≈" });
     const rows = P.classes.map((/** @type {any} */ c, /** @type {number} */ i) => {
       const live = c.status !== "excluded", sw = live ? `<svg class="sw" viewBox="0 0 12 12" aria-hidden="true" focusable="false">${marker(i, 6, 6, colourOf(i))}</svg>` : "";
-      return `<tr><th scope="row">${sw}${c.id}</th><td>${esc(atoms(c.atoms))}</td><td>${esc(String(c.kind).replace(/_/g, " "))}</td><td><span class="st st-${esc(c.status)}"><span aria-hidden="true">${MARK[c.status] || ""}</span> ${esc(c.status)}</span></td>`
-        + `<td>${frags(c.support)}</td><td>${frags(c.against)}</td></tr>`;
+      return `<tr data-class="${c.id}"><th scope="row">${sw}${c.id}</th><td>${esc(atoms(c.atoms))}</td><td>${esc(String(c.kind).replace(/_/g, " "))}</td><td><span class="st st-${esc(c.status)}"><span aria-hidden="true">${MARK[c.status] || ""}</span> ${esc(c.status)}</span></td>`
+        + `<td>${frags(c.support)}</td><td>${frags(c.against)}</td><td class="pv n">computing…</td></tr>`;
     }).join("");
-    const un = P.unexplained.length ? `<tr><th scope="row">unexplained</th><td colspan="5">m/z ${P.unexplained.map((/** @type {number} */ v) => (+v).toFixed(4)).join(", ")}: no candidate explains these peaks</td></tr>` : "";
+    const un = P.unexplained.length ? `<tr><th scope="row">unexplained</th><td colspan="6">m/z ${P.unexplained.map((/** @type {number} */ v) => (+v).toFixed(4)).join(", ")}: no candidate explains these peaks</td></tr>` : "";
     return `<div class="tpp-tw" tabindex="0" role="region" aria-label="Position classes"><table><caption class="sr-only">Classes of positions of the change ${esc(P.transform)} on ${esc(P.parent)}</caption>`
-      + `<thead><tr><th scope="col">Class</th><th scope="col">Atoms (SMILES index)</th><th scope="col">Type</th><th scope="col">Status</th><th scope="col">Fragments in favour (with the change)</th><th scope="col">Fragments against (without it)</th></tr></thead><tbody>${rows}${un}</tbody></table></div>`;
+      + `<thead><tr><th scope="col">Class</th><th scope="col">Atoms (SMILES index)</th><th scope="col">Type</th><th scope="col">Status</th><th scope="col">Fragments in favour (with the change)</th><th scope="col">Fragments against (without it)</th><th scope="col">Prev. f(−) (mean, rank)</th></tr></thead><tbody>${rows}${un}</tbody></table></div>`;
   }
+
+  /**
+   * the cell «Prev. f(−)» of a class: mean f(−) of its atoms and their rank among the sites of the change («rank 1» or «ranks 2–3»)
+   * @param {any} c a class of `posiz/1` @param {any[]} prior the `prior` of `posiz/1` @returns {string}
+   */
+  function priorCell(c, prior) {
+    const mine = prior.filter(p => c.atoms.includes(p.atom)); if (!mine.length) return "–";
+    const mean = mine.reduce((a, p) => a + p.value, 0) / mine.length, rk = mine.map(p => p.rank), lo = Math.min(...rk), hi = Math.max(...rk);
+    return `${mean.toFixed(3)} · rank${lo === hi ? ` ${lo}` : `s ${lo}–${hi}`}`;
+  }
+  /** fills the column «Prev. f(−)» and its line of caveats @param {HTMLElement} out @param {any} P @param {any} r the `reatt/1`-backed `posiz/1`, or `{state}` */
+  function fillPrior(out, P, r) {
+    const note = /** @type {HTMLElement|null} */ (out.querySelector(".tpp-prev")), prior = r && Array.isArray(r.prior) ? r.prior : null;
+    const text = prior ? "" : r && r.state === "failed" ? "failed" : "computing…";
+    P.classes.forEach((/** @type {any} */ c) => { const td = out.querySelector(`tr[data-class="${c.id}"] td.pv`); if (td) td.textContent = prior ? priorCell(c, prior) : text; });
+    if (!note) return;
+    const cav = prior && prior.find((/** @type {any} */ p) => p.caveat), none = prior && !prior.length;
+    note.textContent = PREV_NOTE + (none ? " No prediction for this change." : "") + (cav ? ` For ${P.transform}: ${cav.caveat}.` : "") + (text === "failed" ? " The calculation of the reactivity failed." : "");
+  }
+  const PREV_NOTE = "Prev. f(−): Prediction (GFN2-xTB, implicit water), not evidence; does not reorder or exclude classes.";
 
   /** how each peak of the spectrum is explained @param {any} P @param {number[][]} peaks */
   function peakRoles(P, peaks) {
@@ -207,7 +246,18 @@
       try {
         const peaks = m.peaks.map(p => [+p[0], +p[1]]).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1])), P = await compute(m.smiles, transformOf(m.delta), peaks, m.tol, m.ppm, m.positive !== false);
         out.innerHTML = `<h4>${esc(m.label || "")} ${esc(P.transform)} on the parent, ${P.tol} ${P.tol_unit === "ppm" ? "ppm" : "Da"}</h4>${proposal(P)}`;
-        out.insertAdjacentHTML("beforeend", classTable(P, symbols(m.smiles)));
+        out.insertAdjacentHTML("beforeend", `<p class="tpp-prev">${esc(PREV_NOTE)}</p>` + classTable(P, symbols(m.smiles)));
+        const key = m.smiles.trim(), tr = transformOf(m.delta);
+        let asked = /** @type {any} */ (null);
+        const prior = async (/** @type {string} */ k) => {             // the column «Prev. f(−)»: the same engine with the `reatt/1`; the classes stay those already drawn
+          if (k !== key || !out.isConnected) { if (!out.isConnected) LISTEN.delete(prior); return; }
+          const r = REATT.get(key);
+          if (!r || r.format !== "reatt") { fillPrior(out, P, r || { state: "computing" }); return; }
+          if (asked === r) return; asked = r;
+          try { const Q = await compute(m.smiles, tr, peaks, m.tol, m.ppm, m.positive !== false, JSON.stringify(r)); if (asked === r) fillPrior(out, P, Q); }
+          catch (_) { fillPrior(out, P, { state: "failed" }); }
+        };
+        LISTEN.add(prior); prior(key);
         const chart = document.createElement("div"); out.appendChild(chart); spectrum(chart, P, peaks);
         out.insertAdjacentHTML("beforeend", oxidation(P) + checks(P)); done = true;
       } catch (e) { const k = /** @type {any} */ (e).key; out.innerHTML = `<p class="err" role="alert">${esc(ERR[k] || String(/** @type {any} */ (e).message || e))}</p>`; }
@@ -218,5 +268,5 @@
   /** true for a negative-mode adduct («[M-H]-», «M-H») @param {any} adduct */
   const negative = adduct => /[-−]\s*$/.test(String(adduct ?? "").trim()) || /M\s*[-−]\s*H/.test(String(adduct ?? ""));
 
-  /** @type {any} */ (window).TPPOS = { eligible, mount, transformOf, symbols, negative };
+  /** @type {any} */ (window).TPPOS = { eligible, mount, transformOf, symbols, negative, setReatt };
 })();

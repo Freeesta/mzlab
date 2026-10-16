@@ -107,6 +107,7 @@ pub mod rawfilter;
 pub mod rawlettore;
 pub mod rng;
 pub mod rois;
+pub mod roi_cluster;
 pub mod roles;
 pub mod routes;
 pub mod scaninfo;
