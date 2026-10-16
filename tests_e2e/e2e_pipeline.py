@@ -299,11 +299,12 @@ try:
             def changed(act):                                   # runs `act` and waits for the engine to give the new count
                 prev = pg.inner_text("#ft-n"); act()
                 pg.wait_for_function("p => document.querySelector('#ft-n').textContent !== p", arg=prev, timeout=30000); return count()[0]
-            k1 = changed(lambda: pg.click('[data-fc="det"]'))
-            changed(lambda: pg.click('[data-fc="det"]')); pg.click("#ft-moreb"); pg.fill("#ft-det", "2")
+            pg.click('[data-fc="det"]')
+            pg.wait_for_function("document.querySelector('#ft-why').textContent.includes('too few')", timeout=30000); k1 = count()[0]
+            pg.click('[data-fc="det"]'); pg.wait_for_function("document.querySelector('#ft-why').textContent === ''", timeout=30000)
+            pg.click("#ft-moreb"); pg.fill("#ft-det", "2")
             pg.wait_for_function("document.querySelector('#ft-why').textContent.includes('too few')", timeout=30000)
-            assert count()[0] == k1 <= kept, (k1, count(), kept)                                              # the field gives the count of the chip
-            assert k1 <= kept, (k1, kept)
+            assert count()[0] == k1 < kept, (k1, count(), kept)                                              # the field gives the count of the chip
             # normalisation and filters of the numeric fields (the counts are the engine's)
             pg.select_option("#ft-norm", "somma"); kept2 = changed(lambda: pg.fill("#ft-det", str(len(names) // 2)))
             assert kept2 < total, (kept2, total, pg.inner_text("#ft-why"), pg.input_value("#ft-det"), pg.input_value("#ft-norm"))
