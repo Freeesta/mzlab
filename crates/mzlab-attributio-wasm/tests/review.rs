@@ -44,7 +44,7 @@ fn the_bridge_reviews_a_feature_and_saves_a_decision() {
         "evidence":{"type":"fragments","library":"library/banco.json","entry":"","cosine":0.99,"matched":4,"delta_mz":0,"delta_formula":"","note":"x"}}"#;
     let saved = decision_with(&files, &fetch, d).expect("saved");
     assert_eq!(saved_summary(&saved), format!("{{\"path\":{:?},\"added\":1,\"replaced\":0,\"unchanged\":0}}", saved.path));
-    let golden = std::fs::read_to_string(root().join("../../golden/attributio/banco/feature_decisions.csv")).expect("golden");
+    let golden = std::fs::read_to_string(root().join("../../golden/attributio/banco/feature_decisions.csv")).expect("golden").replace("\r\n", "\n");
     let mut out: Vec<u8> = Vec::new();
     let mut next = 0u64;
     assert!(text_to(&saved.text, &mut |off, b| {

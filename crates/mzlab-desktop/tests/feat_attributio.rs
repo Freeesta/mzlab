@@ -54,7 +54,7 @@ fn review_and_decision_of_the_banco() {
     assert_eq!((d["added"].as_i64(), d["written"].as_bool()), (Some(1), Some(true)));
     let on_disk = std::fs::read_to_string(dir.join(d["path"].as_str().unwrap())).unwrap();
     let golden = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/attributio/banco/feature_decisions.csv");
-    assert_eq!(on_disk, std::fs::read_to_string(golden).unwrap());
+    assert_eq!(on_disk, std::fs::read_to_string(golden).unwrap().replace("\r\n", "\n"));
     // without a folder nothing is written; a path that leaves the folder never is
     let none: Value = serde_json::from_str(&text(st.rpc("feat/attributio/review", &json!({"root": "c", "files": files, "kind": "decision", "decision": decision.to_string()}), &[]).unwrap())).unwrap();
     assert_eq!(none["written"], false);

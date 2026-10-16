@@ -144,7 +144,7 @@ fn golden_csv(text: &str) {
         std::fs::create_dir_all(p.parent().expect("dir")).expect("mkdir");
         std::fs::write(&p, text).expect("write");
     }
-    assert_eq!(text, std::fs::read_to_string(&p).expect("golden csv"), "decisions file");
+    assert_eq!(text, std::fs::read_to_string(&p).expect("golden csv").replace("\r\n", "\n"), "decisions file");
 }
 
 fn decide(files: &mut MemFiles, json: &str) -> mzlab_feat::attributio::review::save::Saved {
