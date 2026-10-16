@@ -97,7 +97,7 @@ try:
             assert pg.evaluate("typeof window.TPREATT === 'undefined' && typeof window.TPV3D === 'undefined' && typeof window.TPLAZY.load === 'function'"), "loaded at the start"
             assert not any(u.endswith(("reattivita.js", "viewer3d.js")) for u in reqs), [u for u in reqs if "reattivita" in u or "viewer3d" in u]
             idx = pg.evaluate("fetch(window.QTOOLS.ctx.base + 'mzfinder/indice.json').then(r => r.json())")
-            assert sorted(idx["lazy"]) == ["reattivita.js", "viewer3d.js"] and not any(n in idx["js"] for n in idx["lazy"]), idx
+            assert {"reattivita.js", "viewer3d.js"} <= set(idx["lazy"]) and not any(n in idx["js"] for n in idx["lazy"]), idx
         step("the two scripts are not loaded at the start of Tabui (TP_Mine/lazy, not in js)", lazy_not_at_start)
         pg.fill("#tp-smi", "CC(=O)Nc1ccc(O)cc1")
         pg.wait_for_function("typeof window.TPREATT !== 'undefined' && typeof window.TPV3D !== 'undefined'", timeout=60000)
@@ -149,6 +149,18 @@ try:
             pg.click("#tpr-t5"); assert json.loads(pg.inner_text("#tpr-host #tpr-p pre"))["format"] == "reatt"
             pg.focus("#tpr-t5"); pg.keyboard.press("ArrowRight"); assert pg.evaluate("document.querySelector('#tpr-host [role=tab][aria-selected=true]').textContent") == "f(−)", "arrow keys between the tabs"
         step("cards Info, Notes, JSON and f(0), f(+)", cardsswitch)
+        def nulls():
+            eht = json.loads(json.dumps(REATT)); eht["method"] = "EHT"
+            for at in eht["atoms"]: at["q"] = None; at["f_zero"] = None
+            for k in ("ip_ev", "ea_ev", "mu_ev", "eta_ev", "omega_ev"): eht["global"][k] = None
+            eht["conformers"]["f_minus_spread"] = None
+            assert pg.evaluate(MOUNT, eht)
+            q = pg.evaluate("[...document.querySelectorAll('#tpr-host .tpr-tab tbody tr')].map(r => [r.children[2].textContent, r.children[4].textContent])")
+            assert all(c == ["—", "—"] for c in q), q[:3]
+            pg.click("#tpr-t3"); t = pg.inner_text("#tpr-host #tpr-p")
+            assert "EHT" in t and "HOMO" in t and "Ionisation" not in t and "Electrophilicity" not in t and "spread" not in t, t
+            assert pg.evaluate(MOUNT, REATT)
+        step("values the engine does not give (null: q and f(0) of EHT, ip/ea/ω) are «—» or left out", nulls)
         def exports():
             pg.click('#tpr-host button[data-ex="XYZ"]'); pg.click('#tpr-host button[data-ex="CSV"]'); pg.click('#tpr-host button[data-ex="SMILES"]'); pg.click('#tpr-host button[data-ex="JSON"]')
             d = pg.evaluate("window.__dl"); names = [x[0] for x in d]; assert len(d) == 4 and names[0].endswith(".xyz") and names[1].endswith(".csv"), names

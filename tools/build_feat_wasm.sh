@@ -7,6 +7,7 @@ limit=512000
 limit_rev=1000000   # attributio-rev carries the table of levels AND the review of one feature (libraries, spectra, formulas, isotopes); measured 961824
 limit_export=800000   # attributio-export carries the cascade AND the four spreadsheet exports (Schymanski folder, publication table, quantification, gradient)
 limit_lr=800000   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 610796
+limit_chem=740000   # chem: ETKDG geometry and GFN2-xTB of the parent (1.3 x the measure); measured 568722
 out=${1:-site/static}/wasm-feat
 R=target/wasm32-unknown-unknown/release
 # the wasm-bindgen + wasm-opt of each module run in the background while cargo builds the next one (tools/wasm_paralleli.sh); wasm_wait below joins them
@@ -21,6 +22,9 @@ wasm_pack "$out/table" $R/mzlab_feat_table_wasm.wasm $limit "mzFinder table"
 # the structure graph, loaded only when the user gives a SMILES: crates/mzlab-feat-grafo-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-grafo-wasm
 wasm_pack "$out/grafo" $R/mzlab_feat_grafo_wasm.wasm $limit "mzFinder grafo"
+# the reactivity of the parent (crates/mzlab-chem-wasm: reatt/1), loaded only in administrator mode
+cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-chem-wasm
+wasm_pack "$out/chem" $R/mzlab_chem_wasm.wasm $limit_chem "mzFinder chem"
 # the readers of the tables of other programs (mzMine, FBMN/GNPS2, MS-DIAL), loaded only when the user opens one: crates/mzlab-feat-import-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-import-wasm
 wasm_pack "$out/import" $R/mzlab_feat_import_wasm.wasm $limit "mzFinder import"
@@ -55,6 +59,8 @@ m["finder_msn"] = {"js": "finder-msn/mzlab_feat_wasm.js", "wasm": "finder-msn/mz
 m["untargeted"] = {"js": "untargeted/mzlab_feat_wasm.js", "wasm": "untargeted/mzlab_feat_wasm_bg.wasm", "sha256": sha("untargeted")}
 m["grafo"] = {"js": "grafo/mzlab_feat_grafo_wasm.js", "wasm": "grafo/mzlab_feat_grafo_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/grafo/mzlab_feat_grafo_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["chem"] = {"js": "chem/mzlab_chem_wasm.js", "wasm": "chem/mzlab_chem_wasm_bg.wasm",
+             "sha256": hashlib.sha256(open(f"{o}/chem/mzlab_chem_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["import"] = {"js": "import/mzlab_feat_import_wasm.js", "wasm": "import/mzlab_feat_import_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/import/mzlab_feat_import_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["attributio"] = {"js": "attributio/mzlab_attributio_wasm.js", "wasm": "attributio/mzlab_attributio_wasm_bg.wasm",
