@@ -66,7 +66,7 @@ try:
         rows = pg.locator("#hr-t tbody tr.clk")
         n0 = rows.count()
 
-        from lib import axe_path
+        from lib import axe_path, attendi
         AXE = axe_path()
         RUN = "axe.run(%s, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.nodes.length]))"
 
@@ -94,7 +94,7 @@ try:
             assert sel.get_attribute("aria-label").startswith("Decided level for"), sel.get_attribute("aria-label")
             assert sel.bounding_box()["height"] >= 24
             sel.select_option("3a"); pg.fill("#tp-det .tpd-note", "checked by hand"); pg.locator("#tp-det .tpd-note").press("Tab")
-            pg.wait_for_timeout(200)
+            attendi(pg, "!!document.querySelector('#hr-t tbody tr.clk .lvb.tpt-dec')")
             assert pg.locator("#hr-t tbody tr.clk").first.locator(".lvb.tpt-dec").count() == 1, "double border on the closed row"
             assert "L3a" in level_of(0)
             assert pg.locator("#tp-det .tpr-head .lvb.tpt-dec").count() == 1, "badge of the head"
@@ -104,7 +104,8 @@ try:
         def identity_tab():
             pg.locator("#tp-det [role=tab]", has_text="Identity").click(); pg.wait_for_selector("#tp-det [role=tabpanel] .tpd-sel")
             assert pg.locator("#tp-det [role=tabpanel] .tpd-sel").input_value() == "3a"
-            pg.locator("#tp-det [role=tabpanel] .tpd-sel").select_option("4"); pg.wait_for_timeout(150)
+            pg.locator("#tp-det [role=tabpanel] .tpd-sel").select_option("4")
+            attendi(pg, "document.querySelector('#tp-det .tpr-head .tpd-sel').value === '4'")
             assert pg.locator("#tp-det .tpr-head .tpd-sel").input_value() == "4", "the head follows the Identity tab"
             pg.locator("#tp-det [role=tabpanel] .tpd-sel").select_option("3a"); pg.locator("#tp-det [role=tab]", has_text="Overview").click()
         step("the Identity tab has the same control, kept in step with the head", identity_tab)
@@ -114,7 +115,7 @@ try:
             assert pg.evaluate("TPDEC.check(4, '2b').ok") is True and pg.evaluate("TPDEC.check(5, 'nottp').ok") is True
             open_row(2)
             sel = pg.locator("#tp-det .tpd-sel").first
-            sel.select_option("1"); pg.wait_for_timeout(150)                 # level 1 needs a standard marked by the user: LIVELLI.decide refuses it
+            sel.select_option("1"); attendi(pg, "!!document.querySelector('#tp-det .tpd-msg').textContent.trim()")                 # level 1 needs a standard marked by the user: LIVELLI.decide refuses it
             msg = pg.locator("#tp-det .tpd-msg").first.inner_text(); assert msg.strip(), "the message of LIVELLI.decide"
             assert sel.input_value() == "", "the choice was not kept"
             assert pg.locator("#hr-t tbody tr.clk .lvb").filter(has_text="L1").count() == 0
@@ -131,14 +132,14 @@ try:
 
         def nottp():
             n = rowsL.count(); open_row(1)
-            pg.locator("#tp-det .tpd-sel").first.select_option("nottp"); pg.wait_for_timeout(200)
+            pg.locator("#tp-det .tpd-sel").first.select_option("nottp"); attendi(pg, "!!document.querySelector('#hr-t tbody tr.clk .lvb.tpt-nottp')")
             b = rowsL.nth(1).locator(".lvb.tpt-nottp"); assert b.count() == 1 and "not a TP" in b.inner_text(), "badge struck through with the words"
             assert pg.locator("#hr-t tbody tr.clk s").count() >= 1
-            pg.click('#hr-tbl [data-chip="hidenottp"]'); pg.wait_for_timeout(200)
+            pg.click('#hr-tbl [data-chip="hidenottp"]'); attendi(pg, f"document.querySelectorAll('#hr-t tbody tr.clk').length === {n - 1}")
             assert rowsL.count() == n - 1, (n, rowsL.count())
-            pg.click('#hr-tbl [data-chip="decided"]'); pg.wait_for_timeout(200)
+            pg.click('#hr-tbl [data-chip="decided"]'); attendi(pg, "document.querySelectorAll('#hr-t tbody tr.clk').length === 1")
             assert rowsL.count() == 1, rowsL.count()
-            pg.click('#hr-tbl [data-chip="decided"]'); pg.wait_for_timeout(100)
+            pg.click('#hr-tbl [data-chip="decided"]'); attendi(pg, f"document.querySelectorAll('#hr-t tbody tr.clk').length === {n - 1}")
         step("«not a TP» + «Hide not a TP» takes the row away; «Decided» keeps the decided ones", nottp)
 
         def export_view():
@@ -150,7 +151,7 @@ try:
         step("Export view: «Decided level» and «Note»", export_view)
 
         def keyboard():
-            pg.click('#hr-tbl [data-chip="hidenottp"]'); pg.wait_for_timeout(100)
+            pg.click('#hr-tbl [data-chip="hidenottp"]'); attendi(pg, "document.querySelector('#hr-tbl [data-chip=hidenottp]').getAttribute('aria-pressed') === 'false'")
             tgs = pg.locator("#hr-t button.tpt-tg"); tgs.nth(0).focus(); pg.keyboard.press("Enter"); pg.wait_for_selector("#tp-det .tpd-sel")
             pg.locator("#tp-det .tpd-sel").first.focus()
             assert pg.evaluate("document.activeElement.classList.contains('tpd-sel')")
@@ -171,7 +172,7 @@ try:
         step("axe: no serious violation, dark theme", axe("dark"))
 
         def narrow():
-            pg.set_viewport_size({"width": 390, "height": 800}); pg.wait_for_timeout(300)
+            pg.set_viewport_size({"width": 390, "height": 800}); attendi(pg, "window.innerWidth === 390")
             if pg.locator("#tp-det .tpd-sel").count() == 0: open_row(0)
             w = pg.evaluate("[document.querySelector('#tp-det').getBoundingClientRect().width, document.querySelector('#hr-t').closest('.tpt-wrap').clientWidth]"); assert w[0] <= w[1] + 2, w
             pg.screenshot(path=str(SHOTS / "tabui_decisioni_390.png")); pg.set_viewport_size({"width": 1280, "height": 900})
