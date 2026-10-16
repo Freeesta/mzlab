@@ -30,7 +30,8 @@ if not reuse:
     from lib_sito import add_wasm; add_wasm(site)
     subprocess.run(["tools/build_feat_wasm.sh", str(site / "static")], cwd=ROOT, check=True, env=dict(os.environ, RUNNER_TEMP=str(tmp / "rt")), capture_output=True)
 else:                                                      # fresh sources of mzFinder over the site that was built
-    for f in (ROOT / "TP_Mine" / "files").glob("*"): shutil.copy2(f, site / "static" / "mzfinder" / f.name)
+    for d in ("files", "js"):
+        for f in (ROOT / "TP_Mine" / d).glob("*"): shutil.copy2(f, site / "static" / "mzfinder" / f.name)
 ser = tmp / "ser"
 subprocess.run([sys.executable, "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser)], cwd=ROOT, check=True, capture_output=True)
 idx = sorted(ser.glob("*.mzidx"))
