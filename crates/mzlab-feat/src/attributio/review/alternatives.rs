@@ -65,7 +65,15 @@ fn from_library(formula: &str, lib: &LibraryIndex, s: &AltSources) -> Vec<Alt> {
             let cmp = s
                 .exp
                 .filter(|e| !e.mz.is_empty() && !r.mz.is_empty())
-                .map(|e| compare(e, &lib.ms2(super::libraries::Ref { file: k, row }), s.tol, None, 0.0));
+                .map(|e| {
+                    compare(
+                        e,
+                        &lib.ms2(super::libraries::Ref { file: k, row }),
+                        s.tol,
+                        None,
+                        0.0,
+                    )
+                });
             let alt = Alt {
                 name: if r.name.is_empty() {
                     "(unnamed)".to_string()

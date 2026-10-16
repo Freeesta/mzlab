@@ -854,7 +854,9 @@ pub fn review_feature<R: RawSource, S: Structures>(
             precursor_present: pim.as_ref().is_some_and(|p| p.present),
             precursor_rel: pim.and_then(|p| p.prec_rel),
             raw: raw.map(|r| r.0),
-            view: Some(super::view::build(&e_mz, &e_it, ex, &exp_q, &scored, low, env.s, &f.pol)),
+            view: Some(super::view::build(
+                &e_mz, &e_it, ex, &exp_q, &scored, low, env.s, &f.pol,
+            )),
             references: scored.into_iter().map(|x| x.r).collect(),
             purity,
         },

@@ -123,7 +123,9 @@ pub fn decision_with(
     fetch: &dyn Fn(usize, u64, u64) -> Option<Vec<u8>>,
     decision_json: &str,
 ) -> Result<Saved, Error> {
-    with_io(files, fetch, &|io| decision_text(io, &files.root, decision_json))
+    with_io(files, fetch, &|io| {
+        decision_text(io, &files.root, decision_json)
+    })
 }
 
 /// `text` written to `write` in pieces of about 64 KiB at increasing offsets.
@@ -257,8 +259,13 @@ pub fn review_to(
     write: Function,
 ) -> Result<String, JsValue> {
     let files = Files::from_json(names_json).map_err(js_err)?;
-    let text = review_with(&files, &|k, o, l| js_fetch(&read, k, o, l), pol, feature_id as i64)
-        .map_err(js_err)?;
+    let text = review_with(
+        &files,
+        &|k, o, l| js_fetch(&read, k, o, l),
+        pol,
+        feature_id as i64,
+    )
+    .map_err(js_err)?;
     if !text_to(&text, &mut js_write(&write)) {
         return Err(js_err(Error::new("error.io")));
     }

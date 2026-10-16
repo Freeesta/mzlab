@@ -30,7 +30,9 @@ fn mem_files(p: &Value) -> MemFiles {
 /// `path` (relative, inside the folder) written under `folder`; refuses anything that leaves it.
 fn write_in(folder: &str, path: &str, text: &str) -> Result<bool> {
     let rel = std::path::Path::new(path);
-    let inside = rel.components().all(|c| matches!(c, std::path::Component::Normal(_)));
+    let inside = rel
+        .components()
+        .all(|c| matches!(c, std::path::Component::Normal(_)));
     if folder.is_empty() || path.is_empty() || !inside {
         return Ok(false);
     }
@@ -62,7 +64,8 @@ impl State {
             o.raw(",\"added\":").int(s.added as i64);
             o.raw(",\"replaced\":").int(s.replaced as i64);
             o.raw(",\"unchanged\":").int(s.unchanged as i64);
-            o.raw(",\"written\":").raw(if written { "true" } else { "false" });
+            o.raw(",\"written\":")
+                .raw(if written { "true" } else { "false" });
             o.raw(",\"text\":").str(&s.text).raw("}");
             return text(o.0);
         }

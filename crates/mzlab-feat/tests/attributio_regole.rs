@@ -11,7 +11,9 @@ use mzlab_feat::attributio::review::alternatives::{same_formula, AltSources};
 use mzlab_feat::attributio::review::banco::review_json;
 use mzlab_feat::attributio::review::libraries::{LibFormat, LibInput, LibraryIndex};
 use mzlab_feat::attributio::review::matching::Ms2;
-use mzlab_feat::attributio::review::rules::{decision_changes, note_required, page_level, Current, Rec};
+use mzlab_feat::attributio::review::rules::{
+    decision_changes, note_required, page_level, Current, Rec,
+};
 use mzlab_feat::attributio::review::save::decision_text;
 use mzlab_feat::attributio::review::structures::NoStructures;
 use mzlab_feat::attributio::table;
@@ -42,15 +44,39 @@ fn a_note_is_required_only_when_the_decision_changes_something() {
         name: Some("Paracetamol"),
         group: None,
     };
-    let rec = |livello, group, nome| Rec { livello, group, nome };
-    assert_eq!(decision_changes(&f, &rec("2b", "", "")), vec!["level 3 -> 2b"]);
+    let rec = |livello, group, nome| Rec {
+        livello,
+        group,
+        nome,
+    };
+    assert_eq!(
+        decision_changes(&f, &rec("2b", "", "")),
+        vec!["level 3 -> 2b"]
+    );
     assert!(note_required(&f, &rec("2b", "", "")));
     assert!(!note_required(&f, &rec("3", "", "")), "3 stays 3");
-    assert!(!note_required(&f, &rec("", "", "Paracetamol")), "the same name changes nothing");
-    assert_eq!(decision_changes(&f, &rec("", "ambiguous", "")), vec!["identity rejected"]);
-    assert_eq!(decision_changes(&f, &rec("", "", "Acetaminophen")), vec!["name -> Acetaminophen"]);
-    let two_a = Current { level: 2, level_sub: "a", name: Some("X"), ..Current::default() };
-    assert_eq!(decision_changes(&two_a, &rec("3a", "", "")), vec!["level 2a -> 3"]);
+    assert!(
+        !note_required(&f, &rec("", "", "Paracetamol")),
+        "the same name changes nothing"
+    );
+    assert_eq!(
+        decision_changes(&f, &rec("", "ambiguous", "")),
+        vec!["identity rejected"]
+    );
+    assert_eq!(
+        decision_changes(&f, &rec("", "", "Acetaminophen")),
+        vec!["name -> Acetaminophen"]
+    );
+    let two_a = Current {
+        level: 2,
+        level_sub: "a",
+        name: Some("X"),
+        ..Current::default()
+    };
+    assert_eq!(
+        decision_changes(&two_a, &rec("3a", "", "")),
+        vec!["level 2a -> 3"]
+    );
     assert!(decision_changes(&two_a, &rec("2", "", "")).is_empty());
 }
 
@@ -71,7 +97,12 @@ fn the_alternatives_with_the_same_formula_are_the_isomers_of_the_library() {
         it: vec![60.0, 150.0, 1000.0, 30.0],
         prec: 152.0706,
     };
-    let src = AltSources { csi: &[], exp: Some(&exp), tol: 0.02, st: &NoStructures };
+    let src = AltSources {
+        csi: &[],
+        exp: Some(&exp),
+        tol: 0.02,
+        st: &NoStructures,
+    };
     let alts = same_formula("C8H9NO2", &lib, &src);
     let names: Vec<&str> = alts.iter().map(|a| a.name.as_str()).collect();
     assert_eq!(names, ["Metacetamol", "Paracetamol", "Methyl anthranilate"]);
@@ -80,18 +111,23 @@ fn the_alternatives_with_the_same_formula_are_the_isomers_of_the_library() {
     assert!(s[0] > 0.999 && s[1] > 0.99, "{s:?}");
     assert_eq!(alts[1].ik1.as_deref(), Some("RZVAJINKPMORJF"));
     assert_eq!(alts[0].source, "library: library/banco.json");
-    assert!(same_formula("C8H10N4O2", &lib, &src).iter().all(|a| a.name == "Caffeine"));
+    assert!(same_formula("C8H10N4O2", &lib, &src)
+        .iter()
+        .all(|a| a.name == "Caffeine"));
     assert!(same_formula("C99H99", &lib, &src).is_empty());
     assert!(same_formula("", &lib, &src).is_empty());
     let none = AltSources { exp: None, ..src };
-    assert!(same_formula("C8H9NO2", &lib, &none).iter().all(|a| a.score.is_none()));
+    assert!(same_formula("C8H9NO2", &lib, &none)
+        .iter()
+        .all(|a| a.score.is_none()));
 }
 
 fn review(files: &MemFiles, pol: &str, id: i64) -> Value {
     let read = |p: &str| files.read(p);
     let list = |d: &str| files.list(d);
     let io = Io::new(&read, &list);
-    serde_json::from_str(&review_json(&io, "campagna_banco", pol, id).expect("review")).expect("JSON")
+    serde_json::from_str(&review_json(&io, "campagna_banco", pol, id).expect("review"))
+        .expect("JSON")
 }
 
 #[test]
@@ -102,16 +138,32 @@ fn the_review_of_a_feature_has_its_proofs_and_proposes_nothing_ticked() {
     assert_eq!(p["class"], "2b-check", "a competing isomer matches better");
     assert_eq!(p["best"]["formula"], "C8H9NO2");
     let ev = &p["evidence"];
-    assert_eq!((ev["n_explained"].as_i64(), ev["n_peaks"].as_i64()), (Some(3), Some(3)));
+    assert_eq!(
+        (ev["n_explained"].as_i64(), ev["n_peaks"].as_i64()),
+        (Some(3), Some(3))
+    );
     let peaks = ev["view"]["peaks"].as_array().expect("peaks");
     assert!(peaks.iter().filter(|k| !k["frag"].is_null()).count() >= 3);
-    assert!(!ev["view"]["mirror"].is_null(), "mirror against the library");
-    assert!(!ev["view"]["isotopes"].as_array().expect("isotopes").is_empty());
+    assert!(
+        !ev["view"]["mirror"].is_null(),
+        "mirror against the library"
+    );
+    assert!(!ev["view"]["isotopes"]
+        .as_array()
+        .expect("isotopes")
+        .is_empty());
     let c = v["checklist"].as_array().expect("checklist");
     let keys: Vec<&str> = c.iter().map(|x| x["key"].as_str().expect("key")).collect();
     assert_eq!(
         keys,
-        ["diagnostic_fragment", "neutral_loss", "isotopes", "pure_precursor", "rt_plausible", "alternatives_excluded"]
+        [
+            "diagnostic_fragment",
+            "neutral_loss",
+            "isotopes",
+            "pure_precursor",
+            "rt_plausible",
+            "alternatives_excluded"
+        ]
     );
     assert!(c[0]["proof"].as_str().expect("proof").starts_with("3 of 3"));
     assert!(c[2]["proof"].is_null(), "no raw data: no isotope proof");
@@ -126,7 +178,10 @@ fn the_review_of_a_feature_has_its_proofs_and_proposes_nothing_ticked() {
 fn a_feature_without_ms2_is_reviewed_without_error() {
     let v = review(&banco_files(), "POS", 4);
     assert_eq!(v["has_ms2"], false);
-    assert!(v["proposal"]["evidence"]["view"]["peaks"].as_array().expect("peaks").is_empty());
+    assert!(v["proposal"]["evidence"]["view"]["peaks"]
+        .as_array()
+        .expect("peaks")
+        .is_empty());
 }
 
 fn decision(extra: &str) -> String {
@@ -144,7 +199,13 @@ fn golden_csv(text: &str) {
         std::fs::create_dir_all(p.parent().expect("dir")).expect("mkdir");
         std::fs::write(&p, text).expect("write");
     }
-    assert_eq!(text, std::fs::read_to_string(&p).expect("golden csv").replace("\r\n", "\n"), "decisions file");
+    assert_eq!(
+        text,
+        std::fs::read_to_string(&p)
+            .expect("golden csv")
+            .replace("\r\n", "\n"),
+        "decisions file"
+    );
 }
 
 fn decide(files: &mut MemFiles, json: &str) -> mzlab_feat::attributio::review::save::Saved {
@@ -160,13 +221,19 @@ fn row_of(files: &MemFiles, id: i64) -> Vec<mzlab_feat::attributio::annotate::Fe
     let read = |p: &str| files.read(p);
     let list = |d: &str| files.list(d);
     let io = Io::new(&read, &list);
-    table::run(&io, "campagna_banco").expect("run").features.into_iter().filter(|f| f.id == id && f.pol == "POS").collect()
+    table::run(&io, "campagna_banco")
+        .expect("run")
+        .features
+        .into_iter()
+        .filter(|f| f.id == id && f.pol == "POS")
+        .collect()
 }
 
 /// Every level of the campaign after the decision is the one `tools/attributio_riferimento.py` gives on the same folder (`livelli.json`).
 fn levels_match_reference(files: &MemFiles) {
     let want: Value = serde_json::from_str(
-        &std::fs::read_to_string(root().join("tests/golden/attributio/banco/livelli.json")).expect("golden levels"),
+        &std::fs::read_to_string(root().join("tests/golden/attributio/banco/livelli.json"))
+            .expect("golden levels"),
     )
     .expect("JSON");
     let read = |p: &str| files.read(p);
@@ -177,10 +244,28 @@ fn levels_match_reference(files: &MemFiles) {
     for f in &run.features {
         let w = &want[format!("{}:{}", f.pol, f.id)];
         // the sublevel of a Level 3 (3a/3b) is newer than the Attributio the reference ran on: only the 2a/2b sublevels are compared
-        let sub = if f.level == 2 || f.level_sub == "b" { f.level_sub.as_str() } else { "" };
-        let wsub = if w[0] == 2 || w[1] == "b" { w[1].as_str().expect("sub") } else { "" };
+        let sub = if f.level == 2 || f.level_sub == "b" {
+            f.level_sub.as_str()
+        } else {
+            ""
+        };
+        let wsub = if w[0] == 2 || w[1] == "b" {
+            w[1].as_str().expect("sub")
+        } else {
+            ""
+        };
         let got = (f.level as i64, sub, f.level_basis.as_str());
-        assert_eq!((w[0].as_i64().expect("level"), wsub, w[2].as_str().expect("basis")), got, "{} {}", f.pol, f.id);
+        assert_eq!(
+            (
+                w[0].as_i64().expect("level"),
+                wsub,
+                w[2].as_str().expect("basis")
+            ),
+            got,
+            "{} {}",
+            f.pol,
+            f.id
+        );
     }
 }
 
@@ -194,9 +279,15 @@ fn a_2b_decision_makes_the_feature_2b_and_survives_the_cascade() {
     let header = saved.text.lines().next().expect("header");
     assert!(header.ends_with(";evidence_checklist"), "{header}");
     let last = saved.text.lines().last().expect("row");
-    assert!(last.ends_with(";diagnostic_fragment|neutral_loss|alternatives_excluded"), "{last}");
+    assert!(
+        last.ends_with(";diagnostic_fragment|neutral_loss|alternatives_excluded"),
+        "{last}"
+    );
     let f = &row_of(&files, 15)[0];
-    assert_eq!((f.level, f.level_sub.as_str(), f.level_basis.as_str()), (2, "b", "diagnostic evidence"));
+    assert_eq!(
+        (f.level, f.level_sub.as_str(), f.level_basis.as_str()),
+        (2, "b", "diagnostic evidence")
+    );
     golden_csv(&saved.text);
     levels_match_reference(&files);
     // the same day and reviewer: the row is replaced, not repeated

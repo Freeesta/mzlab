@@ -13,7 +13,11 @@ fn walk(base: &Path, dir: &Path, out: &mut Vec<(String, Vec<u8>)>) {
         if p.is_dir() {
             walk(base, &p, out);
         } else {
-            let rel = p.strip_prefix(base).expect("inside").to_string_lossy().replace('\\', "/");
+            let rel = p
+                .strip_prefix(base)
+                .expect("inside")
+                .to_string_lossy()
+                .replace('\\', "/");
             out.retain(|(r, _)| *r != rel);
             out.push((rel, std::fs::read(&p).expect("file")));
         }
@@ -25,26 +29,48 @@ fn folder() -> (Files, Vec<(String, Vec<u8>)>) {
     for d in ["campagna_sintetica", "campagna_banco"] {
         walk(&root().join(d), &root().join(d), &mut v);
     }
-    let list: Vec<String> = v.iter().map(|(p, d)| format!("{{\"path\":{p:?},\"size\":{}}}", d.len())).collect();
-    let names = format!("{{\"root\":\"campagna_banco\",\"files\":[{}]}}", list.join(","));
+    let list: Vec<String> = v
+        .iter()
+        .map(|(p, d)| format!("{{\"path\":{p:?},\"size\":{}}}", d.len()))
+        .collect();
+    let names = format!(
+        "{{\"root\":\"campagna_banco\",\"files\":[{}]}}",
+        list.join(",")
+    );
     (Files::from_json(&names).expect("names"), v)
 }
 
 #[test]
 fn the_bridge_reviews_a_feature_and_saves_a_decision() {
     let (files, data) = folder();
-    let fetch = |k: usize, off: u64, len: u64| Some(data[k].1[off as usize..(off + len) as usize].to_vec());
+    let fetch =
+        |k: usize, off: u64, len: u64| Some(data[k].1[off as usize..(off + len) as usize].to_vec());
     let r = review_with(&files, &fetch, "POS", 15).expect("review");
-    if let Ok(p) = std::env::var("DUMP_REVIEW") { std::fs::write(p, &r).expect("dump"); }
-    assert!(r.contains("\"2b-check\"") && r.contains("\"checklist\""), "{}", &r[..200.min(r.len())]);
+    if let Ok(p) = std::env::var("DUMP_REVIEW") {
+        std::fs::write(p, &r).expect("dump");
+    }
+    assert!(
+        r.contains("\"2b-check\"") && r.contains("\"checklist\""),
+        "{}",
+        &r[..200.min(r.len())]
+    );
     assert!(review_with(&files, &fetch, "POS", 999).is_err());
 
     let d = r#"{"pol":"POS","id":15,"livello":"2b","motivazione":"diagnostic ions explained","decided_on":"2026-10-16","decided_by":"rev",
         "checklist":["diagnostic_fragment","neutral_loss","alternatives_excluded"],
         "evidence":{"type":"fragments","library":"library/banco.json","entry":"","cosine":0.99,"matched":4,"delta_mz":0,"delta_formula":"","note":"x"}}"#;
     let saved = decision_with(&files, &fetch, d).expect("saved");
-    assert_eq!(saved_summary(&saved), format!("{{\"path\":{:?},\"added\":1,\"replaced\":0,\"unchanged\":0}}", saved.path));
-    let golden = std::fs::read_to_string(root().join("../../golden/attributio/banco/feature_decisions.csv")).expect("golden").replace("\r\n", "\n");
+    assert_eq!(
+        saved_summary(&saved),
+        format!(
+            "{{\"path\":{:?},\"added\":1,\"replaced\":0,\"unchanged\":0}}",
+            saved.path
+        )
+    );
+    let golden =
+        std::fs::read_to_string(root().join("../../golden/attributio/banco/feature_decisions.csv"))
+            .expect("golden")
+            .replace("\r\n", "\n");
     let mut out: Vec<u8> = Vec::new();
     let mut next = 0u64;
     assert!(text_to(&saved.text, &mut |off, b| {
@@ -54,7 +80,10 @@ fn the_bridge_reviews_a_feature_and_saves_a_decision() {
         true
     }));
     assert_eq!(String::from_utf8(out).expect("utf-8"), golden);
-    assert!(decision_with(&files, &fetch, &d.replace("diagnostic ions explained", "")).is_err(), "a decision against the proposal needs a note");
+    assert!(
+        decision_with(&files, &fetch, &d.replace("diagnostic ions explained", "")).is_err(),
+        "a decision against the proposal needs a note"
+    );
 }
 
 #[test]
