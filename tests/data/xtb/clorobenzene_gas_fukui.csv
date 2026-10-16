@@ -1,0 +1,22 @@
+smiles,atom,quantity,value,method,source
+Clc1ccccc1,0,f_plus,0.156,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,0,f_minus,0.352,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,0,f_zero,0.254,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,1,f_plus,0.061,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,1,f_minus,0.042,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,1,f_zero,0.051,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,2,f_plus,0.056,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,2,f_minus,0.035,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,2,f_zero,0.046,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,3,f_plus,0.058,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,3,f_minus,0.035,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,3,f_zero,0.047,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,4,f_plus,0.059,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,4,f_minus,0.072,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,4,f_zero,0.066,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,5,f_plus,0.058,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,5,f_minus,0.035,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,5,f_zero,0.047,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,6,f_plus,0.056,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,6,f_minus,0.035,"GFN2-xTB, gas",clorobenzene_gas_xtb.out
+Clc1ccccc1,6,f_zero,0.046,"GFN2-xTB, gas",clorobenzene_gas_xtb.out

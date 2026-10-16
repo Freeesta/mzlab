@@ -28,6 +28,8 @@ pub struct Settings {
     pub max_unexpected: usize,
     pub auto_offset: bool,
     pub min_files: usize,
+    /// «Fragment ions found» lists the fragments of the representative MS2 scan from this % of the strongest (`ms2frag`).
+    pub frag_min_rel: f64,
 }
 
 impl Settings {
@@ -50,6 +52,7 @@ impl Default for Settings {
             max_unexpected: 40,
             auto_offset: true,
             min_files: 3,
+            frag_min_rel: super::ms2frag::MIN_REL,
         }
     }
 }
@@ -166,6 +169,7 @@ pub fn settings(settings_json: &str) -> Settings {
     s.max_unexpected = num("max_unexpected").map_or(s.max_unexpected, |x| x.max(0.0) as usize);
     s.auto_offset = flag("auto_offset").unwrap_or(s.auto_offset);
     s.min_files = num("min_files").map_or(s.min_files, |x| x.max(0.0) as usize);
+    s.frag_min_rel = num("frag_min_rel").map_or(s.frag_min_rel, |x| x.clamp(0.0, 100.0));
     s
 }
 

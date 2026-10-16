@@ -4,9 +4,10 @@
 //! (`max_unexpected`, criteria), and the matches are made again. A peak with no feature in the table is `no_feature`.
 
 use super::kin::{kinetics, Gens};
-use super::ms2link::{Links, PREC_TOL};
+use super::ms2link::{Exp, Links};
 use super::rows::{best_area, entry, is_treated};
 use super::{evaluate, finish_one, isf, Entry, LrDig};
+use crate::aligned::Aligned;
 use crate::legacy::Res;
 use mzlab_core::idxread::{Index, ReadAt};
 
@@ -23,22 +24,23 @@ pub enum Near {
     Feature(usize),
 }
 
-fn offset(d: &LrDig) -> f64 {
-    d.offset
-        .as_ref()
-        .filter(|o| o.applied)
-        .map_or(0.0, |o| o.offset)
+/// Whether `apex` lies between the start and the end of a detected peak of the feature `r`, in any column.
+fn in_peak(t: &Aligned, r: usize, apex: f64) -> bool {
+    super::rows::cells(t, r)
+        .iter()
+        .any(|c| c.detected && c.hi > c.lo && apex >= c.lo && apex <= c.hi)
 }
 
-/// The feature of the table within `PREC_TOL` of the precursor `p` (as read on the instrument or calculated) and `rt_tol_min` of `apex`, after
-/// `rt_min`, with the largest area in the files of the series.
-pub fn near(d: &LrDig, p: f64, apex: f64) -> Near {
-    let (t, off) = (&*d.table, offset(d));
+/// The feature of the table whose m/z (the one read in the table, nothing corrected) is within the tolerance of the precursor of `e`
+/// (`Exp::tol`: half the isolation window of the file, else `PREC_TOL`) and whose chromatographic peak, in one of the files of the series, contains
+/// `apex` (start to end of the peak), after `rt_min`, with the largest area in the files of the series.
+pub fn near(d: &LrDig, e: &Exp, apex: f64) -> Near {
+    let (t, tol) = (&*d.table, e.tol().da);
     let best = (0..t.len())
         .filter(|&r| {
             t.rt[r] >= d.settings.rt_min
-                && (t.rt[r] - apex).abs() <= d.settings.rt_tol_min
-                && (t.mz[r] - p).abs().min((t.mz[r] - off - p).abs()) <= PREC_TOL
+                && (t.mz[r] - e.precursor).abs() <= tol
+                && in_peak(t, r, apex)
         })
         .map(|r| (r, best_area(t, &d.lc, r, |_| true)))
         .filter(|x| x.1 > 0.0)
@@ -64,7 +66,7 @@ fn open_peaks(d: &LrDig, l: &Links) -> Vec<(usize, Near)> {
         .filter_map(|u| {
             let x = u.exp?;
             let (e, p) = (l.exps.get(x)?, l.exps.get(x)?.peaks.get(u.peak?)?);
-            Some((x, near(d, e.precursor, p.apex - e.drift)))
+            Some((x, near(d, e, p.apex - e.drift)))
         })
         .collect()
 }
@@ -81,7 +83,11 @@ pub fn make(d: &mut LrDig, l: &Links) -> Vec<(usize, i64)> {
     }
     want.sort_by_key(|w| w.1);
     let t = d.table.clone();
-    let off = offset(d);
+    let off = d
+        .offset
+        .as_ref()
+        .filter(|o| o.applied)
+        .map_or(0.0, |o| o.offset);
     let mut made = Vec::new();
     for (i, (x, r)) in want.iter().enumerate() {
         let id = FIRST_ID + i as i64;
@@ -135,7 +141,7 @@ pub fn finish_links(d: &LrDig, l: &mut Links, made: &[(usize, i64)]) {
             continue;
         };
         let (e, p) = (&l.exps[x], &l.exps[x].peaks[k]);
-        if matches!(near(d, e.precursor, p.apex - e.drift), Near::None) {
+        if matches!(near(d, e, p.apex - e.drift), Near::None) {
             let why = format!(
                 "no feature in the table at m/z {:.2} and {:.2} min",
                 e.precursor, p.apex
