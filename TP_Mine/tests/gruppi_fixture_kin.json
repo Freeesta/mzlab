@@ -1,0 +1,847 @@
+{
+ "format": "gruppi",
+ "version": 1,
+ "reference": "Sun",
+ "norm": "raw",
+ "parent_name": "Demo-parent",
+ "conditions": [
+  {
+   "id": "Sun",
+   "factors": {},
+   "files": [],
+   "times": [
+    0,
+    15,
+    30,
+    60,
+    120
+   ],
+   "replicates": 2,
+   "controls": {
+    "t0": [
+     0
+    ],
+    "blank": [
+     1
+    ],
+    "std": [
+     2
+    ],
+    "dark": []
+   },
+   "parent": {
+    "k": 0.03,
+    "half_life": 23.1,
+    "remaining": 0.03
+   }
+  },
+  {
+   "id": "Lamp",
+   "factors": {},
+   "files": [],
+   "times": [
+    0,
+    15,
+    30,
+    60,
+    120
+   ],
+   "replicates": 2,
+   "controls": {
+    "t0": [
+     0
+    ],
+    "blank": [
+     1
+    ],
+    "std": [
+     2
+    ],
+    "dark": []
+   },
+   "parent": {
+    "k": 0.012,
+    "half_life": 57.8,
+    "remaining": 0.24
+   }
+  },
+  {
+   "id": "Dark",
+   "factors": {},
+   "files": [],
+   "times": [
+    0,
+    15,
+    30,
+    60,
+    120
+   ],
+   "replicates": 2,
+   "controls": {
+    "t0": [
+     0
+    ],
+    "blank": [
+     1
+    ],
+    "std": [
+     2
+    ],
+    "dark": []
+   },
+   "parent": {
+    "k": null,
+    "half_life": null,
+    "remaining": 0.97
+   }
+  }
+ ],
+ "rows": [
+  {
+   "row": 0,
+   "tp_name": "TP 305",
+   "mz": 305.3,
+   "polarity": "+",
+   "rt": 7.1,
+   "neutral_formula": null,
+   "ppm": null,
+   "other_polarity": null,
+   "present_in": [
+    "Sun",
+    "Lamp"
+   ],
+   "only_in": null,
+   "in_all": false,
+   "cond": [
+    {
+     "id": "Sun",
+     "present": true,
+     "n_det": 2,
+     "n_rep": 2,
+     "area": 6000000.0,
+     "area_sd": 480000.0,
+     "cv": 0.08,
+     "ratio_ref": 1.0,
+     "shape": "rising",
+     "t_max": 120,
+     "t_half_rise": 38.57,
+     "rate_rel": 1.0,
+     "kin": [
+      {
+       "t": 0,
+       "area": 10000.0,
+       "sd": 800.0,
+       "n": 2
+      },
+      {
+       "t": 15,
+       "area": 900000.0,
+       "sd": 72000.0,
+       "n": 2
+      },
+      {
+       "t": 30,
+       "area": 2400000.0,
+       "sd": 192000.0,
+       "n": 2
+      },
+      {
+       "t": 60,
+       "area": 4500000.0,
+       "sd": 360000.0,
+       "n": 2
+      },
+      {
+       "t": 120,
+       "area": 6000000.0,
+       "sd": 480000.0,
+       "n": 2
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "pass",
+      "ms2": "linked",
+      "verdict": "Prev. likely"
+     }
+    },
+    {
+     "id": "Lamp",
+     "present": true,
+     "n_det": 2,
+     "n_rep": 2,
+     "area": 3000000.0,
+     "area_sd": 240000.0,
+     "cv": 0.08,
+     "ratio_ref": 0.5,
+     "shape": "rising",
+     "t_max": 120,
+     "t_half_rise": 56.25,
+     "rate_rel": 0.69,
+     "kin": [
+      {
+       "t": 0,
+       "area": 10000.0,
+       "sd": 800.0,
+       "n": 2
+      },
+      {
+       "t": 15,
+       "area": 300000.0,
+       "sd": 24000.0,
+       "n": 2
+      },
+      {
+       "t": 30,
+       "area": 800000.0,
+       "sd": 64000.0,
+       "n": 2
+      },
+      {
+       "t": 60,
+       "area": 1600000.0,
+       "sd": 128000.0,
+       "n": 2
+      },
+      {
+       "t": 120,
+       "area": 3000000.0,
+       "sd": 240000.0,
+       "n": 2
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "pass",
+      "ms2": "linked",
+      "verdict": "Prev. likely"
+     }
+    },
+    {
+     "id": "Dark",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 2,
+     "area": null,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 0,
+       "area": null,
+       "sd": null,
+       "n": 2
+      },
+      {
+       "t": 15,
+       "area": null,
+       "sd": null,
+       "n": 2
+      },
+      {
+       "t": 30,
+       "area": null,
+       "sd": null,
+       "n": 2
+      },
+      {
+       "t": 60,
+       "area": null,
+       "sd": null,
+       "n": 2
+      },
+      {
+       "t": 120,
+       "area": null,
+       "sd": null,
+       "n": 2
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "na",
+      "ms2": "linked",
+      "verdict": "Prev. possible"
+     }
+    }
+   ]
+  },
+  {
+   "row": 1,
+   "tp_name": "TP 229",
+   "mz": 229.1,
+   "polarity": "+",
+   "rt": 5.2,
+   "neutral_formula": null,
+   "ppm": null,
+   "other_polarity": null,
+   "present_in": [
+    "Sun",
+    "Lamp"
+   ],
+   "only_in": null,
+   "in_all": false,
+   "cond": [
+    {
+     "id": "Sun",
+     "present": true,
+     "n_det": 2,
+     "n_rep": 2,
+     "area": 100000.0,
+     "area_sd": 8000.0,
+     "cv": 0.08,
+     "ratio_ref": 1.0,
+     "shape": "bell",
+     "t_max": 30,
+     "t_half_rise": 16.88,
+     "rate_rel": 1.0,
+     "kin": [
+      {
+       "t": 0,
+       "area": 10000.0,
+       "sd": 800.0,
+       "n": 2
+      },
+      {
+       "t": 15,
+       "area": 600000.0,
+       "sd": 48000.0,
+       "n": 2
+      },
+      {
+       "t": 30,
+       "area": 1400000.0,
+       "sd": 112000.0,
+       "n": 2
+      },
+      {
+       "t": 60,
+       "area": 700000.0,
+       "sd": 56000.0,
+       "n": 2
+      },
+      {
+       "t": 120,
+       "area": 100000.0,
+       "sd": 8000.0,
+       "n": 2
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "pass",
+      "ms2": "linked",
+      "verdict": "Prev. likely"
+     }
+    },
+    {
+     "id": "Lamp",
+     "present": true,
+     "n_det": 2,
+     "n_rep": 2,
+     "area": 600000.0,
+     "area_sd": 48000.0,
+     "cv": 0.08,
+     "ratio_ref": 6.0,
+     "shape": "bell",
+     "t_max": 60,
+     "t_half_rise": 27.5,
+     "rate_rel": 0.61,
+     "kin": [
+      {
+       "t": 0,
+       "area": 10000.0,
+       "sd": 800.0,
+       "n": 2
+      },
+      {
+       "t": 15,
+       "area": 200000.0,
+       "sd": 16000.0,
+       "n": 2
+      },
+      {
+       "t": 30,
+       "area": 500000.0,
+       "sd": 40000.0,
+       "n": 2
+      },
+      {
+       "t": 60,
+       "area": 900000.0,
+       "sd": 72000.0,
+       "n": 2
+      },
+      {
+       "t": 120,
+       "area": 600000.0,
+       "sd": 48000.0,
+       "n": 2
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "pass",
+      "ms2": "linked",
+      "verdict": "Prev. likely"
+     }
+    },
+    {
+     "id": "Dark",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 2,
+     "area": null,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 0,
+       "area": null,
+       "sd": null,
+       "n": 2
+      },
+      {
+       "t": 15,
+       "area": null,
+       "sd": null,
+       "n": 2
+      },
+      {
+       "t": 30,
+       "area": null,
+       "sd": null,
+       "n": 2
+      },
+      {
+       "t": 60,
+       "area": null,
+       "sd": null,
+       "n": 2
+      },
+      {
+       "t": 120,
+       "area": null,
+       "sd": null,
+       "n": 2
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "na",
+      "ms2": "linked",
+      "verdict": "Prev. possible"
+     }
+    }
+   ]
+  },
+  {
+   "row": 2,
+   "tp_name": "TP 224",
+   "mz": 224.2,
+   "polarity": "+",
+   "rt": 4.4,
+   "neutral_formula": null,
+   "ppm": null,
+   "other_polarity": null,
+   "present_in": [
+    "Sun",
+    "Lamp",
+    "Dark"
+   ],
+   "only_in": null,
+   "in_all": true,
+   "cond": [
+    {
+     "id": "Sun",
+     "present": true,
+     "n_det": 2,
+     "n_rep": 2,
+     "area": 20000.0,
+     "area_sd": 1600.0,
+     "cv": 0.08,
+     "ratio_ref": 1.0,
+     "shape": "decay",
+     "t_max": 0,
+     "t_half_rise": 0,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 0,
+       "area": 2000000.0,
+       "sd": 160000.0,
+       "n": 2
+      },
+      {
+       "t": 15,
+       "area": 1000000.0,
+       "sd": 80000.0,
+       "n": 2
+      },
+      {
+       "t": 30,
+       "area": 400000.0,
+       "sd": 32000.0,
+       "n": 2
+      },
+      {
+       "t": 60,
+       "area": 100000.0,
+       "sd": 8000.0,
+       "n": 2
+      },
+      {
+       "t": 120,
+       "area": 20000.0,
+       "sd": 1600.0,
+       "n": 2
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "pass",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    },
+    {
+     "id": "Lamp",
+     "present": true,
+     "n_det": 2,
+     "n_rep": 2,
+     "area": 200000.0,
+     "area_sd": 16000.0,
+     "cv": 0.08,
+     "ratio_ref": 10.0,
+     "shape": "decay",
+     "t_max": 0,
+     "t_half_rise": 0,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 0,
+       "area": 2000000.0,
+       "sd": 160000.0,
+       "n": 2
+      },
+      {
+       "t": 15,
+       "area": 1600000.0,
+       "sd": 128000.0,
+       "n": 2
+      },
+      {
+       "t": 30,
+       "area": 1200000.0,
+       "sd": 96000.0,
+       "n": 2
+      },
+      {
+       "t": 60,
+       "area": 600000.0,
+       "sd": 48000.0,
+       "n": 2
+      },
+      {
+       "t": 120,
+       "area": 200000.0,
+       "sd": 16000.0,
+       "n": 2
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "pass",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    },
+    {
+     "id": "Dark",
+     "present": true,
+     "n_det": 2,
+     "n_rep": 2,
+     "area": 2000000.0,
+     "area_sd": 160000.0,
+     "cv": 0.08,
+     "ratio_ref": 100.0,
+     "shape": "flat",
+     "t_max": 0,
+     "t_half_rise": 0,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 0,
+       "area": 2000000.0,
+       "sd": 160000.0,
+       "n": 2
+      },
+      {
+       "t": 15,
+       "area": 2000000.0,
+       "sd": 160000.0,
+       "n": 2
+      },
+      {
+       "t": 30,
+       "area": 1900000.0,
+       "sd": 152000.0,
+       "n": 2
+      },
+      {
+       "t": 60,
+       "area": 2000000.0,
+       "sd": 160000.0,
+       "n": 2
+      },
+      {
+       "t": 120,
+       "area": 2000000.0,
+       "sd": 160000.0,
+       "n": 2
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "pass",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    }
+   ]
+  },
+  {
+   "row": 3,
+   "tp_name": "TP 391",
+   "mz": 391.3,
+   "polarity": "+",
+   "rt": 9.8,
+   "neutral_formula": null,
+   "ppm": null,
+   "other_polarity": null,
+   "present_in": [
+    "Sun",
+    "Lamp",
+    "Dark"
+   ],
+   "only_in": null,
+   "in_all": true,
+   "cond": [
+    {
+     "id": "Sun",
+     "present": true,
+     "n_det": 2,
+     "n_rep": 2,
+     "area": 310000.0,
+     "area_sd": 24800.0,
+     "cv": 0.08,
+     "ratio_ref": 1.0,
+     "shape": "flat",
+     "t_max": 60,
+     "t_half_rise": 0,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 0,
+       "area": 300000.0,
+       "sd": 24000.0,
+       "n": 2
+      },
+      {
+       "t": 15,
+       "area": 310000.0,
+       "sd": 24800.0,
+       "n": 2
+      },
+      {
+       "t": 30,
+       "area": 300000.0,
+       "sd": 24000.0,
+       "n": 2
+      },
+      {
+       "t": 60,
+       "area": 320000.0,
+       "sd": 25600.0,
+       "n": 2
+      },
+      {
+       "t": 120,
+       "area": 310000.0,
+       "sd": 24800.0,
+       "n": 2
+      }
+     ],
+     "prev": {
+      "absent_t0": "fail",
+      "absent_blank": "pass",
+      "in_parent_std": "yes",
+      "above_min": "pass",
+      "ms2": "na",
+      "verdict": "Prev. unlikely"
+     }
+    },
+    {
+     "id": "Lamp",
+     "present": true,
+     "n_det": 2,
+     "n_rep": 2,
+     "area": 300000.0,
+     "area_sd": 24000.0,
+     "cv": 0.08,
+     "ratio_ref": 0.968,
+     "shape": "flat",
+     "t_max": 60,
+     "t_half_rise": 0,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 0,
+       "area": 300000.0,
+       "sd": 24000.0,
+       "n": 2
+      },
+      {
+       "t": 15,
+       "area": 300000.0,
+       "sd": 24000.0,
+       "n": 2
+      },
+      {
+       "t": 30,
+       "area": 300000.0,
+       "sd": 24000.0,
+       "n": 2
+      },
+      {
+       "t": 60,
+       "area": 310000.0,
+       "sd": 24800.0,
+       "n": 2
+      },
+      {
+       "t": 120,
+       "area": 300000.0,
+       "sd": 24000.0,
+       "n": 2
+      }
+     ],
+     "prev": {
+      "absent_t0": "fail",
+      "absent_blank": "pass",
+      "in_parent_std": "yes",
+      "above_min": "pass",
+      "ms2": "na",
+      "verdict": "Prev. unlikely"
+     }
+    },
+    {
+     "id": "Dark",
+     "present": true,
+     "n_det": 2,
+     "n_rep": 2,
+     "area": 300000.0,
+     "area_sd": 24000.0,
+     "cv": 0.08,
+     "ratio_ref": 0.968,
+     "shape": "flat",
+     "t_max": 30,
+     "t_half_rise": 0,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 0,
+       "area": 300000.0,
+       "sd": 24000.0,
+       "n": 2
+      },
+      {
+       "t": 15,
+       "area": 300000.0,
+       "sd": 24000.0,
+       "n": 2
+      },
+      {
+       "t": 30,
+       "area": 310000.0,
+       "sd": 24800.0,
+       "n": 2
+      },
+      {
+       "t": 60,
+       "area": 300000.0,
+       "sd": 24000.0,
+       "n": 2
+      },
+      {
+       "t": 120,
+       "area": 300000.0,
+       "sd": 24000.0,
+       "n": 2
+      }
+     ],
+     "prev": {
+      "absent_t0": "fail",
+      "absent_blank": "pass",
+      "in_parent_std": "yes",
+      "above_min": "pass",
+      "ms2": "na",
+      "verdict": "Prev. unlikely"
+     }
+    }
+   ]
+  }
+ ],
+ "sets": [
+  {
+   "conditions": [
+    "Sun",
+    "Lamp"
+   ],
+   "rows": [
+    0,
+    1
+   ]
+  },
+  {
+   "conditions": [
+    "Sun",
+    "Lamp",
+    "Dark"
+   ],
+   "rows": [
+    2,
+    3
+   ]
+  }
+ ],
+ "warnings": []
+}

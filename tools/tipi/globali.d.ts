@@ -85,6 +85,7 @@ declare var TOUR: any;
 declare var TPALBERO: any;
 declare var TPCALL: any;
 declare var TPDraw: any;
+declare var TPGRUPPI_FILES: any;
 declare var TPHR: any;
 declare var TPLAZY: any;
 declare var TPLIVE: any;
