@@ -222,3 +222,9 @@ impl FinderLrDig {
         o.0
     }
 }
+
+/// Progress of the low-resolution Dig: `{phase, label, done, total, frac}` for a step (`done` of `total` files in the detection), `"null"` for an unknown phase.
+#[wasm_bindgen]
+pub fn finder_lr_progress(phase: &str, done: u32, total: u32) -> String {
+    mzlab_feat::legacy::progress::json("lr", phase, done, total)
+}

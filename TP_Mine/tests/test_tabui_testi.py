@@ -73,3 +73,34 @@ def test_net_change_cell_has_subscripts_and_the_export_stays_plain():
     if shutil.which("node"):
         out = subprocess.run(["node", "-e", 'console.log("\\u2212C2H2 +O3".replace(/([A-Za-z)])(\\d+)/g, "$1<sub>$2</sub>"))'], check=True, capture_output=True, text=True).stdout.strip()
         assert out == "−C<sub>2</sub>H<sub>2</sub> +O<sub>3</sub>"
+
+
+def _lum(h):
+    if len(h) == 4:
+        h = "#" + "".join(ch * 2 for ch in h[1:])
+    c = [int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    c = [v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4 for v in c]
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+
+
+def test_green_scale_keeps_3_to_1_for_the_symbol_at_every_step():
+    css = (JS / "44_tp_riga.js").read_text(encoding="utf-8")
+    g = [re.search(rf"--tpr-g{i}:(#[0-9a-f]{{6}})", css).group(1) for i in range(5)]
+    dark, white = re.search(r"--tpr-k:(#[0-9a-f]{3,6})", css).group(1), re.search(r"--tpr-w:(#[0-9a-f]{3,6})", css).group(1)
+    assert "--tpr-c0" not in css and "--tpr-g-none:#fff" in css
+    lums = [_lum(x) for x in g]
+    assert lums == sorted(lums, reverse=True), "light to dark, one direction"
+    cr = lambda a, b: (max(a, b) + 0.05) / (min(a, b) + 0.05)
+    for k in range(101):                                   # u = 0..1; on-k below 0.6, on-w from 0.6 (TPTAB.paint)
+        u = k / 100
+        x = u * 4; i = min(3, int(x)); f = round((x - i) * 100) / 100
+        mix = "#%02x%02x%02x" % tuple(round(int(g[i][j:j + 2], 16) * (1 - f) + int(g[i + 1][j:j + 2], 16) * f) for j in (1, 3, 5))
+        fg = _lum(dark) if u < 0.6 else _lum(white)
+        assert cr(fg, _lum(mix)) >= 3, (u, mix)
+    assert cr(_lum(dark), _lum("#ffffff")) >= 3          # the empty (white) square
+
+
+def test_cells_uses_the_shared_area_scale_and_white_for_none():
+    t = (JS / "42_tp_table.js").read_text(encoding="utf-8")
+    assert not re.search(r"--tpr-c[0-4]", t) and "areaScale" in t and "AREA_NOTE" in t
+    assert not re.search(r"--tpr-c[0-4]", (JS / "44_tp_riga.js").read_text(encoding="utf-8"))

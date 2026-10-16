@@ -399,3 +399,28 @@ flowchart TD
 
 5. **Fase 5 (Opzionale)**:
    - **Chat DEV CC-B6**: implementa in `crates/mzlab-chem/src/indici.rs` le stime di IP, EA, durezza ed elettrofilicità globale $\omega$, popolando la scheda «Info» di `reattivita.js`.
+
+---
+
+## 7. Stato di Applicazione delle Correzioni nei Prompt (T14)
+
+La seguente tabella traccia lo stato di applicazione delle correzioni per ciascuno dei 15 rilievi identificati nella revisione, conformemente al piano della traccia T14.
+
+| N. | Rilievo / Problema | Prompt Coinvolti | Stato Applicazione | Dettaglio / File modificato |
+|:---:|---|---|:---:|---|
+| 1 | Violazione del budget di avvio (1.55 MB) e assenza di lazy-loading nei prompt CC-B | **CC-B3**, **CC-B4** | Applicata (T14) | Già recepita in main per CC-B3 (PR #894: `TP_Mine/lazy/`); applicata per CC-B4 in `docs/studi/PROMPT_CC_BROWSER/CC-B4.md` (`TP_Mine/lazy/` con `TPLAZY.load`). |
+| 2 | Conflitto di sequenziamento e corsa su `20_tpmine.js` (GR-3 vs GR-5) | **GR-3**, **GR-5** | Applicata (T14) | Già recepita in main per GR-3 (PR #896: rimosso innesto da GR-3); confermata proprietà esclusiva dell'innesto a GR-5 in `docs/studi/PROMPT_GRUPPI/GR-5.md`. |
+| 3 | Campo `other_polarity` mancante in `RowMeta` | **GR-1**, **GR-2** | Già recepita in main | Aggiunto `other_polarity: Option<usize>` in `RowMeta` con PR #887 (GR-1) e serializzato in `gruppi/1` con PR #899 (GR-2). |
+| 4 | Mancata dipendenza in `crates/mzlab-desktop/Cargo.toml` per `mzlab-chem` | **CC-B2** | Applicata (T14) | Aggiunta dipendenza `mzlab-chem = { path = "../mzlab-chem" }` nelle istruzioni di `docs/studi/PROMPT_CC_BROWSER/CC-B2.md`. |
+| 5 | Incoerenza di nome campo `id` vs `row` in `gruppi/1` | **GR-1**, **GR-4** | Già recepita in main | Allineata la chiave JSON a `"row"` nel modulo Rust `gruppi` con PR #887 (GR-1) e nella vista con PR #889 (GR-4). |
+| 6 | Comportamento non definito per 2 tempi trattati in `shape` | **GR-1** | Già recepita in main | Gestito in `crates/mzlab-feat/src/gruppi/forme.rs` (`rising`, `decay`, `flat`, escluso `bell`) con PR #887 (GR-1). |
+| 7 | Assenza di `[M+H]+ formula` in `gruppi/1` per export CSV HR | **GR-1**, **GR-4**, **GR-6** | Applicata (T14) | Specificato in `docs/studi/PROMPT_GRUPPI/GR-6.md` l'inserimento di `ion_formula: Option<String>` e `other_polarity` nell'uscita Rust per l'export CSV HR. |
+| 8 | Rilevamento legami idrogeno (`hbonds`) non assegnato | **CC-B1**, **CC-B2** | Applicata (T14) | Assegnato esplicitamente il calcolo geometrico di `hbonds` in `mol3d.rs` o `geom/` in `docs/studi/PROMPT_CC_BROWSER/CC-B2.md`. |
+| 9 | Nullabilità indici globali e blocco `scc` sotto fallback EHT | **CC-B2**, **CC-B3**, **CC-B6** | Applicata (T14) | Esplicitata la nullabilità di `global.*_ev` (`Option<f64>`) e specificata la risposta di `scc` sotto EHT in `docs/studi/PROMPT_CC_BROWSER/CC-B6.md`. |
+| 10 | Mancato incremento versione bridge in `crates/mzlab-feat-grafo-wasm` | **CC-B5** | Applicata (T14) | Istruito l'aggiornamento della costante bridge WASM a `"mzfeat-grafo/5"` in `docs/studi/PROMPT_CC_BROWSER/CC-B5.md`. |
+| 11 | Mancanza di dipendenza dell'infrastruttura `TPLAZY` per GR-4 | **GR-3**, **GR-4** | Già recepita in main | GR-3 ha rilasciato `TPLAZY` in PR #896 e GR-4 ha operato con pagina di prova dedicata, confluendo in main con PR #889. |
+| 12 | Testi e note in italiano nelle specifiche dell'interfaccia | **CC-B3**, **CC-B4** | Applicata (T14) | Nota in inglese recepita per CC-B3 in main (PR #894); opzioni in inglese ("Solvent: Water / None", "Conformers: 8") applicate in `docs/studi/PROMPT_CC_BROWSER/CC-B4.md`. |
+| 13 | Ambiguità sull'effetto di `in_parent_std` su `prev.verdict` | **GR-1**, **GR-6** | Applicata (T14) | Confermato in `gruppi/prev.rs` (PR #887) e chiarito espressamente in `docs/studi/PROMPT_GRUPPI/GR-6.md` come flag solo informativo senza effetto negativo sul verdetto. |
+| 14 | Criterio prestazionale di fine non quantificato numericamente | **CC-B4** | Applicata (T14) | Quantificata la soglia di incremento ≤ 5% (o ≤ 200 ms) in `docs/studi/PROMPT_CC_BROWSER/CC-B4.md`. |
+| 15 | Potenziale divisione per zero in `ratio_ref` | **GR-1**, **GR-2**, **GR-6** | Applicata (T14) | Gestito in Rust con PR #887 e PR #899; specificato in `docs/studi/PROMPT_GRUPPI/GR-6.md` che con `area(rif) <= 0.0` il valore è serializzato come `null`. |
+

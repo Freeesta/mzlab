@@ -14,6 +14,9 @@
 .tp .live li.ph[data-s=run]{font-weight:600}.tp .live li.ph[data-s=wait],.tp .live li.ph[data-s=skip]{color:var(--muted)}.tp .live li.ph[data-s=done] .pi{color:var(--ok)}
 .tp .live .cand{display:grid;grid-template-columns:34px 1fr auto auto;gap:8px;align-items:baseline;font-size:12px;padding:1px 4px;border-bottom:1px solid var(--line)}
 .tp .live .cand b{text-align:right}.tp .live .cands{max-height:30vh;overflow:auto;border:1px solid var(--line);border-radius:6px;margin:6px 0}
+.tp .live .lhead{display:flex;gap:10px;align-items:center;margin:0 0 6px;font-size:13px}.tp .live .lhead .grow{flex:1}
+.tp .live progress{display:block;width:100%;height:6px;margin-top:2px;accent-color:var(--acc,#2b5c8a)}
+.tp .live button.lcancel{min-height:32px;min-width:80px}
 .tp .live .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}`;
   const fmt = s => s < 10 ? s.toFixed(1) + " s" : Math.round(s) + " s";
   let cur = null;
@@ -22,20 +25,25 @@
     stop();
     if (!document.getElementById("tp-live-css")) { const st = document.createElement("style"); st.id = "tp-live-css"; st.textContent = CSS; document.head.appendChild(st); }
     const esc = h.esc, list = PH[hr ? "hr" : "lr"];
-    R.innerHTML = `<div class="card live" id="tp-live"><h3>Digging...</h3><div class="sr" id="tp-live-sr" role="status" aria-live="polite"></div>
+    R.innerHTML = `<div class="card live" id="tp-live" tabindex="-1"><h3>Digging...</h3>
+      <div class="lhead"><span id="tp-live-el" class="mut">0.0 s</span><span id="tp-live-eta" class="mut grow"></span>${h.cancel ? `<button type="button" class="lcancel" id="tp-live-cancel" aria-label="Cancel the Dig (Escape)">Cancel</button>` : ""}</div><div class="sr" id="tp-live-sr" role="status" aria-live="polite"></div>
       <ol id="tp-live-ph" aria-label="Phases">${list.map(([k, n]) => `<li class="ph" data-ph="${k}" data-s="wait"><span class="pi" aria-hidden="true">○</span><span>${esc(n)}</span><span class="mut pt">waiting</span></li>`).join("")}</ol>
       <div id="tp-live-f" class="mut"></div>
       <div id="tp-live-c" hidden><div class="mut">Candidates that pass the criteria (provisional score)</div><div class="cands" id="tp-live-cl"></div></div>
       ${hr ? `<div id="tp-live-t" hidden></div>` : ""}</div>`;
     const st = { R, hr, h, list, t0: performance.now(), ph: null, tph: 0, cands: new Map(), nodes: [], files: [], alb: null, timer: /** @type {any} */ (null), last: new Map() };
     st.timer = setInterval(() => tick(st), 500);
-    cur = st;
+    cur = st; st.frac = 0;
+    const cb = R.querySelector("#tp-live-cancel"), live = R.querySelector("#tp-live");
+    const cancel = () => { if (!h.cancel || !cb || cb.disabled) return; cb.disabled = true; cb.textContent = "Cancelling..."; h.cancel(); };
+    if (cb && live) { cb.onclick = cancel; live.addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); cancel(); } }); cb.focus({ preventScroll: true }); }
   }
 
   function setPhase(st, k) {
     const now = performance.now();
     if (st.ph) finish(st, st.ph, now);
     st.ph = k; st.tph = now;
+    if (typeof DIAG !== "undefined") DIAG.LONG.marca(k);      // the long tasks of the page are told apart by phase (diagnosi.js)
     const li = st.R.querySelector(`li[data-ph="${k}"]`);
     if (!li) return;
     // phases skipped before this one (not announced by the engine) are shown as such
@@ -49,11 +57,25 @@
     if (li && li.dataset.s === "run") { const d = (now - st.tph) / 1000; st.last.set(k, d); mark(li, "done", "✓", fmt(d)); }
   }
   function tick(st) {
-    if (!st.ph || !st.R.isConnected) return;
+    if (!st.R.isConnected) return;
+    const el = (performance.now() - st.t0) / 1000, e = st.R.querySelector("#tp-live-el"), eta = st.R.querySelector("#tp-live-eta");
+    if (e) e.textContent = fmt(el);
+    // the time left is shown only when the fraction is far enough for it to mean something; the weights of the phases are a model, hence «about»
+    if (eta) eta.textContent = st.frac >= 0.2 && st.frac < 0.98 && el >= 3 ? `about ${fmt(Math.max(1, el * (1 - st.frac) / st.frac))} left` : "";
+    if (!st.ph) return;
     const li = st.R.querySelector(`li[data-ph="${st.ph}"]`);
     if (li && li.dataset.s === "run") li.children[2].textContent = fmt((performance.now() - st.tph) / 1000);
   }
 
+  /** «k of N» and a bar in the row of a phase that goes file by file (the engine says how many are done) */
+  function count(st, k, done, total) {
+    const li = st.R.querySelector(`li[data-ph="${k}"]`); if (!li) return;
+    let pr = /** @type {HTMLProgressElement | null} */ (li.querySelector("progress"));
+    if (!pr) { pr = document.createElement("progress"); pr.setAttribute("aria-label", `${li.children[1].textContent}: files done`); li.children[1].appendChild(pr); }
+    pr.max = total; pr.value = done;
+    const c = li.querySelector(".pc") || (() => { const x = document.createElement("span"); x.className = "pc mut"; x.style.marginLeft = "6px"; li.children[1].insertBefore(x, pr); return x; })();
+    c.textContent = ` ${done} of ${total}`;
+  }
   function addPayload(st, p) {
     if (p.kind === "candidate") {
       st.cands.set(p.id, p); drawCands(st);
@@ -82,6 +104,8 @@
   function event(m) {
     const st = cur; if (!st || !st.R.isConnected) return;
     if (m.phase && m.phase !== st.ph) setPhase(st, m.phase);
+    if (typeof m.frac === "number" && m.frac >= st.frac) st.frac = m.frac;      // never goes back
+    if (m.total > 1 && m.phase) count(st, m.phase, m.done, m.total);
     if (Array.isArray(m.payload)) m.payload.forEach(p => addPayload(st, p));
   }
   function stop(ok) {
@@ -89,6 +113,7 @@
     clearInterval(st.timer); cur = null;
     if (!st.R.isConnected) return;
     if (st.ph) finish(st, st.ph, performance.now());
+    const cb = st.R.querySelector("#tp-live-cancel"); if (cb) cb.remove();
     if (!ok) { const t = st.R.querySelector("#tp-live h3"); if (t) t.textContent = "Stopped"; }
     st.R.querySelectorAll('li[data-s="wait"]').forEach(l => mark(l, "skip", "–", "not needed"));
   }
