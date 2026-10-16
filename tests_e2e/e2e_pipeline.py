@@ -320,7 +320,7 @@ try:
             assert "Open " not in pg.inner_text("#tp-det"), pg.inner_text("#tp-det")[:300]
             pg.wait_for_function("document.querySelectorAll('#tp-det .tpr-ov svg path.tr').length >= %d" % len(names), timeout=60000)
             if re.search(r"RT [\d.]+ min \(", pg.inner_text("#tp-det .tpr-line")):         # the engine gave the borders of this row
-                assert pg.locator("#tp-det .tpr-ov svg .band").count() >= 1, "peak borders are shaded"
+                pg.wait_for_selector("#tp-det .tpr-ov svg .band", state="attached", timeout=15000)      # peak borders are shaded
             pg.locator("#tp-det .tpr-ov svg").first.focus(); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
             assert pg.locator("#tdati tbody tr").count() >= 3; pg.keyboard.press("Escape"); pg.wait_for_selector("#tdati", state="detached")
             out = os.environ.get("MZLAB_PIPE_SHOTS")
