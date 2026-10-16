@@ -260,6 +260,12 @@ impl<R: ReadAt> Index<R> {
             return Err(bad());
         }
         r.read_at(0, &mut h)?;
+        if let Some(v) = crate::idxnuovo::newer_version(&h) {
+            // never taken for damaged: it is a file of a newer program, to be left as it is
+            return Err(Error::new("error.newerFormat")
+                .with("kind", "mzidx")
+                .with("version", v));
+        }
         if &h[..8] != b"MZIDX001" || u64_at(&h, 48) != size {
             return Err(bad());
         }

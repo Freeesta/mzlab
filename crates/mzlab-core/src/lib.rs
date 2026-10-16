@@ -33,6 +33,7 @@ pub mod provenance;
 pub mod gradient;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod idxcache;
+pub mod idxnuovo;
 pub mod idxread;
 pub mod isoscore;
 pub mod itemroutes;

@@ -92,7 +92,9 @@ try:
         def remove_one():
             load_files(); pg.evaluate("redrawAll()"); pg.wait_for_timeout(1500)
             before = pg.evaluate(STATE)["mzlab"]; k = pg.evaluate("E.files[0].file.split('#')[0]"); assert any(k in n for n in before), (k, before)
-            pg.evaluate("void removeFile(E.files[0])"); pg.wait_for_selector("#askdlg[open]"); pg.click("#askok")
+            pg.evaluate("void removeFile(E.files[0])"); pg.wait_for_selector("#tolto-box .tolto")
+            assert any(k in n for n in pg.evaluate(STATE)["mzlab"]), "while «Undo» is offered the copy stays"
+            pg.wait_for_function("!document.querySelector('#tolto-box .tolto')", timeout=15000)      # the notice closes without an undo: the copy is freed
             pg.wait_for_timeout(1500)
             after = pg.evaluate(STATE)["mzlab"]; assert not any(k in n for n in after), ("the file and its index are freed", k, after)
             assert pg.evaluate("E.files.filter(f => !f.gone).length") >= 1

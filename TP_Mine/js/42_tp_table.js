@@ -48,7 +48,7 @@
 
   /**
    * @typedef {{ key: string, label: string, title?: string, help?: string, num?: boolean, off?: boolean, sticky?: boolean, width?: number, sort?: (r: any) => number | string | null, cell: (r: any) => string, text?: (r: any) => string }} Col
-   * @typedef {{ key: string, label: string, help?: string, test: (r: any) => boolean, on?: boolean, off?: string }} Chip
+   * @typedef {{ key: string, label: string, help?: string, test: (r: any) => boolean, on?: boolean, off?: string, group?: string }} Chip
    * @typedef {{ key: string, label: string, help?: string }} Tab
    * @typedef {{ id: string, cols: Col[], rowId: (r: any) => number, name: (r: any) => string, onOpen: (id: any, panel: HTMLElement, tab?: string) => void, onSort?: (key: string, dir: number) => void, esc: (s: any) => string, label?: string, panelId?: string,
    *   chips?: Chip[], search?: (r: any) => string, onFilter?: (keys: string[]) => void, onCount?: (shown: number, total: number) => void, pin?: (r: any) => boolean, tabs?: Tab[], head?: (r: any, box: HTMLElement) => void, height?: number, columns?: boolean,
@@ -178,7 +178,9 @@
     const chipTests = () => (o.chips || []).filter(c => st.chips.has(c.key));
     function derive() {
       const ts = chipTests(), q = st.q.trim().toLowerCase();
-      const ok = (/** @type {any} */ r) => ts.every(c => c.test(r)) && (!q || !o.search || o.search(r).toLowerCase().includes(q));
+      const groups = new Map(), alone = /** @type {Chip[]} */ ([]);       // chips with the same `group` add rows (any of them); the others narrow the list (all of them)
+      for (const c of ts) if (c.group) groups.set(c.group, [...(groups.get(c.group) || []), c]); else alone.push(c);
+      const ok = (/** @type {any} */ r) => alone.every(c => c.test(r)) && [...groups.values()].every(g => g.some((/** @type {Chip} */ c) => c.test(r))) && (!q || !o.search || o.search(r).toLowerCase().includes(q));
       const pinned = o.pin ? st.rows.filter(r => /** @type {Function} */ (o.pin)(r)) : [];
       const rest = (o.chips || o.search) ? st.rows.filter(r => !(o.pin && o.pin(r)) && ok(r)) : st.rows.filter(r => !(o.pin && o.pin(r)));
       st.pinned = pinned; st.rest = sortRows(rest, o.cols.find(x => x.key === st.sort), st.dir); st.list = [...pinned, ...st.rest];
@@ -283,15 +285,16 @@
     panel.addEventListener("click", e => { const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("[role=tab]")); if (b && b.dataset.tab) selectTab(b.dataset.tab, false); });
 
     // ---- chips, search, "Columns" and "Export view"
-    host.querySelectorAll("[data-chip]").forEach(b => b.addEventListener("click", () => {
-      if (b.getAttribute("aria-disabled") === "true") return;
-      const k = /** @type {string} */ (/** @type {HTMLElement} */ (b).dataset.chip), on = !st.chips.has(k);
+    /** @param {string} k @param {boolean} on */
+    function setChip(k, on) {
+      const b = host.querySelector(`[data-chip="${k}"]`); if (!b || b.getAttribute("aria-disabled") === "true") return;
       if (on) st.chips.add(k); else st.chips.delete(k);
       b.setAttribute("aria-pressed", String(on)); lsSet(kChips, JSON.stringify([...st.chips]));
       if (o.onFilter) o.onFilter([...st.chips]);
       if (isVirt()) wrap.scrollTop = 0;
       refresh();
-    }));
+    }
+    host.querySelectorAll("[data-chip]").forEach(b => b.addEventListener("click", () => { const k = /** @type {string} */ (/** @type {HTMLElement} */ (b).dataset.chip); setChip(k, !st.chips.has(k)); }));
     const q = /** @type {HTMLInputElement | null} */ (host.querySelector(".tpt-q"));
     if (q) q.addEventListener("input", () => { st.q = q.value; refresh(); });
     host.querySelectorAll("[data-vc]").forEach(b => b.addEventListener("change", () => {
@@ -342,7 +345,9 @@
       if (o.onFilter) o.onFilter([]);
       refresh();
     }
-    return { setCols, enableChip, reset,
+    return { setCols, enableChip, reset, setChip,
+      /** the keys of the chips that are on */
+      get chips() { return [...st.chips]; },
       /** all the rows (the chips and the search filter them here); the open row stays open if it is still shown, else it is closed @param {any[]} rows */
       setRows(rows) { st.rows = rows; refresh(); },
       open, close, toggle, sortBy,
