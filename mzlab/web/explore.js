@@ -908,6 +908,9 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") { /** @type 
 // CSV/TSV text carries its provenance line (PROV, schema provenienza/1) by default; prov = the fields the export knows ({table, p, file}), or false for a file made for another program (mzFinder).
 // `text` is a string, a Blob/Uint8Array or an (async) iterable of those: an iterable, or a string/Blob over 8 MB, goes piece by piece through OPFS (export-pezzi.js) with the same bytes.
 async function dl(name, text, type = "application/octet-stream", prov = undefined) {
+  const iter = typeof text !== "string" && !(text instanceof Blob) && !(text instanceof Uint8Array) && !!text && (Symbol.asyncIterator in text || Symbol.iterator in text);
+  const size = iter ? 0 : typeof text === "string" ? text.length : text.size || text.byteLength || 0;
+  if ((iter || size >= 8 << 20) && window.carica) await window.carica("m:export-pezzi.js").catch(console.error);          // the piece-by-piece writer is loaded on the first big export
   const EP = /** @type {any} */ (window).EXPORT_PEZZI, tab = /csv|tab-separated/.test(type);
   if (prov !== false && tab && typeof text === "string") text = await PROV.tsv(text, prov || {});
   else if (prov !== false && tab && EP && EP.isIter(text)) { const src = text; text = (async function* () { let first = true; for await (const p of src) { yield first && typeof p === "string" ? await PROV.tsv(p, prov || {}) : p; first = false; } })(); }
