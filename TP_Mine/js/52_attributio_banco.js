@@ -241,7 +241,7 @@
     const f = ctx.list[ctx.index];
     let sec = /** @type {HTMLElement | null} */ (ctx.host.querySelector("#at-banco"));
     if (!sec) {
-      sec = document.createElement("section"); sec.id = "at-banco"; sec.className = "bn"; sec.setAttribute("aria-label", "Banco 2b"); ctx.host.textContent = ""; ctx.host.appendChild(sec);
+      sec = document.createElement("section"); sec.id = "at-banco"; sec.className = "bn"; sec.setAttribute("aria-label", "Bench 2b"); ctx.host.textContent = ""; ctx.host.appendChild(sec);
       sec.addEventListener("keydown", ev => {
         const t = /** @type {HTMLElement} */ (ev.target), typing = /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) && !(t.tagName === "INPUT" && /** @type {HTMLInputElement} */ (t).type === "checkbox");
         if (ev.key === "Escape") close();
@@ -249,17 +249,17 @@
       });
     }
     sec.setAttribute("aria-busy", "true");
-    sec.innerHTML = `<h3>Banco 2b · ${esc(f.pol)} ${esc(f.id)} <span class="mut">(${ctx.index + 1} of ${n})</span></h3><p role="status">Reviewing…</p>`;
+    sec.innerHTML = `<h3>Bench 2b · ${esc(f.pol)} ${esc(f.id)} <span class="mut">(${ctx.index + 1} of ${n})</span></h3><p role="status">Reviewing…</p>`;
     try {
       st.rev = await ctx.pool.attributioReview(ctx.files, ctx.root, f.pol, f.id); st.zoom = null;
     } catch (e) {
       const x = /** @type {any} */ (e);
-      sec.innerHTML = `<h3>Banco 2b · ${esc(f.pol)} ${esc(f.id)}</h3><p class="err" role="alert">${esc((x && x.params && x.params.detail) || (x && x.message) || String(e))}</p><button type="button" data-bn="close" aria-label="Close the Banco">Close</button>`;
+      sec.innerHTML = `<h3>Bench 2b · ${esc(f.pol)} ${esc(f.id)}</h3><p class="err" role="alert">${esc((x && x.params && x.params.detail) || (x && x.message) || String(e))}</p><button type="button" data-bn="close" aria-label="Close Bench 2b">Close</button>`;
       sec.querySelector("[data-bn=close]")?.addEventListener("click", close); sec.removeAttribute("aria-busy"); return;
     }
     const rev = st.rev;
-    sec.innerHTML = `<div class="row"><h3 tabindex="-1" id="bn-h">Banco 2b · ${esc(rev.pol)} ${esc(rev.id)} · m/z ${num(rev.mz)} · RT ${num(rev.rt, 2)} <span class="mut">(${ctx.index + 1} of ${n})</span></h3>
-      <button type="button" data-bn="prev" aria-label="Previous feature">←</button><button type="button" data-bn="next" aria-label="Next feature">→</button><button type="button" data-bn="close" aria-label="Close the Banco">Close</button></div>`
+    sec.innerHTML = `<div class="row"><h3 tabindex="-1" id="bn-h">Bench 2b · ${esc(rev.pol)} ${esc(rev.id)} · m/z ${num(rev.mz)} · RT ${num(rev.rt, 2)} <span class="mut">(${ctx.index + 1} of ${n})</span></h3>
+      <button type="button" data-bn="prev" aria-label="Previous feature">←</button><button type="button" data-bn="next" aria-label="Next feature">→</button><button type="button" data-bn="close" aria-label="Close Bench 2b">Close</button></div>`
       + body(rev);
     sec.removeAttribute("aria-busy");
     for (const b of sec.querySelectorAll("[data-bn]")) b.addEventListener("click", () => { const k = /** @type {HTMLElement} */ (b).dataset.bn; if (k === "close") close(); else show(ctx.index + (k === "next" ? 1 : -1)); });

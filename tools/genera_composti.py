@@ -16,7 +16,7 @@ NAMES = ROOT / "tools" / "composti_nomi.txt"
 OUT = ROOT / "TP_Mine" / "data" / "composti.csv"
 URL = "https://zenodo.org/api/records/22953038/files/PubChemLite_exposomics_20260925.csv/content"
 SHA256 = "6a258459e1ccf29a5d08e82fcf5240a2fc8afbabe5ba9c678e39aa0801dd89cd"   # PubChemLite for Exposomics 3.3.0, 2026-09-25
-COLS = ["names", "formula", "mass", "smiles", "inchikey"]
+COLS = ["names", "neutral_formula", "mass", "smiles", "inchikey"]
 
 csv.field_size_limit(1 << 24)
 

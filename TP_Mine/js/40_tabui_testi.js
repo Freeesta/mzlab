@@ -114,7 +114,7 @@
     "ft.col.basis": "What the level rests on: spectral library, standard, predicted structure, the chemist's judgement.",
     "ft.col.reasons": "Why the level is this one: the checks passed or failed, in words.",
     "ft.tab.members": "The features of the group, with the role of each in the neutral mass; a button opens the feature.",
-    "ft.go.banco": "Opens the Banco 2b on this feature, to review it and decide the level."
+    "ft.go.banco": "Opens Bench 2b on this feature, to review it and decide the level."
   }
   };
   /** @param {string} key @param {Record<string, string | number>} [params] */

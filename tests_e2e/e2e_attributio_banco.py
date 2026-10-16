@@ -71,7 +71,7 @@ try:
         def opens():
             pg.click(TG15); pg.click("#at-det button[data-act=banco]"); pg.wait_for_selector("#bn-save", timeout=120000)
             txt = pg.inner_text("#at-banco")
-            assert "2b-check" in txt and "Metacetamol" in txt and "Banco 2b" in txt, txt[:600]
+            assert "2b-check" in txt and "Metacetamol" in txt and "Bench 2b" in txt, txt[:600]
             boxes = pg.evaluate("[...document.querySelectorAll('#at-banco [data-chk]')].map(c => c.checked)")
             assert boxes == [False] * 6, boxes
             assert "3 of 3 peaks explained" in txt
