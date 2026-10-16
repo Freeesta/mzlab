@@ -1,0 +1,40 @@
+# GR-3 — Tabella dei file con «Condition», condizione di riferimento, `campioni/2` in Tabui LR, caricamento pigro
+
+Prompt pronto per una chat DEV: copia tutto ciò che segue la riga «---». Parte subito, in parallelo con GR-1 e GR-4.
+
+---
+
+Pacchetto GR-3 dello studio `docs/studi/TABUI_GRUPPI_ESPERIMENTI.md` (leggi Sintesi, §1, §2, §4 punto 1, §5). File d'area: `docs/agenti/campioni.md` (sezione «Pannello Pipeline»), `docs/agenti/mzfinder.md` (righe «Caricamento», «Testi e aiuto di Tabui»), `docs/agenti/mzfinder-lr.md`. Codice: `TP_Mine/files/finder-ruoli.js` (riusalo, non copiarlo), `TP_Mine/js/34_pipeline_run.js` (tabella dei ruoli della Pipeline, come esempio), `tools/build_site.py::pack_mzfinder`, `mzlab/web/tpmine-loader.js`, `TP_Mine/js/20_tpmine.js:230-290` e `:480` (solo lettura: la tabella dei file e i file passati al Dig).
+
+## Obiettivo
+In Tabui LR ogni file ha ruolo, condizione, tempo e replica nel modello `campioni/2` (`NB.campioni`), proposti dai nomi e modificabili; l'utente sceglie la condizione di riferimento. Nasce il caricamento pigro dei file di Tabui.
+
+## Da fare
+1. **Caricamento pigro**: cartella `TP_Mine/lazy/`; `pack_mzfinder` la copia in `site/static/mzfinder/lazy/` e la elenca in `indice.json` sotto `"lazy"`; `tpmine-loader.js` espone `window.TPLAZY.load(name) → Promise<void>` (uno `<script>` per file, una volta sola, errori come gli altri script di mzFinder; la CSP resta quella di oggi). Un e2e controlla che aprendo Tabui nessuna richiesta vada a `lazy/`.
+2. **`TP_Mine/lazy/gruppi-campioni.js`** (`// @ts-check`, in `tools/tipi/pagina.json`): `window.TPGRUPPI_FILES.mount(el, files, opts)` disegna la tabella File | Role | Condition | Time | Replicate con `select`/`input` nativi, `aria-label`, fuoco ripristinato dopo ogni modifica (come la Pipeline); «Condition» con `datalist` delle etichette usate; selezione multipla + «Set condition…»; «Confirm conditions» (le proposte sono gialle finché non confermate, stato della pagina); `select` «Reference condition» (default dello studio §4.1); avvisi di `valida` per condizione in `role=status` con testi inglesi brevi. Ruoli, tempi, condizioni proposti da `finder-ruoli.js` (`build`, `check`), che a sua volta chiama il Rust: nessuna regola sui nomi in JS.
+3. **Innesto minimo**: se #871 e #873 sono in `main`, in `20_tpmine.js` la tabella dei file chiama `TPLAZY.load("gruppi-campioni.js")` e `TPGRUPPI_FILES.mount` al posto della tabella attuale quando i file full sono ≥ 2, e passa al Dig `campioni` (canonico) e `reference`; la tabella di oggi resta come ripiego finché lo script non è caricato. Se quelle PR non sono in `main`, lascia l'innesto a GR-5: consegna il componente con la sua pagina di prova e l'e2e, e scrivilo nella PR.
+4. **Persistenza**: `NB.campioni` (già usato dalla Pipeline, stessa chiave per file) e `NB.gruppi_opts` (`{reference, min_rep_frac, min_area}`); nessuna chiave nuova in `localStorage`.
+5. Riga nuova in `docs/agenti/mzfinder.md` («Caricamento pigro») e in `docs/agenti/gruppi.md` (se GR-1 l'ha già creato; altrimenti in `docs/agenti/mzfinder.md`).
+
+## Prove
+- `tests_e2e/e2e_tabui_gruppi_file.py` (`lib.py` → `Run`): con i file sintetici (`tools/dati_sintetici.py`; se `gruppi` non c'è ancora, copie rinominate `G_O2_t60…` dei file «B»), condizioni proposte giuste, «Set condition…» su 2 file, riferimento scelto, tastiera (Tab, frecce nel `select`, Invio su «Confirm conditions»), ricarica della pagina = stesso stato da `NB`; nessuna richiesta a `lazy/` prima dell'apertura della tabella; `window.MZLAB_LR_MISS` vuoto; `e2e_tour` verde.
+- `python3 tools/controlla.py` (tipi 0 errori nel file nuovo, nessun italiano nei testi di Tabui).
+
+## Atteso
+Componente della tabella dei file con condizioni e riferimento, caricamento pigro, innesto se le PR sono unite. Nessun calcolo in JS.
+
+## Regole comuni (valgono per tutta la chat)
+- Sei una chat DEV di mzLab (repository `Freeesta/mzlab`). Il titolo della chat inizia con «mzLab» (per esempio «mzLab GR-1 gruppi in Rust»). Il Coordinatore è la sessione che ti ha mandato questo prompt (il suo id è nel messaggio di avvio): a fine lavoro UN messaggio con `send_message` (al massimo 5 righe: PR, CI, pages, misure, cosa resta). Se manca l'id, scrivi lo stesso riassunto nella descrizione della PR.
+- AGENTS.md è nel tuo contesto: rispettalo. Leggi SOLO lo studio `docs/studi/TABUI_GRUPPI_ESPERIMENTI.md` (§ indicati), i file d'area e i file elencati nel prompt. Per trovare codice: `python3 tools/indice.py` poi `grep -n`, oppure il subagente `cercatore`. Letture a intervalli, niente file interi grandi.
+- **Il programma propone, il chimico decide**: ogni giudizio su un TP è un suggerimento «Prev.» con la sua prova; nessuna funzione dichiara un TP confermato né assegna un livello di Schymanski; nessuna riga si toglie per un criterio di gruppo.
+- **Rust per ogni calcolo** (medie, rapporti, insiemi, forme, criteri: `crates/mzlab-feat/src/gruppi/` e i moduli del prompt); JS solo interfaccia (legge `gruppi/1` e lo disegna o lo formatta); Python solo strumenti e test (`tools/`, `tests/`), mai nel sito. Codice e commenti in inglese.
+- **Tabui solo in inglese**: tabelle, tooltip, messaggi, file esportati e loro nomi; nessuna chiave `lang/` per Tabui (eccezione di `docs/agenti/mzfinder.md`; i testi stanno nel catalogo inglese di `40_tabui_testi.js` o nel file nuovo). «Formula» mai da sola: «Neutral formula» o «[M+H]+ formula». Aree in notazione scientifica. Nessuna etichetta alpha/beta, niente di nascosto salvo la modalità amministratore che già contiene Tabui.
+- **Velocità**: non appesantire l'avvio. I file JS nuovi stanno in `TP_Mine/lazy/` e si caricano con `TPLAZY.load` alla prima apertura (meccanismo creato da GR-3); mai un file nuovo in `TP_Mine/js/`.
+- **File aperti da altre PR**: `TP_Mine/js/20_tpmine.js` e `TP_Mine/js/42_tp_table.js` sono toccati dalle PR #863, #871, #873 (e da quella dei tooltip senza «?»). Parti da file NUOVI; tocca quei due file solo se il prompt lo dice e solo dopo che quelle PR sono in `main` (`git log origin/main --oneline -- TP_Mine/js/42_tp_table.js TP_Mine/js/20_tpmine.js`; se non lo sono, fermati e scrivi al Coordinatore).
+- Non toccare: `.github/workflows/`, `.claude/settings.json`, `mzlab/web/teoria/`, `crates/mzlab-core` salvo il prompt lo dica, i nomi dei dati utente (`qqq_lab`, `qqq.*`).
+- **Repository pubblico**: solo dati sintetici (`tools/dati_sintetici.py`, `TP_Mine/tests/lr_synth.py`) e composti pubblici; MAI dati del repository privato copiati qui; nessun cognome di `nomi_vietati.txt` (`python3 -m pytest -q tests/test_esempi_anonimi.py`).
+- **Documenti**: righe nuove nel file d'area del prompt (≤ 25 KB, righe ≤ 600 caratteri, stato attuale senza «ora/prima» né numeri di PR); aggiorna la riga del tuo pacchetto nella tabella di §9 dello studio (stato, misure).
+- Funzioni ≤ 80 righe; test Rust in file a sé (`crates/<crate>/tests/*.rs`); rustfmt solo sui file che tocchi (mai `cargo fmt` del repository); `python3 tools/controlla.py` verde; un file JS nuovo con `// @ts-check` in `tools/tipi/pagina.json` e 0 errori; ogni grafico nuovo con la sua tabella `TDATI`, colori da variabili CSS (Okabe-Ito), tastiera e `aria-label`, bersagli ≥ 24×24 px (40 al tocco), zoom senza trascinamento, `prefers-reduced-motion`.
+- Prove: `cargo test --release` dei crate toccati, `python3 tools/verifica.py --cambiati` (in cloud: `docs/agenti/ambiente-cloud.md`; prima degli e2e di mzFinder `python3 tools/build_site.py`, poi cancella `site/`), un e2e nel browser se tocchi la pagina (un front end non provato nel browser è rotto), `window.MZLAB_LR_MISS` vuoto.
+- Flusso: ramo `claude/<argomento>` da `origin/main`, PR non bozza, merge con merge commit quando la CI della PR è verde, poi controlla che il workflow «pages» del commit su `main` sia riuscito. Un criterio dello studio §8 non raggiunto o una scelta tra due comportamenti: PR aperta con la spiegazione e domanda al Coordinatore, niente merge.
+- Se il contesto supera 200k token a fine PR: blocco di consegna al Coordinatore (AGENTS.md §2) e fermati.
