@@ -66,13 +66,13 @@ impl Sheet {
     }
 }
 
-/// The text of a cell for a CSV: numbers as the shortest text that reads back the same, `true`/`false`, nothing for a missing cell.
+/// The text of a cell for a CSV: numbers as Python shows a float (`4.0`, `1e-05`), `true`/`false`, nothing for a missing cell.
 pub fn cell_text(c: &Cell) -> String {
     match c {
         Cell::Null => String::new(),
         Cell::Bool(b) => b.to_string(),
         Cell::Int(i) => i.to_string(),
-        Cell::Num(v) => v.to_string(),
+        Cell::Num(v) => super::pyfmt::py_float(*v),
         Cell::Str(s) => s.clone(),
     }
 }

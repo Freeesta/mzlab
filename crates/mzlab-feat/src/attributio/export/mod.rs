@@ -5,3 +5,7 @@ pub mod pyfmt;
 pub mod wide;
 pub mod ctx;
 pub mod schymanski;
+pub mod publication;
+pub mod publication_ids;
+pub mod publication_readme;
+pub mod publication_text;

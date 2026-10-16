@@ -22,9 +22,9 @@ pub fn matrix_and_sites(c: &Campaign, matrix: Option<&str>) -> Result<(String, V
     let name = match matrix {
         Some(m) => m.to_string(),
         None => c
-            .matrices
-            .first()
-            .map(|(k, _)| k.clone())
+            .diagnostics_matrix
+            .clone()
+            .or_else(|| c.matrices.first().map(|(k, _)| k.clone()))
             .ok_or_else(|| CampaignError::campaign("the campaign declares no matrix"))?,
     };
     let sites = c
@@ -140,6 +140,9 @@ pub struct FRow<'a> {
     pub gp: GnpsProv,
     pub mz_method: Option<String>,
     pub mz_usi: Option<String>,
+    pub mz_entry: Option<String>,
+    /// Whether the RT-logP fit flags the feature as an outlier.
+    pub rt_outlier: bool,
     /// Area at each site of the matrix (zero when the feature is not DETECTED).
     pub area: Vec<f64>,
     pub total_area: f64,
@@ -230,6 +233,10 @@ pub fn feature_rows<'a>(c: &Campaign, io: &Io, l: &'a Loaded) -> Result<Vec<FRow
                 mz_usi: hit
                     .and_then(|h| h.usi.clone())
                     .filter(|_| f.mzlib.name.is_some()),
+                mz_entry: hit
+                    .and_then(|h| h.entry.clone())
+                    .filter(|_| f.mzlib.name.is_some()),
+                rt_outlier: fit.is_some_and(|x| x.outlier),
                 total_area: area.iter().sum(),
                 area,
                 rt_z: fit.and_then(|x| x.z),

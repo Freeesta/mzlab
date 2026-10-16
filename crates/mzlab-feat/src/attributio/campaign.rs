@@ -183,6 +183,10 @@ pub struct Campaign {
     pub quantification: Table,
     /// `[gradient] same_sorbent`: the fold change of the gradient compares the same ion with the same sorbent.
     pub gradient_same_sorbent: bool,
+    /// `[diagnostics] matrix`: the matrix the exports use when none is asked.
+    pub diagnostics_matrix: Option<String>,
+    /// `[diagnostics] rt_logp_watchlist`, lowercase: names flagged for a hand check in the publication table.
+    pub rt_logp_watchlist: Vec<String>,
     pub count_2b_as_2: bool,
     pub review: Table,
     pub annotation: Table,

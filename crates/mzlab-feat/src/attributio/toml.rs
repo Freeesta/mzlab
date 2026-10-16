@@ -290,6 +290,12 @@ impl Value {
             _ => None,
         }
     }
+    pub fn as_array(&self) -> Option<&[Value]> {
+        match self {
+            Value::Array(a) => Some(a),
+            _ => None,
+        }
+    }
 }
 
 struct P<'a> {

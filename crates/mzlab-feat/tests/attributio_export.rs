@@ -44,7 +44,11 @@ fn quantification_matches_the_reference() {
     );
     let (e, warning) =
         quantify_lvl1_environmental(&fx.campaign, &src, &cal, &ann.features, None).expect("env");
-    let head: Vec<&str> = QUANT_COLUMNS.iter().chain(ENV_COLUMNS.iter()).copied().collect();
+    let head: Vec<&str> = QUANT_COLUMNS
+        .iter()
+        .chain(ENV_COLUMNS.iter())
+        .copied()
+        .collect();
     same(
         &sheet_json(&head, e.iter().map(|r| r.cells(true)).collect()),
         &only(&g["env"]),
@@ -54,7 +58,10 @@ fn quantification_matches_the_reference() {
 }
 
 fn present(row: &[Value], head: &[Value], site: &str) -> bool {
-    let k = head.iter().position(|h| h == &json!(format!("in_{site}"))).expect("in_ column");
+    let k = head
+        .iter()
+        .position(|h| h == &json!(format!("in_{site}")))
+        .expect("in_ column");
     row[k] == json!(true)
 }
 
@@ -66,7 +73,10 @@ fn gradient_matches_the_reference() {
     let g = golden("esportazione", "gradiente.json");
     let sites: Vec<String> = serde_json::from_value(g["sites"].clone()).expect("sites");
     let st = [sites[0].as_str(), sites[1].as_str()];
-    assert_eq!(same_sorbent_default(&fx.campaign), g["same_sorbent_default"].as_bool().unwrap());
+    assert_eq!(
+        same_sorbent_default(&fx.campaign),
+        g["same_sorbent_default"].as_bool().unwrap()
+    );
     let ih = g["identities"]["head"].as_array().expect("head");
     let ids: Vec<GradIdentity> = g["identities"]["rows"]
         .as_array()
@@ -109,8 +119,14 @@ fn gradient_matches_the_reference() {
         });
         same(&got, want, &format!("{key}.summary"));
     }
-    let ann = load_annotations(&fx.campaign, &src, None, &mzlab_feat::attributio::annotate::BasicCuration, &gnps_comparer)
-        .expect("ann");
+    let ann = load_annotations(
+        &fx.campaign,
+        &src,
+        None,
+        &mzlab_feat::attributio::annotate::BasicCuration,
+        &gnps_comparer,
+    )
+    .expect("ann");
     let cloud = feature_cloud_gradient(&fx.campaign, &src, &ann.features, st).expect("cloud");
     let head: Vec<&str> = mzlab_feat::attributio::gradient::CLOUD_COLUMNS.to_vec();
     same(&sheet_json(&head, cloud), &only(&g["cloud"]), "cloud");
@@ -119,15 +135,28 @@ fn gradient_matches_the_reference() {
         let (p, s) = k.split_once('|').expect("key");
         let m = &areas[&(p.to_string(), s.to_string())];
         for (id, v) in want.as_object().expect("ids") {
-            assert_eq!(m[&id.parse::<i64>().unwrap()], v.as_f64().unwrap(), "{k} {id}");
+            assert_eq!(
+                m[&id.parse::<i64>().unwrap()],
+                v.as_f64().unwrap(),
+                "{k} {id}"
+            );
         }
     }
-    let by = compute_gradient_areas_by_sorbent(&fx.campaign, &src, st, &["POS", "NEG"]).expect("by");
+    let by =
+        compute_gradient_areas_by_sorbent(&fx.campaign, &src, st, &["POS", "NEG"]).expect("by");
     for (k, want) in g["areas_sorbent"].as_object().expect("areas") {
         let mut it = k.split('|');
-        let key = (it.next().unwrap().to_string(), it.next().unwrap().to_string(), it.next().unwrap().to_string());
+        let key = (
+            it.next().unwrap().to_string(),
+            it.next().unwrap().to_string(),
+            it.next().unwrap().to_string(),
+        );
         for (id, v) in want.as_object().expect("ids") {
-            assert_eq!(by[&key][&id.parse::<i64>().unwrap()], v.as_f64().unwrap(), "{k} {id}");
+            assert_eq!(
+                by[&key][&id.parse::<i64>().unwrap()],
+                v.as_f64().unwrap(),
+                "{k} {id}"
+            );
         }
     }
 }
@@ -147,7 +176,8 @@ fn sheets_json(sheets: &[mzlab_feat::attributio::export::cells::Sheet]) -> Value
 fn schymanski_matches_the_reference() {
     let fx = fixture_overlay(&["campagna_sintetica", "campagna_esportazione"]);
     with_io!(fx, io);
-    let sheets = mzlab_feat::attributio::export::schymanski::build(&fx.campaign, &io, None).expect("schymanski");
+    let sheets = mzlab_feat::attributio::export::schymanski::build(&fx.campaign, &io, None)
+        .expect("schymanski");
     let g = golden("esportazione", "schymanski.json");
     let mut got = sheets_json(&sheets);
     in_reference_words(&mut got);
@@ -164,7 +194,10 @@ fn in_reference_words(sheets: &mut Value) {
         (" (L3b)", " (Lvl 3)"),
     ];
     for sheet in sheets.as_array_mut().expect("sheets") {
-        let Some(k) = sheet["head"].as_array().and_then(|h| h.iter().position(|c| c == "level_label")) else {
+        let Some(k) = sheet["head"]
+            .as_array()
+            .and_then(|h| h.iter().position(|c| c == "level_label"))
+        else {
             continue;
         };
         for row in sheet["rows"].as_array_mut().expect("rows") {
@@ -180,4 +213,56 @@ fn in_reference_words(sheets: &mut Value) {
             }
         }
     }
+}
+
+#[test]
+fn publication_matches_the_reference() {
+    use mzlab_feat::attributio::export::publication::build;
+    use mzlab_feat::attributio::export::publication_readme::{readme, Provenance, ReadmeInput};
+    let fx = fixture_overlay(&["campagna_sintetica", "campagna_esportazione"]);
+    with_io!(fx, io);
+    let p = build(&fx.campaign, &io, Some("all")).expect("publication");
+    let g = golden("esportazione", "pubblicazione.json");
+    assert_eq!(json!(p.sites), g["sites"]);
+    let sheets = sheets_json(&[p.identities.clone(), p.excluded.clone()]);
+    same(&only(&sheets[0]), &only(&g["identities"]), "identities");
+    same(&only(&sheets[1]), &only(&g["excluded"]), "excluded");
+    let counts: Value = p
+        .counts
+        .pairs()
+        .iter()
+        .map(|(k, v)| (k.to_string(), json!(v)))
+        .collect::<serde_json::Map<_, _>>()
+        .into();
+    assert_eq!(counts, g["counts"], "counts");
+    assert_eq!(p.identities.csv(), g["csv"].as_str().expect("csv"), "csv");
+    let prov = Provenance::default();
+    let rd = readme(&ReadmeInput {
+        campaign: &fx.campaign,
+        counts: &p.counts,
+        sites: &p.sites,
+        short: &p.short,
+        sorbents: &p.sorbents,
+        title: "Title",
+        description: "Description",
+        prov: &prov,
+    })
+    .expect("readme");
+    let mut got = sheets_json(&[rd])[0].clone();
+    let mut want = only(&g["readme"]);
+    // The reference writes `control sample None` when no control was supplied; the port says so in words.
+    for row in want["rows"].as_array_mut().expect("rows") {
+        if let Some(t) = row[1].as_str() {
+            row[1] = json!(t.replace("control sample None", "control sample (none supplied)"));
+        }
+    }
+    // The provenance rows carry the stamp of the run: compared only by their labels.
+    for v in [&mut got, &mut want] {
+        let rows = v["rows"].as_array_mut().expect("rows");
+        let at = rows.len() - 5;
+        for r in &mut rows[at..] {
+            r[1] = json!("");
+        }
+    }
+    same(&only(&got), &want, "readme");
 }
