@@ -44,7 +44,7 @@ try:
             assert "Prev." in tab and "Sim." in tab, tab[:300]
             assert pg.evaluate("document.querySelectorAll('#hr-t .lvb.pd-1').length") >= 2          # both known products are confirmed by their shifted fragments
             assert pg.evaluate("document.querySelectorAll('#hr-t .sim-bar i').length") >= 6
-            pg.click("#hr-t tr.clk:has-text('C8H11N4O3')"); pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det .sim3", timeout=60000)
+            pg.click("#hr-t tr.clk:has-text('C8H10N4O3')"); pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det .sim3", timeout=60000)
             det = pg.inner_text("#tp-det")
             assert "shifted fragments" in det and "common neutral losses" in det and "modified cosine" in det and "Prediction" in det and "confirmed by the data" in det, det[:900]
             assert pg.evaluate("document.querySelectorAll('#tp-det .sim3 .bar3').length") == 6
@@ -55,8 +55,8 @@ try:
             assert pg.evaluate("[...document.querySelectorAll('#hr-mnet g.mn')].every(g => g.getAttribute('aria-label') && g.getAttribute('role') === 'button')")
             assert "hydroxylation" in pg.inner_text("#hr-mnet") and "demethylation" in pg.inner_text("#hr-mnet")
             pg.click("#hr-mnet details summary"); assert "mass difference" in pg.inner_text("#hr-mnet details")
-            pg.focus("#hr-mnet g.mn[aria-label*='C7H9N4O2']"); pg.keyboard.press("Enter")
-            pg.wait_for_function("document.querySelector('#tp-det').textContent.includes('C7H9N4O2')", timeout=60000)
+            pg.focus("#hr-mnet g.mn[aria-label*='C7H8N4O2']"); pg.keyboard.press("Enter")
+            pg.wait_for_function("document.querySelector('#tp-det').textContent.includes('C7H8N4O2')", timeout=60000)
             pg.select_option("#hr-mn-f", "sel"); assert pg.evaluate("document.querySelectorAll('#hr-mnet g.me line').length") == 1
             with pg.expect_download(timeout=60000) as dl: pg.click("#hr-x-csv")
             assert "Prediction (Löffler)" in Path(dl.value.path()).read_text(encoding="utf-8")

@@ -78,8 +78,8 @@ try:
             pg.fill("#tp-smi", "Cn1cnc2c1c(=O)n(C)c(=O)n2C"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('195.0877')", timeout=60000)
             pg.click("#tp-go"); pg.wait_for_selector("#hr-t tr.clk", timeout=300000)
             tab = pg.inner_text("#hr-t")
-            assert "C8H11N4O3" in tab and "C7H9N4O2" in tab, tab[:600]
-            pg.click("#hr-t tr.clk:has-text('C8H11N4O3')"); pg.click('#tp-det [data-tab="samples"]'); pg.wait_for_selector("#hr-kin", timeout=60000); pg.wait_for_timeout(500)
+            assert "C8H10N4O3" in tab and "C7H8N4O2" in tab, tab[:600]
+            pg.click("#hr-t tr.clk:has-text('C8H10N4O3')"); pg.click('#tp-det [data-tab="samples"]'); pg.wait_for_selector("#hr-kin", timeout=60000); pg.wait_for_timeout(500)
             assert pg.evaluate("document.getElementById('hr-kin').width") > 0
             pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_function("document.querySelector('#tp-det .hr-idx') !== null", timeout=60000)
             neg = pg.evaluate("[...document.querySelectorAll('#hr-t tr.clk')].map(t => +t.dataset.id).filter(i => i < 0).length")

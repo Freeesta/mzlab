@@ -182,16 +182,18 @@ pub(super) fn entry(
     }
 }
 
-/// Rows of the table assigned to the hypothesis nearest to them (within the tolerance); the others are free for the unexpected ions.
-fn assign(t: &Aligned, known: &[f64], tol: f64) -> Vec<Option<usize>> {
+/// Rows of the table assigned to the hypothesis with the fewest steps, then the nearest, within the tolerance; the others are free for the unexpected ions.
+fn assign(t: &Aligned, known: &[f64], steps: &[u32], tol: f64) -> Vec<Option<usize>> {
     (0..t.len())
         .map(|r| {
             (0..known.len())
                 .filter(|&i| (t.mz[r] - known[i]).abs() <= tol)
                 .min_by(|&a, &b| {
-                    (t.mz[r] - known[a])
-                        .abs()
-                        .total_cmp(&(t.mz[r] - known[b]).abs())
+                    steps[a].cmp(&steps[b]).then_with(|| {
+                        (t.mz[r] - known[a])
+                            .abs()
+                            .total_cmp(&(t.mz[r] - known[b]).abs())
+                    })
                 })
         })
         .collect()
@@ -215,7 +217,12 @@ pub fn candidates(
     tol: f64,
 ) -> (Vec<Entry>, HashSet<usize>) {
     let known: Vec<f64> = hyps.iter().map(|h| h.mz + off).collect();
-    let owner = assign(t, &known, tol);
+    let owner = assign(
+        t,
+        &known,
+        &hyps.iter().map(|h| h.steps).collect::<Vec<_>>(),
+        tol,
+    );
     let mut out = Vec::new();
     let mut used = HashSet::new();
     for (i, h) in hyps.iter().enumerate() {

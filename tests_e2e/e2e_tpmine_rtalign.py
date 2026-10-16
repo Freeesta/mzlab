@@ -49,7 +49,7 @@ try:
             pg.screenshot(path=str(HERE / "shots" / "tpmine_rtalign.png"), full_page=True)
         step("HR: the RT alignment card draws one line per file with its legend", card)
         def filled():
-            row = pg.locator("#hr-t tr.clk", has_text="C8H11N4O3"); assert row.count() == 1
+            row = pg.locator("#hr-t tr.clk", has_text="C8H10N4O3"); assert row.count() == 1
             assert row.locator(".tpt-cells .tpt-st-filled").count() == 1, row.inner_html()                                # the table says one area was filled
             row.click(); pg.click('#tp-det [data-tab="samples"]'); pg.wait_for_selector("#hr-kleg", timeout=60000)
             pg.wait_for_function("document.getElementById('hr-kleg').textContent.includes('filled')", timeout=30000)

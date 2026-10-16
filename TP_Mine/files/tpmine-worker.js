@@ -220,10 +220,16 @@ async function runRust(a) {
   const ix = await openIdx(plan.lc);
   try { dig = f.finder_dig(filesJson, parentJson, e.table, h.registry, ix.read, ix.sizes); } finally { ix.close(); }
   lap("dig", t); t = performance.now(); last = "rust"; msn = null; lastRun = { table: e.table, lc: plan.lc, files: JSON.parse(filesJson) };
+  live(JSON.parse(dig.summary("{}", "{}")).rows);
   if (x) { step("tree"); await msnTree(x.name, parentJson); lap("albero", t); }
   lap("total", t0);
   const s = dig.summary(settingsJson || "{}", JSON.stringify(timing));
   return msn ? JSON.stringify(msnSummary(JSON.parse(s))) : s;
+}
+/** the best candidates for the live panel of the page (the rows as the engine ranked them) @param {any[]} rows */
+function live(rows) {
+  const best = rows.slice().sort((a, b) => b.score - a.score).slice(0, 40);
+  postMessage({ type: "progress", text: "Ranking the candidates...", phase: "candidates", payload: best.map(c => ({ kind: "candidate", id: c.id, name: c.derivation || c.formula || `m/z ${c.mz.toFixed(4)}`, mz: c.mz, rt: c.rt, score: c.score })) });
 }
 /** the MSn tree of the standard (`finder_msn` .wasm, loaded only now) from the .mzidx of `name` @param {string} name @param {string} parentJson */
 async function msnTree(name, parentJson) {
@@ -231,6 +237,7 @@ async function msnTree(name, parentJson) {
   const mod = await load("finder_msn"), ix = await openIdx([name]);
   try { msn = mod.finder_msn(ix.read, ix.sizes[0], parentJson); } finally { ix.close(); }
   msn.parentSet = false;
+  for (const n of JSON.parse(msn.msn_tree())) postMessage({ type: "progress", text: "MSn tree of the parent...", phase: "tree", payload: [{ kind: "node", id: n.id, parent: n.parent, level: n.level, mz: n.prec_mz, formula: n.formula, ghost: !!n.ghost }] });
 }
 /** the summary of the Dig with the MSn tree: tree, calibration, region and margin of the rows @param {any} s */
 function msnSummary(s) {

@@ -157,8 +157,8 @@ fn row(o: &mut Out, c: &Cand, files: usize) {
         .raw(",\"sim\":");
     sim_row(o, c);
     o.raw(",\"pred\":");
-    match c.hyp.as_ref().filter(|h| h.level > 0) {
-        Some(h) => o.int(i64::from(h.level)),
+    match c.pred() {
+        Some(l) => o.int(i64::from(l)),
         None => o.raw("null"),
     };
     o.raw(",\"entropy\":");
@@ -212,6 +212,28 @@ fn inclusion(d: &Dig) -> Vec<&Cand> {
     v.sort_by(|a, b| b.score.total_cmp(&a.score));
     v.truncate(INCLUSION);
     v
+}
+
+/// `rt_align` of the summary: the curves of the RT map (`null` without enough anchors).
+fn rt_align(o: &mut Out, d: &Dig) {
+    let m = &d.rt_map;
+    if !m.ok() {
+        o.raw("null");
+        return;
+    }
+    let nodes = m.grid.len();
+    o.raw("{\"files\":");
+    strs(o, &d.files.iter().map(|f| f.label.as_str()).collect::<Vec<_>>());
+    o.raw(",\"rt\":").floats(&m.grid).raw(",\"shift\":[");
+    for k in 0..m.n_files {
+        o.raw(if k > 0 { "," } else { "" })
+            .floats(&m.shift[k * nodes..(k + 1) * nodes]);
+    }
+    o.raw("],\"anchors\":")
+        .int(m.n_anchors as i64)
+        .raw(",\"rms\":")
+        .floats(&m.rms)
+        .raw("}");
 }
 
 fn files_json(o: &mut Out, d: &Dig) {
@@ -283,7 +305,9 @@ pub fn summary(d: &Dig, settings: &str, timing: &str) -> String {
     o.raw(",\"factors\":{\"applied\":false,\"factors\":")
         .floats(&vec![1.0; d.files.len()])
         .raw("}}");
-    o.raw(",\"saturation\":{\"saturated\":false,\"note\":\"\"},\"rt_align\":null,\"funnel\":[");
+    o.raw(",\"saturation\":{\"saturated\":false,\"note\":\"\"},\"rt_align\":");
+    rt_align(&mut o, d);
+    o.raw(",\"funnel\":[");
     for (i, (n, t)) in d.funnel.iter().enumerate() {
         o.raw(if i > 0 { ",{\"n\":" } else { "{\"n\":" })
             .int(*n as i64)
@@ -391,14 +415,16 @@ fn prediction(o: &mut Out, c: &Cand) {
         o.raw("null");
         return;
     };
+    let level = c.pred().unwrap_or(h.level);
+    let (ok, why) = c.confirmation();
     let t = format!(
         "{} ({}): {}",
         h.label,
         h.sources.join(", "),
-        PRED_TEXT[usize::from(h.level)]
+        PRED_TEXT[usize::from(level)]
     );
     o.raw("{\"level\":")
-        .int(i64::from(h.level))
+        .int(i64::from(level))
         .raw(",\"text\":")
         .str(&t)
         .raw(",\"evidence\":");
@@ -407,6 +433,10 @@ fn prediction(o: &mut Out, c: &Cand) {
         &h.alternatives
             .iter()
             .map(|a| format!("also reached as {a}"))
+            .chain(std::iter::once(format!(
+                "{}{why}",
+                if ok { "data: " } else { "data not confirming: " }
+            )))
             .collect::<Vec<_>>(),
     );
     o.raw("}");

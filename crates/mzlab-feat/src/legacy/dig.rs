@@ -14,6 +14,7 @@ use super::similarity::{pair_components, prepare, Components, Spec};
 use super::Res;
 use crate::evid::points::PointsTable;
 use crate::evid::Kind;
+use crate::rtmap::{build, RtMap, RtParams};
 use crate::table::{Aligned, CELL_ABSENT, CELL_FILLED};
 use crate::tp::{NOTE_CHIMERIC_MS2, NOTE_ISF_COELUTES, NO_PARENT, ST_ISF};
 
@@ -21,6 +22,9 @@ use crate::tp::{NOTE_CHIMERIC_MS2, NOTE_ISF_COELUTES, NO_PARENT, ST_ISF};
 const MS2_PPM: f64 = 10.0;
 /// The parent row searched within this many ppm of the [M+H]+ when the table has no TP view.
 const PARENT_PPM: f64 = 5.0;
+/// Shifted fragments (or common neutral losses) that confirm a rule, and their share of the modified cosine.
+const MIN_SHIFTED: usize = 2;
+const MIN_SHIFTED_COS: f64 = 0.05;
 pub const MAX_ROWS: usize = 500;
 pub const INCLUSION: usize = 50;
 
@@ -84,6 +88,32 @@ impl Cand {
             _ => 5,
         }
     }
+
+    /// Does the MS2 confirm the transformation? At least `MIN_SHIFTED` peaks moved by the mass difference (shifted fragments or common neutral
+    /// losses) carrying at least `MIN_SHIFTED_COS` of the cosine, and the ion not present in the reference samples. A cleavage has no single
+    /// mass difference.
+    pub fn confirmation(&self) -> (bool, String) {
+        if self.hyp.as_ref().is_some_and(|h| h.label.starts_with("rottura")) {
+            return (false, "a cleavage has no single mass difference".into());
+        }
+        let Some(m) = &self.ms2 else {
+            return (false, "no MS2 for this ion".into());
+        };
+        let (n, share) = (m.sim.n[1] + m.sim.n[2], m.sim.cos[1] + m.sim.cos[2]);
+        if n < MIN_SHIFTED || share < MIN_SHIFTED_COS {
+            return (false, format!("{n} shifted fragments, {share:.2} of the cosine: not enough"));
+        }
+        if self.kin.as_ref().is_some_and(|k| !k.1) {
+            return (false, "present in the reference samples".into());
+        }
+        (true, format!("{n} fragments shifted by {:+.4} (share of the cosine {share:.2})", m.sim.delta))
+    }
+
+    /// Prediction level (1 = strongest): the weakest step of the derivation, raised to 1 when the data confirm it; `None` without a rule.
+    pub fn pred(&self) -> Option<u8> {
+        let h = self.hyp.as_ref().filter(|h| (1..=4).contains(&h.level))?;
+        Some(if self.confirmation().0 { 1 } else { h.level })
+    }
 }
 
 /// The whole Dig, kept for `detail` and the inclusion list.
@@ -94,6 +124,8 @@ pub struct Dig {
     pub parent_row: Option<usize>,
     pub parent_rt: Option<f64>,
     pub parent_ms2: Option<Consensus>,
+    /// The shift of the apex of the anchor features in every file against the median over the files (drawn by the page; no signal is moved).
+    pub rt_map: RtMap,
     /// The (m/z, RT) of the rows left out because the gate of the TP view takes them for in-source fragments of the parent or of a product.
     pub isf_hidden: Vec<(f64, f64)>,
     pub n_features: Vec<usize>,
@@ -477,6 +509,7 @@ pub fn dig<R: ReadAt>(s: Series, mut open: impl FnMut(usize) -> Res<Index<R>>) -
         parent_row: prow,
         parent_rt: prow.map(|r| t.rt[r]),
         parent_ms2,
+        rt_map: build(t, &RtParams::default()),
         isf_hidden,
         n_features: (0..t.n_files).map(detected).collect(),
         cands,
