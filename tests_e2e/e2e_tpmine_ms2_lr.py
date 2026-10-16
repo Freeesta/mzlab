@@ -57,6 +57,8 @@ TABLE = """() => [...document.querySelectorAll('#tp-ms2map table tr')].filter(r 
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); ctx = b.new_context(viewport={"width": 1280, "height": 1000}, reduced_motion="reduce"); pg = ctx.new_page()
+        try: ctx.grant_permissions(["clipboard-read", "clipboard-write"])
+        except Exception: pass
         pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
         pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
         pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -143,6 +145,40 @@ try:
             assert pg.evaluate("document.activeElement && document.activeElement.dataset.ep") is not None, "«Change» goes to the menu"
             assert "from lr_MS2-t30" in pg.inner_text(".words"), pg.inner_text(".words")
         step("the detail of the row shows its matches, a spectrum per CE, «Change» goes to the menu", detail)
+
+        def rep_chart():                                   # the representative scan: chart with the precursor, the sentence, the copy button, the filter
+            if not pg.locator('#tp-det [data-tab="overview"]').is_visible(): pg.click('#tp-t tr.clk[data-id="10007"]')      # the row of the previous step may still be open (a second click closes it)
+            pg.click('#tp-det [data-tab="overview"]'); pg.wait_for_selector("#tpr-ms2-text", timeout=60000)
+            txt = pg.inner_text("#tpr-ms2-text")
+            assert txt.startswith("Fragment ions found") or txt.startswith("No fragment ions found"), txt
+            if txt.startswith("Fragment ions found"): assert "loss \u2212\u0394Pm/z = \u2212" in txt, txt
+            lab = pg.evaluate("[...document.querySelectorAll('#tp-det svg[aria-label]')].map(s => s.getAttribute('aria-label'))")
+            assert any("precursor m/z" in l and "RT" in l for l in lab), lab                  # RT and precursor m/z in the title
+            assert pg.locator("#tp-det .st-prec").count() == 1, "the precursor is marked in the chart"
+            assert pg.locator("#tp-det .tdbtn").count() >= 2, "the charts have their table of the data (button, or the T key on the focused chart)"
+            assert "Representative MS2" in pg.inner_text("#tp-det .tpr-line"), pg.inner_text("#tp-det .tpr-line")
+            assert pg.evaluate("getComputedStyle(document.getElementById('tpr-ms2-text')).userSelect") != "none"
+            pg.focus("#tpr-ms2-copy"); pg.keyboard.press("Enter")
+            pg.wait_for_function("/Copied|Selected/.test(document.querySelector('#tpr-ms2-text').parentElement.textContent)", timeout=10000)
+            try: assert pg.evaluate("navigator.clipboard.readText()") == txt
+            except Exception as e: assert "Selected" in pg.inner_text("#tpr-ms2-text + button + span"), e        # no clipboard permission here: the text is selected
+        step("the representative MS2: chart with the precursor, the sentence «Fragment ions found», «Copy text», Δm/z and tolerance in words", rep_chart)
+
+        def no_ms2():
+            ids = pg.evaluate("[...document.querySelectorAll('#tp-t tr.clk')].filter(r => r.lastElementChild.textContent.trim() === 'no MS2').map(r => r.dataset.id)")
+            assert ids, "a row without MS2"
+            pg.click(f'#tp-t tr.clk[data-id="{ids[0]}"]'); pg.click('#tp-det [data-tab="overview"]'); pg.wait_for_selector("#tp-det .tpr-none", timeout=60000)
+            assert "No MS\u00b2 in the feature peak" in pg.inner_text("#tp-det"), pg.inner_text("#tp-det")[:400]
+            assert pg.locator("#tpr-ms2-text").count() == 0 and pg.locator("#tp-det .st-prec").count() == 0
+        step("a row with no MS2 in its peak: no chart, «No MS\u00b2 in the feature peak»", no_ms2)
+
+        def filter_ms2():
+            n_all = pg.locator("#tp-t tr.clk").count()
+            pg.click('[data-chip="ms2"]'); pg.wait_for_function(f"document.querySelectorAll('#tp-t tr.clk').length < {n_all}", timeout=30000)
+            cells = pg.evaluate("[...document.querySelectorAll('#tp-t tr.clk')].map(r => r.lastElementChild.textContent.trim())")
+            assert cells and all(not c.startswith("no MS2") for c in cells), cells                   # only rows with an MS2 scan inside the peak
+            pg.click('[data-chip="ms2"]'); pg.wait_for_function(f"document.querySelectorAll('#tp-t tr.clk').length === {n_all}", timeout=30000)
+        step("the filter «With MS2» keeps only the rows with an MS2 in their peak", filter_ms2)
 
         def reload_keeps():
             saved = pg.evaluate("localStorage.getItem('qqq.tabui.ms2links')")
