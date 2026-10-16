@@ -205,13 +205,7 @@ struct MatchCandidate {
     v: usize,
 }
 
-fn score_single_pair(
-    m_a: &[f64],
-    w_a: &[f64],
-    m_b: &[f64],
-    w_b: &[f64],
-    tol: f64,
-) -> f64 {
+fn score_single_pair(m_a: &[f64], w_a: &[f64], m_b: &[f64], w_b: &[f64], tol: f64) -> f64 {
     let mut candidates = Vec::new();
     for (u, &mz_a) in m_a.iter().enumerate() {
         let wt_a = match w_a.get(u) {

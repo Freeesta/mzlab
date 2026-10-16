@@ -22,7 +22,11 @@ fn run_python_reference(out_path: &Path) {
 fn assert_close_f32(got: &[Vec<f32>], want: &[Vec<f32>], tol: f32, ctx: &str) {
     assert_eq!(got.len(), want.len(), "row count mismatch in {ctx}");
     for (r, (g_row, w_row)) in got.iter().zip(want.iter()).enumerate() {
-        assert_eq!(g_row.len(), w_row.len(), "col count mismatch at row {r} in {ctx}");
+        assert_eq!(
+            g_row.len(),
+            w_row.len(),
+            "col count mismatch at row {r} in {ctx}"
+        );
         for (c, (&g, &w)) in g_row.iter().zip(w_row.iter()).enumerate() {
             assert!(
                 (g - w).abs() <= tol,
@@ -64,7 +68,11 @@ fn json_to_vec_vec_f32(val: &Value) -> Vec<Vec<f32>> {
             arr.iter()
                 .map(|row| {
                     row.as_array()
-                        .map(|r| r.iter().filter_map(|x| x.as_f64().map(|v| v as f32)).collect())
+                        .map(|r| {
+                            r.iter()
+                                .filter_map(|x| x.as_f64().map(|v| v as f32))
+                                .collect()
+                        })
                         .unwrap_or_default()
                 })
                 .collect()
@@ -80,7 +88,11 @@ fn json_to_vec_f64(val: &Value) -> Vec<f64> {
 
 fn json_to_vec_usize(val: &Value) -> Vec<usize> {
     val.as_array()
-        .map(|arr| arr.iter().filter_map(|x| x.as_u64().map(|v| v as usize)).collect())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|x| x.as_u64().map(|v| v as usize))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -127,8 +139,16 @@ fn verify_single_case(case: &Value) {
     assert_eq!(ia, exp_ia, "ia pairs mismatch in {ctx}");
     assert_eq!(ib, exp_ib, "ib pairs mismatch in {ctx}");
 
-    let pc_ia = if case["pc_ia"].is_null() { ia.clone() } else { json_to_vec_usize(&case["pc_ia"]) };
-    let pc_ib = if case["pc_ib"].is_null() { ib.clone() } else { json_to_vec_usize(&case["pc_ib"]) };
+    let pc_ia = if case["pc_ia"].is_null() {
+        ia.clone()
+    } else {
+        json_to_vec_usize(&case["pc_ia"])
+    };
+    let pc_ib = if case["pc_ib"].is_null() {
+        ib.clone()
+    } else {
+        json_to_vec_usize(&case["pc_ib"])
+    };
     let scores = plain_cosine(&m, &w_f64, &pc_ia, &pc_ib, tol);
     assert_close_f64(&scores, &exp_scores, 1e-7, &format!("{ctx} - plain_cosine"));
 }
@@ -136,14 +156,21 @@ fn verify_single_case(case: &Value) {
 #[test]
 fn test_all_pairs_parity_with_python() {
     let tmp_dir = std::env::temp_dir();
-    let out_file = tmp_dir.join(format!("mzlab_all_pairs_parity_{}.json", std::process::id()));
+    let out_file = tmp_dir.join(format!(
+        "mzlab_all_pairs_parity_{}.json",
+        std::process::id()
+    ));
     run_python_reference(&out_file);
 
     let content = std::fs::read_to_string(&out_file).expect("Failed to read reference JSON");
     let _ = std::fs::remove_file(&out_file);
 
     let cases: Vec<Value> = serde_json::from_str(&content).expect("Failed to parse reference JSON");
-    assert!(cases.len() >= 40, "Expected at least 40 cases, got {}", cases.len());
+    assert!(
+        cases.len() >= 40,
+        "Expected at least 40 cases, got {}",
+        cases.len()
+    );
 
     for case in &cases {
         verify_single_case(case);
