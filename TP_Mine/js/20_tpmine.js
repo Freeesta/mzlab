@@ -33,7 +33,7 @@
 #qt-nav-tab,nav button[data-v="tpmine"]{background:linear-gradient(135deg,#ffe29a,#f4c95d 55%,#d99a1d)!important;color:#3a2a00!important;border-color:#d99a1d!important;font-weight:700}
 .hero{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px}
 .tp #tp-files th{position:static}.tp .hero-i{display:inline-flex;color:var(--accent)}.hero-t{display:flex;gap:12px;align-items:center}.hero h2{margin:0;font-size:20px}.hero-s{color:var(--muted);font-size:12px}
-.tp .fsum{font-size:12px;color:var(--muted);margin:2px 0 6px}.tp #tp-files td,.tp #tp-files th{padding:1px 6px}.tp #tp-files select,.tp #tp-files input{font-size:11px;padding:0 3px;height:20px}
+.tp #tp-left,.tp #tp-right{min-width:0}.tp #tp-files{max-width:100%;overflow-x:auto}.tp #tp-files table{width:100%;table-layout:auto}.tp #tp-files td:first-child{max-width:min(130px,28vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tp #tp-files select{max-width:100%}.tp .fsum{font-size:12px;color:var(--muted);margin:2px 0 6px}.tp #tp-files td,.tp #tp-files th{padding:1px 6px}.tp #tp-files select,.tp #tp-files input{font-size:11px;padding:0 3px;height:20px}
 .tp .dig{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;font-size:18px;font-weight:700}.tp .dig .qi{display:inline-flex}.tp .tp-q{display:inline-grid;place-items:center;width:16px;height:16px;border:1px solid var(--muted);border-radius:50%;font-size:11px;color:var(--muted);cursor:help;margin-left:4px;font-style:normal}
 .hero{padding:8px 12px}.tp .hero-t{flex-wrap:wrap;gap:4px 10px}.tp .hero h2{font-size:16px}.tp .hero-c{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;justify-content:space-between;margin-top:4px;font-size:13px}
 .tp .hero-c b{font-variant-numeric:tabular-nums}.tp .hero-x{display:inline-flex;gap:6px;flex-wrap:wrap}.tp .hero-x button{min-height:24px;min-width:24px}
@@ -196,8 +196,8 @@
 <div class="tp">
 <div id="tp-left">
  <div class="card"><h3>1 · Files</h3>
-  <div class="row"><button id="tp-page" title="Reload the files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick" title=".mzML, .raw, .wiff (+ .wiff.scan)">Choose files...</button><button id="tp-pickdir" title="e.g. an Agilent .D">Choose folder...</button></div>
-  <input type="file" id="tp-in" accept=".mzML,.mzml,.raw,.wiff,.scan" multiple hidden><input type="file" id="tp-dir" multiple hidden>
+  <div class="row"><button id="tp-page" title="Reload the files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick" title=".mzML, .raw, .wiff (+ .wiff.scan)">Choose files...</button></div>
+  <input type="file" id="tp-in" accept=".mzML,.mzml,.raw,.wiff,.scan" multiple hidden>
   <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
  <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div><div id="tp-reatt"></div>
   <div class="row tp-ac"><input type="text" id="tp-name" class="grow-in" placeholder="Name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false"${dt("ft.f.name")}><ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
@@ -286,15 +286,15 @@
     $("#tp-page").onclick = async () => {
       await loadFromData(false); };
     const forAdd = x => x.nat ? { name: x.name, file: x.buf, nat: true } : x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: /** @type {any} */ (x.buf).slice ? /** @type {any} */ (x.buf).slice(0) : x.buf };
-    // files of the instrument (.raw, .wiff + .wiff.scan, a .D folder): the Data tab prepares them (one copy in OPFS, the .mzidx v2, the bar of nativo-fasi.js), they appear in its list too, and Tabui takes the stubs as "Reload from Data" does
-    async function loadMaker(fs, folder) {
-      if (typeof upload !== "function" || typeof CartCarica === "undefined" || typeof ST === "undefined") return msg("The Data tab is not ready: try again in a moment.", true);
+    // files of the instrument (.raw, .wiff + .wiff.scan): the Data tab prepares them (one copy in OPFS, the .mzidx v2, the bar of nativo-fasi.js), they appear in its list too, and Tabui takes the stubs as "Reload from Data" does
+    async function loadMaker(fs) {
+      if (typeof upload !== "function" || typeof ST === "undefined") return msg("The Data tab is not ready: try again in a moment.", true);
       const before = new Set((ST.files || []).map(f => f.name)), box = $("#tp-load");
       const unmount = typeof PROGRESSO !== "undefined" ? PROGRESSO.mount(box) : () => {};      // the same bar as the Data tab (progresso.js): one model, forward only
       msg(`Preparing ${fs.length} file${fs.length === 1 ? "" : "s"} in the Data tab...`);
       try {
         window.MZLAB_CEN_IDX = true;      // the Data tab builds the centroid index of a profile sample in the same decoding as its own (rust-worker.js lr_index)
-        try { if (folder) await CartCarica.fromInput(fs); else await upload(fs, "data"); } finally { window.MZLAB_CEN_IDX = false; }
+        try { await upload(fs, "data"); } finally { window.MZLAB_CEN_IDX = false; }
         const fresh = new Set((ST.files || []).map(f => f.name).filter(n => !before.has(n)));
         const got = (await pageFiles()).filter(x => fresh.has(x.name));
         if (!got.length) return msg("No new sample was added: the files are already in the Data tab, or they cannot be read (see the notice there).", true);
@@ -314,10 +314,8 @@
       const fs = [...ev.target.files]; ev.target.value = "";
       const mz = fs.filter(f => /\.mzml$/i.test(f.name)), other = fs.filter(f => !/\.mzml$/i.test(f.name));
       if (mz.length) await addFiles(mz.map(f => ({ name: f.name, file: f })));
-      if (other.length) await loadMaker(other, false);
+      if (other.length) await loadMaker(other);
     };
-    $("#tp-pickdir").onclick = () => { const i = $("#tp-dir"); i.setAttribute("webkitdirectory", ""); i.click(); };
-    $("#tp-dir").onchange = async ev => { const fs = [...ev.target.files]; ev.target.value = ""; if (fs.length) await loadMaker(fs, true); };
     // mode: high resolution -> XIC window in ppm (default 5) and RT tolerance from the chromatographic method; unit resolution -> Da and 0.25 min
     let curMode = "";
     function modeUI() {
@@ -670,12 +668,12 @@
         { key: "tpname", label: "TP", help: "ft.col.tpname", sticky: true, sort: r => r.tp_name || "", cell: r => esc(r.tp_name || "") },
         { key: "identity", label: "Identity", help: "ft.col.identity", sticky: true, sort: r => idLabel(r).toLowerCase(), cell: r => esc(idLabel(r)) + alt(r), text: r => idLabel(r) + (r.alternatives.length ? ` (+${r.alternatives.length} other)` : "") },
         { key: "status", label: "Status", help: "ft.col.status", sort: r => notFound(r) ? 1 : 0, cell: r => notFound(r) ? "Searched, not detected" : "Detected", text: r => r.status || "Detected" },
-        { key: "net", label: "Net change (formula)", help: "ft.col.net", sort: r => r.net_change || "", cell: r => esc(r.net_change || "") },
+        { key: "net", label: "Net change (formula)", help: "ft.col.net", sort: r => r.net_change || "", cell: r => esc(r.net_change || "").replace(/([A-Za-z)])(\d+)/g, "$1<sub>$2</sub>") },          // subscripts in the cell only: the export and the copy keep the plain text (C2H2)
         { key: "modif", label: "Modification", help: "ft.col.modif", sort: r => r.modification || "", cell: r => esc(r.modification || "") },
         { key: "mz", label: "<i>m/z</i>", help: "ft.col.mz", num: true, sort: r => r.mz, cell: r => r.mz.toFixed(2) },
         { key: "rt", label: "RT", help: "ft.col.rt", num: true, sort: r => r.ref_rt, cell: r => r.ref_rt == null ? "" : r.ref_rt.toFixed(2) },
         { key: "trend", label: "Trend", help: "ft.col.trend", cell: r => (r.kinetics || []).length ? TPTAB.spark(r.kinetics.map(p => p.area), "area") : "", text: r => (r.kinetics || []).map(p => Math.round(p.area)).join(" ") },
-        { key: "cells", label: "Cells", help: "ft.col.cells", cell: r => cellStates(r).length ? TPTAB.cells(cellStates(r)) : TPTAB.state("na"), text: r => cellStates(r).map(x => x[0]).join("") },
+        { key: "cells", label: "Cells", help: "ft.col.cells", cell: r => cellStates(r).length ? TPTAB.cells(cellStates(r), 12, r.kinetics.map(p => ({ time: p.time, area: p.area }))) : TPTAB.state("na"), text: r => cellStates(r).map(x => x[0]).join("") },
         { key: "max", label: "Max area", help: "ft.col.maxarea", num: true, sort: r => r.max_area, cell: r => notFound(r) ? "—" : fmtA(r.max_area), text: r => notFound(r) ? "—" : fmtA(r.max_area), value: r => notFound(r) ? null : r.max_area },
         { key: "score", off: true, label: "Score", help: "ft.col.score", num: true, sort: r => r.score, cell: r => r.score == null ? "" : `<span class="badge b-${r.label}">${r.score} ${LAB[r.label]}</span>`, text: r => r.score == null ? "" : String(r.score) },
         { key: "formula", off: true, label: "Neutral formula", help: "ft.col.formula", sort: r => r.formula || "", cell: r => esc(r.formula || "") },

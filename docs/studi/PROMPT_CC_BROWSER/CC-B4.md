@@ -10,15 +10,15 @@ Pacchetto CC-B4 dello studio `docs/studi/CC_MOTORE_NEL_BROWSER.md` (leggi §5 «
 Quando Tabui ha finito di calcolare i TP e il genitore ha uno SMILES, parte da solo il calcolo di reattività del genitore in un worker separato; i TP hanno sempre la precedenza; il pannello di CC-B3 mostra lo stato e poi i risultati.
 
 ## Da fare
-1. **Worker** `TP_Mine/files/chem-worker.js`: carica il `.wasm` `chem` (manifesto come `grafo`) solo alla prima richiesta, chiama `reactivity_json`, risponde `{ok, json}` o `{error, error_key, params}`. Un solo calcolo alla volta; una richiesta nuova annulla quella in coda (terminare il worker se è a metà e ricrearlo).
+1. **Worker e lazy-loading**: `TP_Mine/files/chem-worker.js`: carica il `.wasm` `chem` (manifesto come `grafo`) solo alla prima richiesta, chiama `reactivity_json`, risponde `{ok, json}` o `{error, error_key, params}`. Collocare i file dell'interfaccia in `TP_Mine/lazy/` (con caricamento tramite `TPLAZY.load`) invece di caricamento fisso in `TP_Mine/js/` per rispettare il tetto di avvio di 1.55 MB. Un solo calcolo alla volta; una richiesta nuova annulla quella in coda (terminare il worker se è a metà e ricrearlo).
 2. **Quando parte**: dopo l'evento o la promessa di fine del calcolo dei TP in LR (`20_tpmine.js`) e in HR (`21_tpmine_hr.js`) (trova i punti con il `cercatore`); solo con `uipAdminOn()` e SMILES valido; mai durante un calcolo dei TP (se l'utente rilancia i TP, il calcolo di reattività si ferma e riparte dopo); con `requestIdleCallback` o un ritardo breve per non contendere la CPU.
 3. **Cache** nella sessione (stesso SMILES canonico + stessa `version()` del motore = nessun nuovo calcolo); se serve una cache durevole, segui le regole dei dati utente di `docs/agenti/dati.md` senza nuovi nomi di database (chiedi al Coordinatore prima).
-4. **Stato** nel pannello: «waiting for TPs», «computing… (step N of 4: geometry, neutral, cation, anion)» se il motore dà i passi, «done in X s», «failed» con il motivo e il pulsante «Retry»; un pulsante «Recompute» con opzioni (solvente acqua o nessuno, numero di conformeri).
+4. **Stato** nel pannello: «waiting for TPs», «computing… (step N of 4: geometry, neutral, cation, anion)» se il motore dà i passi, «done in X s», «failed» con il motivo e il pulsante «Retry»; un pulsante «Recompute» con opzioni in lingua inglese (es. "Solvent: Water / None", "Conformers: 8").
 5. **App desktop**: stessa sequenza, ma con la funzione nativa (rotta di CC-B2) al posto del worker.
 
 ## Prove
 - `tests_e2e/e2e_reattivita_auto.py`: con `qqq.admin=1` e un file d'esempio di `mzlab/web/esempi/` con genitore (o un genitore inserito nel test), dopo i TP lo stato passa da «waiting» a «done» e la tabella ha i valori; rilanciare i TP durante il calcolo lo ferma; senza `qqq.admin` il `.wasm` `chem` non viene scaricato (controllo delle richieste di rete).
-- Misura: tempo dei TP con e senza calcolo di reattività (differenza entro il rumore, studio §7.6), scritta nel documento d'area; `window.MZLAB_LR_MISS` vuoto.
+- Misura: il tempo di calcolo dei TP con worker di reattività attivo in background non deve aumentare di oltre il 5% (o > 200 ms) rispetto al tempo senza calcolo (studio §7.6), scritta nel documento d'area; `window.MZLAB_LR_MISS` vuoto.
 
 ## Atteso
 Calcolo automatico, non invadente, con stato chiaro; nessun effetto per chi non è amministratore.
