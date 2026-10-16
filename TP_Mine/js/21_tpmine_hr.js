@@ -126,7 +126,8 @@
     const words = r => [r.diagnostic ? "diagnostic evidence" : LV_TEXT[r.level] || "", r.region ? "region " + r.region : "", r.ms2_scans ? r.ms2_scans + " MS2 scans" : "no MS2",
       r.ctl ? (r.ctl.in_t0 ? "also at t0" : "absent at t0") : "", r.ctl ? (r.ctl.in_blank ? "also in the blank" : "absent in the blank") : ""].filter(Boolean).join("; ");
     /** @param {any} r */
-    const baseModel = r => ({ title: r.formula || "m/z " + r.mz, level: r.level, pred: r.pred, words: words(r), actions: [{ key: "copy", label: "Copy", help: "ft.riga.copy", run: () => {
+    const decide = TPRIGA && (/** @type {any} */ (window).TPDEC) ? { series: () => ({ files: s.files, formula: s.parent.formula }), key: (/** @type {any} */ r) => (/** @type {any} */ (window).TPDEC).rowKey(r.mz, r.rt, true), level: (/** @type {any} */ r) => r.level } : null;
+    const baseModel = r => ({ title: r.formula || "m/z " + r.mz, level: r.level, pred: r.pred, words: words(r), decide: decide ? { series: decide.series(), key: decide.key(r), level: r.level } : undefined, actions: [{ key: "copy", label: "Copy", help: "ft.riga.copy", run: () => {
       const text = [r.formula || "", "m/z " + r.mz, "RT " + r.rt, "L" + r.level + (r.diagnostic ? " diagnostic" : "")].join("\t");
       Promise.resolve(navigator.clipboard && navigator.clipboard.writeText(text)).then(() => toast("Copied"), () => toast("Copy is not allowed here"));
     } }] });
@@ -135,7 +136,7 @@
         onOpen: (/** @type {any} */ r, /** @type {HTMLElement} */ body, /** @type {string} */ tab) => { void fillTab(r, body, tab); } };
     }
 
-    const T = TPTAB.mount($("#hr-tbl"), { id: "hr-t", label: "Possible transformation products", cols: COLS, rowId: (/** @type {any} */ r) => r.id, esc, name: (/** @type {any} */ r) => `${r.formula || "m/z " + r.mz}, m/z ${r.mz}`, columns: true, exportName: (s.parent.formula || "parent") + "_TPMine_HR_view",
+    const T = TPTAB.mount($("#hr-tbl"), { id: "hr-t", label: "Possible transformation products", cols: COLS, rowId: (/** @type {any} */ r) => r.id, esc, name: (/** @type {any} */ r) => `${r.formula || "m/z " + r.mz}, m/z ${r.mz}`, columns: true, decide: decide || undefined, exportName: (s.parent.formula || "parent") + "_TPMine_HR_view",
       chips: [chip("l4", "L4 or better", "ft.chip.level", r => +r.level <= 4), chip("l3", "L3 or better", "ft.chip.level", r => +r.level <= 3), chip("diag", "diagnostic", "ft.chip.diagnostic", r => !!r.diagnostic),
         chip("ms2", "With MS2", "ft.chip.ms2", r => r.ms2_scans > 0), chip("not0", "Not at t0", "ft.chip.not0", r => !r.ctl || !r.ctl.in_t0, "ft.chip.wait"), chip("noblank", "Not in blank", "ft.chip.noblank", r => !r.ctl || !r.ctl.in_blank, "ft.chip.wait"),
         chip("region", "With region", "ft.chip.region", r => !!r.region)],
