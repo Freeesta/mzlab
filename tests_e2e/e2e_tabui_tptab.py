@@ -264,6 +264,18 @@ try:
             h = pg.evaluate("document.querySelector('#tp-det').getBoundingClientRect().height"); assert h <= 420, ("panel height with 12 samples", h)
         step("TPRIGA samples: one 24 px cell per sample with symbol and label, table, scroll beyond 10 rows, height", riga_samples)
 
+        def cells_column():
+            pg.evaluate("""() => { const d = document.createElement('div'); d.id = 'cc-t'; d.className = 'tp'; document.body.appendChild(d);
+              d.innerHTML = TPTAB.cells(['detected', 'absent', 'filled', 'detected'], 12, [{ time: 30, area: 1e6 }, { time: 0, area: 0 }, { time: 10, area: 1e3 }, { time: 60, area: 5e4 }]); }""")
+            c = pg.evaluate("[...document.querySelectorAll('#cc-t .tpt-cell')].map(e => [e.textContent, e.getAttribute('data-tt-text'), e.getAttribute('tabindex'), e.getBoundingClientRect().width, e.style.background])")
+            assert [x[0] for x in c] == ["○", "◐", "●", "●"], ("order: t0 first, then growing times", c)
+            assert all(x[1] and x[2] == "0" and x[3] >= 24 for x in c), c
+            assert "time 10" in c[1][1] and "area 1000" in c[1][1] and "peak filled" in c[1][1], c[1]
+            assert c[0][4] == "" and c[1][4] != c[2][4] != c[3][4] and "color-mix" in c[2][4], ("gradient by area", c)
+            pg.locator("#cc-t .tpt-cell").nth(2).focus(); pg.wait_for_selector("#tph-pop:not([hidden])"); assert "time 30" in pg.inner_text("#tph-pop")
+            pg.evaluate("document.getElementById('cc-t').remove()")
+        step("Cells column: sample order, focusable symbols with help, area gradient", cells_column)
+
         def riga_identity_quality():
             pg.click('#tr-t [data-tg="0"]'); settle()
             pg.click("#tr-t [data-tab=identity]"); settle()
