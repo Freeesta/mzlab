@@ -66,5 +66,6 @@ pub(crate) fn scan_of_row(r: &Value, nativo: bool) -> Option<Scan> {
         path,
         charge: f(18).map(|v| v as i64),
         native: s(19).unwrap_or_default(),
+        kind: s(20),
     })
 }

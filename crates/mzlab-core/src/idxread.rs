@@ -76,6 +76,8 @@ pub struct Scan {
     pub path: Option<Vec<(f64, String, f64)>>,
     pub charge: Option<i64>,
     pub native: String,
+    /// `PREC`, `NL`, `NG` or `EPI` (column 21 of the row, absent for an ordinary scan).
+    pub kind: Option<String>,
 }
 
 impl Scan {

@@ -16,11 +16,12 @@ Un `.mzidx` si scrive una volta per file (`build(run, out)`) e si legge a fette 
          inten     n_peaks × T    intensità, nello stesso ordine
          pos       n_peaks × i4   posizione della scansione di appartenenza dentro rt/tic/scan_ids
 scans_off  JSON UTF-8 (separatori compatti): lista di righe, una per scansione, nell'ordine del file, con le colonne di SCAN_COLUMNS:
-         start,end (byte dell'mzML),level,rt,polarity,tic,precursor,collision_energy,filter,profile,parent,iso,act,res,an,pint,path,precursors,charge,native
+         start,end (byte dell'mzML),level,rt,polarity,tic,precursor,collision_energy,filter,profile,parent,iso,act,res,an,pint,path,precursors,charge,native[,kind]
 meta_off   JSON UTF-8: {format:"mzidx", version, block, source:{name,size,mtime_ns,probe,sha256}, run:{nce,hr1,n_chromatograms},
                         keys:{"<livello>/<all|+|->": indice di sezione}, sections:[{level,dtype,n_scans,n_peaks,n_fence,off:{rt,tic,scan_ids,sumint,bp_mz,bp_inten,fence,mz,inten,pos}}]}
 total      dimensione del file: un file di dimensione diversa (troncato) non si apre
 ```
+- **`kind`** (21ª colonna, solo se la scansione ha un tipo): `PREC` (precursor ion, `MS:1000341` o `pr` del filtro Thermo), `NL` (`MS:1000326`, `cnl`), `NG` (`MS:1000325`, `cng`), `EPI` (`MS:1000789`, `MS:1000790`); solo per le scansioni MS2 o oltre (`scantable::kind_of`). Un indice senza tipi ha 20 colonne, come prima; `idxread::Scan.kind`.
 - **T** = `<f4` per l'MS1 di un file ad alta risoluzione (`Run.hr1`), altrimenti `<f8` (stessa regola della tabella in memoria).
 - **Sezioni**: una per ogni livello × polarità (`all`, `+`, `-`: `+` prende le scansioni di polarità +1 o 0, come `Run.table(livello, 1)`); gruppi con le stesse scansioni condividono la sezione. `keys` dice quale.
 - **Validità**: `source.size`, `source.mtime_ns` (solo con la cartella predefinita) e `source.probe` (SHA-1 di dimensione, primi e ultimi 64 KB) devono combaciare con il file; `source.sha256` è l'impronta dell'intero file (calcolata durante la copia in OPFS o, senza, da `upload::impronte`: stesso valore) (la stessa che usa `.mzflow`).
