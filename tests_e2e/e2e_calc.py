@@ -23,7 +23,8 @@ try:
             assert b["vis"] and not b["modal"] and 0 < b["ct"] - b["ab"] < 20 and b["w"] >= 520, b
             pg.click("#calcx"); pg.wait_for_timeout(200)
             pg.click("#nav [data-v=data]"); pg.wait_for_timeout(400)
-            pg.click("#np-calc2"); pg.wait_for_timeout(300)
+            if not pg.evaluate("!!document.querySelector('#calcin').offsetParent"):    # the sidebar tab stays open across views: the button is a toggle
+                pg.click("#np-calc2"); pg.wait_for_timeout(300)
         step("in Dati opens sidebar tab, in Disegno opens right under its button >= 520 px wide", open_below)
         def usable():
             pg.wait_for_timeout(300)               # docked next to the charts the calculator stays open while the student works on them

@@ -54,6 +54,7 @@ try:
                 for k in ["area", "height", "rtMax", "mzMax"]:
                     assert n[k] is not None and abs(n[k] - a[k]) <= 1e-6 * max(1, abs(a[k])), (k, n[k], a[k])
                 assert o["shown"]["height"] and o["shown"]["rtmax"], o["shown"]
+                pg.evaluate(M + ".cv.focus()")      # arrows with the focus elsewhere change file
                 pg.keyboard.press("ArrowRight"); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(700)
         step("the numbers are the ones of /api/xic and /api/spectrum for the window of the box", numbers_match)
         def move_keys():
@@ -65,6 +66,8 @@ try:
         def drag_mouse():
             c = pg.evaluate(f"(()=>{{const a={M}._a, b={M}._mz.ex.box, r={M}.cv.getBoundingClientRect(); return [r.left+a.X((b.rt0+b.rt1)/2), r.top+a.Y((b.mz0+b.mz1)/2), r.left+a.X(b.rt1), r.top+a.Y((b.mz0+b.mz1)/2)]}})()")
             w0 = win()["win"]
+            pg.mouse.move(c[0], c[1]); ready(pg)      # the pointer entering the map shifts the layout: the box is read again where it is now
+            c = pg.evaluate(f"(()=>{{const a={M}._a, b={M}._mz.ex.box, r={M}.cv.getBoundingClientRect(); return [r.left+a.X((b.rt0+b.rt1)/2), r.top+a.Y((b.mz0+b.mz1)/2)]}})()")
             pg.mouse.move(c[0], c[1]); pg.mouse.down(); pg.mouse.move(c[0] + 60, c[1] - 20, steps=5); pg.mouse.up(); pg.wait_for_timeout(800)
             w1 = win()["win"]; assert w1["rt0"] > w0["rt0"] and w1["mz0"] > w0["mz0"] and abs((w1["rt1"] - w1["rt0"]) - (w0["rt1"] - w0["rt0"])) < 1e-9, (w0, w1)
             c = pg.evaluate(f"(()=>{{const a={M}._a, b={M}._mz.ex.box, r={M}.cv.getBoundingClientRect(); return [r.left+a.X(b.rt1), r.top+a.Y((b.mz0+b.mz1)/2)]}})()")
