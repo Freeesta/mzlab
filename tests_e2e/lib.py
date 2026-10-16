@@ -115,6 +115,11 @@ def attendi(pg, expr, timeout=30000):
     pg.wait_for_function(expr, timeout=timeout)
 
 
+def frames(pg, n=2):
+    """Let the page draw `n` animation frames (events handled, canvases repainted): frame-based, not a fixed pause."""
+    pg.evaluate("n => new Promise(ok => { const f = () => (--n > 0 ? requestAnimationFrame(f) : ok()); requestAnimationFrame(f); })", n)
+
+
 def fermo(pg, sel, ms=300, timeout=30000):
     """Wait until the first element matching `sel` has had the same position and size for `ms` milliseconds (it is not moving or growing any more)."""
     pg.evaluate("window.__fermo = null")
