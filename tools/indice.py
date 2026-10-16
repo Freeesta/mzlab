@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "docs" / "agenti" / "mappa.md"
-SKIP = ("vendor/", "ei-dati.js", "web/elements.js", "glossario-dati.js", "web/esempi/", "/target/")
+SKIP = ("vendor/", "ei-dati.js", "web/elements.js", "glossario-dati.js", "web/esempi/", "/target/", "docs/studi/")  # docs/studi/: study probes, not part of the program
 DORMIENTI = {"mzlab/web/qaqc.js", "mzlab/qaqc.py", "tests/test_qaqc.py", "tests_e2e/e2e_qaqc.py"}   # QA/QC: switched off by default, keep it
 GROUPS = [  # (title, path prefix, one line per file?)
     ("Teoria e Pratica (`mzlab/web/teoria/`)", "mzlab/web/teoria/", True),

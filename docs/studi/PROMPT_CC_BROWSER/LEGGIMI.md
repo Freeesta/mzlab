@@ -11,6 +11,7 @@ Un file per pacchetto; ognuno si copia in una chat DEV da sotto la riga «---» 
 | 3 | CC-B4 avvio automatico dopo i TP, worker a bassa priorità, stato | merge di CC-B2 e CC-B3 | `chem` (solo carico) | 1-1,5 |
 | 3 (parallelo) | CC-B5 «Prev. f(−)» in `posiz/1` e nel pannello «Substitution position» | merge di CC-B2 (e CC-B3) | `grafo` | 1-1,5 |
 | 3 (parallelo, facoltativo) | CC-B6 IP, EA, ω; BDE solo se validata | merge di CC-B2 + sì di Federico | `chem` | 1,5-2 |
+| 4 (facoltativi) | CC-B7 tautomeri e ionizzazione qualitativa; CC-B8 polarità per l'ordine di eluizione (`CC_CATALOGO_ROWAN.md`): prompt da scrivere solo dopo il sì di Federico | merge di CC-B2 (+ coppie di isomeri con RT per B8) | `chem` | 2-3; ~2 |
 
 CC-B1 e CC-B3 possono correre insieme (file diversi). CC-B4, CC-B5 e CC-B6 possono correre insieme: B4 tocca il worker e gli innesti in `20_tpmine.js`/`21_tpmine_hr.js`, B5 `posizioni/` e `44_posizioni.js`, B6 `indici.rs` e la scheda «Info» di `46_reattivita.js`; chi unisce per secondo fa `git merge origin/main` e prova di nuovo.
 

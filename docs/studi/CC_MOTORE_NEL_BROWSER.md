@@ -66,6 +66,9 @@ Studio dell'Architetto sulla richiesta di Federico: dopo il calcolo dei TP, Tabu
 | BDE C–H stimata | facoltativo: E(R•) + E(H•) − E(RH) GFN2 a geometria rilassata, oppure le classi di CC-03 | da validare su una tabella di BDE sperimentali prima di mostrarla |
 | pKa, siti di protonazione | no | nessun metodo affidabile a questo costo |
 
+### F. Catalogo Rowan per i TP
+Valutazione completa (valore, metodo in Rust, costo, rischio, priorità) in `CC_CATALOGO_ROWAN.md`. Priorità: 1 Fukui e conformeri; 2 HOMO/LUMO e BDE C–H; 3 tautomeri con ionizzazione qualitativa, logP/polarità per l'ordine di eluizione (solo dopo validazione su isomeri con RT misurato); 4 redox; 5 CCS (solo con dati IMS). Non pertinenti: docking, proteine, fononi, IRC/TS, superfici, solubilità, ADME-Tox, NMR.
+
 ## 3. Misura fatta in questo studio (container cloud, 16/10/2026)
 Script e dati in `docs/studi/cc_browser/` (`riferimento_tblite.py`, `classi.py`, `confronto_sciform.py`, `geometria_sciform.py`, `sciform_main.rs`, `risultati_10.csv`). Riferimento: tblite 0.7.0 (PyPI), GFN2-xTB, ALPB water, cariche di Mulliken, f(−) = q(N−1) − q(N), f(+) = q(N) − q(N+1), geometria RDKit 2026.09.1 ETKDG + MMFF94. Siti: C insaturi con H, mediati sulle classi di simmetria (`CanonicalRankAtoms`).
 
@@ -136,6 +139,8 @@ Script e dati in `docs/studi/cc_browser/` (`riferimento_tblite.py`, `classi.py`,
 | CC-B4 | avvio automatico dopo i TP in worker a bassa priorità, stato, annullamento, desktop | B2 + B3 | B5 | 1-1,5 |
 | CC-B5 | `prior` in `posiz/1` e colonna «Prev. f(−)»; Attributio legge `reatt/1` | B2 (+ B3 per la pagina) | B4 | 1-1,5 |
 | CC-B6 (facoltativo) | IP/EA, ω, HOMO/LUMO nella scheda «Info»; BDE C–H solo se validata | B2 | B4, B5 | 1,5-2 |
+| CC-B7 (facoltativo) | tautomeri per regole sul grafo, ordinati con GFN2 + ALPB; gruppi ionizzabili e carica attesa a pH ~2,7 (qualitativi) | B2 | B6 | 2-3 |
+| CC-B8 (facoltativo) | Crippen logP, dipolo, legame H intramolecolare per l'ordine di eluizione degli isomeri; visibile solo se ≥ 8/10 coppie di isomeri con RT misurato sono in ordine giusto | B2 + dati di Federico | B6, B7 | ~2 |
 
 Ordine: B1 → B2 → (B4, B5, B6 in parallelo); B3 parte subito con un `reatt/1` di prova scritto a mano. Chi unisce per secondo fa `git merge origin/main` e riprova. Rapporto con lo studio precedente: B2 + B5 sostituiscono la parte •OH di CC-03 (Hückel); CC-04 (importare calcoli esterni) resta utile come controllo; l'alogenazione di CC-03 resta com'era.
 
