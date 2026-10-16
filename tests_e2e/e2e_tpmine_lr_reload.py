@@ -5,7 +5,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401
-PORT = 8847
+from lib import free_port; PORT = free_port()
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
