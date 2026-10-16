@@ -542,6 +542,7 @@ ESC.registra({
     if (p._ibkA) p._ibkA = null; else { if (p.meas.list.length) p.meas.ref = null; else p.meas = null; }
     const q = Q("#qtip"); if (q && q._pd) { q.hidden = true; q._pd = null; }
     draw(p); uiSave();
+    if (measAperta(E.active)) measClear(E.active);                          // the ruler goes away with the same press
   },
 });
 document.addEventListener("keydown", e => {
