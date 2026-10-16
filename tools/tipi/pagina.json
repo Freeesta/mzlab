@@ -152,6 +152,8 @@
     "../../TP_Mine/js/42_tp_table.js",
     "../../TP_Mine/js/43_trasformazioni.js",
     "../../TP_Mine/js/44_tp_riga.js",
-    "../../TP_Mine/js/44_posizioni.js"
+    "../../TP_Mine/js/44_posizioni.js",
+    "../../TP_Mine/js/50_attributio.js",
+    "../../TP_Mine/js/51_attributio_table.js"
   ]
 }

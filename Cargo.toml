@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/mzlab-core", "crates/mzlab-wasm", "crates/mzlab-desktop", "crates/mzlab-lib", "crates/mzlab-lib-wasm", "crates/mzlab-feat", "crates/mzlab-feat-wasm", "crates/mzlab-feat-table-wasm", "crates/mzlab-feat-grafo-wasm", "crates/mzlab-feat-import-wasm", "crates/mzlab-finder-lr-wasm", "crates/mzlab-lettori", "crates/mzlab-lettori-wasm"]
+members = ["crates/mzlab-core", "crates/mzlab-wasm", "crates/mzlab-desktop", "crates/mzlab-lib", "crates/mzlab-lib-wasm", "crates/mzlab-feat", "crates/mzlab-feat-wasm", "crates/mzlab-feat-table-wasm", "crates/mzlab-feat-grafo-wasm", "crates/mzlab-feat-import-wasm", "crates/mzlab-attributio-wasm", "crates/mzlab-finder-lr-wasm", "crates/mzlab-lettori", "crates/mzlab-lettori-wasm"]
 exclude = ["vendor/opentfraw"]
 
 [workspace.package]

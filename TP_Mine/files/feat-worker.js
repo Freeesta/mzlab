@@ -180,6 +180,16 @@ export function createFeatPool(opts) {
         return r.bytes;
       });
     },
+    // The table of levels of a campaign folder (admin mode, `.wasm` `attributio`): `files` = [{ path, file }] (path relative to the folder, File of the page), `root` = folder name,
+    // `kind` = "json" | "csv" | "xlsx". Resolves with { summary (object), bytes (the rendering) }.
+    attributioAnnotate(files, root, kind = "json") {
+      return submit(async (slot, load) => {
+        await load("attributio");
+        const names = JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
+        const r = await call(slot, { op: "attributio_annotate", files: files.map(f => f.file), names, kind });
+        return { summary: JSON.parse(r.summary), bytes: r.bytes };
+      });
+    },
     ...previewOps(submit, call, opts),
     ...driftOps(submit, call, copy),
     ...proofOps(submit, call, copy, opts),
@@ -309,6 +319,13 @@ const OPS = {
   async align_unt(m) {
     const f = await openAll(m.paths), out = memSink();
     try { mods.untargeted.align_untargeted_to(arrays(m.files), f.read, f.sizes, m.params, out.write, m.budgetMb || 0); return { bytes: out.bytes() }; } finally { f.close(); }
+  },
+  // the table of levels of a campaign folder (admin mode, `.wasm` `attributio`): `files` are the File objects of the folder, read in slices (FileReaderSync); `kind` json | csv | xlsx
+  async attributio_annotate(m) {
+    const out = memSink(), rd = new FileReaderSync();
+    const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
+    const summary = mods.attributio[{ csv: "table_csv", xlsx: "table_xlsx_rows" }[m.kind] || "annotate_to"](read, m.names, out.write);
+    return { summary, bytes: out.bytes() };
   },
   async preview(m) {
     const f = await openAll([m.path]);

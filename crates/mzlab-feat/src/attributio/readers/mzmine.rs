@@ -161,6 +161,7 @@ fn annotation_rows(c: &Campaign, io: &Io, pol: &str) -> Result<Vec<AnnRow>> {
     let method = a.col("method");
     let entries = entry_texts(&a, "entry_id");
     let mut out = Vec::new();
+    #[allow(clippy::needless_range_loop)]
     for r in 0..a.len() {
         if method.is_some_and(|k| a.cell(r, k).to_lowercase().contains("lipid")) {
             continue;

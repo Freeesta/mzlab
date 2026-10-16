@@ -375,7 +375,7 @@ pub fn compare(
         let th = c.rel;
         let diff = obs - th;
         let label = format!("A+{}", c.k);
-        if obs == 0.0 && floor.map_or(false, |f| f != 0.0 && a_int * th / 100.0 < 1.5 * f) {
+        if obs == 0.0 && floor.is_some_and(|f| f != 0.0 && a_int * th / 100.0 < 1.5 * f) {
             rows.push(IsoRow {
                 k: c.k,
                 label,

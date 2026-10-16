@@ -171,7 +171,7 @@ fn tool_hits(f: &Feature, inp: &Inputs, prec: f64, s: &ReviewSettings) -> Vec<To
     for h in &inp.gnps {
         let exact = h
             .mass_diff
-            .map_or(true, |m| m.abs() <= prec * s.exact_ppm * 1e-6);
+            .is_none_or(|m| m.abs() <= prec * s.exact_ppm * 1e-6);
         out.push(ToolHit {
             tool: "GNPS2",
             kind: if exact { "exact" } else { "analog" }.to_string(),
@@ -851,7 +851,7 @@ pub fn review_feature<R: RawSource, S: Structures>(
             n_explained: ex.n_expl,
             frac_explained: round_to(ex.frac_expl, 3),
             decoy_frac: round_to(ex.decoy_frac, 3),
-            precursor_present: pim.as_ref().map_or(false, |p| p.present),
+            precursor_present: pim.as_ref().is_some_and(|p| p.present),
             precursor_rel: pim.and_then(|p| p.prec_rel),
             raw: raw.map(|r| r.0),
             references: scored.into_iter().map(|x| x.r).collect(),

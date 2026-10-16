@@ -44,9 +44,9 @@ fn twenty_formulas_and_adducts_equal_the_reference_tool() {
         );
         match (parse_adduct(a), w["parsed"].as_array()) {
             (Some((n, d, z)), Some(p)) => {
-                assert_eq!(n as i64, p[0].as_i64().expect("n"), "{at}: n");
+                assert_eq!(n, p[0].as_i64().expect("n"), "{at}: n");
                 close(d, p[1].as_f64().expect("d"), &format!("{at} delta"));
-                assert_eq!(z as i64, p[2].as_i64().expect("z"), "{at}: z");
+                assert_eq!(z, p[2].as_i64().expect("z"), "{at}: z");
             }
             (None, None) => continue,
             other => panic!("{at}: adduct {other:?}"),

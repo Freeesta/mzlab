@@ -1,0 +1,18 @@
+[package]
+name = "mzlab-attributio-wasm"
+description = "wasm-bindgen bridge of the table of levels of Attributio (mzlab-feat, feature attributio); a .wasm of its own, loaded by mzFinder only in administrator mode when a campaign folder is chosen"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+js-sys = "0.3.106"
+mzlab-core = { path = "../mzlab-core" }
+mzlab-feat = { path = "../mzlab-feat", default-features = false, features = ["attributio"] }
+wasm-bindgen = "0.2"
+
+[dev-dependencies]
+serde_json = { version = "1", features = ["float_roundtrip"] }

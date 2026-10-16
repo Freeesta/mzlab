@@ -13,7 +13,6 @@ Restano i prompt dei pacchetti non ancora eseguiti (AT-04 → AT-07 → AT-08, M
 | 2 | AT-01 campagna e lettori · AT-05 abbinamento e librerie · MZ-01 ADAP · MZ-02 risolutore · MZ-03 join e riempimento | AT-00 (AT-01, AT-05); MZ-00 (MZ-01…03) |
 | 3 | AT-02 cascata dei livelli · AT-06 spiegazioni e proposte · MZ-04 `.wasm` `untargeted` | AT-01 (AT-02); AT-01 e AT-05 (AT-06); MZ-01…03 (MZ-04) |
 | 4 | AT-03 curazione e identità · MZ-05 isotopi, identità, ingresso della cascata | AT-02 (AT-03); MZ-04 e AT-01 (MZ-05) |
-| 5 | AT-04 `.wasm` `attributio`, voce di amministratore, tabella | AT-03 |
 | 6 | AT-07 Banco 2b | AT-04, AT-06 |
 | 7 | AT-08 esportazioni, quantificazione, gradiente | AT-07 |
 
