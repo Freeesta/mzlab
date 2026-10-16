@@ -115,7 +115,11 @@ try:
                 row.locator(".tpg-cond").fill(cond); row.locator(".tpg-cond").press("Tab")
                 pg.wait_for_function(f"[...document.querySelectorAll('#tp-cfiles tr')].find(r => r.textContent.includes('{name}')).querySelector('.tpg-cond').value === '{cond}'")
                 row = pg.locator("#tp-cfiles tr", has_text=name)
-                row.locator(".tpg-time").fill(time); row.locator(".tpg-time").press("Enter")
+                for _ in range(5):                     # the table is drawn again after each change: type until the time stays
+                    row = pg.locator("#tp-cfiles tr", has_text=name); row.locator(".tpg-time").fill(time); row.locator(".tpg-time").press("Enter")
+                    pg.wait_for_timeout(600)
+                    if pg.evaluate(f"[...document.querySelectorAll('#tp-cfiles tr')].find(r => r.textContent.includes('{name}')).querySelector('.tpg-time').value") == time: break
+                else: raise AssertionError("the time of " + name + " does not stay")
             pg.click("#tp-cfiles button:has-text('Confirm conditions')")
             assert pg.evaluate("[...document.querySelectorAll('#tp-cfiles tr')].find(r => r.textContent.includes('MS2_shared')).querySelector('.tpg-cond').value") == ""
         step("the MS2 file of O2 gets its condition and time; the other one stays shared", ms2_files)
@@ -201,9 +205,9 @@ try:
                 return pg.evaluate("""([mz, c]) => { const heads = [...document.querySelectorAll('#gv-mx thead button[data-sort]')].map(b => b.dataset.sort).filter(k => !['name','mz','rt'].includes(k));
                   const r = [...document.querySelectorAll('#gv-mx tbody tr[data-row]')].find(r => Math.round(parseFloat(r.querySelectorAll('td')[0].textContent)) === mz);
                   const td = r.querySelectorAll('td')[2 + heads.indexOf(c)]; const p = td.querySelector('.gv-pv'); return p ? p.getAttribute('title') : ''; }""", [mzv, cond])
-            assert "MS2: linked" in prev(257, "O2"), prev(257, "O2")
+            assert "MS2: linked" in prev(257, "O2"), ("257/O2", prev(257, "O2"), pg.evaluate("[...document.querySelectorAll('#tp-cfiles tr')].filter(r => r.textContent.includes('MS2_')).map(r => r.textContent.slice(0,40) + '|' + r.querySelector('.tpg-cond').value + '|' + r.querySelector('.tpg-time').value)"), txt[:700])
             assert prev(257, "N2") == "" or "MS2: none" in prev(257, "N2"), prev(257, "N2")
-            assert "MS2: linked" in prev(273, "Air") and "MS2: linked" in prev(273, "O2"), (prev(273, "Air"), prev(273, "O2"))
+            assert "MS2: linked" in prev(273, "Air") and "MS2: linked" in prev(273, "O2"), ("273", prev(273, "Air"), prev(273, "O2"))
         step("the MS2 files show their condition; «MS2: linked» only where an MS2 of the condition or a shared one is matched", ms2)
 
         def exports():
