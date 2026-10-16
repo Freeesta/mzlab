@@ -1,0 +1,26 @@
+# campaign.toml -- synthetic fixture for the gradient (AT-08): two sites, two sorbents, invented areas.
+[campaign]
+id = "GRAD"
+name = "Synthetic gradient test campaign (fixture, not real data)"
+
+[paths]
+data = "data"
+
+[mzmine]
+dir = "mz"
+merged_dir = "DDA_{pol}/merged"
+sorbents = ["OA", "EC"]
+polarity_tag = { POS = "ddaPOS", NEG = "ddaNEG" }
+
+[gradient]
+same_sorbent = true
+
+[sites.S1]
+file_prefix = "S1"
+
+[sites.S2]
+file_prefix = "S2"
+
+[matrices.all]
+sites = ["S1", "S2"]
+dir = "All"

@@ -4,17 +4,15 @@
 //! with the proof the program calculated, never ticked), the alternatives with the same formula, the RT-logP check and the decisions already written. It proposes,
 //! the chemist decides.
 
-use super::alternatives::{same_formula, Alt, AltSources};
+use super::banco_json::*;
 use super::feature::{review_feature, Env, Inputs};
 use super::libraries::{find_library_files, LibInput, LibraryIndex};
-use super::matching::Ms2;
 use super::proposal::{Proposal, J};
 use super::propose::{read_mgf_blocks, MgfBlock};
 use super::raw::NoRaw;
-use super::rtlogp::{calibrate, check, organic_fraction, CalPoint, LogPValues, MIN_N};
-use super::rules::{page_level, Current};
+use super::rules::Current;
 use super::settings::ReviewSettings;
-use super::sources::{csi_top5, gnps_hits, sirius_hits, SourceTexts, StructureCandidate};
+use super::sources::{gnps_hits, sirius_hits, GnpsHit, SiriusHit, SourceTexts};
 use super::structures::GraphStructures;
 use crate::attributio::annotate::{gnps_comparer, load_annotations, Feature};
 use crate::attributio::campaign::{Campaign, Env as CEnv, POLARITIES};
@@ -170,269 +168,74 @@ pub fn folder_libraries(io: &Io, s: &ReviewSettings) -> LibraryIndex {
     LibraryIndex::build(inputs)
 }
 
-fn num_or_null(v: Option<f64>) -> J {
-    J::on(v)
+/// A campaign loaded for review with what every feature needs: the texts of the tool outputs, the libraries and the hits.
+pub(super) struct Run {
+    pub(super) b: Bench,
+    texts: SourceTexts,
+    lib: LibraryIndex,
+    sirius: Vec<SiriusHit>,
+    gnps: Vec<GnpsHit>,
 }
 
-/// The retention-time versus logP check of the feature, calibrated on the Level 1 and robust 2a features of its polarity that the sources give a logP for.
-fn rt_logp(b: &Bench, f: &Feature) -> Option<(J, Option<bool>)> {
-    let s = &b.settings;
-    let grad = &s.lc_gradient;
-    let floor = if s.rt_logp_floor > 0.0 {
-        s.rt_logp_floor
-    } else if grad.is_empty() {
-        1.0
-    } else {
-        3.0
-    };
-    let y_of = |rt: f64| {
-        if grad.is_empty() {
-            rt
-        } else {
-            organic_fraction(rt, grad, s.lc_dwell_min)
-        }
-    };
-    let values = |g: &Feature| LogPValues {
-        xlogp3: g.csi.xlogp.filter(|v| v.is_finite()),
-        ..Default::default()
-    };
-    let pts: Vec<CalPoint> = b
-        .features
-        .iter()
-        .filter(|g| g.pol == f.pol && (g.level == 1 || (g.level == 2 && g.level_sub == "a")))
-        .filter_map(|g| {
-            Some(CalPoint {
-                logp: values(g),
-                y: Some(y_of(g.rt?)),
-            })
-        })
-        .collect();
-    let model = calibrate(&pts, s.rt_logp_k, floor, MIN_N);
-    let y = f.rt.map(y_of);
-    let c = check(&model, &values(f), y, s.rt_logp_k, floor);
-    let j = J::Obj(vec![
-        ("n_calibrants", J::Num(model.n as f64)),
-        ("y", num_or_null(y)),
-        (
-            "y_label",
-            J::Str(
-                if grad.is_empty() {
-                    "RT (min)"
-                } else {
-                    "organic fraction at elution (%B)"
-                }
-                .into(),
-            ),
-        ),
-        ("logp", num_or_null(c.logp)),
-        ("pred", num_or_null(c.pred)),
-        ("resid", num_or_null(c.resid)),
-        ("window", num_or_null(model.window)),
-        ("ok", c.ok.map_or(J::Null, J::Bool)),
-        ("note", J::Str(model.note.clone())),
-    ]);
-    Some((j, c.ok))
-}
-
-/// The proof the program calculated for each box of the checklist (`None`: not available); the chemist ticks the boxes, the program never does.
-fn proofs(p: &Proposal, alts: &[Alt], rt: Option<bool>) -> Vec<Option<String>> {
-    let e = &p.evidence;
-    let view = e.view.as_ref();
-    let frags: Vec<_> = view
-        .map(|v| v.peaks.iter().filter_map(|k| k.frag.as_ref()).collect())
-        .unwrap_or_default();
-    let losses: Vec<&str> = frags
-        .iter()
-        .map(|f| f.loss.as_str())
-        .filter(|l| !l.is_empty())
-        .collect();
-    let iso = e
-        .raw
-        .as_ref()
-        .and_then(|r| r.ms1.as_ref())
-        .and_then(|m| m.iso_ok);
-    let pur = e
-        .purity
-        .as_ref()
-        .and_then(|u| u.purity.map(|v| (v, u.badge.clone())));
-    vec![
-        (e.n_peaks > 0).then(|| {
-            format!(
-                "{} of {} peaks explained ({:.0}% of the intensity)",
-                e.n_explained,
-                e.n_peaks,
-                e.frac_explained * 100.0
-            )
-        }),
-        (!losses.is_empty()).then(|| format!("losses: {}", losses.join(", "))),
-        iso.map(|ok| {
-            format!(
-                "isotope pattern {}",
-                if ok { "consistent" } else { "not consistent" }
-            )
-        }),
-        pur.map(|(v, b)| format!("isolation purity {v:.2} ({b})")),
-        rt.map(|ok| {
-            format!(
-                "RT versus logP: {}",
-                if ok {
-                    "within the window"
-                } else {
-                    "outside the window"
-                }
-            )
-        }),
-        Some(format!(
-            "{} alternative(s) with the same formula listed",
-            alts.len()
-        )),
-    ]
-}
-
-fn alt_json(a: &Alt, best_ik1: Option<&str>) -> J {
-    J::Obj(vec![
-        ("name", J::s(&a.name)),
-        ("source", J::s(&a.source)),
-        ("entry", J::os(&a.entry)),
-        ("ik1", J::os(&a.ik1)),
-        ("smiles", J::os(&a.smiles)),
-        ("score", J::on(a.score)),
-        ("matched", a.matched.map_or(J::Null, |m| J::Num(m as f64))),
-        ("logp", J::on(a.logp)),
-        (
-            "is_best",
-            J::Bool(a.ik1.is_some() && a.ik1.as_deref() == best_ik1),
-        ),
-    ])
-}
-
-/// The last decision row of the feature, as `{column: value}`, and how many rows the feature has.
-fn decision_json(d: &DecisionTable, f: &Feature) -> (J, usize) {
-    let mut last = None;
-    let mut n = 0;
-    for r in 0..d.len() {
-        let same_pol = d.get(r, "pol").trim().eq_ignore_ascii_case(&f.pol);
-        let same_id = d.get(r, "feature_id").trim().parse::<f64>().ok() == Some(f.id as f64);
-        if same_pol && same_id {
-            last = Some(r);
-            n += 1;
-        }
-    }
-    let j = last.map_or(J::Null, |r| {
-        J::Arr(
-            d.columns
-                .iter()
-                .map(|c| J::Arr(vec![J::s(c), J::s(d.get(r, c))]))
-                .collect(),
-        )
-    });
-    (j, n)
-}
-
-fn checklist_json(marks: Vec<Option<String>>) -> J {
-    J::Arr(
-        CHECKLIST
-            .iter()
-            .zip(marks)
-            .map(|((key, label), proof)| {
-                J::Obj(vec![
-                    ("key", J::s(key)),
-                    ("label", J::s(label)),
-                    ("proof", proof.map_or(J::Null, J::Str)),
-                ])
-            })
-            .collect(),
-    )
-}
-
-fn current_json(f: &Feature, cur: &Current) -> J {
-    J::Obj(vec![
-        (
-            "level",
-            J::Str(page_level(cur.level, cur.level_sub, cur.decision_2b)),
-        ),
-        ("sub", J::s(&f.level_sub)),
-        ("basis", J::s(&f.level_basis)),
-        ("name", cur.name.map_or(J::Null, J::s)),
-        ("identity", f.identity().map_or(J::Null, J::s)),
-        ("group", cur.group.map_or(J::Null, J::s)),
-    ])
-}
-
-fn libraries_json(lib: &LibraryIndex) -> J {
-    J::Arr(
-        lib.summary()
-            .into_iter()
-            .map(|(l, n)| J::Arr(vec![J::Str(l), J::Num(n as f64)]))
-            .collect(),
-    )
-}
-
-/// The alternatives with the formula of the best proposal: the library entries and the CSI:FingerID candidates of the feature.
-fn same_formula_alts(
-    b: &Bench,
-    f: &Feature,
-    p: &Proposal,
-    texts: &SourceTexts,
-    lib: &LibraryIndex,
-    mgf: Option<&MgfBlock>,
-) -> Vec<Alt> {
-    let (pol, id) = (f.pol.as_str(), f.id);
-    let csi: Vec<StructureCandidate> = csi_top5(texts)
-        .into_iter()
-        .find(|(k, _)| k.0 == pol && k.1 == id)
-        .map(|x| x.1)
-        .unwrap_or_default();
-    let exp = p.evidence.view.as_ref().map(|v| Ms2 {
-        mz: v.peaks.iter().map(|k| k.mz).collect(),
-        it: v.peaks.iter().map(|k| k.rel).collect(),
-        prec: mgf.map_or(f.mz.unwrap_or(0.0), |m| m.prec),
-    });
-    match p.best.formula.as_deref() {
-        Some(formula) => same_formula(
-            formula,
+impl Run {
+    pub(super) fn load(io: &Io, root: &str) -> Result<Run> {
+        let b = Bench::load(io, root)?;
+        let texts = source_texts(&b.campaign, io);
+        let lib = folder_libraries(io, &b.settings);
+        let (sirius, gnps) = (sirius_hits(&texts), gnps_hits(&texts));
+        Ok(Run {
+            b,
+            texts,
             lib,
-            &AltSources {
-                csi: &csi,
-                exp: exp.as_ref(),
-                tol: b.settings.tol_da,
-                st: &GraphStructures,
-            },
-        ),
-        None => Vec::new(),
+            sirius,
+            gnps,
+        })
+    }
+
+    /// The MS2 block of the feature in the FBMN MGF.
+    fn mgf(&self, io: &Io, f: &Feature) -> Option<MgfBlock> {
+        feature_mgf(&self.b.campaign, io, &f.pol)
+            .and_then(|p| io.text(&p))
+            .and_then(|t| read_mgf_blocks(&t, Some(&[f.id])).remove(&f.id))
+    }
+
+    /// The proposal of the review for one feature, with its MS2 block.
+    pub(super) fn proposal(&self, io: &Io, f: &Feature) -> (Proposal, Option<MgfBlock>) {
+        let mgf = self.mgf(io, f);
+        let inputs = Inputs {
+            mgf: mgf.as_ref(),
+            sirius: self
+                .sirius
+                .iter()
+                .filter(|h| h.pol == f.pol && h.id == f.id)
+                .collect(),
+            gnps: self
+                .gnps
+                .iter()
+                .filter(|h| h.pol == f.pol && h.id == f.id)
+                .collect(),
+        };
+        let st = GraphStructures;
+        let env = Env {
+            s: &self.b.settings,
+            lib: &self.lib,
+            st: &st,
+            raw: &NoRaw,
+        };
+        (review_feature(&env, f, &inputs), mgf)
     }
 }
 
 /// The review of one feature as JSON (see the module).
 pub fn review_json(io: &Io, root: &str, pol: &str, id: i64) -> Result<String> {
-    let b = Bench::load(io, root)?;
+    let run = Run::load(io, root)?;
+    let (b, texts, lib) = (&run.b, &run.texts, &run.lib);
     let f = b.feature(pol, id).ok_or_else(|| {
         CampaignError::not_found(format!("feature {pol} {id} is not in the table"))
     })?;
-    let texts = source_texts(&b.campaign, io);
-    let lib = folder_libraries(io, &b.settings);
-    let mgf: Option<MgfBlock> = feature_mgf(&b.campaign, io, pol)
-        .and_then(|p| io.text(&p))
-        .and_then(|t| read_mgf_blocks(&t, Some(&[id])).remove(&id));
-    let (sirius, gnps) = (sirius_hits(&texts), gnps_hits(&texts));
-    let inputs = Inputs {
-        mgf: mgf.as_ref(),
-        sirius: sirius
-            .iter()
-            .filter(|h| h.pol == pol && h.id == id)
-            .collect(),
-        gnps: gnps.iter().filter(|h| h.pol == pol && h.id == id).collect(),
-    };
-    let st = GraphStructures;
-    let env = Env {
-        s: &b.settings,
-        lib: &lib,
-        st: &st,
-        raw: &NoRaw,
-    };
-    let p = review_feature(&env, f, &inputs);
-    let alts = same_formula_alts(&b, f, &p, &texts, &lib, mgf.as_ref());
-    let rt = rt_logp(&b, f);
+    let (p, mgf) = run.proposal(io, f);
+    let alts = same_formula_alts(b, f, &p, texts, lib, mgf.as_ref());
+    let rt = rt_logp(b, f);
     let marks = proofs(&p, &alts, rt.as_ref().and_then(|r| r.1));
     let checklist = checklist_json(marks);
     let table = b.decisions(io)?;
@@ -464,7 +267,7 @@ pub fn review_json(io: &Io, root: &str, pol: &str, id: i64) -> Result<String> {
         ("decision", last),
         ("decision_rows", J::Num(n_rows as f64)),
         ("decisions_path", J::Str(b.decisions_path().0)),
-        ("libraries", libraries_json(&lib)),
+        ("libraries", libraries_json(lib)),
         ("has_ms2", J::Bool(mgf.is_some())),
         ("warnings", J::strs(&b.warnings)),
     ]);

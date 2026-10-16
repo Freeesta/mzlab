@@ -44,3 +44,14 @@ Inoltre `campagna_banco/` (sovrapposizione sulla campagna sintetica per il Banco
 | `02 Data/Data Synth/2 - SIRIUS/output POS/structure_identifications.tsv` | `30810ee505c65ed567375fa03e5c1b1f5a436fb1cb5c9a1fa1b423542347c21e` |
 | `02 Data/Data Synth/2 - SIRIUS/output POS/structure_identifications_top-5.tsv` | `417e455997f7168c7c83d06932e1841e997e54cdef36a1f159a5a9f7292b6d37` |
 | `library/banco.json` | `b1e2329a84db082e0b7df377e70ea15eeb320dbeb9cf84d22e757effcbd5dda2` |
+
+Inoltre `campagna_esportazione/` (sovrapposizione sulla campagna sintetica per le esportazioni: decisioni 2b e curva di taratura inventate) e `campagna_gradiente/` (due siti a monte e a valle, per il gradiente); dati inventati:
+
+| File | sha256 |
+|---|---|
+| `campagna_esportazione/03 Stats/scripts/shared/feature_decisions.csv` | `5cb6d0d2d5c0fef1bd563ffb76f71bcbf8db7c312c1e4a8391c926c9631d6394` |
+| `campagna_esportazione/campaign.toml` | `2fad6c66202b493ef243cc503c8334c32f823be5b28cbdbe051b792cf49100a3` |
+| `campagna_esportazione/library/calibration.csv` | `8dbc493510571cb597caf57dfcbe99df636e18b71f5bdb2fd3599b62f13671bc` |
+| `campagna_gradiente/campaign.toml` | `0ef2c287ffc03abb7f7c9fa47c4c9fabef48f3d6427645f67d3487a2803f0239` |
+| `campagna_gradiente/data/mz/DDA_NEG/merged/merged_neg.csv` | `0e4e6aeef1b3407fa5e2f41a3d938c481bbb5629cec5323949b55983f2abf012` |
+| `campagna_gradiente/data/mz/DDA_POS/merged/merged_pos.csv` | `4a9acb9cf199e943c7c9f4e7e7d39bb35e8051b1a9d4b6a2860fcb493f53f9a5` |

@@ -55,6 +55,20 @@ pub fn fixture(name: &str) -> Fixture {
     Fixture { files, campaign }
 }
 
+/// Several fixture folders laid over each other (the later files win), as the reference stage does with its temporary copy.
+pub fn fixture_overlay(names: &[&str]) -> Fixture {
+    let mut files = MemFiles::default();
+    for name in names {
+        let base = root().join("tests/data/attributio").join(name);
+        walk(&base, &base, &mut files);
+    }
+    let text =
+        String::from_utf8(files.read("campaign.toml").expect("campaign.toml")).expect("utf-8");
+    let campaign =
+        Campaign::from_toml(&text, "campaign.toml", names[0], Env::default()).expect("campaign");
+    Fixture { files, campaign }
+}
+
 #[macro_export]
 macro_rules! with_io {
     ($fx:expr, $io:ident) => {

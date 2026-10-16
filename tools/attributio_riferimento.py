@@ -551,6 +551,146 @@ def stadio_frammenti():
     return {"molecole": out}
 
 
+ESPORTAZIONE = ROOT / "tests/data/attributio/campagna_esportazione"
+GRADIENTE = ROOT / "tests/data/attributio/campagna_gradiente"
+USCITA_ESPORTAZIONE = ROOT / "tests/golden/attributio/esportazione"
+
+
+def foglio(nome, df):
+    """DataFrame -> {name, head, rows}: a missing value is null, the numbers stay numbers."""
+    import pandas as pd
+    righe = [[None if (not isinstance(v, (list, dict, tuple, set)) and pd.isna(v)) else jsonable(v) for v in r]
+             for r in df.itertuples(index=False, name=None)]
+    return {"name": nome, "head": [str(c) for c in df.columns], "rows": righe}
+
+
+def campagna_esportazione(src: Path):
+    """A temporary copy of the synthetic campaign with the overlay of the exports (calibration, decisions with evidence), loaded."""
+    import shutil
+    import tempfile
+    tmp = Path(tempfile.mkdtemp())
+    shutil.copytree(CAMPAGNA, tmp / "c")
+    shutil.copytree(ESPORTAZIONE, tmp / "c", dirs_exist_ok=True)
+    return carica(src, tmp / "c"), tmp
+
+
+def stadio_quantificazione(src):
+    from attributio.annotate import load_annotations
+    from attributio.quantify import quantify_lvl1, quantify_lvl1_environmental
+    C, _ = campagna_esportazione(src)
+    feat = load_annotations(C)
+    q = quantify_lvl1(C, feat)
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        e = quantify_lvl1_environmental(C, feat)
+    avvisi = [str(x.message) for x in w if "quantify_lvl1_environmental" in str(x.message)]
+    return {"lvl1": foglio("lvl1", q), "env": foglio("env", e), "avviso": avvisi[0] if avvisi else None}
+
+
+def stadio_schymanski(src):
+    import pandas as pd
+    from attributio.diagnostics import schymanski_export as se
+    from attributio.identity import identity_table
+    C, _ = campagna_esportazione(src)
+    diag = C.cfg.get("diagnostics", {})
+    matrix = diag.get("matrix") or next(iter(C.matrices))
+    sites = C.matrix_sites(matrix)
+    short = {s: C.site_meta[s]["short"] for s in sites}
+    feat = se.build_feature_frame(C, sites)
+    it_all = identity_table(feat, sites, drop_groups=())
+    blocks = {"id": [], "feat": [], "exc": []}
+    for level in (1, 2, 3):
+        by_id, features, excluded = se.build_identity_sheet(C, feat, it_all, level, sites, short)
+        if level == 1:
+            by_id = se.attach_lvl1_quant(C, by_id, feat, sites, short)
+        for d in (by_id, features, excluded):
+            if not d.empty:
+                d.insert(0, "schymanski_level", se.LEVEL_TAG[level])
+        blocks["id"].append(by_id)
+        blocks["feat"].append(features)
+        blocks["exc"].append(excluded)
+
+    def cat(bs):
+        bs = [b for b in bs if len(b)]
+        return pd.concat(bs, ignore_index=True) if bs else pd.DataFrame()
+
+    by_identity, features, excluded = cat(blocks["id"]), cat(blocks["feat"]), cat(blocks["exc"])
+    if not by_identity.empty:
+        by_identity = by_identity[[c for c in se._FRONT if c in by_identity.columns]
+                                  + [c for c in by_identity.columns if c not in se._FRONT]]
+    hojas = [foglio(n, d if not d.empty else pd.DataFrame({e: []}))
+             for n, d, e in (("by_identity", by_identity, "(no identities)"), ("features", features, "(no features)"),
+                             ("excluded", excluded, "(no excluded identities)"))]
+    hojas.append(foglio("notes", se._notes(C, sites, C.calibration_csv is not None)))
+    return {"sheets": hojas}
+
+
+def _senza_dati_di_pericolo(pt):
+    """Stand-in of the hazard record without snapshot data: the record of a name that the registry does not know."""
+    from attributio.ecotox import hazard as hz
+
+    def record(name, campaign_id=None, level=None):
+        rec = hz.HazardRecord(identity=name)
+        caveats = []
+        if hz.ISOMER.search(name):
+            caveats.append("RT isomer: hazard of the named structure, the peak may be another isomer")
+        if level == 3:
+            caveats.append("Level 3: hazard of the CSI:FingerID candidate structure")
+        caveats.append("no structure in the registry")
+        rec.caveat = "; ".join(caveats)
+        return rec
+    pt._hazard.record = record
+
+
+def stadio_pubblicazione(src):
+    import pandas as pd
+    from attributio.diagnostics import publication_table as pt
+    C, _ = campagna_esportazione(src)
+    _senza_dati_di_pericolo(pt)
+    vuoto = (pd.DataFrame(columns=["inchikey_first_block"]), pd.DataFrame(columns=["name", "first_block", "campaign"]))
+    res = pt.build(C, "all", registry=vuoto)
+    rd = pt.readme(res, "Title", "Description", {})
+    return {"identities": foglio("Identities", res["Identities"]), "excluded": foglio("Excluded", res["Excluded"]),
+            "readme": foglio("README", rd), "counts": res["counts"], "sites": res["sites"], "short": res["short"],
+            "csv": res["Identities"].to_csv(sep=";", decimal=".", index=False, encoding="utf-8")}
+
+
+def stadio_gradiente(src):
+    from attributio import gradient as gr
+    from attributio.annotate import load_annotations
+    from attributio.diagnostics import publication_table as pt
+    import pandas as pd
+    C = carica(src, GRADIENTE)
+    sites = list(C.sites)
+    vero = pt.rt_logp_flags
+
+    def senza_l3(feat):          # the reference stops when no Level 3 feature rests on CSI:FingerID: no flags then
+        try:
+            return vero(feat)
+        except ValueError:
+            return pd.DataFrame(columns=["_pol", "_id", "rt_logp_resid", "rt_logp_z", "rt_logp_outlier", "rt_logp_note"])
+    pt.rt_logp_flags = senza_l3
+    feat = load_annotations(C)
+    gt, dd = pt.canonical_identities(feat, sites)
+    fr = pt.feature_frame(C, feat, gt, sites)
+    ident = dd.rename(columns={"nome_comune": "canonical_name"})
+    fi = fr.rename(columns={"nome_comune": "canonical_name"})[["_pol", "_id", "rt", "canonical_name"]]
+    out = {"sites": sites, "identities": foglio("identities", ident), "feature_identities": foglio("fi", fi)}
+    for nome, same in (("stesso_sorbente", None), ("senza_sorbente", False)):
+        tab, summ = gr.identity_gradient(C, feat, ident, sites[0], sites[1], 3.0,
+                                         feature_identities_fn=lambda _f: fi, same_sorbent=same)
+        out[nome] = {"table": foglio(nome, tab), "summary": jsonable(summ.__dict__)}
+    nuvola = gr.feature_cloud_gradient(C, feat, sites[0], sites[1])
+    cols = ["_pol", "_id", "area_us", "area_ds", "status", "log2FC_us_ds", "abs_area"]
+    out["cloud"] = foglio("cloud", nuvola[cols])
+    ar = gr.compute_gradient_areas(C, tuple(sites))
+    out["areas"] = {f"{p}|{s}": {str(k): v for k, v in sorted(m.items())} for (p, s), m in sorted(ar.items())}
+    ab = gr.compute_gradient_areas_by_sorbent(C, tuple(sites))
+    out["areas_sorbent"] = {f"{p}|{s}|{b}": {str(k): v for k, v in sorted(m.items())} for (p, s, b), m in sorted(ab.items())}
+    out["same_sorbent_default"] = gr.same_sorbent_default(C)
+    return out
+
+
 def controlla(uscita: Path, campagna: Path) -> int:
     got = json.loads((uscita / "livelli.json").read_text(encoding="utf-8"))["features"]
     with open(campagna / "livelli_attesi.csv", encoding="utf-8", newline="") as fh:
@@ -576,6 +716,7 @@ def main() -> int:
     ap.add_argument("--uscita", type=Path, default=USCITA)
     ap.add_argument("--sorbenti", type=Path, default=SORBENTI)
     ap.add_argument("--uscita-sorbenti", type=Path, default=USCITA_SORBENTI)
+    ap.add_argument("--uscita-esportazione", type=Path, default=USCITA_ESPORTAZIONE)
     ap.add_argument("--solo", nargs="+", metavar="STADIO", help="write only these stages (e.g. spiegazioni frammenti)")
     ap.add_argument("--controlla", action="store_true",
                     help="compare livelli.json with livelli_attesi.csv (exit 1 on difference)")
@@ -588,7 +729,12 @@ def main() -> int:
     C = carica(root, a.campagna.resolve())
     from attributio.annotate import load_annotations
     feat = load_annotations(C)
+    esp = a.uscita_esportazione
     stadi = {
+        "quantificazione": lambda: scrivi(esp, "quantificazione.json", stadio_quantificazione(root)),
+        "schymanski": lambda: scrivi(esp, "schymanski.json", stadio_schymanski(root)),
+        "pubblicazione": lambda: scrivi(esp, "pubblicazione.json", stadio_pubblicazione(root)),
+        "gradiente": lambda: scrivi(esp, "gradiente.json", stadio_gradiente(root)),
         "campagna": lambda: scrivi(a.uscita, "campagna.json", stadio_campagna(C)),
         "letture": lambda: scrivi(a.uscita, "letture.json", stadio_letture(C)),
         "rilevazione": lambda: scrivi(a.uscita, "rilevazione.json", stadio_rilevazione(C)),

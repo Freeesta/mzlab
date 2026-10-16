@@ -1,0 +1,690 @@
+{
+ "areas": {
+  "NEG|S1": {
+   "1": 400,
+   "2": 1500
+  },
+  "NEG|S2": {
+   "1": 1200,
+   "2": 300
+  },
+  "POS|S1": {
+   "1": 1000,
+   "2": 5000,
+   "3": 3000,
+   "4": 0,
+   "5": 900,
+   "6": 10000,
+   "7": 2000,
+   "8": 100,
+   "9": 0
+  },
+  "POS|S2": {
+   "1": 8000,
+   "2": 4000,
+   "3": 0,
+   "4": 700,
+   "5": 800,
+   "6": 1000,
+   "7": 1000,
+   "8": 4000,
+   "9": 0
+  }
+ },
+ "areas_sorbent": {
+  "NEG|S1|EC": {
+   "1": 400,
+   "2": 0
+  },
+  "NEG|S1|OA": {
+   "1": 0,
+   "2": 1500
+  },
+  "NEG|S2|EC": {
+   "1": 1200,
+   "2": 0
+  },
+  "NEG|S2|OA": {
+   "1": 0,
+   "2": 300
+  },
+  "POS|S1|EC": {
+   "1": 500,
+   "2": 0,
+   "3": 0,
+   "4": 0,
+   "5": 0,
+   "6": 0,
+   "7": 0,
+   "8": 0,
+   "9": 0
+  },
+  "POS|S1|OA": {
+   "1": 1000,
+   "2": 5000,
+   "3": 3000,
+   "4": 0,
+   "5": 900,
+   "6": 10000,
+   "7": 2000,
+   "8": 100,
+   "9": 0
+  },
+  "POS|S2|EC": {
+   "1": 100,
+   "2": 0,
+   "3": 0,
+   "4": 700,
+   "5": 800,
+   "6": 300,
+   "7": 0,
+   "8": 0,
+   "9": 0
+  },
+  "POS|S2|OA": {
+   "1": 8000,
+   "2": 4000,
+   "3": 0,
+   "4": 0,
+   "5": 0,
+   "6": 1000,
+   "7": 1000,
+   "8": 4000,
+   "9": 0
+  }
+ },
+ "cloud": {
+  "head": [
+   "_pol",
+   "_id",
+   "area_us",
+   "area_ds",
+   "status",
+   "log2FC_us_ds",
+   "abs_area"
+  ],
+  "name": "cloud",
+  "rows": [
+   [
+    "POS",
+    1,
+    1000,
+    8000,
+    "both",
+    -3.0,
+    8000
+   ],
+   [
+    "POS",
+    2,
+    5000,
+    4000,
+    "both",
+    0.32192809488736235,
+    5000
+   ],
+   [
+    "POS",
+    3,
+    3000,
+    0,
+    "US_only",
+    null,
+    3000
+   ],
+   [
+    "POS",
+    4,
+    0,
+    700,
+    "DS_only",
+    null,
+    700
+   ],
+   [
+    "POS",
+    5,
+    900,
+    800,
+    "both",
+    0.16992500144231237,
+    900
+   ],
+   [
+    "POS",
+    6,
+    10000,
+    1000,
+    "both",
+    3.321928094887362,
+    10000
+   ],
+   [
+    "POS",
+    7,
+    2000,
+    1000,
+    "both",
+    1.0,
+    2000
+   ],
+   [
+    "POS",
+    8,
+    100,
+    4000,
+    "both",
+    -5.321928094887363,
+    4000
+   ],
+   [
+    "NEG",
+    1,
+    400,
+    1200,
+    "both",
+    -1.5849625007211563,
+    1200
+   ],
+   [
+    "NEG",
+    2,
+    1500,
+    300,
+    "both",
+    2.321928094887362,
+    1500
+   ]
+  ]
+ },
+ "feature_identities": {
+  "head": [
+   "_pol",
+   "_id",
+   "rt",
+   "canonical_name"
+  ],
+  "name": "fi",
+  "rows": [
+   [
+    "POS",
+    1,
+    5.0,
+    "Gradientase"
+   ],
+   [
+    "POS",
+    2,
+    6.0,
+    "Gradienton B"
+   ],
+   [
+    "POS",
+    3,
+    7.0,
+    "Gradientyl"
+   ],
+   [
+    "POS",
+    4,
+    8.0,
+    "Gradientine"
+   ],
+   [
+    "POS",
+    5,
+    9.0,
+    "Gradientidine"
+   ],
+   [
+    "POS",
+    6,
+    10.0,
+    "Gradientamine"
+   ],
+   [
+    "POS",
+    7,
+    11.0,
+    "Gradientol"
+   ],
+   [
+    "POS",
+    8,
+    11.05,
+    "Gradientol"
+   ],
+   [
+    "NEG",
+    1,
+    6.0,
+    "Gradienton B"
+   ],
+   [
+    "NEG",
+    2,
+    5.0,
+    "Gradientic acid"
+   ]
+  ]
+ },
+ "identities": {
+  "head": [
+   "canonical_name",
+   "raw",
+   "best_level",
+   "group",
+   "is_anthro",
+   "cec_category",
+   "formula",
+   "n_merged",
+   "best_level_sub",
+   "in_S1",
+   "in_S2"
+  ],
+  "name": "identities",
+  "rows": [
+   [
+    "Gradientamine",
+    "Gradientamine",
+    2,
+    "natural",
+    false,
+    "",
+    "",
+    1,
+    "a",
+    true,
+    true
+   ],
+   [
+    "Gradientase",
+    "Gradientase",
+    2,
+    "natural",
+    false,
+    "",
+    "",
+    1,
+    "a",
+    true,
+    true
+   ],
+   [
+    "Gradientic acid",
+    "Gradientic acid",
+    2,
+    "natural",
+    false,
+    "",
+    "",
+    1,
+    "a",
+    true,
+    true
+   ],
+   [
+    "Gradientidine",
+    "Gradientidine",
+    2,
+    "natural",
+    false,
+    "",
+    "",
+    1,
+    "a",
+    true,
+    true
+   ],
+   [
+    "Gradientine",
+    "Gradientine",
+    2,
+    "natural",
+    false,
+    "",
+    "",
+    1,
+    "a",
+    false,
+    true
+   ],
+   [
+    "Gradientol",
+    "Gradientol",
+    2,
+    "natural",
+    false,
+    "",
+    "",
+    1,
+    "a",
+    true,
+    true
+   ],
+   [
+    "Gradienton B",
+    "Gradienton B",
+    2,
+    "natural",
+    false,
+    "",
+    "",
+    1,
+    "a",
+    true,
+    true
+   ],
+   [
+    "Gradientyl",
+    "Gradientyl",
+    2,
+    "natural",
+    false,
+    "",
+    "",
+    1,
+    "a",
+    true,
+    false
+   ]
+  ]
+ },
+ "same_sorbent_default": true,
+ "senza_sorbente": {
+  "summary": {
+   "fold_threshold": 3.0,
+   "n_both": 6,
+   "n_ds_enriched": 2,
+   "n_ds_only": 1,
+   "n_not_comparable": 0,
+   "n_sorbent_discordant": 0,
+   "n_us_enriched": 2,
+   "n_us_only": 1,
+   "n_within_fold": 2,
+   "site_ds": "S2",
+   "site_us": "S1"
+  },
+  "table": {
+   "head": [
+    "canonical_name",
+    "status",
+    "representative_pol",
+    "representative_id",
+    "rt",
+    "area_us",
+    "area_ds",
+    "log2FC_us_ds",
+    "log2FC_ds_us",
+    "abs_area",
+    "fc_sorbent",
+    "sorbent_discordant"
+   ],
+   "name": "senza_sorbente",
+   "rows": [
+    [
+     "Gradientamine",
+     "both",
+     "POS",
+     6,
+     10.0,
+     10000.0,
+     1000.0,
+     3.321928094887362,
+     -3.321928094887362,
+     10000,
+     null,
+     false
+    ],
+    [
+     "Gradientase",
+     "both",
+     "POS",
+     1,
+     5.0,
+     1000.0,
+     8000.0,
+     -3.0,
+     3.0,
+     8000,
+     null,
+     false
+    ],
+    [
+     "Gradientic acid",
+     "both",
+     "NEG",
+     2,
+     5.0,
+     1500.0,
+     300.0,
+     2.321928094887362,
+     -2.321928094887362,
+     1500,
+     null,
+     false
+    ],
+    [
+     "Gradientidine",
+     "both",
+     "POS",
+     5,
+     9.0,
+     900.0,
+     800.0,
+     0.16992500144231237,
+     -0.16992500144231246,
+     900,
+     null,
+     false
+    ],
+    [
+     "Gradientine",
+     "DS_only",
+     "POS",
+     4,
+     8.0,
+     0.0,
+     700.0,
+     null,
+     null,
+     700,
+     null,
+     false
+    ],
+    [
+     "Gradientol",
+     "both",
+     "POS",
+     8,
+     11.05,
+     100.0,
+     4000.0,
+     -5.321928094887363,
+     5.321928094887363,
+     4000,
+     null,
+     false
+    ],
+    [
+     "Gradienton B",
+     "both",
+     "POS",
+     2,
+     6.0,
+     5000.0,
+     4000.0,
+     0.32192809488736235,
+     -0.3219280948873623,
+     5000,
+     null,
+     false
+    ],
+    [
+     "Gradientyl",
+     "US_only",
+     "POS",
+     3,
+     7.0,
+     3000.0,
+     0.0,
+     null,
+     null,
+     3000,
+     null,
+     false
+    ]
+   ]
+  }
+ },
+ "sites": [
+  "S1",
+  "S2"
+ ],
+ "stesso_sorbente": {
+  "summary": {
+   "fold_threshold": 3.0,
+   "n_both": 6,
+   "n_ds_enriched": 2,
+   "n_ds_only": 1,
+   "n_not_comparable": 1,
+   "n_sorbent_discordant": 2,
+   "n_us_enriched": 2,
+   "n_us_only": 1,
+   "n_within_fold": 1,
+   "site_ds": "S2",
+   "site_us": "S1"
+  },
+  "table": {
+   "head": [
+    "canonical_name",
+    "status",
+    "representative_pol",
+    "representative_id",
+    "rt",
+    "area_us",
+    "area_ds",
+    "log2FC_us_ds",
+    "log2FC_ds_us",
+    "abs_area",
+    "fc_sorbent",
+    "sorbent_discordant"
+   ],
+   "name": "stesso_sorbente",
+   "rows": [
+    [
+     "Gradientamine",
+     "both",
+     "POS",
+     6,
+     10.0,
+     10000.0,
+     1000.0,
+     3.321928094887362,
+     -3.321928094887362,
+     10000,
+     "OA",
+     true
+    ],
+    [
+     "Gradientase",
+     "both",
+     "POS",
+     1,
+     5.0,
+     1000.0,
+     8000.0,
+     -3.0,
+     3.0,
+     8000,
+     "OA",
+     true
+    ],
+    [
+     "Gradientic acid",
+     "both",
+     "NEG",
+     2,
+     5.0,
+     1500.0,
+     300.0,
+     2.321928094887362,
+     -2.321928094887362,
+     1500,
+     "OA",
+     false
+    ],
+    [
+     "Gradientidine",
+     "both",
+     "POS",
+     5,
+     9.0,
+     900.0,
+     800.0,
+     null,
+     null,
+     900,
+     null,
+     false
+    ],
+    [
+     "Gradientine",
+     "DS_only",
+     "POS",
+     4,
+     8.0,
+     0.0,
+     700.0,
+     null,
+     null,
+     700,
+     null,
+     false
+    ],
+    [
+     "Gradientol",
+     "both",
+     "POS",
+     8,
+     11.05,
+     100.0,
+     4000.0,
+     -5.321928094887363,
+     5.321928094887363,
+     4000,
+     "OA",
+     false
+    ],
+    [
+     "Gradienton B",
+     "both",
+     "POS",
+     2,
+     6.0,
+     5000.0,
+     4000.0,
+     0.32192809488736235,
+     -0.3219280948873623,
+     5000,
+     "OA",
+     false
+    ],
+    [
+     "Gradientyl",
+     "US_only",
+     "POS",
+     3,
+     7.0,
+     3000.0,
+     0.0,
+     null,
+     null,
+     3000,
+     null,
+     false
+    ]
+   ]
+  }
+ }
+}

@@ -1,0 +1,3 @@
+id,mz,rt,datafile:S1_OA_ddaNEG.mzML:feature_state,datafile:S1_OA_ddaNEG.mzML:area,datafile:S1_EC_ddaNEG.mzML:feature_state,datafile:S1_EC_ddaNEG.mzML:area,datafile:S2_OA_ddaNEG.mzML:feature_state,datafile:S2_OA_ddaNEG.mzML:area,datafile:S2_EC_ddaNEG.mzML:feature_state,datafile:S2_EC_ddaNEG.mzML:area,spectral_db_matches:compound_name,spectral_db_matches:similarity_score,spectral_db_matches:n_matching_signals,spectral_db_matches:ion_adduct,spectral_db_matches:mol_formula,spectral_db_matches:precursor_mz
+1,301.1,6.0,UNKNOWN,0,DETECTED,400,UNKNOWN,0,DETECTED,1200,Gradienton B,0.9,8.0,[M-H]-,,301.1
+2,302.1,5.0,DETECTED,1500,UNKNOWN,0,DETECTED,300,UNKNOWN,0,Gradientic acid,0.9,8.0,[M-H]-,,302.1

@@ -16,9 +16,9 @@
     else {
       const u = (/** @type {string} */ p) => new URL("wasm-feat/" + p, c.base).href, man = await (await fetch(u("manifest.json"))).json();
       if (!man.attributio) throw new Error("This site has no engine for Attributio");
-      const url = blob("feat-worker.js"), w = man.attributio, r = man.attributio_rev;
+      const url = blob("feat-worker.js"), w = man.attributio, r = man.attributio_rev, x = man.attributio_export;
       // the .wasm `attributio_rev` (the Banco 2b) is fetched by the worker only when the Banco opens
-      st.pool = (await import(url)).createFeatPool({ workerUrl: url, size: 1, wasm: { attributio: { jsUrl: u(w.js), wasmUrl: u(w.wasm), sha256: w.sha256 }, ...(r ? { attributio_rev: { jsUrl: u(r.js), wasmUrl: u(r.wasm), sha256: r.sha256 } } : {}) } });
+      st.pool = (await import(url)).createFeatPool({ workerUrl: url, size: 1, wasm: { attributio: { jsUrl: u(w.js), wasmUrl: u(w.wasm), sha256: w.sha256 }, ...(r ? { attributio_rev: { jsUrl: u(r.js), wasmUrl: u(r.wasm), sha256: r.sha256 } } : {}), ...(x ? { attributio_export: { jsUrl: u(x.js), wasmUrl: u(x.wasm), sha256: x.sha256 } } : {}) } });
     }
     return st.pool;
   }
@@ -119,7 +119,7 @@
     sec.innerHTML = `<div class="at-wrap"><h2>Attributio</h2>
       <div class="row"><button type="button" class="at-pick" id="at-pick" aria-label="Choose campaign folder">Choose campaign folder</button>
       <input type="file" id="at-dir" webkitdirectory multiple hidden aria-label="Campaign folder">
-      <button type="button" class="at-x" id="at-csv" aria-label="Export CSV" disabled>Export CSV</button><button type="button" class="at-x" id="at-xlsx" aria-label="Export XLSX" disabled>Export XLSX</button></div>
+      <button type="button" class="at-x" id="at-csv" aria-label="Export CSV" disabled>Export CSV</button><button type="button" class="at-x" id="at-xlsx" aria-label="Export XLSX" disabled>Export XLSX</button><span id="at-export-host"></span></div>
       <p id="at-msg" class="mut" role="status"></p><div id="at-banco-host"></div><div id="at-out" class="tp"></div></div>`;
     const q = (/** @type {string} */ s) => /** @type {any} */ (sec.querySelector(s));
     q("#at-dir").onchange = (/** @type {Event} */ ev) => {
@@ -134,6 +134,7 @@
       try { const dir = await W.showDirectoryPicker(), files = /** @type {{path: string, file: File}[]} */ ([]); await walk(dir, "", files); load(sec, files, dir.name, dir); }
       catch (e) { if (!(e && /** @type {any} */ (e).name === "AbortError")) say(sec, String(/** @type {any} */ (e).message || e), true); }
     };
+    /** @type {any} */ (window).ATTRIBUTIO_EXPORT.mount(q("#at-export-host"), { pool: getPool, files: () => st.files, root: () => st.root, say: (/** @type {string} */ t, /** @type {boolean} */ err) => say(sec, t, err) });
     q("#at-csv").onclick = () => exportTable(sec, "csv");
     q("#at-xlsx").onclick = () => exportTable(sec, "xlsx");
   }
