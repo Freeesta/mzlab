@@ -9,13 +9,18 @@ ATTESI = ROOT / "tests/data/attributio/campagna_sintetica/livelli_attesi.csv"
 STADI = ["campagna", "letture", "rilevazione", "livelli", "identita", "proposte", "decisioni", "abbinamenti", "spiegazioni", "frammenti"]
 
 
+def _bytes_lf(p: Path) -> int:
+    """Size with LF line ends: a checkout with CRLF (Windows) must not make a stage bigger."""
+    return len(p.read_text(encoding="utf-8").encode("utf-8"))
+
+
 def test_stadi_presenti_e_piccoli():
     for s in STADI:
         p = ORO / f"{s}.json"
         assert p.exists(), p
-        assert p.stat().st_size < 100_000
+        assert _bytes_lf(p) < 100_000
         json.loads(p.read_text(encoding="utf-8"))
-    assert sum(p.stat().st_size for p in ORO.glob("*.json")) < 300_000
+    assert sum(_bytes_lf(p) for p in ORO.glob("*.json")) < 300_000
 
 
 def test_livelli_coincidono_con_attesi():
