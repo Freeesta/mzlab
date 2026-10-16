@@ -227,7 +227,7 @@ function pushLinked(p, r0, r1, k, keepZoom, o = {}) {
   if (fsPanel()) return;                                      // full screen: the panels underneath stay exactly as they were
   if (!o.step) { p._msg = null; p._sk = null; }              // a click or a drag starts a new walk: the axes of the spectrum are free again
   E.panels.filter(s => s.type === "spec" && s.link === p.id).forEach(s => {
-    s.r0 = r0; s.r1 = r1; s.k = k; s.si = o.i ?? null; if (o.dir) s._dir = o.dir;
+    s.r0 = r0; s.r1 = r1; if (!(s.kSet && E.files[s.k]?.vis && !E.files[s.k].gone)) { s.k = k; s.kSet = false; } s.si = o.i ?? null; if (o.dir) s._dir = o.dir;
     if (!keepZoom) s.zoom = null;
     if (!o.step) { s.lock = null; ctl(s); }                  // no rebuilding of the controls while scrolling
     if (o.step) scAhead(s);
