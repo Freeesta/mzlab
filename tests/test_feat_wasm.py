@@ -3,6 +3,7 @@ series and the one with the graph of the proofs have the same SHA-256 whether th
 synthetic one of tools/feat_mirato.py (profile `piccolo`). Skipped without cargo, the wasm32 target, wasm-bindgen, node or numpy."""
 import shutil
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -22,11 +23,14 @@ def built(tmp_path_factory):
     pytest.importorskip("numpy")
     root = tmp_path_factory.mktemp("feat")
     ser = root / "ser"
-    run("python3", "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser))
+    # the series (python) is independent of the two builds (cargo takes the lock of the target folder one after the other): they run at the same time
+    with ThreadPoolExecutor(2) as pool:
+        made = pool.submit(run, "python3", "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser))
+        run("cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo")
+        run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm")
+        made.result()
     idx = sorted(str(p) for p in ser.glob("*.mzidx"))
     assert len(idx) == 6
-    run("cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo")
-    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm")
     pkg = root / "pkg"
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
     return root, idx, pkg

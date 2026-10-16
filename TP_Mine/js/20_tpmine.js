@@ -802,7 +802,7 @@
         rows: m.rows.map(r => [r.file, r.type, r.time ?? "", ...(m.calibration ? [r.conc ?? ""] : []), Math.round(r.ion[q].area), r.ion[q].rt ?? "", Math.round(r.ion[q].snr), ...qual.flatMap(n => [Math.round(r.ion[n].area), r.ratios[n] ?? ""]), r.ratio_ok == null ? "" : r.ratio_ok ? "ok" : "out", ...(m.calibration ? [r.quant ?? "", r.in_range === false ? "outside the calibration range" : ""] : [])]),
         widths: [34, 10, 8, ...(m.calibration ? [14] : []), 12, 8, 8, ...qual.flatMap(() => [12, 12]), 12, ...(m.calibration ? [16, 34] : [])] };
     }
-    const dl = (n, text, type) => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = n; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
+    const dl = (n, text, type) => window.dl(n, text, type, false);
   }
 
   QTOOLS.register({ id: "tpmine", nav: true, name: "Tabui", desc: "Automatic search for transformation products", open,
