@@ -301,7 +301,8 @@ try:
                 pg.wait_for_function("p => document.querySelector('#ft-n').textContent !== p", arg=prev, timeout=30000); return count()[0]
             k1 = changed(lambda: pg.click('[data-fc="det"]'))
             changed(lambda: pg.click('[data-fc="det"]')); pg.click("#ft-moreb"); pg.fill("#ft-det", "2")
-            pg.wait_for_function("k => +document.querySelector('#ft-n').textContent.replace(/,/g, '').split(' ')[0] === k", arg=k1, timeout=30000)     # the field gives the count of the chip
+            try: pg.wait_for_function("k => +document.querySelector('#ft-n').textContent.replace(/,/g, '').split(' ')[0] === k", arg=k1, timeout=15000)     # the field gives the count of the chip
+            except Exception: raise AssertionError(f"chip {k1}, field: {pg.inner_text('#ft-n')} / {pg.inner_text('#ft-why')} / det={pg.input_value('#ft-det')} / chips={pg.evaluate('[...document.querySelectorAll(\'[data-fc]\')].map(b => b.getAttribute(\'aria-pressed\'))')} / more hidden={pg.evaluate('document.querySelector(\'#ft-more\').hidden')}")
             assert k1 <= kept, (k1, kept)
             # normalisation and filters of the numeric fields (the counts are the engine's)
             pg.select_option("#ft-norm", "somma"); kept2 = changed(lambda: pg.fill("#ft-det", str(len(names) // 2)))
