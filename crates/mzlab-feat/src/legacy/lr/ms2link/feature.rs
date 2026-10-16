@@ -39,7 +39,7 @@ pub(super) fn bounds(d: &LrDig, r: &Entry, e: &Exp) -> (f64, f64) {
         d.lc.iter()
             .position(|f| f.time.is_some_and(|x| (x - t).abs() < 1e-6))
     });
-    let (lo, hi) = match same.and_then(|k| r.cells.get(k)).filter(|c| ok(&c)) {
+    let (lo, hi) = match same.and_then(|k| r.cells.get(k)).filter(|c| ok(c)) {
         Some(c) => (c.lo, c.hi),
         None => {
             let cs: Vec<_> = r.cells.iter().filter(ok).collect();

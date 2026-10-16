@@ -197,5 +197,9 @@ fn a_peak_of_the_trace_0_62_da_from_the_feature_makes_no_target() {
     link(&mut d, "far.mzML", &f, &[]);
     assert_eq!((d.entries.len(), targets(&d).len()), (n, 0));
     assert!(links(&d).links.is_empty(), "{:?}", links(&d).links);
-    assert!(reasons(&d).contains(&"no_feature"), "{:?}", links(&d).unmatched);
+    assert!(
+        reasons(&d).contains(&"no_feature"),
+        "{:?}",
+        links(&d).unmatched
+    );
 }
