@@ -11,24 +11,16 @@ struct Candidate {
     ib: usize,
 }
 
-/// Matches two lists of (m/z, RT) points with a deterministic 1-to-1 bipartite assignment.
-///
-/// Returns `(out_a, out_b)` where `out_a` and `out_b` contain the indices of matched
-/// points, sorted by `out_a` ascending.
-pub fn abbina(
+fn collect_candidates(
     mz_a: &[f64],
     rt_a: &[f64],
     mz_b: &[f64],
     rt_b: &[f64],
     ppm: f64,
     rt_tol: f64,
-) -> (Vec<usize>, Vec<usize>) {
-    let na = mz_a.len().min(rt_a.len());
-    let nb = mz_b.len().min(rt_b.len());
-    if na == 0 || nb == 0 || !ppm.is_finite() || !rt_tol.is_finite() || ppm <= 0.0 || rt_tol <= 0.0 {
-        return (Vec::new(), Vec::new());
-    }
-
+    na: usize,
+    nb: usize,
+) -> Vec<Candidate> {
     let mut order_b: Vec<usize> = (0..nb).collect();
     crate::sortc::by(&mut order_b, |&i, &j| match (mz_b.get(i), mz_b.get(j)) {
         (Some(a), Some(b)) => a.total_cmp(b),
@@ -72,6 +64,10 @@ pub fn abbina(
         }
     }
 
+    candidates
+}
+
+fn match_greedy(mut candidates: Vec<Candidate>, na: usize, nb: usize) -> (Vec<usize>, Vec<usize>) {
     crate::sortc::by(&mut candidates, |a, b| {
         a.d.total_cmp(&b.d)
             .then_with(|| a.ia.cmp(&b.ia))
@@ -110,4 +106,27 @@ pub fn abbina(
     }
 
     (out_a, out_b)
+}
+
+/// Matches two lists of (m/z, RT) points with a deterministic 1-to-1 bipartite assignment.
+///
+/// Returns `(out_a, out_b)` where `out_a` and `out_b` contain the indices of matched
+/// points, sorted by `out_a` ascending.
+pub fn abbina(
+    mz_a: &[f64],
+    rt_a: &[f64],
+    mz_b: &[f64],
+    rt_b: &[f64],
+    ppm: f64,
+    rt_tol: f64,
+) -> (Vec<usize>, Vec<usize>) {
+    let na = mz_a.len().min(rt_a.len());
+    let nb = mz_b.len().min(rt_b.len());
+    if na == 0 || nb == 0 || !ppm.is_finite() || !rt_tol.is_finite() || ppm <= 0.0 || rt_tol <= 0.0
+    {
+        return (Vec::new(), Vec::new());
+    }
+
+    let candidates = collect_candidates(mz_a, rt_a, mz_b, rt_b, ppm, rt_tol, na, nb);
+    match_greedy(candidates, na, nb)
 }
