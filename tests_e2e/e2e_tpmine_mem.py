@@ -16,7 +16,7 @@ msn = next((json.loads(f.read_text(encoding="utf-8")) for f in sorted((DATI / "s
 series = sorted(glob.glob(str(DATI / "HRMS" / "*" / "*TiO2*.mzML")))
 if truth is None or msn is None or len(series) < 13:
     print("SKIP: truth files or the 13 series files not available"); sys.exit(0)
-PORT = 8844
+from lib import free_port; PORT = free_port()
 tmp = Path(tempfile.mkdtemp())
 cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(tmp / "site")]
 if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
