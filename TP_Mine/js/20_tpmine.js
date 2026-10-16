@@ -371,9 +371,13 @@
         } catch (e) { $("#tp-prev").textContent = ""; }
       }, 350);
     };
+    function reattPanel(/** @type {HTMLElement} */ rh, /** @type {string} */ t) {
+      if (!t) { rh.innerHTML = ""; return; }
+      /** @type {any} */ (window).TPLAZY.load("viewer3d.js", "reattivita.js").then(() => { if (rh.dataset.smiles === t) /** @type {any} */ (window).TPREATT.state(rh, "waiting"); }).catch(() => { rh.textContent = "The reactivity panel could not be loaded."; });
+    }
     function structure(t) {             // parent structure drawn with OpenChemLib (already in the site for the Disegno tab)
       const el = $("#tp-struct"); if (!el) return;
-      const rh = $("#tp-reatt"), RE = /** @type {any} */ (window).TPREATT; if (rh && RE && rh.dataset.smiles !== t) { rh.dataset.smiles = t; if (t) RE.state(rh, "waiting"); else rh.innerHTML = ""; }    // panel of reactivity (administrator mode only; its calculation is started elsewhere)
+      const rh = $("#tp-reatt"); if (rh && rh.dataset.smiles !== t) { rh.dataset.smiles = t; reattPanel(rh, t); }    // panel of reactivity (administrator mode only; its scripts load on the first structure; its calculation is started elsewhere)
       if (!t) { el.innerHTML = ""; return; }
       ocl().then(OCL => { el.innerHTML = `<div class="struct">${MOLUI.svg(OCL.Molecule.fromSmiles(t).toSVG(300, 170))}</div>`; }).catch(() => { el.innerHTML = ""; });
     }
