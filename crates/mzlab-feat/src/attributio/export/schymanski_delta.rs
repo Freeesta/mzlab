@@ -47,7 +47,7 @@ pub const FRONT: [&str; 28] = [
     "mz_error_ppm",
     "evidence_sources",
     "library",
-    "formula",
+    "neutral_formula",
     "inchikey",
     "smiles",
     "adducts",

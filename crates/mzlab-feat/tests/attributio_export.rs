@@ -453,6 +453,26 @@ fn the_page_gets_each_export_as_files() {
             "{kind}"
         );
         assert!(files[1]["text"].as_str().unwrap().contains(';'));
+        // no header of an export is a bare «formula»: it is the neutral one or the one of an ion
+        for s in sheets {
+            for h in s["filas"][0].as_array().unwrap() {
+                let h = h.as_str().unwrap_or("").trim().to_lowercase();
+                assert_ne!(h, "formula", "{kind}: a column called just «formula»");
+            }
+        }
+        let csv_head = files[1]["text"]
+            .as_str()
+            .unwrap()
+            .lines()
+            .find(|l| l.contains(';'))
+            .unwrap();
+        assert!(
+            !csv_head
+                .to_lowercase()
+                .split(';')
+                .any(|c| c.trim_matches('"') == "formula"),
+            "{kind}"
+        );
     }
     assert!(run(&io, &fx.campaign.root_name, "nothing", &o).is_err());
     let fg = fixture("campagna_gradiente");
