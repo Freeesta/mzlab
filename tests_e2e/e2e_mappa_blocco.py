@@ -24,6 +24,7 @@ try:
         settle = lambda: (ready(pg), pg.wait_for_timeout(500))
         shown = lambda: pg.evaluate(f"(()=>{{const s={M}._mz.shown;return s&&s.sp?{{rt:s.pt.rt,mz:s.pt.mz,sid:s.sp.sid}}:null}})()")
         lock = lambda: pg.evaluate(f"!!{M}._mz.lock")
+        def full(): pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); settle(); assert pg.evaluate(M + ".el.classList.contains('max')")
         menu_open = lambda: pg.evaluate("!document.querySelector('#ctx').hidden")
         ax, ay = c[0] + c[2] * .45, c[1] + c[3] * .4
         pg.mouse.move(ax, ay); settle()
@@ -43,6 +44,8 @@ try:
         step("Lock keeps the sight after the menu closes", choose_lock)
         def unlock():
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Escape"); settle(); assert not lock()
+            # the same Esc also left the full screen of the panel: back to it, so the geometry c of the map is the one measured above
+            full()
             pg.mouse.move(c[0] + c[2] * .2, c[1] + c[3] * .7, steps=5); settle(); assert shown() != ref
         step("Esc unlocks and the sight follows the pointer", unlock)
         def dismiss():
@@ -61,6 +64,7 @@ try:
             o = off(); assert o and abs(o[0]) <= .5 and abs(o[1]) <= .5, ("zoom", o)
             ctrl_wheel(pg, 0, 200); settle(); o = off(); assert o is None or (abs(o[0]) <= .5 and abs(o[1]) <= .5), ("zoom out", o)
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Escape"); settle(); assert not lock() and pg.evaluate(f"{M}._mz.dot") is None
+            full()
         step("locked point: a dot centred on it (±0.5 px) after zoom, gone on unlock", dot)
         def mark():
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("0"); settle()
