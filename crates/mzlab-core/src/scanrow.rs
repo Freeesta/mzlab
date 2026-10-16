@@ -67,5 +67,6 @@ pub(crate) fn scan_of_row(r: &Value, nativo: bool) -> Option<Scan> {
         charge: f(18).map(|v| v as i64),
         native: s(19).unwrap_or_default(),
         kind: s(20),
+        mob: r.at(21).filter(|v| !v.is_null()).and_then(|v| Some((v.at(0).and_then(Value::f64)?, v.at(1).and_then(Value::str)?.to_string()))),
     })
 }

@@ -31,6 +31,16 @@ pub struct Spectrum {
     pub wide: Option<Vec<f64>>,
 }
 
+/// The kind of a mobility array or scan attribute from its accession: `k0` (inverse reduced), `ms` (drift time) or `` (generic); `None` for any other accession.
+pub fn mobility_of(acc: &str) -> Option<&'static str> {
+    match acc {
+        "MS:1002815" | "MS:1003006" | "MS:1003008" | "MS:1003155" => Some("k0"),
+        "MS:1002476" | "MS:1002477" | "MS:1003153" | "MS:1003156" => Some("ms"),
+        "MS:1002816" | "MS:1003007" | "MS:1003154" | "MS:1002893" => Some(""),
+        _ => None,
+    }
+}
+
 impl Spectrum {
     /// Intensity of peak `i` as the file wrote it.
     pub fn intensity_f64(&self, i: usize) -> f64 {
@@ -73,9 +83,22 @@ pub struct Chromatogram {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Item {
     Spectrum(Spectrum),
+    /// The ion mobility of the spectrum that follows, only for a spectrum that has any (an ion mobility array or a scan attribute).
+    Mobility(Mobility),
     Chromatogram(Chromatogram),
     /// Name of a cvParam of an `<analyzer>` component (instrumentConfiguration), e.g. "quadrupole", "orbitrap".
     Analyzer(String),
+}
+
+/// The ion mobility of one spectrum: `unit` is `k0` (inverse reduced mobility, V·s/cm²), `ms` (drift time) or `` (an array the CV does not name more precisely).
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Mobility {
+    pub index: usize,
+    /// One value per peak, only when the array has as many values as the spectrum has peaks.
+    pub values: Option<Vec<f64>>,
+    pub unit: &'static str,
+    /// The mobility of the whole scan (`MS:1002815` or `MS:1002476`) and its unit.
+    pub scan: Option<(f64, &'static str)>,
 }
 
 #[derive(Debug, Default)]
@@ -93,6 +116,7 @@ pub fn read<R: Read>(reader: R) -> Result<Run> {
         Item::Spectrum(s) => run.spectra.push(s),
         Item::Chromatogram(c) => run.chromatograms.push(c),
         Item::Analyzer(n) => run.analyzers.push(n.to_lowercase()),
+        Item::Mobility(_) => {}
     })?;
     Ok(run)
 }
@@ -102,6 +126,8 @@ enum ArrayKind {
     Mz,
     Intensity,
     Time,
+    /// An ion mobility array; the unit is in `Array.mobility`.
+    Mobility,
     Other,
 }
 
@@ -110,6 +136,7 @@ struct Array {
     num: Num,
     zlib: bool,
     seconds: bool,
+    mobility: &'static str,
     text: String,
 }
 
@@ -154,6 +181,7 @@ struct Spec {
     filter: String,
     selected: Option<f64>,
     target: Option<f64>,
+    mobility_scan: Option<(f64, &'static str)>,
     arrays: Vec<Array>,
 }
 
@@ -169,10 +197,15 @@ struct Chrom {
     ms_term: bool,
 }
 
-fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<Spectrum> {
+fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<(Spectrum, Option<Mobility>)> {
     let (mut mz, mut it, mut wide) = (Vec::new(), Vec::new(), None);
+    let (mut mob, mut mob_unit) = (None, "");
     for a in &s.arrays {
         match a.kind {
+            ArrayKind::Mobility => {
+                mob = Some(decode_array(a.num, a.zlib, &a.text, s.len, inf, Want::F64)?.0);
+                mob_unit = a.mobility;
+            }
             ArrayKind::Mz => mz = decode_array(a.num, a.zlib, &a.text, s.len, inf, Want::F64)?.0,
             ArrayKind::Intensity => {
                 if a.num == Num::F32 {
@@ -193,7 +226,15 @@ fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<Spectrum> {
     if let Some(w) = wide.as_mut() {
         w.truncate(n);
     }
-    Ok(Spectrum {
+    // an array of another length does not belong to these peaks
+    let mob = mob.filter(|m| m.len() == n && n > 0);
+    let mobility = (mob.is_some() || s.mobility_scan.is_some()).then(|| Mobility {
+        index: s.index,
+        values: mob,
+        unit: mob_unit,
+        scan: s.mobility_scan,
+    });
+    Ok((Spectrum {
         index: s.index,
         id: s.id,
         level: s.level,
@@ -205,7 +246,7 @@ fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<Spectrum> {
         mz,
         intensity: it,
         wide,
-    })
+    }, mobility))
 }
 
 fn number_after(id: &str, key: &str) -> Option<f64> {
@@ -306,6 +347,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                             filter: String::new(),
                             selected: None,
                             target: None,
+                            mobility_scan: None,
                             arrays: Vec::new(),
                         });
                         scope = Scope::Spectrum;
@@ -337,6 +379,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                             num: Num::F64,
                             zlib: false,
                             seconds: false,
+                            mobility: "",
                             text: String::new(),
                         });
                     }
@@ -374,6 +417,10 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                                     arr.seconds = seconds;
                                 }
                                 "MS:1000574" => arr.zlib = true,
+                                a if mobility_of(a).is_some() => {
+                                    arr.kind = ArrayKind::Mobility;
+                                    arr.mobility = mobility_of(a).unwrap_or("");
+                                }
                                 "MS:1002312" | "MS:1002313" | "MS:1002314" => {
                                     return Err(Error::new("err.file.numpress"))
                                 }
@@ -398,7 +445,11 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                                 }
                                 "MS:1000744" => s.selected = value.parse().ok(),
                                 "MS:1000827" => s.target = value.parse().ok(),
-                                _ => {}
+                                a => {
+                                    if let (Some(u), Ok(v)) = (mobility_of(a), value.parse::<f64>()) {
+                                        s.mobility_scan.get_or_insert((v, u));
+                                    }
+                                }
                             }
                         }
                     }
@@ -433,7 +484,11 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                     "analyzer" => in_analyzer = false,
                     "spectrum" => {
                         if let Some(s) = spec.take() {
-                            f(Item::Spectrum(finish_spectrum(s, &mut inf)?));
+                            let (sp, mob) = finish_spectrum(s, &mut inf)?;
+                            if let Some(m) = mob {
+                                f(Item::Mobility(m));
+                            }
+                            f(Item::Spectrum(sp));
                             n_spec += 1;
                         }
                         scope = Scope::None;

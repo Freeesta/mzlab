@@ -331,6 +331,7 @@ impl Rows {
             charge: m.charge,
             native: id.clone().unwrap_or_default(),
             kind,
+            mob: super::mobility_of_header(h),
         };
         if let Some(i) = id {
             self.level_of.insert(i, level);
@@ -340,7 +341,9 @@ impl Rows {
 }
 
 /// The accessions `spectrum` looks for in the text of a header (as substrings: `h.contains` too): an extra that carries one of them would change the row.
-const LETTI: [&str; 23] = [
+const LETTI: [&str; 25] = [
+    "MS:1002815",
+    "MS:1002476",
     "MS:1000341",
     "MS:1000326",
     "MS:1000325",
@@ -456,6 +459,7 @@ impl Rows {
             charge: m.charge,
             native: native.clone(),
             kind,
+            mob: None,
         };
         self.level_of.insert(native, level);
         self.rows.push(row);

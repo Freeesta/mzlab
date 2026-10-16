@@ -17,5 +17,4 @@ La dieta del motore non c'è più: è assorbita da DEV-01.
 - [DEV-06](DEV-06.md): Waters MassLynx `.raw` (cartella) (modulo `waters`)
 - [DEV-07](DEV-07.md): Shimadzu `.qgd` (GC/MS) e `.lcd` (LC/MS) (modulo `shimadzu`)
 - [DEV-08](DEV-08.md): Bruker timsTOF TDF/TSF (modulo `bruker`)
-- [DEV-10](DEV-10.md): Mobilità ionica nell'mzML
 - [DEV-11](DEV-11.md): `metodo/1` di un mzML scritto da altri

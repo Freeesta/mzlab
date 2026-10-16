@@ -78,6 +78,8 @@ pub struct Scan {
     pub native: String,
     /// `PREC`, `NL`, `NG` or `EPI` (column 21 of the row, absent for an ordinary scan).
     pub kind: Option<String>,
+    /// The mobility of the whole scan and its unit `k0` or `ms` (column 22 of the row).
+    pub mob: Option<(f64, String)>,
 }
 
 impl Scan {

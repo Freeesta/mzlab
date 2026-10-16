@@ -50,6 +50,8 @@ pub struct Row {
     pub native: String,
     /// Scan type that is not a plain full or product-ion scan (`PREC`, `NL`, `NG`, `EPI`): see `kind_of`.
     pub kind: Option<&'static str>,
+    /// The mobility of the whole scan (a scan attribute) and its unit (`k0` or `ms`).
+    pub mob: Option<(f64, &'static str)>,
 }
 
 /// The table, with what the `run` object of the metadata needs.
@@ -85,6 +87,13 @@ pub(crate) fn kind_of(h: &str, filter: &str) -> Option<&'static str> {
             "cng" => Some("NG"),
             _ => None,
         })
+}
+
+/// The mobility of a scan from its header: the scan attribute `MS:1002815` (inverse reduced, `k0`) or `MS:1002476` (drift time, `ms`).
+pub(crate) fn mobility_of_header(h: &str) -> Option<(f64, &'static str)> {
+    [("MS:1002815", "k0"), ("MS:1002476", "ms")]
+        .into_iter()
+        .find_map(|(acc, u)| cv(h, acc).and_then(float).map(|v| (v, u)))
 }
 
 fn float(s: &str) -> Option<f64> {
@@ -729,9 +738,18 @@ impl Table {
                 None => o.raw("null"),
             };
             o.raw(",").str(&r.native);
-            // a 21st column only for the scans that have a type, so an index without any stays as it was
-            if let Some(k) = r.kind {
-                o.raw(",").str(k);
+            // columns 21 (type) and 22 (mobility) only for the scans that have one, so an index without any stays as it was
+            if r.kind.is_some() || r.mob.is_some() {
+                o.raw(",");
+                match r.kind {
+                    Some(k) => o.str(k),
+                    None => o.raw("null"),
+                };
+            }
+            if let Some((v, u)) = r.mob {
+                o.raw(",[");
+                py_float(&mut o, v);
+                o.raw(",").str(u).raw("]");
             }
             o.raw("]");
         }
