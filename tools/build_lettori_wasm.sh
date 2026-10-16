@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The .wasm modules of the readers, one per family of formats (crates/mzlab-lettori-wasm; each loaded only when a file of its family arrives, never committed), each under its limit after
 # wasm-opt -Oz, and site/static/wasm-lettori/manifest.json with {family: {sha256, byte}} (the worker checks it): tools/build_lettori_wasm.sh <site/static>
-# Called by the last line of tools/build_feat_wasm.sh, which pages.yml, release.yml and sito-rust.yml already run.
+# Called by tools/build_feat_wasm.sh, which pages.yml, release.yml and sito-rust.yml already run.
 set -eu
 # family limit (bytes after wasm-opt -Oz; tests/test_lettori_wasm.py checks the table: no value goes up)
 tetti="aperti 401408
@@ -16,19 +16,19 @@ bruker 524288"
 con_lettori="agilent sciex thermo aperti andi waters shimadzu bruker"
 out=${1:-site/static}/wasm-lettori
 mkdir -p "$out"
-built=""
-echo "$tetti" | while read -r fam limit; do
+. tools/wasm_paralleli.sh   # the wasm-bindgen + wasm-opt of a family run in the background while cargo builds the next one
+while read -r fam limit; do
   case " $con_lettori " in
     *" $fam "*) ;;
     *) echo "lettori $fam: no readers yet, skipped"; continue ;;
   esac
-  cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lettori-wasm --no-default-features --features "$fam"
-  tmp=$(mktemp -d)
-  cp target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm "$tmp/"      # cargo writes the same file for every family: copy it at once
-  wasm-bindgen --target web --no-typescript --out-dir "$out/$fam" "$tmp/mzlab_lettori_wasm.wasm" </dev/null
-  rm -r "$tmp"
-  tools/wasm_opt.sh "$out/$fam/mzlab_lettori_wasm_bg.wasm" "$limit" "lettori $fam" --converge --low-memory-unused --strip-producers --vacuum --dae --merge-blocks --reorder-functions --duplicate-function-elimination --const-hoisting --simplify-globals-optimizing </dev/null
-done
+  cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lettori-wasm --no-default-features --features "$fam" </dev/null
+  # cargo writes the same file for every family: wasm_pack copies it at once
+  wasm_pack "$out/$fam" target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm "$limit" "lettori $fam" --converge --low-memory-unused --strip-producers --vacuum --dae --merge-blocks --reorder-functions --duplicate-function-elimination --const-hoisting --simplify-globals-optimizing
+done <<EOF
+$tetti
+EOF
+wasm_wait
 python3 - "$out" <<'P'
 import hashlib, json, os, sys
 o = sys.argv[1]
