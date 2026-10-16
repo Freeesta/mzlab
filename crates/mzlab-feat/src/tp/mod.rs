@@ -9,13 +9,15 @@
 //! second axis, read from the signs of the proofs of `evid/1`.
 
 mod cancelli;
+mod gruppi;
 mod meta;
 mod parentela;
 mod rete;
 mod tabella;
 
-pub use rete::{arcs, explain_by_arcs, next_generation, Arc, NetParams};
-pub use tabella::{role_of, table_json, Role, TABLE_SCHEMA};
+pub use gruppi::{conditions as group_conditions, groups_json, infos_from_json, treated_by_condition, RowInfo};
+pub use rete::{arcs, arcs_in, explain_by_arcs, explain_by_arcs_in, next_generation, Arc, NetParams};
+pub use tabella::{role_of, table_json, table_json_cond, Role, TABLE_SCHEMA};
 
 use mzlab_core::error::Result;
 
@@ -125,6 +127,9 @@ pub struct TpRoles {
     pub blank_kinds: Vec<String>,
     /// Minutes of every file: the time of a treated file, 0 for a t0, NaN for every other one.
     pub minutes: Vec<f64>,
+    /// With two or more conditions (`serie` of the samples), the treated files of each, in the order of the conditions; else empty. The network reads
+    /// its correlations inside each condition.
+    pub conditions: Vec<Vec<usize>>,
 }
 
 impl TpRoles {
@@ -138,6 +143,7 @@ impl TpRoles {
             blank: p.blank,
             dark: p.dark,
             infusion: p.infusion,
+            conditions: gruppi::treated_by_condition(cs),
         }
     }
 
@@ -236,7 +242,8 @@ fn run_gates(inp: &TpInputs, roles: Option<&TpRoles>) -> Result<Option<TpBlock>>
     cancelli::not_in_source(inp, parent, &mut b);
     cancelli::explained(inp, &mut b);
     if let Some(rules) = inp.rules {
-        explain_by_arcs(inp, rules, &mut b, &NetParams::default())?;
+        let by = roles.map_or(&[][..], |r| r.conditions.as_slice());
+        explain_by_arcs_in(inp, rules, &mut b, &NetParams::default(), by)?;
     }
     parentela::kinship(inp, &mut b);
     Ok(Some(b))
