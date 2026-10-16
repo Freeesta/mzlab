@@ -121,7 +121,7 @@
     const leg = `<p class="tpr-leg" aria-hidden="true">${[...groups].map(([g, t]) => `<span style="color:${kind(t) === "time" ? colour(t) : "var(--muted)"}"><i${kind(t) === "blank" ? ` class="d"` : ""}${kind(t) === "t0" ? ` style="color:var(--ink)"` : ""}></i><span style="color:var(--ink)">${esc(g)}</span></span>`).join("")}</p>`;
     const stride = Math.max(1, Math.ceil(xs.reduce((a, t) => a + t.rt.length, 0) / 600)), rows = /** @type {string[][]} */ ([]);
     for (const t of xs) for (let i = 0; i < t.rt.length; i += stride) rows.push([t.file, t.group || "", fin(t.time) ? String(t.time) : "", t.rt[i].toFixed(3), String(Math.round(t.y[i] || 0))]);
-    const apex = fin(m.apexRt) ? `, apex at ${/** @type {number} */ (m.apexRt).toFixed(2)} min` : "", edges = lo != null && hi != null ? `, peak edges ${lo.toFixed(2)} to ${hi.toFixed(2)} min (shaded)` : "";
+    const apex = fin(m.apexRt) ? `, apex at ${/** @type {number} */ (m.apexRt).toFixed(2)} min` : "", edges = lo != null && hi != null && hi > lo ? `, peak edges ${lo.toFixed(2)} to ${hi.toFixed(2)} min (shaded)` : "";
     chart(box, "XIC, all samples", `Extracted ion chromatograms of ${xs.length} samples in ${groups.size} groups, colour = time of the sample${apex}${edges}.`, s, { head: ["File", "Group", "Time", "RT (min)", "Intensity"], rows });
     box.insertAdjacentHTML("beforeend", leg);
   }
