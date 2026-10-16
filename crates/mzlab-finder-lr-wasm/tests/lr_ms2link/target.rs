@@ -186,3 +186,16 @@ fn relinking_is_stable_and_the_user_can_say_not_this_ion() {
     link(&mut d, "re.mzML", &f, &[]);
     assert_eq!(targets(&d).len(), 1);
 }
+
+#[test]
+fn a_peak_of_the_trace_0_62_da_from_the_feature_makes_no_target() {
+    // the precursor is 0.62 Da above the m/z read in the table (half the window of the file: 0.5 Da): not this feature, so no row is made from it
+    let mut d = with_target().1.clone();
+    let n = d.entries.len();
+    let read = ((257.0590 + SHIFT + 0.62) * 100.0).round() / 100.0;
+    let f = ms2_file("far.mzML", &[x(read, &[(TARGET_RT, 0.07, 5.0e4)])]);
+    link(&mut d, "far.mzML", &f, &[]);
+    assert_eq!((d.entries.len(), targets(&d).len()), (n, 0));
+    assert!(links(&d).links.is_empty(), "{:?}", links(&d).links);
+    assert!(reasons(&d).contains(&"no_feature"), "{:?}", links(&d).unmatched);
+}

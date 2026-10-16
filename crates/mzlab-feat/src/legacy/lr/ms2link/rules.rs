@@ -11,6 +11,7 @@ use super::{
     SN_LINK,
 };
 use crate::legacy::lr::detail::xic;
+use crate::legacy::lr::ms2assoc::{self, Tol};
 use crate::legacy::lr::peak1d::find_peak;
 use crate::legacy::lr::{summary, Entry, LrDig};
 use crate::legacy::Res;
@@ -38,6 +39,11 @@ pub(super) struct Pair<'a> {
     pub(super) hit: Hit,
     pub(super) dmz: f64,
     pub(super) drt: f64,
+    /// The scans of the match: the part of the peak of the trace that lies inside the peak of the feature, and how many scans it has.
+    pub(super) lo: f64,
+    pub(super) hi: f64,
+    pub(super) n_in: usize,
+    pub(super) tol: Tol,
 }
 
 pub(super) fn median(v: &mut [f64]) -> f64 {
@@ -103,38 +109,7 @@ pub(super) fn register(e: &mut Exp, h: &Hit) -> usize {
     e.peaks.len() - 1
 }
 
-/// The m/z values of a row that a precursor can match: calculated, extracted (with the offset of the series) and the one read in the table.
-fn mzs(r: &Entry) -> impl Iterator<Item = f64> {
-    [Some(r.mz), Some(r.mz_x), r.observed].into_iter().flatten()
-}
-
-/// The distance of the precursor `p` to the closest m/z of the row.
-pub(super) fn dmz(r: &Entry, p: f64) -> f64 {
-    mzs(r).map(|m| (p - m).abs()).fold(f64::INFINITY, f64::min)
-}
-
-/// Rule 2: the rows whose m/z (calculated, extracted or read) is within `PREC_TOL` of the precursor. A row that is the isotope peak of another is not one.
-pub(super) fn compatible(d: &LrDig, p: f64) -> Vec<&Entry> {
-    d.entries
-        .iter()
-        .filter(|e| {
-            e.ref_rt.is_some() && (e.isotope_of.is_none() || e.ms2_target) && dmz(e, p) <= PREC_TOL
-        })
-        .collect()
-}
-
-/// Time of the row in the full-scan file with the sampling time of the experiment (its apex there), else its reference RT.
-pub(super) fn expected(d: &LrDig, r: &Entry, e: &Exp) -> f64 {
-    let at = e.time.and_then(|t| {
-        d.lc.iter()
-            .position(|f| f.time.is_some_and(|x| (x - t).abs() < 1e-6))
-    });
-    at.and_then(|k| r.cells.get(k))
-        .filter(|c| c.detected)
-        .and_then(|c| c.apex_rt)
-        .or(r.ref_rt)
-        .unwrap_or(0.0)
-}
+pub(super) use super::feature::{bounds, compatible, dmz, expected, feature_mz};
 
 /// Rule 5: the drift of every MS2 file, median of (apex of the trace - expected time) over the rows alone at their precursor with S/N >= `SN_DRIFT`;
 /// from two matches, at most `rt_tol_min`.
@@ -142,7 +117,7 @@ pub(super) fn drifts(d: &LrDig, exps: &[Exp]) -> Vec<(usize, f64)> {
     let tol = d.settings.rt_tol_min;
     let mut by: Vec<(usize, f64)> = Vec::new();
     for e in exps {
-        if let [r] = compatible(d, e.precursor).as_slice() {
+        if let [r] = compatible(d, e).as_slice() {
             let at = expected(d, r, e);
             if let Some(h) = find(e, at, tol).filter(|h| !h.window && h.sn >= SN_DRIFT) {
                 by.push((e.k, h.apex - at));
@@ -196,24 +171,46 @@ pub(super) fn link_of(
         peak,
         row: p.row.id,
         state,
-        dmz: round(p.dmz, 2),
+        dmz: round(p.dmz, 3),
+        dppm: round(p.dmz / feature_mz(p.row).abs().max(1e-9) * 1e6, 1),
         drt: round(p.drt, 3),
+        lo: round(p.lo, 4),
+        hi: round(p.hi, 4),
+        n_in: p.n_in,
+        tol: p.tol.da,
+        tol_window: p.tol.from_window,
         alternatives: alt,
         why: format!(
-            "precursor {:.2} Da from the m/z of the row; {when}{tail}",
-            p.dmz
+            "precursor {:.2} Da from the feature m/z (tolerance {:.2} Da, {}); {when}{tail}",
+            p.dmz,
+            p.tol.da,
+            if p.tol.from_window {
+                "half isolation window of the file"
+            } else {
+                "table tolerance: window not in the file"
+            }
         ),
     }
 }
 
+/// The match of the peak of the trace of `e` with the feature of `r`: the peak must overlap the peak of the feature (the scans of the match are the
+/// part inside it) and the precursor must be within the tolerance of its m/z.
 pub(super) fn pair<'a>(d: &LrDig, e: &Exp, r: &'a Entry) -> Option<Pair<'a>> {
     let at = expected(d, r, e);
     let hit = find(e, at + e.drift, d.settings.rt_tol_min)?;
+    let (flo, fhi) = bounds(d, r, e);
+    let (lo, hi) = ms2assoc::overlap(hit.lo, hit.hi, flo, fhi)?;
+    let n_in = e.rt.iter().filter(|t| **t >= lo && **t <= hi).count();
+    (n_in > 0).then_some(())?;
     Some(Pair {
         row: r,
         dmz: dmz(r, e.precursor),
         drt: hit.apex - at,
         hit,
+        lo,
+        hi,
+        n_in,
+        tol: e.tol(),
     })
 }
 
@@ -255,7 +252,7 @@ pub(super) fn isotope<'a, R: ReadAt>(
     {
         for iso in ISO {
             let x = dmz(r, e.precursor - iso);
-            if x <= PREC_TOL && x < near {
+            if x <= e.tol().da && x < near {
                 cand.push((x, iso, r));
             }
         }
@@ -410,7 +407,7 @@ pub(super) fn one<R: ReadAt>(
     }
     let before = c.links.len();
     let mut taken = corrections(c, e, x);
-    let comp = compatible(d, e.precursor);
+    let comp = compatible(d, e);
     let mut pairs: Vec<Pair> = comp.iter().filter_map(|r| pair(d, e, r)).collect();
     if let Some(p) = isotope(d, e, &comp, open)? {
         let peak = register(e, &p.hit);
