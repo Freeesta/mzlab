@@ -5,7 +5,7 @@ trace of the loading and no file name. Needs the site and the .wasm (python tool
 import json, os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from lib import ROOT, free_port
+from lib import ROOT, free_port, hold
 
 PORT = free_port()
 errs = []
@@ -21,7 +21,10 @@ for name, samples, scans, points in (("lotto", 4, 700, 1500), ("ferma", 4, 900, 
 (D / "rotto.wiff").write_bytes(b"\x00not a compound file\x01" * 4000)      # a .wiff that is not an OLE container: the pair cannot be opened
 (D / "rotto.wiff.scan").write_bytes((D / "lotto.wiff.scan").read_bytes())
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1)
+import urllib.request
+for _ in range(50):
+    try: urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1); break
+    except Exception: __import__("threading").Event().wait(0.2)      # the server is starting
 # what the student sees of the loading: the rows of the table, the list of the ended ones, the bar of the card; the bar of PROGRESSO; the rows of CONVROWS
 LOOK = """JSON.stringify({see: [...document.querySelectorAll('#flist [data-cvrow], #up .loadbar')].map(e => e.innerText).join('|'), pc: PROGRESSO.state().pc, busy: UPBUSY,
   rows: CONVROWS.rows.map(r => [r.name, r.state]), files: ST.files.map(f => f.name)})"""
@@ -33,7 +36,7 @@ def follow(pg, until, limit=300):
         s = json.loads(pg.evaluate(LOOK)); seen.append(s)
         if s["see"] != last: still = max(still, time.time() - since); last, since = s["see"], time.time()
         if until(s): break
-        time.sleep(0.25)
+        hold(pg, 250)                                   # the polling measures time itself: how long the text stays the same
     return seen, still
 
 try:
@@ -107,8 +110,9 @@ try:
             pg.set_input_files("#pick", [str(D / "ferma.wiff"), str(D / "ferma.wiff.scan")])
             pg.wait_for_function("UPBUSY > 0"); pg.locator("#opbtn").click()
             pg.wait_for_function("document.querySelector('#ldact button') && /\\d:\\d\\d/.test(document.querySelector('#ldmsg').textContent)")
-            t1 = pg.inner_text("#ldmsg"); pg.wait_for_timeout(2200); t2 = pg.inner_text("#ldmsg")
-            assert t1 != t2 and "Indexing 0%" not in t1, (t1, t2)
+            t1 = pg.inner_text("#ldmsg")
+            pg.wait_for_function("t => document.querySelector('#ldmsg').textContent !== t", arg=t1, timeout=3000)       # the elapsed time moves every second
+            assert "Indexing 0%" not in t1, t1
             pg.locator("#ldact button").click()
             pg.wait_for_function("UPBUSY === 0", timeout=30000)
             assert pg.locator("#ldact").is_hidden()
