@@ -6,32 +6,6 @@ use sci_form::xtb::gfn2_params::{MP_DMP3, MP_DMP5, MP_KEXP_MULTI, MP_RMAX, MP_SH
 
 const QP_SCALE: [f64; 6] = [1.0, 2.0, 1.0, 2.0, 2.0, 1.0];
 
-/// Damped interaction tensors between atom pairs (index `i * n + j`) and the on-site kernels.
-pub struct Aes {
-    n: usize,
-    sd: Vec<[f64; 3]>,
-    dd: Vec<[[f64; 3]; 3]>,
-    sq: Vec<[f64; 6]>,
-    dk: Vec<f64>,
-    qk: Vec<f64>,
-}
-
-/// Potentials of the multipoles: on the atomic charge, on the dipole, on the quadrupole.
-pub struct AesPot {
-    pub vat: Vec<f64>,
-    pub vdp: Vec<[f64; 3]>,
-    pub vqp: Vec<[f64; 6]>,
-}
-
-/// Multipole damping radius (bohr): sci-form has 3.9 for Br, the GFN2 parameter file of dxtb 0.4.0 has 4.0 (`tests/parametri_gfn2.rs`).
-fn mp_rad(z: u8, sci_form: f64) -> f64 {
-    if z == 35 {
-        4.0
-    } else {
-        sci_form
-    }
-}
-
 impl Aes {
     pub fn new(el: &[u8], pos: &[[f64; 3]], cn: &[f64]) -> Aes {
         let n = el.len();
@@ -146,5 +120,31 @@ impl Aes {
             }
         }
         e
+    }
+}
+
+/// Damped interaction tensors between atom pairs (index `i * n + j`) and the on-site kernels.
+pub struct Aes {
+    n: usize,
+    sd: Vec<[f64; 3]>,
+    dd: Vec<[[f64; 3]; 3]>,
+    sq: Vec<[f64; 6]>,
+    dk: Vec<f64>,
+    qk: Vec<f64>,
+}
+
+/// Potentials of the multipoles: on the atomic charge, on the dipole, on the quadrupole.
+pub struct AesPot {
+    pub vat: Vec<f64>,
+    pub vdp: Vec<[f64; 3]>,
+    pub vqp: Vec<[f64; 6]>,
+}
+
+/// Multipole damping radius (bohr): sci-form has 3.9 for Br, the GFN2 parameter file of dxtb 0.4.0 has 4.0 (`tests/parametri_gfn2.rs`).
+fn mp_rad(z: u8, sci_form: f64) -> f64 {
+    if z == 35 {
+        4.0
+    } else {
+        sci_form
     }
 }

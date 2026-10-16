@@ -12,53 +12,6 @@ const ECONV: f64 = 1e-6;
 const PCONV: f64 = 2e-5;
 const DAMP: f64 = 0.4;
 
-/// Output of one Fock build and diagonalisation for the input moments `x`.
-struct Step {
-    x: Vec<f64>,
-    energy: f64,
-    emo: Vec<f64>,
-}
-
-/// Fermi occupations (0..1) of `n` electrons in one spin channel and the entropy term (Hartree).
-fn fermi(emo: &[f64], n: usize) -> (Vec<f64>, f64) {
-    let m = emo.len();
-    if n == 0 {
-        return (vec![0.0; m], 0.0);
-    }
-    let mut ef = if n < m {
-        0.5 * (emo[n - 1] + emo[n])
-    } else {
-        emo[m - 1] + 1.0
-    };
-    let mut f = vec![0.0; m];
-    for _ in 0..200 {
-        let (mut tot, mut der) = (0.0, 0.0);
-        for (k, e) in emo.iter().enumerate() {
-            let x = (e - ef) / KT;
-            f[k] = if x < 50.0 { 1.0 / (x.exp() + 1.0) } else { 0.0 };
-            if x < 50.0 {
-                der += x.exp() / (KT * (x.exp() + 1.0).powi(2));
-            }
-            tot += f[k];
-        }
-        let miss = n as f64 - tot;
-        if miss.abs() <= f64::EPSILON.sqrt() {
-            break;
-        }
-        ef += if der > 1e-150 {
-            (miss / der).clamp(-1.0, 1.0)
-        } else {
-            0.0
-        };
-    }
-    let ts: f64 = f
-        .iter()
-        .filter(|&&v| v > 1e-15 && 1.0 - v > 1e-15)
-        .map(|&v| v * v.ln() + (1.0 - v) * (1.0 - v).ln())
-        .sum();
-    (f, ts * KT)
-}
-
 impl System {
     fn split<'a>(&self, x: &'a [f64]) -> (&'a [f64], Vec<[f64; 3]>, Vec<[f64; 6]>) {
         let (ns, n) = (self.basis.shells.len(), self.el.len());
@@ -263,4 +216,51 @@ impl System {
             guess: Guess { x: s.x },
         }
     }
+}
+
+/// Output of one Fock build and diagonalisation for the input moments `x`.
+struct Step {
+    x: Vec<f64>,
+    energy: f64,
+    emo: Vec<f64>,
+}
+
+/// Fermi occupations (0..1) of `n` electrons in one spin channel and the entropy term (Hartree).
+fn fermi(emo: &[f64], n: usize) -> (Vec<f64>, f64) {
+    let m = emo.len();
+    if n == 0 {
+        return (vec![0.0; m], 0.0);
+    }
+    let mut ef = if n < m {
+        0.5 * (emo[n - 1] + emo[n])
+    } else {
+        emo[m - 1] + 1.0
+    };
+    let mut f = vec![0.0; m];
+    for _ in 0..200 {
+        let (mut tot, mut der) = (0.0, 0.0);
+        for (k, e) in emo.iter().enumerate() {
+            let x = (e - ef) / KT;
+            f[k] = if x < 50.0 { 1.0 / (x.exp() + 1.0) } else { 0.0 };
+            if x < 50.0 {
+                der += x.exp() / (KT * (x.exp() + 1.0).powi(2));
+            }
+            tot += f[k];
+        }
+        let miss = n as f64 - tot;
+        if miss.abs() <= f64::EPSILON.sqrt() {
+            break;
+        }
+        ef += if der > 1e-150 {
+            (miss / der).clamp(-1.0, 1.0)
+        } else {
+            0.0
+        };
+    }
+    let ts: f64 = f
+        .iter()
+        .filter(|&&v| v > 1e-15 && 1.0 - v > 1e-15)
+        .map(|&v| v * v.ln() + (1.0 - v) * (1.0 - v).ln())
+        .sum();
+    (f, ts * KT)
 }

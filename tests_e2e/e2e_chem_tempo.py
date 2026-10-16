@@ -2,7 +2,7 @@
 ALPB water, f(−) on the lowest conformers) for carbamazepine (30 atoms) ≤ 5 s and valsartan (61 atoms) ≤ 15 s, the method GFN2-xTB with the three SCC converged,
 `version()` = mzlab-chem/1 and a bad SMILES rejected with its key. Uses site/static/wasm-feat/chem when built there, else builds the module (cargo, wasm-bindgen,
 tools/wasm_opt.sh); SKIP without cargo or wasm-bindgen. Run from the repo root: python3 tests_e2e/e2e_chem_tempo.py"""
-import fcntl, json, os, shutil, subprocess, sys, tempfile, time
+import fcntl, json, os, shutil, socket, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
@@ -31,7 +31,13 @@ else:
 
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(tmp)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1); errs = []
+errs = []
+end = time.time() + 30
+while True:
+    try:
+        socket.create_connection(("127.0.0.1", PORT), timeout=1).close(); break
+    except OSError:
+        if time.time() > end: raise
 RUN = """async ([smiles]) => {
   const m = await import('/chem/mzlab_chem_wasm.js'); await m.default();
   const t = performance.now(), r = JSON.parse(m.reactivity(smiles, ''));
