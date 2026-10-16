@@ -7,6 +7,9 @@ import { anonimizza, riassuntoFile, righeDiagnostica, rapporto, titolo, urlIssue
 
 /** @type {any} */
 const W = window;
+// E (files), S (state) and DIAG are top-level `const` of classic scripts: global names, not properties of window
+const glob = (/** @type {() => any} */ f) => { try { return f(); } catch (_) { return undefined; } };
+const EE = () => glob(() => E), SS = () => glob(() => S), DG = () => glob(() => DIAG);
 const t = (/** @type {string} */ k) => (W.I18N ? W.I18N.t(k) : k);
 const STYLE_ID = "bug-style";
 const CSS = `#bugdlg{position:fixed;inset:0;z-index:6200;display:flex;align-items:center;justify-content:center;padding:16px;background:color-mix(in srgb,var(--ink) 45%,transparent)}
@@ -33,7 +36,7 @@ let diagnostics = /** @type {string[]} */ ([]);
 /** names of everything the user may have called something: files and labels of the open session */
 function nomi() {
   const out = /** @type {string[]} */ ([]);
-  for (const f of (W.E && W.E.files) || []) for (const k of ["file", "label", "name", "sample", "nome"]) if (typeof f[k] === "string") out.push(f[k]);
+  for (const f of (EE() && EE().files) || []) for (const k of ["file", "label", "name", "sample", "nome"]) if (typeof f[k] === "string") out.push(f[k]);
   return out;
 }
 
@@ -47,13 +50,13 @@ async function swState() {
 }
 
 async function raccogli() {
-  const names = nomi(), pul = W.DIAG ? (/** @type {string} */ s) => W.DIAG.pulisci(s, 400) : undefined;
+  const names = nomi(), pul = DG() ? (/** @type {string} */ s) => DG().pulisci(s, 400) : undefined;
   const hash = (location.hash.match(/^#\/[A-Za-z0-9/_-]*/) || ["#/"])[0];
   const errs = W.ERRORI && W.ERRORI.recenti ? W.ERRORI.recenti(5) : [];
   diagnostics = righeDiagnostica({
     version: W.MZLAB_VERSION, commit: W.MZLAB_COMMIT, date: new Date().toISOString(), ua: navigator.userAgent,
-    mode: W.MZLAB_DESKTOP ? "desktop" : "web", view: `${(W.S && W.S.view) || "?"} (${hash})`,
-    files: riassuntoFile((W.E && W.E.files) || []), sw: await swState(), errors: errs.map((/** @type {string} */ e) => anonimizza(e, names, pul)),
+    mode: W.MZLAB_DESKTOP ? "desktop" : "web", view: `${(SS() && SS().view) || "?"} (${hash})`,
+    files: riassuntoFile((EE() && EE().files) || []), sw: await swState(), errors: errs.map((/** @type {string} */ e) => anonimizza(e, names, pul)),
   });
 }
 

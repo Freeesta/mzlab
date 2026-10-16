@@ -22,7 +22,7 @@ try:
             assert b.get_attribute("aria-label") == "Segnala un bug" and b.get_attribute("title") == "Segnala un bug" and b.locator("svg").count() == 1
             assert pg.evaluate("typeof window.BUGREP") == "undefined", "the dialog is lazy: not loaded before the first click"
         step("icon in the header with label and tooltip; dialog not loaded at start", icon)
-        pg.set_input_files("#pick", [str(named)]); pg.wait_for_timeout(800); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [str(named)]); pg.wait_for_selector("text=Carica dati"); pg.click("text=Carica dati"); ready(pg)
         def opens():
             pg.evaluate("window.ERRORI && ERRORI.segnala(new Error('Cannot read %s.mzML and %s'), 'prova')" % (SECRET, SECRET))
             pg.locator("#bug-btn").focus(); pg.keyboard.press("Enter"); pg.wait_for_selector("#bugdlg:not([hidden])", timeout=10000)
@@ -39,7 +39,7 @@ try:
             pg.check("#bug-diag"); assert "- mzLab:" in pg.input_value("#bug-prev")
         step("fields and the diagnostics checkbox rebuild the text (the user's own words stay)", fields)
         def copy():
-            pg.click("#bug-copy"); pg.wait_for_timeout(300)
+            pg.click("#bug-copy"); attendi(pg, "document.querySelector('#bug-st').textContent !== ''")
             clip = pg.evaluate("navigator.clipboard.readText()"); assert clip == pg.input_value("#bug-prev") and "## Cosa è successo" in clip
             assert pg.inner_text("#bug-st") == "Rapporto copiato"
         step("Copy report puts the whole text on the clipboard", copy)
@@ -59,20 +59,20 @@ try:
         step("Tab stays inside, Esc closes and returns the focus", keys)
         def other_views():
             for v in ("draw", "theory"):
-                pg.click(f"#nav button[data-v={v}]"); pg.wait_for_timeout(500)
+                pg.click(f"#nav button[data-v={v}]"); attendi(pg, f"document.querySelector('#nav button[data-v={v}]').classList.contains('on')")
                 assert pg.is_visible("#bug-btn"), v
             pg.click("#bug-btn"); pg.wait_for_selector("#bugdlg:not([hidden])"); assert "theory" in pg.input_value("#bug-prev"); pg.keyboard.press("Escape")
             pg.click("#nav button[data-v=data]")
         step("the icon is there in Dati, Disegno and Teoria", other_views)
         def english():
-            pg.evaluate("I18N.set('en')"); pg.wait_for_timeout(300)
+            pg.evaluate("I18N.set('en')"); pg.wait_for_function("document.querySelector('#bug-btn') && document.querySelector('#bug-btn').getAttribute('aria-label') === 'Report a bug'", timeout=60000)
             assert pg.get_attribute("#bug-btn", "aria-label") == "Report a bug"
             pg.click("#bug-btn"); pg.wait_for_selector("#bugdlg:not([hidden])")
             assert pg.inner_text("#bugdlg h2") == "Report a bug" and pg.inner_text("#bug-go") == "Open on GitHub" and pg.inner_text("#bug-copy") == "Copy report"
-            assert "## What happened" in pg.input_value("#bug-prev"); pg.keyboard.press("Escape"); pg.evaluate("I18N.set('it')")
+            assert "## What happened" in pg.input_value("#bug-prev"); pg.keyboard.press("Escape"); pg.evaluate("I18N.set('it')"); pg.wait_for_function("document.querySelector('#bug-btn') && document.querySelector('#bug-btn').getAttribute('aria-label') === 'Segnala un bug'", timeout=60000)
         step("English", english)
         def narrow():
-            pg.set_viewport_size({"width": 390, "height": 800}); pg.wait_for_timeout(300)
+            pg.set_viewport_size({"width": 390, "height": 800}); attendi(pg, "innerWidth === 390")
             assert pg.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "no horizontal scroll"
             pg.set_viewport_size({"width": 1500, "height": 2200})
         step("narrow window: the header does not overflow", narrow)
