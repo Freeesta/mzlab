@@ -359,7 +359,7 @@ pub fn build_mzidx_native(
         }
     };
     let c = c as usize;
-    let mut l = crate::contato::apri(|| m.apri_fs(fs), &tell, step, c)?;
+    let mut l = crate::contato::apri(fs, |fs| m.apri_fs(fs), &tell, step, c)?;
     let mut out = JsOutput { write };
     // peaks that do not fit in the budget go to the scratch file (a second file of OPFS) instead of being decoded again by every round
     let mut spill = spill_put
