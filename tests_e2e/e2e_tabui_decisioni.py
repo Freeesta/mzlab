@@ -110,16 +110,16 @@ try:
         step("the Identity tab has the same control, kept in step with the head", identity_tab)
 
         def refused_2b():
-            k = next((i for i in range(rowsL.count()) if level_of(i) in ("L5", "L0")), None)
-            assert k is not None, [level_of(i) for i in range(rowsL.count())]
-            open_row(k)
+            assert pg.evaluate("TPDEC.check(5, '2b').ok") is False and pg.evaluate("TPDEC.check(0, '2b').ok") is False, "2b from L5 or L0"
+            assert pg.evaluate("TPDEC.check(4, '2b').ok") is True and pg.evaluate("TPDEC.check(5, 'nottp').ok") is True
+            open_row(2)
             sel = pg.locator("#tp-det .tpd-sel").first
-            sel.select_option("2b"); pg.wait_for_timeout(150)
+            sel.select_option("1"); pg.wait_for_timeout(150)                 # level 1 needs a standard marked by the user: LIVELLI.decide refuses it
             msg = pg.locator("#tp-det .tpd-msg").first.inner_text(); assert msg.strip(), "the message of LIVELLI.decide"
             assert sel.input_value() == "", "the choice was not kept"
-            assert pg.locator("#hr-t tbody tr.clk .lvb").filter(has_text="L2b").count() == 0
-            assert '"l":"2b"' not in (pg.evaluate("localStorage.getItem('qqq.tabui.decisions')") or ""), "a refused level was stored"
-        step("L2b refused where LIVELLI.decide refuses it", refused_2b)
+            assert pg.locator("#hr-t tbody tr.clk .lvb").filter(has_text="L1").count() == 0
+            assert '"l":"1"' not in (pg.evaluate("localStorage.getItem('qqq.tabui.decisions')") or ""), "a refused level was stored"
+        step("a level that LIVELLI.decide refuses is refused (2b from L5 and L0, level 1 without standard)", refused_2b)
 
         def remembered():
             raw = pg.evaluate("localStorage.getItem('qqq.tabui.decisions')"); assert raw and "checked by hand" in raw, raw
@@ -172,6 +172,7 @@ try:
 
         def narrow():
             pg.set_viewport_size({"width": 390, "height": 800}); pg.wait_for_timeout(300)
+            if pg.locator("#tp-det .tpd-sel").count() == 0: open_row(0)
             w = pg.evaluate("[document.querySelector('#tp-det').getBoundingClientRect().width, document.querySelector('#hr-t').closest('.tpt-wrap').clientWidth]"); assert w[0] <= w[1] + 2, w
             pg.screenshot(path=str(SHOTS / "tabui_decisioni_390.png")); pg.set_viewport_size({"width": 1280, "height": 900})
         step("390 px: the panel fits", narrow)
