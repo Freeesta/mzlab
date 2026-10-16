@@ -317,7 +317,7 @@ impl mzlab_core::mzidx_spill::Spill for JsSpill {
 
 /// Builds the `.mzidx` of sample `c` of a dataset straight from its reader (version 2: the rows say where each scan lies in the members) and writes
 /// it with `write(offset, bytes)`; `name` is the name of the item. `phase(n)` is told when a phase begins (1 the members are read for their SHA-256,
-/// 2 the scans are read and indexed, 3 the chromatograms and the index are written); JS follows how far each goes from the bytes it is asked for.
+/// 4 the reader opens the dataset, 2 the scans are read and indexed, 3 the chromatograms and the index are written); `step(done, total)`, when given, is told how many scans of sample `c` have been decoded (`contato.rs`), else JS follows the bytes read.
 /// `write_cen(offset, bytes)`, when the page wants it: if the first MS1 scan is profile (and `centroid` is not asked) the index with the scans as centroids (the `.cen.mzidx` of mzFinder) is built from the SAME decoding of the scans and written there (`"cen"` in the answer holds its statistics); otherwise nothing is written to it.
 /// Returns the statistics and the SHA-256 of the dataset as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`). `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once).
 #[wasm_bindgen]
@@ -336,6 +336,7 @@ pub fn build_mzidx_native(
     spill_put: Option<Function>,
     spill_get: Option<Function>,
     write_cen: Option<Function>,
+    step: Option<Function>,
 ) -> Result<String, JsValue> {
     let tell = |n: u32| drop(phase.call1(&JsValue::NULL, &n.into()));
     let m = Membri::new(names, sizes, read)?;
@@ -357,8 +358,8 @@ pub fn build_mzidx_native(
             upload::impronte(&mut fs).map_err(|e| error_json(&e))?
         }
     };
-    let mut l = m.apri_fs(fs).map_err(|e| error_json(&e))?;
     let c = c as usize;
+    let mut l = crate::contato::apri(|| m.apri_fs(fs), &tell, step, c)?;
     let mut out = JsOutput { write };
     // peaks that do not fit in the budget go to the scratch file (a second file of OPFS) instead of being decoded again by every round
     let mut spill = spill_put
