@@ -28,6 +28,7 @@
     "../../mzlab/web/html-sicuro.js",
     "../../mzlab/web/file-sicuri.js",
     "../../mzlab/web/esperimenti.js",
+    "../../mzlab/web/azioni-icone.js",
     "../../mzlab/web/azioni.js",
     "../../mzlab/web/features.js",
     "../../mzlab/web/icons-modi.js",

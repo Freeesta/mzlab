@@ -35,7 +35,7 @@ try:
             pg.wait_for_function("document.querySelector('#tp-files table') && document.querySelectorAll('#tp-files tr').length >= 9", timeout=240000)
             pg.fill("#tp-smi", "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O")
             pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('241.0641')", timeout=60000)
-            pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=300000); pg.wait_for_timeout(1300)
+            pg.click("#tp-go"); pg.wait_for_selector("#tp-t", timeout=300000); pg.wait_for_timeout(1300)
             pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk")
             pg.click("#tp-t tbody tr.clk >> nth=0"); pg.click('#tp-det [data-tab="identity"]')          # the parent is the pinned first row; the tree is in its tab Identity
             pg.wait_for_selector("#tp-alb svg.alb-svg .nd", timeout=60000)

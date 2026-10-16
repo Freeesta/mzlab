@@ -867,14 +867,14 @@ function menu(ev, items) {
     if (it === "-") { m.appendChild(document.createElement("hr")); return; }
     const d = document.createElement("div");
     if (it.icon) {
+      // decorative icon on the left (currentColor, so it follows the theme and the grey of a disabled entry); a checkable entry keeps its mark on the right
       const ic = document.createElement("span");
+      ic.className = "ic";
+      ic.setAttribute("aria-hidden", "true");
       ic.innerHTML = it.icon;
-      ic.style.display = "inline-flex";
-      ic.style.alignItems = "center";
-      ic.style.marginRight = "6px";
-      ic.style.verticalAlign = "middle";
       d.appendChild(ic);
       d.appendChild(document.createTextNode(it.label));
+      if (it.check) { const ck = document.createElement("span"); ck.className = "ck"; ck.setAttribute("aria-hidden", "true"); ck.textContent = "\u2713"; d.appendChild(ck); }
     } else {
       d.textContent = (it.check ? "\u2713 " : "") + it.label;
     }
