@@ -372,9 +372,10 @@ fn own_candidate_first(det: &Value) {
 #[test]
 fn a_parent_known_only_by_its_mz_stays_in_rust() {
     let (files, _) = series();
-    let plan: Value =
-        serde_json::from_str(&lr::plan::plan_json(&files, r#"{"name": "P", "mz": 250.1}"#).unwrap())
-            .unwrap();
+    let plan: Value = serde_json::from_str(
+        &lr::plan::plan_json(&files, r#"{"name": "P", "mz": 250.1}"#).unwrap(),
+    )
+    .unwrap();
     assert_eq!(plan["rust"], true);
     assert_eq!(plan["formula"], "");
 }
