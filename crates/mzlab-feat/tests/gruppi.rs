@@ -252,7 +252,7 @@ fn warnings_cover_the_design() {
     assert!(w
         .iter()
         .all(|(c, _)| c != "condNoControls" && c != "mixedTimes"));
-    for r in &d.get("rows").unwrap().arr()[..] {
+    for r in d.get("rows").unwrap().arr() {
         for c in r.get("cond").unwrap().arr() {
             assert!(c.get("ratio_ref").unwrap().is_null());
         }
@@ -463,7 +463,7 @@ fn gruppi_speed() {
                     s = s
                         .wrapping_mul(6364136223846793005)
                         .wrapping_add(1442695040888963407);
-                    if (s >> 33) % 3 == 0 {
+                    if (s >> 33).is_multiple_of(3) {
                         x()
                     } else {
                         d(1e4 + ((s >> 40) % 1000) as f64)
