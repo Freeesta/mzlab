@@ -5,7 +5,11 @@ use mzlab_chem::mol3d::{atomic_number, Mol3d};
 use mzlab_feat::chem::grafo::Mol;
 
 fn reference() -> serde_json::Value {
-    let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/data/cc_ref.json")).unwrap();
+    let text = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/data/cc_ref.json"
+    ))
+    .unwrap();
     serde_json::from_str(&text).unwrap()
 }
 
@@ -28,17 +32,30 @@ fn heavy_atoms_keep_the_grafo_order() {
 fn same_atoms_and_bonds_as_rdkit() {
     let r = reference();
     for (name, rec) in r["molecules"].as_object().unwrap() {
-        let g = Mol::parse(rec["smiles"].as_str().unwrap()).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+        let g =
+            Mol::parse(rec["smiles"].as_str().unwrap()).unwrap_or_else(|e| panic!("{name}: {e:?}"));
         let m = Mol3d::from_mol(&g).unwrap();
-        let z: Vec<u8> = rec["z"].as_array().unwrap().iter().map(|v| v.as_u64().unwrap() as u8).collect();
+        let z: Vec<u8> = rec["z"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_u64().unwrap() as u8)
+            .collect();
         assert_eq!(m.el, z, "{name}: elements in order");
-        let mut mine: Vec<(usize, usize, u8)> = m.bonds.iter().map(|&(a, b, o)| (a.min(b), a.max(b), o)).collect();
+        let mut mine: Vec<(usize, usize, u8)> = m
+            .bonds
+            .iter()
+            .map(|&(a, b, o)| (a.min(b), a.max(b), o))
+            .collect();
         let mut theirs: Vec<(usize, usize, u8)> = rec["bonds"]
             .as_array()
             .unwrap()
             .iter()
             .map(|b| {
-                let (a, c) = (b[0].as_u64().unwrap() as usize, b[1].as_u64().unwrap() as usize);
+                let (a, c) = (
+                    b[0].as_u64().unwrap() as usize,
+                    b[1].as_u64().unwrap() as usize,
+                );
                 let o = b[2].as_f64().unwrap();
                 (a.min(c), a.max(c), if o == 1.5 { 4 } else { o as u8 })
             })
@@ -50,7 +67,10 @@ fn same_atoms_and_bonds_as_rdkit() {
         assert_eq!(mine.len(), theirs.len(), "{name}: bond count");
         for (a, b) in mine.iter().zip(&theirs) {
             assert_eq!((a.0, a.1), (b.0, b.1), "{name}: bond ends");
-            assert!(a.2 == b.2 || a.2 == 4 || b.2 == 4, "{name}: order of bond {a:?} vs {b:?}");
+            assert!(
+                a.2 == b.2 || a.2 == 4 || b.2 == 4,
+                "{name}: order of bond {a:?} vs {b:?}"
+            );
         }
     }
 }
