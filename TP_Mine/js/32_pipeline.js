@@ -68,7 +68,7 @@
     st.crate = await st.pool.crateVersion();
     return st.pool;
   }
-  const msg = (key, params) => { try { const t = window.I18N && I18N.t(key, params || {}); return t && t !== key ? t : key; } catch (_) { return key; } };
+  const msg = (key, params) => /** @type {any} */ (window).TE(key, params);
 
   /** puts the parameters of a recipe (the `parametri` of a record) into the form; a floor that is not in the recipe stays the estimated one */
   function apply(p) {
