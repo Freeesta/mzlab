@@ -2,7 +2,7 @@
 // Loader of Tabui (internal name "TP Mine", also called mzFinder in the code): the search for transformation products, shown in the header as a normal tab.
 // This file is small and contains NO tool code. The tools are in the site in plain text (static/mzfinder/, written by tools/build_site.py
 // from TP_Mine/) and are downloaded and run when the page starts (the tab shows a loading note until they are ready). No switch, no password.
-// static/mzfinder/indice.json = {js: [names, run in this order], lazy: [names of lazy/, loaded on request by TPLAZY.load], files: [names, given to the scripts as QTOOLS.ctx.files[name]], py: zip name}
+// static/mzfinder/indice.json = {js: [names, run in this order], files: [names, given to the scripts as QTOOLS.ctx.files[name]], py: zip name}
 // The scripts register their tools with window.QTOOLS.register(...). A tool registered with nav:true gets its own tab in the page header
 // (next to Teoria) and a full page; others get a button in the floating bar.
 // A tool registered with admin:true exists only in the administrator mode (localStorage «qqq.admin» = «1», five clicks on the logo): without it the package is not
@@ -24,27 +24,20 @@
     register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav && on && shown(t)) addTab(t); render(); },
   };
 
-  function runScript(name, sub) {
+  // scripts that are not needed at the start: TPLAZY.load("a.js", "b.js") runs them once, in this order, from static/mzfinder/lazy/ (the names are listed in indice.json under `lazy`)
+  const lazyDone = /** @type {Map<string, Promise<void>>} */ (new Map());
+  /** @param {...string} names @returns {Promise<void>} */
+  const lazyLoad = async (...names) => { for (const n of names) { let p = lazyDone.get(n); if (!p) { p = runScript("lazy/" + n); lazyDone.set(n, p); p.catch(() => lazyDone.delete(n)); } await p; } };
+  /** @type {any} */ (window).TPLAZY = { load: lazyLoad };
+
+  function runScript(name) {
     return new Promise((/** @type {any} */ res, rej) => {
       const s = document.createElement("script");
       s.onload = () => { s.remove(); res(); };
       s.onerror = () => { s.remove(); rej(new Error("script " + name)); };
-      s.src = DIR + (sub || "") + name; document.head.appendChild(s);
+      s.src = DIR + name; document.head.appendChild(s);
     });
   }
-
-  // ---- lazy files (static/mzfinder/lazy/, listed in indice.json under "lazy"): not downloaded when Tabui opens, one <script> each on the first TPLAZY.load(name)
-  /** @type {string[]} */ let lazyNames = [];
-  /** @type {Map<string, Promise<void>>} */ const lazyDone = new Map();
-  /** @type {any} */ (window).TPLAZY = {
-    /** loads a file of lazy/ once; a second call returns the same promise. A name not in the list or a failed download rejects (a failed one can be asked again) */
-    load(/** @type {string} */ name) {
-      const old = lazyDone.get(name); if (old) return old;
-      if (!lazyNames.includes(name)) return Promise.reject(new Error("lazy file " + name + " missing"));
-      const p = runScript(name, "lazy/"); lazyDone.set(name, p); p.catch(() => { lazyDone.delete(name); });
-      return p;
-    },
-  };
 
   // ---- launcher bar and tool host
   let bar = null, host = null, on = false, loaded = null;
@@ -110,7 +103,6 @@
     const get = async (name, how) => { const r = await fetch(DIR + name); if (!r.ok) throw new Error(name + " missing"); return r[how](); };
     const idx = await get("indice.json", "json");
     const js = idx.js || [], names = idx.files || [];
-    lazyNames = idx.lazy || [];
     const warm = js.map(n => fetch(DIR + n).catch(() => null));     // starts all downloads now; the script tags below then hit the cache
     const [texts, pyBuf] = await Promise.all([Promise.all(names.map(n => get(n, "text"))), idx.py ? get(idx.py, "arrayBuffer") : null]);
     const files = {};

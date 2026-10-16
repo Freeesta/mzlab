@@ -118,11 +118,11 @@ def pack_mzfinder(static: Path) -> None:
         shutil.copy2(src / "data" / n, dst / n)
     for n in js:
         shutil.copy2(src / "js" / n, dst / n)
-    lazy = [f.name for f in sorted((src / "lazy").glob("*.js"))] if (src / "lazy").is_dir() else []      # not loaded when Tabui opens: window.TPLAZY.load(name) of tpmine-loader.js
+    lazy = [f.name for f in sorted((src / "lazy").glob("*.js"))] if (src / "lazy").is_dir() else []      # loaded on demand through TPLAZY.load, not at the start of Tabui
     if lazy:
         (dst / "lazy").mkdir()
-    for n in lazy:
-        shutil.copy2(src / "lazy" / n, dst / "lazy" / n)
+        for n in lazy:
+            shutil.copy2(src / "lazy" / n, dst / "lazy" / n)
     for n in files:
         shutil.copy2(src / "files" / n, dst / n)
     with zipfile.ZipFile(dst / "tpmine.zip", "w", zipfile.ZIP_DEFLATED) as z:

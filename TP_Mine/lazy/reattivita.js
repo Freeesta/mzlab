@@ -1,6 +1,6 @@
 // @ts-check
 // TPMINE-PRIVATE  TPREATT: the panel of reactivity of the parent compound in Tabui (administrator mode only). It shows a `reatt/1` (docs/agenti/reattivita.md): the 2D drawing with a halo under the heavy atoms,
-// the 3D model (TPV3D, 47_viewer3d.js), the cards f(−) (default), f(0), f(+), Info, Notes and JSON, the threshold, the table per atom (TDATI) and the exports (XYZ, SMILES, JSON, CSV) with «How to cite».
+// the 3D model (TPV3D, viewer3d.js), the cards f(−) (default), f(0), f(+), Info, Notes and JSON, the threshold, the table per atom (TDATI) and the exports (XYZ, SMILES, JSON, CSV) with «How to cite».
 // Every value is a «Prev.» (prediction for the isolated molecule in implicit water); no level is assigned and no class of positions is reordered or removed. Texts in English, without keys of lang/.
 // Colours only from CSS variables (Okabe-Ito); the atoms above the threshold also have a thick outline and the written index; every figure has its table.
 (() => {
@@ -21,7 +21,7 @@
   const NOTES = [
     "Prev.: prediction for the isolated molecule in implicit water; not evidence.",
     "f(−) orders the sites of an electrophilic attack (such as •OH); it does not see the surface of TiO2, the steric hindrance or the transition state.",
-    "f(0) can be wrong on deactivated rings; read it next to f(−), never alone.",
+    "f(0) radical susceptibility may fail on deactivated rings with •OH; f(−) is recommended for electrophilic attack.",
     "TiO2: the molecule is calculated alone, not adsorbed on the catalyst.",
     "The program proposes, the chemist decides: no level of identification is given and no position class is removed or reordered by these values.",
   ];
@@ -125,7 +125,7 @@
     const row = (/** @type {string} */ k, /** @type {any} */ v) => v === undefined || v === null || v === "" ? "" : `<tr><th scope="row" style="text-align:left">${esc(k)}</th><td style="text-align:left">${esc(v)}</td></tr>`;
     const conv = Array.isArray(s.converged) ? s.converged.map(x => (x ? "yes" : "no")).join(" / ") + " (N, N+1, N−1)" : s.converged === undefined ? "" : s.converged ? "yes" : "no";
     const ev = (/** @type {string} */ k, /** @type {string} */ l) => g[k] === undefined ? "" : row(l, num(g[k], 3) + " eV");
-    return `<table class="tpr-t"><tbody>${row("Method", r.method)}${row("Solvent", r.solvent)}${row("Engine", r.engine)}${row("SMILES", r.smiles)}${row("Atoms", r.atoms.length)}`
+    return `<table class="tpr-t"><tbody>${row("Method", r.method)}${row("Solvent", r.solvent && r.solvent !== "none" ? r.solvent.charAt(0).toUpperCase() + r.solvent.slice(1) : "None")}${row("Engine", r.engine)}${row("SMILES", r.smiles)}${row("Atoms", r.atoms.length)}`
       + `${row("Conformers", c.n !== undefined ? `${c.n}${c.chosen !== undefined ? ", chosen " + c.chosen : ""}${c.f_minus_spread !== undefined ? ", spread of f(−) " + num(c.f_minus_spread, 3) : ""}` : "")}`
       + `${ev("homo_ev", "HOMO")}${ev("lumo_ev", "LUMO")}${ev("gap_ev", "HOMO–LUMO gap")}${ev("ip_ev", "Ionisation potential")}${ev("ea_ev", "Electron affinity")}${ev("mu_ev", "Chemical potential μ")}${ev("eta_ev", "Hardness η")}${ev("omega_ev", "Electrophilicity ω")}`
       + `${row("SCC converged", conv)}${row("SCC iterations", Array.isArray(s.iterations) ? s.iterations.join(" / ") : s.iterations)}</tbody></table>`;
