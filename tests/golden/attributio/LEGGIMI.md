@@ -22,3 +22,7 @@ Un JSON per stadio in `sintetica/` (campagna, letture, rilevazione, livelli, ide
 
 | `banco/feature_decisions.csv` | `64542f25dfd3fefecaedff39eb0da69ed5ef2a92bea4f1bb925790b394e3ef51` |
 | `banco/livelli.json` | `fc264ff6f7d884eaa2abf8cf0c91e9705b93af89586316847a15a0334faff958` |
+| `esportazione/gradiente.json` | `1fd901d6ee39afbaf8517305d8476201dc6212cbacb146cc1e12713646cb6f30` |
+| `esportazione/pubblicazione.json` | `f32bd84d690713fb82a9686bf1c27e923bfe7be90094215e00a1efffcd60d142` |
+| `esportazione/quantificazione.json` | `7acd0c92d330fecc5d5172da9d87735a488f951540d39fd25bac28f8922db1e0` |
+| `esportazione/schymanski.json` | `a32363a1f83a0e7e08cca1b9b777e0a29da1af407eb305f0231103854c2337e1` |

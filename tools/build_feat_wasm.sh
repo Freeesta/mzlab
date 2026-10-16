@@ -5,6 +5,7 @@ set -eu
 # Limit of every .wasm after wasm-opt -Oz, bytes (raised from 460800 to leave room to grow; the size diet is a package of its own; measured: detect 419435, proofs 458034, mrm 244480, grafo 234654).
 limit=512000
 limit_rev=1000000   # attributio-rev carries the table of levels AND the review of one feature (libraries, spectra, formulas, isotopes); measured 961824
+limit_export=800000   # attributio-export carries the cascade AND the four spreadsheet exports (Schymanski folder, publication table, quantification, gradient)
 limit_lr=800000   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 610796
 out=${1:-site/static}/wasm-feat
 for which in detect proofs mrm finder finder_msn untargeted; do
@@ -33,6 +34,10 @@ tools/wasm_opt.sh "$out/attributio/mzlab_attributio_wasm_bg.wasm" $limit "mzFind
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features rev
 wasm-bindgen --target web --no-typescript --out-dir "$out/attributio-rev" target/wasm32-unknown-unknown/release/mzlab_attributio_wasm.wasm
 tools/wasm_opt.sh "$out/attributio-rev/mzlab_attributio_wasm_bg.wasm" $limit_rev "mzFinder attributio-rev"
+# the exports of Attributio (Schymanski folder, publication table, quantification, gradient), loaded only when the Export menu is used: the same crate with the feature export
+cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features export
+wasm-bindgen --target web --no-typescript --out-dir "$out/attributio-export" target/wasm32-unknown-unknown/release/mzlab_attributio_wasm.wasm
+tools/wasm_opt.sh "$out/attributio-export/mzlab_attributio_wasm_bg.wasm" $limit_export "mzFinder attributio-export"
 # the low-resolution Dig of mzFinder (crates/mzlab-finder-lr-wasm), loaded by the worker of mzFinder only for a series of full-scan unit-resolution files
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-finder-lr-wasm
 wasm-bindgen --target web --no-typescript --out-dir "$out/finder-lr" target/wasm32-unknown-unknown/release/mzlab_finder_lr_wasm.wasm
@@ -59,6 +64,8 @@ m["attributio"] = {"js": "attributio/mzlab_attributio_wasm.js", "wasm": "attribu
               "sha256": hashlib.sha256(open(f"{o}/attributio/mzlab_attributio_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["attributio_rev"] = {"js": "attributio-rev/mzlab_attributio_wasm.js", "wasm": "attributio-rev/mzlab_attributio_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/attributio-rev/mzlab_attributio_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["attributio_export"] = {"js": "attributio-export/mzlab_attributio_wasm.js", "wasm": "attributio-export/mzlab_attributio_wasm_bg.wasm",
+              "sha256": hashlib.sha256(open(f"{o}/attributio-export/mzlab_attributio_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["finder_lr"] = {"js": "finder-lr/mzlab_finder_lr_wasm.js", "wasm": "finder-lr/mzlab_finder_lr_wasm_bg.wasm",
                  "sha256": hashlib.sha256(open(f"{o}/finder-lr/mzlab_finder_lr_wasm_bg.wasm", "rb").read()).hexdigest()}
 json.dump(m, open(f"{o}/manifest.json", "w"), indent=1)

@@ -131,6 +131,8 @@ pub struct View {
     pub peaks: Vec<PeakView>,
     pub mirror: Option<Mirror>,
     pub isotopes: Vec<(f64, f64)>,
+    /// The spectrum of each reference (same order as `Evidence::references`, `None` when it is not in the libraries); the evidence export draws any of them. Not in the JSON.
+    pub spectra: Vec<Option<super::matching::Ms2>>,
 }
 
 /// What the proposal rests on.

@@ -54,6 +54,27 @@ impl Campaign {
         k.review = sec("review").t;
         k.annotation = sec("annotation").t;
         k.quantification = sec("quantification").t;
+        k.gradient_same_sorbent = sec("gradient")
+            .t
+            .get("same_sorbent")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let diag = sec("diagnostics").t;
+        k.diagnostics_matrix = diag
+            .get("matrix")
+            .and_then(Value::as_str)
+            .filter(|m| !m.is_empty())
+            .map(str::to_string);
+        k.rt_logp_watchlist = diag
+            .get("rt_logp_watchlist")
+            .and_then(Value::as_array)
+            .map(|a| {
+                a.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_lowercase)
+                    .collect()
+            })
+            .unwrap_or_default();
         k.read_sites(&cfg)?;
         Ok(k)
     }
@@ -96,6 +117,9 @@ impl Campaign {
             library_csv: None,
             calibration_csv: None,
             quantification: Table::default(),
+            gradient_same_sorbent: false,
+            diagnostics_matrix: None,
+            rt_logp_watchlist: Vec::new(),
             count_2b_as_2: true,
             review: Table::default(),
             annotation: Table::default(),

@@ -1,0 +1,85 @@
+# campaign.toml -- overlay of the synthetic campaign: adds the calibration, the quantification and the gradient settings (AT-08). Not a real campaign.
+#
+# Tiny fictional campaign used only by tests/test_synthetic_campaign.py to exercise
+# the core pipeline end-to-end (reading, level assignment, curation, identity dedup,
+# QC) with no network access and no dependency on the private untarget_data /
+# untarget_thai_ita snapshots. Every compound name, site and number here is made up.
+
+[campaign]
+id = "SYNTH"
+name = "Synthetic test campaign (fixture, not real data)"
+instrument = "Fictional Orbitrap"
+fragmentation = "DDA fictional HCD"
+sampling = "2026-01"
+nstat_tag = "[n = 1 per site · exploratory · no statistical test]"
+
+[paths]
+data = "02 Data/Data Synth"
+stats = "03 Stats"
+characterization = "02 Data/Characterization.csv"
+
+[mzmine]
+dir = "1 - mzMine"
+merged_dir = "DDA_{pol}/merged"
+sorbents = ["OA", "EC"]  # dual-SPE, as every real campaign; EC is never DETECTED here
+sample_column = "datafile:{prefix}_{sorbent}_{tag}.mzML:{field}"
+polarity_tag = { POS = "ddaPOS", NEG = "ddaNEG" }
+
+[sirius]
+dir = "2 - SIRIUS"
+output_dirs = { POS = "output POS", NEG = "output NEG" }
+
+[gnps]
+dir = "3 - GNPS"
+output_dir = "GNPS2_output_{pol_lower}"
+
+[standards]
+# One fictional reference standard, POS only: enough for one Level 1 (mass + RT + MS/MS).
+library = "library/standards.csv"
+rt_column = "rt"
+mass_tol_ppm = 5.0
+rt_tol_min = 0.35
+ms2_library_pos = "library/ms2_pos.json"
+ms2_min_cosine = 0.70
+ms2_min_matched = 2
+calibration = "library/calibration.csv"
+
+[curation]
+# The chemist's decisions on single features: POS 2 taken from Level 2 to 3, POS 4 renamed
+# so that it joins the Caffeine identity, and one decision whose feature does not exist.
+feature_decisions = "03 Stats/scripts/shared/feature_decisions.csv"
+# The tables of the name curation (synthetic): the contaminant map, the non-contaminant buckets and the formula corrections.
+name_map = "curation/name_map.csv"
+category_override = "curation/category_override.csv"
+identity_formula_override = "curation/identity_formula_override.csv"
+
+[sites.SiteA]
+file_prefix = "SiteA"
+label = "Site A (fictional)"
+short = "Site A"
+color = "#2e7d4f"
+
+[sites.SiteB]
+file_prefix = "SiteB"
+label = "Site B (fictional)"
+short = "Site B"
+color = "#1f4e79"
+
+[matrices.all]
+sites = ["SiteA", "SiteB"]
+dir = "All"
+label = "All sites"
+
+[quantification]
+spe_enrichment_factor = 250
+r2_min = 0.95
+
+[gradient]
+same_sorbent = true
+
+[diagnostics]
+matrix = "all"
+rt_logp_watchlist = ["fictamine"]
+
+[presence]
+blank_fold = 5

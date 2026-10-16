@@ -86,3 +86,25 @@ fn review_and_decision_of_the_banco() {
     assert_eq!(none["written"], false);
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+#[test]
+fn the_exports_answer_with_files() {
+    let st = State::new();
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/data/attributio");
+    let mut files = Vec::new();
+    for d in ["campagna_sintetica", "campagna_esportazione"] {
+        walk(&root.join(d), &root.join(d), &mut files);
+    }
+    let files = Value::Array(
+        files
+            .into_iter()
+            .map(|(path, text)| json!({"path": path, "text": text}))
+            .collect(),
+    );
+    for (kind, n) in [("schymanski", 1), ("quantify", 1), ("evidence", 2)] {
+        let q = json!({"root": "c", "files": files, "kind": kind, "generated": "2026-10-16"});
+        let r = text(st.rpc("feat/attributio/export", &q, &[]).unwrap());
+        let v: Value = serde_json::from_str(&r).unwrap();
+        assert!(v["files"].as_array().unwrap().len() >= n, "{kind}");
+    }
+}

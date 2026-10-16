@@ -3,6 +3,9 @@
 pub mod adduct;
 pub mod alternatives;
 pub mod banco;
+pub mod banco_json;
+pub mod evidence;
+pub mod evidence_svg;
 pub mod explain;
 pub mod feature;
 mod fields;

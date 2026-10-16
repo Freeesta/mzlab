@@ -85,6 +85,22 @@ function createCore(opts) {
   return { st, slots, queue, spawn, call, submit, kill, copy };
 }
 
+// The exports of a campaign folder (admin mode): `kind` = schymanski | publication | quantify | gradient (`.wasm` `attributio_export`) or evidence (`.wasm` `attributio_rev`, it needs the review);
+// `extra` = { matrix?, generated? }. Resolves with { files: [{ name, text } | { name, rows: { hojas } }], warnings }.
+function exportOps(submit, call) {
+  return {
+    attributioExport(files, root, kind, extra = {}) {
+      return submit(async (slot, load) => {
+        const which = kind === "evidence" ? "attributio_rev" : "attributio_export";
+        await load(which);
+        const names = JSON.stringify({ ...extra, root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
+        const r = await call(slot, { op: "attributio_export", which, files: files.map(f => f.file), names, kind });
+        return JSON.parse(new TextDecoder().decode(r.bytes));
+      });
+    },
+  };
+}
+
 // crateVersion(): the version of the crate mzlab-feat inside the .wasm (compared with cancello.json); preview(file, recipe): the estimates with their proofs, the histograms and three XIC
 // of one file (JSON of mzlab_feat::params::preview_json); `recipe` may carry the 6 numbers of the panel.
 function previewOps(submit, call, opts) {
@@ -208,6 +224,7 @@ export function createFeatPool(opts) {
         return { summary: JSON.parse(r.summary), text: new TextDecoder().decode(r.bytes) };
       });
     },
+    ...exportOps(submit, call),
     ...previewOps(submit, call, opts),
     ...driftOps(submit, call, copy),
     ...proofOps(submit, call, copy, opts),
@@ -410,6 +427,12 @@ Object.assign(OPS, {
     const out = memSink(), rd = new FileReaderSync();
     const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
     mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, out.write);
+    return { bytes: out.bytes() };
+  },
+  async attributio_export(m) {
+    const out = memSink(), rd = new FileReaderSync();
+    const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
+    mods[m.which].export_to(read, m.names, m.kind, out.write);
     return { bytes: out.bytes() };
   },
   async attributio_decision(m) {

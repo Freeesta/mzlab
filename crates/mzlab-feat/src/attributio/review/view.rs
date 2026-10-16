@@ -69,6 +69,7 @@ pub(super) fn build(
         .collect();
     View {
         peaks,
+        spectra: scored.iter().map(|c| c.spec.clone()).collect(),
         mirror: mirror(exp_q, scored, low, s),
         isotopes: ex
             .ion
