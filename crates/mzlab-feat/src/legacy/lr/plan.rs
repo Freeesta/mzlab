@@ -284,7 +284,7 @@ pub fn settings_json(o: &mut Out, s: &Settings) {
 }
 
 /// What the worker needs before the pipeline: `{lc: [names of the columns], ms2: [names], mrm: [names], minutes: [time | null], formula}`; `rust: false` when this series
-/// is not one the Rust Dig serves yet (a file that is not full scan, or a parent known only by its m/z).
+/// is not one the Rust Dig serves (a file that is not full scan, or no full-scan column). A parent known only by its m/z is served: no hypotheses, its row and the unexpected ions.
 pub fn plan_json(files_json: &str, parent_json: &str) -> Res<String> {
     let fs = files(files_json)?;
     let p = parent(parent_json)?;
@@ -292,7 +292,6 @@ pub fn plan_json(files_json: &str, parent_json: &str) -> Res<String> {
     let ms2: Vec<&FileLr> = fs.iter().filter(|f| f.kind == "ms2").collect();
     let mrm: Vec<&FileLr> = fs.iter().filter(|f| f.kind == "mrm").collect();
     let rust = !lc.is_empty()
-        && !p.formula.is_empty()
         && fs
             .iter()
             .all(|f| matches!(f.kind.as_str(), "full" | "ms2" | "mrm"));

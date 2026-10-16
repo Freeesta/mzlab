@@ -1,6 +1,6 @@
 // @ts-check
 // TPMINE-PRIVATE  The low-resolution Dig of mzFinder in Rust (crates/mzlab-finder-lr-wasm, wasm-feat/finder-lr/): imported by tpmine-worker.js for a series of
-// unit-resolution full-scan files, each with its .mzidx in OPFS, a parent with a formula and the default transformations. The pool of feat-worker.js runs
+// unit-resolution full-scan files, each with its .mzidx in OPFS, a parent (with a formula or only its m/z) and the default or the user's list of transformations. The pool of feat-worker.js runs
 // detection, alignment and the hypotheses of the parent (recipe "" = profile `lr`), then finder_lr_dig gives the JSON of api.run; detail(id) reads the XICs
 // from the .mzidx. Every other case (a parent without formula) answers false and the worker goes on to Pyodide.
 
@@ -12,7 +12,7 @@
  * What the worker lends: its URLs, its readers of OPFS, its pool and its detection cache.
  * @typedef {{ featUrl: (p: string) => string, base: () => string, manifest: () => Promise<any>, sha: (b: ArrayBuffer) => Promise<string>,
  *   pool: () => Promise<any>, idxFiles: (n: string[]) => Promise<File[] | null>, openIdx: (n: string[]) => Promise<any>,
- *   detect: (p: any, files: {name: string, path: string}[], idx: File[]) => Promise<Uint8Array[]>, held: Map<string, any>,
+ *   finder: () => Promise<any>, detect: (p: any, files: {name: string, path: string}[], idx: File[]) => Promise<Uint8Array[]>, held: Map<string, any>,
  *   natives: Set<string>, check: () => void, ask: (what: string, name: string) => Promise<any>, idxBase: (n: string) => string }} Ctx
  */
 
@@ -75,7 +75,7 @@ async function mzmlReader(c, names) {
 }
 
 /**
- * api.run of a low-resolution series: the JSON string, or false when the run belongs to Pyodide.
+ * api.run of a low-resolution series: the JSON string, or false when Rust does not serve the series.
  * @param {Ctx} c @param {string[]} a  [files, parent, settings, transformations]
  */
 export async function run(c, a) {
@@ -92,12 +92,18 @@ export async function run(c, a) {
   try { stored = await c.detect(pool, files, idx); } finally { pool.onProgress = prev; }
   lap("feature", t); t = performance.now(); c.check();
   step(x, "candidates");
-  const rules = new Uint8Array(await (await fetch(c.base() + "mzfinder/regole_tp.json")).arrayBuffer());
-  const h = await pool.hypotheses({ stored, paths, rules, parent: p.formula, parentRt: NaN, recipe: "" }); lap("candidates", t); t = performance.now();
+  let registry = "";             // a parent known only by its m/z has no transformations to apply: the Dig keeps its row and the unexpected ions
+  if (p.formula) {
+    let rules = new Uint8Array(await (await fetch(c.base() + "mzfinder/regole_tp.json")).arrayBuffer());
+    const tr = (a[3] || "").trim();
+    if (tr) rules = (await c.finder()).finder_transformations(rules, tr);      // the user's list of transformations: its rows become rules of the hypotheses
+    registry = (await pool.hypotheses({ stored, paths, rules, parent: p.formula, parentRt: NaN, recipe: "" })).registry;
+  }
+  lap("candidates", t); t = performance.now();
   c.check(); step(x, "xic");
   const table = await pool.align(stored, paths, ""); lap("align", t); t = performance.now(); c.check();
   const ix = await c.openIdx(p.lc);     // the XICs: the chromatographic check of the peaks, then the in-source verdicts of the lighter ions
-  try { dig = x.finder_lr_dig(a[0], a[1], a[2] || "{}", table, h.registry, ix.read, ix.sizes); dig.isf(ix.read, ix.sizes); } finally { ix.close(); }
+  try { dig = x.finder_lr_dig(a[0], a[1], a[2] || "{}", table, registry, ix.read, ix.sizes); dig.isf(ix.read, ix.sizes); } finally { ix.close(); }
   cols = [...p.lc, ...p.ms2];
   let mrm = null;
   if (p.mrm.length) {
