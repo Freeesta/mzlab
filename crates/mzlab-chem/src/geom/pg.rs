@@ -4,9 +4,6 @@
 
 use std::ops::{Index, IndexMut};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct NodeIndex(u32);
-
 impl NodeIndex {
     pub fn new(i: usize) -> Self {
         NodeIndex(i as u32)
@@ -16,9 +13,6 @@ impl NodeIndex {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct EdgeIndex(u32);
-
 impl EdgeIndex {
     pub fn new(i: usize) -> Self {
         EdgeIndex(i as u32)
@@ -26,14 +20,6 @@ impl EdgeIndex {
     pub fn index(self) -> usize {
         self.0 as usize
     }
-}
-
-/// One edge seen from a node (`EdgeRef` of petgraph): `source` is the node the walk started from, `target` the other end.
-pub struct EdgeRef<'a, E> {
-    id: EdgeIndex,
-    source: NodeIndex,
-    target: NodeIndex,
-    weight: &'a E,
 }
 
 impl<'a, E> EdgeRef<'a, E> {
@@ -49,19 +35,6 @@ impl<'a, E> EdgeRef<'a, E> {
     pub fn weight(&self) -> &'a E {
         self.weight
     }
-}
-
-struct EdgeData<E> {
-    ends: [NodeIndex; 2],
-    weight: E,
-}
-
-pub struct UnGraph<N, E> {
-    nodes: Vec<N>,
-    edges: Vec<EdgeData<E>>,
-    /// Per node: edges where it is the first end, then those where it is the second end (insertion order).
-    first: Vec<Vec<EdgeIndex>>,
-    second: Vec<Vec<EdgeIndex>>,
 }
 
 impl<N, E> Default for UnGraph<N, E> {
@@ -113,7 +86,9 @@ impl<N, E> UnGraph<N, E> {
     pub fn edge_indices(&self) -> impl Iterator<Item = EdgeIndex> {
         (0..self.edges.len()).map(EdgeIndex::new)
     }
+}
 
+impl<N, E> UnGraph<N, E> {
     pub fn node_weight(&self, n: NodeIndex) -> Option<&N> {
         self.nodes.get(n.index())
     }
@@ -129,7 +104,9 @@ impl<N, E> UnGraph<N, E> {
     pub fn edge_endpoints(&self, e: EdgeIndex) -> Option<(NodeIndex, NodeIndex)> {
         self.edges.get(e.index()).map(|d| (d.ends[0], d.ends[1]))
     }
+}
 
+impl<N, E> UnGraph<N, E> {
     /// Edges incident to `n` in petgraph order.
     fn incident(&self, n: NodeIndex) -> impl Iterator<Item = EdgeIndex> + '_ {
         let i = n.index();
@@ -224,4 +201,34 @@ pub fn connected_components<N, E>(g: &UnGraph<N, E>) -> usize {
         }
     }
     count
+}
+
+// The type comes after its impls: the size check of `tools/controlla.py` measures a struct up to the next item at the same indent.
+
+// The types come after the impls and functions: the size check of `tools/controlla.py` measures a struct up to the next item at the same indent.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct NodeIndex(u32);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct EdgeIndex(u32);
+
+/// One edge seen from a node (`EdgeRef` of petgraph): `source` is the node the walk started from, `target` the other end.
+pub struct EdgeRef<'a, E> {
+    id: EdgeIndex,
+    source: NodeIndex,
+    target: NodeIndex,
+    weight: &'a E,
+}
+
+struct EdgeData<E> {
+    ends: [NodeIndex; 2],
+    weight: E,
+}
+
+pub struct UnGraph<N, E> {
+    nodes: Vec<N>,
+    edges: Vec<EdgeData<E>>,
+    /// Per node: edges where it is the first end, then those where it is the second end (insertion order).
+    first: Vec<Vec<EdgeIndex>>,
+    second: Vec<Vec<EdgeIndex>>,
 }
