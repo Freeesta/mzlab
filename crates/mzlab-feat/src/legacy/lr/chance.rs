@@ -2,7 +2,7 @@
 //! m/z, so the number of matches says little until it is compared with the matches of the same masses shifted by a few Da that no transformation
 //! gives (decoys). `by_chance` = mean number of decoy masses that match; `p` = Poisson probability of at least `matched` matches with the mean
 //! `(decoy matches + 1) / shifts` (the +1 keeps one coincidence from ever looking significant). A class with `p ≥ P_MAX` carries no evidence of
-//! the formulas: its rows get no level 4 (`summary::level`). The criteria of a row do not change.
+//! the formulas: its rows are no proposed formula (`summary::evidence`). The criteria of a row do not change.
 
 use mzlab_core::json::{round, Out};
 
@@ -109,6 +109,7 @@ mod tests {
             neutral: mz - 1.007,
             steps,
             alternatives: Vec::new(),
+            pred: 0,
         }
     }
 

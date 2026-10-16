@@ -83,6 +83,8 @@ pub struct Entry {
     pub ms2_target: bool,
     /// The hypotheses with as many steps as this one match no more than the decoys do (`chance`): the formula is a coincidence of masses.
     pub by_chance: bool,
+    /// Prediction level of the rule that gives the formula (`rows::Hyp::pred`); 0 for the parent and the unexpected ions.
+    pub pred: u8,
 }
 
 /// The whole Dig, kept by the worker for `detail`.

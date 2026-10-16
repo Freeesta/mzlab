@@ -1,8 +1,8 @@
 //! False positives of the low-resolution Dig on the five demo full-scan files of the site (`mzlab/web/esempi/FullScan_t*.mzML`, flufenacet on TiO2):
-//! a parent that is not in the files and random parents (decoys) give no strong candidate and no level 4, and the right parent keeps its products.
+//! a parent that is not in the files and random parents (decoys) give no strong candidate and no proposed formula, and the right parent keeps its products.
 
 use mzlab_core::idxread::Index;
-use mzlab_feat::legacy::lr::{self, summary::level};
+use mzlab_feat::legacy::lr::{self, summary::evidence};
 use mzlab_feat_wasm::run;
 use serde_json::Value;
 use std::path::PathBuf;
@@ -103,10 +103,10 @@ fn shown(d: &lr::LrDig) -> usize {
     candidates(d, "forte").len() + candidates(d, "possibile").len()
 }
 
-fn level4(d: &lr::LrDig) -> Vec<(f64, Option<f64>, String)> {
+fn proposed(d: &lr::LrDig) -> Vec<(f64, Option<f64>, String)> {
     d.entries
         .iter()
-        .filter(|e| level(e).0 == Some(4))
+        .filter(|e| evidence(e).0)
         .map(|e| (e.mz, e.ref_rt, e.name.clone()))
         .collect()
 }
@@ -131,7 +131,7 @@ fn random_parents_give_no_strong_candidate() {
         "C8H5N4", "C14H9N", "C9H12O4", "C11H6N4O", "C21H21O4", "C9H7N4",
     ] {
         let d = dig(f);
-        assert!(level4(&d).is_empty(), "{f}: {:?}", level4(&d));
+        assert!(proposed(&d).is_empty(), "{f}: {:?}", proposed(&d));
         assert!(
             candidates(&d, "forte").is_empty(),
             "{f}: {:?}",
@@ -146,16 +146,16 @@ fn the_right_parent_keeps_its_products() {
     assert!(d.parent_ok);
     let one = d.chance.iter().find(|c| c.steps == 1).unwrap();
     assert!(one.above(), "{one:?}");
-    let l4 = level4(&d);
+    let pf = proposed(&d);
     let has = |mz: f64, rt: f64| {
-        l4.iter()
+        pf.iter()
             .any(|x| (x.0 - mz).abs() < 0.5 && x.1.is_some_and(|t| (t - rt).abs() < 0.2))
     };
     assert!(
         has(362.06, 13.02) && has(378.05, 13.57) && has(396.06, 13.41),
-        "{l4:?}"
+        "{pf:?}"
     );
-    assert!(l4.len() <= 6, "{l4:?}");
+    assert!(pf.len() <= 6, "{pf:?}");
     for e in candidates(&d, "forte") {
         let peak = e.criteria.iter().find(|c| c.name == lr::peakchk::PEAK);
         assert!(
@@ -167,7 +167,7 @@ fn the_right_parent_keeps_its_products() {
     }
 }
 
-/// `cargo test --release -p mzlab-finder-lr-wasm --test lr_demo -- --ignored --nocapture`: candidates shown (strong + possible) and level 4 by threshold.
+/// `cargo test --release -p mzlab-finder-lr-wasm --test lr_demo -- --ignored --nocapture`: candidates shown (strong + possible) and proposed formulas by threshold.
 #[test]
 #[ignore]
 fn table_threshold_noise() {
@@ -183,24 +183,24 @@ fn table_threshold_noise() {
     let decoys = [
         "C8H5N4", "C14H9N", "C9H12O4", "C11H6N4O", "C21H21O4", "C9H7N4",
     ];
-    println!("setting | carbamazepine shown/strong | decoys shown/strong/L4 | flufenacet shown/strong/L4");
+    println!("setting | carbamazepine shown/strong | decoys shown/strong/proposed | flufenacet shown/strong/proposed");
     for (n, s) in sets {
         let c = dig_set("C15H12N2O", s);
-        let (mut ds, mut df, mut d4) = (0, 0, 0);
+        let (mut ds, mut df, mut dp) = (0, 0, 0);
         for f in decoys {
             let d = dig_set(f, s);
             ds += shown(&d);
             df += candidates(&d, "forte").len();
-            d4 += level4(&d).len();
+            dp += proposed(&d).len();
         }
         let f = dig_set("C14H13F4N3O2S", s);
         println!(
-            "{n} | {}/{} | {ds}/{df}/{d4} | {}/{}/{}",
+            "{n} | {}/{} | {ds}/{df}/{dp} | {}/{}/{}",
             shown(&c),
             candidates(&c, "forte").len(),
             shown(&f),
             candidates(&f, "forte").len(),
-            level4(&f).len()
+            proposed(&f).len()
         );
     }
 }

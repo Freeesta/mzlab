@@ -7,7 +7,7 @@ use mzlab_core::json::{round, Out};
 use super::labels::Cell;
 use super::ms2;
 use super::spec;
-use super::summary::{criteria, level, strs};
+use super::summary::{criteria, level_keys, strs};
 use super::{Entry, LrDig};
 use crate::legacy::Res;
 
@@ -171,11 +171,7 @@ pub fn detail<R: ReadAt>(
         .str(e.label)
         .raw(",\"criteria\":");
     criteria(&mut o, &e.criteria);
-    let (lev, ltxt) = level(e);
-    o.raw(",\"level\":")
-        .opt(lev.map(f64::from))
-        .raw(",\"level_text\":")
-        .str(ltxt);
+    level_keys(&mut o, e);
     o.raw(",\"ref_rt\":").opt(e.ref_rt);
     files_json(&mut o, d, e, &mut open)?;
     let m = ms2::ms2(d, e, &mut open)?;

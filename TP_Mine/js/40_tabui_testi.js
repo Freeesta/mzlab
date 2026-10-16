@@ -8,6 +8,7 @@
   const T = {
   en: {
     "ft.col.level": "Identification level (Schymanski scale): L5 appears with the treatment, L4 unique formula, L3 MS2 linked to the parent. Only the chemist writes 2b.",
+    "ft.col.lvlr": "Identification level you decide (Schymanski scale). At unit resolution the program proposes none: the column stays empty until you choose a level in the open row. «Prev.» is the prediction, another scale.",
     "ft.col.pred": "Prediction (Löffler et al. 2025): how expected the transformation is, from 4 generic rule to 1 confirmed by the data. A different scale: «Prev. 3» is not «L3».",
     "ft.col.identity": "What it might be: formula and transformation from the parent, or «m/z … (unexpected)» for a new ion.",
     "ft.col.mz": "Measured m/z (apex). At unit resolution it is a candidate, not an identification.",
