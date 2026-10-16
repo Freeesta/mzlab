@@ -365,10 +365,7 @@ const OPS = {
     const f = await openAll(m.paths), t = new Uint8Array(m.table);
     try { return { text: mods.table.export_ms2((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.spec, m.sha, m.pol, m.kind, f.read, f.sizes) }; } finally { f.close(); }
   },
-  async rowtraces(m) {
-    const f = await openAll(m.paths), t = new Uint8Array(m.table);
-    try { return { text: mods.table.table_row_traces((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.id, f.read, f.sizes, m.ppm) }; } finally { f.close(); }
-  },
+  async rowtraces(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table); try { return { text: mods.table.table_row_traces((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.id, f.read, f.sizes, m.ppm) }; } finally { f.close(); } },
   async "fs.write"(m) { await writeFile(m.path, m.bytes); return {}; },
   async "fs.read"(m) {
     const { h, size } = await openSync(m.path);
