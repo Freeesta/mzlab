@@ -23,7 +23,7 @@ with sync_playwright() as p:
         assert "Esperimento" in pg.inner_text("#flist") and "MS2 (Product Ion)" in pg.inner_text("#flist") and "MRM" in pg.inner_text("#flist") and "Full Scan" in pg.inner_text("#flist") and "EMS" not in pg.inner_text("#flist")
     step("start screen detects the experiment from the content", column)
     pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # the list is opened file by file: the view starts on the first file of the list, whatever its experiment
-    pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
+    pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
     pg.screenshot(path=SH + "121_data.png")
     def side():
         t = flst_own(pg); assert "scan MS1" not in t and "RT 0.5" not in t and "Doppio clic" not in pg.inner_text("#dfiles"), t
@@ -86,7 +86,7 @@ with sync_playwright() as p:
         pg.screenshot(path=SH + "123_ms2.png")
     step("MS2 chromatogram: choose the precursor", ms2)
     def png():
-        open_kind(pg, "full"); pg.evaluate("E.files.forEach(f=>f.vis=true);redrawAll()"); pg.wait_for_timeout(1200)
+        open_kind(pg, "full"); pg.evaluate("E.files.forEach(f=>f.vis=true);syncBrowse();redrawAll()"); pg.wait_for_timeout(1200)
         assert pg.evaluate("E.panels[0].cur") is not None
         with pg.expect_download() as d: dlmenu(pg, '.pnl.chrom', 'png')
         pg.wait_for_timeout(500); print("PNG", d.value.suggested_filename); d.value.save_as("/tmp/chrom.png")
@@ -95,11 +95,11 @@ with sync_playwright() as p:
         assert pg.evaluate("E.panels[0]._exp") in (False, None)
     step("PNG downloads", png)
     def method():
-        pg.evaluate("E.cur=E.files.findIndex(f=>f.kind==='mrm');E.browse=true;renderFileList();renderNav()")
+        pg.evaluate("activeFile(E.files.findIndex(f=>f.kind==='mrm'));renderFileList();renderNav()")
         pg.set_input_files("input[type=file][accept*='.dam']", []) if False else None
         pg.click("#np-method"); ready(pg); t = pg.inner_text("#bigdlg"); assert "MRM" in t and "transizione" in t.lower(), t[:300]
         pg.screenshot(path=SH + "124_method_mrm.png"); pg.click("#bigx")
-        pg.evaluate("E.cur=E.files.findIndex(f=>f.kind==='ms2');renderFileList();renderNav()"); pg.click("#np-method"); ready(pg)
+        pg.evaluate("activeFile(E.files.findIndex(f=>f.kind==='ms2'));renderFileList();renderNav()"); pg.click("#np-method"); ready(pg); attendi(pg, "document.querySelector('#bigdlg').innerText.includes('ioni prodotto')")
         assert "ioni prodotto" in pg.inner_text("#bigdlg"); pg.screenshot(path=SH + "125_method_ms2.png"); pg.click("#bigx")
     step("Metodo: MRM and MS2 explained", method)
     def ital():

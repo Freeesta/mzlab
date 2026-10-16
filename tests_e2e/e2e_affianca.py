@@ -95,18 +95,20 @@ try:
             pg.evaluate("(() => { const s = stackOrder().slice(-3); const a = s[1], b = s[2]; AFFIANCA.fai(b, {k:'dx', t:a.id}, false); })()"); pg.wait_for_timeout(300)
             s = pg.query_selector(".aff-sep"); assert s, "no divider"
             assert pg.evaluate("document.querySelector('.aff-sep').getAttribute('role')") == "separator"
-            w0 = pg.evaluate("stackOrder().at(-2).w")
-            s.focus(); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(300)
-            w1 = pg.evaluate("stackOrder().at(-2).w"); assert w1 == w0 + 16, (w0, w1)
+            ids = pg.evaluate("document.querySelector('.aff-sep')._key").split(":")           # the two panels the first divider sits between
+            wid = lambda: pg.evaluate("ids => ids.map(i => stackOrder().find(q => String(q.id) === i).w)", ids)
+            w0 = wid()[0]
+            pg.focus(".aff-sep"); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(300)
+            w1 = wid()[0]; assert w1 == w0 + 16, (w0, w1)
             pg.keyboard.press("Enter"); pg.wait_for_timeout(300)
-            a, b = pg.evaluate("stackOrder().slice(-3, -1).map(q => q.w)"); assert abs(a - b) <= 8, (a, b)
+            a, b = wid(); assert abs(a - b) <= 8, (a, b)
         step("divider: keys change the widths, Enter makes them equal", divider)
         def narrow():
             pg.set_viewport_size({"width": 860, "height": 2200}); pg.wait_for_timeout(1000)
-            g = rects(); assert g[1][3] == g[2][3] and g[1][2] != g[2][2], g
-            assert [len(x) for x in rows()] == [1, 2], rows()           # arrangement kept
+            g = rects(); assert g[0][3] == g[1][3] and g[0][2] != g[1][2], g
+            assert [len(x) for x in rows()] == [2, 1], rows()           # arrangement kept
             pg.set_viewport_size({"width": 1500, "height": 2200}); pg.wait_for_timeout(1000)
-            g = rects(); assert g[1][2] == g[2][2] and g[1][3] < 700, g
+            g = rects(); assert g[0][2] == g[1][2] and g[0][3] < 700, g
         step("narrow window shows them stacked, the arrangement is kept", narrow)
 finally:
     r.close(); r.report()

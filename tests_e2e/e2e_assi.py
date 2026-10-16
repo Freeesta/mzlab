@@ -86,7 +86,7 @@ try:
             n = pg.evaluate(f"(()=>{{const p=addPanel('xic',{{yz:10,traces:[]}});return p.zoomY}})()"); assert n is None, n
         step("an old 'yz' in a notebook is ignored", old_notebook)
         def excel_tic():
-            pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
+            pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
             with pg.expect_download() as d: dlmenu(pg, ".pnl.chrom", "xlsx")
             f = d.value; assert f.suggested_filename.endswith(".xlsx"), f.suggested_filename
             rows = xlsx_rows(f.path()); head = [c[1] for c in rows[0] if c]

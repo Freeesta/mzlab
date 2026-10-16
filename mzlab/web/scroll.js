@@ -161,6 +161,7 @@ document.addEventListener("keydown", e => {
   if (S.view !== "data") return;
   if (e.key === "Escape") { playStop(); KEY.dir = 0; return; }
   if (!E.files.length || typingNow() || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (/** @type {Element} */ (e.target).closest?.(".aff-sep")) return;                  // the arrows on a divider between side-by-side panels resize them
   if (e.key === " ") {
     const ap = walkTarget(true); if (!ap) return;
     e.preventDefault(); PLAY.space = true; if (e.repeat) return;
