@@ -1,0 +1,18 @@
+[package]
+name = "mzlab-chem-wasm"
+description = "wasm-bindgen bridge of mzlab-chem (SMILES -> reatt/1: ETKDG geometry, GFN2-xTB Fukui functions); a .wasm of its own, loaded only in administrator mode"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+mzlab-core = { path = "../mzlab-core" }
+mzlab-chem = { path = "../mzlab-chem" }
+wasm-bindgen = "0.2"
+
+# rand (through nalgebra and sci-form) links getrandom; the geometry uses only seeded generators, so the browser source is never called
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
