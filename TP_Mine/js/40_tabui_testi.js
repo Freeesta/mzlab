@@ -1,97 +1,11 @@
 // @ts-check
-// TPMINE-PRIVATE  TABUI_T / TT: the help texts of Tabui in Italian and English (labels stay short and in English; the explanation lives here). TT(key, params)
-// takes the language of the page (I18N.lang, or ?lang=), falls back to English, and replaces {name}.
+// TPMINE-PRIVATE  TABUI_T / TT: the help texts of Tabui, in English only whatever the language of the page (labels stay short; the explanation lives here). TT(key, params)
+// replaces {name}.
 (() => {
   "use strict";
   const G = /** @type {any} */ (window);
-  /** @type {{ it: Record<string, string>, en: Record<string, string> }} */
+  /** @type {{ en: Record<string, string> }} */
   const T = {
-  it: {
-    "ft.col.level": "Livello di identificazione (scala di Schymanski): L5 compare col trattamento, L4 formula unica, L3 MS2 legata al progenitore. Il 2b lo scrive solo il chimico.",
-    "ft.col.pred": "Previsione (Löffler et al. 2025): quanto la trasformazione è attesa, da 4 regola generica a 1 confermata dai dati. È un'altra scala: «Prev. 3» non è «L3».",
-    "ft.col.identity": "Che cosa potrebbe essere: formula e trasformazione dal progenitore, o «m/z … (unexpected)» per uno ione nuovo.",
-    "ft.col.mz": "m/z misurato (apice). In bassa risoluzione è un candidato, non un'identificazione.",
-    "ft.col.rt": "Tempo di ritenzione dell'apice, in minuti.",
-    "ft.col.trend": "Area nei campioni trattati in ordine di tempo; i simboli sotto dicono com'è stata ottenuta ogni area.",
-    "ft.col.cells": "Un simbolo per campione: com'è stata ottenuta l'area. Apri la riga, scheda Samples, per i numeri.",
-    "ft.col.maxarea": "Area più alta fra i campioni (unità del motore). Il valore intero è nell'aiuto della cella.",
-    "ft.col.score": "Punteggio di ordinamento (0-100): quota dei criteri superati. Non è una probabilità.",
-    "ft.col.ppm": "Errore di massa della formula proposta, in ppm.",
-    "ft.col.drt": "Differenza di RT dal progenitore, in minuti: un prodotto più polare esce prima.",
-    "ft.col.sim": "Somiglianza della MS2 con quella del progenitore: frammenti uguali, spostati, perdite neutre comuni.",
-    "ft.col.ms2": "Numero di scansioni MS2 dentro il picco.",
-    "ft.col.tmax": "Tempo di trattamento a cui l'area è più alta, in minuti.",
-    "ft.col.class": "Forma della cinetica: cresce, passa per un massimo, scende.",
-    "ft.col.region": "Parte della molecola dove la MS2 colloca la modifica.",
-    "ft.col.rank": "Posto nell'ordine del motore: livello, poi punteggio.",
-    "ft.state.detected": "● rilevata: il picco è stato trovato dal rilevamento in questo campione.",
-    "ft.state.filled": "◐ riempita: nessun picco trovato; l'area è stata riletta dove la feature era attesa.",
-    "ft.state.targeted": "◌ mirata: cercata apposta (ipotesi o lista), non trovata dal rilevamento libero.",
-    "ft.state.absent": "○ assente: nessun segnale.",
-    "ft.chip.changed": "Solo le righe che compaiono o crescono col trattamento.",
-    "ft.chip.noblank": "Togli le righe trovate nel bianco o nel buio.",
-    "ft.chip.not0": "Togli le righe già presenti al t0.",
-    "ft.chip.ms2": "Solo le righe con almeno una MS2.",
-    "ft.chip.decided": "Solo le righe su cui hai deciso un livello.",
-    "ft.chip.hidenottp": "Nasconde le righe che hai segnato come non TP.",
-    "ft.decided.note": "Una nota tua su questa riga: resta nel browser con la decisione ed entra nelle esportazioni.",
-    "ft.chip.level": "Solo le righe a questo livello o migliore.",
-    "ft.chip.diagnostic": "Prove diagnostiche: sito determinato con margine, RT e cinetica coerenti. Solo il chimico può farne un 2b.",
-    "ft.chip.unexpected": "Ioni nuovi che non vengono da una regola di trasformazione.",
-    "ft.chip.strong": "Candidati con punteggio forte (75 o più): i criteri sono quasi tutti superati. Resta un candidato, non un'identificazione.",
-    "ft.chip.possible": "Candidati con punteggio possibile (da 50 a 74): alcuni criteri non sono superati.",
-    "ft.chip.weak": "Candidati con punteggio debole (sotto 50): di solito servono solo per controllo.",
-    "ft.alt": "Altre identità con la stessa massa; l'elenco è nella scheda Identity della riga.",
-    "ft.col.formula": "Formula molecolare proposta per lo ione, se c'è.",
-    "ft.col.ms2match": "Numero di esperimenti MS2 abbinati a questa riga. L'elenco è nella sezione «MS2 matches» sotto la tabella.",
-    "ft.lr.ms2link": "Apre sotto la tabella la sezione «MS2 matches», dove si possono correggere gli abbinamenti.",
-    "ft.chip.region": "Solo le righe di cui la MS2 colloca la modifica in una parte della molecola.",
-    "ft.chip.wait": "Si attiva quando il motore ha calcolato t0 e bianco per questa serie; senza, la colonna non ha numeri.",
-    "ft.export.view": "Esporta le righe e le colonne che vedi, nell'ordine in cui le vedi, con i filtri scritti in testa.",
-    "ft.pin.parent": "Il progenitore resta in cima come riferimento: filtri e ordinamento non lo spostano.",
-    "ft.chip.det2": "Solo le righe con un picco rilevato (non riempito) in almeno due file.",
-    "ft.more.filters": "Apre i filtri numerici: file, area, rapporto col bianco, m/z e RT.",
-    "ft.norm": "Come si confrontano le aree fra i file: nessuna, somma o mediana delle aree.",
-    "ft.col.id": "Numero della riga nella tabella del motore.",
-    "ft.col.charge": "Carica dello ione, se il motore l'ha determinata.",
-    "ft.col.detn": "In quanti file il picco è stato rilevato (non riempito né mirato).",
-    "ft.cols": "Aggiungi o togli colonne facoltative; le prime due restano sempre.",
-    "ft.row.open": "Clic o Invio: la riga si espande qui sotto con tutto ciò che si sa. Esc la chiude.",
-    "ft.tab.overview": "XIC di tutti i campioni con i bordi del picco, e lo spettro (MS1 con gli isotopi, MS2).",
-    "ft.tab.samples": "Per ogni campione: tipo e tempo, area, stato, RT dell'apice e bordi del picco.",
-    "ft.tab.identity": "Massa neutra, addotto, candidati con le loro prove, livello proposto e livello deciso.",
-    "ft.tab.quality": "Forma del picco, segnale/rumore, larghezza, isotopo M+1, presenza nel bianco e nel t0.",
-    "ft.peak.borders": "Inizio e fine del picco (mediana dei file che lo hanno rilevato).",
-    "ft.q.flags": "Avvisi sul picco: forma irregolare, segnale/rumore basso, pochi punti.",
-    "ft.adduct": "Ione che il motore ha scelto per questa riga ([M+H]+, [M+Na]+…) e massa neutra che ne deriva.",
-    "ft.showdata": "Apre il file nella vista Dati con l'XIC di questa m/z.",
-    "ft.decided": "Il livello che decidi tu. Resta nel browser per questa serie ed entra nelle esportazioni.",
-    "ft.more": "Altri risultati della serie, uno aperto alla volta.",
-    "ft.f.name": "Nome del composto progenitore: scrivi 2 lettere per cercarlo nell'elenco, oppure lascia vuoto e dai la formula.",
-    "ft.f.formula": "Formula molecolare neutra del progenitore, per esempio C10H12N2O3S. Se manca, il motore usa lo SMILES.",
-    "ft.f.smiles": "Struttura del progenitore (facoltativa se c'è la formula): serve ai frammenti e ai gruppi delle regole.",
-    "ft.f.adduct": "Ione con cui il progenitore compare nello spettro.",
-    "ft.f.prt": "Tempo di ritenzione del progenitore, in minuti. Vuoto = automatico.",
-    "ft.f.tol": "Finestra dell'XIC attorno a ogni m/z, in Da (o in ppm in alta risoluzione).",
-    "ft.f.rtt": "Quanto può spostarsi l'RT di un picco fra i file, in minuti.",
-    "ft.f.steps": "Quante trasformazioni si possono combinare in un solo prodotto (1-3).",
-    "ft.f.minf": "Bassa risoluzione: il picco deve comparire in almeno questi campioni trattati, o in due consecutivi allo stesso RT. 0 = spento.",
-    "ft.f.rtmin": "Ignora ciò che esce prima di questo RT (fronte non trattenuto), in minuti.",
-    "ft.f.disc": "Cerca anche ioni che crescono nel tempo senza venire da una regola di trasformazione. Più lento.",
-    "ft.f.chg": "Variazione di formula della regola, per esempio +O-H2.",
-    "ft.chip.l5": "Solo le righe a livello 5: solo massa esatta, nessuna MS2 o libreria che le spieghi.",
-    "ft.chip.pol": "Solo le righe di questa polarità (POS = ioni positivi, NEG = negativi).",
-    "ft.col.cand": "Miglior candidato di libreria per la MS2 della feature: un'ipotesi con le sue prove, non un'identificazione. Senza candidato compare l'm/z.",
-    "ft.col.entropy": "Entropia spettrale: somiglianza della MS2 con il record di libreria, da 0 a 1.",
-    "ft.col.ext": "Nomi che la tabella d'origine (mzMine, GNPS2, MS-DIAL) dà alla feature: sono prove con la loro fonte, mai un livello.",
-    "ft.col.members": "Gruppo di feature dello stesso composto (addotti, isotopi, frammenti in sorgente) e quante sono.",
-    "ft.col.nmass": "Massa neutra che spiega più feature del gruppo: è un'ipotesi, aprila per le prove di ogni legame.",
-    "ft.col.pol": "Polarità della tabella: POS = ioni positivi, NEG = negativi.",
-    "ft.col.basis": "Su che cosa poggia il livello: libreria spettrale, standard, struttura prevista, giudizio del chimico.",
-    "ft.col.reasons": "Perché il livello è questo: i controlli superati o falliti, in parole.",
-    "ft.tab.members": "Le feature del gruppo, con il ruolo di ciascuna nella massa neutra; un pulsante apre la feature.",
-    "ft.go.banco": "Apre il Banco 2b su questa feature, per rivederla e decidere il livello."
-  },
   en: {
     "ft.col.level": "Identification level (Schymanski scale): L5 appears with the treatment, L4 unique formula, L3 MS2 linked to the parent. Only the chemist writes 2b.",
     "ft.col.pred": "Prediction (Löffler et al. 2025): how expected the transformation is, from 4 generic rule to 1 confirmed by the data. A different scale: «Prev. 3» is not «L3».",
@@ -181,9 +95,7 @@
   };
   /** @param {string} key @param {Record<string, string | number>} [params] */
   const TT = (key, params) => {
-    let lang = "en";
-    try { const q = new URLSearchParams(location.search).get("lang"); lang = q === "it" || q === "en" ? q : (G.I18N && G.I18N.lang === "it" ? "it" : "en"); } catch (_) { /* English */ }
-    let s = (T[lang] && T[lang][key]) || T.en[key] || "";
+    let s = T.en[key] || "";
     if (params) s = s.replace(/\{(\w+)\}/g, (m, k) => (k in params ? String(params[k]) : m));
     return s;
   };

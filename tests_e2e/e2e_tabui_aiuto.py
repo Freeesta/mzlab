@@ -1,5 +1,5 @@
 """Tabui, help and field errors (TP_Mine/js/40_tabui_testi.js, 41_tabui_aiuto.js, 41_tabui_campi.js, 20_tpmine.js, 43_trasformazioni.js):
-(1) the help popover of a field and of its label (no «?» buttons) opens with the mouse, with the keyboard focus and with the touch, closes with Esc leaving the focus on the field, and speaks Italian
+(1) the help popover of a field and of its label (no «?» buttons) opens with the mouse, with the keyboard focus and with the touch, closes with Esc leaving the focus on the field, and is English only
 or English with the page; without qqq.admin there is no TT; (2) the fields of the form have short placeholders and labels; (3) the error «Enter a formula or SMILES.» marks the
 formula and the SMILES together (aria-invalid, red double border, message linked with aria-describedby) and both return to normal on a click or a key in either; the same rule on
 the fields of the list of transformations. axe: no serious or critical violation (SKIP part without axe-core).
@@ -96,7 +96,7 @@ try:
         step("touch: a tap on a field opens its help", touch)
         pt.context.close()
         pi = fresh(True, "it")
-        step("Italian page, Italian help", lambda: pi.evaluate("TT('ft.col.rt')") == "Tempo di ritenzione dell'apice, in minuti." or (_ for _ in ()).throw(AssertionError(pi.evaluate("TT('ft.col.rt')"))))
+        step("Italian page, English help", lambda: pi.evaluate("TT('ft.col.rt')").startswith("Retention time") or (_ for _ in ()).throw(AssertionError(pi.evaluate("TT('ft.col.rt')"))))
         pi.context.close()
         pg = fresh(True, "en")
         def short():

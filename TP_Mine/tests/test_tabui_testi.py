@@ -1,4 +1,4 @@
-"""Catalog of the help texts of Tabui (TP_Mine/js/40_tabui_testi.js): the same keys in Italian and English, no empty text, every {param} in both languages, at most
+"""Catalog of the help texts of Tabui (TP_Mine/js/40_tabui_testi.js): English only (no Italian catalog), no empty text, every {param} in both languages, at most
 240 characters per text, and every key used in the code (data-tt, dt) exists."""
 import json, re, shutil, subprocess
 from pathlib import Path
@@ -12,7 +12,7 @@ def catalog():
         code = "global.window={};global.location={search:''};" + "eval(require('fs').readFileSync(process.argv[1],'utf8'));console.log(JSON.stringify(window.TABUI_T))"
         return json.loads(subprocess.run(["node", "-e", code, str(JS / "40_tabui_testi.js")], check=True, capture_output=True, text=True).stdout)
     out = {}
-    for lang in ("it", "en"):
+    for lang in ("en",):
         body = re.search(rf"\n  {lang}: \{{(.*?)\n  \}}", src, re.S).group(1)
         out[lang] = {m.group(1): json.loads('"' + m.group(2) + '"') for m in re.finditer(r'"([\w.]+)": "((?:[^"\\]|\\.)*)"', body)}
     return out
@@ -20,13 +20,11 @@ def catalog():
 
 def test_same_keys_and_texts():
     t = catalog()
-    assert set(t["it"]) == set(t["en"]) and len(t["it"]) > 40
-    for lang in ("it", "en"):
-        for k, v in t[lang].items():
-            assert v.strip(), (lang, k)
-            assert len(v) <= 240, (lang, k, len(v))
-    for k in t["it"]:
-        assert set(re.findall(r"\{(\w+)\}", t["it"][k])) == set(re.findall(r"\{(\w+)\}", t["en"][k])), k
+    assert set(t) == {"en"} and len(t["en"]) > 40
+    for k, v in t["en"].items():
+        assert v.strip(), k
+        assert len(v) <= 240, (k, len(v))
+        assert not re.search(r"[àèéìòù]\b", v), k          # Tabui is English only
 
 
 def test_keys_used_in_the_code_exist():
