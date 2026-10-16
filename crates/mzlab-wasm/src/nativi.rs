@@ -222,6 +222,14 @@ impl Membri {
         }
     }
 
+    /// `apri_fs` for the index of sample `c` alone: a SCIEX pair reads only the blocks of that injection (`wiff::lettore::apri_solo`; a container may hold dozens of samples, one builder each).
+    fn apri_campione(&self, mut fs: FileSet, c: usize) -> mzlab_core::Result<Box<dyn Lettore>> {
+        if lettori::riconosci(&mut fs).is_some_and(|v| v.id == mzlab_core::wiff::lettore::VOCE.id) {
+            return mzlab_core::wiff::lettore::apri_solo(fs, &Limiti::sito(), Some(c));
+        }
+        self.apri_fs(fs)
+    }
+
     /// The session of the module for this dataset; `None` when the page registered no function or no module reads it.
     /// `sha1`: the SHA-1 of each member when known (empty text when not), for the header of the mzML.
     fn esterno(&self, sha1: &[String]) -> Option<mzlab_core::Result<Box<dyn Lettore>>> {
@@ -451,8 +459,8 @@ pub fn build_mzidx_native(
         }
     };
     tell(4);
-    let mut l = m.apri_fs(fs).map_err(|e| error_json(&e))?;
     let c = c as usize;
+    let mut l = m.apri_campione(fs, c).map_err(|e| error_json(&e))?;
     if let Some(step) = step {
         l = Box::new(Contato::nuovo(l, step, c));
     }
