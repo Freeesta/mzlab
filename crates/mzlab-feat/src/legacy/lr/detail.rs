@@ -184,6 +184,7 @@ pub fn detail<R: ReadAt>(
     ms2::ms2_json(&mut o, &m);
     o.raw(",\"ms2_links\":");
     ms2::links_json(&mut o, d, e, &mut open)?;
+    super::ms2rep::rep_json(&mut o, d, e, &mut open)?;
     if let Some((_, c)) = d
         .links
         .as_ref()

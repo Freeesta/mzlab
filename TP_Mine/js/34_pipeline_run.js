@@ -11,7 +11,7 @@
   const PV = () => /** @type {any} */ (window).PIPEV;
 
   const html = () => `<details open><summary>Run on all the files</summary>
-    <div class="par"><label>Parent formula<input id="pipe-pf" type="text" placeholder="Formula" autocomplete="off"><span class="why">hypotheses of transformation</span></label>
+    <div class="par"><label>Parent neutral formula<input id="pipe-pf" type="text" placeholder="Neutral formula" autocomplete="off"><span class="why">hypotheses of transformation</span></label>
       <label>Parent SMILES<input id="pipe-psmi" type="text" placeholder="SMILES" autocomplete="off" spellcheck="false"><span class="why">the structure: fragments and groups of the rules</span></label>
       <label>Parent m/z<input id="pipe-pmz" type="number" step="any"></label><label>Parent RT (min)<input id="pipe-prt" type="number" step="any"></label>
 </div>

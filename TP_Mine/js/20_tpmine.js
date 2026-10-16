@@ -5,7 +5,7 @@
   const ctx = () => QTOOLS.ctx;
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const specHtml = sp => !sp ? "" : `<div class="card"><h3>Specificity <span class="mut">(${esc(sp.file)}, ${sp.from}-${sp.to} min)</span></h3><div class="mut" title="Signal in the same file and time window at the m/z of the ion, at ±1 and ±2 Da (neighbours) and at ±0.5 Da (decoy windows). A neighbour or a decoy as strong as the ion says the signal is not specific to its m/z.">ion ${fmtA(sp.signal)}</div><table><tr><th>Δ m/z</th><th>Signal</th></tr>${[...sp.neighbours, ...sp.decoys].map(w => `<tr><td class="n">${w.dm > 0 ? "+" : ""}${w.dm}</td><td class="n">${fmtA(w.signal)}</td></tr>`).join("")}</table><div class="mut">As strong as the ion: ${sp.stronger.neighbours} of ${sp.neighbours.length} neighbours, ${sp.stronger.decoys} of ${sp.decoys.length} decoys.</div></div>`;
-  const fmtA = v => v >= 1e6 ? (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + "M" : v >= 1e3 ? (v / 1e3).toFixed(v >= 1e4 ? 0 : 1) + "k" : String(Math.round(v));
+  const fmtA = v => /** @type {any} */ (window).TPTAB ? /** @type {any} */ (window).TPTAB.area(v) : String(Math.round(v));   // engineering notation, e.g. 821.43e+6
   const TYPES = { sample: "sample", blank: "blank", standard: "standard", control: "control" };
   const KINDS = { full: "Full scan", ms2: "MS2", mrm: "MRM", hr: "LC-HRMS", msn: "MSn (infusion)", empty: "empty", error: "error" };
   const LAB = { forte: "strong", possibile: "possible", debole: "weak", progenitore: "parent" };
@@ -43,13 +43,10 @@
 .tp .lr-idx{max-height:240px;overflow:auto;margin-top:6px;border-top:1px solid var(--line);padding-top:4px;font-size:12px}.tp .lr-idx:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .tp .lr-idx .card{border:0;padding:0;margin:0 0 6px;background:none}.tp .lr-idx h3{font-size:12px;color:var(--muted)}
 .vtabs{display:flex;gap:6px;margin:0 0 8px;flex-wrap:wrap}.vt{border-radius:16px;padding:4px 14px}.vt.on{background:var(--accent);color:var(--panel);border-color:var(--accent)}
-.gems{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-bottom:10px}
-.gem{position:relative;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer}.gem:hover{background:var(--sel)}.gem.sel,.mnode.sel{background:var(--sel);border-left-color:var(--accent)}
-.gem.forte{border-left-color:var(--ok)}.gem.possibile{border-left-color:var(--warn)}.gem.sel{border-left-color:var(--accent)}.gem-h{display:flex;justify-content:space-between;gap:6px;align-items:center}
+.mnode.sel{background:var(--sel);border-left-color:var(--accent)}
+.tp .tp-alt{background:none;border:0;padding:0 4px;min-width:24px;min-height:24px;font:inherit;color:var(--muted);text-decoration:underline dotted;cursor:pointer;border-radius:4px}.tp .tp-alt:hover{background:var(--sel)}
 
 .mnode{cursor:pointer}.mnode:hover circle{stroke:var(--accent);stroke-width:3}.mnode.sel circle{stroke:var(--accent);stroke-width:4}
-.frow{display:grid;grid-template-columns:210px 1fr 60px;gap:8px;align-items:center;padding:3px 0;cursor:pointer;font-size:12px}.frow:hover{background:var(--sel)}
-.ft{display:block;height:14px;background:var(--line);border-radius:7px;overflow:hidden}.ft i{display:block;height:100%;width:0;border-radius:7px;transition:width .8s cubic-bezier(.3,.9,.3,1)}.fv{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
 .struct{text-align:center;margin-bottom:6px}.struct svg{max-width:100%;height:auto}
 .tp-ac{position:relative}.tp-ac input{width:100%}#tp-sug{position:absolute;left:0;right:0;top:100%;z-index:20;margin:2px 0 0;padding:2px;list-style:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.18);max-height:260px;overflow:auto}
 #tp-sug li{padding:5px 8px;border-radius:4px;cursor:pointer;display:flex;gap:8px;align-items:baseline;font-size:13px}#tp-sug li span{color:var(--muted);font-size:11px;margin-left:auto;white-space:nowrap}#tp-sug li[aria-selected=true],#tp-sug li:hover{background:var(--sel);box-shadow:inset 3px 0 0 var(--accent)}
@@ -204,7 +201,7 @@
   <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
  <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div>
   <div class="row tp-ac"><input type="text" id="tp-name" class="grow-in" placeholder="Name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false">${hb("ft.f.name", "Name")}<ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
-  <div class="row"><input type="text" id="tp-mol" class="grow-in" placeholder="Formula" aria-label="Neutral molecular formula" spellcheck="false">${hb("ft.f.formula", "Formula")}</div>
+  <div class="row"><input type="text" id="tp-mol" class="grow-in" placeholder="Neutral formula" aria-label="Neutral molecular formula" spellcheck="false">${hb("ft.f.formula", "Neutral formula")}</div>
   <div class="row"><input type="text" id="tp-smi" class="grow-in" placeholder="SMILES" aria-label="SMILES" spellcheck="false"><button id="tp-draw" type="button" title="Draw the molecule in the Draw tab and bring the SMILES back here">Draw</button>${hb("ft.f.smiles", "SMILES")}</div>
   <div id="tp-warn" role="status"></div>
   <div class="row"><label class="mut" for="tp-add">Adduct</label>${hb("ft.f.adduct", "Adduct")}<select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+HCOO]-</option></select><span class="mut" id="tp-prev"></span></div>
@@ -227,7 +224,7 @@
     const FIELD = () => W.TPFIELD, parentFields = () => [$("#tp-mol"), $("#tp-smi")];
     if (W.TPFIELD) W.TPFIELD.watch(sec, () => { if ($("#tp-msg").dataset.field) msg(""); });       // the group returns to normal on a click or a key in it; so does its message
     /** @type {any} */
-    const st = { files: [], showAll: false, summary: null, sel: null, view: "gems", took: 0 };
+    const st = { files: [], showAll: false, summary: null, sel: null, view: "tab", took: 0 };
     const msg = (t, err) => { const m = $("#tp-msg"); m.textContent = t || ""; m.className = "mut" + (err ? " err" : ""); delete m.dataset.field; };
     const bar = f => { const w = Math.round(f * 100); $("#tp-bar").style.width = w + "%"; $("#tp-barbox").setAttribute("aria-valuenow", w); };
     onProgress = (t, f, m) => { if (t) msg(t); if (f != null) bar(f); if (m && window.TPLIVE) TPLIVE.event(m); };
@@ -497,7 +494,7 @@
     };
 
     // ---- results
-    const VIEWS = [["tab", "Table"], ["gems", "💎 Gems"], ["map", "🕸 Reaction map"], ["kin", "📈 Kinetics"], ["film", "🎬 Film"]];
+    const VIEWS = [["tab", "Table"], ["map", "🕸 Reaction map"], ["kin", "📈 Kinetics"]];
     function countUp(el) {
       const to = +el.dataset.count, dec = +(el.dataset.dec || 0), t0 = performance.now(), D = 900;
       const step = t => { const k = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - k, 3); el.textContent = (to * e).toFixed(dec); if (k < 1) requestAnimationFrame(step); };
@@ -513,8 +510,7 @@
     }
     const toast = t => { const d = document.createElement("div"); d.className = "tp-toast"; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.classList.add("out"), 2200); setTimeout(() => d.remove(), 2800); };
     const good = r => r.label === "forte" || r.label === "possibile";
-    const dispName = r => r.kind === "unexpected" ? r.name : r.name;
-    const shortN = (t, n = 26) => t.length > n ? t.slice(0, n - 1) + "…" : t;
+        const shortN = (t, n = 26) => t.length > n ? t.slice(0, n - 1) + "…" : t;
     const col = r => r.label === "progenitore" ? "#2b5c8a" : r.kind === "unexpected" ? "#7c3aed" : r.label === "forte" ? "#047857" : "#d99a1d";
 
     const calmMotion = () => !(matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -544,15 +540,13 @@
     }
 
     function view() {
-      const V = $("#tp-view"), s = st.summary; stopFilm();
+      const V = $("#tp-view"), s = st.summary;
       const list = s.rows.filter(r => r.label !== "progenitore" && good(r));
       T = null;
       if (st.view === "tab") {
-        V.innerHTML = `<div id="tp-tbl"></div>`;
+        const nd = s.rows.filter(notFound).length;
+        V.innerHTML = `${nd ? `<label class="mut" style="display:inline-flex;gap:6px;align-items:center;min-height:24px"><input type="checkbox" id="tp-nd"> Show searched, not detected (${nd})</label>` : ""}<div id="tp-tbl"></div>`;
         mountTable($("#tp-tbl"));
-      } else if (st.view === "gems") {
-        V.innerHTML = list.length ? `<div class="gems">${list.map((r, i) => gem(r, i)).join("")}</div>` : `<div class="card mut">No gems: no candidate passes the criteria.</div>`;
-        V.querySelectorAll(".gem").forEach(g => g.onclick = () => show(+g.dataset.id));
       } else if (st.view === "map") {
         V.innerHTML = `<div class="card"><div class="mut">Each node is an ion that passes the criteria: the radius follows the maximum area, the colour the confidence (green strong, amber possible, purple unexpected). Lines show the transformation (Δ formula). Click a node for details.</div><div id="tp-map"></div></div>`;
         mapView($("#tp-map"));
@@ -562,19 +556,7 @@
         const ser = [par, ...top].map((r, i) => { const k = r.kinetics, mx = Math.max(...k.map(p => p.area)) || 1; return { x: k.map(p => p.time), y: k.map(p => 100 * p.area / mx), color: i ? hue(i - 1, top.length) : "#555", dash: i ? [] : [6, 4], w: i ? 2 : 2.4, label: r.name, dots: !!i }; });
         chart($("#tp-c-all"), ser, { xlabel: "time (min)" });
         $("#tp-leg-all").innerHTML = ser.map(t => `<span class="mut"><span style="display:inline-block;width:14px;border-top:2px ${t.dash.length ? "dashed" : "solid"} ${t.color};vertical-align:middle"></span> ${esc(shortN(t.label, 34))}</span>`).join("");
-      } else if (st.view === "film") {
-        filmView(V);
       }
-    }
-
-    function gem(r, i) {
-      const k = r.kinetics, mx = Math.max(...k.map(p => p.area)) || 1, w = 220, h = 54;
-      const pts = k.map((p, j) => [(j / Math.max(1, k.length - 1) * (w - 6) + 3), (h - 4 - p.area / mx * (h - 10))]);
-      const line = pts.map(p => p.join(",")).join(" "), area = `3,${h - 3} ${line} ${w - 3},${h - 3}`;
-      return `<div class="gem ${r.label}${r.id === st.sel ? " sel" : ""}" data-id="${r.id}" tabindex="0"><div class="gem-h"><b>${esc(MOLUI.cap(shortN(r.name, 34)))}</b>${r.level ? `<span class="lvb lv-${r.level}">${r.level}</span>` : ""}</div>
-        <div class="mut">${esc(r.formula || "")} · <i>m/z</i> ${r.mz.toFixed(1)} · RT ${r.ref_rt ?? "?"}${r.insource ? " · in-source fragment" + (r.isf ? " (P " + Math.round(100 * r.isf.probs.isf) + "%" + (r.isf.doubtful ? ", doubtful" : "") + ")" : "?") : (r.isf && r.isf.doubtful ? " · doubtful origin (P ISF " + Math.round(100 * r.isf.probs.isf) + "%)" : "")}</div>
-        <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}"><polygon points="${area}" fill="${col(r)}" opacity=".15"/><polyline points="${line}" fill="none" stroke="${col(r)}" stroke-width="2"/>${pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.3" fill="${col(r)}"/>`).join("")}</svg>
-        <div class="mut">max at ${r.tmax ?? "?"} min · area ${fmtA(r.max_area)}${r.kind === "candidate" ? ` · ${esc(r.delta)}` : ` · Δ<i>m/z</i> ${r.delta_mz >= 0 ? "+" : ""}${r.delta_mz}`}</div></div>`;
     }
 
     function mapView(host) {
@@ -601,27 +583,6 @@
       host.querySelectorAll(".mnode").forEach(g => g.onclick = () => show(+g.dataset.id));
     }
 
-    let filmT = null;
-    const stopFilm = () => { if (filmT) { clearInterval(filmT); filmT = null; } };
-    function filmView(V) {
-      const s = st.summary, par = s.rows.find(r => r.label === "progenitore"), items = [par, ...s.rows.filter(r => r.kind === "candidate" && good(r)).slice(0, 12)], times = s.times;
-      V.innerHTML = `<div class="card"><div class="row"><button id="tp-play">▶ Start the film</button><input type="range" id="tp-sl" min="0" max="${times.length - 1}" value="0" class="grow"><b id="tp-tl">t = ${times[0]} min</b></div>
-        <div class="mut">Each bar is the peak area, in % of its maximum: the parent decreases, the transformation products rise (and then, sometimes, fall).</div>
-        <div id="tp-film">${items.map(r => `<div class="frow" data-id="${r.id}"><span class="fl" title="${esc(r.name)}">${esc(MOLUI.cap(shortN(r.name, 30)))}</span><span class="ft"><i style="background:${col(r)}"></i></span><span class="fv"></span></div>`).join("")}</div></div>`;
-      const set = i => {
-        $("#tp-sl").value = i; $("#tp-tl").textContent = `t = ${times[i]} min`;
-        V.querySelectorAll(".frow").forEach(row => { const r = items.find(x => x.id === +row.dataset.id), mx = Math.max(...r.kinetics.map(p => p.area)) || 1, k = r.kinetics.find(p => p.time === times[i]), v = k ? 100 * k.area / mx : 0;
-          row.querySelector("i").style.width = v.toFixed(1) + "%"; row.querySelector(".fv").textContent = k && k.area ? fmtA(k.area) : "-"; });
-      };
-      $("#tp-sl").oninput = e => { stopFilm(); $("#tp-play").textContent = "▶ Start the film"; set(+e.target.value); };
-      $("#tp-play").onclick = () => {
-        if (filmT) { stopFilm(); $("#tp-play").textContent = "▶ Start the film"; return; }
-        let i = 0; $("#tp-play").textContent = "⏸ Pause"; set(0);
-        filmT = setInterval(() => { i++; if (i >= times.length) { stopFilm(); $("#tp-play").textContent = "↺ Replay"; return; } set(i); }, 900);
-      };
-      V.querySelectorAll(".frow").forEach(r => r.onclick = () => show(+r.dataset.id));
-      set(0);
-    }
 
     function summaryText() {
       const s = st.summary, par = s.rows.find(r => r.label === "progenitore"), L = [];
@@ -656,22 +617,28 @@
     let T = null;
     const lvSort = r => (r.level ?? 9) * 1000 - (r.score ?? 0);
     const idLabel = r => r.kind === "unexpected" && !r.ms2_target ? `m/z ${r.mz.toFixed(2)} (unexpected)` : MOLUI.cap(r.name);
+    /** a hypothesis of the rules with no peak in any sample: searched, not detected (no TP name, no area) */
+    const notFound = r => r.status === "Searched, not detected";
     const cellStates = r => (r.kinetics || []).map(p => p.area > 0 ? "detected" : "absent");
     const rowNum = r => r.id >= 100000 ? "n" + (r.id - 100000) : String(r.id);
     function mountTable(host) {
       const W = /** @type {any} */ (window), TPTAB = W.TPTAB, TPRIGA = W.TPRIGA, s = st.summary, ms2 = hasMs2(s);
       const chip = (key, label, help, test, on) => ({ key, label, help, test, on, ...(key === "ms2" ? {} : { group: "class" }) });
-      const alt = r => r.alternatives.length ? ` <span class="mut"${W.TPHELP ? ` data-tt="ft.alt" tabindex="0"` : ""} role="img" aria-label="${r.alternatives.length} more, same mass: ${esc(r.alternatives.join("; "))}">+${r.alternatives.length}</span>` : "";
+      const alt = r => r.alternatives.length ? ` <button type="button" class="tp-alt mut"${W.TPHELP ? ` data-tt="ft.alt"` : ""} data-alt="${r.id}" aria-label="${r.alternatives.length} other candidate ${r.alternatives.length === 1 ? "identity" : "identities"} with the same mass: show them">+${r.alternatives.length} other${r.alternatives.length === 1 ? "" : "s"}</button>` : "";
       const cols = [
         { key: "level", label: "Lvl", help: "ft.col.level", sticky: true, sort: lvSort, cell: r => r.level ? TPTAB.level(r.level) : "", text: r => r.level ? "L" + r.level : "" },
-        { key: "identity", label: "Identity", help: "ft.col.identity", sticky: true, sort: r => idLabel(r).toLowerCase(), cell: r => esc(idLabel(r)) + alt(r), text: r => idLabel(r) + (r.alternatives.length ? ` (+${r.alternatives.length})` : "") },
+        { key: "tpname", label: "TP", help: "ft.col.tpname", sticky: true, sort: r => r.tp_name || "", cell: r => esc(r.tp_name || "") },
+        { key: "identity", label: "Identity", help: "ft.col.identity", sticky: true, sort: r => idLabel(r).toLowerCase(), cell: r => esc(idLabel(r)) + alt(r), text: r => idLabel(r) + (r.alternatives.length ? ` (+${r.alternatives.length} other)` : "") },
+        { key: "status", label: "Status", help: "ft.col.status", sort: r => notFound(r) ? 1 : 0, cell: r => notFound(r) ? "Searched, not detected" : "Detected", text: r => r.status || "Detected" },
+        { key: "net", label: "Net change (formula)", help: "ft.col.net", sort: r => r.net_change || "", cell: r => esc(r.net_change || "") },
+        { key: "modif", label: "Modification", help: "ft.col.modif", sort: r => r.modification || "", cell: r => esc(r.modification || "") },
         { key: "mz", label: "<i>m/z</i>", help: "ft.col.mz", num: true, sort: r => r.mz, cell: r => r.mz.toFixed(2) },
         { key: "rt", label: "RT", help: "ft.col.rt", num: true, sort: r => r.ref_rt, cell: r => r.ref_rt == null ? "" : r.ref_rt.toFixed(2) },
         { key: "trend", label: "Trend", help: "ft.col.trend", cell: r => (r.kinetics || []).length ? TPTAB.spark(r.kinetics.map(p => p.area), "area") : "", text: r => (r.kinetics || []).map(p => Math.round(p.area)).join(" ") },
         { key: "cells", label: "Cells", help: "ft.col.cells", cell: r => cellStates(r).length ? TPTAB.cells(cellStates(r)) : TPTAB.state("na"), text: r => cellStates(r).map(x => x[0]).join("") },
-        { key: "max", label: "Max area", help: "ft.col.maxarea", num: true, sort: r => r.max_area, cell: r => fmtA(r.max_area), text: r => String(Math.round(r.max_area)) },
+        { key: "max", label: "Max area", help: "ft.col.maxarea", num: true, sort: r => r.max_area, cell: r => notFound(r) ? "—" : fmtA(r.max_area), text: r => notFound(r) ? "—" : fmtA(r.max_area), value: r => notFound(r) ? null : r.max_area },
         { key: "score", off: true, label: "Score", help: "ft.col.score", num: true, sort: r => r.score, cell: r => r.score == null ? "" : `<span class="badge b-${r.label}">${r.score} ${LAB[r.label]}</span>`, text: r => r.score == null ? "" : String(r.score) },
-        { key: "formula", off: true, label: "Formula", help: "ft.col.formula", sort: r => r.formula || "", cell: r => esc(r.formula || "") },
+        { key: "formula", off: true, label: "Neutral formula", help: "ft.col.formula", sort: r => r.formula || "", cell: r => esc(r.formula || "") },
         { key: "tmax", off: true, label: "t max", help: "ft.col.tmax", num: true, sort: r => r.tmax, cell: r => String(r.tmax ?? "") },
         ...(ms2 ? [{ key: "ms2", off: true, label: "MS2", help: "ft.col.ms2match", num: true, sort: r => r.ms2 || 0, cell: r => W.TPMS2.cell(r), text: r => String(r.ms2 || 0) }] : []),
         { key: "num", off: true, label: "#", help: "ft.col.rank", sort: r => r.id, cell: r => rowNum(r) },
@@ -679,19 +646,28 @@
       const chips = [chip("strong", "Strong", "ft.chip.strong", r => r.kind !== "unexpected" && r.label === "forte", true), chip("possible", "Possible", "ft.chip.possible", r => r.kind !== "unexpected" && r.label === "possibile", true),
         chip("weak", "Weak", "ft.chip.weak", r => r.kind !== "unexpected" && r.label === "debole", false), chip("unexpected", "Unexpected", "ft.chip.unexpected", r => r.kind === "unexpected" && good(r), true),
         ...(ms2 ? [chip("ms2", "With MS2", "ft.chip.ms2", r => r.ms2 > 0, false)] : [])];
-      T = TPTAB.mount(host, { id: "tp-t", label: "Transformation product candidates", cols, rowId: r => r.id, esc, name: r => `${idLabel(r)}, m/z ${r.mz.toFixed(2)}`, columns: true, chips, exportName: (s.parent.formula || "parent") + "_Tabui_view",
-        search: r => [r.name, r.formula, String(r.mz), r.delta].join(" "), pin: r => r.label === "progenitore",
+      T = TPTAB.mount(host, { id: "tp-t", label: "Transformation product candidates", cols, rowId: r => r.id, esc, name: r => `${r.tp_name || idLabel(r)}, ${idLabel(r)}, m/z ${r.mz.toFixed(2)}`, columns: true, chips, rowClass: r => notFound(r) ? "tpt-nd" : "", exportName: (s.parent.formula || "parent") + "_Tabui_view",
+        search: r => [r.tp_name, r.name, r.formula, String(r.mz), r.delta, r.net_change, r.modification].join(" "), pin: r => r.label === "progenitore",
         tabs: TPRIGA.tabs, head: (r, box) => TPRIGA.head(box, headModel(r)), onOpen: (r, body, tab) => { void fillTab(r, body, tab); } });
-      T.setRows(s.rows); T.sortBy("level", 1);
+      T.setRows(s.rows.filter(r => !notFound(r))); T.sortBy("level", 1);
+      const box = /** @type {HTMLInputElement | null} */ ($("#tp-nd"));
+      if (box) box.onchange = () => { if (T) T.setRows(box.checked ? s.rows : s.rows.filter(r => !notFound(r))); };
+      // the "+N other" button of the Identity cell: open the row on the tab with the other identities (capture: before the row toggles)
+      host.addEventListener("click", e => {
+        const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest(".tp-alt")); if (!b || !T) return;
+        e.stopPropagation(); e.preventDefault(); const id = +/** @type {string} */ (b.dataset.alt);
+        if (T.openId !== id) T.open(id);
+        T.selectTab("identity");
+      }, true);
     }
     /** the head of the open row: level, the sentence of the engine, copy and the way to the card of the MS2 matches */
     function headModel(r) {
       const acts = [{ key: "copy", label: "Copy", help: "ft.riga.copy", run: () => {
-        const text = [idLabel(r), "m/z " + r.mz.toFixed(2), "RT " + (r.ref_rt ?? ""), r.level ? "L" + r.level : "", r.score ?? ""].join("\t");
+        const text = [r.tp_name || "", idLabel(r), r.net_change || "", "m/z " + r.mz.toFixed(2), "RT " + (r.ref_rt ?? ""), r.level ? "L" + r.level : "", r.score ?? ""].join("\t");
         Promise.resolve(navigator.clipboard && navigator.clipboard.writeText(text)).then(() => toast("Copied"), () => toast("Copy is not allowed here"));
       } }];
       if (hasMs2(st.summary)) acts.push({ key: "ms2", label: "MS2 matches", help: "ft.lr.ms2link", run: () => { const d = $("#tp-m-ms2"); if (d) { d.open = true; d.scrollIntoView({ behavior: calmMotion() ? "smooth" : "auto", block: "nearest" }); } } });
-      return { title: idLabel(r), level: r.level ?? undefined, words: r.level_text || "", actions: acts };
+      return { title: (r.tp_name && r.tp_name !== "Parent" ? r.tp_name + " · " : "") + idLabel(r), level: r.level ?? undefined, words: r.level_text || "", actions: acts };
     }
     const GROUP = r => r.type === "blank" ? "Blank" : r.type === "control" ? "Dark" : r.type === "standard" ? "Other" : r.time === 0 ? "t0" : "Treated";
     /** the model of the panel of a row (TPRIGA) from its detail; nothing is computed here */
@@ -763,7 +739,7 @@
       return P.filter(Boolean).map(p => `<p style="margin:4px 0">${p}</p>`).join("");
     }
     async function getDetail(id) { return st.det[id] || (st.det[id] = await call("detail", id)); }
-    /** opens the row of a candidate in the table: from the gems, the map and the film one click goes back to the view "Table"; a row hidden by the chips gets the chip it needs */
+    /** opens the row of a candidate in the table: from the map and the kinetics one click goes back to the view "Table"; a row hidden by the chips gets the chip it needs */
     function show(id) {
       st.sel = id;
       if (st.view !== "tab") { st.view = "tab"; $("#tp-right").querySelectorAll(".vt").forEach(x => x.classList.toggle("on", x.dataset.v === "tab")); view(); }
@@ -778,18 +754,19 @@
       const s = st.summary; msg("Preparing the export...");
       try {
         const top = s.rows.filter(r => r.label === "forte" || r.label === "possibile");
+        const found = s.rows.filter(r => !notFound(r));
         const det = []; for (const r of top) det.push(await getDetail(r.id));
         const times = s.times, name = (st.summary.parent.formula || "parent") + "_Tabui";
-        const head = ["#", "Candidate", "Formula", "Change", "m/z", "RT (min)", "Level", "Score", "Verdict", "t max (min)", "Max area", ...times.map(t => "Area t" + t)];
-        const line = r => [r.id, r.name, r.formula, r.delta, r.mz, r.ref_rt, r.level ?? "", r.score ?? "", r.label, r.tmax ?? "", Math.round(r.max_area), ...times.map(t => { const k = r.kinetics.find(p => p.time === t); return k ? Math.round(k.area) : ""; })];
+        const head = ["#", "TP", "Candidate", "Neutral formula", "Change", "Net change (formula)", "Modification", "m/z", "RT (min)", "Level", "Score", "Verdict", "t max (min)", "Max area", "Max area (number)", ...times.map(t => "Area t" + t)];
+        const line = r => [r.id, r.tp_name, r.name, r.formula, r.delta, r.net_change ?? "", r.modification ?? "", r.mz, r.ref_rt, r.level ?? "", r.score ?? "", r.label, r.tmax ?? "", fmtA(r.max_area), r.max_area, ...times.map(t => { const k = r.kinetics.find(p => p.time === t); return k ? Math.round(k.area) : ""; })];
         const trans = det.flatMap(d => d.transitions);
         if (kind === "json") return dl(name + ".json", JSON.stringify({ summary: s, details: det, ms2_overrides: window.TPMS2 ? window.TPMS2.overrides() : [] }, null, 1), "application/json");
-        if (kind === "csv") return dl(name + ".csv", "sep=;\n" + [head, ...s.rows.map(line)].map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
-        const sheets = [{ name: "Ranking", head, rows: s.rows.map(line), widths: [6, 38, 16, 14, 10, 9, 8, 9, 11, 10, 12, ...times.map(() => 11)] },
+        if (kind === "csv") return dl(name + ".csv", "sep=;\n" + [head, ...found.map(line)].map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
+        const sheets = [{ name: "Ranking", head, rows: found.map(line), widths: [6, 12, 38, 16, 14, 18, 30, 10, 9, 8, 9, 11, 10, 12, 14, ...times.map(() => 11)] },
           { name: "Criteria", head: ["#", "Candidate", "Criterion", "Outcome", "Detail"], rows: det.flatMap(d => d.criteria.map(c => [d.id, d.name, c.name, c.status, c.text])), widths: [6, 38, 28, 8, 70] },
           { name: "MS2", head: ["#", "Candidate", "Product m/z", "% rel.", "Loss", "Note", "Similarity to the parent"], rows: det.flatMap(d => d.ms2.fragments.map(f => [d.id, d.name, f.mz, f.rel, f.loss ?? "", f.note || "", d.sim ? d.sim.cos.total : ""])), widths: [6, 38, 12, 9, 9, 50, 14] },
           ...(window.TPMS2 && window.TPMS2.sheet() ? [window.TPMS2.sheet()] : []),
-          { name: "MRM transitions", head: ["Candidate", "Formula", "Q1", "Q3 observed", "Q3 suggested", "CE", "Expected RT", "RT window", "% rel.", "MS2 scans", "Note"], rows: trans.map(t => [t.compound, t.formula, t.Q1, t.Q3_osservato, t.Q3_consigliato, t.CE, t.RT_attesa_min, t.finestra_RT_min, t["intensita_rel_%"], t.scansioni_ms2, t.nota]), widths: [34, 16, 8, 12, 14, 7, 10, 11, 8, 12, 40] },
+          { name: "MRM transitions", head: ["Candidate", "Neutral formula", "Q1", "Q3 observed", "Q3 suggested", "CE", "Expected RT", "RT window", "% rel.", "MS2 scans", "Note"], rows: trans.map(t => [t.compound, t.formula, t.Q1, t.Q3_osservato, t.Q3_consigliato, t.CE, t.RT_attesa_min, t.finestra_RT_min, t["intensita_rel_%"], t.scansioni_ms2, t.nota]), widths: [34, 16, 8, 12, 14, 7, 10, 11, 8, 12, 40] },
           ...(s.mrm ? [mrmSheet(s.mrm)] : []),
           { name: "Information", head: ["Item", "Value"], rows: [["Parent", s.parent.formula], ["Neutral mass", s.parent.neutral], ["Adduct", s.parent.adduct], ["Parent m/z", s.parent.mz], ["m/z offset (Da)", s.offset ? s.offset.offset : ""], ["k (1/min)", s.decay ? s.decay.k_per_min : ""], ["t1/2 (min)", s.decay ? s.decay.half_life_min : ""], ...Object.entries(s.settings).map(([k, v]) => [k, String(v)]), ...s.files.map(f => ["File", `${f.name} (${f.kind}, ${f.type}, t=${f.time ?? ""})`]), ["Note", "Unit resolution: each row is a candidate, not an identification. Levels 2 and 1 require a library spectrum or a standard."]], widths: [22, 90] }];
         dlx(name + ".xlsx", sheets);

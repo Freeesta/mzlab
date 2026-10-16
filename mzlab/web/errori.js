@@ -6,6 +6,8 @@ const seen = new Set();
 let count = 0;
 /** @type {string[]} */
 const details = [];
+/** @type {string[]} one short line per error (message only, no stack), for the bug report */
+const brief = [];
 
 /** @param {unknown} e */
 function describe(e) {
@@ -29,6 +31,8 @@ export function segnala(e, where = "") {
   seen.add(text);
   details.push((where ? "[" + where + "] " : "") + text);
   if (details.length > 20) details.shift();
+  brief.push(((where ? "[" + where + "] " : "") + msg).split(/\r?\n/)[0].slice(0, 300));
+  if (brief.length > 20) brief.shift();
   count++;
   let box = document.getElementById(BOX);
   if (!box) {
@@ -59,4 +63,4 @@ export function segnala(e, where = "") {
 
 addEventListener("error", ev => segnala(ev.error || ev.message, "error"));
 addEventListener("unhandledrejection", ev => segnala(ev.reason, "promise"));
-/** @type {any} */ (window).ERRORI = { segnala };
+/** @type {any} */ (window).ERRORI = { segnala, recenti: (/** @type {number} */ n) => brief.slice(-n) };
