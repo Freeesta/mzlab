@@ -131,3 +131,53 @@ fn gradient_matches_the_reference() {
         }
     }
 }
+
+fn sheets_json(sheets: &[mzlab_feat::attributio::export::cells::Sheet]) -> Value {
+    json!(sheets
+        .iter()
+        .map(|s| json!({
+            "name": s.name,
+            "head": s.head,
+            "rows": s.rows.iter().map(|r| r.iter().map(cell_json).collect::<Vec<_>>()).collect::<Vec<_>>(),
+        }))
+        .collect::<Vec<_>>())
+}
+
+#[test]
+fn schymanski_matches_the_reference() {
+    let fx = fixture_overlay(&["campagna_sintetica", "campagna_esportazione"]);
+    with_io!(fx, io);
+    let sheets = mzlab_feat::attributio::export::schymanski::build(&fx.campaign, &io, None).expect("schymanski");
+    let g = golden("esportazione", "schymanski.json");
+    let mut got = sheets_json(&sheets);
+    in_reference_words(&mut got);
+    same(&got, &g["sheets"], "schymanski");
+}
+
+/// The labels of the levels that the port writes with the sub-level (`L3a`) are the reference tool's `Lvl 3`: the one deliberate difference of the words.
+fn in_reference_words(sheets: &mut Value) {
+    const PAIRS: [(&str, &str); 5] = [
+        (" (L1)", " (Lvl 1)"),
+        (" (L2a)", " (Lvl 2a)"),
+        (" (L2b)", " (Lvl 2b)"),
+        (" (L3a)", " (Lvl 3)"),
+        (" (L3b)", " (Lvl 3)"),
+    ];
+    for sheet in sheets.as_array_mut().expect("sheets") {
+        let Some(k) = sheet["head"].as_array().and_then(|h| h.iter().position(|c| c == "level_label")) else {
+            continue;
+        };
+        for row in sheet["rows"].as_array_mut().expect("rows") {
+            if let Some(t) = row[k].as_str() {
+                let mut t = t.to_string();
+                for (a, b) in PAIRS {
+                    if let Some(p) = t.strip_suffix(a) {
+                        t = format!("{p}{b}");
+                        break;
+                    }
+                }
+                row[k] = json!(t);
+            }
+        }
+    }
+}
