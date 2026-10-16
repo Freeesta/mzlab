@@ -38,6 +38,8 @@ pub struct Hyp {
     pub neutral: f64,
     pub steps: u32,
     pub alternatives: Vec<String>,
+    /// Prediction level of the weakest rule (Löffler: 2 literature, 3 class, 4 generic); 0 without one.
+    pub pred: u8,
 }
 
 /// The hypotheses of the rules ([M+H]+, at least one step), sorted by steps and m/z.
@@ -79,6 +81,7 @@ pub fn hypotheses(registry: &str) -> Res<Vec<Hyp>> {
             neutral: h.get("mass").and_then(Value::f64).unwrap_or(f64::NAN),
             steps: h.get("steps").and_then(Value::f64).unwrap_or(1.0) as u32,
             alternatives: strs(h, "alternatives"),
+            pred: h.get("level").and_then(Value::f64).unwrap_or(0.0) as u8,
         })
         .filter(|h| h.steps >= 1 && h.mz.is_finite())
         .collect();
@@ -259,6 +262,7 @@ pub fn candidates(
             e.formula = h.formula.clone();
             e.alternatives = h.alternatives.clone();
             e.steps = h.steps;
+            e.pred = h.pred;
             e.neutral_mass = Some(h.neutral);
             e.delta = super::delta(&h.formula, &parent.formula);
             out.push(e);

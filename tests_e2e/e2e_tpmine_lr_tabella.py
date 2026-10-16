@@ -134,6 +134,19 @@ try:
             assert pg.evaluate("!!document.activeElement.closest('#tp-t')"), "the focus returns to the table"
         step("arrows move between the tabs; Esc closes the row and returns the focus", keys)
 
+        def decided():
+            assert pg.locator("#tp-t tbody .lvb").count() == 0, "no level proposed: the Lvl column is empty"
+            other = pg.evaluate("[...document.querySelectorAll('#tp-t tbody tr.clk')].map(r => r.dataset.id).find(i => i !== '0')")
+            pg.click(f'#tp-t tr.clk[data-id="{other}"]'); pg.wait_for_selector("#tp-det .tpd-sel", timeout=60000)
+            sel = pg.locator("#tp-det .tpd-sel").first
+            sel.select_option("2b"); lib.attendi(pg, "!!document.querySelector('#tp-det .tpd-msg').textContent.trim()")
+            sel.select_option("4"); lib.attendi(pg, "document.querySelectorAll('#tp-t tbody .lvb.tpt-dec').length === 1")
+            assert pg.inner_text("#tp-t tbody .lvb.tpt-dec").strip() == "L4"
+            assert "no level proposed" in pg.get_attribute("#tp-t tbody .lvb.tpt-dec", "aria-label")
+            sel.select_option(""); lib.attendi(pg, "document.querySelectorAll('#tp-t tbody .lvb').length === 0")
+            pg.keyboard.press("Escape")
+        step("Lvl stays empty until the chemist decides; 2b is refused, L4 shows in the row", decided)
+
         def node():
             pg.click('.vt[data-v="map"]'); pg.wait_for_selector(".mnode")
             pg.locator(".mnode").nth(1).click()

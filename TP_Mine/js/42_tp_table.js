@@ -435,13 +435,13 @@
       { key: "hidenottp", label: "Hide not a TP", help: "ft.chip.hidenottp", test: (/** @type {any} */ r) => { const x = get(r); return !(x && x.level === G.TPDEC.NOT_TP); } }];
     return { ...o, cols, chips };
   }
-  /** the badge of the Schymanski level («L3», «L2a»); a level decided by the chemist has the double border and the proposed one in the label
-   * @param {string | number} lv @param {{ decided?: string | number | null }} [opt] */
+  /** the badge of the Schymanski level («L3», «L2a»); a level decided by the chemist has the double border and the proposed one in the label (none when
+   * the programme proposed no level, as at unit resolution) @param {string | number} lv @param {{ decided?: string | number | null }} [opt] */
   function level(lv, opt) {
     const L = G.LIVELLI, tag = (/** @type {any} */ x) => L ? L.tag(x) : "L" + x, cls = (/** @type {any} */ x) => L ? L.cls(x) : "lv-" + x;
-    const d = opt && opt.decided;
-    if (d === "nottp") return `<span class="lvb tpt-nottp" role="img" aria-label="Not a TP, decided by the chemist; proposed ${tag(lv)}"${tt("ft.col.level")}><s>${tag(lv)}</s> not a TP</span>`;
-    if (d != null && d !== "") return `<span class="lvb ${cls(d)} tpt-dec" role="img" aria-label="${tag(d)}, decided by the chemist; proposed ${tag(lv)}"${tt("ft.col.level")}>${tag(d)}</span>`;
+    const d = opt && opt.decided, prop = lv != null && lv !== "" ? `; proposed ${tag(lv)}` : "; no level proposed";
+    if (d === "nottp") return `<span class="lvb tpt-nottp" role="img" aria-label="Not a TP, decided by the chemist${prop}"${tt("ft.col.level")}>${prop.startsWith("; proposed") ? `<s>${tag(lv)}</s> ` : ""}not a TP</span>`;
+    if (d != null && d !== "") return `<span class="lvb ${cls(d)} tpt-dec" role="img" aria-label="${tag(d)}, decided by the chemist${prop}"${tt("ft.col.level")}>${tag(d)}</span>`;
     return `<span class="lvb ${cls(lv)}" role="img" aria-label="${tag(lv)}, proposed"${tt("ft.col.level")}>${tag(lv)}</span>`;
   }
   /** the badge of the prediction scale («Prev. 2»): only the outline, so it is not taken for a level @param {number} n */

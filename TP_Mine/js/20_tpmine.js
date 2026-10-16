@@ -224,7 +224,7 @@
  <div class="card" id="tp-minecard"><button id="tp-go" class="imp dig" type="button" aria-busy="false">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : ""}<span id="tp-go-t">Dig</span></button><div class="bar" id="tp-barbox" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" role="status" style="margin-top:4px"></div></div>
  <div class="card" id="tp-untcard"><h3>Feature tables</h3><div class="mut">mzMine, MS-DIAL or GNPS2 tables: match every feature with an MS<sup>2</sup> against the spectral libraries and assign a level.</div><div class="row"><button id="tp-unt" type="button" aria-haspopup="dialog">Match a feature table...</button></div></div>
 </div>
-<div id="tp-right"><div class="card mut" id="tp-empty">Load the files, enter the parent and press <b>Dig</b>: Tabui calibrates the m/z on the parent, generates the candidates, extracts the XICs, looks for peaks that grow over time and are missing from the blank, checks the isotopes, compares the product ions with those of the parent and assigns a confidence level (Schymanski, as far as the resolution allows).</div></div></div></div>`;
+<div id="tp-right"><div class="card mut" id="tp-empty">Load the files, enter the parent and press <b>Dig</b>: Tabui calibrates the m/z on the parent, generates the candidates, extracts the XICs, looks for peaks that grow over time and are missing from the blank, checks the isotopes, compares the product ions with those of the parent and shows the prediction of each transformation (Prev. N). The identification level is yours to decide.</div></div></div></div>`;
     const $ = s => sec.querySelector(s);
     if (W.TPHELP) W.TPHELP.attach(sec);
     const FIELD = () => W.TPFIELD, parentFields = () => [$("#tp-mol"), $("#tp-smi")];
@@ -686,7 +686,7 @@
         }
       }
       const nodes = [par, ...cand, ...unx].map(r => { const [x, y] = node(r), rad = 9 + 15 * Math.log10(1 + r.max_area) / Math.log10(1 + maxA);
-        return `<g class="mnode${r.id === st.sel ? " sel" : ""}" data-id="${r.id}" transform="translate(${x},${y})"><circle r="${rad.toFixed(1)}" fill="${col(r)}" fill-opacity=".85" stroke="#fff" stroke-width="2"><title>${esc(r.name)}</title></circle>${r.level ? `<text y="4" font-size="11" fill="#fff" font-weight="700" text-anchor="middle">${r.level}</text>` : ""}<text y="${(rad + 13).toFixed(0)}" font-size="11" text-anchor="middle" fill="currentColor">${esc(shortN(r.name, 24))}</text><text y="${(rad + 25).toFixed(0)}" font-size="10" text-anchor="middle" fill="#687080">${r.mz.toFixed(1)}</text></g>`; }).join("");
+        return `<g class="mnode${r.id === st.sel ? " sel" : ""}" data-id="${r.id}" transform="translate(${x},${y})"><circle r="${rad.toFixed(1)}" fill="${col(r)}" fill-opacity=".85" stroke="#fff" stroke-width="2"><title>${esc(r.name)}</title></circle><text y="${(rad + 13).toFixed(0)}" font-size="11" text-anchor="middle" fill="currentColor">${esc(shortN(r.name, 24))}</text><text y="${(rad + 25).toFixed(0)}" font-size="10" text-anchor="middle" fill="#687080">${r.mz.toFixed(1)}</text></g>`; }).join("");
       host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-height:${H}px">${[["parent", 0], ["1 step", 1], ["2 steps", 2], ["3 steps / unexpected", 3]].map(([t, i]) => `<text x="${colX[i]}" y="14" font-size="11" fill="#687080" text-anchor="middle" font-weight="700">${t}</text>`).join("")}${edges}${nodes}</svg>`;
       host.querySelectorAll(".mnode").forEach(g => g.onclick = () => show(+g.dataset.id));
     }
@@ -699,8 +699,8 @@
       if (s.offset) L.push(`m/z offset measured on the parent: ${s.offset.offset >= 0 ? "+" : ""}${s.offset.offset} Da${s.offset.applied ? " (corrected)" : ""}.`);
       const top = s.rows.filter(r => r.label !== "progenitore" && good(r) && !(r.insource && !(r.isf && r.isf.doubtful)));
       L.push(`Candidates that grow over time and are absent from the blank: ${top.filter(r => r.kind === "candidate").length}; unexpected ions: ${top.filter(r => r.kind === "unexpected").length}.`);
-      for (const r of top.slice(0, 15)) L.push(`- ${r.name}${r.formula ? ` (${r.formula}${r.delta ? ", " + r.delta : ""})` : ""}: m/z ${r.mz.toFixed(1)}, RT ${r.ref_rt} min, maximum at ${r.tmax} min, area ${fmtA(r.max_area)}, verdict ${LAB[r.label] || r.label}${r.level ? `, confidence level ${r.level}` : ""}.`);
-      L.push("Unit resolution: each row is a candidate, not an identification; levels 2 and 1 require a library spectrum or a standard.");
+      for (const r of top.slice(0, 15)) L.push(`- ${r.name}${r.formula ? ` (${r.formula}${r.delta ? ", " + r.delta : ""})` : ""}: m/z ${r.mz.toFixed(1)}, RT ${r.ref_rt} min, maximum at ${r.tmax} min, area ${fmtA(r.max_area)}, verdict ${LAB[r.label] || r.label}${r.pred ? `, prediction Prev. ${r.pred}` : ""}.`);
+      L.push("Unit resolution: each row is a candidate, not an identification; no identification level is proposed, the chemist decides it. «Prev. N» is the prediction of the transformation (Löffler et al. 2025), not a level.");
       return L.join("\n");
     }
 
@@ -729,7 +729,8 @@
       const w = $("#tp-weak-w"), b = $("#tp-weak-s"), on = weakOn(); if (!w || !b) return;
       w.textContent = `weak evidence ${on ? "shown" : "hidden"}`; b.textContent = on ? "hide" : "show"; b.setAttribute("aria-pressed", String(on));
     }
-    const lvSort = r => (r.level ?? 9) * 1000 - (r.score ?? 0);
+    // the Dig proposes no identification level (`level` is null): the rows go by verdict, then score; the level is the one the chemist decides (TPDEC)
+    const RANK = { progenitore: 0, forte: 1, possibile: 2 }, lvSort = r => (RANK[r.label] ?? 3) * 1000 - (r.score ?? 0);
     const idLabel = r => r.kind === "unexpected" && !r.ms2_target ? `m/z ${r.mz.toFixed(2)} (unexpected)` : MOLUI.cap(r.name);
     /** a hypothesis of the rules with no peak in any sample: searched, not detected (no TP name, no area) */
     const notFound = r => r.status === "Searched, not detected";
@@ -756,7 +757,8 @@
       const chip = (key, label, help, test, on) => ({ key, label, help, test, on, ...(key === "ms2" ? {} : { group: "class" }) });
       const alt = r => r.alternatives.length ? ` <button type="button" class="tp-alt mut"${W.TPHELP ? ` data-tt="ft.alt"` : ""} data-alt="${r.id}" aria-label="${r.alternatives.length} other candidate ${r.alternatives.length === 1 ? "identity" : "identities"} with the same mass: show them">+${r.alternatives.length} other${r.alternatives.length === 1 ? "" : "s"}</button>` : "";
       const cols = [
-        { key: "level", label: "Lvl", help: "ft.col.level", sticky: true, sort: lvSort, cell: r => r.level ? TPTAB.level(r.level) : "", text: r => r.level ? "L" + r.level : "" },
+        { key: "level", label: "Lvl", help: "ft.col.lvlr", sticky: true, sort: lvSort, cell: () => "", text: () => "" },          // empty until the chemist decides (the badge of `decide`)
+        { key: "pred", off: true, label: "Prev.", help: "ft.col.pred", sort: r => r.pred ?? 9, cell: r => r.pred ? TPTAB.pred(r.pred) : "", text: r => r.pred ? `Prev. ${r.pred}` : "" },
         { key: "tpname", label: "TP", help: "ft.col.tpname", sticky: true, sort: r => r.tp_name || "", cell: r => esc(r.tp_name || "") },
         { key: "identity", label: "Identity", help: "ft.col.identity", sticky: true, sort: r => idLabel(r).toLowerCase(), cell: r => esc(idLabel(r)) + alt(r), text: r => idLabel(r) + (r.alternatives.length ? ` (+${r.alternatives.length} other)` : "") },
         { key: "status", label: "Status", help: "ft.col.status", sort: r => notFound(r) || r.status === "Parent not found" ? 1 : 0, cell: r => notFound(r) ? "Searched, not detected" : esc(r.status || "Detected"), text: r => r.status || "Detected" },
@@ -778,7 +780,7 @@
       const chips = [chip("strong", "Strong", "ft.chip.strong", r => r.kind !== "unexpected" && r.label === "forte", true), chip("possible", "Possible", "ft.chip.possible", r => r.kind !== "unexpected" && r.label === "possibile", true),
         chip("weak", "Weak evidence", "ft.chip.weak", r => r.label === "debole", false), chip("unexpected", "Unexpected", "ft.chip.unexpected", r => r.kind === "unexpected" && good(r), true),
         ...(ms2 ? [chip("ms2", "With MS2", "ft.chip.ms2", r => r.ms2 > 0, false)] : [])];
-      T = TPTAB.mount(host, { id: "tp-t", label: "Transformation product candidates", cols, rowId: r => r.id, esc, name: r => `${r.tp_name || idLabel(r)}, ${idLabel(r)}, m/z ${r.mz.toFixed(2)}`, columns: true, chips, rowClass: r => notFound(r) ? "tpt-nd" : "", exportName: (s.parent.formula || "parent") + "_Tabui_view",
+      T = TPTAB.mount(host, { id: "tp-t", label: "Transformation product candidates", cols, rowId: r => r.id, esc, name: r => `${r.tp_name || idLabel(r)}, ${idLabel(r)}, m/z ${r.mz.toFixed(2)}`, columns: true, chips, decide: decideOf() || undefined, rowClass: r => notFound(r) ? "tpt-nd" : "", exportName: (s.parent.formula || "parent") + "_Tabui_view",
         search: r => [r.tp_name, r.name, r.formula, String(r.mz), r.delta, r.net_change, r.modification].join(" "), pin: r => r.label === "progenitore",
         tabs: TPRIGA.tabs, head: (r, box) => TPRIGA.head(box, headModel(r)), onOpen: (r, body, tab) => { void fillTab(r, body, tab); },
         onFilter: keys => { st.weakOn = keys.includes("weak"); weakSync(); } });
@@ -795,18 +797,20 @@
         T.selectTab("identity");
       }, true);
     }
-    /** the head of the open row: level, the sentence of the engine, copy and the way to the card of the MS2 matches */
+    /** the decision of the chemist (45_tabui_decisioni.js): the series is the files and the parent, a row is its m/z and RT; no level is proposed */
+    const decideOf = () => { const D = /** @type {any} */ (window).TPDEC, s = st.summary; return D && s && s.files ? { series: () => ({ files: s.files.map((/** @type {any} */ f) => f.name), formula: s.parent.formula }), key: (/** @type {any} */ r) => D.rowKey(r.mz, r.ref_rt ?? 0, false), level: () => null } : null; };
+    /** the head of the open row: the decided level, the prediction, copy and the way to the card of the MS2 matches */
     function headModel(r) {
-      const acts = [{ key: "copy", label: "Copy", help: "ft.riga.copy", run: () => {
-        const text = [r.tp_name || "", idLabel(r), r.net_change || "", "m/z " + r.mz.toFixed(2), "RT " + (r.ref_rt ?? ""), r.level ? "L" + r.level : "", r.score ?? ""].join("\t");
+      const dc = decideOf(), acts = [{ key: "copy", label: "Copy", help: "ft.riga.copy", run: () => {
+        const text = [r.tp_name || "", idLabel(r), r.net_change || "", "m/z " + r.mz.toFixed(2), "RT " + (r.ref_rt ?? ""), r.pred ? "Prev. " + r.pred : "", r.score ?? ""].join("\t");
         Promise.resolve(navigator.clipboard && navigator.clipboard.writeText(text)).then(() => toast("Copied"), () => toast("Copy is not allowed here"));
       } }];
       if (hasMs2(st.summary)) acts.push({ key: "ms2", label: "MS2 matches", help: "ft.lr.ms2link", run: () => { const d = $("#tp-m-ms2"); if (d) { d.open = true; d.scrollIntoView({ behavior: calmMotion() ? "smooth" : "auto", block: "nearest" }); } } });
-      // the head repeats the closed row (its key cells), not the sentence of the level
+      // the head repeats the closed row (its key cells)
       const summary = [{ label: "TP", value: r.tp_name || "", help: "ft.col.tpname" }, { label: "Identity", value: idLabel(r), help: "ft.col.identity" }, { label: "Net change", value: r.net_change || "", help: "ft.col.net" },
         { label: "Modification", value: r.modification || "", help: "ft.col.modif" }, { label: "m/z", value: r.mz.toFixed(2), help: "ft.col.mz" }, { label: "RT", value: r.ref_rt == null ? "" : r.ref_rt.toFixed(2) + " min", help: "ft.col.rt" },
         { label: "Max area", value: notFound(r) ? "" : fmtA(r.max_area), help: "ft.col.maxarea" }];
-      return { title: (r.tp_name && r.tp_name !== "Parent" ? r.tp_name + " · " : "") + idLabel(r), level: r.level ?? undefined, summary, actions: acts };
+      return { title: (r.tp_name && r.tp_name !== "Parent" ? r.tp_name + " · " : "") + idLabel(r), pred: r.pred || undefined, summary, actions: acts, ...(dc ? { decide: { series: dc.series(), key: dc.key(r), level: null } } : {}) };
     }
     const GROUP = r => r.type === "blank" ? "Blank" : r.type === "control" ? "Dark" : r.type === "standard" ? "Other" : r.time === 0 ? "t0" : "Treated";
     /** the model of the panel of a row (TPRIGA) from its detail; nothing is computed here */
@@ -902,8 +906,8 @@
         const det = []; for (const r of top) det.push(await getDetail(r.id));
         const times = s.times, name = (st.summary.parent.formula || "parent") + "_Tabui";
         const cg = !!s.gruppi;      // several conditions: the columns «Present in» and «Only in» (gruppi/1)
-        const head = ["#", "TP", "Candidate", "Neutral formula", "Change", "Net change (formula)", "Modification", "m/z", "RT (min)", "Level", "Score", "Verdict", "t max (min)", "Max area", "Max area (number)", ...times.map(t => "Area t" + t), ...(cg ? ["Present in", "Only in"] : [])];
-        const line = r => [r.id, r.tp_name, r.name, r.formula, r.delta, r.net_change ?? "", r.modification ?? "", r.mz, r.ref_rt, r.level ?? "", r.score ?? "", r.label, r.tmax ?? "", fmtA(r.max_area), r.max_area, ...times.map(t => { const k = r.kinetics.find(p => p.time === t); return k ? Math.round(k.area) : ""; }), ...(cg ? (g => [g ? g.present_in.join("; ") : "", g && g.only_in ? g.only_in : ""])(gRow(r)) : [])];
+        const head = ["#", "TP", "Candidate", "Neutral formula", "Change", "Net change (formula)", "Modification", "m/z", "RT (min)", "Prediction (Löffler)", "Score", "Verdict", "t max (min)", "Max area", "Max area (number)", ...times.map(t => "Area t" + t), ...(cg ? ["Present in", "Only in"] : [])];
+        const line = r => [r.id, r.tp_name, r.name, r.formula, r.delta, r.net_change ?? "", r.modification ?? "", r.mz, r.ref_rt, r.pred ?? "", r.score ?? "", r.label, r.tmax ?? "", fmtA(r.max_area), r.max_area, ...times.map(t => { const k = r.kinetics.find(p => p.time === t); return k ? Math.round(k.area) : ""; }), ...(cg ? (g => [g ? g.present_in.join("; ") : "", g && g.only_in ? g.only_in : ""])(gRow(r)) : [])];
         const trans = det.flatMap(d => d.transitions);
         if (kind === "json") return dl(name + ".json", JSON.stringify({ summary: s, details: det, ms2_overrides: window.TPMS2 ? window.TPMS2.overrides() : [] }, null, 1), "application/json");
         if (kind === "csv") return dl(name + ".csv", "sep=;\n" + [head, ...found.map(line)].map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
@@ -914,7 +918,7 @@
           ...(window.TPMS2 && window.TPMS2.repSheet(det) ? [window.TPMS2.repSheet(det)] : []),
           { name: "MRM transitions", head: ["Candidate", "Neutral formula", "Q1", "Q3 observed", "Q3 suggested", "CE", "Expected RT", "RT window", "% rel.", "MS2 scans", "Note"], rows: trans.map(t => [t.compound, t.formula, t.Q1, t.Q3_osservato, t.Q3_consigliato, t.CE, t.RT_attesa_min, t.finestra_RT_min, t["intensita_rel_%"], t.scansioni_ms2, t.nota]), widths: [34, 16, 8, 12, 14, 7, 10, 11, 8, 12, 40] },
           ...(s.mrm ? [mrmSheet(s.mrm)] : []),
-          { name: "Information", head: ["Item", "Value"], rows: [["Parent", s.parent.formula], ["Neutral mass", s.parent.neutral], ["Adduct", s.parent.adduct], ["Parent m/z", s.parent.mz], ["m/z offset (Da)", s.offset ? s.offset.offset : ""], ["k (1/min)", s.decay ? s.decay.k_per_min : ""], ["t1/2 (min)", s.decay ? s.decay.half_life_min : ""], ...Object.entries(s.settings).map(([k, v]) => [k, String(v)]), ...s.files.map(f => ["File", `${f.name} (${f.kind}, ${f.type}, t=${f.time ?? ""})`]), ["Note", "Unit resolution: each row is a candidate, not an identification. Levels 2 and 1 require a library spectrum or a standard."]], widths: [22, 90] }];
+          { name: "Information", head: ["Item", "Value"], rows: [["Parent", s.parent.formula], ["Neutral mass", s.parent.neutral], ["Adduct", s.parent.adduct], ["Parent m/z", s.parent.mz], ["m/z offset (Da)", s.offset ? s.offset.offset : ""], ["k (1/min)", s.decay ? s.decay.k_per_min : ""], ["t1/2 (min)", s.decay ? s.decay.half_life_min : ""], ...Object.entries(s.settings).map(([k, v]) => [k, String(v)]), ...s.files.map(f => ["File", `${f.name} (${f.kind}, ${f.type}, t=${f.time ?? ""})`]), ["Note", "Unit resolution: each row is a candidate, not an identification. No identification level is proposed: the chemist decides it. Prediction = Löffler et al. 2025, not a level."]], widths: [22, 90] }];
         dlx(name + ".xlsx", sheets);
       } catch (e) { msg(String(e.message || e), true); return; }
       msg("");
