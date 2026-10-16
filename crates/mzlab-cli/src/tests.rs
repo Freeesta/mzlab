@@ -2,7 +2,6 @@
 //! the pipeline of the app gives on indexes built in memory (`run::recipe_for` -> `run::detect` -> `run::align` -> the export "full" of the table). Synthetic data only.
 
 use std::path::Path;
-use std::process::Command;
 
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::idxread::Index;
@@ -98,11 +97,10 @@ fn page_csv(files: &[(String, Vec<u8>)], params: &str) -> String {
     .unwrap()
 }
 
-fn cli(args: &[&str]) -> std::process::Output {
-    Command::new(env!("CARGO_BIN_EXE_mzlab-cli"))
-        .args(args)
-        .output()
-        .unwrap()
+/// The command of `main.rs`, run in this process (a binary built for the test would be a second build of the engine with another panic profile).
+fn cli(args: &[&str]) -> crate::Outcome {
+    let a: Vec<String> = args.iter().map(|x| x.to_string()).collect();
+    crate::execute(&a)
 }
 
 #[test]
@@ -130,7 +128,7 @@ fn the_csv_of_the_cli_is_the_one_of_the_page() {
     let mut a = args.clone();
     a.extend(["--out", out.to_str().unwrap()]);
     let o = cli(&a);
-    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    assert_eq!(o.code, 0, "{}", o.stderr);
     let got = std::fs::read_to_string(out.join("features.csv")).unwrap();
     let want = page_csv(&files, "");
     assert_eq!(got, want, "default recipe");
@@ -155,7 +153,7 @@ fn the_csv_of_the_cli_is_the_one_of_the_page() {
         csv.to_str().unwrap(),
     ]);
     let o = cli(&a);
-    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    assert_eq!(o.code, 0, "{}", o.stderr);
     assert!(o.stdout.is_empty());
     assert_eq!(
         std::fs::read_to_string(&csv).unwrap(),
@@ -174,12 +172,10 @@ fn the_csv_of_the_cli_is_the_one_of_the_page() {
 
     // --help and the usage errors
     assert!(String::from_utf8_lossy(&cli(&["features", "--help"]).stdout).contains("--preset"));
-    assert_eq!(cli(&["features"]).status.code(), Some(2));
+    assert_eq!(cli(&["features"]).code, 2);
     assert_eq!(
-        cli(&["features", "--preset", "x", paths[0].as_str()])
-            .status
-            .code(),
-        Some(2)
+        cli(&["features", "--preset", "x", paths[0].as_str()]).code,
+        2
     );
     let _ = std::fs::remove_dir_all(Path::new(&dir));
 }
