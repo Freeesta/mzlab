@@ -251,6 +251,12 @@ try:
             assert all(c[0] >= 24 and c[1] >= 24 for c in cells), cells
             assert cells[0][2] == "○" and "absent" in cells[0][3] and "s0.mzML" in cells[0][3], cells[0]
             assert cells[3][2] == "◐" and "filled" in cells[3][3], cells[3]
+            assert pg.locator("#tp-det .tpr-cell[tabindex='0'][data-tt][data-tt-text]").count() == 6, "every cell is focusable and has its tooltip"
+            assert pg.locator("#tp-det .tpr-grp b[tabindex='0'][data-tt]").count() == pg.locator("#tp-det .tpr-grp").count() > 0, "every group title has a tooltip"
+            leg = pg.inner_text("#tp-det .tpr-mxleg"); assert "Colour = peak area (log scale, darker = more); symbol = peak state" in leg and "absent" in leg and "filled" in leg, leg
+            pg.locator("#tp-det .tpr-cell").nth(3).focus(); pg.wait_for_selector("#tph-pop:not([hidden])")
+            tip = pg.inner_text("#tph-pop"); assert "area" in tip and "peak filled" in tip, tip
+            pg.locator("#tp-det .tpr-grp b").first.focus(); pg.wait_for_selector("#tph-pop:not([hidden])"); assert pg.inner_text("#tph-pop").strip() != ""
             assert pg.locator("#tp-det table.tpr tbody tr").count() == 6 and "Normalized" in pg.inner_text("#tp-det table.tpr thead")
             pg.click('#tr-t [data-tg="2"]'); settle(); assert pg.get_attribute("#tr-t [data-tab=samples]", "aria-selected") == "true"
             assert pg.locator("#tp-det .tpr-cell").count() == 12 and pg.locator("#tp-det .tpr-tw.sc").count() == 1, "inner scroll beyond 10 rows"

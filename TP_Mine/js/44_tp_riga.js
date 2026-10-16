@@ -41,11 +41,12 @@
 .tp .tpr-none{margin:4px 0;font-size:12px;color:var(--muted)}
 .tp .tpr-head{display:inline-flex;flex-wrap:wrap;gap:4px 10px;align-items:center}.tp .tpr-words{flex:1 1 20em;font-size:12px}
 .tp .tpr-act{box-sizing:border-box;cursor:pointer;min-height:24px;min-width:24px;padding:0 10px;font:inherit;font-size:12px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink)}
-.tp .tpr-act:hover{background:var(--sel)}.tp .tpr-act:focus-visible,.tp .tpr-more:focus-visible,.tp .tpr-ch svg:focus-visible,.tp .tpr-mx:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.tp .tpr-act:hover{background:var(--sel)}.tp .tpr-act:focus-visible,.tp .tpr-more:focus-visible,.tp .tpr-ch svg:focus-visible,.tp .tpr-cell:focus-visible,.tp .tpr-grp b:focus-visible,.tp .tpr-mxleg [tabindex]:focus-visible,.tp .tpr-mx:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .tp .tpr-dec{font-size:12px;color:var(--muted)}
 .tp .tpr-mx{display:flex;flex-wrap:wrap;gap:4px 16px;margin:2px 0 6px}.tp .tpr-grp{display:flex;flex-direction:column;gap:1px}.tp .tpr-grp b{font-size:11px;font-weight:600;color:var(--muted)}
 .tp .tpr-row{display:flex;gap:2px;flex-wrap:wrap}
 .tp .tpr-cell{box-sizing:border-box;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--muted);border-radius:3px;background:var(--panel);color:var(--muted);font-size:13px;line-height:1}
+.tp .tpr-mxleg{display:flex;flex-wrap:wrap;align-items:center;gap:2px 14px;margin:0 0 6px;font-size:11px;color:var(--muted)}.tp .tpr-mxleg .tpt-leg{margin:0}
 .tp .tpr-cell.on-w{color:var(--tpr-w)}.tp .tpr-cell.on-k{color:var(--tpr-k)}
 .tp .tpr-tw{max-width:100%;overflow-x:auto}.tp .tpr-tw.sc{max-height:220px;overflow:auto}
 .tp table.tpr{border-collapse:collapse;font-size:12px;width:100%}.tp table.tpr th{position:sticky;top:0;background:var(--panel);text-align:left;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line);padding:0 8px 0 0;white-space:nowrap}
@@ -57,7 +58,9 @@
 
   // ------------------------------------------------------------ texts (helps, English), given to the catalogue of the helps when there is one
   const TXT = {
-    en: { "ft.riga.copy": "Copies the values of this row to the clipboard." },
+    en: {
+      "ft.riga.copy": "Copies the values of this row to the clipboard.",
+    },
   };
   let registered = false;
   /** gives the few helps of this file (`ft.riga.*`) to the catalogue of Tabui (`TABUI_T`, texts/40_tabui_testi.js) */
@@ -228,14 +231,22 @@
     let mx = `<div class="tpr-mx" role="group" aria-label="Samples by group">`;
     for (const k of [0, 1, 2, 3]) {
       const ix = order.filter(i => klass(ss[i]) === k); if (!ix.length) continue;
-      mx += `<div class="tpr-grp"><b>${GNAME[k]}</b><div class="tpr-row">${ix.map(i => {
+      mx += `<div class="tpr-grp"><b${G.TPHELP ? ` tabindex="0"` : ""}${tt("ft.riga.g" + k)}>${GNAME[k]}</b><div class="tpr-row">${ix.map(i => {
         const s = ss[i], has = fin(s.area) && /** @type {number} */ (s.area) > 0, u = has ? (lmax > lmin ? (Math.log10(/** @type {number} */ (s.area)) - lmin) / (lmax - lmin) : 0.5) : null;
         const lab = `${s.file}: area ${fin(s.area) ? sci(/** @type {number} */ (s.area)) : "none"}, ${wordOf(s.state)}`;
-        return `<span class="tpr-cell${u == null ? "" : u < 0.5 ? " on-w" : " on-k"}" role="img" aria-label="${esc(lab)}"${u == null ? "" : ` style="background:${ramp("c", u)}"`}><span aria-hidden="true">${esc(sym(s.state))}</span></span>`;
+        const tip = `${s.file} · ${s.type || GNAME[k]}${fin(s.time) ? `, time ${s.time}` : ""} · area ${fin(s.area) ? sci(/** @type {number} */ (s.area)) : "none"} · peak ${wordOf(s.state)}`;
+        return `<span class="tpr-cell${u == null ? "" : u < 0.5 ? " on-w" : " on-k"}" role="img" tabindex="0" aria-label="${esc(lab)}"${G.TPHELP ? ` data-tt="ft.riga.cell" data-tt-text="${esc(tip)}"` : ""}${u == null ? "" : ` style="background:${ramp("c", u)}"`}><span aria-hidden="true">${esc(sym(s.state))}</span></span>`;
       }).join("")}</div></div>`;
     }
     const hasNorm = ss.some(s => fin(s.norm));
     const mxBox = document.createElement("div"); mxBox.innerHTML = mx + `</div>`; const mxEl = /** @type {HTMLElement} */ (mxBox.firstElementChild); panel.appendChild(mxEl);
+    if (G.TPTAB) {
+      const used = ["detected", "filled", "targeted", "absent"].filter(k => ss.some(s => s.state === k));
+      const lg = document.createElement("div"); lg.className = "tpr-mxleg";
+      lg.innerHTML = `<span class="tpr-mxnote">Colour = peak area (log scale, darker = more); symbol = peak state</span>${G.TPTAB.legend(used)}`;
+      panel.appendChild(lg);
+      if (G.TPHELP) G.TPHELP.attach(lg);
+    }
     const head = ["File", "Type", "Time", "Area", ...(hasNorm ? ["Normalized"] : []), "State", "Apex RT", "Edges"];
     const rowsOf = ss.map(s => [s.file, s.type || "", fin(s.time) ? String(s.time) : "", fin(s.area) ? sci(/** @type {number} */ (s.area)) : "–", ...(hasNorm ? [fin(s.norm) ? sci(/** @type {number} */ (s.norm)) : "–"] : []), wordOf(s.state), fix(s.apexRt, 2),
       fin(s.lo) && fin(s.hi) ? `${fix(s.lo, 2)}–${fix(s.hi, 2)}` : "–"]);
