@@ -31,12 +31,16 @@
 .tp .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px}.tp .kv b{color:var(--muted);font-weight:600}
 .tp-wrap{padding:0}
 #qt-nav-tab,nav button[data-v="tpmine"]{background:linear-gradient(135deg,#ffe29a,#f4c95d 55%,#d99a1d)!important;color:#3a2a00!important;border-color:#d99a1d!important;font-weight:700}
-.hero{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px}
-.tp #tp-files th{position:static}.tp .hero-i{display:inline-flex;color:var(--accent)}.hero-t{display:flex;gap:12px;align-items:center}.hero h2{margin:0;font-size:20px}.hero-s{color:var(--muted);font-size:12px}
+.hero{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:10px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px 18px}
+.tp .hero-b{min-width:0}.tp .hero h2{margin:0 0 4px;font-size:12px;font-weight:600;color:var(--muted)}.tp .hero-i{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:13px}.tp #tp-cnt{display:contents}
+.tp .hero .hc{display:inline-flex;gap:4px;align-items:baseline;box-sizing:border-box;min-height:24px;padding:2px 8px;border:1px solid var(--line);border-radius:12px}.tp .hero .hl{color:var(--muted);font-size:12px}.tp .hero b{font-variant-numeric:tabular-nums}.tp .hero .hn{font-weight:600;border-color:transparent;padding-left:0}
+.tp .hero .hc:focus-visible,.tp .hero button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}.tp .hero-l{box-sizing:border-box;min-height:24px;min-width:24px;padding:0 8px;font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink)}
+.tp .hero-x{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start}@media(max-width:900px){.tp .hero{grid-template-columns:minmax(0,1fr)}}@media(pointer:coarse){.tp .hero-x button,.tp .hero-l{min-height:40px}}
+.tp #tp-files th{position:static}
 .tp #tp-left,.tp #tp-right{min-width:0}.tp #tp-files{max-width:100%;overflow-x:auto}.tp #tp-files table{width:100%;table-layout:auto}.tp #tp-files td:first-child{max-width:min(130px,28vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tp #tp-files select{max-width:100%}.tp .fsum{font-size:12px;color:var(--muted);margin:2px 0 6px}.tp #tp-files td,.tp #tp-files th{padding:1px 6px}.tp #tp-files select,.tp #tp-files input{font-size:11px;padding:0 3px;height:20px}
 .tp .dig{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;font-size:18px;font-weight:700}.tp .dig .qi{display:inline-flex}.tp .tp-q{display:inline-grid;place-items:center;width:16px;height:16px;border:1px solid var(--muted);border-radius:50%;font-size:11px;color:var(--muted);cursor:help;margin-left:4px;font-style:normal}
-.hero{padding:8px 12px}.tp .hero-t{flex-wrap:wrap;gap:4px 10px}.tp .hero h2{font-size:16px}.tp .hero-c{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;justify-content:space-between;margin-top:4px;font-size:13px}
-.tp .hero-c b{font-variant-numeric:tabular-nums}.tp .hero-x{display:inline-flex;gap:6px;flex-wrap:wrap}.tp .hero-x button{min-height:24px;min-width:24px}
+
+.tp .hero-x button{min-height:24px;min-width:24px}
 .tp .tp-mores{margin-top:10px}.tp .tp-mores>details{border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:2px 10px;margin:0 0 4px}.tp .tp-mores>details>summary{min-height:28px;display:flex;align-items:center;color:var(--ink)}
 .tp .tp-mores>details[open]{padding-bottom:8px}.tp .tp-mores .card{border:0;padding:0;margin:0}
 .tp .lr-sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:6px 14px;align-items:start}.tp .lr-sg canvas{display:block;width:100%;height:180px}
@@ -225,7 +229,7 @@
     const FIELD = () => W.TPFIELD, parentFields = () => [$("#tp-mol"), $("#tp-smi")];
     if (W.TPFIELD) W.TPFIELD.watch(sec, () => { if ($("#tp-msg").dataset.field) msg(""); });       // the group returns to normal on a click or a key in it; so does its message
     /** @type {any} */
-    const st = { files: [], showAll: false, summary: null, sel: null, view: "tab", took: 0, cond: null, gnames: /** @type {string[]} */ ([]), gctl: null, gv: null };
+    const st = { files: [], showAll: false, summary: null, sel: null, view: "tab", took: 0, pname: "", weakOn: false, cond: null, gnames: /** @type {string[]} */ ([]), gctl: null, gv: null };
     const msg = (t, err) => { const m = $("#tp-msg"); m.textContent = t || ""; m.className = "mut" + (err ? " err" : ""); delete m.dataset.field; };
     const bar = f => { const w = Math.round(f * 100); $("#tp-bar").style.width = w + "%"; $("#tp-barbox").setAttribute("aria-valuenow", w); };
     onProgress = (t, f, m) => { if (t) msg(t); if (f != null) bar(f); if (m && window.TPLIVE) TPLIVE.event(m); };
@@ -563,7 +567,7 @@
           $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
           running = false; setBusy(false); lagNote(tStart); return;
         }
-        st.hs = null; st.summary = JSON.parse(await callRaw("run", digFiles(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
+        st.hs = null; st.pname = parent.name || ""; st.summary = JSON.parse(await callRaw("run", digFiles(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
         if (window.TPMS2) window.TPMS2.setConditions(st.summary.gruppi ? new Map(st.files.filter(f => f.kind === "ms2").map(f => [f.name, (st.cond && st.cond.campioni[st.gnames.indexOf(f.name)] || {}).serie || ""])) : null);
         st.took = performance.now() - t0; st.sel = null; st.det = {}; if (window.TPLIVE) TPLIVE.stop(true); if (typeof DIAG !== "undefined") DIAG.LONG.marca("render"); render(); $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
       } catch (e) {
@@ -602,21 +606,32 @@
       const par = s.rows.find(r => r.label === "progenitore");
       const cnt = k => s.rows.filter(r => (k === "unexp" ? r.kind === "unexpected" && good(r) : r.kind === "candidate" && r.label === k)).length;
       const nF = cnt("forte"), nP = cnt("possibile"), nU = cnt("unexp"), hl = s.decay && s.decay.half_life_min != null ? s.decay.half_life_min : null;
-      const w = (n, label, dec) => `<span class="hc"><b data-count="${n}"${dec ? ` data-dec="${dec}"` : ""}>${dec ? (+n).toFixed(dec) : n}</b> ${label}</span>`;
-      const words = [w(nF, "strong"), w(nP, "possible"), w(nU, "unexpected"), hl != null ? `parent t½ ${w(hl, "min", 1)}` : "", s.offset && s.offset.applied ? `<i>m/z</i> offset ${s.offset.offset >= 0 ? "+" : "−"}${w(Math.abs(s.offset.offset), "Da", 2)}` : "", w(s.rows.length, "ions"), `${(st.took / 1000).toFixed(1)} s`].filter(Boolean).join(" · ");
+      const nW = s.rows.filter(r => r.kind !== "unexpected" && r.label === "debole" && !notFound(r)).length, off = s.offset && s.offset.applied ? s.offset.offset : null;
+      // the summary card: three blocks (Parent, Output, Download); every item has its help, the numbers count up only without reduced motion
+      const it = (k, label, val, help, dec) => `<span class="hc" data-k="${k}"${dt(help)} tabindex="0"><span class="hl">${label}</span> <b${dec != null ? ` data-count="${val}" data-dec="${dec}"` : ""}>${dec != null ? (+val).toFixed(dec) : val}</b></span>`;
+      const pIt = [st.pname ? `<span class="hc hn" data-k="name">${esc(MOLUI.cap(st.pname))}</span>` : "", it("formula", "Neutral formula", esc(s.parent.formula || "—"), "ft.sum.formula"), it("mz", `${esc(s.parent.adduct)} <i>m/z</i>`, s.parent.mz, "ft.sum.mz"),
+        par && par.ref_rt ? it("rt", "RT", `${par.ref_rt} min`, "ft.sum.rt") : "", hl != null ? `${it("half", "t½", hl, "ft.sum.half", 1).replace("</b></span>", "</b> min</span>")}` : "",
+        off != null ? it("offset", "<i>m/z</i> offset", `${off >= 0 ? "+" : "−"}${Math.abs(off).toFixed(2)} Da`, "ft.sum.offset") : ""].filter(Boolean).join("");
+      const cIt = (k, n, label) => `<span class="hc" data-k="${k}"${dt("ft.chip." + k)} tabindex="0"><b data-count="${n}">${n}</b> ${label}</span>`;
+      const words = [cIt("strong", nF, "strong"), cIt("possible", nP, "possible"), cIt("unexpected", nU, "unexpected"),
+        nW ? `<span class="hc" data-k="weak"${dt("ft.chip.weak")} tabindex="0"><b>${nW}</b> <span id="tp-weak-w">weak evidence hidden</span></span><button type="button" id="tp-weak-s" class="hero-l"${dt("ft.sum.weakshow")}>show</button>` : ""].join("");
+      const oIt = it("ions", "Ions analysed", s.rows.length, "ft.sum.ions") + it("took", "Computed in", `${(st.took / 1000).toFixed(1)} s`, "ft.sum.took");
       const nMs2 = s.ms2_links && s.ms2_links.links ? s.ms2_links.links.length : 0, ms2c = window.TPMS2 ? window.TPMS2.card(s) : "", mrmc = mrmCard(s.mrm);
-      R.innerHTML = `<div class="hero"><div class="hero-t"><span class="hero-i">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : "⛏"}</span>
-        <h2>${nF ? "Vein found!" : nP ? "A few nuggets..." : "Poor vein"}</h2><span class="hero-s">${esc(s.parent.formula || "parent")} · ${esc(s.parent.adduct)} <i>m/z</i> ${s.parent.mz}${par && par.ref_rt ? ` · RT ${par.ref_rt} min` : ""}</span></div>
-        <div class="hero-c"><span id="tp-cnt">${words}</span><span class="hero-x"><button id="tp-x-xlsx">Excel (.xlsx)</button><button id="tp-x-csv">CSV</button><button id="tp-x-json">JSON</button><button id="tp-x-txt" title="Copy a summary to paste into the report">Copy summary</button></span></div></div>
+      R.innerHTML = `<div class="hero" role="region" aria-label="Summary of the results">
+        <section class="hero-b" aria-labelledby="tp-h-par"><h2 id="tp-h-par">Parent</h2><div class="hero-i">${pIt}</div></section>
+        <section class="hero-b" aria-labelledby="tp-h-out"><h2 id="tp-h-out">Output</h2><div class="hero-i"><span id="tp-cnt">${words}</span>${oIt}</div></section>
+        <section class="hero-b" aria-labelledby="tp-h-dl"><h2 id="tp-h-dl">Download</h2><div class="hero-x" role="group" aria-labelledby="tp-h-dl"><button type="button" id="tp-x-xlsx"${dt("ft.sum.xlsx")}>Excel (.xlsx)</button><button type="button" id="tp-x-csv"${dt("ft.sum.csv")}>CSV</button><button type="button" id="tp-x-json"${dt("ft.sum.json")}>JSON</button><button type="button" id="tp-x-txt"${dt("ft.sum.txt")}>Copy summary</button></div></section></div>
         <div class="vtabs">${(s.gruppi ? [...VIEWS, ["cond", "Compare conditions"]] : VIEWS).map(([k, n]) => `<button class="vt${st.view === k ? " on" : ""}" data-v="${k}">${n}</button>`).join("")}</div>
         <div id="tp-view"></div>
         <div class="tp-mores">${ms2c ? `<details name="tp-more" id="tp-m-ms2"><summary>MS2 matches (${nMs2})</summary>${ms2c}</details>` : ""}${mrmc ? `<details name="tp-more" id="tp-m-mrm"><summary>MRM (${s.mrm.rows.length} files)</summary>${mrmc}</details>` : ""}</div>`;
       if (window.TPMS2) window.TPMS2.mount({ st, call, refresh: ms2Refresh, show });
-      if (calmMotion()) R.querySelectorAll(".hero-c b[data-count]").forEach(countUp);
+      if (calmMotion()) R.querySelectorAll(".hero b[data-count]").forEach(countUp);
+      if (W.TPHELP) W.TPHELP.attach(R.querySelector(".hero"));
+      const ws = $("#tp-weak-s"); if (ws) ws.onclick = () => { if (st.view !== "tab") { st.view = "tab"; R.querySelectorAll(".vt").forEach(x => x.classList.toggle("on", x.getAttribute("data-v") === "tab")); view(); } if (T) T.setChip("weak", !weakOn()); weakSync(); };
       R.querySelectorAll(".vt").forEach(b => b.onclick = () => { st.view = b.dataset.v; R.querySelectorAll(".vt").forEach(x => x.classList.toggle("on", x === b)); view(); });
       $("#tp-x-xlsx").onclick = () => exportAll("xlsx"); $("#tp-x-csv").onclick = () => exportAll("csv"); $("#tp-x-json").onclick = () => exportAll("json");
       $("#tp-x-txt").onclick = async () => { try { await navigator.clipboard.writeText(summaryText()); toast("Summary copied to the clipboard"); } catch (_) { dl("summary_Tabui.txt", summaryText(), "text/plain"); } };
-      view();
+      view(); weakSync();
       const mm = $("#tp-m-mrm");           // the chart of the calibration needs the width of an open section
       if (mm) mm.addEventListener("toggle", () => { const cc = $("#tp-c-cal"); if (mm.open && cc) { const c = JSON.parse(cc.dataset.cal); chart(cc, [{ x: [0, c.hi], y: [c.intercept, c.slope * c.hi + c.intercept], color: "#2b5c8a" }, { x: c.points.map(p => p.conc), y: c.points.map(p => p.area), color: "#b42318", dots: true, w: 0 }], { xlabel: "concentration (mg/L)", x0: 0 }); } });
       if (nF && calmMotion()) confetti();
@@ -704,6 +719,12 @@
     }
     /** @type {any} the TPTAB of the results while the view "Table" is shown */
     let T = null;
+    /** the weak band of the table is off by default: the card says how many rows it hides and shows them in one click */
+    const weakOn = () => T ? T.chips.includes("weak") : !!st.weakOn;
+    function weakSync() {
+      const w = $("#tp-weak-w"), b = $("#tp-weak-s"), on = weakOn(); if (!w || !b) return;
+      w.textContent = `weak evidence ${on ? "shown" : "hidden"}`; b.textContent = on ? "hide" : "show"; b.setAttribute("aria-pressed", String(on));
+    }
     const lvSort = r => (r.level ?? 9) * 1000 - (r.score ?? 0);
     const idLabel = r => r.kind === "unexpected" && !r.ms2_target ? `m/z ${r.mz.toFixed(2)} (unexpected)` : MOLUI.cap(r.name);
     /** a hypothesis of the rules with no peak in any sample: searched, not detected (no TP name, no area) */
@@ -755,7 +776,9 @@
         ...(ms2 ? [chip("ms2", "With MS2", "ft.chip.ms2", r => r.ms2 > 0, false)] : [])];
       T = TPTAB.mount(host, { id: "tp-t", label: "Transformation product candidates", cols, rowId: r => r.id, esc, name: r => `${r.tp_name || idLabel(r)}, ${idLabel(r)}, m/z ${r.mz.toFixed(2)}`, columns: true, chips, rowClass: r => notFound(r) ? "tpt-nd" : "", exportName: (s.parent.formula || "parent") + "_Tabui_view",
         search: r => [r.tp_name, r.name, r.formula, String(r.mz), r.delta, r.net_change, r.modification].join(" "), pin: r => r.label === "progenitore",
-        tabs: TPRIGA.tabs, head: (r, box) => TPRIGA.head(box, headModel(r)), onOpen: (r, body, tab) => { void fillTab(r, body, tab); } });
+        tabs: TPRIGA.tabs, head: (r, box) => TPRIGA.head(box, headModel(r)), onOpen: (r, body, tab) => { void fillTab(r, body, tab); },
+        onFilter: keys => { st.weakOn = keys.includes("weak"); weakSync(); } });
+      st.weakOn = T.chips.includes("weak"); weakSync();
       host.insertAdjacentHTML("beforeend", TPTAB.legend(["detected", "absent"], true));
       T.setRows(tableRows()); T.sortBy("level", 1);
       const box = /** @type {HTMLInputElement | null} */ ($("#tp-nd"));
