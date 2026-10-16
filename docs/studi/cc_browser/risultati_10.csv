@@ -1,0 +1,31 @@
+molecule,smiles,class_atoms,f_minus_alpb,f_zero_alpb,f_minus_gas,f_minus_eht_sciform
+phenol,"Oc1ccccc1","4",0.0814,0.0562,0.0855,0.3328
+phenol,"Oc1ccccc1","2 6",0.0467,0.0586,0.0473,0.0900
+phenol,"Oc1ccccc1","3 5",0.0334,0.0525,0.0377,0.0801
+anisole,"COc1ccccc1","5",0.0670,0.0499,0.0732,0.3147
+anisole,"COc1ccccc1","3 7",0.0406,0.0550,0.0412,0.0984
+anisole,"COc1ccccc1","4 6",0.0275,0.0489,0.0326,0.0829
+toluene,"Cc1ccccc1","4",0.0717,0.0622,0.0771,0.3193
+toluene,"Cc1ccccc1","2 6",0.0370,0.0462,0.0408,0.0992
+toluene,"Cc1ccccc1","3 5",0.0311,0.0448,0.0381,0.0714
+benzoic_acid,"OC(=O)c1ccccc1","5 7",0.0436,0.0334,0.0462,0.2499
+benzoic_acid,"OC(=O)c1ccccc1","4 8",0.0408,0.0381,0.0416,0.2501
+benzoic_acid,"OC(=O)c1ccccc1","6",0.0264,0.0430,0.0296,0.0000
+nitrobenzene,"[O-][N+](=O)c1ccccc1","5 7",0.0426,0.0304,0.0463,0.1788
+nitrobenzene,"[O-][N+](=O)c1ccccc1","4 8",0.0385,0.0335,0.0410,0.1563
+nitrobenzene,"[O-][N+](=O)c1ccccc1","6",0.0280,0.0351,0.0284,0.1867
+chlorobenzene,"Clc1ccccc1","4",0.0705,0.0640,0.0722,0.3144
+chlorobenzene,"Clc1ccccc1","2 6",0.0349,0.0447,0.0354,0.1166
+chlorobenzene,"Clc1ccccc1","3 5",0.0337,0.0451,0.0349,0.0613
+aniline,"Nc1ccccc1","4",0.0700,0.0497,0.0776,0.3150
+aniline,"Nc1ccccc1","2 6",0.0440,0.0553,0.0451,0.1030
+aniline,"Nc1ccccc1","3 5",0.0278,0.0489,0.0335,0.0694
+naphthalene,"c1ccc2ccccc2c1","2 4 7 9",0.0540,0.0536,0.0554,0.1814
+naphthalene,"c1ccc2ccccc2c1","0 1 5 6",0.0338,0.0328,0.0370,0.0686
+carbamazepine,"NC(=O)N1c2ccccc2C=Cc2ccccc21","10 11",0.0302,0.0375,0.0260,0.1548
+carbamazepine,"NC(=O)N1c2ccccc2C=Cc2ccccc21","6 15",0.0254,0.0313,0.0279,0.1017
+carbamazepine,"NC(=O)N1c2ccccc2C=Cc2ccccc21","7 14",0.0228,0.0191,0.0271,0.0133
+carbamazepine,"NC(=O)N1c2ccccc2C=Cc2ccccc21","5 16",0.0133,0.0139,0.0126,0.0127
+carbamazepine,"NC(=O)N1c2ccccc2C=Cc2ccccc21","8 13",0.0128,0.0176,0.0140,0.0591
+paracetamol,"CC(=O)Nc1ccc(O)cc1","6 9",0.0335,0.0336,0.0325,0.0760
+paracetamol,"CC(=O)Nc1ccc(O)cc1","5 10",0.0318,0.0350,0.0297,0.1000

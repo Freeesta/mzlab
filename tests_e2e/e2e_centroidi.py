@@ -9,7 +9,7 @@ from lib import ROOT
 sys.path.insert(0, str(ROOT / "tools"))
 import dati_sintetici as ds
 
-PORT = 8837
+from lib import free_port; PORT = free_port()
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))
     except Exception as e: print("  ", (name, "FAIL " + str(e)[:600]))

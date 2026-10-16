@@ -134,7 +134,7 @@
         <p>${esc(pur.badge || "")}${pur.purity != null ? ` (${num(pur.purity, 2)})` : ""}${(pur.badge_reasons || []).length ? ": " + esc(pur.badge_reasons.join("; ")) : ""}</p>
         <h4>RT versus logP</h4>${rtSvg(rt) || ""}<p>${esc(rt.note || (rt.ok == null ? "" : rt.ok ? "within the window" : "outside the window"))}</p></div></div>
       <h4>Fragments explained (${ev.n_explained ?? 0} of ${ev.n_peaks ?? 0})</h4>
-      ${frag ? `<table><caption class="sr-only">Fragments explained</caption><thead><tr><th scope="col">m/z</th><th scope="col">%</th><th scope="col">formula</th><th scope="col">ppm</th><th scope="col">loss</th></tr></thead><tbody>${frag}</tbody></table>` : "<p>none</p>"}
+      ${frag ? `<table><caption class="sr-only">Fragments explained</caption><thead><tr><th scope="col">m/z</th><th scope="col">%</th><th scope="col">fragment ion formula</th><th scope="col">ppm</th><th scope="col">loss</th></tr></thead><tbody>${frag}</tbody></table>` : "<p>none</p>"}
       <h4>Alternatives with the same formula</h4>
       ${alts ? `<table><caption class="sr-only">Alternatives with the same formula</caption><thead><tr><th scope="col">name</th><th scope="col">source</th><th scope="col">score</th><th scope="col">peaks</th><th scope="col">logP</th></tr></thead><tbody>${alts}</tbody></table>` : "<p>none found in the libraries of the campaign</p>"}
       <fieldset class="row"><legend>Checklist (tick what you have seen)</legend><ul class="bn-chk">${checks}</ul></fieldset>

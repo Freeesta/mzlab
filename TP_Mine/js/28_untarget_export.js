@@ -4,7 +4,7 @@
 (() => {
   "use strict";
   const G = typeof window !== "undefined" ? window : globalThis;
-  const HEAD = ["key", "polarity", "feature_id", "mz", "rt_min", "level", "level_proposed", "level_decided", "best_candidate", "library", "formula", "inchikey", "smiles", "entropy", "cosine", "shared_peaks", "delta_ppm",
+  const HEAD = ["key", "polarity", "feature_id", "mz", "rt_min", "level", "level_proposed", "level_decided", "best_candidate", "library", "neutral_formula", "inchikey", "smiles", "entropy", "cosine", "shared_peaks", "delta_ppm",
     "ms2_peaks", "ms2_scans", "library_record", "library_authors", "library_license", "evidence", "external_evidence", "table_file", "table_sha256"];
   const NOTE = "Candidates with a level and their evidence, never identifications. Levels: Schymanski et al. 2014. The level 2b is only ever the chemist's decision.";
   const pol = f => (f.pol > 0 ? "POS" : f.pol < 0 ? "NEG" : "");
