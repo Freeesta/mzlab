@@ -25,7 +25,7 @@ const NATIVO = {
     return out;
   },
   // the text key of a phase of the loading of a sample (the event mzlab-index carries `phase`), for CONVROWS and the rows of the loading
-  rowState(phase) { return { read: "nread", scans: "nscan", chrom: "nchrom" }[phase] || "index"; },
+  rowState(phase) { return { read: "nread", open: "nopen", scans: "nscan", chrom: "nchrom" }[phase] || "index"; },
 };
 
 if (typeof module !== "undefined") module.exports = NATIVO;

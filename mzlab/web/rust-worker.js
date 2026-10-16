@@ -171,7 +171,10 @@ async function lrMigrate() {                                              // wha
     try { await ARCH.put("files", n, buf instanceof Blob ? buf : new Uint8Array(buf)); await safe(() => tx("files", "readwrite", s => s.delete(n))); } catch (e) { /* it stays where it is */ }
   }
 }
+const CANCELLED = new Set();                                              // names whose loading the page cancelled (lr_cancel): the copy and the index stop, a new lr_put starts afresh
+const cancelled = () => JSON.stringify({ error_key: "err.load.cancelled", params: {} });
 async function lrPut(m) {                                              // an uploaded file: into OPFS, replacing the one of the same name and its index
+  CANCELLED.delete(m.name);
   if (!m.nat) await ARCH.ensureRoom(m.blob.size, m.name);                 // room first (error.quota with the MB needed and free), never write hoping; held for the file and its index until lr_index ends
   idxPool().cancel(m.name);
   engine.close(slotOf(m.name));
@@ -182,7 +185,7 @@ async function lrPut(m) {                                              // an upl
   await tilesDrop(m.name, null);
   let f;
   if (m.nat) {                                                        // a sample of a maker's file: its members go to OPFS (the progress is the copy), the file of the program is the stub
-    f = await nativo.put(m, frac => postMessage({ op: "progress", id: m.id, frac, phase: "read" }));
+    f = await nativo.put(m, frac => { if (CANCELLED.has(m.name)) throw cancelled(); postMessage({ op: "progress", id: m.id, frac, phase: "read" }); });      // «Cancel» of the page: the copy stops at the next piece
     lrFile.set(m.name, f);
     await ARCH.persistOnce();
     return { info: JSON.stringify({ size: f.size }), files: [[m.name, f]] };
@@ -209,11 +212,13 @@ async function lrOp(m) {
       return { info: JSON.stringify(out.map(({ file, ...r }) => r)), files: out.map(o => [o.name, o.file]) };
     }
     case "lr_put": return lrPut(m);
+    case "lr_cancel": { for (const n of m.names || []) { CANCELLED.add(n); idxPool().cancel(n); } return { info: "{}" }; }      // «Cancel» of the loading: the builders of these files end now
     case "lr_index": try {                                                    // the scan table (Rust), the index (a short-lived worker of the pool), then the index is opened
       const kept = await ARCH.get("idx", m.name + ".mzidx"), keptInfo = kept && await safe(() => infoDi("idx", kept));
       if (nuovo("idx", keptInfo)) jerr("error.newerFormat", { file: m.name, version: keptInfo.versione_formato });      // an index of a newer program stays as it is: no new one is built over it
       const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.indexJob(m.name), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
-      const onProgress = p => postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase });
+      if (CANCELLED.has(m.name)) throw cancelled();
+      const onProgress = p => postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase, done: p.done, total: p.total, wait: p.wait });      // wait: the pool has no free worker yet
       const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, onProgress }
         : { name: m.name, blob: f, inputs: Array.from(prepare_upload(f.size, readerFor(f), m.name)).slice(0, 8), part, onProgress });      // frac: how far the builder has read
       if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
@@ -221,6 +226,7 @@ async function lrOp(m) {
       }
       if (!res.ok) {                                                                // the true cause reaches the page: the error of the builder (a key), else its text
         await ARCH.remove("idx", part);
+        if (res.reason === "cancelled") throw cancelled();
         if (res.reason === "memory") jerr("error.memoryBudget");
         let key = ""; try { key = JSON.parse(res.text).error_key || ""; } catch (_) { /* not JSON */ }
         if (key) throw res.text;

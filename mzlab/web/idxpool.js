@@ -77,7 +77,11 @@ export function createPool({ workerUrl, size, budget = 64, notify = /** @type {(
   return {
     // job: { name, blob, inputs, part, budget? } or { name, nat, part } (a dataset of a maker, rust-nativo.js) or { name, msg, transfer?, onProgress? }
     build(job) {
-      return new Promise(resolve => { queue.push({ ...job, resolve, tried: false, done: false }); wake(); });
+      return new Promise(resolve => {
+        const j = { ...job, resolve, tried: false, done: false };
+        queue.push(j); wake();
+        if (queue.includes(j) && j.onProgress) j.onProgress({ op: "progress", wait: true });      // no free worker: the page says the file is queued, not stuck
+      });
     },
     // the order of the list: the files named first are the first to start (the queued ones; those already running continue)
     prioritize(names) {

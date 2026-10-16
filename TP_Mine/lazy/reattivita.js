@@ -8,15 +8,16 @@
   const G = /** @type {any} */ (window);
   const esc = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"]/g, c => /** @type {any} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const admin = () => typeof G.uipAdminOn === "function" && G.uipAdminOn();
-  /** @typedef {{ i: number, el: string, heavy_index: number|null, x: number, y: number, z: number, q: number, f_plus: number, f_zero: number, f_minus: number, dual: number }} RAtom */
-  /** @typedef {{ format: string, version: number, engine?: string, method?: string, solvent?: string, smiles: string, atoms: RAtom[], bonds?: {a:number,b:number,order?:number}[], hbonds?: {donor_h:number,acceptor:number}[], global?: Record<string, number>, conformers?: {n?:number, chosen?:number, f_minus_spread?:number}, scc?: {converged?: boolean|boolean[], iterations?: number|number[]}, notes?: string[], cite?: any[], ch_sites?: {class:string, heavy_index:number, n_h:number, f_minus:number}[] }} Reatt */
+  /** @typedef {{ i: number, el: string, heavy_index: number|null, x: number, y: number, z: number, q: number|null, f_plus: number, f_zero: number|null, f_minus: number, dual: number }} RAtom */
+  /** @typedef {{ format: string, version: number, engine?: string, method?: string, solvent?: string, smiles: string, atoms: RAtom[], bonds?: {a:number,b:number,order?:number}[], hbonds?: {donor_h:number,acceptor:number}[], global?: Record<string, number|null>, conformers?: {n?:number, chosen?:number, f_minus_spread?:number|null}, scc?: {converged?: boolean|boolean[], iterations?: number|number[]}, notes?: string[], cite?: any[], ch_sites?: {class:string, heavy_index:number, n_h:number, f_minus:number}[] }} Reatt */
 
   const CARDS = /** @type {{ id: string, label: string, key: keyof RAtom }[]} */ ([
     { id: "fminus", label: "f(−)", key: "f_minus" }, { id: "fzero", label: "f(0)", key: "f_zero" }, { id: "fplus", label: "f(+)", key: "f_plus" }]);
   const TABS = ["f(−)", "f(0)", "f(+)", "Info", "Notes", "JSON"];
   const ERR = /** @type {Record<string, string>} */ ({
     "error.chem.element": "An element of the parent is not covered by the engine.", "error.chem.smiles": "The SMILES of the parent could not be read.",
-    "error.chem.scc": "The self-consistent field did not converge.", "error.chem.geometry": "No 3D geometry could be built.", "error.featFailed": "The engine could not be started.",
+    "error.chem.scc": "The self-consistent field did not converge.", "error.chem.geometry": "No 3D geometry could be built.", "error.chem.embed": "No 3D geometry could be built.",
+    "error.chem.charge": "The charge of the molecule is not possible for the engine.", "error.chem.opts": "The options of the calculation are not valid.", "error.featFailed": "The engine could not be started.",
   });
   const NOTES = [
     "Prev.: prediction for the isolated molecule in implicit water; not evidence.",
@@ -47,7 +48,7 @@
 
   /** the index written for an atom: 1-based among the heavy atoms (as in «Substitution position»), H<n> for the hydrogens @param {RAtom} a */
   const indexOf = a => a.heavy_index == null ? "H" + a.i : String(a.heavy_index + 1);
-  const num = (/** @type {any} */ v, d = 4) => Number.isFinite(+v) ? (+v).toFixed(d) : "—";
+  const num = (/** @type {any} */ v, d = 4) => v !== null && v !== "" && Number.isFinite(+v) ? (+v).toFixed(d) : "—";
 
   // ------------------------------------------------------------ exports
   /** @param {Reatt} r @returns {string} XYZ: the number of atoms, a comment, one line per atom (N + 2 lines) */
@@ -124,9 +125,9 @@
     const g = r.global || {}, c = r.conformers || {}, s = r.scc || {};
     const row = (/** @type {string} */ k, /** @type {any} */ v) => v === undefined || v === null || v === "" ? "" : `<tr><th scope="row" style="text-align:left">${esc(k)}</th><td style="text-align:left">${esc(v)}</td></tr>`;
     const conv = Array.isArray(s.converged) ? s.converged.map(x => (x ? "yes" : "no")).join(" / ") + " (N, N+1, N−1)" : s.converged === undefined ? "" : s.converged ? "yes" : "no";
-    const ev = (/** @type {string} */ k, /** @type {string} */ l) => g[k] === undefined ? "" : row(l, num(g[k], 3) + " eV");
+    const ev = (/** @type {string} */ k, /** @type {string} */ l) => g[k] == null ? "" : row(l, num(g[k], 3) + " eV");
     return `<table class="tpr-t"><tbody>${row("Method", r.method)}${row("Solvent", r.solvent && r.solvent !== "none" ? r.solvent.charAt(0).toUpperCase() + r.solvent.slice(1) : "None")}${row("Engine", r.engine)}${row("SMILES", r.smiles)}${row("Atoms", r.atoms.length)}`
-      + `${row("Conformers", c.n !== undefined ? `${c.n}${c.chosen !== undefined ? ", chosen " + c.chosen : ""}${c.f_minus_spread !== undefined ? ", spread of f(−) " + num(c.f_minus_spread, 3) : ""}` : "")}`
+      + `${row("Conformers", c.n !== undefined ? `${c.n}${c.chosen !== undefined ? ", chosen " + c.chosen : ""}${c.f_minus_spread != null ? ", spread of f(−) " + num(c.f_minus_spread, 3) : ""}` : "")}`
       + `${ev("homo_ev", "HOMO")}${ev("lumo_ev", "LUMO")}${ev("gap_ev", "HOMO–LUMO gap")}${ev("ip_ev", "Ionisation potential")}${ev("ea_ev", "Electron affinity")}${ev("mu_ev", "Chemical potential μ")}${ev("eta_ev", "Hardness η")}${ev("omega_ev", "Electrophilicity ω")}`
       + `${row("SCC converged", conv)}${row("SCC iterations", Array.isArray(s.iterations) ? s.iterations.join(" / ") : s.iterations)}</tbody></table>`;
   }
