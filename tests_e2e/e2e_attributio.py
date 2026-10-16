@@ -60,7 +60,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch()
         pg0 = new_page(b, False)
-        attendi(pg0, "typeof uipAdminOn === 'function' && typeof QTOOLS !== 'undefined'")
+        pg0.wait_for_function("typeof uipAdminOn === 'function' && typeof QTOOLS !== 'undefined'", timeout=120000)
         step("without the administrator mode there is no entry", lambda: (_ for _ in ()).throw(AssertionError("entry found")) if pg0.locator("[data-v=attributio], #v-attributio").count() else None)
         pg0.close()
 
