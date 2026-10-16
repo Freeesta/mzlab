@@ -73,7 +73,7 @@ try:
         step("keyboard: Tab reaches the visible controls, each with a visible focus indicator", tab_reach)
         def reflow():
             ctx = r.b.new_context(viewport={"width": 320, "height": 800}, locale="it-IT"); q = ctx.new_page()
-            q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
+            q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
             try:
                 q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); q.wait_for_timeout(1500)
                 q.set_input_files("#pick", [mz("B_FullMass-t0")]); q.wait_for_timeout(800); (q.click("#opbtn") if q.locator("#opbtn").is_visible() else None); ready(q)

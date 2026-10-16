@@ -54,7 +54,7 @@ try:
         def two_tabs():
             pg.evaluate("fetch('api/notebook',{method:'POST',body:'{}'})")
             ctx = r.b.new_context(viewport={"width": 1440, "height": 900})
-            ctx.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
+            ctx.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
             a, q = ctx.new_page(), ctx.new_page()
             for t in (a, q): t.goto(f"http://127.0.0.1:{r.port}/#/disegno"); t.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
             a.fill("#ex-name", "tab_a"); a.dispatch_event("#ex-name", "change"); a.wait_for_timeout(1500)

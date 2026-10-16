@@ -64,6 +64,33 @@ try:
             pg.keyboard.press("Alt+ArrowDown"); pg.wait_for_timeout(300)
             assert [len(x) for x in rows()] == [1, 1, 1], rows()
         step("Alt+arrows on the grip", keys)
+        ROWS = "(() => { const l = stackOrder().slice(-3).map(q => q.id); return LAYOUT.righeDi(stackOrder()).map(r => r.filter(q => l.includes(q.id)).length).filter(n => n).join() })()"
+        def attesa(forma): attendi(pg, f"{ROWS} === '{forma}'")
+        def disp_menu():
+            P = f"stackOrder().find(q => q.id === {pg.evaluate('stackOrder().at(-3).id')})"          # the first of the three: the last ones below the fold are not drawn yet
+            def open_menu():
+                attendi(pg, f"(()=>{{const p={P};p.cv.scrollIntoView({{block:'center'}});p.cv.focus();return document.activeElement===p.cv&&!!p._a&&!!p._a.X}})()")
+                pg.keyboard.press("Shift+F10"); attendi(pg, "!document.querySelector('#ctx').hidden")
+                return pg.evaluate("[...document.querySelectorAll('#ctx [data-azione^=\\'disp.\\']')].map(d=>[d.dataset.azione,d.getAttribute('aria-disabled')==='true',d.textContent.replace(/\\u2713/g,'')])")
+            pg.evaluate("AFFIANCA.ripristina()"); attesa("1,1,1"); assert [len(x) for x in rows()] == [1, 1, 1], rows()
+            it = open_menu(); ids = [i[0] for i in it]
+            assert ids[:2] == ["disp.affianca", "disp.affianca"] and ids[-4:] == ["disp.su", "disp.giu", "disp.intera", "disp.uguali", "disp.ripristina"][-4:] or {"disp.su", "disp.giu", "disp.intera", "disp.uguali", "disp.ripristina"} <= set(ids), ids
+            dis = {i[0]: i[1] for i in it}
+            assert dis["disp.uguali"] and dis["disp.intera"] and dis["disp.ripristina"], dis           # alone in its row, nothing to restore: grey, never hidden
+            assert any("Affianca a" in i[2] and not i[1] for i in it), it
+            pg.click("#ctx [data-azione='disp.affianca']:not([aria-disabled]):has-text('a 3 ')"); attesa("2,1")
+            assert [len(x) for x in rows()] == [2, 1], rows()
+            it = open_menu(); dis = {i[0]: i[1] for i in it}
+            assert not dis["disp.uguali"] and not dis["disp.intera"] and not dis["disp.ripristina"], dis
+            pg.click("#ctx [data-azione='disp.uguali']"); attendi(pg, "(()=>{const s=stackOrder().slice(-3,-1);return Math.abs(s[0].w-s[1].w)<=8})()")
+            a, b = pg.evaluate("stackOrder().slice(-3, -1).map(q => q.w)"); assert abs(a - b) <= 8, (a, b)
+            open_menu(); pg.click("#ctx [data-azione='disp.intera']"); attesa("1,1,1")
+            assert [len(x) for x in rows()] == [1, 1, 1], rows()
+            pg.evaluate("AFFIANCA.fai(stackOrder().at(-2), {k:'dx', t:stackOrder().at(-3).id}, false)"); attesa("2,1")
+            open_menu(); pg.click("#ctx [data-azione='disp.ripristina']"); attesa("1,1,1")
+            assert [len(x) for x in rows()] == [1, 1, 1], rows()
+            pg.keyboard.press("Control+z"); attesa("2,1"); assert [len(x) for x in rows()] == [2, 1], rows()           # the reset can be undone
+        step("right-click menu: the arrangement entries (group disp) do what the menu of the grip does; grey when nothing to do", disp_menu)
         def divider():
             pg.evaluate("(() => { const s = stackOrder().slice(-3); const a = s[1], b = s[2]; AFFIANCA.fai(b, {k:'dx', t:a.id}, false); })()"); pg.wait_for_timeout(300)
             s = pg.query_selector(".aff-sep"); assert s, "no divider"
@@ -72,7 +99,7 @@ try:
             s.focus(); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(300)
             w1 = pg.evaluate("stackOrder().at(-2).w"); assert w1 == w0 + 16, (w0, w1)
             pg.keyboard.press("Enter"); pg.wait_for_timeout(300)
-            a, b = pg.evaluate("stackOrder().slice(-2).map(q => q.w)"); assert abs(a - b) <= 8, (a, b)
+            a, b = pg.evaluate("stackOrder().slice(-3, -1).map(q => q.w)"); assert abs(a - b) <= 8, (a, b)
         step("divider: keys change the widths, Enter makes them equal", divider)
         def narrow():
             pg.set_viewport_size({"width": 860, "height": 2200}); pg.wait_for_timeout(1000)
