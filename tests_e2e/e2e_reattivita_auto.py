@@ -32,30 +32,39 @@ FILES = sorted(str(p) for p in (ROOT / "tests" / "data" / "gruppi").glob("*.mzML
 SMILES = "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O"          # bentazone
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1); errs = []; reqs = []
+import urllib.request
+_t0 = time.time()
+while time.time() - _t0 < 30:
+    try: urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1); break
+    except Exception: pass
+errs = []; reqs = []
 CTL = "#tp-reatt-ctl"
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None); pg = b.new_context(viewport={"width": 1500, "height": 1400}, reduced_motion="reduce").new_page()
-        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
-        pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("request", lambda r: reqs.append(r.url))
+        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');localStorage.setItem('qqq.admin','1');}catch(_){}")
+        pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("request", lambda r: reqs.append(r.url)); logs = []; pg.on("console", lambda m: logs.append(m.text[:200]))
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#nav", timeout=120000)
         pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
         pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
+        pg.evaluate("localStorage.removeItem('qqq.admin')")        # Tabui is open; from here the administrator mode is off (uipAdminOn reads it at every call)
         pg.set_input_files("#tp-in", FILES)
         pg.wait_for_function("document.querySelectorAll('#tp-files tr').length >= 9", timeout=600000)
         pg.fill("#tp-smi", SMILES)
         pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('241.0641')", timeout=60000)
-        pg.wait_for_timeout(1500)
-        chem = lambda: [u for u in reqs if "chem" in u.rsplit("/", 1)[-1] and (u.endswith(".wasm") or u.endswith(".js")) or u.endswith("chem-worker.js")]
+        chem = lambda: [u for u in reqs if "mzlab_chem_wasm" in u ]
 
+        idle = lambda: pg.evaluate("new Promise(r => requestIdleCallback(() => setTimeout(r, 3500), {timeout: 5000}))")      # the idle moment that would start the calculation has passed
         def dig():
             """one Dig; returns its time in ms"""
-            t0 = time.time(); pg.click("#tp-go"); pg.wait_for_function("document.getElementById('tp-msg').textContent === 'Done.'", timeout=300000)
+            pg.wait_for_function("!document.getElementById('tp-go').disabled && !document.getElementById('tp-live')")
+            t0 = time.time(); pg.click("#tp-go")
+            try: pg.wait_for_function("document.getElementById('tp-msg').textContent === 'Done.'", timeout=300000)
+            except Exception: raise AssertionError("Dig did not finish: " + pg.inner_text("#tp-msg") + str(pg.evaluate("[document.getElementById('tp-go').disabled, document.getElementById('tp-right').innerText.slice(0,200)]")))
             return (time.time() - t0) * 1000
         base = []
         def nonadmin():
-            base.append(dig()); pg.wait_for_timeout(3000)
+            base.append(dig()); idle()
             assert pg.evaluate("typeof window.TPREATTAUTO === 'undefined' && typeof window.TPREATT === 'undefined'"), "scripts loaded without administrator mode"
             assert not pg.evaluate("document.querySelector('#tp-reatt .tpr') || !document.querySelector('#tp-reatt-ctl').hidden || document.querySelector('#tp-reatt-ctl').firstChild"), "panel or bar without administrator mode"
             assert not chem(), chem()
@@ -63,8 +72,8 @@ try:
         base.append(dig())
 
         pg.evaluate("localStorage.setItem('qqq.admin', '1')")
-        pg.fill("#tp-smi", SMILES + " "); pg.fill("#tp-smi", SMILES)           # the structure is drawn again: scripts load, the panel waits
-        pg.wait_for_function("window.TPREATTAUTO && document.querySelector('#tp-reatt .tpr')?.dataset.state === 'waiting'", timeout=60000)
+        pg.fill("#tp-smi", "CCO"); pg.wait_for_function("window.TPREATTAUTO && window.TPREATTAUTO.info().smiles === 'CCO'", timeout=60000); pg.fill("#tp-smi", SMILES)           # the structure is drawn again: scripts load, the panel waits
+        pg.wait_for_function("window.TPREATTAUTO && window.TPREATTAUTO.info().smiles === %r && document.querySelector('#tp-reatt .tpr')?.dataset.state === 'waiting'" % SMILES, timeout=60000)
         def idle_before():
             assert not chem(), "chem fetched before the TPs"
             assert pg.evaluate("window.TPREATTAUTO.info().phase") == "waiting" and not pg.evaluate("document.querySelector('#tp-reatt-ctl').hidden")
@@ -73,8 +82,10 @@ try:
 
         def auto():
             pg.evaluate("() => { window.__st = []; new MutationObserver(() => { const s = document.querySelector('#tp-reatt .tpr')?.dataset.state; const l = window.__st; if (s && l[l.length - 1] !== s) l.push(s); }).observe(document.getElementById('tp-reatt'), {subtree: true, childList: true, attributes: true}); return 1; }")
+            pg.evaluate("() => { window.__calls = []; for (const k of ['attach','tpsStart','tpsDone','tpsEnd','cancel']) { const f = window.TPREATTAUTO[k]; window.TPREATTAUTO[k] = (...a) => { window.__calls.push(k); return f(...a); }; } }")
             t = dig()
-            pg.wait_for_function("window.TPREATTAUTO.info().phase === 'done'", timeout=120000)
+            try: pg.wait_for_function("window.TPREATTAUTO.info().phase === 'done'", timeout=120000)
+            except Exception: raise AssertionError(str((pg.evaluate("window.TPREATTAUTO.info()"), pg.inner_text("#tp-reatt")[:200], pg.inner_text(CTL)[:100], logs[-3:], pg.evaluate('window.__calls'))))
             order = pg.evaluate("window.__st")
             assert order[:2] == ["waiting", "computing"], order
             assert pg.evaluate("document.querySelectorAll('#tp-reatt .tpr-tab tbody tr').length") >= 24, "the table has the values (bentazone: 24 atoms with H)"
@@ -113,18 +124,18 @@ try:
         def cancelled():
             pg.click("#tp-go"); pg.wait_for_function("window.TPLIVE && TPLIVE.phases() === 'xic'", timeout=120000)
             pg.click("#tp-live-cancel"); pg.wait_for_function("document.getElementById('tp-msg').textContent === 'Cancelled.'", timeout=30000)
-            pg.wait_for_timeout(2500)
+            idle()
             i = pg.evaluate("window.TPREATTAUTO.info()"); assert i["phase"] == "waiting" and not i["tpsBusy"] and not i["worker"], i
             assert not pg.locator(CTL + " .tpra-re").is_disabled(), "Recompute is blocked after a cancelled Dig"
         step("a cancelled Dig starts nothing and frees «Recompute»", cancelled)
 
         def failed():
             pg.evaluate("window.TPREATTAUTO.cancel()")
-            pg.fill("#tp-smi", "[Xe]"); pg.wait_for_function("window.TPREATTAUTO.info().phase === 'waiting'", timeout=30000)
+            pg.fill("#tp-smi", "CC(C"); pg.wait_for_function("window.TPREATTAUTO.info().smiles === 'CC(C'", timeout=30000)
             pg.click(CTL + " .tpra-re")
             pg.wait_for_function("window.TPREATTAUTO.info().phase === 'failed'", timeout=60000)
             assert "failed" in pg.inner_text("#tp-reatt .tpr") and not pg.locator(CTL + " .tpra-retry").is_hidden(), "no message or no Retry"
-            pg.fill("#tp-smi", SMILES); pg.wait_for_function("window.TPREATTAUTO.info().phase === 'waiting'", timeout=30000)
+            pg.fill("#tp-smi", SMILES); pg.wait_for_function("window.TPREATTAUTO.info().smiles === %r" % SMILES, timeout=30000)
         step("a SMILES the engine refuses gives «failed» with the reason and a «Retry» button", failed)
 
         def timing():

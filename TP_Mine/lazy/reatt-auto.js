@@ -8,8 +8,8 @@
   const G = /** @type {any} */ (window);
   const admin = () => typeof G.uipAdminOn === "function" && G.uipAdminOn();
   const DEFAULTS = { solvent: "water", conformers: 4 };
-  /** @type {{ host: HTMLElement|null, ctl: HTMLElement|null, smiles: string, gen: number, worker: Worker|null, workerUrl: string, tpsBusy: boolean, timer: any, phase: string, opts: { solvent: string, conformers: number }, cache: Map<string, any>, version: string, native: Promise<any>|null, pool: any, calls: Map<number, { ok: (r: any) => void, ko: (e: any) => void }>, seq: number, man: any, canon: Map<string, string> }} */
-  const st = { host: null, ctl: null, smiles: "", gen: 0, worker: null, workerUrl: "", tpsBusy: false, timer: null, phase: "idle", opts: { ...DEFAULTS }, cache: new Map(), version: "", native: null, pool: null, calls: new Map(), seq: 0, man: null, canon: new Map() };
+  /** @type {{ host: HTMLElement|null, ctl: HTMLElement|null, smiles: string, gen: number, worker: Worker|null, workerUrl: string, tpsBusy: boolean, ready: boolean, timer: any, phase: string, opts: { solvent: string, conformers: number }, cache: Map<string, any>, version: string, native: Promise<any>|null, pool: any, calls: Map<number, { ok: (r: any) => void, ko: (e: any) => void }>, seq: number, man: any, canon: Map<string, string> }} */
+  const st = { host: null, ctl: null, smiles: "", gen: 0, worker: null, workerUrl: "", tpsBusy: false, ready: false, timer: null, phase: "idle", opts: { ...DEFAULTS }, cache: new Map(), version: "", native: null, pool: null, calls: new Map(), seq: 0, man: null, canon: new Map() };
 
   const CSS = `.tpra{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:6px 0;font-size:12px}.tpra label{display:inline-flex;align-items:center;gap:4px}
 .tpra select,.tpra input{min-height:28px;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:2px 6px}.tpra input{width:4.5em}
@@ -122,16 +122,18 @@
   // ---------------------------------------------------------------- called by 20_tpmine.js
   /** the parent has a new SMILES (or none): whatever ran is stopped and the panel waits for the TPs @param {HTMLElement} host @param {string} smiles */
   function attach(host, smiles) {
-    cancel(); st.host = host; st.smiles = smiles || "";
+    const again = st.ready && !!smiles && smiles === st.smiles;       // the card was drawn again after the TPs (the results page replaces it): the calculation goes on
+    cancel(); st.host = host; st.smiles = smiles || ""; if (!again) st.ready = false;
     st.ctl = document.getElementById("tp-reatt-ctl"); if (st.ctl) { st.ctl.hidden = !admin() || !st.smiles; if (admin()) build(); }
     setPhase("waiting"); status(st.tpsBusy ? "waiting for TPs" : ""); if (G.TPREATT && admin() && st.smiles) G.TPREATT.state(host, "waiting");
+    if (again) schedule();
   }
   /** a run of the TPs begins: the calculation stops and waits */
-  function tpsStart() { st.tpsBusy = true; cancel(); if (st.host && st.smiles && admin() && G.TPREATT) { G.TPREATT.state(st.host, "waiting"); setPhase("waiting"); status("waiting for TPs"); } syncButtons(); }
+  function tpsStart() { st.tpsBusy = true; st.ready = false; cancel(); if (st.host && st.smiles && admin() && G.TPREATT) { G.TPREATT.state(st.host, "waiting"); setPhase("waiting"); status("waiting for TPs"); } syncButtons(); }
   /** the TPs are done: the calculation starts (when there is a SMILES) */
-  function tpsDone() { st.tpsBusy = false; syncButtons(); schedule(); }
+  function tpsDone() { st.tpsBusy = false; st.ready = true; syncButtons(); schedule(); }
   /** the run of the TPs ended without a result (error, cancelled): nothing starts by itself */
   function tpsEnd() { st.tpsBusy = false; syncButtons(); if (st.phase === "waiting") status(""); }
 
-  G.TPREATTAUTO = { attach, tpsStart, tpsDone, tpsEnd, recompute, cancel, info: () => ({ phase: st.phase, version: st.version, cached: st.cache.size, opts: { ...st.opts }, tpsBusy: st.tpsBusy, worker: !!st.worker }) };
+  G.TPREATTAUTO = { attach, tpsStart, tpsDone, tpsEnd, recompute, cancel, info: () => ({ ready: st.ready, smiles: st.smiles, phase: st.phase, version: st.version, cached: st.cache.size, opts: { ...st.opts }, tpsBusy: st.tpsBusy, worker: !!st.worker }) };
 })();

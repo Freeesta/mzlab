@@ -18,6 +18,7 @@ Solo in modalità amministratore (`uipAdminOn()`); testi in inglese senza chiavi
 - **Barra** (`#tp-reatt-ctl`, sotto il pannello): stato (`role="status"`: «waiting for TPs», «computing…», «done in X s», «done (kept from this session)», «failed»), `Solvent` (Water / None), `Conformers` (1-16, predefinito 4), «Recompute» e, dopo un errore, «Retry». Testi in inglese senza chiavi `lang/`.
 - **Desktop**: stessa sequenza con `pool.reactivity(smiles, opts)` di `feat-desktop-pool.js` (rotta `feat/grafo`, `kind:"reactivity"`), una chiamata nativa alla volta; una chiamata nativa non si può fermare, se annullata la sua risposta viene scartata.
 - **Prove**: `tests_e2e/e2e_reattivita_auto.py` (38 file sintetici di `tests/data/gruppi`, bentazone): senza `qqq.admin` nessun `.wasm` `chem` e nessuna barra; con amministratore waiting → computing → done con la tabella; nuovo Dig a calcolo in corso (worker terminato, poi riparte); Dig annullato; cache; opzioni; SMILES rifiutato con «Retry»; tempo di un Dig con e senza reattività armata (+5 % o 200 ms); `MZLAB_LR_MISS` vuoto.
+- **Misura** (38 file sintetici, Chromium, minimo di 2 Dig): senza reattività 1630 ms, con la reattività armata 1706 ms (+76 ms, nessun calcolo gira durante i TP). `.wasm` `chem` dopo `wasm-opt -Oz`: 568 809 B.
 
 ## Motore: geometria 3D (`crates/mzlab-chem`)
 - **Scopo**: da un SMILES a coordinate 3D affidabili, in Rust, per il motore di reattività (sezione «Motore: GFN2-xTB»). Geometria in `crates/mzlab-chem/src/`: `mol3d.rs`, `embed.rs`, `lengths.rs`, `minimize.rs`.
