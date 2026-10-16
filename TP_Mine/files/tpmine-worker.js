@@ -195,11 +195,18 @@ async function runRust(a) {
   const files = plan.lc.map((/** @type {string} */ n) => ({ name: n, path: "mzlab/idx/" + idxBase(n) + ".mzidx" })), paths = files.map((/** @type {any} */ x) => x.path);
   const timing = /** @type {Record<string, number>} */ ({}), lap = (/** @type {string} */ k, /** @type {number} */ t) => { timing[k] = Math.round((performance.now() - t) / 10) / 100; };
   let t = performance.now();
-  say(`Detecting the features of ${files.length} files...`);
+  /** a step of the run: label and fraction from the engine (`finder_progress`) @param {string} phase @param {number} [done] @param {number} [total] */
+  const step = (phase, done = 0, total = 0) => { const r = JSON.parse(f.finder_progress("hr", phase, done, total)); if (r) postMessage({ type: "progress", text: r.label, frac: r.frac, phase, done: r.done, total: r.total, payload: null }); };
+  step("features", 0, files.length);
   const recipe = JSON.parse(parentJson).adduct?.endsWith("-") ? '{"polarity":-1}' : "";       // an anion parent: the negative scans
-  const stored = await detect(p, files, idx, recipe); lap("feature", t); t = performance.now();
-  say("Aligning the series...");
-  const table = await p.align(stored, paths, recipe); lap("align", t); t = performance.now();
+  const prev = p.onProgress;
+  p.onProgress = (/** @type {any} */ i) => { if (i.phase === "detect") step("features", i.done, i.total); };
+  let stored;
+  try { stored = await detect(p, files, idx, recipe); } finally { p.onProgress = prev; }
+  lap("feature", t); t = performance.now(); check();
+  step("align");
+  const table = await p.align(stored, paths, recipe); lap("align", t); t = performance.now(); check();
+  step("candidates");
   say("Searching the products of the parent...");
   let rules = new Uint8Array(await (await fetch(base() + "mzfinder/regole_tp.json")).arrayBuffer());
   const tr = (a[3] || "").trim();
@@ -207,12 +214,13 @@ async function runRust(a) {
   const h = await p.hypotheses({ stored, paths, rules, parent: plan.formula, parentRt: plan.rt ?? NaN, recipe, structure: plan.structure });
   const minutes = plan.minutes.map((/** @type {number | null} */ m) => (m == null ? NaN : m));
   const pk = JSON.parse(f.finder_parent(filesJson, parentJson, table));       // the parent of the table: the proofs read the kinetics and the in-source fragments against it
-  const e = await p.evidence({ table, state: h.state, minutes, parentMz: pk.rt == null ? NaN : pk.mz, parentRt: pk.rt ?? NaN, recipe }); lap("proofs", t); t = performance.now();
+  check();
+  const e = await p.evidence({ table, state: h.state, minutes, parentMz: pk.rt == null ? NaN : pk.mz, parentRt: pk.rt ?? NaN, recipe }); lap("proofs", t); t = performance.now(); check();
   say("Ranking the candidates...");
   const ix = await openIdx(plan.lc);
   try { dig = f.finder_dig(filesJson, parentJson, e.table, h.registry, ix.read, ix.sizes); } finally { ix.close(); }
   lap("dig", t); t = performance.now(); last = "rust"; msn = null; lastRun = { table: e.table, lc: plan.lc, files: JSON.parse(filesJson) };
-  if (x) { await msnTree(x.name, parentJson); lap("albero", t); }
+  if (x) { step("tree"); await msnTree(x.name, parentJson); lap("albero", t); }
   lap("total", t0);
   const s = dig.summary(settingsJson || "{}", JSON.stringify(timing));
   return msn ? JSON.stringify(msnSummary(JSON.parse(s))) : s;
@@ -261,7 +269,10 @@ async function rustRun(a) {
 
 /** the low-resolution Dig in Rust (finder-lr.js) and what it borrows from this worker */
 const lrMod = () => import(base() + "mzfinder/finder-lr.js");
-const lrCtx = { featUrl, base, manifest, sha, pool, idxFiles, openIdx, detect, held, natives, ask, idxBase };
+/** Cancel: the page sends {type:"cancel"}; the pool stops (its sub-workers are killed, the waiting jobs rejected) and the run throws at the next check, so the files kept here survive */
+let cancelled = false;
+const check = () => { if (cancelled) throw new Error("Cancelled"); };
+const lrCtx = { featUrl, base, manifest, sha, pool, idxFiles, openIdx, detect, held, natives, check, ask, idxBase };
 /** every file has its .mzidx: waits a little for the one that the main program is still writing (a file taken from the Data tab sends no bytes here) @param {string[]} names */
 async function waitIdx(names) {
   for (let i = 0; i < 60; i++) {
@@ -311,6 +322,7 @@ async function call(fn, a) {
     console.warn("mzFinder: no .mzidx yet for", names.filter(n => !held.has(n)).join(", ") || "(all files sent)", "- Pyodide takes over");
   }
   if (fn === "run") {
+    cancelled = false; if (featPool) featPool.resume();
     if (await rustRun(a)) return runRust(a);
     last = "py"; dig = null; msn = null;
     const tr = (a[3] || "").trim(), lr = tr && tr !== DEFAULT_TR ? false : await (await lrMod()).run(lrCtx, a);
@@ -358,6 +370,9 @@ onmessage = async ev => {
       const r = asked.get(m.rid); asked.delete(m.rid); if (r) r(m.value);
     } else if (m.type === "mem") {          // size of the WebAssembly memory: it only grows, so at the end it is the peak of the run (used by the tests)
       postMessage({ id: m.id, result: { wasm: py ? py._module.HEAPU8.length : 0 } });
+    } else if (m.type === "cancel") {
+      cancelled = true; if (featPool) featPool.cancel();
+      postMessage({ id: m.id, result: true });
     } else if (m.type === "call") {
       postMessage({ id: m.id, result: await call(m.fn, m.args || []) });
     }

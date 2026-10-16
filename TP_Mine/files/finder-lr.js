@@ -13,7 +13,7 @@
  * @typedef {{ featUrl: (p: string) => string, base: () => string, manifest: () => Promise<any>, sha: (b: ArrayBuffer) => Promise<string>,
  *   pool: () => Promise<any>, idxFiles: (n: string[]) => Promise<File[] | null>, openIdx: (n: string[]) => Promise<any>,
  *   detect: (p: any, files: {name: string, path: string}[], idx: File[]) => Promise<Uint8Array[]>, held: Map<string, any>,
- *   natives: Set<string>, ask: (what: string, name: string) => Promise<any>, idxBase: (n: string) => string }} Ctx
+ *   natives: Set<string>, check: () => void, ask: (what: string, name: string) => Promise<any>, idxBase: (n: string) => string }} Ctx
  */
 
 /** the finder_lr module of wasm-feat/manifest.json, checked against its SHA-256 @param {Ctx} c */
@@ -30,6 +30,11 @@ async function load(c) {
 
 /** @param {string} text @param {number | null} frac @param {string} phase @param {any} [payload] */
 const progress = (text, frac, phase, payload) => postMessage({ type: "progress", text, frac, phase, payload: payload || null });
+/** a step of the run: the label and the fraction come from the engine (`finder_lr_progress`, phase weights in Rust), `done` of `total` files @param {any} x @param {string} phase @param {number} [done] @param {number} [total] */
+const step = (x, phase, done = 0, total = 0) => {
+  const s = JSON.parse(x.finder_lr_progress(phase, done, total));
+  if (s) postMessage({ type: "progress", text: s.label, frac: s.frac, phase, done: s.done, total: s.total, payload: null });
+};
 
 /** the plan of a run, null when Rust does not serve it @param {Ctx} c @param {string[]} a */
 async function plan(c, a) {
@@ -80,13 +85,17 @@ export async function run(c, a) {
   const files = p.lc.map((/** @type {string} */ n) => ({ name: n, path: "mzlab/idx/" + c.idxBase(n) + ".mzidx" })), paths = files.map((/** @type {any} */ f) => f.path);
   const timing = /** @type {Record<string, number>} */ ({}), lap = (/** @type {string} */ k, /** @type {number} */ t) => { timing[k] = Math.round((performance.now() - t) / 10) / 100; };
   let t = performance.now();
-  progress(`Detecting the peaks of ${files.length} files...`, 0.02, "calibration");
-  const stored = await c.detect(pool, files, idx); lap("feature", t); t = performance.now();
-  progress("Generating candidates...", 0.4, "candidates");
+  step(x, "calibration", 0, files.length);
+  const prev = pool.onProgress;
+  pool.onProgress = (/** @type {any} */ i) => { if (i.phase === "detect") step(x, "calibration", i.done, i.total); };      // file k of N, as the pool finishes them
+  let stored;
+  try { stored = await c.detect(pool, files, idx); } finally { pool.onProgress = prev; }
+  lap("feature", t); t = performance.now(); c.check();
+  step(x, "candidates");
   const rules = new Uint8Array(await (await fetch(c.base() + "mzfinder/regole_tp.json")).arrayBuffer());
   const h = await pool.hypotheses({ stored, paths, rules, parent: p.formula, parentRt: NaN, recipe: "" }); lap("candidates", t); t = performance.now();
-  progress("Aligning the peaks of the series...", 0.6, "xic");
-  const table = await pool.align(stored, paths, ""); lap("align", t); t = performance.now();
+  c.check(); step(x, "xic");
+  const table = await pool.align(stored, paths, ""); lap("align", t); t = performance.now(); c.check();
   dig = x.finder_lr_dig(a[0], a[1], a[2] || "{}", table, h.registry); cols = [...p.lc, ...p.ms2];
   const ix = await c.openIdx(p.lc);
   try { dig.isf(ix.read, ix.sizes); } finally { ix.close(); }   // the in-source verdicts need the lighter ions' traces
@@ -96,11 +105,11 @@ export async function run(c, a) {
     mrm = JSON.parse(x.finder_lr_mrm(a[0], r.read, r.sizes, r.ends, r.packed.map(b => b || null), rt > 0 ? rt : 0.25));
   }
   progress("", null, "xic", JSON.parse(dig.live()));
-  progress("Searching for unexpected ions...", 0.9, "unexpected");
-  progress("Looking for MS2 scans...", 0.95, "ms2");
+  c.check(); step(x, "unexpected");
+  step(x, "ms2");
   const mx = await c.openIdx(cols);      // the columns then the MS2 files: the matches of the MS2 experiments to the rows
   try { dig.ms2_link(mx.read, mx.sizes, JSON.stringify(JSON.parse(a[2] || "{}").ms2_overrides || [])); } finally { mx.close(); }
-  progress("Computing the tables...", 0.97, "tables");
+  c.check(); step(x, "tables");
   lap("dig", t); lap("total", t0);
   const sum = dig.summary(JSON.stringify(timing));
   if (!mrm) return sum;

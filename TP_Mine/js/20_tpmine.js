@@ -508,6 +508,32 @@
     startWorker().then(async () => { $("#tp-tr").value = await callRaw("default_transformations"); if (typeof TPTR !== "undefined") TPTR.mount($("#tp-tr"), callRaw); }).catch(e => msg(String(e.message || e), true));
 
     // ---- run
+    let running = false, cancelling = false;
+    /** if the page was unresponsive for 200 ms or more during the Dig, say so with the one-click diagnostics (long tasks with the phase they fell in, diagnosi.js) */
+    function lagNote(since) {
+      setTimeout(() => {      // the observer reports a little after the task
+        const D = typeof DIAG !== "undefined" ? DIAG : null, w = document.getElementById("tp-warn");
+        if (!D || !w || D.LONG.da(since).every(x => x.dur < 200)) return;
+        const l = D.LONG.da(since).sort((a, b) => b.dur - a.dur)[0];
+        w.textContent = `The page was unresponsive for ${l.dur} ms${l.fase ? ` (${l.fase})` : ""}. `;
+        const b = document.createElement("button"); b.type = "button"; b.className = "sec"; b.textContent = "Copy diagnostics";
+        b.onclick = async () => { try { await navigator.clipboard.writeText(D.testoLento(window.MZLAB_VERSION, since)); b.textContent = "Copied"; } catch (_) { b.textContent = "Copy failed"; } };
+        w.appendChild(b);
+      }, 400);
+    }
+    /** «Cancel» of the Dig: the engine stops at its next check (the pool of workers at once); if it has not answered in 4 s (Pyodide, a long step of the .wasm) the worker is terminated and the files must be loaded again */
+    function cancelRun() {
+      if (!running || cancelling) return;
+      cancelling = true; msg("Cancelling...");
+      send({ type: "cancel" }).catch(() => {});
+      setTimeout(() => {
+        if (!running || !worker) return;
+        worker.terminate(); worker = null; ready = null;
+        for (const p of pending.values()) p.rej(new Error("Cancelled"));
+        pending.clear(); st.files = []; renderFiles();
+        startWorker().catch(() => {});
+      }, 4000);
+    }
     const setBusy = b => { const g = $("#tp-go"); g.disabled = b; g.setAttribute("aria-busy", b ? "true" : "false"); $("#tp-go-t").textContent = b ? "Digging..." : "Dig"; };
     $("#tp-unt").onclick = () => { if (window.UNTUI) window.UNTUI.open(); };
     $("#tp-go").onclick = async () => {
@@ -519,7 +545,9 @@
       const lost = [...new Set([...(window.QQQ_LOADFAIL || []), ...(((typeof E !== "undefined" && E.pending) || []).filter(x => x.state === "err" || x.state === "wait").map(x => x.file))])].filter(n => !have.has(n));
       $("#tp-warn").textContent = lost.length ? `Warning: ${lost.length} file${lost.length > 1 ? "s" : ""} not read and left out of this run (${lost.slice(0, 4).join(", ")}${lost.length > 4 ? ", ..." : ""}). Load ${lost.length > 1 ? "them" : "it"} again before trusting the series.` : "";
       setBusy(true); $("#tp-bar").style.width = "2%"; msg(useCond() && !hrMode ? `Aligning ${st.files.filter(f => f.kind === "full").length} files of ${st.cond.conditions.length} conditions...` : "Digging..."); const t0 = performance.now();
-      if (window.TPLIVE) TPLIVE.start($("#tp-right"), hrMode, { esc, call });
+      const tStart = performance.now(); if (typeof DIAG !== "undefined") DIAG.LONG.marca("start");
+      const prevHtml = $("#tp-right").innerHTML; cancelling = false; running = true;      // what «Cancel» goes back to when no result is held
+      if (window.TPLIVE) TPLIVE.start($("#tp-right"), hrMode, { esc, call, cancel: cancelRun });
       try {
         const files = st.files.filter(f => f.kind !== "error" && f.kind !== "empty").map(f => ({ name: f.name, type: f.type, time: f.time, kind: f.kind }));
         const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, min_files: +$("#tp-minf").value, discover: $("#tp-disc").checked, ms2_overrides: window.TPMS2 ? window.TPMS2.start(st.files) : [], ...(useCond() && !hrMode ? { gruppi: digGroups() } : {}) };
@@ -530,15 +558,22 @@
           const hs = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify({ ppm_prec: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value }), $("#tp-tr").value));
           st.took = performance.now() - t0; st.summary = null; st.det = {};
           if (window.TPLIVE) TPLIVE.stop(true);
-          window.TPHR.render($("#tp-right"), hs, { esc, fmtA, chart, hue, call, callRaw, toast, dl });
+          if (typeof DIAG !== "undefined") DIAG.LONG.marca("render");
+          st.hs = hs; window.TPHR.render($("#tp-right"), hs, { esc, fmtA, chart, hue, call, callRaw, toast, dl });
           $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
-          setBusy(false); return;
+          running = false; setBusy(false); lagNote(tStart); return;
         }
-        st.summary = JSON.parse(await callRaw("run", digFiles(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
+        st.hs = null; st.summary = JSON.parse(await callRaw("run", digFiles(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
         if (window.TPMS2) window.TPMS2.setConditions(st.summary.gruppi ? new Map(st.files.filter(f => f.kind === "ms2").map(f => [f.name, (st.cond && st.cond.campioni[st.gnames.indexOf(f.name)] || {}).serie || ""])) : null);
-        st.took = performance.now() - t0; st.sel = null; st.det = {}; if (window.TPLIVE) TPLIVE.stop(true); render(); $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
-      } catch (e) { if (window.TPLIVE) TPLIVE.stop(false); msg(String(e.message || e), true); $("#tp-bar").style.width = "0"; }
-      setBusy(false);
+        st.took = performance.now() - t0; st.sel = null; st.det = {}; if (window.TPLIVE) TPLIVE.stop(true); if (typeof DIAG !== "undefined") DIAG.LONG.marca("render"); render(); $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (e) {
+        if (window.TPLIVE) TPLIVE.stop(false);
+        if (cancelling) {        // cancelled by the user: the panel goes back to the previous results (or the invitation) and the files stay
+          if (st.summary) render(); else if (st.hs) window.TPHR.render($("#tp-right"), st.hs, { esc, fmtA, chart, hue, call, callRaw, toast, dl }); else $("#tp-right").innerHTML = prevHtml;
+          msg("Cancelled."); $("#tp-bar").style.width = "0"; $("#tp-go").focus();
+        } else { msg(String(e.message || e), true); $("#tp-bar").style.width = "0"; }
+      }
+      running = false; cancelling = false; setBusy(false); lagNote(tStart);
     };
 
     // ---- results
@@ -576,7 +611,7 @@
         <div class="vtabs">${(s.gruppi ? [...VIEWS, ["cond", "Compare conditions"]] : VIEWS).map(([k, n]) => `<button class="vt${st.view === k ? " on" : ""}" data-v="${k}">${n}</button>`).join("")}</div>
         <div id="tp-view"></div>
         <div class="tp-mores">${ms2c ? `<details name="tp-more" id="tp-m-ms2"><summary>MS2 matches (${nMs2})</summary>${ms2c}</details>` : ""}${mrmc ? `<details name="tp-more" id="tp-m-mrm"><summary>MRM (${s.mrm.rows.length} files)</summary>${mrmc}</details>` : ""}</div>`;
-      if (window.TPMS2) window.TPMS2.mount({ st, call, refresh: ms2Refresh });
+      if (window.TPMS2) window.TPMS2.mount({ st, call, refresh: ms2Refresh, show });
       if (calmMotion()) R.querySelectorAll(".hero-c b[data-count]").forEach(countUp);
       R.querySelectorAll(".vt").forEach(b => b.onclick = () => { st.view = b.dataset.v; R.querySelectorAll(".vt").forEach(x => x.classList.toggle("on", x === b)); view(); });
       $("#tp-x-xlsx").onclick = () => exportAll("xlsx"); $("#tp-x-csv").onclick = () => exportAll("csv"); $("#tp-x-json").onclick = () => exportAll("json");
@@ -663,7 +698,7 @@
     function ms2Refresh(touched) {          // after a correction of the MS2 matches: the card, the table of rows and the open detail
       const c = $("#tp-ms2map"), s = st.summary; if (!c || !s) return;
       const h = document.createElement("div"); h.innerHTML = window.TPMS2.card(s); c.replaceWith(h.firstElementChild);
-      window.TPMS2.mount({ st, call, refresh: ms2Refresh });
+      window.TPMS2.mount({ st, call, refresh: ms2Refresh, show });
       const sm = $("#tp-m-ms2 > summary"); if (sm) sm.textContent = `MS2 matches (${s.ms2_links && s.ms2_links.links ? s.ms2_links.links.length : 0})`;
       if (T) { T.setRows(tableRows()); if (st.sel != null && touched.includes(st.sel) && T.openId === st.sel) { T.close(); T.open(st.sel); } }
     }

@@ -53,7 +53,9 @@ for _ in range(100):                      # the server answers: wait on that, no
     try: urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1).close(); break
     except Exception: srv.poll()
 FIRST = "Row for the MS2 of m/z 257.06 at RT 7.40"            # the menu of the first experiment
-TABLE = """() => [...document.querySelectorAll('#tp-ms2map table tr')].filter(r => r.querySelector('td')).map(r => [...r.children].map(c => (c.querySelector('select') ? c.querySelector('select').selectedOptions[0].textContent : c.textContent).trim()))"""
+TABLE = """() => [...document.querySelectorAll('#tp-ms2-files table tr, #tp-ms2-orph table tr')].filter(r => r.querySelector('td')).map(r => [...r.children].map(c => (c.querySelector('select') ? c.querySelector('select').selectedOptions[0].textContent : c.textContent).trim()))"""
+ROWS = """() => [...document.querySelectorAll('#tp-ms2-rows table tr')].filter(r => r.querySelector('td')).map(r => [...r.children].map(c => c.textContent.trim()))"""
+TIP = "(el) => window.TT(el.dataset.tt)"                        # the text of a TPHELP tip
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); ctx = b.new_context(viewport={"width": 1280, "height": 1000}, reduced_motion="reduce"); pg = ctx.new_page()
@@ -96,14 +98,72 @@ try:
             assert {("257.06", "10"), ("257.06", "25"), ("257.06", "40"), ("333.20", "15")} <= fam, fam           # every experiment is listed
             first = next(r for r in t if r[1] == "257.06" and r[2] == "10" and r[4] == "7.40")
             assert first[5] == "auto", first
-            assert any(r[1] == "333.20" and "no MS2 signal" in r[-2] for r in t), [r for r in t if r[1] == "333.20"]   # the reason of the one with no signal, in words
+            assert any(r[1] == "333.20" and r[-2] == "no signal" for r in t), [r for r in t if r[1] == "333.20"]   # the reason of the one with no signal, in one word
+            assert "no MS2 signal" in pg.locator("#tp-ms2-orph tr", has_text="333.20").locator(".tp-rs").evaluate(TIP)     # and in words in its tip
             assert pg.locator("#tp-ms2map caption").count() >= 1 and pg.locator("#tp-ms2map th[scope=col]").count() > 8
             assert pg.locator(f'select[aria-label="{FIRST}"]').count() == 1
-            assert pg.evaluate("document.querySelector('#tp-ms2map select').getBoundingClientRect().height") >= 24
-            assert "Drift per file" in pg.inner_text("#tp-ms2map")
+            assert pg.evaluate("document.querySelector('#tp-ms2-orph select').getBoundingClientRect().height") >= 24
+            assert "RT drift per file" in pg.text_content("#tp-ms2-det") and not pg.evaluate("document.getElementById('tp-ms2-det').open")      # the drift waits in the closed «Details»
+            assert pg.locator("#tp-ms2map th", has_text="Why").count() == 0
             ms2 = pg.evaluate("[...document.querySelectorAll('#tp-t tr.clk')].map(r => [r.dataset.id, r.lastElementChild.textContent.trim()])")
             assert ["7", "1 MS2 experiment"] in ms2 and ["10007", "2 MS2 experiments"] in ms2, ms2           # the column «MS2» of the table of rows, readable as text
         step("every experiment is in the card with its state or its reason; the table of rows has the column «MS2»", card)
+
+        def by_row():
+            assert pg.is_visible("#tp-ms2-rows") and not pg.is_visible("#tp-ms2-files"), "the view «By row» is the default"
+            assert pg.get_attribute('[data-vw="row"]', "aria-pressed") == "true"
+            r = {x[0].split()[0]: x for x in pg.evaluate(ROWS)}
+            assert "7" in r and "10007" in r and r["7"][2] == "1" and r["10007"][2] == "2", r       # one line per row, how many MS2 support it
+            assert r["7"][3].startswith("CE 10") and "7.40 min" in r["7"][3] and "Da" in r["7"][3], r["7"]   # the best match: CE, apex, Δm/z
+            q = pg.locator("#tp-ms2-rows .tp-ms2q").first
+            assert q.get_attribute("role") == "img" and q.get_attribute("aria-label").startswith("Quality "), q.get_attribute("aria-label")
+            assert "allowed" in q.evaluate(TIP)
+            n = pg.evaluate("[...document.querySelectorAll('.tp-ms2-f b')].map(b => +b.textContent)")
+            assert len(n) == 3 and n[0] == pg.evaluate("document.querySelectorAll('#tp-ms2-files tr[data-rev]').length - document.querySelectorAll('#tp-ms2-files .tp-st-isotope').length"), n
+        step("the view «By row»: one line per row with the number of MS2, the best match and its quality", by_row)
+
+        def filters():
+            pg.click('[data-f="matched"]')
+            assert pg.get_attribute('[data-f="matched"]', "aria-pressed") == "true" and not pg.is_visible("#tp-ms2-orph") and pg.is_visible("#tp-ms2-rows")
+            pg.click('[data-f="matched"]')
+            assert pg.get_attribute('[data-f="matched"]', "aria-pressed") == "false" and pg.is_visible("#tp-ms2-orph")
+            pg.click('[data-f="unmatched"]')
+            assert not pg.is_visible("#tp-ms2-rows") and pg.is_visible("#tp-ms2-orph") and not pg.is_visible(".tp-ms2-vw")
+            pg.click('[data-f="unmatched"]')
+            rv = pg.locator('[data-f="review"]')
+            if rv.is_disabled(): assert pg.inner_text('[data-f="review"] b') == "0"
+            else:
+                rv.click(); vis = pg.evaluate("[...document.querySelectorAll('#tp-ms2map tr[data-rev]')].filter(t => t.offsetParent).map(t => t.dataset.rev)")
+                assert vis and set(vis) == {"1"}, vis
+                rv.click()
+            assert pg.locator('#tp-ms2map [aria-pressed="true"]').count() == 1           # only the view button
+        step("the three numbers filter with one click (and a second click shows everything)", filters)
+
+        def tips():
+            bad = pg.evaluate("""[...document.querySelectorAll('#tp-ms2map button, #tp-ms2map .tp-st, #tp-ms2map .tp-rs, #tp-ms2map .tp-ms2q, #tp-ms2map summary')]
+                .filter(e => !(e.dataset.tt && window.TT(e.dataset.tt)) && !e.title).map(e => e.outerHTML.slice(0, 120))""")
+            assert not bad, bad
+            pg.focus('[data-f="unmatched"]'); pg.wait_for_selector("#tph-pop:not([hidden])", timeout=5000)
+            assert "no row got" in pg.inner_text("#tph-pop")
+            pg.keyboard.press("Escape")
+        step("every element that is not plain has its tip (TPHELP, also from the keyboard)", tips)
+
+        def spectrum():
+            pg.click('#tp-ms2-rows .tp-ms2-sp[data-id="7"]')
+            pg.wait_for_function("document.querySelector('#tp-t [data-tg=\"7\"]') && document.querySelector('#tp-t [data-tg=\"7\"]').getAttribute('aria-expanded') === 'true'", timeout=60000)
+            pg.click('#tp-t [data-tg="7"]')                 # closed again for the next steps
+            pg.evaluate("document.getElementById('tp-m-ms2').open = true")
+        step("«Spectrum» opens the row in the table", spectrum)
+
+        def narrow():
+            pg.set_viewport_size({"width": 360, "height": 900})
+            for v in ("row", "file"):
+                pg.click(f'[data-vw="{v}"]'); pg.wait_for_selector(f'[data-vw="{v}"][aria-pressed="true"]')
+                w = pg.evaluate("(() => { const c = document.getElementById('tp-ms2map'), r = c.getBoundingClientRect(); return [c.scrollWidth, c.clientWidth, r.right, innerWidth]; })()")
+                wide = pg.evaluate("[...document.querySelectorAll('#tp-ms2map *')].filter(e => e.offsetParent && !e.closest('.tbl') && e.getBoundingClientRect().right > Math.min(innerWidth, document.getElementById('tp-ms2map').getBoundingClientRect().right) + 1).map(e => e.tagName + '.' + e.className)")
+                assert w[0] <= w[1] + 1 and w[2] <= w[3] + 1 and not wide, (v, w, wide)          # the card (the page around it is not this card's: #nav and the table of rows)
+            pg.click('[data-vw="row"]'); pg.set_viewport_size({"width": 1280, "height": 1000})
+        step("the card does not overflow at 360 px in either view (wide tables scroll inside their box)", narrow)
 
         def similarity():
             pg.click('#tp-t tr.clk[data-id="7"]'); pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det .sim3", timeout=60000)
@@ -124,6 +184,7 @@ try:
         shots("card")
 
         def move():
+            pg.click('[data-vw="file"]'); assert pg.is_visible("#tp-ms2-files")
             pg.focus(f'select[aria-label="{FIRST}"]'); pg.select_option(f'select[aria-label="{FIRST}"]', "10007")
             pg.wait_for_function("document.querySelector('#tp-ms2-msg') && /kept/.test(document.querySelector('#tp-ms2-msg').textContent)", timeout=60000)
             t = pg.evaluate(TABLE)
@@ -133,6 +194,13 @@ try:
             assert ms2["7"] == "no MS2" and ms2["10007"] == "3 MS2 experiments", ms2       # the counts follow the correction
             assert pg.evaluate("document.activeElement && document.activeElement.getAttribute('aria-label')") == FIRST, "the focus stays on the menu"
         step("the menu moves an MS2 to another row (state «user», counts updated, focus kept)", move)
+
+        def change_from_row():
+            pg.click('[data-vw="row"]')
+            pg.click('#tp-ms2-rows tr:has-text("10007") .tp-ms2-go')
+            assert pg.evaluate("document.activeElement && document.activeElement.tagName === 'SELECT' && !!document.activeElement.dataset.ep"), "«Change» goes to the menu"
+            assert pg.is_visible("#tp-ms2-files") and pg.get_attribute('[data-vw="file"]', "aria-pressed") == "true"
+        step("«Change» in the view «By row» opens «By file» on the menu of the best match", change_from_row)
 
         def detail():
             pg.click('#tp-t tr.clk[data-id="10007"]'); pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector(".tp-ms2-l li", timeout=60000)
@@ -187,11 +255,19 @@ try:
             tab_and_dig(); table_view()
             t = pg.evaluate(TABLE)
             assert next(r for r in t if r[1] == "257.06" and r[2] == "10" and r[4] == "7.40")[5] == "user", t
+            pg.click('[data-vw="file"]')
         step("the correction is kept in the browser: after a reload and a new Dig it is there (state «user»)", reload_keeps)
 
         def keyboard():
             pg.evaluate("(() => { const h = document.querySelector('#tp-ms2map h3'); h.tabIndex = -1; h.focus(); })()")
             pg.keyboard.press("Tab")
+            assert pg.evaluate("document.activeElement.dataset.f") == "matched", "Tab reaches the first number"
+            pg.keyboard.press("Enter"); assert pg.get_attribute('[data-f="matched"]', "aria-pressed") == "true"
+            pg.keyboard.press("Enter"); assert pg.get_attribute('[data-f="matched"]', "aria-pressed") == "false"
+            pg.evaluate("(() => { const h = document.querySelector('#tp-ms2-files caption'); h.tabIndex = -1; h.focus(); })()")
+            for _ in range(12):
+                pg.keyboard.press("Tab")
+                if pg.evaluate("document.activeElement && document.activeElement.tagName === 'SELECT'"): break
             ep = pg.evaluate("document.activeElement && document.activeElement.dataset.ep")
             assert ep, "Tab does not reach a menu"
             before = pg.evaluate("document.activeElement.value")
@@ -203,11 +279,11 @@ try:
 
         def none_and_reset():
             pg.select_option(f'select[aria-label="{FIRST}"]', "none")
-            pg.wait_for_function("document.querySelector('#tp-ms2map') && /Set to \"none\"/.test(document.querySelector('#tp-ms2map').textContent)", timeout=60000)
+            pg.wait_for_function("document.querySelector('#tp-ms2-orph') && /removed/.test(document.querySelector('#tp-ms2-orph').textContent)", timeout=60000)
             ms2 = dict(pg.evaluate("[...document.querySelectorAll('#tp-t tr.clk')].map(r => [r.dataset.id, r.lastElementChild.textContent.trim()])"))
             assert ms2["7"] == "no MS2", ms2
             pg.click("#tp-ms2-reset")
-            pg.wait_for_function("document.querySelector('#tp-ms2-reset') && document.querySelector('#tp-ms2-reset').disabled && !/Set to \"none\"/.test(document.querySelector('#tp-ms2map').textContent)", timeout=60000)
+            pg.wait_for_function("document.querySelector('#tp-ms2-reset') && document.querySelector('#tp-ms2-reset').disabled && !/removed/.test((document.querySelector('#tp-ms2-orph') || {}).textContent || '')", timeout=60000)
             t = pg.evaluate(TABLE)
             assert next(r for r in t if r[1] == "257.06" and r[2] == "10" and r[4] == "7.40")[5] == "auto", t
             assert not pg.evaluate("(JSON.parse(localStorage.getItem('qqq.tabui.ms2links') || '{}'))[Object.keys(JSON.parse(localStorage.getItem('qqq.tabui.ms2links') || '{}'))[0]]")
