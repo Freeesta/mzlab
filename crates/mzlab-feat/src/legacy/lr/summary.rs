@@ -99,7 +99,7 @@ struct Row<'a> {
     sim: Option<f64>,
 }
 
-fn row_json(o: &mut Out, r: &Row, p_mz: f64, tp_name: &str, parent_formula: &str) {
+fn row_json(o: &mut Out, r: &Row, p_mz: f64, tp_name: &str, parent_formula: &str, detected: bool) {
     let e = r.e;
     o.raw("{\"id\":")
         .int(e.id)
@@ -111,8 +111,12 @@ fn row_json(o: &mut Out, r: &Row, p_mz: f64, tp_name: &str, parent_formula: &str
         });
     o.raw(",\"name\":").str(&e.name);
     o.raw(",\"tp_name\":").str(tp_name);
-    o.raw(",\"net_change\":").str(&if e.unexpected { String::new() } else { nomi::net_change(&e.formula, parent_formula) });
-    o.raw(",\"modification\":").str(&nomi::modification(&e.name, e.unexpected));
+    o.raw(",\"status\":").str(if detected {
+        "Detected"
+    } else {
+        "Searched, not detected"
+    });
+    nomi::words_json(o, e, parent_formula);
     o.raw(",\"alternatives\":");
     strs(o, &e.alternatives);
     o.raw(",\"formula\":")
@@ -308,11 +312,33 @@ pub fn summary(d: &LrDig, timing: &str) -> String {
     head_json(&mut o, d);
     files_json(&mut o, d);
     o.raw(",\"rows\":[");
-    let names = nomi::tp_names(&d.entries);
-    for (i, r) in ordered(d).iter().enumerate() {
+    let rows = ordered(d);
+    // a hypothesis of the rules with no peak in any sample was searched and not found: no TP name, no area
+    let found: Vec<bool> = d
+        .entries
+        .iter()
+        .map(|e| {
+            rows.iter()
+                .find(|r| std::ptr::eq(r.e, e))
+                .is_some_and(|r| e.label == "progenitore" || e.unexpected || r.max_area > 0.0)
+        })
+        .collect();
+    let names = nomi::tp_names(&d.entries, &found);
+    for (i, r) in rows.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" });
-        let at = d.entries.iter().position(|x| std::ptr::eq(x, r.e)).unwrap_or(0);
-        row_json(&mut o, r, d.parent.mz, &names[at], &d.parent.formula);
+        let at = d
+            .entries
+            .iter()
+            .position(|x| std::ptr::eq(x, r.e))
+            .unwrap_or(0);
+        row_json(
+            &mut o,
+            r,
+            d.parent.mz,
+            &names[at],
+            &d.parent.formula,
+            found[at],
+        );
     }
     o.raw("],\"settings\":");
     plan::settings_json(&mut o, &d.settings);

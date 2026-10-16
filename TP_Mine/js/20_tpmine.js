@@ -544,7 +544,8 @@
       const list = s.rows.filter(r => r.label !== "progenitore" && good(r));
       T = null;
       if (st.view === "tab") {
-        V.innerHTML = `<div id="tp-tbl"></div>`;
+        const nd = s.rows.filter(notFound).length;
+        V.innerHTML = `${nd ? `<label class="mut" style="display:inline-flex;gap:6px;align-items:center;min-height:24px"><input type="checkbox" id="tp-nd"> Show searched, not detected (${nd})</label>` : ""}<div id="tp-tbl"></div>`;
         mountTable($("#tp-tbl"));
       } else if (st.view === "map") {
         V.innerHTML = `<div class="card"><div class="mut">Each node is an ion that passes the criteria: the radius follows the maximum area, the colour the confidence (green strong, amber possible, purple unexpected). Lines show the transformation (Δ formula). Click a node for details.</div><div id="tp-map"></div></div>`;
@@ -616,6 +617,8 @@
     let T = null;
     const lvSort = r => (r.level ?? 9) * 1000 - (r.score ?? 0);
     const idLabel = r => r.kind === "unexpected" && !r.ms2_target ? `m/z ${r.mz.toFixed(2)} (unexpected)` : MOLUI.cap(r.name);
+    /** a hypothesis of the rules with no peak in any sample: searched, not detected (no TP name, no area) */
+    const notFound = r => r.status === "Searched, not detected";
     const cellStates = r => (r.kinetics || []).map(p => p.area > 0 ? "detected" : "absent");
     const rowNum = r => r.id >= 100000 ? "n" + (r.id - 100000) : String(r.id);
     function mountTable(host) {
@@ -626,13 +629,14 @@
         { key: "level", label: "Lvl", help: "ft.col.level", sticky: true, sort: lvSort, cell: r => r.level ? TPTAB.level(r.level) : "", text: r => r.level ? "L" + r.level : "" },
         { key: "tpname", label: "TP", help: "ft.col.tpname", sticky: true, sort: r => r.tp_name || "", cell: r => esc(r.tp_name || "") },
         { key: "identity", label: "Identity", help: "ft.col.identity", sticky: true, sort: r => idLabel(r).toLowerCase(), cell: r => esc(idLabel(r)) + alt(r), text: r => idLabel(r) + (r.alternatives.length ? ` (+${r.alternatives.length} other)` : "") },
+        { key: "status", label: "Status", help: "ft.col.status", sort: r => notFound(r) ? 1 : 0, cell: r => notFound(r) ? "Searched, not detected" : "Detected", text: r => r.status || "Detected" },
         { key: "net", label: "Net change (formula)", help: "ft.col.net", sort: r => r.net_change || "", cell: r => esc(r.net_change || "") },
         { key: "modif", label: "Modification", help: "ft.col.modif", sort: r => r.modification || "", cell: r => esc(r.modification || "") },
         { key: "mz", label: "<i>m/z</i>", help: "ft.col.mz", num: true, sort: r => r.mz, cell: r => r.mz.toFixed(2) },
         { key: "rt", label: "RT", help: "ft.col.rt", num: true, sort: r => r.ref_rt, cell: r => r.ref_rt == null ? "" : r.ref_rt.toFixed(2) },
         { key: "trend", label: "Trend", help: "ft.col.trend", cell: r => (r.kinetics || []).length ? TPTAB.spark(r.kinetics.map(p => p.area), "area") : "", text: r => (r.kinetics || []).map(p => Math.round(p.area)).join(" ") },
         { key: "cells", label: "Cells", help: "ft.col.cells", cell: r => cellStates(r).length ? TPTAB.cells(cellStates(r)) : TPTAB.state("na"), text: r => cellStates(r).map(x => x[0]).join("") },
-        { key: "max", label: "Max area", help: "ft.col.maxarea", num: true, sort: r => r.max_area, cell: r => fmtA(r.max_area), text: r => fmtA(r.max_area), value: r => r.max_area },
+        { key: "max", label: "Max area", help: "ft.col.maxarea", num: true, sort: r => r.max_area, cell: r => notFound(r) ? "—" : fmtA(r.max_area), text: r => notFound(r) ? "—" : fmtA(r.max_area), value: r => notFound(r) ? null : r.max_area },
         { key: "score", off: true, label: "Score", help: "ft.col.score", num: true, sort: r => r.score, cell: r => r.score == null ? "" : `<span class="badge b-${r.label}">${r.score} ${LAB[r.label]}</span>`, text: r => r.score == null ? "" : String(r.score) },
         { key: "formula", off: true, label: "Formula", help: "ft.col.formula", sort: r => r.formula || "", cell: r => esc(r.formula || "") },
         { key: "tmax", off: true, label: "t max", help: "ft.col.tmax", num: true, sort: r => r.tmax, cell: r => String(r.tmax ?? "") },
@@ -642,10 +646,12 @@
       const chips = [chip("strong", "Strong", "ft.chip.strong", r => r.kind !== "unexpected" && r.label === "forte", true), chip("possible", "Possible", "ft.chip.possible", r => r.kind !== "unexpected" && r.label === "possibile", true),
         chip("weak", "Weak", "ft.chip.weak", r => r.kind !== "unexpected" && r.label === "debole", false), chip("unexpected", "Unexpected", "ft.chip.unexpected", r => r.kind === "unexpected" && good(r), true),
         ...(ms2 ? [chip("ms2", "With MS2", "ft.chip.ms2", r => r.ms2 > 0, false)] : [])];
-      T = TPTAB.mount(host, { id: "tp-t", label: "Transformation product candidates", cols, rowId: r => r.id, esc, name: r => `${r.tp_name || idLabel(r)}, ${idLabel(r)}, m/z ${r.mz.toFixed(2)}`, columns: true, chips, exportName: (s.parent.formula || "parent") + "_Tabui_view",
+      T = TPTAB.mount(host, { id: "tp-t", label: "Transformation product candidates", cols, rowId: r => r.id, esc, name: r => `${r.tp_name || idLabel(r)}, ${idLabel(r)}, m/z ${r.mz.toFixed(2)}`, columns: true, chips, rowClass: r => notFound(r) ? "tpt-nd" : "", exportName: (s.parent.formula || "parent") + "_Tabui_view",
         search: r => [r.tp_name, r.name, r.formula, String(r.mz), r.delta, r.net_change, r.modification].join(" "), pin: r => r.label === "progenitore",
         tabs: TPRIGA.tabs, head: (r, box) => TPRIGA.head(box, headModel(r)), onOpen: (r, body, tab) => { void fillTab(r, body, tab); } });
-      T.setRows(s.rows); T.sortBy("level", 1);
+      T.setRows(s.rows.filter(r => !notFound(r))); T.sortBy("level", 1);
+      const box = /** @type {HTMLInputElement | null} */ ($("#tp-nd"));
+      if (box) box.onchange = () => { if (T) T.setRows(box.checked ? s.rows : s.rows.filter(r => !notFound(r))); };
       // the "+N other" button of the Identity cell: open the row on the tab with the other identities (capture: before the row toggles)
       host.addEventListener("click", e => {
         const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest(".tp-alt")); if (!b || !T) return;
@@ -748,14 +754,15 @@
       const s = st.summary; msg("Preparing the export...");
       try {
         const top = s.rows.filter(r => r.label === "forte" || r.label === "possibile");
+        const found = s.rows.filter(r => !notFound(r));
         const det = []; for (const r of top) det.push(await getDetail(r.id));
         const times = s.times, name = (st.summary.parent.formula || "parent") + "_Tabui";
         const head = ["#", "TP", "Candidate", "Formula", "Change", "Net change (formula)", "Modification", "m/z", "RT (min)", "Level", "Score", "Verdict", "t max (min)", "Max area", "Max area (number)", ...times.map(t => "Area t" + t)];
         const line = r => [r.id, r.tp_name, r.name, r.formula, r.delta, r.net_change ?? "", r.modification ?? "", r.mz, r.ref_rt, r.level ?? "", r.score ?? "", r.label, r.tmax ?? "", fmtA(r.max_area), r.max_area, ...times.map(t => { const k = r.kinetics.find(p => p.time === t); return k ? Math.round(k.area) : ""; })];
         const trans = det.flatMap(d => d.transitions);
         if (kind === "json") return dl(name + ".json", JSON.stringify({ summary: s, details: det, ms2_overrides: window.TPMS2 ? window.TPMS2.overrides() : [] }, null, 1), "application/json");
-        if (kind === "csv") return dl(name + ".csv", "sep=;\n" + [head, ...s.rows.map(line)].map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
-        const sheets = [{ name: "Ranking", head, rows: s.rows.map(line), widths: [6, 12, 38, 16, 14, 18, 30, 10, 9, 8, 9, 11, 10, 12, 14, ...times.map(() => 11)] },
+        if (kind === "csv") return dl(name + ".csv", "sep=;\n" + [head, ...found.map(line)].map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
+        const sheets = [{ name: "Ranking", head, rows: found.map(line), widths: [6, 12, 38, 16, 14, 18, 30, 10, 9, 8, 9, 11, 10, 12, 14, ...times.map(() => 11)] },
           { name: "Criteria", head: ["#", "Candidate", "Criterion", "Outcome", "Detail"], rows: det.flatMap(d => d.criteria.map(c => [d.id, d.name, c.name, c.status, c.text])), widths: [6, 38, 28, 8, 70] },
           { name: "MS2", head: ["#", "Candidate", "Product m/z", "% rel.", "Loss", "Note", "Similarity to the parent"], rows: det.flatMap(d => d.ms2.fragments.map(f => [d.id, d.name, f.mz, f.rel, f.loss ?? "", f.note || "", d.sim ? d.sim.cos.total : ""])), widths: [6, 38, 12, 9, 9, 50, 14] },
           ...(window.TPMS2 && window.TPMS2.sheet() ? [window.TPMS2.sheet()] : []),
