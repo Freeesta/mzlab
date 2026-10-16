@@ -49,7 +49,7 @@ Legenda: **L** letto e provato · **P** parziale (si legge, ma manca un pezzo de
 | SIM | L (filtro `sim`, `iteminfo.rs:284-290`) | NV (filtro letto, nessun file) | — | L (+ SIC derivato) | P: funzione SIR letta come canali `SIC`, nome dell'id non verificato | P (euristica sulla lista degli m/z) |
 | SRM/MRM | L (cromatogrammi SRM, `srm.rs::da_voci`) | P: le scansioni SRM si leggono come spettri, ma `cromatogrammi` dà solo TIC (`rawlettore.rs:222`) → nessuna traccia SRM per mzFinder/MRM | L (`wiff/run.rs`) | L (MRM e dMRM del QqQ, id `SRM SIC Q1= Q3=`, uguale a msconvert; nel modulo `agilent`) | L (`waters_dati.rs`: 128 SRM uguali a msconvert) | P (`.qgd` e `.lcd` QqQ → cromatogrammi SRM; CE e dwell no) |
 | Product ion (MS2) | L | L | L (codice 11) | NV (`MSLevel`, `MzOfInterest` nello schema) | NV (DDA: precursore da `.STS`/`_extern.inf`, nessun mzML) | A |
-| Precursor ion / neutral loss | P: letti come spettri, il tipo di scansione (MS:1000341, MS:1000326) non è riconosciuto (nessuna occorrenza nel codice) | NV | L nel modulo `sciex` (codici 5 e 7, `MS:1000341` / `MS:1000326`, parità con msconvert su 3594 spettri; `wiff-varianti.md`) | A | A | A |
+| Precursor ion / neutral loss / gain / EPI | L: tipo di scansione riconosciuto dal termine CV (MS:1000341, 326, 325, 789, 790) o dal filtro Thermo (`pr`, `cnl`, `cng`): `iteminfo.rs::acq` e parti del file misto (`scantable::kind_of`); non verificato su mzML veri | NV | L nel modulo `sciex` (codici 5 e 7, `MS:1000341` / `MS:1000326`, parità con msconvert su 3594 spettri; `wiff-varianti.md`) | A | A | A |
 | EPI / MS3 su QTRAP | L (come MSn) | — | A (non visti, letti come full scan) | — | — | — |
 | DDA | L (`/api/dda`, `hrroutes.rs:61`) | L | — | NV | NV | A |
 | DIA / SWATH / MSe / AIF | P: classificati (`iteminfo.rs:278-325`: DIA, AIF), nessuna deconvoluzione dedicata | L (eventi DIA dei Tribrid corretti, `MODIFICHE-MZLAB.md`) | — | NV | P: MSe a livello 1 e 2 senza precursore (nessun mzML di msconvert); HDMSe senza tempo di deriva | — |
@@ -61,7 +61,7 @@ Legenda: **L** letto e provato · **P** parziale (si legge, ma manca un pezzo de
 | Tracce accessorie (pressione, analogici) | L (`analog.rs`) | P: pressione solo nell'mzML scritto, non come cromatogramma del lettore | A | A (`GC.ini` come metadati) | L (pressione, flusso, % solventi uguali a msconvert) | A |
 | Calibrazione / lock mass | — (già applicata) | P: campi del trailer (`opentfraw.lock_mass_*`, `extra.rs:122-125`), nessuna correzione | A (`GLPTables`) | A | P: cromatogramma della lock mass e campo in `metodo/1`, correzione non applicata | — |
 | Polarità mista | L (`iteminfo.rs`: parti «mixed») | L | L | NV (codice 1 mai visto) | NV | A (la polarità degli eventi `.lcd` 2020 non è decodificata; il QqQ la legge dal byte 33) |
-| Metodo e metadati (`metodo/1`) | P (solo testata; `metodo/1` solo se scritto da mzLab) | L | P (nome, vial, calibrazione mancanti) | L per GC/MS, A per LC/MS | L (`metodo/1` da `_HEADER.TXT`, `_extern.inf`, `_INLET.INF`; operatore `identita`) | P (`metodo/1`: strumento, software, campione, eventi/transizioni; molti flussi non decodificati) |
+| Metodo e metadati (`metodo/1`) | P (testata e parametri di scansione costanti in `metodo/1`, `metodo_mzml.rs`; non verificato su file veri) | L | P (nome, vial, calibrazione mancanti) | L per GC/MS, A per LC/MS | L (`metodo/1` da `_HEADER.TXT`, `_extern.inf`, `_INLET.INF`; operatore `identita`) | P (`metodo/1`: strumento, software, campione, eventi/transizioni; molti flussi non decodificati) |
 
 ### Metodo e metadati (colonna «metodo/metadati» per formato)
 
@@ -140,7 +140,7 @@ I prompt pronti e autosufficienti per le chat DEV sono in `docs/studi/PROMPT_FOR
 | DEV-6 | Waters MassLynx `.raw` (cartella): TQ MRM/SIR, QTof MS/MSe/DDA, lock mass, tracce analogiche | `waters` | DEV-0 | 1 Xevo TQ MRM, 1 Xevo G2-XS (o Synapt) MSe con lock mass, 1 DDA |
 | DEV-7 | Shimadzu `.qgd` (GC/MS), `.lcd` (LCMS-2020, 8040/8050/8060, 9030) | `shimadzu` | DEV-0 (DEV-3 per il confronto con `.cdf`) | 1 `.qgd`, 1 `.lcd` SQ, 1 `.lcd` QqQ MRM, 1 `.lcd` 9030; con mzML o `.cdf` esportato |
 | DEV-8 | Bruker TDF/TSF (timsTOF): MS1, DDA-PASEF, diaPASEF | `bruker` | DEV-0 | 1 TDF DDA-PASEF, 1 diaPASEF, 1 TSF |
-| DEV-9 | Tipi di scansione nel motore: precursor ion, neutral loss, EPI, MS3 | motore | DEV-1, DEV-5 | 1 mzML per tipo (QTRAP) |
+| DEV-9 (fatto) | Tipi di scansione nel motore: precursor ion, neutral loss, EPI, MS3 | motore | DEV-1, DEV-5 | 1 mzML per tipo (QTRAP) |
 | DEV-10 | Mobilità ionica: array dell'mzML, informazioni, scansione | motore | DEV-1, DEV-8 | 1 mzML con mobilità (da TDF o Waters HDMSe) |
 | DEV-11 | `metodo/1` di un mzML di altri (testata, `startTimeStamp`, `sample`, `scanSettings`) | motore | DEV-1 | gli mzML di msconvert già nei dati bastano |
 

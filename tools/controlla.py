@@ -113,6 +113,17 @@ def regole_stato() -> list[str]:
     return bad
 
 
+def regole_layout() -> list[str]:
+    """mzlab/web/layout.js knows rows and quotas only: it never names an experiment (no panel type, no kind of file)."""
+    import re
+    f = indice.ROOT / "mzlab" / "web" / "layout.js"
+    if not f.exists():
+        return []
+    rx = re.compile(r"""["'](?:full|ms2|mrm|spec|chrom|map)["']|\.(?:type|kind)\s*===""")
+    return [f"layout.js names an experiment: layout.js:{n} (rows and quotas only, the type of a panel is not its business)"
+            for n, line in enumerate(f.read_text(encoding="utf-8").split("\n"), 1) if not line.lstrip().startswith("//") and rx.search(line)]
+
+
 ESP_BASE = indice.ROOT / "tools" / "esperimenti_base.json"
 def confronti_esperimenti() -> dict[str, int]:
     """Per file of mzlab/web: comparisons of a variable with "full", "ms2" or "mrm" (the experiment type is data of esperimenti.js)."""
@@ -190,7 +201,7 @@ def main() -> int:
     base = json.loads(BASE.read_text(encoding="utf-8")) if BASE.exists() else {}
     # a limit that is not in the base file yet starts from the current state (--aggiorna writes it)
     base = {kind: base[kind] if kind in base else dict(now[kind]) for kind in KINDS}
-    bad = peggiori(now, base) + regole_statiche() + regole_stato() + regole_esperimenti("--aggiorna" in sys.argv) + regole_frame("--aggiorna" in sys.argv) + regole_attese("--aggiorna" in sys.argv) + html_sicuro.peggiori(html_sicuro.misura(), json.loads(html_sicuro.BASE.read_text(encoding="utf-8")) if html_sicuro.BASE.exists() else {})
+    bad = peggiori(now, base) + regole_statiche() + regole_stato() + regole_layout() + regole_esperimenti("--aggiorna" in sys.argv) + regole_frame("--aggiorna" in sys.argv) + regole_attese("--aggiorna" in sys.argv) + html_sicuro.peggiori(html_sicuro.misura(), json.loads(html_sicuro.BASE.read_text(encoding="utf-8")) if html_sicuro.BASE.exists() else {})
     if "--aggiorna" in sys.argv:
         if bad and BASE.exists():
             print("refusing to update the base, it would get worse:\n  " + "\n  ".join(bad))

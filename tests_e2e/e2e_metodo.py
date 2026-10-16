@@ -34,7 +34,7 @@ try:
         b = p.chromium.launch(executable_path=__import__("os").environ.get("MZLAB_CHROMIUM") or None)
         c = b.new_context(viewport={"width": 1500, "height": 1200}); c.set_default_timeout(120000)
         pg = c.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
         pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         pg.set_input_files("#pick", [str(D / "named.mzML")])
@@ -44,8 +44,10 @@ try:
         pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)
         def none_yet():
             r = pg.evaluate(JSON, "api/metodo?k=0")
-            assert r["status"] == 200 and r["j"]["source"] == "none", r
-        step("an mzML without method: /api/metodo says source none", none_yet)
+            assert r["status"] == 200 and r["j"]["source"] == "mzml", r
+            m = r["j"]["metodo"]
+            assert m["schema"] == "metodo/1" and m["origine"]["formato"] == "mzml", r
+        step("an mzML without method: /api/metodo builds metodo/1 from its header", none_yet)
         def lone_with_match():
             pg.set_input_files("#pick", [str(D / "one.wiff")])
             pg.wait_for_function("fetch('api/metodo?k=0').then(r => r.json()).then(j => j.source === 'wiff')", timeout=60000)

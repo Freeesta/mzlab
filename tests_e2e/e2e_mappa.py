@@ -101,12 +101,12 @@ try:
             pg.click(".pnl.map [data-a=cpar]"); pg.click(".pnl.map details.mzcol summary")                    # «Options»: the rare controls live in the popover; the colors in «Colors…»
             pg.wait_for_function(f"!!({M}._img && {M}._img.b && {M}._img.key.includes('rttol'))", timeout=20000)     # A - B from the server, with the tolerance in RT
             assert pg.evaluate("[...LUT_DIV.slice(0,3)]") == [213, 94, 0] and pg.evaluate("[...LUT_DIV.slice(1020,1023)]") == [0, 114, 178]   # vermilion <-> blue
-            assert pg.evaluate("MAPPA.diffOpt().show") == "up" and not pg.is_checked(".pnl.map [data-mz=neg]")      # the 2D map shows the increases only, until the student asks for the decreases
-            pg.check(".pnl.map [data-mz=neg]")
-            pg.wait_for_function(f"MAPPA.diffOpt().show==='all' && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
-            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.mappa')).neg") is True
+            assert pg.evaluate("MAPPA.diffOpt().show") == "all" and pg.is_checked(".pnl.map [data-mz=neg]")      # both signs by default: the decreases (blue) are drawn
             pg.uncheck(".pnl.map [data-mz=neg]")
             pg.wait_for_function(f"MAPPA.diffOpt().show==='up' && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
+            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.mappa')).neg") is False
+            pg.check(".pnl.map [data-mz=neg]")
+            pg.wait_for_function(f"MAPPA.diffOpt().show==='all' && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
             pg.fill(".pnl.map [data-mz=thr]", "5"); pg.dispatch_event(".pnl.map [data-mz=thr]", "change")
             pg.wait_for_function(f"MAPPA.diffOpt().thr===0.05 && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
             pg.fill(".pnl.map [data-mz=thr]", "2"); pg.dispatch_event(".pnl.map [data-mz=thr]", "change"); pg.wait_for_timeout(500)
