@@ -7,7 +7,7 @@ from lib import ROOT, mz, SH, open_kind
 
 import os
 BASE = os.environ.get("QQQ_BASE", "")          # e.g. QqQ-lab: GitHub Pages serves a project site under /<repo>/
-PORT = 8831
+from lib import free_port; PORT = free_port()
 errs = []
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))

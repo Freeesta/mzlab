@@ -10,7 +10,7 @@ from golden_ref import PyRef
 from lib_hr import synth
 
 sys.path.insert(0, str(ROOT))
-PORT = 8838
+from lib import free_port; PORT = free_port()
 errs = []
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))

@@ -7,7 +7,7 @@ from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(HERE)); import lib  # noqa: F401,E402  (patches wait_for_function for the CSP)
 SRC = Path(os.environ.get("TPMINE_SRC", ROOT / "TP_Mine"))
-PORT = 8846
+from lib import free_port; PORT = free_port()
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))

@@ -42,6 +42,8 @@ NEEDS: dict[str, set[str]] = {
     "e2e13": {"sito"}, "e2e_avvio": {"sito"}, "e2e_avvio_lingua": {"sito"}, "e2e_mzidx": {"sito"}, "e2e_rust": {"sito"}, "e2e_lr": {"sito"}, "e2e_wiff": {"sito"}, "e2e_agilent": {"sito"}, "e2e_metodo": {"sito"}, "e2e_picchi_qualita": {"sito"}, "e2e_hr_rust": {"sito"}, "e2e_hr_mappa": {"sito"}, "e2e_hr_albero": {"sito"}, "e2e_libreria_wasm": {"sito"}, "e2e_libreria_cartella": {"sito"}, "e2e_libreria_scarica": {"sito"},  "e2e_tpmine1": {"sito"}, "e2e_tpmine_nativo": {"sito"}, "e2e_tpmine_diretto_nativo": {"sito"}, "e2e_progresso": {"sito"}, "e2e_tpmine_lr_reload": {"sito"}, "e2e_tpmine_ms2_lr": {"sito"}, "e2e_pipeline": {"sito"}, "e2e_lettori": {"sito"}, "e2e_lettori_modulo": {"sito"}, "e2e_shimadzu": {"sito"}, "e2e_thermo_modulo": {"sito"}, "e2e_tpmine_diretta": {"sito"}, "e2e_tpmine2": {"sito"}, "e2e_tpmine_albero": {"sito"}, "e2e_tpmine_rtalign": {"sito"}, "e2e_tpmine_ms2": {"sito"}, "e2e_untarget": {"sito"}, "e2e_identita": {"sito"},
     "e2e_tpmine_mem": {"sito", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes
 }
+# the slowest e2e (seconds, measured in the CI): they start first, so the pool does not end waiting for one of them
+LENTI = ["e2e_tpmine_lr_rust", "e2e_tpmine_ingresso", "e2e_tpmine_transf"]
 NOT_TESTS = {"lib", "synth"}          # helpers and measurements, not tests
 # e2e3 plus the e2e that were red on main without anybody seeing it (the CI used to run only e2e3): download menu, buttons, settings, axes, spectra.
 # e2e_cromato is not here yet: it fails in WebKit (the dialog of the integrations has no S/N box) and in Firefox (waterfall step), both only in those browsers.
@@ -326,7 +328,7 @@ AREE = [
     ("mzlab/web/pannelli.js", {"e2e_sottrazione", "e2e_intestazioni", "e2e_intestazione_cromato", "e2e_header", "e2e_pannelli", "e2e_pannelli2", "e2e_fisso", "e2e_blocco1", "e2e_blocco2", "e2e_blocco3", "e2e_tour", "e2e_tocco", "e2e_cursore", "e2e_asse_x"}),
     ("mzlab/web/fondo.js", {"e2e5", "e2e23", "e2e_header", "e2e_intestazione_cromato", "e2e_sottrazione"}),
     ("mzlab/web/grafici.js", {"e2e_sottrazione", "e2e_cromato", "e2e_mappa", "e2e_mappa3d", "e2e_nitido", "e2e_assi", "e2e_integrazioni", "e2e_picchi", "e2e_tour", "e2e_asse_x"}),
-    ("mzlab/web/picchi.js", {"e2e_picchi_qualita", "e2e_picchi", "e2e_integrazioni", "e2e_spettro", "e2e_contaminanti", "e2e_assi", "e2e_tour", "e2e_cursore", "e2e_spettro_hr"}),
+    ("mzlab/web/picchi.js", {"e2e_spettro_file", "e2e_picchi_qualita", "e2e_picchi", "e2e_integrazioni", "e2e_spettro", "e2e_contaminanti", "e2e_assi", "e2e_tour", "e2e_cursore", "e2e_spettro_hr"}),
     ("mzlab/web/azioni-icone.js", {"e2e_menu_coerenti"}), ("mzlab/web/azioni.js", {"e2e_menu_coerenti", "e2e_mappa_nav", "e2e_mappa_nav3d", "e2e_mappa_barra"}), ("tests_e2e/e2e_menu_coerenti.py", {"e2e_menu_coerenti"}), ("mzlab/web/mappa.js", {"e2e_menu_coerenti"}), ("mzlab/web/mappa3d.js", {"e2e_menu_coerenti"}),
     ("mzlab/web/eventi.js", {"e2e_menu_coerenti", "e2e_calc", "e2e_scroll", "e2e_spettro", "e2e_cromato", "e2e_tocco", "e2e_barra", "e2e_tour", "e2e_cursore", "e2e_spettro_hr"}),
     ("mzlab/web/provenienza.js", {"e2e_provenienza"}), ("mzlab/web/export-pezzi.js", {"e2e_esporta_pezzi", "e2e_provenienza"}), ("mzlab/web/export-worker.js", {"e2e_esporta_pezzi"}), ("mzlab/web/manifesto.js", {"e2e_formato_nuovo"}), ("mzlab/web/archivio.js", {"e2e_formato_nuovo"}), ("mzlab/web/rust-worker.js", {"e2e_formato_nuovo"}), ("mzlab/web/qaqc.js", {"e2e_qaqc", "e2e_qaqc_dormiente", "e2e_tour"}), ("mzlab/web/features.js", {"e2e_qaqc", "e2e_qaqc_dormiente", "e2e_strumenti"}), ("mzlab/web/profilo.js", {"e2e_statistica"}), ("mzlab/web/tabella.js", {"e2e_statistica"}), ("mzlab/web/bianco.js", {"e2e_statistica"}), ("mzlab/web/riferimento.js", {"e2e_differenza_hr", "e2e_tour"}), ("tests_e2e/e2e_differenza_hr.py", {"e2e_differenza_hr"}), ("mzlab/web/pca.js", {"e2e_statistica"}), ("mzlab/statistica.py", {"e2e_statistica"}), ("tools/dati_sintetici.py", {"e2e_statistica"}), ("mzlab/web/stat.js", {"e2e_statistica", "e2e_strumenti", "e2e_tour"}), ("mzlab/web/campioni.js", {"e2e_statistica", "e2e_workflow", "e2e_campioni_salva"}), ("mzlab/web/campioni-doc.js", {"e2e_statistica", "e2e_workflow", "e2e_campioni_salva"}), ("mzlab/web/campioni-tabella.js", {"e2e_statistica", "e2e_campioni_salva"}), ("tests_e2e/e2e_campioni_salva.py", {"e2e_campioni_salva"}), ("tests_e2e/e2e_ruoli_tempi.py", {"e2e_ruoli_tempi"}), ("mzlab/web/ruoli-carica.js", {"e2e_ruoli_tempi", "e2e_campioni_salva"}), ("mzlab/web/ruoli-avvisi.js", {"e2e_ruoli_tempi"}), ("mzlab/web/ruoli-celle.js", {"e2e_ruoli_tempi"}), ("mzlab/web/ruoli-menu.js", {"e2e_ruoli_tempi"}), ("tests_e2e/e2e_statistica.py", {"e2e_statistica"}), ("mzlab/web/rapporto.js", {"e2e_qaqc", "e2e_workflow"}), ("mzlab/qaqc.py", {"e2e_qaqc"}),
@@ -408,14 +410,12 @@ def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
         rc, _out, dt = sh([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], LOG / "prepara_sito.log", 1800, env=env)
         if rc:
             results.append(("sito per gli e2e (tools/prepara_sito.py)", "FAIL", dt, ["vedi .verifica/log/prepara_sito.log"])); return
-    # the site tests (they build or serve the site on fixed ports) always run alone, after the others
-    alone = [n for n in todo if "sito" in NEEDS.get(n, set())]
+    # every test takes a free port and its own work folder (tests_e2e/lib.py), the site tests too: they all run in the same pool, the slowest first
     from concurrent.futures import ThreadPoolExecutor
+    lenti = [n for n in LENTI if n in todo]
     with ThreadPoolExecutor(max_workers=max(1, jobs)) as ex:
-        for r in ex.map(one, [n for n in todo if n not in alone]):
+        for r in ex.map(one, lenti + [n for n in todo if n not in lenti]):
             out_by[r[0]] = r
-    for n in alone:
-        out_by[n] = one(n)
     results.extend(out_by[n] for n in names)
     results.append(("dati usati per gli e2e", "INFO", 0, [f"{src}: {mz}" + (f" · .dam: {dam.name}" if dam else " · nessun .dam")]))
 
