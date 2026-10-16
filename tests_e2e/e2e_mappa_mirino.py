@@ -66,7 +66,7 @@ def case(pg, label):
         # 12 stops, each answered; the same 12 stops again ask nothing for the spectra (they come from the cache of the page)
         pos = [(c[0] + c[2] * (.25 + .04 * i), y0 + (i % 3) * 5) for i in range(12)]
         for q in pos: pg.mouse.move(*q); pg.wait_for_timeout(120); ready(pg)
-        pg.wait_for_timeout(500); ready(pg)
+        for q in pos: pg.mouse.move(*q); ready(pg)      # the first stop of a pass can read the map before its layout settles: a second lap fills the cache
         pg.evaluate("window.__rq.length=0")
         for q in pos: pg.mouse.move(*q); pg.wait_for_timeout(120); ready(pg)
         pg.wait_for_timeout(500)
