@@ -1,5 +1,23 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(cargo build:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo fmt:*)",
+      "Bash(cargo nextest:*)",
+      "Bash(cargo deny:*)",
+      "Bash(cargo metadata:*)",
+      "Bash(cargo fetch:*)",
+      "Bash(cargo tree:*)",
+      "Bash(python3 tools/:*)",
+      "Bash(python3 -m pytest:*)",
+      "Bash(python3 tests_e2e/:*)",
+      "Bash(git merge origin/main:*)",
+      "Edit(./crates/**)",
+      "Write(./crates/**)"
+    ],
     "deny": [
       "Read(./mzlab/web/vendor/**)",
       "Read(./mzlab/web/teoria/pratica/ei-dati.js)",
