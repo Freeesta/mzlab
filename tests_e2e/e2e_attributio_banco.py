@@ -129,11 +129,14 @@ try:
         step("the cascade runs again (POS 15 is L2b), the reviewer is remembered and the decisions reach the notebook", reruns)
 
         def arrows():
-            h0 = pg.inner_text("#bn-h"); pg.focus("#bn-h"); pg.keyboard.press("ArrowRight")
+            h0 = pg.evaluate("document.querySelector('#bn-h').textContent"); pg.focus("#bn-h"); pg.keyboard.press("ArrowRight")
             pg.wait_for_function("(h) => document.querySelector('#bn-h') && document.querySelector('#bn-h').textContent !== h", arg=h0, timeout=60000)
-            h1 = pg.inner_text("#bn-h"); assert "2 of 16" in h1 or "(" in h1, h1
+            h1 = pg.evaluate("document.querySelector('#bn-h').textContent"); assert "2 of 16" in h1 or "(" in h1, h1
             pg.keyboard.press("ArrowLeft")
-            pg.wait_for_function("(h) => document.querySelector('#bn-h') && document.querySelector('#bn-h').textContent === h", arg=h0, timeout=60000)
+            for _ in range(300):
+                if pg.evaluate("document.querySelector('#bn-h')?.textContent") == h0: break
+                pg.wait_for_timeout(100)
+            else: raise AssertionError("ArrowLeft did not come back to " + h0)
         step("the arrows go to the next and the previous feature", arrows)
 
         step("no request is left unserved and the page has no error", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if (errs or pg.evaluate("(window.MZLAB_LR_MISS || []).length")) else None)

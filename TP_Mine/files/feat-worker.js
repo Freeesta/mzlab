@@ -195,7 +195,7 @@ export function createFeatPool(opts) {
       return submit(async (slot, load) => {
         await load("attributio_rev");
         const names = JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
-        const r = await call(slot, { op: "attributio_review", files: files.map(f => f.file), names, pol, id });
+        const r = await call(slot, { op: "attributio_review", files: files.map(f => f.file), names, pol, feature: id });
         return JSON.parse(new TextDecoder().decode(r.bytes));
       });
     },
@@ -409,7 +409,7 @@ Object.assign(OPS, {
   async attributio_review(m) {
     const out = memSink(), rd = new FileReaderSync();
     const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
-    mods.attributio_rev.review_to(read, m.names, m.id, m.pol, out.write);
+    mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, out.write);
     return { bytes: out.bytes() };
   },
   async attributio_decision(m) {
