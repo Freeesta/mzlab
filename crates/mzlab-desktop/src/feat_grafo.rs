@@ -1,6 +1,7 @@
 //! The route `feat/grafo` of `rpc`: the structure graph of `mzlab_feat::chem` (the same functions as the `.wasm` `grafo`). `{op: "feat/grafo", kind: "analyse", smiles}` gives the
 //! `grafo/1` of a SMILES, `kind: "fragments"` (`molfile`, `a`, `b`) the cuts of a molfile (`frag/1`) and `kind: "partial"` (`molfile`, `delta`) a partial structure (`parz/1`).
 //! `kind: "positions"` (`smiles`, `transform`, `peaks` as JSON text, `tol`, `ppm`, `positive`) gives the `posiz/1` of a product (the classes of positions its MS2 supports).
+//! `kind: "reactivity"` (`smiles`, `opts` as a JSON object or text) gives the `reatt/1` of `mzlab_chem::reactivity_json` (the same function as the `.wasm` `chem`).
 //! An error keeps its key (`error.grafo.ring`, `error.grafo.delta.neg`, ...) as the `.wasm` throws it.
 
 use mzlab_core::{Error, Result};
@@ -26,6 +27,14 @@ impl State {
                 p["ppm"].as_bool().unwrap_or(false),
                 p["positive"].as_bool().unwrap_or(true),
             )?),
+            "reactivity" => {
+                let opts = if p["opts"].is_object() {
+                    p["opts"].to_string()
+                } else {
+                    s("opts").to_string()
+                };
+                text(mzlab_chem::reactivity_json(s("smiles"), &opts)?)
+            }
             _ => Err(Error::new("rpc.unknown")),
         }
     }
