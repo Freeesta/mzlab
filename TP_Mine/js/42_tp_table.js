@@ -41,7 +41,7 @@
 .tp .tpt-tabs button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
 .tp .tpt-body .tpt-scroll{max-height:420px;overflow:auto}
 .tp .tpt-st{display:inline-block;min-width:1em;text-align:center;font-family:"Segoe UI Symbol","DejaVu Sans","Noto Sans Symbols 2",sans-serif}.tp .tpt-st-detected{color:var(--ink)}.tp .tpt-st-filled{color:var(--accent)}.tp .tpt-st-targeted{color:var(--warn)}.tp .tpt-st-absent,.tp .tpt-st-na{color:var(--muted)}
-.tp .tpt-cells{letter-spacing:1px;white-space:nowrap}.tp .tpt-cells .tpt-more{font-size:11px;color:var(--muted);margin-left:3px;letter-spacing:0}
+.tp .tpt-cells{letter-spacing:1px;white-space:nowrap}.tp .tpt-cells-g{letter-spacing:0;display:inline-flex;gap:2px;vertical-align:middle}.tp .tpt-cell{box-sizing:border-box;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--muted);border-radius:3px;background:var(--panel)}.tp .tpt-cell .tpt-st{min-width:0;color:inherit}.tp .tpt-cell.on-w{color:var(--tpr-w)}.tp .tpt-cell.on-k{color:var(--tpr-k)}.tp .tpt-cell:focus-visible{outline:2px solid var(--accent);outline-offset:1px}.tp .tpt-cells .tpt-more{font-size:11px;color:var(--muted);margin-left:3px;letter-spacing:0}
 .tp .tpt-leg{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:11px;margin-top:6px;color:var(--muted)}.tp .tpt-leg span[tabindex]{min-height:24px;display:inline-flex;align-items:center;gap:4px}
 .tp tr.tpt-nd td{color:var(--muted);background:var(--bg2,transparent)}.tp tr.tpt-nd .tpt-sp{opacity:.5}
 .tp .lvb.tpt-dec{border-style:double;border-width:4px;padding:0 4px}
@@ -377,13 +377,32 @@
     const [sym, word] = STATES[s] || STATES.na;
     return `<span class="tpt-st tpt-st-${STATES[s] ? s : "na"}" role="img" aria-label="${word}"${tt("ft.state." + s)}>${sym}</span>`;
   }
-  /** a row of symbols, at most `max` and then «+N»; the label sums them up («5 detected, 1 filled»)
-   * @param {string[]} states @param {number} [max] */
-  function cells(states, max = 12) {
+  const sci = (/** @type {number} */ v) => !Number.isFinite(v) ? "–" : v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(1) : String(+v.toPrecision(3));
+  /** a point u in 0..1 of the scale of five CSS variables `--tpr-c0..4` (the one of the matrix of the samples) */
+  function ramp(/** @type {number} */ u) {
+    const x = Math.max(0, Math.min(1, u)) * 4, i = Math.min(3, Math.floor(x)), f = Math.round((x - i) * 100);
+    return `color-mix(in srgb,var(--tpr-c${i + 1}) ${f}%,var(--tpr-c${i}))`;
+  }
+  /** group of a sample in the order of the row: 0 blank or dark, 1 t0, 2 timed, 3 other @param {{ type?: string, time?: number | null }} x */
+  const grp = x => /^(blank|dark|bianco|buio)/i.test(x.type || "") ? 0 : (/^t0/i.test(x.type || "") || x.time === 0) ? 1 : typeof x.time === "number" && Number.isFinite(x.time) ? 2 : 3;
+  /** a row of symbols, at most `max` and then «+N»; the label sums them up («5 detected, 1 filled»).
+   * With `info` (one `{file, type, time, area}` per state) the samples go in the order of the matrix (blank / dark, t0, growing times), every symbol is a focusable stop with its help
+   * (sample, time, area, state) and its background says the area on the log scale of the matrix (darker = more); the shape still says the state.
+   * @param {string[]} states @param {number} [max] @param {{ file?: string, type?: string, time?: number | null, area?: number }[]} [info] */
+  function cells(states, max = 12, info) {
     const n = /** @type {Record<string, number>} */ ({}); for (const s of states) n[s] = (n[s] || 0) + 1;
     const lab = Object.keys(STATES).filter(k => n[k]).map(k => `${n[k]} ${STATES[k][1]}`).join(", ") || "no samples";
     const sym = (/** @type {string} */ s) => `<span class="tpt-st tpt-st-${STATES[s] ? s : "na"}" aria-hidden="true">${(STATES[s] || STATES.na)[0]}</span>`;
-    return `<span class="tpt-cells" role="img" aria-label="${lab}">${states.slice(0, max).map(sym).join("")}${states.length > max ? `<span class="tpt-more">+${states.length - max}</span>` : ""}</span>`;
+    const more = (/** @type {number} */ k) => k > max ? `<span class="tpt-more">+${k - max}</span>` : "";
+    if (!info || info.length !== states.length) return `<span class="tpt-cells" role="img" aria-label="${lab}">${states.slice(0, max).map(sym).join("")}${more(states.length)}</span>`;
+    const ix = states.map((_, i) => i).sort((a, b) => grp(info[a]) - grp(info[b]) || (+(info[a].time ?? 0)) - (+(info[b].time ?? 0)));
+    const pos = info.map(x => x.area).filter(a => typeof a === "number" && a > 0).map(a => Math.log10(/** @type {number} */ (a))), lo = pos.length ? Math.min(...pos) : 0, hi = pos.length ? Math.max(...pos) : 1;
+    const one = (/** @type {number} */ i) => {
+      const x = info[i], a = x.area, has = typeof a === "number" && a > 0, u = has ? (hi > lo ? (Math.log10(/** @type {number} */ (a)) - lo) / (hi - lo) : 0.5) : null, [, word] = STATES[states[i]] || STATES.na;
+      const tip = `${x.file ? x.file + " · " : ""}${x.type ? x.type + ", " : ""}${typeof x.time === "number" ? "time " + x.time : "no time"} · area ${typeof a === "number" ? sci(a) : "none"} · peak ${word}`;
+      return `<span class="tpt-cell${u == null ? "" : u < 0.5 ? " on-w" : " on-k"}" role="img" aria-label="${tip.replace(/"/g, "&quot;")}"${G.TPHELP ? ` tabindex="0" data-tt="ft.riga.cell" data-tt-text="${tip.replace(/"/g, "&quot;")}"` : ""}${u == null ? "" : ` style="background:${ramp(u)}"`}>${sym(states[i])}</span>`;
+    };
+    return `<span class="tpt-cells tpt-cells-g" role="group" aria-label="${lab}">${ix.slice(0, max).map(one).join("")}${more(states.length)}</span>`;
   }
   /** the legend of the symbols under the table @param {string[]} keys */
   function legend(keys) {

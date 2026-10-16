@@ -11,7 +11,7 @@ Il pannello «Substitution position» mostra, per ogni classe di posizioni compa
 
 ## Da fare
 1. **Rust**: in `crates/mzlab-feat/src/chem/posizioni/` un ingresso facoltativo con i valori per atomo pesante (da `reatt/1`, indice `heavy_index`), che riempie il campo facoltativo `prior:[{atom, value, rank, quantity:"f_minus", method, note:"Prev."}]` di `posiz/1` (resta `version:1`); `rank` tra i siti della stessa trasformazione, pari merito se scarto < 0,005. Si calcola solo per `+O` (•OH, attacco elettrofilo); per `+Cl-H`/`+Br-H` lo stesso f(−) con la nota «electrophilic substitution, not validated here»; per le altre trasformazioni niente.
-   `mzlab-feat` non dipende da `mzlab-chem`: i valori entrano come JSON già calcolato (funzione `positions` del `.wasm` `grafo` con un argomento in più, o una funzione sorella), così il `.wasm` `grafo` non cresce del motore.
+   `mzlab-feat` non dipende da `mzlab-chem`: i valori entrano come JSON già calcolato (funzione `positions` del `.wasm` `grafo` con un argomento in più, o una funzione sorella), così il `.wasm` `grafo` non cresce del motore; incrementare la costante bridge WASM da `"mzfeat-grafo/4"` a `"mzfeat-grafo/5"` in `crates/mzlab-feat-grafo-wasm/src/lib.rs` e nei documenti collegati.
 2. **Pagina** (`TP_Mine/js/44_posizioni.js`): colonna «Prev. f(−)» (valore medio della classe e rango) con l'avviso fisso «Prediction (GFN2-xTB, implicit water), not evidence; does not reorder or exclude classes»; vuota con «computing…» finché CC-B4 non ha il risultato; nella tabella TDATI la colonna c'è sempre.
 3. **Attributio**: nessun cambio ai pacchetti AT; documenta in `docs/agenti/reattivita.md` come il Banco 2b (quando esiste) legge `prior` di `posiz/1`.
 
