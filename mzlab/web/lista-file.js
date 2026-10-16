@@ -86,7 +86,7 @@ function pickTrace(/** @type {Pannello} */ p, /** @type {number} */ x, /** @type
   const a = p._a; if (!a || !a.sr || a.sr.length < 2 || a.cas || a.stk) return;
   let best = null, bd = 14;
   a.sr.forEach(r => { const f = E.files[r.k]; if (!f || !scanFiles([f]).length || !f.vis) return; const d = Math.abs(a.Y(r.ys[nearIdx(r.x, x)]) - py); if (d < bd) { bd = d; best = r.k; } });
-  if (best != null && best !== E.cur) { STATO.file(best, "file"); renderFileList(); renderNav(); uiSave(); }
+  if (best != null && best !== E.cur) { E.panels.forEach(s => { if (s.type === "spec" && s.link === p.id) s.kSet = false; }); STATO.file(best, "file"); renderFileList(); renderNav(); uiSave(); }
 }
 /** Makes file k the active one (ticked if it was not); with one file shown, the new one replaces it (the arrows and the chooser of the bar). */
 function activeFile(k) {
