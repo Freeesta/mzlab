@@ -53,29 +53,36 @@ fn same_shape(got: &Value, want: &Value, path: &str) {
     }
 }
 
+/// `v` without the keys `keys`.
+fn without(v: &Value, keys: &[&str]) -> Value {
+    let mut out = v.clone();
+    for k in keys {
+        out.as_object_mut().unwrap().remove(*k);
+    }
+    out
+}
+
 #[test]
 fn contract_and_rows_of_python() {
     let (files, idxs) = series();
     let d = dig(&files, &idxs);
     let s: Value = serde_json::from_str(&summary(&d, r#"{"total": 1}"#)).unwrap();
     let g = golden();
-    let mut shared = s.clone();
-    shared.as_object_mut().unwrap().remove("ms2_links");
-    shared.as_object_mut().unwrap().remove("ms2_rep");
-    shared.as_object_mut().unwrap().remove("ms2_text");
     // keys of the Rust Dig only: the parent check and the matches by chance (`lr/chance.rs`)
     assert_eq!(s["parent_ok"], true);
     assert!(s["chance"].as_array().is_some_and(|c| !c.is_empty()));
-    shared.as_object_mut().unwrap().remove("parent_ok");
-    shared.as_object_mut().unwrap().remove("chance");
-    shared.as_object_mut().unwrap().remove("unexpected_left");
-    same_shape(&shared, &g["summary"], "summary");
+    let rust_only = [
+        "ms2_links",
+        "ms2_rep",
+        "ms2_text",
+        "parent_ok",
+        "chance",
+        "unexpected_left",
+    ];
+    same_shape(&without(&s, &rust_only), &g["summary"], "summary");
     for row in s["rows"].as_array().unwrap() {
-        let mut shared = row.clone();
-        for k in ["ms2", "tp_name", "status", "net_change", "modification"] {
-            shared.as_object_mut().unwrap().remove(k);
-        }
-        same_shape(&shared, &g["row"], "row");
+        let keys = ["ms2", "tp_name", "status", "net_change", "modification"];
+        same_shape(&without(row, &keys), &g["row"], "row");
         for k in row["kinetics"].as_array().unwrap() {
             same_shape(k, &g["kinetics"], "kinetics");
         }
@@ -109,12 +116,8 @@ fn contract_and_rows_of_python() {
         let id = r["id"].as_i64().unwrap();
         let det: Value =
             serde_json::from_str(&detail(&d, id, |k| Ok(open(&idxs[k]))).unwrap()).unwrap();
-        let mut shared = det.clone();
-        shared.as_object_mut().unwrap().remove("specificity");
-        shared.as_object_mut().unwrap().remove("ms2_links");
-        shared.as_object_mut().unwrap().remove("ms2_rep");
-        shared.as_object_mut().unwrap().remove("ms2_text");
-        same_shape(&shared, &g["detail"], "detail");
+        let keys = ["specificity", "ms2_links", "ms2_rep", "ms2_text"];
+        same_shape(&without(&det, &keys), &g["detail"], "detail");
         assert!(
             det["criteria"]
                 .as_array()

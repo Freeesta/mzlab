@@ -30,7 +30,8 @@ fn open(idx: &[u8]) -> Index<Vec<u8>> {
     Index::open(idx.to_vec(), idx.len() as u64).unwrap()
 }
 
-fn main() {
+/// The arguments without the flags, `--diag` and the N of `--ms2 N`.
+fn args() -> (Vec<String>, bool, usize) {
     let mut a: Vec<String> = std::env::args().skip(1).collect();
     let diag = a
         .iter()
@@ -45,6 +46,11 @@ fn main() {
         }
         None => 0,
     };
+    (a, diag, ms2)
+}
+
+fn main() {
+    let (a, diag, ms2) = args();
     let (out, files, parent, rules) = (
         Path::new(&a[0]),
         std::fs::read_to_string(&a[1]).unwrap(),

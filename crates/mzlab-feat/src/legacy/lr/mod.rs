@@ -297,6 +297,90 @@ fn keep_unexpected(entries: Vec<Entry>, max: usize) -> (Vec<Entry>, (usize, usiz
     (out, left)
 }
 
+/// The rows of `t` within `tol` of one of the m/z `m`.
+fn near(t: &Aligned, m: &[f64], tol: f64) -> Vec<usize> {
+    (0..t.len())
+        .filter(|&r| m.iter().any(|x| (t.mz[r] - x).abs() <= tol))
+        .collect()
+}
+
+/// The row of the parent (`prow`, after the calibration) with the criteria of `parent_check` and of its chromatographic peak; true when
+/// `parent_check` passes.
+#[allow(clippy::too_many_arguments)]
+fn parent_entry(
+    t: &Aligned,
+    lc: &[FileIn],
+    parent: &ParentLr,
+    hyps: &[rows::Hyp],
+    s: &Settings,
+    chk: &peakchk::Checks,
+    prow: Option<usize>,
+    off: f64,
+) -> (Entry, bool) {
+    let mut p = Entry {
+        name: "parent".into(),
+        formula: parent.formula.clone(),
+        mz: parent.mz,
+        mz_x: parent.mz + off,
+        neutral_mass: Some(parent.neutral_mass),
+        alternatives: rows::parent_alternatives(hyps, parent, s.tol_da),
+        row: prow,
+        ..Entry::default()
+    };
+    evaluate(&mut p, t, lc, s.persist());
+    let (parent_ok, pc) = parent_check(&p, lc, s);
+    (p.score, p.label, p.criteria) = (None, "progenitore", pc);
+    let labels: Vec<String> = lc.iter().map(|f| f.label.clone()).collect();
+    if let Some(k) = peakchk::criterion(t, chk, p.row, s, &labels) {
+        p.criteria.insert(1, k);
+    }
+    (p, parent_ok)
+}
+
+/// The candidates of the hypotheses and the unexpected ions, each with its chromatographic peak checked, added to `entries`; returns the
+/// classes of hypotheses against the decoys (`chance`) and marks `by_chance` on the candidates.
+#[allow(clippy::too_many_arguments)]
+fn products<R: ReadAt>(
+    t: &mut Aligned,
+    chk: &mut peakchk::Checks,
+    lc: &[FileIn],
+    hyps: &[rows::Hyp],
+    parent: &ParentLr,
+    s: &Settings,
+    off: f64,
+    entries: &mut Vec<Entry>,
+    open: &mut dyn FnMut(usize) -> Res<Index<R>>,
+) -> Res<Vec<chance::Chance>> {
+    let known: Vec<f64> = hyps.iter().map(|h| h.mz + off).collect();
+    let hrows = near(t, &known, s.tol_da);
+    peakchk::gate(t, chk, &hrows, s, open)?;
+    let (cands, _) = rows::candidates(t, lc, hyps, parent, off, s.tol_da);
+    entries.extend(cands);
+    for e in entries.iter_mut().skip(1) {
+        evaluate_peak(e, t, lc, s, chk);
+    }
+    if s.discover {
+        // the unexpected ions of the table as the pipeline gave it, then checked: one without a real peak stays, `debole`
+        let known: Vec<f64> = entries.iter().map(|e| e.mz_x).collect();
+        let mut un = rows::unexpected(t, lc, &known, s, off);
+        let urows: Vec<usize> = un.iter().filter_map(|e| e.row).collect();
+        peakchk::gate(t, chk, &urows, s, open)?;
+        for e in un.iter_mut() {
+            evaluate_peak(e, t, lc, s, chk);
+        }
+        entries.extend(un);
+    }
+    let ions: Vec<f64> = rows::free_rows(t, lc, &[], s)
+        .into_iter()
+        .map(|r| t.mz[r])
+        .collect();
+    let odds = chance::estimate(hyps, &ions, off, s.tol_da, parent.mz);
+    for e in entries.iter_mut().filter(|e| !e.unexpected && e.id != 0) {
+        e.by_chance = !odds.iter().any(|c| c.steps == e.steps && c.above());
+    }
+    Ok(odds)
+}
+
 /// `api.run` on a low-resolution series after the pipeline: `table` = the `.mzfeat` of the full-scan columns (in the order of `plan::columns`),
 /// `registry` = the `ipotesi/1` JSON of the hypotheses of the parent, `open(k)` = the `.mzidx` of column `k` (the XICs of `peakchk`).
 pub fn dig<R: ReadAt>(
@@ -324,11 +408,6 @@ pub fn dig<R: ReadAt>(
     }
     let hyps = rows::hypotheses(registry)?;
     let mut chk = peakchk::Checks::new(&t);
-    let near = |t: &Aligned, m: &[f64], tol: f64| -> Vec<usize> {
-        (0..t.len())
-            .filter(|&r| m.iter().any(|x| (t.mz[r] - x).abs() <= tol))
-            .collect()
-    };
     let around = near(&t, &[parent.mz], rows::OFFSET_MAX);
     peakchk::gate(&mut t, &mut chk, &around, &s, open)?;
     let (prow, offset) = rows::calibrate(&t, &lc, &parent, &s);
@@ -336,58 +415,21 @@ pub fn dig<R: ReadAt>(
         .as_ref()
         .filter(|o| o.applied)
         .map_or(0.0, |o| o.offset);
-    let mut p = Entry {
-        name: "parent".into(),
-        formula: parent.formula.clone(),
-        mz: parent.mz,
-        mz_x: parent.mz + off,
-        neutral_mass: Some(parent.neutral_mass),
-        alternatives: rows::parent_alternatives(&hyps, &parent, s.tol_da),
-        row: prow,
-        ..Entry::default()
-    };
-    evaluate(&mut p, &t, &lc, s.persist());
-    let (parent_ok, pc) = parent_check(&p, &lc, &s);
-    (p.score, p.label, p.criteria) = (None, "progenitore", pc);
-    if let Some(k) = peakchk::criterion(
-        &t,
-        &chk,
-        p.row,
-        &s,
-        &lc.iter().map(|f| f.label.clone()).collect::<Vec<_>>(),
-    ) {
-        p.criteria.insert(1, k);
-    }
+    let (p, parent_ok) = parent_entry(&t, &lc, &parent, &hyps, &s, &chk, prow, off);
     let dec = decay(&kinetics(&lc, &p.cells));
     let gens = Gens::new(&kinetics(&lc, &p.cells), dec.map(|d| d.k));
     let mut entries = vec![p];
-    let known: Vec<f64> = hyps.iter().map(|h| h.mz + off).collect();
-    let hrows = near(&t, &known, s.tol_da);
-    peakchk::gate(&mut t, &mut chk, &hrows, &s, open)?;
-    let (cands, _) = rows::candidates(&t, &lc, &hyps, &parent, off, s.tol_da);
-    entries.extend(cands);
-    for e in entries.iter_mut().skip(1) {
-        evaluate_peak(e, &t, &lc, &s, &chk);
-    }
-    if s.discover {
-        // the unexpected ions of the table as the pipeline gave it, then checked: one without a real peak stays, `debole`
-        let known: Vec<f64> = entries.iter().map(|e| e.mz_x).collect();
-        let mut un = rows::unexpected(&t, &lc, &known, &s, off);
-        let urows: Vec<usize> = un.iter().filter_map(|e| e.row).collect();
-        peakchk::gate(&mut t, &mut chk, &urows, &s, open)?;
-        for e in un.iter_mut() {
-            evaluate_peak(e, &t, &lc, &s, &chk);
-        }
-        entries.extend(un);
-    }
-    let ions: Vec<f64> = rows::free_rows(&t, &lc, &[], &s)
-        .into_iter()
-        .map(|r| t.mz[r])
-        .collect();
-    let odds = chance::estimate(&hyps, &ions, off, s.tol_da, parent.mz);
-    for e in entries.iter_mut().filter(|e| !e.unexpected && e.id != 0) {
-        e.by_chance = !odds.iter().any(|c| c.steps == e.steps && c.above());
-    }
+    let odds = products(
+        &mut t,
+        &mut chk,
+        &lc,
+        &hyps,
+        &parent,
+        &s,
+        off,
+        &mut entries,
+        open,
+    )?;
     finish(&mut entries, &lc, &s, &gens);
     for e in entries.iter_mut().filter(|e| !e.unexpected && e.id != 0) {
         not_strong_by_chance(e);
