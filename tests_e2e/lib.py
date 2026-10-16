@@ -115,6 +115,11 @@ def attendi(pg, expr, timeout=30000):
     pg.wait_for_function(expr, timeout=timeout)
 
 
+def frames(pg, n=2):
+    """Let the page draw `n` animation frames (events handled, canvases repainted): frame-based, not a fixed pause."""
+    pg.evaluate("n => new Promise(ok => { const f = () => (--n > 0 ? requestAnimationFrame(f) : ok()); requestAnimationFrame(f); })", n)
+
+
 def fermo(pg, sel, ms=300, timeout=30000):
     """Wait until the first element matching `sel` has had the same position and size for `ms` milliseconds (it is not moving or growing any more)."""
     pg.evaluate("window.__fermo = null")
@@ -129,6 +134,9 @@ def saved(pg, timeout=60000):
     pg.wait_for_function("fetch('api/notebook').then(r => r.json()).then(n => (n.session || []).length >= 1)", timeout=timeout)
 
 
+def ctrl_wheel(pg, dx, dy):
+    """Ctrl/⌘ + wheel (the pinch of the trackpad): the zoom of the charts; the wheel alone scrolls the page."""
+    pg.keyboard.down("Control"); pg.mouse.wheel(dx, dy); pg.keyboard.up("Control")
 def ready(pg, timeout=90000, settle=400):
     """Wait until the page is quiet: no loading screen, no request to the server in flight, nothing started or ended for `settle` ms."""
     import time as _t

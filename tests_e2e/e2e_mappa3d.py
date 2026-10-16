@@ -74,6 +74,8 @@ def viewer(pg, tag, hr):
         n0 = pg.evaluate(f"MAPPA.pts({M}).length"); box = pg.locator(".m3d-gl").bounding_box()
         c = pg.evaluate("""(()=>{const m=window.__m3d,V=m.V,g=V.g;let b=-1,bi=0;for(let i=0;i<V.raw.length;i++)if(V.raw[i]>b){b=V.raw[i];bi=i}
           const i=Math.floor(bi/g.nmz),j=bi%g.nmz,q=m.project(m.px(i),m.heightAt(i,j)*m.box().y,m.pz(j)),r=document.querySelector('.m3d-gl').getBoundingClientRect();return [r.left+q[0],r.top+q[1]]})()""")
+        pg.mouse.click(c[0], c[1]); attendi(pg, "window.__m3d.V.cur != null"); pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"); assert pg.evaluate(f"MAPPA.pts({M}).length") == n0, "a click alone only fixes the point"
+        pg.evaluate(f"MAPPA.st({M}).mark = true")                                                # «Mark» on: the click adds it
         pg.mouse.click(c[0], c[1]); pg.wait_for_function(f"MAPPA.pts({M}).length==={n0 + 1}", timeout=10000)
     step(f"{tag}: a click fixes a point (same list as the 2D map)", fix)
     def keys():

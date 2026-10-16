@@ -541,6 +541,7 @@ export function open(p, opener) {
   glc.addEventListener("wheel", e => { e.preventDefault(); V.cam.d = clamp(V.cam.d * Math.exp(e.deltaY * 0.0012), 0.2, 12); V.dirty = true; }, { passive: false });
   function click(e) {
     const h = pick(e.offsetX, e.offsetY); if (!h) return; setCur(h.i, h.j);
+    if (!MAPPA.st(p).mark) return;                                                              // as in 2D: a click only fixes the point; «Mark» adds it to the list
     MAPPA.addPointAt(p, rtAt(h.i), mzAt(h.j), V.g.log ? mzAt(h.j) * V.g.dlog : V.g.dmz).then(() => { V.dirty = true; });
   }
   glc.addEventListener("dblclick", e => {

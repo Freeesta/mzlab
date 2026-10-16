@@ -57,9 +57,9 @@ try:
                 return pg.evaluate(f"(()=>{{const s={M}._mz,a={M}._a,q=s.lock;return s.dot?[s.dot.x-a.X(q.rt),s.dot.y-a.Y(q.mz)]:null}})()")
             o = off(); assert o and abs(o[0]) <= .5 and abs(o[1]) <= .5, ('dot', o)
             q = pg.evaluate(f"(()=>{{const a={M}._a,q={M}._mz.lock,r={M}.cv.getBoundingClientRect();return [r.left+a.X(q.rt),r.top+a.Y(q.mz)]}})()")
-            pg.mouse.move(q[0], q[1]); pg.mouse.wheel(0, -300); settle()                  # zoom around the locked point
+            pg.mouse.move(q[0], q[1]); ctrl_wheel(pg, 0, -300); settle()                  # zoom around the locked point
             o = off(); assert o and abs(o[0]) <= .5 and abs(o[1]) <= .5, ("zoom", o)
-            pg.mouse.wheel(0, 200); settle(); o = off(); assert o is None or (abs(o[0]) <= .5 and abs(o[1]) <= .5), ("zoom out", o)
+            ctrl_wheel(pg, 0, 200); settle(); o = off(); assert o is None or (abs(o[0]) <= .5 and abs(o[1]) <= .5), ("zoom out", o)
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Escape"); settle(); assert not lock() and pg.evaluate(f"{M}._mz.dot") is None
         step("locked point: a dot centred on it (±0.5 px) after zoom, gone on unlock", dot)
         def mark():
