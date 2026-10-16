@@ -34,7 +34,7 @@ try:
             pg.locator("#dpanels .pnl.chrom [data-a=xic]").first.click(); assert dlg()
             opts = pg.evaluate("[...document.querySelectorAll('#xic-ad option')].map(o => [o.value || o.textContent, o.textContent])")
             assert opts[-1] == ["none", "Nessun addotto"] and len(opts) == 8, opts
-            pg.select_option("#xic-ad", "none")
+            pg.fill("#xic-mz", ""); pg.select_option("#xic-ad", "none")
             assert "ione" in pg.get_attribute("#xic-mz", "placeholder"), pg.get_attribute("#xic-mz", "placeholder")
             pg.fill("#xic-mz", "C14H13F4N3O2S+H"); hold(pg, 1300)
             assert "363.8 - 364.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")      # the +H written in the text is the adduct: the same window as [M+H]+
