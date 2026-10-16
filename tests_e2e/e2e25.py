@@ -20,7 +20,10 @@ COLORS = "E.files.filter(f=>f.kind==='full'&&f.type==='sample'&&f.time!=null).so
 def load(pg, times, name):
     shutil.rmtree("/tmp/s25_" + name, ignore_errors=True)
     files = synth.make_series("/tmp/s25_" + name, times)
-    pg.set_input_files("#pick", files); pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+    pg.set_input_files("#pick", files); pg.wait_for_timeout(1000)
+    # the reference server of the tests keeps the files of the previous run in the loading table: only the ones just chosen are loaded
+    pg.evaluate("names => document.querySelectorAll('#flist input[data-k=use]').forEach(x => { if (!names.includes(ST.files[+x.dataset.i].name) && x.checked) x.click(); })", [f.split("/")[-1] for f in files])
+    pg.click("text=Carica dati"); ready(pg)
 try:
     with sync_playwright() as p:
         pg = r.page(p)
@@ -107,7 +110,7 @@ try:
             set_pal(pg, "time") if pg.locator("#uipset").count() else (pg.click("#np-set"), set_pal(pg, "time"))
         step("the palette survives a reload (localStorage qqq.prefs)", persists)
         def traces_use_palette():
-            pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
+            pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
             pg.wait_for_function("(()=>{const p=E.panels.find(p=>p.type==='chrom'); return !!(p && p._a && p._a.sr && p._a.sr.length >= 5)})()", timeout=10000)
             pg.evaluate("(()=>{E.tab='full'})()")
             fl = pg.evaluate("E.panels.filter(p=>p.type==='chrom').length"); assert fl >= 1
@@ -117,7 +120,9 @@ try:
         step("the chromatogram traces use the file colours", traces_use_palette)
         def n_variants():
             for n, times in ((3, [0, 15, 60]), (7, [0, 5, 10, 15, 30, 45, 60])):
-                pg.click("#newrun"); pg.click("#resetdlg [data-reset=files]"); pg.wait_for_timeout(2500)
+                pg.click("#newrun")
+                with pg.expect_navigation(timeout=30000): pg.click("#resetdlg [data-reset=files]")      # the wipe takes as long as it takes, then the page reloads
+                pg.wait_for_selector("#pick", state="attached"); pg.wait_for_timeout(1500)
                 load(pg, times, str(n)); pg.evaluate("setPal('time'); paintFiles()")      # the scale belongs to «Per tempo»
                 c = pg.evaluate(COLORS); hs = [hexof(x[1]) for x in c]; ls = [lum(h) for h in hs]
                 assert len(c) == n and len(set(hs)) == n and all(ls[i] < ls[i + 1] for i in range(n - 1)), (n, hs)

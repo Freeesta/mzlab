@@ -35,7 +35,7 @@ const PROV = (() => {
       const r = await fetch("api/provenance?" + new URLSearchParams(ctx(over)));
       if (!r.ok) throw new Error("provenance");
       const [schema, line] = (await r.text()).split("\n"), parts = line.split(" · "), version = parts[0].slice(8);     // «# mzLab x.y.z · key=value ...»
-      return { schema, version, line, rows: [["mzLab", version], ...parts.slice(1).map(x => [x.slice(0, x.indexOf("=")), x.slice(x.indexOf("=") + 1)])] };
+      return { schema, version, line, rows: [[window.APP_NAME, version], ...parts.slice(1).map(x => [x.slice(0, x.indexOf("=")), x.slice(x.indexOf("=") + 1)])] };
     } catch (_) { if (window.toast) window.toast(I18N.t("prov.fail")); return null; }
   }
   /** text of a table (rows separated by \n) with the provenance line first; unchanged when it already has it or the engine does not answer @param {string} text @param {any} [over] */

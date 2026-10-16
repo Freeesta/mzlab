@@ -13,7 +13,7 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
         pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
-        pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
+        pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
         pg.screenshot(path=SH + "40_start.png")
         # --- hover tooltip on the chromatogram
         def hover_chrom():

@@ -43,10 +43,11 @@ try:
             pg.locator("#colpop [data-c]").nth(3).click(); pg.wait_for_timeout(400)
             assert pg.evaluate("E.files[0].color") == "#D55E00" and pg.evaluate("E.files[0].colorSet")
             n0 = pg.locator("#flst .fl").count()
-            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Rimuovi").click(); pg.wait_for_timeout(300)
-            pg.click("#askok"); pg.wait_for_timeout(800)
+            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Rimuovi").click(); pg.wait_for_timeout(800)
+            # no confirmation: the removal is done at once and «Tolto · Annulla» offers to take it back
+            assert not pg.is_visible("#askok") and pg.locator("#tolto-box .tolto").count() == 1
             assert pg.locator("#flst .fl").count() == n0 - 1 and pg.evaluate("E.files[0].gone")
-        step("right click on a file: rename, colour, remove (with confirmation)", files)
+        step("right click on a file: rename, colour, remove (no confirmation, Undo offered)", files)
         def areas():
             pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(800)
             info = pg.evaluate("""()=>{const p=E.panels.find(q=>q.tab==='full'&&q.type==='chrom');p.el.scrollIntoView({block:'center'});const s=p._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});
