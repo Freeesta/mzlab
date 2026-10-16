@@ -10,7 +10,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+        attendi(pg, "performance.now() > 1000"); pg.click("text=Carica dati"); ready(pg)
         CH = "E.panels.find(p=>p.type==='chrom'&&p.full)"
         # the chromatogram alone in its row, then a double click far from the cursor
         alone = lambda: pg.evaluate(f"(()=>{{const c={CH};return LAYOUT.righeDi(stackOrder()).find(r=>r.includes(c)).length}})()")
