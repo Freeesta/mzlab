@@ -1,0 +1,9 @@
+mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
+
+usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params FILE.json]
+
+  FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
+  --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
+  --preset NAME      auto (default: both polarities as the panel does), pos or neg
+  --params FILE.json the numbers of the panel Pipeline: {"polarity", "mode", "floor", "min_height", "min_points", "ppm", "rt_tol", "fill"}
+  --help             this text
