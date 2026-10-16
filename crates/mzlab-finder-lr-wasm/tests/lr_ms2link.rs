@@ -131,6 +131,7 @@ fn matched(mut d: lr::LrDig, ms2: &[(&str, Option<f64>, Vec<u8>)], ov: &[Overrid
             time: *time,
             kind_type: "sample".into(),
             kind: "ms2".into(),
+            ..Default::default()
         });
     }
     let cols = &base().0;

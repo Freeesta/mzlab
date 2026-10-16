@@ -37,6 +37,9 @@ fn parent_row_by_rt_and_by_t0() {
         kind: "hr".into(),
         time: Some(t),
         t,
+        cond: String::new(),
+        replica: None,
+        order: 0,
     };
     let files = [f(0.0), f(30.0)];
     assert_eq!(parent_row(&t, &p, &files), Some(0), "the t0 decides");

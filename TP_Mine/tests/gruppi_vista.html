@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Compare conditions test page</title></head>
+<body><div id="host"></div>
+<script src="../lazy/gruppi-vista.js"></script>
+<script>
+// Test page: mounts the view on a fixture (?f=gruppi_fixture_kin.json to change it). Serve the repository root, e.g. python3 -m http.server.
+fetch(new URLSearchParams(location.search).get("f") || "gruppi_fixture.json").then(r => r.json()).then(g => window.TPGRUPPI_VIEW.mount(document.getElementById("host"), g, {}));
+</script></body></html>

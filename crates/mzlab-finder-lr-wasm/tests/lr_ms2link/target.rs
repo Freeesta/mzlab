@@ -28,6 +28,7 @@ fn link(d: &mut lr::LrDig, name: &str, f: &[u8], ov: &[Override]) {
         time: None,
         kind_type: "sample".into(),
         kind: "ms2".into(),
+        ..Default::default()
     });
     let cols = &with_target().0;
     let all: Vec<&[u8]> = cols.iter().map(|c| c.as_slice()).chain([f]).collect();

@@ -68,7 +68,7 @@ fn tally(d: &lr::LrDig) -> Tally {
 
 fn run(a: f64, settings: &str) -> Tally {
     let (files, idxs) = series_at(a);
-    tally(&dig_set(files, PARENT, settings, idxs))
+    tally(&dig_with(files, PARENT, settings, idxs))
 }
 
 #[test]

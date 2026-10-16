@@ -35,6 +35,7 @@ fn link(name: &str, x: X) -> lr::LrDig {
         time: None,
         kind_type: "sample".into(),
         kind: "ms2".into(),
+        ..Default::default()
     });
     let cols = &with_ions().0;
     let all: Vec<&[u8]> = cols

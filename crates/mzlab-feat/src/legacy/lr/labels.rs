@@ -111,12 +111,15 @@ fn ratio_crit(name: &'static str, what: &str, refs: &[f64], amax: f64) -> Crit {
     )
 }
 
-fn growth(files: &[FileIn], cells: &[Cell]) -> Option<Crit> {
+/// `distinct` = how many different times the samples must span for growth to be judged (0 = the three samples of today, whatever their times).
+fn growth(files: &[FileIn], cells: &[Cell], distinct: usize) -> Option<Crit> {
     let mut timed: Vec<usize> = (0..files.len())
         .filter(|&k| files[k].kind == "sample" && files[k].time.is_some())
         .collect();
     mzlab_core::sortc::by(&mut timed, |&a, &b| files[a].t.total_cmp(&files[b].t));
-    if timed.len() < 3 {
+    let mut times: Vec<f64> = timed.iter().map(|&k| files[k].t).collect();
+    times.dedup();
+    if timed.len() < 3 || times.len() < distinct {
         return None;
     }
     let a: Vec<f64> = timed
@@ -183,8 +186,19 @@ fn persistence(files: &[FileIn], cells: &[Cell], tr: &[usize], p: Persist) -> Cr
     crit(PERSISTS, if ok { "pass" } else { "fail" }, text)
 }
 
-/// `score_candidate` on the cells of a row (one per column of the table).
+/// `score_candidate` on the cells of a row (one per column of the table); with several conditions, the best condition's (`cond::best`).
 pub fn score(files: &[FileIn], cells: &[Cell], p: Persist) -> Score {
+    super::cond::best(files, cells, p).0
+}
+
+/// `score_candidate` on the cells of a row of one condition (or of a series without conditions).
+pub fn score_one(files: &[FileIn], cells: &[Cell], p: Persist) -> Score {
+    score_in(files, cells, p, 0)
+}
+
+/// `score_one`, with growth judged only when the samples span `distinct` different times (the view of one condition among several: its
+/// replicates of one time are one point of the kinetic, not three).
+pub fn score_in(files: &[FileIn], cells: &[Cell], p: Persist, distinct: usize) -> Score {
     let pick = |sel: &dyn Fn(&FileIn) -> bool| -> Vec<usize> {
         (0..files.len()).filter(|&k| sel(&files[k])).collect()
     };
@@ -241,7 +255,11 @@ pub fn score(files: &[FileIn], cells: &[Cell], p: Persist) -> Score {
         ),
         _ => crit("absent at time zero", "n/a", "no peak".into()),
     });
-    let gr = if ok { growth(files, cells) } else { None };
+    let gr = if ok {
+        growth(files, cells, distinct)
+    } else {
+        None
+    };
     c.push(gr.unwrap_or_else(|| {
         crit(
             GROWS,

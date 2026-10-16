@@ -3,7 +3,7 @@
 //! and time becomes a row (an unexpected ion, `ms2_target`) with the criteria and the score of the other rows but without the filters of the Dig
 //! (`max_unexpected`, criteria), and the matches are made again. A peak with no feature in the table is `no_feature`.
 
-use super::kin::{kinetics, Gens};
+use super::cond::GensBy;
 use super::ms2link::{Exp, Links};
 use super::rows::{best_area, entry, is_treated};
 use super::{evaluate, finish_one, isf, Entry, LrDig};
@@ -106,12 +106,12 @@ pub fn make(d: &mut LrDig, l: &Links) -> Vec<(usize, i64)> {
 
 /// Isotope check and kinetic generation of the new rows.
 fn finish(d: &mut LrDig) {
-    let kin = d
+    let parent = d
         .entries
         .first()
         .filter(|p| p.cells.len() == d.lc.len())
-        .map(|p| kinetics(&d.lc, &p.cells));
-    let gens = Gens::new(kin.as_deref().unwrap_or(&[]), d.decay.as_ref().map(|x| x.k));
+        .map(|p| p.cells.as_slice());
+    let gens = GensBy::new(&d.lc, parent, d.settings.groups.reference.as_deref());
     let snapshot: Vec<Entry> = d.entries.clone();
     let (lc, s) = (&d.lc, &d.settings);
     for e in d.entries.iter_mut().filter(|e| e.ms2_target) {

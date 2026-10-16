@@ -3,7 +3,9 @@
 //! `TP_Mine/js/20_tpmine.js` reads. The rows of the table are the peaks: no second peak search. MS2, MRM and the in-source fragments come later.
 
 pub mod chance;
+pub mod cond;
 pub mod detail;
+pub mod gruppi_out;
 pub mod isf;
 pub mod kin;
 pub mod labels;
@@ -16,6 +18,7 @@ pub mod ms2rep;
 pub mod ms2sim;
 pub mod ms2target;
 pub mod nomi;
+mod parent;
 pub mod peak1d;
 pub mod peakchk;
 pub mod plan;
@@ -32,8 +35,10 @@ use mzlab_core::idxread::{Index, ReadAt};
 use super::series::FileIn;
 use super::Res;
 use crate::aligned::Aligned;
-use kin::{decay, gen_of, kinetics, Decay, Gens};
-use labels::{score, status, Cell, Crit, GROWS};
+use cond::GensBy;
+use kin::Decay;
+use labels::{status, Cell, Crit, GROWS};
+use parent::parent_entry;
 use plan::{FileLr, ParentLr, Settings};
 
 /// The calibration offset measured on the parent (observed - calculated m/z of its ion).
@@ -71,6 +76,8 @@ pub struct Entry {
     pub label: &'static str,
     pub criteria: Vec<Crit>,
     pub isotope_of: Option<i64>,
+    /// The condition whose criteria the row carries (the best one); empty in a series of one condition.
+    pub cond: String,
     pub generation: Option<&'static str>,
     /// A row made from an MS2 experiment whose ion the Dig does not list (`ms2target`).
     pub ms2_target: bool,
@@ -136,7 +143,8 @@ pub(super) fn evaluate(e: &mut Entry, t: &Aligned, lc: &[FileIn], p: labels::Per
     };
     e.ref_rt = e.row.map(|r| mzlab_core::json::round(t.rt[r], 4));
     e.observed = e.row.map(|r| t.mz[r]);
-    let sc = score(lc, &e.cells, p);
+    let (sc, cond) = cond::best(lc, &e.cells, p);
+    e.cond = cond;
     (e.score, e.label, e.criteria) = (sc.score, sc.label, sc.criteria);
 }
 
@@ -151,59 +159,6 @@ fn evaluate_peak(e: &mut Entry, t: &Aligned, lc: &[FileIn], s: &Settings, c: &pe
         let sc = labels::finish(cr, ok);
         (e.score, e.label, e.criteria) = (sc.score, sc.label, sc.criteria);
     }
-}
-
-/// `parent_check`: the parent must be a chromatographic peak in the samples and, with at least two timed samples, its area must fall: the maximum
-/// before the last time and the last area at most half of it. A series where it does not is not the degradation of this parent, and the Dig
-/// proposes no product (`Settings::parent_decay` = false switches the fall off).
-fn parent_check(p: &Entry, lc: &[FileIn], s: &Settings) -> (bool, Vec<Crit>) {
-    let peak = p
-        .cells
-        .iter()
-        .zip(lc)
-        .any(|(c, f)| c.detected && f.kind == "sample");
-    let mut out = vec![labels::crit(
-        "parent found",
-        if peak { "pass" } else { "fail" },
-        if peak {
-            "the ion of the parent is a chromatographic peak in the samples".into()
-        } else if p.row.is_none() {
-            format!(
-                "no ion within {} Da of m/z {:.4} in the samples",
-                rows::OFFSET_MAX,
-                p.mz
-            )
-        } else {
-            "the signal at the m/z of the parent is not a chromatographic peak in any sample".into()
-        },
-    )];
-    let kin = kinetics(lc, &p.cells);
-    let falls = if !s.parent_decay {
-        labels::crit("parent falls over time", "n/a", "switched off".into())
-    } else if kin.len() < 2 || !peak {
-        labels::crit(
-            "parent falls over time",
-            "n/a",
-            "at least two timed samples with a peak are required".into(),
-        )
-    } else {
-        let im = (0..kin.len()).fold(0, |m, i| if kin[i].area > kin[m].area { i } else { m });
-        let last = kin[kin.len() - 1].area;
-        let ok = im + 1 < kin.len() && last <= 0.5 * kin[im].area;
-        labels::crit(
-            "parent falls over time",
-            if ok { "pass" } else { "fail" },
-            format!(
-                "maximum at {} min, last area {:.0} % of it (needs a maximum before the last time and at most 50 %){}",
-                labels::g(kin[im].time),
-                if kin[im].area > 0.0 { 100.0 * last / kin[im].area } else { 0.0 },
-                if ok { "" } else { ": no product is proposed for a parent that does not degrade" }
-            ),
-        )
-    };
-    let ok = peak && falls.status != "fail";
-    out.push(falls);
-    (ok, out)
 }
 
 /// The criteria a product cannot do without: a chromatographic peak, persistence, and formation (absent at time zero or growing). When one
@@ -247,13 +202,13 @@ pub(super) fn finish_one(
     snapshot: &[Entry],
     lc: &[FileIn],
     s: &Settings,
-    gens: &Gens,
+    gens: &GensBy,
 ) {
     let hit = rows::isotope_of(e, snapshot, s.tol_da, s.rt_tol_min);
     rows::isotope_crit(e, hit);
     weak_unless_formed(e);
     if status(&e.criteria, GROWS) == "pass" {
-        if let Some((v, text)) = gen_of(gens, &kinetics(lc, &e.cells)) {
+        if let Some((v, text)) = gens.generation(lc, &e.cells, &e.cond) {
             e.criteria
                 .push(labels::crit("kinetic generation", "n/a", text));
             e.generation = Some(v);
@@ -262,7 +217,7 @@ pub(super) fn finish_one(
 }
 
 /// Isotope check and kinetic generation of every entry but the parent.
-fn finish(entries: &mut [Entry], lc: &[FileIn], s: &Settings, gens: &Gens) {
+fn finish(entries: &mut [Entry], lc: &[FileIn], s: &Settings, gens: &GensBy) {
     let snapshot: Vec<Entry> = entries.to_vec();
     for e in entries
         .iter_mut()
@@ -302,39 +257,6 @@ fn near(t: &Aligned, m: &[f64], tol: f64) -> Vec<usize> {
     (0..t.len())
         .filter(|&r| m.iter().any(|x| (t.mz[r] - x).abs() <= tol))
         .collect()
-}
-
-/// The row of the parent (`prow`, after the calibration) with the criteria of `parent_check` and of its chromatographic peak; true when
-/// `parent_check` passes.
-#[allow(clippy::too_many_arguments)]
-fn parent_entry(
-    t: &Aligned,
-    lc: &[FileIn],
-    parent: &ParentLr,
-    hyps: &[rows::Hyp],
-    s: &Settings,
-    chk: &peakchk::Checks,
-    prow: Option<usize>,
-    off: f64,
-) -> (Entry, bool) {
-    let mut p = Entry {
-        name: "parent".into(),
-        formula: parent.formula.clone(),
-        mz: parent.mz,
-        mz_x: parent.mz + off,
-        neutral_mass: Some(parent.neutral_mass),
-        alternatives: rows::parent_alternatives(hyps, parent, s.tol_da),
-        row: prow,
-        ..Entry::default()
-    };
-    evaluate(&mut p, t, lc, s.persist());
-    let (parent_ok, pc) = parent_check(&p, lc, s);
-    (p.score, p.label, p.criteria) = (None, "progenitore", pc);
-    let labels: Vec<String> = lc.iter().map(|f| f.label.clone()).collect();
-    if let Some(k) = peakchk::criterion(t, chk, p.row, s, &labels) {
-        p.criteria.insert(1, k);
-    }
-    (p, parent_ok)
 }
 
 /// The candidates of the hypotheses and the unexpected ions, each with its chromatographic peak checked, added to `entries`; returns the
@@ -416,8 +338,8 @@ pub fn dig<R: ReadAt>(
         .filter(|o| o.applied)
         .map_or(0.0, |o| o.offset);
     let (p, parent_ok) = parent_entry(&t, &lc, &parent, &hyps, &s, &chk, prow, off);
-    let dec = decay(&kinetics(&lc, &p.cells));
-    let gens = Gens::new(&kinetics(&lc, &p.cells), dec.map(|d| d.k));
+    let gens = GensBy::new(&lc, Some(&p.cells), s.groups.reference.as_deref());
+    let dec = gens.decay;
     let mut entries = vec![p];
     let odds = products(
         &mut t,

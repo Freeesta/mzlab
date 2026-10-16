@@ -1002,6 +1002,8 @@ I18N.add("it", {
   "mappa.pal.cividis": "palette: cividis",
   "ctl.map.follow": "La mappa segue il file scelto nella barra (un solo file spuntato): scegliendone un altro qui cambia anche lì.",
   "ctl.map.file": "File da mostrare",
+  "ctl.map.prev": "File precedente dell'elenco (stesso riferimento e stessa finestra)",
+  "ctl.map.next": "File successivo dell'elenco (stesso riferimento e stessa finestra)",
   "ctl.map.scale.title": "Scala dei colori: la radice quadrata fa emergere i segnali deboli",
   "ctl.map.scale.sqrt": "radice",
   "ctl.map.scale.lin": "lineare",

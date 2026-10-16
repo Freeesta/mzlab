@@ -172,17 +172,18 @@ pub fn dig(files: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
 }
 
 pub fn dig_for(files: &str, parent: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
-    dig_set(files, parent, "{}", idxs)
+    dig_with(files, parent, "{}", idxs)
 }
 
-/// `dig_for` with the settings of the Dig (`plan::settings`).
-pub fn dig_set(files: &str, parent: &str, settings: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
+/// `dig_for` with the settings of the page (`plan::settings`).
+pub fn dig_with(files: &str, parent: &str, settings: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
     let plan: Value = serde_json::from_str(&lr::plan::plan_json(files, parent).unwrap()).unwrap();
     assert_eq!(plan["rust"], true);
     let r = run::recipe_for("", &mut open(&idxs[0])).unwrap();
     // as detect_file_to of the pool: the recipe of every file from its own index, the file name as the name
-    let names: Vec<String> = serde_json::from_str::<Value>(files)
-        .unwrap()
+    let list: Value = serde_json::from_str(files).unwrap();
+    let list = list.get("files").unwrap_or(&list); // a list, or {files, campioni}
+    let names: Vec<String> = list
         .as_array()
         .unwrap()
         .iter()
