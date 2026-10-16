@@ -160,7 +160,7 @@
       const k = ks[+/** @type {HTMLElement} */ (b).dataset.k], L = cur.links; if (!k || !L) return;
       const x = L.experiments.findIndex((/** @type {any} */ e) => e.file === k.file && Math.abs(e.precursor - k.precursor) <= KEY_TOL && (e.ce ?? null) === (k.ce ?? null));
       const p = x < 0 ? -1 : L.experiments[x].peaks.findIndex((/** @type {any} */ q) => Math.abs(q.apex - k.apex) <= 0.01);
-      const sel = /** @type {HTMLElement|null} */ (document.querySelector(`#tp-ms2map [data-ep="${x}:${p}"]`)); if (sel) { sel.scrollIntoView({ block: "center" }); sel.focus(); }
+      const sel = /** @type {HTMLElement|null} */ (document.querySelector(`#tp-ms2map [data-ep="${x}:${p}"]`)); if (sel) { const sec = sel.closest("details"); if (sec) sec.open = true; sel.scrollIntoView({ block: "center" }); sel.focus(); }
     });
     const ce = /** @type {HTMLSelectElement|null} */ (root.querySelector("#tp-ms2-ce")), box = root.querySelector("#tp-ms2-fr");
     if (ce && box) ce.onchange = () => {

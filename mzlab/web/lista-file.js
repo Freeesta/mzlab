@@ -12,17 +12,32 @@ function soloFile(/** @type {any} */ f0) {
   STATO.file(f0.k, "file"); if (f0.kind !== E.tab) setTab(f0.kind);
   cleanupOrphanPanels(); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave(); scrollToBlock(f0.kind);
 }
-/** Removes a file from the session and, in the browser, frees what it holds: the copy in OPFS and its derived indexes (a shared source, like a .wiff with several samples, stays while another sample uses it). */
-async function removeFile(/** @type {any} */ f) {
-  if (!await yesno(I18N.t("files.remove.confirm", { label: EH(f.label) }))) return;
-  f.gone = true; f.vis = false; if (window.MAPPA) MAPPA.dropFile(f.k); paintFiles();
-  E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
-  if (E.cur === f.k) STATO.file((tabFiles()[0] || { k: 0 }).k, "file-removed");
-  renderFileList(); renderNav();
-  // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
-  toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
+/** Removes a file from the session; no question: «Removed · Undo» takes it back (the stack of storia.js). In the browser the copy in OPFS and its derived indexes are freed when the notice has closed without an undo (a shared source, like a .wiff with several samples, stays while another sample uses it). */
+function removeFile(/** @type {any} */ f) {
+  const was = { vis: f.vis, cur: E.cur, ks: E.panels.filter(q => q.k === f.k && q.type !== "xic").map(q => /** @type {[any, number]} */ ([q, q.k])) };
   const src = (/** @type {any} */ g) => (g.file || "").split("#")[0];
-  if (window.MZLAB_BROWSER && !E.files.some(g => g !== f && !g.gone && src(g) === src(f))) post("api/remove", { name: src(f) }).catch(() => { /* not in the browser store: nothing to free */ });
+  const show = () => {
+    paintFiles(); renderFileList(); renderNav();
+    // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
+    toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
+  };
+  const take = () => {
+    f.gone = true; f.vis = false; if (window.MAPPA) MAPPA.dropFile(f.k);
+    E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
+    if (E.cur === f.k) STATO.file((tabFiles()[0] || { k: 0 }).k, "file-removed");
+    show();
+  };
+  const back = () => {
+    f.gone = false; f.vis = was.vis; was.ks.forEach(([q, k]) => { if (E.panels.includes(q)) q.k = k; });
+    if (was.cur === f.k) STATO.file(f.k, "file-restored");
+    show();
+  };
+  const free = () => {
+    if (window.MZLAB_BROWSER && f.gone && !E.files.some(g => g !== f && !g.gone && src(g) === src(f))) post("api/remove", { name: src(f) }).catch(() => { /* not in the browser store: nothing to free */ });
+  };
+  take();
+  if (STORIA) STORIA.tolto({ what: f.label, tab: f.kind, dati: f.label, undo: back, redo: take, scade: window.MZLAB_BROWSER ? free : null });
+  else free();
 }
 let _lastBox = /** @type {number | null} */ (null);
 function boxRange(/** @type {HTMLInputElement} */ x, /** @type {MouseEvent} */ e) {
@@ -71,7 +86,7 @@ function pickTrace(/** @type {Pannello} */ p, /** @type {number} */ x, /** @type
   const a = p._a; if (!a || !a.sr || a.sr.length < 2 || a.cas || a.stk) return;
   let best = null, bd = 14;
   a.sr.forEach(r => { const f = E.files[r.k]; if (!f || !scanFiles([f]).length || !f.vis) return; const d = Math.abs(a.Y(r.ys[nearIdx(r.x, x)]) - py); if (d < bd) { bd = d; best = r.k; } });
-  if (best != null && best !== E.cur) { STATO.file(best, "file"); renderFileList(); renderNav(); uiSave(); }
+  if (best != null && best !== E.cur) { E.panels.forEach(s => { if (s.type === "spec" && s.link === p.id) s.kSet = false; }); STATO.file(best, "file"); renderFileList(); renderNav(); uiSave(); }
 }
 /** Makes file k the active one (ticked if it was not); with one file shown, the new one replaces it (the arrows and the chooser of the bar). */
 function activeFile(k) {

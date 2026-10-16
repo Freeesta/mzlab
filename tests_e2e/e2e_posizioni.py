@@ -8,7 +8,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
-PORT = 8843
+from lib import free_port; PORT = free_port()
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -140,7 +140,8 @@ try:
             pg.wait_for_function("document.querySelector('#tp-files table') && document.querySelectorAll('#tp-files tr').length >= 9", timeout=240000)
             pg.fill("#tp-smi", "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('241.0641')", timeout=60000)
             pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=300000)
-            pg.click('.vt[data-v="gems"]'); pg.click(".gem:has-text('hydroxylation')"); pg.wait_for_selector("#tp-c-xic", timeout=60000)
+            pg.click('.vt[data-v="gems"]'); pg.click(".gem:has-text('hydroxylation')"); pg.wait_for_selector("#tp-t tr.tpt-exp #tp-det", timeout=60000)
+            pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det .lr-idx", timeout=60000)
             has_ms2 = pg.evaluate("!!document.querySelector('#tp-ms2-fr table')")
             btn = pg.evaluate("!!document.querySelector('#tp-det .tpp-btn')")
             assert btn == has_ms2, f"button {btn} but MS2 {has_ms2}"

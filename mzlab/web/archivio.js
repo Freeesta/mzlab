@@ -4,6 +4,7 @@
 // OPFS handles; each is opened for one write and closed at once. Reading goes through File objects (getFile).
 // Folders: files/ (the mzML), idx/ ("<name of the mzML>.mzidx"). No OPFS (an old Safari, a private window that refuses it): available() is false and the
 // page says that the browser is too old (browser.js).
+import { infoDi, nuovo } from "./manifesto.js";
 const ROOT = "mzlab";
 const STEP = 8 << 20;        // bytes written at a time (a Blob is read slice by slice, never whole)
 let rootP = null;
@@ -116,6 +117,10 @@ export async function put(kind, name, data) {
 export async function promote(kind, from, to) {
   await dropLease(kind, from); await dropLease(kind, to);
   const d = await dir(kind), fh = await d.getFileHandle(from);
+  if (kind === "idx" || kind === "feat") {                    // a file of a newer program (another tab, a later version of the page) is never replaced by an older one
+    const old = await d.getFileHandle(to).then(h => h.getFile(), () => null), info = old && await infoDi(kind, old).catch(() => null);
+    if (nuovo(kind, info)) { try { await d.removeEntry(from); } catch (_) { /* optional */ } throw fail("error.newerFormat", { file: to, version: info.versione_formato }); }
+  }
   try { await d.removeEntry(to); } catch (_) { /* nothing to replace */ }
   if (typeof fh.move === "function") { await fh.move(to); const f = await (await d.getFileHandle(to)).getFile(); told("put", kind, to, f.size); return f; }
   const f = await put(kind, to, await fh.getFile());          // no move() in this browser: a copy

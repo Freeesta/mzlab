@@ -6,7 +6,7 @@ from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(HERE)); import lib  # noqa: F401,E402  (patches wait_for_function for the CSP)
 SRC = Path(os.environ.get("TPMINE_SRC", ROOT / "TP_Mine"))
-PORT = 8845
+from lib import free_port; PORT = free_port()
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -37,7 +37,7 @@ try:
             pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('241.0641')", timeout=60000)
             pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=300000); pg.wait_for_timeout(1300)
             pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk")
-            pg.click("#tp-t tr.clk:has(td:nth-child(4):text-matches('^parent', 'i'))")
+            pg.click("#tp-t tbody tr.clk >> nth=0"); pg.click('#tp-det [data-tab="identity"]')          # the parent is the pinned first row; the tree is in its tab Identity
             pg.wait_for_selector("#tp-alb svg.alb-svg .nd", timeout=60000)
             n, e = pg.evaluate("[document.querySelectorAll('#tp-alb svg.alb-svg .nd').length, document.querySelectorAll('#tp-alb svg.alb-svg g.vp > path').length]")
             assert n >= 2 and e == n - 1, (n, e)

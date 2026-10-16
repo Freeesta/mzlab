@@ -6,7 +6,7 @@ Studio dell'Architetto sulla domanda di Federico: ha senso mettere in mzLab un c
 1. Risposta: **sì, ma ridotto**. Il valore vero non sta nel calcolo quantistico ma nel confronto ordinato tra le posizioni possibili e lo spettro MS2 misurato.
 2. Gli indici di Fukui e la DFT dicono «dove è più probabile» l'attacco di OH• su molecole semplici; sui TP reali sono qualitativi, cambiano con il metodo e non sono mai una prova di struttura. Vale lo stesso per ozono, cloro, fotolisi, idrolisi, riduzione, SO4•⁻/Cl• e biotrasformazione (§2b): la previsione della posizione è validata bene solo per l'alogenazione aromatica (90-96 %) e, meno, per il metabolismo P450 (top-2 circa 76-82 %).
 3. Su TiO2 l'attacco non è solo OH• libero in soluzione (lacune, superficie, adsorbimento): una previsione fatta in acqua omogenea vale ancora meno.
-4. Nessun calcolo pesante (xtb, CREST, DFT) può girare nel browser in modo sensato: Fortran, minuti o ore per molecola, megabyte di `.wasm`. Si può solo importare un calcolo fatto fuori.
+4. Nessun calcolo pesante (xtb, CREST, DFT) può girare nel browser in modo sensato: Fortran, minuti o ore per molecola, megabyte di `.wasm`. Si può solo importare un calcolo fatto fuori. Eccezione misurata: GFN2-xTB riscritto in Rust (`docs/studi/CC_MOTORE_NEL_BROWSER.md`).
 5. La prova più solida per localizzare un -OH resta la MS2: se un frammento porta +16 Da, l'OH sta in quel pezzo. Questo si può calcolare in Rust con il grafo SMILES che mzLab ha già.
 6. Di solito la MS2 dice «in quale anello o catena», quasi mai «in orto o in para»: il programma deve mostrare le classi di posizioni che lo spettro non sa distinguere (livello 3a), non sceglierne una.
 7. RT previsto e CCS previsto hanno errori più grandi della differenza tra isomeri posizionali: servono a scartare, non a decidere. Il 3200 QTRAP non ha mobilità ionica.
@@ -81,7 +81,7 @@ Il punto chiave: la MS2 localizza l'O nel **pezzo** che lo porta. Se il pezzo è
 | C. Reattività qualitativa (Hückel π + classi di BDE C-H per l'astrazione) | OH•, alogenazione; P450 se richiesto | Rust, `.wasm` `grafo` | stima < 60 KB | millisecondi | MIT | fase 2, solo se passa la validazione |
 | D. Importazione di un calcolo esterno (CSV `siti/1`, uscita `--vfukui` di xtb) | tutte | Rust (lettore), calcolo fuori | pochi KB | lo decide chi calcola | xtb LGPL-3.0 usato come programma separato: nessun vincolo per noi | fase 2 |
 | E. Contributi di gruppo k(OH•) (Minakata 2009) | OH• | Rust | piccolo | millisecondi | dati pubblicati | no per ora: dà la velocità, non la posizione |
-| F. xtb/tblite/CREST nel browser | tutte | WASM da Fortran + LAPACK | diversi MB, nessuna compilazione WASM nota | minuti-ore (CREST) | LGPL-3.0 (link statico nel `.wasm` = obblighi di rilinkaggio) | **no** |
+| F. xtb/tblite/CREST nel browser | tutte | WASM da Fortran + LAPACK | diversi MB, nessuna compilazione WASM nota | minuti-ore (CREST) | LGPL-3.0 (link statico nel `.wasm` = obblighi di rilinkaggio) | **no** (GFN2 in Rust: `CC_MOTORE_NEL_BROWSER.md`) |
 | G. DFT (ORCA, Psi4) | tutte | fuori | — | ore-giorni | ORCA proprietario, Psi4 LGPL-3.0 | solo come D |
 | H. CFM-ID, MetFrag, SIRIUS nel sito | tutte | fuori (Java/C++) | decine di MB | secondi-minuti | SIRIUS AGPL-3.0; CFM-ID e MetFrag da verificare | no nel sito; i risultati entrano già da Attributio (AT-06) |
 | I. RDKit nel browser (MinimalLib) | tutte | WASM | qualche MB | — | BSD-3 | no: abbiamo già il grafo in Rust |
@@ -123,7 +123,7 @@ Licenze verificate sui file del repository a monte: xtb, CREST, tblite, Psi4 LGP
 |---|---|---|---|---|---|
 | CC-01 | 1 | — | nessuno | 1,5 | fatto: 781 righe di codice (`chem/posizioni/`), 10 prove |
 | CC-02 | 1 | CC-01 | `grafo` | 1,5 | fatto: `positions` nel `.wasm` `grafo` (158 151 → 234 654 B dopo `wasm-opt -Oz`, tetto 512 000 B invariato) e nella rotta `feat/grafo`; pannello `44_posizioni.js`, `e2e_posizioni.py` |
-| CC-03 | 2 | CC-02 + sì di Federico | `grafo` | 2 | da decidere |
+| CC-03 | 2 | CC-02 + sì di Federico | `grafo` | 2 | da decidere; la parte •OH passa a CC-B2/CC-B5 di `CC_MOTORE_NEL_BROWSER.md` se Federico sceglie quella strada |
 | CC-04 | 2 | CC-02 + sì di Federico | `grafo` | 1 | da decidere |
 | CC-05 | Teoria | — | nessuno | 0,5-1 | da fare |
 

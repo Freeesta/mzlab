@@ -8,40 +8,37 @@ limit_rev=1000000   # attributio-rev carries the table of levels AND the review 
 limit_export=800000   # attributio-export carries the cascade AND the four spreadsheet exports (Schymanski folder, publication table, quantification, gradient)
 limit_lr=800000   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 610796
 out=${1:-site/static}/wasm-feat
+R=target/wasm32-unknown-unknown/release
+# the wasm-bindgen + wasm-opt of each module run in the background while cargo builds the next one (tools/wasm_paralleli.sh); wasm_wait below joins them
+. tools/wasm_paralleli.sh
 for which in detect proofs mrm finder finder_msn untargeted; do
   cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features $which
-  dir=$out/$([ $which = detect ] && echo feat || echo $which | tr _ -)
-  wasm-bindgen --target web --no-typescript --out-dir "$dir" target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm
-  tools/wasm_opt.sh "$dir/mzlab_feat_wasm_bg.wasm" $limit "mzFinder $which"
+  wasm_pack "$out/$([ $which = detect ] && echo feat || echo $which | tr _ -)" $R/mzlab_feat_wasm.wasm $limit "mzFinder $which"
 done
 # the third one, loaded only when a table is shown or exported (views, report, CSV, MGF, .ms): crates/mzlab-feat-table-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-table-wasm
-wasm-bindgen --target web --no-typescript --out-dir "$out/table" target/wasm32-unknown-unknown/release/mzlab_feat_table_wasm.wasm
-tools/wasm_opt.sh "$out/table/mzlab_feat_table_wasm_bg.wasm" $limit "mzFinder table"
+wasm_pack "$out/table" $R/mzlab_feat_table_wasm.wasm $limit "mzFinder table"
 # the structure graph, loaded only when the user gives a SMILES: crates/mzlab-feat-grafo-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-grafo-wasm
-wasm-bindgen --target web --no-typescript --out-dir "$out/grafo" target/wasm32-unknown-unknown/release/mzlab_feat_grafo_wasm.wasm
-tools/wasm_opt.sh "$out/grafo/mzlab_feat_grafo_wasm_bg.wasm" $limit "mzFinder grafo"
+wasm_pack "$out/grafo" $R/mzlab_feat_grafo_wasm.wasm $limit "mzFinder grafo"
 # the readers of the tables of other programs (mzMine, FBMN/GNPS2, MS-DIAL), loaded only when the user opens one: crates/mzlab-feat-import-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-import-wasm
-wasm-bindgen --target web --no-typescript --out-dir "$out/import" target/wasm32-unknown-unknown/release/mzlab_feat_import_wasm.wasm
-tools/wasm_opt.sh "$out/import/mzlab_feat_import_wasm_bg.wasm" $limit "mzFinder import"
+wasm_pack "$out/import" $R/mzlab_feat_import_wasm.wasm $limit "mzFinder import"
 # the table of levels of Attributio (administrator mode), loaded only when a campaign folder is chosen: crates/mzlab-attributio-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm
-wasm-bindgen --target web --no-typescript --out-dir "$out/attributio" target/wasm32-unknown-unknown/release/mzlab_attributio_wasm.wasm
-tools/wasm_opt.sh "$out/attributio/mzlab_attributio_wasm_bg.wasm" $limit "mzFinder attributio"
+wasm_pack "$out/attributio" $R/mzlab_attributio_wasm.wasm $limit "mzFinder attributio"
 # the Banco 2b of Attributio (review of one feature, saving of a decision), loaded only when the Banco opens: the same crate with the feature rev
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features rev
-wasm-bindgen --target web --no-typescript --out-dir "$out/attributio-rev" target/wasm32-unknown-unknown/release/mzlab_attributio_wasm.wasm
-tools/wasm_opt.sh "$out/attributio-rev/mzlab_attributio_wasm_bg.wasm" $limit_rev "mzFinder attributio-rev"
+wasm_pack "$out/attributio-rev" $R/mzlab_attributio_wasm.wasm $limit_rev "mzFinder attributio-rev"
 # the exports of Attributio (Schymanski folder, publication table, quantification, gradient), loaded only when the Export menu is used: the same crate with the feature export
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features export
-wasm-bindgen --target web --no-typescript --out-dir "$out/attributio-export" target/wasm32-unknown-unknown/release/mzlab_attributio_wasm.wasm
-tools/wasm_opt.sh "$out/attributio-export/mzlab_attributio_wasm_bg.wasm" $limit_export "mzFinder attributio-export"
+wasm_pack "$out/attributio-export" $R/mzlab_attributio_wasm.wasm $limit_export "mzFinder attributio-export"
 # the low-resolution Dig of mzFinder (crates/mzlab-finder-lr-wasm), loaded by the worker of mzFinder only for a series of full-scan unit-resolution files
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-finder-lr-wasm
-wasm-bindgen --target web --no-typescript --out-dir "$out/finder-lr" target/wasm32-unknown-unknown/release/mzlab_finder_lr_wasm.wasm
-tools/wasm_opt.sh "$out/finder-lr/mzlab_finder_lr_wasm_bg.wasm" $limit_lr "mzFinder finder-lr"
+wasm_pack "$out/finder-lr" $R/mzlab_finder_lr_wasm.wasm $limit_lr "mzFinder finder-lr"
+# the readers module (crates/mzlab-lettori-wasm), loaded only when a file needs it: tools/build_lettori_wasm.sh (it has its own jobs: it overlaps with the ones above)
+tools/build_lettori_wasm.sh "${1:-site/static}"
+wasm_wait
 python3 - "$out" <<'P'
 import hashlib, json, sys
 o = sys.argv[1]
@@ -70,5 +67,3 @@ m["finder_lr"] = {"js": "finder-lr/mzlab_finder_lr_wasm.js", "wasm": "finder-lr/
                  "sha256": hashlib.sha256(open(f"{o}/finder-lr/mzlab_finder_lr_wasm_bg.wasm", "rb").read()).hexdigest()}
 json.dump(m, open(f"{o}/manifest.json", "w"), indent=1)
 P
-# the readers module (crates/mzlab-lettori-wasm), loaded only when a file needs it: tools/build_lettori_wasm.sh
-tools/build_lettori_wasm.sh "${1:-site/static}"

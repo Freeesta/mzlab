@@ -7,7 +7,7 @@ HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
 SRC = Path(os.environ.get("TPMINE_SRC", ROOT / "TP_Mine"))
 MZ = Path(os.environ.get("QQQ_MZML", ROOT.parent / "Data" / "mzML"))
-PORT = 8842
+from lib import free_port; PORT = free_port()
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -47,7 +47,7 @@ try:
             pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=300000)
             assert pg.evaluate("document.querySelectorAll('.gem.forte').length") == 3
             pg.wait_for_timeout(1300)
-            assert pg.inner_text(".stat.g b").strip() == "3" and "Vein found" in pg.inner_text(".hero")
+            assert pg.inner_text(".hero-c b >> nth=0").strip() == "3" and "Vein found" in pg.inner_text(".hero")
             assert pg.evaluate("document.querySelector('#tp-struct svg') !== null")          # parent structure drawn from the SMILES (needs vendor/openchemlib.js)
             pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk")
             t = pg.inner_text("#tp-t")
@@ -56,7 +56,8 @@ try:
             pg.click('.vt[data-v="kin"]'); pg.wait_for_selector("#tp-c-all"); assert pg.evaluate("document.getElementById('tp-c-all').width") > 0
             pg.click('.vt[data-v="film"]'); pg.wait_for_selector(".frow"); pg.click("#tp-play")
             pg.wait_for_function("/t = (5|10) min/.test(document.getElementById('tp-tl').textContent)", timeout=8000)
-            pg.click('.vt[data-v="gems"]'); pg.click(".gem:has-text('hydroxylation')"); pg.wait_for_selector("#tp-c-xic", timeout=60000); pg.wait_for_timeout(500)
+            pg.click('.vt[data-v="gems"]'); pg.click(".gem:has-text('hydroxylation')"); pg.wait_for_selector("#tp-t tr.tpt-exp #tp-det .tpr-ov svg", timeout=60000)      # a gem opens its row in the table
+            pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det .lr-idx", timeout=60000); pg.wait_for_timeout(500)
             d = pg.inner_text("#tp-det")
             assert "In words" in d and "Level 3" in d and "257.1" in d, d[:700]
             pg.screenshot(path=str(HERE / "shots" / "tpmine2_demo.png"), full_page=True)
@@ -140,9 +141,9 @@ try:
                 pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=600000); pg.wait_for_timeout(1300)
                 head = pg.inner_text(".hero")
                 assert "t½" in head and "offset" in head
-                vals = pg.evaluate("[...document.querySelectorAll('.stat b')].map(b=>parseFloat(b.textContent))")
+                vals = pg.evaluate("[...document.querySelectorAll('.hero-c b')].map(b=>parseFloat(b.textContent))")
                 assert 0.25 <= vals[4] <= 0.35 and 2.0 < vals[3] < 4.0 and vals[0] >= 3, vals
-                m = pg.inner_text("#tp-right")
+                pg.click("#tp-m-mrm summary"); m = pg.inner_text("#tp-right")                       # the MRM card is a closed section under the table
                 assert "MRM: automatic integration" in m and "Line: area" in m and "364.1>194.1" in m, m[:400]      # the mzFinder text is English only
                 assert pg.evaluate("document.getElementById('tp-c-cal').width") > 0
                 pg.screenshot(path=str(HERE / "shots" / "tpmine2_real.png"), full_page=True)

@@ -25,6 +25,33 @@ impl ReadAt for Slice<'_> {
     }
 }
 
+/// `error.newerFormat`: the file was written by a newer program (`kind` = `table` for `.mzfeat`, `file` for `.mzfeatf`); it is read-only for this one and never written over.
+fn newer(kind: &str, version: u32) -> mzlab_core::error::Error {
+    mzlab_core::error::Error::new("error.newerFormat")
+        .with("kind", if kind == "table" { "mzfeat" } else { "mzfeatf" })
+        .with("version", version)
+}
+
+/// The number of a magic `MZFEAT0N` newer than the one this reader knows.
+fn newer_magic(m: &[u8]) -> Option<u32> {
+    if &m[..6] != b"MZFEAT" || !m[6..].iter().all(u8::is_ascii_digit) {
+        return None;
+    }
+    std::str::from_utf8(&m[6..]).ok()?.parse().ok().filter(|&n| n > 1)
+}
+
+/// A meta of a newer container or pipeline version is refused with `error.newerFormat`.
+fn refuse_newer(meta: &Value, kind: &str) -> Result<()> {
+    let num = |k: &str| meta.get(k).and_then(|v| v.f64()).map(|v| v as i64);
+    let container = if kind == "table" { crate::store::TABLE_FORMAT } else { 1 };
+    let feat = crate::FEAT_VERSION as i64;
+    if num("version").is_some_and(|v| v > container) || num("feat_version").is_some_and(|v| v > feat) {
+        let v = num("feat_version").filter(|&v| v > feat).or(num("version")).unwrap_or(0);
+        return Err(newer(kind, v as u32));
+    }
+    Ok(())
+}
+
 /// A container opened: its meta and where its data start. The arrays are read by offset, one column at a time, never the whole file.
 struct Opened {
     meta: Value,
@@ -38,6 +65,9 @@ fn open<R: ReadAt>(r: &mut R, size: u64, kind: &str) -> Result<Opened> {
     }
     r.read_at(0, &mut h)?;
     if &h[..8] != MAGIC {
+        if let Some(v) = newer_magic(&h[..8]) {
+            return Err(newer(kind, v));
+        }
         return Err(bad());
     }
     let n = u64::from_le_bytes(h[8..].try_into().unwrap());
@@ -49,6 +79,7 @@ fn open<R: ReadAt>(r: &mut R, size: u64, kind: &str) -> Result<Opened> {
     if meta.get("format").and_then(|v| v.str()) != Some(kind) {
         return Err(bad());
     }
+    refuse_newer(&meta, kind)?;
     let opened = Opened {
         meta,
         start: end.div_ceil(ALIGN as u64) * ALIGN as u64,
