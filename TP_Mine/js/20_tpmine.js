@@ -531,7 +531,7 @@
         <div class="vtabs">${VIEWS.map(([k, n]) => `<button class="vt${st.view === k ? " on" : ""}" data-v="${k}">${n}</button>`).join("")}</div>
         <div id="tp-view"></div>
         <div class="tp-mores">${ms2c ? `<details name="tp-more" id="tp-m-ms2"><summary>MS2 matches (${nMs2})</summary>${ms2c}</details>` : ""}${mrmc ? `<details name="tp-more" id="tp-m-mrm"><summary>MRM (${s.mrm.rows.length} files)</summary>${mrmc}</details>` : ""}</div>`;
-      if (window.TPMS2) window.TPMS2.mount({ st, call, refresh: ms2Refresh });
+      if (window.TPMS2) window.TPMS2.mount({ st, call, refresh: ms2Refresh, show });
       if (calmMotion()) R.querySelectorAll(".hero-c b[data-count]").forEach(countUp);
       R.querySelectorAll(".vt").forEach(b => b.onclick = () => { st.view = b.dataset.v; R.querySelectorAll(".vt").forEach(x => x.classList.toggle("on", x === b)); view(); });
       $("#tp-x-xlsx").onclick = () => exportAll("xlsx"); $("#tp-x-csv").onclick = () => exportAll("csv"); $("#tp-x-json").onclick = () => exportAll("json");
@@ -612,7 +612,7 @@
     function ms2Refresh(touched) {          // after a correction of the MS2 matches: the card, the table of rows and the open detail
       const c = $("#tp-ms2map"), s = st.summary; if (!c || !s) return;
       const h = document.createElement("div"); h.innerHTML = window.TPMS2.card(s); c.replaceWith(h.firstElementChild);
-      window.TPMS2.mount({ st, call, refresh: ms2Refresh });
+      window.TPMS2.mount({ st, call, refresh: ms2Refresh, show });
       const sm = $("#tp-m-ms2 > summary"); if (sm) sm.textContent = `MS2 matches (${s.ms2_links && s.ms2_links.links ? s.ms2_links.links.length : 0})`;
       if (T) { T.setRows(s.rows); if (st.sel != null && touched.includes(st.sel) && T.openId === st.sel) { T.close(); T.open(st.sel); } }
     }
