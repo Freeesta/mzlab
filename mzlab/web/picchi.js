@@ -317,6 +317,7 @@ async function drawSpec(p, snapped) {
   const tok = p._tok = (p._tok || 0) + 1;                // "last one wins": a slower, older request never paints over a newer one
   const say = t => { const { g, W, H: HF } = setup(p.cv); g.clearRect(0, 0, W, HF); g.fillStyle = css("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; };
   const isDda = p.dda != null && !!window.DDA;                // MS2 panel of a DDA trio: shows one MS2 scan of the file (dda.js), whatever file is selected in the toolbar
+  if (!isDda && !p.all && p.level === 1 && E.files[p.k] && !E.files[p.k].vis) { const v = shownFor(p).find(x => scanFiles([x]).length); if (v) { p.k = v.k; p.kSet = false; ctl(p); } }      // the file of the spectrum was unticked: the first ticked one
   const targetK = p.link ? p.k : (E.browse && (!p.tab || p.tab === E.tab) ? E.cur : p.k);
   const base = isDda ? [E.files[p.k]] : p.all ? shownFor(p) : [E.files[targetK]];
   let files = scanFiles(base.filter(Boolean));
