@@ -204,6 +204,17 @@ def free_port() -> int:
     import socket
     with socket.socket() as so:
         so.bind(("127.0.0.1", 0)); return so.getsockname()[1]
+def copia(src, dst):
+    """Copy a file into the shared site/ only when it differs, by an atomic rename: tests that run together (every one makes sure the site has the current sources) never see a half-written file."""
+    src, dst = Path(src), Path(dst)
+    b = src.read_bytes()
+    if dst.exists() and dst.read_bytes() == b: return
+    t = dst.with_name(f".{dst.name}.{os.getpid()}.tmp"); t.write_bytes(b); os.replace(t, dst)
+def scrivi(dst, text):
+    """As copia(), for a text."""
+    dst = Path(dst); b = text.encode("utf-8")
+    if dst.exists() and dst.read_bytes() == b: return
+    t = dst.with_name(f".{dst.name}.{os.getpid()}.tmp"); t.write_bytes(b); os.replace(t, dst)
 # tools/verifica.py runs several tests at once (MZLAB_E2E_PARALLEL=1 / QQQ_E2E_PARALLEL=1): then every Run takes a free port and its own work folder,
 # because a few tests share the fixed ones (they were written to run one after the other)
 PARALLEL = get_env("E2E_PARALLEL") == "1"
