@@ -33,7 +33,8 @@ pub fn campione(f: &FileIn, rank: usize) -> Campione {
     c
 }
 
-/// The columns that carry the MS2 of the experiment file `name`: the samples of the same condition and time.
+/// The columns that carry the MS2 of the experiment file `name`: the samples of the same condition and time. A file with no condition is shared:
+/// it counts for every condition (at its time when it has one).
 fn ms2_columns(d: &LrDig, name: &str) -> Vec<usize> {
     let Some(f) = d.files.iter().find(|f| f.name == name) else {
         return Vec::new();
@@ -41,7 +42,13 @@ fn ms2_columns(d: &LrDig, name: &str) -> Vec<usize> {
     (0..d.lc.len())
         .filter(|&k| {
             let c = &d.lc[k];
-            c.kind == "sample" && c.cond == f.cond && c.time.is_some() && c.time == f.time
+            if c.kind != "sample" {
+                return false;
+            }
+            if f.cond.is_empty() {
+                return f.time.is_none() || c.time == f.time;
+            }
+            c.cond == f.cond && c.time.is_some() && c.time == f.time
         })
         .collect()
 }
