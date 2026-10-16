@@ -59,7 +59,7 @@ try:
         step("X on a chromatogram: the XIC request", xic)
         def integrate():
             focus("chrom"); pg.keyboard.press("i")
-            pg.wait_for_timeout(300)
+            ready(pg)
             if pg.evaluate("!!document.querySelector('dialog[open]')"): pg.keyboard.press("Escape")
         step("I on a chromatogram does not break (integration or its guard)", integrate)
         def fullscreen():

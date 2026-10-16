@@ -38,8 +38,7 @@
   /** The panel «Shortcuts»: a dialog generated from the registry, the shortcuts of the active chart first. */
   const PANNELLO = (() => {
     /** @type {HTMLDialogElement | null} */ let dlg = null;
-    const esc = (/** @type {string} */ s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
-    const riga = (/** @type {any} */ a) => `<li><span class="sc-i" aria-hidden="true">${AZIONI.icona(a, { vista: "*" })}</span><span class="sc-n" title="${esc(a.tip ? a.tip({}) : "")}">${esc(T(a.scorciatoia.et))}</span><kbd>${esc(AZIONI.testo(a.scorciatoia))}</kbd></li>`;
+    const riga = (/** @type {any} */ a) => h`<li><span class="sc-i" aria-hidden="true">${raw(AZIONI.icona(a, { vista: "*" }))}</span><span class="sc-n" title="${a.tip ? a.tip({}) : ""}">${T(a.scorciatoia.et)}</span><kbd>${AZIONI.testo(a.scorciatoia)}</kbd></li>`;
     function elenco() {
       const p = typeof E !== "undefined" && E.active && E.active.el ? E.active : null, vista = p ? p.type : "";
       const tutte = AZIONI.voci.filter((/** @type {any} */ a) => a.scorciatoia);
@@ -56,10 +55,9 @@
         dlg.addEventListener("close", () => { const b = /** @type {any} */ (dlg).prev; if (b && document.contains(b)) try { b.focus({ preventScroll: true }); } catch (_) { /* gone */ } });
       }
       const { qui, resto } = elenco();
-      dlg.innerHTML = `<h2 id="scorc-t">${esc(T("scorc.titolo"))}</h2>` +
-        (qui.length ? `<h3>${esc(T("scorc.qui"))}</h3><ul>${qui.map(riga).join("")}</ul>` : "") +
-        `<h3>${esc(T("scorc.ovunque"))}</h3><ul>${resto.map(riga).join("")}</ul>` +
-        `<div class="row"><button type="button" class="bt" id="scorc-altri">${esc(T("scorc.altri"))}</button><button type="button" class="bt" id="scorc-x" autofocus>${esc(T("scorc.chiudi"))}</button></div>`;
+      dlg.innerHTML = h`<h2 id="scorc-t">${T("scorc.titolo")}</h2>${raw(qui.length ? h`<h3>${T("scorc.qui")}</h3><ul>${raw(qui.map(riga).join(""))}</ul>` : "")}` +
+        h`<h3>${T("scorc.ovunque")}</h3><ul>${raw(resto.map(riga).join(""))}</ul>` +
+        h`<div class="row"><button type="button" class="bt" id="scorc-altri">${T("scorc.altri")}</button><button type="button" class="bt" id="scorc-x" autofocus>${T("scorc.chiudi")}</button></div>`;
       /** @type {any} */ (dlg).prev = document.activeElement;
       /** @type {HTMLElement} */ (dlg.querySelector("#scorc-x")).onclick = () => /** @type {HTMLDialogElement} */ (dlg).close();
       /** @type {HTMLElement} */ (dlg.querySelector("#scorc-altri")).onclick = () => { /** @type {HTMLDialogElement} */ (dlg).close(); if (typeof info === "function" && typeof HELP !== "undefined") info(HELP.scorrimento[1]); };
