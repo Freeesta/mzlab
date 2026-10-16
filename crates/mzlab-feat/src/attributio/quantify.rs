@@ -91,6 +91,18 @@ fn curve_row(cal: &Frame, pol: &str, name: &str) -> Option<usize> {
         .find(|&r| is_recommended(cal, r, kr) && cal.cell(r, kp) == pol && cal.cell(r, kn) == name)
 }
 
+/// The minimum R2 of a curve and the column of the area at the limit of quantification.
+fn loq_settings(c: &Campaign) -> (f64, String) {
+    let q = &c.quantification;
+    (
+        q.get("r2_min").and_then(|v| v.as_f64()).unwrap_or(0.90),
+        q.get("loq_area_column")
+            .and_then(|v| v.as_str())
+            .unwrap_or("area_200ppb")
+            .to_string(),
+    )
+}
+
 /// `quantify_lvl1`: one row per Level 1 feature and per site (`sites`, the sites of the campaign when `None`) where it is DETECTED with a positive area.
 pub fn quantify_lvl1(
     c: &Campaign,
@@ -107,17 +119,7 @@ pub fn quantify_lvl1(
             &own
         }
     };
-    let r2_min = c
-        .quantification
-        .get("r2_min")
-        .and_then(|v| v.as_f64())
-        .unwrap_or(0.90);
-    let loq_col = c
-        .quantification
-        .get("loq_area_column")
-        .and_then(|v| v.as_str())
-        .unwrap_or("area_200ppb")
-        .to_string();
+    let (r2_min, loq_col) = loq_settings(c);
     let mut rows = Vec::new();
     for f in feats.iter().filter(|f| f.level == 1) {
         let Some(name) = f.std.as_ref().and_then(|s| s.name.clone()) else {

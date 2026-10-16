@@ -16,6 +16,7 @@ pub mod export;
 pub mod formula;
 pub mod frame;
 pub mod gradient;
+pub mod gradient_pick;
 pub mod identity;
 pub mod io;
 pub mod members;

@@ -10,13 +10,14 @@ use super::campaign::Campaign;
 use super::detection::{site_area, Agg};
 use super::error::{CampaignError, Result};
 use super::frame::Cell;
+use super::gradient_pick::*;
 use super::sources::Sources;
 use std::collections::HashMap;
 
 /// `(polarity, site)` → `{feature id: largest DETECTED area over the sorbents}`.
 type Areas = HashMap<(String, String), HashMap<i64, f64>>;
 /// `(polarity, site, sorbent)` → `{feature id: DETECTED area}`.
-type AreasBySorbent = HashMap<(String, String, String), HashMap<i64, f64>>;
+pub(super) type AreasBySorbent = HashMap<(String, String, String), HashMap<i64, f64>>;
 
 pub const POLARITIES: [&str; 2] = ["POS", "NEG"];
 
@@ -154,206 +155,6 @@ fn by_id(t: &super::frame::Frame, area: &[f64]) -> HashMap<i64, f64> {
         .collect()
 }
 
-/// One feature of an identity with its areas.
-#[derive(Clone)]
-struct Cand {
-    us: f64,
-    ds: f64,
-    pol: String,
-    id: i64,
-    rt: f64,
-}
-
-/// First element with the largest key (Python's `max` keeps the first of equals).
-fn first_max<T>(v: &[T], key: impl Fn(&T) -> f64) -> &T {
-    let mut best = &v[0];
-    for x in &v[1..] {
-        if key(x) > key(best) {
-            best = x;
-        }
-    }
-    best
-}
-
-struct Pick {
-    us: f64,
-    ds: f64,
-    pol: String,
-    id: i64,
-    rt: f64,
-    l_ud: Option<f64>,
-    l_du: Option<f64>,
-    sorbent: Option<String>,
-    discordant: bool,
-}
-
-fn logs(us: f64, ds: f64) -> (Option<f64>, Option<f64>) {
-    if us > 0.0 && ds > 0.0 {
-        (Some((us / ds).log2()), Some((ds / us).log2()))
-    } else {
-        (None, None)
-    }
-}
-
-fn pick_plain(a: &[Cand]) -> Pick {
-    let common: Vec<Cand> = a
-        .iter()
-        .filter(|t| t.us > 0.0 && t.ds > 0.0)
-        .cloned()
-        .collect();
-    let (us, ds, pol, id, rt) = if common.is_empty() {
-        let bu = first_max(a, |t| t.us);
-        let bd = first_max(a, |t| t.ds);
-        (bu.us, bd.ds, bu.pol.clone(), bu.id, bu.rt)
-    } else {
-        let b = first_max(&common, |t| t.us.max(t.ds));
-        (b.us, b.ds, b.pol.clone(), b.id, b.rt)
-    };
-    let (l_ud, l_du) = logs(us, ds);
-    Pick {
-        us,
-        ds,
-        pol,
-        id,
-        rt,
-        l_ud,
-        l_du,
-        sorbent: None,
-        discordant: false,
-    }
-}
-
-/// Whether the other sorbents point the other way for the ion (`discordant`).
-fn other_sorbents_disagree(
-    by_sb: &AreasBySorbent,
-    sorbents: &[String],
-    ion: (&str, i64),
-    used: &str,
-    sites: [&str; 2],
-    l_ud: f64,
-    fold: f64,
-) -> bool {
-    let get = |site: &str, sb: &str| {
-        by_sb
-            .get(&(ion.0.to_string(), site.to_string(), sb.to_string()))
-            .and_then(|m| m.get(&ion.1))
-            .copied()
-            .unwrap_or(0.0)
-    };
-    let thr = fold.log2();
-    let mut discordant = false;
-    for sb in sorbents.iter().filter(|s| *s != used) {
-        let (o_us, o_ds) = (get(sites[0], sb), get(sites[1], sb));
-        if l_ud.abs() >= thr {
-            let up = l_ud > 0.0;
-            discordant = if o_us > 0.0 && o_ds > 0.0 {
-                let o = (o_us / o_ds).log2();
-                (o > 0.0) != up && o.abs() >= thr
-            } else if up {
-                o_ds > 0.0 && o_us == 0.0
-            } else {
-                o_us > 0.0 && o_ds == 0.0
-            };
-        }
-    }
-    discordant
-}
-
-fn pick_same_sorbent(
-    a: &[Cand],
-    by_sb: &AreasBySorbent,
-    sorbents: &[String],
-    sites: [&str; 2],
-    fold: f64,
-) -> Pick {
-    let get = |pol: &str, site: &str, sb: &str, id: i64| {
-        by_sb
-            .get(&(pol.to_string(), site.to_string(), sb.to_string()))
-            .and_then(|m| m.get(&id))
-            .copied()
-            .unwrap_or(0.0)
-    };
-    let mut pairs = Vec::new();
-    for t in a {
-        for sb in sorbents {
-            let (u, d) = (
-                get(&t.pol, sites[0], sb, t.id),
-                get(&t.pol, sites[1], sb, t.id),
-            );
-            if u > 0.0 && d > 0.0 {
-                pairs.push((
-                    Cand {
-                        us: u,
-                        ds: d,
-                        pol: t.pol.clone(),
-                        id: t.id,
-                        rt: t.rt,
-                    },
-                    sb.clone(),
-                ));
-            }
-        }
-    }
-    if pairs.is_empty() {
-        let b = first_max(a, |t| t.us.max(t.ds));
-        return Pick {
-            us: b.us,
-            ds: b.ds,
-            pol: b.pol.clone(),
-            id: b.id,
-            rt: b.rt,
-            l_ud: None,
-            l_du: None,
-            sorbent: None,
-            discordant: false,
-        };
-    }
-    let mut best = &pairs[0];
-    for p in &pairs[1..] {
-        if p.0.us.max(p.0.ds) > best.0.us.max(best.0.ds) {
-            best = p;
-        }
-    }
-    let (c, sb) = best;
-    let (l_ud, l_du) = logs(c.us, c.ds);
-    let discordant = other_sorbents_disagree(
-        by_sb,
-        sorbents,
-        (&c.pol, c.id),
-        sb,
-        sites,
-        l_ud.unwrap_or(f64::NAN),
-        fold,
-    );
-    Pick {
-        us: c.us,
-        ds: c.ds,
-        pol: c.pol.clone(),
-        id: c.id,
-        rt: c.rt,
-        l_ud,
-        l_du,
-        sorbent: Some(sb.clone()),
-        discordant,
-    }
-}
-
-fn pick_one_site(a: &[Cand], us: bool) -> Pick {
-    let b = first_max(a, |t| if us { t.us } else { t.ds });
-    let (au, ad) = if us { (b.us, 0.0) } else { (0.0, b.ds) };
-    Pick {
-        us: au,
-        ds: ad,
-        pol: b.pol.clone(),
-        id: b.id,
-        rt: b.rt,
-        l_ud: None,
-        l_du: None,
-        sorbent: None,
-        discordant: false,
-    }
-}
-
 /// `identity_gradient`: one row per identity of `identities` that has features in `fi`, and the counts. `same_sorbent` = the campaign's setting when `None`.
 pub fn identity_gradient(
     c: &Campaign,
@@ -405,20 +206,7 @@ pub fn identity_gradient(
             (true, true) => ("both", pick_plain(&a)),
             (true, false) => ("US_only", pick_one_site(&a, true)),
             (false, true) => ("DS_only", pick_one_site(&a, false)),
-            (false, false) => (
-                "none",
-                Pick {
-                    us: 0.0,
-                    ds: 0.0,
-                    pol: a[0].pol.clone(),
-                    id: a[0].id,
-                    rt: a[0].rt,
-                    l_ud: None,
-                    l_du: None,
-                    sorbent: None,
-                    discordant: false,
-                },
-            ),
+            (false, false) => ("none", Pick::none(&a[0])),
         };
         let abs_area = match status {
             "both" => p.us.max(p.ds),
