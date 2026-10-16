@@ -136,6 +136,7 @@ pub mod stats;
 pub mod tracestat;
 pub mod subformulas;
 pub mod campioni;
+pub mod source_ramp;
 
 pub use error::{Error, Result};
 
