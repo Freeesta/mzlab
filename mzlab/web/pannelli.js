@@ -868,7 +868,7 @@ function openXic(panel, pre = {}) {
   const rows = [];
   const isNum = t => /^[\d.,\s]+$/.test(t);
   const renumber = () => {
-    rows.forEach((r, i) => { r.lab.textContent = i === 0 ? I18N.t("xic.ion1") : I18N.t("xic.ionN", { n: i + 1 }); r.x.hidden = rows.length < 2; r.inp.placeholder = i === 0 ? I18N.t("xic.placeholder") : I18N.t("xic.optional"); r.inp.id = i === 0 ? "xic-mz" : ""; r.ad.id = i === 0 ? "xic-ad" : ""; r.sum.id = i === 0 ? "xic-sum" : ""; });
+    rows.forEach((r, i) => { r.lab.textContent = i === 0 ? I18N.t("xic.ion1") : I18N.t("xic.ionN", { n: i + 1 }); r.x.hidden = rows.length < 2; r.inp.placeholder = i === 0 ? I18N.t(r.ad.value === "none" ? "xic.placeholderIon" : "xic.placeholder") : I18N.t(r.ad.value === "none" ? "xic.optionalIon" : "xic.optional"); r.inp.id = i === 0 ? "xic-mz" : ""; r.ad.id = i === 0 ? "xic-ad" : ""; r.sum.id = i === 0 ? "xic-sum" : ""; });
     addB.disabled = rows.length >= XIC_MAXROWS;
   };
   const xtab = () => panel && E.panels.includes(panel) ? panel.tab || E.tab : E.tab;
@@ -880,7 +880,7 @@ function openXic(panel, pre = {}) {
   };
   const evalRow = r => {
     const t = r.inp.value.trim(), ed = ++r.edits; err.textContent = ""; r.ex = null;
-    r.ad.hidden = !t || isNum(t);
+    r.ad.hidden = isNum(t);
     if (!t) { r.win = null; r.label = ""; r.sum.textContent = ""; r.pending = Promise.resolve(); return; }
     if (isNum(t)) {
       const v = numMz1(t), x = numIt(t);
@@ -892,18 +892,18 @@ function openXic(panel, pre = {}) {
       try {
         const f = await getFormula(t, r.ad.value);
         if (ed !== r.edits) return;
-        r.label = `${f.formula} ${f.adduct}`; r.win = xicWin(f.mz, false); if (hrFile()) r.ex = f.mz;
+        r.label = f.adduct ? `${f.formula} ${f.adduct}` : `${f.formula} ion`; r.win = xicWin(f.mz, false); if (hrFile()) r.ex = f.mz;
         r.sum.innerHTML = (t.replace(/\s+/g, "") !== f.formula ? I18N.t("xic.interpreted", { formula: fmtFormula(f.formula) }) + " " : "") + sumText(r);
       } catch (e) { if (ed === r.edits) r.sum.innerHTML = `<span class="fail">${I18N.t("xic.badFormula")}</span>`; }
     })();
   };
   const addRow = (init = {}) => {
     const el = document.createElement("div"); el.className = "xrw";
-    el.innerHTML = `<label></label><div class="xin"><input class="mzf" autocomplete="off" inputmode="decimal" style="width:auto"><select hidden title="${I18N.t("xic.adduct.title")}">${XIC_ADDUCTS.map(a => `<option ${a === (init.adduct || dAd) ? "selected" : ""}>${a}</option>`).join("")}</select><button class="xr-x" type="button" title="${I18N.t("xic.remove.title")}">&times;</button></div><div class="xr-sum"></div>`;
+    el.innerHTML = `<label></label><div class="xin"><input class="mzf" autocomplete="off" inputmode="decimal" style="width:auto"><select title="${I18N.t("xic.adduct.title")}" aria-label="${I18N.t("xic.adduct.title")}">${XIC_ADDUCTS.map(a => `<option ${a === (init.adduct || dAd) ? "selected" : ""}>${a}</option>`).join("")}<option value="none" ${init.adduct === "none" ? "selected" : ""}>${I18N.t("xic.noAdduct")}</option></select><button class="xr-x" type="button" title="${I18N.t("xic.remove.title")}">&times;</button></div><div class="xr-sum"></div>`;
     const r = { el, lab: el.querySelector("label"), inp: el.querySelector("input"), ad: el.querySelector("select"), x: el.querySelector(".xr-x"), sum: el.querySelector(".xr-sum"), win: null, label: "", obs: !!init.obs, edits: 0, pending: Promise.resolve(), tq: 0 };
     r.inp.value = init.text || "";
     r.inp.oninput = () => { r.obs = false; clearTimeout(r.tq); const t = r.inp.value.trim(); if (!t || isNum(t)) evalRow(r); else { r.ad.hidden = false; r.tq = setTimeout(() => evalRow(r), 500); } };
-    r.ad.onchange = () => evalRow(r);
+    r.ad.onchange = () => { renumber(); evalRow(r); };
     r.inp.onkeydown = e => {                                                // Enter extracts at once (empty field: only the message); Shift+Enter moves to the next field
       if (e.key !== "Enter") return; e.preventDefault();
       if (e.shiftKey) { const i = rows.indexOf(r); if (i < rows.length - 1) rows[i + 1].inp.focus(); return; }

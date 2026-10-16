@@ -30,6 +30,20 @@ try:
             assert not dlg() and pg.evaluate("E.panels.some(p=>p.type==='xic' && p.traces[0].w===0.5 && p._a && p._a.sr.length>0)")
             assert "cifra" not in pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').closest('label').title")
         step("XIC window: one m/z value, oppure, neutral formula, unit window around the nominal mass", window_)
+        def noadduct_():
+            pg.locator("#dpanels .pnl.chrom [data-a=xic]").first.click(); assert dlg()
+            opts = pg.evaluate("[...document.querySelectorAll('#xic-ad option')].map(o => [o.value || o.textContent, o.textContent])")
+            assert opts[-1] == ["none", "Nessun addotto"] and len(opts) == 8, opts
+            pg.select_option("#xic-ad", "none")
+            assert "ione" in pg.get_attribute("#xic-mz", "placeholder"), pg.get_attribute("#xic-mz", "placeholder")
+            pg.fill("#xic-mz", "C14H13F4N3O2S+H"); hold(pg, 1300)
+            assert "363.8 - 364.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")      # the +H written in the text is the adduct: the same window as [M+H]+
+            pg.fill("#xic-mz", "C14H13F4N3O2S"); hold(pg, 1300)
+            assert "362.8 - 363.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")      # no adduct at all: the mass of the formula is the m/z
+            pg.select_option("#xic-ad", "[M+H]+"); hold(pg, 700)
+            assert "363.8 - 364.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
+            pg.click("#xic-no")
+        step("XIC window: «No adduct» in the menu of every row (the text is already the ion)", noadduct_)
         def enter_():
             n = pg.evaluate("E.panels.filter(p=>p.type==='xic').length")
             pg.locator("#dpanels .pnl.chrom [data-a=xic]").first.click(); assert dlg()
