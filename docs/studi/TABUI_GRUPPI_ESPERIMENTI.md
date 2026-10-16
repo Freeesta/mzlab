@@ -10,7 +10,7 @@ Studio dell'Architetto sulla richiesta di Federico: Tabui (mzFinder) deve aprire
 5. **Il programma propone, il chimico decide**: «absent in T0», «absent in blank», «also in the parent standard», «above threshold», «MS2 linked» sono suggerimenti con la loro prova; nessun TP è dichiarato confermato.
 6. Calcoli tutti in Rust (modulo nuovo `crates/mzlab-feat/src/gruppi/`), uguale per LR e HR: in HR si aggiungono solo colonne (formula neutra, errore ppm).
 7. Lavoro stimato: 6 pacchetti, circa 9-11 giorni-chat; GR-1 (Rust) e GR-3/GR-4 (pagina, su dati di prova) partono subito e in parallelo; l'innesto nella tabella di Tabui (GR-5) aspetta le PR aperte #863, #871, #873.
-8. Domande per te: §10 (quattro, con la mia raccomandazione). Finché non rispondi valgono le raccomandazioni.
+8. Le tue risposte (§10) sono nel disegno: area grezza, un'etichetta libera per condizione con un secondo campo facoltativo senza vista, standard del parent come suggerimento, T0 e bianco condivisi come default (gestito anche uno per condizione).
 
 ## 1. Cosa c'è già (da non rifare)
 - **Modello dei campioni** `campioni/2` (`crates/mzlab-core/src/campioni/`, `docs/agenti/campioni.md`): per file `tipo` (`sample t0 blank dark infusion std calibration qc`), `tempo` e `tempo_min`, `serie`, `replica`, `istd`; `proponi` ricava ruolo, tempo, serie (prefisso prima del tempo) e repliche dai nomi; `valida` dà avvisi per serie (`noControls`, `noT0`, `noBlank`, `onePoint`, `replicates`); `serie == ""` = condiviso da tutte le serie. Binding in `mzlab-feat-table-wasm` e `mzlab-wasm`. Lo usa la Pipeline HR (`TP_Mine/files/finder-ruoli.js`, `NB.campioni`).
@@ -28,19 +28,19 @@ Studio dell'Architetto sulla richiesta di Federico: Tabui (mzFinder) deve aprire
 2. **Un solo allineamento** di tutti i file full (LR) o di tutte le feature (HR); niente Dig per condizione da unire dopo. Motivo: stessi nomi, stesse righe, tolleranza di RT unica, riempimento delle celle assenti già presente (`Aligned`, `gapfill.rs`). Un TP visto in una sola condizione ha comunque una cella (riempita o assente) in tutte le altre.
 3. **Polarità**: righe separate per + e − (come oggi); se due righe hanno masse neutre uguali (Δ m/z = 2,0146 ± tolleranza) e RT entro la tolleranza, la riga porta «also in ESI−/ESI+» come suggerimento, senza unirle.
 4. **Repliche**: area della condizione a un tempo = media delle repliche rilevate, con deviazione standard e CV; presenza = rilevata in almeno `ceil(0,5 · n)` repliche (n = repliche di quel tempo). Con una replica: nessuna statistica, e la tabella lo scrive («n = 1»).
-5. **Area grezza** per i confronti (stesso metodo, stessa concentrazione iniziale); il contratto prevede `norm: "raw" | "istd"` ma GR-1 implementa solo `raw` (domanda Q1).
+5. **Area grezza** per i confronti (stesso metodo, stessa concentrazione iniziale); il contratto prevede `norm: "raw" | "istd"` ma GR-1 implementa solo `raw` (risposta Q1).
 6. **Una sessione con una sola condizione** non cambia: niente vista nuova, stessa uscita del Dig byte per byte (criterio §8.1).
 7. **Testi**: tutto Tabui in inglese, senza chiavi `lang/`; «Neutral formula» e «[M+H]+ formula», mai «Formula» da sola; aree in notazione scientifica (`1.23e+06`), come la tabella di #871.
 
 ## 3. Contratto `gruppi/1` (uscita del Rust)
 Ingresso di `gruppi::build(table, campioni, opts)`: la matrice righe × file (area, altezza, stato della cella: rilevata/riempita/assente, apice RT), i metadati delle righe (id, nome TP, m/z, polarità, RT, ruolo della riga, formula neutra e ppm se HR, MS2 abbinata per file se c'è), il `campioni/2` canonico e le opzioni. Il modulo non legge file: lo chiamano il Dig LR (GR-2) e la tabella HR (GR-6).
 
-Opzioni (`GroupOpts`, JSON `{"reference": str|null, "min_rep_frac": 0.5, "min_area": 0, "ctrl_ratio": 0.2, "norm": "raw", "shape_drop": 0.3}`): condizione di riferimento (null = nessun rapporto), frazione minima di repliche, area minima (0 = spenta), rapporto massimo controllo/trattato per «absent in…» (`RATIO_MAX` di oggi), calo minimo dopo il massimo per dire «bell».
+Opzioni (`GroupOpts`, JSON `{"reference": str|null, "min_rep_frac": 0.5, "min_area": 0, "ctrl_ratio": 0.2, "norm": "raw", "shape_drop": 0.3, "factors": {}}`): condizione di riferimento (null = nessun rapporto), frazione minima di repliche, area minima (0 = spenta), rapporto massimo controllo/trattato per «absent in…» (`RATIO_MAX` di oggi), calo minimo dopo il massimo per dire «bell», `factors` = secondo campo facoltativo per condizione (`{"O2": {"catalyst": "TiO2 P25"}}`, chiavi e valori liberi; risposta Q2): si conserva e si riporta nell'uscita, nessun calcolo e nessuna vista lo usano.
 
 Uscita (chiavi inglesi, perché è solo di Tabui):
 ```
 { "format": "gruppi", "version": 1, "reference": "O2" | null, "norm": "raw",
-  "conditions": [ { "id": "O2", "files": [3, 4, 5], "times": [60], "replicates": 1,
+  "conditions": [ { "id": "O2", "factors": {}, "files": [3, 4, 5], "times": [60], "replicates": 1,
                     "controls": { "t0": [0], "blank": [1], "std": [2], "dark": [] },
                     "parent": { "k": 0.031 | null, "half_life": 22.4 | null, "remaining": 0.18 | null } } ],
   "rows": [ { "row": 7, "tp_name": "TP 362", "mz": 362.2, "polarity": "+", "rt": 9.84,
@@ -62,7 +62,7 @@ Regole:
 - `ratio_ref` = area(cond) / area(rif) al tempo comune più alto (endpoint); null se il riferimento non è presente (allora `only_in` lo dice) o non c'è riferimento; 0 se la condizione non è presente.
 - `sets`: gli insiemi esatti di condizioni in cui la riga è presente (le colonne dell'UpSet), ordinati per numero di righe; `only_in` e `in_all` ne sono i due casi più usati.
 - `shape` (≥ 3 tempi trattati): `rising` (massimo all'ultimo tempo), `bell` (massimo interno e calo ≥ `shape_drop` dopo), `decay`, `flat` (max/min < 1,5); `single` con un tempo; `t_half_rise` = primo tempo (interpolato) con area ≥ 50 % del massimo; `rate_rel` = `t_half_rise(rif) / t_half_rise(cond)` (> 1 = più veloce del riferimento). Riprende le funzioni di `crate::kinetic` dove esistono.
-- `prev`: controlli della condizione (i suoi più i condivisi); `in_parent_std` = rilevata nello standard del parent con rapporto > `ctrl_ratio` (domanda Q3: è solo un suggerimento); `verdict` = «Prev. likely» se presente e tutti i criteri disponibili passano, «Prev. possible» se manca un controllo o la MS2, «Prev. unlikely» se un controllo fallisce. Mai un livello di Schymanski.
+- `prev`: controlli della condizione (i suoi più i condivisi); `in_parent_std` = rilevata nello standard del parent con rapporto > `ctrl_ratio` (risposta Q3: solo un suggerimento, mai un'esclusione); `verdict` = «Prev. likely» se presente e tutti i criteri disponibili passano, «Prev. possible» se manca un controllo o la MS2, «Prev. unlikely» se un controllo fallisce. Mai un livello di Schymanski.
 - `parent`: decadimento per condizione (`kin::decay` su quella condizione) e frazione rimasta all'endpoint rispetto al T0 della condizione.
 - Determinismo: stesso JSON (stessi byte) per qualunque ordine dei file in ingresso; condizioni in ordine di prima comparsa in `campioni/2`, righe nell'ordine del Dig.
 - Errori: `{error_key: "error.gruppi.*", params}` (`noConditions`, `badOpts`, `sizeMismatch`).
@@ -137,8 +137,9 @@ Il JS non calcola medie, rapporti né insiemi: legge `gruppi/1`. CSV e SVG si sc
 
 GR-1, GR-3 e GR-4 toccano file diversi. GR-2 e GR-6 toccano `legacy/lr/` e `tp/`: nessuna sovrapposizione. Chi unisce per secondo fa `git merge origin/main` e prova di nuovo.
 
-## 10. Domande per Federico (con la raccomandazione; finché non rispondi vale la raccomandazione)
+## 10. Domande per Federico e risposte
+Risposte di Federico: Q1 area grezza; Q2 un'etichetta libera, con un secondo campo facoltativo nel contratto (`factors`, §3) senza vista; Q3 sì, standard del parent solo come suggerimento «Prev.», mai esclusione; Q4 T0 e bianco uno solo per tutte le condizioni come default, gestito anche uno per condizione.
 - **Q1. Area grezza o standard interno?** Per confrontare le condizioni uso l'area così com'è (stesso metodo, stessa concentrazione di partenza). *Consiglio: area grezza ora; lo standard interno si aggiunge dopo se lo usate (il campo `istd` esiste già).*
-- **Q2. Una condizione è una sola etichetta o due fattori?** Per esempio «TiO2 + O2» come etichetta unica, oppure «fotocatalizzatore» e «gas» separati da incrociare. *Consiglio: un'etichetta libera ora; i due fattori diventano un pacchetto a parte (`campioni/3`) solo se servono davvero.*
+- **Q2. Una condizione è una sola etichetta o due fattori?** Per esempio «TiO2 + O2» come etichetta unica, oppure «fotocatalizzatore» e «gas» separati da incrociare. *Consiglio: un'etichetta libera ora; il secondo fattore come campo facoltativo `factors` di `gruppi/1`, senza vista.*
 - **Q3. Lo standard del solo parent fa da controllo?** Un segnale presente anche nello standard al RT del parent è quasi sempre un frammento in sorgente o un'impurezza. *Consiglio: sì, ma solo come suggerimento «also in the parent standard», senza togliere la riga.*
 - **Q4. T0 e bianco: uno per tutte le condizioni o uno per condizione?** (Per esempio un T0 dopo il gorgogliamento di ciascun gas.) *Consiglio: il programma gestisce entrambi i casi; per i nomi dei file che non dicono la condizione, i controlli si considerano condivisi.*

@@ -23,4 +23,4 @@ Un file per pacchetto; ognuno si copia in una chat DEV da sotto la riga «---» 
 GR-3 e GR-4 toccano entrambi `tools/tipi/pagina.json` (una riga ciascuno): chi unisce per secondo fa `git merge origin/main` e prova di nuovo.
 
 ## Cosa NON fanno questi pacchetti
-Nessun TP «confermato» dal programma e nessun livello di Schymanski; nessuna chiave `lang/` né testo italiano in Tabui; nessun dato reale; nessun cambio a `campioni/2` (due fattori per condizione = pacchetto futuro `campioni/3`, solo se Federico lo chiede, domanda Q2); niente nella vista Dati, nel Disegno, in Teoria o nella relazione; nessun file nuovo in `TP_Mine/js/` (si carica tutto all'avvio).
+Nessun TP «confermato» dal programma e nessun livello di Schymanski; nessuna chiave `lang/` né testo italiano in Tabui; nessun dato reale; nessun cambio a `campioni/2` (il secondo fattore di una condizione sta in `factors` di `gruppi/1`, senza vista); niente nella vista Dati, nel Disegno, in Teoria o nella relazione; nessun file nuovo in `TP_Mine/js/` (si carica tutto all'avvio).
