@@ -35,8 +35,13 @@
 .tp #tp-files th{position:static}.tp .hero-i{display:inline-flex;color:var(--accent)}.hero-t{display:flex;gap:12px;align-items:center}.hero h2{margin:0;font-size:20px}.hero-s{color:var(--muted);font-size:12px}
 .tp .fsum{font-size:12px;color:var(--muted);margin:2px 0 6px}.tp #tp-files td,.tp #tp-files th{padding:1px 6px}.tp #tp-files select,.tp #tp-files input{font-size:11px;padding:0 3px;height:20px}
 .tp .dig{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;font-size:18px;font-weight:700}.tp .dig .qi{display:inline-flex}.tp .tp-q{display:inline-grid;place-items:center;width:16px;height:16px;border:1px solid var(--muted);border-radius:50%;font-size:11px;color:var(--muted);cursor:help;margin-left:4px;font-style:normal}
-.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.stat{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:6px 14px;min-width:110px}
-.stat b{display:block;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}.stat span{font-size:11px;color:var(--muted)}.stat.g b{color:var(--ok)}.stat.a b{color:var(--warn)}.stat.v b{color:var(--accent)}
+.hero{padding:8px 12px}.tp .hero-t{flex-wrap:wrap;gap:4px 10px}.tp .hero h2{font-size:16px}.tp .hero-c{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;justify-content:space-between;margin-top:4px;font-size:13px}
+.tp .hero-c b{font-variant-numeric:tabular-nums}.tp .hero-x{display:inline-flex;gap:6px;flex-wrap:wrap}.tp .hero-x button{min-height:24px;min-width:24px}
+.tp .tp-mores{margin-top:10px}.tp .tp-mores>details{border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:2px 10px;margin:0 0 4px}.tp .tp-mores>details>summary{min-height:28px;display:flex;align-items:center;color:var(--ink)}
+.tp .tp-mores>details[open]{padding-bottom:8px}.tp .tp-mores .card{border:0;padding:0;margin:0}
+.tp .lr-sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:6px 14px;align-items:start}.tp .lr-sg canvas{display:block;width:100%;height:180px}
+.tp .lr-idx{max-height:240px;overflow:auto;margin-top:6px;border-top:1px solid var(--line);padding-top:4px;font-size:12px}.tp .lr-idx:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.tp .lr-idx .card{border:0;padding:0;margin:0 0 6px;background:none}.tp .lr-idx h3{font-size:12px;color:var(--muted)}
 .vtabs{display:flex;gap:6px;margin:0 0 8px;flex-wrap:wrap}.vt{border-radius:16px;padding:4px 14px}.vt.on{background:var(--accent);color:var(--panel);border-color:var(--accent)}
 .gems{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-bottom:10px}
 .gem{position:relative;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer}.gem:hover{background:var(--sel)}.gem.sel,.mnode.sel{background:var(--sel);border-left-color:var(--accent)}
@@ -222,7 +227,7 @@
     const FIELD = () => W.TPFIELD, parentFields = () => [$("#tp-mol"), $("#tp-smi")];
     if (W.TPFIELD) W.TPFIELD.watch(sec, () => { if ($("#tp-msg").dataset.field) msg(""); });       // the group returns to normal on a click or a key in it; so does its message
     /** @type {any} */
-    const st = { files: [], showAll: false, summary: null, sel: null, view: "gems", took: 0, filter: { forte: true, possibile: true, unexp: true, debole: false } };
+    const st = { files: [], showAll: false, summary: null, sel: null, view: "gems", took: 0 };
     const msg = (t, err) => { const m = $("#tp-msg"); m.textContent = t || ""; m.className = "mut" + (err ? " err" : ""); delete m.dataset.field; };
     const bar = f => { const w = Math.round(f * 100); $("#tp-bar").style.width = w + "%"; $("#tp-barbox").setAttribute("aria-valuenow", w); };
     onProgress = (t, f, m) => { if (t) msg(t); if (f != null) bar(f); if (m && window.TPLIVE) TPLIVE.event(m); };
@@ -499,7 +504,7 @@
       requestAnimationFrame(step);
     }
     function confetti() {
-      const cv = document.createElement("canvas"); cv.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:95"; document.body.appendChild(cv);
+      const cv = document.createElement("canvas"); cv.className = "confetti"; cv.setAttribute("aria-hidden", "true"); cv.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:95"; document.body.appendChild(cv);
       cv.width = innerWidth; cv.height = innerHeight; const g = /** @type {CanvasRenderingContext2D} */ (cv.getContext("2d")), cols = ["#2b5c8a", "#047857", "#d99a1d", "#b42318", "#7c3aed", "#0ea5e9"];
       const P = Array.from({ length: 140 }, () => ({ x: innerWidth / 2 + (Math.random() - .5) * 300, y: innerHeight * 0.35, vx: (Math.random() - .5) * 14, vy: -Math.random() * 13 - 3, r: 3 + Math.random() * 4, c: cols[(Math.random() * cols.length) | 0], rot: Math.random() * 6, vr: (Math.random() - .5) * .4 }));
       const t0 = performance.now();
@@ -512,40 +517,39 @@
     const shortN = (t, n = 26) => t.length > n ? t.slice(0, n - 1) + "…" : t;
     const col = r => r.label === "progenitore" ? "#2b5c8a" : r.kind === "unexpected" ? "#7c3aed" : r.label === "forte" ? "#047857" : "#d99a1d";
 
+    const calmMotion = () => !(matchMedia("(prefers-reduced-motion: reduce)").matches);
     function render() {
       const s = st.summary, R = $("#tp-right");
       const par = s.rows.find(r => r.label === "progenitore");
       const cnt = k => s.rows.filter(r => (k === "unexp" ? r.kind === "unexpected" && good(r) : r.kind === "candidate" && r.label === k)).length;
-      const nF = cnt("forte"), nP = cnt("possibile"), nU = cnt("unexp");
-      R.innerHTML = `<div class="hero"><div class="hero-t"><span class="hero-i">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 44) : "⛏"}</span>
-        <div><h2>${nF ? "Vein found!" : nP ? "A few nuggets..." : "Poor vein"}</h2><div class="hero-s">${esc(s.parent.formula || "parent")} · ${esc(s.parent.adduct)} <i>m/z</i> ${s.parent.mz}${par && par.ref_rt ? ` · RT ${par.ref_rt} min` : ""} · dug in ${(st.took / 1000).toFixed(1)} s</div></div></div>
-        <div class="stats"><div class="stat g"><b data-count="${nF}">0</b><span>Strong TPs 💎</span></div><div class="stat a"><b data-count="${nP}">0</b><span>Possible TPs</span></div>
-        <div class="stat v"><b data-count="${nU}">0</b><span>unexpected ions</span></div>
-        <div class="stat"><b data-count="${s.decay && s.decay.half_life_min != null ? s.decay.half_life_min : 0}" data-dec="1">0</b><span>parent t½ (min)</span></div>
-        <div class="stat"><b data-count="${s.offset ? Math.abs(s.offset.offset) : 0}" data-dec="2">0</b><span>corrected <i>m/z</i> offset (Da)</span></div>
-        <div class="stat"><b data-count="${s.rows.length}">0</b><span>ions analysed</span></div></div>
-        <div class="row" style="margin-top:10px"><button id="tp-x-xlsx">Excel (.xlsx)</button><button id="tp-x-csv">CSV</button><button id="tp-x-json">JSON</button><button id="tp-x-txt" title="Copy a summary to paste into the report">📋 Copy summary</button></div></div>
+      const nF = cnt("forte"), nP = cnt("possibile"), nU = cnt("unexp"), hl = s.decay && s.decay.half_life_min != null ? s.decay.half_life_min : null;
+      const w = (n, label, dec) => `<span class="hc"><b data-count="${n}"${dec ? ` data-dec="${dec}"` : ""}>${dec ? (+n).toFixed(dec) : n}</b> ${label}</span>`;
+      const words = [w(nF, "strong"), w(nP, "possible"), w(nU, "unexpected"), hl != null ? `parent t½ ${w(hl, "min", 1)}` : "", s.offset && s.offset.applied ? `<i>m/z</i> offset ${s.offset.offset >= 0 ? "+" : "−"}${w(Math.abs(s.offset.offset), "Da", 2)}` : "", w(s.rows.length, "ions"), `${(st.took / 1000).toFixed(1)} s`].filter(Boolean).join(" · ");
+      const nMs2 = s.ms2_links && s.ms2_links.links ? s.ms2_links.links.length : 0, ms2c = window.TPMS2 ? window.TPMS2.card(s) : "", mrmc = mrmCard(s.mrm);
+      R.innerHTML = `<div class="hero"><div class="hero-t"><span class="hero-i">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : "⛏"}</span>
+        <h2>${nF ? "Vein found!" : nP ? "A few nuggets..." : "Poor vein"}</h2><span class="hero-s">${esc(s.parent.formula || "parent")} · ${esc(s.parent.adduct)} <i>m/z</i> ${s.parent.mz}${par && par.ref_rt ? ` · RT ${par.ref_rt} min` : ""}</span></div>
+        <div class="hero-c"><span id="tp-cnt">${words}</span><span class="hero-x"><button id="tp-x-xlsx">Excel (.xlsx)</button><button id="tp-x-csv">CSV</button><button id="tp-x-json">JSON</button><button id="tp-x-txt" title="Copy a summary to paste into the report">Copy summary</button></span></div></div>
         <div class="vtabs">${VIEWS.map(([k, n]) => `<button class="vt${st.view === k ? " on" : ""}" data-v="${k}">${n}</button>`).join("")}</div>
-        <div id="tp-view"></div>${window.TPMS2 ? window.TPMS2.card(s) : ""}${mrmCard(s.mrm)}<div id="tp-det"></div>`;
+        <div id="tp-view"></div>
+        <div class="tp-mores">${ms2c ? `<details name="tp-more" id="tp-m-ms2"><summary>MS2 matches (${nMs2})</summary>${ms2c}</details>` : ""}${mrmc ? `<details name="tp-more" id="tp-m-mrm"><summary>MRM (${s.mrm.rows.length} files)</summary>${mrmc}</details>` : ""}</div>`;
       if (window.TPMS2) window.TPMS2.mount({ st, call, refresh: ms2Refresh });
-      R.querySelectorAll(".stat b").forEach(countUp);
+      if (calmMotion()) R.querySelectorAll(".hero-c b[data-count]").forEach(countUp);
       R.querySelectorAll(".vt").forEach(b => b.onclick = () => { st.view = b.dataset.v; R.querySelectorAll(".vt").forEach(x => x.classList.toggle("on", x === b)); view(); });
       $("#tp-x-xlsx").onclick = () => exportAll("xlsx"); $("#tp-x-csv").onclick = () => exportAll("csv"); $("#tp-x-json").onclick = () => exportAll("json");
       $("#tp-x-txt").onclick = async () => { try { await navigator.clipboard.writeText(summaryText()); toast("Summary copied to the clipboard"); } catch (_) { dl("summary_Tabui.txt", summaryText(), "text/plain"); } };
       view();
-      const cc = $("#tp-c-cal");
-      if (cc) { const c = JSON.parse(cc.dataset.cal); chart(cc, [{ x: [0, c.hi], y: [c.intercept, c.slope * c.hi + c.intercept], color: "#2b5c8a" }, { x: c.points.map(p => p.conc), y: c.points.map(p => p.area), color: "#b42318", dots: true, w: 0 }], { xlabel: "concentration (mg/L)", x0: 0 }); }
-      if (nF) confetti();
+      const mm = $("#tp-m-mrm");           // the chart of the calibration needs the width of an open section
+      if (mm) mm.addEventListener("toggle", () => { const cc = $("#tp-c-cal"); if (mm.open && cc) { const c = JSON.parse(cc.dataset.cal); chart(cc, [{ x: [0, c.hi], y: [c.intercept, c.slope * c.hi + c.intercept], color: "#2b5c8a" }, { x: c.points.map(p => p.conc), y: c.points.map(p => p.area), color: "#b42318", dots: true, w: 0 }], { xlabel: "concentration (mg/L)", x0: 0 }); } });
+      if (nF && calmMotion()) confetti();
     }
 
     function view() {
       const V = $("#tp-view"), s = st.summary; stopFilm();
       const list = s.rows.filter(r => r.label !== "progenitore" && good(r));
+      T = null;
       if (st.view === "tab") {
-        const f = st.filter;
-        V.innerHTML = `<div class="card"><div class="row"><label><input type="checkbox" data-f="forte" ${f.forte ? "checked" : ""}> strong</label><label><input type="checkbox" data-f="possibile" ${f.possibile ? "checked" : ""}> possible</label><label><input type="checkbox" data-f="unexp" ${f.unexp ? "checked" : ""}> unexpected</label><label><input type="checkbox" data-f="debole" ${f.debole ? "checked" : ""}> weak</label><span class="mut">↑ ↓ to scroll</span></div><div class="tbl"><table id="tp-t"></table></div></div>`;
-        V.querySelectorAll("[data-f]").forEach(el => el.onchange = () => { f[el.dataset.f] = el.checked; rows(); });
-        rows();
+        V.innerHTML = `<div id="tp-tbl"></div>`;
+        mountTable($("#tp-tbl"));
       } else if (st.view === "gems") {
         V.innerHTML = list.length ? `<div class="gems">${list.map((r, i) => gem(r, i)).join("")}</div>` : `<div class="card mut">No gems: no candidate passes the criteria.</div>`;
         V.querySelectorAll(".gem").forEach(g => g.onclick = () => show(+g.dataset.id));
@@ -644,18 +648,104 @@
     function ms2Refresh(touched) {          // after a correction of the MS2 matches: the card, the table of rows and the open detail
       const c = $("#tp-ms2map"), s = st.summary; if (!c || !s) return;
       const h = document.createElement("div"); h.innerHTML = window.TPMS2.card(s); c.replaceWith(h.firstElementChild);
-      window.TPMS2.mount({ st, call, refresh: ms2Refresh }); rows();
-      if (st.sel != null && (touched.includes(st.sel))) show(st.sel);
+      window.TPMS2.mount({ st, call, refresh: ms2Refresh });
+      if (T) { T.setRows(s.rows); if (st.sel != null && touched.includes(st.sel) && T.openId === st.sel) { T.close(); T.open(st.sel); } }
     }
-    function rows() {
-      if (!$("#tp-t")) return;
-      const s = st.summary, f = st.filter;
-      const keep = s.rows.filter(r => r.label === "progenitore" || (r.kind === "unexpected" ? f.unexp && (r.label === "forte" || r.label === "possibile") : f[r.label]));
-      $("#tp-t").innerHTML = `<tr><th>#</th><th>Lvl</th><th>Score</th><th>Candidate</th><th>Formula</th><th><i>m/z</i></th><th>RT</th><th>t max</th><th>Max area</th><th>Kinetics</th>${hasMs2(s) ? "<th>MS2</th>" : ""}</tr>` + keep.map(r => `<tr class="clk${r.id === st.sel ? " sel" : ""}" data-id="${r.id}">
-        <td>${r.id >= 100000 ? "n" + (r.id - 100000) : r.id}</td><td>${r.level ? `<span class="lvb lv-${r.level}" title="${esc(r.level_text)}">${r.level}</span>` : ""}</td>
-        <td>${r.score == null ? "" : `<span class="badge b-${r.label}">${r.score} ${LAB[r.label]}</span>`}</td><td>${esc(MOLUI.cap(r.name))}${r.alternatives.length ? ` <span class="mut" title="${esc(r.alternatives.join("\n"))}">+${r.alternatives.length}</span>` : ""}</td>
-        <td>${esc(r.formula)}</td><td class="n">${r.mz.toFixed(2)}</td><td class="n">${r.ref_rt ?? ""}</td><td class="n">${r.tmax ?? ""}</td><td class="n">${fmtA(r.max_area)}</td><td>${spark(r.kinetics)}</td>${hasMs2(s) ? `<td class="n">${window.TPMS2.cell(r)}</td>` : ""}</tr>`).join("");
-      $("#tp-t").querySelectorAll("tr.clk").forEach(tr => tr.onclick = () => show(+tr.dataset.id));
+    /** @type {any} the TPTAB of the results while the view "Table" is shown */
+    let T = null;
+    const lvSort = r => (r.level ?? 9) * 1000 - (r.score ?? 0);
+    const idLabel = r => r.kind === "unexpected" && !r.ms2_target ? `m/z ${r.mz.toFixed(2)} (unexpected)` : MOLUI.cap(r.name);
+    const cellStates = r => (r.kinetics || []).map(p => p.area > 0 ? "detected" : "absent");
+    const rowNum = r => r.id >= 100000 ? "n" + (r.id - 100000) : String(r.id);
+    function mountTable(host) {
+      const W = /** @type {any} */ (window), TPTAB = W.TPTAB, TPRIGA = W.TPRIGA, s = st.summary, ms2 = hasMs2(s);
+      const chip = (key, label, help, test, on) => ({ key, label, help, test, on, ...(key === "ms2" ? {} : { group: "class" }) });
+      const alt = r => r.alternatives.length ? ` <span class="mut"${W.TPHELP ? ` data-tt="ft.alt" tabindex="0"` : ""} role="img" aria-label="${r.alternatives.length} more, same mass: ${esc(r.alternatives.join("; "))}">+${r.alternatives.length}</span>` : "";
+      const cols = [
+        { key: "level", label: "Lvl", help: "ft.col.level", sticky: true, sort: lvSort, cell: r => r.level ? TPTAB.level(r.level) : "", text: r => r.level ? "L" + r.level : "" },
+        { key: "identity", label: "Identity", help: "ft.col.identity", sticky: true, sort: r => idLabel(r).toLowerCase(), cell: r => esc(idLabel(r)) + alt(r), text: r => idLabel(r) + (r.alternatives.length ? ` (+${r.alternatives.length})` : "") },
+        { key: "mz", label: "<i>m/z</i>", help: "ft.col.mz", num: true, sort: r => r.mz, cell: r => r.mz.toFixed(2) },
+        { key: "rt", label: "RT", help: "ft.col.rt", num: true, sort: r => r.ref_rt, cell: r => r.ref_rt == null ? "" : r.ref_rt.toFixed(2) },
+        { key: "trend", label: "Trend", help: "ft.col.trend", cell: r => (r.kinetics || []).length ? TPTAB.spark(r.kinetics.map(p => p.area), "area") : "", text: r => (r.kinetics || []).map(p => Math.round(p.area)).join(" ") },
+        { key: "cells", label: "Cells", help: "ft.col.cells", cell: r => cellStates(r).length ? TPTAB.cells(cellStates(r)) : TPTAB.state("na"), text: r => cellStates(r).map(x => x[0]).join("") },
+        { key: "max", label: "Max area", help: "ft.col.maxarea", num: true, sort: r => r.max_area, cell: r => fmtA(r.max_area), text: r => String(Math.round(r.max_area)) },
+        { key: "score", off: true, label: "Score", help: "ft.col.score", num: true, sort: r => r.score, cell: r => r.score == null ? "" : `<span class="badge b-${r.label}">${r.score} ${LAB[r.label]}</span>`, text: r => r.score == null ? "" : String(r.score) },
+        { key: "formula", off: true, label: "Formula", help: "ft.col.formula", sort: r => r.formula || "", cell: r => esc(r.formula || "") },
+        { key: "tmax", off: true, label: "t max", help: "ft.col.tmax", num: true, sort: r => r.tmax, cell: r => String(r.tmax ?? "") },
+        ...(ms2 ? [{ key: "ms2", off: true, label: "MS2", help: "ft.col.ms2match", num: true, sort: r => r.ms2 || 0, cell: r => W.TPMS2.cell(r), text: r => String(r.ms2 || 0) }] : []),
+        { key: "num", off: true, label: "#", help: "ft.col.rank", sort: r => r.id, cell: r => rowNum(r) },
+      ];
+      const chips = [chip("strong", "Strong", "ft.chip.strong", r => r.kind !== "unexpected" && r.label === "forte", true), chip("possible", "Possible", "ft.chip.possible", r => r.kind !== "unexpected" && r.label === "possibile", true),
+        chip("weak", "Weak", "ft.chip.weak", r => r.kind !== "unexpected" && r.label === "debole", false), chip("unexpected", "Unexpected", "ft.chip.unexpected", r => r.kind === "unexpected" && good(r), true),
+        ...(ms2 ? [chip("ms2", "With MS2", "ft.chip.ms2", r => r.ms2 > 0, false)] : [])];
+      T = TPTAB.mount(host, { id: "tp-t", label: "Transformation product candidates", cols, rowId: r => r.id, esc, name: r => `${idLabel(r)}, m/z ${r.mz.toFixed(2)}`, columns: true, chips, exportName: (s.parent.formula || "parent") + "_Tabui_view",
+        search: r => [r.name, r.formula, String(r.mz), r.delta].join(" "), pin: r => r.label === "progenitore",
+        tabs: TPRIGA.tabs, head: (r, box) => TPRIGA.head(box, headModel(r)), onOpen: (r, body, tab) => { void fillTab(r, body, tab); } });
+      T.setRows(s.rows); T.sortBy("level", 1);
+    }
+    /** the head of the open row: level, the sentence of the engine, copy and the way to the card of the MS2 matches */
+    function headModel(r) {
+      const acts = [{ key: "copy", label: "Copy", help: "ft.riga.copy", run: () => {
+        const text = [idLabel(r), "m/z " + r.mz.toFixed(2), "RT " + (r.ref_rt ?? ""), r.level ? "L" + r.level : "", r.score ?? ""].join("\t");
+        Promise.resolve(navigator.clipboard && navigator.clipboard.writeText(text)).then(() => toast("Copied"), () => toast("Copy is not allowed here"));
+      } }];
+      if (hasMs2(st.summary)) acts.push({ key: "ms2", label: "MS2 matches", help: "ft.lr.ms2link", run: () => { const d = $("#tp-m-ms2"); if (d) { d.open = true; d.scrollIntoView({ behavior: calmMotion() ? "smooth" : "auto", block: "nearest" }); } } });
+      return { title: idLabel(r), level: r.level ?? undefined, words: r.level_text || "", actions: acts };
+    }
+    const GROUP = r => r.type === "blank" ? "Blank" : r.type === "control" ? "Dark" : r.type === "standard" ? "Other" : r.time === 0 ? "t0" : "Treated";
+    /** the model of the panel of a row (TPRIGA) from its detail; nothing is computed here */
+    function lrModel(r, d) {
+      const by = new Map(d.rows.map(x => [x.label, x])), pk = d.traces.map(t => t.peak).filter(Boolean), missing = {};
+      /** @type {any} */
+      const m = { ...headModel(r), apexRt: d.ref_rt, lo: pk.length ? Math.min(...pk.map(p => p.left)) : null, hi: pk.length ? Math.max(...pk.map(p => p.right)) : null, missing };
+      if (d.traces.length) m.xic = d.traces.map(t => { const x = by.get(t.label); return { file: t.label, group: GROUP(x || t), time: x ? x.time : null, rt: t.rt, y: t.y }; }); else missing.xic = "no trace for this row";
+      const fr = d.ms2 && d.ms2.scans && d.ms2.fragments && d.ms2.fragments.length ? d.ms2.fragments : null;
+      if (fr) m.spectrum = { kind: "ms2", mz: fr.map(f => f.mz), y: fr.map(f => f.rel) }; else missing.spectrum = "no MS2 matched to this ion";
+      m.line = [`RT ${d.ref_rt ? d.ref_rt.toFixed(2) : "?"} min${m.lo != null ? ` (${m.lo.toFixed(2)}-${m.hi.toFixed(2)})` : ""}`, `m/z ${d.mz_extracted} extracted${d.mz_observed ? `, ${d.mz_observed.toFixed(2)} observed` : ""}`, fr ? `${d.ms2.scans} MS2 scans, precursor ${d.ms2.precursor}${window.TPMS2 ? window.TPMS2.from(d).replace(/<[^>]*>/g, "") : ""}` : ""].filter(Boolean).join(" · ");
+      m.samples = d.rows.map(x => ({ file: x.label, type: GROUP(x), time: x.time, area: x.detected ? x.area : 0, state: x.detected ? "detected" : "absent", apexRt: x.detected ? x.apex_rt : null, lo: m.lo, hi: m.hi }));
+      const proofs = d.criteria.filter(c => c.status === "pass" || c.status === "fail").map(c => ({ ok: c.status === "pass", text: `${c.name}: ${c.text}` }));
+      m.identity = { neutral: null, adduct: st.summary.parent.adduct, candidates: [{ name: idLabel(r), formula: d.formula || "", adduct: st.summary.parent.adduct, source: d.delta || "", level: r.level ?? undefined, proofs }, ...d.alternatives.map(a => ({ name: a, adduct: st.summary.parent.adduct }))] };
+      const status = n => { const c = d.criteria.find(x => x.name.toLowerCase().includes(n)); return c ? c.status : null; };
+      const best = d.rows.filter(x => x.detected).reduce((a, x) => !a || x.area > a.area ? x : a, null), pres = n => { const v = status(n); return v == null || v === "n/a" ? null : { present: v === "fail" }; };
+      m.quality = { snr: best ? best.snr : null, flags: [], blank: pres("blank"), t0: pres("zero"), rejected: [] };
+      return m;
+    }
+    /** the tab `tab` of the open row into `body`: TPRIGA draws the four parts, this adds what only the low-resolution Dig has */
+    async function fillTab(r, body, tab) {
+      st.sel = r.id; body.innerHTML = `<div class="mut">Computing...</div>`;
+      let d; try { d = await getDetail(r.id); } catch (e) { body.innerHTML = `<div class="err">${esc(e.message || e)}</div>`; return; }
+      if (!T || T.openId !== r.id || T.tab !== tab) return;                  // another row or tab was opened while this one loaded
+      const TPRIGA = /** @type {any} */ (window).TPRIGA, m = lrModel(r, d);
+      if (tab === "samples") {
+        body.innerHTML = `<div class="lr-sg"><div class="lr-s1"></div><div class="tpr-ch"><h4>Kinetics (peak area)</h4><canvas id="tp-c-kin"></canvas></div></div>`;
+        TPRIGA.fill(body.querySelector(".lr-s1"), tab, m); kinChart(d);
+      } else {
+        TPRIGA.fill(body, tab, m);
+        if (tab === "identity") identityExtras(r, d, body); else if (tab === "quality") qualityExtras(r, d, body);
+      }
+    }
+    function kinChart(d) {
+      const kin = d.rows.filter(x => x.type === "sample" && x.time != null).sort((a, b) => a.time - b.time), cv = $("#tp-c-kin");
+      chart(cv, [{ x: kin.map(x => x.time), y: kin.map(x => x.detected ? x.area : 0), color: "#2b5c8a", dots: true }], { xlabel: "time (min)" });
+      if (window.TDATI) TDATI.series(cv, { title: "Kinetics of the ion", xl: "treatment time (min)", yl: "peak area", series: [{ name: "area", x: kin.map(x => x.time), y: kin.map(x => x.detected ? x.area : 0) }] });
+    }
+    /** under the candidates of the tab Identity: the words, the specificity, the MS2, the similarity, the transitions, the position of the change and the fragmentation tree */
+    function identityExtras(r, d, body) {
+      const par = st.summary.rows.find(x => x.label === "progenitore"), isPar = par && r.id === par.id, box = document.createElement("div");
+      box.className = "lr-idx"; box.tabIndex = 0; box.setAttribute("role", "region"); box.setAttribute("aria-label", "More about the candidate");
+      box.innerHTML = `<div class="card words"><h3>In words</h3>${words(d, par)}</div>${specHtml(d.specificity)}
+        <div class="card">${window.TPMS2.detail(d)}${d.sim && window.TPHR ? `<h3 style="margin-top:8px">Similarity to the parent's MS2</h3>${window.TPHR.simCard(d.sim)}` : ""}
+        ${d.transitions.length ? `<h3 style="margin-top:8px">Suggested MRM transitions</h3><table><tr><th>Q1</th><th>Q3</th><th>CE</th><th>RT</th></tr>${d.transitions.map(t => `<tr><td class="n">${t.Q1}</td><td class="n">${t.Q3_consigliato}</td><td class="n">${t.CE}</td><td class="n">${t.RT_attesa_min}</td></tr>`).join("")}</table>` : ""}</div>`;
+      body.appendChild(box);
+      window.TPMS2.bindDetail(box, d);
+      if (window.TPPOS && d.ms2 && d.ms2.scans) window.TPPOS.mount(box, { smiles: (($("#tp-smi") || {}).value || "").trim(), delta: d.delta || "", peaks: d.ms2.fragments.map(f => [f.mz, f.rel]), positive: !window.TPPOS.negative((($("#tp-add") || {}).value) || ""), tol: 0.5, ppm: false, label: "Change" });
+      if (window.TPALBERO && (isPar || (d.ms2 && d.ms2.scans))) { const a = document.createElement("div"); a.className = "card"; a.id = "tp-alb"; box.appendChild(a); window.TPALBERO.mount(a, { esc, call }, isPar ? {} : { compareId: r.id }); }
+    }
+    /** under the quality figures: the isotope criterion and the verdict on the in-source fragments */
+    function qualityExtras(r, d, body) {
+      const iso = d.criteria.filter(c => /isotop/i.test(c.name)), isf = r.isf, P = isf ? Math.round(100 * isf.probs.isf) : null;
+      const src = r.insource ? `in-source fragment of the parent${P != null ? ` (P ISF ${P} %${isf.doubtful ? ", doubtful" : ""})` : ""}` : isf && isf.doubtful ? `doubtful origin (P ISF ${P} %)` : "not flagged";
+      body.insertAdjacentHTML("beforeend", `<dl class="tpr-q"><dt>Isotope</dt><dd>${iso.length ? iso.map(c => `${c.status === "pass" ? "✓" : c.status === "fail" ? "✗" : "–"} ${esc(c.name)}: ${esc(c.text)}`).join("<br>") : "no isotope peak stronger than this ion in the window"}</dd><dt>In-source</dt><dd>${esc(src)}${isf && isf.explanation ? `<br><span class="mut">${esc(isf.explanation)}</span>` : ""}</dd></dl>`);
     }
     function words(d, par) {
       const kin = d.rows.filter(r => r.type === "sample" && r.time != null).sort((a, b) => a.time - b.time), first = kin.find(r => r.detected && r.area > 0), mx = kin.reduce((m, r) => r.detected && r.area > (m ? m.area : 0) ? r : m, null);
@@ -672,42 +762,15 @@
       return P.filter(Boolean).map(p => `<p style="margin:4px 0">${p}</p>`).join("");
     }
     async function getDetail(id) { return st.det[id] || (st.det[id] = await call("detail", id)); }
-    async function show(id) {
-      st.sel = id; rows();
-      $("#tp-right").querySelectorAll(".gem,.mnode").forEach(g => g.classList.toggle("sel", +g.dataset.id === id));
-      const D = $("#tp-det"); D.innerHTML = `<div class="card mut">Computing...</div>`;
-      let d; try { d = await getDetail(id); } catch (e) { D.innerHTML = `<div class="card err">${esc(e.message || e)}</div>`; return; }
-      const par = st.summary.rows.find(r => r.label === "progenitore"), drt = par && par.ref_rt && d.ref_rt ? (d.ref_rt - par.ref_rt) : null;
-      const kin = d.rows.filter(r => r.type === "sample" && r.time != null).sort((a, b) => a.time - b.time);
-      D.innerHTML = `<div class="card words"><h3>In words</h3>${words(d, par)}</div><div class="card"><h3>${esc(MOLUI.cap(d.name))} ${d.level ? `<span class="lvb lv-${d.level}">${d.level}</span>` : ""}</h3>
-        <div class="kv"><b>Formula</b><span>${esc(d.formula || "-")} ${d.delta ? `<span class="mut">(${esc(d.delta)})</span>` : ""}</span>
-        <b><i>m/z</i></b><span>${d.mz} calculated · ${d.mz_extracted} extracted${d.mz_observed ? ` · ${d.mz_observed.toFixed(2)} observed` : ""}</span>
-        <b>RT</b><span>${d.ref_rt ? d.ref_rt.toFixed(2) + " min" : "-"}${drt != null ? ` (${drt >= 0 ? "+" : ""}${drt.toFixed(2)} relative to the parent; more polar TPs elute earlier)` : ""}</span>
-        ${d.level_text ? `<b>Confidence</b><span>${esc(d.level_text)}</span>` : ""}${d.alternatives.length ? `<b>Same mass</b><span>${d.alternatives.map(esc).join("; ")}</span>` : ""}</div></div>
-        <div class="cols"><div class="card"><h3>Criteria</h3><ul class="crit" style="margin:0;padding-left:18px">${d.criteria.map(c => `<li class="${c.status}"><b>${c.status === "pass" ? "✓" : c.status === "fail" ? "✗" : "–"} ${esc(c.name)}</b> <span class="mut">${esc(c.text)}</span></li>`).join("") || "<li class='mut'>parent</li>"}</ul></div>
-        <div class="card"><h3>Kinetics (peak area)</h3><canvas id="tp-c-kin"></canvas></div></div>
-        <div class="card"><h3>XIC of all samples <span class="mut">(window ±${st.summary.settings.tol_da} Da around ${d.mz_extracted})</span></h3><canvas id="tp-c-xic" style="height:260px"></canvas><div class="row" id="tp-leg"></div></div>
-        <div class="cols"><div class="card"><h3>Areas</h3><table><tr><th>Sample</th><th>t</th><th>Area</th><th>Height</th><th>S/N</th><th>RT</th></tr>${d.rows.map(r => `<tr><td>${esc(r.label)}</td><td class="n">${r.time ?? ""}</td><td class="n">${r.detected ? fmtA(r.area) : "<span class='mut'>-</span>"}</td><td class="n">${r.detected ? fmtA(r.height) : ""}</td><td class="n">${r.snr ? r.snr.toFixed(1) : ""}</td><td class="n">${r.apex_rt != null && r.detected ? r.apex_rt.toFixed(2) : ""}</td></tr>`).join("")}</table></div>
-        <div class="card">${window.TPMS2.detail(d)}${d.sim && window.TPHR ? `<h3 style="margin-top:8px">Similarity to the parent's MS2</h3>${window.TPHR.simCard(d.sim)}` : ""}
-        ${d.transitions.length ? `<h3 style="margin-top:8px">Suggested MRM transitions</h3><table><tr><th>Q1</th><th>Q3</th><th>CE</th><th>RT</th></tr>${d.transitions.map(t => `<tr><td class="n">${t.Q1}</td><td class="n">${t.Q3_consigliato}</td><td class="n">${t.CE}</td><td class="n">${t.RT_attesa_min}</td></tr>`).join("")}</table>` : ""}</div></div>${specHtml(d.specificity)}`;
-      window.TPMS2.bindDetail(D, d);
-      if (window.TPPOS && d.ms2 && d.ms2.scans) window.TPPOS.mount(D, { smiles: (($("#tp-smi") || {}).value || "").trim(), delta: d.delta || "", peaks: d.ms2.fragments.map(f => [f.mz, f.rel]), positive: !window.TPPOS.negative((($("#tp-add") || {}).value) || ""), tol: 0.5, ppm: false, label: "Change" });
-      const isPar = par && id === par.id;
-      if (window.TPALBERO && (isPar || (d.ms2 && d.ms2.scans))) { const a = document.createElement("div"); a.className = "card"; a.id = "tp-alb"; D.appendChild(a); window.TPALBERO.mount(a, { esc, call }, isPar ? {} : { compareId: id }); }
-      D.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      chart($("#tp-c-kin"), [{ x: kin.map(r => r.time), y: kin.map(r => r.detected ? r.area : 0), color: "#2b5c8a", dots: true }], { xlabel: "time (min)" });
-      const n = d.traces.length;
-      const tr = d.traces.map((t, i) => ({ x: t.rt, y: t.y, color: t.type === "blank" ? "#888" : hue(i, n), dash: t.type === "blank" ? [4, 3] : [], w: 1.3, label: t.label }));
-      const pk = d.traces.map(t => t.peak).filter(Boolean), c = d.ref_rt || 0;
-      chart($("#tp-c-xic"), tr, { xlabel: "RT (min)", x0: Math.max(0.5, c - 2.5), x1: c + 2.5, shade: pk.length ? [Math.min(...pk.map(p => p.left)), Math.max(...pk.map(p => p.right))] : null });
-      $("#tp-leg").innerHTML = tr.map(t => `<span class="mut"><span style="display:inline-block;width:14px;border-top:2px ${t.dash.length ? "dashed" : "solid"} ${t.color};vertical-align:middle"></span> ${esc(t.label)}</span>`).join("");
+    /** opens the row of a candidate in the table: from the gems, the map and the film one click goes back to the view "Table"; a row hidden by the chips gets the chip it needs */
+    function show(id) {
+      st.sel = id;
+      if (st.view !== "tab") { st.view = "tab"; $("#tp-right").querySelectorAll(".vt").forEach(x => x.classList.toggle("on", x.dataset.v === "tab")); view(); }
+      if (!T || T.open(id)) return;
+      const r = st.summary.rows.find(x => x.id === id); if (!r) return;
+      T.setChip(r.kind === "unexpected" ? "unexpected" : r.label === "forte" ? "strong" : r.label === "possibile" ? "possible" : "weak", true);
+      if (!T.open(id)) { T.reset(); T.open(id); }
     }
-
-    document.addEventListener("keydown", ev => {
-      if (sec.hidden || !st.summary || st.view !== "tab" || !["ArrowDown", "ArrowUp"].includes(ev.key) || /INPUT|SELECT|TEXTAREA/.test((document.activeElement && document.activeElement.tagName) || "")) return;
-      const ids = [...sec.querySelectorAll("#tp-t tr.clk")].map(t => +t.dataset.id); if (!ids.length) return;
-      const i = ids.indexOf(st.sel), n = ev.key === "ArrowDown" ? Math.min(ids.length - 1, i + 1) : Math.max(0, i - 1); ev.preventDefault(); show(ids[n < 0 ? 0 : n]);
-    });
 
     // ---- export
     async function exportAll(kind) {

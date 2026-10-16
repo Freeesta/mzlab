@@ -76,10 +76,16 @@ try:
             try: pg.wait_for_function("document.querySelector('#tp-tol').classList.contains('tp-est')", timeout=60000)      # the estimate of the settings holds the indexes until it is done
             except Exception: pass
             pg.fill("#tp-mol", SMILES)
-            pg.click("#tp-go"); pg.wait_for_selector("#tp-ms2map", timeout=360000)
+            pg.click("#tp-go"); pg.wait_for_selector("#tp-ms2map", state="attached", timeout=360000)
+        def table_view():                                  # the view «Table», the section «MS2 matches» open and the optional column «MS2» on
+            pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk")
+            pg.evaluate("document.getElementById('tp-m-ms2').open = true")
+            if not pg.locator('#tp-t thead th', has_text="MS2").count():
+                pg.click(".tpt-colm summary"); pg.check('[data-vc="ms2"]'); pg.click(".tpt-colm summary")
+            assert pg.locator('#tp-t thead th', has_text="MS2").count() == 1
         def dig():
             tab_and_dig()
-            pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk")
+            table_view()
         step("the automatic start keeps the MS2 file; the Dig gives the card «MS2 matches»", dig)
 
         def card():
@@ -98,7 +104,7 @@ try:
         step("every experiment is in the card with its state or its reason; the table of rows has the column «MS2»", card)
 
         def similarity():
-            pg.click('#tp-t tr.clk[data-id="7"]'); pg.wait_for_selector("#tp-det .sim3", timeout=60000)
+            pg.click('#tp-t tr.clk[data-id="7"]'); pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det .sim3", timeout=60000)
             assert pg.evaluate("document.querySelectorAll('#tp-det .sim3 .bar3').length") == 6        # three components, cosine and entropy
             assert "modified cosine" in pg.inner_text("#tp-det .words"), pg.inner_text("#tp-det .words")
             pg.click('#tp-t tr.clk[data-id="0"]'); pg.wait_for_selector("#tp-det .words", timeout=60000)
@@ -127,7 +133,7 @@ try:
         step("the menu moves an MS2 to another row (state «user», counts updated, focus kept)", move)
 
         def detail():
-            pg.click('#tp-t tr.clk[data-id="10007"]'); pg.wait_for_selector(".tp-ms2-l li", timeout=60000)
+            pg.click('#tp-t tr.clk[data-id="10007"]'); pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector(".tp-ms2-l li", timeout=60000)
             assert pg.locator(".tp-ms2-l li").count() == 3, pg.inner_text(".tp-ms2-l")
             assert pg.locator("#tp-ms2-ce option").count() == 3
             pg.select_option("#tp-ms2-ce", "40")
@@ -142,7 +148,7 @@ try:
             saved = pg.evaluate("localStorage.getItem('qqq.tabui.ms2links')")
             assert saved and "lr_MS2-t30.mzML" in saved, saved
             pg.reload(); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
-            tab_and_dig(); pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk")
+            tab_and_dig(); table_view()
             t = pg.evaluate(TABLE)
             assert next(r for r in t if r[1] == "257.06" and r[2] == "10" and r[4] == "7.40")[5] == "user", t
         step("the correction is kept in the browser: after a reload and a new Dig it is there (state «user»)", reload_keeps)
