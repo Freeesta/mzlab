@@ -116,7 +116,13 @@ fn contract_and_rows_of_python() {
         let id = r["id"].as_i64().unwrap();
         let det: Value =
             serde_json::from_str(&detail(&d, id, |k| Ok(open(&idxs[k]))).unwrap()).unwrap();
-        let keys = ["specificity", "ms2_links", "ms2_rep", "ms2_text", "candidates"];
+        let keys = [
+            "specificity",
+            "ms2_links",
+            "ms2_rep",
+            "ms2_text",
+            "candidates",
+        ];
         same_shape(&without(&det, &keys), &g["detail"], "detail");
         own_candidate_first(&det);
         assert!(
