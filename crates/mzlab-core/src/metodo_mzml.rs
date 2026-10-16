@@ -103,6 +103,23 @@ fn params(s: &str) -> Vec<(String, String, String)> {
         .collect()
 }
 
+/// Attribute `k` of the `<run>` tag.
+fn run_attr(head: &str, k: &str) -> Option<String> {
+    head.find("<run ")
+        .and_then(|p| head.get(p..))
+        .and_then(|t| t.split('>').next())
+        .and_then(|t| attr(t, k))
+}
+
+/// `strumento`: model, serial number and software the header names.
+fn instrument(meta: &Metadata) -> Option<V> {
+    obj(vec![
+        ("modello", text(&meta.instrument)),
+        ("serie", text(&meta.serial)),
+        ("software", Some(V::Arr(software(meta)))),
+    ])
+}
+
 fn software(meta: &Metadata) -> Vec<V> {
     meta.software
         .iter()
@@ -232,11 +249,7 @@ pub fn from_mzml_head(head: &str, scans: &str, name: &str, bytes: u64, meta: &Me
         files,
         sample: None,
     };
-    let created = head
-        .find("<run ")
-        .and_then(|p| head.get(p..))
-        .and_then(|t| t.split('>').next())
-        .and_then(|t| attr(t, "startTimeStamp"));
+    let created = run_attr(head, "startTimeStamp");
     let sample = blocks(head, "sample")
         .first()
         .and_then(|b| tags(b, "sample").first().copied().map(String::from));
@@ -253,14 +266,7 @@ pub fn from_mzml_head(head: &str, scans: &str, name: &str, bytes: u64, meta: &Me
             "campione",
             obj(vec![("nome", sample_name.as_deref().and_then(text))]),
         ),
-        (
-            "strumento",
-            obj(vec![
-                ("modello", text(&meta.instrument)),
-                ("serie", text(&meta.serial)),
-                ("software", Some(V::Arr(software(meta)))),
-            ]),
-        ),
+        ("strumento", instrument(meta)),
         ("ms", ms),
         (
             "campi",
