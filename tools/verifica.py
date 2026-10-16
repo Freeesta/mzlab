@@ -51,6 +51,8 @@ NOT_TESTS = {"lib", "synth"}          # helpers and measurements, not tests
 # About 3 minutes together on a laptop; the whole set (python3 tools/verifica.py) stays the rule before every merge.
 SMOKE = ["e2e3", "e2e8", "e2e18", "e2e19", "e2e20", "e2e_spettro", "e2e_hr_nearest", "e2e_hr_composizione", "e2e_pannelli2",
          "e2e_hr_isotopi", "e2e_picchi", "e2e_a11y_dati"]
+# Tabui and the guided tour (about a minute together) join the smoke round on Chromium Linux only (the PR job): not yet measured on Firefox, WebKit and Windows.
+SMOKE_CHROMIUM_LINUX = ["e2e_tabui_tptab", "e2e_tour"]
 # Console messages that are known and harmless (not counted as browser errors).
 BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"api/formula\?f=C2H6Qq", r"status of 400",
           r"Layout was forced before the page was fully loaded",
@@ -455,7 +457,7 @@ def main() -> None:
         if not a.rapida:
             prova_hr(results)
     if not a.senza_e2e:
-        only = {s.strip().removesuffix(".py") for s in a.solo.split(",") if s.strip()} or (set(SMOKE) if a.rapida or a.fumo else set())
+        only = {s.strip().removesuffix(".py") for s in a.solo.split(",") if s.strip()} or (set(SMOKE) | (set(SMOKE_CHROMIUM_LINUX) if browser_name() == "chromium" and sys.platform.startswith("linux") else set()) if a.rapida or a.fumo else set())
         if a.ultimi_falliti and not only:
             only = last_failed()
             if not only:

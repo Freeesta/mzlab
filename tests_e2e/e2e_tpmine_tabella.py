@@ -109,7 +109,7 @@ try:
             pg.click("#tp-det [data-tab=samples]"); pg.wait_for_selector("#hr-kin", timeout=30000)
             assert pg.locator("#tp-det").count() == 1 and pg.locator("#hr-kin").count() == 1 and pg.evaluate("document.getElementById('hr-kin').width") > 0
             assert pg.locator("#tp-det table.tpr tbody tr").count() >= 6, "a row per file with its state"
-            h = pg.evaluate("document.querySelector('#tp-det').getBoundingClientRect().height"); assert h <= 420, ("panel height, samples", h)
+            h = pg.evaluate("document.querySelector('#tp-det').getBoundingClientRect().height"); assert h <= 450, ("panel height, samples", h)          # the head of the row (summary and buttons of #917) makes the Samples tab about 20 px taller than the other tabs
             pg.click("#tp-det [data-tab=identity]"); pg.wait_for_selector("#tp-det .tpr-tw tbody tr", timeout=30000)
             hd = pg.locator("#tp-det .tpr-tw thead th").all_inner_texts(); assert "Neutral formula" in hd, hd
             assert pg.evaluate("!document.querySelector('#tp-det details.tpr-det').open"), "Details closed by default"
