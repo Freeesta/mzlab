@@ -78,6 +78,7 @@ declare var QTOOLS: any;
 declare var QUALITA: any;
 declare var REGISTRO: any;
 declare var SCARICA: any;
+declare var SCORCIATOIE: any;
 declare var SUBREF: any;
 declare var TABELLA: any;
 declare var TAVOLA: any;

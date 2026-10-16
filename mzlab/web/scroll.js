@@ -161,7 +161,6 @@ document.addEventListener("keydown", e => {
   if (S.view !== "data") return;
   if (e.key === "Escape") { playStop(); KEY.dir = 0; return; }
   if (!E.files.length || typingNow() || e.ctrlKey || e.metaKey || e.altKey) return;
-  if (e.key === "?") { e.preventDefault(); shortcuts(); return; }
   if (e.key === " ") {
     const ap = walkTarget(true); if (!ap) return;
     e.preventDefault(); PLAY.space = true; if (e.repeat) return;
@@ -185,6 +184,3 @@ document.addEventListener("keyup", e => {
 addEventListener("blur", () => { KEY.dir = 0; });
 document.addEventListener("mousedown", () => playStop(), true);      // a click stops the play
 
-function shortcuts() {
-  info(HELP.scorrimento[1]);
-}
