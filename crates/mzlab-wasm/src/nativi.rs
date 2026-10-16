@@ -60,97 +60,6 @@ impl ReadAt for JsMember {
     }
 }
 
-/// The reader of a dataset that tells `step(done, total)` how many scans of sample `c` it has decoded, about once per 1 % of them: the page shows how far the index
-/// of the sample has got by its own scans, not by the bytes of the members (a `.wiff.scan` holds every sample, the open reads the heads of all of them).
-/// A later pass of the builder counts on from where the first one ended; the page counts from the start of each phase.
-struct Contato {
-    l: Box<dyn Lettore>,
-    step: Function,
-    c: usize,
-    n: u32,
-    fatte: u32,
-    detto: u32,
-}
-
-impl Contato {
-    fn nuovo(mut l: Box<dyn Lettore>, step: Function, c: usize) -> Contato {
-        let n = l.indice(c).map_or(0, |v| v.len() as u32);
-        drop(step.call2(&JsValue::NULL, &0.into(), &n.into()));
-        Contato {
-            l,
-            step,
-            c,
-            n,
-            fatte: 0,
-            detto: 0,
-        }
-    }
-    fn conta(&mut self, c: usize) {
-        if c != self.c {
-            return;
-        }
-        self.fatte += 1;
-        if self.fatte - self.detto >= (self.n / 100).max(1) {
-            self.detto = self.fatte;
-            drop(
-                self.step
-                    .call2(&JsValue::NULL, &self.fatte.into(), &self.n.into()),
-            );
-        }
-    }
-}
-
-impl Lettore for Contato {
-    fn formato(&self) -> lettori::Formato {
-        self.l.formato()
-    }
-    fn campioni(&self) -> &[lettori::Campione] {
-        self.l.campioni()
-    }
-    fn indice(&mut self, c: usize) -> mzlab_core::Result<&[lettori::VoceScansione]> {
-        self.l.indice(c)
-    }
-    fn scansione(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> {
-        let s = self.l.scansione(c, k);
-        self.conta(c);
-        s
-    }
-    fn scansione_dati(
-        &mut self,
-        c: usize,
-        k: usize,
-    ) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> {
-        let s = self.l.scansione_dati(c, k);
-        self.conta(c);
-        s
-    }
-    fn intestazione(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<lettori::Campo>> {
-        self.l.intestazione(c, k)
-    }
-    fn cromatogrammi(&mut self, c: usize) -> mzlab_core::Result<Vec<lettori::VoceCromatogramma>> {
-        self.l.cromatogrammi(c)
-    }
-    fn cromatogramma(
-        &mut self,
-        c: usize,
-        id: &str,
-    ) -> mzlab_core::Result<mzlab_core::mzml::Chromatogram> {
-        self.l.cromatogramma(c, id)
-    }
-    fn metodo(&mut self, c: usize) -> mzlab_core::Result<String> {
-        self.l.metodo(c)
-    }
-    fn testata_mzml(
-        &mut self,
-        c: usize,
-    ) -> mzlab_core::Result<Option<mzlab_core::mzmlwrite::Header>> {
-        self.l.testata_mzml(c)
-    }
-    fn extra_mzml(&self, s: &mzlab_core::mzml::Spectrum) -> mzlab_core::mzmlwrite::SpectrumExtra {
-        self.l.extra_mzml(s)
-    }
-}
-
 /// The members of a dataset as the page describes them: names (relative to the dataset), sizes, the read function.
 pub(crate) struct Membri {
     names: Vec<String>,
@@ -408,8 +317,7 @@ impl mzlab_core::mzidx_spill::Spill for JsSpill {
 
 /// Builds the `.mzidx` of sample `c` of a dataset straight from its reader (version 2: the rows say where each scan lies in the members) and writes
 /// it with `write(offset, bytes)`; `name` is the name of the item. `phase(n)` is told when a phase begins (1 the members are read for their SHA-256,
-/// 4 the reader opens the dataset (the table of the scans of every sample), 2 the scans are read and indexed, 3 the chromatograms and the index are written);
-/// `step(done, total)`, when given, is told how many scans of sample `c` have been decoded (`Contato`); without it JS follows the bytes it is asked for.
+/// 4 the reader opens the dataset, 2 the scans are read and indexed, 3 the chromatograms and the index are written); `step(done, total)`, when given, is told how many scans of sample `c` have been decoded (`contato.rs`), else JS follows the bytes read.
 /// `write_cen(offset, bytes)`, when the page wants it: if the first MS1 scan is profile (and `centroid` is not asked) the index with the scans as centroids (the `.cen.mzidx` of mzFinder) is built from the SAME decoding of the scans and written there (`"cen"` in the answer holds its statistics); otherwise nothing is written to it.
 /// Returns the statistics and the SHA-256 of the dataset as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`). `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once).
 #[wasm_bindgen]
@@ -450,12 +358,8 @@ pub fn build_mzidx_native(
             upload::impronte(&mut fs).map_err(|e| error_json(&e))?
         }
     };
-    tell(4);
-    let mut l = m.apri_fs(fs).map_err(|e| error_json(&e))?;
     let c = c as usize;
-    if let Some(step) = step {
-        l = Box::new(Contato::nuovo(l, step, c));
-    }
+    let mut l = crate::contato::apri(|| m.apri_fs(fs), &tell, step, c)?;
     let mut out = JsOutput { write };
     // peaks that do not fit in the budget go to the scratch file (a second file of OPFS) instead of being decoded again by every round
     let mut spill = spill_put
