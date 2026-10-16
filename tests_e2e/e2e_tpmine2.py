@@ -55,11 +55,11 @@ try:
             pg.click('.vt[data-v="kin"]'); pg.wait_for_selector("#tp-c-all"); assert pg.evaluate("document.getElementById('tp-c-all').width") > 0
             assert pg.locator('.vt[data-v="gems"], .vt[data-v="film"]').count() == 0          # Gems and Film are gone
             pg.click('.vt[data-v="tab"]'); pg.click("#tp-t tr.clk:has-text('hydroxylation') >> nth=0"); pg.wait_for_selector("#tp-t tr.tpt-exp #tp-det .tpr-ov svg", timeout=60000)      # a click on the row opens it
-            pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det .lr-idx", timeout=60000); pg.wait_for_timeout(500)
+            pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det .tpr-cand", timeout=60000); pg.click("#tp-det details.tpr-det > summary"); pg.wait_for_selector("#tp-det .lr-idx", timeout=60000); pg.wait_for_timeout(500)
             d = pg.inner_text("#tp-det")
-            assert "In words" in d and "Level 3" in d and "257.1" in d, d[:700]
+            assert "Neutral formula" in d and "257.0" in d and "In words" not in d and "Copy text" not in d, d[:700]      # the Pyodide engine gives no candidates: the [M+H]+ formula only from the Rust detail
             pg.screenshot(path=str(HERE / "shots" / "tpmine2_demo.png"), full_page=True)
-        step("LR demo (synthetic): files, formula from SMILES, search, ranking, detail with MS2 and level 3", demo)
+        step("LR demo (synthetic): files, formula from SMILES, search, ranking, detail with MS2, candidates and Details", demo)
         def xl():
             with pg.expect_download(timeout=120000) as dl: pg.click("#tp-x-xlsx")
             path = dl.value.path(); import zipfile; z = zipfile.ZipFile(path); assert z.testzip() is None; names = z.namelist(); assert any("sheet" in n for n in names), names
