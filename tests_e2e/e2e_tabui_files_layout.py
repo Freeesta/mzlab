@@ -13,7 +13,11 @@ if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_D
 subprocess.run(cmd, check=True)
 from lib_sito import add_wasm; add_wasm(tmp / "site")
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(tmp / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1); errs = []; steps = []
+import socket
+while True:                                   # wait for the server on its port (no fixed pause)
+    try: socket.create_connection(("127.0.0.1", PORT), timeout=1).close(); break
+    except OSError: pass
+errs = []; steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e)[:400]))
@@ -36,7 +40,7 @@ try:
             pg = b.new_context(viewport={"width": w, "height": 1400}, reduced_motion="reduce").new_page()
             pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")
-            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_timeout(3200)
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
             def nofolder():
@@ -50,7 +54,7 @@ try:
                     pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
                     pg.set_input_files("#tp-in", mk(n))
                     pg.wait_for_function(f"document.querySelectorAll('#tp-files tr').length > {min(n, 6)}", timeout=240000)
-                    if n > 6: pg.click("#tp-more"); pg.wait_for_timeout(200)
+                    if n > 6: pg.click("#tp-more"); lib.attendi(pg, "document.getElementById('tp-more').getAttribute('aria-expanded') === 'true'")
                     m = pg.evaluate(MEASURE)
                     assert m["pageOver"] <= 0, m                                   # the page does not scroll sideways
                     assert m["tableR"] <= m["cardR"] + 1 or m["filesOver"] > 0, m  # the table fits, or scrolls inside its own box
