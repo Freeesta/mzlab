@@ -44,8 +44,7 @@ try:
             pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('241.0641')", timeout=60000)
             assert "C10H12N2O3S" in pg.inner_text("#tp-prev")
             assert "hydroxylation" in pg.input_value("#tp-tr")
-            pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=300000)
-            assert pg.evaluate("document.querySelectorAll('.gem.forte').length") == 3
+            pg.click("#tp-go"); pg.wait_for_selector("#tp-t", timeout=300000)
             pg.wait_for_timeout(1300)
             assert pg.inner_text(".hero-c b >> nth=0").strip() == "3" and "Vein found" in pg.inner_text(".hero")
             assert pg.evaluate("document.querySelector('#tp-struct svg') !== null")          # parent structure drawn from the SMILES (needs vendor/openchemlib.js)
@@ -54,9 +53,8 @@ try:
             for need in ("hydroxylation", "loss of propene", "dehydrogenation"): assert need in t.lower(), need      # names are shown capitalised
             pg.click('.vt[data-v="map"]'); pg.wait_for_selector(".mnode"); assert pg.evaluate("document.querySelectorAll('.mnode').length") >= 4
             pg.click('.vt[data-v="kin"]'); pg.wait_for_selector("#tp-c-all"); assert pg.evaluate("document.getElementById('tp-c-all').width") > 0
-            pg.click('.vt[data-v="film"]'); pg.wait_for_selector(".frow"); pg.click("#tp-play")
-            pg.wait_for_function("/t = (5|10) min/.test(document.getElementById('tp-tl').textContent)", timeout=8000)
-            pg.click('.vt[data-v="gems"]'); pg.click(".gem:has-text('hydroxylation')"); pg.wait_for_selector("#tp-t tr.tpt-exp #tp-det .tpr-ov svg", timeout=60000)      # a gem opens its row in the table
+            assert pg.locator('.vt[data-v="gems"], .vt[data-v="film"]').count() == 0          # Gems and Film are gone
+            pg.click('.vt[data-v="tab"]'); pg.click("#tp-t tr.clk:has-text('hydroxylation') >> nth=0"); pg.wait_for_selector("#tp-t tr.tpt-exp #tp-det .tpr-ov svg", timeout=60000)      # a click on the row opens it
             pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det .lr-idx", timeout=60000); pg.wait_for_timeout(500)
             d = pg.inner_text("#tp-det")
             assert "In words" in d and "Level 3" in d and "257.1" in d, d[:700]
@@ -138,7 +136,7 @@ try:
                 pg.set_input_files("#tp-in", [str(MZ / (n + ".mzML")) for n in names])
                 pg.wait_for_function("document.querySelectorAll('#tp-files tr').length >= 24", timeout=300000)
                 pg.fill("#tp-smi", "CC(C)N(C(=O)COc1nnc(s1)C(F)(F)F)c1ccc(F)cc1"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('364.0737')", timeout=60000)
-                pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=600000); pg.wait_for_timeout(1300)
+                pg.click("#tp-go"); pg.wait_for_selector("#tp-t", timeout=600000); pg.wait_for_timeout(1300)
                 head = pg.inner_text(".hero")
                 assert "t½" in head and "offset" in head
                 vals = pg.evaluate("[...document.querySelectorAll('.hero-c b')].map(b=>parseFloat(b.textContent))")

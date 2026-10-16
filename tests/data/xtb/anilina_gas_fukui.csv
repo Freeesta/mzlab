@@ -1,0 +1,22 @@
+smiles,atom,quantity,value,method,source
+Nc1ccccc1,0,f_plus,0.035,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,0,f_minus,0.133,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,0,f_zero,0.084,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,1,f_plus,0.050,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,1,f_minus,0.049,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,1,f_zero,0.049,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,2,f_plus,0.066,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,2,f_minus,0.045,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,2,f_zero,0.055,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,3,f_plus,0.071,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,3,f_minus,0.033,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,3,f_zero,0.052,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,4,f_plus,0.036,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,4,f_minus,0.078,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,4,f_zero,0.057,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,5,f_plus,0.071,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,5,f_minus,0.033,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,5,f_zero,0.052,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,6,f_plus,0.066,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,6,f_minus,0.045,"GFN2-xTB, gas",anilina_gas_xtb.out
+Nc1ccccc1,6,f_zero,0.055,"GFN2-xTB, gas",anilina_gas_xtb.out

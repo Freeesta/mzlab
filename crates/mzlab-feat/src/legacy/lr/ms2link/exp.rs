@@ -37,6 +37,8 @@ pub struct Exp {
     pub peaks: Vec<PeakL>,
     /// The trace has peaks, all of them before `rt_min`.
     pub front: bool,
+    /// Half the isolation window written in the file (median of the scans), Da; `None` when the file does not say it.
+    pub half: Option<f64>,
 }
 
 type Key = (i8, i64, i64);
@@ -83,7 +85,15 @@ pub fn experiments<R: ReadAt>(
                 .filter_map(|i| ix.scans[*i].precursor)
                 .collect();
             small(&mut precs, |a, b| a.total_cmp(b));
+            let mut halves: Vec<f64> = scans
+                .iter()
+                .filter_map(|i| ix.scans[*i].iso)
+                .map(|(a, b)| (b - a) / 2.0)
+                .filter(|h| *h > 0.0)
+                .collect();
+            small(&mut halves, |a, b| a.total_cmp(b));
             let mut e = Exp {
+                half: halves.get(halves.len() / 2).copied(),
                 file: name.clone(),
                 time,
                 polarity,
@@ -150,6 +160,11 @@ fn list_peaks(e: &mut Exp, rt_min: f64, rt_tol: f64) {
 }
 
 impl Exp {
+    /// The m/z tolerance for the precursor of this experiment (`ms2assoc::tolerance` with the Q1 half-window of a unit-resolution instrument).
+    pub fn tol(&self) -> super::super::ms2assoc::Tol {
+        super::super::ms2assoc::tolerance(self.half, super::PREC_TOL, self.precursor)
+    }
+
     /// Positions (in `scans`) of the scans whose time lies in `[lo, hi]`.
     pub fn within(&self, lo: f64, hi: f64) -> Vec<usize> {
         (0..self.rt.len())

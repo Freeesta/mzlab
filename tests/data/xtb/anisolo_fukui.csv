@@ -1,0 +1,25 @@
+smiles,atom,quantity,value,method,source
+COc1ccccc1,0,f_plus,-0.025,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,0,f_minus,-0.053,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,0,f_zero,-0.039,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,1,f_plus,0.052,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,1,f_minus,0.172,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,1,f_zero,0.112,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,2,f_plus,0.054,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,2,f_minus,0.056,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,2,f_zero,0.055,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,3,f_plus,0.072,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,3,f_minus,0.045,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,3,f_zero,0.058,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,4,f_plus,0.067,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,4,f_minus,0.024,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,4,f_zero,0.045,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,5,f_plus,0.033,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,5,f_minus,0.067,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,5,f_zero,0.050,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,6,f_plus,0.074,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,6,f_minus,0.031,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,6,f_zero,0.053,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,7,f_plus,0.067,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,7,f_minus,0.036,"GFN2-xTB, ALPB water",anisolo_xtb.out
+COc1ccccc1,7,f_zero,0.052,"GFN2-xTB, ALPB water",anisolo_xtb.out
