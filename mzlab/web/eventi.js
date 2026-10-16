@@ -339,7 +339,7 @@ function ctxFor(p, e, x, px, py) {
   /** @param {any} c */
   const spettri = c => ESP.spettri(c.p);
   reg({ id: "chrom.avgSel", gruppo: "extract", visibile: spettri, disponibile: /** @param {any} c */ c => !!c.p.sel, nome: () => T("ctx.spec.avgSel"), esegui: /** @param {any} c */ c => newSpec(c.p, c.p.sel[0], c.p.sel[1], c.k) });
-  reg({ id: "chrom.specAtRt", gruppo: "extract", visibile: spettri, nome: () => T("ctx.spec.atRt"),
+  reg({ id: "chrom.specAtRt", gruppo: "extract", visibile: spettri, scorciatoia: { tasto: "Enter", dove: "chart", et: "scorc.spettro" }, nome: () => T("ctx.spec.atRt"),
     doppio: /** @param {any} c */ c => !!c.p._a && !!E.files[c.k] && E.files[c.k].kind !== "mrm" && !c.p.el.classList.contains("max"),      // a MRM file has no spectra; full screen: nobody would see the new panel
     esegui: /** @param {any} c */ async c => {
       const { p, x, k } = c, dt = scanStep(), sn = ESP.di(p) === "ms2" && p.type === "chrom" ? ms2Near(p, x, 0) : null;
@@ -350,8 +350,8 @@ function ctxFor(p, e, x, px, py) {
       p.cur = at; newSpec(p, r0, r1, kk);          // every new spectrum is LIVE right under the chromatogram; the previous ones freeze
       if (c.dbl) draw(p);
     } });
-  reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
-  reg({ id: "xic.addIon", gruppo: "xic", viste: ["xic"], nome: () => T("ctx.chrom.addIon"), esegui: /** @param {any} c */ c => openXic(c.p) });
+  reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
+  reg({ id: "xic.addIon", gruppo: "xic", viste: ["xic"], scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.addIon"), esegui: /** @param {any} c */ c => openXic(c.p) });
   reg({ id: "chrom.annotate", gruppo: "tools", ordine: 9, nome: () => T("ctx.annotate.point"),
     esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.annotate.prompt", { rt: c.x.toFixed(2) }), ""); if (v) { c.p.anns.push({ x: c.x, text: v }); draw(c.p); } } });
 })();

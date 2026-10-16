@@ -63,10 +63,13 @@ const PALETTE = (() => {
     list.addEventListener("pointermove", e => { const li = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("li[data-i]")); if (li && +(li.dataset.i || 0) !== sel) mark(+(li.dataset.i || 0), false); });
   }
 
+  // the key of a command that is also an action of the registry (field `azione`): the text of its shortcut, as the system writes it
+  const tastoDi = c => { const a = c.azione && typeof AZIONI !== "undefined" ? AZIONI.voce(c.azione) : null; return a && a.scorciatoia ? `<kbd class="pal-k">${esc(AZIONI.testo(a.scorciatoia))}</kbd>` : ""; };
+
   function render(q) {
     rows = search(q);
     sel = 0;
-    list.innerHTML = rows.map((c, i) => `<li role="option" id="pal-o-${i}" data-i="${i}" aria-selected="${i === 0}"><span class="pal-i" aria-hidden="true">${c.ic()}</span><span class="pal-t">${esc(BARRA.name(c))}</span><span class="pal-g">${esc(t(`pal.grp.${groupOf(c)}`))}</span></li>`).join("") ||
+    list.innerHTML = rows.map((c, i) => `<li role="option" id="pal-o-${i}" data-i="${i}" aria-selected="${i === 0}"><span class="pal-i" aria-hidden="true">${c.ic()}</span><span class="pal-t">${esc(BARRA.name(c))}</span>${tastoDi(c)}<span class="pal-g">${esc(t(`pal.grp.${groupOf(c)}`))}</span></li>`).join("") ||
       `<li class="pal-e" role="presentation">${esc(t("pal.empty"))}</li>`;
     input.setAttribute("aria-activedescendant", rows.length ? "pal-o-0" : "");
     live.textContent = rows.length ? t("pal.count", { n: rows.length }) : t("pal.empty");
