@@ -253,8 +253,7 @@ const WORKFLOW = (() => {
   }
 
   // ---------------------------------------------------------------- MGF & MSP formatting
-  function formatMgf(spectra, isLr = false) {
-    const blocks = [];
+  function* blocksMgf(spectra, isLr = false) {
     for (const s of spectra) {
       const lines = ["BEGIN IONS"];
       const sid = s.sid != null ? s.sid : (s.scan != null ? s.scan : "");
@@ -275,13 +274,15 @@ const WORKFLOW = (() => {
         lines.push(`${mz.toFixed(5)} ${inten.toFixed(1)}`);
       }
       lines.push("END IONS");
-      blocks.push(lines.join("\n"));
+      yield lines.join("\n");
     }
-    return blocks.join("\n\n") + (blocks.length ? "\n" : "");
   }
+  // the blocks of the file; the text is the blocks joined by an empty line and a final newline
+  function formatMgf(spectra, isLr = false) { const b = [...blocksMgf(spectra, isLr)]; return b.join("\n\n") + (b.length ? "\n" : ""); }
+  // the same bytes as formatMgf, in pieces (a long list of spectra is never one string)
+  function* piecesMgf(spectra, isLr = false) { let n = 0; for (const b of blocksMgf(spectra, isLr)) yield (n++ ? "\n\n" : "") + b; if (n) yield "\n"; }
 
-  function formatMsp(spectra, isLr = false) {
-    const blocks = [];
+  function* blocksMsp(spectra, isLr = false) {
     for (const s of spectra) {
       const lines = [];
       const sid = s.sid != null ? s.sid : (s.scan != null ? s.scan : "");
@@ -301,10 +302,13 @@ const WORKFLOW = (() => {
         const mz = floatVal(pk[0], 0.0), inten = floatVal(pk[1], 0.0);
         lines.push(`${mz.toFixed(5)} ${inten.toFixed(1)}`);
       }
-      blocks.push(lines.join("\n"));
+      yield lines.join("\n");
     }
-    return blocks.join("\n\n") + (blocks.length ? "\n" : "");
   }
+  // the blocks of the file; the text is the blocks joined by an empty line and a final newline
+  function formatMsp(spectra, isLr = false) { const b = [...blocksMsp(spectra, isLr)]; return b.join("\n\n") + (b.length ? "\n" : ""); }
+  // the same bytes as formatMsp, in pieces (a long list of spectra is never one string)
+  function* piecesMsp(spectra, isLr = false) { let n = 0; for (const b of blocksMsp(spectra, isLr)) yield (n++ ? "\n\n" : "") + b; if (n) yield "\n"; }
 
   function floatVal(v, def = 0.0) {
     const n = parseFloat(v);
@@ -372,7 +376,7 @@ const WORKFLOW = (() => {
       file: fn,
       peaks: q.peaks || [],
     }));
-    const text = formatMgf(spectra, isLr);
+    const text = piecesMgf(spectra, isLr);
     const safeName = fn.replace(/[^\w.-]+/g, "_");
     dl(`${safeName}_all_ms2.mgf`, text, "text/plain");
     logOp("export_all_ms2_mgf", { file: fn, n: spectra.length });
@@ -392,7 +396,7 @@ const WORKFLOW = (() => {
       file: fn,
       peaks: q.peaks || [],
     }));
-    const text = formatMsp(spectra, isLr);
+    const text = piecesMsp(spectra, isLr);
     const safeName = fn.replace(/[^\w.-]+/g, "_");
     dl(`${safeName}_all_ms2.msp`, text, "text/plain");
     logOp("export_all_ms2_msp", { file: fn, n: spectra.length });

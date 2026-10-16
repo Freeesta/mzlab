@@ -19,6 +19,7 @@ declare var ConvUI: any;
 declare var DESKUPD: any;
 declare var DIAG: any;
 declare var ERRORI: any;
+declare var EXPORT_PEZZI: any;
 declare var EventSource: any;
 declare var FAIR: any;
 declare var FIG: any;
