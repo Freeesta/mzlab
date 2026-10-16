@@ -1,38 +1,37 @@
 // @ts-strict
 // TPMINE-PRIVATE  Untargeted window of mzFinder: load the files of a feature table (mzMine, MS-DIAL, GNPS2), match every feature with an MS2 against the libraries, table with level,
-// best candidate, entropy, Δppm and evidence, filter by level, click → mirror and «What is it?» (the window of the Data tab), the chemist's decided level, export (28_untarget_export.js).
+// best candidate, entropy, Δppm and evidence as TPTAB tables (42_tp_table.js): chips of level, search, sort from the headers, "Columns", "Export view"; a click opens the row under itself (tabs Overview with the mirror
+// plot, Samples, Identity with «What is it?», the external evidence and the chemist's decided level; «group by identity»: Identity with the network and the evidence of the links, Features); export (28_untarget_export.js).
 (() => {
   "use strict";
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const PAGE = 300;
   const CSS = `#unt{width:min(1240px,97vw);max-width:97vw;max-height:94vh;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink)}
 #unt::backdrop{background:rgba(0,0,0,.35)}#unt h3{margin:0}#unt .top{display:flex;align-items:center;gap:8px}#unt .top h3{flex:1}
 #unt .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}#unt .mut{color:var(--muted);font-size:12px}#unt .drop{border:2px dashed var(--line);border-radius:8px;padding:10px;text-align:center}
-#unt .drop.over{border-color:var(--accent);background:var(--sel)}#unt table{border-collapse:collapse;width:100%;font-size:12px}#unt th,#unt td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
-#unt th{position:sticky;top:0;background:var(--panel);color:var(--muted);font-weight:600}#unt td.n,#unt th.n{text-align:right;font-variant-numeric:tabular-nums}
-#unt tr.row1{cursor:pointer}#unt tr.row1:hover,#unt tr.row1.sel{background:var(--sel)}#unt tr.row1.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
-#unt .tbl{max-height:44vh;overflow:auto;border:1px solid var(--line);border-radius:6px}#unt .err{color:var(--bad)}#unt .warn{color:var(--warn);font-size:12px}
+#unt .drop.over{border-color:var(--accent);background:var(--sel)}#unt .err{color:var(--bad)}#unt .warn{color:var(--warn);font-size:12px}
 #unt progress{width:100%}#unt .det{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}@media(max-width:900px){#unt .det{grid-template-columns:1fr}}
 #unt{--idn-adduct:#0072B2;--idn-isotope:#D55E00;--idn-loss:#009E73;--idn-dimer:#CC79A7;--idn-iin:#E69F00}
-#unt .tg{border:0;background:none;color:var(--ink);cursor:pointer;padding:0 4px;font-size:12px}#unt tr.mem td{background:var(--sel);color:var(--ink)}#unt tr.mem td:first-child{box-shadow:inset 3px 0 0 var(--line)}
 #unt .idn-e line{stroke:var(--idn-adduct);stroke-width:1.5}#unt .idn-isotope line{stroke:var(--idn-isotope);stroke-dasharray:5 3}#unt .idn-loss line{stroke:var(--idn-loss);stroke-dasharray:2 3}#unt .idn-dimer line{stroke:var(--idn-dimer);stroke-dasharray:8 2 2 2}
 #unt .idn-iin line{stroke:var(--idn-iin);stroke-width:3}#unt .idn-e text,#unt .idn-n text{fill:var(--ink);font-size:10px}#unt .idn-n circle{fill:var(--panel);stroke:var(--accent);stroke-width:2}#unt .idn-main circle{fill:var(--accent)}
-#unt canvas{width:100%;height:240px;display:block;border:1px solid var(--line);border-radius:6px}#unt ul{margin:2px 0;padding-left:18px}#unt .ext{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}`;
+#unt canvas{width:100%;height:240px;display:block;border:1px solid var(--line);border-radius:6px}#unt ul{margin:2px 0;padding-left:18px}#unt .tpt-dec-mark{margin-left:3px}`;
 
   /** @type {any} */
-  const st = { table: null, res: null, files: [], level: "all", text: "", onlyMs2: false, nShown: PAGE, sel: null, busy: false, cancel: false, tol: 10, order: null, grp: false, graph: null, open: new Set(), cyc: 1, gorder: null };
+  const st = { table: null, res: null, files: [], sel: null, busy: false, cancel: false, tol: 10, order: null, grp: false, graph: null, cyc: 1, gorder: null, TF: null, TG: null, mounted: null };
   const U = () => /** @type {any} */ (window).UNT, M = () => /** @type {any} */ (window).UNTM, L = () => window.LIVELLI, ID = () => /** @type {any} */ (window).UNTID;
   let dlg = null;
   const $ = q => dlg.querySelector(q);
   const say = t => { const e = $("#unt-msg"); if (e) e.textContent = t || ""; };
   const fmtA = v => (v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : v >= 1e3 ? (v / 1e3).toFixed(v >= 1e4 ? 0 : 1) + "k" : String(Math.round(v)));
   const maxArea = f => Math.max(0, ...Object.values(f.areas));
-  const lvBadge = r => { const lv = M().shown(r); return `<span class="lvb lv-${esc(lv)}" title="${esc(L().sentence(lv) + " · " + (r.lv.decisive || ""))}">${esc(L().tag(lv))}${r.decided ? " ✎" : ""}</span>`; };
+  const TPTAB = () => /** @type {any} */ (window).TPTAB, TPRIGA = () => /** @type {any} */ (window).TPRIGA;
+  /** the badge of a level: TPTAB.level, with the double border and «✎» when the chemist decided it */
+  const lvBadge = (lv, decided) => `${TPTAB().level(lv, { decided: decided || null })}${decided ? `<span class="tpt-dec-mark" aria-hidden="true">✎</span>` : ""}`;
+  const stateOf = (f, s) => !(f.areas[s] > 0) ? "absent" : Array.isArray(f.detected) && !f.detected.includes(s) ? "filled" : "detected";
 
   function open() {
     if (!document.getElementById("unt-css")) { const s = document.createElement("style"); s.id = "unt-css"; s.textContent = CSS; document.head.appendChild(s); }
     if (!dlg) {
-      dlg = document.createElement("dialog"); dlg.id = "unt"; dlg.setAttribute("aria-label", "Feature tables"); document.body.appendChild(dlg);
+      dlg = document.createElement("dialog"); dlg.id = "unt"; dlg.className = "tp"; dlg.setAttribute("aria-label", "Feature tables"); document.body.appendChild(dlg);
       dlg.innerHTML = `<div class="top"><h3>Feature tables</h3><button type="button" id="unt-x" aria-label="Close">&times;</button></div>
         <p class="mut" style="margin:6px 0">Load the files of one table (an mzMine table or FBMN quant table, its MGF with the MS<sup>2</sup>, the annotations, the GNPS2 library file, or an MS-DIAL alignment). Everything stays in this browser.
         Each feature with an MS<sup>2</sup> is searched in the loaded libraries: the result is a candidate with a level and its evidence, never an identification.</p>
@@ -41,10 +40,8 @@
           <label>Precursor tolerance <input type="number" id="unt-tol" value="10" min="1" step="1" style="width:64px"> ppm</label>
           <button type="button" id="unt-libs">Libraries...</button><button type="button" id="unt-pipe">Pipeline...</button><button type="button" id="unt-go" class="imp" disabled>Match</button><button type="button" id="unt-stop" hidden>Stop</button></div>
         <div id="unt-sum" class="mut"></div><progress id="unt-prog" max="1" value="0" hidden aria-label="Progress"></progress><div id="unt-msg" role="status" class="mut"></div>
-        <div id="unt-res" hidden><div class="row"><label>Level <select id="unt-lv"></select></label><label>Filter <input type="text" id="unt-q" placeholder="id, m/z, name..." style="width:170px"></label>
-          <label><input type="checkbox" id="unt-ms2"> only with MS<sup>2</sup></label>
-          <label><input type="checkbox" id="unt-grp"> group by identity</label><label id="unt-cyc-l" hidden>Cycle time <input type="number" id="unt-cyc" value="1" min="0.1" step="0.1" style="width:56px"> s</label><span class="mut" id="unt-cnt"></span><span style="flex:1"></span><span id="unt-exp"></span></div>
-          <div class="tbl"><table id="unt-t"></table></div><div class="row"><button type="button" id="unt-more" hidden>Show more</button></div><div id="unt-det" class="det" hidden></div></div>`;
+        <div id="unt-res" hidden><div class="row"><label><input type="checkbox" id="unt-grp"> group by identity</label><label id="unt-cyc-l" hidden>Cycle time <input type="number" id="unt-cyc" value="1" min="0.1" step="0.1" style="width:56px"> s</label><span style="flex:1"></span><span id="unt-exp"></span></div>
+          <div class="tp"><div id="unt-tf"></div><div id="unt-tg" hidden></div></div></div>`;
       dlg.querySelector("#unt-x").onclick = () => dlg.close();
       const input = $("#unt-in"), drop = $("#unt-drop");
       $("#unt-pick").onclick = () => input.click();
@@ -55,11 +52,7 @@
       $("#unt-pipe").onclick = () => { if (window.PIPE) window.PIPE.open(); };
       $("#unt-go").onclick = match; $("#unt-stop").onclick = () => { st.cancel = true; };
       $("#unt-pol").onchange = () => { if (st.files.length) build(); };
-      $("#unt-lv").onchange = e => { st.level = e.target.value; st.nShown = PAGE; table(); };
-      $("#unt-q").oninput = e => { st.text = e.target.value.trim().toLowerCase(); st.nShown = PAGE; table(); };
-      $("#unt-ms2").onchange = e => { st.onlyMs2 = e.target.checked; st.nShown = PAGE; table(); };
-      $("#unt-more").onclick = () => { st.nShown += PAGE; table(); };
-      $("#unt-grp").onchange = e => { st.grp = e.target.checked; st.nShown = PAGE; st.sel = null; $("#unt-det").hidden = true; group(); };
+      $("#unt-grp").onchange = e => { st.grp = e.target.checked; st.sel = null; group(); };
       $("#unt-cyc").onchange = e => { st.cyc = Math.max(0.1, +e.target.value || 1); st.graph = null; if (st.grp) group(); };
     }
     if (!dlg.open) dlg.showModal();
@@ -81,7 +74,7 @@
       const t = await U().build(st.files.map(f => ({ name: f.name, text: f.text })), { pol });
       const main = st.files.find(f => f.name === t.used[0]);
       if (main) { try { t.file.sha256 = await U().sha256Hex(await main.file.arrayBuffer()); } catch (e) { t.file.sha256 = ""; } }
-      st.table = t; st.res = null; st.sel = null; st.graph = null; st.open = new Set();
+      st.table = t; st.res = null; st.sel = null; st.graph = null; st.mounted = null;
       const s = t.stats, nMs2 = t.features.filter(f => f.ms2).length, nAnn = t.features.filter(f => f.ann.length).length;
       $("#unt-sum").innerHTML = `<b>${esc(t.used[0])}</b>: ${t.features.length.toLocaleString("en")} features · ${t.samples.length} samples · ${nMs2.toLocaleString("en")} with MS<sup>2</sup> · ${nAnn.toLocaleString("en")} with an external annotation · polarity ${t.pol > 0 ? "positive" : t.pol < 0 ? "negative" : "?"}`
         + (t.used.length > 1 ? `<br>Also read: ${esc(t.used.slice(1).join(", "))}` : "") + (t.ignored.length ? `<br><span class="warn">Not recognised: ${esc(t.ignored.join(", "))}</span>` : "")
@@ -94,7 +87,7 @@
   /** a table made elsewhere (the pipeline of mzFinder): it replaces the table read from files and is ready to match */
   function adopt(t) {
     open();
-    st.table = t; st.res = null; st.sel = null; st.graph = null; st.open = new Set(); st.files = [];
+    st.table = t; st.res = null; st.sel = null; st.graph = null; st.mounted = null; st.files = [];
     $("#unt-sum").innerHTML = `<b>${esc(t.file.name)}</b>: ${t.features.length.toLocaleString("en")} features · ${t.samples.length} samples (pipeline of Tabui)`;
     $("#unt-go").disabled = !t.features.length; $("#unt-res").hidden = true;
   }
@@ -110,52 +103,147 @@
     const prog = $("#unt-prog"), go = $("#unt-go"), stop = $("#unt-stop"); go.disabled = true; stop.hidden = false; prog.hidden = false; prog.value = 0;
     try {
       const res = await M().run(t, { tolPpm: st.tol, frag: 0.01, isCancelled: () => st.cancel, onProgress: (i, n) => { prog.value = n ? i / n : 1; say(`Searching ${i.toLocaleString("en")} / ${n.toLocaleString("en")} spectra...`); } });
-      if (st.cancel) { say("Stopped."); } else { st.res = res; st.graph = null; st.level = "all"; st.nShown = PAGE; say(`${res.stats.queries.toLocaleString("en")} spectra searched in ${(res.stats.ms / 1000).toFixed(1)} s.`); fill(); }
+      if (st.cancel) { say("Stopped."); } else { st.res = res; st.graph = null; st.mounted = null; say(`${res.stats.queries.toLocaleString("en")} spectra searched in ${(res.stats.ms / 1000).toFixed(1)} s.`); fill(); }
     } catch (e) { say(""); $("#unt-sum").insertAdjacentHTML("beforeend", `<br><span class="err">${esc(e.message || e)}</span>`); }
     st.busy = false; go.disabled = false; stop.hidden = true; prog.hidden = true;
   }
 
-  // ------------------------------------------------------------ table
+  // ------------------------------------------------------------ tables (TPTAB): one row per feature, or per identity (group by identity); the open row is the panel under it
   function rank(r) { return L().rank(M().shown(r)); }
-  function fill() {
-    const t = st.table, cnt = {}; for (const f of t.features) { const lv = M().shown(st.res.get(f.key)); cnt[lv] = (cnt[lv] || 0) + 1; }
-    $("#unt-lv").innerHTML = `<option value="all">all (${t.features.length.toLocaleString("en")})</option>` + L().ORDER.filter(l => cnt[l]).map(l => `<option value="${l}">${L().tag(l)} · ${esc(L().name(l))} (${cnt[l].toLocaleString("en")})</option>`).join("");
-    $("#unt-lv").value = st.level; $("#unt-res").hidden = false;
+  const hasAreas = () => st.table.samples.length > 1;
+  const sentence = r => L().sentence(M().shown(r)) + (r.name ? " · " + r.name : "") + (r.lib ? " (" + r.lib + ")" : "");
+  /** the chips of level, MS2 and decided, the same in both tables; `get(row)` gives {lv, ms2, decided} */
+  const chipsFor = get => [["l2", "L2 or better", "2b"], ["l3", "L3 or better", "3b"], ["l4", "L4 or better", "4"]].map(([key, label, to]) => ({ key, label, help: "ft.chip.level", test: x => L().rank(get(x).lv) <= L().rank(to) }))
+    .concat([{ key: "l5", label: "L5 only", help: "ft.chip.l5", test: x => get(x).lv === "5" }, { key: "ms2", label: "With MS2", help: "ft.chip.ms2", test: x => !!get(x).ms2 }, { key: "dec", label: "Decided", help: "ft.chip.decided", test: x => !!get(x).decided }]);
+  const nameOf = (x) => x.r.name || "m/z " + x.f.mz.toFixed(4);
+  const extText = ext => (ext[0] || "") + (ext.length > 1 ? ` (+${ext.length - 1})` : "");
+  /** the columns of the table of features; the areas per sample (cells) are shown by default only when the table has more than one sample */
+  function colsF() {
+    const mx = x => maxArea(x.f), states = x => st.table.samples.map(s => stateOf(x.f, s));
+    return [
+      { key: "level", label: "Level", help: "ft.col.level", sticky: true, sort: x => rank(x.r), cell: x => lvBadge(x.r.level, x.r.decided), text: x => L().tag(M().shown(x.r)) },
+      { key: "identity", label: "Identity", help: "ft.col.cand", sticky: true, sort: x => nameOf(x).toLowerCase(), cell: x => esc(nameOf(x)), text: nameOf },
+      { key: "mz", label: "m/z", help: "ft.col.mz", num: true, sort: x => x.f.mz, cell: x => x.f.mz.toFixed(4) },
+      { key: "rt", label: "RT", help: "ft.col.rt", num: true, sort: x => x.f.rt, cell: x => x.f.rt.toFixed(2) },
+      { key: "cells", label: "Cells", help: "ft.col.cells", off: !hasAreas(), cell: x => TPTAB().cells(states(x)), text: x => states(x).map(v => v[0]).join("") },
+      { key: "max", label: "Max area", help: "ft.col.maxarea", num: true, sort: mx, cell: x => fmtA(mx(x)), text: x => String(Math.round(mx(x))) },
+      { key: "ms2", off: true, label: "MS2", help: "ft.col.ms2", num: true, sort: x => x.f.ms2 ? x.f.ms2.mz.length : 0, cell: x => x.f.ms2 ? String(x.f.ms2.mz.length) : "" },
+      { key: "ent", off: true, label: "Entropy", help: "ft.col.entropy", num: true, sort: x => x.r.ent, cell: x => x.r.ent == null ? "" : x.r.ent.toFixed(3) },
+      { key: "ppm", off: true, label: "Δppm", help: "ft.col.ppm", num: true, sort: x => x.r.dppm, cell: x => x.r.dppm == null ? "" : x.r.dppm.toFixed(1) },
+      { key: "id", off: true, label: "ID", help: "ft.col.id", sort: x => x.f.id, cell: x => esc(x.f.id) },
+      { key: "ext", off: true, label: "External evidence", help: "ft.col.ext", cell: x => esc(extText(x.r.external)), text: x => x.r.external.join(" | ") },
+    ];
+  }
+  /** the columns of the table of identities */
+  function colsG() {
+    const b = x => x.x.best, n = x => x.x.members.length;
+    return [
+      { key: "level", label: "Level", help: "ft.col.level", sticky: true, sort: x => L().rank(x.x.level), cell: x => lvBadge(b(x) ? b(x).level : x.x.level, x.x.decided ? x.x.level : null), text: x => L().tag(x.x.level) },
+      { key: "identity", label: "Identity", help: "ft.col.members", sticky: true, sort: x => x.i, cell: x => `${esc(x.x.id)} · ${n(x)} feature${n(x) === 1 ? "" : "s"}`, text: x => `${x.x.id} · ${n(x)} features` },
+      { key: "nmass", label: "Neutral mass", help: "ft.col.nmass", num: true, sort: x => x.x.neutral.mass, cell: x => x.x.neutral.mass.toFixed(4) },
+      { key: "rt", label: "RT", help: "ft.col.rt", num: true, sort: x => x.x.rt, cell: x => x.x.rt.toFixed(2) },
+      { key: "max", label: "Max area", help: "ft.col.maxarea", num: true, sort: x => x.x.maxArea, cell: x => fmtA(x.x.maxArea), text: x => String(Math.round(x.x.maxArea)) },
+      { key: "cand", label: "Best candidate", help: "ft.col.cand", sort: x => (b(x) ? b(x).name : "").toLowerCase(), cell: x => esc(b(x) ? b(x).name : "") },
+      { key: "ms2", off: true, label: "MS2", help: "ft.col.ms2", sort: x => x.x.hasMs2 ? 1 : 0, cell: x => x.x.hasMs2 ? "yes" : "" },
+      { key: "ent", off: true, label: "Entropy", help: "ft.col.entropy", num: true, sort: x => b(x) ? b(x).ent : null, cell: x => b(x) && b(x).ent != null ? b(x).ent.toFixed(3) : "" },
+      { key: "ppm", off: true, label: "Δppm", help: "ft.col.ppm", num: true, sort: x => b(x) ? b(x).dppm : null, cell: x => b(x) && b(x).dppm != null ? b(x).dppm.toFixed(1) : "" },
+      { key: "ext", off: true, label: "External evidence", help: "ft.col.ext", cell: x => esc(extText(x.x.external)), text: x => x.x.external.join(" | ") },
+    ];
+  }
+  const rowsF = () => st.order.map(i => ({ i, f: st.table.features[i], r: st.res.get(st.table.features[i].key) }));
+  const rowsG = () => st.gorder.map(i => ({ i, x: st.graph.identities[i] }));
+
+  /** both tables are mounted once per table read (and per match); the rows of each come with `fill` and `group` */
+  function mountTables() {
+    if (st.mounted === st.table && st.TF) return;
+    st.mounted = st.table;
+    const T = TPTAB(), TB = TPRIGA().tabs, byKey = new Map(st.table.features.map(f => [f.key, f]));
+    st.TF = T.mount($("#unt-tf"), { id: "unt-t", panelId: "unt-det", label: "Features of the table", cols: colsF(), rowId: x => x.i, esc, name: x => `feature ${x.f.id}${x.r.name ? ", " + x.r.name : ""}`, columns: true, height: 460, exportName: "untargeted_view",
+      chips: chipsFor(x => ({ lv: M().shown(x.r), ms2: x.r.hasMs2, decided: x.r.decided })), search: x => [x.f.id, x.f.mz.toFixed(4), x.r.name || "", ...x.r.external].join(" "),
+      tabs: [TB[0], ...(hasAreas() ? [TB[1]] : []), TB[2]], head: headF, onOpen: fillF });
+    st.TG = T.mount($("#unt-tg"), { id: "unt-g", panelId: "unt-gdet", label: "Identities of the table", cols: colsG(), rowId: x => x.i, esc, name: x => `${x.x.id}, ${x.x.members.length} features`, columns: true, height: 460, exportName: "untargeted_identities_view",
+      chips: chipsFor(x => ({ lv: x.x.level, ms2: x.x.hasMs2, decided: x.x.decided })),
+      search: x => [x.x.id, String(x.x.neutral.mass), ...x.x.members.map(k => { const f = byKey.get(k), r = st.res.get(k); return f ? `${f.id} ${f.mz.toFixed(4)} ${r ? r.name : ""}` : ""; })].join(" "),
+      tabs: [TB[2], { key: "members", label: "Features", help: "ft.tab.members" }], head: headG, onOpen: fillG });
+  }
+
+  /** the head of the open row of a feature: level (the decided one with the double border), «Decided», the sentence of the level */
+  function headF(x, box) { TPRIGA().head(box, { level: x.r.level, decided: x.r.decided, words: sentence(x.r) }); }
+  function headG(x, box) { TPRIGA().head(box, { level: x.x.best ? x.x.best.level : x.x.level, decided: x.x.decided ? x.x.level : null, words: `RT ${x.x.rt.toFixed(2)} min · ${ID().hypothesisText(x.x.neutral, st.table)}` }); }
+  /** the tab `tab` of the open row of a feature */
+  function fillF(x, body, tab) {
+    st.sel = x.f.key;
+    if (tab === "samples") { TPRIGA().fill(body, "samples", { samples: st.table.samples.map(s => ({ file: s, area: x.f.areas[s] || 0, state: stateOf(x.f, s) })) }); return; }
+    if (tab === "identity") { identity(x, body); return; }
+    body.innerHTML = x.f.ms2 ? `<canvas id="unt-cv" aria-label="Mirror plot of the MS2 spectrum of the feature against the best library candidate"></canvas><div class="mut" id="unt-mm"></div>` : `<div class="mut">No MS<sup>2</sup> for this feature: the level cannot be higher than 4.</div>`;
+    if (x.f.ms2) mirror(x.f, st.table);
+  }
+  /** the tab of an identity: the network and the evidence of the links, or the features of the group */
+  function fillG(x, body, tab) {
+    st.sel = x.x.id;
+    if (tab === "members") { body.innerHTML = ID().membersHtml(x.x, st.table, st.res); body.querySelectorAll("button[data-open]").forEach(b => { b.onclick = () => showFeature(b.dataset.open); }); return; }
+    body.innerHTML = ID().identityHtml(x.x, st.graph, st.table, st.res);
+  }
+  /** the tab Identity of a feature: evidence of the level, external evidence (never a level), the level decided by the chemist, «What is it?» */
+  function identity(x, body) {
+    const r = x.r, f = x.f;
+    const lvOpts = ["", ...L().ORDER].map(l => `<option value="${l}"${(r.decided || "") === l ? " selected" : ""}>${l ? esc(L().tag(l) + " · " + L().name(l)) : "(no decision)"}</option>`).join("");
+    body.innerHTML = `<div class="mut">${esc(sentence(r))}</div>
+      <ul>${r.evidence.map(e => `<li>${esc(e)}</li>`).join("")}</ul>
+      ${r.external.length ? `<div class="mut">External evidence (never a level):</div><ul>${r.external.map(e => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}
+      <div class="row"><label>Level decided by the chemist <select id="unt-dec">${lvOpts}</select></label>${f.ms2 ? `<button type="button" id="unt-what">What is it?</button>` : ""}</div><div class="mut" id="unt-decmsg" role="status"></div>`;
+    $("#unt-dec").onchange = e => {
+      const o = M().decide(r, e.target.value); $("#unt-decmsg").textContent = o.ok ? "" : o.msg; if (!o.ok) e.target.value = r.decided || "";
+      levelsChanged(); const d = $("#unt-dec"); if (d) d.focus();
+    };
+    const w = $("#unt-what"); if (w) w.onclick = () => { try { window.LIB.whatIs(M().panelOf(f, st.table)); } catch (e) { $("#unt-decmsg").textContent = String(e.message || e); } };
+  }
+
+  function reorder() {
+    const t = st.table;
     st.order = t.features.map((f, i) => i).sort((a, b) => { const ra = st.res.get(t.features[a].key), rb = st.res.get(t.features[b].key); return rank(ra) - rank(rb) || (rb.ent ?? -1) - (ra.ent ?? -1) || a - b; });
+  }
+  function fill() {
+    $("#unt-res").hidden = false; reorder();
     if (/** @type {any} */ (window).UNTX && !$("#unt-x-xlsx")) { $("#unt-exp").innerHTML = /** @type {any} */ (window).UNTX.buttons(); /** @type {any} */ (window).UNTX.bind(dlg, () => ({ table: st.table, res: st.res, tol: st.tol, all: () => st.order.map(i => st.table.features[i]), visible })); }
+    mountTables(); st.TF.setRows(rowsF());
     if (st.grp && !st.graph) group(); else refresh();
   }
-  /** the table in the current mode; the identities take level and candidate from the (possibly changed) results */
+  /** the identities take level and candidate from the (possibly changed) results; the tables show the right one */
   function refresh() {
-    if (st.grp && st.graph) { ID().annotate(st.graph, st.table, st.res); order(); }
+    if (st.grp && st.graph) { ID().annotate(st.graph, st.table, st.res); order(); st.TG.setRows(rowsG()); }
     table();
   }
   function order() {
     const g = st.graph; st.gorder = g.identities.map((x, i) => i).sort((a, b) => { const xa = g.identities[a], xb = g.identities[b]; return L().rank(xa.level) - L().rank(xb.level) || ((xb.best && xb.best.ent) ?? -1) - ((xa.best && xa.best.ent) ?? -1) || a - b; });
   }
+  /** a level was decided: the rows are ordered again and the head of the open row shows the new level */
+  function levelsChanged() {
+    reorder(); st.TF.setRows(rowsF()); refresh();
+    const T = st.grp && st.graph ? st.TG : st.TF, box = T.panel.querySelector(".tpt-head"), row = T.view.find(x => x.i === T.openId);
+    if (box && row) (T === st.TF ? headF : headG)(row, box);
+  }
+  /** the features that the view shows (the members of the identities when the rows are identities): for «only the filtered features» of the export */
   function visible() {
-    const t = st.table, q = st.text, out = [];
-    for (const i of st.order) {
-      const f = t.features[i], r = st.res.get(f.key);
-      if (st.level !== "all" && M().shown(r) !== st.level) continue;
-      if (st.onlyMs2 && !r.hasMs2) continue;
-      if (q && !(f.id.toLowerCase().includes(q) || f.mz.toFixed(4).includes(q) || (r.name || "").toLowerCase().includes(q) || r.external.some(x => x.toLowerCase().includes(q)))) continue;
-      out.push(f);
+    if (st.grp && st.graph && st.TG) {
+      const byKey = new Map(st.table.features.map(f => [f.key, f])), seen = new Set(), out = [];
+      for (const x of st.TG.view) for (const k of x.x.members) if (!seen.has(k)) { seen.add(k); const f = byKey.get(k); if (f) out.push(f); }
+      return out;
     }
-    return out;
+    return st.TF.view.map(x => x.f);
   }
   function table() {
-    if (st.grp && st.graph) return gtable();
-    const t = st.table, rows = visible(), shown = rows.slice(0, st.nShown);
-    $("#unt-cnt").textContent = `${rows.length.toLocaleString("en")} features`;
-    $("#unt-t").innerHTML = `<tr><th>Level</th><th>ID</th><th class="n"><i>m/z</i></th><th class="n">RT</th><th class="n">Max area</th><th class="n">MS<sup>2</sup></th><th>Best candidate</th><th class="n">Entropy</th><th class="n">Δppm</th><th>External evidence</th></tr>`
-      + shown.map(f => { const r = st.res.get(f.key); return `<tr class="row1${st.sel === f.key ? " sel" : ""}" data-k="${esc(f.key)}" tabindex="0"><td>${lvBadge(r)}</td><td>${esc(f.id)}</td><td class="n">${f.mz.toFixed(4)}</td><td class="n">${f.rt.toFixed(2)}</td><td class="n">${fmtA(maxArea(f))}</td>
-        <td class="n">${f.ms2 ? f.ms2.mz.length : ""}</td><td>${esc(r.name)}</td><td class="n">${r.ent == null ? "" : r.ent.toFixed(3)}</td><td class="n">${r.dppm == null ? "" : r.dppm.toFixed(1)}</td><td class="ext" title="${esc(r.external.join("\n"))}">${esc(r.external[0] || "")}${r.external.length > 1 ? ` (+${r.external.length - 1})` : ""}</td></tr>`; }).join("");
-    const more = $("#unt-more"); more.hidden = rows.length <= shown.length; more.textContent = `Show ${Math.min(PAGE, rows.length - shown.length)} more of ${(rows.length - shown.length).toLocaleString("en")}`;
-    $("#unt-t").querySelectorAll("tr.row1").forEach(tr => { tr.onclick = () => select(tr.dataset.k); tr.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(tr.dataset.k); } }; });
+    const g = st.grp && !!st.graph;
+    $("#unt-tf").hidden = g; $("#unt-tg").hidden = !g;
+  }
+  /** a member of an identity: the table goes back to the features and the row of the feature opens (the chips that hide it are cleared) */
+  function showFeature(key) {
+    st.grp = false; $("#unt-grp").checked = false; $("#unt-cyc-l").hidden = true; table();
+    const i = st.table.features.findIndex(f => f.key === key);
+    if (i >= 0 && !st.TF.open(i)) { st.TF.reset(); st.TF.open(i); }
   }
 
-  // ------------------------------------------------------------ identities: one row per group of features of the same compound, expandable, with the evidence of every link
+  // ------------------------------------------------------------ identities: one row per group of features of the same compound, with the evidence of every link in the open row
   async function group() {
     $("#unt-cyc-l").hidden = !st.grp;
     if (!st.grp) { table(); return; }
@@ -165,77 +253,11 @@
       try { const g = await ID().compute(st.table, tp, { opt: { cycle_s: st.cyc } }); ID().annotate(g, st.table, st.res); st.graph = g; g.warnings.forEach(w => say(w)); if (!g.warnings.length) say(`${g.stats.grouped.toLocaleString("en")} groups of 2 or more features, ${g.stats.identities.toLocaleString("en")} rows in all.`); }
       catch (e) { say(String(e.message || e)); st.grp = false; $("#unt-grp").checked = false; $("#unt-cyc-l").hidden = true; return; }
     }
-    order();
+    order(); st.TG.setRows(rowsG());
     table();
   }
-  function gvisible() {
-    const g = st.graph, q = st.text, byKey = new Map(st.table.features.map(f => [f.key, f])), out = [];
-    for (const i of st.gorder) {
-      const x = g.identities[i];
-      if (st.level !== "all" && x.level !== st.level) continue;
-      if (st.onlyMs2 && !x.hasMs2) continue;
-      if (q && !(x.id.toLowerCase().includes(q) || String(x.neutral.mass).includes(q) || x.members.some(k => { const f = byKey.get(k), r = st.res.get(k); return f && (f.id.toLowerCase().includes(q) || f.mz.toFixed(4).includes(q) || (r.name || "").toLowerCase().includes(q)); }))) continue;
-      out.push(x);
-    }
-    return out;
-  }
-  const idBadge = x => `<span class="lvb lv-${esc(x.level)}" title="${esc(L().sentence(x.level) + " · level of feature " + (st.table.byId.get(x.via.split(":").pop()) || { id: x.via }).id)}">${esc(L().tag(x.level))}${x.decided ? " ✎" : ""}</span>`;
-  function gtable() {
-    const t = st.table, g = st.graph, rows = gvisible(), shown = rows.slice(0, st.nShown), byKey = new Map(t.features.map(f => [f.key, f]));
-    $("#unt-cnt").textContent = `${rows.length.toLocaleString("en")} identities · ${g.stats.features.toLocaleString("en")} features`;
-    const head = `<tr><th>Level</th><th>Identity</th><th class="n">Neutral mass</th><th class="n">RT</th><th class="n">Max area</th><th class="n">MS<sup>2</sup></th><th>Best candidate</th><th class="n">Entropy</th><th class="n">Δppm</th><th>External evidence</th></tr>`;
-    const body = shown.map(x => {
-      const open = st.open.has(x.id), b = x.best, many = x.members.length > 1;
-      const top = `<tr class="row1${st.sel === x.id ? " sel" : ""}" data-i="${esc(x.id)}" tabindex="0"><td>${idBadge(x)}</td><td>${many ? `<button type="button" class="tg" data-t="${esc(x.id)}" aria-expanded="${open}" aria-label="${open ? "Hide" : "Show"} the ${x.members.length} features of ${esc(x.id)}">${open ? "▾" : "▸"}</button>` : ""}${esc(x.id)} · ${x.members.length} feature${many ? "s" : ""}</td>
-        <td class="n">${x.neutral.mass.toFixed(4)}</td><td class="n">${x.rt.toFixed(2)}</td><td class="n">${fmtA(x.maxArea)}</td><td class="n">${x.hasMs2 ? "yes" : ""}</td><td>${esc(b ? b.name : "")}</td><td class="n">${b && b.ent != null ? b.ent.toFixed(3) : ""}</td><td class="n">${b && b.dppm != null ? b.dppm.toFixed(1) : ""}</td>
-        <td class="ext" title="${esc(x.external.join("\n"))}">${esc(x.external[0] || "")}${x.external.length > 1 ? ` (+${x.external.length - 1})` : ""}</td></tr>`;
-      if (!open) return top;
-      return top + x.members.map(k => { const f = byKey.get(k), r = st.res.get(k), ro = x.neutral.roles[k];
-        return `<tr class="row1 mem${st.sel === k ? " sel" : ""}" data-k="${esc(k)}" tabindex="0"><td>${lvBadge(r)}</td><td>feature ${esc(f.id)}</td><td>${ro ? esc(ro.label) + (ro.ppm ? ` (${ro.ppm.toFixed(1)} ppm)` : "") : "not explained by this mass"}</td><td class="n">${f.rt.toFixed(2)}</td><td class="n">${fmtA(maxArea(f))}</td><td class="n">${f.ms2 ? f.ms2.mz.length : ""}</td><td>${esc(r.name)}</td><td class="n">${r.ent == null ? "" : r.ent.toFixed(3)}</td><td class="n">${r.dppm == null ? "" : r.dppm.toFixed(1)}</td><td class="n"><i>m/z</i> ${f.mz.toFixed(4)}</td></tr>`; }).join("");
-    }).join("");
-    $("#unt-t").innerHTML = head + body;
-    const more = $("#unt-more"); more.hidden = rows.length <= shown.length; more.textContent = `Show ${Math.min(PAGE, rows.length - shown.length)} more of ${(rows.length - shown.length).toLocaleString("en")}`;
-    const T = $("#unt-t");
-    T.querySelectorAll("button.tg").forEach(b => { b.onclick = e => { e.stopPropagation(); const id = b.dataset.t; if (st.open.has(id)) st.open.delete(id); else st.open.add(id); gtable(); const nb = T.querySelector(`button.tg[data-t="${CSS_escape(id)}"]`); if (nb) nb.focus(); }; });
-    T.querySelectorAll("tr.row1").forEach(tr => { const go = () => (tr.dataset.k ? select(tr.dataset.k) : selectId(tr.dataset.i)); tr.onclick = go; tr.onkeydown = e => { if (e.target === tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); go(); } }; });
-  }
-  function selectId(id) {
-    st.sel = id; const g = st.graph, t = st.table, x = g.identities.find(y => y.id === id); if (!x) return;
-    $("#unt-t").querySelectorAll("tr.row1").forEach(tr => tr.classList.toggle("sel", (tr.dataset.k || tr.dataset.i) === id));
-    const D = $("#unt-det"); D.hidden = false; const byKey = new Map(t.features.map(f => [f.key, f]));
-    const viaF = byKey.get(x.via), b = x.best, roles = x.members.map(k => { const f = byKey.get(k), ro = x.neutral.roles[k], r = st.res.get(k); return `<li>feature ${esc(f.id)} · <i>m/z</i> ${f.mz.toFixed(4)} · RT ${f.rt.toFixed(2)} · ${ro ? esc(ro.label) : "not explained by this mass"} · ${esc(L().tag(M().shown(r)))}${r.name ? " · " + esc(r.name) : ""}</li>`; }).join("");
-    const alts = x.alternatives.map(a => `<li>${esc(ID().hypothesisText(a, t))}</li>`).join("");
-    const edges = x.edges.map(i => g.edges[i]), ev = edges.map(e => `<li>${esc(byKey.get(e.a).id)} – ${esc(byKey.get(e.b).id)}: ${esc(ID().edgeText(e))}</li>`).join("");
-    D.innerHTML = `<div><h3>${esc(x.id)} · ${x.members.length} feature${x.members.length === 1 ? "" : "s"} · RT ${x.rt.toFixed(2)} min ${idBadge(x)}</h3>
-      <div class="mut">${esc(ID().hypothesisText(x.neutral, t))}</div>
-      <div class="mut">Level and candidate come from the best member, feature ${esc(viaF ? viaF.id : "")}${b && b.name ? ": " + esc(b.name) : ""}. ${esc(L().sentence(x.level))}</div>
-      ${x.structConflict ? `<div class="warn">The best candidates of the members have different structure keys (${esc(x.structKeys.join(", "))}).</div>` : ""}
-      <ul>${roles}</ul>${alts ? `<div class="mut">Other readings of the same features:</div><ul>${alts}</ul>` : ""}
-      ${ev ? `<div class="mut">Evidence of the links:</div><ul>${ev}</ul>` : `<div class="mut">No other feature fulfils all the conditions (co-elution, correlated shape, explained mass difference).</div>`}</div>
-      <div>${ID().networkSvg(x, g, t)}</div>`;
-  }
 
-  // ------------------------------------------------------------ detail: evidence, external annotations, decision, mirror, «What is it?»
-  async function select(key) {
-    st.sel = key; const t = st.table, f = t.features.find(x => x.key === key), r = st.res.get(key); if (!f || !r) return;
-    $("#unt-t").querySelectorAll("tr.row1").forEach(tr => tr.classList.toggle("sel", tr.dataset.k === key));
-    const D = $("#unt-det"); D.hidden = false;
-    const lvOpts = ["", ...L().ORDER].map(l => `<option value="${l}"${(r.decided || "") === l ? " selected" : ""}>${l ? esc(L().tag(l) + " · " + L().name(l)) : "(no decision)"}</option>`).join("");
-    D.innerHTML = `<div><h3>Feature ${esc(f.id)} · <i>m/z</i> ${f.mz.toFixed(4)} · RT ${f.rt.toFixed(2)} min ${lvBadge(r)}</h3>
-      <div class="mut">${esc(L().sentence(M().shown(r)))}${r.name ? " · " + esc(r.name) : ""}${r.lib ? " (" + esc(r.lib) + ")" : ""}</div>
-      <ul>${r.evidence.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
-      ${r.external.length ? `<div class="mut">External evidence (never a level):</div><ul>${r.external.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
-      <div class="row"><label>Level decided by the chemist <select id="unt-dec">${lvOpts}</select></label></div><div class="mut" id="unt-decmsg" role="status"></div>
-      <div class="row">${f.ms2 ? `<button type="button" id="unt-what">What is it?</button>` : ""}</div></div>
-      <div>${f.ms2 ? `<canvas id="unt-cv" aria-label="Mirror plot of the MS2 spectrum of the feature against the best library candidate"></canvas><div class="mut" id="unt-mm"></div>` : `<div class="mut">No MS<sup>2</sup> for this feature: the level cannot be higher than 4.</div>`}</div>`;
-    $("#unt-dec").onchange = e => {
-      const o = M().decide(r, e.target.value); $("#unt-decmsg").textContent = o.ok ? "" : o.msg; if (!o.ok) e.target.value = r.decided || "";
-      fill(); const tr = $("#unt-t").querySelector(`tr[data-k="${CSS_escape(key)}"]`); if (tr) tr.classList.add("sel");
-    };
-    const w = $("#unt-what"); if (w) w.onclick = () => { try { window.LIB.whatIs(M().panelOf(f, t)); } catch (e) { $("#unt-decmsg").textContent = String(e.message || e); } };
-    if (f.ms2) mirror(f, t);
-  }
-  const CSS_escape = s => String(s).replace(/["\\]/g, "\\$&");
+  // ------------------------------------------------------------ detail: the mirror plot of the MS2 against the best library candidate
   async function mirror(f, t) {
     const cv = $("#unt-cv"), mm = $("#unt-mm"); if (!cv) return;
     try {

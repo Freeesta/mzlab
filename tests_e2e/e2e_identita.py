@@ -41,30 +41,36 @@ try:
             attendi(pg, "!!window.UNTUI", 120000); pg.click("#tp-unt"); pg.wait_for_selector("#unt[open]", timeout=10000)      # the button does nothing until the table module is registered
             pg.set_input_files("#unt-in", [str(tmp / "tabella_pos.csv")]); pg.wait_for_function("document.querySelector('#unt-sum').textContent.includes('7 features')", timeout=20000)
             pg.click("#unt-go"); pg.wait_for_selector("#unt-res:not([hidden])", timeout=60000)
-            assert pg.evaluate("document.querySelectorAll('#unt-t tr.row1').length") == 7
+            assert pg.evaluate("document.querySelectorAll('#unt-t tbody tr.clk').length") == 7
         step("a table of 7 features (5 samples) is read and matched", boot)
         def group():
-            pg.check("#unt-grp"); pg.wait_for_function("document.querySelectorAll('#unt-t tr.row1').length === 4 && document.querySelector('#unt-t').textContent.includes('ID')", timeout=240000)
-            t = pg.inner_text("#unt-t"); assert "4 features" in t and "300.1000" in t, t
-            assert "4 identities" in pg.inner_text("#unt-cnt") and "7 features" in pg.inner_text("#unt-cnt")
+            pg.check("#unt-grp"); pg.wait_for_function("document.querySelectorAll('#unt-g tbody tr.clk').length === 4 && !document.querySelector('#unt-tg').hidden", timeout=240000)
+            t = pg.inner_text("#unt-g"); assert "4 features" in t and "300.1000" in t, t
+            assert pg.evaluate("document.querySelector('#unt-tf').hidden") and "4 of 4 rows" in pg.inner_text("#unt-tg .tpt-n")
         step("group by identity: 4 rows, the compound's 4 features are one (neutral mass 300.1000); the co-eluted pair with an unexplained difference stays apart", group)
+        ROW = "#unt-g tr.clk:has-text('4 features')"
         def expand():
-            tg = "#unt-t button.tg"; assert pg.get_attribute(tg, "aria-expanded") == "false"
-            pg.click(tg); pg.wait_for_function("document.querySelectorAll('#unt-t tr.mem').length === 4")
-            assert pg.get_attribute(tg, "aria-expanded") == "true" and "aria-label" in pg.evaluate("document.querySelector('#unt-t button.tg').outerHTML")
-            roles = pg.evaluate("[...document.querySelectorAll('#unt-t tr.mem')].map(tr => tr.children[2].textContent).join('|')")
+            tg = ROW + " button.tpt-tg"; assert pg.get_attribute(tg, "aria-expanded") == "false"
+            pg.click(tg); pg.wait_for_selector("#unt-gdet", timeout=10000)
+            assert pg.get_attribute(tg, "aria-expanded") == "true" and "aria-label" in pg.evaluate("document.querySelector('#unt-g button.tpt-tg').outerHTML")
+            assert pg.evaluate("document.querySelector('#unt-g tr.clk + tr.tpt-exp #unt-gdet') !== null"), "the panel is not under its row"
+            pg.click("#unt-gdet button[role=tab][data-tab=members]"); pg.wait_for_function("document.querySelectorAll('#unt-gdet tbody tr').length === 4")
+            roles = pg.evaluate("[...document.querySelectorAll('#unt-gdet tbody tr')].map(tr => tr.children[3].textContent).join('|')")
             assert "[M+H]+" in roles and "[M+Na]+" in roles and "[M+NH4]+" in roles and "isotope" in roles, roles
-        step("the row expands to its members with their role", expand)
+            pg.click("#unt-gdet button[role=tab][data-tab=identity]")
+        step("the row expands under itself; its tab Features lists the members with their role", expand)
         def detail():
-            pg.click("#unt-t tr.row1[data-i]:has-text('4 features')"); pg.wait_for_function("document.querySelector('#unt-det').textContent.includes('Evidence of the links')")
-            d = pg.inner_text("#unt-det"); assert "Neutral mass 300.1000" in d and "r 1.00 over 5 samples" in d and "Level and candidate come from the best member" in d, d
-            assert pg.evaluate("document.querySelectorAll('#unt-det svg line').length") >= 3 and "Network of identity" in pg.evaluate("document.querySelector('#unt-det svg').getAttribute('aria-label')")
+            pg.wait_for_function("document.querySelector('#unt-gdet').textContent.includes('Evidence of the links')")
+            d = pg.inner_text("#unt-gdet"); assert "Neutral mass 300.1000" in d and "r 1.00 over 5 samples" in d and "Level and candidate come from the best member" in d, d
+            assert pg.evaluate("document.querySelectorAll('#unt-gdet svg line').length") >= 3 and "Network of identity" in pg.evaluate("document.querySelector('#unt-gdet svg').getAttribute('aria-label')")
             low = d.lower(); assert not any(w in low for w in ("identified", "confirmed", "proved")), d
-            pg.click("#unt-t tr.mem[data-k='POS:2']"); pg.wait_for_function("document.querySelector('#unt-det').textContent.includes('Feature 2')")
-        step("click → neutral-mass hypothesis, evidence of every link, network; a member opens the feature detail", detail)
+            pg.click("#unt-gdet button[role=tab][data-tab=members]"); pg.click("#unt-gdet button[data-open='POS:2']")
+            pg.wait_for_function("!document.querySelector('#unt-tf').hidden && UNTUI.state.TF.openId != null && UNTUI.state.table.features[UNTUI.state.TF.openId].key === 'POS:2'")
+            assert pg.evaluate("document.querySelector('#unt-t tr.clk + tr.tpt-exp #unt-det') !== null")
+        step("click → neutral-mass hypothesis, evidence of every link, network; a member opens the feature under its row", detail)
         def back():
-            pg.uncheck("#unt-grp"); pg.wait_for_function("document.querySelectorAll('#unt-t tr.row1').length === 7")
-            pg.check("#unt-grp"); pg.wait_for_function("document.querySelectorAll('#unt-t tr.row1[data-i]').length === 4")          # the graph is kept: no new call
+            pg.check("#unt-grp"); pg.wait_for_function("document.querySelectorAll('#unt-g tbody tr.clk').length === 4 && !document.querySelector('#unt-tg').hidden")          # the graph is kept: no new call
+            pg.uncheck("#unt-grp"); pg.wait_for_function("document.querySelectorAll('#unt-t tbody tr.clk').length === 7 && !document.querySelector('#unt-tf').hidden")
         step("back to one row per feature and again", back)
         b.close()
 finally:
