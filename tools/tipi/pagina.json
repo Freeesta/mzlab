@@ -128,6 +128,7 @@
     "../../mzlab/web/libreria-cartella.js",
     "../../mzlab/web/libreria-scarica.js",
     "../../mzlab/web/telefono-scheda.js",
+    "../../TP_Mine/lazy/gruppi-campioni.js",
     "../../TP_Mine/js/20_tpmine.js",
     "../../TP_Mine/js/21_tpmine_hr.js",
     "../../TP_Mine/js/22_tpmine_ms2.js",

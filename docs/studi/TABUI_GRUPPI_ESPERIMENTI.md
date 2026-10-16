@@ -129,7 +129,7 @@ Il JS non calcola medie, rapporti né insiemi: legge `gruppi/1`. CSV e SVG si sc
 | Passo | Pacchetto | Parte dopo | Stima (giorni-chat) | Stato |
 |---|---|---|---|---|
 | 1 | GR-1 modulo Rust `gruppi/`, schema `gruppi-1.json`, fixture | subito | 2 | da fare |
-| 1 (parallelo) | GR-3 tabella dei file con «Condition», riferimento, `campioni/2` in Tabui LR, caricamento pigro | subito (usa la fixture di prova propria fino a GR-1) | 1,5-2 | da fare |
+| 1 (parallelo) | GR-3 tabella dei file con «Condition», riferimento, `campioni/2` in Tabui LR, caricamento pigro | subito (usa la fixture di prova propria fino a GR-1) | 1,5-2 | fatto: componente, innesto in `20_tpmine.js` (#871 e #873 in `main`), `TPLAZY`; prova `e2e_tabui_gruppi_file.py` |
 | 1 (parallelo) | GR-4 vista «Compare conditions»: matrice, UpSet, grafici, esportazioni | subito (fixture) | 2-2,5 | da fare |
 | 2 | GR-2 Dig LR per condizione, dati sintetici multi-condizione, `gruppi/1` nel `.wasm` `finder-lr` e nel desktop | merge di GR-1 | 2 | da fare |
 | 2 (parallelo) | GR-6 HR: `gruppi/1` dalla tabella dei prodotti, rete per condizione | merge di GR-1 | 1,5 | da fare |
