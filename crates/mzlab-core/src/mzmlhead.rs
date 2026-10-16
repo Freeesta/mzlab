@@ -11,6 +11,8 @@ use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 
 const MAX_REGION: u64 = 256 << 20;
+/// The most `mobility_kind` reads to find the end of the first spectrum.
+const MOBILITY_PROBE: u64 = 32 << 20;
 
 fn find(h: &[u8], n: &[u8], from: usize) -> Option<usize> {
     if from > h.len() || n.is_empty() {
@@ -135,6 +137,31 @@ pub fn srm_id(id: &str) -> (Option<f64>, Option<f64>, Option<f64>, String) {
 pub struct Mzml<R: ReadAt> {
     pub r: R,
     pub size: u64,
+}
+
+/// The unit (`k0`, `ms` or ``) of the ion mobility arrays of the first spectrum that has an array list, or `None` (no mobility array there, or no spectrum).
+/// Reads that one spectrum only, in blocks that grow up to the limit of a region.
+pub fn mobility_kind<R: ReadAt>(m: &mut Mzml<R>) -> Result<Option<&'static str>> {
+    let mut n: u64 = 1 << 16;
+    loop {
+        let chunk = m.read(0, n)?;
+        let span = find(&chunk, b"<spectrum ", 0)
+            .and_then(|a| find(&chunk, b"</spectrum>", a).map(|b| (a, b + 11)));
+        if let Some(body) = span.and_then(|(a, b)| chunk.get(a..b)) {
+            for (head, _) in arrays(body) {
+                for acc in head.split("accession=\"").skip(1) {
+                    if let Some(u) = crate::mzml::mobility_of(acc.split('"').next().unwrap_or("")) {
+                        return Ok(Some(u));
+                    }
+                }
+            }
+            return Ok(None);
+        }
+        if n >= m.size || n >= MOBILITY_PROBE {
+            return Ok(None);
+        }
+        n *= 4;
+    }
 }
 
 impl<R: ReadAt> Mzml<R> {

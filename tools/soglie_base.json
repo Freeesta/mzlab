@@ -46,7 +46,8 @@
   "mzlab/web/tour.js": 719,
   "tools/attributio_riferimento.py": 720,
   "tools/genera_ei.py": 751,
-  "crates/mzlab-core/src/idxread.rs": 700
+  "crates/mzlab-core/src/idxread.rs": 700,
+  "crates/mzlab-core/src/mzml.rs": 700
  },
  "funzioni": {
   "TP_Mine/files/feat-desktop-pool.js::createDesktopPool": 120,
@@ -212,6 +213,8 @@
   "tools/controlla_teoria.py::public_errors": 94,
   "tools/dati_sintetici.py::hr_dda": 103,
   "crates/mzlab-core/src/mzmlwrite.rs::Opzioni": 184,
-  "crates/mzlab-core/src/mzmlwrite.rs::esc": 128
+  "crates/mzlab-core/src/mzmlwrite.rs::esc": 128,
+  "crates/mzlab-core/src/mzmlhead.rs::mobility_kind": 470,
+  "crates/mzlab-core/src/scantable/rows.rs::esc": 110
  }
 }

@@ -103,5 +103,28 @@
     if (params) s = s.replace(/\{(\w+)\}/g, (m, k) => (k in params ? String(params[k]) : m));
     return s;
   };
-  G.TABUI_T = T; G.TT = TT;
+  /** the messages of the engine and of the pipeline (errors, notices), English only: no `lang/` key, no language catalog */
+  const E = {
+    "error.featFailed": "The pipeline failed.",
+    "error.featMemory": "Not enough memory for the «{fase}» phase on {files} files (about {stima_mb} MB needed of {budget_mb} MB). The phases already finished are saved; split the series into smaller groups.",
+    "error.featWasmHash": "The pipeline engine did not download correctly (its checksum is wrong). Reload the page.",
+    "error.featState": "The state of the hypotheses is not valid: search the hypotheses again.",
+    "error.featWorker": "A worker of the pipeline stopped working. Try again; if it happens again, close other tabs to free memory.",
+    "error.featNoHypotheses": "The hypotheses of the parent must be searched before the proofs are built.",
+    "error.memoryBudget": "This file is too big for the memory the browser gives the calculation engine.",
+    "error.badRecipe": "The parameters of the pipeline are not valid.",
+    "error.badMzfeat": "This is not a valid .mzfeat file.",
+    "error.io": "A file could not be read.",
+    "tpmine.feat.degraded": "Table without proofs: not enough memory for the proofs on {files} files (phase {phase}, about {stima_mb} MB needed of {budget_mb} MB). The phases already finished are saved; split the series into smaller groups.",
+    "tpmine.feat.restarted": "A worker of the pipeline stopped and was restarted: the step runs again.",
+    "tpmine.feat.cancelled": "The pipeline was stopped.",
+    "tpmine.centroided": "{name} was in profile: Tabui works on centroids and used a centroided copy.",
+  };
+  /** English text of a key of the engine or of the pipeline; an unknown key shows the message of the engine, or the key itself @param {string} key @param {Record<string, any>} [params] */
+  const TE = (key, params) => {
+    const p = params || {};
+    if (!E[key]) return String(p.message || p.detail || key);
+    return E[key].replace(/\{(\w+)\}/g, (m, k) => (k in p ? String(p[k]) : m));
+  };
+  G.TABUI_T = T; G.TT = TT; G.TABUI_E = E; G.TE = TE;
 })();

@@ -34,3 +34,33 @@ def test_keys_used_in_the_code_exist():
             continue
         for k in re.findall(r"""(?:data-tt="|dt\(\s*")(ft\.[\w.]+)""", f.read_text(encoding="utf-8")):
             assert k in keys, (f.name, k)
+
+
+def engine_messages():
+    if not shutil.which("node"):
+        return None
+    code = "global.window={};global.location={search:''};eval(require('fs').readFileSync(process.argv[1],'utf8'));console.log(JSON.stringify([window.TABUI_E,window.TE('error.io'),window.TE('error.unknownThing',{message:'raw'}),window.TE('tpmine.centroided',{name:'a.mzML'})]))"
+    return json.loads(subprocess.run(["node", "-e", code, str(JS / "40_tabui_testi.js")], check=True, capture_output=True, text=True).stdout)
+
+
+def test_engine_messages_are_english_only_and_cover_the_keys():
+    got = engine_messages()
+    if got is None:
+        return
+    table, known, unknown, filled = got
+    assert known == table["error.io"] and unknown == "raw" and filled.startswith("a.mzML was in profile")
+    for k, v in table.items():
+        assert v.strip() and not re.search(r"[àèéìòù]\b|\b(il|della|per|non|file è)\b", v), (k, v)          # Tabui is English only
+    files = list((JS.parent / "files").glob("*.js")) + list(JS.glob("*.js"))
+    used = set()
+    for f in files:
+        if f.name.startswith("40_"):
+            continue
+        used |= set(re.findall(r"""["']((?:error|tpmine\.feat|tpmine)\.[A-Za-z]+(?:\.[A-Za-z]+)?)["']""", f.read_text(encoding="utf-8")))
+    used = {k for k in used if not k.startswith("error.posiz.") and k != "tpmine.api"}          # the panel of the positions has its own English table; tpmine.api is a Python module
+    assert used and not (used - set(table)), sorted(used - set(table))
+
+
+def test_tabui_does_not_use_the_language_catalogs():
+    for f in list(JS.glob("*.js")) + list((JS.parent / "files").glob("*.js")):
+        assert "I18N" not in f.read_text(encoding="utf-8"), f.name

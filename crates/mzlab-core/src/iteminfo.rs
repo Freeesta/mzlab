@@ -21,6 +21,8 @@ pub struct Facts {
     pub analog: Vec<Analog>,
     /// The `.raw` method the file carries (`metodo/1` in the `<run>` of a converted `.raw`) has an LC part (`None`: no `.raw` method).
     pub lc: Option<bool>,
+    /// The unit (`k0`, `ms` or ``) of the ion mobility arrays of the first spectrum, when it has any (`Mzml::mobility_kind`).
+    pub ims: Option<&'static str>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -668,10 +670,27 @@ pub fn item_info<R: ReadAt>(
     o.raw(",\"max_level\":")
         .int(all.iter().map(|s| s.level as i64).max().unwrap_or(1))
         .raw(",\"acq\":[");
-    for (i, a) in acq(&phys1, &phys2).iter().enumerate() {
+    // ion mobility: a scan attribute in the scan table, or mobility arrays in the first spectrum
+    let mobs: Vec<(f64, &str)> = all.iter().filter_map(|s| s.mobility()).collect();
+    let ims_unit = mobs.first().map(|m| m.1).or(facts.ims);
+    let mut modes = acq(&phys1, &phys2);
+    if ims_unit.is_some() {
+        modes.push("IMS");
+    }
+    for (i, a) in modes.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(a);
     }
-    o.raw("],\"mode1\":");
+    o.raw("]");
+    if let Some(u) = ims_unit {
+        o.raw(",\"ims\":{\"unit\":").str(u);
+        if !mobs.is_empty() {
+            let lo = mobs.iter().map(|m| m.0).fold(f64::INFINITY, f64::min);
+            let hi = mobs.iter().map(|m| m.0).fold(f64::NEG_INFINITY, f64::max);
+            o.raw(",\"min\":").num(round(lo, 6)).raw(",\"max\":").num(round(hi, 6)).raw(",\"n\":").int(mobs.len() as i64);
+        }
+        o.raw("}");
+    }
+    o.raw(",\"mode1\":");
     match mode_of(&phys1) {
         Some(m) => o.str(m),
         None => o.raw("null"),
@@ -735,6 +754,7 @@ pub fn facts_from<M: ReadAt>(
         }
     }
     f.lc = crate::infusione::raw_lc(m)?;
+    f.ims = crate::mzmlhead::mobility_kind(m)?;
     // The header polarity and the RT range of the SRM traces matter only for a file without scans or with SRM parts: reading a whole file (up to 256 MB) for them is
     // refused as `error.memoryBudget` for a big profile file (HRMS), and a file with scans and no SRM never shows them.
     if need_mrm && (scans_end == 0 || f.srm > 0) {

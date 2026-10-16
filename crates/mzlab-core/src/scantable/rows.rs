@@ -319,6 +319,7 @@ impl Rows {
             ce: m.ce,
             an: self.head.analyzer(&filt, icref),
             kind: super::kind_of(h, &filt).filter(|_| level > 1),
+            mob: super::mobility_of_header(h),
             filter: filt,
             profile: h.contains("accession=\"MS:1000128\""),
             parent: None,
@@ -339,12 +340,14 @@ impl Rows {
 }
 
 /// The accessions `spectrum` looks for in the text of a header (as substrings: `h.contains` too): an extra that carries one of them would change the row.
-const LETTI: [&str; 23] = [
+const LETTI: [&str; 25] = [
     "MS:1000341",
     "MS:1000326",
     "MS:1000325",
     "MS:1000789",
     "MS:1000790",
+    "MS:1002815",
+    "MS:1002476",
     "MS:1000511",
     "MS:1000130",
     "MS:1000129",
@@ -454,6 +457,7 @@ impl Rows {
             precs: m.precs,
             charge: m.charge,
             native: native.clone(),
+            mob: None,
         };
         self.level_of.insert(native, level);
         self.rows.push(row);

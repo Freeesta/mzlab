@@ -135,7 +135,7 @@ Script e dati in `docs/studi/cc_browser/` (`riferimento_tblite.py`, `classi.py`,
 |---|---|---|---|---|
 | CC-B1 | crate `mzlab-chem`: SMILES → 3D (ETKDG + MMFF94, conformeri), XYZ, strumento `tools/cc_riferimento.py` e dati di riferimento | — | B3 (con dati finti) | 2,5-3 |
 | CC-B2 | GFN2 con carica, SCC robusto, ALPB, Fukui, ripiego EHT, `reatt/1`, `.wasm` `chem` | B1 | B3 | 5-6 |
-| CC-B3 | viewer 3D Canvas + pannello «Parent compound» (2D con aloni, schede, soglia, tabella, esportazioni) | contratto `reatt/1` (finto fino a B2) | B1, B2 | 3-3,5 |
+| CC-B3 | viewer 3D Canvas + pannello «Parent compound» (2D con aloni, schede, soglia, tabella, esportazioni) | contratto `reatt/1` (finto fino a B2) | B1, B2 | 3-3,5 | Stato: `47_viewer3d.js`, `46_reattivita.js` e `e2e_reattivita.py` fatti con un `reatt/1` di prova; il riquadro «Parent compound» ospita il pannello (stato «waiting for TPs»); il calcolo vero lo avvia CC-B4.
 | CC-B4 | avvio automatico dopo i TP in worker a bassa priorità, stato, annullamento, desktop | B2 + B3 | B5 | 1-1,5 |
 | CC-B5 | `prior` in `posiz/1` e colonna «Prev. f(−)»; Attributio legge `reatt/1` | B2 (+ B3 per la pagina) | B4 | 1-1,5 |
 | CC-B6 (facoltativo) | IP/EA, ω, HOMO/LUMO nella scheda «Info»; BDE C–H solo se validata | B2 | B4, B5 | 1,5-2 |

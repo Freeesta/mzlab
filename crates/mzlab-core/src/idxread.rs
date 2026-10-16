@@ -78,12 +78,25 @@ pub struct Scan {
     pub native: String,
     /// The scan type, 0 for an ordinary scan, else the position + 1 in `KINDS` (column 21 of the row); a byte, because the scan table is held whole in memory.
     pub kind: u8,
+    /// The mobility of the whole scan (a scan attribute, as `f32`, `NaN` for none), and its unit: 0 none, 1 `k0`, 2 `ms` (column 22 of the row).
+    pub mob: f32,
+    pub mob_unit: u8,
 }
 
 /// The scan types that are not a plain full or product-ion scan, as the row of the index names them.
 pub const KINDS: [&str; 4] = ["PREC", "NL", "NG", "EPI"];
 
 impl Scan {
+    /// The mobility of the whole scan and its unit (`k0`, `ms`), `None` when the scan has none.
+    pub fn mobility(&self) -> Option<(f64, &'static str)> {
+        let unit = match self.mob_unit {
+            1 => "k0",
+            2 => "ms",
+            _ => return None,
+        };
+        (!self.mob.is_nan()).then_some((f64::from(self.mob), unit))
+    }
+
     /// `PREC`, `NL`, `NG` or `EPI`, `None` for an ordinary scan.
     pub fn kind_name(&self) -> Option<&'static str> {
         usize::from(self.kind)

@@ -24,6 +24,12 @@
     register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav && on && shown(t)) addTab(t); render(); },
   };
 
+  // scripts that are not needed at the start: TPLAZY.load("a.js", "b.js") runs them once, in this order, from static/mzfinder/lazy/ (the names are listed in indice.json under `lazy`)
+  const lazyDone = /** @type {Map<string, Promise<void>>} */ (new Map());
+  /** @param {...string} names @returns {Promise<void>} */
+  const lazyLoad = async (...names) => { for (const n of names) { let p = lazyDone.get(n); if (!p) { p = runScript("lazy/" + n); lazyDone.set(n, p); p.catch(() => lazyDone.delete(n)); } await p; } };
+  /** @type {any} */ (window).TPLAZY = { load: lazyLoad };
+
   function runScript(name) {
     return new Promise((/** @type {any} */ res, rej) => {
       const s = document.createElement("script");
