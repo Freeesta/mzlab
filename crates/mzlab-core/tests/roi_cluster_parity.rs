@@ -14,9 +14,7 @@ fn root() -> PathBuf {
 }
 
 fn close_1e12(a: f64, b: f64) -> bool {
-    (a.is_nan() && b.is_nan())
-        || a == b
-        || (a - b).abs() <= 1e-12 * a.abs().max(b.abs()).max(1e-3)
+    (a.is_nan() && b.is_nan()) || a == b || (a - b).abs() <= 1e-12 * a.abs().max(b.abs()).max(1e-3)
 }
 
 fn nums_2d(v: &Value) -> Vec<Vec<f64>> {
@@ -25,7 +23,11 @@ fn nums_2d(v: &Value) -> Vec<Vec<f64>> {
             rows.iter()
                 .map(|row| {
                     row.as_array()
-                        .map(|vals| vals.iter().map(|x| x.as_f64().unwrap_or(f64::NAN)).collect())
+                        .map(|vals| {
+                            vals.iter()
+                                .map(|x| x.as_f64().unwrap_or(f64::NAN))
+                                .collect()
+                        })
                         .unwrap_or_default()
                 })
                 .collect()
@@ -35,13 +37,21 @@ fn nums_2d(v: &Value) -> Vec<Vec<f64>> {
 
 fn nums_1d(v: &Value) -> Vec<f64> {
     v.as_array()
-        .map(|vals| vals.iter().map(|x| x.as_f64().unwrap_or(f64::NAN)).collect())
+        .map(|vals| {
+            vals.iter()
+                .map(|x| x.as_f64().unwrap_or(f64::NAN))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
 fn usizes_1d(v: &Value) -> Vec<usize> {
     v.as_array()
-        .map(|vals| vals.iter().map(|x| x.as_u64().unwrap_or(0) as usize).collect())
+        .map(|vals| {
+            vals.iter()
+                .map(|x| x.as_u64().unwrap_or(0) as usize)
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -59,27 +69,55 @@ fn verify_trace_case(case: &Value) {
     let want_cluster_heights = nums_1d(&case["cluster_heights"]);
 
     let got_corr = pairwise_windowed_corr(&traces, thr, min_overlap);
-    assert_eq!(got_corr.len(), want_corr.len(), "case {case_id}: corr row count");
+    assert_eq!(
+        got_corr.len(),
+        want_corr.len(),
+        "case {case_id}: corr row count"
+    );
     for (i, (got_row, want_row)) in got_corr.iter().zip(&want_corr).enumerate() {
-        assert_eq!(got_row.len(), want_row.len(), "case {case_id} row {i}: col count");
+        assert_eq!(
+            got_row.len(),
+            want_row.len(),
+            "case {case_id} row {i}: col count"
+        );
         for (j, (&g, &w)) in got_row.iter().zip(want_row).enumerate() {
-            assert!(close_1e12(g, w), "case {case_id} corr[{i}][{j}]: got {g} want {w}");
+            assert!(
+                close_1e12(g, w),
+                "case {case_id} corr[{i}][{j}]: got {g} want {w}"
+            );
         }
     }
 
     let dist = nums_2d(&case["dist"]);
     let (got_labels, got_heights) = average_linkage(&dist, cut);
     assert_eq!(got_labels, want_labels, "case {case_id}: labels mismatch");
-    assert_eq!(got_heights.len(), want_heights.len(), "case {case_id}: heights count");
+    assert_eq!(
+        got_heights.len(),
+        want_heights.len(),
+        "case {case_id}: heights count"
+    );
     for (idx, (&g, &w)) in got_heights.iter().zip(&want_heights).enumerate() {
-        assert!(close_1e12(g, w), "case {case_id} heights[{idx}]: got {g} want {w}");
+        assert!(
+            close_1e12(g, w),
+            "case {case_id} heights[{idx}]: got {g} want {w}"
+        );
     }
 
     let (got_cl_labels, got_cl_heights) = cluster_rois(&traces, thr, min_overlap, cut);
-    assert_eq!(got_cl_labels, want_cluster_labels, "case {case_id}: cluster labels");
-    assert_eq!(got_cl_heights.len(), want_cluster_heights.len(), "case {case_id}: cluster heights");
+    assert_eq!(
+        got_cl_labels, want_cluster_labels,
+        "case {case_id}: cluster labels"
+    );
+    assert_eq!(
+        got_cl_heights.len(),
+        want_cluster_heights.len(),
+        "case {case_id}: cluster heights"
+    );
     for (idx, (&g, &w)) in got_cl_heights.iter().zip(&want_cluster_heights).enumerate() {
-        assert!(close_1e12(g, w), "case {case_id} cluster heights[{idx}]: got {g} want {w}");
+        assert!(
+            close_1e12(g, w),
+            "case {case_id} cluster heights[{idx}]: got {g} want {w}"
+        );
     }
 }
 
@@ -91,10 +129,20 @@ fn verify_linkage_case(case: &Value) {
     let want_heights = nums_1d(&case["heights"]);
 
     let (got_labels, got_heights) = average_linkage(&dist, cut);
-    assert_eq!(got_labels, want_labels, "linkage case {case_id}: labels mismatch");
-    assert_eq!(got_heights.len(), want_heights.len(), "linkage case {case_id}: heights count");
+    assert_eq!(
+        got_labels, want_labels,
+        "linkage case {case_id}: labels mismatch"
+    );
+    assert_eq!(
+        got_heights.len(),
+        want_heights.len(),
+        "linkage case {case_id}: heights count"
+    );
     for (idx, (&g, &w)) in got_heights.iter().zip(&want_heights).enumerate() {
-        assert!(close_1e12(g, w), "linkage case {case_id} heights[{idx}]: got {g} want {w}");
+        assert!(
+            close_1e12(g, w),
+            "linkage case {case_id} heights[{idx}]: got {g} want {w}"
+        );
     }
 }
 
@@ -127,7 +175,9 @@ fn roi_cluster_matches_python() {
         verify_trace_case(case);
     }
 
-    let linkage_cases = all["linkage_cases"].as_array().expect("linkage_cases missing");
+    let linkage_cases = all["linkage_cases"]
+        .as_array()
+        .expect("linkage_cases missing");
     for case in linkage_cases {
         verify_linkage_case(case);
     }

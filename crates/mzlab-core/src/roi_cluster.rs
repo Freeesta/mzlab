@@ -9,11 +9,7 @@
 /// For each pair (i, j), Pearson correlation is calculated over indices where
 /// `A[i][k] >= thr || A[j][k] >= thr`. If the count of such indices is less
 /// than `min_overlap`, or if variance is non-positive or non-finite, NaN is returned.
-pub fn pairwise_windowed_corr(
-    traces: &[Vec<f64>],
-    thr: f64,
-    min_overlap: usize,
-) -> Vec<Vec<f64>> {
+pub fn pairwise_windowed_corr(traces: &[Vec<f64>], thr: f64, min_overlap: usize) -> Vec<Vec<f64>> {
     let m = traces.len();
     if m == 0 {
         return Vec::new();
