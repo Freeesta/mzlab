@@ -745,6 +745,7 @@ I18N.add("en", {
   "export.sheet.meta": "Metadata",
   "export.sheet.notes": "Notes",
   "export.col.pdaSignal": "PDA signal (file units)",
+  "export.stream.fail": "Export failed: not enough space or the browser storage is unavailable.",
   "export.col.intensity": "Intensity (cps)",
   "export.meta.property": "Property",
   "export.meta.value": "Value",

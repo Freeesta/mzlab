@@ -896,9 +896,14 @@ document.addEventListener("click", () => { const m = Q("#ctx"); if (m._lp && m._
 document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });      // the Correzione menu closes when the click is elsewhere
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".corrm:not([hidden])").forEach(m => { m.hidden = true; }); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { /** @type {any} */ (e)._ctxWas = !Q("#ctx").hidden; Q("#ctx").hidden = true; } });      // _ctxWas: this Esc only closed the menu (the full-screen handler below leaves the panel alone)
-// CSV/TSV text carries its provenance line (PROV, schema provenienza/1) by default; prov = the fields the export knows ({table, p, file}), or false for a file made for another program (mzFinder)
+// CSV/TSV text carries its provenance line (PROV, schema provenienza/1) by default; prov = the fields the export knows ({table, p, file}), or false for a file made for another program (mzFinder).
+// `text` is a string, a Blob/Uint8Array or an (async) iterable of those: an iterable, or a string/Blob over 8 MB, goes piece by piece through OPFS (export-pezzi.js) with the same bytes.
 async function dl(name, text, type = "application/octet-stream", prov = undefined) {
-  if (prov !== false && typeof text === "string" && /csv|tab-separated/.test(type)) text = await PROV.tsv(text, prov || {});
+  const EP = /** @type {any} */ (window).EXPORT_PEZZI, tab = /csv|tab-separated/.test(type);
+  if (prov !== false && tab && typeof text === "string") text = await PROV.tsv(text, prov || {});
+  else if (prov !== false && tab && EP && EP.isIter(text)) { const src = text; text = (async function* () { let first = true; for await (const p of src) { yield first && typeof p === "string" ? await PROV.tsv(p, prov || {}) : p; first = false; } })(); }
+  const big = EP && (EP.isIter(text) || (typeof text === "string" ? text.length : text.size || text.byteLength || 0) >= EP.MIN_STREAM);
+  if (big) { try { await EP.save(name, text, type); } catch (e) { console.error(e); if (window.toast) toast(I18N.t("export.stream.fail")); } return; }
   saveBlob(new Blob([text], { type }), name);
 }
 const LOCALE = I18N.lang === "it" ? "it-IT" : "en-GB";           // dates in the exported files
