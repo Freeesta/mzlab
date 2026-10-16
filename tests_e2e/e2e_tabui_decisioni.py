@@ -42,7 +42,13 @@ names = [f.stem + ".mzML" for f in idx]
 PARENT = {"name": "parent", "neutral": "C21H32N2O2", "adduct": "[M+H]+"}
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1); errs = []; reqs = []
+import socket
+for _ in range(100):                                   # the server is ready when its port accepts a connection
+    try: socket.create_connection(("127.0.0.1", PORT), timeout=1).close(); break
+    except OSError:
+        try: srv.wait(timeout=0.2); sys.exit("server did not start")        # still running: try again
+        except subprocess.TimeoutExpired: pass
+errs = []; reqs = []
 PUT = """async (names) => {
   let d = await navigator.storage.getDirectory();
   for (const p of ["mzlab", "idx"]) d = await d.getDirectoryHandle(p, { create: true });
