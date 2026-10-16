@@ -1,0 +1,22 @@
+smiles,atom,quantity,value,method,source
+Cc1ccccc1,0,f_plus,-0.035,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,0,f_minus,-0.026,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,0,f_zero,-0.030,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,1,f_plus,0.080,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,1,f_minus,0.078,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,1,f_zero,0.079,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,2,f_plus,0.056,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,2,f_minus,0.041,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,2,f_zero,0.048,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,3,f_plus,0.059,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,3,f_minus,0.038,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,3,f_zero,0.049,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,4,f_plus,0.058,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,4,f_minus,0.077,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,4,f_zero,0.068,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,5,f_plus,0.059,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,5,f_minus,0.038,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,5,f_zero,0.049,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,6,f_plus,0.056,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,6,f_minus,0.041,"GFN2-xTB, gas",toluene_gas_xtb.out
+Cc1ccccc1,6,f_zero,0.048,"GFN2-xTB, gas",toluene_gas_xtb.out

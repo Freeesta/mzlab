@@ -19,13 +19,8 @@ fn index(o: &mut Out, v: Option<usize>) {
     };
 }
 
-/// The object `ms2_links/1`.
-pub fn json(o: &mut Out, l: &Links) {
-    o.raw("{\"schema\":\"ms2_links/1\",\"prec_tol\":")
-        .num(PREC_TOL)
-        .raw(",\"rt_tol\":")
-        .num(l.rt_tol);
-    o.raw(",\"experiments\":[");
+/// The `experiments` array.
+fn experiments(o: &mut Out, l: &Links) {
     for (i, e) in l.exps.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"file\":")
@@ -69,6 +64,16 @@ pub fn json(o: &mut Out, l: &Links) {
         }
         o.raw("]}");
     }
+}
+
+/// The object `ms2_links/1`.
+pub fn json(o: &mut Out, l: &Links) {
+    o.raw("{\"schema\":\"ms2_links/1\",\"prec_tol\":")
+        .num(PREC_TOL)
+        .raw(",\"rt_tol\":")
+        .num(l.rt_tol);
+    o.raw(",\"experiments\":[");
+    experiments(o, l);
     o.raw("],\"links\":[");
     for (i, k) in l.links.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
@@ -82,6 +87,18 @@ pub fn json(o: &mut Out, l: &Links) {
             .str(k.state.name())
             .raw(",\"dmz\":")
             .num(k.dmz);
+        o.raw(",\"dppm\":")
+            .num(k.dppm)
+            .raw(",\"tol\":")
+            .num(round(k.tol, 3));
+        o.raw(",\"tol_window\":")
+            .raw(if k.tol_window { "true" } else { "false" })
+            .raw(",\"lo\":")
+            .num(round(k.lo, 3));
+        o.raw(",\"hi\":")
+            .num(round(k.hi, 3))
+            .raw(",\"n_in\":")
+            .int(k.n_in as i64);
         o.raw(",\"drt\":").num(k.drt).raw(",\"alternatives\":");
         ids(o, &k.alternatives);
         o.raw(",\"why\":").str(&k.why).raw("}");

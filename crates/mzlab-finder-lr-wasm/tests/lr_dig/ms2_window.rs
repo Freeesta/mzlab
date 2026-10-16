@@ -84,9 +84,9 @@ fn a_wide_cell_in_another_file_does_not_open_the_window() {
     };
     // a flat trace: nothing to take, however wide the cell
     assert_eq!(scans(None, wide), 0);
-    // a peak at the RT of the row: its scans only, none from the rest of the run
+    // a peak at the RT of the row: its scans inside the peak of the feature (median start and end of its cells), none from the rest of the run
     let n = scans(Some(0.0), wide);
-    assert!((8..=20).contains(&n), "{n}");
+    assert!((4..=8).contains(&n), "{n}");
     assert_eq!(n, scans(Some(0.0), narrow));
 }
 
@@ -99,9 +99,6 @@ fn a_cell_one_minute_away_does_not_move_the_window() {
     };
     assert_eq!(scans(Some(0.0), off), scans(Some(0.0), narrow));
     assert_eq!(scans(Some(1.0), off), 0);
-    // the cells say nothing: the peak of the trace at the time of the row is the row's
-    assert_eq!(
-        scans(Some(0.0), |_| vec![cell(1.0e3, 0.1)]),
-        scans(Some(0.0), narrow)
-    );
+    // the peak of the feature decides: a feature whose peak is far from the peak of the trace gets none of its scans
+    assert_eq!(scans(Some(0.0), |_| vec![cell(1.0e3, 0.1)]), 0);
 }

@@ -72,7 +72,7 @@
           <rect class="f" width="${NW}" height="${NH}" rx="6" fill="${pan}" stroke="none"/>${mk ? `<rect width="${NW}" height="${NH}" rx="6" fill="${fill}" fill-opacity=".22" stroke="none"/>` : ""}
           <rect class="b" width="${NW}" height="${NH}" rx="6" fill="none" stroke="${col}" stroke-width="${sw}"${n.ghost ? ' stroke-dasharray="5 3"' : ""}/>
           <text x="${NW / 2}" y="16" text-anchor="middle" font-size="12" font-weight="700" fill="${ink}">${fmtMz(n.mz)}</text>
-          <text x="${NW / 2}" y="30" text-anchor="middle" font-size="11" fill="${ink}">${esc(n.formula || "formula ?")}</text>
+          <text x="${NW / 2}" y="30" text-anchor="middle" font-size="11" fill="${ink}">${esc(n.formula || "ion formula ?")}</text>
           <text x="${NW / 2}" y="44" text-anchor="middle" font-size="10" fill="${mut}">${n.rel != null ? n.rel + " %" : ""}${n.ghost ? " \u00b7 ghost" : ""}${n.kind === "ion" && n.level > 1 ? " \u00b7 MS" + n.level : ""}</text>
           ${glyph ? `<text x="${NW - 7}" y="13" text-anchor="end" font-size="13" font-weight="700" fill="${ink}" aria-hidden="true">${glyph}</text>` : ""}</g>`;
       }).join("");
@@ -106,12 +106,12 @@
       const D = el.querySelector(".alb-det");
       const figs = await Promise.all((n.smiles || []).map(async s => `<figure>${await structure(s.smiles, 190, 130) || ""}<figcaption>weight ${s.score}<br><code>${esc(s.smiles)}</code></figcaption></figure>`));
       const mk = inst.marks[n.id];
-      D.innerHTML = `<h4 style="margin:4px 0">${esc(n.formula || "formula ?")} <span class="mut">${n.kind === "frag" ? "fragment" : "isolated precursor"} (MS<sup>${n.level}</sup>) \u00b7 <i>m/z</i> ${fmtMz(n.mz)}</span></h4>
+      D.innerHTML = `<h4 style="margin:4px 0">${esc(n.formula || "ion formula ?")} <span class="mut">${n.kind === "frag" ? "fragment" : "isolated precursor"} (MS<sup>${n.level}</sup>) \u00b7 <i>m/z</i> ${fmtMz(n.mz)}</span></h4>
         <div class="kv"><b>Intensity</b><span>${n.rel != null ? n.rel + " % of the base peak" : "-"}</span>
         <b>Loss from the parent</b><span>${n.loss ? "\u2212" + esc(n.loss) + (n.loss_mass ? ` (${n.loss_mass} Da)` : "") : "-"}</span>
         ${n.ppm != null ? `<b>Error</b><span>${n.ppm} ppm</span>` : ""}${n.n_scans ? `<b>Scans</b><span>${n.n_scans}${n.ce != null ? " \u00b7 CE " + n.ce : ""}</span>` : ""}
         ${mk ? `<b>In the product</b><span>${mk.state === "same" ? "\u2713 the same fragment" : "\u0394 shifted by " + esc(mk.delta)}</span>` : ""}</div>
-        ${n.alternatives && n.alternatives.length ? `<table style="margin-top:6px"><tr><th>Alternative formula</th><th>Loss</th><th>Error (Da)</th><th>From</th></tr>${n.alternatives.map(a => `<tr><td>${esc(a.formula || "-")}</td><td>\u2212${esc(a.loss)}</td><td class="n">${a.err}</td><td>${a.source === "loss" ? "common neutral loss" : "sub-formula"}</td></tr>`).join("")}</table>` : ""}
+        ${n.alternatives && n.alternatives.length ? `<table style="margin-top:6px"><tr><th>Alternative ion formula</th><th>Loss</th><th>Error (Da)</th><th>From</th></tr>${n.alternatives.map(a => `<tr><td>${esc(a.formula || "-")}</td><td>\u2212${esc(a.loss)}</td><td class="n">${a.err}</td><td>${a.source === "loss" ? "common neutral loss" : "sub-formula"}</td></tr>`).join("")}</table>` : ""}
         <div style="margin-top:6px">${figs.join("") || '<span class="mut">No structure proposed for this node (the SMILES of the parent is needed).</span>'}</div>`;
     }
     function choose(id, focus) {

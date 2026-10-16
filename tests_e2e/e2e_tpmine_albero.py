@@ -35,7 +35,7 @@ try:
             pg.wait_for_function("document.querySelector('#tp-files table') && document.querySelectorAll('#tp-files tr').length >= 9", timeout=240000)
             pg.fill("#tp-smi", "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O")
             pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('241.0641')", timeout=60000)
-            pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=300000); pg.wait_for_timeout(1300)
+            pg.click("#tp-go"); pg.wait_for_selector("#tp-t", timeout=300000); pg.wait_for_timeout(1300)
             pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk")
             pg.click("#tp-t tbody tr.clk >> nth=0"); pg.click('#tp-det [data-tab="identity"]')          # the parent is the pinned first row; the tree is in its tab Identity
             pg.wait_for_selector("#tp-alb svg.alb-svg .nd", timeout=60000)
@@ -45,7 +45,7 @@ try:
             assert pg.evaluate("[...document.querySelectorAll('#tp-alb .nd')].every(g => g.getAttribute('aria-label') && g.getAttribute('role') === 'treeitem')")
             pg.click("#tp-alb .nd:nth-of-type(2)")
             pg.wait_for_selector("#tp-alb .alb-det svg", timeout=60000)               # the structure of the clicked fragment (OpenChemLib)
-            assert "Alternative formula" in pg.inner_text("#tp-alb .alb-det")
+            assert "Alternative ion formula" in pg.inner_text("#tp-alb .alb-det")
             sel = pg.evaluate("document.activeElement.dataset.id")
             pg.keyboard.press("ArrowUp"); pg.wait_for_function("document.activeElement.dataset.id !== %r" % sel, timeout=5000)     # to the parent
             pg.keyboard.press("Enter"); ae = pg.evaluate("document.activeElement.tagName + ':' + document.activeElement.getAttribute('role') + ':' + (document.activeElement.dataset||{}).id"); assert ae.split(":")[1] == "treeitem", ae
