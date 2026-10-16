@@ -103,6 +103,12 @@ try:
             assert " of " in base and "rows" in base, base
         step("a chip removes and restores rows; «N of M rows» changes", chips)
 
+        def weak_note():
+            t = pg.inner_text('.hero .hc[data-k="weak"]')
+            assert "weak evidence" in t, t
+            assert pg.locator("#tp-nopar").count() == 0, "the right parent: no «Parent not found»"
+        step("the count of the weak band is always in the summary card", weak_note)
+
         def expand():
             pg.click('#tp-t tr.clk[data-id="0"]')
             pg.wait_for_selector("#tp-t tr.tpt-exp #tp-det .tpr-ov svg", timeout=60000)

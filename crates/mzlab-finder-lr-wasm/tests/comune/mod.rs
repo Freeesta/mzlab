@@ -175,7 +175,7 @@ pub fn dig_for(files: &str, parent: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
     dig_with(files, parent, "{}", idxs)
 }
 
-/// `dig_for` with the settings of the page.
+/// `dig_for` with the settings of the page (`plan::settings`).
 pub fn dig_with(files: &str, parent: &str, settings: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
     let plan: Value = serde_json::from_str(&lr::plan::plan_json(files, parent).unwrap()).unwrap();
     assert_eq!(plan["rust"], true);
@@ -207,7 +207,15 @@ pub fn dig_with(files: &str, parent: &str, settings: &str, idxs: &[Vec<u8>]) -> 
     let refs: Vec<_> = feats.iter().collect();
     let formula = plan["formula"].as_str().unwrap();
     let h = run::hypotheses(&mut ix, &refs, &rules, "", formula, None, &r).unwrap();
-    lr::dig(files, parent, settings, &table, &h.registry.to_json()).unwrap()
+    lr::dig(
+        files,
+        parent,
+        settings,
+        &table,
+        &h.registry.to_json(),
+        &mut |k| Ok(open(&idxs[k])),
+    )
+    .unwrap()
 }
 
 /// `d` with the MS2 matches of the series: `idxs` are the columns, `ms2` the MS2 files (in the order of the plan).

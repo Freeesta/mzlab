@@ -56,6 +56,7 @@
 #tp-sug li{padding:5px 8px;border-radius:4px;cursor:pointer;display:flex;gap:8px;align-items:baseline;font-size:13px}#tp-sug li span{color:var(--muted);font-size:11px;margin-left:auto;white-space:nowrap}#tp-sug li[aria-selected=true],#tp-sug li:hover{background:var(--sel);box-shadow:inset 3px 0 0 var(--accent)}
 #tp-drawbar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:95;display:flex;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--accent);border-radius:20px;padding:6px 12px;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:13px}#tp-drawbar[hidden]{display:none}
 .tp #tp-warn{font-size:12px;color:var(--bad,#b3261e)}
+.tp #tp-nopar{margin:6px 0;color:var(--bad,#b3261e)}
 .words p{font-size:13px}
 
 
@@ -606,21 +607,24 @@
       const par = s.rows.find(r => r.label === "progenitore");
       const cnt = k => s.rows.filter(r => (k === "unexp" ? r.kind === "unexpected" && good(r) : r.kind === "candidate" && r.label === k)).length;
       const nF = cnt("forte"), nP = cnt("possibile"), nU = cnt("unexp"), hl = s.decay && s.decay.half_life_min != null ? s.decay.half_life_min : null;
-      const nW = s.rows.filter(r => r.kind !== "unexpected" && r.label === "debole" && !notFound(r)).length, off = s.offset && s.offset.applied ? s.offset.offset : null;
+      const nW = s.rows.filter(r => r.label === "debole" && !notFound(r)).length, left = s.unexpected_left || {}, nLeft = (left.over_limit || 0) + (left.isotope_or_flat || 0), off = s.offset && s.offset.applied ? s.offset.offset : null;
       // the summary card: three blocks (Parent, Output, Download); every item has its help, the numbers count up only without reduced motion
       const it = (k, label, val, help, dec) => `<span class="hc" data-k="${k}"${dt(help)} tabindex="0"><span class="hl">${label}</span> <b${dec != null ? ` data-count="${val}" data-dec="${dec}"` : ""}>${dec != null ? (+val).toFixed(dec) : val}</b></span>`;
-      const pIt = [st.pname ? `<span class="hc hn" data-k="name">${esc(MOLUI.cap(st.pname))}</span>` : "", it("formula", "Neutral formula", esc(s.parent.formula || "—"), "ft.sum.formula"), it("mz", `${esc(s.parent.adduct)} <i>m/z</i>`, s.parent.mz, "ft.sum.mz"),
+      const pIt = [st.pname ? `<span class="hc hn" data-k="name">${esc(MOLUI.cap(st.pname))}</span>` : "", s.parent_ok === false ? it("pnf", "Status", "Parent not found", "ft.sum.pnf") : "", it("formula", "Neutral formula", esc(s.parent.formula || "—"), "ft.sum.formula"), it("mz", `${esc(s.parent.adduct)} <i>m/z</i>`, s.parent.mz, "ft.sum.mz"),
         par && par.ref_rt ? it("rt", "RT", `${par.ref_rt} min`, "ft.sum.rt") : "", hl != null ? `${it("half", "t½", hl, "ft.sum.half", 1).replace("</b></span>", "</b> min</span>")}` : "",
         off != null ? it("offset", "<i>m/z</i> offset", `${off >= 0 ? "+" : "−"}${Math.abs(off).toFixed(2)} Da`, "ft.sum.offset") : ""].filter(Boolean).join("");
       const cIt = (k, n, label, help) => `<span class="hc" data-k="${k}"${dt(help)} tabindex="0"><b data-count="${n}">${n}</b> ${label}</span>`;
       const words = [cIt("strong", nF, "strong", "ft.chip.strong"), cIt("possible", nP, "possible", "ft.chip.possible"), cIt("unexpected", nU, "unexpected", "ft.chip.unexpected"),
-        nW ? `<span class="hc" data-k="weak"${dt("ft.chip.weak")} tabindex="0"><b>${nW}</b> <span id="tp-weak-w">weak evidence hidden</span></span><button type="button" id="tp-weak-s" class="hero-l"${dt("ft.sum.weakshow")}>show</button>` : ""].join("");
+        // the weak band is off by default but never out of sight: its count is always here, with the unexpected ions the Dig left out
+        `<span class="hc" data-k="weak"${dt("ft.chip.weak")} tabindex="0"><b>${nW}</b> <span id="tp-weak-w">weak evidence hidden</span></span>${nW ? `<button type="button" id="tp-weak-s" class="hero-l"${dt("ft.sum.weakshow")}>show</button>` : ""}`,
+        nLeft ? `<span class="hc" data-k="left"${dt("ft.sum.left")} tabindex="0"><b>${nLeft}</b> unexpected not listed</span>` : ""].join("");
       const oIt = it("ions", "Ions analysed", s.rows.length, "ft.sum.ions") + it("took", "Computed in", `${(st.took / 1000).toFixed(1)} s`, "ft.sum.took");
       const nMs2 = s.ms2_links && s.ms2_links.links ? s.ms2_links.links.length : 0, ms2c = window.TPMS2 ? window.TPMS2.card(s) : "", mrmc = mrmCard(s.mrm);
       R.innerHTML = `<div class="hero" role="region" aria-label="Summary of the results">
         <section class="hero-b" aria-labelledby="tp-h-par"><h2 id="tp-h-par">Parent</h2><div class="hero-i">${pIt}</div></section>
         <section class="hero-b" aria-labelledby="tp-h-out"><h2 id="tp-h-out">Output</h2><div class="hero-i"><span id="tp-cnt">${words}</span>${oIt}</div></section>
         <section class="hero-b" aria-labelledby="tp-h-dl"><h2 id="tp-h-dl">Download</h2><div class="hero-x" role="group" aria-labelledby="tp-h-dl"><button type="button" id="tp-x-xlsx"${dt("ft.sum.xlsx")}>Excel (.xlsx)</button><button type="button" id="tp-x-csv"${dt("ft.sum.csv")}>CSV</button><button type="button" id="tp-x-json"${dt("ft.sum.json")}>JSON</button><button type="button" id="tp-x-txt"${dt("ft.sum.txt")}>Copy summary</button></div></section></div>
+        ${s.parent_ok === false ? `<p id="tp-nopar" role="status">In these files the ion of the parent is not a chromatographic peak that falls over time, so no product is proposed. Check the formula and the adduct of the parent and the files of the series; the criteria are in the parent row.</p>` : ""}
         <div class="vtabs">${(s.gruppi ? [...VIEWS, ["cond", "Compare conditions"]] : VIEWS).map(([k, n]) => `<button class="vt${st.view === k ? " on" : ""}" data-v="${k}">${n}</button>`).join("")}</div>
         <div id="tp-view"></div>
         <div class="tp-mores">${ms2c ? `<details name="tp-more" id="tp-m-ms2"><summary>MS2 matches (${nMs2})</summary>${ms2c}</details>` : ""}${mrmc ? `<details name="tp-more" id="tp-m-mrm"><summary>MRM (${s.mrm.rows.length} files)</summary>${mrmc}</details>` : ""}</div>`;
@@ -755,7 +759,7 @@
         { key: "level", label: "Lvl", help: "ft.col.level", sticky: true, sort: lvSort, cell: r => r.level ? TPTAB.level(r.level) : "", text: r => r.level ? "L" + r.level : "" },
         { key: "tpname", label: "TP", help: "ft.col.tpname", sticky: true, sort: r => r.tp_name || "", cell: r => esc(r.tp_name || "") },
         { key: "identity", label: "Identity", help: "ft.col.identity", sticky: true, sort: r => idLabel(r).toLowerCase(), cell: r => esc(idLabel(r)) + alt(r), text: r => idLabel(r) + (r.alternatives.length ? ` (+${r.alternatives.length} other)` : "") },
-        { key: "status", label: "Status", help: "ft.col.status", sort: r => notFound(r) ? 1 : 0, cell: r => notFound(r) ? "Searched, not detected" : "Detected", text: r => r.status || "Detected" },
+        { key: "status", label: "Status", help: "ft.col.status", sort: r => notFound(r) || r.status === "Parent not found" ? 1 : 0, cell: r => notFound(r) ? "Searched, not detected" : esc(r.status || "Detected"), text: r => r.status || "Detected" },
         { key: "net", label: "Net change (formula)", help: "ft.col.net", sort: r => r.net_change || "", cell: r => esc(r.net_change || "").replace(/([A-Za-z)])(\d+)/g, "$1<sub>$2</sub>") },          // subscripts in the cell only: the export and the copy keep the plain text (C2H2)
         { key: "modif", label: "Modification", help: "ft.col.modif", sort: r => r.modification || "", cell: r => esc(r.modification || "") },
         { key: "mz", label: "<i>m/z</i>", help: "ft.col.mz", num: true, sort: r => r.mz, cell: r => r.mz.toFixed(2) },
@@ -772,7 +776,7 @@
         { key: "num", off: true, label: "#", help: "ft.col.rank", sort: r => r.id, cell: r => rowNum(r) },
       ];
       const chips = [chip("strong", "Strong", "ft.chip.strong", r => r.kind !== "unexpected" && r.label === "forte", true), chip("possible", "Possible", "ft.chip.possible", r => r.kind !== "unexpected" && r.label === "possibile", true),
-        chip("weak", "Weak", "ft.chip.weak", r => r.kind !== "unexpected" && r.label === "debole", false), chip("unexpected", "Unexpected", "ft.chip.unexpected", r => r.kind === "unexpected" && good(r), true),
+        chip("weak", "Weak evidence", "ft.chip.weak", r => r.label === "debole", false), chip("unexpected", "Unexpected", "ft.chip.unexpected", r => r.kind === "unexpected" && good(r), true),
         ...(ms2 ? [chip("ms2", "With MS2", "ft.chip.ms2", r => r.ms2 > 0, false)] : [])];
       T = TPTAB.mount(host, { id: "tp-t", label: "Transformation product candidates", cols, rowId: r => r.id, esc, name: r => `${r.tp_name || idLabel(r)}, ${idLabel(r)}, m/z ${r.mz.toFixed(2)}`, columns: true, chips, rowClass: r => notFound(r) ? "tpt-nd" : "", exportName: (s.parent.formula || "parent") + "_Tabui_view",
         search: r => [r.tp_name, r.name, r.formula, String(r.mz), r.delta, r.net_change, r.modification].join(" "), pin: r => r.label === "progenitore",

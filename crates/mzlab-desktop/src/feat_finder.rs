@@ -76,8 +76,23 @@ impl State {
         } else {
             s("settings")
         };
-        let mut d = legacy::lr::dig(s("files"), s("parent"), settings, table, s("registry"))
-            .map_err(user)?;
+        let lc: Vec<String> =
+            legacy::lr::plan::columns(&legacy::lr::plan::files(s("files")).map_err(user)?)
+                .into_iter()
+                .map(|f| f.name)
+                .collect();
+        let mut d = legacy::lr::dig(
+            s("files"),
+            s("parent"),
+            settings,
+            table,
+            s("registry"),
+            &mut |k| {
+                self.open_idx(lc.get(k).map_or("", |n| n.as_str()))
+                    .map_err(|e| e.key.to_string())
+            },
+        )
+        .map_err(user)?;
         let names: Vec<String> = (d.lc.iter().map(|f| f.name.clone()))
             .chain(
                 d.files
