@@ -75,7 +75,20 @@
     "ft.f.minf": "Bassa risoluzione: il picco deve comparire in almeno questi campioni trattati, o in due consecutivi allo stesso RT. 0 = spento.",
     "ft.f.rtmin": "Ignora ciò che esce prima di questo RT (fronte non trattenuto), in minuti.",
     "ft.f.disc": "Cerca anche ioni che crescono nel tempo senza venire da una regola di trasformazione. Più lento.",
-    "ft.f.chg": "Variazione di formula della regola, per esempio +O-H2."
+    "ft.f.chg": "Variazione di formula della regola, per esempio +O-H2.",
+    "ft.chip.l5": "Solo le righe a livello 5: solo massa esatta, nessuna MS2 o libreria che le spieghi.",
+    "ft.chip.decided": "Solo le righe a cui il chimico ha deciso un livello.",
+    "ft.chip.pol": "Solo le righe di questa polarità (POS = ioni positivi, NEG = negativi).",
+    "ft.col.cand": "Miglior candidato di libreria per la MS2 della feature: un'ipotesi con le sue prove, non un'identificazione. Senza candidato compare l'm/z.",
+    "ft.col.entropy": "Entropia spettrale: somiglianza della MS2 con il record di libreria, da 0 a 1.",
+    "ft.col.ext": "Nomi che la tabella d'origine (mzMine, GNPS2, MS-DIAL) dà alla feature: sono prove con la loro fonte, mai un livello.",
+    "ft.col.members": "Gruppo di feature dello stesso composto (addotti, isotopi, frammenti in sorgente) e quante sono.",
+    "ft.col.nmass": "Massa neutra che spiega più feature del gruppo: è un'ipotesi, aprila per le prove di ogni legame.",
+    "ft.col.pol": "Polarità della tabella: POS = ioni positivi, NEG = negativi.",
+    "ft.col.basis": "Su che cosa poggia il livello: libreria spettrale, standard, struttura prevista, giudizio del chimico.",
+    "ft.col.reasons": "Perché il livello è questo: i controlli superati o falliti, in parole.",
+    "ft.tab.members": "Le feature del gruppo, con il ruolo di ciascuna nella massa neutra; un pulsante apre la feature.",
+    "ft.go.banco": "Apre il Banco 2b su questa feature, per rivederla e decidere il livello."
   },
   en: {
     "ft.col.level": "Identification level (Schymanski scale): L5 appears with the treatment, L4 unique formula, L3 MS2 linked to the parent. Only the chemist writes 2b.",
@@ -146,7 +159,20 @@
     "ft.f.minf": "Low resolution: a peak must appear in at least this many treated samples, or in two consecutive ones at the same RT. 0 = off.",
     "ft.f.rtmin": "Ignore what elutes before this RT (unretained front), in minutes.",
     "ft.f.disc": "Also look for ions that grow over time without coming from a transformation rule. Slower.",
-    "ft.f.chg": "Formula change of the rule, for example +O-H2."
+    "ft.f.chg": "Formula change of the rule, for example +O-H2.",
+    "ft.chip.l5": "Only level 5 rows: exact mass only, no MS2 or library that explains them.",
+    "ft.chip.decided": "Only the rows whose level the chemist decided.",
+    "ft.chip.pol": "Only the rows of this polarity (POS = positive ions, NEG = negative).",
+    "ft.col.cand": "Best library candidate for the MS2 of the feature: a hypothesis with its evidence, not an identification. Without a candidate the m/z is shown.",
+    "ft.col.entropy": "Spectral entropy: similarity of the MS2 with the library record, from 0 to 1.",
+    "ft.col.ext": "Names that the source table (mzMine, GNPS2, MS-DIAL) gives the feature: evidence with its source, never a level.",
+    "ft.col.members": "Group of features of the same compound (adducts, isotopes, in-source fragments) and how many there are.",
+    "ft.col.nmass": "Neutral mass that explains most features of the group: a hypothesis, open it for the evidence of every link.",
+    "ft.col.pol": "Polarity of the table: POS = positive ions, NEG = negative.",
+    "ft.col.basis": "What the level rests on: spectral library, standard, predicted structure, the chemist's judgement.",
+    "ft.col.reasons": "Why the level is this one: the checks passed or failed, in words.",
+    "ft.tab.members": "The features of the group, with the role of each in the neutral mass; a button opens the feature.",
+    "ft.go.banco": "Opens the Banco 2b on this feature, to review it and decide the level."
   }
   };
   /** @param {string} key @param {Record<string, string | number>} [params] */

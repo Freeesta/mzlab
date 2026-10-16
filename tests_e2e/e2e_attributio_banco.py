@@ -10,6 +10,7 @@ HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401
 
 steps = []
+TG15 = 'button.tpt-tg[aria-label^="Details of POS 15:"]'
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e)[:900]))
@@ -60,15 +61,15 @@ try:
         pg.wait_for_selector("[data-v=attributio]", timeout=120000)
         pg.click("[data-v=attributio]"); pg.wait_for_selector("#at-pick")
         pg.set_input_files("#at-dir", str(FOLDER))
-        pg.wait_for_function("document.querySelectorAll('#at-table tbody tr').length > 0", timeout=120000)
+        pg.wait_for_function("document.querySelectorAll('#at-table tbody tr.clk').length > 0", timeout=120000)
 
         def table():
-            assert pg.evaluate("document.querySelectorAll('#at-table tbody tr').length") == 16
-            assert pg.locator('.at-rev[data-pol="POS"][data-id="15"]').count() == 1
-        step("the table has the 16 features and a Review button per row", table)
+            assert pg.evaluate("document.querySelectorAll('#at-table tbody tr.clk').length") == 16
+            assert pg.locator(TG15).count() == 1
+        step("the table has the 16 features and every row opens", table)
 
         def opens():
-            pg.click('.at-rev[data-pol="POS"][data-id="15"]'); pg.wait_for_selector("#bn-save", timeout=120000)
+            pg.click(TG15); pg.click("#at-det button[data-act=banco]"); pg.wait_for_selector("#bn-save", timeout=120000)
             txt = pg.inner_text("#at-banco")
             assert "2b-check" in txt and "Metacetamol" in txt and "Banco 2b" in txt, txt[:600]
             boxes = pg.evaluate("[...document.querySelectorAll('#at-banco [data-chk]')].map(c => c.checked)")
@@ -122,7 +123,7 @@ try:
         step("three boxes + a note + Save download feature_decisions.csv with the row and evidence_checklist", saves)
 
         def reruns():
-            pg.wait_for_function("document.querySelector('#at-table tr:has(.at-rev[data-id=\"15\"]) .lvb')?.textContent === 'L2b'", timeout=60000)
+            pg.wait_for_function("document.querySelector('#at-table tr.clk:has(button[aria-label^=\"Details of POS 15:\"]) .lvb')?.textContent === 'L2b'", timeout=60000)
             assert pg.evaluate("localStorage.getItem('qqq.attributio.reviewer')") == "rev"
             op = pg.evaluate("(NB.ops || []).filter(o => o.op === 'attributio' && o.attributio.feature_decisions).pop() || null")
             assert op and "diagnostic_fragment|neutral_loss|alternatives_excluded" in op["attributio"]["feature_decisions"], op
