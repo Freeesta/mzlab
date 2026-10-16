@@ -652,6 +652,7 @@
       T = TPTAB.mount(host, { id: "tp-t", label: "Transformation product candidates", cols, rowId: r => r.id, esc, name: r => `${r.tp_name || idLabel(r)}, ${idLabel(r)}, m/z ${r.mz.toFixed(2)}`, columns: true, chips, rowClass: r => notFound(r) ? "tpt-nd" : "", exportName: (s.parent.formula || "parent") + "_Tabui_view",
         search: r => [r.tp_name, r.name, r.formula, String(r.mz), r.delta, r.net_change, r.modification].join(" "), pin: r => r.label === "progenitore",
         tabs: TPRIGA.tabs, head: (r, box) => TPRIGA.head(box, headModel(r)), onOpen: (r, body, tab) => { void fillTab(r, body, tab); } });
+      host.insertAdjacentHTML("beforeend", TPTAB.legend(["detected", "absent"], true));
       T.setRows(s.rows.filter(r => !notFound(r))); T.sortBy("level", 1);
       const box = /** @type {HTMLInputElement | null} */ ($("#tp-nd"));
       if (box) box.onchange = () => { if (T) T.setRows(box.checked ? s.rows : s.rows.filter(r => !notFound(r))); };
