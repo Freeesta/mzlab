@@ -30,11 +30,12 @@ function stdColor(u) {                                       // u in 0..1
 }
 function uipLoad() {
   QA11Y.apply(QA11Y.read());
-  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.v >= 2 || o.pal !== "time" ? o.pal : "file";   /* before v2 "time" was the default, not a choice */ if (o.merge === false) UIP.merge = false;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
+  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.v >= 2 || o.pal !== "time" ? o.pal : "file";   /* before v2 "time" was the default, not a choice */ if (o.merge === false) UIP.merge = false; if (o.beside === true) UIP.beside = true;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
   setPal(UIP.pal);
 }
 function uipSave() {
   const o = { v: 2, theme: UIP.theme, pal: UIP.pal, merge: UIP.merge };
+  if (UIP.beside) o.beside = true;
   if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;         // high resolution: only what differs from the defaults
   uipWrite(UIP_KEY, JSON.stringify(o));
 }
@@ -115,6 +116,7 @@ function uipOpen(btn) {
     <div class="row">${I18N.t("settings.pal.label")} <select id="uip-pal" title="${I18N.t("settings.pal.title")}">${["file", ...Object.keys(PALS).filter(k => k !== "file")].map(k => `<option value="${k}">${I18N.t(`settings.pal.${k}`)}</option>`).join("")}</select></div>
     </details>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>${I18N.t("settings.merge")}</span></label>
+    <label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.beside.title")}"><input type="checkbox" id="uip-beside" ${UIP.beside ? "checked" : ""}> <span>${I18N.t("settings.beside")}</span></label>
     ${(typeof E !== "undefined" && E.files && E.files.some(f => window.HR && HR.isHr(f))) ? `
     <div class="row">${I18N.t("settings.libs.label")} <button id="uip-lib" title="${I18N.t("settings.libs.title")}">${I18N.t("settings.libs.button")}</button></div>` : ""}
     ${(typeof E !== "undefined" && E.files && E.files.some(f => window.HR && HR.isHr(f))) ? `
@@ -156,6 +158,7 @@ function uipOpen(btn) {
     UIP.merge = e.target.checked; uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof redrawAll === "function") redrawAll();
   };
+  d.querySelector("#uip-beside").onchange = e => { UIP.beside = e.target.checked; uipSave(); };      // read when a spectrum is opened (newSpec): nothing to redraw
   const uipTour = d.querySelector("#uip-tour");
   if (uipTour) uipTour.onclick = () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();

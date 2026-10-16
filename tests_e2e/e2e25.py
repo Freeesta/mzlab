@@ -34,11 +34,11 @@ try:
             pg.click("#np-set"); pg.wait_for_timeout(150); pg.click("#np-set"); pg.wait_for_timeout(250)      # close and reopen: it stays as left
             assert pg.evaluate("document.getElementById('uip-a11y').open") is True, "the state of the submenu is remembered"
             t = pg.inner_text("#uipset"); print(repr(t))
-            assert pg.locator("#uipset .row").count() == 7, pg.locator("#uipset .row").count()      # language, theme, font, high contrast, colours, toolbar labels and the merge of the centroids (the text size is the browser's: Ctrl/Cmd + and −); the libraries and the high-resolution rows only appear with MS2 / high-resolution files open
+            assert pg.locator("#uipset .row").count() == 7, pg.locator("#uipset .row").count()      # language, theme, font, high contrast, colours, toolbar labels and the merge of the centroids, the spectrum beside the chromatogram (the text size is the browser's: Ctrl/Cmd + and −); the libraries and the high-resolution rows only appear with MS2 / high-resolution files open
             assert "Dimensione testo" not in t and "Tema" in t and "Colori dei grafici" in t
             for bad in ("Dimensione del testo dell", "Vale per menu", "tutorial", "Installare", "Numera", "suggerimenti"):
                 assert bad.lower() not in t.lower(), bad
-            assert pg.locator("#uipset input[type=checkbox]").count() == 2 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 0      # the merge of the centroids; no «Mostra tutti gli esperimenti insieme» (it is the only view)
+            assert pg.locator("#uipset input[type=checkbox]").count() == 3 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 0      # the merge of the centroids; no «Mostra tutti gli esperimenti insieme» (it is the only view)
             assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["Per file (predefinito)", "Per tempo", "Accessibili", "Alto contrasto", "Arcobaleno", "Bianco e nero"]
             assert pg.input_value("#uip-pal") == "file"
             pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(400)

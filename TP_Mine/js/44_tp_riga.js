@@ -52,16 +52,15 @@
 .tp .tpr-more{box-sizing:border-box;cursor:pointer;min-height:24px;min-width:24px;padding:0 8px;font:inherit;font-size:12px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink);margin-top:4px}
 .tp dl.tpr-q{display:grid;grid-template-columns:max-content 1fr;gap:3px 14px;margin:2px 0;font-size:12px}.tp dl.tpr-q dt{color:var(--muted)}.tp dl.tpr-q dd{margin:0}`;
 
-  // ------------------------------------------------------------ texts (helps; it/en), given to the catalogue of the helps when there is one
+  // ------------------------------------------------------------ texts (helps, English), given to the catalogue of the helps when there is one
   const TXT = {
-    it: { "ft.riga.copy": "Copia negli appunti i valori di questa riga." },
     en: { "ft.riga.copy": "Copies the values of this row to the clipboard." },
   };
   let registered = false;
   /** gives the few helps of this file (`ft.riga.*`) to the catalogue of Tabui (`TABUI_T`, texts/40_tabui_testi.js) */
   function register() {
     const T = G.TABUI_T;
-    if (T && !registered) { registered = true; for (const l of /** @type {("it" | "en")[]} */ (["it", "en"])) if (T[l]) Object.assign(T[l], TXT[l]); }
+    if (T && !registered) { registered = true; Object.assign(T.en, TXT.en); }
   }
   const tt = (/** @type {string | undefined} */ k) => k && G.TPHELP ? ` data-tt="${k}"` : "";
   const esc = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"]/g, c => /** @type {any} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
