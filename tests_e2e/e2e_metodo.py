@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import numpy as np
 import dati_sintetici as ds
 
-PORT = 8837
+from lib import free_port; PORT = free_port()
 errs = []
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))

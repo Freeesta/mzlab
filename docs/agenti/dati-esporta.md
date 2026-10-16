@@ -6,3 +6,4 @@
 - Pulizia: il file in `export/` si toglie 10 minuti dopo l'avvio del download (`drop`); al primo caricamento del modulo `clean` toglie i file più vecchi di 1 ora. L'URL del download resta valido per gli stessi 10 minuti.
 - Chi produce molto testo passa un generatore: MGF/MSP di tutti gli MS2 (`piecesMgf`, `piecesMsp` in `workflow.js`, stessi byte di `formatMgf`/`formatMsp`).
 - Prova: `tests_e2e/e2e_esporta_pezzi.py` (byte per byte su sorgenti piccole, 9 MB con coppia surrogata tagliata, 210 MB in pezzi con SHA-256).
+- mzFinder (`TP_Mine/js/`): le esportazioni passano dallo stesso `dl()` (`window.dl`): `G.dl` in `28_`, `30_`, `38_`, `42_` e l'aiuto `dl` di `20_tpmine.js` (usato anche da `21_tpmine_hr.js`, con `prov === false`: stessi byte di prima, nessuna riga di provenienza). Una stringa grande (CSV completo, MGF, SIRIUS) oltre 8 MB va in OPFS; lo ZIP del rapporto (`zipStore`) e le stringhe del motore restano in memoria finché il motore non le consegna a pezzi.

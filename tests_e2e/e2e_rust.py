@@ -7,7 +7,7 @@ from playwright.sync_api import sync_playwright
 from lib import ROOT, mz
 from golden_ref import PyRef
 
-PORT = 8832
+from lib import free_port; PORT = free_port()
 errs = []
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))

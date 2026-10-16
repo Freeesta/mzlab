@@ -8,7 +8,7 @@ from lib import ROOT, ready
 sys.path.insert(0, str(ROOT / "tools"))
 import agilent_sintetico
 
-PORT = 8838
+from lib import free_port; PORT = free_port()
 errs = []
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))

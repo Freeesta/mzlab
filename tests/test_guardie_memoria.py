@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 import sys
 from pathlib import Path
 
@@ -53,17 +54,23 @@ def measure(tmp_path, idx, budget, tag):
 @needs
 def test_peak_memory_of_each_phase_stays_under_the_recorded_value(tmp_path):
     pytest.importorskip("numpy")
-    build_wasm(tmp_path)
-    small = series(tmp_path, "piccolo")
-    big = series(tmp_path, "completo")
-    measured = {
-        "byte": measure(tmp_path, small, 192, "piccolo")[0],
-        "completo": measure(tmp_path, big, 192, "completo")[0],
-    }
-    blocks, sha_blocks = measure(tmp_path, big, BLOCKS_MB, "blocchi")
-    measured["completo_blocchi"] = blocks
+    # the build and the two series are independent, and so are the four measures (each has its own output folder): they run at the same time
+    with ThreadPoolExecutor(4) as pool:
+        built = pool.submit(build_wasm, tmp_path)
+        small_job = pool.submit(series, tmp_path, "piccolo")
+        big_job = pool.submit(series, tmp_path, "completo")
+        built.result()
+        small, big = small_job.result(), big_job.result()
+        jobs = {
+            "byte": pool.submit(measure, tmp_path, small, 192, "piccolo"),
+            "completo": pool.submit(measure, tmp_path, big, 192, "completo"),
+            "completo_blocchi": pool.submit(measure, tmp_path, big, BLOCKS_MB, "blocchi"),
+            "memoria": pool.submit(measure, tmp_path, big, 192, "completo2"),
+        }
+        done = {k: j.result() for k, j in jobs.items()}
+    measured = {k: done[k][0] for k in ("byte", "completo", "completo_blocchi")}
     # the way in slabs (small budget) gives the same bytes as the way in memory
-    assert sha_blocks == measure(tmp_path, big, 192, "completo2")[1], "the slabs do not give the bytes of the way in memory"
+    assert done["completo_blocchi"][1] == done["memoria"][1], "the slabs do not give the bytes of the way in memory"
     if os.environ.get("MZLAB_GUARDIE_CREA"):
         GUARD.write_text(json.dumps({"serie": "piccolo e completo (feat_mirato.py --seme 2 --scala 1.0); completo_blocchi = completo con budget di %d MB" % BLOCKS_MB,
                                      "soglia": "valore registrato + 10 %", **measured}, indent=1) + "\n", encoding="utf-8")
