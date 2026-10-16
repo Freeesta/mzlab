@@ -612,8 +612,8 @@
       const pIt = [st.pname ? `<span class="hc hn" data-k="name">${esc(MOLUI.cap(st.pname))}</span>` : "", it("formula", "Neutral formula", esc(s.parent.formula || "—"), "ft.sum.formula"), it("mz", `${esc(s.parent.adduct)} <i>m/z</i>`, s.parent.mz, "ft.sum.mz"),
         par && par.ref_rt ? it("rt", "RT", `${par.ref_rt} min`, "ft.sum.rt") : "", hl != null ? `${it("half", "t½", hl, "ft.sum.half", 1).replace("</b></span>", "</b> min</span>")}` : "",
         off != null ? it("offset", "<i>m/z</i> offset", `${off >= 0 ? "+" : "−"}${Math.abs(off).toFixed(2)} Da`, "ft.sum.offset") : ""].filter(Boolean).join("");
-      const cIt = (k, n, label) => `<span class="hc" data-k="${k}"${dt("ft.chip." + k)} tabindex="0"><b data-count="${n}">${n}</b> ${label}</span>`;
-      const words = [cIt("strong", nF, "strong"), cIt("possible", nP, "possible"), cIt("unexpected", nU, "unexpected"),
+      const cIt = (k, n, label, help) => `<span class="hc" data-k="${k}"${dt(help)} tabindex="0"><b data-count="${n}">${n}</b> ${label}</span>`;
+      const words = [cIt("strong", nF, "strong", "ft.chip.strong"), cIt("possible", nP, "possible", "ft.chip.possible"), cIt("unexpected", nU, "unexpected", "ft.chip.unexpected"),
         nW ? `<span class="hc" data-k="weak"${dt("ft.chip.weak")} tabindex="0"><b>${nW}</b> <span id="tp-weak-w">weak evidence hidden</span></span><button type="button" id="tp-weak-s" class="hero-l"${dt("ft.sum.weakshow")}>show</button>` : ""].join("");
       const oIt = it("ions", "Ions analysed", s.rows.length, "ft.sum.ions") + it("took", "Computed in", `${(st.took / 1000).toFixed(1)} s`, "ft.sum.took");
       const nMs2 = s.ms2_links && s.ms2_links.links ? s.ms2_links.links.length : 0, ms2c = window.TPMS2 ? window.TPMS2.card(s) : "", mrmc = mrmCard(s.mrm);
