@@ -116,3 +116,71 @@ fn names() {
     assert_eq!(n, ["TP 362_311 A", "TP 362_311 B", "TP 362_314"]);
     assert_eq!(nm(&[e(1, 362.51, "A", None, "forte")]), ["TP 363"]);
 }
+
+/// Independent cases (`tests/data/nomi_tp/casi_nomi.csv`, masses from pyteomics): one experiment per parent, names against the expected groups.
+#[test]
+fn names_follow_the_independent_cases() {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/data/nomi_tp/casi_nomi.csv"
+    );
+    let text = std::fs::read_to_string(path).unwrap();
+    // (parent, case id, formula, mz, rt, group, kind)
+    let rows: Vec<Vec<&str>> = text
+        .lines()
+        .skip(1)
+        .map(|l| l.split(',').collect())
+        .collect();
+    let mut parents: Vec<&str> = rows.iter().map(|r| r[1]).collect();
+    parents.dedup();
+    parents.sort();
+    parents.dedup();
+    let mut bad = Vec::new();
+    for parent in parents {
+        let mine: Vec<&Vec<&str>> = rows.iter().filter(|r| r[1] == parent).collect();
+        let es: Vec<Entry> = mine
+            .iter()
+            .enumerate()
+            .map(|(i, r)| {
+                e(
+                    i as i64 + 1,
+                    r[4].parse().unwrap(),
+                    r[2],
+                    Some(r[6].parse().unwrap()),
+                    "possibile",
+                )
+            })
+            .collect();
+        let got = nm(&es);
+        for (i, r) in mine.iter().enumerate() {
+            let nominal = r[5];
+            let want = match r[8] {
+                "single" => format!("TP {nominal}"),
+                "isomers" => {
+                    let rank = mine
+                        .iter()
+                        .filter(|o| o[7] == r[7] && o[2] == r[2])
+                        .filter(|o| o[6].parse::<f64>().unwrap() < r[6].parse::<f64>().unwrap())
+                        .count();
+                    format!("TP {nominal} {}", (b'A' + rank as u8) as char)
+                }
+                _ => {
+                    let frac = r[4].split('.').nth(1).unwrap();
+                    format!("TP {nominal}_{}", &frac[..2])
+                }
+            };
+            if got[i] != want {
+                bad.push(format!(
+                    "{} {} {}: got {} want {}",
+                    r[0], r[2], r[4], got[i], want
+                ));
+            }
+        }
+    }
+    assert!(
+        bad.is_empty(),
+        "{} differences:\n{}",
+        bad.len(),
+        bad.join("\n")
+    );
+}
