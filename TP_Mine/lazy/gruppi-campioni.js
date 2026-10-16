@@ -29,6 +29,12 @@
     const R = opts.R, call = opts.call, nb = opts.nb || null, id = "tpg" + ++seq;
     /** @type {Campione[]} */ let cs = await R.build(call, files, nb, null);
     const stored = new Set(((nb && nb.campioni && nb.campioni.campioni) || []).map((/** @type {Campione} */ c) => c.file));
+    // a file the notebook has no entry for: the Data tab's session (v1) carries no condition and often no time, so the proposal from the names (the Rust, all files together) stands unless the session holds a confirmed time
+    const fresh = cs.filter(c => !stored.has(c.file));
+    if (fresh.length) {
+      const prop = /** @type {Campione[]} */ (JSON.parse(await call("proponi", JSON.stringify({ files: files.map(name => ({ name: R.fileOf(name), sha256: "", kind: "" })) }))).campioni);
+      cs = cs.map(c => { const p = prop.find(x => x.file === c.file); if (stored.has(c.file) || !p) return c; if (c.tempo != null && c.tempo_confermato) return { ...c, serie: c.serie || p.serie, replica: p.replica }; return { ...p, ordine_iniezione: c.ordine_iniezione }; });
+    }
     const sure = new Set(cs.filter(c => stored.has(c.file)).map(c => c.file));            // conditions the user already saw
     /** @type {Set<number>} */ const sel = new Set();
     const o = (nb && nb.gruppi_opts) || null;
