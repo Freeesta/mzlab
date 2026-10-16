@@ -26,7 +26,7 @@ if not reuse:
     cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)]
     if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
     subprocess.run(cmd, check=True, capture_output=True)
-shutil.copy2(ROOT / "TP_Mine" / "lazy" / "gruppi-vista.js", site / "static" / "mzfinder" / "gruppi-vista.js")      # fresh source over the site that was built
+shutil.copy2(ROOT / "TP_Mine" / "lazy" / "gruppi-vista.js", site / "static" / "mzfinder" / "lazy" / "gruppi-vista.js")      # fresh source over the site that was built
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 errs = []
@@ -65,7 +65,7 @@ try:
         pg.evaluate("() => { const l = document.getElementById('loading'); if (l && /motore|engine/i.test(l.innerText)) l.remove(); }")     # the view needs no engine: a build without the .wasm must not block the test
         pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-right", timeout=60000)
         pg.wait_for_function("typeof window.TDATI === 'object'", timeout=120000)
-        pg.evaluate("() => new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'static/mzfinder/gruppi-vista.js'; s.onload = ok; s.onerror = () => no(new Error('script')); document.head.appendChild(s); })")
+        pg.evaluate("() => window.TPLAZY.load('gruppi-vista.js')")
         pg.wait_for_function("typeof window.TPGRUPPI_VIEW === 'object'", timeout=20000)
         mount = lambda fx, name="Demo Parent": pg.evaluate(MOUNT, [fx, name])
         mount(FX)
