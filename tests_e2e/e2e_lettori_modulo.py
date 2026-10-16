@@ -154,7 +154,7 @@ def page(b, query):
     pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce").new_page()
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.on("request", lambda r: asked.append(r.url) if "wasm-lettori/" in r.url else None)
-    pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
+    pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
     pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1{query}"); pg.wait_for_selector("#drop", timeout=120000)
     pg.wait_for_function("window.MZLAB_RUST_READY !== undefined", timeout=60000)
     return pg

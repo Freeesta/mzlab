@@ -17,7 +17,7 @@ def session(p, init):
     r = Run(port=8892, wd="/tmp/wd_mappa3d_err")
     try:
         b = p.chromium.launch(); r.b = b
-        ctx = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}); ctx.add_init_script(init + "try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1')}catch(_){}")
+        ctx = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}); ctx.add_init_script(init + "try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1')}catch(_){}")
         pg = ctx.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
         pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); pg.wait_for_timeout(800)
