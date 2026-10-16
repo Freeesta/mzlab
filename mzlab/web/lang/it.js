@@ -636,6 +636,7 @@ I18N.add("it", {
   "error.engineRestarted": "Il motore Rust si è riavviato: i file sono stati riaperti, puoi continuare.",
   "error.engineFallback": "Il motore di calcolo si è fermato di nuovo: ricarica la pagina (i file salvati restano).",
   "err.route.unavailable": "Questa operazione non è disponibile per questi dati.",
+  "error.newerFormat": "Indice o tabella preparati da una versione più recente di mzLab (formato {version}): resta com'è e non viene sovrascritto. Aggiorna la pagina o l'app per aprirlo; qui non si analizza.",
   "error.badIndex": "L'indice di questo file è incompleto o danneggiato (di solito per poco spazio nel browser mentre lo si costruiva). Toglilo e ricaricalo; se capita ancora, libera spazio dalle impostazioni o carica meno file per volta.",
   "error.memoryBudget": "Il file è troppo grande per la memoria che il browser concede al motore di calcolo.",
   "err.engine.index": "Non riesco a leggere questo file: {name}",

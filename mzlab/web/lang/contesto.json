@@ -64,6 +64,7 @@
   "err.file.unknown": "{detail} = motivo tecnico (testo inglese del motore).",
   "err.file.raw": "{detail} = motivo tecnico (testo inglese della libreria).",
   "err.file.notAgilentD": "{name} = nome della cartella .D.",
+  "error.newerFormat": "Errore quando un indice (.mzidx) o una tabella della pipeline (.mzfeat, .mzfeatf) è di un formato più nuovo del programma; {version} = versione del formato trovata (il motore aggiunge anche {kind}, {file}). Il file non si tocca.",
   "err.file.agilentNoEngine": "{name} = nome della cartella .D.",
   "err.file.brukerNoBin": "{name} = nome della cartella .d; {file} = il file che manca (analysis.tdf_bin o analysis.tsf_bin).",
   "load.wiffWait": "{name} = nome del file della coppia .wiff/.wiff.scan arrivato senza l'altro.",
