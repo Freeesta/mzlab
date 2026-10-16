@@ -200,7 +200,7 @@
   <input type="file" id="tp-in" accept=".mzML,.mzml,.raw,.wiff,.scan" multiple hidden>
   <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div>
   <details id="tp-cond" hidden><summary title="Compare several conditions of the same degradation (gases, photocatalysts...): label the files with their condition">Conditions of the files</summary><div id="tp-cfiles"></div></details><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
- <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div><div id="tp-reatt"></div>
+ <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div><div id="tp-reatt"></div><div id="tp-reatt-ctl" hidden></div>
   <div class="row tp-ac"><input type="text" id="tp-name" class="grow-in" placeholder="Name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false"${dt("ft.f.name")}><ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
   <div class="row"><input type="text" id="tp-mol" class="grow-in" placeholder="Neutral formula" aria-label="Neutral molecular formula" spellcheck="false"${dt("ft.f.formula")}></div>
   <div class="row"><input type="text" id="tp-smi" class="grow-in" placeholder="SMILES" aria-label="SMILES" spellcheck="false"${dt("ft.f.smiles")}><button id="tp-draw" type="button" title="Draw the molecule in the Draw tab and bring the SMILES back here">Draw</button></div>
@@ -413,9 +413,12 @@
         } catch (e) { $("#tp-prev").textContent = ""; }
       }, 350);
     };
+    const reattAuto = (/** @type {string} */ fn) => { const a = /** @type {any} */ (window).TPREATTAUTO; if (a) a[fn](); };       // the automatic reactivity of the parent (lazy/reatt-auto.js), once loaded
     function reattPanel(/** @type {HTMLElement} */ rh, /** @type {string} */ t) {
-      if (!t) { rh.innerHTML = ""; return; }
-      /** @type {any} */ (window).TPLAZY.load("viewer3d.js", "reattivita.js").then(() => { if (rh.dataset.smiles === t) /** @type {any} */ (window).TPREATT.state(rh, "waiting"); }).catch(() => { rh.textContent = "The reactivity panel could not be loaded."; });
+      const W = /** @type {any} */ (window);
+      if (!t) { rh.innerHTML = ""; if (W.TPREATTAUTO) W.TPREATTAUTO.attach(rh, ""); return; }
+      if (typeof uipAdminOn !== "function" || !uipAdminOn()) return;      // nothing is loaded or calculated outside the administrator mode
+      W.TPLAZY.load("viewer3d.js", "reattivita.js", "reatt-auto.js").then(() => { if (rh.dataset.smiles === t) W.TPREATTAUTO.attach(rh, t); }).catch(() => { rh.textContent = "The reactivity panel could not be loaded."; });
     }
     function structure(t) {             // parent structure drawn with OpenChemLib (already in the site for the Disegno tab)
       const el = $("#tp-struct"); if (!el) return;
@@ -544,7 +547,8 @@
       const have = new Set(st.files.map(f => String(f.name || "").split(/[\\/]/).pop()));            // files loaded but not in this series: failed to read, or still being opened
       const lost = [...new Set([...(window.QQQ_LOADFAIL || []), ...(((typeof E !== "undefined" && E.pending) || []).filter(x => x.state === "err" || x.state === "wait").map(x => x.file))])].filter(n => !have.has(n));
       $("#tp-warn").textContent = lost.length ? `Warning: ${lost.length} file${lost.length > 1 ? "s" : ""} not read and left out of this run (${lost.slice(0, 4).join(", ")}${lost.length > 4 ? ", ..." : ""}). Load ${lost.length > 1 ? "them" : "it"} again before trusting the series.` : "";
-      setBusy(true); $("#tp-bar").style.width = "2%"; msg(useCond() && !hrMode ? `Aligning ${st.files.filter(f => f.kind === "full").length} files of ${st.cond.conditions.length} conditions...` : "Digging..."); const t0 = performance.now();
+      setBusy(true); reattAuto("tpsStart");      // the reactivity of the parent waits for the TPs
+      $("#tp-bar").style.width = "2%"; msg(useCond() && !hrMode ? `Aligning ${st.files.filter(f => f.kind === "full").length} files of ${st.cond.conditions.length} conditions...` : "Digging..."); const t0 = performance.now();
       const tStart = performance.now(); if (typeof DIAG !== "undefined") DIAG.LONG.marca("start");
       const prevHtml = $("#tp-right").innerHTML; cancelling = false; running = true;      // what «Cancel» goes back to when no result is held
       if (window.TPLIVE) TPLIVE.start($("#tp-right"), hrMode, { esc, call, cancel: cancelRun });
@@ -561,12 +565,14 @@
           if (typeof DIAG !== "undefined") DIAG.LONG.marca("render");
           st.hs = hs; window.TPHR.render($("#tp-right"), hs, { esc, fmtA, chart, hue, call, callRaw, toast, dl });
           $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
-          running = false; setBusy(false); lagNote(tStart); return;
+          running = false; setBusy(false); lagNote(tStart); reattAuto("tpsDone"); return;
         }
         st.hs = null; st.summary = JSON.parse(await callRaw("run", digFiles(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
         if (window.TPMS2) window.TPMS2.setConditions(st.summary.gruppi ? new Map(st.files.filter(f => f.kind === "ms2").map(f => [f.name, (st.cond && st.cond.campioni[st.gnames.indexOf(f.name)] || {}).serie || ""])) : null);
         st.took = performance.now() - t0; st.sel = null; st.det = {}; if (window.TPLIVE) TPLIVE.stop(true); if (typeof DIAG !== "undefined") DIAG.LONG.marca("render"); render(); $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
+        running = false; setBusy(false); reattAuto("tpsDone");
       } catch (e) {
+        reattAuto("tpsEnd");
         if (window.TPLIVE) TPLIVE.stop(false);
         if (cancelling) {        // cancelled by the user: the panel goes back to the previous results (or the invitation) and the files stay
           if (st.summary) render(); else if (st.hs) window.TPHR.render($("#tp-right"), st.hs, { esc, fmtA, chart, hue, call, callRaw, toast, dl }); else $("#tp-right").innerHTML = prevHtml;
