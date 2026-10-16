@@ -63,7 +63,7 @@ impl Default for Settings {
             auto_offset: true,
             min_files: 3,
             frag_min_rel: super::ms2frag::MIN_REL,
-            min_snr: 10.0,
+            min_snr: 5.0,
             max_fwhm_s: 60.0,
             min_points: 5,
             dead_factor: 1.5,

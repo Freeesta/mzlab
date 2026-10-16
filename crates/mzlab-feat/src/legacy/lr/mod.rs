@@ -216,6 +216,29 @@ fn weak_unless_formed(e: &mut Entry) {
     }
 }
 
+/// A candidate reached by two transformations, or of a class of hypotheses that matches no more ions than the decoys (`chance`), is at most
+/// `possibile` (score at most 74): at unit resolution such a match is no evidence of the transformation, but the ion stays in the table.
+fn not_strong_by_chance(e: &mut Entry) {
+    if e.label == "forte" && (e.steps > 1 || e.by_chance) {
+        e.score = e.score.map(|x| x.min(74.0));
+        e.label = "possibile";
+    }
+}
+
+pub const PARENT_OK: &str = "parent of the series";
+
+/// A candidate of a parent that `parent_check` does not confirm: it stays in the table, `debole` (score at most 40), because a match to the
+/// transformations of a parent that is not in the files is no evidence of a product.
+fn orphan(e: &mut Entry) {
+    e.criteria.push(labels::crit(
+        PARENT_OK,
+        "fail",
+        "the parent is not a chromatographic peak that falls over time in these files: the match to its transformations is no evidence".into(),
+    ));
+    e.score = e.score.map(|x| x.min(40.0));
+    e.label = "debole";
+}
+
 /// Isotope check and kinetic generation of one entry (`snapshot` = the entries the isotope is looked for in).
 pub(super) fn finish_one(
     e: &mut Entry,
@@ -247,20 +270,23 @@ fn finish(entries: &mut [Entry], lc: &[FileIn], s: &Settings, gens: &Gens) {
     }
 }
 
-/// The unexpected ions that still pass after the isotope check, by score then area, at most `max_unexpected`.
+/// The unexpected ions after the isotope check, at most `max_unexpected`: the ones that pass by score then area, then the ones that are weak only
+/// because of the chromatographic peak or persistence (they stay visible as `debole`); isotope peaks and ions that do not grow are dropped.
 fn keep_unexpected(entries: Vec<Entry>, max: usize) -> Vec<Entry> {
     let (known, unexp): (Vec<Entry>, Vec<Entry>) = entries.into_iter().partition(|e| !e.unexpected);
     let good: Vec<&Entry> = unexp
         .iter()
         .filter(|e| {
-            matches!(e.label, "forte" | "possibile") && status(&e.criteria, GROWS) != "fail"
+            status(&e.criteria, GROWS) != "fail" && status(&e.criteria, rows::ISOTOPE) != "fail"
         })
         .collect();
     let mut ord: Vec<usize> = (0..good.len()).collect();
     let sc = |e: &Entry| e.score.unwrap_or(0.0);
+    let weak = |e: &Entry| e.label == "debole";
     mzlab_core::sortc::by(&mut ord, |&a, &b| {
-        sc(good[b])
-            .total_cmp(&sc(good[a]))
+        weak(good[a])
+            .cmp(&weak(good[b]))
+            .then(sc(good[b]).total_cmp(&sc(good[a])))
             .then(good[b].area.total_cmp(&good[a].area))
     });
     let mut out = known;
@@ -332,36 +358,45 @@ pub fn dig<R: ReadAt>(
     let dec = decay(&kinetics(&lc, &p.cells));
     let gens = Gens::new(&kinetics(&lc, &p.cells), dec.map(|d| d.k));
     let mut entries = vec![p];
-    let mut odds = Vec::new();
-    if parent_ok {
-        let known: Vec<f64> = hyps.iter().map(|h| h.mz + off).collect();
-        let hrows = near(&t, &known, s.tol_da);
-        peakchk::gate(&mut t, &mut chk, &hrows, &s, open)?;
-        let (cands, _) = rows::candidates(&t, &lc, &hyps, &parent, off, s.tol_da);
-        entries.extend(cands);
-        for e in entries.iter_mut().skip(1) {
+    let known: Vec<f64> = hyps.iter().map(|h| h.mz + off).collect();
+    let hrows = near(&t, &known, s.tol_da);
+    peakchk::gate(&mut t, &mut chk, &hrows, &s, open)?;
+    let (cands, _) = rows::candidates(&t, &lc, &hyps, &parent, off, s.tol_da);
+    entries.extend(cands);
+    for e in entries.iter_mut().skip(1) {
+        evaluate_peak(e, &t, &lc, &s, &chk);
+    }
+    if s.discover {
+        // the unexpected ions of the table as the pipeline gave it, then checked: one without a real peak stays, `debole`
+        let known: Vec<f64> = entries.iter().map(|e| e.mz_x).collect();
+        let mut un = rows::unexpected(&t, &lc, &known, &s, off);
+        let urows: Vec<usize> = un.iter().filter_map(|e| e.row).collect();
+        peakchk::gate(&mut t, &mut chk, &urows, &s, open)?;
+        for e in un.iter_mut() {
             evaluate_peak(e, &t, &lc, &s, &chk);
         }
-        if s.discover {
-            let known: Vec<f64> = entries.iter().map(|e| e.mz_x).collect();
-            let pre = rows::free_rows(&t, &lc, &known, &s);
-            peakchk::gate(&mut t, &mut chk, &pre, &s, open)?;
-            let mut un = rows::unexpected(&t, &lc, &known, &s, off);
-            for e in un.iter_mut() {
-                evaluate_peak(e, &t, &lc, &s, &chk);
-            }
-            entries.extend(un);
-        }
-        let ions: Vec<f64> = rows::free_rows(&t, &lc, &[], &s)
-            .into_iter()
-            .map(|r| t.mz[r])
-            .collect();
-        odds = chance::estimate(&hyps, &ions, off, s.tol_da, parent.mz);
-        for e in entries.iter_mut().filter(|e| !e.unexpected && e.id != 0) {
-            e.by_chance = !odds.iter().any(|c| c.steps == e.steps && c.above());
-        }
+        entries.extend(un);
+    }
+    let ions: Vec<f64> = rows::free_rows(&t, &lc, &[], &s)
+        .into_iter()
+        .map(|r| t.mz[r])
+        .collect();
+    let odds = chance::estimate(&hyps, &ions, off, s.tol_da, parent.mz);
+    for e in entries.iter_mut().filter(|e| !e.unexpected && e.id != 0) {
+        e.by_chance = !odds.iter().any(|c| c.steps == e.steps && c.above());
     }
     finish(&mut entries, &lc, &s, &gens);
+    for e in entries.iter_mut().filter(|e| !e.unexpected && e.id != 0) {
+        not_strong_by_chance(e);
+    }
+    if !parent_ok {
+        for e in entries
+            .iter_mut()
+            .filter(|e| !e.unexpected && e.id != 0 && e.score.is_some())
+        {
+            orphan(e);
+        }
+    }
     let entries = keep_unexpected(entries, s.max_unexpected);
     Ok(LrDig {
         files,

@@ -139,15 +139,15 @@ pub fn gate<R: ReadAt>(
             continue;
         }
         c.done[r] = true;
-        for k in 0..t.n_files {
+        for (k, slot) in ix.iter_mut().enumerate() {
             let cell = t.cell(r, k);
             if t.state[cell] != CELL_DETECTED || !t.apex_rt[cell].is_finite() {
                 continue;
             }
-            if ix[k].is_none() {
-                ix[k] = Some(open(k)?);
+            if slot.is_none() {
+                *slot = Some(open(k)?);
             }
-            let Some(i) = ix[k].as_mut() else { continue };
+            let Some(i) = slot.as_mut() else { continue };
             let (rt, y) = xic(i, t.mz[r] - s.tol_da, t.mz[r] + s.tol_da, 0.0)?;
             let q = judge(&rt, &y, f64::from(t.apex_rt[cell]), s);
             if !q.ok() {

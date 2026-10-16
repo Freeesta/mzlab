@@ -29,10 +29,10 @@ pub fn level(e: &Entry) -> (Option<u8>, &'static str) {
     if !matches!(e.label, "forte" | "possibile") {
         return (None, "No level: the criteria are not met.");
     }
-    if !e.formula.is_empty() && e.label == "forte" && e.steps > 1 {
+    if !e.formula.is_empty() && !e.unexpected && e.steps > 1 {
         return (Some(5), TWO_STEPS);
     }
-    if !e.formula.is_empty() && e.label == "forte" && e.by_chance {
+    if !e.formula.is_empty() && !e.unexpected && e.by_chance {
         return (Some(5), BY_CHANCE);
     }
     let l = if !e.formula.is_empty() && e.label == "forte" {

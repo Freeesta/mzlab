@@ -18,6 +18,8 @@ pub const OFFSET_MAX: f64 = 0.6;
 /// Isomers of one hypothesis: a peak with at least this share of the strongest area, at most this many peaks.
 const ISOMER_FRAC: f64 = 0.10;
 const ISOMER_MAX: usize = 4;
+pub const ISOTOPE: &str = "not an isotope peak";
+
 pub const ISOTOPE_SHIFTS: [(f64, &str); 3] = [
     (1.00335, "13C (M+1)"),
     (2.0067, "M+2"),
@@ -371,7 +373,7 @@ pub fn isotope_of(e: &Entry, all: &[Entry], tol: f64, rt_tol: f64) -> Option<(i6
 pub fn isotope_crit(e: &mut Entry, hit: Option<(i64, String)>) {
     match hit {
         Some((id, text)) => {
-            e.criteria.push(crit("not an isotope peak", "fail", text));
+            e.criteria.push(crit(ISOTOPE, "fail", text));
             e.score = e.score.map(|s| s.min(40.0));
             e.label = "debole";
             e.isotope_of = Some(id);

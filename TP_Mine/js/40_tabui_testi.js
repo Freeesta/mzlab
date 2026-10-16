@@ -44,7 +44,7 @@
     "ft.chip.unexpected": "New ions that do not come from a transformation rule.",
     "ft.chip.strong": "Candidates with a strong score (75 or more): almost all the criteria are passed. Still a candidate, not an identification.",
     "ft.chip.possible": "Candidates with a possible score (50 to 74): some criteria are not passed.",
-    "ft.chip.weak": "Candidates with a weak score (below 50): usually only useful as a check.",
+    "ft.chip.weak": "Weak evidence: rows that fail a criterion a product cannot do without (a real chromatographic peak, persistence, formation over time, a parent that falls) or score below 50. Hidden by default, never removed: one click shows them.",
     "ft.alt": "Other candidate identities with the same mass (\"+2\" = two more). Click to open the Identity tab of the row with the list.",
     "ft.col.formula": "Molecular formula proposed for the ion, if there is one.",
     "ft.col.ms2match": "Number of MS2 experiments matched to this row. The list is in the «MS2 matches» section under the table.",

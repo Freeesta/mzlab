@@ -651,7 +651,7 @@
         { key: "num", off: true, label: "#", help: "ft.col.rank", sort: r => r.id, cell: r => rowNum(r) },
       ];
       const chips = [chip("strong", "Strong", "ft.chip.strong", r => r.kind !== "unexpected" && r.label === "forte", true), chip("possible", "Possible", "ft.chip.possible", r => r.kind !== "unexpected" && r.label === "possibile", true),
-        chip("weak", "Weak", "ft.chip.weak", r => r.kind !== "unexpected" && r.label === "debole", false), chip("unexpected", "Unexpected", "ft.chip.unexpected", r => r.kind === "unexpected" && good(r), true),
+        chip("weak", "Weak evidence", "ft.chip.weak", r => r.label === "debole", false), chip("unexpected", "Unexpected", "ft.chip.unexpected", r => r.kind === "unexpected" && good(r), true),
         ...(ms2 ? [chip("ms2", "With MS2", "ft.chip.ms2", r => r.ms2 > 0, false)] : [])];
       T = TPTAB.mount(host, { id: "tp-t", label: "Transformation product candidates", cols, rowId: r => r.id, esc, name: r => `${r.tp_name || idLabel(r)}, ${idLabel(r)}, m/z ${r.mz.toFixed(2)}`, columns: true, chips, rowClass: r => notFound(r) ? "tpt-nd" : "", exportName: (s.parent.formula || "parent") + "_Tabui_view",
         search: r => [r.tp_name, r.name, r.formula, String(r.mz), r.delta, r.net_change, r.modification].join(" "), pin: r => r.label === "progenitore",

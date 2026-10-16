@@ -172,6 +172,11 @@ pub fn dig(files: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
 }
 
 pub fn dig_for(files: &str, parent: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
+    dig_set(files, parent, "{}", idxs)
+}
+
+/// `dig_for` with the settings of the Dig (`plan::settings`).
+pub fn dig_set(files: &str, parent: &str, settings: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
     let plan: Value = serde_json::from_str(&lr::plan::plan_json(files, parent).unwrap()).unwrap();
     assert_eq!(plan["rust"], true);
     let r = run::recipe_for("", &mut open(&idxs[0])).unwrap();
@@ -204,7 +209,7 @@ pub fn dig_for(files: &str, parent: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
     lr::dig(
         files,
         parent,
-        "{}",
+        settings,
         &table,
         &h.registry.to_json(),
         &mut |k| Ok(open(&idxs[k])),
