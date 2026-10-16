@@ -84,6 +84,55 @@ fn json_to_vec_usize(val: &Value) -> Vec<usize> {
         .unwrap_or_default()
 }
 
+fn verify_single_case(case: &Value) {
+    let id = case["id"].as_i64().unwrap_or(-1);
+    let desc = case["desc"].as_str().unwrap_or("unknown");
+    let ctx = format!("case {id} ({desc})");
+
+    let m = json_to_vec_vec_f64(&case["m"]);
+    let w_f32 = json_to_vec_vec_f32(&case["w"]);
+    let w_f64 = json_to_vec_vec_f64(&case["w"]);
+    let p = json_to_vec_f64(&case["p"]);
+    let binw = case["binw"].as_f64().unwrap_or(1.0);
+    let mmax = case["mmax"].as_f64().unwrap_or(1000.0);
+    let threshold = case["threshold"].as_f64().unwrap_or(0.3) as f32;
+    let upper_triangle = case["upper_triangle"].as_bool().unwrap_or(true);
+    let tol = case["tol"].as_f64().unwrap_or(0.005);
+
+    let rows_opt = (!case["rows"].is_null()).then(|| json_to_vec_usize(&case["rows"]));
+    let cols_opt = (!case["cols"].is_null()).then(|| json_to_vec_usize(&case["cols"]));
+
+    let exp = &case["expected"];
+    let exp_nbins = exp["n_bins"].as_u64().unwrap_or(0) as usize;
+    let exp_f = json_to_vec_vec_f32(&exp["f"]);
+    let exp_l = json_to_vec_vec_f32(&exp["l"]);
+    let exp_fs = json_to_vec_vec_f32(&exp["fs"]);
+    let exp_ls = json_to_vec_vec_f32(&exp["ls"]);
+    let exp_u = json_to_vec_vec_f32(&exp["u"]);
+    let exp_ia = json_to_vec_usize(&exp["pairs_ia"]);
+    let exp_ib = json_to_vec_usize(&exp["pairs_ib"]);
+    let exp_scores = json_to_vec_f64(&exp["cosine_scores"]);
+
+    let bm = bin_matrices(&m, &w_f32, &p, binw, mmax);
+    assert_eq!(bm.n_bins, exp_nbins, "n_bins mismatch in {ctx}");
+    assert_close_f32(&bm.f, &exp_f, 1e-5, &format!("{ctx} - F"));
+    assert_close_f32(&bm.l, &exp_l, 1e-5, &format!("{ctx} - L"));
+    assert_close_f32(&bm.fs, &exp_fs, 1e-5, &format!("{ctx} - Fs"));
+    assert_close_f32(&bm.ls, &exp_ls, 1e-5, &format!("{ctx} - Ls"));
+
+    let u = upper_bound(&bm, rows_opt.as_deref(), cols_opt.as_deref());
+    assert_close_f32(&u, &exp_u, 1e-5, &format!("{ctx} - U"));
+
+    let (ia, ib) = pairs_above(&u, threshold, upper_triangle);
+    assert_eq!(ia, exp_ia, "ia pairs mismatch in {ctx}");
+    assert_eq!(ib, exp_ib, "ib pairs mismatch in {ctx}");
+
+    let pc_ia = if case["pc_ia"].is_null() { ia.clone() } else { json_to_vec_usize(&case["pc_ia"]) };
+    let pc_ib = if case["pc_ib"].is_null() { ib.clone() } else { json_to_vec_usize(&case["pc_ib"]) };
+    let scores = plain_cosine(&m, &w_f64, &pc_ia, &pc_ib, tol);
+    assert_close_f64(&scores, &exp_scores, 1e-7, &format!("{ctx} - plain_cosine"));
+}
+
 #[test]
 fn test_all_pairs_parity_with_python() {
     let tmp_dir = std::env::temp_dir();
@@ -97,72 +146,7 @@ fn test_all_pairs_parity_with_python() {
     assert!(cases.len() >= 40, "Expected at least 40 cases, got {}", cases.len());
 
     for case in &cases {
-        let id = case["id"].as_i64().unwrap_or(-1);
-        let desc = case["desc"].as_str().unwrap_or("unknown");
-        let ctx = format!("case {id} ({desc})");
-
-        let m = json_to_vec_vec_f64(&case["m"]);
-        let w_f32 = json_to_vec_vec_f32(&case["w"]);
-        let w_f64 = json_to_vec_vec_f64(&case["w"]);
-        let p = json_to_vec_f64(&case["p"]);
-        let binw = case["binw"].as_f64().unwrap_or(1.0);
-        let mmax = case["mmax"].as_f64().unwrap_or(1000.0);
-        let threshold = case["threshold"].as_f64().unwrap_or(0.3) as f32;
-        let upper_triangle = case["upper_triangle"].as_bool().unwrap_or(true);
-        let tol = case["tol"].as_f64().unwrap_or(0.005);
-
-        let rows_opt = if case["rows"].is_null() {
-            None
-        } else {
-            Some(json_to_vec_usize(&case["rows"]))
-        };
-        let cols_opt = if case["cols"].is_null() {
-            None
-        } else {
-            Some(json_to_vec_usize(&case["cols"]))
-        };
-
-        let exp = &case["expected"];
-        let exp_nbins = exp["n_bins"].as_u64().unwrap_or(0) as usize;
-        let exp_f = json_to_vec_vec_f32(&exp["f"]);
-        let exp_l = json_to_vec_vec_f32(&exp["l"]);
-        let exp_fs = json_to_vec_vec_f32(&exp["fs"]);
-        let exp_ls = json_to_vec_vec_f32(&exp["ls"]);
-        let exp_u = json_to_vec_vec_f32(&exp["u"]);
-        let exp_ia = json_to_vec_usize(&exp["pairs_ia"]);
-        let exp_ib = json_to_vec_usize(&exp["pairs_ib"]);
-        let exp_scores = json_to_vec_f64(&exp["cosine_scores"]);
-
-        // 1. bin_matrices
-        let bm = bin_matrices(&m, &w_f32, &p, binw, mmax);
-        assert_eq!(bm.n_bins, exp_nbins, "n_bins mismatch in {ctx}");
-        assert_close_f32(&bm.f, &exp_f, 1e-5, &format!("{ctx} - F"));
-        assert_close_f32(&bm.l, &exp_l, 1e-5, &format!("{ctx} - L"));
-        assert_close_f32(&bm.fs, &exp_fs, 1e-5, &format!("{ctx} - Fs"));
-        assert_close_f32(&bm.ls, &exp_ls, 1e-5, &format!("{ctx} - Ls"));
-
-        // 2. upper_bound
-        let u = upper_bound(&bm, rows_opt.as_deref(), cols_opt.as_deref());
-        assert_close_f32(&u, &exp_u, 1e-5, &format!("{ctx} - U"));
-
-        // 3. pairs_above
-        let (ia, ib) = pairs_above(&u, threshold, upper_triangle);
-        assert_eq!(ia, exp_ia, "ia pairs mismatch in {ctx}");
-        assert_eq!(ib, exp_ib, "ib pairs mismatch in {ctx}");
-
-        // 4. plain_cosine
-        let pc_ia = if case["pc_ia"].is_null() {
-            ia.clone()
-        } else {
-            json_to_vec_usize(&case["pc_ia"])
-        };
-        let pc_ib = if case["pc_ib"].is_null() {
-            ib.clone()
-        } else {
-            json_to_vec_usize(&case["pc_ib"])
-        };
-        let scores = plain_cosine(&m, &w_f64, &pc_ia, &pc_ib, tol);
-        assert_close_f64(&scores, &exp_scores, 1e-7, &format!("{ctx} - plain_cosine"));
+        verify_single_case(case);
     }
 }
 
