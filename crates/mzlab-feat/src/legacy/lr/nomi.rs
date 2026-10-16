@@ -127,8 +127,15 @@ fn letters(i: usize) -> String {
 
 /// `"net_change"` and `"modification"` of a row (`—` for the parent, empty for an unexpected ion).
 pub fn words_json(o: &mut mzlab_core::json::Out, e: &Entry, parent: &str) {
-    let net = if e.unexpected { String::new() } else { net_change(&e.formula, parent) };
-    o.raw(",\"net_change\":").str(&net).raw(",\"modification\":").str(&modification(&e.name, e.unexpected));
+    let net = if e.unexpected {
+        String::new()
+    } else {
+        net_change(&e.formula, parent)
+    };
+    o.raw(",\"net_change\":")
+        .str(&net)
+        .raw(",\"modification\":")
+        .str(&modification(&e.name, e.unexpected));
 }
 
 /// Names the entries of one integer m/z: the formulas of `byf` (key -> indexes of `es`) and their isomers.
