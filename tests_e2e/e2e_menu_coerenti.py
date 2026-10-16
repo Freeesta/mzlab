@@ -57,7 +57,7 @@ try:
             keyboard(SP); r = pg.evaluate("""(()=>{const its=[...document.querySelectorAll('#ctx div[role^=menuitem]')].slice(1);
               return {n:its.length,free:its.filter(d=>!d.dataset.azione).map(d=>d.textContent),ids:[...new Set(its.map(d=>d.dataset.azione))],
                 noic:its.filter(d=>!d.querySelector('.ic[aria-hidden=true] svg')).map(d=>d.dataset.azione),
-                bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{viste:[]}).viste.includes('spec'))}})()"""); close()
+                bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{viste:[]}).viste.some(x=>x==='spec'||x==='*'))}})()"""); close()
             assert r["n"] >= 5 and not r["free"] and not r["bad"] and not r["noic"], r
             assert "spec.copy" in r["ids"] and "spec.xic" in r["ids"] and "spec.measure" in r["ids"], r["ids"]
         step("spectrum: every entry of the menu is an action of the registry (data-azione)", spec_ids)
@@ -68,7 +68,7 @@ try:
                 keyboard(sel); r = pg.evaluate("""(v=>{const its=[...document.querySelectorAll('#ctx div[role^=menuitem]')].slice(1);
                   return {n:its.length,free:its.filter(d=>!d.dataset.azione).map(d=>d.textContent),ids:[...new Set(its.map(d=>d.dataset.azione))],
                     noic:its.filter(d=>!d.querySelector('.ic[aria-hidden=true] svg')).map(d=>d.dataset.azione),
-                    bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{viste:[]}).viste.includes(v))}})""" + f"('{vista}')"); close()
+                    bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{viste:[]}).viste.some(x=>x===v||x==='*'))}})""" + f"('{vista}')"); close()
                 assert r["n"] >= 2 and not r["free"] and not r["bad"] and not r["noic"], (vista, r)
                 assert "chrom.annotate" in r["ids"] and "chrom.int" in r["ids"] and "view.resetZoom" in r["ids"] and "ann.edit" in r["ids"], r["ids"]
                 assert (vista == "mrm") == ("chrom.specAtRt" not in r["ids"]), r["ids"]

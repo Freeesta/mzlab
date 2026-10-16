@@ -10,7 +10,7 @@ def step(name, fn):
 try:
     with sync_playwright() as p:
         pg = r.page(p, tour=True)
-        pg.evaluate("try { localStorage.removeItem('qqq.tour.lr'); localStorage.setItem('qqq.barra.hint','1'); } catch (_) {}")
+        pg.evaluate("try { localStorage.removeItem('qqq.tour.lr'); localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1'); } catch (_) {}")
         pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_timeout(800)
         pg.click("text=Carica dati"); ready(pg)
         def invito():

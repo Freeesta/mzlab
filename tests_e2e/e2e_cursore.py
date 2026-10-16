@@ -16,7 +16,7 @@ try:
     with sync_playwright() as p:
         r.b = p.chromium.launch()
         ctx = r.b.new_context(viewport={"width": 1024, "height": 1366}, has_touch=True, locale="it-IT")
-        pg = ctx.new_page(); pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
+        pg = ctx.new_page(); pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 6000, 2); ready(pg)
