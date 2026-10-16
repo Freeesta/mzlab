@@ -11,6 +11,8 @@ crate-type = ["cdylib", "rlib"]
 [features]
 # The Banco 2b (review of one feature and saving of the decision) as a .wasm of its own, `attributio-rev`; without it the .wasm is the table of levels
 rev = []
+# The four spreadsheet exports (Schymanski folder, publication table, quantification, gradient) with the cascade as a .wasm of its own, `attributio-export`; the evidence export is in `attributio-rev`
+export = []
 
 [dependencies]
 js-sys = "0.3.106"

@@ -1,7 +1,7 @@
 //! A table whose columns are born as rows bring them: the union of the columns in order of first appearance, as `pandas.concat` does, a missing cell is null.
 
-use crate::attributio::frame::Cell;
 use crate::attributio::export::cells::Sheet;
+use crate::attributio::frame::Cell;
 
 #[derive(Clone, Debug, Default)]
 pub struct Wide {
@@ -38,7 +38,9 @@ impl Wide {
             .iter()
             .filter_map(|f| self.cols.iter().position(|c| c == f))
             .collect();
-        let rest: Vec<usize> = (0..self.cols.len()).filter(|i| !order.contains(i)).collect();
+        let rest: Vec<usize> = (0..self.cols.len())
+            .filter(|i| !order.contains(i))
+            .collect();
         order.extend(rest);
         let mut s = Sheet::with_head(name, order.iter().map(|&i| self.cols[i].clone()).collect());
         for r in &self.rows {

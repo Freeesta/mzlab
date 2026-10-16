@@ -101,9 +101,13 @@ pub fn xlsx_rows_to(sheets: &[Sheet], emit: &mut dyn FnMut(&str)) {
     let mut o = Out::default();
     o.raw("{\"hojas\":[");
     for (k, s) in sheets.iter().enumerate() {
-        o.raw(if k > 0 { ",{\"nombre\":" } else { "{\"nombre\":" })
-            .str(&s.name)
-            .raw(",\"filas\":[[");
+        o.raw(if k > 0 {
+            ",{\"nombre\":"
+        } else {
+            "{\"nombre\":"
+        })
+        .str(&s.name)
+        .raw(",\"filas\":[[");
         for (i, h) in s.head.iter().enumerate() {
             o.raw(if i > 0 { "," } else { "" }).str(h);
         }

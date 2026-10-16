@@ -81,9 +81,7 @@ pub struct GnpsProv {
 }
 
 fn text(g: &crate::attributio::Frame, r: usize, col: &str) -> Option<String> {
-    g.col(col)
-        .and_then(|c| g.str_na(r, c))
-        .map(str::to_string)
+    g.col(col).and_then(|c| g.str_na(r, c)).map(str::to_string)
 }
 
 fn library_label(g: &crate::attributio::Frame, r: usize) -> Option<String> {
@@ -114,19 +112,22 @@ pub fn gnps_provenance(c: &Campaign, io: &Io) -> Result<HashMap<(String, i64), G
             continue;
         };
         let num = |r: usize, n: &str| g.col(n).and_then(|k| g.num(r, k));
-        let mut rows: Vec<usize> = (0..g.len()).filter(|&r| g.num(r, kscan).is_some()).collect();
+        let mut rows: Vec<usize> = (0..g.len())
+            .filter(|&r| g.num(r, kscan).is_some())
+            .collect();
         rows.sort_by(|&a, &b| desc_na_last(num(a, "MQScore"), num(b, "MQScore")));
         for r in rows {
             let id = g.num(r, kscan).unwrap_or_default() as i64;
-            out.entry((pol.to_string(), id)).or_insert_with(|| GnpsProv {
-                library: library_label(&g, r),
-                adduct: text(&g, r, "Adduct"),
-                shared_peaks: num(r, "SharedPeaks"),
-                mz_error_ppm: num(r, "MZErrorPPM"),
-                mass_diff: num(r, "MassDiff"),
-                library_usi: text(&g, r, "library_usi"),
-                inchikey: text(&g, r, "InChIKey"),
-            });
+            out.entry((pol.to_string(), id))
+                .or_insert_with(|| GnpsProv {
+                    library: library_label(&g, r),
+                    adduct: text(&g, r, "Adduct"),
+                    shared_peaks: num(r, "SharedPeaks"),
+                    mz_error_ppm: num(r, "MZErrorPPM"),
+                    mass_diff: num(r, "MassDiff"),
+                    library_usi: text(&g, r, "library_usi"),
+                    inchikey: text(&g, r, "InChIKey"),
+                });
         }
     }
     Ok(out)
@@ -155,10 +156,17 @@ impl FRow<'_> {
         self.gp.shared_peaks.or(self.f.spec.peaks)
     }
     pub fn match_inchikey(&self) -> Option<&str> {
-        self.gp.inchikey.as_deref().or(self.f.mzlib.inchikey.as_deref())
+        self.gp
+            .inchikey
+            .as_deref()
+            .or(self.f.mzlib.inchikey.as_deref())
     }
     pub fn match_smiles(&self) -> Option<&str> {
-        self.f.gnps.smiles.as_deref().or(self.f.mzlib.smiles.as_deref())
+        self.f
+            .gnps
+            .smiles
+            .as_deref()
+            .or(self.f.mzlib.smiles.as_deref())
     }
     pub fn ref_usi(&self) -> Option<&str> {
         self.gp.library_usi.as_deref().or(self.mz_usi.as_deref())
@@ -229,7 +237,9 @@ pub fn feature_rows<'a>(c: &Campaign, io: &Io, l: &'a Loaded) -> Result<Vec<FRow
                 f,
                 identity: ident.get(&(f.pol.as_str(), f.id)).cloned(),
                 gp: prov.get(&key).cloned().unwrap_or_default(),
-                mz_method: hit.map(|h| h.method.clone()).filter(|_| f.mzlib.name.is_some()),
+                mz_method: hit
+                    .map(|h| h.method.clone())
+                    .filter(|_| f.mzlib.name.is_some()),
                 mz_usi: hit
                     .and_then(|h| h.usi.clone())
                     .filter(|_| f.mzlib.name.is_some()),

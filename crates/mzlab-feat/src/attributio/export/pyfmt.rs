@@ -22,11 +22,7 @@ pub fn py_float(x: f64) -> String {
         let s = format!("{x}");
         return if s.contains('.') { s } else { format!("{s}.0") };
     }
-    format!(
-        "{mant}e{}{:02}",
-        if exp < 0 { '-' } else { '+' },
-        exp.abs()
-    )
+    format!("{mant}e{}{:02}", if exp < 0 { '-' } else { '+' }, exp.abs())
 }
 
 /// `format(x, ".0f")` for a value that may be missing (`nan` as Python prints it).

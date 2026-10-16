@@ -4,6 +4,7 @@
 #[macro_use]
 mod attributio_comune;
 use attributio_comune::*;
+use mzlab_feat::attributio::annotate::AnnotationSettings;
 use mzlab_feat::attributio::annotate::{gnps_comparer, load_annotations};
 use mzlab_feat::attributio::curation::TableCuration;
 use mzlab_feat::attributio::gradient::{
@@ -14,6 +15,12 @@ use mzlab_feat::attributio::io::Io;
 use mzlab_feat::attributio::quantify::{
     load_calibration, quantify_lvl1, quantify_lvl1_environmental, ENV_COLUMNS, QUANT_COLUMNS,
 };
+use mzlab_feat::attributio::readers::feature_decisions::{load_feature_decisions, DecisionTable};
+use mzlab_feat::attributio::review::banco::Bench;
+use mzlab_feat::attributio::review::evidence::{
+    decided_features, export_evidence, settings_digest,
+};
+use mzlab_feat::attributio::review::settings::ReviewSettings;
 use mzlab_feat::attributio::sources::load_sources;
 use serde_json::{json, Value};
 
@@ -130,6 +137,16 @@ fn gradient_matches_the_reference() {
     let cloud = feature_cloud_gradient(&fx.campaign, &src, &ann.features, st).expect("cloud");
     let head: Vec<&str> = mzlab_feat::attributio::gradient::CLOUD_COLUMNS.to_vec();
     same(&sheet_json(&head, cloud), &only(&g["cloud"]), "cloud");
+}
+
+#[test]
+fn gradient_areas_match_the_reference() {
+    let fx = fixture("campagna_gradiente");
+    with_io!(fx, io);
+    let src = load_sources(&fx.campaign, &io).expect("sources");
+    let g = golden("esportazione", "gradiente.json");
+    let sites: Vec<String> = serde_json::from_value(g["sites"].clone()).expect("sites");
+    let st = [sites[0].as_str(), sites[1].as_str()];
     let areas = compute_gradient_areas(&fx.campaign, &src, st, &["POS", "NEG"]).expect("areas");
     for (k, want) in g["areas"].as_object().expect("areas") {
         let (p, s) = k.split_once('|').expect("key");
@@ -265,4 +282,188 @@ fn publication_matches_the_reference() {
         }
     }
     same(&only(&got), &want, "readme");
+}
+
+fn banco_files_with(decisions: &str) -> mzlab_feat::attributio::io::MemFiles {
+    let mut files = fixture("campagna_sintetica").files;
+    let base = root().join("tests/data/attributio/campagna_banco");
+    walk(&base, &base, &mut files);
+    files.add(
+        "03 Stats/scripts/shared/feature_decisions.csv",
+        decisions.as_bytes(),
+    );
+    files
+}
+
+const HEAD: &str = "pol;feature_id;mz;rt;livello;nome;identita;decided_on;decided_by;motivazione;group;evidence_type;evidence_library;evidence_entry;evidence_cosine;evidence_matched;evidence_delta_mz;evidence_delta_formula;evidence_note\n";
+
+fn evidence_files(rows: &str) -> Vec<(String, String)> {
+    let files = banco_files_with(&format!("{HEAD}{rows}"));
+    let read = |p: &str| files.read(p);
+    let list = |d: &str| files.list(d);
+    let io = Io::new(&read, &list);
+    export_evidence(&io, "campagna_banco").expect("evidence")
+}
+
+#[test]
+fn the_settings_digest_is_the_reference_one() {
+    let fx = fixture("campagna_sintetica");
+    let a = AnnotationSettings::for_campaign(&fx.campaign).expect("settings");
+    let (hash, kv) = settings_digest(&ReviewSettings::default(), &a);
+    assert_eq!(hash, "ce04377cc04c", "{kv}");
+}
+
+#[test]
+fn the_decided_features_are_those_whose_last_level_is_2b_or_2() {
+    let rows = "POS;15;152.0706;3.10;3;;;2026-09-01;t;first\nPOS;15;152.0706;3.10;2;Paracetamol;;2026-09-02;t;second\nPOS;15;152.0706;3.10;;;;2026-09-03;t;note only\n";
+    let d = load_feature_decisions(Some(&format!("{HEAD}{rows}")), "d.csv").expect("table");
+    let files = banco_files_with(HEAD);
+    let read = |p: &str| files.read(p);
+    let list = |dir: &str| files.list(dir);
+    let io = Io::new(&read, &list);
+    let b = Bench::load(&io, "campagna_banco").expect("bench");
+    let got = decided_features(&d, &b.features);
+    assert_eq!(got.len(), 1, "{got:?}");
+    assert_eq!((got[0].row, got[0].note.as_str()), (1, "note only"));
+    assert!(decided_features(&DecisionTable::empty(), &b.features).is_empty());
+    let d3 = load_feature_decisions(
+        Some(&format!(
+            "{HEAD}POS;15;152.0706;3.10;3;;;d;t;back to 3\n{rows}"
+        )),
+        "d.csv",
+    )
+    .expect("table");
+    assert_eq!(decided_features(&d3, &b.features).len(), 1);
+    let d4 = load_feature_decisions(
+        Some(&format!("{HEAD}{rows}POS;15;152.0706;3.10;3;;;d;t;last\n")),
+        "d.csv",
+    )
+    .expect("table");
+    assert!(
+        decided_features(&d4, &b.features).is_empty(),
+        "the last level wins"
+    );
+}
+
+#[test]
+fn the_evidence_of_a_decision_is_a_mirror_plot_its_data_and_a_table_row() {
+    let out = evidence_files("POS;15;152.0706;3.10;2;Paracetamol;;2026-09-02;t;kept\n");
+    let names: Vec<&str> = out.iter().map(|(n, _)| n.as_str()).collect();
+    assert_eq!(names.len(), 4, "{names:?}");
+    assert!(
+        names[0].ends_with("_POS15_.svg") || names[0].contains("_POS15_"),
+        "{names:?}"
+    );
+    let get = |ext: &str| {
+        out.iter()
+            .find(|(n, _)| n.ends_with(ext))
+            .expect(ext)
+            .1
+            .clone()
+    };
+    let svg = get(".svg");
+    assert!(svg.starts_with("<svg ") && svg.trim_end().ends_with("</svg>"));
+    assert_eq!(svg.matches("<svg").count(), 1);
+    let csv = out
+        .iter()
+        .find(|(n, _)| n.contains("POS15") && n.ends_with(".csv"))
+        .expect("plot csv")
+        .1
+        .clone();
+    let lines: Vec<&str> = csv.lines().collect();
+    assert_eq!(
+        lines[0],
+        "side;mz;drawn_x;relative_intensity;matched;fragment;ppm"
+    );
+    assert!(lines.iter().any(|l| l.starts_with("experimental;")));
+    assert!(lines.iter().any(|l| l.starts_with("reference;")));
+    let peaks = lines
+        .iter()
+        .filter(|l| l.contains("experimental;") || l.starts_with("reference;"))
+        .count();
+    assert_eq!(
+        svg.matches("<line").count() - svg_axis_lines(&svg),
+        peaks,
+        "one line per row"
+    );
+    let table = out
+        .iter()
+        .find(|(n, _)| n.starts_with("evidence_") && n.ends_with(".csv"))
+        .expect("table")
+        .1
+        .clone();
+    let mut t = table.lines();
+    assert_eq!(t.next().unwrap().split(';').count(), 26);
+    let row: Vec<&str> = t.next().expect("row").split(';').collect();
+    assert_eq!(
+        (row[0], row[1], row[4], row[7], row[11]),
+        ("POS", "15", "2a", "Paracetamol", "exact")
+    );
+    assert_eq!(row[24], "ce04377cc04c");
+    let json = get(".json");
+    assert!(
+        json.contains("\"features\": 1") && json.contains("\"settings_hash\": \"ce04377cc04c\"")
+    );
+    assert!(
+        evidence_files("")
+            .iter()
+            .all(|(n, _)| n.starts_with("evidence_")),
+        "no decision, no plot"
+    );
+}
+
+/// The axis, tick and frame lines of the plot (not peaks).
+fn svg_axis_lines(svg: &str) -> usize {
+    svg.lines()
+        .filter(|l| l.starts_with("<line") && !l.contains("stroke-width=\"2\""))
+        .map(|l| l.matches("<line").count())
+        .sum()
+}
+
+#[test]
+fn the_page_gets_each_export_as_files() {
+    use mzlab_feat::attributio::export::run::{run, Options};
+    let want = [
+        ("schymanski", "schymanski_"),
+        ("publication", "publication_"),
+        ("quantify", "quantification_"),
+    ];
+    let fx = fixture_overlay(&["campagna_sintetica", "campagna_esportazione"]);
+    with_io!(fx, io);
+    let o = Options {
+        matrix: None,
+        generated: "2026-01-01".into(),
+    };
+    for (kind, stem) in want {
+        let v: Value =
+            serde_json::from_str(&run(&io, &fx.campaign.root_name, kind, &o).expect(kind))
+                .expect("JSON");
+        let files = v["files"].as_array().expect("files");
+        assert_eq!(files.len(), 2, "{kind}");
+        assert!(
+            files[0]["name"].as_str().unwrap().starts_with(stem),
+            "{kind}"
+        );
+        assert!(files[0]["name"].as_str().unwrap().ends_with(".xlsx"));
+        let sheets = files[0]["rows"]["hojas"].as_array().expect("sheets");
+        assert!(
+            sheets
+                .iter()
+                .all(|s| s["filas"][0].as_array().is_some_and(|h| !h.is_empty())),
+            "{kind}"
+        );
+        assert!(files[1]["text"].as_str().unwrap().contains(';'));
+    }
+    assert!(run(&io, &fx.campaign.root_name, "nothing", &o).is_err());
+    let fg = fixture("campagna_gradiente");
+    with_io!(fg, iog);
+    let v: Value =
+        serde_json::from_str(&run(&iog, &fg.campaign.root_name, "gradient", &o).expect("gradient"))
+            .expect("JSON");
+    let sheets = v["files"][0]["rows"]["hojas"].as_array().expect("sheets");
+    let names: Vec<&str> = sheets
+        .iter()
+        .map(|s| s["nombre"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, ["Identity gradient", "Feature cloud", "Summary"]);
 }

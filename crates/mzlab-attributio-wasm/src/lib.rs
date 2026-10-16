@@ -5,6 +5,8 @@
 use js_sys::{Function, Uint8Array};
 use mzlab_core::error::Error;
 use mzlab_core::json::{self, Out};
+#[cfg(any(feature = "rev", feature = "export"))]
+use mzlab_feat::attributio::export::run::Options;
 use mzlab_feat::attributio::io::{Entry, Io};
 use mzlab_feat::attributio::review::banco::review_json;
 use mzlab_feat::attributio::review::save::{decision_text, Saved};
@@ -13,11 +15,13 @@ use std::collections::BTreeMap;
 use wasm_bindgen::prelude::*;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with. The build with the feature `rev` (the Banco 2b) is the
-/// `.wasm` `attributio-rev`: it exports the review and the decision only; the one without it exports the table only.
-#[cfg(not(feature = "rev"))]
+/// `.wasm` `attributio-rev`: it exports the review, the decision and the evidence export; the build with `export` is the `.wasm` `attributio-export`: the four spreadsheet exports only; the one without them exports the table only.
+#[cfg(not(any(feature = "rev", feature = "export")))]
 const BRIDGE: &str = "mzfeat-attributio/1";
 #[cfg(feature = "rev")]
 const BRIDGE: &str = "mzfeat-attributio-rev/1";
+#[cfg(feature = "export")]
+const BRIDGE: &str = "mzfeat-attributio-export/1";
 
 #[wasm_bindgen]
 pub fn version() -> String {
@@ -128,6 +132,49 @@ pub fn decision_with(
     })
 }
 
+/// The export `kind` of the folder as the JSON of its files. The evidence export is the `.wasm` `attributio-rev` (it needs the review); the others the `.wasm`
+/// `attributio`. `names_json` may carry `"matrix"` and `"generated"` (the date of the export).
+#[cfg(any(feature = "rev", feature = "export"))]
+pub fn export_with(
+    files: &Files,
+    fetch: &dyn Fn(usize, u64, u64) -> Option<Vec<u8>>,
+    names_json: &str,
+    kind: &str,
+) -> Result<String, Error> {
+    let v = json::parse(names_json.as_bytes()).map_err(|_| Error::new("error.badRequest"))?;
+    let text = |k: &str| v.get(k).and_then(|x| x.str()).map(str::to_string);
+    let o = Options {
+        matrix: text("matrix"),
+        generated: text("generated").unwrap_or_default(),
+    };
+    with_io(files, fetch, &|io| export_kind(io, &files.root, kind, &o))
+}
+
+#[cfg(feature = "export")]
+fn export_kind(
+    io: &Io,
+    root: &str,
+    kind: &str,
+    o: &Options,
+) -> mzlab_feat::attributio::error::Result<String> {
+    mzlab_feat::attributio::export::run::run(io, root, kind, o)
+}
+
+#[cfg(feature = "rev")]
+fn export_kind(
+    io: &Io,
+    root: &str,
+    kind: &str,
+    _o: &Options,
+) -> mzlab_feat::attributio::error::Result<String> {
+    if kind != "evidence" {
+        return Err(mzlab_feat::attributio::error::CampaignError::value(
+            format!("unknown export: {kind}"),
+        ));
+    }
+    mzlab_feat::attributio::review::evidence::evidence_json(io, root)
+}
+
 /// `text` written to `write` in pieces of about 64 KiB at increasing offsets.
 pub fn text_to(text: &str, write: &mut dyn FnMut(u64, &[u8]) -> bool) -> bool {
     let mut off = 0usize;
@@ -199,7 +246,7 @@ fn js_fetch(read: &Function, k: usize, off: u64, len: u64) -> Option<Vec<u8>> {
     Some(v.dyn_into::<Uint8Array>().ok()?.to_vec())
 }
 
-#[cfg(not(feature = "rev"))]
+#[cfg(not(any(feature = "rev", feature = "export")))]
 fn go(read: Function, names_json: &str, write: Function, kind: &str) -> Result<String, JsValue> {
     let files = Files::from_json(names_json).map_err(js_err)?;
     let run = run_with(&files, &|k, o, l| js_fetch(&read, k, o, l)).map_err(js_err)?;
@@ -215,21 +262,21 @@ fn go(read: Function, names_json: &str, write: Function, kind: &str) -> Result<S
 }
 
 /// The table as JSON `{"columns","rows"}` to `write`; answers `{n_features, by_level, fingerprint, settings, warnings}`.
-#[cfg(not(feature = "rev"))]
+#[cfg(not(any(feature = "rev", feature = "export")))]
 #[wasm_bindgen]
 pub fn annotate_to(read: Function, names_json: &str, write: Function) -> Result<String, JsValue> {
     go(read, names_json, write, "json")
 }
 
 /// The table as CSV (`;`, UTF-8) to `write`; answers the same summary.
-#[cfg(not(feature = "rev"))]
+#[cfg(not(any(feature = "rev", feature = "export")))]
 #[wasm_bindgen]
 pub fn table_csv(read: Function, names_json: &str, write: Function) -> Result<String, JsValue> {
     go(read, names_json, write, "csv")
 }
 
 /// The rows of the sheet `{"hojas":[{"nombre","filas"}]}` that the page zips into an XLSX, to `write`; answers the same summary.
-#[cfg(not(feature = "rev"))]
+#[cfg(not(any(feature = "rev", feature = "export")))]
 #[wasm_bindgen]
 pub fn table_xlsx_rows(
     read: Function,
@@ -288,4 +335,33 @@ pub fn decision_to(
         return Err(js_err(Error::new("error.io")));
     }
     Ok(saved_summary(&saved))
+}
+
+/// The export `kind` (`schymanski`, `publication`, `quantify`, `gradient` in the `.wasm` `attributio`; `evidence` in `attributio-rev`) as the JSON of its files
+/// `{"files":[{"name","text"}|{"name","rows"}],"warnings":[]}` to `write`; answers `{"bytes": n}`.
+#[cfg(any(feature = "rev", feature = "export"))]
+#[wasm_bindgen]
+pub fn export_to(
+    read: Function,
+    names_json: &str,
+    kind: &str,
+    write: Function,
+) -> Result<String, JsValue> {
+    let files = Files::from_json(names_json).map_err(js_err)?;
+    let text = export_with(
+        &files,
+        &|k, o, l| js_fetch(&read, k, o, l),
+        names_json,
+        kind,
+    )
+    .map_err(js_err)?;
+    let mut put = |off: u64, b: &[u8]| {
+        write
+            .call2(&JsValue::NULL, &(off as f64).into(), &Uint8Array::from(b))
+            .is_ok()
+    };
+    if !text_to(&text, &mut put) {
+        return Err(js_err(Error::new("error.io")));
+    }
+    Ok(format!("{{\"bytes\":{}}}", text.len()))
 }
