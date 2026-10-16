@@ -127,7 +127,7 @@ try:
             pg.keyboard.press("+"); assert float(s()["zoom"]) > 1, "key plus"; pg.keyboard.press("0"); assert s()["yaw"] == a["yaw"]
             pg.click('#tpr-host input[data-v3="h"]'); assert s()["showH"] == "false" and int(s()["over"]) == 5, s()
             pg.click('#tpr-host input[data-v3="h"]'); assert s()["showH"] == "true"
-            y0 = s()["yaw"]; pg.wait_for_timeout(600); assert s()["yaw"] == y0, "the viewer rotates by itself"
+            y0 = s()["yaw"]; pg.evaluate("new Promise(r => setTimeout(r, 600))"); assert s()["yaw"] == y0, "the viewer rotates by itself"
             assert pg.evaluate("document.querySelector('#tpr-host canvas').getAttribute('aria-label').includes('card f(−)')")
             sizes = pg.evaluate("[...document.querySelectorAll('#tpr-host .v3-bar button')].map(b => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); })")
             assert min(sizes) >= 24, sizes
@@ -182,7 +182,7 @@ try:
             d = os.environ.get("REATT_SHOTS")
             if not d: return
             for th in ("light", "dark"):
-                pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", th); pg.wait_for_timeout(300)
+                pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", th);
                 pg.locator("#tpr-host .tpr").screenshot(path=str(Path(d) / f"reatt_{th}.png"))
         step("screenshots (REATT_SHOTS)", shots)
         step("window.MZLAB_LR_MISS is empty", lambda: (_ for _ in ()).throw(AssertionError(pg.evaluate("window.MZLAB_LR_MISS"))) if pg.evaluate("(window.MZLAB_LR_MISS || []).length") else None)

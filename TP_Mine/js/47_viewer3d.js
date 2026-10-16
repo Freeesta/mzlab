@@ -33,6 +33,32 @@
     return pts.map(p => { const x1 = p.x * cy + p.z * sy, z1 = -p.x * sy + p.z * cy; return { x: x1, y: p.y * cp - z1 * sp, z: p.y * sp + z1 * cp }; });
   }
 
+  /** @returns {string} the canvas and the bar of controls */
+  const markup = () => `<canvas tabindex="0" role="img" width="480" height="340"></canvas><div class="v3-bar" role="group" aria-label="3D view controls">`
+      + [["left", "Rotate left", "◀"], ["right", "Rotate right", "▶"], ["up", "Rotate up", "▲"], ["down", "Rotate down", "▼"], ["in", "Zoom in", "+"], ["out", "Zoom out", "−"], ["reset", "Reset view", "Reset view"]]
+        .map(([k, l, t]) => `<button type="button" data-v3="${k}" aria-label="${l}">${t}</button>`).join("")
+      + `<label><input type="checkbox" data-v3="h" checked> Show H</label></div>`;
+
+  /** buttons, keys and dragging of the viewer @param {HTMLElement} wrap @param {HTMLCanvasElement} cv @param {HTMLInputElement} hCheck @param {any} st state of the view
+   *  @param {{ rotate: (a:number,b:number) => void, zoom: (f:number) => void, reset: () => void, draw: () => void }} f */
+  function bindInput(wrap, cv, hCheck, st, { rotate, zoom, reset, draw }) {
+    const act = (/** @type {string} */ k) => {
+      if (k === "left") rotate(-STEP, 0); else if (k === "right") rotate(STEP, 0); else if (k === "up") rotate(0, -STEP); else if (k === "down") rotate(0, STEP);
+      else if (k === "in") zoom(1.25); else if (k === "out") zoom(0.8); else if (k === "reset") reset();
+    };
+    wrap.querySelectorAll("button[data-v3]").forEach(b => b.addEventListener("click", () => act(/** @type {HTMLElement} */ (b).dataset.v3 || "")));
+    hCheck.addEventListener("change", () => { st.showH = hCheck.checked; draw(); });
+    cv.addEventListener("keydown", e => {
+      const k = ({ ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down", "+": "in", "=": "in", "-": "out", "0": "reset", Home: "reset" })[/** @type {"+"} */ (e.key)];
+      if (k) { e.preventDefault(); act(k); } else if (e.key === "h" || e.key === "H") { e.preventDefault(); st.showH = !st.showH; draw(); }
+    });
+    /** @type {{x:number,y:number}|null} */ let drag = null;       // dragging is only an addition to the buttons and the keys
+    cv.addEventListener("pointerdown", e => { drag = { x: e.clientX, y: e.clientY }; try { cv.setPointerCapture(e.pointerId); } catch (_) { /* not supported */ } });
+    cv.addEventListener("pointermove", e => { if (!drag) return; rotate((e.clientX - drag.x) * 0.01, (e.clientY - drag.y) * 0.01); drag = { x: e.clientX, y: e.clientY }; });
+    const stop = () => { drag = null; };
+    cv.addEventListener("pointerup", stop); cv.addEventListener("pointercancel", stop);
+  }
+
   /**
    * @typedef {{ i: number, el: string, x: number, y: number, z: number }} V3Atom
    * @typedef {{ atoms: V3Atom[], bonds?: {a:number,b:number,order?:number}[], hbonds?: {donor_h:number,acceptor:number}[], label?: string }} V3Model
@@ -43,10 +69,7 @@
     const atoms = model.atoms, at = new Map(atoms.map((a, k) => [a.i, k]));
     const wrap = document.createElement("div"); wrap.className = "tpv3";
     const aria = () => `3D model of ${model.label || "the molecule"}, ${atoms.length} atoms, card ${st.card}. Arrow keys rotate, plus and minus zoom, 0 resets the view, H shows or hides the hydrogens.`;
-    wrap.innerHTML = `<canvas tabindex="0" role="img" width="480" height="340"></canvas><div class="v3-bar" role="group" aria-label="3D view controls">`
-      + [["left", "Rotate left", "◀"], ["right", "Rotate right", "▶"], ["up", "Rotate up", "▲"], ["down", "Rotate down", "▼"], ["in", "Zoom in", "+"], ["out", "Zoom out", "−"], ["reset", "Reset view", "Reset view"]]
-        .map(([k, l, t]) => `<button type="button" data-v3="${k}" aria-label="${l}">${t}</button>`).join("")
-      + `<label><input type="checkbox" data-v3="h" checked> Show H</label></div>`;
+    wrap.innerHTML = markup();
     host.appendChild(wrap);
     const cv = /** @type {HTMLCanvasElement} */ (wrap.querySelector("canvas")), ctx = /** @type {CanvasRenderingContext2D} */ (cv.getContext("2d"));
     const hCheck = /** @type {HTMLInputElement} */ (wrap.querySelector('input[data-v3="h"]'));
@@ -107,21 +130,7 @@
     /** @param {number} f */
     const zoom = f => { st.zoom = Math.max(0.4, Math.min(4, st.zoom * f)); draw(); opt.onChange?.(); };
     const reset = () => { st.yaw = 0.5; st.pitch = -0.3; st.zoom = 1; draw(); opt.onChange?.(); };
-    const act = (/** @type {string} */ k) => {
-      if (k === "left") rotate(-STEP, 0); else if (k === "right") rotate(STEP, 0); else if (k === "up") rotate(0, -STEP); else if (k === "down") rotate(0, STEP);
-      else if (k === "in") zoom(1.25); else if (k === "out") zoom(0.8); else if (k === "reset") reset();
-    };
-    wrap.querySelectorAll("button[data-v3]").forEach(b => b.addEventListener("click", () => act(/** @type {HTMLElement} */ (b).dataset.v3 || "")));
-    hCheck.addEventListener("change", () => { st.showH = hCheck.checked; draw(); });
-    cv.addEventListener("keydown", e => {
-      const k = ({ ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down", "+": "in", "=": "in", "-": "out", "0": "reset", Home: "reset" })[/** @type {"+"} */ (e.key)];
-      if (k) { e.preventDefault(); act(k); } else if (e.key === "h" || e.key === "H") { e.preventDefault(); st.showH = !st.showH; draw(); }
-    });
-    /** @type {{x:number,y:number}|null} */ let drag = null;       // dragging is only an addition to the buttons and the keys
-    cv.addEventListener("pointerdown", e => { drag = { x: e.clientX, y: e.clientY }; try { cv.setPointerCapture(e.pointerId); } catch (_) { /* not supported */ } });
-    cv.addEventListener("pointermove", e => { if (!drag) return; rotate((e.clientX - drag.x) * 0.01, (e.clientY - drag.y) * 0.01); drag = { x: e.clientX, y: e.clientY }; });
-    const stop = () => { drag = null; };
-    cv.addEventListener("pointerup", stop); cv.addEventListener("pointercancel", stop);
+    bindInput(wrap, cv, hCheck, st, { rotate, zoom, reset, draw });
     draw();
     return {
       canvas: cv, rotate, zoom, reset, draw, /** @returns {typeof st} a copy of the state of the view */ state: () => ({ ...st }),
