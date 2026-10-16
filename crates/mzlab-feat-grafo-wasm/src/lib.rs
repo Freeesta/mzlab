@@ -6,7 +6,7 @@ use mzlab_core::json::Out;
 use wasm_bindgen::prelude::*;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
-const BRIDGE: &str = "mzfeat-grafo/4";
+const BRIDGE: &str = "mzfeat-grafo/5";
 
 fn js_err(e: Error) -> JsValue {
     let mut o = Out::default();
@@ -56,4 +56,22 @@ pub fn positions(
 ) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::posizioni::positions_json(smiles, transform, peaks_json, tol, ppm, positive)
         .map_err(js_err)
+}
+
+/// `positions` with the `reatt/1` of the same parent (`reatt_json`, empty = none): the same `posiz/1` plus `prior`, the f(−) of every site as a «Prev.»
+/// (see `mzlab_feat::chem::posizioni::positions_prior_json`). The values come in already computed, so this `.wasm` does not carry the engine of `mzlab-chem`.
+#[wasm_bindgen]
+pub fn positions_prior(
+    smiles: &str,
+    transform: &str,
+    peaks_json: &str,
+    tol: f64,
+    ppm: bool,
+    positive: bool,
+    reatt_json: &str,
+) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::posizioni::positions_prior_json(
+        smiles, transform, peaks_json, tol, ppm, positive, reatt_json,
+    )
+    .map_err(js_err)
 }

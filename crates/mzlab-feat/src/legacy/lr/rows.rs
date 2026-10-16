@@ -18,6 +18,8 @@ pub const OFFSET_MAX: f64 = 0.6;
 /// Isomers of one hypothesis: a peak with at least this share of the strongest area, at most this many peaks.
 const ISOMER_FRAC: f64 = 0.10;
 const ISOMER_MAX: usize = 4;
+pub const ISOTOPE: &str = "not an isotope peak";
+
 pub const ISOTOPE_SHIFTS: [(f64, &str); 3] = [
     (1.00335, "13C (M+1)"),
     (2.0067, "M+2"),
@@ -265,6 +267,26 @@ pub fn candidates(
     (out, used)
 }
 
+/// The free rows (not within the tolerance of the parent or a hypothesis) after `rt_min` whose criteria pass on the cells of the table
+/// (`forte` or `possibile`, growth, persistence, absent at t0 and in the blank not failed).
+pub fn free_rows(t: &Aligned, files: &[FileIn], known: &[f64], s: &Settings) -> Vec<usize> {
+    (0..t.len())
+        .filter(|&r| t.rt[r] >= s.rt_min && !known.iter().any(|m| (t.mz[r] - m).abs() <= s.tol_da))
+        .filter(|&r| {
+            let sc = score(files, &cells(t, r), s.persist());
+            let fine = [
+                "absent in the blank",
+                "absent at time zero",
+                GROWS,
+                PERSISTS,
+            ]
+            .iter()
+            .all(|n| status(&sc.criteria, n) != "fail");
+            matches!(sc.label, "forte" | "possibile") && fine
+        })
+        .collect()
+}
+
 /// The unexpected ions: free rows (not within the tolerance of the parent or a hypothesis) after `rt_min` whose criteria pass
 /// (`forte` or `possibile`, growth not failed, absent at t0 and in the blank), not the isotope peak of a stronger ion, the best
 /// of two neighbours, at most `max_unexpected` by score and area.
@@ -275,30 +297,15 @@ pub fn unexpected(
     s: &Settings,
     off: f64,
 ) -> Vec<Entry> {
-    let tol = s.tol_da;
     let mut found: Vec<(Entry, f64)> = Vec::new();
-    for r in 0..t.len() {
-        if t.rt[r] < s.rt_min || known.iter().any(|m| (t.mz[r] - m).abs() <= tol) {
-            continue;
-        }
-        let c = cells(t, r);
-        let sc = score(files, &c, s.persist());
-        let fine = [
-            "absent in the blank",
-            "absent at time zero",
-            GROWS,
-            PERSISTS,
-        ]
-        .iter()
-        .all(|n| status(&sc.criteria, n) != "fail");
-        if matches!(sc.label, "forte" | "possibile") && fine {
-            let area = best_area(t, files, r, is_treated);
-            found.push((
-                entry(0, true, String::new(), t.mz[r] - off, t.mz[r], Some(r)),
-                area,
-            ));
-        }
+    for r in free_rows(t, files, known, s) {
+        let area = best_area(t, files, r, is_treated);
+        found.push((
+            entry(0, true, String::new(), t.mz[r] - off, t.mz[r], Some(r)),
+            area,
+        ));
     }
+    let tol = s.tol_da;
     let mut ord: Vec<usize> = (0..found.len()).collect();
     mzlab_core::sortc::by(&mut ord, |&a, &b| {
         found[b]
@@ -366,7 +373,7 @@ pub fn isotope_of(e: &Entry, all: &[Entry], tol: f64, rt_tol: f64) -> Option<(i6
 pub fn isotope_crit(e: &mut Entry, hit: Option<(i64, String)>) {
     match hit {
         Some((id, text)) => {
-            e.criteria.push(crit("not an isotope peak", "fail", text));
+            e.criteria.push(crit(ISOTOPE, "fail", text));
             e.score = e.score.map(|s| s.min(40.0));
             e.label = "debole";
             e.isotope_of = Some(id);

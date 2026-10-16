@@ -53,23 +53,36 @@ fn same_shape(got: &Value, want: &Value, path: &str) {
     }
 }
 
+/// `v` without the keys `keys`.
+fn without(v: &Value, keys: &[&str]) -> Value {
+    let mut out = v.clone();
+    for k in keys {
+        out.as_object_mut().unwrap().remove(*k);
+    }
+    out
+}
+
 #[test]
 fn contract_and_rows_of_python() {
     let (files, idxs) = series();
     let d = dig(&files, &idxs);
     let s: Value = serde_json::from_str(&summary(&d, r#"{"total": 1}"#)).unwrap();
     let g = golden();
-    let mut shared = s.clone();
-    shared.as_object_mut().unwrap().remove("ms2_links");
-    shared.as_object_mut().unwrap().remove("ms2_rep");
-    shared.as_object_mut().unwrap().remove("ms2_text");
-    same_shape(&shared, &g["summary"], "summary");
+    // keys of the Rust Dig only: the parent check and the matches by chance (`lr/chance.rs`)
+    assert_eq!(s["parent_ok"], true);
+    assert!(s["chance"].as_array().is_some_and(|c| !c.is_empty()));
+    let rust_only = [
+        "ms2_links",
+        "ms2_rep",
+        "ms2_text",
+        "parent_ok",
+        "chance",
+        "unexpected_left",
+    ];
+    same_shape(&without(&s, &rust_only), &g["summary"], "summary");
     for row in s["rows"].as_array().unwrap() {
-        let mut shared = row.clone();
-        for k in ["ms2", "tp_name", "status", "net_change", "modification"] {
-            shared.as_object_mut().unwrap().remove(k);
-        }
-        same_shape(&shared, &g["row"], "row");
+        let keys = ["ms2", "tp_name", "status", "net_change", "modification"];
+        same_shape(&without(row, &keys), &g["row"], "row");
         for k in row["kinetics"].as_array().unwrap() {
             same_shape(k, &g["kinetics"], "kinetics");
         }
@@ -103,32 +116,40 @@ fn contract_and_rows_of_python() {
         let id = r["id"].as_i64().unwrap();
         let det: Value =
             serde_json::from_str(&detail(&d, id, |k| Ok(open(&idxs[k]))).unwrap()).unwrap();
-        let mut shared = det.clone();
-        shared.as_object_mut().unwrap().remove("specificity");
-        shared.as_object_mut().unwrap().remove("ms2_links");
-        shared.as_object_mut().unwrap().remove("ms2_rep");
-        shared.as_object_mut().unwrap().remove("ms2_text");
-        same_shape(&shared, &g["detail"], "detail");
-        assert!(
-            det["criteria"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|c| c["status"] == "pass"),
-            "{id} without proofs"
-        );
-        for t in det["traces"].as_array().unwrap() {
-            same_shape(t, &g["trace"], "trace");
-        }
-        let sp = &det["specificity"];
-        assert_eq!(sp["neighbours"].as_array().map(Vec::len), Some(4), "{id}");
-        assert_eq!(sp["decoys"].as_array().map(Vec::len), Some(2), "{id}");
-        assert!(det["criteria"]
+        detail_like_python(&det, &g, id);
+    }
+}
+
+/// The detail of a strong or possible row: the shape of the Python, its proofs and its specificity.
+fn detail_like_python(det: &Value, g: &Value, id: i64) {
+    let keys = [
+        "specificity",
+        "ms2_links",
+        "ms2_rep",
+        "ms2_text",
+        "candidates",
+    ];
+    same_shape(&without(det, &keys), &g["detail"], "detail");
+    own_candidate_first(det);
+    assert!(
+        det["criteria"]
             .as_array()
             .unwrap()
             .iter()
-            .any(|c| c["name"] == "persistent"));
+            .any(|c| c["status"] == "pass"),
+        "{id} without proofs"
+    );
+    for t in det["traces"].as_array().unwrap() {
+        same_shape(t, &g["trace"], "trace");
     }
+    let sp = &det["specificity"];
+    assert_eq!(sp["neighbours"].as_array().map(Vec::len), Some(4), "{id}");
+    assert_eq!(sp["decoys"].as_array().map(Vec::len), Some(2), "{id}");
+    assert!(det["criteria"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|c| c["name"] == "persistent"));
 }
 
 #[test]
@@ -285,4 +306,25 @@ fn mrm_files_are_listed_by_the_plan_and_keep_it_in_rust() {
     assert_eq!(plan["rust"], true);
     assert_eq!(plan["mrm"][0], "lr_MRM.mzML");
     assert_eq!(plan["lc"].as_array().unwrap().len(), idxs.len());
+}
+
+/// The candidates of the trace: the row's own first, with its neutral and [M+H]+ formula and the calculated m/z of the row.
+fn own_candidate_first(det: &Value) {
+    let c = det["candidates"].as_array().unwrap();
+    assert!(!c.is_empty() && c[0]["own"] == true, "{c:?}");
+    assert_eq!(c[0]["formula"], det["formula"]);
+    assert_eq!(c[0]["mz"], det["mz"]);
+    assert_eq!(c.len(), 1 + det["alternatives"].as_array().unwrap().len());
+    if let (Some(f), Some(i)) = (c[0]["formula"].as_str(), c[0]["ion_formula"].as_str()) {
+        let h = |t: &str| {
+            let k = t.find('H').unwrap() + 1;
+            t[k..]
+                .chars()
+                .take_while(char::is_ascii_digit)
+                .collect::<String>()
+                .parse::<u32>()
+                .unwrap_or(1)
+        };
+        assert_eq!(h(i), h(f) + 1, "{f} -> {i}");
+    }
 }

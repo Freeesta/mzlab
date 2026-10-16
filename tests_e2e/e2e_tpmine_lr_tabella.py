@@ -1,7 +1,7 @@
 """Tabui, low resolution: the table of the Dig results is a TPTAB (TP_Mine/js/20_tpmine.js, 42_tp_table.js, 44_tp_riga.js). Synthetic Full Scan series (TP_Mine/tests/lr_synth.py)
 opened in the Data tab and dug from Tabui: `#tp-t` is a <table> with at most 7 default columns, the parent stays first after sorting by m/z, a chip removes and restores rows
 («N of M rows» changes), a row opens under itself (XIC inside `tr.tpt-exp`), opening another closes the first, arrows move between the tabs, Esc returns the focus, a click on
-a gem opens its row, no `.confetti` with reduced motion, no pyodide* request, `MZLAB_LR_MISS` empty, axe clean. Builds the site and static/wasm-feat (SKIP without cargo,
+a gem opens its row, no `.confetti` with reduced motion, the summary card in three blocks (Parent, Output, Download) with a help for every item, no pyodide* request, `MZLAB_LR_MISS` empty, axe clean. Builds the site and static/wasm-feat (SKIP without cargo,
 wasm-bindgen or numpy); MZLAB_PIPE_SITE=<built site with static/wasm-feat> reuses one; AXE_JS=<axe.min.js>; shots: MZLAB_PIPE_SHOTS=<folder>. Run from the repo root."""
 import os, shutil, subprocess, sys, tempfile, urllib.request
 from pathlib import Path
@@ -103,6 +103,12 @@ try:
             assert " of " in base and "rows" in base, base
         step("a chip removes and restores rows; «N of M rows» changes", chips)
 
+        def weak_note():
+            t = pg.inner_text('.hero .hc[data-k="weak"]')
+            assert "weak evidence" in t, t
+            assert pg.locator("#tp-nopar").count() == 0, "the right parent: no «Parent not found»"
+        step("the count of the weak band is always in the summary card", weak_note)
+
         def expand():
             pg.click('#tp-t tr.clk[data-id="0"]')
             pg.wait_for_selector("#tp-t tr.tpt-exp #tp-det .tpr-ov svg", timeout=60000)
@@ -139,6 +145,31 @@ try:
             assert pg.locator(".confetti").count() == 0, "confetti with prefers-reduced-motion"
             assert pg.evaluate("document.querySelectorAll('#tp-cnt .hc').length") >= 1
         step("reduced motion: no confetti; the counters are words", calm)
+
+        def summary():
+            t = pg.inner_text(".hero")
+            assert not any(w in t for w in ("Vein found", "nuggets", "Poor vein", "\u26cf")), t[:300]
+            assert pg.locator(".hero svg").count() == 0, "no pickaxe icon"
+            assert [h.strip() for h in pg.locator(".hero h2").all_inner_texts()] == ["Parent", "Output", "Download"]
+            par = pg.inner_text(".hero-b:nth-child(1)")
+            assert "Neutral formula" in par and "[M+H]+" in par and "m/z" in par, par
+            assert pg.locator(".hero-b:nth-child(3) [role=group] button").all_inner_texts() == ["Excel (.xlsx)", "CSV", "JSON", "Copy summary"]
+            bare = pg.evaluate("[...document.querySelectorAll('.hero .hc:not(.hn), .hero button')].filter(e => !e.hasAttribute('data-tt')).map(e => e.textContent)")
+            assert not bare, ("every item and button has its help", bare)
+            pg.locator('.hero .hc[data-k="formula"]').focus(); lib.attendi(pg, "!document.getElementById('tph-pop').hidden && document.getElementById('tph-pop').textContent.includes('Neutral formula')")
+            if pg.locator("#tp-weak-s").count():
+                base = pg.evaluate(COUNT); pg.click("#tp-weak-s")
+                lib.attendi(pg, "document.getElementById('tp-weak-s').getAttribute('aria-pressed') === 'true'")
+                assert pg.inner_text("#tp-weak-s") == "hide" and "shown" in pg.inner_text("#tp-weak-w") and pg.evaluate(COUNT) != base, pg.evaluate(COUNT)
+                assert pg.get_attribute('#tp-view .tpt-chip[data-chip="weak"]', "aria-pressed") == "true", "the card and the chip of the table say the same"
+                pg.click("#tp-weak-s"); lib.attendi(pg, "document.getElementById('tp-weak-s').getAttribute('aria-pressed') === 'false'")
+                assert pg.evaluate(COUNT) == base
+            else: print("  SKIP no row with weak evidence in this series")
+            pg.set_viewport_size({"width": 360, "height": 800}); lib.attendi(pg, "innerWidth === 360")
+            o = pg.evaluate("(() => { const h = document.querySelector('.hero'); return [h.scrollWidth, h.clientWidth, h.getBoundingClientRect().right, innerWidth]; })()")
+            pg.set_viewport_size({"width": 1280, "height": 1000}); lib.attendi(pg, "innerWidth === 1280")
+            assert o[0] <= o[1] + 1 and o[2] <= o[3] + 1, ("the card fits 360 px", o)
+        step("summary card: Parent, Output, Download; no title of outcome, every item with its help, the weak band in one click", summary)
 
         def more():
             n = pg.evaluate("[document.querySelectorAll('details[name=tp-more]').length, document.querySelectorAll('details[name=tp-more][open]').length, document.querySelectorAll('#tp-x-xlsx, #tp-x-csv, #tp-x-json, #tp-x-txt').length, document.querySelectorAll('#tp-view .tpt-xm').length]")

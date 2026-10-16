@@ -138,8 +138,8 @@ export function createDesktopPool(opts = {}) {
     async checkStructures(calls) { return json("feat/import", { kind: "check_structure", calls }); },
     /** `grafo/1` of a SMILES (formula, groups, cleavages): the text of the native route `feat/grafo` @param {string} smiles */
     async analyse(smiles) { return (await call("feat/grafo", { kind: "analyse", smiles })).text(); },
-    /** `posiz/1` of a product (the classes of positions its MS2 supports): the text of the native route `feat/grafo` @param {string} smiles @param {string} transform @param {string} peaks JSON `[[mz, int], ..]` @param {number} tol @param {boolean} ppm @param {boolean} positive */
-    async positions(smiles, transform, peaks, tol, ppm, positive) { return (await call("feat/grafo", { kind: "positions", smiles, transform, peaks, tol, ppm, positive })).text(); },
+    /** `posiz/1` of a product (the classes of positions its MS2 supports): the text of the native route `feat/grafo` @param {string} smiles @param {string} transform @param {string} peaks JSON `[[mz, int], ..]` @param {number} tol @param {boolean} ppm @param {boolean} positive @param {string} [reatt] the `reatt/1` text of the parent («» = none): the report also carries `prior` */
+    async positions(smiles, transform, peaks, tol, ppm, positive, reatt) { return (await call("feat/grafo", { kind: "positions", smiles, transform, peaks, tol, ppm, positive, reatt: reatt || "" })).text(); },
     /** `reatt/1` of a SMILES (reactivity of the parent): the text of the native route `feat/grafo` @param {string} smiles @param {string} opts JSON `{"solvent": "water"|"none", "conformers": 1-16}` or "" */
     async reactivity(smiles, opts) { return (await call("feat/grafo", { kind: "reactivity", smiles, opts })).text(); },
     /** an operation of campioni/2 (proponi, valida, per_tp, da_legacy, canonico, digest) of the native engine: the text it answers @param {string} op @param {string} input */

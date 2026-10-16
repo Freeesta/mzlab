@@ -164,8 +164,7 @@ pub fn detail<R: ReadAt>(
         .num(round(e.mz_x, 3));
     o.raw(",\"mz_observed\":")
         .opt(e.observed.map(|v| round(v, 3)));
-    o.raw(",\"delta\":").str(&e.delta).raw(",\"alternatives\":");
-    strs(&mut o, &e.alternatives);
+    candidates_json(&mut o, e);
     o.raw(",\"score\":")
         .opt(e.score)
         .raw(",\"label\":")
@@ -203,4 +202,125 @@ pub fn detail<R: ReadAt>(
     spec::specificity_json(&mut o, d, e, &mut open)?;
     o.raw("}");
     Ok(o.0)
+}
+
+/// `delta`, `alternatives` and `candidates`: the identities that fit the trace of the row, the row's own first and then by the distance from the observed centroid. At unit
+/// resolution several neutral formulas share the nominal m/z: each one with its [M+H]+ formula, the calculated m/z and `dmz` = observed centroid
+/// minus the offset minus the calculated m/z (Da; `null` without a peak). The page lists them; it does not choose.
+struct Cand {
+    name: String,
+    formula: String,
+    ion: Option<String>,
+    mz: f64,
+    dmz: Option<f64>,
+    own: bool,
+}
+
+fn candidates_json(o: &mut Out, e: &Entry) {
+    o.raw(",\"delta\":").str(&e.delta).raw(",\"alternatives\":");
+    strs(o, &e.alternatives);
+    let drift = e.observed.map(|v| v - e.mz_x);
+    let mut list: Vec<(String, String, bool)> = vec![(e.name.clone(), e.formula.clone(), true)];
+    for a in &e.alternatives {
+        let (l, f) = alternative(a, &e.formula);
+        list.push((l, f, false));
+    }
+    let rows: Vec<Cand> = list
+        .into_iter()
+        .map(|(l, f, own)| {
+            let ion = crate::legacy::series::ion_of(&f, "[M+H]+");
+            let mz = if own || f == e.formula {
+                e.mz
+            } else {
+                ion.as_ref().map_or(f64::NAN, |x| x.1)
+            };
+            let dmz = drift.filter(|_| mz.is_finite()).map(|d| d + e.mz - mz);
+            Cand {
+                name: l,
+                formula: f,
+                ion: ion.map(|x| x.0),
+                mz,
+                dmz,
+                own,
+            }
+        })
+        .collect();
+    let mut ord: Vec<usize> = (1..rows.len()).collect();
+    mzlab_core::sortc::by(&mut ord, |&a, &b| {
+        let k = |i: usize| rows[i].dmz.map_or(f64::INFINITY, f64::abs);
+        k(a).total_cmp(&k(b))
+    });
+    o.raw(",\"candidates\":[");
+    for (n, i) in std::iter::once(0).chain(ord).enumerate() {
+        let Cand {
+            name: l,
+            formula: f,
+            ion,
+            mz,
+            dmz,
+            own,
+        } = &rows[i];
+        o.raw(if n > 0 { ",{\"name\":" } else { "{\"name\":" })
+            .str(l)
+            .raw(",\"formula\":")
+            .str(f)
+            .raw(",\"ion_formula\":");
+        match ion {
+            Some(x) => o.str(x),
+            None => o.raw("null"),
+        };
+        o.raw(",\"mz\":")
+            .opt(Some(*mz).filter(|v| v.is_finite()).map(|v| round(v, 4)))
+            .raw(",\"dmz\":")
+            .opt(dmz.map(|v| round(v, 3)))
+            .raw(",\"own\":")
+            .raw(if *own { "true" } else { "false" })
+            .raw("}");
+    }
+    o.raw("]");
+}
+
+/// One alternative of a row as (label, neutral formula): «label» (the formula of the row), «FORMULA (label)» (another formula of the same
+/// nominal m/z, `hypo::merge`) or «label (FORMULA, m/z 123.4567)» (an alternative of the parent, `rows::parent_alternatives`).
+fn alternative(a: &str, own: &str) -> (String, String) {
+    let is_formula = |t: &str| {
+        t.chars().next().is_some_and(|c| c.is_ascii_uppercase())
+            && t.chars().all(|c| c.is_ascii_alphanumeric())
+    };
+    if let Some((head, rest)) = a.split_once(" (") {
+        if let Some(inner) = rest.strip_suffix(')') {
+            if let Some((f, _)) = inner.split_once(", m/z ") {
+                return (head.to_string(), f.to_string());
+            }
+            if is_formula(head) {
+                return (inner.to_string(), head.to_string());
+            }
+        }
+    }
+    (a.to_string(), own.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::alternative;
+
+    #[test]
+    fn the_three_shapes_of_an_alternative() {
+        assert_eq!(
+            alternative("+O on the ring", "C9H8O"),
+            ("+O on the ring".into(), "C9H8O".into())
+        );
+        assert_eq!(
+            alternative("C10H12O (+CH4)", "C9H8O2"),
+            ("+CH4".into(), "C10H12O".into())
+        );
+        assert_eq!(
+            alternative("-CO (C8H8, m/z 105.0699)", "C9H8O"),
+            ("-CO".into(), "C8H8".into())
+        );
+        assert_eq!(
+            alternative("hydroxylation (ring)", "C9H8O2"),
+            ("hydroxylation (ring)".into(), "C9H8O2".into())
+        );
+    }
 }

@@ -2,7 +2,7 @@
 Without «qqq.admin» the package of Tabui is not even loaded (no TPPOS, no button). With it the panel shows, for a case built here (4-methyldiphenylamine + O, the MS2 has the fragment
 with the oxygen on ring A and the rest of the molecule), the classes the spectrum tells apart, the table of the data of the spectrum (TDATI), the proposal 3a, the box of the
 oxidation type and the suggested checks; a spectrum with no useful peak gives 3b; a row whose change is not covered, or without SMILES, has no button. In the LR demo the detail of the
-hydroxylation gets the button when it has a MS2. Run from the repo root: python3 tests_e2e/e2e_posizioni.py   (env: PYODIDE_DIR)"""
+hydroxylation gets the button when it has a MS2. The column «Prev. f(−)» waits for the `reatt/1` of the parent, then shows mean and rank of each class without changing the rows. Run from the repo root: python3 tests_e2e/e2e_posizioni.py   (env: PYODIDE_DIR)"""
 import json, os, shutil, subprocess, sys, time, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -90,6 +90,27 @@ try:
             assert pg.evaluate("[...document.querySelectorAll('#tpp-host a')].map(a => a.href)") == ["https://doi.org/10.1021/ac9911692", "https://doi.org/10.1007/s11419-018-0410-4"]      # oxidation type and MS3 (no C-OH / N-oxide ambiguity here: no H/D)
             pg.screenshot(path=str(HERE / "shots" / "posizioni.png"), full_page=False)
         step("the classes, their atoms, the proposal 3a, the oxidation type and the checks", panel)
+        def prev():
+            """the column «Prev. f(−)»: «computing…» until the reactivity of the parent arrives (event «tp-reatt», as TPREATT sends it), then mean f(−) and rank of each class;
+            the rows, their order, their statuses and the proposal do not change"""
+            q = "[...document.querySelectorAll('#tpp-host .tpp tbody tr')].map(r => [...r.children].map(c => c.innerText.replace(/\\s+/g, ' ').trim()))"
+            head = pg.evaluate("[...document.querySelectorAll('#tpp-host .tpp thead th')].map(t => t.innerText)")
+            assert head[-1] == "Prev. f(−) (mean, rank)", head
+            note = pg.inner_text("#tpp-host .tpp-prev"); assert "Prediction (GFN2-xTB, implicit water), not evidence; does not reorder or exclude classes" in note, note
+            before = pg.evaluate(q); prop = pg.inner_text("#tpp-host .tpp-prop")
+            assert all(r[6] == "computing…" for r in before if r[0] != "unexplained"), before
+            f = [0.02, 0.01, 0.06, 0.05, 0.03, 0.02, 0.01, 0.01, 0.04, 0.03, 0.12, 0.03, 0.04, 0.07]     # 14 heavy atoms of the parent, values written by hand
+            r = {"format": "reatt", "version": 1, "method": "GFN2-xTB", "solvent": "water", "smiles": DPA, "atoms": [{"i": i, "heavy_index": i, "f_minus": v} for i, v in enumerate(f)]}
+            pg.evaluate("r => window.dispatchEvent(new CustomEvent('tp-reatt', { detail: { smiles: r.smiles, reatt: r } }))", r)
+            pg.wait_for_function("![...document.querySelectorAll('#tpp-host .tpp td.pv')].some(td => td.textContent === 'computing…')", timeout=30000)
+            after = pg.evaluate(q)
+            assert [x[:6] for x in after] == [x[:6] for x in before], "the prior changed the rows"
+            assert pg.inner_text("#tpp-host .tpp-prop") == prop
+            sup = [x for x in after if "✓" in x[3]][0]; assert sup[6] == "0.055 · ranks 2–3", sup     # C3 C4 C13 C14: mean of 0.06 0.05 0.04 0.07
+            assert [x[6] for x in after if x[1] == "C8, C9, C10, C11, C12"] == ["0.046 · ranks 1–5"], after       # ring B: meta 0.08 first, ortho 0.02 last
+            pg.evaluate("window.TPPOS.setReatt(" + json.dumps(DPA) + ", { state: 'failed' })")
+            assert all(x[6] == "failed" for x in pg.evaluate(q) if x[0] != "unexplained") and "failed" in pg.inner_text("#tpp-host .tpp-prev")
+        step("the column «Prev. f(−)»: computing…, then values and ranks; rows and proposal unchanged", prev)
         def chart():
             assert pg.evaluate("!!document.querySelector('#tpp-host .tpp-ch svg[role=img][aria-label]')")
             assert pg.evaluate("document.querySelectorAll('#tpp-host .tpp-ch svg .pk').length") == 2
@@ -141,7 +162,7 @@ try:
             pg.fill("#tp-smi", "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('241.0641')", timeout=60000)
             pg.click("#tp-go"); pg.wait_for_selector("#tp-t", timeout=300000)
             pg.click("#tp-t tr.clk:has-text('hydroxylation') >> nth=0"); pg.wait_for_selector("#tp-t tr.tpt-exp #tp-det", timeout=60000)
-            pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det .lr-idx", timeout=60000)
+            pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det .tpr-cand", timeout=60000); pg.click("#tp-det details.tpr-det > summary"); pg.wait_for_selector("#tp-det .lr-idx", timeout=60000)
             has_ms2 = pg.evaluate("!!document.querySelector('#tp-ms2-fr table')")
             btn = pg.evaluate("!!document.querySelector('#tp-det .tpp-btn')")
             assert btn == has_ms2, f"button {btn} but MS2 {has_ms2}"

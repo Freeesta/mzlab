@@ -30,7 +30,8 @@ fn open(idx: &[u8]) -> Index<Vec<u8>> {
     Index::open(idx.to_vec(), idx.len() as u64).unwrap()
 }
 
-fn main() {
+/// The arguments without the flags, `--diag` and the N of `--ms2 N`.
+fn args() -> (Vec<String>, bool, usize) {
     let mut a: Vec<String> = std::env::args().skip(1).collect();
     let diag = a
         .iter()
@@ -45,6 +46,11 @@ fn main() {
         }
         None => 0,
     };
+    (a, diag, ms2)
+}
+
+fn main() {
+    let (a, diag, ms2) = args();
     let (out, files, parent, rules) = (
         Path::new(&a[0]),
         std::fs::read_to_string(&a[1]).unwrap(),
@@ -89,7 +95,16 @@ fn main() {
     let refs: Vec<_> = feats.iter().collect();
     let h = run::hypotheses(&mut ix, &refs, &rules, "", formula, None, &r).unwrap();
     let table = run::align(&feats, &origin, &r, |k| Ok(open(&idxs[k]))).unwrap();
-    let mut d = lr::dig(&files, &parent, "{}", &table, &h.registry.to_json()).unwrap();
+    let settings = std::env::var("FINDER_LR_SETTINGS").unwrap_or_else(|_| "{}".into());
+    let mut d = lr::dig(
+        &files,
+        &parent,
+        &settings,
+        &table,
+        &h.registry.to_json(),
+        &mut |k| Ok(open(&idxs[k])),
+    )
+    .unwrap();
     if diag {
         diag::print(&d, &mut |k| Ok(open(&idxs[k])));
     }

@@ -4,7 +4,7 @@ Tabui: every experiment is in the card with its state or its reason; a menu move
 correction survives a reload and a new Dig, «none» and «Reset matches» work, the Excel export has the sheet «MS2 matches», the card works from the keyboard and has no axe
 violation, no pyodide* request, `MZLAB_LR_MISS` empty. Builds the site and static/wasm-feat (SKIP without cargo, wasm-bindgen or numpy); MZLAB_PIPE_SITE=<built site with
 static/wasm-feat> reuses one; AXE_JS=<axe.min.js> turns on the axe step. Shots: MZLAB_PIPE_SHOTS=<folder> (light and dark, 1280 and 390 px). Run from the repo root."""
-import json, os, shutil, subprocess, sys, tempfile, time, zipfile
+import json, os, re, shutil, subprocess, sys, tempfile, time, zipfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
@@ -166,10 +166,10 @@ try:
         step("the card does not overflow at 360 px in either view (wide tables scroll inside their box)", narrow)
 
         def similarity():
-            pg.click('#tp-t tr.clk[data-id="7"]'); pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det .sim3", timeout=60000)
+            pg.click('#tp-t tr.clk[data-id="7"]'); pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det details.tpr-det", state="attached", timeout=60000); pg.evaluate("document.querySelector('#tp-det details.tpr-det').open = true"); pg.wait_for_selector("#tp-det .sim3", timeout=60000)      # the extended detail is in «Details»
             assert pg.evaluate("document.querySelectorAll('#tp-det .sim3 .bar3').length") == 6        # three components, cosine and entropy
-            assert "modified cosine" in pg.inner_text("#tp-det .words"), pg.inner_text("#tp-det .words")
-            pg.click('#tp-t tr.clk[data-id="0"]'); pg.wait_for_selector("#tp-det .words", timeout=60000)
+            pk = (pg.get_attribute('#tp-det .tpr-pk[data-tt="ft.pf.ms2"]', 'data-tt-text') or ''); assert "modified cosine" in pk, pk          # the similarity in words: the help of the MS2 proof
+            pg.click('#tp-t tr.clk[data-id="0"]'); pg.wait_for_selector("#tp-det .tpr-cand", timeout=60000)
             assert pg.locator("#tp-det .sim3").count() == 0, "the parent is not compared with itself"
         step("the detail of a row with MS2 shows the similarity to the parent's MS2 (the parent has none)", similarity)
 
@@ -203,7 +203,7 @@ try:
         step("«Change» in the view «By row» opens «By file» on the menu of the best match", change_from_row)
 
         def detail():
-            pg.click('#tp-t tr.clk[data-id="10007"]'); pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector(".tp-ms2-l li", timeout=60000)
+            pg.click('#tp-t tr.clk[data-id="10007"]'); pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det details.tpr-det", state="attached", timeout=60000); pg.evaluate("document.querySelector('#tp-det details.tpr-det').open = true"); pg.wait_for_selector(".tp-ms2-l li", timeout=60000)
             assert pg.locator(".tp-ms2-l li").count() == 3, pg.inner_text(".tp-ms2-l")
             assert pg.locator("#tp-ms2-ce option").count() == 3
             pg.select_option("#tp-ms2-ce", "40")
@@ -211,33 +211,36 @@ try:
             assert "197.06" in fr, fr                                                        # the 60 Da loss of the CE 40 spectrum
             pg.locator(".tp-ms2-ch").first.click()
             assert pg.evaluate("document.activeElement && document.activeElement.dataset.ep") is not None, "«Change» goes to the menu"
-            assert "from lr_MS2-t30" in pg.inner_text(".words"), pg.inner_text(".words")
+            pk = (pg.get_attribute('#tp-det .tpr-pk[data-tt="ft.pf.ms2"]', 'data-tt-text') or ''); assert "from lr_MS2-t30" in pk, pk
         step("the detail of the row shows its matches, a spectrum per CE, «Change» goes to the menu", detail)
 
         def rep_chart():                                   # the representative scan: chart with the precursor, the sentence, the copy button, the filter
             if not pg.locator('#tp-det [data-tab="overview"]').is_visible(): pg.click('#tp-t tr.clk[data-id="10007"]')      # the row of the previous step may still be open (a second click closes it)
-            pg.click('#tp-det [data-tab="overview"]'); pg.wait_for_selector("#tpr-ms2-text", timeout=60000)
-            txt = pg.inner_text("#tpr-ms2-text")
-            assert txt.startswith("Fragment ions found") or txt.startswith("No fragment ions found"), txt
-            if txt.startswith("Fragment ions found"): assert "loss \u2212\u0394Pm/z = \u2212" in txt, txt
+            pg.click('#tp-det [data-tab="overview"]'); pg.wait_for_selector("#tp-det .st-prec", state="attached", timeout=60000)
+            txt = pg.get_attribute("#tp-det .tpr-ch:has(.st-prec) svg", "data-tt-text") or ""      # the sentence of the MS2 is the help of its chart
+            assert "Fragment ions found" in txt or "No fragment ions found" in txt, txt
+            assert "Representative MS2" in txt, txt
+            if "Fragment ions found" in txt: assert "loss \u2212\u0394Pm/z = \u2212" in txt, txt
             lab = pg.evaluate("[...document.querySelectorAll('#tp-det svg[aria-label]')].map(s => s.getAttribute('aria-label'))")
             assert any("precursor m/z" in l and "RT" in l for l in lab), lab                  # RT and precursor m/z in the title
             assert pg.locator("#tp-det .st-prec").count() == 1, "the precursor is marked in the chart"
-            assert pg.locator("#tp-det .tdbtn").count() >= 2, "the charts have their table of the data (button, or the T key on the focused chart)"
-            assert "Representative MS2" in pg.inner_text("#tp-det .tpr-line"), pg.inner_text("#tp-det .tpr-line")
-            assert pg.evaluate("getComputedStyle(document.getElementById('tpr-ms2-text')).userSelect") != "none"
-            pg.focus("#tpr-ms2-copy"); pg.keyboard.press("Enter")
-            pg.wait_for_function("/Copied|Selected/.test(document.querySelector('#tpr-ms2-text').parentElement.textContent)", timeout=10000)
-            try: assert pg.evaluate("navigator.clipboard.readText()") == txt
-            except Exception as e: assert "Selected" in pg.inner_text("#tpr-ms2-text + button + span"), e        # no clipboard permission here: the text is selected
-        step("the representative MS2: chart with the precursor, the sentence «Fragment ions found», «Copy text», Δm/z and tolerance in words", rep_chart)
+            assert pg.locator("#tp-det .tdbtn").count() == 0 and pg.locator("#tp-det .tpr-line").count() == 0 and "Copy text" not in pg.inner_text("#tp-det"), "no Data button, no sentence, no «Copy text»"
+            assert pg.locator("#tp-det .tpr-go").all_inner_texts() == ["XIC in Data", "MS2 in Data"]
+            pg.focus("#tp-det .tpr-ch:has(.st-prec) svg"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]"); pg.keyboard.press("Escape")   # the table of the data, from the T key
+            prec = float(re.search(r"precursor m/z ([\d.]+)", txt).group(1))
+            pg.click("#tp-det .tpr-go >> nth=1")                                          # «MS2 in Data»: the MS2 tab with the spectrum of the precursor, no other step
+            try: pg.wait_for_function(("E.tab === 'ms2' && tabPanels('ms2').some(q => q.type === 'spec' && Math.abs((q.prec || 0) - %r) < 0.6 && q.el.offsetParent)"      # a file of experiments is the MS2 tab,
+                                       " || E.tab === 'infusion' && E.panels.some(q => q.type === 'spec' && q.tab === 'infusion' && q.el.offsetParent && ((E.files[q.k] || {}).ms2_exps || []).some(x => Math.abs(x.prec - %r) < 0.6))") % (prec, prec), timeout=60000)   # or an infusion
+            except Exception: raise AssertionError((prec, pg.evaluate("[E.tab, E.panels.map(p => [p.type, p.tab, p.prec, p.k, !!(p.el && p.el.offsetParent)]), E.files.map(f => [f.kind, (f.ms2_exps || []).map(x => x.prec)])]")))
+            finally: pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-det .tpr-go", timeout=60000)
+        step("the representative MS2: chart with the precursor, its sentence and Δm/z in the help of the chart, «XIC in Data» and «MS2 in Data»", rep_chart)
 
         def no_ms2():
             ids = pg.evaluate("[...document.querySelectorAll('#tp-t tr.clk')].filter(r => r.lastElementChild.textContent.trim() === 'no MS2').map(r => r.dataset.id)")
             assert ids, "a row without MS2"
             pg.click(f'#tp-t tr.clk[data-id="{ids[0]}"]'); pg.click('#tp-det [data-tab="overview"]'); pg.wait_for_selector("#tp-det .tpr-none", timeout=60000)
             assert "No MS\u00b2 in the feature peak" in pg.inner_text("#tp-det"), pg.inner_text("#tp-det")[:400]
-            assert pg.locator("#tpr-ms2-text").count() == 0 and pg.locator("#tp-det .st-prec").count() == 0
+            assert pg.locator("#tp-det .st-prec").count() == 0
         step("a row with no MS2 in its peak: no chart, «No MS\u00b2 in the feature peak»", no_ms2)
 
         def filter_ms2():

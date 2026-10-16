@@ -132,6 +132,13 @@ pub fn parent(parent_json: &str) -> Res<Parent> {
     })
 }
 
+/// The formula and calculated m/z of the ion of `adduct` from a neutral formula written as text; `None` when either cannot be read.
+pub fn ion_of(neutral: &str, adduct: &str) -> Option<(String, f64)> {
+    let n = parse_formula(neutral).ok().filter(|f| !f.is_empty())?;
+    let ion = adduct_ion(&n, adduct).ok()?;
+    Some((fmt(&ion), ion_mz(mass(&n), adduct)?))
+}
+
 /// Formula of the ion of `adduct` (`[M+H]+`, `[M+NH4]+`, `[M-H]-`, `[M+HCOO]-`...): the groups after `+` are added, the ones after `-` taken away.
 fn adduct_ion(neutral: &Formula, adduct: &str) -> Res<Formula> {
     let bad = || format!("unknown adduct {adduct}");

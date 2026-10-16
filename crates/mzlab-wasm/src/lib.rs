@@ -16,6 +16,7 @@ mod scans;
 mod cache;
 mod centroidi; mod panic; mod campioni;
 pub mod esterno;
+mod contato;
 mod nativi;
 mod nativi_motore;
 

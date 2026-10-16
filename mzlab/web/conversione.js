@@ -39,39 +39,128 @@ const CONV = {
   async downloadAll() { for (const n of new Set([...this.files.keys(), ...this.native()])) { await this.download(n); if (!window.MZLAB_DESKTOP) await new Promise(r => setTimeout(r, 400)); } },
 };
 
-// the files being converted (the samples of a SCIEX .wiff), as rows of the list of the files (index.html renderFiles) from the moment their .wiff and .wiff.scan are paired
-// until their index is ready: { name, state, pc }. state: "open" (pair found, reading its .wiff), "wait" (queued), "run" (converting, pc), "conv" (converted, waits for the
-// index), "index" (indexing, pc). A change of state draws the list again; a new percentage only moves the bar of its row.
+// the files being read, converted and indexed (the samples of a maker's file, the files a module converts), as rows of the list of the files (index.html renderFiles) from the moment
+// they are known until the user closes them (the running ones in the table, the ended ones in a list under it): { name, state, pc, sub, t0, seen, ... }. Running states: "open" (pair found, reading its .wiff), "wait" (queued), "run" (converting, pc),
+// "conv" (converted, waits for the index), "index" / "nread" / "nopen" / "nscan" / "nchrom" (indexing, pc; sub = {done, total} scans). Final states, which stay: "done" (scans, secs),
+// "fail" (msg, diag: DIAG with the trace of the loading, «Details» and «Copy diagnosis»), "cancel". A change of state draws the list again; a new percentage only moves the bar of its
+// row; while a row runs, a clock of 1 s writes its time and, after CONV_QUIET ms without news, how long it has been quiet (never a still screen). `onCancel` (set by the loading)
+// shows «Cancel» in the heading.
+const CONV_QUIET = 5000;
+const CONV_FINAL = ["done", "fail", "cancel"];
 const CONVROWS = {
-  /** @type {{ name: string, state: string, pc: number | null }[]} */
+  /** @type {{ name: string, state: string, pc: number | null, sub?: { done: number, total: number } | null, t0?: number, seen?: number, tr?: string[], last?: string, scans?: number, secs?: number, msg?: string, diag?: any, mem?: string }[]} */
   rows: [],
+  /** @type {null | (() => void)} */
+  onCancel: null,
+  timer: /** @type {any} */ (0),
   find(name) { return this.rows.find(r => r.name === name); },
-  add(name, state) { if (!this.find(name)) { this.rows.push({ name, state, pc: null }); this.paint(); } },
-  set(name, state, pc) {
-    const r = this.find(name); if (!r) return;
-    const was = r.state, was_pc = r.pc;
-    r.state = state; r.pc = pc == null ? null : pc;
-    if (was !== state) this.paint(); else if (was_pc !== r.pc) this.fill(r);
+  running() { return this.rows.filter(r => !CONV_FINAL.includes(r.state)); },
+  // a row; `mem` describes the members without their names (".wiff 1.2 MB + .wiff.scan 57.0 MB", for the diagnosis)
+  add(name, state, mem) {
+    const r = this.find(name), now = Date.now();
+    if (r && !CONV_FINAL.includes(r.state)) return;
+    if (r) this.rows.splice(this.rows.indexOf(r), 1);
+    this.rows.push({ name, state, pc: null, sub: null, t0: now, seen: now, tr: [`0.0 s ${state}`], last: "", mem: mem || "" }); this.paint(); this.clock();
+  },
+  set(name, state, pc, sub) {
+    const r = this.find(name); if (!r || CONV_FINAL.includes(r.state)) return;
+    const was = r.state, was_pc = r.pc, was_sub = r.sub ? r.sub.done : -1, now = Date.now();
+    r.state = state; r.pc = pc == null ? null : pc; if (sub !== undefined) r.sub = sub && sub.total ? sub : null;
+    if (was !== state || was_pc !== r.pc || (r.sub ? r.sub.done : -1) !== was_sub) r.seen = now;
+    if (was !== state) { (r.tr = r.tr || []).push(`${((now - (r.t0 || now)) / 1000).toFixed(1)} s ${state}${r.pc == null ? "" : " " + r.pc + "%"}`); this.paint(); } else if (r.seen === now) this.fill(r);
+  },
+  // the last message of the worker, for the diagnosis
+  note(name, text) { const r = this.find(name); if (r) r.last = String(text).slice(0, 200); },
+  // the end of a row: "done" ({ scans }), "fail" ({ msg, diag }) or "cancel"; it stays until «Close» or the next loading
+  finish(name, state, extra) {
+    const r = this.find(name); if (!r || CONV_FINAL.includes(r.state)) return;
+    const now = Date.now(); r.secs = (now - (r.t0 || now)) / 1000; Object.assign(r, extra || {});
+    (r.tr = r.tr || []).push(`${r.secs.toFixed(1)} s ${state}`); r.state = state; r.seen = now;
+    if (r.diag) r.diag.dettagli.trace = this.trace([r]);
+    this.paint();
   },
   drop(name) { const i = this.rows.findIndex(r => r.name === name); if (i >= 0) { this.rows.splice(i, 1); this.paint(); } },
+  // the rows that ended go away (a new loading, «Close»)
+  clearDone() { const n = this.rows.length; this.rows = this.running(); if (n !== this.rows.length) this.paint(); },
   paint() { if (typeof renderFiles === "function") renderFiles(); },
-  label(r) { return I18N.t(convRowKey(r.state), { pc: r.pc == null ? 0 : r.pc }); },
-  cell(name) { const q = document.getElementById("flist"); return q ? [...q.querySelectorAll("[data-cvrow]")].find(x => x.dataset.cvrow === name) : null; },
+  clock() {
+    if (this.timer || typeof setInterval === "undefined") return;
+    this.timer = setInterval(() => {
+      const run = this.running();
+      for (const r of run) this.fill(r);
+      if (!run.length) { clearInterval(this.timer); this.timer = 0; }
+    }, 1000);
+  },
+  label(r) {
+    if (r.state === "done") return I18N.t("conv.row.done", { scans: I18N.fix(r.scans || 0, 0), secs: I18N.fix(r.secs || 0, 1) });
+    if (r.state === "fail") return r.msg || "";
+    const lab = I18N.t(convRowKey(r.state), { pc: r.pc == null ? 0 : r.pc });
+    return r.sub ? `${lab} · ${I18N.t("conv.row.scans", { done: I18N.fix(r.sub.done, 0), total: I18N.fix(r.sub.total, 0) })}` : lab;
+  },
+  // the time of a running row and, when it has been quiet for CONV_QUIET ms, for how long (not for a queued row: it waits for a free builder); "" for an ended row
+  when(r, now = Date.now()) {
+    if (CONV_FINAL.includes(r.state)) return "";
+    const t = convElapsed(now - (r.t0 || now)), q = now - (r.seen || now);
+    return q >= CONV_QUIET && r.state !== "wait" ? `${t} · ${I18N.t("conv.row.quiet", { s: Math.floor(q / 1000) })}` : t;
+  },
+  cell(name) { const q = document.getElementById("flist"); return q ? [...q.querySelectorAll("td[data-cvrow]")].find(x => x.dataset.cvrow === name) : null; },
   fill(r) {
     const c = this.cell(r.name); if (!c) return;
-    const lab = this.label(r), bar = c.querySelector(".prog"), txt = c.querySelector("[data-cvtxt]");
-    if (txt) txt.textContent = lab;
+    const lab = this.label(r), bar = c.querySelector(".prog"), txt = c.querySelector("[data-cvtxt]"), w = c.querySelector("[data-cvwhen]");
+    if (txt && txt.textContent !== lab) txt.textContent = lab;
+    if (w) { const t = this.when(r); if (w.textContent !== t) w.textContent = t; }
     if (bar) { bar.setAttribute("aria-label", r.name + ": " + lab); if (r.pc == null) bar.removeAttribute("aria-valuenow"); else bar.setAttribute("aria-valuenow", String(r.pc)); bar.querySelector("i").style.width = (r.pc || 0) + "%"; }
   },
-  // the rows for the table of the list (a heading row and one row per file), `ncol` = the columns of the table
+  // the trace of the loading for the diagnosis: no file names (the rows are numbered), the members by extension and size, the phases with their times, the last message of the worker
+  trace(rows) {
+    const nav = typeof navigator !== "undefined" ? /** @type {any} */ (navigator) : {}, now = Date.now();
+    const L = [`device: ${nav.deviceMemory || "?"} GB, ${nav.hardwareConcurrency || "?"} cores${typeof window !== "undefined" && window.MZLAB_STIMA ? ", storage " + window.MZLAB_STIMA : ""}`];
+    rows.forEach(r => {
+      const k = this.rows.indexOf(r) + 1;
+      const end = CONV_FINAL.includes(r.state), secs = end ? r.secs || 0 : (now - (r.t0 || now)) / 1000;
+      L.push(`#${k || "?"} ${r.state}${r.pc == null ? "" : " " + r.pc + "%"}${r.sub ? ` scans ${r.sub.done}/${r.sub.total}` : ""}${r.scans ? ` scans ${r.scans}` : ""} · ${secs.toFixed(1)} s${end ? "" : ` · quiet ${((now - (r.seen || now)) / 1000).toFixed(1)} s`}${r.mem ? " · " + r.mem : ""}`);
+      L.push(`  phases: ${(r.tr || []).join(", ")}`);
+      if (r.last) L.push(`  last: ${r.last}`);
+    });
+    return L.join("\n");
+  },
+  // the rows running, for the table of the list (a heading row with the files ended of all, «Cancel» and «Details», then one row per file), `ncol` = the columns of the table
   html(ncol) {
-    if (!this.rows.length) return "";
-    const head = `<tr class="grp"><td colspan="${ncol}">${I18N.t("conv.row.group")} <span class="muted">${I18N.t("load.group.count", { n: this.rows.length })}</span></td></tr>`;
-    return head + this.rows.map(r => {
+    const run = this.running(); if (!run.length) return "";
+    const T = (k, p) => I18N.t(k, p), n = this.rows.length;
+    const act = this.onCancel ? ` <button type="button" class="sec sm" data-cvact="cancel" title="${T("load.cancel.title")}">${T("conv.cancel")}</button>` : "";
+    const det = `<div class="diag" data-cvdiag><button type="button" class="sec sm" data-a="diagdet" aria-expanded="false">${T("diag.details")}</button><div class="diagbox" hidden><pre data-cvtrace></pre><button type="button" class="sec" data-a="diagcopy">${T("diag.copy")}</button></div></div>`;
+    const head = `<tr class="grp"><td colspan="${ncol}">${T("conv.row.group")} <span class="muted">${T("load.prog.count", { done: n - run.length, n })}</span>${act}${det}</td></tr>`;
+    return head + run.map(r => {
       const lab = this.label(r), now = r.pc == null ? "" : ` aria-valuenow="${r.pc}"`;
-      return `<tr aria-busy="true"><td></td><td>${esc(r.name)}</td><td colspan="${ncol - 2}" data-cvrow="${esc(r.name)}"><div class="muted sm" data-cvtxt>${esc(lab)}</div>` +
+      return `<tr aria-busy="true"><td></td><td>${esc(r.name)}</td><td colspan="${ncol - 2}" data-cvrow="${esc(r.name)}"><div class="muted sm"><span data-cvtxt>${esc(lab)}</span> <span class="cp-num" data-cvwhen>${esc(this.when(r))}</span></div>` +
         `<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100"${now} aria-label="${esc(r.name + ": " + lab)}"><i style="width:${r.pc || 0}%"></i></div></td></tr>`;
     }).join("");
+  },
+  // the files whose loading ended, under the table: «Loaded ✓ (scans, time)», the error with «Details» and «Copy diagnosis», «Cancelled»; «Close» once nothing runs
+  summary() {
+    const end = this.rows.filter(r => CONV_FINAL.includes(r.state)); if (!end.length) return "";
+    const T = (k, p) => I18N.t(k, p), run = this.running().length;
+    const li = end.map(r => {
+      const lab = r.state === "cancel" ? T("conv.row.cancel") : this.label(r);
+      return `<li data-cvrow="${esc(r.name)}" data-cvend="${r.state}">${esc(r.name)}: ${r.state === "fail" ? `<span class="fail" data-cvtxt>${esc(lab)}</span>${r.diag && typeof DIAG !== "undefined" ? DIAG.html(r.diag, esc, T) : ""}` : `<span data-cvtxt>${esc(lab)}</span>`}</li>`;
+    }).join("");
+    return `<div class="cvsum" role="group" aria-label="${esc(T(run ? "conv.row.group" : "conv.row.groupDone"))}"><p class="sm"><b>${T(run ? "conv.row.group" : "conv.row.groupDone")}</b> <span class="muted">${T("load.prog.count", { done: end.length, n: this.rows.length })}</span>` +
+      `${run ? "" : ` <button type="button" class="sec sm" data-cvact="close">${T("common.close")}</button>`}</p><ul class="sm">${li}</ul></div>`;
+  },
+  // the buttons of the rows, after renderFiles has drawn them in `el`
+  wire(el) {
+    const T = (k, p) => I18N.t(k, p), v = typeof window !== "undefined" ? window.MZLAB_VERSION : "";
+    const c = el.querySelector("[data-cvact=cancel]"); if (c) c.onclick = () => { c.disabled = true; if (this.onCancel) this.onCancel(); };
+    const x = el.querySelector("[data-cvact=close]"); if (x) x.onclick = () => this.clearDone();
+    const g = el.querySelector("[data-cvdiag]");
+    if (g) {      // the trace of the loading still running: written when it is opened and copied as it is at that moment
+      const d = () => ({ codice: "load.trace", fase: "index", causa: "unknown", dettagli: { format: "?", size: 0, raw: "", head: "", trace: this.trace(this.rows) } });
+      DIAG.cabla(g, d, v, T);
+      const b = g.querySelector("[data-a=diagdet]"), pre = g.querySelector("[data-cvtrace]"), o = b.onclick;
+      b.onclick = e => { pre.textContent = this.trace(this.rows); if (o) o.call(b, e); };
+    }
+    this.rows.forEach(r => { if (r.state !== "fail" || !r.diag) return; const li = [...el.querySelectorAll("[data-cvend=fail]")].find(x => /** @type {HTMLElement} */ (x).dataset.cvrow === r.name), dg = li && li.querySelector(".diag"); if (dg) DIAG.cabla(dg, r.diag, v, T); });
   },
 };
 
@@ -186,7 +275,7 @@ function wiffName(stem, sample, several, taken) {
   return used.has((base + ".mzML").toLowerCase()) ? base + ".wiff.mzML" : base + ".mzML";
 }
 // the text key of the state of a row of the files being converted (CONVROWS)
-function convRowKey(state) { return { open: "conv.row.open", wait: "conv.row.wait", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index", nread: "conv.row.nread", nscan: "conv.row.nscan", nchrom: "conv.row.nchrom" }[state] || "conv.row.wait"; }
+function convRowKey(state) { return { open: "conv.row.open", wait: "conv.row.wait", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index", nread: "conv.row.nread", nopen: "conv.row.nopen", nscan: "conv.row.nscan", nchrom: "conv.row.nchrom", cancel: "conv.row.cancel" }[state] || "conv.row.wait"; }
 // "m:ss" or "h:mm:ss" from milliseconds
 function convElapsed(ms) {
   const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60;
