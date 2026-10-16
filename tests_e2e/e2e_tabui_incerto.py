@@ -48,14 +48,14 @@ try:
               return [(a.pp.x-o1.x)*100/(o2.x-o1.x),(a.pp.y-o1.y)*100/(o2.y-o1.y)]}})()""")
             pg.evaluate("""([x,y])=>{const d=document.querySelector('#kframe').contentDocument;const e=d.elementFromPoint(x,y)||d.body;e.dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:x,clientY:y}))}""", pt)
         def plain():
-            pg.evaluate(f"{KET}.setMolecule('c1ccccc1CCO')"); pg.wait_for_timeout(1000)
+            pg.evaluate(f"{KET}.setMolecule('c1ccccc1CCO')"); pg.wait_for_function(f"{KET}.editor.struct().atoms.size === 9", timeout=10000)
             pg.click("#tp-draw-use"); pg.wait_for_function("document.querySelector('#tp-smi').value.length > 0", timeout=10000)
             pg.wait_for_function("document.querySelector('#tp-prev').innerText.includes('C8H10O')", timeout=30000)
             t = pg.inner_text("#tp-prev"); assert "uncertain" not in t and pg.input_value("#tp-mol") == "C8H10O", (t, pg.input_value("#tp-mol"))
         step("a plain drawing: as before (formula of the SMILES), no note", plain)
         def uncertain():
             pg.click("#tp-draw"); pg.wait_for_function("TPDraw.ready() && !document.querySelector('#tp-draw-use').disabled", timeout=90000)
-            pg.evaluate(f"{KET}.setMolecule('c1ccccc1CCO')"); pg.wait_for_timeout(1000)
+            pg.evaluate(f"{KET}.setMolecule('c1ccccc1CCO')"); pg.wait_for_function(f"{KET}.editor.struct().atoms.size === 9", timeout=10000)
             pg.evaluate(f"{KET}.editor.selection({{atoms:[0,1,2,3,4,5]}})")
             menu_on_atom(0); pg.locator("#ctx div", has_text="Brackets with").first.click()
             pg.wait_for_selector("#askdlg[open]", timeout=5000); pg.fill("#askin", "+O"); pg.click("#askok")
