@@ -21,6 +21,8 @@ pub struct Facts {
     pub analog: Vec<Analog>,
     /// The `.raw` method the file carries (`metodo/1` in the `<run>` of a converted `.raw`) has an LC part (`None`: no `.raw` method).
     pub lc: Option<bool>,
+    /// The unit (`k0`, `ms` or ``) of the ion mobility arrays of the first spectrum, when it has any (`Mzml::mobility_kind`).
+    pub ims: Option<&'static str>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -53,6 +55,35 @@ pub struct Part {
     pub mode: &'static str, // "ms1" | "ms2" | "mrm"
     pub pol: Option<i8>,
     pub tag: String,
+    /// The scan type of the MS2 scans of this part (`PREC`, `NL`, `NG`, `EPI`), `None` for the ordinary ones.
+    pub kind: Option<&'static str>,
+}
+
+/// The scan types in the order they are listed, with the name shown for each.
+const KINDS: [(&str, &str); 4] = [
+    ("PREC", "Precursor ion"),
+    ("NL", "Neutral loss"),
+    ("NG", "Neutral gain"),
+    ("EPI", "EPI"),
+];
+
+fn kind_name(k: &str) -> &'static str {
+    KINDS
+        .iter()
+        .find(|(c, _)| *c == k)
+        .map_or("MS2", |(_, n)| n)
+}
+
+/// The polarities a group of scans is split in: one `None` when the file has a single polarity, else the ones present (positive first).
+fn polarities(sel: &[&Scan], split: bool) -> Vec<Option<i8>> {
+    if !split {
+        return vec![None];
+    }
+    let mut v: Vec<i8> = sel.iter().map(|s| s.polarity).filter(|p| *p == 1 || *p == -1).collect();
+    crate::sortc::slice_ord(&mut v);
+    v.dedup();
+    v.reverse();
+    v.into_iter().map(Some).collect()
 }
 
 /// The experiments of a mixed file (survey + product ions, MRM + EPI, positive + negative), or empty when the file has only one.
@@ -77,34 +108,36 @@ pub fn file_parts(scans: &[Scan], has_srm: bool) -> Vec<Part> {
         if sel.is_empty() {
             continue;
         }
-        let list: Vec<Option<i8>> = if split {
-            let mut v: Vec<i8> = sel
+        // the ordinary scans first, then one part per scan type present
+        let kinds: Vec<Option<&'static str>> = std::iter::once(None)
+            .chain(KINDS.iter().map(|(c, _)| Some(*c)))
+            .filter(|k| (level2 || k.is_none()) && sel.iter().any(|s| s.kind_name() == *k))
+            .collect();
+        for kind in kinds {
+            let sel: Vec<&Scan> = sel
                 .iter()
-                .map(|s| s.polarity)
-                .filter(|p| *p == 1 || *p == -1)
+                .copied()
+                .filter(|s| s.kind_name() == kind)
                 .collect();
-            crate::sortc::slice_ord(&mut v);
-            v.dedup();
-            v.reverse();
-            v.into_iter().map(Some).collect()
-        } else {
-            vec![None]
-        };
-        for pol in list {
-            let suffix = if split {
-                if pol == Some(1) {
-                    " pos"
+            let name = kind.unwrap_or(name);
+            let list = polarities(&sel, split);
+            for pol in list {
+                let suffix = if split {
+                    if pol == Some(1) {
+                        " pos"
+                    } else {
+                        " neg"
+                    }
                 } else {
-                    " neg"
-                }
-            } else {
-                ""
-            };
-            parts.push(Part {
-                mode,
-                pol,
-                tag: format!("{name}{suffix}"),
-            });
+                    ""
+                };
+                parts.push(Part {
+                    mode,
+                    pol,
+                    tag: format!("{name}{suffix}"),
+                    kind,
+                });
+            }
         }
     }
     if has_srm {
@@ -112,6 +145,7 @@ pub fn file_parts(scans: &[Scan], has_srm: bool) -> Vec<Part> {
             mode: "mrm",
             pol: None,
             tag: "MRM".into(),
+            kind: None,
         });
     }
     if parts.len() > 1 {
@@ -130,13 +164,14 @@ pub fn part_label(part: &Part, scans: &[Scan]) -> String {
     let (name, head) = match part.mode {
         "ms1" => ("Full Scan", "MS1"),
         "mrm" => ("MRM", "MRM"),
+        _ if part.kind.is_some() => (kind_name(part.kind.unwrap_or("")), part.kind.unwrap_or("")),
         _ if dda => ("DDA", "MS2"),
         _ => ("MS2", "MS2"),
     };
     format!("{name}{}", part.tag.strip_prefix(head).unwrap_or(""))
 }
 
-pub(crate) fn matches(s: &Scan, part: Option<&Part>) -> bool {
+pub fn matches(s: &Scan, part: Option<&Part>) -> bool {
     let Some(p) = part else { return true };
     if p.mode == "mrm"
         || (p.pol.is_some_and(|pp| pp != 0) && s.polarity != p.pol.unwrap() && s.polarity != 0)
@@ -146,7 +181,7 @@ pub(crate) fn matches(s: &Scan, part: Option<&Part>) -> bool {
     if p.mode == "ms1" {
         s.level == 1
     } else {
-        s.level >= 2
+        s.level >= 2 && s.kind_name() == p.kind
     }
 }
 
@@ -258,8 +293,16 @@ pub struct HrProfile {
 
 pub fn hr_profile(scans: &[Scan], survey: bool, hr: bool) -> HrProfile {
     let g: Vec<&Scan> = scans.iter().filter(|s| (s.level == 1) == survey).collect();
-    let p = if hr { mass_profile(&g) } else { mass_profile(&[]) };
-    HrProfile { on: p.hr, dec: p.dec as usize, ppm: if p.unit == "ppm" { p.tol } else { 0.0 } }
+    let p = if hr {
+        mass_profile(&g)
+    } else {
+        mass_profile(&[])
+    };
+    HrProfile {
+        on: p.hr,
+        dec: p.dec as usize,
+        ppm: if p.unit == "ppm" { p.tol } else { 0.0 },
+    }
 }
 
 fn median(v: &mut [f64]) -> Option<f64> {
@@ -292,6 +335,17 @@ fn acq(sc1: &[&Scan], sc2: &[&Scan]) -> Vec<&'static str> {
     if sc2.is_empty() {
         return out;
     }
+    // the scan types (precursor ion, neutral loss/gain, EPI) outrank the generic MS2; the ordinary scans left over are classified as before
+    for (code, _) in KINDS {
+        if sc2.iter().any(|s| s.kind_name() == Some(code)) {
+            out.push(code);
+        }
+    }
+    let plain: Vec<&Scan> = sc2.iter().copied().filter(|s| s.kind == 0).collect();
+    if plain.is_empty() {
+        return out;
+    }
+    let sc2 = &plain[..];
     let wins: Vec<(f64, f64)> = sc2.iter().filter_map(|s| s.iso).collect();
     if sc2.iter().map(|s| s.level).max().unwrap() >= 3 {
         out.push("MSn");
@@ -461,7 +515,9 @@ pub fn item_info<R: ReadAt>(
             "ms2" => "ms2",
             _ => "mrm",
         },
-        None if all.len() > n1 && msn.as_ref().is_some_and(|m| m.motivo != "rt_costante") => "infusion",
+        None if all.len() > n1 && msn.as_ref().is_some_and(|m| m.motivo != "rt_costante") => {
+            "infusion"
+        }
         None if all.len() - n1 > 0 => "ms2",
         None if n1 > 0 => "full",
         None if facts.srm > 0 => "mrm",
@@ -614,10 +670,27 @@ pub fn item_info<R: ReadAt>(
     o.raw(",\"max_level\":")
         .int(all.iter().map(|s| s.level as i64).max().unwrap_or(1))
         .raw(",\"acq\":[");
-    for (i, a) in acq(&phys1, &phys2).iter().enumerate() {
+    // ion mobility: a scan attribute in the scan table, or mobility arrays in the first spectrum
+    let mobs: Vec<(f64, &str)> = all.iter().filter_map(|s| s.mobility()).collect();
+    let ims_unit = mobs.first().map(|m| m.1).or(facts.ims);
+    let mut modes = acq(&phys1, &phys2);
+    if ims_unit.is_some() {
+        modes.push("IMS");
+    }
+    for (i, a) in modes.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(a);
     }
-    o.raw("],\"mode1\":");
+    o.raw("]");
+    if let Some(u) = ims_unit {
+        o.raw(",\"ims\":{\"unit\":").str(u);
+        if !mobs.is_empty() {
+            let lo = mobs.iter().map(|m| m.0).fold(f64::INFINITY, f64::min);
+            let hi = mobs.iter().map(|m| m.0).fold(f64::NEG_INFINITY, f64::max);
+            o.raw(",\"min\":").num(round(lo, 6)).raw(",\"max\":").num(round(hi, 6)).raw(",\"n\":").int(mobs.len() as i64);
+        }
+        o.raw("}");
+    }
+    o.raw(",\"mode1\":");
     match mode_of(&phys1) {
         Some(m) => o.str(m),
         None => o.raw("null"),
@@ -681,6 +754,7 @@ pub fn facts_from<M: ReadAt>(
         }
     }
     f.lc = crate::infusione::raw_lc(m)?;
+    f.ims = crate::mzmlhead::mobility_kind(m)?;
     // The header polarity and the RT range of the SRM traces matter only for a file without scans or with SRM parts: reading a whole file (up to 256 MB) for them is
     // refused as `error.memoryBudget` for a big profile file (HRMS), and a file with scans and no SRM never shows them.
     if need_mrm && (scans_end == 0 || f.srm > 0) {

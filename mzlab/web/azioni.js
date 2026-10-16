@@ -15,7 +15,7 @@
  */
 const AZIONI = (() => {
   // the order of the groups in every menu: one table for all the panels (the spectrum: value .. link; the map: extract .. help; zoom reset first and the annotations last in every graph)
-  const GRUPPI = ["reset", "value", "ms2", "gen", "extract", "xic", "cont", "tools", "dda", "lib", "link", "lock", "view", "zoom", "learn", "copy", "help", "ann"];
+  const GRUPPI = ["reset", "value", "ms2", "gen", "extract", "xic", "cont", "tools", "dda", "lib", "link", "lock", "view", "zoom", "disp", "learn", "copy", "help", "ann"];
   /** @type {Azione[]} */
   const voci = [];
   /** @param {Azione} a */
@@ -32,7 +32,7 @@ const AZIONI = (() => {
   /** @param {string} id */
   const voce = id => voci.find(v => v.id === id);
   /** @param {Azione} a @param {Contesto} c */
-  const mostra = (a, c) => a.viste.includes(c.vista) && (!a.visibile || a.visibile(c));
+  const mostra = (a, c) => (a.viste.includes(c.vista) || a.viste.includes("*")) && (!a.visibile || a.visibile(c));
   /** @param {Azione} a @param {Contesto} c */
   const pronta = (a, c) => !a.disponibile || a.disponibile(c);
   // the actions of the view in the order of the groups (inside a group: `ordine`, then the order of registration)
@@ -77,5 +77,5 @@ const AZIONI = (() => {
     esegui(l[0].id, c);
     return true;
   }
-  return { formato: "azioni/1", GRUPPI, voci, registra, voce, elenco, per, esegui, pronta, doppio, icona };
+  return { formato: "azioni/1", GRUPPI, voci, registra, voce, elenco, per, esegui, mostra, pronta, doppio, icona };
 })();

@@ -49,19 +49,19 @@ Legenda: **L** letto e provato · **P** parziale (si legge, ma manca un pezzo de
 | SIM | L (filtro `sim`, `iteminfo.rs:284-290`) | NV (filtro letto, nessun file) | — | L (+ SIC derivato) | P: funzione SIR letta come canali `SIC`, nome dell'id non verificato | P (euristica sulla lista degli m/z) |
 | SRM/MRM | L (cromatogrammi SRM, `srm.rs::da_voci`) | P: le scansioni SRM si leggono come spettri, ma `cromatogrammi` dà solo TIC (`rawlettore.rs:222`) → nessuna traccia SRM per mzFinder/MRM | L (`wiff/run.rs`) | L (MRM e dMRM del QqQ, id `SRM SIC Q1= Q3=`, uguale a msconvert; nel modulo `agilent`) | L (`waters_dati.rs`: 128 SRM uguali a msconvert) | P (`.qgd` e `.lcd` QqQ → cromatogrammi SRM; CE e dwell no) |
 | Product ion (MS2) | L | L | L (codice 11) | NV (`MSLevel`, `MzOfInterest` nello schema) | NV (DDA: precursore da `.STS`/`_extern.inf`, nessun mzML) | A |
-| Precursor ion / neutral loss | P: letti come spettri, il tipo di scansione (MS:1000341, MS:1000326) non è riconosciuto (nessuna occorrenza nel codice) | NV | L nel modulo `sciex` (codici 5 e 7, `MS:1000341` / `MS:1000326`, parità con msconvert su 3594 spettri; `wiff-varianti.md`) | A | A | A |
+| Precursor ion / neutral loss / gain / EPI | L: tipo di scansione riconosciuto dal termine CV (MS:1000341, 326, 325, 789, 790) o dal filtro Thermo (`pr`, `cnl`, `cng`): `iteminfo.rs::acq` e parti del file misto (`scantable::kind_of`); non verificato su mzML veri | NV | L nel modulo `sciex` (codici 5 e 7, `MS:1000341` / `MS:1000326`, parità con msconvert su 3594 spettri; `wiff-varianti.md`) | A | A | A |
 | EPI / MS3 su QTRAP | L (come MSn) | — | A (non visti, letti come full scan) | — | — | — |
 | DDA | L (`/api/dda`, `hrroutes.rs:61`) | L | — | NV | NV | A |
 | DIA / SWATH / MSe / AIF | P: classificati (`iteminfo.rs:278-325`: DIA, AIF), nessuna deconvoluzione dedicata | L (eventi DIA dei Tribrid corretti, `MODIFICHE-MZLAB.md`) | — | NV | P: MSe a livello 1 e 2 senza precursore (nessun mzML di msconvert); HDMSe senza tempo di deriva | — |
 | PRM | P: classificato (`iteminfo.rs:319`) | L come MS2 | — | — | — | — |
-| Mobilità ionica / PASEF | A (nessun array di mobilità letto in `mzml.rs`) | — | — | A (campo nello schema, mai letto) | A (funzioni IMS sommate su tutta la deriva, avviso `meta.nonDecodificato`) | — |
+| Mobilità ionica / PASEF | L: array (`MS:1003006`, `1002477`, `1002816`, `1003007/8`, `1003153`...) e attributi di scansione (`MS:1002815`, `1002476`) letti da `mzml.rs`; «IMS» e intervallo in `info` (`ims`), colonna `mob` in `/api/scan`; mappa e XIC per mobilità non fatti; non verificato su mzML veri | — | — | A (campo nello schema, mai letto) | A (funzioni IMS sommate su tutta la deriva, avviso `meta.nonDecodificato`) | — |
 | MSn (n ≥ 3) | L (`msnalbero.rs`, `msn_albero.rs`) | L | A | — | — | — |
 | UV/PDA | P: solo cromatogrammi PDA (`mzml.rs:280-281`), non gli spettri UV 3D | A (controller `Pda`/`Uv` elencati, non letti) | A (flussi `DAD*`, `grezzi-non-estratti.md`) | A | NV (canali `Pda`/analogici delle `_CHROnnn.DAT`: nessun UV vero) | A (`LSS`/`PDA 3D` non decodificati) |
 | TIC / BPC / XIC | L | L (TIC dal file; XIC dal `.mzidx`) | L (TIC dell'indice) | L (TIC/BPC dai record) | L (TIC delle funzioni non di riferimento) | L (TIC = somma dei record) |
 | Tracce accessorie (pressione, analogici) | L (`analog.rs`) | P: pressione solo nell'mzML scritto, non come cromatogramma del lettore | A | A (`GC.ini` come metadati) | L (pressione, flusso, % solventi uguali a msconvert) | A |
 | Calibrazione / lock mass | — (già applicata) | P: campi del trailer (`opentfraw.lock_mass_*`, `extra.rs:122-125`), nessuna correzione | A (`GLPTables`) | A | P: cromatogramma della lock mass e campo in `metodo/1`, correzione non applicata | — |
 | Polarità mista | L (`iteminfo.rs`: parti «mixed») | L | L | NV (codice 1 mai visto) | NV | A (la polarità degli eventi `.lcd` 2020 non è decodificata; il QqQ la legge dal byte 33) |
-| Metodo e metadati (`metodo/1`) | P (solo testata; `metodo/1` solo se scritto da mzLab) | L | P (nome, vial, calibrazione mancanti) | L per GC/MS, A per LC/MS | L (`metodo/1` da `_HEADER.TXT`, `_extern.inf`, `_INLET.INF`; operatore `identita`) | P (`metodo/1`: strumento, software, campione, eventi/transizioni; molti flussi non decodificati) |
+| Metodo e metadati (`metodo/1`) | P (testata e parametri di scansione costanti in `metodo/1`, `metodo_mzml.rs`; non verificato su file veri) | L | P (nome, vial, calibrazione mancanti) | L per GC/MS, A per LC/MS | L (`metodo/1` da `_HEADER.TXT`, `_extern.inf`, `_INLET.INF`; operatore `identita`) | P (`metodo/1`: strumento, software, campione, eventi/transizioni; molti flussi non decodificati) |
 
 ### Metodo e metadati (colonna «metodo/metadati» per formato)
 
@@ -140,8 +140,8 @@ I prompt pronti e autosufficienti per le chat DEV sono in `docs/studi/PROMPT_FOR
 | DEV-6 | Waters MassLynx `.raw` (cartella): TQ MRM/SIR, QTof MS/MSe/DDA, lock mass, tracce analogiche | `waters` | DEV-0 | 1 Xevo TQ MRM, 1 Xevo G2-XS (o Synapt) MSe con lock mass, 1 DDA |
 | DEV-7 | Shimadzu `.qgd` (GC/MS), `.lcd` (LCMS-2020, 8040/8050/8060, 9030) | `shimadzu` | DEV-0 (DEV-3 per il confronto con `.cdf`) | 1 `.qgd`, 1 `.lcd` SQ, 1 `.lcd` QqQ MRM, 1 `.lcd` 9030; con mzML o `.cdf` esportato |
 | DEV-8 | Bruker TDF/TSF (timsTOF): MS1, DDA-PASEF, diaPASEF | `bruker` | DEV-0 | 1 TDF DDA-PASEF, 1 diaPASEF, 1 TSF |
-| DEV-9 | Tipi di scansione nel motore: precursor ion, neutral loss, EPI, MS3 | motore | DEV-1, DEV-5 | 1 mzML per tipo (QTRAP) |
-| DEV-10 | Mobilità ionica: array dell'mzML, informazioni, scansione | motore | DEV-1, DEV-8 | 1 mzML con mobilità (da TDF o Waters HDMSe) |
+| DEV-9 (fatto) | Tipi di scansione nel motore: precursor ion, neutral loss, EPI, MS3 | motore | DEV-1, DEV-5 | 1 mzML per tipo (QTRAP) |
+| DEV-10 (fatto) | Mobilità ionica: array dell'mzML, informazioni, scansione | motore | DEV-1, DEV-8 | 1 mzML con mobilità (da TDF o Waters HDMSe) |
 | DEV-11 | `metodo/1` di un mzML di altri (testata, `startTimeStamp`, `sample`, `scanSettings`) | motore | DEV-1 | gli mzML di msconvert già nei dati bastano |
 
 Ordine definitivo:

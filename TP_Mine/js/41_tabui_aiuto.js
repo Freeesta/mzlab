@@ -1,14 +1,11 @@
 // @ts-check
-// TPMINE-PRIVATE  TPHELP: the help of Tabui. `button(key, label)` gives the HTML of a «?» button; `attach(root)` wires ONE popover (role="tooltip", id tph-pop) for every
-// «?» button and every element with data-tt="key" inside root. Opens on hover (500 ms), keyboard focus, touch and Enter/Space; stays open while the pointer is over it;
-// closes with Esc (focus stays on the trigger), a click outside or losing the focus (WCAG 1.4.13). No `title`: the global #qtip would be a second tip.
+// TPMINE-PRIVATE  TPHELP: the help of Tabui. `attach(root)` wires ONE popover (role="tooltip", id tph-pop) for every element with data-tt="key" inside root (a field and its label).
+// Opens on hover (500 ms) and keyboard focus (the id joins the aria-describedby of the trigger); stays open while the pointer is over it; closes with Esc (focus stays on
+// the trigger), typing, a click outside or losing the focus (WCAG 1.4.13). No `title`: the global #qtip would be a second tip.
 (() => {
   "use strict";
   const G = /** @type {any} */ (window);
   const CSS = `
-.tph-b{box-sizing:border-box;display:inline-grid;place-items:center;min-width:24px;min-height:24px;padding:0;border:1px solid var(--muted);border-radius:50%;background:transparent;color:var(--muted);font:600 12px/1 inherit;cursor:help}
-.tph-b:hover,.tph-b[aria-expanded="true"]{color:var(--ink);border-color:var(--ink)}.tph-b:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-@media(pointer:coarse){.tph-b{min-width:40px;min-height:40px}}
 #tph-pop{position:fixed;z-index:1000;max-width:min(340px,calc(100vw - 16px));box-sizing:border-box;padding:6px 9px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.2);font-size:12px;line-height:1.4;transition:opacity .12s}
 #tph-pop[hidden]{display:none}
 @media(prefers-reduced-motion:reduce){#tph-pop{transition:none}}`;
@@ -17,11 +14,7 @@
   /** @type {HTMLElement | null} */ let pop = null;
   /** @type {HTMLElement | null} */ let cur = null;
   /** @type {any} */ let timer = 0;
-  const esc = (/** @type {string} */ s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] || c));
   const tt = (/** @type {string} */ k) => (G.TT ? G.TT(k) : "");
-
-  /** @param {string} key @param {string} [label] @param {string} [id] */
-  const button = (key, label, id) => `<button type="button" class="tph-b"${id ? ` id="${esc(id)}"` : ""} data-tt="${esc(key)}" aria-label="${esc((label ? label + " " : "") + "help")}" aria-expanded="false" aria-controls="tph-pop">?</button>`;
 
   const ensure = () => {
     if (pop) return pop;
@@ -33,9 +26,14 @@
     document.addEventListener("keydown", ev => { if (ev.key === "Escape" && cur) { const c = cur; close(); c.focus(); } }, true);
     return pop;
   };
+  /** the popover id is one token of aria-describedby: a field error linked to the same attribute (TPFIELD) is kept */
+  const desc = (/** @type {HTMLElement} */ el, /** @type {boolean} */ on) => {
+    const t = (el.getAttribute("aria-describedby") || "").split(/\s+/).filter(x => x && x !== "tph-pop"); if (on) t.push("tph-pop");
+    if (t.length) el.setAttribute("aria-describedby", t.join(" ")); else el.removeAttribute("aria-describedby");
+  };
   const close = () => {
     clearTimeout(timer);
-    if (cur) { cur.removeAttribute("aria-describedby"); if (cur.classList.contains("tph-b")) cur.setAttribute("aria-expanded", "false"); }
+    if (cur) desc(cur, false);
     cur = null; if (pop) pop.hidden = true;
   };
   /** @param {HTMLElement} el */
@@ -45,9 +43,11 @@
     if (el.tagName === "SUMMARY" && /** @type {HTMLDetailsElement | null} */ (el.parentElement) && /** @type {HTMLDetailsElement} */ (el.parentElement).open) return;          // a menu that is open must not be covered by the help of its own button
     if (cur && cur !== el) close();
     cur = el; p.textContent = text; p.hidden = false;
-    el.setAttribute("aria-describedby", "tph-pop"); if (el.classList.contains("tph-b")) el.setAttribute("aria-expanded", "true");
+    desc(el, true);
     const r = el.getBoundingClientRect(), w = p.offsetWidth, h = p.offsetHeight;
-    const left = Math.max(8, Math.min(r.left, innerWidth - w - 8)), below = r.bottom + 4 + h <= innerHeight;
+    const left = Math.max(8, Math.min(r.left, innerWidth - w - 8)), below = el.getAttribute("role") !== "combobox" && r.bottom + 4 + h <= innerHeight;          // above a combobox: its list opens below
+    const side = el.closest("#tp-left"), sr = side ? side.getBoundingClientRect() : null;                 // beside the form when there is room: below or above it would cover the next field
+    if (sr && sr.right + 8 + w <= innerWidth - 8) { p.style.left = sr.right + 8 + "px"; p.style.top = Math.max(8, Math.min(r.top, innerHeight - h - 8)) + "px"; return; }
     p.style.left = left + "px"; p.style.top = Math.max(8, below ? r.bottom + 4 : r.top - h - 4) + "px";
   };
   /** @param {HTMLElement} root */
@@ -63,14 +63,7 @@
     root.addEventListener("focusin", ev => { if (!first(ev)) return; const el = trig(ev.target); if (el) { clearTimeout(timer); open(el); } });
     root.addEventListener("focusout", ev => { if (!first(ev)) return; const el = trig(ev.target); if (el && el === cur) close(); });
     root.addEventListener("toggle", ev => { const d = ev.target; if (cur && d instanceof HTMLDetailsElement && d.open && d.contains(cur)) close(); }, true);          // `toggle` does not bubble: the help of the summary leaves when its menu opens
-    /** @type {{ el: HTMLElement, wasOpen: boolean } | null} */ let down = null;
-    root.addEventListener("pointerdown", ev => { if (!first(ev)) return; const el = trig(ev.target); down = el ? { el, wasOpen: cur === el } : null; });
-    root.addEventListener("click", ev => {                                  // touch, Enter, Space (a button clicks itself): a pointer press on an open one closes it, anything else opens it
-      if (!first(ev)) return;
-      const el = trig(ev.target); if (!el || !el.classList.contains("tph-b")) return;
-      const was = !!down && down.el === el && down.wasOpen; down = null;
-      clearTimeout(timer); if (was) close(); else open(el);
-    });
+    root.addEventListener("input", ev => { if (cur && ev.target === cur) close(); });                // typing hides the tip (it would cover the suggestions)
   };
-  G.TPHELP = { button, attach, close };
+  G.TPHELP = { attach, close };
 })();

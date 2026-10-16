@@ -137,6 +137,9 @@ const BARRA = (() => {
   ];
   // the commands of the 2D map (the list lives in mappa.js, one for the menu, the bar on the map and here): only in the palette
   if (window.MAPPA) MAPPA.CMDS.filter(c => c.viste.includes("map")).forEach(c => CMD.push({ id: c.id, bar: false, group: "graphs", ic: () => MAPPA.SV(MAPPA.ICO[c.ic]), visible: () => inData() && MAPPA.paletteOk(c), run: () => MAPPA.paletteRun(c.id) }));
+  // the arrangement of the panel in use (actions disp.* of azioni/1, registered by affianca.js): only in the palette, for the active panel when the action applies to it
+  const dispCtx = () => { const p = typeof E !== "undefined" ? E.active : null; return p && p.el ? { vista: p.type, p } : null; };
+  if (typeof AZIONI !== "undefined") AZIONI.voci.filter(a => a.gruppo === "disp").forEach(a => CMD.push({ id: a.id, bar: false, group: "graphs", ic: () => AZIONI_ICONE.svg(a.icona || ""), visible: () => { const c = inData() && dispCtx(); return !!c && AZIONI.mostra(a, c) && AZIONI.pronta(a, c); }, run: () => { const c = dispCtx(); if (c) AZIONI.esegui(a.id, c); } }));
   // the two clean slates (reset.js): a short question says what is lost; also in the gear
   CMD.forEach(c => { if (c.search) { c.bar = false; delete c.more; } });      // a command found only by the search lives in no bar and no menu
   /** @type {(id: any) => any} */
@@ -397,7 +400,7 @@ const BARRA = (() => {
     applyLayout();
     updateButtons();
     saveState();
-    if (restoreFocus && !hintSeen()) hintShow();      // the first time the user hides the tools
+    if (restoreFocus && !hintSeen()) SUGG.chiedi("bar", hintShow);      // the first time the user hides the tools (one hint at a time: suggerimenti.js)
     const o = _opener;
     _opener = null;
     if (restoreFocus && o && document.contains(o) && o.offsetParent !== null) o.focus({ preventScroll: true });

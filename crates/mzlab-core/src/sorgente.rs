@@ -15,6 +15,10 @@ pub trait Scansioni {
     fn spettro(&mut self, sc: &Scan) -> Result<(Vec<f64>, Vec<f64>)>;
     /// The header fields of the scan: in an mzML every `cvParam` / `userParam` with a name (with its accession), from a reader `Lettore::intestazione`.
     fn intestazione(&mut self, sc: &Scan) -> Result<Vec<Campo>>;
+    /// The ion mobility of the scan (a mobility array or a scan attribute of an mzML), `None` for a scan that has none and for a reader of a vendor file.
+    fn mobilita(&mut self, _sc: &Scan) -> Result<Option<crate::mzml::Mobility>> {
+        Ok(None)
+    }
 }
 
 /// An mzML read by offset: the row gives `start..end` of the `<spectrum>`. A reader that stands for a vendor file (`ReadAt::lettore`) gives, for a row
@@ -38,6 +42,21 @@ impl<M: ReadAt> Scansioni for M {
             s.mz[..n].to_vec(),
             (0..n).map(|i| s.intensity_f64(i)).collect(),
         ))
+    }
+
+    fn mobilita(&mut self, sc: &Scan) -> Result<Option<crate::mzml::Mobility>> {
+        if sc.k.is_some() && self.lettore().is_some() {
+            return Ok(None);
+        }
+        let mut buf = vec![0u8; sc.end.saturating_sub(sc.start) as usize];
+        self.read_at(sc.start, &mut buf)?;
+        let mut found = None;
+        crate::mzml::parse(&buf[..], |it| {
+            if let crate::mzml::Item::Mobility(m) = it {
+                found.get_or_insert(m);
+            }
+        })?;
+        Ok(found)
     }
 
     fn intestazione(&mut self, sc: &Scan) -> Result<Vec<Campo>> {
