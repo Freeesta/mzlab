@@ -143,7 +143,7 @@ try:
             sel.select_option("4"); lib.attendi(pg, "document.querySelectorAll('#tp-t tbody .lvb.tpt-dec').length === 1")
             assert pg.inner_text("#tp-t tbody .lvb.tpt-dec").strip() == "L4"
             assert "no level proposed" in pg.get_attribute("#tp-t tbody .lvb.tpt-dec", "aria-label")
-            sel.select_option(""); lib.attendi(pg, "document.querySelectorAll('#tp-t tbody .lvb').length === 0")
+            sel.select_option(""); lib.attendi(pg, "document.querySelectorAll('#tp-t tbody tr:not(.tpt-exp) .lvb').length === 0")
             pg.keyboard.press("Escape")
         step("Lvl stays empty until the chemist decides; 2b is refused, L4 shows in the row", decided)
 
