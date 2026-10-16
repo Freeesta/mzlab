@@ -92,6 +92,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | formato `.mzidx` | `docs/agenti/mzidx.md` |
 | cosa i file grezzi contengono e non estraiamo ancora (regola «nessuna perdita») | `docs/agenti/grezzi-non-estratti.md` |
 | errori di lettura dei file: causa breve, «Dettagli», «Copia diagnosi» (`diagnosi.js`), mzML sintetico stile msconvert | `docs/agenti/diagnosi.md` |
+| riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature table in CSV dallo stesso motore e dalla stessa ricetta della pagina) | `docs/agenti/cli.md` |
 | lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, fasi di avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`) |
 | misure dei motori (ultima misura per sezione) | `docs/agenti/misure.md` |
