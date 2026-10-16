@@ -11,7 +11,7 @@ Lo Scavo («Dig») di mzFinder su una serie a risoluzione unitaria (3200 QTRAP, 
 
 ## Scavo LR: quando gira in Rust
 - Tutti i file di tipo `full` (e al più `ms2` e `mrm`), ognuno con il suo `.mzidx` in OPFS (`mzlab/idx/`), progenitore con formula o SMILES (`plan.rust`), trasformazioni predefinite. I file `ms2` (EPI) non sono colonne: `plan_json` li elenca in `ms2` e il worker ne apre l'indice dopo quello delle colonne.
-- File `mrm`: senza indice; `plan_json` li elenca in `mrm`, `finder-lr.js` ne legge il mzML dai byte inviati dalla pagina (`held` del worker; senza, risponde Pyodide) e `run` aggiunge `mrm` al riassunto. Altrimenti (solo m/z del progenitore, trasformazioni proprie) risponde Pyodide.
+- File `mrm`: senza indice; `plan_json` li elenca in `mrm`, `finder-lr.js` ne legge il mzML dai byte inviati dalla pagina (`held` del worker; senza, risponde Pyodide) e `run` aggiunge `mrm` al riassunto. Un progenitore noto solo per m/z resta in Rust (nessuna ipotesi: la sua riga e gli ioni inattesi, registro vuoto); la lista di trasformazioni dell'utente (`a[3]`) si fonde in `regole_tp.json` con `finder_transformations`, come in HR.
 - Ordine nel worker: detect (fase `calibration`), ipotesi (`candidates`), allineamento e Scavo (`xic`, con il carico `live()` dei candidati che passano), poi `unexpected`, `ms2`, `tables`.
 
 ## Scavo LR: semantica

@@ -4,7 +4,7 @@
 // pool of feat-worker.js (detection, alignment, hypotheses, proofs). Rust serves: formula_info, identity_graph, polarity_pairs, origin_evidence and default_transformations always;
 // classify (after finder-idx.js has built the .mzidx of OPFS mzlab/idx/ that a file sent by the page lacks); run on high-resolution files with their .mzidx and any list of transformations (finder_transformations merges the user text into regole_tp.json),
 // then detail, inclusion_csv, msn_tree, frag_tree and frag_tree_compare of that run. With an MSn file of the standard the `finder_msn` .wasm, loaded only
-// then, adds its tree, calibration and the localisation of the products (FinderMsn) to what the Dig gives; run on low-resolution full-scan files with their .mzidx (finder-lr.js, then detail, frag_tree
+// then, adds its tree, calibration and the localisation of the products (FinderMsn) to what the Dig gives; run on low-resolution full-scan, MS2 and MRM files with their .mzidx, any parent and any list of transformations (finder-lr.js, then detail, frag_tree
 // and frag_tree_compare of that run). Everything else (MS2/MRM low-resolution files, isf_classify, transitions, ...) goes to Pyodide, and so does
 // every call when the site has no wasm-feat/ (a copy built without it). In the desktop app (init.desktop) every call goes to finder-desktop.js, i.e. to the native engine of the app: no Pyodide, no wasm-feat/.
 /** @type {any} */ let py = null;
@@ -272,7 +272,7 @@ const lrMod = () => import(base() + "mzfinder/finder-lr.js");
 /** Cancel: the page sends {type:"cancel"}; the pool stops (its sub-workers are killed, the waiting jobs rejected) and the run throws at the next check, so the files kept here survive */
 let cancelled = false;
 const check = () => { if (cancelled) throw new Error("Cancelled"); };
-const lrCtx = { featUrl, base, manifest, sha, pool, idxFiles, openIdx, detect, held, natives, check, ask, idxBase };
+const lrCtx = { finder, featUrl, base, manifest, sha, pool, idxFiles, openIdx, detect, held, natives, check, ask, idxBase };
 /** every file has its .mzidx: waits a little for the one that the main program is still writing (a file taken from the Data tab sends no bytes here) @param {string[]} names */
 async function waitIdx(names) {
   for (let i = 0; i < 60; i++) {
@@ -325,7 +325,7 @@ async function call(fn, a) {
     cancelled = false; if (featPool) featPool.resume();
     if (await rustRun(a)) return runRust(a);
     last = "py"; dig = null; msn = null;
-    const tr = (a[3] || "").trim(), lr = tr && tr !== DEFAULT_TR ? false : await (await lrMod()).run(lrCtx, a);
+    const lr = await (await lrMod()).run(lrCtx, a);
     if (lr !== false) { last = "rust-lr"; return lr; }
   }
   if (OF_DIG.has(fn) && last === "rust-lr") return fn === "msn_tree" ? "null" : (await lrMod()).ofDig(lrCtx, fn, a);     // a low-resolution run has no MSn tree
