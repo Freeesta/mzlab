@@ -134,7 +134,7 @@ Script e dati in `docs/studi/cc_browser/` (`riferimento_tblite.py`, `classi.py`,
 | Pacchetto | Cosa | Dipende da | Parallelo con | Stima (giorni-chat) |
 |---|---|---|---|---|
 | CC-B1 | crate `mzlab-chem`: SMILES → 3D (ETKDG di sci-form, senza MMFF94 vero: la sua versione 0.15.2 è un segnaposto), conformeri, XYZ, strumento `tools/cc_riferimento.py` e dati di riferimento | — | B3 (con dati finti) | 2,5-3 | Stato: fatto (misure in `docs/agenti/reattivita.md`); un MMFF94 vero resta opzionale.
-| CC-B2 | GFN2 con carica, SCC robusto, ALPB, Fukui, ripiego EHT, `reatt/1`, `.wasm` `chem` | B1 | B3 | 5-6 |
+| CC-B2 | GFN2 con carica, SCC robusto, ALPB, Fukui, ripiego EHT, `reatt/1`, `.wasm` `chem` | B1 | B3 | 5-6 | Stato: fatto (misure in `docs/agenti/reattivita.md`): parità con tblite 20/20 (gas |Δq| ≤ 3,1e-4, acqua ALPB con i parametri del supplemento di Ehlert 2021 |Δq| ≤ 1,7e-3), siti 10/10, `.wasm` 568 722 B, carbamazepina 1,0 s in Chromium.
 | CC-B3 | viewer 3D Canvas + pannello «Parent compound» (2D con aloni, schede, soglia, tabella, esportazioni) | contratto `reatt/1` (finto fino a B2) | B1, B2 | 3-3,5 | Stato: `47_viewer3d.js`, `46_reattivita.js` e `e2e_reattivita.py` fatti con un `reatt/1` di prova; il riquadro «Parent compound» ospita il pannello (stato «waiting for TPs»); il calcolo vero lo avvia CC-B4.
 | CC-B4 | avvio automatico dopo i TP in worker a bassa priorità, stato, annullamento, desktop | B2 + B3 | B5 | 1-1,5 |
 | CC-B5 | `prior` in `posiz/1` e colonna «Prev. f(−)»; Attributio legge `reatt/1` | B2 (+ B3 per la pagina) | B4 | 1-1,5 |

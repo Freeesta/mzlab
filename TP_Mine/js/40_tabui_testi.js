@@ -13,6 +13,7 @@
     "ft.col.mz": "Measured m/z (apex). At unit resolution it is a candidate, not an identification.",
     "ft.col.rt": "Retention time of the apex, in minutes.",
     "ft.col.trend": "Area in the treated samples in time order; the symbols below tell how each area was obtained.",
+    "ft.col.conds": "One dot per condition: ● the ion is present in that condition, ○ absent. A suggestion from the comparison of conditions; the filter above the table lists «Only in…» and «In all».",
     "ft.col.cells": "One symbol per sample: how the area was obtained. Open the row, Samples tab, for the numbers.",
     "ft.col.maxarea": "Highest area among the samples (engine units), in scientific notation: 821.43e+6 = 821 430 000. The export also has the true number.",
     "ft.col.status": "«Detected» = a peak found in at least one sample. «Searched, not detected» = an expected transformation that was searched and has no peak: not a product, only the expected m/z.",
