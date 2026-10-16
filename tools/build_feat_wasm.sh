@@ -4,6 +4,7 @@
 set -eu
 # Limit of every .wasm after wasm-opt -Oz, bytes (raised from 460800 to leave room to grow; the size diet is a package of its own; measured: detect 419435, proofs 458034, mrm 244480, grafo 234654).
 limit=512000
+limit_rev=1000000   # attributio-rev carries the table of levels AND the review of one feature (libraries, spectra, formulas, isotopes); measured 961824
 limit_lr=800000   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 610796
 out=${1:-site/static}/wasm-feat
 for which in detect proofs mrm finder finder_msn untargeted; do
@@ -28,6 +29,10 @@ tools/wasm_opt.sh "$out/import/mzlab_feat_import_wasm_bg.wasm" $limit "mzFinder 
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm
 wasm-bindgen --target web --no-typescript --out-dir "$out/attributio" target/wasm32-unknown-unknown/release/mzlab_attributio_wasm.wasm
 tools/wasm_opt.sh "$out/attributio/mzlab_attributio_wasm_bg.wasm" $limit "mzFinder attributio"
+# the Banco 2b of Attributio (review of one feature, saving of a decision), loaded only when the Banco opens: the same crate with the feature rev
+cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features rev
+wasm-bindgen --target web --no-typescript --out-dir "$out/attributio-rev" target/wasm32-unknown-unknown/release/mzlab_attributio_wasm.wasm
+tools/wasm_opt.sh "$out/attributio-rev/mzlab_attributio_wasm_bg.wasm" $limit_rev "mzFinder attributio-rev"
 # the low-resolution Dig of mzFinder (crates/mzlab-finder-lr-wasm), loaded by the worker of mzFinder only for a series of full-scan unit-resolution files
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-finder-lr-wasm
 wasm-bindgen --target web --no-typescript --out-dir "$out/finder-lr" target/wasm32-unknown-unknown/release/mzlab_finder_lr_wasm.wasm
@@ -52,6 +57,8 @@ m["import"] = {"js": "import/mzlab_feat_import_wasm.js", "wasm": "import/mzlab_f
               "sha256": hashlib.sha256(open(f"{o}/import/mzlab_feat_import_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["attributio"] = {"js": "attributio/mzlab_attributio_wasm.js", "wasm": "attributio/mzlab_attributio_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/attributio/mzlab_attributio_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["attributio_rev"] = {"js": "attributio-rev/mzlab_attributio_wasm.js", "wasm": "attributio-rev/mzlab_attributio_wasm_bg.wasm",
+              "sha256": hashlib.sha256(open(f"{o}/attributio-rev/mzlab_attributio_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["finder_lr"] = {"js": "finder-lr/mzlab_finder_lr_wasm.js", "wasm": "finder-lr/mzlab_finder_lr_wasm_bg.wasm",
                  "sha256": hashlib.sha256(open(f"{o}/finder-lr/mzlab_finder_lr_wasm_bg.wasm", "rb").read()).hexdigest()}
 json.dump(m, open(f"{o}/manifest.json", "w"), indent=1)

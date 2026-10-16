@@ -8,6 +8,10 @@ license.workspace = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+# The Banco 2b (review of one feature and saving of the decision) as a .wasm of its own, `attributio-rev`; without it the .wasm is the table of levels
+rev = []
+
 [dependencies]
 js-sys = "0.3.106"
 mzlab-core = { path = "../mzlab-core" }

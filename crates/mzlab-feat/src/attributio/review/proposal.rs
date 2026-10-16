@@ -99,6 +99,40 @@ pub struct PurityEvidence {
     pub low_information: Option<bool>,
 }
 
+/// A fragment of the experimental spectrum explained by a sub-formula of the ion.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FragView {
+    pub formula: String,
+    pub mz_th: f64,
+    pub ppm: f64,
+    pub loss: String,
+}
+
+/// A peak of the experimental spectrum, intensity in % of the base peak.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PeakView {
+    pub mz: f64,
+    pub rel: f64,
+    pub frag: Option<FragView>,
+}
+
+/// The reference spectrum drawn against the experimental one: its peaks and the matched pairs `(experimental index, reference index, shifted)`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Mirror {
+    /// Position in `Evidence::references`.
+    pub reference: usize,
+    pub peaks: Vec<(f64, f64)>,
+    pub pairs: Vec<(usize, usize, bool)>,
+}
+
+/// What the charts of the Banco 2b need: peaks with their fragments, the mirror and the isotope pattern `(m/z, % of the monoisotopic)` of the ion.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct View {
+    pub peaks: Vec<PeakView>,
+    pub mirror: Option<Mirror>,
+    pub isotopes: Vec<(f64, f64)>,
+}
+
 /// What the proposal rests on.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Evidence {
@@ -112,6 +146,8 @@ pub struct Evidence {
     pub raw: Option<RawEvidence>,
     pub references: Vec<Reference>,
     pub purity: Option<PurityEvidence>,
+    /// The peaks, the fragments and the mirror spectrum that the Banco 2b draws.
+    pub view: Option<View>,
 }
 
 /// The proposal of the review for one feature.
@@ -138,21 +174,23 @@ pub enum J {
     Bool(bool),
     Num(f64),
     Str(String),
+    /// A JSON text already written, put in as it is.
+    Raw(String),
     Arr(Vec<J>),
     Obj(Vec<(&'static str, J)>),
 }
 
 impl J {
-    fn s(v: &str) -> J {
+    pub fn s(v: &str) -> J {
         J::Str(v.to_string())
     }
-    fn strs(v: &[String]) -> J {
+    pub fn strs(v: &[String]) -> J {
         J::Arr(v.iter().map(|s| J::s(s)).collect())
     }
-    fn os(v: &Option<String>) -> J {
+    pub fn os(v: &Option<String>) -> J {
         v.as_ref().map_or(J::Null, |s| J::s(s))
     }
-    fn on(v: Option<f64>) -> J {
+    pub fn on(v: Option<f64>) -> J {
         v.filter(|x| x.is_finite()).map_or(J::Null, J::Num)
     }
     /// The JSON text.
@@ -166,6 +204,7 @@ impl J {
             }
             J::Num(x) => out.push_str(&format!("{x}")),
             J::Str(s) => Self::write_str(s, out),
+            J::Raw(s) => out.push_str(s),
             J::Arr(v) => {
                 out.push('[');
                 for (i, x) in v.iter().enumerate() {
@@ -387,6 +426,7 @@ impl Evidence {
                 "purity",
                 self.purity.as_ref().map_or(J::Null, PurityEvidence::json),
             ),
+            ("view", self.view.as_ref().map_or(J::Null, View::json)),
         ])
     }
 }

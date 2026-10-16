@@ -1,6 +1,6 @@
 # Prompt delle chat DEV di Attributio (passaggio a Rust e binario MZ)
 
-Restano i prompt dei pacchetti non ancora eseguiti (AT-04 → AT-07 → AT-08, MZ-05; stato in §6 dello studio); gli altri sono in `main`. Un file per pacchetto; ognuno si copia in una chat DEV (Sonnet) da sotto la riga «---». Lo studio è `docs/studi/ATTRIBUTIO.md`: §1 inventario dei moduli di Attributio, §3 luogo e soglie di parità, §4 Banco 2b, §5 binario MZ (mzmine 3.9.0), §6 piano, §8 domande Q1-Q7 con le scelte predefinite che i prompt seguono. Tutto si pubblica subito dietro la modalità amministratore (`uipAdminOn()`, `mzlab/web/settings.js:100`).
+Restano i prompt dei pacchetti non ancora eseguiti (AT-08, MZ-05; stato in §6 dello studio); gli altri sono in `main`. Un file per pacchetto; ognuno si copia in una chat DEV (Sonnet) da sotto la riga «---». Lo studio è `docs/studi/ATTRIBUTIO.md`: §1 inventario dei moduli di Attributio, §3 luogo e soglie di parità, §4 Banco 2b, §5 binario MZ (mzmine 3.9.0), §6 piano, §8 domande Q1-Q7 con le scelte predefinite che i prompt seguono. Tutto si pubblica subito dietro la modalità amministratore (`uipAdminOn()`, `mzlab/web/settings.js:100`).
 
 ## Due binari
 - **AT (priorità)**: Attributio 1.12.0 riscritto in Rust con parità sulla campagna sintetica (`tests/data/attributio/campagna_sintetica/`, riferimento `tools/attributio_riferimento.py`).
@@ -13,7 +13,6 @@ Restano i prompt dei pacchetti non ancora eseguiti (AT-04 → AT-07 → AT-08, M
 | 2 | AT-01 campagna e lettori · AT-05 abbinamento e librerie · MZ-01 ADAP · MZ-02 risolutore · MZ-03 join e riempimento | AT-00 (AT-01, AT-05); MZ-00 (MZ-01…03) |
 | 3 | AT-02 cascata dei livelli · AT-06 spiegazioni e proposte · MZ-04 `.wasm` `untargeted` | AT-01 (AT-02); AT-01 e AT-05 (AT-06); MZ-01…03 (MZ-04) |
 | 4 | AT-03 curazione e identità · MZ-05 isotopi, identità, ingresso della cascata | AT-02 (AT-03); MZ-04 e AT-01 (MZ-05) |
-| 6 | AT-07 Banco 2b | AT-04, AT-06 |
 | 7 | AT-08 esportazioni, quantificazione, gradiente | AT-07 |
 
 Percorso critico: AT-00 → AT-01 → AT-02 → AT-03 → AT-04 → AT-07 → AT-08 (circa 10 giorni-chat su 14,5 del binario AT). Il binario MZ (circa 6,5) corre accanto e non lo rallenta.
@@ -23,7 +22,7 @@ Percorso critico: AT-00 → AT-01 → AT-02 → AT-03 → AT-04 → AT-07 → AT
 |---|---|---|
 | AT-00 | nessuno | `AGENTS.md` §5 (una riga), `LICENZE-TERZI.md:16`, `docs/agenti/attributio.md` (con MZ-00) |
 | AT-01, AT-02, AT-03, AT-05, AT-06 | nessuno (crate, feature `attributio`) | `crates/mzlab-feat/Cargo.toml` e `lib.rs` (feature `attributio`: la crea AT-01; AT-05 la crea se arriva prima), `crates/mzlab-feat/data/livelli-1.json` e `mzlab/web/livelli-1.js` (solo AT-02), `tools/attributio_riferimento.py` (uno stadio nuovo per pacchetto) |
-| AT-04 → AT-07 → AT-08 | `attributio` (nuovo, in serie; AT-07 può aggiungere `attributio-rev`) | `tools/build_feat_wasm.sh`, `TP_Mine/files/feat-worker.js`, `feat-desktop-pool.js`, `crates/mzlab-desktop/src/feat_attributio.rs`, `TP_Mine/js/50…53_attributio*.js`, `tools/tipi/pagina.json` |
+| AT-08 | `attributio` e `attributio-rev` (in serie dopo AT-07) | `tools/build_feat_wasm.sh`, `TP_Mine/files/feat-worker.js`, `feat-desktop-pool.js`, `crates/mzlab-desktop/src/feat_attributio.rs`, `TP_Mine/js/50…53_attributio*.js`, `tools/tipi/pagina.json` |
 | MZ-00 | nessuno | `tools/valida/cancello_misure.py`, `tools/bench/` |
 | MZ-01, MZ-02, MZ-03 | nessuno (crate, feature `untargeted`) | `crates/mzlab-feat/Cargo.toml` e `lib.rs`, `LICENZE-TERZI.md` (una riga di mzmine) |
 | MZ-04 → MZ-05 | `untargeted` (nuovo, in serie) | `tools/build_feat_wasm.sh` (con AT-04), `TP_Mine/files/feat-worker.js` (con AT-04), `32/34/35_pipeline*.js`, `37_feature_table.js`, `29_untarget_identity.js`, `TP_Mine/data/cancello.json` |

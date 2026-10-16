@@ -22,6 +22,12 @@ async function call(op, p) {
 }
 /** @param {string} op @param {Record<string, any>} [p] */
 const json = async (op, p) => JSON.parse(await (await call(op, p)).text());
+/** the text files of a campaign folder as the app reads them @param {{ path: string, file: File }[]} files */
+async function texts(files) {
+  const out = [];
+  for (const f of files) if (/\.(csv|tsv|toml|json|jsonl|mgf|txt|ms|msp)$/i.test(f.path)) out.push({ path: f.path, text: await f.file.text() });
+  return out;
+}
 /** the table the last align or evidence step holds in the app (`total` = the `bytes` that step answered) @param {number} total @returns {Promise<Uint8Array>} */
 async function tableBytes(total) {
   const out = new Uint8Array(total);
@@ -114,10 +120,15 @@ export function createDesktopPool(opts = {}) {
     rowTraces(a) { return pool.table("row_traces", { samples: a.samples, sha256: a.sha, id: a.id, ppm: a.ppm, names: a.paths.map(nameOf) }); },
     /** the table of levels of a campaign folder (admin mode): the app reads the text files the page sends and answers `{summary, text}`; same result as the pool of the browser @param {{ path: string, file: File }[]} files @param {string} root @param {string} [kind] */
     async attributioAnnotate(files, root, kind = "json") {
-      const texts = [];
-      for (const f of files) if (/\.(csv|tsv|toml|json|jsonl|mgf|txt|ms|msp)$/i.test(f.path)) texts.push({ path: f.path, text: await f.file.text() });
-      const r = await json("feat/attributio/annotate", { root, kind, files: texts });
+      const r = await json("feat/attributio/annotate", { root, kind, files: await texts(files) });
       return { summary: r.summary, bytes: new TextEncoder().encode(r.text) };
+    },
+    /** the Banco 2b: the review of one feature of the folder, the object of the native route `feat/attributio/review` @param {{ path: string, file: File }[]} files @param {string} root @param {string} pol @param {number} id */
+    async attributioReview(files, root, pol, id) { return json("feat/attributio/review", { root, kind: "review", pol, id, files: await texts(files) }); },
+    /** the decisions file after a decision (JSON text); with `folder` (the path of the campaign folder on disk) the app writes it there @param {{ path: string, file: File }[]} files @param {string} root @param {string} decision @param {string} [folder] */
+    async attributioDecision(files, root, decision, folder) {
+      const r = await json("feat/attributio/review", { root, kind: "decision", decision, folder: folder || "", files: await texts(files) });
+      return { summary: { path: r.path, added: r.added, replaced: r.replaced, unchanged: r.unchanged, written: r.written }, text: r.text };
     },
     /** a table of another program (mzMine, FBMN/GNPS2, MS-DIAL) from its files: the table as JSON text, the readers are the native route `feat/import` @param {{name: string, sha256: string, text: string}[]} files @param {number} pol @param {number} maxFeatures */
     async importBuild(files, pol, maxFeatures) { return (await call("feat/import", { kind: "build", files, pol, max_features: maxFeatures })).text(); },

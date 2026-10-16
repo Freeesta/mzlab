@@ -279,6 +279,7 @@ impl State {
             "feat/files" => self.feat_files(),
             "feat/import" => self.op_import(p),
             "feat/attributio/annotate" => self.feat_attributio(p),
+            "feat/attributio/review" => self.feat_attributio_review(p),
             "feat/grafo" => self.op_grafo(p),
             "feat/clear" => {
                 *self.feat_lock() = FeatState::default();

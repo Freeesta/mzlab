@@ -362,9 +362,9 @@ fn add_tool_refs(lib: &LibraryIndex, refs: &mut Vec<RefIn>, hits: Vec<ToolHit>) 
     kept
 }
 
-struct Scored {
-    r: Reference,
-    spec: Option<Ms2>,
+pub(super) struct Scored {
+    pub(super) r: Reference,
+    pub(super) spec: Option<Ms2>,
 }
 
 /// Scores every reference on the spectra as the page holds them and orders them: exact first, then by cos_vis, same structure first.
@@ -854,6 +854,9 @@ pub fn review_feature<R: RawSource, S: Structures>(
             precursor_present: pim.as_ref().is_some_and(|p| p.present),
             precursor_rel: pim.and_then(|p| p.prec_rel),
             raw: raw.map(|r| r.0),
+            view: Some(super::view::build(
+                &e_mz, &e_it, ex, &exp_q, &scored, low, env.s, &f.pol,
+            )),
             references: scored.into_iter().map(|x| x.r).collect(),
             purity,
         },

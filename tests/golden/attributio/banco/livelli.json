@@ -1,0 +1,82 @@
+{
+"NEG:1": [
+4,
+"",
+"CANOPUS class"
+],
+"NEG:2": [
+0,
+"",
+"none"
+],
+"POS:1": [
+1,
+"",
+"reference standard"
+],
+"POS:10": [
+3,
+"",
+"isomers not discriminated"
+],
+"POS:11": [
+3,
+"",
+"isomers not discriminated"
+],
+"POS:12": [
+2,
+"a",
+"spectral library"
+],
+"POS:13": [
+3,
+"",
+"CSI:FingerID"
+],
+"POS:14": [
+3,
+"",
+"RT isomer"
+],
+"POS:15": [
+2,
+"b",
+"diagnostic evidence"
+],
+"POS:2": [
+3,
+"",
+"expert review"
+],
+"POS:3": [
+2,
+"a",
+"spectral library"
+],
+"POS:4": [
+3,
+"",
+"CSI:FingerID"
+],
+"POS:5": [
+4,
+"",
+"CANOPUS class"
+],
+"POS:6": [
+0,
+"",
+"none"
+],
+"POS:8": [
+3,
+"",
+"name conflict"
+],
+"POS:9": [
+2,
+"a",
+"spectral library"
+]
+}

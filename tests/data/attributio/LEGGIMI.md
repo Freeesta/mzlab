@@ -33,3 +33,14 @@ Campagna INVENTATA (nessun dato vero) con due sorbenti (OA, EC), una lista per s
 | `data/mz/DDA_POS/merged/merged_pos.csv` | `f77cd19ab5a5c71c46fc5dcc078118367d234aebef972928d48714c21215d9ca` |
 
 Inoltre `librerie_sintetiche/` (MGF, MSP, JSON a righe, MassBank) e `fonti_sintetiche/` (tabelle di SIRIUS e GNPS2 per POS e NEG): dati inventati per lo stadio `abbinamenti`.
+
+Inoltre `campagna_banco/` (sovrapposizione sulla campagna sintetica per il Banco 2b: aggiunge MS2, tabelle SIRIUS/GNPS2 e una libreria inventate; dati inventati):
+
+| File (in `campagna_banco/`) | sha256 |
+|---|---|
+| `02 Data/Data Synth/1 - mzMine/DDA_POS/merged/merged_pos.csv` | `d6ebff7582a3d8e2d91eaf450a6144b3f6d996917326c3a8ddea568a73c70346` |
+| `02 Data/Data Synth/1 - mzMine/DDA_POS/merged/merged_pos_gnps.mgf` | `4b5fc78595b3820fa004bc502998517ac98920a7f049451b326f1d69f41411b5` |
+| `02 Data/Data Synth/2 - SIRIUS/output POS/formula_identifications_top-5.tsv` | `c41b3758d20500f228c218989daa4ca03f69786711a258e60257afe1ce0c7a6c` |
+| `02 Data/Data Synth/2 - SIRIUS/output POS/structure_identifications.tsv` | `30810ee505c65ed567375fa03e5c1b1f5a436fb1cb5c9a1fa1b423542347c21e` |
+| `02 Data/Data Synth/2 - SIRIUS/output POS/structure_identifications_top-5.tsv` | `417e455997f7168c7c83d06932e1841e997e54cdef36a1f159a5a9f7292b6d37` |
+| `library/banco.json` | `b1e2329a84db082e0b7df377e70ea15eeb320dbeb9cf84d22e757effcbd5dda2` |
