@@ -6,7 +6,7 @@ from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(HERE)); import lib  # noqa: F401,E402  (patches wait_for_function for the CSP)
 SRC = Path(os.environ.get("TPMINE_SRC", ROOT / "TP_Mine"))
-PORT = 8845
+from lib import free_port; PORT = free_port()
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -45,7 +45,7 @@ try:
             assert pg.evaluate("[...document.querySelectorAll('#tp-alb .nd')].every(g => g.getAttribute('aria-label') && g.getAttribute('role') === 'treeitem')")
             pg.click("#tp-alb .nd:nth-of-type(2)")
             pg.wait_for_selector("#tp-alb .alb-det svg", timeout=60000)               # the structure of the clicked fragment (OpenChemLib)
-            assert "Alternative formula" in pg.inner_text("#tp-alb .alb-det")
+            assert "Alternative ion formula" in pg.inner_text("#tp-alb .alb-det")
             sel = pg.evaluate("document.activeElement.dataset.id")
             pg.keyboard.press("ArrowUp"); pg.wait_for_function("document.activeElement.dataset.id !== %r" % sel, timeout=5000)     # to the parent
             pg.keyboard.press("Enter"); ae = pg.evaluate("document.activeElement.tagName + ':' + document.activeElement.getAttribute('role') + ':' + (document.activeElement.dataset||{}).id"); assert ae.split(":")[1] == "treeitem", ae

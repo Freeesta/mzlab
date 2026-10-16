@@ -85,7 +85,7 @@
       + `<span role="cell">${esc(r.formula)}</span><span role="cell" class="n">${r.total}</span><span role="cell" class="pv-ch">${chips(r)}</span><span role="cell" class="n" title="1/N: N candidates the proofs cannot tell apart">1/${r.n}</span>`
       + `<span role="cell">${strip(r.cells)}</span><span role="cell">${reasonText(r)}</span></div>`;
   }
-  const HEAD_PLAIN = ["ID", "m/z", "RT (min)", "Members", "Cells"], HEAD_CAND = ["ID", "Neutral mass", "Formula", "Points", "Contributions", "1/N", "Cells", "Reason"];
+  const HEAD_PLAIN = ["ID", "m/z", "RT (min)", "Members", "Cells"], HEAD_CAND = ["ID", "Neutral mass", "Neutral formula", "Points", "Contributions", "1/N", "Cells", "Reason"];
 
   /** mounts the list in `el`; `opts.onPick(row)` on click or Enter. Returns {set(list), pick(i), count()} */
   function mount(el, { gated, onPick = /** @type {(row?: any, i?: number) => void} */ (() => {}) }) {

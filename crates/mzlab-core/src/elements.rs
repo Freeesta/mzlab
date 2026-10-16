@@ -244,9 +244,41 @@ pub fn ion_mz(neutral: f64, adduct: &str) -> Option<f64> {
         .map(|(_, s)| neutral + s)
 }
 
-/// `/api/formula`: neutral mass and ion m/z of every adduct, exact, at 1 decimal and nominal.
+/// The adduct name that asks for no adduct: the text typed is already the ion, nothing is added to it.
+pub const NO_ADDUCT: &str = "none";
+
+/// The adduct written inside the text of an ion (`C14H13F4N3O4S+H`, `C9H10Cl2N2O [M+Na]+`, `C9H8O4-H`): the formula without it and the adduct of the table, if any.
+fn embedded_adduct(text: &str) -> (String, Option<&'static str>) {
+    let t: String = text.split_whitespace().collect();
+    let names: Vec<&'static str> = adducts().iter().map(|(a, _)| *a).collect();
+    if let Some(i) = t.find("[M") {
+        if let Some(a) = names.iter().find(|a| t[i..] == ***a) {
+            return (t[..i].to_string(), Some(*a));
+        }
+    }
+    if let Some(i) = t.rfind(['+', '-']) {
+        let (head, tail) = (&t[..i], &t[i..]);
+        let hit = names.iter().find(|a| {
+            a.strip_prefix("[M")
+                .and_then(|r| r.rfind(']').map(|j| &r[..j]))
+                == Some(tail)
+        });
+        if let (Some(a), false) = (hit, head.is_empty()) {
+            return (head.to_string(), Some(*a));
+        }
+    }
+    (t, None)
+}
+
+/// `/api/formula`: neutral mass and ion m/z of every adduct, exact, at 1 decimal and nominal. With the adduct `none` the text is an ion: an adduct written in it (`+H`, `[M+H]+`) is the one used, otherwise the mass of the formula is the m/z.
 pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
-    let f = parse_formula(formula)?;
+    let (text, inner) = if adduct == Some(NO_ADDUCT) {
+        let (t, a) = embedded_adduct(formula);
+        (t, a)
+    } else {
+        (formula.to_string(), None)
+    };
+    let f = parse_formula(&text)?;
     let m = mass(&f);
     let mut o = Out::default();
     o.raw("{\"formula\":")
@@ -272,7 +304,10 @@ pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
         o.raw("}");
     }
     o.raw("}");
-    if let Some(a) = adduct {
+    if adduct == Some(NO_ADDUCT) {
+        o.raw(",\"adduct\":").str(inner.unwrap_or("")).raw(",");
+        row(&mut o, inner.and_then(|a| ion_mz(m, a)).unwrap_or(m));
+    } else if let Some(a) = adduct {
         let z = ion_mz(m, a).ok_or_else(|| Error::new("err.adduct.unknown").with("adduct", a))?;
         o.raw(",\"adduct\":").str(a).raw(",");
         row(&mut o, z);

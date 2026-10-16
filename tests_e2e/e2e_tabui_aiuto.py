@@ -1,6 +1,6 @@
 """Tabui, help and field errors (TP_Mine/js/40_tabui_testi.js, 41_tabui_aiuto.js, 41_tabui_campi.js, 20_tpmine.js, 43_trasformazioni.js):
 (1) the help popover of a field and of its label (no «?» buttons) opens with the mouse, with the keyboard focus and with the touch, closes with Esc leaving the focus on the field, and is English only
-or English with the page; without qqq.admin there is no TT; (2) the fields of the form have short placeholders and labels; (3) the error «Enter a formula or SMILES.» marks the
+English only whatever the page language; without qqq.admin there is no TT; (2) the fields of the form have short placeholders and labels; (3) the error «Enter a formula or SMILES.» marks the
 formula and the SMILES together (aria-invalid, red double border, message linked with aria-describedby) and both return to normal on a click or a key in either; the same rule on
 the fields of the list of transformations. axe: no serious or critical violation (SKIP part without axe-core).
 Run from the repo root: python3 tests_e2e/e2e_tabui_aiuto.py"""
@@ -101,10 +101,10 @@ try:
         pg = fresh(True, "en")
         def short():
             ph = pg.evaluate("[...document.querySelectorAll('#v-tpmine .tp input[placeholder]')].map(i => i.placeholder)")
-            assert all(len(x) <= 12 for x in ph), ph
+            assert all(len(x) <= 16 for x in ph), ph
             lab = pg.evaluate("[...document.querySelectorAll('#tp-left label')].map(l => l.textContent.trim())")
             assert all(len(x) <= 24 for x in lab), lab
-            assert pg.get_attribute("#tp-mol", "placeholder") == "Formula" and pg.get_attribute("#tp-name", "placeholder") == "Name"
+            assert pg.get_attribute("#tp-mol", "placeholder") == "Neutral formula" and pg.get_attribute("#tp-name", "placeholder") == "Name"
             assert not pg.query_selector("#tp-left [title*='empty = automatic']")
         step("placeholders and labels of the form are a few words", short)
         def hover_field():

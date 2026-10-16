@@ -204,7 +204,7 @@
   <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
  <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div>
   <div class="row tp-ac"><input type="text" id="tp-name" class="grow-in" placeholder="Name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false"${dt("ft.f.name")}><ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
-  <div class="row"><input type="text" id="tp-mol" class="grow-in" placeholder="Formula" aria-label="Neutral molecular formula" spellcheck="false"${dt("ft.f.formula")}></div>
+  <div class="row"><input type="text" id="tp-mol" class="grow-in" placeholder="Neutral formula" aria-label="Neutral molecular formula" spellcheck="false"${dt("ft.f.formula")}></div>
   <div class="row"><input type="text" id="tp-smi" class="grow-in" placeholder="SMILES" aria-label="SMILES" spellcheck="false"${dt("ft.f.smiles")}><button id="tp-draw" type="button" title="Draw the molecule in the Draw tab and bring the SMILES back here">Draw</button></div>
   <div id="tp-warn" role="status"></div>
   <div class="row"><label class="mut" for="tp-add"${dt("ft.f.adduct")}>Adduct</label><select id="tp-add"${dt("ft.f.adduct")}><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+HCOO]-</option></select><span class="mut" id="tp-prev"></span></div>
@@ -671,7 +671,7 @@
         { key: "cells", label: "Cells", help: "ft.col.cells", cell: r => cellStates(r).length ? TPTAB.cells(cellStates(r)) : TPTAB.state("na"), text: r => cellStates(r).map(x => x[0]).join("") },
         { key: "max", label: "Max area", help: "ft.col.maxarea", num: true, sort: r => r.max_area, cell: r => fmtA(r.max_area), text: r => String(Math.round(r.max_area)) },
         { key: "score", off: true, label: "Score", help: "ft.col.score", num: true, sort: r => r.score, cell: r => r.score == null ? "" : `<span class="badge b-${r.label}">${r.score} ${LAB[r.label]}</span>`, text: r => r.score == null ? "" : String(r.score) },
-        { key: "formula", off: true, label: "Formula", help: "ft.col.formula", sort: r => r.formula || "", cell: r => esc(r.formula || "") },
+        { key: "formula", off: true, label: "Neutral formula", help: "ft.col.formula", sort: r => r.formula || "", cell: r => esc(r.formula || "") },
         { key: "tmax", off: true, label: "t max", help: "ft.col.tmax", num: true, sort: r => r.tmax, cell: r => String(r.tmax ?? "") },
         ...(ms2 ? [{ key: "ms2", off: true, label: "MS2", help: "ft.col.ms2match", num: true, sort: r => r.ms2 || 0, cell: r => W.TPMS2.cell(r), text: r => String(r.ms2 || 0) }] : []),
         { key: "num", off: true, label: "#", help: "ft.col.rank", sort: r => r.id, cell: r => rowNum(r) },
@@ -780,7 +780,7 @@
         const top = s.rows.filter(r => r.label === "forte" || r.label === "possibile");
         const det = []; for (const r of top) det.push(await getDetail(r.id));
         const times = s.times, name = (st.summary.parent.formula || "parent") + "_Tabui";
-        const head = ["#", "Candidate", "Formula", "Change", "m/z", "RT (min)", "Level", "Score", "Verdict", "t max (min)", "Max area", ...times.map(t => "Area t" + t)];
+        const head = ["#", "Candidate", "Neutral formula", "Change", "m/z", "RT (min)", "Level", "Score", "Verdict", "t max (min)", "Max area", ...times.map(t => "Area t" + t)];
         const line = r => [r.id, r.name, r.formula, r.delta, r.mz, r.ref_rt, r.level ?? "", r.score ?? "", r.label, r.tmax ?? "", Math.round(r.max_area), ...times.map(t => { const k = r.kinetics.find(p => p.time === t); return k ? Math.round(k.area) : ""; })];
         const trans = det.flatMap(d => d.transitions);
         if (kind === "json") return dl(name + ".json", JSON.stringify({ summary: s, details: det, ms2_overrides: window.TPMS2 ? window.TPMS2.overrides() : [] }, null, 1), "application/json");
@@ -789,7 +789,7 @@
           { name: "Criteria", head: ["#", "Candidate", "Criterion", "Outcome", "Detail"], rows: det.flatMap(d => d.criteria.map(c => [d.id, d.name, c.name, c.status, c.text])), widths: [6, 38, 28, 8, 70] },
           { name: "MS2", head: ["#", "Candidate", "Product m/z", "% rel.", "Loss", "Note", "Similarity to the parent"], rows: det.flatMap(d => d.ms2.fragments.map(f => [d.id, d.name, f.mz, f.rel, f.loss ?? "", f.note || "", d.sim ? d.sim.cos.total : ""])), widths: [6, 38, 12, 9, 9, 50, 14] },
           ...(window.TPMS2 && window.TPMS2.sheet() ? [window.TPMS2.sheet()] : []),
-          { name: "MRM transitions", head: ["Candidate", "Formula", "Q1", "Q3 observed", "Q3 suggested", "CE", "Expected RT", "RT window", "% rel.", "MS2 scans", "Note"], rows: trans.map(t => [t.compound, t.formula, t.Q1, t.Q3_osservato, t.Q3_consigliato, t.CE, t.RT_attesa_min, t.finestra_RT_min, t["intensita_rel_%"], t.scansioni_ms2, t.nota]), widths: [34, 16, 8, 12, 14, 7, 10, 11, 8, 12, 40] },
+          { name: "MRM transitions", head: ["Candidate", "Neutral formula", "Q1", "Q3 observed", "Q3 suggested", "CE", "Expected RT", "RT window", "% rel.", "MS2 scans", "Note"], rows: trans.map(t => [t.compound, t.formula, t.Q1, t.Q3_osservato, t.Q3_consigliato, t.CE, t.RT_attesa_min, t.finestra_RT_min, t["intensita_rel_%"], t.scansioni_ms2, t.nota]), widths: [34, 16, 8, 12, 14, 7, 10, 11, 8, 12, 40] },
           ...(s.mrm ? [mrmSheet(s.mrm)] : []),
           { name: "Information", head: ["Item", "Value"], rows: [["Parent", s.parent.formula], ["Neutral mass", s.parent.neutral], ["Adduct", s.parent.adduct], ["Parent m/z", s.parent.mz], ["m/z offset (Da)", s.offset ? s.offset.offset : ""], ["k (1/min)", s.decay ? s.decay.k_per_min : ""], ["t1/2 (min)", s.decay ? s.decay.half_life_min : ""], ...Object.entries(s.settings).map(([k, v]) => [k, String(v)]), ...s.files.map(f => ["File", `${f.name} (${f.kind}, ${f.type}, t=${f.time ?? ""})`]), ["Note", "Unit resolution: each row is a candidate, not an identification. Levels 2 and 1 require a library spectrum or a standard."]], widths: [22, 90] }];
         dlx(name + ".xlsx", sheets);
