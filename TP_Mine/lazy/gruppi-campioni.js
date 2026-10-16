@@ -21,6 +21,40 @@
 .tpg input.tpg-time{width:6em}.tpg input.tpg-rep{width:4em}.tpg input.tpg-cond{width:10em}.tpg tr.tpg-prop input.tpg-cond,.tpg tr.tpg-prop input.tpg-time{background:color-mix(in srgb,var(--warn) 30%,transparent)}
 .tpg .tpg-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}.tpg .tpg-w{font-size:12px}.tpg .tpg-w .e{color:var(--bad)}.tpg .tpg-w .w{color:var(--warn)}`;
 
+  /** a file the notebook has no entry for: the Data tab's session (v1) carries no condition and often no time, so the proposal from the names (the Rust, all files together) stands unless the session holds a confirmed time
+   * @param {any} R @param {any} call @param {string[]} files @param {Campione[]} cs @param {Set<string>} stored @returns {Promise<Campione[]>} */
+  async function withProposals(R, call, files, cs, stored) {
+    if (cs.every(c => stored.has(c.file))) return cs;
+    const prop = /** @type {Campione[]} */ (JSON.parse(await call("proponi", JSON.stringify({ files: files.map(name => ({ name: R.fileOf(name), sha256: "", kind: "" })) }))).campioni);
+    return cs.map(c => {
+      const p = prop.find(x => x.file === c.file);
+      if (stored.has(c.file) || !p) return c;
+      if (c.tempo != null && c.tempo_confermato) return { ...c, serie: c.serie || p.serie, replica: p.replica };
+      return { ...p, ordine_iniezione: c.ordine_iniezione };
+    });
+  }
+
+  /** one row of the table @param {any} R @param {string} id @param {Campione} c @param {number} i @param {string} n name, escaped @param {boolean} checked @param {boolean} seen the user already saw the condition */
+  function rowHtml(R, id, c, i, n, checked, seen) {
+      const timed = TIMED.includes(c.tipo), tprop = timed && c.tempo != null && !c.tempo_confermato, cprop = !!c.serie && !seen;
+      return `<tr${tprop || cprop ? ' class="tpg-prop"' : ""}><td><input type="checkbox" id="${id}-s${i}" class="tpg-sel" data-i="${i}" aria-label="Select ${n}"${checked ? " checked" : ""}></td><td>${n}</td>`
+        + `<td><select class="tpg-role" id="${id}-r${i}" data-i="${i}" aria-label="Role of ${n}">${R.ROLES.map((/** @type {string} */ r) => `<option${r === c.tipo ? " selected" : ""}>${r}</option>`).join("")}</select></td>`
+        + `<td><input class="tpg-cond" id="${id}-c${i}" data-i="${i}" list="${id}-dl" autocomplete="off" aria-label="Condition of ${n}" placeholder="${TIMED.includes(c.tipo) ? "" : "shared"}" value="${esc(c.serie)}"${cprop ? ' title="Proposed from the name: Confirm conditions keeps it"' : ""}></td>`
+        + `<td><input class="tpg-time" id="${id}-t${i}" data-i="${i}" type="text" inputmode="decimal" autocomplete="off" aria-label="Time of ${n}"${timed ? "" : " disabled"} value="${c.tempo == null ? "" : c.tempo}"${tprop ? ' title="Proposed from the name: Enter confirms"' : ""}></td>`
+        + `<td><input class="tpg-rep" id="${id}-p${i}" data-i="${i}" type="number" min="1" step="1" aria-label="Replicate of ${n}" value="${c.replica ?? ""}"></td></tr>`;
+  }
+
+  /** the warnings of the Rust, one span per code and condition @param {{codice: string, gravita: string, file: string, serie: string}[]} avvisi @param {boolean} several more than one condition: name it */
+  function warnHtml(avvisi, several) {
+    /** @type {Map<string, {sev: string, n: number, text: string}>} */ const by = new Map();
+    for (const a of avvisi) {
+      const t = /** @type {any} */ (WARN)[a.codice]; if (!t) continue;
+      const key = a.codice + "|" + a.serie, old = by.get(key);
+      by.set(key, { sev: a.gravita, n: (old ? old.n : 0) + 1, text: a.file || !a.serie || !several ? t : `${t} in ${a.serie}` });
+    }
+    return [...by.values()].map(w => `<span class="${w.sev === "error" ? "e" : "w"}">${esc(w.text)}${w.n > 1 ? " (" + w.n + ")" : ""}</span>`).join(" · ");
+  }
+
   /**
    * @param {HTMLElement} el where the table goes @param {string[]} files names of the files, in the order of the Dig @param {Opts} opts
    * @returns {Promise<{campioni: () => Campione[], reference: () => string, conditions: () => string[], unmount: () => void}>}
@@ -30,11 +64,7 @@
     /** @type {Campione[]} */ let cs = await R.build(call, files, nb, null);
     const stored = new Set(((nb && nb.campioni && nb.campioni.campioni) || []).map((/** @type {Campione} */ c) => c.file));
     // a file the notebook has no entry for: the Data tab's session (v1) carries no condition and often no time, so the proposal from the names (the Rust, all files together) stands unless the session holds a confirmed time
-    const fresh = cs.filter(c => !stored.has(c.file));
-    if (fresh.length) {
-      const prop = /** @type {Campione[]} */ (JSON.parse(await call("proponi", JSON.stringify({ files: files.map(name => ({ name: R.fileOf(name), sha256: "", kind: "" })) }))).campioni);
-      cs = cs.map(c => { const p = prop.find(x => x.file === c.file); if (stored.has(c.file) || !p) return c; if (c.tempo != null && c.tempo_confermato) return { ...c, serie: c.serie || p.serie, replica: p.replica }; return { ...p, ordine_iniezione: c.ordine_iniezione }; });
-    }
+    cs = await withProposals(R, call, files, cs, stored);
     const sure = new Set(cs.filter(c => stored.has(c.file)).map(c => c.file));            // conditions the user already saw
     /** @type {Set<number>} */ const sel = new Set();
     const o = (nb && nb.gruppi_opts) || null;
@@ -59,15 +89,7 @@
     async function draw(focus) {
       if (dead) return;
       const k = conds(), shared = k.length >= 2, u = cs.find(c => c.tempo != null);
-      const n = (/** @type {number} */ i) => esc(files[i]);
-      const rows = cs.map((c, i) => {
-        const timed = TIMED.includes(c.tipo), tprop = timed && c.tempo != null && !c.tempo_confermato, cprop = !!c.serie && !sure.has(c.file);
-        return `<tr${tprop || cprop ? ' class="tpg-prop"' : ""}><td><input type="checkbox" id="${id}-s${i}" class="tpg-sel" data-i="${i}" aria-label="Select ${n(i)}"${sel.has(i) ? " checked" : ""}></td><td>${n(i)}</td>`
-          + `<td><select class="tpg-role" id="${id}-r${i}" data-i="${i}" aria-label="Role of ${n(i)}">${R.ROLES.map((/** @type {string} */ r) => `<option${r === c.tipo ? " selected" : ""}>${r}</option>`).join("")}</select></td>`
-          + `<td><input class="tpg-cond" id="${id}-c${i}" data-i="${i}" list="${id}-dl" autocomplete="off" aria-label="Condition of ${n(i)}" placeholder="${TIMED.includes(c.tipo) ? "" : "shared"}" value="${esc(c.serie)}"${cprop ? ' title="Proposed from the name: Confirm conditions keeps it"' : ""}></td>`
-          + `<td><input class="tpg-time" id="${id}-t${i}" data-i="${i}" type="text" inputmode="decimal" autocomplete="off" aria-label="Time of ${n(i)}"${timed ? "" : " disabled"} value="${c.tempo == null ? "" : c.tempo}"${tprop ? ' title="Proposed from the name: Enter confirms"' : ""}></td>`
-          + `<td><input class="tpg-rep" id="${id}-p${i}" data-i="${i}" type="number" min="1" step="1" aria-label="Replicate of ${n(i)}" value="${c.replica ?? ""}"></td></tr>`;
-      }).join("");
+      const rows = cs.map((c, i) => rowHtml(R, id, c, i, esc(files[i]), sel.has(i), sure.has(c.file))).join("");
       el.innerHTML = `<div class="tpg"><style>${CSS}</style>`
         + `<div class="tpg-bar"><strong>Files, conditions and times</strong><label>Time unit <select id="${id}-u" aria-label="Unit of the times of the files">${R.UNITS.map((/** @type {string} */ x) => `<option${u && u.unita_tempo === x ? " selected" : ""}>${x}</option>`).join("")}</select></label>`
         + `<button type="button" id="${id}-set"${sel.size ? "" : " disabled"}>Set condition…</button><button type="button" id="${id}-ok" title="Keeps the conditions and the times proposed from the names">Confirm conditions</button>`
@@ -106,13 +128,7 @@
     async function warn() {
       const box = el.querySelector("#" + id + "-w"); if (!box) return;
       let v; try { v = await R.check(call, cs); } catch (_) { box.textContent = "The roles of the files could not be checked."; return; }
-      /** @type {Map<string, {sev: string, n: number, text: string}>} */ const by = new Map();
-      for (const a of v.avvisi) {
-        if (!(/** @type {any} */ (WARN))[a.codice]) continue;
-        const key = a.codice + "|" + a.serie, t = /** @type {any} */ (WARN)[a.codice], cond = a.serie && conds().length >= 2 ? ` in ${a.serie}` : "";
-        const old = by.get(key); by.set(key, { sev: a.gravita, n: (old ? old.n : 0) + 1, text: (a.file ? t : t + cond) });
-      }
-      if (!dead) box.innerHTML = [...by.values()].map(w => `<span class="${w.sev === "error" ? "e" : "w"}">${esc(w.text)}${w.n > 1 ? " (" + w.n + ")" : ""}</span>`).join(" · ");
+      if (!dead) box.innerHTML = warnHtml(v.avvisi, conds().length >= 2);
     }
 
     refOk(); await draw(); await notify();

@@ -120,7 +120,7 @@ try:
             pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"4\"]').value !== 'blank'", timeout=20000)
             pg.wait_for_function("document.activeElement && document.activeElement.classList.contains('tpg-role') && document.activeElement.value !== 'blank'", timeout=20000)      # drawn again, the focus is back
             pg.keyboard.press("ArrowUp"); pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"4\"]').value === 'blank'", timeout=20000)
-            pg.wait_for_timeout(800)                                      # the table is drawn again after the change
+            pg.wait_for_function("document.activeElement && document.activeElement.classList.contains('tpg-role') && document.activeElement.value === 'blank'", timeout=20000)      # drawn again, the focus is back
             pg.focus(f"{G} .tpg-cond[data-i='1']"); pg.keyboard.press("Tab")
             assert pg.evaluate("document.activeElement.classList.contains('tpg-time')"), pg.evaluate("document.activeElement.outerHTML")
         step("keyboard: arrows in the role select; Tab goes from condition to time", keyboard)
@@ -131,7 +131,8 @@ try:
 
         def reload():
             before = pg.evaluate(BYNAME); roles = pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)")
-            pg.evaluate("nbSave(true)"); pg.wait_for_timeout(1500)
+            pg.evaluate("nbSave(true)")
+            pg.wait_for_function("fetch('api/notebook').then(r => r.json()).then(j => 'campioni' in j && 'gruppi_opts' in j)", timeout=20000)
             kept = pg.evaluate("fetch('api/notebook').then(r => r.json()).then(j => Object.keys(j))")
             assert "campioni" in kept and "gruppi_opts" in kept, ("the notebook did not keep it", kept)
             pg.reload(); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
