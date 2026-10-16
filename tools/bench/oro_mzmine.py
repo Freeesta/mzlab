@@ -104,7 +104,7 @@ def scrivi(path: Path) -> str:
         tic.append(float(it.sum()))
     chroms = [ds._chrom(0, "TIC", rts, np.array(tic))]
     path.write_text(ds._hr_head("exploris", False, nome) + f'<spectrumList count="{len(specs)}" defaultDataProcessingRef="pwiz_Reader_Thermo_conversion">' + "".join(specs) + "</spectrumList>"
-                    + f'<chromatogramList count="{len(chroms)}" defaultDataProcessingRef="pwiz_Reader_Thermo_conversion">' + "".join(chroms) + "</chromatogramList></run></mzML>", encoding="utf-8")
+                    + f'<chromatogramList count="{len(chroms)}" defaultDataProcessingRef="pwiz_Reader_Thermo_conversion">' + "".join(chroms) + "</chromatogramList></run></mzML>", encoding="utf-8", newline="\n")      # LF on every system: the sha256 below must not depend on the platform
     return sha_contenuto(path.read_bytes())
 
 
