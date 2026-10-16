@@ -306,7 +306,7 @@
     const filtersText = () => `# filters: ${[...chipTests().map(c => c.label), ...(st.q.trim() ? [`search "${st.q.trim()}"`] : [])].join(", ") || "none"}`;
     /** the text of a cell of the view for the export (the model, not the DOM) */
     const textOf = (/** @type {Col} */ c, /** @type {any} */ r) => c.text ? c.text(r) : plain(c.cell(r));
-    /** the columns «Decided level» and «Note» at the end of the view, when the table has decisions @param {{ head: string[], rows: string[][] }} v @param {any[]} list */
+    /** the columns «Decided level» and «Note» at the end of the view, when the table has decisions @param {{ head: string[], rows: any[][] }} v @param {any[]} list */
     const withNotes = (v, list) => dec ? { head: [...v.head, "Decided level", "Note"], rows: v.rows.map((r, i) => { const d = G.TPDEC.get(dec.series(), dec.key(list[i])); return [...r, d ? G.TPDEC.text(d.level) : "", d ? d.note : ""]; }) } : v;
     /** a column with `value` gives the true number after its text (e.g. an area as «821.43e+6» and as 821430000) */
     const exported = () => ({ head: cols.flatMap(c => c.value ? [plain(c.label), plain(c.label) + " (number)"] : [plain(c.label)]), rows: st.list.map(r => cols.flatMap(c => c.value ? [textOf(c, r), c.value(r) ?? ""] : [textOf(c, r)])) });
