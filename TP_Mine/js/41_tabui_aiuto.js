@@ -42,6 +42,7 @@
   const open = el => {
     const p = ensure(), key = el.getAttribute("data-tt") || "", text = tt(key);
     if (!text) return;
+    if (el.tagName === "SUMMARY" && /** @type {HTMLDetailsElement | null} */ (el.parentElement) && /** @type {HTMLDetailsElement} */ (el.parentElement).open) return;          // a menu that is open must not be covered by the help of its own button
     if (cur && cur !== el) close();
     cur = el; p.textContent = text; p.hidden = false;
     el.setAttribute("aria-describedby", "tph-pop"); if (el.classList.contains("tph-b")) el.setAttribute("aria-expanded", "true");
@@ -61,6 +62,7 @@
     });
     root.addEventListener("focusin", ev => { if (!first(ev)) return; const el = trig(ev.target); if (el) { clearTimeout(timer); open(el); } });
     root.addEventListener("focusout", ev => { if (!first(ev)) return; const el = trig(ev.target); if (el && el === cur) close(); });
+    root.addEventListener("toggle", ev => { const d = ev.target; if (cur && d instanceof HTMLDetailsElement && d.open && d.contains(cur)) close(); }, true);          // `toggle` does not bubble: the help of the summary leaves when its menu opens
     /** @type {{ el: HTMLElement, wasOpen: boolean } | null} */ let down = null;
     root.addEventListener("pointerdown", ev => { if (!first(ev)) return; const el = trig(ev.target); down = el ? { el, wasOpen: cur === el } : null; });
     root.addEventListener("click", ev => {                                  // touch, Enter, Space (a button clicks itself): a pointer press on an open one closes it, anything else opens it
