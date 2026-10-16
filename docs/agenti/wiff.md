@@ -7,6 +7,7 @@
 - `run.rs`: `Wiff::run(&mut ReadAt) -> mzml::Run`: spettri (`Spectrum`, profilo) e cromatogrammi MRM (`TIC` + un `SRM SIC Q1= Q3= sample= period=1 experiment= transition=` per transizione, `unit` come negli mzML). I `Run` sono quelli che il resto del programma legge.
 - `idx.rs`: `SampleIdxTable` e `SampleN/Idx`. `scan.rs`: blocchi e codec.
 - `methodinfo.rs::method_of_sample`: il metodo del campione (opzionale: i campioni di un lotto possono essere più dei metodi, e alcuni campioni non hanno metodo).
+- `tools/wiff_dump.py FILE.wiff [--all] [--log]` (solo Python standard, `mzlab/reader/ole.py`): testo breve per cercare dove un file del laboratorio tiene ciò che il lettore non mostra ancora (nomi dei campioni, date, vial): flussi raggruppati per campione e metodo con le dimensioni, per ogni campione scansioni (righe di `Idx`), tipi degli esperimenti e stringhe leggibili dei flussi piccoli; `Log` (può avere il nome dell'operatore) solo con `--log`. L'uscita resta fuori dal repository. Prova: `tests/test_wiff_dump.py`.
 
 ## Formato (3200 QTRAP)
 - `SampleSubtree/SampleIdxTable`: 32 byte di intestazione, righe di 16 byte (u32 numero campione, u32 posizione B). La sezione del campione nel `.scan` inizia a B − 20.

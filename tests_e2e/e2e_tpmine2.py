@@ -46,7 +46,7 @@ try:
             assert "hydroxylation" in pg.input_value("#tp-tr")
             pg.click("#tp-go"); pg.wait_for_selector("#tp-t", timeout=300000)
             pg.wait_for_timeout(1300)
-            assert pg.inner_text(".hero-c b >> nth=0").strip() == "3" and "Vein found" in pg.inner_text(".hero")
+            assert pg.inner_text('.hero [data-k="strong"] b').strip() == "3" and "Vein found" not in pg.inner_text(".hero") and "Neutral formula" in pg.inner_text(".hero")
             assert pg.evaluate("document.querySelector('#tp-struct svg') !== null")          # parent structure drawn from the SMILES (needs vendor/openchemlib.js)
             pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk")
             t = pg.inner_text("#tp-t")
@@ -139,8 +139,8 @@ try:
                 pg.click("#tp-go"); pg.wait_for_selector("#tp-t", timeout=600000); pg.wait_for_timeout(1300)
                 head = pg.inner_text(".hero")
                 assert "t½" in head and "offset" in head
-                vals = pg.evaluate("[...document.querySelectorAll('.hero-c b')].map(b=>parseFloat(b.textContent))")
-                assert 0.25 <= vals[4] <= 0.35 and 2.0 < vals[3] < 4.0 and vals[0] >= 3, vals
+                vals = pg.evaluate("Object.fromEntries([...document.querySelectorAll('.hero .hc[data-k]')].map(e => [e.dataset.k, parseFloat(e.querySelector('b') ? e.querySelector('b').textContent.replace('\u2212', '-') : 'NaN')]))")
+                assert 0.25 <= vals["offset"] <= 0.35 and 2.0 < vals["half"] < 4.0 and vals["strong"] >= 3, vals
                 pg.click("#tp-m-mrm summary"); m = pg.inner_text("#tp-right")                       # the MRM card is a closed section under the table
                 assert "MRM: automatic integration" in m and "Line: area" in m and "364.1>194.1" in m, m[:400]      # the mzFinder text is English only
                 assert pg.evaluate("document.getElementById('tp-c-cal').width") > 0

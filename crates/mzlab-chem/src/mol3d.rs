@@ -39,6 +39,39 @@ pub fn symbol(z: u8) -> &'static str {
     }
 }
 
+/// Intramolecular hydrogen bonds (donor H, acceptor) of the geometry `xyz` (Å): an H on N or O, an N, O or F acceptor that is not
+/// the donor, H···acceptor ≤ 2.5 Å and angle donor–H···acceptor > 120°.
+pub fn hbonds(m: &Mol3d, xyz: &[[f64; 3]]) -> Vec<(usize, usize)> {
+    let polar = |z: u8| matches!(z, 7 | 8);
+    let d = |a: usize, b: usize| {
+        (0..3)
+            .map(|k| (xyz[a][k] - xyz[b][k]).powi(2))
+            .sum::<f64>()
+            .sqrt()
+    };
+    let mut out = Vec::new();
+    for &(a, b, _) in &m.bonds {
+        let (h, don) = if m.el[a] == 1 {
+            (a, b)
+        } else if m.el[b] == 1 {
+            (b, a)
+        } else {
+            continue;
+        };
+        if !polar(m.el[don]) {
+            continue;
+        }
+        for acc in (0..m.len()).filter(|&k| k != don && matches!(m.el[k], 7..=9)) {
+            let (dh, ha, da) = (d(don, h), d(h, acc), d(don, acc));
+            let cos = (dh * dh + ha * ha - da * da) / (2.0 * dh * ha);
+            if ha <= 2.5 && cos < (120f64).to_radians().cos() {
+                out.push((h, acc));
+            }
+        }
+    }
+    out
+}
+
 #[derive(Debug, Clone)]
 pub struct Mol3d {
     /// Atomic numbers.
