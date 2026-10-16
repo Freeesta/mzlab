@@ -10,6 +10,7 @@ pub mod agilent;
 pub mod agilent;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod analog;
+pub mod abbina;
 pub mod bench_stats;
 pub mod budget;
 pub mod centroidi;
@@ -91,6 +92,7 @@ pub mod peaks;
 pub mod peakext;
 pub mod signal;
 pub mod sortc;
+pub mod source_ramp;
 pub mod profspec;
 pub mod project;
 pub mod pysum;

@@ -28,7 +28,6 @@
 .tp .hr-idx{max-height:240px;overflow:auto;margin-top:6px;border-top:1px solid var(--line);padding-top:4px;font-size:12px}.tp .hr-idx h4{margin:6px 0 2px;font-size:12px;color:var(--muted)}
 .tp .hr-idx .kv{display:grid;grid-template-columns:max-content 1fr;gap:2px 12px}.tp .hr-idx .kv b{color:var(--muted);font-weight:600}
 .tp .hr-idx:focus-visible{outline:2px solid var(--accent);outline-offset:1px}`;
-  const LV_TEXT = { 3: "MS2 linked to the parent, region localised", 4: "formula and derivation", 5: "appears with the treatment" };       // the badges and the colours are those of livelli.js (.lvb, .lv-N)
   /** quality of the level, 0 best: diagnostic evidence, then L3, L4, L5 @param {any} r */
   const lvQ = r => r.diagnostic ? 0 : +r.level - 2;
   const SIM_LABEL = ["equal fragments", "shifted fragments", "common neutral losses"], SIM_VAR = ["--sim-eq", "--sim-sh", "--sim-nl"];
@@ -123,11 +122,12 @@
     // ---- the open row: the head at once, the tabs when the detail of the candidate and riga/1 have arrived
     /** @type {Map<number, HTMLElement>} */ const heads = new Map();
     /** the sentence of the head: how much evidence there is, in words @param {any} r */
-    const words = r => [r.diagnostic ? "diagnostic evidence" : LV_TEXT[r.level] || "", r.region ? "region " + r.region : "", r.ms2_scans ? r.ms2_scans + " MS2 scans" : "no MS2",
-      r.ctl ? (r.ctl.in_t0 ? "also at t0" : "absent at t0") : "", r.ctl ? (r.ctl.in_blank ? "also in the blank" : "absent in the blank") : ""].filter(Boolean).join("; ");
     /** @param {any} r */
     const decide = TPRIGA && (/** @type {any} */ (window).TPDEC) ? { series: () => ({ files: s.files, formula: s.parent.formula }), key: (/** @type {any} */ r) => (/** @type {any} */ (window).TPDEC).rowKey(r.mz, r.rt, true), level: (/** @type {any} */ r) => r.level } : null;
-    const baseModel = r => ({ title: r.formula || "m/z " + r.mz, level: r.level, pred: r.pred, words: words(r), decide: decide ? { series: decide.series(), key: decide.key(r), level: r.level } : undefined, actions: [{ key: "copy", label: "Copy", help: "ft.riga.copy", run: () => {
+    /** the head repeats the closed row: its key cells */
+    const summaryOf = (/** @type {any} */ r) => [{ label: "Neutral formula", value: r.formula || "", help: "ft.riga.neutral" }, { label: "m/z", value: r.mz.toFixed(4), help: "ft.col.mz" }, { label: "RT", value: r.rt == null ? "" : (+r.rt).toFixed(2) + " min", help: "ft.col.rt" },
+      { label: "Δppm", value: r.ppm == null ? "" : (+r.ppm).toFixed(1), help: "ft.riga.ppm" }, { label: "MS2", value: r.ms2_scans ? r.ms2_scans + " scans" : "none", help: "ft.pf.ms2" }];
+    const baseModel = r => ({ title: r.formula || "m/z " + r.mz, level: r.level, pred: r.pred, summary: summaryOf(r), decide: decide ? { series: decide.series(), key: decide.key(r), level: r.level } : undefined, actions: [{ key: "copy", label: "Copy", help: "ft.riga.copy", run: () => {
       const text = [r.formula || "", "m/z " + r.mz, "RT " + r.rt, "L" + r.level + (r.diagnostic ? " diagnostic" : "")].join("\t");
       Promise.resolve(navigator.clipboard && navigator.clipboard.writeText(text)).then(() => toast("Copied"), () => toast("Copy is not allowed here"));
     } }] });
@@ -221,11 +221,13 @@
       if (ms2) m.spectrum = { kind: "mirror", mz: ms2.candidate.mz, y: ms2.candidate.rel, ref: { mz: ms2.parent.mz, y: ms2.parent.rel } };
       else if (tr && tr.ms1 && tr.ms1.mz && tr.ms1.mz.length) m.spectrum = { kind: "ms1", mz: tr.ms1.mz, y: tr.ms1.y };
       else missing.spectrum = "no MS2 for this ion";
-      m.line = row ? [`RT ${row.rt.toFixed(2)} min${row.rt_lo != null && row.rt_hi != null ? ` (${row.rt_lo.toFixed(2)}-${row.rt_hi.toFixed(2)})` : ""}`, q && q.fwhm != null ? `FWHM ${q.fwhm}` : "", row.charge != null ? `charge ${row.charge}` : "",
-        row.ms2 ? `MS2 from ${row.ms2.file}${row.ms2.purity != null ? ` (purity ${row.ms2.purity.toFixed(2)})` : ""}` : ""].filter(Boolean).join(" · ") : "";
+      m.xicTip = row ? [`RT ${row.rt.toFixed(2)} min${row.rt_lo != null && row.rt_hi != null ? ` (${row.rt_lo.toFixed(2)}-${row.rt_hi.toFixed(2)})` : ""}`, q && q.fwhm != null ? `FWHM ${q.fwhm}` : "", row.charge != null ? `charge ${row.charge}` : "",
+        row.ms2 ? `MS2 from ${row.ms2.file}${row.ms2.purity != null ? ` (purity ${row.ms2.purity.toFixed(2)})` : ""}` : ""].filter(Boolean).join(" · ") + "." : "";
+      const R = /** @type {any} */ (window).TPRIGA && /** @type {any} */ (window).TPRIGA.toData; if (R) m.open = { xic: () => R.xic(r.mz) };
       m.samples = cells ? cells.map((/** @type {any} */ c) => ({ file: c.file, type: GROUP[c.type] || c.type, time: c.time, area: c.area, state: c.state, apexRt: c.apex_rt, lo: row.rt_lo, hi: row.rt_hi }))
         : d.times.map((/** @type {number} */ t, /** @type {number} */ k) => ({ file: fileName(k), time: t >= 0 ? t : null, area: d.areas[k], state: fl.has(k) ? "filled" : d.areas[k] > 0 ? "detected" : "absent" }));
-      const proofs = d.criteria.filter((/** @type {any} */ c) => c.status === "pass" || c.status === "fail").map((/** @type {any} */ c) => ({ ok: c.status === "pass", text: `${c.name}: ${c.text}` }));
+      const pk = (/** @type {string} */ n) => /persist/i.test(n) ? "persist" : /time zero|\bt0\b/i.test(n) ? "t0" : /grow/i.test(n) ? "grow" : /isotop/i.test(n) ? "iso" : /ms2|fragment/i.test(n) ? "ms2" : undefined;
+      const proofs = d.criteria.filter((/** @type {any} */ c) => c.status === "pass" || c.status === "fail").map((/** @type {any} */ c) => ({ key: pk(c.name), ok: c.status === "pass", text: `${c.name}: ${c.text}` }));
       m.identity = { neutral: row && row.ident ? row.ident.neutral : null, adduct: (row && row.ident && row.ident.adduct) || s.parent.ion,
         candidates: [{ formula: r.formula || "", ppm: r.ppm, adduct: s.parent.ion, source: row && row.ident && row.ident.sources ? row.ident.sources.join(", ") : r.derivation ? "transformation list" : "", level: r.level, pred: r.pred, proofs }] };
       if (!r.formula) missing.candidates = "no formula within the tolerance for this ion";

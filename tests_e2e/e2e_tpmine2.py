@@ -46,7 +46,7 @@ try:
             assert "hydroxylation" in pg.input_value("#tp-tr")
             pg.click("#tp-go"); pg.wait_for_selector("#tp-t", timeout=300000)
             pg.wait_for_timeout(1300)
-            assert pg.inner_text(".hero-c b >> nth=0").strip() == "3" and "Vein found" in pg.inner_text(".hero")
+            assert pg.inner_text('.hero [data-k="strong"] b').strip() == "3" and "Vein found" not in pg.inner_text(".hero") and "Neutral formula" in pg.inner_text(".hero")
             assert pg.evaluate("document.querySelector('#tp-struct svg') !== null")          # parent structure drawn from the SMILES (needs vendor/openchemlib.js)
             pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk")
             t = pg.inner_text("#tp-t")
@@ -55,11 +55,11 @@ try:
             pg.click('.vt[data-v="kin"]'); pg.wait_for_selector("#tp-c-all"); assert pg.evaluate("document.getElementById('tp-c-all').width") > 0
             assert pg.locator('.vt[data-v="gems"], .vt[data-v="film"]').count() == 0          # Gems and Film are gone
             pg.click('.vt[data-v="tab"]'); pg.click("#tp-t tr.clk:has-text('hydroxylation') >> nth=0"); pg.wait_for_selector("#tp-t tr.tpt-exp #tp-det .tpr-ov svg", timeout=60000)      # a click on the row opens it
-            pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det .lr-idx", timeout=60000); pg.wait_for_timeout(500)
+            pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det .tpr-cand", timeout=60000); pg.click("#tp-det details.tpr-det > summary"); pg.wait_for_selector("#tp-det .lr-idx", timeout=60000); pg.wait_for_timeout(500)
             d = pg.inner_text("#tp-det")
-            assert "In words" in d and "Level 3" in d and "257.1" in d, d[:700]
+            assert "Neutral formula" in d and "257.0" in d and "In words" not in d and "Copy text" not in d, d[:700]      # the Pyodide engine gives no candidates: the [M+H]+ formula only from the Rust detail
             pg.screenshot(path=str(HERE / "shots" / "tpmine2_demo.png"), full_page=True)
-        step("LR demo (synthetic): files, formula from SMILES, search, ranking, detail with MS2 and level 3", demo)
+        step("LR demo (synthetic): files, formula from SMILES, search, ranking, detail with MS2, candidates and Details", demo)
         def xl():
             with pg.expect_download(timeout=120000) as dl: pg.click("#tp-x-xlsx")
             path = dl.value.path(); import zipfile; z = zipfile.ZipFile(path); assert z.testzip() is None; names = z.namelist(); assert any("sheet" in n for n in names), names
@@ -139,8 +139,8 @@ try:
                 pg.click("#tp-go"); pg.wait_for_selector("#tp-t", timeout=600000); pg.wait_for_timeout(1300)
                 head = pg.inner_text(".hero")
                 assert "t½" in head and "offset" in head
-                vals = pg.evaluate("[...document.querySelectorAll('.hero-c b')].map(b=>parseFloat(b.textContent))")
-                assert 0.25 <= vals[4] <= 0.35 and 2.0 < vals[3] < 4.0 and vals[0] >= 3, vals
+                vals = pg.evaluate("Object.fromEntries([...document.querySelectorAll('.hero .hc[data-k]')].map(e => [e.dataset.k, parseFloat(e.querySelector('b') ? e.querySelector('b').textContent.replace('\u2212', '-') : 'NaN')]))")
+                assert 0.25 <= vals["offset"] <= 0.35 and 2.0 < vals["half"] < 4.0 and vals["strong"] >= 3, vals
                 pg.click("#tp-m-mrm summary"); m = pg.inner_text("#tp-right")                       # the MRM card is a closed section under the table
                 assert "MRM: automatic integration" in m and "Line: area" in m and "364.1>194.1" in m, m[:400]      # the mzFinder text is English only
                 assert pg.evaluate("document.getElementById('tp-c-cal').width") > 0

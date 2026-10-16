@@ -97,12 +97,12 @@ try:
             if tg.get_attribute("aria-expanded") == "true": tg.click(); pg.wait_for_timeout(200)
             assert pg.locator("#hr-t tr.tpt-exp").count() == 0
             tg.click(); pg.wait_for_selector("#hr-t tr.tpt-exp #tp-det", timeout=30000)
-            assert tg.get_attribute("aria-expanded") == "true"
+            assert tg.get_attribute("aria-expanded") == "true", "the toggle says expanded"
             pg.wait_for_selector("#tp-det .tpr-ch svg", timeout=60000)
             ids = pg.evaluate("[...document.querySelectorAll('#hr-t tr.tpt-exp')].length"); assert ids == 1, ids
-            assert [t for t in pg.locator("#tp-det [role=tab]").all_inner_texts()] == ["Overview", "Samples", "Identity", "Quality"]
+            assert [t for t in pg.locator("#tp-det [role=tab]").all_inner_texts()] == ["Overview", "Samples", "Identity", "Quality"], pg.locator("#tp-det [role=tab]").all_inner_texts()
             hb = pg.locator("#tp-det .tpt-head .lvb").first.inner_text(); assert hb.startswith("L"), hb
-            assert pg.locator("#tp-det .tpt-head .tpr-words").inner_text().strip() != ""
+            assert pg.locator("#tp-det .tpt-head .tpr-sum").count() >= 2, "the summary of the closed row"
             assert pg.locator("#tp-det .tpr-ov svg").count() == 2, ("XIC of the row (from the traces) and the spectrum", pg.locator("#tp-det .tpr-ov svg").count(), pg.inner_text("#tp-det")[:600])
             assert pg.locator("#tp-det svg .tr").count() >= 6, "the XIC has a trace for every file"
             h = pg.evaluate("document.querySelector('#tp-det').getBoundingClientRect().height"); assert h <= 420, ("panel height", h)
@@ -111,7 +111,8 @@ try:
             assert pg.locator("#tp-det table.tpr tbody tr").count() >= 6, "a row per file with its state"
             h = pg.evaluate("document.querySelector('#tp-det').getBoundingClientRect().height"); assert h <= 420, ("panel height, samples", h)
             pg.click("#tp-det [data-tab=identity]"); pg.wait_for_selector("#tp-det .tpr-tw tbody tr", timeout=30000)
-            assert "Criteria" in pg.inner_text("#tp-det") or "✓" in pg.inner_text("#tp-det") or "✗" in pg.inner_text("#tp-det")
+            hd = pg.locator("#tp-det .tpr-tw thead th").all_inner_texts(); assert "Neutral formula" in hd, hd
+            assert pg.evaluate("!document.querySelector('#tp-det details.tpr-det').open"), "Details closed by default"
             pg.click("#tp-det [data-tab=quality]"); pg.wait_for_selector("#tp-det dl.tpr-q", timeout=30000)
             pg.click("#tp-det [data-tab=overview]"); pg.wait_for_selector("#tp-det .tpr-ch svg")
             nxt = rows.nth(1) if n0 > 1 else None

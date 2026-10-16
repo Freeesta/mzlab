@@ -98,13 +98,14 @@
       const best = r.areas.reduce((b, a, j) => (a > (r.areas[b] || 0) ? j : b), 0);
       const sources = ii && ii.sources && ii.sources.length ? "Found by " + ii.sources.join(", ") : "";
       const m = {
-        title: identText(r), level: levelOf(r) || undefined, words: sources, missing, samples, decide: dec ? { series: dec.series(), key: dec.key(r), level: dec.level(r) } : undefined,
-        actions: [{ key: "data", label: "Show in Data", help: "ft.showdata", run: () => showInData(o.names[best], r.mz) }],
+        title: identText(r), level: levelOf(r) || undefined, missing, samples, decide: dec ? { series: dec.series(), key: dec.key(r), level: dec.level(r) } : undefined,
+        summary: [{ label: "Identity", value: identText(r), help: "ft.col.identity" }, { label: "m/z", value: r.mz.toFixed(4), help: "ft.col.mz" }, { label: "RT", value: r.rt == null ? "" : (+r.rt).toFixed(2) + " min", help: "ft.col.rt" }, { label: "Found by", value: sources.replace(/^Found by /, "") }],
+        open: { xic: () => showInData(o.names[best], r.mz) },
         xic: t ? t.xic.map((/** @type {any} */ x, /** @type {number} */ j) => ({ file: x.file, group: samples[j].type, time: samples[j].time, rt: x.rt, y: x.y })) : [],
         apexRt: r.rt, lo: w ? w.rt_lo : r.lo, hi: w ? w.rt_hi : r.hi,
         spectrum: t && t.ms1 && t.ms1.mz.length ? { kind: "ms1", mz: t.ms1.mz, y: t.ms1.y, iso: isoOf(t.ms1, r.mz) } : null,
         spectrum2: t && t.ms2 && t.ms2.mz.length ? { kind: "ms2", mz: t.ms2.mz, y: t.ms2.y } : null,
-        line: w ? lineOf(w) : "",
+        xicTip: w ? lineOf(w) : "",
         identity: w ? { neutral: ii ? ii.neutral : null, adduct: ii && ii.adduct ? ii.adduct : "", candidates: idents.map((/** @type {any} */ x) => ({ formula: x.formula, source: "hypothesis", level: x.level, proofs: (x.proofs || []).map((/** @type {any} */ p) => ({ ok: p.segno !== "contro", text: `${p.tipo}: ${p.punti} points` })) })) } : null,
         quality: w ? { shape: w.quality ? w.quality.shape : null, snr: w.quality ? w.quality.snr : null, fwhm: w.quality ? w.quality.fwhm : null, flags: w.quality ? w.quality.flags : [], isoM1: w.iso_m1,
           blank: presence(w, ["blank", "dark"]), t0: presence(w, ["t0"]) } : null,
