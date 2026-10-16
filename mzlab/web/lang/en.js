@@ -636,6 +636,7 @@ I18N.add("en", {
   "error.engineRestarted": "The Rust engine restarted: your files were reopened, you can carry on.",
   "error.engineFallback": "The calculation engine stopped again: reload the page (the saved files stay).",
   "err.route.unavailable": "This operation is not available for this data.",
+  "error.newerFormat": "Index or table prepared by a newer version of mzLab (format {version}): it stays as it is and is not overwritten. Update the page or the app to open it; it is not analysed here.",
   "error.badIndex": "The index of this file is incomplete or damaged (usually because the browser ran short of space while it was built). Remove the file and load it again; if it happens again, free space from the settings or load fewer files at a time.",
   "error.memoryBudget": "This file is too big for the memory the browser gives the calculation engine.",
   "err.engine.index": "This file cannot be read: {name}",
