@@ -6,12 +6,18 @@ use js_sys::{Function, Uint8Array};
 use mzlab_core::error::Error;
 use mzlab_core::json::{self, Out};
 use mzlab_feat::attributio::io::{Entry, Io};
+use mzlab_feat::attributio::review::banco::review_json;
+use mzlab_feat::attributio::review::save::{decision_text, Saved};
 use mzlab_feat::attributio::table::{self, Run};
 use std::collections::BTreeMap;
 use wasm_bindgen::prelude::*;
 
-/// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
+/// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with. The build with the feature `rev` (the Banco 2b) is the
+/// `.wasm` `attributio-rev`: it exports the review and the decision only; the one without it exports the table only.
+#[cfg(not(feature = "rev"))]
 const BRIDGE: &str = "mzfeat-attributio/1";
+#[cfg(feature = "rev")]
+const BRIDGE: &str = "mzfeat-attributio-rev/1";
 
 #[wasm_bindgen]
 pub fn version() -> String {
@@ -86,6 +92,67 @@ pub fn run_with(
         .map_err(|e| Error::new("error.attributio").with("detail", e.to_string()))
 }
 
+/// Runs `f` on the folder (`fetch` as in `run_with`).
+fn with_io<T>(
+    files: &Files,
+    fetch: &dyn Fn(usize, u64, u64) -> Option<Vec<u8>>,
+    f: &dyn Fn(&Io) -> mzlab_feat::attributio::error::Result<T>,
+) -> Result<T, Error> {
+    let read = |p: &str| {
+        let &(k, size) = files.by_path.get(p)?;
+        fetch(k, 0, size)
+    };
+    let list = |d: &str| files.list(d);
+    let io = Io::new(&read, &list);
+    f(&io).map_err(|e| Error::new("error.attributio").with("detail", e.to_string()))
+}
+
+/// The review of one feature (`pol`, `id`) of the folder as JSON: proposal, proofs, checklist, alternatives and the decisions already taken.
+pub fn review_with(
+    files: &Files,
+    fetch: &dyn Fn(usize, u64, u64) -> Option<Vec<u8>>,
+    pol: &str,
+    id: i64,
+) -> Result<String, Error> {
+    with_io(files, fetch, &|io| review_json(io, &files.root, pol, id))
+}
+
+/// The decisions file after the chemist's decision (JSON of the Banco) is added to the folder's.
+pub fn decision_with(
+    files: &Files,
+    fetch: &dyn Fn(usize, u64, u64) -> Option<Vec<u8>>,
+    decision_json: &str,
+) -> Result<Saved, Error> {
+    with_io(files, fetch, &|io| decision_text(io, &files.root, decision_json))
+}
+
+/// `text` written to `write` in pieces of about 64 KiB at increasing offsets.
+pub fn text_to(text: &str, write: &mut dyn FnMut(u64, &[u8]) -> bool) -> bool {
+    let mut off = 0usize;
+    while off < text.len() {
+        let mut end = (off + 65536).min(text.len());
+        while !text.is_char_boundary(end) {
+            end += 1;
+        }
+        if !write(off as u64, &text.as_bytes()[off..end]) {
+            return false;
+        }
+        off = end;
+    }
+    true
+}
+
+/// The summary of a saved decision: `{path, added, replaced, unchanged}`.
+pub fn saved_summary(s: &Saved) -> String {
+    let mut o = Out::default();
+    o.raw("{\"path\":").str(&s.path);
+    o.raw(",\"added\":").int(s.added as i64);
+    o.raw(",\"replaced\":").int(s.replaced as i64);
+    o.raw(",\"unchanged\":").int(s.unchanged as i64);
+    o.raw("}");
+    o.0
+}
+
 /// The table in one of its renderings, in pieces of about 64 KiB written at increasing offsets of `write`.
 pub fn render_to(run: &Run, kind: &str, write: &mut dyn FnMut(u64, &[u8]) -> bool) -> bool {
     let (mut buf, mut off, mut ok) = (String::new(), 0u64, true);
@@ -130,6 +197,7 @@ fn js_fetch(read: &Function, k: usize, off: u64, len: u64) -> Option<Vec<u8>> {
     Some(v.dyn_into::<Uint8Array>().ok()?.to_vec())
 }
 
+#[cfg(not(feature = "rev"))]
 fn go(read: Function, names_json: &str, write: Function, kind: &str) -> Result<String, JsValue> {
     let files = Files::from_json(names_json).map_err(js_err)?;
     let run = run_with(&files, &|k, o, l| js_fetch(&read, k, o, l)).map_err(js_err)?;
@@ -145,18 +213,21 @@ fn go(read: Function, names_json: &str, write: Function, kind: &str) -> Result<S
 }
 
 /// The table as JSON `{"columns","rows"}` to `write`; answers `{n_features, by_level, fingerprint, settings, warnings}`.
+#[cfg(not(feature = "rev"))]
 #[wasm_bindgen]
 pub fn annotate_to(read: Function, names_json: &str, write: Function) -> Result<String, JsValue> {
     go(read, names_json, write, "json")
 }
 
 /// The table as CSV (`;`, UTF-8) to `write`; answers the same summary.
+#[cfg(not(feature = "rev"))]
 #[wasm_bindgen]
 pub fn table_csv(read: Function, names_json: &str, write: Function) -> Result<String, JsValue> {
     go(read, names_json, write, "csv")
 }
 
 /// The rows of the sheet `{"hojas":[{"nombre","filas"}]}` that the page zips into an XLSX, to `write`; answers the same summary.
+#[cfg(not(feature = "rev"))]
 #[wasm_bindgen]
 pub fn table_xlsx_rows(
     read: Function,
@@ -164,4 +235,50 @@ pub fn table_xlsx_rows(
     write: Function,
 ) -> Result<String, JsValue> {
     go(read, names_json, write, "xlsx")
+}
+
+#[cfg(feature = "rev")]
+fn js_write(write: &Function) -> impl FnMut(u64, &[u8]) -> bool + '_ {
+    move |off, b| {
+        write
+            .call2(&JsValue::NULL, &(off as f64).into(), &Uint8Array::from(b))
+            .is_ok()
+    }
+}
+
+/// The review of one feature as JSON to `write` (a feature at a time: the proofs are computed when the Banco opens it); answers `{"bytes": n}`.
+#[cfg(feature = "rev")]
+#[wasm_bindgen]
+pub fn review_to(
+    read: Function,
+    names_json: &str,
+    feature_id: f64,
+    pol: &str,
+    write: Function,
+) -> Result<String, JsValue> {
+    let files = Files::from_json(names_json).map_err(js_err)?;
+    let text = review_with(&files, &|k, o, l| js_fetch(&read, k, o, l), pol, feature_id as i64)
+        .map_err(js_err)?;
+    if !text_to(&text, &mut js_write(&write)) {
+        return Err(js_err(Error::new("error.io")));
+    }
+    Ok(format!("{{\"bytes\":{}}}", text.len()))
+}
+
+/// The decisions file after the decision `decision_json` to `write` (CSV, UTF-8); answers `{path, added, replaced, unchanged}`.
+#[cfg(feature = "rev")]
+#[wasm_bindgen]
+pub fn decision_to(
+    read: Function,
+    names_json: &str,
+    decision_json: &str,
+    write: Function,
+) -> Result<String, JsValue> {
+    let files = Files::from_json(names_json).map_err(js_err)?;
+    let saved = decision_with(&files, &|k, o, l| js_fetch(&read, k, o, l), decision_json)
+        .map_err(js_err)?;
+    if !text_to(&saved.text, &mut js_write(&write)) {
+        return Err(js_err(Error::new("error.io")));
+    }
+    Ok(saved_summary(&saved))
 }

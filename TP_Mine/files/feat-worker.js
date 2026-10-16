@@ -190,6 +190,24 @@ export function createFeatPool(opts) {
         return { summary: JSON.parse(r.summary), bytes: r.bytes };
       });
     },
+    // The Banco 2b (admin mode, `.wasm` `attributio_rev`, loaded when the Banco opens): the review of ONE feature of the folder. Resolves with the object of the review (proposal, proofs, checklist, alternatives).
+    attributioReview(files, root, pol, id) {
+      return submit(async (slot, load) => {
+        await load("attributio_rev");
+        const names = JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
+        const r = await call(slot, { op: "attributio_review", files: files.map(f => f.file), names, pol, id });
+        return JSON.parse(new TextDecoder().decode(r.bytes));
+      });
+    },
+    // The decision of the chemist (`decision` = JSON text of the Banco) added to the decisions of the folder. Resolves with { summary: { path, added, replaced, unchanged }, text } (the whole decisions file).
+    attributioDecision(files, root, decision) {
+      return submit(async (slot, load) => {
+        await load("attributio_rev");
+        const names = JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
+        const r = await call(slot, { op: "attributio_decision", files: files.map(f => f.file), names, decision });
+        return { summary: JSON.parse(r.summary), text: new TextDecoder().decode(r.bytes) };
+      });
+    },
     ...previewOps(submit, call, opts),
     ...driftOps(submit, call, copy),
     ...proofOps(submit, call, copy, opts),
@@ -378,6 +396,21 @@ function describe(e) {
   try { const j = JSON.parse(typeof e === "string" ? e : text); if (j && j.error_key) return { key: j.error_key === "error.memoryBudget" ? "error.featMemory" : j.error_key, params: j.params || {}, text }; } catch (_) { /* not JSON */ }
   return { key: (e && e.key) || (e instanceof WebAssembly.RuntimeError ? "error.featWorker" : "error.featFailed"), params: {}, text };
 }
+// the Banco 2b (`.wasm` `attributio_rev`): the review of one feature, and the decisions file after a decision
+Object.assign(OPS, {
+  async attributio_review(m) {
+    const out = memSink(), rd = new FileReaderSync();
+    const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
+    mods.attributio_rev.review_to(read, m.names, m.id, m.pol, out.write);
+    return { bytes: out.bytes() };
+  },
+  async attributio_decision(m) {
+    const out = memSink(), rd = new FileReaderSync();
+    const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
+    const summary = mods.attributio_rev.decision_to(read, m.names, m.decision, out.write);
+    return { summary, bytes: out.bytes() };
+  },
+});
 if (IN_WORKER) self.onmessage = async ev => {
   const m = ev.data;
   try {

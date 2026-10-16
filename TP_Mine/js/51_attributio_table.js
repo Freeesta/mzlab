@@ -35,23 +35,26 @@
   }
   /** @param {any[]} r */
   const row = r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${r[2] == null ? "" : Number(r[2]).toFixed(4)}</td><td>${r[3] == null ? "" : Number(r[3]).toFixed(2)}</td>`
-    + `<td><span class="lvb lv-${esc(key(r))}">L${esc(key(r))}</span></td><td>${esc(r[5])}</td><td>${esc(r[6])}</td><td>${esc(r[7])}</td><td>${esc(r[8])}</td><td class="at-why">${esc(r[9])}</td></tr>`;
+    + `<td><span class="lvb lv-${esc(key(r))}">L${esc(key(r))}</span></td><td>${esc(r[5])}</td><td>${esc(r[6])}</td><td>${esc(r[7])}</td><td>${esc(r[8])}</td><td class="at-why">${esc(r[9])}</td>`
+    + `<td><button type="button" class="at-rev" data-pol="${esc(r[0])}" data-id="${esc(r[1])}" aria-label="Review ${esc(r[0])} ${esc(r[1])}">Review</button></td></tr>`;
 
-  /** @param {HTMLElement} box @param {{columns: string[], rows: any[][]}} data */
-  function mount(box, data) {
+  /** @param {HTMLElement} box @param {{columns: string[], rows: any[][]}} data @param {{ onReview?: (list: {pol: string, id: number}[], index: number) => void }} [hooks] the Banco 2b opens from the button of a row */
+  function mount(box, data, hooks = {}) {
     const f = { level: "", pol: "", col: -1, dir: 1 };
     const opts = (/** @type {string[]} */ l) => l.map(v => `<option value="${esc(v)}">${v ? "L" + esc(v) : "all"}</option>`).join("");
     box.innerHTML = `<p id="at-counts" role="status"></p>
       <div class="row"><label>Level <select id="at-flv" aria-label="Filter by level">${opts(["", ...LEVELS])}</select></label>
       <label>Polarity <select id="at-fpol" aria-label="Filter by polarity"><option value="">all</option><option>POS</option><option>NEG</option></select></label></div>
       <div class="at-scroll"><table id="at-table"><caption class="mut">Features with their level of identification</caption><thead><tr>${data.columns.map((c, i) =>
-        `<th scope="col" aria-sort="none"><button type="button" data-col="${i}" aria-label="Sort by ${esc(HEAD[/** @type {keyof typeof HEAD} */ (c)] || c)}">${esc(HEAD[/** @type {keyof typeof HEAD} */ (c)] || c)}</button></th>`).join("")}</tr></thead><tbody></tbody></table></div>`;
+        `<th scope="col" aria-sort="none"><button type="button" data-col="${i}" aria-label="Sort by ${esc(HEAD[/** @type {keyof typeof HEAD} */ (c)] || c)}">${esc(HEAD[/** @type {keyof typeof HEAD} */ (c)] || c)}</button></th>`).join("")}<th scope="col">review</th></tr></thead><tbody></tbody></table></div>`;
     const q = (/** @type {string} */ s) => /** @type {HTMLElement} */ (box.querySelector(s));
+    /** @type {any[][]} */
+    let shown = [];
     const draw = () => {
-      const rows = view(data.rows, f);
+      const rows = shown = view(data.rows, f);
       q("#at-counts").textContent = summary(data.rows) + (rows.length === data.rows.length ? "" : ` · ${rows.length} shown`);
       q("tbody").innerHTML = rows.map(row).join("");
-      box.querySelectorAll("th").forEach((th, i) => th.setAttribute("aria-sort", i === f.col ? (f.dir > 0 ? "ascending" : "descending") : "none"));
+      box.querySelectorAll("th:has(button)").forEach((th, i) => th.setAttribute("aria-sort", i === f.col ? (f.dir > 0 ? "ascending" : "descending") : "none"));
     };
     q("#at-flv").onchange = e => { f.level = /** @type {HTMLSelectElement} */ (e.target).value; draw(); };
     q("#at-fpol").onchange = e => { f.pol = /** @type {HTMLSelectElement} */ (e.target).value; draw(); };
@@ -59,6 +62,12 @@
       const i = Number(/** @type {HTMLElement} */ (b).dataset.col);
       f.dir = f.col === i ? -f.dir : 1; f.col = i; draw();
     }));
+    q("tbody").addEventListener("click", e => {
+      const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest(".at-rev"));
+      if (!b || !hooks.onReview) return;
+      const list = shown.map(r => ({ pol: String(r[0]), id: Number(r[1]) })), i = list.findIndex(x => x.pol === b.dataset.pol && String(x.id) === b.dataset.id);
+      hooks.onReview(list, Math.max(0, i));
+    });
     draw();
   }
   /** @type {any} */ (window).ATTRIBUTIO_TABLE = { mount, summary, counts, view, key };

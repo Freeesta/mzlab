@@ -1,0 +1,4 @@
+mappingFeatureId	structurePerIdRank	name	smiles	xlogp	InChIkey2D	molecularFormula
+15	1	Paracetamol	CC(=O)NC1=CC=C(O)C=C1	0.5	RZVAJINKPMORJF	C8H9NO2
+15	2	Metacetamol	CC(=O)NC1=CC(O)=CC=C1	0.6	UCFZRKQSVPQJSZ	C8H9NO2
+15	3	Methyl anthranilate	COC(=O)C1=CC=CC=C1N	1.8	VAMXMNNIEUEQDH	C8H9NO2

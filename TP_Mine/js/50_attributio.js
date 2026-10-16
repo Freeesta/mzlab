@@ -4,8 +4,8 @@
 // the browser and only the ones `campaign.toml` names are read. Texts in English, without keys of lang/ (the exception of mzFinder). The entry is made by ONE `if`: opening it to everybody is deleting that line.
 (() => {
   "use strict";
-  /** @type {{ pool: any, files: {path: string, file: File}[], root: string, data: any, summary: any, busy: boolean }} */
-  const st = { pool: null, files: [], root: "", data: null, summary: null, busy: false };
+  /** @type {{ pool: any, files: {path: string, file: File}[], root: string, data: any, summary: any, busy: boolean, dir: any, dirPath: string }} */
+  const st = { pool: null, files: [], root: "", data: null, summary: null, busy: false, dir: null, dirPath: "" };
   const MAX_FILES = 20000;
 
   /** the pool that runs the engine: the native routes in the app, else the worker of mzFinder with only the .wasm `attributio` */
@@ -16,8 +16,9 @@
     else {
       const u = (/** @type {string} */ p) => new URL("wasm-feat/" + p, c.base).href, man = await (await fetch(u("manifest.json"))).json();
       if (!man.attributio) throw new Error("This site has no engine for Attributio");
-      const url = blob("feat-worker.js"), w = man.attributio;
-      st.pool = (await import(url)).createFeatPool({ workerUrl: url, size: 1, wasm: { attributio: { jsUrl: u(w.js), wasmUrl: u(w.wasm), sha256: w.sha256 } } });
+      const url = blob("feat-worker.js"), w = man.attributio, r = man.attributio_rev;
+      // the .wasm `attributio_rev` (the Banco 2b) is fetched by the worker only when the Banco opens
+      st.pool = (await import(url)).createFeatPool({ workerUrl: url, size: 1, wasm: { attributio: { jsUrl: u(w.js), wasmUrl: u(w.wasm), sha256: w.sha256 }, ...(r ? { attributio_rev: { jsUrl: u(r.js), wasmUrl: u(r.wasm), sha256: r.sha256 } } : {}) } });
     }
     return st.pool;
   }
@@ -51,21 +52,42 @@
     if (W.WORKFLOW && W.WORKFLOW.logOp) W.WORKFLOW.logOp("attributio", { attributio: { fingerprint: s.fingerprint, settings: s.settings, counts: s.by_level } });
   }
 
-  /** @param {HTMLElement} box @param {{path: string, file: File}[]} files @param {string} root */
-  async function load(box, files, root) {
+  /** the Banco 2b on the row `index` of `list`; a saved decision replaces the decisions file in memory and the cascade runs again @param {HTMLElement} box @param {{pol: string, id: number}[]} list @param {number} index */
+  async function review(box, list, index) {
+    try {
+      const pool = await getPool();
+      await /** @type {any} */ (window).ATTRIBUTIO_BANCO.open({
+        pool, files: st.files, root: st.root, list, index, host: /** @type {HTMLElement} */ (box.querySelector("#at-banco-host")), dir: st.dir, dirPath: st.dirPath,
+        onSaved: async (/** @type {string} */ text, /** @type {string} */ path) => {
+          const file = new File([text], path.split("/").pop() || "feature_decisions.csv", { type: "text/csv" }), at = st.files.findIndex(f => f.path === path);
+          if (at >= 0) st.files[at] = { path, file }; else st.files.push({ path, file });
+          await refresh(box);
+        },
+      });
+    } catch (e) { say(box, "Banco 2b: " + (/** @type {any} */ (e).message || e), true); }
+  }
+
+  /** runs the cascade again on the files in memory and draws the table @param {HTMLElement} box */
+  async function refresh(box) {
+    const tab = /** @type {HTMLElement} */ (box.querySelector("#at-out")), r = await run("json");
+    st.data = JSON.parse(new TextDecoder().decode(r.bytes)); st.summary = r.summary;
+    /** @type {any} */ (window).ATTRIBUTIO_TABLE.mount(tab, st.data, { onReview: (/** @type {any} */ l, /** @type {number} */ i) => review(box, l, i) });
+    log(r.summary);
+  }
+
+  /** @param {HTMLElement} box @param {{path: string, file: File}[]} files @param {string} root @param {any} [dir] the folder handle, when the browser gave one @param {string} [dirPath] */
+  async function load(box, files, root, dir, dirPath) {
     if (st.busy) return;
-    st.busy = true; st.files = files; st.root = root;
+    st.busy = true; st.files = files; st.root = root; st.dir = dir || null; st.dirPath = dirPath || "";
+    /** @type {HTMLElement} */ (box.querySelector("#at-banco-host")).textContent = "";
     const tab = /** @type {HTMLElement} */ (box.querySelector("#at-out"));
     tab.textContent = "";
     for (const b of box.querySelectorAll("button")) b.disabled = true;
     say(box, `Reading ${root} (${files.length} files)…`);
     try {
-      const r = await run("json");
-      st.data = JSON.parse(new TextDecoder().decode(r.bytes)); st.summary = r.summary;
-      /** @type {any} */ (window).ATTRIBUTIO_TABLE.mount(tab, st.data);
-      say(box, (r.summary.warnings || []).join(" · ") || "Done.");
+      await refresh(box);
+      say(box, ((st.summary && st.summary.warnings) || []).join(" · ") || "Done.");
       for (const b of box.querySelectorAll(".at-x")) b.disabled = false;
-      log(r.summary);
     } catch (e) {
       const x = /** @type {any} */ (e);
       say(box, "Attributio: " + ((x && x.params && x.params.detail) || (x && x.message) || String(e)), true);
@@ -92,14 +114,14 @@
     if (!document.getElementById("at-css")) {
       const s = document.createElement("style"); s.id = "at-css";
       s.textContent = ".at-wrap{padding:14px;max-width:1400px}.at-scroll{overflow:auto;max-height:70vh}#at-table{border-collapse:collapse;font-size:12px}#at-table th,#at-table td{padding:3px 8px;text-align:left;border-bottom:1px solid var(--line)}"
-        + "#at-table th button{background:none;border:0;font:inherit;font-weight:700;color:var(--ink);cursor:pointer;min-height:24px;min-width:24px}.at-why{max-width:60ch;white-space:pre-wrap}.at-wrap .err{color:var(--bad)}";
+        + "#at-table th button{background:none;border:0;font:inherit;font-weight:700;color:var(--ink);cursor:pointer;min-height:24px;min-width:24px}.at-why{max-width:60ch;white-space:pre-wrap}.at-wrap .err{color:var(--bad)}.at-rev{min-height:24px;min-width:24px}";
       document.head.appendChild(s);
     }
     sec.innerHTML = `<div class="at-wrap"><h2>Attributio</h2>
       <div class="row"><button type="button" class="at-pick" id="at-pick" aria-label="Choose campaign folder">Choose campaign folder</button>
       <input type="file" id="at-dir" webkitdirectory multiple hidden aria-label="Campaign folder">
       <button type="button" class="at-x" id="at-csv" aria-label="Export CSV" disabled>Export CSV</button><button type="button" class="at-x" id="at-xlsx" aria-label="Export XLSX" disabled>Export XLSX</button></div>
-      <p id="at-msg" class="mut" role="status"></p><div id="at-out"></div></div>`;
+      <p id="at-msg" class="mut" role="status"></p><div id="at-banco-host"></div><div id="at-out"></div></div>`;
     const q = (/** @type {string} */ s) => /** @type {any} */ (sec.querySelector(s));
     q("#at-dir").onchange = (/** @type {Event} */ ev) => {
       const list = /** @type {File[]} */ ([...(/** @type {HTMLInputElement} */ (ev.target).files || [])]).slice(0, MAX_FILES);
@@ -110,7 +132,7 @@
     q("#at-pick").onclick = async () => {
       const W = /** @type {any} */ (window);
       if (typeof W.showDirectoryPicker !== "function") { q("#at-dir").click(); return; }
-      try { const dir = await W.showDirectoryPicker(), files = /** @type {{path: string, file: File}[]} */ ([]); await walk(dir, "", files); load(sec, files, dir.name); }
+      try { const dir = await W.showDirectoryPicker(), files = /** @type {{path: string, file: File}[]} */ ([]); await walk(dir, "", files); load(sec, files, dir.name, dir); }
       catch (e) { if (!(e && /** @type {any} */ (e).name === "AbortError")) say(sec, String(/** @type {any} */ (e).message || e), true); }
     };
     q("#at-csv").onclick = () => exportTable(sec, "csv");
