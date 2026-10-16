@@ -15,7 +15,7 @@ pub const DICT_HEAD: [(&str, &str); 36] = [
     ("Chronic hazard basis", "The data that decided the chronic category, with the route (chronic data, acute data, or both)."),
     ("Hazard caveat", "Limits of the hazard record: Level 3 (hazard of the CSI:FingerID candidate, an isomer may differ), RT isomer (hazard of the named structure), a predicted category contradicted by a notified classification."),
     ("Hazard cross-check", "What the lower tiers say when they disagree with the category given (tier and category)."),
-    ("Molecular formula", "Neutral molecular formula of the structure (ASCII)."),
+    ("Neutral molecular formula", "Neutral molecular formula of the structure (ASCII)."),
     ("Monoisotopic mass (Da)", "Monoisotopic mass of the molecular formula (Da)."),
     ("InChIKey", "InChIKey of the structure given by the source that named the compound; when that source gives only the connectivity block (14 characters), the full key of the PubChem representative structure. LC-HRMS does not determine stereochemistry: compare on the first block."),
     ("SMILES", "SMILES of the same structure."),
