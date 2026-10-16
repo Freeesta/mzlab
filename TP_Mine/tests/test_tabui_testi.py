@@ -1,5 +1,5 @@
 """Catalog of the help texts of Tabui (TP_Mine/js/40_tabui_testi.js): the same keys in Italian and English, no empty text, every {param} in both languages, at most
-240 characters per text, and every key used in the code (data-tt, TPHELP.button, hb) exists."""
+240 characters per text, and every key used in the code (data-tt, dt) exists."""
 import json, re, shutil, subprocess
 from pathlib import Path
 
@@ -34,5 +34,5 @@ def test_keys_used_in_the_code_exist():
     for f in JS.glob("*.js"):
         if f.name.startswith("40_"):
             continue
-        for k in re.findall(r"""(?:data-tt="|hb\(\s*"|TPHELP\.button\(\s*")(ft\.[\w.]+)""", f.read_text(encoding="utf-8")):
+        for k in re.findall(r"""(?:data-tt="|dt\(\s*")(ft\.[\w.]+)""", f.read_text(encoding="utf-8")):
             assert k in keys, (f.name, k)
