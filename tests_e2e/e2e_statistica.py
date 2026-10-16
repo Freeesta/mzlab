@@ -81,7 +81,7 @@ try:
         step("type, time (decimal comma), replicate edit the files, QAQC roles and the server copy; a non-number is refused", edit)
         def tsv():
             t = pg.evaluate("CAMPIONI.toTsv(CAMPIONI.rows(), tunitGet())").splitlines()
-            assert t[0] == "filename\tsample_type\ttime\ttime_unit\tconcentration\tconcentration_unit\treplicate\tblank_type\ttime_confirmed" and len(t) == 5, t
+            assert t[0] == "filename\tsample_type\ttime\ttime_unit\tconcentration\tconcentration_unit\treplicate\ttime_confirmed" and len(t) == 5, t
             body = "\n".join(l.replace("S_t30.mzML\tsample\t30\tmin", "S_t30.mzML\tblank\t2\th") for l in t) + "\n"
             n = pg.evaluate("(tx)=>CAMPIONI.importTsv(tx).changed", body)
             assert n == 4
@@ -97,7 +97,7 @@ try:
             assert len(set(cols)) == len(cols) >= 3, cols
         step("time gradient with a legend", gradient)
         def chart_legend():
-            pg.evaluate("(()=>{E.files.forEach(f=>{f.vis=true});redrawAll()})()"); ready(pg)
+            pg.evaluate("(()=>{E.files.forEach(f=>{f.vis=true});syncBrowse();redrawAll()})()"); ready(pg)      # E.browse follows the ticked files of the list
             attendi(pg, "E.panels.some(p=>p.leg&&p.leg.querySelector('.tg'))")
             assert pg.evaluate("!E.panels.some(p=>p.leg&&p.leg.querySelector('.cmp-grad'))"), "the legend of the charts is a column of names, without the gradient bar"
         step("chart legend is a column of names, no gradient bar", chart_legend)

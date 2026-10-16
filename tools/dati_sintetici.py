@@ -201,7 +201,7 @@ def mixed_mrm_epi(path: Path, rng) -> None:
     specs = []
     for i, rt in enumerate(np.linspace(14.0, 14.7, 20)):
         frag = np.array([152.2, 194.2, 224.1, 305.2]); it = np.array([0.5, 1.0, 0.2, 0.3]) * 1e5 * _g(rt, 14.3, 0.1) * rng.normal(1, 0.05, 4)
-        specs.append(_spec(i, rt, frag, it, level=2, prec=364.1, ce=30.0))
+        specs.append(_spec(i, rt, frag, it, level=2, prec=364.1 + (i % 2), ce=30.0))       # two triggering precursors alternate: not one block of a single precursor (that would be an infusion)
     _write(path, specs, [_chrom(0, "TIC", t, q + ql), _chrom(1, srm(0, "194.1", "Quant"), t, q, pol), _chrom(2, srm(1, "152.1", "Qual"), t, ql, pol)])
 
 

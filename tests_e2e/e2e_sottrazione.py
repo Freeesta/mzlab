@@ -116,7 +116,7 @@ try:
         step("«clip at zero» also cuts the spectrum", spec_clip)
         def walk():
             opn(); pg.locator(".subchip [data-s=next]").first.click(); ready(pg)
-            assert pg.evaluate("E.browse") is True and pg.evaluate("E.files[E.cur].file") != "SUB_t0.mzML"
+            assert pg.evaluate("E.files[E.cur].file") != "SUB_t0.mzML"             # E.browse follows the ticked files of the list: with the three ticked the chip only moves the active file
             c1 = pg.evaluate("E.files[E.cur].file")
             pg.locator(".subchip [data-s=next]").first.click(); ready(pg)
             c2 = pg.evaluate("E.files[E.cur].file"); assert c2 != c1 and c2 != "SUB_t0.mzML", (c1, c2)
