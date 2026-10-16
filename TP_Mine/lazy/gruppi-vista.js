@@ -4,6 +4,7 @@
 // condition and the exports. It computes nothing: every number (areas, ratios, sets, shapes, Prev.) is read from the JSON. Texts in English (Tabui has no `lang/` keys); colours only from CSS variables
 // (Okabe-Ito for the first 8 conditions); every chart has its table of the data (TDATI); no animation.
 //   TPGRUPPI_VIEW.mount(el, gruppi, { parentName, onOpenRow(rowId) }) → { destroy(), setFilter(value), selectRow(rowId), state(), csv(kind) }
+//   TPGRUPPI_VIEW.rowDetail(el, gruppi, rowId) → boolean: the table «by condition» and the chart of one row (the open row of the table of Tabui)
 (() => {
   "use strict";
   const G = /** @type {any} */ (window);
@@ -262,12 +263,12 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
       let figs;
       if (many) figs = `<div class="gv-multi" role="group" aria-label="${esc(r.tp_name)}: one small chart per condition">${ids.map(c => `<figure><figcaption>${esc(c)}${c === ref ? " (ref)" : ""}</figcaption>${plot(r, [c], { ymax: top * 1.08, small: true })}</figure>`).join("")}</div>`;
       else figs = `<div class="gv-fig gv-sc free" tabindex="0" role="region" aria-label="Chart of ${esc(r.tp_name)}, scrollable" id="gv-tpfig">${plot(r, ids, { ymax: top * 1.08 })}</div>`;
-      box.innerHTML = `<div class="gv-bar"><label for="gv-tpsel">TP</label><select id="gv-tpsel">${rows.map(x => `<option value="${x.row}">${esc(x.tp_name)} (m/z ${num(x.mz, 1)}, RT ${num(x.rt, 1)})</option>`).join("")}</select>` +
+      box.innerHTML = `<div class="gv-bar">${V.fixed ? "" : `<label for="gv-tpsel">TP</label><select id="gv-tpsel">${rows.map(x => `<option value="${x.row}">${esc(x.tp_name)} (m/z ${num(x.mz, 1)}, RT ${num(x.rt, 1)})</option>`).join("")}</select>`}` +
         `<span role="group" aria-label="Value shown"><button type="button" data-mode="area" aria-pressed="${st.mode === "area"}">Area</button><button type="button" data-mode="pct" aria-pressed="${st.mode === "pct"}">% of max</button></span>` +
         `<button type="button" data-zoom="-" aria-label="Zoom out the chart">−</button><button type="button" data-zoom="+" aria-label="Zoom in the chart">+</button><button type="button" data-dl="tp-svg">Chart (SVG)</button><button type="button" data-dl="tp-png">Chart (PNG)</button>` +
         `${many ? `<button type="button" data-tpdata>Data</button>` : ""}</div>` +
         `<p class="gv-sub">${ts.length > 1 ? "Curves: area against time, one per condition." : "Bars: area at the end point (error bar = standard deviation)."} ${esc(r.tp_name)}, m/z ${num(r.mz, 2)}, RT ${num(r.rt, 2)} min.</p>${legend}${figs}`;
-      /** @type {HTMLSelectElement} */ (Q("#gv-tpsel")).value = String(r.row);
+      const pick = /** @type {HTMLSelectElement | null} */ (Q("#gv-tpsel")); if (pick) pick.value = String(r.row);
       const svgs = [...box.querySelectorAll("svg.gv-svg")].filter(x => !x.closest(".gv-leg"));
       if (G.TDATI) svgs.forEach((svg, i) => {
         G.TDATI.describe(svg, `${r.tp_name}: ${ts.length > 1 ? "area against time" : "area at the end point"} for ${ids.length} conditions.`);
@@ -356,7 +357,8 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
     Object.assign(V, { select, redraw });
   }
 
-  function mount(/** @type {HTMLElement} */ el, /** @type {Gruppi} */ g, /** @type {GOpts} */ opts = {}) {
+  /** the state shared by the parts of the view (the whole view and the detail of one row) */
+  function context(/** @type {HTMLElement} */ el, /** @type {Gruppi} */ g, /** @type {GOpts} */ opts) {
     if (!document.getElementById("gv-css")) { const st = document.createElement("style"); st.id = "gv-css"; st.textContent = CSS; document.head.appendChild(st); }
     const conds = g.conditions, ids = conds.map(c => c.id), ref = g.reference, rows = g.rows, byRow = new Map(rows.map(r => [r.row, r]));
     const parent = slug(opts.parentName || g.parent_name || "parent");
@@ -368,6 +370,12 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
 
     /** @type {any} */
     const V = { g, el, opts, conds, ids, ref, rows, byRow, parent, hasF, hasP, st, cellOf, color, Q: null };
+    V.Q = (/** @type {string} */ s) => /** @type {any} */ (el.querySelector(s));
+    return V;
+  }
+
+  function mount(/** @type {HTMLElement} */ el, /** @type {Gruppi} */ g, /** @type {GOpts} */ opts = {}) {
+    const V = context(el, g, opts), st = V.st;
     // ---- skeleton
     el.innerHTML = `<div class="gv" data-gv>
 <div id="gv-warn"></div>
@@ -381,8 +389,6 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
 <h3>Chosen TP across conditions</h3><div id="gv-tp"></div>
 <h3>Parent compound per condition</h3><div class="gv-sc free" id="gv-par"></div></div>`;
 
-    const Q = (/** @type {string} */ s) => /** @type {any} */ (el.querySelector(s));
-    V.Q = Q;
     filterPart(V); matrixPart(V); upsetPart(V); tpPart(V); exportPart(V); eventPart(V);
     V.drawWarnings(); V.redraw(); V.drawTp(); V.drawParent();
     return {
@@ -394,5 +400,20 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
     };
   }
 
-  G.TPGRUPPI_VIEW = { mount, slug, sci };
+  /** the part of the view that belongs to ONE row, for the open row of the table of Tabui: what the row is in each condition (presence, area, ratio, Prev.) and its chart (same chart and `TDATI` table as the view)
+   * @param {HTMLElement} el @param {Gruppi} g @param {number} rowId the `row` of gruppi/1 (the id of the row in the table) @returns {boolean} false when the output has no such row */
+  function rowDetail(el, g, rowId) {
+    const V = context(el, g, {}), r = V.byRow.get(rowId);
+    if (!r) { el.innerHTML = ""; return false; }
+    V.fixed = true; V.st.tp = rowId;
+    el.innerHTML = `<div class="gv" data-gv><table><caption class="sr-only">${esc(r.tp_name)} in each condition. ● present, ○ absent.</caption><thead><tr><th scope="col">Condition</th><th scope="col" class="n">Area</th><th scope="col" class="n">Ratio to the reference</th><th scope="col">Shape</th><th scope="col">Prev.</th></tr></thead><tbody>` +
+      r.cond.map((/** @type {GCell} */ c) => `<tr><th scope="row">${esc(c.id)}${c.id === g.reference ? '<span class="ref">ref</span>' : ""}</th><td class="n"><span class="gv-pres" aria-hidden="true">${c.present ? "●" : "○"}</span><span class="sr-only">${c.present ? "present" : "absent"}, </span>${sci(c.present ? c.area : c.kin.length ? c.kin[c.kin.length - 1].area : null)}</td>` +
+        `<td class="n">${esc(ratioText(r, c, g.reference))}</td><td>${esc(c.shape || "—")}</td><td>${c.present && c.prev && c.prev.verdict ? `<span class="gv-pv ${c.prev.verdict.split(" ")[1] || ""}" title="${esc(prevTitle(c))}">Prev. ${PREV_SYM[c.prev.verdict] || ""}<span class="sr-only"> ${esc(prevTitle(c))}</span></span>` : "—"}</td></tr>`).join("") +
+      `</tbody></table><div id="gv-tp"></div></div>`;
+    tpPart(V); exportPart(V); eventPart(V);
+    V.drawTp();
+    return true;
+  }
+
+  G.TPGRUPPI_VIEW = { mount, rowDetail, slug, sci };
 })();

@@ -385,6 +385,14 @@
     const sym = (/** @type {string} */ s) => `<span class="tpt-st tpt-st-${STATES[s] ? s : "na"}" aria-hidden="true">${(STATES[s] || STATES.na)[0]}</span>`;
     return `<span class="tpt-cells" role="img" aria-label="${lab}">${states.slice(0, max).map(sym).join("")}${states.length > max ? `<span class="tpt-more">+${states.length - max}</span>` : ""}</span>`;
   }
+  /** one dot per condition: ● present, ○ absent (the shape says it, not the colour); the label names the conditions («present in O2, Air; absent in N2»)
+   * @param {{ id: string, present: boolean }[]} items */
+  function dots(items) {
+    const yes = items.filter(c => c.present).map(c => c.id), no = items.filter(c => !c.present).map(c => c.id);
+    const esc = (/** @type {string} */ t) => t.replace(/[&<>"]/g, ch => /** @type {any} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
+    const lab = [yes.length ? "present in " + yes.join(", ") : "", no.length ? "absent in " + no.join(", ") : ""].filter(Boolean).join("; ");
+    return `<span class="tpt-cells tpt-dots" role="img" aria-label="${esc(lab)}" title="${esc(lab)}">${items.map(c => `<span aria-hidden="true">${c.present ? "●" : "○"}</span>`).join("")}</span>`;
+  }
   /** the legend of the symbols under the table @param {string[]} keys */
   function legend(keys) {
     return `<div class="tpt-leg">${keys.map(k => `<span${G.TPHELP ? ` tabindex="0"` : ""}${tt("ft.state." + k)}>${state(k)} ${(STATES[k] || STATES.na)[1]}</span>`).join("")}</div>`;
@@ -419,5 +427,5 @@
     if (Math.abs(+m) >= 1000) { e += 3; m = (v / 10 ** e).toFixed(2); }
     return m + "e" + (e < 0 ? "-" : "+") + Math.abs(e);
   };
-  G.TPTAB = { mount, spark, state, cells, legend, level, pred, area };
+  G.TPTAB = { mount, spark, state, cells, dots, legend, level, pred, area };
 })();

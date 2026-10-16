@@ -198,7 +198,8 @@
  <div class="card"><h3>1 · Files</h3>
   <div class="row"><button id="tp-page" title="Reload the files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick" title=".mzML, .raw, .wiff (+ .wiff.scan)">Choose files...</button><button id="tp-pickdir" title="e.g. an Agilent .D">Choose folder...</button></div>
   <input type="file" id="tp-in" accept=".mzML,.mzml,.raw,.wiff,.scan" multiple hidden><input type="file" id="tp-dir" multiple hidden>
-  <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
+  <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div>
+  <details id="tp-cond" hidden><summary title="Compare several conditions of the same degradation (gases, photocatalysts...): label the files with their condition">Conditions of the files</summary><div id="tp-cfiles"></div></details><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
  <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div><div id="tp-reatt"></div>
   <div class="row tp-ac"><input type="text" id="tp-name" class="grow-in" placeholder="Name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false"${dt("ft.f.name")}><ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
   <div class="row"><input type="text" id="tp-mol" class="grow-in" placeholder="Neutral formula" aria-label="Neutral molecular formula" spellcheck="false"${dt("ft.f.formula")}></div>
@@ -224,7 +225,7 @@
     const FIELD = () => W.TPFIELD, parentFields = () => [$("#tp-mol"), $("#tp-smi")];
     if (W.TPFIELD) W.TPFIELD.watch(sec, () => { if ($("#tp-msg").dataset.field) msg(""); });       // the group returns to normal on a click or a key in it; so does its message
     /** @type {any} */
-    const st = { files: [], showAll: false, summary: null, sel: null, view: "tab", took: 0 };
+    const st = { files: [], showAll: false, summary: null, sel: null, view: "tab", took: 0, cond: null, gnames: /** @type {string[]} */ ([]), gctl: null, gv: null };
     const msg = (t, err) => { const m = $("#tp-msg"); m.textContent = t || ""; m.className = "mut" + (err ? " err" : ""); delete m.dataset.field; };
     const bar = f => { const w = Math.round(f * 100); $("#tp-bar").style.width = w + "%"; $("#tp-barbox").setAttribute("aria-valuenow", w); };
     onProgress = (t, f, m) => { if (t) msg(t); if (f != null) bar(f); if (m && window.TPLIVE) TPLIVE.event(m); };
@@ -232,7 +233,7 @@
     $("#tp-more").onclick = () => { st.showAll = !st.showAll; renderFiles(); };
     // ---- files
     const renderFiles = () => {
-      modeUI(); if (!st.files.length) { $("#tp-files").innerHTML = ""; $("#tp-more").hidden = true; return; }
+      modeUI(); condUI(); if (!st.files.length) { $("#tp-files").innerHTML = ""; $("#tp-more").hidden = true; return; }
       $("#tp-files").innerHTML = `<table><tr><th>File</th><th>Data type</th><th>Sample</th><th>t (min)</th></tr>` + st.files.map((f, i) => `<tr><td title="${esc(f.name)}">${esc(f.name.replace(/\.mzml$/i, ""))}</td><td>${KINDS[f.kind] || f.kind}${f.error ? ` <span class="err" title="${esc(f.error)}">!</span>` : ""}</td>
         <td>${f.kind === "full" || f.kind === "mrm" || f.kind === "hr" ? `<select data-i="${i}" data-k="type">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}"${f.type === k ? " selected" : ""}>${v}</option>`).join("")}</select>` : (f.kind === "ms2" ? "fragments" : "-")}</td>
         <td>${f.kind === "full" || f.kind === "ms2" || f.kind === "mrm" || f.kind === "hr" ? `<input type="number" data-i="${i}" data-k="time" value="${f.time ?? ""}" style="width:60px" step="any">` : ""}</td></tr>`).join("") + "</table>";
@@ -245,6 +246,49 @@
       $("#tp-fsum").textContent = Object.entries(cn).map(([k, v]) => v + " " + k).join(" · ") + (bl ? " · " + bl + (bl === 1 ? " blank" : " blanks") : "");
       $("#tp-files").querySelectorAll("[data-k]").forEach(el => el.onchange = () => { const f = st.files[+el.dataset.i]; f[el.dataset.k] = el.dataset.k === "time" ? (el.value === "" ? null : +el.value) : el.value; });
     };
+    // ---- conditions of the files (several conditions of the same degradation): the table of roles, conditions, times and replicates is TP_Mine/lazy/gruppi-campioni.js (loaded when the section is opened);
+    // with two conditions or more it rules the roles and times of the Dig, which then compares the conditions (gruppi/1). With one condition (or none) nothing changes.
+    const TYPE_OF = { sample: "sample", t0: "sample", blank: "blank", std: "standard", dark: "control" };
+    const useCond = () => !!(st.cond && st.cond.conditions.length >= 2);
+    const condFiles = () => st.files.filter(f => f.kind === "full" || f.kind === "ms2");
+    function condUI() {
+      const det = /** @type {HTMLDetailsElement} */ ($("#tp-cond")), many = !st.files.some(f => f.kind === "hr") && st.files.filter(f => f.kind === "full").length >= 2;
+      det.hidden = !many; if (!many) { st.cond = null; $("#tp-files").hidden = false; return; }
+      if (det.open && st.gnames.join("\n") !== condFiles().map(f => f.name).join("\n")) void mountConds();
+    }
+    /** the table of conditions for the files now loaded; its answer (campioni/2 canonical, reference, conditions) is kept in st.cond */
+    async function mountConds() {
+      const W = /** @type {any} */ (window), names = condFiles().map(f => f.name), box = $("#tp-cfiles");
+      try {
+        await Promise.all([W.nbEnsure ? W.nbEnsure() : 0, W.TPLAZY.load("gruppi-campioni.js")]);
+        const R = await import(URL.createObjectURL(new Blob([ctx().files["finder-ruoli.js"]], { type: "text/javascript" })));
+        const call = async (/** @type {string} */ op, /** @type {string} */ j) => { const r = await fetch("api/campioni/" + op, { method: "POST", body: j }); const t = await r.text(); if (!r.ok) throw new Error(t); return t; };
+        if (st.gctl) st.gctl.unmount();
+        st.gnames = names;
+        st.gctl = await W.TPGRUPPI_FILES.mount(box, names, { R, call, nb: typeof NB !== "undefined" ? NB : null, save: typeof nbSave === "function" ? nbSave : undefined, onChange: (/** @type {any} */ r) => { st.cond = r; syncFiles(); } });
+      } catch (e) { box.textContent = "The table of conditions could not be loaded: " + String((e && e.message) || e); }
+    }
+    /** the roles and times of the table of conditions, shown also in the plain list of the files */
+    function syncFiles() {
+      if (!st.cond) return;
+      const by = new Map(st.cond.campioni.map((/** @type {any} */ c, /** @type {number} */ i) => [st.gnames[i], c]));
+      for (const f of st.files) { const c = by.get(f.name); if (!c) continue; if (c.tipo in TYPE_OF) f.type = /** @type {any} */ (TYPE_OF)[c.tipo]; f.time = c.tempo_min; }
+      $("#tp-files").hidden = useCond(); renderFilesSummary();
+    }
+    const renderFilesSummary = () => { const bl = st.files.filter(f => f.type === "blank").length; const t = $("#tp-fsum").textContent || ""; $("#tp-fsum").textContent = t.replace(/ · \d+ blanks?$/, "") + (bl ? " · " + bl + (bl === 1 ? " blank" : " blanks") : ""); };
+    $("#tp-cond").addEventListener("toggle", () => { if (/** @type {HTMLDetailsElement} */ ($("#tp-cond")).open) void mountConds(); });
+    /** the files of the Dig: a list, or with two conditions or more the list with the campioni/2 of the table (the names are the ones of the files) */
+    function digFiles(/** @type {any[]} */ list) {
+      if (!useCond()) return JSON.stringify(list);
+      const by = new Map(st.cond.campioni.map((/** @type {any} */ c, /** @type {number} */ i) => [st.gnames[i], { ...c, file: st.gnames[i] }]));
+      return JSON.stringify({ files: list, campioni: { schema: "campioni/2", campioni: list.map(f => by.get(f.name)).filter(Boolean) } });
+    }
+    /** the options of the comparison of conditions (settings.gruppi): the reference and the fields of the notebook */
+    function digGroups() {
+      const o = (typeof NB !== "undefined" && /** @type {any} */ (NB).gruppi_opts) || {}, g = /** @type {any} */ ({ reference: st.cond.reference || null });
+      for (const k of ["min_rep_frac", "min_area", "factors"]) if (o[k] !== undefined) g[k] = o[k];
+      return g;
+    }
     const BIG = 50 << 20;                   // as in the main program: above this a file is mounted from its Blob, not copied (13 HR files = 1 GB)
     // low resolution: the window, the tolerance of RT and the void front are proposed from the data (Rust, preview of the first sample); a proposed value is yellow until the user types
     let estSeq = 0, parentMz = 0;            // parentMz: the m/z of the parent ion (from the preview of the parent), for the drift of its RT
@@ -476,11 +520,11 @@
       const have = new Set(st.files.map(f => String(f.name || "").split(/[\\/]/).pop()));            // files loaded but not in this series: failed to read, or still being opened
       const lost = [...new Set([...(window.QQQ_LOADFAIL || []), ...(((typeof E !== "undefined" && E.pending) || []).filter(x => x.state === "err" || x.state === "wait").map(x => x.file))])].filter(n => !have.has(n));
       $("#tp-warn").textContent = lost.length ? `Warning: ${lost.length} file${lost.length > 1 ? "s" : ""} not read and left out of this run (${lost.slice(0, 4).join(", ")}${lost.length > 4 ? ", ..." : ""}). Load ${lost.length > 1 ? "them" : "it"} again before trusting the series.` : "";
-      setBusy(true); $("#tp-bar").style.width = "2%"; msg("Digging..."); const t0 = performance.now();
+      setBusy(true); $("#tp-bar").style.width = "2%"; msg(useCond() && !hrMode ? `Aligning ${st.files.filter(f => f.kind === "full").length} files of ${st.cond.conditions.length} conditions...` : "Digging..."); const t0 = performance.now();
       if (window.TPLIVE) TPLIVE.start($("#tp-right"), hrMode, { esc, call });
       try {
         const files = st.files.filter(f => f.kind !== "error" && f.kind !== "empty").map(f => ({ name: f.name, type: f.type, time: f.time, kind: f.kind }));
-        const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, min_files: +$("#tp-minf").value, discover: $("#tp-disc").checked, ms2_overrides: window.TPMS2 ? window.TPMS2.start(st.files) : [] };
+        const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, min_files: +$("#tp-minf").value, discover: $("#tp-disc").checked, ms2_overrides: window.TPMS2 ? window.TPMS2.start(st.files) : [], ...(useCond() && !hrMode ? { gruppi: digGroups() } : {}) };
         const parent = { name: (nameIn.dataset.raw && nameIn.value === MOLUI.cap(nameIn.dataset.raw) ? nameIn.dataset.raw : $("#tp-name").value.trim()), neutral: mol, adduct: $("#tp-add").value };
         if (pv.smi) parent.smiles = pv.smi;
         if ($("#tp-prt").value !== "" && +$("#tp-prt").value >= 0) parent.rt = +$("#tp-prt").value;
@@ -492,7 +536,8 @@
           $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
           setBusy(false); return;
         }
-        st.summary = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
+        st.summary = JSON.parse(await callRaw("run", digFiles(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
+        if (window.TPMS2) window.TPMS2.setConditions(st.summary.gruppi ? new Map(st.files.filter(f => f.kind === "ms2").map(f => [f.name, (st.cond && st.cond.campioni[st.gnames.indexOf(f.name)] || {}).serie || ""])) : null);
         st.took = performance.now() - t0; st.sel = null; st.det = {}; if (window.TPLIVE) TPLIVE.stop(true); render(); $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
       } catch (e) { if (window.TPLIVE) TPLIVE.stop(false); msg(String(e.message || e), true); $("#tp-bar").style.width = "0"; }
       setBusy(false);
@@ -530,7 +575,7 @@
       R.innerHTML = `<div class="hero"><div class="hero-t"><span class="hero-i">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : "⛏"}</span>
         <h2>${nF ? "Vein found!" : nP ? "A few nuggets..." : "Poor vein"}</h2><span class="hero-s">${esc(s.parent.formula || "parent")} · ${esc(s.parent.adduct)} <i>m/z</i> ${s.parent.mz}${par && par.ref_rt ? ` · RT ${par.ref_rt} min` : ""}</span></div>
         <div class="hero-c"><span id="tp-cnt">${words}</span><span class="hero-x"><button id="tp-x-xlsx">Excel (.xlsx)</button><button id="tp-x-csv">CSV</button><button id="tp-x-json">JSON</button><button id="tp-x-txt" title="Copy a summary to paste into the report">Copy summary</button></span></div></div>
-        <div class="vtabs">${VIEWS.map(([k, n]) => `<button class="vt${st.view === k ? " on" : ""}" data-v="${k}">${n}</button>`).join("")}</div>
+        <div class="vtabs">${(s.gruppi ? [...VIEWS, ["cond", "Compare conditions"]] : VIEWS).map(([k, n]) => `<button class="vt${st.view === k ? " on" : ""}" data-v="${k}">${n}</button>`).join("")}</div>
         <div id="tp-view"></div>
         <div class="tp-mores">${ms2c ? `<details name="tp-more" id="tp-m-ms2"><summary>MS2 matches (${nMs2})</summary>${ms2c}</details>` : ""}${mrmc ? `<details name="tp-more" id="tp-m-mrm"><summary>MRM (${s.mrm.rows.length} files)</summary>${mrmc}</details>` : ""}</div>`;
       if (window.TPMS2) window.TPMS2.mount({ st, call, refresh: ms2Refresh });
@@ -547,11 +592,17 @@
     function view() {
       const V = $("#tp-view"), s = st.summary;
       const list = s.rows.filter(r => r.label !== "progenitore" && good(r));
-      T = null;
+      T = null; if (st.gv) { st.gv.destroy(); st.gv = null; }
       if (st.view === "tab") {
         const nd = s.rows.filter(notFound).length;
-        V.innerHTML = `${nd ? `<label class="mut" style="display:inline-flex;gap:6px;align-items:center;min-height:24px"><input type="checkbox" id="tp-nd"> Show searched, not detected (${nd})</label>` : ""}<div id="tp-tbl"></div>`;
+        V.innerHTML = `${nd ? `<label class="mut" style="display:inline-flex;gap:6px;align-items:center;min-height:24px"><input type="checkbox" id="tp-nd"> Show searched, not detected (${nd})</label>` : ""}${s.gruppi ? condFilterHtml(s.gruppi) : ""}<div id="tp-tbl"></div>`;
         mountTable($("#tp-tbl"));
+        const sel = /** @type {HTMLSelectElement | null} */ ($("#tp-gflt")); if (sel) sel.onchange = () => { if (T) T.setRows(tableRows()); };
+      } else if (st.view === "cond") {
+        V.innerHTML = `<div class="card" id="tp-gv"><span class="mut" role="status">Loading the comparison...</span></div>`;
+        const host = $("#tp-gv"), W = /** @type {any} */ (window);
+        W.TPLAZY.load("gruppi-vista.js").then(() => { if (st.view === "cond" && host.isConnected) st.gv = W.TPGRUPPI_VIEW.mount(host, s.gruppi, { parentName: s.parent.name || s.parent.formula, onOpenRow: (/** @type {number} */ id) => show(id) }); })
+          .catch(() => { host.textContent = "The comparison of conditions could not be loaded."; });
       } else if (st.view === "map") {
         V.innerHTML = `<div class="card"><div class="mut">Each node is an ion that passes the criteria: the radius follows the maximum area, the colour the confidence (green strong, amber possible, purple unexpected). Lines show the transformation (Δ formula). Click a node for details.</div><div id="tp-map"></div></div>`;
         mapView($("#tp-map"));
@@ -616,7 +667,7 @@
       const h = document.createElement("div"); h.innerHTML = window.TPMS2.card(s); c.replaceWith(h.firstElementChild);
       window.TPMS2.mount({ st, call, refresh: ms2Refresh });
       const sm = $("#tp-m-ms2 > summary"); if (sm) sm.textContent = `MS2 matches (${s.ms2_links && s.ms2_links.links ? s.ms2_links.links.length : 0})`;
-      if (T) { T.setRows(s.rows); if (st.sel != null && touched.includes(st.sel) && T.openId === st.sel) { T.close(); T.open(st.sel); } }
+      if (T) { T.setRows(tableRows()); if (st.sel != null && touched.includes(st.sel) && T.openId === st.sel) { T.close(); T.open(st.sel); } }
     }
     /** @type {any} the TPTAB of the results while the view "Table" is shown */
     let T = null;
@@ -626,6 +677,22 @@
     const notFound = r => r.status === "Searched, not detected";
     const cellStates = r => (r.kinetics || []).map(p => p.area > 0 ? "detected" : "absent");
     const rowNum = r => r.id >= 100000 ? "n" + (r.id - 100000) : String(r.id);
+    /** the row of gruppi/1 of a row of the table (comparison of conditions), null without it */
+    const gIndex = new WeakMap();      // the rows of a gruppi/1 by id (kept apart: the summary is exported as it is)
+    const gRow = (/** @type {any} */ r) => { const g = st.summary.gruppi; if (!g) return null; let m = gIndex.get(g); if (!m) gIndex.set(g, m = new Map(g.rows.map((/** @type {any} */ x) => [x.row, x]))); return m.get(r.id) || null; };
+    const condIds = () => st.summary.gruppi.conditions.map((/** @type {any} */ c) => c.id);
+    /** the filter of the rows by condition: all, in all, only in X, present in X (the sets of gruppi/1; no row is dropped by a criterion of the engine) */
+    function condFilterHtml(/** @type {any} */ g) {
+      const ids = g.conditions.map((/** @type {any} */ c) => c.id), only = (/** @type {string} */ c) => g.rows.some((/** @type {any} */ r) => r.only_in === c), e = (/** @type {string} */ t) => esc(t);
+      return `<label class="mut tp-gf" style="display:inline-flex;gap:6px;align-items:center;min-height:24px;margin:0 8px">Conditions <select id="tp-gflt" aria-label="Filter the rows by condition"><option value="">All rows</option><option value="all">In all conditions</option>`
+        + ids.filter(only).map((/** @type {string} */ c) => `<option value="only:${e(c)}">Only in ${e(c)}</option>`).join("") + ids.map((/** @type {string} */ c) => `<option value="in:${e(c)}">Present in ${e(c)}</option>`).join("") + `</select></label>`;
+    }
+    /** the rows of the table: without «searched, not detected» unless asked, and by the filter of conditions */
+    function tableRows() {
+      const s = st.summary, nd = /** @type {HTMLInputElement | null} */ ($("#tp-nd")), f = (/** @type {HTMLSelectElement | null} */ ($("#tp-gflt")) || { value: "" }).value, par = (/** @type {any} */ r) => r.label === "progenitore";
+      const ok = (/** @type {any} */ r) => { if (!f || par(r)) return true; const g = gRow(r); return !!g && (f === "all" ? g.in_all : f.startsWith("only:") ? g.only_in === f.slice(5) : g.present_in.includes(f.slice(3))); };
+      return s.rows.filter((/** @type {any} */ r) => (nd && nd.checked || !notFound(r)) && ok(r));
+    }
     function mountTable(host) {
       const W = /** @type {any} */ (window), TPTAB = W.TPTAB, TPRIGA = W.TPRIGA, s = st.summary, ms2 = hasMs2(s);
       const chip = (key, label, help, test, on) => ({ key, label, help, test, on, ...(key === "ms2" ? {} : { group: "class" }) });
@@ -640,6 +707,8 @@
         { key: "mz", label: "<i>m/z</i>", help: "ft.col.mz", num: true, sort: r => r.mz, cell: r => r.mz.toFixed(2) },
         { key: "rt", label: "RT", help: "ft.col.rt", num: true, sort: r => r.ref_rt, cell: r => r.ref_rt == null ? "" : r.ref_rt.toFixed(2) },
         { key: "trend", label: "Trend", help: "ft.col.trend", cell: r => (r.kinetics || []).length ? TPTAB.spark(r.kinetics.map(p => p.area), "area") : "", text: r => (r.kinetics || []).map(p => Math.round(p.area)).join(" ") },
+        ...(s.gruppi ? [{ key: "conds", label: "Conditions", help: "ft.col.conds", sort: (/** @type {any} */ r) => { const g = gRow(r); return g ? g.present_in.length : -1; }, cell: (/** @type {any} */ r) => { const g = gRow(r); return g ? TPTAB.dots(g.cond.map((/** @type {any} */ c) => ({ id: c.id, present: c.present }))) : ""; },
+          text: (/** @type {any} */ r) => { const g = gRow(r); return g ? g.present_in.join("; ") : ""; } }] : []),
         { key: "cells", label: "Cells", help: "ft.col.cells", cell: r => cellStates(r).length ? TPTAB.cells(cellStates(r)) : TPTAB.state("na"), text: r => cellStates(r).map(x => x[0]).join("") },
         { key: "max", label: "Max area", help: "ft.col.maxarea", num: true, sort: r => r.max_area, cell: r => notFound(r) ? "—" : fmtA(r.max_area), text: r => notFound(r) ? "—" : fmtA(r.max_area), value: r => notFound(r) ? null : r.max_area },
         { key: "score", off: true, label: "Score", help: "ft.col.score", num: true, sort: r => r.score, cell: r => r.score == null ? "" : `<span class="badge b-${r.label}">${r.score} ${LAB[r.label]}</span>`, text: r => r.score == null ? "" : String(r.score) },
@@ -654,9 +723,9 @@
       T = TPTAB.mount(host, { id: "tp-t", label: "Transformation product candidates", cols, rowId: r => r.id, esc, name: r => `${r.tp_name || idLabel(r)}, ${idLabel(r)}, m/z ${r.mz.toFixed(2)}`, columns: true, chips, rowClass: r => notFound(r) ? "tpt-nd" : "", exportName: (s.parent.formula || "parent") + "_Tabui_view",
         search: r => [r.tp_name, r.name, r.formula, String(r.mz), r.delta, r.net_change, r.modification].join(" "), pin: r => r.label === "progenitore",
         tabs: TPRIGA.tabs, head: (r, box) => TPRIGA.head(box, headModel(r)), onOpen: (r, body, tab) => { void fillTab(r, body, tab); } });
-      T.setRows(s.rows.filter(r => !notFound(r))); T.sortBy("level", 1);
+      T.setRows(tableRows()); T.sortBy("level", 1);
       const box = /** @type {HTMLInputElement | null} */ ($("#tp-nd"));
-      if (box) box.onchange = () => { if (T) T.setRows(box.checked ? s.rows : s.rows.filter(r => !notFound(r))); };
+      if (box) box.onchange = () => { if (T) T.setRows(tableRows()); };
       // the "+N other" button of the Identity cell: open the row on the tab with the other identities (capture: before the row toggles)
       host.addEventListener("click", e => {
         const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest(".tp-alt")); if (!b || !T) return;
@@ -700,8 +769,15 @@
       if (!T || T.openId !== r.id || T.tab !== tab) return;                  // another row or tab was opened while this one loaded
       const TPRIGA = /** @type {any} */ (window).TPRIGA, m = lrModel(r, d);
       if (tab === "samples") {
-        body.innerHTML = `<div class="lr-sg"><div class="lr-s1"></div><div class="tpr-ch"><h4>Kinetics (peak area)</h4><canvas id="tp-c-kin"></canvas></div></div>`;
-        TPRIGA.fill(body.querySelector(".lr-s1"), tab, m); kinChart(d);
+        const g = gRow(r);      // several conditions: the kinetics are one per condition (never the samples of all conditions in one curve)
+        body.innerHTML = `<div class="lr-sg"><div class="lr-s1"></div><div class="tpr-ch">${g ? `<h4>By condition</h4><div id="tp-gbc"></div>` : `<h4>Kinetics (peak area)</h4><canvas id="tp-c-kin"></canvas>`}</div></div>`;
+        TPRIGA.fill(body.querySelector(".lr-s1"), tab, m);
+        if (!g) kinChart(d);
+        else {
+          const W = /** @type {any} */ (window), box = /** @type {HTMLElement} */ (body.querySelector("#tp-gbc"));
+          try { await W.TPLAZY.load("gruppi-vista.js"); } catch (_) { box.textContent = "The comparison of conditions could not be loaded."; return; }
+          if (T && T.openId === r.id && T.tab === tab && box.isConnected) W.TPGRUPPI_VIEW.rowDetail(box, st.summary.gruppi, r.id);
+        }
       } else {
         TPRIGA.fill(body, tab, m);
         if (tab === "identity") identityExtras(r, d, body); else if (tab === "quality") qualityExtras(r, d, body);
@@ -763,12 +839,13 @@
         const found = s.rows.filter(r => !notFound(r));
         const det = []; for (const r of top) det.push(await getDetail(r.id));
         const times = s.times, name = (st.summary.parent.formula || "parent") + "_Tabui";
-        const head = ["#", "TP", "Candidate", "Neutral formula", "Change", "Net change (formula)", "Modification", "m/z", "RT (min)", "Level", "Score", "Verdict", "t max (min)", "Max area", "Max area (number)", ...times.map(t => "Area t" + t)];
-        const line = r => [r.id, r.tp_name, r.name, r.formula, r.delta, r.net_change ?? "", r.modification ?? "", r.mz, r.ref_rt, r.level ?? "", r.score ?? "", r.label, r.tmax ?? "", fmtA(r.max_area), r.max_area, ...times.map(t => { const k = r.kinetics.find(p => p.time === t); return k ? Math.round(k.area) : ""; })];
+        const cg = !!s.gruppi;      // several conditions: the columns «Present in» and «Only in» (gruppi/1)
+        const head = ["#", "TP", "Candidate", "Neutral formula", "Change", "Net change (formula)", "Modification", "m/z", "RT (min)", "Level", "Score", "Verdict", "t max (min)", "Max area", "Max area (number)", ...times.map(t => "Area t" + t), ...(cg ? ["Present in", "Only in"] : [])];
+        const line = r => [r.id, r.tp_name, r.name, r.formula, r.delta, r.net_change ?? "", r.modification ?? "", r.mz, r.ref_rt, r.level ?? "", r.score ?? "", r.label, r.tmax ?? "", fmtA(r.max_area), r.max_area, ...times.map(t => { const k = r.kinetics.find(p => p.time === t); return k ? Math.round(k.area) : ""; }), ...(cg ? (g => [g ? g.present_in.join("; ") : "", g && g.only_in ? g.only_in : ""])(gRow(r)) : [])];
         const trans = det.flatMap(d => d.transitions);
         if (kind === "json") return dl(name + ".json", JSON.stringify({ summary: s, details: det, ms2_overrides: window.TPMS2 ? window.TPMS2.overrides() : [] }, null, 1), "application/json");
         if (kind === "csv") return dl(name + ".csv", "sep=;\n" + [head, ...found.map(line)].map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
-        const sheets = [{ name: "Ranking", head, rows: found.map(line), widths: [6, 12, 38, 16, 14, 18, 30, 10, 9, 8, 9, 11, 10, 12, 14, ...times.map(() => 11)] },
+        const sheets = [{ name: "Ranking", head, rows: found.map(line), widths: [6, 12, 38, 16, 14, 18, 30, 10, 9, 8, 9, 11, 10, 12, 14, ...times.map(() => 11), ...(cg ? [28, 14] : [])] },
           { name: "Criteria", head: ["#", "Candidate", "Criterion", "Outcome", "Detail"], rows: det.flatMap(d => d.criteria.map(c => [d.id, d.name, c.name, c.status, c.text])), widths: [6, 38, 28, 8, 70] },
           { name: "MS2", head: ["#", "Candidate", "Product m/z", "% rel.", "Loss", "Note", "Similarity to the parent"], rows: det.flatMap(d => d.ms2.fragments.map(f => [d.id, d.name, f.mz, f.rel, f.loss ?? "", f.note || "", d.sim ? d.sim.cos.total : ""])), widths: [6, 38, 12, 9, 9, 50, 14] },
           ...(window.TPMS2 && window.TPMS2.sheet() ? [window.TPMS2.sheet()] : []),

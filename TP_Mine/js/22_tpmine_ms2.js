@@ -62,7 +62,10 @@
     return `<select data-ep="${it.exp}:${it.peak}" data-i="${i}" aria-label="${esc(lbl)}" title="Choose the row this MS2 belongs to">${cursel === "" ? opt("", "not matched") : ""}`
       + fit.map(r => opt(String(r.id), rowName(r))).join("") + opt("none", "none (not this ion)") + "</select>";
   }
-  const expCells = (/** @type {any} */ x) => x ? `<td title="${esc(x.file)}">${esc(String(x.file).replace(/\.mzml$/i, ""))}${x.time != null ? ` <span class="mut">t ${x.time}</span>` : ""}</td><td class="n">${num(x.precursor)}</td><td class="n">${x.ce == null ? "" : x.ce}</td><td class="n">${x.polarity > 0 ? "+" : x.polarity < 0 ? "−" : ""}</td>` : `<td></td><td></td><td></td><td></td>`;
+  /** the condition of an MS2 file (series that compares conditions), set by the page after a Dig: file name → condition, «shared» for a file with none */
+  /** @type {Map<string, string> | null} */ let conditions = null;
+  const condTag = (/** @type {any} */ f) => conditions && conditions.has(f) ? ` <span class="mut">· ${esc(conditions.get(f) || "shared")}</span>` : "";
+  const expCells = (/** @type {any} */ x) => x ? `<td title="${esc(x.file)}">${esc(String(x.file).replace(/\.mzml$/i, ""))}${x.time != null ? ` <span class="mut">t ${x.time}</span>` : ""}${condTag(x.file)}</td><td class="n">${num(x.precursor)}</td><td class="n">${x.ce == null ? "" : x.ce}</td><td class="n">${x.polarity > 0 ? "+" : x.polarity < 0 ? "−" : ""}</td>` : `<td></td><td></td><td></td><td></td>`;
 
   function tableHtml(/** @type {any[]} */ list, /** @type {boolean} */ lost) {
     const L = cur.links, head = lost ? "<th scope=\"col\">Reason</th>" : "<th scope=\"col\">Row</th><th scope=\"col\"><i>Δm/z</i> (Da · ppm)</th><th scope=\"col\">ΔRT (min)</th>";
@@ -153,7 +156,7 @@
   /** The "Product ions (MS2)" card of a detail: one line per match with "Change", a CE menu when several CEs, then the fragments. */
   function detail(/** @type {any} */ d) {
     const ks = linksOf(d), m = d.ms2;
-    const lines = ks.map((/** @type {any} */ k, /** @type {number} */ i) => `<li>${esc(String(k.file).replace(/\.mzml$/i, ""))} · precursor ${num(k.precursor)} · CE ${k.ce ?? "?"} · peak at ${num(k.apex)} min · ${badge(k.state)} <span class="mut">${esc(k.why || "")}</span> <button type="button" class="tp-ms2-ch" data-k="${i}" title="Go to the menu of this MS2 experiment">Change</button></li>`).join("");
+    const lines = ks.map((/** @type {any} */ k, /** @type {number} */ i) => `<li>${esc(String(k.file).replace(/\.mzml$/i, ""))}${condTag(k.file)} · precursor ${num(k.precursor)} · CE ${k.ce ?? "?"} · peak at ${num(k.apex)} min · ${badge(k.state)} <span class="mut">${esc(k.why || "")}</span> <button type="button" class="tp-ms2-ch" data-k="${i}" title="Go to the menu of this MS2 experiment">Change</button></li>`).join("");
     const ces = [...new Set(ks.map((/** @type {any} */ k) => k.ce))];
     const menuCe = ces.length > 1 ? `<label class="mut">Collision energy <select id="tp-ms2-ce" aria-label="Collision energy of the product ions shown">${ces.map(c => `<option value="${c ?? ""}"${c === m.collision_energy ? " selected" : ""}>${c ?? "?"}</option>`).join("")}</select></label>` : "";
     const none = m.scans ? "" : `<div class="mut">${missing(d) || "No MS2 scan with this precursor inside the peak."}</div>`;
@@ -201,5 +204,6 @@
 .tp .tp-ms2-l{margin:4px 0 8px;padding-left:18px;font-size:12px}.tp .tp-ms2-l li{margin:3px 0}@media (pointer:coarse){.tp #tp-ms2map select,.tp #tp-ms2map button,.tp .tp-ms2-ch{min-height:40px}}`;
   const st = document.createElement("style"); st.textContent = CSS; document.head.appendChild(st);
 
-  /** @type {any} */ (window).TPMS2 = { start, card, mount, detail, bindDetail, from, repLine, sheet, repSheet, cell, overrides };
+  const setConditions = (/** @type {Map<string, string> | null} */ m) => { conditions = m; };
+  /** @type {any} */ (window).TPMS2 = { start, card, mount, detail, bindDetail, from, repLine, sheet, repSheet, cell, overrides, setConditions };
 })();

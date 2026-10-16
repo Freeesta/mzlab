@@ -254,6 +254,7 @@ function detail(id) {
 /** a run goes to Rust: high-resolution files (and at most the MSn file of the standard), all with their .mzidx @param {string[]} a */
 async function rustRun(a) {
   const files = JSON.parse(a[0]);
+  if (!Array.isArray(files)) return false;               // {files, campioni}: a low-resolution series with conditions (finder-lr.js)
   if (!files.some((/** @type {any} */ f) => f.kind === "hr")) return false;
   return !!(await idxFiles(files.map((/** @type {any} */ f) => f.name)));
 }
