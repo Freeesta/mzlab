@@ -38,7 +38,7 @@ const step = (x, phase, done = 0, total = 0) => {
 
 /** the plan of a run, null when Rust does not serve it @param {Ctx} c @param {string[]} a */
 async function plan(c, a) {
-  const files = JSON.parse(a[0]);
+  const parsed = JSON.parse(a[0]), files = Array.isArray(parsed) ? parsed : parsed.files || [];        // a list, or {files, campioni} with the conditions of the page
   if (!files.length || files.some((/** @type {any} */ f) => !["full", "ms2", "mrm"].includes(f.kind))) return null;
   const x = await load(c);
   if (!x) return null;

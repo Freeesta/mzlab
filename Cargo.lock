@@ -1102,8 +1102,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff2abc00be7fca6ebc474524697ae276ad847ad0a6b3faa4bcb027e9a4614ad0"
 dependencies = [
  "cfg-if",
+ "js-sys",
  "libc",
  "wasi",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -1977,6 +1979,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-chem-wasm"
+version = "1.0.1"
+dependencies = [
+ "getrandom 0.2.17",
+ "mzlab-chem",
+ "mzlab-core",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-cli"
 version = "1.0.1"
 dependencies = [
@@ -2006,6 +2018,7 @@ name = "mzlab-desktop"
 version = "1.0.1"
 dependencies = [
  "memmap2",
+ "mzlab-chem",
  "mzlab-core",
  "mzlab-feat",
  "mzlab-feat-table-wasm",

@@ -414,6 +414,14 @@
     };
     return `<span class="tpt-cells tpt-cells-g" role="group" aria-label="${lab}">${ix.slice(0, max).map(one).join("")}${more(states.length)}</span>`;
   }
+  /** one dot per condition: ● present, ○ absent (the shape says it, not the colour); the label names the conditions («present in O2, Air; absent in N2»)
+   * @param {{ id: string, present: boolean }[]} items */
+  function dots(items) {
+    const yes = items.filter(c => c.present).map(c => c.id), no = items.filter(c => !c.present).map(c => c.id);
+    const esc = (/** @type {string} */ t) => t.replace(/[&<>"]/g, ch => /** @type {any} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
+    const lab = [yes.length ? "present in " + yes.join(", ") : "", no.length ? "absent in " + no.join(", ") : ""].filter(Boolean).join("; ");
+    return `<span class="tpt-cells tpt-dots" role="img" aria-label="${esc(lab)}" title="${esc(lab)}">${items.map(c => `<span aria-hidden="true">${c.present ? "●" : "○"}</span>`).join("")}</span>`;
+  }
   /** the legend of the symbols under the table; with `area` it also says what the green of the squares means @param {string[]} keys @param {boolean} [area] */
   function legend(keys, area) {
     return `<div class="tpt-leg">${area ? `<span>${AREA_NOTE}</span>` : ""}${keys.map(k => `<span${G.TPHELP ? ` tabindex="0"` : ""}${tt("ft.state." + k)}>${state(k)} ${(STATES[k] || STATES.na)[1]}</span>`).join("")}</div>`;
@@ -448,5 +456,5 @@
     if (Math.abs(+m) >= 1000) { e += 3; m = (v / 10 ** e).toFixed(2); }
     return m + "e" + (e < 0 ? "-" : "+") + Math.abs(e);
   };
-  G.TPTAB = { mount, spark, state, cells, legend, areaScale, paint, AREA_NOTE, level, pred, area };
+  G.TPTAB = { mount, spark, state, cells, dots, legend, areaScale, paint, AREA_NOTE, level, pred, area };
 })();
