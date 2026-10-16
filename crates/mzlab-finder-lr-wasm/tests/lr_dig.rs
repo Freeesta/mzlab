@@ -81,7 +81,14 @@ fn contract_and_rows_of_python() {
     ];
     same_shape(&without(&s, &rust_only), &g["summary"], "summary");
     for row in s["rows"].as_array().unwrap() {
-        let keys = ["ms2", "tp_name", "status", "net_change", "modification"];
+        let keys = [
+            "ms2",
+            "tp_name",
+            "status",
+            "net_change",
+            "modification",
+            "pred",
+        ];
         same_shape(&without(row, &keys), &g["row"], "row");
         for k in row["kinetics"].as_array().unwrap() {
             same_shape(k, &g["kinetics"], "kinetics");
@@ -128,6 +135,7 @@ fn detail_like_python(det: &Value, g: &Value, id: i64) {
         "ms2_rep",
         "ms2_text",
         "candidates",
+        "pred",
     ];
     same_shape(&without(det, &keys), &g["detail"], "detail");
     own_candidate_first(det);
@@ -150,6 +158,38 @@ fn detail_like_python(det: &Value, g: &Value, id: i64) {
         .unwrap()
         .iter()
         .any(|c| c["name"] == "persistent"));
+}
+
+/// The Dig writes no Schymanski level: `level` is null on every row and in the detail; a strong or possible row with a formula carries the
+/// prediction of its rule (`pred`, «Prev. 2-4»), the others none.
+#[test]
+fn no_level_only_prediction() {
+    let (files, idxs) = series();
+    let d = dig(&files, &idxs);
+    let s: Value = serde_json::from_str(&summary(&d, r#"{"total": 1}"#)).unwrap();
+    let rows = s["rows"].as_array().unwrap();
+    for r in rows {
+        assert!(r["level"].is_null(), "{r}");
+        let shown =
+            matches!(r["label"].as_str(), Some("forte" | "possibile")) && r["kind"] != "unexpected";
+        match r["pred"].as_i64() {
+            Some(p) => assert!(shown && (2..=4).contains(&p), "{r}"),
+            None => assert!(!shown || r["formula"] == "", "{r}"),
+        }
+    }
+    let id = rows
+        .iter()
+        .find(|r| r["pred"].is_i64())
+        .expect("a row with a prediction")["id"]
+        .as_i64()
+        .unwrap();
+    let det: Value =
+        serde_json::from_str(&detail(&d, id, |k| Ok(open(&idxs[k]))).unwrap()).unwrap();
+    assert!(det["level"].is_null());
+    assert_eq!(
+        det["pred"],
+        rows.iter().find(|r| r["id"] == id).unwrap()["pred"]
+    );
 }
 
 #[test]

@@ -7,43 +7,53 @@ use super::labels::Crit;
 use super::{isf, nomi, plan, Entry, LrDig};
 use crate::legacy::lrisf::IsfVerdict;
 
-const LEVEL_TEXT: [(u8, &str); 3] = [
-    (5, "Level 5: mass of interest. Ion with a compatible time course, nothing more."),
-    (4, "Level 4: proposed formula. Derives from one known transformation of the parent and passes the criteria; at unit resolution the formula is not proven."),
-    (3, "Level 3: tentative candidate. In addition, the product ions (MS2) are consistent with the parent (shared fragments or fragments shifted by Δ)."),
-];
-const TWO_STEPS: &str = "Level 5: mass of interest. The m/z matches two transformations of the parent: at unit resolution so many combinations cover most nominal masses that a match is no evidence of the formula.";
+const PROPOSED: &str = "Proposed formula: it derives from one known transformation of the parent and passes the criteria. At unit resolution the formula is not proven; the identification level is the chemist's.";
+const MASS: &str = "Mass of interest: an ion with a compatible time course, nothing more.";
+const TWO_STEPS: &str = "Mass of interest: the m/z matches two transformations of the parent; at unit resolution so many combinations cover most nominal masses that a match is no evidence of the formula.";
+const BY_CHANCE: &str = "Mass of interest: in this series the transformations of the parent match no more ions than the same masses shifted by a few Da (decoys): the match may be a coincidence.";
+const NOT_MET: &str = "Not proposed: the criteria are not met.";
 
 /// Status of the parent row when `parent_check` fails: no product is proposed.
 pub const PARENT_NOT_FOUND: &str = "Parent not found";
 
-const BY_CHANCE: &str = "Level 5: mass of interest. In this series the transformations of the parent match no more ions than the same masses shifted by a few Da (decoys): the match may be a coincidence.";
-
-/// `confidence`: Schymanski level 5 or 4 as far as unit-resolution data without MS2 allow (never above 3, never 2 or 1). A level needs a chromatographic
-/// peak (`peakchk`) behind the label; 4 needs a formula reached by one transformation (two steps match by chance at unit resolution) whose class of
-/// hypotheses matches more ions than the decoys (`chance`).
-pub fn level(e: &Entry) -> (Option<u8>, &'static str) {
+/// What the data of a row support, in words (`level_text`), and whether the row is a proposed formula: a chromatographic peak (`peakchk`) behind
+/// the label, one transformation (two steps match by chance at unit resolution) and a class of hypotheses that matches more ions than the decoys
+/// (`chance`). The Dig writes no Schymanski level (`level` is null): the chemist decides it (`TPDEC`); the rule gives only the prediction (`pred`).
+pub fn evidence(e: &Entry) -> (bool, &'static str) {
     if e.id == 0 {
-        return (None, "");
+        return (false, "");
     }
     if !matches!(e.label, "forte" | "possibile") {
-        return (None, "No level: the criteria are not met.");
+        return (false, NOT_MET);
     }
-    if !e.formula.is_empty() && !e.unexpected && e.steps > 1 {
-        return (Some(5), TWO_STEPS);
+    let formula = !e.formula.is_empty() && !e.unexpected;
+    if formula && e.steps > 1 {
+        return (false, TWO_STEPS);
     }
-    if !e.formula.is_empty() && !e.unexpected && e.by_chance {
-        return (Some(5), BY_CHANCE);
+    if formula && e.by_chance {
+        return (false, BY_CHANCE);
     }
-    let l = if !e.formula.is_empty() && e.label == "forte" {
-        4
+    if formula && e.label == "forte" {
+        (true, PROPOSED)
     } else {
-        5
-    };
-    (
-        Some(l),
-        LEVEL_TEXT.iter().find(|x| x.0 == l).map_or("", |x| x.1),
-    )
+        (false, MASS)
+    }
+}
+
+/// `pred`: the prediction level (Löffler et al. 2025, «Prev. N») of the rule behind a strong or possible row with a formula; none for the parent,
+/// the unexpected ions and the rows that fail the criteria. It says how expected the transformation is, not what the data prove.
+pub fn pred(e: &Entry) -> Option<u8> {
+    let shown = e.id != 0 && !e.unexpected && !e.formula.is_empty();
+    (shown && matches!(e.label, "forte" | "possibile") && (1..=4).contains(&e.pred))
+        .then_some(e.pred)
+}
+
+/// The keys `level` (always null), `pred` and `level_text` of a row.
+pub fn level_keys(o: &mut Out, e: &Entry) {
+    o.raw(",\"level\":null,\"pred\":")
+        .opt(pred(e).map(f64::from))
+        .raw(",\"level_text\":")
+        .str(evidence(e).1);
 }
 
 pub fn opt_str(o: &mut Out, v: Option<&str>) {
@@ -141,11 +151,7 @@ fn row_json(o: &mut Out, r: &Row, p_mz: f64, tp_name: &str, parent_formula: &str
         .opt(e.score)
         .raw(",\"label\":")
         .str(e.label);
-    let (lev, ltxt) = level(e);
-    o.raw(",\"level\":")
-        .opt(lev.map(f64::from))
-        .raw(",\"level_text\":")
-        .str(ltxt);
+    level_keys(o, e);
     o.raw(",\"ref_rt\":")
         .opt(e.ref_rt.map(|v| round(v, 2)))
         .raw(",\"kinetics\":");
