@@ -160,7 +160,7 @@
   /** @param {HTMLElement} host @param {Reatt} r the `reatt/1` @returns {boolean} true when the panel was drawn */
   function mount(host, r) {
     clear(host); if (!admin() || !r || !r.atoms) return false;
-    injectCss();
+    injectCss(); tell(host, { reatt: r });
     const root = document.createElement("div"); root.className = "card tpr tpv3"; host.appendChild(root);
     const view = { card: 0, tab: 0, thr: 0.05, sort: "idx", dir: 1 };
     root.innerHTML = `<h4>Reactivity of the parent (Prev.)</h4><div class="tpr-tabs" role="tablist" aria-label="Reactivity cards">${TABS.map((t, k) => `<button type="button" role="tab" id="tpr-t${k}" aria-selected="${k === 0}" tabindex="${k === 0 ? 0 : -1}" aria-controls="tpr-p">${esc(t)}</button>`).join("")}</div>`
@@ -233,11 +233,15 @@
     clear(host); if (!admin()) return false;
     injectCss();
     const o = typeof s === "string" ? { state: s } : s, st = /** @type {any} */ (o);
+    tell(host, { state: st.state });
     const text = st.state === "waiting" ? "waiting for TPs" : st.state === "computing" ? "computing…" : `failed: ${ERR[st.error_key || ""] || st.message || st.error_key || "unknown error"}`;
     const root = document.createElement("div"); root.className = "card tpr"; root.dataset.state = st.state;
     root.innerHTML = `<h4>Reactivity of the parent (Prev.)</h4><p class="tpr-st" role="status">${esc(text)}</p>`; host.appendChild(root);
     return true;
   }
+
+  /** tells the other panels of the parent (the column «Prev. f(−)» of «Substitution position», TPPOS) what this panel shows @param {HTMLElement} host @param {any} d */
+  function tell(host, d) { const smiles = host.dataset.smiles || (d.reatt && d.reatt.smiles) || ""; if (smiles) G.dispatchEvent(new CustomEvent("tp-reatt", { detail: { smiles, ...d } })); }
 
   G.TPREATT = { mount, state, xyz, csv, mapHeavy, svg2d, eligible: () => admin() };
 })();

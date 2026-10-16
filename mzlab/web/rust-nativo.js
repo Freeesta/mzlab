@@ -11,7 +11,8 @@ export const MAGIC = "mzlab/nat1";
 export const UPLOAD_ERROR = "err.file.unknown";              // the key the desktop engine gives for a file that did not reach it (the engine is in crates/mzlab-desktop)
 export const PREFIX = "nat~";                              // the members of a dataset in files/: nat~<key>~<path with ~ for />
 const TICK = 200;                                         // ms between two progress messages
-const PHASES = ["read", "read", "scans", "chrom"];        // the name of the phase shown, by the phase number of build_mzidx_native (0 = the copy)
+const PHASES = { 1: "sha", 4: "open", 2: "scans", 3: "chrom" };        // the phase numbers of build_mzidx_native -> the phases of W (nativo-fasi.js), in the order they run
+const SHOWN = { sha: "read", open: "open", scans: "scans", chrom: "chrom" };  // the name of the phase the page shows
 
 /** @typedef {{ name: string, store: string, size: number, sha256?: string, sha1?: string, probe?: string }} StubMember (the fingerprints taken during the copy; a stub without them gets them from the engine as before) */
 /** @typedef {{ mzlab: string, ds: string, c: number, id: number, centroid: boolean, members: StubMember[], size: number }} Stub */
@@ -33,22 +34,28 @@ export function reader(/** @type {Blob[]} */ files, /** @type {((i: number, end:
   return (/** @type {number} */ i, /** @type {number} */ o, /** @type {number} */ n) => { const b = rd[i](o, n); if (seen) seen(i, o + b.length); return b; };
 }
 
-/** runs in the index builder (idx-worker.js): builds the .mzidx of the sample with `build_mzidx_native` of the .wasm (given, so this module has no import of it); `write(offset, bytes)` writes it; `progress({frac, phase})` is told the overall fraction 0..1 */
-export async function buildNative(/** @type {Function} */ build_mzidx_native, /** @type {{ prepara: (names: string[], known?: StubMember[]) => Promise<void> }} */ ext, /** @type {{ st: Stub, files: Blob[] }} */ j, /** @type {string} */ name, /** @type {(o: number, d: Uint8Array) => void} */ write, /** @type {(p: { frac: number, phase: string }) => void} */ progress, /** @type {number} */ budget, /** @type {{ put: (o: number, d: Uint8Array) => void, get: (o: number, n: number) => Uint8Array } | null} */ spill = null, /** @type {((o: number, d: Uint8Array) => void) | undefined} */ writeCen = undefined) {
+/** runs in the index builder (idx-worker.js): builds the .mzidx of the sample with `build_mzidx_native` of the .wasm (given, so this module has no import of it); `write(offset, bytes)` writes it; `progress({frac, phase, done, total})` is told the overall fraction 0..1 and, in the phases that read the scans, how many of the sample's scans are done */
+export async function buildNative(/** @type {Function} */ build_mzidx_native, /** @type {{ prepara: (names: string[], known?: StubMember[]) => Promise<void> }} */ ext, /** @type {{ st: Stub, files: Blob[] }} */ j, /** @type {string} */ name, /** @type {(o: number, d: Uint8Array) => void} */ write, /** @type {(p: { frac: number, phase: string, done: number, total: number }) => void} */ progress, /** @type {number} */ budget, /** @type {{ put: (o: number, d: Uint8Array) => void, get: (o: number, n: number) => Uint8Array } | null} */ spill = null, /** @type {((o: number, d: Uint8Array) => void) | undefined} */ writeCen = undefined) {
   await ext.prepara(j.st.members.map(x => x.name), j.st.members);
   const sizes = j.files.map(f => f.size), all = sizes.reduce((a, b) => a + b, 0) || 1, high = sizes.map(() => 0);
   const given = prints(j.st.members), w = given ? { ...W, sha: 0, scans: W.scans + W.sha } : W;          // the fingerprints of the copy: no phase to read the members again
-  let phase = given ? 2 : 1, last = 0;
-  const base = () => w.copy + (phase > 1 ? w.sha : 0) + (phase > 2 ? w.scans : 0);
-  const span = () => [w.sha, w.scans, w.chrom][phase - 1];
+  const order = ["sha", "open", "scans", "chrom"];
+  let phase = given ? "open" : "sha", last = 0, done = 0, total = 0, from = 0, spilled = 0, back = 0;
+  const base = () => { let b = w.copy; for (const k of order) { if (k === phase) break; b += w[k]; } return b; };
+  // how far the phase has got: the index counts the scans of the sample (step of the engine; the bytes of a .wiff.scan are those of every sample); the chromatograms and the index count
+  // the peaks read back from the scratch file when the scans did not fit in the budget, else the scans decoded again, else the bytes of the members read
+  const within = () => phase === "chrom" && spilled ? Math.min(1, back / spilled)
+    : phase === "scans" && total || phase === "chrom" && total && done > from ? Math.min(1, (done - from) / total) : Math.min(1, high.reduce((a, b) => a + b, 0) / all);
+  const put = spill ? (/** @type {number} */ o, /** @type {Uint8Array} */ d) => { spilled = Math.max(spilled, o + d.length); spill.put(o, d); } : undefined;
+  const get = spill ? (/** @type {number} */ o, /** @type {number} */ n) => { back += n; tell(false); return spill.get(o, n); } : undefined;
   const tell = (/** @type {boolean} */ force) => {
     const t = performance.now(); if (!force && t - last < TICK) return; last = t;
-    const within = Math.min(1, high.reduce((a, b) => a + b, 0) / all);
-    progress({ frac: Math.min(0.999, base() + span() * within), phase: PHASES[phase] });
+    progress({ frac: Math.min(0.999, base() + w[phase] * within()), phase: SHOWN[phase], done: phase === "scans" ? done - from : 0, total: phase === "scans" ? total : 0 });
   };
   const rd = reader(j.files, (i, end) => { if (end > high[i]) high[i] = end; tell(false); });
   const stats = build_mzidx_native(j.st.members.map(x => x.name), Float64Array.from(sizes), rd, j.st.c, name, j.st.centroid, write, budget,
-    (/** @type {number} */ p) => { phase = p; high.fill(0); tell(true); }, given, spill ? spill.put : undefined, spill ? spill.get : undefined, writeCen);
+    (/** @type {number} */ p) => { phase = PHASES[p] || phase; high.fill(0); from = done; tell(true); }, given, put, get, writeCen,
+    (/** @type {number} */ d, /** @type {number} */ n) => { done = d; total = n; tell(false); });
   return stats;
 }
 /** the SRM traces of a sample (`srm::impacchetta` bytes; mzFinder integrates the MRM files from them, no mzML is written): `native_srm` gives the bytes once to its sink @param {Stub} st @param {(st: Stub) => Promise<Blob[]>} memberFiles @param {Function} native_srm @param {{ prepara: (names: string[], known?: StubMember[]) => Promise<void> }} ext */

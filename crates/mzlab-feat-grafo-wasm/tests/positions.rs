@@ -1,5 +1,5 @@
 //! The `positions` of the bridge answers the `posiz/1` of `mzlab_feat::chem::posizioni::positions_json` (the error path builds a `JsValue`, which only exists in a browser).
-use mzlab_feat_grafo_wasm::{positions, version};
+use mzlab_feat_grafo_wasm::{positions, positions_prior, version};
 
 // 4-methyldiphenylamine + O: the fragment C7H8O (tolyl + O, +H) 109.0648 carries the oxygen on ring A, C12H11NO 186.0913 is everything but the methyl.
 const DPA: &str = "Cc1ccc(Nc2ccccc2)cc1";
@@ -25,5 +25,15 @@ fn bridge_gives_the_same_json_as_the_library() {
 
 #[test]
 fn bridge_version_names_the_current_contract() {
-    assert!(version().starts_with("mzfeat-grafo/4"));
+    assert!(version().starts_with("mzfeat-grafo/5"));
+}
+
+#[test]
+fn bridge_with_an_empty_reatt_is_the_plain_report() {
+    let peaks = "[[109.0648,100],[186.0913,50]]";
+    let a =
+        positions(DPA, "+O", peaks, 5.0, true, true).unwrap_or_else(|_| panic!("positions failed"));
+    let b = positions_prior(DPA, "+O", peaks, 5.0, true, true, "")
+        .unwrap_or_else(|_| panic!("positions_prior failed"));
+    assert_eq!(a, b);
 }

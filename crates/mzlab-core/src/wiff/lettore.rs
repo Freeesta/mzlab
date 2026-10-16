@@ -43,6 +43,8 @@ struct Parte {
     scans: Vec<usize>,
     indice: Vec<VoceScansione>,
     chroms: Option<Vec<Chromatogram>>,
+    /// `scans` and `indice` are built (`apri_solo` builds only the injection it is asked for; the others on their first use).
+    pronta: bool,
 }
 
 pub struct LettoreWiff {
@@ -70,6 +72,18 @@ impl LettoreWiff {
         self.parti
             .get(c)
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))
+    }
+
+    /// Injection `c` with its index built (the heads of its blocks read now when `apri_solo` left it out).
+    fn pronta(&mut self, c: usize) -> Result<&Parte> {
+        let p = self
+            .parti
+            .get_mut(c)
+            .ok_or_else(|| Error::new("error.badIndex").with("c", c))?;
+        if !p.pronta {
+            build(p, &mut self.scan, self.scan_len, self.scan_member)?;
+        }
+        Ok(p)
     }
 
     /// The chromatograms of injection `c`, read once (the MRM blocks only).
@@ -136,10 +150,11 @@ fn field(nome: &str, valore: impl ToString) -> Campo {
     }
 
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
-        Ok(&self.parte(c)?.indice)
+        Ok(&self.pronta(c)?.indice)
     }
 
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        self.pronta(c)?;
         let (p, r) = row(&self.parti, c, k)?;
         let pts = scan::read_scan(&mut self.scan, self.scan_len, r.at, r.end)?
             .ok_or_else(|| Error::new("err.file.wiff").with("detail", "not a scan"))?;
@@ -147,6 +162,7 @@ fn field(nome: &str, valore: impl ToString) -> Campo {
     }
 
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+        self.pronta(c)?;
         let (p, r) = row(&self.parti, c, k)?;
         Ok(vec![
             field("sample", p.w.sample),
@@ -191,7 +207,7 @@ fn field(nome: &str, valore: impl ToString) -> Campo {
 
 /// The header of the mzML of injection `c`, with the SHA-1 of the `.wiff.scan`.
 fn testata(l: &mut LettoreWiff, c: usize) -> Result<Header> {
-    l.parte(c)?;
+    l.pronta(c)?;
     if l.scan_sha1.is_none() {
         let win = &mut Window::new(&mut l.scan, l.scan_len);
         l.scan_sha1 = Some(sha1_hex(win, l.scan_len).ok());
@@ -209,7 +225,17 @@ fn member(fs: &mut FileSet, i: usize) -> Result<&mut Membro> {
         .ok_or_else(|| Error::new("err.file.wiff").with("detail", "member"))
 }
 
-fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
+fn apri(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
+    apri_solo(fs, limiti, None)
+}
+
+/// Opens the pair; with `solo = Some(c)` only injection `c` reads the heads of its blocks in the `.wiff.scan` (the index of one sample in its own worker: the other injections
+/// of a container with many would read the whole `.wiff.scan` each), and the others are listed with 0 scans until they are used.
+pub fn apri_solo(
+    mut fs: FileSet,
+    limiti: &Limiti,
+    solo: Option<usize>,
+) -> Result<Box<dyn Lettore>> {
     let wi = wiff_member(&fs).ok_or_else(|| Error::new("err.file.notWiff").with("name", "?"))?;
     let nome = member(&mut fs, wi)?
         .nome
@@ -232,12 +258,22 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let mut scan = std::mem::replace(&mut sm.dati, Box::new(Vec::<u8>::new()));
     let membro = u16::try_from(si).unwrap_or(0);
     let (mut parti, mut campioni, mut total) = (Vec::new(), Vec::new(), 0u64);
-    for s in samples(&ole) {
+    let sha1 = ole.sha1_hex();
+    for (i, s) in samples(&ole).into_iter().enumerate() {
         let mut w = Wiff::open(&ole, &nome, Some(scan_len), s)?;
-        w.wiff_sha1 = Some(ole.sha1_hex());
+        w.wiff_sha1 = Some(sha1.clone());
         total += w.records.len() as u64;
         limiti.voci_ok(total)?;
-        let parte = build(w, &mut scan, scan_len, membro)?;
+        let mut parte = Parte {
+            w,
+            scans: Vec::new(),
+            indice: Vec::new(),
+            chroms: None,
+            pronta: false,
+        };
+        if solo.is_none_or(|c| c == i) {
+            build(&mut parte, &mut scan, scan_len, membro)?;
+        }
         campioni.push(Campione {
             id: s,
             nome: format!("{nome} #{s}"),
@@ -258,7 +294,8 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
 }
 
 /// The index of an injection: one row per non-empty scan block (the heads of the blocks are read through a window, front to back).
-fn build(w: Wiff, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -> Result<Parte> {
+fn build(p: &mut Parte, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -> Result<()> {
+    let w = &p.w;
     let mut win = Window::new(scan, scan_len);
     let (mut scans, mut indice) = (Vec::new(), Vec::new());
     for (i, r) in w.records.iter().enumerate() {
@@ -288,12 +325,8 @@ fn build(w: Wiff, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -> Res
         });
         scans.push(i);
     }
-    Ok(Parte {
-        w,
-        scans,
-        indice,
-        chroms: None,
-    })
+    (p.scans, p.indice, p.pronta) = (scans, indice, true);
+    Ok(())
 }
 
 /// The number after `key` in a spectrum id (`sample=2 ... experiment=1`).

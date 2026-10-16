@@ -63,7 +63,7 @@ try:
         def rows_while_converting():                     # each pair is in the list as soon as it is paired, then each sample, until its mzML is in the list
             seen = set(pg.evaluate("Array.from(window.__rows)"))
             assert {"two.wiff", "serie.wiff"} <= seen, seen
-            assert pg.locator("#flist tr[aria-busy=true]").count() == 0 and pg.evaluate("CONVROWS.rows.length") == 0
+            assert pg.locator("#flist tr[aria-busy=true]").count() == 0 and pg.evaluate("CONVROWS.running().length") == 0
         step("the pairs and the samples are listed (in conversion) before their mzML is ready", rows_while_converting)
         def rows_progress():                             # the bar of a row moves without drawing the list again
             pg.evaluate("CONVROWS.add('x_s1.mzML', 'wait'); CONVROWS.add('x_s2.mzML', 'wait'); CONVROWS.set('x_s1.mzML', 'run', 0)")

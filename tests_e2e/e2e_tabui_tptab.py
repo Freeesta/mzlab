@@ -198,13 +198,13 @@ try:
           const mk = (n) => ["blank", "t0", "t15", "t30", "t60", "t120"].slice(0, n).map((g, i) => ({ file: g + "_r1", group: g, time: g === "blank" ? null : g === "t0" ? 0 : +g.slice(1), rt, y: G(7.1, g === "blank" || g === "t0" ? 1e3 : 1e5 * (i + 1), 0.12) }));
           const samp = n => Array.from({ length: n }, (_, i) => ({ file: "s" + i + ".mzML", type: i === 0 ? "blank" : i === 1 ? "t0" : "time", time: i < 2 ? (i === 1 ? 0 : null) : i * 15, area: i === 0 ? 0 : 1e4 * Math.pow(2, i), norm: 0.1 * i,
             state: i === 0 ? "absent" : i % 5 === 3 ? "filled" : "detected", apexRt: 7.1, lo: 6.95, hi: 7.31 }));
-          const acts = [{ key: "showdata", label: "Show in Data", help: "ft.showdata", run: () => { window.__act = "showdata"; } }, { key: "copy", label: "Copy", help: "ft.riga.copy", run: () => { window.__act = "copy"; } }];
-          const full = { title: "+O", level: "3", pred: 2, decided: null, words: "+O on the parent; MS2 shares 5 fragments; absent in blank and t0", actions: acts, xic: mk(6), apexRt: 7.1, lo: 6.95, hi: 7.31,
+          const acts = [{ key: "copy", label: "Copy", help: "ft.riga.copy", run: () => { window.__act = "copy"; } }];
+          const full = { title: "+O", level: "3", pred: 2, summary: [{ label: "Net change", value: "+O", help: "ft.col.net" }, { label: "m/z", value: "257.0591" }, { label: "RT", value: "7.10 min" }], actions: acts, open: { xic: () => { window.__go = "xic"; } }, xic: mk(6), apexRt: 7.1, lo: 6.95, hi: 7.31,
             spectrum: { kind: "ms1", mz: [257.059, 258.062, 259.057], y: [100, 11, 5], iso: { exp: { mz: [257.059, 258.062, 259.057], y: [100, 12, 4.5] }, obs: { mz: [257.059, 258.062, 259.057], y: [100, 11, 5] } } },
-            line: "RT 7.10 min (6.95-7.31) · FWHM 0.08 min · charge 1 · MS2 from t60_r1 (purity 0.92)", samples: samp(6),
+            xicTip: "RT 7.10 min (6.95-7.31) · FWHM 0.08 min.", samples: samp(6),
             identity: { neutral: 256.0518, adduct: "[M+H]+", candidates: [
-              { name: "Sulfoxide", formula: "C10H12N2O4S", ppm: 1.2, adduct: "[M+H]+", source: "hypothesis", level: "3", pred: 2, proofs: [{ ok: true, text: "mass within 5 ppm" }, { ok: false, text: "MS2 not measured" }] },
-              { formula: "C11H16N2O3S", ppm: 3.4, adduct: "[M+H]+", source: "library", level: "4", pred: 3 }, { formula: "C9H8N4O4S", ppm: -4.1, adduct: "[M+H]+", source: "formula", level: "4" }, { formula: "C12H20N2O2S", ppm: 4.9, adduct: "[M+H]+", source: "formula", level: "4" }] },
+              { name: "Sulfoxide", formula: "C10H12N2O4S", ppm: 1.2, adduct: "[M+H]+", source: "hypothesis", level: "3", pred: 2, proofs: [{ key: "persist", ok: true, text: "found in 4 of 4 treated samples" }, { key: "ms2", ok: false, text: "MS2 not measured" }] },
+              { formula: "C11H16N2O3S", ppm: 3.4, adduct: "[M+H]+", source: "library", level: "4", pred: 3 }, { formula: "C9H8N4O4S", ppm: -4.1, adduct: "[M+H]+", source: "formula", level: "4" }, { formula: "C12H20N2O2S", ppm: 4.9, adduct: "[M+H]+", source: "formula", level: "4" }, { formula: "C13H22N2O2S", ppm: -5.0, adduct: "[M+H]+", source: "formula" }, { formula: "C14H10N2O2S", ppm: 5.1, adduct: "[M+H]+", source: "formula" }] },
             quality: { shape: 0.93, snr: 142, fwhm: 4, flags: ["points"], isoM1: 0.11, blank: { present: false, ratio: 0.01 }, t0: false, rejected: [] } };
           const part = { title: "partial", level: "5", xic: mk(3), apexRt: 7.1, samples: samp(3) };
           const many = Object.assign({}, full, { samples: samp(12), spectrum: { kind: "mirror", mz: [91.05, 119.08, 147.04], y: [30, 100, 55], ref: { mz: [91.05, 119.08, 150], y: [20, 100, 40] } } });
@@ -221,13 +221,13 @@ try:
 
         def riga_head():
             h = pg.inner_text("#tp-det .tpt-head")
-            assert "L3" in h and "Prev. 2" in h and "Decided: —" in h and "absent in blank and t0" in h, h
-            assert pg.locator("#tp-det .tpt-head .lvb.pd-2").count() == 1 and pg.locator("#tp-det .tpt-head .lvb.lv-3").count() == 1, "two scales, two badges"
-            assert pg.locator('#tp-det [data-slot="decided"]').count() == 1
-            pg.click('#tp-det [data-act="showdata"]'); assert pg.evaluate("window.__act") == "showdata"
+            assert "Prev. 2" in h and "Decided" not in h and "Level" not in h and "+O" in h and "257.0591" in h, h
+            assert pg.locator("#tp-det .tpt-head .lvb.pd-2").count() == 1 and pg.locator("#tp-det .tpt-head .lvb.lv-3").count() == 0, "the level only in the closed row"
+            assert pg.locator("#tp-det .tpt-head .tpr-sum").count() == 3 and pg.locator('#tp-det .tpt-head .tpr-sum[data-tt="ft.col.net"]').count() == 1, "the summary of the closed row, with its help"
+            pg.click('#tp-det [data-act="copy"]'); assert pg.evaluate("window.__act") == "copy"
             assert [t for t in pg.locator("#tp-det [role=tab]").all_inner_texts()] == ["Overview", "Samples", "Identity", "Quality"]
             small = pg.evaluate("[...document.querySelectorAll('#tp-det .tpr-act')].filter(e => e.getBoundingClientRect().height < 24).length"); assert small == 0
-        step("TPRIGA: head with L3 and Prev. 2 apart, Decided, words, actions; four tabs", riga_head)
+        step("TPRIGA: head with Prev. 2, the summary of the row, actions; four tabs", riga_head)
 
         def riga_overview():
             r = pg.evaluate("[...document.querySelectorAll('#tp-det .tpr-ov > .tpr-ch svg')].map(s => { const b = s.getBoundingClientRect(); return [b.left, b.top, b.width] })"); assert len(r) == 2, r
@@ -238,10 +238,12 @@ try:
             assert pg.locator("#tp-det svg .tr-blank").count() == 1 and pg.locator("#tp-det svg .tr-t0").count() == 1
             assert pg.locator("#tp-det .tpr-leg > span").count() == 6, "legend per group"
             assert pg.locator("#tp-det svg .iso-e").count() == 3 and pg.locator("#tp-det svg .iso-o").count() == 3, "expected hollow, observed filled"
-            assert pg.locator("#tp-det .tpr-ch .tdbtn").count() == 2, "a data table button for each chart"
-            assert "FWHM 0.08 min" in pg.inner_text("#tp-det .tpr-line")
+            assert pg.locator("#tp-det .tdbtn").count() == 0 and pg.locator("#tp-det .tpr-line").count() == 0, "no Data button, no line under the charts"
+            assert "FWHM 0.08 min" in (pg.get_attribute("#tp-det .tpr-ch:first-child svg", "data-tt-text") or ""), "the window of the peak goes in the help of the chart"
+            assert pg.locator("#tp-det .tpr-go").count() == 1, "XIC in Data (an MS1 spectrum has no MS2 button)"
+            pg.click("#tp-det .tpr-go"); assert pg.evaluate("window.__go") == "xic"
             h = pg.evaluate("document.querySelector('#tp-det').getBoundingClientRect().height"); assert h <= 420, ("panel height", h)
-            pg.click("#tp-det .tpr-ch:first-child .tdbtn"); pg.wait_for_selector("#tdati[open]"); assert "6.500" in pg.inner_text("#tdati"); pg.keyboard.press("Escape")
+            pg.focus("#tp-det .tpr-ch:first-child svg"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]"); assert "6.500" in pg.inner_text("#tdati"); pg.keyboard.press("Escape")
         step("TPRIGA overview: two charts side by side, shaded edges inside the axis, legend, tables of the data, height <= 420 px", riga_overview)
 
         def riga_samples():
@@ -281,9 +283,11 @@ try:
         def riga_identity_quality():
             pg.click('#tr-t [data-tg="0"]'); settle()
             pg.click("#tr-t [data-tab=identity]"); settle()
-            t = pg.inner_text("#tp-det"); assert "256.0518" in t and "[M+H]+" in t and "mass within 5 ppm" in t and "✗" in t and "✓" in t, t
-            assert pg.locator("#tp-det .tpr-tw tbody tr").count() >= 3
-            pg.click("#tp-det .tpr-more"); assert pg.get_attribute("#tp-det .tpr-more", "aria-expanded") == "true" and "C12H20N2O2S" in pg.inner_text("#tp-det")
+            t = pg.inner_text("#tp-det"); assert "Neutral formula" in t and "[M+H]+ formula" not in t and "✗" in t and "✓" in t and "Persistent" in t, t
+            assert pg.locator("#tp-det .tpr-cand tbody tr").count() == 5 and "C14H10N2O2S" not in t and "found in 4 of 4" in (pg.get_attribute("#tp-det .tpr-pk.ok", "data-tt-text") or "")
+            assert pg.get_attribute("#tp-det details.tpr-det", "open") is None and "256.0518" not in t, "the neutral mass only on request"
+            pg.click("#tp-det details.tpr-det > summary"); assert "256.0518" in pg.inner_text("#tp-det details.tpr-det")
+            pg.click("#tp-det .tpr-more"); assert pg.get_attribute("#tp-det .tpr-more", "aria-expanded") == "true" and "C14H10N2O2S" in pg.inner_text("#tp-det")
             pg.click("#tr-t [data-tab=quality]"); settle()
             q = pg.inner_text("#tp-det dl.tpr-q"); assert "few points" in q and "0.11" in q and "142" in q and "absent, ratio 0.01" in q and "Left out of the view by" in q, q
             h = pg.evaluate("document.querySelector('#tp-det').getBoundingClientRect().height"); assert h <= 420, h
