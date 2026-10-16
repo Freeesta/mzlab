@@ -27,12 +27,12 @@ try:
             pg.evaluate(f"(()=>{{const p={CH};p.mz0=p.mz1=null;ctl(p);draw(p)}})()")
         step("2.1: one-row header, Range popover, accented button", header)
         def legend():
-            pg.evaluate("E.files.forEach(f=>{f.vis=true});redrawAll()"); pg.wait_for_timeout(1200)
+            pg.evaluate("E.files.forEach(f=>{f.vis=true});syncBrowse();redrawAll()"); pg.wait_for_timeout(1200)
             g = pg.evaluate(f"(()=>{{const p={CH},l=p.leg.getBoundingClientRect(),c=p.cv.getBoundingClientRect();return [l.top>=c.top,l.bottom<=c.bottom,l.right<=c.right,[...p.leg.children].filter(x=>!x.classList.contains('cmp-grad')).length]}})()"); print(g)
             assert g[0] and g[1] and g[2] and g[3] == 3, g
             pg.evaluate("E.files.forEach((f,i)=>{f.vis=i===0});redrawAll()"); pg.wait_for_timeout(1200)
             assert pg.evaluate(f"{CH}.leg.children.length") == 0 and not pg.evaluate(f"{CH}.leg.offsetParent"), "one file: no legend"
-            pg.evaluate("E.files.forEach(f=>{f.vis=true});redrawAll()"); pg.wait_for_timeout(1200)
+            pg.evaluate("E.files.forEach(f=>{f.vis=true});syncBrowse();redrawAll()"); pg.wait_for_timeout(1200)
         step("2.1/2.4: legend inside the graph, none with one file", legend)
         def below():
             pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
