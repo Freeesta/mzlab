@@ -50,8 +50,8 @@ try:
             pg.click("#sb-x")
             attendi(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")
             assert not pg.is_visible("#flst")
-            # the only ◀ ▶ left in the toolbar are the file arrows
-            assert pg.evaluate("[...document.querySelectorAll('#tools button')].filter(b => /[◀▶]/.test(b.textContent)).map(b => b.id)") == ["fprev", "fnext"]
+            # the only previous/next arrows left in the toolbar are the file arrows (SVG icons, named by their aria-label)
+            assert pg.evaluate("[...document.querySelectorAll('#tools button')].filter(b => /precedente|successivo/i.test(b.getAttribute('aria-label') || '')).map(b => b.id)") == ["fprev", "fnext"]
         step("side-panel icon for the file list", fold)
         def narrow():
             pg.set_viewport_size({"width": 700, "height": 900}); pg.wait_for_timeout(600)
