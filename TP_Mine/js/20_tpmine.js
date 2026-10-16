@@ -649,6 +649,7 @@
       const c = $("#tp-ms2map"), s = st.summary; if (!c || !s) return;
       const h = document.createElement("div"); h.innerHTML = window.TPMS2.card(s); c.replaceWith(h.firstElementChild);
       window.TPMS2.mount({ st, call, refresh: ms2Refresh });
+      const sm = $("#tp-m-ms2 > summary"); if (sm) sm.textContent = `MS2 matches (${s.ms2_links && s.ms2_links.links ? s.ms2_links.links.length : 0})`;
       if (T) { T.setRows(s.rows); if (st.sel != null && touched.includes(st.sel) && T.openId === st.sel) { T.close(); T.open(st.sel); } }
     }
     /** @type {any} the TPTAB of the results while the view "Table" is shown */

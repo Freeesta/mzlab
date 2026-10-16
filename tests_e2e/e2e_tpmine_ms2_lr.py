@@ -171,7 +171,7 @@ try:
             ms2 = dict(pg.evaluate("[...document.querySelectorAll('#tp-t tr.clk')].map(r => [r.dataset.id, r.lastElementChild.textContent.trim()])"))
             assert ms2["7"] == "no MS2", ms2
             pg.click("#tp-ms2-reset")
-            pg.wait_for_function("document.querySelector('#tp-ms2-reset') && document.querySelector('#tp-ms2-reset').disabled", timeout=60000)
+            pg.wait_for_function("document.querySelector('#tp-ms2-reset') && document.querySelector('#tp-ms2-reset').disabled && !/Set to \"none\"/.test(document.querySelector('#tp-ms2map').textContent)", timeout=60000)
             t = pg.evaluate(TABLE)
             assert next(r for r in t if r[1] == "257.06" and r[2] == "10" and r[4] == "7.40")[5] == "auto", t
             assert not pg.evaluate("(JSON.parse(localStorage.getItem('qqq.tabui.ms2links') || '{}'))[Object.keys(JSON.parse(localStorage.getItem('qqq.tabui.ms2links') || '{}'))[0]]")
