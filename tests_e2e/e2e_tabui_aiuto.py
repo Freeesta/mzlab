@@ -82,10 +82,10 @@ try:
         pg = fresh(True, "en")
         def short():
             ph = pg.evaluate("[...document.querySelectorAll('#v-tpmine .tp input[placeholder]')].map(i => i.placeholder)")
-            assert all(len(x) <= 12 for x in ph), ph
+            assert all(len(x) <= 16 for x in ph), ph
             lab = pg.evaluate("[...document.querySelectorAll('#tp-left label')].map(l => l.textContent.trim())")
             assert all(len(x) <= 24 for x in lab), lab
-            assert pg.get_attribute("#tp-mol", "placeholder") == "Formula" and pg.get_attribute("#tp-name", "placeholder") == "Name"
+            assert pg.get_attribute("#tp-mol", "placeholder") == "Neutral formula" and pg.get_attribute("#tp-name", "placeholder") == "Name"
             assert not pg.query_selector("#tp-left [title*='empty = automatic']")
         step("placeholders and labels of the form are a few words", short)
         def hover_field():
