@@ -348,10 +348,11 @@ const redrawAll = () => tabPanels().forEach(draw);
 // many requests in the same frame (window resize, a burst of answers) become one redraw
 let redrawRaf = 0;
 const redrawSoon = () => { if (!redrawRaf) redrawRaf = FRAME.next(() => { redrawRaf = 0; redrawAll(); }); };
-// Esc leaves the full screen of a panel (not when a dialog, a menu or a help box is open: they use Esc themselves)
-document.addEventListener("keydown", e => {
-  if (e.key !== "Escape" || /** @type {any} */ (e)._ctxWas || Q("dialog[open]") || Q("#helppop:not([hidden])") || (Q("#ctx") && !Q("#ctx").hidden) || Q("#uipset") || E.panels.some(q => pendKey(q))) return;     // a pending two-step action takes this Esc first (eventi.js)
-  const m = E.panels.find(q => q.el && q.el.classList.contains("max")); if (m && m._setMax) m._setMax(false);
+// Esc leaves the full screen of a panel (after the measure and the playback: azioni-esc.js)
+ESC.registra({
+  id: "schermo-intero", prio: 50,
+  aperto: () => !!E.panels.find(q => q.el && q.el.classList.contains("max") && q._setMax),
+  chiudi: () => { const m = E.panels.find(q => q.el && q.el.classList.contains("max")); if (m && m._setMax) m._setMax(false); },
 });
 // full screen: ONLY that panel exists. Everything else (header, file list, tabs, toolbar, the other panels) is inert: no click, wheel or key reaches it
 const fsPanel = () => E.panels.find(q => q.el && q.el.classList.contains("max"));

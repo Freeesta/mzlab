@@ -28,6 +28,7 @@
     "../../mzlab/web/azioni-icone.js",
     "../../mzlab/web/azioni.js",
     "../../mzlab/web/azioni-tasti.js",
+    "../../mzlab/web/azioni-esc.js",
     "../../mzlab/web/suggerimenti.js",
     "../../mzlab/web/features.js",
     "../../mzlab/web/icons-modi.js",

@@ -87,7 +87,7 @@ const TASTI = (() => {
   const mac = () => /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
   /** The text of a shortcut as the user's system writes it: ⌘O / ⌥1 on the Mac, Ctrl+O / Alt+1 elsewhere. @param {Scorciatoia} s */
   function testo(s) {
-    const t = s.code ? s.code.replace(/^(Digit|Key)/, "") : s.tasto === "Enter" ? "Enter" : String(s.tasto || "").toUpperCase();
+    const n = String(s.tasto || ""), t = s.code ? s.code.replace(/^(Digit|Key)/, "") : n.length > 1 ? n : n.toUpperCase();
     if (mac()) return (s.mod ? "⌘" : "") + (s.alt ? "⌥" : "") + (s.shift ? "⇧" : "") + t;
     return [s.mod ? "Ctrl" : "", s.alt ? "Alt" : "", s.shift ? "Shift" : "", t].filter(Boolean).join("+");
   }

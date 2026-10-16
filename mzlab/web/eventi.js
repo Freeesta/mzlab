@@ -533,13 +533,16 @@ function pendKey(p) {
   if (p._ibkA) return "pend.span";
   return null;
 }
-// Esc takes back the pending first step (the menus and dialogs keep their own Esc)
-document.addEventListener("keydown", e => {
-  if (e.key !== "Escape" || /** @type {any} */ (e)._ctxWas || e.defaultPrevented || Q("dialog[open]") || (Q("#ctx") && !Q("#ctx").hidden)) return;
-  const p = E.panels.find(q => pendKey(q)); if (!p) return;
-  if (p._ibkA) p._ibkA = null; else { if (p.meas.list.length) p.meas.ref = null; else p.meas = null; }
-  const q = Q("#qtip"); if (q && q._pd) { q.hidden = true; q._pd = null; }
-  draw(p); uiSave();
+// Esc takes back the pending first step, then clears the measure (one press, one thing: azioni-esc.js)
+ESC.registra({
+  id: "misura", prio: 30,
+  aperto: () => E.panels.some(q => pendKey(q)) || measAperta(E.active),
+  chiudi: () => {
+    const p = E.panels.find(q => pendKey(q)); if (!p) return measClear(E.active);
+    if (p._ibkA) p._ibkA = null; else { if (p.meas.list.length) p.meas.ref = null; else p.meas = null; }
+    const q = Q("#qtip"); if (q && q._pd) { q.hidden = true; q._pd = null; }
+    draw(p); uiSave();
+  },
 });
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;

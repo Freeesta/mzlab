@@ -23,6 +23,17 @@
   reg({ id: "view.fullscreen", gruppo: "view", viste: ["*"], icona: "wide", scorciatoia: { tasto: "f", dove: "chart", et: "scorc.schermo" },
     nome: () => T("scorc.schermo"), tip: () => T("scorc.schermo.tip"), disponibile: (/** @type {any} */ c) => !!(c.p && c.p._setMax),
     esegui: (/** @type {any} */ c) => c.p._setMax(!c.p.el.classList.contains("max")) });
+  // whole view of the active chart (Backspace; with a peak selected it deletes the peak first) and Delete of the selected peak: keys of the view, as the zoom history is
+  const attivo = () => { const a = typeof E !== "undefined" ? E.active : null; return a && a.el && document.getElementById("dpanels")?.offsetParent ? a : null; };
+  const scelto = (/** @type {any} */ a) => a && a.isel != null && a.ints && a.ints.find((/** @type {any} */ i) => i.id === a.isel);
+  reg({ id: "chart.intera", gruppo: "view", viste: ["*"], icona: "wide", scorciatoia: { tasto: "Backspace", dove: "view", et: "scorc.intera" },
+    nome: () => T("scorc.intera"), tip: () => T("scorc.intera.tip"), disponibile: () => !!attivo(),
+    esegui: () => { const a = attivo(), s = scelto(a); if (s) return delInts(a, [s]); pushZh(a); a.zoom = null; a.zoomY = null; if (a.type === "spec") a.lock = null; draw(a); uiSave(); } });
+  reg({ id: "chart.elimina", gruppo: "tools", viste: ["*"], icona: "trash", scorciatoia: { tasto: "Delete", dove: "view", et: "scorc.elimina" },
+    nome: () => T("scorc.elimina"), tip: () => T("scorc.elimina.tip"), disponibile: () => !!scelto(attivo()), esegui: () => delInts(attivo(), [scelto(attivo())]) });
+  // Esc is run by azioni-esc.js (one press, one thing, by priority); here it only has its line in the panel
+  reg({ id: "app.esc", gruppo: "view", viste: ["*"], icona: "clear", scorciatoia: { tasto: "Escape", dove: "view", et: "scorc.esc" },
+    nome: () => T("scorc.esc"), tip: () => T("scorc.esc.tip"), disponibile: () => false, esegui: () => {} });
   const inData = () => typeof S !== "undefined" && S.view === "data";
   reg({ id: "app.apri", gruppo: "tools", viste: ["*"], icona: "plus", scorciatoia: { tasto: "o", mod: true, dove: "view", et: "scorc.apri" },
     nome: () => T("scorc.apri"), tip: () => T("scorc.apri.tip"), disponibile: () => !!document.getElementById("pick"), esegui: () => { const i = document.getElementById("pick"); if (i) i.click(); } });
