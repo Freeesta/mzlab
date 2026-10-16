@@ -44,8 +44,10 @@ try:
         pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)
         def none_yet():
             r = pg.evaluate(JSON, "api/metodo?k=0")
-            assert r["status"] == 200 and r["j"]["source"] == "none", r
-        step("an mzML without method: /api/metodo says source none", none_yet)
+            assert r["status"] == 200 and r["j"]["source"] == "mzml", r
+            m = r["j"]["metodo"]
+            assert m["schema"] == "metodo/1" and m["origine"]["formato"] == "mzml", r
+        step("an mzML without method: /api/metodo builds metodo/1 from its header", none_yet)
         def lone_with_match():
             pg.set_input_files("#pick", [str(D / "one.wiff")])
             pg.wait_for_function("fetch('api/metodo?k=0').then(r => r.json()).then(j => j.source === 'wiff')", timeout=60000)
