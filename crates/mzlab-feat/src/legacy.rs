@@ -15,6 +15,7 @@ pub mod ms2;
 #[cfg(feature = "chem")]
 pub mod msn;
 pub mod out;
+pub mod progress;
 pub mod sample;
 pub mod series;
 pub mod similarity;
