@@ -27,7 +27,7 @@ try:
             drawer(pg); assert pg.evaluate("[...document.querySelectorAll('#flst .fl .pol')].map(x=>x.textContent).sort().join('')") == "ESI+ESI−"
         step("file list: signs", list_signs)
         def legend():
-            pg.evaluate("E.files.forEach(f=>f.vis=true)"); pg.evaluate("redrawAll()"); pg.wait_for_timeout(1500)
+            pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse()"); pg.evaluate("redrawAll()"); pg.wait_for_timeout(1500)      # several ticked files: syncBrowse() leaves the single-file view
             leg = pg.inner_text(".pnl.chrom .leg"); assert "ESI+" in leg and "ESI−" in leg, leg                            # both polarities overlaid: the sign is in the legend
         step("legend: sign when positive and negative are overlaid", legend)
         def uniform():
