@@ -269,6 +269,17 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 // the Disegno tab can be opened before any data file is loaded: the notebook (with the drawing) must be read first, otherwise the first save
 // would overwrite the saved drawing with an empty one
 window.nbEnsure = async () => { if (!nbEverLoaded) await nbLoad(); };
+/** One panel as the notebook stores it (uiSave); the links are indices into E.panels. @param {any} p */
+function panelRec(p) {
+  return {
+    type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, riga: p.full ? p.riga : undefined, quota: p.quota ?? undefined, kind: p.kind, smooth: p.smooth, tol: p.tol,
+    traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined })),
+    k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
+    link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1,
+    dda: p.dda != null ? E.panels.findIndex(q => q.id === p.dda) : undefined, dock: p.dock != null ? E.panels.findIndex(q => q.id === p.dock) : undefined, duo: p.duo != null ? E.panels.findIndex(q => q.id === p.duo) : undefined, extra: p.extra || undefined, sid: p.sid ?? undefined, ion: p.ion ?? undefined, avg: p.avg || undefined, imode: p.imode || null, intf: p.intf || "",
+    lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, dots: p.type === "spec" && p.dots ? true : undefined, mk: p.type === "spec" && p.mk != null ? !!p.mk : undefined, noCont: p.type === "spec" && p.noCont ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl === undefined ? undefined : !!p.tl, overlay: p.overlay || undefined, pdaAlign: p.pdaAlign || undefined, pdaDelay: p.pdaDelay ?? undefined, gdelay: p.gdelay || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, fondo: p.fondo && p.fondo.mode !== "none" ? p.fondo : undefined, clipDraw: p.clipDraw || undefined, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" || p.bg === "x" ? p.bg : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, gamma: p.scale === "gamma" ? p.gamma : undefined, norm: p.norm, corr: p.type === "map" ? p.corr : undefined, bgr: p.type === "map" && p.bgr ? p.bgr : undefined, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
+  };
+}
 let uiTimer = null;
 function uiSave(now = false) {
   clearTimeout(uiTimer);
@@ -279,14 +290,7 @@ function uiSave(now = false) {
       contEx: window.LISTE ? LISTE.exclExport() : undefined,
       ref: { ...S.ref, k: S.ref.k === "auto" ? "auto" : E.files[S.ref.k]?.file ?? "auto" },
       tab: E.tab, cur: E.cur, msn: window.INF ? INF.state() : undefined, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined })),
-      panels: E.panels.map(p => ({
-        type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, riga: p.full ? p.riga : undefined, quota: p.quota ?? undefined, kind: p.kind, smooth: p.smooth, tol: p.tol,
-        traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined })),
-        k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
-        link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1,
-        dda: p.dda != null ? E.panels.findIndex(q => q.id === p.dda) : undefined, dock: p.dock != null ? E.panels.findIndex(q => q.id === p.dock) : undefined, duo: p.duo != null ? E.panels.findIndex(q => q.id === p.duo) : undefined, extra: p.extra || undefined, sid: p.sid ?? undefined, ion: p.ion ?? undefined, avg: p.avg || undefined, imode: p.imode || null, intf: p.intf || "",
-        lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, dots: p.type === "spec" && p.dots ? true : undefined, mk: p.type === "spec" && p.mk != null ? !!p.mk : undefined, noCont: p.type === "spec" && p.noCont ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl === undefined ? undefined : !!p.tl, overlay: p.overlay || undefined, pdaAlign: p.pdaAlign || undefined, pdaDelay: p.pdaDelay ?? undefined, gdelay: p.gdelay || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, fondo: p.fondo && p.fondo.mode !== "none" ? p.fondo : undefined, clipDraw: p.clipDraw || undefined, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" || p.bg === "x" ? p.bg : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, gamma: p.scale === "gamma" ? p.gamma : undefined, norm: p.norm, corr: p.type === "map" ? p.corr : undefined, bgr: p.type === "map" && p.bgr ? p.bgr : undefined, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
-      }))
+      panels: E.panels.map(panelRec)
     };
     nbSave(now);
   };
@@ -422,6 +426,13 @@ function fitWidth() {
   const rows = st.some(q => LAYOUT.inRiga(q, st));       // panels side by side follow the width too (and stack when it is too narrow)
   if (rows || window.DDA && E.panels.some(q => q.dock != null)) { relayout(); if (window.DDA) DDA.sync(); }       // Full Scan and MS2 of a DDA file side by side only when the page is wide enough
 }
+/** Opens a panel from its notebook record (restoreUi, and the Undo of a closed panel); the links to other panels are set by the caller. @param {any} sp */
+function riapriPannello(sp) {
+  const kof = (/** @type {string} */ n) => { const i = E.files.findIndex(f => f.file === n); return i < 0 ? 0 : i; };
+  return addPanel(sp.type, {
+    ...sp, tab: sp.tab || (sp.type === "mrm" ? "mrm" : E.files[kof(sp.k)]?.kind === "ms2" ? "ms2" : "full"), k: sp.k ? kof(sp.k) : undefined, ref: sp.ref ? kof(sp.ref) : "", bk: sp.bk ? kof(sp.bk) : "", bg: sp.bg === "w" || sp.bg === "x" ? sp.bg : sp.bg ? kof(sp.bg) : "", traces: (sp.traces || []).map((/** @type {any} */ t) => ({ id: E.seq++, ...t })), link: null, ints: sp.ints || [], anns: sp.anns || []
+  });
+}
 function restoreUi() {
   const u = NB.ui;
   if (u && u.contEx && window.LISTE) LISTE.exclImport(u.contEx);                 // the contaminant exclusions travel with the session
@@ -433,9 +444,7 @@ function restoreUi() {
   STATO.file(Math.min(u.cur || 0, E.files.length - 1), "notebook"); migrateBrowse(u); STATO.scheda(pickTab(u.tab), "notebook");
   const kof = n => { const i = E.files.findIndex(f => f.file === n); return i < 0 ? 0 : i; };
   if (u.ref) { const r = u.ref, i = r.k === "auto" ? -1 : E.files.findIndex(f => f.file === r.k); S.ref = { ...S.ref, ...r, k: i < 0 ? "auto" : i, on: { ...(r.on || {}) } }; }
-  const made = u.panels.map(sp => addPanel(sp.type, {
-    ...sp, tab: sp.tab || (sp.type === "mrm" ? "mrm" : E.files[kof(sp.k)]?.kind === "ms2" ? "ms2" : "full"), k: sp.k ? kof(sp.k) : undefined, ref: sp.ref ? kof(sp.ref) : "", bk: sp.bk ? kof(sp.bk) : "", bg: sp.bg === "w" || sp.bg === "x" ? sp.bg : sp.bg ? kof(sp.bg) : "", traces: (sp.traces || []).map(t => ({ id: E.seq++, ...t })), link: null, ints: sp.ints || [], anns: sp.anns || []
-  }));
+  const made = u.panels.map(sp => riapriPannello(sp));
   u.panels.forEach((sp, i) => { if (sp.link >= 0 && made[sp.link]) made[i].link = made[sp.link].id; if (sp.src >= 0 && made[sp.src]) made[i].src = made[sp.src].id; });
   u.panels.forEach((sp, i) => { for (const k of ["dda", "dock", "duo"]) if (sp[k] != null) made[i][k] = sp[k] >= 0 && made[sp[k]] ? made[sp[k]].id : null; });       // DDA trio: Full Scan / MS2 side by side (dda.js)
   if (window.DDA) DDA.restored(made);
@@ -896,9 +905,17 @@ document.addEventListener("click", () => { const m = Q("#ctx"); if (m._lp && m._
 document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });      // the Correzione menu closes when the click is elsewhere
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".corrm:not([hidden])").forEach(m => { m.hidden = true; }); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { /** @type {any} */ (e)._ctxWas = !Q("#ctx").hidden; Q("#ctx").hidden = true; } });      // _ctxWas: this Esc only closed the menu (the full-screen handler below leaves the panel alone)
-// CSV/TSV text carries its provenance line (PROV, schema provenienza/1) by default; prov = the fields the export knows ({table, p, file}), or false for a file made for another program (mzFinder)
+// CSV/TSV text carries its provenance line (PROV, schema provenienza/1) by default; prov = the fields the export knows ({table, p, file}), or false for a file made for another program (mzFinder).
+// `text` is a string, a Blob/Uint8Array or an (async) iterable of those: an iterable, or a string/Blob over 8 MB, goes piece by piece through OPFS (export-pezzi.js) with the same bytes.
 async function dl(name, text, type = "application/octet-stream", prov = undefined) {
-  if (prov !== false && typeof text === "string" && /csv|tab-separated/.test(type)) text = await PROV.tsv(text, prov || {});
+  const iter = typeof text !== "string" && !(text instanceof Blob) && !(text instanceof Uint8Array) && !!text && (Symbol.asyncIterator in text || Symbol.iterator in text);
+  const size = iter ? 0 : typeof text === "string" ? text.length : text.size || text.byteLength || 0;
+  if ((iter || size >= 8 << 20) && window.carica) await window.carica("m:export-pezzi.js").catch(console.error);          // the piece-by-piece writer is loaded on the first big export
+  const EP = /** @type {any} */ (window).EXPORT_PEZZI, tab = /csv|tab-separated/.test(type);
+  if (prov !== false && tab && typeof text === "string") text = await PROV.tsv(text, prov || {});
+  else if (prov !== false && tab && EP && EP.isIter(text)) { const src = text; text = (async function* () { let first = true; for await (const p of src) { yield first && typeof p === "string" ? await PROV.tsv(p, prov || {}) : p; first = false; } })(); }
+  const big = EP && (EP.isIter(text) || (typeof text === "string" ? text.length : text.size || text.byteLength || 0) >= EP.MIN_STREAM);
+  if (big) { try { await EP.save(name, text, type); } catch (e) { console.error(e); if (window.toast) toast(I18N.t("export.stream.fail")); } return; }
   saveBlob(new Blob([text], { type }), name);
 }
 const LOCALE = I18N.lang === "it" ? "it-IT" : "en-GB";           // dates in the exported files

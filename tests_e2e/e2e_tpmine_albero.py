@@ -37,7 +37,7 @@ try:
             pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('241.0641')", timeout=60000)
             pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=300000); pg.wait_for_timeout(1300)
             pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk")
-            pg.click("#tp-t tr.clk:has(td:nth-child(4):text-matches('^parent', 'i'))")
+            pg.click("#tp-t tbody tr.clk >> nth=0"); pg.click('#tp-det [data-tab="identity"]')          # the parent is the pinned first row; the tree is in its tab Identity
             pg.wait_for_selector("#tp-alb svg.alb-svg .nd", timeout=60000)
             n, e = pg.evaluate("[document.querySelectorAll('#tp-alb svg.alb-svg .nd').length, document.querySelectorAll('#tp-alb svg.alb-svg g.vp > path').length]")
             assert n >= 2 and e == n - 1, (n, e)
