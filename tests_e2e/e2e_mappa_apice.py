@@ -50,8 +50,9 @@ try:
         def groups():
             pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('dialog.m3d[open]')")
             pg.wait_for_function(f"({M}._mz.rows || []).length >= 1", timeout=15000)
-            pg.evaluate(f"MAPPA.addPointAt({M}, {top['rt']} + 0.01, {top['mz']}, 1, 0.2)"); attendi(pg, f"({M}._mz.rows || []).length >= 3")
-            g = pg.evaluate(f"{M}._mz.rows.map(r => r.g)"); assert g[0] == g[2] and g[1] != g[0], g          # 1 and 3 are within the window of RT, 2 is 30 px away
+            pg.fill(".pnl.map [data-t=grp]", "0.02"); pg.keyboard.press("Tab")      # the default tolerance follows the scan step (5 scans): fixed here, 1 and 3 within it, 2 beyond
+            pg.evaluate(f"MAPPA.addPointAt({M}, {top['rt']} + 0.005, {top['mz']}, 1, 0.2)"); attendi(pg, f"({M}._mz.rows || []).length >= 3")
+            g = pg.evaluate(f"{M}._mz.rows.map(r => r.g)"); assert g[0] == g[2] and g[1] != g[0], g          # 1 and 3 are within the window of RT, 2 is 30 px away (0.03 min)
             sh = pg.evaluate(f"[0, 1, 2].map(i => MAPPA.grpShape({M}, i))"); assert sh[0] == sh[2], sh
             assert pg.locator(".pnl.map .mztab tr.mzgr").count() == 1
         step("low resolution too: the points of one group of RT share a shape and a group row", groups)
