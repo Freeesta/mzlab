@@ -300,8 +300,9 @@ try:
                 prev = pg.inner_text("#ft-n"); act()
                 pg.wait_for_function("p => document.querySelector('#ft-n').textContent !== p", arg=prev, timeout=30000); return count()[0]
             k1 = changed(lambda: pg.click('[data-fc="det"]'))
-            changed(lambda: pg.click('[data-fc="det"]')); pg.click("#ft-moreb"); k2 = changed(lambda: pg.fill("#ft-det", "2"))
-            assert k1 == k2 <= kept, (k1, k2, kept)
+            changed(lambda: pg.click('[data-fc="det"]')); pg.click("#ft-moreb"); pg.fill("#ft-det", "2")
+            pg.wait_for_function("k => +document.querySelector('#ft-n').textContent.replace(/,/g, '').split(' ')[0] === k", arg=k1, timeout=30000)     # the field gives the count of the chip
+            assert k1 <= kept, (k1, kept)
             # normalisation and filters of the numeric fields (the counts are the engine's)
             pg.select_option("#ft-norm", "somma"); kept2 = changed(lambda: pg.fill("#ft-det", str(len(names) // 2)))
             assert kept2 < total, (kept2, total, pg.inner_text("#ft-why"), pg.input_value("#ft-det"), pg.input_value("#ft-norm"))
