@@ -221,8 +221,8 @@ function intMenuItems(p, x, near, py) {
   if (nearInt) items.push({ label: I18N.t("int.menu.del"), icon: IC_DEL_INT, fn: () => delInts(p, [nearInt]) });
   if (p.ints.length) items.push({ label: I18N.t("int.menu.delAll"), icon: IC_DEL_INT, fn: () => delInts(p, [...p.ints]) });
   if (nearInt || p.ints.length) items.push("-");
-  items.push({ label: I18N.t("int.menu.params"), fn: peakParams });
-  items.push({ label: I18N.t("int.menu.compare"), fn: () => compareMethods(p, x, py) });
+  items.push({ label: I18N.t("int.menu.params"), icon: AZIONI_ICONE.svg("sliders"), fn: peakParams });
+  items.push({ label: I18N.t("int.menu.compare"), icon: AZIONI_ICONE.svg("overlay"), fn: () => compareMethods(p, x, py) });
   items.push({ label: I18N.t("int.menu.auto"), icon: IC_AUTO, fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach(s => autoInt(p, s, x)); } });
   if (p.sel && p.sel[1] > p.sel[0]) items.push({ label: I18N.t("int.menu.zoomSel"), icon: IC_ZOOM, fn: () => { const [s0, s1] = p.sel; const w = (s1 - s0) * 0.1; zoomTo(p, s0 - w, s1 + w); } });
   return items;

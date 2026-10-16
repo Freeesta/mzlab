@@ -7,6 +7,7 @@ declare var AFF_MIN_KEY: any;
 declare var AFF_T: any;
 declare var ASSE: any;
 declare var AZIONI: any;
+declare var AZIONI_ICONE: any;
 declare var AgilentD: any;
 declare var BANCO: any;
 declare var BARRA: any;

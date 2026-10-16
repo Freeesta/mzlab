@@ -29,7 +29,9 @@ try:
             open_kind(pg, "full"); ready(pg); pg.click("#np-map"); ready(pg); attendi(pg, MAP + "&&" + MAP + "._a")
             want = pg.evaluate(f"AZIONI.per(MAPPA.ad2({MAP},null)).filter(i=>i!=='-').map(i=>i.id)")
             assert "mapxic" in want and "maphelp" in want and "map3top" not in want, want
-            keyboard(MAP); kb = pg.evaluate(IDS); close()
+            keyboard(MAP); kb = pg.evaluate(IDS)
+            noic = pg.evaluate("[...document.querySelectorAll('#ctx [data-azione]')].filter(d=>!d.querySelector('.ic[aria-hidden=true] svg')).map(d=>d.dataset.azione)"); close()
+            assert not noic, ("map menu entries without icon", noic)
             assert pg.evaluate(f"document.activeElement==={MAP}.cv"), "Esc gives the focus back to the map"
             w = pg.evaluate(f"(()=>{{const r={MAP}.cv.getBoundingClientRect();return [r.width,r.height]}})()")
             right_at(MAP, w[0] * 0.5, w[1] * 0.5); ms = pg.evaluate(IDS); close()
@@ -54,8 +56,9 @@ try:
             pg.evaluate(f"(()=>{{const p={SP};p.zoom=null;p.zoomY=null;p.anns=[];draw(p)}})()")
             keyboard(SP); r = pg.evaluate("""(()=>{const its=[...document.querySelectorAll('#ctx div[role^=menuitem]')].slice(1);
               return {n:its.length,free:its.filter(d=>!d.dataset.azione).map(d=>d.textContent),ids:[...new Set(its.map(d=>d.dataset.azione))],
+                noic:its.filter(d=>!d.querySelector('.ic[aria-hidden=true] svg')).map(d=>d.dataset.azione),
                 bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{viste:[]}).viste.includes('spec'))}})()"""); close()
-            assert r["n"] >= 5 and not r["free"] and not r["bad"], r
+            assert r["n"] >= 5 and not r["free"] and not r["bad"] and not r["noic"], r
             assert "spec.copy" in r["ids"] and "spec.xic" in r["ids"] and "spec.measure" in r["ids"], r["ids"]
         step("spectrum: every entry of the menu is an action of the registry (data-azione)", spec_ids)
         step("MRM: Shift+F10 = right click at the same point", lambda: same("E.panels.find(q=>q.type==='mrm')", "mrm"))
@@ -64,11 +67,18 @@ try:
                 pg.evaluate(f"(()=>{{const p={sel};p.zoom=null;p.zoomY=null;p.anns=[];draw(p)}})()")
                 keyboard(sel); r = pg.evaluate("""(v=>{const its=[...document.querySelectorAll('#ctx div[role^=menuitem]')].slice(1);
                   return {n:its.length,free:its.filter(d=>!d.dataset.azione).map(d=>d.textContent),ids:[...new Set(its.map(d=>d.dataset.azione))],
+                    noic:its.filter(d=>!d.querySelector('.ic[aria-hidden=true] svg')).map(d=>d.dataset.azione),
                     bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{viste:[]}).viste.includes(v))}})""" + f"('{vista}')"); close()
-                assert r["n"] >= 2 and not r["free"] and not r["bad"], (vista, r)
+                assert r["n"] >= 2 and not r["free"] and not r["bad"] and not r["noic"], (vista, r)
                 assert "chrom.annotate" in r["ids"] and "chrom.int" in r["ids"] and "view.resetZoom" in r["ids"] and "ann.edit" in r["ids"], r["ids"]
                 assert (vista == "mrm") == ("chrom.specAtRt" not in r["ids"]), r["ids"]
         step("chromatogram and MRM: every entry of the menu is an action of the registry (data-azione)", trace_ids)
+        def every_action():
+            r = pg.evaluate("""(()=>{const none=AZIONI.voci.filter(a=>!a.svg&&!(a.icona&&AZIONI_ICONE.DISEGNI[a.icona])).map(a=>a.id);
+              const bad=AZIONI.voci.filter(a=>a.icona&&!AZIONI_ICONE.DISEGNI[a.icona]).map(a=>a.id);
+              const col=getComputedStyle(document.querySelector('#ctx')).color;return {n:AZIONI.voci.length,none,bad,col}})()""")
+            assert r["n"] >= 40 and not r["none"] and not r["bad"], r
+        step("every action of the registry has an existing icon", every_action)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()
