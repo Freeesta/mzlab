@@ -18,5 +18,8 @@ Modulo Rust puro `crates/mzlab-feat/src/gruppi/` (`mod.rs` tipi e `build`, `pres
 - `parent` per condizione: riga con `is_parent`, `legacy::lr::kin::decay` sui tempi rilevati (k, t½ con ≥ 3 punti) e `remaining` = area all'ultimo tempo / area media del t0 della condizione.
 - Avvisi (ordinati per codice, poi condizione): `refMissing`, `condNoControls` (né t0 né bianco), `condOnePoint`, `condNoReplicates` (nessun tempo con ≥ 2 repliche), `mixedTimes` (tempi diversi da quelli del riferimento, o della prima condizione).
 
+## Alta risoluzione
+- La tabella dei prodotti HR dà `gruppi/1` da `tp/gruppi.rs` (`groups_json`): righe richieste di `tptab/1`, aree dall'`Aligned`, `neutral_formula`, `ion_formula` e `ppm` da `RowInfo` (ipotesi migliore data dal chiamante), `tp_name` «TP <id>» o «Parent»; solo con ≥ 2 condizioni. `condition_files` espone a `tp/` i file e i controlli di ogni condizione. Dettagli in `docs/agenti/mzfeat-tp.md`.
+
 ## Prove
 - `crates/mzlab-feat/tests/gruppi.rs`: fixture `tests/data/gruppi_fixture.json` (ingresso + `expected`, byte per byte; si riscrive con `GRUPPI_FIXTURE_WRITE=1`), presenza con repliche, insiemi, rapporti, controlli condivisi e per condizione, errori, determinismo su 5 permutazioni, prestazioni (`#[ignore]`: `cargo test --release --test gruppi -- --ignored --nocapture gruppi_speed`, 2 000 righe × 60 file ≈ 40 ms nativo, tetto 50 ms). `tests/gruppi_forme.rs`: forme, `t_half_rise`, `rate_rel`, decadimento del parent. Dati solo sintetici (`tests/gruppi_comune/mod.rs`).

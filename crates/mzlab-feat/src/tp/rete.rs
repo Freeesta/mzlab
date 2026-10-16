@@ -99,13 +99,42 @@ fn correlation(a: &[Option<f64>], b: &[Option<f64>], points: usize) -> Option<f6
 
 /// The arcs among the rows that can be in the network (formed, not in source), sorted by `from`, `to`, `rule`.
 pub fn arcs(inp: &TpInputs, rules: &Rules, b: &TpBlock, np: &NetParams) -> Vec<Arc> {
+    arcs_in(inp, rules, b, np, &[])
+}
+
+/// The treated files in time order (all of them, or, in `by`, one list per condition: the files of the condition).
+fn series_files(inp: &TpInputs, by: &[Vec<usize>]) -> Vec<Vec<usize>> {
+    let mut lists: Vec<Vec<usize>> = if by.len() < 2 {
+        vec![(0..inp.minutes.len())
+            .filter(|&k| inp.minutes[k] > 0.0)
+            .collect()]
+    } else {
+        by.iter()
+            .map(|l| l.iter().copied().filter(|&k| inp.minutes[k] > 0.0).collect())
+            .collect()
+    };
+    for l in &mut lists {
+        crate::sortc::by(l, |&x, &y| inp.minutes[x].total_cmp(&inp.minutes[y]));
+    }
+    lists
+}
+
+/// `arcs` with the files of each condition (`by`, treated files of one condition per list; fewer than two lists = one series, as `arcs`). With several
+/// conditions the correlation along the series is read inside each condition, over its own treated times (at least `points`, so a condition with fewer
+/// times gives no arc), and an arc holds when it holds in at least one condition.
+pub fn arcs_in(
+    inp: &TpInputs,
+    rules: &Rules,
+    b: &TpBlock,
+    np: &NetParams,
+    by: &[Vec<usize>],
+) -> Vec<Arc> {
     let t = inp.aligned;
-    let mut files: Vec<usize> = (0..inp.minutes.len())
-        .filter(|&k| inp.minutes[k] > 0.0)
+    let lists = series_files(inp, by);
+    let lists: Vec<&Vec<usize>> = lists
+        .iter()
+        .filter(|l| by.len() < 2 || l.len() >= np.points.max(2))
         .collect();
-    crate::sortc::by(&mut files, |&x, &y| {
-        inp.minutes[x].total_cmp(&inp.minutes[y])
-    });
     let mut rows: Vec<usize> = (0..t.len())
         .filter(|&r| matches!(b.status[r], ST_TP | ST_UNEXPLAINED | ST_PARENT))
         .collect();
@@ -134,14 +163,17 @@ pub fn arcs(inp: &TpInputs, rules: &Rules, b: &TpBlock, np: &NetParams) -> Vec<A
                 if b.status[dst] == ST_PARENT {
                     continue;
                 }
-                let (a, c) = (series(inp, &files, src), series(inp, &files, dst));
                 // the parent decays while its products rise: from the parent the coupling is the opposite one
                 let sign = if b.status[src] == ST_PARENT {
                     -1.0
                 } else {
                     1.0
                 };
-                if correlation(&a, &c, np.points).is_some_and(|x| sign * x >= np.corr) {
+                let holds = lists.iter().any(|files| {
+                    let (a, c) = (series(inp, files, src), series(inp, files, dst));
+                    correlation(&a, &c, np.points).is_some_and(|x| sign * x >= np.corr)
+                });
+                if holds {
                     out.push(Arc {
                         from: src as u32,
                         to: dst as u32,
@@ -181,7 +213,18 @@ pub fn explain_by_arcs(
     b: &mut TpBlock,
     np: &NetParams,
 ) -> Result<Vec<Arc>> {
-    let all = arcs(inp, rules, b, np);
+    explain_by_arcs_in(inp, rules, b, np, &[])
+}
+
+/// `explain_by_arcs` with the arcs of `arcs_in` (the treated files of each condition in `by`).
+pub fn explain_by_arcs_in(
+    inp: &TpInputs,
+    rules: &Rules,
+    b: &mut TpBlock,
+    np: &NetParams,
+    by: &[Vec<usize>],
+) -> Result<Vec<Arc>> {
+    let all = arcs_in(inp, rules, b, np, by);
     // g[r]: 0 = not reached, else steps from the parent + 1 (the parent is 1)
     let mut g = anchors(inp, b)?;
     let mut used = Vec::new();

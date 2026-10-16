@@ -132,7 +132,7 @@ Il JS non calcola medie, rapporti né insiemi: legge `gruppi/1`. CSV e SVG si sc
 | 1 (parallelo) | GR-3 tabella dei file con «Condition», riferimento, `campioni/2` in Tabui LR, caricamento pigro | subito (usa la fixture di prova propria fino a GR-1) | 1,5-2 | da fare |
 | 1 (parallelo) | GR-4 vista «Compare conditions»: matrice, UpSet, grafici, esportazioni | subito (fixture) | 2-2,5 | da fare |
 | 2 | GR-2 Dig LR per condizione, dati sintetici multi-condizione, `gruppi/1` nel `.wasm` `finder-lr` e nel desktop | merge di GR-1 | 2 | da fare |
-| 2 (parallelo) | GR-6 HR: `gruppi/1` dalla tabella dei prodotti, rete per condizione | merge di GR-1 | 1,5 | da fare |
+| 2 (parallelo) | GR-6 HR: `gruppi/1` dalla tabella dei prodotti, rete per condizione | merge di GR-1 | 1,5 | fatto: `tp_table_cond`, `arcs_in`; interfaccia HR da scrivere dopo GR-5 |
 | 3 | GR-5 innesto nella tabella TP (colonna «Conditions», filtro, linguetta), MS2 per condizione, e2e completo, misura con 40 file | merge di GR-2, GR-3, GR-4 e di #863, #871, #873 | 1,5-2 | da fare |
 
 GR-1, GR-3 e GR-4 toccano file diversi. GR-2 e GR-6 toccano `legacy/lr/` e `tp/`: nessuna sovrapposizione. Chi unisce per secondo fa `git merge origin/main` e prova di nuovo.

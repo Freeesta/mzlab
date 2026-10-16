@@ -166,6 +166,26 @@ pub struct GroupsOut {
     pub warnings: Vec<Warning>,
 }
 
+/// A condition seen from outside the module: its sample files (injection order) and the controls that apply to it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CondFiles {
+    pub id: String,
+    pub files: Vec<usize>,
+    pub controls: Controls,
+}
+
+/// The conditions of `cs` (see the rules in `docs/agenti/gruppi.md`), for the callers that need the files of each.
+pub fn condition_files(cs: &[Campione]) -> Vec<CondFiles> {
+    presenza::conditions(cs)
+        .into_iter()
+        .map(|c| CondFiles {
+            id: c.id,
+            files: c.files,
+            controls: c.ctrl,
+        })
+        .collect()
+}
+
 /// Everything a row needs to be computed.
 pub(crate) struct Ctx<'a> {
     pub tb: &'a GroupTable,
