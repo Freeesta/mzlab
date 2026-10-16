@@ -2,7 +2,9 @@
 //! the hypotheses of L7) instead of the Python engine (`TP_Mine/py/tpmine/engine.py`), with the JSON of `api.run` and `api.detail` that
 //! `TP_Mine/js/20_tpmine.js` reads. The rows of the table are the peaks: no second peak search. MS2, MRM and the in-source fragments come later.
 
+pub mod cond;
 pub mod detail;
+pub mod gruppi_out;
 pub mod isf;
 pub mod kin;
 pub mod labels;
@@ -29,8 +31,9 @@ use mzlab_core::elements::{fmt, parse_formula, Formula};
 use super::series::FileIn;
 use super::Res;
 use crate::aligned::Aligned;
-use kin::{decay, gen_of, kinetics, Decay, Gens};
-use labels::{score, status, Cell, Crit, GROWS};
+use cond::GensBy;
+use kin::Decay;
+use labels::{status, Cell, Crit, GROWS};
 use plan::{FileLr, ParentLr, Settings};
 
 /// The calibration offset measured on the parent (observed - calculated m/z of its ion).
@@ -68,6 +71,8 @@ pub struct Entry {
     pub label: &'static str,
     pub criteria: Vec<Crit>,
     pub isotope_of: Option<i64>,
+    /// The condition whose criteria the row carries (the best one); empty in a series of one condition.
+    pub cond: String,
     pub generation: Option<&'static str>,
     /// A row made from an MS2 experiment whose ion the Dig does not list (`ms2target`).
     pub ms2_target: bool,
@@ -125,7 +130,8 @@ pub(super) fn evaluate(e: &mut Entry, t: &Aligned, lc: &[FileIn], p: labels::Per
     };
     e.ref_rt = e.row.map(|r| mzlab_core::json::round(t.rt[r], 4));
     e.observed = e.row.map(|r| t.mz[r]);
-    let sc = score(lc, &e.cells, p);
+    let (sc, cond) = cond::best(lc, &e.cells, p);
+    e.cond = cond;
     (e.score, e.label, e.criteria) = (sc.score, sc.label, sc.criteria);
 }
 
@@ -135,12 +141,12 @@ pub(super) fn finish_one(
     snapshot: &[Entry],
     lc: &[FileIn],
     s: &Settings,
-    gens: &Gens,
+    gens: &GensBy,
 ) {
     let hit = rows::isotope_of(e, snapshot, s.tol_da, s.rt_tol_min);
     rows::isotope_crit(e, hit);
     if status(&e.criteria, GROWS) == "pass" {
-        if let Some((v, text)) = gen_of(gens, &kinetics(lc, &e.cells)) {
+        if let Some((v, text)) = gens.generation(lc, &e.cells, &e.cond) {
             e.criteria
                 .push(labels::crit("kinetic generation", "n/a", text));
             e.generation = Some(v);
@@ -149,7 +155,7 @@ pub(super) fn finish_one(
 }
 
 /// Isotope check and kinetic generation of every entry but the parent.
-fn finish(entries: &mut [Entry], lc: &[FileIn], s: &Settings, gens: &Gens) {
+fn finish(entries: &mut [Entry], lc: &[FileIn], s: &Settings, gens: &GensBy) {
     let snapshot: Vec<Entry> = entries.to_vec();
     for e in entries
         .iter_mut()
@@ -222,8 +228,8 @@ pub fn dig(
     };
     evaluate(&mut p, &t, &lc, s.persist());
     (p.score, p.label, p.criteria) = (None, "progenitore", Vec::new());
-    let dec = decay(&kinetics(&lc, &p.cells));
-    let gens = Gens::new(&kinetics(&lc, &p.cells), dec.map(|d| d.k));
+    let gens = GensBy::new(&lc, Some(&p.cells), s.groups.reference.as_deref());
+    let dec = gens.decay;
     let (cands, _) = rows::candidates(&t, &lc, &hyps, &parent, off, s.tol_da);
     let mut entries = vec![p];
     entries.extend(cands);

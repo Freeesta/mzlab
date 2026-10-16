@@ -131,7 +131,7 @@ Il JS non calcola medie, rapporti né insiemi: legge `gruppi/1`. CSV e SVG si sc
 | 1 | GR-1 modulo Rust `gruppi/`, schema `gruppi-1.json`, fixture | subito | 2 | fatto: PR aperta; 2 000 righe × 60 file ≈ 40 ms nativo |
 | 1 (parallelo) | GR-3 tabella dei file con «Condition», riferimento, `campioni/2` in Tabui LR, caricamento pigro | subito (usa la fixture di prova propria fino a GR-1) | 1,5-2 | fatto: componente `lazy/gruppi-campioni.js`, `TPLAZY`; prova `e2e_tabui_gruppi_file.py` su pagina isolata; l'innesto in `20_tpmine.js` resta a GR-5 |
 | 1 (parallelo) | GR-4 vista «Compare conditions»: matrice, UpSet, grafici, esportazioni | subito (fixture) | 2-2,5 | fatto: `TP_Mine/lazy/gruppi-vista.js`, `e2e_tabui_gruppi_vista.py`; primo disegno 300 × 8 in ~40-70 ms; fixture = uscita di GR-1 |
-| 2 | GR-2 Dig LR per condizione, dati sintetici multi-condizione, `gruppi/1` nel `.wasm` `finder-lr` e nel desktop | merge di GR-1 | 2 | da fare |
+| 2 | GR-2 Dig LR per condizione, dati sintetici multi-condizione, `gruppi/1` nel `.wasm` `finder-lr` e nel desktop | merge di GR-1 | 2 | fatto (usa i 38 mzML di `tests/data/gruppi/`, nessun generatore nuovo); 40 file nativi: 2,0× il tempo e 1,4× la memoria di 20; browser e `wasm-opt` da misurare in CI |
 | 2 (parallelo) | GR-6 HR: `gruppi/1` dalla tabella dei prodotti, rete per condizione | merge di GR-1 | 1,5 | fatto: `tp_table_cond`, `arcs_in`; interfaccia HR da scrivere dopo GR-5 |
 | 3 | GR-5 innesto nella tabella TP (colonna «Conditions», filtro, linguetta), MS2 per condizione, e2e completo, misura con 40 file | merge di GR-2, GR-3, GR-4 e di #863, #871, #873 | 1,5-2 | da fare |
 

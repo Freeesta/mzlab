@@ -10,7 +10,7 @@ mod json;
 mod presenza;
 mod prev;
 
-pub use json::{gruppi_json, parse_input, run_json, to_json};
+pub use json::{campioni_from_value, gruppi_json, opts_from_value, parse_input, run_json, to_json};
 
 use mzlab_core::campioni::Campione;
 use mzlab_core::error::{Error, Result};

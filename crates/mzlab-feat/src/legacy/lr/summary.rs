@@ -346,6 +346,9 @@ pub fn summary(d: &LrDig, timing: &str) -> String {
         o.raw(",\"ms2_links\":");
         super::ms2link::json(&mut o, l);
     }
+    if let Some(g) = super::gruppi_out::block(d, &names, &found) {
+        o.raw(",\"gruppi\":").raw(&g);
+    }
     let timing = if timing.trim().starts_with('{') {
         timing.trim()
     } else {

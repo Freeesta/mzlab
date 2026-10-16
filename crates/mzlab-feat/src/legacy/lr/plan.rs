@@ -8,13 +8,18 @@ use super::super::series::{self, FileIn};
 use super::super::Res;
 
 /// One file of the page: name, label, time, type (`sample`, `blank`, `control`, `standard`) and kind (`full`, `ms2`, `mrm`, `empty`).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct FileLr {
     pub name: String,
     pub label: String,
     pub time: Option<f64>,
     pub kind_type: String,
     pub kind: String,
+    /// The condition (`serie` of `campioni/2`); empty = shared.
+    pub cond: String,
+    pub replica: Option<u32>,
+    /// Position of the injection (`ordine_iniezione`) when `campioni/2` gave it, 0 when unknown.
+    pub order: u32,
 }
 
 /// `DEFAULT_SETTINGS` of the Python engine, with what the page changed.
@@ -30,6 +35,8 @@ pub struct Settings {
     pub min_files: usize,
     /// «Fragment ions found» lists the fragments of the representative MS2 scan from this % of the strongest (`ms2frag`).
     pub frag_min_rel: f64,
+    /// Options of the comparison of conditions (`gruppi/1`) from the settings key `gruppi`; the defaults of the module when absent.
+    pub groups: crate::gruppi::GroupOpts,
 }
 
 impl Settings {
@@ -53,6 +60,7 @@ impl Default for Settings {
             auto_offset: true,
             min_files: 3,
             frag_min_rel: super::ms2frag::MIN_REL,
+            groups: crate::gruppi::GroupOpts::default(),
         }
     }
 }
@@ -70,11 +78,19 @@ pub struct ParentLr {
 }
 
 /// The files of the series that are columns of the table (full scan samples, blanks and controls), in the order of the table.
+/// The standard of the parent is a column only when the series compares conditions (it tells whether an ion is already in the parent).
 pub fn columns(files: &[FileLr]) -> Vec<FileIn> {
+    let multi = super::cond::count(
+        files
+            .iter()
+            .map(|f| (f.kind_type.as_str(), f.cond.as_str())),
+    ) > 1;
     files
         .iter()
         .filter(|f| {
-            f.kind == "full" && matches!(f.kind_type.as_str(), "sample" | "blank" | "control")
+            f.kind == "full"
+                && (matches!(f.kind_type.as_str(), "sample" | "blank" | "control")
+                    || (multi && f.kind_type == "standard"))
         })
         .map(|f| {
             let mut x = FileIn {
@@ -83,6 +99,9 @@ pub fn columns(files: &[FileLr]) -> Vec<FileIn> {
                 kind: f.kind_type.clone(),
                 time: f.time,
                 t: f64::NAN,
+                cond: f.cond.clone(),
+                replica: f.replica,
+                order: f.order,
             };
             x.t = match f.time {
                 Some(t) => t,
@@ -94,16 +113,29 @@ pub fn columns(files: &[FileLr]) -> Vec<FileIn> {
         .collect()
 }
 
-/// The files as the page passes them to `api.run` (`kind` from `classify`; a file without one counts as full scan).
+/// The files as the page passes them to `api.run` (`kind` from `classify`; a file without one counts as full scan): a list, or
+/// `{"files": [...], "campioni": <campioni/2>}` when the page keeps the roles, times, conditions and replicates in the canonical model
+/// (they then win over the fields `type`, `time`, `cond` and `replica` of each file).
 pub fn files(files_json: &str) -> Res<Vec<FileLr>> {
     let v = json::parse(files_json.as_bytes()).map_err(|e| e.to_string())?;
+    let (list, camp) = match v.get("files") {
+        Some(l) => (l, v.get("campioni")),
+        None => (&v, None),
+    };
+    let camp = match camp {
+        Some(c) if !c.is_null() => {
+            crate::gruppi::campioni_from_value(c).map_err(|e| e.to_string())?
+        }
+        _ => Vec::new(),
+    };
     let text = |f: &Value, k: &str| f.get(k).and_then(Value::str).map(String::from);
-    Ok(v.arr()
+    Ok(list
+        .arr()
         .iter()
         .map(|f| {
             let name = text(f, "name").unwrap_or_default();
             let g = guess(&name);
-            FileLr {
+            let mut x = FileLr {
                 label: text(f, "label")
                     .filter(|s| !s.is_empty())
                     .unwrap_or(g.label),
@@ -113,10 +145,32 @@ pub fn files(files_json: &str) -> Res<Vec<FileLr>> {
                 },
                 kind_type: text(f, "type").unwrap_or_else(|| g.kind.to_string()),
                 kind: text(f, "kind").unwrap_or_else(|| "full".into()),
+                cond: text(f, "cond").unwrap_or_default(),
+                replica: f.get("replica").and_then(Value::f64).map(|r| r as u32),
+                order: 0,
                 name,
+            };
+            if let Some(c) = camp.iter().find(|c| c.file == x.name) {
+                apply_campione(&mut x, c);
             }
+            x
         })
         .collect())
+}
+
+/// The role, time, condition and replicate of `campioni/2` over a file (a role the Dig does not use keeps the page's type).
+fn apply_campione(x: &mut FileLr, c: &mzlab_core::campioni::Campione) {
+    match c.role() {
+        "sample" | "t0" => x.kind_type = "sample".into(),
+        "blank" => x.kind_type = "blank".into(),
+        "dark" => x.kind_type = "control".into(),
+        "std" => x.kind_type = "standard".into(),
+        _ => {}
+    }
+    x.time = c.time_min;
+    x.cond = c.series.clone();
+    x.replica = Some(c.replicate);
+    x.order = c.order;
 }
 
 /// The parent of `api.run`: formula or SMILES ([M+H]+), or only the m/z of its ion.
@@ -170,6 +224,12 @@ pub fn settings(settings_json: &str) -> Settings {
     s.auto_offset = flag("auto_offset").unwrap_or(s.auto_offset);
     s.min_files = num("min_files").map_or(s.min_files, |x| x.max(0.0) as usize);
     s.frag_min_rel = num("frag_min_rel").map_or(s.frag_min_rel, |x| x.clamp(0.0, 100.0));
+    if let Some(o) = v
+        .get("gruppi")
+        .and_then(|g| crate::gruppi::opts_from_value(g).ok())
+    {
+        s.groups = o;
+    }
     s
 }
 
