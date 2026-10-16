@@ -111,7 +111,7 @@
     const scrollFrame = (/** @type {() => void} */ f) => G.FRAME && G.FRAME.next ? G.FRAME.next(f) : requestAnimationFrame(f);
 
     function drawHead() {
-      head.innerHTML = cols.map(c => `<th scope="col"${c.sticky ? ` class="tpt-stk${c.num ? " n" : ""}"` : c.num ? ` class="n"` : ""} aria-sort="${st.sort === c.key ? (st.dir > 0 ? "ascending" : "descending") : "none"}"${c.title && !c.help ? ` title="${esc(c.title)}"` : ""}${c.width ? ` style="width:${c.width}px;min-width:${c.width}px"` : ""}>${
+      head.innerHTML = cols.map((c, i) => `<th scope="col"${c.sticky ? ` class="tpt-stk${c.num ? " n" : ""}"` : c.num ? ` class="n"` : ""} aria-sort="${st.sort === c.key ? (st.dir > 0 ? "ascending" : "descending") : "none"}"${c.title && !c.help ? ` title="${esc(c.title)}"` : ""}${c.width || c.sticky ? ` style="${c.sticky ? `left:var(--tpt-l${i},0);` : ""}${c.width ? `width:${c.width}px;min-width:${c.width}px` : ""}"` : ""}>${
         c.sort ? `<button type="button" class="tpt-sh" data-sh="${c.key}"${tt(c.help)}>${c.label}<span aria-hidden="true">${st.sort === c.key ? (st.dir > 0 ? "▲" : "▼") : ""}</span></button>` : c.help && G.TPHELP ? `<span tabindex="0"${tt(c.help)}>${c.label}</span>` : c.label}</th>`).join("");
       head.setAttribute("aria-rowindex", "1");
     }
