@@ -98,193 +98,43 @@ pub fn scenario_files() -> Vec<Campione> {
 /// Cells in the file order: blank, t0, std, O2, Air a/b/c, N2, Ar, CO2, NoGas.
 type Cells = Vec<(u8, f64)>;
 
+/// Cells from text: `-` absent, `~5e3` filled with that area, anything else detected with that area.
+fn cells(text: &str) -> Cells {
+    text.split_whitespace()
+        .map(|t| match t.strip_prefix('~') {
+            _ if t == "-" => x(),
+            Some(a) => f(a.parse().unwrap()),
+            None => d(t.parse().unwrap()),
+        })
+        .collect()
+}
+
 pub fn scenario_rows() -> Vec<(RowMeta, Cells)> {
     let mut parent = meta(0, "Parent", 364.4);
     parent.is_parent = true;
     let mut ms2 = meta(11, "TP 355", 355.2);
     ms2.ms2_files = vec![3];
-    vec![
-        (
-            parent,
-            vec![
-                x(),
-                d(1e7),
-                d(1e7),
-                d(2e6),
-                d(5e6),
-                d(5.2e6),
-                d(4.8e6),
-                d(6e6),
-                d(8e6),
-                d(7e6),
-                d(9e6),
-            ],
-        ),
+    let rows = [
+        (parent, "- 1e7 1e7 2e6 5e6 5.2e6 4.8e6 6e6 8e6 7e6 9e6"),
         (
             meta(1, "TP 362", 362.2),
-            vec![
-                x(),
-                x(),
-                x(),
-                d(1.2e6),
-                d(6e5),
-                d(6.6e5),
-                d(5.4e5),
-                d(8e5),
-                d(4e5),
-                d(9e5),
-                d(3e5),
-            ],
+            "- - - 1.2e6 6e5 6.6e5 5.4e5 8e5 4e5 9e5 3e5",
         ),
-        (
-            meta(2, "TP 305", 305.3),
-            vec![
-                x(),
-                x(),
-                x(),
-                d(5e5),
-                f(3e3),
-                x(),
-                x(),
-                x(),
-                f(1e3),
-                x(),
-                x(),
-            ],
-        ),
+        (meta(2, "TP 305", 305.3), "- - - 5e5 ~3e3 - - - ~1e3 - -"),
         (
             meta(3, "TP 229", 229.1),
-            vec![
-                x(),
-                d(4e5),
-                x(),
-                d(1e6),
-                d(9e5),
-                d(9e5),
-                d(9e5),
-                d(7e5),
-                x(),
-                x(),
-                x(),
-            ],
+            "- 4e5 - 1e6 9e5 9e5 9e5 7e5 - - -",
         ),
-        (
-            meta(4, "TP 224", 224.2),
-            vec![
-                x(),
-                x(),
-                d(3e5),
-                d(1e6),
-                x(),
-                x(),
-                x(),
-                d(8e5),
-                x(),
-                x(),
-                x(),
-            ],
-        ),
-        (
-            meta(5, "TP 391", 391.3),
-            vec![
-                x(),
-                x(),
-                x(),
-                x(),
-                d(2e5),
-                d(2.2e5),
-                x(),
-                d(3e5),
-                x(),
-                x(),
-                x(),
-            ],
-        ),
-        (
-            meta(6, "TP 280", 280.2),
-            vec![
-                x(),
-                x(),
-                x(),
-                d(4e5),
-                d(1e5),
-                x(),
-                x(),
-                d(3e5),
-                x(),
-                x(),
-                x(),
-            ],
-        ),
-        (
-            meta(7, "TP 301", 301.2),
-            vec![
-                x(),
-                x(),
-                x(),
-                d(7e5),
-                d(5e5),
-                d(5e5),
-                d(5e5),
-                d(6e5),
-                x(),
-                x(),
-                x(),
-            ],
-        ),
-        (
-            meta(8, "TP 410", 410.4),
-            vec![
-                x(),
-                x(),
-                x(),
-                f(2e3),
-                f(1e3),
-                f(1e3),
-                x(),
-                x(),
-                x(),
-                x(),
-                x(),
-            ],
-        ),
-        (
-            meta(9, "TP 150", 150.1),
-            vec![
-                d(5e5),
-                x(),
-                x(),
-                d(1e6),
-                x(),
-                x(),
-                x(),
-                d(8e5),
-                x(),
-                x(),
-                x(),
-            ],
-        ),
-        (
-            meta(10, "TP 333", 333.3),
-            vec![
-                x(),
-                x(),
-                x(),
-                f(7e4),
-                d(3e5),
-                d(3e5),
-                d(3e5),
-                x(),
-                x(),
-                x(),
-                x(),
-            ],
-        ),
-        (
-            ms2,
-            vec![x(), x(), x(), d(6e5), x(), x(), x(), x(), d(5e5), x(), x()],
-        ),
-    ]
+        (meta(4, "TP 224", 224.2), "- - 3e5 1e6 - - - 8e5 - - -"),
+        (meta(5, "TP 391", 391.3), "- - - - 2e5 2.2e5 - 3e5 - - -"),
+        (meta(6, "TP 280", 280.2), "- - - 4e5 1e5 - - 3e5 - - -"),
+        (meta(7, "TP 301", 301.2), "- - - 7e5 5e5 5e5 5e5 6e5 - - -"),
+        (meta(8, "TP 410", 410.4), "- - - ~2e3 ~1e3 ~1e3 - - - - -"),
+        (meta(9, "TP 150", 150.1), "5e5 - - 1e6 - - - 8e5 - - -"),
+        (meta(10, "TP 333", 333.3), "- - - ~7e4 3e5 3e5 3e5 - - - -"),
+        (ms2, "- - - 6e5 - - - - 5e5 - -"),
+    ];
+    rows.into_iter().map(|(m, c)| (m, cells(c))).collect()
 }
 
 pub fn scenario_opts() -> GroupOpts {
