@@ -78,7 +78,7 @@
         if (m.type === "progress") return onProgress(m.text, m.frac, m);
         if (m.type === "step") return onProgress(m.text, null);
         if (m.type === "notice") {            // a short notice of the worker (a profile file reduced to centroids): its text comes from the catalogs
-          let t = m.key; try { t = window.I18N.t(m.key, m.params || {}) || t; } catch (_) { /* the key is shown */ }
+          const t = /** @type {any} */ (window).TE(m.key, m.params);
           const d = document.createElement("div"); d.className = "tp-toast"; d.setAttribute("role", "status"); d.textContent = t; document.body.appendChild(d);
           setTimeout(() => d.classList.add("out"), 4200); setTimeout(() => d.remove(), 4800); return;
         }
