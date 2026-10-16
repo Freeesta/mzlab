@@ -12,6 +12,7 @@ crate-type = ["rlib"]
 mzlab-core = { path = "../mzlab-core" }
 mzlab-feat = { path = "../mzlab-feat", features = ["chem"] }
 nalgebra = { version = "0.32", default-features = false, features = ["std"] }
+sci-form = { version = "=0.15.2", default-features = false }
 
 [dev-dependencies]
 serde_json = { version = "1", features = ["float_roundtrip"] }
