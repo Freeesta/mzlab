@@ -193,6 +193,7 @@ interface Window {
   RAPPORTO: typeof RAPPORTO;
   RIFERIMENTO: typeof RIFERIMENTO;
   STAT: typeof STAT;
+  SUGG: typeof SUGG;
   TOUCH: typeof TOUCH;
   fmtAdduct: typeof fmtAdduct;
   fmtFormula: typeof fmtFormula;

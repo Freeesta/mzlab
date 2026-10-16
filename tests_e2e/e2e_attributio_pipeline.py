@@ -60,7 +60,7 @@ PUT = """async (names) => {
 LOW = {"u-noise": "100", "u-min_highest": "300", "u-min_group": "100", "u-min_cons": "3", "u-minabs": "300", "u-chrom": "0.85"}
 def new_page(b, admin):
     pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce").new_page()
-    pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
+    pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
     if admin: pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")
     pg.on("pageerror", lambda e: errs.append(str(e) + " " + str(getattr(e, "stack", ""))[:400]))
     pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "GL Driver" not in m.text else None)

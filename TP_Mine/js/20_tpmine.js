@@ -191,7 +191,7 @@
   // ---------------------------------------------------------------- the tab
   function open(sec) {
     if (!document.getElementById("tp-css")) { const st = document.createElement("style"); st.id = "tp-css"; st.textContent = CSS; document.head.appendChild(st); }
-    const W = /** @type {any} */ (window), hb = (k, l, id) => (W.TPHELP ? W.TPHELP.button(k, l, id) : "");
+    const W = /** @type {any} */ (window), dt = k => (W.TPHELP ? ` data-tt="${k}"` : "");
     sec.innerHTML = `<div class="tp-wrap">
 <div class="tp">
 <div id="tp-left">
@@ -200,20 +200,20 @@
   <input type="file" id="tp-in" accept=".mzML,.mzml,.raw,.wiff,.scan" multiple hidden><input type="file" id="tp-dir" multiple hidden>
   <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
  <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div><div id="tp-reatt"></div>
-  <div class="row tp-ac"><input type="text" id="tp-name" class="grow-in" placeholder="Name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false">${hb("ft.f.name", "Name")}<ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
-  <div class="row"><input type="text" id="tp-mol" class="grow-in" placeholder="Neutral formula" aria-label="Neutral molecular formula" spellcheck="false">${hb("ft.f.formula", "Neutral formula")}</div>
-  <div class="row"><input type="text" id="tp-smi" class="grow-in" placeholder="SMILES" aria-label="SMILES" spellcheck="false"><button id="tp-draw" type="button" title="Draw the molecule in the Draw tab and bring the SMILES back here">Draw</button>${hb("ft.f.smiles", "SMILES")}</div>
+  <div class="row tp-ac"><input type="text" id="tp-name" class="grow-in" placeholder="Name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false"${dt("ft.f.name")}><ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
+  <div class="row"><input type="text" id="tp-mol" class="grow-in" placeholder="Neutral formula" aria-label="Neutral molecular formula" spellcheck="false"${dt("ft.f.formula")}></div>
+  <div class="row"><input type="text" id="tp-smi" class="grow-in" placeholder="SMILES" aria-label="SMILES" spellcheck="false"${dt("ft.f.smiles")}><button id="tp-draw" type="button" title="Draw the molecule in the Draw tab and bring the SMILES back here">Draw</button></div>
   <div id="tp-warn" role="status"></div>
-  <div class="row"><label class="mut" for="tp-add">Adduct</label>${hb("ft.f.adduct", "Adduct")}<select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+HCOO]-</option></select><span class="mut" id="tp-prev"></span></div>
-  <div class="row"><label class="mut grow" for="tp-prt">RT (min)</label>${hb("ft.f.prt", "RT")}<input type="number" id="tp-prt" step="0.05" min="0" placeholder="auto" style="width:70px"></div></div>
+  <div class="row"><label class="mut" for="tp-add"${dt("ft.f.adduct")}>Adduct</label><select id="tp-add"${dt("ft.f.adduct")}><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+HCOO]-</option></select><span class="mut" id="tp-prev"></span></div>
+  <div class="row"><label class="mut grow" for="tp-prt"${dt("ft.f.prt")}>RT (min)</label><input type="number" id="tp-prt"${dt("ft.f.prt")} step="0.05" min="0" placeholder="auto" style="width:70px"></div></div>
  <div class="card"><h3>3 · Settings</h3>
   <div class="row"><button id="tp-est" type="button" title="Low resolution: propose the XIC window, the RT tolerance and the start of the analysis from the loaded files (yellow values, editable)">Estimate from data</button></div>
-  <div class="row"><label class="mut grow" id="tp-tol-l" for="tp-tol">XIC ±Da</label>${hb("ft.f.tol", "XIC")}<input type="number" id="tp-tol" value="0.35" step="0.05" min="0.05" style="width:70px"></div>
-  <div class="row"><label class="mut grow" for="tp-rtt">RT ±min</label>${hb("ft.f.rtt", "RT tolerance")}<input type="number" id="tp-rtt" value="0.25" step="0.05" min="0.05" style="width:70px"></div>
-  <div class="row"><label class="mut grow" for="tp-steps">Steps</label>${hb("ft.f.steps", "Steps")}<input type="number" id="tp-steps" value="2" min="1" max="3" style="width:70px"></div>
-  <div class="row"><label class="mut grow" for="tp-minf">Min. samples</label>${hb("ft.f.minf", "Min. samples")}<input type="number" id="tp-minf" value="3" min="0" max="20" style="width:70px"></div>
-  <div class="row"><label class="mut grow" for="tp-rtmin">RT from (min)</label>${hb("ft.f.rtmin", "RT from")}<input type="number" id="tp-rtmin" value="0.5" step="0.1" min="0" style="width:70px"></div>
-  <div class="row"><label><input type="checkbox" id="tp-disc" checked> Unexpected ions</label>${hb("ft.f.disc", "Unexpected ions", "tp-disc-h")}</div>
+  <div class="row"><label class="mut grow" id="tp-tol-l" for="tp-tol"${dt("ft.f.tol")}>XIC ±Da</label><input type="number" id="tp-tol"${dt("ft.f.tol")} value="0.35" step="0.05" min="0.05" style="width:70px"></div>
+  <div class="row"><label class="mut grow" for="tp-rtt"${dt("ft.f.rtt")}>RT ±min</label><input type="number" id="tp-rtt"${dt("ft.f.rtt")} value="0.25" step="0.05" min="0.05" style="width:70px"></div>
+  <div class="row"><label class="mut grow" for="tp-steps"${dt("ft.f.steps")}>Steps</label><input type="number" id="tp-steps"${dt("ft.f.steps")} value="2" min="1" max="3" style="width:70px"></div>
+  <div class="row"><label class="mut grow" for="tp-minf"${dt("ft.f.minf")}>Min. samples</label><input type="number" id="tp-minf"${dt("ft.f.minf")} value="3" min="0" max="20" style="width:70px"></div>
+  <div class="row"><label class="mut grow" for="tp-rtmin"${dt("ft.f.rtmin")}>RT from (min)</label><input type="number" id="tp-rtmin"${dt("ft.f.rtmin")} value="0.5" step="0.1" min="0" style="width:70px"></div>
+  <div class="row"><label id="tp-disc-h"${dt("ft.f.disc")}><input type="checkbox" id="tp-disc" checked> Unexpected ions</label></div>
   <details><summary>List of transformations (name;change)</summary><textarea id="tp-tr" spellcheck="false"></textarea></details></div>
  <div class="card" id="tp-minecard"><button id="tp-go" class="imp dig" type="button" aria-busy="false">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : ""}<span id="tp-go-t">Dig</span></button><div class="bar" id="tp-barbox" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" role="status" style="margin-top:4px"></div></div>
  <div class="card" id="tp-untcard"><h3>Feature tables</h3><div class="mut">mzMine, MS-DIAL or GNPS2 tables: match every feature with an MS<sup>2</sup> against the spectral libraries and assign a level.</div><div class="row"><button id="tp-unt" type="button" aria-haspopup="dialog">Match a feature table...</button></div></div>

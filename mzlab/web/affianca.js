@@ -13,6 +13,10 @@ affCss.textContent = ".aff-grip{flex:none;min-width:24px;min-height:24px;padding
   ".aff-sep{position:absolute;z-index:6;width:24px;cursor:col-resize;touch-action:none;display:flex;justify-content:center;align-items:stretch;border:0;padding:0;background:transparent}.aff-sep::after{content:'';width:4px;border-radius:2px;background:var(--line)}" +
   ".aff-sep:hover::after,.aff-sep:focus-visible::after,.aff-sep.on::after{background:var(--accent)}.aff-sep:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.aff-sep{width:40px}}" +
   "#aff-bar{position:fixed;z-index:100001;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;background:var(--ink);color:var(--panel);padding:6px 12px;border-radius:6px;box-shadow:0 3px 12px rgba(0,0,0,.25)}#aff-bar button{min-height:24px;padding:0 8px}" +
+  ".aff-grip.aff-hl{opacity:1;outline:2px solid var(--accent);outline-offset:-2px;border-radius:4px}" +
+  "#aff-hint{position:absolute;z-index:32;display:flex;gap:8px;align-items:flex-start;max-width:min(320px,calc(100% - 16px));box-sizing:border-box;padding:8px 8px 8px 12px;background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:13px;line-height:1.4}" +
+  "#aff-hint::before{content:'';position:absolute;top:-6px;left:var(--ha,14px);width:10px;height:10px;background:var(--panel);border-left:1px solid var(--accent);border-top:1px solid var(--accent);transform:rotate(45deg)}" +
+  "#aff-hint button{flex:none;min-width:24px;min-height:24px;border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:0 4px;cursor:pointer}@media (pointer:coarse){#aff-hint button{min-width:40px;min-height:40px}}" +
   "#aff-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}";
 document.head.appendChild(affCss);
 
@@ -77,7 +81,7 @@ function affFai(/** @type {any} */ p, /** @type {any} */ d, /** @type {boolean} 
   const order = affStack(), res = affRifai(order, p.id, grp, d, hostWidth());
   if (!res) { affSay(AFF_T("aff.zone.nospace")); return false; }
   affHist.push({ n: ++HSEQ, s: before }); if (affHist.length > 20) affHist.shift();
-  placeRows(res); affRelay(p); numberPanels(); affSay(affWhere(p)); affBar(AFF_T("aff.done"));
+  placeRows(res); affRelay(p); numberPanels(); affSay(affWhere(p)); affBar(AFF_T("aff.done")); if (d.k === "sx" || d.k === "dx") affHintClose();
   return true;
 }
 function affAnnulla() {
@@ -237,7 +241,75 @@ function affSync() {
   host.querySelectorAll(".aff-sep").forEach(e => e.remove());
   tabPanels().forEach(q => { if (q._grip) q._grip.hidden = !affEligible(q); });
   if (fsPanel()) return;
+  if (document.getElementById("aff-hint")) affHintPlace(); else if (!affHintSeen() && window.SUGG && affHintTarget()) SUGG.chiedi("affianca", affHintShow, 1500);
   LAYOUT.righeDi(affStack()).forEach(r => { if (r.length > 1 && r.every((/** @type {any} */ q) => q.y === r[0].y)) for (let i = 0; i < r.length - 1; i++) { const e = affSep(r, i); if (was === e._key) e.focus(); } });
 }
-const AFFIANCA = { grip: affGrip, sync: affSync, annulla: affAnnulla, ultimo: affUltimo, fai: affFai, rifai: affRifai };
+// ---- hint «drag here to place side by side»: once per browser, when two panels could share a row and no other hint is on screen (suggerimenti.js); × and Esc close it, so does the first side by side
+const AFF_K_HINT = "qqq.pannelli.affianca.hint";
+let affHintMem = false;
+const affHintSeen = () => { try { return !!localStorage.getItem(AFF_K_HINT); } catch (_) { return affHintMem; } };
+const affHintMark = () => { affHintMem = true; try { localStorage.setItem(AFF_K_HINT, "1"); } catch (_) { /* no storage: once per page */ } };
+/** The panel to point at: the second of the stack that can move and does not share a row yet (a spectrum under its chromatogram), when the two would fit side by side. */
+function affHintTarget() {
+  if (window.QQQ_PHONE || typeof S === "undefined" || S.view !== "data" || fsPanel() || affBusy) return null;
+  const l = affStack().filter(affEligible);
+  if (l.length < 2 || l.some(q => l.some(o => o !== q && o.riga === q.riga)) || !affEntra([l[0], l[1]], hostWidth())) return null;
+  return l[1]._grip && !l[1]._grip.hidden ? l[1] : null;
+}
+function affHintPlace() {
+  const el = document.getElementById("aff-hint"), host = document.getElementById("dpanels"), t = affHintTarget();
+  if (!el) return;
+  if (!t || !host) { affHintClose(); return; }
+  const g = t._grip, r = g.getBoundingClientRect(), h = host.getBoundingClientRect(), left = Math.max(4, Math.min(r.left - h.left, host.clientWidth - el.offsetWidth - 4));
+  el.style.left = Math.round(left) + "px"; el.style.top = Math.round(r.bottom - h.top + 8) + "px";
+  el.style.setProperty("--ha", Math.round(Math.max(10, Math.min(r.left - h.left + r.width / 2 - left, el.offsetWidth - 20)) - 5) + "px");
+}
+const affHintEsc = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Escape") affHintClose(); };
+function affHintClose() {
+  document.querySelectorAll(".aff-grip.aff-hl").forEach(g => g.classList.remove("aff-hl"));
+  const el = document.getElementById("aff-hint"); if (!el) return;
+  el.remove(); document.removeEventListener("keydown", affHintEsc);
+}
+function affHintShow() {
+  const t = affHintTarget(), host = document.getElementById("dpanels");
+  if (!t || !host || affHintSeen() || document.getElementById("aff-hint")) return false;
+  const el = document.createElement("div"); el.id = "aff-hint"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite");
+  const txt = document.createElement("span"); txt.textContent = AFF_T("aff.hint");
+  const x = document.createElement("button"); x.type = "button"; x.setAttribute("aria-label", AFF_T("aff.hint.close")); x.textContent = "\u00d7"; x.onclick = affHintClose;
+  el.append(txt, x); host.appendChild(el); t._grip.classList.add("aff-hl"); affHintPlace(); affHintMark();
+  document.addEventListener("keydown", affHintEsc);
+  return true;
+}
+
+// ---- registry azioni/1: the arrangement of the panel the menu was opened on (group disp, the views of the graphs), the same entries as the menu of the grip; also in the palette
+const affWide = (/** @type {any} */ d) => !!d && d.k !== "sx" && d.k !== "dx" && d.k !== "uguali";
+const affOkFor = (/** @type {any} */ p, /** @type {any} */ d) => !!d && !!affRifai(affKeys(affStack()), p.id, affWide(d) && !d.solo ? blockOf(p).grp.map((/** @type {any} */ q) => q.id) : [p.id], d, hostWidth());
+const affMate = (/** @type {any} */ p) => affStack().find(q => q !== p && q.riga === p.riga);
+const affOthers = (/** @type {any} */ p) => affStack().filter(q => q !== p && !blockOf(p).grp.includes(q) && affEligible(q));
+const affRowOf = (/** @type {any} */ q) => `${q.num ?? ""} \u00b7 ${q.el.querySelector(".ttl").textContent}`;
+function affRipristina() {
+  const l = tabPanels().filter(q => q.full); affSnap();
+  l.forEach(q => { q.riga = null; q.quota = null; q.x = 0; q.w = hostWidth(); });
+  affRelay(null); numberPanels(); affSay(AFF_T("aff.reset.done")); affBar(AFF_T("aff.reset.done"));
+}
+const affSplit = () => tabPanels().filter(q => q.full).some(q => q.riga != null && tabPanels().some(o => o !== q && o.full && o.riga === q.riga) || (q.quota != null && q.quota !== 1));
+if (typeof AZIONI !== "undefined") {
+  const reg = (/** @type {any} */ o) => AZIONI.registra({ gruppo: "disp", viste: ["*"], visibile: (/** @type {any} */ c) => c.vista !== "map" && !!c.p && !!c.p.el && !!c.p.full && affEligible(c.p), ...o });
+  reg({ id: "disp.affianca", ordine: 1, nome: () => AFF_T("aff.menu.beside"), disponibile: (/** @type {any} */ c) => affOthers(c.p).length > 0,
+    esegui: (/** @type {any} */ c) => { if (c.p._grip) affOpenMenu(c.p, c.p._grip); },
+    voci: (/** @type {any} */ c) => {
+      const p = c.p, o = affOthers(p);
+      if (!o.length) return [{ nome: AFF_T("aff.menu.beside"), dim: true, esegui: () => 0 }];
+      return o.map(q => { const d = { k: p.y < q.y || p.y === q.y && p.x < q.x ? "sx" : "dx", t: q.id }; return { nome: AFF_T("aff.menu.beside") + " " + affRowOf(q), dim: !affOkFor(p, d), esegui: () => { affFai(p, d, false); } }; });
+    } });
+  const via = (/** @type {string} */ id, /** @type {number} */ ordine, /** @type {string} */ key, /** @type {(p: any) => any} */ move) =>
+    reg({ id, ordine, nome: () => AFF_T(key), disponibile: (/** @type {any} */ c) => affOkFor(c.p, move(c.p)), esegui: (/** @type {any} */ c) => { const d = move(c.p); if (d) affFai(c.p, d, affWide(d)); } });
+  via("disp.su", 2, "aff.menu.up", p => affVertical(p, -1));
+  via("disp.giu", 3, "aff.menu.down", p => affVertical(p, 1));
+  via("disp.intera", 4, "aff.menu.full", p => { const m = affMate(p); return m ? { k: "giu", t: m.id } : null; });
+  via("disp.uguali", 5, "aff.menu.equal", p => affMate(p) ? { k: "uguali" } : null);
+  reg({ id: "disp.ripristina", ordine: 6, nome: () => AFF_T("aff.menu.reset"), disponibile: () => affSplit(), esegui: () => affRipristina() });
+}
+
+const AFFIANCA = { grip: affGrip, sync: affSync, annulla: affAnnulla, ultimo: affUltimo, fai: affFai, rifai: affRifai, ripristina: affRipristina, eligible: affEligible, hint: { target: affHintTarget, show: affHintShow, close: affHintClose, seen: affHintSeen } };
 window.AFFIANCA = AFFIANCA;
