@@ -185,6 +185,11 @@ try:
                 pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", th);
                 pg.locator("#tpr-host .tpr").screenshot(path=str(Path(d) / f"reatt_{th}.png"))
         step("screenshots (REATT_SHOTS)", shots)
+        def hosted():
+            assert pg.evaluate("!!document.querySelector('#tp-struct + #tp-reatt')"), "no host in the Parent compound card"
+            pg.fill("#tp-smi", "CC(=O)Nc1ccc(O)cc1"); pg.wait_for_function("document.querySelector('#tp-reatt .tpr')?.dataset.state === 'waiting'", timeout=30000)
+            assert "waiting for TPs" in pg.inner_text("#tp-reatt .tpr")
+        step("the card Parent compound hosts the panel (state waiting for TPs once the SMILES is there)", hosted)
         step("window.MZLAB_LR_MISS is empty", lambda: (_ for _ in ()).throw(AssertionError(pg.evaluate("window.MZLAB_LR_MISS"))) if pg.evaluate("(window.MZLAB_LR_MISS || []).length") else None)
         b.close()
 finally:
