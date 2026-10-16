@@ -57,6 +57,35 @@ fn largest(t: &Aligned, row: usize, files: &[usize]) -> f64 {
 /// has one (`null` otherwise); without, the rows of status product, formed and not explained, or parent, in the order of the table, and a table with no
 /// block is `error.tpNoBlock`. A row out of the table is `error.badView`.
 pub fn table_json(t: &Aligned, s: &[Sample], rows: Option<&[usize]>) -> Result<String> {
+    table_json_cond(t, s, rows, None)
+}
+
+/// The rows of status product, formed and not explained, or parent, in the order of the table.
+fn default_rows(t: &Aligned) -> Vec<usize> {
+    (0..t.len())
+        .filter(|&r| matches!(t.tp.status[r], ST_TP | ST_UNEXPLAINED | ST_PARENT))
+        .collect()
+}
+
+/// The conditions of a table: the files each one uses and the controls that apply to it.
+struct CondCx {
+    id: String,
+    /// The treated files of the condition, per file of the table.
+    keep: Vec<bool>,
+    t0: Vec<usize>,
+    blank: Vec<usize>,
+}
+
+/// `table_json` with the metadata `campioni/2` of the files and what the caller knows of the best hypothesis of each row. With two or more conditions
+/// `times` stays the time axis of all the treated files; a row's `series`, `in_t0` and `in_blank` are the ones of the condition where the row is strongest
+/// (the files of the others count 0 in `series`, ties go to the first condition), and `gruppi` (`gruppi/1`) holds the detail of every condition together
+/// with `network` (the times of each condition and whether the network read it). With fewer than two conditions the text is the one of `table_json`.
+pub fn table_json_cond(
+    t: &Aligned,
+    s: &[Sample],
+    rows: Option<&[usize]>,
+    cond: Option<(&[mzlab_core::campioni::Campione], &[super::RowInfo])>,
+) -> Result<String> {
     let has_block = !t.tp.is_empty() && t.tp.len() == t.len();
     if rows.is_none() && !has_block {
         return Err(Error::new("error.tpNoBlock"));
@@ -95,29 +124,98 @@ pub fn table_json(t: &Aligned, s: &[Sample], rows: Option<&[usize]>) -> Result<S
         .int(blank.len() as i64)
         .raw("},\"rows\":[");
     let mut first = true;
-    let all: Vec<usize>;
-    let list = match rows {
-        Some(r) => r,
-        None => {
-            all = (0..t.len())
-                .filter(|&r| matches!(t.tp.status[r], ST_TP | ST_UNEXPLAINED | ST_PARENT))
-                .collect();
-            &all
-        }
-    };
-    let cx = Cx {
-        has_block,
-        treated: &treated,
-        tr_files: &tr_files,
-        t0: &t0,
-        blank: &blank,
+    let all = rows.is_none().then(|| default_rows(t));
+    let list = rows.or(all.as_deref()).unwrap_or(&[]);
+    let conds = match cond {
+        Some((cs, _)) if cs.len() == t.n_files => cond_cx(cs, &roles),
+        Some(_) => return Err(Error::new("error.badView")),
+        None => Vec::new(),
     };
     for &r in list {
+        let mut cx = Cx {
+            has_block,
+            treated: &treated,
+            tr_files: &tr_files,
+            t0: &t0,
+            blank: &blank,
+            keep: None,
+        };
+        if let Some(c) = strongest(t, r, &conds) {
+            (cx.keep, cx.t0, cx.blank) = (Some(c.keep.as_slice()), &c.t0, &c.blank);
+        }
         row_json(&mut o, t, r, &cx, first);
         first = false;
     }
-    o.raw("]}");
+    o.raw("]");
+    if let Some((cs, infos)) = cond.filter(|_| !conds.is_empty()) {
+        let g = super::groups_json(t, cs, list, infos)?;
+        o.raw(",\"gruppi\":").raw(g.as_deref().unwrap_or("null"));
+        network_json(&mut o, &conds, &treated);
+    }
+    o.raw("}");
     Ok(o.0)
+}
+
+/// The condition of each file's role and controls (empty with fewer than two conditions).
+fn cond_cx(cs: &[mzlab_core::campioni::Campione], roles: &[Role]) -> Vec<CondCx> {
+    super::group_conditions(cs)
+        .into_iter()
+        .map(|c| {
+            let mut keep = vec![false; roles.len()];
+            for &f in &c.files {
+                keep[f] = matches!(roles[f], Role::Treated(_));
+            }
+            let mut blank: Vec<usize> = c
+                .controls
+                .blank
+                .iter()
+                .chain(&c.controls.dark)
+                .copied()
+                .collect();
+            blank.sort_unstable();
+            CondCx {
+                id: c.id,
+                keep,
+                t0: c.controls.t0,
+                blank,
+            }
+        })
+        .collect()
+}
+
+/// The condition where the row has its largest area (the first on a tie), `None` without conditions.
+fn strongest<'a>(t: &Aligned, row: usize, conds: &'a [CondCx]) -> Option<&'a CondCx> {
+    let best = |c: &CondCx| {
+        (0..c.keep.len())
+            .filter(|&k| c.keep[k])
+            .fold(0.0, |m, k| f64::max(m, measured(t, row, k)))
+    };
+    let mut top: Option<(&CondCx, f64)> = None;
+    for c in conds {
+        let a = best(c);
+        if top.is_none_or(|(_, m)| a > m) {
+            top = Some((c, a));
+        }
+    }
+    top.map(|x| x.0)
+}
+
+/// `"network"`: the number of treated times of each condition and whether the network read its correlations (it needs at least `NetParams::points`).
+fn network_json(o: &mut Out, conds: &[CondCx], treated: &[(f64, usize)]) {
+    let need = super::NetParams::default().points.max(2);
+    o.raw(",\"network\":{\"min_times\":")
+        .int(need as i64)
+        .raw(",\"conditions\":[");
+    for (i, c) in conds.iter().enumerate() {
+        let n = treated.iter().filter(|x| c.keep[x.1]).count();
+        o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
+            .str(&c.id);
+        o.raw(",\"times\":")
+            .int(n as i64)
+            .raw(",\"used\":")
+            .raw(if n >= need { "true}" } else { "false}" });
+    }
+    o.raw("]}");
 }
 
 /// What every row of the table shares: the block flag, the treated files in time order, and the t0 / blank files.
@@ -127,6 +225,8 @@ struct Cx<'a> {
     tr_files: &'a [usize],
     t0: &'a [usize],
     blank: &'a [usize],
+    /// With conditions: the treated files of the condition the row is read in (the others count 0).
+    keep: Option<&'a [bool]>,
 }
 
 fn row_json(o: &mut Out, t: &Aligned, r: usize, cx: &Cx, first: bool) {
@@ -136,10 +236,18 @@ fn row_json(o: &mut Out, t: &Aligned, r: usize, cx: &Cx, first: bool) {
         tr_files,
         t0,
         blank,
+        keep,
     } = *cx;
+    let kept = |k: usize| keep.is_none_or(|v| v[k]);
     let series: Vec<f64> = tr_files
         .iter()
-        .map(|&k| round(measured(t, r, k), 1))
+        .map(|&k| {
+            if kept(k) {
+                round(measured(t, r, k), 1)
+            } else {
+                0.0
+            }
+        })
         .collect();
     let (mut max_a, mut tmax) = (0.0, None);
     for (i, &a) in series.iter().enumerate() {
@@ -150,7 +258,7 @@ fn row_json(o: &mut Out, t: &Aligned, r: usize, cx: &Cx, first: bool) {
     }
     let max_h = tr_files.iter().fold(0.0f64, |m, &k| {
         let c = t.cell(r, k);
-        if t.state[c] == CELL_ABSENT {
+        if t.state[c] == CELL_ABSENT || !kept(k) {
             m
         } else {
             m.max(f64::from(t.height[c]))
