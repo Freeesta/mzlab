@@ -6,8 +6,9 @@ from pathlib import Path
 import json, os, shutil, subprocess, sys, time
 from playwright.sync_api import sync_playwright
 from lib import ROOT
+from lib import copia as lib_copia, scrivi as lib_scrivi
 
-PORT = 8836
+from lib import free_port; PORT = free_port()
 errs = []
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))
@@ -30,7 +31,7 @@ if not wasm.exists():
         print("  ", ("wasm", "FAIL site/static/wasm-lib missing and no cargo + wasm-bindgen to build it")); sys.exit(0)
 # the page of the site is a copy: make sure it is the current worker
 for f in ("libreria-worker.js", "libreria.js", "libreria-cartella.js"):
-    shutil.copyfile(ROOT / "mzlab" / "web" / f, ROOT / "site" / "static" / f)
+    lib_copia(ROOT / "mzlab" / "web" / f, ROOT / "site" / "static" / f)
 
 def rec(name, prec, peaks, extra="Ion_mode: Positive\nPrecursor_type: [M+H]+\nCollision_energy: 30\nInstrument_type: QTRAP\n"):
     return f"Name: {name}\nPrecursorMZ: {prec}\n{extra}Num Peaks: {len(peaks)}\n" + "\n".join(f"{m:.4f}\t{i:.1f}" for m, i in peaks) + "\n"

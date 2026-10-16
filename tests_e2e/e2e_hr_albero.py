@@ -9,7 +9,7 @@ from lib import ROOT
 from golden_ref import PyRef
 
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
-PORT = 8839
+from lib import free_port; PORT = free_port()
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))
     except Exception as e: print("  ", (name, "FAIL " + str(e)[:700]))
