@@ -18,4 +18,3 @@ La dieta del motore non c'è più: è assorbita da DEV-01.
 - [DEV-08](DEV-08.md): Bruker timsTOF TDF/TSF (modulo `bruker`)
 - [DEV-09](DEV-09.md): Tipi di scansione: precursor ion, neutral loss, EPI, MS3
 - [DEV-10](DEV-10.md): Mobilità ionica nell'mzML
-- [DEV-11](DEV-11.md): `metodo/1` di un mzML scritto da altri

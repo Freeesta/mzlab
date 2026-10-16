@@ -61,7 +61,7 @@ Legenda: **L** letto e provato · **P** parziale (si legge, ma manca un pezzo de
 | Tracce accessorie (pressione, analogici) | L (`analog.rs`) | P: pressione solo nell'mzML scritto, non come cromatogramma del lettore | A | A (`GC.ini` come metadati) | L (pressione, flusso, % solventi uguali a msconvert) | A |
 | Calibrazione / lock mass | — (già applicata) | P: campi del trailer (`opentfraw.lock_mass_*`, `extra.rs:122-125`), nessuna correzione | A (`GLPTables`) | A | P: cromatogramma della lock mass e campo in `metodo/1`, correzione non applicata | — |
 | Polarità mista | L (`iteminfo.rs`: parti «mixed») | L | L | NV (codice 1 mai visto) | NV | A (la polarità degli eventi `.lcd` 2020 non è decodificata; il QqQ la legge dal byte 33) |
-| Metodo e metadati (`metodo/1`) | P (solo testata; `metodo/1` solo se scritto da mzLab) | L | P (nome, vial, calibrazione mancanti) | L per GC/MS, A per LC/MS | L (`metodo/1` da `_HEADER.TXT`, `_extern.inf`, `_INLET.INF`; operatore `identita`) | P (`metodo/1`: strumento, software, campione, eventi/transizioni; molti flussi non decodificati) |
+| Metodo e metadati (`metodo/1`) | P (testata e parametri di scansione costanti in `metodo/1`, `metodo_mzml.rs`; non verificato su file veri) | L | P (nome, vial, calibrazione mancanti) | L per GC/MS, A per LC/MS | L (`metodo/1` da `_HEADER.TXT`, `_extern.inf`, `_INLET.INF`; operatore `identita`) | P (`metodo/1`: strumento, software, campione, eventi/transizioni; molti flussi non decodificati) |
 
 ### Metodo e metadati (colonna «metodo/metadati» per formato)
 
