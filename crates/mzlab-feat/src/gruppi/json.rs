@@ -369,6 +369,18 @@ fn parse_table(t: &Value) -> Result<GroupTable> {
     })
 }
 
+/// The options of an already parsed JSON object (the Dig reads them from its settings).
+pub fn opts_from_value(v: &Value) -> Result<GroupOpts> {
+    parse_opts(v)
+}
+
+/// A parsed `campioni/2` document as the list of samples.
+pub fn campioni_from_value(v: &Value) -> Result<Vec<Campione>> {
+    let mut text = Out::default();
+    dump(&mut text, v);
+    campioni::from_json(text.0.as_bytes())
+}
+
 /// Reads the JSON input of `run_json`.
 pub fn parse_input(input: &[u8]) -> Result<(GroupTable, Vec<Campione>, GroupOpts)> {
     let doc = parse(input)?;

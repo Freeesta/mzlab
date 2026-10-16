@@ -19,6 +19,12 @@ pub struct FileIn {
     pub time: Option<f64>,
     /// `-1` for a reference (dark, t0, blank, control), the time in minutes, NaN when unknown.
     pub t: f64,
+    /// The experimental condition (`serie` of `campioni/2`); empty = shared by all (a control of every condition, or the only condition).
+    pub cond: String,
+    /// The replicate of the file within its condition and time, when the page gave it.
+    pub replica: Option<u32>,
+    /// 1-based position of the injection when `campioni/2` gave it, 0 when unknown.
+    pub order: u32,
 }
 
 impl FileIn {
@@ -55,6 +61,9 @@ pub fn lc_files(files_json: &str) -> Res<Vec<FileIn>> {
             kind,
             time,
             t: f64::NAN,
+            cond: String::new(),
+            replica: None,
+            order: 0,
         };
         x.t = match time {
             Some(t) => t,
