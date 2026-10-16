@@ -116,35 +116,40 @@ fn contract_and_rows_of_python() {
         let id = r["id"].as_i64().unwrap();
         let det: Value =
             serde_json::from_str(&detail(&d, id, |k| Ok(open(&idxs[k]))).unwrap()).unwrap();
-        let keys = [
-            "specificity",
-            "ms2_links",
-            "ms2_rep",
-            "ms2_text",
-            "candidates",
-        ];
-        same_shape(&without(&det, &keys), &g["detail"], "detail");
-        own_candidate_first(&det);
-        assert!(
-            det["criteria"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|c| c["status"] == "pass"),
-            "{id} without proofs"
-        );
-        for t in det["traces"].as_array().unwrap() {
-            same_shape(t, &g["trace"], "trace");
-        }
-        let sp = &det["specificity"];
-        assert_eq!(sp["neighbours"].as_array().map(Vec::len), Some(4), "{id}");
-        assert_eq!(sp["decoys"].as_array().map(Vec::len), Some(2), "{id}");
-        assert!(det["criteria"]
+        detail_like_python(&det, &g, id);
+    }
+}
+
+/// The detail of a strong or possible row: the shape of the Python, its proofs and its specificity.
+fn detail_like_python(det: &Value, g: &Value, id: i64) {
+    let keys = [
+        "specificity",
+        "ms2_links",
+        "ms2_rep",
+        "ms2_text",
+        "candidates",
+    ];
+    same_shape(&without(det, &keys), &g["detail"], "detail");
+    own_candidate_first(det);
+    assert!(
+        det["criteria"]
             .as_array()
             .unwrap()
             .iter()
-            .any(|c| c["name"] == "persistent"));
+            .any(|c| c["status"] == "pass"),
+        "{id} without proofs"
+    );
+    for t in det["traces"].as_array().unwrap() {
+        same_shape(t, &g["trace"], "trace");
     }
+    let sp = &det["specificity"];
+    assert_eq!(sp["neighbours"].as_array().map(Vec::len), Some(4), "{id}");
+    assert_eq!(sp["decoys"].as_array().map(Vec::len), Some(2), "{id}");
+    assert!(det["criteria"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|c| c["name"] == "persistent"));
 }
 
 #[test]
