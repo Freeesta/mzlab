@@ -99,7 +99,7 @@ with sync_playwright() as p:
         pg.set_input_files("input[type=file][accept*='.dam']", []) if False else None
         pg.click("#np-method"); ready(pg); t = pg.inner_text("#bigdlg"); assert "MRM" in t and "transizione" in t.lower(), t[:300]
         pg.screenshot(path=SH + "124_method_mrm.png"); pg.click("#bigx")
-        pg.evaluate("activeFile(E.files.findIndex(f=>f.kind==='ms2'));renderFileList();renderNav()"); pg.click("#np-method"); ready(pg); pg.wait_for_timeout(800)
+        pg.evaluate("activeFile(E.files.findIndex(f=>f.kind==='ms2'));renderFileList();renderNav()"); pg.click("#np-method"); ready(pg); attendi(pg, "document.querySelector('#bigdlg').innerText.includes('ioni prodotto')")
         assert "ioni prodotto" in pg.inner_text("#bigdlg"); pg.screenshot(path=SH + "125_method_ms2.png"); pg.click("#bigx")
     step("Metodo: MRM and MS2 explained", method)
     def ital():
