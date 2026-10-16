@@ -417,16 +417,14 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                                     arr.seconds = seconds;
                                 }
                                 "MS:1000574" => arr.zlib = true,
-                                a if mobility_of(a).is_some() => {
-                                    arr.kind = ArrayKind::Mobility;
-                                    arr.mobility = mobility_of(a).unwrap_or("");
-                                }
                                 "MS:1002312" | "MS:1002313" | "MS:1002314" => {
                                     return Err(Error::new("err.file.numpress"))
                                 }
                                 _ => {
                                     if let Some(n) = Num::of_accession(acc) {
                                         arr.num = n;
+                                    } else if let Some(u) = mobility_of(acc) {
+                                        (arr.kind, arr.mobility) = (ArrayKind::Mobility, u);
                                     }
                                 }
                             }
@@ -445,11 +443,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                                 }
                                 "MS:1000744" => s.selected = value.parse().ok(),
                                 "MS:1000827" => s.target = value.parse().ok(),
-                                a => {
-                                    if let (Some(u), Ok(v)) = (mobility_of(a), value.parse::<f64>()) {
-                                        s.mobility_scan.get_or_insert((v, u));
-                                    }
-                                }
+                                _ => s.mobility_scan = s.mobility_scan.or_else(|| mobility_of(acc).zip(value.parse().ok()).map(|(u, v)| (v, u))),
                             }
                         }
                     }
@@ -485,10 +479,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                     "spectrum" => {
                         if let Some(s) = spec.take() {
                             let (sp, mob) = finish_spectrum(s, &mut inf)?;
-                            if let Some(m) = mob {
-                                f(Item::Mobility(m));
-                            }
-                            f(Item::Spectrum(sp));
+                            mob.map(Item::Mobility).into_iter().chain([Item::Spectrum(sp)]).for_each(&mut f);
                             n_spec += 1;
                         }
                         scope = Scope::None;

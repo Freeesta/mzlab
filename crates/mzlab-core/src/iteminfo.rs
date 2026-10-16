@@ -74,6 +74,18 @@ fn kind_name(k: &str) -> &'static str {
         .map_or("MS2", |(_, n)| n)
 }
 
+/// The polarities a group of scans is split in: one `None` when the file has a single polarity, else the ones present (positive first).
+fn polarities(sel: &[&Scan], split: bool) -> Vec<Option<i8>> {
+    if !split {
+        return vec![None];
+    }
+    let mut v: Vec<i8> = sel.iter().map(|s| s.polarity).filter(|p| *p == 1 || *p == -1).collect();
+    crate::sortc::slice_ord(&mut v);
+    v.dedup();
+    v.reverse();
+    v.into_iter().map(Some).collect()
+}
+
 /// The experiments of a mixed file (survey + product ions, MRM + EPI, positive + negative), or empty when the file has only one.
 pub fn file_parts(scans: &[Scan], has_srm: bool) -> Vec<Part> {
     let pols: Vec<i8> = {
@@ -99,28 +111,16 @@ pub fn file_parts(scans: &[Scan], has_srm: bool) -> Vec<Part> {
         // the ordinary scans first, then one part per scan type present
         let kinds: Vec<Option<&'static str>> = std::iter::once(None)
             .chain(KINDS.iter().map(|(c, _)| Some(*c)))
-            .filter(|k| (level2 || k.is_none()) && sel.iter().any(|s| s.kind.as_deref() == *k))
+            .filter(|k| (level2 || k.is_none()) && sel.iter().any(|s| s.kind_name() == *k))
             .collect();
         for kind in kinds {
             let sel: Vec<&Scan> = sel
                 .iter()
                 .copied()
-                .filter(|s| s.kind.as_deref() == kind)
+                .filter(|s| s.kind_name() == kind)
                 .collect();
             let name = kind.unwrap_or(name);
-            let list: Vec<Option<i8>> = if split {
-                let mut v: Vec<i8> = sel
-                    .iter()
-                    .map(|s| s.polarity)
-                    .filter(|p| *p == 1 || *p == -1)
-                    .collect();
-                crate::sortc::slice_ord(&mut v);
-                v.dedup();
-                v.reverse();
-                v.into_iter().map(Some).collect()
-            } else {
-                vec![None]
-            };
+            let list = polarities(&sel, split);
             for pol in list {
                 let suffix = if split {
                     if pol == Some(1) {
@@ -181,7 +181,7 @@ pub fn matches(s: &Scan, part: Option<&Part>) -> bool {
     if p.mode == "ms1" {
         s.level == 1
     } else {
-        s.level >= 2 && s.kind.as_deref() == p.kind
+        s.level >= 2 && s.kind_name() == p.kind
     }
 }
 
@@ -337,11 +337,11 @@ fn acq(sc1: &[&Scan], sc2: &[&Scan]) -> Vec<&'static str> {
     }
     // the scan types (precursor ion, neutral loss/gain, EPI) outrank the generic MS2; the ordinary scans left over are classified as before
     for (code, _) in KINDS {
-        if sc2.iter().any(|s| s.kind.as_deref() == Some(code)) {
+        if sc2.iter().any(|s| s.kind_name() == Some(code)) {
             out.push(code);
         }
     }
-    let plain: Vec<&Scan> = sc2.iter().copied().filter(|s| s.kind.is_none()).collect();
+    let plain: Vec<&Scan> = sc2.iter().copied().filter(|s| s.kind == 0).collect();
     if plain.is_empty() {
         return out;
     }
@@ -671,7 +671,7 @@ pub fn item_info<R: ReadAt>(
         .int(all.iter().map(|s| s.level as i64).max().unwrap_or(1))
         .raw(",\"acq\":[");
     // ion mobility: a scan attribute in the scan table, or mobility arrays in the first spectrum
-    let mobs: Vec<(f64, &str)> = all.iter().filter_map(|s| s.mob.as_ref().map(|(v, u)| (*v, u.as_str()))).collect();
+    let mobs: Vec<(f64, &str)> = all.iter().filter_map(|s| s.mobility()).collect();
     let ims_unit = mobs.first().map(|m| m.1).or(facts.ims);
     let mut modes = acq(&phys1, &phys2);
     if ims_unit.is_some() {
@@ -754,7 +754,7 @@ pub fn facts_from<M: ReadAt>(
         }
     }
     f.lc = crate::infusione::raw_lc(m)?;
-    f.ims = m.mobility_kind()?;
+    f.ims = crate::mzmlhead::mobility_kind(m)?;
     // The header polarity and the RT range of the SRM traces matter only for a file without scans or with SRM parts: reading a whole file (up to 256 MB) for them is
     // refused as `error.memoryBudget` for a big profile file (HRMS), and a file with scans and no SRM never shows them.
     if need_mrm && (scans_end == 0 || f.srm > 0) {

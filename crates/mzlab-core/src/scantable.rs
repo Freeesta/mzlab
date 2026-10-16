@@ -591,6 +591,23 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
     Ok(rows.finish(n_chrom))
 }
 
+/// Columns 21 (type) and 22 (mobility `[value, unit]`) only for the scans that have one, so an index without any stays as it was.
+fn tail_columns(o: &mut Out, r: &Row) {
+    if r.kind.is_none() && r.mob.is_none() {
+        return;
+    }
+    o.raw(",");
+    match r.kind {
+        Some(k) => o.str(k),
+        None => o.raw("null"),
+    };
+    if let Some((v, u)) = r.mob {
+        o.raw(",[");
+        py_float(o, v);
+        o.raw(",").str(u).raw("]");
+    }
+}
+
 fn py_float(o: &mut Out, v: f64) {
     if !v.is_finite() {
         o.raw("null");
@@ -738,19 +755,7 @@ impl Table {
                 None => o.raw("null"),
             };
             o.raw(",").str(&r.native);
-            // columns 21 (type) and 22 (mobility) only for the scans that have one, so an index without any stays as it was
-            if r.kind.is_some() || r.mob.is_some() {
-                o.raw(",");
-                match r.kind {
-                    Some(k) => o.str(k),
-                    None => o.raw("null"),
-                };
-            }
-            if let Some((v, u)) = r.mob {
-                o.raw(",[");
-                py_float(&mut o, v);
-                o.raw(",").str(u).raw("]");
-            }
+            tail_columns(&mut o, r);
             o.raw("]");
         }
         o.raw("]");

@@ -164,8 +164,8 @@ fn the_scan_attribute_gives_ims_and_a_range() {
         "{info}"
     );
     let idx = index_of(&mzml(&sp));
-    assert_eq!(idx.scans[0].mob, Some((0.8, "k0".to_string())));
-    assert_eq!(idx.scans[2].mob, None);
+    assert_eq!(idx.scans[0].mobility(), Some((f64::from(0.8f32), "k0")));
+    assert_eq!(idx.scans[2].mobility(), None);
 }
 
 #[test]

@@ -139,6 +139,31 @@ pub struct Mzml<R: ReadAt> {
     pub size: u64,
 }
 
+/// The unit (`k0`, `ms` or ``) of the ion mobility arrays of the first spectrum that has an array list, or `None` (no mobility array there, or no spectrum).
+/// Reads that one spectrum only, in blocks that grow up to the limit of a region.
+pub fn mobility_kind<R: ReadAt>(m: &mut Mzml<R>) -> Result<Option<&'static str>> {
+    let mut n: u64 = 1 << 16;
+    loop {
+        let chunk = m.read(0, n)?;
+        let span = find(&chunk, b"<spectrum ", 0)
+            .and_then(|a| find(&chunk, b"</spectrum>", a).map(|b| (a, b + 11)));
+        if let Some((a, b)) = span {
+            for (head, _) in arrays(&chunk[a..b]) {
+                for acc in head.split("accession=\"").skip(1) {
+                    if let Some(u) = crate::mzml::mobility_of(acc.split('"').next().unwrap_or("")) {
+                        return Ok(Some(u));
+                    }
+                }
+            }
+            return Ok(None);
+        }
+        if n >= m.size || n >= MOBILITY_PROBE {
+            return Ok(None);
+        }
+        n *= 4;
+    }
+}
+
 impl<R: ReadAt> Mzml<R> {
     pub fn new(r: R, size: u64) -> Self {
         Mzml { r, size }
@@ -158,31 +183,6 @@ impl<R: ReadAt> Mzml<R> {
         v.resize((b - a) as usize, 0);
         self.r.read_at(a, &mut v)?;
         Ok(v)
-    }
-
-    /// The unit (`k0`, `ms` or ``) of the ion mobility arrays of the first spectrum that has an array list, or `None` (no mobility array there, or no spectrum).
-    /// Reads that one spectrum only, in blocks that grow up to the limit of a region.
-    pub fn mobility_kind(&mut self) -> Result<Option<&'static str>> {
-        let mut n: u64 = 1 << 16;
-        loop {
-            let chunk = self.read(0, n)?;
-            let span = find(&chunk, b"<spectrum ", 0)
-                .and_then(|a| find(&chunk, b"</spectrum>", a).map(|b| (a, b + 11)));
-            if let Some((a, b)) = span {
-                for (head, _) in arrays(&chunk[a..b]) {
-                    for acc in head.split("accession=\"").skip(1) {
-                        if let Some(u) = crate::mzml::mobility_of(acc.split('"').next().unwrap_or("")) {
-                            return Ok(Some(u));
-                        }
-                    }
-                }
-                return Ok(None);
-            }
-            if n >= self.size || n >= MOBILITY_PROBE {
-                return Ok(None);
-            }
-            n *= 4;
-        }
     }
 
     /// The header of every `<chromatogram>`; they follow the spectra, so the search starts where the last scan ends (0 without scans).

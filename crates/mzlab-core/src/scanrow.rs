@@ -1,6 +1,6 @@
 //! The rows of the scan table of an index (`SCAN_COLUMNS`, `docs/agenti/mzidx.md`) as `Scan`.
 
-use crate::idxread::Scan;
+use crate::idxread::{Scan, KINDS};
 use crate::json::Value;
 use crate::lettori::Posizione;
 
@@ -44,6 +44,20 @@ pub(crate) fn scan_of_row(r: &Value, nativo: bool) -> Option<Scan> {
     } else {
         (f(0)? as u64, f(1)? as u64, None, None)
     };
+    let (mob, mob_unit) = match r.at(21).filter(|v| !v.is_null()) {
+        Some(v) => {
+            let unit = match v.at(1).and_then(Value::str) {
+                Some("k0") => 1,
+                Some("ms") => 2,
+                _ => 0,
+            };
+            match v.at(0).and_then(Value::f64) {
+                Some(x) if unit != 0 => (x as f32, unit),
+                _ => (f32::NAN, 0),
+            }
+        }
+        None => (f32::NAN, 0),
+    };
     Some(Scan {
         start,
         end,
@@ -66,7 +80,8 @@ pub(crate) fn scan_of_row(r: &Value, nativo: bool) -> Option<Scan> {
         path,
         charge: f(18).map(|v| v as i64),
         native: s(19).unwrap_or_default(),
-        kind: s(20),
-        mob: r.at(21).filter(|v| !v.is_null()).and_then(|v| Some((v.at(0).and_then(Value::f64)?, v.at(1).and_then(Value::str)?.to_string()))),
+        kind: r.at(20).and_then(Value::str).and_then(|k| KINDS.iter().position(|x| *x == k)).map_or(0, |i| i as u8 + 1),
+        mob,
+        mob_unit,
     })
 }

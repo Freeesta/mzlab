@@ -62,7 +62,7 @@ fn index_of(bytes: Vec<u8>) -> (Index<Vec<u8>>, Vec<u8>) {
 }
 
 fn kinds(scans: &[Scan]) -> Vec<Option<&str>> {
-    scans.iter().map(|s| s.kind.as_deref()).collect()
+    scans.iter().map(|s| s.kind_name()).collect()
 }
 
 fn acq_of(bytes: Vec<u8>) -> String {
