@@ -210,7 +210,17 @@ fn pick_plain(a: &[Cand]) -> Pick {
         (b.us, b.ds, b.pol.clone(), b.id, b.rt)
     };
     let (l_ud, l_du) = logs(us, ds);
-    Pick { us, ds, pol, id, rt, l_ud, l_du, sorbent: None, discordant: false }
+    Pick {
+        us,
+        ds,
+        pol,
+        id,
+        rt,
+        l_ud,
+        l_du,
+        sorbent: None,
+        discordant: false,
+    }
 }
 
 /// Whether the other sorbents point the other way for the ion (`discordant`).
@@ -266,9 +276,21 @@ fn pick_same_sorbent(
     let mut pairs = Vec::new();
     for t in a {
         for sb in sorbents {
-            let (u, d) = (get(&t.pol, sites[0], sb, t.id), get(&t.pol, sites[1], sb, t.id));
+            let (u, d) = (
+                get(&t.pol, sites[0], sb, t.id),
+                get(&t.pol, sites[1], sb, t.id),
+            );
             if u > 0.0 && d > 0.0 {
-                pairs.push((Cand { us: u, ds: d, pol: t.pol.clone(), id: t.id, rt: t.rt }, sb.clone()));
+                pairs.push((
+                    Cand {
+                        us: u,
+                        ds: d,
+                        pol: t.pol.clone(),
+                        id: t.id,
+                        rt: t.rt,
+                    },
+                    sb.clone(),
+                ));
             }
         }
     }
@@ -319,7 +341,17 @@ fn pick_same_sorbent(
 fn pick_one_site(a: &[Cand], us: bool) -> Pick {
     let b = first_max(a, |t| if us { t.us } else { t.ds });
     let (au, ad) = if us { (b.us, 0.0) } else { (0.0, b.ds) };
-    Pick { us: au, ds: ad, pol: b.pol.clone(), id: b.id, rt: b.rt, l_ud: None, l_du: None, sorbent: None, discordant: false }
+    Pick {
+        us: au,
+        ds: ad,
+        pol: b.pol.clone(),
+        id: b.id,
+        rt: b.rt,
+        l_ud: None,
+        l_du: None,
+        sorbent: None,
+        discordant: false,
+    }
 }
 
 /// `identity_gradient`: one row per identity of `identities` that has features in `fi`, and the counts. `same_sorbent` = the campaign's setting when `None`.
@@ -366,13 +398,26 @@ pub fn identity_gradient(
             .present
             .unwrap_or((a.iter().any(|t| t.us > 0.0), a.iter().any(|t| t.ds > 0.0)));
         let (status, p) = match (is_us, is_ds) {
-            (true, true) if same => ("both", pick_same_sorbent(&a, &by_sb, &c.sorbents, sites, fold_threshold)),
+            (true, true) if same => (
+                "both",
+                pick_same_sorbent(&a, &by_sb, &c.sorbents, sites, fold_threshold),
+            ),
             (true, true) => ("both", pick_plain(&a)),
             (true, false) => ("US_only", pick_one_site(&a, true)),
             (false, true) => ("DS_only", pick_one_site(&a, false)),
             (false, false) => (
                 "none",
-                Pick { us: 0.0, ds: 0.0, pol: a[0].pol.clone(), id: a[0].id, rt: a[0].rt, l_ud: None, l_du: None, sorbent: None, discordant: false },
+                Pick {
+                    us: 0.0,
+                    ds: 0.0,
+                    pol: a[0].pol.clone(),
+                    id: a[0].id,
+                    rt: a[0].rt,
+                    l_ud: None,
+                    l_du: None,
+                    sorbent: None,
+                    discordant: false,
+                },
             ),
         };
         let abs_area = match status {
@@ -403,7 +448,11 @@ pub fn identity_gradient(
 fn summarize(rows: &[GradientRow], fold: f64, sites: [&str; 2]) -> Result<GradientSummary> {
     let thr = fold.log2();
     let both: Vec<&GradientRow> = rows.iter().filter(|r| r.status == "both").collect();
-    let count = |f: &dyn Fn(f64) -> bool| both.iter().filter(|r| r.log2fc_us_ds.is_some_and(f)).count();
+    let count = |f: &dyn Fn(f64) -> bool| {
+        both.iter()
+            .filter(|r| r.log2fc_us_ds.is_some_and(f))
+            .count()
+    };
     let s = GradientSummary {
         fold_threshold: fold,
         n_both: both.len(),
@@ -441,7 +490,10 @@ pub fn feature_cloud_gradient(
     Ok(feats
         .iter()
         .map(|f| {
-            let (u, d) = (area_of(&f.pol, sites[0], f.id), area_of(&f.pol, sites[1], f.id));
+            let (u, d) = (
+                area_of(&f.pol, sites[0], f.id),
+                area_of(&f.pol, sites[1], f.id),
+            );
             let (status, l, abs) = if u > 0.0 && d > 0.0 {
                 ("both", Some((u / d).log2()), u.max(d))
             } else if u > 0.0 {

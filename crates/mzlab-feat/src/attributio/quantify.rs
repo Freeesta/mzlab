@@ -87,9 +87,8 @@ fn is_recommended(cal: &Frame, r: usize, k: Option<usize>) -> bool {
 fn curve_row(cal: &Frame, pol: &str, name: &str) -> Option<usize> {
     let (kp, kn) = (cal.col("polarity")?, cal.col("compound_name")?);
     let kr = cal.col("recommended");
-    (0..cal.len()).find(|&r| {
-        is_recommended(cal, r, kr) && cal.cell(r, kp) == pol && cal.cell(r, kn) == name
-    })
+    (0..cal.len())
+        .find(|&r| is_recommended(cal, r, kr) && cal.cell(r, kp) == pol && cal.cell(r, kn) == name)
 }
 
 /// `quantify_lvl1`: one row per Level 1 feature and per site (`sites`, the sites of the campaign when `None`) where it is DETECTED with a positive area.
@@ -108,7 +107,11 @@ pub fn quantify_lvl1(
             &own
         }
     };
-    let r2_min = c.quantification.get("r2_min").and_then(|v| v.as_f64()).unwrap_or(0.90);
+    let r2_min = c
+        .quantification
+        .get("r2_min")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.90);
     let loq_col = c
         .quantification
         .get("loq_area_column")
@@ -135,7 +138,10 @@ pub fn quantify_lvl1(
             continue;
         };
         let r2 = num("r2").unwrap_or(f64::NAN);
-        let adduct = cal.col("adduct").map_or("", |k| cal.cell(cr, k)).to_string();
+        let adduct = cal
+            .col("adduct")
+            .map_or("", |k| cal.cell(cr, k))
+            .to_string();
         let area_loq = num(&loq_col);
         for s in sites {
             if !has_site(c, table, s, &f.pol) {
@@ -187,7 +193,11 @@ pub fn quantify_lvl1_environmental(
         r.env = Some(EnvPart {
             conc_env_ng_l: r.conc_ng_ml / ef * 1000.0,
             ef_spe: ef,
-            note: if r.below_loq == Some(true) { NOTE_BELOW } else { NOTE_ESTIMATE },
+            note: if r.below_loq == Some(true) {
+                NOTE_BELOW
+            } else {
+                NOTE_ESTIMATE
+            },
         });
     }
     let warning = format!(

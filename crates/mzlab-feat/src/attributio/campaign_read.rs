@@ -68,7 +68,12 @@ impl Campaign {
         k.rt_logp_watchlist = diag
             .get("rt_logp_watchlist")
             .and_then(Value::as_array)
-            .map(|a| a.iter().filter_map(Value::as_str).map(str::to_lowercase).collect())
+            .map(|a| {
+                a.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_lowercase)
+                    .collect()
+            })
             .unwrap_or_default();
         k.read_sites(&cfg)?;
         Ok(k)

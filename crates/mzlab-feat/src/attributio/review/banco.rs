@@ -267,7 +267,7 @@ pub fn review_json(io: &Io, root: &str, pol: &str, id: i64) -> Result<String> {
         ("decision", last),
         ("decision_rows", J::Num(n_rows as f64)),
         ("decisions_path", J::Str(b.decisions_path().0)),
-        ("libraries", libraries_json(&lib)),
+        ("libraries", libraries_json(lib)),
         ("has_ms2", J::Bool(mgf.is_some())),
         ("warnings", J::strs(&b.warnings)),
     ]);

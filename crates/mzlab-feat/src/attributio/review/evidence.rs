@@ -232,12 +232,11 @@ fn caption(r: Option<&Reference>, dm: f64, d: &DecisionTable, row: usize) -> Vec
 fn draw(
     f: &Feature,
     v: &View,
-    prec: f64,
+    (prec, tol): (f64, f64),
     cand: Option<usize>,
     p: &Proposal,
     d: &DecisionTable,
     row: usize,
-    tol: f64,
 ) -> (String, Vec<Vec<String>>) {
     let refs = &p.evidence.references;
     let r = cand.map(|k| &refs[k]);
@@ -405,7 +404,7 @@ pub fn export_evidence(io: &Io, root: &str) -> Result<Vec<(String, String)>> {
             missing.push(format!("{} {}", f.pol, f.id));
         }
         let prec = mgf.as_ref().map_or(f.mz.unwrap_or(0.0), |m| m.prec);
-        let (svg_text, plot_rows) = draw(f, v, prec, cand, &p, &d, dec.row, b.settings.tol_da);
+        let (svg_text, plot_rows) = draw(f, v, (prec, b.settings.tol_da), cand, &p, &d, dec.row);
         let base = format!(
             "{}_{}{}_{}",
             b.campaign.id,
