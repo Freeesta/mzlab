@@ -681,7 +681,7 @@ function ctl(p) {
     if (isF) mChips.push(I18N.t("corr.file.short", { label: (E.files[+mc.now.slice(1)] || {}).label || "" })); else if (mc.now === "tract") mChips.push(I18N.t("corr.tract")); else if (mc.now === "auto") mChips.push(I18N.t("corr.snip"));
     mChips.push(...MAPPA.optChips(p));
     const mPar = inner => `<span class="cpar"><button class="bt cparl" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.cpar.titleMap")}" aria-label="${I18N.t("ctl.cpar.map")}">${I18N.t("ctl.cpar.map.lab")} &#9662;</button>${mChips.map(t => `<button class="chip" type="button" data-a="cparchip" title="${I18N.t("ctl.cpar.titleMap")}">${EH(t)}</button>`).join("")}<span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span></span>`;
-    c.innerHTML = G(I18N.t("ctl.map.grp.file"), `<select data-o="k" aria-label="${I18N.t("ctl.map.file")}" title="${fol ? I18N.t("ctl.map.follow") : I18N.t("ctl.map.file")}">${sf.map(x => opt(x.k, fol ? E.cur : p.k, x.label)).join("")}</select><span class="muted mzlv" title="${I18N.t("ctl.map.level.title")}">MS<sup>${lvf}</sup></span>`) +
+    c.innerHTML = G(I18N.t("ctl.map.grp.file"), `<span class="mzfs">${mapNav(p, sf, fol, isF ? +mc.now.slice(1) : null, -1)}<select data-o="k" aria-label="${I18N.t("ctl.map.file")}" title="${fol ? I18N.t("ctl.map.follow") : I18N.t("ctl.map.file")}">${sf.map(x => opt(x.k, fol ? E.cur : p.k, x.label)).join("")}</select>${mapNav(p, sf, fol, isF ? +mc.now.slice(1) : null, 1)}</span><span class="muted mzlv" title="${I18N.t("ctl.map.level.title")}">MS<sup>${lvf}</sup></span>`) +
       mCorr + corrInfo(p) +
       mPar(`<label class="muted" title="${isF ? "" : I18N.t("ctl.map.norm.need") + " "}${I18N.t("ctl.map.norm.title")}">${I18N.t("ctl.map.norm.lab")} <select data-o="norm"${isF ? "" : " disabled"}>${opt("abs", p.norm, I18N.t("ctl.map.norm.abs"))}${opt("max", p.norm, I18N.t("ctl.map.norm.max"))}${opt("tic", p.norm, I18N.t("ctl.map.norm.tic"))}</select></label><span data-mzslot="diff"></span>` +
         `<details class="mzcol"${p._colOpen ? " open" : ""}><summary>${I18N.t("ctl.map.colors")}</summary><label class="muted" title="${I18N.t("ctl.map.scale.title")}">${I18N.t("ctl.map.scale.lab")} <select data-o="scale">${opt("lin", p.scale, I18N.t("ctl.map.scale.lin"))}${opt("sqrt", p.scale, I18N.t("ctl.map.scale.sqrt"))}${opt("log", p.scale, I18N.t("ctl.map.scale.log"))}${opt("gamma", p.scale, I18N.t("ctl.map.scale.gamma"))}</select></label>` +
@@ -714,7 +714,7 @@ function ctl(p) {
         ...(cands.length ? ["-"] : []), { label: (p.link ? "" : "\u2713 ") + I18N.t("spec.follow.menu.none"), fn: () => { freezeSpec(p); uiSave(); } }]);
     };
   }
-  if (window.BANCO) BANCO.decorate(p, c);
+  if (window.BANCO) BANCO.decorate(p, c); mapNavWire(p, c);
   if (window.MAPPA && p.type === "map") MAPPA.decorate(p, c);
   const cpB = c.querySelector('[data-a="cpar"]'), cpP = c.querySelector(".cpop");
   const parPlace = () => { if (!cpB || !cpP || cpP.hidden) return; const op = cpP.offsetParent || p.el, pr = op.getBoundingClientRect(), br = cpB.getBoundingClientRect(); cpP.style.left = Math.max(4, Math.min(br.left - pr.left, op.clientWidth - cpP.offsetWidth - 6)) + "px"; cpP.style.top = br.bottom - pr.top + 4 + "px"; };
@@ -964,3 +964,15 @@ function splitPanel(p) {
   relayout(); fitHost(); reveal(prev);
 }
 
+
+/** ◀ ▶ next to the file menu of the 2D map: the neighbouring file of the menu, disabled (not hidden) when there is none; the reference of the difference is jumped. */
+function mapNav(/** @type {Pannello} */ p, /** @type {any[]} */ files, /** @type {boolean} */ fol, /** @type {number | null} */ ref, /** @type {number} */ d) {
+  const t = I18N.t(d < 0 ? "ctl.map.prev" : "ctl.map.next");
+  return `<button class="bt mzstep" type="button" data-a="mapnav" data-d="${d}"${MAPVICINO.vicino(files.map(x => x.k), fol ? E.cur : p.k, d, ref) == null ? " disabled" : ""} title="${t}" aria-label="${t}">${d < 0 ? "&#9664;" : "&#9654;"}</button>`;
+}
+function mapNavWire(/** @type {Pannello} */ p, /** @type {HTMLElement} */ c) {      // same reference and same window: the zoom belongs to the panel
+  c.querySelectorAll('[data-a="mapnav"]').forEach(b => { /** @type {HTMLElement} */ (b).onclick = () => {
+    const fol = follow(p.tab || E.tab), mc = MAPPA.corrState(p), k = MAPVICINO.vicino(tabFiles(p.tab || E.tab).map(x => x.k), fol ? E.cur : p.k, +(/** @type {HTMLElement} */ (b).dataset.d || 0), mc.now[0] === "f" ? +mc.now.slice(1) : null);
+    if (k == null) return; p.k = k; if (fol) { activeFile(k); return; } ctl(p); draw(p);
+  }; });
+}
