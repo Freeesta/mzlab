@@ -215,6 +215,14 @@ def scrivi(dst, text):
     dst = Path(dst); b = text.encode("utf-8")
     if dst.exists() and dst.read_bytes() == b: return
     t = dst.with_name(f".{dst.name}.{os.getpid()}.tmp"); t.write_bytes(b); os.replace(t, dst)
+def build_feat(static, env=None):
+    """Run tools/build_feat_wasm.sh one process at a time: it shares cargo's target/ and its artefacts, so parallel tests would clash."""
+    import fcntl, subprocess, tempfile
+    with open(os.path.join(tempfile.gettempdir(), "mzlab-build-feat.lock"), "w") as lk:
+        fcntl.flock(lk, fcntl.LOCK_EX)
+        subprocess.run(["tools/build_feat_wasm.sh", str(static)], cwd=ROOT, check=True, env=env, capture_output=True)
+
+
 # tools/verifica.py runs several tests at once (MZLAB_E2E_PARALLEL=1 / QQQ_E2E_PARALLEL=1): then every Run takes a free port and its own work folder,
 # because a few tests share the fixed ones (they were written to run one after the other)
 PARALLEL = get_env("E2E_PARALLEL") == "1"
