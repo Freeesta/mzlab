@@ -4,6 +4,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, round, Out, Value};
 
 use super::confronto::{match_spectrum, Evidence, Peak, Pol, Report, Tol};
+use super::prior::{prior_of, write_prior, Prior};
 use super::siti::sites;
 use crate::chem::grafo::Mol;
 
@@ -54,7 +55,7 @@ fn ints(o: &mut Out, v: &[usize]) {
     o.raw("]");
 }
 
-fn write(r: &Report, smiles: &str, transform: &str) -> String {
+fn write(r: &Report, smiles: &str, transform: &str, prior: Option<&[Prior]>) -> String {
     let mut o = Out::default();
     o.raw("{\"format\":\"posiz\",\"version\":1,\"parent\":")
         .str(smiles)
@@ -118,7 +119,11 @@ fn write(r: &Report, smiles: &str, transform: &str) -> String {
         .str(r.sublevel)
         .raw(",\"why\":")
         .str(r.why)
-        .raw("}}");
+        .raw("}");
+    if let Some(p) = prior {
+        write_prior(&mut o, p);
+    }
+    o.raw("}");
     o.0
 }
 
@@ -133,14 +138,32 @@ pub fn positions_json(
     ppm: bool,
     positive: bool,
 ) -> Result<String> {
+    positions_prior_json(smiles, transform, peaks_json, tol, ppm, positive, "")
+}
+
+/// `positions_json` with the `reatt/1` of the same parent (`reatt_json`, empty = none): the report also carries `prior` (the f(−) of every site, «Prev.»),
+/// identical otherwise. A change without a prior (`-CH2`, `+O-2H`) gets `"prior":[]`. Errors also `error.posiz.prior` (`reason`).
+pub fn positions_prior_json(
+    smiles: &str,
+    transform: &str,
+    peaks_json: &str,
+    tol: f64,
+    ppm: bool,
+    positive: bool,
+    reatt_json: &str,
+) -> Result<String> {
     if !(tol.is_finite() && tol > 0.0) {
         return Err(Error::new("error.posiz.tol"));
     }
     let mol = Mol::parse(smiles)?;
     let peaks = parse_peaks(peaks_json)?;
     let all = sites(&mol, transform)?;
+    let prior = match reatt_json.trim() {
+        "" => None,
+        t => Some(prior_of(&all, mol.atoms.len(), t)?),
+    };
     let tol = if ppm { Tol::Ppm(tol) } else { Tol::Da(tol) };
     let pol = if positive { Pol::Pos } else { Pol::Neg };
     let r = match_spectrum(&mol, &all, &peaks, tol, pol)?;
-    Ok(write(&r, smiles, transform))
+    Ok(write(&r, smiles, transform, prior.as_deref()))
 }
