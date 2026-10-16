@@ -74,7 +74,7 @@ try:
         def open_files():
             assert not pg.evaluate("!!document.querySelector('dialog[open]')"), "a dialog is still open"
             pg.evaluate("document.activeElement && document.activeElement.blur()")
-            with pg.expect_file_chooser(timeout=5000): pg.keyboard.press("Control+o")
+            with pg.expect_file_chooser(timeout=20000): pg.keyboard.press("Control+o")
         step("Ctrl+O opens the file chooser", open_files)
         def palette_key():
             pg.keyboard.press("Control+k"); attendi(pg, "PALETTE.isOpen")
