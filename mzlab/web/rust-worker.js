@@ -6,7 +6,7 @@ import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
 import { limpia } from "./pulizia.js";
-import { infoDi } from "./manifesto.js";
+import { infoDi, nuovo } from "./manifesto.js";
 import { createPool, poolSize, makeGate } from "./idxpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { createNativo } from "./rust-nativo.js";
@@ -93,7 +93,7 @@ const slotOf = n => { if (!lrSlot.has(n)) lrSlot.set(n, LR_BASE + ++lrN); return
 const SMALL = (() => { try { return /iPad|iPhone|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); } catch (_) { return false; } })();
 const gate = makeGate(poolSize(SMALL, navigator.hardwareConcurrency));                // the workers of the pool count against it (2 on iPad/phone)
 const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), module: wasmModule, gate, size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ op: "notice", key }) }));
-const jerr = key => { throw JSON.stringify({ error_key: key, params: {} }); };
+const jerr = (key, params = {}) => { throw JSON.stringify({ error_key: key, params }); };
 async function fileOf(name) {
   if (!lrFile.has(name)) { const f = await ARCH.get("files", name); if (!f) jerr("err.session.fileNotFound"); lrFile.set(name, f); }
   return lrFile.get(name);
@@ -175,7 +175,11 @@ async function lrPut(m) {                                              // an upl
   if (!m.nat) await ARCH.ensureRoom(m.blob.size, m.name);                 // room first (error.quota with the MB needed and free), never write hoping; held for the file and its index until lr_index ends
   idxPool().cancel(m.name);
   engine.close(slotOf(m.name));
-  await ARCH.remove("idx", m.name + ".mzidx"); await ARCH.remove("idx", m.name + ".cen.mzidx"); await tilesDrop(m.name, null);
+  for (const ix of [m.name + ".mzidx", m.name + ".cen.mzidx"]) {         // an index of a newer program stays where it is (lr_index then answers error.newerFormat)
+    const cur = await ARCH.get("idx", ix);
+    if (!(cur && nuovo("idx", await safe(() => infoDi("idx", cur))))) await ARCH.remove("idx", ix);
+  }
+  await tilesDrop(m.name, null);
   let f;
   if (m.nat) {                                                        // a sample of a maker's file: its members go to OPFS (the progress is the copy), the file of the program is the stub
     f = await nativo.put(m, frac => postMessage({ op: "progress", id: m.id, frac, phase: "read" }));
@@ -206,6 +210,8 @@ async function lrOp(m) {
     }
     case "lr_put": return lrPut(m);
     case "lr_index": try {                                                    // the scan table (Rust), the index (a short-lived worker of the pool), then the index is opened
+      const kept = await ARCH.get("idx", m.name + ".mzidx"), keptInfo = kept && await safe(() => infoDi("idx", kept));
+      if (nuovo("idx", keptInfo)) jerr("error.newerFormat", { file: m.name, version: keptInfo.versione_formato });      // an index of a newer program stays as it is: no new one is built over it
       const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.indexJob(m.name), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
       const onProgress = p => postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase });
       const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, onProgress }

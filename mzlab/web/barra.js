@@ -47,6 +47,8 @@ const BARRA = (() => {
   const storageKey = () => (isHrMode() ? K_HR : K_LR);
   const defaultW = () => (isHrMode() ? 340 : 300);
   const inData = () => typeof S !== "undefined" && S.view === "data" && !!S.sess && !S.adding;
+  /** A text field (or an open dialog) keeps its own keys: Alt+Shift+arrows select words there, like Ctrl/Cmd+Z undoes text. @param {EventTarget | null} t */
+  const inCampo = t => !!document.querySelector("dialog[open]") || !!(t instanceof Element && t.closest("input,textarea,select,[contenteditable='true'],[contenteditable='']"));
   // context «theory»: the bar shows the commands of the Teoria (window.TCMD of the same-origin iframe), not the ones of the data
   let _ctx = "data";
   const inTheory = () => typeof S !== "undefined" && S.view === "theory";
@@ -901,7 +903,7 @@ const BARRA = (() => {
         return;
       }
       // side of the drawer from the keyboard
-      if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowLeft" || e.key === "ArrowRight") && inData()) {
+      if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowLeft" || e.key === "ArrowRight") && inData() && !inCampo(e.target)) {
         e.preventDefault(); e.stopPropagation();
         setSide(e.key === "ArrowLeft" ? "left" : "right");
         return;

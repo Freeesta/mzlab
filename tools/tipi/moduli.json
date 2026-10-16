@@ -34,6 +34,7 @@
     "../../mzlab/web/mappa-estrai.js",
     "../../mzlab/web/mappa3d.js",
     "../../mzlab/web/migra.js",
+    "../../mzlab/web/export-pezzi.js",
     "../../mzlab/web/origine.js",
     "../../mzlab/web/perf.js",
     "../../mzlab/web/pfas-calc.js",
