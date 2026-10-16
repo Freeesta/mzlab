@@ -396,6 +396,7 @@
     let pvT = 0, OCLp = null;
     const ocl = () => (OCLp = OCLp || import(new URL("vendor/openchemlib.js", ctx().base).href));
     const smilesInfo = async t => { try { const m = (await ocl()).Molecule.fromSmiles(t); return { mol: m, formula: MOLUI.hillOf(m.getMolecularFormula().formula) }; } catch (_) { return null; } };
+    /** @type {{ smiles: string, note: string } | null} */ let drawnPartial = null;       // set by «Use this structure» for a drawing with a delta or an uncertain position; any edit of the fields drops it
     const preview = () => {
       clearTimeout(pvT);
       pvT = setTimeout(async () => {
@@ -407,14 +408,15 @@
         let info = null;
         if (smi) info = await smilesInfo(smi);
         let q = mol || (info && info.formula) || smi;       // formula missing: the one computed from the SMILES (OpenChemLib)
-        if (!mol && info && !$("#tp-mol").value.trim()) { $("#tp-mol").value = info.formula; }
+        if (!mol && info && !$("#tp-mol").value.trim() && !(drawnPartial && drawnPartial.smiles === smi)) { $("#tp-mol").value = info.formula; }
         try {
           const r = await call("formula_info", q, ad);
           const mzNew = r.ok ? +r.mz : 0;
           if (mzNew !== parentMz) { parentMz = mzNew; if (parentMz) estimateLr(); }
-          $("#tp-prev").innerHTML = r.ok ? `${esc(r.formula)} · M ${r.neutral} · ${esc(ad)} <i>m/z</i> ${r.mz}` : `<span class="err">${esc(r.error)}</span>`;
+          const pn = drawnPartial && drawnPartial.smiles === smi ? ` · ${esc(drawnPartial.note)}` : "";       // a drawing with a delta or an uncertain position: a candidate, not an identification
+          $("#tp-prev").innerHTML = r.ok ? `${esc(r.formula)} · M ${r.neutral} · ${esc(ad)} <i>m/z</i> ${r.mz}${pn}` : `<span class="err">${esc(r.error)}</span>`;
           if (!r.ok) FIELD().set([$(mol ? "#tp-mol" : "#tp-smi")], $("#tp-prev"));
-          if (r.ok && mol && info) $("#tp-warn").textContent = MOLUI.mismatchText(r.formula, info.formula);       // compositions, not strings: the order of the elements is irrelevant
+          if (r.ok && mol && info && !pn) $("#tp-warn").textContent = MOLUI.mismatchText(r.formula, info.formula);       // compositions, not strings: the order of the elements is irrelevant
         } catch (e) { $("#tp-prev").textContent = ""; }
       }, 350);
     };
@@ -431,7 +433,7 @@
       if (!t) { el.innerHTML = ""; return; }
       ocl().then(OCL => { el.innerHTML = `<div class="struct">${MOLUI.svg(OCL.Molecule.fromSmiles(t).toSVG(300, 170))}</div>`; }).catch(() => { el.innerHTML = ""; });
     }
-    $("#tp-mol").oninput = preview; $("#tp-smi").oninput = preview; $("#tp-add").onchange = preview;
+    $("#tp-mol").oninput = () => { drawnPartial = null; preview(); }; $("#tp-smi").oninput = () => { drawnPartial = null; preview(); }; $("#tp-add").onchange = preview;
 
     // ---- name -> formula / SMILES from the curated list data/composti.csv (already loaded with mzFinder; nothing is downloaded here)
     let LIST = null;
@@ -511,7 +513,13 @@
     /** @type {any} */ (document.getElementById("tp-draw-use")).onclick = async () => {
       let t = ""; try { t = await window.TPDraw.smiles(); } catch (e) { dsay("Could not read the drawing: " + String((e && e.message) || e)); return; }
       if (!t) { toast("Nothing drawn yet."); return; }
-      $("#tp-smi").value = t; $("#tp-mol").value = ""; preview(); back();
+      let p = null; try { p = await window.TPDraw.partial(); } catch (_) { /* plain drawing */ }
+      drawnPartial = null; let f = "";
+      if (p && (p.delta || p.positionUnknown)) {       // brackets with a delta and/or an attachment to one of several atoms: formula and m/z of the SMILES with the delta
+        f = (p.info && p.info.formula) || "";
+        drawnPartial = { smiles: t, note: (p.delta ? `Δ ${p.delta}, ` : "") + "position uncertain" };
+      }
+      $("#tp-smi").value = t; $("#tp-mol").value = f; preview(); back();
     };
     startWorker().then(async () => { $("#tp-tr").value = await callRaw("default_transformations"); if (typeof TPTR !== "undefined") TPTR.mount($("#tp-tr"), callRaw); }).catch(e => msg(String(e.message || e), true));
 
