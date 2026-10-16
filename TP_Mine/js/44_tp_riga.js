@@ -9,7 +9,7 @@
 
   /**
    * @typedef {{ file: string, group?: string, time?: number | null, rt: number[], y: number[] }} TpXic
-   * @typedef {{ kind: "ms1" | "ms2" | "mirror", mz: number[], y: number[], ref?: { mz: number[], y: number[] }, iso?: { obs?: { mz: number[], y: number[] }, exp?: { mz: number[], y: number[] } } }} TpSpec
+   * @typedef {{ kind: "ms1" | "ms2" | "mirror", mz: number[], y: number[], ref?: { mz: number[], y: number[] }, iso?: { obs?: { mz: number[], y: number[] }, exp?: { mz: number[], y: number[] } }, prec?: number, label?: string }} TpSpec
    * @typedef {{ file: string, type?: string, time?: number | null, area?: number | null, norm?: number | null, state?: string, apexRt?: number | null, lo?: number | null, hi?: number | null }} TpSample
    * @typedef {{ ok: boolean, text: string }} TpProof
    * @typedef {{ name?: string, formula?: string, ppm?: number | null, adduct?: string, source?: string, level?: string | number, pred?: number, proofs?: TpProof[] }} TpCand
@@ -17,7 +17,7 @@
    * @typedef {{ title?: string, level?: string | number, pred?: number, decided?: string | number | null, words?: string, actions?: TpAction[], xic?: TpXic[], apexRt?: number | null, lo?: number | null, hi?: number | null,
    *   spectrum?: TpSpec | null, spectrum2?: TpSpec | null, line?: string, samples?: TpSample[], identity?: { neutral?: number | string | null, adduct?: string, candidates?: TpCand[] } | null,
    *   quality?: { shape?: number | string | null, snr?: number | null, fwhm?: number | null, flags?: string[], isoM1?: number | string | null, blank?: any, t0?: any, rejected?: string[] } | null,
-   *   decide?: { series: any, key: string, level?: string | number | null, name?: string }, missing?: Record<string, string> }} TpRiga
+   *   decide?: { series: any, key: string, level?: string | number | null, name?: string }, ms2text?: string, missing?: Record<string, string> }} TpRiga
    */
 
   const CSS = `
@@ -30,7 +30,10 @@
 .tp .tpr-ch svg .tr{fill:none;stroke-width:1.4}.tp .tpr-ch svg .tr-blank{stroke:var(--muted);stroke-dasharray:4 3}.tp .tpr-ch svg .tr-t0{stroke:var(--ink)}
 .tp .tpr-ch svg .band{fill:var(--sel);stroke:var(--line)}.tp .tpr-ch svg .apex{stroke:var(--accent);stroke-width:1;stroke-dasharray:2 2}
 .tp .tpr-ch svg .st{stroke:var(--ink);stroke-width:1.6}.tp .tpr-ch svg .st-ref{stroke:var(--muted)}.tp .tpr-ch svg .iso-o{fill:var(--accent)}.tp .tpr-ch svg .iso-e{fill:var(--panel);stroke:var(--ink);stroke-width:1}
-.tp .tpr-ch svg .zero{stroke:var(--line);stroke-width:1}
+.tp .tpr-ch svg .zero{stroke:var(--line);stroke-width:1}.tp .tpr-ch svg .st-prec{stroke:var(--accent);stroke-width:2.4;stroke-dasharray:4 2}
+.tp .tpr-ms2t{margin:6px 0 0;font-size:12px}.tp .tpr-ms2t .tpr-txt{display:block;user-select:text;-webkit-user-select:text;white-space:normal;overflow-wrap:anywhere;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--panel)}
+.tp .tpr-ms2t button{box-sizing:border-box;cursor:pointer;min-height:24px;min-width:24px;margin-top:3px;padding:0 10px;font:inherit;font-size:12px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink)}
+@media(pointer:coarse){.tp .tpr-ms2t button{min-height:40px}}
 .tp .tpr-ch .tdbtn{margin:2px 0}
 .tp .tpr-leg{display:flex;flex-wrap:wrap;gap:0 12px;font-size:11px;color:var(--muted);margin:0}.tp .tpr-leg span{display:inline-flex;align-items:center;gap:4px;min-height:18px}
 .tp .tpr-leg i{display:inline-block;width:16px;height:0;border-top:3px solid currentColor}.tp .tpr-leg i.d{border-top-style:dashed}
@@ -133,6 +136,7 @@
     const sp = second ? m.spectrum2 : m.spectrum;
     if (!sp || !sp.mz || !sp.mz.length) { none(box, "Spectrum", m.missing && m.missing.spectrum); return; }
     const mirror = sp.kind === "mirror" && sp.ref && sp.ref.mz.length > 0, all = [...sp.mz, ...(mirror && sp.ref ? sp.ref.mz : []), ...(sp.iso && sp.iso.exp ? sp.iso.exp.mz : [])];
+    if (fin(sp.prec)) all.push(/** @type {number} */ (sp.prec));
     const lo = Math.min(...all), hi = Math.max(...all), pad = (hi - lo || 1) * 0.06, a = lo - pad, b = hi + pad;
     const top = M.t, bot = SH - M.b, mid = mirror ? (top + bot) / 2 : bot, up = mid - top;
     const X = (/** @type {number} */ v) => M.l + (v - a) / (b - a) * (SW - M.l - M.r);
@@ -145,11 +149,14 @@
       if (isoE) { const ye = norm(isoE.y); isoE.mz.forEach((v, i) => { const h = ye[i] * up * 0.92; s += `<rect class="iso-e" x="${(X(v) - 3.5).toFixed(1)}" y="${(mid - h).toFixed(1)}" width="7" height="${h.toFixed(1)}"/>`; }); }
       if (isoO) { const y2 = norm(isoO.y); isoO.mz.forEach((v, i) => { const h = y2[i] * up * 0.92; s += `<rect class="iso-o" x="${(X(v) - 2).toFixed(1)}" y="${(mid - h).toFixed(1)}" width="4" height="${h.toFixed(1)}"/>`; }); }
     }
+    if (fin(sp.prec)) { const px = X(/** @type {number} */ (sp.prec)).toFixed(1); s += `<line class="st st-prec" x1="${px}" x2="${px}" y1="${mid}" y2="${top}"/><text x="${px}" y="${top + 8}" text-anchor="${+px > SW / 2 ? "end" : "start"}">precursor ${esc(/** @type {number} */ (sp.prec).toFixed(2))}</text>`; }
+    if (sp.kind === "ms2" && fin(sp.prec)) s += `<text x="${M.l - 3}" y="${top + 8}" text-anchor="end">${esc(sci(Math.max(...sp.y)))}</text><text x="${M.l - 3}" y="${mid}" text-anchor="end">0</text>`;
     const order = yo.map((v, i) => i).sort((p, q) => yo[q] - yo[p]).slice(0, 4);
     for (const i of order) s += `<text x="${X(sp.mz[i]).toFixed(1)}" y="${(mid - yo[i] * up * 0.92 - 2).toFixed(1)}" text-anchor="middle">${esc(sp.mz[i].toFixed(sp.kind === "ms1" ? 4 : 2))}</text>`;
     s += `<text x="${M.l}" y="${SH - 8}">${esc(a.toFixed(1))}</text><text x="${SW - M.r}" y="${SH - 8}" text-anchor="end">${esc(b.toFixed(1))} m/z</text></svg>`;
-    const title = sp.kind === "ms1" ? "MS1 at the apex" : mirror ? "MS2 against the reference" : "MS2";
+    const title = sp.label || (sp.kind === "ms1" ? "MS1 at the apex" : mirror ? "MS2 against the reference" : "MS2");
     const rows = /** @type {string[][]} */ ([]);
+    if (fin(sp.prec)) rows.push(["precursor", /** @type {number} */ (sp.prec).toFixed(4), ""]);
     sp.mz.slice(0, 300).forEach((v, i) => rows.push([mirror ? "observed" : sp.kind === "ms1" ? "observed" : "MS2", v.toFixed(4), String(+(yo[i] * 100).toFixed(1))]));
     if (mirror && sp.ref) { const yr = norm(sp.ref.y); sp.ref.mz.slice(0, 300).forEach((v, i) => rows.push(["reference", v.toFixed(4), String(+(yr[i] * 100).toFixed(1))])); }
     if (isoE) { const ye = norm(isoE.y); isoE.mz.forEach((v, i) => rows.push(["expected isotope", v.toFixed(4), String(+(ye[i] * 100).toFixed(1))])); }
@@ -197,7 +204,18 @@
     const a = document.createElement("div"), b = document.createElement("div"); a.className = b.className = "tpr-ch"; g.append(a, b);
     xicChart(a, m); specChart(b, m);
     if (m.spectrum2 && m.spectrum2.mz && m.spectrum2.mz.length) { const c = document.createElement("div"); c.className = "tpr-ch"; g.appendChild(c); specChart(c, m, true); }
+    if (m.ms2text) ms2Text(panel, m.ms2text);
     if (m.line) { const p = document.createElement("p"); p.className = "tpr-line"; p.textContent = m.line; panel.appendChild(p); }
+  }
+
+  /** the sentence of the fragments found: one selectable text with a button that copies it @param {HTMLElement} panel @param {string} text */
+  function ms2Text(panel, text) {
+    const d = document.createElement("div"); d.className = "tpr-ms2t";
+    const t = document.createElement("span"); t.className = "tpr-txt"; t.id = "tpr-ms2-text"; t.textContent = text; t.tabIndex = 0; t.setAttribute("role", "group"); t.setAttribute("aria-label", "Fragment ions found in the MS2 of this row");
+    const b = document.createElement("button"); b.type = "button"; b.id = "tpr-ms2-copy"; b.textContent = "Copy text"; b.setAttribute("aria-label", "Copy the fragment ions sentence");
+    const say = document.createElement("span"); say.className = "tpr-none"; say.setAttribute("role", "status"); say.setAttribute("aria-live", "polite");
+    b.onclick = () => Promise.resolve(navigator.clipboard && navigator.clipboard.writeText(text)).then(() => { say.textContent = " Copied"; }, () => { const r = document.createRange(); r.selectNodeContents(t); const g = window.getSelection(); if (g) { g.removeAllRanges(); g.addRange(r); } say.textContent = " Selected: press Ctrl+C"; });
+    d.append(t, b, say); panel.appendChild(d);
   }
 
   /** @param {HTMLElement} panel @param {TpRiga} m */
