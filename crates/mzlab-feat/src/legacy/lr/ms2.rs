@@ -73,8 +73,8 @@ fn average(bins: &BTreeMap<i64, Vec<(f64, f64)>>, n: usize) -> Vec<(f64, f64)> {
 type Part = (usize, Vec<usize>);
 
 fn part_of(l: &Links, k: &Link) -> Part {
-    let (x, p) = (&l.exps[k.exp], &l.exps[k.exp].peaks[k.peak]);
-    (x.k, x.within(p.lo, p.hi))
+    let x = &l.exps[k.exp];
+    (x.k, x.within(k.lo, k.hi))
 }
 
 /// Pooled fragments of the scans of `parts` (the binning and the cut of the fragments).

@@ -49,6 +49,14 @@ pub(super) fn corrections(c: &mut Ctx, e: &mut Exp, x: usize) -> Vec<usize> {
                     row: r,
                     dmz: dmz(r, e.precursor),
                     drt: hit.apex - at,
+                    lo: hit.lo,
+                    hi: hit.hi,
+                    n_in: e
+                        .rt
+                        .iter()
+                        .filter(|t| **t >= hit.lo && **t <= hit.hi)
+                        .count(),
+                    tol: e.tol(),
                     hit,
                 };
                 let mut l = link_of(x, peak, &p, State::User, vec![], "");

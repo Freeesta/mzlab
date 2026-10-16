@@ -21,7 +21,7 @@
   let dlg = null;
   const $ = q => dlg.querySelector(q);
   const say = t => { const e = $("#unt-msg"); if (e) e.textContent = t || ""; };
-  const fmtA = v => (v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : v >= 1e3 ? (v / 1e3).toFixed(v >= 1e4 ? 0 : 1) + "k" : String(Math.round(v)));
+  const fmtA = v => /** @type {any} */ (window).TPTAB.area(v);
   const maxArea = f => Math.max(0, ...Object.values(f.areas));
   const TPTAB = () => /** @type {any} */ (window).TPTAB, TPRIGA = () => /** @type {any} */ (window).TPRIGA;
   /** the badge of a level: TPTAB.level, with the double border and «✎» when the chemist decided it */

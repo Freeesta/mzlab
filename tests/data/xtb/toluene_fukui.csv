@@ -1,0 +1,22 @@
+smiles,atom,quantity,value,method,source
+Cc1ccccc1,0,f_plus,-0.037,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,0,f_minus,-0.043,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,0,f_zero,-0.040,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,1,f_plus,0.084,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,1,f_minus,0.088,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,1,f_zero,0.086,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,2,f_plus,0.055,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,2,f_minus,0.037,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,2,f_zero,0.046,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,3,f_plus,0.058,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,3,f_minus,0.031,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,3,f_zero,0.045,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,4,f_plus,0.053,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,4,f_minus,0.072,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,4,f_zero,0.062,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,5,f_plus,0.058,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,5,f_minus,0.031,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,5,f_zero,0.045,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,6,f_plus,0.055,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,6,f_minus,0.037,"GFN2-xTB, ALPB water",toluene_xtb.out
+Cc1ccccc1,6,f_zero,0.046,"GFN2-xTB, ALPB water",toluene_xtb.out
