@@ -218,6 +218,13 @@ export function createFeatPool(opts) {
         return (await call(slot, { op: "ms2file", table: table.slice(), samples, spec, sha, pol, kind, paths })).text;
       });
     },
+    // XIC of every file, MS1 at the best apex and MS2 of one row (`riga_tracce/1`), read from the .mzidx in OPFS. Resolves with the text.
+    rowTraces({ table, samples, id, ppm, paths }) {
+      return submit(async (slot, load) => {
+        await load("table");
+        return (await call(slot, { op: "rowtraces", table: table.slice(), samples, id, ppm, paths })).text;
+      });
+    },
     // L4-L6: alignment and gap filling of the series in one worker. `stored`: .mzfeatf bytes in the order of `paths`. Resolves with the .mzfeat bytes.
     align(stored, paths, recipe) {
       return submit(async (slot, load) => {
@@ -376,6 +383,7 @@ const OPS = {
     const f = await openAll(m.paths), t = new Uint8Array(m.table);
     try { return { text: mods.table.export_ms2((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.spec, m.sha, m.pol, m.kind, f.read, f.sizes) }; } finally { f.close(); }
   },
+  async rowtraces(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table); try { return { text: mods.table.table_row_traces((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.id, f.read, f.sizes, m.ppm) }; } finally { f.close(); } },
   async "fs.write"(m) { await writeFile(m.path, m.bytes); return {}; },
   async "fs.read"(m) {
     const { h, size } = await openSync(m.path);

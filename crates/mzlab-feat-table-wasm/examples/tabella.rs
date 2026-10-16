@@ -33,4 +33,6 @@ fn main() {
     for (name, kind) in [("ms2.mgf", "mgf"), ("sirius.ms", "sirius")] {
         put(name, core::ms2_file(&mut r(), size, &samples, &spec, &sha, pol, kind, open).expect("ms2"));
     }
+    put("riga.json", core::row_json(&mut r(), size, &samples, 3).expect("row"));
+    put("riga_tracce.json", core::row_traces_json(&mut r(), size, &samples, 3, 5.0, open).expect("traces"));
 }
