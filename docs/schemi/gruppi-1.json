@@ -1,0 +1,142 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "gruppi/1",
+ "title": "gruppi/1: the same degradation in several conditions, compared on one alignment",
+ "description": "Output of mzlab-feat gruppi::build (crates/mzlab-feat/src/gruppi/): per row and condition the presence, mean area of the replicates, ratio to a reference condition, shape over time and the controls as 'Prev.' suggestions; the exact sets of conditions; the decay of the parent per condition. Keys in English, fixed order, only for Tabui. A condition is a non-empty `serie` of a `sample` of campioni/2, in order of first injection; a control of `serie == ''` is shared by all. Ratios, cv and rate_rel are rounded to 6 decimals. Never a confirmation of a product and never a Schymanski level.",
+ "type": "object",
+ "required": ["format", "version", "reference", "norm", "conditions", "rows", "sets", "warnings"],
+ "properties": {
+  "format": {"const": "gruppi"},
+  "version": {"const": 1},
+  "reference": {"type": ["string", "null"], "description": "the reference condition; null when none was asked or it does not exist (warning refMissing)"},
+  "norm": {"const": "raw", "description": "raw areas; 'istd' is refused with error.gruppi.badOpts"},
+  "conditions": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["id", "factors", "files", "times", "replicates", "controls", "parent"],
+    "properties": {
+     "id": {"type": "string"},
+     "factors": {"type": "object", "additionalProperties": {"type": "string"}, "description": "the optional free key/value strings of the options, kept as they came and never used in a calculation"},
+     "files": {"type": "array", "items": {"type": "integer", "minimum": 0}, "description": "column indices of the treated samples, in order of injection"},
+     "times": {"type": "array", "items": {"type": "number"}, "description": "the known treatment times in minutes, ascending"},
+     "replicates": {"type": "integer", "description": "the largest number of replicates at one time"},
+     "controls": {
+      "type": "object",
+      "required": ["t0", "blank", "std", "dark"],
+      "description": "column indices; for each kind the files of the condition if it has any, else the shared ones",
+      "properties": {
+       "t0": {"type": "array", "items": {"type": "integer"}},
+       "blank": {"type": "array", "items": {"type": "integer"}},
+       "std": {"type": "array", "items": {"type": "integer"}, "description": "standard of the parent alone"},
+       "dark": {"type": "array", "items": {"type": "integer"}}
+      }
+     },
+     "parent": {
+      "type": "object",
+      "required": ["k", "half_life", "remaining"],
+      "properties": {
+       "k": {"type": ["number", "null"], "description": "first-order rate constant (1/min) from three or more detected times of the row marked is_parent"},
+       "half_life": {"type": ["number", "null"], "description": "minutes"},
+       "remaining": {"type": ["number", "null"], "description": "area at the last time over the mean area of the time zero of the condition"}
+      }
+     }
+    }
+   }
+  },
+  "rows": {
+   "type": "array",
+   "description": "the rows in the order received",
+   "items": {
+    "type": "object",
+    "required": ["row", "tp_name", "mz", "polarity", "rt", "neutral_formula", "ppm", "ion_formula", "other_polarity", "present_in", "only_in", "in_all", "cond"],
+    "properties": {
+     "row": {"type": "integer", "description": "id of the row given by the caller"},
+     "tp_name": {"type": "string"},
+     "mz": {"type": "number"},
+     "polarity": {"enum": ["+", "-"]},
+     "rt": {"type": "number"},
+     "neutral_formula": {"type": ["string", "null"], "description": "only in high resolution"},
+     "ion_formula": {"type": ["string", "null"], "description": "formula of the ion, e.g. [M+H]+; only in high resolution"},
+     "ppm": {"type": ["number", "null"], "description": "only in high resolution"},
+     "other_polarity": {"type": ["integer", "null"], "description": "id of the row of the other polarity with the same neutral mass, when the caller found one"},
+     "present_in": {"type": "array", "items": {"type": "string"}},
+     "only_in": {"type": ["string", "null"], "description": "the one condition, with two or more conditions in total"},
+     "in_all": {"type": "boolean", "description": "present in every condition, with two or more conditions in total"},
+     "cond": {
+      "type": "array",
+      "description": "one entry per condition, in the order of `conditions`",
+      "items": {
+       "type": "object",
+       "required": ["id", "present", "n_det", "n_rep", "area", "area_sd", "cv", "ratio_ref", "shape", "t_max", "t_half_rise", "rate_rel", "kin", "prev"],
+       "properties": {
+        "id": {"type": "string"},
+        "present": {"type": "boolean", "description": "detected in at least ceil(min_rep_frac * n) replicates of one treated time, with a mean area of at least min_area; filled cells never count"},
+        "n_det": {"type": "integer", "description": "replicates detected at the last time"},
+        "n_rep": {"type": "integer", "description": "replicates at the last time"},
+        "area": {"type": "number", "description": "mean area of the detected replicates at the last time (of the filled ones when none is detected, else 0)"},
+        "area_sd": {"type": ["number", "null"], "description": "sample standard deviation; null with one replicate"},
+        "cv": {"type": ["number", "null"]},
+        "ratio_ref": {"type": ["number", "null"], "description": "area over the area of the reference at the highest time they share; 1 for the reference, 0 for a condition where the row is not present, null without a reference, with the reference absent, or without a common time"},
+        "shape": {"enum": ["single", "rising", "bell", "decay", "flat", null], "description": "only where present: single with one time, null with two, else flat (max/min < 1.5), rising (maximum at the last time, or a fall of less than shape_drop after it), bell (fall of at least shape_drop), decay (maximum at the first time)"},
+        "t_max": {"type": ["number", "null"]},
+        "t_half_rise": {"type": ["number", "null"], "description": "first time, interpolated, at which the area reaches half of the maximum; only for rising and bell"},
+        "rate_rel": {"type": ["number", "null"], "description": "t_half_rise of the reference over t_half_rise of the condition (> 1 = faster)"},
+        "kin": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "required": ["t", "area", "sd", "n"],
+          "properties": {
+           "t": {"type": "number"},
+           "area": {"type": "number", "description": "mean of the detected replicates; of the filled ones when none is detected, to show how absent 'absent' is"},
+           "sd": {"type": ["number", "null"]},
+           "n": {"type": "integer", "description": "replicates averaged"}
+          }
+         }
+        },
+        "prev": {
+         "type": ["object", "null"],
+         "description": "null where the row is not present and for the row marked is_parent",
+         "required": ["absent_t0", "absent_blank", "in_parent_std", "above_min", "ms2", "verdict"],
+         "properties": {
+          "absent_t0": {"enum": ["pass", "fail", "na"], "description": "the control has at most ctrl_ratio of the largest treated area"},
+          "absent_blank": {"enum": ["pass", "fail", "na"]},
+          "in_parent_std": {"enum": ["yes", "no", "na"], "description": "detected in the standard of the parent with a ratio above ctrl_ratio: only a suggestion"},
+          "above_min": {"enum": ["pass", "fail", "na"], "description": "na when min_area is 0"},
+          "ms2": {"enum": ["linked", "none", "na"], "description": "na when no row of the table has a linked MS2"},
+          "verdict": {"enum": ["Prev. likely", "Prev. possible", "Prev. unlikely"], "description": "unlikely if the time zero or the blank has the ion; possible if the parent standard has it, a control is missing or the MS2 is not linked; else likely"}
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "sets": {
+   "type": "array",
+   "description": "the exact combinations of conditions in which rows are present (never the empty one), ordered by number of rows (descending), then by the names",
+   "items": {
+    "type": "object",
+    "required": ["conditions", "rows"],
+    "properties": {
+     "conditions": {"type": "array", "items": {"type": "string"}, "description": "in the order of `conditions`"},
+     "rows": {"type": "array", "items": {"type": "integer"}}
+    }
+   }
+  },
+  "warnings": {
+   "type": "array",
+   "description": "ordered by code (as listed), then by condition",
+   "items": {
+    "type": "object",
+    "required": ["code", "condition"],
+    "properties": {
+     "code": {"enum": ["refMissing", "condNoControls", "condOnePoint", "condNoReplicates", "mixedTimes"]},
+     "condition": {"type": "string", "description": "for refMissing the name asked; for mixedTimes a condition whose times differ from the reference (else from the first condition)"}
+    }
+   }
+  }
+ }
+}

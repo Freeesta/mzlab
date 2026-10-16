@@ -25,8 +25,9 @@ export function createMetodoOps({ engine, ARCH, readerFor, open, sync }) {
         await sync();
         const o = await open(m), e = engine();
         const emb = e.native_metodo(o.slot) || e.mzml_metodo(o.f.size, o.rd);       // a sample of a maker's file: from its reader
-        const doc = emb || wiffDocs.get(base(m.name)) || e.lab_metodo(o.slot, m.name, o.f.size, o.rd);
-        const source = emb ? "mzml" : wiffDocs.has(base(m.name)) ? "wiff" : doc ? "dam" : "none";
+        let doc = emb || wiffDocs.get(base(m.name)) || e.lab_metodo(o.slot, m.name, o.f.size, o.rd);
+        let source = emb ? "mzml" : wiffDocs.has(base(m.name)) ? "wiff" : doc ? "dam" : "none";
+        if (!doc && /\.mzml$/i.test(m.name)) { doc = e.mzml_head_metodo(m.name, o.f.size, o.rd); if (doc) source = "mzml"; }     // an mzML written by another program: its header
         return { info: `{"source":"${source}","metodo":${doc || "null"}}` };
       }
     }

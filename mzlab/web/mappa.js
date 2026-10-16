@@ -88,7 +88,7 @@ window.MAPPA = (() => {
   // ---------------------------------------------------------------- the difference (extends the one of explore.js): computed by the server in numpy
   // with a tolerance in RT (the reference is replaced by its local maximum over +-0.1 min: background lines and small drifts cancel); what it shows
   // (all | increases only | decreases only) and the noise threshold (fraction of the 99.5th percentile) are choices of this browser
-  const diffOpt = (diff = true) => ({ show: PREF.neg ? "all" : "up", thr: PREF.thr ?? (diff ? 0.02 : 0.004), rttol: PREF.rttol ?? 0.1 });
+  const diffOpt = (diff = true) => ({ show: PREF.neg === false ? "up" : "all", thr: PREF.thr ?? (diff ? 0.02 : 0.004), rttol: PREF.rttol ?? 0.1 });
   const diffMap = (k, ref, lv, norm) => memo(`mzd${k}|${ref}|${lv}|${norm}|${diffOpt().rttol}`, () => J(`api/map?k=${k}&level=${lv}&ref=${ref}&norm=${norm}&rttol=${diffOpt().rttol}`).then(j => {
     const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
     return new Float32Array(u.buffer);
@@ -804,7 +804,7 @@ window.MAPPA = (() => {
     if (PREF.pal === "cividis") o.push("cividis");
     if (PREF.thr != null && Math.abs(PREF.thr - (corrState(p).now[0] === "f" ? 0.02 : 0.004)) > 1e-9) o.push(`${T("mappa.thr")} ${+(PREF.thr * 100).toFixed(1)} %`);
     if (corrState(p).now[0] === "f" && p.norm && p.norm !== "abs") o.push(T(`ctl.map.norm.${p.norm}`));
-    if (d.show === "all" && corrState(p).now[0] === "f") o.push(T("mappa.show.neg"));
+    if (d.show === "up" && corrState(p).now[0] === "f") o.push(T("mappa.show.upOnly"));
     return o;
   }
   // ---- the box «How it is extracted» (opened by the markers of mzFinder; the module loads the first time)
@@ -882,7 +882,7 @@ window.MAPPA = (() => {
       `<label class="muted" title="${T("mappa.thr.title")}">${T("mappa.thr")} <input data-mz="thr" class="mzf" inputmode="decimal" value="${+(o.thr * 100).toFixed(1)}"> %</label>` +
       `<select data-mz="rend" title="${T("mappa.rend.title")}" aria-label="${T("mappa.rend.title")}">${opt("smooth", liscia() ? "smooth" : "detail", T("mappa.rend.smooth"))}${opt("detail", liscia() ? "smooth" : "detail", T("mappa.rend.detail"))}</select>` +
       `<select data-mz="dens" title="${T("mappa.dens.title")}" aria-label="${T("mappa.dens.title")}">${["few", "mid", "many"].map(k => opt(k, DENS[PREF.dens] ? PREF.dens : "mid", T(DENS[k].lab))).join("")}</select>`;
-    if (dif) dif.outerHTML = hasRef ? `<label class="muted" title="${T("mappa.show.title")}"><input type="checkbox" data-mz="neg"${PREF.neg ? " checked" : ""}> ${T("mappa.show.neg")}</label>` : "";
+    if (dif) dif.outerHTML = hasRef ? `<label class="muted" title="${T("mappa.show.title")}"><input type="checkbox" data-mz="neg"${PREF.neg === false ? "" : " checked"}> ${T("mappa.show.neg")}</label>` : "";
     const g = document.createElement("span"); g.className = "mzg"; g.setAttribute("role", "group"); g.setAttribute("aria-label", T("ctl.map.grp.tools"));
     g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="snap" class="${PREF.snap === false ? "" : "on"}" aria-pressed="${PREF.snap !== false}" title="${T("mappa.btn.snap.title")}">${T("mappa.btn.snap")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" aria-pressed="${!!mirOn(p)}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button></span>` +
       `<button data-o="view" data-v="3d" title="${T("ctl.map.open3d.title")}" aria-label="${T("ctl.map.open3d.title")}">${T("ctl.map.open3d")}</button>`;

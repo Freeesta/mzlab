@@ -346,7 +346,7 @@ fn xml_escape(s: &str) -> String {
         .replace('\t', "&#9;")
 }
 
-fn xml_unescape(s: &str) -> String {
+pub(crate) fn xml_unescape(s: &str) -> String {
     s.replace("&#9;", "\t")
         .replace("&#13;", "\r")
         .replace("&#10;", "\n")

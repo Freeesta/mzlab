@@ -158,6 +158,7 @@ fn item_info_like_python() {
                 },
                 pol: p["pol"].as_i64().map(|v| v as i8),
                 tag: s(&p["tag"]),
+                kind: None,
             });
             let got = item_info(&mut idx, &facts, &meta, part.as_ref())
                 .unwrap_or_else(|e| panic!("{stem}: {e}"));

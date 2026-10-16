@@ -48,6 +48,10 @@ pub struct Row {
     precs: Vec<Prec>,
     charge: Option<i64>,
     pub native: String,
+    /// Scan type that is not a plain full or product-ion scan (`PREC`, `NL`, `NG`, `EPI`): see `kind_of`.
+    pub kind: Option<&'static str>,
+    /// The mobility of the whole scan (a scan attribute) and its unit (`k0` or `ms`).
+    pub mob: Option<(f64, &'static str)>,
 }
 
 /// The table, with what the `run` object of the metadata needs.
@@ -57,6 +61,39 @@ pub struct Table {
     pub nce: bool,
     pub hr1: bool,
     pub n_chromatograms: usize,
+}
+
+/// The scan type of a spectrum, from the CV term of its header (`MS:1000341` precursor ion, `MS:1000326` constant neutral loss, `MS:1000325`
+/// constant neutral gain, `MS:1000789` enhanced multiply charged and `MS:1000790` time-delayed fragmentation, both shown as `EPI`) or, when the
+/// header says nothing, from a Thermo filter token (`pr`, `cnl`, `cng`). Never from a name.
+pub(crate) fn kind_of(h: &str, filter: &str) -> Option<&'static str> {
+    const TERMS: [(&str, &str); 5] = [
+        ("MS:1000341", "PREC"),
+        ("MS:1000326", "NL"),
+        ("MS:1000325", "NG"),
+        ("MS:1000789", "EPI"),
+        ("MS:1000790", "EPI"),
+    ];
+    for (acc, k) in TERMS {
+        if h.contains(&format!("accession=\"{acc}\"")) {
+            return Some(k);
+        }
+    }
+    filter
+        .split_whitespace()
+        .find_map(|w| match w.to_ascii_lowercase().as_str() {
+            "pr" => Some("PREC"),
+            "cnl" => Some("NL"),
+            "cng" => Some("NG"),
+            _ => None,
+        })
+}
+
+/// The mobility of a scan from its header: the scan attribute `MS:1002815` (inverse reduced, `k0`) or `MS:1002476` (drift time, `ms`).
+pub(crate) fn mobility_of_header(h: &str) -> Option<(f64, &'static str)> {
+    [("MS:1002815", "k0"), ("MS:1002476", "ms")]
+        .into_iter()
+        .find_map(|(acc, u)| cv(h, acc).and_then(float).map(|v| (v, u)))
 }
 
 fn float(s: &str) -> Option<f64> {
@@ -554,6 +591,23 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
     Ok(rows.finish(n_chrom))
 }
 
+/// Columns 21 (type) and 22 (mobility `[value, unit]`) only for the scans that have one, so an index without any stays as it was.
+fn tail_columns(o: &mut Out, r: &Row) {
+    if r.kind.is_none() && r.mob.is_none() {
+        return;
+    }
+    o.raw(",");
+    match r.kind {
+        Some(k) => o.str(k),
+        None => o.raw("null"),
+    };
+    if let Some((v, u)) = r.mob {
+        o.raw(",[");
+        py_float(o, v);
+        o.raw(",").str(u).raw("]");
+    }
+}
+
 fn py_float(o: &mut Out, v: f64) {
     if !v.is_finite() {
         o.raw("null");
@@ -700,7 +754,9 @@ impl Table {
                 Some(c) => o.int(c),
                 None => o.raw("null"),
             };
-            o.raw(",").str(&r.native).raw("]");
+            o.raw(",").str(&r.native);
+            tail_columns(&mut o, r);
+            o.raw("]");
         }
         o.raw("]");
         o.0

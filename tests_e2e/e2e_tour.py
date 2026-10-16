@@ -141,7 +141,7 @@ try:
         pg.wait_for_timeout(300)
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 1 di 8 · Strumenti e movimenti" in hd, hd
+        assert "Passo 1 di 9 · Strumenti e movimenti" in hd, hd
         assert ttl == "Ingrandire e tornare indietro", ttl
 
         # 3. Keyboard test in Chapter 2
@@ -154,20 +154,20 @@ try:
         pg.wait_for_timeout(300)
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 2 di 8 · Strumenti e movimenti" in hd, hd
+        assert "Passo 2 di 9 · Strumenti e movimenti" in hd, hd
         assert ttl == "Il cursore del cromatogramma", ttl
 
         # ArrowLeft goes back to Step 1
         pg.keyboard.press("ArrowLeft")
         pg.wait_for_timeout(300)
         hd = pg.inner_text("#tour-dialog .tour-hd")
-        assert "Passo 1 di 8 · Strumenti e movimenti" in hd, hd
+        assert "Passo 1 di 9 · Strumenti e movimenti" in hd, hd
 
         # ArrowRight advances to Step 2
         pg.keyboard.press("ArrowRight")
         pg.wait_for_timeout(300)
         hd = pg.inner_text("#tour-dialog .tour-hd")
-        assert "Passo 2 di 8 · Strumenti e movimenti" in hd, hd
+        assert "Passo 2 di 9 · Strumenti e movimenti" in hd, hd
 
         # Escape exits and saves saltato
         pg.keyboard.press("Escape")
@@ -187,39 +187,46 @@ try:
         # Step 3: navfile
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 3 di 8 · Strumenti e movimenti" in hd, hd
+        assert "Passo 3 di 9 · Strumenti e movimenti" in hd, hd
         assert ttl == "Cambiare file", ttl
 
         # Step 4: aggiungi
         pg.click("#tour-btn-next")
-        pg.wait_for_timeout(200)
+        attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 4 di 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
-        assert "Passo 4 di 8 · Strumenti e movimenti" in hd, hd
+        assert "Passo 4 di 9 · Strumenti e movimenti" in hd, hd
 
-        # Step 5: pannello
+        # Step 5: affianca (the handle of the panels)
         pg.click("#tour-btn-next")
-        pg.wait_for_timeout(200)
+        attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 5 di 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
-        assert "Passo 5 di 8 · Strumenti e movimenti" in hd, hd
+        assert "Passo 5 di 9 · Strumenti e movimenti" in hd, hd
+        assert pg.inner_text("#tour-dialog h3") == "Affiancare i grafici"
 
-        # Step 6: barra
+        # Step 6: pannello
         pg.click("#tour-btn-next")
-        pg.wait_for_timeout(200)
+        attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 6 di 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
-        assert "Passo 6 di 8 · Strumenti e movimenti" in hd, hd
+        assert "Passo 6 di 9 · Strumenti e movimenti" in hd, hd
 
-        # Step 7: metodo
+        # Step 7: barra
         pg.click("#tour-btn-next")
-        pg.wait_for_timeout(200)
+        attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 7 di 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
-        assert "Passo 7 di 8 · Strumenti e movimenti" in hd, hd
+        assert "Passo 7 di 9 · Strumenti e movimenti" in hd, hd
 
-        # Step 8: ingranaggio
+        # Step 8: metodo
         pg.click("#tour-btn-next")
-        pg.wait_for_timeout(200)
+        attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 8 di 9')")
+        hd = pg.inner_text("#tour-dialog .tour-hd")
+        assert "Passo 8 di 9 · Strumenti e movimenti" in hd, hd
+
+        # Step 9: ingranaggio
+        pg.click("#tour-btn-next")
+        attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 9 di 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 8 di 8 · Strumenti e movimenti" in hd, hd
+        assert "Passo 9 di 9 · Strumenti e movimenti" in hd, hd
         assert ttl == "Impostazioni, Teoria e questo tour", ttl
         assert pg.is_visible("#tour-btn-fine") and "Fine" in pg.inner_text("#tour-btn-fine")
 
@@ -236,14 +243,14 @@ try:
         pg.evaluate("localStorage.setItem('qqq.tour.lr', JSON.stringify({stato:'saltato'}))")
         pg.evaluate("window.BARRA && BARRA.isOpen() && BARRA.close(false)"); pg.wait_for_timeout(300)      # a drawer left open (the state is saved) would stay open after the «file» step: that is not what is measured here
         SPOT = "(()=>{const s=document.querySelector('#tour-spotlight');if(!s)return null;const r=s.getBoundingClientRect();return [Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)]})()"
-        for cap, n in ((1, 7), (2, 8)):
+        for cap, n in ((1, 7), (2, 9)):
             for i in range(n):
                 pg.evaluate(f"TOUR.vai({cap}, {i})"); pg.wait_for_timeout(350)
                 hd = pg.inner_text("#tour-dialog .tour-hd")
                 assert f"Passo {i + 1} di {n}" in hd, (cap, i, hd)           # a step with no target is skipped: the number would jump
                 sp = pg.evaluate(SPOT); assert sp and sp[2] > 10 and sp[3] > 10, (cap, i, sp)
                 assert pg.evaluate("document.querySelector('#dfiles') && getComputedStyle(document.querySelector('#dfiles')).display !== 'none'") == (cap == 1 and i in (0, 1)), (cap, i)
-                if cap == 2 and i == 5:
+                if cap == 2 and i == 6:
                     bar = pg.evaluate("(()=>{const b=document.querySelector('#stbar').getBoundingClientRect();return [Math.round(b.left),Math.round(b.top)]})()")
                     assert abs(sp[0] - bar[0]) < 20 and abs(sp[1] - bar[1]) < 20, (sp, bar)      # the «barra» step points at the toolbar
         pg.click("#tour-btn-skip")

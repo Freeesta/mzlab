@@ -43,6 +43,11 @@ const AZIONI_ICONE = (() => {
     listCheck: '<path d="M2.5 4h11M2.5 8h6M2.5 12h4"/><path d="M9.5 11.5l2 2 3-3.5"/>',
     tag: '<path d="M2.5 2.5h6l5 5-6 6-5-5z"/><circle cx="5.6" cy="5.6" r=".7"/>',
     edit: '<path d="M2.5 13.5l1-3.5 7-7 2.5 2.5-7 7z"/><path d="M9 4.5l2.5 2.5"/>',
+    side: '<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M8 2.5v11"/>',
+    up: '<path d="M8 13V3M4 7l4-4 4 4"/>',
+    down: '<path d="M8 3v10M4 9l4 4 4-4"/>',
+    wide: '<rect x="2" y="4" width="12" height="8" rx="1.3"/><path d="M4.5 8h7M4.5 8L6 6.6M4.5 8L6 9.4M11.5 8L10 6.6M11.5 8L10 9.4"/>',
+    equal: '<path d="M3 5.5h10M3 10.5h10"/>',
     trash: '<path d="M3 4.5h10M6 4.5V3h4v1.5M4.5 4.5l.7 9h5.6l.7-9M7 7v4M9 7v4"/>',
   };
   // the icon of the actions that do not name one (`icona` of the action wins)
@@ -54,6 +59,7 @@ const AZIONI_ICONE = (() => {
     "spec.exportMsp": "save", "spec.exportMassbank": "save", "spec.exportSirius": "save", "spec.contLists": "list", "spec.known": "listCheck", "spec.addLab": "tag",
     "chrom.avgSel": "avg", "chrom.specAtRt": "atRt", "chrom.xic": "xic", "xic.addIon": "plus", "chrom.annotate": "note", "chrom.disp": "sliders", "chrom.ddaShow": "eye",
     "chrom.identAll": "search", "chrom.tree": "tree", "chrom.ibk": "baseline", "chrom.int": "area", "chrom.press": "gauge", "chrom.grad": "ramp",
+    "disp.affianca": "side", "disp.su": "up", "disp.giu": "down", "disp.intera": "wide", "disp.uguali": "equal", "disp.ripristina": "reset",
     "view.resetZoom": "reset", "ann.edit": "edit", "ann.delete": "trash", "metodo.xic": "xic", "metodo.ms2": "ms2",
   };
   /** @param {string} k the SVG of the icon `k`, decorative; "" when it does not exist */

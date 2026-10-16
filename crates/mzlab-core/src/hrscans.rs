@@ -134,7 +134,17 @@ impl<R: ReadAt> Routes<R> {
             Some(p) => o.int(p),
             None => o.raw("null"),
         };
-        o.raw(",\"filter\":").str(&s.filter).raw(",\"profile\":").raw(if s.profile { "true" } else { "false" }).raw("}");
+        o.raw(",\"filter\":").str(&s.filter).raw(",\"profile\":").raw(if s.profile { "true" } else { "false" });
+        // ion mobility, only for a scan that has it: `mob` per peak (when the file gives an array as long as the peaks), `mob_scan` for the whole scan
+        if let Some(m) = mzml.mobilita(s)? {
+            if let Some(v) = m.values.as_ref().filter(|v| v.len() == mz.len()) {
+                o.raw(",\"mob_unit\":").str(m.unit).raw(",\"mob\":").rounded(v, 6);
+            }
+            if let Some((v, u)) = m.scan {
+                o.raw(",\"mob_scan\":").num(round(v, 6)).raw(",\"mob_scan_unit\":").str(u);
+            }
+        }
+        o.raw("}");
         Ok(Some(o.0))
     }
 

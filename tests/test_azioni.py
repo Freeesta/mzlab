@@ -110,3 +110,18 @@ def test_every_id_of_the_icon_table_is_a_registered_action():
                                     check=True, capture_output=True, encoding="utf-8").stdout)
     for i in ids:
         assert f'"{i}"' in src or f'over("{i.split(".")[-1]}"' in src, f"{i}: no action with this id in mzlab/web"
+
+
+def test_arrangement_actions_show_in_every_view_and_have_texts_in_both_languages():
+    """Actions with viste ['*'] show in any view; the keys of the arrangement actions (affianca.js) exist in it and en; layout.js never names an experiment."""
+    r = run("""AZIONI.registra({id:'t.all',gruppo:'disp',viste:['*'],nome:()=>'x',esegui:()=>0});
+      console.log(JSON.stringify(['spec','chrom','mrm'].map(v=>AZIONI.per({vista:v}).some(i=>i.id==='t.all'))))""")
+    assert r == [True, True, True]
+    src = (WEB / "affianca.js").read_text(encoding="utf-8")
+    keys = set(re.findall(r'"(aff\.menu\.[\w.]+)"', src))
+    assert len(keys) >= 6, keys
+    for lang in ("it", "en"):
+        cat = (WEB / "lang" / f"{lang}.js").read_text(encoding="utf-8")
+        for k in keys | {f"cmd.disp.{i}.{f}" for i in ("affianca", "su", "giu", "intera", "uguali", "ripristina") for f in ("lab", "name", "tip", "kw")}:
+            assert f'"{k}"' in cat, (lang, k)
+    assert not re.search(r"""["'](?:full|ms2|mrm|spec|chrom)["']""", (WEB / "layout.js").read_text(encoding="utf-8"))

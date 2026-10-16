@@ -118,6 +118,10 @@ const TOUR = (() => {
       target: () => document.getElementById("g-add")
     },
     {
+      id: "affianca",
+      target: () => [...document.querySelectorAll(".aff-grip")].find(el => !el.hidden && el.offsetParent) || document.querySelector(".pnl.chrom .hd")
+    },
+    {
       id: "pannello",
       target: () => document.querySelector(".pnl.chrom .tbs") || document.querySelector(".pnl.chrom .hd")
     },

@@ -16,7 +16,7 @@ def cold(p, vw, vh, saved=None, scheme="light", touch=False):
     r = Run(port=8872, wd="/tmp/wd_pannello"); r.b = p.chromium.launch()
     ctx = r.b.new_context(viewport={"width": vw, "height": vh}, locale="it-IT", has_touch=touch, color_scheme=scheme, reduced_motion="reduce")
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
-    init = "try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');"
+    init = "try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');"
     for k, v in (saved or {}).items(): init += f"localStorage.setItem('{k}',{v!r});"
     pg.add_init_script(init + "}catch(_){}")
     pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
