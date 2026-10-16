@@ -177,7 +177,7 @@ try:
             assert L[2].split(",")[:7] == [first["tp_name"], str(first["mz"]), str(first["rt"]), "+", c0["id"], "60", "yes" if c0["present"] else "no"], L[2]
             d = grab('[data-ex="wide"]'); assert re.fullmatch(r"tabui_conditions-wide_demo-parent_\d{8}\.csv", d.suggested_filename), d.suggested_filename
             L = Path(d.path()).read_text(encoding="utf-8").splitlines()
-            assert L[0].startswith("TP,m/z,RT (min),Polarity,Present in,Only in,Reference present,Reference area,Reference ratio to reference,Reference Prev.,O2 present"), L[0]
+            assert L[0].startswith("TP,m/z,RT (min),Polarity,Present in,Only in," + ",".join("%s present,%s area,%s ratio to reference,%s Prev." % ((c["id"],) * 4) for c in FX["conditions"][:2])), L[0]
             assert len(L) == 1 + len(FX["rows"])
             d = grab('[data-ex="sets"]'); L = Path(d.path()).read_text(encoding="utf-8").splitlines()
             assert L[0] == "Conditions,Number of TPs,TP names" and len(L) == 1 + len(FX["sets"]) and L[1].startswith(" + ".join(FX["sets"][0]["conditions"]) + "," + str(len(FX["sets"][0]["rows"]))), L[:2]
@@ -206,7 +206,7 @@ try:
             fx = json.loads(json.dumps(FX)); fx["warnings"] = [{"code": "condNoReplicates", "condition": "N2"}, {"code": "refMissing", "condition": "Reference"}]
             mount(fx)
             t = pg.locator("#gv-warn").inner_text(); assert "N2" in t and "reference condition" in t, t
-            assert pg.get_attribute("#gv-warn ul", "role") == "status"
+            assert pg.get_attribute("#gv-warn div", "role") == "status"
             T = pg.locator("#gv-par").inner_text(); assert "t½" in T and "Remaining" in T and "O2" in T
             assert pg.locator("#gv-par tbody tr").count() == len(FX["conditions"])
             mount(FX)

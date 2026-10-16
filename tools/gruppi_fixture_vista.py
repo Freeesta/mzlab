@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Writes the two synthetic `gruppi/1` fixtures the Compare-conditions view is tried on (TP_Mine/tests/gruppi_fixture.json: 6 endpoint conditions;
-TP_Mine/tests/gruppi_fixture_kin.json: 3 conditions x 5 times). Test data only: every number is made up here and follows the contract of
+"""Writes the synthetic `gruppi/1` kinetic fixture the Compare-conditions view is tried on (TP_Mine/tests/gruppi_fixture_kin.json: 3 conditions x 5 times;
+TP_Mine/tests/gruppi_fixture.json is the expected output of the Rust module, copied from crates/mzlab-feat/tests/data/gruppi_fixture.json). Test data only: every number is made up here and follows the contract of
 docs/studi/TABUI_GRUPPI_ESPERIMENTI.md section 3 (presence, ratio to the reference, sets, shape, prev), so the view has something to draw
 before the Rust module is wired in. Run: python3 tools/gruppi_fixture_vista.py"""
 import json, itertools
@@ -44,7 +44,7 @@ def prev(present, area, absent_t0, absent_blank, in_std, ms2):
 def build(conds, times, rows, ref, replicates, parents):
     """conds: ids in order; times: {cond: [t...]}; rows: dicts with per-condition area lists (None = absent)"""
     out_rows, sets = [], {}
-    for rid, r in enumerate(rows, 1):
+    for rid, r in enumerate(rows):
         cond, pres = [], []
         for c in conds:
             ts = times[c]; ar = r["a"].get(c) or [0.0] * len(ts)
@@ -72,28 +72,6 @@ def build(conds, times, rows, ref, replicates, parents):
             "warnings": []}
 
 
-def endpoint():
-    conds = ["Reference", "O2", "Air", "N2", "Ar", "CO2"]
-    times = {c: [60] for c in conds}
-    reps = {c: (2 if c in ("Reference", "O2") else 1) for c in conds}
-    parents = {c: {"k": k, "half_life": round(0.693 / k, 1) if k else None, "remaining": rem} for c, k, rem in
-               [("Reference", 0.021, 0.28), ("O2", 0.031, 0.15), ("Air", 0.027, 0.2), ("N2", 0.004, 0.78), ("Ar", 0.004, 0.8), ("CO2", None, None)]}
-    A = lambda ref, o2, air, n2, ar, co2: {c: [v] if v else None for c, v in zip(conds, (ref, o2, air, n2, ar, co2))}
-    rows = [
-        dict(name="TP 305", mz=305.3, rt=7.1, t0="pass", blank="pass", std="no", ms2="linked", a=A(2.0e6, 4.6e6, 3.0e6, 2.1e5, 1.9e5, 0)),
-        dict(name="TP 229", mz=229.1, rt=5.2, t0="pass", blank="pass", std="no", ms2="linked", a=A(8.0e5, 1.6e6, 1.0e6, 0, 0, 0)),
-        dict(name="TP 224", mz=224.2, rt=4.4, t0="pass", blank="pass", std="no", ms2="none", a=A(1.1e6, 1.0e6, 1.2e6, 1.0e6, 9.5e5, 1.1e6)),
-        dict(name="TP 391", mz=391.3, rt=9.8, t0="fail", blank="pass", std="yes", ms2="na", a=A(3.0e5, 3.1e5, 2.9e5, 3.0e5, 2.8e5, 3.2e5)),
-        dict(name="TP 362 A", mz=362.2, rt=8.4, t0="pass", blank="pass", std="no", ms2="linked", a=A(0, 7.0e5, 0, 0, 0, 0)),
-        dict(name="TP 362 B", mz=362.2, rt=8.9, t0="pass", blank="pass", std="no", ms2="none", a=A(0, 0, 0, 0, 4.0e5, 0)),
-        dict(name="TP 348", mz=348.1, rt=6.3, t0="pass", blank="na", std="no", ms2="linked", a=A(5.0e5, 0, 6.2e5, 0, 0, 0)),
-        dict(name="TP 320", mz=320.0, rt=6.9, t0="pass", blank="pass", std="no", ms2="linked", a=A(0, 9.0e5, 8.0e5, 0, 0, 0)),
-        dict(name="TP 280", mz=280.2, rt=5.8, pol="-", t0="pass", blank="pass", std="no", ms2="na", a=A(1.5e5, 6.0e5, 4.0e5, 0, 0, 1.2e5)),
-        dict(name="TP 262", mz=262.1, rt=11.0, t0="pass", blank="fail", std="no", ms2="none", a=A(0, 0, 0, 0, 0, 2.5e5)),
-    ]
-    return build(conds, times, rows, "Reference", reps, parents)
-
-
 def kinetic():
     conds = ["Sun", "Lamp", "Dark"]
     ts = [0, 15, 30, 60, 120]
@@ -112,6 +90,6 @@ def kinetic():
 
 
 if __name__ == "__main__":
-    for name, fx in (("gruppi_fixture.json", endpoint()), ("gruppi_fixture_kin.json", kinetic())):
+    for name, fx in (("gruppi_fixture_kin.json", kinetic()),):
         (OUT / name).write_text(json.dumps(fx, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
         print(name, len(fx["rows"]), "rows", len(fx["conditions"]), "conditions", len(fx["sets"]), "sets")

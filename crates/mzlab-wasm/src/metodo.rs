@@ -59,6 +59,18 @@ impl Engine {
         Ok(metodo::from_userparam(&head).unwrap_or_default())
     }
 
+    /// `metodo/1` of an mzML from its header and first scans (`""` when it has no header); a document the file carries wins.
+    pub fn mzml_head_metodo(
+        &mut self,
+        name: &str,
+        size: f64,
+        read: Function,
+    ) -> Result<String, JsValue> {
+        let mut m = Mzml::new(JsReader { read }, size as u64);
+        let doc = m.metodo(name, DOC_MAX).map_err(|e| error_json(&e))?;
+        Ok(doc.unwrap_or_default())
+    }
+
     /// `metodo/1` of one sample of a `.wiff` (`size` bytes read through `read`); `sha1` is its SHA-1 when known.
     pub fn wiff_metodo(
         &mut self,

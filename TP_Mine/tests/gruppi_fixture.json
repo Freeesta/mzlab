@@ -1,154 +1,27 @@
 {
  "format": "gruppi",
  "version": 1,
- "reference": "Reference",
+ "reference": "O2",
  "norm": "raw",
- "parent_name": "Demo-parent",
  "conditions": [
   {
-   "id": "Reference",
-   "factors": {},
-   "files": [],
-   "times": [
-    60
-   ],
-   "replicates": 2,
-   "controls": {
-    "t0": [
-     0
-    ],
-    "blank": [
-     1
-    ],
-    "std": [
-     2
-    ],
-    "dark": []
-   },
-   "parent": {
-    "k": 0.021,
-    "half_life": 33.0,
-    "remaining": 0.28
-   }
-  },
-  {
    "id": "O2",
-   "factors": {},
-   "files": [],
-   "times": [
-    60
-   ],
-   "replicates": 2,
-   "controls": {
-    "t0": [
-     0
-    ],
-    "blank": [
-     1
-    ],
-    "std": [
-     2
-    ],
-    "dark": []
+   "factors": {
+    "catalyst": "TiO2 P25"
    },
-   "parent": {
-    "k": 0.031,
-    "half_life": 22.4,
-    "remaining": 0.15
-   }
-  },
-  {
-   "id": "Air",
-   "factors": {},
-   "files": [],
+   "files": [
+    3
+   ],
    "times": [
     60
    ],
    "replicates": 1,
    "controls": {
     "t0": [
-     0
-    ],
-    "blank": [
      1
     ],
-    "std": [
-     2
-    ],
-    "dark": []
-   },
-   "parent": {
-    "k": 0.027,
-    "half_life": 25.7,
-    "remaining": 0.2
-   }
-  },
-  {
-   "id": "N2",
-   "factors": {},
-   "files": [],
-   "times": [
-    60
-   ],
-   "replicates": 1,
-   "controls": {
-    "t0": [
-     0
-    ],
     "blank": [
-     1
-    ],
-    "std": [
-     2
-    ],
-    "dark": []
-   },
-   "parent": {
-    "k": 0.004,
-    "half_life": 173.2,
-    "remaining": 0.78
-   }
-  },
-  {
-   "id": "Ar",
-   "factors": {},
-   "files": [],
-   "times": [
-    60
-   ],
-   "replicates": 1,
-   "controls": {
-    "t0": [
      0
-    ],
-    "blank": [
-     1
-    ],
-    "std": [
-     2
-    ],
-    "dark": []
-   },
-   "parent": {
-    "k": 0.004,
-    "half_life": 173.2,
-    "remaining": 0.8
-   }
-  },
-  {
-   "id": "CO2",
-   "factors": {},
-   "files": [],
-   "times": [
-    60
-   ],
-   "replicates": 1,
-   "controls": {
-    "t0": [
-     0
-    ],
-    "blank": [
-     1
     ],
     "std": [
      2
@@ -158,99 +31,183 @@
    "parent": {
     "k": null,
     "half_life": null,
-    "remaining": null
+    "remaining": 0.2
+   }
+  },
+  {
+   "id": "Air",
+   "factors": {},
+   "files": [
+    4,
+    5,
+    6
+   ],
+   "times": [
+    60
+   ],
+   "replicates": 3,
+   "controls": {
+    "t0": [
+     1
+    ],
+    "blank": [
+     0
+    ],
+    "std": [
+     2
+    ],
+    "dark": []
+   },
+   "parent": {
+    "k": null,
+    "half_life": null,
+    "remaining": 0.5
+   }
+  },
+  {
+   "id": "N2",
+   "factors": {},
+   "files": [
+    7
+   ],
+   "times": [
+    60
+   ],
+   "replicates": 1,
+   "controls": {
+    "t0": [
+     1
+    ],
+    "blank": [
+     0
+    ],
+    "std": [
+     2
+    ],
+    "dark": []
+   },
+   "parent": {
+    "k": null,
+    "half_life": null,
+    "remaining": 0.6
+   }
+  },
+  {
+   "id": "Ar",
+   "factors": {},
+   "files": [
+    8
+   ],
+   "times": [
+    60
+   ],
+   "replicates": 1,
+   "controls": {
+    "t0": [
+     1
+    ],
+    "blank": [
+     0
+    ],
+    "std": [
+     2
+    ],
+    "dark": []
+   },
+   "parent": {
+    "k": null,
+    "half_life": null,
+    "remaining": 0.8
+   }
+  },
+  {
+   "id": "CO2",
+   "factors": {},
+   "files": [
+    9
+   ],
+   "times": [
+    60
+   ],
+   "replicates": 1,
+   "controls": {
+    "t0": [
+     1
+    ],
+    "blank": [
+     0
+    ],
+    "std": [
+     2
+    ],
+    "dark": []
+   },
+   "parent": {
+    "k": null,
+    "half_life": null,
+    "remaining": 0.7
+   }
+  },
+  {
+   "id": "NoGas",
+   "factors": {},
+   "files": [
+    10
+   ],
+   "times": [
+    60
+   ],
+   "replicates": 1,
+   "controls": {
+    "t0": [
+     1
+    ],
+    "blank": [
+     0
+    ],
+    "std": [
+     2
+    ],
+    "dark": []
+   },
+   "parent": {
+    "k": null,
+    "half_life": null,
+    "remaining": 0.9
    }
   }
  ],
  "rows": [
   {
-   "row": 1,
-   "tp_name": "TP 305",
-   "mz": 305.3,
+   "row": 0,
+   "tp_name": "Parent",
+   "mz": 364.4,
    "polarity": "+",
-   "rt": 7.1,
+   "rt": 5,
    "neutral_formula": null,
    "ppm": null,
+   "ion_formula": null,
    "other_polarity": null,
    "present_in": [
-    "Reference",
     "O2",
     "Air",
     "N2",
-    "Ar"
+    "Ar",
+    "CO2",
+    "NoGas"
    ],
    "only_in": null,
-   "in_all": false,
+   "in_all": true,
    "cond": [
-    {
-     "id": "Reference",
-     "present": true,
-     "n_det": 2,
-     "n_rep": 2,
-     "area": 2000000.0,
-     "area_sd": 160000.0,
-     "cv": 0.08,
-     "ratio_ref": 1.0,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 2000000.0,
-       "sd": 160000.0,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "linked",
-      "verdict": "Prev. likely"
-     }
-    },
     {
      "id": "O2",
      "present": true,
-     "n_det": 2,
-     "n_rep": 2,
-     "area": 4600000.0,
-     "area_sd": 368000.0,
-     "cv": 0.08,
-     "ratio_ref": 2.3,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 4600000.0,
-       "sd": 368000.0,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "linked",
-      "verdict": "Prev. likely"
-     }
-    },
-    {
-     "id": "Air",
-     "present": true,
      "n_det": 1,
      "n_rep": 1,
-     "area": 3000000.0,
+     "area": 2000000,
      "area_sd": null,
      "cv": null,
-     "ratio_ref": 1.5,
+     "ratio_ref": 1,
      "shape": "single",
      "t_max": 60,
      "t_half_rise": null,
@@ -258,29 +215,45 @@
      "kin": [
       {
        "t": 60,
-       "area": 3000000.0,
+       "area": 2000000,
        "sd": null,
        "n": 1
       }
      ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "linked",
-      "verdict": "Prev. likely"
-     }
+     "prev": null
+    },
+    {
+     "id": "Air",
+     "present": true,
+     "n_det": 3,
+     "n_rep": 3,
+     "area": 5000000,
+     "area_sd": 200000,
+     "cv": 0.04,
+     "ratio_ref": 2.5,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 5000000,
+       "sd": 200000,
+       "n": 3
+      }
+     ],
+     "prev": null
     },
     {
      "id": "N2",
      "present": true,
      "n_det": 1,
      "n_rep": 1,
-     "area": 210000.0,
+     "area": 6000000,
      "area_sd": null,
      "cv": null,
-     "ratio_ref": 0.105,
+     "ratio_ref": 3,
      "shape": "single",
      "t_max": 60,
      "t_half_rise": null,
@@ -288,29 +261,22 @@
      "kin": [
       {
        "t": 60,
-       "area": 210000.0,
+       "area": 6000000,
        "sd": null,
        "n": 1
       }
      ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "linked",
-      "verdict": "Prev. likely"
-     }
+     "prev": null
     },
     {
      "id": "Ar",
      "present": true,
      "n_det": 1,
      "n_rep": 1,
-     "area": 190000.0,
+     "area": 8000000,
      "area_sd": null,
      "cv": null,
-     "ratio_ref": 0.095,
+     "ratio_ref": 4,
      "shape": "single",
      "t_max": 60,
      "t_half_rise": null,
@@ -318,37 +284,99 @@
      "kin": [
       {
        "t": 60,
-       "area": 190000.0,
+       "area": 8000000,
        "sd": null,
        "n": 1
       }
      ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "linked",
-      "verdict": "Prev. likely"
-     }
+     "prev": null
     },
     {
      "id": "CO2",
-     "present": false,
-     "n_det": 0,
+     "present": true,
+     "n_det": 1,
      "n_rep": 1,
-     "area": null,
+     "area": 7000000,
      "area_sd": null,
      "cv": null,
-     "ratio_ref": 0,
-     "shape": null,
-     "t_max": null,
+     "ratio_ref": 3.5,
+     "shape": "single",
+     "t_max": 60,
      "t_half_rise": null,
      "rate_rel": null,
      "kin": [
       {
        "t": 60,
-       "area": null,
+       "area": 7000000,
+       "sd": null,
+       "n": 1
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "NoGas",
+     "present": true,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 9000000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 4.5,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 9000000,
+       "sd": null,
+       "n": 1
+      }
+     ],
+     "prev": null
+    }
+   ]
+  },
+  {
+   "row": 1,
+   "tp_name": "TP 362",
+   "mz": 362.2,
+   "polarity": "+",
+   "rt": 5,
+   "neutral_formula": null,
+   "ppm": null,
+   "ion_formula": null,
+   "other_polarity": null,
+   "present_in": [
+    "O2",
+    "Air",
+    "N2",
+    "Ar",
+    "CO2",
+    "NoGas"
+   ],
+   "only_in": null,
+   "in_all": true,
+   "cond": [
+    {
+     "id": "O2",
+     "present": true,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 1200000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 1,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 1200000,
        "sd": null,
        "n": 1
       }
@@ -358,7 +386,157 @@
       "absent_blank": "pass",
       "in_parent_std": "no",
       "above_min": "na",
-      "ms2": "linked",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    },
+    {
+     "id": "Air",
+     "present": true,
+     "n_det": 3,
+     "n_rep": 3,
+     "area": 600000,
+     "area_sd": 60000,
+     "cv": 0.1,
+     "ratio_ref": 0.5,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 600000,
+       "sd": 60000,
+       "n": 3
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "na",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    },
+    {
+     "id": "N2",
+     "present": true,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 800000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0.666667,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 800000,
+       "sd": null,
+       "n": 1
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "na",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    },
+    {
+     "id": "Ar",
+     "present": true,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 400000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0.333333,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 400000,
+       "sd": null,
+       "n": 1
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "na",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    },
+    {
+     "id": "CO2",
+     "present": true,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 900000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0.75,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 900000,
+       "sd": null,
+       "n": 1
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "na",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    },
+    {
+     "id": "NoGas",
+     "present": true,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 300000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0.25,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 300000,
+       "sd": null,
+       "n": 1
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "na",
+      "ms2": "none",
       "verdict": "Prev. possible"
      }
     }
@@ -366,615 +544,13 @@
   },
   {
    "row": 2,
-   "tp_name": "TP 229",
-   "mz": 229.1,
+   "tp_name": "TP 305",
+   "mz": 305.3,
    "polarity": "+",
-   "rt": 5.2,
+   "rt": 5,
    "neutral_formula": null,
    "ppm": null,
-   "other_polarity": null,
-   "present_in": [
-    "Reference",
-    "O2",
-    "Air"
-   ],
-   "only_in": null,
-   "in_all": false,
-   "cond": [
-    {
-     "id": "Reference",
-     "present": true,
-     "n_det": 2,
-     "n_rep": 2,
-     "area": 800000.0,
-     "area_sd": 64000.0,
-     "cv": 0.08,
-     "ratio_ref": 1.0,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 800000.0,
-       "sd": 64000.0,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "linked",
-      "verdict": "Prev. likely"
-     }
-    },
-    {
-     "id": "O2",
-     "present": true,
-     "n_det": 2,
-     "n_rep": 2,
-     "area": 1600000.0,
-     "area_sd": 128000.0,
-     "cv": 0.08,
-     "ratio_ref": 2.0,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 1600000.0,
-       "sd": 128000.0,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "linked",
-      "verdict": "Prev. likely"
-     }
-    },
-    {
-     "id": "Air",
-     "present": true,
-     "n_det": 1,
-     "n_rep": 1,
-     "area": 1000000.0,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": 1.25,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 1000000.0,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "linked",
-      "verdict": "Prev. likely"
-     }
-    },
-    {
-     "id": "N2",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 1,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": 0,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "Ar",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 1,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": 0,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "CO2",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 1,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": 0,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
-    }
-   ]
-  },
-  {
-   "row": 3,
-   "tp_name": "TP 224",
-   "mz": 224.2,
-   "polarity": "+",
-   "rt": 4.4,
-   "neutral_formula": null,
-   "ppm": null,
-   "other_polarity": null,
-   "present_in": [
-    "Reference",
-    "O2",
-    "Air",
-    "N2",
-    "Ar",
-    "CO2"
-   ],
-   "only_in": null,
-   "in_all": true,
-   "cond": [
-    {
-     "id": "Reference",
-     "present": true,
-     "n_det": 2,
-     "n_rep": 2,
-     "area": 1100000.0,
-     "area_sd": 88000.0,
-     "cv": 0.08,
-     "ratio_ref": 1.0,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 1100000.0,
-       "sd": 88000.0,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "none",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "O2",
-     "present": true,
-     "n_det": 2,
-     "n_rep": 2,
-     "area": 1000000.0,
-     "area_sd": 80000.0,
-     "cv": 0.08,
-     "ratio_ref": 0.909,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 1000000.0,
-       "sd": 80000.0,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "none",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "Air",
-     "present": true,
-     "n_det": 1,
-     "n_rep": 1,
-     "area": 1200000.0,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": 1.091,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 1200000.0,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "none",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "N2",
-     "present": true,
-     "n_det": 1,
-     "n_rep": 1,
-     "area": 1000000.0,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": 0.909,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 1000000.0,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "none",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "Ar",
-     "present": true,
-     "n_det": 1,
-     "n_rep": 1,
-     "area": 950000.0,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": 0.864,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 950000.0,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "none",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "CO2",
-     "present": true,
-     "n_det": 1,
-     "n_rep": 1,
-     "area": 1100000.0,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": 1.0,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 1100000.0,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "none",
-      "verdict": "Prev. possible"
-     }
-    }
-   ]
-  },
-  {
-   "row": 4,
-   "tp_name": "TP 391",
-   "mz": 391.3,
-   "polarity": "+",
-   "rt": 9.8,
-   "neutral_formula": null,
-   "ppm": null,
-   "other_polarity": null,
-   "present_in": [
-    "Reference",
-    "O2",
-    "Air",
-    "N2",
-    "Ar",
-    "CO2"
-   ],
-   "only_in": null,
-   "in_all": true,
-   "cond": [
-    {
-     "id": "Reference",
-     "present": true,
-     "n_det": 2,
-     "n_rep": 2,
-     "area": 300000.0,
-     "area_sd": 24000.0,
-     "cv": 0.08,
-     "ratio_ref": 1.0,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 300000.0,
-       "sd": 24000.0,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "fail",
-      "absent_blank": "pass",
-      "in_parent_std": "yes",
-      "above_min": "pass",
-      "ms2": "na",
-      "verdict": "Prev. unlikely"
-     }
-    },
-    {
-     "id": "O2",
-     "present": true,
-     "n_det": 2,
-     "n_rep": 2,
-     "area": 310000.0,
-     "area_sd": 24800.0,
-     "cv": 0.08,
-     "ratio_ref": 1.033,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 310000.0,
-       "sd": 24800.0,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "fail",
-      "absent_blank": "pass",
-      "in_parent_std": "yes",
-      "above_min": "pass",
-      "ms2": "na",
-      "verdict": "Prev. unlikely"
-     }
-    },
-    {
-     "id": "Air",
-     "present": true,
-     "n_det": 1,
-     "n_rep": 1,
-     "area": 290000.0,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": 0.967,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 290000.0,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "fail",
-      "absent_blank": "pass",
-      "in_parent_std": "yes",
-      "above_min": "pass",
-      "ms2": "na",
-      "verdict": "Prev. unlikely"
-     }
-    },
-    {
-     "id": "N2",
-     "present": true,
-     "n_det": 1,
-     "n_rep": 1,
-     "area": 300000.0,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": 1.0,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 300000.0,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "fail",
-      "absent_blank": "pass",
-      "in_parent_std": "yes",
-      "above_min": "pass",
-      "ms2": "na",
-      "verdict": "Prev. unlikely"
-     }
-    },
-    {
-     "id": "Ar",
-     "present": true,
-     "n_det": 1,
-     "n_rep": 1,
-     "area": 280000.0,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": 0.933,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 280000.0,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "fail",
-      "absent_blank": "pass",
-      "in_parent_std": "yes",
-      "above_min": "pass",
-      "ms2": "na",
-      "verdict": "Prev. unlikely"
-     }
-    },
-    {
-     "id": "CO2",
-     "present": true,
-     "n_det": 1,
-     "n_rep": 1,
-     "area": 320000.0,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": 1.067,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 320000.0,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "fail",
-      "absent_blank": "pass",
-      "in_parent_std": "yes",
-      "above_min": "pass",
-      "ms2": "na",
-      "verdict": "Prev. unlikely"
-     }
-    }
-   ]
-  },
-  {
-   "row": 5,
-   "tp_name": "TP 362 A",
-   "mz": 362.2,
-   "polarity": "+",
-   "rt": 8.4,
-   "neutral_formula": null,
-   "ppm": null,
+   "ion_formula": null,
    "other_polarity": null,
    "present_in": [
     "O2"
@@ -983,331 +559,14 @@
    "in_all": false,
    "cond": [
     {
-     "id": "Reference",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 2,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
      "id": "O2",
-     "present": true,
-     "n_det": 2,
-     "n_rep": 2,
-     "area": 700000.0,
-     "area_sd": 56000.0,
-     "cv": 0.08,
-     "ratio_ref": null,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 700000.0,
-       "sd": 56000.0,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "linked",
-      "verdict": "Prev. likely"
-     }
-    },
-    {
-     "id": "Air",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 1,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "N2",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 1,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "Ar",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 1,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "CO2",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 1,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
-    }
-   ]
-  },
-  {
-   "row": 6,
-   "tp_name": "TP 362 B",
-   "mz": 362.2,
-   "polarity": "+",
-   "rt": 8.9,
-   "neutral_formula": null,
-   "ppm": null,
-   "other_polarity": null,
-   "present_in": [
-    "Ar"
-   ],
-   "only_in": "Ar",
-   "in_all": false,
-   "cond": [
-    {
-     "id": "Reference",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 2,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "none",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "O2",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 2,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "none",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "Air",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 1,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "none",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "N2",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 1,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "none",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "Ar",
      "present": true,
      "n_det": 1,
      "n_rep": 1,
-     "area": 400000.0,
+     "area": 500000,
      "area_sd": null,
      "cv": null,
-     "ratio_ref": null,
+     "ratio_ref": 1,
      "shape": "single",
      "t_max": 60,
      "t_half_rise": null,
@@ -1315,37 +574,7 @@
      "kin": [
       {
        "t": 60,
-       "area": 400000.0,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "none",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "CO2",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 1,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
+       "area": 500000,
        "sd": null,
        "n": 1
       }
@@ -1358,61 +587,13 @@
       "ms2": "none",
       "verdict": "Prev. possible"
      }
-    }
-   ]
-  },
-  {
-   "row": 7,
-   "tp_name": "TP 348",
-   "mz": 348.1,
-   "polarity": "+",
-   "rt": 6.3,
-   "neutral_formula": null,
-   "ppm": null,
-   "other_polarity": null,
-   "present_in": [
-    "Reference",
-    "Air"
-   ],
-   "only_in": null,
-   "in_all": false,
-   "cond": [
-    {
-     "id": "Reference",
-     "present": true,
-     "n_det": 2,
-     "n_rep": 2,
-     "area": 500000.0,
-     "area_sd": 40000.0,
-     "cv": 0.08,
-     "ratio_ref": 1.0,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 500000.0,
-       "sd": 40000.0,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "na",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
     },
     {
-     "id": "O2",
+     "id": "Air",
      "present": false,
      "n_det": 0,
-     "n_rep": 2,
-     "area": null,
+     "n_rep": 3,
+     "area": 3000,
      "area_sd": null,
      "cv": null,
      "ratio_ref": 0,
@@ -1423,56 +604,19 @@
      "kin": [
       {
        "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "na",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "Air",
-     "present": true,
-     "n_det": 1,
-     "n_rep": 1,
-     "area": 620000.0,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": 1.24,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 620000.0,
+       "area": 3000,
        "sd": null,
        "n": 1
       }
      ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "na",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
+     "prev": null
     },
     {
      "id": "N2",
      "present": false,
      "n_det": 0,
      "n_rep": 1,
-     "area": null,
+     "area": 0,
      "area_sd": null,
      "cv": null,
      "ratio_ref": 0,
@@ -1483,26 +627,19 @@
      "kin": [
       {
        "t": 60,
-       "area": null,
+       "area": 0,
        "sd": null,
-       "n": 1
+       "n": 0
       }
      ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "na",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
+     "prev": null
     },
     {
      "id": "Ar",
      "present": false,
      "n_det": 0,
      "n_rep": 1,
-     "area": null,
+     "area": 1000,
      "area_sd": null,
      "cv": null,
      "ratio_ref": 0,
@@ -1513,26 +650,19 @@
      "kin": [
       {
        "t": 60,
-       "area": null,
+       "area": 1000,
        "sd": null,
        "n": 1
       }
      ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "na",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
+     "prev": null
     },
     {
      "id": "CO2",
      "present": false,
      "n_det": 0,
      "n_rep": 1,
-     "area": null,
+     "area": 0,
      "area_sd": null,
      "cv": null,
      "ratio_ref": 0,
@@ -1543,277 +673,65 @@
      "kin": [
       {
        "t": 60,
-       "area": null,
+       "area": 0,
        "sd": null,
-       "n": 1
+       "n": 0
       }
      ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "na",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
+     "prev": null
+    },
+    {
+     "id": "NoGas",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
     }
    ]
   },
   {
-   "row": 8,
-   "tp_name": "TP 320",
-   "mz": 320.0,
+   "row": 3,
+   "tp_name": "TP 229",
+   "mz": 229.1,
    "polarity": "+",
-   "rt": 6.9,
+   "rt": 5,
    "neutral_formula": null,
    "ppm": null,
+   "ion_formula": null,
    "other_polarity": null,
    "present_in": [
-    "O2",
-    "Air"
-   ],
-   "only_in": null,
-   "in_all": false,
-   "cond": [
-    {
-     "id": "Reference",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 2,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "O2",
-     "present": true,
-     "n_det": 2,
-     "n_rep": 2,
-     "area": 900000.0,
-     "area_sd": 72000.0,
-     "cv": 0.08,
-     "ratio_ref": null,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 900000.0,
-       "sd": 72000.0,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "linked",
-      "verdict": "Prev. likely"
-     }
-    },
-    {
-     "id": "Air",
-     "present": true,
-     "n_det": 1,
-     "n_rep": 1,
-     "area": 800000.0,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": null,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 800000.0,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "linked",
-      "verdict": "Prev. likely"
-     }
-    },
-    {
-     "id": "N2",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 1,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "Ar",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 1,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
-     "id": "CO2",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 1,
-     "area": null,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": null,
-       "sd": null,
-       "n": 1
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "linked",
-      "verdict": "Prev. possible"
-     }
-    }
-   ]
-  },
-  {
-   "row": 9,
-   "tp_name": "TP 280",
-   "mz": 280.2,
-   "polarity": "-",
-   "rt": 5.8,
-   "neutral_formula": null,
-   "ppm": null,
-   "other_polarity": null,
-   "present_in": [
-    "Reference",
     "O2",
     "Air",
-    "CO2"
+    "N2"
    ],
    "only_in": null,
    "in_all": false,
    "cond": [
     {
-     "id": "Reference",
-     "present": true,
-     "n_det": 2,
-     "n_rep": 2,
-     "area": 150000.0,
-     "area_sd": 12000.0,
-     "cv": 0.08,
-     "ratio_ref": 1.0,
-     "shape": "single",
-     "t_max": 60,
-     "t_half_rise": null,
-     "rate_rel": null,
-     "kin": [
-      {
-       "t": 60,
-       "area": 150000.0,
-       "sd": 12000.0,
-       "n": 2
-      }
-     ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "pass",
-      "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "na",
-      "verdict": "Prev. possible"
-     }
-    },
-    {
      "id": "O2",
      "present": true,
-     "n_det": 2,
-     "n_rep": 2,
-     "area": 600000.0,
-     "area_sd": 48000.0,
-     "cv": 0.08,
-     "ratio_ref": 4.0,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 1000000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 1,
      "shape": "single",
      "t_max": 60,
      "t_half_rise": null,
@@ -1821,29 +739,29 @@
      "kin": [
       {
        "t": 60,
-       "area": 600000.0,
-       "sd": 48000.0,
-       "n": 2
+       "area": 1000000,
+       "sd": null,
+       "n": 1
       }
      ],
      "prev": {
-      "absent_t0": "pass",
+      "absent_t0": "fail",
       "absent_blank": "pass",
       "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "na",
-      "verdict": "Prev. possible"
+      "above_min": "na",
+      "ms2": "none",
+      "verdict": "Prev. unlikely"
      }
     },
     {
      "id": "Air",
      "present": true,
-     "n_det": 1,
-     "n_rep": 1,
-     "area": 400000.0,
-     "area_sd": null,
-     "cv": null,
-     "ratio_ref": 2.667,
+     "n_det": 3,
+     "n_rep": 3,
+     "area": 900000,
+     "area_sd": 0,
+     "cv": 0,
+     "ratio_ref": 0.9,
      "shape": "single",
      "t_max": 60,
      "t_half_rise": null,
@@ -1851,48 +769,48 @@
      "kin": [
       {
        "t": 60,
-       "area": 400000.0,
-       "sd": null,
-       "n": 1
+       "area": 900000,
+       "sd": 0,
+       "n": 3
       }
      ],
      "prev": {
-      "absent_t0": "pass",
+      "absent_t0": "fail",
       "absent_blank": "pass",
       "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "na",
-      "verdict": "Prev. possible"
+      "above_min": "na",
+      "ms2": "none",
+      "verdict": "Prev. unlikely"
      }
     },
     {
      "id": "N2",
-     "present": false,
-     "n_det": 0,
+     "present": true,
+     "n_det": 1,
      "n_rep": 1,
-     "area": null,
+     "area": 700000,
      "area_sd": null,
      "cv": null,
-     "ratio_ref": 0,
-     "shape": null,
-     "t_max": null,
+     "ratio_ref": 0.7,
+     "shape": "single",
+     "t_max": 60,
      "t_half_rise": null,
      "rate_rel": null,
      "kin": [
       {
        "t": 60,
-       "area": null,
+       "area": 700000,
        "sd": null,
        "n": 1
       }
      ],
      "prev": {
-      "absent_t0": "pass",
+      "absent_t0": "fail",
       "absent_blank": "pass",
       "in_parent_std": "no",
       "above_min": "na",
-      "ms2": "na",
-      "verdict": "Prev. possible"
+      "ms2": "none",
+      "verdict": "Prev. unlikely"
      }
     },
     {
@@ -1900,7 +818,7 @@
      "present": false,
      "n_det": 0,
      "n_rep": 1,
-     "area": null,
+     "area": 0,
      "area_sd": null,
      "cv": null,
      "ratio_ref": 0,
@@ -1911,7 +829,95 @@
      "kin": [
       {
        "t": 60,
-       "area": null,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "CO2",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "NoGas",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    }
+   ]
+  },
+  {
+   "row": 4,
+   "tp_name": "TP 224",
+   "mz": 224.2,
+   "polarity": "+",
+   "rt": 5,
+   "neutral_formula": null,
+   "ppm": null,
+   "ion_formula": null,
+   "other_polarity": null,
+   "present_in": [
+    "O2",
+    "N2"
+   ],
+   "only_in": null,
+   "in_all": false,
+   "cond": [
+    {
+     "id": "O2",
+     "present": true,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 1000000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 1,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 1000000,
        "sd": null,
        "n": 1
       }
@@ -1919,18 +925,41 @@
      "prev": {
       "absent_t0": "pass",
       "absent_blank": "pass",
-      "in_parent_std": "no",
+      "in_parent_std": "yes",
       "above_min": "na",
-      "ms2": "na",
+      "ms2": "none",
       "verdict": "Prev. possible"
      }
     },
     {
-     "id": "CO2",
+     "id": "Air",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 3,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "N2",
      "present": true,
      "n_det": 1,
      "n_rep": 1,
-     "area": 120000.0,
+     "area": 800000,
      "area_sd": null,
      "cv": null,
      "ratio_ref": 0.8,
@@ -1941,7 +970,178 @@
      "kin": [
       {
        "t": 60,
-       "area": 120000.0,
+       "area": 800000,
+       "sd": null,
+       "n": 1
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "yes",
+      "above_min": "na",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    },
+    {
+     "id": "Ar",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "CO2",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "NoGas",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    }
+   ]
+  },
+  {
+   "row": 5,
+   "tp_name": "TP 391",
+   "mz": 391.3,
+   "polarity": "+",
+   "rt": 5,
+   "neutral_formula": null,
+   "ppm": null,
+   "ion_formula": null,
+   "other_polarity": null,
+   "present_in": [
+    "Air",
+    "N2"
+   ],
+   "only_in": null,
+   "in_all": false,
+   "cond": [
+    {
+     "id": "O2",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": null,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "Air",
+     "present": true,
+     "n_det": 2,
+     "n_rep": 3,
+     "area": 210000,
+     "area_sd": 14142.13562373095,
+     "cv": 0.067344,
+     "ratio_ref": null,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 210000,
+       "sd": 14142.13562373095,
+       "n": 2
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "na",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    },
+    {
+     "id": "N2",
+     "present": true,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 300000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": null,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 300000,
        "sd": null,
        "n": 1
       }
@@ -1950,64 +1150,452 @@
       "absent_t0": "pass",
       "absent_blank": "pass",
       "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "na",
+      "above_min": "na",
+      "ms2": "none",
       "verdict": "Prev. possible"
      }
+    },
+    {
+     "id": "Ar",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": null,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "CO2",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": null,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "NoGas",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": null,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
     }
    ]
   },
   {
-   "row": 10,
-   "tp_name": "TP 262",
-   "mz": 262.1,
+   "row": 6,
+   "tp_name": "TP 280",
+   "mz": 280.2,
    "polarity": "+",
-   "rt": 11.0,
+   "rt": 5,
    "neutral_formula": null,
    "ppm": null,
+   "ion_formula": null,
    "other_polarity": null,
    "present_in": [
-    "CO2"
+    "O2",
+    "N2"
    ],
-   "only_in": "CO2",
+   "only_in": null,
    "in_all": false,
    "cond": [
     {
-     "id": "Reference",
-     "present": false,
-     "n_det": 0,
-     "n_rep": 2,
-     "area": null,
+     "id": "O2",
+     "present": true,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 400000,
      "area_sd": null,
      "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
+     "ratio_ref": 1,
+     "shape": "single",
+     "t_max": 60,
      "t_half_rise": null,
      "rate_rel": null,
      "kin": [
       {
        "t": 60,
-       "area": null,
+       "area": 400000,
        "sd": null,
-       "n": 2
+       "n": 1
       }
      ],
      "prev": {
       "absent_t0": "pass",
-      "absent_blank": "fail",
+      "absent_blank": "pass",
       "in_parent_std": "no",
       "above_min": "na",
       "ms2": "none",
-      "verdict": "Prev. unlikely"
+      "verdict": "Prev. possible"
      }
     },
+    {
+     "id": "Air",
+     "present": false,
+     "n_det": 1,
+     "n_rep": 3,
+     "area": 100000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 100000,
+       "sd": null,
+       "n": 1
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "N2",
+     "present": true,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 300000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0.75,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 300000,
+       "sd": null,
+       "n": 1
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "na",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    },
+    {
+     "id": "Ar",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "CO2",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "NoGas",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    }
+   ]
+  },
+  {
+   "row": 7,
+   "tp_name": "TP 301",
+   "mz": 301.2,
+   "polarity": "+",
+   "rt": 5,
+   "neutral_formula": null,
+   "ppm": null,
+   "ion_formula": null,
+   "other_polarity": null,
+   "present_in": [
+    "O2",
+    "Air",
+    "N2"
+   ],
+   "only_in": null,
+   "in_all": false,
+   "cond": [
+    {
+     "id": "O2",
+     "present": true,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 700000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 1,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 700000,
+       "sd": null,
+       "n": 1
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "na",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    },
+    {
+     "id": "Air",
+     "present": true,
+     "n_det": 3,
+     "n_rep": 3,
+     "area": 500000,
+     "area_sd": 0,
+     "cv": 0,
+     "ratio_ref": 0.714286,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 500000,
+       "sd": 0,
+       "n": 3
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "na",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    },
+    {
+     "id": "N2",
+     "present": true,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 600000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0.857143,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 600000,
+       "sd": null,
+       "n": 1
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "na",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    },
+    {
+     "id": "Ar",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "CO2",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "NoGas",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    }
+   ]
+  },
+  {
+   "row": 8,
+   "tp_name": "TP 410",
+   "mz": 410.4,
+   "polarity": "+",
+   "rt": 5,
+   "neutral_formula": null,
+   "ppm": null,
+   "ion_formula": null,
+   "other_polarity": null,
+   "present_in": [],
+   "only_in": null,
+   "in_all": false,
+   "cond": [
     {
      "id": "O2",
      "present": false,
      "n_det": 0,
-     "n_rep": 2,
-     "area": null,
+     "n_rep": 1,
+     "area": 2000,
      "area_sd": null,
      "cv": null,
      "ratio_ref": null,
@@ -2018,9 +1606,166 @@
      "kin": [
       {
        "t": 60,
-       "area": null,
+       "area": 2000,
        "sd": null,
+       "n": 1
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "Air",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 3,
+     "area": 1000,
+     "area_sd": 0,
+     "cv": 0,
+     "ratio_ref": null,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 1000,
+       "sd": 0,
        "n": 2
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "N2",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": null,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "Ar",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": null,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "CO2",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": null,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "NoGas",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": null,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    }
+   ]
+  },
+  {
+   "row": 9,
+   "tp_name": "TP 150",
+   "mz": 150.1,
+   "polarity": "+",
+   "rt": 5,
+   "neutral_formula": null,
+   "ppm": null,
+   "ion_formula": null,
+   "other_polarity": null,
+   "present_in": [
+    "O2",
+    "N2"
+   ],
+   "only_in": null,
+   "in_all": false,
+   "cond": [
+    {
+     "id": "O2",
+     "present": true,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 1000000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 1,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 1000000,
+       "sd": null,
+       "n": 1
       }
      ],
      "prev": {
@@ -2036,11 +1781,11 @@
      "id": "Air",
      "present": false,
      "n_det": 0,
-     "n_rep": 1,
-     "area": null,
+     "n_rep": 3,
+     "area": 0,
      "area_sd": null,
      "cv": null,
-     "ratio_ref": null,
+     "ratio_ref": 0,
      "shape": null,
      "t_max": null,
      "t_half_rise": null,
@@ -2048,37 +1793,30 @@
      "kin": [
       {
        "t": 60,
-       "area": null,
+       "area": 0,
        "sd": null,
-       "n": 1
+       "n": 0
       }
      ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "fail",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "none",
-      "verdict": "Prev. unlikely"
-     }
+     "prev": null
     },
     {
      "id": "N2",
-     "present": false,
-     "n_det": 0,
+     "present": true,
+     "n_det": 1,
      "n_rep": 1,
-     "area": null,
+     "area": 800000,
      "area_sd": null,
      "cv": null,
-     "ratio_ref": null,
-     "shape": null,
-     "t_max": null,
+     "ratio_ref": 0.8,
+     "shape": "single",
+     "t_max": 60,
      "t_half_rise": null,
      "rate_rel": null,
      "kin": [
       {
        "t": 60,
-       "area": null,
+       "area": 800000,
        "sd": null,
        "n": 1
       }
@@ -2097,7 +1835,94 @@
      "present": false,
      "n_det": 0,
      "n_rep": 1,
-     "area": null,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "CO2",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "NoGas",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    }
+   ]
+  },
+  {
+   "row": 10,
+   "tp_name": "TP 333",
+   "mz": 333.3,
+   "polarity": "+",
+   "rt": 5,
+   "neutral_formula": null,
+   "ppm": null,
+   "ion_formula": null,
+   "other_polarity": null,
+   "present_in": [
+    "Air"
+   ],
+   "only_in": "Air",
+   "in_all": false,
+   "cond": [
+    {
+     "id": "O2",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 70000,
      "area_sd": null,
      "cv": null,
      "ratio_ref": null,
@@ -2108,28 +1933,21 @@
      "kin": [
       {
        "t": 60,
-       "area": null,
+       "area": 70000,
        "sd": null,
        "n": 1
       }
      ],
-     "prev": {
-      "absent_t0": "pass",
-      "absent_blank": "fail",
-      "in_parent_std": "no",
-      "above_min": "na",
-      "ms2": "none",
-      "verdict": "Prev. unlikely"
-     }
+     "prev": null
     },
     {
-     "id": "CO2",
+     "id": "Air",
      "present": true,
-     "n_det": 1,
-     "n_rep": 1,
-     "area": 250000.0,
-     "area_sd": null,
-     "cv": null,
+     "n_det": 3,
+     "n_rep": 3,
+     "area": 300000,
+     "area_sd": 0,
+     "cv": 0,
      "ratio_ref": null,
      "shape": "single",
      "t_max": 60,
@@ -2138,19 +1956,282 @@
      "kin": [
       {
        "t": 60,
-       "area": 250000.0,
+       "area": 300000,
+       "sd": 0,
+       "n": 3
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "na",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    },
+    {
+     "id": "N2",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": null,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "Ar",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": null,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "CO2",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": null,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "NoGas",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": null,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    }
+   ]
+  },
+  {
+   "row": 11,
+   "tp_name": "TP 355",
+   "mz": 355.2,
+   "polarity": "+",
+   "rt": 5,
+   "neutral_formula": null,
+   "ppm": null,
+   "ion_formula": null,
+   "other_polarity": null,
+   "present_in": [
+    "O2",
+    "Ar"
+   ],
+   "only_in": null,
+   "in_all": false,
+   "cond": [
+    {
+     "id": "O2",
+     "present": true,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 600000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 1,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 600000,
        "sd": null,
        "n": 1
       }
      ],
      "prev": {
       "absent_t0": "pass",
-      "absent_blank": "fail",
+      "absent_blank": "pass",
       "in_parent_std": "no",
-      "above_min": "pass",
-      "ms2": "none",
-      "verdict": "Prev. unlikely"
+      "above_min": "na",
+      "ms2": "linked",
+      "verdict": "Prev. likely"
      }
+    },
+    {
+     "id": "Air",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 3,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "N2",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "Ar",
+     "present": true,
+     "n_det": 1,
+     "n_rep": 1,
+     "area": 500000,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0.833333,
+     "shape": "single",
+     "t_max": 60,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 500000,
+       "sd": null,
+       "n": 1
+      }
+     ],
+     "prev": {
+      "absent_t0": "pass",
+      "absent_blank": "pass",
+      "in_parent_std": "no",
+      "above_min": "na",
+      "ms2": "none",
+      "verdict": "Prev. possible"
+     }
+    },
+    {
+     "id": "CO2",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
+    },
+    {
+     "id": "NoGas",
+     "present": false,
+     "n_det": 0,
+     "n_rep": 1,
+     "area": 0,
+     "area_sd": null,
+     "cv": null,
+     "ratio_ref": 0,
+     "shape": null,
+     "t_max": null,
+     "t_half_rise": null,
+     "rate_rel": null,
+     "kin": [
+      {
+       "t": 60,
+       "area": 0,
+       "sd": null,
+       "n": 0
+      }
+     ],
+     "prev": null
     }
    ]
   }
@@ -2158,29 +2239,43 @@
  "sets": [
   {
    "conditions": [
-    "Reference",
+    "O2",
+    "N2"
+   ],
+   "rows": [
+    4,
+    6,
+    9
+   ]
+  },
+  {
+   "conditions": [
+    "O2",
+    "Air",
+    "N2"
+   ],
+   "rows": [
+    3,
+    7
+   ]
+  },
+  {
+   "conditions": [
     "O2",
     "Air",
     "N2",
     "Ar",
-    "CO2"
+    "CO2",
+    "NoGas"
    ],
    "rows": [
-    3,
-    4
+    0,
+    1
    ]
   },
   {
    "conditions": [
-    "Ar"
-   ],
-   "rows": [
-    6
-   ]
-  },
-  {
-   "conditions": [
-    "CO2"
+    "Air"
    ],
    "rows": [
     10
@@ -2188,7 +2283,8 @@
   },
   {
    "conditions": [
-    "O2"
+    "Air",
+    "N2"
    ],
    "rows": [
     5
@@ -2196,27 +2292,7 @@
   },
   {
    "conditions": [
-    "O2",
-    "Air"
-   ],
-   "rows": [
-    8
-   ]
-  },
-  {
-   "conditions": [
-    "Reference",
-    "Air"
-   ],
-   "rows": [
-    7
-   ]
-  },
-  {
-   "conditions": [
-    "Reference",
-    "O2",
-    "Air"
+    "O2"
    ],
    "rows": [
     2
@@ -2224,27 +2300,58 @@
   },
   {
    "conditions": [
-    "Reference",
     "O2",
-    "Air",
-    "CO2"
-   ],
-   "rows": [
-    9
-   ]
-  },
-  {
-   "conditions": [
-    "Reference",
-    "O2",
-    "Air",
-    "N2",
     "Ar"
    ],
    "rows": [
-    1
+    11
    ]
   }
  ],
- "warnings": []
+ "warnings": [
+  {
+   "code": "condOnePoint",
+   "condition": "O2"
+  },
+  {
+   "code": "condOnePoint",
+   "condition": "Air"
+  },
+  {
+   "code": "condOnePoint",
+   "condition": "N2"
+  },
+  {
+   "code": "condOnePoint",
+   "condition": "Ar"
+  },
+  {
+   "code": "condOnePoint",
+   "condition": "CO2"
+  },
+  {
+   "code": "condOnePoint",
+   "condition": "NoGas"
+  },
+  {
+   "code": "condNoReplicates",
+   "condition": "O2"
+  },
+  {
+   "code": "condNoReplicates",
+   "condition": "N2"
+  },
+  {
+   "code": "condNoReplicates",
+   "condition": "Ar"
+  },
+  {
+   "code": "condNoReplicates",
+   "condition": "CO2"
+  },
+  {
+   "code": "condNoReplicates",
+   "condition": "NoGas"
+  }
+ ]
 }

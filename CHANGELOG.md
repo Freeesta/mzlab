@@ -15,6 +15,7 @@ Prima di mettere il tag `vX.Y.Z`: sposta qui sotto le voci di «Non rilasciato»
 - Il doppio clic su un grafico esegue la stessa azione del menu: modifica l'annotazione, altrimenti ripristina lo zoom, altrimenti lo spettro a quell'RT (cromatogramma) o lo spettro intero (spettro).
 - Il menu del tasto destro e la paletta (⌘K) offrono la disposizione dei pannelli: affianca a, sposta su/giù, tutta larghezza, larghezze uguali, ripristina.
 - Suggerimento «Trascina qui per affiancare» una volta sola; nuovo passo «Affianca» nel tour «Strumenti e movimenti»; i fumetti non si sovrappongono mai.
+- Nuova opzione in Impostazioni «Spettro accanto al cromatogramma» (spenta di base): lo spettro aperto con il doppio clic va nella stessa riga del cromatogramma se c'è spazio; si annulla con Ctrl+Z.
 
 ## [1.0.1] - 2026-10-14
 

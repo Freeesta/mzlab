@@ -132,7 +132,7 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
 
     function drawWarnings() {
       const w = g.warnings || [];
-      Q("#gv-warn").innerHTML = w.length ? `<ul class="gv-warn" role="status" aria-label="Warnings">${w.map(x => `<li>${esc((WARN[x.code] || (() => x.code))(x.condition || ""))}</li>`).join("")}</ul>` : "";
+      Q("#gv-warn").innerHTML = w.length ? `<div role="status" aria-label="Warnings"><ul class="gv-warn">${w.map(x => `<li>${esc((WARN[x.code] || (() => x.code))(x.condition || ""))}</li>`).join("")}</ul></div>` : "";
     }
     function drawFilterSelect() {
       const opts2 = [["all", "All rows"], ["inall", "In all conditions"], ...ids.map(c => [`only:${c}`, `Only in ${c}`]), ...ids.map(c => [`in:${c}`, `Present in ${c}`])];
