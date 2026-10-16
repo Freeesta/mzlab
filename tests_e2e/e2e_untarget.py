@@ -1,5 +1,5 @@
-"""mzFinder, feature tables (untargeted): files of an mzMine table are loaded in the window, every feature with an MS2 is searched in a library imported in the page, the table shows level, best
-candidate, entropy and evidence; filter by level, click → mirror and «What is it?», the chemist's decided level (2b only from 2a or 3), the external annotations are evidence and never a level.
+"""mzFinder, feature tables (untargeted): files of an mzMine table are loaded in the window, every feature with an MS2 is searched in a library imported in the page, the table (TPTAB) shows level, best
+candidate, entropy and evidence; chips of level, sort from the headers, click → the row opens under itself with the mirror and «What is it?», the chemist's decided level (2b only from 2a or 3), the external annotations are evidence and never a level.
 Needs the built site (python3 tools/build_site.py). UNT_BENCH=1 also times 5000 features (the result goes to docs/agenti/misure.md).
 Run from the repo root: python3 tests_e2e/e2e_untarget.py"""
 import json, os, random, shutil, subprocess, sys, tempfile, time
@@ -55,32 +55,71 @@ try:
             s = pg.inner_text("#unt-sum"); assert "4 with MS" in s and "positive" in s and "1 with an external annotation" in s, s
             assert pg.evaluate("UNTUI.state.table.file.sha256.length") == 64
         step("the table and its MGF are read; polarity from the file name; SHA-256 of the table", load)
+        IDX = lambda key: pg.evaluate("k => UNTUI.state.table.features.findIndex(f => f.key === k)", key)
+        ROW = lambda key: f"#unt-t tr.clk[data-id='{IDX(key)}']"
         def match():
             pg.click("#unt-go"); pg.wait_for_selector("#unt-res:not([hidden])", timeout=60000)
-            lv = pg.evaluate("Object.fromEntries([...document.querySelectorAll('#unt-t tr.row1')].map(tr => [tr.children[1].textContent, tr.children[0].textContent.trim()]))")
+            pg.wait_for_selector("#unt-t tbody tr.clk", timeout=20000)
+            lv = pg.evaluate("Object.fromEntries([...document.querySelectorAll('#unt-t tbody tr.clk')].map(tr => [UNTUI.state.table.features[+tr.dataset.id].id, tr.querySelector('.lvb').textContent.trim()]))")
             assert lv == {"1": "L2a", "2": "L3a", "3": "L5", "4": "L4", "5": "L5", "6": "L5"}, lv
-            r1 = pg.evaluate("[...document.querySelectorAll('#unt-t tr.row1')].find(tr => tr.children[1].textContent === '1').innerText")
-            assert "Alpha" in r1 and "1.000" in r1, r1
-            assert "Testagel" in pg.evaluate("[...document.querySelectorAll('#unt-t tr.row1')].find(tr => tr.children[1].textContent === '4').innerText")          # evidence of the external source
+            assert pg.evaluate("document.querySelectorAll('#unt-t thead th[scope=col]').length") >= 5 and pg.evaluate("!!document.querySelector('#unt-t th.tpt-stk')")          # a real table with fixed columns
+            pg.click("#unt-res .tpt-colm summary"); pg.check("[data-vc=ent]"); pg.check("[data-vc=ext]"); pg.check("[data-vc=ms2]")          # the optional columns
+            r1 = pg.inner_text(ROW("POS:1")); assert "Alpha" in r1 and "1.000" in r1, r1
+            assert "Testagel" in pg.inner_text(ROW("POS:4"))          # evidence of the external source
+            pg.click("#unt-res .tpt-colm summary")
         step("levels: 2a (3 scans), 3 (one scan), 5 (other spectrum, no MS2), 4 (formula of an external source explains the m/z)", match)
         def filt():
-            pg.select_option("#unt-lv", "5"); assert pg.evaluate("document.querySelectorAll('#unt-t tr.row1').length") == 3
-            pg.select_option("#unt-lv", "all"); pg.fill("#unt-q", "testagel"); assert pg.evaluate("document.querySelectorAll('#unt-t tr.row1').length") == 1
-            pg.fill("#unt-q", ""); pg.check("#unt-ms2"); assert pg.evaluate("document.querySelectorAll('#unt-t tr.row1').length") == 4; pg.uncheck("#unt-ms2")
-        step("filter by level, text and MS2", filt)
+            n = lambda: pg.evaluate("document.querySelectorAll('#unt-t tbody tr.clk').length")
+            pg.click("[data-chip=l5]"); assert n() == 3 and pg.get_attribute("[data-chip=l5]", "aria-pressed") == "true"; pg.click("[data-chip=l5]")
+            pg.click("[data-chip=l3]"); assert n() == 2; pg.click("[data-chip=l3]")
+            pg.fill("#unt-res .tpt-q", "testagel"); assert n() == 1; pg.fill("#unt-res .tpt-q", "")
+            pg.click("[data-chip=ms2]"); assert n() == 4 and "4 of 6 rows" in pg.inner_text("#unt-tf .tpt-n"); pg.click("[data-chip=ms2]")
+            assert n() == 6
+        step("chips of level and MS2, and the search", filt)
+        def sort():
+            sh = '#unt-t th:has(button[data-sh=mz])'          # a numeric column starts from the largest
+            pg.click("#unt-t th button[data-sh=mz]"); a1 = pg.get_attribute(sh, "aria-sort"); assert a1 == "descending", a1
+            pg.click("#unt-t th button[data-sh=mz]"); a2 = pg.get_attribute(sh, "aria-sort"); assert a2 == "ascending", a2
+            first = pg.evaluate("UNTUI.state.table.features[+document.querySelector('#unt-t tbody tr.clk').dataset.id].id"); assert first == "4", first
+            pg.click("#unt-t th button[data-sh=level]")
+        step("the sort works from the headers", sort)
         def detail():
-            pg.click("#unt-t tr.row1[data-k='POS:1']"); pg.wait_for_function("document.querySelector('#unt-mm').textContent.includes('Alpha')", timeout=20000)
+            pg.click(ROW("POS:1") + " td >> nth=1"); pg.wait_for_function("document.querySelector('#unt-mm').textContent.includes('Alpha')", timeout=20000)
             assert pg.evaluate("document.getElementById('unt-cv').width") > 0 and pg.evaluate("!document.getElementById('unt-cv').hidden")
-            assert "Level" in pg.inner_text("#unt-det") and "entropy" in pg.inner_text("#unt-det").lower()
+            assert "Decided" in pg.inner_text("#unt-det") and "entropy" in pg.inner_text("#unt-det").lower()
+            assert pg.evaluate("document.querySelector('#unt-t tr.clk + tr.tpt-exp #unt-det') !== null"), "the panel is not under its row"          # the row opens under itself
+            pg.click("#unt-det button[role=tab][data-tab=identity]")
             pg.click("#unt-what"); pg.wait_for_selector("#libres[open]", timeout=20000); pg.wait_for_function("document.querySelector('#libres #lr-body').textContent.includes('Alpha')", timeout=20000)
             pg.click("#lr-x")
-        step("click → mirror plot and the «What is it?» window", detail)
+        step("click → the row opens under itself: mirror plot, and «What is it?» in the tab Identity", detail)
+        def one():
+            assert pg.evaluate("document.querySelectorAll('#unt-t tr.tpt-exp').length") == 1
+            pg.click(ROW("POS:2") + " td >> nth=1"); assert pg.evaluate("document.querySelectorAll('#unt-t tr.tpt-exp').length") == 1, "only one row open"
+            assert pg.evaluate("UNTUI.state.table.features[UNTUI.state.TF.openId].key") == "POS:2"
+            pg.click(ROW("POS:1") + " td >> nth=1")
+        step("only one row is open at a time", one)
+        def axe(theme):
+            def f():
+                from lib import axe_path, attendi
+                ax = axe_path()
+                if not ax: print("SKIP axe-core not available"); return
+                pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", theme)
+                attendi(pg, "document.getAnimations().length === 0")          # the chips fade between the themes
+                if not pg.evaluate("typeof axe") == "object": pg.add_script_tag(path=ax)
+                v = pg.evaluate("axe.run(document.getElementById('unt'), {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0,3).map(n => n.target.join(' '))]))")
+                assert not v, v
+            return f
+        step("axe: no serious violation in the table and the open row, light theme", axe("light"))
+        step("axe: no serious violation in the table and the open row, dark theme", axe("dark"))
         def decide():
-            pg.select_option("#unt-dec", "2b"); badge = pg.evaluate("document.querySelector(\"#unt-t tr.row1[data-k='POS:1'] .lvb\").textContent")
+            pg.evaluate("document.documentElement.removeAttribute('data-theme')")
+            pg.select_option("#unt-dec", "2b"); badge = pg.evaluate("k => document.querySelector(`#unt-t tr.clk[data-id='${UNTUI.state.table.features.findIndex(f => f.key === k)}'] .lvb`).textContent", "POS:1")
             assert badge.startswith("L2b"), badge
-            pg.click("#unt-t tr.row1[data-k='POS:3']")
+            pg.click(ROW("POS:3") + " td >> nth=1")
+            pg.click("#unt-det button[role=tab][data-tab=identity]")
             pg.select_option("#unt-dec", "2b"); pg.wait_for_function("document.querySelector('#unt-decmsg').textContent.length > 0")
-            assert pg.evaluate("document.querySelector(\"#unt-t tr.row1[data-k='POS:3'] .lvb\").textContent.trim()") == "L5"          # refused: the programme never gives 2b
+            assert pg.evaluate("document.querySelector(\"#unt-t tr.clk[data-id='\" + UNTUI.state.table.features.findIndex(f => f.key === 'POS:3') + \"'] .lvb\").textContent.trim()") == "L5"          # refused: the programme never gives 2b
+            pg.click("[data-chip=dec]"); assert pg.evaluate("document.querySelectorAll('#unt-t tbody tr.clk').length") == 1; pg.click("[data-chip=dec]")          # the chip of the decided levels
         step("the chemist's 2b is accepted from 2a and refused from 5", decide)
         def export():
             def get(sel):
@@ -94,9 +133,16 @@ try:
             n, b = get("#unt-x-xlsx"); assert n.endswith(".xlsx") and b[:2] == b"PK" and b"Library records" in b, n
             n, b = get("#unt-x-mgf"); m = b.decode("utf-8")
             assert m.startswith("# Tabui untargeted export") and m.count("BEGIN IONS") == 4 and "LEVEL=2b" in m and "NAME=Alpha" in m and "not stated" in m
-            pg.select_option("#unt-lv", "5"); pg.check("#unt-xf"); n, b = get("#unt-x-csv"); assert len(b.decode("utf-8").lstrip("\ufeff").split("\r\n")[:-1]) == 1 + 3          # only the filtered features
-            pg.uncheck("#unt-xf"); pg.select_option("#unt-lv", "all")
+            pg.click("[data-chip=l5]"); pg.check("#unt-xf"); n, b = get("#unt-x-csv"); assert len(b.decode("utf-8").lstrip("\ufeff").split("\r\n")[:-1]) == 1 + 3          # only the filtered features
+            pg.uncheck("#unt-xf"); pg.click("[data-chip=l5]")
         step("export: CSV with «;», xlsx and MGF with levels, decided level, licences; only the filtered features", export)
+        def view():
+            pg.click("[data-chip=l5]"); pg.click("#unt-tf .tpt-xm summary")
+            with pg.expect_download() as d: pg.click("#unt-tf [data-x=csv]")
+            t = Path(d.value.path()).read_bytes().decode("utf-8"); assert d.value.suggested_filename == "untargeted_view.csv" and t.startswith("\ufeff# filters: L5 only"), t[:80]
+            lines = t.lstrip("\ufeff").split("\r\n")[:-1]; assert len(lines) == 2 + 3 and lines[1].startswith("Level;Identity;"), lines[:2]          # the columns and the rows that the view shows
+            pg.click("[data-chip=l5]")
+        step("«Export view» writes the rows, the columns and the filters of the view", view)
         def fair():
             def get(sel):
                 with pg.expect_download() as d: pg.click(sel)

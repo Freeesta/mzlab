@@ -104,13 +104,37 @@
       + (x.members.length > keys.length ? `<div class="mut">${x.members.length - keys.length} more features not drawn</div>` : "");
   }
 
+  /** the tab Identity of the open row of an identity (HTML): the neutral-mass hypothesis, where level and candidate come from, the other readings, the evidence of every link (`edgeText`) and the small network */
+  function identityHtml(x, graph, table, results, LV = G.LIVELLI, M = G.UNTM) {
+    const byKey = new Map(table.features.map(f => [f.key, f])), viaF = byKey.get(x.via), b = x.best;
+    const alts = x.alternatives.map(a => `<li>${esc(hypothesisText(a, table))}</li>`).join("");
+    const ev = x.edges.map(i => graph.edges[i]).map(e => `<li>${esc(byKey.get(e.a).id)} – ${esc(byKey.get(e.b).id)}: ${esc(edgeText(e))}</li>`).join("");
+    return `<div class="det"><div><div class="mut">${esc(hypothesisText(x.neutral, table))}</div>
+      <div class="mut">Level and candidate come from the best member, feature ${esc(viaF ? viaF.id : "")}${b && b.name ? ": " + esc(b.name) : ""}. ${esc(LV.sentence(x.level))}</div>
+      ${x.structConflict ? `<div class="warn">The best candidates of the members have different structure keys (${esc(x.structKeys.join(", "))}).</div>` : ""}
+      ${alts ? `<div class="mut">Other readings of the same features:</div><ul>${alts}</ul>` : ""}
+      ${ev ? `<div class="mut">Evidence of the links:</div><ul>${ev}</ul>` : `<div class="mut">No other feature fulfils all the conditions (co-elution, correlated shape, explained mass difference).</div>`}</div>
+      <div>${networkSvg(x, graph, table)}</div></div>`;
+  }
+
+  /** the tab Features of the open row of an identity (HTML): one line per member with its role in the neutral mass, level and candidate, and a button (`data-open` = key) that opens the feature */
+  function membersHtml(x, table, results, LV = G.LIVELLI, M = G.UNTM) {
+    const byKey = new Map(table.features.map(f => [f.key, f])), n = x.members.length;
+    const line = k => {
+      const f = byKey.get(k), r = results.get(k), ro = x.neutral.roles[k]; if (!f) return "";
+      return `<tr><td>${esc(f.id)}</td><td class="n">${f.mz.toFixed(4)}</td><td class="n">${f.rt.toFixed(2)}</td><td>${ro ? esc(ro.label) + (ro.ppm ? ` (${ro.ppm.toFixed(1)} ppm)` : "") : "not explained by this mass"}</td><td>${r ? esc(LV.tag(M.shown(r))) : ""}</td><td>${r ? esc(r.name) : ""}</td>`
+        + `<td><button type="button" class="tpr-act" data-open="${esc(k)}" aria-label="Show feature ${esc(f.id)}">Show</button></td></tr>`;
+    };
+    return `<div class="tpr-tw${n > 10 ? " sc" : ""}"${n > 10 ? ` tabindex="0" role="region" aria-label="Features of the identity"` : ""}><table class="tpr"><caption class="sr-only">Features of the identity</caption><thead><tr><th scope="col">Feature</th><th scope="col" class="n"><i>m/z</i></th><th scope="col" class="n">RT</th><th scope="col">Role</th><th scope="col">Level</th><th scope="col">Candidate</th><th scope="col"><span class="sr-only">Open</span></th></tr></thead><tbody>${x.members.map(line).join("")}</tbody></table></div>`;
+  }
+
   /** positive and negative tables → pairs that can be the same molecule (same neutral mass under the usual adduct pairs, RT within a window); evidence only */
   async function pairPolarity(pos, neg, call, o = {}) {
     const f = t => t.features.map(x => ({ k: x.key, mz: x.mz, rt: x.rt }));
     return call("polarity_pairs", { pos: f(pos), neg: f(neg), ppm: o.ppm ?? 5, rt_min: o.rtMin ?? 0.15 });
   }
 
-  const UNTID = { OPT, MIN_COMMON, structKey, payload, compute, annotate, single, edgeText, evidenceText, edgeShort, hypothesisText, networkSvg, pairPolarity };
+  const UNTID = { OPT, MIN_COMMON, structKey, payload, compute, annotate, single, edgeText, evidenceText, edgeShort, hypothesisText, networkSvg, identityHtml, membersHtml, pairPolarity };
   G.UNTID = UNTID;
   if (typeof module !== "undefined") module.exports = UNTID;
 })();
