@@ -4,7 +4,7 @@ use mzlab_core::json::{round, Out};
 
 use super::kin::{kinetics, Point};
 use super::labels::Crit;
-use super::{isf, plan, Entry, LrDig};
+use super::{isf, nomi, plan, Entry, LrDig};
 use crate::legacy::lrisf::IsfVerdict;
 
 const LEVEL_TEXT: [(u8, &str); 3] = [
@@ -99,7 +99,7 @@ struct Row<'a> {
     sim: Option<f64>,
 }
 
-fn row_json(o: &mut Out, r: &Row, p_mz: f64) {
+fn row_json(o: &mut Out, r: &Row, p_mz: f64, tp_name: &str, parent_formula: &str) {
     let e = r.e;
     o.raw("{\"id\":")
         .int(e.id)
@@ -109,7 +109,11 @@ fn row_json(o: &mut Out, r: &Row, p_mz: f64) {
         } else {
             "candidate"
         });
-    o.raw(",\"name\":").str(&e.name).raw(",\"alternatives\":");
+    o.raw(",\"name\":").str(&e.name);
+    o.raw(",\"tp_name\":").str(tp_name);
+    o.raw(",\"net_change\":").str(&if e.unexpected { String::new() } else { nomi::net_change(&e.formula, parent_formula) });
+    o.raw(",\"modification\":").str(&nomi::modification(&e.name, e.unexpected));
+    o.raw(",\"alternatives\":");
     strs(o, &e.alternatives);
     o.raw(",\"formula\":")
         .str(&e.formula)
@@ -304,9 +308,11 @@ pub fn summary(d: &LrDig, timing: &str) -> String {
     head_json(&mut o, d);
     files_json(&mut o, d);
     o.raw(",\"rows\":[");
+    let names = nomi::tp_names(&d.entries);
     for (i, r) in ordered(d).iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" });
-        row_json(&mut o, r, d.parent.mz);
+        let at = d.entries.iter().position(|x| std::ptr::eq(x, r.e)).unwrap_or(0);
+        row_json(&mut o, r, d.parent.mz, &names[at], &d.parent.formula);
     }
     o.raw("],\"settings\":");
     plan::settings_json(&mut o, &d.settings);

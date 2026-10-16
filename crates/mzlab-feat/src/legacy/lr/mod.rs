@@ -11,6 +11,7 @@ pub mod ms2;
 pub mod ms2link;
 pub mod ms2sim;
 pub mod ms2target;
+pub mod nomi;
 pub mod peak1d;
 pub mod plan;
 pub mod rows;

@@ -23,7 +23,7 @@ WATCH = """() => { window.__lv = {done: 0, cands: 0, nodes: 0, sr: [], finished:
   const R = document.getElementById('tp-right');
   new MutationObserver(() => {
     const L = document.getElementById('tp-live');
-    if (!L) { if (document.querySelector('#tp-view .gem, #hr-t')) window.__lv.finished = true; return; }
+    if (!L) { if (document.querySelector('#tp-t, #hr-t')) window.__lv.finished = true; return; }
     const v = window.__lv; v.done = Math.max(v.done, L.querySelectorAll('li.ph[data-s=done]').length);
     v.cands = Math.max(v.cands, L.querySelectorAll('.cand').length); v.nodes = Math.max(v.nodes, L.querySelectorAll('#tp-live-t .nd').length);
     const s = document.getElementById('tp-live-sr').textContent; if (s && v.sr[v.sr.length - 1] !== s) v.sr.push(s);
@@ -46,7 +46,7 @@ try:
             pg.fill("#tp-smi", "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O")
             pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('241.0641')", timeout=60000)
             pg.evaluate(WATCH)
-            pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=300000)
+            pg.click("#tp-go"); pg.wait_for_selector("#tp-t", timeout=300000)
             v = pg.evaluate("window.__lv")
             assert v["done"] >= 1 and v["cands"] >= 1 and v["finished"], v
             assert len(v["sr"]) >= 2 and len(v["sr"]) <= 7, v["sr"]                   # announced once per phase, not per update

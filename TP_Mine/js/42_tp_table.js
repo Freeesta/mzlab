@@ -47,7 +47,7 @@
 @media(prefers-reduced-motion:no-preference){.tp .tpt-chip,.tp .tpt-tabs button{transition:background .12s,border-color .12s}}`;
 
   /**
-   * @typedef {{ key: string, label: string, title?: string, help?: string, num?: boolean, off?: boolean, sticky?: boolean, width?: number, sort?: (r: any) => number | string | null, cell: (r: any) => string, text?: (r: any) => string }} Col
+   * @typedef {{ key: string, label: string, title?: string, help?: string, num?: boolean, off?: boolean, sticky?: boolean, width?: number, sort?: (r: any) => number | string | null, cell: (r: any) => string, text?: (r: any) => string, value?: (r: any) => number | null }} Col
    * @typedef {{ key: string, label: string, help?: string, test: (r: any) => boolean, on?: boolean, off?: string, group?: string }} Chip
    * @typedef {{ key: string, label: string, help?: string }} Tab
    * @typedef {{ id: string, cols: Col[], rowId: (r: any) => number, name: (r: any) => string, onOpen: (id: any, panel: HTMLElement, tab?: string) => void, onSort?: (key: string, dir: number) => void, esc: (s: any) => string, label?: string, panelId?: string,
@@ -307,11 +307,12 @@
     const textOf = (/** @type {Col} */ c, /** @type {any} */ r) => c.text ? c.text(r) : plain(c.cell(r));
     /** the columns «Decided level» and «Note» at the end of the view, when the table has decisions @param {{ head: string[], rows: string[][] }} v @param {any[]} list */
     const withNotes = (v, list) => dec ? { head: [...v.head, "Decided level", "Note"], rows: v.rows.map((r, i) => { const d = G.TPDEC.get(dec.series(), dec.key(list[i])); return [...r, d ? G.TPDEC.text(d.level) : "", d ? d.note : ""]; }) } : v;
-    const exported = () => ({ head: cols.map(c => plain(c.label)), rows: st.list.map(r => cols.map(c => textOf(c, r))) });
+    /** a column with `value` gives the true number after its text (e.g. an area as «821.43e+6» and as 821430000) */
+    const exported = () => ({ head: cols.flatMap(c => c.value ? [plain(c.label), plain(c.label) + " (number)"] : [plain(c.label)]), rows: st.list.map(r => cols.flatMap(c => c.value ? [textOf(c, r), c.value(r) ?? ""] : [textOf(c, r)])) });
     host.querySelectorAll("[data-x]").forEach(b => b.addEventListener("click", async () => {
       const kind = /** @type {HTMLElement} */ (b).dataset.x, v = withNotes(exported(), st.list), name = o.exportName || "table";
       if (kind === "csv") {
-        const cell = (/** @type {string} */ s) => /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+        const cell = (/** @type {any} */ v) => { const s = String(v ?? ""); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
         G.dl(name + ".csv", "﻿" + [filtersText(), v.head.map(cell).join(";"), ...v.rows.map(r => r.map(cell).join(";"))].join("\r\n") + "\r\n", "text/csv;charset=utf-8", false);
       } else G.dlx(name + ".xlsx", [{ name: "View", head: v.head, rows: v.rows }], false);
     }));
@@ -410,5 +411,12 @@
     return `<span class="lvb pd-${n}" role="img" aria-label="Prev. ${n}, prediction scale"${tt("ft.col.pred")}>Prev. ${n}</span>`;
   }
 
-  G.TPTAB = { mount, spark, state, cells, legend, level, pred };
+  /** an area in engineering notation, never with the suffixes k / M: 821430000 -> «821.43e+6»; a value that rounds up to 1000.00 moves to the next power @param {number} v */
+  const area = v => {
+    if (!Number.isFinite(v) || v === 0) return "0";
+    let e = Math.floor(Math.log10(Math.abs(v)) / 3) * 3, m = (v / 10 ** e).toFixed(2);
+    if (Math.abs(+m) >= 1000) { e += 3; m = (v / 10 ** e).toFixed(2); }
+    return m + "e" + (e < 0 ? "-" : "+") + Math.abs(e);
+  };
+  G.TPTAB = { mount, spark, state, cells, legend, level, pred, area };
 })();

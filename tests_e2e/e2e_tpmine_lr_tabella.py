@@ -69,7 +69,7 @@ try:
             try: pg.wait_for_function("document.querySelector('#tp-tol').classList.contains('tp-est')", timeout=60000)
             except Exception: pass
             pg.fill("#tp-mol", SMILES)
-            pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=360000)
+            pg.click("#tp-go"); pg.wait_for_selector("#tp-t", timeout=360000)
             pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk", timeout=60000)
         step("the Dig of the synthetic series gives the table", dig)
 
@@ -128,12 +128,12 @@ try:
             assert pg.evaluate("!!document.activeElement.closest('#tp-t')"), "the focus returns to the table"
         step("arrows move between the tabs; Esc closes the row and returns the focus", keys)
 
-        def gem():
-            pg.click('.vt[data-v="gems"]'); pg.wait_for_selector("#tp-view .gem")
-            pg.locator("#tp-view .gem").first.click()
+        def node():
+            pg.click('.vt[data-v="map"]'); pg.wait_for_selector(".mnode")
+            pg.locator(".mnode").nth(1).click()
             pg.wait_for_selector("#tp-t tr.tpt-exp #tp-det", timeout=60000)
             assert pg.evaluate("document.querySelector('.vt[data-v=tab]').getAttribute('aria-selected') || document.querySelector('.vt[data-v=tab]').classList.contains('on')")
-        step("a click on a gem opens its row in the Table view", gem)
+        step("a click on a map node opens its row in the Table view", node)
 
         def calm():
             assert pg.locator(".confetti").count() == 0, "confetti with prefers-reduced-motion"
