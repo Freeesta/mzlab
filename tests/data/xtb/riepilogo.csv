@@ -1,0 +1,21 @@
+molecola,cid,n_atomi_pesanti,tempo_xtb_water_s,tempo_xtb_gas_s,convergente_water,convergente_gas,sito_f_minus_water,sito_f_minus_gas,note
+fenolo,996,7,0.047,0.043,true,true,4,4,f(-) water: 0.081; f(-) gas: 0.086
+anisolo,7519,8,0.042,0.040,true,true,5,5,f(-) water: 0.067; f(-) gas: 0.073
+toluene,1140,7,0.041,0.040,true,true,4,4,f(-) water: 0.072; f(-) gas: 0.077
+acido_benzoico,243,9,0.045,0.043,true,true,5 7,5 7,f(-) water: 0.043; f(-) gas: 0.046
+nitrobenzene,7416,9,0.046,0.042,true,true,5 7,5 7,f(-) water: 0.043; f(-) gas: 0.046
+clorobenzene,7964,7,0.048,0.073,true,true,4,4,f(-) water: 0.071; f(-) gas: 0.072
+anilina,6115,7,0.039,0.039,true,true,4,4,f(-) water: 0.070; f(-) gas: 0.078
+naftalene,931,10,0.051,0.046,true,true,2 4 7 9,2 4 7 9,f(-) water: 0.054; f(-) gas: 0.055
+carbamazepina,2554,18,0.116,0.115,true,true,10 11,6 15,f(-) water: 0.030; f(-) gas: 0.028
+paracetamolo,1983,11,0.071,0.072,true,true,6 9,6 9,"f(-) water: 0.034; f(-) gas: 0.033; Scarto f(-) tra classi 6,9 e 5,10 < 0.002"
+diclofenac,3033,19,0.204,0.205,true,true,15,6,f(-) water: 0.033; f(-) gas: 0.033
+sulfametossazolo,5329,17,0.141,0.163,true,true,10 13,10 13,f(-) water: 0.035; f(-) gas: 0.028
+atrazina,2256,14,0.126,0.118,true,true,N/A,N/A,Nessun C insaturo con H (anello triazinico trisostituito)
+bisfenolo_a,6623,17,0.141,0.142,true,true,5 8 12 15,5 8 12 15,f(-) water: 0.022; f(-) gas: 0.023
+caffeina,2519,14,0.094,0.092,true,true,7,7,f(-) water: 0.017; f(-) gas: 0.025
+triclosan,5564,17,0.171,0.161,true,true,5,5,f(-) water: 0.026; f(-) gas: 0.023
+ibuprofene,3672,15,0.115,0.116,true,true,5 14,5 14,f(-) water: 0.026; f(-) gas: 0.022
+metoprololo,4171,19,0.188,0.223,true,true,6 17,6 17,f(-) water: 0.019; f(-) gas: 0.019
+benzofenone_3,4632,17,0.130,0.127,true,true,3,3,f(-) water: 0.051; f(-) gas: 0.046
+imidacloprid,86287518,17,0.160,0.161,true,true,12,12,f(-) water: 0.015; f(-) gas: 0.019; PubChem CID 86287518 (86343 e ChemSpider ID)
