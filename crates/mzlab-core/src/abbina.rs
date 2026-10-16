@@ -24,9 +24,11 @@ pub struct AbbinaParams<'a> {
 
 fn collect_candidates(p: &AbbinaParams<'_>, na: usize, nb: usize) -> Vec<Candidate> {
     let mut order_b: Vec<usize> = (0..nb).collect();
-    crate::sortc::by(&mut order_b, |&i, &j| match (p.mz_b.get(i), p.mz_b.get(j)) {
-        (Some(a), Some(b)) => a.total_cmp(b),
-        _ => std::cmp::Ordering::Equal,
+    crate::sortc::by(&mut order_b, |&i, &j| {
+        match (p.mz_b.get(i), p.mz_b.get(j)) {
+            (Some(a), Some(b)) => a.total_cmp(b),
+            _ => std::cmp::Ordering::Equal,
+        }
     });
 
     let mut candidates: Vec<Candidate> = Vec::new();
