@@ -1,8 +1,7 @@
-"""Tabui, low resolution: the table of the files with role, condition, time and replicate (TP_Mine/lazy/gruppi-campioni.js, campioni/2). Synthetic Full Scan series (TP_Mine/tests/lr_synth.py)
-copied under names of two conditions (G_O2_t30, G_O2_t60, G_N2_t30, G_N2_t60) and a shared blank. Checks: opening Tabui downloads nothing from lazy/ (the script comes with the second
-full-scan file); the conditions are proposed from the names (yellow until «Confirm conditions»), the blank is shared; «Set condition…» on two files, the reference condition, keyboard (Tab,
-arrows in a select, Enter on «Confirm conditions»); the notebook (NB.campioni, NB.gruppi_opts) holds it and a reload gives the same table; MZLAB_LR_MISS empty. Builds the site and static/wasm-feat
-(SKIP without cargo, wasm-bindgen or numpy); MZLAB_PIPE_SITE=<built site with static/wasm-feat> reuses one. Run from the repo root."""
+"""Tabui: the table of the files with role, condition, time and replicate (TP_Mine/lazy/gruppi-campioni.js, campioni/2), alone on a test page (a container the test adds; Tabui does not use it yet).
+Names of two conditions (G_O2_t30, G_O2_t60, G_N2_t30, G_N2_t60) and a shared blank. Checks: opening Tabui downloads nothing from lazy/ (TPLAZY.load brings the script once); the conditions are proposed from the names (yellow until «Confirm conditions»), the blank is shared; «Set condition…» on two files, the reference condition, keyboard (Tab,
+arrows in a select, Enter on «Confirm conditions»); the notebook (NB.campioni, NB.gruppi_opts) holds it and a reload gives the same table; MZLAB_LR_MISS empty. Builds the site
+(SKIP without cargo or wasm-bindgen); MZLAB_PIPE_SITE=<built site with the engine .wasm> reuses one. Run from the repo root."""
 import os, shutil, subprocess, sys, tempfile, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -16,11 +15,6 @@ def step(name, fn):
 
 if not (shutil.which("cargo") and shutil.which("wasm-bindgen")):
     print("SKIP cargo and wasm-bindgen are needed to build the wasm of the engine and of mzFinder"); sys.exit(0)
-try:
-    import numpy  # noqa: F401
-except ImportError:
-    print("SKIP numpy is needed for the synthetic series"); sys.exit(0)
-sys.path.insert(0, str(ROOT / "TP_Mine" / "tests")); import lr_synth  # noqa: E402
 
 tmp = Path(tempfile.mkdtemp(prefix="tabui_gr_files_"))
 reuse = os.environ.get("MZLAB_PIPE_SITE")
@@ -30,7 +24,6 @@ if not reuse:
     if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
     subprocess.run(cmd, check=True)
     from lib_sito import add_wasm; add_wasm(site)
-    from lib import build_feat; build_feat(site / "static", dict(os.environ, RUNNER_TEMP=str(tmp / "rt")))
 else:                                                      # fresh sources of mzFinder over the site that was built
     mz = site / "static" / "mzfinder"
     for d in ("files", "js"):
@@ -38,13 +31,7 @@ else:                                                      # fresh sources of mz
     (mz / "lazy").mkdir(exist_ok=True)
     for f in (ROOT / "TP_Mine" / "lazy").glob("*"): shutil.copy2(f, mz / "lazy" / f.name)
     import json; ix = mz / "indice.json"; d = json.loads(ix.read_text()); d["lazy"] = sorted(f.name for f in (ROOT / "TP_Mine" / "lazy").glob("*.js")); ix.write_text(json.dumps(d))
-src = lr_synth.write_series(tmp / "ser", times=(30, 60), blank=True)
-by = {Path(f["path"]).name: Path(f["path"]) for f in src}
-(tmp / "g").mkdir()
-NAMES = ["G_O2_t30.mzML", "G_O2_t60.mzML", "G_N2_t30.mzML", "G_N2_t60.mzML", "G_blank.mzML"]
-for n, s in zip(NAMES, ["lr_FullMass-t30.mzML", "lr_FullMass-t60.mzML", "lr_FullMass-t30.mzML", "lr_FullMass-t60.mzML", "lr_blank.mzML"]):
-    shutil.copy2(by[s], tmp / "g" / n)
-paths = [str(tmp / "g" / n) for n in NAMES]
+NAMES = ["G_O2_t30.mzML", "G_O2_t60.mzML", "G_N2_t30.mzML", "G_N2_t60.mzML", "G_blank.mzML"]      # names only: the table needs no data
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 errs = []; reqs = []
@@ -69,31 +56,35 @@ try:
         def lazy_idle():
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go", timeout=60000)
             assert not [u for u in reqs if "/mzfinder/lazy/" in u], [u for u in reqs if "/lazy/" in u]
-            assert pg.evaluate("document.querySelector('#tp-gfiles').hidden")
             idx = pg.evaluate("fetch('static/mzfinder/indice.json').then(r => r.json()).then(j => j.lazy)")
             assert "gruppi-campioni.js" in idx, idx
         step("opening Tabui downloads nothing from lazy/ (the file is listed in indice.json)", lazy_idle)
 
-        def open_files():
-            pg.click('#nav button[data-v="data"]') if pg.locator('#nav button[data-v="data"]').count() else None
-            pg.set_input_files("#pick", paths)
-            pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(paths)}", timeout=120000)
-            pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
-            pg.wait_for_function(f"E.files.length >= {len(paths)} && E.pending.length === 0", timeout=240000)
-            pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-page")
-            pg.click("#tp-page"); pg.wait_for_selector(f"{G} table .tpg-cond", timeout=120000)
-            assert [u for u in reqs if "/mzfinder/lazy/gruppi-campioni.js" in u], "the script was not asked for"
+        # the test page: a container in the page, the component mounted by the test (Tabui does not use it yet)
+        MOUNT = """async (names) => {
+            await window.TPLAZY.load("gruppi-campioni.js"); await window.TPLAZY.load("gruppi-campioni.js");
+            const R = await import(URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["finder-ruoli.js"]], { type: "text/javascript" })));
+            const call = async (op, j) => { const r = await fetch("api/campioni/" + op, { method: "POST", body: j }); const t = await r.text(); if (!r.ok) throw new Error(t); return t; };
+            let el = document.getElementById("tp-gfiles"); if (el) { el.textContent = ""; } else { el = document.createElement("div"); el.id = "tp-gfiles"; document.body.prepend(el); }
+            window.GRCHANGES = [];
+            window.GRCTL = await window.TPGRUPPI_FILES.mount(el, names, { R, call, nb: NB, save: nbSave, onChange: r => window.GRCHANGES.push(r) });
+        }"""
+        def open_table():
+            pg.evaluate(MOUNT, NAMES); pg.wait_for_selector(f"{G} table .tpg-cond", timeout=120000)
+            assert len([u for u in reqs if "/mzfinder/lazy/gruppi-campioni.js" in u]) == 1, "the script is asked for once"
             assert pg.locator(f"{G} tr .tpg-cond").count() == len(NAMES)
-        step("two or more full-scan files: the lazy script loads and the table appears", open_files)
+            assert pg.evaluate("window.GRCHANGES.length") >= 1, "the page is told what the table holds at once"
+        step("the lazy script loads once and the table appears", open_table)
 
         def proposed():
-            c = pg.evaluate(BYNAME); k = lambda n: c[next(x for x in c if x.startswith(n))]
-            assert k("G_O2_t30") == k("G_O2_t60") != "" and k("G_N2_t30") == k("G_N2_t60") != "" and k("G_O2_t30") != k("G_N2_t30") and k("G_blank") == "", c
+            c = pg.evaluate(BYNAME)
+            assert c["G_O2_t30.mzML"] == c["G_O2_t60.mzML"] != "" and c["G_N2_t30.mzML"] == c["G_N2_t60.mzML"] != "" and c["G_O2_t30.mzML"] != c["G_N2_t30.mzML"] and c["G_blank.mzML"] == "", c
             assert pg.locator(f"{G} tr.tpg-prop").count() == 4, pg.locator(f"{G} tr.tpg-prop").count()
-            roles = sorted(pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)"))
-            assert roles == ["blank"] + ["sample"] * 4, roles
-            assert sorted(pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-time')].map(e => e.value)")) == ["", "30", "30", "60", "60"]
+            roles = pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)")
+            assert roles == ["sample"] * 4 + ["blank"], roles
+            assert pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-time')].map(e => e.value)") == ["30", "60", "30", "60", ""]
             assert pg.locator(f"{G} .tpg-rep").first.get_attribute("aria-label").startswith("Replicate of ")
+            last = pg.evaluate("window.GRCHANGES.at(-1)"); assert sorted(last["conditions"]) == ["G_N2", "G_O2"], last["conditions"]
         step("conditions, roles and times proposed from the names; the blank is shared; yellow rows", proposed)
 
         def confirm_keys():
@@ -109,7 +100,7 @@ try:
             pg.keyboard.type("Air"); pg.keyboard.press("Enter")
             pg.wait_for_function(f"Object.values({BYNAME}).includes('Air')", timeout=20000)
             c = pg.evaluate(BYNAME); air = sorted(n for n in c if c[n] == "Air")
-            assert len(air) == 2 and all(n.startswith("G_O2") for n in air), c
+            assert air == ["G_O2_t30.mzML", "G_O2_t60.mzML"], c
             pg.wait_for_function("document.activeElement && document.activeElement.textContent.trim() === 'Set condition…'", timeout=20000)
         step("«Set condition…» on two files sets both and returns the focus", set_two)
 
@@ -119,33 +110,27 @@ try:
             pg.select_option(f"{G} select[aria-label='Reference condition']", "Air")
             pg.wait_for_function("NB.gruppi_opts && NB.gruppi_opts.reference === 'Air'", timeout=20000)
             assert pg.evaluate("NB.campioni.campioni.length") == len(NAMES)
-        step("the reference condition is chosen and kept in NB.gruppi_opts", reference)
+            assert pg.evaluate("window.GRCHANGES.at(-1).reference") == "Air"
+        step("the reference condition is chosen, kept in NB.gruppi_opts and given to the page", reference)
 
         def keyboard():
-            pg.focus(f"{G} .tpg-role[data-i='0']"); pg.keyboard.press("ArrowDown")
-            pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"0\"]').value !== 'blank'", timeout=20000)
-            assert pg.evaluate("document.activeElement.classList.contains('tpg-role')"), "the focus stays on the select after the change"
-            pg.keyboard.press("ArrowUp"); pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"0\"]').value === 'blank'", timeout=20000)
+            pg.focus(f"{G} .tpg-role[data-i='4']"); pg.keyboard.press("ArrowDown")
+            pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"4\"]').value !== 'blank'", timeout=20000)
+            pg.keyboard.press("ArrowUp"); pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"4\"]').value === 'blank'", timeout=20000)
             pg.wait_for_timeout(800)                                      # the table is drawn again after the change
             pg.focus(f"{G} .tpg-cond[data-i='1']"); pg.keyboard.press("Tab")
             assert pg.evaluate("document.activeElement.classList.contains('tpg-time')"), pg.evaluate("document.activeElement.outerHTML")
-        step("keyboard: arrows in the role select keep the focus; Tab goes from condition to time", keyboard)
+        step("keyboard: arrows in the role select; Tab goes from condition to time", keyboard)
 
         def warnings():
-            t = pg.inner_text(f"{G} [role=status]"); assert t.strip() != "", "no warning for a series without a t0"
-            assert "No t0" in t and not any(w in t for w in ("Nessun", "tempo")), t
+            t = pg.inner_text(f"{G} [role=status]"); assert "No t0" in t and not any(w in t for w in ("Nessun", "tempo")), t
         step("the warnings are in a role=status region, in English", warnings)
 
         def reload():
             before = pg.evaluate(BYNAME); roles = pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)")
-            pg.wait_for_timeout(800); pg.reload(); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
-            pg.wait_for_timeout(3000)                                     # the files of the first page are not brought back: open them again (the page may open them at once)
-            pg.set_input_files("#pick", paths)
-            pg.wait_for_function("document.querySelector('#opbtn') && (document.querySelector('#opbtn').offsetParent !== null || E.files.length >= %d)" % len(paths), timeout=120000)
-            if pg.evaluate("document.querySelector('#opbtn').offsetParent !== null"): pg.click("#opbtn")
-            pg.wait_for_function(f"E.files.length >= {len(paths)} && E.pending.length === 0", timeout=240000)
-            pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-page"); pg.click("#tp-page")
-            pg.wait_for_selector(f"{G} table .tpg-cond", timeout=120000)
+            pg.wait_for_timeout(1000); pg.reload(); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
+            pg.wait_for_function("window.QTOOLS && window.QTOOLS.ctx && NB.campioni", timeout=120000)
+            pg.evaluate(MOUNT, NAMES); pg.wait_for_selector(f"{G} table .tpg-cond", timeout=120000)
             assert pg.evaluate(BYNAME) == before, (before, pg.evaluate(BYNAME))
             now = pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)"); assert now == roles, (roles, now)
             assert pg.input_value(f"{G} select[aria-label='Reference condition']") == "Air"

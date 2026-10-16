@@ -198,7 +198,7 @@
  <div class="card"><h3>1 · Files</h3>
   <div class="row"><button id="tp-page" title="Reload the files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick" title=".mzML, .raw, .wiff (+ .wiff.scan)">Choose files...</button><button id="tp-pickdir" title="e.g. an Agilent .D">Choose folder...</button></div>
   <input type="file" id="tp-in" accept=".mzML,.mzml,.raw,.wiff,.scan" multiple hidden><input type="file" id="tp-dir" multiple hidden>
-  <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-gfiles" hidden></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
+  <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
  <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div>
   <div class="row tp-ac"><input type="text" id="tp-name" class="grow-in" placeholder="Name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false">${hb("ft.f.name", "Name")}<ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
   <div class="row"><input type="text" id="tp-mol" class="grow-in" placeholder="Neutral formula" aria-label="Neutral molecular formula" spellcheck="false">${hb("ft.f.formula", "Neutral formula")}</div>
@@ -244,32 +244,7 @@
       const bl = st.files.filter(f => f.type === "blank").length;
       $("#tp-fsum").textContent = Object.entries(cn).map(([k, v]) => v + " " + k).join(" · ") + (bl ? " · " + bl + (bl === 1 ? " blank" : " blanks") : "");
       $("#tp-files").querySelectorAll("[data-k]").forEach(el => el.onchange = () => { const f = st.files[+el.dataset.i]; f[el.dataset.k] = el.dataset.k === "time" ? (el.value === "" ? null : +el.value) : el.value; });
-      groupsTable();
     };
-    // ---- two or more full-scan files: role, condition, time and replicate per file (campioni/2, TP_Mine/lazy/gruppi-campioni.js, loaded here on first use); the old table stays for the other files and until the script is loaded
-    /** @type {any} */ const GR = { ctl: null, key: "", seq: 0, R: null, camp: null, reference: "" };
-    const campCall = async (op, j) => { const r = await fetch("api/campioni/" + op, { method: "POST", body: j }); const t = await r.text(); if (!r.ok) throw new Error(t); return t; };
-    const GTYPE = { sample: "sample", t0: "sample", blank: "blank", std: "standard", calibration: "standard", dark: "control" };
-    function groupsApply(r) {          // what the table holds goes to the files of the Dig: type and time in minutes from campioni/2, which also goes to the Dig with the reference condition
-      GR.camp = { schema: "campioni/2", campioni: r.campioni }; GR.reference = r.reference;
-      for (const f of st.files) { const c = r.campioni.find(x => x.file === GR.R.fileOf(f.name)); if (!c || f.kind !== "full") continue; if (GTYPE[c.tipo]) f.type = GTYPE[c.tipo]; f.time = c.tipo === "t0" ? 0 : c.tempo_min; }
-    }
-    async function groupsTable() {
-      const host = $("#tp-gfiles"), full = st.files.filter(f => f.kind === "full"), on = full.length >= 2 && !st.files.some(f => f.kind === "hr"), key = full.map(f => f.name).join("\n");
-      if (!on) { GR.seq++; if (GR.ctl) GR.ctl.unmount(); GR.ctl = null; GR.key = ""; GR.camp = null; host.hidden = true; return; }
-      const hideOld = () => { $("#tp-files").querySelectorAll("tr").forEach((tr, i) => { if (i > 0 && st.files[i - 1].kind === "full") tr.hidden = true; }); $("#tp-more").hidden = st.files.every(f => f.kind === "full"); };
-      if (GR.ctl && GR.key === key) return hideOld();
-      const my = ++GR.seq;
-      try {
-        await W.TPLAZY.load("gruppi-campioni.js");
-        if (!GR.R) GR.R = await import(URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["finder-ruoli.js"]], { type: "text/javascript" })));
-        if (my !== GR.seq) return;
-        if (GR.ctl) GR.ctl.unmount();
-        const ctl = await W.TPGRUPPI_FILES.mount(host, full.map(f => f.name), { R: GR.R, call: campCall, nb: typeof NB !== "undefined" ? NB : null, save: typeof nbSave === "function" ? nbSave : null, onChange: groupsApply });
-        if (my !== GR.seq) { ctl.unmount(); return; }
-        GR.ctl = ctl; GR.key = key; host.hidden = false; hideOld();
-      } catch (e) { console.error("Tabui: the table of conditions could not be shown", e); host.hidden = true; }
-    }
     const BIG = 50 << 20;                   // as in the main program: above this a file is mounted from its Blob, not copied (13 HR files = 1 GB)
     // low resolution: the window, the tolerance of RT and the void front are proposed from the data (Rust, preview of the first sample); a proposed value is yellow until the user types
     let estSeq = 0, parentMz = 0;            // parentMz: the m/z of the parent ion (from the preview of the parent), for the drift of its RT
@@ -501,7 +476,6 @@
       try {
         const files = st.files.filter(f => f.kind !== "error" && f.kind !== "empty").map(f => ({ name: f.name, type: f.type, time: f.time, kind: f.kind }));
         const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, min_files: +$("#tp-minf").value, discover: $("#tp-disc").checked, ms2_overrides: window.TPMS2 ? window.TPMS2.start(st.files) : [] };
-        if (GR.camp) { settings.campioni = GR.camp; settings.reference = GR.reference; const fx = typeof NB !== "undefined" && NB.gruppi_opts && NB.gruppi_opts.factors; if (fx) settings.factors = fx; }
         const parent = { name: (nameIn.dataset.raw && nameIn.value === MOLUI.cap(nameIn.dataset.raw) ? nameIn.dataset.raw : $("#tp-name").value.trim()), neutral: mol, adduct: $("#tp-add").value };
         if (pv.smi) parent.smiles = pv.smi;
         if ($("#tp-prt").value !== "" && +$("#tp-prt").value >= 0) parent.rt = +$("#tp-prt").value;
