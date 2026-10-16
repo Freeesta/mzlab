@@ -201,7 +201,7 @@ fn solve_linear_system(mut a: Vec<f64>, mut b: Vec<f64>, n: usize) -> Option<Vec
                 pivot = r;
             }
         }
-        if !(max_val >= 1e-300) {
+        if max_val.is_nan() || max_val < 1e-300 {
             return None;
         }
         if pivot != c {
