@@ -61,7 +61,7 @@ pub fn hbonds(m: &Mol3d, xyz: &[[f64; 3]]) -> Vec<(usize, usize)> {
         if !polar(m.el[don]) {
             continue;
         }
-        for acc in (0..m.len()).filter(|&k| k != don && matches!(m.el[k], 7 | 8 | 9)) {
+        for acc in (0..m.len()).filter(|&k| k != don && matches!(m.el[k], 7..=9)) {
             let (dh, ha, da) = (d(don, h), d(h, acc), d(don, acc));
             let cos = (dh * dh + ha * ha - da * da) / (2.0 * dh * ha);
             if ha <= 2.5 && cos < (120f64).to_radians().cos() {

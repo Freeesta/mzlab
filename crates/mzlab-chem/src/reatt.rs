@@ -65,12 +65,11 @@ pub struct Result3 {
     pub spread: Option<f64>,
 }
 
+/// Fukui values, HOMO and LUMO (eV), converged and iterations of N, N+1 and N−1.
+pub type Gfn2 = (Fukui, f64, f64, [bool; 3], [usize; 3]);
+
 /// GFN2-xTB of N, N+1 and N−1 for one geometry: (Fukui, HOMO, LUMO, converged, iterations).
-pub fn gfn2(
-    m: &Mol3d,
-    xyz: &[[f64; 3]],
-    water: bool,
-) -> Result<(Fukui, f64, f64, [bool; 3], [usize; 3])> {
+pub fn gfn2(m: &Mol3d, xyz: &[[f64; 3]], water: bool) -> Result<Gfn2> {
     let sys = System::new(&m.el, xyz, water.then_some(&alpb::WATER))?;
     let charge: i32 = m.charge.iter().map(|&c| c as i32).sum();
     let n = sys.solve(charge, None)?;

@@ -61,6 +61,7 @@ impl Aes {
     }
 
     /// Potentials for atomic charges `q`, dipoles `dp` and quadrupoles `qp`, kernels included.
+    #[allow(clippy::needless_range_loop)]
     pub fn potential(&self, q: &[f64], dp: &[[f64; 3]], qp: &[[f64; 6]]) -> AesPot {
         let n = self.n;
         let mut p = AesPot {
@@ -94,6 +95,7 @@ impl Aes {
     }
 
     /// Electrostatic multipole energy (Hartree), kernels included.
+    #[allow(clippy::needless_range_loop)]
     pub fn energy(&self, q: &[f64], dp: &[[f64; 3]], qp: &[[f64; 6]]) -> f64 {
         let n = self.n;
         let mut e = 0.0;

@@ -55,7 +55,7 @@ impl System {
     /// Elements (atomic numbers), positions in Å, optional solvent.
     pub fn new(el: &[u8], xyz: &[[f64; 3]], solvent: Option<&alpb::Solvent>) -> Result<System> {
         if let Some(&z) = el.iter().find(|&&z| !gfn2_params::is_gfn2_supported(z)) {
-            return Err(Error::new("error.chem.element").with("element", &z.to_string()));
+            return Err(Error::new("error.chem.element").with("element", z.to_string()));
         }
         let pos: Vec<[f64; 3]> = xyz
             .iter()
@@ -92,7 +92,7 @@ impl System {
     pub fn solve(&self, charge: i32, guess: Option<&Guess>) -> Result<Scf> {
         let nel = self.electrons() as i64 - charge as i64;
         if nel < 0 || nel as usize > 2 * self.basis.ao.len() {
-            return Err(Error::new("error.chem.charge").with("charge", &charge.to_string()));
+            return Err(Error::new("error.chem.charge").with("charge", charge.to_string()));
         }
         let len = self.basis.shells.len() + 9 * self.el.len();
         let x0 = guess.map_or_else(|| vec![0.0; len], |g| g.x.clone());

@@ -90,6 +90,7 @@ fn pair(
 }
 
 /// Overlap and multipole integrals (positions in bohr).
+#[allow(clippy::needless_range_loop)]
 pub fn ints(el: &[u8], pos: &[[f64; 3]], b: &Basis) -> Ints {
     let n = b.ao.len();
     let z = || DMatrix::zeros(n, n);
