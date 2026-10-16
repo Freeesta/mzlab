@@ -158,7 +158,7 @@ try:
         def narrow():
             pg.set_viewport_size({"width": 360, "height": 900})
             for v in ("row", "file"):
-                pg.click(f'[data-vw="{v}"]'); pg.wait_for_timeout(100)
+                pg.click(f'[data-vw="{v}"]'); pg.wait_for_selector(f'[data-vw="{v}"][aria-pressed="true"]')
                 w = pg.evaluate("(() => { const c = document.getElementById('tp-ms2map'), r = c.getBoundingClientRect(); return [c.scrollWidth, c.clientWidth, r.right, innerWidth]; })()")
                 wide = pg.evaluate("[...document.querySelectorAll('#tp-ms2map *')].filter(e => e.offsetParent && !e.closest('.tbl') && e.getBoundingClientRect().right > Math.min(innerWidth, document.getElementById('tp-ms2map').getBoundingClientRect().right) + 1).map(e => e.tagName + '.' + e.className)")
                 assert w[0] <= w[1] + 1 and w[2] <= w[3] + 1 and not wide, (v, w, wide)          # the card (the page around it is not this card's: #nav and the table of rows)
