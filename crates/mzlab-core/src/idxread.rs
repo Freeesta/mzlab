@@ -99,7 +99,9 @@ impl Scan {
 
     /// `PREC`, `NL`, `NG` or `EPI`, `None` for an ordinary scan.
     pub fn kind_name(&self) -> Option<&'static str> {
-        usize::from(self.kind).checked_sub(1).and_then(|i| KINDS.get(i).copied())
+        usize::from(self.kind)
+            .checked_sub(1)
+            .and_then(|i| KINDS.get(i).copied())
     }
 
     /// Centre of the isolation window, else the precursor, else `none` (the value the callers use for "no precursor").

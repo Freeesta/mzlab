@@ -228,7 +228,7 @@ fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<(Spectrum, Option<Mobil
     }
     // an array of another length does not belong to these peaks
     let mob = mob.filter(|m| m.len() == n && n > 0);
-    let mobility = (mob.is_some() || s.mobility_scan.is_some()).then(|| Mobility {
+    let mobility = (mob.is_some() || s.mobility_scan.is_some()).then_some(Mobility {
         index: s.index,
         values: mob,
         unit: mob_unit,

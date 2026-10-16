@@ -147,8 +147,8 @@ pub fn mobility_kind<R: ReadAt>(m: &mut Mzml<R>) -> Result<Option<&'static str>>
         let chunk = m.read(0, n)?;
         let span = find(&chunk, b"<spectrum ", 0)
             .and_then(|a| find(&chunk, b"</spectrum>", a).map(|b| (a, b + 11)));
-        if let Some((a, b)) = span {
-            for (head, _) in arrays(&chunk[a..b]) {
+        if let Some(body) = span.and_then(|(a, b)| chunk.get(a..b)) {
+            for (head, _) in arrays(body) {
                 for acc in head.split("accession=\"").skip(1) {
                     if let Some(u) = crate::mzml::mobility_of(acc.split('"').next().unwrap_or("")) {
                         return Ok(Some(u));
