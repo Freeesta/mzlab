@@ -29,7 +29,7 @@
 .tp table.tpt .tpt-no{color:var(--muted)}
 .tp .tpt-bar{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:0 0 6px;font-size:12px}
 .tp .tpt-chip{box-sizing:border-box;cursor:pointer;min-height:24px;min-width:24px;padding:0 10px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);font:inherit}
-.tp .tpt-chip[aria-pressed="true"]{background:var(--sel);border-color:var(--accent);font-weight:600}.tp .tpt-chip[aria-pressed="true"]::before{content:"✓ "}
+.tp .tpt-chip[aria-disabled="true"]{opacity:.55;cursor:not-allowed}.tp .tpt-chip[aria-pressed="true"]{background:var(--sel);border-color:var(--accent);font-weight:600}.tp .tpt-chip[aria-pressed="true"]::before{content:"✓ "}
 .tp .tpt-q{box-sizing:border-box;min-height:24px;max-width:180px}
 .tp .tpt-n{color:var(--muted)}.tp .tpt-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .tp .tpt-colm,.tp .tpt-xm{position:relative;margin:0 0 6px;font-size:12px}.tp .tpt-bar .tpt-colm,.tp .tpt-bar .tpt-xm{margin:0}.tp .tpt-colm summary,.tp .tpt-xm summary{cursor:pointer;min-height:24px;display:inline-flex;align-items:center}
@@ -48,10 +48,10 @@
 
   /**
    * @typedef {{ key: string, label: string, title?: string, help?: string, num?: boolean, off?: boolean, sticky?: boolean, width?: number, sort?: (r: any) => number | string | null, cell: (r: any) => string, text?: (r: any) => string }} Col
-   * @typedef {{ key: string, label: string, help?: string, test: (r: any) => boolean, on?: boolean }} Chip
+   * @typedef {{ key: string, label: string, help?: string, test: (r: any) => boolean, on?: boolean, off?: string }} Chip
    * @typedef {{ key: string, label: string, help?: string }} Tab
    * @typedef {{ id: string, cols: Col[], rowId: (r: any) => number, name: (r: any) => string, onOpen: (id: any, panel: HTMLElement, tab?: string) => void, onSort?: (key: string, dir: number) => void, esc: (s: any) => string, label?: string, panelId?: string,
-   *   chips?: Chip[], search?: (r: any) => string, onFilter?: (keys: string[]) => void, pin?: (r: any) => boolean, tabs?: Tab[], head?: (r: any, box: HTMLElement) => void, height?: number, columns?: boolean,
+   *   chips?: Chip[], search?: (r: any) => string, onFilter?: (keys: string[]) => void, onCount?: (shown: number, total: number) => void, pin?: (r: any) => boolean, tabs?: Tab[], head?: (r: any, box: HTMLElement) => void, height?: number, columns?: boolean,
    *   virtual?: number, rowHeight?: number, exportName?: string, status?: boolean }} Opts
    */
 
@@ -94,7 +94,7 @@
     const panel = document.createElement("div"); panel.id = o.panelId || "tp-det";
     /** @type {HTMLElement | null} */ let headBox = null, tabBox = null, bodyBox = null;
     const hasBar = !!(o.chips || o.search || o.columns || o.exportName || o.status);
-    const bar = !hasBar ? "" : `<div class="tpt-bar">${(o.chips || []).map(c => `<button type="button" class="tpt-chip" data-chip="${c.key}" aria-pressed="${st.chips.has(c.key)}"${tt(c.help)}>${c.label}</button>`).join("")}${o.search ? `<input type="search" class="tpt-q" aria-label="Search the rows" placeholder="Search">` : ""}
+    const bar = !hasBar ? "" : `<div class="tpt-bar">${(o.chips || []).map(c => `<button type="button" class="tpt-chip" data-chip="${c.key}" aria-pressed="${st.chips.has(c.key)}"${c.off ? ` aria-disabled="true"${tt(c.off)}` : tt(c.help)}>${c.label}</button>`).join("")}${o.search ? `<input type="search" class="tpt-q" aria-label="Search the rows" placeholder="Search">` : ""}
       <span class="tpt-n" role="status"></span>${o.columns ? `<details class="tpt-colm"><summary${tt("ft.cols")}>Columns</summary><div>${o.cols.filter(c => !c.sticky).map(c => `<label><input type="checkbox" data-vc="${c.key}"${st.vis.has(c.key) ? " checked" : ""}> ${c.label}</label>`).join("")}</div></details>` : ""}${o.exportName ? `<details class="tpt-xm"><summary>Export view</summary><div><button type="button" data-x="csv">CSV</button><button type="button" data-x="xlsx">Excel</button></div></details>` : ""}</div>`;
     host.innerHTML = `${bar}<div class="tpt-live" role="status"></div><div class="tpt-wrap"><table class="tpt" id="${o.id}" aria-label="${esc(o.label || "Products")}"><thead><tr></tr></thead><tbody></tbody></table></div>`;
     const wrap = /** @type {HTMLElement} */ (host.querySelector(".tpt-wrap")), tbl = /** @type {HTMLTableElement} */ (host.querySelector("table")), head = /** @type {HTMLElement} */ (tbl.querySelector("thead tr")), body = /** @type {HTMLElement} */ (tbl.querySelector("tbody"));
@@ -180,6 +180,7 @@
       const rest = (o.chips || o.search) ? st.rows.filter(r => !(o.pin && o.pin(r)) && ok(r)) : st.rows.filter(r => !(o.pin && o.pin(r)));
       st.pinned = pinned; st.rest = sortRows(rest, o.cols.find(x => x.key === st.sort), st.dir); st.list = [...pinned, ...st.rest];
       if (count) count.textContent = `${st.list.length} of ${st.rows.length} rows`;
+      if (o.onCount) o.onCount(st.list.length, st.rows.length);
       if (isVirt() && !o.height) { wrap.classList.add("tpt-h"); wrap.style.maxHeight = "520px"; }
     }
     function refresh() {
@@ -280,6 +281,7 @@
 
     // ---- chips, search, "Columns" and "Export view"
     host.querySelectorAll("[data-chip]").forEach(b => b.addEventListener("click", () => {
+      if (b.getAttribute("aria-disabled") === "true") return;
       const k = /** @type {string} */ (/** @type {HTMLElement} */ (b).dataset.chip), on = !st.chips.has(k);
       if (on) st.chips.add(k); else st.chips.delete(k);
       b.setAttribute("aria-pressed", String(on)); lsSet(kChips, JSON.stringify([...st.chips]));
@@ -317,7 +319,19 @@
     /** @param {string[]} keys */
     function setCols(keys) { cols = o.cols.filter(c => keys.includes(c.key) || c.sticky); draw(); }
     fitSlot();
-    return { setCols,
+    /** a chip that was born disabled (`off` = the key of the help that says why) becomes usable @param {string} key */
+    function enableChip(key) {
+      const b = host.querySelector(`[data-chip="${key}"]`), c = (o.chips || []).find(x => x.key === key); if (!b || !c) return;
+      b.removeAttribute("aria-disabled"); if (c.help && G.TPHELP) b.setAttribute("data-tt", c.help); else b.removeAttribute("data-tt");
+    }
+    /** clears the chips and the search (a row that the filters hide has to be shown) */
+    function reset() {
+      st.chips.clear(); st.q = ""; if (q) q.value = "";
+      host.querySelectorAll("[data-chip]").forEach(b => b.setAttribute("aria-pressed", "false")); lsSet(kChips, "[]");
+      if (o.onFilter) o.onFilter([]);
+      refresh();
+    }
+    return { setCols, enableChip, reset,
       /** all the rows (the chips and the search filter them here); the open row stays open if it is still shown, else it is closed @param {any[]} rows */
       setRows(rows) { st.rows = rows; refresh(); },
       open, close, toggle, sortBy,

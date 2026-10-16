@@ -80,15 +80,14 @@ try:
             pg.click("#tp-go"); pg.wait_for_selector("#hr-t tr.clk", timeout=300000)
             tab = pg.inner_text("#hr-t")
             assert "C8H11N4O3" in tab and "C7H9N4O2" in tab, tab[:600]
-            assert "hypothesis, not an identification" in pg.inner_text("#tp-right")
-            pg.click("#hr-t tr.clk:has-text('C8H11N4O3')"); pg.wait_for_selector("#hr-ms2", timeout=60000); pg.wait_for_timeout(500)
-            assert pg.evaluate("document.getElementById('hr-kin').width") > 0 and pg.evaluate("document.getElementById('hr-ms2').width") > 0
-            assert "Criteria" in pg.inner_text("#tp-det")
+            pg.click("#hr-t tr.clk:has-text('C8H11N4O3')"); pg.click('#tp-det [data-tab="samples"]'); pg.wait_for_selector("#hr-kin", timeout=60000); pg.wait_for_timeout(500)
+            assert pg.evaluate("document.getElementById('hr-kin').width") > 0
+            pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_function("document.querySelector('#tp-det .hr-idx') !== null", timeout=60000)
             neg = pg.evaluate("[...document.querySelectorAll('#hr-t tr.clk')].map(t => +t.dataset.id).filter(i => i < 0).length")
             assert neg == 1, neg                                                  # the row hidden under an in-source fragment
             pg.click("#hr-t tr.clk[data-id^='-']"); pg.wait_for_function("document.querySelector('#tp-det').innerText.includes('C6H8N3O')", timeout=60000)
             assert "co-eluting" in pg.inner_text("#hr-t")
-            pg.select_option("#hr-ord", "level"); pg.wait_for_selector("#hr-t tr.clk")
+            pg.click('#hr-tbl [data-sh="level"]'); pg.wait_for_selector("#hr-t tr.clk")
             with pg.expect_download(timeout=60000) as dlc: pg.click("#hr-x-csv")
             assert "C6H8N3O" in Path(dlc.value.path()).read_text(encoding="utf-8")
             with pg.expect_download(timeout=120000) as dl: pg.click("#hr-x-xlsx")

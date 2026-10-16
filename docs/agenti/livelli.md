@@ -17,4 +17,4 @@ Definizioni scelte da Federico. Valgono per Tabui (MS2 a bassa risoluzione), Att
 - Scala di previsione di Löffler et al., ES&T 59:19095 (2025): etichetta «Prev. N» (gradi 1-4), colonna «Prev.» della tabella dei prodotti di mzFinder (`.lvb.pd-N`).
 - Sono scale diverse e nell'interfaccia non si confondono mai: la stessa cifra con etichette diverse («L3a» contro «Prev. 3») è normale.
 - Il programma propone un livello e mostra le prove; il livello deciso resta vuoto finché il chimico non decide.
-- La tabella dei prodotti di mzFinder (Python, `TP_Mine/py`) usa ancora i gradi 5/4/3 senza sottolivello, mostrati come «L5/L4/L3».
+- La tabella dei prodotti HR di mzFinder (`21_tpmine_hr.js`) mostra il livello proposto 5/4/3 senza sottolivello come «L5/L4/L3» (`TPTAB.level`, colonna «Lvl», la qualità va da prova diagnostica a L3, L4, L5) e la previsione come «Prev. N» (`TPTAB.pred`); le intestazioni dell'esportazione sono «Level (Schymanski)» e «Prediction (Löffler)».

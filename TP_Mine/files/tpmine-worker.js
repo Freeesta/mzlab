@@ -148,6 +148,12 @@ async function tpTable(rows) {
   const m = await import(base() + "mzfinder/finder-tabella.js");
   return m.tpTable({ manifest, url: featUrl, sha }, lastRun, rows);
 }
+/** riga/1 and the traces of one row of the last Dig (finder-tabella.js); "null" when there is none @param {number} id */
+async function tpRow(id) {
+  if (last !== "rust" || !lastRun) return "null";
+  const m = await import(base() + "mzfinder/finder-tabella.js");
+  return m.tpRow({ manifest, url: featUrl, sha }, lastRun, id, await pool(), idxBase);
+}
 const finder = () => load("finder");
 /** every file the page sent has a fresh .mzidx in OPFS (finder-idx.js builds the missing ones) @param {string[]} names */
 async function ensureIdx(names) {
@@ -160,7 +166,7 @@ async function pool() {
   const mod = await import(url);
   self.onmessage = mine;                         // feat-worker.js, imported inside a worker, takes onmessage for itself: it is given back
   const w = (/** @type {any} */ x) => ({ jsUrl: featUrl(x.js), wasmUrl: featUrl(x.wasm), sha256: x.sha256 });
-  featPool = mod.createFeatPool({ workerUrl: url, size: mod.poolSize(false, navigator.hardwareConcurrency), wasm: { feat: w(m.feat), proofs: w(m.proofs) } });
+  featPool = mod.createFeatPool({ workerUrl: url, size: mod.poolSize(false, navigator.hardwareConcurrency), wasm: { feat: w(m.feat), proofs: w(m.proofs), ...(m.table ? { table: w(m.table) } : {}) } });
   return featPool;
 }
 
@@ -292,6 +298,7 @@ async function call(fn, a) {
   if (fn === "estimate" && !init.desktop) return estimate(a);
   if (fn === "default_transformations") return DEFAULT_TR;
   if (fn === "tp_table" && !init.desktop) return tpTable(a[0]);
+  if (fn === "tp_row") return init.desktop ? "null" : tpRow(+a[0]);
   if (fn === "transf_rows" && !init.desktop) return (await finder()).finder_transf_rows(a[0]);       // the table of the list of transformations (in the desktop app finder-desktop.js asks the native engine)
   if (init.desktop) return (desk || (desk = (await import(base() + "mzfinder/finder-desktop.js")).createDesktop(base(), say, held))).call(fn, a);
   if (!(await hasRust())) return toPy(fn, a);
