@@ -21,7 +21,7 @@ r = Run(port=8999, wd="/tmp/wdexp")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        attendi(pg, "window.EXPORT_PEZZI && EXPORT_PEZZI.available()")
+        pg.evaluate("carica(\"m:export-pezzi.js\")"); attendi(pg, "window.EXPORT_PEZZI && EXPORT_PEZZI.available()")
         def save(js, path):
             with pg.expect_download(timeout=300000) as d: pg.evaluate(js)
             d.value.save_as(path); return open(path, "rb").read() if os.path.getsize(path) < 50e6 else None
