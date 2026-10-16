@@ -1,0 +1,17 @@
+[package]
+name = "mzlab-chem"
+description = "mzLab chemistry engine: 3D geometry from SMILES (ETKDG + MMFF94, conformers), numbered like mzlab_feat::chem::grafo::Mol"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+mzlab-core = { path = "../mzlab-core" }
+mzlab-feat = { path = "../mzlab-feat", features = ["chem"] }
+nalgebra = { version = "0.32", default-features = false, features = ["std"] }
+
+[dev-dependencies]
+serde_json = { version = "1", features = ["float_roundtrip"] }
