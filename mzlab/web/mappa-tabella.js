@@ -99,7 +99,10 @@ const MAPTAB = (c, f) => {
     box.querySelector('[data-t="align"]').onchange = ev => { PREF.align = ev.target.checked; prefSave(); tableNow(p); };
     box.querySelector('[data-t="xl"]').onclick = () => excel(p);
     box.querySelector('[data-t="cp"]').onclick = () => copyRows(p);
-    box.querySelector('[data-t="clear"]').onclick = async () => { if (await yesno(T("mappa.tab.clear.ask"))) { pts(p).splice(0); ptsSave(p); overlay(p); tableNow(p); } };
+    box.querySelector('[data-t="clear"]').onclick = () => {          // no question: «Removed · Undo» (storia.js) puts the marks back
+      const gone = pts(p).splice(0), refresh = () => { ptsSave(p); overlay(p); tableNow(p); }; refresh();
+      if (gone.length && STORIA) STORIA.tolto({ what: T("storia.marcature"), p, dati: JSON.stringify(gone), undo: () => { pts(p).splice(0, 0, ...gone); refresh(); }, redo: () => { pts(p).splice(0); refresh(); } });
+    };
     box.querySelectorAll("tbody tr[data-i]").forEach(tr => {
       const i = +tr.dataset.i;
       tr.onclick = ev => { if (ev.target.closest("input,button,a")) return; const q = pts(p)[i]; if (!q) return; s.psel = i; s.lock = { rt: q.rt, mz: q.mz }; follow(p, s.lock); overlay(p); margins(p); tableNow(p); };

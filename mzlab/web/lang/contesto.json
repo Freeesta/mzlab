@@ -1,4 +1,5 @@
 {
+  "storia.tolto": "Avviso 6 s dopo aver tolto un file, chiuso un pannello o svuotato le marcature, con il pulsante Annulla; {what} = nome del file, del pannello o «marcature».",
   "storia.undone": "Annuncio dopo Ctrl/Cmd+Z; {what} = nome breve dell'azione annullata (zoom, integrazione, fondo...).",
   "storia.redone": "Annuncio dopo Ripeti; {what} = nome breve dell'azione ripetuta.",
   "draw.part.line": "Riga del menu del tasto destro su una struttura parziale (tra parentesi). {delta} = Δ normalizzato (es. +O -H2), {formula} = formula con il Δ, {mass} = massa neutra, {mz} = m/z di [M+H]+.",
