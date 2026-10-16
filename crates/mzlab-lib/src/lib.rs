@@ -1,6 +1,7 @@
 //! mzLab spectral libraries (pure Rust, no `unsafe`): parsers, the `.mzlib` format, Flash-style indexes and scores.
 #![forbid(unsafe_code)]
 
+pub mod all_pairs;
 pub mod build;
 pub mod clean;
 pub mod codec;
