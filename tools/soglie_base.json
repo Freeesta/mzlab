@@ -7,7 +7,7 @@
   "TP_Mine/py/tpmine/hr/engine.py": 552,
   "TP_Mine/tests/test_hr_real.py": 539,
   "crates/mzlab-core/src/composition.rs": 865,
-  "crates/mzlab-core/src/iteminfo.rs": 670,
+  "crates/mzlab-core/src/iteminfo.rs": 1000,
   "crates/mzlab-core/src/mzidx.rs": 1130,
   "crates/mzlab-core/src/mzmlhead.rs": 577,
   "crates/mzlab-core/src/rawlettore.rs": 680,

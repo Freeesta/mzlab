@@ -303,7 +303,6 @@ impl Rows {
             attr(tag, "instrumentConfigurationRef")
         });
         let res = resolution(hs, h);
-        let kind = super::kind_of(h, &filt).filter(|_| level > 1);
         let row = Row {
             start: a,
             end: b,
@@ -319,6 +318,7 @@ impl Rows {
             precursor: m.prec,
             ce: m.ce,
             an: self.head.analyzer(&filt, icref),
+            kind: super::kind_of(h, &filt).filter(|_| level > 1),
             filter: filt,
             profile: h.contains("accession=\"MS:1000128\""),
             parent: None,
@@ -330,7 +330,6 @@ impl Rows {
             precs: m.precs,
             charge: m.charge,
             native: id.clone().unwrap_or_default(),
-            kind,
         };
         if let Some(i) = id {
             self.level_of.insert(i, level);
@@ -341,11 +340,7 @@ impl Rows {
 
 /// The accessions `spectrum` looks for in the text of a header (as substrings: `h.contains` too): an extra that carries one of them would change the row.
 const LETTI: [&str; 23] = [
-    "MS:1000341",
-    "MS:1000326",
-    "MS:1000325",
-    "MS:1000789",
-    "MS:1000790",
+    "MS:1000341", "MS:1000326", "MS:1000325", "MS:1000789", "MS:1000790",
     "MS:1000511",
     "MS:1000130",
     "MS:1000129",
@@ -431,7 +426,6 @@ impl Rows {
             .iter()
             .find(|(k, _)| k == "opentfraw.resolution")
             .and_then(|(_, v)| float(&esc(v)));
-        let kind = super::kind_of("", &filt).filter(|_| level > 1);
         let row = Row {
             start: 0,
             end: 0,
@@ -444,6 +438,7 @@ impl Rows {
             precursor: m.prec,
             ce: m.ce,
             an: self.head.analyzer(&filt, None),
+            kind: super::kind_of("", &filt).filter(|_| level > 1),
             filter: filt,
             profile: sp.profile,
             parent: None,
@@ -455,7 +450,6 @@ impl Rows {
             precs: m.precs,
             charge: m.charge,
             native: native.clone(),
-            kind,
         };
         self.level_of.insert(native, level);
         self.rows.push(row);

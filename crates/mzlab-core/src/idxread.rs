@@ -76,11 +76,19 @@ pub struct Scan {
     pub path: Option<Vec<(f64, String, f64)>>,
     pub charge: Option<i64>,
     pub native: String,
-    /// `PREC`, `NL`, `NG` or `EPI` (column 21 of the row, absent for an ordinary scan).
-    pub kind: Option<String>,
+    /// The scan type, 0 for an ordinary scan, else the position + 1 in `KINDS` (column 21 of the row); a byte, because the scan table is held whole in memory.
+    pub kind: u8,
 }
 
+/// The scan types that are not a plain full or product-ion scan, as the row of the index names them.
+pub const KINDS: [&str; 4] = ["PREC", "NL", "NG", "EPI"];
+
 impl Scan {
+    /// `PREC`, `NL`, `NG` or `EPI`, `None` for an ordinary scan.
+    pub fn kind_name(&self) -> Option<&'static str> {
+        usize::from(self.kind).checked_sub(1).and_then(|i| KINDS.get(i).copied())
+    }
+
     /// Centre of the isolation window, else the precursor, else `none` (the value the callers use for "no precursor").
     pub fn prec(&self, none: f64) -> f64 {
         match (self.iso, self.precursor) {

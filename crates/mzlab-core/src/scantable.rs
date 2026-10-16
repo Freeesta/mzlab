@@ -582,6 +582,13 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
     Ok(rows.finish(n_chrom))
 }
 
+/// A 21st column only for the scans that have a type, so an index without any stays as it was.
+fn tail_columns(o: &mut Out, r: &Row) {
+    if let Some(k) = r.kind {
+        o.raw(",").str(k);
+    }
+}
+
 fn py_float(o: &mut Out, v: f64) {
     if !v.is_finite() {
         o.raw("null");
@@ -729,10 +736,7 @@ impl Table {
                 None => o.raw("null"),
             };
             o.raw(",").str(&r.native);
-            // a 21st column only for the scans that have a type, so an index without any stays as it was
-            if let Some(k) = r.kind {
-                o.raw(",").str(k);
-            }
+            tail_columns(&mut o, r);
             o.raw("]");
         }
         o.raw("]");

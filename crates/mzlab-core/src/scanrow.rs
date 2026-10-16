@@ -1,6 +1,6 @@
 //! The rows of the scan table of an index (`SCAN_COLUMNS`, `docs/agenti/mzidx.md`) as `Scan`.
 
-use crate::idxread::Scan;
+use crate::idxread::{Scan, KINDS};
 use crate::json::Value;
 use crate::lettori::Posizione;
 
@@ -66,6 +66,6 @@ pub(crate) fn scan_of_row(r: &Value, nativo: bool) -> Option<Scan> {
         path,
         charge: f(18).map(|v| v as i64),
         native: s(19).unwrap_or_default(),
-        kind: s(20),
+        kind: r.at(20).and_then(Value::str).and_then(|k| KINDS.iter().position(|x| *x == k)).map_or(0, |i| i as u8 + 1),
     })
 }
