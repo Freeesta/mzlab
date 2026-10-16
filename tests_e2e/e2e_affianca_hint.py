@@ -13,7 +13,7 @@ def fresh(p, tour_state=True, aff=None):
     r.b = p.chromium.launch()
     ctx = r.b.new_context(viewport={"width": 1440, "height": 1000}, locale="it-IT", reduced_motion="reduce"); pg = ctx.new_page()
     init = "try{localStorage.setItem('qqq.barra.hint','1');" + ("localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));" if tour_state else "") + (f"localStorage.setItem('{KEY}','{aff}');" if aff else "") + "}catch(_){}"
-    pg.add_init_script(init); pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
+    pg.add_init_script(init); pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "performance.now() > 800")
     return pg
 def load(pg):
     stage(pg, [mz("B_FullMass-t15")]); pg.click("text=Carica dati"); ready(pg)
@@ -31,7 +31,7 @@ try:
             assert pg.evaluate("document.querySelectorAll('.aff-grip.aff-hl').length") == 0
         step("Esc closes it and the handle is no longer highlighted", esc)
         def again():
-            pg.reload(); ready(pg); pg.wait_for_timeout(3500)
+            pg.reload(); ready(pg); attendi(pg, "performance.now() > 3500")
             assert pg.evaluate("E.panels.filter(q => q.full).length") >= 2, "the session is back with its panels"
             assert pg.evaluate(f"!{HINT}") and pg.evaluate(f"localStorage.getItem('{KEY}')") == "1", "it comes back after a reload"
         step("after a reload it does not come back", again)
@@ -51,7 +51,7 @@ try:
         r.b.close()
         pg = fresh(p, tour_state=False)
         def queue():
-            load(pg); attendi(pg, "!!document.getElementById('tour-invito')", timeout=15000); pg.wait_for_timeout(2500)
+            load(pg); attendi(pg, "!!document.getElementById('tour-invito')", timeout=15000); attendi(pg, "performance.now() > 2500")
             assert pg.evaluate(f"!{HINT}"), "never together with the tour invitation"
             assert pg.evaluate("SUGG.inCoda.includes('affianca')"), pg.evaluate("SUGG.inCoda")
             pg.click("#tour-inv-no"); attendi(pg, f"!!{HINT}", timeout=15000)
@@ -60,12 +60,12 @@ try:
         r.b.close()
         pg = fresh(p, aff="1")
         def never():
-            load(pg); pg.wait_for_timeout(3500); assert pg.evaluate(f"!{HINT}")
+            load(pg); attendi(pg, "performance.now() > 3500"); assert pg.evaluate(f"!{HINT}")
         step("already seen in this browser: never shown", never)
         r.b.close()
         pg = fresh(p)
         def narrow():
-            pg.set_viewport_size({"width": 700, "height": 1000}); pg.wait_for_timeout(300); load(pg); pg.wait_for_timeout(3000)
+            pg.set_viewport_size({"width": 700, "height": 1000}); attendi(pg, "performance.now() > 300"); load(pg); attendi(pg, "performance.now() > 3000")
             assert pg.evaluate(f"!{HINT}") and pg.evaluate(f"localStorage.getItem('{KEY}')") is None, "no room side by side: no hint, and not marked as seen"
         step("a window too narrow for two panels side by side: no hint, not marked as seen", narrow)
         r.b.close()
