@@ -38,7 +38,7 @@
   };
   /** @param {HTMLElement} el */
   const open = el => {
-    const p = ensure(), key = el.getAttribute("data-tt") || "", text = tt(key);
+    const p = ensure(), key = el.getAttribute("data-tt") || "", text = el.getAttribute("data-tt-text") || tt(key);          // data-tt-text: a text made for this element (a sample of a matrix)
     if (!text) return;
     if (el.tagName === "SUMMARY" && /** @type {HTMLDetailsElement | null} */ (el.parentElement) && /** @type {HTMLDetailsElement} */ (el.parentElement).open) return;          // a menu that is open must not be covered by the help of its own button
     if (cur && cur !== el) close();

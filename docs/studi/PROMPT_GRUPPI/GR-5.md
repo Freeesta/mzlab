@@ -10,7 +10,7 @@ Pacchetto GR-5 dello studio `docs/studi/TABUI_GRUPPI_ESPERIMENTI.md` (leggi Sint
 Dalla tabella dei file al confronto, tutto collegato in Tabui LR: un Dig con molte condizioni, la colonna «Conditions» e il filtro nella tabella TP, la linguetta «Compare conditions», l'apertura della riga dalla vista, le MS2 per condizione.
 
 ## Da fare
-1. **Tabella dei file e innesto esclusivo**: l'innesto completo della tabella dei file (`TPGRUPPI_FILES`, `TPLAZY.load("gruppi-campioni.js")`, `TPLAZY.load("gruppi-vista.js")`) e il passaggio al Dig di `campioni` e `reference` sono di proprietà esclusiva di GR-5 su `20_tpmine.js` e `42_tp_table.js` (GR-3 e GR-4 non toccano quei file); in `20_tpmine.js` usa `TPGRUPPI_FILES` con ≥ 2 file full e passa `campioni` e `reference` al Dig.
+1. **Tabella dei file**: se GR-3 non ha già fatto l'innesto, `20_tpmine.js` usa `TPGRUPPI_FILES` con ≥ 2 file full e passa `campioni` e `reference` al Dig.
 2. **Tabella TP** (`42_tp_table.js`): con `gruppi` nell'uscita, colonna compatta «Conditions» (un punto per condizione, `aria-label` «present in …; absent in …») e filtro «Only in… / In all / Present in…»; con una condizione nulla cambia (stesso DOM di oggi: controllalo nell'e2e).
 3. **Linguetta «Compare conditions»** accanto a quelle di oggi, solo con ≥ 2 condizioni; alla prima apertura `TPLAZY.load("gruppi-vista.js")`; `onOpenRow` = `show(id)` (torna a «Table» e apre la riga).
 4. **Riga aperta**: nella scheda della riga, sezione «By condition» con i valori della riga in `gruppi/1` (area, rapporto, `prev`) e il grafico del TP della vista (riusa `TPGRUPPI_VIEW`, nessun grafico nuovo).

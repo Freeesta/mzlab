@@ -69,6 +69,21 @@ pub fn tp_table_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, rows_j
     mzlab_feat::tp::table_json(&t, &s, rows.as_deref())
 }
 
+/// `tp_table_json` with the conditions: `campioni_json` is the `campioni/2` of the files and `infos_json` the list `[{"row","neutral_formula","ion_formula","ppm"}]` of
+/// what the caller knows of the best hypothesis of each row. With fewer than two conditions the text is the one of `tp_table_json`; with more it carries `gruppi`.
+pub fn tp_table_cond_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, rows_json: &str, campioni_json: &str, infos_json: &str) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    let rows: Option<Vec<usize>> = if rows_json.trim().is_empty() {
+        None
+    } else {
+        let v = mzlab_core::json::parse(rows_json.as_bytes())?;
+        Some(v.arr().iter().filter_map(|x| x.f64()).map(|x| x as usize).collect())
+    };
+    let cs = mzlab_core::campioni::from_json(campioni_json.as_bytes())?;
+    let infos = mzlab_feat::tp::infos_from_json(infos_json)?;
+    mzlab_feat::tp::table_json_cond(&t, &s, rows.as_deref(), Some((&cs, &infos)))
+}
+
 /// The `campioni/1` that `propose` makes from the names of the files: `{"files":[{"name":..,"sha256":..}, ...]}` (type, time, replicate and group are read from the names).
 pub fn samples_json(files_json: &str) -> Result<String> {
     let v = mzlab_core::json::parse(files_json.as_bytes())?;
