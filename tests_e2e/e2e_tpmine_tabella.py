@@ -1,10 +1,10 @@
 """mzFinder, table of the products (TP_Mine/js/42_tp_table.js, 21_tpmine_hr.js): after the Dig of a synthetic HR series the candidates are a real table with sortable
-headers, a filter, one expandable row at a time (the sheet #tp-det opens right under the row) and the t0 / blank columns from the Rust route `tp_table`. Keyboard: Enter on the
-row button opens, arrows move, Esc closes. No pyodide request. Builds the site like e2e_tpmine_rust.py (MZLAB_PIPE_SITE reuses one). Run from the repo root: python3 tests_e2e/e2e_tpmine_tabella.py"""
+headers, filter chips, one expandable row at a time (the panel #tp-det with four tabs opens right under the row), t0 / blank from the Rust route `tp_table`, the traces of the row
+from `tp_row`, and "More" with one open section. Keyboard: Enter on the row button opens, arrows move, Esc closes. No pyodide request. Builds the site like e2e_tpmine_rust.py (MZLAB_PIPE_SITE reuses one). Run from the repo root: python3 tests_e2e/e2e_tpmine_tabella.py"""
 import json, os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
+HERE = Path(__file__).resolve().parent; ROOT = HERE.parent; SHOTS = HERE / "shots"; SHOTS.mkdir(exist_ok=True)
 sys.path.insert(0, str(HERE)); import lib  # noqa: F401,E402  (patches wait_for_function for the CSP)
 
 steps = []
@@ -50,9 +50,10 @@ PUT = """async (names) => {
 PUTF = PUT.replace('"idx"]', '"files"]').replace('n + ".mzidx", { create', 'n, { create').replace('n + ".mzidx")).body', 'n)).body')
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce").new_page()
+        b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce", accept_downloads=True).new_page()
         pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.on("console", lambda m: print("CONSOLE", m.text[:400]) if "tp_row" in m.text else None)
         pg.context.on("request", lambda r: reqs.append(r.url))
         pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
@@ -67,19 +68,28 @@ try:
         def structure():
             assert pg.locator("#hr-t").evaluate("t => t.tagName") == "TABLE" and n0 >= 1, n0
             heads = pg.locator("#hr-t thead th").all_inner_texts()
-            for h in ("m/z", "RT", "t0", "Blank", "Kinetics"): assert any(h in x for x in heads), (h, heads)
-            assert not any(x.strip() in ("Class", "Region", "Prev.") for x in heads), heads          # few columns by default
-            pg.locator("#hr-colm summary").click(); pg.check('#hr-cols input[data-col="class"]')
+            for h in ("Lvl", "Identity", "m/z", "RT", "Trend", "Cells"): assert any(h in x for x in heads), (h, heads)
+            assert len(heads) <= 7, heads
+            assert not any(x.strip() in ("Class", "Region", "Prev.", "t0", "Blank") for x in heads), heads          # few columns by default
+            pg.locator("#hr-tbl .tpt-colm summary").click(); pg.check('#hr-tbl input[data-vc="class"]')
             assert any("Class" in x for x in pg.locator("#hr-t thead th").all_inner_texts())
-            pg.uncheck('#hr-cols input[data-col="class"]')
-            assert pg.locator("#hr-t tr.clk svg[role=img]").count() >= 1, "kinetics sparkline"
-        step("a real table: headers, sparkline, kinetics column", structure)
+            pg.uncheck('#hr-tbl input[data-vc="class"]'); pg.locator("#hr-tbl .tpt-colm summary").click()
+            assert pg.locator("#hr-t tr.clk svg[role=img]").count() >= 1, "trend sparkline"
+            assert pg.locator("#hr-t tbody tr.clk .tpt-cells").count() >= 1, "cells"
+            badge = pg.locator("#hr-t tbody tr.clk .lvb").first.inner_text(); assert badge.startswith("L") and badge[1:].isdigit(), badge
+            assert pg.locator("#hr-t thead th.tpt-stk").count() == 2, "level and identity stay fixed"
+            for old in ("#hr-lv", "#hr-ord", "#hr-loc", "#hr-ms2f", "#hr-t0f", "#hr-blf", "#hr-colm"): assert pg.locator(old).count() == 0, old
+        step("a real table: few columns, level badge, trend, cells", structure)
 
         def columns():
-            pg.wait_for_function("!document.querySelector('#hr-t0f').disabled", timeout=60000)
-            cells = pg.locator("#hr-t tbody tr.clk td").all_inner_texts()
-            assert pg.locator("#hr-t0f").is_enabled() and pg.locator("#hr-blf").is_enabled()
-        step("t0 and blank columns arrive from the Rust route (filters enabled)", columns)
+            pg.wait_for_function("!document.querySelector('#hr-tbl [data-chip=not0]').hasAttribute('aria-disabled')", timeout=60000)
+            assert not pg.locator("#hr-tbl [data-chip=noblank]").get_attribute("aria-disabled")
+            before = pg.locator("#hr-t tbody tr.clk").count()
+            pg.click("#hr-tbl [data-chip=not0]"); pg.click("#hr-tbl [data-chip=noblank]"); lib.attendi(pg, "document.querySelector('#hr-tbl [data-chip=noblank]').getAttribute('aria-pressed') === 'true'")
+            assert pg.locator("#hr-t tbody tr.clk").count() <= before
+            pg.click("#hr-tbl [data-chip=not0]"); pg.click("#hr-tbl [data-chip=noblank]"); lib.attendi(pg, "document.querySelector('#hr-tbl [data-chip=noblank]').getAttribute('aria-pressed') === 'false'")
+            assert pg.locator("#hr-t tbody tr.clk").count() == before
+        step("t0 and blank arrive from the Rust route (the two chips are enabled and filter)", columns)
 
         def expand():
             first = rows.first
@@ -88,33 +98,75 @@ try:
             assert pg.locator("#hr-t tr.tpt-exp").count() == 0
             tg.click(); pg.wait_for_selector("#hr-t tr.tpt-exp #tp-det", timeout=30000)
             assert tg.get_attribute("aria-expanded") == "true"
-            pg.wait_for_function("document.querySelector('#hr-t tr.tpt-exp #tp-det').innerText.length > 30", timeout=30000)
+            pg.wait_for_selector("#tp-det .tpr-ch svg", timeout=60000)
             ids = pg.evaluate("[...document.querySelectorAll('#hr-t tr.tpt-exp')].length"); assert ids == 1, ids
-            assert pg.locator("#tp-det").count() == 1 and pg.locator("#hr-kin").count() == 1
+            assert [t for t in pg.locator("#tp-det [role=tab]").all_inner_texts()] == ["Overview", "Samples", "Identity", "Quality"]
+            hb = pg.locator("#tp-det .tpt-head .lvb").first.inner_text(); assert hb.startswith("L"), hb
+            assert pg.locator("#tp-det .tpt-head .tpr-words").inner_text().strip() != ""
+            assert pg.locator("#tp-det .tpr-ov svg").count() == 2, ("XIC of the row (from the traces) and the spectrum", pg.locator("#tp-det .tpr-ov svg").count(), pg.inner_text("#tp-det")[:600])
+            assert pg.locator("#tp-det svg .tr").count() >= 6, "the XIC has a trace for every file"
+            h = pg.evaluate("document.querySelector('#tp-det').getBoundingClientRect().height"); assert h <= 420, ("panel height", h)
+            pg.click("#tp-det [data-tab=samples]"); pg.wait_for_selector("#hr-kin", timeout=30000)
+            assert pg.locator("#tp-det").count() == 1 and pg.locator("#hr-kin").count() == 1 and pg.evaluate("document.getElementById('hr-kin').width") > 0
+            assert pg.locator("#tp-det table.tpr tbody tr").count() >= 6, "a row per file with its state"
+            h = pg.evaluate("document.querySelector('#tp-det').getBoundingClientRect().height"); assert h <= 420, ("panel height, samples", h)
+            pg.click("#tp-det [data-tab=identity]"); pg.wait_for_selector("#tp-det .tpr-tw tbody tr", timeout=30000)
+            assert "Criteria" in pg.inner_text("#tp-det") or "✓" in pg.inner_text("#tp-det") or "✗" in pg.inner_text("#tp-det")
+            pg.click("#tp-det [data-tab=quality]"); pg.wait_for_selector("#tp-det dl.tpr-q", timeout=30000)
+            pg.click("#tp-det [data-tab=overview]"); pg.wait_for_selector("#tp-det .tpr-ch svg")
             nxt = rows.nth(1) if n0 > 1 else None
             if nxt:
                 nxt.locator("button.tpt-tg").click(); pg.wait_for_timeout(300)
                 assert pg.locator("#hr-t tr.tpt-exp").count() == 1 and tg.get_attribute("aria-expanded") == "false"
-        step("a row opens its sheet right under it, one at a time", expand)
+                assert pg.locator("#hr-t [aria-expanded=true]").count() == 1, "opening another row closes the first"
+        step("a row opens its four-tab panel right under it, one at a time", expand)
 
         def sort():
             col = pg.locator("#hr-t thead th", has_text="RT").first
-            col.locator("button").click(); pg.wait_for_timeout(200)
+            col.locator("button").click(); lib.attendi(pg, "[...document.querySelectorAll('#hr-t thead th')].some(t => /RT/.test(t.innerText) && t.getAttribute('aria-sort') !== 'none')")
             a = [float(x) for x in pg.eval_on_selector_all("#hr-t tbody tr.clk", "rs=>rs.map(r=>r.children[%d].innerText)" % pg.evaluate("[...document.querySelectorAll('#hr-t thead th')].findIndex(t=>/RT/.test(t.innerText))"))]
             d1 = col.get_attribute("aria-sort"); assert d1 in ("ascending", "descending"), d1
             assert a == sorted(a, reverse=d1 == "descending"), (d1, a)
-            col.locator("button").click(); pg.wait_for_timeout(200)
+            col.locator("button").click(); lib.attendi(pg, "[...document.querySelectorAll('#hr-t thead th')].some(t => /RT/.test(t.innerText) && t.getAttribute('aria-sort') !== '%s')" % d1)
             assert col.get_attribute("aria-sort") == ("ascending" if d1 == "descending" else "descending")
         step("sorting by a header (aria-sort)", sort)
 
         def filt():
             before = pg.locator("#hr-t tbody tr.clk").count()
-            pg.check("#hr-ms2f"); pg.wait_for_timeout(300)
+            pg.click("#hr-tbl [data-chip=ms2]"); lib.attendi(pg, "document.querySelector('#hr-tbl [data-chip=ms2]').getAttribute('aria-pressed') === 'true'")
             after = pg.locator("#hr-t tbody tr.clk").count(); assert after <= before, (before, after)
-            pg.uncheck("#hr-ms2f"); pg.wait_for_timeout(300)
+            assert pg.get_attribute("#hr-tbl [data-chip=ms2]", "aria-pressed") == "true"
+            pg.click("#hr-tbl [data-chip=ms2]"); lib.attendi(pg, "document.querySelector('#hr-tbl [data-chip=ms2]').getAttribute('aria-pressed') === 'false'")
             assert pg.locator("#hr-t tbody tr.clk").count() == before
-            assert pg.inner_text("#hr-cnt").strip() != ""
-        step("the MS2 filter narrows and restores the rows", filt)
+            assert " of " in pg.inner_text("#hr-cnt")
+        step("the MS2 chip narrows and restores the rows", filt)
+
+        def more():
+            for sel in ("#hr-m-net", "#hr-m-funnel", "#hr-rta", "#hr-m-tree"):
+                if pg.locator(sel).count(): pg.click(sel + " summary"); pg.wait_for_timeout(100)          # the RT alignment only exists when the series has anchors
+            assert pg.evaluate("document.querySelectorAll('.hr-more details[open]').length") == 1, "one section of More open at a time"
+            assert pg.evaluate("document.querySelector('#hr-m-tree').open")
+            assert pg.locator("#hr-t").count() == 1 and pg.locator("#hr-mnet").count() == 1
+        step("More: one section open at a time", more)
+
+        def export_view():
+            pg.locator("#hr-tbl .tpt-xm summary").click()
+            with pg.expect_download(timeout=30000) as dl: pg.click('#hr-tbl [data-x="csv"]')
+            txt = Path(dl.value.path()).read_text(encoding="utf-8-sig"); assert txt.startswith("# filters:") and "Lvl" in txt.splitlines()[1], txt[:200]
+        step("Export view: the rows and columns that are seen", export_view)
+
+        def pictures():
+            for theme in ("light", "dark"):
+                pg.evaluate("t => { document.documentElement.dataset.theme = t; }", theme)
+                pg.locator("#hr-t button.tpt-tg").first.click(); pg.wait_for_selector("#tp-det .tpr-ch svg", timeout=60000)
+                pg.screenshot(path=str(SHOTS / f"tpmine_hr_tabella_{theme}.png"))
+                pg.locator("#hr-t button.tpt-tg").first.click()
+            pg.set_viewport_size({"width": 390, "height": 800}); pg.wait_for_timeout(300)
+            pg.locator("#hr-t button.tpt-tg").first.click(); pg.wait_for_selector("#tp-det .tpr-ch svg", timeout=60000)
+            w = pg.evaluate("[document.querySelector('#tp-det').getBoundingClientRect().width, document.querySelector('#hr-t').closest('.tpt-wrap').clientWidth]"); assert w[0] <= w[1] + 2, w
+            pg.screenshot(path=str(SHOTS / "tpmine_hr_tabella_390.png")); pg.set_viewport_size({"width": 1280, "height": 900})
+            pg.locator("#hr-t button.tpt-tg").first.click()
+        step("pictures: light, dark, 390 px", pictures)
 
         def keys():
             tgs = pg.locator("#hr-t button.tpt-tg")

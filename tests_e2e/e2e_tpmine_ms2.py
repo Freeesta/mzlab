@@ -39,26 +39,27 @@ try:
             pg.fill("#tp-smi", "Cn1cnc2c1c(=O)n(C)c(=O)n2C"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('195.0877')", timeout=60000)
             pg.evaluate("t => { document.getElementById('tp-tr').value += t; }", "\nmy oxygen rule;+O;lit: Doe 2020")                  # an own row with a reference (same change as hydroxylation)
             pg.click("#tp-go"); pg.wait_for_selector("#hr-t tr.clk", timeout=300000)
-            pg.locator("#hr-colm summary").click(); pg.check('#hr-cols input[data-col="pred"]'); pg.check('#hr-cols input[data-col="sim"]')          # off by default
+            pg.locator("#hr-tbl .tpt-colm summary").click(); pg.check('#hr-tbl input[data-vc="pred"]'); pg.check('#hr-tbl input[data-vc="sim"]')          # off by default
             tab = pg.inner_text("#hr-t")
             assert "Prev." in tab and "Sim." in tab, tab[:300]
             assert pg.evaluate("document.querySelectorAll('#hr-t .lvb.pd-1').length") >= 2          # both known products are confirmed by their shifted fragments
             assert pg.evaluate("document.querySelectorAll('#hr-t .sim-bar i').length") >= 6
-            pg.click("#hr-t tr.clk:has-text('C8H11N4O3')"); pg.wait_for_selector("#hr-ms2", timeout=60000); pg.wait_for_selector("#tp-det .sim3", timeout=10000)
+            pg.click("#hr-t tr.clk:has-text('C8H11N4O3')"); pg.click('#tp-det [data-tab="identity"]'); pg.wait_for_selector("#tp-det .sim3", timeout=60000)
             det = pg.inner_text("#tp-det")
             assert "shifted fragments" in det and "common neutral losses" in det and "modified cosine" in det and "Prediction" in det and "confirmed by the data" in det, det[:900]
             assert pg.evaluate("document.querySelectorAll('#tp-det .sim3 .bar3').length") == 6
-            assert pg.evaluate("[...document.querySelectorAll('#tp-right .lvb:not([class*=pd-])')].every(b => !b.textContent.includes('2'))")          # the program never writes 2b
+            assert pg.evaluate("[...document.querySelectorAll('#hr-tbl .tpt-lv, #hr-tbl .lvb')].every(b => !b.textContent.includes('2b'))")          # the program never writes 2b
+            pg.click("#hr-m-net summary")
             nn, ne = pg.evaluate("[document.querySelectorAll('#hr-mnet g.mn').length, document.querySelectorAll('#hr-mnet g.me line').length]")
             assert nn >= 3 and ne >= 2, (nn, ne, pg.inner_text("#hr-mnet")[:500])
             assert pg.evaluate("[...document.querySelectorAll('#hr-mnet g.mn')].every(g => g.getAttribute('aria-label') && g.getAttribute('role') === 'button')")
             assert "hydroxylation" in pg.inner_text("#hr-mnet") and "demethylation" in pg.inner_text("#hr-mnet")
             pg.click("#hr-mnet details summary"); assert "mass difference" in pg.inner_text("#hr-mnet details")
             pg.focus("#hr-mnet g.mn[aria-label*='C7H9N4O2']"); pg.keyboard.press("Enter")
-            pg.wait_for_function("document.querySelector('#tp-det h3').textContent.includes('C7H9N4O2')", timeout=60000)
+            pg.wait_for_function("document.querySelector('#tp-det').textContent.includes('C7H9N4O2')", timeout=60000)
             pg.select_option("#hr-mn-f", "sel"); assert pg.evaluate("document.querySelectorAll('#hr-mnet g.me line').length") == 1
             with pg.expect_download(timeout=60000) as dl: pg.click("#hr-x-csv")
-            assert "Prediction level" in Path(dl.value.path()).read_text(encoding="utf-8")
+            assert "Prediction (Löffler)" in Path(dl.value.path()).read_text(encoding="utf-8")
             pg.screenshot(path=str(HERE / "shots" / "tpmine_ms2_hr.png"), full_page=True)
         step("HR: three components, prediction level, mass-difference network", hr)
         b.close()
