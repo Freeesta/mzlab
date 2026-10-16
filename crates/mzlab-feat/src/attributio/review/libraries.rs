@@ -91,6 +91,7 @@ fn has_key(text: &str, key: &str) -> bool {
 /// `(path, format)` of every spectral library in a listing of `(path relative to the libraries root, first bytes)`, in the order Attributio walks
 /// the folders: the files of a folder (sorted) before its sub-folders (sorted); folders in `SKIP_DIRS` and hidden ones are skipped.
 pub fn find_library_files(listing: &[(String, Vec<u8>)]) -> Vec<(String, LibFormat)> {
+    #[allow(clippy::type_complexity)]
     let mut found: Vec<(Vec<(bool, String)>, String, LibFormat)> = Vec::new();
     for (path, head) in listing {
         let parts: Vec<&str> = path.split('/').filter(|p| !p.is_empty()).collect();

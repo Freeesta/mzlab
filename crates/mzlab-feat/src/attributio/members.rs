@@ -29,8 +29,10 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 pub struct EvidenceExtras {
     csi_adduct: HashMap<(String, i64), String>,
     /// `(SMILES, adduct, reference links)`.
+    #[allow(clippy::type_complexity)]
     spec: HashMap<(String, i64), (Option<String>, Option<String>, Option<String>)>,
     /// `(adduct, library, spectrum id)`.
+    #[allow(clippy::type_complexity)]
     gnps: HashMap<(String, i64), (Option<String>, Option<String>, Option<String>)>,
 }
 

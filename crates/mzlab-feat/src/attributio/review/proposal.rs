@@ -90,6 +90,7 @@ pub struct PurityEvidence {
     pub purity: Option<f64>,
     pub prec_int: Option<f64>,
     /// `(m/z, relative intensity, kind, apex offset, r)` of every co-isolated ion.
+    #[allow(clippy::type_complexity)]
     pub co: Vec<(f64, f64, String, Option<f64>, Option<f64>)>,
     pub unexplained: Option<f64>,
     pub imposs: Vec<Impossible>,

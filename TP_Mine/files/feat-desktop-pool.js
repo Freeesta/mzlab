@@ -112,6 +112,13 @@ export function createDesktopPool(opts = {}) {
     ms2File(a) { return pool.table("ms2", { samples: a.samples, spec: a.spec, sha256: a.sha, polarity: a.pol, export_kind: a.kind, names: a.paths.map(nameOf) }); },
     /** the traces of one row (`riga_tracce/1`): XIC of every file, MS1 at the best apex and MS2, read from the index of each file @param {{ samples: string, sha: string, id: number, ppm: number, paths: string[] }} a */
     rowTraces(a) { return pool.table("row_traces", { samples: a.samples, sha256: a.sha, id: a.id, ppm: a.ppm, names: a.paths.map(nameOf) }); },
+    /** the table of levels of a campaign folder (admin mode): the app reads the text files the page sends and answers `{summary, text}`; same result as the pool of the browser @param {{ path: string, file: File }[]} files @param {string} root @param {string} [kind] */
+    async attributioAnnotate(files, root, kind = "json") {
+      const texts = [];
+      for (const f of files) if (/\.(csv|tsv|toml|json|jsonl|mgf|txt|ms|msp)$/i.test(f.path)) texts.push({ path: f.path, text: await f.file.text() });
+      const r = await json("feat/attributio/annotate", { root, kind, files: texts });
+      return { summary: r.summary, bytes: new TextEncoder().encode(r.text) };
+    },
     /** a table of another program (mzMine, FBMN/GNPS2, MS-DIAL) from its files: the table as JSON text, the readers are the native route `feat/import` @param {{name: string, sha256: string, text: string}[]} files @param {number} pol @param {number} maxFeatures */
     async importBuild(files, pol, maxFeatures) { return (await call("feat/import", { kind: "build", files, pol, max_features: maxFeatures })).text(); },
     /** `check_structure` of many annotations at once: the list of the answers (`{ok, ppm, adduct}`) @param {{formula: string, precursor: number | null, adduct: string, pol: number, tol: number}[]} calls */

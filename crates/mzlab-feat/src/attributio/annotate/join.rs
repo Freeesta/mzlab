@@ -137,6 +137,7 @@ fn index<T>(rows: &[T], key: impl Fn(&T) -> (&str, i64)) -> HashMap<(String, i64
 fn gated_class(f: &mut Feature, s: &AnnotationSettings) {
     // a class below canopus_min is not shown; a class also needs its parent shown
     const PARENT: [Option<usize>; 5] = [None, Some(0), Some(1), None, Some(3)];
+    #[allow(clippy::needless_range_loop)]
     for k in 0..5 {
         let ok = f.class_probs[k].is_some_and(|p| p >= s.canopus_min)
             && PARENT[k].is_none_or(|q| f.classes[q].is_some());

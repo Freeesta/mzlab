@@ -86,7 +86,7 @@ pub fn best_scan<R: RawSource>(
         let Some(t) = raw.scan_rt(&s.0, s.1) else {
             continue;
         };
-        if best.map_or(true, |b| (t - rt_min).abs() < b.0) {
+        if best.is_none_or(|b| (t - rt_min).abs() < b.0) {
             best = Some(((t - rt_min).abs(), s));
         }
     }

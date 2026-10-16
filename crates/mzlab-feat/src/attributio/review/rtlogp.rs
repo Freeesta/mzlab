@@ -113,6 +113,7 @@ fn lstsq(x: &[Vec<f64>], y: &[f64]) -> Vec<f64> {
         for p in 0..n {
             for q in p + 1..n {
                 let (mut a, mut b, mut c) = (0.0, 0.0, 0.0);
+                #[allow(clippy::needless_range_loop)]
                 for i in 0..m {
                     a += u[p][i] * u[p][i];
                     b += u[q][i] * u[q][i];
@@ -125,11 +126,13 @@ fn lstsq(x: &[Vec<f64>], y: &[f64]) -> Vec<f64> {
                 let zeta = (b - a) / (2.0 * c);
                 let t = zeta.signum() / (zeta.abs() + (1.0 + zeta * zeta).sqrt());
                 let (cs, sn) = (1.0 / (1.0 + t * t).sqrt(), t / (1.0 + t * t).sqrt());
+                #[allow(clippy::needless_range_loop)]
                 for i in 0..m {
                     let (up, uq) = (u[p][i], u[q][i]);
                     u[p][i] = cs * up - sn * uq;
                     u[q][i] = sn * up + cs * uq;
                 }
+                #[allow(clippy::needless_range_loop)]
                 for i in 0..n {
                     let (vp, vq) = (v[p][i], v[q][i]);
                     v[p][i] = cs * vp - sn * vq;
@@ -301,7 +304,7 @@ pub fn calibrate(points: &[CalPoint], k: f64, floor: f64, min_n: usize) -> Model
         }
     }
     let window = fit.as_ref().map(|f| f64::max(k * f.mad, floor));
-    let mut note = if fit.as_ref().map_or(false, |f| f.kind == FitKind::Mlr) {
+    let mut note = if fit.as_ref().is_some_and(|f| f.kind == FitKind::Mlr) {
         "Multi-descriptor model (Retip-like) active.".to_string()
     } else {
         "Basic logP line active.".to_string()

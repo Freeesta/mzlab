@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The .wasm of mzFinder (crates/mzlab-feat-wasm: detect, proofs, untargeted (the pipeline after mzmine 3.9.0, loaded only when the admin mode picks the mzmine-like engine in the panel Pipeline), mrm, loaded only for a series of MRM files, and finder, loaded by the worker of mzFinder for classify, formula_info, identity_graph, polarity_pairs and the Dig of a high-resolution series, and finder_msn, loaded only when a file of the series is MSn (tree, library, localisation); fetched only when a series is analysed, never committed), each under 500 KB after wasm-opt -Oz,
+# The .wasm of mzFinder (crates/mzlab-feat-wasm: detect, proofs, untargeted (the pipeline after mzmine 3.9.0, loaded only when the admin mode picks the mzmine-like engine in the panel Pipeline), mrm, loaded only for a series of MRM files, and finder, loaded by the worker of mzFinder for classify, formula_info, identity_graph, polarity_pairs and the Dig of a high-resolution series, and finder_msn, loaded only when a file of the series is MSn (tree, library, localisation), and attributio, the table of levels of a campaign folder in administrator mode; fetched only when a series is analysed, never committed), each under 500 KB after wasm-opt -Oz,
 # and site/static/wasm-feat/manifest.json with their SHA-256 (the worker checks it): tools/build_feat_wasm.sh <site/static>
 set -eu
 # Limit of every .wasm after wasm-opt -Oz, bytes (raised from 460800 to leave room to grow; the size diet is a package of its own; measured: detect 419435, proofs 458034, mrm 244480, grafo 234654).
@@ -24,6 +24,10 @@ tools/wasm_opt.sh "$out/grafo/mzlab_feat_grafo_wasm_bg.wasm" $limit "mzFinder gr
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-import-wasm
 wasm-bindgen --target web --no-typescript --out-dir "$out/import" target/wasm32-unknown-unknown/release/mzlab_feat_import_wasm.wasm
 tools/wasm_opt.sh "$out/import/mzlab_feat_import_wasm_bg.wasm" $limit "mzFinder import"
+# the table of levels of Attributio (administrator mode), loaded only when a campaign folder is chosen: crates/mzlab-attributio-wasm
+cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm
+wasm-bindgen --target web --no-typescript --out-dir "$out/attributio" target/wasm32-unknown-unknown/release/mzlab_attributio_wasm.wasm
+tools/wasm_opt.sh "$out/attributio/mzlab_attributio_wasm_bg.wasm" $limit "mzFinder attributio"
 # the low-resolution Dig of mzFinder (crates/mzlab-finder-lr-wasm), loaded by the worker of mzFinder only for a series of full-scan unit-resolution files
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-finder-lr-wasm
 wasm-bindgen --target web --no-typescript --out-dir "$out/finder-lr" target/wasm32-unknown-unknown/release/mzlab_finder_lr_wasm.wasm
@@ -46,6 +50,8 @@ m["grafo"] = {"js": "grafo/mzlab_feat_grafo_wasm.js", "wasm": "grafo/mzlab_feat_
               "sha256": hashlib.sha256(open(f"{o}/grafo/mzlab_feat_grafo_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["import"] = {"js": "import/mzlab_feat_import_wasm.js", "wasm": "import/mzlab_feat_import_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/import/mzlab_feat_import_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["attributio"] = {"js": "attributio/mzlab_attributio_wasm.js", "wasm": "attributio/mzlab_attributio_wasm_bg.wasm",
+              "sha256": hashlib.sha256(open(f"{o}/attributio/mzlab_attributio_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["finder_lr"] = {"js": "finder-lr/mzlab_finder_lr_wasm.js", "wasm": "finder-lr/mzlab_finder_lr_wasm_bg.wasm",
                  "sha256": hashlib.sha256(open(f"{o}/finder-lr/mzlab_finder_lr_wasm_bg.wasm", "rb").read()).hexdigest()}
 json.dump(m, open(f"{o}/manifest.json", "w"), indent=1)

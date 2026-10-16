@@ -90,9 +90,8 @@ pub fn isolation_purity(
     let own: Vec<bool> = (0..mz.len())
         .map(|i| {
             near[i]
-                || iso_sticks.map_or(false, |s| {
-                    s.iter().any(|&(m, _)| (mz[i] - m).abs() <= tol_of(m, ppm))
-                })
+                || iso_sticks
+                    .is_some_and(|s| s.iter().any(|&(m, _)| (mz[i] - m).abs() <= tol_of(m, ppm)))
                 || (1..7).any(|k| (mz[i] - (prec + k as f64 * C13)).abs() <= tol_of(prec, ppm))
         })
         .collect();
@@ -262,7 +261,7 @@ pub fn unexplained(it: &[f64], explained: &[bool], matched: Option<&[bool]>) -> 
     let miss: f64 = (0..w.len())
         .filter(|&i| {
             !(explained.get(i).copied().unwrap_or(false)
-                || matched.map_or(false, |m| m.get(i).copied().unwrap_or(false)))
+                || matched.is_some_and(|m| m.get(i).copied().unwrap_or(false)))
         })
         .map(|i| w[i])
         .sum();
@@ -323,7 +322,7 @@ pub fn candidate_scores(
     let keep: Vec<bool> = reference
         .mz
         .iter()
-        .map(|&r| r < reference.prec - 0.5 && low.map_or(true, |l| r >= l))
+        .map(|&r| r < reference.prec - 0.5 && low.is_none_or(|l| r >= l))
         .collect();
     let rmax = max_where(&reference.it, &keep);
     let main: Vec<usize> = (0..keep.len())
@@ -417,7 +416,7 @@ pub fn badge(
         }
     }
     for c in coel {
-        if c.r.map_or(false, |r| r >= 0.8) && c.offset.unwrap_or(1.0).abs() <= 0.1 {
+        if c.r.is_some_and(|r| r >= 0.8) && c.offset.unwrap_or(1.0).abs() <= 0.1 {
             let s = format!(
                 "co-isolated ion {:.4} ({:.0} %) co-elutes (r {:.2}, apex offset {:+.2} min)",
                 c.mz,

@@ -579,6 +579,7 @@ pub fn network_neighbours(
     tables: &HashMap<(String, i64), (f64, f64)>,
     s: &ReviewSettings,
 ) -> BTreeMap<String, Vec<Neighbour>> {
+    #[allow(clippy::type_complexity)]
     let mut adj: HashMap<(String, i64), Vec<(i64, Option<f64>)>> = HashMap::new();
     for e in edges {
         adj.entry((e.pol.clone(), e.a))
