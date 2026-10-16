@@ -251,12 +251,30 @@ try:
             assert all(c[0] >= 24 and c[1] >= 24 for c in cells), cells
             assert cells[0][2] == "○" and "absent" in cells[0][3] and "s0.mzML" in cells[0][3], cells[0]
             assert cells[3][2] == "◐" and "filled" in cells[3][3], cells[3]
+            assert pg.locator("#tp-det .tpr-cell[tabindex='0'][data-tt][data-tt-text]").count() == 6, "every cell is focusable and has its tooltip"
+            assert pg.locator("#tp-det .tpr-grp b[tabindex='0'][data-tt]").count() == pg.locator("#tp-det .tpr-grp").count() > 0, "every group title has a tooltip"
+            leg = pg.inner_text("#tp-det .tpr-mxleg"); assert "Colour = peak area (log scale, darker = more); symbol = peak state" in leg and "absent" in leg and "filled" in leg, leg
+            pg.locator("#tp-det .tpr-cell").nth(3).focus(); pg.wait_for_selector("#tph-pop:not([hidden])")
+            tip = pg.inner_text("#tph-pop"); assert "area" in tip and "peak filled" in tip, tip
+            pg.locator("#tp-det .tpr-grp b").first.focus(); pg.wait_for_selector("#tph-pop:not([hidden])"); assert pg.inner_text("#tph-pop").strip() != ""
             assert pg.locator("#tp-det table.tpr tbody tr").count() == 6 and "Normalized" in pg.inner_text("#tp-det table.tpr thead")
             pg.click('#tr-t [data-tg="2"]'); settle(); assert pg.get_attribute("#tr-t [data-tab=samples]", "aria-selected") == "true"
             assert pg.locator("#tp-det .tpr-cell").count() == 12 and pg.locator("#tp-det .tpr-tw.sc").count() == 1, "inner scroll beyond 10 rows"
             assert pg.locator("#tp-det .tpr-cell .on-w, #tp-det .tpr-cell.on-w").count() > 0
             h = pg.evaluate("document.querySelector('#tp-det').getBoundingClientRect().height"); assert h <= 420, ("panel height with 12 samples", h)
         step("TPRIGA samples: one 24 px cell per sample with symbol and label, table, scroll beyond 10 rows, height", riga_samples)
+
+        def cells_column():
+            pg.evaluate("""() => { const d = document.createElement('div'); d.id = 'cc-t'; d.className = 'tp'; document.body.appendChild(d);
+              d.innerHTML = TPTAB.cells(['detected', 'absent', 'filled', 'detected'], 12, [{ time: 30, area: 1e6 }, { time: 0, area: 0 }, { time: 10, area: 1e3 }, { time: 60, area: 5e4 }]); }""")
+            c = pg.evaluate("[...document.querySelectorAll('#cc-t .tpt-cell')].map(e => [e.textContent, e.getAttribute('data-tt-text'), e.getAttribute('tabindex'), e.getBoundingClientRect().width, e.style.background])")
+            assert [x[0] for x in c] == ["○", "◐", "●", "●"], ("order: t0 first, then growing times", c)
+            assert all(x[1] and x[2] == "0" and x[3] >= 24 for x in c), c
+            assert "time 10" in c[1][1] and "area 1000" in c[1][1] and "peak filled" in c[1][1], c[1]
+            assert c[0][4] == "" and c[1][4] != c[2][4] != c[3][4] and "color-mix" in c[2][4], ("gradient by area", c)
+            pg.locator("#cc-t .tpt-cell").nth(2).focus(); pg.wait_for_selector("#tph-pop:not([hidden])"); assert "time 30" in pg.inner_text("#tph-pop")
+            pg.evaluate("document.getElementById('cc-t').remove()")
+        step("Cells column: sample order, focusable symbols with help, area gradient", cells_column)
 
         def riga_identity_quality():
             pg.click('#tr-t [data-tg="0"]'); settle()
