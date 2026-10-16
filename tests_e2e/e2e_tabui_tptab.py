@@ -21,8 +21,7 @@ tmp = Path(tempfile.mkdtemp(prefix="tabui_tptab_"))
 reuse = os.environ.get("MZLAB_PIPE_SITE")
 site = Path(reuse) if reuse else tmp / "site"
 if not reuse:
-    cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)]
-    if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
+    cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site), "--no-pyodide"]       # the component needs neither Pyodide nor the engine
     subprocess.run(cmd, check=True, capture_output=True)
 else:                                                      # fresh sources of mzFinder over the site that was built
     for d in ("files", "js"):
@@ -72,8 +71,9 @@ try:
         pg.on("pageerror", lambda e: errs.append(str(e)))
         def load():
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#nav button[data-v=\"tpmine\"]", state="attached", timeout=120000)
+            pg.evaluate("() => { const l = document.getElementById('loading'); if (l && /motore|engine/i.test(l.innerText)) l.remove(); }")     # the component needs no engine: a build without the .wasm must not block the test
+            pg.wait_for_function("typeof window.TPTAB === 'object' && typeof window.TPHELP === 'object' && typeof window.TPRIGA === 'object'", timeout=120000)       # before the click: the view attaches the help to what exists when it is built
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-right", timeout=60000)
-            pg.wait_for_function("typeof window.TPTAB === 'object'", timeout=120000)
             pg.evaluate(MOUNT); pg.wait_for_selector("#tt-t tr.clk")
         load()
         W = "#tt-host .tpt-wrap"
@@ -185,10 +185,13 @@ try:
         step("axe: no serious violation, dark theme", axe("dark"))
 
         def narrow():
+            if not pg.locator("#tt-t tr.tpt-exp").count(): pg.click('#tt-t [data-tg="3"]'); pg.wait_for_selector("#tt-t tr.tpt-exp #tp-det")      # the keyboard step closed the row
             pg.set_viewport_size({"width": 390, "height": 800}); settle()
-            w = pg.evaluate("[document.querySelector('#tp-det').getBoundingClientRect().width, document.querySelector('%s').clientWidth]" % W)
-            assert w[0] <= w[1] + 2, w
-            pg.locator("#tt-host").screenshot(path=str(SHOTS / "tptab-dark-390.png")); pg.set_viewport_size({"width": 1280, "height": 900})
+            try:
+                w = pg.evaluate("[document.querySelector('#tp-det').getBoundingClientRect().width, document.querySelector('%s').clientWidth]" % W)
+                assert w[0] <= w[1] + 2, w
+                pg.locator("#tt-host").screenshot(path=str(SHOTS / "tptab-dark-390.png"))
+            finally: pg.set_viewport_size({"width": 1280, "height": 900}); settle()
         step("narrow window: the panel fits the visible width", narrow)
         # ---- TPRIGA: the panel of the open row, from a model (row 0 complete, row 1 only xic and samples, row 2 with 12 samples and 5 candidates)
         MOUNT2 = """() => {
@@ -267,7 +270,7 @@ try:
         step("TPRIGA samples: one 24 px cell per sample with symbol and label, table, scroll beyond 10 rows, height", riga_samples)
 
         def cells_column():
-            pg.evaluate("""() => { const d = document.createElement('div'); d.id = 'cc-t'; d.className = 'tp'; document.body.appendChild(d);
+            pg.evaluate("""() => { const d = document.createElement('div'); d.id = 'cc-t'; d.className = 'tp'; document.querySelector('#tp-right').appendChild(d);
               d.innerHTML = TPTAB.cells(['detected', 'absent', 'filled', 'detected'], 12, [{ time: 30, area: 1e6 }, { time: 0, area: 0 }, { time: 10, area: 1e3 }, { time: 60, area: 5e4 }]); }""")
             c = pg.evaluate("[...document.querySelectorAll('#cc-t .tpt-cell')].map(e => [e.textContent, e.getAttribute('data-tt-text'), e.getAttribute('tabindex'), e.getBoundingClientRect().width, e.style.background])")
             assert [x[0] for x in c] == ["○", "◐", "●", "●"], ("order: t0 first, then growing times", c)
