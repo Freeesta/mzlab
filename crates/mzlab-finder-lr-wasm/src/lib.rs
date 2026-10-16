@@ -161,7 +161,8 @@ impl FinderLrDig {
     }
 }
 
-/// `api.run` on a low-resolution series: `table` = the `.mzfeat` of the columns of `finder_lr_plan`, `registry` = `ipotesi/1` of the parent.
+/// `api.run` on a low-resolution series: `table` = the `.mzfeat` of the columns of `finder_lr_plan`, `registry` = `ipotesi/1` of the parent,
+/// `read`/`sizes` = the `.mzidx` of the columns (the XICs of the chromatographic check of the peaks).
 #[wasm_bindgen]
 pub fn finder_lr_dig(
     files_json: &str,
@@ -169,8 +170,18 @@ pub fn finder_lr_dig(
     settings_json: &str,
     table: &[u8],
     registry: &str,
+    read: Function,
+    sizes: Vec<f64>,
 ) -> std::result::Result<FinderLrDig, JsValue> {
-    let inner = lr::dig(files_json, parent_json, settings_json, table, registry).map_err(user)?;
+    let inner = lr::dig(
+        files_json,
+        parent_json,
+        settings_json,
+        table,
+        registry,
+        &mut |k| open(&read, k, sizes.get(k).copied().unwrap_or(f64::NAN)),
+    )
+    .map_err(user)?;
     Ok(FinderLrDig { inner })
 }
 

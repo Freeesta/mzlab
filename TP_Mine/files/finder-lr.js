@@ -87,9 +87,9 @@ export async function run(c, a) {
   const h = await pool.hypotheses({ stored, paths, rules, parent: p.formula, parentRt: NaN, recipe: "" }); lap("candidates", t); t = performance.now();
   progress("Aligning the peaks of the series...", 0.6, "xic");
   const table = await pool.align(stored, paths, ""); lap("align", t); t = performance.now();
-  dig = x.finder_lr_dig(a[0], a[1], a[2] || "{}", table, h.registry); cols = [...p.lc, ...p.ms2];
-  const ix = await c.openIdx(p.lc);
-  try { dig.isf(ix.read, ix.sizes); } finally { ix.close(); }   // the in-source verdicts need the lighter ions' traces
+  const ix = await c.openIdx(p.lc);     // the XICs: the chromatographic check of the peaks, then the in-source verdicts of the lighter ions
+  try { dig = x.finder_lr_dig(a[0], a[1], a[2] || "{}", table, h.registry, ix.read, ix.sizes); dig.isf(ix.read, ix.sizes); } finally { ix.close(); }
+  cols = [...p.lc, ...p.ms2];
   let mrm = null;
   if (p.mrm.length) {
     const r = await mzmlReader(c, p.mrm), rt = JSON.parse(a[2] || "{}").rt_tol_min;

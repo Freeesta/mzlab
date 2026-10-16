@@ -52,6 +52,7 @@
 #tp-sug li{padding:5px 8px;border-radius:4px;cursor:pointer;display:flex;gap:8px;align-items:baseline;font-size:13px}#tp-sug li span{color:var(--muted);font-size:11px;margin-left:auto;white-space:nowrap}#tp-sug li[aria-selected=true],#tp-sug li:hover{background:var(--sel);box-shadow:inset 3px 0 0 var(--accent)}
 #tp-drawbar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:95;display:flex;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--accent);border-radius:20px;padding:6px 12px;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:13px}#tp-drawbar[hidden]{display:none}
 .tp #tp-warn{font-size:12px;color:var(--bad,#b3261e)}
+.tp #tp-nopar{margin:6px 0;color:var(--bad,#b3261e)}
 .words p{font-size:13px}
 
 
@@ -523,8 +524,9 @@
       const words = [w(nF, "strong"), w(nP, "possible"), w(nU, "unexpected"), hl != null ? `parent t½ ${w(hl, "min", 1)}` : "", s.offset && s.offset.applied ? `<i>m/z</i> offset ${s.offset.offset >= 0 ? "+" : "−"}${w(Math.abs(s.offset.offset), "Da", 2)}` : "", w(s.rows.length, "ions"), `${(st.took / 1000).toFixed(1)} s`].filter(Boolean).join(" · ");
       const nMs2 = s.ms2_links && s.ms2_links.links ? s.ms2_links.links.length : 0, ms2c = window.TPMS2 ? window.TPMS2.card(s) : "", mrmc = mrmCard(s.mrm);
       R.innerHTML = `<div class="hero"><div class="hero-t"><span class="hero-i">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : "⛏"}</span>
-        <h2>${nF ? "Vein found!" : nP ? "A few nuggets..." : "Poor vein"}</h2><span class="hero-s">${esc(s.parent.formula || "parent")} · ${esc(s.parent.adduct)} <i>m/z</i> ${s.parent.mz}${par && par.ref_rt ? ` · RT ${par.ref_rt} min` : ""}</span></div>
+        <h2>${s.parent_ok === false ? "Parent not found" : nF ? "Vein found!" : nP ? "A few nuggets..." : "Poor vein"}</h2><span class="hero-s">${esc(s.parent.formula || "parent")} · ${esc(s.parent.adduct)} <i>m/z</i> ${s.parent.mz}${par && par.ref_rt ? ` · RT ${par.ref_rt} min` : ""}</span></div>
         <div class="hero-c"><span id="tp-cnt">${words}</span><span class="hero-x"><button id="tp-x-xlsx">Excel (.xlsx)</button><button id="tp-x-csv">CSV</button><button id="tp-x-json">JSON</button><button id="tp-x-txt" title="Copy a summary to paste into the report">Copy summary</button></span></div></div>
+        ${s.parent_ok === false ? `<p id="tp-nopar" role="status">In these files the ion of the parent is not a chromatographic peak that falls over time, so no product is proposed. Check the formula and the adduct of the parent and the files of the series; the criteria are in the parent row.</p>` : ""}
         <div class="vtabs">${VIEWS.map(([k, n]) => `<button class="vt${st.view === k ? " on" : ""}" data-v="${k}">${n}</button>`).join("")}</div>
         <div id="tp-view"></div>
         <div class="tp-mores">${ms2c ? `<details name="tp-more" id="tp-m-ms2"><summary>MS2 matches (${nMs2})</summary>${ms2c}</details>` : ""}${mrmc ? `<details name="tp-more" id="tp-m-mrm"><summary>MRM (${s.mrm.rows.length} files)</summary>${mrmc}</details>` : ""}</div>`;
@@ -629,7 +631,7 @@
         { key: "level", label: "Lvl", help: "ft.col.level", sticky: true, sort: lvSort, cell: r => r.level ? TPTAB.level(r.level) : "", text: r => r.level ? "L" + r.level : "" },
         { key: "tpname", label: "TP", help: "ft.col.tpname", sticky: true, sort: r => r.tp_name || "", cell: r => esc(r.tp_name || "") },
         { key: "identity", label: "Identity", help: "ft.col.identity", sticky: true, sort: r => idLabel(r).toLowerCase(), cell: r => esc(idLabel(r)) + alt(r), text: r => idLabel(r) + (r.alternatives.length ? ` (+${r.alternatives.length} other)` : "") },
-        { key: "status", label: "Status", help: "ft.col.status", sort: r => notFound(r) ? 1 : 0, cell: r => notFound(r) ? "Searched, not detected" : "Detected", text: r => r.status || "Detected" },
+        { key: "status", label: "Status", help: "ft.col.status", sort: r => notFound(r) || r.status === "Parent not found" ? 1 : 0, cell: r => esc(r.status || "Detected"), text: r => r.status || "Detected" },
         { key: "net", label: "Net change (formula)", help: "ft.col.net", sort: r => r.net_change || "", cell: r => esc(r.net_change || "") },
         { key: "modif", label: "Modification", help: "ft.col.modif", sort: r => r.modification || "", cell: r => esc(r.modification || "") },
         { key: "mz", label: "<i>m/z</i>", help: "ft.col.mz", num: true, sort: r => r.mz, cell: r => r.mz.toFixed(2) },

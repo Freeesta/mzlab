@@ -9,17 +9,31 @@ use crate::legacy::lrisf::IsfVerdict;
 
 const LEVEL_TEXT: [(u8, &str); 3] = [
     (5, "Level 5: mass of interest. Ion with a compatible time course, nothing more."),
-    (4, "Level 4: proposed formula. Derives from a known transformation of the parent and passes the criteria; at unit resolution the formula is not proven."),
+    (4, "Level 4: proposed formula. Derives from one known transformation of the parent and passes the criteria; at unit resolution the formula is not proven."),
     (3, "Level 3: tentative candidate. In addition, the product ions (MS2) are consistent with the parent (shared fragments or fragments shifted by Δ)."),
 ];
+const TWO_STEPS: &str = "Level 5: mass of interest. The m/z matches two transformations of the parent: at unit resolution so many combinations cover most nominal masses that a match is no evidence of the formula.";
 
-/// `confidence`: Schymanski level 5 or 4 as far as unit-resolution data without MS2 allow (never above 3, never 2 or 1).
+/// Status of the parent row when `parent_check` fails: no product is proposed.
+pub const PARENT_NOT_FOUND: &str = "Parent not found";
+
+const BY_CHANCE: &str = "Level 5: mass of interest. In this series the transformations of the parent match no more ions than the same masses shifted by a few Da (decoys): the match may be a coincidence.";
+
+/// `confidence`: Schymanski level 5 or 4 as far as unit-resolution data without MS2 allow (never above 3, never 2 or 1). A level needs a chromatographic
+/// peak (`peakchk`) behind the label; 4 needs a formula reached by one transformation (two steps match by chance at unit resolution) whose class of
+/// hypotheses matches more ions than the decoys (`chance`).
 pub fn level(e: &Entry) -> (Option<u8>, &'static str) {
     if e.id == 0 {
         return (None, "");
     }
     if !matches!(e.label, "forte" | "possibile") {
         return (None, "No level: the criteria are not met.");
+    }
+    if !e.formula.is_empty() && e.label == "forte" && e.steps > 1 {
+        return (Some(5), TWO_STEPS);
+    }
+    if !e.formula.is_empty() && e.label == "forte" && e.by_chance {
+        return (Some(5), BY_CHANCE);
     }
     let l = if !e.formula.is_empty() && e.label == "forte" {
         4
@@ -99,7 +113,7 @@ struct Row<'a> {
     sim: Option<f64>,
 }
 
-fn row_json(o: &mut Out, r: &Row, p_mz: f64, tp_name: &str, parent_formula: &str, detected: bool) {
+fn row_json(o: &mut Out, r: &Row, p_mz: f64, tp_name: &str, parent_formula: &str, status: &str) {
     let e = r.e;
     o.raw("{\"id\":")
         .int(e.id)
@@ -111,11 +125,7 @@ fn row_json(o: &mut Out, r: &Row, p_mz: f64, tp_name: &str, parent_formula: &str
         });
     o.raw(",\"name\":").str(&e.name);
     o.raw(",\"tp_name\":").str(tp_name);
-    o.raw(",\"status\":").str(if detected {
-        "Detected"
-    } else {
-        "Searched, not detected"
-    });
+    o.raw(",\"status\":").str(status);
     nomi::words_json(o, e, parent_formula);
     o.raw(",\"alternatives\":");
     strs(o, &e.alternatives);
@@ -337,11 +347,21 @@ pub fn summary(d: &LrDig, timing: &str) -> String {
             d.parent.mz,
             &names[at],
             &d.parent.formula,
-            found[at],
+            if r.e.id == 0 && !d.parent_ok {
+                PARENT_NOT_FOUND
+            } else if found[at] {
+                "Detected"
+            } else {
+                "Searched, not detected"
+            },
         );
     }
     o.raw("],\"settings\":");
     plan::settings_json(&mut o, &d.settings);
+    o.raw(",\"parent_ok\":")
+        .raw(if d.parent_ok { "true" } else { "false" })
+        .raw(",\"chance\":");
+    super::chance::json(&mut o, &d.chance);
     if let Some(l) = &d.links {
         o.raw(",\"ms2_links\":");
         super::ms2link::json(&mut o, l);

@@ -63,6 +63,11 @@ fn contract_and_rows_of_python() {
     shared.as_object_mut().unwrap().remove("ms2_links");
     shared.as_object_mut().unwrap().remove("ms2_rep");
     shared.as_object_mut().unwrap().remove("ms2_text");
+    // keys of the Rust Dig only: the parent check and the matches by chance (`lr/chance.rs`)
+    assert_eq!(s["parent_ok"], true);
+    assert!(s["chance"].as_array().is_some_and(|c| !c.is_empty()));
+    shared.as_object_mut().unwrap().remove("parent_ok");
+    shared.as_object_mut().unwrap().remove("chance");
     same_shape(&shared, &g["summary"], "summary");
     for row in s["rows"].as_array().unwrap() {
         let mut shared = row.clone();

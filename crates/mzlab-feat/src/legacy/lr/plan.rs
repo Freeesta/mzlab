@@ -30,6 +30,16 @@ pub struct Settings {
     pub min_files: usize,
     /// «Fragment ions found» lists the fragments of the representative MS2 scan from this % of the strongest (`ms2frag`).
     pub frag_min_rel: f64,
+    /// A detected cell is a peak only with this S/N on its XIC (`peakchk`).
+    pub min_snr: f64,
+    /// ... at most this FWHM, seconds.
+    pub max_fwhm_s: f64,
+    /// ... at least this many scans above 5 % of its height.
+    pub min_points: usize,
+    /// ... and its apex after `dead_factor · rt_min` (`rt_min` = end of the dead volume).
+    pub dead_factor: f64,
+    /// Products are proposed only when the parent is a chromatographic peak whose area falls over time (`parent_check`).
+    pub parent_decay: bool,
 }
 
 impl Settings {
@@ -53,6 +63,11 @@ impl Default for Settings {
             auto_offset: true,
             min_files: 3,
             frag_min_rel: super::ms2frag::MIN_REL,
+            min_snr: 10.0,
+            max_fwhm_s: 60.0,
+            min_points: 5,
+            dead_factor: 1.5,
+            parent_decay: true,
         }
     }
 }
@@ -170,6 +185,13 @@ pub fn settings(settings_json: &str) -> Settings {
     s.auto_offset = flag("auto_offset").unwrap_or(s.auto_offset);
     s.min_files = num("min_files").map_or(s.min_files, |x| x.max(0.0) as usize);
     s.frag_min_rel = num("frag_min_rel").map_or(s.frag_min_rel, |x| x.clamp(0.0, 100.0));
+    s.min_snr = num("min_snr").map_or(s.min_snr, |x| x.max(0.0));
+    s.max_fwhm_s = num("max_fwhm_s")
+        .filter(|x| *x > 0.0)
+        .unwrap_or(s.max_fwhm_s);
+    s.min_points = num("min_points").map_or(s.min_points, |x| x.max(1.0) as usize);
+    s.dead_factor = num("dead_factor").map_or(s.dead_factor, |x| x.max(0.0));
+    s.parent_decay = flag("parent_decay").unwrap_or(s.parent_decay);
     s
 }
 
@@ -188,6 +210,16 @@ pub fn settings_json(o: &mut Out, s: &Settings) {
     o.raw(",\"min_files\":").int(s.min_files as i64);
     o.raw(",\"auto_offset\":")
         .raw(if s.auto_offset { "true" } else { "false" });
+    o.raw(",\"min_snr\":")
+        .num(s.min_snr)
+        .raw(",\"max_fwhm_s\":")
+        .num(s.max_fwhm_s);
+    o.raw(",\"min_points\":")
+        .int(s.min_points as i64)
+        .raw(",\"dead_factor\":")
+        .num(s.dead_factor);
+    o.raw(",\"parent_decay\":")
+        .raw(if s.parent_decay { "true" } else { "false" });
     o.raw("}");
 }
 

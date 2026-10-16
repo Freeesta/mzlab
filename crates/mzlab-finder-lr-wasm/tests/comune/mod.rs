@@ -201,7 +201,15 @@ pub fn dig_for(files: &str, parent: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
     let refs: Vec<_> = feats.iter().collect();
     let formula = plan["formula"].as_str().unwrap();
     let h = run::hypotheses(&mut ix, &refs, &rules, "", formula, None, &r).unwrap();
-    lr::dig(files, parent, "{}", &table, &h.registry.to_json()).unwrap()
+    lr::dig(
+        files,
+        parent,
+        "{}",
+        &table,
+        &h.registry.to_json(),
+        &mut |k| Ok(open(&idxs[k])),
+    )
+    .unwrap()
 }
 
 /// `d` with the MS2 matches of the series: `idxs` are the columns, `ms2` the MS2 files (in the order of the plan).

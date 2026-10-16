@@ -265,6 +265,26 @@ pub fn candidates(
     (out, used)
 }
 
+/// The free rows (not within the tolerance of the parent or a hypothesis) after `rt_min` whose criteria pass on the cells of the table
+/// (`forte` or `possibile`, growth, persistence, absent at t0 and in the blank not failed).
+pub fn free_rows(t: &Aligned, files: &[FileIn], known: &[f64], s: &Settings) -> Vec<usize> {
+    (0..t.len())
+        .filter(|&r| t.rt[r] >= s.rt_min && !known.iter().any(|m| (t.mz[r] - m).abs() <= s.tol_da))
+        .filter(|&r| {
+            let sc = score(files, &cells(t, r), s.persist());
+            let fine = [
+                "absent in the blank",
+                "absent at time zero",
+                GROWS,
+                PERSISTS,
+            ]
+            .iter()
+            .all(|n| status(&sc.criteria, n) != "fail");
+            matches!(sc.label, "forte" | "possibile") && fine
+        })
+        .collect()
+}
+
 /// The unexpected ions: free rows (not within the tolerance of the parent or a hypothesis) after `rt_min` whose criteria pass
 /// (`forte` or `possibile`, growth not failed, absent at t0 and in the blank), not the isotope peak of a stronger ion, the best
 /// of two neighbours, at most `max_unexpected` by score and area.
@@ -275,30 +295,15 @@ pub fn unexpected(
     s: &Settings,
     off: f64,
 ) -> Vec<Entry> {
-    let tol = s.tol_da;
     let mut found: Vec<(Entry, f64)> = Vec::new();
-    for r in 0..t.len() {
-        if t.rt[r] < s.rt_min || known.iter().any(|m| (t.mz[r] - m).abs() <= tol) {
-            continue;
-        }
-        let c = cells(t, r);
-        let sc = score(files, &c, s.persist());
-        let fine = [
-            "absent in the blank",
-            "absent at time zero",
-            GROWS,
-            PERSISTS,
-        ]
-        .iter()
-        .all(|n| status(&sc.criteria, n) != "fail");
-        if matches!(sc.label, "forte" | "possibile") && fine {
-            let area = best_area(t, files, r, is_treated);
-            found.push((
-                entry(0, true, String::new(), t.mz[r] - off, t.mz[r], Some(r)),
-                area,
-            ));
-        }
+    for r in free_rows(t, files, known, s) {
+        let area = best_area(t, files, r, is_treated);
+        found.push((
+            entry(0, true, String::new(), t.mz[r] - off, t.mz[r], Some(r)),
+            area,
+        ));
     }
+    let tol = s.tol_da;
     let mut ord: Vec<usize> = (0..found.len()).collect();
     mzlab_core::sortc::by(&mut ord, |&a, &b| {
         found[b]
