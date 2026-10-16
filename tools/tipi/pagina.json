@@ -153,6 +153,7 @@
     "../../TP_Mine/js/42_tp_table.js",
     "../../TP_Mine/js/43_trasformazioni.js",
     "../../TP_Mine/js/44_tp_riga.js",
+    "../../TP_Mine/lazy/gruppi-vista.js",
     "../../TP_Mine/js/45_tabui_decisioni.js",
     "../../TP_Mine/js/44_posizioni.js",
     "../../TP_Mine/js/50_attributio.js",
