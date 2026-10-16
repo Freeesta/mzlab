@@ -292,13 +292,13 @@
     const ad = id.adduct || "[M+H]+", cols = PF.filter(([k]) => cs.some(c => (c.proofs || []).some(p => p.key === k)));
     const hasName = cs.some(c => c.name && c.name !== c.formula), hasIon = cs.some(c => c.ion), hasPpm = cs.some(c => fin(c.ppm)), hasDmz = !hasPpm && cs.some(c => fin(c.dmz));
     const th = (/** @type {string} */ label, /** @type {string} */ help, /** @type {string} */ cls) => `<th scope="col"${cls ? ` class="${cls}"` : ""}><span${tt(help)}${G.TPHELP ? ` tabindex="0"` : ""}>${label}</span></th>`;
-    const proof = (/** @type {TpCand} */ c, /** @type {string} */ k, /** @type {string} */ name) => {
+    const proof = (/** @type {TpCand} */ c, /** @type {string} */ k, /** @type {string} */ name, /** @type {string} */ key) => {
       const p = (c.proofs || []).find(x => x.key === k), ok = p ? p.ok : null, w = p ? pfWord(ok) : "not tested";
-      return `<td class="c"><span class="tpr-pk${ok == null ? "" : ok ? " ok" : " no"}" role="img" aria-label="${esc(`${name}: ${w}`)}"${G.TPHELP ? ` tabindex="0" data-tt="ft.pf.${k}" data-tt-text="${esc(`${name}: ${w}.${p && p.text ? " " + p.text : ""}`)}"` : ""}>${ok == null ? "–" : ok ? "✓" : "✗"}</span></td>`;
+      return `<td class="c"><span class="tpr-pk${ok == null ? "" : ok ? " ok" : " no"}" role="img" aria-label="${esc(`${name}: ${w}`)}"${G.TPHELP ? ` tabindex="0" data-tt="${key}" data-tt-text="${esc(`${name}: ${w}.${p && p.text ? " " + p.text : ""}`)}"` : ""}>${ok == null ? "–" : ok ? "✓" : "✗"}</span></td>`;
     };
     const one = (/** @type {TpCand} */ c) => `<tr>${hasName ? `<td>${esc(c.name || "–")}${fin(c.pred) && G.TPTAB ? " " + G.TPTAB.pred(/** @type {number} */ (c.pred)) : ""}</td>` : ""}<td>${esc(c.formula || "–")}${!hasName && fin(c.pred) && G.TPTAB ? " " + G.TPTAB.pred(/** @type {number} */ (c.pred)) : ""}</td>`
       + (hasIon ? `<td>${esc(c.ion || "–")}</td>` : "") + (hasPpm ? `<td class="n">${fix(c.ppm, 1)}</td>` : hasDmz ? `<td class="n">${fin(c.dmz) ? (/** @type {number} */ (c.dmz) >= 0 ? "+" : "") + /** @type {number} */ (c.dmz).toFixed(2) : "–"}</td>` : "")
-      + cols.map(([k, name]) => proof(c, k, name)).join("") + `</tr>`;
+      + cols.map(([k, name, key]) => proof(c, k, name, key)).join("") + `</tr>`;
     const head = (hasName ? th("Candidate", "ft.riga.cands", "") : "") + th("Neutral formula", hasName ? "ft.riga.neutral" : "ft.riga.cands", "") + (hasIon ? th(`${esc(ad)} formula`, "ft.riga.ion", "") : "")
       + (hasPpm ? th("Δppm", "ft.riga.ppm", "n") : hasDmz ? th("Δm/z (Da)", "ft.riga.dmz", "n") : "") + cols.map(([, name, help]) => th(name, help, "c")).join("");
     const SHOW = 5, shown = cs.slice(0, SHOW), rest = cs.slice(SHOW);
