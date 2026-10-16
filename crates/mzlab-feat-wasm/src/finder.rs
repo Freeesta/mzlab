@@ -174,3 +174,9 @@ pub fn finder_transformations(rules: &[u8], text: &str) -> Result<Vec<u8>, JsVal
 pub fn finder_transf_rows(text: &str) -> String {
     legacy::transf::describe(text)
 }
+
+/// Progress of the Dig: `{phase, label, done, total, frac}` for a step (`kind` `"lr"` or `"hr"`; `done` of `total` files in a phase that goes file by file), `"null"` for an unknown phase.
+#[wasm_bindgen]
+pub fn finder_progress(kind: &str, phase: &str, done: u32, total: u32) -> String {
+    legacy::progress::json(kind, phase, done, total)
+}

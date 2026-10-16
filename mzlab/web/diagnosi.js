@@ -44,12 +44,34 @@ const DIAG = {
       dettagli: { format: (info && info.format) || ext || "?", size: (info && info.size) || 0, raw: this.pulisci(raw), head: head || "" },
     };
   },
+  // The long tasks (> 50 ms) of the page, each with the phase the engine was in when it started: what blocks the page on a file we do not have. The observer starts with the page
+  // (avvia) and costs nothing while the page is responsive; `marca` is called at every change of phase (Tabui: TPLIVE) and at the moments that matter (start, results drawn).
+  LONG: {
+    max: 200, list: /** @type {{t: number, dur: number, fase: string}[]} */ ([]), marks: /** @type {{t: number, fase: string}[]} */ ([]),
+    marca(fase) { this.marks.push({ t: performance.now(), fase }); if (this.marks.length > 200) this.marks.shift(); },
+    // the phase that was active at time `t` (ms of performance.now())
+    faseA(t) { let f = ""; for (const m of this.marks) { if (m.t <= t) f = m.fase; else break; } return f; },
+    registra(start, dur) { this.list.push({ t: Math.round(start), dur: Math.round(dur), fase: this.faseA(start) }); if (this.list.length > this.max) this.list.shift(); },
+    avvia() { try { new PerformanceObserver(l => { for (const e of l.getEntries()) this.registra(e.startTime, e.duration); }).observe({ type: "longtask", buffered: true }); } catch (_) { /* no Long Tasks API: nothing is recorded */ } },
+    da(since = 0) { return this.list.filter(x => x.t >= since); },
+    // lines for the text to copy: how many, the longest, then the ten longest with their phase
+    righe(since = 0) {
+      const l = this.da(since); if (!l.length) return [];
+      const top = l.slice().sort((a, b) => b.dur - a.dur).slice(0, 10);
+      return [`long tasks: ${l.length}, longest ${top[0].dur} ms, total ${l.reduce((a, x) => a + x.dur, 0)} ms`, ...top.map(x => `  +${x.t} ms: ${x.dur} ms in ${x.fase || "(no phase)"}`)];
+    },
+  },
   // the text to copy and send: nothing personal (no file name, no path)
   testo(d, version) {
     const x = d.dettagli, L = [`mzLab ${version || "?"}`, `code: ${d.codice}`, `phase: ${d.fase}`, `cause: ${d.causa}`, `format: ${x.format}`, `size: ${x.size} bytes`, `error: ${x.raw}`];
     if (x.head) L.push("header:", x.head);
     if (x.trace) L.push("loading:", x.trace);
+    L.push(...this.LONG.righe());
     return L.join("\n");
+  },
+  // the same for a page that was slow without any error (the Dig of Tabui): version, cores, long tasks since `since`
+  testoLento(version, since = 0) {
+    return [`mzLab ${version || "?"}`, `cores: ${typeof navigator !== "undefined" ? navigator.hardwareConcurrency || "?" : "?"}`, ...this.LONG.righe(since)].join("\n");
   },
   // the first bytes of a File read for the header (a binary maker's file gives no lines)
   async leggiTesta(f) { try { return this.testa(await f.slice(0, 8192).text()); } catch (_) { return ""; } },
@@ -68,4 +90,5 @@ const DIAG = {
   },
 };
 
+if (typeof PerformanceObserver !== "undefined" && typeof document !== "undefined") DIAG.LONG.avvia();
 if (typeof module !== "undefined") module.exports = DIAG;

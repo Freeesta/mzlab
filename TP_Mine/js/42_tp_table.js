@@ -41,7 +41,7 @@
 .tp .tpt-tabs button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
 .tp .tpt-body .tpt-scroll{max-height:420px;overflow:auto}
 .tp .tpt-st{display:inline-block;min-width:1em;text-align:center;font-family:"Segoe UI Symbol","DejaVu Sans","Noto Sans Symbols 2",sans-serif}.tp .tpt-st-detected{color:var(--ink)}.tp .tpt-st-filled{color:var(--accent)}.tp .tpt-st-targeted{color:var(--warn)}.tp .tpt-st-absent,.tp .tpt-st-na{color:var(--muted)}
-.tp .tpt-cells{letter-spacing:1px;white-space:nowrap}.tp .tpt-cells-g{letter-spacing:0;display:inline-flex;gap:2px;vertical-align:middle}.tp .tpt-cell{box-sizing:border-box;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--muted);border-radius:3px;background:var(--panel)}.tp .tpt-cell .tpt-st{min-width:0;color:inherit}.tp .tpt-cell.on-w{color:var(--tpr-w)}.tp .tpt-cell.on-k{color:var(--tpr-k)}.tp .tpt-cell:focus-visible{outline:2px solid var(--accent);outline-offset:1px}.tp .tpt-cells .tpt-more{font-size:11px;color:var(--muted);margin-left:3px;letter-spacing:0}
+.tp .tpt-cells{letter-spacing:1px;white-space:nowrap}.tp .tpt-cells-g{letter-spacing:0;display:inline-flex;gap:2px;vertical-align:middle}.tp .tpt-cell{box-sizing:border-box;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--muted);border-radius:3px;background:var(--tpr-g-none);color:var(--tpr-k)}.tp .tpt-cell.tpt-gs{margin-left:6px}.tp .tpt-cell .tpt-st{min-width:0;color:inherit}.tp .tpt-cell.on-w{color:var(--tpr-w)}.tp .tpt-cell.on-k{color:var(--tpr-k)}.tp .tpt-cell:focus-visible{outline:2px solid var(--accent);outline-offset:1px}.tp .tpt-cells .tpt-more{font-size:11px;color:var(--muted);margin-left:3px;letter-spacing:0}
 .tp .tpt-leg{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:11px;margin-top:6px;color:var(--muted)}.tp .tpt-leg span[tabindex]{min-height:24px;display:inline-flex;align-items:center;gap:4px}
 .tp tr.tpt-nd td{color:var(--muted);background:var(--bg2,transparent)}.tp tr.tpt-nd .tpt-sp{opacity:.5}
 .tp .lvb.tpt-dec{border-style:double;border-width:4px;padding:0 4px}
@@ -377,12 +377,22 @@
     const [sym, word] = STATES[s] || STATES.na;
     return `<span class="tpt-st tpt-st-${STATES[s] ? s : "na"}" role="img" aria-label="${word}"${tt("ft.state." + s)}>${sym}</span>`;
   }
+  const AREA_NOTE = "white = none, darker green = larger area";
   const sci = (/** @type {number} */ v) => !Number.isFinite(v) ? "–" : v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(1) : String(+v.toPrecision(3));
-  /** a point u in 0..1 of the scale of five CSS variables `--tpr-c0..4` (the one of the matrix of the samples) */
+  /** a point u in 0..1 of the green scale of five CSS variables `--tpr-g0..4` (light → dark, one hue): a mix of the two stops around it */
   function ramp(/** @type {number} */ u) {
     const x = Math.max(0, Math.min(1, u)) * 4, i = Math.min(3, Math.floor(x)), f = Math.round((x - i) * 100);
-    return `color-mix(in srgb,var(--tpr-c${i + 1}) ${f}%,var(--tpr-c${i}))`;
+    return `color-mix(in srgb,var(--tpr-g${i + 1}) ${f}%,var(--tpr-g${i}))`;
   }
+  /** the position on the green scale of the areas of one row: log10 of the area against the maximum of the row over three decades (the maximum is 1; no area → null, drawn white).
+   * @param {(number | null | undefined)[]} areas @returns {(a: number | null | undefined) => number | null} */
+  function areaScale(areas) {
+    const mx = Math.max(0, ...areas.filter((/** @type {any} */ a) => typeof a === "number" && Number.isFinite(a)).map(Number));
+    return a => !(typeof a === "number" && a > 0 && mx > 0) ? null : Math.max(0.08, Math.min(1, 1 + Math.log10(a / mx) / 3));
+  }
+  /** the class and the style of a square for the position `u` of the scale: white when there is no area, the symbol dark on the light greens and white on the dark ones
+   * @param {number | null} u */
+  const paint = u => ({ cls: u == null ? "" : u < 0.6 ? " on-k" : " on-w", style: u == null ? "" : ` style="background:${ramp(u)}"` });
   /** group of a sample in the order of the row: 0 blank or dark, 1 t0, 2 timed, 3 other @param {{ type?: string, time?: number | null }} x */
   const grp = x => /^(blank|dark|bianco|buio)/i.test(x.type || "") ? 0 : (/^t0/i.test(x.type || "") || x.time === 0) ? 1 : typeof x.time === "number" && Number.isFinite(x.time) ? 2 : 3;
   /** a row of symbols, at most `max` and then «+N»; the label sums them up («5 detected, 1 filled»).
@@ -395,18 +405,18 @@
     const sym = (/** @type {string} */ s) => `<span class="tpt-st tpt-st-${STATES[s] ? s : "na"}" aria-hidden="true">${(STATES[s] || STATES.na)[0]}</span>`;
     const more = (/** @type {number} */ k) => k > max ? `<span class="tpt-more">+${k - max}</span>` : "";
     if (!info || info.length !== states.length) return `<span class="tpt-cells" role="img" aria-label="${lab}">${states.slice(0, max).map(sym).join("")}${more(states.length)}</span>`;
-    const ix = states.map((_, i) => i).sort((a, b) => grp(info[a]) - grp(info[b]) || (+(info[a].time ?? 0)) - (+(info[b].time ?? 0)));
-    const pos = info.map(x => x.area).filter(a => typeof a === "number" && a > 0).map(a => Math.log10(/** @type {number} */ (a))), lo = pos.length ? Math.min(...pos) : 0, hi = pos.length ? Math.max(...pos) : 1;
-    const one = (/** @type {number} */ i) => {
-      const x = info[i], a = x.area, has = typeof a === "number" && a > 0, u = has ? (hi > lo ? (Math.log10(/** @type {number} */ (a)) - lo) / (hi - lo) : 0.5) : null, [, word] = STATES[states[i]] || STATES.na;
-      const tip = `${x.file ? x.file + " · " : ""}${x.type ? x.type + ", " : ""}${typeof x.time === "number" ? "time " + x.time : "no time"} · area ${typeof a === "number" ? sci(a) : "none"} · peak ${word}`;
-      return `<span class="tpt-cell${u == null ? "" : u < 0.5 ? " on-w" : " on-k"}" role="img" aria-label="${tip.replace(/"/g, "&quot;")}"${G.TPHELP ? ` tabindex="0" data-tt="ft.riga.cell" data-tt-text="${tip.replace(/"/g, "&quot;")}"` : ""}${u == null ? "" : ` style="background:${ramp(u)}"`}>${sym(states[i])}</span>`;
+    const ix = states.map((_, i) => i).sort((a, b) => grp(info[a]) - grp(info[b]) || (+(info[a].time ?? 0)) - (+(info[b].time ?? 0))), sc = areaScale(info.map(x => x.area));
+    const GN = ["blank / dark", "t0", "timed", "other"], esq = (/** @type {string} */ t) => t.replace(/"/g, "&quot;");
+    const one = (/** @type {number} */ i, /** @type {number} */ k) => {
+      const x = info[i], a = x.area, g = grp(x), [, word] = STATES[states[i]] || STATES.na, pr = paint(sc(a));
+      const tip = `${x.file ? x.file + " · " : ""}${x.type || GN[g]}${typeof x.time === "number" ? ", time " + x.time : ""} · area ${typeof a === "number" ? sci(a) : "none"} · peak ${word}`;
+      return `<span class="tpt-cell${pr.cls}${k && grp(info[ix[k - 1]]) !== g ? " tpt-gs" : ""}" role="img" aria-label="${esq(tip)}"${G.TPHELP ? ` tabindex="0" data-tt="ft.riga.cell" data-tt-text="${esq(tip)}"` : ""}${pr.style}>${sym(states[i])}</span>`;
     };
     return `<span class="tpt-cells tpt-cells-g" role="group" aria-label="${lab}">${ix.slice(0, max).map(one).join("")}${more(states.length)}</span>`;
   }
-  /** the legend of the symbols under the table @param {string[]} keys */
-  function legend(keys) {
-    return `<div class="tpt-leg">${keys.map(k => `<span${G.TPHELP ? ` tabindex="0"` : ""}${tt("ft.state." + k)}>${state(k)} ${(STATES[k] || STATES.na)[1]}</span>`).join("")}</div>`;
+  /** the legend of the symbols under the table; with `area` it also says what the green of the squares means @param {string[]} keys @param {boolean} [area] */
+  function legend(keys, area) {
+    return `<div class="tpt-leg">${area ? `<span>${AREA_NOTE}</span>` : ""}${keys.map(k => `<span${G.TPHELP ? ` tabindex="0"` : ""}${tt("ft.state." + k)}>${state(k)} ${(STATES[k] || STATES.na)[1]}</span>`).join("")}</div>`;
   }
   /** the options of a table with decisions: the badge of the Lvl column shows the decided level, two chips filter by it, the export adds two columns @param {Opts} o @param {Decide} d @returns {Opts} */
   function withDecisions(o, d) {
@@ -438,5 +448,5 @@
     if (Math.abs(+m) >= 1000) { e += 3; m = (v / 10 ** e).toFixed(2); }
     return m + "e" + (e < 0 ? "-" : "+") + Math.abs(e);
   };
-  G.TPTAB = { mount, spark, state, cells, legend, level, pred, area };
+  G.TPTAB = { mount, spark, state, cells, legend, areaScale, paint, AREA_NOTE, level, pred, area };
 })();

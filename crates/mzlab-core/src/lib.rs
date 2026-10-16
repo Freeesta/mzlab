@@ -10,6 +10,7 @@ pub mod agilent;
 pub mod agilent;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod analog;
+pub mod bench_stats;
 pub mod budget;
 pub mod centroidi;
 pub mod analysis;
@@ -120,6 +121,7 @@ pub mod specdiff;
 pub mod specpeaks;
 pub mod spectrum;
 pub mod subxic;
+pub mod subpeaks;
 pub mod upload;
 pub mod window;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
