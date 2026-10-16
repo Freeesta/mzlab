@@ -117,7 +117,7 @@ try:
                 row = pg.locator("#tp-cfiles tr", has_text=name)
                 for _ in range(5):                     # the table is drawn again after each change: type until the time stays
                     row = pg.locator("#tp-cfiles tr", has_text=name); row.locator(".tpg-time").fill(time); row.locator(".tpg-time").press("Enter")
-                    pg.wait_for_timeout(600)
+                    lib.fermo(pg, "#tp-cfiles table", 400)
                     if pg.evaluate(f"[...document.querySelectorAll('#tp-cfiles tr')].find(r => r.textContent.includes('{name}')).querySelector('.tpg-time').value") == time: break
                 else: raise AssertionError("the time of " + name + " does not stay")
             pg.click("#tp-cfiles button:has-text('Confirm conditions')")
