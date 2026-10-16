@@ -1,4 +1,5 @@
 {
+  "storia.tolto": "Avviso 6 s dopo aver tolto un file, chiuso un pannello o svuotato le marcature, con il pulsante Annulla; {what} = nome del file, del pannello o «marcature».",
   "storia.undone": "Annuncio dopo Ctrl/Cmd+Z; {what} = nome breve dell'azione annullata (zoom, integrazione, fondo...).",
   "storia.redone": "Annuncio dopo Ripeti; {what} = nome breve dell'azione ripetuta.",
   "draw.part.line": "Riga del menu del tasto destro su una struttura parziale (tra parentesi). {delta} = Δ normalizzato (es. +O -H2), {formula} = formula con il Δ, {mass} = massa neutra, {mz} = m/z di [M+H]+.",
@@ -64,6 +65,7 @@
   "err.file.unknown": "{detail} = motivo tecnico (testo inglese del motore).",
   "err.file.raw": "{detail} = motivo tecnico (testo inglese della libreria).",
   "err.file.notAgilentD": "{name} = nome della cartella .D.",
+  "error.newerFormat": "Errore quando un indice (.mzidx) o una tabella della pipeline (.mzfeat, .mzfeatf) è di un formato più nuovo del programma; {version} = versione del formato trovata (il motore aggiunge anche {kind}, {file}). Il file non si tocca.",
   "err.file.agilentNoEngine": "{name} = nome della cartella .D.",
   "err.file.brukerNoBin": "{name} = nome della cartella .d; {file} = il file che manca (analysis.tdf_bin o analysis.tsf_bin).",
   "load.wiffWait": "{name} = nome del file della coppia .wiff/.wiff.scan arrivato senza l'altro.",
