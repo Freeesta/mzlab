@@ -267,6 +267,7 @@ function newSpec(from, r0, r1, k, link = from.id) {
   s.el.classList.remove("drag");
   
   stackAfter(s, from); relayout(); fitHost();
+  if (UIP.beside && window.AFFIANCA) AFFIANCA.accanto(s, from);        // the option «Spectrum beside the chromatogram»: same row when there is room (affianca.js)
   // Do NOT reveal(s) so the viewport does not shift randomly
   return s;
 }

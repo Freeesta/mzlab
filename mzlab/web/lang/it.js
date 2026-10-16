@@ -572,6 +572,8 @@ I18N.add("it", {
   "settings.pal.rainbow": "Arcobaleno",
   "settings.pal.bw": "Bianco e nero",
   "settings.merge": "Unisci i centroidi della stessa massa nominale",
+  "settings.beside": "Spettro accanto al cromatogramma",
+  "settings.beside.title": "Lo spettro aperto con il doppio clic va nella stessa riga del cromatogramma, se c'è spazio",
   "settings.libs.label": "Librerie di spettri",
   "settings.libs.button": "Librerie…",
   "settings.libs.title": "Carica le librerie (MSP, MGF) con cui confrontare le MS2: clic destro su uno spettro MS2, «Cerca nelle librerie»",
