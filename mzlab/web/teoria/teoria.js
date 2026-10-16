@@ -125,9 +125,15 @@ const TP = (() => {
                    (n ? `<a href="${n[0]}" style="text-align:right"><small>Successivo &rarr;</small>${n[1]}. ${n[2]}</a>` : "<span></span>");
     $("main").appendChild(pn);
     // the index keeps its scroll from one chapter to the next (the active entry is brought into view if it would be hidden)
-    try { const y = sessionStorage.getItem("qqq.teoria.side"); if (y !== null) side.scrollTop = +y || 0; } catch (_) { /* no storage: top */ }
-    const cur = side.querySelector("li a.on"), sr = side.getBoundingClientRect();
-    if (cur && sr.height) { const cr = cur.getBoundingClientRect(); if (cr.top < sr.top) side.scrollTop -= sr.top - cr.top; else if (cr.bottom > sr.bottom) side.scrollTop += cr.bottom - sr.bottom; }
+    const restoreSide = () => {
+      try { const y = sessionStorage.getItem("qqq.teoria.side"); if (y !== null) side.scrollTop = +y || 0; } catch (_) { /* no storage: top */ }
+      const cur = side.querySelector("li a.on"), sr = side.getBoundingClientRect();
+      if (cur && sr.height) { const cr = cur.getBoundingClientRect(); if (cr.top < sr.top) side.scrollTop -= sr.top - cr.top; else if (cr.bottom > sr.bottom) side.scrollTop += cr.bottom - sr.bottom; }
+    };
+    restoreSide();
+    // comandi.js adds the commands block on top of the index a moment later: scrollTop is clamped to the height at that time, so it is applied again once the block is there
+    const sideWatch = new MutationObserver(() => { if (side.querySelector("#sidecmd")) { sideWatch.disconnect(); restoreSide(); } });
+    sideWatch.observe(side, { childList: true }); setTimeout(() => sideWatch.disconnect(), 5000);
     addEventListener("pagehide", () => { try { sessionStorage.setItem("qqq.teoria.side", String(side.scrollTop)); } catch (_) { /* not kept */ } });
     // the neighbouring chapters are fetched ahead (small pages), unless the connection is saving data, slow or cellular (and never on a phone)
     const net = navigator.connection || {};
