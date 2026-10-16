@@ -24,6 +24,7 @@ function measClick(p, m) {
   draw(p); uiSave();
 }
 function measSet(p, m) { p.meas = p.meas || { ref: null, list: [], key: measKey(p) }; p.meas.ref = m; draw(p); uiSave(); }
+const measAperta = p => !!p && p.type === "spec" && !!(p.meas || p.rul);
 function measClear(p) { p.meas = null; p.rul = false; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.remove("on"); draw(p); uiSave(); }
 // Adduct exchanges between two peaks: the short symbol on the chart, the full form in the tooltip. One list for the spectrum ruler and the map (mappa.js).
 const AD_PAIRS = /** @type {Record<string, [number, string, string][]>} */ ({
@@ -123,17 +124,6 @@ function specParams(p, btn) {
   const away = e => { if (!pop.contains(e.target) && !btn.contains(e.target)) { pop.remove(); document.removeEventListener("mousedown", away, true); } };
   setTimeout(() => document.addEventListener("mousedown", away, true), 0);
 }
-
-// ---------------------------------------------------------------- zoom history, whole view (keys)
-document.addEventListener("keydown", e => {
-  const a = E.active; if (!a || !a.el || !Q("#dpanels").offsetParent || a.type === "map" && false) return;
-  if (/** @type {HTMLElement} */ (e.target).closest && /** @type {HTMLElement} */ (e.target).closest("input,textarea,select,[contenteditable='true']")) return;
-  if (document.querySelector("dialog[open]")) return;
-  const chosen = a.isel != null && a.ints && a.ints.find(i => i.id === a.isel);
-  if ((e.key === "Delete" || e.key === "Backspace") && chosen && !e.ctrlKey && !e.metaKey) { e.preventDefault(); delInts(a, [chosen]); return; }      // with a peak selected, Delete/Backspace remove it (before "whole view")
-  if (e.key === "Backspace" && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); pushZh(a); a.zoom = null; a.zoomY = null; if (a.type === "spec") a.lock = null; draw(a); uiSave(); }
-  else if (e.key === "Escape" && a.type === "spec" && (a.meas || a.rul)) measClear(a);
-});
 
 // ---------------------------------------------------------------- linked time axes: the panels with the chain on share the interval of time
 function syncT(p) {

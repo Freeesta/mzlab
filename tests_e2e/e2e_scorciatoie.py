@@ -66,6 +66,28 @@ try:
             q = focus("chrom"); pg.keyboard.press("f"); attendi(pg, f"E.panels.find(x => x.id === {q}).el.classList.contains('max')")
             pg.keyboard.press("f"); attendi(pg, f"!E.panels.find(x => x.id === {q}).el.classList.contains('max')")
         step("F: full screen and back", fullscreen)
+        def esc_priority():
+            q = focus("spec"); panel = f"E.panels.find(x => x.id === {q})"
+            pg.evaluate(f"(()=>{{const q={panel}; if (!(q.meas && q.meas.ref != null)) measSet(q, 0)}})()")
+            pg.keyboard.press("f"); attendi(pg, f"{panel}.el.classList.contains('max')")
+            pg.keyboard.press("Escape"); attendi(pg, f"!(({panel}).meas && ({panel}).meas.ref != null)")
+            assert pg.evaluate(f"{panel}.el.classList.contains('max')"), "the first Esc took back the measure only, full screen stays"
+            pg.keyboard.press("Escape"); attendi(pg, f"!{panel}.el.classList.contains('max')")
+            assert not pg.evaluate("ESC.prossimo()"), "nothing left for Esc"
+        step("Esc: one thing per press, measure before full screen", esc_priority)
+        def esc_menu_first():
+            q = focus("chrom"); panel = f"E.panels.find(x => x.id === {q})"
+            pg.keyboard.press("f"); attendi(pg, f"{panel}.el.classList.contains('max')")
+            pg.evaluate("document.getElementById('ctx').hidden = false")
+            pg.keyboard.press("Escape"); attendi(pg, "document.getElementById('ctx').hidden")
+            assert pg.evaluate(f"{panel}.el.classList.contains('max')"), "the menu takes the Esc, full screen stays"
+            pg.keyboard.press("Escape"); attendi(pg, f"!{panel}.el.classList.contains('max')")
+        step("Esc: an open menu goes before full screen", esc_menu_first)
+        def whole_view():
+            q = focus("chrom"); panel = f"E.panels.find(x => x.id === {q})"
+            pg.evaluate(f"(()=>{{const q={panel}; q.zoom=[q._a.x0+1, q._a.x1-1]; draw(q)}})()")
+            pg.keyboard.press("Backspace"); attendi(pg, f"{panel}.zoom == null")
+        step("Backspace: whole view (key of the registry)", whole_view)
         def views():
             pg.evaluate("document.activeElement && document.activeElement.blur()")
             pg.keyboard.press("Alt+Digit2"); attendi(pg, "S.view === 'draw'")
