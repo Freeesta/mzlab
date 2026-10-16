@@ -24,7 +24,7 @@
     if (document.getElementById("bn-css")) return;
     const s = document.createElement("style"); s.id = "bn-css";
     s.textContent = ".bn{border:1px solid var(--line);border-radius:6px;padding:12px;margin:10px 0;background:var(--panel)}.bn h3,.bn h4{margin:6px 0}.bn .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}"
-      + ".bn button,.bn select,.bn input[type=text],.bn textarea{min-height:28px;min-width:28px;font:inherit}.bn input[type=checkbox]{width:20px;height:20px}.bn label{display:inline-flex;gap:6px;align-items:center}"
+      + ".bn button,.bn select,.bn input[type=text],.bn textarea{min-height:28px;min-width:28px;font:inherit}.bn input[type=checkbox]{width:24px;height:24px;margin:0}.bn label{display:inline-flex;gap:6px;align-items:center}"
       + ".bn-chk{display:grid;gap:6px;margin:6px 0;padding:0;list-style:none}.bn-chk li{display:flex;gap:8px;align-items:flex-start}.bn-proof{color:var(--muted);font-size:12px}"
       + ".bn svg{max-width:100%;height:auto;background:var(--panel)}.bn svg text{fill:var(--ink);font-size:11px}.bn .bn-ax{stroke:var(--muted)}.bn .bn-exp{stroke:var(--lv1)}.bn .bn-ref{stroke:var(--lv3b)}"
       + ".bn .bn-hit{stroke:var(--lv2a)}.bn .bn-dash{stroke-dasharray:4 3}.bn table{border-collapse:collapse;font-size:12px}.bn th,.bn td{padding:3px 8px;text-align:left;border-bottom:1px solid var(--line)}"
