@@ -29,7 +29,7 @@ if not reuse:
     if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
     subprocess.run(cmd, check=True)
     from lib_sito import add_wasm; add_wasm(site)
-    subprocess.run(["tools/build_feat_wasm.sh", str(site / "static")], cwd=ROOT, check=True, env=env, capture_output=True)
+    from lib import build_feat; build_feat(site / "static", env)
 else:
     for sub in ("js", "files"):
         for f in (ROOT / "TP_Mine" / sub).glob("*"): shutil.copy2(f, site / "static" / "mzfinder" / f.name)

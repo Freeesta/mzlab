@@ -5,8 +5,9 @@ import json, os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from lib import ROOT, attendi
+from lib import copia as lib_copia, scrivi as lib_scrivi
 
-PORT = 8852
+from lib import free_port; PORT = free_port()
 errs, steps = [], []
 def step(name, fn):
     try: fn(); print("  ", (name, "ok")); steps.append(1)
@@ -15,9 +16,9 @@ def step(name, fn):
 if not (ROOT / "site" / "index.html").exists():
     print("  ", ("site", "FAIL site/ not built: python3 tools/build_site.py")); sys.exit(0)
 mf = ROOT / "site" / "static" / "mzfinder"
-for f in (ROOT / "TP_Mine" / "js").glob("*.js"): shutil.copyfile(f, mf / f.name)
-idx = json.loads((mf / "indice.json").read_text()); idx["js"] = sorted(f.name for f in (ROOT / "TP_Mine" / "js").glob("*.js")); (mf / "indice.json").write_text(json.dumps(idx))
-for f in ("libreria-worker.js", "libreria.js", "livelli.js", "livelli-1.js"): shutil.copyfile(ROOT / "mzlab" / "web" / f, ROOT / "site" / "static" / f)
+for f in (ROOT / "TP_Mine" / "js").glob("*.js"): lib_copia(f, mf / f.name)
+idx = json.loads((mf / "indice.json").read_text()); idx["js"] = sorted(f.name for f in (ROOT / "TP_Mine" / "js").glob("*.js")); lib_scrivi(mf / "indice.json", json.dumps(idx))
+for f in ("libreria-worker.js", "libreria.js", "livelli.js", "livelli-1.js"): lib_copia(ROOT / "mzlab" / "web" / f, ROOT / "site" / "static" / f)
 
 P, M0 = 1.00727646688, 300.1
 RAMP, OTHER = [1.0, 2.5, 4.0, 3.0, 6.0], [5.0, 1.0, 4.0, 6.0, 0.5]

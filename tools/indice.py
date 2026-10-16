@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "docs" / "agenti" / "mappa.md"
-SKIP = ("vendor/", "ei-dati.js", "web/elements.js", "glossario-dati.js", "web/esempi/", "/target/")
+SKIP = ("vendor/", "ei-dati.js", "web/elements.js", "glossario-dati.js", "web/esempi/", "/target/", "docs/studi/")  # docs/studi/: study probes, not part of the program
 DORMIENTI = {"mzlab/web/qaqc.js", "mzlab/qaqc.py", "tests/test_qaqc.py", "tests_e2e/e2e_qaqc.py"}   # QA/QC: switched off by default, keep it
 GROUPS = [  # (title, path prefix, one line per file?)
     ("Teoria e Pratica (`mzlab/web/teoria/`)", "mzlab/web/teoria/", True),
@@ -29,6 +29,7 @@ GROUPS = [  # (title, path prefix, one line per file?)
     ("Strumenti (`tools/`)", "tools/", True),
     ("mzFinder (`TP_Mine/`)", "TP_Mine/", False),
     ("Test (`tests/`, `tests_e2e/`)", "tests", False),
+    ("Controlli indipendenti (`docs/controlli/`)", "docs/controlli/", False),
 ]
 JS_DEF = re.compile(r"^( {0,2})(?:export\s+)?(?:async\s+)?(?:function\*?\s+([A-Za-z_$][\w$]*)|(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>)")
 RS_DEF = re.compile(r"^( {0,4})(?:pub(?:\([a-z]+\))?\s+)?(?:async\s+)?(?:unsafe\s+)?(fn|struct|enum|trait)\s+([A-Za-z_]\w*)")

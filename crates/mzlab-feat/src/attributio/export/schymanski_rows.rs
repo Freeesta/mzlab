@@ -199,7 +199,7 @@ pub(super) fn source_cells(sub: &[&FRow], rep: &FRow, files: &Files) -> Pairs {
             ])),
         ),
         kv(
-            "formula",
+            "neutral_formula",
             text(join_of(vec![
                 sub.iter()
                     .filter_map(|r| r.f.mzlib.formula.as_deref())
