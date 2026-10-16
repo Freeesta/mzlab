@@ -21,7 +21,7 @@
    */
 
   const CSS = `
-.tp{--tpr-v0:#440154;--tpr-v1:#3b528b;--tpr-v2:#21918c;--tpr-v3:#5ec962;--tpr-v4:#addc30;--tpr-c0:#00204d;--tpr-c1:#575c6d;--tpr-c2:#a69d75;--tpr-c3:#e4cf5b;--tpr-c4:#ffea46;--tpr-w:#fff;--tpr-k:#111}
+.tp{--tpr-v0:#440154;--tpr-v1:#3b528b;--tpr-v2:#21918c;--tpr-v3:#5ec962;--tpr-v4:#addc30;--tpr-g0:#e6f4ea;--tpr-g1:#a8d5b5;--tpr-g2:#5fb27a;--tpr-g3:#2a8050;--tpr-g4:#0b4a28;--tpr-g-none:#fff;--tpr-w:#fff;--tpr-k:#111}
 @media(prefers-color-scheme:dark){:root:not([data-theme=light]) .tp{--tpr-v0:#38bdf8;--tpr-v1:#14b8a6;--tpr-v2:#10b981;--tpr-v3:#84cc16;--tpr-v4:#fde047}}
 :root[data-theme=dark] .tp{--tpr-v0:#38bdf8;--tpr-v1:#14b8a6;--tpr-v2:#10b981;--tpr-v3:#84cc16;--tpr-v4:#fde047}
 .tp .tpr-ov{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px 14px;align-items:start}
@@ -45,7 +45,7 @@
 .tp .tpr-dec{font-size:12px;color:var(--muted)}
 .tp .tpr-mx{display:flex;flex-wrap:wrap;gap:4px 16px;margin:2px 0 6px}.tp .tpr-grp{display:flex;flex-direction:column;gap:1px}.tp .tpr-grp b{font-size:11px;font-weight:600;color:var(--muted)}
 .tp .tpr-row{display:flex;gap:2px;flex-wrap:wrap}
-.tp .tpr-cell{box-sizing:border-box;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--muted);border-radius:3px;background:var(--panel);color:var(--muted);font-size:13px;line-height:1}
+.tp .tpr-cell{box-sizing:border-box;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--muted);border-radius:3px;background:var(--tpr-g-none);color:var(--tpr-k);font-size:13px;line-height:1}
 .tp .tpr-mxleg{display:flex;flex-wrap:wrap;align-items:center;gap:2px 14px;margin:0 0 6px;font-size:11px;color:var(--muted)}.tp .tpr-mxleg .tpt-leg{margin:0}
 .tp .tpr-cell.on-w{color:var(--tpr-w)}.tp .tpr-cell.on-k{color:var(--tpr-k)}
 .tp .tpr-tw{max-width:100%;overflow-x:auto}.tp .tpr-tw.sc{max-height:220px;overflow:auto}
@@ -75,8 +75,8 @@
   const fin = (/** @type {any} */ v) => typeof v === "number" && Number.isFinite(v);
 
   // ------------------------------------------------------------ colours (CSS variables only)
-  /** a point u in 0..1 of a scale of five CSS variables (`--tpr-v0..4` or `--tpr-c0..4`): a mix of the two stops around it */
-  function ramp(/** @type {"v" | "c"} */ k, /** @type {number} */ u) {
+  /** a point u in 0..1 of a scale of five CSS variables (`--tpr-v0..4`): a mix of the two stops around it */
+  function ramp(/** @type {"v"} */ k, /** @type {number} */ u) {
     const x = Math.max(0, Math.min(1, u)) * 4, i = Math.min(3, Math.floor(x)), f = Math.round((x - i) * 100);
     return `color-mix(in srgb,var(--tpr-${k}${i + 1}) ${f}%,var(--tpr-${k}${i}))`;
   }
@@ -224,7 +224,7 @@
   function samples(panel, m) {
     const ss = m.samples || [];
     if (!ss.length) { none(panel, "Samples", m.missing && m.missing.samples); return; }
-    const areas = ss.map(s => s.area).filter(a => fin(a) && /** @type {number} */ (a) > 0).map(Number), lmin = areas.length ? Math.log10(Math.min(...areas)) : 0, lmax = areas.length ? Math.log10(Math.max(...areas)) : 1;
+    const sc = G.TPTAB ? G.TPTAB.areaScale(ss.map(s => s.area)) : (/** @type {any} */ () => null);
     const wordOf = (/** @type {string | undefined} */ st) => { const x = /** @type {HTMLElement} */ (document.createElement("div")); x.innerHTML = G.TPTAB ? G.TPTAB.state(st || "na") : ""; const l = x.firstElementChild; return l ? l.getAttribute("aria-label") || "" : st || ""; };
     const sym = (/** @type {string | undefined} */ st) => { const x = document.createElement("div"); x.innerHTML = G.TPTAB ? G.TPTAB.state(st || "na") : ""; return x.textContent || ""; };
     const order = ss.map((s, i) => i).sort((p, q) => klass(ss[p]) - klass(ss[q]) || (+(ss[p].time ?? 0)) - (+(ss[q].time ?? 0)));
@@ -232,10 +232,10 @@
     for (const k of [0, 1, 2, 3]) {
       const ix = order.filter(i => klass(ss[i]) === k); if (!ix.length) continue;
       mx += `<div class="tpr-grp"><b${G.TPHELP ? ` tabindex="0"` : ""}${tt("ft.riga.g" + k)}>${GNAME[k]}</b><div class="tpr-row">${ix.map(i => {
-        const s = ss[i], has = fin(s.area) && /** @type {number} */ (s.area) > 0, u = has ? (lmax > lmin ? (Math.log10(/** @type {number} */ (s.area)) - lmin) / (lmax - lmin) : 0.5) : null;
+        const s = ss[i], pr = G.TPTAB ? G.TPTAB.paint(sc(s.area)) : { cls: "", style: "" };
         const lab = `${s.file}: area ${fin(s.area) ? sci(/** @type {number} */ (s.area)) : "none"}, ${wordOf(s.state)}`;
         const tip = `${s.file} · ${s.type || GNAME[k]}${fin(s.time) ? `, time ${s.time}` : ""} · area ${fin(s.area) ? sci(/** @type {number} */ (s.area)) : "none"} · peak ${wordOf(s.state)}`;
-        return `<span class="tpr-cell${u == null ? "" : u < 0.5 ? " on-w" : " on-k"}" role="img" tabindex="0" aria-label="${esc(lab)}"${G.TPHELP ? ` data-tt="ft.riga.cell" data-tt-text="${esc(tip)}"` : ""}${u == null ? "" : ` style="background:${ramp("c", u)}"`}><span aria-hidden="true">${esc(sym(s.state))}</span></span>`;
+        return `<span class="tpr-cell${pr.cls}" role="img" tabindex="0" aria-label="${esc(lab)}"${G.TPHELP ? ` data-tt="ft.riga.cell" data-tt-text="${esc(tip)}"` : ""}${pr.style}><span aria-hidden="true">${esc(sym(s.state))}</span></span>`;
       }).join("")}</div></div>`;
     }
     const hasNorm = ss.some(s => fin(s.norm));
@@ -243,7 +243,7 @@
     if (G.TPTAB) {
       const used = ["detected", "filled", "targeted", "absent", "na"];
       const lg = document.createElement("div"); lg.className = "tpr-mxleg";
-      lg.innerHTML = `<span class="tpr-mxnote">Colour = peak area (log scale, darker = more); symbol = peak state. A dark square is a high area; filled = area re-read by the program where the peak was expected.</span>${G.TPTAB.legend(used)}`;
+      lg.innerHTML = `<span class="tpr-mxnote">White = none, darker green = larger area (log scale, relative to the maximum of the row); symbol = peak state. Filled = area re-read by the program where the peak was expected.</span>${G.TPTAB.legend(used)}`;
       panel.appendChild(lg);
       if (G.TPHELP) G.TPHELP.attach(lg);
     }
