@@ -6,7 +6,9 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_feat::deconvolve::{deconvolve_isomers, fragment_matrix, ms2_consensus, DeconvolveParams};
+use mzlab_feat::deconvolve::{
+    deconvolve_isomers, fragment_matrix, ms2_consensus, DeconvolveParams,
+};
 use serde_json::Value;
 
 fn root() -> PathBuf {
@@ -18,7 +20,8 @@ fn near(got: f64, want: f64, tol: f64) -> bool {
 }
 
 fn load_reference_cases() -> Vec<Value> {
-    let out = std::env::temp_dir().join(format!("mzlab-deconvolve-ref-{}.json", std::process::id()));
+    let out =
+        std::env::temp_dir().join(format!("mzlab-deconvolve-ref-{}.json", std::process::id()));
     let status = Command::new("python3")
         .current_dir(root())
         .arg("tools/deconvolve_riferimento.py")
@@ -55,7 +58,11 @@ fn verify_single_component(
     }
     let w_spec = &w_comp["spectrum"];
     let (w_mz, w_rel) = (parse_f64_vec(&w_spec["mz"]), parse_f64_vec(&w_spec["rel"]));
-    assert_eq!(g_comp.spectrum.mz.len(), w_mz.len(), "{tag}: mz len mismatch");
+    assert_eq!(
+        g_comp.spectrum.mz.len(),
+        w_mz.len(),
+        "{tag}: mz len mismatch"
+    );
     for (&gm, &wm) in g_comp.spectrum.mz.iter().zip(&w_mz) {
         assert!(near(gm, wm, 1e-4), "{tag}: mz mismatch");
     }
@@ -83,7 +90,8 @@ fn verify_case(case: &Value) {
     let ints = parse_nested_f64_vec(&case["ints"]);
     let rts = parse_f64_vec(&case["rts"]);
     let xic_val = &case["xic"];
-    let xic_data = (!xic_val.is_null()).then(|| (parse_f64_vec(&xic_val["rt"]), parse_f64_vec(&xic_val["y"])));
+    let xic_data =
+        (!xic_val.is_null()).then(|| (parse_f64_vec(&xic_val["rt"]), parse_f64_vec(&xic_val["y"])));
     let p_val = &case["params"];
     let params = DeconvolveParams {
         min_scans: p_val["min_scans"].as_u64().unwrap_or(4) as usize,
@@ -95,14 +103,30 @@ fn verify_case(case: &Value) {
     let xic_ref = xic_data.as_ref().map(|(r, y)| (r.as_slice(), y.as_slice()));
     let got = deconvolve_isomers(&mzs, &ints, &rts, xic_ref, &params);
     let want = &case["expected"];
-    assert_eq!(got.k, want["k"].as_u64().unwrap() as usize, "{name}: k mismatch");
-    assert_eq!(got.scans, want["scans"].as_u64().unwrap() as usize, "{name}: scans mismatch");
-    assert_eq!(got.fragments, want["fragments"].as_u64().unwrap() as usize, "{name}: fragments mismatch");
+    assert_eq!(
+        got.k,
+        want["k"].as_u64().unwrap() as usize,
+        "{name}: k mismatch"
+    );
+    assert_eq!(
+        got.scans,
+        want["scans"].as_u64().unwrap() as usize,
+        "{name}: scans mismatch"
+    );
+    assert_eq!(
+        got.fragments,
+        want["fragments"].as_u64().unwrap() as usize,
+        "{name}: fragments mismatch"
+    );
     if let (Some(g_lof), Some(w_lof)) = (got.lof, want["lof"].as_f64()) {
         assert!(near(g_lof, w_lof, 0.05), "{name}: LOF mismatch");
     }
     let want_comps = want["components"].as_array().unwrap();
-    assert_eq!(got.components.len(), want_comps.len(), "{name}: components count mismatch");
+    assert_eq!(
+        got.components.len(),
+        want_comps.len(),
+        "{name}: components count mismatch"
+    );
     for (c_idx, (g_comp, w_comp)) in got.components.iter().zip(want_comps).enumerate() {
         verify_single_component(&format!("{name} comp#{c_idx}"), g_comp, w_comp);
     }
@@ -111,7 +135,11 @@ fn verify_case(case: &Value) {
 #[test]
 fn parity_against_python_reference() {
     let cases = load_reference_cases();
-    assert!(cases.len() >= 30, "expected at least 30 reference cases, got {}", cases.len());
+    assert!(
+        cases.len() >= 30,
+        "expected at least 30 reference cases, got {}",
+        cases.len()
+    );
     for case in &cases {
         verify_case(case);
     }
@@ -189,7 +217,10 @@ fn mutational_tests() {
     assert_eq!(base_res.k, 2);
 
     // Mutation 1: High ppm tolerance collapses fragments into fewer columns
-    let p_high_ppm = DeconvolveParams { ppm: 1_000_000.0, ..p };
+    let p_high_ppm = DeconvolveParams {
+        ppm: 1_000_000.0,
+        ..p
+    };
     let (d_mut, cm_mut) = fragment_matrix(&mzs, &ints, p_high_ppm.ppm, 2, true);
     assert!(cm_mut.len() < base_res.fragments);
     assert!(d_mut[0].len() < base_res.fragments);
