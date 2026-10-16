@@ -634,7 +634,7 @@
         { key: "level", label: "Lvl", help: "ft.col.level", sticky: true, sort: lvSort, cell: r => r.level ? TPTAB.level(r.level) : "", text: r => r.level ? "L" + r.level : "" },
         { key: "tpname", label: "TP", help: "ft.col.tpname", sticky: true, sort: r => r.tp_name || "", cell: r => esc(r.tp_name || "") },
         { key: "identity", label: "Identity", help: "ft.col.identity", sticky: true, sort: r => idLabel(r).toLowerCase(), cell: r => esc(idLabel(r)) + alt(r), text: r => idLabel(r) + (r.alternatives.length ? ` (+${r.alternatives.length} other)` : "") },
-        { key: "status", label: "Status", help: "ft.col.status", sort: r => notFound(r) ? 1 : 0, cell: r => notFound(r) ? "Searched, not detected" : "Detected", text: r => r.status || "Detected" },
+        { key: "status", off: true, label: "Status", help: "ft.col.status", sort: r => notFound(r) ? 1 : 0, cell: r => notFound(r) ? "Searched, not detected" : "Detected", text: r => r.status || "Detected" },
         { key: "net", label: "Net change (formula)", help: "ft.col.net", sort: r => r.net_change || "", cell: r => esc(r.net_change || "") },
         { key: "modif", label: "Modification", help: "ft.col.modif", sort: r => r.modification || "", cell: r => esc(r.modification || "") },
         { key: "mz", label: "<i>m/z</i>", help: "ft.col.mz", num: true, sort: r => r.mz, cell: r => r.mz.toFixed(2) },

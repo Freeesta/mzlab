@@ -76,7 +76,7 @@ try:
         def structure():
             assert pg.evaluate("document.getElementById('tp-t').tagName") == "TABLE"
             n = pg.locator("#tp-t thead th").count()
-            assert 2 <= n <= 8, n                                  # the toggle column of the row is not a data column: at most 7 data columns
+            assert 2 <= n <= 11, n                                 # the toggle column of the row is not a data column: at most 10 data columns (Status is off by default)
             first = pg.evaluate("document.querySelector('#tp-t tbody tr.clk').dataset.id")
             assert first == "0", "the parent is the first row: " + first
             assert pg.locator("#tp-t .tpt-pin").count() == 1
