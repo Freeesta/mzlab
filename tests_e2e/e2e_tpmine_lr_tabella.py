@@ -1,5 +1,5 @@
 """Tabui, low resolution: the table of the Dig results is a TPTAB (TP_Mine/js/20_tpmine.js, 42_tp_table.js, 44_tp_riga.js). Synthetic Full Scan series (TP_Mine/tests/lr_synth.py)
-opened in the Data tab and dug from Tabui: `#tp-t` is a <table> with at most 7 default columns, the parent stays first after sorting by m/z, a chip removes and restores rows
+opened in the Data tab and dug from Tabui: `#tp-t` is a <table> with at most 12 default columns, the parent stays first after sorting by m/z, a chip removes and restores rows
 («N of M rows» changes), a row opens under itself (XIC inside `tr.tpt-exp`), opening another closes the first, arrows move between the tabs, Esc returns the focus, a click on
 a gem opens its row, no `.confetti` with reduced motion, no pyodide* request, `MZLAB_LR_MISS` empty, axe clean. Builds the site and static/wasm-feat (SKIP without cargo,
 wasm-bindgen or numpy); MZLAB_PIPE_SITE=<built site with static/wasm-feat> reuses one; AXE_JS=<axe.min.js>; shots: MZLAB_PIPE_SHOTS=<folder>. Run from the repo root."""
@@ -76,11 +76,11 @@ try:
         def structure():
             assert pg.evaluate("document.getElementById('tp-t').tagName") == "TABLE"
             n = pg.locator("#tp-t thead th").count()
-            assert 2 <= n <= 8, n                                  # the toggle column of the row is not a data column: at most 7 data columns
+            assert 2 <= n <= 12, n                                 # 11 data columns by default (Lvl, TP, Identity, Status, Net change, Modification, m/z, RT, Trend, Cells, Max area) + Conditions with groups
             first = pg.evaluate("document.querySelector('#tp-t tbody tr.clk').dataset.id")
             assert first == "0", "the parent is the first row: " + first
             assert pg.locator("#tp-t .tpt-pin").count() == 1
-        step("#tp-t is a table with at most 7 columns, the parent first", structure)
+        step("#tp-t is a table with at most 12 columns, the parent first", structure)
 
         def sort_pin():
             pg.click("#tp-t th button.tpt-sh >> text=m/z")
