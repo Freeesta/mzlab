@@ -59,3 +59,17 @@ def test_sintetico_varianti(tmp_path, variante):
     s = p.read_bytes()
     assert n == len(s) and s.count(b"<spectrum ") == 24
     assert s.startswith(b"<?xml") and (b"<indexedmzML" in s) == (variante != "senza_wrapper")
+
+
+def test_long_tasks_are_told_apart_by_phase():
+    """The long tasks of the page carry the phase active when they started (Tabui marks its phases); the text to copy lists the longest ones and names no file."""
+    r = nodo("""(() => {
+      D.LONG.marks.push({t: 100, fase: 'start'}, {t: 200, fase: 'xic'}, {t: 900, fase: 'render'});
+      D.LONG.registra(150, 60); D.LONG.registra(300, 420); D.LONG.registra(1000, 90);
+      return {fasi: D.LONG.list.map(x => x.fase), righe: D.LONG.righe(0), dopo: D.LONG.righe(500).length, testo: D.testoLento('1.2.3', 0)};
+    })()""")
+    assert r["fasi"] == ["start", "xic", "render"]
+    assert r["righe"][0] == "long tasks: 3, longest 420 ms, total 570 ms"
+    assert r["righe"][1] == "  +300 ms: 420 ms in xic"
+    assert r["dopo"] == 2          # the summary line and the one task after 500 ms
+    assert r["testo"].startswith("mzLab 1.2.3\ncores: ") and "420 ms in xic" in r["testo"]
