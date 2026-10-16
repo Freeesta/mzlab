@@ -128,6 +128,8 @@ fn row_json(o: &mut Out, r: &RowOut) {
     o.raw(",\"neutral_formula\":");
     opt_str(o, m.neutral_formula.as_deref());
     o.raw(",\"ppm\":").fopt(m.ppm);
+    o.raw(",\"ion_formula\":");
+    opt_str(o, m.ion_formula.as_deref());
     o.raw(",\"other_polarity\":")
         .fopt(m.other_polarity.map(f64::from));
     o.raw(",\"present_in\":");
@@ -296,7 +298,8 @@ fn strings(cond: &str, kv: &Value) -> Result<Vec<(String, String)>> {
 
 fn meta(v: &Value) -> Result<RowMeta> {
     let id = v
-        .get("id")
+        .get("row")
+        .or_else(|| v.get("id"))
         .and_then(Value::f64)
         .ok_or_else(|| size("rows"))?;
     let num = |k: &str| v.get(k).and_then(Value::f64);
@@ -309,6 +312,7 @@ fn meta(v: &Value) -> Result<RowMeta> {
         rt: num("rt").unwrap_or(0.0),
         neutral_formula: text("neutral_formula"),
         ppm: num("ppm"),
+        ion_formula: text("ion_formula"),
         is_parent: v.get("is_parent").and_then(Value::bool).unwrap_or(false),
         ms2_files: v
             .get("ms2_files")

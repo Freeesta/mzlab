@@ -16,13 +16,24 @@ fn argmax(kin: &[KinPt]) -> usize {
     m
 }
 
-/// `single` with one time, nothing with two, else the shape over three or more times. A maximum inside the course followed by a fall of less than
+/// With two times there is no inner maximum: `rising`, `decay` or `flat` by `FLAT_RATIO`.
+fn two_points(a: f64, b: f64) -> &'static str {
+    if b > FLAT_RATIO * a {
+        "rising"
+    } else if a > FLAT_RATIO * b {
+        "decay"
+    } else {
+        "flat"
+    }
+}
+
+/// `single` with one time, `rising`/`decay`/`flat` with two, else the shape over three or more times. A maximum inside the course followed by a fall of less than
 /// `drop` of the maximum is a plateau and counts as `rising`.
 pub(crate) fn shape(kin: &[KinPt], drop: f64) -> Option<&'static str> {
     match kin.len() {
         0 => return None,
         1 => return Some("single"),
-        2 => return None,
+        2 => return Some(two_points(kin[0].area, kin[1].area)),
         _ => {}
     }
     let hi = kin[argmax(kin)].area;

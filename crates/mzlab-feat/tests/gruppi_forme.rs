@@ -130,8 +130,8 @@ fn single_time_and_two_times() {
     assert_eq!(cond(&g, 0, "A").t_half_rise, None);
     assert_eq!(
         cond(&g, 0, "B").shape,
-        None,
-        "two times are not enough for a shape"
+        Some("rising"),
+        "two times: rising, decay or flat, never bell"
     );
     assert_eq!(
         g.warnings.iter().filter(|w| w.code == "mixedTimes").count(),
@@ -195,4 +195,42 @@ fn parent_decay_per_condition() {
     // The fraction left at 50 minutes against the time zero of the condition (1e7).
     assert!((p("A").remaining.unwrap() - (-1.5f64).exp()).abs() < 1e-5);
     assert!(p("C").k.unwrap() < p("A").k.unwrap());
+}
+
+#[test]
+fn two_times_are_rising_decay_or_flat() {
+    let cs = files(vec![
+        file("t0.mzML", "t0", "", Some(0.0), 1),
+        file("A_1.mzML", "sample", "A", Some(30.0), 2),
+        file("A_2.mzML", "sample", "A", Some(60.0), 3),
+    ]);
+    let shape = |a: f64, b: f64| {
+        let rows = vec![(meta(0, "TP", 300.0), vec![x(), d(a), d(b)])];
+        let g = build(&table(rows, 3), &cs, &GroupOpts::default()).unwrap();
+        cond(&g, 0, "A").shape
+    };
+    assert_eq!(shape(1e5, 2e5), Some("rising"));
+    assert_eq!(shape(2e5, 1e5), Some("decay"));
+    assert_eq!(shape(1e5, 1.4e5), Some("flat"));
+    assert_eq!(shape(1e5, 1.5e5), Some("flat"));
+}
+
+#[test]
+fn ratio_is_null_when_the_reference_area_is_zero() {
+    let cs = files(vec![
+        file("t0.mzML", "t0", "", Some(0.0), 1),
+        file("R.mzML", "sample", "R", Some(60.0), 2),
+        file("A.mzML", "sample", "A", Some(60.0), 3),
+    ]);
+    let rows = vec![(meta(0, "TP", 300.0), vec![x(), d(0.0), d(2e5)])];
+    let o = GroupOpts {
+        reference: Some("R".into()),
+        ..GroupOpts::default()
+    };
+    let g = build(&table(rows, 3), &cs, &o).unwrap();
+    for c in ["R", "A"] {
+        let r = cond(&g, 0, c).ratio_ref;
+        assert!(r.is_none_or(f64::is_finite), "never Inf or NaN");
+    }
+    assert_eq!(cond(&g, 0, "A").ratio_ref, None);
 }

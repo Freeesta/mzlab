@@ -49,7 +49,7 @@
    "description": "the rows in the order received",
    "items": {
     "type": "object",
-    "required": ["row", "tp_name", "mz", "polarity", "rt", "neutral_formula", "ppm", "other_polarity", "present_in", "only_in", "in_all", "cond"],
+    "required": ["row", "tp_name", "mz", "polarity", "rt", "neutral_formula", "ppm", "ion_formula", "other_polarity", "present_in", "only_in", "in_all", "cond"],
     "properties": {
      "row": {"type": "integer", "description": "id of the row given by the caller"},
      "tp_name": {"type": "string"},
@@ -57,6 +57,7 @@
      "polarity": {"enum": ["+", "-"]},
      "rt": {"type": "number"},
      "neutral_formula": {"type": ["string", "null"], "description": "only in high resolution"},
+     "ion_formula": {"type": ["string", "null"], "description": "formula of the ion, e.g. [M+H]+; only in high resolution"},
      "ppm": {"type": ["number", "null"], "description": "only in high resolution"},
      "other_polarity": {"type": ["integer", "null"], "description": "id of the row of the other polarity with the same neutral mass, when the caller found one"},
      "present_in": {"type": "array", "items": {"type": "string"}},

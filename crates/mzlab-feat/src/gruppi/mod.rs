@@ -32,6 +32,8 @@ pub struct RowMeta {
     pub rt: f64,
     pub neutral_formula: Option<String>,
     pub ppm: Option<f64>,
+    /// Formula of the ion (e.g. of `[M+H]+`), filled by the high resolution caller; null at low resolution.
+    pub ion_formula: Option<String>,
     pub is_parent: bool,
     /// Indices of the files whose MS2 is linked to the row.
     pub ms2_files: Vec<usize>,
