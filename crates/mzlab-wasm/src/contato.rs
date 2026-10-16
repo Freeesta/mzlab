@@ -43,55 +43,19 @@ impl Contato {
     }
 }
 
+#[rustfmt::skip]
 impl Lettore for Contato {
-    fn formato(&self) -> lettori::Formato {
-        self.l.formato()
-    }
-    fn campioni(&self) -> &[lettori::Campione] {
-        self.l.campioni()
-    }
-    fn indice(&mut self, c: usize) -> mzlab_core::Result<&[lettori::VoceScansione]> {
-        self.l.indice(c)
-    }
-    fn scansione(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> {
-        let s = self.l.scansione(c, k);
-        self.conta(c);
-        s
-    }
-    fn scansione_dati(
-        &mut self,
-        c: usize,
-        k: usize,
-    ) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> {
-        let s = self.l.scansione_dati(c, k);
-        self.conta(c);
-        s
-    }
-    fn intestazione(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<lettori::Campo>> {
-        self.l.intestazione(c, k)
-    }
-    fn cromatogrammi(&mut self, c: usize) -> mzlab_core::Result<Vec<lettori::VoceCromatogramma>> {
-        self.l.cromatogrammi(c)
-    }
-    fn cromatogramma(
-        &mut self,
-        c: usize,
-        id: &str,
-    ) -> mzlab_core::Result<mzlab_core::mzml::Chromatogram> {
-        self.l.cromatogramma(c, id)
-    }
-    fn metodo(&mut self, c: usize) -> mzlab_core::Result<String> {
-        self.l.metodo(c)
-    }
-    fn testata_mzml(
-        &mut self,
-        c: usize,
-    ) -> mzlab_core::Result<Option<mzlab_core::mzmlwrite::Header>> {
-        self.l.testata_mzml(c)
-    }
-    fn extra_mzml(&self, s: &mzlab_core::mzml::Spectrum) -> mzlab_core::mzmlwrite::SpectrumExtra {
-        self.l.extra_mzml(s)
-    }
+    fn formato(&self) -> lettori::Formato { self.l.formato() }
+    fn campioni(&self) -> &[lettori::Campione] { self.l.campioni() }
+    fn indice(&mut self, c: usize) -> mzlab_core::Result<&[lettori::VoceScansione]> { self.l.indice(c) }
+    fn scansione(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scansione(c, k); self.conta(c); s }
+    fn scansione_dati(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scansione_dati(c, k); self.conta(c); s }
+    fn intestazione(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<lettori::Campo>> { self.l.intestazione(c, k) }
+    fn cromatogrammi(&mut self, c: usize) -> mzlab_core::Result<Vec<lettori::VoceCromatogramma>> { self.l.cromatogrammi(c) }
+    fn cromatogramma(&mut self, c: usize, id: &str) -> mzlab_core::Result<mzlab_core::mzml::Chromatogram> { self.l.cromatogramma(c, id) }
+    fn metodo(&mut self, c: usize) -> mzlab_core::Result<String> { self.l.metodo(c) }
+    fn testata_mzml(&mut self, c: usize) -> mzlab_core::Result<Option<mzlab_core::mzmlwrite::Header>> { self.l.testata_mzml(c) }
+    fn extra_mzml(&self, s: &mzlab_core::mzml::Spectrum) -> mzlab_core::mzmlwrite::SpectrumExtra { self.l.extra_mzml(s) }
 }
 
 /// The reader of the dataset for the index of sample `c`: phase 4 (`tell`) begins, `apri` opens it, and it counts its scans for `step` when the page gave one.
