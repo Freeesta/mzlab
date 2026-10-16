@@ -142,7 +142,7 @@ impl<R: ReadAt> Mzml<R> {
         Mzml { r, size }
     }
 
-    fn read(&mut self, a: u64, b: u64) -> Result<Vec<u8>> {
+    pub(crate) fn read(&mut self, a: u64, b: u64) -> Result<Vec<u8>> {
         let b = b.min(self.size);
         if b <= a {
             return Ok(vec![]);
