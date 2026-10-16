@@ -10,7 +10,7 @@
 const PROG_W = { conversione: { convert: 0.75, index: 0.25 } };
 /** the app of the desktop sends the file over the network before the engine reads it: that is the first part of the bar (in the browser the file is already there) */
 const PROG_NET = { send: 0.3 };
-const PROG_PHASE_KEY = { send: "load.ph.read", read: "load.ph.read", scans: "load.ph.scans", chrom: "load.ph.chrom", convert: "load.ph.convert" };
+const PROG_PHASE_KEY = { send: "load.ph.read", read: "load.ph.read", open: "load.ph.open", scans: "load.ph.scans", chrom: "load.ph.chrom", convert: "load.ph.convert" };
 
 /** whole-file fraction 0..1 from the phase being run and how far it has got: the phases before it count full */
 function progCompose(profile, phase, local) {
