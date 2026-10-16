@@ -11,7 +11,7 @@
   /**
    * @typedef {{ t: number, area: number | null, sd: number | null, n: number }} GKin
    * @typedef {{ id: string, present: boolean, n_det: number, n_rep: number, area: number | null, area_sd: number | null, cv: number | null, ratio_ref: number | null, shape: string | null, t_max: number | null, t_half_rise: number | null, rate_rel: number | null, kin: GKin[], prev: Record<string, string> }} GCell
-   * @typedef {{ row: number, tp_name: string, mz: number, polarity: string, rt: number, neutral_formula: string | null, ppm: number | null, other_polarity: number | null, present_in: string[], only_in: string | null, in_all: boolean, cond: GCell[] }} GRow
+   * @typedef {{ row: number, tp_name: string, mz: number, polarity: string, rt: number, neutral_formula: string | null, ion_formula?: string | null, ppm: number | null, other_polarity: number | null, present_in: string[], only_in: string | null, in_all: boolean, cond: GCell[] }} GRow
    * @typedef {{ id: string, factors: Record<string, string>, files: number[], times: number[], replicates: number, controls: Record<string, number[]>, parent: { k: number | null, half_life: number | null, remaining: number | null } }} GCond
    * @typedef {{ format: string, version: number, reference: string | null, norm: string, conditions: GCond[], rows: GRow[], sets: { conditions: string[], rows: number[] }[], warnings: { code: string, condition?: string }[], parent_name?: string }} Gruppi
    * @typedef {{ parentName?: string, onOpenRow?: (rowId: number) => void }} GOpts
@@ -158,10 +158,10 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
       `<th scope="col" class="${cls}" aria-sort="${st.sort.col === col ? (st.sort.dir > 0 ? "ascending" : "descending") : "none"}"><button type="button" class="gv-hb" data-sort="${esc(col)}" title="Sort by ${esc(label)}">${esc(label)}${extra}<span aria-hidden="true">${sortMark(col)}</span></button></th>`;
     function drawMatrix() {
       const vr = V.visibleRows();
-      const head = `<tr>${th("name", "TP")}${th("mz", "m/z", "n")}${th("rt", "RT (min)", "n")}${hasF ? "<th scope=\"col\">Neutral formula</th>" : ""}${hasP ? "<th scope=\"col\" class=\"n\">Δ ppm</th>" : ""}` +
+      const head = `<tr>${th("name", "TP")}${th("mz", "m/z", "n")}${th("rt", "RT (min)", "n")}${hasF ? "<th scope=\"col\">Neutral formula</th><th scope=\"col\">[M+H]+ formula</th>" : ""}${hasP ? "<th scope=\"col\" class=\"n\">Δ ppm</th>" : ""}` +
         `${ids.map(c => th(c, c, "", c === ref ? '<span class="ref">ref</span>' : "")).join("")}</tr>`;
       const body = vr.map(r => `<tr data-row="${r.row}"${st.tp === r.row ? ' class="sel"' : ""}><th scope="row"><button type="button" class="gv-nm" data-open="${r.row}" aria-label="${esc(r.tp_name)}, m/z ${num(r.mz, 2)}, RT ${num(r.rt, 2)}${r.polarity === "-" ? ", ESI negative" : ""}. Show the chart">${esc(r.tp_name)}</button></th>` +
-        `<td class="n">${num(r.mz, 2)}${r.polarity === "-" ? ' <span title="negative polarity">(−)</span>' : ""}</td><td class="n">${num(r.rt, 2)}</td>${hasF ? `<td>${esc(r.neutral_formula || "")}</td>` : ""}${hasP ? `<td class="n">${num(r.ppm, 1)}</td>` : ""}` +
+        `<td class="n">${num(r.mz, 2)}${r.polarity === "-" ? ' <span title="negative polarity">(−)</span>' : ""}</td><td class="n">${num(r.rt, 2)}</td>${hasF ? `<td>${esc(r.neutral_formula || "")}</td><td>${esc(r.ion_formula || "")}</td>` : ""}${hasP ? `<td class="n">${num(r.ppm, 1)}</td>` : ""}` +
         `${ids.map(id => { const c = cellOf(r, id); return c ? cellHtml(r, c) : "<td>—</td>"; }).join("")}</tr>`).join("");
       Q("#gv-mx").innerHTML = `<table><caption class="sr-only">Comparison matrix: TP by condition. ● present, ○ absent; area, ratio to the reference, Prev. suggestion.</caption><thead>${head}</thead><tbody>${body || `<tr><td colspan="${3 + ids.length}">No rows match this filter.</td></tr>`}</tbody></table>`;
       Q("#gv-nv").textContent = `${vr.length} of ${rows.length} rows · ${V.filterLabel(st.filter)}`;
@@ -289,16 +289,16 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
     const { g, el, opts, conds, ids, ref, rows, byRow, parent, hasF, hasP, st, cellOf, color, Q } = V;
     // ---- exports
     function longCsv() {
-      const head = ["TP", "m/z", "RT (min)", "Polarity", ...(hasF ? ["Neutral formula"] : []), ...(hasP ? ["Δ ppm"] : []), "Condition", "Time (min)", "Present", "Area", "Area SD", "n", "Ratio to reference", "Shape", "Prev."];
+      const head = ["TP", "m/z", "RT (min)", "Polarity", ...(hasF ? ["Neutral formula", "[M+H]+ formula"] : []), ...(hasP ? ["Δ ppm"] : []), "Condition", "Time (min)", "Present", "Area", "Area SD", "n", "Ratio to reference", "Shape", "Prev."];
       /** @type {any[][]} */ const out = [head];
       for (const r of V.visibleRows()) for (const c of r.cond) for (const k of c.kin.length ? c.kin : [/** @type {any} */ ({ t: "", area: c.area, sd: c.area_sd, n: c.n_rep })])
-        out.push([r.tp_name, r.mz, r.rt, r.polarity, ...(hasF ? [r.neutral_formula] : []), ...(hasP ? [r.ppm] : []), c.id, k.t, c.present ? "yes" : "no", k.area, k.sd, k.n, c.ratio_ref, c.shape, c.prev && c.prev.verdict]);
+        out.push([r.tp_name, r.mz, r.rt, r.polarity, ...(hasF ? [r.neutral_formula, r.ion_formula] : []), ...(hasP ? [r.ppm] : []), c.id, k.t, c.present ? "yes" : "no", k.area, k.sd, k.n, c.ratio_ref, c.shape, c.prev && c.prev.verdict]);
       return csvText(out);
     }
     function wideCsv() {
-      const head = ["TP", "m/z", "RT (min)", "Polarity", ...(hasF ? ["Neutral formula"] : []), ...(hasP ? ["Δ ppm"] : []), "Present in", "Only in", ...ids.flatMap(c => [`${c} present`, `${c} area`, `${c} ratio to reference`, `${c} Prev.`])];
+      const head = ["TP", "m/z", "RT (min)", "Polarity", ...(hasF ? ["Neutral formula", "[M+H]+ formula"] : []), ...(hasP ? ["Δ ppm"] : []), "Present in", "Only in", ...ids.flatMap(c => [`${c} present`, `${c} area`, `${c} ratio to reference`, `${c} Prev.`])];
       /** @type {any[][]} */ const out = [head];
-      for (const r of V.visibleRows()) out.push([r.tp_name, r.mz, r.rt, r.polarity, ...(hasF ? [r.neutral_formula] : []), ...(hasP ? [r.ppm] : []), r.present_in.join("; "), r.only_in, ...ids.flatMap(id => { const c = cellOf(r, id); return c ? [c.present ? "yes" : "no", c.area, c.ratio_ref, c.prev && c.prev.verdict] : ["", "", "", ""]; })]);
+      for (const r of V.visibleRows()) out.push([r.tp_name, r.mz, r.rt, r.polarity, ...(hasF ? [r.neutral_formula, r.ion_formula] : []), ...(hasP ? [r.ppm] : []), r.present_in.join("; "), r.only_in, ...ids.flatMap(id => { const c = cellOf(r, id); return c ? [c.present ? "yes" : "no", c.area, c.ratio_ref, c.prev && c.prev.verdict] : ["", "", "", ""]; })]);
       return csvText(out);
     }
     const setsCsv = () => csvText([["Conditions", "Number of TPs", "TP names"], ...g.sets.map(s => [s.conditions.join(" + "), s.rows.length, s.rows.map(i => byRow.get(i)?.tp_name || i).join("; ")])]);
@@ -360,7 +360,7 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
     if (!document.getElementById("gv-css")) { const st = document.createElement("style"); st.id = "gv-css"; st.textContent = CSS; document.head.appendChild(st); }
     const conds = g.conditions, ids = conds.map(c => c.id), ref = g.reference, rows = g.rows, byRow = new Map(rows.map(r => [r.row, r]));
     const parent = slug(opts.parentName || g.parent_name || "parent");
-    const hasF = rows.some(r => r.neutral_formula), hasP = rows.some(r => r.ppm != null);
+    const hasF = rows.some(r => r.neutral_formula || r.ion_formula), hasP = rows.some(r => r.ppm != null);
     /** @type {{ filter: string, sort: { col: string, dir: number }, tp: number | null, mode: string, zoom: number }} */
     const st = { filter: "all", sort: { col: "", dir: 1 }, tp: rows.length ? rows[0].row : null, mode: "area", zoom: 1 };
     const cellOf = (/** @type {GRow} */ r, /** @type {string} */ id) => r.cond.find(c => c.id === id);
