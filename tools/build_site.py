@@ -118,13 +118,18 @@ def pack_mzfinder(static: Path) -> None:
         shutil.copy2(src / "data" / n, dst / n)
     for n in js:
         shutil.copy2(src / "js" / n, dst / n)
+    lazy = [f.name for f in sorted((src / "lazy").glob("*.js"))] if (src / "lazy").is_dir() else []      # loaded on demand through TPLAZY.load, not at the start of Tabui
+    if lazy:
+        (dst / "lazy").mkdir()
+        for n in lazy:
+            shutil.copy2(src / "lazy" / n, dst / "lazy" / n)
     for n in files:
         shutil.copy2(src / "files" / n, dst / n)
     with zipfile.ZipFile(dst / "tpmine.zip", "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted((src / "py").rglob("*")):
             if f.is_file() and "__pycache__" not in f.parts and f.suffix != ".pyc":
                 z.write(f, f.relative_to(src / "py").as_posix())
-    (dst / "indice.json").write_text(json.dumps({"js": js, "files": files + data, "py": "tpmine.zip"}, indent=1), encoding="utf-8")
+    (dst / "indice.json").write_text(json.dumps({"js": js, "lazy": lazy, "files": files + data, "py": "tpmine.zip"}, indent=1), encoding="utf-8")
 
 
 def write_manifest(out: Path, version: str) -> None:

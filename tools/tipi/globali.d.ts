@@ -86,6 +86,7 @@ declare var TPALBERO: any;
 declare var TPCALL: any;
 declare var TPDraw: any;
 declare var TPHR: any;
+declare var TPLAZY: any;
 declare var TPLIVE: any;
 declare var TPMINE_MEM: any;
 declare var TPMS2: any;

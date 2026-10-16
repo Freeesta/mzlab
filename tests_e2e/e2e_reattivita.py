@@ -1,4 +1,4 @@
-"""Tabui, panel of reactivity of the parent (TP_Mine/js/46_reattivita.js + 47_viewer3d.js, docs/agenti/reattivita.md): administrator mode only.
+"""Tabui, panel of reactivity of the parent (TP_Mine/lazy/reattivita.js + viewer3d.js, docs/agenti/reattivita.md): administrator mode only.
 Without «qqq.admin» there is no TPREATT, no panel and no .wasm «chem» request. With it, a hand-written `reatt/1` (paracetamol, geometry and values invented here, not a calculation) gives the six cards, the
 table per atom with as many rows as `atoms`, the threshold (slider and number linked) that filters the rows and the atoms of the viewer, the buttons and the keys that rotate and zoom (the state of the view
 changes), the switch of the H, no automatic rotation, the exports (XYZ has N + 2 lines), the states of the calculation, and the 2D drawing (a halo under each heavy atom). The order of the heavy atoms of
@@ -92,7 +92,16 @@ try:
 
         pg = fresh(True)
         pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000); pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
+        pg.wait_for_function("window.QTOOLS && window.QTOOLS.list().some(t => t.id === 'tpmine' && !t.ph)", timeout=60000)
+        def lazy_not_at_start():
+            assert pg.evaluate("typeof window.TPREATT === 'undefined' && typeof window.TPV3D === 'undefined' && typeof window.TPLAZY.load === 'function'"), "loaded at the start"
+            assert not any(u.endswith(("reattivita.js", "viewer3d.js")) for u in reqs), [u for u in reqs if "reattivita" in u or "viewer3d" in u]
+            idx = pg.evaluate("fetch(window.QTOOLS.ctx.base + 'mzfinder/indice.json').then(r => r.json())")
+            assert sorted(idx["lazy"]) == ["reattivita.js", "viewer3d.js"] and not any(n in idx["js"] for n in idx["lazy"]), idx
+        step("the two scripts are not loaded at the start of Tabui (TP_Mine/lazy, not in js)", lazy_not_at_start)
+        pg.fill("#tp-smi", "CC(=O)Nc1ccc(O)cc1")
         pg.wait_for_function("typeof window.TPREATT !== 'undefined' && typeof window.TPV3D !== 'undefined'", timeout=60000)
+        step("the first structure loads them once, from mzfinder/lazy/", lambda: (_ for _ in ()).throw(AssertionError(reqs)) if sum(u.endswith("lazy/reattivita.js") for u in reqs) != 1 else None)
         def cards():
             assert pg.evaluate(MOUNT, REATT)
             tabs = pg.evaluate("[...document.querySelectorAll('#tpr-host [role=tab]')].map(b => b.textContent)")
