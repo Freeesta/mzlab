@@ -635,7 +635,7 @@
         { key: "tpname", label: "TP", help: "ft.col.tpname", sticky: true, sort: r => r.tp_name || "", cell: r => esc(r.tp_name || "") },
         { key: "identity", label: "Identity", help: "ft.col.identity", sticky: true, sort: r => idLabel(r).toLowerCase(), cell: r => esc(idLabel(r)) + alt(r), text: r => idLabel(r) + (r.alternatives.length ? ` (+${r.alternatives.length} other)` : "") },
         { key: "status", label: "Status", help: "ft.col.status", sort: r => notFound(r) ? 1 : 0, cell: r => notFound(r) ? "Searched, not detected" : "Detected", text: r => r.status || "Detected" },
-        { key: "net", label: "Net change (formula)", help: "ft.col.net", sort: r => r.net_change || "", cell: r => esc(r.net_change || "") },
+        { key: "net", label: "Net change (formula)", help: "ft.col.net", sort: r => r.net_change || "", cell: r => esc(r.net_change || "").replace(/([A-Za-z)])(\d+)/g, "$1<sub>$2</sub>") },          // subscripts in the cell only: the export and the copy keep the plain text (C2H2)
         { key: "modif", label: "Modification", help: "ft.col.modif", sort: r => r.modification || "", cell: r => esc(r.modification || "") },
         { key: "mz", label: "<i>m/z</i>", help: "ft.col.mz", num: true, sort: r => r.mz, cell: r => r.mz.toFixed(2) },
         { key: "rt", label: "RT", help: "ft.col.rt", num: true, sort: r => r.ref_rt, cell: r => r.ref_rt == null ? "" : r.ref_rt.toFixed(2) },

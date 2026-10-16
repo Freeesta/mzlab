@@ -241,9 +241,9 @@
     const hasNorm = ss.some(s => fin(s.norm));
     const mxBox = document.createElement("div"); mxBox.innerHTML = mx + `</div>`; const mxEl = /** @type {HTMLElement} */ (mxBox.firstElementChild); panel.appendChild(mxEl);
     if (G.TPTAB) {
-      const used = ["detected", "filled", "targeted", "absent"].filter(k => ss.some(s => s.state === k));
+      const used = ["detected", "filled", "targeted", "absent", "na"];
       const lg = document.createElement("div"); lg.className = "tpr-mxleg";
-      lg.innerHTML = `<span class="tpr-mxnote">Colour = peak area (log scale, darker = more); symbol = peak state</span>${G.TPTAB.legend(used)}`;
+      lg.innerHTML = `<span class="tpr-mxnote">Colour = peak area (log scale, darker = more); symbol = peak state. A dark square is a high area; filled = area re-read by the program where the peak was expected.</span>${G.TPTAB.legend(used)}`;
       panel.appendChild(lg);
       if (G.TPHELP) G.TPHELP.attach(lg);
     }
