@@ -340,7 +340,11 @@ impl Rows {
 
 /// The accessions `spectrum` looks for in the text of a header (as substrings: `h.contains` too): an extra that carries one of them would change the row.
 const LETTI: [&str; 23] = [
-    "MS:1000341", "MS:1000326", "MS:1000325", "MS:1000789", "MS:1000790",
+    "MS:1000341",
+    "MS:1000326",
+    "MS:1000325",
+    "MS:1000789",
+    "MS:1000790",
     "MS:1000511",
     "MS:1000130",
     "MS:1000129",
