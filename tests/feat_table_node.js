@@ -26,3 +26,5 @@ for (const [name, kind] of [["full.csv", "full"], ["full_mzmine.csv", "full_mzmi
   put(name, w.export_table(readTable, bytes.length, samples, spec, sha, pol, kind));
 for (const [name, kind] of [["ms2.mgf", "mgf"], ["sirius.ms", "sirius"]])
   put(name, w.export_ms2(readTable, bytes.length, samples, spec, sha, pol, kind, readIdx, sizes));
+put("riga.json", w.table_row(readTable, bytes.length, samples, 3));
+put("riga_tracce.json", w.table_row_traces(readTable, bytes.length, samples, 3, readIdx, sizes, 5.0));

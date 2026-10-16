@@ -9,7 +9,9 @@
   /** keys of the JSON of the engine that the page shows or uses */
   const CONTRACT = {
     qc: ["schema", "file", "gruppi", "standard_cv", "bianchi", "m1_su_m", "scartate"], blank: ["file", "righe", "righe_con_picco"], m1: ["righe", "min", "mediana", "max"], rejected: ["regola", "righe"], qcFile: ["file", "rilevati", "mirati", "riempiti", "assenti", "area_totale"], qcGroup: ["tipo", "gruppo", "tempo_min", "file", "righe", "cv_mediano"],
-    view: ["digest", "righe", "fattori", "conteggi"], counts: ["righe", "tenute", "scartate"],
+    view: ["digest", "righe", "fattori", "conteggi"],
+    row: ["schema", "id", "mz", "rt", "rt_lo", "rt_hi", "charge", "quality", "iso_m1", "ms2", "ident", "cells"], rowQuality: ["shape", "snr", "fwhm", "flags"], rowMs2: ["file", "purity"], rowIdent: ["neutral", "adduct", "sources"], rowCell: ["file", "type", "time", "area", "height", "apex_rt", "width", "state"],
+    traces: ["schema", "id", "mz", "ppm", "xic", "ms1", "ms2"], traceXic: ["file", "rt", "y"], traceMs1: ["file", "rt", "mz", "y"], traceMs2: ["file", "prec", "mz", "y"], counts: ["righe", "tenute", "scartate"],
     report: ["crate", "tabella_sha256", "campioni_sha256", "righe", "file", "celle", "vista", "qc"], cells: ["rilevate", "mirate", "riempite", "assenti"], reportView: ["parametri", "conteggi"], rows: ["hojas"], sheet: ["nombre", "filas"],
   };
   const hex = (/** @type {ArrayBuffer} */ b) => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
@@ -44,7 +46,13 @@
     return JSON.stringify(doc);
   }
 
-  /** a session on one table: `a` = { base, bytes (.mzfeat), names (stems of the files), inputs ([{name, sha256}] of the table), pol } */
+  /** the traces of a row from the .mzidx of the series, read by the pool (OPFS in the page, the index folder in the app); `a.pool` gives it */
+  async function tracesVia(/** @type {any} */ a, /** @type {Uint8Array} */ bytes, /** @type {string} */ samples, /** @type {number} */ id, /** @type {number} */ ppm) {
+    const pool = await a.pool();
+    return pool.rowTraces({ table: bytes, samples, sha: await G.UNT.sha256Hex(bytes), id, ppm, paths: a.names.map((/** @type {string} */ n) => "mzlab/idx/" + n + ".mzidx") });
+  }
+
+  /** a session on one table: `a` = { base, bytes (.mzfeat), names (stems of the files), inputs ([{name, sha256}] of the table), pol, pool() (for the traces) } */
   async function open(/** @type {any} */ a) {
     if (window.MZLAB_DESKTOP) return openNative(a);
     const m = await engine(a.base), bytes = /** @type {Uint8Array} */ (a.bytes), size = bytes.length;
@@ -59,6 +67,8 @@
       view: (/** @type {string} */ spec) => JSON.parse(run(() => m.table_view(read, size, samples, spec))),
       rows: (/** @type {string} */ spec) => JSON.parse(run(() => m.export_table(read, size, samples, spec, sha, a.pol, "xlsx_rows"))).hojas[0].filas,
       report: (/** @type {string} */ spec) => JSON.parse(run(() => m.table_report(read, size, samples, spec, sha))),
+      row: (/** @type {number} */ id) => JSON.parse(run(() => m.table_row(read, size, samples, id))),
+      traces: async (/** @type {number} */ id, /** @type {number} */ ppm) => JSON.parse(await tracesVia(a, bytes, samples, id, ppm)),
       file: (/** @type {string} */ spec, /** @type {string} */ kind) => run(() => m.export_table(read, size, samples, spec, sha, a.pol, kind)),
     };
   }
@@ -78,6 +88,8 @@
       view: async (/** @type {string} */ spec) => JSON.parse(await V("view", spec)),
       rows: async (/** @type {string} */ spec) => JSON.parse(await V("export", spec, { export_kind: "xlsx_rows" })).hojas[0].filas,
       report: async (/** @type {string} */ spec) => JSON.parse(await V("report", spec)),
+      row: async (/** @type {number} */ id) => JSON.parse(await V("row", "", { id })),
+      traces: async (/** @type {number} */ id, /** @type {number} */ ppm) => JSON.parse(await tracesVia(a, bytes, samples, id, ppm)),
       file: (/** @type {string} */ spec, /** @type {string} */ kind) => V("export", spec, { export_kind: kind }),
     };
   }

@@ -106,6 +106,24 @@ pub fn export_ms2(table_read: Function, size: f64, samples_json: &str, spec: &st
     core::ms2_file(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256, polarity, kind, open).map_err(js_err)
 }
 
+/// The `riga/1` of the row with `id`: summaries, identity and one cell per file. An id the table does not have is `error.rowNotFound`.
+#[wasm_bindgen]
+pub fn table_row(table_read: Function, size: f64, samples_json: &str, id: u32) -> std::result::Result<String, JsValue> {
+    core::row_json(&mut table_reader(table_read), size as u64, samples_json, id).map_err(js_err)
+}
+
+/// The `riga_tracce/1` of the row with `id`: XIC of every file, MS1 at the best apex and MS2, read from the `.mzidx` of the series
+/// (`index_read(k, offset, length)`, `index_sizes[k]` bytes) within `ppm` of the m/z of the row.
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
+pub fn table_row_traces(table_read: Function, size: f64, samples_json: &str, id: u32, index_read: Function, index_sizes: Vec<f64>, ppm: f64) -> std::result::Result<String, JsValue> {
+    let open = |k: usize| {
+        let size = *index_sizes.get(k).ok_or_else(|| Error::new("error.badIndex"))?;
+        Index::open(JsReader { read: index_read.clone(), k: k as u32 }, size as u64)
+    };
+    core::row_traces_json(&mut table_reader(table_read), size as u64, samples_json, id, ppm, open).map_err(js_err)
+}
+
 /// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy` or `per_tp`; JSON in, JSON out.
 #[wasm_bindgen]
 pub fn campioni(op: &str, input: &str) -> std::result::Result<String, JsValue> {
