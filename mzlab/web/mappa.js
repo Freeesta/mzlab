@@ -231,7 +231,7 @@ window.MAPPA = (() => {
   const axisWait = async f => { const key = `${f.k}|${f.lv || 1}`; if (!AX.has(key)) axisOf(f); try { await FLY.get("a" + key); } catch (e) { /* no axis */ } return (AX.get(key) || {}).v || null; };
   const specKey = (f, ax, i) => `s${f.k}|${f.lv || 1}|${ax.sid[i]}`;
   const xicKey = (f, a, mz) => `x${f.k}${a.ref ? "+" + a.ref.k : ""}|${xicCentre(f, mz).toFixed(4)}|${xicTol(f, mz).toFixed(5)}|${f.lv || 1}`;
-  const specSize = sp => (sp.mz.length + sp.y.length) * 8 + 200, xicSize = xi => (xi.tr || []).reduce((n, t) => n + (t.rt.length + t.y.length) * 8 + 100, 200);
+  const specSize = sp => (sp.mz.length + sp.y.length + (sp.pmz ? sp.pmz.length + sp.py.length : 0)) * 8 + 200, xicSize = xi => (xi.tr || []).reduce((n, t) => n + (t.rt.length + t.y.length) * 8 + 100, 200);
   // what is already in the page for the point: the exact spectrum / XIC, or null
   // the scan of A (and of B, in a difference) nearest to the point: {f, ax, i, r, rx, j} or null while an RT axis is not in the page
   function scansAt(p, pt) {
@@ -268,7 +268,7 @@ window.MAPPA = (() => {
     return once(key, async () => {
       const j = await J(`api/spectra?k=${f.k}&i0=${i}&i1=${i}&level=${f.lv || 1}&bin=0.1${MERGE()}`), n = j.scans && j.scans[0];
       if (!n) throw new Error("no scan");
-      const r = { key, sid: n.sid, rt: n.rt, mz: n.mz, y: n.y }; SIGHT.set(key, r, specSize(r)); return r;
+      const r = { key, sid: n.sid, rt: n.rt, mz: n.mz, y: n.y, pmz: n.pmz, py: n.py }; SIGHT.set(key, r, specSize(r)); return r;
     });
   };
   async function fetchSpec(p, rt) {
@@ -294,7 +294,7 @@ window.MAPPA = (() => {
     (window.requestIdleCallback || (g => setTimeout(g, 120)))(() => {
       if (ask.pending() || p._a !== a) return;
       J(`api/spectra?k=${f.k}&i0=${lo}&i1=${hi}&level=${lv}&bin=0.1${MERGE()}`).then(j => {
-        for (const n of j.scans || []) { const key = specKey(f, ax, n.i); if (!SIGHT.get(key)) { const r = { key, sid: n.sid, rt: n.rt, mz: n.mz, y: n.y }; SIGHT.set(key, r, specSize(r)); } }
+        for (const n of j.scans || []) { const key = specKey(f, ax, n.i); if (!SIGHT.get(key)) { const r = { key, sid: n.sid, rt: n.rt, mz: n.mz, y: n.y, pmz: n.pmz, py: n.py }; SIGHT.set(key, r, specSize(r)); } }
       }).catch(() => { /* a prefetch is never needed */ });
     });
   }
@@ -394,7 +394,7 @@ window.MAPPA = (() => {
     if (pr) ymax = Math.max(ymax, pr.max);
     if (!ymax) { g.fillText(T("mappa.side.empty"), x0 + 4, M.t + 10); return; }
     const xz = sg ? (x0 + x1) / 2 : x0, len = v => (sg ? (x1 - x0) / 2 : x1 - x0) * v / ymax;
-    if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T(sg ? "mappa.side.diff" : "mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) })); }
+    if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T(sg ? "mappa.side.diff" : "mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) }), true); }
     g.strokeStyle = a.f.color || css("--accent"); g.globalAlpha = prev ? .5 : 1;
     if (sg) {
       g.beginPath(); g.moveTo(xz + .5, M.t); g.lineTo(xz + .5, H - M.b); g.strokeStyle = ink; g.stroke();

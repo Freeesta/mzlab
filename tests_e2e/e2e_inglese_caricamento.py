@@ -60,8 +60,9 @@ try:
             t = pg.inner_text("#unopen"); assert "format not recognised" in t and "x_ingl_b.txt" in t, t
             open("/tmp/y_ingl_b.raw", "w").write("x")
             pg.set_input_files("#pick", "/tmp/y_ingl_b.raw")
-            pg.wait_for_function("document.body.innerText.includes('File type not accepted: y_ingl_b.raw')", timeout=60000)       # a .raw is read in the browser: one the reader does not recognise says so, in English
-            t = pg.inner_text("body"); assert "File type not accepted: y_ingl_b.raw" in t, [l for l in t.split("\n") if "raw" in l]
+            ok_raw = "(t => t.includes('File type not accepted: y_ingl_b.raw') || t.includes('The calculation engine did not load'))(document.body.innerText)"
+            pg.wait_for_function(f"() => {ok_raw}", timeout=60000)       # a .raw is read in the browser by the thermo module: one the reader does not recognise says so, in English (the site of the tests has no readers module: then the engine says it did not load, also in English)
+            t = pg.inner_text("body"); assert "File type not accepted: y_ingl_b.raw" in t or "The calculation engine did not load" in t, [l for l in t.split("\n") if "raw" in l]
             open("/tmp/z_ingl_b.mzML", "w").write("not xml")
             pg.set_input_files("#pick", "/tmp/z_ingl_b.mzML"); pg.wait_for_timeout(800)
             assert not italian_on_screen(pg), italian_on_screen(pg)

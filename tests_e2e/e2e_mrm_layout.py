@@ -26,6 +26,8 @@ try:
             pg2 = r.page(p)
             pg2.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_MRM-t0")])
             pg2.wait_for_timeout(1000); pg2.click("text=Carica dati"); ready(pg2); pg2.wait_for_timeout(1500)
+            v = pg2.evaluate(VIS); assert "mrm" not in v and "chrom" in v and "spec" in v, v         # first load: only the first file of the list is open
+            pg2.evaluate("setVisOf(E.files.filter(f => f.kind === 'mrm'), true)"); ready(pg2)         # ticking the MRM file adds its block
             v = pg2.evaluate(VIS); assert "mrm" in v and "chrom" in v and "spec" in v, v
         step("full scan + MRM: the blocks with data stay", mixed)
 finally:

@@ -15,7 +15,7 @@ try:
         pg.evaluate("setTab('full', true)"); pg.wait_for_timeout(600)
         S = "E.panels.find(q => q.type === 'spec' && q.tab === 'full')"
         def lab_at(mzv, rt=7.07):
-            pg.evaluate(f"(() => {{ const s = {S}; s.k = E.files.find(f => /t15/.test(f.label) && f.kind === 'full').k; s.r0 = {rt} - 0.07; s.r1 = {rt} + 0.07; s.link = null; s.zoom = null; draw(s); }})()"); ready(pg)
+            pg.evaluate(f"(() => {{ const f = E.files.find(f => /t15/.test(f.label) && f.kind === 'full'); activeFile(f.k); const s = {S}; s.k = f.k; s.r0 = {rt} - 0.07; s.r1 = {rt} + 0.07; s.link = null; s.zoom = null; draw(s); }})()"); ready(pg)
             return pg.evaluate(f"(() => {{ const s = {S}, l = (s._a.lbls || []).filter(b => b.m != null && Math.abs(b.m - {mzv}) < 0.6).sort((u, v) => Math.abs(u.m - {mzv}) - Math.abs(v.m - {mzv}))[0]; if (!l) return null; const c = s.el.querySelector('canvas').getBoundingClientRect(); return [c.left + l.x + l.w / 2, c.top + l.y + l.h / 2, l.m]; }})()")
         def menu_items(pt):
             pg.mouse.click(pt[0], pt[1], button="right"); pg.wait_for_selector("#ctx:not([hidden])")
@@ -30,9 +30,10 @@ try:
         def without():
             pg.keyboard.press("Escape")
             pt = lab_at(364.4, 14.3); assert pt, "no label near 364.4"
-            it = menu_items(pt); assert "Estrai la scansione MS2" not in it, it
+            menu_items(pt)
+            assert pg.evaluate("(() => { const e = [...document.querySelectorAll('#ctx [role^=menuitem]')].find(x => x.textContent.trim() === 'Estrai la scansione MS2'); return !e || e.getAttribute('aria-disabled') === 'true' || e.disabled; })()"), "offered for a peak that is not a precursor"      # the action stays in the menu, grey
             pg.keyboard.press("Escape")
-        step("a peak that is not a precursor does not", without)
+        step("a peak that is not a precursor does not (grey)", without)
 finally:
     r.close()
 bad = [s for s in steps if s[1] != "ok"]

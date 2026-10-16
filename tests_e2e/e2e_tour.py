@@ -53,6 +53,7 @@ try:
         steps.append(("invitation shown on first LR load, closed by Non ora, not repeated on reload", "ok"))
 
         # 2. Replay tour from gear: all 15 steps tested
+        pg.wait_for_function("typeof E !== 'undefined' && E.files && E.files.length > 0", timeout=30000)  # the label reads «Rifai» only once the reloaded file is back
         pg.click("#np-set")
         pg.wait_for_selector("#uipset", timeout=3000)
         assert pg.is_visible("#uip-tour") and "Rifai il tour" in pg.inner_text("#uip-tour")

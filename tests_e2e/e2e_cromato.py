@@ -46,7 +46,7 @@ try:
             pg.click("#bigx")
         step("Excel has the extra columns", xl)
         def cascade():
-            pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
+            pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
             pg.evaluate("E.panels.filter(p=>p.type==='xic').forEach(p=>p.el.querySelector('.x').click())"); pg.wait_for_timeout(300)
             ch = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom'&&p.tab==='full')")
             assert "a cascata" in pg.evaluate(f"E.panels[{ch}].el.querySelector('[data-o=mode]').innerText")

@@ -15,7 +15,7 @@ try:
             for s in ("header .hq", "#fs-btn", "#tb-search"):
                 if not pg.locator(s).count() or not pg.is_visible(s): continue
                 pg.click(s); pg.wait_for_timeout(300)
-                if s == "#tb-search": pg.mouse.click(600, 600); pg.wait_for_timeout(300)      # leave the search with the mouse
+                if s == "#tb-search": pg.mouse.click(5, 400); pg.wait_for_timeout(300)      # leave the search with the mouse, outside its list of results (a click on one would open it)
                 pg.mouse.click(5, 400); pg.wait_for_timeout(100)
                 pg.evaluate("document.querySelector(%r).focus()" % s)      # programmatic focus after a mouse use (what closing the search does)
                 o = pg.evaluate(OUT + "(%r)" % s)

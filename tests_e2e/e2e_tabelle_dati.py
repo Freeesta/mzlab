@@ -57,7 +57,8 @@ try:
         def copy():
             pg.evaluate(f"{CH}.cv.focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
             pg.evaluate("navigator.clipboard.writeText=async t=>{window.__clip=t}"); pg.click("#tdati [data-td=c]"); pg.wait_for_timeout(300)
-            c = pg.evaluate("window.__clip"); assert c.split("\n")[0].split("\t")[1] == "RT (min)" and "\t" in c.split("\n")[1], c[:80]
+            c = pg.evaluate("window.__clip"); ln = [l for l in c.split("\n") if not l.startswith("#")]      # the first line is the provenance comment
+            assert ln[0].split("\t")[1] == "RT (min)" and "\t" in ln[1], c[:200]
             close()
         step("Copy puts the table in the clipboard as tab separated text", copy)
         def map_table():

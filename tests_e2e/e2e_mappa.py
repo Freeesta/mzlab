@@ -97,7 +97,7 @@ try:
             assert not pg.evaluate(f"{M}.el.classList.contains('max')") and not pg.evaluate(f"{M}.el.classList.contains('mzmir')")
         step("F again: back in the page, sight off", leave)
         def diff():
-            pg.evaluate(f"(()=>{{const q={M};q.k=E.files[1].k;q.corr='file';q.ref=E.files[0].k;ctl(q);draw(q)}})()")
+            pg.evaluate(f"(()=>{{const q={M};q.k=E.files[1].k;activeFile(q.k);q.corr='file';q.ref=E.files[0].k;ctl(q);draw(q)}})()")      # like the file chooser: the panel takes the file, then it becomes the active one
             pg.click(".pnl.map [data-a=cpar]"); pg.click(".pnl.map details.mzcol summary")                    # «Options»: the rare controls live in the popover; the colors in «Colors…»
             pg.wait_for_function(f"!!({M}._img && {M}._img.b && {M}._img.key.includes('rttol'))", timeout=20000)     # A - B from the server, with the tolerance in RT
             assert pg.evaluate("[...LUT_DIV.slice(0,3)]") == [213, 94, 0] and pg.evaluate("[...LUT_DIV.slice(1020,1023)]") == [0, 114, 178]   # vermilion <-> blue
@@ -155,7 +155,7 @@ try:
             pg.evaluate("localStorage.removeItem('qqq.mappa')"); pg.evaluate(M + ".ref=''; ctl(" + M + "); draw(" + M + ")"); pg.wait_for_timeout(800)
             pg.evaluate(M + ".corr='';" + M + "._parOpen=false; ctl(" + M + ")"); pg.wait_for_timeout(300)
             hh = pg.evaluate("(()=>{const h=" + M + ".el.querySelector('.hd').getBoundingClientRect(); return h.height})()"); assert hh < 60, hh                  # one low row
-            assert pg.locator(".pnl.map [data-a=cpar]").inner_text().strip().startswith("Options") and pg.locator(".pnl.map .corrw").count() == 1
+            assert pg.locator(".pnl.map [data-a=cpar]").inner_text().strip().startswith("Options") and pg.locator(".pnl.map .corrw:not(.ciw)").count() == 1
             assert pg.locator(".pnl.map .mzg").count() >= 2 and pg.locator(".pnl.map .mzleg, .pnl.map .leg .mzhelp").count() == 0, "no fixed guide text under the map"
             pg.click(".pnl.map [data-a=cpar]"); pg.click(".pnl.map details.mzcol summary")
             assert pg.locator(".pnl.map [data-o=view][data-v='3d']").count() == 1 and pg.locator(".pnl.map .seg [data-o=view]").count() == 0   # a single «3D» button

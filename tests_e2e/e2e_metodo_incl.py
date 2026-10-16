@@ -20,7 +20,7 @@ try:
         pg = r.page(p)
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 6000, 2)
         attendi(pg, "E.files.some(f => f.dda && f.kind === 'full')")
-        par = pg.evaluate("(async()=>{const k=E.files.findIndex(f=>f.dda&&f.kind==='full');const d=await DDA.get(k);const i=d.sid.findIndex((_,i)=>d.prec[i]!=null&&d.rt[i]>14&&d.rt[i]<14.6);return {k, mz:d.prec[i], rt:d.rt[i]}})()")
+        par = pg.evaluate("(async()=>{const k=E.files.findIndex(f=>f.dda&&f.kind==='full');const d=await DDA.get(k);const bg=m=>d.sid.some((_,j)=>d.prec[j]!=null&&Math.abs(d.prec[j]-m)<0.01&&d.rt[j]>=1&&d.rt[j]<=2);const i=d.sid.findIndex((_,i)=>d.prec[i]!=null&&d.rt[i]>14&&d.rt[i]<14.6&&!bg(d.prec[i]));return {k, mz:d.prec[i], rt:d.rt[i]}})()")
         doc = {"schema": "metodo/1", "origine": {"formato": "thermo-raw"}, "ms": {"periodi": [{"esperimenti": [{"indice": 1, "mz": [100, 1000]}, {"indice": 2, "inclusione": [
             {"mz": par["mz"], "formula": "C10H12N2O", "specie": "[M+H]+", "carica": 1, "polarita": "positive", "t_inizio_min": par["rt"] - 0.5, "t_fine_min": par["rt"] + 0.5, "nce": [20, 35, 60], "nome": "entry one"},
             {"mz": 123.4567, "polarita": "positive", "t_inizio_min": 1, "t_fine_min": 2, "nome": "entry two"},

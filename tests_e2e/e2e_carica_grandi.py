@@ -28,7 +28,7 @@ def scenario(n_ms1, n_ms2, mb_each):
             pg.click("#opbtn")                                              # pressed while the files are still being read
             while time.time() - t0 < 600 and pg.evaluate("UPBUSY") > 0: time.sleep(0.3)
             pg.wait_for_timeout(500)
-            return count, pg.evaluate("window.__seen"), pg.evaluate("[ST.files.length, [...QQQ_LOADFAIL], document.body.innerText]")
+            return count, pg.evaluate("window.__seen"), pg.evaluate("[ST.files.length, [...QQQ_LOADFAIL], document.body.innerText + ' ' + document.getElementById('start').textContent]")
     finally:
         r.close()
         for f in names: os.remove(f)
@@ -40,7 +40,7 @@ def check(count, seen, got):
     assert len(failed) >= 1 and ok >= 1, f"the room should fit some of the {count} files and not all: {ok} loaded, {len(failed)} failed"
     assert "not enough space" in text or "abbastanza spazio" in text, "the failed files are explained as lack of space"
     assert any("%" in m for m in seen), f"the overlay never showed a percentage while reading: {seen[:5]}"
-def too_many():           # under 50 MB each, so no check up front: a file or an index cut short by the browser is caught after writing
+def too_many():           # the start screen is hidden once the files that fit have opened: its text is read too; under 50 MB each, so no check up front: a file or an index cut short by the browser is caught after writing
     check(*scenario(600, 6000, 80))
 def room_enough():        # room for everything: pressed while reading, the button waits for the last file, then opens them ALL and the loading screen goes away
     d = tempfile.mkdtemp(prefix="grandi_"); names = []
@@ -53,9 +53,9 @@ def room_enough():        # room for everything: pressed while reading, the butt
             pg.evaluate("window.__seen = []; new MutationObserver(() => window.__seen.push(document.getElementById('ldmsg').textContent)).observe(document.getElementById('ldmsg'), {childList: true, characterData: true, subtree: true})")
             pg.evaluate("addEventListener('mzlab-index', () => document.getElementById('opbtn').click(), {once: true})")     # pressed at the first sign of progress: the files are surely still being read
             pg.set_input_files("#pick", names)
-            pg.wait_for_function("UPBUSY === 0 && ST.files.length === 3 && !document.getElementById('start').hidden", timeout=240000)
-            import lib; lib._tempi(pg)                              # the press while reading waited for the files, then «Open» asked for the times (roles and times of the table): written, pressed again
-            pg.click("#opbtn")
+            pg.wait_for_function("UPBUSY === 0 && ST.files.length === 3", timeout=240000)
+            import lib; lib._tempi(pg)                              # the press while reading waited for the files and opens them; if «Open» still asked for the times (roles and times of the table) they are written and it is pressed again
+            if pg.evaluate("!document.getElementById('start').hidden && document.getElementById('loading').hidden"): pg.click("#opbtn")
             ready(pg, timeout=240000)
             seen = pg.evaluate("window.__seen")
             assert any("%" in m for m in seen), f"no percentage on the overlay while reading: {seen[:5]}"

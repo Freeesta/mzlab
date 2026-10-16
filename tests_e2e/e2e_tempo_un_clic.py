@@ -13,9 +13,9 @@ try:
         pg = r.page(p)
         stage(pg, [mz(f) for f in FILES[:3]])
         def click_other():
-            name = pg.evaluate("ST.files[2].name")
+            name = pg.locator(T).nth(1).evaluate("x => ST.files[+x.dataset.i].name")      # the row clicked below
             pg.locator(T).nth(0).fill("7")
-            pg.locator(T).nth(1).click()   # the t0 time is fixed (disabled): two editable times
+            pg.locator(T).nth(1).click()   # every time is editable: the first is typed in, the second is clicked
             attendi(pg, f"(()=>{{const a={ACT};return !!a&&a[0]===ST.files.find(f=>f.name===({name!r})).name&&a[1]==='time'}})()")
             pg.keyboard.type("5")
             attendi(pg, f"{ACT}&&{ACT}[2].endsWith('5')")
