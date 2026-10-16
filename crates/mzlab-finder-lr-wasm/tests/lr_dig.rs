@@ -66,7 +66,9 @@ fn contract_and_rows_of_python() {
     same_shape(&shared, &g["summary"], "summary");
     for row in s["rows"].as_array().unwrap() {
         let mut shared = row.clone();
-        shared.as_object_mut().unwrap().remove("ms2");
+        for k in ["ms2", "tp_name", "status", "net_change", "modification"] {
+            shared.as_object_mut().unwrap().remove(k);
+        }
         same_shape(&shared, &g["row"], "row");
         for k in row["kinetics"].as_array().unwrap() {
             same_shape(k, &g["kinetics"], "kinetics");

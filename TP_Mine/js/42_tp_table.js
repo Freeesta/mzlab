@@ -43,16 +43,17 @@
 .tp .tpt-st{display:inline-block;min-width:1em;text-align:center;font-family:"Segoe UI Symbol","DejaVu Sans","Noto Sans Symbols 2",sans-serif}.tp .tpt-st-detected{color:var(--ink)}.tp .tpt-st-filled{color:var(--accent)}.tp .tpt-st-targeted{color:var(--warn)}.tp .tpt-st-absent,.tp .tpt-st-na{color:var(--muted)}
 .tp .tpt-cells{letter-spacing:1px;white-space:nowrap}.tp .tpt-cells .tpt-more{font-size:11px;color:var(--muted);margin-left:3px;letter-spacing:0}
 .tp .tpt-leg{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:11px;margin-top:6px;color:var(--muted)}.tp .tpt-leg span[tabindex]{min-height:24px;display:inline-flex;align-items:center;gap:4px}
+.tp tr.tpt-nd td{color:var(--muted);background:var(--bg2,transparent)}.tp tr.tpt-nd .tpt-sp{opacity:.5}
 .tp .lvb.tpt-dec{border-style:double;border-width:4px;padding:0 4px}
 @media(prefers-reduced-motion:no-preference){.tp .tpt-chip,.tp .tpt-tabs button{transition:background .12s,border-color .12s}}`;
 
   /**
-   * @typedef {{ key: string, label: string, title?: string, help?: string, num?: boolean, off?: boolean, sticky?: boolean, width?: number, sort?: (r: any) => number | string | null, cell: (r: any) => string, text?: (r: any) => string }} Col
+   * @typedef {{ key: string, label: string, title?: string, help?: string, num?: boolean, off?: boolean, sticky?: boolean, width?: number, sort?: (r: any) => number | string | null, cell: (r: any) => string, text?: (r: any) => string, value?: (r: any) => number | null }} Col
    * @typedef {{ key: string, label: string, help?: string, test: (r: any) => boolean, on?: boolean, off?: string, group?: string }} Chip
    * @typedef {{ key: string, label: string, help?: string }} Tab
    * @typedef {{ id: string, cols: Col[], rowId: (r: any) => number, name: (r: any) => string, onOpen: (id: any, panel: HTMLElement, tab?: string) => void, onSort?: (key: string, dir: number) => void, esc: (s: any) => string, label?: string, panelId?: string,
    *   chips?: Chip[], search?: (r: any) => string, onFilter?: (keys: string[]) => void, onCount?: (shown: number, total: number) => void, pin?: (r: any) => boolean, tabs?: Tab[], head?: (r: any, box: HTMLElement) => void, height?: number, columns?: boolean,
-   *   virtual?: number, rowHeight?: number, exportName?: string, status?: boolean, decide?: Decide }} Opts
+   *   virtual?: number, rowHeight?: number, exportName?: string, status?: boolean, decide?: Decide, rowClass?: (r: any) => string }} Opts
    * @typedef {{ series: () => any, key: (r: any) => string, level: (r: any) => string | number | null }} Decide the level decided by the chemist (45_tabui_decisioni.js): the series of the run, the key of a row and its proposed level
    */
 
@@ -132,7 +133,7 @@
     function rowHtml(r, idx) {
       const id = idOf(r), on = st.open === id, pinned = o.pin ? o.pin(r) : false;
       const idCol = cols.findIndex(c => c.key === "identity");
-      return `<tr class="clk${on ? " sel" : ""}" data-id="${id}" aria-rowindex="${idx + 2}">${cols.map((c, i) => {
+      return `<tr class="clk${on ? " sel" : ""}${o.rowClass && o.rowClass(r) ? " " + o.rowClass(r) : ""}" data-id="${id}" aria-rowindex="${idx + 2}">${cols.map((c, i) => {
         const k = [c.num ? "n" : "", i === 0 ? "tpt-c0" : "", c.sticky ? "tpt-stk" : ""].filter(Boolean).join(" ");
         const tg = i === 0 ? `<button type="button" class="tpt-tg" data-tg="${id}" aria-expanded="${on}" aria-controls="${panel.id}" aria-label="Details of ${esc(o.name(r))}"><span aria-hidden="true">${on ? "▾" : "▸"}</span></button>${pinned ? `<span class="tpt-pin" tabindex="0" role="img" aria-label="Pinned: the parent"${tt("ft.pin.parent")}>★</span>` : ""}` : "";
         return `<td${k ? ` class="${k}"` : ""}${i === (idCol < 0 ? 0 : idCol) ? ` id="${o.id}-i-${id}"` : ""}${stk(c, i)}>${tg}${c.cell(r)}</td>`;
@@ -305,13 +306,14 @@
     const filtersText = () => `# filters: ${[...chipTests().map(c => c.label), ...(st.q.trim() ? [`search "${st.q.trim()}"`] : [])].join(", ") || "none"}`;
     /** the text of a cell of the view for the export (the model, not the DOM) */
     const textOf = (/** @type {Col} */ c, /** @type {any} */ r) => c.text ? c.text(r) : plain(c.cell(r));
-    /** the columns «Decided level» and «Note» at the end of the view, when the table has decisions @param {{ head: string[], rows: string[][] }} v @param {any[]} list */
+    /** the columns «Decided level» and «Note» at the end of the view, when the table has decisions @param {{ head: string[], rows: any[][] }} v @param {any[]} list */
     const withNotes = (v, list) => dec ? { head: [...v.head, "Decided level", "Note"], rows: v.rows.map((r, i) => { const d = G.TPDEC.get(dec.series(), dec.key(list[i])); return [...r, d ? G.TPDEC.text(d.level) : "", d ? d.note : ""]; }) } : v;
-    const exported = () => ({ head: cols.map(c => plain(c.label)), rows: st.list.map(r => cols.map(c => textOf(c, r))) });
+    /** a column with `value` gives the true number after its text (e.g. an area as «821.43e+6» and as 821430000) */
+    const exported = () => ({ head: cols.flatMap(c => c.value ? [plain(c.label), plain(c.label) + " (number)"] : [plain(c.label)]), rows: st.list.map(r => cols.flatMap(c => c.value ? [textOf(c, r), c.value(r) ?? ""] : [textOf(c, r)])) });
     host.querySelectorAll("[data-x]").forEach(b => b.addEventListener("click", async () => {
       const kind = /** @type {HTMLElement} */ (b).dataset.x, v = withNotes(exported(), st.list), name = o.exportName || "table";
       if (kind === "csv") {
-        const cell = (/** @type {string} */ s) => /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+        const cell = (/** @type {any} */ v) => { const s = String(v ?? ""); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
         G.dl(name + ".csv", "﻿" + [filtersText(), v.head.map(cell).join(";"), ...v.rows.map(r => r.map(cell).join(";"))].join("\r\n") + "\r\n", "text/csv;charset=utf-8", false);
       } else G.dlx(name + ".xlsx", [{ name: "View", head: v.head, rows: v.rows }], false);
     }));
@@ -410,5 +412,12 @@
     return `<span class="lvb pd-${n}" role="img" aria-label="Prev. ${n}, prediction scale"${tt("ft.col.pred")}>Prev. ${n}</span>`;
   }
 
-  G.TPTAB = { mount, spark, state, cells, legend, level, pred };
+  /** an area in engineering notation, never with the suffixes k / M: 821430000 -> «821.43e+6»; a value that rounds up to 1000.00 moves to the next power @param {number} v */
+  const area = v => {
+    if (!Number.isFinite(v) || v === 0) return "0";
+    let e = Math.floor(Math.log10(Math.abs(v)) / 3) * 3, m = (v / 10 ** e).toFixed(2);
+    if (Math.abs(+m) >= 1000) { e += 3; m = (v / 10 ** e).toFixed(2); }
+    return m + "e" + (e < 0 ? "-" : "+") + Math.abs(e);
+  };
+  G.TPTAB = { mount, spark, state, cells, legend, level, pred, area };
 })();
