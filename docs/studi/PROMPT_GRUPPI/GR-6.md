@@ -10,14 +10,14 @@ Pacchetto GR-6 dello studio `docs/studi/TABUI_GRUPPI_ESPERIMENTI.md` (leggi Sint
 La tabella dei prodotti HR dà lo stesso `gruppi/1` del Dig LR, con in più formula neutra ed errore ppm, quando il `campioni/2` ha ≥ 2 condizioni; la rete osservata si calcola dentro ogni condizione. Con una condizione l'uscita non cambia.
 
 ## Da fare
-1. In `tp/tabella.rs` (o un file nuovo `tp/gruppi.rs`): costruisci `GroupTable` dalle aree della tabella delle feature e dalle righe di `tp_table` (`neutral_formula` dall'ipotesi migliore se c'è, `ppm` dell'ione), chiama `gruppi::build` e aggiungi `"gruppi"` a `tptab/1` solo con ≥ 2 condizioni.
+1. In `tp/tabella.rs` (o un file nuovo `tp/gruppi.rs`): costruisci `GroupTable` dalle aree della tabella delle feature e dalle righe di `tp_table` (`neutral_formula` dall'ipotesi migliore se c'è, `ion_formula: Option<String>` prodotta da Rust per l'export CSV HR, `ppm` dell'ione, e `other_polarity: Option<usize>` del contratto `gruppi/1`), chiama `gruppi::build` e aggiungi `"gruppi"` a `tptab/1` solo con ≥ 2 condizioni. Se `area(rif) <= 0.0`, `ratio_ref` è serializzato come `null`. Chiarire che `in_parent_std == "yes"` è un flag solo informativo e NON degrada il verdetto a «Prev. unlikely».
 2. `tp/rete.rs`: con più condizioni, la correlazione «lungo la serie» si calcola per condizione (punti = tempi trattati della condizione, almeno `points`) e un arco vale se vale in almeno una condizione; con < 4 tempi per condizione nessun arco (scrivilo nella nota della riga). Con una condizione stesso risultato di oggi.
 3. `tp/tabella.rs::series`, `in_t0`, `in_blank`: con più condizioni restano quelli della condizione in cui la riga è più forte (compatibilità) e il dettaglio sta in `gruppi`.
 4. Binding: nessuna funzione nuova se `tp_table` basta; se serve, `tp_groups(...)` nello stesso `.wasm` `table`, con il contratto di memoria (`docs/agenti/memoria.md`) e la rotta nativa sorella nel desktop.
 5. Righe in `docs/agenti/mzfeat-tp.md` e `docs/agenti/gruppi.md`.
 
 ## Prove
-- `crates/mzlab-feat/tests/tp_gruppi.rs`: fixture HR sintetica (6 condizioni, endpoint; e 3 × 5 tempi) costruita come in `tests/tp_vista.rs`; `gruppi/1` con `neutral_formula` e `ppm`; matrice uguale alla verità; con una condizione `tptab/1` uguale byte per byte a oggi (`tp_vista.rs`, `tp_ruoli.rs` verdi); rete per condizione su un caso con correlazione opposta fra condizioni.
+- `crates/mzlab-feat/tests/tp_gruppi.rs`: fixture HR sintetica (6 condizioni, endpoint; e 3 × 5 tempi) costruita come in `tests/tp_vista.rs`; `gruppi/1` con `neutral_formula`, `ion_formula`, `other_polarity` e `ppm`; `ratio_ref` nullo se `area(rif) <= 0.0`; `in_parent_std` informativo senza degradare `prev.verdict`; matrice uguale alla verità; con una condizione `tptab/1` uguale byte per byte a oggi (`tp_vista.rs`, `tp_ruoli.rs` verdi); rete per condizione su un caso con correlazione opposta fra condizioni.
 - Peso del `.wasm` `table` dopo `wasm-opt -Oz` sotto il suo limite (misura nella PR).
 
 ## Atteso
