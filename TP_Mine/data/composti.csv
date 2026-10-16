@@ -1,4 +1,4 @@
-names,formula,mass,smiles,inchikey
+names,neutral_formula,mass,smiles,inchikey
 acetaminophen;paracetamol;N-(4-hydroxyphenyl)acetamide,C8H9NO2,151.06333,CC(=O)NC1=CC=C(C=C1)O,RZVAJINKPMORJF-UHFFFAOYSA-N
 acetylsalicylic acid;aspirin;2-acetyloxybenzoic acid,C9H8O4,180.04226,CC(=O)OC1=CC=CC=C1C(=O)O,BSYNRYMUTXBXSQ-UHFFFAOYSA-N
 ibuprofen;58560-75-1;2-[4-(2-methylpropyl)phenyl]propanoic acid,C13H18O2,206.13068,CC(C)CC1=CC=C(C=C1)C(C)C(=O)O,HEFNNWSXXWATRW-UHFFFAOYSA-N

@@ -3,7 +3,7 @@
   "predefinito": "fotocatalisi",
   "profili": {
     "fotocatalisi": {
-      "nome": "TiO2/UV: radicali ·OH, lacune h+, O2·−",
+      "nome": "TiO2/UV: ·OH radicals, h+ holes, O2·−",
       "regole": [
         {"id": "hydroxylation", "nome": "hydroxylation", "classe": "hydroxylation", "delta_formula": "+O", "passi_max": 2, "livello_previsione": 3, "fonte": "transformation_table", "direzione_rt": "piu_polare"},
         {"id": "dihydroxylation", "nome": "dihydroxylation", "classe": "hydroxylation", "delta_formula": "+O2", "passi_max": 2, "livello_previsione": 3, "fonte": "transformation_table", "direzione_rt": "piu_polare"},
@@ -57,13 +57,13 @@
       ]
     },
     "ozono_cloro": {
-      "nome": "ozono e cloro",
+      "nome": "ozone and chlorine",
       "congelato": true,
       "regole": [
       ]
     },
     "metabolismo_I_II": {
-      "nome": "metabolismo di fase I e II",
+      "nome": "phase I and II metabolism",
       "eredita": "fotocatalisi",
       "regole": [
         {"id": "glucuronidation", "nome": "glucuronidation", "classe": "conjugation", "delta_formula": "+C6H8O6", "passi_max": 2, "livello_previsione": 3, "fonte": "classe:metabolismo_I_II", "direzione_rt": "piu_polare"},

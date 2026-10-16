@@ -11,7 +11,7 @@ ROWS = list(csv.DictReader(open(CSV, encoding="utf-8", newline="")))
 
 
 def test_columns_and_size():
-    assert list(ROWS[0]) == ["names", "formula", "mass", "smiles", "inchikey"]
+    assert list(ROWS[0]) == ["names", "neutral_formula", "mass", "smiles", "inchikey"]
     assert CSV.stat().st_size < 300_000
     assert 300 <= len(ROWS) <= 2500
 
@@ -25,14 +25,14 @@ def test_every_row_is_complete_and_unique():
 
 
 def test_mass_matches_the_formula():
-    bad = [(r["names"], r["formula"], r["mass"]) for r in ROWS if abs(E.mass(E.parse_formula(r["formula"])) - float(r["mass"])) > 1e-4]
+    bad = [(r["names"], r["neutral_formula"], r["mass"]) for r in ROWS if abs(E.mass(E.parse_formula(r["neutral_formula"])) - float(r["mass"])) > 1e-4]
     assert not bad, bad[:5]
 
 
 def test_known_compounds_are_there():
     names = {n.strip().lower(): r for r in ROWS for n in r["names"].split(";")}
-    assert names["caffeine"]["formula"] == "C8H10N4O2"
-    assert names["ibuprofen"]["formula"] == "C13H18O2"
+    assert names["caffeine"]["neutral_formula"] == "C8H10N4O2"
+    assert names["ibuprofen"]["neutral_formula"] == "C13H18O2"
 
 
 def test_forbidden_names_are_not_in_the_list():
