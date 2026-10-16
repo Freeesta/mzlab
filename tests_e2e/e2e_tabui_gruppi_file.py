@@ -71,7 +71,8 @@ try:
         }"""
         def open_table():
             pg.evaluate(MOUNT, NAMES); pg.wait_for_selector(f"{G} table .tpg-cond", timeout=120000)
-            assert len([u for u in reqs if "/mzfinder/lazy/gruppi-campioni.js" in u]) == 1, "the script is asked for once"
+            n = pg.evaluate("performance.getEntriesByType('resource').filter(e => e.name.includes('/mzfinder/lazy/gruppi-campioni.js')).length")
+            assert n == 1, ("the script is asked for once", n, [u for u in reqs if "/lazy/" in u])
             assert pg.locator(f"{G} tr .tpg-cond").count() == len(NAMES)
             assert pg.evaluate("window.GRCHANGES.length") >= 1, "the page is told what the table holds at once"
         step("the lazy script loads once and the table appears", open_table)
@@ -128,8 +129,12 @@ try:
 
         def reload():
             before = pg.evaluate(BYNAME); roles = pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)")
-            pg.wait_for_timeout(1000); pg.reload(); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
-            pg.wait_for_function("window.QTOOLS && window.QTOOLS.ctx && NB.campioni", timeout=120000)
+            pg.evaluate("nbSave(true)"); pg.wait_for_timeout(1500)
+            kept = pg.evaluate("fetch('api/notebook').then(r => r.json()).then(j => Object.keys(j))")
+            assert "campioni" in kept and "gruppi_opts" in kept, ("the notebook did not keep it", kept)
+            pg.reload(); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
+            try: pg.wait_for_function("window.QTOOLS && window.QTOOLS.ctx && NB.campioni", timeout=30000)
+            except Exception: raise AssertionError("NB after the reload: " + pg.evaluate("JSON.stringify([Object.keys(NB), !!(window.QTOOLS && QTOOLS.ctx)])"))
             pg.evaluate(MOUNT, NAMES); pg.wait_for_selector(f"{G} table .tpg-cond", timeout=120000)
             assert pg.evaluate(BYNAME) == before, (before, pg.evaluate(BYNAME))
             now = pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)"); assert now == roles, (roles, now)
