@@ -135,6 +135,7 @@ try:
             kept = pg.evaluate("fetch('api/notebook').then(r => r.json()).then(j => Object.keys(j))")
             assert "campioni" in kept and "gruppi_opts" in kept, ("the notebook did not keep it", kept)
             pg.reload(); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
+            pg.wait_for_function("typeof window.nbEnsure === 'function'", timeout=120000); pg.evaluate("window.nbEnsure()")
             try: pg.wait_for_function("window.QTOOLS && window.QTOOLS.ctx && NB.campioni", timeout=30000)
             except Exception: raise AssertionError("NB after the reload: " + pg.evaluate("JSON.stringify([Object.keys(NB), !!(window.QTOOLS && QTOOLS.ctx)])"))
             pg.evaluate(MOUNT, NAMES); pg.wait_for_selector(f"{G} table .tpg-cond", timeout=120000)
