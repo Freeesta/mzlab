@@ -15,7 +15,7 @@
    * @typedef {{ name?: string, formula?: string, ppm?: number | null, adduct?: string, source?: string, level?: string | number, pred?: number, proofs?: TpProof[] }} TpCand
    * @typedef {{ key: string, label: string, help?: string, run: (m: TpRiga) => void }} TpAction
    * @typedef {{ title?: string, level?: string | number, pred?: number, decided?: string | number | null, words?: string, actions?: TpAction[], xic?: TpXic[], apexRt?: number | null, lo?: number | null, hi?: number | null,
-   *   spectrum?: TpSpec | null, line?: string, samples?: TpSample[], identity?: { neutral?: number | string | null, adduct?: string, candidates?: TpCand[] } | null,
+   *   spectrum?: TpSpec | null, spectrum2?: TpSpec | null, line?: string, samples?: TpSample[], identity?: { neutral?: number | string | null, adduct?: string, candidates?: TpCand[] } | null,
    *   quality?: { shape?: number | string | null, snr?: number | null, fwhm?: number | null, flags?: string[], isoM1?: number | string | null, blank?: any, t0?: any, rejected?: string[] } | null,
    *   missing?: Record<string, string> }} TpRiga
    */
@@ -121,16 +121,16 @@
     const leg = `<p class="tpr-leg" aria-hidden="true">${[...groups].map(([g, t]) => `<span style="color:${kind(t) === "time" ? colour(t) : "var(--muted)"}"><i${kind(t) === "blank" ? ` class="d"` : ""}${kind(t) === "t0" ? ` style="color:var(--ink)"` : ""}></i><span style="color:var(--ink)">${esc(g)}</span></span>`).join("")}</p>`;
     const stride = Math.max(1, Math.ceil(xs.reduce((a, t) => a + t.rt.length, 0) / 600)), rows = /** @type {string[][]} */ ([]);
     for (const t of xs) for (let i = 0; i < t.rt.length; i += stride) rows.push([t.file, t.group || "", fin(t.time) ? String(t.time) : "", t.rt[i].toFixed(3), String(Math.round(t.y[i] || 0))]);
-    const apex = fin(m.apexRt) ? `, apex at ${/** @type {number} */ (m.apexRt).toFixed(2)} min` : "", edges = lo != null && hi != null ? `, peak edges ${lo.toFixed(2)} to ${hi.toFixed(2)} min (shaded)` : "";
+    const apex = fin(m.apexRt) ? `, apex at ${/** @type {number} */ (m.apexRt).toFixed(2)} min` : "", edges = lo != null && hi != null && hi > lo ? `, peak edges ${lo.toFixed(2)} to ${hi.toFixed(2)} min (shaded)` : "";
     chart(box, "XIC, all samples", `Extracted ion chromatograms of ${xs.length} samples in ${groups.size} groups, colour = time of the sample${apex}${edges}.`, s, { head: ["File", "Group", "Time", "RT (min)", "Intensity"], rows });
     box.insertAdjacentHTML("beforeend", leg);
   }
 
   // spectrum: MS1 with the expected isotopes (hollow) and the observed ones (filled), MS2, or MS2 against a reference (mirror)
   const SW = 340, SH = 150;
-  /** @param {HTMLElement} box @param {TpRiga} m */
-  function specChart(box, m) {
-    const sp = m.spectrum;
+  /** @param {HTMLElement} box @param {TpRiga} m @param {boolean} [second] the second spectrum (`spectrum2`) */
+  function specChart(box, m, second) {
+    const sp = second ? m.spectrum2 : m.spectrum;
     if (!sp || !sp.mz || !sp.mz.length) { none(box, "Spectrum", m.missing && m.missing.spectrum); return; }
     const mirror = sp.kind === "mirror" && sp.ref && sp.ref.mz.length > 0, all = [...sp.mz, ...(mirror && sp.ref ? sp.ref.mz : []), ...(sp.iso && sp.iso.exp ? sp.iso.exp.mz : [])];
     const lo = Math.min(...all), hi = Math.max(...all), pad = (hi - lo || 1) * 0.06, a = lo - pad, b = hi + pad;
@@ -184,6 +184,7 @@
     const g = document.createElement("div"); g.className = "tpr-ov"; panel.appendChild(g);
     const a = document.createElement("div"), b = document.createElement("div"); a.className = b.className = "tpr-ch"; g.append(a, b);
     xicChart(a, m); specChart(b, m);
+    if (m.spectrum2 && m.spectrum2.mz && m.spectrum2.mz.length) { const c = document.createElement("div"); c.className = "tpr-ch"; g.appendChild(c); specChart(c, m, true); }
     if (m.line) { const p = document.createElement("p"); p.className = "tpr-line"; p.textContent = m.line; panel.appendChild(p); }
   }
 
