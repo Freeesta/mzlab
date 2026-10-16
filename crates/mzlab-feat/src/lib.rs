@@ -22,6 +22,7 @@ pub mod famalign;
 pub mod family;
 pub mod filters;
 pub mod gapfill;
+pub mod gruppi;
 pub mod hypo;
 pub mod import;
 pub mod isotopes;

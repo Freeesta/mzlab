@@ -681,9 +681,10 @@
       /** @type {any} */
       const m = { ...headModel(r), apexRt: d.ref_rt, lo: pk.length ? Math.min(...pk.map(p => p.left)) : null, hi: pk.length ? Math.max(...pk.map(p => p.right)) : null, missing };
       if (d.traces.length) m.xic = d.traces.map(t => { const x = by.get(t.label); return { file: t.label, group: GROUP(x || t), time: x ? x.time : null, rt: t.rt, y: t.y }; }); else missing.xic = "no trace for this row";
-      const fr = d.ms2 && d.ms2.scans && d.ms2.fragments && d.ms2.fragments.length ? d.ms2.fragments : null;
-      if (fr) m.spectrum = { kind: "ms2", mz: fr.map(f => f.mz), y: fr.map(f => f.rel) }; else missing.spectrum = "no MS2 matched to this ion";
-      m.line = [`RT ${d.ref_rt ? d.ref_rt.toFixed(2) : "?"} min${m.lo != null ? ` (${m.lo.toFixed(2)}-${m.hi.toFixed(2)})` : ""}`, `m/z ${d.mz_extracted} extracted${d.mz_observed ? `, ${d.mz_observed.toFixed(2)} observed` : ""}`, fr ? `${d.ms2.scans} MS2 scans, precursor ${d.ms2.precursor}${window.TPMS2 ? window.TPMS2.from(d).replace(/<[^>]*>/g, "") : ""}` : ""].filter(Boolean).join(" · ");
+      const rp = d.ms2_rep && d.ms2_rep.mz && d.ms2_rep.mz.length ? d.ms2_rep : null;
+      if (rp) { m.spectrum = { kind: "ms2", mz: rp.mz, y: rp.int, prec: rp.precursor, label: `MS2 at RT ${rp.rt.toFixed(2)} min, precursor m/z ${rp.precursor.toFixed(2)}` }; m.ms2text = d.ms2_text; }
+      else missing.spectrum = d.ms2_text || "no MS2 matched to this ion";
+      m.line = [`RT ${d.ref_rt ? d.ref_rt.toFixed(2) : "?"} min${m.lo != null ? ` (${m.lo.toFixed(2)}-${m.hi.toFixed(2)})` : ""}`, `m/z ${d.mz_extracted} extracted${d.mz_observed ? `, ${d.mz_observed.toFixed(2)} observed` : ""}`, window.TPMS2 ? window.TPMS2.repLine(d) : ""].filter(Boolean).join(" · ");
       m.samples = d.rows.map(x => ({ file: x.label, type: GROUP(x), time: x.time, area: x.detected ? x.area : 0, state: x.detected ? "detected" : "absent", apexRt: x.detected ? x.apex_rt : null, lo: m.lo, hi: m.hi }));
       const proofs = d.criteria.filter(c => c.status === "pass" || c.status === "fail").map(c => ({ ok: c.status === "pass", text: `${c.name}: ${c.text}` }));
       m.identity = { neutral: null, adduct: st.summary.parent.adduct, candidates: [{ name: idLabel(r), formula: d.formula || "", adduct: st.summary.parent.adduct, source: d.delta || "", level: r.level ?? undefined, proofs }, ...d.alternatives.map(a => ({ name: a, adduct: st.summary.parent.adduct }))] };
@@ -771,6 +772,7 @@
           { name: "Criteria", head: ["#", "Candidate", "Criterion", "Outcome", "Detail"], rows: det.flatMap(d => d.criteria.map(c => [d.id, d.name, c.name, c.status, c.text])), widths: [6, 38, 28, 8, 70] },
           { name: "MS2", head: ["#", "Candidate", "Product m/z", "% rel.", "Loss", "Note", "Similarity to the parent"], rows: det.flatMap(d => d.ms2.fragments.map(f => [d.id, d.name, f.mz, f.rel, f.loss ?? "", f.note || "", d.sim ? d.sim.cos.total : ""])), widths: [6, 38, 12, 9, 9, 50, 14] },
           ...(window.TPMS2 && window.TPMS2.sheet() ? [window.TPMS2.sheet()] : []),
+          ...(window.TPMS2 && window.TPMS2.repSheet(det) ? [window.TPMS2.repSheet(det)] : []),
           { name: "MRM transitions", head: ["Candidate", "Neutral formula", "Q1", "Q3 observed", "Q3 suggested", "CE", "Expected RT", "RT window", "% rel.", "MS2 scans", "Note"], rows: trans.map(t => [t.compound, t.formula, t.Q1, t.Q3_osservato, t.Q3_consigliato, t.CE, t.RT_attesa_min, t.finestra_RT_min, t["intensita_rel_%"], t.scansioni_ms2, t.nota]), widths: [34, 16, 8, 12, 14, 7, 10, 11, 8, 12, 40] },
           ...(s.mrm ? [mrmSheet(s.mrm)] : []),
           { name: "Information", head: ["Item", "Value"], rows: [["Parent", s.parent.formula], ["Neutral mass", s.parent.neutral], ["Adduct", s.parent.adduct], ["Parent m/z", s.parent.mz], ["m/z offset (Da)", s.offset ? s.offset.offset : ""], ["k (1/min)", s.decay ? s.decay.k_per_min : ""], ["t1/2 (min)", s.decay ? s.decay.half_life_min : ""], ...Object.entries(s.settings).map(([k, v]) => [k, String(v)]), ...s.files.map(f => ["File", `${f.name} (${f.kind}, ${f.type}, t=${f.time ?? ""})`]), ["Note", "Unit resolution: each row is a candidate, not an identification. Levels 2 and 1 require a library spectrum or a standard."]], widths: [22, 90] }];

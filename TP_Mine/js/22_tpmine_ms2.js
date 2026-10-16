@@ -41,12 +41,12 @@
   /** One line per peak of every experiment: the matches, then the peaks and experiments no row got. */
   function itemsOf(/** @type {any} */ L) {
     /** @type {any[]} */ const out = [], seen = new Set();
-    for (const k of L.links) { out.push({ exp: k.exp, peak: k.peak, row: k.row, state: k.state, dmz: k.dmz, drt: k.drt, why: k.why || "", alts: k.alternatives || [], reason: "" }); seen.add(k.exp); }
+    for (const k of L.links) { out.push({ exp: k.exp, peak: k.peak, row: k.row, state: k.state, dmz: k.dmz, dppm: k.dppm, drt: k.drt, why: k.why || "", alts: k.alternatives || [], reason: "" }); seen.add(k.exp); }
     for (const u of L.unmatched) {
-      out.push({ exp: u.exp, peak: u.peak, row: null, state: u.reason === "stale" ? "stale" : u.reason === "user" ? "user" : "none", dmz: null, drt: null, why: u.why || "", alts: u.rows || [], reason: u.reason });
+      out.push({ exp: u.exp, peak: u.peak, row: null, state: u.reason === "stale" ? "stale" : u.reason === "user" ? "user" : "none", dmz: null, dppm: null, drt: null, why: u.why || "", alts: u.rows || [], reason: u.reason });
       if (u.exp != null) seen.add(u.exp);
     }
-    L.experiments.forEach((/** @type {any} */ _, /** @type {number} */ x) => { if (!seen.has(x)) out.push({ exp: x, peak: null, row: null, state: "none", dmz: null, drt: null, why: "", alts: [], reason: "" }); });
+    L.experiments.forEach((/** @type {any} */ _, /** @type {number} */ x) => { if (!seen.has(x)) out.push({ exp: x, peak: null, row: null, state: "none", dmz: null, dppm: null, drt: null, why: "", alts: [], reason: "" }); });
     return out;
   }
   const badge = (/** @type {string} */ s) => { const [t, h] = STATE[/** @type {keyof typeof STATE} */ (s)] || STATE.none; return `<span class="tp-st tp-st-${s}" title="${esc(h)}">${t}</span>`; };
@@ -65,13 +65,13 @@
   const expCells = (/** @type {any} */ x) => x ? `<td title="${esc(x.file)}">${esc(String(x.file).replace(/\.mzml$/i, ""))}${x.time != null ? ` <span class="mut">t ${x.time}</span>` : ""}</td><td class="n">${num(x.precursor)}</td><td class="n">${x.ce == null ? "" : x.ce}</td><td class="n">${x.polarity > 0 ? "+" : x.polarity < 0 ? "−" : ""}</td>` : `<td></td><td></td><td></td><td></td>`;
 
   function tableHtml(/** @type {any[]} */ list, /** @type {boolean} */ lost) {
-    const L = cur.links, head = lost ? "<th scope=\"col\">Reason</th>" : "<th scope=\"col\">Row</th><th scope=\"col\"><i>Δm/z</i></th><th scope=\"col\">ΔRT</th>";
+    const L = cur.links, head = lost ? "<th scope=\"col\">Reason</th>" : "<th scope=\"col\">Row</th><th scope=\"col\"><i>Δm/z</i> (Da · ppm)</th><th scope=\"col\">ΔRT (min)</th>";
     const body = list.map(it => {
       const x = L.experiments[it.exp], p = x && it.peak != null ? x.peaks[it.peak] : null, why = lost ? REASON[/** @type {keyof typeof REASON} */ (it.reason)] || it.why : it.why;
       const sel = x && p ? menu(it, x, cur.items.indexOf(it)) : "";
       const rm = it.state === "stale" ? ` <button type="button" class="tp-ms2-rm" title="Forget the corrections that find no peak any more">Remove</button>` : "";
       return `<tr>${expCells(x)}<td class="n">${p ? num(p.apex) : ""}</td><td>${badge(it.state)}</td>`
-        + (lost ? `<td title="${esc(it.why)}">${esc(why)}${rm}</td><td>${sel}</td>` : `<td>${sel}</td><td class="n">${num(it.dmz)}</td><td class="n">${num(it.drt)}</td><td class="mut">${esc(why)}</td>`) + "</tr>";
+        + (lost ? `<td title="${esc(it.why)}">${esc(why)}${rm}</td><td>${sel}</td>` : `<td>${sel}</td><td class="n">${it.dmz == null ? "" : `${num(it.dmz)} Da · ${num(it.dppm)} ppm`}</td><td class="n">${num(it.drt)}</td><td class="mut">${esc(why)}</td>`) + "</tr>";
     }).join("");
     return `<div class="tbl"><table><caption class="tp-sr">${lost ? "MS2 experiments that no row got" : "MS2 experiments matched to a row"}</caption><tr><th scope="col">File</th><th scope="col"><i>m/z</i></th><th scope="col">CE</th><th scope="col">Pol.</th>`
       + `<th scope="col">Apex (min)</th><th scope="col">State</th>${lost ? head + "<th scope=\"col\">Assign to</th>" : head + "<th scope=\"col\">Why</th>"}</tr>${body}</table></div>`;
@@ -137,6 +137,12 @@
   const best = (/** @type {any} */ d) => linksOf(d).reduce((/** @type {any} */ m, /** @type {any} */ k) => !m || k.scans > m.scans ? k : m, null);
   /** "from F at t min" for the words of a detail. */
   const from = (/** @type {any} */ d) => { const k = best(d); return k ? ` (from ${esc(String(k.file).replace(/\.mzml$/i, ""))}, peak at ${num(k.apex)} min)` : ""; };
+  /** The representative scan of a detail in words: where it comes from, Δm/z in Da and ppm, ΔRT, the tolerance used and the other scans of the peak. */
+  function repLine(/** @type {any} */ d) {
+    const r = d && d.ms2_rep; if (!r) return "";
+    const src = r.tol_window ? "half the isolation window of the file" : "table tolerance, the file has no isolation window";
+    return `Representative MS2: ${String(r.file).replace(/\.mzml$/i, "")} at RT ${num(r.rt)} min (the most intense of ${r.n_in} scan${r.n_in > 1 ? "s" : ""} in the peak by ${r.intensity_src}${r.others ? `; ${r.others} other${r.others > 1 ? "s" : ""} not drawn` : ""}), precursor m/z ${num(r.precursor)}, Δm/z ${num(r.dmz)} Da (${num(r.dppm)} ppm), ΔRT ${num(r.drt)} min, tolerance ±${num(r.tol)} Da (${src}).`;
+  }
   /** Why a row has no MS2 when an experiment with its precursor exists. */
   function missing(/** @type {any} */ d) {
     const L = cur.links; if (!L) return "";
@@ -175,9 +181,14 @@
     const rows = cur.items.map(it => {
       const x = L.experiments[it.exp], p = x && it.peak != null ? x.peaks[it.peak] : null, r = it.row != null ? rowOf(it.row) : null;
       return [x ? x.file : "", x && x.time != null ? x.time : "", x ? x.precursor : "", x && x.ce != null ? x.ce : "", x ? x.polarity : "", p ? p.apex : "", (STATE[/** @type {keyof typeof STATE} */ (it.state)] || STATE.none)[0],
-        it.row ?? "", r ? r.name : "", it.dmz ?? "", it.drt ?? "", it.reason ? (REASON[/** @type {keyof typeof REASON} */ (it.reason)] || it.reason) : "", it.why];
+        it.row ?? "", r ? r.name : "", it.dmz ?? "", it.dppm ?? "", it.drt ?? "", it.reason ? (REASON[/** @type {keyof typeof REASON} */ (it.reason)] || it.reason) : "", it.why];
     });
-    return { name: "MS2 matches", head: ["File", "t (min)", "Precursor m/z", "CE", "Polarity", "Apex (min)", "State", "Row #", "Row", "Δm/z", "ΔRT (min)", "Reason", "Why"], rows, widths: [34, 8, 12, 6, 8, 10, 11, 7, 30, 8, 9, 34, 60] };
+    return { name: "MS2 matches", head: ["File", "t (min)", "Precursor m/z", "CE", "Polarity", "Apex (min)", "State", "Row #", "Row", "Δm/z (Da)", "Δm/z (ppm)", "ΔRT (min)", "Reason", "Why"], rows, widths: [34, 8, 12, 6, 8, 10, 11, 7, 30, 9, 10, 9, 34, 60] };
+  }
+  /** The sheet «MS2 representative»: for every row with an MS2 scan inside its peak, the scan that stands for it, its Δm/z, ΔRT and tolerance, and the sentence of the fragments found. */
+  function repSheet(/** @type {any[]} */ det) {
+    const rows = det.filter(d => d.ms2_rep).map(d => { const r = d.ms2_rep; return [d.id, d.name, r.file, r.rt, r.precursor, r.dmz, r.dppm, r.drt, r.tol, r.tol_window ? "half isolation window" : "table tolerance", r.n_in, r.others, d.ms2_text]; });
+    return rows.length ? { name: "MS2 representative", head: ["#", "Candidate", "File", "RT (min)", "Precursor m/z", "Δm/z (Da)", "Δm/z (ppm)", "ΔRT (min)", "Tolerance (Da)", "Tolerance from", "Scans in the peak", "Other scans", "Fragment ions found"], rows, widths: [6, 38, 34, 9, 12, 9, 10, 9, 12, 20, 10, 10, 120] } : null;
   }
   const cell = (/** @type {any} */ r) => r.ms2 ? `${r.ms2}<span class="tp-sr"> MS2 experiment${r.ms2 > 1 ? "s" : ""}</span>` : `<span class="tp-sr">no MS2</span>`;
   const overrides = () => cur.ovr;
@@ -190,5 +201,5 @@
 .tp .tp-ms2-l{margin:4px 0 8px;padding-left:18px;font-size:12px}.tp .tp-ms2-l li{margin:3px 0}@media (pointer:coarse){.tp #tp-ms2map select,.tp #tp-ms2map button,.tp .tp-ms2-ch{min-height:40px}}`;
   const st = document.createElement("style"); st.textContent = CSS; document.head.appendChild(st);
 
-  /** @type {any} */ (window).TPMS2 = { start, card, mount, detail, bindDetail, from, sheet, cell, overrides };
+  /** @type {any} */ (window).TPMS2 = { start, card, mount, detail, bindDetail, from, repLine, sheet, repSheet, cell, overrides };
 })();
