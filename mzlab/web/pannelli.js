@@ -147,6 +147,23 @@ function closePanel(p) {
   STATO.rimuovi(p, "close");
 }
 
+/** The X of a panel: it closes at once and «Removed · Undo» opens it again, in its place and with its integrations, zoom and settings (storia.js). @param {any} p */
+function chiudiPannello(p) {
+  const dati = JSON.stringify(panelRec(p)), tab = p.tab, rel = { link: p.link, src: p.src, dda: p.dda, dock: p.dock, duo: p.duo };
+  const what = typeof p.title === "string" && p.title ? p.title : I18N.t("storia.pannello");
+  const after = () => { relayout(); fitHost(); uiSave(); if (tabFiles("ms2").length) renderFileList(); };
+  let cur = p;
+  const chiudi = () => { closePanel(cur); after(); };
+  chiudi();
+  if (!STORIA) return;
+  STORIA.tolto({ what, tab, dati, redo: chiudi, undo: () => {
+    const sp = JSON.parse(dati); sp.y = (sp.y || 0) - 0.5;                       // ahead of the panels that moved up into its place (relayout sorts by y)
+    const q = riapriPannello(sp);
+    for (const k of /** @type {const} */ (["link", "src", "dda", "dock", "duo"])) q[k] = rel[k] != null && E.panels.some(x => x.id === rel[k]) ? rel[k] : null;
+    STORIA.segui(cur, q); cur = q; after(); ctl(q); redrawAll();
+  } });
+}
+
 function closeAllPanels() {
   const all = E.panels.slice();
   all.forEach(p => closePanel(p));
@@ -322,7 +339,7 @@ function addPanel(type, o, after) {
     el.querySelector('[data-a="intf"]').onchange = e => { p.intf = e.target.value; };
   }
   if (bX) bX.onclick = () => openXic(null, { after: p });      // the new XIC sits right under this chromatogram
-  el.querySelector(".x").onclick = () => { closePanel(p); relayout(); fitHost(); uiSave(); if (tabFiles("ms2").length) renderFileList(); };
+  el.querySelector(".x").onclick = () => chiudiPannello(p);
   el.querySelector(".ttl").ondblclick = async () => { const v = await ask(I18N.t("panel.rename.prompt"), ptitle(p.title)); if (v) { p.title = v === ptitle(p.title) ? p.title : v; ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
   return p;

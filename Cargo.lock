@@ -1941,6 +1941,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-cli"
+version = "1.0.1"
+dependencies = [
+ "mzlab-core",
+ "mzlab-feat",
+ "mzlab-feat-table-wasm",
+ "mzlab-feat-wasm",
+ "mzlab-lettori",
+]
+
+[[package]]
 name = "mzlab-core"
 version = "1.0.1"
 dependencies = [
