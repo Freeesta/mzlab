@@ -258,9 +258,11 @@ fn embedded_adduct(text: &str) -> (String, Option<&'static str>) {
     }
     if let Some(i) = t.rfind(['+', '-']) {
         let (head, tail) = (&t[..i], &t[i..]);
-        let hit = names
-            .iter()
-            .find(|a| a.strip_prefix("[M").and_then(|r| r.rfind(']').map(|j| &r[..j])) == Some(tail));
+        let hit = names.iter().find(|a| {
+            a.strip_prefix("[M")
+                .and_then(|r| r.rfind(']').map(|j| &r[..j]))
+                == Some(tail)
+        });
         if let (Some(a), false) = (hit, head.is_empty()) {
             return (head.to_string(), Some(*a));
         }
