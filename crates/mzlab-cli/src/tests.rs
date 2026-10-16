@@ -138,6 +138,10 @@ fn the_csv_of_the_cli_is_the_one_of_the_page() {
         "{}",
         lines[0]
     );
+    assert!(
+        !lines[0].to_lowercase().split(',').any(|c| c == "formula"),
+        "no bare formula column"
+    );
     assert!(lines.len() > 2, "the ions are rows of the table");
 
     // the numbers of the panel from a JSON file, to a .csv file, standard output untouched
