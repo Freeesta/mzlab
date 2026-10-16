@@ -128,7 +128,7 @@ Il JS non calcola medie, rapporti né insiemi: legge `gruppi/1`. CSV e SVG si sc
 ## 9. Pacchetti e ordine
 | Passo | Pacchetto | Parte dopo | Stima (giorni-chat) | Stato |
 |---|---|---|---|---|
-| 1 | GR-1 modulo Rust `gruppi/`, schema `gruppi-1.json`, fixture | subito | 2 | da fare |
+| 1 | GR-1 modulo Rust `gruppi/`, schema `gruppi-1.json`, fixture | subito | 2 | fatto: PR aperta; 2 000 righe × 60 file ≈ 40 ms nativo |
 | 1 (parallelo) | GR-3 tabella dei file con «Condition», riferimento, `campioni/2` in Tabui LR, caricamento pigro | subito (usa la fixture di prova propria fino a GR-1) | 1,5-2 | da fare |
 | 1 (parallelo) | GR-4 vista «Compare conditions»: matrice, UpSet, grafici, esportazioni | subito (fixture) | 2-2,5 | da fare |
 | 2 | GR-2 Dig LR per condizione, dati sintetici multi-condizione, `gruppi/1` nel `.wasm` `finder-lr` e nel desktop | merge di GR-1 | 2 | da fare |
