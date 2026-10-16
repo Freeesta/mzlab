@@ -198,7 +198,7 @@
     const acts = (m.actions || []).map(a => `<button type="button" class="tpr-act" data-act="${esc(a.key)}"${tt(a.help)}>${esc(a.label)}</button>`).join("");
     // the badge of the level only with the decision of the chemist (it follows it); the closed row above already shows it otherwise. «Decided:» only for a table that gives it
     const dec = m.decide ? `<span class="tpr-dec" data-slot="decided"${tt("ft.decided")}${G.TPHELP ? ` tabindex="0"` : ""}>Decided: ${decided != null && decided !== "" ? esc(String(decided)) : "—"}</span>`
-      : "decided" in m && decided != null && decided !== "" ? `<span class="tpr-dec"${tt("ft.decided")}${G.TPHELP ? ` tabindex="0"` : ""}>Decided: ${esc(String(decided))}</span>` : "";
+      : "decided" in m ? `<span class="tpr-dec"${tt("ft.decided")}${G.TPHELP ? ` tabindex="0"` : ""}>Decided: ${decided != null && decided !== "" ? esc(String(decided)) : "—"}</span>` : "";
     const lv = m.decide && m.level != null && m.level !== "" && G.TPTAB ? G.TPTAB.level(m.level, { decided }) : "";
     const sums = (m.summary || []).filter(x => x && x.value !== "" && x.value != null);
     const sum = sums.length ? `<span class="tpr-sums" role="group" aria-label="Summary of the row">${sums.map(x => `<span class="tpr-sum"${tt(x.help)}${x.help && G.TPHELP ? ` tabindex="0"` : ""}><span class="k">${esc(x.label)}</span> <span>${esc(x.value)}</span></span>`).join("")}</span>`

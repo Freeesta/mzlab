@@ -199,7 +199,7 @@ try:
           const samp = n => Array.from({ length: n }, (_, i) => ({ file: "s" + i + ".mzML", type: i === 0 ? "blank" : i === 1 ? "t0" : "time", time: i < 2 ? (i === 1 ? 0 : null) : i * 15, area: i === 0 ? 0 : 1e4 * Math.pow(2, i), norm: 0.1 * i,
             state: i === 0 ? "absent" : i % 5 === 3 ? "filled" : "detected", apexRt: 7.1, lo: 6.95, hi: 7.31 }));
           const acts = [{ key: "copy", label: "Copy", help: "ft.riga.copy", run: () => { window.__act = "copy"; } }];
-          const full = { title: "+O", level: "3", pred: 2, decided: null, summary: [{ label: "Net change", value: "+O", help: "ft.col.net" }, { label: "m/z", value: "257.0591" }, { label: "RT", value: "7.10 min" }], actions: acts, open: { xic: () => { window.__go = "xic"; } }, xic: mk(6), apexRt: 7.1, lo: 6.95, hi: 7.31,
+          const full = { title: "+O", level: "3", pred: 2, summary: [{ label: "Net change", value: "+O", help: "ft.col.net" }, { label: "m/z", value: "257.0591" }, { label: "RT", value: "7.10 min" }], actions: acts, open: { xic: () => { window.__go = "xic"; } }, xic: mk(6), apexRt: 7.1, lo: 6.95, hi: 7.31,
             spectrum: { kind: "ms1", mz: [257.059, 258.062, 259.057], y: [100, 11, 5], iso: { exp: { mz: [257.059, 258.062, 259.057], y: [100, 12, 4.5] }, obs: { mz: [257.059, 258.062, 259.057], y: [100, 11, 5] } } },
             xicTip: "RT 7.10 min (6.95-7.31) · FWHM 0.08 min.", samples: samp(6),
             identity: { neutral: 256.0518, adduct: "[M+H]+", candidates: [
