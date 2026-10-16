@@ -18,7 +18,7 @@ try:
         r.b = p.chromium.launch()
         ctx = r.b.new_context(viewport={"width": 1400, "height": 900})
         pg = ctx.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.upd.last',String(Date.now()));}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');localStorage.setItem('qqq.upd.last',String(Date.now()));}catch(_){}")
         pg.add_init_script(FAKE)
         pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
         def box(): return pg.inner_text("#updbox") if pg.query_selector("#updbox") else ""

@@ -255,7 +255,7 @@ try:
         def ipad():
             for w, h in ((1024, 1366), (1366, 1024)):
                 ctx = r.b.new_context(viewport={"width": w, "height": h}, has_touch=True, is_mobile=True, locale="it-IT", reduced_motion="reduce")
-                q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
+                q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
                 q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_timeout(1500)
                 try:
                     stage(q, [EX]); q.click("text=Carica dati"); ready(q); q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); q.wait_for_timeout(800)     # the session lives in the browser: a new context opens the file itself
@@ -276,7 +276,7 @@ try:
 
         def telefono():
             ctx = r.b.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True, locale="it-IT", reduced_motion="reduce")
-            q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
+            q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
             q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); q.wait_for_timeout(1500)
             try:
                 stage(q, [EX]); q.click("text=Carica dati"); ready(q); q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); q.wait_for_timeout(800)     # the session lives in the browser: a new context opens the file itself

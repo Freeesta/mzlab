@@ -1,6 +1,6 @@
 """Tabui, help and field errors (TP_Mine/js/40_tabui_testi.js, 41_tabui_aiuto.js, 41_tabui_campi.js, 20_tpmine.js, 43_trasformazioni.js):
-(1) the help popover of a «?» button opens with the mouse, with the keyboard focus and with the touch, closes with Esc leaving the focus on the button, and speaks Italian
-or English with the page; without qqq.admin there is no TT; (2) the fields of the form have short placeholders and labels; (3) the error «Enter a formula or SMILES.» marks the
+(1) the help popover of a field and of its label (no «?» buttons) opens with the mouse, with the keyboard focus and with the touch, closes with Esc leaving the focus on the field, and is English only
+English only whatever the page language; without qqq.admin there is no TT; (2) the fields of the form have short placeholders and labels; (3) the error «Enter a formula or SMILES.» marks the
 formula and the SMILES together (aria-invalid, red double border, message linked with aria-describedby) and both return to normal on a click or a key in either; the same rule on
 the fields of the list of transformations. axe: no serious or critical violation (SKIP part without axe-core).
 Run from the repo root: python3 tests_e2e/e2e_tabui_aiuto.py"""
@@ -49,35 +49,54 @@ try:
         step("without qqq.admin there is no TT and no TPHELP", lambda: (lambda r: r == [False, False] or (_ for _ in ()).throw(AssertionError(r)))(pg0.evaluate("[typeof window.TT === 'function', typeof window.TPHELP === 'object']")))
         pg0.context.close()
         pg = fresh(True, "en")
-        def mount():                                                         # the help of a column header, mounted by hand in #tp-right
-            pg.evaluate("""() => { const d = document.createElement('div'); d.id = 'tph-test'; d.innerHTML = '<span>Level</span>' + TPHELP.button('ft.col.level', 'Level'); document.querySelector('#tp-right').prepend(d); TPHELP.attach(d); }""")
-            assert pg.evaluate("TT('ft.col.level').startsWith('Identification level')")
-            bb = pg.locator("#tph-test .tph-b").bounding_box(); assert bb["width"] >= 24 and bb["height"] >= 24, bb
-        step("TPHELP.button is at least 24x24 px", mount)
+        FIELDS = [("#tp-name", None, "ft.f.name"), ("#tp-mol", None, "ft.f.formula"), ("#tp-smi", None, "ft.f.smiles"), ("#tp-add", "label[for=tp-add]", "ft.f.adduct"), ("#tp-prt", "label[for=tp-prt]", "ft.f.prt"),
+                  ("#tp-tol", "label[for=tp-tol]", "ft.f.tol"), ("#tp-rtt", "label[for=tp-rtt]", "ft.f.rtt"), ("#tp-steps", "label[for=tp-steps]", "ft.f.steps"), ("#tp-minf", "label[for=tp-minf]", "ft.f.minf"),
+                  ("#tp-rtmin", "label[for=tp-rtmin]", "ft.f.rtmin"), ("#tp-disc", "#tp-disc-h", "ft.f.disc")]
+        def no_buttons():
+            assert pg.evaluate("document.querySelectorAll('#v-tpmine .tph-b, #v-tpmine button[data-tt]:not(.tpt-sh):not(.tpt-chip)').length") == 0
+            assert pg.evaluate("typeof TPHELP.button") == "undefined"
+            assert not [b for b in pg.evaluate("[...document.querySelectorAll('#v-tpmine button')].map(b => b.textContent.trim())") if b == "?"]
+        step("no «?» button in Tabui", no_buttons)
+        def markers():
+            for f, lab, key in FIELDS:
+                assert pg.get_attribute(f, "data-tt") == key or (f == "#tp-disc" and pg.get_attribute(lab, "data-tt") == key), (f, key)
+                if lab: assert pg.get_attribute(lab, "data-tt") == key, (lab, key)
+        step("every field and every label carries its help key", markers)
         def mouse():
-            pg.hover("#tph-test .tph-b"); pg.wait_for_selector(POP + ":not([hidden])", timeout=3000)
-            assert "Identification level" in pg.inner_text(POP) and pg.get_attribute("#tph-test .tph-b", "aria-expanded") == "true"
+            pg.hover("label[for=tp-tol]"); pg.wait_for_selector(POP + ":not([hidden])", timeout=3000)
+            assert "XIC window" in pg.inner_text(POP)
             pg.hover(POP); lib.hold(pg, 400); assert pg.is_visible(POP), "the popover must stay open under the pointer"
             pg.mouse.move(5, 5); pg.wait_for_selector(POP, state="hidden", timeout=3000)
-        step("the popover opens on hover, stays under the pointer, closes when it leaves", mouse)
+            pg.hover("#tp-smi"); pg.wait_for_selector(POP + ":not([hidden])", timeout=3000)
+            assert "Structure of the parent" in pg.inner_text(POP); pg.mouse.move(5, 5); pg.wait_for_selector(POP, state="hidden", timeout=3000)
+            pg.hover("label[for=tp-add]"); pg.wait_for_selector(POP + ":not([hidden])", timeout=3000)
+            assert "Ion with which" in pg.inner_text(POP); pg.mouse.move(5, 5)
+        step("the help opens on the label and on the field, stays under the pointer, closes when it leaves", mouse)
         def keyboard():
-            pg.focus("#tph-test .tph-b"); pg.wait_for_selector(POP + ":not([hidden])", timeout=3000)
-            assert pg.get_attribute("#tph-test .tph-b", "aria-describedby") == "tph-pop"
-            pg.keyboard.press("Escape"); assert not pg.is_visible(POP)
-            assert pg.evaluate("document.activeElement.classList.contains('tph-b')"), "the focus must stay on the button"
-            pg.keyboard.press("Enter"); pg.wait_for_selector(POP + ":not([hidden])", timeout=3000)
+            pg.focus("#tp-tol"); pg.wait_for_selector(POP + ":not([hidden])", timeout=3000)
+            assert "tph-pop" in pg.get_attribute("#tp-tol", "aria-describedby").split()
+            pg.keyboard.press("Escape"); assert not pg.is_visible(POP) and pg.get_attribute("#tp-tol", "aria-describedby") is None
+            assert pg.evaluate("document.activeElement.id") == "tp-tol", "the focus must stay on the field"
+            pg.focus("#tp-add"); pg.wait_for_selector(POP + ":not([hidden])", timeout=3000)
+            pg.keyboard.press("Tab"); pg.wait_for_selector(POP + ":not([hidden])", timeout=3000); assert "Retention time" in pg.inner_text(POP)
             pg.mouse.click(5, 5); pg.wait_for_selector(POP, state="hidden", timeout=3000)
-        step("keyboard: focus opens, Esc closes and keeps the focus, a click outside closes", keyboard)
+        step("keyboard: focus on the field opens the help (aria-describedby), Esc closes and keeps the focus, Tab moves it, a click outside closes", keyboard)
+        def combo():
+            pg.focus("#tp-name"); pg.wait_for_selector(POP + ":not([hidden])", timeout=3000)
+            r = pg.evaluate("(() => { const a = document.querySelector('#tph-pop').getBoundingClientRect(), l = document.querySelector('#tp-left').getBoundingClientRect(); return a.left >= l.right; })()")
+            assert r, "beside the form: it never covers the next field or the suggestions"
+            pg.keyboard.type("ab"); assert not pg.is_visible(POP), "typing hides the help"
+        step("name field: the help sits beside the form and hides while typing", combo)
+        pg.fill("#tp-name", "")
         pg.context.close()
         pt = fresh(True, "en", touch=True)
         def touch():
-            pt.evaluate("""() => { const d = document.createElement('div'); d.id = 'tph-test'; d.innerHTML = TPHELP.button('ft.col.level', 'Level'); document.querySelector('#tp-right').prepend(d); TPHELP.attach(d); }""")
-            pt.tap("#tph-test .tph-b"); pt.wait_for_selector(POP + ":not([hidden])", timeout=3000)
-            pt.tap("#tp-name"); pt.wait_for_selector(POP, state="hidden", timeout=3000)
-        step("touch: a tap opens the popover, a tap outside closes it", touch)
+            pt.tap("#tp-tol"); pt.wait_for_selector(POP + ":not([hidden])", timeout=3000)
+            pt.tap("#tp-name"); pt.wait_for_function("document.querySelector('#tph-pop').textContent.startsWith('Name of the parent')", timeout=3000)
+        step("touch: a tap on a field opens its help", touch)
         pt.context.close()
         pi = fresh(True, "it")
-        step("Italian page, Italian help", lambda: pi.evaluate("TT('ft.col.rt')") == "Tempo di ritenzione dell'apice, in minuti." or (_ for _ in ()).throw(AssertionError(pi.evaluate("TT('ft.col.rt')"))))
+        step("Italian page, English help", lambda: pi.evaluate("TT('ft.col.rt')").startswith("Retention time") or (_ for _ in ()).throw(AssertionError(pi.evaluate("TT('ft.col.rt')"))))
         pi.context.close()
         pg = fresh(True, "en")
         def short():
@@ -89,7 +108,7 @@ try:
             assert not pg.query_selector("#tp-left [title*='empty = automatic']")
         step("placeholders and labels of the form are a few words", short)
         def hover_field():
-            pg.hover("#tp-left .tph-b[data-tt='ft.f.formula']"); pg.wait_for_selector(POP + ":not([hidden])", timeout=3000)
+            pg.hover("#tp-mol"); pg.wait_for_selector(POP + ":not([hidden])", timeout=3000)
             assert "C10H12N2O3S" in pg.inner_text(POP); pg.mouse.move(5, 5)
         step("the explanation of a field is in its help", hover_field)
         INV = "[document.querySelector('#tp-mol').getAttribute('aria-invalid'), document.querySelector('#tp-smi').getAttribute('aria-invalid')]"
@@ -99,7 +118,7 @@ try:
             assert pg.evaluate(INV) == ["true", "true"], pg.evaluate(INV)
             for s in ("#tp-mol", "#tp-smi"):
                 assert pg.evaluate(f"getComputedStyle(document.querySelector('{s}')).borderTopWidth") == "2px" and pg.evaluate(f"getComputedStyle(document.querySelector('{s}')).boxShadow") != "none"
-                assert pg.get_attribute(s, "aria-describedby") == "tp-msg"
+                assert "tp-msg" in pg.get_attribute(s, "aria-describedby").split()          # the help of the focused field may add its own token
         step("an empty parent marks the formula and the SMILES together", field_err)
         if AXE:
             def axe1():
@@ -107,7 +126,7 @@ try:
             step("axe: the form in the error state has no serious violation", axe1)
         def clear_click():
             pg.click("#tp-smi"); assert pg.evaluate(INV) == [None, None], pg.evaluate(INV)
-            assert pg.inner_text("#tp-msg") == "" and pg.get_attribute("#tp-mol", "aria-describedby") is None
+            assert pg.inner_text("#tp-msg") == "" and "tp-msg" not in (pg.get_attribute("#tp-mol", "aria-describedby") or "")
         step("a click in one of the two fields returns both to normal", clear_click)
         def clear_type():
             pg.click("#tp-go"); assert pg.evaluate(INV) == ["true", "true"]
