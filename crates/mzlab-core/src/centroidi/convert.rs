@@ -119,7 +119,7 @@ pub fn mzml_to_centroids<R: Read, W: Write>(
                 }
             }
             Item::Chromatogram(c) => chroms.push(c),
-            Item::Analyzer(_) => {}
+            Item::Analyzer(_) | Item::Mobility(_) => {}
         }
     })?;
     if let Some(e) = failed {
