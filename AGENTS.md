@@ -85,6 +85,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | Feature table nella Pipeline (passi 5-6: QC, barra dei filtri, `PIPET` con `TPTAB` e riga espansa `TPRIGA`) | `docs/agenti/mzfeat-tabella-vista.md` |
 | pipeline delle feature HR in Rust (`crates/mzlab-feat`) | `docs/agenti/mzfeat.md` (prove e misure: `mzfeat-prove.md`; tabella, id e campioni: `mzfeat-tabella.md`; vista dei prodotti `tp/1`: `mzfeat-tp.md`) |
 | Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di rilevamento alla mzmine: `crates/mzlab-feat/src/attributio/`, `untargeted/`, `.wasm` `attributio`, `attributio-rev`, `attributio-export` e `untargeted`) | `docs/agenti/attributio.md` (binario MZ: `attributio-mz.md`; Banco 2b: `attributio-banco.md`; esportazioni: `attributio-export.md`) |
+| vista «Compare conditions» di Tabui (`TP_Mine/lazy/gruppi-vista.js`: matrice TP × condizione, UpSet, grafici, esportazioni; contratto `gruppi/1`) | `docs/agenti/gruppi-vista.md` (studio: `docs/studi/TABUI_GRUPPI_ESPERIMENTI.md`) |
 | posizione della sostituzione negli isomeri dei TP (classi compatibili con la MS2, `chem/posizioni.rs`, `posiz/1`) | `docs/agenti/posizioni.md` |
 | livelli di identificazione (scala di Schymanski 2a/2b/3a/3b, scala di previsione, etichette «L3» e «Prev. 2», Tabui, Attributio, untargeted) | `docs/agenti/livelli.md` |
 | gruppi di esperimenti in Tabui: condizioni, `gruppi/1`, `crates/mzlab-feat/src/gruppi/` | `docs/agenti/gruppi.md` |
