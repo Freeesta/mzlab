@@ -62,6 +62,7 @@ try:
 
         # the test page: a container in the page, the component mounted by the test (Tabui does not use it yet)
         MOUNT = """async (names) => {
+            await window.nbEnsure();                                       // the notebook is read first, or a save would be refused
             await window.TPLAZY.load("gruppi-campioni.js"); await window.TPLAZY.load("gruppi-campioni.js");
             const R = await import(URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["finder-ruoli.js"]], { type: "text/javascript" })));
             const call = async (op, j) => { const r = await fetch("api/campioni/" + op, { method: "POST", body: j }); const t = await r.text(); if (!r.ok) throw new Error(t); return t; };
@@ -117,6 +118,7 @@ try:
         def keyboard():
             pg.focus(f"{G} .tpg-role[data-i='4']"); pg.keyboard.press("ArrowDown")
             pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"4\"]').value !== 'blank'", timeout=20000)
+            pg.wait_for_function("document.activeElement && document.activeElement.classList.contains('tpg-role') && document.activeElement.value !== 'blank'", timeout=20000)      # drawn again, the focus is back
             pg.keyboard.press("ArrowUp"); pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"4\"]').value === 'blank'", timeout=20000)
             pg.wait_for_timeout(800)                                      # the table is drawn again after the change
             pg.focus(f"{G} .tpg-cond[data-i='1']"); pg.keyboard.press("Tab")
