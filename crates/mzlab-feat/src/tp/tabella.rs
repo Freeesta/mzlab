@@ -165,7 +165,13 @@ fn cond_cx(cs: &[mzlab_core::campioni::Campione], roles: &[Role]) -> Vec<CondCx>
             for &f in &c.files {
                 keep[f] = matches!(roles[f], Role::Treated(_));
             }
-            let mut blank: Vec<usize> = c.controls.blank.iter().chain(&c.controls.dark).copied().collect();
+            let mut blank: Vec<usize> = c
+                .controls
+                .blank
+                .iter()
+                .chain(&c.controls.dark)
+                .copied()
+                .collect();
             blank.sort_unstable();
             CondCx {
                 id: c.id,
@@ -179,7 +185,11 @@ fn cond_cx(cs: &[mzlab_core::campioni::Campione], roles: &[Role]) -> Vec<CondCx>
 
 /// The condition where the row has its largest area (the first on a tie), `None` without conditions.
 fn strongest<'a>(t: &Aligned, row: usize, conds: &'a [CondCx]) -> Option<&'a CondCx> {
-    let best = |c: &CondCx| (0..c.keep.len()).filter(|&k| c.keep[k]).fold(0.0, |m, k| f64::max(m, measured(t, row, k)));
+    let best = |c: &CondCx| {
+        (0..c.keep.len())
+            .filter(|&k| c.keep[k])
+            .fold(0.0, |m, k| f64::max(m, measured(t, row, k)))
+    };
     let mut top: Option<(&CondCx, f64)> = None;
     for c in conds {
         let a = best(c);
@@ -193,11 +203,17 @@ fn strongest<'a>(t: &Aligned, row: usize, conds: &'a [CondCx]) -> Option<&'a Con
 /// `"network"`: the number of treated times of each condition and whether the network read its correlations (it needs at least `NetParams::points`).
 fn network_json(o: &mut Out, conds: &[CondCx], treated: &[(f64, usize)]) {
     let need = super::NetParams::default().points.max(2);
-    o.raw(",\"network\":{\"min_times\":").int(need as i64).raw(",\"conditions\":[");
+    o.raw(",\"network\":{\"min_times\":")
+        .int(need as i64)
+        .raw(",\"conditions\":[");
     for (i, c) in conds.iter().enumerate() {
         let n = treated.iter().filter(|x| c.keep[x.1]).count();
-        o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" }).str(&c.id);
-        o.raw(",\"times\":").int(n as i64).raw(",\"used\":").raw(if n >= need { "true}" } else { "false}" });
+        o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
+            .str(&c.id);
+        o.raw(",\"times\":")
+            .int(n as i64)
+            .raw(",\"used\":")
+            .raw(if n >= need { "true}" } else { "false}" });
     }
     o.raw("]}");
 }
@@ -225,7 +241,13 @@ fn row_json(o: &mut Out, t: &Aligned, r: usize, cx: &Cx, first: bool) {
     let kept = |k: usize| keep.is_none_or(|v| v[k]);
     let series: Vec<f64> = tr_files
         .iter()
-        .map(|&k| if kept(k) { round(measured(t, r, k), 1) } else { 0.0 })
+        .map(|&k| {
+            if kept(k) {
+                round(measured(t, r, k), 1)
+            } else {
+                0.0
+            }
+        })
         .collect();
     let (mut max_a, mut tmax) = (0.0, None);
     for (i, &a) in series.iter().enumerate() {

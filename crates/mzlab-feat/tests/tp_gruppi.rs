@@ -131,7 +131,7 @@ fn six_conditions_give_gruppi_with_the_formulas_and_the_presence_of_the_truth() 
     assert!(
         rows[3]
             .get("neutral_formula")
-            .map_or(true, |x| x.str().is_none()),
+            .is_none_or(|x| x.str().is_none()),
         "no hypothesis, no formula"
     );
     // the network note: one time per condition is below the minimum

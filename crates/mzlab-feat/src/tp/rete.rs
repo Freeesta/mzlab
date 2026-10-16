@@ -110,7 +110,12 @@ fn series_files(inp: &TpInputs, by: &[Vec<usize>]) -> Vec<Vec<usize>> {
             .collect()]
     } else {
         by.iter()
-            .map(|l| l.iter().copied().filter(|&k| inp.minutes[k] > 0.0).collect())
+            .map(|l| {
+                l.iter()
+                    .copied()
+                    .filter(|&k| inp.minutes[k] > 0.0)
+                    .collect()
+            })
             .collect()
     };
     for l in &mut lists {
