@@ -53,6 +53,7 @@ for _ in range(100):
     except Exception: srv.poll()
 G = "#tp-gfiles"
 COND = f"[...document.querySelectorAll('{G} .tpg-cond')].map(e => e.value)"
+BYNAME = f"Object.fromEntries([...document.querySelectorAll('{G} table tr')].slice(1).map(r => [r.children[1].textContent.trim(), r.querySelector('.tpg-cond').value]))"   # the Dig sorts the files by time: rows are found by name
 try:
     with sync_playwright() as p:
         b = p.chromium.launch()
@@ -86,12 +87,12 @@ try:
         step("two or more full-scan files: the lazy script loads and the table appears", open_files)
 
         def proposed():
-            c = pg.evaluate(COND)
-            assert c[0] == c[1] != "" and c[2] == c[3] != "" and c[0] != c[2] and c[4] == "", c
+            c = pg.evaluate(BYNAME); k = lambda n: c[next(x for x in c if x.startswith(n))]
+            assert k("G_O2_t30") == k("G_O2_t60") != "" and k("G_N2_t30") == k("G_N2_t60") != "" and k("G_O2_t30") != k("G_N2_t30") and k("G_blank") == "", c
             assert pg.locator(f"{G} tr.tpg-prop").count() == 4, pg.locator(f"{G} tr.tpg-prop").count()
-            roles = pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)")
-            assert roles == ["sample"] * 4 + ["blank"], roles
-            assert pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-time')].map(e => e.value)")[:2] == ["30", "60"]
+            roles = sorted(pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)"))
+            assert roles == ["blank"] + ["sample"] * 4, roles
+            assert sorted(pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-time')].map(e => e.value)")) == ["", "30", "30", "60", "60"]
             assert pg.locator(f"{G} .tpg-rep").first.get_attribute("aria-label").startswith("Replicate of ")
         step("conditions, roles and times proposed from the names; the blank is shared; yellow rows", proposed)
 
@@ -102,12 +103,13 @@ try:
         step("Enter on «Confirm conditions» removes the yellow and keeps the focus", confirm_keys)
 
         def set_two():
-            pg.check(f"{G} .tpg-sel[data-i='0']"); pg.check(f"{G} .tpg-sel[data-i='2']")
+            for n in ("G_O2_t30", "G_O2_t60"): pg.locator(f"{G} tr", has_text=n).locator(".tpg-sel").check()
             pg.click(f"{G} button:text-is('Set condition…')")
             assert pg.evaluate("document.activeElement.getAttribute('aria-label')") == "Condition for the selected files"
             pg.keyboard.type("Air"); pg.keyboard.press("Enter")
-            pg.wait_for_function(f"({COND})[0] === 'Air'", timeout=20000)
-            c = pg.evaluate(COND); assert c[0] == "Air" and c[2] == "Air" and c[1] != "Air" and c[3] != "Air", c
+            pg.wait_for_function(f"Object.values({BYNAME}).includes('Air')", timeout=20000)
+            c = pg.evaluate(BYNAME); air = sorted(n for n in c if c[n] == "Air")
+            assert len(air) == 2 and all(n.startswith("G_O2") for n in air), c
             assert pg.evaluate("document.activeElement.textContent.trim()") == "Set condition…"
         step("«Set condition…» on two files sets both and returns the focus", set_two)
 
@@ -120,10 +122,10 @@ try:
         step("the reference condition is chosen and kept in NB.gruppi_opts", reference)
 
         def keyboard():
-            pg.focus(f"{G} .tpg-role[data-i='4']"); pg.keyboard.press("ArrowDown")
-            pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"4\"]').value !== 'blank'", timeout=20000)
+            pg.focus(f"{G} .tpg-role[data-i='0']"); pg.keyboard.press("ArrowDown")
+            pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"0\"]').value !== 'blank'", timeout=20000)
             assert pg.evaluate("document.activeElement.classList.contains('tpg-role')"), "the focus stays on the select after the change"
-            pg.keyboard.press("ArrowUp"); pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"4\"]').value === 'blank'", timeout=20000)
+            pg.keyboard.press("ArrowUp"); pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"0\"]').value === 'blank'", timeout=20000)
             pg.focus(f"{G} .tpg-cond[data-i='1']"); pg.keyboard.press("Tab")
             assert pg.evaluate("document.activeElement.classList.contains('tpg-time')"), pg.evaluate("document.activeElement.outerHTML")
         step("keyboard: arrows in the role select keep the focus; Tab goes from condition to time", keyboard)
@@ -134,15 +136,17 @@ try:
         step("the warnings are in a role=status region, in English", warnings)
 
         def reload():
-            before = pg.evaluate(COND); roles = pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)")
-            pg.wait_for_timeout(800); pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
-            pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
-            pg.set_input_files("#pick", paths)
-            pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(paths)}", timeout=120000)
-            pg.click("#opbtn"); pg.wait_for_function(f"E.files.length >= {len(paths)} && E.pending.length === 0", timeout=240000)
+            before = pg.evaluate(BYNAME); roles = pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)")
+            pg.wait_for_timeout(800); pg.reload(); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
+            pg.wait_for_timeout(3000)
+            if pg.evaluate("(window.E && E.files || []).length") < len(paths):          # the page does not bring the files back by itself: open them again
+                pg.wait_for_selector("#drop", state="attached"); pg.set_input_files("#pick", paths)
+                pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(paths)}", timeout=120000)
+                pg.click("#opbtn")
+            pg.wait_for_function(f"E.files.length >= {len(paths)} && E.pending.length === 0", timeout=240000)
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-page"); pg.click("#tp-page")
             pg.wait_for_selector(f"{G} table .tpg-cond", timeout=120000)
-            assert pg.evaluate(COND) == before, (before, pg.evaluate(COND))
+            assert pg.evaluate(BYNAME) == before, (before, pg.evaluate(BYNAME))
             assert pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)") == roles
             assert pg.input_value(f"{G} select[aria-label='Reference condition']") == "Air"
             assert pg.locator(f"{G} tr.tpg-prop").count() == 0, "the stored conditions come back confirmed"
