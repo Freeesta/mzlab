@@ -216,8 +216,13 @@ def scrivi(dst, text):
     if dst.exists() and dst.read_bytes() == b: return
     t = dst.with_name(f".{dst.name}.{os.getpid()}.tmp"); t.write_bytes(b); os.replace(t, dst)
 def build_feat(static, env=None):
-    """Run tools/build_feat_wasm.sh one process at a time: it shares cargo's target/ and its artefacts, so parallel tests would clash."""
+    """Give the copy of the site the .wasm of mzFinder: copied from site/static when built there, else tools/build_feat_wasm.sh, one process at a time: it shares cargo's target/ and its artefacts, so parallel tests would clash."""
     import fcntl, subprocess, tempfile
+    ready = ROOT / "site" / "static"
+    if (ready / "wasm-feat" / "manifest.json").exists():          # already built in the shared site (CI, local runs): copy it instead of building again
+        for d in ("wasm-feat", "wasm-lettori"):
+            if (ready / d).is_dir(): shutil.copytree(ready / d, Path(static) / d, dirs_exist_ok=True)
+        return
     with open(os.path.join(tempfile.gettempdir(), "mzlab-build-feat.lock"), "w") as lk:
         fcntl.flock(lk, fcntl.LOCK_EX)
         subprocess.run(["tools/build_feat_wasm.sh", str(static)], cwd=ROOT, check=True, env=env, capture_output=True)
