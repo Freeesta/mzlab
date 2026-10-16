@@ -5,7 +5,7 @@ import subprocess, sys, time, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 
-PORT = 8851
+from lib import free_port; PORT = free_port()
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))

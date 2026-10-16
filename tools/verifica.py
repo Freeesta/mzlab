@@ -42,6 +42,8 @@ NEEDS: dict[str, set[str]] = {
     "e2e13": {"sito"}, "e2e_avvio": {"sito"}, "e2e_avvio_lingua": {"sito"}, "e2e_mzidx": {"sito"}, "e2e_rust": {"sito"}, "e2e_lr": {"sito"}, "e2e_wiff": {"sito"}, "e2e_agilent": {"sito"}, "e2e_metodo": {"sito"}, "e2e_picchi_qualita": {"sito"}, "e2e_hr_rust": {"sito"}, "e2e_hr_mappa": {"sito"}, "e2e_hr_albero": {"sito"}, "e2e_libreria_wasm": {"sito"}, "e2e_libreria_cartella": {"sito"}, "e2e_libreria_scarica": {"sito"},  "e2e_tpmine1": {"sito"}, "e2e_tpmine_nativo": {"sito"}, "e2e_tpmine_diretto_nativo": {"sito"}, "e2e_progresso": {"sito"}, "e2e_tpmine_lr_reload": {"sito"}, "e2e_tpmine_ms2_lr": {"sito"}, "e2e_pipeline": {"sito"}, "e2e_lettori": {"sito"}, "e2e_lettori_modulo": {"sito"}, "e2e_shimadzu": {"sito"}, "e2e_thermo_modulo": {"sito"}, "e2e_tpmine_diretta": {"sito"}, "e2e_tpmine2": {"sito"}, "e2e_tpmine_albero": {"sito"}, "e2e_tpmine_rtalign": {"sito"}, "e2e_tpmine_ms2": {"sito"}, "e2e_untarget": {"sito"}, "e2e_identita": {"sito"},
     "e2e_tpmine_mem": {"sito", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes
 }
+# the slowest e2e (seconds, measured in the CI): they start first, so the pool does not end waiting for one of them
+LENTI = ["e2e_tpmine_lr_rust", "e2e_tpmine_ingresso", "e2e_tpmine_transf"]
 NOT_TESTS = {"lib", "synth"}          # helpers and measurements, not tests
 # e2e3 plus the e2e that were red on main without anybody seeing it (the CI used to run only e2e3): download menu, buttons, settings, axes, spectra.
 # e2e_cromato is not here yet: it fails in WebKit (the dialog of the integrations has no S/N box) and in Firefox (waterfall step), both only in those browsers.
@@ -408,14 +410,12 @@ def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
         rc, _out, dt = sh([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], LOG / "prepara_sito.log", 1800, env=env)
         if rc:
             results.append(("sito per gli e2e (tools/prepara_sito.py)", "FAIL", dt, ["vedi .verifica/log/prepara_sito.log"])); return
-    # the site tests (they build or serve the site on fixed ports) always run alone, after the others
-    alone = [n for n in todo if "sito" in NEEDS.get(n, set())]
+    # every test takes a free port and its own work folder (tests_e2e/lib.py), the site tests too: they all run in the same pool, the slowest first
     from concurrent.futures import ThreadPoolExecutor
+    lenti = [n for n in LENTI if n in todo]
     with ThreadPoolExecutor(max_workers=max(1, jobs)) as ex:
-        for r in ex.map(one, [n for n in todo if n not in alone]):
+        for r in ex.map(one, lenti + [n for n in todo if n not in lenti]):
             out_by[r[0]] = r
-    for n in alone:
-        out_by[n] = one(n)
     results.extend(out_by[n] for n in names)
     results.append(("dati usati per gli e2e", "INFO", 0, [f"{src}: {mz}" + (f" · .dam: {dam.name}" if dam else " · nessun .dam")]))
 
