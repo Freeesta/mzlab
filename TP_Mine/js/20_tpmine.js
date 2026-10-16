@@ -653,10 +653,21 @@
       const chips = [chip("strong", "Strong", "ft.chip.strong", r => r.kind !== "unexpected" && r.label === "forte", true), chip("possible", "Possible", "ft.chip.possible", r => r.kind !== "unexpected" && r.label === "possibile", true),
         chip("weak", "Weak evidence", "ft.chip.weak", r => r.label === "debole", false), chip("unexpected", "Unexpected", "ft.chip.unexpected", r => r.kind === "unexpected" && good(r), true),
         ...(ms2 ? [chip("ms2", "With MS2", "ft.chip.ms2", r => r.ms2 > 0, false)] : [])];
+      /** @type {HTMLElement | null} */ let note = null;
       T = TPTAB.mount(host, { id: "tp-t", label: "Transformation product candidates", cols, rowId: r => r.id, esc, name: r => `${r.tp_name || idLabel(r)}, ${idLabel(r)}, m/z ${r.mz.toFixed(2)}`, columns: true, chips, rowClass: r => notFound(r) ? "tpt-nd" : "", exportName: (s.parent.formula || "parent") + "_Tabui_view",
         search: r => [r.tp_name, r.name, r.formula, String(r.mz), r.delta, r.net_change, r.modification].join(" "), pin: r => r.label === "progenitore",
-        tabs: TPRIGA.tabs, head: (r, box) => TPRIGA.head(box, headModel(r)), onOpen: (r, body, tab) => { void fillTab(r, body, tab); } });
+        tabs: TPRIGA.tabs, head: (r, box) => TPRIGA.head(box, headModel(r)), onOpen: (r, body, tab) => { void fillTab(r, body, tab); }, onFilter: () => weakNote() });
       T.setRows(s.rows.filter(r => !notFound(r))); T.sortBy("level", 1);
+      // the weak band is off by default but never out of sight: its count, the unexpected ions left out, and one click to show it
+      note = document.createElement("p"); note.id = "tp-weak"; note.className = "mut"; host.prepend(note);
+      function weakNote() {
+        if (!T || !note) return;
+        const on = T.chips.includes("weak"), n = s.rows.filter(r => r.label === "debole" && !notFound(r)).length, left = s.unexpected_left || {}, pl = (k, w) => `${k} ${w}${k === 1 ? "" : "s"}`;
+        const out = [left.over_limit ? `${pl(left.over_limit, "unexpected ion")} over the limit of ${s.settings.max_unexpected} not listed` : "", left.isotope_or_flat ? `${pl(left.isotope_or_flat, "unexpected ion")} left out as isotope peaks or not growing` : ""].filter(Boolean).join(" · ");
+        note.innerHTML = (n ? `${on ? "" : "+"}${n} weak evidence ${on ? "shown" : "hidden"} — <button type="button" id="tp-weak-b">${on ? "hide" : "show"}</button>` : "No row with weak evidence") + (out ? ` · ${esc(out)}` : "");
+        const b = note.querySelector("#tp-weak-b"); if (b) b.addEventListener("click", () => { if (T) T.setChip("weak", !on); });
+      }
+      weakNote();
       const box = /** @type {HTMLInputElement | null} */ ($("#tp-nd"));
       if (box) box.onchange = () => { if (T) T.setRows(box.checked ? s.rows : s.rows.filter(r => !notFound(r))); };
       // the "+N other" button of the Identity cell: open the row on the tab with the other identities (capture: before the row toggles)

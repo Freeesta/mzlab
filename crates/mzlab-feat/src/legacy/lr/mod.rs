@@ -98,6 +98,8 @@ pub struct LrDig {
     pub parent_ok: bool,
     /// Matches of the hypotheses against the decoys, one per number of steps (`chance::estimate`; empty when the parent check failed).
     pub chance: Vec<chance::Chance>,
+    /// Unexpected ions the Dig does not list: (over `max_unexpected`, isotope peaks or not growing).
+    pub unexpected_left: (usize, usize),
 }
 
 /// `+X-Y`: atoms gained and lost from the parent (empty without both formulas).
@@ -272,7 +274,7 @@ fn finish(entries: &mut [Entry], lc: &[FileIn], s: &Settings, gens: &Gens) {
 
 /// The unexpected ions after the isotope check, at most `max_unexpected`: the ones that pass by score then area, then the ones that are weak only
 /// because of the chromatographic peak or persistence (they stay visible as `debole`); isotope peaks and ions that do not grow are dropped.
-fn keep_unexpected(entries: Vec<Entry>, max: usize) -> Vec<Entry> {
+fn keep_unexpected(entries: Vec<Entry>, max: usize) -> (Vec<Entry>, (usize, usize)) {
     let (known, unexp): (Vec<Entry>, Vec<Entry>) = entries.into_iter().partition(|e| !e.unexpected);
     let good: Vec<&Entry> = unexp
         .iter()
@@ -289,9 +291,10 @@ fn keep_unexpected(entries: Vec<Entry>, max: usize) -> Vec<Entry> {
             .then(sc(good[b]).total_cmp(&sc(good[a])))
             .then(good[b].area.total_cmp(&good[a].area))
     });
+    let left = (good.len().saturating_sub(max), unexp.len() - good.len());
     let mut out = known;
     out.extend(ord.into_iter().take(max).map(|i| good[i].clone()));
-    out
+    (out, left)
 }
 
 /// `api.run` on a low-resolution series after the pipeline: `table` = the `.mzfeat` of the full-scan columns (in the order of `plan::columns`),
@@ -397,7 +400,7 @@ pub fn dig<R: ReadAt>(
             orphan(e);
         }
     }
-    let entries = keep_unexpected(entries, s.max_unexpected);
+    let (entries, unexpected_left) = keep_unexpected(entries, s.max_unexpected);
     Ok(LrDig {
         files,
         lc,
@@ -411,5 +414,6 @@ pub fn dig<R: ReadAt>(
         table: std::sync::Arc::new(t),
         parent_ok,
         chance: odds,
+        unexpected_left,
     })
 }

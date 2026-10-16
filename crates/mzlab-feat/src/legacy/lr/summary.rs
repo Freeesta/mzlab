@@ -362,6 +362,11 @@ pub fn summary(d: &LrDig, timing: &str) -> String {
         .raw(if d.parent_ok { "true" } else { "false" })
         .raw(",\"chance\":");
     super::chance::json(&mut o, &d.chance);
+    o.raw(",\"unexpected_left\":{\"over_limit\":")
+        .int(d.unexpected_left.0 as i64)
+        .raw(",\"isotope_or_flat\":")
+        .int(d.unexpected_left.1 as i64)
+        .raw("}");
     if let Some(l) = &d.links {
         o.raw(",\"ms2_links\":");
         super::ms2link::json(&mut o, l);

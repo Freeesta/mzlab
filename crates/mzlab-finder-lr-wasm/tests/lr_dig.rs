@@ -68,6 +68,7 @@ fn contract_and_rows_of_python() {
     assert!(s["chance"].as_array().is_some_and(|c| !c.is_empty()));
     shared.as_object_mut().unwrap().remove("parent_ok");
     shared.as_object_mut().unwrap().remove("chance");
+    shared.as_object_mut().unwrap().remove("unexpected_left");
     same_shape(&shared, &g["summary"], "summary");
     for row in s["rows"].as_array().unwrap() {
         let mut shared = row.clone();

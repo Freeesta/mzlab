@@ -103,6 +103,18 @@ try:
             assert " of " in base and "rows" in base, base
         step("a chip removes and restores rows; «N of M rows» changes", chips)
 
+        def weak_note():
+            t = pg.inner_text("#tp-weak")
+            assert "weak evidence" in t or "No row with weak evidence" in t, t
+            b = pg.locator("#tp-weak-b")
+            if b.count():
+                chip = '#tp-view .tpt-chip[data-chip="weak"]'
+                was = pg.get_attribute(chip, "aria-pressed")
+                b.click(); assert pg.get_attribute(chip, "aria-pressed") != was
+                assert ("shown" if was != "true" else "hidden") in pg.inner_text("#tp-weak"), pg.inner_text("#tp-weak")
+                pg.click("#tp-weak-b"); assert pg.get_attribute(chip, "aria-pressed") == was
+        step("the count of the weak band is always above the table and one click shows or hides it", weak_note)
+
         def expand():
             pg.click('#tp-t tr.clk[data-id="0"]')
             pg.wait_for_selector("#tp-t tr.tpt-exp #tp-det .tpr-ov svg", timeout=60000)
