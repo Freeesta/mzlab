@@ -97,17 +97,17 @@ pub fn decided_features(d: &DecisionTable, features: &[Feature]) -> Vec<Decided>
         let with_level: Vec<usize> = mine
             .iter()
             .copied()
-            .filter(|&r| !d.get(r, "livello").trim().is_empty())
+            .filter(|&r| !d.get(r, "level").trim().is_empty())
             .collect();
         let Some(&last) = with_level.last() else {
             continue;
         };
-        if !matches!(d.get(last, "livello"), "2b" | "2") {
+        if !matches!(d.get(last, "level"), "2b" | "2") {
             continue;
         }
-        let note = match mine.last().map(|&r| d.get(r, "motivazione")) {
+        let note = match mine.last().map(|&r| d.get(r, "justification")) {
             Some(m) if !m.is_empty() => m.to_string(),
-            _ => d.get(last, "motivazione").to_string(),
+            _ => d.get(last, "justification").to_string(),
         };
         out.push(Decided {
             feature: k,
@@ -163,7 +163,7 @@ fn find_candidate(refs: &[Reference], d: &DecisionTable, r: usize) -> Option<usi
         }
         return hit.first().copied();
     }
-    if d.get(r, "livello") == "2" {
+    if d.get(r, "level") == "2" {
         let exact = |k: &usize| refs[*k].kind == "exact" && have(k);
         let same = (0..refs.len()).find(|k| exact(k) && refs[*k].same);
         return same.or_else(|| (0..refs.len()).find(exact));
@@ -269,7 +269,7 @@ fn draw(
             pairs,
         }
     });
-    let level = if d.get(row, "livello") == "2b" {
+    let level = if d.get(row, "level") == "2b" {
         "Level 2b"
     } else {
         "Level 2a"
@@ -323,7 +323,7 @@ fn table_row(
         f.id.to_string(),
         format!("{:.5}", f.mz.unwrap_or(f64::NAN)),
         format!("{:.3}", f.rt.unwrap_or(f64::NAN)),
-        if d.get(row, "livello") == "2b" {
+        if d.get(row, "level") == "2b" {
             "2b"
         } else {
             "2a"

@@ -34,12 +34,12 @@
   }
 
   // ---- the rules of the note: a copy of rules.rs for the live state of Save; the engine checks again when it saves
-  /** @param {any} cur @param {{livello: string, group: string, nome: string}} d @returns {string[]} */
+  /** @param {any} cur @param {{level: string, group: string, name: string}} d @returns {string[]} */
   function changes(cur, d) {
-    const out = [], to = { "2b": "2b", "3": "3", "3a": "3", "3b": "3", "2": "2a", "2a": "2a" }[/** @type {"2b"} */ (d.livello)];
+    const out = [], to = { "2b": "2b", "3": "3", "3a": "3", "3b": "3", "2": "2a", "2a": "2a" }[/** @type {"2b"} */ (d.level)];
     if (to && to !== cur.level) out.push(`level ${cur.level} -> ${to}`);
     if (d.group === "ambiguous" && (cur.group || "") !== "ambiguous") out.push("identity rejected");
-    if (d.nome.trim() && d.nome.trim() !== (cur.name || "")) out.push(`name -> ${d.nome.trim()}`);
+    if (d.name.trim() && d.name.trim() !== (cur.name || "")) out.push(`name -> ${d.name.trim()}`);
     return out;
   }
 
@@ -154,10 +154,10 @@
   function wire(sec) {
     const q = (/** @type {string} */ s) => /** @type {any} */ (sec.querySelector(s));
     const rev = st.rev;
-    const decision = () => ({ livello: q("#bn-lvl").value, nome: q("#bn-name").value, group: q("#bn-amb").checked ? "ambiguous" : "", note: q("#bn-note").value.trim(), by: q("#bn-by").value.trim() });
+    const decision = () => ({ level: q("#bn-lvl").value, name: q("#bn-name").value, group: q("#bn-amb").checked ? "ambiguous" : "", note: q("#bn-note").value.trim(), by: q("#bn-by").value.trim() });
     const refresh = () => {
-      const d = decision(), ch = changes(rev.current, { livello: d.livello, group: d.group, nome: d.nome });
-      const need = (ch.length > 0 || d.livello === "2b") && !d.note, nothing = !d.livello && !d.nome && !d.group && !q("#bn-id").value.trim() && !q("#bn-ev").value;
+      const d = decision(), ch = changes(rev.current, { level: d.level, group: d.group, name: d.name });
+      const need = (ch.length > 0 || d.level === "2b") && !d.note, nothing = !d.level && !d.name && !d.group && !q("#bn-id").value.trim() && !q("#bn-ev").value;
       q("#bn-save").disabled = st.busy || !d.by || need || nothing;
       q("#bn-msg").textContent = need ? `A motivation is required: ${ch.join(", ") || "a 2b row"}.` : (!d.by ? "Write the reviewer." : "");
     };
@@ -206,8 +206,8 @@
       : { type: sel, library: "", entry: "", cosine: sel === "fragments" ? ev.frac_explained ?? "" : "", matched: sel === "fragments" ? ev.n_explained ?? "" : "", delta_mz: "", delta_formula: "", note: "" };
     const t = new Date(), day = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
     return {
-      pol: rev.pol, id: rev.id, livello: q("#bn-lvl").value, nome: q("#bn-name").value.trim(), identita: q("#bn-id").value.trim(), group: q("#bn-amb").checked ? "ambiguous" : "",
-      motivazione: q("#bn-note").value.trim(), decided_on: day, decided_by: q("#bn-by").value.trim(), rt_check: "", evidence,
+      pol: rev.pol, id: rev.id, level: q("#bn-lvl").value, name: q("#bn-name").value.trim(), identity: q("#bn-id").value.trim(), group: q("#bn-amb").checked ? "ambiguous" : "",
+      justification: q("#bn-note").value.trim(), decided_on: day, decided_by: q("#bn-by").value.trim(), rt_check: "", evidence,
       checklist: [...sec.querySelectorAll("[data-chk]")].filter(c => /** @type {HTMLInputElement} */ (c).checked).map(c => /** @type {HTMLElement} */ (c).dataset.chk),
     };
   }
@@ -223,7 +223,7 @@
       const path = r.summary.path, name = path.split("/").pop() || "feature_decisions.csv";
       const wrote = r.summary.written || await writeInFolder(ctx.dir, path, r.text);
       if (!wrote) download(name, r.text);
-      const op = { decision: { pol: d.pol, id: d.id, livello: d.livello, checklist: d.checklist, by: d.decided_by, on: d.decided_on }, feature_decisions: r.text };
+      const op = { decision: { pol: d.pol, id: d.id, level: d.level, checklist: d.checklist, by: d.decided_by, on: d.decided_on }, feature_decisions: r.text };
       if (W.WORKFLOW && W.WORKFLOW.logOp) W.WORKFLOW.logOp("attributio", { attributio: op });
       await ctx.onSaved(r.text, path);
       say(wrote ? `Saved in ${path}.` : `Downloaded ${name}; put it in ${path.split("/").slice(0, -1).join("/")}.`);

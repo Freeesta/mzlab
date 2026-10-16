@@ -117,7 +117,7 @@ try:
             mine = [dict(zip(head, r)) for r in rows[1:] if r[head.index("feature_id")] == "15"]
             assert len(mine) == 1, rows
             r = mine[0]
-            assert (r["pol"], r["livello"], r["decided_by"], r["motivazione"]) == ("POS", "2b", "rev", "diagnostic ions explained"), r
+            assert (r["pol"], r["level"], r["decided_by"], r["justification"]) == ("POS", "2b", "rev", "diagnostic ions explained"), r
             assert r["evidence_checklist"] == "diagnostic_fragment|neutral_loss|alternatives_excluded" and r["evidence_type"] == "fragments", r
             assert len(rows) == 6, len(rows)
         step("three boxes + a note + Save download feature_decisions.csv with the row and evidence_checklist", saves)

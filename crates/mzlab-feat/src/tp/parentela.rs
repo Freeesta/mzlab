@@ -19,13 +19,18 @@ pub(super) fn kinship(inp: &TpInputs, b: &mut TpBlock) {
         let s = &inp.signs[r];
         let t0 = b.notes[r] & NOTE_T0_PRESENT != 0;
         // the controls proof is against whenever the controls have a signal: for a product that also forms in the t0 that is not a reason for doubt
-        let kinds = if t0 { vec![Kind::Kinetics, Kind::Rt, Kind::Network] } else { vec![Kind::Kinetics, Kind::Rt, Kind::Network, Kind::Controls] };
+        let kinds = if t0 {
+            vec![Kind::Kinetics, Kind::Rt, Kind::Network]
+        } else {
+            vec![Kind::Kinetics, Kind::Rt, Kind::Network, Kind::Controls]
+        };
         let kinetic = sign_of(s, Kind::Kinetics) == FOR && !inp.params.saturated;
         b.kinship[r] = if kinds.iter().any(|&k| sign_of(s, k) == AGAINST) {
             KIN_DOUBTFUL
         } else if b.via[r] & VIA_MS2 != 0 {
             KIN_CERTAIN
-        } else if kinetic && b.via[r] & (VIA_RULE | VIA_CLEAVAGE | VIA_IMPORTED | VIA_NETWORK) != 0 {
+        } else if kinetic && b.via[r] & (VIA_RULE | VIA_CLEAVAGE | VIA_IMPORTED | VIA_NETWORK) != 0
+        {
             KIN_PROBABLE
         } else {
             KIN_POSSIBLE

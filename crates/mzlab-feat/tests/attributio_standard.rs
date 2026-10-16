@@ -160,6 +160,26 @@ fn standards_match_the_golden_data() {
 }
 
 // ------------------------------------------------------------------------------------------------------------------ decisions
+/// The golden data come from the reference tool, which still names four columns in Italian.
+fn current(k: &str) -> &str {
+    match k {
+        "livello" => "level",
+        "nome" => "name",
+        "identita" => "identity",
+        "motivazione" => "justification",
+        _ => k,
+    }
+}
+
+fn golden_key(k: &str) -> &str {
+    match k {
+        "level" => "livello",
+        "name" => "nome",
+        "justification" => "motivazione",
+        _ => k,
+    }
+}
+
 #[test]
 fn decisions_match_the_golden_data() {
     let fx = fixture("campagna_sintetica");
@@ -170,7 +190,7 @@ fn decisions_match_the_golden_data() {
     for (r, w) in want.iter().enumerate() {
         for (k, v) in w.as_object().expect("row") {
             assert_eq!(
-                s.decisions.get(r, k),
+                s.decisions.get(r, current(k)),
                 v.as_str().expect("text"),
                 "row {r} {k}"
             );
@@ -207,12 +227,12 @@ fn decisions_match_the_golden_data() {
     {
         assert_eq!(m.row as i64, w["_row"].as_i64().expect("row"));
         for (k, got) in [
-            ("livello", &m.livello),
-            ("nome", &m.nome),
-            ("motivazione", &m.motivazione),
+            ("level", &m.level),
+            ("name", &m.name),
+            ("justification", &m.justification),
             ("group", &m.group),
         ] {
-            assert_eq!(got, w[k].as_str().expect("text"), "{k}");
+            assert_eq!(got, w[golden_key(k)].as_str().expect("text"), "{k}");
         }
     }
     assert_eq!(warnings.len(), 1, "{warnings:?}");
@@ -248,25 +268,21 @@ fn merge_replaces_the_row_of_the_same_day_and_reviewer_and_adds_the_others() {
             ("feature_id", "5"),
             ("mz", "250.1234"),
             ("rt", "6.00"),
-            ("livello", level),
+            ("level", level),
             ("decided_on", on),
             ("decided_by", by),
-            ("motivazione", "x"),
+            ("justification", "x"),
         ]
     };
     let existing = table(&[&day("2b", "2026-09-24", "ann")]);
     let same_day = table(&[&day("3", "2026-09-24", "ann")]);
     let (merged, stats) = merge_decisions(&existing, &same_day);
     assert_eq!((stats.replaced, stats.added, stats.unchanged), (1, 0, 0));
-    assert_eq!((merged.len(), merged.get(0, "livello")), (1, "3"));
+    assert_eq!((merged.len(), merged.get(0, "level")), (1, "3"));
     let (merged, stats) = merge_decisions(&existing, &table(&[&day("3", "2026-09-30", "ann")]));
     assert_eq!((stats.replaced, stats.added, stats.unchanged), (0, 1, 0));
     assert_eq!(
-        (
-            merged.len(),
-            merged.get(0, "livello"),
-            merged.get(1, "livello")
-        ),
+        (merged.len(), merged.get(0, "level"), merged.get(1, "level")),
         (2, "2b", "3")
     );
     let (merged, stats) = merge_decisions(&existing, &table(&[&day("3", "2026-09-24", "bob")]));
@@ -286,10 +302,10 @@ fn merge_replaces_the_row_of_the_same_day_and_reviewer_and_adds_the_others() {
         ("feature_id", "5"),
         ("mz", "250.1230"),
         ("rt", "6.02"),
-        ("livello", "3"),
+        ("level", "3"),
         ("decided_on", "2026-10-02"),
         ("decided_by", "ann"),
-        ("motivazione", "x"),
+        ("justification", "x"),
     ];
     let (merged, stats) = merge_decisions(&existing, &table(&[&moved]));
     assert_eq!(
@@ -302,7 +318,7 @@ fn merge_replaces_the_row_of_the_same_day_and_reviewer_and_adds_the_others() {
         ("feature_id", "9"),
         ("mz", "400.0"),
         ("rt", "7.00"),
-        ("livello", "3"),
+        ("level", "3"),
         ("decided_on", "2026-10-02"),
         ("decided_by", "ann"),
     ];
@@ -312,7 +328,7 @@ fn merge_replaces_the_row_of_the_same_day_and_reviewer_and_adds_the_others() {
 
 #[test]
 fn a_file_without_the_checklist_is_read_and_written_back_with_the_empty_column_last() {
-    let text = "pol;feature_id;mz;rt;livello;nome;identita;decided_on;decided_by;motivazione\nPOS;2;250.1234;6.00;3;;A;2026-09-24;t;why\n";
+    let text = "pol;feature_id;mz;rt;level;name;identity;decided_on;decided_by;justification\nPOS;2;250.1234;6.00;3;;A;2026-09-24;t;why\n";
     let t = load_feature_decisions(Some(text), "f.csv").expect("load");
     assert_eq!(
         t.columns.last().map(String::as_str),
@@ -330,7 +346,7 @@ fn a_file_without_the_checklist_is_read_and_written_back_with_the_empty_column_l
     let again = load_feature_decisions(Some(&out), "f.csv").expect("reload");
     assert_eq!(again, t);
     let with = text
-        .replace("motivazione\n", "motivazione;evidence_checklist\n")
+        .replace("justification\n", "justification;evidence_checklist\n")
         .replace("why\n", "why;fragment|isotopes\n");
     let t = load_feature_decisions(Some(&with), "f.csv").expect("load");
     assert_eq!(t.get(0, "evidence_checklist"), "fragment|isotopes");
@@ -338,8 +354,27 @@ fn a_file_without_the_checklist_is_read_and_written_back_with_the_empty_column_l
 }
 
 #[test]
+fn a_file_with_the_italian_column_names_is_read_and_written_with_the_english_ones() {
+    let text = "pol;feature_id;mz;rt;livello;nome;identita;decided_on;decided_by;motivazione\nPOS;2;250.1234;6.00;2b;Caffeine;A;2026-09-24;t;why\n";
+    let t = load_feature_decisions(Some(text), "f.csv").expect("load");
+    assert_eq!(t.get(0, "level"), "2b");
+    assert_eq!(t.get(0, "name"), "Caffeine");
+    assert_eq!(t.get(0, "identity"), "A");
+    assert_eq!(t.get(0, "justification"), "why");
+    let out = write_feature_decisions(&t);
+    let header = out.lines().next().expect("header");
+    for old in ["livello", "nome", "identita", "motivazione"] {
+        assert!(!header.split(';').any(|c| c == old), "{old} written");
+    }
+    assert_eq!(
+        load_feature_decisions(Some(&out), "f.csv").expect("reload"),
+        t
+    );
+}
+
+#[test]
 fn decision_errors_have_the_messages_of_attributio() {
-    let head = "pol;feature_id;mz;rt;livello;nome;identita;decided_on;decided_by;motivazione";
+    let head = "pol;feature_id;mz;rt;level;name;identity;decided_on;decided_by;justification";
     let err = |rows: &str| {
         load_feature_decisions(Some(&format!("{head}\n{rows}\n")), "f.csv")
             .expect_err("error")
@@ -347,11 +382,11 @@ fn decision_errors_have_the_messages_of_attributio() {
     };
     assert_eq!(
         err("POS;1;;;4;;;;;"),
-        "f.csv: livello must be '2b', '3a', '3b', '3', '2' or empty, found ['4']"
+        "f.csv: level must be '2b', '3a', '3b', '3', '2' or empty, found ['4']"
     );
     assert_eq!(
         err("POS;1;;;2b;;;;;"),
-        "f.csv: a Level 2b decision needs 'motivazione' (POS 1)"
+        "f.csv: a Level 2b decision needs 'justification' (POS 1)"
     );
     let e = load_feature_decisions(Some("pol;feature_id\nPOS;1\n"), "f.csv")
         .expect_err("error")

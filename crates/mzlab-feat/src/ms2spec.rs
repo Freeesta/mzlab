@@ -15,7 +15,14 @@ use crate::export_ms::Ms2;
 const HALF_WINDOW: f64 = 0.6;
 
 /// The scan (index into `Index::scans`) chosen for an ion of `mz` between `rt_lo` and `rt_hi`, from the MS2 scans `by_rt` sorted by time.
-pub(crate) fn pick<R: ReadAt>(index: &Index<R>, by_rt: &[u32], mz: f64, polarity: i8, rt_lo: f64, rt_hi: f64) -> Option<u32> {
+pub(crate) fn pick<R: ReadAt>(
+    index: &Index<R>,
+    by_rt: &[u32],
+    mz: f64,
+    polarity: i8,
+    rt_lo: f64,
+    rt_hi: f64,
+) -> Option<u32> {
     let a = by_rt.partition_point(|&g| index.scans[g as usize].rt < rt_lo);
     by_rt[a..]
         .iter()
@@ -30,13 +37,23 @@ pub(crate) fn pick<R: ReadAt>(index: &Index<R>, by_rt: &[u32], mz: f64, polarity
             };
             (lo..=hi).contains(&mz) && (s.polarity == polarity || (polarity > 0 && s.polarity == 0))
         })
-        .max_by(|&x, &y| index.scans[x as usize].tic.total_cmp(&index.scans[y as usize].tic))
+        .max_by(|&x, &y| {
+            index.scans[x as usize]
+                .tic
+                .total_cmp(&index.scans[y as usize].tic)
+        })
 }
 
 /// The peaks of the scans `wanted` (indices into `Index::scans`) of the MS2 section of a polarity, by scan.
-pub(crate) fn read_peaks<R: ReadAt>(index: &mut Index<R>, polarity: i8, wanted: &[u32]) -> Result<HashMap<u32, (Vec<f64>, Vec<f64>)>> {
+pub(crate) fn read_peaks<R: ReadAt>(
+    index: &mut Index<R>,
+    polarity: i8,
+    wanted: &[u32],
+) -> Result<HashMap<u32, (Vec<f64>, Vec<f64>)>> {
     let mut out = HashMap::new();
-    let Some(si) = index.section_of(2, Some(polarity)) else { return Ok(out) };
+    let Some(si) = index.section_of(2, Some(polarity)) else {
+        return Ok(out);
+    };
     let ids = index.arrays(si)?.scan_ids.clone();
     let want: HashSet<u32> = wanted.iter().copied().collect();
     let mut pos_of: HashMap<u32, u32> = HashMap::new();
@@ -57,32 +74,58 @@ pub(crate) fn read_peaks<R: ReadAt>(index: &mut Index<R>, polarity: i8, wanted: 
 }
 
 /// The MS2 of every row of `Ctx::rows` (same order); `None` for a row with no MS2, or when no scan of its file fits. `open(k)` gives the index of file `k`.
-pub fn spectra<R: ReadAt>(c: &Ctx, mut open: impl FnMut(usize) -> Result<Index<R>>) -> Result<Vec<Option<Ms2>>> {
+pub fn spectra<R: ReadAt>(
+    c: &Ctx,
+    mut open: impl FnMut(usize) -> Result<Index<R>>,
+) -> Result<Vec<Option<Ms2>>> {
     let (t, rows) = (c.table, c.rows());
     let mut out: Vec<Option<Ms2>> = vec![None; rows.len()];
     if t.meta.len() != t.len() {
         return Ok(out);
     }
     for k in 0..t.n_files {
-        let mine: Vec<usize> = (0..rows.len()).filter(|&i| t.meta.ms2_file[rows[i]] == k as u32 && t.meta.ms2_file[rows[i]] != NO_FILE).collect();
+        let mine: Vec<usize> = (0..rows.len())
+            .filter(|&i| {
+                t.meta.ms2_file[rows[i]] == k as u32 && t.meta.ms2_file[rows[i]] != NO_FILE
+            })
+            .collect();
         if mine.is_empty() {
             continue;
         }
         let mut index = open(k)?;
-        let mut by_rt: Vec<u32> = (0..index.scans.len() as u32).filter(|&g| index.scans[g as usize].level == 2).collect();
-        by_rt.sort_by(|&a, &b| index.scans[a as usize].rt.total_cmp(&index.scans[b as usize].rt));
+        let mut by_rt: Vec<u32> = (0..index.scans.len() as u32)
+            .filter(|&g| index.scans[g as usize].level == 2)
+            .collect();
+        by_rt.sort_by(|&a, &b| {
+            index.scans[a as usize]
+                .rt
+                .total_cmp(&index.scans[b as usize].rt)
+        });
         let chosen: Vec<(usize, u32)> = mine
             .iter()
             .filter_map(|&i| {
                 let (r, q) = (rows[i], t.meta.get(rows[i]));
-                pick(&index, &by_rt, t.mz[r], c.polarity, f64::from(q.rt_lo), f64::from(q.rt_hi)).map(|g| (i, g))
+                pick(
+                    &index,
+                    &by_rt,
+                    t.mz[r],
+                    c.polarity,
+                    f64::from(q.rt_lo),
+                    f64::from(q.rt_hi),
+                )
+                .map(|g| (i, g))
             })
             .collect();
         let wanted: Vec<u32> = chosen.iter().map(|x| x.1).collect();
         let peaks = read_peaks(&mut index, c.polarity, &wanted)?;
         for (i, g) in chosen {
             if let Some((mz, it)) = peaks.get(&g).cloned() {
-                out[i] = Some(Ms2 { prec: index.scans[g as usize].prec(0.0), mz, it, files: 1 });
+                out[i] = Some(Ms2 {
+                    prec: index.scans[g as usize].prec(0.0),
+                    mz,
+                    it,
+                    files: 1,
+                });
             }
         }
     }

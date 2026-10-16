@@ -44,11 +44,7 @@ fn a_note_is_required_only_when_the_decision_changes_something() {
         name: Some("Paracetamol"),
         group: None,
     };
-    let rec = |livello, group, nome| Rec {
-        livello,
-        group,
-        nome,
-    };
+    let rec = |level, group, name| Rec { level, group, name };
     assert_eq!(
         decision_changes(&f, &rec("2b", "", "")),
         vec!["level 3 -> 2b"]
@@ -186,7 +182,7 @@ fn a_feature_without_ms2_is_reviewed_without_error() {
 
 fn decision(extra: &str) -> String {
     format!(
-        r#"{{"pol":"POS","id":15,"livello":"2b","motivazione":"diagnostic ions explained","decided_on":"2026-10-16","decided_by":"rev",
+        r#"{{"pol":"POS","id":15,"level":"2b","justification":"diagnostic ions explained","decided_on":"2026-10-16","decided_by":"rev",
         "checklist":["diagnostic_fragment","neutral_loss","alternatives_excluded"],
         "evidence":{{"type":"fragments","library":"library/banco.json","entry":"","cosine":0.99,"matched":4,"delta_mz":0,"delta_formula":"","note":"x"}}{extra}}}"#
     )
@@ -291,7 +287,7 @@ fn a_2b_decision_makes_the_feature_2b_and_survives_the_cascade() {
     golden_csv(&saved.text);
     levels_match_reference(&files);
     // the same day and reviewer: the row is replaced, not repeated
-    let again = decide(&mut files, &decision(r#","nome":"Acetaminophen""#));
+    let again = decide(&mut files, &decision(r#","name":"Acetaminophen""#));
     assert_eq!((again.added, again.replaced), (0, 1));
     assert_eq!(again.text.lines().count(), saved.text.lines().count());
     // another day: the history grows

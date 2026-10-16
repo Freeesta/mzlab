@@ -22,7 +22,7 @@ pub struct Saved {
     pub unchanged: usize,
 }
 
-/// What `livello` of the file each level of the page is written as (`2a` is `2`); the empty level keeps the cascade as it is.
+/// What `level` of the file each level of the page is written as (`2a` is `2`); the empty level keeps the cascade as it is.
 fn file_level(page: &str) -> Option<&'static str> {
     match page.trim() {
         "" => Some(""),
@@ -86,9 +86,9 @@ fn ticked_items(d: &Value) -> Result<Vec<String>> {
 /// The rules of the Banco: a note when the decision changes something, a note for every 2b, no analog as Level 2a.
 fn check_rules(
     f: &Feature,
-    livello: &str,
+    level: &str,
     group: &str,
-    nome: &str,
+    name: &str,
     nota: &str,
     etype: &str,
 ) -> Result<()> {
@@ -99,30 +99,23 @@ fn check_rules(
         name: f.name(),
         group: f.decision.group_override.as_deref(),
     };
-    let changes = decision_changes(
-        &cur,
-        &Rec {
-            livello,
-            group,
-            nome,
-        },
-    );
+    let changes = decision_changes(&cur, &Rec { level, group, name });
     if !changes.is_empty() && nota.is_empty() {
         return Err(bad(format!(
-            "a note (motivazione) is required: the decision changes {}",
+            "a note (justification) is required: the decision changes {}",
             changes.join(", ")
         )));
     }
-    if livello == "2b" && nota.is_empty() {
-        return Err(bad("a '2b' row needs a note (motivazione)"));
+    if level == "2b" && nota.is_empty() {
+        return Err(bad("a '2b' row needs a note (justification)"));
     }
-    if etype == "analog" && livello == "2" {
+    if etype == "analog" && level == "2" {
         return Err(bad("an analog is never Level 2a"));
     }
     Ok(())
 }
 
-/// `decision` is `{pol, id, livello, nome, group, motivazione, decided_by, decided_on, rt_check, checklist: [keys], evidence: {type, library, entry, cosine, matched, delta_mz, delta_formula, note}}`.
+/// `decision` is `{pol, id, level, name, group, justification, decided_by, decided_on, rt_check, checklist: [keys], evidence: {type, library, entry, cosine, matched, delta_mz, delta_formula, note}}`.
 pub fn decision_text(io: &Io, root: &str, decision: &str) -> Result<Saved> {
     let d = json::parse(decision.as_bytes()).map_err(|_| bad("the decision is not valid JSON"))?;
     let g = |k: &str| text(d.get(k));
@@ -136,8 +129,7 @@ pub fn decision_text(io: &Io, root: &str, decision: &str) -> Result<Saved> {
     let f = b
         .feature(&pol, id)
         .ok_or_else(|| bad(format!("feature {pol} {id} is not in the table")))?;
-    let livello =
-        file_level(&g("livello")).ok_or_else(|| bad(format!("livello {:?}", g("livello"))))?;
+    let level = file_level(&g("level")).ok_or_else(|| bad(format!("level {:?}", g("level"))))?;
     let group = choice("group", g("group"), &["", "ambiguous"])?;
     let rt_check = choice("rt_check", g("rt_check"), &["", "peak", "isomer"])?;
     let ev = d.get("evidence");
@@ -147,8 +139,8 @@ pub fn decision_text(io: &Io, root: &str, decision: &str) -> Result<Saved> {
         ev_text("type"),
         &["", "library", "analog", "fragments", "in_silico", "context"],
     )?;
-    let (nome, nota) = (g("nome"), g("motivazione"));
-    check_rules(f, livello, &group, &nome, &nota, &etype)?;
+    let (name, nota) = (g("name"), g("justification"));
+    check_rules(f, level, &group, &name, &nota, &etype)?;
     let ticked = ticked_items(&d)?;
     let mut row = DecisionTable::empty();
     row.rows.push(vec![String::new(); row.columns.len()]);
@@ -161,12 +153,12 @@ pub fn decision_text(io: &Io, root: &str, decision: &str) -> Result<Saved> {
         ("feature_id", id.to_string()),
         ("mz", num(f.mz)),
         ("rt", num(f.rt)),
-        ("livello", livello.to_string()),
-        ("nome", nome),
-        ("identita", g("identita")),
+        ("level", level.to_string()),
+        ("name", name),
+        ("identity", g("identity")),
         ("decided_on", g("decided_on")),
         ("decided_by", g("decided_by")),
-        ("motivazione", nota),
+        ("justification", nota),
         ("group", group),
         ("rt_check", rt_check),
         ("evidence_type", etype),
