@@ -1,4 +1,4 @@
-pol;feature_id;mz;rt;livello;nome;identita;decided_on;decided_by;motivazione;group;evidence_type;evidence_library;evidence_entry;evidence_cosine;evidence_matched;evidence_delta_mz;evidence_delta_formula;evidence_note;rt_check;app_version;settings_hash;settings_used;evidence_ref_hash;evidence_ref_source;evidence_checklist
+pol;feature_id;mz;rt;level;name;identity;decided_on;decided_by;justification;group;evidence_type;evidence_library;evidence_entry;evidence_cosine;evidence_matched;evidence_delta_mz;evidence_delta_formula;evidence_note;rt_check;app_version;settings_hash;settings_used;evidence_ref_hash;evidence_ref_source;evidence_checklist
 POS;2;250.1234;6.00;3;;Fictacin B;2026-09-24;test;fictional: single library, evidence below 2a;;;;;;;;;;;;;;;;
 POS;4;300.1500;4.10;;Caffeine;Fictastructin;2026-09-24;test;fictional: same compound as POS 3;;;;;;;;;;;;;;;;
 POS;99;999.9999;9.99;3;;Nothing;2026-09-24;test;fictional: no such feature, must only warn;;;;;;;;;;;;;;;;

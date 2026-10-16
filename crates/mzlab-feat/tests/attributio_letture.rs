@@ -155,6 +155,13 @@ fn standards_library_and_decision_columns_match_the_golden_data() {
         .expect("cols")
         .iter()
         .map(|c| c.as_str().expect("str").to_string())
+        .map(|c| match c.as_str() {
+            "livello" => "level".into(),
+            "nome" => "name".into(),
+            "identita" => "identity".into(),
+            "motivazione" => "justification".into(),
+            _ => c,
+        })
         .collect();
     want_cols.push("evidence_checklist".into());
     assert_eq!(s.decisions.columns, want_cols);

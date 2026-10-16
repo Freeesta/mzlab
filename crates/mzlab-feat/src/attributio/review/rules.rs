@@ -1,11 +1,11 @@
 // Ported from Attributio src/attributio/review/rules.py.
-//! The decision rules of the Banco 2b: how the level of a feature is shown, what a decision changes and when a note is required. A note (`motivazione`) is
+//! The decision rules of the Banco 2b: how the level of a feature is shown, what a decision changes and when a note is required. A note (`justification`) is
 //! required only when the decision CHANGES the assignment the cascade gives the feature now (the level, the name or the group); keeping things as they are is
 //! saved without a note. The page and the saving of the decisions both ask these functions.
 
-/// The level of `feature_decisions.csv` (`livello`) as the page shows it; `None` for no level decision.
-pub fn livello_to_level(livello: &str) -> Option<&'static str> {
-    match livello.trim() {
+/// The level of `feature_decisions.csv` (`level`) as the page shows it; `None` for no level decision.
+pub fn level_to_level(level: &str) -> Option<&'static str> {
+    match level.trim() {
         "2b" => Some("2b"),
         "3" | "3a" | "3b" => Some("3"),
         "2" => Some("2a"),
@@ -37,24 +37,24 @@ pub struct Current<'a> {
 /// The fields of a decision that the rules read.
 #[derive(Clone, Debug, Default)]
 pub struct Rec<'a> {
-    pub livello: &'a str,
+    pub level: &'a str,
     pub group: &'a str,
-    pub nome: &'a str,
+    pub name: &'a str,
 }
 
 /// What the decision `rec` changes for `feature`; empty: nothing changes and the note is optional.
 pub fn decision_changes(feature: &Current, rec: &Rec) -> Vec<String> {
     let cur = page_level(feature.level, feature.level_sub, feature.decision_2b);
     let mut out = Vec::new();
-    if let Some(to) = livello_to_level(rec.livello).filter(|to| *to != cur) {
+    if let Some(to) = level_to_level(rec.level).filter(|to| *to != cur) {
         out.push(format!("level {cur} -> {to}"));
     }
     if rec.group.trim() == "ambiguous" && feature.group.unwrap_or("") != "ambiguous" {
         out.push("identity rejected".to_string());
     }
-    let nome = rec.nome.trim();
-    if !nome.is_empty() && nome != feature.name.unwrap_or("") {
-        out.push(format!("name -> {nome}"));
+    let name = rec.name.trim();
+    if !name.is_empty() && name != feature.name.unwrap_or("") {
+        out.push(format!("name -> {name}"));
     }
     out
 }

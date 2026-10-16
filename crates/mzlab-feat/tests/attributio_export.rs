@@ -295,7 +295,7 @@ fn banco_files_with(decisions: &str) -> mzlab_feat::attributio::io::MemFiles {
     files
 }
 
-const HEAD: &str = "pol;feature_id;mz;rt;livello;nome;identita;decided_on;decided_by;motivazione;group;evidence_type;evidence_library;evidence_entry;evidence_cosine;evidence_matched;evidence_delta_mz;evidence_delta_formula;evidence_note\n";
+const HEAD: &str = "pol;feature_id;mz;rt;level;name;identity;decided_on;decided_by;justification;group;evidence_type;evidence_library;evidence_entry;evidence_cosine;evidence_matched;evidence_delta_mz;evidence_delta_formula;evidence_note\n";
 
 fn evidence_files(rows: &str) -> Vec<(String, String)> {
     let files = banco_files_with(&format!("{HEAD}{rows}"));

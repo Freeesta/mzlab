@@ -62,7 +62,7 @@ fn review_and_decision_of_the_banco() {
 
     let dir = std::env::temp_dir().join(format!("mzlab_banco_{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
-    let decision = json!({"pol": "POS", "id": 15, "livello": "2b", "motivazione": "diagnostic ions explained", "decided_on": "2026-10-16", "decided_by": "rev",
+    let decision = json!({"pol": "POS", "id": 15, "level": "2b", "justification": "diagnostic ions explained", "decided_on": "2026-10-16", "decided_by": "rev",
         "checklist": ["diagnostic_fragment", "neutral_loss", "alternatives_excluded"],
         "evidence": {"type": "fragments", "library": "library/banco.json", "entry": "", "cosine": 0.99, "matched": 4, "delta_mz": 0, "delta_formula": "", "note": "x"}});
     let q = json!({"root": "c", "files": files, "kind": "decision", "decision": decision.to_string(), "folder": dir.to_string_lossy()});
