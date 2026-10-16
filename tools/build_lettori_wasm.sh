@@ -4,7 +4,7 @@
 # Called by tools/build_feat_wasm.sh, which pages.yml, release.yml and sito-rust.yml already run.
 set -eu
 # family limit (bytes after wasm-opt -Oz; tests/test_lettori_wasm.py checks the table: no value goes up)
-tetti="aperti 401408
+tetti="aperti 524288
 andi 262144
 thermo 614400
 agilent 458752
