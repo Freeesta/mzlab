@@ -447,13 +447,40 @@ impl Gruppo {
 
     /// Peak `i` of what is kept, as `(mz, intensity, scan)`.
     fn picco(&self, i: usize) -> Option<(f64, f64, u32)> {
-        if self.f32 {
-            self.kept32
-                .get(i)
-                .map(|p| (p.mz.to64(), p.it.to64(), p.pos))
-        } else {
-            self.kept.get(i).map(|p| (p.mz, p.it, p.pos))
+        if !self.f32 {
+            return self.kept.get(i).map(|p| (p.mz, p.it, p.pos));
         }
+        self.kept32
+            .get(i)
+            .map(|p| (p.mz.to64(), p.it.to64(), p.pos))
+    }
+
+    /// One peak: counted, then kept (`keep`) or sent to the scratch file (`scorta`, when there is one).
+    #[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // `bucket` is below `NB`; `f32` peaks are what the section writes
+    fn metti(
+        &mut self,
+        keep: bool,
+        Peak { mz, it, pos }: Peak<f64>,
+        scorta: Option<(&mut Parti, &mut dyn Spill)>,
+    ) -> Result<()> {
+        self.counts[bucket(mz)] += 1;
+        if self.level == 1 {
+            self.counts32[bucket(f64::from(mz as f32))] += 1;
+        }
+        if self.f32 {
+            // the values the section writes (`Num::from64`); the scratch file splits them by the bucket of the rounded m/z
+            let (mz, it) = (mz as f32, it as f32);
+            if keep {
+                self.kept32.push(Peak { mz, it, pos });
+            } else if let Some((parti, spill)) = scorta {
+                parti.push(spill, f64::from(mz), f64::from(it), pos)?;
+            }
+        } else if keep {
+            self.kept.push(Peak { mz, it, pos });
+        } else if let Some((parti, spill)) = scorta {
+            parti.push(spill, mz, it, pos)?;
+        }
+        Ok(())
     }
 
     fn held(&self) -> usize {
@@ -494,12 +521,7 @@ impl<'a> Prima<'a> {
         }
     }
 
-    pub(crate) fn con_hr1(mut self, hr1: bool) -> Prima<'a> {
-        self.hr1 = Some(hr1);
-        self
-    }
-
-    /// What the scans seen so far say of `hr1`, if it is not known yet; the groups made from now on keep their peaks so.
+    /// `hr1` as the table says it (an mzML) or as the scans seen so far say it (a reader), if it is not known yet; the groups made from now on keep their peaks so.
     pub(crate) fn indovina(&mut self, hr1: bool) {
         self.hr1.get_or_insert(hr1);
     }
@@ -530,27 +552,10 @@ impl<'a> Prima<'a> {
             }
         }
         for j in 0..n {
+            let spill = self.spill.as_deref_mut().map(|s| s as &mut dyn Spill);
+            let scorta = self.parti.as_mut().zip(spill);
             let (mz, it) = (sp.mz[j], sp.intensity_f64(j));
-            g.counts[bucket(mz)] += 1;
-            if level == 1 {
-                g.counts32[bucket(f64::from(mz as f32))] += 1;
-            }
-            if g.f32 {
-                // the values the section writes (`Num::from64`); the scratch file splits them by the bucket of the rounded m/z
-                let (mz, it) = (mz as f32, it as f32);
-                if self.keep {
-                    g.kept32.push(Peak { mz, it, pos });
-                } else if let (Some(parti), Some(spill)) =
-                    (&mut self.parti, self.spill.as_deref_mut())
-                {
-                    parti.push(spill, f64::from(mz), f64::from(it), pos)?;
-                }
-            } else if self.keep {
-                g.kept.push(Peak { mz, it, pos });
-            } else if let (Some(parti), Some(spill)) = (&mut self.parti, self.spill.as_deref_mut())
-            {
-                parti.push(spill, mz, it, pos)?;
-            }
+            g.metti(self.keep, Peak { mz, it, pos }, scorta)?;
         }
         g.n += n as u64;
         self.visti += 1;
@@ -636,7 +641,8 @@ pub fn build_con_spill(
         return Err(Error::new("err.file.index").with("detail", "scan table"));
     }
     // -- pass 1: count (and keep, while it fits)
-    let mut prima = Prima::new(budget, spill).con_hr1(table.hr1);
+    let mut prima = Prima::new(budget, spill);
+    prima.indovina(table.hr1);
     let mut failure: Option<Error> = None;
     {
         let mut on = |sp: Spectrum| {
