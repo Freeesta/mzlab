@@ -175,6 +175,11 @@ impl Rows {
         self.rows.last().map(|r| (r.level, r.polarity))
     }
 
+    /// Whether the last row alone makes the file high-resolution (`Table::hr1` takes the rows of every MS1 scan).
+    pub(crate) fn ultima_hr(&self) -> bool {
+        self.rows.last().is_some_and(|r| super::is_hr(&[r]))
+    }
+
     /// From the header of a run, without writing it (`Head::da_testata`); `None` when the text would be needed.
     pub(crate) fn da_testata(h: &Header) -> Option<Rows> {
         Head::da_testata(h).map(Rows::with)

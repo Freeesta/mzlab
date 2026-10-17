@@ -132,6 +132,8 @@ fn mzml_con_scratch(label: &str, table: &mzidx::ScanTable, mzml: &[u8], idx: &[u
 
 /// The same index with a scratch file: the peaks that do not fit go to it, the scans are decoded once, the bytes are the same.
 fn con_scratch(label: &str, l: &mut Finto, pb: &upload::Prepared, name: &str, b: &[u8]) {
+    // a wrong guess of 32-bit MS1 peaks (`primo_ms1_diverso`) throws away what pass 1 kept or spilled: the rounds decode again
+    let ripassa = label == "primo FTMS";
     let mut spilled = false;
     for budget in [BIG, 1 << 22, 1 << 20, 1 << 18, 1 << 16, 1 << 14, 1 << 12] {
         let mut out = std::io::Cursor::new(Vec::new());
@@ -149,14 +151,16 @@ fn con_scratch(label: &str, l: &mut Finto, pb: &upload::Prepared, name: &str, b:
             continue;
         };
         assert_eq!(sha, pb.sha256, "{label}");
-        assert_eq!(st.passes, 1, "{label}: one decoding with a scratch file");
+        if !ripassa {
+            assert_eq!(st.passes, 1, "{label}: one decoding with a scratch file");
+        }
         spilled |= !sp.into_inner().is_empty();
         assert!(
             out.into_inner() == b,
             "{label}: the index with a scratch file differs at budget {budget}"
         );
     }
-    if l.indice(0).unwrap().len() > 200 {
+    if l.indice(0).unwrap().len() > 200 && !ripassa {
         assert!(spilled, "{label}: no budget used the scratch file");
     }
 }
@@ -265,4 +269,33 @@ fn uguali_dopo_l_arrotondamento_tra_due_bucket() {
     assert!(pa.table.hr1, "the MS1 sections hold f32");
     let (idx, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG).unwrap();
     mzml_con_scratch("uguali", &pa.table, &mzml, &idx);
+}
+
+/// MS1 filters where the first scan says the opposite of the file: a reader keeps the MS1 peaks of pass 1 by what its first MS1 scan says
+/// (`Prima::indovina`), and a wrong guess must not change a byte.
+fn primo_ms1_diverso(seed: u64, primo: &str, altri: &str) -> Finto {
+    let mut l = Finto::vario(400, 40, seed);
+    let mut primo_visto = false;
+    for s in l.schede.iter_mut().filter(|s| s.spettro.level == 1) {
+        let a = if primo_visto { altri } else { primo };
+        s.spettro.filter = format!("{a} + p ESI Full ms [100.0000-1000.0000]");
+        primo_visto = true;
+    }
+    l
+}
+
+#[test]
+fn primo_ms1_ad_alta_risoluzione_in_un_file_a_bassa() {
+    let mut l = primo_ms1_diverso(21, "FTMS", "ITMS");
+    let p = upload::prepare_lettore(&mut l, 0, &[], "x.mzML").unwrap();
+    assert!(!p.table.hr1);
+    prova("primo FTMS", l);
+}
+
+#[test]
+fn primo_ms1_a_bassa_risoluzione_in_un_file_ad_alta() {
+    let mut l = primo_ms1_diverso(22, "ITMS", "FTMS");
+    let p = upload::prepare_lettore(&mut l, 0, &[], "x.mzML").unwrap();
+    assert!(p.table.hr1);
+    prova("primo ITMS", l);
 }
