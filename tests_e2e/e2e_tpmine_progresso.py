@@ -1,6 +1,7 @@
 """Tabui «Dig» progress and «Cancel» with the Rust engine (TP_Mine/files/finder-lr.js, crates/mzlab-feat/src/legacy/progress.rs): the 38 synthetic files of tests/data/gruppi go in through the
 page; during the Dig the page stays responsive (a 50 ms timer never stalls for more than 300 ms), the phases come in order with «file k of N» for the detection, «Cancel» stops the run
 and gives the panel back without losing the files (a second Dig then finishes), and the long tasks of the page are recorded with their phase (DIAG.LONG, «Copy diagnostics»).
+The head of the panel is the common progress panel (avanzamento.js) in English with the page in Italian; a failed Dig keeps the error, its phase and «Copy diagnosis».
 Builds the site (python3 tools/build_site.py) and static/wasm-feat; SKIP without cargo or wasm-bindgen. MZLAB_PIPE_SITE=<built site with static/wasm-feat> reuses one (the TP_Mine files are
 copied over it). Run from the repo root: python3 tests_e2e/e2e_tpmine_progresso.py"""
 import os, shutil, subprocess, sys, tempfile, time
@@ -37,8 +38,8 @@ WATCH = """() => { window.__w = {gaps: [], counts: [], t0: performance.now()}; l
     .observe(document.getElementById('tp-right'), {subtree: true, childList: true, characterData: true}); }"""
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None); pg = b.new_context(viewport={"width": 1500, "height": 1400}, reduced_motion="reduce").new_page()
-        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');localStorage.setItem('qqq.admin','1');}catch(_){}")
+        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None); pg = b.new_context(permissions=["clipboard-read", "clipboard-write"], viewport={"width": 1500, "height": 1400}, reduced_motion="reduce").new_page()
+        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');localStorage.setItem('qqq.admin','1');localStorage.setItem('mzlab.lang','it');}catch(_){}")
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#nav", timeout=120000)
         pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
@@ -71,6 +72,8 @@ try:
         def cancel():
             pg.click("#tp-go"); pg.wait_for_function("window.TPLIVE && TPLIVE.phases() === 'xic'", timeout=120000)
             assert pg.locator("#tp-live-cancel").is_visible()
+            tm = pg.locator("#tp-live .avanza [data-r=time]").text_content()
+            assert "elapsed" in tm and pg.locator("#tp-live-cancel").text_content() == "Cancel", ("the panel is not in English", tm)
             pg.keyboard.press("Escape") if pg.evaluate("document.activeElement && document.activeElement.id") == "tp-live-cancel" else pg.click("#tp-live-cancel")
             pg.wait_for_function("document.getElementById('tp-msg').textContent === 'Cancelled.'", timeout=30000)
             assert not pg.locator("#tp-go").is_disabled() and pg.locator("#tp-live-cancel").count() == 0
@@ -84,6 +87,21 @@ try:
             assert t.startswith("mzLab 9.9.9\ncores: "), t
             assert pg.evaluate("typeof DIAG.LONG.righe(0).length") == "number"
         step("diagnostics: the text to copy names the cores and the long tasks", diag)
+
+        def failed():
+            pg.evaluate("""() => { const R = document.createElement('div'); R.id = 'tp-fake'; document.querySelector('#tp-right').after(R);
+              TPLIVE.start(R, false, {esc: s => s, call: null, cancel: () => {}}); TPLIVE.event({phase: 'xic', frac: 0.3, text: 'XICs 3 of 9'}); }""")
+            pg.wait_for_selector("#tp-fake #tp-live-cancel")
+            assert pg.locator("#tp-fake [data-r=detail]").text_content() == "XICs 3 of 9"
+            pg.evaluate("TPLIVE.stop(false, 'out of memory in /home/someone/x.wasm')")
+            sm = pg.locator("#tp-fake [data-r=sum]").text_content()
+            assert "stopped during XICs and peaks" in sm and "1 failed" in sm, sm
+            assert pg.locator("#tp-fake li.fail").text_content() == "XICs and peaks: out of memory in /home/someone/x.wasm"
+            pg.click("#tp-fake [data-r=copy]"); pg.wait_for_selector("#tp-fake [data-r=copy]:text('Diagnosis copied')")
+            t = pg.evaluate("navigator.clipboard.readText()")
+            assert "phase: xic" in t and "<path>" in t and "/home/someone" not in t, t
+            pg.click("#tp-fake [data-r=close]"); assert pg.locator("#tp-fake .avanza").count() == 0
+        step("a failed Dig keeps the error, its phase and «Copy diagnosis» (English with the page in Italian)", failed)
         b.close()
 finally:
     srv.terminate()

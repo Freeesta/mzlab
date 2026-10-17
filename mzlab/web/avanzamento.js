@@ -10,16 +10,17 @@ const BEAT = 2000, STALL = 30000, KEEP = 8000;
 /** @param {number} ms */
 export function tempo(ms) { const s = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
 
-/** the time left from the fraction done, or "" while it is not reliable (under 5 % or 3 s, or the fraction is unknown)
- * @param {number | null} frac @param {number} ms elapsed */
-export function rimanente(frac, ms) { return frac == null || frac < 0.05 || frac >= 1 || ms < 3000 ? "" : tempo(ms * (1 - frac) / frac); }
+/** the time left from the fraction done, or "" while it is not reliable (under `min` of the job, 5 % by default, or 3 s, or the fraction is unknown)
+ * @param {number | null} frac @param {number} ms elapsed @param {number} [min] */
+export function rimanente(frac, ms, min = 0.05) { return frac == null || frac < min || frac >= 1 || ms < 3000 ? "" : tempo(ms * (1 - frac) / frac); }
 
 /**
  * @param {HTMLElement} box where the panel goes
- * @param {{ title: string, n: number, cancel?: boolean, signal?: AbortController }} o `cancel: false` when the caller has its own «Cancel»; `signal` is aborted by «Cancel»
+ * @param {{ title: string, n: number, cancel?: boolean, signal?: AbortController, t?: (k: string, p?: any) => string, eta?: number }} o `cancel: false` when the caller has its own «Cancel»;
+ * `signal` is aborted by «Cancel»; `t` gives the texts of the catalog keys when the caller is not in the language of the page (Tabui: English only); `eta` = the fraction from which the time left is shown
  */
 export function avanza(box, o) {
-  const w = /** @type {any} */ (globalThis), T = (/** @type {string} */ k, /** @type {any} */ p = undefined) => w.I18N.t(k, p), esc = (/** @type {any} */ s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] || c);
+  const w = /** @type {any} */ (globalThis), T = o.t || ((/** @type {string} */ k, /** @type {any} */ p = undefined) => w.I18N.t(k, p)), esc = (/** @type {any} */ s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] || c);
   const ctl = o.signal || new AbortController(), t0 = Date.now(), el = document.createElement("div");
   el.className = "convprog avanza"; el.setAttribute("role", "group"); el.setAttribute("aria-label", o.title);
   el.innerHTML = `<div class="cp-head"><b data-r="title"></b> <span data-r="item"></span> <button type="button" class="sec sm" data-r="cancel"></button></div>
@@ -33,7 +34,7 @@ export function avanza(box, o) {
   /** @type {{ name: string, msg: string, diag?: any }[]} */ const fails = [];
   let frac = /** @type {number | null} */ (null), max = 0, seen = t0, done = 0, cancelled = 0, beat = "", timer = /** @type {any} */ (0);
   const show = () => {
-    const now = Date.now(), left = rimanente(frac, now - t0);
+    const now = Date.now(), left = rimanente(frac, now - t0, o.eta);
     q("time").textContent = T("av.elapsed", { t: tempo(now - t0) }) + (left ? " · " + T("av.left", { t: left }) : "");
     const b = cn.disabled ? "" : now - seen >= STALL ? "stall" : now - seen >= BEAT ? "beat" : "";
     if (b !== beat) { beat = b; q("beat").textContent = b ? T(b === "stall" ? "av.stall" : "av.beat") : ""; }
@@ -51,7 +52,7 @@ export function avanza(box, o) {
       seen = Date.now(); show();
     },
     ok() { done++; },
-    /** @param {string} name @param {string} msg @param {any} [diag] a diagnosis of diagnosi.js */
+    /** @param {string} name @param {string} msg @param {any} [diag] a diagnosis of diagnosi.js, or the plain text that «Copy diagnosis» copies */
     fail(name, msg, diag) { fails.push({ name, msg, diag }); },
     stop() { cancelled++; },
     /** the summary in place of the bar, with the time taken; `head` replaces «k of n done» @param {{ head?: string }} [x] */
@@ -60,10 +61,11 @@ export function avanza(box, o) {
       const parts = [x && x.head ? x.head : T("av.sum", { done, n: o.n })];
       if (fails.length) parts.push(T("conv.sum.fail", { n: fails.length }));
       if (cancelled) parts.push(T("conv.sum.cancel", { n: cancelled }));
-      const d = fails.find(f => f.diag), D = w.DIAG;
+      const d = fails.find(f => f.diag), D = d && typeof d.diag !== "string" ? w.DIAG : null;
       const li = fails.map(f => h`<li class="fail">${f.name ? f.name + ": " + f.msg : f.msg}</li>`);
-      el.innerHTML = h`<p class="sm" data-r="sum"><b>${o.title}</b>: ${parts.join(", ")} · ${tempo(Date.now() - t0)} <button type="button" class="sec sm" data-r="close">${T("common.close")}</button></p>${raw(fails.length ? h`<ul class="sm">${li.map(raw)}</ul>` : "")}${raw(d && D ? D.html(d.diag, esc, T) : "")}`;
+      el.innerHTML = h`<p class="sm" data-r="sum"><b>${o.title}</b>: ${parts.join(", ")} · ${tempo(Date.now() - t0)} <button type="button" class="sec sm" data-r="close">${T("common.close")}</button></p>${raw(fails.length ? h`<ul class="sm">${li.map(raw)}</ul>` : "")}${raw(d && D ? D.html(d.diag, esc, T) : d ? h`<button type="button" class="sec sm" data-r="copy">${T("diag.copy")}</button>` : "")}`;
       if (d && D) D.cabla(el, d.diag, w.MZLAB_VERSION || "", T);
+      else if (d) { const c = q("copy"); c.onclick = async () => { try { await navigator.clipboard.writeText(d.diag); c.textContent = T("diag.copied"); } catch (_) { c.textContent = T("diag.copyFail"); } }; }
       q("close").onclick = () => el.remove();
       if (!fails.length) setTimeout(() => el.remove(), KEEP);
     },
