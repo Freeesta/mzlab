@@ -112,7 +112,7 @@ fn proof_text(p: &[&Proof]) -> String {
 fn row(o: &mut Out, c: &Cand, files: usize) {
     let kin = c.kin.as_ref().map(|k| &k.0);
     o.raw("{\"id\":")
-        .int(c.row as i64)
+        .int(c.id())
         .raw(",\"mz\":")
         .num(round(c.mz, 4))
         .raw(",\"rt\":")
@@ -157,8 +157,8 @@ fn row(o: &mut Out, c: &Cand, files: usize) {
         .raw(",\"sim\":");
     sim_row(o, c);
     o.raw(",\"pred\":");
-    match c.hyp.as_ref().filter(|h| h.level > 0) {
-        Some(h) => o.int(i64::from(h.level)),
+    match c.pred() {
+        Some(l) => o.int(i64::from(l)),
         None => o.raw("null"),
     };
     o.raw(",\"entropy\":");
@@ -214,6 +214,31 @@ fn inclusion(d: &Dig) -> Vec<&Cand> {
     v
 }
 
+/// `rt_align` of the summary: the curves of the RT map (`null` without enough anchors).
+fn rt_align(o: &mut Out, d: &Dig) {
+    let m = &d.rt_map;
+    if !m.ok() {
+        o.raw("null");
+        return;
+    }
+    let nodes = m.grid.len();
+    o.raw("{\"files\":");
+    strs(
+        o,
+        &d.files.iter().map(|f| f.label.as_str()).collect::<Vec<_>>(),
+    );
+    o.raw(",\"rt\":").floats(&m.grid).raw(",\"shift\":[");
+    for k in 0..m.n_files {
+        o.raw(if k > 0 { "," } else { "" })
+            .floats(&m.shift[k * nodes..(k + 1) * nodes]);
+    }
+    o.raw("],\"anchors\":")
+        .int(m.n_anchors as i64)
+        .raw(",\"rms\":")
+        .floats(&m.rms)
+        .raw("}");
+}
+
 fn files_json(o: &mut Out, d: &Dig) {
     o.raw("[");
     for (k, f) in d.files.iter().enumerate() {
@@ -235,12 +260,22 @@ fn files_json(o: &mut Out, d: &Dig) {
 
 /// The fragments in source left out of the candidates.
 fn isf_json(o: &mut Out, d: &Dig) {
-    for (i, (mz, rt)) in d.isf_hidden.iter().enumerate() {
+    let hidden = d
+        .cands
+        .iter()
+        .filter(|c| c.hidden.is_some())
+        .map(|c| (c.mz, c.rt, true));
+    let left_out = d.isf_hidden.iter().map(|&(mz, rt)| (mz, rt, false));
+    for (i, (mz, rt, cand)) in left_out.chain(hidden).enumerate() {
         o.raw(if i > 0 { ",{\"mz\":" } else { "{\"mz\":" })
-            .num(round(*mz, 4))
+            .num(round(mz, 4))
             .raw(",\"rt\":")
-            .num(round(*rt, 2))
-            .raw(",\"candidate\":false}");
+            .num(round(rt, 2))
+            .raw(if cand {
+                ",\"candidate\":true}"
+            } else {
+                ",\"candidate\":false}"
+            });
     }
 }
 
@@ -264,6 +299,11 @@ fn inclusion_json(o: &mut Out, d: &Dig) {
 
 /// `api.run` (HR): `settings` and `timing` are JSON objects written as they come.
 pub fn summary(d: &Dig, settings: &str, timing: &str) -> String {
+    summary_with(d, settings, timing, "null")
+}
+
+/// The same with the network of mass differences (`network::mass_network`, a JSON object or `null`).
+pub fn summary_with(d: &Dig, settings: &str, timing: &str, network: &str) -> String {
     let mut o = Out::default();
     let p = &d.parent;
     o.raw("{\"mode\":\"hr\",\"engine\":\"rust\",\"parent\":{\"formula\":")
@@ -283,7 +323,9 @@ pub fn summary(d: &Dig, settings: &str, timing: &str) -> String {
     o.raw(",\"factors\":{\"applied\":false,\"factors\":")
         .floats(&vec![1.0; d.files.len()])
         .raw("}}");
-    o.raw(",\"saturation\":{\"saturated\":false,\"note\":\"\"},\"rt_align\":null,\"funnel\":[");
+    o.raw(",\"saturation\":{\"saturated\":false,\"note\":\"\"},\"rt_align\":");
+    rt_align(&mut o, d);
+    o.raw(",\"funnel\":[");
     for (i, (n, t)) in d.funnel.iter().enumerate() {
         o.raw(if i > 0 { ",{\"n\":" } else { "{\"n\":" })
             .int(*n as i64)
@@ -301,7 +343,9 @@ pub fn summary(d: &Dig, settings: &str, timing: &str) -> String {
         o.raw(if i > 0 { "," } else { "" });
         row(&mut o, c, d.files.len());
     }
-    o.raw("],\"mass_network\":null,\"isf_hidden\":[");
+    o.raw("],\"mass_network\":")
+        .raw(network)
+        .raw(",\"isf_hidden\":[");
     isf_json(&mut o, d);
     o.raw("],\"tree\":null,\"calibration\":null,\"inclusion\":[");
     inclusion_json(&mut o, d);
@@ -330,98 +374,19 @@ pub fn summary(d: &Dig, settings: &str, timing: &str) -> String {
     o.0
 }
 
-fn criteria(o: &mut Out, c: &Cand) {
-    o.raw("[");
-    let mut first = true;
-    for (k, _, name) in KINDS.iter() {
-        for p in c.ident.proofs.iter().filter(|p| p.kind == k.name()) {
-            let status = match p.sign.as_str() {
-                "a favore" if p.points > 0.0 => "pass",
-                "contro" => "fail",
-                _ => "na",
-            };
-            o.raw(if first {
-                "{\"status\":"
-            } else {
-                ",{\"status\":"
-            })
-            .str(status)
-            .raw(",\"name\":")
-            .str(name);
-            o.raw(",\"text\":").str(&proof_text(&[p])).raw("}");
-            first = false;
-        }
-    }
-    o.raw("]");
-}
-
-fn spectrum(o: &mut Out, mz: &[f64], rel: &[f64], n: usize) {
-    o.raw("{\"mz\":")
-        .floats(mz)
-        .raw(",\"rel\":")
-        .floats(rel)
-        .raw(",\"n_scans\":")
-        .int(n as i64)
-        .raw("}");
-}
-
-/// `isotopes` of `detail`: the proof of the isotope pattern as status and text.
-fn isotopes(o: &mut Out, c: &Cand) {
-    let Some(p) = c.ident.proofs.iter().find(|p| p.kind == "isotopi") else {
-        o.raw("null");
-        return;
-    };
-    let st = if p.sign == "contro" {
-        "inconsistent"
-    } else if p.points > 0.0 {
-        "consistent"
-    } else {
-        "not decisive"
-    };
-    o.raw("{\"status\":")
-        .str(st)
-        .raw(",\"text\":")
-        .str(&format!("isotopes {st}: {}", proof_text(&[p])))
-        .raw("}");
-}
-
-/// `prediction` of `detail`: the level of the rule that predicted the formula, how it was reached and the other ways to it.
-fn prediction(o: &mut Out, c: &Cand) {
-    let Some(h) = c.hyp.as_ref().filter(|h| (1..=4).contains(&h.level)) else {
-        o.raw("null");
-        return;
-    };
-    let t = format!(
-        "{} ({}): {}",
-        h.label,
-        h.sources.join(", "),
-        PRED_TEXT[usize::from(h.level)]
-    );
-    o.raw("{\"level\":")
-        .int(i64::from(h.level))
-        .raw(",\"text\":")
-        .str(&t)
-        .raw(",\"evidence\":");
-    strs(
-        o,
-        &h.alternatives
-            .iter()
-            .map(|a| format!("also reached as {a}"))
-            .collect::<Vec<_>>(),
-    );
-    o.raw("}");
-}
+mod parts;
+use parts::{criteria, isotopes, prediction, spectrum};
 
 /// `api.detail(id)`: `Err` when the row is not a candidate.
-pub fn detail(d: &Dig, id: usize) -> Result<String, String> {
+pub fn detail(d: &Dig, id: i64) -> Result<String, String> {
     let c = d
         .cands
         .iter()
-        .find(|c| c.row == id)
+        .find(|c| c.id() == id)
         .ok_or("candidate not found")?;
     let mut o = Out::default();
     let lv = c.level();
-    o.raw("{\"id\":").int(id as i64).raw(",\"row\":");
+    o.raw("{\"id\":").int(id).raw(",\"row\":");
     row(&mut o, c, d.files.len());
     o.raw(",\"criteria\":");
     criteria(&mut o, c);

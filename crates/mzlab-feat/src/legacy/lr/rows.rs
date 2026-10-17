@@ -4,6 +4,7 @@
 
 use std::collections::HashSet;
 
+use mzlab_core::elements::{ion_mz, mass, parse_formula};
 use mzlab_core::json::{self, round, Value};
 
 use super::super::series::FileIn;
@@ -92,7 +93,51 @@ pub fn hypotheses(registry: &str) -> Res<Vec<Hyp>> {
             .cmp(&out[b].steps)
             .then(out[a].mz.total_cmp(&out[b].mz))
     });
-    Ok(ord.into_iter().map(|i| out[i].clone()).collect())
+    Ok(ord.into_iter().map(|i| promote(out[i].clone())).collect())
+}
+
+/// The merge by nominal mass orders the formulas of one ion by their text, so its leader may be a way of two steps while an alternative takes one: the
+/// shortest way leads (the Dig names the row after it); the rest stay as alternatives.
+fn promote(h: Hyp) -> Hyp {
+    let steps = |l: &str| l.matches('+').count() as u32 + 1;
+    let parsed = |a: &String| {
+        let (f, rest) = a.split_once(" (")?;
+        let label = rest.strip_suffix(')')?;
+        let fm = parse_formula(f).ok()?;
+        let neutral = mass(&fm);
+        Some((
+            f.to_string(),
+            label.to_string(),
+            neutral,
+            ion_mz(neutral, "[M+H]+")?,
+        ))
+    };
+    let best = h
+        .alternatives
+        .iter()
+        .filter_map(|a| parsed(a).map(|p| (a, p)))
+        .filter(|(_, p)| steps(&p.1) < h.steps)
+        .min_by_key(|(_, p)| steps(&p.1));
+    let Some((chosen, (formula, label, neutral, mz))) = best else {
+        return h;
+    };
+    let mut alternatives: Vec<String> = h
+        .alternatives
+        .iter()
+        .filter(|a| *a != chosen)
+        .cloned()
+        .collect();
+    alternatives.push(format!("{} ({})", h.formula, h.label));
+    let st = steps(&label);
+    Hyp {
+        label,
+        formula,
+        mz,
+        neutral,
+        steps: st,
+        alternatives,
+        pred: h.pred,
+    }
 }
 
 /// The cells of row `r`, one per column.
@@ -182,16 +227,18 @@ pub(super) fn entry(
     }
 }
 
-/// Rows of the table assigned to the hypothesis nearest to them (within the tolerance); the others are free for the unexpected ions.
-fn assign(t: &Aligned, known: &[f64], tol: f64) -> Vec<Option<usize>> {
+/// Rows of the table assigned to the hypothesis with the fewest steps, then the nearest, within the tolerance; the others are free for the unexpected ions.
+fn assign(t: &Aligned, known: &[f64], steps: &[u32], tol: f64) -> Vec<Option<usize>> {
     (0..t.len())
         .map(|r| {
             (0..known.len())
                 .filter(|&i| (t.mz[r] - known[i]).abs() <= tol)
                 .min_by(|&a, &b| {
-                    (t.mz[r] - known[a])
-                        .abs()
-                        .total_cmp(&(t.mz[r] - known[b]).abs())
+                    steps[a].cmp(&steps[b]).then_with(|| {
+                        (t.mz[r] - known[a])
+                            .abs()
+                            .total_cmp(&(t.mz[r] - known[b]).abs())
+                    })
                 })
         })
         .collect()
@@ -215,7 +262,12 @@ pub fn candidates(
     tol: f64,
 ) -> (Vec<Entry>, HashSet<usize>) {
     let known: Vec<f64> = hyps.iter().map(|h| h.mz + off).collect();
-    let owner = assign(t, &known, tol);
+    let owner = assign(
+        t,
+        &known,
+        &hyps.iter().map(|h| h.steps).collect::<Vec<_>>(),
+        tol,
+    );
     let mut out = Vec::new();
     let mut used = HashSet::new();
     for (i, h) in hyps.iter().enumerate() {

@@ -42,14 +42,20 @@ fn files_json(files: &[String]) -> Out {
 }
 
 /// Writes `run.json`, `detail.json` (first five candidates) and `inclusion.csv`.
-fn write(out: &str, d: &legacy::dig::Dig) {
+fn write(out: &str, d: &legacy::dig::Dig, rules: &[u8]) {
     let o = Path::new(out);
-    std::fs::write(o.join("run.json"), legacy::out::summary(d, "{}", "{}")).expect("write");
+    let net = mzlab_feat::hypo::Rules::parse(rules)
+        .map_or("null".into(), |r| legacy::network::mass_network(d, &r));
+    std::fs::write(
+        o.join("run.json"),
+        legacy::out::summary_with(d, "{}", "{}", &net),
+    )
+    .expect("write");
     let det: Vec<String> = d
         .cands
         .iter()
         .take(5)
-        .map(|c| legacy::out::detail(d, c.row).expect("detail"))
+        .map(|c| legacy::out::detail(d, c.id()).expect("detail"))
         .collect();
     std::fs::write(o.join("detail.json"), format!("[{}]", det.join(","))).expect("write");
     std::fs::write(o.join("inclusion.csv"), legacy::out::inclusion_csv(d, 0)).expect("write");
@@ -117,7 +123,7 @@ fn main() {
         .map(|x| (p.mz, x.1));
     let ev = run::evidence(&table, &h, &mins, par, &r).expect("evidence");
     let d = legacy::dig(&fj.0, &pj.0, &ev, &h.registry.to_json(), |k| open(paths[k])).expect("dig");
-    write(&out, &d);
+    write(&out, &d, &rules);
     let with_ms2 = d.cands.iter().filter(|c| c.ms2.is_some()).count();
     println!(
         "rows {} candidates {} with MS2 {} parent row {:?} parent MS2 {}",

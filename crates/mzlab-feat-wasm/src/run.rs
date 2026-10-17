@@ -181,7 +181,7 @@ pub struct HypoRun {
 
 impl HypoRun {
     /// The rules of the run, parsed again from their bytes; None when the run has none.
-    fn rules(&self) -> Result<Option<Rules>> {
+    pub fn rules(&self) -> Result<Option<Rules>> {
         if self.rules_src.is_empty() {
             return Ok(None);
         }

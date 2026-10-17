@@ -56,8 +56,7 @@ try:
         step("LR: supposed tree of the parent (N nodes, N-1 edges, structure on click, keyboard, SVG)", lr)
         def lr_cmp():
             pg.click("#tp-t tr.clk:has-text('hydroxylation @ 7.40')"); pg.click('#tp-det [data-tab="identity"]')
-            pg.wait_for_selector("#tp-det details.tpr-det", state="attached", timeout=60000); pg.evaluate("document.querySelector('#tp-det details.tpr-det').open = true")          # the tree is in «Details», closed by default
-            pg.wait_for_selector("#tp-alb #alb-cmp", timeout=60000)
+            pg.wait_for_function("() => { const d = document.querySelector('#tp-det details.tpr-det'); if (d) d.open = true; const b = document.querySelector('#tp-alb #alb-cmp'); return !!b && b.offsetParent !== null; }", timeout=60000)          # the tree is in «Details», closed by default (the card is redrawn when the tree arrives)
             pg.click("#alb-cmp")
             pg.wait_for_function("document.getElementById('alb-leg').textContent.includes('shifted')", timeout=60000)
             assert pg.evaluate("document.querySelectorAll('#tp-alb .nd text').length") > 0 and "Δ" in pg.inner_text("#tp-alb")
@@ -82,7 +81,7 @@ try:
             assert pg.evaluate("document.querySelector('#hr-tree details') === null") and "supposed" not in pg.inner_text("#hr-tree")
             pg.click("#hr-tree .nd[aria-label*='C6H8N3O']")
             pg.wait_for_selector("#hr-tree .alb-det svg", timeout=60000)
-            pg.click("#hr-t tr.clk:has-text('C8H11N4O3')"); pg.wait_for_selector("#tp-det .tpr-ch", timeout=60000)
+            pg.click("#hr-t tr.clk:has-text('C8H10N4O3')"); pg.wait_for_selector("#tp-det .tpr-ch", timeout=60000)
             pg.click("#hr-tree #alb-cmp")
             pg.wait_for_function("document.getElementById('alb-leg').textContent.length > 0 && !document.getElementById('alb-leg').textContent.includes('Comparing')", timeout=60000)
             pg.screenshot(path=str(HERE / "shots" / "tpmine_albero_hr.png"), full_page=True)
