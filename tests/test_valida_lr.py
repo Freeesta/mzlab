@@ -1,5 +1,5 @@
 """The low-resolution criteria (tools/valida/lr*.py): each criterion on data built here, once passing and once failing, the tolerances, and a run of the
-native pipeline on the synthetic series (lr_synth full scan, six-level MRM). The run needs cargo and TP_Mine/py; real data are never read."""
+native pipeline on the synthetic series (lr_synth full scan, six-level MRM). The run needs cargo; real data are never read."""
 import shutil
 import sys
 from pathlib import Path
