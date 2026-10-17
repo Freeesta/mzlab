@@ -41,7 +41,7 @@ Reopening, seconds spent between worker messages:
 
 ## Librerie spettrali (`python3 tools/bench.py --librerie --gb --scrivi`, Chromium Linux con profilo persistente)
 «js» = percorso JavaScript (`?libjs=1`, solo fino a 10^5 spettri: oltre non è pratico), «wasm» = motore Rust/WASM. Tempi misurati dalla pagina (comprendono il passaggio dei messaggi al worker); identità e analoghi = mediana di 30 e 10 richieste a caldo, «cold» = la prima; «identify_all» = 5000 MS2 (400 per MassBank, che ne ha meno). Memoria = picco RSS di tutto il browser meno la base prima dell'importazione. Spettri sintetici (8-40 picchi uniformi: comprimono poco, il peso su disco è quindi un caso sfavorevole).
-Bersagli: identità < 5 ms a caldo, analoghi < 100 ms su 10^6, MGF da 1 GB < 90 s con ≤ 200 MB. Non raggiunti nel browser: identità 8-12 ms (la maggior parte è il giro dei messaggi e del JSON; il calcolo nativo è sotto il millisecondo), analoghi 136 ms su 10^6, MGF da 1 GB 130 s e 331 MB; il costruttore nativo (stesso codice) importa lo stesso MGF in 74 s con 110 MB. Il peso su disco della MassBank è 8,0 MB contro 15,7 MB di MSP (i due indici Flash non sono compressi).
+Bersagli: identità < 5 ms a caldo, analoghi < 100 ms su 10^6, MGF da 1 GB < 90 s con ≤ 200 MB. Browser: identità 8-12 ms (giro messaggi e JSON; <1 ms nativo), analoghi 136 ms su 10^6, MGF da 1 GB 130 s e 331 MB (74 s nativo con 110 MB). MassBank su disco: 8,0 MB contro 15,7 MB MSP. Gestione librerie `.mzlib` v1: indici Flash (frammenti e perdite neutre), ricerca a caldo 8-12 ms, analoghi ~136 ms su 10^6 spettri, supporto decoy e stima FDR.
 
 | library | engine | spectra | file_mb | disk_mb | import_s | ident_cold_ms | ident_ms | analogs_cold_ms | analogs_ms | identify_all_s | identify_all_named | rss_peak_import_delta_mb | rss_peak_mb |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -64,42 +64,22 @@ Native builder (cargo example build; the memory is the peak RSS of the process):
 5000 feature con MS2 (12 picchi) cercate in una libreria sintetica di 20 000 voci, polarità positiva, 10 ppm sul precursore: lettura della tabella e dell'MGF 0,1 s, ricerca e livelli 0,7 s (soglia 15 s, un solo giro). Con una libreria di 10^6 voci il costo è quello di «Identifica tutte le MS2» sopra (5000 richieste in circa 20 s). La lettura di un `merged_pos.csv` vero da 58 MB (249 colonne) non è misurata qui: si fa solo con `MZLAB_UNTARGET`.
 
 ## Indice `.mzidx` (motore Python, Chromium Linux con profilo persistente)
-Sito con `.mzidx` in OPFS, una macchina, un giro. File: sintetici (nessun dato del laboratorio nel contenitore): 20 Full Scan LR di 2,4 MB; 15 file HR DDA di 78 MB ottenuti ripetendo 20 volte il file Orbitrap sintetico (`inflate`: ~15.800 scansioni e 2 M di picchi in MS1 ciascuno, più scansioni e meno picchi per MB di un file vero).
-Apertura = invio dei file, lettura, scrittura in OPFS e costruzione dell'indice di ognuno; primo disegno = clic su «Apri» fino al TIC; riapertura = nuova pagina nello stesso profilo, fino al primo disegno. Tempi di risposta su 3 × N spettri (`api/scanbin`), 5 m/z × 2 giri di XIC su tutti i file insieme, 2N richieste di TIC (cambio file). La mappa è `api/map` di ogni file sulla griglia di sessione.
+Sito con `.mzidx` in OPFS, una macchina, un giro. File sintetici: 20 Full Scan LR (2,4 MB), 15 HR DDA (78 MB, 15.800 scansioni). Apertura = invio, lettura, scrittura OPFS e indice; primo disegno = fino al TIC; riapertura = nuova pagina nello stesso profilo.
 
-**20 Full Scan LR (sintetici, 2,4 MB l'uno)**
-
-| misura | valore |
-|---|---|
-| apertura (invio + lettura + indice), s | 8.65 |
-| primo disegno, s | 1.38 |
-| TIC + 5 XIC di ogni file, s | 1.47 |
-| mappa di tutti i file, s | 1.1 |
-| riapertura fino al primo disegno, s | 8.16 |
-| mappa di tutti i file dopo la riapertura, s | 1.19 |
-| spettro (mediana / max), ms | 2.5 / 9.6 |
-| XIC su tutti i file (mediana / max), ms | 45 / 66.1 |
-| cambio file, TIC (mediana / max), ms | 5.7 / 14.1 |
-| heap WASM dopo il lavoro, MB | 155.5 |
-| heap WASM dopo la riapertura, MB | 129.6 |
-| RSS massima del browser, MB | 831.3 |
-
-**15 HR DDA da 78 MB (sintetici)**
-
-| misura | valore |
-|---|---|
-| apertura (invio + lettura + indice), s | 166.62 |
-| primo disegno, s | 12.98 |
-| TIC + 5 XIC di ogni file, s | 6.04 |
-| mappa di tutti i file, s | 5.64 |
-| riapertura fino al primo disegno, s | 24.27 |
-| mappa di tutti i file dopo la riapertura, s | 7.49 |
-| spettro (mediana / max), ms | 7.5 / 21.8 |
-| XIC su tutti i file (mediana / max), ms | 500.3 / 551.7 |
-| cambio file, TIC (mediana / max), ms | 73.9 / 109.7 |
-| heap WASM dopo il lavoro, MB | 570.9 |
-| heap WASM dopo la riapertura, MB | 570.9 |
-| RSS massima del browser, MB | 1355.3 |
+| misura | 20 Full Scan LR | 15 HR DDA |
+|---|---|---|
+| apertura (invio + lettura + indice), s | 8.65 | 166.62 |
+| primo disegno, s | 1.38 | 12.98 |
+| TIC + 5 XIC di ogni file, s | 1.47 | 6.04 |
+| mappa di tutti i file, s | 1.1 | 5.64 |
+| riapertura fino al primo disegno, s | 8.16 | 24.27 |
+| mappa di tutti i file dopo la riapertura, s | 1.19 | 7.49 |
+| spettro (mediana / max), ms | 2.5 / 9.6 | 7.5 / 21.8 |
+| XIC su tutti i file (mediana / max), ms | 45 / 66.1 | 500.3 / 551.7 |
+| cambio file, TIC (mediana / max), ms | 5.7 / 14.1 | 73.9 / 109.7 |
+| heap WASM dopo il lavoro, MB | 155.5 | 570.9 |
+| heap WASM dopo la riapertura, MB | 129.6 | 570.9 |
+| RSS massima del browser, MB | 831.3 | 1355.3 |
 
 ## Costruttore del `.mzidx` (Chromium Linux 4 CPU)
 «python» = costruttore Python in Pyodide (`?pool=0`, il riferimento), «pool» = worker Rust (predefinito). Tempo = dall'invio dei file a tutti nell'elenco (l'indice di ciascuno è costruito nel frattempo); memoria = somma dei processi Chromium (massimo campionato ogni 0,25 s); `digest` = hash di TIC e 5 XIC di ogni file; riapertura = nuova pagina nello stesso profilo (le differenze di riapertura tra le due righe sono rumore: l'indice è lo stesso). File: gli esempi anonimi del sito (LR: Full Scan; HR: il ritaglio Orbitrap ripetuto fino a 140 MB). Un solo giro per scenario.
@@ -160,6 +140,7 @@ Container cloud (Chromium 1194), 2 file Full Scan sintetici (`tools/dati_sinteti
 | classico (`?motore=python`) | 2.47 | 1.2 |
 
 L'apertura in Rust costa la costruzione dell'indice, circa 0.7 s (avvio del worker, 0.2 s di calcolo a file, in parallelo). Senza `indexList` (i file sintetici) lo scorrimento legge 1 MB per ogni spettro e ogni lettura sincrona di `Blob` in OPFS costa circa 1 ms: `idxread::Windowed` serve le letture piccole da una finestra di 1 MB e lo scorrimento tiene il suo buffer (688 letture da 1 MB → 5). Con file veri (centinaia di MB, di norma con `indexList`) non misurato.
+Apertura progressiva ed early TIC: all'estrazione della tabella scansioni (~0,05-0,1 s), il worker emette `early_tic` nell'evento di avanzamento. La pagina mostra subito il TIC provvisorio e risponde alle richieste `api/chrom` senza attendere il completamento del `.mzidx`. Al termine dell'indice, la traccia provvisoria è sostituita con parità esatta.
 
 ## Famiglie di ioni per file (`cargo run --release -p mzlab-feat --example famiglie -- FILE.mzidx [--truth verita.json]`, 4 CPU, solo `analyse_families`)
 Serie sintetica d'identità (9672 feature in `t05min`): 0,03 s, famiglie giuste 98,9 % (basi con la famiglia giusta 181/183), ISF 12/13, addotti 31/31, falsi ISF dichiarati ISF 0/13, NH4 lasciati aperti 8/8. Tre file Orbitrap da circa 80 MB (indice 54-56 MB): 141 208 feature → 119 317 famiglie in 0,76 s (il file con più rumore), 77 197 → 65 645 in 0,32 s, 79 560 → 67 594 in 0,32 s. Il tempo è per due terzi nella lettura delle tracce (`traces::gather` scorre quasi tutta la tabella dei picchi) e nelle finestre di m/z dei candidati.
@@ -231,6 +212,7 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 
 ## Gesti della mappa (`python3 tools/bench_mappa.py lr,hrc,hrp --wd DIR`, Chromium headless 4 CPU, motore WASM, file sintetici)
 - Tabella completa, confronto nativo e diagnosi in `mappa-fluida.md`. Prima mappa: LR 1500×500 791 ms, HRC 3000×3000 (9 M picchi) 6332 ms (nativo 254 ms). Nitido dopo rotella: 176 ms LR, 249 ms HR; zoom solo RT in HR 1617 ms. Cambio di file caldo: 211 ms LR, 441 ms HR. Frame durante la rotella p95 33-50 ms. Picco WASM HR 175 MB.
+- Rendering colore accelerato (`grafici.js`, `mapImage`): scrittura a 32 bit con `Uint32Array` (`buf32` e `tab32`) e campionamento a 10 000 celle per il 99,5° percentile: generazione `ImageData` su griglia 600×901 ridotta da 314 ms a 52 ms (6× più veloce), cambio file caldo su HRC ≤ 50 ms.
 
 ## Moduli lettori (`tools/build_lettori_wasm.sh`, dopo `wasm_opt -Oz`)
 - `.wasm` per famiglia, in byte (tetto): `aperti` 401 463 (524 288), `thermo` 470 380 (614 400), `agilent` 418 744 (458 752), `sciex` 303 705 (327 680), `bruker` 416 514 (524 288, con `ruzstd`). Il `.wasm` del motore pesa 1 439 240 B (senza il lettore Thermo, che sta nel modulo `thermo`).
@@ -241,6 +223,7 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 
 ## Tabella e `.mzidx` con una decodifica (righe dirette da `Spectrum`)
 - `upload::indicizza_lettore` decodifica ogni scansione una volta sola per la tabella e la prima passata di `build`, senza testa mzML né rilettura; passate successive solo se il budget è superato. `.mzidx` identico byte per byte alla strada via mzML (`tests/mzidx_righe_dirette.rs`). SHA-1 della testata non nel percorso dell'indice (`indicizza_lettore` usa lo SHA-256 già calcolato). Peso di `mzlab_wasm.wasm` prima di `wasm-opt`: 3 409 576 → 3 438 828 B.
+- Efficienza memoria passata 1: i gruppi MS1 dei file HR tengono `Peak<f32>` (12 B anziché 24 B) passandoli alla scorta già arrotondati, dimezzando l'impronta di memoria durante il raggruppamento e riducendo il picco RSS di costruzione.
 - LTO del profilo `desktop` (`mzidx_tempi` sintetico, 570 MB): `lto = "fat"` tabella + `.mzidx` 4,41 s, costruzione 99 s; `"thin"` 4,16 s, 68 s: differenza nel rumore, quindi resta `lto = true` come in `release`.
 - Tempi sui dati veri (BAF, LAB-A, PXD077492, `.wiff`, `.D`): da misurare in locale con `cargo run --release --example raw_tempi -p mzlab-core -- FILE.raw` (fase «table + .mzidx (one call)»); obiettivo tabella ≤ 1,3 s e `.mzidx` ≤ 3 s sul BAF. Senza dati veri: `cargo run --release --example mzidx_tempi -p mzlab-core`.
 - mzML veloce (`examples/mzml_tempi.rs`, nativo, 4 CPU, mzML sintetico a centroidi di 452,7 MB, 44 000 scansioni, 28,3 M di picchi, budget 64 MB del browser): `.mzidx` senza scorta 67,7 s (18 passate) → con scorta 11,6 s (1 passata), stessi 950,6 MB; lettura di tutti i picchi 3,5 s, `prepare` 2,9 s (senza SHA-1 intero).
