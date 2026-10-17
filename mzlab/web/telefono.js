@@ -8,7 +8,8 @@
   let force = null;
   try {
     const q = /[?&]telefono=([01])/.exec(location.search);
-    if (q) sessionStorage.setItem("qqq.telefono", q[1]); // kept from the old name: renaming it would lose the users' data
+    // kept from the old name: renaming it would lose the users' data
+    if (q) sessionStorage.setItem("qqq.telefono", q[1]);
     force = sessionStorage.getItem("qqq.telefono");
   } catch (_) { /* storage blocked: automatic choice */ }
   const ua = navigator.userAgent || "";

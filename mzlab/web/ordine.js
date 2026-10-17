@@ -6,7 +6,8 @@
 // by growing concentration, else natural alphabetical order (file2 before file10).
 
 const TIME_UNITS = { s: 1 / 60, min: 1, h: 60, d: 1440 };
-const CONC_MGL = { "mg/L": 1, "µg/L": 1e-3, "ng/L": 1e-6, "g/L": 1e3 };       // concentration labels of the load table -> factor to mg/L
+// concentration labels of the load table -> factor to mg/L
+const CONC_MGL = { "mg/L": 1, "µg/L": 1e-3, "ng/L": 1e-6, "g/L": 1e3 };
 
 // natural comparison of two strings: digit runs compare as numbers, the rest case-insensitively by code point (no locale: same order everywhere)
 function naturalCmp(a, b) {

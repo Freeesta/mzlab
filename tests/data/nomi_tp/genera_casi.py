@@ -20,7 +20,7 @@ from pathlib import Path
 import pyteomics.mass
 
 # -----------------------------------------------------------------------------
-# Dati deterministici trasformazioni (120 righe su 8 molecole madri)
+# Deterministic transformation data (120 rows over 8 parent molecules)
 # -----------------------------------------------------------------------------
 TRASFORMAZIONI_RAW = """case_id,parent_name,parent_smiles,parent_formula,transformation,net_change,tp_formula_neutral
 T001,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,idrossilazione,+O,C15H12N2O2
@@ -145,7 +145,7 @@ T119,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,dealchilazione,-C2H4,C11H14O
 T120,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,glucuronidazione netta,+C6H8O6,C19H26O8"""
 
 # -----------------------------------------------------------------------------
-# Specifiche deterministiche per isomeri e formule diverse
+# Deterministic specs for isomers and different formulas
 # -----------------------------------------------------------------------------
 ISOMERS_SPEC = [
     ("carbamazepina", "C15H14N2O2", [2.30, 3.50]),
@@ -159,10 +159,10 @@ ISOMERS_SPEC = [
 ]
 
 DIFF_SPEC = [
-    # Triplette (stessa m/z nominale, 3 formule diverse)
+    # Triplets (same nominal m/z, 3 different formulas)
     ("carbamazepina", 253, [("C14H8N2O3", 3.80), ("C15H12N2O2", 4.35), ("C16H16N2O", 5.60)]),
     ("caffeina", 181, [("C6H4N4O3", 1.90), ("C7H8N4O2", 2.65), ("C8H12N4O", 3.45)]),
-    # Coppie (con esempi di ordine inverso di RT)
+    # Pairs (with examples of inverse RT order)
     ("carbamazepina", 209, [("C13H8N2O", 4.20), ("C14H12N2", 3.10)]),      # INVERSE RT
     ("carbamazepina", 251, [("C15H10N2O2", 3.80), ("C16H14N2O", 4.70)]),
     ("carbamazepina", 269, [("C15H12N2OS", 4.90), ("C15H12N2O3", 3.30)]),    # INVERSE RT
@@ -315,12 +315,12 @@ def main() -> None:
     print(f"Ambiente: Python {py_ver} | pyteomics {pyt_ver}")
     print("=================================================================")
 
-    # 1. Genera e verifica trasformazioni.csv
+    # 1. Generate and check trasformazioni.csv
     trasf_bytes = generate_trasformazioni_bytes()
     trasf_path = target_dir / "trasformazioni.csv"
     verify_and_write(trasf_path, trasf_bytes, "trasformazioni.csv")
 
-    # 2. Carica righe trasformazioni e genera casi_nomi.csv
+    # 2. Load the transformation rows and generate casi_nomi.csv
     reader = csv.DictReader(io.StringIO(trasf_bytes.decode("utf-8")))
     t_rows = list(reader)
     casi_records = build_casi_nomi_records(t_rows)
@@ -328,7 +328,7 @@ def main() -> None:
     casi_path = target_dir / "casi_nomi.csv"
     verify_and_write(casi_path, casi_bytes, "casi_nomi.csv")
 
-    # 3. Pulizia script obsoleti
+    # 3. Clean up obsolete scripts
     cleanup_obsolete_scripts(target_dir)
 
     print("-----------------------------------------------------------------")

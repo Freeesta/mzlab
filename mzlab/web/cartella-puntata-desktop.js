@@ -23,7 +23,8 @@ const CartPuntDesk = (() => {
   }
   async function choose() { const n = await T().invoke("data_choose_dir"); if (n) { S.opened.clear(); await rescan(); } }
   async function forget() { await T().invoke("data_forget"); clearInterval(timer); }
-  async function fileOf(x) {                                  // a stub File carrying its number in `type`, as the shim makes it for the system dialog
+  // a stub File carrying its number in `type`, as the shim makes it for the system dialog
+  async function fileOf(x) {
     const f = await T().invoke("data_register", { path: x.path });
     const file = new File([], f.name, { type: "application/x-mzlab-file;id=" + f.id });
     Object.defineProperty(file, "size", { value: f.size });

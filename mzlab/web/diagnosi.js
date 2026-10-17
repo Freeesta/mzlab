@@ -37,7 +37,8 @@ const DIAG = {
     const p = (e && e.params) || {}, fase = this.FASI.includes(p.fase) ? p.fase : (e && e.fase) || "open";
     let raw = String(p.raw != null ? p.raw : (e && e.message) || "");
     const nm = String((info && info.name) || ""), stem = nm.replace(/\.[^.]*(\.scan)?$/i, "");
-    for (const x of [nm, stem]) if (x.length > 2) raw = raw.split(x).join("<file>");      // the name of the file never goes in the text to copy (the messages of the engine carry it)
+    // the name of the file never goes in the text to copy (the messages of the engine carry it)
+    for (const x of [nm, stem]) if (x.length > 2) raw = raw.split(x).join("<file>");
     const ext = (String((info && info.name) || "").match(/\.([A-Za-z0-9]+)(?:\.scan)?$/) || [, ""])[1].toLowerCase();
     return {
       codice: (e && e.key) || "err.engine.index", fase, causa: this.causa(raw, fase),

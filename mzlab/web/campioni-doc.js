@@ -6,8 +6,10 @@
 // (the time is confirmed: undefined = yes, it was written by the user) and `cx` (the fields the table does not edit: istd, note, composto, serie).
 const CDOC = /** @type {any} */ ((() => {
   const BASE = /** @type {Record<string, string>} */ ({ sample: "sample", blank: "blank", dark: "sample", infusion: "sample", std: "standard", calibration: "standard", qc: "sample" });
-  const QROLE = /** @type {Record<string, string>} */ ({ sample: "sample", blank: "blank", qc: "qc", standard: "std", dark: "dark" });   // QA/QC vocabulary -> campioni/2
-  const KINDS = ["sample", "blank", "dark", "infusion", "std", "calibration", "qc"];        // the roles the program writes; a document of the old shape may also say `t0` (a sample at 0) or a `tipo_bianco` (ignored)
+  // QA/QC vocabulary -> campioni/2
+  const QROLE = /** @type {Record<string, string>} */ ({ sample: "sample", blank: "blank", qc: "qc", standard: "std", dark: "dark" });
+  // the roles the program writes; a document of the old shape may also say `t0` (a sample at 0) or a `tipo_bianco` (ignored)
+  const KINDS = ["sample", "blank", "dark", "infusion", "std", "calibration", "qc"];
   const known = (/** @type {string} */ k) => k === "t0" || KINDS.includes(k);
   const TIMED = new Set(["sample", "dark"]);
   const raw = (/** @type {string} */ op, /** @type {any} */ body) => fetch("api/campioni/" + op, { method: "POST", body: JSON.stringify(body) }).then(r => r.text());
@@ -39,7 +41,8 @@ const CDOC = /** @type {any} */ ((() => {
   const doc = (/** @type {any[]} */ files) => ({ schema: "campioni/2", campioni: session(files).map(({ rep, ...e }) => e) });
   /** the fields of E.files an entry gives */
   function fields(/** @type {any} */ e) {
-    const k = e.tipo === "calibration" ? "std" : e.tipo === "t0" ? "sample" : e.tipo;       // old documents: `t0` = a sample at 0 minutes, `tipo_bianco` is dropped
+    // old documents: `t0` = a sample at 0 minutes, `tipo_bianco` is dropped
+    const k = e.tipo === "calibration" ? "std" : e.tipo === "t0" ? "sample" : e.tipo;
     const tm = e.tipo === "t0" ? 0 : TIMED.has(k) ? e.tempo_min ?? null : null;
     return { role: k, type: BASE[k] || "sample", time: k === "dark" ? darkTime(tm) : tm, tconf: tm == null || e.tipo === "t0" || e.tempo_confermato !== false,
       conc: e.concentrazione ?? null, cunit: e.unita ?? null, rep: e.rep || undefined, cx: { istd: e.istd, note: e.note, composto: e.composto, serie: e.serie } };

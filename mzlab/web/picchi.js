@@ -1,6 +1,6 @@
 // @ts-strict
 // Peak integration and mass spectra drawing. Split from explore.js: classic script, loaded after grafici.js.
-// ------------------------------------------------------------------ integrazione dei picchi
+// ------------------------------------------------------------------ peak integration
 function integ(s, a, b) {
   const xs = s.x, ys = s.y;
   let i0 = nearIdx(xs, Math.min(a, b)), i1 = nearIdx(xs, Math.max(a, b));

@@ -69,7 +69,7 @@ def test_differenze_addotti_huang1999():
 
 
 @pytest.mark.skipif(not NODE, reason="node non disponibile")
-def test_motore_liste_nominale_vs_ppm_e_csv(tmp_path):
+def test_list_engine_nominal_vs_ppm_and_csv(tmp_path):
     code = r"""
 const L = require(process.argv[1]);
 const items = JSON.parse(require('fs').readFileSync(process.argv[2], 'utf8'));

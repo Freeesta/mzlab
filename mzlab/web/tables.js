@@ -45,11 +45,13 @@
     { n: "[2M-H]-", k: 2, sub: "H", z: -1, note: "tbl.add.note.2mminush" },
   ];
   ADD.forEach(a => { a.shift = (a.add ? massOf(a.add) : 0) - (a.sub ? massOf(a.sub) : 0) - a.z * ELECTRON; });
-  window.QADD = ADD;                                      // for the tests: the shifts are compared with the Python lists
+  // for the tests: the shifts are compared with the Python lists
+  window.QADD = ADD;
   const mzOf = (a, M) => (a.k * M + a.shift) / Math.abs(a.z);
   const fmtAd = n => H(n).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>").replace(/(\d?[+-])$/, "<sup>$1</sup>");
   const sgn = x => (x >= 0 ? "+" : "&minus;");
-  const AD_MORE = { 1: false, "-1": false };                // the less common adducts stay folded until the student opens them
+  // the less common adducts stay folded until the student opens them
+  const AD_MORE = { 1: false, "-1": false };
 
   // Differences between adducts, to recognise pairs of peaks of the same compound (Huang et al. 1999). Only the essential pairs: references, never labels on the user's spectrum
   function calcAdductDiffs() {
@@ -87,7 +89,8 @@
         + `<tr class="admore" data-pol="${pol}"><td colspan="3"><button type="button" class="adtog" aria-expanded="${open ? "true" : "false"}">${open ? "&#9662;" : "&#9656;"} ${I18N.t("tbl.add.more")}</button></td></tr>`
         + (open ? l.filter(a => !a.exp).map(row).join("") : "") + `</tbody>`; };
     const head = `<thead><tr><th scope="col">${I18N.t("tbl.add.col.adduct")}</th><th scope="col" class="num">${I18N.t("tbl.add.col.shift")}</th><th scope="col" class="num">${I18N.t("tbl.add.col.exact")}</th></tr></thead>`;
-    const neg = typeof E !== "undefined" && E.files.some(f => f.polarity === "negative") && !E.files.some(f => f.polarity === "positive");      // the polarity of the loaded files first
+    // the polarity of the loaded files first
+    const neg = typeof E !== "undefined" && E.files.some(f => f.polarity === "negative") && !E.files.some(f => f.polarity === "positive");
     return `<table class="adt">${head}${neg ? group(-1) + group(1) : group(1) + group(-1)}</table>` + diffsHtml();
   }
   function adductTab() {
@@ -96,7 +99,8 @@
   }
   function bindAdducts(root) {
     const inp = root.querySelector("#ad-in"), msg = root.querySelector("#ad-msg"), tb = root.querySelector("#ad-tbl");
-    let lastM = null;                                               // the table is rebuilt at every keystroke: the open / folded state lives in AD_MORE
+    // the table is rebuilt at every keystroke: the open / folded state lives in AD_MORE
+    let lastM = null;
     const redo = () => { tb.innerHTML = adducts(lastM); };
     tb.onclick = e => { const t = e.target.closest(".adtog"); if (!t) return; e.preventDefault(); const pol = t.closest("tr").dataset.pol; AD_MORE[pol] = !AD_MORE[pol]; redo(); const nt = tb.querySelector(`.admore[data-pol="${pol}"] .adtog`); if (nt) nt.focus(); };
     inp.oninput = async () => {
@@ -115,7 +119,8 @@
   // describe for even-electron ions in ESI-MS/MS. A loss is only a hypothesis: it must be checked against the structure.
   // «Perdite neutre»: one line per loss (Δm, formula, where it is seen); «Dettagli» opens loss name, exact mass, mechanism and source;
   // the losses with the same nominal mass sit in a box (unit resolution cannot tell them apart); «Cerca Δm» lists single, pair and repeated candidates.
-  const NL = { q: "", pols: new Set(["+", "-"]), open: new Set() };       // state kept while the window is open (the ruler of the spectrum can fill q)
+  // state kept while the window is open (the ruler of the spectrum can fill q)
+  const NL = { q: "", pols: new Set(["+", "-"]), open: new Set() };
   const fl = f => sub(f.replace(/^(CH3|NO2|Cl)$/, "•$1")).replace(/^•/, "•");   // radicals are written with the dot
   // high resolution (an Orbitrap / Q-TOF file is loaded): the exact mass of each loss is shown and «Cerca Δm» looks within 3 mDa instead of 0.5 Da
   const hrOn = () => !!(window.HR && typeof E !== "undefined" && E.files.some(f => !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2))));

@@ -6,7 +6,8 @@ import { writeFull, quotaError } from "./archivio.js";
 import { buildNative } from "./rust-nativo.js";
 import { createEsterno } from "./lettore-esterno.js";
 
-const ext = createEsterno(native_external);                         // a Thermo .raw is read through the `thermo` module, loaded here on the first one (lettore-esterno.js)
+// a Thermo .raw is read through the `thermo` module, loaded here on the first one (lettore-esterno.js)
+const ext = createEsterno(native_external);
 
 // The pool sends one message first, { op: "module", module }: the .wasm compiled once for all the workers, or null (this worker compiles it itself).
 let ready = null, startInit = null;
@@ -27,8 +28,10 @@ onmessage = async ev => {
     const fh = await d.getFileHandle(m.part, { create: true });
     ah = await fh.createSyncAccessHandle();
     ah.truncate(0);
-    const write = (off, data) => { if (writeFull(ah, data, off) < data.length) { fullAt = off + data.length; throw new Error("storage full"); } endAt = Math.max(endAt, off + data.length); };       // a full disk: not a silently short index
-    let writeCen;                                                   // a profile sample entered from mzFinder: its centroid index is written beside, from the same decoding
+    // a full disk: not a silently short index
+    const write = (off, data) => { if (writeFull(ah, data, off) < data.length) { fullAt = off + data.length; throw new Error("storage full"); } endAt = Math.max(endAt, off + data.length); };
+    // a profile sample entered from mzFinder: its centroid index is written beside, from the same decoding
+    let writeCen;
     if (m.partCen && m.nat) {
       ac = await (await d.getFileHandle(m.partCen, { create: true })).createSyncAccessHandle();
       ac.truncate(0);
@@ -45,14 +48,17 @@ onmessage = async ev => {
         put: (off, data) => { if (writeFull(sh, data, off) < data.length) { fullAt = off + data.length; throw new Error("storage full"); } },
         get: (off, n) => { const b = new Uint8Array(n); if (sh.read(b, { at: off }) < n) throw new Error("spill read"); return b; }
       };
-    } catch (_) { spill = null; }                               // no scratch file (a handle that does not open): the rounds decode again, as always
-    if (m.nat) {                                                    // a dataset of a maker (rust-nativo.js): the index comes straight from its reader; the progress says the phase
+    // no scratch file (a handle that does not open): the rounds decode again, as always
+    } catch (_) { spill = null; }
+    // a dataset of a maker (rust-nativo.js): the index comes straight from its reader; the progress says the phase
+    if (m.nat) {
       // the peaks that do not fit in the budget wait in a scratch file of OPFS (`<name>.mzidx.sp.part`: removed at the end, and by the cleaning of the `.part` files if the worker dies) instead of being decoded again by every round
       stats = await buildNative(build_mzidx_native, ext, m.nat, m.name, write, p => postMessage({ op: "progress", frac: p.frac, phase: p.phase, done: p.done, total: p.total }), m.budget, spill, writeCen);
     } else {
       const fr = new FileReaderSync(), blob = m.blob;
       let tp = 0;
-      const read = (off, len) => {                                  // the builder reads the file front to back: the offset is the progress (the page shows it, at most 5 times a second)
+      // the builder reads the file front to back: the offset is the progress (the page shows it, at most 5 times a second)
+      const read = (off, len) => {
         const now = performance.now();
         if (now - tp > 200) { tp = now; postMessage({ op: "progress", frac: blob.size ? Math.min(1, off / blob.size) : 0 }); }
         return new Uint8Array(fr.readAsArrayBuffer(blob.slice(off, off + len)));
@@ -61,7 +67,8 @@ onmessage = async ev => {
       stats = build_mzidx(blob.size, read, write, levels, pols, rt, tic, rows, source, run, hr1, m.budget, spill ? spill.put : undefined, spill ? spill.get : undefined);
     }
     ah.flush();
-    if (ah.getSize() < endAt) { fullAt = endAt; throw new Error("storage full"); }           // the browser took the writes but the file is shorter (quota reached): never an index that looks complete
+    // the browser took the writes but the file is shorter (quota reached): never an index that looks complete
+    if (ah.getSize() < endAt) { fullAt = endAt; throw new Error("storage full"); }
     ah.close(); ah = null;
     if (ac) { ac.flush(); ac.close(); ac = null; }
     await dropSpill();

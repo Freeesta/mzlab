@@ -9,7 +9,8 @@ const BIANCO = (() => {
   const t = (k, p) => I18N.t(k, p);
   const eh = s => EH(s == null ? "" : s);
   let st = { factor: 3, stat: "max", min: 1 };
-  let res = null;                                              // {r (server answer), features (the rows of the table it was computed on)}
+  // {r (server answer), features (the rows of the table it was computed on)}
+  let res = null;
   Object.assign(st, lsObj(KEY));
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
   const fmt = (v, d = 4) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));

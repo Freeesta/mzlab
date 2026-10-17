@@ -51,14 +51,16 @@ class LibParser {
     const t = l.trim();
     if (!t) { if (this.cur) this.emit(); return; }
     const m = /^([A-Za-z][A-Za-z0-9 _\-]*?)\s*:\s*(.*)$/.exec(t);
-    if (m && (!this.inPeaks || keyOf(m[1]) === "name")) {                    // a «Name:» line always starts a new record, even without the blank line
+    // a «Name:» line always starts a new record, even without the blank line
+    if (m && (!this.inPeaks || keyOf(m[1]) === "name")) {
       const k = keyOf(m[1]);
       if (this.cur && k === "name" && (this.inPeaks || "name" in this.cur.f)) this.emit();
       if (!this.cur) this.fresh();
       if (k === "numpeaks") { this.inPeaks = true; return; }
       this.field(k, m[2].trim()); return;
     }
-    if (!this.cur) { if (!/^[-+.\d]/.test(t)) return; this.fresh(); }          // numbers without any header: a record with no precursor (it will be counted)
+    // numbers without any header: a record with no precursor (it will be counted)
+    if (!this.cur) { if (!/^[-+.\d]/.test(t)) return; this.fresh(); }
     this.inPeaks = true; this.peak(t);
   }
   mgf(l) {
@@ -113,7 +115,8 @@ function cosine(a, b, pairs) {                  // intensities as square roots
   for (const [i, j] of pairs) dot += Math.sqrt(a.it[i] * b.it[j]);
   return na > 0 && nb > 0 ? dot / Math.sqrt(na * nb) : 0;
 }
-function entropyWeighted(it) {                  // Li et al., Nat. Methods 2021: sum 1; if the entropy is below 3 the intensities are raised to 0.25 + 0.25 S
+// Li et al., Nat. Methods 2021: sum 1; if the entropy is below 3 the intensities are raised to 0.25 + 0.25 S
+function entropyWeighted(it) {
   const s = it.reduce((x, y) => x + y, 0); let p = Array.from(it, v => v / s);
   const S = -p.reduce((x, v) => x + (v > 0 ? v * Math.log(v) : 0), 0);
   if (S < 3) { const w = 0.25 + 0.25 * S; p = p.map(v => Math.pow(v, w)); const t = p.reduce((x, y) => x + y, 0); p = p.map(v => v / t); }
@@ -129,7 +132,8 @@ function entropySimilarity(a, b, pairs) {       // 1 - (2 S_AB - S_A - S_B) / ln
 }
 function score(q, lib, tolFrag) {
   const pairs = matchPeaks(q.mz, q.it, lib.mz, lib.it, tolFrag);
-  let dot = 0, qp = 0, qa = 0, la = 0;                         // reverse = the paired peaks of the query against ALL the library peaks; explained = the share of the query intensity that is paired
+  // reverse = the paired peaks of the query against ALL the library peaks; explained = the share of the query intensity that is paired
+  let dot = 0, qp = 0, qa = 0, la = 0;
   for (const [i, j] of pairs) { dot += Math.sqrt(q.it[i] * lib.it[j]); qp += q.it[i]; }
   for (const v of q.it) qa += v; for (const v of lib.it) la += v;
   return { cos: cosine(q, lib, pairs), ent: entropySimilarity(q, lib, pairs), shared: pairs.length, pairs, reverse: qp > 0 && la > 0 ? dot / Math.sqrt(qp * la) : 0, explained: qa > 0 ? qp / qa : 0 };
@@ -142,7 +146,8 @@ function searchIndex(idx, q, opts, getSpec, meta) {
   const tol = opts.ppm != null ? q.prec * opts.ppm * 1e-6 : opts.da, lo = lowerBound(idx.prec, q.prec - tol), out = [];
   for (let k = lo; k < idx.n && idx.prec[k] <= q.prec + tol; k++) {
     const pos = idx.ord[k], lp = idx.pol[pos];
-    if (opts.pol && lp && lp !== opts.pol) continue;                           // same polarity (a library entry without polarity is kept)
+    // same polarity (a library entry without polarity is kept)
+    if (opts.pol && lp && lp !== opts.pol) continue;
     const s = getSpec(pos), sc = score(q, s, opts.frag), m = meta ? meta[pos] : null;
     out.push({ pos, name: m ? m[0] : "", type: m ? m[1] : "", ce: m ? m[2] : "", inst: m ? m[3] : "", formula: m ? m[4] : "", ik: m ? m[5] : "", accession: m ? m[6] || "" : "", authors: m ? m[7] || "" : "", license: m ? m[8] || "" : "",
       cos: sc.cos, ent: sc.ent, shared: sc.shared, reverse: sc.reverse, explained: sc.explained, polarity: lp, dprec: opts.ppm != null ? (idx.prec[k] - q.prec) / q.prec * 1e6 : idx.prec[k] - q.prec, prec: idx.prec[k], pairs: sc.pairs, mz: Array.from(s.mz), it: Array.from(s.it) });
@@ -151,7 +156,8 @@ function searchIndex(idx, q, opts, getSpec, meta) {
 }
 // ---------------------------------------------------------------- analogues: modified cosine (match at shift 0 and at shift delta = precursor difference)
 const AN_TOP = 32;                               // peaks used for the modified cosine: the most intense, sorted by m/z
-function top32(s, prec) {                        // the precursor region (within 1.5 of it) and the noise (< 1% of the highest) are left out, then the 32 most intense
+// the precursor region (within 1.5 of it) and the noise (< 1% of the highest) are left out, then the 32 most intense
+function top32(s, prec) {
   const mx = Math.max(0, ...s.it);
   let idx = Array.from(s.mz.keys()).filter(i => s.mz[i] < prec - 1.5 && s.it[i] >= 0.01 * mx && s.it[i] > 0);
   if (idx.length > AN_TOP) idx = idx.sort((a, b) => s.it[b] - s.it[a]).slice(0, AN_TOP);
@@ -164,7 +170,8 @@ function sharedCount(aMz, bMz, tol) {
   while (i < aMz.length && j < bMz.length) { const d = aMz[i] - bMz[j]; if (Math.abs(d) <= tol) { n++; i++; j++; } else if (d < 0) i++; else j++; }
   return n;
 }
-function lossesOf(mz, prec) { const l = Float64Array.from(mz, m => prec - m); l.reverse(); return l; }       // ascending: mz is ascending
+// ascending: mz is ascending
+function lossesOf(mz, prec) { const l = Float64Array.from(mz, m => prec - m); l.reverse(); return l; }
 function coincidences(q, lib, tol) { return sharedCount(q.mz, lib.mz, tol) + sharedCount(lossesOf(q.mz, q.prec), lossesOf(lib.mz, lib.prec), tol); }
 // modified cosine: candidate pairs at shift 0 and shift delta, one-to-one greedy by decreasing weight sqrt(Iq*Il), normalised as the cosine of the square roots
 function modCosine(q, lib, tol) {
@@ -187,7 +194,8 @@ function analogIndex(idx, q, opts, getSpec, meta) {
   for (let k = lo; k < idx.n && idx.prec[k] <= q.prec + maxD; k++) {
     const pos = idx.ord[k], lp = idx.pol[pos];
     if (opts.pol && lp && lp !== opts.pol) continue;
-    if (Math.abs(idx.prec[k] - q.prec) < (opts.minDelta ?? 0.5)) continue;                // the same mass is an identity, not an analogue
+    // the same mass is an identity, not an analogue
+    if (Math.abs(idx.prec[k] - q.prec) < (opts.minDelta ?? 0.5)) continue;
     const s = getSpec(pos); if (!s) continue;
     const n = coincidences(qs, { mz: s.mz, prec: idx.prec[k] }, frag);
     if (n >= 3) cand.push({ pos, k, n, s });
@@ -204,7 +212,8 @@ function analogIndex(idx, q, opts, getSpec, meta) {
   out.sort((x, y) => y.mcos - x.mcos);
   return out;
 }
-function queryOf(peaks, prec, pol) {            // peaks: [[mz, intensity], ...] -> the query, with the same normalisation as the library
+// peaks: [[mz, intensity], ...] -> the query, with the same normalisation as the library
+function queryOf(peaks, prec, pol) {
   const mz = peaks.map(p => p[0]), it = peaks.map(p => p[1]).map(Number);
   if (!mz.length || !(Math.max(...it) > 0)) return null;
   const t = topPeaks(mz.filter((_, i) => it[i] > 0), it.filter(v => v > 0));
@@ -233,11 +242,13 @@ function unpackIndex(buf) {
 
 // ---------------------------------------------------------------- storage: OPFS, or IndexedDB where it is not there
 if (typeof self !== "undefined" && typeof self.postMessage === "function" && typeof importScripts === "function") {
-  importScripts("libreria-cartella.js", "libreria-scarica.js");           // the folder of the libraries (CARTELLA) and the download of the packages (SCARICA)
+  // the folder of the libraries (CARTELLA) and the download of the packages (SCARICA)
+  importScripts("libreria-cartella.js", "libreria-scarica.js");
   const hasOpfs = () => !!(self.navigator && navigator.storage && navigator.storage.getDirectory);
   let opfsOk = null;
   const root = () => navigator.storage.getDirectory();
-  async function probeOpfs() {                  // Safari / old browsers: no synchronous handles in a worker -> IndexedDB
+  // Safari / old browsers: no synchronous handles in a worker -> IndexedDB
+  async function probeOpfs() {
     if (opfsOk !== null) return opfsOk;
     try { const h = await (await root()).getFileHandle("probe.tmp", { create: true }); const a = await h.createSyncAccessHandle(); a.close(); opfsOk = true; } catch (e) { opfsOk = false; }
     return opfsOk;
@@ -294,7 +305,8 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     const a = lib.idx.off[pos], b = lib.idx.off[pos + 1]; let buf;
     if (lib.peaks) buf = lib.peaks.slice(a * 8, b * 8);
     else {
-      if (!lib.pall && lib.file.size < 150e6) lib.pall = await lib.file.arrayBuffer();       // a library up to 150 MB is read once: a search touches thousands of its spectra
+      // a library up to 150 MB is read once: a search touches thousands of its spectra
+      if (!lib.pall && lib.file.size < 150e6) lib.pall = await lib.file.arrayBuffer();
       buf = lib.pall ? lib.pall.slice(a * 8, b * 8) : await lib.file.slice(a * 8, b * 8).arrayBuffer();
     }
     const f = new Float32Array(buf), mz = new Float32Array(b - a), it = new Float32Array(b - a);
@@ -338,7 +350,8 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     out.sort((a, b) => b.ent - a.ent || b.cos - a.cos);
     return { results: out.slice(0, 50), libs: ids.length, query: { mz: Array.from(q.mz), it: Array.from(q.it) } };
   }
-  async function runAnalogsJs(m) {                 // analogues of one MS2 spectrum in every library (H9): the 10 best by modified cosine
+  // analogues of one MS2 spectrum in every library (H9): the 10 best by modified cosine
+  async function runAnalogsJs(m) {
     const ids = m.ids && m.ids.length ? m.ids : (await listLibraries()).map(i => i.id), q = queryOf(m.peaks, m.prec, m.pol), out = [];
     if (!q) return { results: [], libs: ids.length };
     const maxD = m.maxDelta ?? 200;
@@ -350,15 +363,19 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     out.sort((a, b) => b.mcos - a.mcos);
     return { results: out.slice(0, m.max || 10), libs: ids.length, query: { mz: Array.from(q.mz), it: Array.from(q.it) } };
   }
-  const ikBlock = r => { const k = String(r.ik || "").slice(0, 14).toUpperCase(); return k || "n:" + String(r.name || "").toLowerCase().replace(/[^a-z0-9]+/g, ""); };       // first InChIKey block (or the name): one structure
+  // first InChIKey block (or the name): one structure
+  const ikBlock = r => { const k = String(r.ik || "").slice(0, 14).toUpperCase(); return k || "n:" + String(r.name || "").toLowerCase().replace(/[^a-z0-9]+/g, ""); };
   const lightOf = r => ({ name: r.name, ik: r.ik || "", ent: r.ent, cos: r.cos, shared: r.shared, dprec: r.dprec, lib: r.lib, nlib: r.nlib });
-  function withAlt(cands) {                       // the best candidate and, in `alt`, the best one of ANOTHER structure: the lead is the «distinct» gate of the confidence levels (livelli.js)
+  // the best candidate and, in `alt`, the best one of ANOTHER structure: the lead is the «distinct» gate of the confidence levels (livelli.js)
+  function withAlt(cands) {
     const l = cands.filter(Boolean).sort((a, b) => b.ent - a.ent); if (!l.length) return null;
     const k = ikBlock(l[0]), a = l.find(x => ikBlock(x) !== k); return { ...l[0], alt: a ? lightOf(a) : null };
   }
   const rowOf = (Q, best) => ({ key: Q.key, rt: Q.rt, prec: Q.prec, name: best ? best.name : "", formula: best ? best.formula : "", ik: best ? best.ik || "" : "", dprec: best ? best.dprec : null, lib: best ? best.lib : "", ent: best ? best.ent : null, cos: best ? best.cos : null, shared: best ? best.shared : null, nlib: best ? best.nlib : null, alt: best ? best.alt || null : null,
-    accession: best ? best.accession || "" : "", authors: best ? best.authors || "" : "", license: best ? best.license || "" : "", smiles: best ? best.smiles || "" : "", ce: best ? best.ce || "" : "", inst: best ? best.inst || "" : "", type: best ? best.type || "" : "" });      // record, authors and licence of the best entry: «Identify all» and the untargeted tables cite them
-  async function runAllJs(m, reqId) {             // every MS2 of a file: the best result of each (the query list comes from the page)
+    // record, authors and licence of the best entry: «Identify all» and the untargeted tables cite them
+    accession: best ? best.accession || "" : "", authors: best ? best.authors || "" : "", license: best ? best.license || "" : "", smiles: best ? best.smiles || "" : "", ce: best ? best.ce || "" : "", inst: best ? best.inst || "" : "", type: best ? best.type || "" : "" });
+  // every MS2 of a file: the best result of each (the query list comes from the page)
+  async function runAllJs(m, reqId) {
     const ids = m.ids && m.ids.length ? m.ids : (await listLibraries()).map(i => i.id), libs = []; for (const id of ids) libs.push(await loadLibrary(id));
     const rows = []; let last = 0;
     for (let n = 0; n < m.queries.length; n++) {
@@ -377,8 +394,10 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
 
   // ---------------------------------------------------------------- the WebAssembly engine (.mzlib libraries)
   let W = null, wasmTried = false, forceJs = false, allowWasm = false, migrated = false;
-  const MZLIB_ERRORS = ["lib.err.corrupt", "lib.err.version", "lib.err.tooLarge", "lib.err.io", "lib.err.needWasm", "error.memoryBudget"];     // keys the engine can answer with (the page translates them)
-  async function wasm() {                       // null where WebAssembly or the file is not there (old browser, local development server): the JavaScript path stays
+  // keys the engine can answer with (the page translates them)
+  const MZLIB_ERRORS = ["lib.err.corrupt", "lib.err.version", "lib.err.tooLarge", "lib.err.io", "lib.err.needWasm", "error.memoryBudget"];
+  // null where WebAssembly or the file is not there (old browser, local development server): the JavaScript path stays
+  async function wasm() {
     if (forceJs || !allowWasm) return null;
     if (wasmTried) return W;
     wasmTried = true;
@@ -451,7 +470,8 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
 
   // ---------------------------------------------------------------- the folder of the libraries (libreria-cartella.js)
   const FOLD = { dir: null, mode: null, map: new Map(), infos: [], cat: null, tried: false, catTried: false };
-  async function setFolder(m) {                     // {mode: "opfs" | "fs" (handle) | "native" (base of the mzlab:// protocol)}
+  // {mode: "opfs" | "fs" (handle) | "native" (base of the mzlab:// protocol)}
+  async function setFolder(m) {
     FOLD.tried = true; FOLD.map = new Map(); FOLD.infos = []; FOLD.dir = null; FOLD.mode = null;
     for (const [id, e] of [...WLIBS]) if (CARTELLA.isFolderId(id)) { try { e.lib.free(); } catch (e2) { /* gone */ } WLIBS.delete(id); }
     if (m.mode === "native") { FOLD.dir = CARTELLA.nativeDir(m.base); try { FOLD.dir.name = (await (await fetch(m.base + "lib/dir")).json()).dir; } catch (e) { /* the name is only shown */ } }
@@ -460,10 +480,12 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     FOLD.mode = FOLD.dir && FOLD.dir.kind;
     if (m.cat) FOLD.cat = m.cat;
   }
-  async function foldRefresh() {                    // the inventory of the folder (a SHA-256 only for the files that changed)
+  // the inventory of the folder (a SHA-256 only for the files that changed)
+  async function foldRefresh() {
     if (!FOLD.tried) await setFolder({ mode: "opfs" });
     if (!FOLD.dir) return { voci: [] };
-    if (!FOLD.cat && !FOLD.catTried) { FOLD.catTried = true; try { FOLD.cat = SCARICA.parseCatalog(await (await FOLD.dir.file(CARTELLA.META + "/catalogo.json")).text()); } catch (e) { /* no catalog seen yet */ } }   // the one the user fetched last time: «update available» without a network call
+    // the one the user fetched last time: «update available» without a network call
+    if (!FOLD.cat && !FOLD.catTried) { FOLD.catTried = true; try { FOLD.cat = SCARICA.parseCatalog(await (await FOLD.dir.file(CARTELLA.META + "/catalogo.json")).text()); } catch (e) { /* no catalog seen yet */ } }
     const s = await CARTELLA.scan(FOLD.dir, FOLD.cat);
     FOLD.map = new Map(s.voci.map(v => [v.id, v]));
     FOLD.infos = s.voci.filter(v => (v.stato === "pronta" || v.stato === "aggiornamento") && v.info).map(v => ({ ...v.info, id: v.id, name: CARTELLA.stem(v.nome), file: v.nome, size: v.tipo === "pacchetto" ? v.size : (v.info.bytes || 0),
@@ -476,7 +498,8 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     return [...legacy, ...FOLD.infos];
   }
   const foldName = () => (FOLD.dir ? FOLD.dir.name || "" : "");
-  async function foldAdd(w, file, reqId) {          // index a file (of the folder or imported) into `.mzlab/` of the folder: the index first, the meta file last (it marks the entry as done)
+  // index a file (of the folder or imported) into `.mzlab/` of the folder: the index first, the meta file last (it marks the entry as done)
+  async function foldAdd(w, file, reqId) {
     const key = file.name, sha = new CARTELLA.Sha256(), M = CARTELLA.META;
     if (/\.mzlib$/i.test(key)) { await FOLD.dir.write(key, file); await foldRefresh(); return { id: CARTELLA.idOf(key), name: CARTELLA.stem(key), n: 0, dropped: 0 }; }
     const { r, id, out, opfs } = await runImport(w, file, reqId, v => sha.update(v));
@@ -508,7 +531,8 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     return { cat: FOLD.cat, avail: FOLD.cat.librerie.map(p => ({ id: p.id, stato: SCARICA.stateOf(p, s.voci) })) };
   }
   const DL = { abort: null };
-  async function downloadCmd(m, reqId) {            // the packages the user ticked, one after the other; a failure of one does not stop the others (a cancel does)
+  // the packages the user ticked, one after the other; a failure of one does not stop the others (a cancel does)
+  async function downloadCmd(m, reqId) {
     if (!FOLD.dir || !FOLD.cat) throw Object.assign(new Error("no catalog"), { key: "lib.dl.err.nocatalog" });
     DL.abort = new AbortController(); const done = [], failed = [], base = new URL("librerie/", self.location.href).href;
     try {
@@ -528,7 +552,8 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     const s = await foldRefresh();
     return { done, failed, avail: FOLD.cat.librerie.map(p => ({ id: p.id, stato: SCARICA.stateOf(p, s.voci) })) };
   }
-  async function foldRemove(id) {                   // a source stays in the folder (only its index goes); a package or an imported index is removed
+  // a source stays in the folder (only its index goes); a package or an imported index is removed
+  async function foldRemove(id) {
     const v = FOLD.map.get(id); if (!v) return; const M = CARTELLA.META;
     if (v.tipo === "pacchetto") { await FOLD.dir.remove(v.nome); await FOLD.dir.remove(M + "/" + v.nome + ".pkg.json"); }
     else { await FOLD.dir.remove(M + "/" + v.nome + ".idx.json"); await FOLD.dir.remove(M + "/" + v.nome + ".mzlib"); }
@@ -569,7 +594,8 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
   }
   const ppmOf = t => t.unit === "ppm";
   const arrays = peaks => { const p = peaks.filter(x => x[1] > 0 && x[0] > 0); return [Float64Array.from(p, x => x[0]), Float64Array.from(p, x => x[1])]; };
-  function remapPairs(r, from, to, tol) {         // the pairs of a result computed against another cleaned query: indices into `to` by m/z
+  // the pairs of a result computed against another cleaned query: indices into `to` by m/z
+  function remapPairs(r, from, to, tol) {
     const at = i => { let best = -1, bd = tol; for (let j = 0; j < to.mz.length; j++) { const d = Math.abs(to.mz[j] - from.mz[i]); if (d <= bd) { bd = d; best = j; } } return best; };
     r.pairs = (r.pairs || []).map(p => [at(p[0]), p[1]]).filter(p => p[0] >= 0);
   }
@@ -657,15 +683,18 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
   onmessage = async e => {
     const m = e.data, reqId = m.reqId;
     try {
-      if (m.cmd === "folder") { FOLD.tried = true; FOLD.pending = (FOLD.pending || Promise.resolve()).then(() => setFolder(m)); }      // in order, and set at once: the messages that follow wait for it
+      // in order, and set at once: the messages that follow wait for it
+      if (m.cmd === "folder") { FOLD.tried = true; FOLD.pending = (FOLD.pending || Promise.resolve()).then(() => setFolder(m)); }
       else if (m.cmd !== "config" && FOLD.pending) await FOLD.pending;
       const run = Object.hasOwn(COMMANDS, m.cmd) ? COMMANDS[m.cmd] : null;
       if (!run) throw new Error("unknown command: " + m.cmd);
       const r = await run(m, reqId);
       postMessage({ type: "done", reqId, ...r });
     } catch (err) {
-      let j = null; if (typeof err === "string" && err.startsWith("{")) { try { j = JSON.parse(err); } catch (e2) { j = null; } }      // an error of the engine itself: {"error_key", "params"}
-      const fatal = !j && !!W && (err instanceof WebAssembly.RuntimeError || (err instanceof RangeError && /memory/i.test(String(err.message))));      // a trap or a lost memory: the instance is gone, the page starts a new worker
+      // an error of the engine itself: {"error_key", "params"}
+      let j = null; if (typeof err === "string" && err.startsWith("{")) { try { j = JSON.parse(err); } catch (e2) { j = null; } }
+      // a trap or a lost memory: the instance is gone, the page starts a new worker
+      const fatal = !j && !!W && (err instanceof WebAssembly.RuntimeError || (err instanceof RangeError && /memory/i.test(String(err.message))));
       postMessage({ type: "error", reqId, fatal, error: j ? j.error_key : String(err && err.message || err), error_key: j ? j.error_key : err && err.key, params: j ? j.params : err && err.params });
     }
   };

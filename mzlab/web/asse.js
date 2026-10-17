@@ -24,7 +24,8 @@ const ASSE = (() => {
     if (fix) g.ax = fix;
     else if (!held(e, g.pan)) { g.ax = null; return { dx, dy, ax: null }; }
     else if (!g.ax && Math.max(Math.abs(tx), Math.abs(ty)) >= THR) g.ax = Math.abs(tx) >= Math.abs(ty) ? "x" : "y";
-    return g.ax === "x" ? { dx, dy: 0, ax: "x" } : g.ax === "y" ? { dx: 0, dy, ax: "y" } : { dx: 0, dy: 0, ax: null };       // held, axis not chosen yet: the gesture waits
+    // held, axis not chosen yet: the gesture waits
+    return g.ax === "x" ? { dx, dy: 0, ax: "x" } : g.ax === "y" ? { dx: 0, dy, ax: "y" } : { dx: 0, dy: 0, ax: null };
   }
   /** Short text for the readout of the panel: the axis that is locked now ("" if none). @param {{ ax: "x" | "y" | null } | null} [g] */
   const tag = g => { const a = fix || (g && g.ax); return a ? " · " + T(a === "x" ? "asse.x" : "asse.y") : ""; };

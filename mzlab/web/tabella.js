@@ -59,7 +59,8 @@ const TABELLA = (() => {
   // ---------------------------------------------------------------- the table of the page
   let tb = null;                                               // {source, features, files}
   const files = () => (window.CAMPIONI ? CAMPIONI.files() : []).filter(f => f.kind !== "mrm");
-  const fileObjs = () => (tb ? tb.files : files().map(f => f.file)).map(n => files().find(f => f.file === n) || { file: n, type: "sample" });      // the files of the columns of the table, in its order
+  // the files of the columns of the table, in its order
+  const fileObjs = () => (tb ? tb.files : files().map(f => f.file)).map(n => files().find(f => f.file === n) || { file: n, type: "sample" });
   const roles = () => fileObjs().map(f => CAMPIONI.roleOf(f));
   function setTable(source, features) {
     tb = { source, features, files: files().map(f => f.file) };

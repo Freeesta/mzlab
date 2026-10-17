@@ -48,7 +48,8 @@ export function mountBar(d, t) {
   const style = d.createElement("style"); style.id = "tp-bar-css";
   style.textContent = CSS + usable.flatMap(g => g.hide).join(",") + "{display:none!important}";
   const bar = d.createElement("div"); bar.id = "tp-bar"; bar.setAttribute("role", "toolbar"); bar.setAttribute("aria-label", t("draw.bar.label"));
-  const isSel = (/** @type {Element} */ e) => [...e.classList].some(c => /selected/i.test(c));   // Ketcher marks the active tool with a "selected" class
+  // Ketcher marks the active tool with a "selected" class
+  const isSel = (/** @type {Element} */ e) => [...e.classList].some(c => /selected/i.test(c));
 
   /** @type {{ g: Group, box: HTMLElement, btn: HTMLButtonElement, menu: HTMLElement, items: HTMLButtonElement[], cur: number }[]} */
   const views = [];

@@ -55,7 +55,8 @@ const CartPuntVista = (() => {
     if (!box || !pick) return;
     const T = (k, p) => I18N.t(k, p), nat = !!S.native;
     pick.hidden = !!window.QQQ_PHONE; box.hidden = !!window.QQQ_PHONE;
-    if ((!nat && (!supported() || !S.handle)) || (nat && !S.name)) { box.innerHTML = ""; return; }   // no folder yet: the icon is the way to choose one
+    // no folder yet: the icon is the way to choose one
+    if ((!nat && (!supported() || !S.handle)) || (nat && !S.name)) { box.innerHTML = ""; return; }
     const head = `<div class="sm"><b>${T("cartp.where", { name: esc(S.name) })}</b> <button type="button" class="sec" id="cartforget">${T("cartp.forget")}</button> <button type="button" class="sec" id="cartrefresh">${T("cartp.refresh")}</button></div>`;
     let body;
     if (!nat && S.perm !== "granted") body = `<p class="sm">${T(S.perm === "denied" ? "cartp.denied" : "cartp.grant", { name: esc(S.name) })}</p><button type="button" class="go" id="cartgrant">${T("cartp.grant.btn")}</button>`;
@@ -132,7 +133,8 @@ const CartPunt = (() => {
     } catch (e) { S.items = []; S.perm = "denied"; }
     finally { S.busy = false; render(); }
   }
-  async function fillStats(items) {          // size and date of the files seen for the first time (getFile reads no content)
+  // size and date of the files seen for the first time (getFile reads no content)
+  async function fillStats(items) {
     let n = 0;
     for (const x of items) {
       if (S.stats.has(x.path)) continue;

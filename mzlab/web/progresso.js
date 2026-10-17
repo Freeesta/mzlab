@@ -69,7 +69,8 @@ const PROGRESSO = (() => {
         if (s.pc !== last) { last = s.pc; bar.setAttribute("aria-valuenow", String(s.pc)); fill.style.width = s.pc + "%"; }
         bar.setAttribute("aria-label", lab);
       };
-      draw(PROGRESSO.busy() ? PROGRESSO.state() : { pc: 0, phase: "", done: 0, n: 0, over: false });      // a finished batch is not shown again
+      // a finished batch is not shown again
+      draw(PROGRESSO.busy() ? PROGRESSO.state() : { pc: 0, phase: "", done: 0, n: 0, over: false });
       const off = PROGRESSO.subscribe(draw);
       return () => { off(); el.remove(); };
     },
