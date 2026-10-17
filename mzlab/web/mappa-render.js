@@ -37,7 +37,8 @@
     const kx = kernel(sx), ky = kernel(sy); if (!kx.r && !ky.r) return v;
     let neg = false; for (let i = 0; i < v.length && !neg; i++) if (v[i] < 0) neg = true;
     if (!neg) return spread(v, nrt, nmz, kx, ky);
-    const p = new Float32Array(v.length), n = new Float32Array(v.length);                // a difference A − B: the two signs spread apart, the larger wins in each cell
+    // a difference A − B: the two signs spread apart, the larger wins in each cell
+    const p = new Float32Array(v.length), n = new Float32Array(v.length);
     for (let i = 0; i < v.length; i++) { if (v[i] > 0) p[i] = v[i]; else n[i] = -v[i]; }
     const P = spread(p, nrt, nmz, kx, ky), N = spread(n, nrt, nmz, kx, ky), o = new Float32Array(v.length);
     for (let i = 0; i < v.length; i++) o[i] = P[i] >= N[i] ? P[i] : -N[i];
@@ -64,7 +65,8 @@
     for (let k = 0; k < n; k++) {
       if (m[k] < lo || m[k] > hi) continue;
       const a = lb(m[k] - H), z = lb(m[k] + H + 1e-9), band = [];
-      for (let j = a; j < z; j++) if (Math.abs(m[j] - m[k]) > GROUP_DA) band.push(v[j]);      // the peak and its isotopes are not noise
+      // the peak and its isotopes are not noise
+      for (let j = a; j < z; j++) if (Math.abs(m[j] - m[k]) > GROUP_DA) band.push(v[j]);
       const noise = Math.max(band.length >= MIN ? level(band) : wide, floor);
       out.push({ i: idx[k], snr: v[k] / noise, noise });
     }
@@ -80,7 +82,8 @@
   function pick(mz, y, o) {
     const { lo, hi } = o, strategy = o.strategy || "bands", bands = Math.max(1, o.bands || 4), quota = o.quota || 1, minSnr = o.minSnr ?? 5, ab = (i) => Math.abs(y[i]);
     const all = snrOf(mz, y, lo, hi, o), by = all.slice().sort((a, b) => ab(b.i) - ab(a.i)), seen = [], keep = [];
-    for (const c of by) if (!seen.some(k => Math.abs(mz[k] - mz[c.i]) <= GROUP_DA)) { seen.push(c.i); keep.push(c); }       // the highest of each group of peaks
+    // the highest of each group of peaks
+    for (const c of by) if (!seen.some(k => Math.abs(mz[k] - mz[c.i]) <= GROUP_DA)) { seen.push(c.i); keep.push(c); }
     let top = 0; for (const c of by) { top = Math.max(top, ab(c.i)); break; }
     /** @type {typeof keep} */ let ord;
     if (strategy === "abs") ord = keep.filter(c => ab(c.i) >= top * 0.05);
@@ -93,7 +96,8 @@
         ord = first.concat(ok.filter(c => !first.includes(c)));
       }
     }
-    if (o.act) {                                                    // the peak of the XIC / sight is always labelled, first
+    // the peak of the XIC / sight is always labelled, first
+    if (o.act) {
       let best = -1; for (const c of all) if (mz[c.i] >= o.act[0] && mz[c.i] <= o.act[1] && (best < 0 || ab(c.i) > ab(all[best].i))) best = all.indexOf(c);
       if (best >= 0) ord = /** @type {any[]} */ ([{ ...all[best], act: true }]).concat(ord.filter(c => c.i !== all[best].i));
     }

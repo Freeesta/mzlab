@@ -195,12 +195,14 @@ function plot(c, xs, ys, cx, label, xlab, signed) {
 
 export function open(p, opener) {
   const a = p._a; if (!a || !a.f) return;
-  const probe = document.createElement("canvas"), c0 = makeContext(probe);                      // a throw-away canvas: is there WebGL2 at all? (the context is let go at once)
+  // a throw-away canvas: is there WebGL2 at all? (the context is let go at once)
+  const probe = document.createElement("canvas"), c0 = makeContext(probe);
   if (!c0.gl) { let w1 = false; try { w1 = !!document.createElement("canvas").getContext("webgl"); } catch (e) { /* none */ } throw new Fail("nowebgl2", c0.errs.join("; "), { webgl1: w1 }); }
   try { const x = c0.gl.getExtension("WEBGL_lose_context"); if (x) x.loseContext(); } catch (e) { /* the browser will collect it */ }
   if (!document.getElementById("m3d-css")) { const s = document.createElement("style"); s.id = "m3d-css"; s.textContent = CSS; document.head.appendChild(s); }
   const prefs = MAPPA.prefs, P = Object.assign({}, DEF, prefs[PREF_KEY] || {});
-  prefs.bg = p.corr === "auto";                                  // the 3D takes the background of the 2D panel it was opened from (its own switch stays in the sidebar)
+  // the 3D takes the background of the 2D panel it was opened from (its own switch stays in the sidebar)
+  prefs.bg = p.corr === "auto";
   const savePrefs = () => { prefs[PREF_KEY] = { mode: P.mode, hs: P.hs, ex: P.ex, asp: P.asp, lt: P.lt, fl: P.fl, sig: P.sig, side: P.side }; MAPPA.prefSave(); };
   const f = a.f, lv = f.lv || 1, hr = !!(window.HR && HR.isHr(f, lv));
   /** @type {any} */
@@ -317,7 +319,8 @@ export function open(p, opener) {
     const g = V.g, F = { internal: gl.R32F, format: gl.RED };
     mkTex("h", g.nmz, g.nrt, F, gl.FLOAT, V.Z, gl.NEAREST);
     mkTex("pal", 256, 1, { internal: gl.RGBA8, format: gl.RGBA }, gl.UNSIGNED_BYTE, new Uint8Array(palData().buffer.slice(0)), gl.LINEAR);
-    const px4 = new Uint8Array(g.nrt * g.nmz * 4), tab = palData();       // the colour image of the floor: j upwards = m/z upwards
+    // the colour image of the floor: j upwards = m/z upwards
+    const px4 = new Uint8Array(g.nrt * g.nmz * 4), tab = palData();
     for (let i = 0; i < g.nrt; i++) for (let j = 0; j < g.nmz; j++) {
       const z = V.Z[i * g.nmz + j], q = V.signed ? Math.round(127.5 - 127.5 * clamp(z, -1, 1)) : Math.round(clamp(z, 0, 1) * 255), o = (j * g.nrt + i) * 4;
       px4[o] = tab[q * 4]; px4[o + 1] = tab[q * 4 + 1]; px4[o + 2] = tab[q * 4 + 2]; px4[o + 3] = 255;
@@ -336,7 +339,8 @@ export function open(p, opener) {
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, bufs.stick); gl.bufferData(gl.ARRAY_BUFFER, a.subarray(0, n * 3), gl.STATIC_DRAW); nStick = n; V.dirty = true;
   }
-  function contours() {                                       // marching squares on a coarser grid, 8 levels, drawn flat on the floor
+  // marching squares on a coarser grid, 8 levels, drawn flat on the floor
+  function contours() {
     const g = V.g, st = Math.max(1, Math.ceil(Math.max(g.nrt, g.nmz) / 256)), nx = Math.ceil(g.nrt / st), ny = Math.ceil(g.nmz / st), seg = [];
     const val = (i, j) => Math.abs(V.Z[Math.min(g.nrt - 1, i * st) * g.nmz + Math.min(g.nmz - 1, j * st)]), tab = palData();
     const L = V.signed ? 6 : 8;
@@ -357,7 +361,8 @@ export function open(p, opener) {
     gl.bindBuffer(gl.ARRAY_BUFFER, bufs.cont); gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
   }
   function hist() {
-    if (!V.raw) return;                                       // small histogram of |value| / reference (log scale of the ratio), with the threshold
+    // small histogram of |value| / reference (log scale of the ratio), with the threshold
+    if (!V.raw) return;
     const c = Q("hist"), r = c.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1); c.width = Math.max(10, Math.round((r.width || 280) * d)); c.height = Math.round(46 * d);
     const g = /** @type {CanvasRenderingContext2D} */ (c.getContext("2d")), W = c.width, H = c.height, nb = 64, h = new Float64Array(nb), raw = V.raw;
     for (let i = 0; i < raw.length; i += Math.max(1, raw.length >> 18)) { const x = Math.abs(raw[i]) / V.refv; if (x > 0) h[clamp(Math.floor((Math.log10(Math.min(1, x)) + 4) / 4 * nb), 0, nb - 1)]++; }
@@ -512,11 +517,13 @@ export function open(p, opener) {
     glc.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY }); moved = 0;
     drag = { x: e.offsetX, y: e.offsetY, g: ASSE.gest(true), ox: 0, oy: 0, pan: e.shiftKey || e.button === 2 || e.button === 1 }; if (ptrs.size === 2) lastPinch = 0; glc.focus({ preventScroll: true });
     clearTimeout(lpT); lpDone = false;
-    if (e.pointerType !== "mouse" && ptrs.size === 1) { const at = { x: e.offsetX, y: e.offsetY, cx: e.clientX, cy: e.clientY }; lpT = setTimeout(() => { if (ptrs.size === 1 && moved < 8) { lpDone = true; openMenu({ ...at, lp: true }); } }, 550); }       // long press = the menu
+    // long press = the menu
+    if (e.pointerType !== "mouse" && ptrs.size === 1) { const at = { x: e.offsetX, y: e.offsetY, cx: e.clientX, cy: e.clientY }; lpT = setTimeout(() => { if (ptrs.size === 1 && moved < 8) { lpDone = true; openMenu({ ...at, lp: true }); } }, 550); }
   });
   glc.addEventListener("pointermove", e => {
     const q = ptrs.get(e.pointerId);
-    if (!q) { if (V.lock) return; const h = pick(e.offsetX, e.offsetY); if (h) setCur(h.i, h.j); return; }       // locked: the cursor stays
+    // locked: the cursor stays
+    if (!q) { if (V.lock) return; const h = pick(e.offsetX, e.offsetY); if (h) setCur(h.i, h.j); return; }
     const dx = e.offsetX - q.x, dy = e.offsetY - q.y; q.x = e.offsetX; q.y = e.offsetY; moved += Math.abs(dx) + Math.abs(dy);
     if (ptrs.size === 2) {                                  // two fingers: move, and pinch = zoom
       const [A, B] = [...ptrs.values()], dist = Math.hypot(A.x - B.x, A.y - B.y); if (lastPinch) V.cam.d = clamp(V.cam.d * lastPinch / dist, 0.2, 12); lastPinch = dist; panBy(dx / 2, dy / 2); V.dirty = true; return;
@@ -527,8 +534,10 @@ export function open(p, opener) {
   const up = e => {
     const had = ptrs.delete(e.pointerId); if (!had) return; lastPinch = 0; clearTimeout(lpT);
     if (moved < 5 && ptrs.size === 0 && e.type === "pointerup" && !lpDone) {
-      if (e.button === 0) click(e);                                                             // a click that does not move = fix the point
-      else if (e.button === 2) openMenu({ x: e.offsetX, y: e.offsetY, cx: e.clientX, cy: e.clientY });       // a right click that does not move = the menu (a drag moves the view)
+      // a click that does not move = fix the point
+      if (e.button === 0) click(e);
+      // a right click that does not move = the menu (a drag moves the view)
+      else if (e.button === 2) openMenu({ x: e.offsetX, y: e.offsetY, cx: e.clientX, cy: e.clientY });
     }
     drag = null;
   };
@@ -541,7 +550,8 @@ export function open(p, opener) {
   glc.addEventListener("wheel", e => { e.preventDefault(); V.cam.d = clamp(V.cam.d * Math.exp(e.deltaY * 0.0012), 0.2, 12); V.dirty = true; }, { passive: false });
   function click(e) {
     const h = pick(e.offsetX, e.offsetY); if (!h) return; setCur(h.i, h.j);
-    if (!MAPPA.st(p).mark) return;                                                              // as in 2D: a click only fixes the point; «Mark» adds it to the list
+    // as in 2D: a click only fixes the point; «Mark» adds it to the list
+    if (!MAPPA.st(p).mark) return;
     MAPPA.addPointAt(p, rtAt(h.i), mzAt(h.j), V.g.log ? mzAt(h.j) * V.g.dlog : V.g.dmz).then(() => { V.dirty = true; });
   }
   glc.addEventListener("dblclick", e => {
@@ -556,7 +566,8 @@ export function open(p, opener) {
     if (/** @type {any} */ (e.target).matches("input[type=text],input.mzf,select") ) return;
     const k = e.key; let used = true;
     if (ASSE.key(e)) { e.preventDefault(); readout(); return; }
-    if (ASSE.fix === "x" ? k === "ArrowUp" || k === "ArrowDown" : ASSE.fix === "y" && (k === "ArrowLeft" || k === "ArrowRight")) { e.preventDefault(); return; }       // the locked axis keeps the other one still
+    // the locked axis keeps the other one still
+    if (ASSE.fix === "x" ? k === "ArrowUp" || k === "ArrowDown" : ASSE.fix === "y" && (k === "ArrowLeft" || k === "ArrowRight")) { e.preventDefault(); return; }
     if (k === "ArrowLeft") stepCur(-1, 0); else if (k === "ArrowRight") stepCur(1, 0); else if (k === "ArrowUp") stepCur(0, 1); else if (k === "ArrowDown") stepCur(0, -1);
     else if (k === "+" || k === "=") V.cam.d = clamp(V.cam.d * 0.85, 0.2, 12); else if (k === "-" || k === "_") V.cam.d = clamp(V.cam.d / 0.85, 0.2, 12);
     else if (k >= "1" && k <= "4") setView(+k); else if (k === "r" || k === "R") reset();
@@ -575,8 +586,10 @@ export function open(p, opener) {
       vista: "map3d", kind: "3d", p, k: V.k, pt: () => cellOf(V.lock ? V.cur : hit || V.cur), locked: () => V.lock, toggleLock,
       resetAll: () => { resetCam(35, 32); },
       view: n => setView(n), zoomBy: f => { V.cam.d = clamp(V.cam.d * f, 0.2, 12); V.dirty = true; },
-      host: () => dlg.appendChild(/** @type {any} */ (ctxEl())),                    // the menu must live inside the modal dialog to be seen and used
-      after: () => { close(); }                                // the XIC and the spectrum appear in the panels of the page
+      // the menu must live inside the modal dialog to be seen and used
+      host: () => dlg.appendChild(/** @type {any} */ (ctxEl())),
+      // the XIC and the spectrum appear in the panels of the page
+      after: () => { close(); }
     };
   }
   function toggleLock() { V.lock = !V.lock; MAPPA.lockBtn(navBar, V.lock); readout(); }
@@ -586,7 +599,8 @@ export function open(p, opener) {
     MAPPA.showMenu(ad3(hit), { preventDefault() {}, clientX: at.cx, clientY: at.cy, kbd: !!at.kbd, lp: !!at.lp });
   }
   const navBar = MAPPA.barFor(() => ad3(null), "3d"); dlg.querySelector(".m3d-top").after(navBar);
-  dlg.addEventListener("keydown", e => { const c = ctxEl(); if (e.key === "Escape" && c && !c.hidden && dlg.contains(c)) { e.preventDefault(); e.stopPropagation(); c.hidden = true; glc.focus({ preventScroll: true }); } }, true);     // Esc closes the menu first, not the viewer
+  // Esc closes the menu first, not the viewer
+  dlg.addEventListener("keydown", e => { const c = ctxEl(); if (e.key === "Escape" && c && !c.hidden && dlg.contains(c)) { e.preventDefault(); e.stopPropagation(); c.hidden = true; glc.focus({ preventScroll: true }); } }, true);
   dlg.addEventListener("cancel", e => { const c = ctxEl(); if (c && !c.hidden && dlg.contains(c)) { e.preventDefault(); c.hidden = true; } });
 
   // ---- sidebar
@@ -643,7 +657,8 @@ export function open(p, opener) {
     try { draw(p); } catch (e) { /* the panel is gone */ }
     if (opener && opener.isConnected) opener.focus();
   });
-  window.__m3d = { V, P, ptrs, markCell, setView, pick, project: (...a2) => project(...a2), box, rtAt, mzAt, px, pz, heightAt, frame, close };     // for the tests
+  // for the tests
+  window.__m3d = { V, P, ptrs, markCell, setView, pick, project: (...a2) => project(...a2), box, rtAt, mzAt, px, pz, heightAt, frame, close };
   dlg.showModal(); resize(); offRo = FRAME.ro(main, () => resize()); glc.focus({ preventScroll: true });
   if (!window.ResizeObserver) resize();
   load().then(() => { raf = FRAME.next(loop); });

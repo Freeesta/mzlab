@@ -1,7 +1,8 @@
 // @ts-strict
 // A SCIEX .wiff dropped without its .wiff.scan: read only for its method (rust-worker.js). `rpc(msg, onProgress)` and `base(name)` come from the bridge (rust-bridge.js).
 // A failure rejects with an Error whose `json` is { error, error_key, params } like the API errors.
-const WIFF_ERRORS = ["err.file.notWiff", "err.file.wiffNoScan", "err.file.wiff", "err.file.mzmlWrite"];        // the keys the Rust reader and writer of the .wiff give
+// the keys the Rust reader and writer of the .wiff give
+const WIFF_ERRORS = ["err.file.notWiff", "err.file.wiffNoScan", "err.file.wiff", "err.file.mzmlWrite"];
 export function wiffApi(rpc, base) {
   const fail = (r, key) => {
     let e = { error_key: key, params: { detail: "" } };

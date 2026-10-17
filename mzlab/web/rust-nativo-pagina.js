@@ -5,7 +5,8 @@ import { ensureRoom } from "./archivio.js";
 
 /** @param {{ rpc: (m: any, onp?: (p: any) => void) => Promise<any>, base: (n: string) => string, current: () => any, abort: (w: any) => void }} h */
 export function makeNativo(h) {
-  const names = new Set();                                   // the files of the session that are samples of a maker's file
+  // the files of the session that are samples of a maker's file
+  const names = new Set();
   const fail = (/** @type {any} */ r, /** @type {string} */ key) => {
     let e = { error_key: key, params: {} };
     try { const j = JSON.parse(r.error); if (j.error_key) e = j; } catch (_) { /* the worker was lost */ }
@@ -39,19 +40,22 @@ export function makeNativo(h) {
     async nativeToMzml(/** @type {string} */ name, /** @type {number} */ size, /** @type {((p: any) => void) | undefined} */ onProgress, /** @type {AbortSignal | undefined} */ signal, /** @type {boolean | undefined} */ numpress) {
       const w = h.current(), cancelled = () => Object.assign(new Error("cancelled"), { cancelled: true });
       if (signal && signal.aborted) throw cancelled();
-      if (!window.MZLAB_DESKTOP) {                                                  // the desktop app writes on the disk, not in the browser storage
+      // the desktop app writes on the disk, not in the browser storage
+      if (!window.MZLAB_DESKTOP) {
         try { await ensureRoom(size * 1.1); }
         catch (q) { const j = JSON.parse(String(q)); throw Object.assign(new Error(j.error_key), { json: { error: j.error_key, ...j } }); }
       }
       const onAbort = () => { if (w && w === h.current()) h.abort(w); };
       if (signal) signal.addEventListener("abort", onAbort, { once: true });
-      const dest = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.mzML`;      // in OPFS mzlab/conv/
+      // in OPFS mzlab/conv/
+      const dest = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.mzML`;
       const drop = () => navigator.storage.getDirectory().then(d => d.getDirectoryHandle("mzlab")).then(d => d.getDirectoryHandle("conv")).then(d => d.removeEntry(dest)).catch(() => {});
       const r = await h.rpc({ op: "nat2mzml", name: h.base(name), dest, numpress: !!numpress }, onProgress);
       if (signal) signal.removeEventListener("abort", onAbort);
       if (r.cancelled || signal && signal.aborted) { drop(); throw cancelled(); }
       if (r.dead || r.error) { drop(); throw fail(r, "err.file.mzmlWrite"); }
-      if (r.tid != null) return Object.assign(new Blob([]), { mzlabId: r.tid });     // desktop app: the mzML is on the disk, saved from there (conversione.js download)
+      // desktop app: the mzML is on the disk, saved from there (conversione.js download)
+      if (r.tid != null) return Object.assign(new Blob([]), { mzlabId: r.tid });
       return r.file || new Blob(r.parts, { type: "application/xml" });
     },
   };

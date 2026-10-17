@@ -18,9 +18,12 @@ const ELEM = (() => {
 .cx-pt{display:grid;grid-template-columns:repeat(18,minmax(0,1fr));gap:2px;margin-top:4px}.cx-pt button{padding:1px 0;font-size:11px;min-width:0;line-height:1.4}.cx-pt button.on{background:var(--accent);color:#fff;border-color:var(--accent)}.cx-pt button:disabled{opacity:.3}`;
   document.head.appendChild(css0);
   const t = (k, p) => I18N.t(k, p);
-  const SUPPORTED = ["C", "H", "N", "O", "S", "P", "F", "Cl", "Br", "I", "Si", "Na", "K", "Se"];   // the elements of composition.py (Python MASS)
-  const ISOT = ["2H", "13C", "15N", "18O", "34S", "37Cl", "81Br"];                                  // isotopes that can be an element on their own (Python ISOTOPES)
-  const DBEQ = { C: 1, H: -0.5, N: 0.5, O: 0, S: 0, P: 0.5, F: -0.5, Cl: -0.5, Br: -0.5, I: -0.5, Si: 1, Na: -0.5, K: -0.5, Se: 0 };      // ring and double bond equivalents (composition.py DBEQ)
+  // the elements of composition.py (Python MASS)
+  const SUPPORTED = ["C", "H", "N", "O", "S", "P", "F", "Cl", "Br", "I", "Si", "Na", "K", "Se"];
+  // isotopes that can be an element on their own (Python ISOTOPES)
+  const ISOT = ["2H", "13C", "15N", "18O", "34S", "37Cl", "81Br"];
+  // ring and double bond equivalents (composition.py DBEQ)
+  const DBEQ = { C: 1, H: -0.5, N: 0.5, O: 0, S: 0, P: 0.5, F: -0.5, Cl: -0.5, Br: -0.5, I: -0.5, Si: 1, Na: -0.5, K: -0.5, Se: 0 };
   const DEFAULT_ELS = "C:0-13,H:0-25,N:0-4,O:0-3,S:0-1";
   const SUPD = "⁰¹²³⁴⁵⁶⁷⁸⁹";
   const parse = s => String(s || "").split(/[,;]/).map(x => x.trim()).filter(Boolean).map(x => { const m = /^(\d*[A-Z][a-z]?)\s*:\s*(\d+)(?:\s*-\s*(\d+))?$/.exec(x); return m ? { s: m[1], n0: +m[2], n1: m[3] != null ? +m[3] : +m[2] } : { raw: x }; });

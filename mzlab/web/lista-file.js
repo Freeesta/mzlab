@@ -49,10 +49,12 @@ function boxRange(/** @type {HTMLInputElement} */ x, /** @type {MouseEvent} */ e
 function bindListaFile() {
   const L = Q("#flst"), fileOf = (/** @type {EventTarget | null} */ t, /** @type {string} */ sel) => { const nm = /** @type {HTMLElement | null} */ (/** @type {Element} */ (t).closest(sel)); return nm ? E.files[+(nm.dataset.k || 0)] : null; };
   L.ondblclick = e => {
-    const sw = /** @type {Element} */ (e.target).closest(".fl:not(.pr) > i");           // the colour square: the first click of a file that is not the active one rebuilds the list, so the handler lives here and not on the square
+    // the colour square: the first click of a file that is not the active one rebuilds the list, so the handler lives here and not on the square
+    const sw = /** @type {Element} */ (e.target).closest(".fl:not(.pr) > i");
     if (sw) { e.stopPropagation(); const g = fileOf(sw.parentElement?.querySelector(".nm"), ".nm"); if (g) pickFileColor(g); return; }
     const f = fileOf(e.target, ".fl:not(.pr) .nm"); if (f) { if (lrTog()) soloFile(f); else renameFile(f); } };
-  if (!L.dataset.cap) L.addEventListener("click", e => {          // Ctrl / Cmd + click on a row (not on a box): adds the file to the visible ones or takes it away, the active file does not change
+  // Ctrl / Cmd + click on a row (not on a box): adds the file to the visible ones or takes it away, the active file does not change
+  if (!L.dataset.cap) L.addEventListener("click", e => {
     const row = /** @type {Element} */ (e.target).closest(".fl:not(.pr)");
     if (!(e.ctrlKey || e.metaKey) || !lrTog() || !row || /** @type {Element} */ (e.target).closest("input")) return;
     const f = fileOf(row.querySelector(".nm"), ".nm"); if (f) { e.stopPropagation(); setVisOf([f], !f.vis); }

@@ -55,13 +55,15 @@ const BANCO = (() => {
     const g = key ? gs.find(x => x.key === key) : null, nt = g && !g.msn ? tabOf(g) : null;
     group(p).forEach(q => {
       if (q.type === "chrom" && !eligible(q)) return;
-      if (nt && q.tab !== nt && q.tab !== "mrm") {                           // another experiment: the files of the cell are the ones of that experiment (same physical file)
+      // another experiment: the files of the cell are the ones of that experiment (same physical file)
+      if (nt && q.tab !== nt && q.tab !== "mrm") {
         const f0 = q.type === "spec" ? E.files[q.k] : null; q.tab = nt;
         if (f0) { const sib = E.files.find(x => !x.gone && baseOf(x) === baseOf(f0) && x.kind === nt); if (sib) q.k = sib.k; }
         q.title = q.type === "chrom" ? PT.chrom : nt === "ms2" ? PT.product : PT.spec; q.sel = null;
       }
       q.filt = key || null;
-      if (g && g.level > 1) { q.prec = null; if (q.type === "chrom") q.title = PT.chrom; }       // the type of scan already says which precursor: not one chosen before
+      // the type of scan already says which precursor: not one chosen before
+      if (g && g.level > 1) { q.prec = null; if (q.type === "chrom") q.title = PT.chrom; }
       if (q.type === "chrom") q.flv = g ? g.level : null;
       else { if (g) q.level = g.level; q.zoom = null; q.zoomY = null; q.lock = null; q.si = null; q.meas = null; }
       ctl(q); draw(q);
@@ -151,7 +153,8 @@ const BANCO = (() => {
     p.ranges.forEach((r, ri) => {
       const lv = r.flv || 1;
       filesFor(lv).forEach(({ f, vis: vf }) => {
-        if (r.kind === "sub") {         // the sum of the sub-formulas of a formula (chem/subformulas.py): one request per file
+        // the sum of the sub-formulas of a formula (chem/subformulas.py): one request per file
+        if (r.kind === "sub") {
           jobs.push(subData(f, r).then(d => { if (d.rt.length) out.push({ x: d.rt, y: d.y, color: vf.color, dash: fdash(vf), name: `${rangeLabel(r)} · ${vf.label}`, k: f.k, key: `r|${r.id}|${f.k}`, ion: rangeLabel(r), time: vf.time, grp: ri, rlabel: rangeLabel(r) }); }).catch(() => null));
           return;
         }
@@ -233,10 +236,12 @@ const BANCO = (() => {
   function header(p) {
     if (!sync()) return;
     const ac = act();
-    if (ac && (p === ac || (p.type === "spec" && p.link === ac.id)) && ist.tab === "hdr") { clearTimeout(ist.t); ist.t = setTimeout(renderInfo, 250); }      // the header of the scan follows the cursor (of the cell or of its chromatogram)
+    // the header of the scan follows the cursor (of the cell or of its chromatogram)
+    if (ac && (p === ac || (p.type === "spec" && p.link === ac.id)) && ist.tab === "hdr") { clearTimeout(ist.t); ist.t = setTimeout(renderInfo, 250); }
     if (p.type !== "spec") return;
     const rl = p.el.querySelector(".rtl"); if (!rl) return;
-    let lv = p.el.querySelector(".mslv"); if (!lv) { lv = document.createElement("b"); lv.className = "mslv"; rl.before(lv); }       // the stage of the spectrum, well visible: MS1 / MS2
+    // the stage of the spectrum, well visible: MS1 / MS2
+    let lv = p.el.querySelector(".mslv"); if (!lv) { lv = document.createElement("b"); lv.className = "mslv"; rl.before(lv); }
     const stage = p.level > 1 ? p.level : 1; if (lv.dataset.n !== String(stage)) { lv.dataset.n = String(stage); lv.innerHTML = `MS<sup>${stage}</sup>`; }
     let h = p.el.querySelector(".bnl"); if (!h) { h = document.createElement("span"); h.className = "bnl muted sm"; h.style.marginLeft = "8px"; rl.after(h); }
     const d = p._a && p._a.data && p._a.data[0] && p._a.data[0].d, nl = d && d.y && d.y.length ? Math.max(...d.y) : null;
@@ -545,7 +550,8 @@ const BANCO = (() => {
     if (!sync()) { if (b) b.hidden = true; host.classList.remove("one", "nolab"); const ic = Q("#hrinfo"); if (ic) ic.hidden = true; return; }
     if (!b) {
       b = document.createElement("div"); b.id = "hrbar"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", I18N.t("bn.toolbar"));
-      const sp = host.querySelector(":scope > .sp"); host.insertBefore(b, sp);       // one row: the buttons of the bench sit in #tools, between the file arrows and «Method»
+      // one row: the buttons of the bench sit in #tools, between the file arrows and «Method»
+      const sp = host.querySelector(":scope > .sp"); host.insertBefore(b, sp);
       b.innerHTML = h`${raw(`<span class="hg"><span class="hcap" aria-hidden="true">${EH(I18N.t("bn.lab.scan"))}</span>${barBtn("prev", I18N.t("bn.bar.prev"), ICON.prev)}${barBtn("next", I18N.t("bn.bar.next"), ICON.next)}</span>` +
         `<span class="hg">${barBtn("zall", I18N.t("bn.bar.zall"), ICON.zall, null, I18N.t("bn.lab.zall"))}</span>` +
         `<span class="hg">${barBtn("add", I18N.t("bn.bar.addcell"), ICON.add, null, I18N.t("bn.cell"))}${barBtn("type", I18N.t("bn.bar.type"), ICON.type, null, I18N.t("bn.lab.type"))}</span>` +

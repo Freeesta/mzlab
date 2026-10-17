@@ -9,7 +9,8 @@
 const QAQC = (() => {
   const KEY = "qqq.qaqc";
   const ROLES = ["sample", "blank", "qc", "standard", "dark"];
-  const MARK = { sample: "c", blank: "s", qc: "d", standard: "t", dark: "x" };      // circle, square, diamond, triangle, cross: not only colour
+  // circle, square, diamond, triangle, cross: not only colour
+  const MARK = { sample: "c", blank: "s", qc: "d", standard: "t", dark: "x" };
   const COL = ["var(--lv1)", "var(--lv3)", "var(--lv2a)", "var(--lv4)", "var(--lv2b)", "var(--lv5)"];
   const t = (k, p) => I18N.t(k, p);
   const Q1 = s => document.querySelector(s);
@@ -19,7 +20,8 @@ const QAQC = (() => {
   let st = blankState();
   let res = { ions: [], ratio: null, feat: null, at: null };      // last results, read by the study report
   Object.assign(st, lsObj(KEY));
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ ...st, roles: {} })); } catch (_) { /* no storage */ } };      // the roles are not stored here any more: they belong to the sample table (campioni.js, notebook NB.session)
+  // the roles are not stored here any more: they belong to the sample table (campioni.js, notebook NB.session)
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ ...st, roles: {} })); } catch (_) { /* no storage */ } };
 
   // ---------------------------------------------------------------- the series and the type of each file
   const series = () => (typeof E !== "undefined" && E.files ? E.files : []).filter(f => !f.gone && (f.lv || 1) === 1 && f.kind !== "mrm" && f.kind !== "empty");
@@ -29,8 +31,10 @@ const QAQC = (() => {
     if (/(^|[_\-\s.])(dark|buio)([_\-\s.\d]|$)/i.test(n)) return "dark";
     return f.type === "blank" ? "blank" : f.type === "standard" ? "standard" : "sample";
   }
-  const FROM_CAMPIONI = { sample: "sample", t0: "sample", infusion: "sample", blank: "blank", dark: "dark", qc: "qc", std: "standard", calibration: "standard" };      // role of campioni/2 -> role of the QA/QC
-  const roleOf = f => (f.role && FROM_CAMPIONI[f.role]) || (ROLES.includes(st.roles[f.file]) ? st.roles[f.file] : guessRole(f));      // st.roles only holds the old roles read at loading (migration of the notebook v1)
+  // role of campioni/2 -> role of the QA/QC
+  const FROM_CAMPIONI = { sample: "sample", t0: "sample", infusion: "sample", blank: "blank", dark: "dark", qc: "qc", std: "standard", calibration: "standard" };
+  // st.roles only holds the old roles read at loading (migration of the notebook v1)
+  const roleOf = f => (f.role && FROM_CAMPIONI[f.role]) || (ROLES.includes(st.roles[f.file]) ? st.roles[f.file] : guessRole(f));
   const roleName = r => (r === "blank" ? t("qaqc.role.blank") : r === "qc" ? t("qaqc.role.qc") : r === "standard" ? t("qaqc.role.standard") : r === "dark" ? t("qaqc.role.dark") : t("qaqc.role.sample"));
 
   // ---------------------------------------------------------------- ions: m/z or formula, RT expected

@@ -10,7 +10,8 @@ const RAPPORTO = (() => {
   const t = (k, p) => I18N.t(k, p);
   const eh = s => EH(s == null ? "" : s);
   const isHr = () => !!(window.HR && typeof BANCO !== "undefined" && BANCO.on());
-  const cands = new Map();                           // candidates annotated in the session (confidence level and evidence), kept in the workflow file
+  // candidates annotated in the session (confidence level and evidence), kept in the workflow file
+  const cands = new Map();
 
   // libreria.js calls this every time it assesses the candidates of one spectrum (and again after the chemist's decision)
   function note(lv, q) {

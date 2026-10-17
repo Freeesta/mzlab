@@ -1,6 +1,6 @@
 // @ts-strict
 // Chart drawing: chromatograms (TIC, XIC, corrections), hover line, zoom, RT x m/z map. Split from explore.js: classic script, loaded after pannelli.js.
-// ------------------------------------------------------------------ disegno dei grafici
+// ------------------------------------------------------------------ chart drawing
 // ---- corrections applied to the traces (fondo.js): the difference with a reference, then ONE background on the difference. Nothing is clipped here.
 // ---- internal blank: a stretch of the trace chosen by the student (for example 0-2 min, where nothing elutes) gives the background level, which is
 // subtracted from the whole trace. p.fondo.ib = { mode: "mean" | "median" | "line", a: [t0, t1], b: [t0, t1] (line only: second stretch) } (fondo.js).
@@ -318,7 +318,7 @@ async function drawLines(p) {
   // rows of the stacked view: one per trace, or (stacked graphs of the bench) one per graph with the files overlaid in it
   const rowIx = new Map(); sr.forEach((s, i) => { const g = s.grp != null ? s.grp : "i" + i; if (!rowIx.has(g)) rowIx.set(g, rowIx.size); s.row = rowIx.get(g); });
   const nrow = rowIx.size, rowMax = new Array(nrow).fill(1e-9); sr.forEach(s => { rowMax[s.row] = Math.max(rowMax[s.row], s.mx); });
-  // unità del grafico: sovrapposti = intensità; impilati = riga i + frazione dell'altezza (scala comune, oppure ogni riga normalizzata 0-100 con p.norm100)
+  // chart units: overlaid = intensity; stacked = row i + fraction of the height (common scale, or each row normalised 0-100 with p.norm100)
   sr.forEach((s, i) => { s.off = stk ? s.row : 0; s.sc = stk ? (p.norm100 ? rowMax[s.row] : G) / 0.92 : p.norm100 && !p.log ? s.mx / 100 : 1; });
   const U = (s, v) => s.off + v / s.sc;
   const yzf = !!p.zoomY && !stk && !logy;                       // y zoom (box, or drag on the numbers at the left of the axis): tall peaks are cut at the top
@@ -429,7 +429,7 @@ async function drawLines(p) {
     drawAnn(p, g, a, X(a.x), Math.max(M.t + 1, Math.min(H - M.b, Y(top))), W, 26);
   }
   if (window.GRADIENTE) { GRADIENTE.ensure(p); if (p.overlay) GRADIENTE.draw(p, g, p._a); }      // the gradient over the traces (PNG included)
-  // cosa mostrare quando il mouse passa sul grafico: RT e intensità di ogni traccia visibile in quel punto
+  // what to show when the mouse is over the chart: RT and intensity of each visible trace at that point
   p._a.hov = (px, py) => {
     const x = xOf(p, px), rows = sr.map(s => { const i = nearIdx(s.x, x); return { s, v: s.ys[i], raw: s.yraw ? s.yraw[i] : null }; }).sort((a, b) => b.v - a.v);
     return { px, rt: x, html: `<b>RT ${x.toFixed(2)} min</b>` + rows.slice(0, 8).map(r => `<div><i style="background:${r.s.color}"></i>${EH(r.s.name.length > 30 ? r.s.name.slice(0, 29) + "…" : r.s.name)} <b>${fmt(r.v)}</b>${r.raw != null ? ` <span class="sm">${I18N.t("tip.raw", { v: fmt(r.raw) })}</span>` : ""}</div>`).join("") + (window.GRADIENTE && p.overlay ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
@@ -437,7 +437,7 @@ async function drawLines(p) {
   legend(p, all, (p.type === "chrom" && p.kind === "press" && sr.some(s => s.unitNote) ? I18N.t("analog.unit.tenfold", sr.find(s => s.unitNote).unitNote.params) : "") + (p.type === "chrom" && !isAnalog(p.kind) && p.kind !== "pda" && (p.mz0 != null || p.mz1 != null) ? I18N.t("leg.note.mz", { lo: p.mz0 ?? "min", hi: p.mz1 ?? "max" }) : "") + (p.type === "chrom" && p.kind !== "pda" && p.prec && shown().some(f => f.kind === "ms2") ? I18N.t("leg.note.prec", { prec: p.prec }) : "") + (all.some(x => x.corr) ? I18N.t("leg.note.corr", { corr: all.find(x => x.corr).corr }) : "") + (stk ? (p.norm ? I18N.t("leg.note.rowNorm") : I18N.t("leg.note.rowScale", { h: fmt(G / 0.92) })) : ""));
 }
 
-// ---- mouse sul grafico: linea verticale + riquadro con i valori; la linea compare anche negli altri pannelli con l'asse RT
+// ---- mouse over the chart: vertical line + box with the values; the line also shows in the other panels with an RT axis
 const xOf = (p, px) => { const a = p._a; return a.x0 + (px - M.l) / (a.W - M.l - M.r) * (a.x1 - a.x0); };
 function hideHover(p) {
   if (p.tip) p.tip.hidden = true; if (p.vl) p.vl.hidden = true;
@@ -460,7 +460,7 @@ function showHover(p, px, py) {
     q.vl.hidden = false; q.vl.style.left = q.cv.offsetLeft + b.X(h.rt) + "px"; q.vl.style.top = q.cv.offsetTop + M.t + "px"; q.vl.style.height = b.H - M.t - M.b + "px";
   });
 }
-// ---- zoom: Ctrl/Cmd + rotella (o pizzico sul trackpad) attorno al cursore; Maiusc + trascina sposta
+// ---- zoom: Ctrl/Cmd + wheel (or trackpad pinch) around the cursor; Shift + drag pans
 function clampView(z0, z1, f0, f1) {
   let span = z1 - z0; const full = f1 - f0;
   if (span >= full * 0.999) return null;
@@ -478,7 +478,7 @@ function zoomYTo(p, lo, hi, quiet) {
 }
 function zoomTo(p, z0, z1) { const [f0, f1] = p._a.full; p.zoom = clampView(z0, z1, f0, f1); draw(p); }
 
-// ---- mappa RT-m/z (come "Ion Map" di Xcalibur e il visualizzatore 2D di MZmine): ogni pixel è l'intensità media di uno ione in un istante
+// ---- RT-m/z map (like Xcalibur's "Ion Map" and MZmine's 2D viewer): each pixel is the mean intensity of one ion at one instant
 const DIV = [[0, [213, 94, 0]], [0.5, [250, 250, 246]], [1, [0, 114, 178]]];       // Okabe-Ito vermilion #D55E00 <-> white <-> blue #0072B2: readable by colour-blind people
 function lut(stops) {
   const out = new Uint8ClampedArray(256 * 4);
@@ -520,8 +520,8 @@ function mapImage(p, A, B, scale, norm = "abs") {
   else { const mA = mapNorm(A.m, norm), mB = B ? mapNorm(B.m, norm) : null; for (let i = 0; i < n; i++) v[i] = mB ? mA[i] - mB[i] : mA[i]; }
   const nz = []; for (let i = 0; i < n; i++) { const a = Math.abs(v[i]); if (a > 0) nz.push(a); }
   nz.sort((a, b) => a - b);
-  const ref = nz.length ? nz[Math.min(nz.length - 1, Math.floor(nz.length * 0.995))] : 1;        // 99.5° percentile: un solo picco enorme non appiattisce il resto
-  const floor = dop.thr;                                             // sotto questa frazione è rumore: resta bianco
+  const ref = nz.length ? nz[Math.min(nz.length - 1, Math.floor(nz.length * 0.995))] : 1;        // 99.5th percentile: one huge peak does not flatten the rest
+  const floor = dop.thr;                                             // below this fraction it is noise: stays white
   const T = x => { if (B && (dop.show === "up" && x < 0 || dop.show === "down" && x > 0)) return 0; const r = Math.min(1, Math.abs(x) / ref); if (r < floor) return 0; return scale === "lin" ? r : scale === "log" ? Math.log10(1 + 1000 * r) / 3 : scale === "gamma" ? Math.pow(r, p.gamma || 0.6) : Math.sqrt(r); };
   const { nrt, nmz } = A, off = document.createElement("canvas"); off.width = nrt; off.height = nmz;
   const ctx = /** @type {CanvasRenderingContext2D} */ (off.getContext("2d")), im = ctx.createImageData(nrt, nmz), tab = B ? LUT_DIV : lutSeq(pal);

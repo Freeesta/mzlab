@@ -13,7 +13,8 @@ const LISTE = (() => {
     (lists || []).forEach(L => {
       if (!L) return;
       if (active && active[L.id] === false) return;
-      const en = I18N.lang === "en";                       // the built-in list carries English names and classes (name_en, cls_en); the lists of the user are shown as written
+      // the built-in list carries English names and classes (name_en, cls_en); the lists of the user are shown as written
+      const en = I18N.lang === "en";
       (L.items || []).forEach(it => {
         const x = { ...it, clsKey: it.cls, list: L.id, listName: (en && L.name_en) || L.name || L.id, listBuiltin: !!L.builtin };
         if (en && it.name_en) x.name = it.name_en;
@@ -140,7 +141,8 @@ const LISTE = (() => {
   }
 
   function csvParse(text) {
-    const lines = String(text).replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim() && !l.startsWith("#"));       // «# mzLab ...» = provenance line of our own exports
+    // «# mzLab ...» = provenance line of our own exports
+    const lines = String(text).replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim() && !l.startsWith("#"));
     if (!lines.length) return [];
     const sep = (lines[0].match(/;/g) || []).length > (lines[0].match(/,/g) || []).length ? ";" : ",";
     const head = csvSplit(lines[0], sep);
@@ -256,7 +258,8 @@ const LISTE = (() => {
   // Exclusions (HR only): hide a compatible peak from the lists and the tables, never change the data. Stored in the browser, the same for every file.
   const KEY_EXCL = "qqq.contaminanti.esclusi";
   const exclKinds = ["entry", "cls", "list"];
-  const FLD = { entry: "voc" + "i", cls: "class" + "i", list: "list" + "e" };         // names of the stored object (user data: do not rename)
+  // names of the stored object (user data: do not rename)
+  const FLD = { entry: "voc" + "i", cls: "class" + "i", list: "list" + "e" };
   let exclCache = null;
   const exclRead = () => {
     if (exclCache) return exclCache;
@@ -295,7 +298,8 @@ const LISTE = (() => {
     return new Promise(async res => {
       if (typeof indexedDB === "undefined") return res(null);
       try {
-        const { DB_NAME, DB_VER, upgrade } = await import("./qqq-db.js");          // the schema is written once (qqq-db.js)
+        // the schema is written once (qqq-db.js)
+        const { DB_NAME, DB_VER, upgrade } = await import("./qqq-db.js");
         const req = indexedDB.open(DB_NAME, DB_VER);
         req.onupgradeneeded = () => upgrade(req.result);
         req.onsuccess = () => res(req.result);

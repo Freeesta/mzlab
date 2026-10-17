@@ -23,7 +23,8 @@ const QMODI = (() => {
       what: t("modi.mrm.what"), use: t("modi.mrm.use"), out: t("modi.mrm.out"), sel: t("modi.mrm.sel"), res: t("modi.mrm.res") },
   };
   M.msn = { name: t("inf.name"), short: "MSn", ico: "prod", q: [t("modi.msn.q1"), t("modi.msn.q2"), t("modi.msn.q3")],
-    what: t("modi.msn.what"), use: t("modi.msn.use"), out: t("modi.msn.out"), sel: t("modi.msn.sel"), res: t("modi.msn.res") };      // not in ORDER: the Teoria table keeps the three modes of the 3200
+    // not in ORDER: the Teoria table keeps the three modes of the 3200
+    what: t("modi.msn.what"), use: t("modi.msn.use"), out: t("modi.msn.out"), sel: t("modi.msn.sel"), res: t("modi.msn.res") };
   const ORDER = ["full", "prod", "mrm"];
   const th = "padding:3px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-weight:600";
   const td = "padding:3px 8px;border-bottom:1px solid var(--line);vertical-align:top";

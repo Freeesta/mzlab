@@ -64,10 +64,12 @@ const CARTELLA = (() => {
   // A source: `f` = { size, mtime } of the file, `meta` = the .idx.json (or null), `idxSize` = bytes of the index file (or null if missing), `sha()` = SHA-256 of the source.
   async function statoSorgente(f, meta, idxSize, sha) {
     if (!meta) return { stato: "da_indicizzare" };
-    if (idxSize == null || idxSize !== meta.bytes) return { stato: "danneggiata" };           // the index is missing or not what was written
+    // the index is missing or not what was written
+    if (idxSize == null || idxSize !== meta.bytes) return { stato: "danneggiata" };
     const o = meta.origine || {};
     if (o.size === f.size && o.mtime === f.mtime) return { stato: "pronta" };
-    if (o.size === f.size && o.sha256 && (await sha()) === o.sha256) return { stato: "pronta", mtime: f.mtime };   // touched, not changed
+    // touched, not changed
+    if (o.size === f.size && o.sha256 && (await sha()) === o.sha256) return { stato: "pronta", mtime: f.mtime };
     return { stato: "da_indicizzare" };
   }
   // A package (`.mzlib` at the top of the folder): `side` = its sidecar { id, versione, sha256, size, mtime } (or null for a file of the user), `cat` = the catalog entry
@@ -94,7 +96,8 @@ const CARTELLA = (() => {
 
   // ---------------------------------------------------------------- directories (same interface for handles and for the native folder)
   const splitRel = rel => { const i = rel.lastIndexOf("/"); return [i < 0 ? "" : rel.slice(0, i), rel.slice(i + 1)]; };
-  function handleDir(root, kind) {                      // a FileSystemDirectoryHandle (OPFS `librerie/` or the folder chosen with showDirectoryPicker)
+  // a FileSystemDirectoryHandle (OPFS `librerie/` or the folder chosen with showDirectoryPicker)
+  function handleDir(root, kind) {
     const walk = async (sub, create) => { let d = root; for (const p of sub.split("/").filter(Boolean)) d = await d.getDirectoryHandle(p, { create }); return d; };
     const bytes = async data => (typeof data === "string" ? new TextEncoder().encode(data) : data instanceof Blob ? new Uint8Array(await data.arrayBuffer()) : data);
     const self = {
@@ -113,7 +116,8 @@ const CARTELLA = (() => {
         a.flush(); a.close();
       },
       async remove(rel) { safeRel(rel); const [sub, name] = splitRel(rel); try { await (await walk(sub, false)).removeEntry(name); } catch (e) { /* not there */ } },
-      async replace(tmp, rel) {                         // tmp -> rel: the old content stays until the new file is complete
+      // tmp -> rel: the old content stays until the new file is complete
+      async replace(tmp, rel) {
         safeRel(tmp); safeRel(rel); const [sub, name] = splitRel(rel);
         try { const fh = await (await walk(splitRel(tmp)[0], false)).getFileHandle(splitRel(tmp)[1]); if (fh.move) { await fh.move(await walk(sub, true), name); return; } } catch (e) { /* copy instead */ }
         await self.write(rel, await self.file(tmp)); await self.remove(tmp);
@@ -122,7 +126,8 @@ const CARTELLA = (() => {
     };
     return self;
   }
-  function nativeDir(base) {                            // the folder of the desktop app, through mzlab://localhost/lib/<route> (crates/mzlab-desktop/src/librerie.rs)
+  // the folder of the desktop app, through mzlab://localhost/lib/<route> (crates/mzlab-desktop/src/librerie.rs)
+  function nativeDir(base) {
     const url = (route, p) => base + "lib/" + route + "?" + Object.entries(p || {}).map(([k, v]) => k + "=" + encodeURIComponent(v)).join("&");
     const get = async (route, p) => { const r = await fetch(url(route, p)); if (r.status !== 200) throw new Error(await r.text()); return r; };
     const CH = 8 << 20;
@@ -166,7 +171,8 @@ const CARTELLA = (() => {
     } catch (e) { return null; }
   };
   const HEAD = [0x4d, 0x5a, 0x4c, 0x42];
-  async function readHead(file) {                      // the 36-byte header of a .mzlib (docs/agenti/librerie.md): null if it is not one
+  // the 36-byte header of a .mzlib (docs/agenti/librerie.md): null if it is not one
+  async function readHead(file) {
     try { const b = new Uint8Array(await file.slice(0, 36).arrayBuffer()); if (b.length < 36 || !HEAD.every((x, i) => b[i] === x)) return null; const dv = new DataView(b.buffer); return { n: dv.getUint32(8, true), peaks: Number(dv.getBigUint64(16, true)), minReader: dv.getUint16(6, true) }; } catch (e) { return null; }
   }
   // The state of every entry. `cat` = the catalog (or null). Returns { voci: [{ nome, tipo, id, size, mtime, stato, info, nuova }] } sorted by name.
@@ -189,7 +195,8 @@ const CARTELLA = (() => {
         seen.add(f.name);
       }
     }
-    for (const f of sub) {                              // indexes of files that are not in the folder (imported with the button or by drop): nothing to compare, ready while the index is whole
+    // indexes of files that are not in the folder (imported with the button or by drop): nothing to compare, ready while the index is whole
+    for (const f of sub) {
       const m = /^(.*)\.idx\.json$/.exec(f.name); if (!m || seen.has(m[1])) continue;
       const meta = await readJson(dir, META + "/" + f.name, okIdx), ok = meta && subSize.get(m[1] + ".mzlib") === meta.bytes;
       voci.push({ nome: m[1], tipo: "importata", id: idOf(m[1]), size: meta ? meta.origine.size : 0, mtime: meta ? meta.origine.mtime : 0, stato: ok ? "pronta" : "danneggiata", info: meta && meta.info });

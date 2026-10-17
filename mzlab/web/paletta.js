@@ -19,7 +19,8 @@ const PALETTE = (() => {
   const kw = c => (c.teo ? "" : t(`cmd.${c.id}.kw`));
 
   function candidates() {
-    if (BARRA.inTheory) return BARRA.theoryCommands().filter(c => !c.off);      // in the Teoria the palette searches the commands of the Teoria
+    // in the Teoria the palette searches the commands of the Teoria
+    if (BARRA.inTheory) return BARRA.theoryCommands().filter(c => !c.off);
     return BARRA.commands.filter(c => c.run && !c.items && c.id !== "search" && BARRA.visible(c));
   }
 

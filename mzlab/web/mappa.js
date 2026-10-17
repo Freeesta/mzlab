@@ -9,14 +9,17 @@ window.MAPPA = (() => {
   const PREF = (() => { return lsObj(PREF_KEY); })();
   const prefSave = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(PREF)); } catch (e) { /* no storage */ } };
   const GRP0 = 0.02, SHAPES = ["circle", "square", "triangle", "diamond"], GLYPH = ["●", "■", "▲", "◆"];
-  const SHAPE_KEY = { circle: "mappa.shape.circle", square: "mappa.shape.square", triangle: "mappa.shape.triangle", diamond: "mappa.shape.diamond" };     // literal keys: the i18n check finds them     // RT window of a group (min); the shape of a group's points, by turns
+  // literal keys: the i18n check finds them     // RT window of a group (min); the shape of a group's points, by turns
+  const SHAPE_KEY = { circle: "mappa.shape.circle", square: "mappa.shape.square", triangle: "mappa.shape.triangle", diamond: "mappa.shape.diamond" };
   const DENS = { few: { lab: "mappa.dens.few", limit: 4, bands: 2, quota: 1 }, mid: { lab: "mappa.dens.mid", limit: 8, bands: 4, quota: 1 }, many: { lab: "mappa.dens.many", limit: 14, bands: 6, quota: 2 } }, BOTTOM = 140, NARROW = 700, QUIET = 150;
   const st = p => p._mz || (p._mz = { lock: null, kp: null, hov: null, mir: null, reg: null, regT: 0, spec: null, xic: null, xicB: null });
   const is2d = p => p.type === "map" && p._a && p._a.map;
   const isMax = p => p.el && p.el.classList.contains("max");
-  const mirOn = p => { const s = st(p); return s.ex ? true : s.mir != null ? s.mir : isMax(p); };       // «How it is extracted» always uses the two plots at the margins
+  // «How it is extracted» always uses the two plots at the margins
+  const mirOn = p => { const s = st(p); return s.ex ? true : s.mir != null ? s.mir : isMax(p); };
   const wide = p => p.el && p.el.clientWidth >= NARROW;
-  const point = p => { const s = st(p); return s.lock || s.frz || s.kp || s.hov; };       // frz: the point of the right click, held while the menu is open
+  // frz: the point of the right click, held while the menu is open
+  const point = p => { const s = st(p); return s.lock || s.frz || s.kp || s.hov; };
   const isHrF = f => !!(f && window.HR && HR.isHr(f, f.lv || 1));
 
   // the first time a 2D map is opened, the 3D viewer is fetched when the browser is idle (same guards as the other preloads in shell.js): the switch to 3D is then immediate
@@ -39,7 +42,8 @@ window.MAPPA = (() => {
     const sp = document.createElement("canvas"); sp.className = "mzside"; sp.hidden = true; sp.setAttribute("role", "img"); grid.appendChild(sp);
     const xc = document.createElement("canvas"); xc.className = "mzbot"; xc.hidden = true; grid.appendChild(xc);
     Object.assign(st(p), { ov, sp, xc, grid });
-    sp.addEventListener("mousemove", ev => {                        // the tooltip of a label: its m/z and its S/N (intensity over the noise around it)
+    // the tooltip of a label: its m/z and its S/N (intensity over the noise around it)
+    sp.addEventListener("mousemove", ev => {
       const r = sp.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top, s = st(p), l = (s.lbls || []).find(o => x >= o.x - 2 && x <= o.x + o.w + 2 && y >= o.y - 2 && y <= o.y + o.h + 2), q = l && s.snr ? s.snr.get(l.i) : null;
       sp.title = q != null ? T("mappa.lbl.tip", { mz: l.t, snr: q >= 100 ? Math.round(q) : q.toFixed(1) }) : "";
     });
@@ -56,16 +60,19 @@ window.MAPPA = (() => {
   }
   let fsByUs = null;
   function onMax(p, on) {
-    st(p).mir = null;                                                   // the sight follows the view again: off in the page, on in full screen
+    // the sight follows the view again: off in the page, on in full screen
+    st(p).mir = null;
     layout(p);
     if (on) {
-      const de = document.documentElement;       // the whole page goes full screen (menus and dialogs, which live in the page, stay visible); the panel covers it
+      // the whole page goes full screen (menus and dialogs, which live in the page, stay visible); the panel covers it
+      const de = document.documentElement;
       if (!document.fullscreenElement && de.requestFullscreen) de.requestFullscreen().then(() => { fsByUs = p; }).catch(() => { /* iPad and others: the fixed panel is the full screen */ });
       setTimeout(() => p.cv.focus({ preventScroll: true }), 0);
     } else if (fsByUs === p && document.fullscreenElement) { fsByUs = null; document.exitFullscreen().catch(() => {}); }
   }
   document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && fsByUs) { const p = fsByUs; fsByUs = null; if (isMax(p)) p._setMax(false); } });
-  function mirBtn(p) {                                                  // the button shows the real state of the sight (on in full screen, off in the page, until it is clicked or M is pressed)
+  // the button shows the real state of the sight (on in full screen, off in the page, until it is clicked or M is pressed)
+  function mirBtn(p) {
     const b = p.el && p.el.querySelector('[data-mz="mir"]'); if (!b) return;
     const on = !!mirOn(p); b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
   }
@@ -74,7 +81,8 @@ window.MAPPA = (() => {
     const m = mirOn(p) && is2dView(p) && wide(p);
     s.grid.classList.toggle("mir", m); s.sp.hidden = !m; s.xc.hidden = !m;
     p.el.classList.toggle("mzmir", m);
-    const grow = m && !isMax(p);                                        // in the page the panel grows by the height of the XIC, and shrinks back after
+    // in the page the panel grows by the height of the XIC, and shrinks back after
+    const grow = m && !isMax(p);
     if (grow !== !!s.grown) { p.h = Math.max(200, p.h + (grow ? 1 : -1) * (BOTTOM + 80)); s.grown = grow; apply(p); if (typeof relayout === "function") relayout(); fitHost(); uiSave(); }
   }
   const is2dView = p => p.type === "map";
@@ -107,11 +115,14 @@ window.MAPPA = (() => {
       return { ...j, m: new Float32Array(u.buffer) };
     }));
   };
-  const quiet = () => REG.ms && REG.ms < 30 ? 40 : QUIET;                   // a fast route is asked soon after the last change, a slow one only after the pause
+  // a fast route is asked soon after the last change, a slow one only after the pause
+  const quiet = () => REG.ms && REG.ms < 30 ? 40 : QUIET;
   function regionGrid(p, A, x0, x1, y0, y1, pw, ph) {
     const f = E.files[A.k], hr = isHrF(f), step = Math.max(scanStep(), 1e-4);
-    const d = Math.min(2, devicePixelRatio || 1), nrt = Math.max(2, Math.min(1000, Math.max(Math.round(pw * d), Math.ceil((x1 - x0) / (A.rt1 - A.rt0) * A.nrt)), Math.floor((x1 - x0) / step)));   // never more bins than scans: no empty stripes
-    const nmz = Math.max(2, Math.min(1000, Math.max(Math.round(ph * d), Math.ceil((y1 - y0) / A.dmz)), hr ? 1000 : Math.floor((y1 - y0) / 0.1)));  // never coarser than the whole map; low resolution: bins of at least 0.1
+    // never more bins than scans: no empty stripes
+    const d = Math.min(2, devicePixelRatio || 1), nrt = Math.max(2, Math.min(1000, Math.max(Math.round(pw * d), Math.ceil((x1 - x0) / (A.rt1 - A.rt0) * A.nrt)), Math.floor((x1 - x0) / step)));
+    // never coarser than the whole map; low resolution: bins of at least 0.1
+    const nmz = Math.max(2, Math.min(1000, Math.max(Math.round(ph * d), Math.ceil((y1 - y0) / A.dmz)), hr ? 1000 : Math.floor((y1 - y0) / 0.1)));
     return [+x0.toFixed(5), +x1.toFixed(5), +y0.toFixed(5), +y1.toFixed(5), nrt, nmz];
   }
   // The region is asked with a margin (a quarter of the view on each side): a pan or a small zoom inside it is already sharp and asks nothing.
@@ -137,25 +148,30 @@ window.MAPPA = (() => {
     s.regT = setTimeout(async () => {
       try {
         const a = await getRegion(A.k, A.level, w, (B ? `&ref=${B.k}&norm=${norm}&rttol=${diffOpt().rttol}` : "") + mapBg(p));
-        if (seq !== s.regSeq) return;                                     // a newer view was asked meanwhile: this one is not painted
+        // a newer view was asked meanwhile: this one is not painted
+        if (seq !== s.regSeq) return;
         const fa = B ? 1 : normFactor(A.m, norm), n = a.m.length, v = new Float32Array(n);
-        for (let i = 0; i < n; i++) v[i] = a.m[i] * fa;                    // with a reference the server already gives A - B (normalised, tolerance in RT)
+        // with a reference the server already gives A - B (normalised, tolerance in RT)
+        for (let i = 0; i < n; i++) v[i] = a.m[i] * fa;
         s.reg = { pk, v, nrt: a.nrt, nmz: a.nmz, rt0: a.rt0, rt1: a.rt1, mz0: a.mz0, mz1: a.mz1, dmz: a.dmz, off: paint(liscia() ? splatOf(A, v, a) : v, a.nrt, a.nmz, im, !!B) };
         draw(p);
       } catch (e) { /* keep the stretched whole map */ }
     }, quiet());
-    return !!(R && R.pk === pk && R.off && R.rt0 <= x0 + 1e-9 && R.rt1 >= x1 - 1e-9 && R.mz0 <= y0 + 1e-9 && R.mz1 >= y1 - 1e-9) && put(R);   // meanwhile a coarser region that covers the view is better than the stretched map
+    // meanwhile a coarser region that covers the view is better than the stretched map
+    return !!(R && R.pk === pk && R.off && R.rt0 <= x0 + 1e-9 && R.rt1 >= x1 - 1e-9 && R.mz0 <= y0 + 1e-9 && R.mz1 >= y1 - 1e-9) && put(R);
   }
   // «Liscia» (the default) or «Dettaglio»: only how the zoomed region is drawn; the values the sight and the XIC read are the ones of the matrix
   const liscia = () => PREF.rend !== "detail", HR_FWHM_PPM = 15, LR_FWHM = 0.7, FWHM = 2.3548;
-  function splatOf(A, v, a) {                                             // a gaussian as wide as the m/z resolution of the instrument and the spacing of the scans
+  // a gaussian as wide as the m/z resolution of the instrument and the spacing of the scans
+  function splatOf(A, v, a) {
     const hr = isHrF(E.files[A.k]), mid = (a.mz0 + a.mz1) / 2, wm = hr ? mid * HR_FWHM_PPM * 1e-6 : LR_FWHM;
     return MAPREND.splat(v, a.nrt, a.nmz, scanStep() / ((a.rt1 - a.rt0) / a.nrt), wm / FWHM / a.dmz);
   }
   function paint(v, nrt, nmz, im, diff) {
     const off = document.createElement("canvas"); off.width = nrt; off.height = nmz;
     const ctx = /** @type {CanvasRenderingContext2D} */ (off.getContext("2d")), d = ctx.createImageData(nrt, nmz), tab = diff ? LUT_DIV : lutSeq(mapPal());
-    const px = new Uint32Array(d.data.buffer), tab32 = new Uint32Array(tab.buffer, tab.byteOffset, 256);       // one 32-bit write per pixel, the same bytes as the table
+    // one 32-bit write per pixel, the same bytes as the table
+    const px = new Uint32Array(d.data.buffer), tab32 = new Uint32Array(tab.buffer, tab.byteOffset, 256);
     for (let i = 0; i < nrt; i++) for (let j = 0; j < nmz; j++) {
       const x = v[i * nmz + j], t = im.T(x), q = diff ? Math.round(127.5 + Math.sign(-x) * t * 127.5) : Math.round(t * 255);
       px[(nmz - 1 - j) * nrt + i] = tab32[q];
@@ -185,7 +201,8 @@ window.MAPPA = (() => {
     g.clearRect(0, 0, a.W, a.H);
     if (!is2d(p)) return;
     drawPoints(p, g);
-    if (s.guide) {                                                         // axis lock (asse.js): the line along which the gesture may move
+    // axis lock (asse.js): the line along which the gesture may move
+    if (s.guide) {
       const q = s.guide; g.save(); g.strokeStyle = css("--accent"); g.lineWidth = 1.5; g.setLineDash([6, 4]); g.beginPath();
       if (q.ax === "x") { g.moveTo(M.l, q.y + .5); g.lineTo(a.W - M.r, q.y + .5); } else { g.moveTo(q.x + .5, M.t); g.lineTo(q.x + .5, a.H - M.b); }
       g.stroke(); g.restore();
@@ -217,12 +234,16 @@ window.MAPPA = (() => {
   // Asked only for what the point needs and the page does not hold: the scan is found in the page on the RT axis of the file (/api/scan_axis, once), the
   // spectrum comes from /api/spectra by position and only when the scan changes, the XIC only when the window changes. One request at a time, the newest
   // point wins (MIRINO.latest, at most once per frame); what has not arrived yet is a preview read from the matrix of the map, marked as such.
-  const SIGHT = MIRINO.lru(MIRINO.budget()), AX = new Map(), FLY = new Map();      // spectra and XIC under a memory budget; RT axes; requests in flight
-  { const clear = CACHE.clear.bind(CACHE); CACHE.clear = () => { clear(); SIGHT.clear(); AX.clear(); FLY.clear(); }; }   // same moments as the cache of explore.js
+  // spectra and XIC under a memory budget; RT axes; requests in flight
+  const SIGHT = MIRINO.lru(MIRINO.budget()), AX = new Map(), FLY = new Map();
+  // same moments as the cache of explore.js
+  { const clear = CACHE.clear.bind(CACHE); CACHE.clear = () => { clear(); SIGHT.clear(); AX.clear(); FLY.clear(); }; }
   const dropFile = k => { SIGHT.drop(`s${k}|`); SIGHT.drop(`x${k}|`); SIGHT.drop(`x${k}+`); SIGHT.dropIf(key => key[0] === "s" ? key.includes(`-${k}|`) : key.includes(`+${k}|`)); for (const key of [...AX.keys()]) if (key.startsWith(`${k}|`)) AX.delete(key); };
-  const MEAS = /[?&]perf\b/.test(location.search), meas = window.__mir = [];     // with ?perf: the cost of the exact answer of each stop of the sight (tools/bench_mirino.py)
+  // with ?perf: the cost of the exact answer of each stop of the sight (tools/bench_mirino.py)
+  const MEAS = /[?&]perf\b/.test(location.search), meas = window.__mir = [];
   const once = (key, fn) => { if (!FLY.has(key)) FLY.set(key, fn().finally(() => FLY.delete(key))); return FLY.get(key); };
-  const axisOf = f => {                                                  // {rt, sid} of the scans of the level; null until it has arrived
+  // {rt, sid} of the scans of the level; null until it has arrived
+  const axisOf = f => {
     const key = `${f.k}|${f.lv || 1}`, e = AX.get(key); if (e) return e.v;
     const q = /** @type {any} */ ({ v: null }); AX.set(key, q);
     once("a" + key, () => J(`api/scan_axis?k=${f.k}&level=${f.lv || 1}`)).then(j => { q.v = { rt: Float64Array.from(j.rt), sid: j.sid }; ask(null); }, () => AX.delete(key));
@@ -279,7 +300,8 @@ window.MAPPA = (() => {
       const key = specKeyAt({ f, ax, i, r, rx, j }); if (s.spec && s.spec.key === key) return s.spec;
       const hit = SIGHT.get(key); if (hit) return (s.spec = hit);
       if (!r) { s.spec = await getScan(f, ax, i); return s.spec; }
-      const [sa, sb] = await Promise.all([getScan(f, ax, i), getScan(r, rx, j)]);        // A − B over every m/z: peaks of A and B closer than the XIC window are one
+      // A − B over every m/z: peaks of A and B closer than the XIC window are one
+      const [sa, sb] = await Promise.all([getScan(f, ax, i), getScan(r, rx, j)]);
       const d = MIRINO.diffPeaks(sa.mz, sa.y, sb.mz, sb.y, mz => xicTol(f, mz));
       const sp = { key, sid: sa.sid, rt: sa.rt, rtb: sb.rt, mz: d.mz, y: d.y, signed: true }; SIGHT.set(key, sp, specSize(sp)); s.spec = sp;
     } catch (e) { /* nothing to show */ }
@@ -308,11 +330,13 @@ window.MAPPA = (() => {
     if (j >= 0 && j < m.nmz) { const r = MIRINO.trace(m.v, m.nrt, m.nmz, j, m.rt0, m.rt1); out.xic = { c: pt.mz, tol: m.dmz / 2, tr: [{ k: a.f.k, rt: r.x, y: r.y }], signed: !!a.ref }; }
     return out;
   }
-  function show(p, pt) {                                                 // exact where the page has it, a preview for the rest
+  // exact where the page has it, a preview for the rest
+  function show(p, pt) {
     const s = st(p); if (s.sp.hidden && s.xc.hidden) return;
     const sp = specFor(p, pt), xi = xicFor(p, pt), pv = !sp || !xi ? preview(p, pt) : null;
     if (MEAS && pv) window.__mirPrev = (window.__mirPrev || 0) + 1;
-    s.shown = { pt, sp: sp ? sp.key : null, xi: xi ? xi.key : null };                 // what the two plots hold (read by e2e_mappa_mirino)
+    // what the two plots hold (read by e2e_mappa_mirino)
+    s.shown = { pt, sp: sp ? sp.key : null, xi: xi ? xi.key : null };
     drawSide(p, pt, sp || (pv && pv.spec) || s.spec, !sp); drawBottom(p, pt, xi || (pv && pv.xic) || s.xic, !xi);
     return sp && xi;
   }
@@ -332,7 +356,8 @@ window.MAPPA = (() => {
     const s = st(p), t1 = performance.now();
     await Promise.all([fetchSpec(p, q.rt), fetchXic(p, q.mz), fetchTic(p)]);
     const t2 = performance.now(), r = point(p); if (!r || !p._a) return;
-    const done = show(p, r); readout(p);                                 // an answer for a point the sight has left is not drawn: the newest point is already queued
+    // an answer for a point the sight has left is not drawn: the newest point is already queued
+    const done = show(p, r); readout(p);
     if (done) { if (MEAS && s.t0) meas.push({ fetch: t2 - t1, draw: performance.now() - t2, total: performance.now() - s.t0 }); s.t0 = 0; prefetch(p, r); }
   }
   function margins(p) {
@@ -344,12 +369,15 @@ window.MAPPA = (() => {
     if (!s.t0) s.t0 = performance.now();
     ask.panel = p; ask(pt);
   }
-  const frame = p => { const s = st(p); if (!s.raf) s.raf = FRAME.next(() => { s.raf = 0; const t = performance.now(); overlay(p); margins(p); if (MEAS) (window.__mirFrame || (window.__mirFrame = [])).push(performance.now() - t); }); };      // pointer events come faster than frames
-  const xicTol = (f, mz) => isHrF(f) ? HR.tolDa(f, mz, f.lv || 1) : 0.5;           // LR: window [n - 0.2, n + 0.8] = centre n + 0.3, +-0.5
+  // pointer events come faster than frames
+  const frame = p => { const s = st(p); if (!s.raf) s.raf = FRAME.next(() => { s.raf = 0; const t = performance.now(); overlay(p); margins(p); if (MEAS) (window.__mirFrame || (window.__mirFrame = [])).push(performance.now() - t); }); };
+  // LR: window [n - 0.2, n + 0.8] = centre n + 0.3, +-0.5
+  const xicTol = (f, mz) => isHrF(f) ? HR.tolDa(f, mz, f.lv || 1) : 0.5;
   const xicCentre = (f, mz) => isHrF(f) ? mz : Math.round(mz) + 0.3;
   function canvasOf(c) {
     const r = c.getBoundingClientRect(), d = Math.min(4, devicePixelRatio || 1), w = Math.round(r.width * d), h = Math.round(r.height * d);
-    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }      // resizing reallocates the bitmap: only when the panel changed size
+    // resizing reallocates the bitmap: only when the panel changed size
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
     const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, r.width, r.height); return { g, W: r.width, H: r.height };
   }
   // m/z labels of the sideways spectrum: beyond the tip of the bar (fixed gap) with a halo of the panel colour; if they do not fit they go above the bar,
@@ -382,15 +410,18 @@ window.MAPPA = (() => {
     const al = g.globalAlpha; g.globalAlpha = al * .25; g.fillStyle = col; g.fill(); g.globalAlpha = al; trace();
     return { pts: pts.length, full: n };
   }
-  function drawSide(p, pt, sp, prev) {                                            // spectrum turned on its side: m/z upwards like the map, intensity to the right
+  // spectrum turned on its side: m/z upwards like the map, intensity to the right
+  function drawSide(p, pt, sp, prev) {
     const s = st(p), a = p._a; if (s.sp.hidden || !a) return;
     const { g, W, H } = canvasOf(s.sp), ink = css("--muted"); g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
     const Y = v => H - M.b - (v - a.y0) / (a.y1 - a.y0) * (H - M.t - M.b), x0 = 6, x1 = W - 8;
     g.beginPath(); g.moveTo(x0 + .5, M.t); g.lineTo(x0 + .5, H - M.b); g.stroke();
     if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, M.t + 10); return; }
-    const sg = !!sp.signed, ab = v => sg ? Math.abs(v) : v;                      // difference A − B: bars right (more in A) and left (more in B) of a zero line
+    // difference A − B: bars right (more in A) and left (more in B) of a zero line
+    const sg = !!sp.signed, ab = v => sg ? Math.abs(v) : v;
     let ymax = 0; const vis = []; for (let i = 0; i < sp.mz.length; i++) if (sp.mz[i] >= a.y0 && sp.mz[i] <= a.y1) { vis.push(i); if (ab(sp.y[i]) > ymax) ymax = ab(sp.y[i]); }
-    const pr = !prev && !sg && sp.pmz && sp.py ? profRange(sp, a.y0, a.y1) : null;       // profile scan: the continuous line (pmz/py) is drawn, the peaks (mz/y) only label it
+    // profile scan: the continuous line (pmz/py) is drawn, the peaks (mz/y) only label it
+    const pr = !prev && !sg && sp.pmz && sp.py ? profRange(sp, a.y0, a.y1) : null;
     if (pr) ymax = Math.max(ymax, pr.max);
     if (!ymax) { g.fillText(T("mappa.side.empty"), x0 + 4, M.t + 10); return; }
     const xz = sg ? (x0 + x1) / 2 : x0, len = v => (sg ? (x1 - x0) / 2 : x1 - x0) * v / ymax;
@@ -407,9 +438,11 @@ window.MAPPA = (() => {
     g.stroke();
     }
     g.globalAlpha = 1;
-    if (prev) { g.fillStyle = ink; g.fillText(T("mappa.preview"), x0 + 4, H - M.b + 14); return; }       // a preview has bins, not peaks: no m/z labels
+    // a preview has bins, not peaks: no m/z labels
+    if (prev) { g.fillStyle = ink; g.fillText(T("mappa.preview"), x0 + 4, H - M.b + 14); return; }
     const dn = DENS[PREF.dens] || DENS.mid, cen = xicCentre(a.f, pt.mz), tol = xicTol(a.f, pt.mz);
-    const kept = MAPREND.pick(sp.mz, sp.y, { lo: a.y0, hi: a.y1, bands: dn.bands, quota: dn.quota, act: [cen - tol, cen + tol] });     // best S/N of each slice of the window; the peak of the sight always
+    // best S/N of each slice of the window; the peak of the sight always
+    const kept = MAPREND.pick(sp.mz, sp.y, { lo: a.y0, hi: a.y1, bands: dn.bands, quota: dn.quota, act: [cen - tol, cen + tol] });
     s.snr = new Map(kept.all.map(c => [c.i, c.snr]));
     sideLabels(g, W, kept.map(c => c.i), i => ({ y: Y(sp.mz[i]), tip: sg ? xz + Math.max(0, len(sp.y[i])) : x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)), i }), x0, s, dn.limit);
     if (pt.mz >= a.y0 && pt.mz <= a.y1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, Y(pt.mz) + .5); g.lineTo(x1, Y(pt.mz) + .5); g.stroke(); g.setLineDash([]); }
@@ -423,23 +456,28 @@ window.MAPPA = (() => {
     for (const t of nice(a.x0, a.x1, 8)) { const x = X(t); if (x < M.l - 1 || x > W - M.r + 1) continue; g.textAlign = "center"; g.fillText(String(+t.toFixed(2)), x, H - mb + 13); }
     if (!xi || !pt) { g.textAlign = "left"; g.fillText(T("mappa.bot.title"), M.l + 4, mt + 8); return; }
     let tr = xi.tr || [], ymax = 0, sg = false;
-    if (a.ref && xi.signed) sg = true;                                              // preview of a difference: the matrix already holds A − B
+    // preview of a difference: the matrix already holds A − B
+    if (a.ref && xi.signed) sg = true;
     else if (a.ref && tr.length >= 2) { const d = MIRINO.diffTrace(tr[0].rt, tr[0].y, tr[1].rt, tr[1].y); tr = [{ k: tr[0].k, rt: d.rt, y: d.y, label: "A − B" }]; sg = true; }
-    const tic = sg && s.tic && s.tic.key === ticKey(a) ? s.tic : null;               // A − B of the TIC, on its own scale, behind the XIC
+    // A − B of the TIC, on its own scale, behind the XIC
+    const tic = sg && s.tic && s.tic.key === ticKey(a) ? s.tic : null;
     for (const t of tr) for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1 && Math.abs(t.y[i]) > ymax) ymax = Math.abs(t.y[i]);
     if (window.TDATI) { s.xc.setAttribute("aria-label", T("mappa.bot.title")); TDATI.series(s.xc, { title: T("mappa.bot.title"), xl: T("tdati.col.rt"), yl: T("tdati.col.int"), series: tr.map(t => ({ x: t.rt, y: t.y, name: t.label || t.name })).concat(tic ? [{ x: tic.rt, y: tic.y, name: "TIC A − B" }] : []) }, true); }
     const lo0 = sg ? -ymax : 0, Y = v => H - mb - (v - lo0) / ((sg ? 2 * ymax : ymax) || 1) * (H - mt - mb);
-    g.beginPath(); g.moveTo(M.l + .5, mt); g.lineTo(M.l + .5, H - mb + .5); g.stroke();      // intensity axis, like the other chromatograms
+    // intensity axis, like the other chromatograms
+    g.beginPath(); g.moveTo(M.l + .5, mt); g.lineTo(M.l + .5, H - mb + .5); g.stroke();
     if (ymax) { g.textAlign = "right"; for (const t of nice(lo0, sg ? ymax : ymax, Math.max(2, Math.floor((H - mt - mb) / 28)))) { const y = Math.round(Y(t)) + .5; g.beginPath(); g.moveTo(M.l - 4, y); g.lineTo(M.l, y); g.stroke(); g.fillText(fmtA(t), M.l - 6, y + 3.5); } }
     if (sg) {
       const y0 = Y(0); g.beginPath(); g.moveTo(M.l, y0 + .5); g.lineTo(W - M.r, y0 + .5); g.stroke();
-      if (tic) {                                                                    // TIC A − B: thin dashed line with its own scale (written beside the label)
+      // TIC A − B: thin dashed line with its own scale (written beside the label)
+      if (tic) {
         const tm = Math.max(...tic.y.map(Math.abs)) || 1; g.strokeStyle = ink; g.setLineDash([2, 3]); g.beginPath(); let f1 = true;
         for (let i = 0; i < tic.rt.length; i++) { if (tic.rt[i] < a.x0 || tic.rt[i] > a.x1) continue; const x = X(tic.rt[i]), y = y0 - tic.y[i] / tm * (y0 - mt); if (f1) { g.moveTo(x, y); f1 = false; } else g.lineTo(x, y); }
         g.stroke(); g.setLineDash([]);
       }
       const t = tr[0];
-      for (const [sgn, col] of /** @type {[number, string][]} */ ([[1, "--diff-pos"], [-1, "--diff-neg"]])) {          // area between the curve and zero: vermilion where A is higher, blue where B is
+      // area between the curve and zero: vermilion where A is higher, blue where B is
+      for (const [sgn, col] of /** @type {[number, string][]} */ ([[1, "--diff-pos"], [-1, "--diff-neg"]])) {
         g.save(); g.beginPath(); g.rect(M.l, sgn > 0 ? mt : y0, W - M.l - M.r, sgn > 0 ? y0 - mt : H - mb - y0); g.clip();
         g.fillStyle = css(col); g.strokeStyle = css(col); g.globalAlpha = prev ? .35 : .55; g.beginPath(); g.moveTo(X(Math.max(a.x0, t.rt[0] ?? a.x0)), y0);
         let lx = M.l; for (let i = 0; i < t.rt.length; i++) { if (t.rt[i] < a.x0 || t.rt[i] > a.x1) continue; lx = X(t.rt[i]); g.lineTo(lx, Y(t.y[i])); }
@@ -472,7 +510,8 @@ window.MAPPA = (() => {
     if (!is2d(p)) return; const s = st(p), a = p._a;
     if (s.feat && window.MAPEX && MAPEX.featHover(p, px, py)) return;
     if (s.ex && window.MAPEX && MAPEX.hover(p, px, py)) return;
-    if (s.frz) return;                                                  // the menu is open: the sight stays on the clicked point
+    // the menu is open: the sight stays on the clicked point
+    if (s.frz) return;
     const held = !!(e && e.shiftKey && !e.buttons && mirOn(p) && !s.lock);
     if (!held) s.sl = null;
     if (px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) { s.hov = null; }
@@ -482,20 +521,24 @@ window.MAPPA = (() => {
     if (!s.lock) frame(p); else readout(p);
   }
   function guide(p, q) { const s = st(p); if (!q && !s.guide) return; s.guide = q || null; overlay(p); }
-  function shiftUp(p, e) {                                              // Shift released: the sight is free again, at the pointer
+  // Shift released: the sight is free again, at the pointer
+  function shiftUp(p, e) {
     const s = st(p); if (e.key !== "Shift" || !s.sl) return;
     s.sl = null; if (s.hov && s.lpx && !s.frz) s.hov = xy2pt(p, s.lpx[0], s.lpx[1]);
     frame(p);
   }
   function leave(p) { const s = st(p); if (s.frz) return; s.sl = null; s.hov = null; if (!s.lock && s.ovg) frame(p); }
   function wheel(p, e, px, py) {
-    if (!is2d(p) || e.ctrlKey || e.metaKey) return false;               // Ctrl/Cmd + wheel (a pinch on the trackpad) keeps the zoom of explore.js
-    if (!e.shiftKey && !e.altKey) return false;                         // the wheel alone scrolls the page, as over every other chart
+    // Ctrl/Cmd + wheel (a pinch on the trackpad) keeps the zoom of explore.js
+    if (!is2d(p) || e.ctrlKey || e.metaKey) return false;
+    // the wheel alone scrolls the page, as over every other chart
+    if (!e.shiftKey && !e.altKey) return false;
     e.preventDefault();
     const a = p._a;
     if (!p._wz || Date.now() - p._wz > 600) pushZh(p); p._wz = Date.now();
     const dy = e.deltaY || e.deltaX, f = Math.exp(Math.max(-60, Math.min(60, dy)) * 0.004);
-    scaleView(p, f, { rt: xOf(p, px), mz: a.mzAt(py) }, e.shiftKey ? "x" : e.altKey ? "y" : "xy");       // Maiusc = RT only, Alt = m/z only
+    // Maiusc = RT only, Alt = m/z only
+    scaleView(p, f, { rt: xOf(p, px), mz: a.mzAt(py) }, e.shiftKey ? "x" : e.altKey ? "y" : "xy");
     draw(p); return true;
   }
   function boxZoom(p, ax, ay, bx, by) {
@@ -518,7 +561,8 @@ window.MAPPA = (() => {
     e.preventDefault(); hideHover(p);
     const a = p._a, inside = px >= M.l && px <= a.W - M.r && py >= M.t && py <= a.H - M.b;
     if (e.shiftKey) { if (inside) openXic(null, { mz: a.mzAt(py), obs: true }); return true; }
-    if (Date.now() - (st(p).lpAt || 0) < 900) return true;             // the long press has just opened the menu (Android also sends contextmenu)
+    // the long press has just opened the menu (Android also sends contextmenu)
+    if (Date.now() - (st(p).lpAt || 0) < 900) return true;
     showMenu(ad2(p, inside ? { rt: xOf(p, px), mz: a.mzAt(py) } : null), e); return true;
   }
   // the menu of the Menu key / Shift+F10: the right-click menu, at the point of the sight (locked, keyboard or the middle of the map)
@@ -537,7 +581,8 @@ window.MAPPA = (() => {
     if (k === "0") { done(); whole(p); return; }
     if (k === "Backspace") { done(); whole(p); return; }
     if (!is2d(p)) return;
-    if (ASSE.key(e)) { done(); overlay(p); return; }                           // X / Y latch the axis of the gestures, Esc frees it
+    // X / Y latch the axis of the gestures, Esc frees it
+    if (ASSE.key(e)) { done(); overlay(p); return; }
     if (s.ex && window.MAPEX && MAPEX.key(p, e)) { done(); return; }
     if (k === "m" || k === "M") { done(); s.mir = !mirOn(p); layout(p); draw(p); return; }
     if (k === "l" || k === "L") { done(); ad2(p, null).toggleLock(); return; }
@@ -553,16 +598,20 @@ window.MAPPA = (() => {
     done();
     const cur = point(p) || { rt: (a.x0 + a.x1) / 2, mz: (a.y0 + a.y1) / 2 }, nx = { ...cur }, dir = k === "ArrowRight" || k === "ArrowUp" ? 1 : -1;
     const set = q => { if (s.lock) s.lock = q; else s.kp = q; follow(p, q); overlay(p); margins(p); };
-    if (ASSE.fix === "x" ? k === "ArrowUp" || k === "ArrowDown" : ASSE.fix === "y" && (k === "ArrowLeft" || k === "ArrowRight")) return;      // the locked axis keeps the other one still
+    // the locked axis keeps the other one still
+    if (ASSE.fix === "x" ? k === "ArrowUp" || k === "ArrowDown" : ASSE.fix === "y" && (k === "ArrowLeft" || k === "ArrowRight")) return;
     if (k === "ArrowUp" || k === "ArrowDown") {
-      if (e.shiftKey) { fetchSpec(p, cur.rt).then(sp => { const m = peakStep(sp, cur.mz, dir); if (m != null) set({ ...cur, mz: m }); }); return; }   // next local maximum of the spectrum above 3 x noise
+      // next local maximum of the spectrum above 3 x noise
+      if (e.shiftKey) { fetchSpec(p, cur.rt).then(sp => { const m = peakStep(sp, cur.mz, dir); if (m != null) set({ ...cur, mz: m }); }); return; }
       nx.mz = Math.max(a.fullY[0], Math.min(a.fullY[1], cur.mz + dir * binDa(p))); set(nx); return;
     }
     fetchXic(p, cur.mz).then(xi => {
       const t = xi && xi.tr && xi.tr[0]; if (!t || !t.rt.length) { nx.rt = Math.max(a.full[0], Math.min(a.full[1], cur.rt + dir * scanStep())); set(nx); return; }
       const i0 = nearIdx(t.rt, cur.rt);
-      if (e.shiftKey) { const i = apexStep(t, i0, dir); if (i != null) set({ ...cur, rt: t.rt[i] }); return; }       // apex of the XIC in that direction
-      const i = Math.max(0, Math.min(t.rt.length - 1, (Math.abs(t.rt[i0] - cur.rt) < 1e-6 ? i0 : (dir > 0 ? (t.rt[i0] > cur.rt ? i0 - 1 : i0) : (t.rt[i0] < cur.rt ? i0 + 1 : i0))) + dir));   // next scan
+      // apex of the XIC in that direction
+      if (e.shiftKey) { const i = apexStep(t, i0, dir); if (i != null) set({ ...cur, rt: t.rt[i] }); return; }
+      // next scan
+      const i = Math.max(0, Math.min(t.rt.length - 1, (Math.abs(t.rt[i0] - cur.rt) < 1e-6 ? i0 : (dir > 0 ? (t.rt[i0] > cur.rt ? i0 - 1 : i0) : (t.rt[i0] < cur.rt ? i0 + 1 : i0))) + dir));
       set({ ...cur, rt: t.rt[i] });
     });
   }
@@ -616,7 +665,8 @@ window.MAPPA = (() => {
     const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "", shape: shapeNew(list, q.rt) }); st(p).psel = list.length - 1;
     ptsSave(p); overlay(p); table(p);
   }
-  const markedAt = (p, q) => p._a ? nearPoint(p, p._a.X(q.rt), p._a.Y(q.mz)) : -1;      // index of the marked point under (rt, m/z), -1 if none
+  // index of the marked point under (rt, m/z), -1 if none
+  const markedAt = (p, q) => p._a ? nearPoint(p, p._a.X(q.rt), p._a.Y(q.mz)) : -1;
   function nearPoint(p, px, py) {
     const a = p._a; let best = -1, bd = 81;
     pts(p).forEach((q, i) => { const d = (a.X(q.rt) - px) ** 2 + (a.Y(q.mz) - py) ** 2; if (d < bd) { bd = d; best = i; } });
@@ -628,7 +678,8 @@ window.MAPPA = (() => {
     if (st(p).ex && window.MAPEX && MAPEX.down(p, e, px, py)) return true;       // the box of «How it is extracted»
     const i = nearPoint(p, px, py); if (i < 0) return false;
     e.preventDefault(); const s = st(p), list = pts(p), r = p.cv.getBoundingClientRect(); s.psel = i; let moved = false;
-    const a0 = p._a, q0 = { rt: list[i].rt, mz: list[i].mz }, g = ASSE.gest(); let ax = null, wait = false;     // Ctrl/⌘ held or X / Y: the point moves along one axis only (asse.js)
+    // Ctrl/⌘ held or X / Y: the point moves along one axis only (asse.js)
+    const a0 = p._a, q0 = { rt: list[i].rt, mz: list[i].mz }, g = ASSE.gest(); let ax = null, wait = false;
     const mv = ev => {
       moved = true; const x = ev.clientX - r.left, y = ev.clientY - r.top, c = ASSE.clip(g, ev, x - px, y - py); ax = c.ax; wait = !ax && (!!ASSE.fix || ASSE.held(ev));
       list[i].rt = ax === "y" || wait ? q0.rt : xOf(p, x); list[i].mz = ax === "x" || wait ? q0.mz : p._a.mzAt(y); guide(p, ax && { ax, x: a0.X(q0.rt), y: a0.Y(q0.mz) }); overlay(p);
@@ -644,7 +695,8 @@ window.MAPPA = (() => {
   // a click (no drag) on the map: with «Segna» on it adds a point; on a point it chooses it
   function click(p, px, py) {
     if (!is2d(p)) return false; const s = st(p), i = nearPoint(p, px, py);
-    if (s.feat && window.MAPEX && MAPEX.featClick(p, px, py)) return true;       // a marker of mzFinder: the box goes there
+    // a marker of mzFinder: the box goes there
+    if (s.feat && window.MAPEX && MAPEX.featClick(p, px, py)) return true;
     if (i >= 0) { s.psel = i; overlay(p); table(p); return true; }
     if (!s.mark) return false;
     addPoint(p, px, py); return true;
@@ -667,7 +719,8 @@ window.MAPPA = (() => {
     xic: '<path d="M2 13h12"/><path d="M3 12c2-7 3-7 5 0s3 3 5-3"/>', spec: '<path d="M3 13V8M6 13V4M9 13V9M12 13V6"/>',
     both: '<path d="M2 13h5"/><path d="M2.5 12c1-6 2-6 3 0M9 13V8M12 13V5"/>',
     mark: '<circle cx="8" cy="8" r="5.2"/><circle cx="8" cy="8" r="1.6"/>', lock: '<rect x="3.5" y="7" width="9" height="6.5" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/>', unlock: '<rect x="3.5" y="7" width="9" height="6.5" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 014.8-1"/>',
-    home: '<g transform="translate(1 1) scale(1.0714)"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/></g>',       // the corners of the «whole view» button of every panel
+    // the corners of the «whole view» button of every panel
+    home: '<g transform="translate(1 1) scale(1.0714)"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/></g>',
      rx: '<path d="M2 8h12M2 5.5v5M14 5.5v5"/>', ry: '<path d="M8 2v12M5.5 2h5M5.5 14h5"/>',
     sel: '<rect x="3" y="3" width="10" height="10" rx="1" stroke-dasharray="2.5 2"/><path d="M8 6v4M6 8h4"/>', plus: '<path d="M8 3v10M3 8h10"/>', minus: '<path d="M3 8h10"/>',
     copy: '<rect x="5.5" y="5.5" width="8" height="8" rx="1.2"/><path d="M10.5 5.5V3.7a1.2 1.2 0 00-1.2-1.2H3.7a1.2 1.2 0 00-1.2 1.2v5.6a1.2 1.2 0 001.2 1.2h1.8"/>',
@@ -687,7 +740,8 @@ window.MAPPA = (() => {
       zoomBy: f => zoomBy(p, f, s.lock || at || point(p))
     };
   }
-  const touched = p => Date.now() - (st(p).gestAt || 0) < 700;           // a finger gesture has just moved the map: the mouse events that follow it are not clicks or boxes
+  // a finger gesture has just moved the map: the mouse events that follow it are not clicks or boxes
+  const touched = p => Date.now() - (st(p).gestAt || 0) < 700;
   const ptText = q => q ? `RT ${q.rt.toFixed(2)} min · m/z ${q.mz.toFixed(3)}${q.v != null ? " · " + T("mappa.read.int") + " " + fmt(q.v) : ""}` : "";
   function extract(ad, what) {
     const q = ad.pt(); if (!q) { nearMsg(T("mapnav.nopt")); return; }
@@ -699,7 +753,8 @@ window.MAPPA = (() => {
   const V2 = ["map", "map3d"];
   const nameOf = (id, ad) => T(id === "maplock" && ad.locked() || id === "mapmark" && ad.marked() ? `cmd.${id}.off.name` : `cmd.${id}.name`);
   const cmd = (id, gruppo, ic, viste, o) => AZIONI.registra({ id, gruppo, ic, viste, nome: ad => nameOf(id, ad), tip: () => T(`cmd.${id}.tip`), svg: ad => SV(id === "maplock" && ad.locked() ? ICO.unlock : ICO[ic]), ...o });
-  const short = id => ({ voce: ad => id === "mapspec" && ad.kind === "2d" && ad.p.sel ? T("cmd.mapspec.menuAvg") : T(`cmd.${id}.menu`) });       // with an RT stretch selected (Alt + drag) the spectrum is the average over it
+  // with an RT stretch selected (Alt + drag) the spectrum is the average over it
+  const short = id => ({ voce: ad => id === "mapspec" && ad.kind === "2d" && ad.p.sel ? T("cmd.mapspec.menuAvg") : T(`cmd.${id}.menu`) });
   const hasPt = ad => !!ad.pt();
   const CMDS = [
     cmd("mapxic", "extract", "xic", V2, { ...short("mapxic"), disponibile: hasPt, esegui: ad => extract(ad, "xic") }),
@@ -740,17 +795,20 @@ window.MAPPA = (() => {
     const a = p._a; if (!a) return; if (c && (c.rt < a.x0 || c.rt > a.x1 || c.mz < a.y0 || c.mz > a.y1)) c = null;
     pushZh(p); scaleView(p, f, c, "xy"); draw(p); uiSave();
   }
-  function panPx(p, dx, dy) {                                           // the picture follows the finger / the pointer by (dx, dy) pixels
+  // the picture follows the finger / the pointer by (dx, dy) pixels
+  function panPx(p, dx, dy) {
     const a = p._a, w = a.W - M.l - M.r, h = a.H - M.t - M.b, sx = (a.x1 - a.x0) / w * dx, sy = (a.y1 - a.y0) / h * dy;
     p.zoom = clampView(a.x0 - sx, a.x1 - sx, a.full[0], a.full[1]); p.zoomY = clampView(a.y0 + sy, a.y1 + sy, a.fullY[0], a.fullY[1]);
   }
-  function pinch(p, last, c, f) {                                      // scale by f around the previous midpoint, then follow the midpoint to where it is now
+  // scale by f around the previous midpoint, then follow the midpoint to where it is now
+  function pinch(p, last, c, f) {
     const a = p._a, w = a.W - M.l - M.r, h = a.H - M.t - M.b, rt = xOf(p, last.x), mz = a.mzAt(last.y);
     const x0 = rt - (rt - a.x0) * f, x1 = rt + (a.x1 - rt) * f, y0 = mz - (mz - a.y0) * f, y1 = mz + (a.y1 - mz) * f, sx = (x1 - x0) / w * (c.x - last.x), sy = (y1 - y0) / h * (c.y - last.y);
     p.zoom = clampView(x0 - sx, x1 - sx, a.full[0], a.full[1]); p.zoomY = clampView(y0 + sy, y1 + sy, a.fullY[0], a.fullY[1]);
   }
   // ---- the bar on the map: reset, zoom, lock, gestures (the same commands)
-  const BAR = { "2d": ["mapzin", "mapzout", "mapfeat", "maphelp"], "3d": ["mapreset", "mapzin", "mapzout", "maplock", "maphelp"] };      // 2D: the reset is the «fit» button of the panel head
+  // 2D: the reset is the «fit» button of the panel head
+  const BAR = { "2d": ["mapzin", "mapzout", "mapfeat", "maphelp"], "3d": ["mapreset", "mapzin", "mapzout", "maplock", "maphelp"] };
   // the buttons sit in the toolbar of the panel (2D: the head, with the same .bt look as the others) or in the header of the side column (3D); nothing floats over the data
   function barFor(getAd, kind = "2d") {
     const b = document.createElement("span"); b.className = "tbg mznav"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", T("mapnav.bar"));
@@ -759,7 +817,8 @@ window.MAPPA = (() => {
     b.addEventListener("mousemove", e => e.stopPropagation());
     lockBtn(b, false); return b;
   }
-  function lockBtn(bar, on) {                                           // the padlock button shows the state: closed + pressed = locked
+  // the padlock button shows the state: closed + pressed = locked
+  function lockBtn(bar, on) {
     const b = bar && bar.querySelector('[data-nav="maplock"]'); if (!b) return;
     b.setAttribute("aria-pressed", String(on)); b.classList.toggle("on", on); b.innerHTML = SV(on ? ICO.lock : ICO.unlock);
     const nm = T(on ? "cmd.maplock.off.name" : "cmd.maplock.name"); b.title = nm; b.setAttribute("aria-label", nm);
@@ -774,7 +833,8 @@ window.MAPPA = (() => {
     return { now: p.corr === "file" && p.ref !== "" && p.ref != null ? "f" + p.ref : se ? "f" + se.k : p.corr === "tract" ? "tract" : p.corr === "auto" ? "auto" : "" };
   }
   function setCorr(p, v) {
-    corrInit(p); if (v === "snip") v = "auto";                                // the shared menu calls the automatic background «snip»
+    // the shared menu calls the automatic background «snip»
+    corrInit(p); if (v === "snip") v = "auto";
     if (v === "") { p.corr = "none"; p.ref = ""; p.bgr = null; }
     else if (v[0] === "f") { p.corr = "file"; p.ref = +v.slice(1); p.bgr = null; }
     else if (v === "auto") { p.corr = "auto"; p.ref = ""; p.bgr = null; }
@@ -791,7 +851,8 @@ window.MAPPA = (() => {
     if (p.corr === "tract" && p.bgr) return `&bgrt0=${+(+p.bgr[0]).toFixed(4)}&bgrt1=${+(+p.bgr[1]).toFixed(4)}`;
     return "";
   }
-  function corrPick(p) {                                                // «Background of a stretch» chosen with no stretch yet: the next stretch selected with Alt + drag is the one
+  // «Background of a stretch» chosen with no stretch yet: the next stretch selected with Alt + drag is the one
+  function corrPick(p) {
     if (!p._pickBg || !p.sel || !(p.sel[1] > p.sel[0])) return false;
     p.bgr = [...p.sel]; p.sel = null; p._pickBg = false; ctl(p); uiSave(); return true;
   }
@@ -812,14 +873,16 @@ window.MAPPA = (() => {
     if (on) MAPEX.start(p); else MAPEX.stop(p);
     navSync(p);
   }
-  const featAvail = p => !!(p._a && p._a.f && window.MAPFEAT && window.HR && HR.isHr(p._a.f, p._a.f.lv || 1) && (MAPFEAT.features(p._a.f) || []).length);       // only the high-resolution world, only when mzFinder holds a result
+  // only the high-resolution world, only when mzFinder holds a result
+  const featAvail = p => !!(p._a && p._a.f && window.MAPFEAT && window.HR && HR.isHr(p._a.f, p._a.f.lv || 1) && (MAPFEAT.features(p._a.f) || []).length);
   async function featToggle(p) {
     const s = st(p); if (!s.feat && !featAvail(p)) return;
     if (!window.MAPEX) { try { window.MAPEX = await import("./mappa-estrai.js"); } catch (e) { console.error(e); return; } }
     s.feat = !s.feat; if (!s.feat && window.MAPEX) MAPEX.featClear(p);
     navSync(p); frame(p);
   }
-  function grow(p, key, px) {                                           // the panel is px taller while a block under the map is shown (0 = gone); the amount may change
+  // the panel is px taller while a block under the map is shown (0 = gone); the amount may change
+  function grow(p, key, px) {
     const s = st(p), k = "g" + key, prev = s[k] || 0; if (px === prev || isMax(p)) return;
     s[k] = px; p.h = Math.max(200, p.h + px - prev); apply(p); if (typeof relayout === "function") relayout(); fitHost(); uiSave();
   }
@@ -841,7 +904,8 @@ window.MAPPA = (() => {
     let lastTap = null, lp = 0;
     const at = (t, r) => ({ x: t.clientX - r.left, y: t.clientY - r.top });
     const cen = ts => { const r = cv.getBoundingClientRect(), a = at(ts[0], r), b = ts[1] ? at(ts[1], r) : a; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y), cx: (ts[0].clientX + (ts[1] || ts[0]).clientX) / 2, cy: (ts[0].clientY + (ts[1] || ts[0]).clientY) / 2 }; };
-    const rubber = (/** @type {any} */ a, /** @type {any} */ b = a) => {          // the box of the finger: the same element as the mouse box (eventi.js)
+    // the box of the finger: the same element as the mouse box (eventi.js)
+    const rubber = (/** @type {any} */ a, /** @type {any} */ b = a) => {
       const zr = /** @type {HTMLElement | null} */ (p.el.querySelector(".zr")); if (!zr) return;
       if (!a) { zr.hidden = true; return; }
       zr.hidden = false; zr.style.left = cv.offsetLeft + Math.min(a.x, b.x) + "px"; zr.style.width = Math.abs(b.x - a.x) + "px"; zr.style.top = cv.offsetTop + Math.min(a.y, b.y) + "px"; zr.style.height = Math.abs(b.y - a.y) + "px";
@@ -851,7 +915,8 @@ window.MAPPA = (() => {
       if (!is2d(p)) return; clearTimeout(lp); const c = cen(e.touches);
       if (e.touches.length >= 2) { g = { two: true, last: c, moved: true }; pushZh(p); return; }
       g = { two: false, last: c, start: c, moved: false, t0: Date.now() };
-      if (st(p).ex && window.MAPEX && inside(c)) g.box = MAPEX.touch(p, c.x, c.y);       // a finger on the box moves the box, not the map
+      // a finger on the box moves the box, not the map
+      if (st(p).ex && window.MAPEX && inside(c)) g.box = MAPEX.touch(p, c.x, c.y);
       lp = setTimeout(() => { if (g && !g.moved) { g.moved = true; st(p).lpAt = Date.now(); showMenu(ad2(p, inside(c) ? { rt: xOf(p, c.x), mz: p._a.mzAt(c.y) } : null), { preventDefault() {}, clientX: c.cx, clientY: c.cy, lp: true }); } }, 550);
     }, { passive: true });
     cv.addEventListener("touchmove", e => {
@@ -859,7 +924,8 @@ window.MAPPA = (() => {
       if (!g.moved && Math.hypot(c.x - g.start.x, c.y - g.start.y) < 8) return;
       if (g.box && e.touches.length === 1) { g.moved = true; st(p).gestAt = Date.now(); clearTimeout(lp); e.preventDefault(); g.box(c.x, c.y); return; }
       g.moved = true; st(p).gestAt = Date.now(); clearTimeout(lp); e.preventDefault();
-      if (!g.two && e.touches.length === 1) { g.rb = true; g.last = c; rubber(g.start, c); return; }       // one finger draws the zoom box
+      // one finger draws the zoom box
+      if (!g.two && e.touches.length === 1) { g.rb = true; g.last = c; rubber(g.start, c); return; }
       if (g.two && e.touches.length >= 2 && g.last.d > 0 && c.d > 0) pinch(p, g.last, c, g.last.d / c.d);
       else panPx(p, c.x - g.last.x, c.y - g.last.y);
       g.last = c; draw(p);
@@ -868,7 +934,8 @@ window.MAPPA = (() => {
       clearTimeout(lp); if (!g) return; const moved = g.moved, two = g.two, rb = g.rb && g.start, last = g.last; g = null;
       if (rb) { rubber(null); if (Math.abs(last.x - rb.x) > 4 || Math.abs(last.y - rb.y) > 4) boxZoom(p, rb.x, rb.y, last.x, last.y); st(p).gestAt = Date.now(); if (e.cancelable) e.preventDefault(); uiSave(); return; }
       if (e.touches.length) { if (e.cancelable) e.preventDefault(); g = { two: e.touches.length > 1, last: cen(e.touches), start: cen(e.touches), moved: true }; return; }
-      if (moved) { st(p).gestAt = Date.now(); if (e.cancelable) e.preventDefault(); uiSave(); return; }       // no mouse events after a gesture (they would be a box zoom)
+      // no mouse events after a gesture (they would be a box zoom)
+      if (moved) { st(p).gestAt = Date.now(); if (e.cancelable) e.preventDefault(); uiSave(); return; }
       const now = Date.now(), c = e.changedTouches[0], r = cv.getBoundingClientRect(), q = at(c, r);
       if (lastTap && now - lastTap.t < 350 && Math.hypot(q.x - lastTap.x, q.y - lastTap.y) < 30) { lastTap = null; if (e.cancelable) e.preventDefault(); st(p).dtap = now; dbl(p, q.x); navSync(p); return; }
       lastTap = { t: now, x: q.x, y: q.y };
@@ -910,7 +977,8 @@ window.MAPPA = (() => {
   function failure3d(kind, detail, diag) {
     const k = ["nowebgl2", "shader", "import", "lost"].includes(kind) ? kind : "error", d = { kind, detail, ...diag }, esc = x => EH(String(x == null ? "" : x));
     const tech = Object.entries(d).filter(([, v]) => v !== undefined && v !== "").map(([a, v]) => `${a}: ${typeof v === "object" ? JSON.stringify(v) : v}`).join("\n");
-    document.querySelectorAll("dialog.m3d").forEach(x => x.remove());            // a half-built viewer must not stay on the page
+    // a half-built viewer must not stay on the page
+    document.querySelectorAll("dialog.m3d").forEach(x => x.remove());
     big(T("m3d.err.title"), `<p>${I18N.t(`m3d.err.${k}`)}</p>${k === "nowebgl2" ? `<p>${T("m3d.err.how")}</p>` : ""}<p>${T("m3d.err.2d")}</p><pre class="m3d-tech" tabindex="0" aria-label="${T("m3d.err.tech")}">${esc(tech)}</pre>`);
   }
   async function open3d(p, opener) {
@@ -941,7 +1009,8 @@ window.MAPPA = (() => {
   function setH(p, h) { p.h = Math.max(HMIN, Math.round(h)); apply(p); if (p.el) p.el.querySelectorAll(".pgrip").forEach(g => g.setAttribute("aria-valuenow", String(p.h))); }
   function grip(el, side) {
     const g = document.createElement("div"); g.className = "pgrip " + side; g.tabIndex = 0; g.setAttribute("role", "separator"); g.setAttribute("aria-orientation", "horizontal");
-    { const p0 = pOf(el); g.setAttribute("aria-valuemin", String(HMIN)); g.setAttribute("aria-valuemax", "2000"); g.setAttribute("aria-valuenow", String(p0 ? p0.h : el.offsetHeight)); }          // a focusable separator needs its value (the height of the panel)
+    // a focusable separator needs its value (the height of the panel)
+    { const p0 = pOf(el); g.setAttribute("aria-valuemin", String(HMIN)); g.setAttribute("aria-valuemax", "2000"); g.setAttribute("aria-valuenow", String(p0 ? p0.h : el.offsetHeight)); }
     g.setAttribute("aria-label", I18N.t(side === "t" ? "mappa.rz.top" : "mappa.rz.bot")); g.title = I18N.t("mappa.rz.title");
     g.addEventListener("pointerdown", ev => {
       const p = pOf(el); if (!p || el.classList.contains("max") || ev.button > 0) return;
@@ -950,7 +1019,8 @@ window.MAPPA = (() => {
       const mv = e => {
         const d = e.clientY - y0;
         if (side === "b") setH(p, h0 + d);
-        else if (up) { const k = Math.max(-(h0 - HMIN), Math.min(uh0 - HMIN, d)); setH(up, uh0 + k); setH(p, h0 - k); p.y = up.y + up.h + (top0 - (up.y + uh0)); apply(p); }   // splitter: what one gains the other loses
+        // splitter: what one gains the other loses
+        else if (up) { const k = Math.max(-(h0 - HMIN), Math.min(uh0 - HMIN, d)); setH(up, uh0 + k); setH(p, h0 - k); p.y = up.y + up.h + (top0 - (up.y + uh0)); apply(p); }
         else { const h = Math.max(HMIN, Math.min(bot0, h0 - d)); p.h = h; p.y = bot0 - h; apply(p); }
         if (typeof fitHost === "function") fitHost();
       };

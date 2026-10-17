@@ -24,7 +24,7 @@ def local_server():
 
 
 def test_allowed_origin_handling(local_server):
-    # Origin non consentita
+    # Origin not allowed
     req = urllib.request.Request(f"{local_server}/stato", headers={"Origin": "https://attacker.com"})
     try:
         urllib.request.urlopen(req)
@@ -33,7 +33,7 @@ def test_allowed_origin_handling(local_server):
         assert e.code == 403
         assert "Access-Control-Allow-Origin" not in e.headers
 
-    # Origin consentita da GitHub Pages
+    # Origin allowed from GitHub Pages
     req_gh = urllib.request.Request(f"{local_server}/stato", headers={"Origin": "https://freeesta.github.io"})
     with urllib.request.urlopen(req_gh) as resp:
         assert resp.status == 200
@@ -41,7 +41,7 @@ def test_allowed_origin_handling(local_server):
         data = json.loads(resp.read().decode())
         assert data["ok"] is True
 
-    # Origin consentita locale
+    # Local origin allowed
     req_loc = urllib.request.Request(f"{local_server}/stato", headers={"Origin": "http://127.0.0.1:8765"})
     with urllib.request.urlopen(req_loc) as resp:
         assert resp.status == 200
@@ -49,7 +49,7 @@ def test_allowed_origin_handling(local_server):
 
 
 def test_cors_options_preflight(local_server):
-    # Preflight da attacker
+    # Preflight from an attacker
     req_evil = urllib.request.Request(f"{local_server}/salva", headers={"Origin": "https://evil.org"}, method="OPTIONS")
     try:
         urllib.request.urlopen(req_evil)
@@ -57,7 +57,7 @@ def test_cors_options_preflight(local_server):
     except urllib.error.HTTPError as e:
         assert e.code == 403
 
-    # Preflight consentito
+    # Preflight allowed
     req_ok = urllib.request.Request(f"{local_server}/salva", headers={"Origin": "https://freeesta.github.io"}, method="OPTIONS")
     with urllib.request.urlopen(req_ok) as resp:
         assert resp.status == 200
@@ -69,7 +69,7 @@ def test_cors_options_preflight(local_server):
 def test_post_salva_token_required(local_server):
     payload = json.dumps({"file": "04-lc.html", "html": "test"}).encode()
 
-    # Senza token -> 403
+    # No token -> 403
     req_no_tok = urllib.request.Request(f"{local_server}/salva", data=payload, headers={"Content-Type": "application/json"}, method="POST")
     try:
         urllib.request.urlopen(req_no_tok)
@@ -79,7 +79,7 @@ def test_post_salva_token_required(local_server):
         data = json.loads(e.read().decode())
         assert "Token" in data["error"]
 
-    # Con token errato -> 403
+    # Wrong token -> 403
     req_bad_tok = urllib.request.Request(
         f"{local_server}/salva",
         data=payload,
@@ -92,7 +92,7 @@ def test_post_salva_token_required(local_server):
     except urllib.error.HTTPError as e:
         assert e.code == 403
 
-    # Con token corretto in header
+    # Right token in the header
     assert st.verify_token(
         type("Handler", (), {"headers": {"X-Teoria-Token": st.TOKEN}, "path": "/salva"})(),
         {}
@@ -100,7 +100,7 @@ def test_post_salva_token_required(local_server):
 
 
 def test_path_traversal_blocked(local_server):
-    # Tentativo di leggere file fuori da teoria tramite API /carica
+    # Try to read a file outside teoria through the /carica API
     req = urllib.request.Request(f"{local_server}/carica?file=../../Cargo.toml")
     try:
         urllib.request.urlopen(req)
@@ -108,7 +108,7 @@ def test_path_traversal_blocked(local_server):
     except urllib.error.HTTPError as e:
         assert e.code == 400
 
-    # Tentativo di leggere file statico fuori da teoria
+    # Try to read a static file outside teoria
     try:
         urllib.request.urlopen(f"{local_server}/../Cargo.toml")
         pytest.fail("Non deve servire file fuori da mzlab/web/teoria/")
