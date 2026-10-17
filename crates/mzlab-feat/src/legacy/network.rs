@@ -8,7 +8,7 @@ use mzlab_core::elements::{mass, parse_formula};
 use mzlab_core::json::{round, Out};
 
 use super::dig::{Cand, Dig};
-use super::network_pred::predecessors;
+use super::network_pred::{predecessors, related};
 use crate::hypo::{Counts, Rules};
 
 /// The most edges of the network that the page receives; the strongest (with shifted fragments) first.
@@ -101,7 +101,8 @@ fn mark_predecessors(
     tmax: &[Option<f64>],
     rules: &Rules,
 ) {
-    for p in predecessors(forms, cands, tmax, rules) {
+    let cos = |j: usize, i: usize| related(cands[j - 1], cands[i - 1]);
+    for p in predecessors(forms, tmax, rules, &cos) {
         if let Some(e) = edges.iter_mut().find(|e| (e.from, e.to) == (p.from, p.to)) {
             e.kind = "both";
         } else if !edges.iter().any(|e| (e.from, e.to) == (p.to, p.from)) {

@@ -12,6 +12,9 @@ use super::series::Ident;
 use super::Res;
 use crate::table::Aligned;
 
+#[cfg(test)]
+mod golden;
+
 /// Half window around the RT of the parent (min) and tolerance of the fragment mass (ppm).
 const RT_WINDOW: f64 = 0.5;
 const MASS_PPM: f64 = 5.0;

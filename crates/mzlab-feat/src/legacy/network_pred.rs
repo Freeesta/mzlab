@@ -6,6 +6,9 @@ use super::dig::Cand;
 use super::similarity::{pair_components, prepare};
 use crate::hypo::{Counts, Rules};
 
+#[cfg(test)]
+mod golden;
+
 /// Matched peaks and modified cosine from which two MS2 are related, and the kinetic slack (min).
 const MIN_MATCHED: usize = 3;
 const COS_RELATED: f64 = 0.6;
@@ -62,8 +65,8 @@ fn minus(a: &Counts, b: &Counts) -> Counts {
     c
 }
 
-/// Modified cosine and matched peaks of the MS2 of candidate `j` against that of `i`.
-fn related(j: &Cand, i: &Cand) -> Option<f64> {
+/// Modified cosine of the MS2 of candidate `j` against that of `i` when they are related (`MIN_MATCHED` peaks, `COS_RELATED`).
+pub(super) fn related(j: &Cand, i: &Cand) -> Option<f64> {
     let (mj, mi) = (j.ms2.as_ref()?, i.ms2.as_ref()?);
     let (sj, si) = (
         prepare(&mj.cons.mz, &mj.cons.rel, j.mz),
@@ -77,9 +80,9 @@ fn related(j: &Cand, i: &Cand) -> Option<f64> {
 /// One predecessor per candidate that has one (`forms[0]` is the parent, `tmax[k]` the maximum of the profile of node `k`).
 pub(super) fn predecessors(
     forms: &[Counts],
-    cands: &[&Cand],
     tmax: &[Option<f64>],
     rules: &Rules,
+    cos: &dyn Fn(usize, usize) -> Option<f64>,
 ) -> Vec<Pred> {
     let mut out = Vec::new();
     for i in 1..forms.len() {
@@ -91,7 +94,7 @@ pub(super) fn predecessors(
         }
         for j in (1..forms.len()).filter(|&j| j != i) {
             let name = derive(&minus(&forms[i], &forms[j]), rules, false);
-            let cos = related(cands[j - 1], cands[i - 1]);
+            let cos = cos(j, i);
             if name.is_none() && cos.is_none() {
                 continue;
             }
@@ -145,8 +148,7 @@ mod tests {
             c(&[("C", 8), ("H", 10), ("N", 4), ("O", 2)]),
             c(&[("C", 8), ("H", 10), ("N", 4), ("O", 4)]),
         ];
-        let cand = &[];
-        let p = predecessors(&forms, cand, &[Some(0.0), Some(10.0)], &r);
+        let p = predecessors(&forms, &[Some(0.0), Some(10.0)], &r, &|_, _| None);
         assert!(p.len() == 1 && p[0].from == 0 && p[0].to == 1);
     }
 }
