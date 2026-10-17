@@ -17,7 +17,8 @@ use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
 use mzlab_core::methodinfo::{method_of_sample, Kind};
 use mzlab_core::mzml::ChromKind;
 use mzlab_core::wiff::dad::{
-    dde_records, decode_tof_block, device_channels, wiff2_sample_info, DadData, TofSampleData,
+    dde_records, decode_tof_block, device_channels, wiff2_sample_info, DadData, DdeEntry,
+    TofSampleData,
 };
 use mzlab_core::wiff::{container, idx, samples, scan, Wiff};
 
@@ -299,6 +300,54 @@ fn tof_sciex_os_ida_streams_and_scan_blocks() {
             "scan {i}: mz0={mz0} mzn={mzn}"
         );
     }
+
+    let ms1_scan = 2035usize;
+    if ms1_scan < n_scans && dde.len() > 1855 {
+        let rec = &idx_bytes[32 + 54 * ms1_scan..32 + 54 * (ms1_scan + 1)];
+        let off = u32::from_le_bytes([rec[0], rec[1], rec[2], rec[3]]) as u64;
+        let sz = u32::from_le_bytes([rec[4], rec[5], rec[6], rec[7]]) as usize;
+        let at = section + off + scan::PAYLOAD_SKIP;
+        let mut buf = vec![0u8; sz];
+        scan_reader.read_at(at, &mut buf).unwrap();
+        let pts = decode_tof_block(&buf).unwrap();
+        let deps: Vec<_> = (0..5).map(|d| &dde[185 * 10 + d]).collect();
+        assert!(verify_precursors_ppm(&pts, &tof, ms1_scan, &deps) >= 3);
+    }
+}
+
+fn verify_precursors_ppm(
+    pts: &[(u32, u32)],
+    tof: &TofSampleData,
+    scan: usize,
+    deps: &[&DdeEntry],
+) -> usize {
+    let mut ok = 0usize;
+    for &d in deps {
+        if d.precursor_mz <= 0.0 || d.precursor_intensity <= 0.0 {
+            continue;
+        }
+        let (mut apex, mut sum_mz, mut sum_c) = (0u32, 0.0f64, 0.0f64);
+        for &(b, c) in pts {
+            let mz = tof.bin_to_mz(scan, b);
+            if (mz - d.precursor_mz).abs() < 0.05 {
+                apex = apex.max(c);
+                sum_mz += mz * f64::from(c);
+                sum_c += f64::from(c);
+            }
+        }
+        if sum_c > 0.0 {
+            let cent = sum_mz / sum_c;
+            let ppm = (cent - d.precursor_mz).abs() / d.precursor_mz * 1e6;
+            assert!(
+                ppm <= 10.0,
+                "precursor {}: diff {ppm:.2} ppm",
+                d.precursor_mz
+            );
+            assert_eq!(f64::from(apex), d.precursor_intensity);
+            ok += 1;
+        }
+    }
+    ok
 }
 
 fn write_synthetic_ci_wiff(out: &Path) {
@@ -439,8 +488,8 @@ fn synthetic_ci_dad_mrm_gradient_and_tof_roundtrip() {
     let tof_blk = [
         0xff, 0xff, 0xff, 0xff, 100, 0, 0, 0, 0, 5, 0x82, 0x7c, 200, 0xff,
     ];
-    assert_eq!(
-        decode_tof_block(&tof_blk).unwrap(),
-        vec![(100, 5), (112, 200)]
-    );
+    let pts = decode_tof_block(&tof_blk).unwrap();
+    assert_eq!(pts, vec![(100, 5), (112, 200)]);
+    let mz0 = tof.bin_to_mz(0, pts[0].0);
+    assert!(mz0 > 0.0 && mz0.is_finite());
 }
