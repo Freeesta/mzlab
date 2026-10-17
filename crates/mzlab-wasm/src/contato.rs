@@ -55,6 +55,7 @@ impl Lettore for Contato {
     fn cromatogrammi(&mut self, c: usize) -> mzlab_core::Result<Vec<lettori::VoceCromatogramma>> { self.l.cromatogrammi(c) }
     fn cromatogramma(&mut self, c: usize, id: &str) -> mzlab_core::Result<mzlab_core::mzml::Chromatogram> { self.l.cromatogramma(c, id) }
     fn metodo(&mut self, c: usize) -> mzlab_core::Result<String> { self.l.metodo(c) }
+    fn mancanti(&mut self, c: usize) -> usize { self.l.mancanti(c) }
     fn testata_mzml(&mut self, c: usize) -> mzlab_core::Result<Option<mzlab_core::mzmlwrite::Header>> { self.l.testata_mzml(c) }
     fn extra_mzml(&self, s: &mzlab_core::mzml::Spectrum) -> mzlab_core::mzmlwrite::SpectrumExtra { self.l.extra_mzml(s) }
 }

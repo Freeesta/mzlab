@@ -5,7 +5,7 @@
 CASES (default `lr,hrc`): `lr` = 3200-like Full Scan (1500 scans x 500 centroids), `hrc` = Orbitrap Full Scan in centroids (3000 x 3000),
 `hrc_big` (6000 x 5000), `hrp` = Orbitrap in profile (400 x 50 000 points), `hrp_big` (600 x 150 000); `NAME:SCANSxPEAKS` sets the size
 (e.g. `hrp:300x100000`). Two files per case (A and B: the change of the active file). Without `--site` the site is built in WD/site with
-`build_site.py --no-pyodide` and the engine .wasm (cargo + wasm-bindgen, as pages.yml). Prints one table per case: time of the first
+`build_site.py` and the engine .wasm (cargo + wasm-bindgen, as pages.yml). Prints one table per case: time of the first
 drawing, wheel zoom, pan, zoom on RT only (the whole m/z band is read), deep zoom, change of file, sight sweep, frame times, memory.
 Every number is measured in the page (performance.now()); nothing of the product is changed: the hooks wrap global functions."""
 import argparse, base64, json, os, shutil, statistics, subprocess, sys, tempfile, time
@@ -66,7 +66,7 @@ def write_file(path, kind, nscan, npk, seed):
 
 # ---------------------------------------------------------------- the site
 def build_site(out):
-    subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--no-pyodide", "--out", str(out)], check=True, cwd=ROOT, stdout=subprocess.DEVNULL)
+    subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(out)], check=True, cwd=ROOT, stdout=subprocess.DEVNULL)
     w = out / "static" / "wasm"
     subprocess.run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm"], cwd=ROOT, check=True)
     subprocess.run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(w), "target/wasm32-unknown-unknown/release/mzlab_wasm.wasm"], cwd=ROOT, check=True)

@@ -269,7 +269,7 @@ async function upload0(files,into,box,signal){
       if(d.wait)CONVROWS.set(f.name,"wait",Math.min(99,mono()));else put(d.frac,d.phase,d.total?{done:d.done,total:d.total}:null)};
     addEventListener("mzlab-index",onIdx);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{if(QQQ_NET)PROGRESSO.set(f.name,PROG_NET.send*a/b,"send");const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
-      if(j.error)throw I18N.err(j);if(f.mzlabNat){const x=(j.files||[]).find(y=>y.name===f.name);CONVROWS.finish(f.name,"done",{scans:x?x.n_spectra||x.scans||0:0})}else CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();
+      if(j.error)throw I18N.err(j);if(f.mzlabNat){const x=(j.files||[]).find(y=>y.name===f.name);CONVROWS.finish(f.name,"done",{scans:x?x.n_spectra||x.scans||0:0,kind:x?(x.mixed||[]).length>1?"mixed":x.kind:"",missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(f.name))||0})}else CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();
       LOADFAIL.delete(f.name)}
     catch(e){LOADFAIL.add(f.name);if(e.key==="err.load.cancelled"){CONVROWS.finish(f.name,"cancel");return}
       const d=DIAG.da(e,{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f));

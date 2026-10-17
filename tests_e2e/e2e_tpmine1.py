@@ -15,14 +15,14 @@ def step(name, fn):
 
 tmp = Path(tempfile.mkdtemp())
 cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(tmp / "site")]
-if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
 subprocess.run(cmd, check=True)
 from lib_sito import add_wasm; add_wasm(tmp / "site")          # the engine of the page is Rust: the .wasm goes in the copy of the site
 site = tmp / "site"
 def packed():
     d = site / "static" / "mzfinder"
-    assert (d / "indice.json").exists() and (d / "tpmine.zip").exists() and (site / "static" / "tpmine-loader.js").exists()
+    assert (d / "indice.json").exists() and (site / "static" / "tpmine-loader.js").exists()
     assert not (site / "static" / "tpmine.enc").exists()
+    assert not (d / "tpmine.zip").exists() and not (d / "pyodide").exists()
 step("built site: Tabui in plain text in static/mzfinder/, no encrypted file", packed)
 
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

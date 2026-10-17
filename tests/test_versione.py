@@ -53,5 +53,5 @@ def test_sbom_lists_what_ships_and_matches_the_vendor_readme():
     versions = {c["name"]: c.get("version") for c in doc["components"]}
     readme = (ROOT / "mzlab/web/vendor/README.md").read_text(encoding="utf-8")
     assert f"Ketcher {versions['ketcher']}" in readme and f"OpenChemLib JS {versions['openchemlib']}" in readme
-    assert f'PYODIDE = "{versions["pyodide"]}"' in (ROOT / "tools/build_site.py").read_text(encoding="utf-8")
+    assert "pyodide" not in versions and "numpy" not in versions
     json.dumps(doc)
