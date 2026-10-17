@@ -74,7 +74,9 @@ In alternativa, è possibile cancellare direttamente lo stato locale dal browser
 Il presente manuale è suddiviso in moduli didattici progressivi:
 
 1. **[01. Navigazione e Funzionalità](01_navigazione_e_funzionalita.md)**  
-   Guida dettagliata alla Vista Dati: caricamento dei file `.mzML`,
+   Guida dettagliata alla Vista Dati: caricamento dei file (formati aperti
+   .mzML/.mzXML e formati proprietari supportati nativamente dai lettori Rust
+   di mzLab: .raw Thermo, .wiff SCIEX, .D Agilent, .raw Waters MassLynx),
    gestione del cromatogramma (TIC, EIC/XIC, BPC), selezione degli intervalli
    temporali, navigazione da tastiera scansione per scansione, pannello dello
    spettro di massa, righello di misura $\Delta m/z$ con riconoscimento
@@ -93,9 +95,10 @@ Il presente manuale è suddiviso in moduli didattici progressivi:
 
 3. **[03. Criticità e Punti di Attenzione dell'Interfaccia](03_criticita_interfaccia.md)**  
    Approfondimento sugli aspetti dell'interfaccia che richiedono particolare
-   cura: conversione dei formati proprietari (.raw, .wiff), comportamento del
-   righello di misura, sblocco della modalità amministratore, differenze
-   di puntamento tra trackpad e mouse, e archiviazione OPFS nel browser.
+   cura: gestione dei formati proprietari (.raw Thermo, .wiff SCIEX, .D Agilent,
+   .raw Waters MassLynx letti nativamente dai lettori Rust di mzLab),
+   comportamento del righello di misura, sblocco della modalità amministratore,
+   differenze di puntamento tra trackpad e mouse, e archiviazione OPFS nel browser.
 
 ---
 

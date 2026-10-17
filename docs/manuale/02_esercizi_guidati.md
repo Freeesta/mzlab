@@ -70,7 +70,7 @@ protone/sodio.]
 
 ### Passo 1.3: Simulazione del Pattern Isotopico
 1. Fare clic destro sul picco principale a $m/z\ 152.0709$.
-2. Selezionare **«Pattern isotopico…»**.
+2. Selezionare **«Profilo isotopico di una formula…»**.
 3. Nella casella di testo digitare la formula con il relativo addotto:
    `C8H9NO2 [M+H]+` e premere Invio.
 

@@ -300,6 +300,131 @@ fn proposal_rank(p: &str) -> u8 {
     }
 }
 
+/// Fast XIC extraction over MS1 spectra for a given m/z window.
+fn extract_xic(ms1_spectra: &[&Spectrum], lo: f64, hi: f64) -> (Vec<f64>, f64) {
+    let mut y_trace = Vec::with_capacity(ms1_spectra.len());
+    let mut max_y = 0.0f64;
+    for s in ms1_spectra {
+        let mut sum_i = 0.0f64;
+        for (&m, &inten) in s.mz.iter().zip(&s.intensity) {
+            if m >= lo && m <= hi {
+                sum_i += inten as f64;
+            }
+        }
+        if sum_i > max_y {
+            max_y = sum_i;
+        }
+        y_trace.push(sum_i);
+    }
+    (y_trace, max_y)
+}
+
+/// Format proposal and scientific rationale motif.
+fn format_proposal_and_motif(
+    peak: &DetectedPeak,
+    ppm_error: f64,
+    isotope_score: Option<f64>,
+    ms2_matched: bool,
+    tol_ppm: f64,
+) -> Option<(String, String)> {
+    let iso_val = isotope_score.unwrap_or(0.0);
+    let proposal = if peak.sn_ratio >= 5.0 && iso_val >= 0.7 && ms2_matched {
+        "Prev. 1".to_string()
+    } else if peak.sn_ratio >= 5.0 && iso_val >= 0.7 {
+        "Prev. 2".to_string()
+    } else if peak.sn_ratio >= 3.0 && ppm_error.abs() <= tol_ppm {
+        "Prev. 3".to_string()
+    } else {
+        return None;
+    };
+
+    let iso_str = match isotope_score {
+        Some(s) if s >= 0.7 => format!("isotope pattern confirmed (score {:.2})", s),
+        Some(s) => format!("isotope pattern unconfirmed (score {:.2})", s),
+        None => "isotope pattern unconfirmed".to_string(),
+    };
+    let ms2_str = if ms2_matched {
+        "MS2 precursor matched"
+    } else {
+        "no MS2 precursor matched"
+    };
+    let motif = format!(
+        "Peak at RT {:.2} min, S/N {:.1}, mass error {:+.1} ppm, {}, {}",
+        peak.rt_apex, peak.sn_ratio, ppm_error, iso_str, ms2_str
+    );
+    Some((proposal, motif))
+}
+
+/// Evaluate a chromatographic peak against target entry and assign proposal.
+fn evaluate_peak(
+    entry: &crate::entry::TargetEntry,
+    adduct: AdductType,
+    target_mz: f64,
+    ms1_spectra: &[&Spectrum],
+    ms2_spectra: &[&Spectrum],
+    peak: DetectedPeak,
+    opts: &TargetSearchOptions,
+) -> Option<TargetMatch> {
+    let spec = ms1_spectra[peak.apex_idx];
+    let tol_da = target_mz * opts.tolerance_ppm * 1e-6;
+    let lo = target_mz - tol_da;
+    let hi = target_mz + tol_da;
+
+    let mut observed_mz = target_mz;
+    let mut max_apex_i = 0.0f32;
+    for (&m, &inten) in spec.mz.iter().zip(&spec.intensity) {
+        if m >= lo && m <= hi && inten > max_apex_i {
+            max_apex_i = inten;
+            observed_mz = m;
+        }
+    }
+
+    let ppm_error = (observed_mz - target_mz) / target_mz * 1e6;
+    let peak_width = peak.rt_end - peak.rt_start;
+    let ms2_matched = check_ms2_match(
+        target_mz,
+        peak.rt_apex,
+        peak_width,
+        ms2_spectra,
+        opts.tolerance_ppm,
+    );
+    let isotope_score = compute_isotope_score(
+        &entry.neutral_formula,
+        adduct,
+        target_mz,
+        spec,
+        opts.tolerance_ppm,
+    );
+
+    let (proposal, motif) = format_proposal_and_motif(
+        &peak,
+        ppm_error,
+        isotope_score,
+        ms2_matched,
+        opts.tolerance_ppm,
+    )?;
+
+    Some(TargetMatch {
+        id: entry.id.clone(),
+        name_en: entry.name_en.clone(),
+        neutral_formula: entry.neutral_formula.clone(),
+        adduct,
+        target_mz,
+        observed_mz,
+        ppm_error,
+        rt_apex: peak.rt_apex,
+        rt_start: peak.rt_start,
+        rt_end: peak.rt_end,
+        height: peak.height,
+        area: peak.area,
+        sn_ratio: peak.sn_ratio,
+        isotope_score,
+        ms2_matched,
+        proposal,
+        motif,
+    })
+}
+
 /// Search an indexed target list against chromatographic spectra with HRMS verification.
 pub fn cerca_targets(
     list: &TargetList,
@@ -320,25 +445,8 @@ pub fn cerca_targets(
         for &adduct in &opts.adducts {
             let target_mz = entry.mz_for_adduct(adduct);
             let tol_da = target_mz * opts.tolerance_ppm * 1e-6;
-            let lo = target_mz - tol_da;
-            let hi = target_mz + tol_da;
-
-            // Fast XIC extraction over MS1 spectra
-            let mut y_trace = Vec::with_capacity(ms1_spectra.len());
-            let mut max_y = 0.0f64;
-            for s in &ms1_spectra {
-                let mut sum_i = 0.0f64;
-                for (&m, &inten) in s.mz.iter().zip(&s.intensity) {
-                    if m >= lo && m <= hi {
-                        sum_i += inten as f64;
-                    }
-                }
-                if sum_i > max_y {
-                    max_y = sum_i;
-                }
-                y_trace.push(sum_i);
-            }
-
+            let (y_trace, max_y) =
+                extract_xic(&ms1_spectra, target_mz - tol_da, target_mz + tol_da);
             if max_y <= 0.0 {
                 continue;
             }
@@ -347,78 +455,17 @@ pub fn cerca_targets(
             let peaks = detect_chrom_peaks(&ms1_rts, &y_trace, opts.min_sn, opts.min_area, noise);
 
             for peak in peaks {
-                let spec = ms1_spectra[peak.apex_idx];
-                let mut observed_mz = target_mz;
-                let mut max_apex_i = 0.0f32;
-                for (&m, &inten) in spec.mz.iter().zip(&spec.intensity) {
-                    if m >= lo && m <= hi && inten > max_apex_i {
-                        max_apex_i = inten;
-                        observed_mz = m;
-                    }
-                }
-
-                let ppm_error = (observed_mz - target_mz) / target_mz * 1e6;
-                let peak_width = peak.rt_end - peak.rt_start;
-                let ms2_matched = check_ms2_match(
+                if let Some(m) = evaluate_peak(
+                    entry,
+                    adduct,
                     target_mz,
-                    peak.rt_apex,
-                    peak_width,
+                    &ms1_spectra,
                     &ms2_spectra,
-                    opts.tolerance_ppm,
-                );
-                let isotope_score = compute_isotope_score(
-                    &entry.neutral_formula,
-                    adduct,
-                    target_mz,
-                    spec,
-                    opts.tolerance_ppm,
-                );
-
-                let iso_val = isotope_score.unwrap_or(0.0);
-                let proposal = if peak.sn_ratio >= 5.0 && iso_val >= 0.7 && ms2_matched {
-                    "Prev. 1".to_string()
-                } else if peak.sn_ratio >= 5.0 && iso_val >= 0.7 {
-                    "Prev. 2".to_string()
-                } else if peak.sn_ratio >= 3.0 && ppm_error.abs() <= opts.tolerance_ppm {
-                    "Prev. 3".to_string()
-                } else {
-                    continue;
-                };
-
-                let iso_str = match isotope_score {
-                    Some(s) if s >= 0.7 => format!("isotope pattern confirmed (score {:.2})", s),
-                    Some(s) => format!("isotope pattern unconfirmed (score {:.2})", s),
-                    None => "isotope pattern unconfirmed".to_string(),
-                };
-                let ms2_str = if ms2_matched {
-                    "MS2 precursor matched"
-                } else {
-                    "no MS2 precursor matched"
-                };
-                let motif = format!(
-                    "Peak at RT {:.2} min, S/N {:.1}, mass error {:+.1} ppm, {}, {}",
-                    peak.rt_apex, peak.sn_ratio, ppm_error, iso_str, ms2_str
-                );
-
-                matches.push(TargetMatch {
-                    id: entry.id.clone(),
-                    name_en: entry.name_en.clone(),
-                    neutral_formula: entry.neutral_formula.clone(),
-                    adduct,
-                    target_mz,
-                    observed_mz,
-                    ppm_error,
-                    rt_apex: peak.rt_apex,
-                    rt_start: peak.rt_start,
-                    rt_end: peak.rt_end,
-                    height: peak.height,
-                    area: peak.area,
-                    sn_ratio: peak.sn_ratio,
-                    isotope_score,
-                    ms2_matched,
-                    proposal,
-                    motif,
-                });
+                    peak,
+                    opts,
+                ) {
+                    matches.push(m);
+                }
             }
         }
     }
