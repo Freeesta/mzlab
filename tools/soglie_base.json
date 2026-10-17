@@ -93,7 +93,6 @@
   "crates/mzlab-core/tests/routes_parity.rs::rust_routes_match_python": 100,
   "crates/mzlab-core/tests/upload_parity.rs::upload_like_python": 82,
   "crates/mzlab-desktop/src/engine.rs::State": 229,
-  "crates/mzlab-desktop/src/idxbuild.rs::decode_inputs": 98,
   "crates/mzlab-desktop/src/librerie.rs::Folder": 167,
   "crates/mzlab-desktop/src/main.rs::main": 90,
   "crates/mzlab-desktop/src/protocol.rs::handle_body": 122,

@@ -32,19 +32,6 @@ pub struct IdxBuilder {
     pub(crate) pool: rayon::ThreadPool,
 }
 
-/// A name that is only a file name (the page never chooses a path).
-pub(crate) fn clean(name: &str) -> Result<&str, Error> {
-    if name.is_empty()
-        || name.contains(['/', '\\'])
-        || name == "."
-        || name == ".."
-        || name.contains('\0')
-    {
-        return Err(Error::new("err.file.index").with("detail", "bad name"));
-    }
-    Ok(name)
-}
-
 /// The body of `idx/build`: eight items, each as a little-endian `u32` length and the bytes: levels (u8), polarities (i8), RT (f64 LE), TIC (f64 LE),
 /// the JSON rows of the scans, the `source` object, the `run` object (UTF-8), and one byte for `hr1`.
 pub fn decode_inputs(body: &[u8]) -> Result<ScanTable, Error> {
@@ -97,76 +84,6 @@ impl IdxBuilder {
         Ok(self.dir.join(format!("{}.mzidx", clean(name)?)))
     }
 
-    /// Builds the index of `source` (an mzML of the disk) as `<name>.mzidx`; waits for a free thread of the pool when several files are being built.
-    /// `table`: the scan table the page sent; `None` reads it here (`upload::prepare_parallelo`: the SHA-256 is taken on a second thread meanwhile).
-    pub fn build(
-        &self,
-        source: &Path,
-        name: &str,
-        table: Option<&ScanTable>,
-    ) -> Result<Stats, Error> {
-        let dest = self.path(name)?;
-        let part = self.dir.join(format!("{}.mzidx.part", clean(name)?));
-        let r = self.pool.install(|| -> Result<Stats, Error> {
-            let map = Arc::new(Mapped::open(source).map_err(|e| io_error(&e))?);
-            let letta;
-            let table = match table {
-                Some(t) => t,
-                None => {
-                    let size = map.bytes().len() as u64;
-                    letta = upload::prepare_parallelo(
-                        &mut MapAt(map.clone()),
-                        MapAt(map.clone()),
-                        size,
-                        name,
-                    )?;
-                    &letta.table
-                }
-            };
-            let mut out = File::create(&part).map_err(|e| io_error(&e))?;
-            self.con_scorta(name, |spill| {
-                mzidx::build_mzml_spill(
-                    table,
-                    Cursor::new(map.bytes()),
-                    &mut out,
-                    DEFAULT_BUDGET,
-                    Some(spill),
-                )
-            })
-        });
-        match r {
-            Ok(st) => {
-                std::fs::rename(&part, &dest).map_err(|e| io_error(&e))?;
-                Ok(st)
-            }
-            Err(e) => {
-                let _ = std::fs::remove_file(&part);
-                Err(e)
-            }
-        }
-    }
-
-    /// Runs `f` with the scratch file of `<name>` (`<name>.mzidx.sp.part`: the peaks that do not fit in the budget wait there, so the scans are
-    /// decoded once), removed when `f` returns, whatever it returns.
-    pub(crate) fn con_scorta(
-        &self,
-        name: &str,
-        f: impl FnOnce(&mut File) -> Result<Stats, Error>,
-    ) -> Result<Stats, Error> {
-        let path = self.dir.join(format!("{}.mzidx.sp.part", clean(name)?));
-        let mut spill = File::options()
-            .read(true)
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(&path)
-            .map_err(|e| io_error(&e))?;
-        let r = f(&mut spill);
-        drop(spill);
-        let _ = std::fs::remove_file(&path);
-        r
-    }
-
     /// `len` bytes of the index from `off`.
     pub fn read(&self, name: &str, off: u64, len: u64) -> Result<Vec<u8>, Error> {
         let mut f = File::open(self.path(name)?).map_err(|e| io_error(&e))?;
@@ -192,5 +109,85 @@ impl IdxBuilder {
         std::fs::metadata(self.path(name).ok()?)
             .ok()
             .map(|m| m.len())
+    }
+}
+
+/// A name that is only a file name (the page never chooses a path).
+pub(crate) fn clean(name: &str) -> Result<&str, Error> {
+    if name.is_empty()
+        || name.contains(['/', '\\'])
+        || name == "."
+        || name == ".."
+        || name.contains('\0')
+    {
+        return Err(Error::new("err.file.index").with("detail", "bad name"));
+    }
+    Ok(name)
+}
+
+impl IdxBuilder {
+    /// Builds the index of `source` (an mzML of the disk) as `<name>.mzidx`; waits for a free thread of the pool when several files are being built.
+    /// `table`: the scan table the page sent; `None` reads it here (`upload::prepare_parallelo`: the SHA-256 is taken on a second thread meanwhile).
+    pub fn build(
+        &self,
+        source: &Path,
+        name: &str,
+        table: Option<&ScanTable>,
+    ) -> Result<Stats, Error> {
+        self.scrivi(name, |out, spill| {
+            let map = Arc::new(Mapped::open(source).map_err(|e| io_error(&e))?);
+            let size = map.bytes().len() as u64;
+            let letta = match table {
+                Some(_) => None,
+                None => Some(upload::prepare_parallelo(
+                    &mut MapAt(map.clone()),
+                    MapAt(map.clone()),
+                    size,
+                    name,
+                )?),
+            };
+            let table = table.unwrap_or_else(|| &letta.as_ref().expect("read above").table);
+            mzidx::build_mzml_spill(
+                table,
+                Cursor::new(map.bytes()),
+                out,
+                DEFAULT_BUDGET,
+                Some(spill),
+            )
+        })
+    }
+
+    /// Runs `f` on a thread of the pool with the index file (`<name>.mzidx.part`, renamed `<name>.mzidx` when `f` succeeds, removed when it fails)
+    /// and the scratch file (`<name>.mzidx.sp.part`: the peaks past the budget wait there, so the scans are decoded once; always removed).
+    pub(crate) fn scrivi(
+        &self,
+        name: &str,
+        f: impl FnOnce(&mut File, &mut File) -> Result<Stats, Error> + Send,
+    ) -> Result<Stats, Error> {
+        let dest = self.path(name)?;
+        let part = self.dir.join(format!("{}.mzidx.part", clean(name)?));
+        let sp = self.dir.join(format!("{}.mzidx.sp.part", clean(name)?));
+        let r = self.pool.install(|| -> Result<Stats, Error> {
+            let mut out = File::create(&part).map_err(|e| io_error(&e))?;
+            let mut spill = File::options()
+                .read(true)
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&sp)
+                .map_err(|e| io_error(&e))?;
+            f(&mut out, &mut spill)
+        });
+        let _ = std::fs::remove_file(&sp);
+        match r {
+            Ok(st) => {
+                std::fs::rename(&part, &dest).map_err(|e| io_error(&e))?;
+                Ok(st)
+            }
+            Err(e) => {
+                let _ = std::fs::remove_file(&part);
+                Err(e)
+            }
+        }
     }
 }
