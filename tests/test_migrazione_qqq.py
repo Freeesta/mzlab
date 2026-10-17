@@ -265,123 +265,121 @@ def test_resilience_to_exceptions():
     assert res["old_val"] == "v1"
 
 
-def test_indexeddb_migration_full_lifecycle():
-    uri = (WEB / "qqq-db.js").as_uri()
-    code = f"""
-    import {{ copyStore, countStore, putKv, getKv, migrateIdb }} from {uri!r};
-
-    class MockStore {{
-      constructor(name, keyPath = null) {{
+MOCK_IDB_SETUP = """
+    class MockStore {
+      constructor(name, keyPath = null) {
         this.name = name;
         this.keyPath = keyPath;
         this.map = new Map();
-      }}
-      put(val, key) {{
+      }
+      put(val, key) {
         const k = this.keyPath ? val[this.keyPath] : key;
         this.map.set(k, val);
-        const req = {{ result: k, onsuccess: null, onerror: null }};
+        const req = { result: k, onsuccess: null, onerror: null };
         setTimeout(() => req.onsuccess && req.onsuccess(), 0);
         return req;
-      }}
-      get(key) {{
+      }
+      get(key) {
         const res = this.map.get(key);
-        const req = {{ result: res, onsuccess: null, onerror: null }};
+        const req = { result: res, onsuccess: null, onerror: null };
         setTimeout(() => req.onsuccess && req.onsuccess(), 0);
         return req;
-      }}
-      count() {{
-        const req = {{ result: this.map.size, onsuccess: null, onerror: null }};
+      }
+      count() {
+        const req = { result: this.map.size, onsuccess: null, onerror: null };
         setTimeout(() => req.onsuccess && req.onsuccess(), 0);
         return req;
-      }}
-      openCursor() {{
+      }
+      openCursor() {
         const entries = Array.from(this.map.entries());
         let idx = 0;
-        const req = {{ result: null, onsuccess: null, onerror: null }};
-        function step() {{
-          if (idx < entries.length) {{
+        const req = { result: null, onsuccess: null, onerror: null };
+        function step() {
+          if (idx < entries.length) {
             const [k, v] = entries[idx++];
-            const cursor = {{
+            const cursor = {
               key: k,
               value: v,
               continue: () => setTimeout(step, 0)
-            }};
+            };
             req.result = cursor;
             if (req.onsuccess) req.onsuccess();
-          }} else {{
+          } else {
             req.result = null;
             if (req.onsuccess) req.onsuccess();
-          }}
-        }}
+          }
+        }
         setTimeout(step, 0);
         return req;
-      }}
-    }}
+      }
+    }
 
-    class MockDb {{
-      constructor(name) {{
+    class MockDb {
+      constructor(name) {
         this.name = name;
         this.stores = new Map();
-        this.objectStoreNames = {{
+        this.objectStoreNames = {
           contains: (s) => this.stores.has(s)
-        }};
-      }}
-      addStore(name, keyPath = null) {{
+        };
+      }
+      addStore(name, keyPath = null) {
         const s = new MockStore(name, keyPath);
         this.stores.set(name, s);
         return s;
-      }}
-      transaction(sName, mode) {{
+      }
+      transaction(sName, mode) {
         const store = this.stores.get(sName);
-        const tx = {{
+        const tx = {
           objectStore: () => store,
           oncomplete: null,
           onerror: null
-        }};
+        };
         setTimeout(() => tx.oncomplete && tx.oncomplete(), 20);
         return tx;
-      }}
-      close() {{}}
-    }}
+      }
+      close() {}
+    }
 
     const dbs = new Map();
     const deleted = [];
-    globalThis.indexedDB = {{
-      databases: async () => Array.from(dbs.keys()).map(name => ({{ name }})),
-      open: (name) => {{
+    globalThis.indexedDB = {
+      databases: async () => Array.from(dbs.keys()).map(name => ({ name })),
+      open: (name) => {
         const db = dbs.get(name);
-        const req = {{ result: db, onsuccess: null, onerror: null }};
+        const req = { result: db, onsuccess: null, onerror: null };
         setTimeout(() => req.onsuccess && req.onsuccess(), 0);
         return req;
-      }},
-      deleteDatabase: (name) => {{
+      },
+      deleteDatabase: (name) => {
         deleted.push(name);
         dbs.delete(name);
-        const req = {{ onsuccess: null, onerror: null }};
+        const req = { onsuccess: null, onerror: null };
         setTimeout(() => req.onsuccess && req.onsuccess(), 0);
         return req;
-      }}
-    }};
+      }
+    };
 
-    // Setup legacy qqq_lab database
     const oldDb = new MockDb("qqq_lab");
-    const oldFiles = oldDb.addStore("files");
-    const oldKv = oldDb.addStore("kv");
-    const oldListe = oldDb.addStore("liste_utente", "id");
-    oldFiles.put("file_bytes_1", "f1.mzML");
-    oldKv.put("dark", "theme");
-    oldListe.put({{ id: "lst1", name: "Custom Targets" }});
+    oldDb.addStore("files").put("file_bytes_1", "f1.mzML");
+    oldDb.addStore("kv").put("dark", "theme");
+    oldDb.addStore("liste_utente", "id").put({ id: "lst1", name: "Custom Targets" });
     dbs.set("qqq_lab", oldDb);
 
-    // Setup new mzlab_lab database
     const newDb = new MockDb("mzlab_lab");
     newDb.addStore("files");
     newDb.addStore("kv");
     newDb.addStore("liste_utente", "id");
     newDb.addStore("manifest", "path");
     dbs.set("mzlab_lab", newDb);
+"""
 
-    // Run 1: initial migration
+
+def test_indexeddb_migration_full_lifecycle():
+    uri = (WEB / "qqq-db.js").as_uri()
+    code = f"""
+    import {{ countStore, getKv, migrateIdb }} from {uri!r};
+
+{MOCK_IDB_SETUP}
     await migrateIdb(newDb, "qqq_lab");
     const r1 = {{
       migrated_from: await getKv(newDb, "migrated_from"),
@@ -390,40 +388,21 @@ def test_indexeddb_migration_full_lifecycle():
       files_count: await countStore(newDb, "files"),
       liste_count: await countStore(newDb, "liste_utente"),
     }};
-
-    // Run 2: second launch
     await migrateIdb(newDb, "qqq_lab");
-    const r2 = {{
-      runs: await getKv(newDb, "migration_runs"),
-      deleted: deleted.slice(),
-    }};
-
-    // Run 3: third launch triggers deletion of qqq_lab
+    const r2 = {{ runs: await getKv(newDb, "migration_runs"), deleted: deleted.slice() }};
     await migrateIdb(newDb, "qqq_lab");
     const r3 = {{
       runs: await getKv(newDb, "migration_runs"),
       status: await getKv(newDb, "migration_status"),
       deleted: deleted.slice(),
     }};
-
     console.log(JSON.stringify({{ r1, r2, r3 }}));
     """
     res = run_node_esm(code)
-    # Run 1 assertions
-    assert res["r1"]["migrated_from"] == "qqq_lab"
-    assert res["r1"]["status"] == "ok"
-    assert res["r1"]["runs"] == 1
-    assert res["r1"]["files_count"] == 1
-    assert res["r1"]["liste_count"] == 1
-
-    # Run 2 assertions
-    assert res["r2"]["runs"] == 2
-    assert "qqq_lab" not in res["r2"]["deleted"]
-
-    # Run 3 assertions: deletion performed
-    assert res["r3"]["runs"] == 3
-    assert res["r3"]["status"] == "cleaned"
-    assert "qqq_lab" in res["r3"]["deleted"]
+    assert res["r1"]["migrated_from"] == "qqq_lab" and res["r1"]["status"] == "ok"
+    assert res["r1"]["runs"] == 1 and res["r1"]["files_count"] == 1 and res["r1"]["liste_count"] == 1
+    assert res["r2"]["runs"] == 2 and "qqq_lab" not in res["r2"]["deleted"]
+    assert res["r3"]["runs"] == 3 and res["r3"]["status"] == "cleaned" and "qqq_lab" in res["r3"]["deleted"]
 
 
 def test_service_worker_activation_cleanup():
