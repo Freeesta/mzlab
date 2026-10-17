@@ -34,6 +34,7 @@ declare var CONVERT_RAW: any;
 declare var CONVROWS: any;
 declare var CONV_FINAL: any;
 declare var CONV_QUIET: any;
+declare var CONV_SUM: any;
 declare var CONV_W: any;
 declare var CRCT: any;
 declare var CU: any;

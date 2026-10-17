@@ -1,8 +1,8 @@
 """The loading of a SCIEX .wiff + .wiff.scan of realistic size in the browser (synthetic, tools/wiff_grande.py; no laboratory data), on the built site with the Rust engine (?motore=rust&lr=1):
 the bar goes forward only and ends; each sample has its row with the phase, the scans done and the time, and the page never stays still for more than 5 s; at the end each sample keeps
-«Loaded ✓ (n scans, t s)»; «Cancel» stops the files still running and they do not enter the list; a damaged pair leaves an error with «Details» and «Copy diagnosis», whose text carries the
+«Loaded ✓ (n scans, t s)» and the totals by kind; a truncated .wiff.scan says how many scans are missing; «Cancel» stops the files still running and they do not enter the list; a damaged pair leaves an error with «Details» and «Copy diagnosis», whose text carries the
 trace of the loading and no file name. Needs the site and the .wasm (python tools/build_site.py + wasm, see e2e_wiff.py). Run from the repo root: python3 tests_e2e/e2e_wiff_carico.py"""
-import json, os, shutil, subprocess, sys, tempfile, time
+import json, os, re, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from lib import ROOT, free_port, hold
@@ -16,10 +16,11 @@ def step(name, fn):
 if not (ROOT / "site" / "static" / "wasm" / "mzlab_wasm.js").exists():
     print("  ", ("site", "FAIL site/ not built: python tools/build_site.py + wasm")); sys.exit(0)
 D = Path(tempfile.mkdtemp(prefix="wiff_carico_"))
-for name, samples, scans, points in (("lotto", 4, 700, 1500), ("ferma", 4, 900, 1500), ("molti", 48, 40, 300)):
+for name, samples, scans, points in (("lotto", 4, 700, 1500), ("ferma", 4, 900, 1500), ("molti", 48, 40, 300), ("corto", 1, 200, 300)):
     subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_grande.py"), str(D), "--name", name, "--samples", str(samples), "--scans", str(scans), "--points", str(points)], check=True, capture_output=True)
 (D / "rotto.wiff").write_bytes(b"\x00not a compound file\x01" * 4000)      # a .wiff that is not an OLE container: the pair cannot be opened
 (D / "rotto.wiff.scan").write_bytes((D / "lotto.wiff.scan").read_bytes())
+cut = D / "corto.wiff.scan"; cut.write_bytes(cut.read_bytes()[: cut.stat().st_size // 2])      # a copy of the pair that stopped halfway: the .wiff lists scans the .wiff.scan does not have
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 import urllib.request
 for _ in range(50):
@@ -65,6 +66,8 @@ try:
             items = pg.locator("#flist .cvsum li").all_inner_texts()
             assert len(items) == 4 and all("Loaded ✓ (700 scans," in t and t.rstrip().endswith("s)") for t in items), items
             assert pg.locator("#flist tr[aria-busy=true]").count() == 0
+            tot = pg.inner_text("#flist .cvsum [data-cvtot]")
+            assert re.fullmatch(r"4 files: 4 full scan · \d+:\d\d", tot.strip()), tot
             pg.locator("#flist .cvsum [data-cvact=close]").click()
             assert pg.locator("#flist .cvsum").count() == 0 and pg.evaluate("CONVROWS.rows.length") == 0
         step("each sample keeps «Loaded ✓ (n scans, t s)» until «Close»", loaded)
@@ -78,6 +81,16 @@ try:
             assert len(items) == 48 and all("Loaded ✓ (40 scans," in t for t in items), items[:3]
             pg.locator("#flist .cvsum [data-cvact=close]").click()
         step("a container of 48 samples loads them all, never still for more than 5 s", many)
+        def truncated():                                # a truncated .wiff.scan: the sample loads with the scans it has, and its row and the totals say how many are missing
+            pg.set_input_files("#pick", [str(D / "corto.wiff"), str(D / "corto.wiff.scan")])
+            pg.wait_for_function("UPBUSY === 0 && CONVROWS.rows.length > 0", timeout=120000)
+            li = pg.locator("#flist .cvsum li[data-cvmiss]")
+            assert li.count() == 1, pg.inner_text("#flist .cvsum")
+            n, t = int(li.get_attribute("data-cvmiss")), li.inner_text()
+            assert 0 < n < 200 and f"{n} scans missing: the .wiff.scan ends before them" in t and "Loaded ✓" in t, t
+            assert "1 with scans missing" in pg.inner_text("#flist .cvsum [data-cvtot]")
+            pg.locator("#flist .cvsum [data-cvact=close]").click()
+        step("a truncated .wiff.scan loads what it has and says how many scans are missing", truncated)
 
         def cancel():
             pg.set_input_files("#pick", [str(D / "ferma.wiff"), str(D / "ferma.wiff.scan")])

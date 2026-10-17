@@ -236,7 +236,7 @@ async function lrOp(m) {
       let opened = false;
       try { opened = await lrOpen(m.name); } catch (_) { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); }      // an index that does not open (incomplete, damaged) is not kept
       if (!opened) jerr("err.engine.index");
-      return { info: JSON.stringify({ ms: Math.round(performance.now() - t0) }) };
+      return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (res.stats && res.stats.missing) || 0 }) };      // missing: scans the index lists beyond the end of a truncated data file
     } finally { ARCH.release(m.name); }
     case "lr_index_cen": try {                                                // mzFinder works on centroids: the index of a profile sample with its scans as centroids, apart from the one of the Data tab
       const job = await nativo.indexJob(m.name), part = m.name + ".cen.mzidx.part";
