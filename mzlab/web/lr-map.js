@@ -36,9 +36,12 @@ export async function engineRoute(path, q, env) {
     const r = (await env.rpc({ op: "lr_composition", query: "?" + q.toString() })).info;
     return r ? { status: 200, text: r } : null;
   }
-  if (path === "/api/perf") return { status: 200, text: '{"files":[]}' };                  // the ?perf meter lists how Python read each file: Python reads none here
-  if (path === "/api/contaminants") return { status: 200, text: await (await fetch(new URL("contaminanti.json", import.meta.url))).text() };   // a built-in list: data, not a calculation
-  if (path === "/api/provenance") return { status: 200, text: (await env.rpc({ op: "lr_provenance", ctx: [...q].map(([k, v]) => [k, String(v).replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/·/g, "-").trim()]).filter(kv => kv[1]).map(kv => " · " + kv[0] + "=" + kv[1]).join("") })).info };       // schema provenienza/1: the engine writes the line of an exported table
+  // the ?perf meter lists how Python read each file: Python reads none here
+  if (path === "/api/perf") return { status: 200, text: '{"files":[]}' };
+  // a built-in list: data, not a calculation
+  if (path === "/api/contaminants") return { status: 200, text: await (await fetch(new URL("contaminanti.json", import.meta.url))).text() };
+  // schema provenienza/1: the engine writes the line of an exported table
+  if (path === "/api/provenance") return { status: 200, text: (await env.rpc({ op: "lr_provenance", ctx: [...q].map(([k, v]) => [k, String(v).replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/·/g, "-").trim()]).filter(kv => kv[1]).map(kv => " · " + kv[0] + "=" + kv[1]).join("") })).info };
   if (path === "/api/subxic") return await subxicRoute(q, env);
   if (path === "/api/qaqc") return await qaqcRoute(q, env);
   if (/^\/api\/map(snap|punti|punti3d|tiles)?$/.test(path)) return await mapRoute(path, q, env);
@@ -48,7 +51,8 @@ export async function engineRoute(path, q, env) {
 /** The POST routes of the statistics (`api/stat/profile|blank|reference|pca`): the Rust engine from the table the page sends. null = not served.
  * @param {string} path  @param {string} body  @param {{rpc: (m: any) => Promise<any>}} env */
 export async function statRoute(path, body, { rpc }) {
-  if (path.startsWith("/api/campioni/")) return { status: 200, text: (await rpc({ op: "lr_campioni", cop: path.slice(14), body })).info };   // roles and times of the files (campioni/2): proponi, valida, ...
+  // roles and times of the files (campioni/2): proponi, valida, ...
+  if (path.startsWith("/api/campioni/")) return { status: 200, text: (await rpc({ op: "lr_campioni", cop: path.slice(14), body })).info };
   if (!/^\/api\/stat\/(profile|blank|reference|pca)$/.test(path)) return undefined;
   const r = (await rpc({ op: "lr_stat", path: path.slice(1), body })).info;
   if (!r) return null;

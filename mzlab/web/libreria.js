@@ -18,8 +18,10 @@ const LIB = (() => {
       pend.delete(m.reqId); if (m.type === "error") { const er = I18N.err(m); er.fatal = !!m.fatal; r.no(er); } else r.ok(m);
     };
     me.onerror = e => { const er = new Error(I18N.t("lib.err.worker", { message: e.message || "error" })); /** @type {any} */ (er).fatal = true; pend.forEach(r => r.no(er)); pend.clear(); if (worker === me) worker = null; };
-    me.postMessage({ cmd: "config", reqId: 0, forceJs, wasm: !!(window.MZLAB_BROWSER || window.MZLAB_DESKTOP) });      // the engine's .wasm exists only in the built site (window.MZLAB_BROWSER, browser.js) and in the app
-    me.postMessage({ cmd: "folder", reqId: 0, ...folderMsg });                         // the folder of the libraries (chosen before the first call: call1 waits for folderStart)
+    // the engine's .wasm exists only in the built site (window.MZLAB_BROWSER, browser.js) and in the app
+    me.postMessage({ cmd: "config", reqId: 0, forceJs, wasm: !!(window.MZLAB_BROWSER || window.MZLAB_DESKTOP) });
+    // the folder of the libraries (chosen before the first call: call1 waits for folderStart)
+    me.postMessage({ cmd: "folder", reqId: 0, ...folderMsg });
     return me;
   }
   function restart() {
@@ -53,7 +55,8 @@ const LIB = (() => {
   const dirDb = () => new Promise((ok, no) => { const r = indexedDB.open("mzlab-libdir", 1); r.onupgradeneeded = () => r.result.createObjectStore("h"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
   const dirGet = async () => { try { const db = await dirDb(); return await new Promise(ok => { const r = db.transaction("h").objectStore("h").get("dir"); r.onsuccess = () => { db.close(); ok(r.result || null); }; r.onerror = () => { db.close(); ok(null); }; }); } catch (e) { return null; } };
   const dirPut = async h => { try { const db = await dirDb(); await new Promise(/** @type {(v?: any) => void} */ ok => { const t = db.transaction("h", "readwrite"); if (h) t.objectStore("h").put(h, "dir"); else t.objectStore("h").delete("dir"); t.oncomplete = () => { db.close(); ok(); }; t.onerror = () => { db.close(); ok(); }; }); } catch (e) { /* no storage */ } };
-  let folderMsg = { mode: "opfs" }, folderInit = null, waiting = null;     // what the worker is told; `waiting` = a remembered folder that needs a click to be allowed again
+  // what the worker is told; `waiting` = a remembered folder that needs a click to be allowed again
+  let folderMsg = { mode: "opfs" }, folderInit = null, waiting = null;
   const folderInfo = { mode: "opfs", name: "", needsGrant: false };
   function folderStart() {
     if (!folderInit) folderInit = (async () => {
@@ -166,9 +169,11 @@ const LIB = (() => {
   let avail = null, busy = false;
   const mb = n => fmtN(Math.round(n / 1e5) / 10);
   const avLabel = st => ({ new: I18N.t("lib.avail.st.new"), update: I18N.t("lib.avail.st.update"), installed: I18N.t("lib.avail.st.installed"), damaged: I18N.t("lib.avail.st.damaged") })[st] || st;
-  const NATIVE_ERRORS = ["lib.dl.err.host", "lib.dl.err.externalOff"];        // answered by the native side (listed so that tools/controlla_i18n.py sees the keys)
+  // answered by the native side (listed so that tools/controlla_i18n.py sees the keys)
+  const NATIVE_ERRORS = ["lib.dl.err.host", "lib.dl.err.externalOff"];
   const errText = (key, params) => I18N.t(NATIVE_ERRORS.includes(key) || key.startsWith("lib.dl.err.") ? key : "lib.dl.err.io", params || {});
-  async function nativeJson(cmd, args) {                    // the native side answers a JSON text: the result, or {status:"error", error_key, detail}
+  // the native side answers a JSON text: the result, or {status:"error", error_key, detail}
+  async function nativeJson(cmd, args) {
     const j = JSON.parse(await T().invoke(cmd, args));
     if (j.status === "error") throw new Error(errText(j.error_key, { detail: j.detail }));
     return j;
@@ -201,7 +206,10 @@ const LIB = (() => {
     if (!ids.length && !xids.length) return;
     busy = true; go.disabled = true; cn.hidden = false;
     const name = id => (avail.cat.librerie.find(p => p.id === id) || avail.cat.esterne.find(e => e.id === id) || { nome: id }).nome;
-    const show = m => { st.innerHTML = `<div>${EHt(I18N.t("lib.avail.progress", { name: name(m.id), piece: m.piece || 0, pieces: m.pieces || 0, mb: mb(m.bytes), total: mb(m.total) }))}</div><progress max="${m.total || 1}" value="${m.bytes}"></progress>`; };
+    const all = [...ids, ...xids]; st.innerHTML = "";
+    const A = (await import("./avanzamento.js")).avanza(st, { title: I18N.t("lib.avail.job"), n: all.length, cancel: false });      // the shared progress panel; «Cancel» stays the button of the window
+    let cur = "";
+    const show = m => { const k = Math.max(1, all.indexOf(m.id) + 1); if (m.id !== cur) { cur = m.id; A.item(k, name(m.id)); } A.set(m.total ? (k - 1 + m.bytes / m.total) / all.length : null, I18N.t("lib.avail.progress", { name: name(m.id), piece: m.piece || 0, pieces: m.pieces || 0, mb: mb(m.bytes), total: mb(m.total) })); };
     let off = null; const fails = []; let done = 0;
     try {
       if (T() && T().event) off = await T().event.listen("lib-progress", ev => show(ev.payload));
@@ -215,7 +223,8 @@ const LIB = (() => {
       }
     } catch (e) { fails.push(e.message); }
     finally { if (off) off(); busy = false; go.disabled = false; cn.hidden = true; }
-    st.innerHTML = (done ? `<div>${EHt(I18N.t("lib.avail.done", { n: done }))}</div>` : "") + fails.map(f => `<div class="err">${EHt(f)}</div>`).join("");
+    fails.forEach(f => A.fail("", f)); for (let i = 0; i < done; i++) A.ok();
+    A.end(done ? { head: I18N.t("lib.avail.done", { n: done }) } : undefined);
     try { avail = { ...(await call("catalog", { cached: true })), cfg: avail.cfg }; renderAvail(); } catch (e) { /* the list stays as it was */ }
     await refresh();
   }
@@ -232,7 +241,8 @@ const LIB = (() => {
   }
 
   // ------------------------------------------------------------ the query: the MS2 spectrum shown in a panel
-  function profOf(f) {                              // tolerances: the profile of hr.js when it exists, otherwise 10 ppm for a high resolution instrument and 0.5 Da
+  // tolerances: the profile of hr.js when it exists, otherwise 10 ppm for a high resolution instrument and 0.5 Da
+  function profOf(f) {
     try { if (window.HR && HR.prof) { const q = HR.prof(f, 2); if (q) return { hr: !!q.hr, v: q.hr ? q.tol : 0.5, unit: q.hr ? "ppm" : "Da" }; } } catch (e) { /* the fallback below */ }
     const hr = /orbitrap|exploris|fusion|q.?exactive|tof|ft-?icr|astral/i.test(String((f && f.instrument) || ""));
     return hr ? { hr: true, v: 10, unit: "ppm" } : { hr: false, v: 0.5, unit: "Da" };
@@ -248,7 +258,8 @@ const LIB = (() => {
 
   // ------------------------------------------------------------ the results window
   function mirror(cv, q, r) {
-    if (window.TDATI) {                                     // description and table: the experimental peaks above, the library ones below
+    // description and table: the experimental peaks above, the library ones below
+    if (window.TDATI) {
       cv.setAttribute("aria-label", I18N.t("lr.mirror.aria")); TDATI.describe(cv, I18N.t("lr.mirror.desc", { n: q.mz.length, m: r.mz.length, name: r.name || "" }));
       TDATI.addButton(cv, () => ({ title: I18N.t("lr.mirror.aria"), head: [I18N.t("lr.mirror.col.src"), "m/z", I18N.t("tdati.col.rel")], rowHeader: true,
         rows: [...q.mz.map((m, i) => [I18N.t("lr.mirror.exp"), TDATI.num(m, 4), TDATI.num(q.it[i], 4)]), ...r.mz.map((m, i) => [I18N.t("lr.mirror.lib"), TDATI.num(m, 4), TDATI.num(r.it[i], 4)])] }));
@@ -272,7 +283,8 @@ const LIB = (() => {
     nlp.forEach(pr => { g.beginPath(); g.setLineDash([1, 3]); g.strokeStyle = warn; g.lineWidth = 1.5; g.moveTo(X(q.mz[pr[0]]), qy(pr[0])); g.lineTo(X(r.mz[pr[1]]), ly(pr[1])); g.stroke(); });
     g.restore(); cv.dataset.lines = JSON.stringify(lines); cv.dataset.nl = JSON.stringify(nlp);
     g.lineWidth = 1.5; g.font = fpx(12);
-    const shq = new Set((r.pairs || []).filter(p => p[2]).map(p => p[0])), shl = new Set((r.pairs || []).filter(p => p[2]).map(p => p[1]));      // analogues: peaks matched after the shift
+    // analogues: peaks matched after the shift
+    const shq = new Set((r.pairs || []).filter(p => p[2]).map(p => p[0])), shl = new Set((r.pairs || []).filter(p => p[2]).map(p => p[1]));
     const bars = (mz, it, set, dir) => mz.forEach((m, i) => {
       const hh = it[i] * half, sh = (dir > 0 ? shq : shl).has(i), nl = (dir > 0 ? nlq : nll).has(i); g.strokeStyle = sh ? shc : nl ? warn : set.has(i) ? acc : mut; g.lineWidth = set.has(i) ? 2 : 1.3;
       g.beginPath(); g.moveTo(X(m), mid); g.lineTo(X(m), mid - dir * hh); g.stroke();
@@ -290,7 +302,8 @@ const LIB = (() => {
   // confidence levels: livelli.js (rules and thresholds in the data file livelli-1.js, the user's thresholds in qqq.lib.soglie). The candidates carry ik, ent, cos, shared, dprec (ppm), nlib
   const assess = (cands, o = {}) => LIVELLI.assess({ cands, analogs: o.analogs, nScans: o.nScans, std: o.std || null, formulaUnique: !!o.formulaUnique });
   const THR_KEYS = ["entropia_min", "picchi_min", "precursore_ppm_max", "scansioni_min", "margine_min", "entropia_provvisorio", "analogo_mcos_min"];
-  function levelHtml(res) {                                    // «candidate, level N, evidence»: the badge, the evidence (one line per gate), the decisive sentence, the proposed and the decided level
+  // «candidate, level N, evidence»: the badge, the evidence (one line per gate), the decisive sentence, the proposed and the decided level
+  function levelHtml(res) {
     const lv = LIVELLI.shown(res), b = res.best || res.nearest || res.analog;
     return `<div class="vd" style="margin:6px 0;padding:6px 10px;border-radius:6px;border:1px solid var(--line)"><span class="lvb ${LIVELLI.cls(lv)}">${EHt(LIVELLI.sentence(lv))}</span>${b && res.proposed !== "5" && res.proposed !== "0" ? ` <b>${EHt(b.name || "")}</b>` : ""}
       <div class="sm" style="margin-top:4px"><b>${I18N.t("lv.evidence")}</b>: ${res.lines.length ? res.lines.map(x => EHt(x)).join(" · ") : "–"}</div><div class="sm">${EHt(res.decisive)}</div>
@@ -308,7 +321,8 @@ const LIB = (() => {
     root.querySelectorAll("[data-thr]").forEach(el => el.onchange = () => { const v = numIt(el.value); if (v >= 0) { LIVELLI.setThreshold(el.dataset.thr, v); again(); } });
     const rs = root.querySelector("#lr-sog-reset"); if (rs) rs.onclick = () => { LIVELLI.reset(); const T = LIVELLI.thresholds(); root.querySelectorAll("[data-thr]").forEach(el => { el.value = String(T[el.dataset.thr]); }); again(); };
   }
-  async function scansOf(p) {                                  // MS2 scans of the same precursor (10 ppm) and the same peak (RT gaps up to 0.2 min), as «Identify all» groups them; 1 where the file is not DDA
+  // MS2 scans of the same precursor (10 ppm) and the same peak (RT gaps up to 0.2 min), as «Identify all» groups them; 1 where the file is not DDA
+  async function scansOf(p) {
     try {
       if (p.avg && p.avg.length > 1) return p.avg.length;
       if (p.sid == null || p.k == null) return 1;
@@ -335,7 +349,8 @@ const LIB = (() => {
     ensureCss();
     const q = queryOf(p);
     if (!q || !q.peaks.length) return info(I18N.t("lib.pickMs2"));
-    if (profOf(q.f).hr) return whatIs(p);                // high resolution: «What is it?» (identity and analogs together, level and evidence)
+    // high resolution: «What is it?» (identity and analogs together, level and evidence)
+    if (profOf(q.f).hr) return whatIs(p);
     let d = /** @type {any} */ (document.getElementById("libres"));
     if (!d) { d = document.createElement("dialog"); d.id = "libres"; document.body.appendChild(d); }
     const prof = profOf(q.f), st = /** @type {any} */ ({ prec: q.prec != null ? +q.prec.toFixed(4) : null, v: prof.v, unit: prof.unit, frag: 0.5, res: null, sel: 0 });
@@ -388,8 +403,10 @@ const LIB = (() => {
     if (st.prec) run(); else msg(I18N.t("lib.typePrec"));
   }
   // ------------------------------------------------------------ «Cos'è?» (high resolution only): identity (Flash entropy) and analogues (hybrid) of ONE MS2 spectrum together, with level and evidence
-  const isHr = p => { const q = queryOf(p); return !!(q && profOf(q.f).hr); };       // the voice of the menu exists only for high-resolution spectra (low resolution gives no answers)
-  function cosVis(q, r, lo) {                         // cosine on the visible peaks (cos_vis of Attributio): the reference peaks below the lower limit of the MS2 scan window are removed; null when nothing is cut
+  // the voice of the menu exists only for high-resolution spectra (low resolution gives no answers)
+  const isHr = p => { const q = queryOf(p); return !!(q && profOf(q.f).hr); };
+  // cosine on the visible peaks (cos_vis of Attributio): the reference peaks below the lower limit of the MS2 scan window are removed; null when nothing is cut
+  function cosVis(q, r, lo) {
     if (!(lo > 0) || !r.mz.some(m => m < lo)) return null;
     let dot = 0, na = 0, nb = 0; for (const v of q.it) na += v;
     r.mz.forEach((m, j) => { if (m >= lo) nb += r.it[j]; });
@@ -397,7 +414,8 @@ const LIB = (() => {
     return na > 0 && nb > 0 ? dot / Math.sqrt(na * nb) : 0;
   }
   const polTxt = v => I18N.t(v > 0 ? "lib.what.pol.pos" : v < 0 ? "lib.what.pol.neg" : "lib.what.pol.unk");
-  function groupsOf(rs) {                              // the same first InChIKey block (or name) = one structure: the best entry heads the group
+  // the same first InChIKey block (or name) = one structure: the best entry heads the group
+  function groupsOf(rs) {
     const m = new Map(); rs.forEach((r, i) => { r._i = i; const k = LIVELLI.ikKey(r); if (!m.has(k)) m.set(k, []); m.get(k).push(r); });
     return [...m.values()];
   }
@@ -430,7 +448,8 @@ const LIB = (() => {
       st.groups = groupsOf(R.results);
       st.lv = assess(R.results, { nScans: st.n, analogs: A && A.results }); if (st.decided) LIVELLI.decide(st.lv, st.decided);
       const cvs = st.sel.k === "id" && R.results[st.sel.i] && st.lo != null ? cosVis({ it: R.query.it }, R.results[st.sel.i], st.lo) : null;
-      if (cvs != null) st.lv.lines = st.lv.lines.concat([I18N.t("lib.what.cosVis", { lo: st.lo, cos: cvs.toFixed(2) })]);       // a proof only: it never changes the level
+      // a proof only: it never changes the level
+      if (cvs != null) st.lv.lines = st.lv.lines.concat([I18N.t("lib.what.cosVis", { lo: st.lo, cos: cvs.toFixed(2) })]);
       window.RAPPORTO && RAPPORTO.note(st.lv, q); vd.innerHTML = levelHtml(st.lv); levelBind(vd, st.lv, () => { st.decided = st.lv.decided || ""; show(); });
       body.innerHTML = `<h4 style="margin:8px 0 2px">${I18N.t("lib.what.cand")}</h4>` + (R.results.length ? `<div class="tbl"><table><tr><th class="num">#</th><th>${I18N.t("lib.col.name")}</th><th class="num">${I18N.t("lib.col.entropy")}</th><th class="num">${I18N.t("lib.col.reverse")}</th><th class="num">${I18N.t("lib.col.shared")}</th><th class="num">${I18N.t("lib.col.explained")}</th><th class="num">${I18N.t("lib.col.dprecHtml")}</th><th>${I18N.t("lib.col.adduct")}</th><th>${I18N.t("lib.col.pol")}</th><th>CE</th><th>${I18N.t("lib.col.instrument")}</th><th>${I18N.t("lib.col.library")}</th><th>${I18N.t("lib.col.license")}</th></tr>
         ${st.groups.map((g, gi) => g.map((r, k) => idRow(r, gi, k)).join("")).join("")}</table></div>` : `<p>${I18N.t("lib.what.none")}</p>`)
@@ -505,7 +524,8 @@ const LIB = (() => {
     }
     return out.sort((a, b) => a.rt - b.rt);
   }
-  function groupAssess(g) {                          // the level of a group of scans of one precursor: its best candidate, the best one of ANOTHER structure (`alt`, from the worker) and the number of scans
+  // the level of a group of scans of one precursor: its best candidate, the best one of ANOTHER structure (`alt`, from the worker) and the number of scans
+  function groupAssess(g) {
     const b = g.best && g.best.name ? g.best : null;
     return assess(b ? [b, b.alt].filter(Boolean) : [], { nScans: g.n });
   }
@@ -536,7 +556,8 @@ const LIB = (() => {
       say(I18N.t("lib.all.comparing"), 0, queries.length);
       const r = await call("searchAll", { queries, tol: { v: profOf(f).v, unit: "ppm" }, frag: 0.01 }, m => say(I18N.t("lib.all.comparingN", { i: m.read, n: m.total }), m.read, m.total));
       if (window.LISTE) await LISTE.ready();
-      let showHid = false;                                   // contaminant exclusions (liste.js): candidates whose precursor is a contaminant the student excluded stay out of the list, counted, until «Mostra»
+      // contaminant exclusions (liste.js): candidates whose precursor is a contaminant the student excluded stay out of the list, counted, until «Mostra»
+      let showHid = false;
       const groups = groupRows(r.rows), show = all => {
         const hidOf = g => { const c = window.LISTE ? LISTE.compat(g.prec, f.polarity, UIP.hrPpm) : null; return !!(c && c.hid); };
         const base = groups.map(g => ({ g, v: groupAssess(g), k: window.LISTE ? LISTE.textFor(g.prec, f.polarity, UIP.hrPpm) : "", hid: hidOf(g) })).filter(x => all || (x.v.proposed !== "5" && x.v.proposed !== "0"));

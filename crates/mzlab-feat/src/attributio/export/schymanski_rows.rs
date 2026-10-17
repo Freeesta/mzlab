@@ -7,6 +7,7 @@ use super::schymanski_delta::interpret_delta;
 use crate::attributio::frame::Cell;
 use crate::attributio::identity::IdentityRow;
 use crate::attributio::readers::standards::py_round;
+use crate::sortc::SortC;
 use std::collections::HashMap;
 
 pub(super) const PPM_DIRECT_MAX: f64 = 20.0;
@@ -302,7 +303,7 @@ pub(super) fn cell_key(p: &Pairs, name: &str) -> Option<Cell> {
 
 /// The order of the rows of an identity sheet: contaminants first, then by confidence, the missing ones last.
 pub(super) fn sort_rows(rows: &mut [Pairs]) {
-    rows.sort_by(|a, b| {
+    rows.sortc_by(|a, b| {
         let cec = |p: &Pairs| matches!(cell_key(p, "is_contaminant_CEC"), Some(Cell::Bool(true)));
         let conf = |p: &Pairs| match cell_key(p, "confidence_score") {
             Some(Cell::Num(v)) => Some(v),

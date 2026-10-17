@@ -1,7 +1,8 @@
-//! `hr/formula.py` beyond what `fragtree::Space` needs: candidates and counts under a sub-formula (`within`), and the m/z calibration
+//! The formula space of mzFinder beyond what `fragtree::Space` needs: candidates and counts under a sub-formula (`within`), and the m/z calibration
 //! (`Calibration`, `fit_calibration`).
 
 use crate::legacy::fragtree::Space;
+use crate::sortc::SortC;
 
 /// `FormulaSpace.window` of one m/z: (start, stop) of the sorted formulas within max(ppm, abs_da).
 fn window(sp: &Space, mz: f64, ppm: f64, abs_da: f64) -> (usize, usize) {
@@ -25,7 +26,7 @@ pub fn candidates(
 ) -> Vec<usize> {
     let (a, b) = window(sp, mz, ppm, abs_da);
     let mut idx: Vec<usize> = (a..b).filter(|&i| inside(&sp.g[i], within)).collect();
-    idx.sort_by(|&x, &y| (sp.mass[x] - mz).abs().total_cmp(&(sp.mass[y] - mz).abs()));
+    idx.sortc_by(|&x, &y| (sp.mass[x] - mz).abs().total_cmp(&(sp.mass[y] - mz).abs()));
     idx
 }
 
@@ -64,7 +65,7 @@ impl Calibration {
 /// `np.median`.
 fn median(v: &[f64]) -> f64 {
     let mut s = v.to_vec();
-    s.sort_by(f64::total_cmp);
+    s.sortc_by(f64::total_cmp);
     let n = s.len();
     if n == 0 {
         return f64::NAN;

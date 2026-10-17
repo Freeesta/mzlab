@@ -10,7 +10,6 @@ import numpy as np
 from mzlab.chem import elements as E
 from mzlab.chem import isoscore
 
-from . import PPM
 
 K = (0, 1, 2)
 
@@ -51,30 +50,3 @@ def picchi_da_verita(ioni: list[dict]) -> list[Picco]:
         for rt in ion.get("rt_obs") or []:
             out.append(Picco(ion_id=str(ion["id"]), rt_obs=float(rt), mz=mz, rel=rel))
     return out
-
-
-def misura_file(table, picchi: list[Picco], k_file: int, n_files: int, floor: float, ppm: float = PPM, rt_win: float = 0.3, apex_win: float = 0.05) -> None:
-    """Extract the three windows of every Picco from one file's MS1 table (called while the table is loaded)."""
-    from tpmine.hr import features as FT
-    for p in picchi:
-        if p.area is None:
-            p.area, p.height, p.apex = (np.zeros((3, n_files)), np.zeros((3, n_files)), np.full((3, n_files), np.nan))
-        a0, apex0 = FT.trace_area(table, p.mz[0], p.rt_obs - rt_win, p.rt_obs + rt_win, floor, ppm)
-        for k in K:
-            if k == 0:
-                a, apex = a0, apex0
-            elif a0 > 0:
-                a, apex = FT.trace_area(table, p.mz[k], apex0 - apex_win, apex0 + apex_win, floor, ppm)
-            else:
-                continue
-            if a <= 0:
-                continue
-            y = table.xic(p.mz[k], p.mz[k] * ppm * 1e-6)
-            i = int(np.argmin(np.abs(table.rt - apex)))
-            p.area[k, k_file], p.apex[k, k_file] = a, apex
-            p.height[k, k_file] = float(y[max(i - 1, 0):i + 2].max())
-
-
-def scegli_riferimento(picchi: list[Picco]) -> None:
-    for p in picchi:
-        p.ref_file = int(np.argmax(p.area[0])) if p.area is not None and p.area[0].max() > 0 else -1

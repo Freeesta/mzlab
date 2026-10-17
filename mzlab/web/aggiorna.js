@@ -40,7 +40,8 @@ window.DESKUPD = (() => {
 
   async function check(silent) {
     if (!live()) return;
-    if (busy) {                                    // a click during the silent check takes it over: same answer, shown as a dialog
+    // a click during the silent check takes it over: same answer, shown as a dialog
+    if (busy) {
       if (quiet && !silent) { quiet = false; show(EH(I18N.t("update.checking")), []); }
       return;
     }

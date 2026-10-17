@@ -1,7 +1,8 @@
-//! The identities of an untargeted feature table as mzFinder gives them (`TP_Mine/py/tpmine/hr/identity.py`: `build` and `polarity_pairs`):
+//! The identities of an untargeted feature table as mzFinder gives them (`build` and `polarity_pairs`):
 //! the graph of co-eluting, correlated, mass-explained features with the evidence of every edge, and the neutral-mass hypotheses of every
 //! connected component. Stateless: the table comes in the payload, the JSON is the one of `api.identity_graph` and `api.polarity_pairs`.
 
+use crate::sortc::SortC;
 use mzlab_core::json::{self, Out, Value};
 
 use super::edge::{self, dimer_of, mean, relations, std, EdgeIn, Iimn, Spec};
@@ -103,7 +104,7 @@ fn iin_groups(fs: &[Feat], g: &mut Graph) {
             continue;
         }
         let mut ms = ms.clone();
-        ms.sort_by(|&a, &b| fs[a].mz.total_cmp(&fs[b].mz));
+        ms.sortc_by(|&a, &b| fs[a].mz.total_cmp(&fs[b].mz));
         let i = ms[0];
         for &j in &ms[1..] {
             let text: Vec<&str> = [ions(i), ions(j)].into_iter().flatten().collect();
@@ -215,7 +216,7 @@ struct Ctx<'a> {
 fn computed_edges(c: &Ctx, fs: &[Feat], g: &mut Graph) -> usize {
     let n = fs.len();
     let mut order: Vec<usize> = (0..n).collect();
-    order.sort_by(|&a, &b| fs[a].rt.total_cmp(&fs[b].rt));
+    order.sortc_by(|&a, &b| fs[a].rt.total_cmp(&fs[b].rt));
     let rts: Vec<f64> = order.iter().map(|&i| fs[i].rt).collect();
     let apex_min = c.o.apex_scans * c.o.cycle_s / 60.0;
     let sh = shifts(c.t, c.forms, c.pol);
@@ -417,12 +418,12 @@ fn identities(c: &Ctx, fs: &[Feat], g: &mut Graph, out: &mut Out) -> (usize, usi
         .into_iter()
         .map(|(r, m)| (median(m.iter().map(|&i| fs[i].rt).collect()), r, m))
         .collect();
-    comp.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
+    comp.sortc_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
     out.raw("[");
     let mut grouped = 0;
     for (k, (rt, r, members)) in comp.iter().enumerate() {
         let mut ms = members.clone();
-        ms.sort_by(|&a, &b| fs[a].mz.total_cmp(&fs[b].mz));
+        ms.sortc_by(|&a, &b| fs[a].mz.total_cmp(&fs[b].mz));
         grouped += (ms.len() > 1) as usize;
         let hyp = hypotheses(c, &ms, fs, &maxa);
         out.raw(if k > 0 { ",{\"id\":" } else { "{\"id\":" })
@@ -450,7 +451,7 @@ fn identities(c: &Ctx, fs: &[Feat], g: &mut Graph, out: &mut Out) -> (usize, usi
             out.raw(if q > 0 { "," } else { "" }).int(*e as i64);
         }
         let mut groups: Vec<&str> = ms.iter().filter_map(|&i| g.iin_of[i].as_deref()).collect();
-        groups.sort();
+        groups.sortc();
         groups.dedup();
         out.raw("],\"mzmine_groups\":[");
         for (q, s) in groups.iter().enumerate() {

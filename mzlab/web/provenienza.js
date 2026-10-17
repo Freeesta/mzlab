@@ -34,7 +34,8 @@ const PROV = (() => {
     try {
       const r = await fetch("api/provenance?" + new URLSearchParams(ctx(over)));
       if (!r.ok) throw new Error("provenance");
-      const [schema, line] = (await r.text()).split("\n"), parts = line.split(" · "), version = parts[0].slice(8);     // «# mzLab x.y.z · key=value ...»
+      // «# mzLab x.y.z · key=value ...»
+      const [schema, line] = (await r.text()).split("\n"), parts = line.split(" · "), version = parts[0].slice(8);
       return { schema, version, line, rows: [[window.APP_NAME, version], ...parts.slice(1).map(x => [x.slice(0, x.indexOf("=")), x.slice(x.indexOf("=") + 1)])] };
     } catch (_) { if (window.toast) window.toast(I18N.t("prov.fail")); return null; }
   }

@@ -1,4 +1,4 @@
-//! Kinetics against the frozen Python answers (`tools/feat_riferimento.py OUT --solo cinetica --golden`): same shape chosen, rates equal, scale and
+//! Kinetics against the frozen answers of the former Python engine: same shape chosen, rates equal, scale and
 //! AICc within 1e-6 relative, same leave-one-out shapes, same generation; two runs give the same bytes.
 
 use mzlab_feat::kinetic::{generation, ChainBank, FormBank, Resample, K_PARENT_MIN, MARGIN};

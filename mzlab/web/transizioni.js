@@ -9,12 +9,14 @@ const ms = () => parseFloat(cs().getPropertyValue("--t-med")) || 0;
 const ease = () => cs().getPropertyValue("--ease-out").trim() || "ease-out";
 const still = () => R.classList.contains("no-tr") || !ms() || !Element.prototype.animate;
 
-let pressed = false, suppress = false;                // the user is dragging or resizing: the layout follows the pointer at once
+// the user is dragging or resizing: the layout follows the pointer at once
+let pressed = false, suppress = false;
 ["pointerdown", "mousedown"].forEach(t => addEventListener(t, () => { pressed = true; }, true));
 ["pointerup", "pointercancel", "mouseup", "dragend", "blur"].forEach(t => addEventListener(t, () => { pressed = false; }, true));
 
 const rect = el => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; };
-function play(el, a, b, keepSize) {                     // a = where it was, b = where it is: slide (and stretch) back to b
+// a = where it was, b = where it is: slide (and stretch) back to b
+function play(el, a, b, keepSize) {
   const dx = a.x - b.x, dy = a.y - b.y, sx = !keepSize && b.w && Math.abs(a.w - b.w) > 1 ? a.w / b.w : 1, sy = !keepSize && b.h && Math.abs(a.h - b.h) > 1 ? a.h / b.h : 1;
   if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && sx === 1 && sy === 1) return;
   el.animate([{ transformOrigin: "0 0", transform: `translate(${dx}px,${dy}px) scale(${sx},${sy})` }, { transformOrigin: "0 0", transform: "none" }], { duration: ms(), easing: ease() });

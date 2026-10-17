@@ -11,8 +11,8 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "py"))
-from tpmine import demo  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tests_e2e"))
+import finder_demo as demo  # noqa: E402
 
 SHIFT = demo.SHIFT
 TIMES = (0, 5, 10, 15, 30, 45, 60)

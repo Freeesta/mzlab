@@ -36,7 +36,8 @@ const KMDVIEW = (() => {
       const shape = r.series ? SHAPES[(r.series - 1) % SHAPES.length] : "circle", col = r.series ? colorOf(r.series) : "var(--muted)";
       const tip = `<title>${eh(t("kmd.point.tip", { mz: fmt(r.mz, 4), rt: fmt(r.rt, 2), kmd: fmt(r.kmd, 4), s: r.series || "–" }))}</title>`;
       s += `<g data-i="${r.i}" tabindex="0" role="button" aria-label="${eh(t("kmd.row.aria", { mz: fmt(r.mz, 4), rt: fmt(r.rt, 2) }))}" opacity="${dim ? 0.3 : 1}">`
-        + `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="12" fill="transparent"/>`          // 24 px target around a small mark
+        // 24 px target around a small mark
+        + `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="12" fill="transparent"/>`
         + mark(shape, x, y, on ? 5.6 : 3.8, `fill="${col}" fill-opacity="${r.series ? 1 : 0.55}" stroke="${on ? "var(--ink)" : "var(--ink)"}" stroke-width="${on ? 1.6 : 0.5}"`) + tip + `</g>`;
     });
     return s + "</svg>";

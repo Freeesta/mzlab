@@ -1,7 +1,8 @@
-//! The fragmentation tree of the parent as mzFinder draws it (`TP_Mine/py/tpmine/fragtree.py::_two_level`, with `hr/formula.py::FormulaSpace`
-//! and `hr/molgraph.py::substructures` + `mask_smiles`): the parent ion and its strongest MS2 fragments, each with the formulas and neutral
+//! The fragmentation tree of the parent as mzFinder draws it (`_two_level`, with `FormulaSpace`
+//! and `substructures` + `mask_smiles`): the parent ion and its strongest MS2 fragments, each with the formulas and neutral
 //! losses that explain it and the substructures of the SMILES that can be it. The JSON is the one of `api.frag_tree`.
 
+use crate::sortc::SortC;
 use std::collections::{HashMap, HashSet};
 
 use mzlab_core::elements::{mass, mass_of, parse_formula, ELECTRON};
@@ -115,7 +116,7 @@ impl Space {
             let mut k = upper.len();
             loop {
                 if k == 0 {
-                    rows.sort_by(|a, b| a.0.total_cmp(&b.0));
+                    rows.sortc_by(|a, b| a.0.total_cmp(&b.0));
                     let (mass, g) = rows.into_iter().unzip();
                     return Space { g, mass };
                 }
@@ -135,7 +136,7 @@ impl Space {
         let a = self.mass.partition_point(|&x| x < mz - tol);
         let b = self.mass.partition_point(|&x| x <= mz + tol);
         let mut idx: Vec<usize> = (a..b.max(a)).collect();
-        idx.sort_by(|&x, &y| {
+        idx.sortc_by(|&x, &y| {
             (self.mass[x] - mz)
                 .abs()
                 .total_cmp(&(self.mass[y] - mz).abs())
@@ -194,7 +195,7 @@ fn alternatives(t: &TwoLevel, space: Option<&Space>, losses: &[(&str, f64)], m: 
                     loss: ls,
                 });
             }
-            alts.sort_by(|a, b| {
+            alts.sortc_by(|a, b| {
                 (!a.loss_source)
                     .cmp(&!b.loss_source)
                     .then(a.err.abs().total_cmp(&b.err.abs()))
@@ -212,7 +213,7 @@ fn alternatives(t: &TwoLevel, space: Option<&Space>, losses: &[(&str, f64)], m: 
                     });
                 }
             }
-            alts.sort_by(|a, b| a.err.abs().total_cmp(&b.err.abs()));
+            alts.sortc_by(|a, b| a.err.abs().total_cmp(&b.err.abs()));
         }
     }
     alts.truncate(MAX_ALT);
@@ -288,7 +289,7 @@ pub fn two_level(t: &TwoLevel, losses: &[(&str, f64)]) -> String {
         t.rel.iter().copied().fold(f64::NEG_INFINITY, f64::max)
     };
     let mut ord: Vec<usize> = (0..t.rel.len()).collect();
-    ord.sort_by(|&a, &b| t.rel[b].total_cmp(&t.rel[a]));
+    ord.sortc_by(|&a, &b| t.rel[b].total_cmp(&t.rel[a]));
     let keep: Vec<usize> = ord
         .into_iter()
         .filter(|&j| t.rel[j] * 100.0 / top >= MIN_REL && t.mzs[j] < t.mz0 - 1.0)

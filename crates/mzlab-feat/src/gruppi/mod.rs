@@ -12,6 +12,7 @@ mod prev;
 
 pub use json::{campioni_from_value, gruppi_json, opts_from_value, parse_input, run_json, to_json};
 
+use crate::sortc::SortC;
 use mzlab_core::campioni::Campione;
 use mzlab_core::error::{Error, Result};
 use presenza::{CondModel, GStat};
@@ -421,7 +422,7 @@ fn cond_outs(cx: &Ctx) -> Vec<CondOut> {
                 .find(|(n, _)| n == &c.id)
                 .map(|(_, f)| f.clone())
                 .unwrap_or_default();
-            factors.sort();
+            factors.sortc();
             CondOut {
                 id: c.id.clone(),
                 factors,

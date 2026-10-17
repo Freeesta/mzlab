@@ -1,4 +1,4 @@
-//! What the difference of m/z between two co-eluting ions can be: the tables of `TP_Mine/py/tpmine/hr/iimn.py` (`relations`, `dimer_of`) read in
+//! What the difference of m/z between two co-eluting ions can be: the tables of mzFinder (`relations`, `dimer_of`) read in
 //! the direction of `edge_evidence.relations_of`: the lighter ion X, the heavier Y.
 //!
 //! Y is an adduct of X, Y is the dimer of X, or X is an in-source fragment of Y (Y minus a neutral loss). Several readings can fit one step

@@ -20,6 +20,22 @@ try:
         assert "flufenacet" not in pg.inner_text("body").lower(), "the compound is never named after the files are open"
         assert all("FullScan" in u for u in reqs), ("only the Full Scan set was downloaded", reqs)
         steps.append(("choice Full Scan: 5 files with times 0/5/10/15/30, only that set downloaded, no links, button in box 1, no compound name, data open", "ok"))
+        # the shared progress panel (avanzamento.js): item «k di n», true percentage, sign of life when nothing arrives, «Annulla», summary; nothing is opened after a cancel
+        pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_selector("#demobtn")
+        # the examples come from the service worker, out of reach of page.route: the second MRM file is held by a wrapper of fetch until «Annulla» aborts it
+        pg.evaluate("""() => { const f0 = window.fetch; let n = 0; window.fetch = (u, o) => String(u).includes("esempi/MRM") && ++n === 2
+            ? new Promise((_, no) => o.signal.addEventListener("abort", () => no(new DOMException("aborted", "AbortError")))) : f0(u, o); }""")
+        pg.click("#demobtn"); pg.click("#demochoice [data-demo=mrm]")
+        pg.wait_for_function("(document.querySelector('#demo .avanza [data-r=item]')||{}).textContent?.startsWith('2 di 4: ')", timeout=20000)
+        assert pg.get_attribute("#demo .avanza [role=progressbar]", "aria-valuenow") == "25", pg.get_attribute("#demo .avanza [role=progressbar]", "aria-valuenow")
+        pg.wait_for_function("document.querySelector('#demo .avanza [data-r=beat]').textContent.includes('Ancora al lavoro')", timeout=6000)
+        assert "trascorsi" in pg.inner_text("#demo .avanza [data-r=time]")
+        pg.click("#demo .avanza [data-r=cancel]")
+        pg.wait_for_selector("#demo .avanza [data-r=sum]", timeout=10000)
+        t = pg.inner_text("#demo .avanza [data-r=sum]"); assert "1 di 4 completati" in t and "1 annullati" in t, t
+        assert pg.locator("#flist [data-k=conc]").count() == 0, "nothing is loaded after «Annulla»"
+        pg.click("#demo .avanza [data-r=close]"); assert pg.locator("#demo .avanza").count() == 0
+        steps.append(("the shared progress panel: item, percentage, sign of life, «Annulla» stops and the summary says it", "ok"))
         # MS2: two files, times 15 and 60, the product-ion type
         pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500); reqs.clear()
         pg.click("#demobtn"); pg.click("#demochoice [data-demo=ms2]"); pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===2", timeout=30000); pg.wait_for_timeout(500)

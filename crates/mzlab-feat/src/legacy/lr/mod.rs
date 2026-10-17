@@ -1,5 +1,5 @@
 //! The Dig of mzFinder on a low-resolution series (unit resolution, full scan), computed on the pipeline of the crate (profile `lr`: L1-L6 and
-//! the hypotheses of L7) instead of the Python engine (`TP_Mine/py/tpmine/engine.py`), with the JSON of `api.run` and `api.detail` that
+//! the hypotheses of L7) instead of the former Python engine, with the JSON of `api.run` and `api.detail` that
 //! `TP_Mine/js/20_tpmine.js` reads. The rows of the table are the peaks: no second peak search. MS2, MRM and the in-source fragments come later.
 
 pub mod chance;

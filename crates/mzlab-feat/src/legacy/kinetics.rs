@@ -1,4 +1,4 @@
-//! The kinetic descriptors of a row as mzFinder shows them (`TP_Mine/py/tpmine/hr/kinetics.py::descriptors`, `not_in_reference`; the unimodal fit
+//! The kinetic descriptors of a row as mzFinder shows them (`descriptors`, `not_in_reference`; the unimodal fit
 //! `mzlab/ionfamily.py::_isotonic_up_down`).
 
 use mzlab_core::json::Out;

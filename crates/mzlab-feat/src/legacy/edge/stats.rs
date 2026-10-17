@@ -1,6 +1,7 @@
-//! The spectra and the statistics behind the evidence of an edge (`hr/identity.py`): top peaks, matching peaks, ratios over the samples, shared skeleton.
+//! The spectra and the statistics behind the evidence of an edge: top peaks, matching peaks, ratios over the samples, shared skeleton.
 
 use super::*;
+use crate::sortc::SortC;
 
 pub(super) fn tol(mz: f64) -> f64 {
     ABS_DA.max(mz.abs() * PPM * 1e-6)
@@ -18,7 +19,7 @@ pub fn spec(mz: &[f64], it: &[f64]) -> Option<Spec> {
         return Some((mz.to_vec(), it.to_vec()));
     }
     let mut k: Vec<usize> = (0..it.len()).collect();
-    k.sort_by(|&a, &b| it[b].total_cmp(&it[a]));
+    k.sortc_by(|&a, &b| it[b].total_cmp(&it[a]));
     k.truncate(MAX_PEAKS);
     Some((
         k.iter().map(|&j| mz[j]).collect(),

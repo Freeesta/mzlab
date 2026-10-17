@@ -1,4 +1,4 @@
-//! `peaks.find_peak` of the Python engine (`TP_Mine/py/tpmine/peaks.py`) for one trace: smoothing, the peak around a time (or the highest one), noise
+//! `peaks.find_peak` of mzFinder for one trace: smoothing, the peak around a time (or the highest one), noise
 //! from the far points, edges, points across the peak, area (linear baseline removed, counts x s), FWHM (s) and S/N. Used for the MRM traces.
 
 /// The peak of a trace.

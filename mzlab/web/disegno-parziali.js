@@ -187,7 +187,8 @@ export function addExportPartials(/** @type {any} */ K, /** @type {string} */ sv
 export async function partialExport(K, molfile, v2000) {
   const delta = partials(K).map(p => p.delta).filter(Boolean).join(" "), ms = multis(K), all = [...K.editor.struct().atoms.keys()];
   const mf = ms.length ? (molfile ? molfile(all) : multiMolfile(K, all, ms)) || "" : "";
-  const flat = delta && v2000 ? v2000(all) : null, r = flat ? await checkDelta(flat, delta) : null;       // formula and m/z of the whole drawing with the delta (the engine, parz/1)
+  // formula and m/z of the whole drawing with the delta (the engine, parz/1)
+  const flat = delta && v2000 ? v2000(all) : null, r = flat ? await checkDelta(flat, delta) : null;
   const info = r && !r.error ? { formula: r.formula, mass: r.mass, mz: r.mz } : null;
   return { smiles: plainSmiles(await K.getSmiles()), delta, level: delta || ms.length ? "3b" : null, positionUnknown: ms.length > 0, molfile: mf, info };
 }

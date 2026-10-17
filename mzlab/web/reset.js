@@ -7,13 +7,15 @@
 (() => {
   "use strict";
   const wait = (p, ms = 4000) => Promise.race([p, new Promise(r => setTimeout(r, ms))]).catch(() => {});
-  const KEEP_OPFS = ["librerie"];                                     // what the variant "files" leaves in OPFS: the spectral libraries the user saved
+  // what the variant "files" leaves in OPFS: the spectral libraries the user saved
+  const KEEP_OPFS = ["librerie"];
   const KEEP_IDB = ["mzlab-libs", "mzlab-libdir"];                    // ... and their databases
   const KNOWN_IDB = ["qqq_lab", "mzlab-libs", "mzlab-libdir"];
   // "cold" (the desktop app, first page of a new run): the files and the session like "files", plus the working state kept in localStorage (map, peak and list
   // choices, sidebar layout...); what the user set on purpose stays: language, theme and settings, reading aids, the update notice, library settings, seen hints
   const KEEP_LS = /^(mzlab\.lang|qqq-theme|qqq\.(prefs|a11y|set\.a11y|upd\.|reset\.note|lib\.|tour\.|telefono|logo\.))/;
-  const RUN_KEY = "qqq.run";                                          // sessionStorage: present while this run of the app lives (a reload keeps it, a new start does not)
+  // sessionStorage: present while this run of the app lives (a reload keeps it, a new start does not)
+  const RUN_KEY = "qqq.run";
   const MODES = { 1: "all", all: "all", files: "files", cold: "cold" };
   const modeOf = q => MODES[q] || null;
 
@@ -32,7 +34,8 @@
     for (const n of names) {
       if (mode !== "all" && KEEP_IDB.includes(n)) continue;
       const ok = await wait(delDb(n), 3000);
-      (ok ? rep.idb : rep.blocked).push(n);                           // blocked: another connection is open; the deletion is queued and finishes when the page reloads
+      // blocked: another connection is open; the deletion is queued and finishes when the page reloads
+      (ok ? rep.idb : rep.blocked).push(n);
     }
   }
   async function caches_(mode, rep) {
@@ -43,8 +46,10 @@
   }
   async function wipe(mode = "all") {
     const rep = { mode, opfs: [], idb: [], blocked: [], caches: [], sw: 0, keys: 0, errors: /** @type {string[]} */ ([]) };
-    try { if (window.qqEngineStop) window.qqEngineStop(); } catch (e) { /* no engine */ }              // the engine worker holds sync handles on the files: it must go first
-    if (!window.QQQ_BROWSER) await wait(fetch("api/new", { method: "POST", body: JSON.stringify({ fresh: true }) }));      // the development server keeps the session in memory
+    // the engine worker holds sync handles on the files: it must go first
+    try { if (window.qqEngineStop) window.qqEngineStop(); } catch (e) { /* no engine */ }
+    // the development server keeps the session in memory
+    if (!window.QQQ_BROWSER) await wait(fetch("api/new", { method: "POST", body: JSON.stringify({ fresh: true }) }));
     if (navigator.storage && /** @type {any} */ (navigator.storage).getDirectory) await wait(opfs(mode, rep));
     if (window.indexedDB) await wait(idb(mode, rep), 12000);
     if (window.caches) await wait(caches_(mode, rep));
@@ -97,7 +102,8 @@
     n.innerHTML = `<span>${I18N.t("reset.note")}</span><button type="button" data-n="reset">${I18N.t("reset.note.btn")}</button><button type="button" data-n="x" aria-label="${I18N.t("reset.note.close")}">×</button>`;
     n.addEventListener("click", e => { const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("button[data-n]")); if (!b) return; if (b.dataset.n === "reset") ask(); n.remove(); });
     document.body.appendChild(n);
-    if (window.avvisoAuto) avvisoAuto(n, { x: false });                       // goes away by itself after 20 s (the timer waits while the pointer or the focus is on it)
+    // goes away by itself after 20 s (the timer waits while the pointer or the focus is on it)
+    if (window.avvisoAuto) avvisoAuto(n, { x: false });
   }
   // the desktop app calls this once at start (desktop-shim.js): the first page of a new run starts clean; a reload of the page in the same run keeps everything.
   // Without sessionStorage nothing is reset (it could never be told apart from a reload).

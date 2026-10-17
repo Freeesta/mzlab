@@ -1,10 +1,11 @@
-//! The verdict of one ion (`isf.py::classify_report`): probabilities that it is inherited from the parent (in-source fragment, isotope,
+//! The verdict of one ion (`classify_report` of mzFinder): probabilities that it is inherited from the parent (in-source fragment, isotope,
 //! adduct, other) or a true transformation product, the evidence behind them, the doubtful cases with their reason and a readable explanation.
 //! MS2 and DP-ramp evidence enter as log-odds with heuristic weights, flagged `calibrated: false`. Texts in English, identical to the Python.
 
 use super::isf::{fdef, features, nn, predict_logit, sigmoid, sub, truthy, NAMES};
 use super::isf_split::split_inherited;
 use super::isf_text::{english, evidence_value, LABELS};
+use crate::sortc::SortC;
 use mzlab_core::json::Value;
 use mzlab_core::jsonb::{num, text, Obj};
 use mzlab_core::stats::wspearman;
@@ -25,7 +26,7 @@ fn ramp_spearman(r: &Ramp) -> Option<f64> {
     if pts.len() < 3 {
         return None;
     }
-    pts.sort_by(|a, b| a.0.total_cmp(&b.0));
+    pts.sortc_by(|a, b| a.0.total_cmp(&b.0));
     let (d, v): (Vec<f64>, Vec<f64>) = pts.into_iter().unzip();
     Some(wspearman(&d, &v, None)).filter(|s| s.is_finite())
 }

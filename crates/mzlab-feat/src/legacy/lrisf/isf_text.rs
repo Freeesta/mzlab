@@ -1,4 +1,4 @@
-//! Python's number formats and the texts of the verdict (`isf.py::TEXT`, the evidence values, `_english`).
+//! Python's number formats and the texts of the verdict (`TEXT`, the evidence values, `_english`).
 
 use super::isf::{fnum, nn, sub, truthy};
 use mzlab_core::json::Value;

@@ -27,7 +27,8 @@ const SUGG = (() => {
    *  @returns {boolean} true when the hint is on screen now */
   function chiedi(id, mostra, attesa = 0) {
     const gia = coda.find(r => r.id === id);
-    if (gia) { gia.mostra = mostra; return false; }       // asked again (the page calls it after every layout): it keeps its place and its delay
+    // asked again (the page calls it after every layout): it keeps its place and its delay
+    if (gia) { gia.mostra = mostra; return false; }
     if (!attesa && !aperto() && !coda.length && mostra()) return true;
     coda.push({ id, mostra, fine: Date.now() + TENUTA, dopo: Date.now() + attesa });
     if (!timer) timer = window.setTimeout(giro, 1000);

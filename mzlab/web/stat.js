@@ -9,7 +9,8 @@ const STAT = (() => {
   const t = k => I18N.t(k);
   const isHr = () => !!(window.HR && typeof BANCO !== "undefined" && BANCO.on());
   const add = s => { if (!secs.some(x => x.id === s.id)) secs.push(s); };
-  const open = {};                               // sections the user closed: they stay closed while the panel is painted again
+  // sections the user closed: they stay closed while the panel is painted again
+  const open = {};
   function mount(box) {
     const live = secs.filter(s => (!s.hr || isHr()) && (!s.visible || s.visible()));
     box.innerHTML = live.map(s => `<details class="stat-sec" data-s="${s.id}"${open[s.id] === false ? "" : " open"}><summary>${t(s.title)}</summary><div id="stat-${s.id}"></div></details>`).join("");

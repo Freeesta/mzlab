@@ -77,13 +77,13 @@ try:
             t = pg.inner_text(f".pnl.map .tip"); print("MAP TIP:", t.replace("\n", " | ")); import re; mzv = float(re.search(r"m/z ([0-9.]+)", t).group(1)); assert abs(mzv - 194.5) < 3.5, t   # +-3.5 m/z = about 2 px: the page layout may shift by a sub-pixel
         step("map hover", maphover)
         def mapxic():
-            i = mi(); c = pt(pg, i, 14.33, ymz=194.5); pg.keyboard.down("Shift"); pg.mouse.click(c["px"], c["py"], button="right"); pg.keyboard.up("Shift"); pg.wait_for_timeout(300)   # Maiusc + clic destro = XIC (mappa.js; il clic destro blocca il punto)
+            i = mi(); c = pt(pg, i, 14.33, ymz=194.5); pg.keyboard.down("Shift"); pg.mouse.click(c["px"], c["py"], button="right"); pg.keyboard.up("Shift"); pg.wait_for_timeout(300)   # Shift + right click = XIC (mappa.js; the right click locks the point)
             pg.click("#xic-go"); ready(pg)
             assert pg.evaluate("E.panels.some(p=>p.type==='xic'&&p.traces.length===1&&Math.abs(p.traces[0].mz-194.5)<3.5)")
         step("map Shift + right click -> XIC", mapxic)
         def mapdrag():
             i = mi(); a = pt(pg, i, 14.1, ymz=300); b = pt(pg, i, 14.6, ymz=300)
-            pg.mouse.move(a["px"], a["py"]); pg.keyboard.down("Alt"); pg.mouse.down(); pg.mouse.move(b["px"], b["py"], steps=6); pg.mouse.up(); pg.keyboard.up("Alt"); pg.wait_for_timeout(300)   # Alt + trascina = intervallo (trascinare da solo = zoom)
+            pg.mouse.move(a["px"], a["py"]); pg.keyboard.down("Alt"); pg.mouse.down(); pg.mouse.move(b["px"], b["py"], steps=6); pg.mouse.up(); pg.keyboard.up("Alt"); pg.wait_for_timeout(300)   # Alt + drag = range (plain drag = zoom)
             assert pg.evaluate(f"E.panels[{i}].sel"), "Alt + drag selects an interval"
             pg.mouse.click(b["px"], b["py"], button="right"); pg.wait_for_timeout(300)                      # the right-click menu: with a stretch selected the Spectrum entry is the average
             pg.locator("#ctx div", has_text="Spettro medio").first.click(); pg.wait_for_timeout(2000)

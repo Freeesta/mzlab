@@ -1,7 +1,8 @@
-//! `hr/localize.py::localize`: where on the molecule did the change happen? Maximum likelihood on the shifts of formula between the MS2 of a
+//! `localize`: where on the molecule did the change happen? Maximum likelihood on the shifts of formula between the MS2 of a
 //! product and the fragment library of the parent: a fragment unshifted (U) does not contain the change, a shifted one (S) does; every
 //! candidate site (a set of atoms) is scored on the atom sets the library gives to those fragments.
 
+use crate::sortc::SortC;
 use std::collections::BTreeSet;
 
 use super::library::Library;
@@ -68,7 +69,7 @@ pub fn default_groups(g: &Graph) -> Vec<(String, BTreeSet<usize>)> {
         merged.into_iter().for_each(|s| r.extend(s));
         systems.push(r);
     }
-    systems.sort_by_key(|s| s.first().copied().unwrap_or(0));
+    systems.sortc_by_key(|s| s.first().copied().unwrap_or(0));
     let letter = |k: usize| char::from_u32(65 + k as u32).unwrap_or('?');
     let mut out: Vec<(String, BTreeSet<usize>)> = systems
         .into_iter()
@@ -105,7 +106,7 @@ pub fn describe(atoms: &BTreeSet<usize>, groups: &[(String, BTreeSet<usize>)]) -
             (k > 0).then(|| (k as f64 / g.len() as f64, name.as_str(), k, g.len()))
         })
         .collect();
-    parts.sort_by(|a, b| b.0.total_cmp(&a.0).then(b.2.cmp(&a.2)));
+    parts.sortc_by(|a, b| b.0.total_cmp(&a.0).then(b.2.cmp(&a.2)));
     let s: Vec<String> = parts
         .iter()
         .map(|(_, name, k, n)| format!("{name} ({k}/{n})"))
@@ -318,7 +319,7 @@ fn found(
     let atoms: BTreeSet<usize> = atoms_of(region, n).into_iter().collect();
     let groups = default_groups(&subs.g);
     let mut o: Vec<usize> = (0..ll.len()).collect();
-    o.sort_by(|&a, &b| ll[b].total_cmp(&ll[a]));
+    o.sortc_by(|&a, &b| ll[b].total_cmp(&ll[a]));
     let out_best = (0..ll.len())
         .filter(|&i| !inside[i])
         .map(|i| ll[i])

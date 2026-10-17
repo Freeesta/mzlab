@@ -6,6 +6,7 @@ use super::settings::LIBRARY_CONFLICT_RULES;
 use crate::attributio::campaign::Campaign;
 use crate::attributio::error::{CampaignError, Result};
 use crate::attributio::toml::Value;
+use crate::sortc::SortC;
 
 const KNOWN: [&str; 14] = [
     "spec_sim_min",
@@ -30,7 +31,7 @@ impl AnnotationSettings {
         let t = &c.annotation;
         let mut bad: Vec<&str> = t.keys().filter(|k| !KNOWN.contains(k)).collect();
         if !bad.is_empty() {
-            bad.sort_unstable();
+            bad.sortc();
             return Err(CampaignError::value(format!(
                 "{} [annotation]: unknown keys {}",
                 c.config_name(),

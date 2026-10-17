@@ -96,7 +96,8 @@ header img.logo{cursor:pointer;border-radius:4px}header img.logo:focus-visible{o
     return null;
   }
   function hit() {
-    if (logo.style.opacity === "0") return;                         // the shards are flying: wait for the logo to be whole again
+    // the shards are flying: wait for the logo to be whole again
+    if (logo.style.opacity === "0") return;
     const n = stage + 1;
     if (n >= HITS) { shatter(!root.hasAttribute("data-logo-gold"), flipAdmin()); return; }
     showStage(n); swing();

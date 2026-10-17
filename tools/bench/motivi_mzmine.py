@@ -188,10 +188,10 @@ def _lista_mzmine(fasi: Path, prefisso: str, stems: list[str]) -> list[ListaFile
     return out
 
 
-def corri_nativo(idx: list[str], uscita: Path, ricetta: str) -> None:
+def corri_nativo(idx: list[str], uscita: Path, recipe: str) -> None:
     uscita.mkdir(parents=True, exist_ok=True)
     nativo.costruisci_esempio()
-    subprocess.run([str(nativo.ESEMPIO), str(uscita), *idx, *(["--recipe", ricetta] if ricetta else [])], cwd=ROOT, check=True, capture_output=True)
+    subprocess.run([str(nativo.ESEMPIO), str(uscita), *idx, *(["--recipe", recipe] if recipe else [])], cwd=ROOT, check=True, capture_output=True)
 
 
 def misura(mzml: Path, lavoro: Path, altezza_min: float, solo: list[str] | None = None, ciclo: float | None = None) -> dict:

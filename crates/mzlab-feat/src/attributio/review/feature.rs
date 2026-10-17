@@ -21,6 +21,7 @@ use super::sources::{GnpsHit, SiriusHit};
 use super::structures::{structures_of, Structures};
 use super::tsv::Cell;
 use crate::attributio::annotate::Feature;
+use crate::sortc::SortC;
 use std::collections::HashMap;
 
 /// What the review reads from the outside.
@@ -259,7 +260,7 @@ fn library_refs<R: RawSource, S: Structures>(
         .into_iter()
         .map(|r| (compare(exp, &env.lib.ms2(r), s.tol_da, low, 0.0), r))
         .collect();
-    exact.sort_by(|a, b| {
+    exact.sortc_by(|a, b| {
         b.0.cos_vis
             .total_cmp(&a.0.cos_vis)
             .then(b.0.cos.total_cmp(&a.0.cos))
@@ -280,7 +281,7 @@ fn library_refs<R: RawSource, S: Structures>(
             usi_id: None,
         });
     }
-    refs.sort_by(|a, b| {
+    refs.sortc_by(|a, b| {
         let key = |x: &RefIn| {
             let r = x.lib.expect("library reference");
             (
@@ -317,7 +318,7 @@ fn library_refs<R: RawSource, S: Structures>(
             },
         ));
     }
-    analogs.sort_by(|a, b| b.0.total_cmp(&a.0).then(b.1.total_cmp(&a.1)));
+    analogs.sortc_by(|a, b| b.0.total_cmp(&a.0).then(b.1.total_cmp(&a.1)));
     refs.extend(analogs.into_iter().take(s.top_n as usize).map(|a| a.2));
     refs
 }
@@ -475,7 +476,7 @@ fn finish_refs<R: RawSource, S: Structures>(
             let rp = rprec.unwrap_or(prec);
             let keep = page_peaks(&m.mz, &m.it, rp, 0.01);
             let mut o = keep;
-            o.sort_by(|&a, &b| m.mz[a].total_cmp(&m.mz[b]));
+            o.sortc_by(|&a, &b| m.mz[a].total_cmp(&m.mz[b]));
             let q = quantised(
                 &o.iter().map(|&i| m.mz[i]).collect::<Vec<_>>(),
                 &o.iter().map(|&i| m.it[i]).collect::<Vec<_>>(),
@@ -510,7 +511,7 @@ fn finish_refs<R: RawSource, S: Structures>(
         seen.push(k);
         new
     });
-    out.sort_by(|a, b| {
+    out.sortc_by(|a, b| {
         let ka = (a.r.kind != "exact", -a.r.cos_vis.unwrap_or(-1.0), !a.r.same);
         let kb = (b.r.kind != "exact", -b.r.cos_vis.unwrap_or(-1.0), !b.r.same);
         ka.0.cmp(&kb.0)

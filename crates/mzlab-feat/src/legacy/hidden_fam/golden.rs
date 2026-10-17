@@ -1,4 +1,4 @@
-//! `hr/filters.py::isf_hidden` against the golden file of the reference (`tests/golden/finder_funzioni.json`).
+//! `isf_hidden` against the golden file of the reference (`tests/golden/finder_funzioni.json`).
 
 use super::*;
 
@@ -19,7 +19,7 @@ fn tr(area: f64, height: f64, apex: usize) -> Trace {
     Trace { area, height, apex }
 }
 
-/// `hr/filters.py::isf_hidden` on the cases of `tests/golden/finder_funzioni.json`: the verdict follows the ratio test or the shift of the apex.
+/// `isf_hidden` on the cases of `tests/golden/finder_funzioni.json`: the verdict follows the ratio test or the shift of the apex.
 #[test]
 fn the_verdict_matches_the_python_reference() {
     let g: serde_json::Value = serde_json::from_str(include_str!(

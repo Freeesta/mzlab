@@ -3,7 +3,8 @@
 // «Formule compatibili»: elemental composition of an ion from its exact m/z (server: mzlab/chem/composition.py, /api/composition). High-resolution world only.
 // The answer is a list of CANDIDATES with their errors and checks, never an identification. Classic script, loaded after hr.js.
 const COMP = (() => {
-  const KEY = "qqq.comp";                                           // saved presets of the elements in use (localStorage, this browser only)
+  // saved presets of the elements in use (localStorage, this browser only)
+  const KEY = "qqq.comp";
   const P_CHNO = "C H N O S P", BUILTIN = { [I18N.t("comp.preset.organic")]: "C:0-60,H:0-120,N:0-10,O:0-12", [P_CHNO]: "C:0-60,H:0-120,N:0-10,O:0-12,S:0-3,P:0-3",
     [I18N.t("comp.preset.halogens")]: "C:0-60,H:0-120,N:0-10,O:0-12,S:0-3,P:0-3,F:0-6,Cl:0-3,Br:0-2" };
   const IONS = [["[M+H]+", "[M+H]⁺"], ["[M+NH4]+", "[M+NH₄]⁺"], ["[M+Na]+", "[M+Na]⁺"], ["[M+K]+", "[M+K]⁺"], ["[M]+", I18N.t("comp.ion.plus")], ["M+.", I18N.t("comp.ion.radical")],
@@ -116,7 +117,8 @@ const COMP = (() => {
       $("#cmp-load").onclick = () => { $("#cmp-els").value = presets[$("#cmp-pre").value] || $("#cmp-els").value; $("#cmp-els").dispatchEvent(new Event("input")); };
       $("#cmp-save").onclick = async () => { const n = await ask(I18N.t("comp.presetName"), ""); if (!n) return; const s = rd(); s.presets = { ...(s.presets || {}), [n]: $("#cmp-els").value }; wr(s); toast(I18N.t("comp.saved")); };
       if (window.ELEM) { ELEM.bindEls($("#cmp-elt"), $("#cmp-els")); ELEM.bindPeriodic($("#cmp-ptb"), $("#cmp-els")); }
-      $("#cmp-rep").onchange = () => { if ($("#cmp-rep").checked) { $("#cmp-els").value = presets[P_CHNO]; $("#cmp-els").dispatchEvent(new Event("input")); } };      // «representative elements»: the usual set of organic molecules
+      // «representative elements»: the usual set of organic molecules
+      $("#cmp-rep").onchange = () => { if ($("#cmp-rep").checked) { $("#cmp-els").value = presets[P_CHNO]; $("#cmp-els").dispatchEvent(new Event("input")); } };
       const go = async () => {
         const rules = [...document.querySelectorAll("#bigbody [data-r]")].filter(x => x.checked).map(x => x.dataset.r);
         const q = { mz: num($("#cmp-mz").value), ion: $("#cmp-ion").value, tol: num($("#cmp-tol").value) ?? 5, unit: $("#cmp-unit").value, max: parseInt($("#cmp-max").value) || 10,

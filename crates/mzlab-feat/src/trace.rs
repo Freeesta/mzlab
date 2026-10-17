@@ -1,4 +1,4 @@
-//! Ion traces of the MS1 peaks of one file and polarity: port of `TP_Mine/py/tpmine/hr/features.py::detect`.
+//! Ion traces of the MS1 peaks of one file and polarity: the `detect` of mzFinder.
 //!
 //! Log-ppm channels on two shifted grids; (channel, scan) cells; a segment is a run of scans in one channel with gaps <= `max_gap`.
 //! Segments of neighbouring channels that cover the same scans are stitched, the two grids are merged and the Fourier-transform side

@@ -1,6 +1,7 @@
 //! The JSON of the MSn tree as mzFinder gives it: `MsnTree.summary()`, `engine._tree_summary` (`msn_tree`, `tree` of the run), the calibration,
 //! `fragtree._hr_msn` (`frag_tree`), `fragtree.compare_hr` (`frag_tree_compare`) and the localisation of the detail.
 
+use crate::sortc::SortC;
 use mzlab_core::json::{round, Out};
 
 use super::library::Library;
@@ -159,7 +160,7 @@ pub fn tree_summary(t: &MsnTree) -> String {
             .raw(if n.ghost { "true" } else { "false" });
         o.raw(",\"ce\":").opt(n.ce).raw(",\"peaks\":[");
         let mut ps: Vec<&Peak> = n.peaks.iter().collect();
-        ps.sort_by(|a, b| b.rel.total_cmp(&a.rel));
+        ps.sortc_by(|a, b| b.rel.total_cmp(&a.rel));
         for (j, p) in ps.iter().take(8).enumerate() {
             o.raw(if j > 0 { ",{\"mz\":" } else { "{\"mz\":" })
                 .num(round(p.mz, 4))
@@ -207,7 +208,7 @@ pub fn library(l: &Library) -> String {
         .num(e.mz)
         .raw(",\"source\":[");
         let mut s = e.source.clone();
-        s.sort_unstable();
+        s.sortc();
         for (j, x) in s.iter().enumerate() {
             o.raw(if j > 0 { "," } else { "" }).str(x);
         }

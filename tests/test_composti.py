@@ -1,4 +1,3 @@
-# TPMINE-PRIVATE
 """The curated list of known compounds (TP_Mine/data/composti.csv) is well formed and in the size budget."""
 import csv
 import re
@@ -6,7 +5,7 @@ from pathlib import Path
 
 from mzlab.chem import elements as E
 
-CSV = Path(__file__).resolve().parents[1] / "data" / "composti.csv"
+CSV = Path(__file__).resolve().parents[1] / "TP_Mine" / "data" / "composti.csv"
 ROWS = list(csv.DictReader(open(CSV, encoding="utf-8", newline="")))
 
 
@@ -38,7 +37,7 @@ def test_known_compounds_are_there():
 def test_forbidden_names_are_not_in_the_list():
     import os
     nomi = []
-    for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), str(Path(__file__).resolve().parents[3] / "mzlab-dati")):
+    for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), str(Path(__file__).resolve().parents[2] / "mzlab-dati")):
         f = Path(c) / "nomi_vietati.txt" if c else None
         if f and f.is_file():
             nomi += [n.strip().lower() for n in f.read_text(encoding="utf-8").splitlines() if n.strip() and not n.startswith("#")]

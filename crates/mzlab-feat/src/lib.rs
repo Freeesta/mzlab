@@ -1,5 +1,5 @@
 //! Feature detection of mzLab: ion traces of the MS1 peaks of one file, in slabs of m/z read from the `.mzidx`.
-//! `trace::detect` is the port of `TP_Mine/py/tpmine/hr/features.py::detect`; `table::FileFeatures` is its result.
+//! `trace::detect` is the detection of mzFinder; `table::FileFeatures` is its result.
 //! `family::build_families` joins isotopologues, adducts and in-source fragments of the same ion into families.
 //! `pipeline::analyse` adds the quality of every peak (`quality`), the isotopologues (`isotopes`) and the MS2 with purity (`ms2`).
 

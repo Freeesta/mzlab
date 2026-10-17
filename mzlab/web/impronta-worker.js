@@ -12,7 +12,8 @@ onmessage = async ev => {
   if (m.op === "module") { ready = (m.module ? init({ module_or_path: m.module }) : init()); return; }
   let broken = false;
   try { await ready; } catch (_) { broken = true; }
-  if (broken) { if (m.op === "upd") postMessage({ op: "ack", id: m.id }); else if (m.op === "end") postMessage({ op: "fine", id: m.id, out: null }); return; }       // no engine here: the page takes the fingerprints later
+  // no engine here: the page takes the fingerprints later
+  if (broken) { if (m.op === "upd") postMessage({ op: "ack", id: m.id }); else if (m.op === "end") postMessage({ op: "fine", id: m.id, out: null }); return; }
   try {
     if (m.op === "new") passate.set(m.id, new Passata(m.size));
     else if (m.op === "upd") { passate.get(m.id)?.aggiorna(m.b); postMessage({ op: "ack", id: m.id }); }
@@ -21,7 +22,8 @@ onmessage = async ev => {
       const out = p ? p.fine() : null;                  // `fine` consumes the object: nothing to free
       postMessage({ op: "fine", id: m.id, out: out ? Array.from(out) : null });
     }
-  } catch (_) {                                          // the page takes the fingerprints later; never leave the copy waiting
+  // the page takes the fingerprints later; never leave the copy waiting
+  } catch (_) {
     if (m.op === "upd") postMessage({ op: "ack", id: m.id }); else if (m.op === "end") postMessage({ op: "fine", id: m.id, out: null });
   }
 };

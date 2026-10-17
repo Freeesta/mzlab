@@ -1,6 +1,7 @@
-//! The ion forms of each polarity, the relations between two ions and the shape of two profiles (`hr/identity.py`), and `polarity_pairs`.
+//! The ion forms of each polarity, the relations between two ions and the shape of two profiles, and `polarity_pairs`.
 
 use super::*;
+use crate::sortc::SortC;
 
 /// The adducts of the neutral M: (name, m/z shift, multiplier, base ion), `FORMS[pol]`.
 pub(super) type Form = (&'static str, f64, f64, bool);
@@ -69,7 +70,7 @@ pub(super) fn shifts(t: &Iimn, f: &[Form], pol: i32) -> Vec<f64> {
         out.push(v);
         out.push(-v);
     }
-    out.sort_by(f64::total_cmp);
+    out.sortc_by(f64::total_cmp);
     out.dedup();
     out
 }
@@ -157,7 +158,7 @@ pub fn polarity_pairs(payload_json: &str) -> Res<String> {
             rows.push(((num(fe, "mz") - sh) / mult, name, fe));
         }
     }
-    rows.sort_by(|a, b| a.0.total_cmp(&b.0));
+    rows.sortc_by(|a, b| a.0.total_cmp(&b.0));
     let mut out: Vec<(&Value, f64, Out)> = Vec::new();
     for fe in &pos {
         for name in ["[M+H]+", "[M+Na]+", "[M+NH4]+"] {
@@ -191,7 +192,7 @@ pub fn polarity_pairs(payload_json: &str) -> Res<String> {
             }
         }
     }
-    out.sort_by(|a, b| cmp_value(a.0, b.0).then(a.1.total_cmp(&b.1)));
+    out.sortc_by(|a, b| cmp_value(a.0, b.0).then(a.1.total_cmp(&b.1)));
     let mut o = Out::default();
     o.raw("[");
     for (k, x) in out.iter().enumerate() {

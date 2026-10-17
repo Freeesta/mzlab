@@ -7,9 +7,11 @@
 const LIVELLI = (() => {
   const D = (typeof window !== "undefined" ? window : globalThis).LIVELLI_DATI;
   const KEY = "qqq.lib.soglie", ORDER = D.livelli;
-  const LEGACY = { ent: "entropia_min", shared: "picchi_min", ppm: "precursore_ppm_max", ent2: "entropia_provvisorio" };      // the keys of the first version of the thresholds
+  // the keys of the first version of the thresholds
+  const LEGACY = { ent: "entropia_min", shared: "picchi_min", ppm: "precursore_ppm_max", ent2: "entropia_provvisorio" };
   const t = (k, p) => (typeof I18N !== "undefined" ? I18N.t(k, p) : k);
-  const read = () => { if (typeof lsObj === "function") return lsObj(KEY); try { const o = JSON.parse(localStorage.getItem(KEY) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } };   // lsObj lives in i18n.js (not loaded under node)
+  // lsObj lives in i18n.js (not loaded under node)
+  const read = () => { if (typeof lsObj === "function") return lsObj(KEY); try { const o = JSON.parse(localStorage.getItem(KEY) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } };
   const write = o => { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* not available */ } };
 
   // ------------------------------------------------------------ profiles and thresholds
@@ -27,8 +29,10 @@ const LIVELLI = (() => {
     st[n] = { ...(st[n] || {}), [key]: v }; write(st); return true;
   }
   function reset() { write({}); }
-  const exportState = () => ({ formato: D.formato, profilo: profileName(), soglie: thresholds() });          // what the workflow file keeps
-  function importState(o) {                            // accepts the first format ({ent, shared, ppm, ent2}) and this one
+  // what the workflow file keeps
+  const exportState = () => ({ formato: D.formato, profilo: profileName(), soglie: thresholds() });
+  // accepts the first format ({ent, shared, ppm, ent2}) and this one
+  function importState(o) {
     if (!o || typeof o !== "object") return;
     if (o.formato === D.formato && o.soglie) { const n = D.profili[o.profilo] ? o.profilo : D.predefinito; write({ profilo: n, [n]: o.soglie }); }
     else write(o);
@@ -47,9 +51,11 @@ const LIVELLI = (() => {
     const txt = `${label} ${inf ? "∞" : num(v, dm)} vs ${num(thr, dm)}${unit} ${ok ? "✓" : "✗"}`;
     return { id: g.id, ruolo: g.ruolo || "", value: known ? v : null, thr, op: g.op, unit: g.unita || "", ok, txt };
   }
-  const ikKey = c => { const k = String(c.ik || "").slice(0, 14).toUpperCase(); return k || ("n:" + String(c.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "")); };      // first InChIKey block (or the name)
+  // first InChIKey block (or the name)
+  const ikKey = c => { const k = String(c.ik || "").slice(0, 14).toUpperCase(); return k || ("n:" + String(c.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "")); };
   function ranked(cands, field) { return [...(cands || [])].filter(c => c && c[field] != null).sort((a, b) => b[field] - a[field]); }
-  function marginOf(list, field) {                     // lead of the first candidate over the first one with another structure (∞ when there is none)
+  // lead of the first candidate over the first one with another structure (∞ when there is none)
+  function marginOf(list, field) {
     if (!list.length) return null; const k = ikKey(list[0]), o = list.find(c => ikKey(c) !== k);
     return o ? list[0][field] - o[field] : Infinity;
   }
@@ -96,9 +102,11 @@ const LIVELLI = (() => {
     if (lv === "1" && !res.std) return { ok: false, msg: t("lv.refuse.1") };
     res.decided = lv; return { ok: true };
   }
-  const shown = res => res.decided || res.proposed;                 // the level written in the lists: the decision when there is one
+  // the level written in the lists: the decision when there is one
+  const shown = res => res.decided || res.proposed;
   const cls = lv => "lv-" + String(lv);
-  const tag = lv => "L" + String(lv);                              // the label of the Schymanski scale (L2a, L3b): never the bare digit, which would be confused with the prediction scale «Prev. N»
+  // the label of the Schymanski scale (L2a, L3b): never the bare digit, which would be confused with the prediction scale «Prev. N»
+  const tag = lv => "L" + String(lv);
   const name = lv => t(`lv.name.${lv}`);
   const sentence = lv => t("lv.sentence", { lv: tag(lv), name: name(lv) });  // «Candidate · level 2a», never «it is X»
   const rank = lv => ORDER.indexOf(lv);

@@ -11,7 +11,8 @@ const PCA = (() => {
   const t = (k, p) => I18N.t(k, p);
   const eh = s => EH(s == null ? "" : s);
   let st = { min: 1000, k: 2, transform: "log", scaling: "pareto" };
-  let res = null, sel = null;                                  // res: {r, feats, names, files, groups}; sel: index (in r.features) of the feature chosen
+  // res: {r, feats, names, files, groups}; sel: index (in r.features) of the feature chosen
+  let res = null, sel = null;
   Object.assign(st, lsObj(KEY));
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
   const fmt = (v, d = 3) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
@@ -70,7 +71,8 @@ const PCA = (() => {
     const xs = r.scores.map(q => q[0]), ys = r.scores.map(q => q[1]);
     const f = frame(xs, ys, axisLabel(r, 0), axisLabel(r, 1));
     let s = `<svg class="pca-plot" id="pca-scores" viewBox="0 0 ${W} ${H}" role="img" aria-label="${eh(t("pca.scores.aria", { x: pct(r.explained[0]) + " %", y: pct(r.explained[1]) + " %" }))}">${f.s}`;
-    Object.entries(r.ellipses).forEach(([g, e]) => {                  // 95 % ellipse of a group of replicates, drawn through the data-to-pixel map
+    // 95 % ellipse of a group of replicates, drawn through the data-to-pixel map
+    Object.entries(r.ellipses).forEach(([g, e]) => {
       const o = gs.find(q => q.g === g); if (!o) return;
       const pts = Array.from({ length: 61 }, (_, i) => { const th = i / 60 * 2 * Math.PI, u = e.a * Math.cos(th), v = e.b * Math.sin(th);
         return [f.X(e.cx + u * Math.cos(e.angle) - v * Math.sin(e.angle)), f.Y(e.cy + u * Math.sin(e.angle) + v * Math.cos(e.angle))]; });
@@ -149,7 +151,8 @@ const PCA = (() => {
     else { const np = addPanel("xic", { traces: [ht] }); np.pcaIon = true; reveal(np); }
   }
   let curBox = null;
-  document.addEventListener("tabella", () => { res = null; sel = null; const r = curBox && curBox.querySelector("#pca-res"); if (r) r.innerHTML = ""; });      // another table: the old result no longer belongs to it
+  // another table: the old result no longer belongs to it
+  document.addEventListener("tabella", () => { res = null; sel = null; const r = curBox && curBox.querySelector("#pca-res"); if (r) r.innerHTML = ""; });
   function select(i, box) {
     sel = i;
     const ft = res.feats[i];
