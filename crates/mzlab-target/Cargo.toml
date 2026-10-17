@@ -9,6 +9,7 @@ license.workspace = true
 crate-type = ["rlib"]
 
 [dependencies]
+mzlab-core = { path = "../mzlab-core" }
 serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]

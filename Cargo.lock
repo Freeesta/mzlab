@@ -2144,6 +2144,7 @@ dependencies = [
 name = "mzlab-target"
 version = "1.0.1"
 dependencies = [
+ "mzlab-core",
  "serde",
 ]
 
