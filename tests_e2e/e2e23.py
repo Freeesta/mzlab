@@ -68,7 +68,7 @@ try:
             assert pg.evaluate("E.panels.filter(q=>q.type==='spec'&&(q.link===%d||q.src===%d)).every(q=>q.bg==='w'&&q.bw0===0.3&&q.bw1===2)" % (cid, cid))
         step("spectrum of the blank stretch subtracted from the linked spectra", spec)
         def reload():
-            pg.evaluate("uiSave(true)"); pg.wait_for_timeout(1500); pg.reload(); pg.wait_for_timeout(5000)
+            saved(pg); pg.reload(); attendi(pg, "typeof E !== 'undefined' && E.panels.some(q => q.tab === 'full' && q.type === 'chrom' && q.fondo)", 90000); ready(pg)
             assert pg.evaluate("(E.panels.find(q=>q.tab==='full'&&q.type==='chrom')||{}).fondo.ib.mode") == "mean"
             pg.locator("#dpanels .pnl >> nth=0 >> [data-o=cinfo]").click(); pg.locator("#dpanels .pnl >> nth=0 >> [data-ib=off]").click(); pg.wait_for_timeout(500)
             assert pg.evaluate("E.panels.find(q=>q.tab==='full'&&q.type==='chrom').fondo.mode") == "none"
