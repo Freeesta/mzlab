@@ -10,11 +10,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
-if not (ROOT / "TP_Mine" / "py").exists():
-    pytest.skip("TP_Mine/py not available", allow_module_level=True)
 import valida_feat as VF  # noqa: E402
 from valida import sintetici_identita as SI  # noqa: E402
-from valida import tabelle as T  # noqa: E402
 from mzlab.chem import elements as E  # noqa: E402
 from mzlab.reader.mzml import Run  # noqa: E402
 
@@ -138,14 +135,6 @@ def test_blank_dark_t0_and_background(serie, verita):
     assert n_scans("SIN_dark.mzML", ioni["SIN-001"]["mz"]) >= n_scans("SIN_t20min.mzML", ioni["SIN-001"]["mz"])      # stable parent in the dark
 
 
-def test_validation_reads_the_series(serie):
-    rep = VF.valida(T.trova_serie(serie), VF.carica_verita(serie / "verita.json"), sensibilita=False, nome="sin")
-    s = rep["tabelle"]["mzFinder riempita"]["tp_veri"]["riassunto"]
-    n = len(json.loads((serie / "verita.json").read_text(encoding="utf-8"))["tps"])
-    assert s["valutabili"] == n and s["trovati"] >= 0.6 * n
-    assert rep["tabelle"]["mzFinder riempita"]["completezza"]["M"]["trovati"] >= 10
-
-
 def test_kinetics_shapes():
     c = SI.costruisci(SEME, "piccolo")
     por = {}
@@ -212,10 +201,3 @@ def test_full_profile_has_the_numbers_of_the_plan():
     for r in rows:
         if r["ruolo"] == "coincidenza":
             assert abs(r["mz"] - float(r["note"].split("ipotesi_mz=")[1].split(";")[0])) / r["mz"] <= 5e-6
-
-
-def test_numbers_script_runs(serie, verita):
-    from valida import sintetici_numeri as SN
-    r = SN.numeri(serie)
-    assert r["per_ruolo"]["progenitore"]["trovate"] == 1 and r["per_ruolo"]["esca"]["con_segnale_a_qualunque_RT"] == 0 and r["candidati"] > 0
-    assert "| tp1 |" in SN.markdown(r)

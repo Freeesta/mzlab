@@ -37,7 +37,7 @@ import numpy as np
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from valida import ROOT                                  # noqa: E402,F401  (puts `mzlab` and `tpmine` on sys.path)
+from valida import ROOT                                  # noqa: E402,F401  (puts `mzlab` on sys.path)
 from valida.isotopologhi import componenti               # noqa: E402
 from valida.sintetici_mzml import ISO_SEMI, scrivi_file  # noqa: E402,F401
 from mzlab.chem import elements as E                     # noqa: E402

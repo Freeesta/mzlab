@@ -28,7 +28,7 @@ try:
         pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
         pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
         def hr():
-            sys.path[:0] = [str(SRC / "tests"), str(SRC / "py"), str(ROOT)]
+            sys.path[:0] = [str(SRC / "tests"), str(ROOT)]
             import lc_synth, msn_synth
             lc_synth.FRAG[lc_synth.HYDROXY] = [(154.0611, 100), (139.0502, 40), (126.0662, 20), (138.0662, 30)]       # the parent's fragments + O
             d = Path(tempfile.mkdtemp()); fs = lc_synth.write_series(d); mf = msn_synth.write_msn(d / "cafe_msn.mzML", msn_synth.caffeine_nodes())

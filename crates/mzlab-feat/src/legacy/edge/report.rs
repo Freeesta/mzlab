@@ -1,4 +1,4 @@
-//! `origin_evidence` (`TP_Mine/py/tpmine/hr/edge_evidence.py::report_evidence`): the evidence, without a label, for the report «where does this ion
+//! `origin_evidence` (`report_evidence` of mzFinder): the evidence, without a label, for the report «where does this ion
 //! come from?» of the HR world. X = the ion, P = the candidate parent; in order the m/z step, the co-elution, the MS2 of the parent, the shared
 //! skeleton, the ratio across the samples and the typical loss of an adduct. Stateless: the report comes in the payload `{report, pol}`.
 

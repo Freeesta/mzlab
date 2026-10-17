@@ -24,8 +24,8 @@ MEASURE = """() => { const f = document.getElementById('tp-files'), c = f.closes
   const nav = document.getElementById('nav'), nd = nav ? nav.style.display : ''; if (nav) nav.style.display = 'none'; const de = document.documentElement; return {pageOver: de.scrollWidth - de.clientWidth, cardR: cr.right, tableR: t.right, filesOver: f.scrollWidth - f.clientWidth,
     cardOver: c.scrollWidth - c.clientWidth, vw: de.clientWidth, rows: f.querySelectorAll('tr').length, _: nav ? (nav.style.display = nd) : 0}; }"""
 try:
-    sys.path[:0] = [str(SRC / "py"), str(ROOT)]
-    from tpmine.demo import make_demo
+    sys.path[:0] = [str(ROOT)]
+    from finder_demo import make_demo
     base = [Path(f["path"]) for f in make_demo(Path(tempfile.mkdtemp()))]
     def mk(n):
         d = Path(tempfile.mkdtemp()); out = []

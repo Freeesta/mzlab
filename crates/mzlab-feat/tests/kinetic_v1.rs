@@ -1,6 +1,6 @@
 //! Kinetic evidence on the synthetic identity series (V1) with known kinetics: right shape above 10 times the noise, generation right or
 //! "undecidable", share of decoys (noise coincidences, random formation rates) with a coherent kinetics, time per 1000 identities.
-//! Areas: `tests/golden/feat/cinetica_v1.json` (`tools/feat_riferimento.py OUT --solo cinetica --golden`). `--nocapture` prints the tables.
+//! Areas: `tests/golden/feat/cinetica_v1.json` (frozen answers of the former Python engine). `--nocapture` prints the tables.
 
 use std::collections::BTreeMap;
 use std::time::Instant;

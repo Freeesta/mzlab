@@ -1,5 +1,5 @@
-//! The list of transformations the user edits in mzFinder (`tpmine.chem.parse_transformations`) and its rows as extra rules of the hypotheses (L5): the changes
-//! of formula that `hr/network.py::transformation_table` adds to the known ones and the `lit:` comments of `hr/rules.py::literature`. `merge` returns the rules
+//! The list of transformations the user edits in mzFinder (`parse_transformations` of mzFinder) and its rows as extra rules of the hypotheses (L5): the changes
+//! of formula that `transformation_table` adds to the known ones and the `lit:` comments of `literature`. `merge` returns the rules
 //! file with the new rows appended (a change that a rule already has is not added twice; a `lit:` comment turns the rule of that change into a literature rule).
 //! The error texts are those of the Python.
 
@@ -19,7 +19,7 @@ pub struct Row {
     pub comment: String,
 }
 
-/// `tpmine.chem.parse_delta`: '+O', '-H2', '-Cl+H', '+C2H4O' -> signed counts (what is not a sign followed by letters and digits is skipped).
+/// `parse_delta` of mzFinder: '+O', '-H2', '-Cl+H', '+C2H4O' -> signed counts (what is not a sign followed by letters and digits is skipped).
 pub fn parse_delta(text: &str) -> Res<Delta> {
     let mut c: Vec<char> = text.chars().filter(|&c| c != ' ').collect();
     if c.first().is_some_and(|&x| x != '+' && x != '-') {

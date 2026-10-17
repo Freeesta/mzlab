@@ -1,4 +1,4 @@
-//! The evidence features and the logistic model of the in-source-fragment classifier (`TP_Mine/py/tpmine/isf.py::features`, `predict_logit`,
+//! The evidence features and the logistic model of the in-source-fragment classifier (`features`, `predict_logit`,
 //! `_sigmoid`; the parameters of `isf_model.MODEL`, fitted offline, are constants here). A missing feature contributes nothing.
 
 use mzlab_core::json::Value;

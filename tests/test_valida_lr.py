@@ -1,5 +1,5 @@
 """The low-resolution criteria (tools/valida/lr*.py): each criterion on data built here, once passing and once failing, the tolerances, and a run of the
-native pipeline on the synthetic series (lr_synth full scan, six-level MRM). The run needs cargo and TP_Mine/py; real data are never read."""
+native pipeline on the synthetic series (lr_synth full scan, six-level MRM). The run needs cargo; real data are never read."""
 import shutil
 import sys
 from pathlib import Path
@@ -9,9 +9,6 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
-if not (ROOT / "TP_Mine" / "py").exists():
-    pytest.skip("TP_Mine/py not available", allow_module_level=True)
-sys.path.insert(0, str(ROOT / "TP_Mine" / "py"))
 from valida import lr  # noqa: E402
 from valida import lr_criteri as C  # noqa: E402
 

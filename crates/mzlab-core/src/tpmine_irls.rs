@@ -1,5 +1,5 @@
 //! Regularised L2 logistic regression via IRLS for in-source fragmentation (ISF).
-//! Port of `fit_logistic` and `predict_logit` from `TP_Mine/py/tpmine/isf.py`.
+//! The `fit_logistic` and `predict_logit` of the in-source-fragment classifier of mzFinder.
 
 /// Fitted L2-regularised logistic regression model.
 #[derive(Debug, Clone, PartialEq)]

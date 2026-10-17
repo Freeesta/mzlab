@@ -1,5 +1,5 @@
 //! The criteria of a low-resolution ion on the cells of its row: a peak in the treated samples, absent in the blank and at time zero, growth
-//! over time (Spearman rank correlation up to the maximum and rise), then score and label as `score.py` names them (`forte`, `possibile`,
+//! over time (Spearman rank correlation up to the maximum and rise), then score and label as mzFinder names them (`forte`, `possibile`,
 //! `debole`). The peaks are those of the pipeline (state of the cell), not a second peak search.
 
 use super::super::series::FileIn;
