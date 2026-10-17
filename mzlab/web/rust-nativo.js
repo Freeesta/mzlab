@@ -3,6 +3,7 @@
 // are kept in OPFS `files/` under flat names; a sample is a «file» of the program called `x.mzML` whose bytes are a small JSON (the stub: which members, which sample), so the list of the
 // files, the index (`idx/x.mzML.mzidx`) and the removal work as for any mzML. The engine reads the members through their offsets (crates/mzlab-wasm/src/nativi.rs).
 import { putChunks, ensureRoom } from "./archivio.js";
+import { openSource } from "./lettura-sync.js";
 import { rawSink } from "./rust-opfs.js";
 import { W } from "./nativo-fasi.js";
 import { createEsterno } from "./lettore-esterno.js";
@@ -29,8 +30,8 @@ export function prints(/** @type {StubMember[]} */ members) {
 }
 
 /** `read(member, offset, length)` over some Files, as nativi.rs wants it; `seen(i, end)` is told how far each member was read */
-export function reader(/** @type {Blob[]} */ files, /** @type {((i: number, end: number) => void) | undefined} */ seen) {
-  const fr = new FileReaderSync(), rd = files.map(f => (/** @type {number} */ o, /** @type {number} */ n) => new Uint8Array(fr.readAsArrayBuffer(f.slice(o, o + n))));
+export function reader(/** @type {Blob[]} */ files, /** @type {((i: number, end: number) => void) | undefined} */ seen, /** @type {import("./lettura-sync.js").Fonte[] | undefined} */ fonti = undefined) {
+  const fr = new FileReaderSync(), rd = fonti ? fonti.map(f => f.read) : files.map(f => (/** @type {number} */ o, /** @type {number} */ n) => new Uint8Array(fr.readAsArrayBuffer(f.slice(o, o + n))));
   return (/** @type {number} */ i, /** @type {number} */ o, /** @type {number} */ n) => { const b = rd[i](o, n); if (seen) seen(i, o + b.length); return b; };
 }
 
@@ -52,11 +53,15 @@ export async function buildNative(/** @type {Function} */ build_mzidx_native, /*
     const t = performance.now(); if (!force && t - last < TICK) return; last = t;
     progress({ frac: Math.min(0.999, base() + w[phase] * within()), phase: SHOWN[phase], done: phase === "scans" ? done - from : 0, total: phase === "scans" ? total : 0 });
   };
-  const rd = reader(j.files, (i, end) => { if (end > high[i]) high[i] = end; tell(false); });
-  const stats = build_mzidx_native(j.st.members.map(x => x.name), Float64Array.from(sizes), rd, j.st.c, name, j.st.centroid, write, budget,
-    (/** @type {number} */ p) => { phase = PHASES[p] || phase; high.fill(0); from = done; tell(true); }, given, put, get, writeCen,
-    (/** @type {number} */ d, /** @type {number} */ n) => { done = d; total = n; tell(false); });
-  return stats;
+  // the members are read from their copies in OPFS through read-only handles (a Blob where there is none), closed when the build ends
+  const fonti = await Promise.all(j.files.map((f, i) => openSource("files", j.st.members[i].store, f)));
+  const rd = reader(j.files, (i, end) => { if (end > high[i]) high[i] = end; tell(false); }, fonti);
+  try {
+    const stats = build_mzidx_native(j.st.members.map(x => x.name), Float64Array.from(sizes), rd, j.st.c, name, j.st.centroid, write, budget,
+      (/** @type {number} */ p) => { phase = PHASES[p] || phase; high.fill(0); from = done; tell(true); }, given, put, get, writeCen,
+      (/** @type {number} */ d, /** @type {number} */ n) => { done = d; total = n; tell(false); });
+    return stats;
+  } finally { fonti.forEach(f => f.close()); }
 }
 /** the SRM traces of a sample (`srm::impacchetta` bytes; mzFinder integrates the MRM files from them, no mzML is written): `native_srm` gives the bytes once to its sink @param {Stub} st @param {(st: Stub) => Promise<Blob[]>} memberFiles @param {Function} native_srm @param {{ prepara: (names: string[], known?: StubMember[]) => Promise<void> }} ext */
 async function srmDi(st, memberFiles, native_srm, ext) {
