@@ -585,7 +585,7 @@
         running = false; setBusy(false); reattAuto("tpsDone");
       } catch (e) {
         reattAuto("tpsEnd");
-        if (window.TPLIVE) TPLIVE.stop(false);
+        if (window.TPLIVE) TPLIVE.stop(false, cancelling ? null : String(e.message || e));      // a failed Dig keeps its panel with the error and «Copy diagnosis»
         if (cancelling) {        // cancelled by the user: the panel goes back to the previous results (or the invitation) and the files stay
           if (st.summary) render(); else if (st.hs) window.TPHR.render($("#tp-right"), st.hs, { esc, fmtA, chart, hue, call, callRaw, toast, dl }); else $("#tp-right").innerHTML = prevHtml;
           msg("Cancelled."); $("#tp-bar").style.width = "0"; $("#tp-go").focus();
