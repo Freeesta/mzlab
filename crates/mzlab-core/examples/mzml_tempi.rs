@@ -1,7 +1,7 @@
 //! Times the load of an mzML (scan table, fingerprints, `.mzidx`) and its writing, with no real file.
 //! `cargo run --release --example mzml_tempi -p mzlab-core -- genera OUT.mzML [SCANS] [PEAKS_PER_SCAN]` writes a synthetic mzML (made-up reader of
 //! `tests/lettore_finto`, timed); `cargo run --release --example mzml_tempi -p mzlab-core -- FILE.mzML [BUDGET_MB]` times, on any mzML, the
-//! scan table (`upload::prepare`), pass-by-pass `.mzidx` (`mzidx::build_mzml`) and the plain parse (`mzml::parse`).
+//! scan table (`upload::prepare`, and `upload::prepare_parallelo` with the fingerprints on a second thread), pass-by-pass `.mzidx` (`mzidx::build_mzml`) and the plain parse (`mzml::parse`).
 #[path = "../tests/lettore_finto/mod.rs"]
 mod finto;
 
@@ -22,20 +22,7 @@ impl mzidx::Output for Nulla {
 fn main() {
     let a: Vec<String> = std::env::args().skip(1).collect();
     if a.first().map(String::as_str) == Some("genera") {
-        let out = a.get(1).expect("usage: genera OUT.mzML [SCANS] [PEAKS]");
-        let n: usize = a.get(2).and_then(|s| s.parse().ok()).unwrap_or(20000);
-        let peaks: usize = a.get(3).and_then(|s| s.parse().ok()).unwrap_or(2000);
-        let mut l = finto::Finto::vario(n, peaks, 12345);
-        let t = Instant::now();
-        let w = BufWriter::new(File::create(out).expect("create"));
-        lettori_mzml::scrivi(&mut l, 0, w, &mut |_, _| {}).expect("write");
-        let size = std::fs::metadata(out).map(|m| m.len()).unwrap_or(0);
-        println!(
-            "write {n} scans: {:.2} s, {:.1} MB",
-            t.elapsed().as_secs_f64(),
-            size as f64 / 1e6
-        );
-        return;
+        return genera(&a);
     }
     let path = a.first().expect("usage: mzml_tempi FILE.mzML [BUDGET_MB]");
     let budget: usize = a.get(1).and_then(|s| s.parse().ok()).unwrap_or(192);
@@ -60,6 +47,19 @@ fn main() {
         "prepare (table+prints)  {:>8.3} s ({} scans)",
         t.elapsed().as_secs_f64(),
         p.table.level.len()
+    );
+    let t = Instant::now();
+    let p2 = upload::prepare_parallelo(
+        &mut File::open(path).expect("open"),
+        File::open(path).expect("open"),
+        size,
+        "x.mzML",
+    )
+    .expect("prepare");
+    assert_eq!(p2.sha256, p.sha256);
+    println!(
+        "prepare (prints apart)  {:>8.3} s",
+        t.elapsed().as_secs_f64()
     );
     // without a spool every round decodes the file again; with a spool (a scratch file next to the mzML) it is decoded once
     for con in [false, true] {
@@ -93,4 +93,21 @@ fn main() {
         );
         let _ = std::fs::remove_file(&spool_path);
     }
+}
+
+/// `genera OUT.mzML [SCANS] [PEAKS]`: writes a synthetic mzML to time.
+fn genera(a: &[String]) {
+    let out = a.get(1).expect("usage: genera OUT.mzML [SCANS] [PEAKS]");
+    let n: usize = a.get(2).and_then(|s| s.parse().ok()).unwrap_or(20000);
+    let peaks: usize = a.get(3).and_then(|s| s.parse().ok()).unwrap_or(2000);
+    let mut l = finto::Finto::vario(n, peaks, 12345);
+    let t = Instant::now();
+    let w = BufWriter::new(File::create(out).expect("create"));
+    lettori_mzml::scrivi(&mut l, 0, w, &mut |_, _| {}).expect("write");
+    let size = std::fs::metadata(out).map(|m| m.len()).unwrap_or(0);
+    println!(
+        "write {n} scans: {:.2} s, {:.1} MB",
+        t.elapsed().as_secs_f64(),
+        size as f64 / 1e6
+    );
 }

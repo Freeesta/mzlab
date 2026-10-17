@@ -116,7 +116,7 @@ impl State {
     pub fn build_index(&self, id: u32, name: &str, body: &[u8]) -> Result<String> {
         let p = self.picked(id)?;
         let table = crate::idxbuild::decode_inputs(body)?;
-        let st = self.indexer()?.build(&p.path, name, &table)?;
+        let st = self.indexer()?.build(&p.path, name, Some(&table))?;
         Ok(format!(
             "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"size\":{}}}",
             st.scans, st.peaks, st.sections, st.passes, st.bytes

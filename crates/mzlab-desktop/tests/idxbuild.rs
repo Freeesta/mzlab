@@ -155,6 +155,12 @@ fn native_index_is_identical_to_the_python_one_and_files_build_in_parallel() {
             .exists(),
         "no half-written file stays"
     );
+    let left: Vec<_> = std::fs::read_dir(dir.join("cache"))
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_name().to_string_lossy().ends_with(".sp.part"))
+        .collect();
+    assert!(left.is_empty(), "no scratch file stays: {left:?}");
     handle(&state, "idx/remove", &format!("name={some}.mzML"));
     assert!(!dir
         .join("cache")

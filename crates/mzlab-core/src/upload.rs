@@ -126,11 +126,34 @@ pub fn prepare_con<R: ReadAt>(
             (sha256, probe)
         }
     };
+    Ok(da_tabella_mzml(&t, name, size, sha256, probe))
+}
+
+/// Native only: `prepare` with the fingerprints taken by a second thread (`r2`, a second reader of the same file) while the scan table is read.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn prepare_parallelo<R: ReadAt, R2: ReadAt + Send>(
+    r: &mut R,
+    mut r2: R2,
+    size: u64,
+    name: &str,
+) -> Result<Prepared> {
+    std::thread::scope(|s| {
+        let h = s.spawn(move || fingerprint(&mut r2, size, Passata::senza_sha1(size)));
+        let t = scantable::read(&mut Windowed::new(r, size), size);
+        let prints = h
+            .join()
+            .unwrap_or_else(|_| Err(Error::new("err.file.unknown")));
+        let (sha256, _, probe) = prints?;
+        Ok(da_tabella_mzml(&t?, name, size, sha256, probe))
+    })
+}
+
+fn da_tabella_mzml(t: &Table, name: &str, size: u64, sha256: String, probe: String) -> Prepared {
     let mut source = Out::default();
     source_head(&mut source, name, size, &probe, &sha256);
     source.raw("}");
     let scans_json = t.rows_json().into_bytes();
-    Ok(prepared(&t, scans_json, source.0, sha256, probe))
+    prepared(t, scans_json, source.0, sha256, probe)
 }
 
 /// The opening of the `source` object, up to `sha256`.

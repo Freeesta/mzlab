@@ -169,6 +169,9 @@ trait Sect {
     /// Bytes per peak while a round holds it.
     fn cost(&self, b: usize) -> usize;
     fn begin_round(&mut self, lo: usize, hi: usize) -> Result<()>;
+    /// The round is filled from the scratch file: its partitions come one after the other, so a peak whose bucket changed by the 32-bit rounding can
+    /// come before the peaks of earlier scans; equal m/z are then ordered by scan, as a round filled in scan order has them.
+    fn per_scansione(&mut self);
     fn fill(&mut self, sp: &Spectrum, pos: u32) -> Result<()>;
     /// The same for one peak (a peak read back from the scratch file).
     fn fill_pk(&mut self, mz: f64, it: f64, pos: u32) -> Result<()>;
@@ -195,7 +198,7 @@ struct Sec<T: Num> {
     counts: Vec<u32>,
     before: Vec<u64>,
     n: u64,
-    /// The round holds peaks of more than one group (`carica`): equal m/z are then ordered by scan.
+    /// Equal m/z are ordered by scan: the round holds peaks of more than one group (`carica`) or comes from the scratch file (`per_scansione`).
     per_scansione: bool,
     // round state
     lo: usize,
@@ -323,6 +326,10 @@ impl<T: Num> Sect for Sec<T> {
         self.round.resize(at, Peak::default());
         self.done = self.before[lo];
         Ok(())
+    }
+
+    fn per_scansione(&mut self) {
+        self.per_scansione = true;
     }
 
     fn fill(&mut self, sp: &Spectrum, pos: u32) -> Result<()> {
@@ -772,6 +779,7 @@ pub(crate) fn build_dopo(
                 let mut failure: Option<Error> = None;
                 if let (Some(p), Some(sp)) = (parti.as_ref(), spill.as_deref_mut()) {
                     // the peaks are in the scratch file: no decoding
+                    secs.iter_mut().for_each(|s| s.per_scansione());
                     leggi_parti(p, sp, lo, hi, &mut |mz, it, pos| {
                         for &(si, q) in &member[pos as usize] {
                             secs[si].fill_pk(mz, it, q)?;
