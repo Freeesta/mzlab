@@ -443,3 +443,48 @@ def test_service_worker_activation_cleanup():
     res = run_node_esm(code)
     assert res["deleted"] == ["mzlab-app-old", "qqq-app-v1", "qqq-big-v1"]
     assert res["remaining"] == ["mzlab-app-current", "mzlab-big-current"]
+
+
+def test_copy_store_no_premature_write_transaction():
+    uri = (WEB / "qqq-db.js").as_uri()
+    code = f"""
+    import {{ copyStore }} from {uri!r};
+
+{MOCK_IDB_SETUP}
+    let writeTxOpened = false;
+    let cursorFinished = false;
+    let writeTxBeforeCursorDone = false;
+
+    const origTx = newDb.transaction.bind(newDb);
+    newDb.transaction = (sName, mode) => {{
+      if (mode === "readwrite") {{
+        writeTxOpened = true;
+        if (!cursorFinished) writeTxBeforeCursorDone = true;
+      }}
+      return origTx(sName, mode);
+    }};
+
+    const store = oldDb.stores.get("kv");
+    const origCursor = store.openCursor.bind(store);
+    store.openCursor = () => {{
+      const req = origCursor();
+      let userSuccess = null;
+      Object.defineProperty(req, "onsuccess", {{
+        get: () => userSuccess,
+        set: fn => {{
+          userSuccess = () => {{
+            if (!req.result) cursorFinished = true;
+            if (fn) fn();
+          }};
+        }}
+      }});
+      return req;
+    }};
+
+    await copyStore(oldDb, newDb, "kv");
+    console.log(JSON.stringify({{ writeTxOpened, writeTxBeforeCursorDone }}));
+    """
+    res = run_node_esm(code)
+    assert res["writeTxOpened"] is True
+    assert res["writeTxBeforeCursorDone"] is False
+

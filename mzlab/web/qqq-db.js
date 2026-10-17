@@ -62,24 +62,37 @@ export function copyStore(oldDb, newDb, storeName) {
   return new Promise((resolve, reject) => {
     try {
       const oldTx = oldDb.transaction(storeName, "readonly");
-      const newTx = newDb.transaction(storeName, "readwrite");
       const oldStore = oldTx.objectStore(storeName);
-      const newStore = newTx.objectStore(storeName);
       const isKeyPath = !!oldStore.keyPath;
+      /** @type {any[]} */
+      const entries = [];
 
       const req = oldStore.openCursor();
       req.onsuccess = () => {
-        const cursor = req.result;
-        if (cursor) {
-          if (isKeyPath) newStore.put(cursor.value);
-          else newStore.put(cursor.value, cursor.key);
-          cursor.continue();
+        try {
+          const cursor = req.result;
+          if (cursor) {
+            entries.push(isKeyPath ? cursor.value : [cursor.value, cursor.key]);
+            cursor.continue();
+          } else {
+            if (entries.length === 0) return resolve(true);
+            const newTx = newDb.transaction(storeName, "readwrite");
+            const newStore = newTx.objectStore(storeName);
+            for (const item of entries) {
+              if (isKeyPath) newStore.put(item);
+              else newStore.put(item[0], item[1]);
+            }
+            newTx.oncomplete = () => resolve(true);
+            newTx.onerror = () => reject(newTx.error);
+            newTx.onabort = () => reject(newTx.error);
+          }
+        } catch (err) {
+          reject(err);
         }
       };
       req.onerror = () => reject(req.error);
-      newTx.oncomplete = () => resolve(true);
-      newTx.onerror = () => reject(newTx.error);
-      newTx.onabort = () => reject(newTx.error);
+      oldTx.onerror = () => reject(oldTx.error);
+      oldTx.onabort = () => reject(oldTx.error);
     } catch (e) {
       reject(e);
     }
@@ -107,6 +120,7 @@ export function putKv(db, key, val) {
       tx.objectStore("kv").put(val, key);
       tx.oncomplete = () => resolve(true);
       tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
     } catch (e) {
       reject(e);
     }
