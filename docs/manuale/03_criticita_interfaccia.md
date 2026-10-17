@@ -6,50 +6,64 @@ software spettrometrici desktop.
 
 ---
 
-## 1. Gestione dei Formati Proprietari (.raw, .wiff) e Conversione
+## 1. Gestione dei Formati Proprietari (.raw, .wiff, .D) e Lettori Nativi Rust
 
-Uno dei primi ostacoli per gli studenti riguarda il caricamento diretto dei file
-generati dagli spettrometri di laboratorio (Thermo, Sciex, Agilent, Waters).
+Uno degli aspetti più avanzati di mzLab è la capacità di elaborare direttamente
+all'interno del browser i formati di dati prodotti dai principali strumenti di
+laboratorio, senza richiedere l'installazione di software commerciale né la
+preventiva conversione manuale su computer Windows.
 
-### 1.1 Perché il Browser Non Legge Direttamente Tutti i File Proprietari?
-Gli spettrometri commerciali salvano i dati in formati binari proprietari
-(ad esempio i file `.raw` di Thermo Fisher o i file `.wiff` di Sciex).
-I costruttori forniscono librerie di decodifica (*RAWFileReader*, *WiffReader*)
-che sono librerie dinamiche Windows closed-source (DLL a 64 bit per ambiente
-.NET).
+### 1.1 Come mzLab Legge i Formati Proprietari nel Browser
+I formati generati dai costruttori (ad es. i file `.raw` di Thermo Fisher, `.wiff`
+di SCIEX, le cartelle `.D` di Agilent o `.raw` di Waters MassLynx) sono tradizionalmente
+vincolati a librerie dinamiche Windows proprietarie (DLL closed-source).
 
-Poiché mzLab viene eseguito interamente all'interno della sandbox di sicurezza
-del browser web (su qualsiasi sistema operativo: macOS, Windows, Linux, tablet)
-senza componenti nativi installati, **non è consentito al browser caricare DLL
-di sistema**.
+mzLab supera questo vincolo grazie a lettori dedicati sviluppati in linguaggio
+Rust e compilati in WebAssembly (WASM). Questi moduli vengono eseguiti direttamente
+all'interno del browser dell'utente (su qualsiasi sistema operativo: macOS, Linux,
+Windows, iPadOS) sfruttando Web Workers dedicati:
+- **Nessuna installazione locale:** non occorre installare driver, runtime .NET o DLL.
+- **Privacy e sicurezza totale:** l'elaborazione avviene interamente sul dispositivo
+  dello studente, senza inviare dati o spettri a server remoti.
+- **Caricamento modulare e leggero:** il modulo WASM di uno specifico costruttore
+  viene scaricato e attivato in memoria solo quando lo studente trascina un file
+  di quella famiglia.
 
-### 1.2 Eccezione Integrata: File .wiff del 3200 QTRAP
-mzLab include un lettore WebAssembly specializzato per i file generati dallo
-spettrometro Sciex 3200 QTRAP. Affinché il caricamento avvenga con successo,
-è indispensabile trascinare **contemporaneamente entrambi i file** associati
-alla corsa:
-- Il file principale con estensione `.wiff`
-- Il file gemello con estensione `.wiff.scan` (avente lo stesso identico nome base)
+### 1.2 Formati Supportati Nativamente e Modalità di Caricamento
+1. **Thermo Fisher `.raw`:**
+   - I file `.raw` (Thermo Orbitrap, Q-Exactive, TSQ, LTQ, ecc.) vengono letti
+     nativamente dal lettore Rust di mzLab. È sufficiente trascinare il file
+     `.raw` nella zona di caricamento.
+2. **SCIEX `.wiff` (3200 QTRAP, serie QTRAP, TripleTOF):**
+   - mzLab legge nativamente le acquisizioni SCIEX. Affinché il caricamento avvenga
+     con successo, è indispensabile selezionare o trascinare **contemporaneamente
+     entrambi i file** della corsa:
+     * Il file descrittore principale con estensione `.wiff`
+     * Il file binario delle scansioni con estensione `.wiff.scan` (con il medesimo nome)
+3. **Agilent `.D` (LC/MS e GC/MS):**
+   - Le acquisizioni Agilent sono organizzate come cartelle con estensione `.D`
+     (contenenti file di parametri e dati binari).
+   - Possono essere caricate trascinando l'intera cartella `.D` oppure facendo clic
+     sul pulsante **«Apri cartella»** (icona cartella accanto a «1. File dei dati»).
+4. **Waters MassLynx `.raw`:**
+   - I dati Waters MassLynx sono salvati in cartelle con estensione `.raw`.
+   - Vengono letti nativamente trascinando o selezionando l'intera cartella di corsa.
+5. **Bruker e Shimadzu:**
+   - mzLab supporta inoltre le cartelle Bruker `.d` (formati TDF, TSF, BAF) e i file
+     Shimadzu (`.qgd` e `.lcd`) tramite i rispettivi lettori WebAssembly.
 
-Se viene trascinato solo il file `.wiff` senza il relativo `.wiff.scan`, il
-programma segnalerà che la scansione binaria è incompleta.
+### 1.3 Quando Può Servire MSConvert (ProteoWizard)?
+I lettori Rust/WASM integrati in mzLab gestiscono direttamente la stragrande
+maggioranza delle corse analitiche di laboratorio.
+Il ricorso al programma esterno gratuito **ProteoWizard MSConvert** (disponibile
+per Windows) resta utile solo come soluzione alternativa nei seguenti casi specifici:
+- File generati da strumenti molto datati o con opzioni di acquisizione non standard;
+- File proprietari con indici interni danneggiati o corruzioni binarie;
+- Necessità di applicare filtri di pre-elaborazione particolari prima dell'apertura
+  (es. algoritmi di centroidazione proprietari non simulabili in ambiente standard).
 
-### 1.3 Conversione Tramite MSConvert (ProteoWizard)
-Per tutti gli altri strumenti (es. Thermo Q-Exactive, Orbitrap, strumenti
-Agilent o Waters), i dati devono essere preventivamente convertiti nel formato
-standard aperto `.mzML` utilizzando il software libero **ProteoWizard MSConvert**
-(disponibile per Windows).
-
-**Parametri consigliati per MSConvert:**
-1. *Output format:* **mzML**.
-2. *Binary encoding precision:* **64-bit** per $m/z$ e **32-bit** per l'intensità.
-3. *Compression:* spuntare **zlib compression** (riduce le dimensioni del file
-   fino al 70%).
-4. *Filters (Filtri):*
-   - Per studi didattici sui profili continui e larghezza picco: lasciare in
-     formato profilo (*profile mode*).
-   - Per file molto pesanti o algoritmi di estrazione veloci: aggiungere il
-     filtro `Peak Picking` (selezionando `Vendor` per `msLevel = 1-`).
+In tali casi, la conversione consigliata è in formato standard aperto `.mzML` a
+64-bit per $m/z$, 32-bit per l'intensità e compressione zlib abilitata.
 
 ---
 
@@ -159,9 +173,9 @@ File System*).
 
 ### 5.1 Come Funziona l'OPFS
 L'OPFS è un file system isolato e sandboxato all'interno del browser dell'utente.
-Quando si carica un file `.mzML`:
-1. Il file originale viene copiato nello storage privato del browser.
-2. Un processo Web Worker in background crea un indice binario (`.mzidx`) per
+Quando si carica una corsa analitica (in formato aperto o proprietario):
+1. I dati originali o indicizzati vengono memorizzati nello storage privato del browser.
+2. Un processo Web Worker in background crea o gestisce l'indice binario (`.mzidx`) per
    accesso rapido casuale.
 3. Ricaricando la pagina web o riaprendola il giorno successivo, **i file e la
    sessione di lavoro rimangono memorizzati nel browser** e non devono essere
