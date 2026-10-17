@@ -1,7 +1,7 @@
 // High-resolution mass spectrometry (HRMS) target screening calculation core.
 "use strict";
 
-const LISTE_TARGET_CORE = (() => {
+const LISTE_TARGET_CORE = (function() {
   const ADDUCT_DELTAS = {
     "[M+H]+": 1.007276,
     "[M+Na]+": 22.989218,
