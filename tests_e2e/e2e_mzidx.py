@@ -14,9 +14,9 @@ def step(name, fn):
 
 LIST = """async (kind) => { const out = []; try { const r = await navigator.storage.getDirectory(); const d = await (await r.getDirectoryHandle('mzlab')).getDirectoryHandle(kind);
   for await (const [n, h] of d.entries()) { if (n.endsWith('.part')) continue; try { out.push([n, (await h.getFile()).size]); } catch (e) { /* being written */ } } } catch (e) {} return out; }"""
-IDBCOUNT = """() => new Promise(res => { const r = indexedDB.open('qqq_lab'); r.onsuccess = () => { const db = r.result;
+IDBCOUNT = """() => new Promise(res => { const dbName = typeof NOMI !== 'undefined' ? NOMI.DB : 'mzlab_lab'; const r = indexedDB.open(dbName); r.onsuccess = () => { const db = r.result;
   if (!db.objectStoreNames.contains('files')) return res(-1); const q = db.transaction('files').objectStore('files').count(); q.onsuccess = () => { db.close(); res(q.result); }; }; r.onerror = () => res(-2); })"""
-NOTEBOOK = """() => new Promise(res => { const r = indexedDB.open('qqq_lab'); r.onsuccess = () => { const db = r.result; const q = db.transaction('kv').objectStore('kv').get('notebook');
+NOTEBOOK = """() => new Promise(res => { const dbName = typeof NOMI !== 'undefined' ? NOMI.DB : 'mzlab_lab'; const r = indexedDB.open(dbName); r.onsuccess = () => { const db = r.result; const q = db.transaction('kv').objectStore('kv').get('notebook');
   q.onsuccess = () => { db.close(); res(String(q.result || '')); }; }; r.onerror = () => res(''); })"""
 FILES = [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")]
 
@@ -41,8 +41,8 @@ try:
             got = pg.evaluate(LIST, "idx"); assert len(got) == 3 and all(n.endswith(".mzML.mzidx") for n, _ in got), got
         step("the .mzidx of each file appears in OPFS right after the upload", indexes)
         def manifest():
-            # the manifest of qqq_lab has a row for every file of OPFS (kept up to date by the archive) and kv.schema says the data are at the current schema
-            m = pg.evaluate("""async () => { const db = await new Promise((ok, no) => { const r = indexedDB.open("qqq_lab"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+            # the manifest of the database has a row for every file of OPFS (kept up to date by the archive) and kv.schema says the data are at the current schema
+            m = pg.evaluate("""async () => { const dbName = typeof NOMI !== 'undefined' ? NOMI.DB : 'mzlab_lab'; const db = await new Promise((ok, no) => { const r = indexedDB.open(dbName); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
               const all = s => new Promise(ok => { const r = db.transaction(s).objectStore(s).getAll(); r.onsuccess = () => ok(r.result); });
               const kv = await new Promise(ok => { const r = db.transaction("kv").objectStore("kv").get("schema"); r.onsuccess = () => ok(r.result); });
               const rows = await all("manifest"); db.close(); return { kv, paths: rows.map(x => x.path).sort(), tipi: [...new Set(rows.map(x => x.tipo))].sort(), idx: rows.filter(x => x.path.startsWith("idx/")).map(x => [x.versione_formato, !!x.crate, !!x.sorgente_sha256]) }; }""")
@@ -101,7 +101,7 @@ try:
         # what the old versions did: the files in the IndexedDB store «files» and nothing in OPFS
         TO_IDB = """async () => { const root = await navigator.storage.getDirectory(), top = await root.getDirectoryHandle('mzlab'), d = await top.getDirectoryHandle('files'), put = [];
           for await (const [n, h] of d.entries()) put.push([n, await (await h.getFile()).arrayBuffer()]);
-          const db = await new Promise((res, rej) => { const r = indexedDB.open('qqq_lab'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+          const db = await new Promise((res, rej) => { const dbName = typeof NOMI !== 'undefined' ? NOMI.DB : 'mzlab_lab'; const r = indexedDB.open(dbName); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
           await new Promise(res => { const t = db.transaction('files', 'readwrite'); for (const [n, b] of put) t.objectStore('files').put(b, n); t.oncomplete = () => res(); });
           db.close(); await top.removeEntry('files', { recursive: true }); await top.removeEntry('idx', { recursive: true }); return put.length; }"""
         def old_way():

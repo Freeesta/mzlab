@@ -43,8 +43,8 @@ time.sleep(1); errs = []; reqs = []
 SHAS = """async () => { const out = {}; try { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('idx');
   for await (const [n, h] of d.entries()) { if (n.endsWith('.part')) continue; const b = await (await h.getFile()).arrayBuffer();
     out[n] = [...new Uint8Array(await crypto.subtle.digest('SHA-256', b))].map(x => x.toString(16).padStart(2, '0')).join(''); } } catch (e) {} return out; }"""
-# the files of an older visit: the bytes in the object store «files» of qqq_lab
-TO_IDB = """async (list) => { const db = await new Promise((res, rej) => { const q = indexedDB.open('qqq_lab'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+# the files of an older visit: the bytes in the object store «files» of the database
+TO_IDB = """async (list) => { const dbName = typeof NOMI !== 'undefined' ? NOMI.DB : 'mzlab_lab'; const db = await new Promise((res, rej) => { const q = indexedDB.open(dbName); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
   const bufs = []; for (const u of list) bufs.push([u.split('/').pop(), await (await fetch(u)).arrayBuffer()]);
   await new Promise((res, rej) => { const tx = db.transaction('files', 'readwrite'), s = tx.objectStore('files'); for (const [n, b] of bufs) s.put(b, n); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); db.close(); }"""
 TABLE = "[...document.querySelectorAll('#hr-t tr.clk')].map(r => r.textContent.replace(/\\s+/g, ' ').trim())"
