@@ -94,45 +94,6 @@ impl Cand {
             _ => 5,
         }
     }
-
-    /// Does the MS2 confirm the transformation? At least `MIN_SHIFTED` peaks moved by the mass difference (shifted fragments or common neutral
-    /// losses) carrying at least `MIN_SHIFTED_COS` of the cosine, and the ion not present in the reference samples. A cleavage has no single
-    /// mass difference.
-    pub fn confirmation(&self) -> (bool, String) {
-        if self
-            .hyp
-            .as_ref()
-            .is_some_and(|h| h.label.starts_with("rottura"))
-        {
-            return (false, "a cleavage has no single mass difference".into());
-        }
-        let Some(m) = &self.ms2 else {
-            return (false, "no MS2 for this ion".into());
-        };
-        let (n, share) = (m.sim.n[1] + m.sim.n[2], m.sim.cos[1] + m.sim.cos[2]);
-        if n < MIN_SHIFTED || share < MIN_SHIFTED_COS {
-            return (
-                false,
-                format!("{n} shifted fragments, {share:.2} of the cosine: not enough"),
-            );
-        }
-        if self.kin.as_ref().is_some_and(|k| !k.1) {
-            return (false, "present in the reference samples".into());
-        }
-        (
-            true,
-            format!(
-                "{n} fragments shifted by {:+.4} (share of the cosine {share:.2})",
-                m.sim.delta
-            ),
-        )
-    }
-
-    /// Prediction level (1 = strongest): the weakest step of the derivation, raised to 1 when the data confirm it; `None` without a rule.
-    pub fn pred(&self) -> Option<u8> {
-        let h = self.hyp.as_ref().filter(|h| (1..=4).contains(&h.level))?;
-        Some(if self.confirmation().0 { 1 } else { h.level })
-    }
 }
 
 /// The whole Dig, kept for `detail` and the inclusion list.
@@ -378,6 +339,8 @@ pub(super) fn candidate(
 }
 
 mod attach;
+mod pred;
+use super::hidden::Inputs;
 use attach::attach_ms2;
 
 /// The inputs of a Dig on a series already through the pipeline.
@@ -418,11 +381,7 @@ pub fn dig<R: ReadAt>(s: Series, mut open: impl FnMut(usize) -> Res<Index<R>>) -
     let mut ix = (0..t.n_files).map(&mut open).collect::<Res<Vec<_>>>()?;
     let parent_ms2 = attach_ms2(&mut ix, t, &s.parent, prow, &mut cands)?;
     if let (Some(p), Some(m)) = (prow, &parent_ms2) {
-        let inp = super::hidden::Inputs {
-            files: &s.files,
-            parent: &s.parent,
-            hyps: &s.hyps,
-        };
+        let inp = Inputs::new(&s.files, &s.parent, &s.hyps);
         super::hidden::add(t, &inp, p, &m.mz, &w, &mut cands);
     }
     let mut warnings = Vec::new();

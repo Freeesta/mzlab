@@ -118,6 +118,16 @@ pub(super) struct Inputs<'a> {
     pub hyps: &'a HashMap<u32, Hyp>,
 }
 
+impl<'a> Inputs<'a> {
+    pub fn new(files: &'a [FileIn], parent: &'a Parent, hyps: &'a HashMap<u32, Hyp>) -> Self {
+        Inputs {
+            files,
+            parent,
+            hyps,
+        }
+    }
+}
+
 /// Appends the hidden products: rows of the table that sit at the RT of the parent, at the mass of a fragment of its MS2 (`fragments`), that are not
 /// candidates already and whose ratio to the parent rises with the treatment.
 pub(super) fn add(
