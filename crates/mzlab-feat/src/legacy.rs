@@ -8,6 +8,7 @@ pub mod formula;
 #[cfg(feature = "chem")]
 pub mod fragtree;
 pub mod hidden;
+mod hidden_fam;
 pub mod identity;
 pub mod kinetics;
 pub mod lr;
@@ -16,6 +17,7 @@ pub mod ms2;
 #[cfg(feature = "chem")]
 pub mod msn;
 pub mod network;
+mod network_pred;
 pub mod out;
 pub mod progress;
 pub mod sample;
