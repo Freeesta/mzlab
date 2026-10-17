@@ -32,6 +32,7 @@ fn cats(root: &El) -> Vec<Cat> {
                 .map(|t| {
                     let rows: Vec<Vec<String>> = t
                         .findall("row")
+                        .chain(t.findall("Row"))
                         .map(|r| {
                             (1..=8)
                                 .filter_map(|i| {
@@ -43,7 +44,7 @@ fn cats(root: &El) -> Vec<Cat> {
                         .collect();
                     (
                         t.findtext("Name").unwrap_or("").trim().to_string(),
-                        rows.into_iter().skip(1).filter(|r| !r.is_empty()).collect(),
+                        rows.into_iter().filter(|r| !r.is_empty()).collect(),
                     )
                 })
                 .collect();
@@ -67,7 +68,7 @@ fn acquity_lc(cats: &[Cat]) -> Option<Lc> {
         .rev()
         .find(|t| t.0 == "Gradient Table")?;
     let mut grad = Vec::new();
-    for r in &gt.1 {
+    for r in gt.1.iter().skip(1) {
         if r.len() < 4 {
             continue;
         }
@@ -149,12 +150,21 @@ pub(super) fn lc(ole: &Ole, base: &str) -> Option<Lc> {
     let b = find(&raw, 0, raw.len(), end)?;
     let root = xmltree::parse(&String::from_utf8_lossy(raw.get(a..b + end.len())?))?;
     let cats = cats(&root);
-    if let Some(acq) = acquity_lc(&cats) {
-        return Some(acq);
-    }
+    acquity_lc(&cats).or_else(|| shimadzu_lc(&cats))
+}
+
+fn shimadzu_lc(cats: &[Cat]) -> Option<Lc> {
     let cat = |title: &str| cats.iter().rev().find(|c| c.0 == title);
-    let par = |title: &str, name: &str| cat(title).and_then(|c| c.1.iter().rev().find(|p| p.0 == name)).map(|p| p.1 .0.as_str()).unwrap_or("");
-    let (flow0, b0) = (num(par("Pumps", "Total Flow")), num(par("Pumps", "B Concentration")));
+    let par = |title: &str, name: &str| {
+        cat(title)
+            .and_then(|c| c.1.iter().rev().find(|p| p.0 == name))
+            .map(|p| p.1 .0.as_str())
+            .unwrap_or("")
+    };
+    let (flow0, b0) = (
+        num(par("Pumps", "Total Flow")),
+        num(par("Pumps", "B Concentration")),
+    );
     let tp = cat("System Controller")
         .and_then(|c| c.2.iter().rev().find(|t| t.0 == "Time Program"))
         .map(|t| t.1.iter().skip(1).cloned().collect::<Vec<_>>())
@@ -167,7 +177,11 @@ pub(super) fn lc(ole: &Ole, base: &str) -> Option<Lc> {
     crate::sortc::any_by(&mut events, |a, b| a.0.total_cmp(&b.0));
     let (mut grad, mut flow, mut bconc, mut stop) = (Vec::new(), flow0, b0, None);
     if b0.is_some() {
-        grad.push(GPoint { t: 0.0, b: b0, flow });
+        grad.push(GPoint {
+            t: 0.0,
+            b: b0,
+            flow,
+        });
     }
     for (t, name, val) in events {
         match (name.as_str(), val) {
@@ -190,7 +204,13 @@ pub(super) fn lc(ole: &Ole, base: &str) -> Option<Lc> {
     let pv = |k: &str| par("PDA Detector", k);
     let channels = cat("PDA Detector")
         .and_then(|c| c.2.iter().rev().find(|t| t.0 == "DA Channel Array"))
-        .map(|t| t.1.iter().skip(1).filter(|r| r.len() >= 2).filter_map(|r| num(&r[0]).map(|w| (w, num(&r[1])))).collect())
+        .map(|t| {
+            t.1.iter()
+                .skip(1)
+                .filter(|r| r.len() >= 2)
+                .filter_map(|r| num(&r[0]).map(|w| (w, num(&r[1]))))
+                .collect()
+        })
         .unwrap_or_default();
     Some(Lc {
         gradient: grad,

@@ -222,34 +222,21 @@ fn spectrum_tic_invariant_and_auxiliary_device_logs() {
         assert!(checked >= 3, "{name}: verified {checked} samples");
     }
 
-    let p_path = d.join("dati_formati/sciex_wiff/P10201_240814_C1S1_01.wiff");
-    if let Ok(bytes) = std::fs::read(&p_path) {
-        let ole = container(bytes, "P10201").unwrap();
-        let chs = device_channels(&ole, 1);
-        assert_eq!(chs.len(), 2);
-        assert_eq!(
-            (
-                chs[0].name.as_str(),
-                chs[0].unit.as_str(),
-                chs[0].values.len()
-            ),
-            ("Column Pressure", "psi", 301)
-        );
-        assert_eq!(
-            (
-                chs[1].name.as_str(),
-                chs[1].unit.as_str(),
-                chs[1].values.len()
-            ),
-            ("Pump A Flowrate", "", 301)
-        );
+    let p_acq = d.join("dati_formati/sciex_wiff/triplequad5500_mrm_Z14418483/NEG.wiff");
+    if let Ok(bytes) = std::fs::read(&p_acq) {
+        let ole = container(bytes, "NEG.wiff").unwrap();
         let m_acq = method_of_sample(&ole, 1).expect("Waters Acquity method");
         let lc_acq = m_acq.lc.expect("Waters Acquity LC gradient");
-        assert_eq!(lc_acq.flow, Some(0.15));
-        assert_eq!(lc_acq.b0, Some(0.0));
-        assert_eq!(lc_acq.oven, Some(30.0));
-        assert_eq!(lc_acq.run_time, Some(10.0));
-        assert!(lc_acq.gradient.len() >= 4);
+        assert!(lc_acq.flow.is_some());
+        assert!(lc_acq.gradient.len() >= 2);
+    }
+
+    let p_ch = d.join("dati_formati/sciex_wiff/qtrap5500_mrm_PXD001506/Duodenum_MRM_SMB_01.wiff");
+    if let Ok(bytes) = std::fs::read(&p_ch) {
+        let ole = container(bytes, "Duodenum_MRM_SMB_01.wiff").unwrap();
+        let chs = device_channels(&ole, 1);
+        assert!(!chs.is_empty(), "expected auxiliary device channels");
+        assert!(chs.iter().any(|c| !c.values.is_empty()));
     }
 }
 
@@ -312,4 +299,148 @@ fn tof_sciex_os_ida_streams_and_scan_blocks() {
             "scan {i}: mz0={mz0} mzn={mzn}"
         );
     }
+}
+
+fn write_synthetic_ci_wiff(out: &Path) {
+    let script = concat!(
+        "import struct, sys\n",
+        "from pathlib import Path\n",
+        "sys.path.insert(0, str(Path(sys.argv[1]) / 'tools'))\n",
+        "import cfb_scrivi\n",
+        "out = Path(sys.argv[2])\n",
+        "dad_hdr = bytearray(86); struct.pack_into('<I', dad_hdr, 4, 4); struct.pack_into('<II', dad_hdr, 34, 3, 5); struct.pack_into('<ffff', dad_hdr, 46, 0.012, 200.0, 204.0, 1.0)\n",
+        "rows = [[1.0, 2.0, 3.0, 4.0, 5.0], [0.5, 1.5, 2.5, 3.5, 4.5], [2.0, 4.0, 6.0, 8.0, 10.0]]\n",
+        "dad_idx = bytearray(32) + b''.join(struct.pack('<ff', (i+1)*0.004, sum(r)) for i, r in enumerate(rows))\n",
+        "dad_rtd = bytearray(32) + b''.join(struct.pack('<5f', *r) for r in rows)\n",
+        "exp_hdr = bytearray(180); struct.pack_into('<I', exp_hdr, 4, 5); struct.pack_into('<I', exp_hdr, 122, 4); struct.pack_into('<I', exp_hdr, 176, 2)\n",
+        "par = lambda n, v: struct.pack('<H', len(n)*2) + n.encode('utf-16le') + struct.pack('<fff', v, v, 0.0)\n",
+        "ent = lambda q1, q3, dw, lb, dp, ep, cep, ce, cxp: struct.pack('<ffffIH', q1, 0.0, q3, dw, 0, len(lb)*2) + lb.encode('utf-16le') + par('DP', dp) + par('EP', ep) + par('CEP', cep) + par('CE', ce) + par('CXP', cxp)\n",
+        "mrex = bytearray(32) + struct.pack('<II', 2, 5) + ent(364.1, 194.1, 25.0, 'Quant', 50.0, 10.0, 22.11, 20.0, 3.0) + ent(364.1, 152.1, 25.0, 'Qual', 50.0, 10.0, 22.11, 28.0, 4.0)\n",
+        "smrm = bytearray(52); struct.pack_into('<I', smrm, 28, 30); struct.pack_into('<II', smrm, 36, 0, 60); struct.pack_into('<d', smrm, 44, 1.0)\n",
+        "vam_shim = bytearray(612) + b'<?xml version=\"1.0\"?><SCIEX_ANALYST_ACQUISITION_METHOD><Category><Title>Pumps</Title><Parameter><Name>Total Flow</Name><Value>0.25</Value></Parameter><Parameter><Name>B Concentration</Name><Value>5.0</Value></Parameter></Category><Category><Title>Oven</Title><Parameter><Name>Temperature</Name><Value>40.0</Value></Parameter></Category><Category><Title>System Controller</Title><Table><Name>Time Program</Name><row><Field1>Time</Field1><Field2>Module</Field2><Field3>0</Field3><Field4>Parameter</Field4><Field5>Value</Field5></row><row><Field1>10.0</Field1><Field2>Pumps</Field2><Field3>0</Field3><Field4>Pump B Conc.</Field4><Field5>95.0</Field5></row><row><Field1>22.0</Field1><Field2>Controller</Field2><Field3>0</Field3><Field4>Stop</Field4><Field5>0</Field5></row></Table></Category></SCIEX_ANALYST_ACQUISITION_METHOD>'\n",
+        "vam_acq = bytearray(612) + b'<?xml version=\"1.0\"?><SCIEX_ANALYST_ACQUISITION_METHOD><Category><Title>ACQUITY BSM Method</Title><Table><Name>Gradient Table</Name><row><Field1>Time</Field1><Field2>Flow Rate</Field2><Field3>%A</Field3><Field4>%B</Field4></row><row><Field1>Initial</Field1><Field2>0.300</Field2><Field3>90.0</Field3><Field4>10.0</Field4></row><row><Field1>8.00</Field1><Field2>0.300</Field2><Field3>5.0</Field3><Field4>95.0</Field4></row></Table></Category><Category><Title>ACQUITY SM Method</Title><Parameter><Name>Target Column Temperature</Name><Value>35.0</Value></Parameter></Category></SCIEX_ANALYST_ACQUISITION_METHOD>'\n",
+        "step = lambda t, fl, a, b: bytes(36) + struct.pack('<H', 16) + 'New step'.encode('utf-16le') + struct.pack('<fffff', t, fl, 0.0, a, b) + bytes(16)\n",
+        "cn, cu = 'Column Pressure'.encode('utf-16le'), '(psi)'.encode('utf-16le')\n",
+        "ch_s = bytes(36) + struct.pack('<HIH', 1, 1, len(cn)) + cn + struct.pack('<H', len(cu)) + cu + struct.pack('<dHffI', 6.0, 0, 0.0, 5000.0, 0xffffffff)\n",
+        "w2 = bytearray(126); struct.pack_into('<I', w2, 32, 1); struct.pack_into('<H', w2, 52, 56); w2[54:110] = b'01234567-89ab-cdef-0123-456789abcdef_0000000000000001234'\n",
+        "dde = bytearray(32) + struct.pack('<dddHHi', 413.266, 0.0, 1540.0, 1, 0, 0)\n",
+        "tdc = bytearray(72); struct.pack_into('<d', tdc, 32, 1.0 / 38.4)\n",
+        "tcal = bytearray(32) + struct.pack('<ddII', 0.001, 100.0, 0, 1) + struct.pack('<ddI', 0.001, 100.0, 0)\n",
+        "idx1 = bytearray(32) + struct.pack('<IId', 0, 8, 6000.0) + b'\\x01\\x00' + struct.pack('<dd', 1500.0, 0.0) + bytes(20)\n",
+        "tbl = bytearray(32) + b''.join(struct.pack('<II', s, 20) + bytes(8) for s in (1, 2, 3))\n",
+        "cfb_scrivi.write({\n",
+        "  'SampleSubtree/SampleIdxTable': bytes(tbl),\n",
+        "  'SampleSubtree/Sample1/Idx': bytes(idx1),\n",
+        "  'SampleSubtree/Sample1/Devices/Device_1/DAD/DADSampleHeader': bytes(dad_hdr),\n",
+        "  'SampleSubtree/Sample1/Devices/Device_1/DAD/DADIdx': bytes(dad_idx),\n",
+        "  'SampleSubtree/Sample1/Devices/Device_1/DAD/DADRealTimeData': bytes(dad_rtd),\n",
+        "  'SampleSubtree/Sample1/Devices/Device_2/Channel': ch_s,\n",
+        "  'SampleSubtree/Sample1/Devices/Device_2/DevRealTimeHeader': bytes(32) + struct.pack('<I', 3),\n",
+        "  'SampleSubtree/Sample1/Devices/Device_2/DevData': bytes(32) + struct.pack('<3d', 1200.0, 1250.0, 1210.0),\n",
+        "  'SampleSubtree/Sample1/Wiff2SampleInfo': bytes(w2),\n",
+        "  'SampleSubtree/Sample1/DDERealTimeData': bytes(dde),\n",
+        "  'SampleSubtree/Sample1/TDCInfo': bytes(tdc),\n",
+        "  'SampleSubtree/Sample1/TOFCalibrationData': bytes(tcal),\n",
+        "  'SampleSubtree/Sample1/Itc': bytes(32) + struct.pack('<d', 0.5),\n",
+        "  'SampleSubtree/Sample1/TDCStatistics': bytes(32) + struct.pack('<I', 1) + bytes(20),\n",
+        "  'MethodSubtree/Method1/DeviceMethod0/Period0/Experiment0/ExperimentHeader': bytes(exp_hdr),\n",
+        "  'MethodSubtree/Method1/DeviceMethod0/Period0/Experiment0/MassRangeEx/MassRangeEx': bytes(mrex),\n",
+        "  'MethodSubtree/Method1/DeviceMethod0/Period0/Experiment0/sMRM': bytes(smrm),\n",
+        "  'MethodSubtree/Method1/DeviceMethod1/VendorAppMethod': bytes(vam_shim),\n",
+        "  'SampleSubtree/Sample2/Idx': bytes(idx1),\n",
+        "  'MethodSubtree/Method2/DeviceMethod0/Period0/Experiment0/ExperimentHeader': bytes(exp_hdr),\n",
+        "  'MethodSubtree/Method2/DeviceMethod1/VendorAppMethod': bytes(vam_acq),\n",
+        "  'SampleSubtree/Sample3/Idx': bytes(idx1),\n",
+        "  'MethodSubtree/Method3/DeviceMethod0/Period0/Experiment0/ExperimentHeader': bytes(exp_hdr),\n",
+        "  'MethodSubtree/Method3/DeviceMethod1/LCPumpStep0/LCPumpStep': step(0.0, 400.0, 95.0, 5.0),\n",
+        "  'MethodSubtree/Method3/DeviceMethod1/LCPumpStep1/LCPumpStep': step(12.0, 400.0, 10.0, 90.0),\n",
+        "}, out / 'ci.wiff')\n",
+        "(out / 'ci.wiff.scan').write_bytes(bytes(44) + struct.pack('<2f', 1000.0, 500.0))\n",
+    );
+    let st = std::process::Command::new("python3")
+        .arg("-c")
+        .arg(script)
+        .arg(root())
+        .arg(out)
+        .status()
+        .unwrap();
+    assert!(st.success(), "synthetic CI wiff generator failed");
+}
+
+#[test]
+fn synthetic_ci_dad_mrm_gradient_and_tof_roundtrip() {
+    let out = std::env::temp_dir().join(format!("mzlab_wiff_ci_{}", std::process::id()));
+    std::fs::create_dir_all(&out).unwrap();
+    write_synthetic_ci_wiff(&out);
+
+    let wiff_bytes = std::fs::read(out.join("ci.wiff")).unwrap();
+    let scan_bytes = std::fs::read(out.join("ci.wiff.scan")).unwrap();
+    let ole = container(wiff_bytes, "ci.wiff").unwrap();
+    let w = Wiff::open(&ole, "ci.wiff", Some(scan_bytes.len() as u64), 1).unwrap();
+
+    let dad = w.dad.as_ref().expect("synthetic DAD");
+    assert_eq!((dad.points(), dad.channels()), (3, 5));
+    assert_eq!(dad.twc_chromatogram(0).intensity, vec![15.0, 12.5, 30.0]);
+    assert_eq!(
+        dad.wavelength_chromatogram(202.0, None, 0)
+            .unwrap()
+            .intensity,
+        vec![3.0, 2.5, 6.0]
+    );
+
+    let m1 = method_of_sample(&ole, 1).unwrap();
+    let Kind::Mrm(tr) = &m1.experiments[0].kind else {
+        panic!("expected MRM")
+    };
+    assert_eq!(tr.len(), 2);
+    assert_eq!(
+        (tr[0].q1, tr[0].q3, tr[0].name.as_str(), tr[0].ce, tr[0].dp),
+        (364.1, 194.1, "Quant", Some(20.0), Some(50.0))
+    );
+    assert_eq!(
+        (tr[1].q1, tr[1].q3, tr[1].name.as_str(), tr[1].ce, tr[1].cxp),
+        (364.1, 152.1, "Qual", Some(28.0), Some(4.0))
+    );
+    let lc1 = m1.lc.unwrap();
+    assert_eq!(
+        (lc1.flow, lc1.b0, lc1.oven, lc1.run_time),
+        (Some(0.25), Some(5.0), Some(40.0), Some(22.0))
+    );
+    assert_eq!(lc1.gradient.len(), 2);
+
+    let lc2 = method_of_sample(&ole, 2).unwrap().lc.unwrap();
+    assert_eq!(
+        (lc2.flow, lc2.b0, lc2.oven, lc2.run_time),
+        (Some(0.3), Some(10.0), Some(35.0), Some(8.0))
+    );
+    let lc3 = method_of_sample(&ole, 3).unwrap().lc.unwrap();
+    assert_eq!(
+        (lc3.flow, lc3.b0, lc3.run_time),
+        (Some(0.4), Some(5.0), Some(12.0))
+    );
+
+    let chs = device_channels(&ole, 1);
+    assert_eq!(
+        (
+            chs.len(),
+            chs[0].name.as_str(),
+            chs[0].unit.as_str(),
+            chs[0].values.len()
+        ),
+        (1, "Column Pressure", "psi", 3)
+    );
+    let dde = dde_records(&ole, 1, 2);
+    assert_eq!(
+        (dde.len(), dde[0].precursor_mz, dde[0].precursor_intensity),
+        (1, 413.266, 1540.0)
+    );
+    let tof = TofSampleData::read(&ole, 1).unwrap();
+    assert_eq!(tof.scan_calibration.len(), 1);
+    let tof_blk = [
+        0xff, 0xff, 0xff, 0xff, 100, 0, 0, 0, 0, 5, 0x82, 0x7c, 200, 0xff,
+    ];
+    assert_eq!(
+        decode_tof_block(&tof_blk).unwrap(),
+        vec![(100, 5), (112, 200)]
+    );
 }

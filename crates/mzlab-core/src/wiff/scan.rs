@@ -82,7 +82,12 @@ fn f64_at(b: &[u8], at: usize) -> f64 {
 
 /// The scan whose block starts at `at` (the payload) and whose data end before `end`; `None` when the block is not a scan.
 /// An empty scan gives empty vectors.
-pub fn read_scan<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, end: u64) -> Result<Option<Points>> {
+pub fn read_scan<R: ReadAt>(
+    scan: &mut R,
+    scan_len: u64,
+    at: u64,
+    end: u64,
+) -> Result<Option<Points>> {
     let end = end.min(scan_len);
     if at + HEAD as u64 > end {
         return Ok(None);
@@ -95,18 +100,28 @@ pub fn read_scan<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, end: u64) -> R
     let h: Vec<f64> = (0..8).map(|i| f64_at(&head, 8 + 8 * i)).collect();
     let n = u32::from_le_bytes([head[72], head[73], head[74], head[75]]) as usize;
     // at most 10 bytes for a long skip and 10 for a long count per point
-    let mut data = vec![0u8; ((end - at) as usize - HEAD).min(n.saturating_mul(20).saturating_add(16))];
+    let mut data =
+        vec![0u8; ((end - at) as usize - HEAD).min(n.saturating_mul(20).saturating_add(16))];
     if n > 0 {
         scan.read_at(at + HEAD as u64, &mut data)?;
     }
     let pts = if n > 0 { decode(&data, n) } else { Vec::new() };
     let mz: Vec<f64> = pts.iter().map(|&(b, _)| h[0] + b as f64 * h[2]).collect();
-    let intensity = pts.iter().zip(&mz).map(|(&(_, c), &m)| c as f64 * if m > h[4] { h[7] } else { h[3] }).collect();
+    let intensity = pts
+        .iter()
+        .zip(&mz)
+        .map(|(&(_, c), &m)| c as f64 * if m > h[4] { h[7] } else { h[3] })
+        .collect();
     Ok(Some(Points { mz, intensity }))
 }
 
 /// The number of points of the scan block at `at`, `None` when the block is not a scan.
-pub fn point_count<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, end: u64) -> Result<Option<u32>> {
+pub fn point_count<R: ReadAt>(
+    scan: &mut R,
+    scan_len: u64,
+    at: u64,
+    end: u64,
+) -> Result<Option<u32>> {
     if at + HEAD as u64 > end.min(scan_len) {
         return Ok(None);
     }
@@ -116,13 +131,22 @@ pub fn point_count<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, end: u64) ->
 }
 
 /// The cps of each of `n` transitions of an MRM block starting at `at`.
-pub fn read_mrm<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, n: usize) -> Result<Option<Vec<f64>>> {
+pub fn read_mrm<R: ReadAt>(
+    scan: &mut R,
+    scan_len: u64,
+    at: u64,
+    n: usize,
+) -> Result<Option<Vec<f64>>> {
     if at + 4 * n as u64 > scan_len {
         return Ok(None);
     }
     let mut b = vec![0u8; 4 * n];
     scan.read_at(at, &mut b)?;
-    Ok(Some(b.chunks_exact(4).map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]) as f64).collect()))
+    Ok(Some(
+        b.chunks_exact(4)
+            .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]) as f64)
+            .collect(),
+    ))
 }
 
 #[cfg(test)]
@@ -132,7 +156,10 @@ mod tests {
     #[test]
     fn nibble_stream() {
         // a point of 3, a skip of 2, a point of 5, a point with the long count 300 (byte 0, then a u32) after the skipped low nibble
-        assert_eq!(decode(&[0x3a, 0x50, 0x00, 0x2c, 0x01, 0x00, 0x00], 3), vec![(0, 3), (3, 5), (4, 300)]);
+        assert_eq!(
+            decode(&[0x3a, 0x50, 0x00, 0x2c, 0x01, 0x00, 0x00], 3),
+            vec![(0, 3), (3, 5), (4, 300)]
+        );
         // a long skip of 20 bins, then a point of 1
         assert_eq!(decode(&[0x80, 0x14, 0x10], 1), vec![(20, 1)]);
         // a stream that ends early gives the points it has

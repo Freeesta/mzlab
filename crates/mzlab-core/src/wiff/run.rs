@@ -10,12 +10,17 @@ use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::methodinfo::Kind;
 use crate::metodo::sha1_hex;
-#[cfg_attr(feature = "estesi", allow(unused_imports))] use crate::mzml::{ChromKind, Chromatogram, Run, Spectrum};
+#[cfg_attr(feature = "estesi", allow(unused_imports))]
+use crate::mzml::{ChromKind, Chromatogram, Run, Spectrum};
 use crate::mzmlwrite::{Header, MzmlWriter};
 
 impl Wiff {
     fn mrm_transitions(&self, experiment: usize) -> Vec<(Option<f64>, Option<f64>)> {
-        let kind = self.method.as_ref().and_then(|m| m.experiments.get(experiment)).map(|e| &e.kind);
+        let kind = self
+            .method
+            .as_ref()
+            .and_then(|m| m.experiments.get(experiment))
+            .map(|e| &e.kind);
         match kind {
             Some(Kind::Mrm(t)) => t.iter().map(|t| (Some(t.q1), Some(t.q3))).collect(),
             _ => Vec::new(),
@@ -33,8 +38,15 @@ impl Wiff {
     }
 
     /// Gives the spectra one at a time to `on` (profile; the empty scans are left out) and returns the chromatograms of the MRM blocks.
-    #[cfg(not(feature = "estesi"))] pub fn visit<R: ReadAt>(&self, scan: &mut R, on: &mut dyn FnMut(Spectrum) -> Result<()>) -> Result<Vec<Chromatogram>> {
-        let mut mrm: Vec<Mrm> = (0..self.experiments.len().max(1)).map(|_| Mrm::default()).collect();
+    #[cfg(not(feature = "estesi"))]
+    pub fn visit<R: ReadAt>(
+        &self,
+        scan: &mut R,
+        on: &mut dyn FnMut(Spectrum) -> Result<()>,
+    ) -> Result<Vec<Chromatogram>> {
+        let mut mrm: Vec<Mrm> = (0..self.experiments.len().max(1))
+            .map(|_| Mrm::default())
+            .collect();
         let mut n = 0;
         for r in &self.records {
             if let Some(p) = scan::read_scan(scan, self.scan_len, r.at, r.end)? {
@@ -43,7 +55,8 @@ impl Wiff {
                 }
                 on(self.spectrum_of(n, r, p))?;
                 n += 1;
-            } else if let Some(v) = scan::read_mrm(scan, self.scan_len, r.at, r.size as usize / 4)? {
+            } else if let Some(v) = scan::read_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?
+            {
                 let m = &mut mrm[r.experiment];
                 m.time.push(r.time_min);
                 m.tic.push(r.tic);
@@ -58,10 +71,19 @@ impl Wiff {
 
     /// The spectrum `n` (counting the non-empty scans) made of the block `r` and its points: the one `visit` gives and `lettore::LettoreWiff::scansione` serves.
     pub(super) fn spectrum_of(&self, n: usize, r: &super::Record, p: scan::Points) -> Spectrum {
-        let e = self.experiments.get(r.experiment).cloned().unwrap_or_default();
+        let e = self
+            .experiments
+            .get(r.experiment)
+            .cloned()
+            .unwrap_or_default();
         Spectrum {
             index: n,
-            id: format!("sample={} period=1 cycle={} experiment={}", self.sample, r.cycle + 1, r.experiment + 1),
+            id: format!(
+                "sample={} period=1 cycle={} experiment={}",
+                self.sample,
+                r.cycle + 1,
+                r.experiment + 1
+            ),
             level: e.level.max(1),
             rt: r.time_min,
             polarity: self.polarity_of(&e),
@@ -75,13 +97,19 @@ impl Wiff {
     }
 
     /// The chromatograms of the MRM blocks only (no scan is decoded).
-    #[cfg(not(feature = "estesi"))] pub fn chromatograms<R: ReadAt>(&self, scan: &mut R) -> Result<Vec<Chromatogram>> {
-        let mut mrm: Vec<Mrm> = (0..self.experiments.len().max(1)).map(|_| Mrm::default()).collect();
+    #[cfg(not(feature = "estesi"))]
+    pub fn chromatograms<R: ReadAt>(&self, scan: &mut R) -> Result<Vec<Chromatogram>> {
+        let mut mrm: Vec<Mrm> = (0..self.experiments.len().max(1))
+            .map(|_| Mrm::default())
+            .collect();
         for r in &self.records {
             if scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some() {
                 continue;
             }
-            if let (Some(v), Some(m)) = (scan::read_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?, mrm.get_mut(r.experiment)) {
+            if let (Some(v), Some(m)) = (
+                scan::read_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?,
+                mrm.get_mut(r.experiment),
+            ) {
                 m.time.push(r.time_min);
                 m.tic.push(r.tic);
                 m.cols.resize(v.len(), Vec::new());
@@ -97,7 +125,8 @@ impl Wiff {
     pub fn spectrum_count<R: ReadAt>(&self, scan: &mut R) -> Result<usize> {
         let mut n = 0;
         for r in &self.records {
-            n += scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some_and(|c| c > 0) as usize;
+            n += scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some_and(|c| c > 0)
+                as usize;
         }
         Ok(n)
     }
@@ -123,15 +152,29 @@ impl Wiff {
                 scans.push((p.mz, p.intensity));
             }
         }
-        let refs: Vec<(&[f64], &[f64])> = scans.iter().map(|(a, b)| (a.as_slice(), b.as_slice())).collect();
+        let refs: Vec<(&[f64], &[f64])> = scans
+            .iter()
+            .map(|(a, b)| (a.as_slice(), b.as_slice()))
+            .collect();
         Ok(centroidi::estimate(&refs, 0.7).params)
     }
 
     /// As `to_mzml`; with `centroid` every spectrum is reduced to one point per peak (`centroidi`, MS:1000035). `progress(done, total)` is called every few spectra with the spectra written and the spectra to write.
-    pub fn to_mzml_progress<R: ReadAt, W: Write>(&self, scan: &mut R, out: W, name: &str, centroid: bool, progress: &mut dyn FnMut(usize, usize)) -> Result<()> {
+    pub fn to_mzml_progress<R: ReadAt, W: Write>(
+        &self,
+        scan: &mut R,
+        out: W,
+        name: &str,
+        centroid: bool,
+        progress: &mut dyn FnMut(usize, usize),
+    ) -> Result<()> {
         let mut scan = Window::new(scan, self.scan_len);
         let header = self.header(name, sha1_hex(&mut scan, self.scan_len).ok(), centroid);
-        let cp = if centroid { Some(self.centroid_params(&mut scan)?) } else { None };
+        let cp = if centroid {
+            Some(self.centroid_params(&mut scan)?)
+        } else {
+            None
+        };
         let mut buf = Buf::default();
         let mut w = MzmlWriter::new(out, &header)?;
         let count = self.spectrum_count(&mut scan)?;
@@ -181,10 +224,16 @@ impl Wiff {
             acquired: self.created.clone(),
             run_params,
             instrument: Some(instrument),
-            components: [("source", "MS:1000073", "electrospray ionization"), ("analyzer", "MS:1000081", "quadrupole"), ("analyzer", "MS:1000081", "quadrupole"), ("analyzer", "MS:1000078", "axial ejection linear ion trap"), ("detector", "MS:1000253", "electron multiplier")]
-                .iter()
-                .map(|(a, b, c)| (a.to_string(), b.to_string(), c.to_string()))
-                .collect(),
+            components: [
+                ("source", "MS:1000073", "electrospray ionization"),
+                ("analyzer", "MS:1000081", "quadrupole"),
+                ("analyzer", "MS:1000081", "quadrupole"),
+                ("analyzer", "MS:1000078", "axial ejection linear ion trap"),
+                ("detector", "MS:1000253", "electron multiplier"),
+            ]
+            .iter()
+            .map(|(a, b, c)| (a.to_string(), b.to_string(), c.to_string()))
+            .collect(),
             software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
             centroided: centroid,
             ..Default::default()
@@ -196,16 +245,35 @@ impl Wiff {
     fn instrument_terms(&self) -> ((String, String), Vec<(String, String)>) {
         match self.model.as_deref() {
             None => (("MS:1000651".into(), "3200 QTRAP".into()), Vec::new()),
-            Some(m) if m.replace(' ', "").contains("3200QTRAP") => (("MS:1000651".into(), "3200 QTRAP".into()), Vec::new()),
-            Some(m) => (("MS:1000031".into(), "instrument model".into()), vec![("instrument model".into(), m.to_string())]),
+            Some(m) if m.replace(' ', "").contains("3200QTRAP") => {
+                (("MS:1000651".into(), "3200 QTRAP".into()), Vec::new())
+            }
+            Some(m) => (
+                ("MS:1000031".into(), "instrument model".into()),
+                vec![("instrument model".into(), m.to_string())],
+            ),
         }
     }
 
-    #[cfg(not(feature = "estesi"))] fn add_chromatograms(&self, chroms: &mut Vec<Chromatogram>, mrm: Vec<Mrm>) {
+    #[cfg(not(feature = "estesi"))]
+    fn add_chromatograms(&self, chroms: &mut Vec<Chromatogram>, mrm: Vec<Mrm>) {
         let unit = "number of detector counts";
-        for (e, Mrm { time, tic, cols }) in mrm.into_iter().enumerate().filter(|(_, m)| !m.time.is_empty()) {
+        for (e, Mrm { time, tic, cols }) in mrm
+            .into_iter()
+            .enumerate()
+            .filter(|(_, m)| !m.time.is_empty())
+        {
             if chroms.is_empty() {
-                chroms.push(Chromatogram { index: 0, id: "TIC".into(), kind: ChromKind::Tic, q1: None, q3: None, unit: unit.into(), time: time.clone(), intensity: tic });
+                chroms.push(Chromatogram {
+                    index: 0,
+                    id: "TIC".into(),
+                    kind: ChromKind::Tic,
+                    q1: None,
+                    q3: None,
+                    unit: unit.into(),
+                    time: time.clone(),
+                    intensity: tic,
+                });
             }
             let known = self.mrm_transitions(e);
             for (j, col) in cols.into_iter().enumerate() {
@@ -214,15 +282,29 @@ impl Wiff {
                     (Some(a), Some(b)) => format!(" Q1={a} Q3={b}"),
                     _ => String::new(),
                 };
-                let id = format!("SRM SIC{mass} sample={} period=1 experiment={} transition={j}", self.sample, e + 1);
-                chroms.push(Chromatogram { index: chroms.len(), id, kind: ChromKind::Srm, q1, q3, unit: unit.into(), time: time.clone(), intensity: col });
+                let id = format!(
+                    "SRM SIC{mass} sample={} period=1 experiment={} transition={j}",
+                    self.sample,
+                    e + 1
+                );
+                chroms.push(Chromatogram {
+                    index: chroms.len(),
+                    id,
+                    kind: ChromKind::Srm,
+                    q1,
+                    q3,
+                    unit: unit.into(),
+                    time: time.clone(),
+                    intensity: col,
+                });
             }
         }
     }
 }
 
 /// The MRM blocks of one experiment: times (min), TIC, and one column per transition.
-#[derive(Default)] #[cfg_attr(feature = "estesi", allow(dead_code))]
+#[derive(Default)]
+#[cfg_attr(feature = "estesi", allow(dead_code))]
 struct Mrm {
     time: Vec<f64>,
     tic: Vec<f64>,

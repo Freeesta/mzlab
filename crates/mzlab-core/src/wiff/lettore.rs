@@ -141,7 +141,12 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     if id == "DAD TWC" {
         return Some(dad.twc_chromatogram(0));
     }
-    let nm: f64 = id.strip_prefix("DAD ")?.strip_suffix(" nm")?.trim().parse().ok()?;
+    let nm: f64 = id
+        .strip_prefix("DAD ")?
+        .strip_suffix(" nm")?
+        .trim()
+        .parse()
+        .ok()?;
     dad.wavelength_chromatogram(nm, None, 0)
 }
 
@@ -182,7 +187,12 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
 }
 
 fn field(nome: &str, valore: impl ToString) -> Campo {
-    Campo { nome: nome.into(), valore: valore.to_string(), unita: None, cv: None }
+    Campo {
+        nome: nome.into(),
+        valore: valore.to_string(),
+        unita: None,
+        cv: None,
+    }
 }
 
 /// The header of the mzML of injection `c`, with the SHA-1 of the `.wiff.scan`.

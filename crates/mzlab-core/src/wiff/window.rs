@@ -16,7 +16,12 @@ pub struct Window<'a, R: ReadAt> {
 impl<'a, R: ReadAt> Window<'a, R> {
     /// `len`: the size of the file (a window never reads past it).
     pub fn new(inner: &'a mut R, len: u64) -> Self {
-        Window { inner, len, start: 0, buf: Vec::new() }
+        Window {
+            inner,
+            len,
+            start: 0,
+            buf: Vec::new(),
+        }
     }
 }
 
@@ -64,6 +69,6 @@ mod tests {
             assert_eq!(&b[..], &data[off as usize..off as usize + 100]);
         }
         assert!(w.read_at(2_999_950, &mut b).is_err());
-        assert_eq!(c.1, 3);   // the first window, the one at the end, the read past the end
+        assert_eq!(c.1, 3); // the first window, the one at the end, the read past the end
     }
 }
