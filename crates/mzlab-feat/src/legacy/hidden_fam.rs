@@ -109,6 +109,63 @@ pub(super) fn add_all<R: ReadAt>(
     add(t, s, ix, at.0, at.1, w, cands)
 }
 
+fn traces<R: ReadAt>(ix: &mut [Index<R>], mz: f64, rt: f64) -> Res<Vec<Trace>> {
+    ix.iter_mut().map(|x| measure(x, mz, rt)).collect()
+}
+
+/// Does the table have a row of its own for the mass `f` at the RT of the parent?
+fn has_row(t: &Aligned, prow: usize, f: f64) -> bool {
+    let rt = t.rt[prow];
+    (0..t.len()).any(|r| {
+        r != prow
+            && (t.rt[r] - rt).abs() <= RT_WINDOW
+            && ((t.mz[r] - f) / f).abs() * 1e6 <= MASS_PPM
+    })
+}
+
+/// The candidate of a fragment: the row of the parent with the m/z, the areas and the kinetics of the fragment.
+fn product(
+    t: &Aligned,
+    s: &Inputs,
+    w: &[f64; 10],
+    at: (usize, f64, String),
+    ion: (Vec<f64>, i64),
+) -> Cand {
+    let (prow, f, formula) = at;
+    let id = Ident {
+        row: prow,
+        hypothesis: None,
+        formula: Some(formula),
+        total: 0.0,
+        proofs: Vec::new(),
+    };
+    let mut c = candidate(t, s.files, s.parent, id, s.hyps, w);
+    let times: Vec<f64> = s.files.iter().map(|x| x.t).collect();
+    let pick = |sel: fn(&FileIn) -> bool| -> Vec<f64> {
+        s.files
+            .iter()
+            .zip(&ion.0)
+            .filter(|p| sel(p.0))
+            .map(|p| *p.1)
+            .collect()
+    };
+    let (treated, refs) = (pick(FileIn::is_treated), pick(FileIn::is_ref));
+    let ref_max = refs.iter().copied().fold(0.0, f64::max);
+    c.kin = descriptors(&times, &ion.0).map(|d| {
+        (
+            d,
+            !treated.is_empty() && not_in_reference(&treated, ref_max),
+        )
+    });
+    c.area_max = treated.iter().copied().fold(0.0, f64::max);
+    c.areas = ion.0;
+    c.mz = f;
+    c.filled = Vec::new();
+    c.hidden = Some(ion.1);
+    c.flags.push("possible TP co-eluting with an ISF");
+    c
+}
+
 /// Appends the fragments of the MS2 of the parent (`fragments`) that have no row of their own, are a sub-formula of the parent and whose ratio to the
 /// parent rises with the treatment. The candidate stands on the row of the parent, with the m/z of the fragment and its own areas.
 pub(super) fn add<R: ReadAt>(
@@ -121,17 +178,8 @@ pub(super) fn add<R: ReadAt>(
     cands: &mut Vec<Cand>,
 ) -> Res<()> {
     let rt = t.rt[prow];
-    let par = ix
-        .iter_mut()
-        .map(|x| measure(x, s.parent.mz, rt))
-        .collect::<Res<Vec<Trace>>>()?;
-    let has_row = |f: f64| {
-        (0..t.len()).any(|r| {
-            r != prow
-                && (t.rt[r] - rt).abs() <= RT_WINDOW
-                && ((t.mz[r] - f) / f).abs() * 1e6 <= MASS_PPM
-        })
-    };
+    let par = traces(ix, s.parent.mz, rt)?;
+    let has_row = |f: f64| has_row(t, prow, f);
     let mut next = cands.iter().filter_map(|c| c.hidden).min().unwrap_or(0);
     let mut frags: Vec<f64> = fragments.to_vec();
     frags.sort_by(f64::total_cmp);
@@ -146,46 +194,13 @@ pub(super) fn add<R: ReadAt>(
         {
             continue;
         }
-        let tr = ix
-            .iter_mut()
-            .map(|x| measure(x, f, rt))
-            .collect::<Res<Vec<Trace>>>()?;
+        let tr = traces(ix, f, rt)?;
         if !is_hidden(s.files, &par, &tr) {
             continue;
         }
         let ion: Vec<f64> = tr.iter().map(|x| x.area).collect();
-        let id = Ident {
-            row: prow,
-            hypothesis: None,
-            formula: Some(formula),
-            total: 0.0,
-            proofs: Vec::new(),
-        };
-        let mut c = candidate(t, s.files, s.parent, id, s.hyps, w);
-        let times: Vec<f64> = s.files.iter().map(|x| x.t).collect();
-        let pick = |sel: fn(&FileIn) -> bool| -> Vec<f64> {
-            s.files
-                .iter()
-                .zip(&ion)
-                .filter(|p| sel(p.0))
-                .map(|p| *p.1)
-                .collect()
-        };
-        let (treated, refs) = (pick(FileIn::is_treated), pick(FileIn::is_ref));
-        let ref_max = refs.iter().copied().fold(0.0, f64::max);
-        c.kin = descriptors(&times, &ion).map(|d| {
-            (
-                d,
-                !treated.is_empty() && not_in_reference(&treated, ref_max),
-            )
-        });
-        c.area_max = treated.iter().copied().fold(0.0, f64::max);
-        c.areas = ion;
-        c.mz = f;
-        c.filled = Vec::new();
         next -= 1;
-        c.hidden = Some(next);
-        c.flags.push("possible TP co-eluting with an ISF");
+        let c = product(t, s, w, (prow, f, formula), (ion, next));
         cands.push(c);
     }
     Ok(())
