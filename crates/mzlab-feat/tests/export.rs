@@ -91,7 +91,7 @@ fn root() -> PathBuf {
 #[test]
 fn the_ms2_of_a_row_comes_from_its_file() {
     let out = std::env::temp_dir().join(format!("mzlab_feat_export_{}", std::process::id()));
-    let ok = Command::new("python3").arg(root().join("tools/feat_riferimento.py")).arg(&out).args(["--solo", "identita"]).output().map(|o| o.status.success()).unwrap_or(false);
+    let ok = Command::new("python3").arg(root().join("tools/feat_sintetici.py")).arg(&out).args(["--solo", "identita"]).output().map(|o| o.status.success()).unwrap_or(false);
     if !ok {
         assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "python3 or numpy missing");
         eprintln!("skipped: python3/numpy not available");

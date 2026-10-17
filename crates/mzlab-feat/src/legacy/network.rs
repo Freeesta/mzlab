@@ -11,6 +11,9 @@ use super::dig::{Cand, Dig};
 use super::network_pred::{predecessors, related};
 use crate::hypo::{Counts, Rules};
 
+#[cfg(test)]
+mod golden;
+
 /// The most edges of the network that the page receives; the strongest (with shifted fragments) first.
 const MAX_EDGES: usize = 1500;
 /// Sampling step of the kinetics (min): a source may peak this much after its product and still be consistent.

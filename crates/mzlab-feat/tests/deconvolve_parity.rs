@@ -1,10 +1,9 @@
-//! Parity tests for `mzlab_feat::deconvolve` against Python reference (`tools/deconvolve_riferimento.py`).
+//! `mzlab_feat::deconvolve` against the frozen answers of the former Python reference (`tests/golden/feat/deconvolve.json`).
 //! Checks tolerance of 1e-4 on profiles, correlations, and deconvolved spectra, plus mutational and negative tests.
 
 #![allow(clippy::disallowed_methods)]
 
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use mzlab_feat::deconvolve::{
     deconvolve_isomers, fragment_matrix, ms2_consensus, DeconvolveParams,
@@ -20,18 +19,10 @@ fn near(got: f64, want: f64, tol: f64) -> bool {
 }
 
 fn load_reference_cases() -> Vec<Value> {
-    let out =
-        std::env::temp_dir().join(format!("mzlab-deconvolve-ref-{}.json", std::process::id()));
-    let status = Command::new("python3")
-        .current_dir(root())
-        .arg("tools/deconvolve_riferimento.py")
-        .arg(&out)
-        .status()
-        .expect("failed to execute tools/deconvolve_riferimento.py");
-    assert!(status.success(), "reference generator failed");
-    let content = std::fs::read(&out).expect("failed to read generated reference");
-    let _ = std::fs::remove_file(&out);
-    serde_json::from_slice(&content).expect("failed to parse reference JSON")
+    serde_json::from_slice(
+        &std::fs::read(root().join("tests/golden/feat/deconvolve.json")).unwrap(),
+    )
+    .expect("failed to parse reference JSON")
 }
 
 fn parse_f64_vec(v: &Value) -> Vec<f64> {
@@ -133,7 +124,7 @@ fn verify_case(case: &Value) {
 }
 
 #[test]
-fn parity_against_python_reference() {
+fn parity_against_the_golden_file() {
     let cases = load_reference_cases();
     assert!(
         cases.len() >= 30,

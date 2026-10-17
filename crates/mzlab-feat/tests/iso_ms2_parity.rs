@@ -1,5 +1,5 @@
-//! Isotope groups and MS2 links of `pipeline::analyse` against the plain-loop reference of `tools/feat_riferimento.py --solo identita`
-//! (same indices, purity within 1e-5), and against the truth of the synthetic identity series: purity of the MS2 within 0.05 and
+//! Isotope groups and MS2 links of `pipeline::analyse` against the frozen plain-loop reference (`tests/golden/feat/iso_ms2_identita.json`, on
+//! `tools/feat_sintetici.py --solo identita`; same indices, purity within 1e-5), and against the truth of the synthetic identity series: purity of the MS2 within 0.05 and
 //! isotopologues grouped with their base ion. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 use std::path::{Path, PathBuf};
@@ -15,7 +15,7 @@ fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-/// Without the cut of the maxima: the Python reference does not cut.
+/// Without the cut of the maxima: the reference does not cut.
 fn run(idx: &Path, p: &Params) -> (FileFeatures, mzlab_feat::ms2::Ms2Links) {
     let f = std::fs::File::open(idx).unwrap();
     let size = f.metadata().unwrap().len();
@@ -129,7 +129,7 @@ fn check_truth(f: &FileFeatures, dir: &Path) {
 fn isotopes_and_ms2_like_python() {
     let out = std::env::temp_dir().join(format!("mzlab_feat_iso_{}", std::process::id()));
     let ok = Command::new("python3")
-        .arg(root().join("tools/feat_riferimento.py"))
+        .arg(root().join("tools/feat_sintetici.py"))
         .arg(&out)
         .args(["--solo", "identita"])
         .output()
@@ -143,8 +143,10 @@ fn isotopes_and_ms2_like_python() {
         eprintln!("skipped: python3/numpy not available");
         return;
     }
-    let want: Value =
-        serde_json::from_slice(&std::fs::read(out.join("iso_ms2_identita.json")).unwrap()).unwrap();
+    let want: Value = serde_json::from_slice(
+        &std::fs::read(root().join("tests/golden/feat/iso_ms2_identita.json")).unwrap(),
+    )
+    .unwrap();
     let idx = out.join("identita.mzidx");
     let p = Params::default();
     let (f, links) = run(&idx, &p);
