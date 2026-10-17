@@ -164,6 +164,7 @@ async function wiffToMzml(files,box,signal){const rb=window.MZLAB_RUST_READY?awa
     if(signal&&signal.aborted){CONVROWS.finish(e.row,"cancel");continue}
     try{const mem=[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],M0=window.LETTORI_MOD,pr=M0&&window.LETTORI_FAM.sciex.sonda?await M0.probe("sciex",mem).catch(()=>null):null;      // the module looks at every pair first: the engine reads the 3200 QTRAP only, and a file of another instrument or scan type is for the module («variante»)
       if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}];cs.forEach((x,i)=>{const nm=wiffName(e.stem,x.id,cs.length>1,taken);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex"))});CONVROWS.drop(e.row);continue}
+      const hit=await NATIVO.cached(rb,e.stem,mem,ST.files||[]);if(hit){for(const x of hit){CONVROWS.add(x.name,"open");CONVROWS.finish(x.name,"done",{scans:x.n_spectra||x.scans||0,kind:(x.mixed||[]).length>1?"mixed":x.kind,missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(x.name))||0,cached:true})}CONVROWS.drop(e.row);continue}      // the same pair again: its samples are in the list with their index, nothing is copied or read again
       const s=(await rb.nativeSamples(mem)).samples,key=NATIVO.key(e.stem);
       s.forEach((x,i)=>{const nm=wiffName(e.stem,x.id,s.length>1,taken),f=NATIVO.sample(nm,key,mem,i,x.id,false);taken.push(nm);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}      // the module's answer for the pair holds for its samples (moduloWants)
     catch(x){const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam));
@@ -269,7 +270,7 @@ async function upload0(files,into,box,signal){
       if(d.wait)CONVROWS.set(f.name,"wait",Math.min(99,mono()));else put(d.frac,d.phase,d.total?{done:d.done,total:d.total}:null)};
     addEventListener("mzlab-index",onIdx);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{if(QQQ_NET)PROGRESSO.set(f.name,PROG_NET.send*a/b,"send");const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
-      if(j.error)throw I18N.err(j);if(f.mzlabNat){const x=(j.files||[]).find(y=>y.name===f.name);CONVROWS.finish(f.name,"done",{scans:x?x.n_spectra||x.scans||0:0})}else CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();
+      if(j.error)throw I18N.err(j);if(f.mzlabNat){const x=(j.files||[]).find(y=>y.name===f.name);CONVROWS.finish(f.name,"done",{scans:x?x.n_spectra||x.scans||0:0,kind:x?(x.mixed||[]).length>1?"mixed":x.kind:"",missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(f.name))||0})}else CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();
       LOADFAIL.delete(f.name)}
     catch(e){LOADFAIL.add(f.name);if(e.key==="err.load.cancelled"){CONVROWS.finish(f.name,"cancel");return}
       const d=DIAG.da(e,{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f));
