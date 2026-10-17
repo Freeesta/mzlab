@@ -59,8 +59,8 @@ PUT = """async (names) => {
 LOW = {"u-noise": "100", "u-min_highest": "300", "u-min_group": "100", "u-min_cons": "3", "u-minabs": "300", "u-chrom": "0.85"}
 def new_page(b, admin):
     pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce").new_page()
-    pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
-    if admin: pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")
+    pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+    if admin: pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
     pg.on("pageerror", lambda e: errs.append(str(e) + " " + str(getattr(e, "stack", ""))[:400]))
     pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "GL Driver" not in m.text else None)
     pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
@@ -72,7 +72,7 @@ try:
         b = p.chromium.launch()
         pg0 = new_page(b, True)      # mzFinder (PIPE) is loaded only in the administrator mode: the mode is left before the panel is built
         def no_admin():
-            pg0.evaluate("localStorage.removeItem('qqq.admin'); PIPE.open()"); pg0.wait_for_selector("#pipe[open]")
+            pg0.evaluate("localStorage.removeItem('mzlab.admin'); PIPE.open()"); pg0.wait_for_selector("#pipe[open]")
             assert pg0.locator("#pipe-engine").count() == 0 and pg0.locator("#pipe-unt").count() == 1 and pg0.is_hidden("#pipe-unt")
             assert json.loads(pg0.evaluate("PIPE.recipe(PIPE.values())")).get("engine") is None
         step("without the administrator mode there is no engine choice and the recipe is the one of mzFinder", no_admin)

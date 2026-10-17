@@ -1,5 +1,5 @@
 """Tabui, panel «Substitution position» (TP_Mine/js/44_posizioni.js, docs/agenti/posizioni.md): administrator mode only.
-Without «qqq.admin» the package of Tabui is not even loaded (no TPPOS, no button). With it the panel shows, for a case built here (4-methyldiphenylamine + O, the MS2 has the fragment
+Without «mzlab.admin» the package of Tabui is not even loaded (no TPPOS, no button). With it the panel shows, for a case built here (4-methyldiphenylamine + O, the MS2 has the fragment
 with the oxygen on ring A and the rest of the molecule), the classes the spectrum tells apart, the table of the data of the spectrum (TDATI), the proposal 3a, the box of the
 oxidation type and the suggested checks; a spectrum with no useful peak gives 3b; a row whose change is not covered, or without SMILES, has no button. In the LR demo the detail of the
 hydroxylation gets the button when it has a MS2. The column «Prev. f(−)» waits for the `reatt/1` of the parent, then shows mean and rank of each class without changing the rows. Run from the repo root: python3 tests_e2e/e2e_posizioni.py  """
@@ -53,11 +53,11 @@ try:
             c = b.new_context(viewport={"width": 1400, "height": 1500}); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.on("response", lambda r: errs.append(("http%d" % r.status, r.url)) if r.status >= 400 and "logo.svg" not in r.url and "/vendor/" not in r.url else None)
-            if admin: pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")
+            if admin: pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); lib.attendi(pg, "typeof window.QTOOLS !== 'undefined'", 60000)
             return pg
         pg = fresh(False)
-        step("without qqq.admin there is no TPPOS and no button", lambda: (_ for _ in ()).throw(AssertionError("TPPOS exists")) if pg.evaluate("typeof window.TPPOS !== 'undefined' || !!document.querySelector('.tpp-btn')") else None)
+        step("without mzlab.admin there is no TPPOS and no button", lambda: (_ for _ in ()).throw(AssertionError("TPPOS exists")) if pg.evaluate("typeof window.TPPOS !== 'undefined' || !!document.querySelector('.tpp-btn')") else None)
         pg.context.close()
 
         pg = fresh(True)

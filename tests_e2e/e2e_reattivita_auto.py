@@ -1,5 +1,5 @@
 """Automatic reactivity of the parent in Tabui (TP_Mine/lazy/reatt-auto.js, TP_Mine/files/chem-worker.js; docs/agenti/reattivita.md).
-The 38 synthetic files of tests/data/gruppi go in through the page. Without «qqq.admin» a Dig fetches no .wasm «chem» and shows no bar. With it: after a Dig the panel goes
+The 38 synthetic files of tests/data/gruppi go in through the page. Without «mzlab.admin» a Dig fetches no .wasm «chem» and shows no bar. With it: after a Dig the panel goes
 waiting -> computing -> done and the table has the values (bentazone, a public compound); a new Dig while it computes stops the worker, the panel waits and the calculation runs again after the TPs;
 a cancelled Dig starts nothing; the same SMILES and options give the session's copy; the options (solvent, conformers) and «Recompute»; the time of a Dig does not grow with the reactivity armed.
 Builds the site and static/wasm-feat; SKIP without cargo and wasm-bindgen. MZLAB_PIPE_SITE=<built site with static/wasm-feat> reuses one. Run from the repo root: python3 tests_e2e/e2e_reattivita_auto.py"""
@@ -41,12 +41,12 @@ CTL = "#tp-reatt-ctl"
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None); pg = b.new_context(viewport={"width": 1500, "height": 1400}, reduced_motion="reduce").new_page()
-        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');localStorage.setItem('qqq.admin','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
         pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("request", lambda r: reqs.append(r.url)); logs = []; pg.on("console", lambda m: logs.append(m.text[:200]))
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#nav", timeout=120000)
         pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
         pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
-        pg.evaluate("localStorage.removeItem('qqq.admin')")        # Tabui is open; from here the administrator mode is off (uipAdminOn reads it at every call)
+        pg.evaluate("localStorage.removeItem('mzlab.admin')")        # Tabui is open; from here the administrator mode is off (uipAdminOn reads it at every call)
         pg.set_input_files("#tp-in", FILES)
         pg.wait_for_function("document.querySelectorAll('#tp-files tr').length >= 9", timeout=600000)
         pg.fill("#tp-smi", SMILES)
@@ -67,17 +67,17 @@ try:
             assert pg.evaluate("typeof window.TPREATTAUTO === 'undefined' && typeof window.TPREATT === 'undefined'"), "scripts loaded without administrator mode"
             assert not pg.evaluate("document.querySelector('#tp-reatt .tpr') || !document.querySelector('#tp-reatt-ctl').hidden || document.querySelector('#tp-reatt-ctl').firstChild"), "panel or bar without administrator mode"
             assert not chem(), chem()
-        step("without qqq.admin a Dig shows no panel and downloads no .wasm chem", nonadmin)
+        step("without mzlab.admin a Dig shows no panel and downloads no .wasm chem", nonadmin)
         base.append(dig())
 
-        pg.evaluate("localStorage.setItem('qqq.admin', '1')")
+        pg.evaluate("localStorage.setItem('mzlab.admin', '1')")
         pg.fill("#tp-smi", "CCO"); pg.wait_for_function("window.TPREATTAUTO && window.TPREATTAUTO.info().smiles === 'CCO'", timeout=60000); pg.fill("#tp-smi", SMILES)           # the structure is drawn again: scripts load, the panel waits
         pg.wait_for_function("window.TPREATTAUTO && window.TPREATTAUTO.info().smiles === %r && document.querySelector('#tp-reatt .tpr')?.dataset.state === 'waiting'" % SMILES, timeout=60000)
         def idle_before():
             assert not chem(), "chem fetched before the TPs"
             assert pg.evaluate("window.TPREATTAUTO.info().phase") == "waiting" and not pg.evaluate("document.querySelector('#tp-reatt-ctl').hidden")
             assert "Recompute" in pg.inner_text(CTL) and "Solvent" in pg.inner_text(CTL) and "Conformers" in pg.inner_text(CTL)
-        step("with qqq.admin the panel waits for the TPs and nothing is fetched yet", idle_before)
+        step("with mzlab.admin the panel waits for the TPs and nothing is fetched yet", idle_before)
 
         def auto():
             pg.evaluate("() => { window.__st = []; new MutationObserver(() => { const s = document.querySelector('#tp-reatt .tpr')?.dataset.state; const l = window.__st; if (s && l[l.length - 1] !== s) l.push(s); }).observe(document.getElementById('tp-reatt'), {subtree: true, childList: true, attributes: true}); return 1; }")

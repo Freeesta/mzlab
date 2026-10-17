@@ -55,7 +55,7 @@ try:
             pg.check("input[name=dfont][value='20']"); pg.wait_for_timeout(500)
             assert sz() == 20, sz()
             pg.reload(); pg.wait_for_timeout(1500); ready(pg)
-            assert pg.evaluate("localStorage.getItem('qqq.disegno.font')") == "20"
+            assert pg.evaluate("localStorage.getItem('mzlab.disegno.font')") == "20"
             assert sz() == 20, ("applied again after a reload", sz())
             pg.click("#tools-card summary") if not pg.is_visible("#font-body") else None
             pg.check("input[name=dfont][value='16']"); pg.wait_for_timeout(300)

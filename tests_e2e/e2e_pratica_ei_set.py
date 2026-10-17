@@ -1,6 +1,6 @@
 """Pratica EI, path of simple compounds and hard mode (pratica-ei.html): one compound per path level, the hard mode hides formula, class and name,
 the passive coherence checks (mass, nitrogen rule, RDB, isotopes, ions) and the three-level hints never reveal the structure, the answer
-appears only at «Consegna e correggi», progress is recorded apart (qqq.pratica -> ei-difficile), dark theme, axes of the canvas, phone."""
+appears only at «Consegna e correggi», progress is recorded apart (mzlab.pratica -> ei-difficile), dark theme, axes of the canvas, phone."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 def axe_path():
@@ -124,7 +124,7 @@ try:
             pg.click("#h-done"); pg.wait_for_selector("#end .score", timeout=30000)
             t = pg.inner_text("#end").lower()
             assert "correzione" in t and "2-butanone" in t and "struttura ✓" in t and "formula ✓" in t, t[:300]
-            rec = pg.evaluate("JSON.parse(localStorage.getItem('qqq.pratica')).items")
+            rec = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.pratica')).items")
             assert "2-butanone" in rec.get("ei-difficile", {}) and "2-butanone" not in rec.get("ei", {}), list(rec)
             assert pg.is_disabled("#h-done")
         step("hard mode: the answer appears only at the delivery; the result goes to ei-difficile (the guided progress is untouched)", delivery)

@@ -260,11 +260,11 @@ class Run:
         s.b = p.chromium.launch()
         pg = s.b.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion="reduce")
         if not tour:
-            pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         else:          # the tour tests want the invitation of the tour, but not the hint of the side-by-side panels: it shows up after a few seconds (later under load) over the spectrum and takes the clicks of the test
-            pg.add_init_script("try{localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         if qaqc:       # QA/QC is dormant: only this switch (as ?qaqc=1) makes it visible
-            pg.add_init_script("try{localStorage.setItem('qqq.dev.qaqc','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.dev.qaqc','1');}catch(_){}")
         pg.on("pageerror", lambda e: s.errs.append(("pageerror", str(e))))
         pg.on("console", lambda m: s.errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") and "GL Driver Message" not in m.text else None)       # software-GL performance hints of the 3D viewer are not page errors
         pg.on("requestfailed", lambda r: s.errs.append(("reqfail", r.url, r.failure)))

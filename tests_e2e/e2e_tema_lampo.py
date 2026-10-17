@@ -14,7 +14,7 @@ def early_pixel(b, url, scheme, pref):
     """Opens url with its stylesheets and external scripts held back and returns the computed background of <html> read before any of them ran
     (headless Chromium paints no frame while they are pending, so the computed style is what the first frame will use)."""
     ctx = b.new_context(color_scheme=scheme, viewport={"width": 800, "height": 600}, reduced_motion="reduce")
-    if pref: ctx.add_init_script("try{localStorage.setItem('qqq.prefs',JSON.stringify({theme:'%s'}))}catch(e){}" % pref)
+    if pref: ctx.add_init_script("try{localStorage.setItem('mzlab.prefs',JSON.stringify({theme:'%s'}))}catch(e){}" % pref)
     pg = ctx.new_page(); held = []; free = []
     def hold(route):
         route.continue_() if free else held.append(route)
@@ -37,7 +37,7 @@ try:
             step(nm + ": saved light over a dark system -> light", lambda url=url, light=light: (lambda px: (_ for _ in ()).throw(AssertionError(px)) if not near(px, light) else None)(early_pixel(b, url, "dark", "light")))
         def walk():
             ctx = b.new_context(color_scheme="dark", viewport={"width": 1000, "height": 700}); ctx.add_init_script(
-                "try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}))}catch(e){}"
+                "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}))}catch(e){}"
                 ";(()=>{window.__bg=[];const s=()=>window.__bg.push(getComputedStyle(document.documentElement).backgroundColor);document.addEventListener('DOMContentLoaded',s);requestAnimationFrame(s)})()")
             pg = ctx.new_page()
             for url in (root + "static/teoria/index.html", root + "static/teoria/04-lc.html", root + "static/teoria/pratica.html", root):

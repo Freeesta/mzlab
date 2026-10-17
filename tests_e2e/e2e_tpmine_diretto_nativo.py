@@ -34,7 +34,7 @@ try:
         c = b.new_context(viewport={"width": 1500, "height": 1800}); c.set_default_timeout(120000)
         pg = c.new_page()
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
-        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');localStorage.setItem('qqq.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
         pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         pg.evaluate("""async () => { const rb = await window.MZLAB_RUST_READY; window.__calls = []; for (const k of ["nativeToMzml", "nativeCentroidIndex"]) { const f = rb[k]; rb[k] = (n, ...a) => { window.__calls.push(k + ":" + n); return f.call(rb, n, ...a); }; }
@@ -76,7 +76,7 @@ try:
         direct = pg.evaluate(HASH)
         def same_bytes():
             c2 = b.new_context(viewport={"width": 1500, "height": 1800}); c2.set_default_timeout(120000)
-            p2 = c2.new_page(); p2.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
+            p2 = c2.new_page(); p2.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             p2.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); p2.wait_for_selector("#drop"); p2.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
             p2.set_input_files("#pick", PAIRS); p2.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
             attendi(p2, "(async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('idx'); let n = 0; for await (const [k] of d.entries()) if (/^(serie|prodotto)\\w*\\.mzML\\.mzidx$/.test(k)) n++; return n >= 3; })()", 60000)

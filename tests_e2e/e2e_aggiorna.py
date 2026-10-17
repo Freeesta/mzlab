@@ -18,7 +18,7 @@ try:
         r.b = p.chromium.launch()
         ctx = r.b.new_context(viewport={"width": 1400, "height": 900})
         pg = ctx.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');localStorage.setItem('qqq.upd.last',String(Date.now()));}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.upd.last',String(Date.now()));}catch(_){}")
         pg.add_init_script(FAKE)
         pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
         def box(): return pg.inner_text("#updbox") if pg.query_selector("#updbox") else ""
@@ -62,10 +62,10 @@ try:
         step("a newer app is needed: link to the releases", newapp)
         def upd(): return pg.evaluate("__calls.filter(c => c.startsWith('update'))")       # the page makes other desktop calls on load (the data folder)
         def once_a_day():
-            pg.evaluate("window.__calls=[]"); pg.evaluate("localStorage.setItem('qqq.upd.last',String(Date.now()))")
+            pg.evaluate("window.__calls=[]"); pg.evaluate("localStorage.setItem('mzlab.upd.last',String(Date.now()))")
             pg.evaluate("window.dispatchEvent(new Event('load'))"); pg.wait_for_timeout(4600)
             assert upd() == [], "checked twice in a day: " + str(upd())
-            pg.evaluate("localStorage.setItem('qqq.upd.last','1')"); pg.evaluate("window.__reply={update_check:{status:'uptodate'}}")
+            pg.evaluate("localStorage.setItem('mzlab.upd.last','1')"); pg.evaluate("window.__reply={update_check:{status:'uptodate'}}")
             pg.evaluate("window.dispatchEvent(new Event('load'))"); pg.wait_for_function("__calls.some(c => c === 'update_check')", timeout=15000)
             assert upd() == ["update_check"], upd()
         step("the automatic check runs once a day", once_a_day)
@@ -75,7 +75,7 @@ try:
             pg.evaluate(f"DESKUPD.release({str(force).lower()})")
         def rel_calls(): return pg.evaluate("__calls.filter(c => c === 'release_check')")
         def release_notice():
-            pg.evaluate("localStorage.removeItem('qqq.rel.seen')")
+            pg.evaluate("localStorage.removeItem('mzlab.rel.seen')")
             rel({"status": "none"}); pg.wait_for_function("__calls.includes('release_check')"); assert pg.query_selector("#relbox") is None
             rel("throw"); pg.wait_for_function("__calls.includes('release_check')"); assert pg.query_selector("#relbox") is None
             rel({"status": "newer", "version": "9.9.9"}); pg.wait_for_selector("#relbox")
@@ -84,16 +84,16 @@ try:
         step("a newer release shows a notice with the link; none or an error shows nothing", release_notice)
         def release_seen():
             pg.click("#relbox button"); assert pg.query_selector("#relbox") is None
-            assert pg.evaluate("localStorage.getItem('qqq.rel.seen')") == "9.9.9"
+            assert pg.evaluate("localStorage.getItem('mzlab.rel.seen')") == "9.9.9"
             rel({"status": "newer", "version": "9.9.9"}); pg.wait_for_function("__calls.includes('release_check')"); pg.evaluate("0")
             assert pg.query_selector("#relbox") is None, "closed for that version: not shown again"
             rel({"status": "newer", "version": "9.9.10"}); pg.wait_for_selector("#relbox")
         step("a notice closed for a version does not come back for that version, only for a newer one", release_seen)
         def release_daily():
-            pg.evaluate("localStorage.setItem('qqq.rel.last',String(Date.now()))")
+            pg.evaluate("localStorage.setItem('mzlab.rel.last',String(Date.now()))")
             rel({"status": "newer", "version": "99.0.0"}, False); pg.evaluate("new Promise(r => setTimeout(r, 0))")
             assert rel_calls() == [], "asked twice in a day"
-            pg.evaluate("localStorage.setItem('qqq.rel.last','1')")
+            pg.evaluate("localStorage.setItem('mzlab.rel.last','1')")
             rel({"status": "newer", "version": "99.0.0"}, False); pg.wait_for_selector("#relbox")
             assert rel_calls() == ["release_check"]
         step("the release check runs at most once a day", release_daily)

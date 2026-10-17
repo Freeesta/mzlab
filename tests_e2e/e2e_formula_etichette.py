@@ -34,7 +34,7 @@ try:
         def fresh(admin=True, lang="en", touch=False):
             c = b.new_context(viewport={"width": 1400, "height": 1000}, has_touch=touch, reduced_motion="reduce"); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e)))
-            if admin: pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")
+            if admin: pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/?lang={lang}"); pg.wait_for_selector("#drop", timeout=120000)
             if admin:
                 pg.wait_for_selector(TAB, timeout=30000); pg.wait_for_function("window.QTOOLS.list().some(t => t.id === 'tpmine')", timeout=60000)

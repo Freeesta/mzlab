@@ -72,12 +72,12 @@ try:
         step("2b only by the decision of the chemist; 1 refused without a standard", decision)
         def thresholds():
             pg.click("#libres #lr-sog summary"); pg.fill("#libres [data-thr=entropia_min]", "0,999"); pg.dispatch_event("#libres [data-thr=entropia_min]", "change"); pg.wait_for_timeout(500)
-            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.lib.soglie')).mzlab.entropia_min") == 0.999
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.lib.soglie')).mzlab.entropia_min") == 0.999
             assert "L3" in pg.inner_text("#libres .vd .lvb") or "L2a" not in pg.inner_text("#libres .vd .lvb")
             wf = pg.evaluate("LIVELLI.exportState()"); assert wf["soglie"]["entropia_min"] == 0.999 and wf["formato"] == "livelli/1"
             pg.click("#libres #lr-sog-reset"); pg.wait_for_timeout(300)
             assert pg.evaluate("LIVELLI.thresholds().entropia_min") == 0.75
-        step("editable thresholds saved in qqq.lib.soglie and exported for the workflow file", thresholds)
+        step("editable thresholds saved in mzlab.lib.soglie and exported for the workflow file", thresholds)
         def mirror_lines():
             lines = json.loads(pg.get_attribute("#libres #lr-cv", "data-lines")); assert len(lines) >= 4 and all(l[2] == 0 for l in lines), lines
             pg.locator("#libres tr.row[data-k=an]").first.click(); pg.wait_for_timeout(400)

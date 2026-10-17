@@ -33,7 +33,7 @@ try:
             assert pg.evaluate("document.getElementById('uip-a11y').open") is False, "the accessibility submenu starts closed"
             assert not pg.is_visible("#uip-pal") and not pg.is_visible("#uip-font") and not pg.is_visible("#uip-hc")
             pg.click("#uip-a11y > summary"); pg.wait_for_timeout(150); assert pg.is_visible("#uip-pal") and pg.is_visible("#uip-font") and pg.is_visible("#uip-hc")
-            assert pg.evaluate("localStorage.getItem('qqq.set.a11y')") == "1"
+            assert pg.evaluate("localStorage.getItem('mzlab.set.a11y')") == "1"
             pg.click("#np-set"); pg.wait_for_timeout(150); pg.click("#np-set"); pg.wait_for_timeout(250)      # close and reopen: it stays as left
             assert pg.evaluate("document.getElementById('uip-a11y').open") is True, "the state of the submenu is remembered"
             t = pg.inner_text("#uipset"); print(repr(t))
@@ -103,12 +103,12 @@ try:
         step("4 palettes: colours change at once, hc >= 4.5:1 and +1 px, cb has line styles, order by time kept", palettes)
         def persists():
             set_pal(pg, "cb"); pg.wait_for_timeout(300)
-            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.prefs'))") == {"v": 2, "theme": "auto", "pal": "cb", "merge": True}
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.prefs'))") == {"v": 2, "theme": "auto", "pal": "cb", "merge": True}
             pg.reload(); pg.wait_for_timeout(3500)
             assert pg.evaluate("UIP.pal") == "cb"
             c = [hexof(x[1]) for x in pg.evaluate(COLORS)]; assert c and c[0] == "#00204d", c       # cividis start: colours recomputed with the saved palette
             set_pal(pg, "time") if pg.locator("#uipset").count() else (pg.click("#np-set"), set_pal(pg, "time"))
-        step("the palette survives a reload (localStorage qqq.prefs)", persists)
+        step("the palette survives a reload (localStorage mzlab.prefs)", persists)
         def traces_use_palette():
             pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
             pg.wait_for_function("(()=>{const p=E.panels.find(p=>p.type==='chrom'); return !!(p && p._a && p._a.sr && p._a.sr.length >= 5)})()", timeout=10000)
@@ -129,16 +129,16 @@ try:
                 pg.screenshot(path=SH + f"250_scale_{n}.png", clip={"x": 0, "y": 60, "width": 400, "height": 500})
         step("n = 3 and n = 7: distinct, ordered colours (screenshots 250_scale_*.png)", n_variants)
         def new_session():
-            pg.evaluate("localStorage.setItem('qqq.extra','1')"); pg.click("#np-set") if pg.locator("#uipset").count() == 0 else None
+            pg.evaluate("localStorage.setItem('mzlab.extra','1')"); pg.click("#np-set") if pg.locator("#uipset").count() == 0 else None
             set_pal(pg, "rainbow"); pg.wait_for_timeout(300)
             n0 = pg.evaluate("E.files.length"); assert n0 > 0
             pg.click("#newrun"); pg.wait_for_timeout(500)
             assert pg.is_visible("#resetdlg [data-reset=all]") and pg.is_visible("#resetdlg [data-reset=files]")
             pg.click("#resetdlg .rs-cancel"); pg.wait_for_timeout(500)                               # cancel: nothing is touched
-            assert pg.evaluate("E.files.length") == n0 and pg.evaluate("localStorage.getItem('qqq.extra')") == "1" and pg.evaluate("UIP.pal") == "rainbow"
+            assert pg.evaluate("E.files.length") == n0 and pg.evaluate("localStorage.getItem('mzlab.extra')") == "1" and pg.evaluate("UIP.pal") == "rainbow"
             pg.click("#newrun"); pg.click("#resetdlg [data-reset=all]"); pg.wait_for_timeout(3000)
-            print("after:", pg.evaluate("[E.files.length, localStorage.getItem('qqq.extra'), localStorage.getItem('qqq.prefs')]"))
-            assert pg.evaluate("E.files.length") == 0 and pg.evaluate("localStorage.getItem('qqq.extra')") is None and pg.evaluate("localStorage.getItem('qqq.prefs')") is None
+            print("after:", pg.evaluate("[E.files.length, localStorage.getItem('mzlab.extra'), localStorage.getItem('mzlab.prefs')]"))
+            assert pg.evaluate("E.files.length") == 0 and pg.evaluate("localStorage.getItem('mzlab.extra')") is None and pg.evaluate("localStorage.getItem('mzlab.prefs')") is None
             assert pg.evaluate("UIP.pal") == "file" and pg.evaluate("document.documentElement.dataset.pal") == "file" and pg.evaluate("UIP.font") is None
             assert pg.evaluate("(NB.session||null)") is None and pg.evaluate("Object.keys(NB).filter(k=>k!=='ui'&&k!=='session').length") == 0
             st = pg.evaluate("fetch('api/notebook').then(r=>r.json())"); assert not st.get("session"), st

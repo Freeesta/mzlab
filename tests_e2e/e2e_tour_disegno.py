@@ -1,6 +1,6 @@
 """Guided tour of the Disegno view (TOUR.disegno(), chapter 3): 7 steps, each finds its visible target (the zoom buttons live inside the Ketcher iframe), the
 arrow points at it, the steps about the right-hand panels show them if the student hid them and hide them again at the end, «Fine» and Escape close the tour
-without touching the state of the Dati invitation (qqq.tour.lr), English texts."""
+without touching the state of the Dati invitation (mzlab.tour.lr), English texts."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -40,7 +40,7 @@ try:
         def close():
             pg.click("#tour-btn-fine"); pg.wait_for_timeout(300)
             assert not pg.evaluate("TOUR.active") and pg.locator("#tour-dialog").count() == 0
-            assert pg.evaluate("localStorage.getItem('qqq.tour.lr')") is not None and "saltato" in pg.evaluate("localStorage.getItem('qqq.tour.lr')")   # untouched
+            assert pg.evaluate("localStorage.getItem('mzlab.tour.lr')") is not None and "saltato" in pg.evaluate("localStorage.getItem('mzlab.tour.lr')")   # untouched
         step("«Fine» closes it and leaves the Dati invitation state alone", close)
         def hidden_panels():
             pg.click("#side-toggle"); pg.wait_for_timeout(300)

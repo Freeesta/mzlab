@@ -8,7 +8,7 @@ def step(name, fn):
 r = Run(port=8816, wd="/tmp/wd6")
 KQ = "document.getElementById('kframe').contentWindow.ketcher"
 SELALL = "(()=>{const k=%s;k.editor.selection({atoms:[...k.editor.struct().atoms.keys()]})})()" % KQ
-LBL = "[...document.getElementById('kframe').contentWindow.ketcher.editor.render.paper.canvas.querySelectorAll('#qqq-labels text')].map(t=>t.textContent)"
+LBL = "[...document.getElementById('kframe').contentWindow.ketcher.editor.render.paper.canvas.querySelectorAll('#mzlab-labels text')].map(t=>t.textContent)"
 try:
     with sync_playwright() as p:
         pg = r.page(p)
@@ -195,7 +195,7 @@ try:
         step("arrow labels (neutral loss, Δm) are off by default", arrow_off)
         def labelmenu():
             pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); pg.wait_for_timeout(1200)
-            xy = pg.evaluate("(()=>{const fr=document.getElementById('kframe'),r=fr.getBoundingClientRect(),t=fr.contentWindow.document.querySelector('#qqq-labels text').getBoundingClientRect();return [r.left+t.x+t.width/2,r.top+t.y+t.height/2]})()")
+            xy = pg.evaluate("(()=>{const fr=document.getElementById('kframe'),r=fr.getBoundingClientRect(),t=fr.contentWindow.document.querySelector('#mzlab-labels text').getBoundingClientRect();return [r.left+t.x+t.width/2,r.top+t.y+t.height/2]})()")
             pg.mouse.click(xy[0], xy[1], button="right"); pg.wait_for_timeout(400)
             t = pg.inner_text("#ctx"); print(t)
             assert "Copia la formula (C8H10NO2+)" in t and "Copia la massa (m/z 152)" in t, t
@@ -234,9 +234,9 @@ try:
             assert n == 0, n
         step("macromolecule mode switch hidden", macro)
         def zoom():
-            b0 = pg.evaluate("document.getElementById('kframe').contentWindow.document.querySelector('#qqq-labels text').getBoundingClientRect().width")
+            b0 = pg.evaluate("document.getElementById('kframe').contentWindow.document.querySelector('#mzlab-labels text').getBoundingClientRect().width")
             pg.evaluate(KQ + ".editor.zoom(2)"); pg.wait_for_timeout(600)
-            b1 = pg.evaluate("document.getElementById('kframe').contentWindow.document.querySelector('#qqq-labels text').getBoundingClientRect().width")
+            b1 = pg.evaluate("document.getElementById('kframe').contentWindow.document.querySelector('#mzlab-labels text').getBoundingClientRect().width")
             assert b1 > b0 * 1.6, (b0, b1); pg.evaluate(KQ + ".editor.zoom(1)")
         step("label follows the zoom", zoom)
         def off():

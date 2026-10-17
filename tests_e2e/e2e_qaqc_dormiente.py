@@ -1,5 +1,5 @@
 """QA/QC dormant: with the switch off (default) nothing of it is in the DOM, the bar, «Altro», the palette, the tour or the notebook and the
-console is quiet; with it on (?qaqc=1 / qqq.dev.qaqc) the button, the panel and the palette command are there."""
+console is quiet; with it on (?qaqc=1 / mzlab.dev.qaqc) the button, the panel and the palette command are there."""
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -61,7 +61,7 @@ try:
             assert pg.evaluate("window.FEATURES.qaqc") and pg.locator("#stbar [data-cmd=qaqc]").count() == 1
             assert "QA/QC" in palette(pg, "qaqc")
             drawer(pg, "qaqc"); pg.wait_for_selector("#sb-panel-qaqc select[data-role]")
-        step("on (qqq.dev.qaqc): button, palette command and panel as before", acceso)
+        step("on (mzlab.dev.qaqc): button, palette command and panel as before", acceso)
         r.close()
 except Exception as e:
     steps.append(("setup", "FAIL " + str(e)[:400]))

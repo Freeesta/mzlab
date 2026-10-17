@@ -38,7 +38,7 @@ try:
             pg.evaluate("document.querySelector('#bigdlg').close()")
         step("the elements in use are remembered", keep)
         def menu():
-            pg.evaluate("localStorage.removeItem('qqq.comp')")
+            pg.evaluate("localStorage.removeItem('mzlab.comp')")
             sp = pg.evaluate("(()=>{const s=E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp);return s?s.id:null})()"); assert sp is not None, "an HR spectrum panel"
             xy = pg.evaluate(f"(()=>{{const s=E.panels.find(q=>q.id=={sp}),a=s._a,d=a.data[0].d;let b=0;d.y.forEach((v,i)=>{{if(v>d.y[b])b=i}});const r=s.cv.getBoundingClientRect();return {{x:r.left+a.X(d.mz[b]),y:r.top+a.Y(d.y[b])+6}}}})()")
             pg.evaluate(f"E.panels.find(q=>q.id=={sp}).el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
@@ -54,7 +54,7 @@ try:
             spec = {"mz": [p["mz"] for p in pat], "y": [p["rel"] * 1e4 for p in pat]}
             ms2 = {"mz": [m for _, m in subformulas("C13H25N4O3S", 1, 100.0)[1][::25][:6]], "y": [5e4] * 6}
             pg.evaluate("document.querySelector('#bigdlg').close()")
-            pg.evaluate("localStorage.removeItem('qqq.comp')")
+            pg.evaluate("localStorage.removeItem('mzlab.comp')")
             pg.evaluate(f"COMP.open({{mz: {pat[0]['mz']}, polarity: 'positive', spec: {spec}, ms2: {ms2}}})"); pg.wait_for_timeout(400)
             pg.fill("#cmp-els", "C:0-20,H:0-40,N:0-6,O:0-6,S:0-2"); pg.click("#cmp-go"); pg.wait_for_selector("#cmp-out table", timeout=15000)
             hd = pg.inner_text("#cmp-out tr:nth-child(1)"); hd = hd.lower(); assert "punteggio" in hd and "ms2 spiegata" in hd and "alogeni" in hd, hd

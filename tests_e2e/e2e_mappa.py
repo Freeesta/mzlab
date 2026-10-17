@@ -104,7 +104,7 @@ try:
             assert pg.evaluate("MAPPA.diffOpt().show") == "all" and pg.is_checked(".pnl.map [data-mz=neg]")      # both signs by default: the decreases (blue) are drawn
             pg.uncheck(".pnl.map [data-mz=neg]")
             pg.wait_for_function(f"MAPPA.diffOpt().show==='up' && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
-            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.mappa')).neg") is False
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.mappa')).neg") is False
             pg.check(".pnl.map [data-mz=neg]")
             pg.wait_for_function(f"MAPPA.diffOpt().show==='all' && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
             pg.fill(".pnl.map [data-mz=thr]", "5"); pg.dispatch_event(".pnl.map [data-mz=thr]", "change")
@@ -152,7 +152,7 @@ try:
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Delete"); pg.wait_for_function(f"MAPPA.pts({M}).length===2", timeout=5000)
         step("points saved for the pair of files (a note too) and back after a reload; row = lock; Canc removes", persist)
         def panel2d():
-            pg.evaluate("localStorage.removeItem('qqq.mappa')"); pg.evaluate(M + ".ref=''; ctl(" + M + "); draw(" + M + ")"); pg.wait_for_timeout(800)
+            pg.evaluate("localStorage.removeItem('mzlab.mappa')"); pg.evaluate(M + ".ref=''; ctl(" + M + "); draw(" + M + ")"); pg.wait_for_timeout(800)
             pg.evaluate(M + ".corr='';" + M + "._parOpen=false; ctl(" + M + ")"); pg.wait_for_timeout(300)
             hh = pg.evaluate("(()=>{const h=" + M + ".el.querySelector('.hd').getBoundingClientRect(); return h.height})()"); assert hh < 60, hh                  # one low row
             assert pg.locator(".pnl.map [data-a=cpar]").inner_text().strip().startswith("Options") and pg.locator(".pnl.map .corrw:not(.ciw)").count() == 1
@@ -162,7 +162,7 @@ try:
             assert pg.locator(".pnl.map [data-mz=pal]").input_value() == "viridis"
             v0 = pg.evaluate(M + "._img.v.length"); img0 = pg.evaluate(M + "._img.key")
             pg.select_option(".pnl.map [data-mz=pal]", "cividis"); pg.wait_for_timeout(1200)
-            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.mappa')).pal") == "cividis" and pg.evaluate(M + "._img.key") != img0
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.mappa')).pal") == "cividis" and pg.evaluate(M + "._img.key") != img0
             bgs = pg.evaluate(M + ".leg.querySelector('.cbar').style.background"); assert "rgb(0, 32, 76)" in bgs, bgs
             assert pg.evaluate(M + ".leg.querySelectorAll('.cbar').length") == 1 and pg.evaluate("/\\d/.test(" + M + ".leg.textContent)")     # colour bar with values
             pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c=snip]"); pg.wait_for_timeout(1500)

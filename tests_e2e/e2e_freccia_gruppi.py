@@ -11,7 +11,7 @@ try:
         b = p.chromium.launch(); r.b = b
         for theme in ("light", "dark"):
             ctx = b.new_context(locale="en-US", viewport={"width": 1280, "height": 900})
-            ctx.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1')}catch(_){}")
+            ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1')}catch(_){}")
             pg = ctx.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
             pg.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); pg.wait_for_timeout(800)
             pg.evaluate(f"document.documentElement.dataset.theme='{theme}'")

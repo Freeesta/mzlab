@@ -53,7 +53,7 @@ try:
             tab("idn"); assert "Identifica tutte" in body()
         step("composition, isotopes and libraries open the functions that already exist", launchers)
         def persist():
-            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.banco.info')).tab") == "idn"
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.banco.info')).tab") == "idn"
             h = pg.evaluate("document.querySelector('#hrinfo').offsetHeight"); assert h >= 160
         step("the tab and the height are remembered", persist)
     r.close()
