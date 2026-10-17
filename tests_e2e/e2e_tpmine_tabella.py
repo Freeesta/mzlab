@@ -50,11 +50,11 @@ PUTF = PUT.replace('"idx"]', '"files"]').replace('n + ".mzidx", { create', 'n, {
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce", accept_downloads=True).new_page()
-        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.on("console", lambda m: print("CONSOLE", m.text[:400]) if "tp_row" in m.text else None)
         pg.context.on("request", lambda r: reqs.append(r.url))
-        pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
+        pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_function("typeof window.TPCALL === 'function'", timeout=120000)
         pg.evaluate(PUT, names); pg.evaluate(PUTF, names)

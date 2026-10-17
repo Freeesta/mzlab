@@ -60,8 +60,8 @@ try:
         b = p.chromium.launch(); ctx = b.new_context(viewport={"width": 1280, "height": 1000}, reduced_motion="reduce"); pg = ctx.new_page()
         try: ctx.grant_permissions(["clipboard-read", "clipboard-write"])
         except Exception: pass
-        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
-        pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
         pg.on("pageerror", lambda e: errs.append(str(e)))
         ctx.on("request", lambda r: reqs.append(r.url))
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
@@ -251,7 +251,7 @@ try:
         step("the filter «With MS2» keeps only the rows with an MS2 in their peak", filter_ms2)
 
         def reload_keeps():
-            saved = pg.evaluate("localStorage.getItem('qqq.tabui.ms2links')")
+            saved = pg.evaluate("localStorage.getItem('mzlab.tabui.ms2links')")
             assert saved and "lr_MS2-t30.mzML" in saved, saved
             pg.reload(); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
             tab_and_dig(); table_view()
@@ -288,7 +288,7 @@ try:
             pg.wait_for_function("document.querySelector('#tp-ms2-reset') && document.querySelector('#tp-ms2-reset').disabled && !/removed/.test((document.querySelector('#tp-ms2-orph') || {}).textContent || '')", timeout=60000)
             t = pg.evaluate(TABLE)
             assert next(r for r in t if r[1] == "257.06" and r[2] == "10" and r[4] == "7.40")[5] == "auto", t
-            assert not pg.evaluate("(JSON.parse(localStorage.getItem('qqq.tabui.ms2links') || '{}'))[Object.keys(JSON.parse(localStorage.getItem('qqq.tabui.ms2links') || '{}'))[0]]")
+            assert not pg.evaluate("(JSON.parse(localStorage.getItem('mzlab.tabui.ms2links') || '{}'))[Object.keys(JSON.parse(localStorage.getItem('mzlab.tabui.ms2links') || '{}'))[0]]")
         step("«none» takes the scans away; «Reset matches» brings the automatic matches back and forgets the corrections", none_and_reset)
 
         def xlsx():

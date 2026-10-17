@@ -37,7 +37,7 @@ try:
         pg = r.page(p, qaqc=True)
         load(pg, [D / "S_t0.mzML", D / "S_t30.mzML", D / "Blank_1.mzML"], 3)
         def lr_panel():
-            pg.evaluate("localStorage.removeItem('qqq.qaqc')"); drawer(pg, "qaqc"); pg.wait_for_selector("#sb-panel-qaqc select[data-role]")
+            pg.evaluate("localStorage.removeItem('mzlab.qaqc')"); drawer(pg, "qaqc"); pg.wait_for_selector("#sb-panel-qaqc select[data-role]")
             roles = pg.evaluate("Array.from(document.querySelectorAll('#sb-panel-qaqc select[data-role]')).map(s=>[s.dataset.role,s.value])")
             assert dict(roles)["Blank_1.mzML"] == "blank" and dict(roles)["S_t0.mzML"] == "sample", roles
             assert pg.locator("#qq-kind").count() == 0                                         # LR: standards only, no list of known ions
@@ -60,7 +60,7 @@ try:
         def lr_role_fix():
             pg.select_option("select[data-role='S_t30.mzML']", "qc"); ready(pg); pg.wait_for_timeout(600)
             assert pg.evaluate("QAQC.results.ions[0].roles.join()") == "blank,sample,qc"
-            attendi(pg, "NB.session.some(x=>x.file==='S_t30.mzML' && x.tipo==='qc')")                 # remembered in the notebook (campioni/2), not in qqq.qaqc
+            attendi(pg, "NB.session.some(x=>x.file==='S_t30.mzML' && x.tipo==='qc')")                 # remembered in the notebook (campioni/2), not in mzlab.qaqc
         step("a type corrected by hand is used and remembered", lr_role_fix)
         def report(hr):
             import json

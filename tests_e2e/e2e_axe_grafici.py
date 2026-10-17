@@ -46,7 +46,7 @@ try:
         step("WCAG 2.5.7: zoom and pan without dragging (+ - [ ] 0 on the focused chart)", keys)
         def touch():
             ctx = r.b.new_context(viewport={"width": 1024, "height": 1366}, has_touch=True, is_mobile=True, locale="it-IT")
-            q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+            q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
             q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_timeout(1500)
             try:
                 q.evaluate("1"); ready(q)

@@ -33,7 +33,7 @@ try:
             g = pg.evaluate("(async () => (await (await fetch('api/gradient?k=0')).json()).gradient)()")
             assert g["source"] == "course" and [p["b"] for p in g["points"]] == [10, 10, 60, 70, 100, 100, 10, 10], g
             assert pg.evaluate("Object.keys(NB.gradienti||{}).length") == 1
-            assert pg.evaluate("!!localStorage.getItem('qqq.gradiente.ultimo')")
+            assert pg.evaluate("!!localStorage.getItem('mzlab.gradiente.ultimo')")
         step("«Metodo del corso» stores the gradient for the file (and the last used)", course)
         def editor():
             pg.click("#grad-rm"); pg.wait_for_selector("#grad-new"); ready(pg)

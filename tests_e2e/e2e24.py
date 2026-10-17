@@ -26,7 +26,7 @@ try:
         if SITE:
             b = p.chromium.launch(); pg = b.new_page(viewport={"width": 1500, "height": 2200}, accept_downloads=True)
             pg.on("pageerror", lambda e: errs.append(str(e)))
-            pg.add_init_script("try{localStorage.setItem('qqq.tutorial','1')}catch(e){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.tutorial','1')}catch(e){}")
             pg.goto("http://127.0.0.1:8861/"); pg.wait_for_timeout(2500)
         else:
             pg = r.page(p)

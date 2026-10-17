@@ -25,7 +25,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
-        pg.evaluate("localStorage.removeItem('qqq.contaminanti');localStorage.removeItem('qqq.contaminanti.on');localStorage.removeItem('qqq.liste.attive')")
+        pg.evaluate("localStorage.removeItem('mzlab.contaminanti');localStorage.removeItem('mzlab.contaminanti.on');localStorage.removeItem('mzlab.liste.attive')")
         pg.evaluate("LISTE.ensure()"); pg.wait_for_function("LISTE.find&&true", timeout=5000); pg.wait_for_timeout(1500)
         sp = pg.evaluate(f"(()=>{{const p={SP};p.zoom=[270,400];draw(p);return p.id}})()"); pg.wait_for_timeout(1500)
 
@@ -63,21 +63,21 @@ try:
             kks = pg.evaluate(f"{SP}._a.cont.match({SP}._a.cmarks[0].m).map(x=>LISTE.keyFor('entry', x))"); kk = kks[0]
             for k in kks: pg.evaluate(f"LISTE.exclSet('entry', {json.dumps(k)}, true)")
             pg.wait_for_timeout(1200)
-            s1 = st(); assert s1["hid"] >= 1 and s1["marks"] < m0, (m0, s1, pg.evaluate(f"{SP}._a.cmarks.map(c=>c.m)"), pg.evaluate("JSON.stringify(localStorage.getItem(\"qqq.contaminanti.esclusi\"))"))
+            s1 = st(); assert s1["hid"] >= 1 and s1["marks"] < m0, (m0, s1, pg.evaluate(f"{SP}._a.cmarks.map(c=>c.m)"), pg.evaluate("JSON.stringify(localStorage.getItem(\"mzlab.contaminanti.esclusi\"))"))
             assert "Mostra" in pg.inner_text(".cont-cnt")
             assert t0 == sig(), "TIC drawn the same"
             pg.focus(".cont-show"); pg.keyboard.press("Enter"); pg.wait_for_timeout(1000)
             assert st()["marks"] == m0 and "Nascondi" in pg.inner_text(".cont-cnt")
             pg.click(".cont-show"); pg.wait_for_timeout(800)
-            ls = json.loads(pg.evaluate("localStorage.getItem('qqq.contaminanti.esclusi')")); assert kk in ls["voci"], ls
-        step("exclude one entry: sign gone, counter, Show/Hide by keyboard, TIC identical, kept in qqq.contaminanti.esclusi", excl)
+            ls = json.loads(pg.evaluate("localStorage.getItem('mzlab.contaminanti.esclusi')")); assert kk in ls["voci"], ls
+        step("exclude one entry: sign gone, counter, Show/Hide by keyboard, TIC identical, kept in mzlab.contaminanti.esclusi", excl)
 
         def excl_cls():
             pg.evaluate("LISTE.exclReset()"); pg.wait_for_timeout(600)
             ck = pg.evaluate(f"LISTE.keyFor('cls', {SP}._a.cont.match(391.2843)[0])")
             pg.evaluate(f"LISTE.exclSet('cls', {json.dumps(ck)}, true)"); pg.wait_for_timeout(1000)
             assert pg.evaluate(f"{SP}._a.cont.state(391.2843).hid") is True
-            assert json.loads(pg.evaluate("localStorage.getItem('qqq.contaminanti.esclusi')"))["classi"] == [ck]
+            assert json.loads(pg.evaluate("localStorage.getItem('mzlab.contaminanti.esclusi')"))["classi"] == [ck]
             pg.click("#np-liste"); pg.wait_for_selector("#lst-excl", timeout=5000); pg.wait_for_timeout(500)
             assert pg.is_visible("#lst-excl-reset"); pg.click("#lst-excl-reset"); pg.wait_for_timeout(500)
             assert pg.evaluate("LISTE.exclItems().length") == 0
@@ -99,7 +99,7 @@ try:
             pg.evaluate(f"LISTE.exclSet('entry', {json.dumps(k)}, true)"); pg.wait_for_timeout(300)
             pg.evaluate("uiSave(true)"); pg.wait_for_timeout(500)
             assert k in pg.evaluate("NB.ui.contEx.voci"), "exclusions saved with the session"
-            pg.evaluate("localStorage.removeItem('qqq.contaminanti.esclusi')"); pg.evaluate("LISTE.exclReset()")
+            pg.evaluate("localStorage.removeItem('mzlab.contaminanti.esclusi')"); pg.evaluate("LISTE.exclReset()")
             pg.evaluate("LISTE.exclImport(NB.ui.contEx)"); assert pg.evaluate("LISTE.exclItems().length") == 1
             pg.evaluate("LISTE.exclReset()")
         step("exclusions saved with the session and restored", sess)
@@ -111,10 +111,10 @@ try:
         def gear():
             pg.click("#np-set"); pg.wait_for_selector("#uip-cont", timeout=5000)
             assert pg.is_checked("#uip-cont"); pg.uncheck("#uip-cont"); pg.wait_for_timeout(400)
-            assert pg.evaluate("LISTE.isOn()") is False and pg.evaluate("localStorage.getItem('qqq.contaminanti.on')") == "false"
+            assert pg.evaluate("LISTE.isOn()") is False and pg.evaluate("localStorage.getItem('mzlab.contaminanti.on')") == "false"
             pg.check("#uip-cont"); pg.wait_for_timeout(300); assert pg.evaluate("LISTE.isOn()") is True
             pg.click("#np-set")
-        step("gear switch: on by default, kept in qqq.contaminanti.on", gear)
+        step("gear switch: on by default, kept in mzlab.contaminanti.on", gear)
         def gear_lab():
             pg.click("#np-set"); pg.wait_for_selector("#uip-cont", timeout=5000)
             assert pg.locator("#uip-lab").count() == 0 and "aboratorio" not in pg.inner_text("#uipset"), "the laboratory contaminants are not in the settings"
@@ -124,7 +124,7 @@ try:
             pg.keyboard.press("Enter"); pg.wait_for_selector("#bigdlg[open] #lab-add", timeout=5000); pg.evaluate("document.querySelector('#bigdlg').close()")
         step("laboratory contaminants: not in the settings, found by the search bar (it and en words)", gear_lab)
         def gear_fresh():
-            pg.evaluate("localStorage.removeItem('qqq.contaminanti.on')"); pg.evaluate("window.__L=window.LISTE;window.LISTE=undefined")
+            pg.evaluate("localStorage.removeItem('mzlab.contaminanti.on')"); pg.evaluate("window.__L=window.LISTE;window.LISTE=undefined")
             pg.click("#np-set"); pg.wait_for_selector("#uip-cont", timeout=5000); ok = pg.is_checked("#uip-cont")
             pg.click("#np-set"); pg.evaluate("window.LISTE=window.__L"); assert ok, "known contaminants are on for a new user, also before the lists are loaded"
         step("known contaminants: on by default in the settings", gear_fresh)
@@ -144,7 +144,7 @@ try:
             mz0 = pg.evaluate(f"(()=>{{const p={SP};const d=p._a.data[0].d;let k=-1;d.mz.forEach((m,i)=>{{if(m>200&&m<300&&(k<0||d.y[i]>d.y[k]))k=i}});return d.mz[k]}})()")
             pg.evaluate(f"setTimeout(()=>LISTE.askAdd({mz0}, 'positive'),0)"); pg.wait_for_selector("#askok", timeout=5000); pg.fill("#askin", "mio fondo"); pg.click("#askok"); pg.wait_for_timeout(1200)
             h = hov(pg, mz0); assert h and "mio fondo" in h and "Contaminanti del laboratorio" in h, h
-            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.contaminanti')).length") == 1
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.contaminanti')).length") == 1
             csv = pg.evaluate("LISTE.csvOut(LISTE.labRows())"); assert csv.startswith("mz,name,formula,polarity,note") and "mio fondo" in csv
         step("laboratory contaminants: added from the menu, seen in the box, saved as CSV", lab)
 
@@ -178,7 +178,7 @@ try:
             shut(pg, "#listex"); pg.wait_for_timeout(300)
         step("user CSV suspect list: uploaded, visible in dialog, matched in HR hover tip", user_csv)
 
-        pg.evaluate("localStorage.removeItem('qqq.contaminanti')")
+        pg.evaluate("localStorage.removeItem('mzlab.contaminanti')")
     r.close()
 
     r2 = Run(port=8994, wd="/tmp/wd_cont2")

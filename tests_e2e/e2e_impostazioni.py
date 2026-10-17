@@ -10,7 +10,7 @@ def step(name, fn):
 try:
     with sync_playwright() as p:
         pg = r.page(p, tour=True)
-        pg.evaluate("try { localStorage.removeItem('qqq.tour.lr'); localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1'); } catch (_) {}")
+        pg.evaluate("try { localStorage.removeItem('mzlab.tour.lr'); localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1'); } catch (_) {}")
         pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_timeout(800)
         pg.click("text=Carica dati"); ready(pg)
         def invito():
@@ -18,7 +18,7 @@ try:
             t = pg.inner_text("#tour-invito"); assert "Primo accesso? Un tour guidato degli strumenti." in t and "minut" not in t, t
             hold(pg, 55000); assert pg.is_visible("#tour-invito"), "still there before a minute"
             hold(pg, 8000); assert not pg.is_visible("#tour-invito"), "dismissed by itself after a minute"
-            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.tour.lr')).stato") == "invitato"
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr')).stato") == "invitato"
             pg.reload(); ready(pg); pg.wait_for_timeout(1500); assert not pg.is_visible("#tour-invito"), "does not come back on reload"
         step("the invitation closes by itself after a minute and does not come back", invito)
         def gear():

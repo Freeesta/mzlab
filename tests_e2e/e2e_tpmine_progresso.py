@@ -39,7 +39,7 @@ WATCH = """() => { window.__w = {gaps: [], counts: [], t0: performance.now()}; l
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None); pg = b.new_context(permissions=["clipboard-read", "clipboard-write"], viewport={"width": 1500, "height": 1400}, reduced_motion="reduce").new_page()
-        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');localStorage.setItem('qqq.admin','1');localStorage.setItem('mzlab.lang','it');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.lang','it');}catch(_){}")
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#nav", timeout=120000)
         pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)

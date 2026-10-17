@@ -82,7 +82,7 @@ try:
             assert not errs, errs; ctx.close()
         step("prefers-reduced-motion: no view transition and no animation", reduced)
         def a11y_reduce():
-            ctx, pg, errs = ctxpage(b, init=SPY + "try{localStorage.setItem('qqq.a11y',JSON.stringify({motion:'always'}))}catch(e){}"); pg.goto(T + "06-esi.html"); real_wait(pg, 400)
+            ctx, pg, errs = ctxpage(b, init=SPY + "try{localStorage.setItem('mzlab.a11y',JSON.stringify({motion:'always'}))}catch(e){}"); pg.goto(T + "06-esi.html"); real_wait(pg, 400)
             click_chapter(pg, "08-vuoto.html"); o = rev(pg)
             assert not o["anims"], o
             ctx.close()

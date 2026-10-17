@@ -34,7 +34,7 @@ try:
         b = p.chromium.launch(); r.b = b
         def page():
             pg = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}).new_page()
-            pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e)))); return pg
         pg = page(); opened(pg, D / "late-t0.mzML")
         def start():

@@ -12,7 +12,7 @@ try:
         pg = r.page(p)
         pg.click("#nav button[data-v=draw]"); pg.wait_for_function("window.TPDraw && TPDraw.ready()", timeout=90000)
         pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); pg.wait_for_timeout(1800)
-        txt = lambda: pg.evaluate("(()=>{const d=document.getElementById('kframe').contentDocument;return [...d.querySelectorAll('#qqq-labels text')].map(t=>t.textContent).join(' ')})()")
+        txt = lambda: pg.evaluate("(()=>{const d=document.getElementById('kframe').contentDocument;return [...d.querySelectorAll('#mzlab-labels text')].map(t=>t.textContent).join(' ')})()")
         def five():
             assert pg.evaluate("[...document.querySelectorAll('#lb-dec option')].map(o=>o.value).join()") == "0,1,2,3,4,5"
             pg.select_option("#lb-dec", "5"); pg.wait_for_timeout(900)

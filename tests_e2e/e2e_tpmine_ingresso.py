@@ -74,7 +74,7 @@ def rows_ready(pg):
     assert "LC-HRMS" in pg.inner_text("#tp-fsum"), pg.inner_text("#tp-fsum")
 
 
-INIT = "try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}"
+INIT = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 
 
 def fresh(b):
@@ -84,7 +84,7 @@ def fresh(b):
     pg.on("console", lambda m: print("console:", m.text[:300], flush=True) if "mzFinder" in m.text else None)      # why the engine fell back, in the log of a red run
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.context.on("request", lambda r: reqs.append(r.url))
-    pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
+    pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
     pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
     pg.wait_for_function("typeof window.TPCALL === 'function'", timeout=120000)
     return pg

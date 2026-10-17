@@ -9,11 +9,11 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_memoria.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 KJ = "document.querySelector('#kframe').contentWindow.ketcher"
-LAB = "(()=>{const g=document.querySelector('#kframe').contentDocument.querySelector('#qqq-labels');return g?g.childNodes.length:-1})()"
-KEYS = ["qqq.a11y", "qqq.banco.info", "qqq.barra.hr", "qqq.barra.lato", "qqq.barra.lr", "qqq.bianco", "qqq.comp", "qqq.contaminanti",
-        "qqq.contaminanti.esclusi", "qqq.contaminanti.on", "qqq.convopen", "qqq.disegno.riquadri", "qqq.disegno.strumenti", "qqq.fair", "qqq.flgrp",
-        "qqq.gradiente.ultimo", "mzlab.lang", "qqq.lib.cartella", "qqq.lib.soglie", "qqq.liste.attive", "qqq.lr", "qqq.mappa", "qqq.pca",
-        "qqq.picchi", "qqq.pool", "qqq.prefs", "qqq.profilo", "qqq.qaqc", "qqq.riferimento", "qqq.tunit", "qqq.unopen", "qqq.upd.last", "qqq-labels", "qqq-theme"]
+LAB = "(()=>{const g=document.querySelector('#kframe').contentDocument.querySelector('#mzlab-labels');return g?g.childNodes.length:-1})()"
+KEYS = ["mzlab.a11y", "mzlab.banco.info", "mzlab.barra.hr", "mzlab.barra.lato", "mzlab.barra.lr", "mzlab.bianco", "mzlab.comp", "mzlab.contaminanti",
+        "mzlab.contaminanti.esclusi", "mzlab.contaminanti.on", "mzlab.convopen", "mzlab.disegno.riquadri", "mzlab.disegno.strumenti", "mzlab.fair", "mzlab.flgrp",
+        "mzlab.gradiente.ultimo", "mzlab.lang", "mzlab.lib.cartella", "mzlab.lib.soglie", "mzlab.liste.attive", "mzlab.lr", "mzlab.mappa", "mzlab.pca",
+        "mzlab.picchi", "mzlab.pool", "mzlab.prefs", "mzlab.profilo", "mzlab.qaqc", "mzlab.riferimento", "mzlab.tunit", "mzlab.unopen", "mzlab.upd.last", "mzlab-labels", "mzlab-theme"]
 BAD = ["{", "null", "[]", "123", '"x"', '{"a":1}', "[1,2,3]", "undefined", "x" * 5000]
 r = Run(port=8997, wd="/tmp/wd_memoria")
 try:
@@ -54,7 +54,7 @@ try:
         def two_tabs():
             pg.evaluate("fetch('api/notebook',{method:'POST',body:'{}'})")
             ctx = r.b.new_context(viewport={"width": 1440, "height": 900})
-            ctx.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
+            ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             a, q = ctx.new_page(), ctx.new_page()
             for t in (a, q): t.goto(f"http://127.0.0.1:{r.port}/#/disegno"); t.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
             a.fill("#ex-name", "tab_a"); a.dispatch_event("#ex-name", "change"); a.wait_for_timeout(1500)

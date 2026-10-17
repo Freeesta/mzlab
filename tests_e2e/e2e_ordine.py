@@ -1,4 +1,4 @@
-"""Load table and file list: order of the files (time, mixed units), time field without arrows and with validation, unit of the time (min, h, d) saved in qqq.tunit."""
+"""Load table and file list: order of the files (time, mixed units), time field without arrows and with validation, unit of the time (min, h, d) saved in mzlab.tunit."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from synth import write_full
@@ -29,7 +29,7 @@ try:
         step("the time field is a text field (inputmode decimal), the unit select is there", field)
         def unit():
             pg.select_option("#tunit", "h")
-            assert pg.evaluate("localStorage.getItem('qqq.tunit')") == "h"
+            assert pg.evaluate("localStorage.getItem('mzlab.tunit')") == "h"
             v = pg.evaluate("Array.from(document.querySelectorAll('#flist input[data-k=time]')).map(i=>i.value)")
             assert v[2:] == ["2", "24"] and v[0] == "0.0833333", v
             pg.select_option("#tunit", "d"); v = pg.evaluate("Array.from(document.querySelectorAll('#flist input[data-k=time]')).map(i=>i.value)")

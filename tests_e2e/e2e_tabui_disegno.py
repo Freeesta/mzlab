@@ -32,7 +32,7 @@ try:
         def fresh():
             c = b.new_context(viewport={"width": 1400, "height": 1000}, reduced_motion="reduce"); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e)))
-            pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/?lang=en"); pg.wait_for_selector(TAB, timeout=60000)
             pg.click(TAB); pg.wait_for_selector("#tp-draw")
             return pg

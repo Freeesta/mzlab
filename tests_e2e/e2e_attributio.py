@@ -1,4 +1,4 @@
-"""Voice «Attributio» of the administrator mode (TP_Mine/js/50_attributio.js, 51_attributio_table.js, feat-worker.js, the .wasm `attributio`). Without `qqq.admin` there is no entry; with it the
+"""Voice «Attributio» of the administrator mode (TP_Mine/js/50_attributio.js, 51_attributio_table.js, feat-worker.js, the .wasm `attributio`). Without `mzlab.admin` there is no entry; with it the
 synthetic campaign folder (tests/data/attributio/campagna_sintetica) is loaded with set_input_files, the table has 15 features with the levels of livelli_attesi.csv, the filters and the sort
 work, CSV and XLSX are downloaded, the result and its fingerprint reach the notebook, the controls are at least 24 x 24 px and MZLAB_LR_MISS stays empty. Builds the site and the .wasm
 (SKIP without cargo and wasm-bindgen); MZLAB_PIPE_SITE=<built site with static/wasm-feat> reuses a site. Run from the repo root: python3 tests_e2e/e2e_attributio.py"""
@@ -51,8 +51,8 @@ for _ in range(100):
 errs = []
 def new_page(b, admin):
     pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce", accept_downloads=True).new_page()
-    pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
-    if admin: pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")
+    pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+    if admin: pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "GL Driver" not in m.text else None)
     pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)

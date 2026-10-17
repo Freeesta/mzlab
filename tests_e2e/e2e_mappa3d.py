@@ -111,13 +111,13 @@ try:
             pg.screenshot(path=SH + "m3d_lr_diff.png")
             pg.check("dialog.m3d [data-m=bg]"); pg.wait_for_function("window.__m3d.V.g.bg===true", timeout=60000)
             pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
-            pg.evaluate("localStorage.removeItem('qqq.mappa')")
+            pg.evaluate("localStorage.removeItem('mzlab.mappa')")
         step("lr: comparison A - B (signed heights) and constant background removed", diff)
         # old keys of the previous 3D view are ignored without errors
         def oldkeys():
-            pg.evaluate("localStorage.setItem('qqq.mappa', JSON.stringify({t3pal:'cividis',t3sig:2,t3thr:.1}))"); pg.reload(); pg.wait_for_timeout(1500)
+            pg.evaluate("localStorage.setItem('mzlab.mappa', JSON.stringify({t3pal:'cividis',t3sig:2,t3thr:.1}))"); pg.reload(); pg.wait_for_timeout(1500)
             assert not r.errs, r.errs
-        step("old t3* keys of qqq.mappa are ignored", oldkeys)
+        step("old t3* keys of mzlab.mappa are ignored", oldkeys)
         b.close()
     r.close(); r2 = Run(port=8839, wd="/tmp/wd_mappa3d_hr")
     with sync_playwright() as p:

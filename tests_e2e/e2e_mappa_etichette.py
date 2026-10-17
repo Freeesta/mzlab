@@ -13,7 +13,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch(); r.b = b
         pg = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}).new_page()
-        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
         pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")]); pg.wait_for_timeout(800)
