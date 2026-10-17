@@ -24,6 +24,14 @@ const NATIVO = {
     }
     return out;
   },
+  // the samples of a pair that the browser storage already holds with a current index (the same members: names, sizes, dates): their entries of `list`, else null (a part of them only, the desktop app, an engine without natsame)
+  async cached(rb, stem, mem, list) {
+    if (!rb.nativeSame || window.MZLAB_DESKTOP) return null;
+    const cands = list.filter(f => f.name.startsWith(stem)).map(f => f.name); if (!cands.length) return null;
+    const hits = await rb.nativeSame(mem, cands); if (!hits.length) return null;
+    const s = (await rb.nativeSamples(mem)).samples;
+    return hits.length === s.length ? list.filter(f => hits.includes(f.name)) : null;
+  },
   // the text key of a phase of the loading of a sample (the event mzlab-index carries `phase`), for CONVROWS and the rows of the loading
   rowState(phase) { return { read: "nread", open: "nopen", scans: "nscan", chrom: "nchrom" }[phase] || "index"; },
 };

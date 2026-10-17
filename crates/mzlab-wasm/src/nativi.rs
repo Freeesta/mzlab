@@ -259,8 +259,6 @@ pub fn native_samples(
 
 /// The fingerprints of a member taken while it is copied: `aggiorna(piece)` for each piece in file order, then `fine()` gives `[sha256, sha1, probe]`
 /// (`undefined` when the pieces do not add up to `size`). The page passes them on to `build_mzidx_native` and to the reader of the header of the mzML.
-/// The fingerprints of a member taken while it is copied: `aggiorna(piece)` for each piece in file order, then `fine()` gives `[sha256, sha1, probe]`
-/// (`undefined` when the pieces do not add up to `size`). The page passes them on to `build_mzidx_native` and to the reader of the header of the mzML.
 #[wasm_bindgen]
 pub struct Passata(Option<upload::Passata>);
 
@@ -319,7 +317,7 @@ impl mzlab_core::mzidx_spill::Spill for JsSpill {
 /// it with `write(offset, bytes)`; `name` is the name of the item. `phase(n)` is told when a phase begins (1 the members are read for their SHA-256,
 /// 4 the reader opens the dataset, 2 the scans are read and indexed, 3 the chromatograms and the index are written); `step(done, total)`, when given, is told how many scans of sample `c` have been decoded (`contato.rs`), else JS follows the bytes read.
 /// `write_cen(offset, bytes)`, when the page wants it: if the first MS1 scan is profile (and `centroid` is not asked) the index with the scans as centroids (the `.cen.mzidx` of mzFinder) is built from the SAME decoding of the scans and written there (`"cen"` in the answer holds its statistics); otherwise nothing is written to it.
-/// Returns the statistics and the SHA-256 of the dataset as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`). `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once).
+/// Returns the statistics, the SHA-256 of the dataset and `missing` (the scans a truncated data file lacks, `Lettore::mancanti`) as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`). `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
 pub fn build_mzidx_native(
@@ -360,6 +358,7 @@ pub fn build_mzidx_native(
     };
     let c = c as usize;
     let mut l = crate::contato::apri(fs, |fs| m.apri_fs(fs), &tell, step, c)?;
+    let cm = (c, l.mancanti(c));
     let mut out = JsOutput { write };
     // peaks that do not fit in the budget go to the scratch file (a second file of OPFS) instead of being decoded again by every round
     let mut spill = spill_put
@@ -370,7 +369,7 @@ pub fn build_mzidx_native(
         .map(|s| s as &mut dyn mzlab_core::mzidx_spill::Spill);
     // a profile sample that the page also wants as centroids: both indexes from one decoding of the scans
     if let Some(wc) = write_cen.filter(|_| !centroid && primo_ms1_profilo(&mut *l, c)) {
-        return doppio(l, c, impronte, name, out, wc, budget_mb, spill, &tell);
+        return doppio(l, cm, impronte, name, out, wc, budget_mb, spill, &tell);
     }
     let mut l = if centroid {
         lettori_centroidi::centroidato(l)
@@ -390,16 +389,16 @@ pub fn build_mzidx_native(
     )
     .map_err(|e| error_json(&e))?;
     Ok(format!(
-        "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{},\"sha256\":\"{}\"}}",
-        st.scans, st.peaks, st.sections, st.passes, st.bytes, sha256
+        "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{},\"sha256\":\"{}\",\"missing\":{}}}",
+        st.scans, st.peaks, st.sections, st.passes, st.bytes, sha256, cm.1
     ))
 }
 
-/// `build_mzidx_native` for a profile sample whose centroid index is wanted too: both from one decoding (`indicizza_lettore_doppio`).
+/// `build_mzidx_native` for a profile sample whose centroid index is wanted too: both from one decoding (`indicizza_lettore_doppio`); `missing`: `Lettore::mancanti` of sample `c`.
 #[allow(clippy::too_many_arguments)]
 fn doppio(
     l: Box<dyn mzlab_core::lettori::Lettore>,
-    c: usize,
+    (c, missing): (usize, usize),
     impronte: Vec<upload::Impronta>,
     name: &str,
     mut out: JsOutput,
@@ -424,8 +423,8 @@ fn doppio(
     )
     .map_err(|e| error_json(&e))?;
     Ok(format!(
-        "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{},\"sha256\":\"{}\",\"cen\":{{\"peaks\":{},\"bytes\":{}}}}}",
-        st.scans, st.peaks, st.sections, st.passes, st.bytes, sha256, sc.peaks, sc.bytes
+        "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{},\"sha256\":\"{}\",\"missing\":{},\"cen\":{{\"peaks\":{},\"bytes\":{}}}}}",
+        st.scans, st.peaks, st.sections, st.passes, st.bytes, sha256, missing, sc.peaks, sc.bytes
     ))
 }
 

@@ -2,6 +2,7 @@
 //! at the same geometry, and the table of the C–H sites by symmetry class (`posizioni::symmetry_classes`).
 
 use crate::mol3d::Mol3d;
+use mzlab_core::sortc::SortC;
 use mzlab_feat::chem::grafo::Mol;
 use mzlab_feat::chem::posizioni::symmetry_classes;
 
@@ -87,7 +88,7 @@ pub fn ch_sites(mol: &Mol, m: &Mol3d, f_minus: &[f64]) -> Vec<Site> {
             tie_first: false,
         })
         .collect();
-    sites.sort_by(|a, b| b.f_minus.total_cmp(&a.f_minus));
+    sites.sortc_by(|a, b| b.f_minus.total_cmp(&a.f_minus));
     let top = sites.first().map_or(0.0, |s| s.f_minus);
     for (k, s) in sites.iter_mut().enumerate() {
         s.rank = k + 1;

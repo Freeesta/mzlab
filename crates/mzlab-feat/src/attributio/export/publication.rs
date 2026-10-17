@@ -16,6 +16,7 @@ use crate::attributio::error::{CampaignError, Result};
 use crate::attributio::frame::Cell;
 use crate::attributio::identity::IdentityRow;
 use crate::attributio::io::Io;
+use crate::sortc::SortC;
 
 impl Build<'_> {
     fn site_cells(&self, it: &Dd, sub: &[&PFeat]) -> Vec<Cell> {
@@ -234,7 +235,7 @@ fn excluded_sheet(x: &Build, fr: &[PFeat]) -> Sheet {
             .filter(|e| e.group == "ambiguous" || e.group == "lab_artifact")
             .map(|e| excluded_row(x, e, fr))
             .collect();
-    keyed.sort_by(|a, b| a.0.cmp(&b.0));
+    keyed.sortc_by(|a, b| a.0.cmp(&b.0));
     let mut s = Sheet::new("Excluded", &EXCLUDED_HEAD);
     s.rows = keyed.into_iter().map(|k| k.1).collect();
     s
@@ -269,7 +270,7 @@ pub fn build(c: &Campaign, io: &Io, matrix: Option<&str>) -> Result<Publication>
     for it in &dd {
         done.push(x.identity_row(it, &fr)?);
     }
-    done.sort_by(|a, b| {
+    done.sortc_by(|a, b| {
         b.1.anthro
             .cmp(&a.1.anthro)
             .then(a.1.lv.cmp(&b.1.lv))

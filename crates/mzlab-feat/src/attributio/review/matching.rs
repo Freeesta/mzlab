@@ -5,6 +5,7 @@
 // adds what the review needs around it: cleaning that keeps the indices of the input, the lower limit of the scan window (`cos_vis`),
 // the matched pairs and the elemental formulas of a mass difference.
 
+use crate::sortc::SortC;
 use mzlab_lib::scores::gnps_match_prepared;
 
 /// A spectrum as the review holds it: peaks as read and the precursor m/z.
@@ -245,7 +246,7 @@ fn fmt_delta(d: &[(&str, i32)]) -> String {
             .filter(|(_, n)| *n * sign > 0)
             .map(|(e, n)| (*e, n * sign))
             .collect();
-        els.sort_by_key(|(e, _)| match *e {
+        els.sortc_by_key(|(e, _)| match *e {
             "C" => (0, ""),
             "H" => (1, ""),
             e => (2, e),
@@ -359,7 +360,7 @@ fn free_search(delta: f64, tol_mda: f64) -> Vec<([i32; 5], i32, f64, f64)> {
             }
         }
     }
-    found.sort_by(|a, b| a.4.total_cmp(&b.4).then(a.3.abs().total_cmp(&b.3.abs())));
+    found.sortc_by(|a, b| a.4.total_cmp(&b.4).then(a.3.abs().total_cmp(&b.3.abs())));
     found
         .into_iter()
         .map(|(g, h, m, e, _)| (g, h, m, e))

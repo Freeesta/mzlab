@@ -5,6 +5,7 @@
 use super::settings::AnnotationSettings;
 use super::text::{fmt_g, num_txt};
 use super::types::Feature;
+use crate::sortc::SortC;
 
 fn gate(ok: bool) -> &'static str {
     if ok {
@@ -245,7 +246,7 @@ fn decisive(f: &Feature, s: &AnnotationSettings, mut failed: Vec<(usize, String)
                 s.cosmic_min
             );
             if !failed.is_empty() {
-                failed.sort_by_key(|t| t.0);
+                failed.sortc_by_key(|t| t.0);
                 d.push_str(&format!(" Closest library hit: {}.", failed[0].1));
             }
             d

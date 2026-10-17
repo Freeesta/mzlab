@@ -3,6 +3,8 @@
 //! the reference against which the check `xlogp_rt` judges the retention time of an identity.
 
 /// Z-score above which a retention time is an outlier of the fit.
+use crate::sortc::SortC;
+
 pub const Z_FLAG: f64 = 3.5;
 /// Minimum number of valid candidates per polarity to trust the fit.
 pub const MIN_N: usize = 15;
@@ -36,7 +38,7 @@ pub fn median(v: &[f64]) -> f64 {
         return f64::NAN;
     }
     let mut s = v.to_vec();
-    s.sort_by(f64::total_cmp);
+    s.sortc_by(f64::total_cmp);
     let n = s.len();
     if n % 2 == 1 {
         s[n / 2]
@@ -48,7 +50,7 @@ pub fn median(v: &[f64]) -> f64 {
 /// Non-decreasing monotonic fit y ~ x (the expected y of each point, in the input order).
 pub fn isotonic_fit(x: &[f64], y: &[f64]) -> Vec<f64> {
     let mut order: Vec<usize> = (0..x.len()).collect();
-    order.sort_by(|&a, &b| x[a].total_cmp(&x[b]));
+    order.sortc_by(|&a, &b| x[a].total_cmp(&x[b]));
     let mut vals: Vec<f64> = Vec::new();
     let mut weights: Vec<f64> = Vec::new();
     for &i in &order {
@@ -135,7 +137,7 @@ fn fit_polarity(group: &[&FitInput]) -> Vec<Fitted> {
 /// For each polarity (in sorted order): the isotonic fit RT ~ XLogP on the valid candidates.
 pub fn build_batch_fit(rows: &[FitInput]) -> Vec<Fitted> {
     let mut pols: Vec<&str> = rows.iter().map(|r| r.pol.as_str()).collect();
-    pols.sort_unstable();
+    pols.sortc();
     pols.dedup();
     pols.into_iter()
         .flat_map(|p| fit_polarity(&rows.iter().filter(|r| r.pol == p).collect::<Vec<_>>()))

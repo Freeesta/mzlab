@@ -1,6 +1,7 @@
 //! Names and plain-words columns of the Tabui table (Dig): net change against the parent, readable modification and the TP names from the m/z.
 //! Pure functions on formulas, rule names and rows; the Python engine (`tpmine/nomi.py`) does the same and the tests hold the same cases.
 
+use crate::sortc::SortC;
 use std::collections::BTreeMap;
 
 use mzlab_core::elements::parse_formula;
@@ -39,7 +40,7 @@ pub fn net_change(formula: &str, parent: &str) -> String {
             .filter(|(_, n)| if pos { **n > 0 } else { **n < 0 })
             .map(|(e, n)| (*e, n.abs()))
             .collect();
-        els.sort_by(|a, b| rank(a.0).cmp(&rank(b.0)));
+        els.sortc_by(|a, b| rank(a.0).cmp(&rank(b.0)));
         (!els.is_empty()).then(|| {
             let mut s = sign.to_string();
             for (e, n) in els {
@@ -142,12 +143,12 @@ pub fn words_json(o: &mut mzlab_core::json::Out, e: &Entry, parent: &str) {
 fn name_group(es: &[Entry], nom: i64, byf: &BTreeMap<String, Vec<usize>>, out: &mut [String]) {
     let min_mz = |v: &Vec<usize>| v.iter().map(|&i| es[i].mz).fold(f64::INFINITY, f64::min);
     let mut keys: Vec<(&String, f64)> = byf.iter().map(|(k, v)| (k, min_mz(v))).collect();
-    keys.sort_by(|a, b| a.1.total_cmp(&b.1).then(a.0.cmp(b.0)));
+    keys.sortc_by(|a, b| a.1.total_cmp(&b.1).then(a.0.cmp(b.0)));
     let mut n = 2;
     if keys.len() > 1 {
         while n < 6 {
             let mut d: Vec<String> = keys.iter().map(|k| digits(k.1, n)).collect();
-            d.sort();
+            d.sortc();
             d.dedup();
             if d.len() == keys.len() {
                 break;
@@ -162,7 +163,7 @@ fn name_group(es: &[Entry], nom: i64, byf: &BTreeMap<String, Vec<usize>>, out: &
             format!("TP {nom}")
         };
         let mut iso = byf[*k].clone();
-        iso.sort_by(|&a, &b| {
+        iso.sortc_by(|&a, &b| {
             let (x, y) = (es[a].ref_rt, es[b].ref_rt);
             x.is_none()
                 .cmp(&y.is_none())

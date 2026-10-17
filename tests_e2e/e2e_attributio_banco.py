@@ -28,7 +28,6 @@ site = Path(reuse) if reuse else tmp / "site"
 env = dict(os.environ, RUNNER_TEMP=str(tmp / "rt"))
 if not reuse:
     cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)]
-    if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
     subprocess.run(cmd, check=True)
     from lib_sito import add_wasm; add_wasm(site)
     from lib import build_feat; build_feat(site / "static", env)
@@ -38,7 +37,7 @@ else:
     ix = site / "static" / "mzfinder" / "indice.json"; d = json.loads(ix.read_text())
     d["js"] = sorted(f.name for f in (ROOT / "TP_Mine" / "js").glob("*.js")); ix.write_text(json.dumps(d))
 man = json.loads((site / "static" / "wasm-feat" / "manifest.json").read_text())
-for key, cap in (("attributio", 512000), ("attributio_rev", 1000000), ("attributio_export", 800000)):
+for key, cap in (("attributio", 512000), ("attributio_rev", 942080), ("attributio_export", 659456)):
     size = (site / "static" / "wasm-feat" / man[key]["wasm"]).stat().st_size
     assert size < cap, (key, size)
     print(f"  {key} .wasm:", size, "bytes")

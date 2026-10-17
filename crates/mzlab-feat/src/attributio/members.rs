@@ -21,6 +21,7 @@ use super::pattern::Pattern;
 use super::readers::sirius::load_sirius;
 use super::untid::{untid_column, Untid};
 use super::{Campaign, Result, Sources};
+use crate::sortc::SortC;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 /// What the typed rows of the readers do not keep: the CSI adduct, the structure and reference of the SIRIUS spectral match, the adduct, library and
@@ -62,7 +63,7 @@ impl EvidenceExtras {
             );
             let mut rows: Vec<usize> = (0..f.len()).filter(|&r| t.ids[r].is_some()).collect();
             let score = |r: usize| sim.and_then(|c| f.num(r, c));
-            rows.sort_by(|&a, &b| super::readers::desc_na_last(score(a), score(b)));
+            rows.sortc_by(|&a, &b| super::readers::desc_na_last(score(a), score(b)));
             for r in rows {
                 let key = (t.pol.clone(), t.ids[r].unwrap_or_default());
                 e.spec
@@ -98,7 +99,7 @@ impl EvidenceExtras {
                 (r, exact, num(r, "MQScore"))
             })
             .collect();
-        rows.sort_by(|a, b| b.1.cmp(&a.1).then(super::readers::desc_na_last(a.2, b.2)));
+        rows.sortc_by(|a, b| b.1.cmp(&a.1).then(super::readers::desc_na_last(a.2, b.2)));
         let (ad, lib, sid) = (g.col("Adduct"), g.col("LibraryName"), g.col("SpectrumID"));
         for (r, _, _) in rows {
             let id = num(r, "#Scan#").unwrap_or_default() as i64;

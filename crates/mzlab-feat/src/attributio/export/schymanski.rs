@@ -13,6 +13,7 @@ use crate::attributio::io::{file_name, Io};
 use crate::attributio::quantify::{load_calibration, quantify_lvl1_environmental, QuantRow};
 use crate::attributio::readers::standards::py_round;
 use crate::attributio::sources::merged_table_path;
+use crate::sortc::SortC;
 use std::collections::{BTreeMap, HashMap};
 
 pub const LEVEL_TAG: [&str; 3] = ["L1", "L2a", "L3"];
@@ -138,7 +139,7 @@ fn level_blocks(
         .map(|(i, sub)| identity_row(level, included[i], sub, short, files))
         .collect();
     sort_rows(&mut ident_rows);
-    feat_lvl.sort_by(|a, b| {
+    feat_lvl.sortc_by(|a, b| {
         (a.identity.as_deref(), a.f.pol.as_str(), a.f.id).cmp(&(
             b.identity.as_deref(),
             b.f.pol.as_str(),
@@ -151,7 +152,7 @@ fn level_blocks(
         .collect();
     let everyone: Vec<&FRow> = rows.iter().collect();
     let mut gone: Vec<&&IdentityRow> = at.iter().filter(|i| dropped(&i.group)).collect();
-    gone.sort_by(|a, b| a.identity.cmp(&b.identity));
+    gone.sortc_by(|a, b| a.identity.cmp(&b.identity));
     let exc = gone
         .iter()
         .map(|g| excluded_cells(&g.identity, &g.group, &everyone))

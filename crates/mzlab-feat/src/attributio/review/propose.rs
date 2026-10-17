@@ -12,6 +12,7 @@ use crate::attributio::detection::{detected_mask, has_site};
 use crate::attributio::frame::Frame;
 use crate::attributio::review::sources::Edge;
 use crate::attributio::sorbents::blank_abundance;
+use crate::sortc::SortC;
 use std::collections::{BTreeMap, HashMap};
 
 /// Sorting order of the tiers on the page.
@@ -619,7 +620,7 @@ pub fn network_neighbours(
             });
         }
         if !nb.is_empty() {
-            nb.sort_by(|a, b| {
+            nb.sortc_by(|a, b| {
                 b.cos
                     .unwrap_or(0.0)
                     .total_cmp(&a.cos.unwrap_or(0.0))

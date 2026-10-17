@@ -14,7 +14,7 @@ const TICK = 200;                                         // ms between two prog
 const PHASES = { 1: "sha", 4: "open", 2: "scans", 3: "chrom" };        // the phase numbers of build_mzidx_native -> the phases of W (nativo-fasi.js), in the order they run
 const SHOWN = { sha: "read", open: "open", scans: "scans", chrom: "chrom" };  // the name of the phase the page shows
 
-/** @typedef {{ name: string, store: string, size: number, sha256?: string, sha1?: string, probe?: string }} StubMember (the fingerprints taken during the copy; a stub without them gets them from the engine as before) */
+/** @typedef {{ name: string, store: string, size: number, mtime?: number, sha256?: string, sha1?: string, probe?: string }} StubMember (`mtime`: lastModified of the file given; the fingerprints taken during the copy; a stub without them gets them from the engine as before) */
 /** @typedef {{ mzlab: string, ds: string, c: number, id: number, centroid: boolean, members: StubMember[], size: number }} Stub */
 
 /** the stub in a File of the archive, or null when it is an ordinary file (an mzML, a member) */
@@ -114,6 +114,17 @@ async function copyMember(/** @type {{ ARCH: any, impronte?: { start: (size: num
 }
 
 /** @param {{ ARCH: any, readerFor: (b: Blob) => (o: number, n: number) => Uint8Array, fileOf: (n: string) => Promise<File>, jerr: (k: string) => never, native_samples: Function, native_to_mzml: Function, native_srm: Function, native_external: Function, impronte?: { start: (size: number) => import("./impronta.js").Presa } }} h */
+/** which of `names` are samples of the same files as `members` ([{ name, size, mtime }]: same names, sizes and lastModified, and in OPFS): the same pair given again */
+async function sameDi(/** @type {(n: string) => Promise<Stub | null>} */ stubOf, /** @type {any} */ ARCH, /** @type {{ name: string, size: number, mtime: number }[]} */ members, /** @type {string[]} */ names) {
+  const key = (/** @type {{ name: string, size: number, mtime?: number }[]} */ ms) => JSON.stringify(ms.map(m => [m.name, m.size, m.mtime || 0]).sort());
+  const want = key(members), out = [];
+  for (const n of names) {
+    const st = await stubOf(n).catch(() => null);
+    if (st && st.members.every(m => m.mtime) && key(st.members) === want && (await Promise.all(st.members.map(m => ARCH.get("files", m.store)))).every((f, i) => f && f.size === st.members[i].size)) out.push(n);
+  }
+  return out;
+}
+
 export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte }) {
   const ext = createEsterno(native_external);               // a Thermo .raw is read through the `thermo` module (lettore-esterno.js)
   const stubs = new Map();                                // mzML name -> Stub (read from the file once)
@@ -146,7 +157,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
     /** @type {StubMember[]} */ const members = [];
     for (const x of nat.members) {
       const store = PREFIX + nat.key + "~" + x.name.replace(/[\\/]/g, "~");
-      const member = /** @type {StubMember} */ ({ name: x.name, store, size: x.blob.size });
+      const member = /** @type {StubMember} */ ({ name: x.name, store, size: x.blob.size, mtime: /** @type {any} */ (x.blob).lastModified || 0 });
       members.push(member);
       await copyMember({ ARCH, impronte, writing, taken }, x.blob, store, bump);
       const o = taken.get(store);
@@ -191,5 +202,5 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
 
   const samples = (/** @type {{ name: string, blob: Blob }[]} */ members) => samplesDi(native_samples, ext, members);
   const log = registroDi(stubOf, memberFiles, ext, jerr);
-  return { stubOf, attach, put, indexJob, toMzml, samples, sweep, srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); }, registro: log.registro };
+  return { stubOf, attach, put, same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, toMzml, samples, sweep, srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); }, registro: log.registro };
 }

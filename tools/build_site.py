@@ -1,12 +1,10 @@
 """Builds the static site (the whole program running in the browser) into site/.
 
-    python tools/build_site.py                      # downloads Pyodide (for mzFinder only) from the jsDelivr CDN (needs internet)
-    python tools/build_site.py --pyodide-dir DIR    # uses an already downloaded copy (tests)
-    python tools/build_site.py --no-pyodide         # without the Python of mzFinder (the program of the students never has any)
+    python tools/build_site.py
 
-site/index.html + site/static/ (the web folder as is). The engine of the program is Rust (static/wasm/, built by the workflow); no Python
-runs in the pages of the students. Only mzFinder (hidden) still has its own Pyodide: static/mzfinder/pyodide/ and static/mzfinder/mzlab.zip.
-GitHub Pages serves the site as it is (.github/workflows/pages.yml).
+site/index.html + site/static/ (the web folder as is). The engine of the program, mzFinder included, is Rust (static/wasm/, static/wasm-feat/,
+built by the workflow): the site downloads nothing from the net and carries no Python. `--pyodide-dir DIR` and `--no-pyodide` are still
+accepted and do nothing (the workflows pass them). GitHub Pages serves the site as it is (.github/workflows/pages.yml).
 """
 from __future__ import annotations
 
@@ -16,7 +14,6 @@ import json
 import re
 import shutil
 import sys
-import urllib.request
 import zipfile
 from pathlib import Path
 
@@ -24,27 +21,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import tema_testa  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-PYODIDE = "314.0.7"                                   # Python 3.14 + numpy 2.4 in WebAssembly
-CDN = f"https://cdn.jsdelivr.net/pyodide/v{PYODIDE}/full/"
-CORE = ["pyodide.mjs", "pyodide.asm.mjs", "pyodide.asm.wasm", "python_stdlib.zip", "pyodide-lock.json"]
-# SHA-256 of the files of this Pyodide version (computed from the jsDelivr release when the version was pinned). A different hash stops the build:
-# a tampered CDN file would otherwise run inside every student's browser. When PYODIDE is updated, recompute them. numpy is checked against
-# the sha256 written in pyodide-lock.json (which is itself pinned here).
-SHA256 = {
-    "pyodide.mjs": "6f1d60f7bf529beb300f0f47983c921d3982363640ba20af0e38efdddbc66109",
-    "pyodide.asm.mjs": "f7cdc8ece80678ceb712f8e65ebe6d3a83203a180c399865f49612a051693635",
-    "pyodide.asm.wasm": "cc36e3cab04fdfc9a63ff13eb52eae2b911bf46c025cc7b281f394bd3de1d5e6",
-    "python_stdlib.zip": "fa1957e5777068fc4f7437f96d860ae2fbe9c19732ba06c84e004ec16dd7dd7a",
-    "pyodide-lock.json": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010",
-}
-
-
-def check_sha256(path: Path, want: str) -> None:
-    got = hashlib.sha256(path.read_bytes()).hexdigest()
-    if got != want:
-        raise SystemExit(f"{path.name}: SHA-256 {got} is not the expected {want}: build stopped")
-
-
 # The visible name of the program lives only in mzlab/web/appname.js
 APP_NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "web" / "appname.js").read_text(encoding="utf-8")).group(1)
 
@@ -80,21 +56,11 @@ MANIFEST = {
 }
 
 
-def fetch(name: str, dest: Path, src_dir: Path | None) -> None:
-    if src_dir is not None:
-        shutil.copy2(src_dir / name, dest / name)
-        return
-    with urllib.request.urlopen(CDN + name, timeout=300) as r, open(dest / name, "wb") as fh:
-        shutil.copyfileobj(r, fh)
-
-
 def python_files(out: Path) -> list[str]:
-    """The Python the site carries outside mzFinder's folder: any `pyodide*` file or folder and any zip with a `.py` inside (there must be none)."""
+    """The Python the site carries: any `pyodide*` file or folder and any zip with a `.py` inside (there must be none, mzFinder's folder included)."""
     found = []
     for f in sorted(out.rglob("*")):
         rel = f.relative_to(out)
-        if rel.parts[:2] == ("static", "mzfinder"):
-            continue
         if "pyodide" in f.name.lower():
             found.append(rel.as_posix())
         elif f.is_file() and f.suffix == ".zip":
@@ -125,11 +91,7 @@ def pack_mzfinder(static: Path) -> None:
             shutil.copy2(src / "lazy" / n, dst / "lazy" / n)
     for n in files:
         shutil.copy2(src / "files" / n, dst / n)
-    with zipfile.ZipFile(dst / "tpmine.zip", "w", zipfile.ZIP_DEFLATED) as z:
-        for f in sorted((src / "py").rglob("*")):
-            if f.is_file() and "__pycache__" not in f.parts and f.suffix != ".pyc":
-                z.write(f, f.relative_to(src / "py").as_posix())
-    (dst / "indice.json").write_text(json.dumps({"js": js, "lazy": lazy, "files": files + data, "py": "tpmine.zip"}, indent=1), encoding="utf-8")
+    (dst / "indice.json").write_text(json.dumps({"js": js, "lazy": lazy, "files": files + data}, indent=1), encoding="utf-8")
 
 
 def write_manifest(out: Path, version: str) -> None:
@@ -161,8 +123,8 @@ def teoria_entry() -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--pyodide-dir", type=Path)
-    ap.add_argument("--no-pyodide", action="store_true", help="do not add the Python of mzFinder (tests that need no mzFinder)")
+    ap.add_argument("--pyodide-dir", type=Path, help="accepted, no effect (the site carries no Python)")
+    ap.add_argument("--no-pyodide", action="store_true", help="accepted, no effect (the site carries no Python)")
     ap.add_argument("--out", type=Path, default=ROOT / "site")
     a = ap.parse_args()
     out = a.out
@@ -200,33 +162,17 @@ def main() -> None:
     ver = ver_match.group(1) if ver_match else "0.1.0"
     (static / "version.js").write_text(f'window.MZLAB_VERSION = "{ver}";\nwindow.MZLAB_COMMIT = "{commit}";\n', encoding="utf-8")
     pack_mzfinder(static)
-    mf = static / "mzfinder"
-    if mf.is_dir() and not a.no_pyodide:                       # mzFinder's own Python (hidden, for the lab): the only Python of the site
-        with zipfile.ZipFile(mf / "mzlab.zip", "w", zipfile.ZIP_DEFLATED) as z:
-            for f in sorted([*(ROOT / "mzlab").rglob("*.py"), *(ROOT / "mzlab" / "chem").glob("*.json")]):       # the list of known contaminants is data of the package
-                rel = f.relative_to(ROOT)
-                if "web" in rel.parts or "__pycache__" in rel.parts:
-                    continue
-                z.write(f, rel.as_posix())
-        py = mf / "pyodide"
-        py.mkdir()
-        for n in CORE:
-            fetch(n, py, a.pyodide_dir)
-            check_sha256(py / n, SHA256[n])
-        lock = json.loads((py / "pyodide-lock.json").read_text(encoding="utf-8"))
-        fetch(lock["packages"]["numpy"]["file_name"], py, a.pyodide_dir)
-        check_sha256(py / lock["packages"]["numpy"]["file_name"], lock["packages"]["numpy"]["sha256"])
     bad = python_files(out)
     if bad:
-        raise SystemExit(f"the site must not carry Python outside static/mzfinder/: {bad[:5]}")
+        raise SystemExit(f"the site must not carry Python: {bad[:5]}")
     # service worker at the site root (scope = the whole site): offline use after the first visit
     sw = (static / "sw.js").read_text(encoding="utf-8")
     (static / "sw.js").unlink()
     h = hashlib.sha1()
     for f in sorted(out.rglob("*")):
-        if f.is_file() and "pyodide" not in f.parts and "vendor" not in f.parts:
+        if f.is_file() and "vendor" not in f.parts:
             h.update(f.relative_to(out).as_posix().encode() + f.read_bytes())
-    big = PYODIDE + "-" + hashlib.sha1(b"".join(f.name.encode() + f.read_bytes() for f in sorted((static / "vendor").rglob("*")) if f.is_file())).hexdigest()[:8]   # the content, not the size: a same-size change must not be served from the old cache
+    big = "v-" + hashlib.sha1(b"".join(f.name.encode() + f.read_bytes() for f in sorted((static / "vendor").rglob("*")) if f.is_file())).hexdigest()[:8]   # the content, not the size: a same-size change must not be served from the old cache
     (out / "sw.js").write_text(sw.replace("__APP__", h.hexdigest()[:10]).replace("__BIG__", big), encoding="utf-8")
     write_manifest(out, commit)
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())

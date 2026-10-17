@@ -34,7 +34,7 @@ LOG = OUT / "log"
 E2E = ROOT / "tests_e2e"
 
 # What each e2e needs besides a browser. "veri" = the asserts depend on the real lab data (skipped with synthetic data);
-# "dam" = needs a .dam method file (QQQ_DAM); "sito" = builds the static site with Pyodide (network to jsDelivr or PYODIDE_DIR);
+# "dam" = needs a .dam method file (QQQ_DAM); "sito" = builds the static site (no network);
 # Keep this table up to date when you add an e2e (default: no needs).
 NEEDS: dict[str, set[str]] = {
     "e2e9": {"dam"}, "e2e10": {"dam"}, "e2e15": {"dam"}, "e2e_dam_incoerente": {"dam"},

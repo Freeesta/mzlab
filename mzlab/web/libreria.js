@@ -206,7 +206,10 @@ const LIB = (() => {
     if (!ids.length && !xids.length) return;
     busy = true; go.disabled = true; cn.hidden = false;
     const name = id => (avail.cat.librerie.find(p => p.id === id) || avail.cat.esterne.find(e => e.id === id) || { nome: id }).nome;
-    const show = m => { st.innerHTML = `<div>${EHt(I18N.t("lib.avail.progress", { name: name(m.id), piece: m.piece || 0, pieces: m.pieces || 0, mb: mb(m.bytes), total: mb(m.total) }))}</div><progress max="${m.total || 1}" value="${m.bytes}"></progress>`; };
+    const all = [...ids, ...xids]; st.innerHTML = "";
+    const A = (await import("./avanzamento.js")).avanza(st, { title: I18N.t("lib.avail.job"), n: all.length, cancel: false });      // the shared progress panel; «Cancel» stays the button of the window
+    let cur = "";
+    const show = m => { const k = Math.max(1, all.indexOf(m.id) + 1); if (m.id !== cur) { cur = m.id; A.item(k, name(m.id)); } A.set(m.total ? (k - 1 + m.bytes / m.total) / all.length : null, I18N.t("lib.avail.progress", { name: name(m.id), piece: m.piece || 0, pieces: m.pieces || 0, mb: mb(m.bytes), total: mb(m.total) })); };
     let off = null; const fails = []; let done = 0;
     try {
       if (T() && T().event) off = await T().event.listen("lib-progress", ev => show(ev.payload));
@@ -220,7 +223,8 @@ const LIB = (() => {
       }
     } catch (e) { fails.push(e.message); }
     finally { if (off) off(); busy = false; go.disabled = false; cn.hidden = true; }
-    st.innerHTML = (done ? `<div>${EHt(I18N.t("lib.avail.done", { n: done }))}</div>` : "") + fails.map(f => `<div class="err">${EHt(f)}</div>`).join("");
+    fails.forEach(f => A.fail("", f)); for (let i = 0; i < done; i++) A.ok();
+    A.end(done ? { head: I18N.t("lib.avail.done", { n: done }) } : undefined);
     try { avail = { ...(await call("catalog", { cached: true })), cfg: avail.cfg }; renderAvail(); } catch (e) { /* the list stays as it was */ }
     await refresh();
   }

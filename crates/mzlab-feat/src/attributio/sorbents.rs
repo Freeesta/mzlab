@@ -7,6 +7,7 @@ use super::campaign::Campaign;
 use super::error::{CampaignError, Result};
 use super::frame::Frame;
 use super::io::{file_name, Io};
+use crate::sortc::SortC;
 use std::collections::{HashMap, HashSet};
 
 /// The blank abundance mzMine writes (`... (abundance 1.3E3)`), 0 when the text has none.
@@ -38,7 +39,7 @@ pub fn sorbent_columns(c: &Campaign, f: &Frame, sorbent: &str, pol: &str) -> Vec
         .filter(|n| n.starts_with("datafile:"))
         .filter_map(|n| n.rsplit_once(':').map(|(_, field)| field))
         .collect();
-    fields.sort_unstable();
+    fields.sortc();
     fields.dedup();
     let mut out = Vec::new();
     for (site, _) in &c.sites {
@@ -407,7 +408,7 @@ pub fn remap_ids<T>(
             seen.insert((p.to_string(), id))
         })
         .collect();
-    kept.sort_unstable();
+    kept.sortc();
     let mut slots: Vec<Option<T>> = rows.into_iter().map(Some).collect();
     kept.into_iter().filter_map(|n| slots[n].take()).collect()
 }

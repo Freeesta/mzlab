@@ -1,4 +1,4 @@
-"""The site of the students carries no Python: no `pyodide*`, no zip with `.py` outside static/mzfinder/ (the hidden mzFinder keeps its own Pyodide there)."""
+"""The site carries no Python anywhere, mzFinder's folder included: no `pyodide*`, no zip with `.py`, and the build downloads nothing."""
 import importlib.util
 import subprocess
 import sys
@@ -18,19 +18,17 @@ def test_python_files_finds_what_must_not_be_there(tmp_path):
     (s / "mzfinder" / "pyodide" / "pyodide.mjs").write_text("x")
     with zipfile.ZipFile(s / "mzfinder" / "mzlab.zip", "w") as z:
         z.writestr("mzlab/app.py", "x = 1")
-    assert build_site.python_files(tmp_path) == []                      # mzFinder's folder is the one place
-    (s / "pyodide").mkdir()
-    (s / "pyodide" / "pyodide.asm.wasm").write_text("x")
-    with zipfile.ZipFile(s / "mzlab.zip", "w") as z:
-        z.writestr("mzlab/app.py", "x = 1")
     with zipfile.ZipFile(s / "data.zip", "w") as z:
         z.writestr("a.json", "{}")                                      # a zip without Python is fine
-    assert build_site.python_files(tmp_path) == ["static/mzlab.zip", "static/pyodide", "static/pyodide/pyodide.asm.wasm"]
+    assert build_site.python_files(tmp_path) == ["static/mzfinder/mzlab.zip", "static/mzfinder/pyodide", "static/mzfinder/pyodide/pyodide.mjs"]
 
 
-def test_the_built_site_has_no_python(tmp_path):
+def test_the_built_site_has_no_python_and_needs_no_net(tmp_path):
     out = tmp_path / "site"
-    subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--no-pyodide", "--out", str(out)], check=True, capture_output=True)
-    assert build_site.python_files(out) == []
-    assert not (out / "static" / "browser-worker.js").exists() and not (out / "static" / "mzlab.zip").exists()
-    assert not list(out.rglob("*.py"))
+    env = {"HTTPS_PROXY": "http://127.0.0.1:9", "HTTP_PROXY": "http://127.0.0.1:9", "PATH": "/usr/bin:/bin"}      # a download would fail
+    for flags in ([], ["--no-pyodide"], ["--pyodide-dir", str(tmp_path)]):                  # the flags the workflows pass are accepted and do nothing
+        subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), *flags, "--out", str(out)], check=True, capture_output=True, env=env)
+        assert build_site.python_files(out) == []
+        assert not (out / "static" / "mzfinder" / "tpmine.zip").exists() and not (out / "static" / "mzfinder" / "mzlab.zip").exists()
+        assert not (out / "static" / "mzfinder" / "pyodide").exists() and "py" not in __import__("json").loads((out / "static" / "mzfinder" / "indice.json").read_text())
+        assert not list(out.rglob("*.py"))

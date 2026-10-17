@@ -2,6 +2,7 @@
 //! The name checks of the registry: one structure under several names, one name over several structures, a name outside the PubChem synonyms, the name source
 //! against the loader, and the library entries that contradict their own precursor.
 
+use crate::sortc::SortC;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use super::{
@@ -100,7 +101,7 @@ fn structures_of_one_name(ctx: &Context, out: &mut Vec<Finding>) {
             })
             .collect::<Vec<_>>()
             .join("; ");
-        blocks.sort_unstable();
+        blocks.sortc();
         out.push(finding(
             CHECK_NAME_INCHIKEY,
             WARNING,

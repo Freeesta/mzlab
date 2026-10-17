@@ -1,0 +1,19 @@
+hydroxylation;+O;one extra oxygen (aromatic or aliphatic OH)
+dihydroxylation;+O2;two extra oxygens
+dehydrogenation;-H2;loss of H2 (double bond, ring closure)
+oxidation to carbonyl;+O-H2;alcohol -> ketone or aldehyde
+demethylation;-CH2;N- or O-demethylation
+methylation;+CH2
+loss of propene (N-deisopropylation);-C3H6;loss of the isopropyl group
+decarboxylation;-CO2
+carboxylation;+CO2
+hydration;+H2O;addition of water, hydrolysis without cleavage
+dehydration;-H2O
+loss of SO2;-SO2;SO2 extrusion (sulfonamides, sulfones)
+loss of CO;-CO
+oxidative deamination;-NH+O-H2
+reductive dechlorination;-Cl+H
+hydrolytic dechlorination;-Cl+OH
+reductive debromination;-Br+H
+hydrolytic defluorination;-F+OH
+amide hydrolysis;+H2O;cleavage of the amide/ester bond (same mass as hydration)

@@ -2,6 +2,7 @@
 //! file) and, read from the `.mzidx` of the series, the XIC of every file, the MS1 at the best apex and the MS2 of the row. Numbers only: no verdict. A summary
 //! that was not computed is `null`, never a made-up number.
 
+use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
@@ -303,7 +304,7 @@ fn ms2_of<R: ReadAt>(
     let mut by_rt: Vec<u32> = (0..index.scans.len() as u32)
         .filter(|&g| index.scans[g as usize].level == 2)
         .collect();
-    by_rt.sort_by(|&a, &b| {
+    by_rt.sortc_by(|&a, &b| {
         index.scans[a as usize]
             .rt
             .total_cmp(&index.scans[b as usize].rt)

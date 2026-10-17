@@ -20,10 +20,8 @@ function a11yWrite(o) {
 }
 window.QA11Y = window.QA11Y || { read: a11yRead, apply: a11yApply, write: a11yWrite };
 // calibration standards (MRM): one orange hue by concentration (used by paintFiles in explore.js)
-// one orange hue, light (low concentration) to dark (high) on white
-const STD_SEQ_LIGHT = ["#fdae6b", "#e6550d", "#a63603", "#5a1d02"];
-// luminous peach to bright orange/coral on dark
-const STD_SEQ_DARK  = ["#ffedd5", "#fed7aa", "#fba94b", "#f97316", "#ff5722"];
+const STD_SEQ_LIGHT = ["#fdae6b", "#e6550d", "#a63603", "#5a1d02"];     // one orange hue, light (low concentration) to dark (high) on white
+const STD_SEQ_DARK  = ["#ffedd5", "#fed7aa", "#fba94b", "#f97316", "#ff5722"]; // luminous peach to bright orange/coral on dark
 function stdColor(u) {                                       // u in 0..1
   const seq = isDark() ? STD_SEQ_DARK : STD_SEQ_LIGHT;
   const P = PALS[UIP.pal], x = (P.hc ? 0.45 + 0.55 * u : u) * (seq.length - 1), i = Math.min(Math.floor(x), seq.length - 2), f = x - i;
@@ -38,8 +36,7 @@ function uipLoad() {
 function uipSave() {
   const o = { v: 2, theme: UIP.theme, pal: UIP.pal, merge: UIP.merge };
   if (UIP.beside) o.beside = true;
-  // high resolution: only what differs from the defaults
-  if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;
+  if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;         // high resolution: only what differs from the defaults
   uipWrite(UIP_KEY, JSON.stringify(o));
 }
 // the settings panel of the Teoria (inside the iframe) changes the theme of the whole program through here
@@ -47,8 +44,7 @@ window.uipSetTheme = t => { if (["auto", "light", "dark"].includes(t)) { UIP.the
 function uipApply() {
   const r = document.documentElement;
   if (UIP.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", UIP.theme);
-  // the Teoria (iframe) follows the theme too (it reads it itself when it loads; this is for a change while it is open)
-  const tf = /** @type {HTMLIFrameElement | null} */ (document.getElementById("tframe"));
+  const tf = /** @type {HTMLIFrameElement | null} */ (document.getElementById("tframe"));                // the Teoria (iframe) follows the theme too (it reads it itself when it loads; this is for a change while it is open)
   if (tf && tf.contentWindow) { try { tf.contentWindow.postMessage({ type: "qqq-theme", theme: UIP.theme }, location.origin); } catch (_) { /* not loaded yet */ } }
   if (typeof setPal === "function") setPal(UIP.pal);
   if (typeof paintFiles === "function" && typeof E !== "undefined") {
@@ -137,12 +133,9 @@ function uipOpen(btn) {
     `;
   document.body.appendChild(d);
   if (window.DESKUPD) DESKUPD.bind(d);
-  // the label is always bilingual: whoever cannot read the current language finds it
-  const uipLang = d.querySelector("#uip-lang"); uipLang.value = I18N.lang;
-  // remembered in qqq.lang, then the page reloads (open files come back with the session)
-  uipLang.onchange = e => I18N.set(e.target.value);
-  // closed at first, then as the user left it
-  const sub = /** @type {HTMLDetailsElement} */ (d.querySelector("#uip-a11y"));
+  const uipLang = d.querySelector("#uip-lang"); uipLang.value = I18N.lang;   // the label is always bilingual: whoever cannot read the current language finds it
+  uipLang.onchange = e => I18N.set(e.target.value);                         // remembered in qqq.lang, then the page reloads (open files come back with the session)
+  const sub = /** @type {HTMLDetailsElement} */ (d.querySelector("#uip-a11y"));      // closed at first, then as the user left it
   try { sub.open = localStorage.getItem("qqq.set.a11y") === "1"; } catch (_) { /* closed */ }
   sub.addEventListener("toggle", () => { try { localStorage.setItem("qqq.set.a11y", sub.open ? "1" : "0"); } catch (_) { /* not remembered */ } });
   const a11yCur = QA11Y.read();
@@ -161,26 +154,21 @@ function uipOpen(btn) {
   }
   d.querySelector("#uip-th").value = UIP.theme; d.querySelector("#uip-pal").value = UIP.pal;
   const r = btn.getBoundingClientRect(); d.style.top = r.bottom + 6 + "px"; d.style.left = Math.max(8, Math.min(r.left, innerWidth - d.offsetWidth - 8)) + "px";
-  // spectra are asked again to the server with / without the merge
-  d.querySelector("#uip-merge").onchange = e => {
+  d.querySelector("#uip-merge").onchange = e => {            // spectra are asked again to the server with / without the merge
     UIP.merge = e.target.checked; uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof redrawAll === "function") redrawAll();
   };
-  // read when a spectrum is opened (newSpec): nothing to redraw
-  d.querySelector("#uip-beside").onchange = e => { UIP.beside = e.target.checked; uipSave(); };
+  d.querySelector("#uip-beside").onchange = e => { UIP.beside = e.target.checked; uipSave(); };      // read when a spectrum is opened (newSpec): nothing to redraw
   const uipTour = d.querySelector("#uip-tour");
-  // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
-  if (uipTour) uipTour.onclick = () => {
+  if (uipTour) uipTour.onclick = () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();
-    // in Disegno the button starts the tour of Disegno
-    if (window.TOUR && typeof S !== "undefined" && S.view === "draw") { TOUR.disegno(); return; }
+    if (window.TOUR && typeof S !== "undefined" && S.view === "draw") { TOUR.disegno(); return; }      // in Disegno the button starts the tour of Disegno
     const go = () => { if (!window.TOUR) return; if (typeof E !== "undefined" && E.files && E.files.length) TOUR.inizia(1, 0); else TOUR.caricaEsempio(); };
     if (typeof S !== "undefined" && S.view !== "data" && typeof setView === "function") { setView("data"); setTimeout(go, 150); } else go();
   };
   const uipCont = d.querySelector("#uip-cont"); if (uipCont) uipCont.onchange = e => { if (window.LISTE) LISTE.setOn(e.target.checked); };
   uipReset(d);
-  // desktop app: external downloads of public libraries (off until the user turns it on)
-  const uipExt = d.querySelector("#uip-ext");
+  const uipExt = d.querySelector("#uip-ext");           // desktop app: external downloads of public libraries (off until the user turns it on)
   if (uipExt && window.__TAURI__ && __TAURI__.core) {
     __TAURI__.core.invoke("lib_get_config").then(c => { uipExt.checked = !!(c && c.external); }, () => {});
     uipExt.onchange = () => __TAURI__.core.invoke("lib_set_external", { on: uipExt.checked }).catch(() => { uipExt.checked = !uipExt.checked; });
@@ -194,14 +182,12 @@ function uipOpen(btn) {
   const uipPpm = d.querySelector("#uip-ppm"); if (uipPpm) uipPpm.onchange = e => { UIP.hrPpm = Math.min(50, Math.max(1, +e.target.value || 5)); e.target.value = UIP.hrPpm; hrChanged(); };
   const uipHdec = d.querySelector("#uip-hdec"); if (uipHdec) uipHdec.onchange = e => { UIP.hrDec = Math.min(5, Math.max(3, Math.round(+e.target.value || 4))); e.target.value = UIP.hrDec; hrChanged(); };
   d.querySelector("#uip-th").onchange = e => { UIP.theme = e.target.value; uipSave(); uipApply(); };
-  // applied at once: file colours, lists, legends, every graph
-  d.querySelector("#uip-pal").onchange = e => {
+  d.querySelector("#uip-pal").onchange = e => {              // applied at once: file colours, lists, legends, every graph
     setPal(e.target.value); uipSave();
     if (typeof paintFiles === "function" && typeof E !== "undefined") { paintFiles(); if (E.files.length) { renderFileList(); } }
     uipApply();
   };
-  // Esc closes the settings and gives the focus back to the gear
-  document.addEventListener("keydown", function esc(e) { if (!d.isConnected) return document.removeEventListener("keydown", esc); if (e.key === "Escape") { d.remove(); btn.focus(); document.removeEventListener("keydown", esc); } });
+  document.addEventListener("keydown", function esc(e) { if (!d.isConnected) return document.removeEventListener("keydown", esc); if (e.key === "Escape") { d.remove(); btn.focus(); document.removeEventListener("keydown", esc); } });       // Esc closes the settings and gives the focus back to the gear
   setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.contains(/** @type {Node} */ (e.target)) && e.target !== btn && !btn.contains(e.target)) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
 }
 
@@ -209,8 +195,7 @@ uipLoad();
 (() => {
   const nav = Q("#nav"), b = document.createElement("button"); b.id = "np-set"; b.className = "ib gear"; b.title = I18N.t("settings.gear.title"); b.setAttribute("aria-label", I18N.t("settings.title"));
   b.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
-  // in the Teoria the gear opens the settings of the Teoria, elsewhere the ones of the program
-  nav.insertAdjacentElement("afterend", b); b.onclick = e => {
+  nav.insertAdjacentElement("afterend", b); b.onclick = e => {      // in the Teoria the gear opens the settings of the Teoria, elsewhere the ones of the program
     e.stopPropagation();
     const tw = /** @type {any} */ (document.documentElement.classList.contains("in-theory") && /** @type {HTMLIFrameElement} */ (document.getElementById("tframe")).contentWindow);
     if (tw && tw.TEORIA && tw.TEORIA.settings) tw.TEORIA.settings(); else uipOpen(b);

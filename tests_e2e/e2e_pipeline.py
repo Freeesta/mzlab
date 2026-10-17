@@ -32,7 +32,6 @@ site = Path(reuse) if reuse else tmp / "site"
 env = dict(os.environ, RUNNER_TEMP=str(tmp / "rt"))
 if not reuse:
     cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)]
-    if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
     subprocess.run(cmd, check=True)
     from lib_sito import add_wasm; add_wasm(site)
     from lib import build_feat; build_feat(site / "static", env)

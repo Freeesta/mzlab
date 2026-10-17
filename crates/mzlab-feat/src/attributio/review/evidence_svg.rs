@@ -4,6 +4,7 @@
 //! also a row of the CSV that goes with the plot.
 
 use super::proposal::PeakView;
+use crate::sortc::SortC;
 
 const EXP: &str = "#1f4e79";
 const REF: &str = "#c55a11";
@@ -176,7 +177,7 @@ fn peak_line(fr: &Frame, x: f64, v: f64, color: &str) -> String {
 /// The explained fragments, largest first, not overlapping (4 % of the span), at most 12 labels.
 fn labels(fr: &Frame, p: &Plot, out: &mut String) {
     let mut order: Vec<usize> = (0..p.peaks.len()).collect();
-    order.sort_by(|&a, &b| p.peaks[b].rel.total_cmp(&p.peaks[a].rel));
+    order.sortc_by(|&a, &b| p.peaks[b].rel.total_cmp(&p.peaks[a].rel));
     let span = if p.peaks.len() > 1 {
         let (lo, hi) = p
             .peaks

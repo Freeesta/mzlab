@@ -2,6 +2,7 @@
 //! the parent, rises with the treatment above the ratio of the references. The ratio is that of the areas of the table (the apex shift against the parent is
 //! not tested). A mass that passes becomes a candidate with a negative id, "possible TP co-eluting with an ISF".
 
+use crate::sortc::SortC;
 use mzlab_core::elements::{fmt, mass, Formula, ELECTRON};
 
 use super::dig::{areas, candidate, Cand};
@@ -107,7 +108,7 @@ fn hidden_rows(
         })
         .filter(|&r| rises(files, &pa, &areas(t, r)))
         .collect();
-    rows.sort_by(|&a, &b| t.mz[a].total_cmp(&t.mz[b]));
+    rows.sortc_by(|&a, &b| t.mz[a].total_cmp(&t.mz[b]));
     rows
 }
 

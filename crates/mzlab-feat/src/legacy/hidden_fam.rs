@@ -1,6 +1,7 @@
 //! Products hidden under an in-source fragment of the parent when the pipeline runs in family mode: the fragment is then a member of the family of the
 //! parent, not a row of the table, so its areas are read from the XIC of every file at the RT of the parent and tested with the ratio of `hidden::rises`.
 
+use crate::sortc::SortC;
 use mzlab_core::differenza::area;
 use mzlab_core::idxread::{Index, ReadAt};
 
@@ -68,7 +69,7 @@ fn measure<R: ReadAt>(ix: &mut Index<R>, mz: f64, rt: f64) -> Res<Trace> {
 }
 
 fn median(mut v: Vec<f64>) -> f64 {
-    v.sort_by(f64::total_cmp);
+    v.sortc_by(f64::total_cmp);
     v.get(v.len() / 2).copied().unwrap_or(0.0)
 }
 
@@ -185,7 +186,7 @@ pub(super) fn add<R: ReadAt>(
     let has_row = |f: f64| has_row(t, prow, f);
     let mut next = cands.iter().filter_map(|c| c.hidden).min().unwrap_or(0);
     let mut frags: Vec<f64> = fragments.to_vec();
-    frags.sort_by(f64::total_cmp);
+    frags.sortc_by(f64::total_cmp);
     for f in frags {
         let Some(formula) = fragment_formula(s.parent, f) else {
             continue;

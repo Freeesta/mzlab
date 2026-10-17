@@ -11,6 +11,7 @@
 use super::standards::{DECISION_MZ_PPM, DECISION_RT_MIN};
 use crate::attributio::error::{py_list, CampaignError, Result};
 use crate::attributio::frame::{to_csv, to_num, Frame};
+use crate::sortc::SortC;
 use std::collections::BTreeSet;
 
 pub const COLUMNS: [&str; 10] = [
@@ -224,7 +225,7 @@ pub fn load_feature_decisions(text: Option<&str>, path: &str) -> Result<Decision
         .collect();
     if !missing.is_empty() {
         let mut m = missing;
-        m.sort_unstable();
+        m.sortc();
         return Err(CampaignError::value(format!(
             "{path}: missing columns {}",
             py_list(&m)
