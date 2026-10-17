@@ -27,10 +27,12 @@
     // the files and indexes in OPFS
     await wait((async () => { const d = await navigator.storage.getDirectory(); await d.removeEntry("mzlab", { recursive: true }); })());
     await wait(new Promise((/** @type {any} */ r) => { const q = indexedDB.deleteDatabase(NOMI.DB); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
-    await wait((async () => { for (const k of await caches.keys()) if (k.startsWith(NOMI.CACHE_PREFIX) || k === "mzlab-libs") await caches.delete(k); })());
+    if (NOMI.DB_OLD) await wait(new Promise((/** @type {any} */ r) => { const q = indexedDB.deleteDatabase(NOMI.DB_OLD); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
+    await wait((async () => { for (const k of await caches.keys()) if (k.startsWith(NOMI.CACHE_PREFIX) || k.startsWith("qqq-") || k === "mzlab-libs") await caches.delete(k); })());
     await wait((async () => { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); })());
     const u = new URL(location.href); u.search = "?riparti=1"; location.replace(u.href);
   };
+  window.mzlabHardReset = window.qqHardReset;
   const restart = () => window.qqHardReset();
   // i18n.js loads after this script: the message is a catalog key, written when the page (and I18N) is there
   const fail = (key, params, again) => { window.qqFailed = key; window.qqPhaseCur = null; const show = () => { const m = document.getElementById("ldmsg"); if (m && window.I18N) m.textContent = I18N.t(key, params); if (again && window.ldAction && window.I18N) ldAction(I18N.t("load.restart"), restart); }; show(); document.addEventListener("DOMContentLoaded", show); };

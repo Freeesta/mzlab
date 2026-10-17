@@ -163,6 +163,7 @@ declare var QAQC: any;
 declare var QICON: any;
 declare var QMODI: any;
 declare var RAPPORTO: any;
+declare var RESET: any;
 declare var RIFERIMENTO: any;
 declare var RUOLI: any;
 declare var RawHtml: any;

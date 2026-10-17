@@ -2,11 +2,15 @@
 // After the first visit the whole program works offline: the app files are fetched from the network first (so a new
 // version is picked up as soon as there is one) and the big, rarely changing ones (Ketcher; the Python of mzFinder) come from the cache.
 try { importScripts("static/nomi.js"); } catch (_) { /* local testing */ }
-const APP = (typeof NOMI !== "undefined" ? NOMI.CACHE_APP : "qqq-app-") + "__APP__", BIG = (typeof NOMI !== "undefined" ? NOMI.CACHE_BIG : "qqq-big-") + "__BIG__";
+const APP = (typeof NOMI !== "undefined" ? NOMI.CACHE_APP : "mzlab-app-") + "__APP__", BIG = (typeof NOMI !== "undefined" ? NOMI.CACHE_BIG : "mzlab-big-") + "__BIG__";
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil((async () => {
-  const pfx = typeof NOMI !== "undefined" ? NOMI.CACHE_PREFIX : "qqq-";
-  for (const k of await caches.keys()) if (k.startsWith(pfx) && k !== APP && k !== BIG) await caches.delete(k);
+  const pfx = typeof NOMI !== "undefined" ? NOMI.CACHE_PREFIX : "mzlab-";
+  for (const k of await caches.keys()) {
+    if (k.startsWith("qqq-") || (k.startsWith(pfx) && k !== APP && k !== BIG)) {
+      await caches.delete(k);
+    }
+  }
   await self.clients.claim();
 })()));
 self.addEventListener("fetch", e => {
