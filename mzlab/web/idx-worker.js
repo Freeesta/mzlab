@@ -4,6 +4,7 @@
 import init, { build_mzidx, build_mzidx_native, native_external } from "./wasm/mzlab_wasm.js";
 import { writeFull, quotaError } from "./archivio.js";
 import { buildNative } from "./rust-nativo.js";
+import { openSource } from "./lettura-sync.js";
 import { createEsterno } from "./lettore-esterno.js";
 
 // a Thermo .raw is read through the `thermo` module, loaded here on the first one (lettore-esterno.js)
@@ -18,7 +19,7 @@ onmessage = async ev => {
   const m = ev.data;
   if (m.op === "module") { if (!ready) initWith(m.module); startInit(); return; }
   await waiting; await ready;
-  let ah = null, ac = null, sh = null, spName = null, fullAt = 0, endAt = 0, dir = null;
+  let ah = null, ac = null, sh = null, fonte = null, spName = null, fullAt = 0, endAt = 0, dir = null;
   const dropSpill = async () => {                                   // the scratch file is never kept
     if (sh) { try { sh.truncate(0); sh.close(); } catch (_) { /* already closed */ } sh = null; }
     if (spName && dir) { try { await dir.removeEntry(spName); } catch (_) { /* not there */ } spName = null; }
@@ -55,17 +56,20 @@ onmessage = async ev => {
       // the peaks that do not fit in the budget wait in a scratch file of OPFS (`<name>.mzidx.sp.part`: removed at the end, and by the cleaning of the `.part` files if the worker dies) instead of being decoded again by every round
       stats = await buildNative(build_mzidx_native, ext, m.nat, m.name, write, p => postMessage({ op: "progress", frac: p.frac, phase: p.phase, done: p.done, total: p.total }), m.budget, spill, writeCen);
     } else {
-      const fr = new FileReaderSync(), blob = m.blob;
+      const blob = m.blob;
+      // the copy in OPFS is read through a read-only handle; without one (or if the file is taken) the Blob is read as before
+      fonte = await openSource("files", m.name, blob);
       let tp = 0;
       // the builder reads the file front to back: the offset is the progress (the page shows it, at most 5 times a second)
       const read = (off, len) => {
         const now = performance.now();
         if (now - tp > 200) { tp = now; postMessage({ op: "progress", frac: blob.size ? Math.min(1, off / blob.size) : 0 }); }
-        return new Uint8Array(fr.readAsArrayBuffer(blob.slice(off, off + len)));
+        return fonte.read(off, len);
       };
       const [levels, pols, rt, tic, rows, source, run, hr1] = m.inputs;
       stats = build_mzidx(blob.size, read, write, levels, pols, rt, tic, rows, source, run, hr1, m.budget, spill ? spill.put : undefined, spill ? spill.get : undefined);
     }
+    if (fonte) { fonte.close(); fonte = null; }
     ah.flush();
     // the browser took the writes but the file is shorter (quota reached): never an index that looks complete
     if (ah.getSize() < endAt) { fullAt = endAt; throw new Error("storage full"); }
@@ -76,6 +80,7 @@ onmessage = async ev => {
   } catch (e) {
     if (ah) { try { ah.close(); } catch (_) { /* already closed */ } }
     if (ac) { try { ac.close(); } catch (_) { /* already closed */ } }
+    if (fonte) fonte.close();
     await dropSpill();
     let text = typeof e === "string" ? e : String(e && e.message || e);
     if (fullAt) text = await quotaError(fullAt).catch(() => text);
