@@ -25,7 +25,7 @@ export function createMethodRoutes({ rpc, json, items }) {
       if (!its) return json({ warnings: [] });
       return raw(await rpc({ op: "lr_method_warnings", have: [...new Set(its.map(x => x.kind))].sort() }));
     }
-    if (!["/api/method", "/api/metodo", "/api/analog", "/api/registro", "/api/delay", "/api/gradient"].includes(path) && !(path === "/api/chrom" && q.get("kind") === "pda")) return undefined;
+    if (!["/api/method", "/api/metodo", "/api/analog", "/api/registro", "/api/delay", "/api/gradient"].includes(path) && !(path === "/api/chrom" && q.get("kind") === "pda") && !(path === "/api/map" && q.get("kind") === "pda")) return undefined;
     const it = item(q), name = it && it.file;
     if (!it || q.get("ref")) return null;
     try {
@@ -41,6 +41,7 @@ export function createMethodRoutes({ rpc, json, items }) {
       // a series of the instrument log of a .raw: {id, kind, unit, time, intensity}
       if (path === "/api/registro") return raw(await rpc({ op: "natregistro", name, id: q.get("id") || "" }));
       if (path === "/api/chrom") return raw(await rpc({ op: "lr_pda", name }));
+      if (path === "/api/map") return raw(await rpc({ op: "lr_pda_map", name }));
       // a part of a mixed file with a PDA reads its own scans: not served (null)
       return raw(await rpc({ op: "lr_delay", name }));
     } catch (e) { return fail(e, 500); }

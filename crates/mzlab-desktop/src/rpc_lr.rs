@@ -186,6 +186,24 @@ impl State {
         }
     }
 
+    fn method_or_gradient(&self, eng: &mut Eng, op: &str, item: &str) -> Result<Answer> {
+        self.lab_sync(eng);
+        let name = item.split('#').next().unwrap_or(item);
+        let slot = self.open_lr(eng, name)?;
+        let (rd, size) = self.src_named(&mut eng.nat, slot, name)?;
+        let mut m = Mzml::new(rd, size);
+        let data = mzlab_core::itemroutes::item_method(&eng.idx[&slot].idx, &mut m, item)?;
+        let labs = Self::labs_of(eng);
+        if op == "lr_method" {
+            return text(labmethods::method_json(&data, &labs, item)?);
+        }
+        let pick = labmethods::pick(&data, &labs, item)?;
+        match gradient::from_dam(labmethods::lc_of(&labs, pick))? {
+            Some(g) => text(tx(&g)),
+            None => text("null"),
+        }
+    }
+
     #[allow(unused_variables)]
     pub(crate) fn op_lab(&self, eng: &mut Eng, op: &str, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
@@ -220,24 +238,7 @@ impl State {
                 let have: Vec<String> = v.arr().iter().filter_map(|x| x.str().map(String::from)).collect();
                 text(labmethods::warnings_json(&Self::labs_of(eng), &have))
             }
-            "lr_method" | "lr_gradient" => {
-                self.lab_sync(eng);
-                let item = s("name");
-                let name = item.split('#').next().unwrap_or(item);
-                let slot = self.open_lr(eng, name)?;
-                let (rd, size) = self.src_named(&mut eng.nat, slot, name)?;
-                let mut m = Mzml::new(rd, size);
-                let data = mzlab_core::itemroutes::item_method(&eng.idx[&slot].idx, &mut m, item)?;
-                let labs = Self::labs_of(eng);
-                if op == "lr_method" {
-                    return text(labmethods::method_json(&data, &labs, item)?);
-                }
-                let pick = labmethods::pick(&data, &labs, item)?;
-                match gradient::from_dam(labmethods::lc_of(&labs, pick))? {
-                    Some(g) => text(tx(&g)),
-                    None => text("null"),
-                }
-            }
+            "lr_method" | "lr_gradient" => self.method_or_gradient(eng, op, s("name")),
             "lr_analog" => {
                 let name = s("name").split('#').next().unwrap_or("");
                 let (mut m, chroms, _) = self.chroms(eng, name)?;
@@ -247,6 +248,11 @@ impl State {
                 let name = s("name").split('#').next().unwrap_or("");
                 let (mut m, chroms, _) = self.chroms(eng, name)?;
                 text(mzlab_core::itemroutes::pda_trace(&mut m, &chroms)?)
+            }
+            "lr_pda_map" => {
+                let name = s("name").split('#').next().unwrap_or("");
+                let (mut m, _, _) = self.chroms(eng, name)?;
+                text(mzlab_core::itemroutes::pda_map(&mut m)?)
             }
             "lr_delay" => {
                 let name = s("name").split('#').next().unwrap_or("");

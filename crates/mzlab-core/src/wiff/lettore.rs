@@ -10,7 +10,7 @@ use crate::lettori::{
     VoceCromatogramma, VoceLettore, VoceScansione, CONTRATTO,
 };
 use crate::metodo::{sha1_hex, Source, SrcFile};
-use crate::mzml::{Chromatogram, Spectrum};
+use crate::mzml::{ChromKind, Chromatogram, Spectrum};
 use crate::mzmlwrite::Header;
 use crate::ole::Ole;
 
@@ -138,7 +138,7 @@ fn source(l: &LettoreWiff, sample: u32) -> Source {
 
 fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram> {
     let dad = dad?;
-    if id == "DAD TWC" {
+    if id == "DAD TWC" || id.eq_ignore_ascii_case("pda") {
         return Some(dad.twc_chromatogram(0));
     }
     let nm: f64 = id
@@ -171,13 +171,21 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
         Ok(vec![field("sample", p.w.sample), field("cycle", r.cycle + 1), field("experiment", r.experiment + 1)])
     }
     fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
-        Ok(self.chromatograms(c)?.iter().map(|h| VoceCromatogramma { id: h.id.clone(), tipo: h.kind, unita: h.unit.clone() }).collect())
+        let mut v: Vec<VoceCromatogramma> = self.chromatograms(c)?.iter().map(|h| VoceCromatogramma { id: h.id.clone(), tipo: h.kind, unita: h.unit.clone() }).collect();
+        if self.parte(c)?.w.dad.is_some() && !v.iter().any(|x| x.tipo == ChromKind::Pda) {
+            v.push(VoceCromatogramma { id: "DAD TWC".into(), tipo: ChromKind::Pda, unita: "mAU".into() });
+        }
+        Ok(v)
     }
     fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         if let Some(ch) = self.chromatograms(c)?.iter().find(|h| h.id == id).cloned() {
             return Ok(ch);
         }
         dad_chrom(self.parte(c)?.w.dad.as_ref(), id).ok_or_else(|| Error::new("error.badIndex").with("id", id))
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn dad_map(&mut self, c: usize) -> Result<Option<String>> {
+        Ok(self.parte(c)?.w.dad.as_ref().map(|d| d.to_map_json()))
     }
     fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> { testata(self, c).map(Some) }
     fn metodo(&mut self, c: usize) -> Result<String> {

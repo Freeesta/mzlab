@@ -77,6 +77,10 @@ impl DadData {
     ) -> Option<Chromatogram> {
         dad_wl_chrom(self, nm, bandwidth_nm, index)
     }
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn to_map_json(&self) -> String {
+        super::dad_map::dad_to_map_json(self)
+    }
 }
 
 fn read_dad(ole: &Ole, sample: u32) -> Option<DadData> {
@@ -111,11 +115,13 @@ fn read_dad(ole: &Ole, sample: u32) -> Option<DadData> {
     }
     let rtd = ole.read(&h_path.replace("DADSampleHeader", "DADRealTimeData"))?;
     let total = n_pts.checked_mul(n_ch)?;
-    let matrix_mau: Vec<f32> = rtd
-        .get(32..32 + 4 * total)?
-        .chunks_exact(4)
-        .filter_map(|b| Some(f32::from_le_bytes(b.try_into().ok()?)))
-        .collect();
+    let raw = rtd.get(32..32 + 4 * total)?;
+    let mut matrix_mau = Vec::with_capacity(total);
+    for c in raw.chunks_exact(4) {
+        if let Ok(arr) = c.try_into() {
+            matrix_mau.push(f32::from_le_bytes(arr));
+        }
+    }
     let wavelengths_nm = (0..n_ch).map(|j| wl0 + j as f64 * step).collect();
     Some(DadData {
         time_min,

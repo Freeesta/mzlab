@@ -66,6 +66,9 @@ impl Wiff {
         }
         let mut chroms = Vec::new();
         self.add_chromatograms(&mut chroms, mrm);
+        if let Some(dad) = &self.dad {
+            chroms.push(dad.twc_chromatogram(chroms.len()));
+        }
         Ok(chroms)
     }
 
@@ -118,6 +121,9 @@ impl Wiff {
         }
         let mut chroms = Vec::new();
         self.add_chromatograms(&mut chroms, mrm);
+        if let Some(dad) = &self.dad {
+            chroms.push(dad.twc_chromatogram(chroms.len()));
+        }
         Ok(chroms)
     }
 
@@ -235,6 +241,7 @@ impl Wiff {
             .map(|(a, b, c)| (a.to_string(), b.to_string(), c.to_string()))
             .collect(),
             software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
+            serial: self.serial.clone(),
             centroided: centroid,
             ..Default::default()
         }
