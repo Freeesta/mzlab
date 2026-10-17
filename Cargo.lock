@@ -2141,6 +2141,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-target"
+version = "1.0.1"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "mzlab-wasm"
 version = "1.0.1"
 dependencies = [
