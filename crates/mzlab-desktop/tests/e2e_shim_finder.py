@@ -1,7 +1,7 @@
 """mzFinder in the desktop shim, in Chromium, without Tauri: the page of the desktop (dist/, made by prepare.py: no Pyodide, no wasm-feat/), mzFinder on, against the real native
 engine (`cargo run --example serve`, the mzlab:// protocol over HTTP). A synthetic high-resolution series chosen with «Choose files...» (the bytes go to the app once): classify, the Dig,
 its details and the table of the page. The Dig equals the one of `cargo run --example finder` (timing aside) and no request names pyodide or wasm-feat. Run from the repository root:
-  python3 tools/build_site.py --no-pyodide && python3 crates/mzlab-desktop/prepare.py && python3 crates/mzlab-desktop/tests/e2e_shim_finder.py"""
+  python3 tools/build_site.py && python3 crates/mzlab-desktop/prepare.py && python3 crates/mzlab-desktop/tests/e2e_shim_finder.py"""
 import json, os, re, shutil, subprocess, sys, tempfile, threading, urllib.request
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -20,7 +20,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + (str(e) or repr(e))[:900]))
 
 if not (DIST / "index.html").exists():
-    print("  ", ("dist", "FAIL run tools/build_site.py --no-pyodide and crates/mzlab-desktop/prepare.py first")); sys.exit(1)
+    print("  ", ("dist", "FAIL run tools/build_site.py and crates/mzlab-desktop/prepare.py first")); sys.exit(1)
 try:
     import numpy
 except ImportError:

@@ -2,7 +2,7 @@
 Without «qqq.admin» the package of Tabui is not even loaded (no TPPOS, no button). With it the panel shows, for a case built here (4-methyldiphenylamine + O, the MS2 has the fragment
 with the oxygen on ring A and the rest of the molecule), the classes the spectrum tells apart, the table of the data of the spectrum (TDATI), the proposal 3a, the box of the
 oxidation type and the suggested checks; a spectrum with no useful peak gives 3b; a row whose change is not covered, or without SMILES, has no button. In the LR demo the detail of the
-hydroxylation gets the button when it has a MS2. The column «Prev. f(−)» waits for the `reatt/1` of the parent, then shows mean and rank of each class without changing the rows. Run from the repo root: python3 tests_e2e/e2e_posizioni.py   (env: PYODIDE_DIR)"""
+hydroxylation gets the button when it has a MS2. The column «Prev. f(−)» waits for the `reatt/1` of the parent, then shows mean and rank of each class without changing the rows. Run from the repo root: python3 tests_e2e/e2e_posizioni.py  """
 import json, os, shutil, subprocess, sys, time, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -16,7 +16,6 @@ def step(name, fn):
 
 tmp = Path(tempfile.mkdtemp())
 cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(tmp / "site")]
-if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
 subprocess.run(cmd, check=True)
 from lib_sito import add_wasm; add_wasm(tmp / "site")          # the engine of the page is Rust: the .wasm goes in the copy of the site
 site = tmp / "site"

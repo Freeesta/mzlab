@@ -2,7 +2,7 @@
 
     python3 tools/prepara_sito.py
 
-`tools/build_site.py --no-pyodide`, then `cargo build` of mzlab-wasm for wasm32 and `wasm-bindgen` into site/static/wasm (the same two commands the site
+`tools/build_site.py`, then `cargo build` of mzlab-wasm for wasm32 and `wasm-bindgen` into site/static/wasm (the same two commands the site
 tests run when the engine is missing). Nothing is done when site/ is newer than its sources; cargo skips what is up to date; the wasm-bindgen version must be the one of Cargo.lock.
 """
 import re
@@ -41,7 +41,7 @@ def main() -> int:
     if not shutil.which("cargo"):
         print("cargo not found: the e2e tests need the Rust toolchain (rustup show)")
         return 1
-    run([sys.executable, "tools/build_site.py", "--no-pyodide"])
+    run([sys.executable, "tools/build_site.py"])
     run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm"])
     have = subprocess.run(["wasm-bindgen", "--version"], capture_output=True, text=True).stdout if shutil.which("wasm-bindgen") else ""
     want = bindgen_version()

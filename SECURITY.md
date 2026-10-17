@@ -19,6 +19,6 @@ Only the latest release of the desktop app and the version of the site published
 ## What the project already does
 
 - A Content-Security-Policy in the page (no `unsafe-eval`, network only to the same origin) and in the desktop app.
-- Pyodide is pinned by SHA-256; the desktop updates are checked by SHA-256.
+- The desktop updates are checked by SHA-256.
 - Dependencies are watched by Dependabot (Cargo, pip, GitHub Actions) and checked by `cargo-deny` (advisories and licences).
 - A CycloneDX software bill of materials (SBOM) is attached to every release.
