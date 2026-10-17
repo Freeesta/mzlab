@@ -47,8 +47,10 @@ const CONV = {
 // shows «Cancel» in the heading.
 const CONV_QUIET = 5000;
 const CONV_FINAL = ["done", "fail", "cancel"];
+// what the summary counts apart, in this order: the kinds of file (`kind` of the file entry, "mixed" for a file of more parts), then the rows that did not load
+const CONV_SUM = { full: "conv.sum.full", ms2: "conv.sum.ms2", mrm: "conv.sum.mrm", infusion: "conv.sum.infusion", mixed: "conv.sum.mixed", other: "conv.sum.other", fail: "conv.sum.fail", cancel: "conv.sum.cancel" };
 const CONVROWS = {
-  /** @type {{ name: string, state: string, pc: number | null, sub?: { done: number, total: number } | null, t0?: number, seen?: number, tr?: string[], last?: string, scans?: number, secs?: number, msg?: string, diag?: any, mem?: string }[]} */
+  /** @type {{ name: string, state: string, pc: number | null, sub?: { done: number, total: number } | null, t0?: number, seen?: number, tr?: string[], last?: string, scans?: number, kind?: string, missing?: number, secs?: number, msg?: string, diag?: any, mem?: string }[]} */
   rows: [],
   /** @type {null | (() => void)} */
   onCancel: null,
@@ -92,7 +94,7 @@ const CONVROWS = {
     }, 1000);
   },
   label(r) {
-    if (r.state === "done") return I18N.t("conv.row.done", { scans: I18N.fix(r.scans || 0, 0), secs: I18N.fix(r.secs || 0, 1) });
+    if (r.state === "done") return I18N.t("conv.row.done", { scans: I18N.fix(r.scans || 0, 0), secs: I18N.fix(r.secs || 0, 1) }) + (r.missing ? " · " + I18N.t("conv.row.missing", { n: I18N.fix(r.missing, 0) }) : "");
     if (r.state === "fail") return r.msg || "";
     const lab = I18N.t(convRowKey(r.state), { pc: r.pc == null ? 0 : r.pc });
     return r.sub ? `${lab} · ${I18N.t("conv.row.scans", { done: I18N.fix(r.sub.done, 0), total: I18N.fix(r.sub.total, 0) })}` : lab;
@@ -137,16 +139,27 @@ const CONVROWS = {
         `<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100"${now} aria-label="${esc(r.name + ": " + lab)}"><i style="width:${r.pc || 0}%"></i></div></td></tr>`;
     }).join("");
   },
+  // the count of the ended rows by kind of file (full scan, MS2, MRM, infusion, mixed, other), the failed, cancelled and truncated ones, and the time from the first start to the last end
+  /** @param {CONVROWS["rows"]} end */
+  totals(end) {
+    const T = (k, p) => I18N.t(k, p), by = new Map();
+    const add = k => by.set(k, (by.get(k) || 0) + 1);
+    for (const r of end) add(r.state !== "done" ? r.state : r.kind in CONV_SUM && r.kind !== "fail" && r.kind !== "cancel" ? r.kind : "other");
+    const parts = Object.keys(CONV_SUM).filter(k => by.has(k)).map(k => T(CONV_SUM[k], { n: I18N.fix(by.get(k), 0) }));
+    const miss = end.filter(r => r.missing).length; if (miss) parts.push(T("conv.sum.missing", { n: I18N.fix(miss, 0) }));
+    const t0 = Math.min(...end.map(r => r.t0 || 0)), t1 = Math.max(...end.map(r => (r.t0 || 0) + 1000 * (r.secs || 0)));
+    return T("conv.sum.head", { n: I18N.fix(end.length, 0), parts: parts.join(", "), time: convElapsed(t1 - t0) });
+  },
   // the files whose loading ended, under the table: «Loaded ✓ (scans, time)», the error with «Details» and «Copy diagnosis», «Cancelled»; «Close» once nothing runs
   summary() {
     const end = this.rows.filter(r => CONV_FINAL.includes(r.state)); if (!end.length) return "";
     const T = (k, p) => I18N.t(k, p), run = this.running().length;
     const li = end.map(r => {
       const lab = r.state === "cancel" ? T("conv.row.cancel") : this.label(r);
-      return `<li data-cvrow="${esc(r.name)}" data-cvend="${r.state}">${esc(r.name)}: ${r.state === "fail" ? `<span class="fail" data-cvtxt>${esc(lab)}</span>${r.diag && typeof DIAG !== "undefined" ? DIAG.html(r.diag, esc, T) : ""}` : `<span data-cvtxt>${esc(lab)}</span>`}</li>`;
+      return `<li data-cvrow="${esc(r.name)}" data-cvend="${r.state}"${r.missing ? ` data-cvmiss="${r.missing}"` : ""}>${esc(r.name)}: ${r.state === "fail" ? `<span class="fail" data-cvtxt>${esc(lab)}</span>${r.diag && typeof DIAG !== "undefined" ? DIAG.html(r.diag, esc, T) : ""}` : `<span data-cvtxt>${esc(lab)}</span>`}</li>`;
     }).join("");
     return `<div class="cvsum" role="group" aria-label="${esc(T(run ? "conv.row.group" : "conv.row.groupDone"))}"><p class="sm"><b>${T(run ? "conv.row.group" : "conv.row.groupDone")}</b> <span class="muted">${T("load.prog.count", { done: end.length, n: this.rows.length })}</span>` +
-      `${run ? "" : ` <button type="button" class="sec sm" data-cvact="close">${T("common.close")}</button>`}</p><ul class="sm">${li}</ul></div>`;
+      `${run ? "" : ` <button type="button" class="sec sm" data-cvact="close">${T("common.close")}</button>`}</p>${run ? "" : `<p class="sm" data-cvtot>${esc(this.totals(end))}</p>`}<ul class="sm">${li}</ul></div>`;
   },
   // the buttons of the rows, after renderFiles has drawn them in `el`
   wire(el) {

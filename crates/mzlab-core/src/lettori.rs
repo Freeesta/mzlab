@@ -208,6 +208,10 @@ pub trait Lettore {
     fn extra_mzml(&self, _s: &Spectrum) -> SpectrumExtra {
         SpectrumExtra::default()
     }
+    /// The scans the index of sample `c` lists but that lie beyond the end of the data file (a truncated copy): they are not in the index.
+    fn mancanti(&mut self, _c: usize) -> usize {
+        0
+    }
     /// True when the engine's reader would not read sample `c` as the file is (another instrument model, a scan type it does not know): the readers module is
     /// then the one to open it (`docs/agenti/lettori-modulo.md`).
     #[cfg(feature = "sciex")]
