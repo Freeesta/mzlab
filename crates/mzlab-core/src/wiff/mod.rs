@@ -115,39 +115,74 @@ fn polarity(method: &Option<Method>) -> i8 {
     method
         .as_ref()
         .and_then(|m| m.source.iter().find(|p| p.id == "IS"))
-        .map_or(0, |p| if p.value > 0.0 { 1 } else if p.value < 0.0 { -1 } else { 0 })
+        .map_or(0, |p| {
+            if p.value > 0.0 {
+                1
+            } else if p.value < 0.0 {
+                -1
+            } else {
+                0
+            }
+        })
+}
+
+fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Result<Wiff> {
+    let scan_len =
+        scan_len.ok_or_else(|| Error::new("err.file.wiffNoScan").with("name", name))?;
+    let table = ole
+        .read(&format!("{SAMPLES}SampleIdxTable"))
+        .ok_or_else(|| bad("no sample table"))?;
+    let section = idx::sections(&table)
+        .into_iter()
+        .find(|s| s.0 == sample)
+        .ok_or_else(|| bad("no such sample"))?
+        .1;
+    let entries = idx::parse(
+        &ole.read(&format!("{SAMPLES}Sample{sample}/Idx"))
+            .ok_or_else(|| bad("no Idx"))?,
+    );
+    let experiments = experiments(ole, sample);
+    #[cfg(feature = "estesi")]
+    let experiments = estesi::refine(ole, sample, experiments)?;
+    let n_exp = experiments.len().max(1);
+    let records = entries
+        .iter()
+        .enumerate()
+        .map(|(k, e)| Record {
+            at: section + e.offset as u64 + scan::PAYLOAD_SKIP,
+            end: entries
+                .get(k + 1)
+                .map_or(scan_len, |n| section + n.offset as u64 + scan::PAYLOAD_SKIP),
+            size: e.size,
+            time_min: e.time_ms / 60000.0,
+            tic: e.tic,
+            cycle: k / n_exp,
+            experiment: k % n_exp,
+        })
+        .collect();
+    let method = methodinfo::method_of_sample(ole, sample);
+    #[cfg(feature = "estesi")]
+    let method = method.or_else(|| estesi::fallback_method(ole, sample));
+    let dad = dad::DadData::read(ole, sample);
+    let (model, created) = crate::metodo_wiff::run_facts(ole, sample);
+    Ok(Wiff {
+        sample,
+        records,
+        experiments,
+        polarity: polarity(&method),
+        method,
+        dad,
+        model,
+        created,
+        wiff_sha1: None,
+        scan_len,
+    })
 }
 
 impl Wiff {
     /// Sample `sample` of the container. `scan_len` is the size of the `.wiff.scan`, `None` when that file is missing (`err.file.wiffNoScan`).
     pub fn open(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Result<Wiff> {
-        let scan_len = scan_len.ok_or_else(|| Error::new("err.file.wiffNoScan").with("name", name))?;
-        let table = ole.read(&format!("{SAMPLES}SampleIdxTable")).ok_or_else(|| bad("no sample table"))?;
-        let section = idx::sections(&table).into_iter().find(|s| s.0 == sample).ok_or_else(|| bad("no such sample"))?.1;
-        let entries = idx::parse(&ole.read(&format!("{SAMPLES}Sample{sample}/Idx")).ok_or_else(|| bad("no Idx"))?);
-        let experiments = experiments(ole, sample);
-        #[cfg(feature = "estesi")]
-        let experiments = estesi::refine(ole, sample, experiments)?;
-        let n_exp = experiments.len().max(1);
-        let records = entries
-            .iter()
-            .enumerate()
-            .map(|(k, e)| Record {
-                at: section + e.offset as u64 + scan::PAYLOAD_SKIP,
-                end: entries.get(k + 1).map_or(scan_len, |n| section + n.offset as u64 + scan::PAYLOAD_SKIP),
-                size: e.size,
-                time_min: e.time_ms / 60000.0,
-                tic: e.tic,
-                cycle: k / n_exp,
-                experiment: k % n_exp,
-            })
-            .collect();
-        let method = methodinfo::method_of_sample(ole, sample);
-        #[cfg(feature = "estesi")]
-        let method = method.or_else(|| estesi::fallback_method(ole, sample));
-        let dad = dad::DadData::read(ole, sample);
-        let (model, created) = crate::metodo_wiff::run_facts(ole, sample);
-        Ok(Wiff { sample, records, experiments, polarity: polarity(&method), method, dad, model, created, wiff_sha1: None, scan_len })
+        open_wiff(ole, name, scan_len, sample)
     }
 }
 

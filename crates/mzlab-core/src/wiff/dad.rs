@@ -7,13 +7,16 @@ use crate::error::Result;
 use crate::mzml::{ChromKind, Chromatogram};
 use crate::ole::Ole;
 
+fn u8_at(b: &[u8], at: usize) -> Option<u8> {
+    b.get(at).copied()
+}
+
 fn u16_at(b: &[u8], at: usize) -> Option<u16> {
-    b.get(at..at + 2).map(|s| u16::from_le_bytes([s[0], s[1]]))
+    Some(u16::from_le_bytes(b.get(at..at + 2)?.try_into().ok()?))
 }
 
 fn u32_at(b: &[u8], at: usize) -> Option<u32> {
-    b.get(at..at + 4)
-        .map(|s| u32::from_le_bytes([s[0], s[1], s[2], s[3]]))
+    Some(u32::from_le_bytes(b.get(at..at + 4)?.try_into().ok()?))
 }
 
 fn f32_at(b: &[u8], at: usize) -> Option<f32> {
@@ -21,9 +24,8 @@ fn f32_at(b: &[u8], at: usize) -> Option<f32> {
 }
 
 fn f64_at(b: &[u8], at: usize) -> Option<f64> {
-    b.get(at..at + 8)
-        .map(|s| f64::from_le_bytes([s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]]))
-        .filter(|v| v.is_finite())
+    let v = f64::from_le_bytes(b.get(at..at + 8)?.try_into().ok()?);
+    v.is_finite().then_some(v)
 }
 
 /// Complete 3D optical DAD / PDA dataset of one sample (`DADSampleHeader`, `DADIdx`, `DADRealTimeData`).
@@ -67,18 +69,35 @@ impl DadData {
             intensity: self.twc_mau.clone(),
         }
     }
-    pub fn wavelength_chromatogram(&self, nm: f64, bandwidth_nm: Option<f64>, index: usize) -> Option<Chromatogram> {
+    pub fn wavelength_chromatogram(
+        &self,
+        nm: f64,
+        bandwidth_nm: Option<f64>,
+        index: usize,
+    ) -> Option<Chromatogram> {
         dad_wl_chrom(self, nm, bandwidth_nm, index)
     }
 }
 
 fn read_dad(ole: &Ole, sample: u32) -> Option<DadData> {
     let prefix = format!("SampleSubtree/Sample{sample}/Devices/");
-    let h_path = ole.paths_list().find(|p| p.starts_with(&prefix) && p.ends_with("/DAD/DADSampleHeader"))?.to_string();
+    let h_path = ole
+        .paths_list()
+        .find(|p| p.starts_with(&prefix) && p.ends_with("/DAD/DADSampleHeader"))?
+        .to_string();
     let h = ole.read(&h_path)?;
-    let (n_pts, n_ch) = (u32_at(&h, 34)? as usize, u32_at(&h, 38)? as usize);
-    let (dur, wl0, wl1, step) = (f32_at(&h, 46)? as f64, f32_at(&h, 50)? as f64, f32_at(&h, 54)? as f64, f32_at(&h, 58)? as f64);
-    if n_pts == 0 || n_ch == 0 || step <= 0.0 || wl1 < wl0 || ((wl1 - wl0) / step).round() as usize + 1 != n_ch {
+    let (n_pts, n_ch) = (
+        usize::try_from(u32_at(&h, 34)?).ok()?,
+        usize::try_from(u32_at(&h, 38)?).ok()?,
+    );
+    let (dur, wl0, wl1, step) = (
+        f64::from(f32_at(&h, 46)?),
+        f64::from(f32_at(&h, 50)?),
+        f64::from(f32_at(&h, 54)?),
+        f64::from(f32_at(&h, 58)?),
+    );
+    let expected_span = (0..n_ch).last().map(|last| last as f64 * step)?;
+    if n_pts == 0 || step <= 0.0 || ((wl1 - wl0) - expected_span).abs() > 0.5 * step {
         return None;
     }
     let idx = ole.read(&h_path.replace("DADSampleHeader", "DADIdx"))?;
@@ -87,34 +106,59 @@ fn read_dad(ole: &Ole, sample: u32) -> Option<DadData> {
     }
     let (mut time_min, mut twc_mau) = (Vec::with_capacity(n_pts), Vec::with_capacity(n_pts));
     for i in 0..n_pts {
-        time_min.push(f32_at(&idx, 32 + 8 * i)? as f64);
-        twc_mau.push(f32_at(&idx, 36 + 8 * i)? as f64);
+        time_min.push(f64::from(f32_at(&idx, 32 + 8 * i)?));
+        twc_mau.push(f64::from(f32_at(&idx, 36 + 8 * i)?));
     }
     let rtd = ole.read(&h_path.replace("DADSampleHeader", "DADRealTimeData"))?;
     let total = n_pts.checked_mul(n_ch)?;
     let matrix_mau: Vec<f32> = rtd
         .get(32..32 + 4 * total)?
         .chunks_exact(4)
-        .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+        .filter_map(|b| Some(f32::from_le_bytes(b.try_into().ok()?)))
         .collect();
     let wavelengths_nm = (0..n_ch).map(|j| wl0 + j as f64 * step).collect();
-    Some(DadData { time_min, twc_mau, wavelengths_nm, wl_start_nm: wl0, wl_stop_nm: wl1, wl_step_nm: step, duration_min: dur, matrix_mau })
+    Some(DadData {
+        time_min,
+        twc_mau,
+        wavelengths_nm,
+        wl_start_nm: wl0,
+        wl_stop_nm: wl1,
+        wl_step_nm: step,
+        duration_min: dur,
+        matrix_mau,
+    })
 }
 
-fn dad_wl_chrom(dad: &DadData, nm: f64, bandwidth_nm: Option<f64>, index: usize) -> Option<Chromatogram> {
+fn dad_wl_chrom(
+    dad: &DadData,
+    nm: f64,
+    bandwidth_nm: Option<f64>,
+    index: usize,
+) -> Option<Chromatogram> {
     let n_ch = dad.channels();
     if n_ch == 0 {
         return None;
     }
-    let half = bandwidth_nm.unwrap_or(0.0).max(0.0) * 0.5;
-    let cols: Vec<usize> = if half > 0.0 {
-        dad.wavelengths_nm.iter().enumerate().filter(|(_, &w)| (w - nm).abs() <= half + 1e-6).map(|(j, _)| j).collect()
+    let half = bandwidth_nm
+        .unwrap_or(0.0)
+        .max(0.0)
+        .max(0.5 * dad.wl_step_nm)
+        * 0.5;
+    let cols: Vec<usize> = if bandwidth_nm.is_some_and(|b| b > 0.0) {
+        dad.wavelengths_nm
+            .iter()
+            .enumerate()
+            .filter(|(_, &w)| (w - nm).abs() <= half + 1e-6)
+            .map(|(j, _)| j)
+            .collect()
     } else {
-        let j = ((nm - dad.wl_start_nm) / dad.wl_step_nm).round();
-        if j < 0.0 || (j as usize) >= n_ch {
-            return None;
-        }
-        vec![j as usize]
+        let best = dad
+            .wavelengths_nm
+            .iter()
+            .enumerate()
+            .find(|(_, &w)| (w - nm).abs() <= 0.5 * dad.wl_step_nm + 1e-6)
+            .map(|(j, _)| j)?;
+        vec![best]
     };
     if cols.is_empty() {
         return None;
@@ -122,8 +166,15 @@ fn dad_wl_chrom(dad: &DadData, nm: f64, bandwidth_nm: Option<f64>, index: usize)
     let inv = 1.0 / cols.len() as f64;
     let intensity = (0..dad.points())
         .map(|i| {
-            let row = dad.matrix_mau.get(i * n_ch..(i + 1) * n_ch).unwrap_or_default();
-            cols.iter().filter_map(|&j| row.get(j)).map(|&v| f64::from(v)).sum::<f64>() * inv
+            let row = dad
+                .matrix_mau
+                .get(i * n_ch..(i + 1) * n_ch)
+                .unwrap_or_default();
+            cols.iter()
+                .filter_map(|&j| row.get(j))
+                .map(|&v| f64::from(v))
+                .sum::<f64>()
+                * inv
         })
         .collect();
     Some(Chromatogram {
@@ -169,21 +220,22 @@ pub fn device_channels(ole: &Ole, sample: u32) -> Vec<DeviceChannel> {
             let Some(nlen) = u16_at(&ch, p + 4).map(usize::from) else {
                 break;
             };
-            if p + 6 + nlen + 2 > ch.len() {
+            let Some(name_slice) = ch.get(p + 6..p + 6 + nlen) else {
                 break;
-            }
-            let name = utf16_str(&ch[p + 6..p + 6 + nlen]);
+            };
+            let name = utf16_str(name_slice);
             p += 6 + nlen;
             let Some(ulen) = u16_at(&ch, p).map(usize::from) else {
                 break;
             };
-            if p + 2 + ulen + 22 > ch.len() {
+            let Some(unit_slice) = ch.get(p + 2..p + 2 + ulen) else {
+                break;
+            };
+            let unit = utf16_str(unit_slice).trim_matches(['(', ')']).to_string();
+            p += 2 + ulen;
+            if p + 22 > ch.len() {
                 break;
             }
-            let unit = utf16_str(&ch[p + 2..p + 2 + ulen])
-                .trim_matches(['(', ')'])
-                .to_string();
-            p += 2 + ulen;
             let Some(dt_s) = f64_at(&ch, p) else { break };
             let idx = u16_at(&ch, p + 8).unwrap_or(0);
             let smin = f32_at(&ch, p + 10).unwrap_or(0.0);
@@ -197,7 +249,8 @@ pub fn device_channels(ole: &Ole, sample: u32) -> Vec<DeviceChannel> {
         let total = ole
             .read(&format!("{base}DevRealTimeHeader"))
             .and_then(|h| u32_at(&h, 32))
-            .unwrap_or(0) as usize;
+            .and_then(|v| usize::try_from(v).ok())
+            .unwrap_or(0);
         let data = ole.read(&format!("{base}DevData")).unwrap_or_default();
         let n_pts = if total >= n_ch && data.len() >= 32 + 8 * total {
             total / n_ch
@@ -232,7 +285,7 @@ pub fn device_channels(ole: &Ole, sample: u32) -> Vec<DeviceChannel> {
 fn utf16_str(b: &[u8]) -> String {
     let u: Vec<u16> = b
         .chunks_exact(2)
-        .map(|c| u16::from_le_bytes([c[0], c[1]]))
+        .filter_map(|c| Some(u16::from_le_bytes(c.try_into().ok()?)))
         .collect();
     String::from_utf16_lossy(&u)
         .trim_end_matches('\0')
@@ -297,7 +350,7 @@ pub fn wiff2_sample_info(ole: &Ole, sample: u32) -> Option<Wiff2SampleInfo> {
     }
     let sample_number = u32_at(&b, 32)?;
     let sample_guid: [u8; 16] = b.get(36..52)?.try_into().ok()?;
-    let len = (u16_at(&b, 52)? as usize).min(56);
+    let len = usize::from(u16_at(&b, 52)?).min(56);
     let link_id = String::from_utf8_lossy(b.get(54..54 + len)?).to_string();
     let batch_guid: [u8; 16] = b.get(110..126)?.try_into().ok()?;
     Some(Wiff2SampleInfo {
@@ -332,7 +385,7 @@ impl TofSampleData {
         let (initial_a, initial_t0, n_scans) = (
             f64_at(&cal, 32)?,
             f64_at(&cal, 40)?,
-            u32_at(&cal, 52)? as usize,
+            usize::try_from(u32_at(&cal, 52)?).ok()?,
         );
         if cal.len() < 56 + 20 * n_scans {
             return None;
@@ -358,7 +411,8 @@ impl TofSampleData {
         let tdc_statistics_count = ole
             .read(&format!("{base}TDCStatistics"))
             .and_then(|b| u32_at(&b, 32))
-            .unwrap_or(0) as usize;
+            .and_then(|v| usize::try_from(v).ok())
+            .unwrap_or(0);
         Some(TofSampleData {
             tdc_bin_time_ns,
             initial_a,
@@ -375,7 +429,7 @@ impl TofSampleData {
             .scan_calibration
             .get(scan_idx)
             .map_or((self.initial_a, self.initial_t0), |&(a, t0, _)| (a, t0));
-        let root = (bin as f64 * self.tdc_bin_time_ns - t0) * a;
+        let root = (f64::from(bin) * self.tdc_bin_time_ns - t0) * a;
         root * root
     }
 }
@@ -383,45 +437,46 @@ impl TofSampleData {
 /// Decodes a `.wiff.scan` TOF `0xffffffff` TDC block (`size` bytes starting at `block`), returning `(bin, count)` pairs.
 /// Verifies the `0xffffffff` marker; every step advances `curr_bin` by multiples of 4 TDC ticks.
 pub fn decode_tof_block(block: &[u8]) -> Result<Vec<(u32, u32)>> {
-    if block.len() < 9 || block[..4] != [0xff; 4] {
+    if block.len() < 9 || block.get(..4) != Some(&[0xff; 4][..]) {
         return Err(bad("not a TOF 0xffffffff block"));
     }
     let mut curr_bin = u32_at(block, 4).unwrap_or(0);
     let mut pos = 9usize;
     let mut pts = Vec::new();
-    while pos < block.len() {
-        let b = block[pos];
+    while let Some(b) = u8_at(block, pos) {
         if b == 0xff {
             break;
         } else if (0x81..=0xfb).contains(&b) {
             curr_bin = curr_bin.wrapping_add(4 * u32::from(b - 0x80));
             pos += 1;
-        } else if b == 0xfc && pos + 2 <= block.len() {
-            curr_bin = curr_bin.wrapping_add(4 * u32::from(block[pos + 1]));
+        } else if b == 0xfc {
+            let z = u32::from(u8_at(block, pos + 1).ok_or_else(|| bad("truncated TOF token"))?);
+            curr_bin = curr_bin.wrapping_add(4 * z);
             pos += 2;
-        } else if b == 0xfd && pos + 3 <= block.len() {
-            let z = u32::from(u16::from_le_bytes([block[pos + 1], block[pos + 2]]));
+        } else if b == 0xfd {
+            let z = u32::from(u16_at(block, pos + 1).ok_or_else(|| bad("truncated TOF token"))?);
             curr_bin = curr_bin.wrapping_add(4 * z);
             pos += 3;
-        } else if b == 0xfe && pos + 5 <= block.len() {
-            let z = u32_at(block, pos + 1).unwrap_or(0);
+        } else if b == 0xfe {
+            let z = u32_at(block, pos + 1).ok_or_else(|| bad("truncated TOF token"))?;
             curr_bin = curr_bin.wrapping_add(4 * z);
             pos += 5;
         } else if (0x01..=0x7b).contains(&b) {
             pts.push((curr_bin, u32::from(b)));
             curr_bin = curr_bin.wrapping_add(4);
             pos += 1;
-        } else if b == 0x7c && pos + 2 <= block.len() {
-            pts.push((curr_bin, u32::from(block[pos + 1])));
+        } else if b == 0x7c {
+            let c = u32::from(u8_at(block, pos + 1).ok_or_else(|| bad("truncated TOF token"))?);
+            pts.push((curr_bin, c));
             curr_bin = curr_bin.wrapping_add(4);
             pos += 2;
-        } else if b == 0x7d && pos + 3 <= block.len() {
-            let c = u32::from(u16::from_le_bytes([block[pos + 1], block[pos + 2]]));
+        } else if b == 0x7d {
+            let c = u32::from(u16_at(block, pos + 1).ok_or_else(|| bad("truncated TOF token"))?);
             pts.push((curr_bin, c));
             curr_bin = curr_bin.wrapping_add(4);
             pos += 3;
-        } else if b == 0x7e && pos + 5 <= block.len() {
-            let c = u32_at(block, pos + 1).unwrap_or(0);
+        } else if b == 0x7e {
+            let c = u32_at(block, pos + 1).ok_or_else(|| bad("truncated TOF token"))?;
             pts.push((curr_bin, c));
             curr_bin = curr_bin.wrapping_add(4);
             pos += 5;
