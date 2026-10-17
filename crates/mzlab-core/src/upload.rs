@@ -108,8 +108,24 @@ fn fingerprint(r: &mut dyn ReadAt, size: u64, mut p: Passata) -> Result<(String,
 
 /// Everything the index builder and the loading table need of an mzML: the scan table, the metadata objects and the fingerprints.
 pub fn prepare<R: ReadAt>(r: &mut R, size: u64, name: &str) -> Result<Prepared> {
+    prepare_con(r, size, name, None)
+}
+
+/// `prepare` with the `(sha256, probe)` of the file when the page took them while it copied the file (`Passata`): the file is then not read again for them.
+pub fn prepare_con<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    name: &str,
+    known: Option<(String, String)>,
+) -> Result<Prepared> {
     let t = scantable::read(&mut Windowed::new(r, size), size)?;
-    let (sha256, _, probe) = fingerprint(r, size, Passata::senza_sha1(size))?;
+    let (sha256, probe) = match known {
+        Some(k) => k,
+        None => {
+            let (sha256, _, probe) = fingerprint(r, size, Passata::senza_sha1(size))?;
+            (sha256, probe)
+        }
+    };
     let mut source = Out::default();
     source_head(&mut source, name, size, &probe, &sha256);
     source.raw("}");
