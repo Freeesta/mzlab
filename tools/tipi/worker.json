@@ -13,6 +13,7 @@
     "../../mzlab/web/idx-worker.js",
     "../../mzlab/web/impronta-worker.js",
     "../../mzlab/web/lettori-worker.js",
+    "../../mzlab/web/lettura-sync.js",
     "../../mzlab/web/libreria-worker.js",
     "../../mzlab/web/peaks-worker.js",
     "../../mzlab/web/rust-worker-lab.js",

@@ -1,9 +1,9 @@
-"""Contrast (WCAG AA, 4.5:1) of the shared theme variables used by notice boxes (.avv ok/warn/bad), read from index.html."""
+"""Contrast (WCAG AA, 4.5:1) of the shared theme variables used by notice boxes (.avv ok/warn/bad), read from app.css."""
 import re
 from pathlib import Path
 
 WEB = Path(__file__).resolve().parent.parent / "mzlab" / "web"
-HTML = (WEB / "index.html").read_text(encoding="utf-8")
+HTML = (WEB / "app.css").read_text(encoding="utf-8")
 
 
 def _vars(block):
