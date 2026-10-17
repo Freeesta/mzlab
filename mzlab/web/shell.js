@@ -127,16 +127,18 @@ const sendFile=(url,f,onp)=>window.QQQ_BROWSER?fetch(url,{method:"POST",body:f})
 const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].map(t=>`MS2_t${t}.mzML`),mrm:["0.6","2.4","7.2","18"].map(c=>`MRM_std_${c}ppm.mzML`),hrms:[0,5,10,30].map(t=>`HRMS_t${String(t).padStart(3,"0")}.mzML`)};
 (()=>{const d=$("#demo");if(!d)return;
  const ch=$("#demochoice"),b=$("#demobtn");
- // the button only opens the choice; a set (Full Scan ~28 MB, MS2 ~10 MB, MRM ~2 MB, HRMS ~28 MB) is downloaded only when it is chosen, and the button says how far it has got
+ // the button only opens the choice; a set (Full Scan ~28 MB, MS2 ~10 MB, MRM ~2 MB, HRMS ~28 MB) is downloaded only when it is chosen, with the shared progress panel (avanzamento.js) under the button
  const setOpen=on=>{ch.hidden=!on;ch.style.display=on?"flex":"none";b.setAttribute("aria-expanded",on?"true":"false")};
  b.onclick=()=>setOpen(ch.hidden);
- ch.querySelectorAll("[data-demo]").forEach(o=>o.onclick=async()=>{const files=DEMO_SETS[o.dataset.demo],lab=b.innerHTML;setOpen(false);b.disabled=true;let got=0;
-  const show=i=>{b.textContent=I18N.t("load.demo.progress",{i,n:files.length,mb:I18N.fix(got/1e6,1)})};
-  try{const fs=[];for(const [i,n] of files.entries()){show(i+1);const r=await fetch("static/esempi/"+n);if(!r.ok)throw new Error(n);const parts=[];
-    if(r.body&&r.body.getReader){const rd=r.body.getReader();for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;show(i+1)}}
+ ch.querySelectorAll("[data-demo]").forEach(o=>o.onclick=async()=>{const files=DEMO_SETS[o.dataset.demo];setOpen(false);b.disabled=true;let got=0;
+  const A=(await import("./avanzamento.js")).avanza(d,{title:I18N.t("load.demo.job"),n:files.length});      // the shared progress panel: item, true percentage (Content-Length), time, «Cancel», summary
+  let all=null;try{const fs=[];for(const [i,n] of files.entries()){A.item(i+1,n);const r=await fetch("static/esempi/"+n,{signal:A.signal});if(!r.ok)throw new Error(n);const len=+(r.headers.get("content-length")||0),parts=[];let mine=0;
+    const step=()=>A.set(len?(i+Math.min(1,mine/len))/files.length:i/files.length,I18N.t("load.demo.mb",{mb:I18N.fix(got/1e6,1)}));step();
+    if(r.body&&r.body.getReader){const rd=r.body.getReader();for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;mine+=value.length;step()}}
     else{const bl=await r.blob();parts.push(bl);got+=bl.size}
-    fs.push(new File(parts,n))}
-   b.textContent=I18N.t("load.demo.opening");await upload(fs,"data")}catch(e){fail(new Error(I18N.t("load.demo.error",{message:e.message})))}finally{b.disabled=false;b.innerHTML=lab}})})();
+    fs.push(new File(parts,n));A.ok()}
+   all=fs}catch(e){if(A.signal.aborted)A.stop();else A.fail("",I18N.t("load.demo.error",{message:e.message}))}finally{A.end();b.disabled=false}
+  if(all)await upload(all,"data")})})();
 // files of the instruments are not read by the program (no reader of proprietary formats): a message with the recipe instead of a generic error
 // full screen of the whole app (Fullscreen API; the button stays hidden where the browser has none, e.g. iPhone)
 {const b=$("#bug-btn");if(b)b.onclick=()=>carica("m:bug-report.js").then(()=>(/** @type {any} */(window)).BUGREP.apri()).catch(console.error)}   // «Report a bug»: the dialog is loaded on the first click
