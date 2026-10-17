@@ -11,6 +11,7 @@
 
 pub use super::fields::Value;
 use super::fields::{settings, Field};
+use crate::sortc::SortC;
 
 settings! {
     // explanation of the spectrum by the candidate structure
@@ -157,7 +158,7 @@ impl ReviewSettings {
             .filter(|k| !Self::KEYS.contains(k))
             .collect();
         if !bad.is_empty() {
-            bad.sort_unstable();
+            bad.sortc();
             let list: Vec<String> = bad.iter().map(|k| format!("'{k}'")).collect();
             return Err(format!(
                 "{config_name} [review]: unknown keys [{}]",

@@ -3,6 +3,7 @@
 //! Restructured from the SCC loop of sci-form 0.15.2 `src/xtb/gfn2.rs`; MIT, see LICENSE-sci-form.
 
 use super::{Guess, Scf, System};
+use mzlab_core::sortc::SortC;
 use nalgebra::DMatrix;
 use sci_form::xtb::broyden::BroydenMixer;
 
@@ -81,7 +82,7 @@ impl System {
     fn diag(&self, f: &DMatrix<f64>) -> (Vec<f64>, DMatrix<f64>) {
         let e = (&self.x * f * &self.x).symmetric_eigen();
         let mut idx: Vec<usize> = (0..e.eigenvalues.len()).collect();
-        idx.sort_by(|&a, &b| e.eigenvalues[a].total_cmp(&e.eigenvalues[b]));
+        idx.sortc_by(|&a, &b| e.eigenvalues[a].total_cmp(&e.eigenvalues[b]));
         let c = &self.x * e.eigenvectors.select_columns(&idx);
         (idx.iter().map(|&k| e.eigenvalues[k]).collect(), c)
     }

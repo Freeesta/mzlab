@@ -7,6 +7,7 @@
 use crate::attributio::campaign::Campaign;
 use crate::attributio::error::{CampaignError, Result};
 use crate::attributio::io::{join, Io};
+use crate::sortc::SortC;
 use mzlab_core::json::{self, Value};
 use std::collections::HashMap;
 
@@ -26,7 +27,7 @@ pub fn feature_mgf(c: &Campaign, io: &Io, pol: &str) -> Option<String> {
         return None;
     }
     let mut names: Vec<String> = io.list(&dir).into_iter().map(|e| e.name).collect();
-    names.sort();
+    names.sortc();
     names
         .into_iter()
         .find(|n| n.to_lowercase() == want)

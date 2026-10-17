@@ -8,6 +8,7 @@ use super::libraries::LibraryIndex;
 use super::matching::{compare, Ms2};
 use super::sources::StructureCandidate;
 use super::structures::Structures;
+use crate::sortc::SortC;
 
 /// An alternative structure with the formula asked.
 #[derive(Clone, Debug, PartialEq)]
@@ -142,7 +143,7 @@ pub fn same_formula(formula: &str, lib: &LibraryIndex, src: &AltSources) -> Vec<
             None => out.push(c),
         }
     }
-    out.sort_by(|a, b| {
+    out.sortc_by(|a, b| {
         let key = |x: &Alt| x.score.map_or(f64::INFINITY, |s| -s);
         key(a)
             .total_cmp(&key(b))

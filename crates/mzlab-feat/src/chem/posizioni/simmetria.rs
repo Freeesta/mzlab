@@ -1,5 +1,6 @@
 //! Atom equivalence classes by iterative refinement of local invariants (Morgan/CANON style).
 
+use crate::sortc::SortC;
 use std::collections::BTreeMap;
 
 use crate::chem::grafo::Mol;
@@ -26,7 +27,7 @@ pub fn symmetry_classes(mol: &Mol) -> Vec<u32> {
                     .iter()
                     .map(|(j, k)| ((mol.bonds[*k].order * 2.0) as u8, cls[*j]))
                     .collect();
-                nb.sort_unstable();
+                nb.sortc();
                 (cls[i], nb)
             })
             .collect();
@@ -42,7 +43,7 @@ pub fn symmetry_classes(mol: &Mol) -> Vec<u32> {
 
 fn distinct(v: &[u32]) -> usize {
     let mut s = v.to_vec();
-    s.sort_unstable();
+    s.sortc();
     s.dedup();
     s.len()
 }

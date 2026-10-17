@@ -26,7 +26,7 @@ else:
         fcntl.flock(lk, fcntl.LOCK_EX)
         subprocess.run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-chem-wasm"], cwd=ROOT, check=True, capture_output=True)
         subprocess.run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(out), "target/wasm32-unknown-unknown/release/mzlab_chem_wasm.wasm"], cwd=ROOT, check=True)
-    subprocess.run(["tools/wasm_opt.sh", str(out / "mzlab_chem_wasm_bg.wasm"), "740000", "chem"], cwd=ROOT, env=dict(os.environ, RUNNER_TEMP=str(tmp / "rt")))
+    subprocess.run(["tools/wasm_opt.sh", str(out / "mzlab_chem_wasm_bg.wasm"), "569344", "chem"], cwd=ROOT, env=dict(os.environ, RUNNER_TEMP=str(tmp / "rt")))
 (tmp / "index.html").write_text("<!doctype html><meta charset=utf-8><title>chem</title>")
 
 PORT = lib.free_port()

@@ -9,6 +9,7 @@ use crate::attributio::formula::{
 };
 use crate::attributio::frame::Cell;
 use crate::attributio::readers::standards::py_round;
+use crate::sortc::SortC;
 use std::collections::BTreeSet;
 
 pub(super) const LEVEL_LABEL: [&str; 3] = ["1", "2a", "3"];
@@ -400,7 +401,7 @@ pub(super) fn feature_ids(sub: &[&PFeat]) -> String {
         .iter()
         .map(|p| (p.f().pol != "POS", p.f().id, p.f().pol.as_str()))
         .collect();
-    ids.sort();
+    ids.sortc();
     ids.iter()
         .map(|(_, i, p)| format!("{p}:{i}"))
         .collect::<Vec<_>>()

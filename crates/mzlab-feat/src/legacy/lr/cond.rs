@@ -6,6 +6,7 @@
 use super::super::series::FileIn;
 use super::kin::{decay, gen_of, kinetics, Decay, Gens, Point};
 use super::labels::{score_in, score_one, Cell, Persist, Score};
+use crate::sortc::SortC;
 
 /// The distinct non-empty conditions of the samples, in the order of the files.
 pub fn conditions(files: &[FileIn]) -> Vec<String> {
@@ -58,7 +59,7 @@ pub fn members(files: &[FileIn], cond: &str) -> Vec<usize> {
             own
         });
     }
-    out.sort_unstable();
+    out.sortc();
     out
 }
 

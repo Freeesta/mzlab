@@ -1,6 +1,7 @@
 //! «Fragment ions found»: the fragments of the representative MS2 scan of a feature with their neutral loss in m/z and, when it can be said, in
 //! formula (`docs/agenti/mzfinder-ms2-regola.md`). Pure functions: the spectrum and the formulas come in, the list and its text go out.
 
+use crate::sortc::SortC;
 use mzlab_core::elements::{fmt, mass, parse_formula, Formula};
 
 /// Fragments closer than this to the precursor are the precursor itself, Da.
@@ -132,7 +133,7 @@ pub fn find(precursor: f64, neutral: &str, ions: &[Ion], min_rel: f64, tol: f64)
             }
         })
         .collect();
-    out.sort_by(|a, b| {
+    out.sortc_by(|a, b| {
         b.intensity
             .total_cmp(&a.intensity)
             .then(a.mz.total_cmp(&b.mz))

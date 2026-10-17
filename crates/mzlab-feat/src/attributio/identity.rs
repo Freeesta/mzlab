@@ -6,6 +6,7 @@
 
 use super::annotate::{Curation, Feature};
 use super::curation::CEC_CATEGORIES;
+use crate::sortc::SortC;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// The groups that the counts leave out by default: library codes and internal standards or carry-over.
@@ -413,7 +414,7 @@ pub fn load_confident_inventory(
             }
         })
         .collect();
-    rows.sort_by(|a, b| {
+    rows.sortc_by(|a, b| {
         let q = |r: &InventoryRow| r.best_q.map_or(f64::NEG_INFINITY, |v| v);
         (&a.group, &a.category, a.best_level)
             .cmp(&(&b.group, &b.category, b.best_level))

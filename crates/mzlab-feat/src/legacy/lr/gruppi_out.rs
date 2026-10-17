@@ -2,6 +2,7 @@
 //! the ONE table of the pipeline (no second peak search, no new alignment), the roles of the columns as `campioni/2` and the options of the settings.
 //! A series with fewer than two conditions has no block.
 
+use crate::sortc::SortC;
 use mzlab_core::campioni::Campione;
 
 use super::super::series::FileIn;
@@ -83,7 +84,7 @@ fn meta(d: &LrDig, e: &Entry, name: &str) -> RowMeta {
                 .collect()
         })
         .unwrap_or_default();
-    ms2.sort_unstable();
+    ms2.sortc();
     ms2.dedup();
     RowMeta {
         id: e.id as u32,
@@ -105,7 +106,7 @@ pub fn block(d: &LrDig, names: &[String], found: &[bool]) -> Option<String> {
     }
     // the order of the conditions is the one of the injections; without it, the order of the names (never the position in the list)
     let mut by_name: Vec<&str> = d.lc.iter().map(|f| f.name.as_str()).collect();
-    by_name.sort_unstable();
+    by_name.sortc();
     let rank = |f: &FileIn| by_name.iter().position(|n| *n == f.name).unwrap_or(0);
     let cs: Vec<Campione> = d.lc.iter().map(|f| campione(f, rank(f))).collect();
     let shown: Vec<usize> = (0..d.entries.len()).filter(|&i| found[i]).collect();
