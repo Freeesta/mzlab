@@ -4,7 +4,7 @@
 // Used by 20_tpmine.js; all the text of Tabui is English, without lang/ keys. Data: window.TPMS2 (no state outside this file but the corrections).
 (() => {
   "use strict";
-  const STORE = "qqq.tabui.ms2links";
+  const STORE = typeof NOMI !== "undefined" ? NOMI.KEY("tabui.ms2links") : "qqq.tabui.ms2links";
   const KEY_TOL = 0.05;            // the key of a correction (as in the engine): file, precursor ±0.05, CE ±0.05, apex ±rt_tol / 2
   const WIN = 0.5;                 // the menu offers the rows within ±0.5 Da of the precursor (the Q1 window of unit resolution)
   const esc = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] || c));

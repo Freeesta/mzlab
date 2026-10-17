@@ -3,7 +3,7 @@
 // mzML files carry no gradient; Thermo .raw files keep it as UTF-16 text of the Chromeleon script (the first ~2 MB are read in the browser, the file is neither
 // opened nor copied). The model is {source, points: [{t, b, flow?, curve?}], run_time?, solvents?}; the server keeps it per file (api/gradient) and the notebook
 // (NB.gradienti), the .mzflow and qqq.gradiente.ultimo remember what the student entered. Classic globals are used as they are (E, J, post, NB, I18N, EH).
-const LAST_KEY = "qqq.gradiente.ultimo";
+const LAST_KEY = typeof NOMI !== "undefined" ? NOMI.KEY("gradiente.ultimo") : "qqq.gradiente.ultimo";
 const cache = new Map();                                     // file name -> model | null (what the server answered)
 const nameOf = f => f.file.split("#")[0];
 const T = (k, p) => I18N.t(k, p);

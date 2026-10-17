@@ -5,7 +5,7 @@
 // discarded, with the blank level, the threshold and the highest sample for each feature. Nothing is hidden; the numbers come from /api/stat/blank
 // (mzlab/statistica.py). The same parameters feed the first filter of the PCA.
 const BIANCO = (() => {
-  const KEY = "qqq.bianco";
+  const KEY = NOMI.KEY("bianco");
   const t = (k, p) => I18N.t(k, p);
   const eh = s => EH(s == null ? "" : s);
   let st = { factor: 3, stat: "max", min: 1 };

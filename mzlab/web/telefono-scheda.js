@@ -15,7 +15,7 @@
   $("#phinfo").onclick = () => { const m = $("#phmore"); m.hidden = !m.hidden; if (!m.hidden) m.scrollIntoView({ behavior: "smooth", block: "nearest" }); };
   nav.querySelector("[data-v=theory]")?.addEventListener("click", () => { location.href = "static/teoria/index.html"; });
   // "Apri comunque": the choice is kept for this tab (same key as telefono.js) and the page starts again as the full program
-  $("#phopen").onclick = () => { try { sessionStorage.setItem("qqq.telefono", "0"); } catch (_) { /* storage blocked: the URL decides */ } location.replace(location.pathname + "?telefono=0"); };
+  $("#phopen").onclick = () => { try { sessionStorage.setItem(NOMI.KEY("telefono"), "0"); } catch (_) { /* storage blocked: the URL decides */ } location.replace(location.pathname + "?telefono=0"); };
   let y0 = scrollY;
   // the header goes away scrolling down, comes back scrolling up
   addEventListener("scroll", () => { const y = scrollY; hd.classList.toggle("away", y > y0 && y > 60); y0 = y; }, { passive: true });

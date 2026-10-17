@@ -137,6 +137,7 @@ declare var NATIVO: any;
 declare var NB: any;
 declare var NB_V: any;
 declare var NEAR: any;
+declare var NOMI: any;
 declare var NPHRASES: any;
 declare var OKABE: any;
 declare var OKABE_DARK: any;

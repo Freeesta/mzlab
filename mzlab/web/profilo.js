@@ -7,7 +7,7 @@
 //   High resolution: optionally divided by the internal standard the user defined in QA/QC (ratio per file).
 // Order, normalization and the points of the line come from /api/stat/profile (mzlab/statistica.py); the page draws.
 const PROFILO = (() => {
-  const KEY = "qqq.profilo";
+  const KEY = NOMI.KEY("profilo");
   const t = (k, p) => I18N.t(k, p);
   const eh = s => EH(s == null ? "" : s);
   const isHr = () => !!(window.HR && typeof BANCO !== "undefined" && BANCO.on());

@@ -6,7 +6,7 @@
 // The user's thresholds are in localStorage `qqq.lib.soglie` and in the workflow file. Pure functions: no DOM, so that node can test them (tests/test_livelli.py).
 const LIVELLI = (() => {
   const D = (typeof window !== "undefined" ? window : globalThis).LIVELLI_DATI;
-  const KEY = "qqq.lib.soglie", ORDER = D.livelli;
+  const KEY = typeof NOMI !== "undefined" ? NOMI.KEY("lib.soglie") : "qqq.lib.soglie", ORDER = D.livelli;
   // the keys of the first version of the thresholds
   const LEGACY = { ent: "entropia_min", shared: "picchi_min", ppm: "precursore_ppm_max", ent2: "entropia_provvisorio" };
   const t = (k, p) => (typeof I18N !== "undefined" ? I18N.t(k, p) : k);

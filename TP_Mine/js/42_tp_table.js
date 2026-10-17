@@ -87,7 +87,7 @@
     if (!document.getElementById("tpt-css")) { const s = document.createElement("style"); s.id = "tpt-css"; s.textContent = CSS; document.head.appendChild(s); }
     const coarse = typeof matchMedia !== "undefined" && matchMedia("(pointer:coarse)").matches;
     const rowH = coarse ? 40 : (o.rowHeight || 30), virtualN = o.virtual ?? 300, tabs = o.tabs || [], esc = o.esc;
-    const kCols = "qqq.tabui.cols." + o.id, kChips = "qqq.tabui.chips." + o.id;
+    const kCols = typeof NOMI !== "undefined" ? NOMI.KEY("tabui.cols." + o.id) : "qqq.tabui.cols." + o.id, kChips = typeof NOMI !== "undefined" ? NOMI.KEY("tabui.chips." + o.id) : "qqq.tabui.chips." + o.id;
     /** @type {{ rows: any[], list: any[], pinned: any[], rest: any[], open: number | null, sort: string | null, dir: number, tab: string, q: string, chips: Set<string>, vis: Set<string>, expH: number, a: number, b: number }} */
     const st = { rows: [], list: [], pinned: [], rest: [], open: null, sort: null, dir: -1, tab: tabs.length ? tabs[0].key : "", q: "", chips: new Set((o.chips || []).filter(c => c.on).map(c => c.key)), vis: new Set(o.cols.filter(c => !c.off || c.sticky).map(c => c.key)), expH: 380, a: 0, b: 0 };
     if (o.columns) {                                         // the choice of columns and chips is kept per table

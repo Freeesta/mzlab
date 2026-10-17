@@ -7,7 +7,7 @@
 // and a 95 % ellipse, loadings (paler when unstable) tied to the table of the features: a click shows the XIC and the time profile of the ion.
 // Off below 5 samples.
 const PCA = (() => {
-  const KEY = "qqq.pca", MIN_SAMPLES = 5;
+  const KEY = NOMI.KEY("pca"), MIN_SAMPLES = 5;
   const t = (k, p) => I18N.t(k, p);
   const eh = s => EH(s == null ? "" : s);
   let st = { min: 1000, k: 2, transform: "log", scaling: "pareto" };

@@ -15,7 +15,7 @@
 
   // ---- registry: tools register themselves after the scripts are loaded. {id, name, icon (svg string), desc, open(body, ctx)}
   const tools = [];
-  const adminOn = () => { try { return localStorage.getItem("qqq.admin") === "1" || localStorage.getItem("qqq.teoria.esteso") === "1"; } catch (_) { return false; } };
+  const adminOn = () => { try { return localStorage.getItem(NOMI.KEY("admin")) === "1" || localStorage.getItem(NOMI.KEY("teoria.esteso")) === "1"; } catch (_) { return false; } };
   /** a tool with admin:true is shown only in the administrator mode */
   const shown = t => !t.admin || adminOn();
   const reg = window.QTOOLS = {

@@ -9,8 +9,8 @@
   try {
     const q = /[?&]telefono=([01])/.exec(location.search);
     // kept from the old name: renaming it would lose the users' data
-    if (q) sessionStorage.setItem("qqq.telefono", q[1]);
-    force = sessionStorage.getItem("qqq.telefono");
+    if (q) sessionStorage.setItem(NOMI.KEY("telefono"), q[1]);
+    force = sessionStorage.getItem(NOMI.KEY("telefono"));
   } catch (_) { /* storage blocked: automatic choice */ }
   const ua = navigator.userAgent || "";
   const coarse = !!(/** @type {any} */ (window).matchMedia && matchMedia("(pointer:coarse)").matches);

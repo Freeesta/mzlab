@@ -26,8 +26,8 @@
     window.qqEngineStop();
     // the files and indexes in OPFS
     await wait((async () => { const d = await navigator.storage.getDirectory(); await d.removeEntry("mzlab", { recursive: true }); })());
-    await wait(new Promise((/** @type {any} */ r) => { const q = indexedDB.deleteDatabase("qqq_lab"); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
-    await wait((async () => { for (const k of await caches.keys()) if (k.startsWith("qqq-") || k === "mzlab-libs") await caches.delete(k); })());
+    await wait(new Promise((/** @type {any} */ r) => { const q = indexedDB.deleteDatabase(NOMI.DB); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
+    await wait((async () => { for (const k of await caches.keys()) if (k.startsWith(NOMI.CACHE_PREFIX) || k === "mzlab-libs") await caches.delete(k); })());
     await wait((async () => { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); })());
     const u = new URL(location.href); u.search = "?riparti=1"; location.replace(u.href);
   };
@@ -52,7 +52,7 @@
         .catch(e => { window.MZLAB_RUST_ERR = String(e && e.message || e); console.debug("[mzLab] Rust engine not available", e); return null; })
     : Promise.resolve(null);
   // for a diagnosis: which version of the site this page is
-  try { caches.keys().then(k => console.info("[mzLab] site cache:", k.filter(n => n.startsWith("qqq-app-")).join(", ") || "none", "| page:", document.lastModified)).catch(() => {}); } catch (_) { /* no Cache API */ }
+  try { caches.keys().then(k => console.info("[mzLab] site cache:", k.filter(n => n.startsWith(NOMI.CACHE_APP)).join(", ") || "none", "| page:", document.lastModified)).catch(() => {}); } catch (_) { /* no Cache API */ }
   // the page waits for it to decide whether a Thermo .raw can be read
   window.MZLAB_RUST_READY = rustReady;
   // reset.js: the worker holds sync handles on the files

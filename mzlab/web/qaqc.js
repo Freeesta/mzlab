@@ -7,7 +7,7 @@
 // Low resolution: only RT and area of the standards the user chose and the blanks; no list of ions of the sample (principle 1).
 // The numbers come from /api/qaqc (mzlab/qaqc.py); the state (roles, ions, threshold) is saved in localStorage qqq.qaqc and in the workflow file.
 const QAQC = (() => {
-  const KEY = "qqq.qaqc";
+  const KEY = NOMI.KEY("qaqc");
   const ROLES = ["sample", "blank", "qc", "standard", "dark"];
   // circle, square, diamond, triangle, cross: not only colour
   const MARK = { sample: "c", blank: "s", qc: "d", standard: "t", dark: "x" };

@@ -12,7 +12,7 @@ const FEATURES = (() => {
       if (q === "1") return true;
       if (q === "0") return false;
     } catch (_) { /* no address */ }
-    try { return localStorage.getItem("qqq.dev." + name) === "1"; } catch (_) { return false; }
+    try { return localStorage.getItem(NOMI.KEY("dev." + name)) === "1"; } catch (_) { return false; }
   };
   return { qaqc: on("qaqc") };
 })();

@@ -141,9 +141,10 @@
   async function idbFiles() {
     try {
       // "qqq_lab" is the name of the browser database (kept from the old name: renaming it would lose the users' data)
-      if (!indexedDB.databases || !(await indexedDB.databases()).some(d => d.name === "qqq_lab")) return [];
+      const dbName = typeof NOMI !== "undefined" ? NOMI.DB : "qqq_lab";
+      if (!indexedDB.databases || !(await indexedDB.databases()).some(d => d.name === dbName)) return [];
       return await new Promise(res => {
-        const r = indexedDB.open("qqq_lab");
+        const r = indexedDB.open(dbName);
         r.onerror = () => res([]);
         r.onsuccess = () => {
           const db = r.result;

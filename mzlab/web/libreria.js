@@ -61,7 +61,7 @@ const LIB = (() => {
   function folderStart() {
     if (!folderInit) folderInit = (async () => {
       if (window.MZLAB_DESKTOP) { folderMsg = { mode: "native", base: BASE }; folderInfo.mode = "native"; return; }
-      if (/** @type {any} */ (window).showDirectoryPicker && LS.get("qqq.lib.cartella") === "fs") {
+      if (/** @type {any} */ (window).showDirectoryPicker && LS.get(NOMI.KEY("lib.cartella")) === "fs") {
         const h = await dirGet();
         if (h) {
           let perm = "prompt"; try { perm = await h.queryPermission({ mode: "readwrite" }); } catch (e) { /* old handle */ }
@@ -82,9 +82,9 @@ const LIB = (() => {
   async function chooseFolder() {
     if (T()) { const r = await T().invoke("lib_choose_dir"); if (r) { folderMsg = { mode: "native", base: BASE }; await pushFolder(); } return; }
     const h = await /** @type {any} */ (window).showDirectoryPicker({ id: "mzlab-libs", mode: "readwrite" });
-    await dirPut(h); LS.set("qqq.lib.cartella", "fs"); waiting = null; folderInfo.needsGrant = false; folderInfo.mode = "fs"; folderInfo.name = h.name; folderMsg = { mode: "fs", handle: h }; await pushFolder();
+    await dirPut(h); LS.set(NOMI.KEY("lib.cartella"), "fs"); waiting = null; folderInfo.needsGrant = false; folderInfo.mode = "fs"; folderInfo.name = h.name; folderMsg = { mode: "fs", handle: h }; await pushFolder();
   }
-  async function useBrowserFolder() { await dirPut(null); LS.set("qqq.lib.cartella", null); waiting = null; folderInfo.needsGrant = false; folderInfo.mode = "opfs"; folderInfo.name = ""; folderMsg = { mode: "opfs" }; await pushFolder(); }
+  async function useBrowserFolder() { await dirPut(null); LS.set(NOMI.KEY("lib.cartella"), null); waiting = null; folderInfo.needsGrant = false; folderInfo.mode = "opfs"; folderInfo.name = ""; folderMsg = { mode: "opfs" }; await pushFolder(); }
 
   // ------------------------------------------------------------ the «Librerie» window
   const STATES = { pronta: "ok", da_indicizzare: "warn", aggiornamento: "warn", danneggiata: "bad" };

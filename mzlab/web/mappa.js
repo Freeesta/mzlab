@@ -5,7 +5,7 @@
 // Preferences of this browser in localStorage "qqq.mappa".
 window.MAPPA = (() => {
   const T = (k, o) => I18N.t(k, o);
-  const PREF_KEY = "qqq.mappa";
+  const PREF_KEY = NOMI.KEY("mappa");
   const PREF = (() => { return lsObj(PREF_KEY); })();
   const prefSave = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(PREF)); } catch (e) { /* no storage */ } };
   const GRP0 = 0.02, SHAPES = ["circle", "square", "triangle", "diamond"], GLYPH = ["●", "■", "▲", "◆"];

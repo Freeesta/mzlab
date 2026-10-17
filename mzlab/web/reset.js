@@ -10,12 +10,12 @@
   // what the variant "files" leaves in OPFS: the spectral libraries the user saved
   const KEEP_OPFS = ["librerie"];
   const KEEP_IDB = ["mzlab-libs", "mzlab-libdir"];                    // ... and their databases
-  const KNOWN_IDB = ["qqq_lab", "mzlab-libs", "mzlab-libdir"];
+  const KNOWN_IDB = [NOMI.DB, "mzlab-libs", "mzlab-libdir"];
   // "cold" (the desktop app, first page of a new run): the files and the session like "files", plus the working state kept in localStorage (map, peak and list
   // choices, sidebar layout...); what the user set on purpose stays: language, theme and settings, reading aids, the update notice, library settings, seen hints
   const KEEP_LS = /^(mzlab\.lang|qqq-theme|qqq\.(prefs|a11y|set\.a11y|upd\.|reset\.note|lib\.|tour\.|telefono|logo\.))/;
   // sessionStorage: present while this run of the app lives (a reload keeps it, a new start does not)
-  const RUN_KEY = "qqq.run";
+  const RUN_KEY = NOMI.KEY("run");
   const MODES = { 1: "all", all: "all", files: "files", cold: "cold" };
   const modeOf = q => MODES[q] || null;
 
@@ -40,7 +40,7 @@
   }
   async function caches_(mode, rep) {
     for (const k of await caches.keys()) {
-      if (mode !== "all" && !k.startsWith("qqq-big-")) continue;
+      if (mode !== "all" && !k.startsWith(NOMI.CACHE_BIG)) continue;
       if (await caches.delete(k)) rep.caches.push(k);
     }
   }
@@ -96,7 +96,7 @@
   }
   // ---- once: «the files stay in the browser» (a reload does not remove them; this says how)
   function remind() {
-    try { if (localStorage.getItem("qqq.reset.note")) return; localStorage.setItem("qqq.reset.note", "1"); } catch (e) { return; }
+    try { if (localStorage.getItem(NOMI.KEY("reset.note"))) return; localStorage.setItem(NOMI.KEY("reset.note"), "1"); } catch (e) { return; }
     if (document.getElementById("resetnote")) return;
     const n = document.createElement("div"); n.id = "resetnote"; n.setAttribute("role", "status");
     n.innerHTML = `<span>${I18N.t("reset.note")}</span><button type="button" data-n="reset">${I18N.t("reset.note.btn")}</button><button type="button" data-n="x" aria-label="${I18N.t("reset.note.close")}">×</button>`;

@@ -4,7 +4,7 @@
 // (crates/mzlab-desktop/src/update.rs: manifest, only the changed files, SHA-256, atomic swap); this file only asks and shows.
 // In a browser nothing here runs. A silent check at start (at most once a day) shows a small notice, never a dialog.
 window.DESKUPD = (() => {
-  const KEY = "qqq.upd.last", DAY = 864e5, REL_LATEST = "https://github.com/Freeesta/mzlab/releases/latest", REL = "https://github.com/Freeesta/mzlab/actions/workflows/desktop.yml";
+  const KEY = NOMI.KEY("upd.last"), DAY = 864e5, REL_LATEST = "https://github.com/Freeesta/mzlab/releases/latest", REL = "https://github.com/Freeesta/mzlab/actions/workflows/desktop.yml";
   const T = () => window.__TAURI__;
   const live = () => !!(window.MZLAB_DESKTOP && T() && T().core);
   const mb = b => I18N.fix(b / 1e6, 1);
@@ -82,9 +82,9 @@ window.DESKUPD = (() => {
   // At most once a day (qqq.rel.last); a notice closed for a version is not shown again for that version (qqq.rel.seen).
   async function release(force) {
     if (!live()) return;
-    let last = 0, seen = ""; try { last = +(localStorage.getItem("qqq.rel.last") || 0); seen = localStorage.getItem("qqq.rel.seen") || ""; } catch (_) { /* optional */ }
+    let last = 0, seen = ""; try { last = +(localStorage.getItem(NOMI.KEY("rel.last")) || 0); seen = localStorage.getItem(NOMI.KEY("rel.seen")) || ""; } catch (_) { /* optional */ }
     if (!force && Date.now() - last <= DAY) return;
-    try { localStorage.setItem("qqq.rel.last", String(Date.now())); } catch (_) { /* optional */ }
+    try { localStorage.setItem(NOMI.KEY("rel.last"), String(Date.now())); } catch (_) { /* optional */ }
     try {
       const r = JSON.parse(await T().core.invoke("release_check"));
       if (r.status !== "newer" || !r.version || r.version === seen) return;
@@ -96,7 +96,7 @@ window.DESKUPD = (() => {
       const a = document.createElement("a"); a.href = REL_LATEST; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = I18N.t("release.get");
       const btn = document.createElement("button"); btn.type = "button"; btn.textContent = I18N.t("update.close");
       bar.append(a, btn); d.append(msg, bar);
-      btn.onclick = () => { try { localStorage.setItem("qqq.rel.seen", r.version); } catch (_) { /* optional */ } d.remove(); };
+      btn.onclick = () => { try { localStorage.setItem(NOMI.KEY("rel.seen"), r.version); } catch (_) { /* optional */ } d.remove(); };
       document.body.appendChild(d);
       if (window.avvisoAuto) avvisoAuto(d, { x: false });       // not marked as seen: it comes back at the next check
     } catch (_) { /* offline, old binary without the command: no notice */ }
