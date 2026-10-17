@@ -20,8 +20,9 @@ from lib_sito import add_wasm; add_wasm(tmp / "site")          # the engine of t
 site = tmp / "site"
 def packed():
     d = site / "static" / "mzfinder"
-    assert (d / "indice.json").exists() and (d / "tpmine.zip").exists() and (site / "static" / "tpmine-loader.js").exists()
+    assert (d / "indice.json").exists() and (site / "static" / "tpmine-loader.js").exists()
     assert not (site / "static" / "tpmine.enc").exists()
+    assert not (d / "tpmine.zip").exists() and not (d / "pyodide").exists()
 step("built site: Tabui in plain text in static/mzfinder/, no encrypted file", packed)
 
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

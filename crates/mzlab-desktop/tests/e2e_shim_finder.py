@@ -308,7 +308,7 @@ try:
         def clean():
             bad = [u for u in reqs if re.search(r"pyodide|wasm-feat|mzlab\.zip", u, re.I)]
             assert not bad, bad[:5]
-        step("no request names pyodide, wasm-feat or mzlab.zip", clean)
+        step("no request names pyodide or wasm-feat", clean)
         b.close()
 finally:
     eng.terminate(); page.shutdown()
