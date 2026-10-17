@@ -345,6 +345,7 @@ const getMs2Tr = k => memo(`m2t${k}`, () => J(`api/ms2tr?k=${k}`)).then(d => d.f
         redrawAll();
       }
     } else if (d.phase === "open" || d.frac >= 1) {
+      if (E.earlyTic) E.earlyTic.delete(d.name);
       const f = E.files.find(x => x.file === d.name || fileBase(x.file) === fileBase(d.name));
       if (f && f._provisional) {
         delete f._provisional;

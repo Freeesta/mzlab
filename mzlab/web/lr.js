@@ -29,6 +29,7 @@ const earlyTics = new Map();
 /** the page shows how far the loading of `name` has got (event mzlab-index, shell.js upload); `p` = { done, total } scans of the sample, `wait` = queued for a free builder */
 const tellIndex = (/** @type {string} */ name, /** @type {number} */ frac, /** @type {string | undefined} */ phase, /** @type {any} */ p = {}) => {
   if (p && p.early_tic) earlyTics.set(name, p.early_tic);
+  if (phase === "open" || frac >= 1) earlyTics.delete(name);
   window.dispatchEvent(new CustomEvent("mzlab-index", { detail: { name, frac, phase, done: p.done || 0, total: p.total || 0, wait: !!p.wait, early_tic: p.early_tic || null } }));
 };
 export function createLr({ rb }) {
@@ -176,16 +177,6 @@ export function createLr({ rb }) {
       if (method === "GET") {
         if (path === "/api/state") return json(state());
         if (path === "/api/session") return json(session());
-        if (path === "/api/chrom") {
-          const k0 = Number(u.searchParams.get("k"));
-          const it = items && items[k0];
-          const name = it ? base(it.file) : (u.searchParams.get("name") || "");
-          const et = earlyTics.get(name) || (Number.isInteger(k0) && [...earlyTics.values()][k0]);
-          const kind = u.searchParams.get("kind") || "tic";
-          if (et && kind === "tic" && !u.searchParams.get("mz0") && !u.searchParams.get("mz1") && !u.searchParams.get("prec") && !u.searchParams.get("filt")) {
-            return json({ rt: et.rt, y: et.y || et.tic, provvisorio: true });
-          }
-        }
         { const r = await mr.get(path, u.searchParams); if (r !== undefined) return r; }          // method, analog traces, delay, PDA, gradient
         if (path === "/api/formula") {
           try { return { status: 200, text: (await rpc({ op: "lr_formula", f: u.searchParams.get("f") || "", adduct: u.searchParams.get("adduct") || "" })).info }; }
