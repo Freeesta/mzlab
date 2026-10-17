@@ -54,7 +54,7 @@ def test_text_mac_and_windows():
     js = (f"const fs=require('fs');const A=new Function(fs.readFileSync({str(WEB / 'azioni.js')!r},'utf8')+';return AZIONI;')();"
           "const r=[];for(const p of ['MacIntel','Linux x86_64']){Object.defineProperty(globalThis,'navigator',{value:{platform:p},configurable:true});"
           "r.push([{tasto:'o',mod:true,dove:'view'},{code:'Digit1',alt:true,dove:'view'},{tasto:'x',dove:'chart'},{tasto:'Enter',dove:'chart'}].map(s=>A.testo(s)));}console.log(JSON.stringify(r));")
-    mac, win = json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True, check=True).stdout)
+    mac, win = json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True, encoding="utf-8", check=True).stdout)
     assert mac == ["⌘O", "⌥1", "X", "Enter"] and win == ["Ctrl+O", "Alt+1", "X", "Enter"]
 
 
@@ -63,4 +63,4 @@ def test_premuto():
           "const e=(o)=>Object.assign({key:'',code:'',ctrlKey:false,metaKey:false,altKey:false,shiftKey:false},o);"
           "console.log(JSON.stringify([A.premuto({tasto:'x'},e({key:'x'})),A.premuto({tasto:'x'},e({key:'X',shiftKey:true})),A.premuto({tasto:'x'},e({key:'x',ctrlKey:true})),"
           "A.premuto({tasto:'o',mod:true},e({key:'o',metaKey:true})),A.premuto({code:'Digit1',alt:true},e({code:'Digit1',key:'¡',altKey:true})),A.premuto({tasto:'?'},e({key:'?',shiftKey:true})),A.premuto({tasto:'Enter'},e({key:'Enter'}))]));")
-    assert json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True, check=True).stdout) == [True, False, False, True, True, True, True]
+    assert json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True, encoding="utf-8", check=True).stdout) == [True, False, False, True, True, True, True]

@@ -99,6 +99,7 @@ jobs:
         if: failure()
         shell: bash
         run: |
+          [ -f .verifica/ultimo.md ] || { echo "No .verifica/ultimo.md: verifica.py stopped before writing its report (see the log of the failed step above)"; exit 0; }
           cat .verifica/ultimo.md | cut -c1-2000
           for n in $(grep -o '^- FAIL [A-Za-z0-9_]*' .verifica/ultimo.md | awk '{print $3}'); do echo "===== $n"; tail -n 60 ".verifica/log/$n.log"; done
       - name: Logs of the failed tests
