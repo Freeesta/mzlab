@@ -5,8 +5,8 @@
   const T = window.__TAURI__;
   if (!T || !T.core) return;
   window.MZLAB_DESKTOP = true;
-  // a new run of the app starts as if new (no files, session or working choices; language, theme and settings stay); a reload in the same run keeps them
-  if (window.QQRESET && window.QQRESET.cold()) return;
+  const R = window.MZRESET || window.QQRESET;
+  if (R && R.cold()) return;
   const BASE = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
   const tag = id => "application/x-mzlab-file;id=" + id;
 
@@ -24,6 +24,7 @@
 
   // «Scarica mzML»: the native save dialog for a converted mzML (by its number on the disk); resolves to the chosen path or null
   window.MZLAB_SAVE_MZML = (id, name) => T.core.invoke("save_mzml", { id, name });
+  window.QQQ_SAVE_MZML = window.MZLAB_SAVE_MZML;
 
   document.addEventListener("click", async e => {
     const t = e.target.closest && e.target.closest("#drop, #dropdam");

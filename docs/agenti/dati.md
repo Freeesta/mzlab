@@ -78,15 +78,16 @@ Barra laterale, strumenti, tour e suggerimenti: `docs/agenti/dati-barra.md`.
 - **CSP e file non fidati**: la CSP nel meta di `index.html` ha `object-src 'none'`, `base-uri 'none'`, `form-action 'self'` e `script-src` senza `unsafe-inline`: gli script inline sono ammessi per SHA-256 (`python3 tools/csp_hash.py` riscrive hash e CSP del desktop; `--check` e `tests/test_csp_hash.py` verificano); `style-src` tiene `unsafe-inline` per gli attributi `style`. `tests_e2e/e2e_xss.py` carica un mzML sintetico con HTML nel nome del file, nello strumento e nell'id della corsa: nulla viene creato né eseguito e la console non ha violazioni CSP.
 
 ## Inventario chiavi, IndexedDB e cache
-Il modulo centrale `mzlab/web/nomi.js` (`NOMI`, script classico in `index.html` prima di `reset.js`) accentra i nomi di storage, database e cache, garantendo la compatibilità retroattiva con i dati memorizzati nel browser.
-- **IndexedDB**: `NOMI.DB` = `"qqq_lab"`, versione 2 (`DB_VERSION`), versione 3 (`DB_VER`, schema in `qqq-db.js`). Conserva taccuino (`notebook`), liste utente (`liste_utente`), manifest OPFS (`manifest`) e coppie chiave-valore (`kv`).
-- **Cache Storage** (`sw.js`): prefisso `NOMI.CACHE_PREFIX` = `"qqq-"`, cache app `NOMI.CACHE_APP` = `"qqq-app-"` (con suffisso versione), cache vendor `NOMI.CACHE_BIG` = `"qqq-big-"`.
-- **LocalStorage e SessionStorage**: funzione helper `NOMI.KEY(k)`. Mappa le eccezioni (`"theme"` → `"qqq-theme"`, `"labels"` → `"qqq-labels"`), preserva stringhe con prefisso `"qqq"`, e per tutte le altre antepone `"qqq."` (es. `NOMI.KEY("prefs")` → `"qqq.prefs"`).
-  - *localStorage*: preferenze e tema (`qqq.prefs`, `qqq-theme`, `qqq-labels`, `qqq.a11y`, `qqq.set.a11y`),
-    flag admin e dev (`qqq.admin`, `qqq.dev.qaqc`, `qqq.dev.riferimento`), viste Dati (`qqq.picchi`, `qqq.qaqc`,
-    `qqq.riferimento`, `qqq.gradiente.ultimo`, `qqq.kmd`, `qqq.mappa`, `qqq.ordine`, `qqq.pca`, `qqq.pfas`,
-    `qqq.profilo`, `qqq.fair`, `qqq.flgrp`, `qqq.tunit`, `qqq.lib.soglie`), tour e aggiornamenti (`qqq.tour.lr`,
-    `qqq.upd.last`, `qqq.upd.seen`, `qqq.logo.gold`, `qqq.reset.note`), TP_Mine (`qqq.attributio.reviewer`,
-    `qqq.tabui.decisioni`, `qqq.pipeline.draft`), teoria (`qqq.pratica`).
-  - *sessionStorage*: flag telefono (`qqq.telefono`, `qqq.telefono.scelto`), deduplica avvisi (`qqq.unopen`, `qqq.convopen`), scroll e tour (`qqq.teoria.y`, `qqq.teoria.side`, `qqq.tour.step`).
+Il modulo centrale `mzlab/web/nomi.js` (`NOMI`, script classico in `index.html` prima di `reset.js`) accentra i nomi di storage, database e cache, gestendo la migrazione trasparente dai dati legacy `qqq` a `mzlab`.
+- **IndexedDB**: `NOMI.DB` = `"mzlab_lab"` (`NOMI.DB_OLD` = `"qqq_lab"`), versione 2 (`DB_VERSION`), versione 3 (`DB_VER`, schema in `qqq-db.js`). Conserva taccuino (`notebook`), liste utente (`liste_utente`), manifest OPFS (`manifest`) e coppie chiave-valore (`kv`). All'avvio il worker verifica `mzlab_lab`: se vuoto e `qqq_lab` esiste, migra store per store (`files`, `kv`, `liste_utente`) con cursore, confronta i conteggi e imposta `kv.migrated_from = "qqq_lab"`. Al 3° avvio confermato rimuove `qqq_lab`.
+- **Cache Storage** (`sw.js`): prefisso `NOMI.CACHE_PREFIX` = `"mzlab-"`, cache app `NOMI.CACHE_APP` = `"mzlab-app-"` (con suffisso versione), cache vendor `NOMI.CACHE_BIG` = `"mzlab-big-"`. Nell'evento `activate` cancella le vecchie cache con prefisso `qqq-`.
+- **LocalStorage e SessionStorage**: funzione helper `NOMI.KEY(k)`. Mappa le eccezioni (`"theme"` → `"mzlab-theme"`, `"labels"` → `"mzlab-labels"`), preserva stringhe con prefisso `"mzlab"`, e per le altre antepone `"mzlab."` (es. `NOMI.KEY("prefs")` → `"mzlab.prefs"`). All'avvio sincrono `NOMI.migrateStorage()` copia le chiavi legacy `qqq.*` in `mzlab.*` con fallback in lettura (`NOMI.get(k)`). Al 3° avvio riuscito (`mzlab.avvii >= 3`) rimuove le chiavi vecchie.
+  - *localStorage*: preferenze e tema (`mzlab.prefs`, `mzlab-theme`, `mzlab-labels`, `mzlab.a11y`, `mzlab.set.a11y`),
+    flag admin e dev (`mzlab.admin`, `mzlab.dev.qaqc`, `mzlab.dev.riferimento`), viste Dati (`mzlab.picchi`, `mzlab.qaqc`,
+    `mzlab.riferimento`, `mzlab.gradiente.ultimo`, `mzlab.kmd`, `mzlab.mappa`, `mzlab.ordine`, `mzlab.pca`, `mzlab.pfas`,
+    `mzlab.profilo`, `mzlab.fair`, `mzlab.flgrp`, `mzlab.tunit`, `mzlab.lib.soglie`), tour e aggiornamenti (`mzlab.tour.lr`,
+    `mzlab.upd.last`, `mzlab.upd.seen`, `mzlab.logo.gold`, `mzlab.reset.note`), TP_Mine (`mzlab.attributio.reviewer`,
+    `mzlab.tabui.decisioni`, `mzlab.pipeline.draft`), teoria (`mzlab.pratica`).
+  - *sessionStorage*: flag telefono (`mzlab.telefono`, `mzlab.telefono.scelto`), deduplica avvisi (`mzlab.unopen`, `mzlab.convopen`), scroll e tour (`mzlab.teoria.y`, `mzlab.teoria.side`, `mzlab.tour.step`).
+- **Reset** (`reset.js`, `browser.js`): `wipe()` e `qqHardReset()` eliminano sia i dati correnti `mzlab` sia i residui legacy `qqq` (database `mzlab_lab` e `qqq_lab`, chiavi storage `mzlab.*` e `qqq.*`, cache `mzlab-*` e `qqq-*`).
 

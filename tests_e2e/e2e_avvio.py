@@ -13,11 +13,11 @@ def step(name, fn):
 
 # a v1 database (as an older version of the program left it) kept open by a page that never closes it: the upgrade to v2 is blocked
 HOLD = """() => new Promise((res, rej) => {
-  const r = indexedDB.open("qqq_lab", 1);
+  const r = indexedDB.open("mzlab_lab", 1);
   r.onupgradeneeded = () => { const db = r.result; db.createObjectStore("files"); db.createObjectStore("kv"); };
   r.onsuccess = () => { window.__held = r.result; res(true); }; r.onerror = () => rej(String(r.error));
 })"""
-GONE = "() => new Promise(res => { if (window.__held) { window.__held.close(); window.__held = null; } const r = indexedDB.deleteDatabase('qqq_lab'); r.onsuccess = r.onerror = r.onblocked = () => res(true); })"
+GONE = "() => new Promise(res => { if (window.__held) { window.__held.close(); window.__held = null; } const r = indexedDB.deleteDatabase('mzlab_lab'); r.onsuccess = r.onerror = r.onblocked = () => res(true); })"
 
 def title_static():
     html = (ROOT / "mzlab/web/index.html").read_text(encoding="utf-8")
@@ -51,14 +51,14 @@ try:
         def keeps_notebook():
             holder.evaluate(GONE)
             holder.evaluate("""() => new Promise((res, rej) => {
-              const r = indexedDB.open("qqq_lab", 2);
+              const r = indexedDB.open("mzlab_lab", 2);
               r.onupgradeneeded = () => { const db = r.result; db.createObjectStore("files"); db.createObjectStore("kv"); db.createObjectStore("liste_utente", { keyPath: "id" }); };
               r.onsuccess = () => { const db = r.result, t = db.transaction(["files", "kv"], "readwrite"); t.objectStore("files").put(new ArrayBuffer(8), "old.mzML"); t.objectStore("kv").put('{"k":1}', "notebook"); t.oncomplete = () => { db.close(); res(true); }; };
               r.onerror = () => rej(String(r.error));
             })""")
             pg = ctx.new_page(); pg.goto(URL + "?riparti=1")
             pg.wait_for_selector("#drop", timeout=120000)
-            left = pg.evaluate("""() => new Promise(res => { const r = indexedDB.open("qqq_lab"); r.onsuccess = () => { const db = r.result, t = db.transaction(["files", "kv"]);
+            left = pg.evaluate("""() => new Promise(res => { const r = indexedDB.open("mzlab_lab"); r.onsuccess = () => { const db = r.result, t = db.transaction(["files", "kv"]);
               const a = t.objectStore("files").count(), n = t.objectStore("kv").get("notebook"); t.oncomplete = () => { db.close(); res([a.result, n.result]); }; }; })""")
             assert left[0] == 0 and left[1] is None, left
             pg.close()

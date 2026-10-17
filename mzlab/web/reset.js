@@ -4,18 +4,19 @@
 // cache - brings the files back. This file removes them, by NAME (what the browser lists, never a fixed list: other parts of the program add their own folders and
 // databases), and reloads. Variants: "all" (everything, as if the program had never run here) and "files" (the files, their indexes and the session; the
 // preferences, language, theme and the saved libraries stay), both offered by the question of ask(); also "cold" and "cold" (below). Loaded before the engine (browser.js) so that ?reset=all|files|1 acts before anything is opened.
-(() => {
+const RESET = (function () {
   "use strict";
   const wait = (p, ms = 4000) => Promise.race([p, new Promise(r => setTimeout(r, ms))]).catch(() => {});
   // what the variant "files" leaves in OPFS: the spectral libraries the user saved
   const KEEP_OPFS = ["librerie"];
   const KEEP_IDB = ["mzlab-libs", "mzlab-libdir"];                    // ... and their databases
-  const KNOWN_IDB = [NOMI.DB, "mzlab-libs", "mzlab-libdir"];
+  const KNOWN_IDB = [NOMI.DB, typeof NOMI !== "undefined" && NOMI.DB_OLD ? NOMI.DB_OLD : "qqq_lab", "mzlab-libs", "mzlab-libdir"];
   // "cold" (the desktop app, first page of a new run): the files and the session like "files", plus the working state kept in localStorage (map, peak and list
   // choices, sidebar layout...); what the user set on purpose stays: language, theme and settings, reading aids, the update notice, library settings, seen hints
-  const KEEP_LS = /^(mzlab\.lang|qqq-theme|qqq\.(prefs|a11y|set\.a11y|upd\.|reset\.note|lib\.|tour\.|telefono|logo\.))/;
+  const KEEP_LS = /^((mzlab|qqq)\.(lang|prefs|a11y|set\.a11y|upd\.|reset\.note|lib\.|tour\.|telefono|logo\.)|(mzlab|qqq)-(theme|labels))/;
   // sessionStorage: present while this run of the app lives (a reload keeps it, a new start does not)
-  const RUN_KEY = NOMI.KEY("run");
+  const RUN_KEY = typeof NOMI !== "undefined" ? NOMI.KEY("run") : "mzlab.run";
+  const RUN_KEY_OLD = typeof NOMI !== "undefined" && NOMI.OLD_KEY ? NOMI.OLD_KEY("run") : "qqq.run";
   const MODES = { 1: "all", all: "all", files: "files", cold: "cold" };
   const modeOf = q => MODES[q] || null;
 
@@ -40,7 +41,7 @@
   }
   async function caches_(mode, rep) {
     for (const k of await caches.keys()) {
-      if (mode !== "all" && !k.startsWith(NOMI.CACHE_BIG)) continue;
+      if (mode !== "all" && !k.startsWith(NOMI.CACHE_BIG) && !k.startsWith("qqq-big-")) continue;
       if (await caches.delete(k)) rep.caches.push(k);
     }
   }
@@ -76,7 +77,7 @@
     window.QQ_RESETTING = true;
     const msg = document.getElementById("ldmsg"); if (msg && window.I18N) msg.textContent = I18N.t("reset.busy");
     const rep = await wipe(mode);
-    if (opt.mark) { try { sessionStorage.setItem(RUN_KEY, "1"); } catch (e) { /* none */ } }
+    if (opt.mark) { try { sessionStorage.setItem(RUN_KEY, "1"); sessionStorage.setItem(RUN_KEY_OLD, "1"); } catch (e) { /* none */ } }
     if (opt.reload === false) return rep;
     const u = new URL(location.href); u.searchParams.delete("reset"); u.searchParams.delete("riparti"); if (rep.blocked.length || mode !== "files") u.searchParams.set("riparti", "1");
     location.replace(u.href);
@@ -108,13 +109,21 @@
   // the desktop app calls this once at start (desktop-shim.js): the first page of a new run starts clean; a reload of the page in the same run keeps everything.
   // Without sessionStorage nothing is reset (it could never be told apart from a reload).
   function cold() {
-    try { if (sessionStorage.getItem(RUN_KEY)) return false; sessionStorage.setItem(RUN_KEY, "1"); sessionStorage.removeItem(RUN_KEY); } catch (e) { return false; }
+    try {
+      if (sessionStorage.getItem(RUN_KEY) || sessionStorage.getItem(RUN_KEY_OLD)) return false;
+      sessionStorage.setItem(RUN_KEY, "1");
+      sessionStorage.setItem(RUN_KEY_OLD, "1");
+      sessionStorage.removeItem(RUN_KEY);
+      sessionStorage.removeItem(RUN_KEY_OLD);
+    } catch (e) { return false; }
     run("cold", { mark: true });
     return true;
   }
   window.QQRESET = { wipe, run, ask, remind, modeOf, cold, last: null };
+  window.MZRESET = window.QQRESET;
 
   // ?reset=1 | all | files: acts at once (the engine of browser.js does not start while this runs)
   const q = modeOf(new URLSearchParams(location.search).get("reset"));
   if (q) { window.QQ_RESETTING = true; run(q); }
+  return window.QQRESET;
 })();
