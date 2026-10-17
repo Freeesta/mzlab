@@ -64,7 +64,7 @@
           await refresh(box);
         },
       });
-    } catch (e) { say(box, "Banco 2b: " + (/** @type {any} */ (e).message || e), true); }
+    } catch (e) { say(box, "Bench 2b: " + (/** @type {any} */ (e).message || e), true); }
   }
 
   /** runs the cascade again on the files in memory and draws the table @param {HTMLElement} box */

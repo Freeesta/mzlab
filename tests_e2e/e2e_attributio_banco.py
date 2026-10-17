@@ -71,7 +71,7 @@ try:
         def opens():
             pg.click(TG15); pg.click("#at-det button[data-act=banco]"); pg.wait_for_selector("#bn-save", timeout=120000)
             txt = pg.inner_text("#at-banco")
-            assert "2b-check" in txt and "Metacetamol" in txt and "Banco 2b" in txt, txt[:600]
+            assert "2b-check" in txt and "Metacetamol" in txt and "Bench 2b" in txt, txt[:600]
             boxes = pg.evaluate("[...document.querySelectorAll('#at-banco [data-chk]')].map(c => c.checked)")
             assert boxes == [False] * 6, boxes
             assert "3 of 3 peaks explained" in txt
@@ -117,7 +117,7 @@ try:
             mine = [dict(zip(head, r)) for r in rows[1:] if r[head.index("feature_id")] == "15"]
             assert len(mine) == 1, rows
             r = mine[0]
-            assert (r["pol"], r["livello"], r["decided_by"], r["motivazione"]) == ("POS", "2b", "rev", "diagnostic ions explained"), r
+            assert (r["pol"], r["level"], r["decided_by"], r["justification"]) == ("POS", "2b", "rev", "diagnostic ions explained"), r
             assert r["evidence_checklist"] == "diagnostic_fragment|neutral_loss|alternatives_excluded" and r["evidence_type"] == "fragments", r
             assert len(rows) == 6, len(rows)
         step("three boxes + a note + Save download feature_decisions.csv with the row and evidence_checklist", saves)

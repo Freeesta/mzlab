@@ -20,7 +20,7 @@ Un JSON per stadio in `sintetica/` (campagna, letture, rilevazione, livelli, ide
 | `rilevazione.json` | `bb17ed23002afb4a8eaecf5d3147da61347bd49be2b02426f899683f422ce64e` |
 | `sorbenti/sorbenti.json` | `0034ebf388572845ac1f684446fea93a180e65ef25a1a16a25e6cb87bac06a98` |
 
-| `banco/feature_decisions.csv` | `64542f25dfd3fefecaedff39eb0da69ed5ef2a92bea4f1bb925790b394e3ef51` |
+| `banco/feature_decisions.csv` | `d112f41005358c1d124e4f2e15b6dd16608db9c74cced72971532e3ff4ca3337` |
 | `banco/livelli.json` | `fc264ff6f7d884eaa2abf8cf0c91e9705b93af89586316847a15a0334faff958` |
 | `esportazione/gradiente.json` | `1fd901d6ee39afbaf8517305d8476201dc6212cbacb146cc1e12713646cb6f30` |
 | `esportazione/pubblicazione.json` | `f32bd84d690713fb82a9686bf1c27e923bfe7be90094215e00a1efffcd60d142` |

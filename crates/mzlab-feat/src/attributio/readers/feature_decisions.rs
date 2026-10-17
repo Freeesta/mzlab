@@ -1,10 +1,10 @@
 // Ported from Attributio readers/feature_decisions.py.
 //! The chemist's decisions on single features of a campaign: one `;`-separated file declared in `[curation] feature_decisions`, with the columns
-//! `pol;feature_id;mz;rt;livello;nome;identita;decided_on;decided_by;motivazione` and the optional ones (`group`, the evidence, `rt_check`, the provenance of
+//! `pol;feature_id;mz;rt;level;name;identity;decided_on;decided_by;justification` and the optional ones (`group`, the evidence, `rt_check`, the provenance of
 //! the review, and `evidence_checklist`: the checks the chemist ticked before a 2b, separated by `|`; read if there, always written last).
-//! `livello` `2b` (probable structure from diagnostic fragments, in-silico spectra or an unambiguous chemical context; only the chemist writes it, needs
-//! `motivazione`), `3a` (few positional/isomeric candidates among homologues), `3b` (a generic class with many plausible isomers), `3` (a Level 2 goes to
-//! Level 3 without saying which; never raises a level), `2` (a record) or empty; `nome` replaces the
+//! `level` `2b` (probable structure from diagnostic fragments, in-silico spectra or an unambiguous chemical context; only the chemist writes it, needs
+//! `justification`), `3a` (few positional/isomeric candidates among homologues), `3b` (a generic class with many plausible isomers), `3` (a Level 2 goes to
+//! Level 3 without saying which; never raises a level), `2` (a record) or empty; `name` replaces the
 //! feature's name before curation; `group` `ambiguous` takes the identity out of every count. The file is a history: the rows of one feature apply in file
 //! order and a later row supersedes the earlier ones; a decision is per FEATURE (found again by m/z and RT when mzMine is re-run), never per name.
 
@@ -18,12 +18,12 @@ pub const COLUMNS: [&str; 10] = [
     "feature_id",
     "mz",
     "rt",
-    "livello",
-    "nome",
-    "identita",
+    "level",
+    "name",
+    "identity",
     "decided_on",
     "decided_by",
-    "motivazione",
+    "justification",
 ];
 pub const EVIDENCE_COLUMNS: [&str; 8] = [
     "evidence_type",
@@ -55,10 +55,10 @@ pub const OPTIONAL_COLUMNS: [&str; 16] = [
 ];
 /// The fields a decision is compared on when the review app saves one.
 pub const DECISION_FIELDS: [&str; 14] = [
-    "livello",
-    "nome",
+    "level",
+    "name",
     "group",
-    "motivazione",
+    "justification",
     "evidence_type",
     "evidence_library",
     "evidence_entry",
@@ -70,6 +70,22 @@ pub const DECISION_FIELDS: [&str; 14] = [
     "rt_check",
     "evidence_checklist",
 ];
+
+/// The Italian names of the four columns in the files saved before they were renamed: accepted when a file is read, never written.
+pub const LEGACY_COLUMNS: [(&str, &str); 4] = [
+    ("livello", "level"),
+    ("nome", "name"),
+    ("identita", "identity"),
+    ("motivazione", "justification"),
+];
+
+/// The name of a column as the program knows it: a legacy Italian name becomes the English one unless the file already has that one.
+fn current_name(have: &[String], c: &str) -> String {
+    match LEGACY_COLUMNS.iter().find(|(old, _)| *old == c) {
+        Some((_, new)) if !have.iter().any(|x| x == new) => (*new).to_string(),
+        _ => c.to_string(),
+    }
+}
 
 /// Every column of the file, in the order it is written.
 pub fn all_columns() -> Vec<String> {
@@ -155,9 +171,9 @@ fn check_decisions(t: &DecisionTable, path: &str) -> Result<()> {
     check_values(
         t,
         path,
-        "livello",
+        "level",
         &["", "2", "2b", "3", "3a", "3b"],
-        "livello must be '2b', '3a', '3b', '3', '2' or empty",
+        "level must be '2b', '3a', '3b', '3', '2' or empty",
     )?;
     check_values(
         t,
@@ -181,12 +197,12 @@ fn check_decisions(t: &DecisionTable, path: &str) -> Result<()> {
         "rt_check must be 'peak', 'isomer' or empty",
     )?;
     let unjustified: Vec<String> = (0..t.len())
-        .filter(|&r| t.get(r, "livello") == "2b" && t.get(r, "motivazione").trim().is_empty())
+        .filter(|&r| t.get(r, "level") == "2b" && t.get(r, "justification").trim().is_empty())
         .map(|r| format!("{} {}", t.get(r, "pol"), t.get(r, "feature_id")))
         .collect();
     if !unjustified.is_empty() {
         return Err(CampaignError::value(format!(
-            "{path}: a Level 2b decision needs 'motivazione' ({})",
+            "{path}: a Level 2b decision needs 'justification' ({})",
             unjustified.join(", ")
         )));
     }
@@ -198,7 +214,9 @@ pub fn load_feature_decisions(text: Option<&str>, path: &str) -> Result<Decision
     let Some(text) = text else {
         return Ok(DecisionTable::empty());
     };
-    let f = Frame::parse(text, ';')?;
+    let mut f = Frame::parse(text, ';')?;
+    let have = f.columns().to_vec();
+    f.rename_columns(|c| current_name(&have, c));
     let missing: Vec<&str> = COLUMNS
         .iter()
         .copied()
@@ -229,9 +247,7 @@ pub fn load_feature_decisions(text: Option<&str>, path: &str) -> Result<Decision
             t.rows.iter_mut().for_each(|row| row.push(String::new()));
         }
     }
-    let strip = ["pol", "livello", "nome"]
-        .into_iter()
-        .chain(OPTIONAL_COLUMNS);
+    let strip = ["pol", "level", "name"].into_iter().chain(OPTIONAL_COLUMNS);
     for c in strip {
         let k = t.columns.iter().position(|x| x == c).unwrap_or(0);
         for row in t.rows.iter_mut() {
@@ -286,9 +302,9 @@ pub fn find_feature(table: &[FeatureKey], d: &DecisionTable, r: usize) -> Option
 #[derive(Clone, Debug, PartialEq)]
 pub struct MatchedDecision {
     pub row: usize,
-    pub livello: String,
-    pub nome: String,
-    pub motivazione: String,
+    pub level: String,
+    pub name: String,
+    pub justification: String,
     pub group: String,
     pub evidence: Vec<(String, String)>,
 }
@@ -309,7 +325,7 @@ pub fn match_decisions(
                 "feature decision not applied (feature not found or not unique): {} {} {} -- check feature_decisions.csv",
                 d.get(r, "pol"),
                 d.get(r, "feature_id"),
-                d.get(r, "identita")
+                d.get(r, "identity")
             ));
             continue;
         };
@@ -321,9 +337,9 @@ pub fn match_decisions(
         };
         out.push(MatchedDecision {
             row,
-            livello: d.get(r, "livello").into(),
-            nome: d.get(r, "nome").into(),
-            motivazione: d.get(r, "motivazione").into(),
+            level: d.get(r, "level").into(),
+            name: d.get(r, "name").into(),
+            justification: d.get(r, "justification").into(),
             group: d.get(r, "group").into(),
             evidence: EVIDENCE_COLUMNS
                 .iter()

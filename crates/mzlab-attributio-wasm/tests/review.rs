@@ -56,7 +56,7 @@ fn the_bridge_reviews_a_feature_and_saves_a_decision() {
     );
     assert!(review_with(&files, &fetch, "POS", 999).is_err());
 
-    let d = r#"{"pol":"POS","id":15,"livello":"2b","motivazione":"diagnostic ions explained","decided_on":"2026-10-16","decided_by":"rev",
+    let d = r#"{"pol":"POS","id":15,"level":"2b","justification":"diagnostic ions explained","decided_on":"2026-10-16","decided_by":"rev",
         "checklist":["diagnostic_fragment","neutral_loss","alternatives_excluded"],
         "evidence":{"type":"fragments","library":"library/banco.json","entry":"","cosine":0.99,"matched":4,"delta_mz":0,"delta_formula":"","note":"x"}}"#;
     let saved = decision_with(&files, &fetch, d).expect("saved");

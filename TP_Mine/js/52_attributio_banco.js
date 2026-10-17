@@ -34,12 +34,12 @@
   }
 
   // ---- the rules of the note: a copy of rules.rs for the live state of Save; the engine checks again when it saves
-  /** @param {any} cur @param {{livello: string, group: string, nome: string}} d @returns {string[]} */
+  /** @param {any} cur @param {{level: string, group: string, name: string}} d @returns {string[]} */
   function changes(cur, d) {
-    const out = [], to = { "2b": "2b", "3": "3", "3a": "3", "3b": "3", "2": "2a", "2a": "2a" }[/** @type {"2b"} */ (d.livello)];
+    const out = [], to = { "2b": "2b", "3": "3", "3a": "3", "3b": "3", "2": "2a", "2a": "2a" }[/** @type {"2b"} */ (d.level)];
     if (to && to !== cur.level) out.push(`level ${cur.level} -> ${to}`);
     if (d.group === "ambiguous" && (cur.group || "") !== "ambiguous") out.push("identity rejected");
-    if (d.nome.trim() && d.nome.trim() !== (cur.name || "")) out.push(`name -> ${d.nome.trim()}`);
+    if (d.name.trim() && d.name.trim() !== (cur.name || "")) out.push(`name -> ${d.name.trim()}`);
     return out;
   }
 
@@ -154,10 +154,10 @@
   function wire(sec) {
     const q = (/** @type {string} */ s) => /** @type {any} */ (sec.querySelector(s));
     const rev = st.rev;
-    const decision = () => ({ livello: q("#bn-lvl").value, nome: q("#bn-name").value, group: q("#bn-amb").checked ? "ambiguous" : "", note: q("#bn-note").value.trim(), by: q("#bn-by").value.trim() });
+    const decision = () => ({ level: q("#bn-lvl").value, name: q("#bn-name").value, group: q("#bn-amb").checked ? "ambiguous" : "", note: q("#bn-note").value.trim(), by: q("#bn-by").value.trim() });
     const refresh = () => {
-      const d = decision(), ch = changes(rev.current, { livello: d.livello, group: d.group, nome: d.nome });
-      const need = (ch.length > 0 || d.livello === "2b") && !d.note, nothing = !d.livello && !d.nome && !d.group && !q("#bn-id").value.trim() && !q("#bn-ev").value;
+      const d = decision(), ch = changes(rev.current, { level: d.level, group: d.group, name: d.name });
+      const need = (ch.length > 0 || d.level === "2b") && !d.note, nothing = !d.level && !d.name && !d.group && !q("#bn-id").value.trim() && !q("#bn-ev").value;
       q("#bn-save").disabled = st.busy || !d.by || need || nothing;
       q("#bn-msg").textContent = need ? `A motivation is required: ${ch.join(", ") || "a 2b row"}.` : (!d.by ? "Write the reviewer." : "");
     };
@@ -206,8 +206,8 @@
       : { type: sel, library: "", entry: "", cosine: sel === "fragments" ? ev.frac_explained ?? "" : "", matched: sel === "fragments" ? ev.n_explained ?? "" : "", delta_mz: "", delta_formula: "", note: "" };
     const t = new Date(), day = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
     return {
-      pol: rev.pol, id: rev.id, livello: q("#bn-lvl").value, nome: q("#bn-name").value.trim(), identita: q("#bn-id").value.trim(), group: q("#bn-amb").checked ? "ambiguous" : "",
-      motivazione: q("#bn-note").value.trim(), decided_on: day, decided_by: q("#bn-by").value.trim(), rt_check: "", evidence,
+      pol: rev.pol, id: rev.id, level: q("#bn-lvl").value, name: q("#bn-name").value.trim(), identity: q("#bn-id").value.trim(), group: q("#bn-amb").checked ? "ambiguous" : "",
+      justification: q("#bn-note").value.trim(), decided_on: day, decided_by: q("#bn-by").value.trim(), rt_check: "", evidence,
       checklist: [...sec.querySelectorAll("[data-chk]")].filter(c => /** @type {HTMLInputElement} */ (c).checked).map(c => /** @type {HTMLElement} */ (c).dataset.chk),
     };
   }
@@ -223,7 +223,7 @@
       const path = r.summary.path, name = path.split("/").pop() || "feature_decisions.csv";
       const wrote = r.summary.written || await writeInFolder(ctx.dir, path, r.text);
       if (!wrote) download(name, r.text);
-      const op = { decision: { pol: d.pol, id: d.id, livello: d.livello, checklist: d.checklist, by: d.decided_by, on: d.decided_on }, feature_decisions: r.text };
+      const op = { decision: { pol: d.pol, id: d.id, level: d.level, checklist: d.checklist, by: d.decided_by, on: d.decided_on }, feature_decisions: r.text };
       if (W.WORKFLOW && W.WORKFLOW.logOp) W.WORKFLOW.logOp("attributio", { attributio: op });
       await ctx.onSaved(r.text, path);
       say(wrote ? `Saved in ${path}.` : `Downloaded ${name}; put it in ${path.split("/").slice(0, -1).join("/")}.`);
@@ -241,7 +241,7 @@
     const f = ctx.list[ctx.index];
     let sec = /** @type {HTMLElement | null} */ (ctx.host.querySelector("#at-banco"));
     if (!sec) {
-      sec = document.createElement("section"); sec.id = "at-banco"; sec.className = "bn"; sec.setAttribute("aria-label", "Banco 2b"); ctx.host.textContent = ""; ctx.host.appendChild(sec);
+      sec = document.createElement("section"); sec.id = "at-banco"; sec.className = "bn"; sec.setAttribute("aria-label", "Bench 2b"); ctx.host.textContent = ""; ctx.host.appendChild(sec);
       sec.addEventListener("keydown", ev => {
         const t = /** @type {HTMLElement} */ (ev.target), typing = /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) && !(t.tagName === "INPUT" && /** @type {HTMLInputElement} */ (t).type === "checkbox");
         if (ev.key === "Escape") close();
@@ -249,17 +249,17 @@
       });
     }
     sec.setAttribute("aria-busy", "true");
-    sec.innerHTML = `<h3>Banco 2b · ${esc(f.pol)} ${esc(f.id)} <span class="mut">(${ctx.index + 1} of ${n})</span></h3><p role="status">Reviewing…</p>`;
+    sec.innerHTML = `<h3>Bench 2b · ${esc(f.pol)} ${esc(f.id)} <span class="mut">(${ctx.index + 1} of ${n})</span></h3><p role="status">Reviewing…</p>`;
     try {
       st.rev = await ctx.pool.attributioReview(ctx.files, ctx.root, f.pol, f.id); st.zoom = null;
     } catch (e) {
       const x = /** @type {any} */ (e);
-      sec.innerHTML = `<h3>Banco 2b · ${esc(f.pol)} ${esc(f.id)}</h3><p class="err" role="alert">${esc((x && x.params && x.params.detail) || (x && x.message) || String(e))}</p><button type="button" data-bn="close" aria-label="Close the Banco">Close</button>`;
+      sec.innerHTML = `<h3>Bench 2b · ${esc(f.pol)} ${esc(f.id)}</h3><p class="err" role="alert">${esc((x && x.params && x.params.detail) || (x && x.message) || String(e))}</p><button type="button" data-bn="close" aria-label="Close Bench 2b">Close</button>`;
       sec.querySelector("[data-bn=close]")?.addEventListener("click", close); sec.removeAttribute("aria-busy"); return;
     }
     const rev = st.rev;
-    sec.innerHTML = `<div class="row"><h3 tabindex="-1" id="bn-h">Banco 2b · ${esc(rev.pol)} ${esc(rev.id)} · m/z ${num(rev.mz)} · RT ${num(rev.rt, 2)} <span class="mut">(${ctx.index + 1} of ${n})</span></h3>
-      <button type="button" data-bn="prev" aria-label="Previous feature">←</button><button type="button" data-bn="next" aria-label="Next feature">→</button><button type="button" data-bn="close" aria-label="Close the Banco">Close</button></div>`
+    sec.innerHTML = `<div class="row"><h3 tabindex="-1" id="bn-h">Bench 2b · ${esc(rev.pol)} ${esc(rev.id)} · m/z ${num(rev.mz)} · RT ${num(rev.rt, 2)} <span class="mut">(${ctx.index + 1} of ${n})</span></h3>
+      <button type="button" data-bn="prev" aria-label="Previous feature">←</button><button type="button" data-bn="next" aria-label="Next feature">→</button><button type="button" data-bn="close" aria-label="Close Bench 2b">Close</button></div>`
       + body(rev);
     sec.removeAttribute("aria-busy");
     for (const b of sec.querySelectorAll("[data-bn]")) b.addEventListener("click", () => { const k = /** @type {HTMLElement} */ (b).dataset.bn; if (k === "close") close(); else show(ctx.index + (k === "next" ? 1 : -1)); });

@@ -100,7 +100,7 @@ fn candidates<R: RawSource, S: Structures>(
             .map(|t| parse_formula(&t));
         let ex = explain(fd.as_ref(), mz, &f.pol, exp, s);
         c.push(Cand {
-            label: "formula",
+            label: "neutral formula",
             smiles: None,
             fd,
             ex,

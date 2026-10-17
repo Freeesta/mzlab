@@ -1,5 +1,5 @@
 // Ported from Attributio annotate.py.
-//! The chemist's decisions on single features (`feature_decisions.csv`): `nome` replaces the name, `livello` 3, 3a or 3b takes a Level 2 to 3 (`expert review`; 3b marks a generic class) and `2b`
+//! The chemist's decisions on single features (`feature_decisions.csv`): `name` replaces the name, `level` 3, 3a or 3b takes a Level 2 to 3 (`expert review`; 3b marks a generic class) and `2b`
 //! raises a Level 3 or moves a Level 2a to 2b (`diagnostic evidence`), the only way a feature gets 2b. Also `level_sub` and the `mzlib-only` flag.
 
 use super::curate::Curation;
@@ -84,11 +84,11 @@ pub fn apply_decisions(
         if !rec.group.is_empty() {
             f.decision.group_override = Some(rec.group.clone());
         }
-        if !rec.nome.is_empty() {
-            f.disp_name = Some(rec.nome.clone());
-            f.cec = cur.match_cec(&[Some(&rec.nome)]);
+        if !rec.name.is_empty() {
+            f.disp_name = Some(rec.name.clone());
+            f.cec = cur.match_cec(&[Some(&rec.name)]);
         }
-        let l = rec.livello.as_str();
+        let l = rec.level.as_str();
         let three = matches!(l, "3" | "3a" | "3b");
         if (l == "2" || three) && f.decision.decision_2b {
             undo_2b(f, &mut before, i);
@@ -128,7 +128,7 @@ pub fn apply_decisions(
                 ));
             }
         }
-        f.decision.feature_decision = rec.motivazione.clone();
+        f.decision.feature_decision = rec.justification.clone();
     }
     for f in feats.iter_mut() {
         f.cec_headline = f.cec.as_ref().is_some_and(|c| cur.is_headline(&c.0));

@@ -24,6 +24,11 @@ impl Frame {
     pub fn is_empty(&self) -> bool {
         self.nrows == 0
     }
+    /// Renames every column with `f(old name)`.
+    pub fn rename_columns(&mut self, f: impl Fn(&str) -> String) {
+        self.columns = self.columns.iter().map(|c| f(c)).collect();
+        self.index = index_of(&self.columns);
+    }
     /// Position of a column (the first one with that name).
     pub fn col(&self, name: &str) -> Option<usize> {
         self.index.get(name).copied()
