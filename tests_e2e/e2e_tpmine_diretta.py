@@ -1,5 +1,5 @@
 """mzFinder «Dig» live: while the engine works the right-hand side shows the phases (at least one done), the candidates that pass the criteria and, in HR, the tree
-growing. Synthetic LR demo and synthetic HR series on the built site. Run from the repo root: python3 tests_e2e/e2e_tpmine_diretta.py   (env: PYODIDE_DIR)"""
+growing. Synthetic LR demo and synthetic HR series on the built site. Run from the repo root: python3 tests_e2e/e2e_tpmine_diretta.py  """
 import os, subprocess, sys, time, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -13,7 +13,6 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e)[:400]))
 tmp = Path(tempfile.mkdtemp())
 cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(tmp / "site")]
-if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
 subprocess.run(cmd, check=True)
 from lib_sito import add_wasm; add_wasm(tmp / "site")          # the engine of the page is Rust: the .wasm goes in the copy of the site
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(tmp / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

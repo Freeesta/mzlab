@@ -1,4 +1,4 @@
-"""mzFinder, feature tables: «group by identity» (engine in Pyodide, identity.py). The features of one compound (adducts, isotope) become ONE expandable row with the neutral mass, the level of
+"""mzFinder, feature tables: «group by identity» (engine in Rust). The features of one compound (adducts, isotope) become ONE expandable row with the neutral mass, the level of
 the best member, the evidence of every link and a small network; two co-eluting features with an unexplained difference stay apart; the table goes back to one row per feature.
 Needs the built site (python3 tools/build_site.py). Run from the repo root: python3 tests_e2e/e2e_identita.py"""
 import json, os, shutil, subprocess, sys, tempfile, time
