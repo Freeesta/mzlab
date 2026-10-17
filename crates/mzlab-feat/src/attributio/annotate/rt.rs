@@ -13,6 +13,7 @@ use crate::attributio::campaign::{Campaign, POLARITIES};
 use crate::attributio::detection::{has_site, site_area, Agg};
 use crate::attributio::error::Result;
 use crate::attributio::sources::Sources;
+use crate::sortc::SortC;
 use std::collections::HashMap;
 
 /// The outcome of the rule for one feature.
@@ -72,7 +73,7 @@ fn identity_formulas(
     }
     by.into_iter()
         .map(|(k, mut v)| {
-            v.sort_unstable();
+            v.sortc();
             let mut best = ("", 0usize);
             let mut n = 0;
             while n < v.len() {
@@ -150,7 +151,7 @@ fn make_cluster<'a>(rows: Vec<&'a Item<'a>>, site_keys: &[&str]) -> Cluster<'a> 
 }
 
 fn split_clusters<'a>(mut g: Vec<&'a Item<'a>>, tol: f64, site_keys: &[&str]) -> Vec<Cluster<'a>> {
-    g.sort_by(|a, b| {
+    g.sortc_by(|a, b| {
         rt_order(a.f.rt, b.f.rt)
             .then_with(|| a.f.pol.cmp(&b.f.pol))
             .then(a.f.id.cmp(&b.f.id))
@@ -176,7 +177,7 @@ fn split_clusters<'a>(mut g: Vec<&'a Item<'a>>, tol: f64, site_keys: &[&str]) ->
 
 fn rows_of_group(key: &str, clusters: &[Cluster]) -> Vec<RtRow> {
     let mut order: Vec<usize> = (0..clusters.len()).collect();
-    order.sort_by(|&a, &b| {
+    order.sortc_by(|&a, &b| {
         let (x, y) = (&clusters[a], &clusters[b]);
         x.level
             .cmp(&y.level)

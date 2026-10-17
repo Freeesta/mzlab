@@ -6,6 +6,7 @@
 //! The series are aligned by transition (Q1, Q3 to 0.01) and RT, and the cells without a peak are integrated on the chromatogram of the transition.
 //! The qualifier/quantifier ratios and the long table of the calibration standards are here too; the calibration line is never computed.
 
+use crate::sortc::SortC;
 use mzlab_core::error::Result;
 use mzlab_core::peakq::{quality, Quality};
 use mzlab_core::peaks::noise_level;
@@ -44,7 +45,7 @@ pub fn read_srm<T: Tracce>(t: &mut T) -> Result<Vec<Srm>> {
             y: s.y,
         })
         .collect();
-    out.sort_by(|a, b| a.q1.total_cmp(&b.q1).then(a.q3.total_cmp(&b.q3)));
+    out.sortc_by(|a, b| a.q1.total_cmp(&b.q1).then(a.q3.total_cmp(&b.q3)));
     Ok(out)
 }
 
@@ -169,7 +170,7 @@ pub fn align(files: &[&FileFeatures], p: &MrmParams) -> Aligned {
             all.push((key(f.mz[i]), key(f.q3[i]), f.rt[i], k, i));
         }
     }
-    all.sort_by(|a, b| {
+    all.sortc_by(|a, b| {
         (a.0, a.1)
             .cmp(&(b.0, b.1))
             .then(a.2.total_cmp(&b.2))

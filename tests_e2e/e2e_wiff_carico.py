@@ -71,6 +71,17 @@ try:
             pg.locator("#flist .cvsum [data-cvact=close]").click()
             assert pg.locator("#flist .cvsum").count() == 0 and pg.evaluate("CONVROWS.rows.length") == 0
         step("each sample keeps «Loaded ✓ (n scans, t s)» until «Close»", loaded)
+        def again():                                    # the same pair again: its samples come from the browser storage, nothing is copied or indexed again and the list has no duplicates
+            t0 = pg.evaluate("Date.now()")
+            pg.set_input_files("#pick", [str(D / "lotto.wiff"), str(D / "lotto.wiff.scan")])
+            pg.wait_for_function("UPBUSY === 0 && CONVROWS.rows.length === 4", timeout=60000)
+            items = pg.locator("#flist .cvsum li").all_inner_texts()
+            assert all("Loaded from cache ✓ (700 scans)" in t for t in items), items
+            assert "4 from cache" in pg.inner_text("#flist .cvsum [data-cvtot]")
+            assert sorted(n for n in pg.evaluate("ST.files.map(f => f.name)") if n.startswith("lotto")) == [f"lotto_s{i}.mzML" for i in range(1, 5)]
+            assert pg.evaluate("Date.now()") - t0 < 10000
+            pg.locator("#flist .cvsum [data-cvact=close]").click()
+        step("the same pair again is «Loaded from cache»: no copy, no new index, no duplicate", again)
 
         def many():                                     # one .wiff with 48 samples: each builder opens only its own sample (wiff::lettore::apri_solo), none waits on the others
             pg.set_input_files("#pick", [str(D / "molti.wiff"), str(D / "molti.wiff.scan")])

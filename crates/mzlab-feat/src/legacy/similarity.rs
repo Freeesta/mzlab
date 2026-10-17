@@ -1,6 +1,7 @@
 //! The similarity of the MS2 of the parent and of a product in three components (`TP_Mine/py/tpmine/hr/similarity.py`: `prepare`, `entropy_weights`,
 //! `_typed_matching`, `pair_components`): equal fragments, shifted fragments and common neutral losses, for the modified cosine and the entropy.
 
+use crate::sortc::SortC;
 use mzlab_core::json::Out;
 
 /// Peaks kept per spectrum.
@@ -27,12 +28,12 @@ pub fn prepare(mz: &[f64], inten: &[f64], precursor: f64) -> Spec {
     }
     let top = keep.iter().map(|p| p.1).fold(f64::NEG_INFINITY, f64::max);
     let mut v: Vec<(f64, f64)> = keep.into_iter().filter(|p| p.1 >= 0.01 * top).collect();
-    v.sort_by(|a, b| b.1.total_cmp(&a.1));
+    v.sortc_by(|a, b| b.1.total_cmp(&a.1));
     v.truncate(K);
     let w: Vec<f64> = v.iter().map(|p| p.1.sqrt()).collect();
     let norm = w.iter().map(|x| x * x).sum::<f64>().sqrt();
     let mut s: Vec<(f64, f64)> = v.iter().zip(&w).map(|(p, &x)| (p.0, x / norm)).collect();
-    s.sort_by(|a, b| a.0.total_cmp(&b.0));
+    s.sortc_by(|a, b| a.0.total_cmp(&b.0));
     s.into_iter().unzip()
 }
 
@@ -95,7 +96,7 @@ fn typed_matching(
             }
         }
     }
-    cand.sort_by(|x, y| y.2.total_cmp(&x.2));
+    cand.sortc_by(|x, y| y.2.total_cmp(&x.2));
     let (mut ua, mut ub) = (vec![false; ma.len()], vec![false; mb.len()]);
     let mut out = Vec::new();
     for (i, j, v, eq) in cand {

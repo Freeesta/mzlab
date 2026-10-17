@@ -8,7 +8,8 @@
   window.QQQ_BROWSER = true; // kept from the old name: backward compatibility
   const SRC = /** @type {HTMLScriptElement} */ (document.currentScript).src;
   // an old browser cannot run the engine: say it clearly instead of staying blank
-  const modern = !!(window.Worker && window.WebAssembly && window.indexedDB && window.Promise && window.Response && navigator.storage && navigator.storage.getDirectory);      // OPFS keeps the files and their indexes
+  // OPFS keeps the files and their indexes
+  const modern = !!(window.Worker && window.WebAssembly && window.indexedDB && window.Promise && window.Response && navigator.storage && navigator.storage.getDirectory);
   try { if ("serviceWorker" in navigator && !window.QQ_RESETTING) navigator.serviceWorker.register(new URL("../sw.js", SRC)).catch(() => {}); } catch (_) { /* offline copy is optional */ }
   // while the engine loads the page shows the same loading screen as everywhere else (#loading, funny phrases);
   // the phase of the start (window.qqPhaseCur = {key, pct}: a catalog key and the percentage when known) replaces the phrase in the single status line of #loading
@@ -23,7 +24,8 @@
   const wait = p => Promise.race([p, new Promise(r => setTimeout(r, 4000))]).catch(() => {});
   window.qqHardReset = async () => {
     window.qqEngineStop();
-    await wait((async () => { const d = await navigator.storage.getDirectory(); await d.removeEntry("mzlab", { recursive: true }); })());     // the files and indexes in OPFS
+    // the files and indexes in OPFS
+    await wait((async () => { const d = await navigator.storage.getDirectory(); await d.removeEntry("mzlab", { recursive: true }); })());
     await wait(new Promise((/** @type {any} */ r) => { const q = indexedDB.deleteDatabase("qqq_lab"); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
     await wait((async () => { for (const k of await caches.keys()) if (k.startsWith("qqq-") || k === "mzlab-libs") await caches.delete(k); })());
     await wait((async () => { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); })());
@@ -34,7 +36,8 @@
   const fail = (key, params, again) => { window.qqFailed = key; window.qqPhaseCur = null; const show = () => { const m = document.getElementById("ldmsg"); if (m && window.I18N) m.textContent = I18N.t(key, params); if (again && window.ldAction && window.I18N) ldAction(I18N.t("load.restart"), restart); }; show(); document.addEventListener("DOMContentLoaded", show); };
   document.addEventListener("DOMContentLoaded", () => { step(window.qqStep); if (window.qqPhaseCur) ldRefresh(); });
 
-  const notice = key => {                                                    // a short message under the header (a polite live region)
+  // a short message under the header (a polite live region)
+  const notice = key => {
     const show = () => {
       let el = document.getElementById("rust-note");
       if (!el) { el = document.createElement("div"); el.id = "rust-note"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite"); el.style.cssText = "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9999;max-width:90vw;padding:8px 14px;border-radius:8px;background:var(--panel,#fff);color:var(--ink,#25282c);border:1px solid var(--accent,#888);font:14px system-ui,sans-serif"; document.body.appendChild(el); }
@@ -48,9 +51,12 @@
     ? import(new URL("rust-bridge.js", SRC).href).then(m => { const b = m.createBridge({ workerUrl: new URL("rust-worker.js", SRC), notify: notice, onBlocked: () => phase({ key: "load.blocked", pct: null }) }); b.start(); window.MZLAB_RUST = b; return b; })
         .catch(e => { window.MZLAB_RUST_ERR = String(e && e.message || e); console.debug("[mzLab] Rust engine not available", e); return null; })
     : Promise.resolve(null);
-  try { caches.keys().then(k => console.info("[mzLab] site cache:", k.filter(n => n.startsWith("qqq-app-")).join(", ") || "none", "| page:", document.lastModified)).catch(() => {}); } catch (_) { /* no Cache API */ }      // for a diagnosis: which version of the site this page is
-  window.MZLAB_RUST_READY = rustReady;                                       // the page waits for it to decide whether a Thermo .raw can be read
-  window.qqEngineStop = () => { try { if (window.MZLAB_RUST) window.MZLAB_RUST.stop(); } catch (_) { /* gone already */ } };      // reset.js: the worker holds sync handles on the files
+  // for a diagnosis: which version of the site this page is
+  try { caches.keys().then(k => console.info("[mzLab] site cache:", k.filter(n => n.startsWith("qqq-app-")).join(", ") || "none", "| page:", document.lastModified)).catch(() => {}); } catch (_) { /* no Cache API */ }
+  // the page waits for it to decide whether a Thermo .raw can be read
+  window.MZLAB_RUST_READY = rustReady;
+  // reset.js: the worker holds sync handles on the files
+  window.qqEngineStop = () => { try { if (window.MZLAB_RUST) window.MZLAB_RUST.stop(); } catch (_) { /* gone already */ } };
   let lr = null;
   const lrInit = async () => {
     if (window.QQQ_PHONE) throw new Error("phone: engine not started");
@@ -59,7 +65,8 @@
     if (!b || b.disabled) { fail("load.err.engineMissing"); throw new Error("the calculation engine is not available in this browser"); }
     try {
       lr = (await import(new URL("lr.js", SRC).href)).createLr({ rb: b });
-      const u = new URL(location.href), stall = +(u.searchParams.get("ripresa") || 0) || 30000;       // the browser storage held by another tab: the loading screen says so
+      // the browser storage held by another tab: the loading screen says so
+      const u = new URL(location.href), stall = +(u.searchParams.get("ripresa") || 0) || 30000;
       const within = p => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("reopening the saved files timed out"), { key: "load.err.resumeTimeout" })), stall))]);
       const fresh = u.searchParams.get("riparti") === "1";
       if (fresh) { await within(lr.reset()); u.searchParams.delete("riparti"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
@@ -68,7 +75,8 @@
     }
     catch (e) {
       window.MZLAB_LR_ERR = String(e && e.message || e); lr = null;
-      if (e && e.key) fail(e.key, null, true); else { console.error("[mzLab] engine start failed", e); fail("load.err.engineStart"); }   // the technical text stays in MZLAB_LR_ERR and the console: the screen speaks the language of the page
+      // the technical text stays in MZLAB_LR_ERR and the console: the screen speaks the language of the page
+      if (e && e.key) fail(e.key, null, true); else { console.error("[mzLab] engine start failed", e); fail("load.err.engineStart"); }
       throw e;
     }
   };
@@ -81,7 +89,8 @@
   window.fetch = async (input, init = {}) => {
     const raw = typeof input === "string" ? input : /** @type {Request} */ (input).url;
     if (typeof raw !== "string" || !/^(\.\/)?api\//.test(raw)) return realFetch(input, init);
-    const url = window.INF ? window.INF.qs(raw) : raw;                                 // a request that names a node of the MSn tree carries the grouping of the tree
+    // a request that names a node of the MSn tree carries the grouping of the tree
+    const url = window.INF ? window.INF.qs(raw) : raw;
     if (/^(\.\/)?api\/(ping|bye)/.test(url)) return json({ ok: true });      // presence: not needed without a server
     const tr = /** @type {any} */ (window).MZLAB_TRACE, t0 = tr ? performance.now() : 0;
     if (tr) tr.push("fetch> " + url.slice(0, 80));
@@ -98,9 +107,11 @@
     }
     const a = await lr.handle(method, url, init);
     if (a) return new Response(a.text, { status: a.status, headers: { "Content-Type": "application/json", "X-Engine": "rust" } });
-    (window.MZLAB_LR_MISS = window.MZLAB_LR_MISS || []).push(method + " " + url);             // a request the engine could not answer (tests: it must stay empty)
+    // a request the engine could not answer (tests: it must stay empty)
+    (window.MZLAB_LR_MISS = window.MZLAB_LR_MISS || []).push(method + " " + url);
     return json({ error: "operation not available", error_key: rb && rb.disabled ? "load.err.engineLost" : "err.route.unavailable", params: {} }, 501);
   };
-  /** @type {any} */ (window).EventSource = class { constructor() {} close() {} };                  // "the tab is open" signal: only for the local program
+  // "the tab is open" signal: only for the local program
+  /** @type {any} */ (window).EventSource = class { constructor() {} close() {} };
   navigator.sendBeacon = () => true;
 })();

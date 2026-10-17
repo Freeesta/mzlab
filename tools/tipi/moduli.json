@@ -15,6 +15,7 @@
     "globali.d.ts",
     "manuale.d.ts",
     "../../mzlab/web/archivio.js",
+    "../../mzlab/web/avanzamento.js",
     "../../mzlab/web/draw.js",
     "../../mzlab/web/errori.js",
     "../../mzlab/web/bug-report.js",

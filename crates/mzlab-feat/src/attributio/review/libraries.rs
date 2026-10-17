@@ -12,6 +12,7 @@
 
 use super::adduct::adduct_key;
 use super::matching::Ms2;
+use crate::sortc::SortC;
 use mzlab_lib::build::{build_in_memory, BuildOpts};
 use mzlab_lib::parse::{self, Format};
 use mzlab_lib::read::Library;
@@ -111,7 +112,7 @@ pub fn find_library_files(listing: &[(String, Vec<u8>)]) -> Vec<(String, LibForm
             found.push((key, path.clone(), f));
         }
     }
-    found.sort_by(|a, b| a.0.cmp(&b.0));
+    found.sortc_by(|a, b| a.0.cmp(&b.0));
     found.into_iter().map(|(_, p, f)| (p, f)).collect()
 }
 
@@ -148,7 +149,7 @@ impl LibRecord {
 fn record_of(s: &Spectrum) -> LibRecord {
     let ik = s.meta.inchikey.trim().to_uppercase();
     let mut order: Vec<usize> = (0..s.mz.len()).collect();
-    order.sort_by(|a, b| s.mz[*a].total_cmp(&s.mz[*b]));
+    order.sortc_by(|a, b| s.mz[*a].total_cmp(&s.mz[*b]));
     LibRecord {
         name: s.meta.name.trim().to_string(),
         ik1: if ik.chars().count() >= 14 {
@@ -319,7 +320,7 @@ impl LibraryIndex {
                 out.push((r.prec, Ref { file: k, row }));
             }
         }
-        out.sort_by(|a, b| {
+        out.sortc_by(|a, b| {
             a.0.total_cmp(&b.0)
                 .then((a.1.file, a.1.row).cmp(&(b.1.file, b.1.row)))
         });
@@ -368,7 +369,7 @@ impl LibraryIndex {
                 }
             }
         }
-        scored.sort_by(|a, b| {
+        scored.sortc_by(|a, b| {
             b.0.total_cmp(&a.0)
                 .then((a.1.file, a.1.row).cmp(&(b.1.file, b.1.row)))
         });

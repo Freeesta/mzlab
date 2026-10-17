@@ -22,11 +22,13 @@ function scrollToBlock(t) {
 function setTab(t, quiet, motivo) {
   if (t === E.tab && !quiet) return;
   E.curBy[E.tab] = E.cur;
-  E.activeBy = E.activeBy || {};      // coming back to a tab: same active graph as when the student left it (no automatic scroll)
+  // coming back to a tab: same active graph as when the student left it (no automatic scroll)
+  E.activeBy = E.activeBy || {};
   E.activeBy[E.tab] = E.active; STATO.scheda(t, motivo || "tab");
   const back = E.curBy[t]; STATO.file(E.files[back]?.kind === t ? back : (tabFiles()[0] || { k: E.cur }).k, "tab");
   setActive(E.activeBy[t] && E.panels.includes(E.activeBy[t]) ? E.activeBy[t] : null); playStop();
-  E.panels.forEach(q => { if (q.type === "spec") q.lock = null; });      // changing tab: the axes of the spectra are free again
+  // changing tab: the axes of the spectra are free again
+  E.panels.forEach(q => { if (q.type === "spec") q.lock = null; });
   const firstLayout = tabFiles().length && !tabPanels(t).length;
   if (firstLayout) loading(true);                       // same funny loading screen as everywhere else
   ensureLayout();
@@ -40,13 +42,16 @@ function setTab(t, quiet, motivo) {
 
 // first time a tab is shown (or after all its panels were closed and the page reloaded): its starting layout
 function ensureLayout() {
-  if (lrTog()) ensureBlocks();          // every type with a visible file gets its block, placed under the ones already there (also the type just opened by a click in the list)
-  else if (tabFiles().some(f => f.vis) && !E.panels.some(p => p.tab === E.tab)) defaultLayoutTab(E.tab);          // a block is made only for a type with a visible file: no empty panels
+  // every type with a visible file gets its block, placed under the ones already there (also the type just opened by a click in the list)
+  if (lrTog()) ensureBlocks();
+  // a block is made only for a type with a visible file: no empty panels
+  else if (tabFiles().some(f => f.vis) && !E.panels.some(p => p.tab === E.tab)) defaultLayoutTab(E.tab);
 }
 // every experiment type that has files gets its block (its starting layout) under the ones already on the page
 function ensureBlocks() {
   ESP.ids.forEach(t => {
-    if (!tabFiles(t).some(f => f.vis) || E.panels.some(p => p.tab === t)) return;      // a type whose files are all closed has no block until one of them is opened
+    // a type whose files are all closed has no block until one of them is opened
+    if (!tabFiles(t).some(f => f.vis) || E.panels.some(p => p.tab === t)) return;
     const before = new Set(E.panels);
     STATO.conScheda(t, () => defaultLayoutTab(t), "blocks");
     const shift = () => {
@@ -92,7 +97,8 @@ function ms2Exps() {
     if (x.ce != null) e.ce.add(x.ce); e.n += x.n; e.files.add(f.k); m.set(x.prec, e);
   }));
   const l = [...m.values()];
-  return l.length > 8 ? l.sort((a, b) => b.n - a.n) : l.sort((a, b) => (a.prec ?? 0) - (b.prec ?? 0));      // a data-dependent file has many precursors with few scans: the most scanned first
+  // a data-dependent file has many precursors with few scans: the most scanned first
+  return l.length > 8 ? l.sort((a, b) => b.n - a.n) : l.sort((a, b) => (a.prec ?? 0) - (b.prec ?? 0));
 }
 // a triangle on the survey chromatogram: open that product-ion scan in the MS2 tab
 async function goMs2(t) {
@@ -110,25 +116,32 @@ function defaultLayoutTab(t) {
     const nodi = !!ESP.voce(t)?.nodi, f0 = tabFiles(t)[0];
     // chromatogram + linked spectrum must both fit in the window (a laptop at 1280x720 would push the spectrum below the fold and the arrows need both in view):
     // the usual 330 + 310 px when there is room, otherwise the height left in the window shared 50/50 (never below 190 px each)
-    const dp = Q("#dpanels"), top = dp.offsetParent ? dp.getBoundingClientRect().top + scrollY : Q("header").getBoundingClientRect().height + 84, avail = innerHeight - top - 42;   // (not laid out yet while the loading screen is up: header + tabs + toolbar)
+    // (not laid out yet while the loading screen is up: header + tabs + toolbar)
+    const dp = Q("#dpanels"), top = dp.offsetParent ? dp.getBoundingClientRect().top + scrollY : Q("header").getBoundingClientRect().height + 84, avail = innerHeight - top - 42;
     const g = pnlGap(); let hc = 330, hs = 310; if (avail < hc + hs + g) { hc = Math.max(190, Math.round((avail - g) * 0.5)); hs = Math.max(190, Math.round(avail - g - hc)); }
     const c = addPanel("chrom", { tab: t, x: 0, y: 0, w, h: hc, full: true });
     const sp = addPanel("spec", { tab: t, link: c.id, k: f0.k, level: 1, x: 0, y: hc + g, w, h: hs, full: true });
-    if (window.DDA && f0.dda && !nodi) DDA.make(c, sp);                 // a data-dependent file: the MS2 scans sit to the right of the Full Scan
-    if (nodi) INF.layout(c, sp, f0); else apexSpectrum(c, sp);          // an MSn infusion starts on its richest node (the TIC of the node and its mean spectrum)
-    let tries = 0, h0 = [c.h, sp.h];       // once the graphs are on screen the real top of the page is known (a wrapped toolbar moves it): correct the heights then
+    // a data-dependent file: the MS2 scans sit to the right of the Full Scan
+    if (window.DDA && f0.dda && !nodi) DDA.make(c, sp);
+    // an MSn infusion starts on its richest node (the TIC of the node and its mean spectrum)
+    if (nodi) INF.layout(c, sp, f0); else apexSpectrum(c, sp);
+    // once the graphs are on screen the real top of the page is known (a wrapped toolbar moves it): correct the heights then
+    let tries = 0, h0 = [c.h, sp.h];
     const fix = () => {
-      if (!E.panels.includes(c) || !E.panels.includes(sp) || c.h !== h0[0] || sp.h !== h0[1]) return;      // the student already resized them
+      // the student already resized them
+      if (!E.panels.includes(c) || !E.panels.includes(sp) || c.h !== h0[0] || sp.h !== h0[1]) return;
       if (!dp.offsetParent) { if (++tries < 60) FRAME.next(fix); return; }
       const av = innerHeight - (dp.getBoundingClientRect().top + scrollY) - 14;
       const g = pnlGap(); if (c.h + sp.h + g <= av) return;
       c.h = Math.max(190, Math.round((av - g) * 0.5)); sp.h = Math.max(190, Math.round(av - g - c.h)); sp.y = c.y + c.h + gapAfter(c, sp); apply(c); apply(sp); relayout(); fitHost(); draw(c); draw(sp);
     };
     FRAME.next(fix);
-    if (window.BANCO) BANCO.afterLayout();       // high-resolution bench: product ions that are not a DDA (infusion MSn, PRM) get their own cells under the survey
+    // high-resolution bench: product ions that are not a DDA (infusion MSn, PRM) get their own cells under the survey
+    if (window.BANCO) BANCO.afterLayout();
   } else if (t === "ms2") {
     const exps = ms2Exps(), f0 = tabFiles("ms2")[0]; let y = 0;
-    const list = exps.length ? exps.slice(0, 1) : [{ prec: null, k: f0.k }];       // ONE pair (chromatogram + spectrum) for the first precursor; the list on the left switches it
+    // ONE pair (chromatogram + spectrum) for the first precursor; the list on the left switches it
+    const list = exps.length ? exps.slice(0, 1) : [{ prec: null, k: f0.k }];
     list.forEach(e => { addMs2Pair(e, y); y += 550; });
   } else if (t === "mrm") {
     if (E._mrmLoading) return; E._mrmLoading = true;
@@ -192,5 +205,6 @@ function ms2Switch(prec) {
   live.forEach(sp => { sp.prec = prec; sp.zoom = null; sp.zoomY = null; sp.lock = null; sp.title = ptProduct(prec); });
   ctl(c); live.forEach(ctl);
   renderFileList(); uiSave();
-  return Promise.resolve(draw(c)).then(() => live[0] ? apexSpectrum(c, live[0]) : null);       // the spectrum of the highest scan of the new precursor
+  // the spectrum of the highest scan of the new precursor
+  return Promise.resolve(draw(c)).then(() => live[0] ? apexSpectrum(c, live[0]) : null);
 }

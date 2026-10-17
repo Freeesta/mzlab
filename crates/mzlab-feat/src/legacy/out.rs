@@ -1,5 +1,6 @@
 //! The JSON of `api.run` (HR) and `api.detail` that `TP_Mine/js/21_tpmine_hr.js` reads, and the inclusion list, written from a `Dig`.
 
+use crate::sortc::SortC;
 use mzlab_core::json::{round, Out};
 
 use super::dig::{Cand, Dig, INCLUSION, KINDS, MAX_ROWS};
@@ -208,7 +209,7 @@ fn rt_span(c: &Cand) -> (f64, f64) {
 /// The candidates of the inclusion list: without MS2, best score first.
 fn inclusion(d: &Dig) -> Vec<&Cand> {
     let mut v: Vec<&Cand> = d.cands.iter().filter(|c| c.ms2.is_none()).collect();
-    v.sort_by(|a, b| b.score.total_cmp(&a.score));
+    v.sortc_by(|a, b| b.score.total_cmp(&a.score));
     v.truncate(INCLUSION);
     v
 }

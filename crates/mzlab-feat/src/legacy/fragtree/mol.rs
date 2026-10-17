@@ -1,6 +1,7 @@
 //! The molecular graph of a SMILES as `hr/molgraph.py` sees it: its connected substructures after at most four cuts, and the SMILES of one of them (`fragtree.mask_smiles`).
 
 use super::*;
+use crate::sortc::SortC;
 
 /// The heavy-atom graph of `molgraph.Mol`.
 pub struct Graph {
@@ -58,7 +59,7 @@ impl Graph {
                     ring.push(x);
                     u = prev[&x];
                 }
-                ring.sort();
+                ring.sortc();
                 if seen.insert(ring.clone()) {
                     found.push(ring);
                 }
@@ -128,7 +129,7 @@ impl Subs {
     /// `_top_smiles`: up to three different substructures, heaviest first.
     pub(crate) fn top_smiles(&self, idx: &[usize], w: &[f64]) -> Vec<(String, f64)> {
         let mut o: Vec<usize> = (0..w.len()).collect();
-        o.sort_by(|&a, &b| w[b].total_cmp(&w[a]));
+        o.sortc_by(|&a, &b| w[b].total_cmp(&w[a]));
         let mut out: Vec<(String, f64)> = Vec::new();
         for j in o {
             let s = mask_smiles(&self.g, self.masks[idx[j]]);

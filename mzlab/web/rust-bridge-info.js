@@ -11,19 +11,22 @@ export async function infoRoute(path, u, { slots, rpc, base, stats, t0 }) {
   await Promise.all(ks.map(k => slots[k].opening));
   if (!ks.every(k => slots[k] && slots[k].idx && !slots[k].bad)) return null;
   const done = text => { stats.rust++; return { status: 200, text, ms: performance.now() - t0 }; };
-  if (path === "/api/fileinfo") {                                       // instrument and software from the head of the mzML, counts and m/z range from the index
+  // instrument and software from the head of the mzML, counts and m/z range from the index
+  if (path === "/api/fileinfo") {
     const s = slots[ks[0]];
     if (ks.length !== 1 || !s.idx.scans || !s.blob) return null;
     const r = await rpc({ op: "fileinfo", slot: ks[0], name: base(s.name).split("#")[0], blob: s.blob });
     return r.dead || r.error || !r.info ? null : done(r.info);
   }
-  if (path === "/api/chrom") {                                          // an MRM file: the chromatogram of the mzML of that kind (the m/z window, precursor and filter do not apply)
+  // an MRM file: the chromatogram of the mzML of that kind (the m/z window, precursor and filter do not apply)
+  if (path === "/api/chrom") {
     const s = slots[ks[0]];
     if (ks.length !== 1 || s.idx.scans || !s.blob) return null;
     const r = await rpc({ op: "mrmchrom", slot: ks[0], kind: q.get("kind") || "tic", blob: s.blob });
     return r.dead || r.error || !r.info ? null : done(r.info);
   }
-  const parts = [];                                                      // ms2tr: the precursor > fragment pairs of the MS2 scans of each file
+  // ms2tr: the precursor > fragment pairs of the MS2 scans of each file
+  const parts = [];
   for (const k of ks) {
     const r = await rpc({ op: "route", slot: k, path, query: u.search });
     if (r.dead || r.error || !r.info) return null;

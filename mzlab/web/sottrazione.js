@@ -21,9 +21,12 @@ function autoFile(tab) {
 function eff(p) {
   if (!p || !KINDS.includes(p.type)) return null;
   const tab = p.tab || E.tab, r = R();
-  if (p.type === "chrom" && (tab === "ms2" || (p.ranges && p.ranges.length))) return null;       // precursor chromatograms and the stacked graphs of the bench have their own logic
-  if (p.type === "spec" && p.bg === "x") return null;                            // «none» chosen in the panel while the session has a reference
-  if (p.type === "map" && (p.corr === "none" || p.corr === "auto" || p.corr === "tract")) return null;       // another correction chosen in the panel
+  // precursor chromatograms and the stacked graphs of the bench have their own logic
+  if (p.type === "chrom" && (tab === "ms2" || (p.ranges && p.ranges.length))) return null;
+  // «none» chosen in the panel while the session has a reference
+  if (p.type === "spec" && p.bg === "x") return null;
+  // another correction chosen in the panel
+  if (p.type === "map" && (p.corr === "none" || p.corr === "auto" || p.corr === "tract")) return null;
   const own = p.type === "spec" ? (p.bg !== "w" ? p.bg : null) : p.type === "map" ? p.ref : p.type === "mrm" ? null : p.bk;
   let f = fileOf(own), auto = false;
   if (!f && r.on[tab]) { f = r.k === "auto" ? autoFile(tab) : fileOf(r.k) || autoFile(tab); auto = r.k === "auto"; }
@@ -36,12 +39,14 @@ const normText = o => (o.norm === "tic" ? T("sub.norm.tic") : o.norm === "istd" 
 const text = p => { const o = eff(p); return o ? T("sub.note", { file: o.file.label, f: num(o.factor), norm: normText(o) }) : ""; };
 
 let live = null;
-function say(t) {                                                             // announced politely: the chip shows the state, no modal dialog
+// announced politely: the chip shows the state, no modal dialog
+function say(t) {
   if (!live) { live = document.createElement("div"); live.setAttribute("role", "status"); live.setAttribute("aria-live", "polite"); live.style.cssText = "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"; document.body.appendChild(live); }
   live.textContent = ""; setTimeout(() => { live.textContent = t; }, 30);
 }
 let timer = 0;
-function refresh(tab, now) {                                                 // the preview follows the control after 150 ms
+// the preview follows the control after 150 ms
+function refresh(tab, now) {
   clearTimeout(timer);
   const run = () => { E.panels.filter(p => (p.tab || E.tab) === tab && KINDS.includes(p.type)).forEach(p => { ctl(p); draw(p); }); uiSave(); };
   if (now) run(); else timer = setTimeout(run, 150);

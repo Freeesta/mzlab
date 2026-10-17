@@ -11,7 +11,8 @@ const PROFILO = (() => {
   const t = (k, p) => I18N.t(k, p);
   const eh = s => EH(s == null ? "" : s);
   const isHr = () => !!(window.HR && typeof BANCO !== "undefined" && BANCO.on());
-  const qaOn = () => !!(window.FEATURES && FEATURES.qaqc);      // «Normalise on» (internal standards of QA/QC) exists only with QA/QC on
+  // «Normalise on» (internal standards of QA/QC) exists only with QA/QC on
+  const qaOn = () => !!(window.FEATURES && FEATURES.qaqc);
   let st = { text: "", rt: "", metric: "area", istd: "" };
   let res = null;                                              // last result {ion, rows, series, normalized, metric}
   Object.assign(st, lsObj(KEY));

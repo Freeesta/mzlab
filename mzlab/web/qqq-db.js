@@ -20,7 +20,8 @@ export function lab(onblocked) {
   return () => dbP || (dbP = new Promise((res, rej) => {
     const r = indexedDB.open(DB_NAME, DB_VER);
     r.onupgradeneeded = () => upgrade(r.result);
-    if (onblocked) r.onblocked = onblocked;        // another tab holds an older connection: the upgrade waits until it is closed
+    // another tab holds an older connection: the upgrade waits until it is closed
+    if (onblocked) r.onblocked = onblocked;
     r.onsuccess = () => { const db = r.result; db.onversionchange = () => { db.close(); dbP = null; }; res(db); };
     r.onerror = () => rej(r.error);
   }).catch(e => { dbP = null; throw e; }));

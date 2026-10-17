@@ -5,7 +5,8 @@
   // ---- formulas: composition = {element: count}; the order of the elements never matters
   const SYM = /^[A-Z][a-z]?/;
   function parse(text) {
-    const s = String(text || "").replace(/\s+/g, "").replace(/\]?[+-]\d*$/, "");   // a trailing charge does not change the composition
+    // a trailing charge does not change the composition
+    const s = String(text || "").replace(/\s+/g, "").replace(/\]?[+-]\d*$/, "");
     if (!s) return null;
     let total = {};
     for (const part of s.split(/[·.*]/)) {       // hydrates / adducts: CuSO4·5H2O -> CuSO4 + 5 H2O

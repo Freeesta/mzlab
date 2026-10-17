@@ -2,7 +2,8 @@
 // Legend of a graph: never on top of the data. Of the four corners of the plot area it takes the one with the least ink under it
 // (peaks, lines, labels are read from the canvas); if none is free the intensity axis gets headroom (p._legPad) and the graph is drawn again once.
 const LEGENDE_INK = 3;                                  // dots of ink tolerated under the legend box
-/** @type {CanvasRenderingContext2D | null} */ let legScratch = null;       // the box is copied here: the graph canvas itself is never read back
+// the box is copied here: the graph canvas itself is never read back
+/** @type {CanvasRenderingContext2D | null} */ let legScratch = null;
 /** Dots of ink (not transparent) of the canvas in the box x, y, w, h (CSS pixels of the canvas). */
 function legInk(/** @type {any} */ p, x, y, w, h) {
   const cv = p.cv, s = cv.width / (cv.offsetWidth || 1), bw = Math.max(1, Math.round(w * s)), bh = Math.max(1, Math.round(h * s));
@@ -35,7 +36,8 @@ function legPlace(/** @type {any} */ p, /** @type {HTMLElement} */ el) {
   for (const c of cand) if (c[2] < best[2]) best = c;
   set(best[0], best[1]);
   if (best[2] <= LEGENDE_INK || p._legPad) return false;
-  p._legPad = Math.min(0.4, (h + 12) / Math.max(60, H - M.t - M.b));            // no free corner: room above the data, once per view
+  // no free corner: room above the data, once per view
+  p._legPad = Math.min(0.4, (h + 12) / Math.max(60, H - M.t - M.b));
   return true;
 }
 const LEGENDE = { place: legPlace };

@@ -38,7 +38,8 @@ function affRifai(/** @type {any[]} */ order, /** @type {number} */ pid, /** @ty
   const side = d.k === "sx" || d.k === "dx";
   if (side && !affEntra([...mates(t), p], W)) return null;
   const old = order.filter(q => q !== p && q.riga === p.riga && !grp.includes(q.id));
-  if (old.length === 1) old[0].quota = 1;                                               // left alone: back to the full width
+  // left alone: back to the full width
+  if (old.length === 1) old[0].quota = 1;
   const out = rest.slice();
   if (side) {
     p.riga = t.riga; mates(t).forEach(q => { q.quota = null; }); p.quota = null;
@@ -113,7 +114,8 @@ function affDragGrip(/** @type {any} */ p, /** @type {PointerEvent} */ e0, /** @
   const upd = (/** @type {PointerEvent} */ ev) => {
     const h = Q("#dpanels").getBoundingClientRect(), px = ev.clientX - h.left, py = ev.clientY - h.top, order = affStack();
     let z = affZona(order, [p.id], px, py);
-    if (z.k !== "sx" && z.k !== "dx") { if (z.t != null && grpOf(null).includes(z.t)) z.solo = true; else z = affZona(order, grpOf(z), px, py); }       // dropped on its own spectrum: the panel moves alone, past it
+    // dropped on its own spectrum: the panel moves alone, past it
+    if (z.k !== "sx" && z.k !== "dx") { if (z.t != null && grpOf(null).includes(z.t)) z.solo = true; else z = affZona(order, grpOf(z), px, py); }
     const kk = z.k + ":" + z.t + (z.solo ? "s" : ""); if (kk === key) return; key = kk; d = z;
     const cp = affKeys(order), grp = grpOf(z), res = affRifai(cp, p.id, grp, z, hostWidth());
     if (!res) { const t = order.find(q => q.id === z.t); affShowPrev(t ? { x: t.x, y: t.y, w: t.w, h: t.h } : null, AFF_T("aff.zone.nospace")); d = null; return; }
@@ -141,9 +143,11 @@ function affDragGrip(/** @type {any} */ p, /** @type {PointerEvent} */ e0, /** @
   function affVertical(/** @type {any} */ p, /** @type {number} */ dir) {         // one row up / down
   const grp = blockOf(p).grp, order = affStack().filter(q => !grp.includes(q)), rows = LAYOUT.righeDi(order), all = affStack();
   const near = all[all.indexOf(p) + dir];
-  if (near && grp.includes(near) && near.riga !== p.riga) return { k: dir < 0 ? "su" : "giu", t: near.id, solo: true };       // its own spectrum is next to it: swap with it
+  // its own spectrum is next to it: swap with it
+  if (near && grp.includes(near) && near.riga !== p.riga) return { k: dir < 0 ? "su" : "giu", t: near.id, solo: true };
   const slot = rows.filter(r => all.indexOf(r[0]) < all.indexOf(p)).length, mates = all.filter(q => q !== p && q.riga === p.riga);
-  if (mates.length) return { k: dir < 0 ? "su" : "giu", t: mates[0].id };            // leaving its row: right above / below it
+  // leaving its row: right above / below it
+  if (mates.length) return { k: dir < 0 ? "su" : "giu", t: mates[0].id };
   const r = rows[dir < 0 ? slot - 1 : slot]; return r ? { k: dir < 0 ? "su" : "giu", t: r[0].id } : null;
 }
 function affNeighbour(/** @type {any} */ p, /** @type {number} */ dir) {
@@ -237,7 +241,8 @@ function affSep(/** @type {any[]} */ row, /** @type {number} */ i) {
 function affSync() {
   if (affBusy) return;
   const host = document.getElementById("dpanels"); if (!host) return;
-  const was = document.activeElement && document.activeElement.classList.contains("aff-sep") ? /** @type {any} */ (document.activeElement)._key : null;       // a rebuilt divider keeps the focus
+  // a rebuilt divider keeps the focus
+  const was = document.activeElement && document.activeElement.classList.contains("aff-sep") ? /** @type {any} */ (document.activeElement)._key : null;
   host.querySelectorAll(".aff-sep").forEach(e => e.remove());
   tabPanels().forEach(q => { if (q._grip) q._grip.hidden = !affEligible(q); });
   if (fsPanel()) return;

@@ -9,6 +9,7 @@ use super::rows::{best_area, entry, is_treated};
 use super::{evaluate, finish_one, isf, Entry, LrDig};
 use crate::aligned::Aligned;
 use crate::legacy::Res;
+use crate::sortc::SortC;
 use mzlab_core::idxread::{Index, ReadAt};
 
 /// Id of the first row made from an MS2 (the unexpected ions of the Dig start at 100001).
@@ -81,7 +82,7 @@ pub fn make(d: &mut LrDig, l: &Links) -> Vec<(usize, i64)> {
             }
         }
     }
-    want.sort_by_key(|w| w.1);
+    want.sortc_by_key(|w| w.1);
     let t = d.table.clone();
     let off = d
         .offset

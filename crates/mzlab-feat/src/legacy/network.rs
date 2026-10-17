@@ -2,6 +2,7 @@
 //! the formula of the first to the formula of the second (one step); of two ions the edge goes from the one that peaks first. The MS2 of the edge (shifted
 //! fragments) is that of the parent against the product; the precursors of two steps or related by MS2 are not drawn.
 
+use crate::sortc::SortC;
 use std::collections::BTreeMap;
 
 use mzlab_core::elements::{mass, parse_formula};
@@ -10,6 +11,9 @@ use mzlab_core::json::{round, Out};
 use super::dig::{Cand, Dig};
 use super::network_pred::{predecessors, related};
 use crate::hypo::{Counts, Rules};
+
+#[cfg(test)]
+mod golden;
 
 /// The most edges of the network that the page receives; the strongest (with shifted fragments) first.
 const MAX_EDGES: usize = 1500;
@@ -224,7 +228,7 @@ pub fn mass_network(d: &Dig, rules: &Rules) -> String {
     }
     let share = |e: &Edge| edge_share(e, &cands);
     if total > MAX_EDGES {
-        edges.sort_by(|a, b| {
+        edges.sortc_by(|a, b| {
             let s = |e: &Edge| share(e).map_or(0.0, |x| x.1);
             (a.kind == "mass")
                 .cmp(&(b.kind == "mass"))

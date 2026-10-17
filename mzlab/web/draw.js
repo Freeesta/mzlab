@@ -2,7 +2,7 @@
 // "Disegno": Ketcher (structures, fragments, arrows, text). Bundled in web/vendor: no internet needed.
 // The page only draws and labels: the student does the chemistry (no formula/adduct/fragment tables here, on purpose).
 // OpenChemLib (also bundled) only turns what is drawn into SMILES and estimates properties of it (logP ...).
-// Module script; helpers come from explore.js (window).
+// Module script; helpers (rh, EH, toast, ...) come from the classic scripts through window.
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
 import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js";

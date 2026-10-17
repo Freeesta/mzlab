@@ -2,6 +2,7 @@
 //! by their points; formula and derivation come from the hypothesis of the identity, the kinetics from the areas of the row, the MS2 from the scans
 //! of every file inside the peak (consensus and three-component similarity with the MS2 of the parent).
 
+use crate::sortc::SortC;
 use std::collections::{BTreeSet, HashMap};
 
 use mzlab_core::elements::{fmt, parse_formula, Formula};
@@ -180,7 +181,7 @@ fn isf_rows(t: &Aligned) -> Vec<usize> {
     let mut rows: Vec<usize> = (0..t.len())
         .filter(|&r| t.tp.status.get(r) == Some(&ST_ISF))
         .collect();
-    rows.sort_by(|&a, &b| t.mz[a].total_cmp(&t.mz[b]));
+    rows.sortc_by(|&a, &b| t.mz[a].total_cmp(&t.mz[b]));
     rows
 }
 
@@ -371,7 +372,7 @@ pub fn dig<R: ReadAt>(s: Series, mut open: impl FnMut(usize) -> Res<Index<R>>) -
         .into_iter()
         .filter(|i| i.total > 0.0 && i.row < t.len() && !is_isf(i.row))
         .collect();
-    ids.sort_by(|a, b| b.total.total_cmp(&a.total).then(a.row.cmp(&b.row)));
+    ids.sortc_by(|a, b| b.total.total_cmp(&a.total).then(a.row.cmp(&b.row)));
     let mut cands: Vec<Cand> = ids
         .into_iter()
         .map(|i| candidate(t, &s.files, &s.parent, i, &s.hyps, &w))

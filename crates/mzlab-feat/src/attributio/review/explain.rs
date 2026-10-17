@@ -6,6 +6,7 @@
 
 use super::adduct::{mass_of, ELECTRON};
 use super::settings::ReviewSettings;
+use crate::sortc::SortC;
 use std::collections::BTreeMap;
 
 pub const C13: f64 = 1.003355;
@@ -274,7 +275,7 @@ pub fn subformula_table(ion: &Formula, pol: &str, adduct: &str, max_n: i64) -> O
             counts[k] = 0;
         }
     }
-    rows.sort_by(|a, b| a.0.total_cmp(&b.0));
+    rows.sortc_by(|a, b| a.0.total_cmp(&b.0));
     Some(SubTable {
         elements: els,
         radix,

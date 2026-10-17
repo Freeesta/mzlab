@@ -1,5 +1,8 @@
 // @ts-strict
 // @ts-check
+// Data view base: notices (toast), theme and colours, notebook save and sync, session boot and UI restore, file list (order, groups, colours, drag and drop).
+// Data exploration starts from the total chromatogram; the student decides what to extract.
+// Classic script: its functions are page globals used by the other Dati scripts (pannelli.js, grafici.js, ...).
 
 window.toast = function(msg) {
   let t = document.getElementById("toast-container");
@@ -39,7 +42,8 @@ window.avvisoAuto = function(el, o = {}) {
   el.addEventListener("focusin", () => { inside = true; stop(); });
   el.addEventListener("focusout", e => { if (!el.contains(/** @type {Node | null} */ (e.relatedTarget))) { inside = false; go(); } });
   if (o.x !== false && !el.querySelector("button.x")) {
-    const b = document.createElement("button"); b.type = "button"; b.className = "x"; b.textContent = "×";       // the shared close X (index.html)
+    // the shared close X (index.html)
+    const b = document.createElement("button"); b.type = "button"; b.className = "x"; b.textContent = "×";
     b.setAttribute("aria-label", I18N.t("avviso.close")); b.onclick = () => close("x"); el.appendChild(b);
   }
   go();
@@ -47,10 +51,9 @@ window.avvisoAuto = function(el, o = {}) {
 };
 
 "use strict";
-// Esplorazione dei dati: si parte dal cromatogramma totale, lo studente decide cosa estrarre.
-// Script classico (usa gli helper di index.html: S, setup, nice, fmt, css, esc, smooth, M, setView, applyView).
 // user preferences (settings gear): text size, theme, chart colours, high resolution (hr: automatic | off, tolerance in ppm, decimals; see hr.js). Filled from localStorage by uipLoad() (settings.js).
-const UIP = { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4 };      // merge = join the centroids of the same nominal mass (centroid files only)
+// merge = join the centroids of the same nominal mass (centroid files only)
+const UIP = { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4 };
 // areas: at least 3 decimals in the label (2.243e+6), whole number in the tooltip
 const fmtA = v => !Number.isFinite(v) || v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(3) : (+v.toPrecision(4)).toString();
 const fmtFull = v => Number.isFinite(v) ? Math.round(v).toString() : "";
@@ -109,7 +112,8 @@ const PALS = {
     dash: true, blank: "#777777", blankDark: "#aaaaaa", std: "#333333", stdDark: "#dddddd"
   },
 };
-PALS.file = { ...PALS.time, plain: true };               // default: one categorical colour per file, no time scale, no neutral greys, continuous lines
+// default: one categorical colour per file, no time scale, no neutral greys, continuous lines
+PALS.file = { ...PALS.time, plain: true };
 const PAL = [];
 function setPal(mode) {
   UIP.pal = PALS[mode] ? mode : "file";
@@ -118,7 +122,8 @@ function setPal(mode) {
   document.documentElement.dataset.pal = UIP.pal;
 }
 setPal(UIP.pal);
-function seqColor(u) {                                       // u in 0..1 -> colour of the current palette's sequential scale
+// u in 0..1 -> colour of the current palette's sequential scale
+function seqColor(u) {
   const P = PALS[UIP.pal], dark = isDark();
   if (P.hue) return P.hue(u);
   const seq = dark && P.seqDark ? P.seqDark : P.seq;
@@ -132,7 +137,8 @@ const DASHES = [[], [6, 3], [2, 3], [10, 3, 2, 3]];
 const LWX = () => PALS[UIP.pal].lw || 0;                      // extra line width (px) of the high contrast palette
 // line style of a file: blank dashed, Full Scan standard dash-dot (both neutral grey); with the colour-blind / high-contrast palettes the files of the
 // time scale are also told apart by line style (second code besides the colour)
-let PLAIN = false;                                           // true while every file takes a categorical colour (palette "file", or "time" with no file that has a time)
+// true while every file takes a categorical colour (palette "file", or "time" with no file that has a time)
+let PLAIN = false;
 function fdash(f) {
   if (f.type === "blank") return [4, 3];
   if (PLAIN) return [];
@@ -144,12 +150,14 @@ const Q = s => document.querySelector(s);
 const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const fmtFormula = f => !f ? "" : EH(f).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>");
 const fmtAdduct = a => !a ? "" : fmtFormula(a).replace(/([+-]+)$/, "<sup>$1</sup>");
-const subText = f => String(f || "").replace(/\d/g, d => "₀₁₂₃₄₅₆₇₈₉"[d]);                // formula in plain text for the canvas (subscript digits)
+// formula in plain text for the canvas (subscript digits)
+const subText = f => String(f || "").replace(/\d/g, d => "₀₁₂₃₄₅₆₇₈₉"[d]);
 window.fmtFormula = fmtFormula; window.fmtAdduct = fmtAdduct;
 const KIND = { full: "Full Scan", ms2: "MS2 (Product Ion)", mrm: "MRM" };
 const kindOf = f => f.kind === "empty" ? I18N.t("kind.empty") : KIND[f.kind] || f.kind;
 // the three kinds of experiment never share a graph: Dati has one block of panels for each (Full Scan, MS2, MRM); panels and files belong to one
-const tabFiles = (t = E.tab) => E.files.filter(f => f.kind === t && !f.gone);   // f.gone = removed from the session (the file on disk is untouched)
+// f.gone = removed from the session (the file on disk is untouched)
+const tabFiles = (t = E.tab) => E.files.filter(f => f.kind === t && !f.gone);
 // the blocks of every experiment type are on the same page (one block per type in the low-resolution world, the cells of the bench in the high-resolution one):
 // tabPanels() without an argument is all the panels. A panel still holds ONE experiment type; E.tab is the type of the current file.
 const lrTog = () => !(window.BANCO && BANCO.on());
@@ -166,13 +174,19 @@ const TOL0 = 1.0;                                   // strumento datato: finestr
 // small inline icons (no external files): download arrow and "fit to window" corners
 const IC_DATA = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px" aria-hidden="true"><rect x="1.5" y="2" width="9" height="8" rx="1"/><path d="M1.5 5h9M1.5 7.6h9M5 2v8"/></svg>';
 const IC_DL = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px"><path d="M6 1v7M3 5.5 6 8.5 9 5.5M1.5 11h9"/></svg>';
-const IC_AUTO = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M1 14h14"/><path d="M3 14C5 14 6 4.5 8 4.5S11 14 13 14z" fill="currentColor" fill-opacity=".3"/><path d="M13 1.2l.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7z" fill="currentColor" stroke="none"/></svg>';   // peak with its area + sparkle = automatic
-const IC_MAN = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M1 14h14"/><path d="M4.5 14C6 14 6.5 5 8 5s2 9 3.5 9" /><path d="M4 2.5v11.5M12 2.5v11.5" stroke-dasharray="2 1.6"/></svg>';   // peak between two edge bars = manual
-const IC_DEL_INT = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 14h14"/><path d="M3 14c1.5 0 2.5-9 5-9s3.5 9 5 9"/><path d="M10.5 2.5l4 4M14.5 2.5l-4 4"/></svg>';   // peak with an X = delete integration
-const IC_ZOOM = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="4.6"/><path d="M10 10l4.6 4.6M4.4 6.5h4.2M6.5 4.4v4.2"/></svg>';   // magnifier = zoom tool
+// peak with its area + sparkle = automatic
+const IC_AUTO = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M1 14h14"/><path d="M3 14C5 14 6 4.5 8 4.5S11 14 13 14z" fill="currentColor" fill-opacity=".3"/><path d="M13 1.2l.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7z" fill="currentColor" stroke="none"/></svg>';
+// peak between two edge bars = manual
+const IC_MAN = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M1 14h14"/><path d="M4.5 14C6 14 6.5 5 8 5s2 9 3.5 9" /><path d="M4 2.5v11.5M12 2.5v11.5" stroke-dasharray="2 1.6"/></svg>';
+// peak with an X = delete integration
+const IC_DEL_INT = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 14h14"/><path d="M3 14c1.5 0 2.5-9 5-9s3.5 9 5 9"/><path d="M10.5 2.5l4 4M14.5 2.5l-4 4"/></svg>';
+// magnifier = zoom tool
+const IC_ZOOM = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="4.6"/><path d="M10 10l4.6 4.6M4.4 6.5h4.2M6.5 4.4v4.2"/></svg>';
 const IC_TAB = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="2" width="11" height="10" rx="1.2"/><path d="M1.5 5.5h11M1.5 8.7h11M6 5.5V12"/></svg>';
-const IC_FS = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M8.5 1.5h4v4M12.5 1.5 8 6M5.5 12.5h-4v-4M1.5 12.5 6 8"/></svg>';   // full screen: arrows pointing out
-const IC_FSX = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 5.5H8.5V2M8.5 5.5 13 1M2 8.5h3.5V12M5.5 8.5 1 13"/></svg>';  // leave full screen: arrows pointing in
+// full screen: arrows pointing out
+const IC_FS = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M8.5 1.5h4v4M12.5 1.5 8 6M5.5 12.5h-4v-4M1.5 12.5 6 8"/></svg>';
+// leave full screen: arrows pointing in
+const IC_FSX = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 5.5H8.5V2M8.5 5.5 13 1M2 8.5h3.5V12M5.5 8.5 1 13"/></svg>';
 const IC_SMOOTH = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 11L2.6 7.5 4 10.5 5.6 5.5 7 9.5 8.6 4.5 10 8.5 11.6 6 13 9.5 15 7" stroke-width="1" stroke-opacity=".6"/><path d="M1 11C4 11 5 4 8 4s4 7 7 7" stroke-width="2"/></svg>';
 const IC_RANGE = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2v10M12 2v10M2 7h10M4.5 4.7 2 7l2.5 2.3M9.5 4.7 12 7l-2.5 2.3"/></svg>';
 const IC_FIT = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/></svg>';
@@ -185,10 +199,13 @@ function loading(on, msg) {
   if (on) {
     ldSince = Date.now(); ldMsg = msg ? { text: msg, pct: null } : null; ldRefresh();
     clearTimeout(ldSlow); ldSlow = setTimeout(() => { if (!window.qqFailed && !Q("#loading").hidden && !ldMsg && !window.qqPhaseCur) { ldMsg = { text: I18N.t("load.slow"), pct: null }; ldRefresh(); } }, 20000);
-    ldIon(true);                                                     // engine start and data loading: the ions (one analyser per load)
-    if (!ldTimer) { ldNext(); ldTimer = setInterval(ldNext, 5000); } L.hidden = false;   // a phrase already turning (first start) goes on with its 5 s clock
+    // engine start and data loading: the ions (one analyser per load)
+    ldIon(true);
+    // a phrase already turning (first start) goes on with its 5 s clock
+    if (!ldTimer) { ldNext(); ldTimer = setInterval(ldNext, 5000); } L.hidden = false;
   } else {
-    if (window.qqFailed) return;                                   // a failed engine start keeps its message (and the «start from scratch» button) on screen
+    // a failed engine start keeps its message (and the «start from scratch» button) on screen
+    if (window.qqFailed) return;
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
     clearTimeout(ldSlow); setTimeout(() => {
       L.classList.add("fade-out"); ldMsg = null;
@@ -212,7 +229,8 @@ function loading(on, msg) {
 
 // ------------------------------------------------------------------ taccuino (salvato accanto ai dati)
 let nbTimer = null, nbLast = "", nbBase = {}, nbRemote = null;
-const NB_V = 2;                                                          // schema of the notebook: bump it when a field changes meaning and migrate in nbLoad (2: NB.session in the format campioni/2)
+// schema of the notebook: bump it when a field changes meaning and migrate in nbLoad (2: NB.session in the format campioni/2)
+const NB_V = 2;
 const nbPlain = v => !!v && typeof v === "object" && !Array.isArray(v);
 // what comes back from the storage can be old, empty or damaged: only a plain object is accepted and the fields the program iterates over must have the right type
 function nbClean(j) {
@@ -237,7 +255,8 @@ function nbMerge(remote) {
 function nbSave(now = false) {
   clearTimeout(nbTimer);
   const go = async () => {
-    if (!nbEverLoaded || JSON.stringify(NB) === nbLast) return;        // not read yet (a save would erase the stored notebook), or nothing changed: no request (fewer aborted saves on reload)
+    // not read yet (a save would erase the stored notebook), or nothing changed: no request (fewer aborted saves on reload)
+    if (!nbEverLoaded || JSON.stringify(NB) === nbLast) return;
     let remote = nbRemote;
     if (!now) { try { remote = await (await fetch("api/notebook")).json(); } catch (_) { /* keep the last copy read */ } }
     const out = nbMerge(remote || nbBase), body = JSON.stringify(out);
@@ -252,7 +271,8 @@ async function nbLoad() {
   try { j = nbClean(await (await fetch("api/notebook")).json()); } catch (_) { /* first time, or the storage is not answering */ }
   Object.assign(NB, j); nbBase = JSON.parse(JSON.stringify(NB)); nbRemote = j; nbLast = JSON.stringify(NB);
   nbEverLoaded = true;
-  if (CDOC.isOld(NB.session)) {          // notebook v1: roles of the Data view, QC and dark roles of qqq.qaqc -> campioni/2, without loss
+  // notebook v1: roles of the Data view, QC and dark roles of qqq.qaqc -> campioni/2, without loss
+  if (CDOC.isOld(NB.session)) {
     try { NB.session = await CDOC.migrate(NB.session, (window.QAQC && QAQC.state.roles) || {}); NB._v = NB_V; nbSave(); } catch (_) { /* the notebook stays as it is */ }
   }
   document.dispatchEvent(new Event("nbloaded"));
@@ -296,14 +316,14 @@ function uiSave(now = false) {
   };
   if (now) run(); else uiTimer = setTimeout(run, 800);
 }
-// alla chiusura della pagina (o quando la scheda va in secondo piano) si salva subito: l'ultima modifica non va persa
+// when the page closes (or the tab goes to the background) save at once: the last change is not lost
 addEventListener("pagehide", () => uiSave(true));
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") uiSave(true); });
 
 let EXPORTING = false;
 const fz = () => 1;        // (the text size of the graphs follows the browser zoom: Ctrl/Cmd + and −)
 const fpx = (n, st = "") => `${st}${+(n * fz()).toFixed(1)}px system-ui`;
-// ------------------------------------------------------------------ dati (con cache)
+// ------------------------------------------------------------------ data (cached)
 const CACHE = new Map();
 const memo = (key, fn) => { if (!CACHE.has(key)) CACHE.set(key, fn().catch(e => { CACHE.delete(key); throw e; })); return CACHE.get(key); };
 const J = u => fetch(u).then(async r => { const j = await r.json(); if (j.error) throw I18N.err(j); return j; });
@@ -311,10 +331,12 @@ const J = u => fetch(u).then(async r => { const j = await r.json(); if (j.error)
 const prk = (pr, ft) => ft ? `${pr ?? ""}~${ft}` : pr;
 const prSplit = pr => { const t = String(pr ?? ""), i = t.indexOf("~"); return i < 0 ? [pr ?? "", ""] : [t.slice(0, i), t.slice(i + 1)]; };
 const FT = ft => ft ? `&filt=${encodeURIComponent(ft)}` : "";
-const getMs2Tr = k => memo(`m2t${k}`, () => J(`api/ms2tr?k=${k}`)).then(d => d.files[0].transitions);      // precursor > fragment pairs of an MS2 file (unit resolution)
+// precursor > fragment pairs of an MS2 file (unit resolution)
+const getMs2Tr = k => memo(`m2t${k}`, () => J(`api/ms2tr?k=${k}`)).then(d => d.files[0].transitions);
 const getChrom = (k, kind, lv, mz0, mz1, prec, filt) => memo(`c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}|${filt ?? ""}`, () => J(`api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(filt)));
 const getXic = (k, mz, tol, lv) => memo(`x${k}|${mz}|${tol}|${lv}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0]));
-const MERGE = () => (UIP.merge ? "&merge=1" : "") + (window.HR ? HR.q() : "");     // + "&hr=0" when high resolution is switched off (hr.js)
+// + "&hr=0" when high resolution is switched off (hr.js)
+const MERGE = () => (UIP.merge ? "&merge=1" : "") + (window.HR ? HR.q() : "");
 const getSpec = (k, a, b, lv, pr, bg) => memo(`s${k}|${a}|${b}|${lv}|${pr}|${bg ? bg.join(",") : ""}|${UIP.merge ? 1 : 0}`, () => J(`api/spectrum?k=${k}&rt0=${a}&rt1=${b}&level=${lv}&precursor=${prSplit(pr)[0]}${FT(prSplit(pr)[1])}` + (bg ? `&bgk=${bg[0]}&bgrt0=${bg[1]}&bgrt1=${bg[2]}&bgf=${bg[3] ?? 1}&bgclip=${bg[4] ?? 1}` : "") + MERGE()));
 const getFormula = (f, ad) => J(`api/formula?f=${encodeURIComponent(f)}&adduct=${encodeURIComponent(ad || "")}`);
 // default adduct from the polarity of the visible files
@@ -328,7 +350,8 @@ const polSign = (f, list) => { const q = POLS[f && f.polarity] || POLS.unknown; 
 // the polarity written once in the heading of a group when all its files share it: " · ESI+"
 const polHead = list => { const s = polKnown(list); return s.size === 1 && list.every(f => f.polarity && f.polarity !== "unknown") ? " \u00b7 " + polLabel(list[0]) : ""; };
 const polMixed = () => new Set(shown().map(f => f.polarity).filter(x => x && x !== "unknown")).size > 1;
-const legPol = f => polMixed() && f ? " " + polSign(f, shown()) : "";                      // the legend shows the sign only when positive and negative files are drawn together
+// the legend shows the sign only when positive and negative files are drawn together
+const legPol = f => polMixed() && f ? " " + polSign(f, shown()) : "";
 const defAdduct = fs => { const l = fs || (shown().length ? shown() : E.files.filter(f => f.vis)); return l.some(f => f.polarity === "negative") && !l.some(f => f.polarity === "positive") ? "[M-H]-" : "[M+H]+"; };
 const getMrm = k => memo(`m${k}`, () => J(`api/mrm?k=${k}`).then(j => j.files[0].transitions));
 
@@ -351,23 +374,29 @@ async function bootSession0() {
   const key = JSON.stringify(j.session.map(s => s.file));
   if (key === E.key) return;
   const oldNames = E.files.map(f => f.file), mem = E._mem || {};
-  E.files.forEach(f => { mem[f.file] = f; });                    // a list reopened file by file: the files not back yet keep their state (visibility, label, role) until they return
+  // a list reopened file by file: the files not back yet keep their state (visibility, label, role) until they return
+  E.files.forEach(f => { mem[f.file] = f; });
   const oldVis = mem;
   E.key = key;
   CACHE.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
-  const seq = !!E._seq, waiting = !!(E.pending && E.pending.some(x => x.state === "wait"));      // seq: a list opened file by file, this is not its first step
+  // seq: a list opened file by file, this is not its first step
+  const seq = !!E._seq, waiting = !!(E.pending && E.pending.some(x => x.state === "wait"));
   E._seq = waiting; E._mem = waiting ? mem : null;
-  const isFirstLoad = !oldNames.length || seq || waiting;       // while a list is opened file by file the new ones follow the rules of the first load
+  // while a list is opened file by file the new ones follow the rules of the first load
+  const isFirstLoad = !oldNames.length || seq || waiting;
   const isHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr) || s.dda);
-  const trueHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr));       // a low-resolution IDA file is not high resolution
+  // a low-resolution IDA file is not high resolution
+  const trueHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr));
   E.files = j.session.map((s, k) => {
     let vis = true;
     if (oldVis[s.file]) {
       vis = oldVis[s.file].vis;
     } else if (isFirstLoad && trueHr && new Set(j.session.map(x => fileBase(x.file))).size > 1) {
-      vis = fileBase(s.file) === fileBase(j.session[0].file);          // high resolution: only the first file (in the order of the list) is open, a click opens the others
+      // high resolution: only the first file (in the order of the list) is open, a click opens the others
+      vis = fileBase(s.file) === fileBase(j.session[0].file);
     } else if (isFirstLoad && !isHr && j.session.length > 1) {
-      vis = (k === 0);          // low resolution: only the first file of the list is open (also with mixed Full Scan / MS2 / MRM), the others wait in the list and a click opens them
+      // low resolution: only the first file of the list is open (also with mixed Full Scan / MS2 / MRM), the others wait in the list and a click opens them
+      vis = (k === 0);
     }
     return { ...s, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: oldVis[s.file] ? oldVis[s.file].label : s.label, lv: s.kind === "ms2" ? 2 : 1 };
   });
@@ -381,7 +410,7 @@ async function bootSession0() {
     if (i >= 0) { if (pend) delete PEND.get(o)[key]; } else if (name != null) PEND.set(o, { ...(PEND.get(o) || {}), [key]: { k: out, name } });
     o[key] = out;
   };
-  if (E.panels.length && oldNames.length) {                // caricamento successivo: i pannelli restano
+  if (E.panels.length && oldNames.length) {                // later load: the panels stay
     E.panels.forEach(p => { remap(p, "k", 0); remap(p, "ref", 0); remap(p, "bk", ""); if (p.bg !== "w" && p.bg !== "x") remap(p, "bg", ""); });
     remap(E, "cur", 0);
     if (S.ref.k !== "auto") remap(S.ref, "k", 0);
@@ -423,8 +452,10 @@ function fitWidth() {
   const w = Q("#dpanels").clientWidth; if (w < 100) return;
   const st = stackOrder();
   E.panels.forEach(p => { if (p.full && !dockedP(p) && !hasDocked(p) && !LAYOUT.inRiga(p, st) && Math.abs(p.w - w) > 1) { p.x = 0; p.w = w; apply(p); } });
-  const rows = st.some(q => LAYOUT.inRiga(q, st));       // panels side by side follow the width too (and stack when it is too narrow)
-  if (rows || window.DDA && E.panels.some(q => q.dock != null)) { relayout(); if (window.DDA) DDA.sync(); }       // Full Scan and MS2 of a DDA file side by side only when the page is wide enough
+  // panels side by side follow the width too (and stack when it is too narrow)
+  const rows = st.some(q => LAYOUT.inRiga(q, st));
+  // Full Scan and MS2 of a DDA file side by side only when the page is wide enough
+  if (rows || window.DDA && E.panels.some(q => q.dock != null)) { relayout(); if (window.DDA) DDA.sync(); }
 }
 /** Opens a panel from its notebook record (restoreUi, and the Undo of a closed panel); the links to other panels are set by the caller. @param {any} sp */
 function riapriPannello(sp) {
@@ -435,8 +466,10 @@ function riapriPannello(sp) {
 }
 function restoreUi() {
   const u = NB.ui;
-  if (u && u.contEx && window.LISTE) LISTE.exclImport(u.contEx);                 // the contaminant exclusions travel with the session
-  if (u && u.msn && window.INF) INF.restore(u.msn);                              // the grouping of the MSn tree travels with the session
+  // the contaminant exclusions travel with the session
+  if (u && u.contEx && window.LISTE) LISTE.exclImport(u.contEx);
+  // the grouping of the MSn tree travels with the session
+  if (u && u.msn && window.INF) INF.restore(u.msn);
   if (!u || !u.panels || !u.panels.length) return false;
   const names = new Set(E.files.map(f => f.file));
   if (!u.files.every(f => names.has(f.file))) return false;
@@ -446,11 +479,14 @@ function restoreUi() {
   if (u.ref) { const r = u.ref, i = r.k === "auto" ? -1 : E.files.findIndex(f => f.file === r.k); S.ref = { ...S.ref, ...r, k: i < 0 ? "auto" : i, on: { ...(r.on || {}) } }; }
   const made = u.panels.map(sp => riapriPannello(sp));
   u.panels.forEach((sp, i) => { if (sp.link >= 0 && made[sp.link]) made[i].link = made[sp.link].id; if (sp.src >= 0 && made[sp.src]) made[i].src = made[sp.src].id; });
-  u.panels.forEach((sp, i) => { for (const k of ["dda", "dock", "duo"]) if (sp[k] != null) made[i][k] = sp[k] >= 0 && made[sp[k]] ? made[sp[k]].id : null; });       // DDA trio: Full Scan / MS2 side by side (dda.js)
+  // DDA trio: Full Scan / MS2 side by side (dda.js)
+  u.panels.forEach((sp, i) => { for (const k of ["dda", "dock", "duo"]) if (sp[k] != null) made[i][k] = sp[k] >= 0 && made[sp[k]] ? made[sp[k]].id : null; });
   if (window.DDA) DDA.restored(made);
-  made.forEach(q => { if (q.type === "spec" && q.link) ctl(q); });     // one live spectrum per chromatogram, even in an old notebook
+  // one live spectrum per chromatogram, even in an old notebook
+  made.forEach(q => { if (q.type === "spec" && q.link) ctl(q); });
   if (E.files[E.cur]?.kind !== E.tab) STATO.file((tabFiles()[0] || { k: 0 }).k, "notebook");
-  if (typeof stackBlocks === "function") stackBlocks();       // a session saved with one type at a time: the blocks go one under the other
+  // a session saved with one type at a time: the blocks go one under the other
+  if (typeof stackBlocks === "function") stackBlocks();
   renderFileList(); return true;
 }
 
@@ -468,7 +504,8 @@ function paintFiles() {
   E.files.forEach(f => { f.rank = null; });
   const cal = E.files.filter(f => !f.gone && f.kind === "mrm" && f.type === "standard" && f.conc != null).sort((a, b) => a.conc - b.conc || a.k - b.k), inCal = new Set(cal);
   PLAIN = !!P.plain || (UIP.pal === "time" && !inScale.size && !cal.length);
-  if (PLAIN) {                                               // nothing to draw on a time scale: a different colour per file, never grey or black
+  // nothing to draw on a time scale: a different colour per file, never grey or black
+  if (PLAIN) {
     let m = 0;
     E.files.forEach(f => { if (f.type === "blank") { if (!f.colorSet) f.color = blankCol; } else if (!f.colorSet) f.color = PAL[m++ % PAL.length]; else m++; });
     return;
@@ -543,10 +580,12 @@ function bindFileRows() {
     row.onclick = e => {
       if (e.target.closest("input") || e.target.closest(".pr-tog")) return;
       const f0 = E.files[+nm.dataset.k];
-      if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {          // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
+      // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
+      if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {
         sibsOf(f0).forEach(f => { f.vis = true; }); STATO.file(f0.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
       }
-      if (lrTog() && f0 && (!E.panels.length || !f0.vis)) {          // a hidden file (or an empty work area): the file opens with the starting layout of its type (MRM: its chromatograms; Full Scan: TIC + spectrum...); panels left without a visible file are closed, none stays empty
+      // a hidden file (or an empty work area): the file opens with the starting layout of its type (MRM: its chromatograms; Full Scan: TIC + spectrum...); panels left without a visible file are closed, none stays empty
+      if (lrTog() && f0 && (!E.panels.length || !f0.vis)) {
         const far = E.panels.length && f0.kind !== E.tab;
         sibsOf(f0).forEach(f => { f.vis = true; }); STATO.file(f0.k, "file"); setTab(f0.kind); ensureLayout(); cleanupOrphanPanels(); renderFileList(); renderNav(); redrawAll(); uiSave();
         if (far) scrollToBlock(f0.kind); return;
@@ -670,9 +709,11 @@ const typeTag = blank => `<abbr class="ftag" title="${blank ? I18N.t("files.type
 function renderFileList() {
   // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file. ALL the files are listed, all of them live
   const groups = [];
-  const side = window.BANCO && BANCO.on() ? E.files.filter(f => !f.gone && f.kind !== "mrm") : E.files.filter(f => !f.gone);       // both worlds list the files of every experiment, all of them live
+  // both worlds list the files of every experiment, all of them live
+  const side = window.BANCO && BANCO.on() ? E.files.filter(f => !f.gone && f.kind !== "mrm") : E.files.filter(f => !f.gone);
   side.forEach(f => { const g = grpOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
-  groups.forEach(G => { if (G.g === "hr.dda") G.fs = G.fs.filter((f, i, a) => a.findIndex(x => fileBase(x.file) === fileBase(f.file)) === i); });       // a DDA file is ONE row (its Full Scan and MS2 parts open together)
+  // a DDA file is ONE row (its Full Scan and MS2 parts open together)
+  groups.forEach(G => { if (G.g === "hr.dda") G.fs = G.fs.filter((f, i, a) => a.findIndex(x => fileBase(x.file) === fileBase(f.file)) === i); });
   if (window.BANCO && BANCO.on() && E.tab === "mrm") groups.sort((a, b) => ["standard", "sample", "blank"].indexOf(a.g) - ["standard", "sample", "blank"].indexOf(b.g));
   const sub = f => f.type === "sample" ? fmtTime(f.time) : (f.type === "blank" ? typeTag(true) : typeTag(false) + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
   const row = f => {
@@ -747,7 +788,8 @@ function renderFileList() {
   renderNav();
 }
 // right click on a file of the list: rename (only a label, the file on disk is not touched), colour, remove from the session
-const FILE_COLORS = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#56B4E9", "#F0E442", "#000000", "#7a3b9b", "#8a8a8a"];   // Okabe-Ito + 2: distinguishable with colour-blindness
+// Okabe-Ito + 2: distinguishable with colour-blindness
+const FILE_COLORS = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#56B4E9", "#F0E442", "#000000", "#7a3b9b", "#8a8a8a"];
 async function renameFile(f) { const v = await ask(I18N.t("files.rename.prompt"), f.label); if (v) { f.label = v; renderFileList(); renderNav(); redrawAll(); uiSave(); } }
 // double click on the colour square: the colour picker opens straight away. The browser's own picker hangs from the (invisible) input: the input sits at the square,
 // moved so that the picker (about COLOR_BOX) keeps COLOR_MARGIN px from every edge of the window
@@ -805,16 +847,21 @@ const scanFiles = l => l.filter(f => f.kind !== "mrm");
 // ------------------------------------------------------------------ barra: frecce tra i file, metodo, esporta
 function renderNav() {
   const s = Q("#fsel"); if (!s) return;
-  const shortName = n => n.length > 34 ? n.slice(0, 20) + "…" + n.slice(-13) : n;          // a very long name is cut in the middle, so the final time stays visible
+  // a very long name is cut in the middle, so the final time stays visible
+  const shortName = n => n.length > 34 ? n.slice(0, 20) + "…" + n.slice(-13) : n;
   s.innerHTML = tabFiles().map(f => `<option value="${f.k}" ${f.k === E.cur ? "selected" : ""} title="${EH(f.label)}">${EH(shortName(f.label))}</option>`).join("");
   const cur = tabFiles().find(f => f.k === E.cur);
   const g = /** @type {CanvasRenderingContext2D} */ (document.createElement("canvas").getContext("2d")), cs = getComputedStyle(s); g.font = `${cs.fontSize} ${cs.fontFamily}`;
-  s.style.width = Math.ceil(Math.max(0, ...[...s.options].map(o => g.measureText(o.textContent).width)) + 36) + "px";   // as wide as the longest name (CSS sets the minimum and the maximum)
-  const tf = tabFiles(), one = tf.length <= 1, why = I18N.t("nav.needMore");   // with a single file nothing here has a meaning
-  syncBrowse();                                                      // one file shown (ticked) = the graphs follow it; several = overlaid, the active one drives the spectrum
+  // as wide as the longest name (CSS sets the minimum and the maximum)
+  s.style.width = Math.ceil(Math.max(0, ...[...s.options].map(o => g.measureText(o.textContent).width)) + 36) + "px";
+  // with a single file nothing here has a meaning
+  const tf = tabFiles(), one = tf.length <= 1, why = I18N.t("nav.needMore");
+  // one file shown (ticked) = the graphs follow it; several = overlaid, the active one drives the spectrum
+  syncBrowse();
   [Q("#fprev"), Q("#fnext"), Q("#fsel")].forEach(b => { if (b.dataset.t0 == null) b.dataset.t0 = b.title; b.disabled = one; b.title = one ? why : b.dataset.t0; });
   if (cur && !s.disabled) s.title = cur.label;                       // the whole name, also when it had to be cut
-  const sig = [E.browse, E.cur, tabFiles().length, E.tab].join("|"); if (/** @type {any} */ (renderNav)._sig !== sig) { /** @type {any} */ (renderNav)._sig = sig; E.panels.forEach(q => q.el && ctl(q)); }      // the graphs' own file choosers depend on the mode
+  // the graphs' own file choosers depend on the mode
+  const sig = [E.browse, E.cur, tabFiles().length, E.tab].join("|"); if (/** @type {any} */ (renderNav)._sig !== sig) { /** @type {any} */ (renderNav)._sig = sig; E.panels.forEach(q => q.el && ctl(q)); }
 }
 Q("#fprev").onclick = () => goFile(-1); Q("#fnext").onclick = () => goFile(1);
 Q("#fsel").onchange = e => activeFile(+e.target.value);
@@ -823,7 +870,8 @@ document.addEventListener("mousedown", e => { const t = /** @type {Element} */ (
 // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom: the function declaration of a classic script wins at run time
 function toolbar() {
   if (window.BANCO) BANCO.bar();       // high-resolution bench: its toolbar (banco.js)
-  const has = (/** @type {string} */ t) => tabFiles(t).length > 0, scan = has("full") || has("ms2") || has("infusion"), mrm = has("mrm"), empty = !scan && !mrm;       // the buttons follow the experiment types the files have
+  // the buttons follow the experiment types the files have
+  const has = (/** @type {string} */ t) => tabFiles(t).length > 0, scan = has("full") || has("ms2") || has("infusion"), mrm = has("mrm"), empty = !scan && !mrm;
   Q("#np-chrom").hidden = !scan; Q("#np-spec").hidden = !scan; Q("#np-map").hidden = !has("full"); Q("#np-xic").hidden = !scan;
   Q("#np-mrm").hidden = !mrm;
   Q("#g-add").hidden = empty; Q("#g-tools").hidden = empty; Q("#g-file").hidden = empty; Q("#dpanels").hidden = empty; Q("#tools .sp").hidden = empty; Q("#np-method").hidden = empty;
@@ -882,35 +930,43 @@ function menu(ev, items) {
     if (it.aria) d.setAttribute("aria-label", it.aria);
     d.setAttribute("role", it.check != null ? "menuitemcheckbox" : "menuitem");
     if (it.check != null) d.setAttribute("aria-checked", String(!!it.check));
-    if (it.id) d.dataset.azione = it.id;                       // an action of the registry azioni/1: the same id in every menu that offers it
-    if (it.dim) { d.className = "dim"; if (it.id) { d.tabIndex = -1; d.setAttribute("aria-disabled", "true"); } }     // an action not available now: grey, still reachable from the keyboard
+    // an action of the registry azioni/1: the same id in every menu that offers it
+    if (it.id) d.dataset.azione = it.id;
+    // an action not available now: grey, still reachable from the keyboard
+    if (it.dim) { d.className = "dim"; if (it.id) { d.tabIndex = -1; d.setAttribute("aria-disabled", "true"); } }
     else { d.tabIndex = -1; d.onclick = () => { m.hidden = true; it.fn(); }; }
     m.appendChild(d);
   });
   m.hidden = false; m.setAttribute("role", "menu");
-  if (!m._kb) { m._kb = true; m.addEventListener("keydown", e => {                 // keyboard: arrows move, Enter/Space choose, Esc closes
+  // keyboard: arrows move, Enter/Space choose, Esc closes
+  if (!m._kb) { m._kb = true; m.addEventListener("keydown", e => {
     const its = [...m.querySelectorAll('div[role^=menuitem]:not(.dim), div[aria-disabled=true]')], i = its.indexOf(document.activeElement);
     if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (its.length) its[(i + (e.key === "ArrowDown" ? 1 : -1) + its.length) % its.length].focus(); }
     else if (e.key === "Enter" || e.key === " ") { if (i >= 0) { e.preventDefault(); if (!its[i].hasAttribute("aria-disabled")) its[i].click(); } }
     else if (e.key === "Escape") { e.preventDefault(); m.hidden = true; if (m._ret && m._ret.focus) m._ret.focus(); }
   }); }
   m._ret = ev.kbd ? document.activeElement : null; m._lp = !!ev.lp; m._t = Date.now();
-  const off = document.documentElement.classList.contains("touch") ? 16 : 0;      // with a finger the menu opens beside it: lifting the finger must not click an item
+  // with a finger the menu opens beside it: lifting the finger must not click an item
+  const off = document.documentElement.classList.contains("touch") ? 16 : 0;
   m.style.left = Math.min(ev.clientX + off, innerWidth - 270) + "px";
   m.style.top = Math.max(4, Math.min(ev.clientY + off, innerHeight - m.offsetHeight - 8)) + "px";
   if (ev.kbd) { const f = m.querySelector('div[role^=menuitem]:not(.dim)'); if (f) f.focus(); }
 }
 document.addEventListener("pointerup", () => { const m = Q("#ctx"); if (m._lp && !m.hidden) m._up = Date.now(); }, true);
-document.addEventListener("click", () => { const m = Q("#ctx"); if (m._lp && m._up && Date.now() - m._up < 400) { m._lp = false; m._up = 0; return; } m.hidden = true; });       // a long press opens the menu: the click that may follow the lifted finger must not close it
-document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });      // the Correzione menu closes when the click is elsewhere
+// a long press opens the menu: the click that may follow the lifted finger must not close it
+document.addEventListener("click", () => { const m = Q("#ctx"); if (m._lp && m._up && Date.now() - m._up < 400) { m._lp = false; m._up = 0; return; } m.hidden = true; });
+// the Correzione menu closes when the click is elsewhere
+document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".corrm:not([hidden])").forEach(m => { m.hidden = true; }); });
-document.addEventListener("keydown", e => { if (e.key === "Escape") { /** @type {any} */ (e)._ctxWas = !Q("#ctx").hidden; if (/** @type {any} */ (e)._ctxWas) e.preventDefault(); Q("#ctx").hidden = true; } });      // _ctxWas: this Esc only closed the menu (the full-screen handler below leaves the panel alone)
+// _ctxWas: this Esc only closed the menu (the full-screen handler below leaves the panel alone)
+document.addEventListener("keydown", e => { if (e.key === "Escape") { /** @type {any} */ (e)._ctxWas = !Q("#ctx").hidden; if (/** @type {any} */ (e)._ctxWas) e.preventDefault(); Q("#ctx").hidden = true; } });
 // CSV/TSV text carries its provenance line (PROV, schema provenienza/1) by default; prov = the fields the export knows ({table, p, file}), or false for a file made for another program (mzFinder).
 // `text` is a string, a Blob/Uint8Array or an (async) iterable of those: an iterable, or a string/Blob over 8 MB, goes piece by piece through OPFS (export-pezzi.js) with the same bytes.
 async function dl(name, text, type = "application/octet-stream", prov = undefined) {
   const iter = typeof text !== "string" && !(text instanceof Blob) && !(text instanceof Uint8Array) && !!text && (Symbol.asyncIterator in text || Symbol.iterator in text);
   const size = iter ? 0 : typeof text === "string" ? text.length : text.size || text.byteLength || 0;
-  if ((iter || size >= 8 << 20) && window.carica) await window.carica("m:export-pezzi.js").catch(console.error);          // the piece-by-piece writer is loaded on the first big export
+  // the piece-by-piece writer is loaded on the first big export
+  if ((iter || size >= 8 << 20) && window.carica) await window.carica("m:export-pezzi.js").catch(console.error);
   const EP = /** @type {any} */ (window).EXPORT_PEZZI, tab = /csv|tab-separated/.test(type);
   if (prov !== false && tab && typeof text === "string") text = await PROV.tsv(text, prov || {});
   else if (prov !== false && tab && EP && EP.isIter(text)) { const src = text; text = (async function* () { let first = true; for await (const p of src) { yield first && typeof p === "string" ? await PROV.tsv(p, prov || {}) : p; first = false; } })(); }
@@ -925,7 +981,8 @@ function plotSheets(p) {
   const cols = [], yt = p.kind === "pda" ? I18N.t("export.col.pdaSignal") : p.kind === "press" ? I18N.t("axis.pressure") : I18N.t("export.col.intensity");
   if (p.type === "spec") a.data.forEach(x => { cols.push([`m/z - ${x.f.label}`, x.d.mz], [`${I18N.t("export.col.intensity")} - ${x.f.label}`, x.d.y0 || x.d.y]); });
   else if (a.sr) {
-    const same = p.type === "chrom" && a.sr.length > 1 && a.sr.every(q => q.x.length === a.sr[0].x.length && q.x.every((v, i) => v === a.sr[0].x[i]));   // total chromatograms of one run type share the time axis: one RT column
+    // total chromatograms of one run type share the time axis: one RT column
+    const same = p.type === "chrom" && a.sr.length > 1 && a.sr.every(q => q.x.length === a.sr[0].x.length && q.x.every((v, i) => v === a.sr[0].x[i]));
     if (same) { cols.push(["RT (min)", a.sr[0].x]); a.sr.forEach(sr => cols.push([`${yt} - ${sr.name}`, sr.y])); }
     else a.sr.forEach(sr => { cols.push([`RT (min) - ${sr.name}`, sr.x], [`${yt} - ${sr.name}`, sr.y]); });
   }

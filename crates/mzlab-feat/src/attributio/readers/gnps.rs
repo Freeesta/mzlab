@@ -8,6 +8,7 @@ use crate::attributio::campaign::Campaign;
 use crate::attributio::error::Result;
 use crate::attributio::frame::{Cell, Record};
 use crate::attributio::io::{join, Io};
+use crate::sortc::SortC;
 use std::collections::{HashMap, HashSet};
 
 const DB_PREFIXES: [&str; 5] = [
@@ -189,7 +190,7 @@ pub fn load_gnps_library(
             smiles: text_at(&g, r, "Smiles"),
         });
     }
-    rows.sort_by(|a, b| b.exact.cmp(&a.exact).then(desc_na_last(a.score, b.score)));
+    rows.sortc_by(|a, b| b.exact.cmp(&a.exact).then(desc_na_last(a.score, b.score)));
     Ok(dedup_first(rows, |h| (h.pol.clone(), h.id)))
 }
 

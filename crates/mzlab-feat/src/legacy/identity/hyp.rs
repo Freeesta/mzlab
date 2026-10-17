@@ -1,6 +1,7 @@
 //! The neutral-mass hypotheses of a connected component of the identity graph (`hr/identity.py::_hypotheses`).
 
 use super::*;
+use crate::sortc::SortC;
 
 /// The role of a member in a hypothesis.
 #[derive(Clone)]
@@ -111,7 +112,7 @@ pub(super) fn grow(c: &Ctx, ms: &[usize], fs: &[Feat], role: &mut Vec<(usize, Ro
 /// `hypotheses`: neutral masses that explain the members, best first.
 pub(super) fn hypotheses(c: &Ctx, ms: &[usize], fs: &[Feat], maxa: &[f64]) -> Vec<Hyp> {
     let mut cap: Vec<usize> = ms.to_vec();
-    cap.sort_by(|&a, &b| maxa[b].total_cmp(&maxa[a]));
+    cap.sortc_by(|&a, &b| maxa[b].total_cmp(&maxa[a]));
     cap.truncate(c.o.max_hyp);
     let mut cands: Vec<(f64, &str)> = Vec::new();
     for &i in &cap {
@@ -127,7 +128,7 @@ pub(super) fn hypotheses(c: &Ctx, ms: &[usize], fs: &[Feat], maxa: &[f64]) -> Ve
             cands.push((n, "mzmine"));
         }
     }
-    cands.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(b.1)));
+    cands.sortc_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(b.1)));
     let mut clusters: Vec<(f64, bool)> = Vec::new();
     for (m, src) in cands {
         match clusters.last_mut() {
@@ -166,7 +167,7 @@ pub(super) fn hypotheses(c: &Ctx, ms: &[usize], fs: &[Feat], maxa: &[f64]) -> Ve
             roles: role,
         });
     }
-    out.sort_by(|a, b| {
+    out.sortc_by(|a, b| {
         b.roles
             .len()
             .cmp(&a.roles.len())
@@ -230,7 +231,7 @@ pub(super) fn hyp_out(h: Option<&Hyp>, fs: &[Feat], o: &mut Out) {
 
 /// `numpy.median`.
 pub(super) fn median(mut v: Vec<f64>) -> f64 {
-    v.sort_by(f64::total_cmp);
+    v.sortc_by(f64::total_cmp);
     let n = v.len();
     if n % 2 == 1 {
         v[n / 2]

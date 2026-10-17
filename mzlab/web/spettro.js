@@ -20,7 +20,8 @@ const measKey = p => JSON.stringify([p.zoom, p.r0, p.r1, p.k, p.level, p.si, p.p
 function measClick(p, m) {
   p.meas = p.meas || { ref: null, list: [], key: measKey(p) };
   if (p.meas.ref == null) p.meas.ref = m;
-  else if (Math.abs(m - p.meas.ref) > (p._a && p._a.hrp ? 0.001 : 0.04)) p.meas.list.push({ a: p.meas.ref, b: m });          // one more measure from the same reference
+  // one more measure from the same reference
+  else if (Math.abs(m - p.meas.ref) > (p._a && p._a.hrp ? 0.001 : 0.04)) p.meas.list.push({ a: p.meas.ref, b: m });
   draw(p); uiSave();
 }
 function measSet(p, m) { p.meas = p.meas || { ref: null, list: [], key: measKey(p) }; p.meas.ref = m; draw(p); uiSave(); }
@@ -51,7 +52,8 @@ function measCtx(p, px, py) {
 }
 function drawMeas(p, g, X, Y, W) {
   const m = p.meas; if (!m || p._exp && false) return;
-  if (m.key == null) m.key = measKey(p); else if (m.key !== measKey(p)) { p.meas = null; return; }       // zoom or scan changed: the measure is cancelled
+  // zoom or scan changed: the measure is cancelled
+  if (m.key == null) m.key = measKey(p); else if (m.key !== measKey(p)) { p.meas = null; return; }
   const ac = css("--accent"), x0 = M.l, x1 = W - M.r;
   g.save(); g.beginPath(); g.rect(x0, M.t - 1, x1 - x0, 400); g.clip();
   g.strokeStyle = g.fillStyle = ac; g.lineWidth = 1; g.font = fpx(12); g.textAlign = "center";
@@ -65,20 +67,24 @@ function drawMeas(p, g, X, Y, W) {
     g.lineWidth = 1.4; g.beginPath(); g.moveTo(xa, y - 4); g.lineTo(xa, y + 4); g.moveTo(xa, y); g.lineTo(xb, y); g.moveTo(xb, y - 4); g.lineTo(xb, y + 4); g.stroke(); g.lineWidth = 1;
     const dd = Math.abs(q.b - q.a), hr = !!(p._a && p._a.hrp), ap = adductPair(dd, hr, specPol(p)), mid = (xa + xb) / 2;
     const num = dd.toFixed(hr ? p._a.dec : 1) + (hr ? ` (${(dd * 1000).toFixed(1)} mDa)` : "");
-    /** @type {[string, string][]} */ const parts = ap ? [[ap.short, ""]] : [["Δ", ""], ["m/z", "italic "], [" " + num, ""]];             // «m/z» is a symbol of a quantity: italic, with the Δ and the number upright
+    // «m/z» is a symbol of a quantity: italic, with the Δ and the number upright
+    /** @type {[string, string][]} */ const parts = ap ? [[ap.short, ""]] : [["Δ", ""], ["m/z", "italic "], [" " + num, ""]];
     const ws = parts.map(([t, st]) => { g.font = fpx(12, st); return g.measureText(t).width; }), wt = ws.reduce((u, v) => u + v, 0);
     const bx = Math.max(x0 + 2, Math.min(x1 - wt - 2, mid - wt / 2)); let cx = bx;
     g.textAlign = "left"; g.lineJoin = "round";
     parts.forEach(([t, st], j) => { g.font = fpx(12, st); g.lineWidth = 3; g.strokeStyle = css("--panel"); g.strokeText(t, cx, y - 5); g.fillStyle = ac; g.fillText(t, cx, y - 5); cx += ws[j]; });
     g.font = fpx(12); g.strokeStyle = ac; g.lineWidth = 1;
-    const fv = `<i>m/z</i> ${num}`;                                                                    // the label is a target of the hover box and of the right click (eventi.js)
+    // the label is a target of the hover box and of the right click (eventi.js)
+    const fv = `<i>m/z</i> ${num}`;
     (p._a.lbls = p._a.lbls || []).push({ x: bx - 3, y: y - 5 - 13 * fz(), w: wt + 6, h: 5 + 13 * fz(), dm: dd, ap, hr, tip: ap ? `<b>${ap.full}</b> · Δ${fv}<div class="sm">${I18N.t("spec.dm.tip.ad")}</div>` : `Δ${fv}<div class="sm">${I18N.t("spec.dm.tip.ls")}</div>` });
   });
   g.restore();
 }
-function specClick(p, px, py) {                  // a click on the spectrum (no drag): the ruler picks the nearest visible label, else the nearest peak
+// a click on the spectrum (no drag): the ruler picks the nearest visible label, else the nearest peak
+function specClick(p, px, py) {
   if (!(p.rul || (p.meas && p.meas.ref != null)) || !p._a || !p._a.snap) return;
-  /** @type {any} */ let lb = null, bd = 34;                          // the m/z labels are the targets (start and end alike): the nearest one within 34 px, whatever the height of the click
+  // the m/z labels are the targets (start and end alike): the nearest one within 34 px, whatever the height of the click
+  /** @type {any} */ let lb = null, bd = 34;
   (p._a.lbls || []).forEach(l => { if (l.m == null) return; const d = Math.abs(l.x + l.w / 2 - px); if (d < bd) { bd = d; lb = l; } });
   if (lb) { measClick(p, lb.m); return; }
   const s = p._a.snap(px); if (s) measClick(p, s.m);
@@ -140,7 +146,8 @@ function toggleTl(p) {
 
 // ---------------------------------------------------------------- one line under the spectrum: which scan it is
 function scanLine(p, data, d0) {
-  const f = data[0].f, parts = [], i = p.si != null ? p.si : d0.i0, n = d0.n;       // only what the title does not say: which scan(s), and for MS2 the precursor and the energy
+  // only what the title does not say: which scan(s), and for MS2 the precursor and the energy
+  const f = data[0].f, parts = [], i = p.si != null ? p.si : d0.i0, n = d0.n;
   parts.push(d0.scans === 1 && i != null ? I18N.t("spec.scanLine.one", { i: i + 1, of: n ? "/" + n : "" }) : I18N.t("spec.scanLine.avg", { n: d0.scans }));
   if (p.level === 2) { const ce = p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null; parts.push(I18N.t("spec.scanLine.prec", { prec: p.prec != null ? p.prec : "?" }) + (ce != null ? I18N.t("spec.scanLine.ce", { ce }) : "")); }
   return parts.join(" · ");
@@ -197,11 +204,13 @@ async function isoAsk(p) {
   if (!v) return;
   const mm = v.match(/^\s*(\S+)\s*(\[.*\].*)?$/); if (!mm) return;
   let ftxt = mm[1], adt = mm[2];
-  const chg = ftxt.match(/^(.+?)([+\-−])$/);               // a formula written with its charge (C10H14N+, as copied from the drawing): the ion as it is, no proton added
+  // a formula written with its charge (C10H14N+, as copied from the drawing): the ion as it is, no proton added
+  const chg = ftxt.match(/^(.+?)([+\-−])$/);
   if (chg) { ftxt = chg[1]; if (!adt) adt = chg[2] === "+" ? "[M]+" : "[M]-"; }
   try { const r = await getFormula(ftxt, ""); p.iso = { formula: r.formula, ad: (adt || defAdduct(a.data.map(/** @param {any} x */ x => x.f))).trim() };
     const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), pat = QQQRef.isoPattern(ion.n, ion.z);
-    p.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; p._isoKey = JSON.stringify(p.zoom); draw(p); }   // zoom on the pattern (double click: whole spectrum); a later change of zoom switches the simulation off
+    // zoom on the pattern (double click: whole spectrum); a later change of zoom switches the simulation off
+    p.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; p._isoKey = JSON.stringify(p.zoom); draw(p); }
   catch (e) { info(I18N.t("ctx.spec.iso.fail", { message: EH(/** @type {any} */ (e).message) })); }
 }
 // «Resolution of the pattern…» (high resolution): a number or «auto»

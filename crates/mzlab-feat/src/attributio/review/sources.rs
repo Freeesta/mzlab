@@ -5,6 +5,7 @@
 // the hit tables are typed like the ones Attributio builds with pandas. `UsiFetcher` stays out (it needs the network).
 
 use super::tsv::{Cell, Tsv};
+use crate::sortc::SortC;
 
 /// The text of the tool outputs of a campaign, per polarity (`"POS"` then `"NEG"`).
 #[derive(Debug, Clone, Default)]
@@ -74,7 +75,7 @@ impl Sirius {
     /// Row indices ordered by `(pol, id, rank)` with a missing rank last, stable.
     fn by_rank(&self, rank_col: &str) -> Vec<usize> {
         let mut o: Vec<usize> = (0..self.rows.len()).collect();
-        o.sort_by(|a, b| {
+        o.sortc_by(|a, b| {
             (self.pol(*a), self.id(*a))
                 .cmp(&(self.pol(*b), self.id(*b)))
                 .then_with(|| {
@@ -179,7 +180,7 @@ pub fn sirius_hits(texts: &SourceTexts) -> Vec<SiriusHit> {
         }
         all.extend(sirius_kind(&s, kind));
     }
-    all.sort_by(|a, b| {
+    all.sortc_by(|a, b| {
         (a.pol.as_str(), a.id, a.kind)
             .cmp(&(b.pol.as_str(), b.id, b.kind))
             .then_with(|| na_last(a.similarity, b.similarity, true))

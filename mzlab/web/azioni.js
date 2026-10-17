@@ -24,7 +24,8 @@ const AZIONI = (() => {
   function registra(a) {
     if (voci.some(v => v.id === a.id)) throw new Error("AZIONI: id already registered: " + a.id);
     if (!GRUPPI.includes(a.gruppo)) throw new Error("AZIONI: unknown group " + a.gruppo + " of " + a.id);
-    if (!a.icona && typeof AZIONI_ICONE !== "undefined") a.icona = AZIONI_ICONE.POR_ID[a.id];       // the icon of the action: its own key, else the table of azioni-icone.js
+    // the icon of the action: its own key, else the table of azioni-icone.js
+    if (!a.icona && typeof AZIONI_ICONE !== "undefined") a.icona = AZIONI_ICONE.POR_ID[a.id];
     voci.push(a);
     return a;
   }
@@ -126,7 +127,8 @@ const TASTI = (() => {
     const combo = e.ctrlKey || e.metaKey || e.altKey;
     if (document.querySelector("dialog[open]")) return;
     if (!combo && inCampo(e.target)) return;
-    const p = combo ? null : pannelloDi(e.target);                                    // the letters of a chart: only with the focus on it
+    // the letters of a chart: only with the focus on it
+    const p = combo ? null : pannelloDi(e.target);
     const vista = p ? p.type : (typeof S !== "undefined" && S.view) || "data";
     const c = p ? contestoGrafico(p, e) : { vista, p: E.active, e };
     for (const a of conTasto(vista)) {

@@ -4,6 +4,7 @@
 //! Hydrogen accounting of a cleavage: each side takes an H (`cut`); at an ether, ester, amide or sulfonamide bond one side takes OH instead and the other H
 //! (`hydrolysis`, both orientations), as water would split it.
 
+use crate::sortc::SortC;
 use std::collections::BTreeSet;
 
 use mzlab_core::elements::{self, Formula};
@@ -233,7 +234,7 @@ impl Mol {
                     ring.push(x);
                     u = prev[x];
                 }
-                ring.sort_unstable();
+                ring.sortc();
                 found.insert(ring);
             }
         }

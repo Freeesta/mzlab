@@ -60,7 +60,8 @@ const METODO_INCL = (() => {
     });
     const open = (/** @type {number} */ i, /** @type {any} */ ev) => {
       const dlg = document.getElementById("bigdlg"), ctx = document.getElementById("ctx");
-      if (dlg && ctx && ctx.parentElement !== dlg) { dlg.appendChild(ctx); dlg.addEventListener("close", () => document.body.appendChild(ctx), { once: true }); }      // a modal dialog leaves nothing else above it
+      // a modal dialog leaves nothing else above it
+      if (dlg && ctx && ctx.parentElement !== dlg) { dlg.appendChild(ctx); dlg.addEventListener("close", () => document.body.appendChild(ctx), { once: true }); }
       menu(ev, [{ label: "m/z " + n(cur.items[i].mz), dim: true }, "-", ...AZIONI.per(ctxOf(i))]);
     };
     sec.addEventListener("contextmenu", ev => { const i = at(/** @type {Element} */ (ev.target)); if (i >= 0) open(i, ev); });

@@ -16,18 +16,18 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
 
-        # 1. Caricamento file LR d'esempio
+        # 1. Load the LR example file
         pg.set_input_files("#pick", [F_LR])
         pg.wait_for_timeout(800)
         pg.click("text=Carica dati")
         ready(pg)
 
-        # 2. Verifica calcolo SHA-256 nel worker
+        # 2. Check the SHA-256 computation in the worker
         sha = pg.evaluate("() => E.files && E.files[0] ? E.files[0].sha256 : ''")
         assert len(sha) == 64, f"SHA-256 non valido o vuoto: '{sha}'"
         steps.append(("calcolo sha256 durante il caricamento del file", "ok"))
 
-        # 3. Modifica parametri di sessione
+        # 3. Change session parameters
         pg.evaluate("""() => {
             UIP.hrPpm = 8;
             UIP.hrDec = 5;
@@ -35,7 +35,7 @@ try:
             if (typeof uipSave === 'function') uipSave();
         }""")
 
-        # 4. Esportazione .mzflow e verifica contenuto
+        # 4. Export .mzflow and check its content
         with pg.expect_download() as d_info:
             pg.evaluate("() => WORKFLOW.export()")
         download = d_info.value
@@ -53,7 +53,7 @@ try:
         assert len(wf_data.get("operazioni", [])) >= 1
         steps.append(("esportazione .mzflow con sha256 e parametri", "ok"))
 
-        # 5. Ripristino parametri e riapplicazione del flusso di lavoro
+        # 5. Restore the parameters and re-apply the workflow
         pg.evaluate("""() => {
             UIP.hrPpm = 5;
             UIP.hrDec = 4;
@@ -62,7 +62,7 @@ try:
         }""")
         assert pg.evaluate("() => UIP.hrPpm") == 5
 
-        # Riapertura ed applicazione del workflow esportato
+        # Reopen and apply the exported workflow
         applied = pg.evaluate("(wf) => WORKFLOW.applyWorkflow(wf, 'test.mzflow')", wf_data)
         assert applied is True
         assert pg.evaluate("() => UIP.hrPpm") == 8
@@ -70,7 +70,7 @@ try:
         assert pg.evaluate("() => UIP.theme") == "dark"
         steps.append(("riapertura .mzflow e ripristino parametri", "ok"))
 
-        # 6. Test formattazione MGF e MSP in LR (senza annotazioni/nomi - Principio 1)
+        # 6. Test MGF and MSP formatting in LR (no annotations/names - Principle 1)
         mgf_out = pg.evaluate("""() => {
             const spec = {
                 sid: 42,
@@ -113,12 +113,12 @@ try:
         assert "Num Peaks: 2" in msp_out
         steps.append(("formattazione MGF e MSP conforme al Principio 1 (LR)", "ok"))
 
-        # 7. Nessun ingresso nell'interfaccia (la funzione resta nel codice); il vecchio nome si legge ancora
+        # 7. No entry in the interface (the function stays in the code); the old name is still read
         assert pg.query_selector("#session-menu-btn") is None, "la freccina del menu sessione non c'e piu"
         old = dict(wf_data, formato="mzworkflow/1")
         assert pg.evaluate("(wf) => WORKFLOW.applyWorkflow(wf, 'vecchio.mzworkflow')", old) is True
         steps.append(("lettura del vecchio formato mzworkflow/1", "ok"))
-        # 8. Operazioni sconosciute: ignorate (con avviso), il resto si applica
+        # 8. Unknown operations: ignored (with a notice), the rest is applied
         fut = dict(wf_data, operazioni=[{"op": "export_report", "t": "x"}, {"op": "operazione_futura", "t": "y"}])
         assert pg.evaluate("(wf) => WORKFLOW.applyWorkflow(wf, 'f.mzflow')", fut) is True
         ops = pg.evaluate("() => NB.ops.map(o => o.op)")

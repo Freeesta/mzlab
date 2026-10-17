@@ -8,7 +8,8 @@
 //       (saved in the notebook) and an Excel export. The only "conclusion" on the page is the one the student writes.
 /** @type {any} */
 const OG = { res: null, sel: new Set(), traces: new Map(), busy: 0 };
-const ogMsg = w => (w && w.key ? I18N.t(w.key, w.params) : String(w));                // a warning from the server: {key, params}
+// a warning from the server: {key, params}
+const ogMsg = w => (w && w.key ? I18N.t(w.key, w.params) : String(w));
 const ogRole = r => (r.label_key ? I18N.t(r.label_key, r.params) : r.label || r.role);   // a role of a co-eluting ion
 (function () {
   const st = document.createElement("style");

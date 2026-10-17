@@ -8,7 +8,8 @@
   const eh = s => EH(s == null ? "" : s);
   const T_UNITS = ["min", "h", "d"];
   const C_UNITS = ["mg/L", "µg/L", "ng/L", "g/L"];
-  const isDark = name => files().some(f => f.file === name && kindOf(f) === "dark");        // only a dark takes a signed time
+  // only a dark takes a signed time
+  const isDark = name => files().some(f => f.file === name && kindOf(f) === "dark");
 
   // ---------------------------------------------------------------- the section
   function paint(box) {

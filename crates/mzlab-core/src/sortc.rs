@@ -118,6 +118,30 @@ pub fn slice_ord<T: Ord>(v: &mut [T]) {
     slice_by(v, |a, b| a.cmp(b));
 }
 
+/// The cold-path sorts as methods of a slice (`v.sortc_by(cmp)` where std has `v.sort_by(cmp)`), so a call site changes one word.
+pub trait SortC<T> {
+    fn sortc_by<F: FnMut(&T, &T) -> Ordering>(&mut self, cmp: F);
+    fn sortc_by_key<K: Ord, F: FnMut(&T) -> K>(&mut self, key: F);
+    fn sortc(&mut self)
+    where
+        T: Ord;
+}
+
+impl<T> SortC<T> for [T] {
+    fn sortc_by<F: FnMut(&T, &T) -> Ordering>(&mut self, cmp: F) {
+        slice_by(self, cmp);
+    }
+    fn sortc_by_key<K: Ord, F: FnMut(&T) -> K>(&mut self, key: F) {
+        slice_by_key(self, key);
+    }
+    fn sortc(&mut self)
+    where
+        T: Ord,
+    {
+        slice_ord(self);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

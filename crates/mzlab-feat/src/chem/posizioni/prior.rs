@@ -2,6 +2,7 @@
 //! among the sites. A prediction («Prev.»), never evidence: it does not touch the classes, their order, their status or the proposal.
 //! Only for changes made by an electrophilic attack: `+O` (•OH); `+Cl-H` and `+Br-H` carry a caveat (not validated); any other change has none.
 
+use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, round, Out, Value};
 
@@ -78,7 +79,7 @@ fn class_ranks(sites: &[Site], f: &[f64]) -> Vec<(u32, u32)> {
             .collect();
         means.push((s.class, v.iter().sum::<f64>() / v.len() as f64));
     }
-    means.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
+    means.sortc_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
     let (mut rank, mut lead) = (0u32, f64::INFINITY);
     means
         .iter()

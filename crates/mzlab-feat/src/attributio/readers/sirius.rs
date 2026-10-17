@@ -8,6 +8,7 @@ use crate::attributio::campaign::{Campaign, POLARITIES};
 use crate::attributio::error::{CampaignError, Result};
 use crate::attributio::frame::{Cell, Frame, Record};
 use crate::attributio::io::{join, Io};
+use crate::sortc::SortC;
 use std::collections::HashSet;
 
 pub const KEY_FILE: &str = "canopus_structure_summary.tsv";
@@ -30,7 +31,7 @@ pub fn sirius_output_dir(c: &Campaign, io: &Io, pol: &str) -> Option<String> {
         .filter(|e| e.is_dir && e.name.contains(pol) && !e.name.starts_with('.'))
         .map(|e| e.name)
         .collect();
-    subs.sort();
+    subs.sortc();
     subs.into_iter()
         .map(|n| join(&c.sirius_dir, &n))
         .find(|d| has_key(d))
@@ -284,7 +285,7 @@ fn spectral_rows(tables: &[SiriusTable]) -> Result<Vec<SpectralMatch>> {
             });
         }
     }
-    rows.sort_by(|a, b| desc_na_last(a.sim, b.sim));
+    rows.sortc_by(|a, b| desc_na_last(a.sim, b.sim));
     let mut seen = HashSet::new();
     rows.retain(|m| seen.insert((m.pol.clone(), m.id)));
     Ok(rows)

@@ -22,7 +22,8 @@ export async function infoDi(kind, blob) {
   const head = await blob.slice(0, 32).arrayBuffer(), v = new DataView(head);
   if (kind === "idx") {
     const mn = /^MZIDX(\d{3})$/.exec(text(head, 0, 8));
-    if (mn && Number(mn[1]) > 1) return { versione_formato: MASSIMI.idx + Number(mn[1]) - 1, crate: null, sorgente_sha256: null };       // a newer magic: the layout is unknown
+    // a newer magic: the layout is unknown
+    if (mn && Number(mn[1]) > 1) return { versione_formato: MASSIMI.idx + Number(mn[1]) - 1, crate: null, sorgente_sha256: null };
     if (!mn) return null;
     const m = await metaOf(blob, Number(v.getBigUint64(16, true)), Number(v.getBigUint64(24, true)));
     return { versione_formato: v.getUint32(8, true), crate: (m && m.crate) || null, sorgente_sha256: (m && m.source && m.source.sha256) || null };
