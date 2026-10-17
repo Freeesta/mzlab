@@ -206,7 +206,7 @@ fn dig_and_views(e: &Env, proofs: &[u8], registry: &str, files_json: &str, paren
     if let Some(c) = d.cands.first() {
         assert_eq!(
             e.r("finder/detail", json!({"id": c.row})),
-            legacy::out::detail(&d, c.row).unwrap()
+            legacy::out::detail(&d, c.id()).unwrap()
         );
     }
     let piece =

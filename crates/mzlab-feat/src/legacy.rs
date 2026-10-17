@@ -5,6 +5,7 @@
 pub mod dig;
 pub mod edge;
 pub mod formula;
+pub mod hidden;
 #[cfg(feature = "chem")]
 pub mod fragtree;
 pub mod identity;
@@ -14,6 +15,7 @@ pub mod lrisf;
 pub mod ms2;
 #[cfg(feature = "chem")]
 pub mod msn;
+pub mod network;
 pub mod out;
 pub mod progress;
 pub mod sample;

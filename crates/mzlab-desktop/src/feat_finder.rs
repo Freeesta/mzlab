@@ -46,7 +46,7 @@ impl State {
             name => {
                 let mut m = Msn::new(&mut self.open_idx(name)?, s("parent")).map_err(user)?;
                 let out = m
-                    .summary(&out, |id| legacy::out::detail(&d, id as usize))
+                    .summary(&out, |id| legacy::out::detail(&d, id as i64))
                     .map_err(user)?;
                 (out, Some(m))
             }
@@ -221,17 +221,18 @@ impl State {
         let FeatState { dig, msn, .. } = &mut *g;
         let d = dig.as_ref().ok_or_else(|| Error::new("error.featState"))?;
         let id = p["id"].as_u64().unwrap_or(0) as usize;
+        let sid = p["id"].as_i64().unwrap_or(0);
         text(match (op, msn.as_mut()) {
             ("finder/msn_tree", m) => m.map_or("null".to_string(), |m| m.msn_tree()),
-            ("finder/detail", None) => legacy::out::detail(d, id).map_err(user)?,
-            ("finder/detail", Some(m)) => m.detail(&legacy::out::detail(d, id).map_err(user)?),
+            ("finder/detail", None) => legacy::out::detail(d, sid).map_err(user)?,
+            ("finder/detail", Some(m)) => m.detail(&legacy::out::detail(d, sid).map_err(user)?),
             ("finder/inclusion_csv", _) => legacy::out::inclusion_csv(d, id),
             ("finder/frag_tree", None) => legacy::fragtree::of_dig(d),
             ("finder/frag_tree", Some(m)) => m.frag_tree(),
             (_, None) => legacy::fragtree::COMPARE_NONE.to_string(),
             (_, Some(m)) => {
                 // "candidate not found", and the localisation the comparison uses
-                m.detail(&legacy::out::detail(d, id).map_err(user)?);
+                m.detail(&legacy::out::detail(d, sid).map_err(user)?);
                 m.frag_tree_compare(id as u32)
             }
         })

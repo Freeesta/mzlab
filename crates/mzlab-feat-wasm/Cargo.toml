@@ -11,13 +11,14 @@ crate-type = ["cdylib", "rlib"]
 [features]
 # Six .wasm come from this crate (the five of the list and `untargeted`), each under 500 KB (the CI builds them with --no-default-features): `detect` = L1-L6 (detect_file, align_series), `proofs` = L7-L9
 # (run_hypotheses, build_evidence), `mrm` = L1-L6 of the MRM files (detect_mrm_file, align_mrm_series; it carries the reader of the chromatograms of the mzML,
-# loaded only for an MRM series), `finder` = what the Pyodide of mzFinder served (classify, formula_info, identity_graph, polarity_pairs, the Dig of a high-resolution series and its fragmentation tree; it turns on `mzlab-feat/chem` for the SMILES), `finder_msn` = the MSn tree of the standard, its library and the localisation of the products (loaded only when a file of the series is MSn). All on (the default) is the native build used by the tests and the examples.
-default = ["detect", "proofs", "mrm", "finder", "finder_msn"]
+# loaded only for an MRM series), `finder` = what the Pyodide of mzFinder served (classify, formula_info, identity_graph, polarity_pairs, the Dig of a high-resolution series and its fragmentation tree; it turns on `mzlab-feat/chem` for the SMILES), `finder_edge` = identity_graph, polarity_pairs and origin_evidence (a .wasm of its own, loaded when the page asks for one), `finder_msn` = the MSn tree of the standard, its library and the localisation of the products (loaded only when a file of the series is MSn). All on (the default) is the native build used by the tests and the examples.
+default = ["detect", "proofs", "mrm", "finder", "finder_msn", "finder_edge"]
 detect = []
 proofs = []
 mrm = []
 finder = ["mzlab-feat/chem"]
 finder_msn = ["mzlab-feat/chem"]
+finder_edge = ["mzlab-feat/chem"]
 # `untargeted` = the pipeline after mzmine 3.9.0 (detect_untargeted_to, align_untargeted_to; `docs/agenti/attributio.md`): a .wasm of its own, NOT among the defaults.
 untargeted = ["mzlab-feat/untargeted"]
 

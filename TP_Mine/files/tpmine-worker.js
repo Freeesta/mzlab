@@ -219,6 +219,7 @@ async function runRust(a) {
   say("Ranking the candidates...");
   const ix = await openIdx(plan.lc);
   try { dig = f.finder_dig(filesJson, parentJson, e.table, h.registry, ix.read, ix.sizes); } finally { ix.close(); }
+  dig.set_rules(rules);          // the rules of the network of mass differences
   lap("dig", t); t = performance.now(); last = "rust"; msn = null; lastRun = { table: e.table, lc: plan.lc, files: JSON.parse(filesJson) };
   live(JSON.parse(dig.summary("{}", "{}")).rows);
   if (x) { step("tree"); await msnTree(x.name, parentJson); lap("albero", t); }
@@ -321,7 +322,7 @@ async function call(fn, a) {
   if (fn === "transf_rows" && !init.desktop) return (await finder()).finder_transf_rows(a[0]);       // the table of the list of transformations (in the desktop app finder-desktop.js asks the native engine)
   if (init.desktop) return (desk || (desk = (await import(base() + "mzfinder/finder-desktop.js")).createDesktop(base(), say, held))).call(fn, a);
   if (!(await hasRust())) return toPy(fn, a);
-  if (ALWAYS.has(fn)) { const f = await finder(); return fn === "formula_info" ? f.finder_formula_info(a[0], a[1]) : f["finder_" + fn](a[0]); }
+  if (ALWAYS.has(fn)) { const f = await load(fn === "formula_info" ? "finder" : "finder_edge"); return fn === "formula_info" ? f.finder_formula_info(a[0], a[1]) : f["finder_" + fn](a[0]); }
   if (fn === "classify") {
     const names = JSON.parse(a[0]);
     await ensureIdx(names).catch(e => console.warn("mzFinder: indexing failed, Pyodide takes over:", e));

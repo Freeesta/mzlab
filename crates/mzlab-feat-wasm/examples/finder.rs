@@ -49,7 +49,7 @@ fn write(out: &str, d: &legacy::dig::Dig) {
         .cands
         .iter()
         .take(5)
-        .map(|c| legacy::out::detail(d, c.row).expect("detail"))
+        .map(|c| legacy::out::detail(d, c.id()).expect("detail"))
         .collect();
     std::fs::write(o.join("detail.json"), format!("[{}]", det.join(","))).expect("write");
     std::fs::write(o.join("inclusion.csv"), legacy::out::inclusion_csv(d, 0)).expect("write");

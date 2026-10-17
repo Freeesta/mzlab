@@ -1,5 +1,5 @@
-//! The functions of mzFinder that its Pyodide served and Rust now serves (`mzlab_feat::legacy`): `classify`, `formula_info`, `identity_graph`,
-//! `polarity_pairs` and `origin_evidence` with the same JSON, and the Dig of a high-resolution series already through the pipeline (`FinderDig`: `summary`, `detail`,
+//! The functions of mzFinder that its Pyodide served and Rust now serves (`mzlab_feat::legacy`): `classify`, `formula_info`,
+//! `transformations`, and the Dig of a high-resolution series already through the pipeline (`FinderDig`: `summary`, `detail`,
 //! `inclusion_csv`, `frag_tree`, `frag_tree_compare`). Built only into the `.wasm`
 //! of the feature `finder`, loaded by the worker of mzFinder when the page asks for one of them. Errors are JavaScript `Error`s with the English text
 //! that the Python raised.
@@ -55,17 +55,26 @@ pub fn finder_formula_info(text: &str, adduct: &str) -> String {
 #[wasm_bindgen]
 pub struct FinderDig {
     inner: Dig,
+    rules: Option<mzlab_feat::hypo::Rules>,
 }
 
 #[wasm_bindgen]
 impl FinderDig {
     /// The JSON of `api.run`; `settings` and `timing` are JSON objects copied into it.
     pub fn summary(&self, settings: &str, timing: &str) -> String {
-        legacy::out::summary(&self.inner, settings, timing)
+        let net = self.rules.as_ref().map_or("null".into(), |r| {
+            legacy::network::mass_network(&self.inner, r)
+        });
+        legacy::out::summary_with(&self.inner, settings, timing, &net)
+    }
+    /// The `regole_tp` of the hypotheses (with the rows of the user's list): the rules of the network of mass differences.
+    pub fn set_rules(&mut self, rules: &[u8]) -> Result<(), JsValue> {
+        self.rules = Some(mzlab_feat::hypo::Rules::parse(rules).map_err(|e| user(e.to_string()))?);
+        Ok(())
     }
     /// `api.detail(id)`.
-    pub fn detail(&self, id: u32) -> Result<String, JsValue> {
-        legacy::out::detail(&self.inner, id as usize).map_err(user)
+    pub fn detail(&self, id: i32) -> Result<String, JsValue> {
+        legacy::out::detail(&self.inner, i64::from(id)).map_err(user)
     }
     /// `api.inclusion_csv(n)` (0 = the default length).
     pub fn inclusion_csv(&self, n: u32) -> String {
@@ -79,24 +88,6 @@ impl FinderDig {
     pub fn frag_tree_compare(&self, _id: u32) -> String {
         legacy::fragtree::COMPARE_NONE.into()
     }
-}
-
-/// `api.identity_graph(payload)`.
-#[wasm_bindgen]
-pub fn finder_identity_graph(payload: &str) -> Result<String, JsValue> {
-    legacy::identity_graph(payload).map_err(user)
-}
-
-/// `api.polarity_pairs(payload)`.
-#[wasm_bindgen]
-pub fn finder_polarity_pairs(payload: &str) -> Result<String, JsValue> {
-    legacy::polarity_pairs(payload).map_err(user)
-}
-
-/// `api.origin_evidence(payload)`: the evidence of the report «where does this ion come from?».
-#[wasm_bindgen]
-pub fn finder_origin_evidence(payload: &str) -> Result<String, JsValue> {
-    legacy::edge::origin_evidence(payload).map_err(user)
 }
 
 /// `api.run` on high-resolution files: `table` = the `.mzfeat` with the proofs of the LC files (in the order of the files of `files_json` that are
@@ -114,7 +105,7 @@ pub fn finder_dig(
         open(&read, k, sizes.get(k).copied().unwrap_or(f64::NAN))
     })
     .map_err(user)?;
-    Ok(FinderDig { inner })
+    Ok(FinderDig { inner, rules: None })
 }
 
 /// The peak of the parent in the aligned `table` (`.mzfeat` of the LC files): `{"mz", "rt"}` of its row, `{"mz", "rt": null}` when there is none.
