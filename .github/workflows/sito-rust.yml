@@ -67,19 +67,8 @@ jobs:
               print(state, name, *notes[:5])
           sys.exit(any(x[1] == "FAIL" for x in r))
           PY
-      - uses: actions/cache@v4
-        with:
-          path: .pyodide-cache
-          key: pyodide-${{ hashFiles('tools/build_site.py') }}
-      - name: Build the site (downloads Pyodide from jsDelivr)
-        run: |
-          # Pyodide files are checked against the SHA-256 pinned in tools/build_site.py, so a cached copy is as safe as a download
-          if [ -f .pyodide-cache/pyodide.mjs ]; then
-            python tools/build_site.py --pyodide-dir .pyodide-cache
-          else
-            python tools/build_site.py
-            mkdir -p .pyodide-cache && cp site/static/mzfinder/pyodide/* .pyodide-cache/
-          fi
+      - name: Build the site
+        run: python tools/build_site.py
       - name: Build the WASM engine into the site (as pages.yml does)
         run: |
           ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')

@@ -1,4 +1,4 @@
-# Publishes the whole program as a static site: Python + numpy run inside the student's browser (Pyodide).
+# Publishes the whole program as a static site: everything runs in the student's browser (Rust/WASM engine).
 # Nothing is uploaded anywhere: the mzML files stay in the browser of whoever opens the page.
 # One-time setting on GitHub: Settings > Pages > Build and deployment > Source: "GitHub Actions".
 name: pages
@@ -27,19 +27,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - uses: actions/cache@v4
-        with:
-          path: .pyodide-cache
-          key: pyodide-${{ hashFiles('tools/build_site.py') }}
-      - name: Build the site (downloads Pyodide from jsDelivr)
-        run: |
-          # Pyodide files are checked against the SHA-256 pinned in tools/build_site.py, so a cached copy is as safe as a download
-          if [ -f .pyodide-cache/pyodide.mjs ]; then
-            python tools/build_site.py --pyodide-dir .pyodide-cache
-          else
-            python tools/build_site.py
-            mkdir -p .pyodide-cache && cp site/static/mzfinder/pyodide/* .pyodide-cache/
-          fi
+      - name: Build the site
+        run: python tools/build_site.py
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
       # every run restores the newest cache; a new one is saved only when the Rust sources (crates/, vendor/, Cargo.lock) changed: the 10 GB of caches of the repository are not filled by copies of the same build
