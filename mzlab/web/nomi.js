@@ -134,6 +134,7 @@ const NOMI = (function () {
       avvii++;
       ls.setItem("mzlab.avvii", String(avvii));
       if (avvii >= 3) {
+        ls.setItem("mzlab.purged", "1");
         const toRemove = [];
         for (let i = 0; i < ls.length; i++) {
           const k = ls.key(i);
@@ -167,6 +168,68 @@ const NOMI = (function () {
       }
     }
   }
+
+  function hookSetItem(proto) {
+    const orig = proto.setItem;
+    proto.setItem = function (k, v) {
+      orig.call(this, k, v);
+      try {
+        if (typeof k !== "string" || this.getItem("mzlab.purged") === "1") return;
+        const avvii = parseInt(this.getItem("mzlab.avvii") || "1", 10);
+        if (avvii >= 3) return;
+        if (k.startsWith("mzlab.")) orig.call(this, "qqq." + k.slice(6), v);
+        else if (k === "mzlab-theme") orig.call(this, "qqq-theme", v);
+        else if (k === "mzlab-labels") orig.call(this, "qqq-labels", v);
+        else if (k.startsWith("qqq.")) orig.call(this, "mzlab." + k.slice(4), v);
+        else if (k === "qqq-theme") orig.call(this, "mzlab-theme", v);
+        else if (k === "qqq-labels") orig.call(this, "mzlab-labels", v);
+      } catch (_) {}
+    };
+  }
+
+  function hookGetItem(proto) {
+    const orig = proto.getItem;
+    proto.getItem = function (k) {
+      const val = orig.call(this, k);
+      if (val !== null || typeof k !== "string") return val;
+      try {
+        if (k.startsWith("qqq.")) return orig.call(this, "mzlab." + k.slice(4));
+        if (k === "qqq-theme") return orig.call(this, "mzlab-theme");
+        if (k === "qqq-labels") return orig.call(this, "mzlab-labels");
+        if (k.startsWith("mzlab.")) return orig.call(this, "qqq." + k.slice(6));
+        if (k === "mzlab-theme") return orig.call(this, "qqq-theme");
+        if (k === "mzlab-labels") return orig.call(this, "qqq-labels");
+      } catch (_) {}
+      return null;
+    };
+  }
+
+  function hookRemoveItem(proto) {
+    const orig = proto.removeItem;
+    proto.removeItem = function (k) {
+      orig.call(this, k);
+      try {
+        if (typeof k !== "string" || this.getItem("mzlab.purged") === "1") return;
+        if (k.startsWith("qqq.")) orig.call(this, "mzlab." + k.slice(4));
+        else if (k === "qqq-theme") orig.call(this, "mzlab-theme");
+        else if (k === "qqq-labels") orig.call(this, "mzlab-labels");
+        else if (k.startsWith("mzlab.")) orig.call(this, "qqq." + k.slice(6));
+        else if (k === "mzlab-theme") orig.call(this, "qqq-theme");
+        else if (k === "mzlab-labels") orig.call(this, "qqq-labels");
+      } catch (_) {}
+    };
+  }
+
+  function installStorageHooks() {
+    if (typeof window === "undefined" || typeof Storage === "undefined" || !Storage.prototype) return;
+    try {
+      hookSetItem(Storage.prototype);
+      hookGetItem(Storage.prototype);
+      hookRemoveItem(Storage.prototype);
+    } catch (_) {}
+  }
+
+  installStorageHooks();
 
   // Synchronous migration on load
   migrateStorage();

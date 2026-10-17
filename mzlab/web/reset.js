@@ -15,7 +15,8 @@ const RESET = (function () {
   // choices, sidebar layout...); what the user set on purpose stays: language, theme and settings, reading aids, the update notice, library settings, seen hints
   const KEEP_LS = /^((mzlab|qqq)\.(lang|prefs|a11y|set\.a11y|upd\.|reset\.note|lib\.|tour\.|telefono|logo\.)|(mzlab|qqq)-(theme|labels))/;
   // sessionStorage: present while this run of the app lives (a reload keeps it, a new start does not)
-  const RUN_KEY = NOMI.KEY("run");
+  const RUN_KEY = typeof NOMI !== "undefined" ? NOMI.KEY("run") : "mzlab.run";
+  const RUN_KEY_OLD = typeof NOMI !== "undefined" && NOMI.OLD_KEY ? NOMI.OLD_KEY("run") : "qqq.run";
   const MODES = { 1: "all", all: "all", files: "files", cold: "cold" };
   const modeOf = q => MODES[q] || null;
 
@@ -76,7 +77,7 @@ const RESET = (function () {
     window.QQ_RESETTING = true;
     const msg = document.getElementById("ldmsg"); if (msg && window.I18N) msg.textContent = I18N.t("reset.busy");
     const rep = await wipe(mode);
-    if (opt.mark) { try { sessionStorage.setItem(RUN_KEY, "1"); } catch (e) { /* none */ } }
+    if (opt.mark) { try { sessionStorage.setItem(RUN_KEY, "1"); sessionStorage.setItem(RUN_KEY_OLD, "1"); } catch (e) { /* none */ } }
     if (opt.reload === false) return rep;
     const u = new URL(location.href); u.searchParams.delete("reset"); u.searchParams.delete("riparti"); if (rep.blocked.length || mode !== "files") u.searchParams.set("riparti", "1");
     location.replace(u.href);
@@ -109,9 +110,11 @@ const RESET = (function () {
   // Without sessionStorage nothing is reset (it could never be told apart from a reload).
   function cold() {
     try {
-      if (sessionStorage.getItem(RUN_KEY) || sessionStorage.getItem("qqq.run")) return false;
+      if (sessionStorage.getItem(RUN_KEY) || sessionStorage.getItem(RUN_KEY_OLD)) return false;
       sessionStorage.setItem(RUN_KEY, "1");
+      sessionStorage.setItem(RUN_KEY_OLD, "1");
       sessionStorage.removeItem(RUN_KEY);
+      sessionStorage.removeItem(RUN_KEY_OLD);
     } catch (e) { return false; }
     run("cold", { mark: true });
     return true;
