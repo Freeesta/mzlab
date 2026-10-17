@@ -1,5 +1,5 @@
 //! The last steps of the detection: the two grids are merged, the Fourier-transform side lobes are marked (`_merge_grids`,
-//! `fourier_artefacts` of `features.py`).
+//! `fourier_artefacts`).
 
 use crate::sortc;
 use mzlab_core::error::Result;
@@ -8,7 +8,7 @@ use crate::axis::{MassAxis, LR_TOUCH};
 use crate::table::{FileFeatures, FLAG_BACKGROUND, FLAG_FT_LOBE};
 use crate::trace::reserve;
 
-/// A feature before the grids are merged (columns of `F` in `features.py`).
+/// A feature before the grids are merged (the columns of `F`).
 #[derive(Clone, Copy)]
 pub(crate) struct Row {
     pub(crate) mz: f64,

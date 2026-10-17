@@ -1,4 +1,4 @@
-//! The parts of mzFinder ported to Rust (`legacy/`) against the frozen Python answers (`tools/finder_riferimento.py --golden`): `formula_info`, the
+//! The parts of mzFinder ported to Rust (`legacy/`) against the frozen answers of the former Python engine: `formula_info`, the
 //! names of `classify`, the kinetic descriptors, the MS2 consensus, the three components of the MS2 similarity and the MSn tree with its
 //! library and localisation, numbers within 1e-9.
 

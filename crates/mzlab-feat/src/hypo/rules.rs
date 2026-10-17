@@ -58,7 +58,7 @@ fn bad(what: &str) -> Error {
     Error::new("error.hypo.rulesFormat").with("what", what)
 }
 
-/// '+O', '-H2', '-Cl+H', '+C2H4O' -> signed counts (as `tpmine.chem.parse_delta`).
+/// '+O', '-H2', '-Cl+H', '+C2H4O' -> signed counts (as the `parse_delta` of mzFinder).
 pub fn parse_delta(text: &str) -> Result<Counts> {
     let t: String = text.chars().filter(|c| !c.is_whitespace()).collect();
     let t = if t.starts_with(['+', '-']) {

@@ -3,7 +3,7 @@ names of composti.csv), in the `lang/` catalogs (Tabui has no key there) and no 
 import csv, json, re
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 TP = ROOT / "TP_Mine"
 ITALIAN = re.compile(
     r"\b(nessun[a-z]*|della|delle|degli|dello|nella|nelle|sono|questo|questa|perch[eé]|anche|pi[uù]|pu[oò]|oppure|tabella|banco|scegli|apri|chiudi|salva|scarica|errore|avviso|"

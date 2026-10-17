@@ -1,4 +1,4 @@
-//! `best_edges` against the frozen answers of the former Python engine (`hr/network.py::mass_network`, `tests/golden/feat/tp_ms2.json`): the same
+//! `best_edges` against the frozen answers of the former Python engine (the `mass_network` of mzFinder, `tests/golden/feat/tp_ms2.json`): the same
 //! edges (source, product, kinetic consistency) and the exact change of mass (rounded to 1e-5 there). The rule tables have the same changes.
 
 use super::*;

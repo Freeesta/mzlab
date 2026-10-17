@@ -11,8 +11,6 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "tools")]
-if not (ROOT / "TP_Mine" / "py").exists():
-    pytest.skip("TP_Mine/py not available", allow_module_level=True)
 from bench import corri_mzmine, motivi_mzmine as MM, oro_mzmine  # noqa: E402
 from bench.motivi_mzmine import ListaFile  # noqa: E402
 from valida import cancello_misure as M  # noqa: E402

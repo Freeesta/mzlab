@@ -1,5 +1,5 @@
 //! Names and plain-words columns of the Tabui table (Dig): net change against the parent, readable modification and the TP names from the m/z.
-//! Pure functions on formulas, rule names and rows; the Python engine (`tpmine/nomi.py`) does the same and the tests hold the same cases.
+//! Pure functions on formulas, rule names and rows; the tests hold the cases of the former Python engine.
 
 use crate::sortc::SortC;
 use std::collections::BTreeMap;

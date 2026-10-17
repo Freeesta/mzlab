@@ -11,7 +11,7 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e)[:400]))
 tmp = Path(tempfile.mkdtemp())
-sys.path[:0] = [str(ROOT / "TP_Mine" / "tests"), str(ROOT / "TP_Mine" / "py")]
+sys.path[:0] = [str(ROOT / "TP_Mine" / "tests")]
 import lr_synth
 files = lr_synth.write_series(tmp / "lr", times=(0, 15, 60), blank=False)
 paths = [str(f["path"]) for f in files]

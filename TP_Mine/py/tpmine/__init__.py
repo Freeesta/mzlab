@@ -1,2 +1,0 @@
-# TPMINE-PRIVATE
-

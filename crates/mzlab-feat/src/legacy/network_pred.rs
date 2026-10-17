@@ -1,4 +1,4 @@
-//! The predecessors of the candidates (`hr/network.py::predecessors`): for every candidate with a formula, the best source among the parent and the other
+//! The predecessors of the candidates (`predecessors` of mzFinder): for every candidate with a formula, the best source among the parent and the other
 //! candidates, by a known transformation (one step among candidates, up to two from the parent) or by an MS2 related to its own; they mark the edges of
 //! the mass network as «both» or add the «network» edges that no single mass difference gives.
 

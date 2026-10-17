@@ -201,13 +201,6 @@ def pytest(results, timeout) -> None:
     last = [l for l in out.strip().splitlines() if re.search(r"passed|failed|error", l)][-1:] or out.strip().splitlines()[-1:]
     fails = [l for l in out.splitlines() if l.startswith(("FAILED", "ERROR"))][:6]
     results.append(("pytest", "OK" if rc == 0 else "FAIL", dt, (fails or []) + last if rc else last))
-    priv = ROOT / "TP_Mine"
-    if (priv / "tests").is_dir():
-        env = dict(os.environ, PYTHONPATH=f"{ROOT}{os.pathsep}{priv / 'py'}")
-        rc, out, dt = sh([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", str(priv / "tests")], LOG / "pytest_tpmine.log", timeout, env=env)
-        last = out.strip().splitlines()[-1:] if out.strip() else []
-        fails = [l for l in out.splitlines() if l.startswith(("FAILED", "ERROR"))][:4]
-        results.append(("pytest TP Mine", "OK" if rc == 0 else "FAIL", dt, fails + last if rc else last))
 
 
 def dati_repo() -> Path | None:

@@ -1,8 +1,8 @@
 //! Ion families of one file, before any alignment: which peaks are the same molecule seen as an isotopologue, an adduct, a dimer or an
 //! in-source fragment of one ion.
 //!
-//! Port of the relations of `TP_Mine/py/tpmine/hr/iimn.py` (`relations`, `dimer_of`), of `identity.py` (an edge needs co-elution, a known step
-//! and shape correlation) and of `edge_evidence.py` (the proofs of the label). The families are made inside each file, as khipu and asari do:
+//! The relations of mzFinder (`relations`, `dimer_of`), its identity rule (an edge needs co-elution, a known step
+//! and shape correlation) and its edge evidence (the proofs of the label). The families are made inside each file, as khipu and asari do:
 //! the pairs are peaks that co-elute (apex within 0.05 min) and whose traces correlate (Pearson >= 0.9 scan by scan around the apex, within one
 //! FWHM) with a step of the tables in `rel`; the isotopologues come from `isotopes`.
 //! - An **in-source fragment** is declared only with the proof of the MS2 of its parent (its m/z among the fragments of the co-eluting ion) and,
