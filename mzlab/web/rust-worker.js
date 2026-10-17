@@ -280,6 +280,13 @@ async function lrOp(m) {
 const memNow = () => { try { if (engine) engine.trim_cache(); } catch (_) { /* the answer goes out anyway */ } return wasmMem ? wasmMem.buffer.byteLength : 0; };
 let active = 0;                                                                   // requests in flight: the read handles are exclusive, so they are released when the worker is idle
 onmessage = async ev => { active++; try { await handle(ev); } finally { if (--active === 0) await ARCH.parkAll(); } };
+/** the names among `m.names` of samples of the same files as `m.members` with a current index in OPFS */
+async function natSame(/** @type {any} */ m) {
+  const out = [];
+  for (const n of await nativo.same(m.members, m.names || [])) { const ix = await ARCH.get("idx", n + ".mzidx"); if (ix && !nuovo("idx", await safe(() => infoDi("idx", ix)))) out.push(n); }
+  return JSON.stringify({ names: out });
+}
+
 async function handle(ev) {
   const m = ev.data;
   if (m.op === "module") { startInit(m.module); return; } startInit(null);
@@ -307,7 +314,7 @@ async function handle(ev) {
         postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
         return;
       }
-      case "natsamples": info = await nativo.samples(m.members); break;                      // the samples of a maker's dataset (a .wiff holds several), from its members
+      case "natsamples": info = await nativo.samples(m.members); break; case "natsame": info = await natSame(m); break;   // the samples of a maker's dataset (a .wiff holds several), from its members; those already loaded from the same files, whose index is in OPFS
       case "nat2mzml": {                                                              // «Download .mzML»: one sample of a maker's file as mzML on OPFS, written piece by piece
         const sink = await nativo.toMzml(m, p => postMessage({ op: "progress", id, ...p }));
         postMessage({ id, op: m.op, n: sink.parts ? sink.parts.length : 1, parts: sink.parts || null, file: sink.file || null }, sink.parts ? sink.parts.map(a => a.buffer) : []);
