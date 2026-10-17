@@ -242,3 +242,27 @@ fn array_di_lunghezza_diversa() {
         false,
     );
 }
+
+#[test]
+fn uguali_dopo_l_arrotondamento_tra_due_bucket() {
+    // every MS1 scan holds 100.0 and every other one 99.9999999 too (bucket 99 in 64 bits, 100 in 32): with the scratch file the partitions of the two
+    // buckets are read one after the other, and the equal 32-bit m/z must still come in scan order
+    let mut l = Finto::vario(600, 10, 13);
+    for (k, s) in l.schede.iter_mut().enumerate() {
+        let sp = &mut s.spettro;
+        sp.wide = None;
+        if sp.level == 1 {
+            sp.mz = if k % 2 == 1 {
+                vec![99.5, 99.999_999_9, 100.0, 100.5]
+            } else {
+                vec![99.5, 100.0, 100.5]
+            };
+            sp.intensity = (0..sp.mz.len()).map(|j| (k * 10 + j) as f32).collect();
+        }
+    }
+    let mzml = lettori_mzml::scrivi(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "uguali.mzML").unwrap();
+    assert!(pa.table.hr1, "the MS1 sections hold f32");
+    let (idx, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG).unwrap();
+    mzml_con_scratch("uguali", &pa.table, &mzml, &idx);
+}

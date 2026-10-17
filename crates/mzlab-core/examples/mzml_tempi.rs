@@ -1,7 +1,7 @@
 //! Times the load of an mzML (scan table, fingerprints, `.mzidx`) and its writing, with no real file.
 //! `cargo run --release --example mzml_tempi -p mzlab-core -- genera OUT.mzML [SCANS] [PEAKS_PER_SCAN]` writes a synthetic mzML (made-up reader of
 //! `tests/lettore_finto`, timed); `cargo run --release --example mzml_tempi -p mzlab-core -- FILE.mzML [BUDGET_MB]` times, on any mzML, the
-//! scan table (`upload::prepare`), pass-by-pass `.mzidx` (`mzidx::build_mzml`) and the plain parse (`mzml::parse`).
+//! scan table (`upload::prepare`, and `upload::prepare_parallelo` with the fingerprints on a second thread), pass-by-pass `.mzidx` (`mzidx::build_mzml`) and the plain parse (`mzml::parse`).
 #[path = "../tests/lettore_finto/mod.rs"]
 mod finto;
 
@@ -60,6 +60,19 @@ fn main() {
         "prepare (table+prints)  {:>8.3} s ({} scans)",
         t.elapsed().as_secs_f64(),
         p.table.level.len()
+    );
+    let t = Instant::now();
+    let p2 = upload::prepare_parallelo(
+        &mut File::open(path).expect("open"),
+        File::open(path).expect("open"),
+        size,
+        "x.mzML",
+    )
+    .expect("prepare");
+    assert_eq!(p2.sha256, p.sha256);
+    println!(
+        "prepare (prints apart)  {:>8.3} s",
+        t.elapsed().as_secs_f64()
     );
     // without a spool every round decodes the file again; with a spool (a scratch file next to the mzML) it is decoded once
     for con in [false, true] {

@@ -1,16 +1,19 @@
 //! Native builder of the `.mzidx` (`mzlab-core::mzidx`, the same code as the site's Rust workers): the source file is memory-mapped (`memmap2`),
 //! the builds of several files run on a `rayon` thread pool (as many threads as cores minus one, at most 4: the window keeps its core), and the
-//! index is written to the cache folder of the app as `<name>.mzidx` (first as `.mzidx.part`, then renamed). The page asks over `mzlab://`:
+//! index is written to the cache folder of the app as `<name>.mzidx` (first as `.mzidx.part`, then renamed; the peaks past the budget wait in
+//! `<name>.mzidx.sp.part`, removed at the end). The page asks over `mzlab://`:
 //! `idx/build` (POST, body = the scan table, see `decode_inputs`), `idx/read` (the index in pieces, to put it in the archive of the page), `idx/remove`.
 
 use std::fs::File;
 use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use mzlab_core::mzidx::{self, ScanTable, Stats, DEFAULT_BUDGET};
-use mzlab_core::Error;
+use mzlab_core::{upload, Error};
 
 use crate::mapped::Mapped;
+use crate::rpc::MapAt;
 
 pub(crate) fn io_error(e: &std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
@@ -95,13 +98,41 @@ impl IdxBuilder {
     }
 
     /// Builds the index of `source` (an mzML of the disk) as `<name>.mzidx`; waits for a free thread of the pool when several files are being built.
-    pub fn build(&self, source: &Path, name: &str, table: &ScanTable) -> Result<Stats, Error> {
+    /// `table`: the scan table the page sent; `None` reads it here (`upload::prepare_parallelo`: the SHA-256 is taken on a second thread meanwhile).
+    pub fn build(
+        &self,
+        source: &Path,
+        name: &str,
+        table: Option<&ScanTable>,
+    ) -> Result<Stats, Error> {
         let dest = self.path(name)?;
         let part = self.dir.join(format!("{}.mzidx.part", clean(name)?));
         let r = self.pool.install(|| -> Result<Stats, Error> {
-            let map = Mapped::open(source).map_err(|e| io_error(&e))?;
+            let map = Arc::new(Mapped::open(source).map_err(|e| io_error(&e))?);
+            let letta;
+            let table = match table {
+                Some(t) => t,
+                None => {
+                    let size = map.bytes().len() as u64;
+                    letta = upload::prepare_parallelo(
+                        &mut MapAt(map.clone()),
+                        MapAt(map.clone()),
+                        size,
+                        name,
+                    )?;
+                    &letta.table
+                }
+            };
             let mut out = File::create(&part).map_err(|e| io_error(&e))?;
-            mzidx::build_mzml(table, Cursor::new(map.bytes()), &mut out, DEFAULT_BUDGET)
+            self.con_scorta(name, |spill| {
+                mzidx::build_mzml_spill(
+                    table,
+                    Cursor::new(map.bytes()),
+                    &mut out,
+                    DEFAULT_BUDGET,
+                    Some(spill),
+                )
+            })
         });
         match r {
             Ok(st) => {
@@ -113,6 +144,27 @@ impl IdxBuilder {
                 Err(e)
             }
         }
+    }
+
+    /// Runs `f` with the scratch file of `<name>` (`<name>.mzidx.sp.part`: the peaks that do not fit in the budget wait there, so the scans are
+    /// decoded once), removed when `f` returns, whatever it returns.
+    pub(crate) fn con_scorta(
+        &self,
+        name: &str,
+        f: impl FnOnce(&mut File) -> Result<Stats, Error>,
+    ) -> Result<Stats, Error> {
+        let path = self.dir.join(format!("{}.mzidx.sp.part", clean(name)?));
+        let mut spill = File::options()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(&path)
+            .map_err(|e| io_error(&e))?;
+        let r = f(&mut spill);
+        drop(spill);
+        let _ = std::fs::remove_file(&path);
+        r
     }
 
     /// `len` bytes of the index from `off`.

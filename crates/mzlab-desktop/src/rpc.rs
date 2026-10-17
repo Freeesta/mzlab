@@ -121,16 +121,14 @@ impl State {
         Ok(Routes::new(Index::open(r, size)?))
     }
 
-    /// `lr_index`: the scan table and the index of a registered mzML (a thread of the build pool), then the index is opened again on the next request.
+    /// `lr_index`: the scan table and the index of a registered mzML (both on a thread of the build pool), then the index is opened again on the next request.
     pub(crate) fn lr_index(&self, name: &str) -> Result<Answer> {
         let e = self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name).ok_or_else(|| Error::new("err.session.fileNotFound").with("name", name))?;
         let t0 = std::time::Instant::now();
         if let Some(nat) = &e.nat {
             self.indexer()?.build_nat(nat, name)?;
         } else {
-            let (mut rd, size) = map_file(&e.path)?;
-            let prepared = mzlab_core::upload::prepare(&mut rd, size, name)?;
-            self.indexer()?.build(&e.path, name, &prepared.table)?;
+            self.indexer()?.build(&e.path, name, None)?;
         }
         let mut eng = self.eng.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(slot) = eng.lr_slot.get(name).copied() {
