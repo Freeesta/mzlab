@@ -18,8 +18,8 @@ def cold(p, vw, vh, reduced, saved=None):
     r = Run(port=8873, wd="/tmp/wd_transizioni"); r.b = p.chromium.launch()
     ctx = r.b.new_context(viewport={"width": vw, "height": vh}, locale="it-IT", reduced_motion="reduce" if reduced else "no-preference")
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
-    init = "try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');"
-    if "qqq.barra.lr" not in (saved or {}): init += "localStorage.setItem('qqq.barra.lr','{\"open\":false}');"      # the panel opens at first start: these tests slide it open from closed
+    init = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');"
+    if "mzlab.barra.lr" not in (saved or {}): init += "localStorage.setItem('mzlab.barra.lr','{\"open\":false}');"      # the panel opens at first start: these tests slide it open from closed
     for k, v in (saved or {}).items(): init += f"localStorage.setItem('{k}',{v!r});"
     pg.add_init_script(init + "}catch(_){}")
     pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
@@ -55,7 +55,7 @@ try:
                 assert not errs, errs
             finally: ctx.close(); r.close()
         step("left: slide, exact final geometry, one refit, focus kept", lambda: run(1440, None, "left"))
-        step("right: same", lambda: run(1440, {"qqq.barra.lato": "right"}, "right"))
+        step("right: same", lambda: run(1440, {"mzlab.barra.lato": "right"}, "right"))
         step("sheet under 900 px: same", lambda: run(800, None, "sheet"))
         def vicini():
             r, ctx, pg, errs = cold(p, 1440, 900, False)

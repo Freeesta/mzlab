@@ -15,7 +15,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch(); r.b = b
         pg = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}).new_page()
-        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "!!document.querySelector('#pick')")
         pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")]); attendi(pg, "!!document.querySelector('#opbtn')")
@@ -80,7 +80,7 @@ try:
         def aviso():
             pg.clock.install()
             n = lambda: pg.locator("#resetnote").count()
-            new = lambda: pg.evaluate("localStorage.removeItem('qqq.reset.note'); QQRESET.remind()")
+            new = lambda: pg.evaluate("localStorage.removeItem('mzlab.reset.note'); QQRESET.remind()")
             new(); assert n() == 1
             pg.clock.run_for(19000); assert n() == 1, "still there before 20 s"
             pg.clock.run_for(2000); assert n() == 0, "gone by itself after 20 s"

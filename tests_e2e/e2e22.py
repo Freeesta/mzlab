@@ -13,7 +13,7 @@ r = Run(port=8822 + 100, wd="/tmp/wd22")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.add_init_script("try{if(!localStorage.getItem('qqq.prefs'))localStorage.setItem('qqq.prefs',JSON.stringify({tips:false,num:false,font:90,theme:'auto'}))}catch(e){}")   # a pre-simplification value
+        pg.add_init_script("try{if(!localStorage.getItem('mzlab.prefs'))localStorage.setItem('mzlab.prefs',JSON.stringify({tips:false,num:false,font:90,theme:'auto'}))}catch(e){}")   # a pre-simplification value
         pg.reload(); pg.wait_for_timeout(1500)
         shutil.rmtree("/tmp/s22", ignore_errors=True)
         pg.set_input_files("#pick", synth.make_series("/tmp/s22", [0, 15, 60])); pg.wait_for_timeout(1000)
@@ -26,7 +26,7 @@ try:
             assert pg.locator("#uipset [data-f]").count() == 0 and "Dimensione testo" not in pg.inner_text("#uipset"), "no text size buttons any more"
             pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(500)
             assert pg.evaluate("document.documentElement.dataset.theme") == "dark"
-            saved = pg.evaluate("JSON.parse(localStorage.getItem('qqq.prefs'))"); print(saved)
+            saved = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.prefs'))"); print(saved)
             assert saved == {"theme": "dark", "v": 2, "pal": "file", "merge": True}, saved
         step("gear: theme, saved in localStorage (theme, pal, merge)", gear)
         def reload():

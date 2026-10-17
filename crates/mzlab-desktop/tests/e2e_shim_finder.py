@@ -96,7 +96,7 @@ class Quiet(SimpleHTTPRequestHandler):
 page = ThreadingHTTPServer(("127.0.0.1", PAGE_PORT), partial(Quiet, directory=str(DIST)))
 threading.Thread(target=page.serve_forever, daemon=True).start()
 
-FAKE_TAURI = """try { if (!sessionStorage.getItem("qqq.run")) sessionStorage.setItem("qqq.run", "1"); } catch (_) {}    // a running app: no cold start
+FAKE_TAURI = """try { if (!sessionStorage.getItem("mzlab.run")) sessionStorage.setItem("mzlab.run", "1"); } catch (_) {}    // a running app: no cold start
 window.__TAURI__ = { core: { invoke: async () => [] }, event: { listen: async () => () => {} }, window: { getCurrentWindow: () => ({ setTitle: () => {} }) } };"""
 def native_route(route):                 # mzlab.localhost -> the engine over HTTP (what the window does with the custom protocol)
     u = route.request.url.replace("http://mzlab.localhost", f"http://127.0.0.1:{ENGINE_PORT}")
@@ -112,12 +112,12 @@ try:
         b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None)
         ctx = b.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36", viewport={"width": 1280, "height": 900}, reduced_motion="reduce")
         ctx.add_init_script(FAKE_TAURI)
-        ctx.add_init_script("try{localStorage.setItem('qqq.mzfinder','1');localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
+        ctx.add_init_script("try{localStorage.setItem('mzlab.mzfinder','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
         ctx.route(re.compile(r"http://mzlab\.localhost/.*"), native_route)
         ctx.on("request", lambda r: reqs.append(r.url))
         pg = ctx.new_page()
         pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
+        pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
         pg.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); pg.wait_for_selector("#drop", timeout=300000)
         pg.wait_for_function("typeof window.TPCALL === 'function' && window.MZLAB_DESKTOP === true", timeout=300000)
         pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")

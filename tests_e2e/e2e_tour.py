@@ -18,7 +18,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p, tour=True)
         # Clear any existing tour state
-        pg.evaluate("try { localStorage.removeItem('qqq.tour.lr'); } catch (_) {}")
+        pg.evaluate("try { localStorage.removeItem('mzlab.tour.lr'); } catch (_) {}")
 
         # 1. First load of LR data shows invitation
         stage(pg, [TMP_LR])
@@ -42,7 +42,7 @@ try:
         pg.click("#tour-inv-no")
         attendi(pg, "!document.querySelector('#tour-invito') || document.querySelector('#tour-invito').hidden || !document.querySelector('#tour-invito').offsetParent", 5000)
         assert not pg.is_visible("#tour-invito"), "invitation closed by Non ora"
-        st = pg.evaluate("JSON.parse(localStorage.getItem('qqq.tour.lr'))")
+        st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr'))")
         assert st["stato"] == "invitato", st
 
         # Reload: invitation does not come back (the session is saved first: the reload resumes from the notebook)
@@ -178,7 +178,7 @@ try:
         pg.keyboard.press("Escape")
         pg.wait_for_timeout(300)
         assert not pg.is_visible("#tour-dialog"), "dialog closed by Escape"
-        st = pg.evaluate("JSON.parse(localStorage.getItem('qqq.tour.lr'))")
+        st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr'))")
         assert st["stato"] == "saltato", st
         # Focus returned to gear
         focused_id = pg.evaluate("document.activeElement.id")
@@ -239,13 +239,13 @@ try:
         pg.click("#tour-btn-fine")
         pg.wait_for_timeout(300)
         assert not pg.is_visible("#tour-dialog")
-        st = pg.evaluate("JSON.parse(localStorage.getItem('qqq.tour.lr'))")
+        st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr'))")
         assert st["stato"] == "fatto", st
         steps.append(("chapter 2 steps completed with Fine, saves stato fatto", "ok"))
 
         # every step finds its target visible (the toolbar, the file drawer opened for its step and closed after it)
         pg.goto(f"http://127.0.0.1:{r.port}/?lang=it"); ready(pg)
-        pg.evaluate("localStorage.setItem('qqq.tour.lr', JSON.stringify({stato:'saltato'}))")
+        pg.evaluate("localStorage.setItem('mzlab.tour.lr', JSON.stringify({stato:'saltato'}))")
         pg.evaluate("window.BARRA && BARRA.isOpen() && BARRA.close(false)"); pg.wait_for_timeout(300)      # a drawer left open (the state is saved) would stay open after the «file» step: that is not what is measured here
         SPOT = "(()=>{const s=document.querySelector('#tour-spotlight');if(!s)return null;const r=s.getBoundingClientRect();return [Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)]})()"
         for cap, n in ((1, 7), (2, 9)):
@@ -260,7 +260,7 @@ try:
                     assert abs(sp[0] - bar[0]) < 20 and abs(sp[1] - bar[1]) < 20, (sp, bar)      # the «barra» step points at the toolbar
         pg.click("#tour-btn-skip")
         # the invitation (bottom left) is not covered by the toolbar or by the drawer
-        pg.evaluate("localStorage.removeItem('qqq.tour.lr')"); saved(pg); pg.reload(); ready(pg); pg.wait_for_selector("#tour-invito", timeout=30000)
+        pg.evaluate("localStorage.removeItem('mzlab.tour.lr')"); saved(pg); pg.reload(); ready(pg); pg.wait_for_selector("#tour-invito", timeout=30000)
         for vp in ((1280, 800), (1024, 1366), (1500, 1000)):
             pg.set_viewport_size({"width": vp[0], "height": vp[1]}); pg.wait_for_timeout(300)
             pg.evaluate("BARRA.setTab('file',{noFocus:true,instant:true})"); pg.wait_for_timeout(300)
@@ -294,7 +294,7 @@ try:
         pg.evaluate("fetch('api/new', {method:'POST', body:JSON.stringify({fresh:true})})")
         pg.reload()
         pg.wait_for_timeout(1000)
-        pg.evaluate("localStorage.removeItem('qqq.tour.lr')")
+        pg.evaluate("localStorage.removeItem('mzlab.tour.lr')")
 
         pg.set_input_files("#pick", [TMP_HR])
         pg.wait_for_timeout(800)
@@ -314,7 +314,7 @@ try:
         pg.evaluate("fetch('api/new', {method:'POST', body:JSON.stringify({fresh:true})})")
         pg.reload()
         pg.wait_for_timeout(1000)
-        pg.evaluate("localStorage.removeItem('qqq.tour.lr')")
+        pg.evaluate("localStorage.removeItem('mzlab.tour.lr')")
 
         # In start screen without data
         assert pg.evaluate("typeof E === 'undefined' || !E.files || !E.files.length"), "no files loaded"

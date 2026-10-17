@@ -1,5 +1,5 @@
 """One writer and one saving of roles and times (campioni/2): an edit in the Data view survives a reload (role, subtype, time, confirmation), a notebook v1
-with QC and dark roles of qqq.qaqc is migrated without loss, and a .mzflow saved and opened again keeps the SHA-256 of its `campioni` operation.
+with QC and dark roles of mzlab.qaqc is migrated without loss, and a .mzflow saved and opened again keeps the SHA-256 of its `campioni` operation.
 Synthetic files with invented names."""
 import sys, os, json, shutil, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
@@ -39,18 +39,18 @@ try:
         def one_writer():
             nb = pg.evaluate("NB.session")
             assert nb and all(x.get("tipo") and "tempo_min" in x for x in nb) and pg.evaluate("NB._v") == 2, nb[:1]
-            assert pg.evaluate("(()=>{try{return Object.keys(JSON.parse(localStorage.getItem('qqq.qaqc')||'{}').roles||{}).length}catch(e){return 0}})()") == 0, "qqq.qaqc.roles is not written any more"
+            assert pg.evaluate("(()=>{try{return Object.keys(JSON.parse(localStorage.getItem('mzlab.qaqc')||'{}').roles||{}).length}catch(e){return 0}})()") == 0, "mzlab.qaqc.roles is not written any more"
             assert pg.evaluate("QAQC.roleOf(E.files.find(f=>f.file==='X_t030min.mzML'))") == "qc"
             pg.evaluate("CAMPIONI.apply([{file:'X_t030min.mzML', role:'dark'}])")
             assert pg.evaluate("QAQC.roleOf(E.files.find(f=>f.file==='X_t030min.mzML'))") == "dark" and pg.evaluate("E.files.find(f=>f.file==='X_t030min.mzML').type") == "sample"
             pg.evaluate("CAMPIONI.apply([{file:'X_t030min.mzML', role:'qc'}])")
-        step("NB.session is campioni/2, qqq.qaqc.roles is empty, the QA/QC follows the table", one_writer)
+        step("NB.session is campioni/2, mzlab.qaqc.roles is empty, the QA/QC follows the table", one_writer)
         def migrate_v1():
             pg.evaluate("() => { window.uiSave = () => {}; window.nbSave = () => {}; }")           # the page leaving must not overwrite the notebook written below
             v1 = {"_v": 1, "session": [{"file": "X_t000min.mzML", "time": 0, "type": "sample"}, {"file": "X_t005min.mzML", "time": 5, "type": "sample"}, {"file": "X_t030min.mzML", "time": 30, "type": "sample"},
                   {"file": "X_t060min.mzML", "time": 60, "type": "sample"}, {"file": "X_dark-adsorption.mzML", "time": 15, "type": "sample"}, {"file": "X_blank.mzML", "type": "blank"}]}
             pg.evaluate("""async (v1) => { await fetch('api/notebook', {method: 'POST', body: JSON.stringify(v1)});
-                localStorage.setItem('qqq.qaqc', JSON.stringify({roles: {'X_t030min.mzML': 'qc', 'X_dark-adsorption.mzML': 'dark'}, ions: [], thr: 3, win: 0.5, ratio: {text: '', rt: ''}, seq: 1})); }""", v1)
+                localStorage.setItem('mzlab.qaqc', JSON.stringify({roles: {'X_t030min.mzML': 'qc', 'X_dark-adsorption.mzML': 'dark'}, ions: [], thr: 3, win: 0.5, ratio: {text: '', rt: ''}, seq: 1})); }""", v1)
             pg.reload(); pg.wait_for_function("typeof E !== 'undefined' && E.files.length === 6", timeout=90000); ready(pg)
             got = {x[0]: x for x in pg.evaluate(SNAP)}
             assert got["X_t000min.mzML"][1] == "sample" and got["X_t000min.mzML"][2] == 0, got           # no t0 role: a sample at time 0
@@ -67,7 +67,7 @@ try:
                         "tempo_confermato": tempo is not None, "tempo_min": tempo, "tipo": tipo, "tipo_bianco": bianco, "unita": None, "unita_tempo": "min"}
             old = {"_v": 2, "session": [e("X_t000min.mzML", "t0", 0, k=1), e("X_t005min.mzML", "sample", 5, k=2), e("X_t030min.mzML", "sample", 30, k=3), e("X_t060min.mzML", "sample", 60, k=4),
                                         e("X_dark-adsorption.mzML", "dark", 15, k=5), e("X_blank.mzML", "blank", None, "solvent", k=6)]}
-            pg.evaluate("async (d) => { await fetch('api/notebook', {method: 'POST', body: JSON.stringify(d)}); localStorage.removeItem('qqq.qaqc'); }", old)
+            pg.evaluate("async (d) => { await fetch('api/notebook', {method: 'POST', body: JSON.stringify(d)}); localStorage.removeItem('mzlab.qaqc'); }", old)
             pg.reload(); pg.wait_for_function("typeof E !== 'undefined' && E.files.length === 6", timeout=90000); ready(pg)
             got = {x[0]: x for x in pg.evaluate(SNAP)}
             assert got["X_t000min.mzML"][1] == "sample" and got["X_t000min.mzML"][2] == 0, got

@@ -49,7 +49,7 @@ try:
             q = r.b.new_page(viewport={"width": 1500, "height": 1100}, reduced_motion="reduce")
             try:
                 q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#pick", state="attached")
-                q.evaluate("try{localStorage.removeItem('qqq.tour.lr')}catch(_){}")
+                q.evaluate("try{localStorage.removeItem('mzlab.tour.lr')}catch(_){}")
                 stage(q, [TMP])
                 q.click("text=Carica dati"); attendi(q, "typeof E !== 'undefined' && E.files.length >= 1")
                 q.wait_for_selector("#tour-invito", timeout=5000); axe(q, "'#tour-invito'")

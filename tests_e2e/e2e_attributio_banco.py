@@ -1,4 +1,4 @@
-"""Banco 2b of Attributio (TP_Mine/js/52_attributio_banco.js, feat-worker.js, the .wasm `attributio_rev`). With `qqq.admin` the synthetic campaign plus tests/data/attributio/campagna_banco (one more
+"""Banco 2b of Attributio (TP_Mine/js/52_attributio_banco.js, feat-worker.js, the .wasm `attributio_rev`). With `mzlab.admin` the synthetic campaign plus tests/data/attributio/campagna_banco (one more
 feature, a Level 3 paracetamol with an MS2 and a library of three isomers) is loaded; the Banco opens from the row of POS 15 (class 2b-check, six boxes none ticked, charts with their table of data),
 Save stays disabled while a decision that changes something has no note, three boxes + a note + Save download feature_decisions.csv with the expected row and evidence_checklist, the table shows
 the feature as 2b, the arrows go to the next feature, the controls are at least 24 x 24 px, MZLAB_LR_MISS stays empty and both .wasm are under their cap. Builds the site and the .wasm (SKIP without
@@ -53,7 +53,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch()
         pg = b.new_context(viewport={"width": 1280, "height": 1000}, reduced_motion="reduce", accept_downloads=True).new_page()
-        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.pannelli.affianca.hint','1');localStorage.setItem('qqq.admin','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "GL Driver" not in m.text else None)
         pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
@@ -123,7 +123,7 @@ try:
 
         def reruns():
             pg.wait_for_function("document.querySelector('#at-table tr.clk:has(button[aria-label^=\"Details of POS 15:\"]) .lvb')?.textContent === 'L2b'", timeout=60000)
-            assert pg.evaluate("localStorage.getItem('qqq.attributio.reviewer')") == "rev"
+            assert pg.evaluate("localStorage.getItem('mzlab.attributio.reviewer')") == "rev"
             op = pg.evaluate("(NB.ops || []).filter(o => o.op === 'attributio' && o.attributio.feature_decisions).pop() || null")
             assert op and "diagnostic_fragment|neutral_loss|alternatives_excluded" in op["attributio"]["feature_decisions"], op
         step("the cascade runs again (POS 15 is L2b), the reviewer is remembered and the decisions reach the notebook", reruns)

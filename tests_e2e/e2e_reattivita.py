@@ -1,5 +1,5 @@
 """Tabui, panel of reactivity of the parent (TP_Mine/lazy/reattivita.js + viewer3d.js, docs/agenti/reattivita.md): administrator mode only.
-Without «qqq.admin» there is no TPREATT, no panel and no .wasm «chem» request. With it, a hand-written `reatt/1` (paracetamol, geometry and values invented here, not a calculation) gives the six cards, the
+Without «mzlab.admin» there is no TPREATT, no panel and no .wasm «chem» request. With it, a hand-written `reatt/1` (paracetamol, geometry and values invented here, not a calculation) gives the six cards, the
 table per atom with as many rows as `atoms`, the threshold (slider and number linked) that filters the rows and the atoms of the viewer, the buttons and the keys that rotate and zoom (the state of the view
 changes), the switch of the H, no automatic rotation, the exports (XYZ has N + 2 lines), the states of the calculation, and the 2D drawing (a halo under each heavy atom). The order of the heavy atoms of
 OpenChemLib is checked against `heavy_index` for paracetamol and carbamazepine (same order) and for a relabelled graph (the mapping by element and neighbours). Run from the repo root: python3 tests_e2e/e2e_reattivita.py"""
@@ -81,11 +81,11 @@ try:
             pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.on("request", lambda r: reqs.append(r.url))
             pg.on("response", lambda r: errs.append(("http%d" % r.status, r.url)) if r.status >= 400 and "logo.svg" not in r.url and "/vendor/" not in r.url and "wasm-feat/manifest" not in r.url else None)
-            if admin: pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")
+            if admin: pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); lib.attendi(pg, "typeof window.QTOOLS !== 'undefined'", 60000)
             return pg
         pg = fresh(False)
-        step("without qqq.admin there is no TPREATT, no panel and no .wasm chem", lambda: (_ for _ in ()).throw(AssertionError("TPREATT or panel present")) if pg.evaluate("typeof window.TPREATT !== 'undefined' || !!document.querySelector('.tpr')")
+        step("without mzlab.admin there is no TPREATT, no panel and no .wasm chem", lambda: (_ for _ in ()).throw(AssertionError("TPREATT or panel present")) if pg.evaluate("typeof window.TPREATT !== 'undefined' || !!document.querySelector('.tpr')")
              or any("chem" in u and u.endswith(".wasm") for u in reqs) else None)
         pg.context.close()
 

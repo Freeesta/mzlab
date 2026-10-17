@@ -27,7 +27,7 @@ try:
         def unlock():
             for _ in range(5): pg.click("header img.logo")
             pg.wait_for_selector("#stbar [data-tcmd=editor]", timeout=15000)       # the Teoria in the frame reloads by itself: no manual reload
-            assert pg.evaluate("localStorage.getItem('qqq.admin')") == "1"
+            assert pg.evaluate("localStorage.getItem('mzlab.admin')") == "1"
         step("five logo hits with the Teoria open: the editor button appears without a reload by hand", unlock)
         def edit():
             pg.click("#stbar [data-tcmd=editor]"); tf().wait_for_selector("body.tedit-active #tedit-bar", timeout=10000)

@@ -21,7 +21,7 @@ try:
         def fresh(name="06-esi.html", scheme="light", motion="no-preference", prefs=None):
             q = r.b.new_page(viewport={"width": 1400, "height": 1000}, color_scheme=scheme, reduced_motion=motion)
             q.add_init_script(STUB)
-            if prefs is not None: q.add_init_script("localStorage.setItem('qqq.a11y', %s)" % json.dumps(json.dumps(prefs)))
+            if prefs is not None: q.add_init_script("localStorage.setItem('mzlab.a11y', %s)" % json.dumps(json.dumps(prefs)))
             q.goto(base + name); q.wait_for_timeout(900); return q
         def attr(q, n): return q.evaluate(f"document.documentElement.getAttribute('data-a11y-{n}')")
         def panel():
@@ -32,7 +32,7 @@ try:
             q.keyboard.press("Escape"); assert q.is_hidden("#a11y-panel")
             q.keyboard.press("Tab") ; q.focus("#a11y-btn"); q.keyboard.press("Enter"); assert q.is_visible("#a11y-panel")          # keyboard only
             txt = q.inner_text("#a11y-panel"); assert "⌘+ / Ctrl+" not in txt and "Dimensione" not in txt, txt[:200]
-            assert q.evaluate("localStorage.getItem('qqq.prefs')") is None            # the old key is not touched
+            assert q.evaluate("localStorage.getItem('mzlab.prefs')") is None            # the old key is not touched
             q.close()
         step("Aa button, side panel, Esc, keyboard, no old text-size", panel)
         def fonts():
@@ -70,12 +70,12 @@ try:
         step("backgrounds cream / blue / high contrast, light and dark: contrast 4.5 (7)", backgrounds)
         def persist():
             q = fresh(); q.click("#a11y-btn"); q.check("input[name=a11y-bg][value=blue]"); q.check("input[data-k=nums]")
-            assert json.loads(q.evaluate("localStorage.getItem('qqq.a11y')"))["bg"] == "blue"
+            assert json.loads(q.evaluate("localStorage.getItem('mzlab.a11y')"))["bg"] == "blue"
             q.reload(); q.wait_for_timeout(700)
             assert attr(q, "bg") == "blue" and attr(q, "nums") is not None
             q.click("#a11y-btn"); assert q.is_checked("input[name=a11y-bg][value=blue]") and q.is_checked("input[data-k=nums]")
             q.close()
-        step("persistence after reload (key qqq.a11y)", persist)
+        step("persistence after reload (key mzlab.a11y)", persist)
         def ruler():
             q = fresh(); q.click("#a11y-btn"); q.check("input[data-k=ruler]"); q.keyboard.press("Escape")
             assert q.evaluate("getComputedStyle(document.getElementById('a11y-ruler')).pointerEvents") == "none"
@@ -90,7 +90,7 @@ try:
             q = fresh(); assert q.is_visible("#side") and q.get_attribute("#tc-indice", "aria-pressed") == "true"
             assert q.locator("#a11y-prog,[data-k=focus]").count() == 0
             q.click("#tc-indice"); assert attr(q, "noside") is not None and q.is_hidden("#side") and q.get_attribute("#tc-indice", "aria-pressed") == "false"
-            assert json.loads(q.evaluate("localStorage.getItem('qqq.a11y')")).get("noside") is True
+            assert json.loads(q.evaluate("localStorage.getItem('mzlab.a11y')")).get("noside") is True
             q.reload(); q.wait_for_selector("#tc-indice"); assert q.is_hidden("#side"), "remembered"
             q.keyboard.press("f"); assert q.is_visible("#side") and attr(q, "noside") is None; q.close()
         step("index toggle (button and F): hides/shows the side index, remembered", indice)
@@ -124,7 +124,7 @@ try:
             q = fresh(prefs={"font": "atkinson", "space": True, "bg": "cream", "ruler": True, "noside": True, "nums": True})
             q.click("#a11y-btn"); q.click("#a11y-reset"); q.wait_for_timeout(200)
             assert all(attr(q, n) is None for n in ("font", "space", "bg", "ruler", "noside", "nums")), q.evaluate("document.documentElement.outerHTML.slice(0,300)")
-            assert json.loads(q.evaluate("localStorage.getItem('qqq.a11y')")) == {}
+            assert json.loads(q.evaluate("localStorage.getItem('mzlab.a11y')")) == {}
             q.close()
         step("Ripristina predefinite turns everything off", reset)
         def pratica():
@@ -132,7 +132,7 @@ try:
             q = fresh(); q.set_viewport_size({"width": 400, "height": 800}); q.reload(); q.wait_for_timeout(600); assert q.is_visible("#a11y-btn"); q.close()
         step("Aa is on Pratica and on a narrow screen", pratica)
         def inapp():
-            pg.evaluate("localStorage.setItem('qqq.a11y', JSON.stringify({bg:'cream',space:true}))")
+            pg.evaluate("localStorage.setItem('mzlab.a11y', JSON.stringify({bg:'cream',space:true}))")
             pg.click("#nav button[data-v=theory]")
             attendi(pg, "(() => { const f = document.querySelector('#tframe'); try { return f.contentDocument.documentElement.getAttribute('data-a11y-bg') === 'cream' } catch (e) { return false } })()", 60000)
             f = next(x for x in pg.frames if "/teoria/" in x.url)

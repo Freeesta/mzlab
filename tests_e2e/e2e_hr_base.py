@@ -32,7 +32,7 @@ try:
             pg.click("#np-set"); pg.wait_for_timeout(300)
             assert "ppm" in pg.inner_text("#uipset")
             pg.fill("#uip-ppm", "8"); pg.dispatch_event("#uip-ppm", "change"); pg.fill("#uip-hdec", "5"); pg.dispatch_event("#uip-hdec", "change"); pg.wait_for_timeout(300)
-            v = pg.evaluate("(()=>{const ex=E.files.find(f=>f.file.includes('Exploris')&&f.lv===1);return [HR.prof(ex,1),JSON.parse(localStorage.getItem('qqq.prefs'))]})()"); print(v)
+            v = pg.evaluate("(()=>{const ex=E.files.find(f=>f.file.includes('Exploris')&&f.lv===1);return [HR.prof(ex,1),JSON.parse(localStorage.getItem('mzlab.prefs'))]})()"); print(v)
             assert v[0]["tol"] == 8 and v[0]["dec"] == 5 and v[1]["hrPpm"] == 8 and v[1]["hrDec"] == 5 and "hr" not in v[1]
             pg.click("#np-set"); pg.wait_for_timeout(300)
         step("gear: «Masse» row (ppm, decimals) changes the profile and is saved", gear)

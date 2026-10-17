@@ -73,7 +73,7 @@ try:
             q.goto(T + "13-formula.html"); q.wait_for_selector("#menu")
             h = q.evaluate("document.documentElement.scrollHeight - innerHeight"); q.evaluate(f"scrollTo(0, {int(h * 0.5)})"); q.wait_for_timeout(1000)
             q.evaluate("dispatchEvent(new Event('pagehide'))")
-            st = q.evaluate("JSON.parse(localStorage.getItem('qqq.teoria.pos'))")
+            st = q.evaluate("JSON.parse(localStorage.getItem('mzlab.teoria.pos'))")
             assert st["last"] == "13-formula.html" and 0.4 < st["pos"]["13-formula.html"] < 0.6, st
             q.goto("about:blank"); q.goto(T + "13-formula.html"); q.wait_for_load_state("load"); q.wait_for_timeout(500)
             assert q.evaluate("scrollY") > 300, "position not restored"

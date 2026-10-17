@@ -31,7 +31,7 @@ try:
             assert same, "on: the live spectrum is in the row of the chromatogram"
         step("on: the spectrum is in the same row as the chromatogram", accesa)
         def ricordata():
-            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.prefs')).beside") is True, "remembered in the preferences"
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.prefs')).beside") is True, "remembered in the preferences"
         step("the choice is remembered", ricordata)
         def annulla():
             pg.keyboard.press("Control+z"); attendi(pg, f"LAYOUT.righeDi(stackOrder()).find(r=>r.includes({CH})).length === 1")

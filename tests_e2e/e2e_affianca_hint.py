@@ -1,4 +1,4 @@
-"""Hint «Trascina qui per affiancare» (affianca.js, suggerimenti.js): shown ONCE per browser (qqq.pannelli.affianca.hint) when two panels could share a row and no other hint is open;
+"""Hint «Trascina qui per affiancare» (affianca.js, suggerimenti.js): shown ONCE per browser (mzlab.pannelli.affianca.hint) when two panels could share a row and no other hint is open;
 × and Esc close it, so does the first side by side; never together with the tour invitation (one queue); after a reload it does not come back."""
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -6,13 +6,13 @@ steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:300]))
-KEY = "qqq.pannelli.affianca.hint"
+KEY = "mzlab.pannelli.affianca.hint"
 r = Run(port=8877, wd="/tmp/wd_affianca_hint")
 HINT = "document.getElementById('aff-hint')"
 def fresh(p, tour_state=True, aff=None):
     r.b = p.chromium.launch()
     ctx = r.b.new_context(viewport={"width": 1440, "height": 1000}, locale="it-IT", reduced_motion="reduce"); pg = ctx.new_page()
-    init = "try{localStorage.setItem('qqq.barra.hint','1');" + ("localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));" if tour_state else "") + (f"localStorage.setItem('{KEY}','{aff}');" if aff else "") + "}catch(_){}"
+    init = "try{localStorage.setItem('mzlab.barra.hint','1');" + ("localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));" if tour_state else "") + (f"localStorage.setItem('{KEY}','{aff}');" if aff else "") + "}catch(_){}"
     pg.add_init_script(init); pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "performance.now() > 800")
     return pg
 def load(pg):

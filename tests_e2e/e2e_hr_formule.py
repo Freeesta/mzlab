@@ -16,7 +16,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2); ready(pg)
-        pg.evaluate("localStorage.removeItem('qqq.comp')")
+        pg.evaluate("localStorage.removeItem('mzlab.comp')")
         def sp_id():
             return pg.evaluate("(()=>{const s=E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp);return s?s.id:null})()")
         def peak_xy():

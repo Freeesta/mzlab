@@ -29,9 +29,9 @@ try:
             assert not set(cols) & set(eval(GREY)) and pg.evaluate("E.files.every(f => fdash(f).length === 0)"), cols
         step("«by time» without times falls back to a colour per file", by_time_no_time)
         def migrate():
-            pg.evaluate("localStorage.setItem('qqq.prefs', JSON.stringify({theme: 'auto', pal: 'time', merge: true}))"); pg.reload(); attendi(pg, "typeof UIP !== 'undefined' && E.files !== undefined")
+            pg.evaluate("localStorage.setItem('mzlab.prefs', JSON.stringify({theme: 'auto', pal: 'time', merge: true}))"); pg.reload(); attendi(pg, "typeof UIP !== 'undefined' && E.files !== undefined")
             assert pg.evaluate("UIP.pal") == "file", "old saved default must become «file»"
-            pg.evaluate("localStorage.setItem('qqq.prefs', JSON.stringify({v: 2, theme: 'auto', pal: 'time', merge: true}))"); pg.reload(); attendi(pg, "typeof UIP !== 'undefined' && E.files !== undefined")
+            pg.evaluate("localStorage.setItem('mzlab.prefs', JSON.stringify({v: 2, theme: 'auto', pal: 'time', merge: true}))"); pg.reload(); attendi(pg, "typeof UIP !== 'undefined' && E.files !== undefined")
             assert pg.evaluate("UIP.pal") == "time", "an explicit choice is kept"
         step("saved «time» migrates to «file» unless chosen (v2)", migrate)
 finally:

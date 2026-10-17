@@ -1,5 +1,5 @@
 """Settings of the Teoria (impostazioni.js): the gear opens ONE panel with Tema, Lettura facilitata and animations; none of the data settings; the theme
-is the one of the program (qqq.prefs); «Ripristina predefinite» resets only the settings (never qqq.pratica / qqq.teoria.pos); choices persist."""
+is the one of the program (mzlab.prefs); «Ripristina predefinite» resets only the settings (never mzlab.pratica / mzlab.teoria.pos); choices persist."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -35,14 +35,14 @@ try:
         step("one panel: Tema, lettura, animazioni; no Avanzamento, no focus mode, no data settings", content)
         def theme():
             q.check("input[name=a11y-tema][value=dark]"); q.wait_for_function("document.documentElement.dataset.theme==='dark'", timeout=8000)
-            assert json.loads(ls("qqq.prefs"))["theme"] == "dark"
+            assert json.loads(ls("mzlab.prefs"))["theme"] == "dark"
             q.wait_for_selector("#a11y-btn"); q.click("#a11y-btn"); assert q.is_checked("input[name=a11y-tema][value=dark]")
             q.check("input[name=a11y-tema][value=auto]"); q.wait_for_timeout(500)
-        step("Tema is the qqq.prefs of the program and survives a reload", theme)
+        step("Tema is the mzlab.prefs of the program and survives a reload", theme)
         def motion():
             q.wait_for_selector("#a11y-btn"); q.click("#a11y-btn") if q.is_hidden("#a11y-panel") else None
             q.check("[data-motion]"); assert q.get_attribute("html", "data-a11y-reduce") is not None
-            assert json.loads(ls("qqq.a11y"))["motion"] == "always"
+            assert json.loads(ls("mzlab.a11y"))["motion"] == "always"
         step("reduced animations set data-a11y-reduce and persist", motion)
         def preview():
             q.check("input[name=a11y-font][value=atkinson]"); f = q.evaluate("getComputedStyle(document.querySelector('#a11y-prev')).fontFamily"); assert "Atkinson" in f, f
@@ -53,17 +53,17 @@ try:
             q.check("input[name=a11y-bg][value='']"); q.uncheck("[data-k=space]"); q.check("input[name=a11y-font][value='']")
         step("the preview follows font, spacing and background; arrows move the choice; values saved as before", preview)
         def reset():
-            q.evaluate("localStorage.setItem('qqq.pratica','{\"v\":1}');localStorage.setItem('qqq.teoria.pos','{\"last\":\"x\"}')")
+            q.evaluate("localStorage.setItem('mzlab.pratica','{\"v\":1}');localStorage.setItem('mzlab.teoria.pos','{\"last\":\"x\"}')")
             q.check("input[name=a11y-font][value=dyslexic]"); q.check("[data-k=space]"); assert q.get_attribute("html", "data-a11y-space") is not None
             q.click("#a11y-reset")
             assert q.get_attribute("html", "data-a11y-font") is None and q.get_attribute("html", "data-a11y-space") is None and q.get_attribute("html", "data-a11y-reduce") is None
-            assert json.loads(ls("qqq.a11y")) == {}
-            assert ls("qqq.pratica") is not None and ls("qqq.teoria.pos") is not None, "settings only"
+            assert json.loads(ls("mzlab.a11y")) == {}
+            assert ls("mzlab.pratica") is not None and ls("mzlab.teoria.pos") is not None, "settings only"
             q.check("[data-motion]")
         step("Ripristina predefinite: settings back to the defaults, progress and reading position kept", reset)
         def keys():
-            q.evaluate("localStorage.setItem('qqq.pratica','{\"v\":1}')"); q.reload(); q.wait_for_selector("#a11y-btn")
-            assert json.loads(ls("qqq.a11y"))["motion"] == "always" and ls("qqq.pratica")
+            q.evaluate("localStorage.setItem('mzlab.pratica','{\"v\":1}')"); q.reload(); q.wait_for_selector("#a11y-btn")
+            assert json.loads(ls("mzlab.a11y"))["motion"] == "always" and ls("mzlab.pratica")
         step("choices persist across a reload", keys)
         c.close()
         pg = r.page(p); pg.set_viewport_size({"width": 1280, "height": 900})

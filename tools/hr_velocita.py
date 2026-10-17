@@ -1,10 +1,10 @@
 """Measurement (not a test; run from the repository root): cost of the data of scan-by-scan navigation on a high-resolution file, JSON (api/spectra) against the binary block (api/scanbin).
-Local server by default; the built site (Pyodide) with QQQ_SITE=1 (python tools/build_site.py first). File: $HR_FILE or the Exploris file of the data repository."""
+Local server by default; the built site (Pyodide) with MZLAB_SITE=1 or QQQ_SITE=1 (python tools/build_site.py first). File: $HR_FILE or the Exploris file of the data repository."""
 import os, subprocess, sys, time, json
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests_e2e"))
 from lib import *
-f = os.environ.get("HR_FILE") or str(Path(os.environ.get("QQQ_DATI", "/home/user/QqQ-lab-dati")) / "HRMS" / "Orbitrap_Exploris120_DDApos_10-15min.mzML")
-SITE = os.environ.get("QQQ_SITE") == "1"
+f = os.environ.get("HR_FILE") or str(Path(os.environ.get("MZLAB_DATI") or os.environ.get("QQQ_DATI", "/home/user/QqQ-lab-dati")) / "HRMS" / "Orbitrap_Exploris120_DDApos_10-15min.mzML")
+SITE = os.environ.get("MZLAB_SITE") == "1" or os.environ.get("QQQ_SITE") == "1"
 MEAS = """async()=>{
   const k=E.files.find(x=>x.kind==='full').k, out={};
   const T=async(name,fn)=>{const ts=[];for(let r=0;r<4;r++){const t=performance.now();await fn(r*60+10);ts.push(performance.now()-t)}ts.sort((a,b)=>a-b);out[name]=Math.round(ts[1])};

@@ -108,7 +108,7 @@ try:
             n = pg.evaluate("[...document.querySelectorAll('.wk .fb')].filter(e=>e.getAttribute('aria-live')!=='polite').length"); assert n == 0, n
         step("every .fb is a polite live region", live)
         def dark():
-            pg.evaluate("localStorage.setItem('qqq.prefs', JSON.stringify({theme:'dark'}))"); pg.goto(url); pg.wait_for_selector("#g1 .opts button")
+            pg.evaluate("localStorage.setItem('mzlab.prefs', JSON.stringify({theme:'dark'}))"); pg.goto(url); pg.wait_for_selector("#g1 .opts button")
             pg.click("#g1 .opts button >> nth=0")
             lum = """(c)=>{const m=c.match(/[\\d.]+/g).map(Number);const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};return .2126*f(m[0])+.7152*f(m[1])+.0722*f(m[2])}"""
             bgs = pg.evaluate("(" + lum + ")(getComputedStyle(document.body).backgroundColor)"); assert bgs < 0.1, bgs
@@ -125,7 +125,7 @@ try:
         AXE = axe_path()
         if AXE:
             def axe():
-                pg.evaluate("localStorage.removeItem('qqq.prefs')"); pg.goto(url); pg.wait_for_selector("#g1 .opts button"); pg.click("#g1 .opts button >> nth=0"); pg.add_script_tag(path=AXE)
+                pg.evaluate("localStorage.removeItem('mzlab.prefs')"); pg.goto(url); pg.wait_for_selector("#g1 .opts button"); pg.click("#g1 .opts button >> nth=0"); pg.add_script_tag(path=AXE)
                 v = pg.evaluate("axe.run('main', {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}).then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => v.id + ': ' + v.nodes.length))")
                 assert not v, v
             step("axe-core: no serious or critical violation", axe)
