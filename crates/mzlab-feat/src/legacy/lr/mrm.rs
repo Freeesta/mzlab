@@ -1,4 +1,4 @@
-//! Integration of the MRM files of a low-resolution series (`TP_Mine/py/tpmine/mrm.py::analyse` without the calibration line): the area, time and
+//! Integration of the MRM files of a low-resolution series (`analyse` of mzFinder without the calibration line): the area, time and
 //! S/N of every transition in every file around the time of the quantifier, and the ratio of every qualifier to the quantifier checked against the
 //! median of the standards. The program gives no concentrations.
 

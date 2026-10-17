@@ -1,4 +1,4 @@
-//! `hr/formula.py` beyond what `fragtree::Space` needs: candidates and counts under a sub-formula (`within`), and the m/z calibration
+//! The formula space of mzFinder beyond what `fragtree::Space` needs: candidates and counts under a sub-formula (`within`), and the m/z calibration
 //! (`Calibration`, `fit_calibration`).
 
 use crate::legacy::fragtree::Space;

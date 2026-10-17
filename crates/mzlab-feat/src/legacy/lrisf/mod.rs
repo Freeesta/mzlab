@@ -1,5 +1,5 @@
 //! The in-source-fragment verdict of the low-resolution rows of mzFinder and the supposed fragmentation tree: pure functions with parity to
-//! `TP_Mine/py/tpmine/isf.py` and `fragtree.py` (`tools/finder_lrisf_riferimento.py`, `tests/golden/finder_lrisf.json`). The verdict (a
+//! the former Python engine (`tests/golden/finder_lrisf.json`). The verdict (a
 //! probability) lives only here, never in `mzlab-core`, whose `ionfamily` ports measure and do not conclude. The classifier is
 //! `isf_eval(samples, parent_mz, ions, formula_p) -> Vec<Option<IsfVerdict>>` (`api.classify_ions` with `fam = false`; never panics: on an error
 //! the ion gets `None`), `lr_tree(ms2, mz_x, ion_formula, smiles) -> json` (the supposed tree, `fragtree.lr`) and `compare_lr(tree, tp_mz, dm) -> json`.

@@ -92,7 +92,7 @@ def main():
     inclusi = set(elenco("pagina") + elenco("moduli") + elenco("worker"))
     for p in sorted(glob.glob(RADICE + "/mzlab/web/**/*.js", recursive=True) + glob.glob(RADICE + "/TP_Mine/**/*.js", recursive=True)):
         r = os.path.relpath(p, RADICE)
-        if r.startswith(NON_CONTROLLATI) or "/tests/" in r or r.startswith("TP_Mine/py") or r in inclusi:
+        if r.startswith(NON_CONTROLLATI) or "/tests/" in r or r in inclusi:
             continue
         errori.append("file in no tsc project (add it to tools/tipi/pagina|moduli|worker.json): " + r)
     if "--controlla" in sys.argv:

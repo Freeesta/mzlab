@@ -9,12 +9,14 @@ let ldTimer = null, ldDotTimer = null, ldShown = "", ldSince = 0, ldBag = [], ld
 // The analyser screens (an-*.js, docs/agenti/analizzatori.md) are switched off: LD_ANALYSERS = true loads them on demand and picks one at random.
 const LD_ANALYSERS = false, LD_AN = ["util", "quad", "paul", "tof", "settore", "orbi", "ims", "esi", "maldi", "trappola", "fticr", "qqq"];
 let ldIonRaf = 0, ldAnLoad = null;
-function ldAnLoaded() {                                          // plain scripts, in order (an-util first); resolves once they have all run
+// plain scripts, in order (an-util first); resolves once they have all run
+function ldAnLoaded() {
   return ldAnLoad || (ldAnLoad = LD_AN.reduce((p, n) => p.then(() => new Promise(ok => { const s = document.createElement("script"); s.src = "static/an-" + n + ".js"; s.onload = s.onerror = /** @type {any} */ (ok); document.head.appendChild(s); })), Promise.resolve()));
 }
 function ldIon(on, mode) {
   if (on && LD_ANALYSERS && !/** @type {any} */ (window).LDAN) { ldAnLoaded().then(() => ldIon(on, mode)); return; }
-  if (on && ldIonRaf && !mode) return;                            // already turning (first paint, then engine start and data loading): keep the same analyser
+  // already turning (first paint, then engine start and data loading): keep the same analyser
+  if (on && ldIonRaf && !mode) return;
   const cv = /** @type {HTMLCanvasElement | null} */ (document.getElementById("ldion"));
   FRAME.cancel(ldIonRaf); ldIonRaf = 0;
   if (!cv) return;
@@ -24,11 +26,13 @@ function ldIon(on, mode) {
   const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim();
   const col = [v("--accent"), v("--ok"), v("--bad")], line = v("--line") || "#ccc";
   cv.width = W * R; cv.height = H * R; const cx = /** @type {CanvasRenderingContext2D} */ (cv.getContext("2d")); cx.setTransform(R, 0, 0, R, 0, 0);
-  const ctx = { cx, W, H, TAU, line, muted: v("--muted") || line }, A = { base: {   // the plain animation: three ions 120° apart, their trails advancing and weaving together (depth z sets size and brightness)
+  // the plain animation: three ions 120° apart, their trails advancing and weaving together (depth z sets size and brightness)
+  const ctx = { cx, W, H, TAU, line, muted: v("--muted") || line }, A = { base: {
     n: 26, dt: 0.045, step: 9,
     at(j, t) { const ph = TAU / 1.6 * t + j * TAU / 3; return { x: 0, y: H / 2 + 30 * Math.sin(ph), z: Math.cos(ph) }; },
     shift(k) { return W / 2 + 25 * 9 / 2 - k * 9; } } };
-  if (LD_ANALYSERS) for (const k of Object.keys(/** @type {any} */ (window).LDAN || {})) A[k] = /** @type {any} */ (window).LDAN[k](ctx);   // an-*.js: window.LDAN.<name>(ctx) -> { n, dt, T?, at(j, t), draw?(t), mid? }
+  // an-*.js: window.LDAN.<name>(ctx) -> { n, dt, T?, at(j, t), draw?(t), mid? }
+  if (LD_ANALYSERS) for (const k of Object.keys(/** @type {any} */ (window).LDAN || {})) A[k] = /** @type {any} */ (window).LDAN[k](ctx);
   const keys = Object.keys(A), an = A[mode in A ? mode : LD_ANALYSERS ? keys[1 + Math.floor(Math.random() * (keys.length - 1))] : "base"];
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.hasAttribute("data-a11y-reduce"), t0 = performance.now();
   const frame = ms => {
@@ -58,7 +62,8 @@ function ldRefresh() {
   const ph = window.qqPhaseCur, cur = ldMsg || (ph && window.I18N ? { text: I18N.t(ph.key, ph.params), pct: ph.pct } : null);
   const el = document.getElementById("ldmsg");
   if (!el || window.qqFailed) return;
-  if (!cur) {                                                     // no status text: a phrase keeps running as it is; after a status text the SAME phrase comes back (never a new one before its time)
+  // no status text: a phrase keeps running as it is; after a status text the SAME phrase comes back (never a new one before its time)
+  if (!cur) {
     el.setAttribute("aria-live", "off");
     if (ldTimer && ldShown === "msg") ldShow(ldLast);
     return;
@@ -66,15 +71,19 @@ function ldRefresh() {
   ldShown = "msg";
   clearInterval(ldDotTimer); const pct = cur.pct == null ? null : Math.max(0, Math.min(100, Math.round(cur.pct)));
   el.setAttribute("aria-live", "polite"); el.textContent = cur.text;
-  if (pct != null) { const s = document.createElement("span"); s.setAttribute("aria-hidden", "true"); s.textContent = ` ${pct}%`; el.appendChild(s); }   // the percentage is shown, not announced at every tick
+  // the percentage is shown, not announced at every tick
+  if (pct != null) { const s = document.createElement("span"); s.setAttribute("aria-hidden", "true"); s.textContent = ` ${pct}%`; el.appendChild(s); }
 }
-function ldAction(label, fn) {                                   // a button under the status line (stuck start: «start from scratch»)
+// a button under the status line (stuck start: «start from scratch»)
+function ldAction(label, fn) {
   const a = document.getElementById("ldact"); if (!a) return; a.textContent = ""; a.hidden = !label; if (!label) return;
   const b = document.createElement("button"); b.className = "btn"; b.textContent = label; b.onclick = fn; a.appendChild(b); b.focus();
 }
 function ldNext() {
-  if (window.qqFailed || ldMsg || window.qqPhaseCur) return;                                    // a failed start keeps its error message on screen
-  if (!ldBag.length) {                                            // refill with a fresh shuffle, never starting with the phrase just shown
+  // a failed start keeps its error message on screen
+  if (window.qqFailed || ldMsg || window.qqPhaseCur) return;
+  // refill with a fresh shuffle, never starting with the phrase just shown
+  if (!ldBag.length) {
     ldBag = Array.from({ length: NPHRASES }, (_, i) => i).sort(() => Math.random() - 0.5);
     if (ldBag[ldBag.length - 1] === ldLast) ldBag.unshift(/** @type {number} */ (ldBag.pop()));
   }
@@ -84,7 +93,8 @@ function ldShow(i) {                                              // phrase i (0
   ldLast = i; ldShown = "phrase";
   const el = document.getElementById("ldmsg"); if (!el) return; el.innerHTML = I18N.t(`load.phrase.${i + 1}`);
   const dots = document.createElement("span");
-  for (let k = 0; k < 3; k++) { const d = document.createElement("span"); d.textContent = "."; dots.appendChild(d); }   // the phrase appears at once with its three dots (a fast load must still show them)
+  // the phrase appears at once with its three dots (a fast load must still show them)
+  for (let k = 0; k < 3; k++) { const d = document.createElement("span"); d.textContent = "."; dots.appendChild(d); }
   el.appendChild(dots);
   let n = 3; clearInterval(ldDotTimer);
   ldDotTimer = setInterval(() => { n = (n + 1) % 4; /** @type {HTMLElement[]} */ ([...dots.children]).forEach((d, i) => { d.style.visibility = i < n ? "visible" : "hidden"; }); }, 450);

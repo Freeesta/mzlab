@@ -87,7 +87,7 @@ def verify_casi_nomi(path: Path) -> tuple[list[dict], dict[str, int]]:
         if round(mz_ex) != mz_nom:
             mismatch_nominal += 1
 
-        # Verifica consistenza massa calcolata con pyteomics
+        # Check the computed mass against pyteomics
         charge = 1 if r["adduct"] == "[M+H]+" else -1
         py_mz = pyteomics.mass.calculate_mass(formula=r["tp_formula_neutral"], charge=charge)
         if abs(py_mz - mz_ex) > 1e-4:
@@ -146,7 +146,7 @@ def analyze_groups(rows: list[dict]) -> dict[str, int]:
             if len(grp_rows) >= 3:
                 triplets += 1
 
-    # Ricerca coppie a ordine inverso RT vs mz_exact
+    # Look for pairs with RT order inverse to mz_exact
     inverse_rt_count = 0
     for grp_rows in groups.values():
         if grp_rows[0]["expected_kind"] == "different_formula":

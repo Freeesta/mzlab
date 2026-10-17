@@ -33,7 +33,7 @@ try:
         def uniform():
             pg.evaluate("E.files.filter(f=>f.polarity==='negative').forEach(f=>{f.gone=true})"); pg.evaluate("renderFileList()"); pg.wait_for_timeout(300)
             assert pg.locator("#flst .pol").count() == 0, "all files ESI+: no badge per file"
-            # Federico: "Non scrivere ESI+ o ESI- dopo il tipo di esperimento nei file"
+            # Federico: "Do not write ESI+ or ESI- after the experiment type in the files"
             ov = pg.evaluate("(()=>{const l=document.querySelector('#flst');return [...l.querySelectorAll('.fl')].every(e=>e.getBoundingClientRect().right<=l.getBoundingClientRect().right+1)})()"); assert ov, "nothing sticks out of the list"
             pg.evaluate("E.files.forEach(f=>{f.gone=false})"); pg.evaluate("renderFileList()")
         def simboli():

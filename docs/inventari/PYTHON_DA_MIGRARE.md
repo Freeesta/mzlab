@@ -1,40 +1,26 @@
 # Inventario dei Moduli di Calcolo Python da Migrare in Rust
 
-> Documento redatto per la traccia **T9 (Inventario moduli di calcolo Python da migrare in Rust)**.
-> Conforme alla regola architetturale di mzLab: *il motore e tutti i calcoli scientifico-analitici devono risiedere in Rust* (compilati in WebAssembly per il browser client-side in Web Worker con archiviazione OPFS, e come binario nativo per CLI e app desktop Tauri); Python è riservato a strumenti di supporto offline, test e generatori di riferimenti di parità.
+> Regola architetturale di mzLab: il motore e tutti i calcoli scientifico-analitici risiedono in Rust (WebAssembly nel browser, binario nativo per CLI e app desktop). Python è riservato a strumenti di supporto offline, test e generatori di riferimenti di parità.
 
-## 1. Introduzione e Criteri di Classificazione
+mzFinder: nessun Python (motore Rust, risposte del vecchio Python congelate in `tests/golden/`).
 
-### 1.1 Contesto e Scopo dell'Inventario
-Lo scopo del presente inventario è censire in modo esaustivo, metodico e puntuale ogni funzione e classe Python in `mzlab/`, nel motore storico `TP_Mine/` (mzFinder) e negli strumenti di calcolo in `tools/` che implementi logiche analitiche, matematiche o chemiometriche.
-Questo inventario mappa lo stato di avanzamento della migrazione verso l'ecosistema di crate Rust (`mzlab-core`, `mzlab-feat`, `mzlab-lib`, `mzlab-lettori`, `mzlab-wasm`), evidenziando ciò che è già allineato, ciò che è parziale e ciò che manca del tutto.
+## 1. Criteri
 
-### 1.2 Criteri di Distinzione
-- **Calcolo analitico/scientifico (INCLUSO)**:
-  - *Chimica analitica e formule*: masse monoisotopiche, masse nominali, scomposizione formule, addotti, cariche, regole di Hill, decomposizione combinatoria in sotto-formule, regole euristiche Seven Golden Rules.
-  - *Spettrometria e pattern isotopici*: calcolo della struttura fine isotopica, convoluzione per risoluzione strumentale, score isotopico, vincolo di frammentazione MS2, spettri consenso e alberi gerarchici MSn.
-  - *Elaborazione segnale e cromatografia*: baseline estimation (SNIP, AsLS), smoothing e derivate Savitzky-Golay, continuous wavelet transform (CWT Ricker), estrazione picchi centWave, stima apice parabolico con incertezza delta method, FWHM, asimmetria, S/N, integrazione area trapezoidale.
-  - *Feature extraction e allineamento*: lastre m/z, segmentazione e stitching di canali, allineamento k-way per ione e per famiglia, calcolo mappe di RT piecewise linear (RtMap), gap-filling, deisotoping e risoluzione di miscele.
-  - *Chemiometria e statistica*: regressioni robuste (Theil-Sen, Deming pesata per l'origine), correlazioni (Pearson pesata, Spearman, Kendall tau-b), test permutazionali Monte Carlo con PCG64, PCA esplorativa completa (SVD con Jacobi, loadings, scores, ellissi Hotelling T2, stabilità bootstrap), stima componenti EFA, deconvolution (SIMPLISMA, NNDSVD, MCR-ALS).
-  - *Modelli cinetici e classificazione*: fitting cinetiche 1° ordine, Bateman consecutivo A->B->C, Padé, stima stabilità bootstrap / leave-one-out, regressione logistica IRLS per classificazione frammenti in sorgente (ISF).
-  - *Metrologia e QA/QC*: metriche di accuratezza di massa ppm, stabilità RT, deriva strumentale, coefficiente di variazione (CV%), rapporti campione/bianco.
-- **Strumenti di supporto, build e test (ESCLUSI da questa tabella di migrazione)**:
-  - Script di test e asserzioni (`tests/`, `tests_e2e/`).
-  - Script di formattazione, indice e verifica conformità (`tools/indice.py`, `tools/controlla.py`, `tools/controlla_rust.py`, `tools/dimensione.py`, `tools/csp_hash.py`, `tools/sbom.py`).
-  - Script di build e packaging sito/WASM (`tools/build_site.py`, `tools/prepara_sito.py`, `tools/wasm_opt.sh`, `tools/build_feat_wasm.sh`).
-  - Script di generazione fixture d'oro e test di parità (`tools/*_riferimento.py`): questi script NON devono essere migrati in Rust in quanto costituiscono il *riferimento oracolo* contro cui i test di parità Rust (`crates/*/tests/*_parity.rs`) verificano la coincidenza dei risultati.
+### 1.1 Ambito
+L'inventario censisce le funzioni Python di calcolo analitico, matematico o chemiometrico del pacchetto `mzlab/` (riferimento dell'app Dati) e degli strumenti in `tools/` (`tools/valida/`, `tools/bench/`, `tools/centroidi_nucleo.py`). Mappa lo stato rispetto ai crate Rust `mzlab-core`, `mzlab-feat`, `mzlab-lib`, `mzlab-lettori`, `mzlab-wasm`.
 
-### 1.3 Criteri di Priorità e Rischio
-- **Priorità**:
-  - **Alta**: Funzioni collocate direttamente sul percorso critico dell'analisi interattiva della Web UI (Dati, Attributio, Spettri, Mappe 2D/3D), dell'API HTTP, o della pipeline CLI di elaborazione campioni.
-  - **Media**: Funzioni di supporto analitico avanzato, diagnostica di secondo livello, deconvolution di miscele o moduli QA/QC opzionali.
-  - **Bassa**: Calcoli ancillari, formattazioni estetiche, utility di calibrazione modelli offline o moduli già completamente migrati e stabili in Rust.
-- **Rischio**:
-  - **Alto**: Algoritmi complessi esposti a divergenze floating-point sottili (somme Neumaier, SVD Jacobi, algebra lineare, deconvoluzione MCR-ALS, fitting non lineari, generatori pseudo-casuali PCG64), o ad alta complessità combinatoria chimica.
-  - **Medio**: Calcoli dipendenti da ordinamenti, tolleranze analitiche (ppm, Da, RT window) o soglie euristiche.
-  - **Basso / Trascurabile**: Formule analitiche deterministiche, conversioni chiuse o costanti stechiometriche.
+### 1.2 Cosa è incluso e cosa no
+- Incluso: formule e masse, pattern isotopici, segnale e picchi (baseline, Savitzky-Golay, CWT, FWHM, S/N), allineamento e feature, statistica e chemiometria (correlazioni, PCA, deconvoluzione), cinetica, QA/QC, mappe 2D.
+- Escluso: test (`tests/`, `tests_e2e/`), controlli e indici (`tools/indice.py`, `tools/controlla.py`, `tools/controlla_rust.py`, `tools/csp_hash.py`, `tools/sbom.py`), build del sito e del WASM (`tools/build_site.py`, `tools/prepara_sito.py`, `tools/wasm_opt.sh`, `tools/build_feat_wasm.sh`), generatori di dati sintetici (`tools/feat_mirato.py`, `tools/feat_sintetici.py`, `tests_e2e/finder_demo.py`, fixture `TP_Mine/tests/lr_synth.py`, `TP_Mine/tests/lc_synth.py`, `TP_Mine/tests/msn_synth.py`).
+- Gli script `*_riferimento` di `tools/` non si migrano: sono l'oracolo contro cui i test di parità Rust (`crates/*/tests/*_parity.rs`) verificano i risultati. Le risposte congelate stanno in `tests/golden/`.
 
-## 2. Tabella Principale dell'Inventario dei Moduli di Calcolo
+### 1.3 Priorità e rischio
+- Priorità alta: percorso critico della UI Dati, dell'API HTTP o della CLI. Media: diagnostica avanzata, deconvoluzione, QA/QC opzionale. Bassa: calcoli ancillari o già stabili in Rust.
+- Rischio alto: algoritmi sensibili al floating point (somme Neumaier, SVD Jacobi, MCR-ALS, fitting non lineari, PCG64) o combinatoria chimica. Medio: ordinamenti, tolleranze, soglie euristiche. Basso: formule deterministiche.
+
+## 2. Tabella dei moduli di calcolo
+
+La parità di ogni riga con sì è verificata da un test `crates/*/tests/*_parity.rs` (o `golden.rs`) sulle risposte congelate in `tests/golden/`.
 
 | File | Funzione / Classe | Scopo | Equivalente Rust (sì/no/parziale + percorso in crates/) | Chiamanti (UI, CLI, Tabui, Attributio, pytest di parità) | Priorità | Rischio | Come provare la parità |
 |---|---|---|---|---|---|---|---|
@@ -62,8 +48,8 @@ Questo inventario mappa lo stato di avanzamento della migrazione verso l'ecosist
 | `mzlab/chem/subformulas.py` | `measure` | Misurazione e correlazione delle sotto-formule su tabella di picchi MS/MS | sì (`crates/mzlab-core/src/subformulas.rs::measure`) | UI, CLI, pytest | media | medio | `tests/chimica_parity.rs` |
 | `mzlab/chem/msntree.py` | `consensus` | Calcolo spettro consenso MSn raggruppando picchi presenti in almeno min_frac scansioni con normalizzazione | sì (`crates/mzlab-core/src/msntree.rs::consensus`, `msnalbero.rs`) | UI (`infusione-albero.js`), CLI, `/api/msntree`, pytest `test_msntree.py` | alta (sul percorso critico MSn) | medio (stabilità tolleranze m/z) | `tests/msntree_parity.rs` con `tools/msntree_riferimento.py` |
 | `mzlab/chem/msntree.py` | `msn_tree` | Costruzione gerarchica albero di frammentazione multi-stadio MSn (precursore, frammenti, sotto-formule per nodo) | sì (`crates/mzlab-core/src/msntree.rs::msn_tree`, `msnroute.rs`) | UI (scheda Infusione/MSn), CLI, `/api/msntree`, pytest `test_msntree.py` | alta (sul percorso critico MSn) | medio | `tests/msntree_route_parity.rs` con `tools/msntree_rotta_riferimento.py` |
-| `mzlab/chem/contaminants.py` | `ion_shift` | Calcolo shift m/z per ioni di contaminanti noti per polarità e addotto | sì (`crates/mzlab-core/src/elements.rs`, `contaminanti.json`) | UI (tabella contaminanti), CLI, pytest | bassa | trascurabile | `tests/golden.rs` |
-| `mzlab/chem/contaminants.py` | `expand` | Espansione catalogo contaminanti e calcolo serie omologhe di polimeri (PEG, PPG, silossani) | sì (`crates/mzlab-core/src/contaminants.rs`) | UI (banco, marcatura sfondo), CLI, pytest | media | basso | `tests/golden.rs` |
+| `mzlab/chem/contaminants.py` | `ion_shift` | Calcolo shift m/z per ioni di contaminanti noti per polarità e addotto | no (nessun modulo in `crates/`; dati in `mzlab/chem/contaminants.json`) | UI (tabella contaminanti), CLI, pytest | bassa | trascurabile | `tests/golden.rs` |
+| `mzlab/chem/contaminants.py` | `expand` | Espansione catalogo contaminanti e calcolo serie omologhe di polimeri (PEG, PPG, silossani) | no (nessun modulo in `crates/`) | UI (banco, marcatura sfondo), CLI, pytest | media | basso | `tests/golden.rs` |
 | `mzlab/peaks.py` | `nominal` | Conversione m/z continuo a massa nominale intera | sì (`crates/mzlab-core/src/peaks.rs::nominal`) | UI, CLI, `api.py`, pytest `test_peaks.py` | bassa | trascurabile | `tests/specpeaks_parity.rs` |
 | `mzlab/peaks.py` | `profile_peaks` | Estrazione picchi baricentrici da spettri di massa in profilo a risoluzione unitaria | sì (`crates/mzlab-core/src/specpeaks.rs::profile_peaks`, `profspec.rs`) | UI (spettro profilo LR), CLI, `/api/spectrum`, pytest `test_peaks.py` | alta (lettura file profilo) | medio (integrazione baricentro) | `tests/specpeaks_parity.rs` con `tools/specpeaks_riferimento.py` |
 | `mzlab/peaks.py` | `merge_unit` | Fusione e aggregazione di centroidi multipli entro la stessa unità di massa nominale (1 Da) | sì (`crates/mzlab-core/src/specpeaks.rs::merge_unit`) | UI, CLI, `spectrum.rs`, pytest `test_peaks.py` | alta (spettri unitari medi) | basso | `tests/specpeaks_parity.rs` |
@@ -77,7 +63,7 @@ Questo inventario mappa lo stato di avanzamento della migrazione verso l'ecosist
 | `mzlab/analog.py` | `reduce_minmax` | Decimazione min-max conservativa per compressione visiva di tracce analogiche dense | sì (`crates/mzlab-core/src/analog.rs::reduce_minmax`) | UI (rendering veloce grafici analogici), CLI, `/api/analog`, pytest | alta (reattività UI su tracce da 100k punti) | basso | `crates/mzlab-core/tests/golden.rs` |
 | `mzlab/analog.py` | `gradient_model` | Costruzione e validazione del modello matematico a tratti del gradiente solventi (%B vs tempo) | sì (`crates/mzlab-core/src/gradient.rs::model`) | UI (grafici gradiente sovrapposto), CLI, `/api/gradient`, pytest | alta | basso | `tests/routes_parity.rs` |
 | `mzlab/analog.py` | `from_dam` | Estrazione del profilo del gradiente solventi dai metadati binari Analyst .dam | sì (`crates/mzlab-core/src/gradient.rs::from_dam`, `methodinfo.rs`) | UI, CLI, `/api/gradient`, pytest `test_metodo_nome.py` | media | medio | `tests/dam_parity.rs` |
-| `mzlab/analog.py` | `parse_chromeleon` | Parsing dello script di metodo HPLC Chromeleon per estrazione tabella gradiente (%B, flusso, curve) | parziale (struttura in `crates/mzlab-core/src/gradient.rs`, parser testo assente in Rust) | UI, `/api/gradient`, CLI | media | medio (espressioni regolari e formati script Dionex/Thermo) | Generare fixture da metodi Chromeleon reali e testare parità stringa -> struct Gradient |
+| `mzlab/analog.py` | `parse_chromeleon` | Parsing dello script di metodo HPLC Chromeleon per estrazione tabella gradiente (%B, flusso, curve) | sì (`crates/mzlab-core/src/chromeleon.rs::parse_chromeleon`) | UI, `/api/gradient`, CLI | bassa (già migrato) | medio (espressioni regolari e formati script Dionex/Thermo) | Generare fixture da metodi Chromeleon reali e testare parità stringa -> struct Gradient |
 | `mzlab/analog.py` | `parse_gradient_csv` | Parsing di file CSV utente time;%B[;flow] con gestione virgola o punto decimale | sì (`crates/mzlab-core/src/gradient.rs::parse_csv`) | UI (upload gradiente custom), CLI, pytest | media | basso | `tests/routes_parity.rs` |
 | `mzlab/analog.py` | `course_gradient` | Generatore gradiente predefinito della simulazione didattica | sì (`crates/mzlab-core/src/gradient.rs::course`) | UI (Teoria e Pratica), CLI | bassa | trascurabile | `tests/routes_parity.rs` |
 | `mzlab/analog.py` | `detector_delay` | Stima del ritardo temporale (dead volume) tra DAD/UV e spettrometro di massa tramite cross-correlazione | sì (`crates/mzlab-core/src/analog.rs::detector_delay`) | UI, CLI, `/api/delay`, pytest | media | medio (interpolazione e cross-correlazione) | `tests/routes_parity.rs` |
@@ -114,15 +100,15 @@ Questo inventario mappa lo stato di avanzamento della migrazione verso l'ecosist
 | `mzlab/ionfamily.py` | `annotate_roles` | Assegnazione automatica ruoli chimico-analitici ([M+H]+, isotopo, addotto Na/K/NH4, frammento in sorgente, dimero) | sì (`crates/mzlab-core/src/roles.rs::annotate_roles`) | UI, `/api/origin`, `origin_report`, pytest | alta (sul percorso critico) | medio | `tests/origin_parity.rs` con `tools/origin_riferimento.py` |
 | `mzlab/ionfamily.py` | `isotope_check` | Confronto dei rapporti M+1 e M+2 osservati dalle aree delle ROI rispetto al pattern teorico dell'averagina | sì (`crates/mzlab-core/src/roles.rs::isotope_check`) | UI, `origin_report`, pytest | alta | basso | `tests/origin_parity.rs` |
 | `mzlab/ionfamily.py` | `estimate_components` | Stima del numero di specie chimiche indipendenti k tramite SVD contro bordo di rumore Marchenko-Pastur ed EFA | sì (`crates/mzlab-core/src/components.rs::estimate_components`, `statmat.rs`) | UI, analisi spettri co-eluiti, pytest `test_ionfamily.py` | media | alto (SVD Jacobi one-sided e autovalori) | `tests/components_parity.rs` con `tools/componenti_riferimento.py` |
-| `mzlab/ionfamily.py` | `_isotonic_up_down` | Regressione isotonica con vincolo di unimodalità (curva non decrescente prima dell'apice, non crescente dopo) | NO (mancante in `crates/mzlab-core`) | `mcr_als`, deconvoluzione chemiometrica | media (bloccante per porting MCR-ALS) | medio (algoritmo pool adjacent violators PAVA) | Test di parità con profili sintetici cromatografici vs scipy/numpy |
-| `mzlab/ionfamily.py` | `simplisma` | Algoritmo SIMPLISMA per identificazione automatica di k variabili pure (canali non sovrapposti) | NO (mancante in `crates/mzlab-core`) | `deconvolve_window`, `mcr_als` | media (core della deconvoluzione analitica) | alto (determinante matrice correlazione e purezza) | Test di parità su matrici D scans x canali sintetiche e reali |
+| `mzlab/ionfamily.py` | `_isotonic_up_down` | Regressione isotonica con vincolo di unimodalità (curva non decrescente prima dell'apice, non crescente dopo) | sì (`crates/mzlab-feat/src/deconvolve.rs`) | `mcr_als`, deconvoluzione chemiometrica | bassa (già migrato) | medio (algoritmo pool adjacent violators PAVA) | Test di parità con profili sintetici cromatografici vs scipy/numpy |
+| `mzlab/ionfamily.py` | `simplisma` | Algoritmo SIMPLISMA per identificazione automatica di k variabili pure (canali non sovrapposti) | sì (`crates/mzlab-feat/src/deconvolve/mcr.rs::simplisma`) | `deconvolve_window`, `mcr_als` | bassa (già migrato) | alto (determinante matrice correlazione e purezza) | Test di parità su matrici D scans x canali sintetiche e reali |
 | `mzlab/ionfamily.py` | `nndsvd` | Inizializzazione deterministica Non-Negative Double SVD per fattorizzazione matriciale non negativa (NMF) | NO (mancante in `crates/mzlab-core`) | `mcr_als`, deconvoluzione | media | alto (richiede SVD rank-1 positivo/negativo) | Test di parità vs sklearn.decomposition._nndsvd |
-| `mzlab/ionfamily.py` | `mcr_als` | Multivariate Curve Resolution - Alternating Least Squares con vincoli di non-negatività e unimodalità | NO (mancante in `crates/mzlab-core`) | `deconvolve_window`, `mcr_stability` | media (risoluzione miscele co-eluenti) | alto (minimi quadrati vincolati NNLS e convergenza) | Confronto matrici C (profili) ed S (spettri) su dataset co-eluizione |
+| `mzlab/ionfamily.py` | `mcr_als` | Multivariate Curve Resolution - Alternating Least Squares con vincoli di non-negatività e unimodalità | sì (`crates/mzlab-feat/src/deconvolve/mcr.rs::mcr_als`) | `deconvolve_window`, `mcr_stability` | bassa (già migrato) | alto (minimi quadrati vincolati NNLS e convergenza) | Confronto matrici C (profili) ed S (spettri) su dataset co-eluizione |
 | `mzlab/ionfamily.py` | `mcr_stability` | Analisi dell'ambiguità rotazionale e stabilità delle soluzioni MCR-ALS da ripartenze multiple casuali | NO (mancante in `crates/mzlab-core`) | `deconvolve_window` | bassa | alto | Confronto indici di sovrapposizione e deviazioni standard soluzioni |
 | `mzlab/ionfamily.py` | `deconvolve_window` | Deconvoluzione chemiometrica automatica di una finestra cromatografica co-eluita in cromatogrammi e spettri puri | NO (mancante in `crates/mzlab-core`) | UI (strumenti avanzati spettrometria), CLI | media | alto (pipeline completa SIMPLISMA + MCR-ALS) | Dati d'oro da corse co-eluenti con standard di miscela |
-| `mzlab/ionfamily.py` | `source_ramp` | Analisi delle curve di breakdown da potenziale di declustering (DP) per conferma sperimentale di frammenti in sorgente | NO / parziale (struttura dati in `crates/mzlab-feat/src/legacy/lrisf/isf_report.rs`, fitting curve mancante) | UI, analisi standard DP | media | medio | Test di regressione sigmoide/lineare su serie a DP crescente |
-| `mzlab/ionfamily.py` | `_pairwise_windowed_corr` | Calcolo matrice di correlazione Pearson a coppie su finestre temporali locali | sì / parziale (`crates/mzlab-feat/src/family.rs`) | `ion_families`, clustering | media | basso | `tests/family_parity.rs` |
-| `mzlab/ionfamily.py` | `_average_linkage` | Clustering gerarchico agglomerativo con criterio average-linkage fino a soglia di taglio | NO in `crates/mzlab-core` (l'allineamento in `mzlab-feat` usa componenti connesse e ordini) | `ion_families` | media | medio | Test di parità dendrogramma vs scipy.cluster.hierarchy |
+| `mzlab/ionfamily.py` | `source_ramp` | Analisi delle curve di breakdown da potenziale di declustering (DP) per conferma sperimentale di frammenti in sorgente | sì (`crates/mzlab-core/src/source_ramp.rs`) | UI, analisi standard DP | bassa (già migrato) | medio | Test di regressione sigmoide/lineare su serie a DP crescente |
+| `mzlab/ionfamily.py` | `_pairwise_windowed_corr` | Calcolo matrice di correlazione Pearson a coppie su finestre temporali locali | sì (`crates/mzlab-core/src/roi_cluster.rs::pairwise_windowed_corr`) | `ion_families`, clustering | bassa (già migrato) | basso | `tests/family_parity.rs` |
+| `mzlab/ionfamily.py` | `_average_linkage` | Clustering gerarchico agglomerativo con criterio average-linkage fino a soglia di taglio | sì (`crates/mzlab-core/src/roi_cluster.rs::average_linkage`) | `ion_families` | bassa (già migrato) | medio | Test di parità dendrogramma vs scipy.cluster.hierarchy |
 | `mzlab/ionfamily.py` | `ion_families` | Raggruppamento delle ROI di una finestra in famiglie di ioni co-eluiti a bassa risoluzione | parziale (`crates/mzlab-feat/src/family.rs` per HR; mancante per ROI 1 Da in `mzlab-core`) | UI, CLI, pytest `test_ionfamily.py` | media | medio | `tests/test_ionfamily.py` |
 | `mzlab/ionfamily.py` | `greedy_match` / `_greedy_pairs` | Matching bipartito greedy globale ponderato per accoppiamento picchi spettrali | sì (`crates/mzlab-core/src/ms2sim.rs::greedy_match`, `crates/mzlab-lib/src/scores.rs`) | `ms2_similarity`, librerie, pytest | alta | medio | `tests/origin_parity.rs` |
 | `mzlab/ionfamily.py` | `ms2_similarity` | Similarità spettrale tra spettro frammentazione MS2 di X e precursore P (coseno, frammenti e perdite neutre) | sì (`crates/mzlab-core/src/ms2sim.rs::ms2_similarity`, `crates/mzlab-lib/src/scores.rs`) | UI, `/api/origin`, `origin_report`, pytest | alta | medio | `tests/origin_parity.rs` |
@@ -156,38 +142,7 @@ Questo inventario mappa lo stato di avanzamento della migrazione verso l'ecosist
 | `mzlab/explore.py` | `Item.ionmap` / `ionmap_region` | Aggregazione intensità per cella su griglia bidimensionale RT x m/z per viewer mappa 2D e 3D | sì (`crates/mzlab-core/src/mapgrid.rs::map`, `maptiles.rs`, `mzlab-wasm`) | UI (`mappa-render.js`), CLI, `/api/map`, pytest `test_mappa.py` | alta (sul percorso critico visuale) | alto (performance streaming e allocazione memoria) | `tests/map_parity.rs` e `tests/maptiles_parity.rs` con `tools/mappa_riferimento.py` |
 | `mzlab/explore.py` | `Item.map_snap` | Ricerca del massimo locale m/z-RT più vicino alle coordinate del cursore/clic dell'utente | sì (`crates/mzlab-core/src/mapgrid.rs::mapsnap`) | UI (interazione clic su mappa), CLI, `/api/snap`, pytest | alta | basso | `tests/map_parity.rs` |
 | `mzlab/explore.py` | `Item._binned` / `scan_avg` | Spettro medio aggregato in finestra RT con binning Da o ppm da indice mzidx | sì (`crates/mzlab-core/src/spectrum.rs`, `hrroutes.rs`, `profspec.rs`) | UI (spettro medio finestra RT), CLI, `/api/spectrum`, pytest | alta | medio | `tests/routes_parity.rs` e `tests/hr_parity.rs` |
-| `TP_Mine/py/tpmine/hr/features.py` | `detect` | Estrazione feature LC-HRMS MS1 da picchi centroidi dell'indice (lastre m/z, canali 4 ppm, segmenti, stitching, rimozione lobi FT) | sì (`crates/mzlab-feat/src/trace.rs::detect`, `channels.rs`, `post.rs`, `table.rs`) | Pyodide worker (`tpmine-worker.js`), `valida_feat.py`, test parità | alta (sul percorso critico feature detection) | alto (ricostruzione continua traccia e stabilità canali) | `crates/mzlab-feat/tests/trace_parity.rs` con `tools/feat_riferimento.py` |
-| `TP_Mine/py/tpmine/hr/features.py` | `align` | Allineamento multi-file k-way per ione su griglia m/z ed RT con ordinamento stabile | sì (`crates/mzlab-feat/src/align.rs::align`) | Pyodide worker, `valida_feat.py`, test parità | alta | alto (matching k-way stabile e tolleranze RT/ppm) | `crates/mzlab-feat/tests/align_parity.rs` con `tools/feat_allinea.py` |
-| `TP_Mine/py/tpmine/hr/features.py` | `fill_gaps` | Re-integrazione mirata delle feature mancanti (gap-filling) con tolleranza RT e floor di rumore | sì (`crates/mzlab-feat/src/gapfill.rs::fill_file`) | Pyodide worker, pipeline HR, test parità | alta | medio | `crates/mzlab-feat/tests/gapfill_parity.rs` con `tools/feat_riempimento.py` |
-| `TP_Mine/py/tpmine/hr/rtalign.py` | `build` | Costruzione delle curve di allineamento tempi di ritenzione (RtMap) tramite ancore robuste e interpolazione piecewise linear | sì (`crates/mzlab-feat/src/rtmap.rs::build`) | Pyodide worker, allineamento HR, test parità | alta | medio | `crates/mzlab-feat/tests/align_parity.rs` con `tools/feat_allinea.py` |
-| `TP_Mine/py/tpmine/hr/filters.py` | `quality_metrics` / `assess` | Valutazione metrica della qualità del picco (forma gaussiana, S/N, asimmetria, FWHM) | sì (`crates/mzlab-feat/src/quality.rs::assess`, `crates/mzlab-core/src/peakq.rs`) | Pipeline feature detection, test parità | alta | medio | `crates/mzlab-feat/tests/trace_parity.rs` |
-| `TP_Mine/py/tpmine/hr/filters.py` | `mark_mixtures` / `resolve` | Risoluzione dei picchi cromatografici con massimi multipli e marcatura di miscele tramite similarità MS2 | sì (`crates/mzlab-feat/src/resolve.rs::assess_and_resolve`, `mark_mixtures`) | Pipeline feature detection HR, test parità | alta | alto | `crates/mzlab-feat/tests/untargeted_resolve.rs` |
-| `TP_Mine/py/tpmine/hr/iimn.py` | `relations` | Tabelle e regole di identificazione delle relazioni molecolari tra ioni (addotti, isotopi, dimeri, ISF) | sì (`crates/mzlab-feat/src/family.rs`, `evid.rs`, `crates/mzlab-attributio-wasm`) | Attributio, IIMN, test parità | alta | medio | `crates/mzlab-feat/tests/family_parity.rs` con `tools/feat_famiglie.py` |
-| `TP_Mine/py/tpmine/hr/edge_evidence.py` | `evaluate_edge` / `report_evidence` | Valutazione oggettiva delle evidenze analitiche a supporto di un arco relazionale (frammenti condivisi, costanza rapporto aree) | sì (`crates/mzlab-feat/src/evid.rs::evidence`, `crates/mzlab-feat/src/legacy/edge.rs`) | Attributio, scheda Identità, `/api/origin`, test parità | alta | medio | `crates/mzlab-feat/tests/evid.rs` |
-| `TP_Mine/py/tpmine/hr/identity.py` | `build` | Costruzione del grafo delle identità di composti (componenti connesse da co-eluizione, correlazione e massa) | sì (`crates/mzlab-feat/src/rowident.rs`, `rowmeta.rs`, `crates/mzlab-feat/src/legacy/identity.rs`) | UI (`29_untarget_identity.js`), `/api/identity_graph`, test parità | alta | alto | `crates/mzlab-feat/tests/rowident.rs` |
-| `TP_Mine/py/tpmine/hr/identity.py` | `polarity_pairs` | Accoppiamento tra identità in polarità positiva e negativa per medesima massa neutra entro tolleranza ppm | sì (`crates/mzlab-feat/src/hypo.rs`, `crates/mzlab-feat/src/legacy/identity/pairs.rs`) | UI, `/api/polarity_pairs`, test parità | media | basso | `crates/mzlab-feat/tests/hypo.rs` |
-| `TP_Mine/py/tpmine/hr/kinetics.py` | `FormBank.fit` | Fitting cinetico su banca di forme analitiche (Bateman, esponenziale, plateau) e selezione ottimale con AICc | sì (`crates/mzlab-feat/src/kinetic.rs::FormBank`) | Attributio, modulo cinetica, test parità | alta | medio | `crates/mzlab-feat/tests/kinetic_parity.rs` con `tools/feat_cinetica.py` |
-| `TP_Mine/py/tpmine/hr/kinetics.py` | `stability` | Stima della stabilità della classificazione cinetica mediante ricampionamento bootstrap e leave-one-out | sì (`crates/mzlab-feat/src/kinetic/resample.rs::stability`) | Modulo cinetica, test parità | alta | medio | `crates/mzlab-feat/tests/kinetic_parity.rs` |
-| `TP_Mine/py/tpmine/hr/kinetics.py` | `generation` | Attribuzione della generazione di prodotto (1a vs 2a generazione via modello a catena Padé A->B->C) | sì (`crates/mzlab-feat/src/kinetic/generation.rs::generation`) | Attributio, scheda TP, test parità | alta | alto | `crates/mzlab-feat/tests/kinetic_parity.rs` |
-| `TP_Mine/py/tpmine/hr/similarity.py` | `modified_cosine` | Coseno modificato tra spettri MS2 con shifting del precursore per riconoscimento frammenti e perdite neutre | sì (`crates/mzlab-feat/src/legacy/similarity.rs`, `crates/mzlab-lib/src/scores.rs`) | Matching librerie, allineamento MS2, test parità | alta | medio | `crates/mzlab-lib/tests/search.rs` |
-| `TP_Mine/py/tpmine/hr/similarity.py` | `entropy_similarity` | Calcolo similarità di entropia spettrale pesata per confronto accurato spettri frammentazione | sì (`crates/mzlab-core/src/entropy.rs`, `crates/mzlab-lib/src/scores.rs`) | Librerie spettrali, Attributio, test parità | alta | basso | `crates/mzlab-lib/tests/parita.rs` |
-| `TP_Mine/py/tpmine/hr/similarity.py` | `all_pairs` | Calcolo della matrice all-pairs dense di similarità spettrale con pre-filtro a blocchi | parziale (`crates/mzlab-lib/src/search.rs` ha indice flash; all-pairs dense globale è assente) | Costruzione reti molecolari globali GNPS-style | media | medio | Confronto matrici di adiacenza della rete spettrale |
-| `TP_Mine/py/tpmine/hr/spectra.py` | `consensus_arrays` | Spettro consenso da serie di array m/z e intensità di scansioni DDA centroidi | sì (`crates/mzlab-core/src/msnalbero.rs::consenso`, `crates/mzlab-feat/src/ms2spec.rs`) | Pipeline feature extraction HR, test parità | alta | medio | `crates/mzlab-feat/tests/iso_ms2_parity.rs` |
-| `TP_Mine/py/tpmine/hr/spectra.py` | `deconvolve_isomers` | Deconvoluzione di spettri MS2 chimerici originati da isomeri co-eluenti tramite fattorizzazione matriciale | NO (mancante in Rust) | Pyodide worker mzFinder, attribuzione spettri isomeri | alta (critico per risoluzione isomeri in DDA) | alto (deconvoluzione non lineare) | Confronto spettri deconvoluti su miscele note di isomeri |
-| `TP_Mine/py/tpmine/hr/spectra.py` | `subpeaks` | Individuazione di sub-apici cromatografici parzialmente risolti su traccia MS1 tramite derivate Savitzky-Golay | NO (mancante in Rust) | Pyodide worker mzFinder, `deconvolve_isomers` | media | medio | Confronto tempi apice sub-picchi rilevati |
-| `TP_Mine/py/tpmine/hr/localize.py` | `substructures` / `candidates` | Localizzazione topologica della trasformazione su grafo molecolare (tagli di legami e sottostrutture) | sì / parziale (`crates/mzlab-feat/src/chem/grafo.rs`, `crates/mzlab-feat/src/chem/posizioni/`) | UI (disegno e localizzazione), Attributio | media | medio | `crates/mzlab-feat/tests/posizioni.rs` |
-| `TP_Mine/py/tpmine/hr/rules.py` | `prediction` | Generazione e ranking delle predizioni di trasformazione con regole biochimiche (fase I / fase II) | sì (`crates/mzlab-feat/src/hypo.rs`) | Passaggio mirato mzFinder, test parità | alta | medio | `crates/mzlab-feat/tests/hypo.rs` |
-| `TP_Mine/py/tpmine/isf.py` | `fit_logistic` | Addestramento regressore logistico L2 con IRLS su feature di estrazione evidenze per classificazione ISF | NO (in Rust è implementata solo l'inferenza con pesi congelati in `crates/mzlab-feat/src/legacy/lrisf/`) | Script di addestramento modello `calibrate()` | bassa (necessario solo per ricalibrare modelli) | alto (ottimizzazione IRLS e convergenza) | Confronto vettori dei pesi logistici e log-odds calcolati |
-| `TP_Mine/py/tpmine/isf.py` | `classify_report` / `classify_ions` | Classificazione bayesiana delle probabilità di ereditarietà dal progenitore e ripartizione ipotesi | sì (`crates/mzlab-feat/src/legacy/lrisf/isf.rs`, `crates/mzlab-finder-lr-wasm`) | UI (Dig low-res), Pyodide, test parità | alta | medio | `crates/mzlab-feat/tests/legacy_lrisf.rs` |
-| `TP_Mine/py/tpmine/mrm.py` | `predict_transitions` | Predizione teorica delle transizioni MRM (coppie Q1/Q3 con collision energy e dwell time ottimizzati) | sì (`crates/mzlab-feat/src/mrm.rs`, `crates/mzlab-core/src/mrmroutes.rs`) | UI (esportazione transizioni MRM), CLI | media | basso | `crates/mzlab-feat/tests/lr_mrm.rs` |
-| `TP_Mine/py/tpmine/score.py` | `score_candidate` | Punteggio multi-criterio e livello di confidenza Schymanski per candidati a bassa risoluzione | sì (`crates/mzlab-feat/src/legacy/lr/mod.rs`) | Engine LR, test parità | alta | medio | `crates/mzlab-feat/tests/legacy_parity.rs` |
-| `TP_Mine/py/tpmine/score.py` | `halogen_expectation` | Calcolo del rapporto atteso (M+2)/M specificamente per atomi di cloro e bromo | sì (`crates/mzlab-feat/src/legacy/lr/mod.rs`, `crates/mzlab-core/src/elements.rs`) | Engine LR, scoring candidati alogenati | media | basso | `crates/mzlab-feat/tests/legacy_parity.rs` |
-| `TP_Mine/py/tpmine/chem.py` | `parse_delta` / `fmt_delta` | Parsing e formattazione di variazioni di formula chimica (es. '+O', '-H2', '-Cl+H') | sì (`crates/mzlab-feat/src/chem/frammenti.rs::parse_delta`, `fmt_delta`) | UI (editor disegno, trasformazioni), test parità | media | basso | `crates/mzlab-feat/tests/posizioni.rs` |
-| `TP_Mine/py/tpmine/chem.py` | `smiles_formula` | Ricavo della formula molecolare da stringa SMILES (subset organico, anelli aromatici, cariche) | sì (`crates/mzlab-feat/src/chem/grafo.rs::formula`, `crates/mzlab-core/src/elements.rs`) | UI (import SMILES), test parità | alta | medio (correttezza valenze e idrogeni impliciti) | `crates/mzlab-feat/tests/posizioni.rs` |
-| `TP_Mine/py/tpmine/engine.py` | `Experiment.parent_decay` | Calcolo cinetica di decadimento del progenitore (k, tempo di dimezzamento t1/2, R2) da log-aree | sì (`crates/mzlab-feat/src/kinetic/saturation.rs`, `crates/mzlab-core/src/kinetics.rs`) | Engine TP Mine, test parità | alta | basso | `crates/mzlab-feat/tests/kinetic_parity.rs` |
-| `TP_Mine/py/tpmine/engine.py` | `Experiment.discover` | Scoperta untargeted di ioni con crescita nel tempo e assenti nei controlli a tempo zero o bianco | sì (`crates/mzlab-feat/src/legacy/lr/plan.rs`, `crates/mzlab-finder-lr-wasm`) | Engine LR mzFinder, test parità | alta | medio | `crates/mzlab-feat/tests/lr_fullscan.rs` |
 | `tools/centroidi_nucleo.py` | `centroids` (nucleo algoritmo) | Centroiding completo da spettro in profilo (SG, stima fondo/rumore, soglie Poisson, fit Gaussiano, de-saturazione plateau, ricerca spalle) | sì (`crates/mzlab-core/src/lettori_centroidi.rs::centroids`, `lettori_centroidi/`) | Conversione mzML profilo -> centroidi, CLI, test parità | alta (qualità dati grezzi) | alto (accuratezza m/z al ppm e quantificazione area) | `crates/mzlab-core/tests/centroidi_parity.rs` con `tools/centroidi_riferimento.py` |
-| `tools/valida/abbina.py` | `abbina` | Matching bipartito greedy deterministico 1-a-1 tra due liste di punti 2D (m/z, RT) con tolleranza m/z (ppm) ed RT (min) | NO (mancante in Rust; codice Python utilizzato per validazione) | Script di validazione e quality gate (`cancello.py`, `metriche.py`, benchmark) | alta (benchmark e quality gate CI) | medio (stabilità ordinamento delle distanze normalizzate) | Test di parità con liste di punti sintetici m/z-RT randomici |
 | `tools/valida/metriche.py` | `tp_veri` | Calcolo dei prodotti di trasformazione veri recuperati nella tabella allineata rispetto al ground truth | NO (mancante in Rust) | Quality gate del CI (`cancello.py`), validazione feature tables | media | basso | Confronto valori numerici su serie sintetiche V1/V1X |
 | `tools/valida/metriche.py` | `rapporto_isotopico` | Misura dell'errore relativo del rapporto di area M+1/M rispetto al valore teorico di formula | NO (mancante in Rust) | Quality gate CI, validazione | media | basso | Confronto errori calcolati su verità sintetiche |
 | `tools/valida/metriche.py` | `jaccard` | Calcolo dell'indice di similarità di Jaccard tra due tabelle di feature allineate | NO (mancante in Rust) | Confronto tra software (mzLab vs MZmine/MS-DIAL) | media | trascurabile | Verifica analitica insiemistica |
@@ -196,118 +151,49 @@ Questo inventario mappa lo stato di avanzamento della migrazione verso l'ecosist
 | `tools/valida/lr_criteri.py` | `r2_loglog` / `valle` | Calcolo linearità R2 log-log per curve di calibrazione e calcolo profondità valle tra gaussiane | NO (mancante in Rust) | Quality gate bassa risoluzione (`test_valida_lr.py`) | media | basso | Confronto numerico su serie MRM standard |
 | `tools/valida/isotopologhi.py` | `componenti` / `picchi_da_verita` | Generatore di picchi teorici di riferimento M, M+1, M+2 alla mzRAPP per validazione | NO (mancante in Rust) | Validazione feature extraction | bassa | basso | Confronto picchi generati vs mzRAPP |
 | `tools/bench/metriche.py` | `p1`...`p5` (endpoint benchmark) | Calcolo formale degli endpoint scientifici P1 (recall), P2 (accuratezza quantitativa), P3 (integrità riga), P4 (recall candidati), P5 (falsi positivi esche) | NO (mancante in Rust; pipeline benchmark Python) | Benchmark mzLab vs Asari/MZmine/OpenMS/XCMS (`tools/bench/`) | media (fondamentale per pubblicazione scientifica) | medio | Test di coerenza su dataset D1 e D2 |
-| `tools/bench/statistica.py` | `mcnemar_esatto` / `holm` | Test esatto di McNemar a due code su esiti appaiati e correzione step-down di Holm per test multipli | NO (mancante in Rust) | Analisi statistica del benchmark | media | medio (calcolo binomiale esatto) | Confronto p-value con scipy.stats e statsmodels |
-| `tools/bench/statistica.py` | `indici_bootstrap` / `intervallo` | Calcolo intervalli di confidenza non parametrici al 95% tramite bootstrap con ricampionamento | NO (mancante in Rust) | Analisi statistica del benchmark | media | medio (riproducibilità RNG seed) | Confronto percentili bootstrap vs numpy |
 
-## 3. Sezione di Riepilogo e Statistiche
+## 3. Riepilogo
 
-### 3.1 Conteggi Totali
-- **Totale funzioni/classi di calcolo censite**: **160**
-- **Equivalente Rust già implementato e funzionante (SÌ)**: **130** (81.2%)
-- **Equivalente Rust parziale (PARZIALE)**: **3** (1.9%)
-- **Equivalente Rust mancante (NO)**: **27** (16.9%)
+### 3.1 Conteggi
+- Funzioni/classi censite: **127**
+- Equivalente Rust presente (sì): **108**
+- Parziale: **1**
+- Mancante (no): **18**
 
-### 3.2 Distribuzione nei Crate Rust Esistenti
-Le funzioni che hanno già un equivalente in Rust o sono parzialmente coperte sono così distribuite nei crate del workspace:
-- **`crates/mzlab-core`**: **119** funzioni/moduli coperti.
-  * Nucleo chimico: `elements.rs`, `composition.rs`, `isoscore.rs`, `subformulas.rs`, `contaminants.rs`, `msntree.rs`.
-  * Segnale e picchi: `signal.rs`, `peaks.rs`, `peakext.rs`, `peakq.rs`, `specpeaks.rs`, `lettori_centroidi.rs`.
-  * Statistica e chemiometria: `stats.rs`, `statmat.rs`, `statistica.rs`, `statref.rs`, `pca.rs`, `components.rs`.
-  * Mappe e cromatogrammi: `mapgrid.rs`, `mapcells.rs`, `maptiles.rs`, `maproute.rs`, `differenza.rs`, `diffroute.rs`, `subxic.rs`, `analog.rs`, `gradient.rs`.
-  * Attribuzione origine e cinetica: `similarity.rs`, `ratio.rs`, `kinetics.rs`, `roles.rs`, `ms2sim.rs`, `origin.rs`.
-- **`crates/mzlab-feat`**: **30** funzioni/moduli coperti.
-  * Feature detection HR: `trace.rs`, `channels.rs`, `post.rs`, `table.rs`, `sweep.rs`, `quality.rs`, `resolve.rs`.
-  * Allineamento e gap-filling: `align.rs`, `famalign.rs`, `rtmap.rs`, `gapfill.rs`, `pipeline.rs`.
-  * Famiglie, isotopi e legami MS2: `family.rs`, `isotopes.rs`, `ms2.rs`, `ms2spec.rs`.
-  * Ipotesi mirate e cinetiche avanzate: `hypo.rs`, `target.rs`, `kinetic.rs` (con `generation.rs`, `resample.rs`, `saturation.rs`).
-  * Modulo legacy & transizioni: `legacy/` (`lrisf/`, `identity/`, `fragtree/`, `lr/`, `msn/`).
-- **`crates/mzlab-lib`**: **6** funzioni/moduli (coseno modificato, similarità entropica, matching spettrale, punteggi pesati, clean).
-- **`crates/mzlab-wasm` / `mzlab-desktop`**: ponti WASM ed esposizione runtime per esecuzione in Web Worker e app Tauri.
+### 3.2 Distribuzione nei crate
+- `crates/mzlab-core`: nucleo chimico (`elements.rs`, `composition.rs`, `isoscore.rs`, `subformulas.rs`, `msntree.rs`),
+  - segnale e picchi (`signal.rs`, `peaks.rs`, `peakext.rs`, `peakq.rs`, `specpeaks.rs`, `subpeaks.rs`, `rois.rs`, `roi_cluster.rs`),
+  - statistica (`stats.rs`, `statmat.rs`, `statistica.rs`, `statref.rs`, `pca.rs`, `components.rs`, `bench_stats.rs`),
+  - mappe e cromatogrammi (`mapgrid.rs`, `mapcells.rs`, `maptiles.rs`, `differenza.rs`, `subxic.rs`, `analog.rs`, `gradient.rs`, `chromeleon.rs`),
+  - origine e cinetica (`similarity.rs`, `ratio.rs`, `kinetics.rs`, `roles.rs`, `ms2sim.rs`, `origin.rs`, `source_ramp.rs`), `abbina.rs`, `qaqc.rs`.
+- `crates/mzlab-feat`: feature HR, allineamento e gap-filling, famiglie e isotopi, ipotesi e cinetica, deconvoluzione (`deconvolve.rs`, `deconvolve/mcr.rs`), moduli `legacy/`.
+- `crates/mzlab-lib`: coseno modificato, similarità entropica, matching spettrale, matrice all-pairs (`all_pairs.rs`), punteggi.
+- `crates/mzlab-wasm` e `mzlab-desktop`: ponti WASM e runtime Tauri.
 
-### 3.3 Stato delle Funzioni Parziali o Mancanti
-Delle **30** funzioni non completamente migrate:
-- **3 parziali**:
-  1. `mzlab/analog.py::parse_chromeleon`: Il modello dati `Gradient` è in `crates/mzlab-core/src/gradient.rs`, ma il parsing specifico della sintassi Chromeleon (`PumpModule.Pump.%B.Value`) è presente solo in Python.
-  2. `TP_Mine/py/tpmine/hr/similarity.py::all_pairs`: In `crates/mzlab-lib` è presente l'indice Flash per interrogare singole query, ma il costruttore della matrice all-against-all densa con pre-filtraggio a blocchi di matrici F ed L risiede ancora in Python.
-  3. `TP_Mine/py/tpmine/hr/localize.py`: In `crates/mzlab-feat/src/chem/` (`grafo.rs`, `posizioni/`) è implementata la scomposizione e simmetria topologica, ma alcune euristiche di cut su legami multipli non sono completamente replicate.
-- **27 mancanti (NO)**:
-  * Gruppo Deconvoluzione Chemiometrica (6 funzioni): `simplisma`, `nndsvd`, `mcr_als`, `mcr_stability`, `deconvolve_window`, `_isotonic_up_down` in `mzlab/ionfamily.py`.
-  * Gruppo Deconvoluzione Isomeri e Spettri Chimerici (3 funzioni): `deconvolve_isomers`, `subpeaks`, `fragment_matrix` in `TP_Mine/py/tpmine/hr/spectra.py`.
-  * Gruppo Calibrazione Modelli e Soglie Diagnostiche (6 funzioni): `fit_logistic`, `calibrate`, `_auc_cv` in `tpmine/isf.py`; `roc_curve`, `auc`, `youden_threshold`, `cv_threshold`, `calibrate_thresholds` in `mzlab/ionfamily.py`.
-  * Gruppo Curve di Declustering Potential (1 funzione): `source_ramp` in `mzlab/ionfamily.py`.
-  * Gruppo Algoritmi Matematici di Matching e Validazione (11 funzioni): `abbina` in `tools/valida/abbina.py`; metriche gate in `tools/valida/cancello_misure.py` e `metriche.py`; endpoint e statistiche bootstrap/McNemar in `tools/bench/`.
+### 3.3 Voci non ancora complete in Rust
+- `mzlab/chem/contaminants.py` `ion_shift`: no (nessun modulo in `crates/`; dati in `mzlab/chem/contaminants.json`)
+- `mzlab/chem/contaminants.py` `expand`: no (nessun modulo in `crates/`)
+- `mzlab/ionfamily.py` `nndsvd`: NO (mancante in `crates/mzlab-core`)
+- `mzlab/ionfamily.py` `mcr_stability`: NO (mancante in `crates/mzlab-core`)
+- `mzlab/ionfamily.py` `deconvolve_window`: NO (mancante in `crates/mzlab-core`)
+- `mzlab/ionfamily.py` `ion_families`: parziale (`crates/mzlab-feat/src/family.rs` per HR; mancante per ROI 1 Da in `mzlab-core`)
+- `mzlab/ionfamily.py` `roc_curve`: NO (mancante in Rust)
+- `mzlab/ionfamily.py` `auc`: NO (mancante in Rust)
+- `mzlab/ionfamily.py` `youden_threshold`: NO (mancante in Rust)
+- `mzlab/ionfamily.py` `cv_threshold`: NO (mancante in Rust)
+- `mzlab/ionfamily.py` `calibrate_thresholds`: NO (mancante in Rust)
+- `tools/valida/metriche.py` `tp_veri`: NO (mancante in Rust)
+- `tools/valida/metriche.py` `rapporto_isotopico`: NO (mancante in Rust)
+- `tools/valida/metriche.py` `jaccard`: NO (mancante in Rust)
+- `tools/valida/cancello_misure.py` `richiamo` / `isomeri_separati`: NO (mancante in Rust)
+- `tools/valida/cancello_misure.py` `errore_area`: NO (mancante in Rust)
+- `tools/valida/lr_criteri.py` `r2_loglog` / `valle`: NO (mancante in Rust)
+- `tools/valida/isotopologhi.py` `componenti` / `picchi_da_verita`: NO (mancante in Rust)
+- `tools/bench/metriche.py` `p1`...`p5` (endpoint benchmark): NO (mancante in Rust; pipeline benchmark Python)
 
-### 3.4 I 10 Casi Più Urgenti e Prioritari da Migrare in Rust
-
-Di seguito sono analizzati i **10 casi più urgenti** da migrare in Rust, ordinati per impatto tecnico sul prodotto, indipendenza da runtime esterni (Pyodide) e performance.
-
-#### 1. Deconvoluzione Chemiometrica MCR-ALS con SIMPLISMA (`mcr_als`, `simplisma`, `nndsvd`, `_isotonic_up_down`)
-- **File e riga**: `mzlab/ionfamily.py (righe 1226-1390)`
-- **Descrizione**: Risoluzione di miscele analitiche co-eluenti. SIMPLISMA individua le variabili pure (m/z non interferiti); NNDSVD fornisce un'inizializzazione deterministica non negativa; MCR-ALS ottimizza alternativamente concentrazioni cromatografiche e spettri puri con vincoli di non-negatività e unimodalità (PAVA).
-- **Priorità**: Alta (impatto diretto sull'estrazione di spettri puri da miscele co-eluenti)
-- **Motivazione tecnica**: Attualmente mzLab può solo stimare il numero di componenti via SVD (`crates/mzlab-core/src/components.rs`), ma non può estrarre i profili e gli spettri deconvoluti nel browser. Implementare MCR-ALS in Rust (su `statmat.rs`) sblocca la deconvoluzione in WebAssembly ad alte prestazioni senza bloccare la UI.
-- **Come verificare la parità**: Confrontare matrici C (profili) ed S (spettri) su dataset sintetici di co-eluizione a 2 e 3 analiti sovrapposti (`tests/components_parity.rs`).
-
-#### 2. Deconvoluzione Spettri MS2 Chimerici di Isomeri Co-eluenti (`deconvolve_isomers`, `fragment_matrix`)
-- **File e riga**: `TP_Mine/py/tpmine/hr/spectra.py (righe 65-120)`
-- **Descrizione**: Separa i contributi di frammentazione di due o più isomeri co-eluiti all'interno della stessa finestra di isolamento precursore DDA, ricostruendo lo spettro MS2 puro di ciascun isomero.
-- **Priorità**: Alta (eliminazione Pyodide in mzFinder)
-- **Motivazione tecnica**: È uno dei motivi principali per cui il Web Worker di mzFinder fa ancora affidamento su Pyodide (`tpmine-worker.js`). Portarlo in `crates/mzlab-feat/src/ms2spec.rs` permetterebbe la completa esecuzione client-side in Rust WASM del disaccoppiamento isomerico.
-- **Come verificare la parità**: Confronto spettri deconvoluti con serie di standard sintetici di isomeri fenilici/alogenati (`tools/valida/sintetici_identita.py`).
-
-#### 3. Rilevamento Sub-Apici su Tracce Cromatografiche MS1 (`subpeaks`)
-- **File e riga**: `TP_Mine/py/tpmine/hr/spectra.py (righe 122-140)`
-- **Descrizione**: Rileva apici secondari parzialmente fusi e spalle su tracce XIC tramite analisi dei passaggi per lo zero della derivata prima e minimi della derivata seconda Savitzky-Golay.
-- **Priorità**: Alta (collegamento MS2 a feature risolte)
-- **Motivazione tecnica**: Indispensabile per assegnare correttamente le scansioni MS2 dipendenti allo specifico isomero nel cluster risolto (`resolve.rs`). In Rust manca un rilevatore di sub-apici cromatografici con soglia di separazione minima.
-- **Come verificare la parità**: Confronto dei tempi di ritenzione degli apici individuati su tracce sintetiche bi-gaussiane a diversa risoluzione Rs.
-
-#### 4. Matching Bipartito Greedy Deterministico 2D m/z - RT (`abbina`)
-- **File e riga**: `tools/valida/abbina.py (righe 10-35)`
-- **Descrizione**: Algoritmo di matching 1-a-1 bipartito pesato su differenze normalizzate di m/z (ppm) e tempo di ritenzione (minuti) tra due tabelle o liste di coordinate analitiche.
-- **Priorità**: Alta (velocità CI, validazione e allineamento esterno)
-- **Motivazione tecnica**: È il cuore del confronto analitico tra feature tables (mzLab vs MZmine, MS-DIAL, XCMS, ground truth). In Python rallenta l'esecuzione dei test di qualità (`cancello.py`). La migrazione in `crates/mzlab-feat` o `mzlab-core` consente di integrarlo direttamente nel motore nativo e nei tool di benchmark.
-- **Come verificare la parità**: Test unitario con matrici di coordinate generate casualmente con seed fisso: verifica corrispondenza esatta delle coppie (ia, ib).
-
-#### 5. Costruttore Matrice All-Pairs di Similarità Spettrale con Prefiltro (`all_pairs`, `upper_bound`, `bin_matrices`)
-- **File e riga**: `TP_Mine/py/tpmine/hr/similarity.py (righe 140-205)`
-- **Descrizione**: Calcolo della similarità modified cosine su tutte le coppie possibili di spettri MS2 (N x N) con pre-filtraggio matriciale rapido (upper bound F e L con matrici binnate) per reti molecolari scalabili.
-- **Priorità**: Alta (scalabilità Molecular Networking)
-- **Motivazione tecnica**: Attualmente `crates/mzlab-lib` supporta la ricerca 1-contro-tutti su libreria (flash search), ma la costruzione efficiente dell'intera rete molecolare (all-against-all) di uno studio multi-file è ancora legata all'implementazione Python di `tpmine`.
-- **Come verificare la parità**: Confronto lista archi e pesi coseno su set di 500 spettri DDA reali (`tests/test_hr_similarity.py`).
-
-#### 6. Clustering Gerarchico Agglomerativo per ROI a Bassa Risoluzione (`_pairwise_windowed_corr`, `_average_linkage`)
-- **File e riga**: `mzlab/ionfamily.py (righe 1078-1135)`
-- **Descrizione**: Raggruppamento delle regioni di interesse cromatografiche (ROI) in famiglie di ioni co-eluiti e correlati (stesso profilo, stesso apice) tramite correlazione a coppie e clustering average-linkage.
-- **Priorità**: Alta (eliminazione dipendenza da ionfamily.py per file LR)
-- **Motivazione tecnica**: Il crate `mzlab-feat` gestisce l'allineamento ad alta risoluzione tramite lastre, ma per i dati a bassa risoluzione (3200 QTRAP full scan) l'aggregazione iniziale delle ROI fa ancora riferimento alla logica di `ionfamily.py`.
-- **Come verificare la parità**: Confronto degli indici delle ROI raggruppate nei test `tests/test_ionfamily.py` e `tests/origin_parity.rs`.
-
-#### 7. Parsing del Testo dei Metodi Gradiente HPLC Chromeleon (`parse_chromeleon`)
-- **File e riga**: `mzlab/analog.py (righe 106-160)`
-- **Descrizione**: Interprete sintattico per estrarre la tabella del gradiente ternario/quaternario (%B, flusso mL/min, curve di salita) dai file di metodo esportati da Dionex/Thermo Chromeleon.
-- **Priorità**: Media (supporto formati strumentali universali)
-- **Motivazione tecnica**: In `crates/mzlab-core/src/gradient.rs` sono già implementati `from_dam` (Analyst) e `parse_csv`, ma il parsing del testo Chromeleon è rimasto solo in Python. Completarlo rende il motore WASM e CLI autonomo per qualsiasi file esportato da sistemi Chromeleon/UltiMate 3000.
-- **Come verificare la parità**: Test di parità su script Chromeleon reali memorizzati in `tests/data/` confrontando la struct `Gradient` risultante.
-
-#### 8. Analisi Sperimentale Curve di Frammentazione DP (`source_ramp`)
-- **File e riga**: `mzlab/ionfamily.py (righe 1396-1431)`
-- **Descrizione**: Modellazione quantitativa delle curve di rottura (breakdown curves) al variare del Declustering Potential (DP in Volt): il rapporto F/(F+P) cresce all'aumentare dell'energia di declustering confermando inequivocabilmente che F è un frammento in sorgente (ISF).
-- **Priorità**: Media (attribuzione rigorosa ISF su standard)
-- **Motivazione tecnica**: Fornisce la prova sperimentale più solida in assoluto per discriminare frammenti in sorgente da veri metaboliti. In Rust sono predisposte le strutture dati in `crates/mzlab-feat/src/legacy/lrisf/isf_report.rs`, ma manca il calcolo del fit di regressione della rampa.
-- **Come verificare la parità**: Confronto parametri pendenza e plateau su serie di standard a DP variabile (es. 20V, 50V, 80V, 120V).
-
-#### 9. Calibrazione e Regressione Logistica IRLS per Modello ISF (`fit_logistic`, `calibrate`)
-- **File e riga**: `TP_Mine/py/tpmine/isf.py (righe 35-70)`
-- **Descrizione**: Algoritmo di ottimizzazione Iteratively Reweighted Least Squares (IRLS) con regolarizzazione L2 per addestrare i pesi del modello di classificazione dei frammenti in sorgente sulle feature di evidenza.
-- **Priorità**: Media (indipendenza nell'aggiornamento e ricalibrazione modelli)
-- **Motivazione tecnica**: In Rust (`crates/mzlab-feat/src/legacy/lrisf/`) l'inferenza del modello è già presente ma utilizza coefficienti fissi congelati da `isf_model.py`. Per consentire al laboratorio di addestrare il modello su nuovi strumenti (es. Orbitrap Exploris o Waters Synapt) serve il solver IRLS in Rust.
-- **Come verificare la parità**: Confronto dei coefficienti stimati `model.weights` e `model.intercept` a parità di matrice X e vettore target y sintetico.
-
-#### 10. Metriche di Validazione e Statistiche Bootstrap di Benchmark (`mcnemar_esatto`, `holm`, `p1`...`p5`)
-- **File e riga**: `tools/bench/statistica.py e tools/bench/metriche.py`
-- **Descrizione**: Calcolo rigoroso degli endpoint di accuratezza quantitativa e recall (P1-P5), intervalli di confidenza non parametrici al 95% via bootstrap, test di McNemar a due code su campioni appaiati e correzione step-down di Holm.
-- **Priorità**: Media (unificazione motore di validazione scientifica)
-- **Motivazione tecnica**: Attualmente tutti i benchmark e i confronti statistici tra mzLab e software della concorrenza (MZmine 3, XCMS, OpenMS, Asari) richiedono l'interprete Python e librerie come scipy/statsmodels. Portare queste statistiche in Rust consentirà alla CLI di mzLab di generare report di benchmark certificati in modo completamente autonomo e ultra-veloce.
-- **Come verificare la parità**: Confronto dei valori degli endpoint e dei p-value aggiustati con i risultati di `tools/bench/corri.py` sui dataset d'oro D1 e D2.
-
+### 3.4 Priorità tra le voci mancanti
+1. Deconvoluzione: `nndsvd`, `mcr_stability`, `deconvolve_window` (profili e spettri puri da finestre co-eluite). Parità: matrici C ed S su serie sintetiche di co-eluizione a 2 e 3 analiti.
+2. Soglie diagnostiche: `roc_curve`, `auc`, `youden_threshold`, `cv_threshold`, `calibrate_thresholds`. Parità: curve e soglie su punteggi sintetici con seme fisso.
+3. Famiglie di ioni a bassa risoluzione: `ion_families` per ROI a 1 Da in `mzlab-core`.
+4. Gate di validazione in `tools/valida/` (`tp_veri`, `jaccard`, `richiamo`, `r2_loglog`, `valle`, `picchi_da_verita`) e endpoint `p1`...`p5` di `tools/bench/metriche.py`: restano Python finché i cancelli girano da `tools/valida_feat.py` e `tools/bench/`.
+5. Contaminanti: `ion_shift` ed `expand` di `mzlab/chem/contaminants.py` (catalogo in `mzlab/chem/contaminants.json`).

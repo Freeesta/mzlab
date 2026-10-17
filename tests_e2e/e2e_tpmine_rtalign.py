@@ -27,7 +27,7 @@ try:
         pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
         pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
         def card():
-            sys.path[:0] = [str(SRC / "tests"), str(SRC / "py"), str(ROOT)]
+            sys.path[:0] = [str(SRC / "tests"), str(ROOT)]
             import lc_synth, msn_synth
             d = Path(tempfile.mkdtemp())
             fs = lc_synth.write_series(d, weak=0.2, anchors=True, drift={-1: 0.0, 0: 0.06, 5: -0.04, 10: 0.0, 20: 0.05, 40: -0.03})

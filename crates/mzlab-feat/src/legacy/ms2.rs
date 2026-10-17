@@ -1,4 +1,4 @@
-//! The MS2 of a row as mzFinder pools it (`TP_Mine/py/tpmine/hr/spectra.py`): the DDA scans whose isolation centre is within 10 ppm of the m/z and
+//! The MS2 of a row as mzFinder pools it: the DDA scans whose isolation centre is within 10 ppm of the m/z and
 //! whose time lies inside the peak in that file (`select_ms2`), their peaks (read from the MS2 section of the `.mzidx`) and the consensus spectrum
 //! (`consensus_arrays`, `ms2_consensus`).
 

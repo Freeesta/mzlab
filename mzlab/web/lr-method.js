@@ -7,7 +7,8 @@ export function createMethodRoutes({ rpc, json, items }) {
   const gradients = new Map();            // item file -> the gradient typed, pasted or imported for it (the model)
   const api = { gradients, list: () => methods, clear: () => { methods = []; } };
   const num = (q, k, d) => (q.get(k) === null || q.get(k) === "" ? d : Number(q.get(k)));
-  const fail = (e, status) => {           // an error of the engine with a key: the JSON of Python's _fail (the page words it from the key); 500 for a GET, as Python's
+  // an error of the engine with a key: the JSON of Python's _fail (the page words it from the key); 500 for a GET, as Python's
+  const fail = (e, status) => {
     let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ }
     if (!j || !j.error_key) throw e;
     if (j.error_key === "err.route.unavailable") return null;          // not served: the caller counts it as a miss
@@ -34,11 +35,14 @@ export function createMethodRoutes({ rpc, json, items }) {
         return json({ gradient: g || gradients.get(name) || null });
       }
       if (path === "/api/method") return raw(await rpc({ op: "lr_method", name }));
-      if (path === "/api/metodo") return raw(await rpc({ op: "lr_metodo", name }));      // metodo/1 of the item (docs/agenti/metodo.md)
+      // metodo/1 of the item (docs/agenti/metodo.md)
+      if (path === "/api/metodo") return raw(await rpc({ op: "lr_metodo", name }));
       if (path === "/api/analog") return raw(await rpc({ op: "lr_analog", name, i: num(q, "i", NaN), n: Math.max(10, Math.min(Math.trunc(num(q, "n", 2000)), 20000)) }));
-      if (path === "/api/registro") return raw(await rpc({ op: "natregistro", name, id: q.get("id") || "" }));      // a series of the instrument log of a .raw: {id, kind, unit, time, intensity}
+      // a series of the instrument log of a .raw: {id, kind, unit, time, intensity}
+      if (path === "/api/registro") return raw(await rpc({ op: "natregistro", name, id: q.get("id") || "" }));
       if (path === "/api/chrom") return raw(await rpc({ op: "lr_pda", name }));
-      return raw(await rpc({ op: "lr_delay", name }));                                 // a part of a mixed file with a PDA reads its own scans: not served (null)
+      // a part of a mixed file with a PDA reads its own scans: not served (null)
+      return raw(await rpc({ op: "lr_delay", name }));
     } catch (e) { return fail(e, 500); }
   };
 

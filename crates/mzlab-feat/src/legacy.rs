@@ -1,5 +1,5 @@
-//! Compatibility layer of mzFinder: the JSON that `TP_Mine/py/tpmine/api.py` returns, computed in Rust. `classify` and `formula_info` are ports with
-//! parity to the Python (`tools/finder_riferimento.py`); `summary` and `detail` translate the series of the pipeline (L1-L9, evid/1, tp/1) into the
+//! Compatibility layer of mzFinder: the JSON that the mzFinder API returns, computed in Rust. `classify` and `formula_info` are ports with
+//! parity to the former Python engine; `summary` and `detail` translate the series of the pipeline (L1-L9, evid/1, tp/1) into the
 //! rows and the detail that `TP_Mine/js/21_tpmine_hr.js` reads.
 
 pub mod dig;

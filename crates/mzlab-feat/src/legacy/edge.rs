@@ -1,5 +1,5 @@
-//! The evidence on the link between two co-eluting ions as mzFinder writes it (`TP_Mine/py/tpmine/hr/edge_evidence.py::edge_evidence`, with its
-//! texts, in f64) and the tables of `hr/iimn.py` it reads (`relations`, `dimer_of`). `family::evidence` is the same reading for the pipeline (f32,
+//! The evidence on the link between two co-eluting ions as mzFinder writes it (`edge_evidence`, with its
+//! texts, in f64) and the tables of mzFinder it reads (`relations`, `dimer_of`). `family::evidence` is the same reading for the pipeline (f32,
 //! without texts); this one gives the JSON of `api.identity_graph`.
 
 use mzlab_core::elements::{mass, mass_of, parse_formula, ELECTRON};

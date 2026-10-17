@@ -39,7 +39,7 @@ fn tolerance_energies_and_blocks() {
         (3, Some(&d)),
         (2, Some(&a)),
     ];
-    // the default is msn.py: nominal masses, one energy one node
+    // the default is that of mzFinder: nominal masses, one energy one node
     let t = albero_di(scans.clone(), &Raggruppa::default());
     let ids: Vec<&str> = t.nodi.iter().map(|n| n.id.as_str()).collect();
     assert_eq!(ids, ["195@cid30", "195@cid35", "195@cid30>138@cid35"]);

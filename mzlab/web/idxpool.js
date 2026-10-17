@@ -42,7 +42,8 @@ export function createPool({ workerUrl, size, budget = 64, notify = /** @type {(
     active++; if (gate) gate.used++;
     let w;
     const end = () => { if (running.get(job) === w) running.delete(job); try { w.terminate(); } catch (_) { /* gone */ } active--; if (gate) gate.used--; };
-    const retry = (reason, text) => {                          // the worker is lost: once more at the front of the queue, then the error
+    // the worker is lost: once more at the front of the queue, then the error
+    const retry = (reason, text) => {
       end();
       if (!job.tried) { job.tried = true; queue.unshift(job); } else finish(job, { ok: false, reason, text });
       wake();
@@ -62,7 +63,8 @@ export function createPool({ workerUrl, size, budget = 64, notify = /** @type {(
         if (m.fatal) return retry("crash", m.text);
         end();
         let key = ""; try { key = JSON.parse(m.text).error_key || ""; } catch (_) { /* not JSON */ }
-        if (key === "error.memoryBudget") {                      // fewer workers and a smaller budget; the page is told why the file fails
+        // fewer workers and a smaller budget; the page is told why the file fails
+        if (key === "error.memoryBudget") {
           notify(key);
           const was = limit; limit = Math.max(1, limit >> 1);
           if (!job.shrunk && was > 1) { job.shrunk = true; job.budget = Math.max(8, (job.budget || budget) >> 1); queue.unshift(job); }
@@ -80,7 +82,8 @@ export function createPool({ workerUrl, size, budget = 64, notify = /** @type {(
       return new Promise(resolve => {
         const j = { ...job, resolve, tried: false, done: false };
         queue.push(j); wake();
-        if (queue.includes(j) && j.onProgress) j.onProgress({ op: "progress", wait: true });      // no free worker: the page says the file is queued, not stuck
+        // no free worker: the page says the file is queued, not stuck
+        if (queue.includes(j) && j.onProgress) j.onProgress({ op: "progress", wait: true });
       });
     },
     // the order of the list: the files named first are the first to start (the queued ones; those already running continue)

@@ -10,7 +10,7 @@ from pathlib import Path
 
 TOOLS = Path(__file__).resolve().parents[1]
 ROOT = TOOLS.parent
-for _p in (TOOLS, ROOT):                               # `valida` (which puts `mzlab` and `tpmine` on the path) and `bench` itself
+for _p in (TOOLS, ROOT):                               # `valida` (which puts `mzlab` on the path) and `bench` itself
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 

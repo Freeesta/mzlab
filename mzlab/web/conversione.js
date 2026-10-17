@@ -168,7 +168,8 @@ const CONVROWS = {
     const c = el.querySelector("[data-cvact=cancel]"); if (c) c.onclick = () => { c.disabled = true; if (this.onCancel) this.onCancel(); };
     const x = el.querySelector("[data-cvact=close]"); if (x) x.onclick = () => this.clearDone();
     const g = el.querySelector("[data-cvdiag]");
-    if (g) {      // the trace of the loading still running: written when it is opened and copied as it is at that moment
+    // the trace of the loading still running: written when it is opened and copied as it is at that moment
+    if (g) {
       const d = () => ({ codice: "load.trace", fase: "index", causa: "unknown", dettagli: { format: "?", size: 0, raw: "", head: "", trace: this.trace(this.rows) } });
       DIAG.cabla(g, d, v, T);
       const b = g.querySelector("[data-a=diagdet]"), pre = g.querySelector("[data-cvtrace]"), o = b.onclick;
@@ -203,7 +204,8 @@ const ConvUI = {
     const show = () => {
       const now = Date.now(), elapsed = convElapsed(now - t0), conv = stage === "indexing" ? 100 : convTotalPercent(sizes, Math.max(0, cur), convFraction(last));
       const known = last && (last.copied != null || last.scansTotal); let pc = (conv == null || !known && cur <= 0) && stage === "converting" ? null : Math.min(100, Math.floor(CONV_W * (conv || 0) + (1 - CONV_W) * 100 * idxMean()));
-      if (pc != null) { maxPc = Math.max(maxPc, Math.min(99, pc)); pc = maxPc; }         // forward only and never 100 % before `end()`: the same rules as PROGRESSO
+      // forward only and never 100 % before `end()`: the same rules as PROGRESSO
+      if (pc != null) { maxPc = Math.max(maxPc, Math.min(99, pc)); pc = maxPc; }
       const lab = T(stage === "indexing" ? "conv.phase.indexing" : "conv.phase.converting");
       if (lab !== phaseKey && !cancel.disabled) { phaseKey = lab; q("phase").textContent = lab; }
       bar.setAttribute("aria-label", lab); setBar(pc);
@@ -231,7 +233,8 @@ const ConvUI = {
         tick(); show();
         return {
           update(p) { touch([p.scans, p.read, p.written, p.copied].join(",")); last = p; show(); },
-          title(text) { q("file").textContent = text; },       // replaces "File i of n: name" (conversions running together: "Samples converted: 3 of 23")
+          // replaces "File i of n: name" (conversions running together: "Samples converted: 3 of 23")
+          title(text) { q("file").textContent = text; },
           done() { doneFrac = (cur + 1) / n; },
           fail(msg) { clearInterval(timer); timer = null; el.remove(); const f = document.createElement("div"); f.className = "fail"; f.textContent = name + ": " + msg; box.appendChild(f); },
         };
@@ -239,7 +242,8 @@ const ConvUI = {
       // the page builds the index of each converted file (index.html upload): `pc` 0..100 of `name`; the bar goes on from where the conversion left it
       index(name, pc) {
         if (!indexed.has(name)) nIdx++;
-        indexed.set(name, Math.max(indexed.get(name) || 0, pc));        // never backwards: the builder reads the file more than once
+        // never backwards: the builder reads the file more than once
+        indexed.set(name, Math.max(indexed.get(name) || 0, pc));
         if (stage !== "indexing") { stage = "indexing"; q("file").textContent = ""; cancel.hidden = true; }
         touch("idx" + [...indexed.values()].join(","));
         tick(); show();

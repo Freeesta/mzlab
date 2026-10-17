@@ -20,14 +20,17 @@ export function createMetodoOps({ engine, ARCH, readerFor, open, sync }) {
   return async function metodoOp(m) {
     switch (m.op) {
       case "lr_metodo_wiff": return register(m);
-      case "lr_metodo_m": return { info: engine().agilent_m_metodo(m.name, m.names, m.lens, m.data) };      // a *.m method folder: its files come in one buffer
+      // a *.m method folder: its files come in one buffer
+      case "lr_metodo_m": return { info: engine().agilent_m_metodo(m.name, m.names, m.lens, m.data) };
       case "lr_metodo": {                    // { source: "mzml" | "wiff" | "dam" | "none", metodo: {...} }
         await sync();
         const o = await open(m), e = engine();
-        const emb = e.native_metodo(o.slot) || e.mzml_metodo(o.f.size, o.rd);       // a sample of a maker's file: from its reader
+        // a sample of a maker's file: from its reader
+        const emb = e.native_metodo(o.slot) || e.mzml_metodo(o.f.size, o.rd);
         let doc = emb || wiffDocs.get(base(m.name)) || e.lab_metodo(o.slot, m.name, o.f.size, o.rd);
         let source = emb ? "mzml" : wiffDocs.has(base(m.name)) ? "wiff" : doc ? "dam" : "none";
-        if (!doc && /\.mzml$/i.test(m.name)) { doc = e.mzml_head_metodo(m.name, o.f.size, o.rd); if (doc) source = "mzml"; }     // an mzML written by another program: its header
+        // an mzML written by another program: its header
+        if (!doc && /\.mzml$/i.test(m.name)) { doc = e.mzml_head_metodo(m.name, o.f.size, o.rd); if (doc) source = "mzml"; }
         return { info: `{"source":"${source}","metodo":${doc || "null"}}` };
       }
     }

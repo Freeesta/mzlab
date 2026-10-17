@@ -2,7 +2,7 @@
 
 MRM (`B_MRM-STD_*`, six levels, and `B_MRM-t*`): the transitions of the standards are detected in every level above the lowest, their area grows with the
 concentration (Spearman 1 over the detected levels), the log-log R2 is only reported, and the cells of the treated files are coherent (state and area agree).
-Full scan (`B_FullMass-t*`, `B_MS2-*`): every ion that `engine.py` gives as candidate or unexpected ion is a row of the table (+-0.35 Da, +-0.25 min), every
+Full scan (`B_FullMass-t*`, `B_MS2-*`): every reference ion (the former Python engine's candidates and unexpected ions, frozen for the synthetic series) is a row of the table (+-0.35 Da, +-0.25 min), every
 candidate has its proofs, isomers that the profile separates (valley below 50 %) are two rows.
 
 Tolerances are the ones of the project and are never fitted on the products or the standards: a failing criterion is reported with its number. Every

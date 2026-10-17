@@ -39,7 +39,8 @@ async function scBin(url) {
   if (!r.ok) { let m = new Error(I18N.t("err.http", { status: r.status })); try { const j = await r.json(); if (j && j.error) m = I18N.err(j); } catch (e) { /* not JSON */ } throw m; }
   const buf = await r.arrayBuffer(), hl = new DataView(buf).getUint32(0, true), head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hl)));
   let off = 4 + hl;
-  const arr = (T, n) => { const a = Array.from(new T(buf.slice(off, off + n * T.BYTES_PER_ELEMENT))); off += n * T.BYTES_PER_ELEMENT; return a; };      // slice: an array view needs an aligned offset
+  // slice: an array view needs an aligned offset
+  const arr = (T, n) => { const a = Array.from(new T(buf.slice(off, off + n * T.BYTES_PER_ELEMENT))); off += n * T.BYTES_PER_ELEMENT; return a; };
   const scans = head.scans.map(m => { const mz = arr(Float64Array, m.n), y = arr(Float32Array, m.n), o = { i: m.i, sid: m.sid, rt: m.rt, mode: m.mode, mz, y, no: m.no, filter: m.filter, nl: m.nl, tic: m.tic };
     if (m.np) { o.pmz = arr(Float64Array, m.np); o.py = arr(Float32Array, m.np); } return o; });
   return { n: head.n, scans };
@@ -78,7 +79,8 @@ function lockSync(p, k, x0a, x1a, ymaxA, inRange, one) {
   };
   if (lk.ymax == null) { Object.assign(lk, { z: zk, k, pending: false, ymax: Math.max(ymaxA, nb(x0a, x1a)) }); return lk; }
   if (lk.k !== k) { lk.k = k; return lk; }
-  if (zk !== lk.z) { Object.assign(lk, { z: zk, ymax: Math.max(ymaxA, nb(x0a, x1a)) }); return lk; }   // zoom changed by the student: new top for the new m/z range
+  // zoom changed by the student: new top for the new m/z range
+  if (zk !== lk.z) { Object.assign(lk, { z: zk, ymax: Math.max(ymaxA, nb(x0a, x1a)) }); return lk; }
   if (lk.fresh) { lk.fresh = false; lk.ymax = Math.max(lk.ymax, ymaxA, nb(x0a, x1a)); return lk; }
   const need = inRange(x0a, x1a) * 1.12; if (need > lk.ymax) lk.ymax = need;
   return lk;
@@ -108,9 +110,11 @@ function drawSoon(p) {
 // one pace for the held arrow and for Space: STEP_MS between scans on a fixed timetable (not "at least that long since the last frame"), a late frame does not make a burst
 const STEP_MS = 66;
 const paceDue = (o, now) => { if (now - o.t < STEP_MS) return false; o.t = now - o.t > 4 * STEP_MS ? now : o.t + STEP_MS; return true; };
-function cursorLine(p) {                                           // the vertical cursor of a chromatogram: a thin overlay, not part of the canvas, with a dot on top that can be dragged
+// the vertical cursor of a chromatogram: a thin overlay, not part of the canvas, with a dot on top that can be dragged
+function cursorLine(p) {
   const c = p.cl, a = p._a, h = p.ch; if (!c) return;
-  if (p.tl && p.cur != null && !p._cs && isLine(p)) tabPanels(p.tab).forEach(q => { if (q !== p && q.tl && isLine(q) && q.cur !== p.cur) { q.cur = p.cur; q._cs = true; cursorLine(q); q._cs = false; } });      // one cursor for the linked chromatograms
+  // one cursor for the linked chromatograms
+  if (p.tl && p.cur != null && !p._cs && isLine(p)) tabPanels(p.tab).forEach(q => { if (q !== p && q.tl && isLine(q) && q.cur !== p.cur) { q.cur = p.cur; q._cs = true; cursorLine(q); q._cs = false; } });
   if (!a || !a.X || p.type === "spec" || p.type === "map" || p.cur == null || p.cur < a.x0 || p.cur > a.x1) { c.hidden = true; if (h) h.hidden = true; return; }
   c.hidden = false; c.style.left = p.cv.offsetLeft + a.X(p.cur) + "px"; c.style.top = p.cv.offsetTop + M.t + "px"; c.style.height = a.H - M.t - M.b + "px";
   if (!h) return;
@@ -155,13 +159,15 @@ function keyLoop() {
   };
   KEY.raf = FRAME.next(tick);
 }
-document.addEventListener("keyup", e => { if (e.key === " " && PLAY.space) { PLAY.space = false; e.preventDefault(); } });   // Space on a focused button would also click it on release
+// Space on a focused button would also click it on release
+document.addEventListener("keyup", e => { if (e.key === " " && PLAY.space) { PLAY.space = false; e.preventDefault(); } });
 ESC.registra({ id: "riproduzione", prio: 40, aperto: () => S.view === "data" && (!!PLAY.p || !!KEY.dir), chiudi: () => { playStop(); KEY.dir = 0; } });
 const typingNow = () => /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || !!Q("dialog[open]");
 document.addEventListener("keydown", e => {
   if (S.view !== "data") return;
   if (!E.files.length || typingNow() || e.ctrlKey || e.metaKey || e.altKey) return;
-  if (/** @type {Element} */ (e.target).closest?.(".aff-sep")) return;                  // the arrows on a divider between side-by-side panels resize them
+  // the arrows on a divider between side-by-side panels resize them
+  if (/** @type {Element} */ (e.target).closest?.(".aff-sep")) return;
   if (e.key === " ") {
     const ap = walkTarget(true); if (!ap) return;
     e.preventDefault(); PLAY.space = true; if (e.repeat) return;
@@ -169,18 +175,22 @@ document.addEventListener("keydown", e => {
     return;
   }
   const dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (!dir) return;
-  if (window.DDA && DDA.key(e, dir)) return;                          // the MS2 spectrum of a DDA trio is active: arrows = the next / previous MS2
+  // the MS2 spectrum of a DDA trio is active: arrows = the next / previous MS2
+  if (window.DDA && DDA.key(e, dir)) return;
   e.preventDefault();
-  const ap = walkTarget(false);                                      // active panel with a cursor: arrows = previous/next scan; otherwise arrows change file
+  // active panel with a cursor: arrows = previous/next scan; otherwise arrows change file
+  const ap = walkTarget(false);
   if (!ap) { if (!fsPanel()) goFile(dir); return; }
-  if (e.repeat) return;                                              // the automatic repeat of the system is ignored: the loop below paces a held key
+  // the automatic repeat of the system is ignored: the loop below paces a held key
+  if (e.repeat) return;
   playStop();
   KEY.dir = dir; KEY.n = e.shiftKey ? 5 : 1; KEY.p = ap; KEY.t0 = KEY.t = performance.now();
   if (stepScan(ap, dir * KEY.n)) keyLoop(); else KEY.dir = 0;
 });
 document.addEventListener("keyup", e => {
   if ((e.key === "ArrowRight" && KEY.dir > 0) || (e.key === "ArrowLeft" && KEY.dir < 0)) KEY.dir = 0;
-  if (e.key === " " && walkTarget(true) && S.view === "data" && !typingNow()) e.preventDefault();   // a focused button must not be "clicked" by the Space that started the play
+  // a focused button must not be "clicked" by the Space that started the play
+  if (e.key === " " && walkTarget(true) && S.view === "data" && !typingNow()) e.preventDefault();
 });
 addEventListener("blur", () => { KEY.dir = 0; });
 document.addEventListener("mousedown", () => playStop(), true);      // a click stops the play

@@ -1,4 +1,4 @@
-//! SMILES -> heavy-atom graph (port of the reading part of `TP_Mine/py/tpmine/hr/molgraph.py`): formula, functional groups and the cleavages of the
+//! SMILES -> heavy-atom graph (the reading part of the molecular graph of mzFinder): formula, functional groups and the cleavages of the
 //! structure. The groups are the preconditions of `regole_tp/2` (`hypo::rules`); the formulas of the two sides of every cleavage go to
 //! `hypo::Inputs::fragments`. No SMARTS and no aromaticity perception: a bond is aromatic when both atoms are written aromatic.
 //! Hydrogen accounting of a cleavage: each side takes an H (`cut`); at an ether, ester, amide or sulfonamide bond one side takes OH instead and the other H

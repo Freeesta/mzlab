@@ -13,7 +13,7 @@ Definizioni scelte da Federico. Valgono per Tabui (MS2 a bassa risoluzione), Att
 - **Tabui** (risoluzione unitaria): il programma non propone alcun livello di Schymanski (`level` null, colonna «Lvl» vuota) e mostra solo «Prev. N» della regola; il livello lo sceglie il chimico nella riga aperta (`TPDEC`, il 2b resta rifiutato senza livello proposto). `level_text` dice cosa reggono i dati: «Proposed formula» vuole un picco cromatografico vero, il progenitore che decade, un solo passo e una classe di ipotesi sopra il caso (`legacy/lr/summary.rs`, `docs/agenti/mzfinder-lr.md`). Una MS2 abbinata non cambia nulla (D6 = no).
 
 ## Due scale, due etichette
-- Scala di Schymanski: etichetta «L» + livello, sottolivello in minuscolo («L2a», «L3b»); in JS `LIVELLI.tag(lv)`, classi colore `.lv-2a`, `.lv-3a`, `.lv-3b`… (variabili `--lv*` in `index.html`). Nelle esportazioni (CSV, JSON) i valori restano senza «L» (`2a`, `3b`).
+- Scala di Schymanski: etichetta «L» + livello, sottolivello in minuscolo («L2a», «L3b»); in JS `LIVELLI.tag(lv)`, classi colore `.lv-2a`, `.lv-3a`, `.lv-3b`… (variabili `--lv*` in `app.css`). Nelle esportazioni (CSV, JSON) i valori restano senza «L» (`2a`, `3b`).
 - Scala di previsione di Löffler et al., ES&T 59:19095 (2025): etichetta «Prev. N» (gradi 1-4), colonna «Prev.» della tabella dei prodotti di mzFinder (`.lvb.pd-N`).
 - Sono scale diverse e nell'interfaccia non si confondono mai: la stessa cifra con etichette diverse («L3a» contro «Prev. 3») è normale.
 - Il programma propone un livello (in HR; in Tabui LR nessuno) e mostra le prove; il livello deciso resta vuoto finché il chimico non decide.

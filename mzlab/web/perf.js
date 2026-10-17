@@ -70,7 +70,8 @@
   hook();
   window.addEventListener("load", hook);
 
-  const kinds = (window.PerformanceObserver && PerformanceObserver.supportedEntryTypes) || [];      // Firefox and Safari warn in the console if asked for an unknown type
+  // Firefox and Safari warn in the console if asked for an unknown type
+  const kinds = (window.PerformanceObserver && PerformanceObserver.supportedEntryTypes) || [];
   if (kinds.includes("longtask")) try {
     new PerformanceObserver(l => { for (const e of l.getEntries()) { note("lento", "attività lunga", e.duration, "main thread"); add("lento", e.duration); } }).observe({ entryTypes: ["longtask"] });
   } catch (_) { /* Safari: no long tasks */ }
@@ -124,6 +125,7 @@
   };
   box.querySelector("#perf-clear").onclick = () => { rows.length = 0; for (const k of Object.keys(stat)) delete stat[k]; schedule(); };
   box.querySelector("#perf-min").onclick = () => { min = !min; out.hidden = min; };
-  for (const [at, text] of window.PERF_EARLY || []) window.PERF.mark(text, at);     // engine steps seen by browser.js before this script loaded
+  // engine steps seen by browser.js before this script loaded
+  for (const [at, text] of window.PERF_EARLY || []) window.PERF.mark(text, at);
   note("start", "misure attive", performance.now());
 })();

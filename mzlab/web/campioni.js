@@ -8,10 +8,14 @@
 // `campioni`). Export and import of the table as TSV (mzmine column names, the columns of campioni/2 at the end).
 // The pure functions at the top (TSV, replicate groups, time scale) are also run by node in tests/test_campioni.py.
 const CAMPIONI = (() => {
-  const TYPES = ["sample", "blank", "qc", "standard", "dark", "infusion"];            // sample_type of the table (an old export may say «t0»: a sample at 0 minutes)
-  const KIND = { standard: "std", calibration: "std" };                              // sample_type -> role of campioni/2 (the others are the same word)
-  const WORD = { std: "standard", calibration: "standard" };                          // role of campioni/2 -> sample_type
-  const COLS = ["filename", "sample_type", "time", "time_unit", "concentration", "concentration_unit", "replicate", "time_confirmed"];     // an old export has a «blank_type» column too: ignored
+  // sample_type of the table (an old export may say «t0»: a sample at 0 minutes)
+  const TYPES = ["sample", "blank", "qc", "standard", "dark", "infusion"];
+  // sample_type -> role of campioni/2 (the others are the same word)
+  const KIND = { standard: "std", calibration: "std" };
+  // role of campioni/2 -> sample_type
+  const WORD = { std: "standard", calibration: "standard" };
+  // an old export has a «blank_type» column too: ignored
+  const COLS = ["filename", "sample_type", "time", "time_unit", "concentration", "concentration_unit", "replicate", "time_confirmed"];
   const C_UNITS = ["mg/L", "µg/L", "ng/L", "g/L"];
 
   // ---------------------------------------------------------------- pure functions
@@ -24,7 +28,8 @@ const CAMPIONI = (() => {
   }
   // TSV (or CSV with ; or ,) -> {rows: [{filename, type, time (minutes), conc, cunit, rep}], warnings: [text]}
   function parseTsv(text) {
-    const lines = String(text || "").replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim() !== "" && !l.startsWith("#"));       // «# mzLab ...» = provenance line of our own exports
+    // «# mzLab ...» = provenance line of our own exports
+    const lines = String(text || "").replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim() !== "" && !l.startsWith("#"));
     const warn = [];
     if (!lines.length) return { rows: [], warnings: ["empty"] };
     const sep = lines[0].includes("\t") ? "\t" : lines[0].includes(";") ? ";" : ",";
@@ -76,7 +81,8 @@ const CAMPIONI = (() => {
   const t = (k, p) => I18N.t(k, p);
   const eh = s => EH(s == null ? "" : s);
   const files = () => (typeof E !== "undefined" && E.files ? E.files : []).filter(f => !f.gone && (f.lv || 1) === 1 && f.kind !== "empty");
-  const roleOf = f => (window.QAQC ? QAQC.roleOf(f) : f.type || "sample");        // role of the QA/QC (sample | blank | qc | standard | dark), for the statistics
+  // role of the QA/QC (sample | blank | qc | standard | dark), for the statistics
+  const roleOf = f => (window.QAQC ? QAQC.roleOf(f) : f.type || "sample");
   const kindOf = f => CDOC.kindOf(f);                                              // role of campioni/2
   const roleName = r => t("qaqc.role." + r);
   const repOf = f => repKey(f, roleOf(f));
@@ -86,10 +92,12 @@ const CAMPIONI = (() => {
 
   function setKind(f, k) {
     const was = kindOf(f);
-    if (k === "t0") { k = "sample"; if (!(f.time === 0)) { f.time = 0; f.tconf = true; } }       // the old role: a sample at 0 minutes
+    // the old role: a sample at 0 minutes
+    if (k === "t0") { k = "sample"; if (!(f.time === 0)) { f.time = 0; f.tconf = true; } }
     f.role = k; f.type = CDOC.BASE[k] || "sample";
     if (was !== k && !CDOC.TIMED.has(k)) { f.time = null; f.tconf = true; }
-    else if (was === "dark" && k !== "dark" && f.time != null && f.time < 0) { f.time = null; f.tconf = true; }        // a negative time belongs to the dark only
+    // a negative time belongs to the dark only
+    else if (was === "dark" && k !== "dark" && f.time != null && f.time < 0) { f.time = null; f.tconf = true; }
   }
   // apply the edits {file, role? (or type: the sample_type of the table), time? (minutes), tconf?, conc?, cunit?, rep?} to the open files and tell everyone
   // (`quiet`: the views are not redrawn, for the loading of files). The only writer of roles, subtypes, times and their confirmation.
@@ -100,7 +108,8 @@ const CAMPIONI = (() => {
       const k = KIND[e.role || e.type] || e.role || e.type;
       if (k && CDOC.known(k)) setKind(f, k);
       if ("time" in e) { f.time = e.time; f.tconf = e.tconf !== false; } else if ("tconf" in e) f.tconf = !!e.tconf;
-      if (kindOf(f) === "dark") f.time = darkTime(f.time);              // minutes of darkness before the time zero: never positive
+      // minutes of darkness before the time zero: never positive
+      if (kindOf(f) === "dark") f.time = darkTime(f.time);
       if ("conc" in e) { f.conc = e.conc; if (e.conc == null) f.cunit = null; }
       if ("cunit" in e) f.cunit = e.cunit;
       if ("rep" in e) f.rep = e.rep || undefined;
@@ -141,7 +150,8 @@ const CAMPIONI = (() => {
   // ---------------------------------------------------------------- the legend of the time gradient (also used by the other sections)
   // colour bar from the first to the last time of the files that have one; "" when no file has a time
   function gradientLegend(fs) {
-    const tm = (fs || files()).filter(f => f.time != null && f.type === "sample" && kindOf(f) !== "dark");        // the dark (negative time) is not a point of the gradient
+    // the dark (negative time) is not a point of the gradient
+    const tm = (fs || files()).filter(f => f.time != null && f.type === "sample" && kindOf(f) !== "dark");
     if (tm.length < 2) return "";
     const lo = Math.min(...tm.map(f => f.time)), hi = Math.max(...tm.map(f => f.time));
     if (!(hi > lo)) return "";

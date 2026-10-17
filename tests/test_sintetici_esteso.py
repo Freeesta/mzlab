@@ -11,8 +11,6 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
-if not (ROOT / "TP_Mine" / "py").exists():
-    pytest.skip("TP_Mine/py not available", allow_module_level=True)
 from valida import sintetici_esteso as X  # noqa: E402
 from valida import sintetici_esteso_verita as XV  # noqa: E402
 from valida import sintetici_identita as SI  # noqa: E402

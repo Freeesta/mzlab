@@ -21,7 +21,8 @@
     return done[f];
   }
   window.carica = function (n) { return add(n); };
-  if (window.QQQ_PHONE) { add("telefono-scheda.js"); return; }   // a smartphone gets only the card: no Dati, Disegno or shell
+  // a smartphone gets only the card: no Dati, Disegno or shell
+  if (window.QQQ_PHONE) { add("telefono-scheda.js"); return; }
   var classic = L.filter(function (n) { return n.slice(0, 2) !== "m:"; });
   var modules = L.filter(function (n) { return n.slice(0, 2) === "m:"; });
   classic.concat(["shell.js"], modules).forEach(function (n) { add(n).catch(function (e) { console.error(e); }); });

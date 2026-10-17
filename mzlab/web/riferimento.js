@@ -135,7 +135,8 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
     const note = box.querySelector("#ref-open"), mz = x.f.mz, rt = x.f.rt;
     const say = k => { if (note) note.textContent = k ? t(k) : ""; };
     try {
-      const prof = window.PROFILO ? await PROFILO.show(mz, rt) : null;                // fills the profile, which orders the files by time
+      // fills the profile, which orders the files by time
+      const prof = window.PROFILO ? await PROFILO.show(mz, rt) : null;
       if (typeof xicDirect !== "function") return;
       const np = xicDirect(mz, null, null);
       const name = res.names[x.q.max_file], f = E.files.find(q => q.file === name && (q.lv || 1) === 1) || E.files.find(q => q.file === name);
@@ -144,13 +145,16 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
       if (!f || typeof newSpec !== "function" || !np) return;
       const near = await nearScan(f.k, apex);
       const s1 = newSpec(np, near ? near.rt - NEAR : apex - NEAR, near ? near.rt + NEAR : apex + NEAR, f.k);
-      if (window.DDA && f.dda && s1) {                                                // a data-dependent file: the MS2 scans of this ion, if the instrument took any
+      // a data-dependent file: the MS2 scans of this ion, if the instrument took any
+      if (window.DDA && f.dda && s1) {
         DDA.make(np, s1);
         try { await DDA.get(f.k); } catch (_) { /* the scans are read again below */ }
-        for (let n = 0; n < 12; n++) {                                                  // the spectrum draws after the scans are read: wait for it
+        // the spectrum draws after the scans are read: wait for it
+        for (let n = 0; n < 12; n++) {
           const q = DDA.ms2For(s1, mz)[0];
           if (q) { DDA.openMs2(s1, q.j); break; }
-          const D = DDA.ready(f.k), s2 = E.panels.find(q => q.id === s1.duo && q.el);      // the instrument fragments the ion in other cycles: the MS2 scan closest in time
+          // the instrument fragments the ion in other cycles: the MS2 scan closest in time
+          const D = DDA.ready(f.k), s2 = E.panels.find(q => q.id === s1.duo && q.el);
           if (D && s2 && D.sid) {
             const tol = Math.max(0.02, mz * ((window.UIP && UIP.hrPpm) || 5) * 1e-6);
             let best = -1;
@@ -178,7 +182,8 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
   };
   const tsv = () => params().map(l => "# " + l.join("\t")).concat([head().join("\t")], body().map(l => l.map(c => String(c).replace(/[\t\r\n]+/g, " ")).join("\t"))).join("\n") + "\n";
 
-  let live = null;                                              // the box of the section, repainted when the table or the sample table changes
+  // the box of the section, repainted when the table or the sample table changes
+  let live = null;
   function mount(box) {
     live = box;
     paint(box);

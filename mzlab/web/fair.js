@@ -5,7 +5,8 @@
 // The compound fields (name, SMILES, InChIKey) are typed by the user (SMILES may come from «Disegno»); instrument, ionisation, collision energy, precursor and peaks come from the mzML.
 // The pure functions (record, check, siriusMs, adductMass) are tested with node; the dialog is at the bottom. The untargeted tables of mzFinder use `siriusMs` through TP_Mine/js/30_untarget_fair.js.
 const FAIR = (() => {
-  const LICENSES = ["CC BY", "CC0", "CC BY-SA", "CC BY-NC", "CC BY-NC-SA"];            // the licences MassBank accepts for contributed records
+  // the licences MassBank accepts for contributed records
+  const LICENSES = ["CC BY", "CC0", "CC BY-SA", "CC BY-NC", "CC BY-NC-SA"];
   // m/z shift of the precursor (M + shift); electron mass included
   const ADDUCTS = { "[M+H]+": 1.007276, "[M+Na]+": 22.989218, "[M+NH4]+": 18.033823, "[M+K]+": 38.963158, "[M-H2O+H]+": -17.00274, "[M-H]-": -1.007276, "[M+Cl]-": 34.969402, "[M+HCOO]-": 44.998201, "[M+CH3COO]-": 59.013851 };
   const adductMass = a => (a in ADDUCTS ? ADDUCTS[a] : null);
@@ -93,7 +94,8 @@ const FAIR = (() => {
 
   // ------------------------------------------------------------------ dialog (browser only)
   const T = (k, p) => I18N.t(k, p);
-  const MSG = { lr: "fair.err.lr", peaks: "fair.err.peaks", prec: "fair.err.prec", name: "fair.err.name", smiles: "fair.err.smiles", smilesBad: "fair.err.smilesBad", inchikey: "fair.err.inchikey", authors: "fair.err.authors", license: "fair.err.license", contributor: "fair.err.contributor", id: "fair.err.id", instrument: "fair.err.instrument", itype: "fair.err.itype", precType: "fair.err.precType", polarity: "fair.err.polarity", precMismatch: "fair.warn.precMismatch", noCe: "fair.warn.noCe" };   // literal keys, so that tools/controlla_i18n.py sees them
+  // literal keys, so that tools/controlla_i18n.py sees them
+  const MSG = { lr: "fair.err.lr", peaks: "fair.err.peaks", prec: "fair.err.prec", name: "fair.err.name", smiles: "fair.err.smiles", smilesBad: "fair.err.smilesBad", inchikey: "fair.err.inchikey", authors: "fair.err.authors", license: "fair.err.license", contributor: "fair.err.contributor", id: "fair.err.id", instrument: "fair.err.instrument", itype: "fair.err.itype", precType: "fair.err.precType", polarity: "fair.err.polarity", precMismatch: "fair.warn.precMismatch", noCe: "fair.warn.noCe" };
   const EHt = s => EH(s == null ? "" : s);
   const mem = { get: () => { return lsObj("qqq.fair"); }, set: v => { try { localStorage.setItem("qqq.fair", JSON.stringify(v)); } catch (_) { /* storage blocked */ } } };
 
@@ -113,7 +115,8 @@ const FAIR = (() => {
     const d0 = p._a.data[0].d, d = { ...d0, ...(d0.scan || {}) }, s = x.spec;
     return { mz: s.peaks.map(a => a[0]), y: s.peaks.map(a => a[1]), prec: s.prec, rt: s.rt, sid: x.sid, file: x.fn, polarity: s.polarity, ce: d.ce != null ? d.ce : null, nce: !!d.nce, act: d.act || "", parent: d.parent, k: (p._a.data[0].f || {}).k };
   }
-  const available = p => { try { return !!specOf(p); } catch (_) { return false; } };         // the entries of the menu exist only for high-resolution MS2 spectra
+  // the entries of the menu exist only for high-resolution MS2 spectra
+  const available = p => { try { return !!specOf(p); } catch (_) { return false; } };
   const safe = s => String(s || "spectrum").replace(/\.[^.]+$/, "").replace(/[^\w.-]+/g, "_").slice(0, 60);
 
   /** MS1 peaks (parent scan of the MS2, from the file) around the precursor for SIRIUS: the isotope pattern; {} if the file does not say which scan it was */

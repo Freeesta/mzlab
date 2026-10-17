@@ -1,4 +1,4 @@
-//! `hr/localize.py::localize`: where on the molecule did the change happen? Maximum likelihood on the shifts of formula between the MS2 of a
+//! `localize`: where on the molecule did the change happen? Maximum likelihood on the shifts of formula between the MS2 of a
 //! product and the fragment library of the parent: a fragment unshifted (U) does not contain the change, a shifted one (S) does; every
 //! candidate site (a set of atoms) is scored on the atom sets the library gives to those fragments.
 

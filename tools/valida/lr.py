@@ -2,7 +2,9 @@
 ones when the private data are there. Aggregated numbers only (no names of compounds, no data); the document is `cancello_lr/1`, written in the work folder and
 never committed by this tool.
 
-Real data are read from a local path (`MZLAB_DATI`/`mzML` or `--serie-lr`) and the criteria that need them stay `ok` null (skipped, never passed) without it."""
+Real data are read from a local path (`MZLAB_DATI`/`mzML` or `--serie-lr`) and the criteria that need them stay `ok` null (skipped, never passed) without it.
+The full scan is judged against reference ions: on the synthetic series the frozen ions of the former Python engine (`tests/golden/finder_lr_riferimento.json`);
+the real series has no public reference, so its full scan criteria stay unmeasured (only the determinism of the run is measured)."""
 from __future__ import annotations
 
 import json
@@ -10,11 +12,12 @@ import os
 import sys
 from pathlib import Path
 
-from . import ROOT, cancello, lr_criteri as C, lr_nativo as N, lr_riferimento as RF, lr_sintetici as S, nativo
+from . import ROOT, cancello, lr_criteri as C, lr_nativo as N, lr_sintetici as S, nativo
 
 sys.path.insert(0, str(ROOT / "TP_Mine" / "tests"))
 FORMATO = "cancello_lr/1"
 NEUTRA_SINTETICA = ("C10H12N2O3S", 241.0641, 9.0)                    # the parent of lr_synth: neutral formula, [M+H]+ m/z, RT
+RIFERIMENTO_SINTETICO = ROOT / "tests" / "golden" / "finder_lr_riferimento.json"
 
 
 def prefissa(criteri: list[dict], p: str) -> list[dict]:
@@ -22,11 +25,11 @@ def prefissa(criteri: list[dict], p: str) -> list[dict]:
     return [{**c, "id": p + c["id"][3:]} for c in criteri]
 
 
-def fullscan(files: list[dict], parent: tuple, lavoro: Path, coppie_verita=None) -> tuple[list[dict], dict, dict]:
-    """The full scan criteria on `files` ([{name, path}], the ones of the engine too): (criteria, details, sha of the run). `parent`: (neutral formula, m/z observed, RT)."""
+def fullscan(files: list[dict], parent: tuple, lavoro: Path, rif: list[dict], coppie_verita=None) -> tuple[list[dict], dict, dict]:
+    """The full scan criteria on `files` ([{name, path}]) against the reference ions `rif` ([{mz, rt, kind, label}]): (criteria, details, sha of the run).
+    `parent`: (neutral formula, m/z observed, RT)."""
     idx = N.ordina_per_tempo(N.indici_lr([Path(f["path"]) for f in files], lavoro / "indici"))
     run = nativo.esegui(idx, parent[0], parent[1], parent[2], lavoro / "nativo")
-    rif = RF.ioni_riferimento(files, parent[0])
     coppie = coppie_verita if coppie_verita is not None else C.coppie_isomeri(rif)
     crit, det = C.criteri_fullscan(rif, run.tabella.mz, run.tabella.rt, run.identita, coppie)
     det["crate"] = run.versione_crate
@@ -58,8 +61,9 @@ def sintetici(lavoro: Path, seme: int = 5) -> tuple[list[dict], dict]:
     files = lr_synth.write_series(lavoro / "fullscan")
     neutra, mz, rt = NEUTRA_SINTETICA
     parent = (neutra, mz + lr_synth.SHIFT, rt)
-    cf, df, sha = fullscan(files, parent, lavoro / "fs1", coppie_sintetiche(lr_synth.SHIFT))
-    _, _, sha2 = fullscan(files, parent, lavoro / "fs2", coppie_sintetiche(lr_synth.SHIFT))
+    rif = json.loads(RIFERIMENTO_SINTETICO.read_text(encoding="utf-8"))["ioni"]
+    cf, df, sha = fullscan(files, parent, lavoro / "fs1", rif, coppie_sintetiche(lr_synth.SHIFT))
+    _, _, sha2 = fullscan(files, parent, lavoro / "fs2", rif, coppie_sintetiche(lr_synth.SHIFT))
     mzml = S.serie_mrm(lavoro / "mrm_file", seme)
     cm, dm, shm = mrm(mzml, lavoro / "m1")
     shm2 = N.esegui_mrm(mzml, lavoro / "m2")["sha"]
@@ -83,12 +87,12 @@ def reale(cartella: Path | None, parent: tuple | None, lavoro: Path) -> tuple[li
         cm2 = N.esegui_mrm(mrm_f, lavoro / "mrm2")["sha"] == shm
     else:
         (cm, _), cm2 = C.criteri_mrm(None), None
+    cf, _ = C.criteri_fullscan(None, [], [], [], [])                  # no public reference ions for the real full scan
     if fs_f and parent:
-        cf, det["fullscan"], sha = fullscan([{"name": p.name, "path": p} for p in fs_f], parent, lavoro / "fs1")
-        sha2 = nativo.esegui(N.ordina_per_tempo(N.indici_lr(fs_f, lavoro / "fs1" / "indici")), parent[0], parent[1], parent[2], lavoro / "fs2").sha
-        cf2 = sha == sha2
+        idx = N.ordina_per_tempo(N.indici_lr(fs_f, lavoro / "fs1" / "indici"))
+        cf2 = nativo.esegui(idx, parent[0], parent[1], parent[2], lavoro / "fs1").sha == nativo.esegui(idx, parent[0], parent[1], parent[2], lavoro / "fs2").sha
     else:
-        (cf, _), cf2 = C.criteri_fullscan(None, [], [], [], []), None
+        cf2 = None
     d = None if cm2 is None and cf2 is None else int(bool(cm2 is not False and cf2 is not False))
     return cm + cf + [cancello.crit("lr_determinismo", d, 1, "==")], det
 

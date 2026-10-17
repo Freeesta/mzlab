@@ -1,4 +1,4 @@
-//! The neutral-mass hypotheses of a connected component of the identity graph (`hr/identity.py::_hypotheses`).
+//! The neutral-mass hypotheses of a connected component of the identity graph (`_hypotheses` of mzFinder).
 
 use super::*;
 use crate::sortc::SortC;

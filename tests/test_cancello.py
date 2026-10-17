@@ -12,8 +12,6 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
-if not (ROOT / "TP_Mine" / "py").exists():
-    pytest.skip("TP_Mine/py not available", allow_module_level=True)
 import valida_feat as VF  # noqa: E402
 from valida import cancello as C  # noqa: E402
 from valida import cancello_misure as M  # noqa: E402

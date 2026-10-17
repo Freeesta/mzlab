@@ -1,5 +1,5 @@
 //! The reading of a SMILES: atoms and bonds as written (organic subset, brackets, lower-case aromatic atoms, ring closures `1`-`9` and `%nn`), then the
-//! implicit hydrogens by valence (as `molgraph.py`: an aromatic C or N gives one electron to the ring; hypervalent N, P, S take the next valence).
+//! implicit hydrogens by valence (an aromatic C or N gives one electron to the ring; hypervalent N, P, S take the next valence).
 
 use mzlab_core::error::{Error, Result};
 

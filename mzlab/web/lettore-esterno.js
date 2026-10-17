@@ -29,11 +29,14 @@ export function createEsterno(native_external) {
     const w = loaded.get(fam);
     if (!w) throw loadError(fam, "module not loaded");
     const sums = Array.from(names, (n, i) => (sha1 && sha1[i]) || known.get(n + "\0" + sizes[i]) || "");
-    const h = w.apri_con_sha1 && sums.some(Boolean) ? w.apri_con_sha1(names, sizes, read, sums) : w.apri(names, sizes, read);        // the module reads the members with the engine's own `read`; the SHA-1 of a member the page knows is not read again
+    // the module reads the members with the engine's own `read`; the SHA-1 of a member the page knows is not read again
+    const h = w.apri_con_sha1 && sums.some(Boolean) ? w.apri_con_sha1(names, sizes, read, sums) : w.apri(names, sizes, read);
     return {
-      protocollo: () => (w.protocollo ? w.protocollo() : 1),        // the version of the binary transport of the index and the scans (a module of an older build has none)
+      // the version of the binary transport of the index and the scans (a module of an older build has none)
+      protocollo: () => (w.protocollo ? w.protocollo() : 1),
       campioni: () => w.campioni(h),
-      indice: (/** @type {number} */ c) => w.indice(h, c),        // one Uint8Array: the columns of the index (crates/mzlab-core/src/trasporto.rs)
+      // one Uint8Array: the columns of the index (crates/mzlab-core/src/trasporto.rs)
+      indice: (/** @type {number} */ c) => w.indice(h, c),
       scansione: (/** @type {number} */ c, /** @type {number} */ k) => w.scansione(h, c, k),
       intestazione: (/** @type {number} */ c, /** @type {number} */ k) => w.intestazione(h, c, k),
       cromatogrammi: (/** @type {number} */ c) => w.cromatogrammi(h, c),

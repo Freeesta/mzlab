@@ -1,4 +1,4 @@
-//! The in-source-fragment verdict of the low-resolution rows (`legacy/lrisf/`) against the Python answers (`tools/finder_lrisf_riferimento.py --golden`):
+//! The in-source-fragment verdict of the low-resolution rows (`legacy/lrisf/`) against the frozen answers of the former Python engine:
 //! the inputs are the reports of `origin_report`, numbers within 1e-9, labels, `doubtful` and texts exactly equal.
 
 use mzlab_core::json::{parse, Value as V};

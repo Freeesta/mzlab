@@ -10,7 +10,8 @@ const HR = (() => {
   function prof(f, level) {
     const lv = level || (f && f.lv) || 1, p = f && (lv === 2 ? f.prof2 : f.prof1);
     if (!p) return LOW;
-    if (!p.hr) return p;                                                     // ion trap: 2 decimals, 0.5 Da (as Thermo's default), not high resolution
+    // ion trap: 2 decimals, 0.5 Da (as Thermo's default), not high resolution
+    if (!p.hr) return p;
     return { ...p, dec: Math.round(num(UIP.hrDec, 3, 5, p.dec)), tol: num(UIP.hrPpm, 1, 50, p.tol), unit: "ppm" };
   }
   const isHr = (f, level) => prof(f, level).hr;
@@ -52,7 +53,8 @@ const HR = (() => {
     const e = ELMAP[s]; if (!e || !e.iso.length) throw new Error(I18N.t("tbl.iso.unavailable", { s }));
     return e.iso.filter(i => i[1] != null && i[2] > 0).map(i => [i[1], i[2] / 100]);
   };
-  const joinMasses = list => {                             // list of [mass, probability]: sort, and merge masses within FINE_TOL
+  // list of [mass, probability]: sort, and merge masses within FINE_TOL
+  const joinMasses = list => {
     list.sort((a, b) => a[0] - b[0]);
     const out = []; let cur = null;
     for (const [m, p] of list) {
@@ -138,7 +140,8 @@ const HR = (() => {
   // error in ppm), otherwise on the calculated m/z with "non trovato". Returns the note for the legend.
   function drawIso(p, g, X, Y, d0, ymax, W, f) {
     const tol = prof(f, p.level).tol, st = p.iso.style || "centroidi";
-    const fw = fwhmFn(p.iso, f, p.level), R = p.iso.R === 0 ? 0 : (p.iso.R || (p.level === 2 ? f.res2 : f.res1) || 0), pat = isoPat(p.iso, fw);          // no width: whole fine structure
+    // no width: whole fine structure
+    const fw = fwhmFn(p.iso, f, p.level), R = p.iso.R === 0 ? 0 : (p.iso.R || (p.level === 2 ? f.res2 : f.res1) || 0), pat = isoPat(p.iso, fw);
     const top = pat.reduce((a, b) => (b.rel > a.rel ? b : a));
     const find = mz => { let best = null; d0.mz.forEach((m, j) => { if (d0.y[j] <= 0) return; const e = ppm(m, mz); if (Math.abs(e) <= tol && (!best || d0.y[j] > best.y)) best = { m, y: d0.y[j], e }; }); return best; };
     const obsTop = find(top.mz), h = obsTop ? obsTop.y : ymax / 1.12 * 0.9;
@@ -174,7 +177,8 @@ const HR = (() => {
   // [centre, half width] in Da of trace t for file f
   function xicArgs(f, t, p) {
     if (!t.ion) return [t.mz, t.w ?? p.tol];
-    if (t.wda != null) return [t.mz, t.wda];                                  // interval chosen in Da in «Display options»
+    // interval chosen in Da in «Display options»
+    if (t.wda != null) return [t.mz, t.wda];
     const q = prof(f, f.lv);
     if (q.hr) return [t.mz, t.mz * (t.ppm ?? q.tol) * 1e-6];
     const [a, b] = xicWin(t.mz, t.obs);

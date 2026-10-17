@@ -1,4 +1,4 @@
-//! Alignment of the features of a series of files in groups ("per ion" mode): port of `TP_Mine/py/tpmine/hr/features.py::align`.
+//! Alignment of the features of a series of files in groups ("per ion" mode): the `align` of mzFinder.
 //! The tables (sorted by m/z) are merged k ways in file order, which is the stable sort of the concatenation of Python. A chain of
 //! features whose consecutive m/z gaps are below `ppm` is one slab (no group crosses its edges): it is cut where it spans more than
 //! `max_ppm_span`, sorted by RT and cut where the RT gap is above `rt_gap`; so one slab is held at a time.

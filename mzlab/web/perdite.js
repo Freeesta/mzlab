@@ -33,7 +33,8 @@ const LOSSES = [
   { f: "SO3", name: "loss.SO3.name", pol: "-", seen: "loss.SO3.seen", mech: "loss.SO3.mech" },
 ];
 const LOSS_REFS = "Levsen 2007; Holčapek 2010";
-const LOSS_RAD = "loss.rad";                      // catalog key: the texts of this list are in lang/it.js and en.js (keys loss.<formula>.name / seen / mech)
+// catalog key: the texts of this list are in lang/it.js and en.js (keys loss.<formula>.name / seen / mech)
+const LOSS_RAD = "loss.rad";
 // the candidates for a mass difference: single losses within the tolerance, pairs that add up to it, and repetitions (n x the same loss).
 // mass(f) = exact mass of a formula (given by the caller); tol in Da.
 function lossCombos(target, mass, tol = 0.5, list = LOSSES) {

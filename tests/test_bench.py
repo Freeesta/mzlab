@@ -11,8 +11,6 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
-if not (ROOT / "TP_Mine" / "py").exists():
-    pytest.skip("TP_Mine/py not available", allow_module_level=True)
 from bench import adatta as A  # noqa: E402
 from bench import metriche as M  # noqa: E402
 from bench import rapporto as R  # noqa: E402

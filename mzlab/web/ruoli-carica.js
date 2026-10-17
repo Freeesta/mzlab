@@ -22,7 +22,8 @@ const RUOLI = /** @type {any} */ ((() => {
 
   /** the role `v` for an entry (the student's choice or a proposal); the time follows the role */
   function setRole(/** @type {Voce} */ f, /** @type {string} */ v) {
-    const was = roleOf(f), r = v === "standard" ? "std" : v === "t0" ? "sample" : v;   // the option of the select says «standard» (the value the rest of the program knows); `t0` = a sample at 0
+    // the option of the select says «standard» (the value the rest of the program knows); `t0` = a sample at 0
+    const was = roleOf(f), r = v === "standard" ? "std" : v === "t0" ? "sample" : v;
     f.role = r; f.type = BASE[r] || "sample";
     if (v === "t0") f.time = 0;
     else if (!TIMED.has(r)) f.time = null;
@@ -33,7 +34,8 @@ const RUOLI = /** @type {any} */ ((() => {
   let busy = 0;   // proposals under way (the tests wait for 0)
   /** proposals from the names for the entries not asked yet; true when something changed */
   async function propose(/** @type {() => Voce[]} */ get) {
-    const todo = get().filter(f => !f.prop);   // the list is rebuilt while the answer travels: entries are looked up again by name
+    // the list is rebuilt while the answer travels: entries are looked up again by name
+    const todo = get().filter(f => !f.prop);
     if (!todo.length) return false;
     todo.forEach(f => { f.prop = 1; });
     let doc;

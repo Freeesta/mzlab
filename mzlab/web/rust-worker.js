@@ -98,7 +98,10 @@ async function fileOf(name) {
   if (!lrFile.has(name)) { const f = await ARCH.get("files", name); if (!f) jerr("err.session.fileNotFound"); lrFile.set(name, f); }
   return lrFile.get(name);
 }
-const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte: createImpronte({ Passata, workerUrl: new URL("./impronta-worker.js", import.meta.url), module: () => wasmModule }) });
+const impronte = createImpronte({ Passata, workerUrl: new URL("./impronta-worker.js", import.meta.url), module: () => wasmModule });
+const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte });
+const prints = (n, size) => { const p = lrPrints.get(n); lrPrints.delete(n); return p && p.size === size ? [p.sha256, p.probe] : [undefined, undefined]; };
+const lrPrints = new Map();                                              // plain mzML name -> { size, sha256, probe } taken while lrPut copied it: lr_index takes them once and does not read the file again for them
 async function lrOpen(name) {                                             // opens the index of a file in its slot; false when there is none
   const f = await fileOf(name), ix = await ARCH.get("idx", name + ".mzidx");
   if (!ix) return false;
@@ -173,6 +176,16 @@ async function lrMigrate() {                                              // wha
 }
 const CANCELLED = new Set();                                              // names whose loading the page cancelled (lr_cancel): the copy and the index stop, a new lr_put starts afresh
 const cancelled = () => JSON.stringify({ error_key: "err.load.cancelled", params: {} });
+// the uploaded blob copied to OPFS in pieces, its SHA-256 and probe taken in the same pass (a .dam has none: the method is not indexed)
+async function copyPrints(m) {
+  const blob = m.blob, pass = /\.mzml$/i.test(m.name) ? impronte.start(blob.size) : null;
+  const put = ARCH.putChunks("files", m.name, blob.size, async (o, n) => new Uint8Array(await blob.slice(o, o + n).arrayBuffer()), pass ? b => pass.add(b) : undefined);
+  let f;
+  try { f = await put; } catch (e) { if (pass) pass.end().catch(() => null); throw e; }
+  const o = pass && await pass.end().catch(() => null);
+  if (o) lrPrints.set(m.name, { size: blob.size, sha256: o[0], probe: o[2] });
+  return f;
+}
 async function lrPut(m) {                                              // an uploaded file: into OPFS, replacing the one of the same name and its index
   CANCELLED.delete(m.name);
   if (!m.nat) await ARCH.ensureRoom(m.blob.size, m.name);                 // room first (error.quota with the MB needed and free), never write hoping; held for the file and its index until lr_index ends
@@ -190,8 +203,9 @@ async function lrPut(m) {                                              // an upl
     await ARCH.persistOnce();
     return { info: JSON.stringify({ size: f.size }), files: [[m.name, f]] };
   }
-  try { f = await ARCH.put("files", m.name, m.blob); }
-  catch (e) { if (/quota/i.test(String(e && (e.name || e.message)))) { await lrFree(); f = await ARCH.put("files", m.name, m.blob); } else { ARCH.release(m.name); throw e; } }
+  lrPrints.delete(m.name);
+  try { f = await copyPrints(m); }
+  catch (e) { if (/quota/i.test(String(e && (e.name || e.message)))) { await lrFree(); f = await copyPrints(m); } else { ARCH.release(m.name); throw e; } }
   lrFile.set(m.name, f);
   if (/\.dam$/i.test(m.name)) ARCH.release(m.name);                    // a method has no index
   await ARCH.persistOnce();
@@ -220,7 +234,7 @@ async function lrOp(m) {
       if (CANCELLED.has(m.name)) throw cancelled();
       const onProgress = p => postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase, done: p.done, total: p.total, wait: p.wait });      // wait: the pool has no free worker yet
       const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, onProgress }
-        : { name: m.name, blob: f, inputs: Array.from(prepare_upload(f.size, readerFor(f), m.name)).slice(0, 8), part, onProgress });      // frac: how far the builder has read
+        : { name: m.name, blob: f, inputs: Array.from(prepare_upload(f.size, readerFor(f), m.name, ...prints(m.name, f.size))).slice(0, 8), part, onProgress });      // frac: how far the builder has read
       if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
         if (res.ok && res.stats && res.stats.cen) await ARCH.promote("idx", partCen, m.name + ".cen.mzidx"); else await ARCH.remove("idx", partCen);
       }

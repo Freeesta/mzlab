@@ -1,4 +1,4 @@
-//! Map of retention time of a series: port of `TP_Mine/py/tpmine/hr/rtalign.py`. The anchors are the groups that every file shows and that
+//! Map of retention time of a series (`rtalign` of mzFinder). The anchors are the groups that every file shows and that
 //! nothing else crowds: strong, alone in their m/z window and RT neighbourhood, with the apex of the same peak in all files. The apex of an
 //! anchor in a file minus its median apex over the files is the RT shift of that file; the curve of a file is piecewise linear between the
 //! medians of consecutive groups of anchors. It only tells where a feature is expected in a file; no signal is moved.
