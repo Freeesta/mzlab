@@ -59,91 +59,38 @@ console.log(JSON.stringify(out));
     assert data["pseudo"]["neutral_formula"] == "C10H15NO"
 
 
-@pytest.mark.skipif(not NODE, reason="node non disponibile")
-def test_screening_engine_proposals_prev1_prev2_prev3():
+def _run_screening_js():
     code = r"""
 const LT = require(process.argv[1]);
-
-// Substance 1: Pseudoephedrine (C10H15NO, monoisotopic 165.115364, MH+ 166.122641) -> Will be Prev. 1 (MS1 + isotope + MS2)
-// Substance 2: DMAA (C7H17N, monoisotopic 115.1361, MH+ 116.143376) -> Will be Prev. 2 (MS1 + isotope, no MS2)
-// Substance 3: TestComp (C8H10, monoisotopic 106.07825, MH+ 107.085526) -> Will be Prev. 3 (MS1 accurate mass, bad isotope, no MS2)
 const targets = [
   { id: 'pseudo', name_en: 'Pseudoephedrine', neutral_formula: 'C10H15NO', monoisotopic_mass: 165.115364, mz_mh: 166.122641 },
   { id: 'dmaa', name_en: 'DMAA', neutral_formula: 'C7H17N', monoisotopic_mass: 115.1361, mz_mh: 116.143376 },
   { id: 'test', name_en: 'TestComp', neutral_formula: 'C8H10', monoisotopic_mass: 106.07825, mz_mh: 107.085526 }
 ];
-
-// Build synthetic spectra
 const spectra = [];
-const numScans = 61;
-const rtStart = 1.0;
-const rtStep = 0.1;
-
-for (let i = 0; i < numScans; i++) {
-  const rt = rtStart + i * rtStep;
-  const mz = [115.05, 350.20, 580.45];
-  const intensity = [10.0, 8.0, 12.0];
-
-  // Pseudoephedrine peak at RT 2.5 (scan 15), height 1000, M+1 present (~11% of M0)
-  const dt1 = rt - 2.5;
-  const i1 = 1000.0 * Math.exp(-0.5 * Math.pow(dt1 / 0.1, 2));
-  if (i1 >= 5.0) {
-    mz.push(166.122641);
-    intensity.push(i1);
-    mz.push(166.122641 + 1.003355);
-    intensity.push(i1 * 0.1117);
-  }
-
-  // DMAA peak at RT 4.0 (scan 30), height 800, M+1 present (~7.9% of M0)
-  const dt2 = rt - 4.0;
-  const i2 = 800.0 * Math.exp(-0.5 * Math.pow(dt2 / 0.1, 2));
-  if (i2 >= 5.0) {
-    mz.push(116.143376);
-    intensity.push(i2);
-    mz.push(116.143376 + 1.003355);
-    intensity.push(i2 * 0.0793);
-  }
-
-  // TestComp peak at RT 5.2 (scan 42), height 300, accurate mass but NO M+1
-  const dt3 = rt - 5.2;
-  const i3 = 300.0 * Math.exp(-0.5 * Math.pow(dt3 / 0.1, 2));
-  if (i3 >= 5.0) {
-    mz.push(107.085526);
-    intensity.push(i3);
-  }
-
-  spectra.push({
-    level: 1,
-    rt: rt,
-    mz: mz,
-    intensity: intensity
-  });
+for (let i = 0; i < 61; i++) {
+  const rt = 1.0 + i * 0.1;
+  const mz = [115.05, 350.20, 580.45], intensity = [10.0, 8.0, 12.0];
+  const i1 = 1000.0 * Math.exp(-0.5 * Math.pow((rt - 2.5) / 0.1, 2));
+  if (i1 >= 5.0) { mz.push(166.122641, 166.122641 + 1.003355); intensity.push(i1, i1 * 0.1117); }
+  const i2 = 800.0 * Math.exp(-0.5 * Math.pow((rt - 4.0) / 0.1, 2));
+  if (i2 >= 5.0) { mz.push(116.143376, 116.143376 + 1.003355); intensity.push(i2, i2 * 0.0793); }
+  const i3 = 300.0 * Math.exp(-0.5 * Math.pow((rt - 5.2) / 0.1, 2));
+  if (i3 >= 5.0) { mz.push(107.085526); intensity.push(i3); }
+  spectra.push({ level: 1, rt, mz, intensity });
 }
-
-// Add MS2 spectrum matching Pseudoephedrine precursor near RT 2.5
-spectra.push({
-  level: 2,
-  rt: 2.51,
-  precursor: 166.122641,
-  mz: [148.11, 133.09],
-  intensity: [500.0, 200.0]
-});
-
-const matches = LT.cercaTargets(targets, spectra, {
-  tolerance_ppm: 5.0,
-  min_sn: 3.0,
-  min_area: 10.0,
-  adducts: ['[M+H]+']
-});
-
+spectra.push({ level: 2, rt: 2.51, precursor: 166.122641, mz: [148.11, 133.09], intensity: [500.0, 200.0] });
+const matches = LT.cercaTargets(targets, spectra, { tolerance_ppm: 5.0, min_sn: 3.0, min_area: 10.0, adducts: ['[M+H]+'] });
 console.log(JSON.stringify(matches));
 """
     res = subprocess.run([NODE, "-e", code, str(TARGET_JS)], capture_output=True, text=True, check=True)
-    matches = json.loads(res.stdout)
+    return json.loads(res.stdout)
 
+
+@pytest.mark.skipif(not NODE, reason="node non disponibile")
+def test_screening_engine_prev1_prev2():
+    matches = _run_screening_js()
     assert len(matches) == 3
-
-    # Check order: Prev. 1 must be first, then Prev. 2, then Prev. 3
     assert matches[0]["proposal"] == "Prev. 1"
     assert matches[0]["id"] == "pseudo"
     assert matches[0]["ms2_matched"] is True
@@ -159,6 +106,10 @@ console.log(JSON.stringify(matches));
     assert "no MS2 precursor matched" in matches[1]["motif"]
     assert "isotope pattern confirmed" in matches[1]["motif"]
 
+
+@pytest.mark.skipif(not NODE, reason="node non disponibile")
+def test_screening_engine_prev3_and_sort():
+    matches = _run_screening_js()
     assert matches[2]["proposal"] == "Prev. 3"
     assert matches[2]["id"] == "test"
     assert matches[2]["ms2_matched"] is False
