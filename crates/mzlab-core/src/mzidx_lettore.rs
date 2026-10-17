@@ -86,6 +86,9 @@ fn riga(
     if let Some(p) = prima {
         // the level and polarity of the row, as `build` reads them from the table
         let (level, pol) = rows.ultima().unwrap_or((s.level, 0));
+        if level == 1 {
+            p.indovina(rows.ultima_hr());
+        }
         p.add(level, pol, s)?;
     }
     Ok(())

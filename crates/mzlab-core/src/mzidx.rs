@@ -279,11 +279,14 @@ impl<T: Num> Sect for Sec<T> {
     fn carica(&mut self, da: &[&Gruppo], rank: &[u32]) -> Result<()> {
         self.begin_round(0, NB)?;
         for g in da {
-            for p in &g.kept {
+            // a group keeps one of the two (`Gruppo::f32`); `f32 -> f64 -> f32` gives back the same bits
+            let p64 = g.kept.iter().map(|p| (p.mz, p.it, p.pos));
+            let p32 = g.kept32.iter().map(|p| (p.mz.to64(), p.it.to64(), p.pos));
+            for (mz, it, pos) in p64.chain(p32) {
                 let q = Peak {
-                    mz: T::from64(p.mz),
-                    it: T::from64(p.it),
-                    pos: rank[p.pos as usize],
+                    mz: T::from64(mz),
+                    it: T::from64(it),
+                    pos: rank[pos as usize],
                 };
                 let b = bucket(q.mz.to64());
                 self.round[self.cursor[b]] = q;
@@ -421,20 +424,73 @@ struct Gruppo {
     /// The same as seen after rounding the m/z to 32 bits (where a section holds `f32`: only level 1).
     counts32: Vec<u32>,
     n: u64,
+    /// The peaks are kept rounded to 32 bits (`kept32`, 12 B a peak instead of 24): MS1 of a high-resolution file, whose sections hold `f32`.
+    f32: bool,
     /// In scan order; `pos` is the number of the scan in the file.
     kept: Vec<Peak<f64>>,
+    kept32: Vec<Peak<f32>>,
 }
 
 impl Gruppo {
-    fn nuovo(level: u8, polarity: i8) -> Gruppo {
+    fn nuovo(level: u8, polarity: i8, f32: bool) -> Gruppo {
         Gruppo {
             level,
             polarity,
             counts: vec![0; NB],
             counts32: if level == 1 { vec![0; NB] } else { Vec::new() },
             n: 0,
+            f32: f32 && level == 1,
             kept: Vec::new(),
+            kept32: Vec::new(),
         }
+    }
+
+    /// Peak `i` of what is kept, as `(mz, intensity, scan)`.
+    fn picco(&self, i: usize) -> Option<(f64, f64, u32)> {
+        if !self.f32 {
+            return self.kept.get(i).map(|p| (p.mz, p.it, p.pos));
+        }
+        self.kept32
+            .get(i)
+            .map(|p| (p.mz.to64(), p.it.to64(), p.pos))
+    }
+
+    /// One peak: counted, then kept (`keep`) or sent to the scratch file (`scorta`, when there is one).
+    #[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // `bucket` is below `NB`; `f32` peaks are what the section writes
+    fn metti(
+        &mut self,
+        keep: bool,
+        Peak { mz, it, pos }: Peak<f64>,
+        scorta: Option<(&mut Parti, &mut dyn Spill)>,
+    ) -> Result<()> {
+        self.counts[bucket(mz)] += 1;
+        if self.level == 1 {
+            self.counts32[bucket(f64::from(mz as f32))] += 1;
+        }
+        if self.f32 {
+            // the values the section writes (`Num::from64`); the scratch file splits them by the bucket of the rounded m/z
+            let (mz, it) = (mz as f32, it as f32);
+            if keep {
+                self.kept32.push(Peak { mz, it, pos });
+            } else if let Some((parti, spill)) = scorta {
+                parti.push(spill, f64::from(mz), f64::from(it), pos)?;
+            }
+        } else if keep {
+            self.kept.push(Peak { mz, it, pos });
+        } else if let Some((parti, spill)) = scorta {
+            parti.push(spill, mz, it, pos)?;
+        }
+        Ok(())
+    }
+
+    fn held(&self) -> usize {
+        self.kept.len() * std::mem::size_of::<Peak<f64>>()
+            + self.kept32.len() * std::mem::size_of::<Peak<f32>>()
+    }
+
+    fn lascia(&mut self) {
+        self.kept = Vec::new();
+        self.kept32 = Vec::new();
     }
 }
 
@@ -447,6 +503,9 @@ pub(crate) struct Prima<'a> {
     visti: usize,
     spill: Option<&'a mut dyn Spill>,
     parti: Option<Parti>,
+    /// Whether the MS1 sections will hold `f32` (`ScanTable::hr1`): known before pass 1 for an mzML, guessed from the first MS1 scan for a reader
+    /// (`indovina`); a wrong guess of `true` is undone by `build_dopo`.
+    hr1: Option<bool>,
 }
 
 impl<'a> Prima<'a> {
@@ -458,7 +517,13 @@ impl<'a> Prima<'a> {
             visti: 0,
             spill,
             parti: None,
+            hr1: None,
         }
+    }
+
+    /// `hr1` as the table says it (an mzML) or as the scans seen so far say it (a reader), if it is not known yet; the groups made from now on keep their peaks so.
+    pub(crate) fn indovina(&mut self, hr1: bool) {
+        self.hr1.get_or_insert(hr1);
     }
 
     /// The next scan of the file, with the level and polarity (+1, -1, 0) of its row.
@@ -471,7 +536,8 @@ impl<'a> Prima<'a> {
         {
             Some(i) => i,
             None => {
-                self.gruppi.push(Gruppo::nuovo(level, polarity));
+                self.gruppi
+                    .push(Gruppo::nuovo(level, polarity, self.hr1 == Some(true)));
                 self.gruppi.len() - 1
             }
         };
@@ -479,35 +545,28 @@ impl<'a> Prima<'a> {
         let n = sp.mz.len();
         let pos = self.visti as u32;
         if self.keep {
-            reserve(&mut g.kept, n)?;
+            if g.f32 {
+                reserve(&mut g.kept32, n)?;
+            } else {
+                reserve(&mut g.kept, n)?;
+            }
         }
         for j in 0..n {
+            let spill = self.spill.as_deref_mut().map(|s| s as &mut dyn Spill);
+            let scorta = self.parti.as_mut().zip(spill);
             let (mz, it) = (sp.mz[j], sp.intensity_f64(j));
-            g.counts[bucket(mz)] += 1;
-            if level == 1 {
-                g.counts32[bucket(f64::from(mz as f32))] += 1;
-            }
-            if self.keep {
-                g.kept.push(Peak { mz, it, pos });
-            } else if let (Some(parti), Some(spill)) = (&mut self.parti, self.spill.as_deref_mut())
-            {
-                parti.push(spill, mz, it, pos)?;
-            }
+            g.metti(self.keep, Peak { mz, it, pos }, scorta)?;
         }
         g.n += n as u64;
         self.visti += 1;
         if self.keep {
-            let held: usize = self
-                .gruppi
-                .iter()
-                .map(|g| g.kept.len() * std::mem::size_of::<Peak<f64>>())
-                .sum();
+            let held: usize = self.gruppi.iter().map(Gruppo::held).sum();
             if held > self.budget / 2 {
                 self.keep = false;
                 if let Some(sp) = self.spill.as_deref_mut() {
                     self.parti = Some(avvia(&mut self.gruppi, sp)?);
                 }
-                self.gruppi.iter_mut().for_each(|g| g.kept = Vec::new());
+                self.gruppi.iter_mut().for_each(Gruppo::lascia);
             }
         }
         Ok(())
@@ -526,18 +585,19 @@ fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
     let mut parti = Parti::new(&counts);
     let mut next = vec![0usize; gruppi.len()];
     loop {
-        let mut best: Option<usize> = None;
+        let mut best: Option<(usize, (f64, f64, u32))> = None;
         for (i, g) in gruppi.iter().enumerate() {
-            if let Some(p) = g.kept.get(next[i]) {
-                if best.is_none_or(|b| p.pos < gruppi[b].kept[next[b]].pos) {
-                    best = Some(i);
+            if let Some(p) = g.picco(next[i]) {
+                if best.is_none_or(|(_, b)| p.2 < b.2) {
+                    best = Some((i, p));
                 }
             }
         }
-        let Some(i) = best else { break };
-        let p = gruppi[i].kept[next[i]];
+        let Some((i, (mz, it, pos))) = best else {
+            break;
+        };
         next[i] += 1;
-        parti.push(sp, p.mz, p.it, p.pos)?;
+        parti.push(sp, mz, it, pos)?;
     }
     Ok(parti)
 }
@@ -582,6 +642,7 @@ pub fn build_con_spill(
     }
     // -- pass 1: count (and keep, while it fits)
     let mut prima = Prima::new(budget, spill);
+    prima.indovina(table.hr1);
     let mut failure: Option<Error> = None;
     {
         let mut on = |sp: Spectrum| {
@@ -631,6 +692,13 @@ pub(crate) fn build_dopo(
             "detail",
             format!("{} spectra, {n_scans} scans", prima.visti),
         ));
+    }
+    if !table.hr1 && prima.gruppi.iter().any(|g| g.f32) {
+        // pass 1 guessed 32-bit MS1 peaks for a file that is not high-resolution: what it kept or spilled is rounded, so the rounds decode again
+        prima.keep = false;
+        prima.parti = None;
+        prima.spill = None;
+        prima.gruppi.iter_mut().for_each(Gruppo::lascia);
     }
     let keep = prima.keep;
     let mut passes = 1usize;
