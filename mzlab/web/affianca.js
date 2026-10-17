@@ -250,7 +250,7 @@ function affSync() {
   LAYOUT.righeDi(affStack()).forEach(r => { if (r.length > 1 && r.every((/** @type {any} */ q) => q.y === r[0].y)) for (let i = 0; i < r.length - 1; i++) { const e = affSep(r, i); if (was === e._key) e.focus(); } });
 }
 // ---- hint «drag here to place side by side»: once per browser, when two panels could share a row and no other hint is on screen (suggerimenti.js); × and Esc close it, so does the first side by side
-const AFF_K_HINT = "qqq.pannelli.affianca.hint";
+const AFF_K_HINT = NOMI.KEY("pannelli.affianca.hint");
 let affHintMem = false;
 const affHintSeen = () => { try { return !!localStorage.getItem(AFF_K_HINT); } catch (_) { return affHintMem; } };
 const affHintMark = () => { affHintMem = true; try { localStorage.setItem(AFF_K_HINT, "1"); } catch (_) { /* no storage: once per page */ } };

@@ -7,7 +7,7 @@
 // Pickaxe, cracks and shards are inline SVG/CSS (no asset). The label of the logo (alt/title) never changes.
 (() => {
   "use strict";
-  const HITS = 5, HEAL_MS = 3000, GOLD_KEY = "qqq.logo.gold", ADMIN_KEY = "qqq.admin", LEGACY_KEY = "qqq.teoria.esteso";
+  const HITS = 5, HEAL_MS = 3000, GOLD_KEY = NOMI.KEY("logo.gold"), ADMIN_KEY = NOMI.KEY("admin"), LEGACY_KEY = NOMI.KEY("teoria.esteso");
   const logo = document.querySelector("header img.logo");
   if (!logo) return;
   const t = (k, d) => (window.I18N && I18N.t ? I18N.t(k) : d);

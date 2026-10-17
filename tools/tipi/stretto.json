@@ -15,6 +15,7 @@
     "modello.d.ts",
     "manuale.d.ts",
     "manuale-dom.d.ts",
+    "../../mzlab/web/nomi.js",
     "../../mzlab/web/reset.js",
     "../../mzlab/web/telefono.js",
     "../../mzlab/web/appname.js",

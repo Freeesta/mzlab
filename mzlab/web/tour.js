@@ -46,7 +46,7 @@ function computePosition(rect, dialogWidth, dialogHeight, vw, vh) {
 }
 
 const TOUR = (() => {
-  const STORAGE_KEY = "qqq.tour.lr";
+  const STORAGE_KEY = typeof NOMI !== "undefined" ? NOMI.KEY("tour.lr") : "qqq.tour.lr";
 
   const STEPS_CAP1 = [
     {
@@ -764,7 +764,7 @@ if (typeof window !== "undefined") {
   // «New session» / «Start from scratch»: the invitation is a user datum too, so it comes back with the clean slate
   const hard = window.qqHardReset;
   if (typeof hard === "function") {
-    window.qqHardReset = () => { try { localStorage.removeItem("qqq.tour.lr"); } catch (_) { /* storage blocked: nothing to reset */ } return hard(); };
+    window.qqHardReset = () => { try { localStorage.removeItem(typeof NOMI !== "undefined" ? NOMI.KEY("tour.lr") : "qqq.tour.lr"); } catch (_) { /* storage blocked: nothing to reset */ } return hard(); };
   }
 }
 

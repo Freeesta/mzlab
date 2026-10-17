@@ -604,8 +604,8 @@ function reorderFiles(fromK, toK, isBefore) {
 }
 
 const flCompact = () => !!(/** @type {any} */ (window).matchMedia && matchMedia("(pointer:coarse), (max-width:1100px)").matches);
-function flGrpGet() { return lsObj("qqq.flgrp"); }
-function flGrpSet(m) { E._flgrp = m; try { localStorage.setItem("qqq.flgrp", JSON.stringify(m)); } catch (_) { /* no storage */ } }
+function flGrpGet() { return lsObj(NOMI.KEY("flgrp")); }
+function flGrpSet(m) { E._flgrp = m; try { localStorage.setItem(NOMI.KEY("flgrp"), JSON.stringify(m)); } catch (_) { /* no storage */ } }
 // the rows of the list: a click selects the file (the active one), a double click on the name shows only that file (rename: right click), on the colour square it opens the colour picker (called by renderFileList)
 function bindFileRows() {
   bindListaFile();

@@ -21,3 +21,5 @@ mzlab/web/liste.js	addotto
 mzlab/web/banco.js	del
 mzlab/web/libreria-worker.js	librerie
 mzlab/web/index.html	dati
+mzlab/web/liste.js	contaminanti
+mzlab/web/picchi.js	picchi

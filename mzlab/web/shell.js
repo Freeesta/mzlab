@@ -235,8 +235,8 @@ function ssGet(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
 function ssSet(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}
 const SEEN_GROUPS=new Set();
 function groupHash(files){const s=files.map(f=>f.name+":"+f.size).sort().join("|");let h=5381;for(let i=0;i<s.length;i++)h=(h*33^s.charCodeAt(i))>>>0;return h+"."+files.length}
-function groupSeen(h){let a=[];try{a=JSON.parse(ssGet("qqq.unopen")||"[]")}catch(e){}return SEEN_GROUPS.has(h)||a.includes(h)}
-function groupMark(h){SEEN_GROUPS.add(h);try{const a=JSON.parse(ssGet("qqq.unopen")||"[]");a.push(h);ssSet("qqq.unopen",JSON.stringify(a.slice(-50)))}catch(e){}}
+function groupSeen(h){let a=[];try{a=JSON.parse(ssGet(NOMI.KEY("unopen"))||"[]")}catch(e){}return SEEN_GROUPS.has(h)||a.includes(h)}
+function groupMark(h){SEEN_GROUPS.add(h);try{const a=JSON.parse(ssGet(NOMI.KEY("unopen"))||"[]");a.push(h);ssSet(NOMI.KEY("unopen"),JSON.stringify(a.slice(-50)))}catch(e){}}
 function namesCut(a,max){return a.slice(0,max).map(esc).join(", ")+(a.length>max?"…":"")}
 // ONE notice for the whole loading: files that cannot be opened in the browser (count + collapsible list), unknown formats and read errors, one line per kind
 function closeUnopen(){const u=$("#unopen");u.hidden=true;u.textContent=""}
@@ -264,7 +264,7 @@ function reportLoad(rep){
   u.querySelectorAll(".diag").forEach((el,i)=>DIAG.cabla(el,DG[i],window.MZLAB_VERSION,T));
   if(rep.unopen.length){
     const h=$("#convhint");h.textContent=T("conv.help.hint",{types:[...new Set(conv)].join(", ")});h.hidden=false;
-    if(!ssGet("qqq.convopen")){ssSet("qqq.convopen","1");openConvHelp(false)}   // opens by itself once per session
+    if(!ssGet(NOMI.KEY("convopen"))){ssSet(NOMI.KEY("convopen"),"1");openConvHelp(false)}   // opens by itself once per session
     if(CONVERT_RAW)$("#convdesk").hidden=false}
   else if(needHelp&&CONVERT_RAW)$("#convhelp").hidden=false}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#unopen").hidden&&$("#unopen").contains(document.activeElement)){e.preventDefault();closeUnopen()}});

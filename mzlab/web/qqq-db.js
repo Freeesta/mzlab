@@ -3,7 +3,7 @@
 // Used by rust-worker.js and (with a dynamic import) liste.js.
 // SCHEMA is the version of the whole archive (this database and the folders of OPFS together); `kv.schema` holds the one the data are at and migra.js brings it
 // up to this value. DB_VER is the version of IndexedDB itself: it follows SCHEMA only when a store is added.
-export const DB_NAME = "qqq_lab", DB_VER = 3, SCHEMA = 3;
+export const DB_NAME = typeof NOMI !== "undefined" ? NOMI.DB : "qqq_lab", DB_VER = 3, SCHEMA = 3;
 
 // stores: the files kept without OPFS, the notebook and the settings (kv), the user's lists of the Liste panel, the manifest of the files of OPFS
 // (one row per file: { path, tipo, bytes, creato, usato, formato, versione_formato, crate, sorgente_sha256 })

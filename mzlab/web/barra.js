@@ -10,10 +10,10 @@
 // State: localStorage qqq.barra.lr / qqq.barra.hr ({tab, open, w, last}), side shared in qqq.barra.lato.
 
 const BARRA = (() => {
-  const K_LR = "qqq.barra.lr";
-  const K_HR = "qqq.barra.hr";
-  const K_SIDE = "qqq.barra.lato";
-  const K_HINT = "qqq.barra.hint";   // first-visit hint under the toolbar: shown once per browser
+  const K_LR = NOMI.KEY("barra.lr");
+  const K_HR = NOMI.KEY("barra.hr");
+  const K_SIDE = NOMI.KEY("barra.lato");
+  const K_HINT = NOMI.KEY("barra.hint");   // first-visit hint under the toolbar: shown once per browser
   const HR_PANELS = ["hdr", "lst", "fil", "alb", "cmp", "iso", "idn", "disp"];
   const MIN_W = 280, MAX_W = 560;
   const SHEET = 900;                // below this width the panel is a sheet that replaces the workspace

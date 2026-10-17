@@ -238,8 +238,9 @@ const LISTE = (() => {
     };
   }
 
-  // ---------------------------------------------------------------- page & storage (IndexedDB "qqq_lab", store "liste_utente")
-  const KEY_ROWS = "qqq.contaminanti", KEY_ON = "qqq.contaminanti.on", KEY_LISTS = "qqq.liste.attive";
+  const KEY_ROWS = typeof NOMI !== "undefined" ? NOMI.KEY("contaminanti") : "qqq.contaminanti",
+    KEY_ON = typeof NOMI !== "undefined" ? NOMI.KEY("contaminanti.on") : "qqq.contaminanti.on",
+    KEY_LISTS = typeof NOMI !== "undefined" ? NOMI.KEY("liste.attive") : "qqq.liste.attive";
   const IDB_STORE = "liste_utente";
 
   const ST = {
@@ -256,7 +257,7 @@ const LISTE = (() => {
   const isOn = () => rd(KEY_ON, true) !== false;
 
   // Exclusions (HR only): hide a compatible peak from the lists and the tables, never change the data. Stored in the browser, the same for every file.
-  const KEY_EXCL = "qqq.contaminanti.esclusi";
+  const KEY_EXCL = typeof NOMI !== "undefined" ? NOMI.KEY("contaminanti.esclusi") : "qqq.contaminanti.esclusi";
   const exclKinds = ["entry", "cls", "list"];
   // names of the stored object (user data: do not rename)
   const FLD = { entry: "voc" + "i", cls: "class" + "i", list: "list" + "e" };

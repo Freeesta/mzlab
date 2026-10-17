@@ -5,7 +5,7 @@
 (() => {
   "use strict";
   const G = /** @type {any} */ (window);
-  const STORE = "qqq.tabui.decisions", MAX_SERIES = 50, NOT_TP = "nottp", EVENT = "tpdec";
+  const STORE = typeof NOMI !== "undefined" ? NOMI.KEY("tabui.decisions") : "qqq.tabui.decisions", MAX_SERIES = 50, NOT_TP = "nottp", EVENT = "tpdec";
 
   /** @typedef {{ files?: (string | { name?: string, size?: number })[], formula?: string }} Series the files of the series (names, sizes when known) and the formula of the parent */
   /** @typedef {{ l: string, n: string }} Dec one decision: level ("" for none, "nottp", or a level of LIVELLI) and note */

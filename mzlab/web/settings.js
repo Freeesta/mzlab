@@ -3,10 +3,10 @@
 // Settings gear: ONLY three controls (text size, theme, chart colours). Classic script, loaded after explore.js/tabs.js
 // (uses UIP, PALS, setPal, paintFiles, Q, redrawAll from there). Everything is stored in localStorage inside try/catch: it may be blocked
 // (private window, strict settings) and the page must work without it.
-const UIP_KEY = "qqq.prefs"; // kept from the old name: renaming it would lose the users' data
+const UIP_KEY = NOMI.KEY("prefs"); // kept from the old name: renaming it would lose the users' data
 const uipRead = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const uipWrite = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage not available: the setting lasts until the page is closed */ } };
-function a11yRead() { return lsObj("qqq.a11y"); }
+function a11yRead() { return lsObj(NOMI.KEY("a11y")); }
 function a11yApply(o) {
   const r = document.documentElement;
   if (o.font) r.setAttribute("data-a11y-font", o.font); else r.removeAttribute("data-a11y-font");
@@ -15,7 +15,7 @@ function a11yApply(o) {
   if (o.motion === "always" || (rm && o.motion !== "never")) r.setAttribute("data-a11y-reduce", ""); else r.removeAttribute("data-a11y-reduce");
 }
 function a11yWrite(o) {
-  try { localStorage.setItem("qqq.a11y", JSON.stringify(o)); } catch (e) { /* storage blocked: the setting applies now and is not remembered */ }
+  try { localStorage.setItem(NOMI.KEY("a11y"), JSON.stringify(o)); } catch (e) { /* storage blocked: the setting applies now and is not remembered */ }
   a11yApply(o);
 }
 window.QA11Y = window.QA11Y || { read: a11yRead, apply: a11yApply, write: a11yWrite };
@@ -45,7 +45,7 @@ function uipApply() {
   const r = document.documentElement;
   if (UIP.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", UIP.theme);
   const tf = /** @type {HTMLIFrameElement | null} */ (document.getElementById("tframe"));                // the Teoria (iframe) follows the theme too (it reads it itself when it loads; this is for a change while it is open)
-  if (tf && tf.contentWindow) { try { tf.contentWindow.postMessage({ type: "qqq-theme", theme: UIP.theme }, location.origin); } catch (_) { /* not loaded yet */ } }
+  if (tf && tf.contentWindow) { try { tf.contentWindow.postMessage({ type: NOMI.KEY("theme"), theme: UIP.theme }, location.origin); } catch (_) { /* not loaded yet */ } }
   if (typeof setPal === "function") setPal(UIP.pal);
   if (typeof paintFiles === "function" && typeof E !== "undefined") {
     paintFiles();
@@ -98,10 +98,10 @@ function uipReset(d) {
 }
 
 // Administrator mode (5 clicks on the logo): the exit row shows only while it is on; the flag is shared with the Teoria
-function uipAdminOn() { try { return localStorage.getItem("qqq.admin") === "1" || localStorage.getItem("qqq.teoria.esteso") === "1"; } catch (_) { return false; } }
+function uipAdminOn() { try { return localStorage.getItem(NOMI.KEY("admin")) === "1" || localStorage.getItem(NOMI.KEY("teoria.esteso")) === "1"; } catch (_) { return false; } }
 
 // known contaminants on HR spectra: on unless the student turned them off (read from the same key as liste.js, which may not be loaded yet)
-function uipContOn() { try { return localStorage.getItem("qqq.contaminanti.on") !== "false"; } catch (_) { return true; } }
+function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.on")) !== "false"; } catch (_) { return true; } }
 
 // --- popup of the gear
 function uipOpen(btn) {
@@ -136,8 +136,8 @@ function uipOpen(btn) {
   const uipLang = d.querySelector("#uip-lang"); uipLang.value = I18N.lang;   // the label is always bilingual: whoever cannot read the current language finds it
   uipLang.onchange = e => I18N.set(e.target.value);                         // remembered in qqq.lang, then the page reloads (open files come back with the session)
   const sub = /** @type {HTMLDetailsElement} */ (d.querySelector("#uip-a11y"));      // closed at first, then as the user left it
-  try { sub.open = localStorage.getItem("qqq.set.a11y") === "1"; } catch (_) { /* closed */ }
-  sub.addEventListener("toggle", () => { try { localStorage.setItem("qqq.set.a11y", sub.open ? "1" : "0"); } catch (_) { /* not remembered */ } });
+  try { sub.open = localStorage.getItem(NOMI.KEY("set.a11y")) === "1"; } catch (_) { /* closed */ }
+  sub.addEventListener("toggle", () => { try { localStorage.setItem(NOMI.KEY("set.a11y"), sub.open ? "1" : "0"); } catch (_) { /* not remembered */ } });
   const a11yCur = QA11Y.read();
   const uipFont = d.querySelector("#uip-font");
   if (uipFont) {

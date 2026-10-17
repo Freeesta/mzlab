@@ -7,7 +7,7 @@
 // Colours: Okabe-Ito through the CSS variables of the levels; every chart has its table of data (TDATI); zoom with buttons, no drag; arrows go to the next and the previous feature.
 (() => {
   "use strict";
-  const REVIEWER_KEY = "qqq.attributio.reviewer";
+  const REVIEWER_KEY = typeof NOMI !== "undefined" ? NOMI.KEY("attributio.reviewer") : "qqq.attributio.reviewer";
   const LEVELS = [["", "keep the cascade's level"], ["2a", "2a"], ["2b", "2b"], ["3a", "3a"], ["3b", "3b"]];
   const EVIDENCE = [["", "none"], ["fragments", "explained fragments"], ["library", "library spectrum"], ["analog", "analog"], ["in_silico", "in silico"], ["context", "context"]];
   const esc = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] || c));

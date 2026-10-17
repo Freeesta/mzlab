@@ -6,7 +6,7 @@
 // two lists (kept, discarded) with the reason. Never a verdict: the program sorts and filters, the chemist decides. The work is done by
 // mzlab/statistica.py (reference_difference, identity_links; /api/stat/reference); this file draws the table and opens the evidence of a row.
 const RIFERIMENTO = (() => {
-  const KEY = "qqq.riferimento", MAX_ROWS = 500;
+  const KEY = NOMI.KEY("riferimento"), MAX_ROWS = 500;
   const t = (k, p) => I18N.t(k, p);
   const eh = s => EH(s == null ? "" : s);
   const SHAPES = ["rises", "rises_falls", "falls", "flat"];

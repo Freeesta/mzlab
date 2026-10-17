@@ -78,7 +78,7 @@
   // ------------------------------------------------------------ roles and times (campioni/2): the Rust proposes and checks, the page packs and shows
   const WARN = { noT0: "No t0: more false positives", noBlank: "No blank: background stays", onePoint: "One time point: no kinetics", timeUnconfirmed: "Times not confirmed", timeMissing: "Time missing",
     t0WithTime: "A t0 has a time other than 0", noControls: "No t0, blank or dark control", noTreated: "No treated sample" };
-  const qaqcRoles = () => { try { return JSON.parse(localStorage.getItem("qqq.qaqc") || "{}").roles || null; } catch (_) { return null; } };
+  const qaqcRoles = () => { try { return JSON.parse(localStorage.getItem(typeof NOMI !== "undefined" ? NOMI.KEY("qaqc") : "qqq.qaqc") || "{}").roles || null; } catch (_) { return null; } };
   const fail = e => { let j = null; try { j = JSON.parse(String(e)); } catch (_) { /* not JSON */ } return Object.assign(new Error(j ? j.error_key : String(e && e.message || e)), j ? { key: j.error_key, params: j.params } : {}); };
   async function loadRoles() {
     try {

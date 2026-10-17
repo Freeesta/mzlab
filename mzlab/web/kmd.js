@@ -4,7 +4,7 @@
 // number of repeating units (CF2, CF2O, C2F4, CH2). The arithmetic is in kmd-calc.js (KMDCALC). A VIEW and a list of CANDIDATE series with their evidence
 // (members, steps, retention trend): the program never says what an ion is. Click on a point or a row: XIC of the ion and its profile in time.
 const KMD = (() => {
-  const KEY = "qqq.kmd";
+  const KEY = NOMI.KEY("kmd");
   const t = (k, p) => I18N.t(k, p);
   const eh = s => EH(s == null ? "" : s);
   const st = Object.assign({ unit: "CF2", tol: 3, min: 3 }, lsObj(KEY));

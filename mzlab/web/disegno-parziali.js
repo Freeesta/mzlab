@@ -136,7 +136,7 @@ export function drawPartials(/** @type {any} */ K, /** @type {SVGSVGElement} */ 
   const at = (/** @type {number} */ i) => { const a = st.atoms.get(i); return { x: a.pp.x * sc, y: a.pp.y * sc }; };
   for (const p of ps) drawBrackets(g, p.atoms.filter(i => st.atoms.has(i)).map(at), { text: p.delta, pad: sc * 0.45 });
   for (const m of ms) drawMulticenter(g, at(m.sub), m.ends.map(at), { r: sc * 0.12 });
-  svg.querySelectorAll("text").forEach(t => { if (!t.closest("#mz-parziali, #qqq-labels")) t.style.visibility = texts.has((t.textContent || "").trim()) ? "hidden" : ""; });
+  svg.querySelectorAll("text").forEach(t => { if (!t.closest("#mz-parziali, #" + (typeof NOMI !== "undefined" ? NOMI.KEY("labels") : "qqq-labels"))) t.style.visibility = texts.has((t.textContent || "").trim()) ? "hidden" : ""; });
 }
 
 /** the .ket text without the data S-groups of the partial structures: the exported image gets their brackets from `addExportPartials`, not Ketcher's DAT text */

@@ -6,7 +6,7 @@
 import { carbons, mdc, pickFormula, search } from "./pfas-calc.js";
 
 const w = /** @type {any} */ (window);
-const KEY = "qqq.pfas";
+const KEY = typeof NOMI !== "undefined" ? NOMI.KEY("pfas") : "qqq.pfas";
 const MAX_FEATURES = 300, MAX_ROWS = 200, POOL = 4;
 const t = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
 const eh = (/** @type {any} */ s) => EH(s == null ? "" : s);

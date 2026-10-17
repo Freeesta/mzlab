@@ -70,13 +70,13 @@ const darkTime = v => (v == null || Number.isNaN(v) || v === 0 ? v : -Math.abs(v
 // the unit chosen by the student (localStorage "qqq.tunit"; in memory if the storage is not available); a time is shown only when the file name gave one
 let _tunit = "min";
 function tunitGet() {
-  try { const u = localStorage.getItem("qqq.tunit"); if (u && TIME_UNITS[u]) _tunit = u; } catch (_) { /* no storage */ }
+  try { const u = localStorage.getItem(NOMI.KEY("tunit")); if (u && TIME_UNITS[u]) _tunit = u; } catch (_) { /* no storage */ }
   return _tunit;
 }
 function tunitSet(u) {
   if (!TIME_UNITS[u]) return;
   _tunit = u;
-  try { localStorage.setItem("qqq.tunit", u); } catch (_) { /* no storage */ }
+  try { localStorage.setItem(NOMI.KEY("tunit"), u); } catch (_) { /* no storage */ }
 }
 // "30 min", "0.5 h", "2 d" for a time in minutes
 const tunitLabel = u => typeof I18N !== "undefined" ? { s: I18N.t("unit.t.s"), min: I18N.t("unit.t.min"), h: I18N.t("unit.t.h"), d: I18N.t("unit.t.d") }[u] : u;
