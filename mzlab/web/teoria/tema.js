@@ -2,13 +2,13 @@
    Inside the app the page asks the parent (same origin) and listens for its messages; opened alone it follows the system. */
 (function () {
   var R = document.documentElement, mq = window.matchMedia ? matchMedia("(prefers-color-scheme: dark)") : null, pref = "auto";
-  function parentPref() { try { if (parent !== window) return parent.document.documentElement.getAttribute("data-theme") || "auto"; } catch (e) { /* not reachable: own preference */ } try { var t = JSON.parse(localStorage.getItem("qqq.prefs") || "{}").theme; if (t === "dark" || t === "light") return t; } catch (e) { /* no storage: system */ } return "auto"; }
+  function parentPref() { try { if (parent !== window) return parent.document.documentElement.getAttribute("data-theme") || "auto"; } catch (e) { /* not reachable: own preference */ } try { var raw = localStorage.getItem("mzlab.prefs"); if (raw === null) raw = localStorage.getItem("qqq.prefs"); var t = JSON.parse(raw || "{}").theme; if (t === "dark" || t === "light") return t; } catch (e) { /* no storage: system */ } return "auto"; }
   function eff(x) { return x === "dark" || (x !== "light" && mq && mq.matches) ? "dark" : "light"; }
   function apply(x) { pref = x; R.setAttribute("data-theme", eff(x)); R.style.colorScheme = eff(x); }
   apply(parentPref());
-  // «Lettura facilitata»: the choices (localStorage «qqq.a11y», JSON of codes) become data-a11y-* attributes of <html> before the page is drawn; the rules are in teoria.css, the panel in impostazioni.js
+  // «Lettura facilitata»: the choices (localStorage «mzlab.a11y», JSON of codes) become data-a11y-* attributes of <html> before the page is drawn; the rules are in teoria.css, the panel in impostazioni.js
   var A11Y_KEYS = { font: ["atkinson", "dyslexic"], bg: ["cream", "blue", "hc"], motion: ["auto", "always"] };
-  function a11yRead() { var o = {}; try { o = JSON.parse(localStorage.getItem("qqq.a11y") || "{}") || {}; } catch (e) { /* no storage: defaults */ } return o; }
+  function a11yRead() { var o = {}; try { var raw = localStorage.getItem("mzlab.a11y"); if (raw === null) raw = localStorage.getItem("qqq.a11y"); o = JSON.parse(raw || "{}") || {}; } catch (e) { /* no storage: defaults */ } return o; }
   function a11yApply(o) {
     function set(n, v) { if (v) R.setAttribute("data-a11y-" + n, v === true ? "" : v); else R.removeAttribute("data-a11y-" + n); }
     set("font", A11Y_KEYS.font.indexOf(o.font) >= 0 ? o.font : ""); set("bg", A11Y_KEYS.bg.indexOf(o.bg) >= 0 ? o.bg : "");
@@ -16,17 +16,17 @@
     var rm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
     set("reduce", o.motion === "always" || (rm && o.motion !== "never"));
   }
-  // «Tema» of the settings panel: the same preference as the app (localStorage «qqq.prefs», key theme). Inside the app the app applies it (and tells this page); alone, this page does
+  // «Tema» of the settings panel: the same preference as the app (localStorage «mzlab.prefs», key theme). Inside the app the app applies it (and tells this page); alone, this page does
   function setTheme(x) {
     if (["auto", "light", "dark"].indexOf(x) < 0) return;
     try { if (parent !== window && parent.uipSetTheme) { parent.uipSetTheme(x); return; } } catch (e) { /* not reachable: own preference */ }
-    try { var o = JSON.parse(localStorage.getItem("qqq.prefs") || "{}") || {}; o.theme = x; localStorage.setItem("qqq.prefs", JSON.stringify(o)); } catch (e) { /* not stored */ }
+    try { var raw = localStorage.getItem("mzlab.prefs"); if (raw === null) raw = localStorage.getItem("qqq.prefs"); var o = JSON.parse(raw || "{}") || {}; o.theme = x; localStorage.setItem("mzlab.prefs", JSON.stringify(o)); } catch (e) { /* not stored */ }
     var before = R.getAttribute("data-theme"); apply(x);
     if (before !== R.getAttribute("data-theme")) { try { sessionStorage.setItem("qqq.teoria.y", String(scrollY)); } catch (y) { /* nothing to keep */ } location.reload(); }
   }
-  function themePref() { try { var t = JSON.parse(localStorage.getItem("qqq.prefs") || "{}").theme; if (t === "light" || t === "dark") return t; } catch (e) { /* none */ } return "auto"; }
+  function themePref() { try { var raw = localStorage.getItem("mzlab.prefs"); if (raw === null) raw = localStorage.getItem("qqq.prefs"); var t = JSON.parse(raw || "{}").theme; if (t === "light" || t === "dark") return t; } catch (e) { /* none */ } return "auto"; }
   window.QTEMA = { set: setTheme, get: themePref };
-  window.QA11Y = { read: a11yRead, apply: a11yApply, write: function (o) { try { localStorage.setItem("qqq.a11y", JSON.stringify(o)); } catch (e) { /* not stored */ } a11yApply(o); } };
+  window.QA11Y = { read: a11yRead, apply: a11yApply, write: function (o) { try { localStorage.setItem("mzlab.a11y", JSON.stringify(o)); } catch (e) { /* not stored */ } a11yApply(o); } };
   a11yApply(a11yRead());
   // chapter-to-chapter fade (teoria.css): without cross-document view transitions (or inside the app's iframe) the page gets a short CSS fade instead
   if (window.top !== window || !("PageRevealEvent" in window)) R.classList.add("vt-no");
