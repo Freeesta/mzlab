@@ -211,6 +211,53 @@ async function lrPut(m) {                                              // an upl
   await ARCH.persistOnce();
   return { info: JSON.stringify({ size: f.size }), files: [[m.name, f]] };
 }
+function earlyTicOf(job, inputs) {
+  if (job && job.st && job.st.rt && job.st.tic) {
+    const st = job.st, lv = st.level ? Array.from(st.level) : null, ra = Array.from(st.rt), ta = Array.from(st.tic);
+    if (!lv || !lv.some(x => x === 1)) return { rt: ra, tic: ta, y: ta };
+    const rt = [], tic = [];
+    for (let i = 0; i < lv.length; i++) if (lv[i] === 1) { rt.push(ra[i]); tic.push(ta[i]); }
+    return { rt, tic, y: tic };
+  }
+  if (!job && inputs && inputs[2] && inputs[3]) {
+    const lv = inputs[0] ? new Uint8Array(inputs[0].buffer, inputs[0].byteOffset, inputs[0].byteLength) : null;
+    const ra = new Float64Array(inputs[2].buffer, inputs[2].byteOffset, inputs[2].byteLength / 8);
+    const ta = new Float64Array(inputs[3].buffer, inputs[3].byteOffset, inputs[3].byteLength / 8);
+    if (!lv || !lv.some(x => x === 1)) return { rt: Array.from(ra), tic: Array.from(ta), y: Array.from(ta) };
+    const rt = [], tic = [];
+    for (let i = 0; i < lv.length; i++) if (lv[i] === 1) { rt.push(ra[i]); tic.push(ta[i]); }
+    return { rt, tic, y: tic };
+  }
+  return null;
+}
+async function lrIndex(m) {
+  const kept = await ARCH.get("idx", m.name + ".mzidx"), keptInfo = kept && await safe(() => infoDi("idx", kept));
+  if (nuovo("idx", keptInfo)) jerr("error.newerFormat", { file: m.name, version: keptInfo.versione_formato });      // an index of a newer program stays as it is: no new one is built over it
+  const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.indexJob(m.name), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
+  if (CANCELLED.has(m.name)) throw cancelled();
+  const onProgress = p => postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase, done: p.done, total: p.total, wait: p.wait, early_tic: p.early_tic });      // wait: the pool has no free worker yet
+  const inputs = job ? null : Array.from(prepare_upload(f.size, readerFor(f), m.name, ...prints(m.name, f.size))).slice(0, 8);
+  const early_tic = earlyTicOf(job, inputs);
+  if (early_tic) onProgress({ frac: 0.05, phase: "scan", done: 0, total: early_tic.rt.length, early_tic });
+  const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, onProgress }
+    : { name: m.name, blob: f, inputs, part, onProgress });      // frac: how far the builder has read
+  if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
+    if (res.ok && res.stats && res.stats.cen) await ARCH.promote("idx", partCen, m.name + ".cen.mzidx"); else await ARCH.remove("idx", partCen);
+  }
+  if (!res.ok) {                                                                // the true cause reaches the page: the error of the builder (a key), else its text
+    await ARCH.remove("idx", part);
+    if (res.reason === "cancelled") throw cancelled();
+    if (res.reason === "memory") jerr("error.memoryBudget");
+    let key = ""; try { key = JSON.parse(res.text).error_key || ""; } catch (_) { /* not JSON */ }
+    if (key) throw res.text;
+    throw JSON.stringify({ error_key: res.reason === "crash" ? "err.engine.indexCrash" : "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } });
+  }
+  await ARCH.promote("idx", part, m.name + ".mzidx");
+  let opened = false;
+  try { opened = await lrOpen(m.name); } catch (_) { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); }      // an index that does not open (incomplete, damaged) is not kept
+  if (!opened) jerr("err.engine.index");
+  return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (res.stats && res.stats.missing) || 0 }) };      // missing: scans the index lists beyond the end of a truncated data file
+}
 async function lrOp(m) {
   switch (m.op) {
     case "lr_boot": {                                                     // every file in OPFS, with its size, whether it has an index, and the File itself for the bridge
@@ -227,31 +274,7 @@ async function lrOp(m) {
     }
     case "lr_put": return lrPut(m);
     case "lr_cancel": { for (const n of m.names || []) { CANCELLED.add(n); idxPool().cancel(n); } return { info: "{}" }; }      // «Cancel» of the loading: the builders of these files end now
-    case "lr_index": try {                                                    // the scan table (Rust), the index (a short-lived worker of the pool), then the index is opened
-      const kept = await ARCH.get("idx", m.name + ".mzidx"), keptInfo = kept && await safe(() => infoDi("idx", kept));
-      if (nuovo("idx", keptInfo)) jerr("error.newerFormat", { file: m.name, version: keptInfo.versione_formato });      // an index of a newer program stays as it is: no new one is built over it
-      const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.indexJob(m.name), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
-      if (CANCELLED.has(m.name)) throw cancelled();
-      const onProgress = p => postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase, done: p.done, total: p.total, wait: p.wait });      // wait: the pool has no free worker yet
-      const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, onProgress }
-        : { name: m.name, blob: f, inputs: Array.from(prepare_upload(f.size, readerFor(f), m.name, ...prints(m.name, f.size))).slice(0, 8), part, onProgress });      // frac: how far the builder has read
-      if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
-        if (res.ok && res.stats && res.stats.cen) await ARCH.promote("idx", partCen, m.name + ".cen.mzidx"); else await ARCH.remove("idx", partCen);
-      }
-      if (!res.ok) {                                                                // the true cause reaches the page: the error of the builder (a key), else its text
-        await ARCH.remove("idx", part);
-        if (res.reason === "cancelled") throw cancelled();
-        if (res.reason === "memory") jerr("error.memoryBudget");
-        let key = ""; try { key = JSON.parse(res.text).error_key || ""; } catch (_) { /* not JSON */ }
-        if (key) throw res.text;
-        throw JSON.stringify({ error_key: res.reason === "crash" ? "err.engine.indexCrash" : "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } });
-      }
-      await ARCH.promote("idx", part, m.name + ".mzidx");
-      let opened = false;
-      try { opened = await lrOpen(m.name); } catch (_) { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); }      // an index that does not open (incomplete, damaged) is not kept
-      if (!opened) jerr("err.engine.index");
-      return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (res.stats && res.stats.missing) || 0 }) };      // missing: scans the index lists beyond the end of a truncated data file
-    } finally { ARCH.release(m.name); }
+    case "lr_index": try { return await lrIndex(m); } finally { ARCH.release(m.name); }
     case "lr_index_cen": try {                                                // mzFinder works on centroids: the index of a profile sample with its scans as centroids, apart from the one of the Data tab
       const job = await nativo.indexJob(m.name), part = m.name + ".cen.mzidx.part";
       if (!job) jerr("err.session.fileNotFound");

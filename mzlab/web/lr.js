@@ -23,15 +23,21 @@ import { createMethodRoutes } from "./lr-method.js";
 import { mixesResolutions, sessionFiles } from "./lr-sessione.js";
 import { W } from "./nativo-fasi.js";
 
+/** @type {Map<string, any>} */
+const earlyTics = new Map();
+
 /** the page shows how far the loading of `name` has got (event mzlab-index, shell.js upload); `p` = { done, total } scans of the sample, `wait` = queued for a free builder */
-const tellIndex = (/** @type {string} */ name, /** @type {number} */ frac, /** @type {string | undefined} */ phase, /** @type {any} */ p = {}) => window.dispatchEvent(new CustomEvent("mzlab-index", { detail: { name, frac, phase, done: p.done || 0, total: p.total || 0, wait: !!p.wait } }));
+const tellIndex = (/** @type {string} */ name, /** @type {number} */ frac, /** @type {string | undefined} */ phase, /** @type {any} */ p = {}) => {
+  if (p && p.early_tic) earlyTics.set(name, p.early_tic);
+  window.dispatchEvent(new CustomEvent("mzlab-index", { detail: { name, frac, phase, done: p.done || 0, total: p.total || 0, wait: !!p.wait, early_tic: p.early_tic || null } }));
+};
 export function createLr({ rb }) {
   const files = new Map();               // name -> row of App.files() (as an object)
   let items = null;                      // Item.info() of every item (objects), null = no session
   let hr = false, lr = false;            // the kinds of file in the session: the two cannot be mixed
   const mr = createMethodRoutes({ rpc: m => rpc(m), json: (o, st) => json(o, st), items: () => items });      // the methods (.dam) and how the items were acquired
   const missing = new Map();             // name -> scans its index lacks (a truncated data file, `build_mzidx_native`): for the row of the loading, not part of the row of App.files()
-  const api = { files, missing };
+  const api = { files, missing, earlyTics, earlyTic: (/** @type {string} */ name) => earlyTics.get(name) };
   const rpc = async (msg, onp) => {
     const tr = /** @type {any} */ (window).MZLAB_TRACE, t0 = tr ? performance.now() : 0;      // tests: where the time goes
     const r = await rb.rpc(msg, onp);
@@ -145,7 +151,7 @@ export function createLr({ rb }) {
     const n = safeName(body.name);
     if (!n) return fail("err.file.notAccepted", { name: body.name }, `file type not accepted: ${body.name}`);
     await rpc({ op: "lr_remove", name: n });
-    files.delete(n); await mr.refresh();
+    files.delete(n); earlyTics.delete(n); await mr.refresh();
     if (items) {
       items = items.filter(it => base(it.file) !== n);
       if (!items.length) { items = null; hr = lr = false; }
@@ -156,6 +162,7 @@ export function createLr({ rb }) {
 
   async function fresh(body) {
     items = null; hr = lr = false;
+    earlyTics.clear();
     if (body.fresh) { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); if (rb.clearNative) rb.clearNative(); }
     rb.noteNew();
     return json(state());
@@ -169,6 +176,16 @@ export function createLr({ rb }) {
       if (method === "GET") {
         if (path === "/api/state") return json(state());
         if (path === "/api/session") return json(session());
+        if (path === "/api/chrom") {
+          const k0 = Number(u.searchParams.get("k"));
+          const it = items && items[k0];
+          const name = it ? base(it.file) : (u.searchParams.get("name") || "");
+          const et = earlyTics.get(name) || (Number.isInteger(k0) && [...earlyTics.values()][k0]);
+          const kind = u.searchParams.get("kind") || "tic";
+          if (et && kind === "tic" && !u.searchParams.get("mz0") && !u.searchParams.get("mz1") && !u.searchParams.get("prec") && !u.searchParams.get("filt")) {
+            return json({ rt: et.rt, y: et.y || et.tic, provvisorio: true });
+          }
+        }
         { const r = await mr.get(path, u.searchParams); if (r !== undefined) return r; }          // method, analog traces, delay, PDA, gradient
         if (path === "/api/formula") {
           try { return { status: 200, text: (await rpc({ op: "lr_formula", f: u.searchParams.get("f") || "", adduct: u.searchParams.get("adduct") || "" })).info }; }

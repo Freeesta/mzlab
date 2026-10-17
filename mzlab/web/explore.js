@@ -333,7 +333,41 @@ const prSplit = pr => { const t = String(pr ?? ""), i = t.indexOf("~"); return i
 const FT = ft => ft ? `&filt=${encodeURIComponent(ft)}` : "";
 // precursor > fragment pairs of an MS2 file (unit resolution)
 const getMs2Tr = k => memo(`m2t${k}`, () => J(`api/ms2tr?k=${k}`)).then(d => d.files[0].transitions);
-const getChrom = (k, kind, lv, mz0, mz1, prec, filt) => memo(`c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}|${filt ?? ""}`, () => J(`api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(filt)));
+(() => {
+  addEventListener("mzlab-index", (/** @type {any} */ e) => {
+    const d = e && e.detail;
+    if (!d || !d.name) return;
+    if (d.early_tic) {
+      (E.earlyTic || (E.earlyTic = new Map())).set(d.name, d.early_tic);
+      const f = E.files.find(x => x.file === d.name || fileBase(x.file) === fileBase(d.name));
+      if (f) {
+        f._provisional = true;
+        redrawAll();
+      }
+    } else if (d.phase === "open" || d.frac >= 1) {
+      const f = E.files.find(x => x.file === d.name || fileBase(x.file) === fileBase(d.name));
+      if (f && f._provisional) {
+        delete f._provisional;
+        redrawAll();
+      }
+    }
+  });
+})();
+const getChrom = (k, kind, lv, mz0, mz1, prec, filt) => {
+  const key = `c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}|${filt ?? ""}`;
+  const f = E.files[k];
+  const name = f ? f.file : null;
+  const early = (kind === "tic" && mz0 == null && mz1 == null && prec == null && !filt && name) ? ((E.earlyTic && E.earlyTic.get(name)) || (/** @type {any} */ (window).MZLAB_LR?.earlyTic?.(name))) : null;
+  if (early && !CACHE.has(key)) {
+    J(`api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(filt)).then(res => {
+      if (f) delete f._provisional;
+      CACHE.set(key, Promise.resolve(res));
+      redrawAll();
+    }).catch(() => {});
+    return Promise.resolve({ rt: early.rt, y: early.y || early.tic, provvisorio: true });
+  }
+  return memo(key, () => J(`api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(filt)));
+};
 const getXic = (k, mz, tol, lv) => memo(`x${k}|${mz}|${tol}|${lv}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0]));
 // + "&hr=0" when high resolution is switched off (hr.js)
 const MERGE = () => (UIP.merge ? "&merge=1" : "") + (window.HR ? HR.q() : "");
@@ -722,7 +756,7 @@ function renderFileList() {
     const prList = hasPr ? [...new Set(f.precursors)].sort((a, b) => a - b) : [];
     return `<div class="fl ${f.k === E.cur ? "cur" : ""}"${f.k === E.cur ? ' aria-current="true"' : ""} data-tip="${EH(f.label)}" data-k="${f.k}" draggable="true" style="flex-wrap:wrap">
       <input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="${I18N.t("files.showHide")}">
-      <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b><span style="display:inline-flex;align-items:center;gap:4px">${polSign(f)}<small>${sub(f)}</small>${modeTag(f)}${hasPr ? `<span class="pr-tog${prOpen ? " on" : ""}" role="button" tabindex="0" aria-expanded="${prOpen}" aria-label="${I18N.t("files.showHidePrec")}" data-prk="${f.k}" title="${I18N.t("files.showHidePrec")}"></span>` : ""}</span></div>
+      <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b><span style="display:inline-flex;align-items:center;gap:4px">${polSign(f)}<small>${sub(f)}</small>${modeTag(f)}${f._provisional ? `<span class="sm muted provvisorio" title="${I18N.t("load.ph.index")}"> ⏳</span>` : ""}${hasPr ? `<span class="pr-tog${prOpen ? " on" : ""}" role="button" tabindex="0" aria-expanded="${prOpen}" aria-label="${I18N.t("files.showHidePrec")}" data-prk="${f.k}" title="${I18N.t("files.showHidePrec")}"></span>` : ""}</span></div>
       ${hasPr ? `<div class="pr-container" style="padding-left:22px;width:100%;box-sizing:border-box;margin-top:2px;${prOpen ? "" : "display:none;"}">` +
         prList.map(pr => `<div class="fl pr" style="padding-left:0;min-height:0;margin-bottom:2px;border-bottom:none"><input type="checkbox" data-pr="${pr}" ${ms2PairOf(pr) ? "checked" : ""} title="${I18N.t("files.addPair.title")}"><div class="fi"><b class="pn" data-pg="${pr}" title="${I18N.t("files.precGo.title")}"><span style="font-style:italic">m/z</span> ${EH(pr)}</b></div></div>`).join("") +
         '</div>' : ""}
