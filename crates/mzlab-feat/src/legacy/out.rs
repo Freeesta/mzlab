@@ -223,7 +223,10 @@ fn rt_align(o: &mut Out, d: &Dig) {
     }
     let nodes = m.grid.len();
     o.raw("{\"files\":");
-    strs(o, &d.files.iter().map(|f| f.label.as_str()).collect::<Vec<_>>());
+    strs(
+        o,
+        &d.files.iter().map(|f| f.label.as_str()).collect::<Vec<_>>(),
+    );
     o.raw(",\"rt\":").floats(&m.grid).raw(",\"shift\":[");
     for k in 0..m.n_files {
         o.raw(if k > 0 { "," } else { "" })
@@ -257,14 +260,22 @@ fn files_json(o: &mut Out, d: &Dig) {
 
 /// The fragments in source left out of the candidates.
 fn isf_json(o: &mut Out, d: &Dig) {
-    let hidden = d.cands.iter().filter(|c| c.hidden.is_some()).map(|c| (c.mz, c.rt, true));
+    let hidden = d
+        .cands
+        .iter()
+        .filter(|c| c.hidden.is_some())
+        .map(|c| (c.mz, c.rt, true));
     let left_out = d.isf_hidden.iter().map(|&(mz, rt)| (mz, rt, false));
     for (i, (mz, rt, cand)) in left_out.chain(hidden).enumerate() {
         o.raw(if i > 0 { ",{\"mz\":" } else { "{\"mz\":" })
             .num(round(mz, 4))
             .raw(",\"rt\":")
             .num(round(rt, 2))
-            .raw(if cand { ",\"candidate\":true}" } else { ",\"candidate\":false}" });
+            .raw(if cand {
+                ",\"candidate\":true}"
+            } else {
+                ",\"candidate\":false}"
+            });
     }
 }
 
@@ -332,7 +343,9 @@ pub fn summary_with(d: &Dig, settings: &str, timing: &str, network: &str) -> Str
         o.raw(if i > 0 { "," } else { "" });
         row(&mut o, c, d.files.len());
     }
-    o.raw("],\"mass_network\":").raw(network).raw(",\"isf_hidden\":[");
+    o.raw("],\"mass_network\":")
+        .raw(network)
+        .raw(",\"isf_hidden\":[");
     isf_json(&mut o, d);
     o.raw("],\"tree\":null,\"calibration\":null,\"inclusion\":[");
     inclusion_json(&mut o, d);

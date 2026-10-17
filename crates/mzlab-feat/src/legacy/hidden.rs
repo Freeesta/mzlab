@@ -111,18 +111,24 @@ fn hidden_rows(
     rows
 }
 
+/// What the hidden products are read against: the files, the parent and the hypotheses of the Dig.
+pub(super) struct Inputs<'a> {
+    pub files: &'a [FileIn],
+    pub parent: &'a Parent,
+    pub hyps: &'a HashMap<u32, Hyp>,
+}
+
 /// Appends the hidden products: rows of the table that sit at the RT of the parent, at the mass of a fragment of its MS2 (`fragments`), that are not
 /// candidates already and whose ratio to the parent rises with the treatment.
 pub(super) fn add(
     t: &Aligned,
-    files: &[FileIn],
-    parent: &Parent,
-    hyps: &HashMap<u32, Hyp>,
+    s: &Inputs,
     prow: usize,
     fragments: &[f64],
     w: &[f64; 10],
     cands: &mut Vec<Cand>,
 ) {
+    let (files, parent, hyps) = (s.files, s.parent, s.hyps);
     let rows = hidden_rows(t, files, prow, fragments, cands);
     for (j, r) in rows.into_iter().enumerate() {
         let formula = fragment_formula(parent, t.mz[r]);

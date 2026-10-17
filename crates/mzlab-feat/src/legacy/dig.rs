@@ -99,7 +99,11 @@ impl Cand {
     /// losses) carrying at least `MIN_SHIFTED_COS` of the cosine, and the ion not present in the reference samples. A cleavage has no single
     /// mass difference.
     pub fn confirmation(&self) -> (bool, String) {
-        if self.hyp.as_ref().is_some_and(|h| h.label.starts_with("rottura")) {
+        if self
+            .hyp
+            .as_ref()
+            .is_some_and(|h| h.label.starts_with("rottura"))
+        {
             return (false, "a cleavage has no single mass difference".into());
         }
         let Some(m) = &self.ms2 else {
@@ -107,12 +111,21 @@ impl Cand {
         };
         let (n, share) = (m.sim.n[1] + m.sim.n[2], m.sim.cos[1] + m.sim.cos[2]);
         if n < MIN_SHIFTED || share < MIN_SHIFTED_COS {
-            return (false, format!("{n} shifted fragments, {share:.2} of the cosine: not enough"));
+            return (
+                false,
+                format!("{n} shifted fragments, {share:.2} of the cosine: not enough"),
+            );
         }
         if self.kin.as_ref().is_some_and(|k| !k.1) {
             return (false, "present in the reference samples".into());
         }
-        (true, format!("{n} fragments shifted by {:+.4} (share of the cosine {share:.2})", m.sim.delta))
+        (
+            true,
+            format!(
+                "{n} fragments shifted by {:+.4} (share of the cosine {share:.2})",
+                m.sim.delta
+            ),
+        )
     }
 
     /// Prediction level (1 = strongest): the weakest step of the derivation, raised to 1 when the data confirm it; `None` without a rule.
@@ -405,7 +418,12 @@ pub fn dig<R: ReadAt>(s: Series, mut open: impl FnMut(usize) -> Res<Index<R>>) -
     let mut ix = (0..t.n_files).map(&mut open).collect::<Res<Vec<_>>>()?;
     let parent_ms2 = attach_ms2(&mut ix, t, &s.parent, prow, &mut cands)?;
     if let (Some(p), Some(m)) = (prow, &parent_ms2) {
-        super::hidden::add(t, &s.files, &s.parent, &s.hyps, p, &m.mz, &w, &mut cands);
+        let inp = super::hidden::Inputs {
+            files: &s.files,
+            parent: &s.parent,
+            hyps: &s.hyps,
+        };
+        super::hidden::add(t, &inp, p, &m.mz, &w, &mut cands);
     }
     let mut warnings = Vec::new();
     if !isf_hidden.is_empty() {

@@ -83,7 +83,11 @@ pub(super) fn prediction(o: &mut Out, c: &Cand) {
             .map(|a| format!("also reached as {a}"))
             .chain(std::iter::once(format!(
                 "{}{why}",
-                if ok { "data: " } else { "data not confirming: " }
+                if ok {
+                    "data: "
+                } else {
+                    "data not confirming: "
+                }
             )))
             .collect::<Vec<_>>(),
     );

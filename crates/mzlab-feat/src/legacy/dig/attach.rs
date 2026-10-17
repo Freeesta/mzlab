@@ -46,7 +46,6 @@ pub(super) fn ms2_of<R: ReadAt>(
         .collect())
 }
 
-
 /// The MS2 of the parent and of every candidate; the candidates get theirs with the similarity to the parent (none without the parent's).
 pub(super) fn attach_ms2<R: ReadAt>(
     ix: &mut [Index<R>],

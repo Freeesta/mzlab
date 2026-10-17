@@ -55,7 +55,7 @@ impl State {
             name => {
                 let mut m = Msn::new(&mut self.open_idx(name)?, s("parent")).map_err(user)?;
                 let out = m
-                    .summary(&out, |id| legacy::out::detail(&d, id as i64))
+                    .summary(&out, |id| legacy::out::detail(&d, id))
                     .map_err(user)?;
                 (out, Some(m))
             }
