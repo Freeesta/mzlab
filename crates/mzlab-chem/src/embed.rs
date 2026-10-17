@@ -5,6 +5,7 @@ use crate::lengths::ideal;
 use crate::minimize::lbfgs;
 use crate::mol3d::Mol3d;
 use mzlab_core::error::{Error, Result};
+use mzlab_core::sortc::SortC;
 use sci_form::graph::{Atom, Bond, BondOrder, BondStereo, Hybridization, Molecule};
 
 /// Conformers computed by default; the number is a parameter of `embed`.
@@ -36,7 +37,7 @@ pub fn embed(m: &Mol3d, seed: u64, n: usize) -> Result<Vec<Conf>> {
     if out.is_empty() {
         return Err(Error::new("error.chem.embed").with("reason", &last));
     }
-    out.sort_by(|a, b| a.energy.total_cmp(&b.energy));
+    out.sortc_by(|a, b| a.energy.total_cmp(&b.energy));
     Ok(out)
 }
 

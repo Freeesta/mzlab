@@ -15,6 +15,7 @@ use crate::attributio::readers::{desc_na_last, read_table};
 use crate::attributio::rt_logp::build_batch_fit;
 use crate::attributio::sources::load_sources;
 use crate::attributio::Sources;
+use crate::sortc::SortC;
 use std::collections::HashMap;
 
 /// The first matrix of the campaign when none is asked, with its sites.
@@ -115,7 +116,7 @@ pub fn gnps_provenance(c: &Campaign, io: &Io) -> Result<HashMap<(String, i64), G
         let mut rows: Vec<usize> = (0..g.len())
             .filter(|&r| g.num(r, kscan).is_some())
             .collect();
-        rows.sort_by(|&a, &b| desc_na_last(num(a, "MQScore"), num(b, "MQScore")));
+        rows.sortc_by(|&a, &b| desc_na_last(num(a, "MQScore"), num(b, "MQScore")));
         for r in rows {
             let id = g.num(r, kscan).unwrap_or_default() as i64;
             out.entry((pol.to_string(), id))

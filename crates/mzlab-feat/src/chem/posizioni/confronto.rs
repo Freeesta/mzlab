@@ -7,6 +7,7 @@
 //! * a class is SUPPORTED when a peak explained with the change belongs, among the candidates not excluded, to exactly its members; EXCLUDED when an intense peak carries the change in a
 //!   piece the members cannot carry it in and no other cleavage of theirs explains that peak; otherwise UNDISTINGUISHED.
 
+use crate::sortc::SortC;
 use std::collections::BTreeMap;
 
 use mzlab_core::elements;
@@ -155,7 +156,7 @@ fn candidates(mol: &Mol, sites: &[Site], pol: Pol, used: &[Peak], tol: Tol) -> V
             c
         })
         .collect();
-    out.sort_by_key(|c| c.sites[0]);
+    out.sortc_by_key(|c| c.sites[0]);
     out
 }
 
@@ -167,9 +168,9 @@ fn select_peaks(peaks: &[Peak], prec: f64, tol: Tol) -> (Vec<Peak>, f64) {
         .copied()
         .filter(|p| p.inten >= base * MIN_REL && !tol.ok(p.mz, prec))
         .collect();
-    v.sort_by(|a, b| b.inten.total_cmp(&a.inten));
+    v.sortc_by(|a, b| b.inten.total_cmp(&a.inten));
     v.truncate(MAX_PEAKS);
-    v.sort_by(|a, b| a.mz.total_cmp(&b.mz));
+    v.sortc_by(|a, b| a.mz.total_cmp(&b.mz));
     (v, base)
 }
 
@@ -253,7 +254,7 @@ fn classes_of(
                 .iter()
                 .flat_map(|m| cands[*m].sites.clone())
                 .collect();
-            atoms.sort_unstable();
+            atoms.sortc();
             let kind = if members.iter().all(|m| cands[*m].rep.kind == first.rep.kind) {
                 first.rep.kind.to_string()
             } else {
@@ -272,7 +273,7 @@ fn classes_of(
             }
         })
         .collect();
-    out.sort_by_key(|c| c.atoms[0]);
+    out.sortc_by_key(|c| c.atoms[0]);
     for (i, c) in out.iter_mut().enumerate() {
         c.id = i;
     }
@@ -303,7 +304,7 @@ fn suggestions(cands: &[Cand], classes: &[Class], s: &[Vec<usize>]) -> Vec<&'sta
     };
     let shared = s.iter().any(|v| {
         let mut ids: Vec<Option<usize>> = v.iter().map(|ci| class_of(*ci)).collect();
-        ids.sort_unstable();
+        ids.sortc();
         ids.dedup();
         ids.len() > 1
     });

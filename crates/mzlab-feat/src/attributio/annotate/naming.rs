@@ -8,6 +8,7 @@ use super::settings::AnnotationSettings;
 use super::text::{fmt_g, num_txt};
 use super::types::Feature;
 use crate::attributio::formula::{structure_fit, STRUCTURE_TOL_PPM};
+use crate::sortc::SortC;
 
 /// One valid library hit of a feature.
 #[derive(Clone, Debug, PartialEq)]
@@ -130,7 +131,7 @@ pub fn rank_library_hits(f: &Feature, names: &[Option<String>; 7]) -> Vec<Librar
         })
         .collect();
     let key = |v: Option<f64>| -v.filter(|x| !x.is_nan()).unwrap_or(-1.0);
-    hits.sort_by(|a, b| {
+    hits.sortc_by(|a, b| {
         key(a.cosine)
             .total_cmp(&key(b.cosine))
             .then(key(a.ions).total_cmp(&key(b.ions)))
@@ -186,7 +187,7 @@ pub fn name_features(feats: &mut [Feature], s: &AnnotationSettings, cur: &dyn Cu
             .iter()
             .filter_map(|(n, bl)| n.and(*bl).filter(|x| !x.is_empty()))
             .collect();
-        blocks.sort_unstable();
+        blocks.sortc();
         blocks.dedup();
         f.name_blocks = blocks.join("|");
         let mut near_tie = false;

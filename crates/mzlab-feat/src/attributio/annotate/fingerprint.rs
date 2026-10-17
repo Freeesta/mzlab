@@ -10,6 +10,7 @@ use crate::attributio::readers::mzmine::annotation_file;
 use crate::attributio::readers::sirius::sirius_output_dir;
 use crate::attributio::readers::standards::StandardsSettings;
 use crate::attributio::sources::merged_table_path;
+use crate::sortc::SortC;
 
 /// Every file whose change must invalidate the cache that exists: the merged tables, the SIRIUS and GNPS2 exports, the mzMine annotations and the FBMN MGF, the
 /// standards library and its spectra, the decisions, the curation tables, the sorbent tables and the campaign file.
@@ -67,7 +68,7 @@ pub fn annotations_fingerprint(
     s: &AnnotationSettings,
 ) -> String {
     let mut sorted: Vec<&str> = sites.iter().map(String::as_str).collect();
-    sorted.sort_unstable();
+    sorted.sortc();
     let mut parts = vec![
         c.id.clone(),
         sorted.join(","),

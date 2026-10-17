@@ -4,6 +4,7 @@
 //! `(decoy matches + 1) / shifts` (the +1 keeps one coincidence from ever looking significant). A class with `p ≥ P_MAX` carries no evidence of
 //! the formulas: its rows are no proposed formula (`summary::evidence`). The criteria of a row do not change.
 
+use crate::sortc::SortC;
 use mzlab_core::json::{round, Out};
 
 use super::rows::Hyp;
@@ -49,7 +50,7 @@ fn hits(masses: &[f64], ions: &[f64], tol: f64) -> usize {
 /// `ions` = m/z (as read, with the offset) of the rows that pass the criteria; `off` = the calibration offset applied to the hypotheses.
 pub fn estimate(hyps: &[Hyp], ions: &[f64], off: f64, tol: f64, parent_mz: f64) -> Vec<Chance> {
     let mut steps: Vec<u32> = hyps.iter().map(|h| h.steps).collect();
-    steps.sort_unstable();
+    steps.sortc();
     steps.dedup();
     steps
         .into_iter()
@@ -59,7 +60,7 @@ pub fn estimate(hyps: &[Hyp], ions: &[f64], off: f64, tol: f64, parent_mz: f64) 
                 .filter(|h| h.steps == n && (h.mz - parent_mz).abs() > tol)
                 .map(|h| h.mz + off)
                 .collect();
-            m.sort_by(f64::total_cmp);
+            m.sortc_by(f64::total_cmp);
             m.dedup_by(|a, b| (*a - *b).abs() < 1e-6);
             let decoy: usize = SHIFTS
                 .iter()

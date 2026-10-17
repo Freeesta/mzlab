@@ -5,6 +5,7 @@ use super::campaign::*;
 use super::error::{py_list, CampaignError, Result};
 use super::io::join;
 use super::toml::{self, Table, Value};
+use crate::sortc::SortC;
 
 /// Keys of `[curation]` that name a curation table, in the order of `Campaign::curation_csv`.
 pub(crate) const CURATION_KEYS: [&str; 3] =
@@ -39,7 +40,7 @@ impl Campaign {
         let unknown: Vec<&str> = lv.t.keys().filter(|x| *x != "count_2b_as_2").collect();
         if !unknown.is_empty() {
             let mut u = unknown;
-            u.sort();
+            u.sortc();
             return Err(CampaignError::campaign(format!(
                 "{file_name} [levels]: unknown keys {}",
                 py_list(&u)

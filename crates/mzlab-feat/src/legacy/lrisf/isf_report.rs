@@ -5,6 +5,7 @@
 use super::isf::{fdef, features, nn, predict_logit, sigmoid, sub, truthy, NAMES};
 use super::isf_split::split_inherited;
 use super::isf_text::{english, evidence_value, LABELS};
+use crate::sortc::SortC;
 use mzlab_core::json::Value;
 use mzlab_core::jsonb::{num, text, Obj};
 use mzlab_core::stats::wspearman;
@@ -25,7 +26,7 @@ fn ramp_spearman(r: &Ramp) -> Option<f64> {
     if pts.len() < 3 {
         return None;
     }
-    pts.sort_by(|a, b| a.0.total_cmp(&b.0));
+    pts.sortc_by(|a, b| a.0.total_cmp(&b.0));
     let (d, v): (Vec<f64>, Vec<f64>) = pts.into_iter().unzip();
     Some(wspearman(&d, &v, None)).filter(|s| s.is_finite())
 }

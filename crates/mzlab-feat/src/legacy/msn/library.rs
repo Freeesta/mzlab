@@ -4,6 +4,7 @@
 use super::space::candidates;
 use super::{Cand, MsnTree};
 use crate::legacy::fragtree::{fmt, vec_of};
+use crate::sortc::SortC;
 
 /// One formula of the library.
 #[derive(Debug, Clone)]
@@ -67,7 +68,7 @@ impl Library {
             return;
         };
         let mut both: Vec<usize> = ei.iter().copied().filter(|i| idx.contains(i)).collect();
-        both.sort_unstable();
+        both.sortc();
         both.dedup();
         if !both.is_empty() {
             let ww: Vec<f64> = both

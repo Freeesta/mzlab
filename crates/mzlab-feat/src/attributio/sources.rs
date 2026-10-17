@@ -20,6 +20,7 @@ use super::readers::standards::{
     Comparer, FeatureRef, Level1Decision, Ms2Check, StandardMatch, StandardsSettings, Tolerances,
 };
 use super::sorbents::{add_sorbent_blanks, collapse_twins, TwinMap};
+use crate::sortc::SortC;
 use std::collections::HashMap;
 
 /// The mass tolerance of a GNPS2 hit to count as the compound and not an analogue.
@@ -35,7 +36,7 @@ pub fn merged_table_path(c: &Campaign, io: &Io, pol: &str) -> Result<String> {
         .filter(|e| !e.is_dir && e.name.ends_with(".csv"))
         .map(|e| e.name)
         .collect();
-    names.sort();
+    names.sortc();
     let mut best: Option<(String, usize)> = None;
     for name in names {
         let low = name.to_lowercase();

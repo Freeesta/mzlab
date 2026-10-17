@@ -4,6 +4,7 @@
 //!
 //! The role of a sample (treated, t0, blank) is read in ONE place, `role_of`: a change of the model of the roles touches only that function.
 
+use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{round, Out};
 
@@ -172,7 +173,7 @@ fn cond_cx(cs: &[mzlab_core::campioni::Campione], roles: &[Role]) -> Vec<CondCx>
                 .chain(&c.controls.dark)
                 .copied()
                 .collect();
-            blank.sort_unstable();
+            blank.sortc();
             CondCx {
                 id: c.id,
                 keep,
