@@ -254,7 +254,7 @@ const LISTE = (() => {
 
   const rd = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const wr = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode / quota */ } };
-  const isOn = () => rd(KEY_ON, true) !== false;
+  const isOn = () => rd(KEY_ON, false) === true;
 
   // Exclusions (HR only): hide a compatible peak from the lists and the tables, never change the data. Stored in the browser, the same for every file.
   const KEY_EXCL = typeof NOMI !== "undefined" ? NOMI.KEY("contaminanti.esclusi") : "qqq.contaminanti.esclusi";
@@ -291,7 +291,7 @@ const LISTE = (() => {
   const exclItems = () => { const e = exclRead(); return exclKinds.flatMap(k => e[k].map(key => ({ kind: k, key }))); };
   // the compatible entries of a peak: vis = those not excluded (the peak keeps its mark); hid = there are some, and all are excluded (the peak is hidden)
   const split = ms => { const vis = ms.filter(x => !isExcluded(x)); return { vis, hid: ms.length > 0 && !vis.length }; };
-  function setOn(v) { wr(KEY_ON, !!v); if (typeof redrawAll === "function") redrawAll(); }
+  function setOn(v) { wr(KEY_ON, !!v); document.querySelectorAll("#lst-cont-signs").forEach(el => { el.checked = !!v; }); if (typeof redrawAll === "function") redrawAll(); }
   const labRows = () => { const r = rd(KEY_ROWS, []); return Array.isArray(r) ? r.filter(x => x && x.mz > 0) : []; };
   const saveRows = rows => { wr(KEY_ROWS, rows); reindex(); if (typeof redrawAll === "function") redrawAll(); };
 
@@ -563,6 +563,13 @@ const LISTE = (() => {
         </div>
 
         <div style="display:flex;align-items:center;gap:12px;font-size:12px;flex-wrap:wrap">
+          <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" title="${I18N.t("lst.contSigns.title")}">
+            <input type="checkbox" id="lst-cont-signs" ${isOn() ? "checked" : ""}>
+            <span>${I18N.t("lst.contSigns")}</span>
+          </label>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;font-size:12px;flex-wrap:wrap">
           <span class="muted" id="lst-src-lbl">${I18N.t("lst.active")}</span>
           <span id="lst-src-checks" style="display:inline-flex;gap:10px;flex-wrap:wrap"></span>
         </div>
@@ -648,6 +655,8 @@ const LISTE = (() => {
     const elChecks = container.querySelector("#lst-src-checks");
     const elChecksLbl = container.querySelector("#lst-src-lbl");
     const elUListBar = container.querySelector("#lst-userlists-bar");
+    const elContSigns = container.querySelector("#lst-cont-signs");
+    if (elContSigns) elContSigns.onchange = e => { setOn(e.target.checked); };
 
     const KIND_LBL = { entry: () => I18N.t("cont.excl.k.entry"), cls: () => I18N.t("cont.excl.k.cls"), list: () => I18N.t("cont.excl.k.list") };
     const elExcl = container.querySelector("#lst-excl");

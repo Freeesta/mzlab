@@ -29,6 +29,35 @@ try:
         pg.evaluate("LISTE.ensure()"); pg.wait_for_function("LISTE.find&&true", timeout=5000); pg.wait_for_timeout(1500)
         sp = pg.evaluate(f"(()=>{{const p={SP};p.zoom=[270,400];draw(p);return p.id}})()"); pg.wait_for_timeout(1500)
 
+        def default_off():
+            # Initially contaminants are off: no signs on spectrum
+            assert pg.evaluate(f"{SP}._a.cmarks.length") == 0 and pg.evaluate(f"{SP}._a.cont") is None, "no signs on spectrum at startup"
+            h = hov(pg, 279.1591); assert h and "contaminante" not in h, "no contaminant line in peak hover"
+            # Open Reference lists panel
+            pg.evaluate("BARRA.close(false)")
+            pg.click("#np-liste"); pg.wait_for_selector("#sb-panel-lists #lst-cont-signs", timeout=5000)
+            assert not pg.is_checked("#lst-cont-signs"), "checkbox in Reference lists is unchecked by default"
+            # Check the box: signs appear
+            pg.check("#lst-cont-signs")
+            pg.wait_for_function(f"{SP}&&{SP}._a&&{SP}._a.cmarks&&{SP}._a.cmarks.length>=1", timeout=5000)
+            assert pg.is_checked("#lst-cont-signs")
+            assert pg.evaluate("LISTE.isOn()") is True
+            assert pg.evaluate("localStorage.getItem('mzlab.contaminanti.on')") == "true"
+            assert pg.evaluate(f"{SP}._a.cmarks.length") >= 1, "signs appear on spectrum after checking"
+            # Reload page: choice persists
+            pg.reload()
+            pg.wait_for_function("E.panels.some(p=>p.type==='spec'&&p._a)", timeout=30000)
+            pg.wait_for_function("LISTE.find&&true", timeout=5000)
+            pg.evaluate(f"(()=>{{const p={SP};p.zoom=[270,400];draw(p);return p.id}})()")
+            pg.wait_for_function(f"{SP}&&{SP}._a&&{SP}._a.cmarks&&{SP}._a.cmarks.length>=1", timeout=5000)
+            assert pg.evaluate("LISTE.isOn()") is True
+            assert pg.evaluate(f"{SP}._a.cmarks.length") >= 1, "signs persist after reload"
+            pg.evaluate("BARRA.close(false)")
+            pg.click("#np-liste"); pg.wait_for_selector("#sb-panel-lists #lst-cont-signs", timeout=5000)
+            assert pg.is_checked("#lst-cont-signs"), "checkbox remains checked after reload"
+            pg.evaluate("BARRA.close(false)")
+        step("default off: unchecked in Reference lists, no diamonds; checked adds diamonds; persists on reload", default_off)
+
         def known():
             h = hov(pg, 279.1591); assert h and "Compatibile con un contaminante noto" in h and "dibutilftalato" in h and "Keller 2008" in h, h
             h2 = hov(pg, 391.2843); assert h2 and "DEHP" in h2, h2
@@ -109,14 +138,12 @@ try:
         step("restore all", reset_all)
 
         def gear():
-            pg.click("#np-set"); pg.wait_for_selector("#uip-cont", timeout=5000)
-            assert pg.is_checked("#uip-cont"); pg.uncheck("#uip-cont"); pg.wait_for_timeout(400)
-            assert pg.evaluate("LISTE.isOn()") is False and pg.evaluate("localStorage.getItem('mzlab.contaminanti.on')") == "false"
-            pg.check("#uip-cont"); pg.wait_for_timeout(300); assert pg.evaluate("LISTE.isOn()") is True
+            pg.click("#np-set"); pg.wait_for_selector("#uipset", timeout=5000)
+            assert pg.locator("#uip-cont").count() == 0, "contaminant switch removed from settings modal"
             pg.click("#np-set")
-        step("gear switch: on by default, kept in mzlab.contaminanti.on", gear)
+        step("gear: contaminant switch removed from settings modal", gear)
         def gear_lab():
-            pg.click("#np-set"); pg.wait_for_selector("#uip-cont", timeout=5000)
+            pg.click("#np-set"); pg.wait_for_selector("#uipset", timeout=5000)
             assert pg.locator("#uip-lab").count() == 0 and "aboratorio" not in pg.inner_text("#uipset"), "the laboratory contaminants are not in the settings"
             pg.click("#np-set")
             pg.keyboard.press("Control+k"); pg.wait_for_selector("#pal-in", timeout=5000); pg.fill("#pal-in", "contaminanti"); pg.wait_for_function("document.querySelector('#pal-l').innerText.includes('Contaminanti del laboratorio')", timeout=5000)
@@ -124,10 +151,12 @@ try:
             pg.keyboard.press("Enter"); pg.wait_for_selector("#bigdlg[open] #lab-add", timeout=5000); pg.evaluate("document.querySelector('#bigdlg').close()")
         step("laboratory contaminants: not in the settings, found by the search bar (it and en words)", gear_lab)
         def gear_fresh():
-            pg.evaluate("localStorage.removeItem('mzlab.contaminanti.on')"); pg.evaluate("window.__L=window.LISTE;window.LISTE=undefined")
-            pg.click("#np-set"); pg.wait_for_selector("#uip-cont", timeout=5000); ok = pg.is_checked("#uip-cont")
-            pg.click("#np-set"); pg.evaluate("window.LISTE=window.__L"); assert ok, "known contaminants are on for a new user, also before the lists are loaded"
-        step("known contaminants: on by default in the settings", gear_fresh)
+            pg.evaluate("localStorage.removeItem('mzlab.contaminanti.on'); window.__L=window.LISTE; window.LISTE=undefined")
+            assert pg.evaluate("uipContOn()") is False, "uipContOn is off for a new user"
+            pg.evaluate("window.LISTE=window.__L")
+            assert pg.evaluate("LISTE.isOn()") is False, "LISTE.isOn is off for a new user"
+            pg.evaluate("LISTE.setOn(true)")
+        step("known contaminants: off by default for a new user", gear_fresh)
 
         def series():
             o = pg.evaluate("""(async()=>{const j=await J('api/contaminants');const idx=LISTE.buildIndex(j.lists);
