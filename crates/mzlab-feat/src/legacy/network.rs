@@ -8,6 +8,7 @@ use mzlab_core::elements::{mass, parse_formula};
 use mzlab_core::json::{round, Out};
 
 use super::dig::{Cand, Dig};
+use super::network_pred::predecessors;
 use crate::hypo::{Counts, Rules};
 
 /// The most edges of the network that the page receives; the strongest (with shifted fragments) first.
@@ -20,6 +21,9 @@ struct Edge {
     to: usize,
     rule: usize,
     kinetic: &'static str,
+    /// «mass» (one rule), «both» (also the predecessor of the candidate) or «network» (a predecessor without a single mass difference, named by `name`).
+    kind: &'static str,
+    name: Option<String>,
 }
 
 fn counts(f: &str) -> Counts {
@@ -78,6 +82,8 @@ fn best_edges(forms: &[Counts], tmax: &[Option<f64>], rules: &Rules) -> Vec<Edge
                         to: b,
                         rule: ri,
                         kinetic,
+                        kind: "mass",
+                        name: None,
                     };
                     best.insert(key, (rank, edge));
                 }
@@ -85,6 +91,30 @@ fn best_edges(forms: &[Counts], tmax: &[Option<f64>], rules: &Rules) -> Vec<Edge
         }
     }
     best.into_values().map(|e| e.1).collect()
+}
+
+/// The predecessors of the candidates: the edge of a predecessor that is also a mass difference becomes «both», the others are added as «network».
+fn mark_predecessors(
+    edges: &mut Vec<Edge>,
+    forms: &[Counts],
+    cands: &[&Cand],
+    tmax: &[Option<f64>],
+    rules: &Rules,
+) {
+    for p in predecessors(forms, cands, tmax, rules) {
+        if let Some(e) = edges.iter_mut().find(|e| (e.from, e.to) == (p.from, p.to)) {
+            e.kind = "both";
+        } else if !edges.iter().any(|e| (e.from, e.to) == (p.to, p.from)) {
+            edges.push(Edge {
+                from: p.from,
+                to: p.to,
+                rule: 0,
+                kinetic: "consistent",
+                kind: "network",
+                name: Some(p.name.unwrap_or_else(|| "MS2 related".into())),
+            });
+        }
+    }
 }
 
 /// The nodes that an edge touches: the parent, then the candidates (`cands[k - 1]` is node `k`).
@@ -114,6 +144,60 @@ fn write_nodes(o: &mut Out, d: &Dig, cands: &[&Cand], edges: &[Edge]) {
     }
 }
 
+fn edge_share(e: &Edge, cands: &[&Cand]) -> Option<(usize, f64)> {
+    if e.from == 0 && e.kind != "network" {
+        shifted(cands[e.to - 1])
+    } else {
+        None
+    }
+}
+
+/// The edges of the network, as the page reads them.
+fn write_edges(o: &mut Out, edges: &[Edge], cands: &[&Cand], forms: &[Counts], rules: &Rules) {
+    let id = |o: &mut Out, k: usize| {
+        if k == 0 {
+            o.str("progenitore");
+        } else {
+            o.int(cands[k - 1].id());
+        }
+    };
+    let share = |e: &Edge| edge_share(e, cands);
+    for (i, e) in edges.iter().enumerate() {
+        let r = &rules.rules[e.rule];
+        let name = e.name.as_deref().unwrap_or(&r.id);
+        o.raw(if i > 0 { ",{\"from\":" } else { "{\"from\":" });
+        id(o, e.from);
+        o.raw(",\"to\":");
+        id(o, e.to);
+        o.raw(",\"rule\":")
+            .str(name)
+            .raw(",\"kinetic\":")
+            .str(e.kinetic);
+        o.raw(",\"dm\":").num(round(
+            neutral_mass(&forms[e.to]) - neutral_mass(&forms[e.from]),
+            5,
+        ));
+        if e.kind == "network" {
+            o.raw(",\"scope\":null");
+        } else {
+            o.raw(",\"scope\":").str(match r.level {
+                2 => "literature",
+                3 => "class",
+                _ => "generic",
+            });
+        }
+        o.raw(",\"kind\":").str(e.kind);
+        if let Some((n, s)) = share(e) {
+            o.raw(",\"shifted\":{\"n\":")
+                .int(n as i64)
+                .raw(",\"share\":")
+                .num(round(s, 3))
+                .raw("}");
+        }
+        o.raw("}");
+    }
+}
+
 /// The `mass_network` of the summary: `{nodes, edges, n_edges}`; `null` when there are no rules or no edge.
 pub fn mass_network(d: &Dig, rules: &Rules) -> String {
     let pf = d.parent.formula();
@@ -132,63 +216,25 @@ pub fn mass_network(d: &Dig, rules: &Rules) -> String {
         .chain(cands.iter().map(|c| c.kin.as_ref().map(|k| k.0.tmax)))
         .collect();
     let mut edges = best_edges(&forms, &tmax, rules);
+    mark_predecessors(&mut edges, &forms, &cands, &tmax, rules);
     let total = edges.len();
     if total == 0 {
         return "null".into();
     }
-    let share = |e: &Edge| {
-        if e.from == 0 {
-            shifted(cands[e.to - 1])
-        } else {
-            None
-        }
-    };
+    let share = |e: &Edge| edge_share(e, &cands);
     if total > MAX_EDGES {
         edges.sort_by(|a, b| {
             let s = |e: &Edge| share(e).map_or(0.0, |x| x.1);
-            s(b).total_cmp(&s(a))
+            (a.kind == "mass")
+                .cmp(&(b.kind == "mass"))
+                .then(s(b).total_cmp(&s(a)))
         });
         edges.truncate(MAX_EDGES);
     }
-    let id = |o: &mut Out, k: usize| {
-        if k == 0 {
-            o.str("progenitore");
-        } else {
-            o.int(cands[k - 1].id());
-        }
-    };
     let mut o = Out::default();
     write_nodes(&mut o, d, &cands, &edges);
     o.raw("],\"edges\":[");
-    for (i, e) in edges.iter().enumerate() {
-        let r = &rules.rules[e.rule];
-        o.raw(if i > 0 { ",{\"from\":" } else { "{\"from\":" });
-        id(&mut o, e.from);
-        o.raw(",\"to\":");
-        id(&mut o, e.to);
-        o.raw(",\"rule\":")
-            .str(&r.id)
-            .raw(",\"kinetic\":")
-            .str(e.kinetic);
-        o.raw(",\"dm\":").num(round(
-            neutral_mass(&forms[e.to]) - neutral_mass(&forms[e.from]),
-            5,
-        ));
-        o.raw(",\"scope\":").str(match r.level {
-            2 => "literature",
-            3 => "class",
-            _ => "generic",
-        });
-        o.raw(",\"kind\":\"mass\"");
-        if let Some((n, s)) = share(e) {
-            o.raw(",\"shifted\":{\"n\":")
-                .int(n as i64)
-                .raw(",\"share\":")
-                .num(round(s, 3))
-                .raw("}");
-        }
-        o.raw("}");
-    }
+    write_edges(&mut o, &edges, &cands, &forms, rules);
     o.raw("],\"n_edges\":").int(total as i64).raw("}");
     o.0
 }

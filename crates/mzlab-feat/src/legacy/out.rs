@@ -6,8 +6,7 @@ use super::dig::{Cand, Dig, INCLUSION, KINDS, MAX_ROWS};
 use super::kinetics;
 use super::series::Proof;
 
-const LEVEL_TEXT: [&str; 3] = [
-    "Level 3: tentative candidate. In addition, the MS2 is linked to that of the parent (proof graph).",
+const LEVEL_TEXT: [&str; 2] = [
     "Level 4: formula of a hypothesis derived from the parent, within the mass tolerance.",
     "Level 5: mass of interest. Appears with the treatment and has a proof in favour; nothing more.",
 ];
@@ -391,7 +390,7 @@ pub fn detail(d: &Dig, id: i64) -> Result<String, String> {
     o.raw(",\"criteria\":");
     criteria(&mut o, c);
     o.raw(",\"level_text\":")
-        .str(LEVEL_TEXT[usize::from(lv - 3)])
+        .str(LEVEL_TEXT[usize::from(lv - 4)])
         .raw(",\"components\":");
     components(&mut o, c, true);
     o.raw(",\"times\":")

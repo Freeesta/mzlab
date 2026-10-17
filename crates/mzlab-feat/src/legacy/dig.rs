@@ -80,18 +80,17 @@ impl Cand {
     pub fn id(&self) -> i64 {
         self.hidden.unwrap_or(self.row as i64)
     }
-    /// 5 appears with the treatment, 4 formula of a hypothesis with its exact mass, 3 also the MS2 linked to the parent.
+    /// 5 appears with the treatment, 4 formula of a hypothesis with its exact mass. No level 3: a linked MS2 does not change the level (the prediction scale «Prev. N» carries it).
     pub fn level(&self) -> u8 {
-        let pass = |k: &str| {
-            self.ident
-                .proofs
-                .iter()
-                .any(|p| p.kind == k && p.points > 0.0 && p.sign == "a favore")
-        };
-        match (self.formula.is_some() && pass("massa"), pass("MS2")) {
-            (true, true) => 3,
-            (true, false) => 4,
-            _ => 5,
+        let mass = self
+            .ident
+            .proofs
+            .iter()
+            .any(|p| p.kind == "massa" && p.points > 0.0 && p.sign == "a favore");
+        if self.formula.is_some() && mass {
+            4
+        } else {
+            5
         }
     }
 }
@@ -382,7 +381,7 @@ pub fn dig<R: ReadAt>(s: Series, mut open: impl FnMut(usize) -> Res<Index<R>>) -
     let parent_ms2 = attach_ms2(&mut ix, t, &s.parent, prow, &mut cands)?;
     if let (Some(p), Some(m)) = (prow, &parent_ms2) {
         let inp = Inputs::new(&s.files, &s.parent, &s.hyps);
-        super::hidden::add(t, &inp, p, &m.mz, &w, &mut cands);
+        super::hidden_fam::add_all(t, &inp, &mut ix, (p, &m.mz), &w, &mut cands)?;
     }
     let mut warnings = Vec::new();
     if !isf_hidden.is_empty() {
