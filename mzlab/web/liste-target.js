@@ -3,7 +3,7 @@
 
 const LISTE_TARGET = (function() {
   const CORE = (typeof window !== "undefined" && /** @type {any} */ (window).LISTE_TARGET_CORE) ||
-    (typeof globalThis !== "undefined" && globalThis["require"] ? globalThis["require"]("./liste-target-core.js") : {});
+    (typeof module !== "undefined" && /** @type {any} */ (module).require ? /** @type {any} */ (module).require("./liste-target-core.js") : {});
 
   const EH = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
