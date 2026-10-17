@@ -1,4 +1,4 @@
-//! The files of mzFinder as `api.classify` names them (`TP_Mine/py/tpmine/engine.py::guess_sample`, `file_kind`; `hr/engine.py::classify`), read from the
+//! The files of mzFinder as `api.classify` names them (`guess_sample`, `file_kind`, `classify`), read from the
 //! `.mzidx` of each file: label, treatment time and type guessed from the name, kind of the unit-resolution path and kind of the high-resolution path.
 
 use mzlab_core::idxread::{Index, ReadAt};

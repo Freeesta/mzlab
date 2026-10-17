@@ -3,7 +3,7 @@
 import json, re, shutil, subprocess
 from pathlib import Path
 
-JS = Path(__file__).resolve().parents[1] / "js"
+JS = Path(__file__).resolve().parents[1] / "TP_Mine" / "js"
 
 
 def catalog():

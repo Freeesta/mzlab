@@ -1,4 +1,4 @@
-//! The molecular graph of a SMILES as `hr/molgraph.py` sees it: its connected substructures after at most four cuts, and the SMILES of one of them (`fragtree.mask_smiles`).
+//! The molecular graph of a SMILES as mzFinder sees it: its connected substructures after at most four cuts, and the SMILES of one of them (`fragtree.mask_smiles`).
 
 use super::*;
 

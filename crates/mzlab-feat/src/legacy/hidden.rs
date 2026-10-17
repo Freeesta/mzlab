@@ -1,4 +1,4 @@
-//! Products hidden under an in-source fragment of the parent (`hr/filters.py::isf_hidden`): a fragment mass whose ratio to the parent, in the peak of
+//! Products hidden under an in-source fragment of the parent (`isf_hidden` of mzFinder): a fragment mass whose ratio to the parent, in the peak of
 //! the parent, rises with the treatment above the ratio of the references. The ratio is that of the areas of the table (the apex shift against the parent is
 //! not tested). A mass that passes becomes a candidate with a negative id, "possible TP co-eluting with an ISF".
 

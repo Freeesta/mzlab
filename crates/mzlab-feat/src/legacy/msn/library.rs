@@ -1,4 +1,4 @@
-//! `hr/iimn.py::FragmentLibrary` and `build_library`: the formulas of the fragments of the parent seen in the MSn tree (the precursors of its
+//! `FragmentLibrary` and `build_library` of mzFinder: the formulas of the fragments of the parent seen in the MSn tree (the precursors of its
 //! nodes) and in the DDA MS2 of the parent, each with the substructures that can give it.
 
 use super::space::candidates;

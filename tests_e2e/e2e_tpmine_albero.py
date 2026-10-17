@@ -27,8 +27,8 @@ try:
         pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
         pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
         def lr():
-            sys.path[:0] = [str(SRC / "py"), str(ROOT)]
-            from tpmine.demo import make_demo
+            sys.path[:0] = [str(ROOT)]
+            from finder_demo import make_demo
             fl = make_demo(Path(tempfile.mkdtemp()))
             pg.set_input_files("#tp-in", [f["path"] for f in fl])
             pg.wait_for_function("document.querySelector('#tp-files table') && document.querySelectorAll('#tp-files tr').length >= 9", timeout=240000)
@@ -63,7 +63,7 @@ try:
             pg.click("#alb-cmp"); pg.wait_for_function("document.getElementById('alb-leg').textContent === ''", timeout=10000)
         step("LR: comparison with a product marks the shifted fragments", lr_cmp)
         def hr():
-            sys.path[:0] = [str(SRC / "tests"), str(SRC / "py"), str(ROOT)]
+            sys.path[:0] = [str(SRC / "tests"), str(ROOT)]
             import lc_synth, msn_synth
             d = Path(tempfile.mkdtemp()); fs = lc_synth.write_series(d, hidden_isf=True); mf = msn_synth.write_msn(d / "cafe_msn.mzML", msn_synth.caffeine_nodes())
             pg.reload(); pg.wait_for_selector("#drop", timeout=120000)

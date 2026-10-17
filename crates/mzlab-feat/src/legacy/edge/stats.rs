@@ -1,4 +1,4 @@
-//! The spectra and the statistics behind the evidence of an edge (`hr/identity.py`): top peaks, matching peaks, ratios over the samples, shared skeleton.
+//! The spectra and the statistics behind the evidence of an edge: top peaks, matching peaks, ratios over the samples, shared skeleton.
 
 use super::*;
 

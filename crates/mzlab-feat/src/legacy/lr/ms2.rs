@@ -1,4 +1,4 @@
-//! The MS2 of a row of the low-resolution Dig (`engine.py::ms2`, `transitions`): the product-ion scans of the peaks of the traces that
+//! The MS2 of a row of the low-resolution Dig (`ms2`, `transitions`): the product-ion scans of the peaks of the traces that
 //! `ms2link` matched to the row, pooled by fragment and compared with the parent's.
 
 use std::collections::BTreeMap;

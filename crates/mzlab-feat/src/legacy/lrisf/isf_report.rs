@@ -1,4 +1,4 @@
-//! The verdict of one ion (`isf.py::classify_report`): probabilities that it is inherited from the parent (in-source fragment, isotope,
+//! The verdict of one ion (`classify_report` of mzFinder): probabilities that it is inherited from the parent (in-source fragment, isotope,
 //! adduct, other) or a true transformation product, the evidence behind them, the doubtful cases with their reason and a readable explanation.
 //! MS2 and DP-ramp evidence enter as log-odds with heuristic weights, flagged `calibrated: false`. Texts in English, identical to the Python.
 

@@ -9,9 +9,6 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
-if not (ROOT / "TP_Mine" / "py").exists():
-    pytest.skip("TP_Mine/py not available", allow_module_level=True)
-sys.path.insert(0, str(ROOT / "TP_Mine" / "py"))
 from valida import lr  # noqa: E402
 from valida import lr_criteri as C  # noqa: E402
 

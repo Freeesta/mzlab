@@ -279,7 +279,7 @@ try:
             assert t == {"ok": False, "mode": "lr", "note": "no MS2 of the parent in the files", "nodes": []}, t
         step("a low-resolution series: the Dig and the details equal the native example's", lr_series)
         def lr_ms2_mrm():
-            import dati_sintetici as DS; from valida import lr_sintetici as LS; from tpmine import demo
+            import dati_sintetici as DS; from valida import lr_sintetici as LS; import finder_demo as demo
             rng = numpy.random.default_rng(3); pm = demo.PARENT_MZ + demo.SHIFT
             epi, std, t0 = (tmp / "lr" / n for n in ("lr_EPI.mzML", "lr_MRM-std.mzML", "lr_MRM-t0.mzML"))
             DS._write(epi, [DS._spec(i, 8.8 + 0.02 * i, numpy.array([pm - 61, pm - 44, pm - 17]), numpy.array([120., 500., 900.]) * rng.normal(1, 0.05), level=2, prec=pm, ce=30) for i in range(21)], [])

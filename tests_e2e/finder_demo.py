@@ -1,5 +1,4 @@
-# TPMINE-PRIVATE
-"""Synthetic experiment to test TP Mine (no real data).
+"""Synthetic experiment of the mzFinder e2e tests (no real data): `make_demo(folder)` writes the series and returns its files.
 
 Truth built into the data (unit-resolution centroids shifted by +0.30 Da, like the real instrument): parent [M+H]+ 241.0641 decays;
 hydroxylation (+O, 257.059), N-deisopropylation (-C3H6, 199.017) and dehydrogenation (-H2, 239.048) rise over time; an ion near 273 is a contaminant

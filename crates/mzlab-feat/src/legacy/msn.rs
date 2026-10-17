@@ -1,6 +1,6 @@
-//! The MSn tree of the parent from a direct-infusion MSn file (`TP_Mine/py/tpmine/hr/msn.py::build_tree`): nodes = fragmentation paths of the
+//! The MSn tree of the parent from a direct-infusion MSn file (`build_tree`): nodes = fragmentation paths of the
 //! filter string, consensus spectra, exact precursor masses from the parent node, formulas under the hierarchical sub-formula rule, atom sets
-//! constrained by the tree; then the fragment library (`hr/iimn.py::build_library`) and the localisation of a product (`hr/localize.py`).
+//! constrained by the tree; then the fragment library (`build_library`) and the localisation of a product (`localize`).
 
 use std::collections::HashMap;
 

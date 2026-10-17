@@ -1,4 +1,4 @@
-//! The ion forms of each polarity, the relations between two ions and the shape of two profiles (`hr/identity.py`), and `polarity_pairs`.
+//! The ion forms of each polarity, the relations between two ions and the shape of two profiles, and `polarity_pairs`.
 
 use super::*;
 

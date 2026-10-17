@@ -152,8 +152,8 @@ try:
         pg = fresh(True)
         def demo():
             """the real flow: the LR demo (synthetic) of mzFinder, the detail of the hydroxylation of the parent has the button when the TP has a MS2"""
-            sys.path[:0] = [str(ROOT / "TP_Mine" / "py"), str(ROOT)]
-            from tpmine.demo import make_demo
+            sys.path[:0] = [str(ROOT)]
+            from finder_demo import make_demo
             fl = make_demo(Path(tempfile.mkdtemp()))
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000); pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
             pg.set_input_files("#tp-in", [f["path"] for f in fl])

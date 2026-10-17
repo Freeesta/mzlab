@@ -1,5 +1,5 @@
 //! Channels and segments: runs of scans in one log-ppm channel and the stitching of the pieces of one ion across neighbouring channels
-//! (`_segments` and `_stitch` of `features.py`).
+//! (`_segments` and `_stitch`).
 
 use crate::sortc;
 use mzlab_core::error::Result;

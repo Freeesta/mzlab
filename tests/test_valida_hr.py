@@ -9,8 +9,6 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
-if not (ROOT / "TP_Mine" / "py").exists():
-    pytest.skip("TP_Mine/py not available", allow_module_level=True)
 import dati_sintetici as ds  # noqa: E402
 from valida import cancello, hr, nativo  # noqa: E402
 from valida import hr_nativo as H  # noqa: E402

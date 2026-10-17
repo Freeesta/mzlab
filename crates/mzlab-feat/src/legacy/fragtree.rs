@@ -1,5 +1,5 @@
-//! The fragmentation tree of the parent as mzFinder draws it (`TP_Mine/py/tpmine/fragtree.py::_two_level`, with `hr/formula.py::FormulaSpace`
-//! and `hr/molgraph.py::substructures` + `mask_smiles`): the parent ion and its strongest MS2 fragments, each with the formulas and neutral
+//! The fragmentation tree of the parent as mzFinder draws it (`_two_level`, with `FormulaSpace`
+//! and `substructures` + `mask_smiles`): the parent ion and its strongest MS2 fragments, each with the formulas and neutral
 //! losses that explain it and the substructures of the SMILES that can be it. The JSON is the one of `api.frag_tree`.
 
 use std::collections::{HashMap, HashSet};

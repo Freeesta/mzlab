@@ -1,4 +1,4 @@
-//! The list of transformations of mzFinder in Rust (`legacy::transf`) against the frozen Python answers (`tools/finder_transf_riferimento.py --golden`):
+//! The list of transformations of mzFinder in Rust (`legacy::transf`) against the frozen answers of the former Python engine:
 //! the rows, the rules that the list adds to `TP_Mine/data/regole_tp.json`, the `lit:` references and the error texts.
 
 use mzlab_feat::hypo::Rules;
