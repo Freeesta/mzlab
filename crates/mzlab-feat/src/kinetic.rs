@@ -1,5 +1,5 @@
 //! Kinetics as evidence: the shape of a product over the treatment time (formation, rise and fall, flat, decay) chosen by `AICc`, its stability
-//! under resampling and the generation (first or second) of the product. Port of `TP_Mine/py/tpmine/hr/kinetics.py` (chain models solved
+//! under resampling and the generation (first or second) of the product. The chain models (solved
 //! with a Pade matrix exponential) plus the four shapes. Numbers to sort and weigh, never a verdict. `libm` for `exp`/`ln`, fixed order sums.
 
 mod bank;

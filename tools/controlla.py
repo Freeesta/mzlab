@@ -22,6 +22,7 @@ BASE = indice.ROOT / "tools" / "soglie_base.json"
 MAX_FILE, MAX_FUNC = 500, 80
 MAX_DOC_LINE, MAX_DOC_BYTES = 600, 25 * 1024
 DOC_SKIP = {"mappa.md", "misure-diario.md"}
+NEAR_FILE, NEAR_DOC_BYTES = 475, int(23.5 * 1024)       # strong warning (never an error) before the limits: two parallel PRs may cross them together
 KINDS = ("file", "funzioni", "doc_righe", "doc_kb")
 LABEL = {"file": "file", "funzioni": "funzione", "doc_righe": "documento (righe lunghe)", "doc_kb": "documento (byte)"}
 SLACK = 0.10          # growth tolerated on an entry that is already over the limit
@@ -54,6 +55,23 @@ def misura() -> dict[str, dict[str, int]]:
         if len(raw) > MAX_DOC_BYTES:
             big[rel] = len(raw)
     return {"file": files, "funzioni": funcs, "doc_righe": long_lines, "doc_kb": big}
+
+
+def vicini() -> list[str]:
+    """Files within 25 lines of the 500-line limit and documents within 1.5 KB of 25 KB (but not over): a warning, so that two PRs growing the same file do not cross the limit together."""
+    out = []
+    for f in indice.tracked():
+        n = (indice.ROOT / f).read_text(encoding="utf-8", errors="replace").count("\n") + 1
+        if NEAR_FILE <= n <= MAX_FILE:
+            out.append(f"{f} has {n} lines (limit {MAX_FILE})")
+    docs = [indice.ROOT / "AGENTS.md"] + sorted((indice.ROOT / "docs" / "agenti").glob("*.md"))
+    for d in docs:
+        if d.name in DOC_SKIP or not d.exists():
+            continue
+        size = len(d.read_bytes())
+        if NEAR_DOC_BYTES <= size <= MAX_DOC_BYTES:
+            out.append(f"{d.relative_to(indice.ROOT).as_posix()} is {size / 1024:.1f} KB (limit 25 KB): split it by topic before adding more")
+    return out
 
 
 def peggiori(now: dict[str, dict[str, int]], base: dict[str, dict[str, int]]) -> list[str]:
@@ -215,6 +233,8 @@ def main() -> int:
     print(f"WARN {len(now['file'])} files over {MAX_FILE} lines, {len(now['funzioni'])} functions over {MAX_FUNC} lines "
           f"(base: {len(base['file'])} / {len(base['funzioni'])}); documents: {len(now['doc_righe'])} with lines over "
           f"{MAX_DOC_LINE} characters, {len(now['doc_kb'])} over 25 KB")
+    for w in vicini():
+        print("WARN near the limit: " + w)
     if "--lista" in sys.argv:
         for kind in KINDS:
             for k, v in sorted(now[kind].items(), key=lambda kv: -kv[1]):

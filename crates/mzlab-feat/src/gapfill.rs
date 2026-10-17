@@ -1,4 +1,4 @@
-//! Gap filling: port of `TP_Mine/py/tpmine/hr/features.py::fill_gaps` and `trace_area`. A cell of the aligned table where the detection found no
+//! Gap filling: the `fill_gaps` and `trace_area` of mzFinder. A cell of the aligned table where the detection found no
 //! peak (`CELL_ABSENT`) is integrated again at the intensity floor, in the window of m/z of the reference ion of the row and in the window of RT where
 //! the peak is expected (from the RT map, or from the files where the row was seen). One file is open at a time; the cells of a file are served
 //! in slabs of m/z (`sweep::windows`). A filled cell gets `CELL_FILLED`: it is never counted as detected.

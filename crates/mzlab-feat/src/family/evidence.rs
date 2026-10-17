@@ -1,4 +1,4 @@
-//! Evidence on the link between two co-eluting ions: port of `TP_Mine/py/tpmine/hr/edge_evidence.py::edge_evidence`.
+//! Evidence on the link between two co-eluting ions: the `edge_evidence` of mzFinder.
 //!
 //! For the pair (X lighter, Y heavier) the readings of the step (`rel`) are checked against the MS2 of the two ions and the ratio of the
 //! areas over the samples, and the pair gets a label that is a signal for the chemist, never a verdict: adduct, in-source fragment (only

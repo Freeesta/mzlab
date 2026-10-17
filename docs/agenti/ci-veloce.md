@@ -20,3 +20,16 @@
 - **Test Rust e guardie** (job `rust`): `cargo test` esegue i binari uno dopo l'altro (compilazione 230 s + esecuzione 192 s su 205 binari); gli altri binari durano ≤ 11 s, quindi niente `cargo-nextest`.
   `rois_parity` dura 30 s (era 66 s): `tools/roi_riferimento.py` elabora i file in parallelo, un processo per CPU, e ogni file scrive solo i propri `<stem>.mzidx` e `.rois.json`.
   Le guardie di memoria (`tests/test_guardie_memoria.py`, `tests/test_feat_wasm.py`) costruiscono, generano le serie e misurano in parallelo, ciascuna misura nella sua cartella: 112 s → 57 s con le build in cache.
+
+## Dieci regole pratiche prima di aprire una PR
+Prima di aprire la PR: `python3 tools/pre_pr.py` (1-2 minuti: mappa, soglie, i18n, Teoria, globali, tsc, import degli e2e, `cargo fmt` e clippy se hai toccato `crates/`, poi `verifica.py --cambiati`; `--senza-e2e` salta l'ultimo passo).
+1. **File nuovo = indicizzato subito**: `python3 tools/indice.py` e il file sta in un gruppo (la CI lo controlla con `--controlla`).
+2. **Tagli**: funzione ≤ 80 righe, file ≤ 500 righe, documento ≤ 25 KB, riga di documento ≤ 600 caratteri; `controlla.py` avvisa (WARN) da 475 righe e da 23,5 KB: dividi prima di sforare, perché due PR parallele sul medesimo file sforano insieme.
+3. **HTML dal codice** sempre con il tag `h` dei template (`h\`...\``), che esegue l'escape; mai concatenare testi dei file nell'HTML.
+4. **Testi** come chiavi di `lang/it.js` e `lang/en.js`; Tabui (mzFinder) solo in inglese e senza chiavi `lang/`; Teoria e Pratica solo in italiano (`controlla_i18n.py`).
+5. **Tipi**: `// @ts-check` nei file nuovi, il file sta in un progetto di `tools/tipi/` e dopo ogni nome globale nuovo `python3 tools/tipi/genera_globali.py`.
+6. **Rust**: `cargo fmt --all` e `python3 tools/controlla_rust.py` (fmt e clippy contro la base) prima del push.
+7. **Memoria nei `.wasm`**: nessuna funzione esportata restituisce un `Vec<u8>` intero (usa un `WriteAt`; `tools/api_byte_ammesse.txt` ammette solo l'esistente) e per ordinare si usa il modulo `mzlab_core::sortc` (`sortc::by`, `by_key`, `ord`, …) al posto di `sort*` della libreria standard, che pesa nel `.wasm`.
+8. **e2e**: si attende lo STATO, non l'orologio: `ready(pg)`, `attendi(pg, espr)`, `saved(pg)` prima di ogni `reload()` che deve riprendere la sessione; mai `wait_for_timeout` nuovi (`tools/attese_base.json` scende soltanto).
+9. **Cancellare o rinominare un file**: cerca i chiamanti anche in `crates/*/tests`, `tests_e2e`, `tools` e `.github/workflows` (`grep -rn nome`); `tools/controlla_import.py` prende gli import Python spariti.
+10. **Prima di chiudere**: `git merge origin/main` (mai rebase), risolvi tenendo il lavoro di tutti, rilancia `pre_pr.py` e un solo push.

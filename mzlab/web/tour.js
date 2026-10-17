@@ -175,10 +175,11 @@ const TOUR = (() => {
   let curCap = 1;
   let curStep = 0;
   let prevFocus = null;
-  let provaTimer = null;
+  let tryTimer = null;
   let provaState = null;
   let currentTargetEl = null;
-  let curLeave = null;      // what undoes the preparation of the step on screen (e.g. closes the drawer the step opened)
+  // what undoes the preparation of the step on screen (e.g. closes the drawer the step opened)
+  let curLeave = null;
 
   // the file list is a drawer of the toolbar: the tour opens it for the steps about the list and closes it again when the step ends
   function openFileDrawer() {
@@ -409,16 +410,16 @@ const TOUR = (() => {
     rafScroll = FRAME.next(updatePosition);
   };
 
-  const stopProvaTimer = () => {
-    if (provaTimer) {
-      clearInterval(provaTimer);
-      provaTimer = null;
+  const stopTryTimer = () => {
+    if (tryTimer) {
+      clearInterval(tryTimer);
+      tryTimer = null;
     }
     provaState = null;
   };
 
   const renderStep = () => {
-    stopProvaTimer();
+    stopTryTimer();
     const list = stepsOf(curCap);
     if (curStep >= list.length) {
       if (curCap === 1) {
@@ -532,13 +533,13 @@ const TOUR = (() => {
     // Setup "Prova tu" observation
     if (step.prova && step.attesa && step.initProva) {
       provaState = step.initProva();
-      provaTimer = setInterval(() => {
+      tryTimer = setInterval(() => {
         if (!active) {
-          stopProvaTimer();
+          stopTryTimer();
           return;
         }
         if (step.attesa(provaState)) {
-          stopProvaTimer();
+          stopTryTimer();
           TOUR.avanti();
         }
       }, 300);
@@ -606,7 +607,8 @@ const TOUR = (() => {
         if (div.parentNode) div.remove();
         document.removeEventListener("keydown", onInvKeyDown);
       };
-      idle = setTimeout(closeInv, 60000);      // no answer within a minute counts as «Not now» (the invitation is already marked as offered)
+      // no answer within a minute counts as «Not now» (the invitation is already marked as offered)
+      idle = setTimeout(closeInv, 60000);
 
       const onInvKeyDown = e => {
         if (e.key === "Escape") {
@@ -616,7 +618,8 @@ const TOUR = (() => {
 
       document.addEventListener("keydown", onInvKeyDown);
       try { div.querySelector("#tour-inv-si").focus({ preventScroll: true }); } catch (_) { /* focus is only a help: the invitation works without it */ }
-      ["pointerenter", "focusin"].forEach(ev => div.addEventListener(ev, () => clearTimeout(idle)));      // whoever is reading or choosing keeps it
+      // whoever is reading or choosing keeps it
+      ["pointerenter", "focusin"].forEach(ev => div.addEventListener(ev, () => clearTimeout(idle)));
 
       div.querySelector("#tour-inv-si").onclick = () => {
         closeInv();
@@ -705,7 +708,7 @@ const TOUR = (() => {
     },
 
     chiudi: () => {
-      stopProvaTimer();
+      stopTryTimer();
       if (curLeave) { const f = curLeave; curLeave = null; f(); }
       active = false;
       currentTargetEl = null;

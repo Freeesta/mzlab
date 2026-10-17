@@ -17,7 +17,8 @@
   // "Apri comunque": the choice is kept for this tab (same key as telefono.js) and the page starts again as the full program
   $("#phopen").onclick = () => { try { sessionStorage.setItem("qqq.telefono", "0"); } catch (_) { /* storage blocked: the URL decides */ } location.replace(location.pathname + "?telefono=0"); };
   let y0 = scrollY;
-  addEventListener("scroll", () => { const y = scrollY; hd.classList.toggle("away", y > y0 && y > 60); y0 = y; }, { passive: true }); // the header goes away scrolling down, comes back scrolling up
+  // the header goes away scrolling down, comes back scrolling up
+  addEventListener("scroll", () => { const y = scrollY; hd.classList.toggle("away", y > y0 && y > 60); y0 = y; }, { passive: true });
 
   // Teoria warm-up: only the files of the Teoria home, low priority, when the browser is idle, never on "save data". The service worker
   // answers through its normal path (network, then the app cache), so the later visit finds them without a second download.

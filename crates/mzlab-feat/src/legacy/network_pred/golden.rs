@@ -1,4 +1,4 @@
-//! `hr/network.py::predecessors` against the golden file of the reference (`tests/golden/finder_funzioni.json`).
+//! `predecessors` against the golden file of the reference (`tests/golden/finder_funzioni.json`).
 
 use super::*;
 
@@ -6,7 +6,7 @@ fn rules() -> Rules {
     Rules::parse(include_bytes!("../../../../../TP_Mine/data/regole_tp.json")).unwrap()
 }
 
-/// The choices of `hr/network.py::predecessors` on the cases of `tests/golden/finder_funzioni.json` (names differ: the table of the reference is its own).
+/// The choices of `predecessors` on the cases of `tests/golden/finder_funzioni.json` (names differ: the table of the reference is its own).
 #[test]
 fn the_predecessors_match_the_python_reference() {
     let g: serde_json::Value = serde_json::from_str(include_str!(

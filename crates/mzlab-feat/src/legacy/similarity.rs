@@ -1,4 +1,4 @@
-//! The similarity of the MS2 of the parent and of a product in three components (`TP_Mine/py/tpmine/hr/similarity.py`: `prepare`, `entropy_weights`,
+//! The similarity of the MS2 of the parent and of a product in three components (`prepare`, `entropy_weights`,
 //! `_typed_matching`, `pair_components`): equal fragments, shifted fragments and common neutral losses, for the modified cosine and the entropy.
 
 use crate::sortc::SortC;

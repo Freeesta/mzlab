@@ -1,6 +1,6 @@
 //! The low-resolution Dig on the synthetic series of `TP_Mine/tests/lr_synth.py` (same ions, kinetics and +0.30 Da shift, written here in
 //! Rust): the pipeline runs natively as the pool of `feat-worker.js` runs it (detection, alignment, hypotheses), then the adapter. Checked
-//! against `tests/golden/finder_lr_contratto.json` (`tools/finder_lr_riferimento.py`): the keys and JSON types of the Python answer, and its
+//! against `tests/golden/finder_lr_contratto.json`: the keys and JSON types of the answer of the former Python engine, and its
 //! rows that pass the criteria found again within ±0.35 Da and ±0.25 min.
 
 use mzlab_core::mzidx::build_mzml_to_vec;

@@ -6,7 +6,8 @@
 
 /** @typedef {{ id: string, gruppo?: string, nome: string, unita?: string, n: number, min: number, max: number }} Voce */
 
-const MAX_FILES = 8;                                   // files of a tab asked for their list (the others are mzML or other makers' files with no log)
+// files of a tab asked for their list (the others are mzML or other makers' files with no log)
+const MAX_FILES = 8;
 const MAX_POINTS = 2000;                               // min/max pairs kept per series on screen
 /** @type {Map<string, Voce[] | null | undefined>} file name -> its list (null: none; undefined: being asked) */
 const LISTS = new Map();

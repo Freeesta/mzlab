@@ -52,7 +52,7 @@ function attach(p) {
   cv.onmousemove = e => {
     const a = p._a; if (!a) return; const px = rect(e), py = recty(e), x = xd(px);
     if (p.type === "spec" && a.markN != null) hoverMark(p, px);
-    if (drag && drag.pan) {                                   // Maiusc + trascina: sposta la vista
+    if (drag && drag.pan) {                                   // Shift + drag: pans the view
       const c = a.map ? ASSE.clip(drag.g, e, px - drag.x0, py - drag.y0) : { dx: px - drag.x0, dy: py - drag.y0, ax: null }; drag.ax = c.ax; if (a.map && window.MAPPA) MAPPA.guide(p, c.ax && { ax: c.ax, x: drag.x0, y: drag.y0 });     // map: Ctrl/⌘ + Shift or X / Y = one direction only (asse.js)
       const pw = a.W - M.l - M.r, span = drag.z[1] - drag.z[0], dx = c.dx / pw * span;
       p.zoom = clampView(drag.z[0] - dx, drag.z[1] - dx, a.full[0], a.full[1]);
@@ -163,7 +163,7 @@ function attach(p) {
     }
   };
   addEventListener("mouseup", p._up, { signal: p._ac.signal });
-  // Ctrl/Cmd + rotella (o pizzico sul trackpad): zoom attorno al cursore. La rotella da sola continua a far scorrere la pagina.
+  // Ctrl/Cmd + wheel (or trackpad pinch): zoom around the cursor. The wheel alone keeps scrolling the page.
   cv.addEventListener("wheel", e => {
     if (p.type === "map" && window.MAPPA && p._a && MAPPA.wheel(p, e, rect(e), recty(e))) return;     // mappa.js: the wheel alone zooms the map
     if (!(e.ctrlKey || e.metaKey) && p._a && p.zoom && p.type !== "map" && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {      // trackpad: two fingers sideways pan the zoomed x axis (vertical scroll still moves the page)

@@ -1,4 +1,4 @@
-//! The identities of an untargeted feature table as mzFinder gives them (`TP_Mine/py/tpmine/hr/identity.py`: `build` and `polarity_pairs`):
+//! The identities of an untargeted feature table as mzFinder gives them (`build` and `polarity_pairs`):
 //! the graph of co-eluting, correlated, mass-explained features with the evidence of every edge, and the neutral-mass hypotheses of every
 //! connected component. Stateless: the table comes in the payload, the JSON is the one of `api.identity_graph` and `api.polarity_pairs`.
 

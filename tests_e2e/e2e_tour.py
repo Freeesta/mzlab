@@ -40,20 +40,22 @@ try:
 
         # Click "Non ora" -> closes; the invitation is recorded as already shown
         pg.click("#tour-inv-no")
-        pg.wait_for_timeout(300)
+        attendi(pg, "!document.querySelector('#tour-invito') || document.querySelector('#tour-invito').hidden || !document.querySelector('#tour-invito').offsetParent", 5000)
         assert not pg.is_visible("#tour-invito"), "invitation closed by Non ora"
         st = pg.evaluate("JSON.parse(localStorage.getItem('qqq.tour.lr'))")
         assert st["stato"] == "invitato", st
 
-        # Reload: invitation does not come back
+        # Reload: invitation does not come back (the session is saved first: the reload resumes from the notebook)
+        saved(pg)
         pg.reload()
+        attendi(pg, "typeof E !== 'undefined' && E.files && E.files.length > 0")  # the invitation shows once the data are up: wait for that state, then check it stays away
         ready(pg)
-        pg.wait_for_timeout(1000)
+        frames(pg, 30)
         assert not pg.is_visible("#tour-invito"), "invitation does not return on reload"
         steps.append(("invitation shown on first LR load, closed by Non ora, not repeated on reload", "ok"))
 
         # 2. Replay tour from gear: all 15 steps tested
-        pg.wait_for_function("typeof E !== 'undefined' && E.files && E.files.length > 0", timeout=30000)  # the label reads «Rifai» only once the reloaded file is back
+        attendi(pg, "typeof E !== 'undefined' && E.files && E.files.length > 0")  # the label reads «Rifai» only once the reloaded file is back
         pg.click("#np-set")
         pg.wait_for_selector("#uipset", timeout=3000)
         assert pg.is_visible("#uip-tour") and "Rifai il tour" in pg.inner_text("#uip-tour")
@@ -122,6 +124,8 @@ try:
 
         # Try it: right-click a peak in the spectrum -> extract XIC
         # Find a label box in the spectrum
+        attendi(pg, "(() => { const p = E.panels.find(q => q.type === 'spec'); return !!(p && p._a && p._a.lbls && p._a.lbls.some(x => x.m != null)); })()")   # the labels are laid out once the spectrum is drawn: without them the click would land on an empty spot
+        frames(pg)
         lb = pg.evaluate("(() => { const p = E.panels.find(q => q.type === 'spec'); const q = p.cv.getBoundingClientRect(); const l = p._a && p._a.lbls && p._a.lbls.filter(x => x.m != null)[0]; return l ? { x: q.left + l.x + l.w / 2, y: q.top + l.y + l.h / 2 } : { x: q.left + q.width / 2, y: q.top + q.height / 2 }; })()")
         pg.mouse.click(lb["x"], lb["y"], button="right")
         pg.wait_for_selector("#ctx", timeout=3000)
@@ -256,7 +260,7 @@ try:
                     assert abs(sp[0] - bar[0]) < 20 and abs(sp[1] - bar[1]) < 20, (sp, bar)      # the «barra» step points at the toolbar
         pg.click("#tour-btn-skip")
         # the invitation (bottom left) is not covered by the toolbar or by the drawer
-        pg.evaluate("localStorage.removeItem('qqq.tour.lr')"); pg.reload(); ready(pg); pg.wait_for_selector("#tour-invito", timeout=8000)
+        pg.evaluate("localStorage.removeItem('qqq.tour.lr')"); saved(pg); pg.reload(); ready(pg); pg.wait_for_selector("#tour-invito", timeout=30000)
         for vp in ((1280, 800), (1024, 1366), (1500, 1000)):
             pg.set_viewport_size({"width": vp[0], "height": vp[1]}); pg.wait_for_timeout(300)
             pg.evaluate("BARRA.setTab('file',{noFocus:true,instant:true})"); pg.wait_for_timeout(300)

@@ -1,4 +1,4 @@
-//! Alignment and RT map against the frozen answers of the Python code (`tools/feat_allinea.py`, `tests/golden/feat/allinea_sintetico.json`):
+//! Alignment and RT map against the frozen answers of the former Python engine (`tests/golden/feat/allinea_sintetico.json`):
 //! same groups (m/z, RT, area, height, apex, width) with and without a span limit and artefacts, same shift curves; the answer is the same
 //! with the input files in any order of equal rows (two runs give the same bytes).
 

@@ -1,4 +1,4 @@
-//! The roles of an ion inherited from the parent (`isf.py::_split_inherited`): weights of in-source fragment / isotope / adduct / other from
+//! The roles of an ion inherited from the parent (`_split_inherited` of mzFinder): weights of in-source fragment / isotope / adduct / other from
 //! the mass difference and the roles `origin_report` found. Physics is a hard constraint: an ion heavier than the parent is not a fragment.
 
 use super::isf::{fdef, nn, truthy};

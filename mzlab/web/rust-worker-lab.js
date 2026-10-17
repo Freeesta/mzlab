@@ -5,7 +5,8 @@ import { createMetodoOps } from "./rust-metodo.js";
 
 export function createLabOps({ engine, ARCH, fileOf, lrOpen, slotOf, readerFor, jerr }) {
   let sig = null, n = 0;
-  const seq = new Map();                    // name -> order of upload in this session: the files of the same millisecond keep it
+  // name -> order of upload in this session: the files of the same millisecond keep it
+  const seq = new Map();
   async function sync() {
     const list = (await ARCH.list("files")).filter(e => /\.dam$/i.test(e.name) && !/\.part$/.test(e.name)).sort((a, b) => a.lastModified - b.lastModified || (seq.get(a.name) || 0) - (seq.get(b.name) || 0) || (a.name < b.name ? -1 : 1));
     const now = list.map(e => `${e.name}:${e.size}:${e.lastModified}`).join("|");

@@ -99,3 +99,69 @@ fn impronte_gives_the_sha1_to_the_member_and_the_known_ones_replace_the_read() {
     // not as many as the members: the caller reads them
     assert!(upload::impronte_note(&mut set(&b), &[]).is_none());
 }
+
+/// The fingerprints taken while the file is copied (`Passata` fed in pieces) given to `prepare_con` give the same `Prepared` as the full read, and the file is read once less.
+#[test]
+fn prepare_with_known_fingerprints_is_identical_and_skips_the_reread() {
+    use mzlab_core::idxread::ReadAt;
+    use mzlab_core::mzml::Spectrum;
+    use mzlab_core::mzmlwrite::{Header, MzmlWriter};
+
+    struct Counting(Vec<u8>, u64);
+    impl ReadAt for Counting {
+        fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
+            self.1 += buf.len() as u64;
+            self.0.read_at(off, buf)
+        }
+    }
+
+    let mut w = MzmlWriter::new(Vec::new(), &Header::default()).unwrap();
+    w.open_spectra(200).unwrap();
+    for i in 0..200usize {
+        w.spectrum(&Spectrum {
+            index: i,
+            id: format!("controllerType=0 controllerNumber=1 scan={}", i + 1),
+            level: 1,
+            rt: 0.05 * i as f64,
+            polarity: 1,
+            profile: false,
+            filter: String::new(),
+            precursor: None,
+            mz: (0..40).map(|b| 100.0 + b as f64 * 1.5).collect(),
+            intensity: (0..40).map(|b| 10.0 + ((i * 7 + b) % 50) as f32).collect(),
+            wide: None,
+        })
+        .unwrap();
+    }
+    w.close_spectra().unwrap();
+    let mzml = w.finish().unwrap();
+    let size = mzml.len() as u64;
+
+    let mut full = Counting(mzml.clone(), 0);
+    let a = upload::prepare(&mut full, size, "x.mzML").unwrap();
+
+    let mut pass = Passata::new(size);
+    for c in mzml.chunks(8 << 20) {
+        pass.aggiorna(c);
+    }
+    let (sha256, _, probe) = pass.fine().unwrap();
+    let mut quick = Counting(mzml, 0);
+    let b = upload::prepare_con(
+        &mut quick,
+        size,
+        "x.mzML",
+        Some((sha256.clone(), probe.clone())),
+    )
+    .unwrap();
+
+    assert_eq!(
+        (a.sha256.as_str(), a.probe.as_str()),
+        (sha256.as_str(), probe.as_str())
+    );
+    assert_eq!(a.table.source_json, b.table.source_json);
+    assert_eq!(a.table.scans_json, b.table.scans_json);
+    assert_eq!(a.table.run_json, b.table.run_json);
+    assert_eq!((a.table.rt, a.table.tic), (b.table.rt, b.table.tic));
+    assert_eq!((a.sha256, a.probe), (b.sha256, b.probe));
+    assert!(quick.1 < full.1, "{} vs {}", quick.1, full.1);
+}

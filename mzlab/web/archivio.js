@@ -23,7 +23,8 @@ export const listen = f => { try { channel().addEventListener("message", e => f(
 
 // one tab at a time writes a file (Web Locks "mzlab-file:<kind>/<name>"): a lock held for more than WAIT_MS is not waited for silently, it is an error with a key
 const WAIT_MS = 2000;
-const fail = (key, params) => JSON.stringify({ error_key: key, params });          // thrown as a string: the worker answers it as an error of the engine (a key, not a fault)
+// thrown as a string: the worker answers it as an error of the engine (a key, not a fault)
+const fail = (key, params) => JSON.stringify({ error_key: key, params });
 export async function locked(kind, name, fn) {
   const L = self.navigator && navigator.locks;
   if (!L) return fn();
@@ -44,7 +45,8 @@ export async function persistOnce() {
   try { if (navigator.storage && navigator.storage.persist && !(await navigator.storage.persisted())) await navigator.storage.persist(); } catch (_) { /* optional */ }
 }
 export const BIG = 50 << 20, ROOM = 1.8;
-const held = new Map();                                     // room promised to the files being loaded (file + index), not yet written: several files loaded together do not count the same free space twice
+// room promised to the files being loaded (file + index), not yet written: several files loaded together do not count the same free space twice
+const held = new Map();
 export const release = key => { held.delete(key); };
 export async function ensureRoom(bytes, key = "") {
   if (bytes < BIG) return;
@@ -66,7 +68,8 @@ const dir = async kind => (await root()).getDirectoryHandle(kind, { create: true
 
 // Writes all of `data` at `at` into a sync handle. A full disk (or the quota of the origin) does not always throw: write() can return fewer bytes than asked, and a file silently
 // cut short is unreadable later ("this file cannot be read"). A short write or a QuotaExceededError is the error.quota of the page, with the room needed and left.
-export function writeFull(ah, data, at) {                  // bytes really written (less than data.length: the disk or the quota is full)
+// bytes really written (less than data.length: the disk or the quota is full)
+export function writeFull(ah, data, at) {
   let done = 0;
   try { while (done < data.length) { const n = ah.write(data.subarray(done), { at: at + done }); if (!(n > 0)) break; done += n; } }
   catch (e) { if (!(e && e.name === "QuotaExceededError")) throw e; }
@@ -90,7 +93,8 @@ async function writeNow(kind, name, size, chunk, after) {
     ah.truncate(0);
     for (let off = 0; off < size; off += STEP) { const b = await chunk(off, Math.min(STEP, size - off)); await writeAll(ah, b, off); if (after) await after(b, off); }
     ah.flush();
-    if (ah.getSize() < size) throw await quotaError(size);        // the browser took the writes but the file is shorter (quota reached)
+    // the browser took the writes but the file is shorter (quota reached)
+    if (ah.getSize() < size) throw await quotaError(size);
   } catch (e) {
     try { ah.close(); } catch (_) { /* already closed */ }
     try { await d.removeEntry(name); } catch (_) { /* nothing to remove */ }
@@ -117,7 +121,8 @@ export async function put(kind, name, data) {
 export async function promote(kind, from, to) {
   await dropLease(kind, from); await dropLease(kind, to);
   const d = await dir(kind), fh = await d.getFileHandle(from);
-  if (kind === "idx" || kind === "feat") {                    // a file of a newer program (another tab, a later version of the page) is never replaced by an older one
+  // a file of a newer program (another tab, a later version of the page) is never replaced by an older one
+  if (kind === "idx" || kind === "feat") {
     const old = await d.getFileHandle(to).then(h => h.getFile(), () => null), info = old && await infoDi(kind, old).catch(() => null);
     if (nuovo(kind, info)) { try { await d.removeEntry(from); } catch (_) { /* optional */ } throw fail("error.newerFormat", { file: to, version: info.versione_formato }); }
   }
@@ -140,7 +145,8 @@ async function openLease(l) {
   l.open = (async () => {
     try {
       const ah = await (await (await dir(l.kind)).getFileHandle(l.name)).createSyncAccessHandle();
-      if (l.dead) { try { ah.close(); } catch (_) { /* already closed */ } return; }          // dropped while it was opening: never keep a handle nobody owns
+      // dropped while it was opening: never keep a handle nobody owns
+      if (l.dead) { try { ah.close(); } catch (_) { /* already closed */ } return; }
       l.ah = ah; l.last = performance.now(); arm(l);
     } catch (_) { l.ah = null; }
     finally { l.open = null; }

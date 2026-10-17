@@ -1,4 +1,4 @@
-//! `api.formula_info`: the molecular formula of the parent from a formula or a SMILES (`TP_Mine/py/tpmine/chem.py::neutral_formula`,
+//! `api.formula_info`: the molecular formula of the parent from a formula or a SMILES (`neutral_formula`,
 //! `smiles_formula`), its neutral mass and the m/z of the ion. The error texts are those of Python (`str(e)`), since the page shows them.
 
 use mzlab_core::elements::{fmt, ion_mz, mass, mass_of, parse_formula, Formula};

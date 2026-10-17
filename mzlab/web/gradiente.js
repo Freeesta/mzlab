@@ -89,7 +89,8 @@ function bind(f, again) {
         const pts = draft.filter(r => String(r.t).trim() !== "" || String(r.b).trim() !== "").map(r => ({ t: r.t, b: r.b, flow: r.flow === "" ? null : r.flow }));
         save({ source: "manual", points: pts.map(p => ({ t: String(p.t).replace(",", "."), b: String(p.b).replace(",", "."), flow: p.flow == null ? null : String(p.flow).replace(",", ".") })) }, Q("#grad-all").checked);
       };
-      ed.onpaste = async e => {                              // a block copied from Excel: time TAB %B [TAB flow] per line
+      // a block copied from Excel: time TAB %B [TAB flow] per line
+      ed.onpaste = async e => {
         const t = (e.clipboardData || /** @type {any} */ (window).clipboardData).getData("text"); if (!/\n|\t/.test(t.trim())) return;
         e.preventDefault();
         try { draft = toDraft(await parse(t, "csv")); paint(); } catch (er) { err(er); }
@@ -136,7 +137,8 @@ function curve(p) {
   const cur = ms.find(x => x.f === E.files[E.cur]) || ms[0];
   return { m: cur.m, note: fs.length > 1 ? T("grad.legend.one", { file: cur.f.label }) : null };
 }
-function at(m, t) {                                          // {b, flow?} on the straight ramps; null outside the programmed time
+// {b, flow?} on the straight ramps; null outside the programmed time
+function at(m, t) {
   const pts = m.points; if (!pts.length || t < pts[0].t || t > pts[pts.length - 1].t) return null;
   /** @type {{ b: number, flow?: number } | null} */ let r = null;
   for (let i = 0; i < pts.length - 1; i++) {
@@ -200,7 +202,8 @@ function draw(p, g, a) {
   const { W, H, X, x0, x1 } = a, ph = H - M.t - M.b, Y = v => H - M.b - v / 100 * ph, col = colorOf(p), d = delayOf(p), z = typeof fz === "function" ? fz() : 1;
   g.save();
   g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 1; g.font = fpx(12);
-  g.beginPath(); g.moveTo(W - M.r + .5, M.t); g.lineTo(W - M.r + .5, H - M.b); g.stroke();                       // the right axis
+  // the right axis
+  g.beginPath(); g.moveTo(W - M.r + .5, M.t); g.lineTo(W - M.r + .5, H - M.b); g.stroke();
   g.textAlign = "left";
   for (const v of [0, 25, 50, 75, 100]) { g.beginPath(); g.moveTo(W - M.r, Math.round(Y(v)) + .5); g.lineTo(W - M.r + 4, Math.round(Y(v)) + .5); g.stroke(); g.fillText(String(v), W - M.r + 7, Y(v) + 3.5 * z); }
   g.save(); g.translate(W - 4, (M.t + H - M.b) / 2); g.rotate(Math.PI / 2); g.textAlign = "center"; g.fillText("%B", 0, 0); g.restore();
@@ -211,7 +214,8 @@ function draw(p, g, a) {
     g.setLineDash(dash); g.lineWidth = w; g.stroke(); g.setLineDash([]);
     if (area) { g.lineTo(pts[pts.length - 1][0], Y(0)); g.lineTo(pts[0][0], Y(0)); g.closePath(); g.globalAlpha = 0.1; g.fill(); g.globalAlpha = 1; }
   };
-  if (d) { g.globalAlpha = 0.75; trace(0, 1, [2, 3], false); g.globalAlpha = 1; trace(d, 2, [], true); }       // programmed: thin dots; at the column: full
+  // programmed: thin dots; at the column: full
+  if (d) { g.globalAlpha = 0.75; trace(0, 1, [2, 3], false); g.globalAlpha = 1; trace(d, 2, [], true); }
   else trace(0, 2, [6, 3], true);
   g.restore();
   if (c.note) { g.save(); g.font = fpx(11); g.fillStyle = css("--muted"); g.textAlign = "right"; g.fillText(c.note, W - M.r - 6, M.t + 14 * z); g.restore(); }

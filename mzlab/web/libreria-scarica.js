@@ -8,7 +8,8 @@
 // assembled into `.mzlab/<id>.new`, checked as a whole and swapped for the old `<id>.mzlib` in one step: the old package stays until the new one is verified.
 
 const SCARICA = (() => {
-  const READER = 1;                                  // the highest .mzlib version this page reads (mzlab_lib::format::VERSION)
+  // the highest .mzlib version this page reads (mzlab_lib::format::VERSION)
+  const READER = 1;
   const TRIES = 2;
   const err = (key, params) => Object.assign(new Error(key), { key, params: params || {} });
   const hex = u8 => [...new Uint8Array(u8)].map(x => x.toString(16).padStart(2, "0")).join("");

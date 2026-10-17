@@ -1,4 +1,4 @@
-//! The one builder of the tree of an MSn file (`TP_Mine/py/tpmine/hr/msn.py`: `node_key`, `node_id`, the grouping of `build_tree` and
+//! The one builder of the tree of an MSn file (`node_key`, `node_id`, the grouping of `build_tree` and
 //! `find_parent`), without chemistry: scans → nodes (one per path of precursors) with their parent, and the consensus spectrum of a node
 //! (`consensus_arrays`). mzFinder (`mzlab_feat::legacy::msn`) puts formulas, calibration and atoms on it.
 
@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use crate::idxread::Scan;
 
-/// How the scans become nodes; the default is what `msn.py` does.
+/// How the scans become nodes; the default is what mzFinder does.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub enum Tol {
     /// Precursors rounded to the nominal mass (`node_key`).

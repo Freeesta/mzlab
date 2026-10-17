@@ -108,8 +108,24 @@ fn fingerprint(r: &mut dyn ReadAt, size: u64, mut p: Passata) -> Result<(String,
 
 /// Everything the index builder and the loading table need of an mzML: the scan table, the metadata objects and the fingerprints.
 pub fn prepare<R: ReadAt>(r: &mut R, size: u64, name: &str) -> Result<Prepared> {
+    prepare_con(r, size, name, None)
+}
+
+/// `prepare` with the `(sha256, probe)` of the file when the page took them while it copied the file (`Passata`): the file is then not read again for them.
+pub fn prepare_con<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    name: &str,
+    known: Option<(String, String)>,
+) -> Result<Prepared> {
     let t = scantable::read(&mut Windowed::new(r, size), size)?;
-    let (sha256, _, probe) = fingerprint(r, size, Passata::senza_sha1(size))?;
+    let (sha256, probe) = match known {
+        Some(k) => k,
+        None => {
+            let (sha256, _, probe) = fingerprint(r, size, Passata::senza_sha1(size))?;
+            (sha256, probe)
+        }
+    };
     let mut source = Out::default();
     source_head(&mut source, name, size, &probe, &sha256);
     source.raw("}");
@@ -342,16 +358,16 @@ pub fn indicizza_lettore_doppio(
     Ok(((st, p.sha256), (st_cen, p_cen.sha256)))
 }
 
-/// Native only: the fingerprints of the members are taken by a second thread (`ricetta` makes its own file set, since a reader does not cross threads)
+/// Native only: the fingerprints of the members are taken by a second thread (`recipe` makes its own file set, since a reader does not cross threads)
 /// while `lavoro` decodes the scans. `lavoro` gets the function that waits for them (to hand to `indicizza_lettore_con`); the members of the set
 /// it opens carry an empty SHA-1 (`senza_sha1`): the table does not read it. SHA-256 and SHA-1 are the same as `impronte` gives.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn con_impronte_parallele<R>(
-    ricetta: impl FnOnce() -> Result<FileSet> + Send,
+    recipe: impl FnOnce() -> Result<FileSet> + Send,
     lavoro: impl FnOnce(&mut dyn FnMut() -> Result<Vec<Impronta>>) -> Result<R>,
 ) -> Result<R> {
     std::thread::scope(|s| {
-        let mut h = Some(s.spawn(move || ricetta().and_then(|mut fs| impronte(&mut fs))));
+        let mut h = Some(s.spawn(move || recipe().and_then(|mut fs| impronte(&mut fs))));
         let mut attendi = || match h.take() {
             Some(h) => h
                 .join()

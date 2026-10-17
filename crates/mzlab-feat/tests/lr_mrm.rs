@@ -1,4 +1,4 @@
-//! The MRM integration of the low-resolution Dig: `find_peak` against the Python engine (`TP_Mine/py/tpmine/peaks.py`, values computed on this very
+//! The MRM integration of the low-resolution Dig: `find_peak` against the former Python engine (values computed on this very
 //! trace) and the tables of `analyse` on three synthetic files.
 
 use mzlab_core::json::{self, Value};

@@ -616,11 +616,12 @@ pub fn composition(query: &str) -> String {
 }
 
 /// What the index builder and the loading table need of an uploaded mzML, without Python (`mzlab-core::upload`): the scan table as the eight inputs of
-/// `build_mzidx` (levels, polarities, rt, tic, rows, source, run, hr1) and, at the end, the SHA-256 of the file. `read(offset, length)` gives the bytes.
+/// `build_mzidx` (levels, polarities, rt, tic, rows, source, run, hr1) and, at the end, the SHA-256 of the file. `read(offset, length)` gives the bytes. `sha256` and `probe`, when both given, are the fingerprints taken during the copy: the file is not read again for them.
 #[wasm_bindgen]
-pub fn prepare_upload(size: f64, read: Function, name: &str) -> Result<js_sys::Array, JsValue> {
+pub fn prepare_upload(size: f64, read: Function, name: &str, sha256: Option<String>, probe: Option<String>) -> Result<js_sys::Array, JsValue> {
     let mut r = JsReader { read };
-    let p = mzlab_core::upload::prepare(&mut r, size as u64, name).map_err(|e| error_json(&e))?;
+    let known = sha256.zip(probe);
+    let p = mzlab_core::upload::prepare_con(&mut r, size as u64, name, known).map_err(|e| error_json(&e))?;
     let t = &p.table;
     let f8 = |v: &[f64]| Uint8Array::from(&v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>()[..]);
     let out = js_sys::Array::new();

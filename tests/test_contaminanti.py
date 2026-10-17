@@ -32,7 +32,7 @@ def test_valori_calcolati_del_prompt():
     assert one("peg", "[M+NH4]+", 8) == pytest.approx(388.2541, abs=5e-5)
 
 
-def test_serie_peg_e_doppia_carica():
+def test_peg_series_and_double_charge():
     a, b = one("peg", "[M+NH4]+", 8), one("peg", "[M+NH4]+", 9)
     assert b - a == pytest.approx(44.02621, abs=1e-4)
     # [M+2H]2+ of n=12: (M + 2 H+) / 2
@@ -80,7 +80,7 @@ NODE = shutil.which("node")
 
 
 @pytest.mark.skipif(not NODE, reason="node non disponibile")
-def test_motore_liste_con_node(tmp_path):
+def test_list_engine_with_node(tmp_path):
     code = r"""
 const L = require(process.argv[1]);
 const items = JSON.parse(require('fs').readFileSync(process.argv[2], 'utf8'));

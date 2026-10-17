@@ -3,7 +3,8 @@
 // One undo / redo stack for the Dati view: Ctrl/Cmd+Z undoes the last action of the visible tab, Shift+Ctrl/Cmd+Z or Ctrl+Y does it again.
 // Classic script, loaded after picchi.js. An entry = { n, p, tipo, etichetta, prima, dopo }: a small snapshot of the touched part only
 // (zoom, the JSON of p.ints, the correction fields), never traces, spectra or p._a. No persistence: reload empties it.
-let HSEQ = 0;                                                             // order of the undoable actions (also used by affianca.js)
+// order of the undoable actions (also used by affianca.js)
+let HSEQ = 0;
 
 /** The stack itself (no DOM, tested in Node): at most maxN entries / maxB characters of snapshots, the oldest are dropped. */
 class StoriaPila {
@@ -44,7 +45,8 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   };
   const fullscreen = () => E.panels.find((/** @type {any} */ q) => q.el && q.el.classList.contains("max"));
   /** Visible now: the panel is open, in the visible tab, and in full screen only that panel. @param {any} e */
-  const visibile = e => { if (e.tipo === "tolto" && e.tab !== undefined) return !fullscreen() && e.tab === E.tab;      // a removed file or closed panel belongs to a tab, not to a live panel
+  // a removed file or closed panel belongs to a tab, not to a live panel
+  const visibile = e => { if (e.tipo === "tolto" && e.tab !== undefined) return !fullscreen() && e.tab === E.tab;
     if (!E.panels.includes(e.p)) return false; const m = fullscreen(); return m ? e.p === m : (e.p.tab || E.tab) === E.tab; };
   /** @param {any} p @param {string} tipo @param {any} [snap] */
   const cattura = (p, tipo, snap) => tipo === "int" ? (snap ?? intSnap(p))
@@ -52,7 +54,8 @@ const STORIA = typeof document === "undefined" ? null : (() => {
     : JSON.stringify({ zoom: p.zoom || null, zoomY: p.zoomY || null });
   /** Puts a snapshot back and returns the one it replaced. @param {any} e @param {string} st */
   const ripristina = (e, st) => {
-    if (e.tipo === "tolto") { if (st.charAt(0) === "U") { e.undo(); return "R"; } e.redo(); return "U" + e.dati; }     // prima = "U" + data (its weight), dopo = "R"
+    // before = "U" + data (its weight), after = "R"
+    if (e.tipo === "tolto") { if (st.charAt(0) === "U") { e.undo(); return "R"; } e.redo(); return "U" + e.dati; }
     const p = e.p, cur = cattura(p, e.tipo), o = JSON.parse(st);
     if (e.tipo === "int") { p.ints = o; p.isel = null; }
     else if (e.tipo === "campi") { KEYS.forEach(k => { if (k in o) p[k] = o[k]; else delete p[k]; }); if (typeof ctl === "function") ctl(p); if (typeof syncTb === "function") syncTb(p); }
@@ -74,7 +77,8 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   /** @param {(e: any) => boolean} [solo] */
   function annulla(solo) {
     const ok = solo ? (/** @type {any} */ e) => visibile(e) && solo(e) : visibile, i = StoriaPila.ultimo(pila.v, ok), top = i < 0 ? 0 : pila.v[i].n;
-    if (!solo && window.AFFIANCA && AFFIANCA.ultimo() > top) { AFFIANCA.annulla(); sync(); return true; }      // the last thing done was a change of the arrangement
+    // the last thing done was a change of the arrangement
+    if (!solo && window.AFFIANCA && AFFIANCA.ultimo() > top) { AFFIANCA.annulla(); sync(); return true; }
     const e = pila.annulla(ok, ripristina);
     if (!e) { if (!solo) say(T("storia.niente")); return false; }
     presa(e); say(T("storia.undone", { what: etichetta(e) })); sync(); return true;
@@ -113,11 +117,14 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   document.addEventListener("keydown", e => {
     const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
     if (!mod || e.altKey || (k !== "z" && k !== "y") || (k === "y" && (e.shiftKey || e.metaKey))) return;
-    if (idle(/** @type {Element | null} */ (e.target))) return;                                     // the browser undoes its own text
+    // the browser undoes its own text
+    if (idle(/** @type {Element | null} */ (e.target))) return;
     const redo = k === "y" || e.shiftKey;
-    if (inDati()) { e.preventDefault(); if (redo) ripeti(); else annulla(); return; }                // always intercepted: Safari would reopen the closed tab
+    // always intercepted: Safari would reopen the closed tab
+    if (inDati()) { e.preventDefault(); if (redo) ripeti(); else annulla(); return; }
     const kf = document.getElementById("kframe");
-    if (kf && kf.offsetParent && window.TPDraw && TPDraw.undo) { e.preventDefault(); TPDraw.undo(redo); }   // Disegno with the focus outside the editor
+    // Disegno with the focus outside the editor
+    if (kf && kf.offsetParent && window.TPDraw && TPDraw.undo) { e.preventDefault(); TPDraw.undo(redo); }
   });
   return { registra, tolto, segui, annulla, ripeti, sync, svuota: () => { pila.svuota(); sync(); }, pila };
 })();

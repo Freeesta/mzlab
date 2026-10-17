@@ -108,9 +108,11 @@
   const ATTRS = [["data-i18n-title", "title"], ["data-i18n-placeholder", "placeholder"], ["data-i18n-aria-label", "aria-label"]];
   function apply(rootEl) {
     const r = rootEl || (typeof document !== "undefined" ? document : null); if (!r) return;
-    const P = { app: (typeof window !== "undefined" && window.APP_NAME) || "" };      // {app} = the visible name of the program (appname.js)
+    // {app} = the visible name of the program (appname.js)
+    const P = { app: (typeof window !== "undefined" && window.APP_NAME) || "" };
     r.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n"), P); });
-    r.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html"), P); });   // catalog text with b/i/u/code/sub/sup/a/br (trusted)
+    // catalog text with b/i/u/code/sub/sup/a/br (trusted)
+    r.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html"), P); });
     ATTRS.forEach(([a, target]) => r.querySelectorAll("[" + a + "]").forEach(el => el.setAttribute(target, t(el.getAttribute(a), P))));
   }
   function setLangAttr() { if (typeof document !== "undefined") document.documentElement.setAttribute("lang", lang); }
@@ -126,7 +128,8 @@
   }
 
   const loc = typeof location !== "undefined" ? location : {}, nav = typeof navigator !== "undefined" ? navigator : {};
-  lang = LANGS.includes(root.I18N_LANG) ? root.I18N_LANG : detect(loc.search, store.get(), nav.languages && nav.languages.length ? Array.from(nav.languages) : nav.language);   // I18N_LANG: set before this script by pages that exist in one language only (the Teoria)
+  // I18N_LANG: set before this script by pages that exist in one language only (the Teoria)
+  lang = LANGS.includes(root.I18N_LANG) ? root.I18N_LANG : detect(loc.search, store.get(), nav.languages && nav.languages.length ? Array.from(nav.languages) : nav.language);
   setLangAttr();
   if (typeof document !== "undefined") {
     const go = () => apply(document);

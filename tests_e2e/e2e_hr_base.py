@@ -42,7 +42,7 @@ try:
             assert "Alta risoluzione non disponibile per prova: aperto come bassa risoluzione" in t
         step("fallback notice (once per file)", notice)
         def reload():
-            pg.evaluate("uiSave(true)"); pg.wait_for_timeout(1500); pg.reload(); pg.wait_for_timeout(6000)
+            saved(pg); pg.reload(); attendi(pg, "typeof E !== 'undefined' && E.files.length >= 5", 90000); ready(pg)
             v = pg.evaluate("[E.files.length,HR.prof(E.files.find(f=>f.file.includes('Exploris')),1).dec]"); assert v[0] >= 5 and v[1] == 5, v
         step("after a reload the profiles are back", reload)
         

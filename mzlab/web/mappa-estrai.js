@@ -6,7 +6,8 @@
 // found for the student: the position is always theirs (principle 1). The data are the ones of /api/xic and /api/spectrum.
 const T = (k, o) => I18N.t(k, o);
 const MIN_RT = 0.004;                                   // smallest RT window (min)
-const minMz = p => window.HR && HR.isHr(p._a.f, p._a.f.lv || 1) ? 1e-4 : 0.05;       // smallest m/z window (Da): a few ppm in high resolution
+// smallest m/z window (Da): a few ppm in high resolution
+const minMz = p => window.HR && HR.isHr(p._a.f, p._a.f.lv || 1) ? 1e-4 : 0.05;
 const ex = p => MAPPA.st(p).ex;
 const dp = p => window.HR && HR.isHr(p._a.f, p._a.f.lv || 1) ? 4 : 2;
 const num = (v, d) => v == null || !Number.isFinite(v) ? "–" : v.toFixed(d);
@@ -42,10 +43,13 @@ function clampBox(p, b) {
   const a = p._a, MIN_MZ = minMz(p), lim = (lo, hi, min, f0, f1) => { let w = Math.max(hi - lo, min); if (lo < f0) { lo = f0; hi = lo + w; } if (hi > f1) { hi = f1; lo = Math.max(f0, hi - w); } return [lo, hi]; };
   [b.rt0, b.rt1] = lim(b.rt0, b.rt1, MIN_RT, a.full[0], a.full[1]); [b.mz0, b.mz1] = lim(b.mz0, b.mz1, MIN_MZ, a.fullY[0], a.fullY[1]);
 }
-const px = (p, b) => { const a = p._a; return { x0: a.X(b.rt0), x1: a.X(b.rt1), y0: a.Y(b.mz1), y1: a.Y(b.mz0) }; };       // pixel rectangle (y0 = top)
-function grab(p, x, y, tol) {                                          // what is at (x, y): an edge, a corner, the inside, or nothing
+// pixel rectangle (y0 = top)
+const px = (p, b) => { const a = p._a; return { x0: a.X(b.rt0), x1: a.X(b.rt1), y0: a.Y(b.mz1), y1: a.Y(b.mz0) }; };
+// what is at (x, y): an edge, a corner, the inside, or nothing
+function grab(p, x, y, tol) {
   const b = ex(p).box, r = px(p, b);
-  const hh = Math.max(r.y1 - r.y0, 18), hw = Math.max(r.x1 - r.x0, 18), cy = (r.y0 + r.y1) / 2, cx = (r.x0 + r.x1) / 2;      // a thin box is easy to hit: its hit area is at least 18 px
+  // a thin box is easy to hit: its hit area is at least 18 px
+  const hh = Math.max(r.y1 - r.y0, 18), hw = Math.max(r.x1 - r.x0, 18), cy = (r.y0 + r.y1) / 2, cx = (r.x0 + r.x1) / 2;
   const y0 = cy - hh / 2, y1 = cy + hh / 2, x0 = cx - hw / 2, x1 = cx + hw / 2, ty = Math.min(tol, hh / 3), tx = Math.min(tol, hw / 3);
   if (x < x0 - tx || x > x1 + tx || y < y0 - ty || y > y1 + ty) return null;
   const L = Math.abs(x - x0) <= tx, R = Math.abs(x - x1) <= tx, Tp = Math.abs(y - y0) <= ty, B = Math.abs(y - y1) <= ty;
@@ -67,12 +71,14 @@ export function down(p, e, x, y) {
   const up = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", up); };
   addEventListener("mousemove", mv); addEventListener("mouseup", up); return true;
 }
-export function touch(p, x, y) {                                       // a finger on the box moves it; returns the function that follows the finger, or null
+// a finger on the box moves it; returns the function that follows the finger, or null
+export function touch(p, x, y) {
   const s = ex(p); if (!s) return null; const h = grab(p, x, y, 16); if (!h) return null;
   const start = { x, y, box: { ...s.box } }; return (nx, ny) => drag(p, h, start, nx, ny);
 }
 export function hover(p, x, y) { const s = ex(p); if (!s) return false; p.cv.style.cursor = cursorOf(grab(p, x, y, 6)); return true; }
-export function key(p, e) {                                            // arrows move the box by one scan / one bin, Alt + arrows resize it
+// arrows move the box by one scan / one bin, Alt + arrows resize it
+export function key(p, e) {
   const s = ex(p), a = p._a; if (!s || !a || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return false;
   const MIN_MZ = minMz(p), b = s.box, dir = e.key === "ArrowRight" || e.key === "ArrowUp" ? 1 : -1, dt = scanStep(), dm = Math.max(MIN_MZ, (b.mz1 - b.mz0) / 4), horiz = e.key === "ArrowLeft" || e.key === "ArrowRight";
   if (e.altKey) { if (horiz) { b.rt0 -= dir * dt / 2; b.rt1 += dir * dt / 2; } else { b.mz0 -= dir * dm / 2; b.mz1 += dir * dm / 2; } }
@@ -89,11 +95,13 @@ async function load(p) {
   s.k = f.k;
   try {
     const [xj, sj] = await Promise.all([J(`api/xic?k=${f.k}&mz=${c}&tol=${tol}&level=${lv}`), J(`api/spectrum?k=${f.k}&rt0=${b.rt0}&rt1=${b.rt1}&level=${lv}&precursor=&bin=0.1`)]);
-    if (ex(p) !== s || gen !== s.gen) return;                           // the box has moved again: the newest answer is on its way
+    // the box has moved again: the newest answer is on its way
+    if (ex(p) !== s || gen !== s.gen) return;
     const tr = (xj.traces || [])[0];
     s.xic = tr ? { rt: tr.rt, y: tr.y, c, tol } : null;
     const m = MAPPA.st(p);
-    if (s.fresh && m.fq && tr) {                                        // a feature was chosen: the RT window goes to the edges of its peak, then the plots are asked again
+    // a feature was chosen: the RT window goes to the edges of its peak, then the plots are asked again
+    if (s.fresh && m.fq && tr) {
       s.fresh = false; const ed = autoEdges({ x: tr.rt, y: tr.y }, m.fq.rt); m.fedges = ed ? { rt0: ed[0], rt1: ed[1], auto: true } : null;
       if (ed) { s.box.rt0 = ed[0]; s.box.rt1 = Math.max(ed[1], ed[0] + MIN_RT); clampBox(p, s.box); changed(p); return; }
     }
@@ -101,21 +109,24 @@ async function load(p) {
     MAPPA.redraw(p); table(p);
   } catch (e) { /* nothing to show: the plots keep their title */ }
 }
-export function numbers(p) { const s = ex(p); return s && s.num ? { win: s.win, ...s.num } : null; }       // read by the tests
+// read by the tests
+export function numbers(p) { const s = ex(p); return s && s.num ? { win: s.win, ...s.num } : null; }
 
 // ---------------------------------------------------------------- drawing
 export function overlay(p, g) {
   const s = ex(p), a = p._a; if (!s || !a) return;
   const r = px(p, s.box), L = a.W - M.r, Bt = a.H - M.b, ac = css("--accent"), ink = css("--ink");
   g.save();
-  g.setLineDash([5, 4]); g.strokeStyle = ac; g.lineWidth = 1; g.globalAlpha = .8;                    // the guides: the edges of the box continue to the axes of the two plots
+  // the guides: the edges of the box continue to the axes of the two plots
+  g.setLineDash([5, 4]); g.strokeStyle = ac; g.lineWidth = 1; g.globalAlpha = .8;
   g.beginPath(); for (const x of [r.x0, r.x1]) { g.moveTo(Math.round(x) + .5, r.y1); g.lineTo(Math.round(x) + .5, Bt); }
   for (const y of [r.y0, r.y1]) { g.moveTo(r.x1, Math.round(y) + .5); g.lineTo(L, Math.round(y) + .5); } g.stroke(); g.setLineDash([]);
   g.globalAlpha = .14; g.fillStyle = ac; g.fillRect(r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0);
   g.globalAlpha = 1; g.lineWidth = 2; g.strokeStyle = ac; g.strokeRect(r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0);
   g.fillStyle = css("--panel"); g.lineWidth = 1.5; for (const [x, y] of [[r.x0, r.y0], [r.x1, r.y0], [r.x0, r.y1], [r.x1, r.y1]]) { g.fillRect(x - 4, y - 4, 8, 8); g.strokeRect(x - 4, y - 4, 8, 8); }
   const n = s.num;
-  if (n && n.rtMax != null && n.mzMax != null) {                                                       // where the maximum of the window is: the two coordinates go to the axes
+  // where the maximum of the window is: the two coordinates go to the axes
+  if (n && n.rtMax != null && n.mzMax != null) {
     const x = a.X(n.rtMax), y = a.Y(n.mzMax); g.strokeStyle = ink; g.lineWidth = 1; g.setLineDash([2, 3]);
     g.beginPath(); g.moveTo(x + .5, y); g.lineTo(x + .5, Bt); g.moveTo(x, y + .5); g.lineTo(L, y + .5); g.stroke(); g.setLineDash([]);
     g.fillStyle = ink; g.beginPath(); g.arc(x, y, 3, 0, 2 * Math.PI); g.fill();
@@ -129,20 +140,24 @@ function plotArea(p, c) {
 }
 export function margins(p) {
   const s = ex(p); if (!s || !p._a) return; const m = MAPPA.st(p);
-  if (s.k !== p._a.f.k) { s.k = p._a.f.k; load(p); }                      // another file: the plots are asked again for the same box
+  // another file: the plots are asked again for the same box
+  if (s.k !== p._a.f.k) { s.k = p._a.f.k; load(p); }
   if (!m.xc.hidden) drawXic(p, m.xc, s);
   if (!m.sp.hidden) drawSpec(p, m.sp, s);
 }
-function drawXic(p, c, s) {                                           // the same RT axis as the map; the integrated zone is filled
+// the same RT axis as the map; the integrated zone is filled
+function drawXic(p, c, s) {
   const { g, W, H, a } = plotArea(p, c), mt = 10, mb = 22, ink = css("--muted"), ac = css("--accent"), x = v => M.l + (v - a.x0) / (a.x1 - a.x0) * (W - M.l - M.r);
   g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink; g.beginPath(); g.moveTo(M.l, H - mb + .5); g.lineTo(W - M.r, H - mb + .5); g.stroke();
   g.textAlign = "center"; for (const t of nice(a.x0, a.x1, 8)) { const xx = x(t); if (xx >= M.l - 1 && xx <= W - M.r + 1) g.fillText(String(+t.toFixed(2)), xx, H - mb + 13); }
   g.textAlign = "left"; const b = s.box, xa = x(b.rt0), xb = x(b.rt1);
-  g.globalAlpha = .14; g.fillStyle = ac; g.fillRect(xa, mt, xb - xa, H - mt - mb); g.globalAlpha = 1;       // the RT window of the box, for the eye
+  // the RT window of the box, for the eye
+  g.globalAlpha = .14; g.fillStyle = ac; g.fillRect(xa, mt, xb - xa, H - mt - mb); g.globalAlpha = 1;
   const t = s.xic; if (!t || !t.rt.length) { g.fillStyle = css("--ink"); g.fillText(T("mapex.xic.title"), M.l + 4, mt + 8); guides(g, xa, xb, mt, H - mb, ac); return; }
   let ymax = 0; for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1 && t.y[i] > ymax) ymax = t.y[i];
   const y = v => H - mb - v / (ymax || 1) * (H - mt - mb);
-  g.beginPath(); let first = true, started = false;                                                       // the filled area: between the two edges of the box
+  // the filled area: between the two edges of the box
+  g.beginPath(); let first = true, started = false;
   const pts = []; for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1) pts.push(i);
   g.fillStyle = ac; g.globalAlpha = .45;
   const inside = pts.filter(i => t.rt[i] >= b.rt0 && t.rt[i] <= b.rt1);
@@ -153,7 +168,8 @@ function drawXic(p, c, s) {                                           // the sam
   if (s.num && s.num.rtMax != null && s.num.rtMax >= a.x0 && s.num.rtMax <= a.x1) { g.strokeStyle = css("--ink"); g.setLineDash([2, 3]); g.beginPath(); g.moveTo(x(s.num.rtMax) + .5, mt); g.lineTo(x(s.num.rtMax) + .5, H - mb); g.stroke(); g.setLineDash([]); }
 }
 const guides = (g, xa, xb, y0, y1, col) => { g.save(); g.strokeStyle = col; g.setLineDash([5, 4]); g.beginPath(); for (const xx of [xa, xb]) { g.moveTo(Math.round(xx) + .5, y0); g.lineTo(Math.round(xx) + .5, y1); } g.stroke(); g.restore(); };
-function drawSpec(p, c, s) {                                          // the same m/z axis as the map, turned on its side; the m/z window is a band
+// the same m/z axis as the map, turned on its side; the m/z window is a band
+function drawSpec(p, c, s) {
   const { g, W, H, a } = plotArea(p, c), ink = css("--muted"), ac = css("--accent"), x0 = 6, x1 = W - 8, b = s.box;
   const Y = v => H - M.b - (v - a.y0) / (a.y1 - a.y0) * (H - M.t - M.b);
   g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink; g.beginPath(); g.moveTo(x0 + .5, M.t); g.lineTo(x0 + .5, H - M.b); g.stroke();
@@ -218,7 +234,8 @@ export async function selectFeat(p, q) {
   s.box = { mz0: q.mz - d, mz1: q.mz + d, rt0: m.fedges ? m.fedges.rt0 : q.rt - w, rt1: m.fedges ? m.fedges.rt1 : q.rt + w }; s.fresh = !m.fedges; clampBox(p, s.box); changed(p);
 }
 export function featClear(p) { const m = MAPPA.st(p); m.fsel = null; m.fq = null; m.fedges = null; if (m.exBox) table(p); MAPPA.redraw(p); }
-function found(p, box) {                                               // «How it was found»: window, peak with its edges, the filters with their thresholds
+// «How it was found»: window, peak with its edges, the filters with their thresholds
+function found(p, box) {
   const m = MAPPA.st(p), s = ex(p), q = m.fq; let el = box.querySelector(".mzex-found"); if (el) el.remove(); if (!q || !s) return;
   const n = s.num || {}, d = dp(p), ppm = q.ppm ?? 5, dm = q.mz * ppm * 1e-6, ed = m.fedges;
   const rows = (q.filters || []).map(f => {

@@ -35,15 +35,13 @@ nat.mkdir()
 subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "finder", "--", str(nat), *map(str, idx), "--parent", PARENT["neutral"],
                 "--rules", str(ROOT / "TP_Mine" / "data" / "regole_tp.json")], cwd=ROOT, check=True, capture_output=True)
 native = {"run": json.loads((nat / "run.json").read_text()), "detail": json.loads((nat / "detail.json").read_text())}
-# the MSn file of the standard (a structure with the formula of the parent) and the tree of the Python engine (tools/finder_riferimento.py) it is compared with
-sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
-import finder_riferimento as FR  # noqa: E402
-from types import SimpleNamespace  # noqa: E402
-SMI, ION = "C1CCC(CC1)N(CC)C(=O)c1ccc(cc1)OCCN1CCCC1", "C21H33N2O2"
+# the MSn file of the standard (a structure with the formula of the parent) and the frozen answers of the former Python engine on it
+sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(ROOT / "TP_Mine" / "tests"))
+import msn_synth  # noqa: E402
+G = json.loads((ROOT / "tests" / "golden" / "finder_msn_e2e.json").read_text(encoding="utf-8"))
+SMI, ION = G["smiles"], G["ion"]
 (tmp / "msn").mkdir()
-msn_ml = FR.MSY.write_msn(tmp / "msn" / "std_msn.mzML", FR.msn_nodes(numpy.random.default_rng(7), ION, SMI), n_scans=5)
-r = FR.Run(str(msn_ml)); TREE = FR.MS.build_tree(r, ION, SMI); r.close()
-EX = SimpleNamespace(tree=TREE, smiles=SMI)
+msn_ml = msn_synth.write_msn(tmp / "msn" / "std_msn.mzML", {tuple(tuple(x) for x in k): [tuple(x) for x in peaks] for k, peaks in G["nodes"]}, n_scans=5)
 def ties(a, b, at):
     """top_sites: the order of sites whose log-likelihoods differ by rounding only (the sums of numpy) is free; the last group may be cut anywhere"""
     ll = lambda x: next(v for v in x.values() if isinstance(v, float))
@@ -75,17 +73,6 @@ def close(a, b, at=""):
     else:
         assert a == b, (at, a, b)
 
-
-def py_localization(d, library):
-    """what the Python engine puts in detail.localization for the candidate of detail `d` (its ion = the neutral formula + H)"""
-    els = TREE.els
-    v = FR.FO.vec(d["row"]["formula"], els); v[els.index("H")] += 1
-    m2 = d["ms2"]["candidate"]
-    r = FR.LZ.localize(FR.FO.fmt(v, els), ION, m2["mz"], m2["rel"], library, FR.FO.FormulaSpace(v, els), groups=None, tp_mz=d["row"]["mz"])
-    r["n_atoms"] = TREE.subs.mol.n
-    if r.get("ok"):
-        r["n_groups"] = sum(1 for g in FR.LZ.default_groups(TREE.subs.mol).values() if g & set(r["region_atoms"]))
-    return FR._plain(r)
 
 # the low-resolution series (TP_Mine/tests/lr_synth.py) and its Dig by the native example of the .wasm (the same pipeline)
 sys.path.insert(0, str(ROOT / "TP_Mine" / "tests")); import lr_synth  # noqa: E402
@@ -245,26 +232,24 @@ try:
             call = lambda fn, *a: pg.evaluate("([fn, a]) => window.TPCALL(fn, ...a)", [fn, list(a)])
             run = call("run", files, {"name": "parent", "smiles": SMI}, {}, "")
             assert [x["name"] for x in run["files"]] == [x["name"] for x in got["files"]], run["files"]
-            close(run["tree"], FR._plain(FR.ExperimentHR._tree_summary(EX)), "tree")
-            close(run["calibration"], FR._plain(TREE.cal.as_dict()), "calibration")
+            close(run["tree"], G["tree"], "tree")
+            close(run["calibration"], G["calibration"], "calibration")
             close(call("msn_tree"), run["tree"], "msn_tree")
-            close(call("frag_tree"), FR._plain(FR.FT._hr_msn(EX)), "frag_tree")
+            close(call("frag_tree"), G["frag_tree"], "frag_tree")
             ds = [call("detail", x["id"]) for x in run["rows"][:12]]
-            pm = next((d["ms2"]["parent"] for d in ds if d.get("ms2")), None)     # the synthetic series has no MS2 of the parent in the Dig: then none is localised
-            library = pm and FR.iimn.build_library(TREE, dda_peaks=(numpy.array(pm["mz"]), numpy.array(pm["rel"])))
             rows = {x["id"]: x for x in run["rows"]}
             for d in ds:
                 if not (d.get("ms2") and d["row"]["formula"]):
                     assert d["localization"] is None and rows[d["id"]]["region"] is None, d["id"]
-                    close(call("frag_tree_compare", d["id"]), FR._plain(FR.FT.compare_hr(FR.FT._hr_msn(EX), None)), f"compare {d['id']}")
+                    close(call("frag_tree_compare", d["id"]), G["compare_none"], f"compare {d['id']}")
                     continue
-                want = py_localization(d, library)
+                want = G["localization"][str(d["id"])]["l"]
                 close(d["localization"], want, f"localization {d['id']}")
                 close(d["ms2"]["evidence"], want.get("evidence", []), f"evidence {d['id']}")
                 ok = want.get("ok")
                 assert rows[d["id"]]["region"] == (want["region"] if ok else None) and rows[d["id"]]["margin"] == (round(want["margin"], 2) if ok else None), ("row", d["id"])
-                close(call("frag_tree_compare", d["id"]), FR._plain(FR.FT.compare_hr(FR.FT._hr_msn(EX), want)), f"compare {d['id']}")
-        step("run with an MSn file: tree, calibration, localization, frag_tree and frag_tree_compare (= the Python)", msn_standard)
+                close(call("frag_tree_compare", d["id"]), G["localization"][str(d["id"])]["cmp"], f"compare {d['id']}")
+        step("run with an MSn file: tree, calibration, localization, frag_tree and frag_tree_compare (= the frozen Python answers)", msn_standard)
         def lr_series():
             pg.set_input_files("#tp-in", [f["path"] for f in lrs])
             pg.wait_for_function("[...document.querySelectorAll('#tp-files tr')].filter(r => r.textContent.trim().startsWith('lr_')).length >= %d" % len(lrs), timeout=300000)
@@ -279,7 +264,7 @@ try:
             assert t == {"ok": False, "mode": "lr", "note": "no MS2 of the parent in the files", "nodes": []}, t
         step("a low-resolution series: the Dig and the details equal the native example's", lr_series)
         def lr_ms2_mrm():
-            import dati_sintetici as DS; from valida import lr_sintetici as LS; from tpmine import demo
+            import dati_sintetici as DS; from valida import lr_sintetici as LS; import finder_demo as demo
             rng = numpy.random.default_rng(3); pm = demo.PARENT_MZ + demo.SHIFT
             epi, std, t0 = (tmp / "lr" / n for n in ("lr_EPI.mzML", "lr_MRM-std.mzML", "lr_MRM-t0.mzML"))
             DS._write(epi, [DS._spec(i, 8.8 + 0.02 * i, numpy.array([pm - 61, pm - 44, pm - 17]), numpy.array([120., 500., 900.]) * rng.normal(1, 0.05), level=2, prec=pm, ce=30) for i in range(21)], [])

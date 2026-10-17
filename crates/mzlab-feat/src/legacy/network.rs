@@ -1,4 +1,4 @@
-//! The network of mass differences of the Dig (`hr/network.py::mass_network`): an edge from one ion to another for every rule whose change of formula takes
+//! The network of mass differences of the Dig (the `mass_network` of mzFinder): an edge from one ion to another for every rule whose change of formula takes
 //! the formula of the first to the formula of the second (one step); of two ions the edge goes from the one that peaks first. The MS2 of the edge (shifted
 //! fragments) is that of the parent against the product; the precursors of two steps or related by MS2 are not drawn.
 
