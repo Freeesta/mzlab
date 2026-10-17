@@ -92,7 +92,7 @@ Ogni pacchetto è autosufficiente e si consegna in una PR con la sua misura `ben
 - File: nuovo `crates/mzlab-core/src/maptiles.rs` + rotta in `maproute.rs`; `mzlab-wasm` per salvare/leggere le tessere; parità in `crates/mzlab-core/tests/` contro `region_map` su griglie allineate (Rust contro Rust, nessun Python nuovo).
 - Guadagno: ogni zoom e spostamento costa le celle della vista (≤ 2 M) e non i picchi; nitido HR ≤ 100 ms anche solo in RT; prima mappa ≤ 0,2 s quando la piramide esiste.
 - Rischio: medio (spazio OPFS: circa 1/8 dell'indice; invalidazione con l'impronta dell'indice; definizione del massimo per celle a cavallo).
-- Accettazione: test di parità nuovo `crates/mzlab-core/tests/maptiles_parity.rs` (tessere uguali a `region_map` su griglie allineate, file LR e HR sintetici); `bench_mappa.py lr,hrc` con zoom solo RT HRC ≤ 0,2 s via `api/maptiles` chiamata dal test; tetto del `.wasm` del motore invariato; nessun cambio della pagina.
+- Accettazione: test di parità nuovo `crates/mzlab-core/tests/maptiles_parity.rs` (tessere uguali a `region_map` su griglie allineate, file LR e HR sintetici); `bench_mappa.py lr,hrc` con zoom solo RT HRC ≤ 0,2 s via `api/maptiles` chiamata dal test; tetto del `.wasm` del motore invariato (1 703 936 B, soglia ufficiale verificata in `pages.yml` e `docs/agenti/lettura-nativa.md`); nessun cambio della pagina.
 - Dipendenze e conflitti: meglio dopo P1 (stessa lettura), può partire in parallelo sulla parte di calcolo. Solo Rust: libero.
 
 ### P3 Colore veloce e immagini per file
@@ -127,13 +127,13 @@ Ogni pacchetto è autosufficiente e si consegna in una PR con la sua misura `ben
 - Accettazione: `bench_mappa.py lr,hrc` con frame p95 ≤ 17 ms durante rotella e spostamento in LR e HRC; `e2e_mappa*`, `e2e_tour` verdi (ogni passo trova il bersaglio).
 - Dipendenze e conflitti: nessuna sul motore; stessi file di P3 (`mappa.js`, `grafici.js`).
 
-### P7 Colore su GPU (facoltativo)
-- Scopo: zoom continuo a 60 fps anche su griglie 2048 × 1024. Celle in una texture float, scala come texture 1D, shader che applica log/lineare e percentile; ripiego su P3 se WebGL manca.
-- File: nuovo `mzlab/web/mappa-gl.js` (modulo ES), aggancio in `grafici.js`.
-- Guadagno: colore < 5 ms, cambio di scala istantaneo.
+### P7 Colore su GPU (ipotetico studio futuro, non implementato)
+- Studio architetturale (nessun file `mzlab/web/mappa-gl.js` presente nel codice): qualora servisse uno zoom continuo a 60 fps anche su griglie 2048 × 1024. Celle in una texture float, scala come texture 1D, shader che applica log/lineare e percentile; ripiego su P3 se WebGL manca.
+- File ipotetico: eventuale `mzlab/web/mappa-gl.js` (modulo ES), aggancio in `grafici.js`.
+- Guadagno stimato: colore < 5 ms, cambio di scala istantaneo.
 - Rischio: medio-alto (CSP e contesti persi su iPad, stessa resa dei colori, accessibilità invariata).
-- Accettazione: `bench_mappa.py lr,hrc` con colore ≤ 5 ms e frame p95 ≤ 17 ms su griglia 2048 × 1024; confronto dei pixel con P3; ripiego senza WebGL provato; `e2e_axe_grafici` verde.
-- Dipendenze e conflitti: dopo P3-P6, solo se i frame non sono ancora a 60 fps. File nuovo: libero.
+- Accettazione ipotetica: `bench_mappa.py lr,hrc` con colore ≤ 5 ms e frame p95 ≤ 17 ms su griglia 2048 × 1024; confronto dei pixel con P3; ripiego senza WebGL provato; `e2e_axe_grafici` verde.
+- Dipendenze e conflitti: dopo P3-P6, solo se i frame non fossero ancora a 60 fps.
 
 ### P8 App desktop: lettura mappata e parallela
 - Scopo: la mappa nativa già 0,25 s; con `memmap2` per l'`.mzidx` e `rayon` per costruire le tessere di P2 su più file.

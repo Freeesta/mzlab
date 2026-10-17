@@ -10,8 +10,8 @@ Apri **https://freeesta.github.io/mzlab/** in un browser recente (Chrome, Edge, 
 
 - **I tuoi file non lasciano il computer**: la pagina non li invia a nessun server e non raccoglie dati sui visitatori. Sessione, disegni e progressi restano nello spazio del browser e si ripristinano alla riapertura (stesso computer, stesso browser).
 - Trascina i file `.mzML` (e, se vuoi, il `.dam` del metodo), controlla tempi e tipi, premi **Carica dati**. Senza file: **«Prova con i file di esempio»**.
-- Si aprono direttamente anche i `.raw` Thermo, i `.wiff` SCIEX (con il loro `.wiff.scan`) e le cartelle `.D` Agilent, sia nel sito sia nell'app desktop (ultima versione). I file Waters, Shimadzu e Bruker non si leggono direttamente: convertire in mzML con MSConvert (guida nella schermata di caricamento).
-  *(English: Thermo `.raw`, SCIEX `.wiff` + `.wiff.scan` and Agilent `.D` folders open directly, in the site and in the latest desktop app. Waters, Shimadzu and Bruker files are not read directly: convert them to mzML with MSConvert.)*
+- Si aprono direttamente anche i `.raw` Thermo, i `.wiff` SCIEX (con il loro `.wiff.scan`) e le cartelle `.D` Agilent, sia nel sito sia nell'app desktop. I file Waters (cartelle `.raw`), Shimadzu (`.qgd`/`.lcd`) e Bruker (cartelle `.d` timsTOF/TSF) sono supportati tramite i moduli lettori nativi Rust dedicati (`crates/mzlab-lettori/`, scaricati on-demand nel browser o integrati nell'app desktop).
+  *(English: Thermo `.raw`, SCIEX `.wiff` + `.wiff.scan` and Agilent `.D` folders open directly, in the site and in the desktop app. Waters `.raw` folders, Shimadzu `.qgd`/`.lcd` and Bruker `.d` timsTOF/TSF folders are supported via dedicated native Rust reader modules (`crates/mzlab-lettori/`), fetched on demand in the browser or built into the desktop app.)*
 - **Da smartphone** il sito mostra solo la Teoria; Dati, Disegno e giochi vanno usati da computer o tablet.
 
 ## Le schede
@@ -26,7 +26,7 @@ Con risoluzione unitaria **un m/z è un candidato, non un'identificazione**.
 
 ## Sviluppo
 
-Tutto ciò che serve a chi modifica il programma (regole, architettura, test, decisioni prese) è in [`AGENTS.md`](AGENTS.md) (nucleo) e in [`docs/agenti/`](docs/agenti/) (un file per area). In breve: nessuna compilazione; `python3 tools/verifica.py` esegue tutti i controlli (sintassi JS, pytest, prove nel browser con Playwright); il sito si costruisce con `python3 tools/build_site.py` e si pubblica da solo a ogni push su `main`. Per modificare i testi della Teoria: [`mzlab/web/teoria/LEGGIMI.md`](mzlab/web/teoria/LEGGIMI.md).
+Tutto ciò che serve a chi modifica il programma (regole, architettura, test, decisioni prese) è in [`AGENTS.md`](AGENTS.md) (nucleo) e in [`docs/agenti/`](docs/agenti/) (un file per area). In breve: per l'uso ordinario del sito statico o dei test non serve compilazione (JavaScript classico e moduli ES, Python per la suite di test); per lo sviluppo del motore Rust (`crates/`) si compila in WebAssembly per il web o in binario nativo per la versione desktop e i test di parità. `python3 tools/verifica.py` esegue tutti i controlli (sintassi JS, pytest, prove nel browser con Playwright); il sito si costruisce con `python3 tools/build_site.py` e si pubblica da solo a ogni push su `main`. Per modificare i testi della Teoria: [`mzlab/web/teoria/LEGGIMI.md`](mzlab/web/teoria/LEGGIMI.md).
 
 ## Uso dell'intelligenza artificiale
 
@@ -56,5 +56,5 @@ Se usi mzLab nel corso o in una pubblicazione, cita il software con i dati di [`
 ## Limiti noti
 
 - Non ancora validato contro il software dello strumento su più composti.
-- Numpress non supportato (convertire con zlib).
+- La compressione MS-Numpress negli mzML è supportata tramite il modulo formati aperti (`crates/mzlab-lettori/`).
 - Provato a fondo con Chromium; Firefox e Safari solo con le prove automatiche essenziali.
