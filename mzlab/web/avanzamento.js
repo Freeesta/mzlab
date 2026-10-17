@@ -61,8 +61,8 @@ export function avanza(box, o) {
       if (fails.length) parts.push(T("conv.sum.fail", { n: fails.length }));
       if (cancelled) parts.push(T("conv.sum.cancel", { n: cancelled }));
       const d = fails.find(f => f.diag), D = w.DIAG;
-      el.innerHTML = `<p class="sm" data-r="sum"><b>${esc(o.title)}</b>: ${esc(parts.join(", "))} · ${esc(tempo(Date.now() - t0))} <button type="button" class="sec sm" data-r="close">${T("common.close")}</button></p>`
-        + (fails.length ? `<ul class="sm">${fails.map(f => `<li class="fail">${esc(f.name ? f.name + ": " + f.msg : f.msg)}</li>`).join("")}</ul>` : "") + (d && D ? D.html(d.diag, esc, T) : "");
+      const li = fails.map(f => h`<li class="fail">${f.name ? f.name + ": " + f.msg : f.msg}</li>`);
+      el.innerHTML = h`<p class="sm" data-r="sum"><b>${o.title}</b>: ${parts.join(", ")} · ${tempo(Date.now() - t0)} <button type="button" class="sec sm" data-r="close">${T("common.close")}</button></p>${raw(fails.length ? h`<ul class="sm">${li.map(raw)}</ul>` : "")}${raw(d && D ? D.html(d.diag, esc, T) : "")}`;
       if (d && D) D.cabla(el, d.diag, w.MZLAB_VERSION || "", T);
       q("close").onclick = () => el.remove();
       if (!fails.length) setTimeout(() => el.remove(), KEEP);
