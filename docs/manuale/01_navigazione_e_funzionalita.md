@@ -13,19 +13,36 @@ viene presentata la schermata iniziale di caricamento.
 
 [Screenshot: Schermata iniziale di caricamento di mzLab. Al centro campeggia
 un'ampia zona di rilascio circondata da un bordo tratteggiato con la scritta
-«Trascina qui i tuoi file .mzML o cartelle». Sotto il riquadro principale sono
-visibili due pulsanti secondari: «Seleziona file dal disco» e il collegamento
-evidenziato «Prova con i file di esempio (Full Scan, MS2, HRMS, MRM)», che
-permette di caricare set didattici preimpostati senza scaricare file esterni.]
+«Trascina qui i file oppure clicca per sceglierli dal computer» con l'elenco dei
+formati supportati (.mzML · .raw · .wiff · .D). Accanto all'intestazione
+«1. File dei dati» è presente il pulsante cartella per aprire un'intera directory.
+Sotto il riquadro principale è presente il comando «Prova con i file di esempio ▾»
+(Full Scan, MS2, MRM, HRMS), che permette di caricare set didattici preimpostati
+senza scaricare file esterni.]
 
 ### 1.1 Formati Supportati e Modalità di Rilascio
-- **File `.mzML` (formato standard aperto):** è il formato primario per mzLab,
-  sia per spettrometria a bassa risoluzione (LRMS, quadrupoli) che ad alta
-  risoluzione (HRMS, Q-TOF, Orbitrap). I file possono essere in profilo continuo
-  (*profile*) oppure già centroidati (*centroided*).
-- **Cartelle e caricamento multiplo:** è possibile selezionare o trascinare
-  intere cartelle contenenti più sequenze cromatografiche (ad esempio serie
-  cinetiche $t_0, t_5, t_{10}, \dots, t_{60}$ o rette di calibrazione MRM).
+mzLab include lettori nativi scritti in Rust e compilati in WebAssembly, che
+permettono di leggere direttamente nel browser sia formati aperti che file
+proprietari dei principali costruttori di spettrometri di massa:
+
+- **Formati aperti standard (.mzML, .mzXML, NetCDF .cdf/.nc):** supportati sia
+  in profilo continuo (*profile*) che già centroidati (*centroided*), sia per
+  spettrometria a bassa risoluzione (LRMS, quadrupoli) che ad alta risoluzione
+  (HRMS, Q-TOF, Orbitrap).
+- **File Thermo Fisher `.raw`:** letti nativamente dal lettore Rust/WASM di mzLab
+  (acquisizioni Orbitrap, Q-Exactive, TSQ, ecc.), senza necessità di Windows né
+  di DLL proprietarie.
+- **File SCIEX `.wiff`:** letti nativamente (3200 QTRAP, serie QTRAP, TripleTOF)
+  trascinando contemporaneamente il file `.wiff` e il relativo file `.wiff.scan`.
+- **Cartelle Agilent `.D`:** lette nativamente selezionando o trascinando la cartella
+  della corsa analitica (tramite il pulsante «Apri cartella» o il drag-and-drop).
+- **Cartelle Waters MassLynx `.raw`:** lette nativamente tramite selezione o rilascio
+  della cartella di corsa Waters.
+- **Bruker e Shimadzu:** cartelle Bruker `.d` (TDF, TSF, BAF) e file Shimadzu
+  (`.qgd`, `.lcd`) gestiti dai rispettivi moduli WASM dedicati.
+- **Cartelle e caricamento multiplo:** è possibile selezionare intere cartelle o
+  trascinare contemporaneamente più corse (ad esempio serie cinetiche
+  $t_0, t_5, \dots, t_{60}$ o standard MRM).
 - **Apertura progressiva e indicizzazione locale:** mzLab non blocca l'interfaccia
   durante il caricamento. Il motore in WebAssembly analizza i file in background
   tramite Web Workers, memorizza i binari nel file system virtuale locale (OPFS)
@@ -180,7 +197,7 @@ perfetta coincidenza tra profilo teorico e sperimentale.]
 ### 5.1 Procedura di Confronto Isotopico
 1. Posizionare il puntatore sul picco principale (monoisotopico) da analizzare.
 2. Fare **clic con il tasto destro del mouse** sul picco.
-3. Selezionare la voce di menu **«Pattern isotopico…»**.
+3. Selezionare la voce di menu **«Profilo isotopico di una formula…»**.
 4. Nella finestra di dialogo che compare, digitare la formula neutra proposta
    con l'addotto (es. `C8H9NO2 [M+H]+`), oppure la formula già ionizzata
    (es. `C8H10NO2+`).
@@ -189,7 +206,7 @@ perfetta coincidenza tra profilo teorico e sperimentale.]
    sovrappone i cerchietti rossi teorici sui centroidi sperimentali e adatta
    automaticamente lo zoom alla finestra del cluster isotopico ($M, M+1, M+2$).
 6. Per chiudere la simulazione, fare clic destro e scegliere
-   **«Nascondi pattern isotopico»** (oppure fare doppio clic per ripristinare
+   **«Togli il profilo isotopico»** (oppure fare doppio clic per ripristinare
    la vista intera dello spettro).
 
 ---
@@ -218,19 +235,21 @@ con l'indicazione del valore dell'area: «Area: 1.48e6, S/N: 142».]
   (es. $m/z\ 152.0 \pm 0.5$).
 
 ### 6.2 Integrazione Manuale e Automatica dei Picchi
-1. **Integrazione Manuale:**
+1. **Integrazione Manuale e Regolazione Bordi:**
    - Fare clic destro sul picco cromatografico nell'XIC e selezionare
-     **«Integra picco»**.
-   - Tracciare con il mouse la linea di base da valle a monte del picco.
-   - mzLab calcola l'area sottesa, l'altezza del picco, la larghezza a metà
-     altezza (FWHM) e la stima del rumore di fondo locale ($S/N$).
+     **«Integra»** (oppure posizionare il cursore sul picco e premere il tasto **I**).
+   - È possibile correggere i bordi dell'integrazione trascinando direttamente
+     le barre verticali dei delimitatori nel pannello.
+   - mzLab calcola l'area sottesa con la regola dei trapezi e baseline lineare,
+     l'altezza del picco, la larghezza a metà altezza (FWHM) e la stima del
+     rumore di fondo locale ($S/N$).
 2. **Integrazione Automatica:**
-   - Nella barra degli strumenti del cromatogramma, premere il pulsante
-     **«Trova picchi»**.
-   - L'algoritmo integrato riconosce automaticamente gli apici cromatografici
-     che superano la soglia di sensibilità definita nei parametri, calcolando
-     la linea di base con l'algoritmo SNIP (*Statistics-sensitive Non-linear
-     Iterative Peak-clipping*).
+   - Nella barra degli strumenti del cromatogramma/XIC, premere l'icona
+     dell'**integrazione automatica** (o clic destro $\rightarrow$ **«Integra»**).
+   - Per visualizzare le etichette degli apici con il rispettivo tempo di
+     ritenzione, attivare l'opzione **«picchi»** nell'intestazione del pannello.
+   - mzLab propone automaticamente i bordi del picco calcolando la linea di
+     base (con algoritmo SNIP per la sottrazione del fondo).
 3. **Tabella ed Esportazione:**
    - I picchi integrati vengono inseriti nella tabella integrata della sessione.
    - Possono essere esportati direttamente in formato compatibile con fogli di
