@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import indice  # noqa: E402
 
 # Imported by the e2e but not installed in every environment (optional, or only on the CI runners).
-THIRD_PARTY = {"playwright", "numpy", "pytest", "axe_playwright_python", "PIL", "scipy", "pandas", "matplotlib", "sklearn"}
+THIRD_PARTY = {"playwright", "numpy", "pytest", "axe_playwright_python", "PIL", "openpyxl", "scipy", "pandas", "matplotlib", "sklearn"}
 
 
 def local_names() -> set[str]:
