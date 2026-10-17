@@ -11,5 +11,6 @@ def test_loading_has_only_the_ion_canvas():
     assert box, "#loading not found"
     assert 'id="ldion"' in box.group(0) and "<i " not in box.group(0) and 'class="ms"' not in box.group(0), "old bars inside #loading"
     assert 'style="display:none"' not in box.group(0).split("<canvas")[1].split(">")[0], "canvas hidden at start"
-    assert not re.search(r"(^|[^\w-])\.ms\s*[{ i]|@keyframes pk\b|animation:\s*pk\b", html), "CSS of the old bars"
+    css = html + (WEB / "app.css").read_text(encoding="utf-8")
+    assert not re.search(r"(^|[^\w-])\.ms\s*[{ i]|@keyframes pk\b|animation:\s*pk\b", css), "CSS of the old bars"
     assert "#loading .ms" not in (WEB / "avvio.js").read_text(encoding="utf-8")
