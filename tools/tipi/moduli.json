@@ -33,6 +33,7 @@
     "../../mzlab/web/lr-origin.js",
     "../../mzlab/web/lr-sessione.js",
     "../../mzlab/web/lr.js",
+    "../../mzlab/web/liste-target.js",
     "../../mzlab/web/manifesto.js",
     "../../mzlab/web/mappa-estrai.js",
     "../../mzlab/web/mappa3d.js",
