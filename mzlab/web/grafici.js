@@ -487,7 +487,7 @@ function lut(stops) {
     const [t0, c0] = stops[k], [t1, c1] = stops[k + 1], f = Math.min(1, Math.max(0, (t - t0) / (t1 - t0)));
     for (let c = 0; c < 3; c++) out[i * 4 + c] = c0[c] + (c1[c] - c0[c]) * f; out[i * 4 + 3] = 255;
   }
-  return out;
+  /** @type {any} */ (out)._u32 = new Uint32Array(out.buffer); return out;
 }
 const LUT_DIV = lut(DIV);
 // sequential palettes of the map (2D and 3D): viridis (default) and cividis, both readable by colour-blind people
@@ -516,18 +516,20 @@ function mapImage(p, A, B, scale, norm = "abs") {
   const pal = mapPal(), key = `${A.k}|${B ? B.k : ""}|${scale}${scale === "gamma" ? p.gamma || 0.6 : ""}|${norm}|${pal}|${mapBg(p)}|${JSON.stringify(dop)}`;
   if (p._img && p._img.key === key && p._img.a === A.m && p._img.b === (B ? B.d || B.m : null)) return p._img;
   const n = A.m.length, v = new Float32Array(n);
-  if (B && B.d) v.set(B.d);                                              // the difference computed by the server (numpy, with the tolerance in RT)
-  else { const mA = mapNorm(A.m, norm), mB = B ? mapNorm(B.m, norm) : null; for (let i = 0; i < n; i++) v[i] = mB ? mA[i] - mB[i] : mA[i]; }
+  if (B && B.d) v.set(B.d); else { const mA = mapNorm(A.m, norm), mB = B ? mapNorm(B.m, norm) : null; for (let i = 0; i < n; i++) v[i] = mB ? mA[i] - mB[i] : mA[i]; }
   const nz = []; for (let i = 0; i < n; i++) { const a = Math.abs(v[i]); if (a > 0) nz.push(a); }
-  nz.sort((a, b) => a - b);
-  const ref = nz.length ? nz[Math.min(nz.length - 1, Math.floor(nz.length * 0.995))] : 1;        // 99.5th percentile: one huge peak does not flatten the rest
-  const floor = dop.thr;                                             // below this fraction it is noise: stays white
+  let samp = nz; if (nz.length > 10000) {
+    samp = []; const s = nz.length / 10000; for (let i = 0; i < 10000; i++) samp.push(nz[Math.floor(i * s)]);
+  }
+  samp.sort((a, b) => a - b);
+  const ref = samp.length ? samp[Math.min(samp.length - 1, Math.floor(samp.length * 0.995))] : 1, floor = dop.thr;        // 99.5th percentile: one huge peak does not flatten the rest
   const T = x => { if (B && (dop.show === "up" && x < 0 || dop.show === "down" && x > 0)) return 0; const r = Math.min(1, Math.abs(x) / ref); if (r < floor) return 0; return scale === "lin" ? r : scale === "log" ? Math.log10(1 + 1000 * r) / 3 : scale === "gamma" ? Math.pow(r, p.gamma || 0.6) : Math.sqrt(r); };
   const { nrt, nmz } = A, off = document.createElement("canvas"); off.width = nrt; off.height = nmz;
   const ctx = /** @type {CanvasRenderingContext2D} */ (off.getContext("2d")), im = ctx.createImageData(nrt, nmz), tab = B ? LUT_DIV : lutSeq(pal);
+  const tab32 = /** @type {Uint32Array} */ ((/** @type {any} */ (tab))._u32 || ((/** @type {any} */ (tab))._u32 = new Uint32Array(tab.buffer))), buf32 = new Uint32Array(im.data.buffer);
   for (let i = 0; i < nrt; i++) for (let j = 0; j < nmz; j++) {
-    const x = v[i * nmz + j], t = T(x), q = B ? Math.round(127.5 + Math.sign(-x) * t * 127.5) : Math.round(t * 255), o = ((nmz - 1 - j) * nrt + i) * 4;
-    im.data[o] = tab[q * 4]; im.data[o + 1] = tab[q * 4 + 1]; im.data[o + 2] = tab[q * 4 + 2]; im.data[o + 3] = 255;
+    const x = v[i * nmz + j], t = T(x), q = B ? Math.round(127.5 + Math.sign(-x) * t * 127.5) : Math.round(t * 255);
+    buf32[(nmz - 1 - j) * nrt + i] = tab32[q];
   }
   ctx.putImageData(im, 0, 0);
   return (p._img = { key, off, v, ref, T, a: A.m, b: B ? B.d || B.m : null });
@@ -571,7 +573,6 @@ async function drawMap(p) {
   p._a.hov = (px, py) => {
     const rt = xOf(p, px), mz = mzAt(py), i = Math.min(A.nrt - 1, Math.max(0, Math.floor((rt - rt0) / (rt1 - rt0) * A.nrt))), j = Math.min(A.nmz - 1, Math.max(0, Math.floor((mz - A.mz0) / A.dmz)));
     const v = im.v[i * A.nmz + j];
-    
     return { px, rt, html: I18N.t("map.hov", { rt: rt.toFixed(2), mz: mz.toFixed(mzd(p)), what: I18N.t(B ? "map.hov.diff" : "map.hov.mean"), v: (B && v > 0 ? "+" : "") + fmt(v) }) + `<div class="sm">${I18N.t("map.hov.bin", { lo: (A.mz0 + j * A.dmz).toFixed(0), hi: (A.mz0 + (j + 1) * A.dmz).toFixed(0) })}</div>` };
   };
   const rng = B ? [`<span title="${EH(I18N.t("map.leg2d.up.tip"))}">${I18N.t("map.leg2d.up")}</span>`, `<span title="${EH(I18N.t("map.leg2d.down.tip"))}">${I18N.t("map.leg2d.down")}</span>`] : ["0", fmt(im.ref)];       // the colour bar ends: the 99.5th percentile (above it the colour saturates)
