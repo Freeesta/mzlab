@@ -30,7 +30,8 @@ export function createLr({ rb }) {
   let items = null;                      // Item.info() of every item (objects), null = no session
   let hr = false, lr = false;            // the kinds of file in the session: the two cannot be mixed
   const mr = createMethodRoutes({ rpc: m => rpc(m), json: (o, st) => json(o, st), items: () => items });      // the methods (.dam) and how the items were acquired
-  const api = { files };
+  const missing = new Map();             // name -> scans its index lacks (a truncated data file, `build_mzidx_native`): for the row of the loading, not part of the row of App.files()
+  const api = { files, missing };
   const rpc = async (msg, onp) => {
     const tr = /** @type {any} */ (window).MZLAB_TRACE, t0 = tr ? performance.now() : 0;      // tests: where the time goes
     const r = await rb.rpc(msg, onp);
@@ -87,7 +88,7 @@ export function createLr({ rb }) {
       if (nat && rb.markNative) rb.markNative(n);
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
-      else { fase = "index"; const ix = JSON.parse((await rpc({ op: "lr_index", name: n, cen: !!window.MZLAB_CEN_IDX }, p => tellIndex(n, p.frac, p.phase, p))).info || "{}"); fase = "open"; files.set(n, { ...JSON.parse((await rpc({ op: "lr_entry", name: n })).info), missing: ix.missing || 0 }); }
+      else { fase = "index"; const ix = JSON.parse((await rpc({ op: "lr_index", name: n, cen: !!window.MZLAB_CEN_IDX }, p => tellIndex(n, p.frac, p.phase, p))).info || "{}"); fase = "open"; files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); missing.set(n, ix.missing || 0); }
     } catch (e) {
       let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (_) { /* not an engine error */ }
       const raw = String(e && (e.raw || e.message || e) || "").slice(0, 600);      // the original text for the diagnosis (the page cuts paths out)
