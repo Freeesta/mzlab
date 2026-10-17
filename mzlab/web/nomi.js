@@ -106,6 +106,8 @@ const NOMI = (function () {
     }
   }
 
+  let _purging = false;
+
   function migrateLs(ls) {
     const migrato = ls.getItem("mzlab.migrato");
     if (migrato !== "1") {
@@ -134,16 +136,20 @@ const NOMI = (function () {
       avvii++;
       ls.setItem("mzlab.avvii", String(avvii));
       if (avvii >= 3) {
-        ls.setItem("mzlab.purged", "1");
-        const toRemove = [];
-        for (let i = 0; i < ls.length; i++) {
-          const k = ls.key(i);
-          if (k && (k.startsWith("qqq.") || k === "qqq-theme" || k === "qqq-labels")) {
-            toRemove.push(k);
+        _purging = true;
+        try {
+          const toRemove = [];
+          for (let i = 0; i < ls.length; i++) {
+            const k = ls.key(i);
+            if (k && (k.startsWith("qqq.") || k === "qqq-theme" || k === "qqq-labels")) {
+              toRemove.push(k);
+            }
           }
-        }
-        for (const k of toRemove) {
-          ls.removeItem(k);
+          for (const k of toRemove) {
+            ls.removeItem(k);
+          }
+        } finally {
+          _purging = false;
         }
       }
     }
@@ -174,9 +180,7 @@ const NOMI = (function () {
     proto.setItem = function (k, v) {
       orig.call(this, k, v);
       try {
-        if (typeof k !== "string" || this.getItem("mzlab.purged") === "1") return;
-        const avvii = parseInt(this.getItem("mzlab.avvii") || "1", 10);
-        if (avvii >= 3) return;
+        if (typeof k !== "string" || _purging) return;
         if (k.startsWith("mzlab.")) orig.call(this, "qqq." + k.slice(6), v);
         else if (k === "mzlab-theme") orig.call(this, "qqq-theme", v);
         else if (k === "mzlab-labels") orig.call(this, "qqq-labels", v);
@@ -209,7 +213,7 @@ const NOMI = (function () {
     proto.removeItem = function (k) {
       orig.call(this, k);
       try {
-        if (typeof k !== "string" || this.getItem("mzlab.purged") === "1") return;
+        if (typeof k !== "string" || _purging) return;
         if (k.startsWith("qqq.")) orig.call(this, "mzlab." + k.slice(4));
         else if (k === "qqq-theme") orig.call(this, "mzlab-theme");
         else if (k === "qqq-labels") orig.call(this, "mzlab-labels");
