@@ -36,7 +36,7 @@ def passi(con_e2e: bool) -> list[tuple[str, list[str]]]:
     if (ROOT / "tools" / "controlla_import.py").exists():
         p.append(("import degli e2e", [PY, "tools/controlla_import.py"]))
     if cambiato("crates/"):
-        p += [("cargo fmt", ["cargo", "fmt", "--all", "--check"]), ("fmt e clippy contro la base", [PY, "tools/controlla_rust.py"])]
+        p += [("fmt e clippy contro la base", [PY, "tools/controlla_rust.py"])]
     if con_e2e:
         p.append(("e2e dei file cambiati", [PY, "tools/verifica.py", "--cambiati"]))
     return p
