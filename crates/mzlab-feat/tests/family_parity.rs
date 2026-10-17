@@ -1,6 +1,6 @@
-//! Families against the frozen answers of the Python rules (`tools/feat_famiglie.py`, `tests/golden/feat/famiglie_*.json`):
+//! Families against the frozen answers of the former Python rules (`tests/golden/feat/famiglie_*.json`):
 //! the label and the evidence of `edge_evidence` on a grid of steps, MS2 and ratios; and, on peaks of the synthetic identity series with their
-//! traces and MS2 spectra, the same pairs, arcs, roles, families and alternatives as the plain Python loops.
+//! traces and MS2 spectra, the same pairs, arcs, roles, families and alternatives as the plain loops of the reference.
 
 use std::path::{Path, PathBuf};
 
@@ -313,7 +313,7 @@ fn families_are_deterministic() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let out = std::env::temp_dir().join(format!("mzlab_feat_fam_{}", std::process::id()));
     let ok = std::process::Command::new("python3")
-        .arg(root.join("tools/feat_riferimento.py"))
+        .arg(root.join("tools/feat_sintetici.py"))
         .arg(&out)
         .args(["--solo", "identita"])
         .output()

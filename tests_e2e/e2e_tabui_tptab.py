@@ -21,7 +21,7 @@ tmp = Path(tempfile.mkdtemp(prefix="tabui_tptab_"))
 reuse = os.environ.get("MZLAB_PIPE_SITE")
 site = Path(reuse) if reuse else tmp / "site"
 if not reuse:
-    cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site), "--no-pyodide"]       # the component needs neither Pyodide nor the engine
+    cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)]       # the component needs neither Pyodide nor the engine
     subprocess.run(cmd, check=True, capture_output=True)
 else:                                                      # fresh sources of mzFinder over the site that was built
     for d in ("files", "js"):

@@ -1,23 +1,9 @@
-//! Parity and property tests for `all_pairs` module against Python reference implementation.
+//! Parity and property tests for `all_pairs`: against the frozen answers of the former Python reference (`tests/golden/lib/all_pairs.json`).
 
 use std::path::Path;
-use std::process::Command;
 
 use mzlab_lib::all_pairs::{bin_matrices, pairs_above, plain_cosine, upper_bound};
 use serde_json::Value;
-
-fn run_python_reference(out_path: &Path) {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let root = manifest_dir.join("../..");
-    let script = root.join("tools/all_pairs_riferimento.py");
-    let status = Command::new("python3")
-        .current_dir(&root)
-        .arg(&script)
-        .arg(out_path)
-        .status()
-        .expect("Failed to execute python3 tools/all_pairs_riferimento.py");
-    assert!(status.success(), "Python reference generator failed");
-}
 
 fn assert_close_f32(got: &[Vec<f32>], want: &[Vec<f32>], tol: f32, ctx: &str) {
     assert_eq!(got.len(), want.len(), "row count mismatch in {ctx}");
@@ -154,17 +140,11 @@ fn verify_single_case(case: &Value) {
 }
 
 #[test]
-fn test_all_pairs_parity_with_python() {
-    let tmp_dir = std::env::temp_dir();
-    let out_file = tmp_dir.join(format!(
-        "mzlab_all_pairs_parity_{}.json",
-        std::process::id()
-    ));
-    run_python_reference(&out_file);
-
-    let content = std::fs::read_to_string(&out_file).expect("Failed to read reference JSON");
-    let _ = std::fs::remove_file(&out_file);
-
+fn test_all_pairs_parity_with_the_golden_file() {
+    let content = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/lib/all_pairs.json"),
+    )
+    .expect("Failed to read reference JSON");
     let cases: Vec<Value> = serde_json::from_str(&content).expect("Failed to parse reference JSON");
     assert!(
         cases.len() >= 40,

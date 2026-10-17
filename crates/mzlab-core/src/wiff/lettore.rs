@@ -145,6 +145,11 @@ fn field(nome: &str, valore: impl ToString) -> Campo {
         Formato::SciexWiff
     }
 
+    fn mancanti(&mut self, c: usize) -> usize {
+        let n = self.scan_len;
+        self.parti.get(c).map_or(0, |p| p.w.records.iter().filter(|r| r.end > n || r.at >= n).count())
+    }
+
     fn campioni(&self) -> &[Campione] {
         &self.campioni
     }

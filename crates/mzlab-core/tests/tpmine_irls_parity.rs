@@ -1,8 +1,7 @@
-//! Parity tests for regularised L2 logistic regression via IRLS against Python (`tools/tpmine_irls_riferimento.py`).
+//! Regularised L2 logistic regression via IRLS against the frozen answers of the former Python reference (`tests/golden/tpmine_irls.json`).
 //! Checks coefficients, intercept, standardization parameters, logit predictions and feature contributions.
 
 use std::path::Path;
-use std::process::Command;
 
 use mzlab_core::tpmine_irls::{fit_logistic, predict_logit, LogisticModel};
 use serde_json::Value;
@@ -117,36 +116,9 @@ fn verify_single_case(case_idx: usize, c: &Value) {
 }
 
 #[test]
-fn tpmine_irls_matches_python_reference() {
+fn tpmine_irls_matches_the_golden_file() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let out = std::env::temp_dir().join(format!("mzlab-irls-{}.json", std::process::id()));
-
-    let run = Command::new("python3")
-        .current_dir(&root)
-        .arg("tools/tpmine_irls_riferimento.py")
-        .arg(&out)
-        .output();
-
-    let success = match &run {
-        Ok(output) => output.status.success(),
-        Err(_) => false,
-    };
-
-    if !success {
-        assert!(
-            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
-            "the reference generator did not run: {run:?}"
-        );
-        eprintln!("python3 or numpy not available: test skipped");
-        return;
-    }
-
-    let file_bytes = match std::fs::read(&out) {
-        Ok(b) => b,
-        Err(e) => panic!("failed to read generated reference file: {e}"),
-    };
-    let _ = std::fs::remove_file(&out);
-
+    let file_bytes = std::fs::read(root.join("tests/golden/tpmine_irls.json")).unwrap();
     let data: Value = match serde_json::from_slice(&file_bytes) {
         Ok(v) => v,
         Err(e) => panic!("invalid JSON in reference output: {e}"),

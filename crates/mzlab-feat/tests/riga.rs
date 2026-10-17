@@ -267,7 +267,7 @@ fn floats(v: &Value, key: &str) -> Vec<f64> {
 fn reference_index() -> Option<std::path::PathBuf> {
     let out = std::env::temp_dir().join(format!("mzlab_feat_riga_{}", std::process::id()));
     let ok = Command::new("python3")
-        .arg(root().join("tools/feat_riferimento.py"))
+        .arg(root().join("tools/feat_sintetici.py"))
         .arg(&out)
         .args(["--solo", "identita"])
         .output()

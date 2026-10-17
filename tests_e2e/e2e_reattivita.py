@@ -60,7 +60,6 @@ def paracetamol():
 REATT = paracetamol(); N = len(REATT["atoms"])
 tmp = Path(tempfile.mkdtemp())
 cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(tmp / "site")]
-if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
 subprocess.run(cmd, check=True)
 from lib_sito import add_wasm
 try: add_wasm(tmp / "site")          # the panel does not need the engine of the data: where the .wasm cannot be built the page starts without it

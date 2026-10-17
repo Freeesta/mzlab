@@ -1,10 +1,9 @@
-//! `subpeaks` parity test against TP_Mine/py/tpmine/hr/spectra.py reference answers.
-//! Generates synthetic chromatographic traces via `tools/subpeaks_riferimento.py` and verifies exact match of apex retention times within 1e-9.
+//! `subpeaks` against the frozen answers of the former Python reference (`tests/golden/subpeaks.json`: synthetic chromatographic traces and their
+//! sub-peaks); apex retention times within 1e-9.
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use mzlab_core::subpeaks::subpeaks;
 use serde_json::Value;
@@ -24,27 +23,8 @@ fn close(a: f64, b: f64) -> bool {
 }
 
 #[test]
-fn subpeaks_like_python() {
-    let out = std::env::temp_dir().join(format!("mzlab_subpeaks_{}.json", std::process::id()));
-    let ok = Command::new("python3")
-        .arg(root().join("tools/subpeaks_riferimento.py"))
-        .arg(&out)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    if !ok {
-        assert!(
-            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
-            "python3 or numpy missing"
-        );
-        eprintln!("skipped: python3/numpy not available");
-        return;
-    }
-    let data = match std::fs::read(&out) {
-        Ok(d) => d,
-        Err(e) => panic!("failed to read generated reference file: {e}"),
-    };
-    let _ = std::fs::remove_file(&out);
+fn subpeaks_like_the_golden_file() {
+    let data = std::fs::read(root().join("tests/golden/subpeaks.json")).unwrap();
     let rows: Vec<Value> = match serde_json::from_slice(&data) {
         Ok(r) => r,
         Err(e) => panic!("failed to parse json reference: {e}"),

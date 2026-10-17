@@ -1,6 +1,6 @@
-//! `trace::detect` answers like `features.detect` of Python (`tools/feat_riferimento.py`): same number of features, same apex and
-//! edge scans, m/z within 1e-6 and areas within 1e-4 (relative), same flags. Also with a small slab (tiny memory budget).
-//! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
+//! `trace::detect` against the frozen answers of the former Python detection (`tests/golden/feat/detect.json`) on the synthetic files of
+//! `tools/feat_sintetici.py`: same number of features, same apex and edge scans, m/z within 1e-6 and areas within 1e-4 (relative), same flags. Also
+//! with a small slab (tiny memory budget). Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -81,10 +81,10 @@ fn check(name: &str, got: &FileFeatures, want: &Value) {
 }
 
 #[test]
-fn detect_like_python() {
+fn detect_like_the_golden_file() {
     let out = std::env::temp_dir().join(format!("mzlab_feat_{}", std::process::id()));
     let ok = Command::new("python3")
-        .arg(root().join("tools/feat_riferimento.py"))
+        .arg(root().join("tools/feat_sintetici.py"))
         .arg(&out)
         .output()
         .map(|o| o.status.success())
@@ -97,21 +97,22 @@ fn detect_like_python() {
         eprintln!("skipped: python3/numpy not available");
         return;
     }
+    let golden: Value = serde_json::from_slice(
+        &std::fs::read(root().join("tests/golden/feat/detect.json")).unwrap(),
+    )
+    .unwrap();
     let mut total = 0;
     let mut lobes = 0;
     let mut bg = 0;
     for name in ["deboli", "intensi", "fondo", "vicini", "vuoto"] {
-        let want: Value = serde_json::from_slice(
-            &std::fs::read(out.join(format!("detect_{name}.json"))).unwrap(),
-        )
-        .unwrap();
+        let want = &golden[name];
         let mut p = Params::default();
         if let Some(l) = want["params"]["long_trace"].as_u64() {
             p.long_trace = l as u32;
         }
         let idx = out.join(format!("{name}.mzidx"));
         let big = run_detect(&idx, &p);
-        check(name, &big, &want);
+        check(name, &big, want);
         // a slab of a thousand peaks: the same table
         let small = run_detect(
             &idx,

@@ -1,9 +1,8 @@
-//! Hypotheses of the targeted pass: the rules file `TP_Mine/data/regole_tp.json` is the table of mzFinder, the hypotheses of the rules have the masses
-//! of `tools/feat_ipotesi.py` (golden file `ipotesi_regole.json`), the order and the ids are stable (same SHA-256 twice), and the other sources work.
-//! The checks that need python3 are skipped without it (`MZLAB_GOLDEN_STRICT=1` fails instead).
+//! Hypotheses of the targeted pass: with the rules file `TP_Mine/data/regole_tp.json` the hypotheses of the rules have the masses of the frozen
+//! answers of the former Python list (golden file `ipotesi_regole.json`), the order and the ids are stable (same SHA-256 twice), and the other
+//! sources work.
 
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use mzlab_core::elements;
 use mzlab_feat::hypo::*;
@@ -70,27 +69,6 @@ fn rule_hypotheses_match_the_python_list() {
             assert!((h.mz - w["mz"].as_f64().unwrap()).abs() < 1e-6);
             assert_eq!(h.sources, SRC_RULE);
         }
-    }
-}
-
-#[test]
-fn rules_file_is_the_table_of_mzfinder() {
-    let ok = Command::new("python3")
-        .arg(root().join("tools/genera_regole_tp.py"))
-        .arg("--controlla")
-        .status()
-        .map(|s| s.success());
-    match ok {
-        Ok(true) => {}
-        Ok(false)
-            if std::env::var("MZLAB_GOLDEN_STRICT").is_err()
-                && Command::new("python3")
-                    .arg("-c")
-                    .arg("import numpy")
-                    .status()
-                    .map(|s| !s.success())
-                    .unwrap_or(true) => {}
-        other => panic!("regole_tp.json: {other:?}"),
     }
 }
 
