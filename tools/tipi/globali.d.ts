@@ -33,6 +33,8 @@ declare var KMDCALC: any;
 declare var LETTORI_FAM: any;
 declare var LETTORI_MOD: any;
 declare var LISTE: any;
+declare var LISTE_TARGET: any;
+declare var LISTE_TARGET_CORE: any;
 declare var LIVELLI: any;
 declare var LIVELLI_DATI: any;
 declare var LOSSES: any;

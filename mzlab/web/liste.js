@@ -533,6 +533,13 @@ const LISTE = (() => {
   function panelHtml(state) {
     return `
       <div class="liste-panel" style="display:flex;flex-direction:column;gap:6px;padding:6px 8px;height:100%;box-sizing:border-box;overflow:auto">
+        <div style="display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line,#cbd5e1);padding-bottom:4px;margin-bottom:2px">
+          <span class="seg" id="lst-view-seg">
+            <button type="button" data-v="ref" class="on">Reference Lists</button>
+            <button type="button" data-v="target">HRMS Target Screening</button>
+          </span>
+        </div>
+        <div id="lst-ref-box" style="display:flex;flex-direction:column;gap:6px;flex:1">
         <div class="liste-bar">
           <div class="lb-row">
             <label><span><i>m/z</i></span> <input type="text" id="lst-mz" value="${EH(state.mz)}" placeholder="${I18N.t("lst.mzPh")}" aria-label="m/z"></label>
@@ -581,8 +588,37 @@ const LISTE = (() => {
             <tbody id="lst-tbody"></tbody>
           </table>
         </div>
+        </div>
+        <div id="lst-target-box" style="display:none;flex-direction:column;flex:1;overflow:auto"></div>
       </div>
   `;
+  }
+
+  function setupViewSwitcher(container, opt = {}) {
+    const elViewSeg = container.querySelector("#lst-view-seg");
+    const elRefBox = container.querySelector("#lst-ref-box");
+    const elTargetBox = container.querySelector("#lst-target-box");
+    async function switchToView(viewName) {
+      const isTarget = viewName === "target";
+      if (elViewSeg) {
+        elViewSeg.querySelectorAll("button").forEach(b => b.classList.toggle("on", (b.dataset.v === "target") === isTarget));
+      }
+      if (elRefBox) elRefBox.style.display = isTarget ? "none" : "flex";
+      if (elTargetBox) {
+        elTargetBox.style.display = isTarget ? "flex" : "none";
+        if (isTarget && !elTargetBox.dataset.mounted) {
+          elTargetBox.dataset.mounted = "1";
+          try {
+            const mod = (typeof window !== "undefined" && window.LISTE_TARGET) || (await import("./liste-target.js")).default || (await import("./liste-target.js"));
+            if (mod && typeof mod.mount === "function") mod.mount(elTargetBox);
+          } catch (_) {}
+        }
+      }
+    }
+    if (elViewSeg) {
+      elViewSeg.querySelectorAll("button").forEach(b => { b.onclick = () => switchToView(b.dataset.v); });
+    }
+    if (opt.targetScreening) switchToView("target");
   }
 
   function mount(container, opt = {}) {
@@ -600,6 +636,7 @@ const LISTE = (() => {
     };
 
     container.innerHTML = panelHtml(state);
+    setupViewSwitcher(container, opt);
 
     const elMz = container.querySelector("#lst-mz");
     const elTol = container.querySelector("#lst-tol");
@@ -823,7 +860,9 @@ const LISTE = (() => {
     labRows,
     mount,
     open,
-    openSearch: open
+    openSearch: open,
+    openTargetScreening: (opt = {}) => open({ ...opt, targetScreening: true }),
+    target: () => (typeof window !== "undefined" && window.LISTE_TARGET) || (typeof globalThis !== "undefined" && globalThis["require"] ? globalThis["require"]("./liste-target.js") : null)
   };
 })();
 
