@@ -1,22 +1,15 @@
 // @ts-check
-// TPMINE-PRIVATE  Web Worker of mzFinder: it routes the calls of the page between Rust and its own Pyodide (Python + numpy, the private engine on the mzML bytes
-// sent by the page), which starts only when a call needs it. Rust = the `finder` .wasm (crates/mzlab-feat-wasm, wasm-feat/manifest.json) and, for a Dig, the
+// TPMINE-PRIVATE  Web Worker of mzFinder: it routes the calls of the page to the Rust engine. Rust = the `finder` .wasm (crates/mzlab-feat-wasm, wasm-feat/manifest.json) and, for a Dig, the
 // pool of feat-worker.js (detection, alignment, hypotheses, proofs). Rust serves: formula_info, identity_graph, polarity_pairs, origin_evidence and default_transformations always;
 // classify (after finder-idx.js has built the .mzidx of OPFS mzlab/idx/ that a file sent by the page lacks); run on high-resolution files with their .mzidx and any list of transformations (finder_transformations merges the user text into regole_tp.json),
 // then detail, inclusion_csv, msn_tree, frag_tree and frag_tree_compare of that run. With an MSn file of the standard the `finder_msn` .wasm, loaded only
 // then, adds its tree, calibration and the localisation of the products (FinderMsn) to what the Dig gives; run on low-resolution full-scan, MS2 and MRM files with their .mzidx, any parent and any list of transformations (finder-lr.js, then detail, frag_tree
-// and frag_tree_compare of that run). Everything else (MS2/MRM low-resolution files, isf_classify, transitions, ...) goes to Pyodide, and so does
-// every call when the site has no wasm-feat/ (a copy built without it). In the desktop app (init.desktop) every call goes to finder-desktop.js, i.e. to the native engine of the app: no Pyodide, no wasm-feat/.
-/** @type {any} */ let py = null;
-/** @type {any} */ let api = null;
-/** @type {any} */ let init = null;               // the init message: Pyodide is loaded from it only when needed
-/** @type {Promise<any> | null} */ let pyReady = null;
-/** @type {Map<string, any>} */ const puts = new Map();   // the files of the page, kept until Pyodide loads them (then written at once)
+// and frag_tree_compare of that run). A call the engine cannot serve, or a site without wasm-feat/, answers with an error. In the desktop app (init.desktop) every call goes to finder-desktop.js, i.e. to the native engine of the app.
+/** @type {any} */ let init = null;               // the init message: {desktop, base}
 /** @type {Record<string, any>} */ const mods = {};   // the modules of the manifest already loaded (wasm-bindgen): finder, finder_msn
 /** @type {any} */ let man = null;                // wasm-feat/manifest.json
 /** @type {any} */ let featPool = null;
 /** @type {Set<string>} the held files that are the stub of a sample of a maker's file and have no mzML in `held` (finder-idx.js reads their .mzidx as it is) */ const natives = new Set();
-/** @type {Set<string>} every stub the page sent: Pyodide, if it is needed, gets their mzML (written then, for that use only) */ const stubs = new Set();
 /** @type {Map<number, (v: any) => void>} the answers the page owes to `ask` */ const asked = new Map();
 let askSeq = 0;
 /** the page makes what only it can: `what` "mzml" = the mzML of a sample of a maker's file (a Blob), "cenidx" = the centroid index of a profile sample built in OPFS idx/ (true), "srm" = its SRM traces as `srm::impacchetta` bytes (an ArrayBuffer); null when it cannot @param {string} what @param {string} name @returns {Promise<any>} */
@@ -26,11 +19,11 @@ const ask = (what, name) => new Promise(res => { const rid = ++askSeq; asked.set
 /** @type {any} */ let desk = null;               // finder-desktop.js: in the desktop app every call but the default list goes to the native engine
 /** @type {any} */ let dig = null;                // FinderDig of the last run in Rust
 /** @type {any} */ let msn = null;                // FinderMsn of that run (null without an MSn file)
-let last = "", bigN = 0;                          // the engine of the last run: "rust" | "rust-lr" | "py"
+let last = "";                          // the engine of the last run: "rust" | "rust-lr"
 /** @type {Map<string, Uint8Array>} */ const detected = new Map();   // .mzfeatf of a .mzidx (name, size, date): a second Dig skips the detection
 const ALWAYS = new Set(["formula_info", "identity_graph", "polarity_pairs", "origin_evidence"]);
 const OF_DIG = new Set(["detail", "inclusion_csv", "msn_tree", "frag_tree", "frag_tree_compare", "ms2_relink"]);
-// chem.transformations_text() of the Python engine (tests/test_tpmine_worker.py keeps them equal)
+// the default list of transformations (tests/test_tpmine_worker.py keeps it equal to the reference text)
 const DEFAULT_TR = `hydroxylation;+O;one extra oxygen (aromatic or aliphatic OH)
 dihydroxylation;+O2;two extra oxygens
 dehydrogenation;-H2;loss of H2 (double bond, ring closure)
@@ -52,43 +45,9 @@ hydrolytic defluorination;-F+OH
 amide hydrolysis;+H2O;cleavage of the amide/ester bond (same mass as hydration)`;
 /** @param {string} text */
 const say = text => postMessage({ type: "step", text });
-const base = () => new URL("../../", init.pyodideMjs).href;
+const base = () => init.base;
 /** @param {string} p */
 const featUrl = p => base() + "wasm-feat/" + p;
-
-// ---------------------------------------------------------------- Pyodide (started on the first call that needs it)
-/** @param {string} name @param {any} m */
-function putPy(name, m) {
-  const dst = "/tp_data/" + name;
-  try { py.FS.unlink(dst); } catch (_) { /* not there yet */ }
-  if (m.blob) {      // a big file is not copied into the heap of WebAssembly: the Blob is mounted read-only (WORKERFS) and linked, like the main program does
-    const dir = "/big/" + (++bigN);
-    py.FS.mkdirTree(dir);
-    py.FS.mount(py.FS.filesystems.WORKERFS, { blobs: [{ name: "data", data: m.blob }] }, dir);
-    py.FS.symlink(dir + "/data", dst);
-  } else py.FS.writeFile(dst, new Uint8Array(m.buf));
-}
-function pyodide() {
-  return pyReady || (pyReady = (async () => {
-    say("Carico Python...");
-    const { loadPyodide } = await import(init.pyodideMjs);
-    py = await loadPyodide({ indexURL: init.indexURL });
-    say("Carico numpy...");
-    await py.loadPackage("numpy");
-    say("Preparo il motore...");
-    py.FS.mkdirTree("/qqq"); py.unpackArchive(init.qqqZip, "zip", { extractDir: "/qqq" });
-    py.FS.mkdirTree("/tpm"); py.unpackArchive(init.tpZip, "zip", { extractDir: "/tpm" });
-    py.FS.mkdirTree("/tp_data");
-    py.runPython("import sys\nsys.path[:0] = ['/qqq', '/tpm']\nimport tpmine.api");
-    api = py.pyimport("tpmine.api");
-    api._progress = (/** @type {string} */ text, /** @type {number} */ frac, /** @type {string} */ phase, /** @type {string} */ payload) =>
-      postMessage({ type: "progress", text, frac, phase, payload: payload ? JSON.parse(payload) : null });
-    for (const [name, m] of puts) putPy(name, m);
-    if (puts.size) api.classify(JSON.stringify([...puts.keys()]));     // the Python engine learns the kinds of the files the page already sent
-    puts.clear();
-    return api;
-  })());
-}
 
 // ---------------------------------------------------------------- Rust: the finder .wasm and the .mzidx of OPFS
 async function idxDir() {
@@ -126,7 +85,7 @@ async function openIdx(names) {
 }
 async function manifest() { return man || (man = await (await fetch(featUrl("manifest.json"))).json()); }
 /** @type {Promise<boolean> | null} */ let rustOk = null;
-/** the site has the finder .wasm (a copy built without wasm-feat, like the ones of most e2e tests, keeps everything in Pyodide) */
+/** the site has the finder .wasm (a copy built without wasm-feat has no engine) */
 function hasRust() {
   return rustOk || (rustOk = fetch(featUrl("manifest.json")).then(r => (r.ok ? r.json() : null)).then(m => { man = m; return !!(m && m.finder); }).catch(() => false));
 }
@@ -321,23 +280,24 @@ async function call(fn, a) {
   if (fn === "tp_row") return init.desktop ? "null" : tpRow(+a[0]);
   if (fn === "transf_rows" && !init.desktop) return (await finder()).finder_transf_rows(a[0]);       // the table of the list of transformations (in the desktop app finder-desktop.js asks the native engine)
   if (init.desktop) return (desk || (desk = (await import(base() + "mzfinder/finder-desktop.js")).createDesktop(base(), say, held))).call(fn, a);
-  if (!(await hasRust())) return toPy(fn, a);
+  if (!(await hasRust())) throw new Error("mzFinder engine not built: this copy of the site has no wasm-feat/");
   if (ALWAYS.has(fn)) { const f = await load(fn === "formula_info" ? "finder" : "finder_edge"); return fn === "formula_info" ? f.finder_formula_info(a[0], a[1]) : f["finder_" + fn](a[0]); }
   if (fn === "classify") {
     const names = JSON.parse(a[0]);
-    await ensureIdx(names).catch(e => console.warn("mzFinder: indexing failed, Pyodide takes over:", e));
-    if (await waitIdx(names)) { const r = classifyRust(names); if (py) await toPy(fn, a); return r; }       // a Pyodide that is already running learns the kinds of the files too
-    console.warn("mzFinder: no .mzidx yet for", names.filter(n => !held.has(n)).join(", ") || "(all files sent)", "- Pyodide takes over");
+    await ensureIdx(names).catch(e => console.warn("mzFinder: indexing failed:", e));
+    if (await waitIdx(names)) return classifyRust(names);
+    throw new Error("no .mzidx yet for " + (names.filter(n => !held.has(n)).join(", ") || "the files"));
   }
   if (fn === "run") {
     cancelled = false; if (featPool) featPool.resume();
     if (await rustRun(a)) return runRust(a);
-    last = "py"; dig = null; msn = null;
+    dig = null; msn = null;
     const lr = await (await lrMod()).run(lrCtx, a);
     if (lr !== false) { last = "rust-lr"; return lr; }
+    throw new Error("these files need their .mzidx: open them again");
   }
   if (OF_DIG.has(fn) && last === "rust-lr") return fn === "msn_tree" ? "null" : (await lrMod()).ofDig(lrCtx, fn, a);     // a low-resolution run has no MSn tree
-  if (fn === "ms2_relink" && last !== "rust-lr") throw new Error("MS2 matches need the Rust engine");   // Pyodide and the high-resolution engine have no matches
+  if (fn === "ms2_relink" && last !== "rust-lr") throw new Error("MS2 matches need the Rust engine");   // the high-resolution engine has no matches
   if (OF_DIG.has(fn) && last === "rust") {
     if (fn === "detail") return detail(+a[0]);
     if (fn === "inclusion_csv") return dig.inclusion_csv(+(a[0] || 0));
@@ -347,18 +307,7 @@ async function call(fn, a) {
     detail(+a[0]);                                   // "candidate not found", and the localisation the comparison uses
     return msn.frag_tree_compare(+a[0]);
   }
-  return toPy(fn, a);
-}
-/** @param {string} fn @param {any[]} a */
-async function toPy(fn, a) {
-  for (const name of stubs) {                        // Pyodide reads mzML only
-    const b = await ask("mzml", name);
-    if (!b) throw new Error(`cannot read ${name}`);
-    if (py) putPy(name, { blob: b }); else puts.set(name, { name, blob: b });
-  }
-  stubs.clear();
-  const r = (await pyodide())[fn](...a);
-  return typeof r === "string" ? r : String(r);
+  throw new Error("mzFinder engine: no such call: " + fn);
 }
 
 onmessage = async ev => {
@@ -369,15 +318,13 @@ onmessage = async ev => {
       postMessage({ type: "ready" });
     } else if (m.type === "put") {
       held.set(m.name, m.blob || m.buf);
-      stubs.delete(m.name); natives.delete(m.name);
-      if (m.nat) { stubs.add(m.name); natives.add(m.name); puts.delete(m.name); }         // a stub is no mzML: Pyodide gets the real one only when it runs (toPy)
-      else if (py) putPy(m.name, m);
-      else { puts.delete(m.name); puts.set(m.name, m); }
+      natives.delete(m.name);
+      if (m.nat) natives.add(m.name);                  // a stub is no mzML: finder-idx.js reads the .mzidx of the maker's file as it is
       postMessage({ id: m.id, result: true });
     } else if (m.type === "ask-reply") {
       const r = asked.get(m.rid); asked.delete(m.rid); if (r) r(m.value);
     } else if (m.type === "mem") {          // size of the WebAssembly memory: it only grows, so at the end it is the peak of the run (used by the tests)
-      postMessage({ id: m.id, result: { wasm: py ? py._module.HEAPU8.length : 0 } });
+      postMessage({ id: m.id, result: { wasm: 0 } });
     } else if (m.type === "cancel") {
       cancelled = true; if (featPool) featPool.cancel();
       postMessage({ id: m.id, result: true });

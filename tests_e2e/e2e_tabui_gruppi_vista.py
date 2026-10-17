@@ -24,7 +24,6 @@ reuse = os.environ.get("MZLAB_PIPE_SITE")
 site = Path(reuse) if reuse else tmp / "site"
 if not reuse:
     cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)]
-    if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
     subprocess.run(cmd, check=True, capture_output=True)
 shutil.copy2(ROOT / "TP_Mine" / "lazy" / "gruppi-vista.js", site / "static" / "mzfinder" / "lazy" / "gruppi-vista.js")      # fresh source over the site that was built
 PORT = lib.free_port()

@@ -1,5 +1,5 @@
 """mzFinder, HR: the RT alignment card (shift against RT, one line per file) and the filled cells of a weak product (marked, never a found peak).
-Synthetic series with a known RT drift. Run from the repo root: python3 tests_e2e/e2e_tpmine_rtalign.py   (env: PYODIDE_DIR)"""
+Synthetic series with a known RT drift. Run from the repo root: python3 tests_e2e/e2e_tpmine_rtalign.py  """
 import os, shutil, subprocess, sys, time, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -13,7 +13,6 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL line %d: %s" % (e.__traceback__.tb_next.tb_lineno if e.__traceback__.tb_next else 0, str(e)[:500])))
 tmp = Path(tempfile.mkdtemp())
 cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(tmp / "site")]
-if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
 subprocess.run(cmd, check=True)
 from lib_sito import add_wasm; add_wasm(tmp / "site")          # the engine of the page is Rust: the .wasm goes in the copy of the site
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(tmp / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

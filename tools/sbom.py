@@ -1,5 +1,5 @@
 """CycloneDX 1.5 SBOM of the JavaScript and WebAssembly components that ship with the site (the Rust crates have theirs from
-`cargo cyclonedx`, see .github/workflows/sbom.yml). Versions are read from mzlab/web/vendor/README.md and tools/build_site.py,
+`cargo cyclonedx`, see .github/workflows/sbom.yml). Versions are read from mzlab/web/vendor/README.md,
 so the list cannot drift from what is shipped (tests/test_versione.py checks it).
 
     python3 tools/sbom.py [--out sbom-js.cdx.json]
@@ -26,10 +26,8 @@ def _find(pattern: str, text: str, what: str) -> str:
 
 def componenti(root: Path = ROOT) -> list[dict]:
     vendor = (root / "mzlab/web/vendor/README.md").read_text(encoding="utf-8")
-    build = (root / "tools/build_site.py").read_text(encoding="utf-8")
     ketcher = _find(r"Ketcher (\d+\.\d+\.\d+)", vendor, "the version of Ketcher")
     ocl = _find(r"OpenChemLib JS (\d+\.\d+\.\d+)", vendor, "the version of OpenChemLib JS")
-    pyodide = _find(r'(?m)^PYODIDE\s*=\s*"([^"]+)"', build, "PYODIDE in build_site.py")
 
     def lib(name: str, version: str | None, lic: str, url: str, purl: str | None, note: str = "") -> dict:
         c: dict = {"type": "library", "bom-ref": f"{name}@{version or 'unversioned'}", "name": name,
@@ -48,10 +46,6 @@ def componenti(root: Path = ROOT) -> list[dict]:
             "Chemical editor, standalone build (Indigo in WebAssembly); bundles React 18 (MIT)."),
         lib("openchemlib", ocl, "BSD-3-Clause", "https://github.com/cheminfo/openchemlib-js", f"pkg:npm/openchemlib@{ocl}",
             "Formula and exact mass of the drawn structures."),
-        lib("pyodide", pyodide, "MPL-2.0", "https://github.com/pyodide/pyodide", f"pkg:github/pyodide/pyodide@{pyodide}",
-            "Python in WebAssembly, downloaded by the site build and pinned by SHA-256 (Python itself: PSF-2.0)."),
-        lib("numpy", None, "BSD-3-Clause", "https://numpy.org", "pkg:pypi/numpy",
-            "Included in Pyodide; its exact version is in pyodide-lock.json of the site."),
     ]
 
 

@@ -7,7 +7,7 @@
   `desktop` (richiama `desktop.yml`: `.dmg` macOS universale, `.exe` Windows, AppImage e `.deb` Linux, non firmati) e `sbom` (richiama `sbom.yml`: CycloneDX di ogni crate) → `bozza` (ambiente `release`): raccoglie i file, scrive `SHA256SUMS` e crea una **release in bozza** con le note del changelog. Nulla è pubblicato da solo.
 - Il comando del passo «Installer» di `desktop.yml` deve terminare con `-- --profile desktop` (profilo `desktop` del `Cargo.toml`, `opt-level = 3`; vedi `docs/agenti/rust-desktop.md`); i `.wasm` restano sul profilo `release`.
 - Se si cambiano i passi di build in `pages.yml`, cambiano anche nel job `sito` di `release.yml`.
-- **`tools/sbom.py`**: CycloneDX 1.5 dei componenti JS e WASM del sito (Ketcher, OpenChemLib, Pyodide, numpy); le versioni sono lette da `mzlab/web/vendor/README.md` e `tools/build_site.py`.
+- **`tools/sbom.py`**: CycloneDX 1.5 dei componenti JS e WASM del sito (Ketcher, OpenChemLib); le versioni sono lette da `mzlab/web/vendor/README.md` e `tools/build_site.py`.
 - **Passi di Federico** (il codice non li fa):
   1) una volta, in Settings → Environments crea l'ambiente `release` e, se vuole, aggiungi tu come revisore obbligatorio
   2) scrivi la sezione del changelog, alza la versione nei tre file, unisci in `main`

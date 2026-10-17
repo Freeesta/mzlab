@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Prepares the web folder of the desktop app: `python3 tools/build_site.py` first, then `python3 crates/mzlab-desktop/prepare.py`.
 Copies site/ (the page as published) to crates/mzlab-desktop/dist/ and changes only a few things there: the CSP of index.html allows the
-mzlab:// protocol, static/rust-worker.js is the native one, static/desktop-shim.js is loaded before browser.js, and mzFinder's own Python
-(static/mzfinder/pyodide/ and mzlab.zip: the hidden tool of the lab, it needs the website) is left out: the app carries no Python at all.
+mzlab:// protocol, static/rust-worker.js is the native one and static/desktop-shim.js is loaded before browser.js.
 Nothing of mzlab/web or tools/ is touched. Stdlib only."""
 import re
 import shutil
@@ -36,8 +35,6 @@ def prepare(site: Path = SITE, dist: Path = DIST) -> None:
     static = dist / "static"
     shutil.copy(HERE / "shim" / "desktop-worker.js", static / "rust-worker.js")
     shutil.copy(HERE / "shim" / "desktop-shim.js", static / "desktop-shim.js")
-    shutil.rmtree(static / "mzfinder" / "pyodide", ignore_errors=True)
-    (static / "mzfinder" / "mzlab.zip").unlink(missing_ok=True)
     (static / "sw.js").unlink(missing_ok=True)   # the app is on disk: no service worker (it cannot register on a custom scheme)
     print(f"desktop dist ready: {dist}")
 

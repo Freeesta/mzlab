@@ -146,6 +146,33 @@ fn the_synthetic_pairs_read_the_same_through_the_registry() {
         .sum();
     assert!(n > 0);
     one_sample(&out, "two");
+    truncated(&out, "serie");
+}
+
+/// A `.wiff.scan` cut in half: the scans beyond its end are counted by `mancanti` and left out of the index, the others still read.
+fn truncated(dir: &Path, name: &str) {
+    let mut whole = lettori::apri(set(dir, name), &Limiti::sito()).unwrap();
+    let mut fs = set(dir, name);
+    let scan = &mut fs.membri[1];
+    let mut bytes = vec![0u8; scan.dim as usize / 2];
+    scan.dati.read_at(0, &mut bytes).unwrap();
+    scan.dim = bytes.len() as u64;
+    scan.dati = Box::new(bytes);
+    let mut cut = mzlab_core::wiff::lettore::apri_solo(fs, &Limiti::sito(), Some(0)).unwrap();
+    let (n, k) = (whole.indice(0).unwrap().len(), cut.indice(0).unwrap().len());
+    assert_eq!(whole.mancanti(0), 0, "{name}: the whole pair lacks nothing");
+    assert!(
+        k < n && cut.mancanti(0) > 0,
+        "{name}: {k} of {n} scans, {} missing",
+        cut.mancanti(0)
+    );
+    assert!(
+        k + cut.mancanti(0) >= n,
+        "{name}: every scan left out is counted"
+    );
+    for s in 0..k {
+        cut.scansione(0, s).unwrap();
+    }
 }
 
 /// `apri_solo` (the builder of one index): sample `c` gives the index of the whole opening, the others are listed with 0 scans and give their own index when asked.

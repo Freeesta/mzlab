@@ -17,7 +17,6 @@ reuse = os.environ.get("MZLAB_PIPE_SITE")
 if reuse: site = Path(reuse)
 else:
     cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)]
-    if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
     subprocess.run(cmd, check=True)
     from lib_sito import add_wasm; add_wasm(site)
 PORT = lib.free_port()
