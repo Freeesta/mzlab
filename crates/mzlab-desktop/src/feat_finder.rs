@@ -27,7 +27,15 @@ impl State {
                 .map_err(|e| e.key.to_string())
         })
         .map_err(user)?;
-        let out = legacy::out::summary(
+        // the network of mass differences reads the rules of the last hypotheses run, as the worker of the site does with `set_rules`
+        let net = g
+            .hypo
+            .as_ref()
+            .and_then(|h| h.rules().ok().flatten())
+            .map_or("null".to_string(), |r| {
+                legacy::network::mass_network(&d, &r)
+            });
+        let out = legacy::out::summary_with(
             &d,
             if s("settings").is_empty() {
                 "{}"
@@ -39,6 +47,7 @@ impl State {
             } else {
                 s("timing")
             },
+            &net,
         );
         // with an MSn file of the standard (`msn` = its name) the summary gets the tree, the calibration and the localisation of the rows
         let (out, msn) = match s("msn") {

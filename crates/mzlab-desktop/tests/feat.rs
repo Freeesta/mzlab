@@ -194,7 +194,10 @@ fn dig_and_views(e: &Env, proofs: &[u8], registry: &str, files_json: &str, paren
         Ok::<_, String>(open(&e.paths[k]))
     })
     .unwrap();
-    assert_eq!(summary, legacy::out::summary(&d, "{}", "{}"));
+    let rules = std::fs::read(e.root.join("TP_Mine/data/regole_tp.json")).unwrap();
+    let net = mzlab_feat::hypo::Rules::parse(&rules)
+        .map_or("null".into(), |r| legacy::network::mass_network(&d, &r));
+    assert_eq!(summary, legacy::out::summary_with(&d, "{}", "{}", &net));
     assert_eq!(
         e.r("finder/inclusion_csv", json!({"id": 0})),
         legacy::out::inclusion_csv(&d, 0)
