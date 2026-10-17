@@ -88,18 +88,14 @@ pub(super) fn fragment_formula(parent: &Parent, mz: f64) -> Option<String> {
 const RT_WINDOW: f64 = 0.5;
 const MASS_PPM: f64 = 5.0;
 
-/// Appends the hidden products: rows of the table that sit at the RT of the parent, at the mass of a fragment of its MS2 (`fragments`), that are not
-/// candidates already and whose ratio to the parent rises with the treatment.
-pub(super) fn add(
+/// The rows of the table, by m/z, that are hidden products (see `add`).
+fn hidden_rows(
     t: &Aligned,
     files: &[FileIn],
-    parent: &Parent,
-    hyps: &HashMap<u32, Hyp>,
     prow: usize,
     fragments: &[f64],
-    w: &[f64; 10],
-    cands: &mut Vec<Cand>,
-) {
+    cands: &[Cand],
+) -> Vec<usize> {
     let pa = areas(t, prow);
     let mut rows: Vec<usize> = (0..t.len())
         .filter(|&r| r != prow && (t.rt[r] - t.rt[prow]).abs() <= RT_WINDOW)
@@ -112,6 +108,22 @@ pub(super) fn add(
         .filter(|&r| rises(files, &pa, &areas(t, r)))
         .collect();
     rows.sort_by(|&a, &b| t.mz[a].total_cmp(&t.mz[b]));
+    rows
+}
+
+/// Appends the hidden products: rows of the table that sit at the RT of the parent, at the mass of a fragment of its MS2 (`fragments`), that are not
+/// candidates already and whose ratio to the parent rises with the treatment.
+pub(super) fn add(
+    t: &Aligned,
+    files: &[FileIn],
+    parent: &Parent,
+    hyps: &HashMap<u32, Hyp>,
+    prow: usize,
+    fragments: &[f64],
+    w: &[f64; 10],
+    cands: &mut Vec<Cand>,
+) {
+    let rows = hidden_rows(t, files, prow, fragments, cands);
     for (j, r) in rows.into_iter().enumerate() {
         let formula = fragment_formula(parent, t.mz[r]);
         let id = Ident {

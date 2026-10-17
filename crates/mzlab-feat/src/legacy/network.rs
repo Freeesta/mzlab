@@ -37,29 +37,21 @@ fn same_change(a: &Counts, b: &Counts, delta: &Counts) -> bool {
     })
 }
 
+fn neutral_mass(c: &Counts) -> f64 {
+    mass(
+        &c.iter()
+            .map(|(e, n)| (e.clone(), *n as u64))
+            .collect::<Vec<_>>(),
+    )
+}
+
 fn shifted(c: &Cand) -> Option<(usize, f64)> {
     let s = &c.ms2.as_ref()?.sim;
     Some((s.n[1] + s.n[2], s.cos[1] + s.cos[2]))
 }
 
-/// The `mass_network` of the summary: `{nodes, edges, n_edges}`; `null` when there are no rules or no edge.
-pub fn mass_network(d: &Dig, rules: &Rules) -> String {
-    let pf = d.parent.formula();
-    // the parent itself, as a row of the table, is node 0
-    let cands: Vec<&Cand> = d
-        .cands
-        .iter()
-        .filter(|c| c.formula.as_deref().is_some_and(|f| f != pf))
-        .collect();
-    let mut forms = vec![counts(&d.parent.formula())];
-    forms.extend(
-        cands
-            .iter()
-            .map(|c| counts(c.formula.as_deref().unwrap_or(""))),
-    );
-    let tmax: Vec<Option<f64>> = std::iter::once(Some(0.0))
-        .chain(cands.iter().map(|c| c.kin.as_ref().map(|k| k.0.tmax)))
-        .collect();
+/// Best edge of every pair of ions (kinetics, then from the parent) over all the rules. Node 0 is the parent.
+fn best_edges(forms: &[Counts], tmax: &[Option<f64>], rules: &Rules) -> Vec<Edge> {
     let mut best: BTreeMap<(usize, usize), ((u8, u8), Edge)> = BTreeMap::new();
     for a in 0..forms.len() {
         for (ri, r) in rules.rules.iter().enumerate() {
@@ -81,23 +73,65 @@ pub fn mass_network(d: &Dig, rules: &Rules) -> String {
                 );
                 let key = (a.min(b), a.max(b));
                 if best.get(&key).is_none_or(|e| rank > e.0) {
-                    best.insert(
-                        key,
-                        (
-                            rank,
-                            Edge {
-                                from: a,
-                                to: b,
-                                rule: ri,
-                                kinetic,
-                            },
-                        ),
-                    );
+                    let edge = Edge {
+                        from: a,
+                        to: b,
+                        rule: ri,
+                        kinetic,
+                    };
+                    best.insert(key, (rank, edge));
                 }
             }
         }
     }
-    let mut edges: Vec<Edge> = best.into_values().map(|e| e.1).collect();
+    best.into_values().map(|e| e.1).collect()
+}
+
+/// The nodes that an edge touches: the parent, then the candidates (`cands[k - 1]` is node `k`).
+fn write_nodes(o: &mut Out, d: &Dig, cands: &[&Cand], edges: &[Edge]) {
+    o.raw("{\"nodes\":[{\"id\":\"progenitore\",\"label\":\"parent\",\"formula\":")
+        .str(&d.parent.formula())
+        .raw(",\"mz\":null,\"rt\":null,\"score\":null,\"level\":null}");
+    let used = |k: usize| edges.iter().any(|e| e.from == k || e.to == k);
+    for (_, c) in cands.iter().enumerate().filter(|(k, _)| used(k + 1)) {
+        let f = c.formula.as_deref().unwrap_or("");
+        let label = c
+            .hyp
+            .as_ref()
+            .map(|h| h.label.as_str())
+            .filter(|s| !s.is_empty())
+            .unwrap_or(f);
+        o.raw(",{\"id\":").int(c.id()).raw(",\"label\":").str(label);
+        o.raw(",\"formula\":")
+            .str(f)
+            .raw(",\"mz\":")
+            .num(round(c.mz, 4));
+        o.raw(",\"rt\":")
+            .num(round(c.rt, 2))
+            .raw(",\"score\":")
+            .num(round(c.score, 1));
+        o.raw(",\"level\":").int(i64::from(c.level())).raw("}");
+    }
+}
+
+/// The `mass_network` of the summary: `{nodes, edges, n_edges}`; `null` when there are no rules or no edge.
+pub fn mass_network(d: &Dig, rules: &Rules) -> String {
+    let pf = d.parent.formula();
+    let cands: Vec<&Cand> = d
+        .cands
+        .iter()
+        .filter(|c| c.formula.as_deref().is_some_and(|f| f != pf))
+        .collect();
+    let mut forms = vec![counts(&pf)];
+    forms.extend(
+        cands
+            .iter()
+            .map(|c| counts(c.formula.as_deref().unwrap_or(""))),
+    );
+    let tmax: Vec<Option<f64>> = std::iter::once(Some(0.0))
+        .chain(cands.iter().map(|c| c.kin.as_ref().map(|k| k.0.tmax)))
+        .collect();
+    let mut edges = best_edges(&forms, &tmax, rules);
     let total = edges.len();
     if total == 0 {
         return "null".into();
@@ -123,39 +157,8 @@ pub fn mass_network(d: &Dig, rules: &Rules) -> String {
             o.int(cands[k - 1].id());
         }
     };
-    let ion_mass = |k: usize| {
-        let f: Vec<(String, u64)> = forms[k]
-            .iter()
-            .map(|(e, n)| (e.clone(), *n as u64))
-            .collect();
-        mass(&f)
-    };
     let mut o = Out::default();
-    o.raw("{\"nodes\":[{\"id\":\"progenitore\",\"label\":\"parent\",\"formula\":")
-        .str(&d.parent.formula())
-        .raw(",\"mz\":null,\"rt\":null,\"score\":null,\"level\":null}");
-    let used = |k: usize| edges.iter().any(|e| e.from == k || e.to == k);
-    for (k, c) in cands.iter().enumerate().filter(|(k, _)| used(k + 1)) {
-        let f = c.formula.as_deref().unwrap_or("");
-        o.raw(",{\"id\":").int(c.id()).raw(",\"label\":");
-        o.str(
-            c.hyp
-                .as_ref()
-                .map(|h| h.label.as_str())
-                .filter(|s| !s.is_empty())
-                .unwrap_or(f),
-        );
-        o.raw(",\"formula\":")
-            .str(f)
-            .raw(",\"mz\":")
-            .num(round(c.mz, 4));
-        o.raw(",\"rt\":")
-            .num(round(c.rt, 2))
-            .raw(",\"score\":")
-            .num(round(c.score, 1));
-        o.raw(",\"level\":").int(i64::from(c.level())).raw("}");
-        let _ = k;
-    }
+    write_nodes(&mut o, d, &cands, &edges);
     o.raw("],\"edges\":[");
     for (i, e) in edges.iter().enumerate() {
         let r = &rules.rules[e.rule];
@@ -167,8 +170,10 @@ pub fn mass_network(d: &Dig, rules: &Rules) -> String {
             .str(&r.id)
             .raw(",\"kinetic\":")
             .str(e.kinetic);
-        o.raw(",\"dm\":")
-            .num(round(ion_mass(e.to) - ion_mass(e.from), 5));
+        o.raw(",\"dm\":").num(round(
+            neutral_mass(&forms[e.to]) - neutral_mass(&forms[e.from]),
+            5,
+        ));
         o.raw(",\"scope\":").str(match r.level {
             2 => "literature",
             3 => "class",
