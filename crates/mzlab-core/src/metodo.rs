@@ -170,6 +170,10 @@ pub fn ms_section(m: &Method, source_type: Option<&str>) -> Option<V> {
                                     ("q3", num(Some(t.q3))),
                                     ("dwell_ms", num(Some(t.dwell))),
                                     ("ce_eV", num(t.ce)),
+                                    ("dp_V", num(t.dp)),
+                                    ("ep_V", num(t.ep)),
+                                    ("cep_V", num(t.cep)),
+                                    ("cxp_V", num(t.cxp)),
                                     ("nome", text(&t.name)),
                                 ])
                             })

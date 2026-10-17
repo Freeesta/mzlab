@@ -199,6 +199,18 @@
                           "ce_eV": {
                             "type": "number"
                           },
+                          "dp_V": {
+                            "type": "number"
+                          },
+                          "ep_V": {
+                            "type": "number"
+                          },
+                          "cep_V": {
+                            "type": "number"
+                          },
+                          "cxp_V": {
+                            "type": "number"
+                          },
                           "nome": {
                             "type": "string"
                           },

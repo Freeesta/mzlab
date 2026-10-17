@@ -427,17 +427,8 @@ fn raw_log(log: &[String]) -> String {
 }
 
 /// What is missing or not decoded, for `avvisi`.
-fn warnings(ole: &Ole, sample: &str, no_log: bool) -> Vec<Option<V>> {
+fn warnings(_ole: &Ole, _sample: &str, no_log: bool) -> Vec<Option<V>> {
     let mut warn = vec![];
-    if ole
-        .paths_list()
-        .any(|p| p.contains("DADRealTimeData") && p.starts_with(sample))
-    {
-        warn.push(obj(vec![
-            ("chiave", Some(V::s("meta.nonDecodificato"))),
-            ("dove", Some(V::s("DAD"))),
-        ]));
-    }
     if no_log {
         warn.push(obj(vec![
             ("chiave", Some(V::s("meta.mancante"))),

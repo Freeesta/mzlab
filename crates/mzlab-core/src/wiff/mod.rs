@@ -4,10 +4,12 @@
 //! were decoded against ProteoWizard mzML of the same files. The code here is written anew.
 //! The scans are PROFILE data as the file holds them (no peak picking): `Spectrum::profile` is true.
 
+pub mod dad;
 pub mod idx;
 pub mod lettore;
 mod run;
-#[cfg(not(feature = "estesi"))] pub mod scan;
+#[cfg(not(feature = "estesi"))]
+pub mod scan;
 mod window;
 
 use crate::error::{Error, Result};
@@ -27,7 +29,9 @@ pub struct Experiment {
     pub code: Option<u32>,
     /// 1 for a full scan (and unknown types), 2 for a product-ion scan.
     pub level: u8,
-    pub precursor: Option<f64>, #[cfg(feature = "estesi")] pub polarity: Option<i8>,
+    pub precursor: Option<f64>,
+    #[cfg(feature = "estesi")]
+    pub polarity: Option<i8>,
 }
 
 /// A block of the index placed in the `.wiff.scan`.
@@ -51,6 +55,8 @@ pub struct Wiff {
     /// +1, -1, or 0 when the method has no ion spray voltage.
     pub polarity: i8,
     pub method: Option<Method>,
+    /// Optical DAD / PDA 3D matrix and TWC when the sample has a `DAD` storage.
+    pub dad: Option<dad::DadData>,
     /// `Component ID` of the mass spectrometer in the Log, and the creation time of the file: the header of the mzML.
     pub model: Option<String>,
     pub created: Option<String>,
@@ -70,7 +76,10 @@ pub fn container(wiff: Vec<u8>, name: &str) -> Result<Ole> {
 
 /// The numbers of the samples that have scans, in order.
 pub fn samples(ole: &Ole) -> Vec<u32> {
-    let mut v: Vec<u32> = ole.read(&format!("{SAMPLES}SampleIdxTable")).map(|t| idx::sections(&t).into_iter().map(|s| s.0).collect()).unwrap_or_default();
+    let mut v: Vec<u32> = ole
+        .read(&format!("{SAMPLES}SampleIdxTable"))
+        .map(|t| idx::sections(&t).into_iter().map(|s| s.0).collect())
+        .unwrap_or_default();
     v.retain(|n| ole.has(&format!("{SAMPLES}Sample{n}/Idx")));
     crate::sortc::slice_ord(&mut v);
     v.dedup();
@@ -79,28 +88,46 @@ pub fn samples(ole: &Ole) -> Vec<u32> {
 
 fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
     let mut out = Vec::new();
-    while let Some(d) = ole.read(&format!("MethodSubtree/Method{sample}/DeviceMethod0/Period0/Experiment{}/ExperimentHeader", out.len())) {
-        let code = d.get(HEADER_CODE..HEADER_CODE + 4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]));
-        let prec = d.get(HEADER_PRECURSOR..HEADER_PRECURSOR + 8).map(|b| f64::from_le_bytes(b.try_into().unwrap_or([0; 8]))).filter(|p| p.is_finite() && *p > 0.0);
+    while let Some(d) = ole.read(&format!(
+        "MethodSubtree/Method{sample}/DeviceMethod0/Period0/Experiment{}/ExperimentHeader",
+        out.len()
+    )) {
+        let code = d
+            .get(HEADER_CODE..HEADER_CODE + 4)
+            .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]));
+        let prec = d
+            .get(HEADER_PRECURSOR..HEADER_PRECURSOR + 8)
+            .map(|b| f64::from_le_bytes(b.try_into().unwrap_or([0; 8])))
+            .filter(|p| p.is_finite() && *p > 0.0);
         let product = code == Some(CODE_PRODUCT);
-        out.push(Experiment { code, level: if product { 2 } else { 1 }, precursor: if product { prec } else { None }, #[cfg(feature = "estesi")] polarity: None });
+        out.push(Experiment {
+            code,
+            level: if product { 2 } else { 1 },
+            precursor: if product { prec } else { None },
+            #[cfg(feature = "estesi")]
+            polarity: None,
+        });
     }
     out
 }
 
 fn polarity(method: &Option<Method>) -> i8 {
-    method.as_ref().and_then(|m| m.source.iter().find(|p| p.id == "IS")).map_or(0, |p| if p.value > 0.0 { 1 } else if p.value < 0.0 { -1 } else { 0 })
+    method
+        .as_ref()
+        .and_then(|m| m.source.iter().find(|p| p.id == "IS"))
+        .map_or(0, |p| if p.value > 0.0 { 1 } else if p.value < 0.0 { -1 } else { 0 })
 }
 
 impl Wiff {
-    /// Sample `sample` of the container. `scan_len` is the size of the `.wiff.scan`, `None` when that file is missing
-    /// (`err.file.wiffNoScan`).
+    /// Sample `sample` of the container. `scan_len` is the size of the `.wiff.scan`, `None` when that file is missing (`err.file.wiffNoScan`).
     pub fn open(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Result<Wiff> {
         let scan_len = scan_len.ok_or_else(|| Error::new("err.file.wiffNoScan").with("name", name))?;
         let table = ole.read(&format!("{SAMPLES}SampleIdxTable")).ok_or_else(|| bad("no sample table"))?;
         let section = idx::sections(&table).into_iter().find(|s| s.0 == sample).ok_or_else(|| bad("no such sample"))?.1;
         let entries = idx::parse(&ole.read(&format!("{SAMPLES}Sample{sample}/Idx")).ok_or_else(|| bad("no Idx"))?);
-        let experiments = experiments(ole, sample); #[cfg(feature = "estesi")] let experiments = estesi::refine(ole, sample, experiments)?;
+        let experiments = experiments(ole, sample);
+        #[cfg(feature = "estesi")]
+        let experiments = estesi::refine(ole, sample, experiments)?;
         let n_exp = experiments.len().max(1);
         let records = entries
             .iter()
@@ -115,17 +142,20 @@ impl Wiff {
                 experiment: k % n_exp,
             })
             .collect();
-        let method = methodinfo::method_of_sample(ole, sample); #[cfg(feature = "estesi")] let method = method.or_else(|| estesi::fallback_method(ole, sample));
+        let method = methodinfo::method_of_sample(ole, sample);
+        #[cfg(feature = "estesi")]
+        let method = method.or_else(|| estesi::fallback_method(ole, sample));
+        let dad = dad::DadData::read(ole, sample);
         let (model, created) = crate::metodo_wiff::run_facts(ole, sample);
-        Ok(Wiff { sample, records, experiments, polarity: polarity(&method), method, model, created, wiff_sha1: None, scan_len })
+        Ok(Wiff { sample, records, experiments, polarity: polarity(&method), method, dad, model, created, wiff_sha1: None, scan_len })
     }
 }
 
 #[cfg(feature = "estesi")]
+pub(crate) mod estesi;
+#[cfg(feature = "estesi")]
 #[path = "scan_estesi.rs"]
 pub mod scan;
-#[cfg(feature = "estesi")]
-pub(crate) mod estesi;
 
 #[cfg(not(feature = "estesi"))]
 impl Wiff {

@@ -99,6 +99,11 @@ impl LettoreWiff {
         Ok(p.chroms.as_deref().unwrap_or_default())
     }
 
+    /// The optical DAD / PDA 3D matrix and TWC of injection `c`, when the injection has a `DAD` storage.
+    pub fn dad(&self, c: usize) -> Result<Option<&super::dad::DadData>> {
+        Ok(self.parte(c)?.w.dad.as_ref())
+    }
+
     /// The member of the `FileSet` that holds the `.wiff.scan` (what `Posizione::membro` says).
     pub fn membro_scan(&self) -> u16 {
         self.scan_member
@@ -131,33 +136,23 @@ fn source(l: &LettoreWiff, sample: u32) -> Source {
     }
 }
 
-fn field(nome: &str, valore: impl ToString) -> Campo {
-    Campo {
-        nome: nome.into(),
-        valore: valore.to_string(),
-        unita: None,
-        cv: None,
+fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram> {
+    let dad = dad?;
+    if id == "DAD TWC" {
+        return Some(dad.twc_chromatogram(0));
     }
+    let nm: f64 = id.strip_prefix("DAD ")?.strip_suffix(" nm")?.trim().parse().ok()?;
+    dad.wavelength_chromatogram(nm, None, 0)
 }
 
 #[rustfmt::skip] impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { self.parti.get(c).is_some_and(|p| p.w.variante()) } #[cfg(feature = "estesi")] fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) }
-    fn formato(&self) -> Formato {
-        Formato::SciexWiff
-    }
-
+    fn formato(&self) -> Formato { Formato::SciexWiff }
     fn mancanti(&mut self, c: usize) -> usize {
         let n = self.scan_len;
         self.parti.get(c).map_or(0, |p| p.w.records.iter().filter(|r| r.end > n || r.at >= n).count())
     }
-
-    fn campioni(&self) -> &[Campione] {
-        &self.campioni
-    }
-
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
-        Ok(&self.pronta(c)?.indice)
-    }
-
+    fn campioni(&self) -> &[Campione] { &self.campioni }
+    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> { Ok(&self.pronta(c)?.indice) }
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.pronta(c)?;
         let (p, r) = row(&self.parti, c, k)?;
@@ -165,49 +160,29 @@ fn field(nome: &str, valore: impl ToString) -> Campo {
             .ok_or_else(|| Error::new("err.file.wiff").with("detail", "not a scan"))?;
         Ok(p.w.spectrum_of(k, r, pts))
     }
-
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         self.pronta(c)?;
         let (p, r) = row(&self.parti, c, k)?;
-        Ok(vec![
-            field("sample", p.w.sample),
-            field("cycle", r.cycle + 1),
-            field("experiment", r.experiment + 1),
-        ])
+        Ok(vec![field("sample", p.w.sample), field("cycle", r.cycle + 1), field("experiment", r.experiment + 1)])
     }
-
     fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
-        let all = self.chromatograms(c)?;
-        Ok(all
-            .iter()
-            .map(|h| VoceCromatogramma {
-                id: h.id.clone(),
-                tipo: h.kind,
-                unita: h.unit.clone(),
-            })
-            .collect())
+        Ok(self.chromatograms(c)?.iter().map(|h| VoceCromatogramma { id: h.id.clone(), tipo: h.kind, unita: h.unit.clone() }).collect())
     }
-
     fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
-        self.chromatograms(c)?
-            .iter()
-            .find(|h| h.id == id)
-            .cloned()
-            .ok_or_else(|| Error::new("error.badIndex").with("id", id))
+        if let Some(ch) = self.chromatograms(c)?.iter().find(|h| h.id == id).cloned() {
+            return Ok(ch);
+        }
+        dad_chrom(self.parte(c)?.w.dad.as_ref(), id).ok_or_else(|| Error::new("error.badIndex").with("id", id))
     }
-
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
-        testata(self, c).map(Some)
-    }
-
+    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> { testata(self, c).map(Some) }
     fn metodo(&mut self, c: usize) -> Result<String> {
         let sample = self.parte(c)?.w.sample;
-        Ok(crate::metodo_wiff::from_wiff(
-            &self.ole,
-            sample,
-            &source(self, sample),
-        ))
+        Ok(crate::metodo_wiff::from_wiff(&self.ole, sample, &source(self, sample)))
     }
+}
+
+fn field(nome: &str, valore: impl ToString) -> Campo {
+    Campo { nome: nome.into(), valore: valore.to_string(), unita: None, cv: None }
 }
 
 /// The header of the mzML of injection `c`, with the SHA-1 of the `.wiff.scan`.
