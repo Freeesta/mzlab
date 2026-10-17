@@ -50,7 +50,7 @@ const CONV_FINAL = ["done", "fail", "cancel"];
 // what the summary counts apart, in this order: the kinds of file (`kind` of the file entry, "mixed" for a file of more parts), then the rows that did not load
 const CONV_SUM = { full: "conv.sum.full", ms2: "conv.sum.ms2", mrm: "conv.sum.mrm", infusion: "conv.sum.infusion", mixed: "conv.sum.mixed", other: "conv.sum.other", fail: "conv.sum.fail", cancel: "conv.sum.cancel" };
 const CONVROWS = {
-  /** @type {{ name: string, state: string, pc: number | null, sub?: { done: number, total: number } | null, t0?: number, seen?: number, tr?: string[], last?: string, scans?: number, kind?: string, missing?: number, secs?: number, msg?: string, diag?: any, mem?: string }[]} */
+  /** @type {{ name: string, state: string, pc: number | null, sub?: { done: number, total: number } | null, t0?: number, seen?: number, tr?: string[], last?: string, scans?: number, kind?: string, missing?: number, cached?: boolean, secs?: number, msg?: string, diag?: any, mem?: string }[]} */
   rows: [],
   /** @type {null | (() => void)} */
   onCancel: null,
@@ -94,7 +94,7 @@ const CONVROWS = {
     }, 1000);
   },
   label(r) {
-    if (r.state === "done") return I18N.t("conv.row.done", { scans: I18N.fix(r.scans || 0, 0), secs: I18N.fix(r.secs || 0, 1) }) + (r.missing ? " · " + I18N.t("conv.row.missing", { n: I18N.fix(r.missing, 0) }) : "");
+    if (r.state === "done") return (r.cached ? I18N.t("conv.row.cached", { scans: I18N.fix(r.scans || 0, 0) }) : I18N.t("conv.row.done", { scans: I18N.fix(r.scans || 0, 0), secs: I18N.fix(r.secs || 0, 1) })) + (r.missing ? " · " + I18N.t("conv.row.missing", { n: I18N.fix(r.missing, 0) }) : "");
     if (r.state === "fail") return r.msg || "";
     const lab = I18N.t(convRowKey(r.state), { pc: r.pc == null ? 0 : r.pc });
     return r.sub ? `${lab} · ${I18N.t("conv.row.scans", { done: I18N.fix(r.sub.done, 0), total: I18N.fix(r.sub.total, 0) })}` : lab;
@@ -146,6 +146,7 @@ const CONVROWS = {
     const add = k => by.set(k, (by.get(k) || 0) + 1);
     for (const r of end) add(r.state !== "done" ? r.state : r.kind in CONV_SUM && r.kind !== "fail" && r.kind !== "cancel" ? r.kind : "other");
     const parts = Object.keys(CONV_SUM).filter(k => by.has(k)).map(k => T(CONV_SUM[k], { n: I18N.fix(by.get(k), 0) }));
+    const hit = end.filter(r => r.cached).length; if (hit) parts.push(T("conv.sum.cached", { n: I18N.fix(hit, 0) }));
     const miss = end.filter(r => r.missing).length; if (miss) parts.push(T("conv.sum.missing", { n: I18N.fix(miss, 0) }));
     const t0 = Math.min(...end.map(r => r.t0 || 0)), t1 = Math.max(...end.map(r => (r.t0 || 0) + 1000 * (r.secs || 0)));
     return T("conv.sum.head", { n: I18N.fix(end.length, 0), parts: parts.join(", "), time: convElapsed(t1 - t0) });

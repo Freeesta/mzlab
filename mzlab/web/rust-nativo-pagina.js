@@ -24,6 +24,12 @@ export function makeNativo(h) {
       if (r.dead || r.error) throw fail(r, "err.file.notAccepted");
       return JSON.parse(r.info);
     },
+    /** which of `names` (files of the session) are samples of these very files (`members`: [{ name, blob }]: same names, sizes and lastModified) with their index kept: the same dataset given again */
+    async nativeSame(/** @type {{ name: string, blob: Blob }[]} */ members, /** @type {string[]} */ names) {
+      const r = await h.rpc({ op: "natsame", members: members.map(m => ({ name: m.name, size: m.blob.size, mtime: /** @type {any} */ (m.blob).lastModified || 0 })), names: names.map(h.base) });
+      if (r.dead || r.error) return [];
+      return JSON.parse(r.info).names;
+    },
     /** the SRM traces of the sample `name` as `srm::impacchetta` writes them (a Uint8Array): mzFinder integrates an MRM file from them without an mzML */
     async nativeSrm(/** @type {string} */ name) {
       const r = await h.rpc({ op: "natsrm", name: h.base(name) });
