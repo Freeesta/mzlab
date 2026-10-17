@@ -77,6 +77,9 @@ impl DadData {
     ) -> Option<Chromatogram> {
         dad_wl_chrom(self, nm, bandwidth_nm, index)
     }
+    pub fn to_map_json(&self) -> String {
+        super::dad_map::dad_to_map_json(self)
+    }
 }
 
 fn read_dad(ole: &Ole, sample: u32) -> Option<DadData> {

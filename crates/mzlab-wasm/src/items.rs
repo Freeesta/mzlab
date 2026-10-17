@@ -2,12 +2,12 @@
 //! `api/delay`, `api/chrom?kind=pda`, `api/gradient`): the same answers as `mzlab/app.py`, from the index and the mzML (low resolution only).
 use super::{error_json, Engine};
 use crate::nativi::Src;
+use js_sys::Function;
 use mzlab_core::gradient::{self, Gradient};
 use mzlab_core::json::{self, Out};
 use mzlab_core::labmethods::{self, Lab};
 use mzlab_core::mzmlhead::{Chrom, Mzml};
 use wasm_bindgen::prelude::*;
-use js_sys::Function;
 
 #[wasm_bindgen]
 impl Engine {
@@ -19,7 +19,8 @@ impl Engine {
     /// Loads (or replaces) the method `name` (the bytes of a `.dam`); a file that cannot be read is kept with the reason.
     pub fn lab_put(&mut self, name: &str, data: &[u8]) {
         self.labs.retain(|(l, _)| l.name != name);
-        self.labs.push((Lab::read(name, data.to_vec()), data.len() as u64));
+        self.labs
+            .push((Lab::read(name, data.to_vec()), data.len() as u64));
     }
 
     /// `App.methods()`: `[{name, size, info}]`, oldest first.
@@ -37,18 +38,34 @@ impl Engine {
     /// `/api/method_warnings`; `have` = JSON array of the experiment types of the open items (sorted).
     pub fn lab_warnings(&self, have: &str) -> Result<String, JsValue> {
         let v = json::parse(have.as_bytes()).map_err(|e| error_json(&e))?;
-        let have: Vec<String> = v.arr().iter().filter_map(|x| x.str().map(String::from)).collect();
+        let have: Vec<String> = v
+            .arr()
+            .iter()
+            .filter_map(|x| x.str().map(String::from))
+            .collect();
         Ok(labmethods::warnings_json(&self.labs(), &have))
     }
 
     /// `/api/method` of the item `item` (`name` or `name#tag`) of the file at `slot` (`size` bytes of mzML read through `read`).
-    pub fn lab_method(&mut self, slot: u32, item: &str, size: f64, read: Function) -> Result<String, JsValue> {
+    pub fn lab_method(
+        &mut self,
+        slot: u32,
+        item: &str,
+        size: f64,
+        read: Function,
+    ) -> Result<String, JsValue> {
         let data = self.item_data(slot, item, size, read)?;
         labmethods::method_json(&data, &self.labs(), item).map_err(|e| error_json(&e))
     }
 
     /// `App.gradient` without the typed one: the pump program of the method preselected for the item, `"null"` when it has none.
-    pub fn lab_gradient(&mut self, slot: u32, item: &str, size: f64, read: Function) -> Result<String, JsValue> {
+    pub fn lab_gradient(
+        &mut self,
+        slot: u32,
+        item: &str,
+        size: f64,
+        read: Function,
+    ) -> Result<String, JsValue> {
         let data = self.item_data(slot, item, size, read)?;
         let labs = self.labs();
         let pick = labmethods::pick(&data, &labs, item).map_err(|e| error_json(&e))?;
@@ -59,9 +76,17 @@ impl Engine {
     }
 
     /// `/api/analog`: trace `i` of the file at `slot`, `n` points at most per extreme.
-    pub fn item_analog(&mut self, slot: u32, size: f64, read: Function, i: i32, n: i32) -> Result<String, JsValue> {
+    pub fn item_analog(
+        &mut self,
+        slot: u32,
+        size: f64,
+        read: Function,
+        i: i32,
+        n: i32,
+    ) -> Result<String, JsValue> {
         let (mut m, chroms) = self.chroms(slot, size, read)?;
-        mzlab_core::itemroutes::analog(&mut m, &chroms, i as i64, n as i64).map_err(|e| error_json(&e))
+        mzlab_core::itemroutes::analog(&mut m, &chroms, i as i64, n as i64)
+            .map_err(|e| error_json(&e))
     }
 
     /// `/api/chrom?kind=pda`: the UV trace of the file at `slot`.
@@ -70,8 +95,25 @@ impl Engine {
         mzlab_core::itemroutes::pda_trace(&mut m, &chroms).map_err(|e| error_json(&e))
     }
 
+    /// `/api/map?kind=pda`: the 2D DAD optical matrix.
+    pub fn item_pda_map(
+        &mut self,
+        slot: u32,
+        size: f64,
+        read: Function,
+    ) -> Result<String, JsValue> {
+        let (mut m, _) = self.chroms(slot, size, read)?;
+        mzlab_core::itemroutes::pda_map(&mut m).map_err(|e| error_json(&e))
+    }
+
     /// `api/chrom` of the MRM file at `slot`: the chromatogram of the mzML with that kind (`tic`, `bpc`, `srm`).
-    pub fn mrm_chrom(&mut self, slot: u32, size: f64, read: Function, kind: &str) -> Result<String, JsValue> {
+    pub fn mrm_chrom(
+        &mut self,
+        slot: u32,
+        size: f64,
+        read: Function,
+        kind: &str,
+    ) -> Result<String, JsValue> {
         let Some(r) = self.idx.get_mut(&slot) else {
             return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
         };
@@ -82,12 +124,19 @@ impl Engine {
     }
 
     /// `/api/delay` of the item `item` of the file at `slot`.
-    pub fn item_delay(&mut self, slot: u32, item: &str, size: f64, read: Function) -> Result<String, JsValue> {
+    pub fn item_delay(
+        &mut self,
+        slot: u32,
+        item: &str,
+        size: f64,
+        read: Function,
+    ) -> Result<String, JsValue> {
         let r = self.idx.get_mut(&slot).ok_or_else(no_index)?;
         let end = r.idx.scans.last().map_or(0, |s| s.end);
         let mut m = self.nat.mzml(slot, read, size)?;
         let chroms = m.chromatograms(end).map_err(|e| error_json(&e))?;
-        r.delay_item(&mut m, &chroms, item).map_err(|e| error_json(&e))
+        r.delay_item(&mut m, &chroms, item)
+            .map_err(|e| error_json(&e))
     }
 }
 
@@ -96,7 +145,12 @@ impl Engine {
         self.labs.iter().map(|(l, _)| l.clone()).collect()
     }
 
-    fn chroms(&mut self, slot: u32, size: f64, read: Function) -> Result<(Mzml<Src<'_>>, Vec<Chrom>), JsValue> {
+    fn chroms(
+        &mut self,
+        slot: u32,
+        size: f64,
+        read: Function,
+    ) -> Result<(Mzml<Src<'_>>, Vec<Chrom>), JsValue> {
         let r = self.idx.get(&slot).ok_or_else(no_index)?;
         let end = r.idx.scans.last().map_or(0, |s| s.end);
         let mut m = self.nat.mzml(slot, read, size)?;
@@ -105,7 +159,13 @@ impl Engine {
     }
 
     /// `Item.method()` as JSON.
-    pub(crate) fn item_data(&mut self, slot: u32, item: &str, size: f64, read: Function) -> Result<String, JsValue> {
+    pub(crate) fn item_data(
+        &mut self,
+        slot: u32,
+        item: &str,
+        size: f64,
+        read: Function,
+    ) -> Result<String, JsValue> {
         let r = self.idx.get(&slot).ok_or_else(no_index)?;
         let mut m = self.nat.mzml(slot, read, size)?;
         mzlab_core::itemroutes::item_method(&r.idx, &mut m, item).map_err(|e| error_json(&e))

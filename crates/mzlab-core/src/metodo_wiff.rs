@@ -183,17 +183,58 @@ fn filetime(ft: u64) -> String {
     )
 }
 
-/// The instrument model (`Component ID` of the mass spectrometer in the Log of sample `n`) and the creation time of the file
-/// (`YYYY-MM-DDTHH:MM:SS`, local time of the instrument PC): what the mzML header says about the run.
-pub fn run_facts(ole: &Ole, n: u32) -> (Option<String>, Option<String>) {
+/// The instrument facts (model, creation time, serial, source type) of sample `n`.
+pub fn run_facts_full(
+    ole: &Ole,
+    n: u32,
+) -> (
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+) {
     let (log, _, _, props) = read_parts(ole, &format!("SampleSubtree/Sample{n}/"));
-    let model = log
+    let cfg = log
         .iter()
-        .find(|r| r.starts_with("Mass Spectrometer:") && r.contains("Config Table"))
+        .find(|r| r.starts_with("Mass Spectrometer:") && r.contains("Config Table"));
+    let model = cfg
         .and_then(|r| field(r, "Component ID:"))
         .map(str::to_string);
+    let serial = cfg
+        .and_then(|r| field(r, "Serial Number:"))
+        .map(str::to_string);
+    let st = source_type(&log);
     let created = props.into_iter().find(|(i, _)| *i == 12).map(|p| p.1);
-    (model, created)
+    (model, created, serial, st)
+}
+
+/// The instrument model and creation time of sample `n`.
+pub fn run_facts(ole: &Ole, n: u32) -> (Option<String>, Option<String>) {
+    let (m, c, _, _) = run_facts_full(ole, n);
+    (m, c)
+}
+
+fn user_and_computer<'a>(
+    driver: Option<&'a str>,
+    cfr: &'a [String],
+) -> (Option<&'a str>, Option<&'a str>) {
+    let comp = driver.and_then(|r| field(r, "Computer="));
+    let u = driver
+        .and_then(|r| r.split("User=").nth(1))
+        .and_then(|r| r.split(":Computer=").next())
+        .map(|u| u.trim_matches('\\').trim())
+        .filter(|u| !u.is_empty());
+    let dom = cfr
+        .iter()
+        .find(|s| s.contains('\\') && !s.contains(':'))
+        .and_then(|s| s.rsplit('\\').next());
+    (u.or(dom), comp)
+}
+
+fn ms_sec(method: Option<&crate::methodinfo::Method>, st: Option<&str>) -> Option<V> {
+    method
+        .and_then(|m| ms_section(m, st))
+        .or_else(|| st.and_then(|s| obj(vec![("sorgente", obj(vec![("tipo", text(s))]))])))
 }
 
 /// The document of sample `n` of the `.wiff` in `ole`; never an error: what is missing is absent, what cannot be read is in `avvisi`.
@@ -221,19 +262,10 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
             .find(|(s, key, _)| s.starts_with(sec) && key == k)
             .map(|(_, _, v)| v.as_str())
     };
-    let computer = driver.and_then(|r| field(r, "Computer="));
-    let user = driver
-        .and_then(|r| r.split("User=").nth(1))
-        .and_then(|r| r.split(":Computer=").next())
-        .map(|u| u.trim_matches('\\').trim())
-        .filter(|u| !u.is_empty());
+    let (user, computer) = user_and_computer(driver.map(|s| s.as_str()), &cfr);
     let version = cfr.iter().find(|s| {
         !s.is_empty() && s.chars().all(|c| c.is_ascii_digit() || c == '.') && s.contains('.')
     });
-    let domain_user = cfr
-        .iter()
-        .find(|s| s.contains('\\') && !s.contains(':'))
-        .and_then(|s| s.rsplit('\\').next());
 
     let source_type = source_type(&log);
     let (lc, det) = lc_with_pressure(method.as_ref(), get("Pumps", "P.Max 1"));
@@ -248,13 +280,8 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
         ("origine", crate::metodo::origin(src, prop(12))),
         ("campione", campione(&data, get("", "Injection Volume"))),
         ("strumento", strumento(cfg, version)),
-        ("operatore", operatore(user.or(domain_user), computer)),
-        (
-            "ms",
-            method
-                .as_ref()
-                .and_then(|m| ms_section(m, source_type.as_deref())),
-        ),
+        ("operatore", operatore(user, computer)),
+        ("ms", ms_sec(method.as_ref(), source_type.as_deref())),
         ("lc", lc),
         (
             "campionatore",
@@ -357,32 +384,18 @@ fn source_type(log: &[String]) -> Option<String> {
 
 /// The `strumento` section from the "Config Table" record of the log and the software version of the `CFR_INFO` strings.
 fn strumento(cfg: Option<&String>, version: Option<&String>) -> Option<V> {
+    let f = |k| cfg.and_then(|r| field(r, k)).and_then(text);
+    let sw = obj(vec![
+        ("nome", Some(V::s("Analyst"))),
+        ("versione", version.and_then(|v| text(v))),
+    ])
+    .map(|s| V::Arr(vec![s]));
     obj(vec![
-        (
-            "produttore",
-            cfg.and_then(|r| field(r, "Manufacturer:")).and_then(text),
-        ),
-        (
-            "modello",
-            cfg.and_then(|r| field(r, "Component ID:")).and_then(text),
-        ),
-        (
-            "serie",
-            cfg.and_then(|r| field(r, "Serial Number:")).and_then(text),
-        ),
-        (
-            "firmware",
-            cfg.and_then(|r| field(r, "Firmware Version:"))
-                .and_then(text),
-        ),
-        (
-            "software",
-            obj(vec![
-                ("nome", Some(V::s("Analyst"))),
-                ("versione", version.and_then(|v| text(v))),
-            ])
-            .map(|s| V::Arr(vec![s])),
-        ),
+        ("produttore", f("Manufacturer:")),
+        ("modello", f("Component ID:")),
+        ("serie", f("Serial Number:")),
+        ("firmware", f("Firmware Version:")),
+        ("software", sw),
     ])
 }
 

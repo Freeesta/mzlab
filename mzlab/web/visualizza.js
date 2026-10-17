@@ -47,6 +47,7 @@ const DISP = (() => {
     note: p => { const m = measured(p); return m ? t("disp.pdaDelay.found", { delay: m.delay.toFixed(2), n: m.peaks, corr: m.corr.toFixed(2) }) : t("disp.pdaDelay.none"); } });
   register("chrom", { id: "pdaalign", label: "disp.pdaAlign", title: "disp.pdaAlign.title", kind: "check", when: p => p.kind === "pda" && !!dfile(p), get: p => !!p.pdaAlign, set: (p, v) => { p.pdaAlign = !!v; redraw(p); } });
   // ---- gradient over the chromatogram: the delay at the column is typed by the student (the program does not estimate the dwell volume)
+  register("chrom", { id: "grad", label: "ctx.chrom.grad", title: "ctx.chrom.grad.aria", kind: "check", when: p => window.GRADIENTE && GRADIENTE.have(p), get: p => p.overlay === "grad", set: (p, v) => { p.overlay = v ? "grad" : null; redraw(p); } });
   register("chrom", { id: "gdelay", label: "disp.gdelay", title: "disp.gdelay.title", kind: "number", min: 0, max: 10, step: 0.1, when: p => p.overlay === "grad", get: p => p.gdelay || 0,
     set: (p, v) => { p.gdelay = clamp(Math.round((numIt(v) || 0) * 10) / 10, 0, 10); redraw(p); } });
   // ---- XIC in high resolution: the ion and its interval (the header only says «XIC • m/z value»); the interval is per trace, in ppm or in Da

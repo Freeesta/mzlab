@@ -198,6 +198,10 @@ pub trait Lettore {
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>>;
     fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>>;
     fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram>;
+    /// Optical DAD / PDA 2D map JSON for sample `c`, if present.
+    fn dad_map(&mut self, _c: usize) -> Result<Option<String>> {
+        Ok(None)
+    }
     /// The `metodo/1` document of the sample (`docs/agenti/metodo.md`).
     fn metodo(&mut self, c: usize) -> Result<String>;
     /// The header of the mzML of sample `c` (instrument, sources, hashes); `None`: `lettori_mzml::scrivi` makes a plain one from the format.

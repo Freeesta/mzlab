@@ -38,7 +38,11 @@ impl Wiff {
                 }
             }
         }
-        Ok(self.chromatograms_of(blocks))
+        let mut chroms = self.chromatograms_of(blocks);
+        if let Some(dad) = &self.dad {
+            chroms.push(dad.twc_chromatogram(chroms.len()));
+        }
+        Ok(chroms)
     }
 
     /// The chromatograms of the MRM blocks only (no scan is decoded).
@@ -54,7 +58,11 @@ impl Wiff {
                 blocks.add(r, c);
             }
         }
-        Ok(self.chromatograms_of(blocks))
+        let mut chroms = self.chromatograms_of(blocks);
+        if let Some(dad) = &self.dad {
+            chroms.push(dad.twc_chromatogram(chroms.len()));
+        }
+        Ok(chroms)
     }
 
     /// The TIC of all the MRM blocks and one SRM chromatogram per transition that was acquired at least once.

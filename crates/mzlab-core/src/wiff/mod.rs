@@ -5,6 +5,7 @@
 //! The scans are PROFILE data as the file holds them (no peak picking): `Spectrum::profile` is true.
 
 pub mod dad;
+pub mod dad_map;
 pub mod idx;
 pub mod lettore;
 mod run;
@@ -59,6 +60,8 @@ pub struct Wiff {
     pub dad: Option<dad::DadData>,
     /// `Component ID` of the mass spectrometer in the Log, and the creation time of the file: the header of the mzML.
     pub model: Option<String>,
+    pub serial: Option<String>,
+    pub source_type: Option<String>,
     pub created: Option<String>,
     /// SHA-1 (hex) of the `.wiff`, for the `sourceFile` of the mzML; the caller that has the bytes sets it (`Ole::sha1_hex`).
     pub wiff_sha1: Option<String>,
@@ -127,8 +130,7 @@ fn polarity(method: &Option<Method>) -> i8 {
 }
 
 fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Result<Wiff> {
-    let scan_len =
-        scan_len.ok_or_else(|| Error::new("err.file.wiffNoScan").with("name", name))?;
+    let scan_len = scan_len.ok_or_else(|| Error::new("err.file.wiffNoScan").with("name", name))?;
     let table = ole
         .read(&format!("{SAMPLES}SampleIdxTable"))
         .ok_or_else(|| bad("no sample table"))?;
@@ -164,7 +166,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
     #[cfg(feature = "estesi")]
     let method = method.or_else(|| estesi::fallback_method(ole, sample));
     let dad = dad::DadData::read(ole, sample);
-    let (model, created) = crate::metodo_wiff::run_facts(ole, sample);
+    let (model, created, serial, source_type) = crate::metodo_wiff::run_facts_full(ole, sample);
     Ok(Wiff {
         sample,
         records,
@@ -173,6 +175,8 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         method,
         dad,
         model,
+        serial,
+        source_type,
         created,
         wiff_sha1: None,
         scan_len,

@@ -372,6 +372,7 @@ pub(crate) fn chromatogram_kind(c: &Chromatogram) -> Option<String> {
         ChromKind::Bpc => cv("MS:1000628", "basepeak chromatogram", ""),
         ChromKind::Srm => cv("MS:1001473", "selected reaction monitoring chromatogram", ""),
         ChromKind::Sic => cv("MS:1000627", "selected ion current chromatogram", ""),
+        ChromKind::Pda => cv("MS:1000813", "total wavelength chromatogram", ""),
         _ => return None,
     })
 }

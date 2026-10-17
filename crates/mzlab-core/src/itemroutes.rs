@@ -159,6 +159,16 @@ pub fn pda_trace<M: ReadAt>(m: &mut Mzml<M>, chroms: &[Chrom]) -> Result<String>
     Ok(o.0)
 }
 
+/// `/api/map?kind=pda`: the 2D DAD optical matrix (retention time vs wavelength) from the native reader when available.
+pub fn pda_map<M: ReadAt>(m: &mut Mzml<M>) -> Result<String> {
+    if let Some((l, c)) = m.r.lettore() {
+        if let Some(json) = l.dad_map(c)? {
+            return Ok(json);
+        }
+    }
+    Err(Error::new("err.pda.none"))
+}
+
 /// `/api/chrom` of an MRM file (no scans): the first chromatogram of the mzML with that kind (`tic`, `bpc`, `srm`), empty when it has none. The m/z window, the
 /// precursor and the filter do not apply to it.
 pub fn mrm_chrom<M: ReadAt>(m: &mut Mzml<M>, chroms: &[Chrom], kind: &str) -> Result<String> {

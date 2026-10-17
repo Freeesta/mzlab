@@ -36,6 +36,7 @@ export function createLabOps({ engine, ARCH, fileOf, lrOpen, slotOf, readerFor, 
       case "lr_gradient": { await sync(); const o = await open(m); return { info: e.lab_gradient(o.slot, m.name, o.f.size, o.rd) }; }
       case "lr_analog": { const o = await open(m); return { info: e.item_analog(o.slot, o.f.size, o.rd, m.i, m.n) }; }
       case "lr_pda": { const o = await open(m); return { info: e.item_pda(o.slot, o.f.size, o.rd) }; }
+      case "lr_pda_map": { const o = await open(m); return { info: e.item_pda_map(o.slot, o.f.size, o.rd) }; }
       case "lr_delay": { const o = await open(m); return { info: e.item_delay(o.slot, m.name, o.f.size, o.rd) }; }
     }
     return undefined;
