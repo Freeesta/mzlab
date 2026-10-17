@@ -1,5 +1,5 @@
-//! `gapfill::fill_file` answers like `features.fill_gaps` of Python (`tools/feat_riempimento.py`): the same cells are filled, with and without the RT
-//! map, and the areas agree within 1e-4 (relative). Filled cells have `CELL_FILLED` and never `CELL_DETECTED`. Skipped without python3 and numpy
+//! `gapfill::fill_file` against the frozen answers of the former Python `fill_gaps` (`tests/golden/feat/riempimento.json`, on the identity series of
+//! `tools/feat_sintetici.py --solo identita`): the same cells are filled, with and without the RT map, and the areas agree within 1e-4 (relative). Filled cells have `CELL_FILLED` and never `CELL_DETECTED`. Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 use std::path::{Path, PathBuf};
@@ -93,13 +93,13 @@ fn check(what: &str, got: &Aligned, want: &Value) {
 }
 
 #[test]
-fn fill_like_python() {
+fn fill_like_the_golden_file() {
     let out = std::env::temp_dir().join(format!("mzlab_fill_{}", std::process::id()));
     let root: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let ok = Command::new("python3")
-        .arg(root.join("tools/feat_riferimento.py"))
+        .arg(root.join("tools/feat_sintetici.py"))
         .arg(&out)
-        .args(["--solo", "riempimento"])
+        .args(["--solo", "identita"])
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false);
@@ -111,8 +111,10 @@ fn fill_like_python() {
         eprintln!("skipped: python3/numpy not available");
         return;
     }
-    let d: Value =
-        serde_json::from_slice(&std::fs::read(out.join("riempimento.json")).unwrap()).unwrap();
+    let d: Value = serde_json::from_slice(
+        &std::fs::read(root.join("tests/golden/feat/riempimento.json")).unwrap(),
+    )
+    .unwrap();
     let map = rt_map(&d, d["n_files"].as_u64().unwrap() as usize);
     let (with_map, n1) = run_fill(&d, &out, Some(&map));
     check("with the map", &with_map, &d["with_map"]);
