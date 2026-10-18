@@ -18,7 +18,7 @@
   // for the ?perf meter (perf.js loads later: what happens before it is kept here and picked up by it)
   const perfMark = t => { if (window.PERF) PERF.mark(t); else if (/[?&]perf\b/.test(location.search)) (window.PERF_EARLY = window.PERF_EARLY || []).push([performance.now(), t]); };
   const step = t => { window.qqStep = t; console.debug("[mzLab]", t); perfMark(t); };
-  const phase = m => { window.qqPhaseCur = m ? { key: m.key, pct: m.pct, params: m.params } : null; if (m) step(m.key); if (window.ldRefresh && window.I18N) ldRefresh(); };
+  const phase = m => { window.qqPhaseCur = m ? { key: m.key, pct: m.pct, params: m.params } : null; if (m) step(m.key); if (window.ldRefresh && window.I18N) ldRefresh(); if (typeof AVVIO !== "undefined" && AVVIO.renderFase) AVVIO.renderFase(); };
   // the ONE clean slate («New session» and «Start from scratch»): saved files, notebook, user lists, caches (app, engine, libraries) and service worker are removed, then the page reloads
   // from the network; ?riparti=1 makes the new worker delete the saved files itself if the database could not be deleted now (another tab holds it)
   const wait = p => Promise.race([p, new Promise(r => setTimeout(r, 4000))]).catch(() => {});
@@ -36,7 +36,7 @@
   window.mzlabHardReset = window.qqHardReset;
   const restart = () => window.qqHardReset();
   // i18n.js loads after this script: the message is a catalog key, written when the page (and I18N) is there
-  const fail = (key, params, again) => { window.qqFailed = key; window.qqPhaseCur = null; if (typeof AVVIO !== "undefined") AVVIO.segnaFallito(key); const show = () => { const m = document.getElementById("ldmsg"); if (m && window.I18N) m.textContent = I18N.t(key, params); if (again && window.ldAction && window.I18N) ldAction(I18N.t("load.restart"), restart); }; show(); document.addEventListener("DOMContentLoaded", show); };
+  const fail = (key, params, again) => { window.qqFailed = key; window.qqPhaseCur = null; if (typeof AVVIO !== "undefined") AVVIO.segnaFallito({ key, params }); const show = () => { const m = document.getElementById("ldmsg"); if (m && window.I18N) m.textContent = I18N.t(key, params); if (again && window.ldAction && window.I18N) { ldAction(I18N.t("load.restart"), restart); const L = document.getElementById("loading"); if (L) L.hidden = false; } }; show(); document.addEventListener("DOMContentLoaded", show); };
   document.addEventListener("DOMContentLoaded", () => { step(window.qqStep); if (window.qqPhaseCur) ldRefresh(); });
 
   // a short message under the header (a polite live region)

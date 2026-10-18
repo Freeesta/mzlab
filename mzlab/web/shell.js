@@ -22,8 +22,8 @@ function nice(a,b,n){const s=(b-a)/n,p=Math.pow(10,Math.floor(Math.log10(s))),m=
 function smooth(y,k){if(!k)return y;return y.map((_,i)=>{const a=y[i-1]??y[i],c=y[i+1]??y[i];return(a+2*y[i]+c)/4})}
 const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles
 
-async function init(){try{loading(true);await bootSession();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});
-  const d=await api("api/state");fail();window.qqReady=true;if(typeof AVVIO!=="undefined")AVVIO.segnaPronto();if(window.ldClearBootTimer)window.ldClearBootTimer();setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else{applyView();if(window.QQRESET)QQRESET.remind()}if(window.BARRA)BARRA.init()}catch(e){fail(e);if(typeof AVVIO!=="undefined")AVVIO.segnaFallito(e)}finally{loading(false)}}
+async function init(){try{await bootSession();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});
+  const d=await api("api/state");fail();window.qqReady=true;if(typeof AVVIO!=="undefined")AVVIO.segnaPronto();if(window.ldClearBootTimer)window.ldClearBootTimer();setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);if(typeof AVVIO!=="undefined")AVVIO.segnaSessione(hasSess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else{applyView();if(window.QQRESET)QQRESET.remind()}if(window.BARRA)BARRA.init()}catch(e){fail(e);if(typeof AVVIO!=="undefined")AVVIO.segnaFallito(e)}finally{if(!$("#loading").hidden)loading(false)}}
 
 // ------------------------------------------------------------------ views: Dati (start screen or panels), Disegno
 let _lastV="";
@@ -45,9 +45,7 @@ function applyView(){const v=S.view,d=v==="data";
  hh();addEventListener("scroll",()=>hd.classList.toggle("scrolled",scrollY>4),{passive:true});addEventListener("resize",hh);if(window.ResizeObserver)new ResizeObserver(hh).observe(hd)}
 window.hdrH=()=>document.querySelector("header").offsetHeight;
 // Back and Forward walk through the views
-function setView(v,fromHistory){STATO.vista(v,"view");applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);
-  // no automatic scroll when the view changes (decision 7/10): panels, zoom, cursor and active graph are state and stay
-  if(v==="data"&&!window.qqReady&&!window.QQQ_PHONE)$("#loading").hidden=false}
+function setView(v,fromHistory){STATO.vista(v,"view");applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);}
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.dataset.v));
 // Back/Forward and typed addresses: the view follows the hash (a cold #/teoria never gets here: the head script leaves the page)
 addEventListener("popstate",()=>{const v=hashView()||"data";if(v!==S.view)setView(v,true)});
@@ -320,7 +318,7 @@ async function upload0(files,into,box,signal){
   // in the browser the engine builds the indexes of several files at once (pool of workers)
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);
   await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
-function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView();armStuck()}
+function showStart(d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView();armStuck()}
 // start screen still without files after 10 s: a quiet way out, «Full reset», that opens the same question as «New session» (reset.js)
 let stuckTimer=0;
 function armStuck(){if(stuckTimer||$("#stuck"))return;stuckTimer=setTimeout(()=>{const s=$("#start");if(!s||s.hidden||S.sess||ST.files.length||$("#stuck"))return;

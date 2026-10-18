@@ -386,3 +386,84 @@ def test_duplicate_file_while_waiting_real_upload_drop_dups():
     assert res["processed"] == ["sample.mzML"]
     assert res["inflight"] == 0
     assert res["st_files"] == 1
+
+
+def test_segna_fallito_object_and_fallback_without_i18n():
+    code = f"""
+    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+    AVVIO._resetTest('pending');
+    global.window = {{
+      fail: () => {{}},
+      I18N: {{ t: (k, p) => `translated: ${{k}} (${{p.p}})` }}
+    }};
+    AVVIO.segnaFallito({{ key: 'load.err.code', params: {{ p: 'abc' }} }});
+    const withI18N = AVVIO.errore;
+
+    AVVIO._resetTest('pending');
+    global.window.I18N = null;
+    AVVIO.segnaFallito({{ key: 'load.err.code' }});
+    const withoutI18N = AVVIO.errore;
+
+    console.log(JSON.stringify({{ withI18N, withoutI18N }}));
+    """
+    res = run_node(code)
+    assert res["withI18N"] == "translated: load.err.code (abc)"
+    assert res["withoutI18N"] == "Calculation engine startup failed"
+
+
+def test_render_fase_dom_and_sessione_scheletro():
+    code = f"""
+    {DOM_HELPERS}
+    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+    const faseEl = makeEl('avvio-fase');
+    const dropEl = makeEl('drop');
+    const skelEl = makeEl('drop-skeleton');
+    const store = {{}};
+    global.window.localStorage = {{
+      getItem: k => store[k] || null,
+      setItem: (k, v) => {{ store[k] = String(v); }},
+      removeItem: k => {{ delete store[k]; }}
+    }};
+    global.document.getElementById = id => {{
+      if (id === 'avvio-fase') return faseEl;
+      if (id === 'drop') return dropEl;
+      if (id === 'drop-skeleton') return skelEl;
+      return null;
+    }};
+
+    // 1) renderFase con phase tracking e percentuale
+    AVVIO._resetTest('pending');
+    global.window.qqPhaseCur = {{ key: 'load.ph.index', pct: 45.6 }};
+    AVVIO.renderFase();
+    const faseTxt = faseEl.textContent;
+    const faseHidden = faseEl.hidden;
+
+    // Ready nasconde la linea di stato
+    AVVIO.segnaPronto();
+    const faseAfterReady = faseEl.hidden;
+
+    // 2) Indizio di sessione e scheletro
+    AVVIO.segnaSessione(true);
+    const haSess1 = AVVIO.haSessione();
+    AVVIO.applicaIndizioSessione();
+    const dropHidden1 = dropEl.hidden, skelHidden1 = skelEl.hidden;
+
+    AVVIO.rimuoviScheletro();
+    const dropHidden2 = dropEl.hidden, skelHidden2 = skelEl.hidden;
+
+    AVVIO.segnaSessione(false);
+    const haSess2 = AVVIO.haSessione();
+
+    console.log(JSON.stringify({{
+      faseTxt, faseHidden, faseAfterReady,
+      haSess1, dropHidden1, skelHidden1,
+      dropHidden2, skelHidden2, haSess2
+    }}));
+    """
+    res = run_node(code)
+    assert "46%" in res["faseTxt"] and not res["faseHidden"]
+    assert res["faseAfterReady"] is True
+    assert res["haSess1"] is True and res["dropHidden1"] is True and res["skelHidden1"] is False
+    assert res["dropHidden2"] is False and res["skelHidden2"] is True
+    assert res["haSess2"] is False
+

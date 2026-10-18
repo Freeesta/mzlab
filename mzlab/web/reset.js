@@ -61,6 +61,8 @@ const RESET = (function () {
       } catch (e) { rep.errors.push("storage"); }
     } else {
       try {
+        const sk = typeof NOMI !== "undefined" ? NOMI.KEY("sessione") : "mzlab.sessione";
+        try { localStorage.removeItem(sk); } catch (_) {}
         if (mode === "cold") {
           const ks = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && /^(qqq|mzlab)/i.test(k) && !KEEP_LS.test(k)) ks.push(k); }
           ks.forEach(k => localStorage.removeItem(k)); rep.keys = ks.length;

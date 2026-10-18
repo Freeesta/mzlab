@@ -218,7 +218,7 @@ function loading(on, msg) {
 // progress bar for any API call (the work runs in the worker) that lasts more than ~1 s; the loading screen already covers file opening
 (() => {
   const bar = () => document.getElementById("busybar"); let pending = 0, timer = 0; const orig = window.fetch.bind(window);
-  const update = () => { const b = bar(); if (b) b.hidden = !(pending > 0 && !timer && Q("#loading").hidden); };
+  const update = () => { const b = bar(); if (b) b.hidden = !(pending > 0 && !timer && Q("#loading").hidden && window.qqReady); };
   window.fetch = (input, init) => {
     const url = typeof input === "string" ? input : (input && /** @type {any} */ (input).url) || "";
     if (!/^(\.\/)?api\//.test(url)) return orig(input, init);
@@ -306,6 +306,7 @@ function uiSave(now = false) {
   clearTimeout(uiTimer);
   const run = () => {
     if (!E.files.length) return;
+    if (typeof AVVIO !== "undefined" && AVVIO.segnaSessione) AVVIO.segnaSessione(true);
     NB.session = CDOC.session(E.files.filter(f => !f.gone));
     NB.ui = {
       contEx: window.LISTE ? LISTE.exclExport() : undefined,
@@ -406,6 +407,7 @@ const PEND = new WeakMap();      // object -> { key: { k: placeholder index, nam
 async function bootSession0() {
   const j = await J("api/session");
   S.sess = j.session;
+  if (typeof AVVIO !== "undefined" && AVVIO.segnaSessione) AVVIO.segnaSessione(!!j.session);
   if (!j.session) { E.files = []; E.key = ""; E.pending = []; E._seq = false; E._mem = null; E.progTok = null; return; }
   const key = JSON.stringify(j.session.map(s => s.file));
   if (key === E.key) return;

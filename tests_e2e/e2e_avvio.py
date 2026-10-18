@@ -66,20 +66,26 @@ try:
         def status_while_loading():
             holder.evaluate(GONE)
             pg = ctx.new_page(); pg.goto(URL)
-            pg.wait_for_selector("#ldmsg", state="attached")
-            assert pg.locator("#ldbar").count() == 0 and pg.locator("#loading [role=progressbar]").count() == 0, "bar on the loading screen"
-            assert pg.get_attribute("#ldmsg", "role") == "status" and pg.get_attribute("#loading", "aria-busy") == "true"
-            seen = set()
-            def poll():
-                t = pg.evaluate("document.getElementById('ldmsg') ? document.getElementById('ldmsg').textContent : ''")
-                if t: seen.add(t)
-                return not pg.locator("#loading").is_visible() or pg.locator("#drop").count() > 0
-            for _ in range(240):
-                if poll(): break
-                pg.wait_for_timeout(250)
-            assert seen, "status line never had text"
-            pg.wait_for_selector("#drop", timeout=120000); pg.close()
-        step("one status line (role=status) and no bar on the loading screen", status_while_loading)
+            pg.wait_for_selector("#start")
+            assert pg.locator("#loading").is_hidden(), "loading veil must be hidden on boot"
+            assert pg.locator("#drop").is_visible(), "drop zone must be visible immediately"
+            assert pg.locator("#drop-skeleton").is_hidden(), "skeleton must be hidden without session"
+            assert pg.get_attribute("#avvio-fase", "role") == "status"
+            pg.wait_for_function("window.qqReady === true", timeout=120000)
+            assert pg.locator("#avvio-fase").is_hidden(), "avvio-fase must be hidden once ready"
+            pg.close()
+        step("app shell immediate, drop visible, and discrete status line role=status", status_while_loading)
+        def session_skeleton_when_clue_present():
+            holder.evaluate(GONE)
+            c = b.new_context(locale="it-IT", viewport={"width": 1300, "height": 900})
+            c.add_init_script("try { localStorage.setItem('mzlab.sessione', '1'); } catch (e) {}")
+            pg = c.new_page(); pg.goto(URL, wait_until="domcontentloaded")
+            assert pg.evaluate("document.getElementById('drop-skeleton') && !document.getElementById('drop-skeleton').hidden"), "skeleton visible with session clue"
+            assert pg.evaluate("document.getElementById('drop') && document.getElementById('drop').hidden"), "drop hidden with session clue"
+            pg.wait_for_function("document.getElementById('drop') && !document.getElementById('drop').hidden", timeout=120000)
+            assert pg.locator("#drop-skeleton").is_hidden()
+            c.close()
+        step("session clue shows skeleton on boot and clears when ready", session_skeleton_when_clue_present)
         b.close()
 finally:
     srv.terminate()

@@ -321,6 +321,7 @@ I18N.add("it", {
   "load.engine.waiting": "{n} file in attesa",
   "load.engine.waitingOne": "1 file in attesa",
   "load.engine.cancel": "Annulla",
+  "load.session.restoring": "Ripristino della sessione…",
   "load.ph.read": "Lettura dei file",
   "load.ph.scans": "Indice delle scansioni",
   "load.ph.chrom": "Cromatogrammi",
