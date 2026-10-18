@@ -16,8 +16,7 @@ const CartCarica = (() => {
     return p.slice(0, p.lastIndexOf("/") + 1);
   }
   function setDir(f, d) { Object.defineProperty(f, "_dir", { value: d, configurable: true }); return f; }
-  const pairKey = (f, stem) => dir(f) + "\u0000" + stem.toLowerCase();
-  const hiddenIn = f => dir(f).split("/").some(s => s && HIDDEN(s)) || HIDDEN(f.name);
+  const pairKey = (f, stem) => dir(f) + "\u0000" + stem.toLowerCase(), hiddenIn = f => dir(f).split("/").some(s => s && HIDDEN(s)) || HIDDEN(f.name);
 
   // compatible files go on, the others are counted
   function split(files) {
@@ -43,8 +42,7 @@ const CartCarica = (() => {
 
   // ---- reading (DataTransferItem.webkitGetAsEntry): the entries must be taken in the drop event itself, before any await
   function entriesOf(dt) {
-    const items = dt && dt.items ? [...dt.items] : [];
-    const es = items.map(i => (i.kind === "file" && i.webkitGetAsEntry ? i.webkitGetAsEntry() : null)).filter(Boolean);
+    const es = (dt?.items ? [...dt.items] : []).map(i => (i.kind === "file" && i.webkitGetAsEntry ? i.webkitGetAsEntry() : null)).filter(Boolean);
     return es.some(e => e.isDirectory) ? es : null;
   }
   const call = (o, m, ...a) => new Promise((ok, ko) => o[m](...a, ok, ko));
@@ -71,7 +69,9 @@ const CartCarica = (() => {
     const kept = mm.methods.filter(m => m.files.length), meth = kept.map(m => m.name); AgilentD.held.push(...kept);
     const ig = (ignored.length ? " " + T(ignored.length === 1 ? "cart.ignored.one" : "cart.ignored", { n: ignored.length }) : "") + (meth.length ? " " + T(meth.length === 1 ? "cart.method.one" : "cart.method", { n: meth.length, name: meth.join(", ") }) : "");
     const n = ok.length + ag.runs.length + wr.runs.length; if (!n) { note(meth.length ? ig.trim() : T("cart.none", { name }) + ig); return; }
-    const msg = T(n === 1 ? "cart.found.one" : "cart.found", { n, name }) + ig; note(msg); await upload([...uniqueNames(ok, (ST.files || []).map(x => x.name)), ...await AgilentD.toMzml(ag.runs), ...WatersRaw.toMzml(wr.runs)], null);
+    const msg = T(n === 1 ? "cart.found.one" : "cart.found", { n, name }) + ig; note(msg);
+    if (ag.runs.length && typeof AVVIO !== "undefined" && !(await AVVIO.pronto())) return;
+    await upload([...uniqueNames(ok, (ST.files || []).map(x => x.name)), ...await AgilentD.toMzml(ag.runs), ...WatersRaw.toMzml(wr.runs)], null);
     if (!ig && document.getElementById("cartinfo")?.textContent === msg) note("");      // loaded: «n files to load» is done; the summary of the ignored files and later notices stay
   }
   function fromDrop(e) {                // true when the drop was a folder (read and loaded here); the entries are taken before any await

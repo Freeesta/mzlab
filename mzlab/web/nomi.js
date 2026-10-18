@@ -33,6 +33,7 @@ const NOMI = (function () {
    * @returns {string}
    */
   function OLD_KEY(k) {
+    if (k === "lang" || k === "mzlab.lang" || k === "qqq.lang") return "";
     if (k === "theme" || k === "mzlab-theme" || k === "qqq-theme") return "qqq-theme";
     if (k === "labels" || k === "mzlab-labels" || k === "qqq-labels") return "qqq-labels";
     if (typeof k === "string") {
@@ -114,7 +115,7 @@ const NOMI = (function () {
       const toCopy = [];
       for (let i = 0; i < ls.length; i++) {
         const k = ls.key(i);
-        if (k && (k.startsWith("qqq.") || k === "qqq-theme" || k === "qqq-labels")) {
+        if (k && k !== "qqq.lang" && (k.startsWith("qqq.") || k === "qqq-theme" || k === "qqq-labels")) {
           toCopy.push(k);
         }
       }
@@ -141,7 +142,7 @@ const NOMI = (function () {
           const toRemove = [];
           for (let i = 0; i < ls.length; i++) {
             const k = ls.key(i);
-            if (k && (k.startsWith("qqq.") || k === "qqq-theme" || k === "qqq-labels")) {
+            if (k && k !== "qqq.lang" && (k.startsWith("qqq.") || k === "qqq-theme" || k === "qqq-labels")) {
               toRemove.push(k);
             }
           }
@@ -159,7 +160,7 @@ const NOMI = (function () {
     const toCopy = [];
     for (let i = 0; i < ss.length; i++) {
       const k = ss.key(i);
-      if (k && (k.startsWith("qqq.") || k === "qqq-theme" || k === "qqq-labels")) {
+      if (k && k !== "qqq.lang" && (k.startsWith("qqq.") || k === "qqq-theme" || k === "qqq-labels")) {
         toCopy.push(k);
       }
     }
@@ -180,7 +181,7 @@ const NOMI = (function () {
     proto.setItem = function (k, v) {
       orig.call(this, k, v);
       try {
-        if (typeof k !== "string" || _purging) return;
+        if (typeof k !== "string" || _purging || k === "mzlab.lang" || k === "qqq.lang") return;
         if (k.startsWith("mzlab.")) orig.call(this, "qqq." + k.slice(6), v);
         else if (k === "mzlab-theme") orig.call(this, "qqq-theme", v);
         else if (k === "mzlab-labels") orig.call(this, "qqq-labels", v);
@@ -195,7 +196,7 @@ const NOMI = (function () {
     const orig = proto.getItem;
     proto.getItem = function (k) {
       const val = orig.call(this, k);
-      if (val !== null || typeof k !== "string") return val;
+      if (val !== null || typeof k !== "string" || k === "mzlab.lang" || k === "qqq.lang") return val;
       try {
         if (k.startsWith("qqq.")) return orig.call(this, "mzlab." + k.slice(4));
         if (k === "qqq-theme") return orig.call(this, "mzlab-theme");
@@ -213,7 +214,7 @@ const NOMI = (function () {
     proto.removeItem = function (k) {
       orig.call(this, k);
       try {
-        if (typeof k !== "string" || _purging) return;
+        if (typeof k !== "string" || _purging || k === "mzlab.lang" || k === "qqq.lang") return;
         if (k.startsWith("qqq.")) orig.call(this, "mzlab." + k.slice(4));
         else if (k === "qqq-theme") orig.call(this, "mzlab-theme");
         else if (k === "qqq-labels") orig.call(this, "mzlab-labels");

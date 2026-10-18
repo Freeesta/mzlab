@@ -26,6 +26,7 @@
     "../../mzlab/web/carica.js",
     "../../mzlab/web/frame.js",
     "../../mzlab/web/stato.js",
+    "../../mzlab/web/avvio-progressivo.js",
     "../../mzlab/web/html-sicuro.js",
     "../../mzlab/web/file-sicuri.js",
     "../../mzlab/web/esperimenti.js",
