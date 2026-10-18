@@ -225,6 +225,8 @@ function makeEl(id) {
   let text = '', hidden = false, children = [];
   return {
     id,
+    getBoundingClientRect: () => ({ height: 0 }),
+    style: {},
     get textContent() { return text + children.map(c => c.textContent).join(''); },
     set textContent(v) { text = v; children = []; },
     get hidden() { return hidden; },

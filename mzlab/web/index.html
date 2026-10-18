@@ -22,7 +22,6 @@
   <button class="pho" type="button" id="phopen" data-i18n="phone.open">Apri comunque</button>
   <div id="phmore" hidden><h2 data-i18n="phone.about.title">Che cos'è {APP}</h2><p data-i18n="phone.about.text">Piattaforma interattiva per l'analisi di dati LC-MS/MS a triplo quadrupolo: apre i file dello spettrometro, mostra cromatogrammi e spettri e aiuta a identificare i prodotti di trasformazione. Funziona nel browser, senza installare nulla, e i file restano sul vostro computer.</p></div>
 </div>
-<script>/* synchronous i18n application before first paint; the header stays invisible (not hidden: its space is kept) until its texts are in the language of the page */(function(){if(window.I18N&&window.I18N.apply)window.I18N.apply(document);document.documentElement.classList.remove("i18n-wait")})()</script>
 <div id="avvio-fase" class="sm muted" role="status" aria-live="polite" hidden></div>
 <div id="err"></div>
 <section id="v-data" hidden>
@@ -64,7 +63,6 @@
 <dialog id="refdlg"><div class="top" style="display:flex;align-items:center;gap:8px"><h3 id="reftitle"></h3><span class="sp"></span><button id="refx" class="x" data-i18n-title="common.close" title="Chiudi">&times;</button></div><div id="refbody"></div></dialog>
 <dialog id="bigdlg"><div class="top"><h3 id="bigtt" style="margin:0;flex:1"></h3><button id="bigx" class="x" data-i18n-title="common.close" title="Chiudi">&times;</button></div><div id="bigbody"></div></dialog>
 <div id="loading" aria-busy="true" hidden><canvas aria-hidden="true" id="ldion" width="420" height="120"></canvas><div id="ldmsg" role="status" aria-live="off"></div><div id="ldact" hidden></div></div>
-<script>/* synchronous i18n application before first paint; the header stays invisible (not hidden: its space is kept) until its texts are in the language of the page */(function(){if(window.I18N&&window.I18N.apply)window.I18N.apply(document);document.documentElement.classList.remove("i18n-wait")})()</script>
 <script src="static/avvio.js"></script>
 <div id="calcdlg" class="card" hidden role="dialog" data-i18n-aria-label="header.calc.long" aria-label="Calcolatrice m/z"><div class="top" style="display:flex"><h3 style="margin:0;flex:1" data-i18n="header.calc.long">Calcolatrice m/z</h3><button class="x" id="calcx" data-i18n-title="common.close" title="Chiudi">&times;</button></div>
  <input id="calcin" data-i18n-placeholder="calc.ph" placeholder="Numero o formula" autocomplete="off" data-i18n-title="calc.in.title" title="Un conto: numeri e + − × ÷ ( ), anche con la virgola. Una formula bruta: anche con parentesi (C9H10N2O) e in minuscolo (c9h10n2o). «Ans» = l'ultimo risultato. Invio = risultato, Esc = azzera.">
@@ -119,5 +117,4 @@
 <script>/* synchronous i18n application before first paint; the header stays invisible (not hidden: its space is kept) until its texts are in the language of the page */(function(){if(window.I18N&&window.I18N.apply)window.I18N.apply(document);document.documentElement.classList.remove("i18n-wait")})()</script>
 <script src="static/avvio-progressivo.js"></script>
 <script src="static/carica.js"></script>
-<script>/* synchronous i18n application before first paint; the header stays invisible (not hidden: its space is kept) until its texts are in the language of the page */(function(){if(window.I18N&&window.I18N.apply)window.I18N.apply(document);document.documentElement.classList.remove("i18n-wait")})()</script>
 </body></html>
