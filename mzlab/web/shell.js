@@ -23,7 +23,7 @@ function smooth(y,k){if(!k)return y;return y.map((_,i)=>{const a=y[i-1]??y[i],c=
 const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles
 
 async function init(){try{loading(true);await bootSession();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});
-  const d=await api("api/state");fail();window.qqReady=true;if(window.ldClearBootTimer)window.ldClearBootTimer();setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else{applyView();if(window.QQRESET)QQRESET.remind()}if(window.BARRA)BARRA.init()}catch(e){fail(e)}finally{loading(false)}}
+  const d=await api("api/state");fail();window.qqReady=true;if(typeof AVVIO!=="undefined")AVVIO.segnaPronto();if(window.ldClearBootTimer)window.ldClearBootTimer();setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else{applyView();if(window.QQRESET)QQRESET.remind()}if(window.BARRA)BARRA.init()}catch(e){fail(e);if(typeof AVVIO!=="undefined")AVVIO.segnaFallito(e)}finally{loading(false)}}
 
 // ------------------------------------------------------------------ views: Dati (start screen or panels), Disegno
 let _lastV="";
@@ -285,7 +285,7 @@ const LOADS=new Set();
 const memDesc=fs=>fs.map(b=>`${(String(b.name).match(/\.[^./\\]+(\.scan)?$/i)||["?"])[0]} ${(b.size/1048576).toFixed(1)} MB`).join(" + ");
 // «Cancel»: the files not started are not read, the engine stops the copies and the indexes running (lr_cancel), the module its conversions; the files already loaded stay
 async function cancelLoads(){for(const c of LOADS)c.abort();const rb=window.MZLAB_RUST,names=CONVROWS.running().map(r=>r.name);if(rb&&rb.rpc&&names.length)try{await rb.rpc({op:"lr_cancel",names})}catch(_){}}
-async function upload(files,into){const box=$("#up");fail();files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)));if(!UPBUSY)CONVROWS.clearDone();UPBUSY++;checkGo();const mine=files,ctl=new AbortController();LOADS.add(ctl);CONVROWS.onCancel=cancelLoads;
+async function upload(files,into){if(typeof AVVIO!=="undefined"&&!(await AVVIO.pronto()))return;const box=$("#up");fail();files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)));if(!UPBUSY)CONVROWS.clearDone();UPBUSY++;checkGo();const mine=files,ctl=new AbortController();LOADS.add(ctl);CONVROWS.onCancel=cancelLoads;
   // for the diagnosis of the loading
   try{navigator.storage.estimate().then(e=>{window.MZLAB_STIMA=`${Math.round((e.usage||0)/1e6)} of ${Math.round((e.quota||0)/1e6)} MB`}).catch(()=>{})}catch(_){}
   try{await upload0(files,into,box,ctl.signal)}finally{LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));UPBUSY--;checkGo();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();if(UPBAR){UPBAR();UPBAR=null}IDLE.splice(0).forEach(ok=>ok())}}}

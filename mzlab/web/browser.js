@@ -36,7 +36,7 @@
   window.mzlabHardReset = window.qqHardReset;
   const restart = () => window.qqHardReset();
   // i18n.js loads after this script: the message is a catalog key, written when the page (and I18N) is there
-  const fail = (key, params, again) => { window.qqFailed = key; window.qqPhaseCur = null; const show = () => { const m = document.getElementById("ldmsg"); if (m && window.I18N) m.textContent = I18N.t(key, params); if (again && window.ldAction && window.I18N) ldAction(I18N.t("load.restart"), restart); }; show(); document.addEventListener("DOMContentLoaded", show); };
+  const fail = (key, params, again) => { window.qqFailed = key; window.qqPhaseCur = null; if (typeof AVVIO !== "undefined") AVVIO.segnaFallito(key); const show = () => { const m = document.getElementById("ldmsg"); if (m && window.I18N) m.textContent = I18N.t(key, params); if (again && window.ldAction && window.I18N) ldAction(I18N.t("load.restart"), restart); }; show(); document.addEventListener("DOMContentLoaded", show); };
   document.addEventListener("DOMContentLoaded", () => { step(window.qqStep); if (window.qqPhaseCur) ldRefresh(); });
 
   // a short message under the header (a polite live region)
