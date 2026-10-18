@@ -37,30 +37,26 @@ const AVVIO = (function () {
     if (typeof document === "undefined") return;
     const info = document.getElementById("avvio-drop-info");
     if (!info) return;
-    if (stato === "ready" || stato === "failed") {
+    if (stato === "ready" || stato === "failed" || attesa.length === 0) {
       info.hidden = true;
       info.textContent = "";
       return;
     }
-    // pending
+    // pending with files waiting
     info.hidden = false;
     const n = attesa.length;
-    if (n === 0) {
-      info.textContent = T("load.engine.preparing");
-    } else {
-      const txt = n === 1 ? T("load.engine.waitingOne", { n: 1 }) : T("load.engine.waiting", { n });
-      info.textContent = "";
-      const s = document.createElement("span");
-      s.textContent = `${T("load.engine.preparing")} · ${txt} `;
-      info.appendChild(s);
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "sec sm";
-      b.id = "avvio-annulla";
-      b.textContent = T("load.engine.cancel");
-      b.onclick = annulla;
-      info.appendChild(b);
-    }
+    const txt = n === 1 ? T("load.engine.waitingOne", { n: 1 }) : T("load.engine.waiting", { n });
+    info.textContent = "";
+    const s = document.createElement("span");
+    s.textContent = `${txt} `;
+    info.appendChild(s);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "sec sm";
+    b.id = "avvio-annulla";
+    b.textContent = T("load.engine.cancel");
+    b.onclick = annulla;
+    info.appendChild(b);
   }
 
   function renderFase() {
@@ -73,10 +69,15 @@ const AVVIO = (function () {
       el.textContent = "";
       return;
     }
+    const ph = typeof window !== "undefined" && window.qqPhaseCur ? window.qqPhaseCur : null;
+    if (!ph && !timedOut) {
+      el.hidden = true;
+      el.textContent = "";
+      return;
+    }
     el.hidden = false;
     el.textContent = "";
-    const ph = typeof window !== "undefined" && window.qqPhaseCur ? window.qqPhaseCur : null;
-    let txt = ph && typeof window !== "undefined" && window.I18N ? window.I18N.t(ph.key, ph.params) : (typeof window !== "undefined" && window.I18N ? window.I18N.t("load.engine.preparing") : "Preparing calculation engine…");
+    let txt = ph && typeof window !== "undefined" && window.I18N ? window.I18N.t(ph.key, ph.params) : "";
     if (ph && ph.pct != null) {
       txt += ` ${Math.max(0, Math.min(100, Math.round(ph.pct)))}%`;
     }
@@ -124,6 +125,8 @@ const AVVIO = (function () {
     const d = document.getElementById("drop");
     const s = document.getElementById("drop-skeleton");
     const ha = haSessione();
+    // the skeleton takes the height of the drop box it replaces: when the session turns out not to exist, nothing moves
+    if (d && ha && !d.hidden && d.getBoundingClientRect().height > 0 && s) s.style.minHeight = d.getBoundingClientRect().height + "px";
     if (d) d.hidden = ha;
     if (s) {
       s.hidden = !ha;

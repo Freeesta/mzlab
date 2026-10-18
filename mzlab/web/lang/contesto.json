@@ -31,7 +31,6 @@
   "phone.about.title": "Titolo della scheda «i» sullo smartphone; {app} = nome del programma.",
   "bt.copied": "Nota nella finestra di aiuto di BioTransformer: lo SMILES del disegno è stato copiato negli appunti; {smiles} = SMILES (abbreviato).",
   "load.err.engineStart": "Errore grave all'avvio, sulla schermata di attesa: il motore non parte (il dettaglio tecnico va nella console).",
-  "load.engine.preparing": "Avviso sotto la zona di rilascio mentre il motore di calcolo si sta preparando.",
   "load.engine.waiting": "Avviso sotto la zona di rilascio mentre il motore si sta avviando con file in coda; {n} = numero di file in coda.",
   "load.engine.waitingOne": "Avviso sotto la zona di rilascio quando c'è un file in attesa del motore.",
   "load.engine.cancel": "Pulsante per annullare i caricamenti in attesa del motore.",

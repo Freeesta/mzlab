@@ -24,6 +24,7 @@
     "../../mzlab/web/tour.js",
     "../../mzlab/web/avvio.js",
     "../../mzlab/web/carica.js",
+    "../../mzlab/web/first-paint.js",
     "../../mzlab/web/frame.js",
     "../../mzlab/web/stato.js",
     "../../mzlab/web/avvio-progressivo.js",

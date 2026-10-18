@@ -1061,8 +1061,22 @@ const BARRA = (() => {
     updateButtons();
   }
 
+  // first paint: the toolbar of the start screen (no session) and the header icons are drawn by index.html, before the engine is up, so
+  // nothing appears or moves when it is ready; init() later rebuilds the same bar
+  function primo() {
+    document.querySelectorAll("header [data-ic]").forEach(e => {
+      e.innerHTML = QICON.get(/** @type {HTMLElement} */ (e).dataset.ic, 16);
+      e.querySelectorAll("svg").forEach(v => { v.removeAttribute("aria-label"); v.removeAttribute("role"); v.setAttribute("aria-hidden", "true"); });
+    });
+    _mode = "lr";
+    loadState();
+    window.CMD = CMD;
+    buildBar();
+  }
+
   return {
     init,
+    primo,
     hintShow,
     hintClose,
     commands: CMD,
@@ -1104,7 +1118,9 @@ if (typeof window !== "undefined") {
 }
 
 if (typeof document !== "undefined") {
-  if (document.readyState === "loading") {
+  if (/** @type {any} */ (window).QQ_FIRST_PAINT) {          // read by first-paint.js: only the bar is drawn now, init() comes with the engine (shell.js)
+    BARRA.primo();
+  } else if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => BARRA.init());
   } else {
     BARRA.init();
