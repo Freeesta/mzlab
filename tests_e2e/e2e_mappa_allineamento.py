@@ -26,21 +26,27 @@ try:
         pg = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}).new_page()
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-        pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
-        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")]); pg.wait_for_timeout(800)
+        pg.goto(f"http://127.0.0.1:{r.port}/")
+        attendi(pg, "document.querySelector('#pick')")
+        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")])
         pg.click("#opbtn"); ready(pg)
-        pg.click("#np-map"); ready(pg); pg.wait_for_timeout(400)
-        pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.wait_for_timeout(300)
+        pg.click("#np-map"); ready(pg)
+        attendi(pg, f"{M} && {M}._a")
+        pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
+        frames(pg, 2)
 
         # Activate sight
-        pg.click(".pnl.map [data-mz=mir]"); pg.wait_for_timeout(400)
+        pg.click(".pnl.map [data-mz=mir]")
+        attendi(pg, f"MAPPA.st({M}).mir")
+        frames(pg, 2)
         box = lambda: pg.evaluate(f"(()=>{{const c={M}.cv.getBoundingClientRect();return [c.left,c.top,c.width,c.height]}})()")
         at = lambda fx, fy: (lambda c: (c[0] + c[2] * fx, c[1] + c[3] * fy))(box())
 
         # Move mouse over map center to set sight point
         x, y = at(.5, .5)
         pg.mouse.move(x, y); pg.mouse.move(x + 2, y + 2)
-        pg.wait_for_function(f"!!({M}._mz.spec && {M}._mz.xic)", timeout=15000); pg.wait_for_timeout(300)
+        attendi(pg, f"!!({M}._mz.spec && {M}._mz.xic)")
+        frames(pg, 2)
 
         def check_alignment():
             return pg.evaluate(f"""(() => {{
@@ -79,10 +85,11 @@ try:
         def step_long_name():
             long_name = "X" * 60
             pg.evaluate(f"(()=>{{ E.files[0].label = '{long_name}'; E.files[0].name = '{long_name}'; ctl({M}); draw({M}); }})()")
-            pg.wait_for_timeout(500)
+            frames(pg, 3)
             x, y = at(.5, .5)
             pg.mouse.move(x, y); pg.mouse.move(x + 2, y + 2)
-            pg.wait_for_timeout(300)
+            attendi(pg, f"!!({M}._mz.spec && {M}._mz.xic)")
+            frames(pg, 2)
             res = check_alignment()
             assert res is not None, "alignment data not available"
             assert not res["has_rd"], "2D map must not have .rd element in header"
@@ -94,10 +101,11 @@ try:
         def step_resize():
             # Resize viewport to 1280px (narrower)
             pg.set_viewport_size({"width": 1280, "height": 850})
-            pg.wait_for_timeout(600)
+            fermo(pg, ".pnl.map canvas")
             x, y = at(.5, .5)
             pg.mouse.move(x, y); pg.mouse.move(x + 2, y + 2)
-            pg.wait_for_timeout(300)
+            attendi(pg, f"!!({M}._mz.spec && {M}._mz.xic)")
+            frames(pg, 2)
             res = check_alignment()
             assert res is not None, "alignment data not available after resize"
             assert res["diff_y"] <= 1.0, f"m/z alignment error on resize: {res['diff_y']}px"
@@ -105,15 +113,19 @@ try:
 
             # Fullscreen toggle
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f")
-            pg.wait_for_timeout(700)
+            attendi(pg, f"{M}.el.classList.contains('max')")
+            fermo(pg, ".pnl.map canvas")
             x, y = at(.5, .5)
             pg.mouse.move(x, y); pg.mouse.move(x + 2, y + 2)
-            pg.wait_for_timeout(300)
+            attendi(pg, f"!!({M}._mz.spec && {M}._mz.xic)")
+            frames(pg, 2)
             res_fs = check_alignment()
             assert res_fs is not None, "alignment data not available in fullscreen"
             assert res_fs["diff_y"] <= 1.0, f"m/z alignment error in fullscreen: {res_fs['diff_y']}px"
             assert res_fs["diff_x"] <= 1.0, f"RT alignment error in fullscreen: {res_fs['diff_x']}px"
-            pg.keyboard.press("f"); pg.wait_for_timeout(500)
+            pg.keyboard.press("f")
+            attendi(pg, f"!{M}.el.classList.contains('max')")
+            fermo(pg, ".pnl.map canvas")
         step("Passo 3b: viewport resize and full screen: alignment preserved (<=1px)", step_resize)
 
         r.close()
