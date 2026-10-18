@@ -147,13 +147,16 @@ export function margins(p) {
 }
 // the same RT axis as the map; the integrated zone is filled
 function drawXic(p, c, s) {
-  const { g, W, H, a } = plotArea(p, c), mt = 10, mb = 22, ink = css("--muted"), ac = css("--accent"), x = v => M.l + (v - a.x0) / (a.x1 - a.x0) * (W - M.l - M.r);
-  g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink; g.beginPath(); g.moveTo(M.l, H - mb + .5); g.lineTo(W - M.r, H - mb + .5); g.stroke();
-  g.textAlign = "center"; for (const t of nice(a.x0, a.x1, 8)) { const xx = x(t); if (xx >= M.l - 1 && xx <= W - M.r + 1) g.fillText(String(+t.toFixed(2)), xx, H - mb + 13); }
+  const { g, W, H, a } = plotArea(p, c), mt = 10, mb = 22, ink = css("--muted"), ac = css("--accent");
+  const cr = p.cv.getBoundingClientRect(), xr = c.getBoundingClientRect();
+  const ml = (cr.left - xr.left) + M.l, mr = (cr.right - xr.left) - M.r, pw = mr - ml;
+  const x = v => ml + (v - a.x0) / (a.x1 - a.x0) * pw;
+  g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink; g.beginPath(); g.moveTo(ml, H - mb + .5); g.lineTo(mr, H - mb + .5); g.stroke();
+  g.textAlign = "center"; for (const t of nice(a.x0, a.x1, 8)) { const xx = x(t); if (xx >= ml - 1 && xx <= mr + 1) g.fillText(String(+t.toFixed(2)), xx, H - mb + 13); }
   g.textAlign = "left"; const b = s.box, xa = x(b.rt0), xb = x(b.rt1);
   // the RT window of the box, for the eye
   g.globalAlpha = .14; g.fillStyle = ac; g.fillRect(xa, mt, xb - xa, H - mt - mb); g.globalAlpha = 1;
-  const t = s.xic; if (!t || !t.rt.length) { g.fillStyle = css("--ink"); g.fillText(T("mapex.xic.title"), M.l + 4, mt + 8); guides(g, xa, xb, mt, H - mb, ac); return; }
+  const t = s.xic; if (!t || !t.rt.length) { g.fillStyle = css("--ink"); g.fillText(T("mapex.xic.title"), ml + 4, mt + 8); guides(g, xa, xb, mt, H - mb, ac); return; }
   let ymax = 0; for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1 && t.y[i] > ymax) ymax = t.y[i];
   const y = v => H - mb - v / (ymax || 1) * (H - mt - mb);
   // the filled area: between the two edges of the box
@@ -164,15 +167,17 @@ function drawXic(p, c, s) {
   if (inside.length) { g.beginPath(); g.moveTo(x(t.rt[inside[0]]), y(0)); for (const i of inside) g.lineTo(x(t.rt[i]), y(t.y[i])); g.lineTo(x(t.rt[inside[inside.length - 1]]), y(0)); g.closePath(); g.fill(); }
   g.globalAlpha = 1; g.strokeStyle = a.f.color || css("--ink"); g.lineWidth = 1.3; g.beginPath(); for (const i of pts) { const xx = x(t.rt[i]), yy = y(t.y[i]); if (first) { g.moveTo(xx, yy); first = false; } else g.lineTo(xx, yy); } g.stroke(); g.lineWidth = 1;
   guides(g, xa, xb, mt, H - mb, ac);
-  g.fillStyle = css("--ink"); g.fillText(`XIC ${num(s.win ? s.win.mz0 : b.mz0, 2)}–${num(s.win ? s.win.mz1 : b.mz1, 2)} · max ${fmt(ymax)}`, M.l + 4, mt + 8);
+  g.fillStyle = css("--ink"); g.fillText(`XIC ${num(s.win ? s.win.mz0 : b.mz0, 2)}–${num(s.win ? s.win.mz1 : b.mz1, 2)} · max ${fmt(ymax)}`, ml + 4, mt + 8);
   if (s.num && s.num.rtMax != null && s.num.rtMax >= a.x0 && s.num.rtMax <= a.x1) { g.strokeStyle = css("--ink"); g.setLineDash([2, 3]); g.beginPath(); g.moveTo(x(s.num.rtMax) + .5, mt); g.lineTo(x(s.num.rtMax) + .5, H - mb); g.stroke(); g.setLineDash([]); }
 }
 const guides = (g, xa, xb, y0, y1, col) => { g.save(); g.strokeStyle = col; g.setLineDash([5, 4]); g.beginPath(); for (const xx of [xa, xb]) { g.moveTo(Math.round(xx) + .5, y0); g.lineTo(Math.round(xx) + .5, y1); } g.stroke(); g.restore(); };
 // the same m/z axis as the map, turned on its side; the m/z window is a band
 function drawSpec(p, c, s) {
   const { g, W, H, a } = plotArea(p, c), ink = css("--muted"), ac = css("--accent"), x0 = 6, x1 = W - 8, b = s.box;
-  const Y = v => H - M.b - (v - a.y0) / (a.y1 - a.y0) * (H - M.t - M.b);
-  g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink; g.beginPath(); g.moveTo(x0 + .5, M.t); g.lineTo(x0 + .5, H - M.b); g.stroke();
+  const cr = p.cv.getBoundingClientRect(), sr = c.getBoundingClientRect();
+  const mapTop = (cr.top - sr.top) + M.t, mapBot = (cr.bottom - sr.top) - M.b, mapH = mapBot - mapTop;
+  const Y = v => mapBot - (v - a.y0) / (a.y1 - a.y0) * mapH;
+  g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink; g.beginPath(); g.moveTo(x0 + .5, mapTop); g.lineTo(x0 + .5, mapBot); g.stroke();
   const ya = Y(b.mz1), yb = Y(b.mz0); g.globalAlpha = .14; g.fillStyle = ac; g.fillRect(x0, ya, x1 - x0, yb - ya); g.globalAlpha = 1;
   g.save(); g.strokeStyle = ac; g.setLineDash([5, 4]); g.beginPath(); for (const yy of [ya, yb]) { g.moveTo(x0, Math.round(yy) + .5); g.lineTo(x1, Math.round(yy) + .5); } g.stroke(); g.restore();
   const sp = s.spec; g.fillStyle = css("--ink");
@@ -224,7 +229,7 @@ function featAt(p, x, y, tol = 9) {
 }
 export function featHover(p, x, y) {
   const q = featAt(p, x, y); if (!q) return false; const v = MAPPA.valueAt(p, q.rt, q.mz);
-  p.rd.textContent = T("mapfeat.read", { mz: q.mz.toFixed(dp(p)), rt: q.rt.toFixed(2), v: v == null ? "–" : fmt(v) }); p.cv.style.cursor = "pointer"; return true;
+  if (p.rd) p.rd.textContent = T("mapfeat.read", { mz: q.mz.toFixed(dp(p)), rt: q.rt.toFixed(2), v: v == null ? "–" : fmt(v) }); p.cv.style.cursor = "pointer"; return true;
 }
 export function featClick(p, x, y) { const q = featAt(p, x, y, 11); if (!q) return false; selectFeat(p, q); return true; }
 export async function selectFeat(p, q) {

@@ -60,9 +60,10 @@ try:
             assert all(v > 100 for v in sz), sz
             ali = pg.evaluate(f"(()=>{{const s={M}._mz;return [s.sp.getBoundingClientRect().top-{M}.cv.getBoundingClientRect().top, s.xc.getBoundingClientRect().left-{M}.cv.getBoundingClientRect().left]}})()")
             assert abs(ali[0]) < 1 and abs(ali[1]) < 1, ali                                      # same m/z axis (side) and same RT axis (bottom)
-            rd = pg.inner_text(f".pnl.map .rd"); assert "scan" in rd and "RT" in rd and "intensity" in rd, rd
+            tip = pg.inner_text(f".pnl.map .tip"); assert "RT" in tip and "m/z" in tip and "intensity" in tip, tip
+            assert pg.evaluate(f"{M}._mz.spec && {M}._mz.spec.sid != null")
             pg.screenshot(path=SH + "mappa_fs.png")
-        step("full screen (F): sight on, spectrum at the side and XIC below, aligned; readout", full)
+        step("full screen (F): sight on, spectrum at the side and XIC below, aligned; hover box and side scan", full)
         def keys():
             pt = lambda: pg.evaluate(f"MAPPA.point({M})")
             p0 = pt(); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(400); p1 = pt()
@@ -82,7 +83,7 @@ try:
             pg.click("#ctx [role=menuitemcheckbox]"); pg.wait_for_timeout(300)                  # right click = the menu; «Lock the sight» is in it
             lk = pg.evaluate(f"{M}._mz.lock"); assert lk, lk
             pg.mouse.move(x + 80, y + 40); pg.wait_for_timeout(200); assert pg.evaluate(f"MAPPA.point({M})") == lk          # the mouse is free, the point stays
-            assert "locked" in pg.inner_text(".pnl.map .rd")
+            assert pg.evaluate(f"!!{M}._mz.lock && !!{M}._mz.dot")
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("ArrowUp"); pg.wait_for_timeout(200); lk2 = pg.evaluate(f"{M}._mz.lock"); assert lk2["mz"] > lk["mz"], (lk, lk2)   # arrows move the locked point
             pg.keyboard.press("l"); pg.wait_for_timeout(200); assert pg.evaluate(f"{M}._mz.lock") is None
             pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pg.click("#ctx [role=menuitemcheckbox]"); pg.wait_for_timeout(200)
