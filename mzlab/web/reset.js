@@ -96,16 +96,8 @@ const RESET = (function () {
     d.addEventListener("close", () => d.remove());
     d.showModal(); /** @type {HTMLElement | null} */ (d.querySelector(".rs-cancel"))?.focus();
   }
-  // ---- once: «the files stay in the browser» (a reload does not remove them; this says how)
+  // ---- once: «the files stay in the browser» (disattivato: nessun popup)
   function remind() {
-    try { if (localStorage.getItem(NOMI.KEY("reset.note"))) return; localStorage.setItem(NOMI.KEY("reset.note"), "1"); } catch (e) { return; }
-    if (document.getElementById("resetnote")) return;
-    const n = document.createElement("div"); n.id = "resetnote"; n.setAttribute("role", "status");
-    n.innerHTML = `<span>${I18N.t("reset.note")}</span><button type="button" data-n="reset">${I18N.t("reset.note.btn")}</button><button type="button" data-n="x" aria-label="${I18N.t("reset.note.close")}">×</button>`;
-    n.addEventListener("click", e => { const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("button[data-n]")); if (!b) return; if (b.dataset.n === "reset") ask(); n.remove(); });
-    document.body.appendChild(n);
-    // goes away by itself after 20 s (the timer waits while the pointer or the focus is on it)
-    if (window.avvisoAuto) avvisoAuto(n, { x: false });
   }
   // the desktop app calls this once at start (desktop-shim.js): the first page of a new run starts clean; a reload of the page in the same run keeps everything.
   // Without sessionStorage nothing is reset (it could never be told apart from a reload).

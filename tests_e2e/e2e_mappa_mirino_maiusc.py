@@ -78,20 +78,10 @@ try:
             assert pg.evaluate(f"MAPPA.pts({M}).every(q => q.shape)"), "the shape is stored with the point"
         step("markers: the shape is decided at creation and never changes", shapes)
         def aviso():
-            pg.clock.install()
             n = lambda: pg.locator("#resetnote").count()
-            new = lambda: pg.evaluate("localStorage.removeItem('mzlab.reset.note'); QQRESET.remind()")
-            new(); assert n() == 1
-            pg.clock.run_for(19000); assert n() == 1, "still there before 20 s"
-            pg.clock.run_for(2000); assert n() == 0, "gone by itself after 20 s"
-            new(); box = pg.locator("#resetnote").bounding_box(); pg.mouse.move(box["x"] + 8, box["y"] + 8)
-            pg.clock.run_for(60000); assert n() == 1, "the pointer on it stops the timer"
-            pg.mouse.move(5, 5); pg.clock.run_for(21000); assert n() == 0, "it goes when the pointer leaves"
-            new(); pg.evaluate("document.querySelector('#resetnote button').focus()")
-            pg.clock.run_for(60000); assert n() == 1, "the focus inside stops the timer"
-            pg.evaluate("document.activeElement.blur()"); pg.clock.run_for(21000); assert n() == 0
-            new(); pg.evaluate("document.querySelector('#resetnote [data-n=x]').click()"); assert n() == 0, "the X closes it at once"
-        step("notice «files stay in the browser»: a 20 s timer, closes with its X", aviso)
+            pg.evaluate("QQRESET.remind()")
+            assert n() == 0, "the reset notice popup is disabled"
+        step("notice «files stay in the browser» is disabled", aviso)
         b.close()
     r.close()
 except Exception as e:
