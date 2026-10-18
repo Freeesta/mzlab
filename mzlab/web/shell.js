@@ -77,7 +77,7 @@ function sortFiles(){const c=fileComparator(ST.files,f=>f.conc==null?null:f.conc
 const METHOD_FORMATS=[{ext:".dam",maker:"SCIEX"}];
 const isMethodFile=name=>METHOD_FORMATS.some(x=>name.toLowerCase().endsWith(x.ext));
 (()=>{const fm=METHOD_FORMATS.map(x=>x.ext+" "+x.maker).join(", ");$("#pickdam").accept=METHOD_FORMATS.map(x=>x.ext).join(",");
-  $("#dropdam").setAttribute("aria-label",I18N.t("load.method.drop")+" ("+fm+")");$("#dropdam").innerHTML=`<b>${I18N.t("load.method.drop")}</b><br>${I18N.t("load.method.dropHint")}<small class="fmts">${esc(METHOD_FORMATS.map(x=>x.ext).join(" · "))}</small>`})();
+  $("#dropdam").setAttribute("aria-label",I18N.t("load.method.drop")+" ("+fm+")");})();
 // each method is a chip «Method: name» with ×; the method goes with the data file of the same base name, else with the selected file (api.method)
 function renderMethods(){const el=$("#mlist");
   el.innerHTML=ST.methods.map((m,i)=>`<span class="chip"><span>${I18N.t("load.method.chip",{name:esc(m.name)})}</span> <span class="muted sm">${esc(m.info&&m.info.key?I18N.t(m.info.key,m.info.params):"")} · ${sz(m.size)}</span> <button type="button" data-mrm="${i}" aria-label="${esc(I18N.t("load.method.remove",{name:m.name}))}" title="${I18N.t("load.table.remove")}">&times;</button></span>`).join("");
@@ -156,11 +156,10 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 // full screen of the whole app (Fullscreen API; the button stays hidden where the browser has none, e.g. iPhone)
 // «Report a bug»: the dialog is loaded on the first click
 {const b=$("#bug-btn");if(b)b.onclick=()=>carica("m:bug-report.js").then(()=>(/** @type {any} */(window)).BUGREP.apri()).catch(console.error)}
-(()=>{const b=$("#fs-btn"),de=document.documentElement;if(!b||!de.requestFullscreen)return;b.hidden=false;
+(()=>{const b=$("#fs-btn"),de=document.documentElement;if(!b)return;if(!de.requestFullscreen){b.hidden=true;return}
   const sync=()=>{const on=!!document.fullscreenElement,k=on?"header.fullscreen.exit":"header.fullscreen";b.setAttribute("aria-pressed",on);b.querySelector(".fs-in").hidden=on;b.querySelector(".fs-out").hidden=!on;b.title=I18N.t(k);b.setAttribute("aria-label",b.title);b.dataset.i18nTitle=b.dataset.i18nAriaLabel=k};
   b.onclick=()=>{(document.fullscreenElement?document.exitFullscreen():de.requestFullscreen({navigationUI:"hide"})).catch(()=>{})};document.addEventListener("fullscreenchange",sync)})();
-(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.nativo){d.setAttribute("data-i18n-html","load.dropWiff");d.innerHTML=I18N.t("load.dropWiff");d.title=I18N.t("load.dropWiff.tip");const h=document.querySelector("h3[data-i18n=\"load.step1.title\"]");if(h){h.setAttribute("data-i18n","load.step1.titleNative");h.textContent=I18N.t("load.step1.titleNative")}CONVERT_RAW=true;$("#convhelp").hidden=true
-}})})();   // the .raw note only where the Rust engine can read it
+(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.nativo){d.title=I18N.t("load.dropWiff.tip");CONVERT_RAW=true;const _k=[I18N.t("load.dropWiff"),I18N.t("load.step1.titleNative")]}else $("#convhelp").hidden=false}); else $("#convhelp").hidden=false})()   // the .raw note only where the Rust engine can read it
 // a Thermo .raw is read as it is by the Rust engine (rust-nativo.js): each file is a sample `x.mzML` and no mzML is written; without the engine the recipe is shown
 async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.nativo||!files.some(f=>/\.raw$/i.test(f.name)))return files;
   return NATIVO.raws(files,(ST.files||[]).map(x=>x.name))}
@@ -321,9 +320,8 @@ async function upload0(files,into,box,signal){
 function showStart(d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView();armStuck()}
 // start screen still without files after 10 s: a quiet way out, «Full reset», that opens the same question as «New session» (reset.js)
 let stuckTimer=0;
-function armStuck(){if(stuckTimer||$("#stuck"))return;stuckTimer=setTimeout(()=>{const s=$("#start");if(!s||s.hidden||S.sess||ST.files.length||$("#stuck"))return;
-  const p=document.createElement("p");p.id="stuck";p.className="muted sm";p.style.textAlign="center";p.append(I18N.t("start.stuck")+" ");const bt=document.createElement("button");bt.type="button";bt.className="sec";bt.id="stuckbtn";bt.textContent=I18N.t("start.stuck.btn");bt.onclick=()=>QQRESET.ask();p.append(bt);
-  s.appendChild(p)},10000)}
+function armStuck(){if(stuckTimer)return;stuckTimer=setTimeout(()=>{const s=$("#start"),p=$("#stuck");if(!s||!p||s.hidden||S.sess||ST.files.length)return;
+  $("#stuckbtn").onclick=()=>QQRESET.ask();p.style.visibility="visible"},10000)}   // its line is in the page from the first paint (space kept, invisible): when it shows, nothing moves
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=e=>{CartCarica.fromInput(e.target.files);e.target.value=""};
 $("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};

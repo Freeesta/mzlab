@@ -113,8 +113,8 @@ try:
         step("«Delete all files» of the card of the loaded files: two presses, empty list, memory released, loading again works", clear_all)
         def stuck():
             pg.goto(base + "?reset=files"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)
-            assert pg.locator("#stuck").count() == 0, "not at once"
-            pg.wait_for_selector("#stuckbtn", timeout=20000)
+            assert not pg.is_visible("#stuck"), "not at once (its space is reserved, invisible)"
+            pg.wait_for_selector("#stuckbtn", state="visible", timeout=20000)
             assert "Full reset" in pg.inner_text("#stuckbtn") and "Not starting" in pg.inner_text("#stuck"), pg.inner_text("#stuck")
             pg.click("#stuckbtn"); pg.wait_for_selector("#resetdlg[open]")
             assert "Files and session only" in pg.inner_text("#resetdlg"), "the same dialog as «New session»"

@@ -288,11 +288,11 @@ def test_render_drop_stato_coda_e_annulla_dom():
     }}));
     """
     res = run_node(code)
-    assert res["hidden0"] is False and "Preparazione del motore di calcolo…" in res["txt0"]
+    assert res["hidden0"] is True and res["txt0"] == ""
     assert res["hasBtn1"] is True and "1 file in attesa" in res["txt1"]
     assert "3 file in attesa" in res["txt3"]
     assert res["ok1"] is False and res["ok2"] is False and res["ok3"] is False
-    assert res["hasBtnCancel"] is False and "Preparazione del motore di calcolo…" in res["txtCancel"]
+    assert res["hasBtnCancel"] is False and res["txtCancel"] == ""
 
 
 def test_render_drop_stato_transizioni_e_fallback_dom():
@@ -328,7 +328,7 @@ def test_render_drop_stato_transizioni_e_fallback_dom():
     res = run_node(code)
     assert res["hiddenReady"] is True and res["txtReady"] == ""
     assert res["hiddenFail"] is True and res["txtFail"] == ""
-    assert res["txtFallback0"] == "load.engine.preparing"
+    assert res["txtFallback0"] == ""
     assert "load.engine.waitingOne" in res["txtFallback1"]
 
 
