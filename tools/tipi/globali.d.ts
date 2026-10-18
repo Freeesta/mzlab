@@ -210,6 +210,10 @@ interface Window {
   fmtAdduct: typeof fmtAdduct;
   fmtFormula: typeof fmtFormula;
   isDark: typeof isDark;
+  ldAction: typeof ldAction;
+  ldArmBootTimer: typeof ldArmBootTimer;
+  ldClearBootTimer: typeof ldClearBootTimer;
+  ldFullReset: typeof ldFullReset;
   openBT: typeof openBT;
   rh: typeof rh;
 }

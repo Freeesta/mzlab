@@ -33,7 +33,7 @@
     const u = new URL(location.href); u.search = "?riparti=1"; location.replace(u.href);
   };
   window.mzlabHardReset = window.qqHardReset;
-  const restart = () => window.qqHardReset();
+  const restart = () => (window.QQRESET && window.QQRESET.run ? window.QQRESET.run("all") : window.qqHardReset());
   // i18n.js loads after this script: the message is a catalog key, written when the page (and I18N) is there
   const fail = (key, params, again) => { window.qqFailed = key; window.qqPhaseCur = null; const show = () => { const m = document.getElementById("ldmsg"); if (m && window.I18N) m.textContent = I18N.t(key, params); if (again && window.ldAction && window.I18N) ldAction(I18N.t("load.restart"), restart); }; show(); document.addEventListener("DOMContentLoaded", show); };
   document.addEventListener("DOMContentLoaded", () => { step(window.qqStep); if (window.qqPhaseCur) ldRefresh(); });
@@ -77,8 +77,9 @@
     }
     catch (e) {
       window.MZLAB_LR_ERR = String(e && e.message || e); lr = null;
+      if (window.ERRORI && window.ERRORI.segnala) window.ERRORI.segnala(e, "engine");
       // the technical text stays in MZLAB_LR_ERR and the console: the screen speaks the language of the page
-      if (e && e.key) fail(e.key, null, true); else { console.error("[mzLab] engine start failed", e); fail("load.err.engineStart"); }
+      if (e && e.key) fail(e.key, null, true); else { console.error("[mzLab] engine start failed", e); fail("load.err.engineStart", null, true); }
       throw e;
     }
   };
