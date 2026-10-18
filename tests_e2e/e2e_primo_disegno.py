@@ -24,13 +24,12 @@ SNAPSHOT_JS = '''
     const out = {};
     for (const root of [document.querySelector('header'), document.querySelector('#start')]) {
         if (!root) continue;
-        const els = [root, ...root.querySelectorAll('*')].filter(e => e.id === 'stbar' || !e.closest('#stbar'));   // the buttons arrive in the reserved space of #stbar: only what they could push is compared
+        const els = [root, ...root.querySelectorAll('*')];
         for (let i = 0; i < els.length; i++) {
             const el = els[i];
             const r = el.getBoundingClientRect();
             if (r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden') {
-                const path = (n) => { let p = ''; for (; n && n !== document.body; n = n.parentElement) { const k = n.parentElement ? [...n.parentElement.children].filter(c => c.tagName === n.tagName).indexOf(n) : 0; p = '/' + (n.id ? '#' + n.id : n.tagName.toLowerCase() + k) + p; } return p; };
-                const key = path(el);
+                const key = (el.id ? '#' + el.id : el.tagName.toLowerCase()) + '[' + i + ']';
                 out[key] = {
                     id: el.id || '',
                     tag: el.tagName,
@@ -75,13 +74,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const out = {};
     for (const root of [document.querySelector('header'), document.querySelector('#start')]) {
         if (!root) continue;
-        const els = [root, ...root.querySelectorAll('*')].filter(e => e.id === 'stbar' || !e.closest('#stbar'));   // the buttons arrive in the reserved space of #stbar: only what they could push is compared
+        const els = [root, ...root.querySelectorAll('*')];
         for (let i = 0; i < els.length; i++) {
             const el = els[i];
             const r = el.getBoundingClientRect();
             if (r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden') {
-                const path = (n) => { let p = ''; for (; n && n !== document.body; n = n.parentElement) { const k = n.parentElement ? [...n.parentElement.children].filter(c => c.tagName === n.tagName).indexOf(n) : 0; p = '/' + (n.id ? '#' + n.id : n.tagName.toLowerCase() + k) + p; } return p; };
-                const key = path(el);
+                const key = (el.id ? '#' + el.id : el.tagName.toLowerCase()) + '[' + i + ']';
                 out[key] = {
                     id: el.id || '',
                     tag: el.tagName,
@@ -104,14 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
 '''
 
 
-# reserved slots: what is allowed to come into them is not a change of the page (the box is already there and nothing moves): the button of the
-# session (space kept, visibility only) and the session skeleton / drop box, which swap inside the same box (its height is the drop's)
-SLOTS = ("#session-btn-wrap", "#drop-skeleton", "#stuck")
-
-
 def diff_nodes(sA, sB):
-    sA = {k: v for k, v in sA.items() if not (any(x in k for x in SLOTS) or k.endswith('/#drop') or '/#drop/' in k)}
-    sB = {k: v for k, v in sB.items() if not (any(x in k for x in SLOTS) or k.endswith('/#drop') or '/#drop/' in k)}
     changes = []
     for k, a in sA.items():
         if k in sB:
@@ -207,8 +198,7 @@ def run_measurement(port):
             label = f"{w}x{h} {loc} warm={warm}"
             print(f"[{label}] CLS={cls_val:.4f} | Diff nodes: 1->2: {len(d12)}, 2->3: {len(d23)}, 3->4: {len(d34)} | Pixels: 1->2: {pnote12}, 2->3: {pnote23}")
 
-            # the pixels are printed above for information (a swap inside a reserved box repaints it); the criteria are CLS and the nodes
-            if cls_val > 0 or len(d12) > 0 or len(d23) > 0 or len(d34) > 0:
+            if cls_val > 0 or len(d12) > 0 or len(d23) > 0 or pdiff12 or pdiff23:
                 all_defects.append({
                     "config": label,
                     "cls": cls_val,
@@ -217,8 +207,6 @@ def run_measurement(port):
                     "d23_count": len(d23),
                     "d12_sample": d12[:10],
                     "d23_sample": d23[:10],
-                    "d34_count": len(d34),
-                    "d34_sample": d34[:10],
                 })
             ctx.close()
         b.close()
