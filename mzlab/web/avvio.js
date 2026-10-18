@@ -65,7 +65,7 @@ function ldRefresh() {
   // no status text: a phrase keeps running as it is; after a status text the SAME phrase comes back (never a new one before its time)
   if (!cur) {
     el.setAttribute("aria-live", "off");
-    if (ldTimer && ldShown === "msg") ldShow(ldLast);
+    if (ldTimer && ldShown === "msg") { if (ldLast >= 0) ldShow(ldLast); else ldNext(); }
     return;
   }
   ldShown = "msg";
@@ -122,7 +122,7 @@ function ldShow(i) {                                              // phrase i (0
   let n = 3; clearInterval(ldDotTimer);
   ldDotTimer = setInterval(() => { n = (n + 1) % 4; /** @type {HTMLElement[]} */ ([...dots.children]).forEach((d, i) => { d.style.visibility = i < n ? "visible" : "hidden"; }); }, 450);
 }
-if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(true); ldArmBootTimer(); }   // at once, on the first paint
+if (!window.QQQ_PHONE) { ldArmBootTimer(); }
 window.ldAction = ldAction;
 window.ldFullReset = ldFullReset;
 window.ldArmBootTimer = ldArmBootTimer;
