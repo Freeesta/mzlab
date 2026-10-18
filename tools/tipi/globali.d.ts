@@ -166,6 +166,7 @@ declare var orderFiles: any;
 declare var parseDecimal: any;
 declare var progCompose: any;
 declare var qqEngineStop: any;
+declare var qqFailInfo: any;
 declare var qqFailed: any;
 declare var qqHardReset: any;
 declare var qqPhaseCur: any;

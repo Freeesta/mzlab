@@ -38,12 +38,12 @@ try:
             holder.evaluate(HOLD)
             pg = ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.goto(URL + "?ripresa=4000")
-            pg.wait_for_function("document.getElementById('ldmsg') && /altra scheda/.test(document.getElementById('ldmsg').textContent)", timeout=90000)
-            assert pg.locator("#ldbar").count() == 0, "bar on the loading screen"
-            assert pg.locator("#ldsub").count() == 0, "second status line"
-            pg.wait_for_selector("#ldact button", timeout=60000)
-            assert "Riparti da zero" in pg.inner_text("#ldact") and "non risponde" in pg.inner_text("#ldmsg"), pg.inner_text("#loading")
-            pg.click("#ldact button")
+            pg.wait_for_function("document.getElementById('avvio-fase') && /altra scheda/.test(document.getElementById('avvio-fase').textContent)", timeout=90000)
+            assert pg.locator("#loading").is_hidden() and pg.locator("header").is_visible(), "no veil: the page stays visible"
+            pg.wait_for_selector("#avvio-errore #avvio-reset", timeout=60000)
+            assert pg.get_attribute("#avvio-errore", "role") == "alert"
+            assert "non risponde" in pg.inner_text("#avvio-errore-msg") and "Reset completo" in pg.inner_text("#avvio-errore"), pg.inner_text("#avvio-errore")
+            pg.click("#avvio-reset")
             pg.wait_for_selector("#drop", timeout=120000)
             assert "riparti" not in pg.url, pg.url
             pg.close()
@@ -73,6 +73,7 @@ try:
             assert pg.get_attribute("#avvio-fase", "role") == "status"
             pg.wait_for_function("window.qqReady === true", timeout=120000)
             assert pg.locator("#avvio-fase").is_hidden(), "avvio-fase must be hidden once ready"
+            assert pg.locator("#avvio-errore").count() == 0, "engine OK: no banner"
             pg.close()
         step("app shell immediate, drop visible, and discrete status line role=status", status_while_loading)
         def session_skeleton_when_clue_present():
@@ -86,6 +87,41 @@ try:
             assert pg.locator("#drop-skeleton").is_hidden()
             c.close()
         step("session clue shows skeleton on boot and clears when ready", session_skeleton_when_clue_present)
+        def wasm_fails():
+            holder.evaluate(GONE)
+            c = b.new_context(locale="it-IT", viewport={"width": 1300, "height": 900}, service_workers="block")
+            c.grant_permissions(["clipboard-read", "clipboard-write"], origin=URL.rstrip("/"))
+            c.route("**/*.wasm", lambda r: r.abort())
+            pg = c.new_page(); perr = []; pg.on("pageerror", lambda e: perr.append(str(e)))
+            pg.goto(URL, wait_until="domcontentloaded")
+            pg.wait_for_selector("#avvio-errore #avvio-copia", timeout=120000)
+            assert pg.get_attribute("#avvio-errore", "role") == "alert"
+            assert pg.locator("header").is_visible() and pg.locator("#loading").is_hidden() and pg.locator("#drop").is_visible()
+            pg.click("#avvio-copia")
+            txt = pg.evaluate("navigator.clipboard.readText()")
+            assert "mzLab" in txt and "error:" in txt and ".wasm" not in txt and "/static/" not in txt, txt
+            c.unroute("**/*.wasm")
+            pg.click("#avvio-reset")
+            pg.wait_for_function("window.qqReady === true", timeout=180000)
+            assert pg.locator("#avvio-errore").count() == 0
+            c.close()
+        step("WASM aborted: banner role=alert, page visible, details copied without file names, «Full reset» brings the site back", wasm_fails)
+        def wasm_fails_with_session():
+            holder.evaluate(GONE)
+            c = b.new_context(locale="it-IT", viewport={"width": 1300, "height": 900}, service_workers="block")
+            c.add_init_script("try { localStorage.setItem('mzlab.sessione', '1'); } catch (e) {}")
+            c.route("**/*.wasm", lambda r: r.abort())
+            pg = c.new_page(); perr = []; pg.on("pageerror", lambda e: perr.append(str(e)))
+            pg.goto(URL, wait_until="domcontentloaded")
+            pg.wait_for_selector("#avvio-errore", timeout=120000)
+            assert pg.locator("#drop").is_visible() and pg.locator("#drop-skeleton").is_hidden(), "skeleton must go away after a failure"
+            Path("/tmp/avvio_f3.mzML").write_text("<mzML></mzML>")
+            n0 = len(perr)
+            pg.set_input_files("#pick", ["/tmp/avvio_f3.mzML"])
+            pg.wait_for_function("typeof ST !== 'undefined'")
+            assert pg.evaluate("ST.files.length") == 0 and pg.locator("#avvio-errore").count() == 1 and len(perr) == n0, perr
+            c.close()
+        step("failed engine with a saved session: drop visible, skeleton gone; a dropped file gives no error and no load", wasm_fails_with_session)
         b.close()
 finally:
     srv.terminate()

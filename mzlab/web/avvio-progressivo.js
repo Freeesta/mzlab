@@ -10,6 +10,8 @@ const AVVIO = (function () {
   let stato = "pending";
   /** @type {any} */
   let errore = null;
+  /** the catalog key of the failure (for the details to copy) */
+  let chiave = "";
   /** @type {Array<(ok: boolean) => void>} */
   let attesa = [];
   /** @type {any} */
@@ -167,9 +169,62 @@ const AVVIO = (function () {
     }
   }
 
+  const GENERICO = "Calculation engine startup failed";
+  /** a catalog key looks like `load.err.engineStart`: dots, no spaces (a real message with a full stop is not a key) */
+  const eChiave = s => /^[A-Za-z][\w-]*(\.[\w-]+)+$/.test(s);
+  /** the text of a catalog key; the generic English one when the catalog is not there or does not know the key */
+  function testoChiave(key, params) {
+    const I = typeof window !== "undefined" ? window.I18N : null;
+    const t = I ? I.t(key, params) : "";
+    return t && t !== key ? t : GENERICO;
+  }
+  /** a label of the catalog, or its English fallback */
+  function lab(k, en) {
+    const I = typeof window !== "undefined" ? window.I18N : null;
+    const t = I ? I.t(k) : "";
+    return t && t !== k ? t : en;
+  }
+
+  /** the text to copy: version, key, step, technical text; no file name, no path */
+  function dettagli() {
+    const w = typeof window !== "undefined" ? /** @type {any} */ (window) : {};
+    const pulisci = s => String(w.DIAG && w.DIAG.pulisci ? w.DIAG.pulisci(s) : String(s).replace(/[\\/][^\s"']*/g, "<path>")).replace(/\w+:\/\/[^\s"'<>]*/g, "<url>");
+    const R = [`mzLab ${w.MZLAB_VERSION || "?"}`, `error: ${errore || ""}`, `key: ${chiave}`, `step: ${w.qqStep || ""}`];
+    if (w.MZLAB_LR_ERR) R.push(`engine: ${pulisci(w.MZLAB_LR_ERR)}`);
+    if (typeof navigator !== "undefined") R.push(`agent: ${navigator.userAgent}`);
+    return R.join("\n");
+  }
+
+  /** the fixed banner at the top (not modal, role=alert): the message, «Copy details», «Full reset»; the page stays visible */
+  function mostraBanner() {
+    if (typeof document === "undefined" || !document.body) return;
+    let b = document.getElementById("avvio-errore");
+    if (!b) {
+      b = document.createElement("div");
+      b.id = "avvio-errore"; b.setAttribute("role", "alert");
+      document.body.insertBefore(b, document.body.firstChild);
+    }
+    b.textContent = "";
+    const m = document.createElement("span"); m.id = "avvio-errore-msg"; m.textContent = errore || GENERICO; b.appendChild(m);
+    const c = document.createElement("button");
+    c.type = "button"; c.id = "avvio-copia"; c.className = "sec sm"; c.textContent = lab("load.fail.copy", "Copy details");
+    c.onclick = async () => {
+      try { await navigator.clipboard.writeText(dettagli()); c.textContent = lab("diag.copied", "Copied"); } catch (_) { c.textContent = lab("diag.copyFail", "Copy failed"); }
+    };
+    b.appendChild(c);
+    const r = document.createElement("button");
+    r.type = "button"; r.id = "avvio-reset"; r.className = "btn sec sm"; r.textContent = lab("reset.all.btn", "Full reset");
+    r.onclick = () => {
+      r.disabled = true;
+      const w = /** @type {any} */ (window);
+      if (typeof w.qqHardReset === "function") w.qqHardReset(); else if (typeof w.ldFullReset === "function") w.ldFullReset(); else location.reload();
+    };
+    b.appendChild(r);
+  }
+
   /**
-   * Segna l'avvio come fallito.
-   * @param {any} [err]
+   * Segna l'avvio come fallito: UNA sola fonte per il testo (`errore` = testo del banner).
+   * @param {any} [err] `{ key, params }`, una chiave di catalogo, un testo vero o un Error
    */
   function segnaFallito(err) {
     if (stato !== "pending") return;
@@ -177,25 +232,15 @@ const AVVIO = (function () {
     if (bootTimer) { clearTimeout(bootTimer); bootTimer = null; }
     timedOut = false;
     let msg = "";
-    if (err && typeof err === "object" && err.key) {
-      msg = (typeof window !== "undefined" && window.I18N ? window.I18N.t(err.key, err.params) : "") || "Calculation engine startup failed";
-    } else if (typeof err === "string") {
-      if (typeof window !== "undefined" && window.I18N) {
-        msg = window.I18N.t(err);
-      } else if (err.includes(".")) {
-        msg = "Calculation engine startup failed";
-      } else {
-        msg = err;
-      }
-    } else if (err && err.message) {
-      msg = err.message;
-    } else {
-      msg = "Calculation engine startup failed";
-    }
+    chiave = "";
+    if (err && typeof err === "object" && err.key) { chiave = String(err.key); msg = testoChiave(chiave, err.params); }
+    else if (typeof err === "string" && eChiave(err)) { chiave = err; msg = testoChiave(err); }
+    else if (typeof err === "string" && err) msg = err;
+    else if (err && err.message) msg = err.message;
+    else msg = GENERICO;
     errore = msg;
-    if (typeof window !== "undefined" && typeof window.fail === "function") {
-      try { window.fail(msg); } catch (_) {}
-    }
+    rimuoviScheletro();
+    mostraBanner();
     const coda = attesa;
     attesa = [];
     renderDropStato();
@@ -260,6 +305,9 @@ const AVVIO = (function () {
 
 if (typeof window !== "undefined") {
   /** @type {any} */ (window).AVVIO = AVVIO;
+  // browser.js can fail before this module is loaded (old browser): it leaves {key, params} in window.qqFailInfo
+  const f = /** @type {any} */ (window).qqFailInfo;
+  if (f) AVVIO.segnaFallito(f);
 }
 if (typeof module !== "undefined" && module.exports) {
   module.exports = AVVIO;

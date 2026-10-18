@@ -34,9 +34,8 @@
     const u = new URL(location.href); u.search = "?riparti=1"; u.hash = ""; location.replace(u.href);
   };
   window.mzlabHardReset = window.qqHardReset;
-  const restart = () => window.qqHardReset();
-  // i18n.js loads after this script: the message is a catalog key, written when the page (and I18N) is there
-  const fail = (key, params, again) => { window.qqFailed = key; window.qqPhaseCur = null; if (typeof AVVIO !== "undefined") AVVIO.segnaFallito({ key, params }); const show = () => { const m = document.getElementById("ldmsg"); if (m && window.I18N) m.textContent = I18N.t(key, params); if (again && window.ldAction && window.I18N) { ldAction(I18N.t("load.restart"), restart); const L = document.getElementById("loading"); if (L) L.hidden = false; } }; show(); document.addEventListener("DOMContentLoaded", show); };
+  // the failure goes to the banner of AVVIO (avvio-progressivo.js: fixed, role=alert, «Copy details», «Full reset»); the page stays visible. If AVVIO is not loaded yet it picks window.qqFailInfo up
+  const fail = (key, params) => { window.qqFailed = key; window.qqPhaseCur = null; window.qqFailInfo = { key, params }; if (typeof AVVIO !== "undefined") AVVIO.segnaFallito(window.qqFailInfo); };
   document.addEventListener("DOMContentLoaded", () => { step(window.qqStep); if (window.qqPhaseCur) ldRefresh(); });
 
   // a short message under the header (a polite live region)
@@ -80,7 +79,7 @@
       window.MZLAB_LR_ERR = String(e && e.message || e); lr = null;
       if (window.ERRORI && window.ERRORI.segnala) window.ERRORI.segnala(e, "engine");
       // the technical text stays in MZLAB_LR_ERR and the console: the screen speaks the language of the page
-      if (e && e.key) fail(e.key, null, true); else { console.error("[mzLab] engine start failed", e); fail("load.err.engineStart", null, true); }
+      if (e && e.key) fail(e.key); else { console.error("[mzLab] engine start failed", e); fail("load.err.engineStart"); }
       throw e;
     }
   };
