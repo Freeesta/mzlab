@@ -206,6 +206,7 @@ function loading(on, msg) {
   } else {
     // a failed engine start keeps its message (and the «start from scratch» button) on screen
     if (window.qqFailed) return;
+    if (window.ldClearBootTimer) window.ldClearBootTimer();
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
     clearTimeout(ldSlow); setTimeout(() => {
       L.classList.add("fade-out"); ldMsg = null;

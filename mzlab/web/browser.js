@@ -30,7 +30,8 @@
     if (NOMI.DB_OLD) await wait(new Promise((/** @type {any} */ r) => { const q = indexedDB.deleteDatabase(NOMI.DB_OLD); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
     await wait((async () => { for (const k of await caches.keys()) if (k.startsWith(NOMI.CACHE_PREFIX) || k.startsWith("qqq-") || k === "mzlab-libs") await caches.delete(k); })());
     await wait((async () => { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); })());
-    const u = new URL(location.href); u.search = "?riparti=1"; location.replace(u.href);
+    try { localStorage.clear(); sessionStorage.clear(); } catch (_) {}
+    const u = new URL(location.href); u.search = "?riparti=1"; u.hash = ""; location.replace(u.href);
   };
   window.mzlabHardReset = window.qqHardReset;
   const restart = () => window.qqHardReset();
@@ -77,8 +78,9 @@
     }
     catch (e) {
       window.MZLAB_LR_ERR = String(e && e.message || e); lr = null;
+      if (window.ERRORI && window.ERRORI.segnala) window.ERRORI.segnala(e, "engine");
       // the technical text stays in MZLAB_LR_ERR and the console: the screen speaks the language of the page
-      if (e && e.key) fail(e.key, null, true); else { console.error("[mzLab] engine start failed", e); fail("load.err.engineStart"); }
+      if (e && e.key) fail(e.key, null, true); else { console.error("[mzLab] engine start failed", e); fail("load.err.engineStart", null, true); }
       throw e;
     }
   };

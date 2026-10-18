@@ -74,10 +74,33 @@ function ldRefresh() {
   // the percentage is shown, not announced at every tick
   if (pct != null) { const s = document.createElement("span"); s.setAttribute("aria-hidden", "true"); s.textContent = ` ${pct}%`; el.appendChild(s); }
 }
-// a button under the status line (stuck start: «start from scratch»)
+// a button under the status line (stuck start: «start from scratch» or full reset)
 function ldAction(label, fn) {
   const a = document.getElementById("ldact"); if (!a) return; a.textContent = ""; a.hidden = !label; if (!label) return;
-  const b = document.createElement("button"); b.className = "btn"; b.textContent = label; b.onclick = fn; a.appendChild(b); b.focus();
+  const b = document.createElement("button"); b.className = "btn imp"; b.id = "ldreset"; b.type = "button"; b.textContent = label; b.onclick = fn; a.appendChild(b); b.focus();
+}
+let ldBootTimer = null;
+function ldFullReset() {
+  const b = /** @type {HTMLButtonElement | null} */ (document.querySelector("#ldact button"));
+  if (b) b.disabled = true;
+  const msg = document.getElementById("ldmsg");
+  if (msg && window.I18N) msg.textContent = I18N.t("reset.busy");
+  if (window.qqHardReset) window.qqHardReset();
+  else if (window.QQRESET && window.QQRESET.run) window.QQRESET.run("all");
+  else location.reload();
+}
+function ldArmBootTimer() {
+  if (ldBootTimer || window.qqReady) return;
+  ldBootTimer = setTimeout(() => {
+    if (window.qqReady) return;
+    const L = document.getElementById("loading");
+    if (!L || L.hidden) return;
+    const label = window.I18N ? I18N.t("reset.all.btn") : "Full reset";
+    ldAction(label, ldFullReset);
+  }, 10000);
+}
+function ldClearBootTimer() {
+  if (ldBootTimer) { clearTimeout(ldBootTimer); ldBootTimer = null; }
 }
 function ldNext() {
   // a failed start keeps its error message on screen
@@ -99,4 +122,9 @@ function ldShow(i) {                                              // phrase i (0
   let n = 3; clearInterval(ldDotTimer);
   ldDotTimer = setInterval(() => { n = (n + 1) % 4; /** @type {HTMLElement[]} */ ([...dots.children]).forEach((d, i) => { d.style.visibility = i < n ? "visible" : "hidden"; }); }, 450);
 }
-if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(true); }   // at once, on the first paint
+if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(true); ldArmBootTimer(); }   // at once, on the first paint
+window.ldAction = ldAction;
+window.ldFullReset = ldFullReset;
+window.ldArmBootTimer = ldArmBootTimer;
+window.ldClearBootTimer = ldClearBootTimer;
+

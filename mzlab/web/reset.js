@@ -57,8 +57,7 @@ const RESET = (function () {
     if (mode === "all") {
       if (navigator.serviceWorker) await wait((async () => { for (const r of await navigator.serviceWorker.getRegistrations()) { await r.unregister(); rep.sw++; } })());
       try {
-        const ks = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && /^(qqq|mzlab)/i.test(k)) ks.push(k); }
-        ks.forEach(k => localStorage.removeItem(k)); rep.keys = ks.length; sessionStorage.clear();
+        localStorage.clear(); sessionStorage.clear();
       } catch (e) { rep.errors.push("storage"); }
     } else {
       try {
@@ -79,7 +78,7 @@ const RESET = (function () {
     const rep = await wipe(mode);
     if (opt.mark) { try { sessionStorage.setItem(RUN_KEY, "1"); sessionStorage.setItem(RUN_KEY_OLD, "1"); } catch (e) { /* none */ } }
     if (opt.reload === false) return rep;
-    const u = new URL(location.href); u.searchParams.delete("reset"); u.searchParams.delete("riparti"); if (rep.blocked.length || mode !== "files") u.searchParams.set("riparti", "1");
+    const u = new URL(location.href); if (mode === "all") { u.search = "?riparti=1"; u.hash = ""; } else { u.searchParams.delete("reset"); u.searchParams.delete("riparti"); if (rep.blocked.length || mode !== "files") u.searchParams.set("riparti", "1"); }
     location.replace(u.href);
     return rep;
   }
