@@ -1,12 +1,15 @@
-"""Unit tests for the AVVIO progressive startup state machine and upload gate (PR 1):
+"""Unit and DOM tests for the AVVIO progressive startup state machine and upload gate (Fase 1):
 - pending -> ready with 0, 1, and 3 uploads in waiting queue (strict execution order)
 - pending -> failed (uploads resolve false, no unhandled exceptions, error shown once)
 - double segnaPronto (idempotent transition)
 - segnaFallito after ready is ignored (state transition locked)
 - annulla from waiting state (cancels queue, resolves false)
-- duplicate file while waiting -> single upload (via dropDups and INFLIGHT logic)
+- segnaFallito translates catalog key with I18N.t before window.fail (never raw key in #err)
+- renderDropStato DOM test with and without parameters (0, 1, 3 files, cancel click, ready/failed)
+- duplicate file while waiting via REAL upload and dropDups from mzlab/web/shell.js
 """
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -191,52 +194,195 @@ def test_annulla_cancels_waiting_uploads():
     assert res["stato"] == "pending"
 
 
-def test_duplicate_file_while_waiting_single_upload():
+def test_segna_fallito_translates_catalog_key_before_fail():
     code = f"""
     const AVVIO = require('{WEB / "avvio-progressivo.js"}');
     AVVIO._resetTest('pending');
 
-    // Simulate shell.js deduplication logic with INFLIGHT, ST.files and dropDups
-    const INFLIGHT = new Set();
-    const ST_files = [];
-    const fkey = f => f.name + "|" + f.size;
-    function dropDups(files) {{
-      const dups = files.filter(f => INFLIGHT.has(fkey(f)) || ST_files.some(g => g.name === f.name && g.size === f.size));
-      return files.filter(f => !dups.includes(f));
-    }}
-
-    const processed = [];
-    async function upload(files) {{
-      if (!(await AVVIO.pronto())) return;
-      files = dropDups(files);
-      if (!files.length) return;
-      files.forEach(f => INFLIGHT.add(fkey(f)));
-      try {{
-        // simulate async upload0 (sendFile)
-        await new Promise(r => setTimeout(r, 10));
-        for (const f of files) {{
-          processed.push(f.name);
-          ST_files.push(f);
-        }}
-      }} finally {{
-        files.forEach(f => INFLIGHT.delete(fkey(f)));
+    let failedArg = null;
+    global.window = {{
+      fail: (arg) => {{ failedArg = arg; }},
+      I18N: {{
+        t: (k, p) => k === 'load.err.engineStart' ? 'Il motore non risponde' : k
       }}
-    }}
+    }};
+    global.I18N = global.window.I18N;
 
-    const fileA = {{ name: 'sample.mzML', size: 1024 }};
-    const fileA_dup = {{ name: 'sample.mzML', size: 1024 }};
-
-    // Two drops of the same file while pending
-    const call1 = upload([fileA]);
-    const call2 = upload([fileA_dup]);
-
-    AVVIO.segnaPronto();
-    await Promise.all([call1, call2]);
+    AVVIO.segnaFallito('load.err.engineStart');
 
     console.log(JSON.stringify({{
-      processed
+      failedArg,
+      errore: AVVIO.errore
     }}));
     """
     res = run_node(code)
-    # The first call processes sample.mzML; the second call finds sample.mzML in INFLIGHT/seen and is dropped
+    assert res["failedArg"] == "Il motore non risponde"
+    assert res["errore"] == "Il motore non risponde"
+
+
+DOM_HELPERS = """
+function makeEl(id) {
+  let text = '', hidden = false, children = [];
+  return {
+    id,
+    get textContent() { return text + children.map(c => c.textContent).join(''); },
+    set textContent(v) { text = v; children = []; },
+    get hidden() { return hidden; },
+    set hidden(v) { hidden = v; },
+    appendChild(c) { children.push(c); },
+    get children() { return children; },
+    onclick: null, type: '', className: ''
+  };
+}
+const infoEl = makeEl('avvio-drop-info');
+global.document = {
+  getElementById: (id) => id === 'avvio-drop-info' ? infoEl : null,
+  createElement: () => makeEl()
+};
+global.window = global;
+global.I18N = {
+  t: (k, p) => {
+    if (k === 'load.engine.preparing') return 'Preparazione del motore di calcolo…';
+    if (k === 'load.engine.waitingOne') return '1 file in attesa';
+    if (k === 'load.engine.waiting') return p.n + ' file in attesa';
+    if (k === 'load.engine.cancel') return 'Annulla';
+    return k;
+  }
+};
+"""
+
+
+def test_render_drop_stato_coda_e_annulla_dom():
+    """DOM test of renderDropStato queue counts with parameters and cancel button."""
+    code = f"""
+    {DOM_HELPERS}
+    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+
+    // 0 file (senza parametri)
+    AVVIO._resetTest('pending');
+    AVVIO.renderDropStato();
+    const txt0 = infoEl.textContent, hidden0 = infoEl.hidden;
+
+    // 1 file (n = 1)
+    let ok1 = null;
+    const p1 = AVVIO.pronto().then(r => {{ ok1 = r; }});
+    const txt1 = infoEl.textContent;
+    const btn1 = infoEl.children.find(c => c.id === 'avvio-annulla');
+
+    // 3 file (n = 3)
+    let ok2 = null, ok3 = null;
+    const p2 = AVVIO.pronto().then(r => {{ ok2 = r; }});
+    const p3 = AVVIO.pronto().then(r => {{ ok3 = r; }});
+    const txt3 = infoEl.textContent;
+    const btn3 = infoEl.children.find(c => c.id === 'avvio-annulla');
+
+    // Clic annulla
+    btn3.onclick();
+    await Promise.all([p1, p2, p3]);
+    const txtCancel = infoEl.textContent;
+    const btnCancel = infoEl.children.find(c => c.id === 'avvio-annulla');
+
+    console.log(JSON.stringify({{
+      txt0, hidden0, txt1, hasBtn1: !!btn1, ok1, txt3, hasBtn3: !!btn3, ok2, ok3,
+      txtCancel, hasBtnCancel: !!btnCancel
+    }}));
+    """
+    res = run_node(code)
+    assert res["hidden0"] is False and "Preparazione del motore di calcolo…" in res["txt0"]
+    assert res["hasBtn1"] is True and "1 file in attesa" in res["txt1"]
+    assert "3 file in attesa" in res["txt3"]
+    assert res["ok1"] is False and res["ok2"] is False and res["ok3"] is False
+    assert res["hasBtnCancel"] is False and "Preparazione del motore di calcolo…" in res["txtCancel"]
+
+
+def test_render_drop_stato_transizioni_e_fallback_dom():
+    """DOM test of renderDropStato state transitions and fallback without I18N."""
+    code = f"""
+    {DOM_HELPERS}
+    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+
+    // Transizione ready
+    AVVIO._resetTest('pending');
+    AVVIO.renderDropStato();
+    AVVIO.segnaPronto();
+    const hiddenReady = infoEl.hidden, txtReady = infoEl.textContent;
+
+    // Transizione failed
+    AVVIO._resetTest('pending');
+    AVVIO.renderDropStato();
+    AVVIO.segnaFallito('load.err.engineStart');
+    const hiddenFail = infoEl.hidden, txtFail = infoEl.textContent;
+
+    // Senza I18N (fallback)
+    global.window.I18N = null;
+    AVVIO._resetTest('pending');
+    AVVIO.renderDropStato();
+    const txtFallback0 = infoEl.textContent;
+    AVVIO.pronto();
+    const txtFallback1 = infoEl.textContent;
+
+    console.log(JSON.stringify({{
+      hiddenReady, txtReady, hiddenFail, txtFail, txtFallback0, txtFallback1
+    }}));
+    """
+    res = run_node(code)
+    assert res["hiddenReady"] is True and res["txtReady"] == ""
+    assert res["hiddenFail"] is True and res["txtFail"] == ""
+    assert res["txtFallback0"] == "load.engine.preparing"
+    assert "load.engine.waitingOne" in res["txtFallback1"]
+
+
+def test_duplicate_file_while_waiting_real_upload_drop_dups():
+    """Test duplicate files while pending and after ready via real code extracted from shell.js."""
+    shell_src = (WEB / "shell.js").read_text(encoding="utf-8")
+    m = re.search(r"const INFLIGHT=new Set\(\)[\s\S]*?async function upload\(files,into\)\{[\s\S]*?finally\{[\s\S]*?\}\}\}", shell_src)
+    assert m is not None, "Could not extract upload and dropDups from shell.js"
+
+    code = f"""
+    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+
+    global.window = global;
+    global.I18N = {{ t: (k, p) => k }};
+    global.document = {{
+      getElementById: () => null,
+      querySelector: () => ({{ appendChild: () => {{}} }}),
+      querySelectorAll: () => []
+    }};
+    const $ = s => document.querySelector(s);
+    const ST = {{ files: [] }};
+    const CartCarica = {{ note: () => {{}} }};
+    let UPBUSY = 0;
+    const CONVROWS = {{ clearDone: () => {{}}, paint: () => {{}}, onCancel: null }};
+    function checkGo() {{}}
+    function fail() {{}}
+    const IDLE = [];
+    const processed = [];
+    async function upload0(files, into, box, signal) {{
+      await new Promise(r => setTimeout(r, 10));
+      for (const f of files) {{
+        processed.push(f.name);
+        ST.files.push(f);
+      }}
+    }}
+
+    {m.group(0)}
+
+    AVVIO._resetTest('pending');
+    const fileA = {{ name: 'sample.mzML', size: 1024 }};
+    const fileA_dup = {{ name: 'sample.mzML', size: 1024 }};
+
+    const c1 = upload([fileA]);
+    const c2 = upload([fileA_dup]);
+
+    AVVIO.segnaPronto();
+    await Promise.all([c1, c2]);
+
+    const c3 = upload([fileA_dup]);
+    await c3;
+
+    console.log(JSON.stringify({{ processed, inflight: INFLIGHT.size, st_files: ST.files.length }}));
+    """
+    res = run_node(code)
     assert res["processed"] == ["sample.mzML"]
+    assert res["inflight"] == 0
+    assert res["st_files"] == 1

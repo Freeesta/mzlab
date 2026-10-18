@@ -31,7 +31,7 @@ const AVVIO = (function () {
     }
     // pending
     info.hidden = false;
-    const T = (/** @type {string} */ k, /** @type {any} */ [p]) => (window.I18N ? I18N.t(k, p) : k);
+    const T = (k, p) => (typeof window !== "undefined" && window.I18N ? I18N.t(k, p) : k);
     const n = attesa.length;
     if (n === 0) {
       info.textContent = T("load.engine.preparing");
@@ -85,9 +85,13 @@ const AVVIO = (function () {
   function segnaFallito(err) {
     if (stato !== "pending") return;
     stato = "failed";
-    errore = err || new Error("Engine startup failed");
+    const key = typeof err === "string" ? err : (err && typeof err === "object" && err.key ? err.key : null);
+    const params = err && typeof err === "object" ? err.params : undefined;
+    const tradotto = key && typeof window !== "undefined" && window.I18N ? I18N.t(key, params) : null;
+    const msg = tradotto || (err && (err.message || err)) || "Engine startup failed";
+    errore = msg;
     if (typeof window !== "undefined" && typeof window.fail === "function") {
-      try { window.fail(errore); } catch (_) {}
+      try { window.fail(msg); } catch (_) {}
     }
     const coda = attesa;
     attesa = [];
