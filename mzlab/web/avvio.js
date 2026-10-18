@@ -85,8 +85,8 @@ function ldFullReset() {
   if (b) b.disabled = true;
   const msg = document.getElementById("ldmsg");
   if (msg && window.I18N) msg.textContent = I18N.t("reset.busy");
-  if (window.QQRESET && window.QQRESET.run) window.QQRESET.run("all");
-  else if (window.qqHardReset) window.qqHardReset();
+  if (window.qqHardReset) window.qqHardReset();
+  else if (window.QQRESET && window.QQRESET.run) window.QQRESET.run("all");
   else location.reload();
 }
 function ldArmBootTimer() {
