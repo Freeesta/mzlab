@@ -7,6 +7,7 @@
   var done = {};
   if (window.NOMI) done["nomi.js"] = Promise.resolve("nomi.js");
   if (window.AVVIO) done["avvio-progressivo.js"] = Promise.resolve("avvio-progressivo.js");
+  if (window.BARRA) ["features.js", "icons-modi.js", "barra.js"].forEach(function (f) { done[f] = Promise.resolve(f); });   // read by first-paint.js
   function add(n) {
     var mod = n.slice(0, 2) === "m:";
     var f = mod ? n.slice(2) : n;

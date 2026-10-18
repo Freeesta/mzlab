@@ -411,6 +411,7 @@ declare var fname: any;
 declare var follow: any;
 declare var followers: any;
 declare var fondoText: any;
+declare var fp: any;
 declare var fpx: any;
 declare var frame: any;
 declare var freezeSpec: any;

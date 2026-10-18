@@ -128,8 +128,6 @@ const AVVIO = (function () {
     // the skeleton takes the height of the drop box it replaces: when the session turns out not to exist, nothing moves
     if (d && ha && !d.hidden && d.getBoundingClientRect().height > 0 && s) s.style.minHeight = d.getBoundingClientRect().height + "px";
     if (d) d.hidden = ha;
-    const nr = document.getElementById("newrun");
-    if (nr && ha) nr.hidden = false;   // the session is known from localStorage: its button is there at the first paint (shell.js decides the same later)
     if (s) {
       s.hidden = !ha;
       if (ha && !s.textContent) s.textContent = typeof window !== "undefined" && window.I18N ? window.I18N.t("load.session.restoring") : "Restoring session…";
