@@ -36,6 +36,7 @@
   "load.engine.waitingOne": "Avviso sotto la zona di rilascio quando c'è un file in attesa del motore.",
   "load.engine.cancel": "Pulsante per annullare i caricamenti in attesa del motore.",
   "load.session.restoring": "Messaggio visualizzato nello scheletro della zona di rilascio durante il ripristino della sessione salvata.",
+  "load.fail.copy": "Pulsante del banner d'errore all'avvio: copia in memoria i dettagli tecnici (senza nomi di file) da incollare in una segnalazione.",
   "load.err.engineMissing": "Schermata di attesa all'avvio: il browser non ha WebAssembly o il motore non c'è.",
   "load.blocked": "Schermata di attesa all'avvio: il database dei file salvati è bloccato da un'altra scheda; {app} = nome del programma.",
   "load.err.worker": "Errore del processo di calcolo nel browser, sulla schermata di attesa; {text} = testo tecnico (inglese).",

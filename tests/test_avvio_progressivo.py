@@ -4,7 +4,7 @@
 - double segnaPronto (idempotent transition)
 - segnaFallito after ready is ignored (state transition locked)
 - annulla from waiting state (cancels queue, resolves false)
-- segnaFallito translates catalog key with I18N.t before window.fail (never raw key in #err)
+- segnaFallito translates catalog key with I18N.t (never a raw key in the banner)
 - renderDropStato DOM test with and without parameters (0, 1, 3 files, cancel click, ready/failed)
 - duplicate file while waiting via REAL upload and dropDups from mzlab/web/shell.js
 """
@@ -118,7 +118,7 @@ def test_pending_to_failed_no_exceptions_resolves_false():
     assert res["outA"] is False
     assert res["outB"] is False
     assert res["outC"] is False
-    assert res["failReported"] == ["boom"]
+    assert res["failReported"] == []   # the banner replaced the old #err line (phase 3)
     assert res["inAttesa"] == 0
 
 
@@ -216,7 +216,7 @@ def test_segna_fallito_translates_catalog_key_before_fail():
     }}));
     """
     res = run_node(code)
-    assert res["failedArg"] == "Il motore non risponde"
+    assert res["failedArg"] is None   # the text goes to the banner, not to #err (phase 3)
     assert res["errore"] == "Il motore non risponde"
 
 
