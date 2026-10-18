@@ -107,7 +107,9 @@ body.sb-dragging,body.sb-dragging *{cursor:grabbing!important;user-select:none!i
 .sb-dz-prev{position:fixed;top:var(--hh,40px);bottom:0;z-index:5201;pointer-events:none;border:2px solid var(--accent);background:color-mix(in srgb,var(--panel) 70%,transparent);box-sizing:border-box;border-radius:8px}
 @media (prefers-reduced-motion:no-preference){.sb-dz{transition:background .12s}}
 /* the button of the session is always in the header (hidden = invisible, space kept): when it comes nothing moves */
-header #newrun[hidden]{display:inline-flex!important;visibility:hidden}header .ib .ic{min-width:16px;min-height:16px}
+header #newrun[hidden]{display:inline-flex!important;visibility:hidden}
+/* header texts are translated before the first paint (index.html): its space is kept, invisible, until then */
+html.i18n-wait header{visibility:hidden}header .ib .ic{min-width:16px;min-height:16px}
 /* toolbar of the header */
 #stbar{flex:1 1 0;min-width:0;height:30px;min-height:30px;display:flex;align-items:center;justify-content:flex-end;gap:3px;overflow:hidden;white-space:nowrap}
 @media (max-width:760px){header{flex-wrap:wrap}#stbar{flex:1 1 100%;order:20;justify-content:flex-start}}
