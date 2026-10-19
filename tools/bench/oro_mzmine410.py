@@ -88,6 +88,54 @@ def esegui(xml: Path, mm: Path, tmp: Path) -> subprocess.CompletedProcess:
     return r
 
 
+ISO = 1.003355      # mass difference of 13C - 12C
+
+
+def _fase_isotopi(fasi: Path) -> tuple[list[str], list[list]]:
+    """Per file: the rows that the grouper keeps and the ones it removes. The 4.10 export has no charge column, so the charge is derived: a removed row is an isotopologue
+    of the closest kept row within 0.1 min whose m/z is lower by 1 to 4 times 1.003355/z (z in 1..3, tolerance 0.01); the charge of a kept row is round(1.003355 / spacing of its nearest removed row) and every other removed row is a whole multiple of 1.003355/z.
+    Kept rows with removed rows are principal (charge z), the others alone (charge 0)."""
+    col = ["file", "id", "mz", "rt", "height", "charge", "role", "principal"]
+    righe = []
+    for f, tenute in oro._per_file(fasi, "isotopi"):
+        tutte = dict(oro._per_file(fasi, "risolutore"))[f]
+        ids = {r["id"] for r in tenute}
+        base = {r["id"]: (float(r["mz"]), float(r["rt"])) for r in tenute}
+        rimosse, figlie = [], {i: [] for i in ids}
+        for r in tutte:
+            if r["id"] in ids:
+                continue
+            mz, rt = float(r["mz"]), float(r["rt"])
+            # kept rows that can have this row as the k-th isotopologue (k = 1..4) for some charge z in 1..3; the closest in m/z wins
+            trovate = [(mz - m, i) for i, (m, t) in base.items() if m < mz and abs(t - rt) < 0.1
+                       and any(abs((mz - m) * z / ISO - round((mz - m) * z / ISO)) < 0.01 and 1 <= round((mz - m) * z / ISO) <= 4 for z in (1, 2, 3))]
+            i = min(trovate)[1] if trovate else ""
+            if i:
+                figlie[i].append(mz - base[i][0])
+            rimosse.append([f, r["id"], r["mz"], r["rt"], r["height"], "", "isotopologue", i])
+        cariche: dict[str, set[int]] = {}
+        for i, ds in figlie.items():
+            # the charge follows from the nearest removed row (the first isotopologue, at 1.003355/z); every other row must be a whole multiple of that spacing
+            z = round(ISO / min(ds)) if ds else 0
+            ok = [z] if ds and 1 <= z <= 3 and all(abs(d * z / ISO - round(d * z / ISO)) < 0.01 and round(d * z / ISO) >= 1 for d in ds) else []
+            if ds and not ok:
+                raise SystemExit(f"{f}: the removed rows of the kept row {i} fit no charge")
+            cariche[i] = {ok[0]} if ds else set()
+        for r in tenute:
+            zs = cariche[r["id"]]
+            z = next(iter(zs)) if zs else 0
+            righe.append([f, r["id"], r["mz"], r["rt"], r["height"], z, "principal" if zs else "alone", ""])
+        righe += rimosse
+        # expected by the design of the synthetic data: the kept 500.25 has z=1 and the kept 600.30 has z=2, with at least one removed row each (the M+2 peak is not always detected)
+        for mz0, z0 in ((500.25, 1), (600.30, 2)):
+            k = [r for r in righe if r[0] == f and r[6] == "principal" and abs(float(r[2]) - mz0) < 0.01]
+            n = [r for r in righe if r[0] == f and r[6] == "isotopologue" and k and r[7] == k[0][1]]
+            print(f"check {f}: kept {mz0} -> {[(r[1], r[5]) for r in k]}, removed {len(n)}")
+            if len(k) != 1 or k[0][5] != z0 or not n:
+                raise SystemExit(f"{f}: the kept {mz0} must have charge {z0} and at least one removed row (got {[(r[1], r[5]) for r in k]}, {len(n)})")
+    return col, righe
+
+
 def _fase_finder(fasi: Path) -> tuple[list[str], list[list]]:
     """Per file: what the finder writes on every resolved feature (charge, number of peaks of the pattern, m/z of the peaks)."""
     col = ["file", "id", "mz", "rt", "height", "charge", "pattern_peaks", "pattern_mz"]
@@ -95,7 +143,9 @@ def _fase_finder(fasi: Path) -> tuple[list[str], list[list]]:
     for f, rs in oro._per_file(fasi, "finder"):
         for r in rs:
             mzs = (r.get("isotope_pattern:mz") or "").split(";") if r.get("isotope_pattern:mz") else []
-            righe.append([f, r["id"], r["mz"], r["rt"], r["height"], r.get("charge", ""), r.get("isotope_pattern:n", len(mzs)), " ".join(mzs)])
+            # 4.10.90 exports the number of peaks of the pattern as `datafile:<file>.mzML:isotopes` (and not the m/z of the peaks: `pattern_mz` stays empty)
+            n = r.get("isotope_pattern:n") or r.get(f"datafile:{f}.mzML:isotopes", "")
+            righe.append([f, r["id"], r["mz"], r["rt"], r["height"], r.get("charge", ""), n, " ".join(mzs)])
     return col, righe
 
 
@@ -125,7 +175,7 @@ def scrivi_oro(dest: Path, versione: str) -> None:
         for nome, (col, righe), chiave in [("adap.csv", oro._fase_per_file(fasi, "adap", False), per_file), ("resolved.csv", oro._fase_per_file(fasi, "risolutore", True), per_file),
                                            ("aligned.csv", oro._fase_allineata(fasi / "join_Aligned_feature_list.csv"), allineata),
                                            ("gapfilled.csv", oro._fase_allineata(fasi / "riempimento_Aligned_feature_list_gap-filled.csv"), allineata),
-                                           ("isotopes.csv", oro._fase_isotopi(fasi), per_file), ("isotopes_finder.csv", _fase_finder(fasi), per_file)]:
+                                           ("isotopes.csv", _fase_isotopi(fasi), per_file), ("isotopes_finder.csv", _fase_finder(fasi), per_file)]:
             oro._scrivi_csv(dest / nome, col, righe, chiave)
         (dest / "LEGGIMI.md").write_text(_leggimi(versione, shas, shas_410, mm, {n: oro._sostituisci(x, t) for n, x in xmls.items()}), encoding="utf-8")
 
@@ -133,6 +183,7 @@ def scrivi_oro(dest: Path, versione: str) -> None:
 def _leggimi(versione: str, shas: dict[str, str], shas_410: dict[str, str], mm: Path, xmls: dict[str, str]) -> str:
     java = subprocess.run([str(mm / "lib" / "runtime" / "bin" / "java"), "-version"], capture_output=True, text=True).stderr.strip().splitlines()
     java = [x for x in java if x.startswith(("openjdk version", "OpenJDK Runtime"))]
+    plataforma = f"generated on macOS arm64 with mzmine.app {versione} and the Temurin JDK of the app" if sys.platform == "darwin" else "generated from the portable Linux package"
     file = "".join(f"- `{n}`: `{h}` (as read by mzmine: `{shas_410[n]}`)\n" for n, h in shas.items())
     lotti = "".join(f"\n## Batch `{n}`\n```xml\n{x}```\n" for n, x in xmls.items())
     return f"""# Gold data of mzmine {versione} per stage (synthetic files)
@@ -143,6 +194,8 @@ The mzML files are not in the repository: `tools/bench/oro_mzmine.py --genera DI
 - **Written on**: {date.today().isoformat()} by `python3 tools/bench/oro_mzmine410.py --oro` (it checks first that every parameter name of the batch exists in the parameter classes of `mzmine-community-{versione}.jar`: mzmine ignores the others without a word).
 - **mzmine**: {versione}, `{URL.format(v=versione)}`, sha256 `{VERSIONI[versione]}`; license MIT, (c) 2004-2022 The mzmine Development Team (`https://github.com/mzmine/mzmine/blob/master/LICENSE.txt`, branch master checked).
 - **JDK**: the one inside the package (`lib/runtime`): {java[0]}{' / ' + java[1] if len(java) > 1 else ''}.
+- **Platform**: {plataforma}
+- **Charge in `isotopes.csv`**: the 4.10 export of the grouper has no charge column, so `role`, `charge` and `principal` are derived (`_fase_isotopi`): a removed row is an isotopologue of the kept row within 0.1 min whose m/z is lower by 1 to 4 times 1.003355/z (z in 1..3, tolerance 0.01), the charge of a kept row is round(1.003355 / spacing of its nearest removed row) and every other removed row is a whole multiple of 1.003355/z; kept rows with removed rows are principal (charge z), the others alone (charge 0). `isotopes_finder.csv` is written as exported: `pattern_peaks` is the column `isotopes` of the finder export (number of peaks of the pattern, empty when no pattern was found), `pattern_mz` is empty because 4.10.90 does not export the m/z of the peaks, and an empty `charge` means that the finder found no charge.
 - **Command**: `bin/mzmine -b fasi.xml -t TMP`, `bin/mzmine -b isotopi.xml -t TMP`, `bin/mzmine -b finder.xml -t TMP` (no interface), parameters of `tools/bench/parametri/mzmine/predefinita.json`.
 - **Input files** (sha256 of the mzML written by `oro_mzmine.py`, equal to the ones of the 3.9.0 set, with every array decoded and rounded to 6 significant digits; mzmine {versione} reads them after `senza_cromatogrammi`, which drops the TIC chromatogram: its parser fails on it, no stage uses it:
 
