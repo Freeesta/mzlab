@@ -131,3 +131,14 @@ fn a_budget_that_holds_nothing_is_refused_in_order() {
     .unwrap_err();
     assert_eq!(err.key, "error.memoryBudget");
 }
+
+/// The `.wasm` export `untargeted_formula_id` gives the JSON `formula_id/1` of `untargeted::formula_id` (caffeine, [M+H]+, the pattern from the natural abundances).
+#[test]
+fn formula_id_export_gives_the_json_of_the_module() {
+    let mz = vec![195.0876520311805, 196.09015386499837, 197.09225064161305];
+    let y = vec![1000000.0, 103166.01515119415, 8936.76966493754];
+    let text = mzlab_feat_wasm::untargeted_formula_id(mz, y, 195.0876520311805, "").unwrap();
+    assert!(text.starts_with("{\"v\":\"formula_id/1\""), "{text}");
+    assert!(text.contains("\"neutral\":\"C8H10N4O2\""), "{text}");
+    assert!(text.contains("\"chosen\":0"));
+}

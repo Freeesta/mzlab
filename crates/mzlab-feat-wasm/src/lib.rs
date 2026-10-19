@@ -515,3 +515,21 @@ pub fn align_untargeted_to(
         untargeted::align_to(&mut src, &budget, &p, open, sink)
     })
 }
+
+#[cfg(feature = "untargeted")]
+/// Candidate elemental compositions of the feature at `feature_mz` (its monoisotopic peak) in the spectrum `(mz, y)`: the JSON `formula_id/1` of
+/// `mzlab_feat::untargeted::formula_id` (charge and pattern from the isotope finder, formulas from the exact mass, the choice of the program with its reasons).
+/// `params` is `{"ion","z","tol_ppm","elements","nitrogen","rdb_min","max_results"}` (all optional).
+#[wasm_bindgen]
+pub fn untargeted_formula_id(
+    mz: Vec<f64>,
+    y: Vec<f64>,
+    feature_mz: f64,
+    params: &str,
+) -> std::result::Result<String, JsValue> {
+    use mzlab_feat::untargeted::formula_id::{identify, to_json, Opts};
+    let o = Opts::from_json(params).map_err(js_err)?;
+    identify(&mz, &y, feature_mz, &o)
+        .map(|r| to_json(&r))
+        .map_err(js_err)
+}
