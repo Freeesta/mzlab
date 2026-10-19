@@ -3,8 +3,8 @@
 //! Rewritten from scratch after the algorithm of mzmine 3.9.0 `featdet_chromatogramdeconvolution/minimumsearch/MinimumSearchFeatureResolver.java`
 //! (with `AbstractResolver.java`, `FeatureResolverTask.java`, `util/MathUtils.java` and `datamodel/featuredata/FeatureDataUtils.java`; MIT,
 //! (c) 2004-2022 The mzmine Development Team); no code copied. Paper: Schmid R. et al., MZmine 3, Nat. Biotechnol. 41:447 (2023),
-//! doi:10.1038/s41587-023-01690-2. The reference is the tag `v3.9.0`: `master` widens the borders of a peak up to the zero next to it
-//! (`adjustStartAndEnd`) and is NOT followed here.
+//! doi:10.1038/s41587-023-01690-2. The reference is the tag `v3.9.0`; mzmine 4.10 also widens the borders of a peak up to the zero next to it
+//! (`adjustStartAndEnd`): that is [`MinParams::adjust_edges`], off by default (3.9.0).
 //!
 //! One function, one step: [`quantile`] (threshold), [`zero_below`], [`has_lower_within`] (is this point a local minimum), [`keep_region`]
 //! (shape filter), [`regions`] (the walk along the run), [`make_feature`] (height, area, m/z, apex). Where the text of the study
@@ -29,6 +29,9 @@ pub struct MinParams {
     pub min_points: usize,
     /// «Peak duration range (min/mobility)», min, both ends included.
     pub duration: (f64, f64),
+    /// mzmine 4.10 `adjustStartAndEnd`: an edge point that is not 0 and has a 0 next to it takes that 0 in, so the peak, its area and its range are one
+    /// scan wider on that side. Off: the 3.9.0 ranges.
+    pub adjust_edges: bool,
 }
 
 impl Default for MinParams {
@@ -41,6 +44,7 @@ impl Default for MinParams {
             min_rel_height: 0.0,
             min_points: 5,
             duration: (0.0, 1.0),
+            adjust_edges: false,
         }
     }
 }
@@ -168,7 +172,11 @@ pub fn regions(x: &[f64], y: &mut [f64], p: &MinParams) -> Vec<(usize, usize)> {
                 && top >= y[end] * p.min_ratio;
             if closes_on_zero || closes_on_minimum {
                 if keep_region(x, y, start, end, top, min_height, p) {
-                    out.push((start, end));
+                    out.push(if p.adjust_edges {
+                        widen(y, start, end)
+                    } else {
+                        (start, end)
+                    });
                 }
                 start = end; // the source sets `end - 1` and the `for` adds 1
                 continue 'region;
@@ -177,6 +185,21 @@ pub fn regions(x: &[f64], y: &mut [f64], p: &MinParams) -> Vec<(usize, usize)> {
         break; // unreachable: `end == last` always closes
     }
     out
+}
+
+/// `adjustStartAndEnd` of 4.10: a non-zero edge with a zero next to it takes the zero in (`y` is the thresholded trace of the walk).
+fn widen(y: &[f64], s: usize, e: usize) -> (usize, usize) {
+    let s2 = if s > 0 && y[s] != 0.0 && y[s - 1] == 0.0 {
+        s - 1
+    } else {
+        s
+    };
+    let e2 = if e + 1 < y.len() && y[e] != 0.0 && y[e + 1] == 0.0 {
+        e + 1
+    } else {
+        e
+    };
+    (s2, e2)
 }
 
 /// Height, area (trapezoids over the RT axis, in intensity·min), apex and m/z of the points `s..=e` of the original trace.

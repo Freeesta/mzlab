@@ -211,3 +211,45 @@ fn bad_input_gives_nothing() {
     );
     assert!(resolve(&Chrom::default(), &[], &p).is_empty());
 }
+
+#[test]
+fn adjust_edges_takes_the_zero_next_to_an_edge_in() {
+    // mzmine 4.10 `adjustStartAndEnd`: an edge point that is not 0 with a 0 next to it takes the 0 in, one scan per side
+    let y = polyline(&[(100, 1.5e4), (115, 3e5), (130, 1.5e4)]);
+    let off = resolve(&chrom(y.clone()), &axis(N), &MinParams::default());
+    let on = resolve(
+        &chrom(y),
+        &axis(N),
+        &MinParams {
+            adjust_edges: true,
+            ..MinParams::default()
+        },
+    );
+    assert_eq!((off.len(), on.len()), (1, 1));
+    assert_eq!(off[0].scans, (100, 130));
+    assert_eq!(on[0].scans, (99, 131));
+    assert!((on[0].rt_start - (off[0].rt_start - STEP)).abs() < 1e-12);
+    // the zeros add no height and no area (the trapezoids to them are of the triangles 0 -> edge)
+    assert_eq!(on[0].height, off[0].height);
+    assert!(on[0].area > off[0].area);
+}
+
+#[test]
+fn adjust_edges_stops_at_the_ends_of_the_run() {
+    // a peak that starts at the first scan (or ends at the last one) has no zero to take in on that side
+    let mut y = vec![0.0; 100];
+    for (k, v) in y.iter_mut().enumerate().take(12) {
+        *v = 3e4 + 4e4 * (6 - (k as i32 - 6).abs()) as f64;
+    }
+    let on = MinParams {
+        adjust_edges: true,
+        ..MinParams::default()
+    };
+    let first = resolve(&chrom(y.clone()), &axis(100), &on);
+    assert_eq!(first.len(), 1);
+    assert_eq!(first[0].scans, (0, 12));
+    y.reverse();
+    let last = resolve(&chrom(y), &axis(100), &on);
+    assert_eq!(last.len(), 1);
+    assert_eq!(last[0].scans, (87, 99));
+}

@@ -147,6 +147,8 @@ fn bridge_params() -> MinParams {
         min_rel_height: 0.005,
         min_points: 5,
         duration: (0.0, 50.0),
+        // the widening is done by this module on the regions (`bridge`)
+        adjust_edges: false,
     }
 }
 
