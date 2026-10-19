@@ -44,6 +44,22 @@ name = "untargeted_pipeline"
 required-features = ["untargeted"]
 
 [[test]]
+name = "untargeted_join_410"
+required-features = ["untargeted"]
+
+[[test]]
+name = "untargeted_gapfill_410"
+required-features = ["untargeted"]
+
+[[test]]
+name = "untargeted_iso_410"
+required-features = ["untargeted"]
+
+[[test]]
+name = "untargeted_pipeline_410"
+required-features = ["untargeted"]
+
+[[test]]
 name = "untargeted_iso"
 required-features = ["untargeted"]
 
