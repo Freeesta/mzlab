@@ -1,6 +1,7 @@
 //! Molfile (V2000 and V3000, first record of an SDF) into `mol/1`. Atoms keep the order of the file; aromatic bonds (type 4) are kekulised;
 //! hydrogens of B C N O P S F Cl Br I come from the valence rules, other elements get none; stereo is read from wedges (tetrahedral
 //! centres), the "either" flags and the 2D/3D geometry of double bonds, and enhanced-stereo groups (V3000). Coordinates are kept as a layer.
+//! A double bond with the "either" flag is `unknown`; without the flag its Z/E comes from the drawn coordinates (as RDKit does).
 //! Not read: whether a drawn centre or double bond is really stereogenic (a later package decides), nor stereo from 3D coordinates.
 
 use crate::codec::MolError;
