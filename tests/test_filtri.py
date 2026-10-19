@@ -1,6 +1,6 @@
 """Scan filters (WP-H3a): /api/filters lists the scan types of a file with their counts, and `filt` restricts the chromatogram, the spectra and the
 single scans to one type. Synthetic Orbitrap DDA file; the infusion MSn file of the private data repository (skipped without it) for the paths."""
-import json, os, struct, sys
+import json, struct, sys
 from pathlib import Path
 import numpy as np
 import pytest
@@ -10,6 +10,7 @@ from mzlab.api import dispatch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import dati_sintetici as ds  # noqa: E402
+from dati_percorsi import percorso  # noqa: E402
 
 
 def call(app, url):
@@ -74,12 +75,8 @@ def test_scan_key_forms():
 
 
 def _msn():
-    for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), str(ROOT.parent / "mzlab-dati"), str(ROOT.parent / "QqQ-lab-dati")):
-        if c:
-            f = next(iter((Path(c) / "HRMS").glob("*/*direct-infusion_MSn.mzML")), None)
-            if f:
-                return f
-    return None
+    hrms = percorso("dati/HRMS")
+    return next(iter(hrms.glob("*/*direct-infusion_MSn.mzML")), None) if hrms else None
 
 
 @pytest.mark.skipif(_msn() is None, reason="infusion MSn file of the data repository not available")

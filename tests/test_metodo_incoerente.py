@@ -1,5 +1,5 @@
 """A method (.dam) of another experiment type than the open files is reported (MRM against Full Scan, MS2 method with a Full Scan file...)."""
-import os, shutil
+import shutil, sys
 from pathlib import Path
 import pytest
 import numpy as np
@@ -7,13 +7,12 @@ from mzlab.app import App
 from mzlab.reader.methodinfo import method_kind
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+from dati_percorsi import percorso  # noqa: E402
 
 
 def _dam_dir():
-    for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), str(ROOT.parent / "mzlab-dati"), str(ROOT.parent / "QqQ-lab-dati")):
-        if c and (Path(c) / "dam").is_dir():
-            return Path(c) / "dam"
-    return None
+    return percorso("dati/3200 qtrap/dam")
 
 
 def test_method_kind_from_the_experiments_and_the_name():

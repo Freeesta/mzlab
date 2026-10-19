@@ -1,18 +1,21 @@
 """Private validation of the identification and of the analogue search (WP-H8/H9): the MassBank library of the data repository against the DDA MS2 of the
 photocatalysis series (the files and the library are NOT in this repository: the test is skipped without them). The compound is never named here: the
 expected library entry is read from the data (the highest-scoring identity of the parent)."""
-import json, os, subprocess
+import json, subprocess, sys
 from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 JS = ROOT / "mzlab" / "web" / "libreria-worker.js"
+sys.path.insert(0, str(ROOT / "tools"))
+from dati_percorsi import percorso  # noqa: E402
 
 
 def _dati():
-    for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), str(ROOT.parent / "mzlab-dati"), str(ROOT.parent / "QqQ-lab-dati")):
-        if c and (Path(c) / "librerie" / "massbank_eu_qft_pos.msp").is_file() and list((Path(c) / "HRMS").glob("*/*_TiO2_t010min.mzML")):
-            return Path(c)
+    """The MassBank library file and the HRMS folder of the data repository, or None."""
+    lib, hrms = percorso("dati/librerie/massbank_eu_qft_pos.msp"), percorso("dati/HRMS")
+    if lib and lib.is_file() and hrms and list(hrms.glob("*/*_TiO2_t010min.mzML")):
+        return {"lib": lib, "hrms": hrms}
     return None
 
 
@@ -23,13 +26,13 @@ TARGETS = {"parent": (317.1642, 5.55, 5.85), "315": (315.1485, 5.15, 5.45), "291
 EXPECT_ANALOG = {"315": (-2.0159, 0.81), "291": (-26.0154, 0.75), "331": (13.9796, 0.84), "319": (1.9791, 0.72), "247": (-70.0419, 0.88)}      # (delta precursor, modified cosine) of the specification
 
 
-def _queries(d):
+def _queries(hrms):
     import sys
     sys.path.insert(0, str(ROOT))
     from mzlab.reader.mzml import Run
     out, allq = {}, []
     for fn in ("t002min", "t010min", "t020min", "t045min"):                  # the TP show up at different times: every target is looked for in the four files
-        f = next((d / "HRMS").glob(f"*/*_TiO2_{fn}.mzML")); r = Run(str(f))
+        f = next(hrms.glob(f"*/*_TiO2_{fn}.mzML")); r = Run(str(f))
         for k, (mz, lo, hi) in TARGETS.items():
             for s in r.scans:
                 if s.level == 2 and lo <= s.rt <= hi and abs((s.iso[0] + s.iso[1]) / 2 - mz) <= 0.005:
@@ -67,9 +70,9 @@ console.log(JSON.stringify(out));
 
 @pytest.fixture(scope="module")
 def result(tmp_path_factory):
-    d = _dati(); q, allq = _queries(d)
+    d = _dati(); q, allq = _queries(d["hrms"])
     tmp = tmp_path_factory.mktemp("ident"); qf = tmp / "q.json"; qf.write_text(json.dumps({"queries": q, "all": allq}))
-    p = subprocess.run(["node", "-e", NODE, str(JS), str(d / "librerie" / "massbank_eu_qft_pos.msp"), str(qf)], capture_output=True, encoding="utf-8", check=True)
+    p = subprocess.run(["node", "-e", NODE, str(JS), str(d["lib"]), str(qf)], capture_output=True, encoding="utf-8", check=True)
     return json.loads(p.stdout)
 
 

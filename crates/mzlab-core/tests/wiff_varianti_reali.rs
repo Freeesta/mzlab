@@ -1,4 +1,4 @@
-//! The `.wiff` reader of the readers module (feature `estesi`) on the real files of other SCIEX instruments (private data repository, `dati_formati/`):
+//! The `.wiff` reader of the readers module (feature `estesi`) on the real files of other SCIEX instruments (private data repository, `dati/formati/`):
 //! every sample opens with the TIC of the index or is refused with a cause, the chromatograms and spectra match the ProteoWizard mzML next to the file,
 //! `metodo/1` says what the files say. Skipped without the data repository.
 
@@ -8,7 +8,11 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::mzml::Run;
 use mzlab_core::wiff::{container, Wiff};
+
 use serde_json::Value;
+
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 fn close(a: f64, b: f64) -> bool {
     a == b || (a - b).abs() <= 1e-9 * a.abs().max(b.abs()).max(1.0)
@@ -21,27 +25,6 @@ fn detail(e: &mzlab_core::error::Error) -> String {
         .find(|(k, _)| *k == "detail")
         .map(|(_, v)| v.clone())
         .unwrap_or_default()
-}
-
-fn dati_formati() -> Option<PathBuf> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .canonicalize()
-        .ok()?;
-    cands.extend(
-        root.ancestors()
-            .skip(1)
-            .take(3)
-            .map(|p| p.join("mzlab-dati")),
-    );
-    cands
-        .into_iter()
-        .map(|p| p.join("dati_formati"))
-        .find(|p| p.is_dir())
 }
 
 fn pairs(dir: &Path, out: &mut Vec<PathBuf>) {
@@ -63,7 +46,7 @@ fn pairs(dir: &Path, out: &mut Vec<PathBuf>) {
 /// Real SCIEX files of other instruments (private data repository): every sample opens and its scans add up to the TIC of the index, or is refused with a cause.
 #[test]
 fn real_qtrap_files_open_with_the_tic_of_the_index_or_are_refused() {
-    let Some(d) = dati_formati() else {
+    let Some(d) = dati_percorsi::percorso("dati/formati") else {
         eprintln!("SKIP wiff_varianti: no data repository (MZLAB_DATI)");
         return;
     };
@@ -130,7 +113,7 @@ fn transition_key(id: &str) -> Option<String> {
     Some(id[at..].to_string())
 }
 
-fn mzml_files(d: &Path) -> Vec<PathBuf> {
+fn mzml_files() -> Vec<PathBuf> {
     fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
         for e in std::fs::read_dir(dir).into_iter().flatten().flatten() {
             let p = e.path();
@@ -142,8 +125,14 @@ fn mzml_files(d: &Path) -> Vec<PathBuf> {
         }
     }
     let mut mzmls = Vec::new();
-    walk(&d.join("sciex_wiff"), &mut mzmls);
-    walk(&d.join("scansioni_speciali"), &mut mzmls);
+    for dir in [
+        "dati/formati/sciex/wiff",
+        "dati/formati/aperti/scansioni_speciali",
+    ] {
+        if let Some(p) = dati_percorsi::percorso(dir) {
+            walk(&p, &mut mzmls);
+        }
+    }
     mzlab_core::sortc::slice_ord(&mut mzmls);
     mzmls
 }
@@ -276,12 +265,12 @@ fn compare_spectra(label: &str, want: &Run, got: &Run) -> usize {
 /// The chromatograms and spectra of the real files with a ProteoWizard mzML next to them (private data repository): the mzML of msconvert is the reference.
 #[test]
 fn real_files_match_proteowizard_mzml() {
-    let Some(d) = dati_formati() else {
+    if dati_percorsi::percorso("dati/formati").is_none() {
         eprintln!("SKIP wiff_varianti_reali: no data repository (MZLAB_DATI)");
         return;
-    };
+    }
     let (mut done, mut chroms, mut spectra, mut scheduled) = (0, 0, 0, 0);
-    for f in mzml_files(&d) {
+    for f in mzml_files() {
         let Some(wiff) = wiff_of(&f) else {
             continue;
         };
@@ -312,9 +301,10 @@ fn real_files_match_proteowizard_mzml() {
 }
 
 /// `metodo/1` of the real file `file` in `sub` of the data repository, sample `sample`.
-fn method(d: &Path, sub: &str, file: &str, sample: u32) -> Value {
+fn method(sub: &str, file: &str, sample: u32) -> Value {
     use mzlab_core::metodo::Source;
-    let ole = container(std::fs::read(d.join(sub).join(file)).unwrap(), file).unwrap();
+    let path = dati_percorsi::percorso(&format!("{sub}/{file}")).unwrap();
+    let ole = container(std::fs::read(path).unwrap(), file).unwrap();
     let src = Source {
         format: "sciex-wiff",
         files: vec![],
@@ -334,13 +324,12 @@ fn experiments(m: &Value) -> Vec<Value> {
 /// method states (the file named «6minWindow» has 360 s), the transitions of a scheduled experiment carry their target time, the version of Analyst is in the GLP tables.
 #[test]
 fn real_methods_say_what_the_files_say() {
-    let Some(d) = dati_formati() else {
+    if dati_percorsi::percorso("dati/formati").is_none() {
         eprintln!("SKIP wiff_varianti_reali: no data repository (MZLAB_DATI)");
         return;
-    };
+    }
     let blank = method(
-        &d,
-        "sciex_wiff/qtrap6500lowmass_mrm_mzml_MTBLS1381",
+        "dati/formati/sciex/wiff/qtrap6500lowmass_mrm_mzml_MTBLS1381",
         "QTrap007483_031618.wiff",
         1,
     );
@@ -367,8 +356,7 @@ fn real_methods_say_what_the_files_say() {
                 .as_str()
                 .is_some_and(|v| v.starts_with("Analyst "))));
     let moss = method(
-        &d,
-        "sciex_wiff/qtrap4500_smrm_PXD005017",
+        "dati/formati/sciex/wiff/qtrap4500_smrm_PXD005017",
         "Mix-moss_20160630_sMRM_6minWindow_30minGrad_60minTotal_3ulinj_01.wiff",
         1,
     );
@@ -377,8 +365,7 @@ fn real_methods_say_what_the_files_say() {
         "6minWindow"
     );
     let plain = method(
-        &d,
-        "sciex_wiff/qtrap5500_mrm_PXD001506",
+        "dati/formati/sciex/wiff/qtrap5500_mrm_PXD001506",
         "Duodenum_MRM_SMB_01.wiff",
         1,
     );
@@ -390,7 +377,7 @@ fn real_methods_say_what_the_files_say() {
                 .get("dwell_ms")
                 .is_some()
     );
-    let lab = method(&d, "../3200 qtrap/wiff inquinanti 25-26 B", "MRM.wiff", 1);
+    let lab = method("dati/3200 qtrap/wiff", "MRM.wiff", 1);
     let dad = lab["campi"]
         .as_array()
         .unwrap()

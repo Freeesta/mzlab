@@ -7,6 +7,7 @@ compound (one extra H allowed for hydrogen-transfer rearrangements); the peak is
 """
 import json
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,8 @@ import pytest
 from mzlab.chem.elements import parse_formula, mass
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+from dati_percorsi import percorso  # noqa: E402
 DATA = ROOT / "mzlab" / "web" / "teoria" / "pratica" / "ei-dati.js"
 NOMINAL = {"H": 1, "C": 12, "N": 14, "O": 16, "F": 19, "Si": 28, "P": 31, "S": 32, "Cl": 35, "Br": 79, "I": 127}
 AIUTI = ROOT / "mzlab" / "web" / "teoria" / "pratica" / "ei-aiuti.js"
@@ -100,10 +103,10 @@ def test_keys_are_chemically_consistent():
 
 def test_no_compound_of_the_lab_methods():
     """The pollutants of the lab methods must not appear (their names are read from the private data repository, if present)."""
-    dam = None
-    for base in (ROOT.parent / "QqQ-lab-dati" / "dam", ROOT.parent / "Data" / "dam - Metodi"):
-        if base.is_dir():
-            dam = base
+    dam = percorso("dati/3200 qtrap/dam")
+    legacy = ROOT.parent / "Data" / "dam - Metodi"          # outside the data repository: not in the layout table
+    if legacy.is_dir():
+        dam = legacy
     if dam is None:
         pytest.skip("repository privato dei dati non presente")
     names = {m.group(1).lower() for p in dam.glob("*.dam") if (m := re.match(r"Lab_inq_MS2_([A-Za-z]+)\.dam$", p.name))}

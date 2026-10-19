@@ -2,6 +2,9 @@
 //! `feat-worker.js` runs it), shared by the tests of the low-resolution Dig.
 #![allow(dead_code)]
 
+#[path = "../../../../tools/dati_percorsi.rs"]
+pub mod dati_percorsi;
+
 use mzlab_core::idxread::Index;
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::mzml::Spectrum;
@@ -225,15 +228,9 @@ pub fn linked(mut d: lr::LrDig, idxs: &[Vec<u8>], ms2: &[&Vec<u8>]) -> lr::LrDig
     d
 }
 
-/// The private data repository (with the truth of the MS2 tests), if there is one: `MZLAB_DATI` or the folder next to this repository.
+/// The private data repository (with the truth of the MS2 tests), if there is one: see `tools/dati_percorsi.rs`.
 pub fn root() -> Option<PathBuf> {
-    let p = match std::env::var("MZLAB_DATI") {
-        Ok(v) => PathBuf::from(v),
-        Err(_) => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../mzlab-dati"),
-    };
-    p.join("scratchpad/tabui_ms2_lr_truth.json")
-        .exists()
-        .then_some(p)
+    dati_percorsi::percorso("scratchpad/tabui_ms2_lr_truth.json").and(dati_percorsi::radice())
 }
 
 pub fn index_of_file(path: &std::path::Path) -> Vec<u8> {

@@ -1,19 +1,17 @@
 """WP-H4: tree of the fragmentation paths of a direct-infusion MSn file (private validation: the file is not in this repository; skipped without it).
 No compound is named here: the chain of the fragments is given as formulas."""
-import os, sys
+import sys
 from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+from dati_percorsi import percorso  # noqa: E402
 
 
 def _file():
-    for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), str(ROOT.parent / "mzlab-dati"), str(ROOT.parent / "QqQ-lab-dati")):
-        if c:
-            f = next(iter((Path(c) / "HRMS").glob("*/*direct-infusion_MSn.mzML")), None)
-            if f:
-                return f
-    return None
+    hrms = percorso("dati/HRMS")
+    return next(iter(hrms.glob("*/*direct-infusion_MSn.mzML")), None) if hrms else None
 
 
 pytestmark = pytest.mark.skipif(_file() is None, reason="infusion MSn file of the data repository not available")
