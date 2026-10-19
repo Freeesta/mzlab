@@ -54,6 +54,11 @@ fn the_bridge_reviews_a_feature_and_saves_a_decision() {
         "{}",
         &r[..200.min(r.len())]
     );
+    // The classes of the rules table ride along with the review: the contract is present, never an identification.
+    assert!(
+        r.contains("\"classes\":null") || r.contains("\"format\":\"classi/1\""),
+        "classes key missing"
+    );
     assert!(review_with(&files, &fetch, "POS", 999).is_err());
 
     let d = r#"{"pol":"POS","id":15,"level":"2b","justification":"diagnostic ions explained","decided_on":"2026-10-16","decided_by":"rev",

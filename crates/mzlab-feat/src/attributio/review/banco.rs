@@ -263,6 +263,7 @@ pub fn review_json(io: &Io, root: &str, pol: &str, id: i64) -> Result<String> {
                     .collect(),
             ),
         ),
+        ("classes", classes_json(b, f, mgf.as_ref())),
         ("rtlogp", rt.map_or(J::Null, |r| r.0)),
         ("decision", last),
         ("decision_rows", J::Num(n_rows as f64)),
