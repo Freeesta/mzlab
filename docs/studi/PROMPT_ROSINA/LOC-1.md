@@ -1,10 +1,10 @@
-# LOC-1 — Scaricare ELENCO-1, contare MassIVE, provare gli oracoli sul Mac
+# LOC-1 — Scaricare ELENCO-1, contare MassIVE, provare gli oracoli sul Mac (fatto il 19/10)
 
 Prompt pronto per la chat locale: copia tutto ciò che segue la riga «---».
 
 ---
 
-Pacchetto LOC-1 del progetto «Rosina» (`docs/studi/ROSINA.md`): Scaricare ELENCO-1, contare MassIVE, provare gli oracoli sul Mac.
+Pacchetto LOC-1 del progetto «Rosina» (`docs/studi/ROSINA.md`): Scaricare ELENCO-1, contare MassIVE, provare gli oracoli sul Mac (fatto il 19/10).
 File da leggere oltre a quelli comuni: `docs/studi/ROSINA.md` §3 e D, `docs/studi/rosina/FONTI.md` (sezione ELENCO-1).
 
 ## Obiettivo

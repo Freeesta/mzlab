@@ -1,20 +1,20 @@
-# LOC-2 — Oracoli su tutto il corpus: mzML di riferimento, JSON di TRFP, 1/K0, verità
+# LOC-2 — Oracoli su tutto il corpus: TRFP sul Mac, workflow `oracoli.yml` per msconvert e `timsdata`, verità
 
 Prompt pronto per la chat locale: copia tutto ciò che segue la riga «---».
 
 ---
 
-Pacchetto LOC-2 del progetto «Rosina» (`docs/studi/ROSINA.md`): Oracoli su tutto il corpus: mzML di riferimento, JSON di TRFP, 1/K0, verità.
+Pacchetto LOC-2 del progetto «Rosina» (`docs/studi/ROSINA.md`): Oracoli su tutto il corpus: TRFP sul Mac, workflow `oracoli.yml` per msconvert e `timsdata`, verità.
 File da leggere oltre a quelli comuni: `docs/studi/ROSINA.md` §4 e F, `tools/rosina/` (dopo R-00).
 
 ## Obiettivo
 Ogni file nativo del corpus (privato e `~/mzLab/rosina-dati/`) ha la sua verità `verita/1` prodotta da un oracolo con versione dichiarata.
 
 ## Da fare
-1. Per ogni nativo: msconvert (Docker, o il PC Windows se il Docker non va) due volte, senza peak picking e con `peakPicking vendor msLevel=1-`, in `riferimenti/msconvert-<versione>/`; per Waters con IMS anche senza `combineIonMobilitySpectra`; per Bruker con e senza.
-2. Thermo: anche ThermoRawFileParser `-f 2 -m 0` in `riferimenti/trfp-<versione>/`. Bruker: tabella di 1/K0 di `timsdata` (ogni scansione di 3 frame per file) in `riferimenti/timsdata-<versione>/`.
-3. `python3 tools/rosina/verita.py` (e `verita_trfp.py`, `verita_timsdata.py`) per ogni riferimento: `scratchpad/rosina/verita/<percorso sotto dati/formati>/<file>.verita.json`. Riferimenti > 90 MB: nel privato solo la verità, l'mzML resta sul Mac.
-4. Tabella finale `dati/formati/ORACOLI.md` nel privato: file × oracolo × esito (va, errore con il messaggio, tempo). Un file che nessun oracolo apre è un'informazione: resta nell'indice con `riferimento=nessuno`.
+1. msconvert: non gira sul Mac arm64. Avvia il workflow `oracoli.yml` del privato (scritto in R-00) sui file del corpus, a lotti, e controlla che ogni nativo abbia la sua verità in `scratchpad/rosina/verita/`; se il workflow fallisce per un produttore, scrivi l'errore e usa l'mzML pubblicato nello stesso deposito (V2), se c'è.
+2. Thermo: ThermoRawFileParser sul Mac (`dotnet ThermoRawFileParser.dll -f 2 -m 0`), JSON e mzML in `riferimenti/trfp-<versione>/` accanto al nativo (≤ 90 MB) o solo sul Mac, poi `verita_trfp.py`. Bruker: m/z e 1/K0 vengono dal workflow (`libtimsdata` per Linux); se non va, «oracolo assente» per m/z e 1/K0 e lo scrivi in `ORACOLI.md`.
+3. `python3 tools/rosina/verita.py` (e `verita_trfp.py`) per i riferimenti prodotti sul Mac: `scratchpad/rosina/verita/<percorso sotto dati/formati>/<file>.verita.json`. Riferimenti > 90 MB: nel privato solo la verità.
+4. Tabella finale: aggiorna `coordinamento/dati_esterni/rosina/ORACOLI.md` con file × oracolo × esito (va, errore con il messaggio, tempo). Un file che nessun oracolo apre resta nell'indice con `riferimento=nessuno`.
 
 ## Atteso
 Verità per tutto il corpus apribile; tabella degli oracoli; commit nel privato (mai nel pubblico). Messaggio al Coordinatore con i numeri per produttore.

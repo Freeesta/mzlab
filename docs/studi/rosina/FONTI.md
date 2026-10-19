@@ -5,11 +5,11 @@ Catalogo delle fonti da cui prendere i file di prova. Qui solo accession, licenz
 ## Regole di ridistribuzione
 | Licenza della fonte | Nel privato | Nel pubblico (`tests/formati/`) |
 |---|---|---|
-| CC0 (PRIDE di solito, parte di MetaboLights e Zenodo) | sì | sì, ≤ 1 MB per file, dopo il sì di Federico, con `ATTRIBUZIONI.md` |
+| CC0 (PRIDE di solito, parte di MetaboLights e Zenodo) | sì | sì, ≤ 2 MB per file, proposti dalla chat DEV del lettore, dopo il sì di Federico, con `ATTRIBUZIONI.md` |
 | CC-BY 4.0 (Zenodo, Workbench) | sì | sì, alle stesse condizioni, con l'attribuzione completa |
 | CC-BY-SA, CC-BY-NC | sì | no |
 | «EMBL-EBI Terms of Use» (molti studi MetaboLights e PRIDE vecchi) | sì (uso di ricerca) | no |
-| Workbench senza licenza nel record | sì | no fino a verifica della licenza, studio per studio |
+| Licenza non dichiarata (Workbench senza licenza nel record, Zenodo senza licenza) | sì | no |
 | Fixture di ProteoWizard e dei lettori liberi (repository Apache/MIT) | sì | no: i file dei produttori dentro un repository Apache non diventano Apache |
 | Dati del laboratorio (`mzML/`, `dam/`, `HRMS/`) | sì | mai |
 | Personale o clinico (GDPR) | solo se anonimo nel deposito | mai |
@@ -44,14 +44,14 @@ Scelto per chiudere le celle vuote di `ROSINA.md` F.4 e per dare un riferimento 
 
 | # | Fonte | Strumento, esperimento | Byte | Checksum | Licenza | Scopo |
 |---|---|---|---|---|---|---|
-| 1 | Workbench ST003942 | Waters Xevo TQ Absolute, MRM, raw + mzML | 24,9 M + 23 M | n/d | da verificare | V2 Waters MRM |
-| 2 | Workbench ST003984 | Waters Xevo TQ-S, MRM, raw + mzML | 38,9 M + 26,6 M | n/d | da verificare | V2 Waters MRM |
-| 3 | Workbench ST004286 | Agilent 6490 QqQ, `.d` + mzML (un run ~10 MB per range HTTP) | 72,2 M + 35,2 M | n/d | da verificare | V2 Agilent QqQ |
+| 1 | Workbench ST003942 | Waters Xevo TQ Absolute, MRM, raw + mzML | 24,9 M + 23 M | n/d | non dichiarata (nessuna ridistribuzione) | V2 Waters MRM |
+| 2 | Workbench ST003984 | Waters Xevo TQ-S, MRM, raw + mzML | 38,9 M + 26,6 M | n/d | non dichiarata (nessuna ridistribuzione) | V2 Waters MRM |
+| 3 | Workbench ST004286 | Agilent 6490 QqQ, `.d` + mzML (un run ~10 MB per range HTTP) | 72,2 M + 35,2 M | n/d | non dichiarata (nessuna ridistribuzione) | V2 Agilent QqQ |
 | 4 | MTBLS7394 | Waters Synapt G2, MSe + lock spray + mobilità | 35,2 M | n/d | EBI | lock mass, deriva |
 | 5 | MTBLS12691 | Shimadzu LCMS-8060, MRM | 12 M | sha256 b187ac65… | EBI | V1 Shimadzu QqQ |
 | 6 | MTBLS13204 | Shimadzu LCMS-9030 Q-TOF, pos/neg | 54,3 M | sha256 a71abdeb… | EBI | `shimadzu-tof`, polarità |
 | 7 | Zenodo 18633076 | Shimadzu LCMS-2020 + PDA | 87,6 M | md5 976d9c74… | CC-BY 4.0 | PDA Shimadzu |
-| 8 | Workbench ST001609 | Shimadzu GCMS-QP2010 Ultra, `.qgd` (zip annidato) | 2,0 M | md5 03e00619… | da verificare | `.qgd` + `.cdf` esportato? |
+| 8 | Workbench ST001609 | Shimadzu GCMS-QP2010 Ultra, `.qgd` (zip annidato) | 2,0 M | md5 03e00619… | non dichiarata (nessuna ridistribuzione) | `.qgd` + `.cdf` esportato? |
 | 9 | MTBLS427 | Agilent 6560 IM-QTOF, profilo, ESI− | 24,3 M | sha256 pubblicato | EBI | decisione 6560 |
 | 10 | PXD043691 | Thermo TSQ Quantum Access, SRM | 64,8 M | SHA-1 4e851a06… | CC0 | TSQ vecchio in `opentfraw` |
 | 11 | MTBLS2956 | Thermo Q Exactive + UltiMate 3000, UV 520 nm | 52,9 M | sha256 c0e98389… | EBI | UV/PDA Thermo |
@@ -61,12 +61,12 @@ Scelto per chiudere le celle vuote di `ROSINA.md` F.4 e per dare un riferimento 
 | 15 | PXD037766 | Bruker timsTOF Pro 2, Synchro-PASEF | 43,6 M | non pubblicato | CC0 | compressione 2, 1/K0 |
 | 16 | PXD058337 | Bruker timsTOF HT, DDA (GPF) | 29,9 M | non pubblicato | CC0 | compressione 2, 1/K0 |
 | 17 | PXD051519 | Agilent 6530A Q-TOF nanoLC chip, DDA | 47,2 M | `checksum.txt` PRIDE | CC0 | Q-TOF DDA |
-| 18 | Zenodo 22673685 | SCIEX, LC-MS a doppia polarità, `.wiff` + `.scan` | 1,8 M + 90,9 M | md5 aef1947d…, bb646a1d… | da verificare | polarità mista SCIEX |
+| 18 | Zenodo 22673685 | SCIEX, LC-MS a doppia polarità, `.wiff` + `.scan` | 1,8 M + 90,9 M | md5 aef1947d…, bb646a1d… | non dichiarata (nessuna ridistribuzione) | polarità mista SCIEX |
 
 ## Fonti da esplorare (non ancora nel corpus)
 | Fonte | Cosa cercare | Accesso | Nota |
 |---|---|---|---|
-| MassIVE | conteggio dei formati e strumenti (manca nel censimento A); file Waters/Agilent con mzML | FTP `massive.ucsd.edu` (non raggiungibile dal cloud) | chat locale (LOC-1) |
+| MassIVE | estensioni dei file per dataset (gli strumenti sono contati in `ROSINA.md` A.4); file Waters/Agilent con mzML | FTP `massive.ucsd.edu` (non raggiungibile dal cloud) | chat locale |
 | Panorama Public | SRM/MRM di SCIEX, Thermo, Agilent, Waters con i documenti Skyline (aree come V5) | HTTPS, CC-BY 4.0 dichiarata dal portale (da verificare per progetto) | ottimo V5: aree integrate dagli autori |
 | NORMAN DSFP | LC-HRMS ambientale (stesso dominio del laboratorio) | portale, mzML/mzXML convertiti | spesso senza il nativo: utile per mzML altrui |
 | GNPS/MassIVE MSV | DDA metabolomica di molti strumenti | FTP | come MassIVE |

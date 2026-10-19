@@ -57,7 +57,7 @@ Una scheda per formato: stato, cosa manca, prove possibili (scala V1-V7 di `../R
 ### mzXML
 - **Stato**: L (32/64 bit, zlib, indice), solo V7: nessun mzML della stessa corsa nel corpus.
 - **Manca**: V2 (MetaboLights ha studi con mzXML e il nativo nello stesso deposito: 11,9 % degli studi); `msInstrument` multipli; `parentFile` con SHA-1.
-- **Prove**: V2 (nativo convertito da msconvert sul Mac), V4 (pyteomics `mzxml`).
+- **Prove**: V2 (nativo dello stesso deposito convertito da msconvert nel workflow `oracoli.yml`), V4 (pyteomics `mzxml`).
 - **Lavoro**: 1 giorno (R-08). **Rischio**: basso. **Priorità**: 3.
 
 ### mzData
