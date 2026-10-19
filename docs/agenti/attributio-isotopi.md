@@ -9,3 +9,4 @@
 - `Config::mode` (`ElementMode`, predefinito `UserPlusAuto` come mzmine): se non è `UserDefined`, `select::detect` esegue `auto::detect` sulla finestra grezza attorno al pattern vincente (±2,5/carica), ricostruisce la busta con gli atomi trovati (con gli elementi dell'utente solo in `UserPlusAuto`) e ricalcola quella carica; il vincitore resta primo e `Detection::composition` riporta gli elementi.
 - Non fatto: filtro dei segnali spiegabili, raffinamento fra scansioni, mobilità.
 - Prove: `tests/untargeted_isofinder.rs` e `untargeted_isofinder_auto.rs` con spettri sintetici (busta binomiale esatta; [M+H]+ con struttura fine esatta di Cl2, Br, S2, Si e di un CHNO) da `tools/isofinder_riferimento.py` → `tests/data/untargeted/isofinder/{casi,elementi}.json`; parità con mzmine 4.10 non disponibile.
+- Sopra il finder: composizione elementare dei candidati (`formula_id.rs`), in `attributio-formula.md`.
