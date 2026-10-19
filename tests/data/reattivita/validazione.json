@@ -1,0 +1,978 @@
+{
+ "format": "reattivita-validazione",
+ "version": 1,
+ "molecules": {
+  "diclofenac": "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl",
+  "sulfamethoxazole": "Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1",
+  "atrazine": "CCNc1nc(Cl)nc(NC(C)C)n1",
+  "bisphenol_a": "CC(C)(c1ccc(O)cc1)c1ccc(O)cc1",
+  "caffeine": "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
+  "triclosan": "Oc1cc(Cl)ccc1Oc1ccc(Cl)cc1Cl",
+  "ibuprofen": "CC(C)Cc1ccc(C(C)C(=O)O)cc1",
+  "metoprolol": "COCCc1ccc(OCC(O)CNC(C)C)cc1",
+  "benzophenone_3": "COc1ccc(C(=O)c2ccccc2)c(O)c1",
+  "imidacloprid": "Clc1ccc(CN2CCNC2=N[N+](=O)[O-])cn1",
+  "bentazone": "CC(C)N1C(=O)c2ccccc2NS1(=O)=O",
+  "carbamazepine": "NC(=O)N1c2ccccc2C=Cc2ccccc21",
+  "propranolol": "CC(C)NCC(O)COc1cccc2ccccc12",
+  "diuron": "CN(C)C(=O)Nc1ccc(Cl)c(Cl)c1",
+  "phenol": "Oc1ccccc1",
+  "anisole": "COc1ccccc1",
+  "toluene": "Cc1ccccc1",
+  "benzoic_acid": "OC(=O)c1ccccc1",
+  "nitrobenzene": "[O-][N+](=O)c1ccccc1",
+  "chlorobenzene": "Clc1ccccc1",
+  "aniline": "Nc1ccccc1",
+  "naphthalene": "c1ccc2ccccc2c1",
+  "paracetamol": "CC(=O)Nc1ccc(O)cc1"
+ },
+ "rows": [
+  {
+   "id": "diclofenac-OH-01",
+   "molecule": "diclofenac",
+   "smiles": "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl",
+   "reaction": "OH",
+   "atoms": [
+    6
+   ],
+   "scope": "ch",
+   "product": "5-hydroxydiclofenac",
+   "doi": "10.1021/es050794n",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "diclofenac-OH-02",
+   "molecule": "diclofenac",
+   "smiles": "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl",
+   "reaction": "OH",
+   "atoms": [
+    15
+   ],
+   "scope": "ch",
+   "product": "4'-hydroxydiclofenac",
+   "doi": "10.1021/es050794n",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "diclofenac-OH-03",
+   "molecule": "diclofenac",
+   "smiles": "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl",
+   "reaction": "OH",
+   "atoms": [
+    14,
+    16
+   ],
+   "scope": "ch",
+   "product": "3'-hydroxydiclofenac",
+   "doi": "10.1021/es050794n",
+   "tier": "literatura",
+   "confidence": "media",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "diclofenac-metabolism-04",
+   "molecule": "diclofenac",
+   "smiles": "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl",
+   "reaction": "metabolism",
+   "atoms": [
+    6
+   ],
+   "scope": "ch",
+   "product": "5-hydroxydiclofenac",
+   "doi": "10.1021/tx9802365",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "coppie_isomeri_rt.csv"
+  },
+  {
+   "id": "diclofenac-metabolism-05",
+   "molecule": "diclofenac",
+   "smiles": "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl",
+   "reaction": "metabolism",
+   "atoms": [
+    15
+   ],
+   "scope": "ch",
+   "product": "4'-hydroxydiclofenac",
+   "doi": "10.1021/tx9802365",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "coppie_isomeri_rt.csv"
+  },
+  {
+   "id": "sulfamethoxazole-OH-06",
+   "molecule": "sulfamethoxazole",
+   "smiles": "Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1",
+   "reaction": "OH",
+   "atoms": [
+    10,
+    13
+   ],
+   "scope": "ch",
+   "product": "3-hydroxysulfamethoxazole",
+   "doi": "10.1016/j.watres.2009.04.006",
+   "tier": "literatura",
+   "confidence": "media",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "sulfamethoxazole-OH-07",
+   "molecule": "sulfamethoxazole",
+   "smiles": "Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1",
+   "reaction": "OH",
+   "atoms": [
+    12
+   ],
+   "scope": "atom",
+   "product": "4-nitrosulfamethoxazole (NH2 oxidation)",
+   "doi": "10.1016/j.watres.2009.04.006",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "sulfamethoxazole-OH-08",
+   "molecule": "sulfamethoxazole",
+   "smiles": "Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1",
+   "reaction": "OH",
+   "atoms": [
+    4,
+    5
+   ],
+   "scope": "atom",
+   "product": "sulfanilic acid + 3-amino-5-methylisoxazole (S-N cleavage)",
+   "doi": "10.1016/j.watres.2009.04.006",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "sulfamethoxazole-OH-09",
+   "molecule": "sulfamethoxazole",
+   "smiles": "Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1",
+   "reaction": "OH",
+   "atoms": [
+    2
+   ],
+   "scope": "ch",
+   "product": "isoxazole ring opening (C4)",
+   "doi": "10.1016/j.watres.2009.04.006",
+   "tier": "literatura",
+   "confidence": "media",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "atrazine-OH-10",
+   "molecule": "atrazine",
+   "smiles": "CCNc1nc(Cl)nc(NC(C)C)n1",
+   "reaction": "OH",
+   "atoms": [
+    1
+   ],
+   "scope": "atom",
+   "product": "deethylatrazine (N-ethyl alpha C)",
+   "doi": "10.1021/es001271c",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "atrazine-OH-11",
+   "molecule": "atrazine",
+   "smiles": "CCNc1nc(Cl)nc(NC(C)C)n1",
+   "reaction": "OH",
+   "atoms": [
+    10
+   ],
+   "scope": "atom",
+   "product": "deisopropylatrazine (N-isopropyl alpha C)",
+   "doi": "10.1021/es001271c",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "atrazine-OH-12",
+   "molecule": "atrazine",
+   "smiles": "CCNc1nc(Cl)nc(NC(C)C)n1",
+   "reaction": "OH",
+   "atoms": [
+    5
+   ],
+   "scope": "atom",
+   "product": "hydroxyatrazine (C-Cl)",
+   "doi": "10.1021/es001271c",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "bisphenol_a-OH-13",
+   "molecule": "bisphenol_a",
+   "smiles": "CC(C)(c1ccc(O)cc1)c1ccc(O)cc1",
+   "reaction": "OH",
+   "atoms": [
+    5,
+    8,
+    12,
+    15
+   ],
+   "scope": "ch",
+   "product": "3-hydroxybisphenol A",
+   "doi": "10.1016/j.apcatb.2014.05.007",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "bisphenol_a-OH-14",
+   "molecule": "bisphenol_a",
+   "smiles": "CC(C)(c1ccc(O)cc1)c1ccc(O)cc1",
+   "reaction": "OH",
+   "atoms": [
+    1
+   ],
+   "scope": "atom",
+   "product": "4-hydroxyacetophenone + hydroquinone (bridge cleavage)",
+   "doi": "10.1016/j.apcatb.2014.05.007",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "caffeine-OH-15",
+   "molecule": "caffeine",
+   "smiles": "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
+   "reaction": "OH",
+   "atoms": [
+    2
+   ],
+   "scope": "ch",
+   "product": "8-hydroxycaffeine (1,3,7-trimethyluric acid)",
+   "doi": "10.1021/es047985v",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "caffeine-OH-16",
+   "molecule": "caffeine",
+   "smiles": "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
+   "reaction": "OH",
+   "atoms": [
+    9
+   ],
+   "scope": "atom",
+   "product": "theobromine (N1-demethylation)",
+   "doi": "10.1021/es047985v",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "caffeine-OH-17",
+   "molecule": "caffeine",
+   "smiles": "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
+   "reaction": "OH",
+   "atoms": [
+    13
+   ],
+   "scope": "atom",
+   "product": "paraxanthine (N3-demethylation)",
+   "doi": "10.1021/es047985v",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "caffeine-OH-18",
+   "molecule": "caffeine",
+   "smiles": "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
+   "reaction": "OH",
+   "atoms": [
+    0
+   ],
+   "scope": "atom",
+   "product": "theophylline (N7-demethylation)",
+   "doi": "10.1021/es047985v",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "caffeine-metabolism-19",
+   "molecule": "caffeine",
+   "smiles": "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
+   "reaction": "metabolism",
+   "atoms": [
+    9
+   ],
+   "scope": "atom",
+   "product": "theobromine (N1-demethylation)",
+   "doi": "10.1155/2018/2085059",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "coppie_isomeri_rt.csv"
+  },
+  {
+   "id": "caffeine-metabolism-20",
+   "molecule": "caffeine",
+   "smiles": "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
+   "reaction": "metabolism",
+   "atoms": [
+    13
+   ],
+   "scope": "atom",
+   "product": "paraxanthine (N3-demethylation)",
+   "doi": "10.1155/2018/2085059",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "coppie_isomeri_rt.csv"
+  },
+  {
+   "id": "caffeine-metabolism-21",
+   "molecule": "caffeine",
+   "smiles": "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
+   "reaction": "metabolism",
+   "atoms": [
+    0
+   ],
+   "scope": "atom",
+   "product": "theophylline (N7-demethylation)",
+   "doi": "10.1155/2018/2085059",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "coppie_isomeri_rt.csv"
+  },
+  {
+   "id": "triclosan-OH-22",
+   "molecule": "triclosan",
+   "smiles": "Oc1cc(Cl)ccc1Oc1ccc(Cl)cc1Cl",
+   "reaction": "OH",
+   "atoms": [
+    8
+   ],
+   "scope": "atom",
+   "product": "2,4-dichlorophenol + 4-chlorocatechol (ether cleavage)",
+   "doi": "10.1897/04-243r.1",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "ibuprofen-OH-23",
+   "molecule": "ibuprofen",
+   "smiles": "CC(C)Cc1ccc(C(C)C(=O)O)cc1",
+   "reaction": "OH",
+   "atoms": [
+    1
+   ],
+   "scope": "atom",
+   "product": "2-hydroxyibuprofen (tertiary C-H)",
+   "doi": "10.1016/j.chemosphere.2018.10.053",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "ibuprofen-OH-24",
+   "molecule": "ibuprofen",
+   "smiles": "CC(C)Cc1ccc(C(C)C(=O)O)cc1",
+   "reaction": "OH",
+   "atoms": [
+    3
+   ],
+   "scope": "atom",
+   "product": "1-hydroxyibuprofen (benzylic C-H)",
+   "doi": "10.1016/j.chemosphere.2018.10.053",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "ibuprofen-OH-25",
+   "molecule": "ibuprofen",
+   "smiles": "CC(C)Cc1ccc(C(C)C(=O)O)cc1",
+   "reaction": "OH",
+   "atoms": [
+    0,
+    2
+   ],
+   "scope": "atom",
+   "product": "carboxyibuprofen (terminal methyl)",
+   "doi": "10.3390/jox15010005",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "ibuprofen-OH-26",
+   "molecule": "ibuprofen",
+   "smiles": "CC(C)Cc1ccc(C(C)C(=O)O)cc1",
+   "reaction": "OH",
+   "atoms": [
+    8
+   ],
+   "scope": "atom",
+   "product": "4-isobutylacetophenone (decarboxylation)",
+   "doi": "10.1016/j.chemosphere.2018.10.053",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "metoprolol-O3-27",
+   "molecule": "metoprolol",
+   "smiles": "COCCc1ccc(OCC(O)CNC(C)C)cc1",
+   "reaction": "O3",
+   "atoms": [
+    3
+   ],
+   "scope": "atom",
+   "product": "alpha-hydroxymetoprolol (benzylic C)",
+   "doi": "10.1021/es900280e",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "metoprolol-O3-28",
+   "molecule": "metoprolol",
+   "smiles": "COCCc1ccc(OCC(O)CNC(C)C)cc1",
+   "reaction": "O3",
+   "atoms": [
+    6,
+    17
+   ],
+   "scope": "ch",
+   "product": "ar-hydroxymetoprolol (ortho to ether O)",
+   "doi": "10.1021/es900280e",
+   "tier": "literatura",
+   "confidence": "media",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "metoprolol-O3-29",
+   "molecule": "metoprolol",
+   "smiles": "COCCc1ccc(OCC(O)CNC(C)C)cc1",
+   "reaction": "O3",
+   "atoms": [
+    0
+   ],
+   "scope": "atom",
+   "product": "O-demethylmetoprolol (methoxy C)",
+   "doi": "10.1021/es900280e",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "metoprolol-OH-30",
+   "molecule": "metoprolol",
+   "smiles": "COCCc1ccc(OCC(O)CNC(C)C)cc1",
+   "reaction": "OH",
+   "atoms": [
+    14
+   ],
+   "scope": "atom",
+   "product": "deisopropylmetoprolol (N-isopropyl alpha C)",
+   "doi": "10.1016/j.jhazmat.2010.03.013",
+   "tier": "literatura",
+   "confidence": "media",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "benzophenone_3-OH-31",
+   "molecule": "benzophenone_3",
+   "smiles": "COc1ccc(C(=O)c2ccccc2)c(O)c1",
+   "reaction": "OH",
+   "atoms": [
+    0
+   ],
+   "scope": "atom",
+   "product": "2,4-dihydroxybenzophenone (O-demethylation)",
+   "doi": "10.1016/j.jenvman.2015.11.047",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "benzophenone_3-OH-32",
+   "molecule": "benzophenone_3",
+   "smiles": "COc1ccc(C(=O)c2ccccc2)c(O)c1",
+   "reaction": "OH",
+   "atoms": [
+    9,
+    13
+   ],
+   "scope": "ch",
+   "product": "BP-8 (2' ortho)",
+   "doi": "10.1016/j.jenvman.2015.11.047",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "benzophenone_3-OH-33",
+   "molecule": "benzophenone_3",
+   "smiles": "COc1ccc(C(=O)c2ccccc2)c(O)c1",
+   "reaction": "OH",
+   "atoms": [
+    11
+   ],
+   "scope": "ch",
+   "product": "4'-hydroxy (para)",
+   "doi": "10.1016/j.jhazmat.2020.123591",
+   "tier": "literatura",
+   "confidence": "media",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "benzophenone_3-OH-34",
+   "molecule": "benzophenone_3",
+   "smiles": "COc1ccc(C(=O)c2ccccc2)c(O)c1",
+   "reaction": "OH",
+   "atoms": [
+    3
+   ],
+   "scope": "ch",
+   "product": "2,5-dihydroxy-4-methoxybenzophenone (C5)",
+   "doi": "10.1016/j.jenvman.2015.11.047",
+   "tier": "literatura",
+   "confidence": "media",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "imidacloprid-OH-35",
+   "molecule": "imidacloprid",
+   "smiles": "Clc1ccc(CN2CCNC2=N[N+](=O)[O-])cn1",
+   "reaction": "OH",
+   "atoms": [
+    7
+   ],
+   "scope": "atom",
+   "product": "5-hydroxyimidacloprid (imidazolidine C5)",
+   "doi": "10.1016/j.apcatb.2008.07.018",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "imidacloprid-OH-36",
+   "molecule": "imidacloprid",
+   "smiles": "Clc1ccc(CN2CCNC2=N[N+](=O)[O-])cn1",
+   "reaction": "OH",
+   "atoms": [
+    10
+   ],
+   "scope": "atom",
+   "product": "imidacloprid-urea (nitroimine carbon)",
+   "doi": "10.1016/j.apcatb.2008.07.018",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "imidacloprid-OH-37",
+   "molecule": "imidacloprid",
+   "smiles": "Clc1ccc(CN2CCNC2=N[N+](=O)[O-])cn1",
+   "reaction": "OH",
+   "atoms": [
+    5
+   ],
+   "scope": "atom",
+   "product": "6-chloronicotinic acid (methylene bridge)",
+   "doi": "10.1016/j.apcatb.2008.07.018",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "siti_sperimentali.csv"
+  },
+  {
+   "id": "bentazone-OH-38",
+   "molecule": "bentazone",
+   "smiles": "CC(C)N1C(=O)c2ccccc2NS1(=O)=O",
+   "reaction": "OH",
+   "atoms": [
+    8
+   ],
+   "scope": "ch",
+   "product": "6-hydroxybentazone",
+   "doi": "10.1016/j.apcatb.2016.06.068",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "tp_noti/tp_noti.csv"
+  },
+  {
+   "id": "bentazone-OH-39",
+   "molecule": "bentazone",
+   "smiles": "CC(C)N1C(=O)c2ccccc2NS1(=O)=O",
+   "reaction": "OH",
+   "atoms": [
+    10
+   ],
+   "scope": "ch",
+   "product": "8-hydroxybentazone",
+   "doi": "10.1016/j.apcatb.2016.06.068",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "tp_noti/tp_noti.csv"
+  },
+  {
+   "id": "carbamazepine-OH-40",
+   "molecule": "carbamazepine",
+   "smiles": "NC(=O)N1c2ccccc2C=Cc2ccccc21",
+   "reaction": "OH",
+   "atoms": [
+    10,
+    11
+   ],
+   "scope": "ch",
+   "product": "carbamazepine-10,11-epoxide / diol",
+   "doi": "10.1016/s0045-6535(03)00757-4",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "tp_noti/tp_noti.csv"
+  },
+  {
+   "id": "carbamazepine-OH-41",
+   "molecule": "carbamazepine",
+   "smiles": "NC(=O)N1c2ccccc2C=Cc2ccccc21",
+   "reaction": "OH",
+   "atoms": [
+    7
+   ],
+   "scope": "ch",
+   "product": "2-hydroxycarbamazepine",
+   "doi": "10.3390/catal10020169",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "tp_noti/tp_noti.csv"
+  },
+  {
+   "id": "carbamazepine-OH-42",
+   "molecule": "carbamazepine",
+   "smiles": "NC(=O)N1c2ccccc2C=Cc2ccccc21",
+   "reaction": "OH",
+   "atoms": [
+    6
+   ],
+   "scope": "ch",
+   "product": "3-hydroxycarbamazepine",
+   "doi": "10.3390/catal10020169",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "tp_noti/tp_noti.csv"
+  },
+  {
+   "id": "propranolol-OH-43",
+   "molecule": "propranolol",
+   "smiles": "CC(C)NCC(O)COc1cccc2ccccc12",
+   "reaction": "OH",
+   "atoms": [
+    12
+   ],
+   "scope": "ch",
+   "product": "4-hydroxypropranolol",
+   "doi": "10.1016/j.apcatb.2012.10.003",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "tp_noti/tp_noti.csv"
+  },
+  {
+   "id": "propranolol-OH-44",
+   "molecule": "propranolol",
+   "smiles": "CC(C)NCC(O)COc1cccc2ccccc12",
+   "reaction": "OH",
+   "atoms": [
+    14
+   ],
+   "scope": "ch",
+   "product": "5-hydroxypropranolol",
+   "doi": "10.1016/j.apcatb.2012.10.003",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "tp_noti/tp_noti.csv"
+  },
+  {
+   "id": "diuron-O3-45",
+   "molecule": "diuron",
+   "smiles": "CN(C)C(=O)Nc1ccc(Cl)c(Cl)c1",
+   "reaction": "O3",
+   "atoms": [
+    9
+   ],
+   "scope": "atom",
+   "product": "1-(3-chloro-4-hydroxyphenyl)-3,3-dimethylurea (C-Cl)",
+   "doi": "10.1016/j.cej.2016.02.005",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "tp_noti/tp_noti.csv"
+  },
+  {
+   "id": "phenol-OH-46",
+   "molecule": "phenol",
+   "smiles": "Oc1ccccc1",
+   "reaction": "OH",
+   "atoms": [
+    2,
+    4,
+    6
+   ],
+   "scope": "ch",
+   "product": "catechol + hydroquinone",
+   "doi": "10.1016/j.arabjc.2021.103635",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "coppie_isomeri_rt.csv"
+  },
+  {
+   "id": "benzoic_acid-OH-47",
+   "molecule": "benzoic_acid",
+   "smiles": "OC(=O)c1ccccc1",
+   "reaction": "OH",
+   "atoms": [
+    4,
+    8,
+    6
+   ],
+   "scope": "ch",
+   "product": "salicylic acid + 4-hydroxybenzoic acid",
+   "doi": "10.55730/1300-0144.6374",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "coppie_isomeri_rt.csv"
+  },
+  {
+   "id": "nitrobenzene-OH-48",
+   "molecule": "nitrobenzene",
+   "smiles": "[O-][N+](=O)c1ccccc1",
+   "reaction": "OH",
+   "atoms": [
+    4,
+    8,
+    6
+   ],
+   "scope": "ch",
+   "product": "2-nitrophenol + 4-nitrophenol",
+   "doi": "10.1021/es050824m",
+   "tier": "literatura",
+   "confidence": "alta",
+   "source": "coppie_isomeri_rt.csv"
+  },
+  {
+   "id": "phenol-OH-49",
+   "molecule": "phenol",
+   "smiles": "Oc1ccccc1",
+   "reaction": "OH",
+   "atoms": [
+    2,
+    4,
+    6
+   ],
+   "scope": "ch",
+   "product": "ortho/para",
+   "doi": null,
+   "tier": "bozza",
+   "confidence": "bozza",
+   "source": "docs/bozze/teoria_cc05.md"
+  },
+  {
+   "id": "anisole-OH-50",
+   "molecule": "anisole",
+   "smiles": "COc1ccccc1",
+   "reaction": "OH",
+   "atoms": [
+    3,
+    5,
+    7
+   ],
+   "scope": "ch",
+   "product": "ortho/para",
+   "doi": null,
+   "tier": "bozza",
+   "confidence": "bozza",
+   "source": "docs/bozze/teoria_cc05.md"
+  },
+  {
+   "id": "toluene-OH-51",
+   "molecule": "toluene",
+   "smiles": "Cc1ccccc1",
+   "reaction": "OH",
+   "atoms": [
+    2,
+    4,
+    6
+   ],
+   "scope": "ch",
+   "product": "ortho/para",
+   "doi": null,
+   "tier": "bozza",
+   "confidence": "bozza",
+   "source": "docs/bozze/teoria_cc05.md"
+  },
+  {
+   "id": "benzoic_acid-OH-52",
+   "molecule": "benzoic_acid",
+   "smiles": "OC(=O)c1ccccc1",
+   "reaction": "OH",
+   "atoms": [
+    5,
+    7,
+    4,
+    8
+   ],
+   "scope": "ch",
+   "product": "meta/ortho",
+   "doi": null,
+   "tier": "bozza",
+   "confidence": "bozza",
+   "source": "docs/bozze/teoria_cc05.md"
+  },
+  {
+   "id": "nitrobenzene-OH-53",
+   "molecule": "nitrobenzene",
+   "smiles": "[O-][N+](=O)c1ccccc1",
+   "reaction": "OH",
+   "atoms": [
+    5,
+    7
+   ],
+   "scope": "ch",
+   "product": "meta",
+   "doi": null,
+   "tier": "bozza",
+   "confidence": "bozza",
+   "source": "docs/bozze/teoria_cc05.md"
+  },
+  {
+   "id": "chlorobenzene-OH-54",
+   "molecule": "chlorobenzene",
+   "smiles": "Clc1ccccc1",
+   "reaction": "OH",
+   "atoms": [
+    2,
+    4,
+    6
+   ],
+   "scope": "ch",
+   "product": "ortho/para",
+   "doi": null,
+   "tier": "bozza",
+   "confidence": "bozza",
+   "source": "docs/bozze/teoria_cc05.md"
+  },
+  {
+   "id": "aniline-OH-55",
+   "molecule": "aniline",
+   "smiles": "Nc1ccccc1",
+   "reaction": "OH",
+   "atoms": [
+    2,
+    4,
+    6
+   ],
+   "scope": "ch",
+   "product": "ortho/para",
+   "doi": null,
+   "tier": "bozza",
+   "confidence": "bozza",
+   "source": "docs/bozze/teoria_cc05.md"
+  },
+  {
+   "id": "naphthalene-OH-56",
+   "molecule": "naphthalene",
+   "smiles": "c1ccc2ccccc2c1",
+   "reaction": "OH",
+   "atoms": [
+    2,
+    4,
+    7,
+    9
+   ],
+   "scope": "ch",
+   "product": "alpha",
+   "doi": null,
+   "tier": "bozza",
+   "confidence": "bozza",
+   "source": "docs/bozze/teoria_cc05.md"
+  },
+  {
+   "id": "paracetamol-OH-57",
+   "molecule": "paracetamol",
+   "smiles": "CC(=O)Nc1ccc(O)cc1",
+   "reaction": "OH",
+   "atoms": [
+    6,
+    9
+   ],
+   "scope": "ch",
+   "product": "ortho to OH",
+   "doi": null,
+   "tier": "bozza",
+   "confidence": "bozza",
+   "source": "docs/bozze/teoria_cc05.md"
+  }
+ ],
+ "baseline": {
+  "O3/literatura": {
+   "atom": [
+    0,
+    0,
+    0
+   ],
+   "ch": [
+    1,
+    1,
+    1
+   ],
+   "n_atom": 4,
+   "n_ch": 1
+  },
+  "OH/bozza": {
+   "atom": [
+    1,
+    6,
+    8
+   ],
+   "ch": [
+    9,
+    9,
+    9
+   ],
+   "n_atom": 9,
+   "n_ch": 9
+  },
+  "OH/literatura": {
+   "atom": [
+    0,
+    4,
+    9
+   ],
+   "ch": [
+    8,
+    17,
+    18
+   ],
+   "n_atom": 39,
+   "n_ch": 20
+  },
+  "metabolism/literatura": {
+   "atom": [
+    0,
+    0,
+    1
+   ],
+   "ch": [
+    1,
+    2,
+    2
+   ],
+   "n_atom": 5,
+   "n_ch": 2
+  }
+ }
+}
