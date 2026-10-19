@@ -90,3 +90,7 @@ required-features = ["untargeted"]
 [[test]]
 name = "untargeted_isofinder_auto"
 required-features = ["untargeted"]
+
+[[test]]
+name = "untargeted_finder_410"
+required-features = ["untargeted"]
