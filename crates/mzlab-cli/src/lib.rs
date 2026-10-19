@@ -76,8 +76,8 @@ fn open(idx: &Path) -> Result<Index<File>> {
     Index::open(f, size)
 }
 
-/// The CSV of the series `files`, indexes kept in `tmp`.
-fn features(files: &[PathBuf], params: &str, tmp: &Path) -> Result<String> {
+/// The CSV of the series `files`, indexes kept in `tmp` (the caller owns it: WASI has no temporary folder).
+pub fn features(files: &[PathBuf], params: &str, tmp: &Path) -> Result<String> {
     let idxs: Vec<PathBuf> = (0..files.len())
         .map(|k| tmp.join(format!("{k}.mzidx")))
         .collect();
