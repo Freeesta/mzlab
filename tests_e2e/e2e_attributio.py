@@ -156,14 +156,14 @@ try:
             assert pg.get_attribute("#at-msg", "class") != "err", pg.inner_text("#at-msg")
             pg.click("#at-export"); assert pg.get_attribute("#at-export", "aria-expanded") == "true"
             items = pg.evaluate("[...document.querySelectorAll('#at-export-menu button')].map(b => [b.dataset.kind, b.getBoundingClientRect().height])")
-            assert [k for k, _ in items] == ["evidence", "schymanski", "publication", "quantify", "gradient"] and all(h >= 24 for _, h in items), items
+            assert [k for k, _ in items] == ["evidence", "schymanski", "publication", "quantify", "gradient", "sirius"] and all(h >= 24 for _, h in items), items
             pg.keyboard.press("Escape"); assert pg.get_attribute("#at-export", "aria-expanded") == "false"
             got = {}
-            for kind in ("evidence", "schymanski", "publication", "quantify", "gradient"):
+            for kind in ("evidence", "schymanski", "publication", "quantify", "gradient", "sirius"):
                 pg.click("#at-export")
                 with pg.expect_download(timeout=120000) as d: pg.click(f"#at-export-menu [data-kind={kind}]")
                 got[kind] = (d.value.suggested_filename, Path(d.value.path()).read_bytes())
-            assert len(got) == 5 and all(v[1][:2] == b"PK" for v in got.values()), {k: (v[0], v[1][:4]) for k, v in got.items()}
+            assert len(got) == 6 and all(v[1][:2] == b"PK" for v in got.values()), {k: (v[0], v[1][:4]) for k, v in got.items()}
             def first_row(blob, name="xl/worksheets/sheet1.xml"):
                 with zipfile.ZipFile(io.BytesIO(blob)) as z: x = z.read(name).decode("utf-8")
                 return re.findall(r"<t[^>]*>([^<]*)</t>", x.split("</row>")[0])
@@ -175,8 +175,9 @@ try:
             pub = inner(got["publication"][1]); xl = [n for n in pub if n.endswith(".xlsx")]; assert xl and any(n.endswith(".csv") for n in pub), list(pub)
             assert first_row(pub[xl[0]])[:3] == ["ID", "Compound", "Confidence level"], first_row(pub[xl[0]])
             assert first_row(got["quantify"][1])[:3] == ["_pol", "_id", "std_name"], first_row(got["quantify"][1])
+            sir = inner(got["sirius"][1]); assert got["sirius"][0].startswith("sirius_") and any(n.endswith(".ms") for n in sir) and any(n.endswith(".mgf") for n in sir), list(sir)
             gr = first_row(got["gradient"][1]); assert gr[:2] == ["canonical_name", "status"], gr
-        step("Export gives the five files and the spreadsheets open with their headers", export_menu)
+        step("Export gives the six files and the spreadsheets open with their headers", export_menu)
 
         step("no request is left unserved and the page has no error", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if (errs or pg.evaluate("(window.MZLAB_LR_MISS || []).length")) else None)
         b.close()

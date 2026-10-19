@@ -1,6 +1,6 @@
 //! The exports of a campaign folder as the page takes them: `run(io, root, kind, opts)` answers one JSON `{"files":[...],"warnings":[...]}` where a file is
 //! `{"name","text"}` (CSV, SVG, JSON) or `{"name","rows"}` (the rows of a spreadsheet, `{"hojas":[...]}`, that the page zips into an XLSX). The kinds are
-//! `schymanski`, `publication`, `quantify` and `gradient`; the evidence export (`evidence`) needs the review and lives in `review::evidence`.
+//! `schymanski`, `publication`, `quantify`, `gradient` and `sirius`; the evidence export (`evidence`) needs the review and lives in `review::evidence`.
 
 use super::cells::{xlsx_rows, Sheet};
 use super::ctx::{matrix_and_sites, Loaded};
@@ -8,6 +8,7 @@ use super::publication::build as build_publication;
 use super::publication_ids::{canonical_identities, feature_frame};
 use super::publication_readme::{readme, Provenance, ReadmeInput};
 use super::schymanski::build as build_schymanski;
+use super::sirius::{collect, write_mgf, write_ms};
 use crate::attributio::campaign::{Campaign, Env as CEnv};
 use crate::attributio::error::{CampaignError, Result};
 use crate::attributio::frame::Cell;
@@ -177,6 +178,14 @@ fn gradient(c: &Campaign, io: &Io, o: &Options) -> Result<Vec<ExportFile>> {
     Ok(with_csv(&format!("gradient_{}", c.id), vec![t, cloud, sum]))
 }
 
+fn sirius(c: &Campaign, io: &Io, warnings: &mut Vec<String>) -> Result<Vec<ExportFile>> {
+    let features = collect(c, io, warnings)?;
+    Ok(vec![
+        ExportFile::Text(format!("sirius_{}.ms", c.id), write_ms(&features)),
+        ExportFile::Text(format!("sirius_{}.mgf", c.id), write_mgf(&features)),
+    ])
+}
+
 /// The export `kind` of the folder as the JSON the page reads.
 pub fn run(io: &Io, root: &str, kind: &str, o: &Options) -> Result<String> {
     let c = load_campaign(io, root)?;
@@ -189,6 +198,7 @@ pub fn run(io: &Io, root: &str, kind: &str, o: &Options) -> Result<String> {
         "publication" => publication(&c, io, o)?,
         "quantify" => quantify(&c, io, o, &mut warnings)?,
         "gradient" => gradient(&c, io, o)?,
+        "sirius" => sirius(&c, io, &mut warnings)?,
         _ => return Err(CampaignError::value(format!("unknown export: {kind}"))),
     };
     Ok(files_json(&files, &warnings))

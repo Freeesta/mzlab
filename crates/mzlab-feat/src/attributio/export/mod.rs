@@ -15,6 +15,7 @@ pub mod schymanski_delta;
 pub mod schymanski_notes;
 pub mod schymanski_rows;
 pub mod sha1;
+pub mod sirius;
 pub mod wide;
 
 /// The version of Attributio the exports follow.

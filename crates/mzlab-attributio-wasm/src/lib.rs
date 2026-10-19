@@ -337,7 +337,7 @@ pub fn decision_to(
     Ok(saved_summary(&saved))
 }
 
-/// The export `kind` (`schymanski`, `publication`, `quantify`, `gradient` in the `.wasm` `attributio`; `evidence` in `attributio-rev`) as the JSON of its files
+/// The export `kind` (`schymanski`, `publication`, `quantify`, `gradient`, `sirius` in the `.wasm` `attributio`; `evidence` in `attributio-rev`) as the JSON of its files
 /// `{"files":[{"name","text"}|{"name","rows"}],"warnings":[]}` to `write`; answers `{"bytes": n}`.
 #[cfg(any(feature = "rev", feature = "export"))]
 #[wasm_bindgen]
