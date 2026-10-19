@@ -68,3 +68,10 @@ console.log(JSON.stringify(out));
     assert o["mark"].startswith("<mark>Frammenta</mark>zion<mark>e</mark>") or "<mark>Frammenta</mark>" in o["mark"]
     assert "&lt;b&gt;" in o["mark"]
     assert len(o["groups"]) == len(set(o["groups"]))
+
+
+def test_administrator_chapters_with_a_fifth_field_are_indexed():
+    src = (G.D / "teoria.js").read_text(encoding="utf-8")
+    row = '  ["99-prova.html", "99", "Capitolo riservato", "Appendice", true],\n'
+    assert len(G.chapters(src.replace("];", row + "];", 1))) == len(G.chapters(src)) + 1
+    assert ("99-prova.html", "99", "Capitolo riservato") in G.chapters(src.replace("];", row + "];", 1))
