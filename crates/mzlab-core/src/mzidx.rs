@@ -9,7 +9,7 @@ use std::cmp::Ordering;
 use std::io::{Cursor, Seek, SeekFrom, Write};
 
 use crate::error::{Error, Result};
-use crate::mzidx_ordine::ordina;
+use crate::mzidx_ordine::ordina_secchi;
 use crate::mzidx_spill::{leggi_parti, Parti, Spill};
 use crate::mzml::{self, Item, Spectrum};
 
@@ -65,7 +65,7 @@ pub struct Stats {
     pub bytes: u64,
 }
 
-pub(crate) trait Num: Copy + Default {
+pub(crate) trait Num: Copy + Default + Send {
     const SIZE: usize;
     /// Values rounded to 32 bits (the buckets are those of the rounded value).
     const F32: bool;
@@ -362,12 +362,11 @@ impl<T: Num> Sect for Sec<T> {
 
     fn flush(&mut self, out: &mut dyn Output, off: &Offsets) -> Result<()> {
         let mut round = std::mem::take(&mut self.round);
-        let mut tmp = Vec::new();
-        for b in self.lo..self.hi {
-            let (a, z) = (self.base[b], self.base[b] + self.counts[b] as usize);
-            // a round filled by passes is in scan order, so a stable sort keeps equal m/z so; `carica` joins groups, `pos` orders them
-            ordina(&mut round[a..z], &mut tmp, self.per_scansione)?;
-        }
+        // a round filled by passes is in scan order, so a stable sort keeps equal m/z so; `carica` joins groups, `pos` orders them
+        let ends: Vec<usize> = (self.lo..self.hi)
+            .map(|b| self.base[b] + self.counts[b] as usize)
+            .collect();
+        ordina_secchi(&mut round, self.base[self.lo], &ends, self.per_scansione)?;
         let r = self.emit(out, off, &round);
         self.round = Vec::new();
         r
