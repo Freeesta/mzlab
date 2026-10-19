@@ -191,6 +191,34 @@ function proofOps(submit, call, copy, opts) {
   };
 }
 
+// Methods of the pool that read one row or one spectrum of the table (MS2 file, traces, compositions).
+function rowOps(submit, call) {
+  return {
+    // MS2 file of the table (FBMN `.mgf`, SIRIUS `.ms`): the best MS2 of each row is read from the .mzidx of its file (OPFS). Resolves with the text.
+    ms2File({ table, samples, spec, sha, pol, kind, paths }) {
+      return submit(async (slot, load) => {
+        await load("table");
+        return (await call(slot, { op: "ms2file", table: table.slice(), samples, spec, sha, pol, kind, paths })).text;
+      });
+    },
+    // XIC of every file, MS1 at the best apex and MS2 of one row (`riga_tracce/1`), read from the .mzidx in OPFS. Resolves with the text.
+    rowTraces({ table, samples, id, ppm, paths }) {
+      return submit(async (slot, load) => {
+        await load("table");
+        return (await call(slot, { op: "rowtraces", table: table.slice(), samples, id, ppm, paths })).text;
+      });
+    },
+    // Candidate elemental compositions of one feature from its MS1 spectrum (`.wasm` `untargeted`, `formula_id/1`): `mz`, `y` the spectrum, `featureMz` the monoisotopic m/z,
+    // `params` the JSON text of the options (ion, z, tol_ppm, elements, nitrogen, rdb_min, max_results). Resolves with the JSON text.
+    formulaId({ mz, y, featureMz, params }) {
+      return submit(async (slot, load) => {
+        await load("untargeted");
+        return (await call(slot, { op: "formula_id", mz: Float64Array.from(mz), y: Float64Array.from(y), featureMz, params: params || "" })).text;
+      });
+    },
+  };
+}
+
 export function createFeatPool(opts) {
   const { st, slots, queue, spawn, call, submit, kill, copy, rest } = createCore(opts);
 
@@ -261,20 +289,7 @@ export function createFeatPool(opts) {
     ...previewOps(submit, call, opts),
     ...driftOps(submit, call, copy),
     ...proofOps(submit, call, copy, opts),
-    // MS2 file of the table (FBMN `.mgf`, SIRIUS `.ms`): the best MS2 of each row is read from the .mzidx of its file (OPFS). Resolves with the text.
-    ms2File({ table, samples, spec, sha, pol, kind, paths }) {
-      return submit(async (slot, load) => {
-        await load("table");
-        return (await call(slot, { op: "ms2file", table: table.slice(), samples, spec, sha, pol, kind, paths })).text;
-      });
-    },
-    // XIC of every file, MS1 at the best apex and MS2 of one row (`riga_tracce/1`), read from the .mzidx in OPFS. Resolves with the text.
-    rowTraces({ table, samples, id, ppm, paths }) {
-      return submit(async (slot, load) => {
-        await load("table");
-        return (await call(slot, { op: "rowtraces", table: table.slice(), samples, id, ppm, paths })).text;
-      });
-    },
+    ...rowOps(submit, call),
     // L4-L6: alignment and gap filling of the series in one worker. `stored`: .mzfeatf bytes in the order of `paths`. Resolves with the .mzfeat bytes.
     align(stored, paths, recipe) {
       return submit(async (slot, load) => {
@@ -391,6 +406,7 @@ const OPS = {
     const f = await openAll([m.path]), out = memSink();
     try { mods.untargeted.detect_untargeted_to(f.read, f.sizes[0], m.name, m.params, out.write); return { bytes: out.bytes() }; } finally { f.close(); }
   },
+  async formula_id(m) { return { text: mods.untargeted.untargeted_formula_id(m.mz, m.y, m.featureMz, m.params) }; },
   async align_unt(m) {
     const f = await openAll(m.paths), out = memSink();
     try { mods.untargeted.align_untargeted_to(arrays(m.files), f.read, f.sizes, m.params, out.write, m.budgetMb || 0); return { bytes: out.bytes() }; } finally { f.close(); }

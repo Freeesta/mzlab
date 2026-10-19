@@ -1,0 +1,449 @@
+{
+ "format": "classi-regole/1",
+ "classes": [
+  {
+   "id": "phthalate",
+   "name": "Phthalate esters",
+   "rules": [
+    {
+     "id": "ph_149",
+     "kind": "frag",
+     "formula": "C8H5O3",
+     "polarity": "+",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Protonated phthalic anhydride, the base peak of most dialkyl phthalates."
+    }
+   ]
+  },
+  {
+   "id": "glucuronide",
+   "name": "Glucuronide conjugates",
+   "rules": [
+    {
+     "id": "gl_loss",
+     "kind": "loss",
+     "formula": "C6H8O6",
+     "polarity": "both",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Loss of dehydrated glucuronic acid (176 Da) from the aglycone ion."
+    },
+    {
+     "id": "gl_175",
+     "kind": "frag",
+     "formula": "C6H7O6",
+     "polarity": "-",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Glucuronate anion, the conjugate itself."
+    },
+    {
+     "id": "gl_113",
+     "kind": "frag",
+     "formula": "C5H5O3",
+     "polarity": "-",
+     "role": "support",
+     "weight": 1,
+     "why": "Glucuronate ring fragment (175 minus H2O and CO2)."
+    },
+    {
+     "id": "gl_85",
+     "kind": "frag",
+     "formula": "C4H5O2",
+     "polarity": "-",
+     "role": "support",
+     "weight": 1,
+     "why": "Glucuronate ring fragment (113 minus CO)."
+    }
+   ]
+  },
+  {
+   "id": "sulfate",
+   "name": "Sulfate conjugates",
+   "rules": [
+    {
+     "id": "su_loss",
+     "kind": "loss",
+     "formula": "SO3",
+     "polarity": "both",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Loss of SO3 (80 Da) from the aglycone-sulfate ion."
+    },
+    {
+     "id": "su_hso4",
+     "kind": "frag",
+     "formula": "HSO4",
+     "polarity": "-",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Hydrogen sulfate anion."
+    },
+    {
+     "id": "su_so3",
+     "kind": "frag",
+     "formula": "SO3",
+     "polarity": "-",
+     "role": "support",
+     "weight": 1,
+     "why": "SO3 radical anion, also given by sulfonic acids."
+    }
+   ]
+  },
+  {
+   "id": "sulfonic",
+   "name": "Sulfonic acids and sulfonates",
+   "rules": [
+    {
+     "id": "sa_so3",
+     "kind": "frag",
+     "formula": "SO3",
+     "polarity": "-",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "SO3 radical anion released by the sulfonate group."
+    },
+    {
+     "id": "sa_so2",
+     "kind": "loss",
+     "formula": "SO2",
+     "polarity": "both",
+     "role": "support",
+     "weight": 1,
+     "why": "Loss of SO2, also shown by sulfonamides."
+    }
+   ]
+  },
+  {
+   "id": "hexoside",
+   "name": "Hexosides",
+   "rules": [
+    {
+     "id": "hx_loss",
+     "kind": "loss",
+     "formula": "C6H10O5",
+     "polarity": "both",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Loss of an anhydrohexose residue (162 Da) from a glycoside."
+    }
+   ]
+  },
+  {
+   "id": "deoxyhexoside",
+   "name": "Deoxyhexosides",
+   "rules": [
+    {
+     "id": "dh_loss",
+     "kind": "loss",
+     "formula": "C6H10O4",
+     "polarity": "both",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Loss of a deoxyhexose residue (146 Da, e.g. rhamnose)."
+    }
+   ]
+  },
+  {
+   "id": "pentoside",
+   "name": "Pentosides",
+   "rules": [
+    {
+     "id": "pe_loss",
+     "kind": "loss",
+     "formula": "C5H8O4",
+     "polarity": "both",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Loss of a pentose residue (132 Da)."
+    }
+   ]
+  },
+  {
+   "id": "hexnac",
+   "name": "N-acetylhexosamine glycosides",
+   "rules": [
+    {
+     "id": "hn_204",
+     "kind": "frag",
+     "formula": "C8H14NO5",
+     "polarity": "+",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "HexNAc oxonium ion."
+    },
+    {
+     "id": "hn_loss",
+     "kind": "loss",
+     "formula": "C8H13NO5",
+     "polarity": "both",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Loss of an N-acetylhexosamine residue (203 Da)."
+    },
+    {
+     "id": "hn_168",
+     "kind": "frag",
+     "formula": "C8H10NO3",
+     "polarity": "+",
+     "role": "support",
+     "weight": 1,
+     "why": "HexNAc oxonium ion after loss of 2 H2O."
+    },
+    {
+     "id": "hn_138",
+     "kind": "frag",
+     "formula": "C7H8NO2",
+     "polarity": "+",
+     "role": "support",
+     "weight": 1,
+     "why": "HexNAc oxonium ion after loss of 2 H2O and CH2O."
+    }
+   ]
+  },
+  {
+   "id": "phosphate",
+   "name": "Phosphates",
+   "rules": [
+    {
+     "id": "ph_h2po4",
+     "kind": "frag",
+     "formula": "H2PO4",
+     "polarity": "-",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Dihydrogen phosphate anion."
+    },
+    {
+     "id": "ph_po3",
+     "kind": "frag",
+     "formula": "PO3",
+     "polarity": "-",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Metaphosphate anion."
+    },
+    {
+     "id": "ph_h3po4",
+     "kind": "loss",
+     "formula": "H3PO4",
+     "polarity": "both",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Loss of phosphoric acid (98 Da)."
+    },
+    {
+     "id": "ph_hpo3",
+     "kind": "loss",
+     "formula": "HPO3",
+     "polarity": "both",
+     "role": "support",
+     "weight": 1,
+     "why": "Loss of metaphosphoric acid (80 Da)."
+    }
+   ]
+  },
+  {
+   "id": "phosphocholine",
+   "name": "Phosphocholines",
+   "rules": [
+    {
+     "id": "pc_184",
+     "kind": "frag",
+     "formula": "C5H15NO4P",
+     "polarity": "+",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Phosphocholine head-group ion."
+    },
+    {
+     "id": "pc_86",
+     "kind": "frag",
+     "formula": "C5H12N",
+     "polarity": "+",
+     "role": "support",
+     "weight": 1,
+     "why": "Choline-derived iminium ion, weaker companion of 184."
+    }
+   ]
+  },
+  {
+   "id": "sulfonamide",
+   "name": "Sulfonamides (sulfanilamide type)",
+   "rules": [
+    {
+     "id": "sf_156",
+     "kind": "frag",
+     "formula": "C6H6NO2S",
+     "polarity": "+",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Sulfanilyl cation of the sulfonamide antibiotics."
+    },
+    {
+     "id": "sf_108",
+     "kind": "frag",
+     "formula": "C6H6NO",
+     "polarity": "+",
+     "role": "support",
+     "weight": 1,
+     "why": "Sulfanilyl ion after loss of SO."
+    },
+    {
+     "id": "sf_92",
+     "kind": "frag",
+     "formula": "C6H6N",
+     "polarity": "+",
+     "role": "support",
+     "weight": 1,
+     "why": "Aniline-type ion after loss of SO2."
+    },
+    {
+     "id": "sf_so2",
+     "kind": "loss",
+     "formula": "SO2",
+     "polarity": "+",
+     "role": "support",
+     "weight": 1,
+     "why": "SO2 extrusion from the protonated sulfonamide."
+    }
+   ]
+  },
+  {
+   "id": "pfas",
+   "name": "Perfluoroalkyl substances",
+   "rules": [
+    {
+     "id": "pf_cf3",
+     "kind": "frag",
+     "formula": "CF3",
+     "polarity": "-",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Trifluoromethyl anion."
+    },
+    {
+     "id": "pf_c2f5",
+     "kind": "frag",
+     "formula": "C2F5",
+     "polarity": "-",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Pentafluoroethyl anion."
+    },
+    {
+     "id": "pf_c3f7",
+     "kind": "frag",
+     "formula": "C3F7",
+     "polarity": "-",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Heptafluoropropyl anion."
+    },
+    {
+     "id": "pf_fso3",
+     "kind": "frag",
+     "formula": "FSO3",
+     "polarity": "-",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Fluorosulfate anion of the perfluoroalkane sulfonates."
+    },
+    {
+     "id": "pf_cf2",
+     "kind": "loss",
+     "formula": "CF2",
+     "polarity": "both",
+     "role": "support",
+     "weight": 1,
+     "why": "Spacing of one CF2 unit between chain homologues."
+    },
+    {
+     "id": "pf_hf",
+     "kind": "loss",
+     "formula": "HF",
+     "polarity": "both",
+     "role": "support",
+     "weight": 1,
+     "why": "Loss of HF from a fluorinated chain."
+    },
+    {
+     "id": "pf_co2",
+     "kind": "loss",
+     "formula": "CO2",
+     "polarity": "-",
+     "role": "support",
+     "weight": 1,
+     "why": "Decarboxylation of a perfluoroalkyl carboxylate."
+    }
+   ]
+  },
+  {
+   "id": "glutathione",
+   "name": "Glutathione conjugates",
+   "rules": [
+    {
+     "id": "gs_129",
+     "kind": "loss",
+     "formula": "C5H7NO3",
+     "polarity": "+",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Loss of pyroglutamic acid (129 Da) from the glutathione moiety."
+    },
+    {
+     "id": "gs_272",
+     "kind": "frag",
+     "formula": "C10H14N3O6",
+     "polarity": "-",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Deprotonated gamma-Glu-dehydroAla-Gly ion."
+    },
+    {
+     "id": "gs_75",
+     "kind": "loss",
+     "formula": "C2H5NO2",
+     "polarity": "+",
+     "role": "support",
+     "weight": 1,
+     "why": "Loss of glycine (75 Da)."
+    },
+    {
+     "id": "gs_307",
+     "kind": "loss",
+     "formula": "C10H17N3O6S",
+     "polarity": "+",
+     "role": "support",
+     "weight": 1,
+     "why": "Loss of glutathione (307 Da)."
+    }
+   ]
+  },
+  {
+   "id": "taurine",
+   "name": "Taurine conjugates",
+   "rules": [
+    {
+     "id": "ta_124",
+     "kind": "frag",
+     "formula": "C2H6NO3S",
+     "polarity": "-",
+     "role": "diagnostic",
+     "weight": 3,
+     "why": "Deprotonated taurine."
+    },
+    {
+     "id": "ta_80",
+     "kind": "frag",
+     "formula": "SO3",
+     "polarity": "-",
+     "role": "support",
+     "weight": 1,
+     "why": "SO3 radical anion released by the sulfonate group."
+    }
+   ]
+  }
+ ]
+}

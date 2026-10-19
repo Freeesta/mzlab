@@ -2,6 +2,7 @@
 Synthetic Orbitrap DDA file; the real infusion MSn file and the TiO2 series of the private data repository (skipped without them). Low-resolution world untouched."""
 import sys, os, glob; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+from dati_percorsi import percorso  # noqa: E402  (tools/ is on sys.path through lib)
 from lib_hr import synth, load
 steps = []
 def step(name, fn):
@@ -116,12 +117,11 @@ except Exception as e:
     steps.append(("lr", "FAIL " + str(e)[:300]))
     try: r.close()
     except Exception: pass
-DATI = None
-for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), "/home/user/mzlab-dati", "/home/user/QqQ-lab-dati"):
-    if c and glob.glob(c + "/HRMS/*/*direct-infusion_MSn.mzML"): DATI = c; break
+HRMS = percorso("dati/HRMS")    # None without the private data repository: the block is skipped
+DATI = str(HRMS) if HRMS and glob.glob(f"{HRMS}/*/*direct-infusion_MSn.mzML") else None
 if DATI:
-    MSN = glob.glob(DATI + "/HRMS/*/*direct-infusion_MSn.mzML")[0]
-    TIO = [glob.glob(DATI + f"/HRMS/*/*_TiO2_t0{n}min.mzML")[0] for n in ("10", "20", "45")]
+    MSN = glob.glob(DATI + "/*/*direct-infusion_MSn.mzML")[0]
+    TIO = [glob.glob(DATI + f"/*/*_TiO2_t0{n}min.mzML")[0] for n in ("10", "20", "45")]
     r = Run(port=8980, wd="/tmp/wd_msnbarra")
     try:
         with sync_playwright() as p:

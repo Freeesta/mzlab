@@ -22,28 +22,19 @@ use mzlab_core::wiff::dad::{
 };
 use mzlab_core::wiff::{container, idx, samples, scan, Wiff};
 
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
+
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-fn dati() -> Option<PathBuf> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    for up in root().canonicalize().ok()?.ancestors().skip(1).take(3) {
-        cands.push(up.join("mzlab-dati"));
-    }
-    cands.into_iter().find(|p| p.join("3200 qtrap").is_dir())
-}
-
 #[test]
 fn dad_3d_matrix_twc_and_single_wavelength_invariants() {
-    let Some(d) = dati() else {
+    let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else {
         eprintln!("SKIP wiff_estrazione_completa: no data repository (MZLAB_DATI)");
         return;
     };
-    let folder = d.join("3200 qtrap/wiff inquinanti 25-26 B");
     for (name, expected_pts) in [
         ("FullMass", 5500usize),
         ("MRM", 5000usize),
@@ -105,8 +96,9 @@ fn dad_3d_matrix_twc_and_single_wavelength_invariants() {
 
 #[test]
 fn mrm_fine_parameters_and_hplc_gradient_extraction() {
-    let Some(d) = dati() else { return };
-    let folder = d.join("3200 qtrap/wiff inquinanti 25-26 B");
+    let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else {
+        return;
+    };
     let wiff_bytes = std::fs::read(folder.join("MRM.wiff")).unwrap();
     let scan_bytes = std::fs::read(folder.join("MRM.wiff.scan")).unwrap();
     let ole = container(wiff_bytes.clone(), "MRM.wiff").unwrap();
@@ -181,8 +173,9 @@ fn mrm_fine_parameters_and_hplc_gradient_extraction() {
 
 #[test]
 fn spectrum_tic_invariant_and_auxiliary_device_logs() {
-    let Some(d) = dati() else { return };
-    let folder = d.join("3200 qtrap/wiff inquinanti 25-26 B");
+    let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else {
+        return;
+    };
     for name in ["FullMass", "MS2"] {
         let wiff_bytes = std::fs::read(folder.join(format!("{name}.wiff"))).unwrap();
         let mut scan_bytes = std::fs::read(folder.join(format!("{name}.wiff.scan"))).unwrap();
@@ -223,8 +216,10 @@ fn spectrum_tic_invariant_and_auxiliary_device_logs() {
         assert!(checked >= 3, "{name}: verified {checked} samples");
     }
 
-    let p_acq = d.join("dati_formati/sciex_wiff/triplequad5500_mrm_Z14418483/NEG.wiff");
-    if let Ok(bytes) = std::fs::read(&p_acq) {
+    if let Some(bytes) =
+        dati_percorsi::percorso("dati/formati/sciex/wiff/triplequad5500_mrm_Z14418483/NEG.wiff")
+            .and_then(|p| std::fs::read(p).ok())
+    {
         let ole = container(bytes, "NEG.wiff").unwrap();
         let m_acq = method_of_sample(&ole, 1).expect("Waters Acquity method");
         let lc_acq = m_acq.lc.expect("Waters Acquity LC gradient");
@@ -232,8 +227,11 @@ fn spectrum_tic_invariant_and_auxiliary_device_logs() {
         assert!(lc_acq.gradient.len() >= 2);
     }
 
-    let p_ch = d.join("dati_formati/sciex_wiff/qtrap5500_mrm_PXD001506/Duodenum_MRM_SMB_01.wiff");
-    if let Ok(bytes) = std::fs::read(&p_ch) {
+    if let Some(bytes) = dati_percorsi::percorso(
+        "dati/formati/sciex/wiff/qtrap5500_mrm_PXD001506/Duodenum_MRM_SMB_01.wiff",
+    )
+    .and_then(|p| std::fs::read(p).ok())
+    {
         let ole = container(bytes, "Duodenum_MRM_SMB_01.wiff").unwrap();
         let chs = device_channels(&ole, 1);
         assert!(!chs.is_empty(), "expected auxiliary device channels");
@@ -243,9 +241,12 @@ fn spectrum_tic_invariant_and_auxiliary_device_logs() {
 
 #[test]
 fn tof_sciex_os_ida_streams_and_scan_blocks() {
-    let Some(d) = dati() else { return };
-    let wiff_path = d.join("Erica/Test IDA PFAS untargeted.wiff");
-    let scan_path = d.join("Erica/Test IDA PFAS untargeted.wiff.scan");
+    let (Some(wiff_path), Some(scan_path)) = (
+        dati_percorsi::percorso("dati/Erica/Test IDA PFAS untargeted.wiff"),
+        dati_percorsi::percorso("dati/Erica/Test IDA PFAS untargeted.wiff.scan"),
+    ) else {
+        return;
+    };
     let (Ok(wiff_bytes), Ok(mut scan_reader)) =
         (std::fs::read(&wiff_path), std::fs::File::open(&scan_path))
     else {

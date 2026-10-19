@@ -8,6 +8,8 @@ use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::rc::Rc;
 use std::time::Instant;
 
+use sha2::{Digest, Sha256};
+
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{self, FileSet, Lettore, Limiti, Membro};
 use mzlab_core::{lettori_centroidi, lettori_mzml, mzidx, upload};
@@ -128,6 +130,15 @@ fn open(path: &str, cen: bool) -> (Box<dyn Lettore>, Counters, f64) {
     (l, c, t.elapsed().as_secs_f64())
 }
 
+/// First 12 hex digits of the SHA-256 of `b` (the `.mzidx` must be byte for byte the same from one build to the next).
+fn hash12(b: &[u8]) -> String {
+    Sha256::digest(b)
+        .iter()
+        .take(6)
+        .map(|x| format!("{x:02x}"))
+        .collect()
+}
+
 fn line(what: &str, secs: f64, c: &Counters, extra: &str) {
     let (calls, fills) = c.take();
     println!("{what:<28} {secs:>8.3} s  reads {calls:>10}  blocks {fills:>7}  {extra}");
@@ -220,10 +231,11 @@ fn scratch_phases(
         t.elapsed().as_secs_f64(),
         c,
         &format!(
-            "{:.1} MB, {} passes, scratch {:.1} MB",
+            "{:.1} MB, {} passes, scratch {:.1} MB, sha256 {}",
             st.bytes as f64 / 1e6,
             st.passes,
-            sp.metadata().map_or(0.0, |m| m.len() as f64 / 1e6)
+            sp.metadata().map_or(0.0, |m| m.len() as f64 / 1e6),
+            hash12(out.get_ref())
         ),
     );
     drop(sp);
@@ -312,10 +324,11 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
         t.elapsed().as_secs_f64(),
         &c,
         &format!(
-            "{:.1} MB, {} sections, {} passes",
+            "{:.1} MB, {} sections, {} passes, sha256 {}",
             st.bytes as f64 / 1e6,
             st.sections,
-            st.passes
+            st.passes,
+            hash12(out.get_ref())
         ),
     );
 

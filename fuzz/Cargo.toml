@@ -8,6 +8,10 @@ publish = false
 [package.metadata]
 cargo-fuzz = true
 
+# the entry points live in ingressi.rs, pulled in by #[path]; machete does not follow it
+[package.metadata.cargo-machete]
+ignored = ["mzlab-core", "mzlab-lib"]
+
 [dependencies]
 libfuzzer-sys = "0.4"
 mzlab-core = { path = "../crates/mzlab-core" }

@@ -4,7 +4,7 @@
 
 For every .mzML it prints: size, scans per level, MS2 per cycle, resolution, isolation window, activation, spectrum mode,
 and the size / time of the MS1 peak table (what the browser has to hold in memory). `tools/verifica.py` runs it on the
-two cuttings of the private data repository (QqQ-lab-dati/HRMS) and, on Federico's Mac, on ../Data/HRMS (the whole files).
+two cuttings of the private data repository (dati/HRMS) and, on Federico's Mac, on ../Data/HRMS (the whole files).
 Written with regular expressions on the headers only, so it works on any file the reader opens (and says what is missing).
 """
 from __future__ import annotations

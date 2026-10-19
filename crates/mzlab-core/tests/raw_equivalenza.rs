@@ -1,6 +1,6 @@
 //! RV-01: the memory work on the `.raw` reader (trailers and indexes kept compact) changes no result. For each real file the `.mzidx` (as `raw_tempi` builds it), the mzML of `lettori_mzml::scrivi`, the
-//! `metodo/1` document and the header of an array of scans have the SHA-256 recorded before the change. Needs the private data repository (`MZLAB_DATI`, `dati_formati/raw_veloce_alias.tsv` for LAB-A);
-//! the big DDA is looked for as `$MZLAB_RAW_BAF` or `dati_formati/thermo_raw/BAF_GEE_37.raw`. A file that is missing skips its case. `RAW_EQ_PRINT=1` prints the hashes instead of checking them.
+//! `metodo/1` document and the header of an array of scans have the SHA-256 recorded before the change. Needs the private data repository (`MZLAB_DATI`, `dati/formati/raw_veloce_alias.tsv` for LAB-A);
+//! the big DDA is looked for as `$MZLAB_RAW_BAF` or `dati/formati/thermo/raw/BAF_GEE_37.raw`. A file that is missing skips its case. `RAW_EQ_PRINT=1` prints the hashes instead of checking them.
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
@@ -8,10 +8,8 @@ use mzlab_core::lettori::{self, FileSet, Lettore, Limiti, Membro};
 use mzlab_core::{lettori_mzml, mzidx, upload};
 use sha2::{Digest, Sha256};
 
-fn dati() -> Option<PathBuf> {
-    let d = PathBuf::from(std::env::var_os("MZLAB_DATI")?);
-    d.is_dir().then_some(d)
-}
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 fn hex(b: &[u8]) -> String {
     Sha256::digest(b)
@@ -98,19 +96,22 @@ const PRIMA: &[(&str, [&str; 4])] = &[
     ),
 ];
 
-fn file(d: &Path, caso: &str) -> Option<PathBuf> {
+fn file(caso: &str) -> Option<PathBuf> {
     let p = match caso {
         "LAB-A" => {
-            let t = std::fs::read_to_string(d.join("dati_formati/raw_veloce_alias.tsv")).ok()?;
+            let t = std::fs::read_to_string(dati_percorsi::percorso(
+                "dati/formati/raw_veloce_alias.tsv",
+            )?)
+            .ok()?;
             let r = t
                 .lines()
                 .find(|l| l.starts_with("LAB-A\t"))?
                 .split('\t')
                 .nth(1)?
                 .to_string();
-            d.join(r)
+            dati_percorsi::percorso(&format!("dati/{r}"))?
         }
-        "PXD077492" => std::fs::read_dir(d.join("dati_formati/thermo_raw"))
+        "PXD077492" => std::fs::read_dir(dati_percorsi::percorso("dati/formati/thermo/raw")?)
             .ok()?
             .flatten()
             .map(|e| e.path())
@@ -120,22 +121,23 @@ fn file(d: &Path, caso: &str) -> Option<PathBuf> {
                         && n.to_string_lossy().ends_with(".raw")
                 })
             })?,
-        _ => std::env::var_os("MZLAB_RAW_BAF")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| d.join("dati_formati/thermo_raw/BAF_GEE_37.raw")),
+        _ => match std::env::var_os("MZLAB_RAW_BAF") {
+            Some(v) => PathBuf::from(v),
+            None => dati_percorsi::percorso("dati/formati/thermo/raw/BAF_GEE_37.raw")?,
+        },
     };
     p.is_file().then_some(p)
 }
 
 #[test]
 fn la_memoria_compatta_non_cambia_nessun_risultato() {
-    let Some(d) = dati() else {
+    let Some(_) = dati_percorsi::radice() else {
         eprintln!("SKIP raw_equivalenza: no data repository (MZLAB_DATI)");
         return;
     };
     let print = std::env::var_os("RAW_EQ_PRINT").is_some();
     for (caso, prima) in PRIMA {
-        let Some(p) = file(&d, caso) else {
+        let Some(p) = file(caso) else {
             eprintln!("SKIP raw_equivalenza {caso}: file not found");
             continue;
         };
@@ -156,12 +158,12 @@ fn la_memoria_compatta_non_cambia_nessun_risultato() {
 /// (`trasporto`) returns it as it is, for a sample of the scans of each file.
 #[test]
 fn scansione_dati_e_il_trasporto_danno_la_stessa_scansione() {
-    let Some(d) = dati() else {
+    let Some(_) = dati_percorsi::radice() else {
         eprintln!("SKIP raw_equivalenza: no data repository (MZLAB_DATI)");
         return;
     };
     for caso in ["LAB-A", "PXD077492", "BAF"] {
-        let Some(p) = file(&d, caso) else {
+        let Some(p) = file(caso) else {
             eprintln!("SKIP raw_equivalenza {caso}: file not found");
             continue;
         };

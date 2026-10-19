@@ -118,6 +118,8 @@ export function createDesktopPool(opts = {}) {
     ms2File(a) { return pool.table("ms2", { samples: a.samples, spec: a.spec, sha256: a.sha, polarity: a.pol, export_kind: a.kind, names: a.paths.map(nameOf) }); },
     /** the traces of one row (`riga_tracce/1`): XIC of every file, MS1 at the best apex and MS2, read from the index of each file @param {{ samples: string, sha: string, id: number, ppm: number, paths: string[] }} a */
     rowTraces(a) { return pool.table("row_traces", { samples: a.samples, sha256: a.sha, id: a.id, ppm: a.ppm, names: a.paths.map(nameOf) }); },
+    /** candidate compositions of one feature from its MS1 spectrum (`feat/formula_id`, the JSON `formula_id/1`) @param {{ mz: number[], y: number[], featureMz: number, params?: string }} a */
+    async formulaId(a) { return (await call("feat/formula_id", { mz: Array.from(a.mz), y: Array.from(a.y), feature_mz: a.featureMz, params: a.params || "" })).text(); },
     /** the table of levels of a campaign folder (admin mode): the app reads the text files the page sends and answers `{summary, text}`; same result as the pool of the browser @param {{ path: string, file: File }[]} files @param {string} root @param {string} [kind] */
     async attributioAnnotate(files, root, kind = "json") {
       const r = await json("feat/attributio/annotate", { root, kind, files: await texts(files) });
