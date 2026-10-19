@@ -3,11 +3,14 @@ import hashlib
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+from dati_percorsi import radice  # noqa: E402
 ESEMPI = ROOT / "mzlab" / "web" / "esempi"
 MAX_BYTES = 10 * 1024 * 1024
 
@@ -17,10 +20,10 @@ def _nomi():
     env = os.environ.get("MZLAB_NOMI_VIETATI")
     if env:
         return [n.strip().lower() for n in env.split(",") if n.strip()]
-    for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), str(ROOT.parent / "mzlab-dati")):
-        f = Path(c) / "nomi_vietati.txt" if c else None
-        if f and f.is_file():
-            return [n.strip().lower() for n in f.read_text(encoding="utf-8").splitlines() if n.strip() and not n.startswith("#")]
+    r = radice()
+    f = r / "nomi_vietati.txt" if r else None
+    if f and f.is_file():
+        return [n.strip().lower() for n in f.read_text(encoding="utf-8").splitlines() if n.strip() and not n.startswith("#")]
     return []
 
 
