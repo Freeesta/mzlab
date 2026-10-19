@@ -102,6 +102,24 @@
     return "";
   }
 
+  /** the parent: bonds shortened at hetero atoms; the lost part of a loss product is grey and dashed (`keep` = atoms kept, null = all)
+   * @param {(p: Element, tag: string, at: Record<string, string | number>, text?: string) => Element} el @param {Element} bondsG @param {Element} labelsG @param {MGraph} g
+   * @param {{ x: number, y: number }[]} pt @param {Set<number>} hetero @param {Set<number> | null} keep */
+  function parentDraw(el, bondsG, labelsG, g, pt, hetero, keep) {
+    const f = (/** @type {number} */ v) => v.toFixed(1);
+    for (const b of g.bonds) {
+      const A = pt[b.a], B = pt[b.b], u = unit(B.x - A.x, B.y - A.y), ga = hetero.has(b.a) ? 9 : 0, gb = hetero.has(b.b) ? 9 : 0, lost = keep && !(keep.has(b.a) && keep.has(b.b));
+      const nrm = { x: -u.y, y: u.x }, off = b.o === 1 ? [0] : b.o === 2 ? [-2.2, 2.2] : [-3.4, 0, 3.4];
+      for (const o of off) el(bondsG, "line", { x1: f(A.x + u.x * ga + nrm.x * o), y1: f(A.y + u.y * ga + nrm.y * o), x2: f(B.x - u.x * gb + nrm.x * o), y2: f(B.y - u.y * gb + nrm.y * o),
+        stroke: lost ? "var(--muted)" : "var(--ink)", "stroke-width": 1.6, ...(lost ? { "stroke-dasharray": "3 3" } : {}) });
+    }
+    g.atoms.forEach((a, i) => {
+      if (a.el === "C") return;
+      el(labelsG, "text", { x: f(pt[i].x), y: f(pt[i].y + 4.5), "text-anchor": "middle", "font-size": 13, "font-weight": 600, "font-family": "Arial, sans-serif",
+        fill: keep && !keep.has(i) ? "var(--muted)" : "var(--ink)", stroke: "var(--panel)", "stroke-width": 3, "paint-order": "stroke" }, a.el);
+    });
+  }
+
   /**
    * The drawing as an SVG string (viewBox, role «img», aria-label, `<title>`); null when the SMILES cannot be drawn.
    * @param {string} smiles parent SMILES @param {Drawing} d @returns {Promise<string | null>}
@@ -123,18 +141,7 @@
     let minX = 0, minY = 0, maxX = Math.max(...pt.map(p => p.x)), maxY = Math.max(...pt.map(p => p.y));
     const grow = (/** @type {number} */ x, /** @type {number} */ y) => { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); };
 
-    // the parent: bonds shortened at hetero atoms; the lost part of a loss product is grey and dashed
-    for (const b of g.bonds) {
-      const A = pt[b.a], B = pt[b.b], u = unit(B.x - A.x, B.y - A.y), ga = hetero.has(b.a) ? 9 : 0, gb = hetero.has(b.b) ? 9 : 0, lost = keep && !(keep.has(b.a) && keep.has(b.b));
-      const nrm = { x: -u.y, y: u.x }, off = b.o === 1 ? [0] : b.o === 2 ? [-2.2, 2.2] : [-3.4, 0, 3.4];
-      for (const o of off) el(bondsG, "line", { x1: f(A.x + u.x * ga + nrm.x * o), y1: f(A.y + u.y * ga + nrm.y * o), x2: f(B.x - u.x * gb + nrm.x * o), y2: f(B.y - u.y * gb + nrm.y * o),
-        stroke: lost ? "var(--muted)" : "var(--ink)", "stroke-width": 1.6, ...(lost ? { "stroke-dasharray": "3 3" } : {}) });
-    }
-    g.atoms.forEach((a, i) => {
-      if (a.el === "C") return;
-      el(labelsG, "text", { x: f(pt[i].x), y: f(pt[i].y + 4.5), "text-anchor": "middle", "font-size": 13, "font-weight": 600, "font-family": "Arial, sans-serif",
-        fill: keep && !keep.has(i) ? "var(--muted)" : "var(--ink)", stroke: "var(--panel)", "stroke-width": 3, "paint-order": "stroke" }, a.el);
-    });
+    parentDraw(el, bondsG, labelsG, g, pt, hetero, keep);
 
     // the zone the fragments point to: translucent colour plus a hatch, so the colour is never the only cue
     const defs = el(root, "defs", {}), pid = "tpm-h" + Math.random().toString(36).slice(2, 8);
