@@ -81,7 +81,7 @@ const LIB = (() => {
   const listeners = []; const changed = () => listeners.forEach(f => { try { f(); } catch (e) { /* a window that is gone */ } });
   async function chooseFolder() {
     if (T()) { const r = await T().invoke("lib_choose_dir"); if (r) { folderMsg = { mode: "native", base: BASE }; await pushFolder(); } return; }
-    const h = await /** @type {any} */ (window).showDirectoryPicker({ id: "mzlab-libs", mode: "readwrite" });
+    const h = await /** @type {any} */ (window).showDirectoryPicker({ id: "mzlab-libs", startIn: "desktop", mode: "readwrite" });
     await dirPut(h); LS.set(NOMI.KEY("lib.cartella"), "fs"); waiting = null; folderInfo.needsGrant = false; folderInfo.mode = "fs"; folderInfo.name = h.name; folderMsg = { mode: "fs", handle: h }; await pushFolder();
   }
   async function useBrowserFolder() { await dirPut(null); LS.set(NOMI.KEY("lib.cartella"), null); waiting = null; folderInfo.needsGrant = false; folderInfo.mode = "opfs"; folderInfo.name = ""; folderMsg = { mode: "opfs" }; await pushFolder(); }

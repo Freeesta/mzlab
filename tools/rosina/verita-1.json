@@ -1,0 +1,356 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "verita/1",
+  "description": "Ground truth of one native file, as an external oracle (msconvert, ThermoRawFileParser, timsdata, the authors' mzML) gives it. docs/studi/ROSINA.md F.1.",
+  "type": "object",
+  "required": [
+    "schema",
+    "file",
+    "oracolo",
+    "conteggi",
+    "scansioni",
+    "punti",
+    "cromatogrammi",
+    "metadati"
+  ],
+  "properties": {
+    "schema": {
+      "const": "verita/1"
+    },
+    "file": {
+      "type": "object",
+      "required": [
+        "nome"
+      ],
+      "properties": {
+        "nome": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "campione": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "oracolo": {
+      "type": "object",
+      "required": [
+        "nome",
+        "versione",
+        "opzioni",
+        "data",
+        "piattaforma"
+      ],
+      "properties": {
+        "nome": {
+          "type": "string"
+        },
+        "versione": {
+          "type": "string"
+        },
+        "opzioni": {
+          "type": "string"
+        },
+        "data": {
+          "type": "string"
+        },
+        "piattaforma": {
+          "type": "string"
+        }
+      }
+    },
+    "conteggi": {
+      "type": "object",
+      "required": [
+        "spettri",
+        "cromatogrammi"
+      ],
+      "properties": {
+        "spettri": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "cromatogrammi": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "scansioni": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "rt_min",
+          "livello",
+          "polarita",
+          "profilo",
+          "n_punti",
+          "tic"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "rt_min": {
+            "type": "number"
+          },
+          "livello": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "polarita": {
+            "enum": [
+              -1,
+              0,
+              1
+            ]
+          },
+          "precursore_mz": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "isolamento": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "mz": {
+                "type": "number"
+              },
+              "inf": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "sup": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "description": "mz = target; inf, sup = lower and upper OFFSET of the window as the mzML says (MS:1000828, MS:1000829)"
+          },
+          "ce": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "attivazione": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "profilo": {
+            "type": "boolean"
+          },
+          "n_punti": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tic": {
+            "type": "number"
+          },
+          "bpi_mz": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "bpi": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "punti": {
+      "description": "Peaks of up to 8 chosen scans: first, last, median, maximum TIC, one per level. Key: the index in `scansioni`.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "mz",
+          "intensita"
+        ],
+        "properties": {
+          "mz": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "intensita": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "cromatogrammi": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "tipo",
+          "n",
+          "somma",
+          "massimo",
+          "campione"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tipo": {
+            "enum": [
+              "tic",
+              "bpc",
+              "srm",
+              "sim",
+              "pda",
+              "pressione",
+              "analogico",
+              "altro"
+            ]
+          },
+          "n": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "somma": {
+            "type": "number"
+          },
+          "massimo": {
+            "type": "number"
+          },
+          "campione": {
+            "description": "At most 16 points spread over the trace.",
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "metadati": {
+      "description": "Field as the oracle writes it -> {valore, produttore?, metodo?}. `metodo` is the path in metodo/1 from tools/rosina/mappa_metadati.tsv.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "valore"
+        ],
+        "properties": {
+          "valore": {
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ]
+          },
+          "produttore": {
+            "type": "string"
+          },
+          "metodo": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "mobilita": {
+      "description": "Optional, Bruker: 1/K0 (V s/cm2) for each mobility scan index of a frame, as `timsdata` gives it.",
+      "type": "object",
+      "required": [
+        "scan",
+        "one_over_k0"
+      ],
+      "properties": {
+        "scan": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "one_over_k0": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "tolleranza": {
+      "description": "Optional: 'hr', 'lr' or an object that overrides single tolerances of the family default (mz_ppm null = by Da, mz_da, rt_min, intensita_rel, cromatogramma_rel).",
+      "oneOf": [
+        {
+          "enum": [
+            "hr",
+            "lr"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mz_ppm": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "mz_da": {
+              "type": "number"
+            },
+            "rt_min": {
+              "type": "number"
+            },
+            "intensita_rel": {
+              "type": "number"
+            },
+            "cromatogramma_rel": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

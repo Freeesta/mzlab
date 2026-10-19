@@ -41,6 +41,13 @@ def test_url_issue_attesa_e_limite():
     assert big["troncato"] and len(big["url"]) <= 6000 and big["url"].endswith("CUT")
 
 
+def test_url_email_attesa_e_limite():
+    u = nodo("B.urlEmail({user:'a.b',host:'c.it',subject:'[Bug] x',body:'hello world',cut:'CUT'})")
+    assert u["url"] == "mailto:a.b@c.it?subject=%5BBug%5D%20x&body=hello%20world" and not u["troncato"]
+    big = nodo("B.urlEmail({user:'a.b',host:'c.it',subject:'t',body:'à€😀'.repeat(3000),cut:'CUT'})")
+    assert big["troncato"] and len(big["url"]) <= 1900 and big["url"].endswith("CUT")
+
+
 def test_titolo():
     assert nodo("B.titolo('', 'vuoto')") == "[Bug] vuoto"
     assert nodo("B.titolo('linea uno\\nlinea due', 'v')") == "[Bug] linea uno"
