@@ -1,0 +1,114 @@
+{
+ "schema": "step/1",
+ "id": "spectra.chimeric",
+ "version": 1,
+ "package": "attributio",
+ "title": "Handle chimeric MS2 spectra",
+ "doc": "Finds the other ions co-isolated in the precursor window of each MS2 spectrum (from the MS1 scans around it), writes the precursor purity and the intruders, and either flags, cleans or deconvolves the spectrum. Downstream scores read the purity and the removed peaks.",
+ "in": {
+  "spectra": {
+   "type": "spectra",
+   "title": "MS2 spectra",
+   "requires": {
+    "ms_levels": [
+     1,
+     2
+    ]
+   }
+  },
+  "index": {
+   "type": "mzidx",
+   "many": true,
+   "title": "Scan index (MS1 around each MS2)"
+  }
+ },
+ "out": {
+  "spectra": {
+   "type": "spectra",
+   "title": "Spectra with purity and intruders"
+  }
+ },
+ "params": {
+  "type": "object",
+  "properties": {
+   "window_da": {
+    "title": "Isolation window",
+    "type": "number",
+    "minimum": 0,
+    "x-unit": "Da",
+    "x-estimate": true,
+    "description": "Left empty, read from the isolation window of each scan"
+   },
+   "min_purity": {
+    "title": "Minimum purity",
+    "type": "number",
+    "minimum": 0,
+    "maximum": 1,
+    "default": 0.5,
+    "x-unit": "fraction"
+   }
+  }
+ },
+ "runs_in": {
+  "wasm": "feat (attributio)",
+  "native": true
+ },
+ "deterministic": true,
+ "errors": [
+  "err.file.index",
+  "error.memoryBudget"
+ ],
+ "algorithms": [
+  {
+   "id": "purity_flag",
+   "title": "Purity flag",
+   "doc": "Share of the MS1 signal in the window that belongs to the precursor, before and after the MS2 scan (fill_purity in crates/mzlab-feat/src/interp/ms2link.rs); the spectrum is kept and flagged.",
+   "applicability": {
+    "ms_levels": [
+     1,
+     2
+    ]
+   },
+   "status": "available"
+  },
+  {
+   "id": "intruders",
+   "title": "Intruder ions",
+   "doc": "Lists the co-isolated ions of the window with their share, so that fragments they explain can be discounted by the scores (chimeric.rs of the open MS-04 work).",
+   "applicability": {
+    "resolution": [
+     "hr"
+    ],
+    "ms_levels": [
+     1,
+     2
+    ]
+   },
+   "status": "planned"
+  },
+  {
+   "id": "library_deconvolution",
+   "title": "Library-assisted deconvolution",
+   "doc": "Explains the spectrum as a non-negative mix of the library spectra of the precursor and of the intruders, and returns the residual as the cleaned spectrum.",
+   "references": [
+    {
+     "doi": "10.1038/s41592-021-01195-3",
+     "citation_key": "stancliffe2021decoid",
+     "note": "library-assisted deconvolution of chimeric MS2 spectra"
+    }
+   ],
+   "applicability": {
+    "resolution": [
+     "hr"
+    ],
+    "needs": [
+     "library"
+    ],
+    "note": "Data-dependent MS2 with wide windows and a library that covers the intruders"
+   },
+   "status": "planned"
+  }
+ ],
+ "default_algorithm": "purity_flag",
+ "per_item": false
+}

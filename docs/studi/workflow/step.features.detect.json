@@ -1,0 +1,251 @@
+{
+ "schema": "step/1",
+ "id": "features.detect",
+ "version": 1,
+ "title": "Detect features",
+ "doc": "Finds the chromatographic peaks of the MS1 scans of each file. The parameters are common to every algorithm; each algorithm adds its own.",
+ "cv": "MS:1000035",
+ "package": "core",
+ "in": {
+  "index": {
+   "type": "mzidx",
+   "many": true,
+   "title": "Scan index",
+   "requires": {
+    "ms_levels": [
+     1
+    ]
+   }
+  }
+ },
+ "out": {
+  "peaks": {
+   "type": "peaks",
+   "many": true,
+   "title": "Features of each file"
+  }
+ },
+ "params": {
+  "type": "object",
+  "properties": {
+   "polarity": {
+    "title": "Polarity",
+    "enum": [
+     1,
+     -1,
+     0
+    ],
+    "default": 1,
+    "description": "1 positive, -1 negative, 0 all MS1 scans"
+   },
+   "floor": {
+    "title": "Noise floor",
+    "type": "number",
+    "minimum": 0,
+    "default": 20000,
+    "x-unit": "counts",
+    "x-estimate": true,
+    "description": "Points below are ignored; left empty, it is estimated from the intensity histogram"
+   },
+   "min_height": {
+    "title": "Minimum height",
+    "type": "number",
+    "minimum": 0,
+    "default": 200000,
+    "x-unit": "counts"
+   },
+   "axis": {
+    "title": "m/z axis",
+    "enum": [
+     "ppm",
+     "Da"
+    ],
+    "default": "ppm",
+    "x-advanced": true
+   },
+   "budget": {
+    "title": "Working memory",
+    "type": "integer",
+    "x-unit": "bytes",
+    "x-noresult": true,
+    "x-advanced": true
+   }
+  }
+ },
+ "runs_in": {
+  "wasm": "feat (detect)",
+  "wasm_ceiling_bytes": 512000,
+  "native": true
+ },
+ "deterministic": true,
+ "errors": [
+  "error.memoryBudget",
+  "err.file.index"
+ ],
+ "algorithms": [
+  {
+   "id": "masstrace",
+   "version": 1,
+   "title": "Mass traces",
+   "doc": "Builds mass traces scan by scan and cuts them at the minima; defaults and fields of trace::Params in crates/mzlab-feat/src/trace.rs.",
+   "applicability": {
+    "resolution": [
+     "hr",
+     "lr"
+    ],
+    "spectrum_mode": [
+     "centroid",
+     "profile"
+    ]
+   },
+   "params": {
+    "type": "object",
+    "properties": {
+     "min_points": {
+      "title": "Minimum points",
+      "type": "integer",
+      "minimum": 2,
+      "default": 5,
+      "x-advanced": true
+     },
+     "max_gap": {
+      "title": "Maximum gap",
+      "type": "integer",
+      "minimum": 0,
+      "default": 2,
+      "x-unit": "scans",
+      "x-advanced": true
+     },
+     "long_trace": {
+      "title": "Long trace",
+      "type": "integer",
+      "minimum": 1,
+      "default": 400,
+      "x-unit": "scans",
+      "x-advanced": true
+     }
+    }
+   },
+   "status": "available"
+  },
+  {
+   "id": "centwave",
+   "title": "CentWave",
+   "doc": "Regions of interest in m/z, then a continuous wavelet transform over the expected peak widths.",
+   "references": [
+    {
+     "doi": "10.1186/1471-2105-9-504",
+     "citation_key": "tautenhahn2008highly",
+     "note": "CentWave: ROI detection and the wavelet peak model"
+    }
+   ],
+   "applicability": {
+    "resolution": [
+     "hr"
+    ],
+    "spectrum_mode": [
+     "centroid"
+    ],
+    "peak_fwhm_s": [
+     2,
+     60
+    ],
+    "note": "High resolution centroided data with a known range of peak widths"
+   },
+   "params": {
+    "type": "object",
+    "properties": {
+     "ppm": {
+      "title": "m/z deviation",
+      "type": "number",
+      "minimum": 0,
+      "default": 25,
+      "x-unit": "ppm"
+     },
+     "peak_width_s": {
+      "title": "Peak width",
+      "type": "array",
+      "items": {
+       "type": "number",
+       "minimum": 0
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "default": [
+       5,
+       30
+      ],
+      "x-unit": "s"
+     },
+     "snr": {
+      "title": "Signal to noise",
+      "type": "number",
+      "minimum": 0,
+      "default": 10
+     }
+    }
+   },
+   "status": "planned"
+  },
+  {
+   "id": "threshold",
+   "title": "Threshold and derivative",
+   "doc": "Smooths each extracted chromatogram and keeps the apexes where the first derivative changes sign above the floor; fits unit resolution and few points per peak.",
+   "applicability": {
+    "resolution": [
+     "lr"
+    ],
+    "note": "Unit resolution full scan or MRM with few points per peak"
+   },
+   "params": {
+    "type": "object",
+    "properties": {
+     "smooth": {
+      "title": "Smoothing window",
+      "type": "integer",
+      "minimum": 1,
+      "default": 5,
+      "x-unit": "scans"
+     }
+    }
+   },
+   "status": "planned"
+  }
+ ],
+ "default_algorithm": "masstrace",
+ "per_item": true,
+ "presets": {
+  "hr": {
+   "title": "High resolution",
+   "when": {
+    "resolution": [
+     "hr"
+    ]
+   },
+   "params": {
+    "axis": "ppm",
+    "floor": 20000,
+    "min_height": 200000
+   },
+   "evidence": "defaults of trace::Params",
+   "algorithm": "masstrace"
+  },
+  "lr": {
+   "title": "Unit resolution",
+   "when": {
+    "resolution": [
+     "lr"
+    ]
+   },
+   "params": {
+    "axis": "Da",
+    "floor": 2000,
+    "min_height": 20000
+   },
+   "evidence": "LR_FLOOR and LR_MIN_HEIGHT of recipe_lr.rs; the preview proposes the values of each file",
+   "algorithm": "masstrace"
+  }
+ },
+ "default_preset": "hr",
+ "memory_hint_bytes": 6430000
+}
