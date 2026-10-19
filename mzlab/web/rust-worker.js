@@ -334,8 +334,7 @@ function applyPolicy(/** @type {any} */ m) {
 
 async function handle(ev) {
   const m = ev.data;
-  if (m.op === "module") { startInit(m.module); return; } startInit(null);
-  if (m.op === "policy") { await ready; applyPolicy(m); return; }
+  if (m.op === "module") { startInit(m.module); return; } startInit(null); if (m.op === "policy") { await ready; applyPolicy(m); return; }
   if (m.op === "recycle") { for (const b of m.bufs) if (b.byteLength) pool.push(b); if (pool.length > 8) pool.splice(0, pool.length - 8); return; }
   await ready;
   await ARCH.wake();                                                              // the read handles parked while idle are reopened before the request reads

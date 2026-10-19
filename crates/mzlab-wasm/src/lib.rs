@@ -4,7 +4,7 @@
 //! `[rt(n), y(n)]` for chromatograms and `[n_total, count, (sid, rt, k, mz(k), y(k)) per scan]` for spectra. Errors are JSON
 //! `{"error_key": ..., "params": {...}}` strings (the page translates the key), never a text.
 #![forbid(unsafe_code)]
-mod info; mod diff; mod items; mod metodo; mod stat;
+mod info; mod diff; mod items; mod metodo; mod stat; mod budget_js;
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
@@ -548,7 +548,7 @@ impl Engine {
 
 /// Builds the `.mzidx` of an mzML of `size` bytes (read through `read(offset, length)`, decoded again for every pass) and writes it with
 /// `write(offset, bytes)`. The scan table (levels, polarities as signed bytes, RT and TIC as little-endian `f64`, the JSON rows,
-/// the `source` and `run` objects) comes from the Python reader. `budget_mb` bounds the peaks held in memory, `cap_mb` is the budget of the instance (0 = 192). Returns the statistics as JSON;
+/// the `source` and `run` objects) comes from the Python reader. `budget_mb` bounds the peaks held in memory, `cap_mb` is the budget of the instance (0 = 192), checked before the copies of the table (`error.memoryBudget`, phase `index`). Returns the statistics as JSON;
 /// errors are JSON with a key (`error.memoryBudget` when memory cannot be reserved).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
@@ -569,7 +569,6 @@ pub fn build_mzidx(
     spill_get: Option<Function>,
     cap_mb: f64,
 ) -> Result<String, JsValue> {
-    // what the builder holds besides the peaks is estimated before the copies of the table are made (`error.memoryBudget`, phase `index`)
     mzlab_core::stima::check_index(&MemBudget::from_request(cap_mb), levels.len(), scans_json.len(), (budget_mb as usize) << 20).map_err(|e| error_json(&e))?;
     let table = mzidx::ScanTable {
         level: levels.to_vec(),
@@ -625,8 +624,7 @@ pub fn prepare_upload(size: f64, read: Function, name: &str, sha256: Option<Stri
     let mut r = JsReader { read };
     let known = sha256.zip(probe);
     // the scan table is estimated before it is kept: a file that does not fit is refused in order (`error.memoryBudget`, phase `table`)
-    let budget = MemBudget::from_request(budget_mb);
-    let p = mzlab_core::upload::prepare_in(&mut r, size as u64, name, known, Some(&budget)).map_err(|e| error_json(&e))?;
+    let p = mzlab_core::upload::prepare_in(&mut r, size as u64, name, known, Some(&MemBudget::from_request(budget_mb))).map_err(|e| error_json(&e))?;
     let t = &p.table;
     let f8 = |v: &[f64]| Uint8Array::from(&v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>()[..]);
     let out = js_sys::Array::new();
@@ -640,16 +638,6 @@ pub fn prepare_upload(size: f64, read: Function, name: &str, sha256: Option<Stri
     out.push(&JsValue::from_bool(t.hr1));
     out.push(&JsValue::from_str(&p.sha256));
     Ok(out)
-}
-
-/// The memory budget of the engine (`mzlab-core::budget_auto`): chosen by the program from what the browser says of the device, or `manual_mb` when it is a
-/// positive number (kept inside the limits). JSON: `{mode, mb, reason, confidence, hard_mb, max_scans, inputs}`.
-#[wasm_bindgen]
-pub fn budget_choice(device_gb: f64, cores: u32, small: bool, manual_mb: f64) -> String {
-    use mzlab_core::budget_auto as ba;
-    let m = ba::Machine { device_gb: if device_gb.is_finite() { device_gb.max(0.0) } else { 0.0 }, cores, small, ..ba::Machine::default() };
-    let c = if manual_mb.is_finite() && manual_mb > 0.0 { ba::manual(&m, manual_mb) } else { ba::auto(&m) };
-    ba::json(&c, &m, mzlab_core::stima::max_scans(&MemBudget::mb(c.mb as f64)))
 }
 
 /// Fields per peak written by `detect_peaks`: apex, lo, hi, area, height, snr, scans, gaussian, asymmetry (NaN = not measurable), noise score.

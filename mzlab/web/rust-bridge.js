@@ -23,9 +23,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   let worker = null, seq = 0, peakMem = 0;
   const pending = new Map();               // id -> { res, worker }
   const stats = { rust: 0, python: 0, restarts: 0, mzml: 0 };       // mzml: how many times a file was read as an mzML (not from its index)
-  const api = { enabled: true, disabled: false, stats, budgetMb: 0, halved: false, lastPanic: /** @type {string | null} */ (null),
-    // the memory budget the engine decided (budget_choice in Rust) and what to do when it changes
-    choice: /** @type {any} */ (null), onChoice: /** @type {(c: any) => void} */ (() => {}), setBudget: (/** @type {number} */ mb) => {} };
+  const api = BUD.attach({ enabled: true, disabled: false, stats, budgetMb: 0, halved: false, lastPanic: /** @type {string | null} */ (null) });
   const death = { restarts: /** @type {number[]} */ ([]), api, stats };       // for judgeDeath
   const base = n => String(n || "").split(/[\\/]/).pop() || "";
   const recycler = api.recycler = makeRecycler({ pending, worker: () => worker, recycleNow: () => { stop(worker, { dead: true }); stats.recycled = (stats.recycled || 0) + 1; respawn(); }, disabled: () => api.disabled });
@@ -36,8 +34,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       const m = ev.data;
       if (m.op === "ready") return;
       if (m.op === "blocked") { onBlocked(); return; }                                                     // the saved files are held by another tab
-      if (m.op === "notice") { notify(m.key); return; }
-      if (m.op === "budget-choice") { api.choice = m.choice; BUD.record(m.choice, m.choice.mode === "manual" ? "user" : "auto"); api.onChoice(m.choice); return; }                                                    // e.g. error.memoryBudget from the pool of the indexes
+      if (m.op === "notice") { notify(m.key); return; }  if (m.op === "budget-choice") { BUD.chosen(api, m.choice); return; }   // notice: e.g. error.memoryBudget from the pool of the indexes
       if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);
       if (!p) { if (m.buf) recycle(m.buf); return; }
@@ -67,8 +64,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   function died(w, info) {
     if (w !== worker) return;
     stop(w, { dead: true });
-    const act = judgeDeath(death, info, peakMem);
-    if (act === "halve") BUD.record({ mb: api.budgetMb, mode: "automatic", reason: "halved", confidence: "low", inputs: api.choice ? api.choice.inputs : {} }, "supervisor");
+    const act = judgeDeath(death, info, peakMem); if (act === "halve") BUD.halved(api);
     if (act === "restart" || act === "halve") { respawn(); notify("error.engineRestarted"); return; }
     api.disabled = true; slots.forEach(s => { if (s) s.bad = true; }); notify(act === "oom" ? "error.memoryBudget" : "error.engineFallback");
   }
@@ -94,10 +90,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (!s.idx) { s.mzml = openMzml(k, s); return s.mzml; }
     });
   }
-  api.start = () => { if (!worker && !api.disabled) spawn(); };
-  // a budget chosen by hand (0 = automatic): kept, and the engine decides again with it (the files open stay as they are)
-  api.budgetRow = () => BUD.row(api);
-  api.setBudget = mb => { BUD.setManual(mb); if (worker) worker.send({ op: "policy", ...BUD.policy() }); };
+  api.start = () => { if (!worker && !api.disabled) spawn(); }; BUD.wire(api, () => worker);
   api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } };
   api.noteRemove = name => { blobs.delete(base(name)); if (api.unmarkNative) api.unmarkNative(name); };
   api.noteNew = () => { blobs.clear(); api.noteExplore(null); };

@@ -148,20 +148,6 @@ pub(crate) struct Rows {
     pool: HashSet<Arc<str>>,
 }
 
-/// The retention time of a spectrum header, in minutes.
-fn rt_minutes(h: &str) -> f64 {
-    let mut rt = cv(h, "MS:1000016").and_then(float).unwrap_or(0.0);
-    if let Some(p) = h.find("accession=\"MS:1000016\"") {
-        let tag_end = h[p..].find('>').map_or(h.len(), |g| p + g);
-        if let Some(u) = attr(&h[p..tag_end], "unitName") {
-            if u.starts_with("second") {
-                rt /= 60.0;
-            }
-        }
-    }
-    rt
-}
-
 impl Rows {
     pub(super) fn with(head: Head) -> Rows {
         Rows {
@@ -178,8 +164,7 @@ impl Rows {
         self.rows.len()
     }
 
-    /// Room for `n` more rows in one allocation: a vector that doubles holds the old and the new buffer together while it grows, which at a million
-    /// scans is the peak of the whole load.
+    /// Room for `n` more rows in one allocation (a vector that doubles holds the old and the new buffer together: the peak of a million-scan load).
     pub(crate) fn reserve(&mut self, n: usize) {
         self.rows.reserve_exact(n);
     }
@@ -196,10 +181,9 @@ impl Rows {
 
     /// The text of a reference to another scan: the allocation of that scan's native id when it is already known (a precursor comes after its parent).
     fn shared(&self, t: &str) -> Arc<str> {
-        match self.level_of.get_key_value(t) {
-            Some((k, _)) => k.clone(),
-            None => Arc::from(t),
-        }
+        self.level_of
+            .get_key_value(t)
+            .map_or_else(|| Arc::from(t), |(k, _)| k.clone())
     }
 
     /// The native id of a row, and the key of `level_of` for it: one allocation for both.
@@ -232,6 +216,20 @@ impl Rows {
         let run_text = String::from_utf8_lossy(&doc[lo..(lo + 2000).min(doc.len())]);
         Rows::with(Head::parse(&head, &run_text))
     }
+}
+
+/// The retention time of a spectrum header, in minutes.
+fn rt_minutes(h: &str) -> f64 {
+    let mut rt = cv(h, "MS:1000016").and_then(float).unwrap_or(0.0);
+    if let Some(p) = h.find("accession=\"MS:1000016\"") {
+        let tag_end = h[p..].find('>').map_or(h.len(), |g| p + g);
+        if let Some(u) = attr(&h[p..tag_end], "unitName") {
+            if u.starts_with("second") {
+                rt /= 60.0;
+            }
+        }
+    }
+    rt
 }
 
 /// The resolution of a spectrum header (`hs` is its part before the precursors).

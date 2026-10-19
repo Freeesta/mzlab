@@ -72,3 +72,20 @@ export function row(/** @type {any} */ bridge) {
 
 /** Keeps the manual choice (0 = automatic) and writes it in the log; the bridge then tells the engine. */
 export function setManual(/** @type {number} */ mb) { write(KEY_MANUAL, mb > 0 ? String(mb) : null); }
+
+/** Adds to the bridge object the fields of the budget: the choice the engine reported, the listener of the settings row and the way to change it. */
+export function attach(/** @type {any} */ api) {
+  return Object.assign(api, { choice: null, onChoice: (/** @type {any} */ _c) => {}, setBudget: (/** @type {number} */ _mb) => {} });
+}
+
+/** The engine reported its choice: kept, written in the log and shown. */
+export function chosen(/** @type {any} */ api, /** @type {any} */ choice) { api.choice = choice; record(choice, choice.mode === "manual" ? "user" : "auto"); api.onChoice(choice); }
+
+/** The supervisor halved the budget after a death by lack of memory. */
+export function halved(/** @type {any} */ api) { record({ mb: api.budgetMb, mode: "automatic", reason: "halved", confidence: "low", inputs: api.choice ? api.choice.inputs : {} }, "supervisor"); }
+
+/** A budget chosen by hand (0 = automatic) is kept and the engine decides again with it (the files open stay as they are). `worker()` gives the current worker. */
+export function wire(/** @type {any} */ api, /** @type {() => any} */ worker) {
+  api.budgetRow = () => row(api);
+  api.setBudget = (/** @type {number} */ mb) => { setManual(mb); const w = worker(); if (w) w.send({ op: "policy", ...policy() }); };
+}

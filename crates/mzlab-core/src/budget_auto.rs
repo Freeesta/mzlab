@@ -42,6 +42,28 @@ pub struct Choice {
     pub hard_mb: usize,
 }
 
+/// The choice as the JSON the page shows and logs: the numbers the rule used are in `inputs`.
+pub fn json(c: &Choice, m: &Machine, max_scans: usize) -> String {
+    let mut o = Out::default();
+    o.raw("{\"mode\":")
+        .str(c.mode)
+        .raw(",\"mb\":")
+        .int(c.mb as i64);
+    o.raw(",\"reason\":")
+        .str(c.reason)
+        .raw(",\"confidence\":")
+        .str(c.confidence);
+    o.raw(",\"hard_mb\":")
+        .int(c.hard_mb as i64)
+        .raw(",\"max_scans\":")
+        .int(max_scans as i64);
+    o.raw(&format!(
+        ",\"inputs\":{{\"native\":{},\"device_gb\":{},\"ram_mb\":{},\"cores\":{},\"small\":{}}}}}",
+        m.native, m.device_gb as i64, m.ram_mb as i64, m.cores, m.small
+    ));
+    o.0
+}
+
 fn ceiling(m: &Machine) -> usize {
     if m.native {
         NATIVE_MAX_MB
@@ -100,35 +122,6 @@ pub fn manual(m: &Machine, mb: f64) -> Choice {
         confidence: "user",
         hard_mb: auto(m).hard_mb,
     }
-}
-
-/// The choice as the JSON the page shows and logs: the numbers the rule used are in `inputs`.
-pub fn json(c: &Choice, m: &Machine, max_scans: usize) -> String {
-    let mut o = Out::default();
-    o.raw("{\"mode\":")
-        .str(c.mode)
-        .raw(",\"mb\":")
-        .int(c.mb as i64)
-        .raw(",\"reason\":")
-        .str(c.reason)
-        .raw(",\"confidence\":")
-        .str(c.confidence)
-        .raw(",\"hard_mb\":")
-        .int(c.hard_mb as i64)
-        .raw(",\"max_scans\":")
-        .int(max_scans as i64)
-        .raw(",\"inputs\":{\"native\":")
-        .raw(if m.native { "true" } else { "false" })
-        .raw(",\"device_gb\":")
-        .int(m.device_gb as i64)
-        .raw(",\"ram_mb\":")
-        .int(m.ram_mb as i64)
-        .raw(",\"cores\":")
-        .int(i64::from(m.cores))
-        .raw(",\"small\":")
-        .raw(if m.small { "true" } else { "false" })
-        .raw("}}");
-    o.0
 }
 
 #[cfg(test)]

@@ -505,6 +505,152 @@ pub use json::Columns;
 use rows::Head;
 pub(crate) use rows::Rows;
 
+fn push(rows: &mut Rows, a: u64, b: u64, h: &[u8]) {
+    rows.spectrum(a, b, &String::from_utf8_lossy(h));
+}
+
+/// Reads the headers of the spectra whose offsets the file lists: the end of the last spectrum, or `None` when it cannot be found.
+fn read_listed<R: ReadAt>(
+    src: &mut Source<'_, R>,
+    offs: &[u64],
+    rows: &mut Rows,
+) -> Result<Option<u64>> {
+    let size = src.size;
+    let mut last_end = 0u64;
+    // end of the last spectrum
+    let tail_from = *offs.last().unwrap();
+    let mut n = 1 << 16;
+    let mut last = None;
+    loop {
+        let chunk = src.read(tail_from, tail_from + n)?;
+        if let Some(p) = find(&chunk, b"</spectrum>") {
+            last = Some(tail_from + p as u64);
+            break;
+        }
+        if tail_from + n >= size {
+            break;
+        }
+        n *= 4;
+    }
+    if let Some(last) = last {
+        let limits: Vec<u64> = offs[1..]
+            .iter()
+            .copied()
+            .chain(std::iter::once(last + 11 + 1))
+            .collect();
+        for (&a, &limit) in offs.iter().zip(&limits) {
+            let mut n: u64 = 4096;
+            let (chunk, c) = loop {
+                let chunk = src.read(a, (a + n).min(limit))?;
+                let c = find(&chunk, b"<binaryDataArrayList");
+                if c.is_some() || a + n >= limit {
+                    break (chunk, c);
+                }
+                n *= 4;
+            };
+            let b = match c {
+                None => {
+                    let e = chunk.windows(11).rposition(|w| w == b"</spectrum>");
+                    a + e.map_or(chunk.len(), |e| e + 11) as u64
+                }
+                Some(_) => {
+                    let from = limit.saturating_sub(64).max(a);
+                    let tail = src.read(from, limit)?;
+                    match tail.windows(11).rposition(|w| w == b"</spectrum>") {
+                        Some(e) => from + e as u64 + 11,
+                        None => limit,
+                    }
+                }
+            };
+            push(rows, a, b, &chunk[..c.unwrap_or(chunk.len())]);
+            last_end = b;
+        }
+        return Ok(Some(last_end));
+    }
+    Ok(None)
+}
+
+/// Finds the spectra by walking the file (no list of offsets); the estimate of the table is made every `EVERY` scans. Returns the end of the last one.
+fn read_walked<R: ReadAt>(
+    src: &mut Source<'_, R>,
+    rows: &mut Rows,
+    budget: Option<&MemBudget>,
+) -> Result<u64> {
+    let size = src.size;
+    let mut last_end = 0u64;
+    let mut pos = 0u64;
+    let mut buf: Vec<u8> = Vec::new();
+    let mut buf_off = 0u64;
+    loop {
+        // find "<spectrum " from pos
+        let a = loop {
+            let rel = pos.saturating_sub(buf_off) as usize;
+            if buf_off <= pos && rel <= buf.len() {
+                if let Some(p) = find(&buf[rel..], b"<spectrum ") {
+                    break Some(pos + p as u64);
+                }
+            }
+            if buf_off <= pos && buf_off + buf.len() as u64 >= size {
+                break None;
+            }
+            let next = if buf_off <= pos && pos < buf_off + buf.len() as u64 {
+                (buf_off + buf.len() as u64).saturating_sub(10).max(pos)
+            } else {
+                pos
+            };
+            if next >= size {
+                break None;
+            }
+            buf = src.read(next, next + (1 << 20))?;
+            buf_off = next;
+            pos = next;
+        };
+        let Some(a) = a else { break };
+        if let Some(b) = budget {
+            stima::check_walk(b, rows.len(), a, size)?;
+        }
+        // find "</spectrum>" after a
+        let mut n: u64 = 1 << 16;
+        let b = loop {
+            let chunk = src.read(a, a + n)?;
+            if let Some(p) = find(&chunk, b"</spectrum>") {
+                let b = a + p as u64 + 11;
+                let hdr_end = find(&chunk[..p], b"<binaryDataArrayList").unwrap_or(p);
+                push(rows, a, b, &chunk[..hdr_end]);
+                break Some(b);
+            }
+            if a + n >= size {
+                break None;
+            }
+            n *= 4;
+        };
+        let Some(b) = b else { break };
+        last_end = b;
+        pos = b;
+    }
+    Ok(last_end)
+}
+
+/// The chromatograms after the last spectrum.
+fn count_chromatograms<R: ReadAt>(src: &mut Source<'_, R>, last_end: u64) -> Result<usize> {
+    let size = src.size;
+    let mut n_chrom = 0usize;
+    let mut pos = last_end;
+    while pos < size {
+        let chunk = src.read(pos, (pos + (1 << 20)).min(size))?;
+        let mut i = 0;
+        while let Some(p) = find(&chunk[i..], b"<chromatogram ") {
+            n_chrom += 1;
+            i += p + 1;
+        }
+        if pos + chunk.len() as u64 >= size {
+            break;
+        }
+        pos += chunk.len() as u64 - 13;
+    }
+    Ok(n_chrom)
+}
+
 /// Reads the scan table of an mzML of `size` bytes.
 pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
     read_in(r, size, None)
@@ -537,130 +683,14 @@ pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> R
         rows.reserve(o.len());
     }
     // each header becomes its row as soon as it is read: keeping the headers of every spectrum (about 1.5 KB each) would hold hundreds of MB
-    let mut last_end = 0u64;
-    fn push(rows: &mut Rows, a: u64, b: u64, h: &[u8]) {
-        rows.spectrum(a, b, &String::from_utf8_lossy(h));
-    }
-    let mut done = false;
-    if let Some(offs) = offs {
-        // end of the last spectrum
-        let tail_from = *offs.last().unwrap();
-        let mut n = 1 << 16;
-        let mut last = None;
-        loop {
-            let chunk = src.read(tail_from, tail_from + n)?;
-            if let Some(p) = find(&chunk, b"</spectrum>") {
-                last = Some(tail_from + p as u64);
-                break;
-            }
-            if tail_from + n >= size {
-                break;
-            }
-            n *= 4;
-        }
-        if let Some(last) = last {
-            let limits: Vec<u64> = offs[1..]
-                .iter()
-                .copied()
-                .chain(std::iter::once(last + 11 + 1))
-                .collect();
-            for (&a, &limit) in offs.iter().zip(&limits) {
-                let mut n: u64 = 4096;
-                let (chunk, c) = loop {
-                    let chunk = src.read(a, (a + n).min(limit))?;
-                    let c = find(&chunk, b"<binaryDataArrayList");
-                    if c.is_some() || a + n >= limit {
-                        break (chunk, c);
-                    }
-                    n *= 4;
-                };
-                let b = match c {
-                    None => {
-                        let e = chunk.windows(11).rposition(|w| w == b"</spectrum>");
-                        a + e.map_or(chunk.len(), |e| e + 11) as u64
-                    }
-                    Some(_) => {
-                        let from = limit.saturating_sub(64).max(a);
-                        let tail = src.read(from, limit)?;
-                        match tail.windows(11).rposition(|w| w == b"</spectrum>") {
-                            Some(e) => from + e as u64 + 11,
-                            None => limit,
-                        }
-                    }
-                };
-                push(&mut rows, a, b, &chunk[..c.unwrap_or(chunk.len())]);
-                last_end = b;
-            }
-            done = true;
-        }
-    }
-    if !done {
-        let mut pos = 0u64;
-        let mut buf: Vec<u8> = Vec::new();
-        let mut buf_off = 0u64;
-        loop {
-            // find "<spectrum " from pos
-            let a = loop {
-                let rel = pos.saturating_sub(buf_off) as usize;
-                if buf_off <= pos && rel <= buf.len() {
-                    if let Some(p) = find(&buf[rel..], b"<spectrum ") {
-                        break Some(pos + p as u64);
-                    }
-                }
-                if buf_off <= pos && buf_off + buf.len() as u64 >= size {
-                    break None;
-                }
-                let next = if buf_off <= pos && pos < buf_off + buf.len() as u64 {
-                    (buf_off + buf.len() as u64).saturating_sub(10).max(pos)
-                } else {
-                    pos
-                };
-                if next >= size {
-                    break None;
-                }
-                buf = src.read(next, next + (1 << 20))?;
-                buf_off = next;
-                pos = next;
-            };
-            let Some(a) = a else { break };
-            if let Some(b) = budget {
-                stima::check_walk(b, rows.len(), a, size)?;
-            }
-            // find "</spectrum>" after a
-            let mut n: u64 = 1 << 16;
-            let b = loop {
-                let chunk = src.read(a, a + n)?;
-                if let Some(p) = find(&chunk, b"</spectrum>") {
-                    let b = a + p as u64 + 11;
-                    let hdr_end = find(&chunk[..p], b"<binaryDataArrayList").unwrap_or(p);
-                    push(&mut rows, a, b, &chunk[..hdr_end]);
-                    break Some(b);
-                }
-                if a + n >= size {
-                    break None;
-                }
-                n *= 4;
-            };
-            let Some(b) = b else { break };
-            last_end = b;
-            pos = b;
-        }
-    }
-
-    // chromatograms after the last spectrum
-    let mut n_chrom = 0usize;
-    let mut pos = last_end;
-    while pos < size {
-        let chunk = src.read(pos, (pos + (1 << 20)).min(size))?;
-        let mut i = 0;
-        while let Some(p) = find(&chunk[i..], b"<chromatogram ") {
-            n_chrom += 1;
-            i += p + 1;
-        }
-        if pos + chunk.len() as u64 >= size {
-            break;
-        }
-        pos += chunk.len() as u64 - 13;
-    }
+    let listed = match &offs {
+        Some(o) => read_listed(&mut src, o, &mut rows)?,
+        None => None,
+    };
+    let last_end = match listed {
+        Some(e) => e,
+        None => read_walked(&mut src, &mut rows, budget)?,
+    };
+    let n_chrom = count_chromatograms(&mut src, last_end)?;
     Ok(rows.finish(n_chrom))
 }
