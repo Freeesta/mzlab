@@ -37,3 +37,4 @@ def test_a_row_without_change_is_no_evidence():
     rows = [{"id": 3, "mz": 500.0, "rt": 2.0, "delta": "", "confidence": "", "region": ""}]
     m = M.measure({"rows": rows}, {"tps": [{"id": "d", "mz": 500.0, "region": "chain A"}]})
     assert (m["region_checked"], len(m["no_evidence"])) == (0, 1)
+    assert m["no_evidence"][0][2] == ["no_change_proposal"]

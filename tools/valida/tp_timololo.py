@@ -46,6 +46,13 @@ def find(rows: list[dict], t: dict) -> list[dict]:
     return [r for r in hit if not times or any(abs(r["rt"] - x) <= RT_TOL for x in times)]
 
 
+def why(r: dict) -> list[str]:
+    """Why a row has no position verdict: the engine's reasons, or `no_change_proposal` when the row has no change at all (empty confidence)."""
+    if not r["confidence"]:
+        return ["no_change_proposal"]
+    return r.get("reasons") or ["unspecified"]
+
+
 def measure(data: dict, truth: dict) -> dict:
     rows = data.get("rows", [])
     tps = [t for t in truth.get("tps", []) if isinstance(t, dict) and t.get("mz") is not None]
@@ -58,7 +65,7 @@ def measure(data: dict, truth: dict) -> dict:
             name = t.get("id", t.get("name", "?"))
             # rows with no change proposed (empty confidence) or that cannot say (few fragments, change lost) have no region to compare: no evidence
             if all(r["confidence"] in ("", "cannot_say") for r in hit):
-                no_evidence.append((name, want, sorted({x for r in hit for x in r.get("reasons", [])})))
+                no_evidence.append((name, want, sorted({x for r in hit for x in why(r)})))
                 continue
             region_n += 1
             agree = any(want.lower() in (r.get("region") or "").lower() for r in hit)
