@@ -228,6 +228,17 @@ impl Run {
 
 /// The review of one feature as JSON (see the module).
 pub fn review_json(io: &Io, root: &str, pol: &str, id: i64) -> Result<String> {
+    review_json_with(io, root, pol, id, Some(crate::classi::BUNDLED))
+}
+
+/// The review with the chemical-class table given as text (`None`: no `classes`); the browser passes the table it fetched, so the `.wasm` carries no data.
+pub fn review_json_with(
+    io: &Io,
+    root: &str,
+    pol: &str,
+    id: i64,
+    classes: Option<&str>,
+) -> Result<String> {
     let run = Run::load(io, root)?;
     let (b, texts, lib) = (&run.b, &run.texts, &run.lib);
     let f = b.feature(pol, id).ok_or_else(|| {
@@ -263,7 +274,7 @@ pub fn review_json(io: &Io, root: &str, pol: &str, id: i64) -> Result<String> {
                     .collect(),
             ),
         ),
-        ("classes", classes_json(b, f, mgf.as_ref())),
+        ("classes", classes_json(b, f, mgf.as_ref(), classes)),
         ("rtlogp", rt.map_or(J::Null, |r| r.0)),
         ("decision", last),
         ("decision_rows", J::Num(n_rows as f64)),

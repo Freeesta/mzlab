@@ -3,6 +3,8 @@
 use mzlab_attributio_wasm::{decision_with, review_with, saved_summary, text_to, Files};
 use std::path::{Path, PathBuf};
 
+const CLASSES: &str = include_str!("../../mzlab-feat/data/classi-1.json");
+
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/data/attributio")
 }
@@ -45,7 +47,7 @@ fn the_bridge_reviews_a_feature_and_saves_a_decision() {
     let (files, data) = folder();
     let fetch =
         |k: usize, off: u64, len: u64| Some(data[k].1[off as usize..(off + len) as usize].to_vec());
-    let r = review_with(&files, &fetch, "POS", 15).expect("review");
+    let r = review_with(&files, &fetch, "POS", 15, CLASSES).expect("review");
     if let Ok(p) = std::env::var("DUMP_REVIEW") {
         std::fs::write(p, &r).expect("dump");
     }
@@ -59,7 +61,7 @@ fn the_bridge_reviews_a_feature_and_saves_a_decision() {
         r.contains("\"classes\":null") || r.contains("\"format\":\"classi/1\""),
         "classes key missing"
     );
-    assert!(review_with(&files, &fetch, "POS", 999).is_err());
+    assert!(review_with(&files, &fetch, "POS", 999, "").is_err());
 
     let d = r#"{"pol":"POS","id":15,"level":"2b","justification":"diagnostic ions explained","decided_on":"2026-10-16","decided_by":"rev",
         "checklist":["diagnostic_fragment","neutral_loss","alternatives_excluded"],
