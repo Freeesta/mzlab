@@ -6,6 +6,10 @@
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const specHtml = sp => !sp ? "" : `<div class="card"><h3>Specificity <span class="mut">(${esc(sp.file)}, ${sp.from}-${sp.to} min)</span></h3><div class="mut" title="Signal in the same file and time window at the m/z of the ion, at ±1 and ±2 Da (neighbours) and at ±0.5 Da (decoy windows). A neighbour or a decoy as strong as the ion says the signal is not specific to its m/z.">ion ${fmtA(sp.signal)}</div><table><tr><th>Δ m/z</th><th>Signal</th></tr>${[...sp.neighbours, ...sp.decoys].map(w => `<tr><td class="n">${w.dm > 0 ? "+" : ""}${w.dm}</td><td class="n">${fmtA(w.signal)}</td></tr>`).join("")}</table><div class="mut">As strong as the ion: ${sp.stronger.neighbours} of ${sp.neighbours.length} neighbours, ${sp.stronger.decoys} of ${sp.decoys.length} decoys.</div></div>`;
   const fmtA = v => /** @type {any} */ (window).TPTAB ? /** @type {any} */ (window).TPTAB.area(v) : String(Math.round(v));   // engineering notation, e.g. 821.43e+6
+  /** the same sample read from two sources (Data tab, chosen files) has one key: base name, no .mzML (repeated or not), lower case @param {string} n */
+  const fileKey = n => (String(n || "").split(/[\\/]/).pop() || "").replace(/(\.mzml)+$/i, "").toLowerCase();
+  /** @param {string} n the name shown in a row: without the extension */
+  const fileLabel = n => String(n || "").replace(/(\.mzml)+$/i, "");
   const TYPES = { sample: "sample", blank: "blank", standard: "standard", control: "control" };
   const KINDS = { full: "Full scan", ms2: "MS2", mrm: "MRM", hr: "LC-HRMS", msn: "MSn (infusion)", empty: "empty", error: "error" };
   /** the reactivity of the parent as told by TPREATT (`tp-reatt`): the heavy atoms with the highest Prev. f(−) go in the summary @type {{ smiles: string, atoms: any[] }|null} */
@@ -30,6 +34,7 @@
 @media(max-width:1000px){.tp{grid-template-columns:1fr}}
 .tp.tp-nol{grid-template-columns:1fr}.tp.tp-nol #tp-left{display:none}
 .tp-tools{padding:8px 16px 0}.tp-tools button{box-sizing:border-box;min-height:28px;min-width:28px;padding:2px 10px;font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink)}.tp-tools button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}@media(pointer:coarse){.tp-tools button{min-height:40px}}
+.tp .tp-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.tp .tp-rm{box-sizing:border-box;min-width:24px;min-height:24px;padding:0 6px;font:inherit;line-height:1;cursor:pointer;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink)}.tp .tp-rm:focus-visible,.tp .tp-fn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}@media(pointer:coarse){.tp .tp-rm{min-width:40px;min-height:40px}}
 .tp h3{margin:0 0 6px;font-size:14px}.tp .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:10px}
 .tp .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0}.tp .grow{flex:1;min-width:120px}.tp input[type=text],.tp textarea,.tp input[type=number]{width:100%;box-sizing:border-box}
 .tp .mut{color:var(--muted);font-size:12px}.tp table{border-collapse:collapse;width:100%;font-size:12px}.tp th,.tp td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
@@ -151,9 +156,9 @@
     } catch (_) { return []; }
   }
   async function pageFiles() {
-    const o = await opfsFiles(), have = new Set(o.map(f => f.name));
-    // by name: the order of the entries of OPFS depends on which write finished first, the one of IndexedDB is by key; the Dig must not depend on it
-    return o.concat((await idbFiles()).filter(f => !have.has(f.name))).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
+    const o = await opfsFiles(), have = new Set(o.map(f => fileKey(f.name)));
+    // by name: the order of the entries of OPFS depends on which write finished first, the one of IndexedDB is by key; the Dig must not depend on it. A sample kept by both is one file
+    return o.concat((await idbFiles()).filter(f => !have.has(fileKey(f.name)))).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
   }
   async function idbFiles() {
     try {
@@ -219,7 +224,7 @@
 <div class="tp">
 <div id="tp-left">
  <div class="card"><h3>1 · Files</h3>
-  <div class="row"><button id="tp-page" title="Reload the files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick" title=".mzML, .raw, .wiff (+ .wiff.scan)">Choose files...</button></div>
+  <div class="row"><button id="tp-page" title="Reload the files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick" title=".mzML, .raw, .wiff (+ .wiff.scan)">Choose files...</button><button id="tp-rmall" type="button" aria-label="Remove all the files" hidden>Remove all</button></div>
   <input type="file" id="tp-in" accept=".mzML,.mzml,.raw,.wiff,.scan" multiple hidden>
   <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div>
   <details id="tp-cond" hidden><summary title="Compare several conditions of the same degradation (gases, photocatalysts...): label the files with their condition">Conditions of the files</summary><div id="tp-cfiles"></div></details><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
@@ -247,18 +252,9 @@
     if (W.TPHELP) W.TPHELP.attach(sec);
     const FIELD = () => W.TPFIELD, parentFields = () => [$("#tp-mol"), $("#tp-smi")];
     if (W.TPFIELD) W.TPFIELD.watch(sec, () => { if ($("#tp-msg").dataset.field) msg(""); });       // the group returns to normal on a click or a key in it; so does its message
-    // the loading panel can be hidden to give the whole width to the tables; the choice is kept (mzlab.tabui.side = "0" hidden)
-    {
-      const tp = /** @type {HTMLElement} */ ($(".tp")), b = /** @type {HTMLButtonElement} */ ($("#tp-sb"));
-      const set = (/** @type {boolean} */ hide, /** @type {boolean} */ keep) => {
-        tp.classList.toggle("tp-nol", hide); b.setAttribute("aria-pressed", String(hide)); b.textContent = hide ? "Show panel" : "Hide panel"; b.setAttribute("aria-label", hide ? "Show the loading panel" : "Hide the loading panel");
-        if (keep) try { localStorage.setItem("mzlab.tabui.side", hide ? "0" : "1"); } catch (_) { /* storage may be blocked */ }
-      };
-      let was = false; try { was = localStorage.getItem("mzlab.tabui.side") === "0"; } catch (_) { /* storage may be blocked */ }
-      set(was, false); b.onclick = () => set(!tp.classList.contains("tp-nol"), true);
-    }
+    if (W.TPUI) W.TPUI.sidePanel(sec);       // 45_tabui_ui.js: the button that hides the loading panel
     /** @type {any} */
-    const st = { files: [], showAll: false, summary: null, sel: null, view: "tab", took: 0, pname: "", weakOn: false, cond: null, gnames: /** @type {string[]} */ ([]), gctl: null, gv: null };
+    const st = { files: [], showAll: false, summary: null, sel: null, view: "tab", took: 0, pname: "", weakOn: false, noAuto: false, cond: null, gnames: /** @type {string[]} */ ([]), gctl: null, gv: null };
     const msg = (t, err) => { const m = $("#tp-msg"); m.textContent = t || ""; m.className = "mut" + (err ? " err" : ""); delete m.dataset.field; };
     const bar = f => { const w = Math.round(f * 100); $("#tp-bar").style.width = w + "%"; $("#tp-barbox").setAttribute("aria-valuenow", w); };
     onProgress = (t, f, m) => { if (t) msg(t); if (f != null) bar(f); if (m && window.TPLIVE) TPLIVE.event(m); };
@@ -266,10 +262,10 @@
     $("#tp-more").onclick = () => { st.showAll = !st.showAll; renderFiles(); };
     // ---- files
     const renderFiles = () => {
-      modeUI(); condUI(); if (!st.files.length) { $("#tp-files").innerHTML = ""; $("#tp-more").hidden = true; return; }
-      $("#tp-files").innerHTML = `<table><tr><th>File</th><th>Data type</th><th>Sample</th><th>t (min)</th></tr>` + st.files.map((f, i) => `<tr><td title="${esc(f.name)}">${esc(f.name.replace(/\.mzml$/i, ""))}</td><td>${KINDS[f.kind] || f.kind}${f.error ? ` <span class="err" title="${esc(f.error)}">!</span>` : ""}</td>
+      modeUI(); condUI(); if (!st.files.length) { $("#tp-files").innerHTML = ""; $("#tp-more").hidden = true; $("#tp-rmall").hidden = true; return; }
+      $("#tp-files").innerHTML = `<table><tr><th>File</th><th>Data type</th><th>Sample</th><th>t (min)</th><th><span class="tp-sr">Remove</span></th></tr>` + st.files.map((f, i) => `<tr><td><span class="tp-fn" tabindex="0"${W.TPHELP ? ` data-tt="ft.riga.cell" data-tt-text="${esc(f.name)}"` : ""}>${esc(fileLabel(f.name))}</span></td><td>${KINDS[f.kind] || f.kind}${f.error ? ` <span class="err" title="${esc(f.error)}">!</span>` : ""}</td>
         <td>${f.kind === "full" || f.kind === "mrm" || f.kind === "hr" ? `<select data-i="${i}" data-k="type">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}"${f.type === k ? " selected" : ""}>${v}</option>`).join("")}</select>` : (f.kind === "ms2" ? "fragments" : "-")}</td>
-        <td>${f.kind === "full" || f.kind === "ms2" || f.kind === "mrm" || f.kind === "hr" ? `<input type="number" data-i="${i}" data-k="time" value="${f.time ?? ""}" style="width:60px" step="any">` : ""}</td></tr>`).join("") + "</table>";
+        <td>${f.kind === "full" || f.kind === "ms2" || f.kind === "mrm" || f.kind === "hr" ? `<input type="number" data-i="${i}" data-k="time" value="${f.time ?? ""}" style="width:60px" step="any">` : ""}</td><td><button type="button" class="tp-rm" data-rm="${i}" aria-label="Remove ${esc(fileLabel(f.name))}">×</button></td></tr>`).join("") + "</table>";
       const MAXV = 6, many = st.files.length > MAXV;
       $("#tp-files").querySelectorAll("tr").forEach((tr, i) => { if (i > 0) tr.hidden = many && !st.showAll && i > MAXV; });
       const more = $("#tp-more"); more.hidden = !many; more.setAttribute("aria-expanded", st.showAll ? "true" : "false");
@@ -277,6 +273,7 @@
       const cn = {}; st.files.forEach(f => { const k = f.kind === "hr" ? "LC-HRMS" : f.kind === "msn" ? "MSn" : (KINDS[f.kind] || f.kind); cn[k] = (cn[k] || 0) + 1; });
       const bl = st.files.filter(f => f.type === "blank").length;
       $("#tp-fsum").textContent = Object.entries(cn).map(([k, v]) => v + " " + k).join(" · ") + (bl ? " · " + bl + (bl === 1 ? " blank" : " blanks") : "");
+      $("#tp-rmall").hidden = false; $("#tp-files").querySelectorAll("[data-rm]").forEach(b => b.onclick = () => removeFiles([Number(/** @type {HTMLElement} */ (b).dataset.rm)]));
       $("#tp-files").querySelectorAll("[data-k]").forEach(el => el.onchange = () => { const f = st.files[+el.dataset.i]; f[el.dataset.k] = el.dataset.k === "time" ? (el.value === "" ? null : +el.value) : el.value; });
     };
     // ---- conditions of the files (several conditions of the same degradation): the table of roles, conditions, times and replicates is TP_Mine/lazy/gruppi-campioni.js (loaded when the section is opened);
@@ -339,6 +336,10 @@
       put("#tp-rtt", e.rt_tol, 2, e.drift && e.drift.value > 2 * (e.fwhm && e.fwhm.value || 0) ? `From the data: the RT of the parent drifts by ${e.drift.value.toFixed(2)} min over ${e.drift.n} files` : `From the data: 2 × the median width at half height of the strongest peaks of ${f.name} (${e.fwhm && e.fwhm.n} peaks)`);
       put("#tp-rtmin", e.dead, 1, `From the data: the unretained front of ${f.name} ends here`);
     }
+    const sortFiles = () => st.files.sort((a, b) => (a.kind > b.kind ? 1 : a.kind < b.kind ? -1 : (a.time ?? -1) - (b.time ?? -1)));
+    // 45_tabui_ui.js takes the rows out and puts them back (Undo); the files stay in the Data tab
+    const removeFiles = (/** @type {number[]} */ idx) => W.TPUI.removeFiles({ st, idx, busy: () => running, say: msg, key: fileKey, label: fileLabel, sort: sortFiles, redraw: () => { renderFiles(); estimateLr(); }, pick: $("#tp-pick") });
+    $("#tp-rmall").onclick = () => removeFiles(st.files.map((_, i) => i));
     async function addFiles(list, only) {         // list: [{name, buf}] or [{name, file}] (File/Blob: read only if small)
       msg("Reading files...");
       try {
@@ -352,10 +353,12 @@
         }
         const info = await call("classify", list.map(f => f.name));
         const hint = (() => { try { return Object.fromEntries((window.E && E.files || []).map(x => [String(x.file || x.name || "").split(/[\\/]/).pop(), x])); } catch (_) { return {}; } })();
-        st.files = st.files.filter(f => !info.some(i => i.name === f.name));
-        for (const i of info) { if (i.hr_kind === "hr" || i.hr_kind === "msn") i.kind = i.hr_kind; const h = hint[i.name]; if (h && h.time != null) i.time = h.time; if (h && ["sample", "blank", "standard", "control"].includes(h.type)) i.type = h.type; st.files.push(i); }
+        const seen = new Set(), fresh = info.filter(i => !seen.has(fileKey(i.name)) && seen.add(fileKey(i.name)));      // one row per sample, whatever source it came from
+        st.files = st.files.filter(f => !seen.has(fileKey(f.name)));
+        if (!only) st.noAuto = false;
+        for (const i of fresh) { if (i.hr_kind === "hr" || i.hr_kind === "msn") i.kind = i.hr_kind; const h = hint[i.name]; if (h && h.time != null) i.time = h.time; if (h && ["sample", "blank", "standard", "control"].includes(h.type)) i.type = h.type; st.files.push(i); }
         if (only) st.files = st.files.filter(f => f.kind === "full" || f.kind === "hr" || (f.kind === "ms2" && !st.files.some(x => x.kind === "hr")));   // automatic start: the Full Scan / HRMS series, and its MS2 files when it is low resolution
-        st.files.sort((a, b) => (a.kind > b.kind ? 1 : a.kind < b.kind ? -1 : (a.time ?? -1) - (b.time ?? -1)));
+        sortFiles();
         renderFiles(); msg(""); bar(0);
         estimateLr();
       } catch (e) { msg(String(e.message || e), true); bar(0); }
@@ -412,7 +415,7 @@
     }
     $("#tp-mol").addEventListener("input", modeUI);
     setTimeout(() => loadFromData(true), 0);
-    sec.addEventListener("tpshow", () => { if (!st.files.length) loadFromData(true); });
+    sec.addEventListener("tpshow", () => { if (!st.files.length && !st.noAuto) loadFromData(true); });
 
     // ---- parent: values, preview, structure
     const FORMULA = /^[A-Za-z0-9()]+$/;
