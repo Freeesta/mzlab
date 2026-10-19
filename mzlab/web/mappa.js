@@ -52,6 +52,8 @@ window.MAPPA = (() => {
     document.addEventListener("keyup", e => { if (p.cv.isConnected) shiftUp(p, e); });
     p.el.addEventListener("keydown", e => { if (isMax(p) && e.target === p.el) key(p, e); });
     const tbs = p.el.querySelector(".tbs"); tbs.insertBefore(navBar(p), tbs.children[1] || null); navSync(p); touchInit(p, cv);
+    const ro = FRAME.ro(cv, () => { if (mirOn(p)) { overlay(p); margins(p); } });
+    st(p).ro = p._ro = ro;
     const wrap = () => {
       if (!p._setMax || p._setMax._mz) return;
       const orig = p._setMax, f = on => { orig(on); onMax(p, on); }; f._mz = true; p._setMax = f;
@@ -224,10 +226,7 @@ window.MAPPA = (() => {
     g.globalAlpha = 1; g.beginPath(); g.arc(x, y, 4, 0, 2 * Math.PI); g.fillStyle = css("--accent"); g.fill(); g.lineWidth = 1.6; g.strokeStyle = css("--ink"); g.stroke(); s.dot = { x, y };
   }
   function readout(p) {
-    const pt = point(p), a = p._a; if (!a || !is2d(p)) return;
-    if (!pt || !(mirOn(p) || st(p).lock)) return;
-    const s = st(p), f = a.f, v = valueAt(p, pt.rt, pt.mz), sp = specFor(p, pt), sc = sp && sp.sid != null ? T("mappa.read.scan", { n: sp.sid + 1 }) + " · " : "";
-    p.rd.textContent = `${f ? f.label + (a.ref ? " − " + a.ref.label : "") + " · " : ""}${sc}RT ${pt.rt.toFixed(2)} min · m/z ${pt.mz.toFixed(mzd(p))} · ${T("mappa.read.int")} ${v == null ? "–" : fmt(v)}${s.lock ? " · " + T("mappa.read.locked") : ""}${s.sl && s.sl.ax ? " · " + T(s.sl.ax === "x" ? "asse.x" : "asse.y") : ""}`;
+    // Map 2D has no header readout text to prevent 2-row wrapping
   }
 
   // ---------------------------------------------------------------- the two plots at the margins: spectrum of the scan (m/z aligned with the map) and XIC (RT aligned)
@@ -414,21 +413,23 @@ window.MAPPA = (() => {
   function drawSide(p, pt, sp, prev) {
     const s = st(p), a = p._a; if (s.sp.hidden || !a) return;
     const { g, W, H } = canvasOf(s.sp), ink = css("--muted"); g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
-    const Y = v => H - M.b - (v - a.y0) / (a.y1 - a.y0) * (H - M.t - M.b), x0 = 6, x1 = W - 8;
-    g.beginPath(); g.moveTo(x0 + .5, M.t); g.lineTo(x0 + .5, H - M.b); g.stroke();
-    if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, M.t + 10); return; }
+    const cr = p.cv.getBoundingClientRect(), sr = s.sp.getBoundingClientRect();
+    const mapTop = (cr.top - sr.top) + M.t, mapBot = (cr.bottom - sr.top) - M.b, mapH = mapBot - mapTop;
+    const Y = v => mapBot - (v - a.y0) / (a.y1 - a.y0) * mapH, x0 = 6, x1 = W - 8;
+    g.beginPath(); g.moveTo(x0 + .5, mapTop); g.lineTo(x0 + .5, mapBot); g.stroke();
+    if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, Math.max(10, mapTop + 10)); return; }
     // difference A − B: bars right (more in A) and left (more in B) of a zero line
     const sg = !!sp.signed, ab = v => sg ? Math.abs(v) : v;
     let ymax = 0; const vis = []; for (let i = 0; i < sp.mz.length; i++) if (sp.mz[i] >= a.y0 && sp.mz[i] <= a.y1) { vis.push(i); if (ab(sp.y[i]) > ymax) ymax = ab(sp.y[i]); }
     // profile scan: the continuous line (pmz/py) is drawn, the peaks (mz/y) only label it
     const pr = !prev && !sg && sp.pmz && sp.py ? profRange(sp, a.y0, a.y1) : null;
     if (pr) ymax = Math.max(ymax, pr.max);
-    if (!ymax) { g.fillText(T("mappa.side.empty"), x0 + 4, M.t + 10); return; }
+    if (!ymax) { g.fillText(T("mappa.side.empty"), x0 + 4, Math.max(10, mapTop + 10)); return; }
     const xz = sg ? (x0 + x1) / 2 : x0, len = v => (sg ? (x1 - x0) / 2 : x1 - x0) * v / ymax;
     if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T(sg ? "mappa.side.diff" : "mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) }), true); }
     g.strokeStyle = a.f.color || css("--accent"); g.globalAlpha = prev ? .5 : 1;
     if (sg) {
-      g.beginPath(); g.moveTo(xz + .5, M.t); g.lineTo(xz + .5, H - M.b); g.strokeStyle = ink; g.stroke();
+      g.beginPath(); g.moveTo(xz + .5, mapTop); g.lineTo(xz + .5, mapBot); g.strokeStyle = ink; g.stroke();
       for (const [sgn, col] of /** @type {[number, string][]} */ ([[1, "--diff-pos"], [-1, "--diff-neg"]])) { g.strokeStyle = css(col); g.beginPath(); for (const i of vis) if (sp.y[i] * sgn > 0) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(xz, y); g.lineTo(xz + len(sp.y[i]), y); } g.stroke(); }
     } else {
     g.beginPath();
@@ -439,22 +440,24 @@ window.MAPPA = (() => {
     }
     g.globalAlpha = 1;
     // a preview has bins, not peaks: no m/z labels
-    if (prev) { g.fillStyle = ink; g.fillText(T("mappa.preview"), x0 + 4, H - M.b + 14); return; }
+    if (prev) { g.fillStyle = ink; g.fillText(T("mappa.preview"), x0 + 4, Math.min(H - 4, mapBot + 14)); return; }
     const dn = DENS[PREF.dens] || DENS.mid, cen = xicCentre(a.f, pt.mz), tol = xicTol(a.f, pt.mz);
     // best S/N of each slice of the window; the peak of the sight always
     const kept = MAPREND.pick(sp.mz, sp.y, { lo: a.y0, hi: a.y1, bands: dn.bands, quota: dn.quota, act: [cen - tol, cen + tol] });
     s.snr = new Map(kept.all.map(c => [c.i, c.snr]));
     sideLabels(g, W, kept.map(c => c.i), i => ({ y: Y(sp.mz[i]), tip: sg ? xz + Math.max(0, len(sp.y[i])) : x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)), i }), x0, s, dn.limit);
     if (pt.mz >= a.y0 && pt.mz <= a.y1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, Y(pt.mz) + .5); g.lineTo(x1, Y(pt.mz) + .5); g.stroke(); g.setLineDash([]); }
-    g.fillStyle = ink; g.fillText(sg ? `A − B · RT ${sp.rt.toFixed(2)}` : `${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, H - M.b + 14);
+    g.fillStyle = ink; g.fillText(sg ? `A − B · RT ${sp.rt.toFixed(2)}` : `${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, Math.min(H - 4, mapBot + 14));
   }
   function drawBottom(p, pt, xi, prev) {                                          // XIC under the map: the same RT axis
     const s = st(p), a = p._a; if (s.xc.hidden || !a) return;
     const { g, W, H } = canvasOf(s.xc), ink = css("--muted"), mt = 10, mb = 22; g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
-    const X = v => M.l + (v - a.x0) / (a.x1 - a.x0) * (W - M.l - M.r);
-    g.beginPath(); g.moveTo(M.l, H - mb + .5); g.lineTo(W - M.r, H - mb + .5); g.stroke();
-    for (const t of nice(a.x0, a.x1, 8)) { const x = X(t); if (x < M.l - 1 || x > W - M.r + 1) continue; g.textAlign = "center"; g.fillText(String(+t.toFixed(2)), x, H - mb + 13); }
-    if (!xi || !pt) { g.textAlign = "left"; g.fillText(T("mappa.bot.title"), M.l + 4, mt + 8); return; }
+    const cr = p.cv.getBoundingClientRect(), xr = s.xc.getBoundingClientRect();
+    const ml = (cr.left - xr.left) + M.l, mr = (cr.right - xr.left) - M.r, pw = mr - ml;
+    const X = v => ml + (v - a.x0) / (a.x1 - a.x0) * pw;
+    g.beginPath(); g.moveTo(ml, H - mb + .5); g.lineTo(mr, H - mb + .5); g.stroke();
+    for (const t of nice(a.x0, a.x1, 8)) { const x = X(t); if (x < ml - 1 || x > mr + 1) continue; g.textAlign = "center"; g.fillText(String(+t.toFixed(2)), x, H - mb + 13); }
+    if (!xi || !pt) { g.textAlign = "left"; g.fillText(T("mappa.bot.title"), ml + 4, mt + 8); return; }
     let tr = xi.tr || [], ymax = 0, sg = false;
     // preview of a difference: the matrix already holds A − B
     if (a.ref && xi.signed) sg = true;
@@ -465,10 +468,10 @@ window.MAPPA = (() => {
     if (window.TDATI) { s.xc.setAttribute("aria-label", T("mappa.bot.title")); TDATI.series(s.xc, { title: T("mappa.bot.title"), xl: T("tdati.col.rt"), yl: T("tdati.col.int"), series: tr.map(t => ({ x: t.rt, y: t.y, name: t.label || t.name })).concat(tic ? [{ x: tic.rt, y: tic.y, name: "TIC A − B" }] : []) }, true); }
     const lo0 = sg ? -ymax : 0, Y = v => H - mb - (v - lo0) / ((sg ? 2 * ymax : ymax) || 1) * (H - mt - mb);
     // intensity axis, like the other chromatograms
-    g.beginPath(); g.moveTo(M.l + .5, mt); g.lineTo(M.l + .5, H - mb + .5); g.stroke();
-    if (ymax) { g.textAlign = "right"; for (const t of nice(lo0, sg ? ymax : ymax, Math.max(2, Math.floor((H - mt - mb) / 28)))) { const y = Math.round(Y(t)) + .5; g.beginPath(); g.moveTo(M.l - 4, y); g.lineTo(M.l, y); g.stroke(); g.fillText(fmtA(t), M.l - 6, y + 3.5); } }
+    g.beginPath(); g.moveTo(ml + .5, mt); g.lineTo(ml + .5, H - mb + .5); g.stroke();
+    if (ymax) { g.textAlign = "right"; for (const t of nice(lo0, sg ? ymax : ymax, Math.max(2, Math.floor((H - mt - mb) / 28)))) { const y = Math.round(Y(t)) + .5; g.beginPath(); g.moveTo(ml - 4, y); g.lineTo(ml, y); g.stroke(); g.fillText(fmtA(t), ml - 6, y + 3.5); } }
     if (sg) {
-      const y0 = Y(0); g.beginPath(); g.moveTo(M.l, y0 + .5); g.lineTo(W - M.r, y0 + .5); g.stroke();
+      const y0 = Y(0); g.beginPath(); g.moveTo(ml, y0 + .5); g.lineTo(mr, y0 + .5); g.stroke();
       // TIC A − B: thin dashed line with its own scale (written beside the label)
       if (tic) {
         const tm = Math.max(...tic.y.map(Math.abs)) || 1; g.strokeStyle = ink; g.setLineDash([2, 3]); g.beginPath(); let f1 = true;
@@ -478,9 +481,9 @@ window.MAPPA = (() => {
       const t = tr[0];
       // area between the curve and zero: vermilion where A is higher, blue where B is
       for (const [sgn, col] of /** @type {[number, string][]} */ ([[1, "--diff-pos"], [-1, "--diff-neg"]])) {
-        g.save(); g.beginPath(); g.rect(M.l, sgn > 0 ? mt : y0, W - M.l - M.r, sgn > 0 ? y0 - mt : H - mb - y0); g.clip();
+        g.save(); g.beginPath(); g.rect(ml, sgn > 0 ? mt : y0, pw, sgn > 0 ? y0 - mt : H - mb - y0); g.clip();
         g.fillStyle = css(col); g.strokeStyle = css(col); g.globalAlpha = prev ? .35 : .55; g.beginPath(); g.moveTo(X(Math.max(a.x0, t.rt[0] ?? a.x0)), y0);
-        let lx = M.l; for (let i = 0; i < t.rt.length; i++) { if (t.rt[i] < a.x0 || t.rt[i] > a.x1) continue; lx = X(t.rt[i]); g.lineTo(lx, Y(t.y[i])); }
+        let lx = ml; for (let i = 0; i < t.rt.length; i++) { if (t.rt[i] < a.x0 || t.rt[i] > a.x1) continue; lx = X(t.rt[i]); g.lineTo(lx, Y(t.y[i])); }
         g.lineTo(lx, y0); g.closePath(); g.fill(); g.globalAlpha = 1; g.lineWidth = 1.2; g.stroke(); g.restore();
       }
       g.lineWidth = 1;
@@ -492,7 +495,7 @@ window.MAPPA = (() => {
     });
     g.fillStyle = css("--ink"); g.textAlign = "left";
     const lo = xi.c - xi.tol, hi = xi.c + xi.tol;
-    g.fillText(prev ? `XIC · ${T("mappa.preview")}` : `XIC${sg ? " A − B" : ""} ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}${tic ? " · " + T("mappa.bot.tic") : ""}`, M.l + 4, mt + 8);
+    g.fillText(prev ? `XIC · ${T("mappa.preview")}` : `XIC${sg ? " A − B" : ""} ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}${tic ? " · " + T("mappa.bot.tic") : ""}`, ml + 4, mt + 8);
     if (pt.rt >= a.x0 && pt.rt <= a.x1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(pt.rt) + .5, mt); g.lineTo(X(pt.rt) + .5, H - mb); g.stroke(); g.setLineDash([]); }
   }
 
@@ -554,7 +557,7 @@ window.MAPPA = (() => {
     const rt = a.x0 + (px - M.l) / (a.W - M.l - M.r) * (a.x1 - a.x0); spectrumAt(p, Math.max(a.full[0], Math.min(a.full[1], rt)), a.f.k);
   }
   function whole(p) { pushZh(p); p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
-  function unlock(p) { const s = st(p); s.lock = null; overlay(p); margins(p); if (!mirOn(p)) p.rd.textContent = ""; }
+  function unlock(p) { const s = st(p); s.lock = null; overlay(p); margins(p); }
   // right click: lock / unlock the point; Maiusc + right click: the XIC of that m/z (the old right-click entry)
   function ctx(p, e, px, py) {
     if (!is2d(p)) return false;

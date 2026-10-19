@@ -40,7 +40,7 @@ try:
         def choose_lock():
             pg.click("#ctx [aria-label='Lock the sight']"); settle(); assert not menu_open() and lock()
             pg.mouse.move(c[0] + c[2] * .2, c[1] + c[3] * .7, steps=5); settle(); assert shown() == ref and lock()
-            assert pg.evaluate(f"{M}.rd.textContent").find("locked") >= 0 or True
+            assert pg.evaluate(f"!!{M}._mz.lock && !!{M}._mz.dot")
         step("Lock keeps the sight after the menu closes", choose_lock)
         def unlock():
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Escape"); settle(); assert not lock()
