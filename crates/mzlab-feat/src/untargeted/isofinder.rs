@@ -4,12 +4,13 @@
 //! `signal/CarbonEnvelopeModel.java` and `util/IsotopesUtils.java` (MIT, (c) 2004-2022 The mzmine Development Team); rewritten, no code copied.
 //! Unlike the 13C isotope filter of `isotopes.rs` (which works on the ROWS of the table and removes them) it works on the SPECTRUM of each feature and
 //! writes a pattern on it. Here: the candidates of the spectrum, the expected envelope (`envelope`), the ladder on the 13C grid (`ladder`) and the
-//! score of ONE charge ([`Engine::score_charge`]). The isotope masses come from `mzlab_core::isoscore::isotopes_of`. Not done: the filter of
+//! score of ONE charge ([`Engine::score_charge`]) and the choice among the charges (`select`: pattern, alternatives, probabilities). The isotope masses come from `mzlab_core::isoscore::isotopes_of`. Not done: the filter of
 //! explainable signals (off by default), the refinement across scans (`CrossScanRefiner`), mobility.
 
 pub mod envelope;
 pub mod ladder;
 mod score;
+pub mod select;
 
 use std::collections::BTreeMap;
 
