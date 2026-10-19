@@ -15,7 +15,7 @@ const LISTS = new Map();
 /** @param {{ k: number, file: string }} f */
 async function ask(f) {
   LISTS.set(f.file, undefined);
-  await /** @type {any} */ (window).FIRST_CHROM?.ready;
+  await CHROM1.ready;
   /** @type {Voce[] | null} */ let list = null;
   try {
     const d = ((await J(`api/metodo?k=${f.k}`)) || {}).metodo;

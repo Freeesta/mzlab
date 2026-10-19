@@ -356,37 +356,20 @@ const getMs2Tr = k => memo(`m2t${k}`, () => J(`api/ms2tr?k=${k}`)).then(d => d.f
     }
   });
 })();
-// The engine answers one request at a time, in order: what is only nice to have (the series list of a log, which comes from api/metodo) waits until the first chromatogram has been asked for
-// (or 3 s, for a session that never asks for one), so the first graph is not queued behind it. `open()` is called by getChrom right after it has sent its request.
-const FIRST_CHROM = (() => {
-  /** @type {() => void} */ let open = () => {};
-  const ready = new Promise(r => { open = () => r(undefined); });
-  setTimeout(open, 3000);
-  return { ready, open };
-})();
-/** @type {any} */ (window).FIRST_CHROM = FIRST_CHROM;
-// provisional TIC being replaced by the real one (one request per chromatogram, however many redraws ask meanwhile)
-const EARLY_REQ = new Map();
 const getChrom = (k, kind, lv, mz0, mz1, prec, filt) => {
   const key = `c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}|${filt ?? ""}`;
-  const f = E.files[k];
-  const name = f ? f.file : null;
+  const f = E.files[k], name = f ? f.file : null;
   const early = (kind === "tic" && mz0 == null && mz1 == null && prec == null && !filt && name) ? ((E.earlyTic && E.earlyTic.get(name)) || (/** @type {any} */ (window).MZLAB_LR?.earlyTic?.(name))) : null;
   const url = `api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(filt);
   if (early && !CACHE.has(key)) {
-    if (!EARLY_REQ.has(key)) {
-      EARLY_REQ.set(key, J(url).then(res => {
-        if (f) delete f._provisional;
-        CACHE.set(key, Promise.resolve(res));
-        redrawAll();
-      }).catch(() => {}).finally(() => EARLY_REQ.delete(key)));
-    }
-    FIRST_CHROM.open();
+    CHROM1.once(key, () => J(url).then(res => {
+      if (f) delete f._provisional;
+      CACHE.set(key, Promise.resolve(res));
+      redrawAll();
+    }).catch(() => {}));
     return Promise.resolve({ rt: early.rt, y: early.y || early.tic, provvisorio: true });
   }
-  const r = memo(key, () => J(url));
-  FIRST_CHROM.open();
-  return r;
+  return CHROM1.sent(memo(key, () => J(url)));
 };
 const getXic = (k, mz, tol, lv) => memo(`x${k}|${mz}|${tol}|${lv}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0]));
 // + "&hr=0" when high resolution is switched off (hr.js)
@@ -433,7 +416,7 @@ async function bootSession0() {
   E.files.forEach(f => { mem[f.file] = f; });
   const oldVis = mem;
   E.key = key;
-  CACHE.clear(); EARLY_REQ.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
+  CACHE.clear(); CHROM1.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
   // seq: a list opened file by file, this is not its first step
   const seq = !!E._seq, waiting = !!(E.pending && E.pending.some(x => x.state === "wait"));
   E._seq = waiting; E._mem = waiting ? mem : null;

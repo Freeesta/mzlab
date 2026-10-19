@@ -195,7 +195,6 @@ interface Window {
   DISP: typeof DISP;
   ELEM: typeof ELEM;
   FEATURES: typeof FEATURES;
-  FIRST_CHROM: typeof FIRST_CHROM;
   HR: typeof HR;
   INF: typeof INF;
   KMD: typeof KMD;
