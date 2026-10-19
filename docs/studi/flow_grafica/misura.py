@@ -1,4 +1,4 @@
-"""Acceptance checks and smoothness measures of the Flow prototype (docs/studi/flow_grafica/prototipo.html), for docs/studi/FLOW_GRAFICA.md §8.
+"""Acceptance checks and smoothness measures of the Flow prototype (docs/studi/flow_grafica/prototipo.html), for docs/studi/FLOW_GRAFICA.md §9.
 
 Run: python3 docs/studi/flow_grafica/misura.py [--cpu 4]   (Chromium from Playwright; --cpu N = CPU throttling, like a slow student laptop)
 Prints one JSON line per check; exit 1 if an acceptance criterion fails. Study probe: not collected by pytest, not part of the site."""
@@ -125,7 +125,7 @@ def main() -> int:
             page.context.new_cdp_session(page).send("Emulation.setCPUThrottlingRate", {"rate": cpu})
         for n in (0, 50, 200, 500):
             m = smooth(page, n)
-            # Acceptance (§8): with 200 extra nodes the median frame stays under 20 ms and no gesture frame passes 50 ms more than twice.
+            # Acceptance (FLOW_GRAFICA.md §9): with 200 extra nodes the median frame stays under 20 ms and no gesture frame passes 50 ms more than twice.
             ok = n > 200 or (m["drag"]["p50"] <= 20 and m["pan"]["p50"] <= 20 and m["drag"]["over50"] <= 2 and m["pan"]["over50"] <= 2)
             out(f"smooth {n}", ok, cpu=cpu, **m)
         b.close()
