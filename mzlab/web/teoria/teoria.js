@@ -52,6 +52,8 @@ window.QADMIN = window.QADMIN || (() => {
 })();
 const ESTESO = QADMIN.on();
 (window.TEORIA = window.TEORIA || {}).esteso = () => ESTESO;
+// the text of the Teoria is Italian only, but the bar shared with the program (tabs, full screen) speaks the language chosen there
+window.TEORIA.lang = (() => { try { return localStorage.getItem("mzlab.lang") === "en" ? "en" : "it"; } catch (_) { return "it"; } })();
 if (ESTESO) document.documentElement.classList.add("esteso"); else for (let i = CHAPTERS.length; i--;) if (CHAPTERS[i][4]) CHAPTERS.splice(i, 1);
 // the chapters were written before the name changed: the old name in the text of the page is shown as the current one
 function renameApp(root = document.body) {
@@ -97,9 +99,10 @@ const TP = (() => {
     // standalone header: logo (to the program), title and the same three tabs as the program (Dati · Disegno · Teoria); always visible.
     // From file:// the relative links to the program do not exist (as before: logo to the index, no tabs); on a phone only the logo (to the notice) and Teoria.
     const prog = location.protocol !== "file:";
-    const tabs = `<nav id="tabs" aria-label="Sezioni di ${APP}">` +
-      (!prog || PHONE ? "" : `<a id="tab-dati" href="../../#/dati">Dati</a><a id="tab-disegno" href="../../#/disegno">Disegno</a>`) +
-      `<a id="tab-teoria" href="index.html" class="on" aria-current="page">Teoria</a></nav>`;
+    const TAB = window.TEORIA.lang === "en" ? { dati: "Data", disegno: "Drawing", teoria: "Theory", sez: "Sections of" } : { dati: "Dati", disegno: "Disegno", teoria: "Teoria", sez: "Sezioni di" };
+    const tabs = `<nav id="tabs" aria-label="${TAB.sez} ${APP}">` +
+      (!prog || PHONE ? "" : `<a id="tab-dati" href="../../#/dati">${TAB.dati}</a><a id="tab-disegno" href="../../#/disegno">${TAB.disegno}</a>`) +
+      `<a id="tab-teoria" href="index.html" class="on" aria-current="page">${TAB.teoria}</a></nav>`;
     top.innerHTML = `<button id="menu" type="button" aria-label="Indice" aria-expanded="false" aria-controls="side">&#9776;</button>` + (embedded ? "" :
       `<a id="logo" href="${!prog ? "index.html" : PHONE ? "../../" : "../../#/dati"}" aria-label="${!prog ? "Teoria: introduzione" : PHONE ? APP : APP + ": Dati"}"><img src="../logo-64.png" alt="m/z" width="28" height="28"></a>` + tabs + `<span class="sp"></span>`);
     document.body.prepend(top);

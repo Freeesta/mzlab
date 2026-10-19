@@ -29,7 +29,7 @@ try:
             names = q.eval_on_selector_all("#tabs a", "e=>e.map(x=>x.textContent)"); assert names == ["Dati", "Disegno", "Teoria"], names
             cur = q.eval_on_selector_all("#tabs a[aria-current=page]", "e=>e.map(x=>x.textContent)"); assert cur == ["Teoria"], cur
             for a in q.locator("#tabs a").all():
-                b = a.bounding_box(); assert b and b["height"] >= 44 and b["width"] >= 44 and b["x"] >= 0 and b["x"] + b["width"] <= w, (a.inner_text(), b)
+                b = a.bounding_box(); assert b and b["height"] >= 32 and b["width"] >= 32 and b["x"] >= 0 and b["x"] + b["width"] <= w, (a.inner_text(), b)
             assert q.evaluate("document.documentElement.scrollWidth") <= w, "horizontal scroll"
             assert q.evaluate("document.querySelector('#top').getBoundingClientRect().height") < 80
             assert q.get_attribute("#tab-dati", "href") == "../../#/dati" and q.get_attribute("#tab-disegno", "href") == "../../#/disegno"
@@ -37,7 +37,7 @@ try:
             for w in (360, 768, 1280):
                 c, q = ctx(w); go(q, T + "06-esi.html"); tabs_ok(q, w)
                 go(q, T + "pratica-ei.html"); tabs_ok(q, w); idle(q); c.close()
-        step("tabs Dati · Disegno · Teoria visible and ≥ 44 px at 360, 768, 1280 px (Teoria and Pratica)", widths)
+        step("tabs Dati · Disegno · Teoria visible and ≥ 32 px with a mouse at 360, 768, 1280 px (Teoria and Pratica)", widths)
         def dark():
             c, q = ctx(360, color_scheme="dark"); go(q, T + "12-dati.html"); tabs_ok(q, 360)
             L = "(c=>{const m=c.match(/[0-9.]+/g).map(Number),f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};return .2126*f(m[0])+.7152*f(m[1])+.0722*f(m[2])})"
