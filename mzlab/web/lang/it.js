@@ -3190,6 +3190,7 @@ I18N.add("it", {
   "tour.invito.testo": "Primo accesso? Un tour guidato degli strumenti.",
   "tour.invito.si": "Inizia il tour",
   "tour.invito.no": "Non ora",
+  "tour.invito.dopo": "Potrai fare il tour più tardi dalle Impostazioni.",
   "tour.impost.titolo": "Tour guidato",
   "tour.impost.rifai": "Rifai il tour",
   "tour.impost.esempio": "Fai il tour con un file di esempio",

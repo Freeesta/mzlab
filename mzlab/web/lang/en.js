@@ -3190,6 +3190,7 @@ I18N.add("en", {
   "tour.invito.testo": "First time here? A guided tour of the tools.",
   "tour.invito.si": "Start the tour",
   "tour.invito.no": "Not now",
+  "tour.invito.dopo": "You can take the tour later from Settings.",
   "tour.impost.titolo": "Guided tour",
   "tour.impost.rifai": "Replay the tour",
   "tour.impost.esempio": "Take the tour with an example file",
