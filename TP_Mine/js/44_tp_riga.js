@@ -17,7 +17,7 @@
    * @typedef {{ key: string, label: string, help?: string, run: (m: TpRiga) => void }} TpAction
    * @typedef {{ label: string, value: string, help?: string }} TpSum
    * @typedef {{ title?: string, level?: string | number, pred?: number, decided?: string | number | null, summary?: TpSum[], words?: string, actions?: TpAction[], xic?: TpXic[], xicTip?: string, apexRt?: number | null, lo?: number | null, hi?: number | null,
-   *   spectrum?: TpSpec | null, spectrum2?: TpSpec | null, open?: { xic?: () => void, ms2?: () => void }, samples?: TpSample[], identity?: { neutral?: number | string | null, adduct?: string, candidates?: TpCand[] } | null,
+   *   composition?: { run: () => Promise<any> }, spectrum?: TpSpec | null, spectrum2?: TpSpec | null, open?: { xic?: () => void, ms2?: () => void }, samples?: TpSample[], identity?: { neutral?: number | string | null, adduct?: string, candidates?: TpCand[] } | null,
    *   quality?: { shape?: number | string | null, snr?: number | null, fwhm?: number | null, flags?: string[], isoM1?: number | string | null, blank?: any, t0?: any, rejected?: string[] } | null,
    *   decide?: { series: any, key: string, level?: string | number | null, name?: string }, missing?: Record<string, string> }} TpRiga
    */
@@ -387,7 +387,7 @@
    * @param {HTMLElement} panel @param {string} tab @param {TpRiga} m */
   function fill(panel, tab, m) {
     register(); panel.innerHTML = "";
-    if (tab === "samples") samples(panel, m); else if (tab === "identity") identity(panel, m); else if (tab === "quality") quality(panel, m); else overview(panel, m);
+    if (tab === "samples") samples(panel, m); else if (tab === "identity") { identity(panel, m); if (G.TPCOMP && m.composition) G.TPCOMP.mount(panel, m.composition); } else if (tab === "quality") quality(panel, m); else overview(panel, m);
   }
 
   /** the options of `TPTAB.mount` that put these panels in the open row: `TPRIGA.hook(r => model)` @param {(r: any) => TpRiga} model */
