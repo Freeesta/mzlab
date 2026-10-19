@@ -32,6 +32,13 @@ pub fn expected_fragments(mol: &Mol, site: &Site, pol: Pol) -> Vec<Frag> {
         if site.kind == "demethyl" && (bd.a == site.atom || bd.b == site.atom) {
             continue;
         }
+        // The bond that becomes the double bond is not cut.
+        if site
+            .partner
+            .is_some_and(|p| (bd.a, bd.b) == (site.atom, p) || (bd.b, bd.a) == (site.atom, p))
+        {
+            continue;
+        }
         let variants: &[(u64, u64)] = if hydrolysable(mol, k) == "cut" {
             &[(1, 0)]
         } else {

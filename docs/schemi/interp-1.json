@@ -4,7 +4,7 @@
  "title": "interp/1: the interpretation of one row of the feature table of the products",
  "description": "One JSON per row, in the block `interp` of the `.mzfeat` (crates/mzlab-feat/src/interp/, route `table_interp(id)` of the .wasm `interp`). Only rows that pass the filters F1-F4 of `filtri/1` and have a status of product in `tp/1` are interpreted. All text is English; no intensity is ever compared with the infusion.",
  "type": "object",
- "required": ["schema", "id", "parent", "change", "ms1", "ms2", "vs_parent", "tree", "hidden"],
+ "required": ["schema", "id", "parent", "change", "ms1", "ms2", "vs_parent", "tree", "site", "drawing", "hidden"],
  "properties": {
   "schema": {"const": "interp/1"},
   "id": {"type": "integer", "description": "id of the row in the table"},
@@ -87,6 +87,44 @@
     "n_shifted": {"type": "integer"}
    }
   },
+  "site": {
+   "type": ["object", "null"],
+   "description": "the position of the change: the candidate classes with their support, the declared confidence and the reasons; never an identity",
+   "required": ["transform", "confidence", "reasons", "source", "informative", "margin", "classes", "region", "retained", "proposal"],
+   "properties": {
+    "transform": {"type": "string", "description": "the net change as posiz/1 names it (+O, -CH2, -2H, +O-2H, +Cl-H, +Br-H), or the delta of the row when posizioni does not know it"},
+    "confidence": {"enum": ["site", "region", "uncertain", "cannot_say"]},
+    "reasons": {"type": "array", "items": {"enum": ["no_ms2", "chimeric", "isomers_not_separated", "no_reference", "few_fragments", "multiple_changes", "change_lost", "unsupported_change"]}, "description": "why nothing can be said (cannot_say only)"},
+    "source": {"enum": ["tree", "cuts"], "description": "votes from the MSn tree of the infusion (localize) or from the cleavages of posiz/1"},
+    "informative": {"type": "integer", "description": "fragments of at least 5 % of the base peak whose formula is within 5 ppm"},
+    "margin": {"type": ["number", "null"], "description": "log-likelihood distance between the first and the second class left"},
+    "classes": {"type": "array", "items": {"type": "object", "required": ["id", "kind", "status", "atoms", "group", "n_support", "n_against", "support"], "properties": {
+     "id": {"type": "integer"},
+     "kind": {"type": "string"},
+     "status": {"enum": ["supported", "excluded", "undistinguished"]},
+     "atoms": {"type": "array", "items": {"type": "integer"}},
+     "group": {"type": ["string", "null"], "description": "ring A, chain A...: set when all the atoms of the class lie in one"},
+     "n_support": {"type": "integer"},
+     "n_against": {"type": "integer"},
+     "support": {"type": "number", "description": "softmax of the likelihood among the classes not excluded (0 for an excluded one): an ordering, not the chance of being right"}}}},
+    "region": {"type": ["object", "null"], "properties": {"name": {"type": "string"}, "atoms": {"type": "array", "items": {"type": "integer"}}}},
+    "retained": {"type": ["object", "null"], "description": "for a loss, the part that is kept", "properties": {"atoms": {"type": "array", "items": {"type": "integer"}}, "text": {"type": "string"}}},
+    "proposal": {"type": "object", "properties": {"sublevel": {"enum": ["3a", "3b"]}, "why": {"type": "string"}}}}},
+  "drawing": {
+   "type": ["object", "null"],
+   "description": "the one form the page draws: structure (only with a site), multicenter (every candidate in one aromatic ring), bracket (a zone or the whole parent)",
+   "required": ["mode", "atoms", "ends", "lost", "added", "kind", "delta", "label", "uncertainty", "fallback"],
+   "properties": {
+    "mode": {"enum": ["structure", "multicenter", "bracket"]},
+    "atoms": {"type": "array", "items": {"type": "integer"}},
+    "ends": {"type": "array", "items": {"type": "integer"}, "description": "the candidate atoms a multicenter bond ends on"},
+    "lost": {"type": "array", "items": {"type": "integer"}, "description": "atoms a loss removes, drawn faint and dashed"},
+    "added": {"enum": ["O", "Cl", "Br", null], "description": "element of the atom a structure adds on the outer bisector of the site"},
+    "kind": {"type": ["string", "null"]},
+    "delta": {"type": "string", "description": "with the true minus sign U+2212"},
+    "label": {"type": "string"},
+    "uncertainty": {"enum": ["none", "zone", "whole"]},
+    "fallback": {"enum": ["bracket", null], "description": "the form when the page has no molfile of the parent"}}},
   "hidden": {"type": ["string", "null"], "description": "code of the filter that hid the row after the interpretation (F5, mass error), else null"}
  },
  "$defs": {
