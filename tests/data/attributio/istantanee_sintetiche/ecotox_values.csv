@@ -1,4 +1,9 @@
-cas;kind;taxon;species;endpoint;duration_h;op;value_mg_L;n_results;n_refs;media;measurement;result_ids;reference
-111-11-1;acute;fish;Danio rerio;LC50;96.0;=;0.85;3;2;FW;MORT;1,2,3;Ref A
-111-11-1;chronic;algae;Raphidocelis subcapitata;EC10;72.0;>;12.5;1;1;FW;PGRT;4;Ref B
-333-33-3;acute;crustacean;Daphnia magna;EC50;48.0;=;n/a;1;1;FW;IMBL;5;Ref C
+cas;ik1;kind;taxon;species;endpoint;duration_h;op;value_mg_L;n_results;n_refs;media;measurement;result_ids;reference
+;AAAAAAAAAAAAAA;acute;fish;Danio rerio;LC50;96.0;=;0.85;3;1;FW;MORT;1,2;Ref
+;AAAAAAAAAAAAAA;acute;fish;Pimephales promelas;LC50;96.0;=;2.4;2;1;FW;MORT;1,2;Ref
+;AAAAAAAAAAAAAA;chronic;algae;Raphidocelis subcapitata;EC10;72.0;>;12.5;1;1;FW;MORT;1,2;Ref
+;EEEEEEEEEEEEEE;acute;crustacean;Daphnia magna;EC50;48.0;=;50.0;2;1;FW;MORT;1,2;Ref
+;GGGGGGGGGGGGGG;acute;fish;Danio rerio;LC50;96.0;=;50.0;2;1;FW;MORT;1,2;Ref
+;GGGGGGGGGGGGGG;acute;crustacean;Daphnia magna;EC50;48.0;=;0.8;2;1;FW;MORT;1,2;Ref
+;GGGGGGGGGGGGGG;chronic;fish;Danio rerio;NOEC;768.0;=;2.0;1;1;FW;MORT;1,2;Ref
+;HHHHHHHHHHHHHH;acute;fish;Danio rerio;LC50;96.0;=;;1;1;FW;MORT;1,2;Ref

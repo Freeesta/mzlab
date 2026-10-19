@@ -754,7 +754,7 @@ def main() -> int:
         "frammenti": lambda: scrivi(a.uscita, "frammenti.json", stadio_frammenti()),
         "sorbenti": lambda: scrivi(a.uscita_sorbenti, "sorbenti.json", stadio_sorbenti(carica(root, a.sorbenti.resolve()))),
     }
-    stadi.update(stadi_tox(frame_rows, scrivi))
+    stadi.update(stadi_tox(frame_rows, scrivi, lambda: carica(root, CAMPAGNA)))
     for nome in a.solo or list(stadi):
         stadi[nome]()
     return controlla(a.uscita, a.campagna) if a.controlla else 0
