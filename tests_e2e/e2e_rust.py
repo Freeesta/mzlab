@@ -5,6 +5,7 @@ from pathlib import Path
 import shutil, subprocess, sys, time
 from playwright.sync_api import sync_playwright
 from lib import ROOT, mz
+from dati_percorsi import percorso
 from golden_ref import PyRef
 
 from lib import free_port; PORT = free_port()
@@ -95,8 +96,9 @@ try:
             assert rust_n >= 8, rust_n
         step("index routes (chrom with m/z window and bpc, filters, scanlist, nearest_scan, scaninfo): same JSON as Python", index_routes)
         def thermo_raw():
-            import os
-            raws = [p for d in [os.environ.get("MZLAB_DATI"), str(ROOT.parent / "mzlab-dati")] if d for p in __import__("glob").glob(os.path.join(d, "HRMS", "*", "*.raw"))]
+            import glob, os
+            hrms = percorso("dati/HRMS")
+            raws = glob.glob(os.path.join(str(hrms), "*", "*.raw")) if hrms else []
             if not raws: print("   (skipped: no .raw in the data repository)"); return
             assert ".raw" in pg.inner_text("#drop"), "the drop area does not name .raw"
             n0 = len(pg.query_selector_all("#flist input[data-k=use]"))

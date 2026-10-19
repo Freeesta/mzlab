@@ -306,6 +306,7 @@ impl State {
             "feat/align" => self.feat_align(p),
             "feat/untargeted/detect" => self.feat_unt_detect(p),
             "feat/untargeted/align" => self.feat_unt_align(p),
+            "feat/formula_id" => self.feat_formula_id(p),
             "feat/hypotheses" => self.feat_hypotheses(p),
             "feat/evidence" => self.feat_evidence(p),
             "feat/table" => self.feat_table(p),

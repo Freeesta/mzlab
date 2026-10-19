@@ -2,34 +2,19 @@
 //! A Thermo `.raw` in PROFILE against the mzML msconvert made from it (profile, 64-bit, zlib, no peak picking), scan by scan, on the mzML
 //! that `raw::to_mzml_progress` writes: MS level, polarity, scan time, TIC, base peak, precursor (selected m/z, isolation window, energy,
 //! the scan it comes from), number of points, m/z and intensity. Needs the private data repository (MZLAB_DATI, or `mzlab-dati` beside
-//! this one) with `HRMS/Profile raw/`: without it the test is skipped; no `.raw` lives in this repository.
+//! this one) with `dati/HRMS/Profile raw/`: without it the test is skipped; no `.raw` lives in this repository.
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::PathBuf;
 
 use mzlab_core::{mzml, raw};
 use quick_xml::events::Event;
 use quick_xml::Reader;
 
-fn dati() -> Option<PathBuf> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    let here = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    for up in here.ancestors().skip(1).take(3) {
-        cands.push(up.join("mzlab-dati"));
-        cands.push(
-            up.parent()
-                .map(|p| p.join("mzlab-dati"))
-                .unwrap_or_default(),
-        );
-    }
-    cands.into_iter().find(|p| p.join("HRMS").is_dir())
-}
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 /// What the header of one spectrum says (numbers as text where they are compared exactly).
 #[derive(Default, Debug, Clone)]
@@ -276,18 +261,18 @@ struct Report {
 }
 
 fn compare() -> Option<Report> {
-    let Some(d) = dati() else {
+    let Some(d) = dati_percorsi::percorso("dati/HRMS/Profile raw") else {
         eprintln!("skipped: no data repository (MZLAB_DATI)");
         return None;
     };
-    let Some(rawp) = std::fs::read_dir(d.join("HRMS/Profile raw"))
+    let Some(rawp) = std::fs::read_dir(&d)
         .into_iter()
         .flatten()
         .flatten()
         .map(|e| e.path())
         .find(|p| p.extension().is_some_and(|x| x == "raw") && p.with_extension("mzML").is_file())
     else {
-        eprintln!("skipped: no .raw with its mzML in HRMS/Profile raw");
+        eprintln!("skipped: no .raw with its mzML in dati/HRMS/Profile raw");
         return None;
     };
     let refp = rawp.with_extension("mzML");

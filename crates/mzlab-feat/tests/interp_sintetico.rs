@@ -5,6 +5,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use mzlab_core::error::Result;
 use mzlab_core::idxread::Index;
 use mzlab_core::json::parse;
 use mzlab_feat::famalign::align_families;
@@ -13,6 +14,7 @@ use mzlab_feat::interp::{run::run_to, store};
 use mzlab_feat::pipeline::{analyse, Steps};
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::store::{read_table, write_table, Origin, Slice};
+use mzlab_feat::table::Aligned;
 
 use mzlab_feat::tp::{TpBlock, NO_PARENT, ST_PARENT, ST_TP};
 use mzlab_feat::trace::Params;
@@ -41,14 +43,8 @@ fn series() -> Option<PathBuf> {
     ok.then_some(out)
 }
 
-#[test]
-fn the_block_is_built_from_the_dda_of_the_series_and_read_by_row() {
-    let Some(out) = series() else { return };
-    let open = |_: usize| {
-        let f = std::fs::File::open(out.join("identita.mzidx")).unwrap();
-        let size = f.metadata().unwrap().len();
-        Index::open(f, size)
-    };
+/// The table of the one-file series with the block `tp/1` made by hand: every row a product but the parent; the parent and the product of the series.
+fn table_of(open: &dyn Fn(usize) -> Result<Index<std::fs::File>>) -> (Aligned, usize, usize) {
     let mut ix = open(0).unwrap();
     let (mut f, links) = analyse(&mut ix, &Params::default(), &Steps::default()).unwrap();
     analyse_families(
@@ -80,6 +76,18 @@ fn the_block_is_built_from_the_dda_of_the_series_and_read_by_row() {
     };
     t.tp.status[parent] = ST_PARENT;
     assert_ne!(t.tp.parent_row, NO_PARENT);
+    (t, parent, product)
+}
+
+#[test]
+fn the_block_is_built_from_the_dda_of_the_series_and_read_by_row() {
+    let Some(out) = series() else { return };
+    let open = |_: usize| {
+        let f = std::fs::File::open(out.join("identita.mzidx")).unwrap();
+        let size = f.metadata().unwrap().len();
+        Index::open(f, size)
+    };
+    let (t, parent, product) = table_of(&open);
     let bytes = write_table(&t, &Recipe::default(), &Origin::default());
 
     let mut sink = Vec::new();

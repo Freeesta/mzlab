@@ -104,13 +104,6 @@ function createCore(opts) {
   return { st, slots, queue, spawn, call, submit, kill, copy, rest };
 }
 
-// The interpretation of the rows (`interp/1`, `.wasm` `interp`, loaded on request): interpBuild({ table, parent, registry, polarity, paths, infusion }) resolves with the .mzfeat bytes that have the block
-// (`paths` = the .mzidx of the series in OPFS, `infusion` = position of the infusion file among them, -1 = none); interpRow({ table, id }) with the JSON text of one row ("null" when not interpreted).
-function interpOps(submit, call) {
-  const run = (msg, key) => submit(async (slot, load) => { await load("interp"); return (await call(slot, { ...msg, table: msg.table.slice() }))[key]; });
-  return { interpBuild: m => run({ op: "interp_build", ...m }, "bytes"), interpRow: m => run({ op: "table_interp", ...m }, "text") };
-}
-
 // The exports of a campaign folder (admin mode): `kind` = schymanski | publication | quantify | gradient (`.wasm` `attributio_export`) or evidence (`.wasm` `attributio_rev`, it needs the review);
 // `extra` = { matrix?, generated? }. Resolves with { files: [{ name, text } | { name, rows: { hojas } }], warnings }.
 function exportOps(submit, call) {
@@ -185,6 +178,37 @@ function proofOps(submit, call, copy, opts) {
   };
 }
 
+// Methods of the pool that read one row or one spectrum of the table (MS2 file, traces, compositions).
+function rowOps(submit, call) {
+  return {
+    // MS2 file of the table (FBMN `.mgf`, SIRIUS `.ms`): the best MS2 of each row is read from the .mzidx of its file (OPFS). Resolves with the text.
+    ms2File({ table, samples, spec, sha, pol, kind, paths }) {
+      return submit(async (slot, load) => {
+        await load("table");
+        return (await call(slot, { op: "ms2file", table: table.slice(), samples, spec, sha, pol, kind, paths })).text;
+      });
+    },
+    // XIC of every file, MS1 at the best apex and MS2 of one row (`riga_tracce/1`), read from the .mzidx in OPFS. Resolves with the text.
+    rowTraces({ table, samples, id, ppm, paths }) {
+      return submit(async (slot, load) => {
+        await load("table");
+        return (await call(slot, { op: "rowtraces", table: table.slice(), samples, id, ppm, paths })).text;
+      });
+    },
+    // Candidate elemental compositions of one feature from its MS1 spectrum (`.wasm` `untargeted`, `formula_id/1`): `mz`, `y` the spectrum, `featureMz` the monoisotopic m/z,
+    // `params` the JSON text of the options (ion, z, tol_ppm, elements, nitrogen, rdb_min, max_results). Resolves with the JSON text.
+    formulaId({ mz, y, featureMz, params }) {
+      return submit(async (slot, load) => {
+        await load("untargeted");
+        return (await call(slot, { op: "formula_id", mz: Float64Array.from(mz), y: Float64Array.from(y), featureMz, params: params || "" })).text;
+      });
+    },
+    // The interpretation of the rows (`.wasm` `interp`, `interp/1`): interpBuild({ table, parent, registry, polarity, paths, infusion }) resolves with the .mzfeat bytes that have the block (`infusion` = position of the infusion .mzidx in `paths`, -1 = none); interpRow({ table, id }) with the JSON text of one row.
+    interpBuild: m => submit(async (slot, load) => { await load("interp"); return (await call(slot, { op: "interp_build", ...m, table: m.table.slice() })).bytes; }),
+    interpRow: m => submit(async (slot, load) => { await load("interp"); return (await call(slot, { op: "table_interp", ...m, table: m.table.slice() })).text; }),
+  };
+}
+
 export function createFeatPool(opts) {
   const { st, slots, queue, spawn, call, submit, kill, copy, rest } = createCore(opts);
 
@@ -254,21 +278,7 @@ export function createFeatPool(opts) {
     ...previewOps(submit, call, opts),
     ...driftOps(submit, call, copy),
     ...proofOps(submit, call, copy, opts),
-    // MS2 file of the table (FBMN `.mgf`, SIRIUS `.ms`): the best MS2 of each row is read from the .mzidx of its file (OPFS). Resolves with the text.
-    ms2File({ table, samples, spec, sha, pol, kind, paths }) {
-      return submit(async (slot, load) => {
-        await load("table");
-        return (await call(slot, { op: "ms2file", table: table.slice(), samples, spec, sha, pol, kind, paths })).text;
-      });
-    },
-    // XIC of every file, MS1 at the best apex and MS2 of one row (`riga_tracce/1`), read from the .mzidx in OPFS. Resolves with the text.
-    rowTraces({ table, samples, id, ppm, paths }) {
-      return submit(async (slot, load) => {
-        await load("table");
-        return (await call(slot, { op: "rowtraces", table: table.slice(), samples, id, ppm, paths })).text;
-      });
-    },
-    ...interpOps(submit, call),
+    ...rowOps(submit, call),
     // L4-L6: alignment and gap filling of the series in one worker. `stored`: .mzfeatf bytes in the order of `paths`. Resolves with the .mzfeat bytes.
     align(stored, paths, recipe) {
       return submit(async (slot, load) => {
@@ -364,15 +374,10 @@ async function init(m) {
 const reply = (id, r, transfer) => self.postMessage({ id, ok: true, ...r }, transfer || []);
 const arrays = list => list.map(b => (b instanceof Uint8Array ? b : new Uint8Array(b)));
 
-const INTERP_OPS = {   // the ops of the .wasm `interp`
-  async interp_build(m) {
-    const f = await openAll(m.paths), t = new Uint8Array(m.table), out = memSink();
-    try { mods.interp.interp_build((_, off, len) => t.subarray(off, off + len), t.length, m.parent, m.registry, m.polarity, f.read, f.sizes, m.infusion, out.write); } finally { f.close(); }
-    return { bytes: out.bytes() };
-  },
+const INTERP_OPS = {
+  async interp_build(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table), out = memSink(); try { mods.interp.interp_build((_, off, len) => t.subarray(off, off + len), t.length, m.parent, m.registry, m.polarity, f.read, f.sizes, m.infusion, out.write); } finally { f.close(); } return { bytes: out.bytes() }; },
   async table_interp(m) { const t = new Uint8Array(m.table); return { text: mods.interp.table_interp((_, off, len) => t.subarray(off, off + len), t.length, m.id) }; },
 };
-
 // the sink of a step of the .wasm: write(offset, bytes) into one growing buffer (JavaScript memory, not the 256 MB of the .wasm); the step answers { bytes, sha256 }
 function memSink() {
   let buf = new Uint8Array(1 << 20), n = 0;
@@ -384,8 +389,7 @@ function memSink() {
     bytes: () => buf.slice(0, n),
   };
 }
-const OPS = {
-  ...INTERP_OPS,
+const OPS = { ...INTERP_OPS,
   async init(m) { await init(m); return { version: mods[m.which].version(), crate: mods[m.which].crate_version() }; },
   async detect(m) {
     const f = await openAll([m.path]), out = memSink();
@@ -395,6 +399,7 @@ const OPS = {
     const f = await openAll([m.path]), out = memSink();
     try { mods.untargeted.detect_untargeted_to(f.read, f.sizes[0], m.name, m.params, out.write); return { bytes: out.bytes() }; } finally { f.close(); }
   },
+  async formula_id(m) { return { text: mods.untargeted.untargeted_formula_id(m.mz, m.y, m.featureMz, m.params) }; },
   async align_unt(m) {
     const f = await openAll(m.paths), out = memSink();
     try { mods.untargeted.align_untargeted_to(arrays(m.files), f.read, f.sizes, m.params, out.write, m.budgetMb || 0); return { bytes: out.bytes() }; } finally { f.close(); }

@@ -9,7 +9,7 @@ use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::Value;
 
 use crate::store::{bad, ALIGN, MAGIC, PIECE};
-use crate::store_read::open;
+use crate::store_read::{open, Opened};
 
 const OWN: [&str; 3] = ["interp_id", "interp_off", "interp"];
 
@@ -47,40 +47,22 @@ enum Src<'a> {
     Bytes(&'a [u8]),
 }
 
-/// Writes to `sink` the `.mzfeat` of `src` (`size` bytes) with the block: `meta` is the JSON of the key `interp`, `rows` the `(id, JSON)` of every row.
-pub fn append<R: ReadAt, W: WriteAt>(
-    src: &mut R,
-    size: u64,
-    sink: &mut W,
-    meta: &str,
-    rows: &[(u32, String)],
-) -> Result<()> {
-    let o = open(src, size, "table")?;
-    let mut h = [0u8; 16];
-    src.read_at(0, &mut h)?;
-    let n = u64::from_le_bytes(h[8..].try_into().unwrap()) as usize;
-    let mut text = vec![0u8; n];
-    src.read_at(16, &mut text)?;
-    let text = String::from_utf8(text).map_err(|_| bad())?;
-    let cut = text.rfind(",\"arrays\":[").ok_or_else(bad)?;
-    let head = &text[..cut];
-    let head = head.rfind(",\"interp\":").map_or(head, |i| &head[..i]);
+type Item<'a> = (String, String, usize, Src<'a>);
 
-    let mut ids = Vec::new();
-    let mut offs = vec![0u8; 4];
-    let mut data = Vec::new();
+/// The ids, the end offsets (n + 1, the first is 0) and the bytes of the JSON of every row.
+fn pack(rows: &[(u32, String)]) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+    let (mut ids, mut offs, mut data) = (Vec::new(), vec![0u8; 4], Vec::new());
     for (id, json) in rows {
         ids.extend(id.to_le_bytes());
         data.extend(json.as_bytes());
         offs.extend((data.len() as u32).to_le_bytes());
     }
-    let own: [(&str, &str, usize, Src); 3] = [
-        ("interp_id", "u32", rows.len(), Src::Bytes(&ids)),
-        ("interp_off", "u32", rows.len() + 1, Src::Bytes(&offs)),
-        ("interp", "u8", data.len(), Src::Bytes(&data)),
-    ];
-    let mut list: Vec<(String, String, usize, Src)> = Vec::new();
-    let mut evid = None;
+    (ids, offs, data)
+}
+
+/// The arrays of the old file except ours, and `evid` apart: it stays the last one.
+fn old_arrays<'a>(o: &Opened) -> Result<(Vec<Item<'a>>, Option<Item<'a>>)> {
+    let (mut list, mut evid) = (Vec::new(), None);
     for e in o.meta.get("arrays").map(Value::arr).unwrap_or(&[]) {
         let name = e.get("name").and_then(Value::str).ok_or_else(bad)?;
         let dtype = e.get("dtype").and_then(Value::str).ok_or_else(bad)?;
@@ -105,15 +87,12 @@ pub fn append<R: ReadAt, W: WriteAt>(
             list.push(item);
         }
     }
-    list.extend(
-        own.into_iter()
-            .map(|(a, b, c, d)| (a.to_string(), b.to_string(), c, d)),
-    );
-    list.extend(evid);
+    Ok((list, evid))
+}
 
-    let mut dir = String::new();
-    let mut at = 0usize;
-    let mut places = Vec::new();
+/// The directory of the meta (JSON text) and where each array starts, aligned to `ALIGN`.
+fn directory(list: &[Item]) -> Result<(String, Vec<usize>)> {
+    let (mut dir, mut at, mut places) = (String::new(), 0usize, Vec::new());
     for (i, (name, dtype, count, _)) in list.iter().enumerate() {
         at = at.div_ceil(ALIGN) * ALIGN;
         dir.push_str(&format!(
@@ -123,6 +102,41 @@ pub fn append<R: ReadAt, W: WriteAt>(
         places.push(at);
         at += count * width(dtype)?;
     }
+    Ok((dir, places))
+}
+
+/// Writes to `sink` the `.mzfeat` of `src` (`size` bytes) with the block: `meta` is the JSON of the key `interp`, `rows` the `(id, JSON)` of every row.
+pub fn append<R: ReadAt, W: WriteAt>(
+    src: &mut R,
+    size: u64,
+    sink: &mut W,
+    meta: &str,
+    rows: &[(u32, String)],
+) -> Result<()> {
+    let o = open(src, size, "table")?;
+    let mut h = [0u8; 16];
+    src.read_at(0, &mut h)?;
+    let n = u64::from_le_bytes(h[8..].try_into().unwrap()) as usize;
+    let mut text = vec![0u8; n];
+    src.read_at(16, &mut text)?;
+    let text = String::from_utf8(text).map_err(|_| bad())?;
+    let cut = text.rfind(",\"arrays\":[").ok_or_else(bad)?;
+    let head = &text[..cut];
+    let head = head.rfind(",\"interp\":").map_or(head, |i| &head[..i]);
+
+    let (ids, offs, data) = pack(rows);
+    let own: [(&str, &str, usize, Src); 3] = [
+        ("interp_id", "u32", rows.len(), Src::Bytes(&ids)),
+        ("interp_off", "u32", rows.len() + 1, Src::Bytes(&offs)),
+        ("interp", "u8", data.len(), Src::Bytes(&data)),
+    ];
+    let (mut list, evid) = old_arrays(&o)?;
+    list.extend(
+        own.into_iter()
+            .map(|(a, b, c, d)| (a.to_string(), b.to_string(), c, d)),
+    );
+    list.extend(evid);
+    let (dir, places) = directory(&list)?;
     let meta_text = format!("{head},\"interp\":{meta},\"arrays\":[{dir}]}}");
     let mut seq = Seq { sink, pos: 0 };
     seq.put(MAGIC)?;
