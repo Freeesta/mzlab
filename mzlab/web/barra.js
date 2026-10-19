@@ -275,7 +275,7 @@ const BARRA = (() => {
     if (ttl && c) ttl.textContent = name(c);
     const sbHelp = Q1("#sb-help");
     if (sbHelp) {
-      const helpKeys = { losses: "losses", adducts: "adducts", lists: "liste" };
+      const helpKeys = { adducts: "adducts", lists: "liste" };
       sbHelp.style.display = helpKeys[id] ? "" : "none";
       sbHelp.dataset.help = helpKeys[id] || "";
     }

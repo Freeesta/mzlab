@@ -119,7 +119,6 @@ declare var LOADS: any;
 declare var LOCALE: any;
 declare var LOSSES: any;
 declare var LOSS_RAD: any;
-declare var LOSS_REFS: any;
 declare var LUTS_SEQ: any;
 declare var LUT_DIV: any;
 declare var LWX: any;

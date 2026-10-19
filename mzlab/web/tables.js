@@ -117,27 +117,36 @@
   // ---------------------------------------------------------------- common neutral losses (MS/MS and in-source)
   // The masses are computed from the formulas (exact mass rounded to the integer); the "typical of" column summarises what the reviews below
   // describe for even-electron ions in ESI-MS/MS. A loss is only a hypothesis: it must be checked against the structure.
-  // «Perdite neutre»: one line per loss (Δm, formula, where it is seen); «Dettagli» opens loss name, exact mass, mechanism and source;
-  // the losses with the same nominal mass sit in a box (unit resolution cannot tell them apart); «Cerca Δm» lists single, pair and repeated candidates.
+  // «Perdite neutre»: one compact line per loss (Δm | formula | short label); the line itself is the button that opens loss name, full description,
+  // exact mass, mechanism and source. Losses with the same nominal mass share ONE line (formulas side by side). Radicals carry a small dot with a tooltip.
+  // «Cerca Δm» lists single, pair and repeated candidates.
   // state kept while the window is open (the ruler of the spectrum can fill q)
   const NL = { q: "", pols: new Set(["+", "-"]), open: new Set() };
   const fl = f => sub(f.replace(/^(CH3|NO2|Cl)$/, "•$1")).replace(/^•/, "•");   // radicals are written with the dot
   // high resolution (an Orbitrap / Q-TOF file is loaded): the exact mass of each loss is shown and «Cerca Δm» looks within 3 mDa instead of 0.5 Da
   const hrOn = () => !!(window.HR && typeof E !== "undefined" && E.files.some(f => !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2))));
-  const NL_TOL = () => hrOn() ? 0.003 : 0.5, NL_DEC = () => hrOn() ? 4 : 1;
-  const lossRow = (l, o) => {
-    const m = massOf(l.f), id = l.f;
-    return `<div class="nlr${o.hit.has(id) ? " hit" : ""}" data-f="${id}"><div class="nlr-main"><div class="nlr-head"><span class="nlm">${Math.round(m)}${hrOn() ? `<small class="muted" title="${I18N.t("tbl.loss.exactTitle")}">${m.toFixed(4)}</small>` : ""}</span><span class="nlf"><b>${fl(l.f)}</b></span><button class="nld" type="button" data-d="${id}" aria-expanded="${NL.open.has(id)}" title="${I18N.t("tbl.loss.details")}">${I18N.t("tbl.loss.details")}</button></div>
-      <div class="nls">${H(I18N.t(l.seen))}</div></div>
-      ${l.rad ? `<div class="nlrad">• ${H(I18N.t(LOSS_RAD))}</div>` : ""}
-      <div class="nldet"${NL.open.has(id) ? "" : " hidden"}><div class="nld-name"><b>${H(I18N.t(l.name))}</b></div><div>${I18N.t("tbl.loss.detail", { m: m.toFixed(4), mech: H(I18N.t(l.mech)) })}</div><div class="muted sm">${I18N.t(l.rad ? "tbl.loss.sourcesRad" : "tbl.loss.sources", { refs: H(LOSS_REFS) })}</div></div></div>`;
+  const NL_TOL = () => hrOn() ? 0.003 : 0.5, NL_DEC = () => hrOn() ? 4 : 0;
+  const NL_CHEV = '<svg class="nlch" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6l3 3 3-3"/></svg>';
+  const lossDet = l => {
+    const m = massOf(l.f);
+    // unit resolution: no exact mass (it would need mass accuracy); HR adds it with four decimals
+    const det = hrOn() ? I18N.t("tbl.loss.detail", { m: m.toFixed(4), mech: H(I18N.t(l.mech)) }) : I18N.t("tbl.loss.detailLr", { mech: H(I18N.t(l.mech)) });
+    return `<div class="nld-it" data-l="${l.f}"><div class="nld-name"><b>${fl(l.f)}</b> ${H(I18N.t(l.name))}</div><div>${H(I18N.t(l.seen))}</div>${l.rad ? `<div class="nlrad-t">• ${H(I18N.t(LOSS_RAD))}</div>` : ""}<div>${det}</div></div>`;
+  };
+  // one line: id keys the open state, ls = the losses (one, or several with the same nominal mass)
+  const lossRow = (ls, o) => {
+    const id = ls.length > 1 ? "g" + Math.round(massOf(ls[0].f)) : ls[0].f, open = NL.open.has(id), m = massOf(ls[0].f), rad = ls.some(l => l.rad);
+    const hit = ls.some(l => o.hit.has(l.f)), exact = hrOn() ? `<small class="muted" title="${I18N.t("tbl.loss.exactTitle")}">${m.toFixed(4)}</small>` : "";
+    const label = ls.length > 1 ? `${I18N.t("tbl.loss.sameShort")}${Math.round(m) === 80 ? " · " + I18N.t("tbl.loss.checkM2") : ""}` : H(I18N.t(ls[0].short));
+    return `<div class="nlr${hit ? " hit" : ""}" data-f="${id}"><button type="button" class="nlrow" data-d="${id}" aria-expanded="${open}" aria-controls="nld-${id}"><span class="nlm">${Math.round(m)}${exact}</span><span class="nlf">${ls.map(l => `<b>${fl(l.f)}</b>`).join('<span class="nlsep"> · </span>')}</span><span class="nls">${label}</span>${rad ? `<span class="nlrd" role="img" aria-label="${H(I18N.t("loss.radShort"))}" title="${H(I18N.t("loss.radShort"))}"></span>` : ""}${NL_CHEV}</button>
+      <div class="nldet" id="nld-${id}"${open ? "" : " hidden"}>${ls.map(lossDet).join("")}</div></div>`;
   };
   function lossList() {
     const hit = new Set(), q = numIt(NL.q);
     const vis = LOSSES.filter(l => l.pol === "±" || NL.pols.has(l.pol)).sort((a, b) => massOf(a.f) - massOf(b.f));
     if (isFinite(q)) vis.forEach(l => { if (Math.abs(massOf(l.f) - q) <= NL_TOL()) hit.add(l.f); });
     const groups = []; vis.forEach(l => { const n = Math.round(massOf(l.f)), g = groups[groups.length - 1]; if (g && g.n === n) g.ls.push(l); else groups.push({ n, ls: [l] }); });
-    return groups.map(g => g.ls.length < 2 ? lossRow(g.ls[0], { hit }) : `<div class="nlg"><div class="nlgn">${I18N.t("tbl.loss.sameNominal", { n: g.n })}${g.n === 80 ? " " + I18N.t("tbl.loss.checkM2") : ""}</div>${g.ls.map(l => lossRow(l, { hit })).join("")}</div>`).join("");
+    return groups.map(g => lossRow(g.ls, { hit })).join("");
   }
   function lossCombosHtml() {
     const q = numIt(NL.q); if (!isFinite(q) || q <= 0) return "";
@@ -148,12 +157,12 @@
   function lossTab() {
     return `<div class="nlbar"><div class="sb-search-box"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input id="nl-q" inputmode="decimal" autocomplete="off" placeholder="${I18N.t("tbl.loss.searchPh")}" value="${H(NL.q)}" title="${I18N.t("tbl.loss.searchTitle")}"></div>
       <span class="seg" id="nl-pol" title="${I18N.t("tbl.loss.polTitle")}"><button type="button" data-p="+" class="${NL.pols.has("+") ? "on" : ""}">ESI+</button><button type="button" data-p="-" class="${NL.pols.has("-") ? "on" : ""}">ESI&minus;</button></span></div>
-      <div id="nl-res">${lossCombosHtml()}</div><div id="nl-list">${lossList()}</div>`;
+      <div class="nlhint muted" id="nl-hint">ⓘ ${I18N.t("tbl.loss.hint")}</div><div id="nl-res">${lossCombosHtml()}</div><div id="nl-list">${lossList()}</div>`;
   }
   function bindLoss(root, show) {
     const list = () => { root.querySelector("#nl-list").innerHTML = lossList(); wire(); root.querySelector("#nl-res").innerHTML = lossCombosHtml(); };
     const wire = () => {
-      root.querySelectorAll(".nld").forEach(b => b.onclick = () => { const id = b.dataset.d, row = b.closest(".nlr"), d = row.querySelector(".nldet"); if (NL.open.has(id)) NL.open.delete(id); else NL.open.add(id); d.hidden = !NL.open.has(id); b.setAttribute("aria-expanded", NL.open.has(id)); });
+      root.querySelectorAll(".nlrow").forEach(b => b.onclick = () => { const id = b.dataset.d, d = b.closest(".nlr").querySelector(".nldet"); if (NL.open.has(id)) NL.open.delete(id); else NL.open.add(id); d.hidden = !NL.open.has(id); b.setAttribute("aria-expanded", NL.open.has(id)); });
       root.querySelectorAll("[data-go]").forEach(a => a.onclick = e => { e.preventDefault(); show(a.dataset.go); });
     };
     wire();
