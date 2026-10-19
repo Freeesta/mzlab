@@ -264,6 +264,51 @@ impl State {
         })
     }
 
+    /// `feat/interp/build`: the interpretation of the rows of the held table (`interp/1`); the table with its block replaces it. Answers `{bytes, sha256}`.
+    fn feat_interp_build(&self, p: &Value) -> Result<Answer> {
+        let s = |k: &str| p[k].as_str().unwrap_or("");
+        let ns = names(p);
+        let table = self
+            .feat_lock()
+            .table
+            .clone()
+            .ok_or_else(|| Error::new("error.featState"))?;
+        let infusion = p["infusion"]
+            .as_i64()
+            .filter(|&k| k >= 0)
+            .map(|k| k as usize);
+        let mut inf = match infusion {
+            Some(k) => Some(self.open_idx(ns.get(k).map_or("", |n| n.as_str()))?),
+            None => None,
+        };
+        let mut out = Vec::new();
+        mzlab_feat::interp::run::run_to(
+            &mut Slice(&table),
+            table.len() as u64,
+            s("parent"),
+            s("registry"),
+            p["polarity"].as_i64().unwrap_or(1).signum() as i8,
+            &mut |k| self.open_idx(ns.get(k).map_or("", |n| n.as_str())),
+            inf.as_mut(),
+            &mut out,
+        )?;
+        let answer = written(&out)?;
+        self.feat_lock().table = Some(out);
+        Ok(answer)
+    }
+
+    /// `feat/interp/row`: the `interp/1` of row `id` of the held table, `null` when it was not interpreted.
+    fn feat_interp_row(&self, p: &Value) -> Result<Answer> {
+        let g = self.feat_lock();
+        let table = g
+            .table
+            .as_deref()
+            .ok_or_else(|| Error::new("error.featState"))?;
+        let id = p["id"].as_u64().unwrap_or(0) as u32;
+        let row = mzlab_feat::interp::store::read_row(&mut Slice(table), table.len() as u64, id)?;
+        text(row.unwrap_or_else(|| "null".into()))
+    }
+
     /// The routes of mzFinder (`feat/*`, `finder/*`).
     pub(crate) fn op_feat(&self, op: &str, p: &Value) -> Result<Answer> {
         match op {
@@ -275,6 +320,8 @@ impl State {
             "feat/hypotheses" => self.feat_hypotheses(p),
             "feat/evidence" => self.feat_evidence(p),
             "feat/table" => self.feat_table(p),
+            "feat/interp/build" => self.feat_interp_build(p),
+            "feat/interp/row" => self.feat_interp_row(p),
             "feat/version" => text(format!("\"{}\"", mzlab_feat::CRATE_VERSION)),
             "feat/preview" => self.feat_preview(p),
             "feat/files" => self.feat_files(),

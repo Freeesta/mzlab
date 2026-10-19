@@ -8,7 +8,7 @@ use mzlab_core::json::{self, Out};
 #[cfg(any(feature = "rev", feature = "export"))]
 use mzlab_feat::attributio::export::run::Options;
 use mzlab_feat::attributio::io::{Entry, Io};
-use mzlab_feat::attributio::review::banco::review_json;
+use mzlab_feat::attributio::review::banco::review_json_with;
 use mzlab_feat::attributio::review::save::{decision_text, Saved};
 use mzlab_feat::attributio::table::{self, Run};
 use std::collections::BTreeMap;
@@ -119,8 +119,12 @@ pub fn review_with(
     fetch: &dyn Fn(usize, u64, u64) -> Option<Vec<u8>>,
     pol: &str,
     id: i64,
+    classes: &str,
 ) -> Result<String, Error> {
-    with_io(files, fetch, &|io| review_json(io, &files.root, pol, id))
+    let table = (!classes.is_empty()).then_some(classes);
+    with_io(files, fetch, &|io| {
+        review_json_with(io, &files.root, pol, id, table)
+    })
 }
 
 /// The decisions file after the chemist's decision (JSON of the Banco) is added to the folder's.
@@ -297,7 +301,7 @@ fn js_write(write: &Function) -> impl FnMut(u64, &[u8]) -> bool + '_ {
     }
 }
 
-/// The review of one feature as JSON to `write` (a feature at a time: the proofs are computed when the Banco opens it); answers `{"bytes": n}`.
+/// The review of one feature as JSON to `write` (a feature at a time: the proofs are computed when the Banco opens it); `classes` is the text of the chemical-class table (empty: none); answers `{"bytes": n}`.
 #[cfg(feature = "rev")]
 #[wasm_bindgen]
 pub fn review_to(
@@ -305,6 +309,7 @@ pub fn review_to(
     names_json: &str,
     feature_id: f64,
     pol: &str,
+    classes: &str,
     write: Function,
 ) -> Result<String, JsValue> {
     let files = Files::from_json(names_json).map_err(js_err)?;
@@ -313,6 +318,7 @@ pub fn review_to(
         &|k, o, l| js_fetch(&read, k, o, l),
         pol,
         feature_id as i64,
+        classes,
     )
     .map_err(js_err)?;
     if !text_to(&text, &mut js_write(&write)) {

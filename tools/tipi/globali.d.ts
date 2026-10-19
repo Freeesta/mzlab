@@ -207,6 +207,7 @@ interface Window {
   PROFILO: typeof PROFILO;
   QAQC: typeof QAQC;
   RAPPORTO: typeof RAPPORTO;
+  RICERCA: typeof RICERCA;
   RIFERIMENTO: typeof RIFERIMENTO;
   STAT: typeof STAT;
   SUGG: typeof SUGG;
