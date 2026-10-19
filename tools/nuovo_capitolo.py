@@ -2,7 +2,7 @@
 numbered sections, a numbered equation and figure, boxes, end-of-chapter questions, links to glossary and formulary.
 
     python3 tools/nuovo_capitolo.py 25 spe "Estrazione in fase solida (SPE)" --parte "I bis. Preparare il campione"
-    python3 tools/nuovo_capitolo.py 25 spe "Estrazione in fase solida (SPE)" --out ../mzlab-dati/bozze --source-card "scheda-25"
+    python3 tools/nuovo_capitolo.py 25 spe "Estrazione in fase solida (SPE)" --out ../mzlab-dati/corso/bozze_teoria --source-card "scheda-25"
 
 Writes mzlab/web/teoria/NN-slug.html (or <out>/NN-slug.html: private drafts are born in the private repository) and prints the lines to add by hand
 to CHAPTERS in teoria.js (registering the chapter is not done here). Checked afterwards by tools/controlla_teoria.py."""

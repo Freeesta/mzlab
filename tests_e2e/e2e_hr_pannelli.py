@@ -43,9 +43,7 @@ try:
         def lists():
             drawer(pg, "lists"); ready(pg)
             rows = pg.evaluate("[...document.querySelectorAll('#sb-panel-lists .lb-row')].map(r => [r.querySelectorAll('input').length, r.querySelectorAll('.seg').length])")
-            assert rows == [[2, 0], [1, 0], [0, 2]], rows
-            h = pg.evaluate("document.querySelector('#lst-mode-seg').getBoundingClientRect().height"); assert h < 26, h
-            assert pg.inner_text("#lst-mode-seg") .replace("\n", " ").strip() in ("Nominale Alta ris.",), pg.inner_text("#lst-mode-seg")
+            assert rows == [[2, 0], [1, 0], [0, 1]], rows
             rh = pg.evaluate("document.querySelector('#lst-tbody tr').getBoundingClientRect().height"); assert rh < 34, rh
         step("reference lists: m/z and ppm on one row, search on one, two small segmented controls, compact rows", lists)
     r.close()

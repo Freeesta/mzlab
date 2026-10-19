@@ -1,6 +1,5 @@
 """Peaks of profile spectra (one per nominal mass), merging of centroids, and the profile path of the API."""
 import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -13,6 +12,8 @@ from mzlab.app import App
 from mzlab.peaks import XIC_BELOW, XIC_DRIFT, merge_unit, nominal, pad_zeros, profile_peaks
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+from dati_percorsi import percorso  # noqa: E402
 
 
 def _gauss_profile(centres, heights, sigma=0.3, lo=300.0, hi=372.0, step=0.06, flat=()):
@@ -68,10 +69,8 @@ def test_zeros_put_back_next_to_gaps():
 
 
 def _real_profile():
-    for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), str(ROOT.parent / "mzlab-dati"), str(ROOT.parent / "QqQ-lab-dati")):
-        if c and (Path(c) / "mzML_profilo").is_dir():
-            return sorted((Path(c) / "mzML_profilo").glob("B_FullMass-t0.mzML"))
-    return []
+    d = percorso("dati/3200 qtrap/mzML_profilo")
+    return sorted(d.glob("B_FullMass-t0.mzML")) if d and d.is_dir() else []
 
 
 def test_real_profile_file_isotopes_of_the_t0_are_separate():

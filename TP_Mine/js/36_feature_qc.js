@@ -52,6 +52,12 @@
     return pool.rowTraces({ table: bytes, samples, sha: await G.UNT.sha256Hex(bytes), id, ppm, paths: a.names.map((/** @type {string} */ n) => "mzlab/idx/" + n + ".mzidx") });
   }
 
+  /** candidate compositions of a row (`formula_id/1`) from its MS1 spectrum, computed by the pool (the `.wasm` `untargeted` in the page, the native route in the app) */
+  async function compositionVia(/** @type {any} */ a, /** @type {number[]} */ mz, /** @type {number[]} */ y, /** @type {number} */ featureMz, /** @type {string} */ params) {
+    const pool = await a.pool();
+    return JSON.parse(await pool.formulaId({ mz, y, featureMz, params }));
+  }
+
   /** a session on one table: `a` = { base, bytes (.mzfeat), names (stems of the files), inputs ([{name, sha256}] of the table), pol, pool() (for the traces) } */
   async function open(/** @type {any} */ a) {
     if (window.MZLAB_DESKTOP) return openNative(a);
@@ -69,6 +75,7 @@
       report: (/** @type {string} */ spec) => JSON.parse(run(() => m.table_report(read, size, samples, spec, sha))),
       row: (/** @type {number} */ id) => JSON.parse(run(() => m.table_row(read, size, samples, id))),
       traces: async (/** @type {number} */ id, /** @type {number} */ ppm) => JSON.parse(await tracesVia(a, bytes, samples, id, ppm)),
+      composition: (/** @type {number[]} */ mz, /** @type {number[]} */ y, /** @type {number} */ featureMz, /** @type {string} */ params) => compositionVia(a, mz, y, featureMz, params),
       file: (/** @type {string} */ spec, /** @type {string} */ kind) => run(() => m.export_table(read, size, samples, spec, sha, a.pol, kind)),
     };
   }
@@ -90,6 +97,7 @@
       report: async (/** @type {string} */ spec) => JSON.parse(await V("report", spec)),
       row: async (/** @type {number} */ id) => JSON.parse(await V("row", "", { id })),
       traces: async (/** @type {number} */ id, /** @type {number} */ ppm) => JSON.parse(await tracesVia(a, bytes, samples, id, ppm)),
+      composition: (/** @type {number[]} */ mz, /** @type {number[]} */ y, /** @type {number} */ featureMz, /** @type {string} */ params) => compositionVia(a, mz, y, featureMz, params),
       file: (/** @type {string} */ spec, /** @type {string} */ kind) => V("export", spec, { export_kind: kind }),
     };
   }

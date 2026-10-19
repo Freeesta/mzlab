@@ -1,22 +1,22 @@
 """/api/spectra (single scans, scan-by-scan navigation) must agree with /api/spectrum on a window holding only that scan."""
 import json
 import os
+import sys
 from pathlib import Path
 
 import numpy as np
 import pytest
 
-from mzlab import api
-from mzlab.demo import make_demo
-from mzlab.app import App
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+from dati_percorsi import percorso  # noqa: E402
+from mzlab import api  # noqa: E402
+from mzlab.demo import make_demo  # noqa: E402
+from mzlab.app import App  # noqa: E402
 
 
 def _real_files():
-    dati = os.environ.get("MZLAB_DATI", os.environ.get("QQQ_DATI"))
-    mzml = os.environ.get("MZLAB_MZML", os.environ.get("QQQ_MZML"))
-    for c in (mzml, (dati + "/mzML") if dati else None,
-              str(Path(__file__).resolve().parents[2] / "mzlab-dati" / "mzML"),
-              str(Path(__file__).resolve().parents[2] / "QqQ-lab-dati" / "mzML")):
+    mzml = os.environ.get("MZLAB_MZML", os.environ.get("QQQ_MZML"))     # an explicit folder wins over the data repository
+    for c in (mzml, percorso("dati/3200 qtrap/mzML")):
         if c and Path(c).is_dir():
             return sorted(Path(c).glob("B_*.mzML"))
     return []
