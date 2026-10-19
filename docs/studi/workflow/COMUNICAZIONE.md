@@ -19,7 +19,7 @@ Ogni violazione è una voce `{instance, port, error_key, params}` con chiavi del
 Esempio vero: `raw → mzidx` esiste diretto (`upload::indicizza_lettore`) e passando per l'mzML (`lettori_mzml::scrivi` + `build_mzml_spill`), e le due vie danno le stesse feature (V, §6.1 del principale): il diretto è più corto e vince. Entrano nel grafo SOLO le conversioni registrate: il secondo scrittore di mzML (`raw::to_mzml`, aree diverse a valle, V) non c'è.
 
 ## 3. Ordine di esecuzione e parallelismo (ricavati, mai scritti dall'utente)
-- **Ordine**: ordinamento topologico del grafo (algoritmo di Kahn); a parità, l'ordine di `passi` nel file. Lo stesso file dà sempre lo stesso piano.
+- **Ordine**: ordinamento topologico del grafo (algoritmo di Kahn); a parità, l'ordine di `steps` nel file. Lo stesso file dà sempre lo stesso piano.
 - **Parallelo fra rami**: un'istanza parte quando tutti i suoi antenati sono finiti; due istanze senza dipendenza reciproca girano insieme (es. i due rami `tp.generate` di `PROVE_SU_CARTA.md` D).
 - **Parallelo per file**: un passo `per_item: true` su una porta `many` gira una volta per elemento, in parallelo; le uscite si raccolgono per INDICE, non per ordine di arrivo. Oggi il rilevamento è già per file (`run::detect` per file, poi `read_files` e `align`: V in `mzlab-cli`).
 - **Dove**: nel browser un worker per istanza attiva, che carica il modulo `.wasm` del passo (`runs_in.wasm`; oggi ci sono già `rust-worker.js`, `feat-worker.js`, `tpmine-worker.js`: V); nell'app desktop fili nativi (`rayon` è già una dipendenza di `mzlab-desktop`: V).
@@ -28,11 +28,17 @@ Esempio vero: `raw → mzidx` esiste diretto (`upload::indicizza_lettore`) e pas
 - **Errori e annullamento**: un passo che fallisce ferma solo i suoi discendenti; i rami fratelli finiscono e restano in cache. Annullare un passo ferma lui e i discendenti.
 - **Cache come `make`**: chiave = (SHA-256 degli ingressi, `id@versione`, `params_sha256`). Cambiare un parametro di X invalida X e i discendenti, nient'altro; un giro ripetuto senza cambi non ricalcola nulla e `prov/1` scrive `cached: true`.
 
-## 4. Preset e alternative
-- **Famiglia** (`family`, es. `features.detect`): è la «casella» della tela. Le **alternative** sono più `passo/1` con la stessa famiglia e la stessa firma di porte (stessi nomi e tipi): si scambiano senza ricollegare fili. Oggi ogni famiglia ha una sola implementazione in mzLab (V, `MATRICE.md`); le alternative (es. un rilevamento alla centWave) sono future e vanno riscritte dagli articoli, mai copiate (§9 del principale).
-- **Preset** (`presets`, `default_preset`): insiemi di parametri con nome. Un preset può avere `when` sulle faccette dell'ingresso (es. `hr`, `lr`): la scelta «Auto» prende il primo che corrisponde. Esiste già nel codice: `run::recipe_for` sceglie la ricetta ad alta risoluzione o quella del profilo a risoluzione unitaria dal primo file, e la CLI ha `--preset auto|pos|neg` (V). Il preset di default di una famiglia si giustifica con numeri del banco (`tools/bench/`, prova 1 del §7), non con un'opinione; il descrittore cita la misura.
-- **Nel file**: un'istanza scrive `step`, eventualmente `preset`, e in `params` solo le differenze. La forma canonica (regola 1 del §4 del principale) risolve preset + differenze + stime in valori completi; `prov/1` scrive il preset e i valori risolti.
-- **Scambio di alternativa**: i parametri con lo stesso nome e la stessa unità passano; gli altri prendono il preset di default della nuova; la tela mostra la differenza prima di confermare.
+## 4. Algoritmi, preset e confronto
+- **Algoritmi** (`algorithms[]`, `default_algorithm`): il passo (es. `features.detect`) è la «casella» della tela; le **alternative** sono algoritmi dentro lo stesso passo, con le stesse porte (stessi nomi e tipi): si scambiano senza ricollegare fili. Ogni voce dichiara `id`, `version`, `title`, `doc`, `source` (DOI dell'articolo da cui si riscrive: mai codice copiato, §9 del principale), `applicability`, `params` propri e `status` (`available` o `planned`, che la tela mostra in grigio).
+  I `params` del passo sono quelli comuni a tutti gli algoritmi. Esempi veri nei file `step.features.detect.json` (`masstrace` available; `centwave`, `threshold` planned) e `step.spectra.match.json` (`cosine`, `modified_cosine`, `spectral_entropy`, tutti in `mzlab-lib/src/scores.rs`, V).
+- **Applicabilità e suggerimento**: `applicability` usa le faccette dell'ingresso (`resolution`, `polarity`, `ms_levels`, `spectrum_mode`) più ciò che il metodo chiede (`peak_fwhm_s`, `min_files`, `needs`: `internal_standards`, `ms2`, `blank`, `reference_sample`, `library`) e una `note`. La tela mette in testa gli algoritmi che tornano; gli altri restano selezionabili con il motivo (es. «needs internal standards»), il controllo del piano li rifiuta solo se manca un ingresso obbligatorio.
+- **Predefinito**: `default_algorithm` è il migliore noto per il caso tipico e si giustifica con numeri del banco (`tools/bench/`, prova 1 del §7), non con un'opinione.
+- **Preset** (`presets`, `default_preset`): insiemi di parametri con nome, ognuno per un `algorithm` (assente = il predefinito). Un preset può avere `when` sulle faccette dell'ingresso (es. `hr`, `lr`): la scelta «Auto» prende il primo che corrisponde. Esiste già nel codice: `run::recipe_for` sceglie la ricetta ad alta risoluzione o quella del profilo a risoluzione unitaria dal primo file, e la CLI ha `--preset auto|pos|neg` (V).
+- **Nel file**: un'istanza scrive `step`, eventualmente `algorithm` e `preset`, e in `params` solo le differenze. La forma canonica (regola 1 del §4 del principale) risolve algoritmo + preset + differenze + stime in valori completi; `prov/1` scrive l'algoritmo (`id@version`), il preset e i valori risolti; la chiave della cache comprende l'algoritmo.
+- **Scambio di algoritmo**: i parametri comuni restano; quelli propri prendono il preset del nuovo algoritmo; la tela mostra la differenza prima di confermare.
+- **Confronto** (`meta.compare@1`, `step.meta.compare.json`): un meta-passo che esegue il passo nominato in `params.step` con 2 o più `variants` (`algorithm`, `preset`, `params`, `label`) sugli stessi ingressi. Le porte d'ingresso sono quelle del passo avvolto (`ports_from: wrapped`); le uscite sono una per variante (`cmp.A.peaks`, `cmp.B.peaks`) e un `comparison`. Varianti uguali sono un errore (`err.flow.compare.sameVariant`). Le varianti girano in parallelo con le regole del §3 (la memoria si somma).
+- **Metriche del confronto**, per tipo d'uscita: `peaks`/`table`: abbinate entro `mz_tolerance_ppm` (o `mz_tolerance_da` a risoluzione unitaria) e `rt_tolerance_min`, solo in A, solo in B, mediana di Δm/z in ppm e di ΔRT, mediana di |log2| del rapporto delle aree, Spearman delle aree abbinate; `rtmap`: scarto di RT per ancora; `annot` (punteggi MS2): correlazione di rango (Kendall), accordo del primo candidato, sovrapposizione dei primi k. Ogni metrica porta l'elenco delle righe che la spiegano, così la tela mostra le differenze, non solo i numeri.
+- **Usi**: scegliere il predefinito su prove; validare una nuova implementazione contro la vecchia (stessi ingressi, stesso hash di partenza); metodologia e didattica (lo studente vede cosa cambia con il metodo). Nel mondo LR il confronto mostra picchi diversi, mai TP o rette (principio 1).
 
 ## 5. Il dialogo tra tela e motore (messaggi)
 Solo JSON piccoli; i dati restano nel deposito.
@@ -48,12 +54,12 @@ La logica del controllo e della canonica sta in Rust (regola «Tutto in Rust»);
 
 ## 6. Esempio: due rami, un preset, una conversione proposta
 ```json
-{"formato":"mzflow/2","programma":{"nome":"mzLab","versione":"x"},
- "ingressi":[{"name":"t0.raw","sha256":"…","type":"raw"},{"name":"t60.raw","sha256":"…","type":"raw"},{"name":"campioni.json","sha256":"…","type":"samples"}],
- "passi":[
+{"format":"mzflow/2","program":{"name":"mzLab","version":"x"},
+ "inputs":[{"name":"t0.raw","sha256":"…","type":"raw"},{"name":"t60.raw","sha256":"…","type":"raw"},{"name":"samples.json","sha256":"…","type":"samples"}],
+ "steps":[
   {"id":"idx","step":"index.mzidx@1","in":{"raw":["file:t0.raw","file:t60.raw"]},"label":"proposed: Build index"},
-  {"id":"det","step":"features.detect@1","preset":"hr","in":{"index":"idx.index"},"params":{"min_height":100000}},
-  {"id":"aln","step":"features.align@1","in":{"peaks":"det.peaks","index":"idx.index","samples":"file:campioni.json"}},
+  {"id":"det","step":"features.detect@1","algorithm":"masstrace","preset":"hr","in":{"index":"idx.index"},"params":{"min_height":100000}},
+  {"id":"aln","step":"features.align@1","in":{"peaks":"det.peaks","index":"idx.index","samples":"file:samples.json"}},
   {"id":"ms2","step":"features.ms2_link@1","in":{"table":"aln.table","index":"idx.index"}},
   {"id":"tp","step":"tp.link@1","in":{"table":"aln.table","spectra":"ms2.spectra"}},
   {"id":"csv","step":"export.table_csv@1","in":{"table":"aln.table"}}]}

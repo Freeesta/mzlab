@@ -1,0 +1,93 @@
+{
+ "schema": "step/1",
+ "id": "spectra.match",
+ "version": 1,
+ "title": "Compare MS2 spectra",
+ "doc": "Scores each query MS2 spectrum against the reference spectra and keeps the best hits.",
+ "in": {
+  "query": {
+   "type": "spectra",
+   "title": "Query spectra"
+  },
+  "reference": {
+   "type": "spectra",
+   "title": "Reference spectra",
+   "accepts": [
+    "table"
+   ]
+  }
+ },
+ "out": {
+  "hits": {
+   "type": "annot",
+   "title": "Best hits per spectrum"
+  }
+ },
+ "params": {
+  "type": "object",
+  "properties": {
+   "tolerance": {
+    "title": "Fragment tolerance",
+    "type": "number",
+    "minimum": 0,
+    "default": 0.01,
+    "x-unit": "Da"
+   },
+   "top": {
+    "title": "Hits kept",
+    "type": "integer",
+    "minimum": 1,
+    "default": 5
+   }
+  }
+ },
+ "runs_in": {
+  "wasm": "lib",
+  "native": true
+ },
+ "deterministic": true,
+ "errors": [
+  "err.lib.spectrum"
+ ],
+ "algorithms": [
+  {
+   "id": "cosine",
+   "title": "Cosine",
+   "doc": "One-to-one peak pairs within the tolerance, highest intensity product first (cosine_from_pairs in crates/mzlab-lib/src/scores.rs).",
+   "applicability": {
+    "ms_levels": [
+     2
+    ]
+   },
+   "status": "available"
+  },
+  {
+   "id": "modified_cosine",
+   "title": "Modified cosine",
+   "doc": "Peaks may also pair at the precursor difference, for analogues that differ by one modification (modified_cosine in scores.rs).",
+   "source": "doi:10.1021/ci300058c",
+   "applicability": {
+    "ms_levels": [
+     2
+    ],
+    "note": "Analogues and transformation products of a known parent"
+   },
+   "status": "available"
+  },
+  {
+   "id": "spectral_entropy",
+   "title": "Spectral entropy",
+   "doc": "Entropy similarity of the merged spectrum (entropy_from_pairs in scores.rs).",
+   "source": "doi:10.1038/s41592-021-01331-z",
+   "applicability": {
+    "ms_levels": [
+     2
+    ],
+    "note": "Library search with noisy spectra"
+   },
+   "status": "available"
+  }
+ ],
+ "default_algorithm": "spectral_entropy",
+ "per_item": true
+}

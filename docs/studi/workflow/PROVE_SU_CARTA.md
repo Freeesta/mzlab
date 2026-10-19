@@ -1,13 +1,13 @@
 # Prova su carta: quattro workflow veri di terzi nel formato `mzflow/2`
 
-Parte di `docs/studi/WORKFLOW_MODULARI.md` (§5). Ogni workflow è stato letto in un file vero (URL nel §1 del principale) e riscritto a mano nel formato della bozza (`contratto.schema.json`). Per ogni caso: come si scrive, cosa non si esprime, quale correzione del contratto ne è nata. Le correzioni sono già nella bozza.
+Parte di `docs/studi/WORKFLOW_MODULARI.md` (§5). Ogni workflow è stato letto in un file vero (URL nel §1 del principale) e riscritto a mano nel formato della bozza (`contract.schema.json`). Per ogni caso: come si scrive, cosa non si esprime, quale correzione del contratto ne è nata. Le correzioni sono già nella bozza.
 
 ## A. mzmine 4.0.2, batch FBMN (`mzmine_microbial_workshop.mzbatch.xml`, 20 passi)
 ```json
-{"formato":"mzflow/2","programma":{"nome":"mzLab","versione":"x"},"ingressi":[{"name":"S1.mzML","sha256":"…"}],
- "passi":[
+{"format":"mzflow/2","program":{"name":"mzLab","version":"x"},"inputs":[{"name":"S1.mzML","sha256":"…"}],
+ "steps":[
   {"id":"imp","step":"import.raw@1","in":{"raw":"file:S1.mzML"}},
-  {"id":"md1","step":"spectra.centroid@1","in":{"index":"imp.index"},"params":{"ms_level":1,"algorithm":{"algorithm":"factor_of_lowest","noise_factor":5.0}}},
+  {"id":"md1","step":"spectra.centroid@1","in":{"index":"imp.index"},"algorithm":"factor_of_lowest","params":{"ms_level":1,"noise_factor":5.0}},
   {"id":"md2","step":"spectra.centroid@1","in":{"index":"imp.index"},"params":{"ms_level":2}},
   {"id":"eic","step":"features.detect@1","in":{"index":"md1.index"},"params":{"min_points":6,"min_height":500000,"mz_tol":{"da":0.002,"ppm":10},"rt_range":[0.3,30.0]}},
   {"id":"res","step":"features.resolve@1","in":{"peaks":"eic.peaks"},"params":{"top_edge_ratio":2.0,"duration_min":[0,1.2]}},
@@ -17,11 +17,11 @@ Parte di `docs/studi/WORKFLOW_MODULARI.md` (§5). Ogni workflow è stato letto i
 ```
 - **Si esprime**: passi 1-10 (import → gap filling), con la stessa sequenza e gli stessi numeri.
 - **Non si esprime**: lisciatura come passo a sé (nostro `features.smooth` non esiste: buco della matrice); «Original feature list = REMOVE» (gestione della memoria della sessione, non un risultato); passi 12-16 (correlazione, ion identity networking, reti spettrali, lipidi) e gli export GNPS/SIRIUS/GraphML (nessun modulo mzLab o solo in parte).
-- **Correzioni nate qui**: (1) lo stesso tipo di passo compare due volte (Mass detection su MS1 e su MS2) → `id` unico per ISTANZA, il tipo sta in `step`; (2) le tolleranze sono coppie Da + ppm → tipo composto `mz_tol {da, ppm}` con unità esplicite, mai il nostro «ppm negativo = Da» di `Recipe::row_window`; (3) la scelta di un algoritmo con i suoi parametri (`selected_item` + `<module>`) → `oneOf` con il discriminante `algorithm`; (4) l'ingresso implicito `BATCH_LAST_FEATURELISTS` → riferimenti espliciti `passo.uscita` (un importatore li ricostruisce in ordine).
+- **Correzioni nate qui**: (1) lo stesso tipo di passo compare due volte (Mass detection su MS1 e MS2) → `id` unico per ISTANZA, il tipo sta in `step`; (2) le tolleranze sono coppie Da + ppm → tipo composto `mz_tol {da, ppm}` con unità esplicite (mai «ppm negativo = Da» di `Recipe::row_window`); (3) la scelta di un algoritmo con i suoi parametri (`selected_item` + `<module>`) → `algorithms[]` del passo con i parametri propri di ognuno, e `algorithm` dell'istanza; (4) l'ingresso implicito `BATCH_LAST_FEATURELISTS` → riferimenti espliciti `STEP.OUTPUT` (un importatore li ricostruisce in ordine).
 
 ## B. OpenMS: FeatureFinderMetabo (`.ini` vero, versione 2.8.0) e catena tipica
 ```json
-{"passi":[
+{"steps":[
   {"id":"ffm","step":"features.detect@1","in":{"index":["file:a.mzML","file:b.mzML"]},"params":{"noise_floor":10.0,"mz_tol":{"ppm":20},"min_trace_s":5.0,"snr_min":3.0,"fwhm_s":5.0}},
   {"id":"iso","step":"features.isotopes@1","in":{"peaks":"ffm.peaks"},"params":{"charge":[1,3],"model":"metabolites_5pct_rms"}},
   {"id":"rt","step":"series.rt_align@1","in":{"peaks":"iso.peaks"}},
@@ -33,25 +33,25 @@ Parte di `docs/studi/WORKFLOW_MODULARI.md` (§5). Ogni workflow è stato letto i
 
 ## C. XCMS, vignetta (`xcms.Rmd`, ramo `devel`)
 ```json
-{"passi":[
-  {"id":"cw","step":"features.detect@1","in":{"index":["file:ko15.mzML","file:wt15.mzML"]},"params":{"algorithm":{"algorithm":"centwave","peakwidth_s":[20,80],"noise":5000,"prefilter":[6,5000]}}},
+{"steps":[
+  {"id":"cw","step":"features.detect@1","in":{"index":["file:ko15.mzML","file:wt15.mzML"]},"algorithm":"centwave","params":{"peak_width_s":[20,80],"noise":5000,"prefilter":[6,5000]}},
   {"id":"mrg","step":"features.merge_neighbours@1","in":{"peaks":"cw.peaks"},"params":{"expand_rt_s":4}},
-  {"id":"rt","step":"series.rt_align@1","in":{"peaks":"mrg.peaks"},"params":{"algorithm":{"algorithm":"obiwarp","bin_mz":0.6}}},
-  {"id":"grp","step":"features.align@1","in":{"peaks":"mrg.peaks","rtmap":"rt.rtmap","samples":"file:campioni.json"},"params":{"bandwidth_s":30,"min_fraction":0.4}},
+  {"id":"rt","step":"series.rt_align@1","in":{"peaks":"mrg.peaks"},"algorithm":"obiwarp","params":{"bin_mz":0.6}},
+  {"id":"grp","step":"features.align@1","in":{"peaks":"mrg.peaks","rtmap":"rt.rtmap","samples":"file:samples.json"},"params":{"bandwidth_s":30,"min_fraction":0.4}},
   {"id":"fill","step":"features.gapfill@1","in":{"table":"grp.table"}}]}
 ```
 - **Si esprime**: la sequenza intera; `sampleGroups` diventa un ingresso tipizzato `samples` (`campioni/2`), non un parametro.
-- **Non si esprime oggi**: centWave e Obiwarp non sono algoritmi di mzLab (scelta `algorithm` con un solo valore oggi, `masstrace`/`anchors`); `refineChromPeaks` non ha un passo nostro. La vignetta ripete l'allineamento con parametri diversi su un sottoinsieme (`pdp_subs`): due istanze dello stesso passo sullo stesso ingresso = ramo del grafo.
+- **Non si esprime oggi**: centWave e Obiwarp non sono algoritmi di mzLab (nel descrittore sono voci `planned` di `algorithms[]`; oggi sono `available` solo `masstrace` e `anchors`); `refineChromPeaks` non ha un passo nostro. La vignetta ripete l'allineamento con parametri diversi su un sottoinsieme (`pdp_subs`): due istanze dello stesso passo sullo stesso ingresso = ramo del grafo.
 - **Correzioni**: (7) XCMS modifica l'oggetto sul posto (`adjustRtime` cambia gli RT) → da noi ogni passo produce un dato NUOVO (`rtmap`), gli ingressi sono immutabili: è ciò che rende la riesecuzione e la cache per hash possibili; (8) i gruppi di campioni sono un tipo (`samples`), con il proprio hash.
 
 ## D. patRoon, percorso TP «logic» e «library» (handbook, cap. 7)
 ```json
-{"passi":[
+{"steps":[
   {"id":"fg","step":"features.align@1","in":{"peaks":"det.peaks"}},
-  {"id":"flt","step":"table.filter@1","in":{"table":"fg.table","samples":"file:campioni.json"},"params":{"abs_min_intensity":1e4,"blank_ratio":3}},
+  {"id":"flt","step":"table.filter@1","in":{"table":"fg.table","samples":"file:samples.json"},"params":{"abs_min_intensity":1e4,"blank_ratio":3}},
   {"id":"ms2","step":"features.ms2_link@1","in":{"table":"flt.table"}},
-  {"id":"tpl","step":"tp.generate@1","in":{"table":"flt.table"},"params":{"algorithm":{"algorithm":"logic","rules":"file:trasformazioni.json"}}},
-  {"id":"tpb","step":"tp.generate@1","in":{"structure":"file:timolol.mol"},"params":{"algorithm":{"algorithm":"library","library":"file:pubchem_trans.csv"}}},
+  {"id":"tpl","step":"tp.generate@1","in":{"table":"flt.table"},"algorithm":"logic","params":{"rules":"file:transformations.json"}},
+  {"id":"tpb","step":"tp.generate@1","in":{"structure":"file:timolol.mol"},"algorithm":"library","params":{"library":"file:pubchem_trans.csv"}},
   {"id":"lnk","step":"tp.link@1","in":{"table":"flt.table","spectra":"ms2.spectra","tp":["tpl.tp","tpb.tp"]},"params":{"rt_direction":true,"min_spec_sim":0.75,"min_frag_matches":1}}]}
 ```
 - **Si esprime**: entrambi i rami e la loro unione (`tp` con `many`), cioè un grafo, non una catena.

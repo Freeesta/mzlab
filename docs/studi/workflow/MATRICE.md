@@ -51,6 +51,6 @@ Parte di `docs/studi/WORKFLOW_MODULARI.md` (§3). Legenda: **V** = letto in un f
 | lettori della struttura | — | — | — | MetFrag, TP «library» (V) | `interp`, `positions_json`, `reactivity_json` (Fukui), RT-logP via InChIKey, librerie (V) | — |
 
 ## 5. Catalogo e buchi
-- **mzLab ha tutto il tratto grezzo → tabella → TP** (V nel codice), ma come chiamate interne: nessun passo si descrive (niente `passo/1`), i parametri sono strutture Rust (`Recipe`, `Params`) e l'interfaccia è scritta a mano.
+- **mzLab ha tutto il tratto grezzo → tabella → TP** (V nel codice), ma come chiamate interne: nessun passo si descrive (niente `step/1`), i parametri sono strutture Rust (`Recipe`, `Params`) e l'interfaccia è scritta a mano.
 - **Buchi veri** (nessun modulo mzLab): un grafo della struttura con stereo, isotopi e sali (oggi si perdono alla lettura, V), un calcolo dell'InChIKey, allineamento RT per deformazione continua (Obiwarp: abbiamo solo ancore), export mzTab-M e mzQC, generazione dei TP da struttura (BioTransformer, CTS: esclusa, §8 del principale), lisciatura come passo a sé.
 - **Unico nostro** (nessun altro dei quattro): lettura nativa nel browser, stima dei parametri con prova, posizione della sostituzione, livelli LR/HR con prove e non verdetti.

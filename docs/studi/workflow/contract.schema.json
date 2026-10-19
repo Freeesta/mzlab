@@ -1,11 +1,11 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
- "$id": "workflow-contratto/1-draft",
- "title": "Draft contract of mzLab workflows: step descriptor passo/1, plan mzflow/2 (field passi) and run record prov/1",
- "description": "Study draft (docs/studi/WORKFLOW_MODULARI.md §4), not used by the program yet. Three documents: a step describes itself (passo/1, one per step and version, shipped with the module that runs it); a workflow lists step instances wired by references (passi of mzflow/2, beside operazioni of mzflow/1); a run writes what it used and made (prov/1, a subset of PROV-JSON). User-facing strings are in English.",
+ "$id": "workflow-contract/1-draft",
+ "title": "Draft contract of mzLab workflows: step descriptor step/1, plan mzflow/2 (field steps) and run record prov/1",
+ "description": "Study draft (docs/studi/WORKFLOW_MODULARI.md §4), not used by the program yet. Three documents: a step describes itself (step/1, one per step and version, shipped with the module that runs it, with its selectable algorithms); a workflow lists step instances wired by references (steps of mzflow/2, beside the operations log of mzflow/1); a run writes what it used and made (prov/1, a subset of PROV-JSON). Every name, id, description, label and error key of the modules is in English.",
  "$defs": {
   "dataType": {
-   "description": "Typed data between steps. raw = vendor file set (one sample); mzml = mzML 1.1 (indexedmzML when written by mzLab); mzidx = mzLab scan index (docs/agenti/mzidx.md); xic = one chromatogram; peaks = features of one file (.mzfeatf); rtmap = RT correction of a series; table = aligned feature table (.mzfeat); samples = roles and times (campioni/2); spectra = MS2 lists; annot = row annotations (interp/1, levels); tp = product view (tp/1); structure = a mol/1 record, format owned by the structure study (docs/studi/STRUTTURA_DATO*.md, not this draft); transform = a parent -> product transformation with atom mapping (transform1, a subset of trasf/1 of that study); qc = quality numbers; report = terminal export (CSV, XLSX, HTML).",
+   "description": "Typed data between steps. raw = vendor file set (one sample); mzml = mzML 1.1 (indexedmzML when written by mzLab); mzidx = mzLab scan index (docs/agenti/mzidx.md); xic = one chromatogram; peaks = features of one file (.mzfeatf); rtmap = RT correction of a series; table = aligned feature table (.mzfeat); samples = roles and times (the campioni/2 record); spectra = MS2 lists; annot = row annotations (interp/1, levels); tp = product view (tp/1); structure = a mol/1 record, format owned by the structure study (docs/studi/STRUTTURA_DATO*.md, not this draft); transform = a parent -> product transformation with atom mapping (transform1, a subset of trasf/1 of that study); comparison = differences between the outputs of two or more algorithms run on the same data (written by meta.compare); qc = quality numbers; report = terminal export (CSV, XLSX, HTML).",
    "enum": [
     "raw",
     "mzml",
@@ -20,9 +20,122 @@
     "tp",
     "structure",
     "transform",
+    "comparison",
     "qc",
     "report"
    ]
+  },
+  "facets": {
+   "type": "object",
+   "description": "facets of the data read from it: resolution (hr, lr), polarity, ms_levels, samples",
+   "properties": {
+    "resolution": {
+     "type": "array",
+     "items": {
+      "enum": [
+       "hr",
+       "lr"
+      ]
+     }
+    },
+    "polarity": {
+     "type": "array",
+     "items": {
+      "enum": [
+       1,
+       -1,
+       0
+      ]
+     }
+    },
+    "ms_levels": {
+     "type": "array",
+     "items": {
+      "type": "integer",
+      "minimum": 1
+     }
+    }
+   },
+   "additionalProperties": false
+  },
+  "applicability": {
+   "type": "object",
+   "description": "when an algorithm fits the data, so that the interface can suggest it; facets read from the incoming data, plus what the method needs",
+   "properties": {
+    "resolution": {
+     "type": "array",
+     "items": {
+      "enum": [
+       "hr",
+       "lr"
+      ]
+     }
+    },
+    "polarity": {
+     "type": "array",
+     "items": {
+      "enum": [
+       1,
+       -1,
+       0
+      ]
+     }
+    },
+    "ms_levels": {
+     "type": "array",
+     "items": {
+      "type": "integer",
+      "minimum": 1
+     }
+    },
+    "spectrum_mode": {
+     "type": "array",
+     "items": {
+      "enum": [
+       "profile",
+       "centroid"
+      ]
+     }
+    },
+    "peak_fwhm_s": {
+     "type": "array",
+     "prefixItems": [
+      {
+       "type": "number",
+       "minimum": 0
+      },
+      {
+       "type": "number",
+       "minimum": 0
+      }
+     ],
+     "minItems": 2,
+     "maxItems": 2,
+     "description": "range of chromatographic peak widths (FWHM, seconds) where the method is known to work"
+    },
+    "min_files": {
+     "type": "integer",
+     "minimum": 1
+    },
+    "needs": {
+     "type": "array",
+     "items": {
+      "enum": [
+       "internal_standards",
+       "ms2",
+       "blank",
+       "reference_sample",
+       "library"
+      ]
+     },
+     "description": "inputs or sample roles the method cannot work without"
+    },
+    "note": {
+     "type": "string",
+     "description": "one sentence for the suggestion, in English"
+    }
+   },
+   "additionalProperties": false
   },
   "port": {
    "type": "object",
@@ -60,7 +173,7 @@
    "additionalProperties": false
   },
   "paramSchema": {
-   "description": "JSON Schema 2020-12 of the parameters (type object). The form is generated from it: title, description, default, minimum, maximum, enum, oneOf with the discriminator 'algorithm'. Extra keywords: x-unit (ppm, Da, min, s, counts, fraction), x-advanced (hidden behind 'More'), x-group (a box of the form), x-estimate (absent value = estimated by the step, which then writes the value and its proof in prov/1), x-noresult (does not change the result: memory budget, threads; left out of the fingerprint).",
+   "description": "JSON Schema 2020-12 of the parameters (type object). The form is generated from it: title, description, default, minimum, maximum, enum. Extra keywords: x-unit (ppm, Da, min, s, counts, fraction), x-advanced (hidden behind 'More'), x-group (a box of the form), x-estimate (absent value = estimated by the step, which then writes the value and its proof in prov/1), x-noresult (does not change the result: memory budget, threads; left out of the fingerprint).",
    "type": "object",
    "required": [
     "type",
@@ -76,7 +189,54 @@
    "type": "string",
    "pattern": "^(err|error)\\.[A-Za-z0-9_.]+$"
   },
-  "passo": {
+  "algorithm": {
+   "type": "object",
+   "required": [
+    "id",
+    "title",
+    "status"
+   ],
+   "properties": {
+    "id": {
+     "type": "string",
+     "pattern": "^[a-z][a-z0-9_]*$",
+     "description": "unique inside the step, e.g. masstrace, centwave"
+    },
+    "version": {
+     "type": "integer",
+     "minimum": 1,
+     "default": 1,
+     "description": "raised whenever this algorithm can give a different output; part of the cache key"
+    },
+    "title": {
+     "type": "string"
+    },
+    "doc": {
+     "type": "string",
+     "description": "one paragraph for the help of the form, in English"
+    },
+    "source": {
+     "type": "string",
+     "description": "the original paper (DOI) the implementation is written from"
+    },
+    "applicability": {
+     "$ref": "#/$defs/applicability"
+    },
+    "params": {
+     "$ref": "#/$defs/paramSchema",
+     "description": "parameters of this algorithm only; the common params of the step apply to all"
+    },
+    "status": {
+     "enum": [
+      "available",
+      "planned"
+     ],
+     "description": "planned: listed for the design, not selectable"
+    }
+   },
+   "additionalProperties": false
+  },
+  "step": {
    "type": "object",
    "required": [
     "schema",
@@ -92,7 +252,7 @@
    ],
    "properties": {
     "schema": {
-     "const": "passo/1"
+     "const": "step/1"
     },
     "id": {
      "type": "string",
@@ -134,7 +294,8 @@
      }
     },
     "params": {
-     "$ref": "#/$defs/paramSchema"
+     "$ref": "#/$defs/paramSchema",
+     "description": "parameters common to every algorithm of the step"
     },
     "runs_in": {
      "type": "object",
@@ -162,10 +323,21 @@
      },
      "description": "the error keys the step may return (the shape is the one of the API: {error, error_key, params})"
     },
-    "family": {
+    "algorithms": {
+     "type": "array",
+     "minItems": 1,
+     "items": {
+      "$ref": "#/$defs/algorithm"
+     },
+     "description": "selectable methods with the same in and out ports; a step without the field has one implicit algorithm"
+    },
+    "default_algorithm": {
      "type": "string",
-     "pattern": "^[a-z]+(\\.[a-z][a-z0-9_]*)+$",
-     "description": "the slot of the canvas; alternatives share the family and the port signature (default: id)"
+     "description": "the best known for the typical case; required when algorithms is present"
+    },
+    "ports_from": {
+     "const": "wrapped",
+     "description": "meta steps only: in ports are those of the step named by params.step, out ports add one variant per run"
     },
     "per_item": {
      "type": "boolean",
@@ -219,24 +391,33 @@
        "evidence": {
         "type": "string",
         "description": "the bench measure that justifies the values"
+       },
+       "algorithm": {
+        "type": "string",
+        "description": "an id of algorithms; absent = default_algorithm"
        }
       },
       "additionalProperties": false
      },
-     "description": "named parameter sets; Auto takes the first whose when matches the input facets"
+     "description": "named parameter sets, each for one algorithm; Auto takes the first whose when matches the input facets"
     },
     "default_preset": {
      "type": "string"
     }
    },
-   "additionalProperties": false
+   "additionalProperties": false,
+   "dependentRequired": {
+    "algorithms": [
+     "default_algorithm"
+    ]
+   }
   },
   "ref": {
    "type": "string",
    "pattern": "^(file:.+|[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*)$",
-   "description": "file:NAME (an entry of ingressi) or STEP.OUTPUT (an output of an earlier step instance)"
+   "description": "file:NAME (an entry of inputs) or STEP.OUTPUT (an output of an earlier step instance)"
   },
-  "istanza": {
+  "instance": {
    "type": "object",
    "required": [
     "id",
@@ -252,7 +433,7 @@
     "step": {
      "type": "string",
      "pattern": "^[a-z]+(\\.[a-z][a-z0-9_]*)+@[0-9]+$",
-     "description": "id@version of a passo/1"
+     "description": "id@version of a step/1"
     },
     "in": {
      "type": "object",
@@ -280,6 +461,10 @@
     "preset": {
      "type": "string",
      "description": "a key of presets of the step; params then hold only the differences"
+    },
+    "algorithm": {
+     "type": "string",
+     "description": "an id of the algorithms of the step; absent = the one of the preset, else default_algorithm"
     }
    },
    "additionalProperties": false
@@ -287,26 +472,26 @@
   "mzflow2": {
    "type": "object",
    "required": [
-    "formato",
-    "programma",
-    "ingressi",
-    "passi"
+    "format",
+    "program",
+    "inputs",
+    "steps"
    ],
    "properties": {
-    "formato": {
+    "format": {
      "const": "mzflow/2"
     },
-    "programma": {
+    "program": {
      "type": "object",
      "required": [
-      "nome",
-      "versione"
+      "name",
+      "version"
      ],
      "properties": {
-      "nome": {
+      "name": {
        "type": "string"
       },
-      "versione": {
+      "version": {
        "type": "string"
       },
       "commit": {
@@ -314,7 +499,7 @@
       }
      }
     },
-    "ingressi": {
+    "inputs": {
      "type": "array",
      "items": {
       "type": "object",
@@ -339,16 +524,16 @@
       }
      }
     },
-    "passi": {
+    "steps": {
      "type": "array",
      "items": {
-      "$ref": "#/$defs/istanza"
+      "$ref": "#/$defs/instance"
      },
      "description": "a DAG: every reference points to an earlier instance; the interface shows a chain while the graph has one path"
     },
-    "operazioni": {
+    "operations": {
      "type": "array",
-     "description": "the log of mzflow/1, unchanged"
+     "description": "the log of mzflow/1, unchanged; a reader also takes the mzflow/1 keys formato, programma and operazioni"
     }
    }
   },
@@ -439,7 +624,7 @@
        },
        "estimates": {
         "type": "object",
-        "description": "parameter -> proof of the estimate (as prove of feature_pipeline/1)"
+        "description": "parameter -> proof of the estimate (as the proofs of feature_pipeline/1)"
        },
        "used": {
         "type": "array",
@@ -482,44 +667,15 @@
        },
        "preset": {
         "type": "string"
+       },
+       "algorithm": {
+        "type": "string",
+        "description": "the algorithm that ran, id@version (e.g. masstrace@1)"
        }
       }
      }
     }
    }
-  },
-  "facets": {
-   "type": "object",
-   "description": "facets of the data read from it: resolution (hr, lr), polarity, ms_levels, samples",
-   "properties": {
-    "resolution": {
-     "type": "array",
-     "items": {
-      "enum": [
-       "hr",
-       "lr"
-      ]
-     }
-    },
-    "polarity": {
-     "type": "array",
-     "items": {
-      "enum": [
-       1,
-       -1,
-       0
-      ]
-     }
-    },
-    "ms_levels": {
-     "type": "array",
-     "items": {
-      "type": "integer",
-      "minimum": 1
-     }
-    }
-   },
-   "additionalProperties": false
   },
   "transform1": {
    "type": "object",
