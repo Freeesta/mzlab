@@ -63,17 +63,8 @@ jobs:
           restore-keys: rust-${{ runner.os }}-
       - name: numpy (the parity tests write the synthetic files with tools/golden.py)
         run: python -m pip install numpy
-      # The native test binaries are optimised (opt-level 3) but without the LTO and the single codegen unit of the .wasm profile:
-      # these two settings only make the .wasm small, and on ~150 test binaries they cost ~10 minutes of linking. Only this step,
-      # so the .wasm built below (and by the guards) are the ones of Cargo.toml [profile.release], byte for byte.
-      - name: Tests (parity with tests/golden/)
-        env:
-          MZLAB_GOLDEN_STRICT: "1"
-          MZLAB_IDX_STRICT: "1"
-          CARGO_PROFILE_RELEASE_LTO: "false"
-          CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
-          CARGO_PROFILE_RELEASE_OPT_LEVEL: "3"
-        run: cargo test --locked --release
+      - name: fmt and clippy against the base (tools/controlla_rust.py, tools/clippy_base.json)
+        run: python3 tools/controlla_rust.py
       - name: WASM build (release)
         run: cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
       - name: The libraries crates and mzlab-feat build for WASM
@@ -83,16 +74,6 @@ jobs:
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features proofs
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features mrm
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-table-wasm
-      # saved right after the builds, so a red guard or clippy does not lose the cache (main only)
-      - uses: actions/cache/save@v4
-        if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin/wasm-bindgen
-            target
-          key: ${{ steps.rcache.outputs.cache-primary-key }}
       - name: No native dependencies in the WASM graph
         run: |
           for p in mzlab-wasm mzlab-lib mzlab-lib-wasm mzlab-feat mzlab-feat-wasm mzlab-feat-table-wasm mzlab-feat-grafo-wasm; do
@@ -107,8 +88,28 @@ jobs:
           wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
           python -m pip install pytest
           python -m pytest -q tests/test_guardie_memoria.py tests/test_feat_wasm.py
-      - name: fmt and clippy against the base (tools/controlla_rust.py, tools/clippy_base.json)
-        run: python3 tools/controlla_rust.py
+      # The native test binaries are optimised (opt-level 3) but without the LTO and the single codegen unit of the .wasm profile:
+      # these two settings only make the .wasm small, and on ~150 test binaries they cost ~10 minutes of linking. Only this step,
+      # so the .wasm built above (and by the guards) are the ones of Cargo.toml [profile.release], byte for byte.
+      - name: Tests (parity with tests/golden/)
+        env:
+          MZLAB_GOLDEN_STRICT: "1"
+          MZLAB_IDX_STRICT: "1"
+          CARGO_PROFILE_RELEASE_LTO: "false"
+          CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
+          CARGO_PROFILE_RELEASE_OPT_LEVEL: "3"
+        run: cargo test --locked --release
+      # Fail-fast order: the cheap checks and the guards (WASM size, memory, dependencies) come before the ~10 min of native tests.
+      # The cache is saved last and also after a red step (main only), so the test binaries are in it too.
+      - uses: actions/cache/save@v4
+        if: always() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
 
   # Licences and sources of the dependencies (deny.toml). The advisories (RustSec) change every day: they are checked by .github/workflows/advisories.yml, not here.
   deny:
