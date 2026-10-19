@@ -1,6 +1,6 @@
 # The built site with the Rust engine (.wasm) driven by the e2e tests that need it: e2e_rust, e2e_mzidx, e2e_progressivo.
 # Runs on pull requests that touch the engine, the page or the build, and by hand. Not a required check of the protected main branch.
-# `sito-wasm-core` and `sito-wasm-feat` build the .wasm in parallel and hand them over as artifacts; `sito-e2e` runs the quick checks of tools/verifica.py
+# `sito-wasm-core`, `sito-wasm-feat-a` and `sito-wasm-feat-b` build the .wasm in parallel and hand them over as artifacts; `sito-e2e` runs the quick checks of tools/verifica.py
 # (JS syntax with Teoria and the shell, i18n, code map, sizes), builds the site, adds the artifacts and runs the e2e; `sito` is the summary (like rust-ok). pytest is not repeated here: test.yml runs it on every pull request
 # (3.11 and 3.14, with the wasm32 toolchain, so also the tests this job would skip).
 # The run on main fills the Rust caches (core, feat) when the Rust sources changed (every run restores the newest one); a cache saved on a pull request is not visible to the other pull requests.
@@ -25,7 +25,7 @@ concurrency:
   group: sito-rust-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
 
-# The .wasm are built once, in two parallel jobs (engine + libraries, mzFinder + readers), and `sito-e2e` downloads them as artifacts.
+# The .wasm are built once, in three parallel jobs (engine + libraries, mzFinder part a, mzFinder part b + readers), and `sito-e2e` downloads them as artifacts.
 jobs:
   sito-wasm-core:
     runs-on: ubuntu-latest
@@ -78,7 +78,7 @@ jobs:
             site/static/wasm-lib
           retention-days: 1
 
-  sito-wasm-feat:
+  sito-wasm-feat-a:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -93,10 +93,10 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: sito-feat-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          key: sito-feat-a-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           # the cache of this kind first, then the older single cache, so the first run is not cold
           restore-keys: |
-            sito-feat-${{ runner.os }}-
+            sito-feat-a-${{ runner.os }}-
             sito-rust-${{ runner.os }}-
       - name: wasm-bindgen CLI (the version of Cargo.lock)
         run: |
@@ -105,7 +105,7 @@ jobs:
       - name: Build the WASM of mzFinder and the readers
         run: |
           mkdir -p site/static
-          tools/build_feat_wasm.sh site/static
+          tools/build_feat_wasm.sh site/static a
       # saved right after the build, so a red e2e does not lose the cache (main only)
       - uses: actions/cache/save@v4
         if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
@@ -118,14 +118,59 @@ jobs:
           key: ${{ steps.rcache.outputs.cache-primary-key }}
       - uses: actions/upload-artifact@v4
         with:
-          name: wasm-feat
+          name: wasm-feat-a
+          path: |
+            site/static/wasm-feat
+          retention-days: 1
+
+  sito-wasm-feat-b:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      - id: rcache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: sito-feat-b-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          # the cache of this kind first, then the older single cache, so the first run is not cold
+          restore-keys: |
+            sito-feat-b-${{ runner.os }}-
+            sito-rust-${{ runner.os }}-
+      - name: wasm-bindgen CLI (the version of Cargo.lock)
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
+      - name: Build the WASM of mzFinder and the readers
+        run: |
+          mkdir -p site/static
+          tools/build_feat_wasm.sh site/static b
+      # saved right after the build, so a red e2e does not lose the cache (main only)
+      - uses: actions/cache/save@v4
+        if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wasm-feat-b
           path: |
             site/static/wasm-feat
             site/static/wasm-lettori
           retention-days: 1
 
   sito-e2e:
-    needs: [sito-wasm-core, sito-wasm-feat]
+    needs: [sito-wasm-core, sito-wasm-feat-a, sito-wasm-feat-b]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -165,8 +210,10 @@ jobs:
           pattern: wasm-*
           path: wasm-artifacts
           merge-multiple: true
-      - name: The WASM built by the two jobs go into the site
-        run: cp -r wasm-artifacts/. site/static/
+      - name: The WASM built by the three jobs go into the site, then the manifest of mzFinder
+        run: |
+          cp -r wasm-artifacts/. site/static/
+          tools/build_feat_wasm.sh site/static manifest
       - name: e2e on the built site
         run: |
           ls -l site/static/wasm/*.wasm | awk '{print "motore .wasm:", $5, "bytes"}'
