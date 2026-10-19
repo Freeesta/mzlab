@@ -56,6 +56,8 @@
   "load.exp.nameHint": "Avviso nella riga di un file quando il nome fa pensare a un esperimento diverso da quello nel file; {hint} e {kind} = nomi degli esperimenti (Full Scan, MS2 (Product Ion), MRM, o «nessun dato»).",
   "load.exp.precursors": "Tra parentesi, nella colonna Esperimento di un file misto: numero di precursori delle MS2.",
   "load.group.count": "Numero di file in un gruppo della tabella di caricamento.",
+  "load.hrmix.lr": "Button of the note shown when low- and high-resolution files are both ticked: keeps only the low-resolution files ticked; {n} = how many low-resolution files are in the list.",
+  "load.hrmix.hr": "Same note, button that keeps only the high-resolution files ticked; {n} = how many high-resolution files are in the list.",
   "load.group.hr": "Nome di un gruppo di esperimento della tabella di caricamento per i file ad alta risoluzione.",
   "load.method.mrm": "Riga «Contenuto» di un metodo .dam solo MRM; {n} = numero di transizioni.",
   "load.method.scans": "Riga «Contenuto» di un metodo .dam con più esperimenti a scansione; {n} = numero di esperimenti.",

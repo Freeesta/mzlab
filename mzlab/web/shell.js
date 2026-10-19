@@ -68,8 +68,14 @@ function mergeFiles(list){const old=Object.fromEntries(ST.files.map(f=>[f.name,f
   ST.files=list.map(f=>{const o=old[f.name],type=o?o.type:f.type,conc=o?o.conc:concFrom(f),time=type==="blank"?null:o?o.time:f.time;return {...f,time,type,conc,use:o?o.use:true,
     // gC: concentration read from the name (yellow in the table until the student edits or confirms them)
     gC:o?o.gC:conc!=null,role:o&&o.role,prop:o&&o.prop,ed:o&&o.ed}});
+  if(list.some(f=>!old[f.name]))hrMixPreselect();
   // roles and times proposed from the names by the engine (campioni/2)
   sortFiles();renderFiles();RUOLI.propose(()=>ST.files).then(c=>{if(c){sortFiles();renderFiles()}})}
+// low- and high-resolution files cannot be opened together: a note offers the choice while both worlds are in the list, and the loading is paused while both are ticked; the most numerous world is preselected when files arrive
+const hrMixCount=()=>{const l=ST.files.filter(f=>f.kind in GORD);return {lr:l.filter(f=>!f.hr).length,hr:l.filter(f=>f.hr).length,onLr:l.filter(f=>f.use&&!f.hr).length,onHr:l.filter(f=>f.use&&f.hr).length}};
+const hrMixed=()=>{const c=hrMixCount();return c.onLr>0&&c.onHr>0};
+function hrMixPick(hr){ST.files.forEach(f=>{if(f.kind in GORD)f.use=!!f.hr===hr})}
+function hrMixPreselect(){if(!hrMixed())return;const c=hrMixCount();hrMixPick(c.onHr>c.onLr)}
 // order of the table: experiment (Full Scan, MS2, MRM, the rest), then blank, standards, samples; inside each, the rule of ordine.js (time, else concentration, else natural name)
 const GORD={full:0,ms2:1,mrm:2,infusion:3},TYPORD={blank:0,standard:1,sample:2};
 // groups of the table: low resolution first, then high resolution (f.hr, from the engine); a file with several parts (Full Scan + MS2: DDA/IDA) has a group of its own, never the one of its MS2 part
@@ -120,7 +126,10 @@ function renderFiles(){const F=ST.files,el=$("#flist");
   const tuEl=$("#tunit");if(tuEl)tuEl.onchange=()=>{tunitSet(tuEl.value);renderFiles()};
   const cu=$("#cunit");if(cu)cu.onchange=()=>{const k=cu.value,r=CU[ST.unit][1]/CU[k][1];F.forEach(f=>{if(f.conc!=null)f.conc=roundc(f.conc*r)});ST.unit=k;renderFiles()};
   el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];const j=await post("api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});checkGo();modeNote()}
-function modeNote(){const h=$("#hrnote");if(h)h.hidden=!ST.files.some(f=>f.use&&f.hr_profile);const m=$("#modenote");if(!m)return;const u=ST.files.filter(f=>f.use&&["full","ms2"].includes(f.kind)),has=x=>u.some(f=>f.spectrum_mode===x||f.spectrum_mode==="mixed");m.hidden=!(has("profile")&&has("centroid"))}
+function hrMixNote(){const n=$("#hrmix");if(!n)return;const c=hrMixCount();n.hidden=!(c.lr>0&&c.hr>0);if(n.hidden)return;
+  $("#hrmix-t").textContent=I18N.t("load.hrmix.note");$("#hrmix-lr").textContent=I18N.t("load.hrmix.lr",{n:c.lr});$("#hrmix-hr").textContent=I18N.t("load.hrmix.hr",{n:c.hr});
+  $("#hrmix-lr").setAttribute("aria-pressed",String(c.onLr>0&&c.onHr===0));$("#hrmix-hr").setAttribute("aria-pressed",String(c.onHr>0&&c.onLr===0))}
+function modeNote(){hrMixNote();const h=$("#hrnote");if(h)h.hidden=!ST.files.some(f=>f.use&&f.hr_profile);const m=$("#modenote");if(!m)return;const u=ST.files.filter(f=>f.use&&["full","ms2"].includes(f.kind)),has=x=>u.some(f=>f.spectrum_mode===x||f.spectrum_mode==="mixed");m.hidden=!(has("profile")&&has("centroid"))}
 // the button is live only when at least one chosen file can be opened (an mzML with no data cannot)
 const usable=f=>f.use&&["full","ms2","mrm","infusion"].includes(f.kind);
 // ...and not while files are still being read and indexed: the button would open only the ones already ready (UPBUSY = loadings under way)
@@ -136,7 +145,7 @@ function waitStato(){if(!WAITING)return;const s=PROGRESSO.state(),on=PROGRESSO.b
   loadingStato(`${lab}${k} · ${convElapsed(Date.now()-WAIT0)}`,on?s.pc:null)}
 PROGRESSO.subscribe(waitStato);
 const idle=()=>UPBUSY>0?new Promise(ok=>IDLE.push(ok)):Promise.resolve();
-function checkGo(){$("#opbtn").disabled=UPBUSY===0&&!ST.files.some(usable);$("#gomsg").textContent=""}
+function checkGo(){$("#opbtn").disabled=(UPBUSY===0&&!ST.files.some(usable))||hrMixed();$("#gomsg").textContent=""}
 // sends a file and returns the JSON answer (progress callback: loaded, total); in the browser version there is no network: it goes to the worker
 const sendFile=(url,f,onp)=>window.QQQ_BROWSER?fetch(url,{method:"POST",body:f}).then(r=>{onp(1,1);return r.json()}):new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open("POST",url);
   x.upload.onprogress=e=>{if(e.lengthComputable)onp(e.loaded,e.total)};x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(_){}ok(j)};x.onerror=()=>ko(new Error(I18N.t("err.upload.network")));x.send(f)});
@@ -354,6 +363,7 @@ async function openRest(rest,tok){
     added.push(p);if(Date.now()-last>=200)await boot();
   }
   if(E.progTok===tok){if(added.length)await boot();E.pendN=0;renderFileList();uiSave()}}
+$("#hrmix-lr").onclick=()=>{hrMixPick(false);renderFiles()};$("#hrmix-hr").onclick=()=>{hrMixPick(true);renderFiles()};
 $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
   try{if(UPBUSY>0){WAITING=true;WAIT0=Date.now();waitStato();const tk=setInterval(waitStato,1000);ldAction(I18N.t("conv.cancel"),cancelLoads);try{await idle()}finally{clearInterval(tk);ldAction("");WAITING=false;loadingStato(null)}}
     if(!ST.files.some(usable)){checkGo();return}

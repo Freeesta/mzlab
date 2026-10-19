@@ -356,3 +356,5 @@ html:not(.phone) header #newrun[hidden]{display:none!important}
 html:not(.phone) header #np-set,html:not(.phone) header #newrun{min-height:28px}
 html:not(.phone) #avvio-copia,html:not(.phone) #avvio-reset,html:not(.phone) #demobtn,html:not(.phone) #errcopy,html:not(.phone) #errx{min-height:28px;min-width:28px}
 }
+
+.hrmix{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;border:1px solid var(--accent);border-left-width:4px;border-radius:6px;background:var(--soft);font-size:14px}.hrmix-ic{flex:none;color:var(--accent)}.hrmix button{min-height:24px}@media (pointer:coarse){.hrmix button{min-height:40px}}
