@@ -187,7 +187,18 @@ version = "0.0.0"
 dependencies = [
  "libfuzzer-sys",
  "mzlab-core",
+ "mzlab-lettori",
  "mzlab-lib",
+]
+
+[[package]]
+name = "mzlab-lettori"
+version = "1.0.1"
+dependencies = [
+ "base64",
+ "flate2",
+ "mzlab-core",
+ "ruzstd",
 ]
 
 [[package]]

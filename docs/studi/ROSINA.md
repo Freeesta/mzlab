@@ -175,7 +175,7 @@ Ordine: LOC-1 e R-00 subito e in parallelo; LOC-2 dopo R-00; R-01…R-08 dopo LO
 
 ### F.1 Il file di verità `verita/1`
 JSON per file nativo (uno per campione nei contenitori a più campioni): `schema`, `file` (nome logico, SHA-256), `oracolo` (`nome`, `versione`, `opzioni`, `data`, `piattaforma`), `conteggi` (spettri per livello, cromatogrammi per tipo), `scansioni[]` (`id`, `rt_min`, `livello`, `polarita`, `precursore_mz`, `isolamento`, `ce`, `attivazione`, `profilo`, `n_punti`, `tic`, `bpi_mz`, `bpi`), `punti` (per 8 scansioni scelte: prima, ultima, mediana, TIC massimo, e una per livello: m/z e intensità interi), `cromatogrammi[]` (`id`, `tipo`, `n`, `somma`, `massimo`, 16 punti campione).
-`metadati`: campo → valore come lo dà l'oracolo, con il nome del produttore e il percorso `metodo/1` atteso, da `SCHEDE.md`. Si genera dall'mzML di riferimento (`tools/rosina/verita.py MZML`) o dall'oracolo (TRFP JSON, `timsdata`). Dimensione tipica: 50-500 KB.
+`metadati`: campo → valore come lo dà l'oracolo, con il nome del produttore e il percorso `metodo/1` atteso, da `SCHEDE.md`. Si genera dall'mzML di riferimento (`tools/rosina/verita.py MZML`) o dall'oracolo (TRFP JSON con `verita_trfp.py`, tabella 1/K0 di `timsdata` con `verita_timsdata.py`: gli oracoli girano su Mac o Windows, gli script leggono quello che hanno prodotto). Campi facoltativi: `tolleranza` (`hr`, `lr` o oggetto che cambia singole soglie) e `mobilita` (Bruker). Dimensione tipica: 50-500 KB.
 
 ### F.2 Livelli di prova (ogni lettore, ogni file del corpus)
 | Livello | Controllo | Tolleranza |
@@ -193,7 +193,7 @@ Esito per file: `L` (F0-F5 contro V1 o V2), `P` (manca un livello, scritto), `NV
 
 ### F.3 Dove gira
 - **CI pubblica** (`test.yml`): F0-F4 e F6 sui sintetici e sui piccoli pubblici; F5 sui documenti `metodo/1` dei sintetici.
-- **CI privata** (nuovo workflow notturno in `mzlab-dati`, proposto in R-00): checkout di `Freeesta/mzlab` `main`, `cargo test -p mzlab-lettori --features tutte --test verita` su ogni `scratchpad/rosina/verita/**/*.verita.json` (file ≤ 90 MB); il riassunto (formato × livello) in un artefatto, mai nel pubblico.
+- **CI privata** (workflow notturno in `mzlab-dati`, testo in `rosina/WORKFLOW_NOTTE.md`): checkout di `Freeesta/mzlab` `main`, `cargo test -p mzlab-lettori --features tutte --test 'verita_*'` (un test per famiglia, `tests/verita_<famiglia>.rs`) su ogni `scratchpad/rosina/verita/**/*.verita.json` (file ≤ 90 MB); il riassunto (formato × livello) in un artefatto, mai nel pubblico.
 - **Locale** (Mac): F8 e i file in `~/mzLab/rosina-dati/`, con lo stesso test e `MZLAB_DATI_GRANDI=<percorso>`.
 
 ### F.4 Casi limite: ogni cella vuota è «nessun file», da cercare
