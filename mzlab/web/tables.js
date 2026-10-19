@@ -125,11 +125,13 @@
   const fl = f => sub(f.replace(/^(CH3|NO2|Cl)$/, "•$1")).replace(/^•/, "•");   // radicals are written with the dot
   // high resolution (an Orbitrap / Q-TOF file is loaded): the exact mass of each loss is shown and «Cerca Δm» looks within 3 mDa instead of 0.5 Da
   const hrOn = () => !!(window.HR && typeof E !== "undefined" && E.files.some(f => !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2))));
-  const NL_TOL = () => hrOn() ? 0.003 : 0.5, NL_DEC = () => hrOn() ? 4 : 1;
+  const NL_TOL = () => hrOn() ? 0.003 : 0.5, NL_DEC = () => hrOn() ? 4 : 0;
   const NL_CHEV = '<svg class="nlch" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6l3 3 3-3"/></svg>';
   const lossDet = l => {
     const m = massOf(l.f);
-    return `<div class="nld-it" data-f="${l.f}"><div class="nld-name"><b>${fl(l.f)}</b> ${H(I18N.t(l.name))}</div><div>${H(I18N.t(l.seen))}</div>${l.rad ? `<div class="nlrad-t">• ${H(I18N.t(LOSS_RAD))}</div>` : ""}<div>${I18N.t("tbl.loss.detail", { m: m.toFixed(4), mech: H(I18N.t(l.mech)) })}</div><div class="muted sm">${I18N.t(l.rad ? "tbl.loss.sourcesRad" : "tbl.loss.sources", { refs: H(LOSS_REFS) })}</div></div>`;
+    // unit resolution: no exact mass (it would need mass accuracy); HR adds it with four decimals
+    const det = hrOn() ? I18N.t("tbl.loss.detail", { m: m.toFixed(4), mech: H(I18N.t(l.mech)) }) : I18N.t("tbl.loss.detailLr", { mech: H(I18N.t(l.mech)) });
+    return `<div class="nld-it" data-f="${l.f}"><div class="nld-name"><b>${fl(l.f)}</b> ${H(I18N.t(l.name))}</div><div>${H(I18N.t(l.seen))}</div>${l.rad ? `<div class="nlrad-t">• ${H(I18N.t(LOSS_RAD))}</div>` : ""}<div>${det}</div></div>`;
   };
   // one line: id keys the open state, ls = the losses (one, or several with the same nominal mass)
   const lossRow = (ls, o) => {

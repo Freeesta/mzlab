@@ -32,7 +32,6 @@ const LOSSES = [
   { f: "HBr", name: "loss.HBr.name", short: "loss.HBr.short", pol: "±", seen: "loss.HBr.seen", mech: "loss.HBr.mech" },
   { f: "SO3", name: "loss.SO3.name", short: "loss.SO3.short", pol: "-", seen: "loss.SO3.seen", mech: "loss.SO3.mech" },
 ];
-const LOSS_REFS = "Levsen 2007; Holčapek 2010";
 // catalog key: the texts of this list are in lang/it.js and en.js (keys loss.<formula>.name / seen / mech)
 const LOSS_RAD = "loss.rad";
 // the candidates for a mass difference: single losses within the tolerance, pairs that add up to it, and repetitions (n x the same loss).
@@ -47,4 +46,4 @@ function lossCombos(target, mass, tol = 0.5, list = LOSSES) {
   }
   return { single, pairs, reps };
 }
-if (typeof module !== "undefined") module.exports = { LOSSES, LOSS_REFS, LOSS_RAD, lossCombos };
+if (typeof module !== "undefined") module.exports = { LOSSES, LOSS_RAD, lossCombos };

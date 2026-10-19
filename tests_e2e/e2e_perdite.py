@@ -27,7 +27,7 @@ try:
         def details():
             b = pg.locator('#nl-list [data-d="H2O"]'); assert b.get_attribute("aria-expanded") == "false"
             b.click(); pg.wait_for_timeout(200); assert b.get_attribute("aria-expanded") == "true"
-            t = pg.inner_text('#nl-list [data-f="H2O"] .nldet'); print(t[:120]); assert "18.0106" in t and "meccanismo" in t and "Levsen" in t and "acqua" in t, t
+            t = pg.inner_text('#nl-list [data-f="H2O"] .nldet'); print(t[:120]); assert "18.0106" not in t and "meccanismo" in t and "acqua" in t and "Levsen" not in t and "Fonti" not in t, t   # unit resolution: no exact mass, no references
             b.focus(); pg.keyboard.press("Enter"); pg.wait_for_timeout(100)
             assert b.get_attribute("aria-expanded") == "false" and pg.locator('#nl-list [data-f="H2O"] .nldet:visible').count() == 0
             pg.keyboard.press("Space"); pg.wait_for_timeout(100); assert b.get_attribute("aria-expanded") == "true"
@@ -36,7 +36,7 @@ try:
         def groups():
             g = pg.locator("#nl-list .nlr[data-f^=g]"); assert g.count() == 2, g.count()      # with + : 28 and 42 (46 and 80 need a negative-only loss)
             row = pg.locator('#nl-list [data-f="g28"] .nlrow'); t = row.inner_text(); assert "CO" in t and "C₂H₄" in t and "risoluzione unitaria" in t, t
-            row.click(); d = pg.inner_text('#nl-list [data-f="g28"] .nldet'); assert d.count("Fonti") == 2, d
+            row.click(); d = pg.inner_text('#nl-list [data-f="g28"] .nldet'); assert "Fonti" not in d and d.count("meccanismo") == 2, d
             row.click()
             # Click ESI- to activate both + and -
             pg.locator("#nl-pol [data-p='-']").click(); pg.wait_for_timeout(200)
@@ -75,11 +75,21 @@ try:
             pg.click("#nl-pol [data-p='-']"); pg.wait_for_timeout(200)
             row = pg.locator('#nl-list [data-f="Cl"]'); assert row.count() == 1
             assert row.locator(".nlm").inner_text() == "35" and "•Cl" in row.inner_text() and "cloro aromatico" in row.inner_text()
-            pg.locator('#nl-list [data-d="Cl"]').click(); d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" in d and "HCl (36)" in d and "37Cl" in d and "radicale" in d, d
+            pg.locator('#nl-list [data-d="Cl"]').click(); d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" not in d and "HCl (36)" in d and "37Cl" in d and "radicale" in d, d
             # the «?» is replaced by one short hint line
             assert not pg.is_visible("#sb-help") and pg.is_visible("#nl-hint") and len(pg.inner_text("#nl-hint")) < 80
             pg.fill("#nl-q", "62"); pg.wait_for_timeout(300); assert "H2O" in pg.inner_text("#nl-res").replace("H₂O", "H2O"); pg.fill("#nl-q", ""); shut(pg, "#refx")
         step("A2: compact view, ESI+/ESI- toggles, •Cl, hint line instead of «?»", a2)
+        def hr_version():
+            # an HR file is loaded: exact mass with four decimals in the details and in the combinations
+            pg.evaluate("window.HR.isHr=()=>true"); pg.fill("#nl-q", "62"); pg.wait_for_timeout(300)
+            pg.locator('#nl-list [data-d="Cl"]').click() if pg.locator('#nl-list [data-f="Cl"] .nldet:visible').count() == 0 else None
+            d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" in d and "Levsen" not in d, d
+            assert "(" in pg.inner_text("#nl-res") and "." in pg.inner_text("#nl-res"), "decimals in HR"
+            pg.evaluate("window.HR.isHr=()=>false"); pg.fill("#nl-q", "62"); pg.wait_for_timeout(300)
+            import re; assert not re.search(r"\d\.\d", pg.inner_text("#nl-res")), pg.inner_text("#nl-res")      # LR: rounded to the unit
+            pg.fill("#nl-q", "")
+        step("LR rounded to the unit / HR with four decimals, no references in both", hr_version)
         def narrow_axe():
             AXE = axe_path(); assert AXE, "axe-core not available"
             pg.add_script_tag(path=AXE)
