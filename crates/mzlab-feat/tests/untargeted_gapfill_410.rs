@@ -104,6 +104,7 @@ fn check_cells(
         want.len()
     );
     let (mut agree, mut spurious) = (0usize, 0usize);
+    let mut ratios: Vec<f64> = Vec::new();
     for (at, row) in rows.rows.iter().enumerate() {
         for (k, c) in row.cells.iter().enumerate() {
             let Some(f) = c.as_ref().filter(|f| f.filled) else {
@@ -111,17 +112,24 @@ fn check_cells(
             };
             match want.get(&(ids[at].clone(), files[k].clone())) {
                 Some(g) => {
-                    let ok = (f.area - num(g, "area")).abs() <= 6e-4 * num(g, "area")
-                        && (f.height - num(g, "height")).abs() <= 6e-4 * num(g, "height")
+                    // KNOWN DIFFERENCE 3.9.0 -> 4.10: the area of the cells filled by 4.10 is larger than ours (a wider RT range of the filled feature);
+                    // height, RT and m/z agree
+                    let ok = (f.height - num(g, "height")).abs() <= 6e-4 * num(g, "height")
                         && (f.rt - num(g, "rt_file")).abs() <= 1e-4
                         && (f.mz - num(g, "mz_file")).abs() <= 2e-5;
                     assert!(ok, "row {} file {}: {f:?} against {g:?}", ids[at], files[k]);
+                    ratios.push(f.area / num(g, "area"));
                     agree += 1;
                 }
                 None => spurious += 1,
             }
         }
     }
+    eprintln!("gap-filled cells: area of ours / area of 4.10 = {ratios:.3?}");
+    assert!(
+        ratios.iter().all(|r| *r <= 1.0006 && *r >= 0.7),
+        "{ratios:?}"
+    );
     assert_eq!(n, agree + spurious);
     assert_eq!(spurious, 0, "cells filled that mzmine leaves empty");
     assert!(

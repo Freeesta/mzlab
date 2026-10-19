@@ -76,3 +76,35 @@ pub fn same(r: &Row, c: &Chrom, scans: &[Ms1Scan], mz_tol: f64, h_tol: f64) -> R
         Err(why.join("; "))
     }
 }
+
+/// As [`same`] but without the RT range: apex, m/z and height only (mzmine 4.10 reports wider ranges than 3.9.0, see `mzmine410/LEGGIMI.md`).
+pub fn same_core(
+    r: &Row,
+    c: &Chrom,
+    scans: &[Ms1Scan],
+    mz_tol: f64,
+    h_tol: f64,
+) -> Result<(), String> {
+    let (rt, _, _, h) = shape(c, scans);
+    let mut why = Vec::new();
+    if (c.mz - r.mz).abs() > mz_tol {
+        why.push(format!("m/z {} vs {}", c.mz, r.mz));
+    }
+    if (rt - r.rt).abs() > 1e-3 {
+        why.push(format!("RT apex {rt:.2} vs {}", r.rt));
+    }
+    if (h - r.height).abs() > h_tol * r.height {
+        why.push(format!("height {h} vs {}", r.height));
+    }
+    if why.is_empty() {
+        Ok(())
+    } else {
+        Err(why.join("; "))
+    }
+}
+
+/// How much wider (min) the range of the reference is than ours: `(ours.start - theirs.start, theirs.end - ours.end)`.
+pub fn range_widening(r: &Row, c: &Chrom, scans: &[Ms1Scan]) -> (f64, f64) {
+    let (_, a, b, _) = shape(c, scans);
+    (a - r.start, r.end - b)
+}
