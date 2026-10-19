@@ -47,7 +47,7 @@ pub fn clean_library_name(raw: &str) -> String {
         if digits > 0 {
             let cut = body.len() - digits;
             return b[..cut]
-                .trim_end_matches(|c: char| c == ' ' || c == '-' || c == '_')
+                .trim_end_matches([' ', '-', '_'])
                 .to_string();
         }
     }
