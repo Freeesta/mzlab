@@ -39,6 +39,38 @@ pub(crate) fn symbol(s: &str) -> Result<(String, u16), MolError> {
     }
 }
 
+/// One atom line: the atom, the charge code of the legacy column and the unpaired electrons it implies.
+fn atom_line(line: &str) -> Result<(DraftAtom, i8, u8), MolError> {
+    let (el, iso) = symbol(field(line, 31, 34))?;
+    let atom = DraftAtom {
+        el,
+        iso,
+        chg: 0,
+        rad: 0,
+        valence: match int(line, 48, 51)? {
+            0 => None,
+            15 => Some(0),
+            v => u8::try_from(v).ok(),
+        },
+        xyz: [
+            float(line, 0, 10)?,
+            float(line, 10, 20)?,
+            float(line, 20, 30)?,
+        ],
+    };
+    let (charge, rad) = match int(line, 36, 39)? {
+        1 => (3, 0),
+        2 => (2, 0),
+        3 => (1, 0),
+        4 => (0, 1),
+        5 => (-1, 0),
+        6 => (-2, 0),
+        7 => (-3, 0),
+        _ => (0, 0),
+    };
+    Ok((atom, charge, rad))
+}
+
 pub(crate) fn read_v2000(lines: &[&str]) -> Result<Draft, MolError> {
     let counts = lines.get(3).copied().unwrap_or("");
     let (na, nb) = (int(counts, 0, 3)? as usize, int(counts, 3, 6)? as usize);
@@ -51,33 +83,10 @@ pub(crate) fn read_v2000(lines: &[&str]) -> Result<Draft, MolError> {
     let mut legacy_charge = vec![0i8; na];
     let mut rad = vec![0u8; na];
     for (i, line) in lines[4..4 + na].iter().enumerate() {
-        let (el, iso) = symbol(field(line, 31, 34))?;
-        atoms.push(DraftAtom {
-            el,
-            iso,
-            chg: 0,
-            rad: 0,
-            valence: match int(line, 48, 51)? {
-                0 => None,
-                15 => Some(0),
-                v => u8::try_from(v).ok(),
-            },
-            xyz: [
-                float(line, 0, 10)?,
-                float(line, 10, 20)?,
-                float(line, 20, 30)?,
-            ],
-        });
-        match int(line, 36, 39)? {
-            1 => legacy_charge[i] = 3,
-            2 => legacy_charge[i] = 2,
-            3 => legacy_charge[i] = 1,
-            4 => rad[i] = 1,
-            5 => legacy_charge[i] = -1,
-            6 => legacy_charge[i] = -2,
-            7 => legacy_charge[i] = -3,
-            _ => {}
-        }
+        let (atom, charge, unpaired) = atom_line(line)?;
+        atoms.push(atom);
+        legacy_charge[i] = charge;
+        rad[i] = unpaired;
     }
     let mut bonds = Vec::with_capacity(nb);
     for line in &lines[4 + na..4 + na + nb] {

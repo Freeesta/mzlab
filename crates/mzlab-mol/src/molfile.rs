@@ -34,6 +34,86 @@ impl Mol {
     }
 }
 
+impl Draft {
+    fn finish(mut self) -> Result<Mol, MolError> {
+        let n = self.atoms.len();
+        let ends: Vec<(usize, usize)> = self.bonds.iter().map(|b| (b.a, b.b)).collect();
+        let mut orders: Vec<u8> = self.bonds.iter().map(|b| b.order).collect();
+        let facts: Vec<Facts> = self
+            .atoms
+            .iter()
+            .map(|a| Facts {
+                el: &a.el,
+                chg: i32::from(a.chg),
+                h: 0,
+            })
+            .collect();
+        if !assign(&ends, &mut orders, &facts) {
+            return Err(fail("the aromatic system cannot be kekulised"));
+        }
+        for (b, &o) in self.bonds.iter_mut().zip(&orders) {
+            b.order = o;
+        }
+        let mut sum = vec![0u32; n];
+        for b in &self.bonds {
+            sum[b.a] += u32::from(b.order);
+            sum[b.b] += u32::from(b.order);
+        }
+        let atoms = self.final_atoms(&sum);
+        let mut bonds: Vec<Bond> = self
+            .bonds
+            .iter()
+            .map(|b| Bond {
+                a: b.a.min(b.b) as u32,
+                b: b.a.max(b.b) as u32,
+                o: b.order,
+            })
+            .collect();
+        bonds.sort_by_key(|b| (b.a, b.b));
+        let mut stereo = tetra(&self, &atoms);
+        stereo.extend(double_bonds(&self));
+        let groups = groups(&self, &stereo)?;
+        let mut m = Mol::new(atoms, bonds, stereo, groups);
+        m.coords = self.coords();
+        Ok(m)
+    }
+
+    fn final_atoms(&self, sum: &[u32]) -> Vec<Atom> {
+        self.atoms
+            .iter()
+            .enumerate()
+            .map(|(i, a)| {
+                let (h, rad) = hydrogens(a, sum[i]);
+                Atom {
+                    el: a.el.clone(),
+                    iso: a.iso,
+                    chg: a.chg,
+                    rad,
+                    h: h as u8,
+                }
+            })
+            .collect()
+    }
+
+    /// The coordinate layer, unless every atom sits at the origin (a file without coordinates).
+    fn coords(&self) -> Option<Coords> {
+        if self.atoms.iter().all(|a| a.xyz == [0.0; 3]) {
+            return None;
+        }
+        let flat = self.atoms.iter().all(|a| a.xyz[2] == 0.0);
+        let xy = self
+            .atoms
+            .iter()
+            .map(|a| a.xyz[..if flat { 2 } else { 3 }].to_vec())
+            .collect();
+        Some(Coords {
+            dim: if flat { 2 } else { 3 },
+            xy,
+            from: "molfile".into(),
+        })
+    }
+}
+
 /// A wedge or wavy mark on a bond, read from its first atom to its second.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Wedge {
@@ -69,83 +149,6 @@ pub(crate) struct Draft {
     pub atoms: Vec<DraftAtom>,
     pub bonds: Vec<DraftBond>,
     pub collections: Vec<(GroupKind, Vec<usize>)>,
-}
-
-impl Draft {
-    fn finish(mut self) -> Result<Mol, MolError> {
-        let n = self.atoms.len();
-        let ends: Vec<(usize, usize)> = self.bonds.iter().map(|b| (b.a, b.b)).collect();
-        let mut orders: Vec<u8> = self.bonds.iter().map(|b| b.order).collect();
-        let facts: Vec<Facts> = self
-            .atoms
-            .iter()
-            .map(|a| Facts {
-                el: &a.el,
-                chg: i32::from(a.chg),
-                h: 0,
-            })
-            .collect();
-        if !assign(&ends, &mut orders, &facts) {
-            return Err(fail("the aromatic system cannot be kekulised"));
-        }
-        for (b, &o) in self.bonds.iter_mut().zip(&orders) {
-            b.order = o;
-        }
-        let mut sum = vec![0u32; n];
-        for b in &self.bonds {
-            sum[b.a] += u32::from(b.order);
-            sum[b.b] += u32::from(b.order);
-        }
-        let atoms: Vec<Atom> = self
-            .atoms
-            .iter()
-            .enumerate()
-            .map(|(i, a)| {
-                let (h, rad) = hydrogens(a, sum[i]);
-                Atom {
-                    el: a.el.clone(),
-                    iso: a.iso,
-                    chg: a.chg,
-                    rad,
-                    h: h as u8,
-                }
-            })
-            .collect();
-        let mut bonds: Vec<Bond> = self
-            .bonds
-            .iter()
-            .map(|b| Bond {
-                a: b.a.min(b.b) as u32,
-                b: b.a.max(b.b) as u32,
-                o: b.order,
-            })
-            .collect();
-        bonds.sort_by_key(|b| (b.a, b.b));
-        let mut stereo = tetra(&self, &atoms);
-        stereo.extend(double_bonds(&self));
-        let groups = groups(&self, &stereo)?;
-        let mut m = Mol::new(atoms, bonds, stereo, groups);
-        m.coords = self.coords();
-        Ok(m)
-    }
-
-    /// The coordinate layer, unless every atom sits at the origin (a file without coordinates).
-    fn coords(&self) -> Option<Coords> {
-        if self.atoms.iter().all(|a| a.xyz == [0.0; 3]) {
-            return None;
-        }
-        let flat = self.atoms.iter().all(|a| a.xyz[2] == 0.0);
-        let xy = self
-            .atoms
-            .iter()
-            .map(|a| a.xyz[..if flat { 2 } else { 3 }].to_vec())
-            .collect();
-        Some(Coords {
-            dim: if flat { 2 } else { 3 },
-            xy,
-            from: "molfile".into(),
-        })
-    }
 }
 
 /// Hydrogens and unpaired electrons of an atom whose bonds add up to `sum`: a stated valence fixes the total (the rest is hydrogens,
