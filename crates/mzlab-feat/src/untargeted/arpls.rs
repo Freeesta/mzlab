@@ -3,7 +3,7 @@
 //! Rewritten from scratch after the algorithm of mzmine 4.10.90 `featdet_baselinecorrection/arpls/` (`ArplsBaseline.java`, `PentadiagonalSolver.java`,
 //! `ArplsBaselineCorrector.java`, with `AbstractResolverBaselineCorrector.java` and `BaselineDataBuffer.java` for the option «Exclude peaks»; MIT,
 //! (c) 2004-2022 The mzmine Development Team); no code copied. Paper: Baek S.-J. et al., Analyst 140:250 (2015), doi:10.1039/C4AN01061B.
-//! Used by the untargeted pipeline before the resolver; the independent reference is `tools/arpls_riferimento.py`.
+//! Used by the untargeted pipeline before the resolver when the recipe has a `"baseline"` object (off by default); the independent reference is `tools/arpls_riferimento.py`.
 //!
 //! The baseline `z` solves `(W + lambda D2'D2) z = W y` with the weights `W` of the previous round (logistic in the residuals below the baseline);
 //! the system is pentadiagonal and symmetric, so one LDL' factorisation per round is enough. [`correct`] returns `max(y - z, 0)`.
