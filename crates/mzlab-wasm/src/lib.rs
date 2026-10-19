@@ -611,6 +611,12 @@ pub fn formula_mz(formula: &str, adduct: &str) -> Result<String, JsValue> {
     mzlab_core::elements::formula_mz(formula, if adduct.is_empty() { None } else { Some(adduct) }).map_err(|e| error_json(&e))
 }
 
+/// `ricerca/1`: what a typed number is compatible with (neutral loss, adduct shift, contaminant); an error is JSON with a key.
+#[wasm_bindgen]
+pub fn ricerca_numero(req: &str) -> Result<String, JsValue> {
+    mzlab_core::ricerca::match_number(req).map_err(|e| error_json(&e))
+}
+
 /// `api/composition` from its query string (`?mz=...&elements=...`): the JSON of the formulas that fit, or empty when Python must answer.
 #[wasm_bindgen]
 pub fn composition(query: &str) -> String {
