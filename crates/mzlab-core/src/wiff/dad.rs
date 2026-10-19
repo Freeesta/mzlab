@@ -77,7 +77,6 @@ impl DadData {
     ) -> Option<Chromatogram> {
         dad_wl_chrom(self, nm, bandwidth_nm, index)
     }
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn to_map_json(&self) -> String {
         super::dad_map::dad_to_map_json(self)
     }
