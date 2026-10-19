@@ -89,23 +89,27 @@ fn need_gold(test: &str) -> Option<()> {
     None
 }
 
-/// The ranges of 4.10 are wider than ours on both sides (up to 0.07 min) and its areas larger (ours 70-100 %); none of ours is wider.
+/// KNOWN DIFFERENCE (the resolver of 4.10, `adjustStartAndEnd`): where a zero point sits next to an edge point 4.10 takes it in, so its range is one scan (0.01 min)
+/// wider on that side and its area larger (ours 96-100 %); none of ours is wider.
 fn check_ranges(wide: &[(f64, f64, f64)]) {
-    let normal = |w: &&(f64, f64, f64)| {
-        w.0 >= -1e-3 && w.0 <= 0.07 && w.1 >= -1e-3 && w.1 <= 0.07 && w.2 <= 1.0011 && w.2 >= 0.7
-    };
-    let ok = wide.iter().filter(normal).count();
+    let scan = |w: f64| w.abs() < 1e-3 || (w - 0.01).abs() < 1e-3;
+    let ok = wide
+        .iter()
+        .filter(|w| scan(w.0) && scan(w.1) && w.2 <= 1.0011 && w.2 >= 0.96)
+        .count();
+    let widened = wide.iter().filter(|w| w.0 > 5e-3 || w.1 > 5e-3).count();
     eprintln!(
-        "ranges: {ok}/{} within 0.07 min wider and 70-100 % of the area; others {:?}",
+        "ranges: {ok}/{} equal or one scan wider; {widened} wider; others {:?}",
         wide.len(),
-        wide.iter().filter(|w| !normal(w)).collect::<Vec<_>>()
-    );
-    assert!(
         wide.iter()
-            .all(|w| w.0 >= -1e-3 && w.1 >= -1e-3 && w.2 <= 1.0011),
-        "a feature of ours is wider than the one of 4.10: {wide:?}"
+            .filter(|w| !(scan(w.0) && scan(w.1)))
+            .collect::<Vec<_>>()
     );
-    assert!(ok as f64 >= 0.85 * wide.len() as f64, "{wide:?}");
+    assert_eq!(ok, wide.len(), "{wide:?}");
+    assert!(
+        widened >= wide.len() / 2,
+        "the difference of 4.10 is gone: {wide:?}"
+    );
 }
 
 /// Chromatograms with a different number of features in mzmine and in ours.

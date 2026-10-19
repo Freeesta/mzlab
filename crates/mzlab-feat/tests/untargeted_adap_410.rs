@@ -10,10 +10,7 @@ use mzlab_feat::untargeted::adap::{build, AdapParams};
 
 mod untargeted_common;
 
-use untargeted_common::{range_widening, rows, same_core, scans_of, shape, Row};
-
-// 1e-5 is the rounding of the 5 decimals of the CSV; one chromatogram (oro_3, 601.30339) differs by 1.1e-5 (0.02 ppm), a KNOWN DIFFERENCE with 4.10.
-const MZ_TOL: f64 = 2e-5;
+use untargeted_common::{rows, same, scans_of, shape, Row};
 
 const GOLD: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -59,7 +56,6 @@ fn parity_with_mzmine410() {
     let p = AdapParams::default();
     let rows = rows(Path::new(GOLD));
     let (mut total, mut equal, mut bad) = (0usize, 0usize, Vec::new());
-    let mut wide = Vec::new();
     for file in ["oro_1", "oro_2", "oro_3", "oro_4"] {
         let scans = scans_of(&dir.join(format!("{file}.mzML")), &p);
         let ours = build(&scans, &p);
@@ -71,11 +67,10 @@ fn parity_with_mzmine410() {
                 !used[*k] && (c.mz - r.mz).abs() < 5e-3 && (shape(c, &scans).0 - r.rt).abs() < 0.02
             });
             match cand {
-                Some((k, c)) => match same_core(r, c, &scans, MZ_TOL, 6e-4) {
+                Some((k, c)) => match same(r, c, &scans, 1e-5, 6e-4) {
                     Ok(()) => {
                         used[k] = true;
-                        equal += 1;
-                        wide.push(range_widening(r, c, &scans));
+                        equal += 1
                     }
                     Err(w) => bad.push(format!("{file} m/z {}: {w}", r.mz)),
                 },
@@ -92,22 +87,6 @@ fn parity_with_mzmine410() {
             ));
         }
     }
-    eprintln!("ADAP parity: {equal}/{total} same m/z, apex and height; different: {bad:#?}");
+    eprintln!("ADAP parity: {equal}/{total} identical; different: {bad:#?}");
     assert!(equal as f64 >= 0.99 * total as f64, "{bad:#?}");
-    // KNOWN DIFFERENCE 3.9.0 -> 4.10: the ranges of 4.10 are wider than ours on both sides, by 0.02-0.05 min for the large majority of the
-    // chromatograms (a few reach much further); none is narrower.
-    let near = |w: f64| (0.0..=0.06).contains(&(w + 1e-9));
-    let normal = wide.iter().filter(|w| near(w.0) && near(w.1)).count();
-    eprintln!(
-        "ADAP ranges: {normal}/{} within 0.06 min wider, outliers {:?}",
-        wide.len(),
-        wide.iter()
-            .filter(|w| !(near(w.0) && near(w.1)))
-            .collect::<Vec<_>>()
-    );
-    assert!(
-        wide.iter().all(|w| w.0 >= -1e-3 && w.1 >= -1e-3),
-        "a range of ours is wider than the one of 4.10: {wide:?}"
-    );
-    assert!(normal as f64 >= 0.9 * wide.len() as f64, "{wide:?}");
 }

@@ -156,7 +156,7 @@ fn pipeline_matches_the_final_list_of_mzmine() {
         "{agree}/{gold_cells}"
     );
     assert_eq!(spurious, 0);
-    // KNOWN DIFFERENCE 3.9.0 -> 4.10: the areas of 4.10 are larger than ours (wider RT ranges of the features); the heights agree
+    // KNOWN DIFFERENCE (the resolver of 4.10 takes in a zero point next to an edge, `adjustStartAndEnd`): the areas of 4.10 are a little larger than ours; the heights agree
     ratios.sort_by(f64::total_cmp);
     eprintln!(
         "area of ours / area of 4.10: min {:.3} median {:.3} max {:.3}",
@@ -165,7 +165,7 @@ fn pipeline_matches_the_final_list_of_mzmine() {
         ratios[ratios.len() - 1]
     );
     assert!(
-        ratios.iter().all(|r| *r <= 1.0011 && *r >= 0.7),
+        ratios.iter().all(|r| *r <= 1.0011 && *r >= 0.96),
         "{ratios:?}"
     );
 }
