@@ -1,0 +1,35 @@
+# Manual run: writes the gold data of mzmine 4.10 (tools/bench/oro_mzmine410.py) and uploads them as an artifact (no commit).
+# mzmine 4 refuses every batch without a logged-in user: the secret MZMINE_USER_FILE holds the .mzuser file as base64 on one line.
+name: oro-mzmine410
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  oro:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m pip install numpy
+      - name: mzmine 4.10 batch
+        env:
+          MZMINE_USER_B64: ${{ secrets.MZMINE_USER_FILE }}
+        run: |
+          echo "::add-mask::$MZMINE_USER_B64"
+          umask 077
+          user_file="$(mktemp)"
+          trap 'rm -f "$user_file"' EXIT
+          printf '%s' "$MZMINE_USER_B64" | base64 -d > "$user_file"
+          MZMINE_USER_FILE="$user_file" python3 tools/bench/oro_mzmine410.py --oro "$RUNNER_TEMP/mzmine410"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mzmine410
+          path: ${{ runner.temp }}/mzmine410
+          retention-days: 7

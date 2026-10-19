@@ -127,7 +127,7 @@ Impossibili oggi senza SDK del produttore: SCIEX `.wiff2` (cifrato), Bruker BAF,
 - Costo: qualche KB nel motore per il lettore esterno, il download del modulo `thermo` al primo `.raw`, una copia degli array di ogni scansione tra le due istanze. Raccomandazione: farlo (il formato del laboratorio è il `.wiff` del 3200, che resta nel motore). Lo stesso lettore esterno può servire più avanti le altre famiglie senza mzML intermedio.
 
 ### Pacchetti
-I prompt pronti e autosufficienti per le chat DEV sono in `docs/studi/PROMPT_FORMATI/` (`DEV-00.md` … `DEV-11.md`, indice in `LEGGIMI.md`): ognuno dice i file e i punti di codice da toccare, le prove, i metodi e i metadati da leggere e i file reali. Ordine e dipendenze:
+Pacchetti per le chat DEV, con i file reali di prova. Ordine e dipendenze:
 
 | # | Pacchetto | Modulo | Dipende da | File reali da chiedere a Federico (ognuno con il suo mzML di msconvert, 64 bit, zlib, senza peak picking) |
 |---|---|---|---|---|

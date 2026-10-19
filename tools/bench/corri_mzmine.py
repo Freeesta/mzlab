@@ -68,7 +68,8 @@ def parametri_non_letti(xml: Path | str, mzmine: Path | str) -> list[str]:
     One line `<module>: <name>` per unknown name; an empty list = every name exists."""
     import zipfile
     from xml.etree import ElementTree as ET
-    jar = zipfile.ZipFile(next((Path(mzmine) / "lib").glob("work-*.jar")))
+    lib = Path(mzmine) / "lib"
+    jar = zipfile.ZipFile(next(iter(lib.glob("work-*.jar")), None) or next((lib / "app").glob("mzmine-community-*.jar")))      # 3.9: work-*.jar; 4.x: app/mzmine-community-*.jar
     classi = [n for n in jar.namelist() if n.endswith("Parameters.class")]
     comuni = b"".join(jar.read(n) for n in jar.namelist() if n.startswith("io/github/mzmine/parameters/") and n.endswith(".class"))      # names of the shared parameter types
     out = []

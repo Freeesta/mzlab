@@ -460,6 +460,9 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
 
     // the spans of the spectra
     let offs = src.offsets()?;
+    if let Some(o) = &offs {
+        rows.reserve(o.len());
+    }
     // each header becomes its row as soon as it is read: keeping the headers of every spectrum (about 1.5 KB each) would hold hundreds of MB
     let mut last_end = 0u64;
     fn push(rows: &mut Rows, a: u64, b: u64, h: &[u8]) {
