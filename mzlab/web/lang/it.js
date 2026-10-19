@@ -2785,6 +2785,8 @@ I18N.add("it", {
   "a11y.empty": "Grafico senza dati da mostrare.",
   "a11y.line": "{title}. Cromatogramma: {n} tracce; asse x tempo di ritenzione (min) da {a} a {b}; asse y intensità fino a {y}; {p} picchi integrati. T apre la tabella dei dati, D rilegge questa descrizione, + e − ingrandiscono, [ e ] spostano il tratto visibile, 0 mostra tutto.",
   "a11y.spec": "{title}. Spettro di massa: asse x m/z da {a} a {b}; asse y intensità; {n} picchi oltre la soglia. T apre la tabella dei dati, D rilegge questa descrizione, + e − ingrandiscono, [ e ] spostano il tratto visibile, 0 mostra tutto.",
+  "a11y.mapPda": "{title}. Mappa tempo di ritenzione per lunghezza d'onda del PDA: RT da {a} a {b} min, da {c} a {d} nm. T apre la tabella delle celle più intense, D rilegge questa descrizione.",
+  "tdati.col.mau": "Assorbanza (mAU)",
   "a11y.map": "{title}. Mappa tempo di ritenzione per m/z: RT da {a} a {b} min, m/z da {c} a {d}. T apre la tabella delle celle più intense, D rilegge questa descrizione.",
   "tdati.btn": "Dati",
   "tdati.series": "Serie {n}",

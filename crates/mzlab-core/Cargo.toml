@@ -7,10 +7,12 @@ license.workspace = true
 
 [features]
 # the Thermo `.raw` reader (`raw`, `rawlettore`, `rawfilter`, `metodo_raw`, the `opentfraw` dependency): the engine (mzlab-wasm) leaves it off and reaches it through the `thermo` readers module
-default = ["thermo"]
+default = ["thermo", "mappa-dad"]
 thermo = ["dep:opentfraw"]
 # variants of the readers served only by the readers module (crates/mzlab-lettori), never by the engine (mzlab-wasm leaves it off)
 estesi = []
+# the 2D map of the optical detector of a `.wiff` (`wiff/dad_map.rs`, `dad_map` of the `Lettore` trait): the engine and the desktop app serve it, the readers module (`sciex`, under a size limit) only converts and leaves it off
+mappa-dad = []
 # what only the SCIEX readers module needs beyond `estesi` and the other families must not carry (their .wasm is under a size limit): the `variante` method of the `Lettore` trait and the `cv:` parameters of the mzML writer
 sciex = ["estesi"]
 

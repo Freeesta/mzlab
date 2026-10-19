@@ -45,7 +45,7 @@ function mapData(p) {
     if (v != null && v > 0) cells.push([rt, mz, v]);
   }
   cells.sort((u, v) => v[2] - u[2]).splice(100);
-  return { title: ptitle(p), head: [T("tdati.col.rt"), "m/z", T("tdati.col.int")], rows: cells.map(c => [nm(c[0], 3), nm(c[1], 2), nm(c[2], 1)]), note: T("tdati.note.map", { n: cells.length }) };
+  return { title: ptitle(p), head: [T("tdati.col.rt"), a.pda ? "nm" : "m/z", a.pda ? T("tdati.col.mau") : T("tdati.col.int")], rows: cells.map(c => [nm(c[0], 3), nm(c[1], a.pda ? 0 : 2), nm(c[2], 1)]), note: T("tdati.note.map", { n: cells.length }) };
 }
 const data = p => (p.type === "spec" ? specData(p) : p.type === "map" ? mapData(p) : lineData(p));
 
@@ -55,7 +55,7 @@ function text(p) {
     const n = a.data ? a.data[0].d.mz.filter((m, i) => m >= a.x0 && m <= a.x1 && a.data[0].d.y[i] >= (p.thr ?? 5) / 100 * Math.max(...a.data[0].d.y, 1e-9)).length : 0;
     return T("a11y.spec", { title: ptitle(p), a: nm(a.x0, 2), b: nm(a.x1, 2), n });
   }
-  if (p.type === "map") return T("a11y.map", { title: ptitle(p), a: nm(a.x0, 2), b: nm(a.x1, 2), c: nm(a.y0, 1), d: nm(a.y1, 1) });
+  if (p.type === "map") return T(a.pda ? "a11y.mapPda" : "a11y.map", { title: ptitle(p), a: nm(a.x0, 2), b: nm(a.x1, 2), c: nm(a.y0, 1), d: nm(a.y1, 1) });
   return T("a11y.line", { title: ptitle(p), n: (a.sr || []).length, a: nm(a.x0, 2), b: nm(a.x1, 2), y: nm(a.ymax, 0), p: (p.ints || []).length });
 }
 function update(p) {
