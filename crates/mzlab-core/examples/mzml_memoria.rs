@@ -40,7 +40,11 @@ fn picco() -> f64 {
 /// Peak resident set of the process so far, in MB (`VmHWM`).
 fn rss_max() -> f64 {
     let s = std::fs::read_to_string("/proc/self/status").unwrap_or_default();
-    let kb = s.lines().find(|l| l.starts_with("VmHWM:")).and_then(|l| l.split_whitespace().nth(1)).and_then(|v| v.parse::<f64>().ok());
+    let kb = s
+        .lines()
+        .find(|l| l.starts_with("VmHWM:"))
+        .and_then(|l| l.split_whitespace().nth(1))
+        .and_then(|v| v.parse::<f64>().ok());
     kb.unwrap_or(0.0) / 1024.0
 }
 
@@ -48,7 +52,9 @@ fn rss_max() -> f64 {
 struct ASuFile(File);
 impl mzidx::Output for ASuFile {
     fn write_at(&mut self, o: u64, d: &[u8]) -> mzlab_core::Result<()> {
-        self.0.write_all_at(d, o).map_err(|_| mzlab_core::Error::new("err.file.index"))
+        self.0
+            .write_all_at(d, o)
+            .map_err(|_| mzlab_core::Error::new("err.file.index"))
     }
 }
 
@@ -62,7 +68,9 @@ impl mzidx::Output for Nulla {
 
 fn main() {
     let a: Vec<String> = std::env::args().skip(1).collect();
-    let path = a.first().expect("usage: mzml_memoria FILE.mzML [BUDGET_MB]");
+    let path = a
+        .first()
+        .expect("usage: mzml_memoria FILE.mzML [BUDGET_MB]");
     let budget: usize = a.get(1).and_then(|s| s.parse().ok()).unwrap_or(192);
     let size = std::fs::metadata(path).expect("file").len();
     println!("file {:.2} GB, budget {budget} MB", size as f64 / 1e9);
@@ -71,9 +79,26 @@ fn main() {
     let rows = p.table.level.len();
     println!("prepare   heap peak {:>7.1} MB, rss peak {:>7.1} MB | {rows} scans, rows JSON {:.1} MB ({:.0} B per scan)", picco(), rss_max(), p.table.scans_json.len() as f64 / 1048576.0, p.table.scans_json.len() as f64 / rows.max(1) as f64);
     let (idx, spool) = (format!("{path}.mzidx"), format!("{path}.spool"));
-    let mut sp = OpenOptions::new().read(true).write(true).create(true).truncate(true).open(&spool).expect("spool");
-    let mut out: Box<dyn mzidx::Output> = if std::env::var("MZ_NULL").is_ok() { Box::new(Nulla) } else { Box::new(ASuFile(File::create(&idx).expect("idx"))) };
-    let st = mzidx::build_mzml_spill(&p.table, BufReader::new(File::open(path).expect("open")), &mut *out, budget << 20, Some(&mut sp as &mut dyn mzlab_core::mzidx_spill::Spill)).expect("index");
+    let mut sp = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&spool)
+        .expect("spool");
+    let mut out: Box<dyn mzidx::Output> = if std::env::var("MZ_NULL").is_ok() {
+        Box::new(Nulla)
+    } else {
+        Box::new(ASuFile(File::create(&idx).expect("idx")))
+    };
+    let st = mzidx::build_mzml_spill(
+        &p.table,
+        BufReader::new(File::open(path).expect("open")),
+        &mut *out,
+        budget << 20,
+        Some(&mut sp as &mut dyn mzlab_core::mzidx_spill::Spill),
+    )
+    .expect("index");
     let sp_mb = std::fs::metadata(&spool).map(|m| m.len()).unwrap_or(0) as f64 / 1048576.0;
     println!("mzidx     heap peak {:>7.1} MB, rss peak {:>7.1} MB | {} passes, mzidx {:.1} MB, scratch file {:.1} MB", picco(), rss_max(), st.passes, st.bytes as f64 / 1048576.0, sp_mb);
     let _ = (std::fs::remove_file(&idx), std::fs::remove_file(&spool));
