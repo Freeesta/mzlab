@@ -1,0 +1,4 @@
+cas;kind;taxon;species;endpoint;duration_h;op;value_mg_L;n_results;n_refs;media;measurement;result_ids;reference
+111-11-1;acute;fish;Danio rerio;LC50;96.0;=;0.85;3;2;FW;MORT;1,2,3;Ref A
+111-11-1;chronic;algae;Raphidocelis subcapitata;EC10;72.0;>;12.5;1;1;FW;PGRT;4;Ref B
+333-33-3;acute;crustacean;Daphnia magna;EC50;48.0;=;n/a;1;1;FW;IMBL;5;Ref C

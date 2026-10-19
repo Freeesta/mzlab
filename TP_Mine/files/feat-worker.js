@@ -112,6 +112,12 @@ function createCore(opts) {
   return { st, slots, queue, spawn, call, submit, kill, copy, rest, classesText };
 }
 
+// Runs a .wasm export that reads the job's files through `read(k, off, len)` and writes into memory; resolves with { bytes }.
+function viaFiles(m, run) {
+  const out = memSink(), rd = new FileReaderSync();
+  run((k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len))), out.write);
+  return { bytes: out.bytes() };
+}
 // The exports of a campaign folder (admin mode): `kind` = schymanski | publication | quantify | gradient (`.wasm` `attributio_export`) or evidence (`.wasm` `attributio_rev`, it needs the review);
 // `extra` = { matrix?, generated? }. Resolves with { files: [{ name, text } | { name, rows: { hojas } }], warnings }.
 function exportOps(submit, call) {
@@ -173,11 +179,12 @@ function proofOps(submit, call, copy, opts) {
         return { state: h.state, tried: h.tried, found: h.found, registry: h.registry, ms: Math.round(performance.now() - t0) };
       });
     },
-    evidence({ table, state, minutes, parentMz, parentRt, recipe }) {
+    // `stored` and `paths` (the .mzfeatf and the .mzidx of the series) let the proofs measure the rows in the files; without them the proofs are the ones of the table alone.
+    evidence({ table, state, minutes, parentMz, parentRt, recipe, stored, paths }) {
       return submit(async (slot, load) => {
         await load("proofs");
         const t0 = performance.now();
-        const e = await call(slot, { op: "evidence", table: table.slice(), state: state.slice(), minutes, parentMz, parentRt, recipe, budgetMb: opts.budgetMb || 0 });
+        const e = await call(slot, { op: "evidence", table: table.slice(), state: state.slice(), minutes, parentMz, parentRt, recipe, budgetMb: opts.budgetMb || 0, ...(stored && paths ? { files: copy(stored), paths } : {}) });
         slot.recycle = true;
         if (opts.onProgress) opts.onProgress({ phase: "proofs", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: e.mem / 1048576 });
         return { table: e.bytes };
@@ -299,7 +306,7 @@ export function createFeatPool(opts) {
     // both phases in a row (hypotheses worker, then proofs worker). Resolves with { table, tried, found, registry, msHypotheses }.
     async proofs({ table, stored, paths, rules, parent, parentRt, minutes, parentMz, recipe }) {
       const h = await this.hypotheses({ stored, paths, rules, parent, parentRt, recipe });
-      const e = await this.evidence({ table, state: h.state, minutes, parentMz, parentRt, recipe });
+      const e = await this.evidence({ table, state: h.state, minutes, parentMz, parentRt, recipe, stored, paths });
       return { table: e.table, tried: h.tried, found: h.found, registry: h.registry, msHypotheses: h.ms };
     },
     // the archive worker (the only one that writes OPFS): path = "mzlab/feat/<name>"
@@ -434,8 +441,10 @@ const OPS = {
     if (!m.state) throw Object.assign(new Error("error.featNoHypotheses"), { key: "error.featNoHypotheses" });
     if (hypo) hypo.free();
     hypo = mods.proofs.load_hypotheses(new Uint8Array(m.state));
-    const nan = v => (v == null ? NaN : v), table = new Uint8Array(m.table), out = memSink();
-    mods.proofs.build_evidence_to((_, off, len) => table.subarray(off, off + len), table.length, hypo, Float64Array.from(m.minutes, nan), nan(m.parentMz), nan(m.parentRt), m.recipe, out.write, m.budgetMb || 0, m.campioni || undefined);
+    const nan = v => (v == null ? NaN : v), table = new Uint8Array(m.table), out = memSink(), f = m.files && m.paths ? await openAll(m.paths) : null;
+    try {
+      mods.proofs.build_evidence_to((_, off, len) => table.subarray(off, off + len), table.length, hypo, Float64Array.from(m.minutes, nan), nan(m.parentMz), nan(m.parentRt), m.recipe, out.write, m.budgetMb || 0, m.campioni || undefined, f ? arrays(m.files) : undefined, f ? f.read : undefined, f ? f.sizes : undefined);
+    } finally { if (f) f.close(); }
     return { bytes: out.bytes() };
   },
   async ms2file(m) {
@@ -465,18 +474,8 @@ function describe(e) {
 }
 // the Banco 2b (`.wasm` `attributio_rev`): the review of one feature, and the decisions file after a decision
 Object.assign(OPS, {
-  async attributio_review(m) {
-    const out = memSink(), rd = new FileReaderSync();
-    const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
-    mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, m.classes || "", out.write);
-    return { bytes: out.bytes() };
-  },
-  async attributio_export(m) {
-    const out = memSink(), rd = new FileReaderSync();
-    const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
-    mods[m.which].export_to(read, m.names, m.kind, out.write);
-    return { bytes: out.bytes() };
-  },
+  attributio_review: m => viaFiles(m, (read, write) => mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, m.classes || "", write)),
+  attributio_export: m => viaFiles(m, (read, write) => mods[m.which].export_to(read, m.names, m.kind, write)),
   async attributio_decision(m) {
     const out = memSink(), rd = new FileReaderSync();
     const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
