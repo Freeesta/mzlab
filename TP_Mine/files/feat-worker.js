@@ -112,6 +112,12 @@ function createCore(opts) {
   return { st, slots, queue, spawn, call, submit, kill, copy, rest, classesText };
 }
 
+// Runs a .wasm export that reads the job's files through `read(k, off, len)` and writes into memory; resolves with { bytes }.
+function viaFiles(m, run) {
+  const out = memSink(), rd = new FileReaderSync();
+  run((k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len))), out.write);
+  return { bytes: out.bytes() };
+}
 // The exports of a campaign folder (admin mode): `kind` = schymanski | publication | quantify | gradient (`.wasm` `attributio_export`) or evidence (`.wasm` `attributio_rev`, it needs the review);
 // `extra` = { matrix?, generated? }. Resolves with { files: [{ name, text } | { name, rows: { hojas } }], warnings }.
 function exportOps(submit, call) {
@@ -466,18 +472,8 @@ function describe(e) {
 }
 // the Banco 2b (`.wasm` `attributio_rev`): the review of one feature, and the decisions file after a decision
 Object.assign(OPS, {
-  async attributio_review(m) {
-    const out = memSink(), rd = new FileReaderSync();
-    const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
-    mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, m.classes || "", out.write);
-    return { bytes: out.bytes() };
-  },
-  async attributio_export(m) {
-    const out = memSink(), rd = new FileReaderSync();
-    const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
-    mods[m.which].export_to(read, m.names, m.kind, out.write);
-    return { bytes: out.bytes() };
-  },
+  attributio_review: m => viaFiles(m, (read, write) => mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, write)),
+  attributio_export: m => viaFiles(m, (read, write) => mods[m.which].export_to(read, m.names, m.kind, write)),
   async attributio_decision(m) {
     const out = memSink(), rd = new FileReaderSync();
     const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
