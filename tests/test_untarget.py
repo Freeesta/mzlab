@@ -168,7 +168,7 @@ def _campaign():
     return p if p and (p / "livelli_attesi.csv").is_file() else None
 
 
-@pytest.mark.skipif(_campaign() is None, reason="MZLAB_DATI with scratchpad/da_copiare/attributio_synthetic_campaign not available")
+@pytest.mark.skipif(_campaign() is None, reason="MZLAB_DATI with coordinamento/da_copiare/attributio_synthetic_campaign not available")
 def test_parity_with_the_synthetic_campaign_for_features_decided_by_mzmine_and_gnps2():
     c = _campaign()
     gold = {(r["_pol"], r["_id"]): r for r in csv.DictReader((c / "livelli_attesi.csv").open(encoding="utf-8"), delimiter=";")}

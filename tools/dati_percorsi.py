@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 NAMES = ("mzlab-dati", "QqQ-lab-dati")
 # A folder is the data repository when it has the new index or one of the legacy top folders.
-MARKERS = ("dati/INDICE.md", "mzML", "dati_formati", "3200 qtrap", "HRMS", "scratchpad")
+MARKERS = ("dati/INDICE.md", "nomi_vietati.txt", "mzML", "dati_formati", "3200 qtrap", "HRMS", "scratchpad")
 
 
 def _mappa() -> list[tuple[str, str]]:

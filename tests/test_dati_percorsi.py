@@ -54,3 +54,18 @@ def test_table_is_well_formed():
     righe = [r.split("\t") for r in (ROOT / "tools/dati_mappa.tsv").read_text(encoding="utf-8").splitlines() if r and not r.startswith("#")]
     assert righe and all(len(r) == 2 for r in righe)
     assert len({r[0] for r in righe}) == len(righe)
+
+
+def test_only_the_resolver_reads_the_data_env_and_legacy_names():
+    """One point knows the layout: nothing else reads MZLAB_DATI/QQQ_DATI or spells the legacy folders."""
+    import re
+    cattivi = re.compile(r"environ[^\n]*(MZLAB|QQQ)_DATI|var(_os)?\(\"(MZLAB|QQQ)_DATI|get_env\(\"DATI|dati_formati|3200 qtrap/wiff inquinanti")
+    ok = {"dati_percorsi.py", "dati_percorsi.rs", "dati_mappa.tsv", "test_dati_percorsi.py"}
+    trovati = []
+    for sub in ("tools", "tests", "tests_e2e", "crates"):
+        for p in (ROOT / sub).rglob("*"):
+            if p.suffix not in {".py", ".rs"} or p.name in ok or "target" in p.parts or "golden" in p.parts:
+                continue
+            if cattivi.search(p.read_text(encoding="utf-8", errors="ignore")):
+                trovati.append(str(p.relative_to(ROOT)))
+    assert not trovati, trovati

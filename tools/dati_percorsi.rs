@@ -6,8 +6,9 @@ use std::path::{Path, PathBuf};
 
 const MAPPA: &str = include_str!("dati_mappa.tsv");
 // A folder is the data repository when it has the new index or one of the legacy top folders.
-const MARKERS: [&str; 6] = [
+const MARKERS: [&str; 7] = [
     "dati/INDICE.md",
+    "nomi_vietati.txt",
     "mzML",
     "dati_formati",
     "3200 qtrap",

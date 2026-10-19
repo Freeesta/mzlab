@@ -128,8 +128,7 @@ fn the_chromatograms_match_the_msconvert_mzml_when_there_is_one() {
             .to_string();
         let mzml_path = [
             raw.with_extension("mzML"),
-            d.join("aperti/mzml_msconvert")
-                .join(format!("{name}.mzML")),
+            d.join("aperti/mzml_msconvert").join(format!("{name}.mzML")),
         ]
         .into_iter()
         .find(|p| p.is_file());
