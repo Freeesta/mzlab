@@ -172,6 +172,16 @@ fn experimental_sites_ranking_ph7() {
     );
 }
 
+/// The same measure with Hirshfeld populations instead of Mulliken charges (task C36): locked in `baseline_hirshfeld`.
+#[test]
+fn experimental_sites_ranking_hirshfeld() {
+    assert_eq!(
+        measure("{\"protomer\":\"none\",\"charges\":\"hirshfeld\"}"),
+        data()["baseline_hirshfeld"],
+        "the counts with Hirshfeld populations differ from baseline_hirshfeld in validazione.json"
+    );
+}
+
 #[test]
 fn dataset_is_well_formed() {
     let d = data();

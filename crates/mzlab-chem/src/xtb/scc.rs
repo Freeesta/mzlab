@@ -153,6 +153,8 @@ impl System {
             energy: self.energy(&p, &out, ts),
             x: out,
             emo,
+            p,
+            c,
         }
     }
 
@@ -215,6 +217,8 @@ impl System {
             converged,
             iterations,
             guess: Guess { x: s.x },
+            p: s.p,
+            c: s.c,
         }
     }
 }
@@ -224,6 +228,8 @@ struct Step {
     x: Vec<f64>,
     energy: f64,
     emo: Vec<f64>,
+    p: DMatrix<f64>,
+    c: DMatrix<f64>,
 }
 
 /// Fermi occupations (0..1) of `n` electrons in one spin channel and the entropy term (Hartree).

@@ -1032,5 +1032,63 @@
    "n_atom": 5,
    "n_ch": 2
   }
+ },
+ "baseline_hirshfeld": {
+  "O3/literatura": {
+   "atom": [
+    0,
+    0,
+    0
+   ],
+   "ch": [
+    1,
+    1,
+    1
+   ],
+   "n_atom": 4,
+   "n_ch": 1
+  },
+  "OH/bozza": {
+   "atom": [
+    2,
+    8,
+    8
+   ],
+   "ch": [
+    9,
+    9,
+    9
+   ],
+   "n_atom": 9,
+   "n_ch": 9
+  },
+  "OH/literatura": {
+   "atom": [
+    0,
+    6,
+    14
+   ],
+   "ch": [
+    8,
+    17,
+    18
+   ],
+   "n_atom": 39,
+   "n_ch": 20
+  },
+  "metabolism/literatura": {
+   "atom": [
+    0,
+    1,
+    2
+   ],
+   "ch": [
+    1,
+    2,
+    2
+   ],
+   "n_atom": 5,
+   "n_ch": 2
+  }
  }
 }

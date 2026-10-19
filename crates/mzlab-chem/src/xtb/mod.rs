@@ -6,6 +6,7 @@
 mod aes;
 pub mod alpb;
 mod basis;
+mod hirshfeld;
 mod sasa;
 mod scc;
 mod water;
@@ -18,9 +19,16 @@ use sci_form::xtb::gfn2_params;
 pub use basis::{ANGSTROM_TO_BOHR, EV_PER_HARTREE};
 pub use scc::MAX_ITER;
 
+/// Valence electrons of the neutral atom of atomic number `z`.
+pub fn valence(z: u8) -> f64 {
+    basis::par(z).ref_occ.iter().sum()
+}
+
 /// Geometry-dependent part of a GFN2-xTB calculation.
 pub struct System {
     el: Vec<u8>,
+    /// Positions in bohr.
+    pos: Vec<[f64; 3]>,
     basis: basis::Basis,
     ints: basis::Ints,
     h0: DMatrix<f64>,
@@ -36,19 +44,6 @@ pub struct System {
 #[derive(Clone)]
 pub struct Guess {
     x: Vec<f64>,
-}
-
-/// Result of one SCC.
-pub struct Scf {
-    /// Mulliken atomic charges.
-    pub q: Vec<f64>,
-    /// Orbital energies (eV), ascending.
-    pub emo_ev: Vec<f64>,
-    /// Electronic energy (Hartree): band, second and third order, multipoles, self-consistent D4, solvation, entropy.
-    pub energy: f64,
-    pub converged: bool,
-    pub iterations: usize,
-    pub guess: Guess,
 }
 
 impl System {
@@ -76,6 +71,7 @@ impl System {
             d4: D4Model::new(el, &pos),
             solv: solvent.map(|s| alpb::matrix(el, &pos, s)),
             el: el.to_vec(),
+            pos,
             basis: b,
             ints,
             h0,
@@ -98,6 +94,38 @@ impl System {
         let x0 = guess.map_or_else(|| vec![0.0; len], |g| g.x.clone());
         Ok(self.scc(nel as usize, x0))
     }
+}
+
+impl System {
+    /// Share of the HOMO and of the LUMO on each atom (Mulliken partition of |ψ|², each list sums to 1) for `nel` electrons.
+    pub fn frontier_shares(&self, scf: &Scf, nel: usize) -> (Vec<f64>, Vec<f64>) {
+        let sc = &self.ints.s * &scf.c;
+        let share = |k: usize| {
+            let mut v = vec![0.0; self.el.len()];
+            for (m, ao) in self.basis.ao.iter().enumerate() {
+                v[ao.0] += scf.c[(m, k)] * sc[(m, k)];
+            }
+            v
+        };
+        let h = (nel / 2).max(1) - 1;
+        (share(h), share((nel / 2).min(scf.emo_ev.len() - 1)))
+    }
+}
+
+/// Result of one SCC.
+pub struct Scf {
+    /// Mulliken atomic charges.
+    pub q: Vec<f64>,
+    /// Orbital energies (eV), ascending.
+    pub emo_ev: Vec<f64>,
+    /// Electronic energy (Hartree): band, second and third order, multipoles, self-consistent D4, solvation, entropy.
+    pub energy: f64,
+    pub converged: bool,
+    pub iterations: usize,
+    pub guess: Guess,
+    /// Density matrix (atomic-orbital basis) and molecular-orbital coefficients (columns, ascending energy).
+    pub p: DMatrix<f64>,
+    pub c: DMatrix<f64>,
 }
 
 impl Scf {
