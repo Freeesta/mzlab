@@ -40,7 +40,6 @@ declare var LIVELLI: any;
 declare var LIVELLI_DATI: any;
 declare var LOSSES: any;
 declare var LOSS_RAD: any;
-declare var LOSS_REFS: any;
 declare var MAPEX: any;
 declare var MAPPA: any;
 declare var MAPPA_PNL: any;
