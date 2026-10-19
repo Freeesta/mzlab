@@ -131,7 +131,7 @@
     const m = massOf(l.f);
     // unit resolution: no exact mass (it would need mass accuracy); HR adds it with four decimals
     const det = hrOn() ? I18N.t("tbl.loss.detail", { m: m.toFixed(4), mech: H(I18N.t(l.mech)) }) : I18N.t("tbl.loss.detailLr", { mech: H(I18N.t(l.mech)) });
-    return `<div class="nld-it" data-f="${l.f}"><div class="nld-name"><b>${fl(l.f)}</b> ${H(I18N.t(l.name))}</div><div>${H(I18N.t(l.seen))}</div>${l.rad ? `<div class="nlrad-t">• ${H(I18N.t(LOSS_RAD))}</div>` : ""}<div>${det}</div></div>`;
+    return `<div class="nld-it" data-l="${l.f}"><div class="nld-name"><b>${fl(l.f)}</b> ${H(I18N.t(l.name))}</div><div>${H(I18N.t(l.seen))}</div>${l.rad ? `<div class="nlrad-t">• ${H(I18N.t(LOSS_RAD))}</div>` : ""}<div>${det}</div></div>`;
   };
   // one line: id keys the open state, ls = the losses (one, or several with the same nominal mass)
   const lossRow = (ls, o) => {

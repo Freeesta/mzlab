@@ -26,11 +26,11 @@ try:
         step("4.1/4.6: compact one-line rows, sorted by Δm, polarity of the files", simple)
         def details():
             b = pg.locator('#nl-list [data-d="H2O"]'); assert b.get_attribute("aria-expanded") == "false"
-            b.click(); pg.wait_for_timeout(200); assert b.get_attribute("aria-expanded") == "true"
+            b.click(); assert b.get_attribute("aria-expanded") == "true"
             t = pg.inner_text('#nl-list [data-f="H2O"] .nldet'); print(t[:120]); assert "18.0106" not in t and "meccanismo" in t and "acqua" in t and "Levsen" not in t and "Fonti" not in t, t   # unit resolution: no exact mass, no references
-            b.focus(); pg.keyboard.press("Enter"); pg.wait_for_timeout(100)
+            b.focus(); pg.keyboard.press("Enter")
             assert b.get_attribute("aria-expanded") == "false" and pg.locator('#nl-list [data-f="H2O"] .nldet:visible').count() == 0
-            pg.keyboard.press("Space"); pg.wait_for_timeout(100); assert b.get_attribute("aria-expanded") == "true"
+            pg.keyboard.press("Space"); assert b.get_attribute("aria-expanded") == "true"
             pg.keyboard.press("Space")
         step("4.2: the row is the button: click and keyboard open exact mass, mechanism, source, name", details)
         def groups():
@@ -73,7 +73,7 @@ try:
             assert pg.locator("#nl-list .nlpp").count() == 0, "polarity column removed"
             # Turn on both + and -
             pg.click("#nl-pol [data-p='-']"); pg.wait_for_timeout(200)
-            row = pg.locator('#nl-list [data-f="Cl"]'); assert row.count() == 1
+            row = pg.locator('#nl-list [data-f="Cl"]'); assert row.count() == 1, (row.count(), pg.evaluate("[...document.querySelectorAll('#nl-list .nlr')].map(r=>r.dataset.f)"), pg.is_visible("#sb-panel-losses"))
             assert row.locator(".nlm").inner_text() == "35" and "•Cl" in row.inner_text() and "cloro aromatico" in row.inner_text()
             pg.locator('#nl-list [data-d="Cl"]').click(); d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" not in d and "HCl (36)" in d and "37Cl" in d and "radicale" in d, d
             # the «?» is replaced by one short hint line
@@ -82,11 +82,11 @@ try:
         step("A2: compact view, ESI+/ESI- toggles, •Cl, hint line instead of «?»", a2)
         def hr_version():
             # an HR file is loaded: exact mass with four decimals in the details and in the combinations
-            pg.evaluate("window.HR.isHr=()=>true"); pg.fill("#nl-q", "62"); pg.wait_for_timeout(300)
+            pg.evaluate("window.HR.isHr=()=>true"); pg.fill("#nl-q", "62")
             pg.locator('#nl-list [data-d="Cl"]').click() if pg.locator('#nl-list [data-f="Cl"] .nldet:visible').count() == 0 else None
             d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" in d and "Levsen" not in d, d
             assert "(" in pg.inner_text("#nl-res") and "." in pg.inner_text("#nl-res"), "decimals in HR"
-            pg.evaluate("window.HR.isHr=()=>false"); pg.fill("#nl-q", "62"); pg.wait_for_timeout(300)
+            pg.evaluate("window.HR.isHr=()=>false"); pg.fill("#nl-q", "62")
             import re; assert not re.search(r"\d\.\d", pg.inner_text("#nl-res")), pg.inner_text("#nl-res")      # LR: rounded to the unit
             pg.fill("#nl-q", "")
         step("LR rounded to the unit / HR with four decimals, no references in both", hr_version)
@@ -97,11 +97,11 @@ try:
             RUN = """() => axe.run(document.querySelector('#sb-panel-losses'), {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.map(v => [v.id, v.impact, v.nodes.length]))"""
             v = pg.evaluate(RUN); assert not v, v
             for w, h in [(1440, 900), (400, 800)]:
-                pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(300)
-                if not pg.is_visible("#sb-panel-losses"): pg.evaluate("BARRA.setTab('losses')"); pg.wait_for_timeout(300)
+                pg.set_viewport_size({"width": w, "height": h})
+                if not pg.is_visible("#sb-panel-losses"): pg.evaluate("BARRA.setTab('losses')")
                 sw = pg.evaluate("(()=>{const r=document.querySelector('#sb-panel-losses');return [r.scrollWidth>r.clientWidth+1,document.documentElement.scrollWidth>innerWidth]})()"); assert not any(sw), (w, sw)
                 tgt = pg.evaluate("[...document.querySelectorAll('#nl-list .nlrow')].every(b=>{const q=b.getBoundingClientRect();return q.width>=24&&q.height>=24})"); assert tgt, w
-            pg.set_viewport_size({"width": 1400, "height": 1000}); pg.wait_for_timeout(200)
+            pg.set_viewport_size({"width": 1400, "height": 1000})
             pg.locator('#nl-list [data-d="g28"]').click(); pg.locator("#nl-pol [data-p='-']").click(); shut(pg, "#refx")
         step("axe without violations on the panel; 1440 and 400 px without horizontal scroll; targets ≥ 24 px", narrow_axe)
         def ruler():
