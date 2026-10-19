@@ -8,6 +8,8 @@ File dello studio:
 - `docs/studi/workflow/PROVE_SU_CARTA.md`: quattro workflow veri di terzi riscritti nel formato, cosa non si esprime e le correzioni nate;
 - `docs/studi/workflow/contratto.schema.json`: la bozza (JSON Schema 2020-12) di `passo/1`, `mzflow/2` e `prov/1`;
 - `docs/studi/workflow/esempio.mzflow.json`: un workflow grezzo → mzML → feature; `passo-features.detect.json`: il descrittore del rilevamento con i campi e i predefiniti veri di `trace::Params` (entrambi validano la bozza, V);
+- `docs/studi/workflow/COMUNICAZIONE.md`: come si parlano i moduli della futura tela «Flow» (porte, compatibilità, passo mancante proposto, ordine e parallelismo ricavati, preset e alternative; §4b);
+- `docs/studi/workflow/PUBBLICAZIONE.md`: quali crate pubblicare e in che ordine, licenze, cosa serve (§12, solo analisi);
 - `crates/mzlab-cli/examples/flusso.rs`: il prototipo (§6).
 
 **Segni**: **V** = verificato (letto in un file vero o nel codice, o misurato qui); **I** = ipotesi (non letto o non provato).
@@ -68,6 +70,10 @@ File dello studio:
 6. Gli errori si fermano al passo: `prov/1` scrive l'attività con `error`, le uscite già fatte restano valide e in cache.
 
 **Interfaccia generata** (I, da provare): un modulo per passo dallo schema (numero con unità e limiti, menu da `enum`, gruppi da `x-group`, «More» per `x-advanced`, «Auto» per `x-estimate` con la prova accanto), solo in inglese, icone da `QICON`, transizioni morbide spente da `prefers-reduced-motion`, tastiera e `aria-label` dai `title`. Pochi clic: un workflow salvato si riapplica con «Open» → scegli i file → «Run».
+
+## 4b. Come si parlano i moduli (dettaglio: `workflow/COMUNICAZIONE.md`)
+Un filo porta un descrittore (`type`, `sha256`, faccette come `hr`/`lr`), mai i byte. Un'uscita si collega a un ingresso se tipo (o `accepts`), cardinalità, faccette (`requires`) e aciclicità tornano; se manca una conversione registrata (`converts`), il programma la PROPONE con un clic.
+Ordine (Kahn) e parallelismo (rami indipendenti, `per_item` per file; worker nel browser, fili nell'app) si ricavano da ciò che ogni passo legge e scrive; l'unica risorsa condivisa è la memoria (`memory_hint_bytes`). Ogni famiglia ha preset con `when` sulle faccette (es. `hr`, `lr`, come fa già `run::recipe_for`, V) e alternative scambiabili con la stessa firma di porte. I campi sono nella bozza e i cinque esempi la validano (V).
 
 ## 5. Prova su carta (dettaglio: `workflow/PROVE_SU_CARTA.md`)
 Quattro workflow veri (mzmine FBMN, OpenMS FFM, XCMS vignetta, patRoon TP) riscritti nel formato. Si esprimono tutti nel tratto rilevamento → allineamento → riempimento; non si esprimono gli algoritmi che non abbiamo (centWave, Obiwarp, lisciatura a sé) né i programmi esterni (BioTransformer, CTS, MetFrag). Undici correzioni, già nella bozza: `id` per istanza, tolleranze composte, `oneOf` per l'algoritmo, riferimenti espliciti, `x-advanced`, conversioni dichiarate, dati immutabili, `samples` come tipo, `err.flow.unavailable`, liste dell'utente come ingressi con hash, grafo dal primo giorno.
@@ -133,10 +139,13 @@ Ordine: W-1 e W-3 in parallelo; W-2 dopo W-1; W-4 dopo W-2; W-5 e W-6 dopo W-4. 
 7. Non tenere due convertitori in mzML equivalenti in apparenza (§6.2 punto 1).
 8. Non mettere il motore dei workflow nel modulo principale vicino al tetto; non alzare i tetti.
 9. Non promettere equivalenza con i parametri di mzmine o OpenMS: un import di batch è una traduzione dichiarata (`PROVE_SU_CARTA.md` B).
-10. Non costruire subito l'editor a grafo: prima catene, il formato è già un grafo.
+10. Non costruire la tela «Flow» prima del controllo del piano in Rust: la tela disegna e basta, compatibilità e ordine li decide il motore (COMUNICAZIONE.md §5), altrimenti le regole si scrivono due volte.
 
 ## 11. Decisioni da prendere (raccomandazione)
 1. **Nome e posto**: `mzflow/2` con `passi`; `passo/1` e `prov/1` in `docs/schemi/` quando W-1 e W-2 li implementano (oggi bozze qui).
 2. **Dove gira il controllo del piano nel browser**: modulo nuovo piccolo (raccomandato) contro motore (solo se la misura lo permette).
 3. **Scrittore unico di mzML**: `lettori_mzml::scrivi` (raccomandato: è quello del registro e dà le stesse aree della via diretta).
 4. **Import dei batch di mzmine**: solo dopo W-4, come traduzione con avviso dei parametri non tradotti (come `parametri_non_letti` di `tools/bench`).
+
+## 12. Pubblicazione delle librerie (dettaglio: `workflow/PUBBLICAZIONE.md`)
+Ordine proposto: prima il codec numpress staccato da `mzlab-core` (piccolo, verità esterna nella specifica), poi `mzlab-lib`, poi i lettori; npm dopo. Licenza MIT; le licenze delle dipendenze sono già controllate a ogni PR da `cargo deny` (V). Mancano API in inglese e stabile, rustdoc, `publish = false` su tutti i crate finché Federico non dà il via. Nessuna azione esterna senza il suo «via».

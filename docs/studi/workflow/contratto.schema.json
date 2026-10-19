@@ -6,51 +6,227 @@
  "$defs": {
   "dataType": {
    "description": "Typed data between steps. raw = vendor file set (one sample); mzml = mzML 1.1 (indexedmzML when written by mzLab); mzidx = mzLab scan index (docs/agenti/mzidx.md); xic = one chromatogram; peaks = features of one file (.mzfeatf); rtmap = RT correction of a series; table = aligned feature table (.mzfeat); samples = roles and times (campioni/2); spectra = MS2 lists; annot = row annotations (interp/1, levels); tp = product view (tp/1); structure = molfile V3000; qc = quality numbers; report = terminal export (CSV, XLSX, HTML).",
-   "enum": ["raw", "mzml", "mzidx", "xic", "peaks", "rtmap", "table", "samples", "spectra", "annot", "tp", "structure", "qc", "report"]
+   "enum": [
+    "raw",
+    "mzml",
+    "mzidx",
+    "xic",
+    "peaks",
+    "rtmap",
+    "table",
+    "samples",
+    "spectra",
+    "annot",
+    "tp",
+    "structure",
+    "qc",
+    "report"
+   ]
   },
   "port": {
    "type": "object",
-   "required": ["type"],
+   "required": [
+    "type"
+   ],
    "properties": {
-    "type": {"$ref": "#/$defs/dataType"},
-    "many": {"type": "boolean", "default": false, "description": "a list, one per file of the series"},
-    "optional": {"type": "boolean", "default": false},
-    "title": {"type": "string"}
+    "type": {
+     "$ref": "#/$defs/dataType"
+    },
+    "many": {
+     "type": "boolean",
+     "default": false,
+     "description": "a list, one per file of the series"
+    },
+    "optional": {
+     "type": "boolean",
+     "default": false
+    },
+    "title": {
+     "type": "string"
+    },
+    "accepts": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/dataType"
+     },
+     "description": "other types this input takes besides type (COMUNICAZIONE.md §2)"
+    },
+    "requires": {
+     "$ref": "#/$defs/facets",
+     "description": "facets the incoming data must have; checked by plan.check, or by the step when they are not known yet"
+    }
    },
    "additionalProperties": false
   },
   "paramSchema": {
    "description": "JSON Schema 2020-12 of the parameters (type object). The form is generated from it: title, description, default, minimum, maximum, enum, oneOf with the discriminator 'algorithm'. Extra keywords: x-unit (ppm, Da, min, s, counts, fraction), x-advanced (hidden behind 'More'), x-group (a box of the form), x-estimate (absent value = estimated by the step, which then writes the value and its proof in prov/1), x-noresult (does not change the result: memory budget, threads; left out of the fingerprint).",
    "type": "object",
-   "required": ["type", "properties"],
-   "properties": {"type": {"const": "object"}}
+   "required": [
+    "type",
+    "properties"
+   ],
+   "properties": {
+    "type": {
+     "const": "object"
+    }
+   }
   },
-  "errorKey": {"type": "string", "pattern": "^(err|error)\\.[A-Za-z0-9_.]+$"},
+  "errorKey": {
+   "type": "string",
+   "pattern": "^(err|error)\\.[A-Za-z0-9_.]+$"
+  },
   "passo": {
    "type": "object",
-   "required": ["schema", "id", "version", "title", "in", "out", "params", "runs_in", "deterministic", "errors"],
+   "required": [
+    "schema",
+    "id",
+    "version",
+    "title",
+    "in",
+    "out",
+    "params",
+    "runs_in",
+    "deterministic",
+    "errors"
+   ],
    "properties": {
-    "schema": {"const": "passo/1"},
-    "id": {"type": "string", "pattern": "^[a-z]+(\\.[a-z_]+)+$", "description": "kind of step, e.g. features.detect"},
-    "version": {"type": "integer", "minimum": 1, "description": "raised whenever the same inputs and parameters can give a different output (like parameter_version of mzmine, but tied to the result)"},
-    "title": {"type": "string"},
-    "doc": {"type": "string", "description": "one paragraph for the help of the form, in English"},
-    "icon": {"type": "string", "description": "key of QICON"},
-    "cv": {"type": "string", "pattern": "^MS:[0-9]{7}$", "description": "PSI-MS term of the action, when one exists (MS:1000035 peak picking, MS:1000544 conversion to mzML, MS:1000745 retention time alignment)"},
-    "in": {"type": "object", "additionalProperties": {"$ref": "#/$defs/port"}},
-    "out": {"type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/port"}},
-    "params": {"$ref": "#/$defs/paramSchema"},
+    "schema": {
+     "const": "passo/1"
+    },
+    "id": {
+     "type": "string",
+     "pattern": "^[a-z]+(\\.[a-z][a-z0-9_]*)+$",
+     "description": "kind of step, e.g. features.detect"
+    },
+    "version": {
+     "type": "integer",
+     "minimum": 1,
+     "description": "raised whenever the same inputs and parameters can give a different output (like parameter_version of mzmine, but tied to the result)"
+    },
+    "title": {
+     "type": "string"
+    },
+    "doc": {
+     "type": "string",
+     "description": "one paragraph for the help of the form, in English"
+    },
+    "icon": {
+     "type": "string",
+     "description": "key of QICON"
+    },
+    "cv": {
+     "type": "string",
+     "pattern": "^MS:[0-9]{7}$",
+     "description": "PSI-MS term of the action, when one exists (MS:1000035 peak picking, MS:1000544 conversion to mzML, MS:1000745 retention time alignment)"
+    },
+    "in": {
+     "type": "object",
+     "additionalProperties": {
+      "$ref": "#/$defs/port"
+     }
+    },
+    "out": {
+     "type": "object",
+     "minProperties": 1,
+     "additionalProperties": {
+      "$ref": "#/$defs/port"
+     }
+    },
+    "params": {
+     "$ref": "#/$defs/paramSchema"
+    },
     "runs_in": {
      "type": "object",
      "description": "where the step runs: the .wasm module and its fixed size ceiling, and/or native (CLI, desktop)",
      "properties": {
-      "wasm": {"type": "string"},
-      "wasm_ceiling_bytes": {"type": "integer"},
-      "native": {"type": "boolean"}
+      "wasm": {
+       "type": "string"
+      },
+      "wasm_ceiling_bytes": {
+       "type": "integer"
+      },
+      "native": {
+       "type": "boolean"
+      }
      }
     },
-    "deterministic": {"type": "boolean", "description": "true: same input hashes + same id@version + same canonical parameters give the same output bytes, native and WASM"},
-    "errors": {"type": "array", "items": {"$ref": "#/$defs/errorKey"}, "description": "the error keys the step may return (the shape is the one of the API: {error, error_key, params})"}
+    "deterministic": {
+     "type": "boolean",
+     "description": "true: same input hashes + same id@version + same canonical parameters give the same output bytes, native and WASM"
+    },
+    "errors": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/errorKey"
+     },
+     "description": "the error keys the step may return (the shape is the one of the API: {error, error_key, params})"
+    },
+    "family": {
+     "type": "string",
+     "pattern": "^[a-z]+(\\.[a-z][a-z0-9_]*)+$",
+     "description": "the slot of the canvas; alternatives share the family and the port signature (default: id)"
+    },
+    "per_item": {
+     "type": "boolean",
+     "default": false,
+     "description": "runs once per element of its many input, in parallel; outputs are gathered by index"
+    },
+    "converts": {
+     "type": "object",
+     "required": [
+      "from",
+      "to"
+     ],
+     "properties": {
+      "from": {
+       "$ref": "#/$defs/dataType"
+      },
+      "to": {
+       "$ref": "#/$defs/dataType"
+      }
+     },
+     "additionalProperties": false,
+     "description": "a registered conversion: the plan check proposes it when a wire joins from to to"
+    },
+    "cost": {
+     "type": "number",
+     "minimum": 0,
+     "description": "relative cost used to break ties between conversion paths"
+    },
+    "memory_hint_bytes": {
+     "type": "integer",
+     "minimum": 0,
+     "description": "expected heap peak per item, from heap_peak_bytes of earlier runs; the planner admits steps within the memory budget"
+    },
+    "presets": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "object",
+      "required": [
+       "params"
+      ],
+      "properties": {
+       "title": {
+        "type": "string"
+       },
+       "when": {
+        "$ref": "#/$defs/facets"
+       },
+       "params": {
+        "type": "object"
+       },
+       "evidence": {
+        "type": "string",
+        "description": "the bench measure that justifies the values"
+       }
+      },
+      "additionalProperties": false
+     },
+     "description": "named parameter sets; Auto takes the first whose when matches the input facets"
+    },
+    "default_preset": {
+     "type": "string"
+    }
    },
    "additionalProperties": false
   },
@@ -61,57 +237,288 @@
   },
   "istanza": {
    "type": "object",
-   "required": ["id", "step", "in"],
+   "required": [
+    "id",
+    "step",
+    "in"
+   ],
    "properties": {
-    "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$", "description": "unique in the workflow: the same kind can appear twice (mass detection on MS1 and on MS2)"},
-    "step": {"type": "string", "pattern": "^[a-z]+(\\.[a-z_]+)+@[0-9]+$", "description": "id@version of a passo/1"},
-    "in": {"type": "object", "additionalProperties": {"oneOf": [{"$ref": "#/$defs/ref"}, {"type": "array", "items": {"$ref": "#/$defs/ref"}}]}},
-    "params": {"type": "object", "description": "only the values that differ from the defaults; the canonical form fills the rest"},
-    "label": {"type": "string"}
+    "id": {
+     "type": "string",
+     "pattern": "^[a-z][a-z0-9_]*$",
+     "description": "unique in the workflow: the same kind can appear twice (mass detection on MS1 and on MS2)"
+    },
+    "step": {
+     "type": "string",
+     "pattern": "^[a-z]+(\\.[a-z][a-z0-9_]*)+@[0-9]+$",
+     "description": "id@version of a passo/1"
+    },
+    "in": {
+     "type": "object",
+     "additionalProperties": {
+      "oneOf": [
+       {
+        "$ref": "#/$defs/ref"
+       },
+       {
+        "type": "array",
+        "items": {
+         "$ref": "#/$defs/ref"
+        }
+       }
+      ]
+     }
+    },
+    "params": {
+     "type": "object",
+     "description": "only the values that differ from the defaults; the canonical form fills the rest"
+    },
+    "label": {
+     "type": "string"
+    },
+    "preset": {
+     "type": "string",
+     "description": "a key of presets of the step; params then hold only the differences"
+    }
    },
    "additionalProperties": false
   },
   "mzflow2": {
    "type": "object",
-   "required": ["formato", "programma", "ingressi", "passi"],
+   "required": [
+    "formato",
+    "programma",
+    "ingressi",
+    "passi"
+   ],
    "properties": {
-    "formato": {"const": "mzflow/2"},
-    "programma": {"type": "object", "required": ["nome", "versione"], "properties": {"nome": {"type": "string"}, "versione": {"type": "string"}, "commit": {"type": "string"}}},
+    "formato": {
+     "const": "mzflow/2"
+    },
+    "programma": {
+     "type": "object",
+     "required": [
+      "nome",
+      "versione"
+     ],
+     "properties": {
+      "nome": {
+       "type": "string"
+      },
+      "versione": {
+       "type": "string"
+      },
+      "commit": {
+       "type": "string"
+      }
+     }
+    },
     "ingressi": {
      "type": "array",
-     "items": {"type": "object", "required": ["name", "sha256"], "properties": {"name": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "bytes": {"type": "integer"}, "type": {"$ref": "#/$defs/dataType"}}}
+     "items": {
+      "type": "object",
+      "required": [
+       "name",
+       "sha256"
+      ],
+      "properties": {
+       "name": {
+        "type": "string"
+       },
+       "sha256": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+       },
+       "bytes": {
+        "type": "integer"
+       },
+       "type": {
+        "$ref": "#/$defs/dataType"
+       }
+      }
+     }
     },
-    "passi": {"type": "array", "items": {"$ref": "#/$defs/istanza"}, "description": "a DAG: every reference points to an earlier instance; the interface shows a chain while the graph has one path"},
-    "operazioni": {"type": "array", "description": "the log of mzflow/1, unchanged"}
+    "passi": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/istanza"
+     },
+     "description": "a DAG: every reference points to an earlier instance; the interface shows a chain while the graph has one path"
+    },
+    "operazioni": {
+     "type": "array",
+     "description": "the log of mzflow/1, unchanged"
+    }
    }
   },
   "prov1": {
    "type": "object",
-   "required": ["schema", "agent", "entity", "activity"],
+   "required": [
+    "schema",
+    "agent",
+    "entity",
+    "activity"
+   ],
    "properties": {
-    "schema": {"const": "prov/1"},
-    "agent": {"type": "object", "required": ["name", "version"], "properties": {"name": {"type": "string"}, "version": {"type": "string"}, "commit": {"type": "string"}, "platform": {"enum": ["wasm", "native"]}}},
-    "plan_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "entity": {"type": "object", "additionalProperties": {"type": "object", "required": ["sha256", "type"], "properties": {"sha256": {"type": "string"}, "bytes": {"type": "integer"}, "type": {"$ref": "#/$defs/dataType"}, "label": {"type": "string"}}}},
+    "schema": {
+     "const": "prov/1"
+    },
+    "agent": {
+     "type": "object",
+     "required": [
+      "name",
+      "version"
+     ],
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "version": {
+       "type": "string"
+      },
+      "commit": {
+       "type": "string"
+      },
+      "platform": {
+       "enum": [
+        "wasm",
+        "native"
+       ]
+      }
+     }
+    },
+    "plan_sha256": {
+     "type": "string",
+     "pattern": "^[0-9a-f]{64}$"
+    },
+    "entity": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "object",
+      "required": [
+       "sha256",
+       "type"
+      ],
+      "properties": {
+       "sha256": {
+        "type": "string"
+       },
+       "bytes": {
+        "type": "integer"
+       },
+       "type": {
+        "$ref": "#/$defs/dataType"
+       },
+       "label": {
+        "type": "string"
+       }
+      }
+     }
+    },
     "activity": {
      "type": "object",
      "additionalProperties": {
       "type": "object",
-      "required": ["step", "params_sha256", "used", "generated"],
+      "required": [
+       "step",
+       "params_sha256",
+       "used",
+       "generated"
+      ],
       "properties": {
-       "step": {"type": "string"},
-       "params": {"type": "object", "description": "canonical: every value, estimated ones included"},
-       "params_sha256": {"type": "string"},
-       "estimates": {"type": "object", "description": "parameter -> proof of the estimate (as prove of feature_pipeline/1)"},
-       "used": {"type": "array", "items": {"type": "string"}},
-       "generated": {"type": "array", "items": {"type": "string"}},
-       "ms": {"type": "number"},
-       "heap_peak_bytes": {"type": "integer"},
-       "error": {"type": "object", "required": ["error_key"], "properties": {"error": {"type": "string"}, "error_key": {"$ref": "#/$defs/errorKey"}, "params": {"type": "object"}}}
+       "step": {
+        "type": "string"
+       },
+       "params": {
+        "type": "object",
+        "description": "canonical: every value, estimated ones included"
+       },
+       "params_sha256": {
+        "type": "string"
+       },
+       "estimates": {
+        "type": "object",
+        "description": "parameter -> proof of the estimate (as prove of feature_pipeline/1)"
+       },
+       "used": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "generated": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "ms": {
+        "type": "number"
+       },
+       "heap_peak_bytes": {
+        "type": "integer"
+       },
+       "error": {
+        "type": "object",
+        "required": [
+         "error_key"
+        ],
+        "properties": {
+         "error": {
+          "type": "string"
+         },
+         "error_key": {
+          "$ref": "#/$defs/errorKey"
+         },
+         "params": {
+          "type": "object"
+         }
+        }
+       },
+       "cached": {
+        "type": "boolean",
+        "description": "true when the output came from the cache key (input hashes, id@version, params_sha256)"
+       },
+       "preset": {
+        "type": "string"
+       }
       }
      }
     }
    }
+  },
+  "facets": {
+   "type": "object",
+   "description": "facets of the data read from it: resolution (hr, lr), polarity, ms_levels, samples",
+   "properties": {
+    "resolution": {
+     "type": "array",
+     "items": {
+      "enum": [
+       "hr",
+       "lr"
+      ]
+     }
+    },
+    "polarity": {
+     "type": "array",
+     "items": {
+      "enum": [
+       1,
+       -1,
+       0
+      ]
+     }
+    },
+    "ms_levels": {
+     "type": "array",
+     "items": {
+      "type": "integer",
+      "minimum": 1
+     }
+    }
+   },
+   "additionalProperties": false
   }
  }
 }
