@@ -17,7 +17,7 @@ HAS = "!!document.querySelector('#np-qaqc,#sb-panel-qaqc,[data-cmd=qaqc]')"
 def palette(pg, q):
     pg.evaluate("document.activeElement.blur()"); pg.keyboard.press("Control+k"); pg.wait_for_selector("#paletta:not([hidden])")
     pg.keyboard.press("Control+a"); pg.keyboard.type(q); pg.wait_for_timeout(250)
-    t = pg.inner_text("#pal-l"); pg.keyboard.press("Escape"); pg.wait_for_selector("#paletta", state="hidden"); return t
+    t = pg.inner_text("#paletta"); pg.keyboard.press("Escape"); pg.wait_for_selector("#paletta", state="hidden"); return t
 
 r = Run(port=8958, wd="/tmp/wd_qaqc_dorm")
 try:

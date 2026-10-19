@@ -55,13 +55,13 @@ function palList(/** @type {{title: string, rows: any[]}[]} */ blocks, /** @type
       html += `<li role="option" id="pal-o-${i}" data-i="${i}" aria-selected="false"${r.aria ? ` aria-label="${palEsc(r.aria)}"` : ""}><span class="pal-i" aria-hidden="true">${r.ic}</span><span class="pal-t">${r.html}</span>${r.tail}</li>`;
     }
   }
-  if (!rows.length && !pending) html += `<li class="pal-e" role="presentation">${palEsc(query ? I18N.t("pal.empty") : I18N.t("pal.try"))}</li>`;
-  else if (!query) html += `<li class="pal-e" role="presentation">${palEsc(I18N.t("pal.try"))}</li>`;
-  return { html, rows };
+  // the hint or the «nothing found» line lives outside the listbox, which must hold options only
+  const note = !rows.length && !pending ? I18N.t(query ? "pal.empty" : "pal.try") : !query ? I18N.t("pal.try") : "";
+  return { html, rows, note };
 }
 
 const PALETTE = (() => {
-  let box = null, input = null, list = null, live = null;
+  let box = null, input = null, list = null, live = null, note = null;
   let rows = [];
   let sel = 0;
   let prev = null;
@@ -84,12 +84,13 @@ const PALETTE = (() => {
     box.setAttribute("role", "dialog");
     box.setAttribute("aria-modal", "true");
     box.setAttribute("aria-label", t("pal.title"));
-    box.innerHTML = `<div class="pal-b"><input type="text" id="pal-in" role="combobox" aria-expanded="true" aria-controls="pal-l" aria-autocomplete="list" aria-label="${palEsc(t("pal.title"))}" placeholder="${palEsc(t("pal.placeholder"))}" autocomplete="off" autocapitalize="off" spellcheck="false">` +
-      `<ul id="pal-l" role="listbox" aria-label="${palEsc(t("pal.title"))}"></ul><div class="pal-f"><span>${palEsc(t("pal.hint"))}</span><span id="pal-n" role="status" aria-live="polite" class="pal-sr"></span></div></div>`;
+    box.innerHTML = `<div class="pal-b"><input type="text" id="pal-in" role="combobox" aria-expanded="false" aria-controls="pal-l" aria-autocomplete="list" aria-label="${palEsc(t("pal.title"))}" placeholder="${palEsc(t("pal.placeholder"))}" autocomplete="off" autocapitalize="off" spellcheck="false">` +
+      `<ul id="pal-l" role="listbox" aria-label="${palEsc(t("pal.title"))}"></ul><div id="pal-e" class="pal-e"></div><div class="pal-f"><span>${palEsc(t("pal.hint"))}</span><span id="pal-n" role="status" aria-live="polite" class="pal-sr"></span></div></div>`;
     document.body.appendChild(box);
     input = box.querySelector("#pal-in");
     list = box.querySelector("#pal-l");
     live = box.querySelector("#pal-n");
+    note = box.querySelector("#pal-e");
     input.addEventListener("input", () => render(input.value));
     input.addEventListener("keydown", onKey);
     box.addEventListener("pointerdown", e => { if (e.target === box) close(true); });
@@ -101,6 +102,9 @@ const PALETTE = (() => {
     const r = palList(blocks, input.value.trim(), pending);
     rows = r.rows;
     list.innerHTML = r.html;
+    list.hidden = !rows.length;
+    input.setAttribute("aria-expanded", String(rows.length > 0));
+    note.textContent = r.note;
     sel = Math.min(sel, Math.max(rows.length - 1, 0));
     if (rows.length) mark(sel, false); else input.setAttribute("aria-activedescendant", "");
     live.textContent = rows.length ? t("pal.count", { n: rows.length }) : pending ? "" : t("pal.empty");

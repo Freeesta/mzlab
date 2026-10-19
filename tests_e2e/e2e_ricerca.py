@@ -21,7 +21,7 @@ try:
         pg.click("#opbtn"); ready(pg)
         def opn():
             pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press("Control+k"); pg.wait_for_selector("#paletta:not([hidden])")
-        txt = lambda: pg.inner_text("#pal-l")
+        txt = lambda: pg.inner_text("#paletta")
         def typ(q, want=None):
             pg.fill("#pal-in", q)
             if want: attendi(pg, f"document.querySelector('#pal-l').innerText.includes({want!r})")
@@ -75,7 +75,7 @@ try:
         def english():
             pg.evaluate("I18N.set('en')"); attendi(pg, "I18N.lang === 'en'"); ready(pg); opn(); typ("18", "loss")
             t = txt(); assert "loss" in t and "Adduct" in t, t
-            pg.fill("#pal-in", ""); attendi(pg, "document.querySelector('#pal-l').innerText.includes('Try: 18')")
+            pg.fill("#pal-in", ""); attendi(pg, "document.querySelector('#paletta').innerText.includes('Try: 18')")
             pg.keyboard.press("Escape")
         step("English labels", english)
         step("no engine miss and no console error", lambda: (lambda m: m == [] or (_ for _ in ()).throw(AssertionError(m)))(pg.evaluate("window.MZLAB_LR_MISS || []")))
