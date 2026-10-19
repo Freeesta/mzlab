@@ -94,7 +94,7 @@ function renderFiles(){const F=ST.files,el=$("#flist");
   const hasCal=F.some(f=>f.use&&isCal(f)),hasTime=F.some(f=>f.time!=null),tu=tunitGet(),tuSel=`<select id="tunit" title="${I18N.t("load.table.tunit.title")}" aria-label="${I18N.t("load.table.tunit.title")}">${Object.keys(TIME_UNITS).map(k=>`<option value="${k}" ${k===tu?"selected":""}>${tunitLabel(k)}</option>`).join("")}</select>`,unitSel=`<select id="cunit" title="${I18N.t("load.table.unit.title")}">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
   // GUESS: concentration cells
   const ncol=7+(hasCal?1:0),GUESS=` title="${I18N.t("load.guess.title")}"`;
-  let last=-1,rows="";
+  let last="",rows="";
   F.forEach((f,i)=>{const g=loadGrp(f).key;
     if(g!==last){last=g;const mem=F.filter(x=>loadGrp(x).key===g);rows+=`<tr class="grp"><td colspan="${ncol}">${loadGrpName(f)}${typeof polHead==="function"&&["full","ms2","mrm"].includes(f.kind)&&!(f.mixed&&f.mixed.length>1)?polHead(mem):""} <span class="muted">${I18N.t("load.group.count",{n:mem.length})}</span></td></tr>`}
     rows+=`<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)} ${typeof polSign==="function"?polSign(f,F):""}${nameWarn(f)}</td><td>${expCell(f)}</td>`+

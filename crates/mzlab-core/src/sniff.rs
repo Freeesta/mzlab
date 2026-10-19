@@ -61,6 +61,16 @@ fn hr_profile<R: ReadAt, M: Scansioni + ?Sized>(
     .any(|w| low.contains(w)))
 }
 
+/// High resolution (survey or product-ion scans), as the file list of an opened item reports it.
+fn is_hr(v: &json::Value) -> bool {
+    ["prof1", "prof2"].iter().any(|k| {
+        v.get(k)
+            .and_then(|p| p.get("hr"))
+            .and_then(json::Value::bool)
+            .unwrap_or(false)
+    })
+}
+
 /// `{kind, scans, srm, polarity, mixed, spectrum_mode, hr_profile, hr, hint, msn}` of a whole file (`msn`: `infusione.rs`).
 pub fn sniff<R: ReadAt, M: ReadAt>(
     idx: &mut Index<R>,
@@ -95,13 +105,7 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
     crate::sortc::slice_ord(&mut prec);
     prec.dedup();
     let hrp = hr_profile(idx, &mut m.r, &facts.instrument)?;
-    // high resolution (survey or product-ion scans), as the file list of an opened item reports it
-    let hr = ["prof1", "prof2"].iter().any(|k| {
-        v.get(k)
-            .and_then(|p| p.get("hr"))
-            .and_then(json::Value::bool)
-            .unwrap_or(false)
-    });
+    let hr = is_hr(&v);
     let mut o = Out::default();
     o.raw("{\"kind\":")
         .str(kind)
