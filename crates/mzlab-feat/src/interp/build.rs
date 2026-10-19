@@ -284,8 +284,8 @@ pub fn build<R: ReadAt>(
     let mut facts = row_facts(t);
     let mut registry = filtri::Registry::default();
     let mut work: Vec<Work> = vec![];
-    for r in 0..t.len() {
-        match filtri::first_hidden(&facts[r]) {
+    for (r, f) in facts.iter().enumerate() {
+        match filtri::first_hidden(f) {
             Some(i) if t.tp.status[r] != ST_PARENT => registry.hidden[i].push(t.id(r)),
             None if t.tp.status[r] == ST_TP || t.tp.status[r] == ST_UNEXPLAINED => {
                 work.push(Work {
@@ -301,11 +301,11 @@ pub fn build<R: ReadAt>(
     }
     let parent_row = (t.tp.parent_row != NO_PARENT).then_some(t.tp.parent_row as usize);
     let (mut parent_scans, mut perr) = (vec![], vec![None; t.n_files]);
-    for k in 0..t.n_files {
+    for (k, slot) in perr.iter_mut().enumerate() {
         let mut ix = open(k)?;
         let (ps, pe) = read_file(&mut ix, k, inp, &mut work, parent_row)?;
         parent_scans.push(ps);
-        perr[k] = pe;
+        *slot = pe;
     }
     let all_parent: Vec<Ms2Scan> = parent_scans.iter().flatten().cloned().collect();
     let dda = ms2link::pool(&all_parent).consensus;

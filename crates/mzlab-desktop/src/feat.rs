@@ -268,8 +268,15 @@ impl State {
     fn feat_interp_build(&self, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
         let ns = names(p);
-        let table = self.feat_lock().table.clone().ok_or_else(|| Error::new("error.featState"))?;
-        let infusion = p["infusion"].as_i64().filter(|&k| k >= 0).map(|k| k as usize);
+        let table = self
+            .feat_lock()
+            .table
+            .clone()
+            .ok_or_else(|| Error::new("error.featState"))?;
+        let infusion = p["infusion"]
+            .as_i64()
+            .filter(|&k| k >= 0)
+            .map(|k| k as usize);
         let mut inf = match infusion {
             Some(k) => Some(self.open_idx(ns.get(k).map_or("", |n| n.as_str()))?),
             None => None,
@@ -293,7 +300,10 @@ impl State {
     /// `feat/interp/row`: the `interp/1` of row `id` of the held table, `null` when it was not interpreted.
     fn feat_interp_row(&self, p: &Value) -> Result<Answer> {
         let g = self.feat_lock();
-        let table = g.table.as_deref().ok_or_else(|| Error::new("error.featState"))?;
+        let table = g
+            .table
+            .as_deref()
+            .ok_or_else(|| Error::new("error.featState"))?;
         let id = p["id"].as_u64().unwrap_or(0) as u32;
         let row = mzlab_feat::interp::store::read_row(&mut Slice(table), table.len() as u64, id)?;
         text(row.unwrap_or_else(|| "null".into()))

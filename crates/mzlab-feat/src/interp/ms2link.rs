@@ -264,7 +264,7 @@ pub struct Pooled {
 
 pub fn pool(scans: &[Ms2Scan]) -> Pooled {
     let mut clean: Vec<&Ms2Scan> = scans.iter().filter(|s| !s.chimeric).collect();
-    clean.sort_by(|a, b| (a.file, a.rt.to_bits()).cmp(&(b.file, b.rt.to_bits())));
+    clean.sort_by_key(|s| (s.file, s.rt.to_bits()));
     let spectra: Vec<(Vec<f64>, Vec<f64>)> =
         clean.iter().map(|s| (s.mz.clone(), s.it.clone())).collect();
     let cons = consensus(&spectra);

@@ -25,11 +25,11 @@ pub struct VsParent {
     pub formula_shifted: Vec<f64>,
 }
 
+/// Components of the comparison, then the fragments in common, the shifted ones and the neutral losses.
+pub type Against = (Components, Vec<f64>, Vec<f64>, Vec<f64>);
+
 /// Spectrum of the row against the DDA spectrum of the parent. Spectra are (m/z, intensity) with their precursors.
-pub fn against_dda(
-    parent: (&[f64], &[f64], f64),
-    row: (&[f64], &[f64], f64),
-) -> Option<(Components, Vec<f64>, Vec<f64>, Vec<f64>)> {
+pub fn against_dda(parent: (&[f64], &[f64], f64), row: (&[f64], &[f64], f64)) -> Option<Against> {
     let (a, b) = (
         prepare(parent.0, parent.1, parent.2),
         prepare(row.0, row.1, row.2),
