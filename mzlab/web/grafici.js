@@ -504,6 +504,18 @@ const getMap = (k, lv, bg) => memo(`g${k}|${lv}|${bg}`, () => J(lv === "pda" ? `
   const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
   return { ...j, m: new Float32Array(u.buffer) };
 }));
+// Whether a file has a PDA matrix (RT x wavelength) for the map: a PDA trace alone is not one and the browser engine reads none, so the answer is probed once
+// from the route (a plain fetch: the error is the answer, not a message) and kept on the file (`_pdaMap`); true re-renders the controls of the map panels, which then offer the PDA choice.
+function pdaMapOk(f) {
+  if (f._pdaMap === undefined) {
+    f._pdaMap = null;
+    fetch(`api/map?k=${f.k}&kind=pda`).then(r => r.json()).then(j => !j.error, () => false).then(ok => {
+      f._pdaMap = ok;
+      for (const q of E.panels) if (q.type === "map") { if (!ok && q.mapKind === "pda" && q.k === f.k) { q.mapKind = null; draw(q); } ctl(q); }
+    });
+  }
+  return f._pdaMap === true;
+}
 // Optional normalisation before the comparison of two experiments: "max" divides each map by its own most intense point, "tic" by the sum of all its intensities
 // (shown in parts per thousand). Without it two files acquired with different methods or injected amounts are subtracted in raw counts.
 function mapNorm(m, norm) {
