@@ -7,6 +7,13 @@ use crate::chem::grafo::Mol;
 use crate::legacy::fragtree::Graph;
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Zone {
+    pub atoms: Vec<usize>,
+    pub support: f64,
+    pub class: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Drawing {
     /// `structure`, `multicenter` or `bracket`.
     pub mode: &'static str,
@@ -18,6 +25,12 @@ pub struct Drawing {
     pub lost: Vec<usize>,
     /// Element of the atom the structure adds on the outer bisector of the site (None for a loss or a dehydrogenation).
     pub added: Option<&'static str>,
+    /// Atoms of the zone the fragments support most (empty when none).
+    pub highlight: Vec<usize>,
+    /// The candidate classes with their support, for `uncertain` only.
+    pub zones: Vec<Zone>,
+    /// For a loss, the atoms that are kept (the rest is drawn faint).
+    pub kept: Vec<usize>,
     pub kind: Option<String>,
     pub delta: String,
     pub label: String,
@@ -47,6 +60,9 @@ fn whole(mol: &Mol, delta: &str, label: &str, uncertainty: &'static str) -> Draw
         ends: vec![],
         lost: vec![],
         added: None,
+        highlight: vec![],
+        zones: vec![],
+        kept: vec![],
         kind: None,
         delta: delta.to_string(),
         label: label.to_string(),
@@ -92,6 +108,15 @@ pub fn drawing(smiles: &str, site: &SiteReport) -> Drawing {
     }
 }
 
+/// The atoms of the class with the most support among those not excluded.
+fn top_atoms(site: &SiteReport) -> Vec<usize> {
+    site.votes
+        .iter()
+        .filter(|v| v.status != "excluded")
+        .max_by(|a, b| a.support.total_cmp(&b.support))
+        .map_or(vec![], |v| v.atoms.clone())
+}
+
 fn empty(delta: &str) -> Drawing {
     Drawing {
         mode: "bracket",
@@ -99,6 +124,9 @@ fn empty(delta: &str) -> Drawing {
         ends: vec![],
         lost: vec![],
         added: None,
+        highlight: vec![],
+        zones: vec![],
+        kept: vec![],
         kind: None,
         delta: delta.to_string(),
         label: delta.to_string(),
@@ -126,11 +154,17 @@ fn structure(mol: &Mol, site: &SiteReport, delta: &str) -> Drawing {
     } else {
         vec![]
     };
+    let kept = match (&site.retained, lost.is_empty()) {
+        (Some((a, _)), _) => a.clone(),
+        (None, false) => (0..mol.atoms.len()).filter(|a| !lost.contains(a)).collect(),
+        _ => vec![],
+    };
     Drawing {
         mode: "structure",
         atoms,
         lost,
         added: added_of(s.kind),
+        kept,
         kind: Some(s.kind.to_string()),
         label: delta.to_string(),
         uncertainty: "none",
@@ -164,6 +198,7 @@ fn zone(mol: &Mol, smiles: &str, site: &SiteReport, delta: &str) -> Drawing {
             mode: "multicenter",
             atoms: group.clone(),
             ends: cands,
+            highlight: top_atoms(site),
             label,
             uncertainty: "zone",
             ..empty(delta)
@@ -172,6 +207,7 @@ fn zone(mol: &Mol, smiles: &str, site: &SiteReport, delta: &str) -> Drawing {
     Drawing {
         atoms: group.clone(),
         ends: vec![],
+        highlight: top_atoms(site),
         label,
         uncertainty: "zone",
         ..empty(delta)

@@ -113,12 +113,16 @@
   "drawing": {
    "type": ["object", "null"],
    "description": "the one form the page draws: structure (only with a site), multicenter (every candidate in one aromatic ring), bracket (a zone or the whole parent)",
-   "required": ["mode", "atoms", "ends", "lost", "added", "kind", "delta", "label", "uncertainty", "fallback"],
+   "required": ["mode", "atoms", "ends", "lost", "sub", "highlight", "kept", "zones", "added", "kind", "delta", "label", "uncertainty", "fallback"],
    "properties": {
     "mode": {"enum": ["structure", "multicenter", "bracket"]},
     "atoms": {"type": "array", "items": {"type": "integer"}},
     "ends": {"type": "array", "items": {"type": "integer"}, "description": "the candidate atoms a multicenter bond ends on"},
     "lost": {"type": "array", "items": {"type": "integer"}, "description": "atoms a loss removes, drawn faint and dashed"},
+    "sub": {"type": "null", "description": "atom of the substituent in a multicenter drawing: always null, the page draws it on the outer bisector"},
+    "highlight": {"type": "array", "items": {"type": "integer"}, "description": "atoms of the zone the fragments support most (empty when none)"},
+    "kept": {"type": "array", "items": {"type": "integer"}, "description": "for a loss, the atoms kept; the rest is drawn faint"},
+    "zones": {"type": "array", "items": {"type": "object", "properties": {"atoms": {"type": "array", "items": {"type": "integer"}}, "support": {"type": "number"}, "class": {"type": "integer"}}}, "description": "the candidate classes with their support (uncertain only)"},
     "added": {"enum": ["O", "Cl", "Br", null], "description": "element of the atom a structure adds on the outer bisector of the site"},
     "kind": {"type": ["string", "null"]},
     "delta": {"type": "string", "description": "with the true minus sign U+2212"},

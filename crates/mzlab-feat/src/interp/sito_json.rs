@@ -97,7 +97,21 @@ fn drawing(o: &mut Out, d: &Drawing) {
     atoms(o, &d.ends);
     o.raw(",\"lost\":");
     atoms(o, &d.lost);
-    o.raw(",\"added\":");
+    o.raw(",\"sub\":null,\"highlight\":");
+    atoms(o, &d.highlight);
+    o.raw(",\"kept\":");
+    atoms(o, &d.kept);
+    o.raw(",\"zones\":[");
+    for (i, z) in d.zones.iter().enumerate() {
+        o.raw(if i > 0 { ",{\"atoms\":" } else { "{\"atoms\":" });
+        atoms(o, &z.atoms);
+        o.raw(",\"support\":")
+            .num(round(z.support, 3))
+            .raw(",\"class\":")
+            .int(z.class as i64)
+            .raw("}");
+    }
+    o.raw("],\"added\":");
     match d.added {
         Some(e) => o.str(e),
         None => o.raw("null"),

@@ -179,3 +179,27 @@ fn the_delta_label_uses_the_true_minus() {
     let r = undetermined(c.transform, vec!["no_ms2"]);
     assert_eq!(drawing("CCCO", &r).delta, "\u{2212}2H");
 }
+
+#[test]
+fn a_loss_keeps_the_rest_and_a_region_highlights_its_best_class() {
+    let sm = "COc1ccc(CCN)cc1";
+    let c = candidates(
+        sm,
+        &parse_formula("C9H13NO").unwrap(),
+        &parse_formula("C8H11NO").unwrap(),
+    )
+    .unwrap();
+    assert_eq!(c.transform, "-CH2");
+    let p = peaks_of(sm, "-CH2", 0);
+    let r = analyse(&c, &p, Pol::Pos, &FACTS, None);
+    assert_eq!(r.confidence, "site", "{:?}", r.reasons);
+    let d = drawing(sm, &r);
+    assert_eq!(d.lost, [0]);
+    assert_eq!(d.kept.len(), 10);
+    assert!(!d.kept.contains(&0));
+    let p = peaks_of(PHENOL, "+O", 3);
+    let r = report(PHENOL, "C8H10O", "C8H10O2", &p, &FACTS);
+    let d = drawing(PHENOL, &r);
+    assert_eq!(d.highlight, [3, 4, 7, 8]);
+    assert!(d.zones.is_empty());
+}
