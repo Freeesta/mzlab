@@ -402,7 +402,10 @@ fn notes(r: &Result3, water: bool, prot: Option<&Protomer>, bde: bool) -> Vec<St
     }
     n.push(format!("C–H sites: unsaturated carbons with hydrogens, f(−) averaged over each symmetry class; sites within {} of the first are a tie.", crate::fukui::TIE));
     if bde {
-        n.push("Combined score: mean of two min-max scaled parts, f(−) and the radical energy (E of the radical after losing one H· minus E of the molecule, same GFN2-xTB and solvent, kcal/mol; lower = easier). A site rises when both agree; the two parts are listed per site.".to_string());
+        n.push(
+            "Score: mean of min-max f(−) and radical energy (kcal/mol, lower = easier H· loss)."
+                .to_string(),
+        );
     }
     n
 }
