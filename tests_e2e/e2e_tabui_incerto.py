@@ -59,7 +59,7 @@ try:
             menu_on_atom(0); pg.locator("#ctx div", has_text="Brackets with").first.click()
             pg.wait_for_selector("#askdlg[open]", timeout=5000); pg.fill("#askin", "+O"); pg.click("#askok")
             pg.evaluate(f"{KET}.editor.selection(null)")
-            pg.wait_for_function("TPDraw.partial().then(p => p.delta === '+O' && p.info && p.info.formula === 'C8H10O2')", timeout=20000)
+            pg.wait_for_function("TPDraw.partial().then(p => p.delta === '+O' && p.level === 3 && p.info && p.info.formula === 'C8H10O2')", timeout=20000)
             pg.click("#tp-draw-use")
             pg.wait_for_function("document.querySelector('#tp-mol').value === 'C8H10O2'", timeout=20000)
             pg.wait_for_function("document.querySelector('#tp-prev').innerText.includes('position uncertain')", timeout=30000)
