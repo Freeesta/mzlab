@@ -2,7 +2,7 @@
 
 - **Concurrency**: `test`, `rust`, `sito-rust`, `desktop` annullano il run in corso solo sulle pull request (un push nuovo sostituisce il vecchio); su `main` ogni commit tiene il suo risultato.
 - **Pages** (`pages.yml`): `build` e `deploy` hanno gruppi propri (`pages-build`, `pages-deploy`) senza annullamento: un run in corso finisce sempre, tra quelli in attesa GitHub tiene solo il più recente. Il sito riceve quindi sempre una versione nuova anche con molte unioni di fila.
-- **`rust`**: job `changes` + `rust-ok` sempre presente; `rust` e `deny` girano solo se cambiano `crates/`, `Cargo.*`, `rust-toolchain.toml`, `deny.toml` o gli script del controllo Rust (altrimenti «skipped», `rust-ok` verde).
+- **`rust`**: job `changes` + `rust-ok` sempre presente; `rust` (test nativi), `rust-wasm` (build .wasm, dipendenze, guardie), `rust-lint` (fmt, clippy) e `deny` girano in parallelo, ognuno con la propria cache (`rust-<os>-lint|wasm|test-…`), solo se cambiano `crates/`, `Cargo.*`, `rust-toolchain.toml`, `deny.toml` o gli script del controllo Rust (altrimenti «skipped», `rust-ok` verde).
 - **`sito-rust`** (`sito`, `sito-e2e`, `sito-unit`): parte solo se cambiano `crates/`, `Cargo.*`, `mzlab/`, `tools/build_site.py`, `tests_e2e/`, `tests/golden/`, `tools/dati_sintetici.py`, `tools/verifica.py` o il workflow; su una PR solo-documentazione NON compare (filtro dei percorsi, non «skipped»).
 - **`desktop`** (job `shim` + 3 OS): solo se cambiano `crates/mzlab-desktop/**` (include `tauri.conf.json` e `prepare.py`), `Cargo.lock` o il workflow, oppure a mano; la pagina nell'installer si verifica prima di ogni release.
 - **`test`** (`pytest 3.11/3.14`, `browser`, `javascript`, `tipi`): girano sempre (controlli obbligatori di «main protetto»).
@@ -18,7 +18,7 @@
 - **Build dei `.wasm`** (`tools/build_feat_wasm.sh`, `tools/build_lettori_wasm.sh`, `tools/wasm_opt.sh`, `tools/wasm_paralleli.sh`): una invocazione di cargo per modulo; un solo `cargo build -p a -p b` unirebbe le feature di `mzlab-core` e cambierebbero byte e dimensioni (motore +14 %).
   `wasm-bindgen` e `wasm-opt` di ogni modulo girano in background mentre cargo compila il successivo (`wasm_pack`; `wasm_wait` stampa i log in ordine e fallisce se un lavoro fallisce); `wasm-opt` si installa una volta per `$RUNNER_TEMP` (`flock`).
   I 48 file di `site/static/wasm*` hanno gli stessi SHA-256 della costruzione in serie; i tetti non cambiano. Misura (4 CPU, dipendenze calde, crate del workspace da zero, motore + librerie + 13 moduli mzFinder + 8 lettori): 643 s in serie, 350 s con i lavori in background.
-- **Test Rust e guardie** (job `rust`): `cargo test` esegue i binari uno dopo l'altro (compilazione 230 s + esecuzione 192 s su 205 binari); gli altri binari durano ≤ 11 s, quindi niente `cargo-nextest`.
+- **Test Rust e guardie** (job `rust`; guardie in `rust-wasm`): `cargo test` esegue i binari uno dopo l'altro (compilazione 230 s + esecuzione 192 s su 205 binari); gli altri binari durano ≤ 11 s, quindi niente `cargo-nextest`.
   `rois_parity` dura 30 s (era 66 s): `tools/roi_riferimento.py` elabora i file in parallelo, un processo per CPU, e ogni file scrive solo i propri `<stem>.mzidx` e `.rois.json`.
   Le guardie di memoria (`tests/test_guardie_memoria.py`, `tests/test_feat_wasm.py`) costruiscono, generano le serie e misurano in parallelo, ciascuna misura nella sua cartella: 112 s → 57 s con le build in cache.
 
@@ -37,5 +37,5 @@ Prima di aprire la PR: `python3 tools/pre_pr.py` (1-2 minuti: mappa, soglie, i18
 
 ## Test che lanciano node o leggono la piattaforma
 - Un test pytest che passa un percorso a `node -e` lo scrive con `.as_posix()` (i backslash di Windows finirebbero nella stringa JS) e ogni `subprocess.run` di node ha `text=True, encoding="utf-8"` (su Windows la decodifica predefinita è cp1252).
-- Il passo «wasm-bindgen CLI» di `rust.yml` sta prima del salvataggio della cache: il binario in `~/.cargo/bin` entra nella cache e le guardie non lo ricompilano.
+- Il passo «wasm-bindgen CLI» di `rust.yml` (job `rust-wasm`) sta prima del salvataggio della cache: il binario in `~/.cargo/bin` entra nella cache e le guardie non lo ricompilano.
 - Teoria e Pratica leggono prima le chiavi `mzlab.*` e poi le vecchie `qqq.*` (le pagine standalone non caricano `nomi.js`); lo snippet del tema (`tools/tema_testa.py`) fa lo stesso per `prefs`.
