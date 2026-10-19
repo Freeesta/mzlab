@@ -12,6 +12,7 @@ use mzlab_feat::attributio::sources::load_sources;
 use mzlab_feat::attributio::Campaign;
 
 use mzlab_feat::attributio::ms2_engine::matcher::{Query, SearchOpts};
+use mzlab_feat::attributio::ms2_engine::rearrange::attribute;
 use mzlab_feat::attributio::ms2_engine::{compile_library, Ms2Library};
 use serde_json::Value;
 
@@ -182,4 +183,51 @@ fn insilico_score_follows_the_reference() {
     assert_eq!(r.len(), 1);
     assert_eq!(r[0].candidate.name, "Caffeine");
     assert!(r[0].mass_ppm.abs() < 1.0);
+}
+
+/// MS-03: the hydrogen-rearrangement attribution equals the reference built on Attributio's sub-formula table (formulas, shifts, ppm, losses, score at 1e-9).
+#[test]
+fn rearrangement_attribution_equals_the_reference() {
+    use mzlab_feat::attributio::review::explain::parse_formula;
+    use mzlab_feat::attributio::review::settings::ReviewSettings;
+    let p = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/data/attributio/ms2_engine/rearrange.json"
+    );
+    let g: Value = serde_json::from_str(&std::fs::read_to_string(p).unwrap()).unwrap();
+    let s = ReviewSettings::default();
+    let mut moved = 0;
+    for c in g["cases"].as_array().unwrap() {
+        let (mz, it) = (nums(&c["mz_peaks"]), nums(&c["it"]));
+        let fd = parse_formula(c["formula"].as_str().unwrap());
+        let got = attribute(
+            &fd,
+            c["mz"].as_f64().unwrap(),
+            c["pol"].as_str().unwrap(),
+            (&mz, &it),
+            &s,
+        )
+        .unwrap();
+        let w = &c["result"];
+        assert_eq!(got.adduct, w["adduct"].as_str().unwrap());
+        assert_eq!(got.n_explained as i64, w["n_explained"].as_i64().unwrap());
+        assert_eq!(got.n_rearranged as i64, w["n_rearranged"].as_i64().unwrap());
+        assert!((got.score - w["score"].as_f64().unwrap()).abs() < 1e-9);
+        assert!((got.frac_explained - w["frac_explained"].as_f64().unwrap()).abs() < 1e-9);
+        for (i, h) in w["hits"].as_array().unwrap().iter().enumerate() {
+            match (&got.hits[i], h.is_null()) {
+                (None, true) => {}
+                (Some(x), false) => {
+                    assert_eq!(x.shift as i64, h["k"].as_i64().unwrap());
+                    assert_eq!(x.formula, h["formula"].as_str().unwrap());
+                    assert_eq!(x.loss, h["loss"].as_str().unwrap());
+                    assert!((x.mz_th - h["mz_th"].as_f64().unwrap()).abs() < 1e-9);
+                    assert!((x.ppm - h["ppm"].as_f64().unwrap()).abs() < 1e-6);
+                    moved += (x.shift != 0) as i32;
+                }
+                _ => panic!("peak {i} of {}", c["formula"]),
+            }
+        }
+    }
+    assert!(moved >= 5, "{moved} rearranged peaks");
 }
