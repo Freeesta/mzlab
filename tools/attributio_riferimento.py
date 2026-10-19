@@ -776,6 +776,30 @@ def stadio_tox_pericolo(dir_: Path):
             "coverage": hazard.coverage(table, pd.Series([True, False] * 6 + [True]))}
 
 
+def stadio_tox_amenabilita():
+    """LC-ESI amenability rules on hand cases (every branch of the decision list)."""
+    from attributio.reglists import amenability as A
+    nan = float("nan")
+    C = [  # smiles, mono_mass, formula, charge, xlogp, skeleton
+        ("", 100.0, "C5H5N", None, 1.0, "AAAAAAAAAAAAAA"), ("nan", 100.0, "C5H5N", None, 1.0, "AAAAAAAAAAAAAA"), (None, 100.0, "C5H5N", None, 1.0, ""),
+        ("CBr", 93.9, "CH3Br", None, 1.2, "GZUXJHMPEANEGY"), ("C[n+]1ccc(cc1)-c1cc[n+](C)cc1", 186.1, "C12H14N2", 2, None, "INFDPOAKFNIJBF"),
+        ("CCO", None, "C2H6O", None, 0.0, ""), ("CCO", 46.04, "C2H6O", None, 0.0, ""), ("C" * 120, 1700.0, "C120H242", None, 1.0, ""),
+        ("O=O", 100.0, "O2", None, 0.0, ""), ("[Hg]C", 216.0, "CH3Hg", None, 1.0, ""), ("CC(=O)[O-].[Mn+2]", 200.0, "C2H3MnO2", None, -1.0, ""),
+        ("CC(=O)Nc1ccc(O)cc1", 151.06, "C8H9NO2", None, 0.5, ""), ("CC(=O)Nc1ccc(O)cc1", 151.06, "C8H9NO2", 0, 0.5, ""),
+        ("c1ccc(cc1)C(=O)[O-].[Na+]", 144.0, "C7H5O2Na", None, 1.0, ""), ("CC(=O)Nc1ccc(O)cc1.Cl", 187.0, "C8H10ClNO2", None, 0.5, ""),
+        ("CCCCCCCCCCCCCCCC[N+](C)(C)C.[Cl-]", 284.3, "C19H42N.Cl", None, 6.0, ""), ("C[N+](C)(C)C", 74.1, "C4H12N", None, -3.0, ""),
+        ("CCCCCCCCCCCCCCCC[N+](C)(C)C", 284.3, "C19H42N", None, 6.0, ""), ("c1ccccc1", 78.05, "C6H6", None, 2.1, ""), ("ClC(Cl)(Cl)C(Cl)(Cl)Cl", 233.8, "C2Cl6", None, 4.0, ""),
+        ("CC", 30.0, "C2H6", None, 1.8, ""), ("CCCCCCCCCCCC", 170.2, "C12H26", None, 6.0, ""),
+        ("OP(=O)(O)CNCC(=O)O", 169.0, "C3H8NO5P", None, -3.4, ""), ("NCC(=O)O", 75.03, "C2H5NO2", None, -3.2, ""), ("OCC(O)C(O)C(O)C(O)CO", 182.08, "C6H14O6", None, -3.1, ""),
+        ("OC(=O)CC(O)(CC(=O)O)C(=O)O", 192.03, "C6H8O7", None, -1.7, ""), ("NC(CO)CO.OC(=O)C(F)(F)F", 205.0, "C5H8F3NO4", None, -2.5, ""),
+        ("FC(F)(F)C(F)(F)C(F)(F)F", 200.0, "C6F14", None, 3.0, ""), ("CS(=O)(=O)N", 95.0, "CH5NO2S", -1, -0.5, ""), ("CC(=O)[O-]", 59.0, "C2H3O2", -1, -0.5, ""),
+        ("CC[NH3+]", 46.0, "C2H8N", 1, 0.0, ""), ("CC[NH3+]", 246.0, "C2H8N", 1, 0.0, ""), ("OC(=O)CC.OC(=O)CCC", 164.0, "C7H12O4", None, 0.1, ""),
+        ("c1ccccc1O", 94.04, "C6H6O", None, nan, ""), ("c1ccccc1O", 94.04, None, None, 1.5, ""), ("c1ccccc1O", 94.04, "", None, 1.5, ""), ("CN(C)C.Cl", 59.07, "C3H9N.ClH", None, 0.3, ""),
+        ("CC(C)(C)N.[K+]", 73.1, "C4H11NK", None, 0.2, ""), ("CCN.[Mg+2]", 45.0, "C2H7NMg", None, 0.2, ""), ("CC[N+](C)(C)C.[Br-]", 102.0, "C5H14N.Br", None, 0.0, ""),
+    ]
+    return {"cases": [[c[0], None if c[1] is None else c[1], c[2], c[3], None if c[4] is None else (None if c[4] != c[4] else c[4]), c[5], list(A.lc_esi_amenable("n", c[0], c[1], c[2], c[3], c[4], c[5]))] for c in C]}
+
+
 def controlla(uscita: Path, campagna: Path) -> int:
     got = json.loads((uscita / "livelli.json").read_text(encoding="utf-8"))["features"]
     with open(campagna / "livelli_attesi.csv", encoding="utf-8", newline="") as fh:
@@ -839,6 +863,7 @@ def main() -> int:
         "tox-istantanee": lambda: scrivi(USCITA_TOX, "istantanee.json", stadio_tox_istantanee(ISTANTANEE)),
         "tox-registro": lambda: scrivi(USCITA_TOX, "registro.json", stadio_tox_registro()),
         "tox-pericolo": lambda: scrivi(USCITA_TOX, "pericolo.json", stadio_tox_pericolo(ISTANTANEE)),
+        "tox-amenabilita": lambda: scrivi(USCITA_TOX, "amenabilita.json", stadio_tox_amenabilita()),
         "sorbenti": lambda: scrivi(a.uscita_sorbenti, "sorbenti.json", stadio_sorbenti(carica(root, a.sorbenti.resolve()))),
     }
     for nome in a.solo or list(stadi):

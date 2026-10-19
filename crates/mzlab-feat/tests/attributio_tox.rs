@@ -249,3 +249,27 @@ fn hazard_records_match_the_golden_data() {
         .collect();
     same(&Value::Object(got), &g["coverage"], "coverage");
 }
+
+// ------------------------------------------------------------------------------------------------------------------ amenability (RG-03)
+use mzlab_feat::attributio::tox::amenability::lc_esi_amenable;
+
+#[test]
+fn lc_esi_amenability_matches_the_golden_data() {
+    let g = golden("tox", "amenabilita.json");
+    for c in g["cases"].as_array().unwrap() {
+        let (verdict, rule) = lc_esi_amenable(
+            c[0].as_str().unwrap_or(""),
+            c[1].as_f64(),
+            c[2].as_str(),
+            c[3].as_i64(),
+            c[4].as_f64(),
+            c[5].as_str().unwrap(),
+        );
+        assert_eq!(
+            json!([verdict, rule]),
+            c[6],
+            "amenability {:?}",
+            &c.as_array().unwrap()[..6]
+        );
+    }
+}
