@@ -31,17 +31,24 @@ fn generate() -> Option<PathBuf> {
     ok.then_some(dir)
 }
 
-#[test]
-fn parity_with_mzmine410() {
-    if !std::path::Path::new(concat!(
+/// `Some(())` when the 4.10 gold data are there; otherwise says why the test is skipped.
+fn need_gold(test: &str) -> Option<()> {
+    let dir = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../tests/data/untargeted/mzmine410"
-    ))
-    .exists()
-    {
-        eprintln!("SKIP parity_with_mzmine410: tests/data/untargeted/mzmine410 is missing (the 4.10 gold data need an mzmine account: tools/bench/oro_mzmine410.py)");
-        return;
+    );
+    if std::path::Path::new(dir).exists() {
+        return Some(());
     }
+    eprintln!("SKIP {test}: tests/data/untargeted/mzmine410 is missing (the 4.10 gold data need an mzmine account: tools/bench/oro_mzmine410.py)");
+    None
+}
+
+#[test]
+fn parity_with_mzmine410() {
+    let Some(()) = need_gold("parity_with_mzmine410") else {
+        return;
+    };
     let Some(dir) = generate() else {
         eprintln!("SKIP untargeted_adap: python3 with numpy is missing");
         return;

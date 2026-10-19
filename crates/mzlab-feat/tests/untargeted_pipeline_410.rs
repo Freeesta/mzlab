@@ -88,17 +88,24 @@ fn find(t: &Aligned, mz: f64, rt: f64) -> Option<usize> {
     (0..t.len()).find(|&r| (t.mz[r] - mz).abs() < 2e-4 && (t.rt[r] - rt).abs() < 0.02)
 }
 
-#[test]
-fn pipeline_matches_the_final_list_of_mzmine() {
-    if !std::path::Path::new(concat!(
+/// `Some(())` when the 4.10 gold data are there; otherwise says why the test is skipped.
+fn need_gold(test: &str) -> Option<()> {
+    let dir = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../tests/data/untargeted/mzmine410"
-    ))
-    .exists()
-    {
-        eprintln!("SKIP pipeline_matches_the_final_list_of_mzmine: tests/data/untargeted/mzmine410 is missing (the 4.10 gold data need an mzmine account: tools/bench/oro_mzmine410.py)");
-        return;
+    );
+    if std::path::Path::new(dir).exists() {
+        return Some(());
     }
+    eprintln!("SKIP {test}: tests/data/untargeted/mzmine410 is missing (the 4.10 gold data need an mzmine account: tools/bench/oro_mzmine410.py)");
+    None
+}
+
+#[test]
+fn pipeline_matches_the_final_list_of_mzmine() {
+    let Some(()) = need_gold("pipeline_matches_the_final_list_of_mzmine") else {
+        return;
+    };
     let Some(mut ixs) = synthetic() else { return };
     let p = UntParams {
         polarity: Some(1),

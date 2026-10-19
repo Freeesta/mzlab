@@ -69,17 +69,24 @@ fn same(f: &Feature, r: &BTreeMap<String, String>) -> bool {
         && close(f.area_s, num(r, "area") * 60.0, 1.1e-3)
 }
 
-#[test]
-fn resolver_matches_mzmine_410() {
-    if !std::path::Path::new(concat!(
+/// `Some(())` when the 4.10 gold data are there; otherwise says why the test is skipped.
+fn need_gold(test: &str) -> Option<()> {
+    let dir = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../tests/data/untargeted/mzmine410"
-    ))
-    .exists()
-    {
-        eprintln!("SKIP resolver_matches_mzmine_410: tests/data/untargeted/mzmine410 is missing (the 4.10 gold data need an mzmine account: tools/bench/oro_mzmine410.py)");
-        return;
+    );
+    if std::path::Path::new(dir).exists() {
+        return Some(());
     }
+    eprintln!("SKIP {test}: tests/data/untargeted/mzmine410 is missing (the 4.10 gold data need an mzmine account: tools/bench/oro_mzmine410.py)");
+    None
+}
+
+#[test]
+fn resolver_matches_mzmine_410() {
+    let Some(()) = need_gold("resolver_matches_mzmine_410") else {
+        return;
+    };
     let rt = axis();
     let p = MinParams::default();
     let expected = rows("resolved.csv");

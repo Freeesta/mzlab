@@ -49,17 +49,24 @@ fn expected() -> BTreeMap<String, Vec<(BTreeSet<String>, i64)>> {
     out
 }
 
-#[test]
-fn the_groups_of_each_file_are_those_of_mzmine() {
-    if !std::path::Path::new(concat!(
+/// `Some(())` when the 4.10 gold data are there; otherwise says why the test is skipped.
+fn need_gold(test: &str) -> Option<()> {
+    let dir = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../tests/data/untargeted/mzmine410"
-    ))
-    .exists()
-    {
-        eprintln!("SKIP the_groups_of_each_file_are_those_of_mzmine: tests/data/untargeted/mzmine410 is missing (the 4.10 gold data need an mzmine account: tools/bench/oro_mzmine410.py)");
-        return;
+    );
+    if std::path::Path::new(dir).exists() {
+        return Some(());
     }
+    eprintln!("SKIP {test}: tests/data/untargeted/mzmine410 is missing (the 4.10 gold data need an mzmine account: tools/bench/oro_mzmine410.py)");
+    None
+}
+
+#[test]
+fn the_groups_of_each_file_are_those_of_mzmine() {
+    let Some(()) = need_gold("the_groups_of_each_file_are_those_of_mzmine") else {
+        return;
+    };
     let rows = csv("isotopes.csv");
     let want = expected();
     let (mut total, mut same, mut extra) = (0, 0, 0);
@@ -134,15 +141,9 @@ fn aligned() -> (Aligned, Vec<Row>) {
 
 #[test]
 fn the_ions_of_the_aligned_list_group_the_same_way() {
-    if !std::path::Path::new(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../tests/data/untargeted/mzmine410"
-    ))
-    .exists()
-    {
-        eprintln!("SKIP the_ions_of_the_aligned_list_group_the_same_way: tests/data/untargeted/mzmine410 is missing (the 4.10 gold data need an mzmine account: tools/bench/oro_mzmine410.py)");
+    let Some(()) = need_gold("the_ions_of_the_aligned_list_group_the_same_way") else {
         return;
-    }
+    };
     let (t, rows) = aligned();
     let got = group(&t, &IsoParams::default());
     // the row of a feature of a file: found by the m/z and RT of the file as aligned.csv prints them

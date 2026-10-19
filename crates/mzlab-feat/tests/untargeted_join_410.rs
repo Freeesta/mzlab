@@ -34,17 +34,24 @@ fn key(file: &str, mz: f64, rt: f64) -> String {
     format!("{file}|{mz:.5}|{rt:.3}")
 }
 
-#[test]
-fn rows_like_mzmine() {
-    if !std::path::Path::new(concat!(
+/// `Some(())` when the 4.10 gold data are there; otherwise says why the test is skipped.
+fn need_gold(test: &str) -> Option<()> {
+    let dir = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../tests/data/untargeted/mzmine410"
-    ))
-    .exists()
-    {
-        eprintln!("SKIP rows_like_mzmine: tests/data/untargeted/mzmine410 is missing (the 4.10 gold data need an mzmine account: tools/bench/oro_mzmine410.py)");
-        return;
+    );
+    if std::path::Path::new(dir).exists() {
+        return Some(());
     }
+    eprintln!("SKIP {test}: tests/data/untargeted/mzmine410 is missing (the 4.10 gold data need an mzmine account: tools/bench/oro_mzmine410.py)");
+    None
+}
+
+#[test]
+fn rows_like_mzmine() {
+    let Some(()) = need_gold("rows_like_mzmine") else {
+        return;
+    };
     let resolved = csv("resolved.csv");
     let files: Vec<String> = resolved
         .iter()

@@ -131,17 +131,24 @@ fn check_cells(
     );
 }
 
-#[test]
-fn fills_the_cells_like_mzmine() {
-    if !std::path::Path::new(concat!(
+/// `Some(())` when the 4.10 gold data are there; otherwise says why the test is skipped.
+fn need_gold(test: &str) -> Option<()> {
+    let dir = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../tests/data/untargeted/mzmine410"
-    ))
-    .exists()
-    {
-        eprintln!("SKIP fills_the_cells_like_mzmine: tests/data/untargeted/mzmine410 is missing (the 4.10 gold data need an mzmine account: tools/bench/oro_mzmine410.py)");
-        return;
+    );
+    if std::path::Path::new(dir).exists() {
+        return Some(());
     }
+    eprintln!("SKIP {test}: tests/data/untargeted/mzmine410 is missing (the 4.10 gold data need an mzmine account: tools/bench/oro_mzmine410.py)");
+    None
+}
+
+#[test]
+fn fills_the_cells_like_mzmine() {
+    let Some(()) = need_gold("fills_the_cells_like_mzmine") else {
+        return;
+    };
     let dir = std::env::temp_dir().join(format!("mzlab_untargeted_gap_{}", std::process::id()));
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let ok = Command::new("python3")
