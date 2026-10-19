@@ -40,10 +40,10 @@ try:
             n0 = pg.get_attribute("#pal-in", "aria-activedescendant"); pg.keyboard.press("ArrowDown")
             assert pg.get_attribute("#pal-in", "aria-activedescendant") != n0 and pg.locator("#pal-l [aria-selected=true]").count() == 1
             pg.keyboard.press("ArrowUp"); pg.keyboard.press("Enter"); attendi(pg, "document.querySelector('#paletta').hidden")
-            attendi(pg, "BARRA.curTab === 'losses'"); assert pg.input_value("#nl-q") == "18", "the loss panel opens with the number"; pg.wait_for_timeout(500); pg.evaluate("BARRA.close(false)")
+            attendi(pg, "BARRA.curTab === 'losses'"); assert pg.input_value("#nl-q") == "18", "the loss panel opens with the number"; attendi(pg, "document.activeElement.id === 'nl-q'"); pg.evaluate("BARRA.close(false)")
         step("↑↓ and Enter open the panel of the first result", keys)
         def esc():
-            opn(); typ("18", "Perdita"); pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+            opn(); typ("18", "Perdita"); pg.keyboard.press("Escape"); attendi(pg, "document.querySelector('#paletta').hidden")
             assert not pg.is_visible("#paletta"), (pg.evaluate("document.activeElement.id||document.activeElement.tagName"), pg.evaluate("document.querySelector('#paletta').hidden"))
         step("Esc closes", esc)
         def formula():
@@ -62,9 +62,9 @@ try:
         def narrow():
             ctx = r.b.new_context(viewport={"width": 400, "height": 800}, locale="it-IT", reduced_motion="reduce")
             q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-            q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); q.wait_for_timeout(1500)
+            q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); ready(q)
             try:
-                stage(q, [EX / "FullScan_t0.mzML"]); q.click("text=Carica dati"); ready(q); q.wait_for_timeout(500)
+                stage(q, [EX / "FullScan_t0.mzML"]); q.click("text=Carica dati"); ready(q)
                 q.click("#tb-search"); q.wait_for_selector("#paletta:not([hidden])"); q.fill("#pal-in", "18")
                 attendi(q, "document.querySelector('#pal-l').innerText.includes('Addotto')")
                 assert q.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1, "no sideways scroll"
@@ -73,7 +73,7 @@ try:
                 ctx.close()
         step("400 px: the box fits", narrow)
         def english():
-            pg.evaluate("I18N.set('en')"); pg.wait_for_timeout(1500); ready(pg); opn(); typ("18", "loss")
+            pg.evaluate("I18N.set('en')"); attendi(pg, "I18N.lang === 'en'"); ready(pg); opn(); typ("18", "loss")
             t = txt(); assert "loss" in t and "Adduct" in t, t
             pg.fill("#pal-in", ""); attendi(pg, "document.querySelector('#pal-l').innerText.includes('Try: 18')")
             pg.keyboard.press("Escape")
