@@ -197,6 +197,7 @@ declare var SUGG: any;
 declare var StoriaPila: any;
 declare var TABELLA: any;
 declare var TASTI: any;
+declare var TEMASOFT: any;
 declare var TIME_UNITS: any;
 declare var TIP_DELAY: any;
 declare var TOL0: any;
