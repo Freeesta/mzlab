@@ -70,3 +70,11 @@ required-features = ["untargeted"]
 [[test]]
 name = "untargeted_to_attributio"
 required-features = ["untargeted", "attributio"]
+
+[[test]]
+name = "untargeted_arpls"
+required-features = ["untargeted"]
+
+[[test]]
+name = "untargeted_smooth"
+required-features = ["untargeted"]
