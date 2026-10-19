@@ -26,15 +26,17 @@ async function init(){try{await bootSession();await Promise.all(E.panels.map(p=>
   const d=await api("api/state");fail();window.qqReady=true;if(typeof AVVIO!=="undefined")AVVIO.segnaPronto();if(window.ldClearBootTimer)window.ldClearBootTimer();setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);if(typeof AVVIO!=="undefined")AVVIO.segnaSessione(!!S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else{applyView();if(window.QQRESET)QQRESET.remind()}if(window.BARRA)BARRA.init()}catch(e){fail(e);if(typeof AVVIO!=="undefined")AVVIO.segnaFallito(e)}finally{if(!$("#loading").hidden)loading(false)}}
 
 // ------------------------------------------------------------------ views: Dati (start screen or panels), Disegno
-let _lastV="";
+let _lastV="",_itNoted=false;
+// true only the first time: remembered in localStorage (the reset of the settings of the Teoria clears it), per session when there is no storage
+function itNoteOnce(){const k="mzlab.teoria.itnote";try{if(localStorage.getItem(k))return false;localStorage.setItem(k,"1");return true}catch(e){const r=!_itNoted;_itNoted=true;return r}}
 function applyView(){const v=S.view,d=v==="data";
   $("#start").hidden=!(d&&(!S.sess||S.adding));$("#v-data").hidden=!(d&&S.sess&&!S.adding);$("#cancadd").hidden=!(S.sess&&S.adding);renderLoaded();
   if(window.BARRA){if(d&&S.sess&&!S.adding)BARRA.dockCalc(true);else BARRA.dockCalc(false);}
   $("#v-draw").hidden=v!=="draw";document.documentElement.classList.toggle("in-draw",v==="draw");$("#v-theory").hidden=v!=="theory";
-  // The Teoria is Italian only: in English it opens at once in Italian, with a short toast each time the student enters it
+  // The Teoria is Italian only: in English it opens at once in Italian, with a short toast the first time the student enters it (once per session without storage)
   // theory module, loaded on first open
   if(v==="theory"&&!$("#tframe").getAttribute("src"))$("#tframe").src="static/teoria/index.html";
-  if(v==="theory"&&_lastV!=="theory"&&I18N.lang==="en"&&window.toast)toast(I18N.t("theory.onlyItalian"));
+  if(v==="theory"&&_lastV!=="theory"&&I18N.lang==="en"&&window.toast&&itNoteOnce())toast(I18N.t("theory.onlyItalian"));
   _lastV=v;
   document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   // one title per view (WCAG 2.4.2)
@@ -167,7 +169,9 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 // files of the instruments are not read by the program (no reader of proprietary formats): a message with the recipe instead of a generic error
 // full screen of the whole app (Fullscreen API; the button stays hidden where the browser has none, e.g. iPhone)
 // «Report a bug»: the dialog is loaded on the first click
-{const b=$("#bug-btn");if(b)b.onclick=()=>carica("m:bug-report.js").then(()=>(/** @type {any} */(window)).BUGREP.apri()).catch(console.error)}
+// the button belongs to the administrator mode (5 clicks on the logo): it shows when that mode turns on
+{const b=$("#bug-btn");if(b){
+  b.onclick=()=>carica("m:bug-report.js").then(()=>(/** @type {any} */(window)).BUGREP.apri()).catch(console.error)}}
 (()=>{const b=$("#fs-btn"),de=document.documentElement;if(!b)return;if(!de.requestFullscreen){b.hidden=true;return}
   const sync=()=>{const on=!!document.fullscreenElement,k=on?"header.fullscreen.exit":"header.fullscreen";b.setAttribute("aria-pressed",on);b.querySelector(".fs-in").hidden=on;b.querySelector(".fs-out").hidden=!on;b.title=I18N.t(k);b.setAttribute("aria-label",b.title);b.dataset.i18nTitle=b.dataset.i18nAriaLabel=k};
   b.onclick=()=>{(document.fullscreenElement?document.exitFullscreen():de.requestFullscreen({navigationUI:"hide"})).catch(()=>{})};document.addEventListener("fullscreenchange",sync)})();

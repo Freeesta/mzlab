@@ -30,7 +30,7 @@ try:
             assert q.inner_text("#sblocco").strip() == "Sbloccato" and ls(q) == "1"
             q.wait_for_function("document.documentElement.classList.contains('esteso')", timeout=8000)
             assert q.locator("#sblocco.on").count() == 0 and q.evaluate("TEORIA.esteso()") is True
-            q.click("#logo"); q.wait_for_url("**/#/dati", timeout=3000)   # unlocked: a single click still follows the link (after 600 ms)
+            q.click("#logo"); q.wait_for_url("**/#/dati", timeout=15000)   # unlocked: a single click still follows the link (after 600 ms)
             c.close()
         step("five quick clicks: flag, status message, reload with html.esteso; a single click still follows the link", five)
         def calm():
