@@ -22,7 +22,10 @@ fn casuali(n: usize, seme: u64) -> Vec<u8> {
         .collect()
 }
 
-fn entrate() -> Vec<(&'static str, fn(&[u8]))> {
+/// A fuzz entry: its name and the function it runs on the bytes.
+type Entrata = (&'static str, fn(&[u8]));
+
+fn entrate() -> Vec<Entrata> {
     vec![
         ("aperti", ingressi_lettori::lettori_aperti),
         ("andi", ingressi_lettori::lettori_andi),
