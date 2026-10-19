@@ -11,6 +11,9 @@ from lib import *
 from e2e_memoria_misure import INIT, pss, procs, browser_pid
 
 
+DRAWN = "!document.querySelector('#v-data').hidden && !!window.PERF && PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw chrom')"
+
+
 def make(tmp, spec):
     out = tmp / "enorme.mzML"
     args = ["--scans", "1200000", "--peaks1", "40", "--peaks2", "25"]  if spec == "m" else ["--gb", spec]
@@ -55,10 +58,12 @@ def one(r, p, spec, tmp):
         rend, wasm = sample(pg, root)
         peak_r = max(peak_r, rend)
         if sum(m for _, m in wasm) > sum(m for _, m in peak_w): peak_w = wasm
-        if pg.evaluate("!document.querySelector('#v-data').hidden && window.PERF && PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw chrom')"): break
+        if pg.evaluate(DRAWN): break
         bad = pg.evaluate("(document.querySelector('.toast-err, #fe-err, [role=alert]') || {}).innerText || ''")
         if bad.strip(): how = "error: " + bad.strip().replace("\n", " ")[:160]; break
-        pg.wait_for_timeout(1500)
+        # sampling interval: ends early as soon as the first chromatogram is drawn
+        try: attendi(pg, DRAWN, 1500)
+        except Exception: pass
     else:
         if how == "loaded": how = "not finished"
     st = pg.evaluate("navigator.storage.estimate().then(s => s.usage / 1048576)")
