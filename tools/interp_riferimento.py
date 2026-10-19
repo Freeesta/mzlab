@@ -23,6 +23,9 @@ def sites(m, transform):
                 out.append(("aliphatic_oh", i))
             elif a.GetSymbol() == "S" and not a.GetIsAromatic() and a.GetDegree() == 2:
                 out.append(("s_oxide", i))
+            elif a.GetSymbol() == "N" and a.GetIsAromatic() and a.GetDegree() == 2 and not a.GetTotalNumHs() and not a.GetFormalCharge():
+                # a pyridine-type nitrogen takes the oxygen (N-oxide), as the Rust side does
+                out.append(("n_oxide", i))
             elif a.GetSymbol() == "N" and not a.GetIsAromatic() and a.GetDegree() == 3 and not any(
                     n.GetSymbol() == "C" and any(b.GetBondTypeAsDouble() == 2 for b in n.GetBonds()) for n in a.GetNeighbors()):
                 out.append(("n_oxide", i))

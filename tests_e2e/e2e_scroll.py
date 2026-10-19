@@ -12,7 +12,7 @@ r = Run(port=8860, wd="/tmp/wd60")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [mz(f) for f in FILES])
         pg.click("text=Carica dati"); ready(pg)
         def lockclick():             # the click on the lock makes the spectrum the active panel: give the chromatogram the focus back
             pg.click(".pnl.spec [data-a=lock]"); pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'))")

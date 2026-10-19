@@ -312,6 +312,7 @@ pub fn build<R: ReadAt>(
             )
         })
         .collect();
+    registry.decoys = filtri::table_decoys(inp.hyps, &t.mz, &t.tp.status, &facts);
     Ok(Output {
         rows,
         registry,

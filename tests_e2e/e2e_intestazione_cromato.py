@@ -16,7 +16,7 @@ r = Run(port=8896, wd="/tmp/wd96")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [str(D / "B_FullMass-t0.mzML"), str(D / "B_FullMass-t60.mzML")]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [str(D / "B_FullMass-t0.mzML"), str(D / "B_FullMass-t60.mzML")])
         pg.click("text=Carica dati"); ready(pg)
         pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_timeout(2000)
         X, C = ".pnl.xic", ".pnl.chrom"

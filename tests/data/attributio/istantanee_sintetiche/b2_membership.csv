@@ -1,0 +1,11 @@
+inchikey_skeleton;list_id;name;list_attribute;is_tp;parent;lc_esi_amenable;amenability_rule;formula;mono_mass;smiles;inchikey;list_group;cas;pubchem_cid;xlogp;list_version;resolved_by
+AAAAAAAAAAAAAA;HHP_PAN;Alphazol;Highly hazardous;false;;true;ESI+ amine;C9H10N2O;162.0793;CC1=CC=C(C=C1)N=C(N)O;AAAAAAAAAAAAAA-UHFFFAOYSA-N;pesticides;111-11-1;11;1.5;v1;name
+AAAAAAAAAAAAAA;EU_PS_2026_805;Alphazol;PS;false;;true;ESI+ amine;C9H10N2O;162.0793;CC1=CC=C(C=C1)N=C(N)O;AAAAAAAAAAAAAA-UHFFFAOYSA-N;acque_UE;111-11-1;11;;v1;name
+DDDDDDDDDDDDDD;WHO_MIA;Deltacide;Critically important;false;;true;;C6H6O2;110.0368;;DDDDDDDDDDDDDD-UHFFFAOYSA-N;internazionali;;21;;v1;name
+FFFFFFFFFFFFFF;HHP_PAN;Zetafen;HHP 1;true;Parent Z;true;;C14H10;178.0783;;FFFFFFFFFFFFFF-UHFFFAOYSA-N;pesticides;;22;;v1;name
+KKKKKKKKKKKKKK;WHO_MIA;Standard A;CIA;false;;doubtful;;C9H8O;132.0575;;KKKKKKKKKKKKKK-UHFFFAOYSA-N;internazionali;;23;2.0;v1;name
+MMMMMMMMMMMMMM;EU_PS_2026_805;Chloroxen;PHS;false;;true;;C6H5Cl;112.0080;;MMMMMMMMMMMMMM-UHFFFAOYSA-N;acque_UE;;24;3.0;v1;name
+NNNNNNNNNNNNNN;HHP_PAN;Sulfobrom;HHP 2;false;;true;;C4H3BrS;161.9139;not-a-smiles;NNNNNNNNNNNNNN-UHFFFAOYSA-N;pesticides;;25;;v1;name
+OOOOOOOOOOOOOO;HHP_PAN;Not amenable;HHP 3;false;;false;;C5H5;77.0391;;OOOOOOOOOOOOOO-UHFFFAOYSA-N;pesticides;;26;1.0;v1;name
+PPPPPPPPPPPPPP;WHO_MIA;Out of window;CIA;false;;true;;C50H50;2500.0;;PPPPPPPPPPPPPP-UHFFFAOYSA-N;internazionali;;27;5.0;v1;name
+IIIIIIIIIIIIII;HHP_PAN;Fictazine;HHP 4;false;;doubtful;;C20H20;320.5;;IIIIIIIIIIIIII-UHFFFAOYSA-N;pesticides;;28;3.3;v1;name
