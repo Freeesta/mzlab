@@ -546,7 +546,7 @@
   "diag.cause.decode": "Diagnosi di un errore di lettura file (blocco «Dettagli» dell'avviso).",
   "diag.cause.engine": "Diagnosi di un errore di lettura file (blocco «Dettagli» dell'avviso): il motore WASM si è fermato (trap), non è memoria esaurita.",
   "diag.cause.unknown": "Diagnosi di un errore di lettura file (blocco «Dettagli» dell'avviso).",
-  "load.loaded.clearSure": "Conferma del pulsante «Cancella tutti i file» della scheda dei file già caricati; {n} = quanti file.",
+  "load.loaded.clearSure": "Conferma del pulsante «Svuota i dati caricati» della scheda dei file già caricati; {n} = quanti file.",
   "feat.err.lines": "Errore sotto la lista di ioni. {n} = righe non valide, {list} = numeri delle prime righe.",
   "feat.err.many": "Errore: lista troppo lunga. {max} = massimo di ioni.",
   "feat.sum": "Riepilogo della tabella. {n} = feature, {m} = file, {src} = origine (frase).",
