@@ -1,6 +1,6 @@
 # Studio «Rosina»: leggere i file di tutti gli spettrometri di massa (lettori nativi e convertitore mzML)
 
-Obiettivo (Federico, 19/10): mzLab legge, su qualunque computer, i file di ogni produttore, sia in formato nativo sia come convertitore in mzML (profilo e centroidi), e ne legge PERFETTAMENTE i metadati. Questo studio parte dall'inventario e dalla matrice di `docs/studi/FORMATI_NATIVI_MS.md` (non rifatti) e dal corpus già raccolto nel repository privato (`dati_formati/`, 191 file, 1,3 GB). Base: `main` a `69b8c16`.
+Obiettivo (Federico, 19/10): mzLab legge, su qualunque computer, i file di ogni produttore, sia in formato nativo sia come convertitore in mzML (profilo e centroidi), e ne legge PERFETTAMENTE i metadati. Questo studio parte dall'inventario e dalla matrice di `docs/studi/FORMATI_NATIVI_MS.md` (non rifatti) e dal corpus già raccolto nel repository privato (`dati/formati/`, 191 file, 1,3 GB). Base: `main` a `959c6db`; privato a `d41a808`.
 
 Documenti dello studio:
 - questo file: i quattro punti di metodo, A (censimento), D (politica dei dati), E (piano di chat), F (protocollo di prova), decisioni;
@@ -11,7 +11,7 @@ Documenti dello studio:
 ## 0. Da dove si parte (stato misurato)
 
 - Lettori: motore (mzML, `.wiff` 3200, `.D` GC/MS, lettore esterno Thermo) e otto moduli (`aperti`, `andi`, `thermo`, `agilent`, `sciex`, `waters`, `shimadzu`, `bruker`). Ogni modulo è a circa il 3 % dal suo tetto (`docs/agenti/lettori-modulo.md`: es. `sciex` 319 930 su 327 680 B, `waters` 293 150 su 303 104 B): ogni lettore nuovo o parte nuova pesante va in un modulo NUOVO, non dentro uno esistente.
-- Corpus privato `mzlab-dati/dati_formati/` (indice `INDICE.md`, record `_records_*.tsv`, candidati grandi `_grandi_*.tsv`, lacune `_nontrovato_*.md`): Thermo 26 `.raw` (TSQ Vantage/Quantum/Quantiva/Altis, Q Exactive, PDA), SCIEX 34 cartelle (API 4000 → ZenoTOF 7600, `.wiff2`), Agilent 15 `.D`, Waters 11 cartelle, Shimadzu 10, Bruker 12, mzXML 3, numpress 3, netCDF 5, scansioni speciali 7, fixture dei lettori liberi (ProteoWizard 198 file, ThermoRawFileParser, rawrr, timsrust).
+- Corpus privato `mzlab-dati/dati/formati/` (indice `INDICE.md`, record `_records_*.tsv`, candidati grandi `_grandi_*.tsv`, lacune `_nontrovato_*.md`): Thermo 26 `.raw` (TSQ Vantage/Quantum/Quantiva/Altis, Q Exactive, PDA), SCIEX 34 cartelle (API 4000 → ZenoTOF 7600, `.wiff2`), Agilent 15 `.D`, Waters 11 cartelle, Shimadzu 10, Bruker 12, mzXML 3, numpress 3, netCDF 5, scansioni speciali 7, fixture dei lettori liberi (ProteoWizard 198 file, ThermoRawFileParser, rawrr, timsrust).
 - **La lacuna vera non sono i file ma la verità.** Quasi tutti i file sono «senza mzML»: il cloud non può far girare msconvert (niente Windows, Docker non parte). Le prove oggi sono interne (somma delle intensità = TIC dell'indice) o contro msconvert su pochi file: Waters TOF, Shimadzu, mzXML, TSQ, PDA Thermo, TripleTOF sono «non verificati». Rosina è prima di tutto un progetto di **oracoli e verità**, poi di lettori.
 - Rete del cloud (provata il 19/10): PRIDE, MetaboLights (API e FTP via HTTPS), Zenodo, Metabolomics Workbench (lento) raggiungibili; MassIVE no (connessione chiusa). Nessun file di dati scaricato dal cloud in questo studio (solo metadati dei depositi, 354 MB in tutto).
 
@@ -39,7 +39,7 @@ Documenti dello studio:
 - **Dati personali**: i file clinici portano nomi di campione, operatori, computer, percorsi. Restano nel privato; nel pubblico (documenti, test, commit) solo accession e numeri. `identita` di `metodo/1` resta fuori dall'mzML.
 
 ## 2. Il materiale più grezzo
-- I **file nativi originali** dei depositi (non gli mzML degli autori), con lo SHA-256 del file o del manifest della cartella (già così in `dati_formati/`).
+- I **file nativi originali** dei depositi (non gli mzML degli autori), con lo SHA-256 del file o del manifest della cartella (già così in `dati/formati/`).
 - I **metadati dei depositi** per contare gli strumenti: faccette di PRIDE (`/pride/ws/archive/v3/facet/projects`), dump EB-eye di MetaboLights (`eb_eye_metabolights_studies.xml`, con i nomi dei file di ogni studio e i protocolli MS), analisi di Metabolomics Workbench (`/rest/study/study_id/ST/analysis`, nome e tipo dello strumento); SDRF e ProteomeXchange per i dettagli.
 - **Sorgente dei lettori aperti** come mappa delle stranezze: ProteoWizard (`pwiz_aux/msrc/utility/vendor_api`, `pwiz/data/vendor_readers` con i test), ThermoRawFileParser, OpenMS, opentims/timsrust/alphatims, pyteomics/pymzml, rainbow (DAD Agilent), openwraw/opentfraw/openaraw/opensxraw/openszraw (Apache-2.0, già citati nei moduli): letti per capire, mai copiati.
 - I **file con foglio di metodo noto**: i `.wiff` e `.dam` del 3200 del laboratorio, con la stampa del metodo e la «File Information» di Analyst presa sul PC dello strumento.
@@ -138,13 +138,14 @@ Priorità di Rosina (dati + dominio): 1. Thermo (la metà dei file in ogni depos
 
 ## D. Politica dei dati in `mzlab-dati`
 
-Stato (19/10): il privato ha `dati_formati/` alla radice; il riordino in `dati/formati/` è preparato dal lato pubblico dalla PR #1052 (risolutore unico `tools/dati_percorsi.py`/`.rs` + `tools/dati_mappa.tsv`, aperta, non unita): lo spostamento nel privato viene dopo la sua unione. Rosina usa solo i percorsi del risolutore (`percorso("dati/formati/…")`), mai percorsi a mano.
+Stato (19/10): il privato è riordinato: dati in `dati/` (formati in `dati/formati/<produttore>/<famiglia>/`, p. es. `sciex/wiff`, `thermo/raw`, `bruker/timstof_dda_pasef`), coordinamento in `coordinamento/`, verità in `scratchpad/`. Il codice pubblico trova i percorsi con il risolutore unico (`tools/dati_percorsi.py`/`.rs` + `tools/dati_mappa.tsv`, `percorso("dati/formati/…")`): Rosina non scrive mai percorsi a mano.
 
-- **Struttura**: `dati/formati/<produttore>/<strumento>/<accession>_<esperimento>/` con dentro il nativo (file o cartella), `riferimenti/<oracolo>-<versione>/` (mzML del produttore o degli autori, se piccoli) e `verita/<file>.verita.json`. Produttori: `thermo`, `sciex`, `agilent`, `waters`, `bruker`, `shimadzu`, `leco`, `aperti` (mzML, mzXML, mzData, imzML, netCDF senza produttore noto). Strumento = quello letto nel file, non quello dichiarato dal deposito (spesso sbagliato, vedi `INDICE.md`).
+- **Struttura**: le cartelle esistenti `dati/formati/<produttore>/<famiglia>/` restano; ogni file nuovo di Rosina va in `dati/formati/<produttore>/<famiglia>/<accession>_<esperimento>/` con dentro il nativo (file o cartella) e `riferimenti/<oracolo>-<versione>/` (mzML del produttore o degli autori, se ≤ 90 MB). Le verità stanno in `scratchpad/rosina/verita/` con lo stesso percorso relativo a `dati/formati/` (`<file>.verita.json`). Una famiglia nuova (cartella o riga) va anche in `tools/dati_mappa.tsv` del pubblico. Produttori: `thermo`, `sciex`, `agilent`, `waters`, `bruker`, `shimadzu`, `leco`, `aperti` (mzML, mzXML, mzData, imzML, netCDF senza produttore noto). Nell'indice lo strumento è quello letto nel file, non quello dichiarato dal deposito (spesso sbagliato, vedi `INDICE.md`).
 - **Indice unico** `dati/formati/INDICE.tsv` (da cui si genera `INDICE.md`): `percorso`, `produttore`, `modello_nel_file`, `versione_formato`, `esperimenti` (vocabolario chiuso: `fullscan`, `sim`, `mrm`, `smrm`, `ms2`, `dda`, `dia`, `mse`, `prm`, `pis`, `nl`, `epi`, `ms3`, `ims`, `uv`, `analogico`, `polarita-mista`, `lockmass`, `profilo`, `centroidi`, `gc`, `imaging`).
   Altre colonne: `fonte`, `accession`, `doi`, `licenza`, `ridistribuibile` (`si`, `no`, `da-verificare`), `byte`, `sha256` (file o manifest), `url`, `riferimento` (`nessuno`, `autori`, `msconvert-<v>`, `trfp-<v>`, …), `verita` (`si`/`no`), `note`.
-- **File grandi fuori da git**: `dati/formati/GRANDI.tsv` (stesse colonne + `destinazione`) e lo script `tools/rosina/scarica.py GRANDI.tsv DEST` del repository pubblico (nessun dato dentro: legge l'elenco, scarica con ripresa, controlla byte e checksum, rifiuta oltre il tetto di `controlla_tetto.sh`). Sul Mac i grandi stanno in `~/mzLab/rosina-dati/` (tetto 20 GB); nel privato vanno solo file ≤ 90 MB (regola di `tools/controlla_dati.py`) e le verità.
+- **File grandi fuori da git**: `dati/formati/GRANDI.tsv` (stesse colonne + `destinazione`; assorbe i quattro `_grandi_*.tsv`) e lo script `tools/rosina/scarica.py GRANDI.tsv DEST` del repository pubblico (nessun dato dentro: legge l'elenco, scarica con ripresa, controlla byte e checksum, rifiuta oltre il tetto di `controlla_tetto.sh`). Sul Mac i grandi stanno in `~/mzLab/rosina-dati/` (tetto 20 GB); nel privato vanno solo file ≤ 90 MB (regola di `tools/controlla_dati.py`) e le verità.
 - **Repository pubblico**: solo file sintetici (`tools/*_sintetico.py`, già per ogni famiglia) e, dopo il controllo della licenza da parte di Federico, piccoli file CC0/CC-BY/MIT/Apache (≤ 1 MB ciascuno, ≤ 10 MB in tutto) in `tests/formati/` con `ATTRIBUZIONI.md`, senza nomi di persone o di campioni clinici. Le fixture di ProteoWizard e i file «EBI terms of use» restano privati.
+- **Elenchi da scaricare** (ELENCO-1, …): `coordinamento/dati_esterni/rosina/`.
 - **Licenze**: `dati/formati/_licenze/` con il testo della licenza di ogni fonte e degli SDK usati come oracoli.
 
 ## E. Piano di chat
@@ -190,7 +191,7 @@ Esito per file: `L` (F0-F5 contro V1 o V2), `P` (manca un livello, scritto), `NV
 
 ### F.3 Dove gira
 - **CI pubblica** (`test.yml`): F0-F4 e F6 sui sintetici e sui piccoli pubblici; F5 sui documenti `metodo/1` dei sintetici.
-- **CI privata** (nuovo workflow notturno in `mzlab-dati`, proposto in R-00): checkout di `Freeesta/mzlab` `main`, `cargo test -p mzlab-lettori --features tutte --test verita` su ogni `verita/*.json` del corpus (file ≤ 90 MB); il riassunto (formato × livello) in un artefatto, mai nel pubblico.
+- **CI privata** (nuovo workflow notturno in `mzlab-dati`, proposto in R-00): checkout di `Freeesta/mzlab` `main`, `cargo test -p mzlab-lettori --features tutte --test verita` su ogni `scratchpad/rosina/verita/**/*.verita.json` (file ≤ 90 MB); il riassunto (formato × livello) in un artefatto, mai nel pubblico.
 - **Locale** (Mac): F8 e i file in `~/mzLab/rosina-dati/`, con lo stesso test e `MZLAB_DATI_GRANDI=<percorso>`.
 
 ### F.4 Casi limite: ogni cella vuota è «nessun file», da cercare

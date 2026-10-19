@@ -1,6 +1,6 @@
 # Rosina B: fonti pubbliche per formato ed esperimento
 
-Catalogo delle fonti da cui prendere i file di prova. Qui solo accession, licenza, peso, checksum e ridistribuibilità: i nomi dei file (che possono contenere nomi di persone o di campioni clinici) stanno solo nel repository privato (`dati_formati/INDICE.md` oggi, `dati/formati/INDICE.tsv` dopo il riordino di `ROSINA.md` D). Misurato il 19/10/2026.
+Catalogo delle fonti da cui prendere i file di prova. Qui solo accession, licenza, peso, checksum e ridistribuibilità: i nomi dei file (che possono contenere nomi di persone o di campioni clinici) stanno solo nel repository privato (`dati/formati/INDICE.md`; `INDICE.tsv` di `ROSINA.md` D). Misurato il 19/10/2026.
 
 ## Regole di ridistribuzione
 | Licenza della fonte | Nel privato | Nel pubblico (`tests/formati/`) |
@@ -40,7 +40,7 @@ Conteggi dalla tabella dell'indice privato (righe; «rif» = mzML o altro riferi
 | mzML numpress | 3 | Apache/BSD | sì | repository OpenMS, pymzML |
 
 ## ELENCO-1 (da scaricare: chat locale, ≈ 0,8 GB in tutto)
-Scelto per chiudere le celle vuote di `ROSINA.md` F.4 e per dare un riferimento (mzML degli autori o oracolo) ai formati che non ne hanno. Le righe complete (URL, nomi dei file) vanno alla chat locale per messaggio e in `mzlab-dati/scratchpad/rosina/ELENCO-1.tsv`, mai qui.
+Scelto per chiudere le celle vuote di `ROSINA.md` F.4 e per dare un riferimento (mzML degli autori o oracolo) ai formati che non ne hanno. Le righe complete (URL, nomi dei file) vanno alla chat locale per messaggio e in `mzlab-dati/coordinamento/dati_esterni/rosina/ELENCO-1.tsv`, mai qui.
 
 | # | Fonte | Strumento, esperimento | Byte | Checksum | Licenza | Scopo |
 |---|---|---|---|---|---|---|
