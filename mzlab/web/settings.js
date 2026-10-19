@@ -40,7 +40,7 @@ function uipSave() {
   uipWrite(UIP_KEY, JSON.stringify(o));
 }
 // the settings panel of the Teoria (inside the iframe) changes the theme of the whole program through here
-window.uipSetTheme = t => { if (["auto", "light", "dark"].includes(t)) { UIP.theme = t; uipSave(); uipApply(); } };
+window.uipSetTheme = t => { if (["auto", "light", "dark"].includes(t)) { UIP.theme = t; uipSave(); TEMASOFT.run(uipApply); } };
 function uipApply() {
   const r = document.documentElement;
   if (UIP.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", UIP.theme);
@@ -145,7 +145,7 @@ function uipOpen(btn) {
   const on = (/** @type {string} */ sel, /** @type {string} */ ev, /** @type {(e: any) => void} */ fn) => { const el = d.querySelector(sel); if (el) el.addEventListener(ev, fn); };
   const radio = (/** @type {string} */ name, /** @type {(v: string) => void} */ fn) => d.querySelectorAll(`input[name="${name}"]`).forEach(r => r.addEventListener("change", e => { if (/** @type {HTMLInputElement} */ (e.target).checked) fn(/** @type {HTMLInputElement} */ (e.target).value); }));
   radio("uip-lang", v => I18N.set(v));                                  // remembered in qqq.lang, then the page reloads (open files come back with the session)
-  radio("uip-th", v => { UIP.theme = v; uipSave(); uipApply(); });
+  radio("uip-th", v => { UIP.theme = v; uipSave(); TEMASOFT.run(uipApply); });
   radio("uip-font", v => { const c = QA11Y.read(); c.font = v; QA11Y.write(c); });
   on("#uip-hc", "change", e => { const c = QA11Y.read(); c.bg = e.target.checked ? "hc" : ""; QA11Y.write(c); if (typeof redrawAll === "function") redrawAll(); });
   on("#uip-motion", "change", e => { const c = QA11Y.read(); c.motion = e.target.checked ? "always" : "auto"; QA11Y.write(c); });
