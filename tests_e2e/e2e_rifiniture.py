@@ -42,7 +42,7 @@ try:
         step("progress bar shows after ~1 s of a pending API call and hides afterwards", busy)
         def gear():
             pg.click("#np-set"); pg.wait_for_timeout(200)
-            a11y_open(pg); pg.select_option("#uip-font", "atkinson"); pg.check("#uip-hc"); pg.wait_for_timeout(200)
+            a11y_open(pg); pg.check("input[name=uip-font][value=atkinson]", force=True); pg.check("#uip-hc"); pg.wait_for_timeout(200)
             root = "document.documentElement"
             assert pg.evaluate(f"{root}.getAttribute('data-a11y-font')") == "atkinson" and pg.evaluate(f"{root}.hasAttribute('data-a11y-bg')")
             pg.reload(); pg.wait_for_timeout(1500)

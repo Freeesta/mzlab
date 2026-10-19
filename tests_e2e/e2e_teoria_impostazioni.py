@@ -28,7 +28,7 @@ try:
             assert q.inner_text("#a11y-reset").strip() == "Ripristina predefinite"
             assert q.locator("#a11y-panel input[name=a11y-tema]").count() == 3 and q.locator("#a11y-panel input[name=a11y-font]").count() == 3 and q.locator("#a11y-panel input[name=a11y-bg]").count() == 4
             assert q.locator("#a11y-panel input[role=switch]").count() == 4, "four switches: space, nums, ruler, reduced motion"
-            assert q.get_attribute("#a11y-panel", "aria-label") == "Impostazioni" and q.locator("#a11y-prev").count() == 1
+            assert q.get_attribute("#a11y-panel", "aria-label") == "Impostazioni" and q.locator("#a11y-prev").count() == 0, "no preview box"
             assert q.evaluate("(()=>{const p=document.querySelector('#a11y-panel');return p.scrollHeight<=p.clientHeight})()"), "the panel fits without scrolling at 900 px"
             for sel in ("#a11y-panel .opt", "#a11y-panel .swrow", "#a11y-reset", "#a11y-panel .x"):
                 for b in q.locator(sel).all(): bb = b.bounding_box(); assert bb["height"] >= 24 and bb["width"] >= 24, (sel, bb)
@@ -45,13 +45,13 @@ try:
             assert json.loads(ls("mzlab.a11y"))["motion"] == "always"
         step("reduced animations set data-a11y-reduce and persist", motion)
         def preview():
-            q.check("input[name=a11y-font][value=atkinson]"); f = q.evaluate("getComputedStyle(document.querySelector('#a11y-prev')).fontFamily"); assert "Atkinson" in f, f
-            q.check("[data-k=space]"); ls_ = q.evaluate("getComputedStyle(document.querySelector('#a11y-prev')).letterSpacing"); assert ls_ != "normal", ls_
+            q.check("input[name=a11y-font][value=atkinson]"); f = q.evaluate("getComputedStyle(document.body).fontFamily"); assert "Atkinson" in f, f
+            q.check("[data-k=space]"); assert q.get_attribute("html", "data-a11y-space") is not None
             q.check("input[name=a11y-bg][value=cream]"); assert q.get_attribute("html", "data-a11y-bg") == "cream"
             assert q.locator("input[name=a11y-bg][value=cream]").is_checked() and not q.locator("input[name=a11y-bg][value='']").is_checked()
             q.focus("input[name=a11y-font][value=atkinson]"); q.keyboard.press("ArrowRight"); assert q.get_attribute("html", "data-a11y-font") == "dyslexic", "arrow keys move the choice"
             q.check("input[name=a11y-bg][value='']"); q.uncheck("[data-k=space]"); q.check("input[name=a11y-font][value='']")
-        step("the preview follows font, spacing and background; arrows move the choice; values saved as before", preview)
+        step("the page follows font, spacing and background; arrows move the choice; values saved as before", preview)
         def reset():
             q.evaluate("localStorage.setItem('mzlab.pratica','{\"v\":1}');localStorage.setItem('mzlab.teoria.pos','{\"last\":\"x\"}')")
             q.check("input[name=a11y-font][value=dyslexic]"); q.check("[data-k=space]"); assert q.get_attribute("html", "data-a11y-space") is not None

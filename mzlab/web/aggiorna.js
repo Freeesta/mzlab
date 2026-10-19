@@ -74,7 +74,7 @@ window.DESKUPD = (() => {
   const ACT = { close, go, restart: () => T().core.invoke("update_restart") };
 
   // row of the settings popup (only in the desktop app)
-  const row = () => live() ? `<div class="row" title="${I18N.t("update.settings.title")}"><span>${I18N.t("update.settings.label")}</span> <button id="uip-upd" type="button">${I18N.t("update.settings.button")}</button></div>` : "";
+  const row = () => live() ? `<div class="imp-fld" title="${I18N.t("update.settings.title")}"><span><span class="ic">${window.IMPCOMP ? IMPCOMP.GICON.update : ""}</span>${I18N.t("update.settings.label")}</span><button id="uip-upd" type="button">${I18N.t("update.settings.button")}</button></div>` : "";
   const bind = d => { const b = d.querySelector("#uip-upd"); if (b) b.onclick = () => { d.remove(); check(false); }; };
 
   // Newer release of the desktop app itself: the installers are not signed and nothing updates the binary, so the app only tells.

@@ -161,7 +161,7 @@ try:
         def preferenza():
             pg.set_viewport_size({"width": 1500, "height": 1000}); pg.wait_for_timeout(400)
             assert pg.evaluate("typeof BARRA.setLabels") == "undefined" and pg.evaluate(FIT)["lvl"] == "all"
-            pg.click("#np-set"); pg.wait_for_selector("#uip-th"); assert pg.locator("#uip-etich").count() == 0, "no labels option in the settings"
+            pg.click("#np-set"); pg.wait_for_selector("#uipset"); assert pg.locator("#uip-etich").count() == 0, "no labels option in the settings"
             pg.keyboard.press("Escape")
             pg.evaluate("localStorage.setItem('mzlab.barra.etichette','hidden')"); pg.reload(); ready(pg); pg.wait_for_timeout(400)
             assert pg.evaluate(FIT)["lvl"] == "all", "an old saved value is ignored: the labels follow the width"

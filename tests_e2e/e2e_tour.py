@@ -57,7 +57,7 @@ try:
         # 2. Replay tour from gear: all 15 steps tested
         attendi(pg, "typeof E !== 'undefined' && E.files && E.files.length > 0")  # the label reads «Rifai» only once the reloaded file is back
         pg.click("#np-set")
-        pg.wait_for_selector("#uipset", timeout=3000)
+        pg.wait_for_selector("#uipset", timeout=3000); pg.evaluate("document.getElementById('uip-g-app').open = true")
         assert pg.is_visible("#uip-tour") and "Rifai il tour" in pg.inner_text("#uip-tour")
         pg.click("#uip-tour")
 

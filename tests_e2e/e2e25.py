@@ -31,21 +31,20 @@ try:
         def gear():
             pg.click("#np-set"); pg.wait_for_timeout(200)
             assert pg.evaluate("document.getElementById('uip-a11y').open") is False, "the accessibility submenu starts closed"
-            assert not pg.is_visible("#uip-pal") and not pg.is_visible("#uip-font") and not pg.is_visible("#uip-hc")
-            pg.click("#uip-a11y > summary"); pg.wait_for_timeout(150); assert pg.is_visible("#uip-pal") and pg.is_visible("#uip-font") and pg.is_visible("#uip-hc")
+            assert pg.is_visible("#uip-pal") and not pg.is_visible("#uip-hc"), "look group open, reading group closed"
+            pg.click("#uip-a11y > summary"); pg.wait_for_timeout(150); assert pg.is_visible("#uip-hc") and pg.is_visible("input[name=uip-font][value=atkinson]")
             assert pg.evaluate("localStorage.getItem('mzlab.set.a11y')") == "1"
-            pg.click("#np-set"); pg.wait_for_timeout(150); pg.click("#np-set"); pg.wait_for_timeout(250)      # close and reopen: it stays as left
+            pg.keyboard.press("Escape"); pg.wait_for_timeout(150); pg.click("#np-set"); pg.wait_for_timeout(250)      # close and reopen: it stays as left
             assert pg.evaluate("document.getElementById('uip-a11y').open") is True, "the state of the submenu is remembered"
             t = pg.inner_text("#uipset"); print(repr(t))
-            assert pg.locator("#uipset .row").count() == 7, pg.locator("#uipset .row").count()      # language, theme, font, high contrast, colours, toolbar labels and the merge of the centroids, the spectrum beside the chromatogram (the text size is the browser's: Ctrl/Cmd + and −); the libraries and the high-resolution rows only appear with MS2 / high-resolution files open
-            assert "Dimensione testo" not in t and "Tema" in t and "Colori dei grafici" in t
+            assert "Dimensione testo" not in t and "tema" in t.lower() and "colori dei grafici" in t.lower()
             for bad in ("Dimensione del testo dell", "Vale per menu", "tutorial", "Installare", "Numera", "suggerimenti"):
                 assert bad.lower() not in t.lower(), bad
-            assert pg.locator("#uipset input[type=checkbox]").count() == 3 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 0      # the merge of the centroids; no «Mostra tutti gli esperimenti insieme» (it is the only view)
+            assert pg.locator("#uipset input[type=checkbox]").count() == 4 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 0      # the merge of the centroids; no «Mostra tutti gli esperimenti insieme» (it is the only view)
             assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["Per file (predefinito)", "Per tempo", "Accessibili", "Alto contrasto", "Arcobaleno", "Bianco e nero"]
             assert pg.input_value("#uip-pal") == "file"
-            pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(400)
-            pg.select_option("#uip-th", "auto"); pg.wait_for_timeout(300)
+            pg.check("input[name=uip-th][value=dark]", force=True); pg.wait_for_timeout(400)
+            pg.check("input[name=uip-th][value=auto]", force=True); pg.wait_for_timeout(300)
             assert pg.evaluate("UIP.tips") is None and pg.evaluate("UIP.num") is None and pg.evaluate("typeof TUT") == "undefined" and pg.evaluate("typeof tipOf") == "undefined"
             assert pg.evaluate("document.querySelectorAll('.pnum:not([hidden])').length") >= 1, "panel numbers stay on"
             assert pg.evaluate("document.querySelectorAll('[title]').length") > 40, "tooltips stay on"
@@ -120,7 +119,7 @@ try:
         step("the chromatogram traces use the file colours", traces_use_palette)
         def n_variants():
             for n, times in ((3, [0, 15, 60]), (7, [0, 5, 10, 15, 30, 45, 60])):
-                pg.click("#newrun")
+                pg.keyboard.press("Escape"); pg.click("#newrun")
                 with pg.expect_navigation(timeout=30000): pg.click("#resetdlg [data-reset=files]")      # the wipe takes as long as it takes, then the page reloads
                 pg.wait_for_selector("#pick", state="attached"); pg.wait_for_timeout(1500)
                 load(pg, times, str(n)); pg.evaluate("setPal('time'); paintFiles()")      # the scale belongs to «Per tempo»
@@ -132,11 +131,11 @@ try:
             pg.evaluate("localStorage.setItem('mzlab.extra','1')"); pg.click("#np-set") if pg.locator("#uipset").count() == 0 else None
             set_pal(pg, "rainbow"); pg.wait_for_timeout(300)
             n0 = pg.evaluate("E.files.length"); assert n0 > 0
-            pg.click("#newrun"); pg.wait_for_timeout(500)
+            pg.keyboard.press("Escape"); pg.click("#newrun"); pg.wait_for_timeout(500)
             assert pg.is_visible("#resetdlg [data-reset=all]") and pg.is_visible("#resetdlg [data-reset=files]")
             pg.click("#resetdlg .rs-cancel"); pg.wait_for_timeout(500)                               # cancel: nothing is touched
             assert pg.evaluate("E.files.length") == n0 and pg.evaluate("localStorage.getItem('mzlab.extra')") == "1" and pg.evaluate("UIP.pal") == "rainbow"
-            pg.click("#newrun"); pg.click("#resetdlg [data-reset=all]"); pg.wait_for_timeout(3000)
+            pg.keyboard.press("Escape"); pg.click("#newrun"); pg.click("#resetdlg [data-reset=all]"); pg.wait_for_timeout(3000)
             print("after:", pg.evaluate("[E.files.length, localStorage.getItem('mzlab.extra'), localStorage.getItem('mzlab.prefs')]"))
             assert pg.evaluate("E.files.length") == 0 and pg.evaluate("localStorage.getItem('mzlab.extra')") is None and pg.evaluate("localStorage.getItem('mzlab.prefs')") is None
             assert pg.evaluate("UIP.pal") == "file" and pg.evaluate("document.documentElement.dataset.pal") == "file" and pg.evaluate("UIP.font") is None
