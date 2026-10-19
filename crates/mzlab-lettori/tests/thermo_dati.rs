@@ -1,36 +1,22 @@
 #![cfg(feature = "thermo")]
 //! The SRM transitions of a TSQ `.raw` and the UV channels of a Dionex detector, read through the module. Real files only (the private data repository,
-//! `MZLAB_DATI` or `mzlab-dati` beside this one, folder `dati_formati/`); every test skips without them. There is no msconvert mzML of a TSQ or UV file in that
+//! `MZLAB_DATI` or `mzlab-dati` beside this one, folder `dati/formati/`); every test skips without them. There is no msconvert mzML of a TSQ or UV file in that
 //! repository, so the parity with msconvert (same number of transitions, Q1/Q3 within 1e-3, times and intensities within 1e-6) runs only when a `<file>.mzML` is
-//! found beside the `.raw` (or in `dati_formati/mzml_msconvert/`), and is skipped otherwise.
+//! found beside the `.raw` (or in `dati/formati/aperti/mzml_msconvert/`), and is skipped otherwise.
 use std::path::{Path, PathBuf};
 
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::mzml::{self, ChromKind, Item};
 
-fn dati() -> Option<PathBuf> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    for up in Path::new(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .skip(1)
-        .take(3)
-    {
-        cands.push(up.join("mzlab-dati"));
-    }
-    cands.into_iter().find(|p| p.join("dati_formati").is_dir())
-}
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 fn file(rel: &str) -> Option<PathBuf> {
-    let p = dati()?.join("dati_formati").join(rel);
-    if p.is_file() {
-        Some(p)
-    } else {
+    let p = dati_percorsi::percorso(&format!("dati/formati/{rel}")).filter(|p| p.is_file());
+    if p.is_none() {
         eprintln!("SKIP thermo_dati: {rel} not found");
-        None
     }
+    p
 }
 
 fn apri(p: &Path) -> Box<dyn mzlab_core::lettori::Lettore> {
@@ -48,7 +34,7 @@ fn apri(p: &Path) -> Box<dyn mzlab_core::lettori::Lettore> {
 
 #[test]
 fn a_tsq_file_gives_srm_chromatograms_with_q1_q3_and_ce() {
-    let Some(p) = file("thermo_raw/PXD057351_WT_R1.raw") else {
+    let Some(p) = file("thermo/raw/PXD057351_WT_R1.raw") else {
         return;
     };
     let mut l = apri(&p);
@@ -68,7 +54,7 @@ fn a_tsq_file_gives_srm_chromatograms_with_q1_q3_and_ce() {
 
 #[test]
 fn polarity_comes_from_the_method_table() {
-    let Some(p) = file("thermo_raw/MTBLS7889_Fermentation_3_Media_test_001.raw") else {
+    let Some(p) = file("thermo/raw/MTBLS7889_Fermentation_3_Media_test_001.raw") else {
         return;
     };
     let mut l = apri(&p);
@@ -88,7 +74,7 @@ fn polarity_comes_from_the_method_table() {
 
 #[test]
 fn uv_channels_are_pda_traces_and_the_3d_field_is_a_warning() {
-    let Some(p) = file("thermo_pda/MTBLS9839_MET-2021-P17-YG_neg_MS2dd30k_1121_EB_076.raw") else {
+    let Some(p) = file("thermo/pda/MTBLS9839_MET-2021-P17-YG_neg_MS2dd30k_1121_EB_076.raw") else {
         return;
     };
     let mut l = apri(&p);
@@ -112,7 +98,7 @@ fn uv_channels_are_pda_traces_and_the_3d_field_is_a_warning() {
 
 #[test]
 fn lock_mass_is_in_the_method() {
-    let Some(p) = file("thermo_pda/MTBLS775_StandardsMix-b-carbolin_4-CTC_10ng-ml_1.raw") else {
+    let Some(p) = file("thermo/pda/MTBLS775_StandardsMix-b-carbolin_4-CTC_10ng-ml_1.raw") else {
         return;
     };
     let m = apri(&p).metodo(0).unwrap();
@@ -124,17 +110,17 @@ fn lock_mass_is_in_the_method() {
 
 #[test]
 fn the_chromatograms_match_the_msconvert_mzml_when_there_is_one() {
-    let Some(d) = dati() else {
+    let Some(d) = dati_percorsi::percorso("dati/formati") else {
         eprintln!("SKIP thermo_dati: no data repository (MZLAB_DATI)");
         return;
     };
     let mut done = 0;
     for rel in [
-        "thermo_raw/PXD057351_WT_R1",
-        "thermo_raw/PXD064022_122323_HbMu_MRM_Assay_Test_B3",
-        "thermo_pda/MTBLS9839_MET-2021-P17-YG_neg_MS2dd30k_1121_EB_076",
+        "thermo/raw/PXD057351_WT_R1",
+        "thermo/raw/PXD064022_122323_HbMu_MRM_Assay_Test_B3",
+        "thermo/pda/MTBLS9839_MET-2021-P17-YG_neg_MS2dd30k_1121_EB_076",
     ] {
-        let raw = d.join("dati_formati").join(format!("{rel}.raw"));
+        let raw = d.join(format!("{rel}.raw"));
         let name = Path::new(rel)
             .file_name()
             .unwrap()
@@ -142,8 +128,7 @@ fn the_chromatograms_match_the_msconvert_mzml_when_there_is_one() {
             .to_string();
         let mzml_path = [
             raw.with_extension("mzML"),
-            d.join("dati_formati/mzml_msconvert")
-                .join(format!("{name}.mzML")),
+            d.join("aperti/mzml_msconvert").join(format!("{name}.mzML")),
         ]
         .into_iter()
         .find(|p| p.is_file());

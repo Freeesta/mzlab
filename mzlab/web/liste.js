@@ -531,10 +531,12 @@ const LISTE = (() => {
   const fmtSub = f => EH(f).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>").replace(/(\d?[+-])$/, "<sup>$1</sup>");
 
   // the markup of the panel: search bar, active lists, user lists, exclusions and the table (the handlers are bound in mount())
+  // the panel shows list names without a trailing bibliographic reference, e.g. «(Keller 2008)»
+  const noRef = n => String(n).replace(/\s*\([^)]*\d{4}\)\s*$/, "");
   function panelHtml(state) {
     return `
       <div class="liste-panel" style="display:flex;flex-direction:column;gap:6px;padding:6px 8px;height:100%;box-sizing:border-box;overflow:auto">
-        <div style="display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line,#cbd5e1);padding-bottom:4px;margin-bottom:2px">
+        <div style="display:${state.mode === "da" ? "none" : "flex"};align-items:center;gap:6px;border-bottom:1px solid var(--line,#cbd5e1);padding-bottom:4px;margin-bottom:2px">
           <span class="seg" id="lst-view-seg">
             <button type="button" data-v="ref" class="on">Reference Lists</button>
             <button type="button" data-v="target">HRMS Target Screening</button>
@@ -544,16 +546,12 @@ const LISTE = (() => {
         <div class="liste-bar">
           <div class="lb-row">
             <label><span><i>m/z</i></span> <input type="text" id="lst-mz" value="${EH(state.mz)}" placeholder="${I18N.t("lst.mzPh")}" aria-label="m/z"></label>
-            <label id="lst-tol-wrap"><span id="lst-tol-lbl">${state.mode === "da" ? "&plusmn; Da" : "&plusmn; ppm"}</span> <input type="number" id="lst-tol" value="${state.mode === "da" ? state.tolDa : state.tolPpm}" step="${state.mode === "da" ? "0.1" : "1"}" min="0.001" aria-label="${I18N.t("lst.tolAria")}"></label>
+            <label id="lst-tol-wrap"${state.mode === "da" ? " hidden" : ""}><span id="lst-tol-lbl">${state.mode === "da" ? "&plusmn; Da" : "&plusmn; ppm"}</span> <input type="number" id="lst-tol" value="${state.mode === "da" ? state.tolDa : state.tolPpm}" step="${state.mode === "da" ? "0.1" : "1"}" min="0.001" aria-label="${I18N.t("lst.tolAria")}"></label>
           </div>
           <div class="lb-row">
             <label class="lb-grow"><span>${I18N.t("lst.search")}</span> <input type="text" id="lst-txt" value="${EH(state.text)}" placeholder="${I18N.t("lst.searchPh")}"></label>
           </div>
           <div class="lb-row">
-            <span class="seg" id="lst-mode-seg" title="${I18N.t("lst.modeTitle")}">
-              <button type="button" data-m="da" class="${state.mode === "da" ? "on" : ""}">${I18N.t("lst.mode.nominal")}</button>
-              <button type="button" data-m="ppm" class="${state.mode === "ppm" ? "on" : ""}">${I18N.t("lst.mode.hr")}</button>
-            </span>
             <span class="seg" id="lst-pol-seg" title="${I18N.t("lst.polFilter")}">
               <button type="button" data-p="1" class="${state.pol === 1 ? "on" : ""}">ESI+</button>
               <button type="button" data-p="-1" class="${state.pol === -1 ? "on" : ""}">ESI&minus;</button>
@@ -562,7 +560,7 @@ const LISTE = (() => {
           </div>
         </div>
 
-        <div style="display:flex;align-items:center;gap:12px;font-size:12px;flex-wrap:wrap">
+        <div style="display:${state.mode === "da" ? "none" : "flex"};align-items:center;gap:12px;font-size:12px;flex-wrap:wrap">
           <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" title="${I18N.t("lst.contSigns.title")}">
             <input type="checkbox" id="lst-cont-signs" ${isOn() ? "checked" : ""}>
             <span>${I18N.t("lst.contSigns")}</span>
@@ -582,15 +580,14 @@ const LISTE = (() => {
           <table class="lct" style="width:100%;border-collapse:collapse;font-size:12px">
             <thead>
               <tr style="position:sticky;top:0;background:var(--soft,#f1f5f9);z-index:2">
-                <th class="num" style="width:84px"><i>m/z</i> ${I18N.t("lst.th.theo")}</th>
-                <th class="num" style="width:70px">&Delta;</th>
+                <th class="num" style="width:${state.mode === "da" ? 56 : 84}px"><i>m/z</i>${state.mode === "da" ? "" : " " + I18N.t("lst.th.theo")}</th>
+                ${state.mode === "da" ? "" : `<th class="num" style="width:70px">&Delta;</th>`}
                 <th>${I18N.t("lst.col.name")}</th>
-                <th>${I18N.t("lst.th.series")}</th>
+                ${state.mode === "da" ? "" : `<th>${I18N.t("lst.th.series")}</th>`}
                 <th>${I18N.t("lst.th.ion")}</th>
-                <th>${I18N.t("lst.col.formula")}</th>
+                ${state.mode === "da" ? "" : `<th>${I18N.t("lst.col.formula")}</th>`}
                 <th>${I18N.t("lst.th.pol")}</th>
-                <th>${I18N.t("lst.th.class")}</th>
-                <th>${I18N.t("lst.th.source")}</th>
+                ${state.mode === "da" ? "" : `<th>${I18N.t("lst.th.class")}</th><th class="lst-src-col">${I18N.t("lst.th.source")}</th>`}
               </tr>
             </thead>
             <tbody id="lst-tbody"></tbody>
@@ -636,7 +633,7 @@ const LISTE = (() => {
     // Initial state of controls
     const state = {
       mz: opt.mz != null ? String(opt.mz) : "",
-      mode: opt.hr ? "ppm" : (opt.mz != null ? "da" : (window.HR && typeof E !== "undefined" && E.files.some(f => !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2))) ? "ppm" : "da")),
+      mode: opt.hr ? "ppm" : (opt.mz != null ? "da" : (window.TBL_HR ? (TBL_HR() ? "ppm" : "da") : "ppm")),
       tolDa: 0.5,
       tolPpm: typeof UIP !== "undefined" && UIP.hrPpm ? UIP.hrPpm : 5,
       text: "",
@@ -648,7 +645,6 @@ const LISTE = (() => {
 
     const elMz = container.querySelector("#lst-mz");
     const elTol = container.querySelector("#lst-tol");
-    const elTolLbl = container.querySelector("#lst-tol-lbl");
     const elTxt = container.querySelector("#lst-txt");
     const elTbody = container.querySelector("#lst-tbody");
     const elCount = container.querySelector("#lst-count");
@@ -674,14 +670,14 @@ const LISTE = (() => {
       const allLists = [...ST.lists, ...ST.userLists];
       if (allLists.length < 2) {                              // one list only: a fixed title with its source, no switch
         const L = allLists[0];
-        elChecks.innerHTML = L ? `<b>${EH((I18N.lang === "en" && L.name_en) || L.name)}</b>${L.source ? ` <span class="muted">&middot; ${EH(L.source)}</span>` : ""}` : "";
+        elChecks.innerHTML = L ? `<b>${EH(noRef((I18N.lang === "en" && L.name_en) || L.name))}</b>` : "";
         elChecksLbl.hidden = true;
       } else {
       elChecksLbl.hidden = false;
       elChecks.innerHTML = allLists.map(L => {
         const on = act[L.id] !== false;
         return `<label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer">
-          <input type="checkbox" data-lid="${EH(L.id)}" ${on ? "checked" : ""}> <span>${EH((I18N.lang === "en" && L.name_en) || L.name)}</span>
+          <input type="checkbox" data-lid="${EH(L.id)}" ${on ? "checked" : ""}> <span>${EH(noRef((I18N.lang === "en" && L.name_en) || L.name))}</span>
         </label>`;
       }).join("");
       elChecks.querySelectorAll("input[data-lid]").forEach(chk => {
@@ -705,6 +701,7 @@ const LISTE = (() => {
     }
 
     function render() {
+      container.classList.toggle("lst-onelist", ST.lists.length + ST.userLists.length < 2);
       const idx = ST.idx;
       if (!idx) {
         elCount.textContent = I18N.t("lst.loadingLists");
@@ -746,7 +743,7 @@ const LISTE = (() => {
       if (elCount) elCount.innerHTML = "";
 
       if (!shown.length) {
-        elTbody.innerHTML = `<tr><td colspan="9" class="muted" style="text-align:center;padding:16px">${I18N.t("lst.noMatch")}</td></tr>`;
+        elTbody.innerHTML = `<tr><td colspan="${isNom ? 4 : 9}" class="muted" style="text-align:center;padding:16px">${I18N.t("lst.noMatch")}</td></tr>`;
         return;
       }
 
@@ -755,6 +752,12 @@ const LISTE = (() => {
                                     : (it.err != null ? (it.err >= 0 ? "+" : "") + it.err.toFixed(1) + " ppm" : "")) : "";
         const polBadge = it.pol === 1 ? `<span class="pol pos" style="font-size:10px">ESI+</span>` : it.pol === -1 ? `<span class="pol neg" style="font-size:10px">ESI&minus;</span>` : `<span class="pol both" style="font-size:10px">&plusmn;</span>`;
         const seriesInfo = it.series ? `<span class="sm" title="${I18N.t("lst.member", { n: it.series.n })}">n=${it.series.n}</span>` : "";
+        if (isNom) return `<tr>
+          <td class="num font-mono"><b>${Math.round(it.mz)}</b></td>
+          <td><b>${EH(it.name)}</b></td>
+          <td>${EH(it.adduct || I18N.t("lst.mzOnly"))}</td>
+          <td>${polBadge}</td>
+        </tr>`;
         return `<tr>
           <td class="num font-mono"><b>${it.mz.toFixed(4)}</b></td>
           <td class="num sm muted">${delta}</td>
@@ -764,7 +767,7 @@ const LISTE = (() => {
           <td>${it.formula ? fmtSub(it.formula) : "<span class='muted'>&ndash;</span>"}</td>
           <td>${polBadge}</td>
           <td class="sm muted">${EH(it.cls || "")}</td>
-          <td class="sm">${EH(it.listName || it.source || it.list)}</td>
+          <td class="sm lst-src-col">${EH(noRef(it.listName || it.list))}</td>
         </tr>`;
       }).join("");
     }
@@ -778,18 +781,6 @@ const LISTE = (() => {
       else state.tolPpm = v || 5;
       render();
     };
-
-    container.querySelectorAll("#lst-mode-seg button").forEach(b => {
-      b.onclick = () => {
-        state.mode = b.dataset.m;
-        container.querySelectorAll("#lst-mode-seg button").forEach(x => x.classList.toggle("on", x === b));
-        const isNom = state.mode === "da";
-        elTolLbl.innerHTML = isNom ? "&plusmn; Da" : "&plusmn; ppm";
-        elTol.value = isNom ? state.tolDa : state.tolPpm;
-        elTol.step = isNom ? "0.1" : "1";
-        render();
-      };
-    });
 
     container.querySelectorAll("#lst-pol-seg button").forEach(b => {
       b.onclick = () => {

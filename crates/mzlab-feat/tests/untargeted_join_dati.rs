@@ -1,13 +1,16 @@
 //! Join aligner against the real series: the per-file lists of mzmine 3.9.0 (`risolutore_<file>.mzML_*.csv`) are aligned by `untargeted::join` and the
 //! rows are compared with the table that mzmine aligned (`join_Aligned_feature_list.csv`, before the gap filling). Real data never enter the public
 //! repository: the directory of the exports of one run of `tools/bench/motivi_mzmine.py` (its `mzmine/` folder) is `MZLAB_MZMINE_FASI`, else
-//! `$MZLAB_DATI/HRMS/mzmine39_fasi/`. Without it the test is skipped. Threshold: at least 0.97 of the rows with the same set of cells.
+//! `dati/HRMS/mzmine39_fasi/` of the data repository. Without it the test is skipped. Threshold: at least 0.97 of the rows with the same set of cells.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
 use mzlab_feat::untargeted::join::{align, JoinParams};
 use mzlab_feat::untargeted::Feature;
+
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 fn table(path: &std::path::Path) -> (Vec<String>, Vec<Vec<String>>) {
     let text = std::fs::read_to_string(path).unwrap();
@@ -20,12 +23,10 @@ fn table(path: &std::path::Path) -> (Vec<String>, Vec<Vec<String>>) {
 }
 
 fn dir() -> Option<PathBuf> {
-    let d = std::env::var_os("MZLAB_MZMINE_FASI")
-        .map(PathBuf::from)
-        .or_else(|| {
-            std::env::var_os("MZLAB_DATI").map(|p| PathBuf::from(p).join("HRMS/mzmine39_fasi"))
-        })?;
-    d.is_dir().then_some(d)
+    if let Some(d) = std::env::var_os("MZLAB_MZMINE_FASI").map(PathBuf::from) {
+        return d.is_dir().then_some(d);
+    }
+    dati_percorsi::percorso("dati/HRMS/mzmine39_fasi").filter(|d| d.is_dir())
 }
 
 fn key(file: &str, mz: f64, rt: f64) -> String {

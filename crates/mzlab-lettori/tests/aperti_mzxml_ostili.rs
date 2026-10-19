@@ -9,6 +9,9 @@ use comune::{b64, insieme, zlib};
 use mzlab_core::lettori::Limiti;
 use std::path::PathBuf;
 
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
+
 fn testo(o: Opz) -> String {
     String::from_utf8(mzxml(&corsa(), o)).unwrap()
 }
@@ -128,34 +131,14 @@ fn nessuna_lunghezza_del_file_manda_in_panico_il_lettore() {
 
 // ---- real files (private data repository) ----
 
-fn dati() -> Option<PathBuf> {
-    let mut c: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    let qui = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    for up in qui.ancestors().skip(1).take(3) {
-        c.push(up.join("mzlab-dati"));
-    }
-    if let Some(h) = std::env::var_os("HOME") {
-        c.push(PathBuf::from(h).join("mzlab-dati"));
-    }
-    c.into_iter()
-        .find(|p| p.join("dati_formati/INDICE.md").exists())
-}
-
-/// The pairs (mzXML, mzML of the same raw file) of `dati_formati/mzXML/`.
+/// The pairs (mzXML, mzML of the same raw file) of `dati/formati/aperti/mzXML/`.
 fn coppie() -> Vec<(PathBuf, PathBuf)> {
-    let Some(d) = dati() else {
+    let Some(d) = dati_percorsi::percorso("dati/formati/aperti/mzXML") else {
         eprintln!("SKIP aperti_mzxml: no data repository (MZLAB_DATI)");
         return Vec::new();
     };
     let mut out = Vec::new();
-    for e in std::fs::read_dir(d.join("dati_formati/mzXML"))
-        .into_iter()
-        .flatten()
-        .flatten()
-    {
+    for e in std::fs::read_dir(d).into_iter().flatten().flatten() {
         let p = e.path();
         if p.extension()
             .is_some_and(|x| x.eq_ignore_ascii_case("mzxml"))
@@ -230,15 +213,11 @@ fn ogni_mzxml_vero_dice_quello_che_dice_il_suo_mzml() {
 /// Every real mzXML of the data repository (no mzML beside it): scans counted, peaks sorted and finite, the header read.
 #[test]
 fn i_mzxml_veri_si_aprono_e_i_conti_tornano() {
-    let Some(d) = dati() else {
+    let Some(d) = dati_percorsi::percorso("dati/formati/aperti/mzXML") else {
         eprintln!("SKIP aperti_mzxml: no data repository (MZLAB_DATI)");
         return;
     };
-    for e in std::fs::read_dir(d.join("dati_formati/mzXML"))
-        .into_iter()
-        .flatten()
-        .flatten()
-    {
+    for e in std::fs::read_dir(d).into_iter().flatten().flatten() {
         let p = e.path();
         if !p
             .extension()

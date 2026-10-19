@@ -12,6 +12,9 @@ use mzlab_core::infusione::infusione;
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::upload::prepare;
 
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
+
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
@@ -67,33 +70,22 @@ fn synthetic_tune_infusion_is_recognised() {
     assert_eq!((m.motivo, m.livelli, m.nodi), ("blocchi", 5, 5));
 }
 
-fn dati() -> Option<PathBuf> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    for up in root().ancestors().take(3) {
-        cands.push(up.join("mzlab-dati"));
-    }
-    cands
-        .into_iter()
-        .find(|p| p.join("scratchpad/verita_infusione_msn.json").is_file())
-}
-
 #[test]
 fn real_files_like_the_truth() {
-    let Some(d) = dati() else {
+    let Some(truth_file) = dati_percorsi::percorso("scratchpad/verita_infusione_msn.json") else {
         eprintln!("skipped: no data repository (MZLAB_DATI)");
         return;
     };
-    let truth: serde_json::Value = serde_json::from_slice(
-        &std::fs::read(d.join("scratchpad/verita_infusione_msn.json")).unwrap(),
-    )
-    .unwrap();
+    // The `file` entries of the truth are relative to `dati/` (`HRMS/...`).
+    let truth: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(truth_file).unwrap()).unwrap();
     let mut seen = 0;
     for (group, positive) in [("positivi", true), ("negativi", false)] {
         for f in truth[group].as_array().unwrap() {
-            let p = d.join(f["file"].as_str().unwrap());
+            let Some(p) = dati_percorsi::percorso(&format!("dati/{}", f["file"].as_str().unwrap()))
+            else {
+                continue;
+            };
             let Ok(mzml) = std::fs::read(&p) else {
                 continue;
             };

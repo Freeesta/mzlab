@@ -187,7 +187,7 @@ try:
             pg.evaluate("BARRA.close(false)")                      # an earlier step may have left the panel docked: the button would hide it
             pg.click("#np-liste"); pg.wait_for_selector("#sb-panel-lists", timeout=5000)
             assert pg.is_visible("#sb-panel-lists") and pg.evaluate("BARRA.curTab") == "lists"
-            assert pg.is_visible("#sb-help") and pg.locator("#sb-help").get_attribute("data-help") == "liste"
+            assert not pg.is_visible("#sb-help"), "no question mark on the Lists panel"
             # Close dialog
             pg.evaluate("BARRA.close(false)"); shut(pg, "#listex"); pg.wait_for_timeout(400)
         step("header button: #np-liste opens the Liste tab of the sidebar", header_btn)
@@ -231,8 +231,7 @@ try:
             pg.wait_for_selector("#sb-panel-lists", timeout=5000)
             assert pg.is_visible("#sb-panel-lists")
             # Verify nominal mode is active with ±0.5 Da tolerance and educational text is present
-            mode_btn = pg.evaluate("document.querySelector('#lst-mode-seg button.on').dataset.m")
-            assert mode_btn == "da", f"expected 'da', got {mode_btn}"
+            assert pg.locator("#lst-mode-seg").count() == 0 and not pg.is_visible("#lst-view-seg"), "no mode switch: the world decides"
             tol_val = pg.evaluate("document.querySelector('#lst-tol').value")
             assert float(tol_val) == 0.5
             body_txt = pg.inner_text("#sb-panel-lists")
