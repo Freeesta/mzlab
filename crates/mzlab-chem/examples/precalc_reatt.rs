@@ -23,7 +23,7 @@ fn main() {
         .collect();
     let t0 = Instant::now();
     let chunk = rows.len().div_ceil(threads);
-    let outs: Vec<Vec<(String, f64, Result<String, String>)>> = std::thread::scope(|s| {
+    let outs: Vec<Vec<Row>> = std::thread::scope(|s| {
         let hs: Vec<_> = rows
             .chunks(chunk)
             .map(|c| {
@@ -31,7 +31,8 @@ fn main() {
                     c.iter()
                         .map(|(ik, smi)| {
                             let t = Instant::now();
-                            let r = mzlab_chem::reactivity_json(smi, "").map_err(|e| format!("{e:?}"));
+                            let r =
+                                mzlab_chem::reactivity_json(smi, "").map_err(|e| format!("{e:?}"));
                             (ik.clone(), t.elapsed().as_secs_f64(), r)
                         })
                         .collect()
@@ -50,7 +51,11 @@ fn main() {
     let mut times: Vec<f64> = all.iter().map(|x| x.1).collect();
     times.sort_by(|x, y| x.partial_cmp(y).unwrap());
     let ok = all.iter().filter(|x| x.2.is_ok()).count();
-    let full: usize = all.iter().filter_map(|x| x.2.as_ref().ok()).map(|s| s.len()).sum();
+    let full: usize = all
+        .iter()
+        .filter_map(|x| x.2.as_ref().ok())
+        .map(|s| s.len())
+        .sum();
     let n = times.len();
     println!(
         "n={n} ok={ok} fail={} wall={total:.1}s sum={:.1}s median={:.3}s p90={:.3}s max={:.3}s full_json_bytes={full}",
@@ -60,12 +65,20 @@ fn main() {
         times[n * 9 / 10],
         times[n - 1]
     );
-    // Compact table: {inchikey: [[q, f+, f-, homo, lumo] per atom (3 decimals; H included)]} + per-compound HOMO/LUMO/gap.
+    let o = compact_table(&all);
+    std::fs::write(&a[2], &o).unwrap();
+    println!("compact_bytes={}", o.len());
+}
+
+type Row = (String, f64, Result<String, String>);
+
+/// Compact table: {inchikey: [[q, f+, f-, homo, lumo] per atom (3 decimals; H included)]} + per-compound HOMO/LUMO/gap.
+fn compact_table(all: &[Row]) -> String {
     let mut o = String::from("{\"engine\":\"");
     o += mzlab_chem::ENGINE;
     o += "\",\"rows\":{";
     let mut first = true;
-    for (ik, _, r) in &all {
+    for (ik, _, r) in all {
         let Ok(s) = r else { continue };
         let v: serde_json::Value = serde_json::from_str(s).unwrap();
         let g = |a: &serde_json::Value, k: &str| a.get(k).and_then(|x| x.as_f64()).unwrap_or(0.0);
@@ -96,6 +109,5 @@ fn main() {
         );
     }
     o += "}}";
-    std::fs::write(&a[2], &o).unwrap();
-    println!("compact_bytes={}", o.len());
+    o
 }
