@@ -70,7 +70,7 @@ HOOK = r"""
     g.Blob = new Proxy(B, { construct(t, a, nt) {
       let [p, o] = a;
       if (o && /javascript/.test(o.type || '') && p && p.length && p.every(x => typeof x === 'string') && !String(p[0]).startsWith('/*mzhook*/')) {
-        const head = String(p[0]).slice(0, 400).split('\n').find(l => l.trim()) || '';
+        const head = String(p[0]).slice(0, 600).split('\n').find(l => l.trim() && !/ts-check/.test(l)) || '';
         p = ['/*mzhook*/' + HOOKSRC + ';\n', ...p];
         const r = Reflect.construct(t, [p, o], nt); mz.blobs.set(r, head.trim().slice(0, 60)); return r;
       }
@@ -180,7 +180,9 @@ def measure(pg, ctx, cdp):
     page_x = pg.evaluate(SIZER)
     workers = []
     for w in pg.workers:
-        try: workers.append({"url": w.url[:60], **w.evaluate("() => self.__mz ? self.__mz.report() : null")})
+        try:
+            rep_ = w.evaluate("() => self.__mz ? self.__mz.report() : null")
+            workers.append({"url": w.url[:60], **rep_} if rep_ else {"url": w.url[:60], "error": "no hook (a worker started by another worker)"})
         except Exception as e: workers.append({"url": w.url[:60], "error": str(e)[:80]})
     sw = []
     for s in ctx.service_workers:
@@ -202,6 +204,7 @@ PROPOSAL = {
     "canvas": "backing store limited to the visible box x dpr; zoom redraws instead of enlarging the bitmap",
     "cache": "limit by bytes (LRU), computed from the memory still free; entries rebuilt from the engine on demand",
     "copies": "post with the transfer list (and recycle) instead of the structured clone: every copy is a second live array until the next GC",
+    "browser": "Chromium's own process (UI, network, storage): not the app's",
     "renderer": "sum of the items above plus the engine; closing idle workers and releasing hidden canvases is what lowers it",
     "gpu": "textures follow the canvases: fewer and smaller canvases lower it",
 }
@@ -214,12 +217,12 @@ def rows_of(snap):
     out.append((pg["heap_mb"], "page: JS heap", "page_heap", "CDP Performance.getMetrics after GC"))
     for i, mb in enumerate(snap["renderer_pss_mb"]): out.append((mb, f"renderer process #{i + 1}: PSS", "renderer", "/proc smaps_rollup (page + its dedicated workers, or the service worker)"))
     out.append((snap["gpu_pss_mb"], "gpu process: PSS", "gpu", "/proc smaps_rollup"))
-    out.append((snap["browser_pss_mb"], "browser process: PSS", "renderer", "/proc smaps_rollup"))
+    out.append((snap["browser_pss_mb"], "browser process: PSS", "browser", "/proc smaps_rollup"))
     for i, mb in enumerate(pg["wasm_mb"]): out.append((mb, f"page: WebAssembly memory #{i + 1}", "wasm", "Memory.buffer.byteLength"))
     for w in snap["workers"]:
-        if w.get("error") or not w.get("name") and w.get("heap_mb") is None: continue
+        if w.get("error"): continue
         nm = w.get("name") or w["url"]
-        if w.get("heap_mb") is not None: out.append((w["heap_mb"], f"worker {nm}: JS heap", "worker_heap", "performance.memory (not forced GC)"))
+        if w.get("heap_mb") is not None: out.append((w["heap_mb"], f"worker {nm}: JS heap", "worker_heap", "performance.memory"))
         for i, mb in enumerate(w.get("wasm_mb", [])): out.append((mb, f"worker {nm}: WebAssembly memory #{i + 1}", "wasm", "Memory.buffer.byteLength"))
         if w.get("copied_mb", 0) >= 1: out.append((w["copied_mb"], f"worker {nm}: buffers posted by copy ({w['copies']} messages)", "copies", "sum over the run, not live"))
     for s in snap["service_workers"]:
@@ -234,11 +237,11 @@ def rows_of(snap):
     return [(round(mb, 1), lab, kind, how) for mb, lab, kind, how in out]
 
 
-def scenario(r, p, files, tabui_files):
+def scenario(r, p, files):
     b = p.chromium.launch()
     ctx = b.new_context(viewport={"width": 1400, "height": 900}, reduced_motion="reduce", locale="it-IT")
     ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
-    ctx.add_init_script(INIT)
+    ctx.add_init_script(INIT) if not os.environ.get("NOHOOK") else None
     pg = ctx.new_page(); cdp = ctx.new_cdp_session(pg); cdp.send("Performance.enable")
     snaps, notes = {}, []
     pg.goto(f"http://127.0.0.1:{r.port}/?perf=1")
@@ -253,11 +256,12 @@ def scenario(r, p, files, tabui_files):
     attendi(pg, "PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw map')", 60000); ready(pg)
     snaps["4_after_map"] = measure(pg, ctx, cdp)
     try:
-        pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-in", state="attached", timeout=60000)
-        pg.set_input_files("#tp-in", [str(f) for f in tabui_files])
-        pg.wait_for_function(f"document.querySelectorAll('#tp-files tr').length >= {len(tabui_files) + 1}", timeout=90000)
+        # Tabui takes the files already open in the page
+        pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go", timeout=60000)
+        pg.wait_for_function("document.querySelectorAll('#tp-files tr').length > 1", timeout=20000)
     except Exception as e:
         notes.append("Tabui step incomplete: " + str(e).splitlines()[0][:120])
+        notes.append("Tabui state: " + pg.evaluate("(document.querySelector('#tp-load')||{}).textContent + ' | ' + (document.querySelector('#tp-files')||{}).innerText")[:300])
     ready(pg)
     snaps["5_after_tabui"] = measure(pg, ctx, cdp)
     notes.append("lr_miss=%d" % pg.evaluate("(window.MZLAB_LR_MISS || []).length"))
@@ -284,7 +288,7 @@ def main():
         for i, t in enumerate((0, 8, 20)):
             f = tmp / f"B_FullMass-t{t}.mzML"; ds.full_scan(f, t, np.random.default_rng(i + 1)); files.append(f)
         with sync_playwright() as p:
-            snaps, notes = scenario(r, p, files, files)
+            snaps, notes = scenario(r, p, files)
     finally:
         r.close()
         import shutil; shutil.rmtree(tmp, ignore_errors=True)
