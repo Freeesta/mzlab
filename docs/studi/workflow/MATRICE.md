@@ -39,7 +39,7 @@ Parte di `docs/studi/WORKFLOW_MODULARI.md` (§3). Legenda: **V** = letto in un f
 | `tp.position` | no | no | no | no | `chem/posizioni.rs` (`posiz/1`, V) | — |
 | `export.*` | GNPS FBMN, SIRIUS, GraphML, CSV (V) | mzTab, consensusXML (I) | no | `report` (V) | CSV «full» stile mzmine, MGF/MSP, XLSX (V) | formato |
 
-## 4. Struttura chimica e trasformazioni (tipi `structure` e `transform`; il formato della struttura è dello studio dedicato `docs/studi/STRUTTURA_DATO.md`)
+## 4. Struttura chimica e trasformazioni (tipi `structure` e `transform`; il formato della struttura è dello studio dedicato `docs/studi/STRUTTURA_DATO*.md`, record `mol/1`)
 | Passo | mzmine | OpenMS | XCMS | patRoon | mzLab | Parametri chiave |
 |---|---|---|---|---|---|---|
 | `structure.draw` | no (I) | no | no | no | Disegno con Ketcher in iframe `sandbox` (V) | — |

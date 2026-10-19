@@ -5,7 +5,7 @@
  "description": "Study draft (docs/studi/WORKFLOW_MODULARI.md §4), not used by the program yet. Three documents: a step describes itself (passo/1, one per step and version, shipped with the module that runs it); a workflow lists step instances wired by references (passi of mzflow/2, beside operazioni of mzflow/1); a run writes what it used and made (prov/1, a subset of PROV-JSON). User-facing strings are in English.",
  "$defs": {
   "dataType": {
-   "description": "Typed data between steps. raw = vendor file set (one sample); mzml = mzML 1.1 (indexedmzML when written by mzLab); mzidx = mzLab scan index (docs/agenti/mzidx.md); xic = one chromatogram; peaks = features of one file (.mzfeatf); rtmap = RT correction of a series; table = aligned feature table (.mzfeat); samples = roles and times (campioni/2); spectra = MS2 lists; annot = row annotations (interp/1, levels); tp = product view (tp/1); structure = a chemical structure, format owned by the structure study (docs/studi/STRUTTURA_DATO.md, not this draft); transform = a parent -> product transformation with atom mapping (transform1); qc = quality numbers; report = terminal export (CSV, XLSX, HTML).",
+   "description": "Typed data between steps. raw = vendor file set (one sample); mzml = mzML 1.1 (indexedmzML when written by mzLab); mzidx = mzLab scan index (docs/agenti/mzidx.md); xic = one chromatogram; peaks = features of one file (.mzfeatf); rtmap = RT correction of a series; table = aligned feature table (.mzfeat); samples = roles and times (campioni/2); spectra = MS2 lists; annot = row annotations (interp/1, levels); tp = product view (tp/1); structure = a mol/1 record, format owned by the structure study (docs/studi/STRUTTURA_DATO*.md, not this draft); transform = a parent -> product transformation with atom mapping (transform1, a subset of trasf/1 of that study); qc = quality numbers; report = terminal export (CSV, XLSX, HTML).",
    "enum": [
     "raw",
     "mzml",
@@ -523,7 +523,7 @@
   },
   "transform1": {
    "type": "object",
-   "description": "parent -> product of one transformation, with the atom mapping; the structures are referenced by hash, never copied",
+   "description": "parent -> product of one transformation, with the atom mapping (the fields of trasf/1 of the structure study that the workflow reads; the other fields pass through). Structures are referenced by hash, never copied; atom indices are the canonical indices of the mol/1 record, never those of a SMILES",
    "required": [
     "parent",
     "delta"
@@ -532,12 +532,12 @@
     "parent": {
      "type": "string",
      "pattern": "^[0-9a-f]{64}$",
-     "description": "sha256 of the parent structure"
+     "description": "sha256 of the canonical core (atoms, bonds, stereo, groups; no coords, props or regions) of the parent structure"
     },
     "product": {
      "type": "string",
      "pattern": "^[0-9a-f]{64}$",
-     "description": "sha256 of the product structure; absent when only the change is known (partial structure, level 3b)"
+     "description": "sha256 of the canonical core (atoms, bonds, stereo, groups; no coords, props or regions) of the product structure; absent when only the change is known (partial structure, level 3b)"
     },
     "delta": {
      "type": "string",
@@ -592,8 +592,7 @@
      "type": "string",
      "description": "identification level of the product (docs/agenti/livelli.md)"
     }
-   },
-   "additionalProperties": false
+   }
   }
  }
 }
