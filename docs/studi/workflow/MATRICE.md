@@ -39,7 +39,17 @@ Parte di `docs/studi/WORKFLOW_MODULARI.md` (§3). Legenda: **V** = letto in un f
 | `tp.position` | no | no | no | no | `chem/posizioni.rs` (`posiz/1`, V) | — |
 | `export.*` | GNPS FBMN, SIRIUS, GraphML, CSV (V) | mzTab, consensusXML (I) | no | `report` (V) | CSV «full» stile mzmine, MGF/MSP, XLSX (V) | formato |
 
-## 4. Catalogo e buchi
+## 4. Struttura chimica (tipo `structure`; dettaglio: `docs/studi/STRUTTURA_DATO.md`)
+| Passo | mzmine | OpenMS | XCMS | patRoon | mzLab | Parametri chiave |
+|---|---|---|---|---|---|---|
+| `structure.draw` | no (I) | no | no | no | Disegno con Ketcher in iframe `sandbox` (V) | — |
+| `structure.import` (SMILES, molfile, SDF, InChI) | strutture delle librerie via CDK (I) | no (I) | no | via rcdk/Open Babel (I) | `grafo::Mol::parse` e `from_molfile` V2000 (V; stereo e isotopi persi) | formato |
+| `structure.from_result` | no (I) | no | no | candidati di MetFrag/SIRIUS (I) | «Use this structure» di Tabui (V) | — |
+| `structure.render` (con zone evidenziate) | struttura del candidato (I) | no | no | `plotStructure` (I) | `TPMOL.svg` + `parentesi.js`, aloni della reattività (V) | modo del disegno, incertezza |
+| `structure.identity` (canonico, InChIKey) | da RDKit/CDK (I) | no | no | via rcdk (I) | nessuna InChIKey calcolata, solo dalle fonti (V); classi di `simmetria.rs` (V) | — |
+| lettori della struttura | — | — | — | MetFrag, TP «library» (V) | `interp`, `positions_json`, `reactivity_json` (Fukui), RT-logP via InChIKey, librerie (V) | — |
+
+## 5. Catalogo e buchi
 - **mzLab ha tutto il tratto grezzo → tabella → TP** (V nel codice), ma come chiamate interne: nessun passo si descrive (niente `passo/1`), i parametri sono strutture Rust (`Recipe`, `Params`) e l'interfaccia è scritta a mano.
-- **Buchi veri** (nessun modulo mzLab): allineamento RT per deformazione continua (Obiwarp: abbiamo solo ancore), export mzTab-M e mzQC, generazione dei TP da struttura (BioTransformer, CTS: esclusa, §8 del principale), lisciatura come passo a sé.
+- **Buchi veri** (nessun modulo mzLab): un grafo della struttura con stereo, isotopi e sali (oggi si perdono alla lettura, V), un calcolo dell'InChIKey, allineamento RT per deformazione continua (Obiwarp: abbiamo solo ancore), export mzTab-M e mzQC, generazione dei TP da struttura (BioTransformer, CTS: esclusa, §8 del principale), lisciatura come passo a sé.
 - **Unico nostro** (nessun altro dei quattro): lettura nativa nel browser, stima dei parametri con prova, posizione della sostituzione, livelli LR/HR con prove e non verdetti.
