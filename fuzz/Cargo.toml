@@ -1,0 +1,66 @@
+# cargo-fuzz targets for the parsers of files; a workspace of its own (nightly + libFuzzer), never built by the main workspace or by the mandatory CI.
+[package]
+name = "mzlab-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+mzlab-core = { path = "../crates/mzlab-core" }
+mzlab-lib = { path = "../crates/mzlab-lib" }
+
+[workspace]
+
+[[bin]]
+name = "ole"
+path = "fuzz_targets/ole.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "xmltree_methodinfo"
+path = "fuzz_targets/xmltree_methodinfo.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "mzmlhead"
+path = "fuzz_targets/mzmlhead.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "idxread"
+path = "fuzz_targets/idxread.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "raw"
+path = "fuzz_targets/raw.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "wiff"
+path = "fuzz_targets/wiff.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "mzlib_msp_mgf"
+path = "fuzz_targets/mzlib_msp_mgf.rs"
+test = false
+doc = false
+bench = false
+

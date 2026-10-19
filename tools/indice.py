@@ -29,6 +29,7 @@ GROUPS = [  # (title, path prefix, one line per file?)
     ("Strumenti (`tools/`)", "tools/", True),
     ("mzFinder (`TP_Mine/`)", "TP_Mine/", False),
     ("Test (`tests/`, `tests_e2e/`)", "tests", False),
+    ("Fuzzing dei parser (`fuzz/`)", "fuzz/", False),
     ("Controlli indipendenti (`docs/controlli/`)", "docs/controlli/", False),
 ]
 JS_DEF = re.compile(r"^( {0,2})(?:export\s+)?(?:async\s+)?(?:function\*?\s+([A-Za-z_$][\w$]*)|(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>)")

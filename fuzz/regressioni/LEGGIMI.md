@@ -1,0 +1,1 @@
+A crash found by `cargo fuzz` goes here as `fuzz/regressioni/<target>/<name>` (the artifact file, unchanged), together with the fix. `crates/mzlab-lib/tests/fuzz_regressioni.rs` runs every file through the entry point of its target in `cargo test`.
