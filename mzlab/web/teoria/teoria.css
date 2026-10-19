@@ -441,11 +441,12 @@ body.tedit-active .sim::before{content:"[Simulazione interattiva protetta]";posi
 .exp-close{font:inherit;font-size:18px;font-weight:700;color:var(--muted);background:transparent;border:none;cursor:pointer;padding:4px 8px;border-radius:6px}
 .exp-close:hover{color:var(--bad);background:var(--sel)}
 .exp-tab{width:100%;border-collapse:collapse}
-.exp-tab th,.exp-tab td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:center}
+.exp-tab th,.exp-tab td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle;height:52px;box-sizing:border-box}
 .exp-tab th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.exp-tab thead th{height:auto}
 .exp-tab th:first-child,.exp-tab td:first-child{text-align:left}
-.exp-fmt{display:flex;align-items:center;gap:10px}.exp-fmt .exp-ico{font-size:20px}.exp-fmt b{font-size:14px}.exp-fmt span.d{color:var(--muted);font-size:13px}
-.exp-item{min-width:44px;min-height:36px;padding:4px 12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;cursor:pointer;color:var(--ink);font:inherit;font-weight:700}
+.exp-tab .exp-fmt{font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink)}.exp-fmt .exp-ico{font-size:20px;margin-right:10px;vertical-align:middle}.exp-fmt b{font-size:14px}.exp-fmt span.d{color:var(--muted);font-size:13px}
+.exp-item{min-width:44px;min-height:40px;padding:4px 12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;cursor:pointer;color:var(--ink);font:inherit;font-weight:700}
 .exp-item:hover,.exp-item:focus-visible{border-color:var(--accent);background:var(--sel)}
 .exp-status{margin-top:14px;padding:10px 14px;border-radius:6px;font-size:13.5px;font-weight:600;text-align:center}
 .exp-status.ok{background:var(--ok);color:#fff}
