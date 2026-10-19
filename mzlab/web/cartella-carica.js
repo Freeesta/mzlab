@@ -74,11 +74,11 @@ const CartCarica = (() => {
     await upload([...uniqueNames(ok, (ST.files || []).map(x => x.name)), ...await AgilentD.toMzml(ag.runs), ...WatersRaw.toMzml(wr.runs)], null);
     if (!ig && document.getElementById("cartinfo")?.textContent === msg) note("");      // loaded: «n files to load» is done; the summary of the ignored files and later notices stay
   }
-  function fromDrop(e) {                // true when the drop was a folder (read and loaded here); the entries are taken before any await
+  function fromDrop(e, /** @type {(() => void) | undefined} */ done) {                // true when the drop was a folder (read and loaded here); the entries are taken before any await
     const es = entriesOf(e.dataTransfer);
     if (!es) return false;
     note(I18N.t("cart.reading", { n: 0 }));
-    readEntries(es, n => { if (n % 50 === 0) note(I18N.t("cart.reading", { n })); }).then(files => load(files, rootName(es, files)), x => note(String(x.message || x)));
+    readEntries(es, n => { if (n % 50 === 0) note(I18N.t("cart.reading", { n })); }).then(files => load(files, rootName(es, files)), x => note(String(x.message || x))).then(() => { if (done) done(); });
     return true;
   }
   async function fromInput(list) { const files = [...list]; await load(files, rootName(null, files)); }

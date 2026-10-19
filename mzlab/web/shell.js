@@ -363,13 +363,43 @@ async function openRest(rest,tok){
     added.push(p);if(Date.now()-last>=200)await boot();
   }
   if(E.progTok===tok){if(added.length)await boot();E.pendN=0;renderFileList();uiSave()}}
+// opens the ticked files of the loading table: the first one at once, the others as they are read (E.pending); `scroll` brings the page back to the top (the button of the table)
+async function openStaged(scroll){
+  const rest=await exploreList(ST.files.filter(usable).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find(x=>x.file===f.name)||{}).label})));
+  STATO.aggiunta(false,"adding");await bootSession();RUOLI.commit(ST.files);applyView();if(scroll)window.scrollTo(0,0);
+  await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();if(rest)rest()}
+// Files dropped on the side panel of the data view are added at once: the same upload() and the same opening as the loading table, without the loading screen (the progress is the bar of the list, E.pending);
+// files of the other resolution than the open ones stay in the loading table, unticked, and a note says so
+const DIRECT={tm:0};
+const dropReady=()=>!!(S.sess&&!S.adding&&!$("#v-data").hidden);
+const dropHasFiles=e=>[...((e.dataTransfer&&e.dataTransfer.types)||[])].includes("Files");
+function directNote(key,p){const n=$("#fl-note");clearTimeout(DIRECT.tm);n.textContent=key?I18N.t(key,p):"";n.hidden=!key;if(key)DIRECT.tm=setTimeout(()=>directNote(""),9000)}
+function dropZone(on){$("#sb-pane").classList.toggle("dz-over",on);$("#fl-dz").hidden=!on}
+async function directDone(){
+  const open=f=>E.files.some(x=>!x.gone&&(x.file===f.name||x.file.startsWith(f.name+"#")));
+  ST.files.forEach(f=>{if(open(f))f.use=true});
+  const fresh=ST.files.filter(f=>f.kind in GORD&&!open(f));
+  if(!fresh.length){directNote("");return}
+  const ref=ST.files.find(open),world=ref?!!ref.hr:fresh.filter(f=>f.hr).length>fresh.filter(f=>!f.hr).length;
+  fresh.forEach(f=>{f.use=!!f.hr===world});
+  const skipped=fresh.filter(f=>!f.use).length,n=fresh.length-skipped;
+  try{if(n)await openStaged(false);directNote(skipped?"files.drop.mixed":"files.drop.done",{n,m:skipped})}
+  catch(e){directNote("files.drop.fail",{msg:e.message})}
+  renderFiles()}
+(()=>{const dz=$("#dfiles");
+  ["dragenter","dragover"].forEach(t=>dz.addEventListener(t,e=>{if(!dropReady()||!dropHasFiles(e))return;e.preventDefault();dropZone(true)}));
+  dz.addEventListener("dragleave",e=>{if(!dz.contains(e.relatedTarget))dropZone(false)});
+  dz.addEventListener("drop",e=>{dropZone(false);if(!dropReady()||!dropHasFiles(e))return;e.preventDefault();e.stopPropagation();
+    const fs=[...e.dataTransfer.files],done=()=>{if(!UPBUSY&&dropReady())directDone()};directNote("files.drop.adding");
+    if(!CartCarica.fromDrop(e,done))upload(fs,"data").then(done)});
+  $("#addf").addEventListener("click",()=>directNote(""))})();
 $("#hrmix-lr").onclick=()=>{hrMixPick(false);renderFiles()};$("#hrmix-hr").onclick=()=>{hrMixPick(true);renderFiles()};
 $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
   try{if(UPBUSY>0){WAITING=true;WAIT0=Date.now();waitStato();const tk=setInterval(waitStato,1000);ldAction(I18N.t("conv.cancel"),cancelLoads);try{await idle()}finally{clearInterval(tk);ldAction("");WAITING=false;loadingStato(null)}}
     if(!ST.files.some(usable)){checkGo();return}
     // the time of a dark is negative whatever way it got here (name, table, old project)
     ST.files.forEach(f=>{if(RUOLI.roleOf(f)==="dark")f.time=darkTime(f.time)});
-    const rest=await exploreList(ST.files.filter(usable).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find(x=>x.file===f.name)||{}).label})));STATO.aggiunta(false,"adding");await bootSession();RUOLI.commit(ST.files);applyView();window.scrollTo(0,0);await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();if(rest)rest()}
+    await openStaged(true)}
   catch(e){
     if(e.key==="err.hr.mix"){
       $("#gomsg").innerHTML=`<span class="fail">${I18N.t("err.hr.mix")}</span> 

@@ -12,8 +12,8 @@ function soloFile(/** @type {any} */ f0) {
   STATO.file(f0.k, "file"); if (f0.kind !== E.tab) setTab(f0.kind);
   cleanupOrphanPanels(); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave(); scrollToBlock(f0.kind);
 }
-/** Removes a file from the session; no question: «Removed · Undo» takes it back (the stack of storia.js). In the browser the copy in OPFS and its derived indexes are freed when the notice has closed without an undo (a shared source, like a .wiff with several samples, stays while another sample uses it). */
-function removeFile(/** @type {any} */ f) {
+// The three steps of taking one file out: take (hide it), back (undo) and free (release its copy in OPFS and its indexes, only in the browser, when the notice closes without an undo).
+function fileRemoval(/** @type {any} */ f) {
   const was = { vis: f.vis, cur: E.cur, ks: E.panels.filter(q => q.k === f.k && q.type !== "xic").map(q => /** @type {[any, number]} */ ([q, q.k])) };
   const src = (/** @type {any} */ g) => (g.file || "").split("#")[0];
   const show = () => {
@@ -35,9 +35,21 @@ function removeFile(/** @type {any} */ f) {
   const free = () => {
     if (window.MZLAB_BROWSER && f.gone && !E.files.some(g => g !== f && !g.gone && src(g) === src(f))) post("api/remove", { name: src(f) }).catch(() => { /* not in the browser store: nothing to free */ });
   };
-  take();
-  if (STORIA) STORIA.tolto({ what: f.label, tab: f.kind, dati: f.label, undo: back, redo: take, scade: window.MZLAB_BROWSER ? free : null });
-  else free();
+  return { take, back, free };
+}
+/** Removes a file from the session; no question: «Removed · Undo» takes it back (the stack of storia.js). In the browser the copy in OPFS and its derived indexes are freed when the notice has closed without an undo (a shared source, like a .wiff with several samples, stays while another sample uses it). */
+function removeFile(/** @type {any} */ f) {
+  const r = fileRemoval(f); r.take();
+  if (STORIA) STORIA.tolto({ what: f.label, tab: f.kind, dati: f.label, undo: r.back, redo: r.take, scade: window.MZLAB_BROWSER ? r.free : null });
+  else r.free();
+}
+/** Removes every file of the list with ONE «Removed · Undo» entry that takes them all back (same mechanism as removeFile). */
+function removeAllFiles() {
+  const rs = E.files.filter(f => !f.gone).map(fileRemoval); if (!rs.length) return;
+  rs.forEach(r => r.take());
+  const all = (/** @type {"take" | "back"} */ k) => () => (k === "back" ? [...rs].reverse() : rs).forEach(r => r[k]());
+  if (STORIA) STORIA.tolto({ what: I18N.t("files.removeAll.what", { n: rs.length }), dati: String(rs.length), undo: all("back"), redo: all("take"), scade: window.MZLAB_BROWSER ? () => rs.forEach(r => r.free()) : null });
+  else rs.forEach(r => r.free());
 }
 let _lastBox = /** @type {number | null} */ (null);
 function boxRange(/** @type {HTMLInputElement} */ x, /** @type {MouseEvent} */ e) {
@@ -47,6 +59,7 @@ function boxRange(/** @type {HTMLInputElement} */ x, /** @type {MouseEvent} */ e
   setVisOf(all.slice(Math.min(i, j), Math.max(i, j) + 1).map(b => E.files[+(b.dataset.k || 0)]), x.checked); return true;
 }
 function bindListaFile() {
+  /** @type {HTMLButtonElement} */ (Q("#rmall")).disabled = !E.files.some(f => !f.gone);
   const L = Q("#flst"), fileOf = (/** @type {EventTarget | null} */ t, /** @type {string} */ sel) => { const nm = /** @type {HTMLElement | null} */ (/** @type {Element} */ (t).closest(sel)); return nm ? E.files[+(nm.dataset.k || 0)] : null; };
   L.ondblclick = e => {
     // the colour square: the first click of a file that is not the active one rebuilds the list, so the handler lives here and not on the square

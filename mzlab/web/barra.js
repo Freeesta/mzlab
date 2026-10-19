@@ -281,6 +281,8 @@ const BARRA = (() => {
     }
     const addf = Q1("#addf");
     if (addf) addf.style.display = id === "file" ? "" : "none";
+    const rmall = Q1("#rmall");
+    if (rmall) rmall.style.display = id === "file" ? "" : "none";
     setPanelVisible(id);
     if (HR_PANELS.includes(id)) {
       if (typeof BANCO !== "undefined") {
