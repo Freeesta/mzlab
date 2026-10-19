@@ -6,7 +6,13 @@
 //! neutral masses agree under two different adducts of the polarity are one identity. The reading of each ion goes through `RowIdent::compute_in`, fed
 //! with one hypothesis per linked ion (source `SRC_NETWORK`, RT of the ion); an ion with no link has no hypothesis and is read as [M+H]+ ([M-H]- in
 //! negative), so `compute_in` is called with the hypotheses of the links only. Isotopologues take the identity of the representative of their isotope
-//! group. The correlation of shapes between samples (the other evidence of mzmine) is not used here: the link is by mass and RT.
+//! group.
+//!
+//! Difference from mzmine: its networking first groups the features by RT and by the correlation of their peak shapes (metaMSEcorrelate; also the
+//! intensity profile across samples) and only then looks for adducts inside a group. Here neither correlation is used: the link is by neutral mass and
+//! RT alone, so two ions of compatible mass and RT are linked even if their profiles across samples disagree (a false link is possible). The 4.10.90 gold
+//! data has no networking output, so there is no external value to test a correlation criterion against and no parity with mzmine is claimed for this
+//! step (it is claimed for ADAP, resolver, join, gap filling and isotopes). The correlation across common samples lives in `legacy/identity.rs`.
 
 use super::isotopes::{items_of, IsoGroups};
 use crate::axis::half;
