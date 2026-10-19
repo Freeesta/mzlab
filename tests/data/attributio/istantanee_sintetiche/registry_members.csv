@@ -6,3 +6,5 @@ identity;SYN;Deltacide;contaminant;;;;DDDDDDDDDDDDDD;;;;;;;;;
 identity;SYN;Epsilon;contaminant;;;;EEEEEEEEEEEEEE;;;;;;;;;
 identity;SYN;Zetafen;contaminant;;;;FFFFFFFFFFFFFF;;;;;;;;;
 identity;SYN;Thetadecane;contaminant;;;;HHHHHHHHHHHHHH;;;;;;;;;
+identity;SYNTH;Fictacin B;natural;;;;LLLLLLLLLLLLLL;;;PubChem name;;;;;;
+identity;SYNTH;TestStandardA;natural;;;;KKKKKKKKKKKKKK;;;suspect list;;;;;;

@@ -24,6 +24,7 @@ pub mod names;
 pub mod pattern;
 pub mod quantify;
 pub mod readers;
+pub mod reglists;
 pub mod rt_logp;
 pub mod sorbents;
 pub mod sources;

@@ -693,6 +693,10 @@ def stadio_gradiente(src):
     return out
 
 
+def carica_tox():
+    return carica(Path(os.environ["ATTRIBUTIO_SRC"]).expanduser().resolve(), CAMPAGNA)
+
+
 def stadio_tox_ghs():
     """Thresholds of ecotox/ghs.py on a grid of values, taxon sets and H-statements."""
     from attributio.ecotox import ghs
@@ -800,6 +804,45 @@ def stadio_tox_amenabilita():
     return {"cases": [[c[0], None if c[1] is None else c[1], c[2], c[3], None if c[4] is None else (None if c[4] != c[4] else c[4]), c[5], list(A.lc_esi_amenable("n", c[0], c[1], c[2], c[3], c[4], c[5]))] for c in C]}
 
 
+def stadio_tox_b1(dir_: Path):
+    """B1 of the synthetic campaign against the invented membership table: inputs (identities, structures, list entries) and every output table."""
+    import pandas as pd
+    from attributio.chem import registry
+    from attributio.reglists import catalog as K
+    from attributio.reglists import identities as I
+    from attributio.reglists import match as M
+    from attributio.reglists.schema import read_membership
+    registry.registry_path = lambda name="registry": dir_ / registry.FILES[name]
+    C = carica_tox()
+    out = {}
+    for window in (None, [100.0, 400.0]):
+        C.cfg.setdefault("reglists", {})
+        if window:
+            C.cfg["reglists"]["mz_window"] = window
+        else:
+            C.cfg["reglists"].pop("mz_window", None)
+        sites = C.matrix_sites(I.reglists_config(C)["matrix"])
+        base, _feat, _n2nc = I.campaign_identities(C, sites)
+        b = M.match_campaign(C, mem_path=dir_ / "reglist_membership.csv")
+        mem = read_membership(dir_ / "reglist_membership.csv")
+        subs = M.submatrices(C, sites)
+        out["window" if window else "nowindow"] = {
+            "window": window, "sites": sites, "submatrices": subs,
+            "identities_in": frame_rows(base, ["nome_comune", "group", "best_level", *[f"in_{x}" for x in sites]]),
+            "structures": frame_rows(b.structures), "membership": frame_rows(mem),
+            "ident": frame_rows(b.ident.drop(columns=[c for c in b.ident.columns if c in ("raw", "is_anthro", "formula")])),
+            "long": frame_rows(b.long), "summary": frame_rows(b.summary), "coverage": frame_rows(b.coverage), "lists": b.lists,
+            "catalog": [[l, K.spec(l).label, K.group_of(l), K.spec(l).question] for l in b.lists]}
+    from attributio.reglists import compare as CMP
+    mp = dir_ / "reglist_membership.csv"
+    b_all, b_h, b_w = (M.match_campaign(C, mem_path=mp, lists=l) for l in (None, ["HHP_PAN", "EU_PS_2026_805"], ["WHO_MIA", "EU_PS_2026_805"]))
+    for tag, res in (("two", {"ALL": b_all, "H": b_h}), ("three", {"ALL": b_all, "H": b_h, "W": b_w}), ("one", {"W": b_w})):
+        t, sm = CMP.cross_table(res)
+        out["p3_" + tag] = {"campaigns": list(res), "table": frame_rows(t), "summary": frame_rows(sm)}
+    out["ordered"] = [K.ordered(x) for x in (["WHO_MIA", "ZZ", "HHP_PAN", "AA", "WHO_MIA"], [], ["EU_PS_2013_39"])]
+    return out
+
+
 def controlla(uscita: Path, campagna: Path) -> int:
     got = json.loads((uscita / "livelli.json").read_text(encoding="utf-8"))["features"]
     with open(campagna / "livelli_attesi.csv", encoding="utf-8", newline="") as fh:
@@ -864,6 +907,7 @@ def main() -> int:
         "tox-registro": lambda: scrivi(USCITA_TOX, "registro.json", stadio_tox_registro()),
         "tox-pericolo": lambda: scrivi(USCITA_TOX, "pericolo.json", stadio_tox_pericolo(ISTANTANEE)),
         "tox-amenabilita": lambda: scrivi(USCITA_TOX, "amenabilita.json", stadio_tox_amenabilita()),
+        "tox-b1": lambda: scrivi(USCITA_TOX, "b1.json", stadio_tox_b1(ISTANTANEE)),
         "sorbenti": lambda: scrivi(a.uscita_sorbenti, "sorbenti.json", stadio_sorbenti(carica(root, a.sorbenti.resolve()))),
     }
     for nome in a.solo or list(stadi):

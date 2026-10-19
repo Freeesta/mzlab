@@ -1,3 +1,15 @@
 inchikey_skeleton;list_id;name;list_attribute;is_tp;parent;lc_esi_amenable;amenability_rule;formula;mono_mass;smiles;inchikey;list_group;cas
 AAAAAAAAAAAAAA;HHP_PAN;Alphazol;Highly hazardous;falso;;vero;ESI+ amine;C9H10N2O;162.0793;CC1=CC=C(C=C1)N=C(N)O;AAAAAAAAAAAAAA-UHFFFAOYSA-N;pesticides;111-11-1
 CCCCCCCCCCCCCC;WHO_MIA;Gammaxin;Critically important;false;;dubbio;ester;C12H14O3;206.0943;CCOC(=O)C1=CC=CC=C1OC;CCCCCCCCCCCCCC-UHFFFAOYSA-N;drugs;333-33-3
+BBBBBBBBBBBBBB;HHP_PAN;Caffeine;HHP 1;false;;true;;;194.08;;BBBBBBBBBBBBBB-UHFFFAOYSA-N;pesticidi_HHP;
+RYYVLZVUVIJVGH;HHP_PAN;Caffeine, isomer;HHP 2;false;;true;;;194.08;;RYYVLZVUVIJVGH-OTHERKEYAA-N;pesticidi_HHP;
+IIIIIIIIIIIIII;HHP_PAN;Fictazine;HHP 3;false;;doubtful;;;320.5;;IIIIIIIIIIIIII-UHFFFAOYSA-N;pesticidi_HHP;
+ZZZZZZZZZZZZZZ;HHP_PAN;Unmatched one;HHP 4;false;;true;;;250.1;;ZZZZZZZZZZZZZZ-UHFFFAOYSA-N;pesticidi_HHP;
+ZZZZZZZZZZZZZY;HHP_PAN;Unmatched out of window;HHP 5;false;;true;;;2500;;ZZZZZZZZZZZZZY-UHFFFAOYSA-N;pesticidi_HHP;
+EEEEEEEEEEEEEE;WHO_MIA;Epsilon drug;HP-CIA;false;;true;;;101.2;;EEEEEEEEEEEEEE-UHFFFAOYSA-N;internazionali;
+JJJJJJJJJJJJJJ;WHO_MIA;Fictolol;CIA;false;;true;;;310.2;;;internazionali;
+LLLLLLLLLLLLLL;WHO_MIA;Fictacin;CIA;false;;false;;;410.2;;LLLLLLLLLLLLLL-UHFFFAOYSA-N;internazionali;
+KKKKKKKKKKKKKK;EU_PS_2026_805;Standard A;PS;false;;true;;;150.1;;KKKKKKKKKKKKKK-UHFFFAOYSA-N;acque_UE;
+FFFFFFFFFFFFFF;EU_PS_2026_805;Zetafen;PHS;false;;true;;;178.1;;FFFFFFFFFFFFFF-UHFFFAOYSA-N;acque_UE;
+BBBBBBBBBBBBBB;EU_PS_2026_805;Caffeine again;PS;false;;true;;;194.08;;BBBBBBBBBBBBBB-UHFFFAOYSA-N;acque_UE;
+QQQQQQQQQQQQQQ;MY_NEW_LIST;Not in catalogue;x;false;;true;;;200;;QQQQQQQQQQQQQQ-UHFFFAOYSA-N;;
