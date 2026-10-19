@@ -261,6 +261,14 @@ export function createFeatPool(opts) {
         return (await call(slot, { op: "rowtraces", table: table.slice(), samples, id, ppm, paths })).text;
       });
     },
+    // Candidate elemental compositions of one feature from its MS1 spectrum (`.wasm` `untargeted`, `formula_id/1`): `mz`, `y` the spectrum, `featureMz` the monoisotopic m/z,
+    // `params` the JSON text of the options (ion, z, tol_ppm, elements, nitrogen, rdb_min, max_results). Resolves with the JSON text.
+    formulaId({ mz, y, featureMz, params }) {
+      return submit(async (slot, load) => {
+        await load("untargeted");
+        return (await call(slot, { op: "formula_id", mz: Float64Array.from(mz), y: Float64Array.from(y), featureMz, params: params || "" })).text;
+      });
+    },
     // L4-L6: alignment and gap filling of the series in one worker. `stored`: .mzfeatf bytes in the order of `paths`. Resolves with the .mzfeat bytes.
     align(stored, paths, recipe) {
       return submit(async (slot, load) => {
@@ -377,6 +385,7 @@ const OPS = {
     const f = await openAll([m.path]), out = memSink();
     try { mods.untargeted.detect_untargeted_to(f.read, f.sizes[0], m.name, m.params, out.write); return { bytes: out.bytes() }; } finally { f.close(); }
   },
+  async formula_id(m) { return { text: mods.untargeted.untargeted_formula_id(m.mz, m.y, m.featureMz, m.params) }; },
   async align_unt(m) {
     const f = await openAll(m.paths), out = memSink();
     try { mods.untargeted.align_untargeted_to(arrays(m.files), f.read, f.sizes, m.params, out.write, m.budgetMb || 0); return { bytes: out.bytes() }; } finally { f.close(); }
