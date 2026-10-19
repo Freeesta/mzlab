@@ -147,3 +147,64 @@ fn italian_vocabulary_reads_as_english() {
     assert_eq!(canon("dubbio | falso"), "doubtful | false");
     assert_eq!(canon("anything else"), "anything else");
 }
+
+// ------------------------------------------------------------------------------------------------------------------ registry rules (RG-01)
+use mzlab_feat::attributio::tox::registry::*;
+
+fn parse(v: &Value) -> Option<f64> {
+    v.as_str()
+        .and_then(|s| s.trim().parse::<f64>().ok())
+        .filter(|x| !x.is_nan())
+}
+
+#[test]
+fn registry_rules_match_the_golden_data() {
+    let g = golden("tox", "registro.json");
+    let props: Vec<(i64, String)> = g["props"]
+        .as_object()
+        .unwrap()
+        .iter()
+        .map(|(k, v)| (k.parse().unwrap(), v.as_str().unwrap().to_string()))
+        .collect();
+    for r in g["representative"].as_array().unwrap() {
+        let got = representative_cid(r[0].as_str().unwrap(), &props, r[1].as_str());
+        assert_eq!(
+            got.map_or(Value::Null, |c| json!(c)),
+            r[2],
+            "representative {r:?}"
+        );
+    }
+    for r in g["synonyms"].as_array().unwrap() {
+        let syn: Vec<&str> = r[0]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| s.as_str().unwrap())
+            .collect();
+        assert_eq!(json!(dtxsid_from_synonyms(&syn)), r[1], "dtxsid {syn:?}");
+        assert_eq!(json!(cas_from_synonyms(&syn)), r[2], "cas {syn:?}");
+    }
+    for r in g["h_codes"].as_array().unwrap() {
+        let t: Vec<&str> = r[0]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| s.as_str().unwrap())
+            .collect();
+        assert_eq!(json!(h_aquatic_codes(&t)), r[1], "h codes {t:?}");
+    }
+    for r in g["categories"].as_array().unwrap() {
+        let mut counts = [None; 10];
+        for (i, v) in r[0].as_array().unwrap().iter().enumerate() {
+            counts[i] = v.as_f64().or_else(|| parse(v));
+        }
+        assert_eq!(json!(pcl_categories(&counts)), r[1], "categories {r:?}");
+    }
+    for r in g["predicted"].as_array().unwrap() {
+        let c = r[0].as_array().unwrap();
+        let (v, w) = predicted_lowest_lc50_mg_l(&[parse(&c[0]), parse(&c[1]), parse(&c[2])]);
+        same(&v.map_or(Value::Null, |x| json!(x)), &r[1], "lc50");
+        assert_eq!(json!(w), r[2]);
+        assert_eq!(json!(ghs_acute_category(v)), r[3]);
+    }
+}
