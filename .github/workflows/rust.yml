@@ -83,6 +83,11 @@ jobs:
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features proofs
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features mrm
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-table-wasm
+      # installed before the cache is saved: ~/.cargo/bin/wasm-bindgen is in the cached paths, and installing it after the save (as the guards step did) recompiled it on every run (~90 s)
+      - name: wasm-bindgen CLI (the version of Cargo.lock)
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
       # saved right after the builds, so a red guard or clippy does not lose the cache (main only)
       - uses: actions/cache/save@v4
         if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
@@ -103,8 +108,6 @@ jobs:
           done
       - name: Guards of memory and same bytes under a reduced budget (docs/agenti/memoria.md)
         run: |
-          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
-          wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
           python -m pip install pytest
           python -m pytest -q tests/test_guardie_memoria.py tests/test_feat_wasm.py
       - name: fmt and clippy against the base (tools/controlla_rust.py, tools/clippy_base.json)

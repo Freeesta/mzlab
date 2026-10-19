@@ -13,7 +13,7 @@ pytestmark = pytest.mark.skipif(not shutil.which("node"), reason="node missing")
 
 def nodo(js: str):
     src = f"import * as B from {(ROOT / 'mzlab/web/bug-report-testo.js').as_uri()!r};process.stdout.write(JSON.stringify({js}))"
-    r = subprocess.run(["node", "--input-type=module", "-e", src], capture_output=True, text=True, check=True)
+    r = subprocess.run(["node", "--input-type=module", "-e", src], capture_output=True, text=True, encoding="utf-8", check=True)
     return json.loads(r.stdout)
 
 

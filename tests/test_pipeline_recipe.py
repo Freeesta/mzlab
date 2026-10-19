@@ -20,7 +20,7 @@ const A = {{ recipe: JSON.stringify({{ ppm: 5, floor: null }}), proofs: [1], par
   out: {{ evid: new TextEncoder().encode('evid'), tried: 4, found: 2, registry: '{{"a":1}}' }}, data: {{ meta: {{ inputs: [{{ name: 'a.mzidx', sha256: 'ab' }}] }} }},
   rules: '{{"version": 3}}', levels: '{{"versione": 2}}', suspects: null }};
 (async () => {{ {body} }})();"""
-    out = subprocess.run(["node", "-e", js], capture_output=True, text=True, timeout=60)
+    out = subprocess.run(["node", "-e", js], capture_output=True, text=True, encoding="utf-8", timeout=60)
     assert out.returncode == 0, out.stderr
     return json.loads(out.stdout)
 

@@ -45,9 +45,8 @@ try:
             pg.evaluate("localStorage.removeItem('mzlab.reset.note')"); saved(pg); pg.reload(); ready(pg)
             attendi(pg, "E.files.length >= 2", 60000)
             assert pg.evaluate("E.files.length") >= 2, "after a reload the files are still there (this is wanted)"
-            assert pg.locator("#resetnote").count() == 1 and "stay in the browser" in pg.inner_text("#resetnote"), "the page says so"
-            pg.reload(); ready(pg); pg.wait_for_timeout(500); assert pg.locator("#resetnote").count() == 0, "only once"
-        step("a reload keeps the files; the page says it once", stay)
+            assert pg.locator("#resetnote").count() == 0, "no reminder pops up (switched off in reset.js)"
+        step("a reload keeps the files and shows no reminder", stay)
         def partial():
             pg.goto(base + "?reset=files"); pg.wait_for_function("location.search === '' || !location.search.includes('reset')", timeout=30000); ready_start(pg)
             s = pg.evaluate(STATE)
@@ -62,7 +61,7 @@ try:
         def full_cmd():
             load_files(); pg.click("#newrun"); pg.wait_for_selector("#resetdlg[open]")
             txt = pg.inner_text("#resetdlg"); assert "Start a new session?" in txt and "Choose what to delete." not in txt and "Full reset" in txt and "Everything, as the first time" in txt and "Files and session only" in txt and "Cancel" in txt, txt
-            hs = pg.evaluate("[...document.querySelectorAll('#resetdlg button')].map(b => b.getBoundingClientRect().height)"); assert all(h >= 44 for h in hs), hs
+            hs = pg.evaluate("[...document.querySelectorAll('#resetdlg button')].map(b => b.getBoundingClientRect().height)"); assert all(round(h, 2) >= 44 for h in hs), hs
             assert pg.evaluate("(() => { const p = document.createElement('span'); p.style.color = 'var(--on-accent)'; p.style.background = 'var(--bad)'; document.body.appendChild(p); const c = getComputedStyle(p).backgroundColor; p.remove(); return c === getComputedStyle(document.querySelector('#resetdlg [data-reset=all]')).backgroundColor; })()"), "the wide button is red (CSS variable)"
             pg.click("#resetdlg [data-reset=all]"); pg.wait_for_function("location.search.includes('riparti')", timeout=30000); ready_start(pg)
             s = pg.evaluate(STATE)

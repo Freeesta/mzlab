@@ -10,10 +10,10 @@ OPEN, CLOSE = "<!--tema-->", "<!--/tema-->"
 LIGHT = {"app": "#f7f8fa", "teoria": "#fbfbf9"}   # the --bg of each page in the light theme (the dark one is #14171b in both)
 DARK = "#14171b"
 
-# data-theme comes from the parent page (Teoria inside the app) or from the saved preference «qqq.prefs» (key never renamed); «auto» sets
+# data-theme comes from the parent page (Teoria inside the app) or from the saved preference «mzlab.prefs» (the old «qqq.prefs» until migrated); «auto» sets
 # nothing and the prefers-color-scheme rules decide. «no-tr» switches the colour transitions off until the second frame after load.
 JS = ('(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}'
-      'if(!t)try{t=JSON.parse(localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}'
+      'if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}'
       'if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}'
       'R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()')
 

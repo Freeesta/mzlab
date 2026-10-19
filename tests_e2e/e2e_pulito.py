@@ -7,7 +7,7 @@ def step(name, fn):
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_pulito.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
-UNLABELLED = """()=>[...document.querySelectorAll('button,[role=button]')].filter(b=>b.offsetParent&&!b.closest('dialog:not([open])')&&!(b.innerText||'').trim().replace(/[\\u200b]/g,'')&&!b.title&&!b.getAttribute('aria-label')).map(b=>b.id||b.className||b.outerHTML.slice(0,60))"""
+UNLABELLED = """()=>[...document.querySelectorAll('button,[role=button]')].filter(b=>b.offsetParent&&getComputedStyle(b).visibility!=='hidden'&&!b.closest('dialog:not([open])')&&!(b.innerText||'').trim().replace(/[\\u200b]/g,'')&&!b.title&&!b.getAttribute('aria-label')).map(b=>b.id||b.className||b.outerHTML.slice(0,60))"""
 r = Run(port=8877, wd="/tmp/wd77")
 try:
     with sync_playwright() as p:
