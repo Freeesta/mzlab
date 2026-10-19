@@ -9,6 +9,7 @@ use std::cmp::Ordering;
 use std::io::{Cursor, Seek, SeekFrom, Write};
 
 use crate::error::{Error, Result};
+use crate::mzidx_ordine::ordina;
 use crate::mzidx_spill::{leggi_parti, Parti, Spill};
 use crate::mzml::{self, Item, Spectrum};
 
@@ -64,7 +65,7 @@ pub struct Stats {
     pub bytes: u64,
 }
 
-trait Num: Copy + Default {
+pub(crate) trait Num: Copy + Default {
     const SIZE: usize;
     /// Values rounded to 32 bits (the buckets are those of the rounded value).
     const F32: bool;
@@ -100,14 +101,14 @@ impl Num for f64 {
 }
 
 #[derive(Clone, Copy, Default)]
-struct Peak<T> {
-    mz: T,
-    it: T,
-    pos: u32,
+pub(crate) struct Peak<T> {
+    pub(crate) mz: T,
+    pub(crate) it: T,
+    pub(crate) pos: u32,
 }
 
 /// Ascending, NaN last (as `np.argsort`).
-fn by_mz<T: Num>(a: &Peak<T>, b: &Peak<T>) -> Ordering {
+pub(crate) fn by_mz<T: Num>(a: &Peak<T>, b: &Peak<T>) -> Ordering {
     let (x, y) = (a.mz.to64(), b.mz.to64());
     match (x.is_nan(), y.is_nan()) {
         (true, true) => Ordering::Equal,
@@ -361,16 +362,11 @@ impl<T: Num> Sect for Sec<T> {
 
     fn flush(&mut self, out: &mut dyn Output, off: &Offsets) -> Result<()> {
         let mut round = std::mem::take(&mut self.round);
+        let mut tmp = Vec::new();
         for b in self.lo..self.hi {
             let (a, z) = (self.base[b], self.base[b] + self.counts[b] as usize);
-            // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
-            // (a round filled by passes is in scan order, so the stable sort keeps equal m/z so; `carica` joins groups, `pos` orders them)
-            #[allow(clippy::disallowed_methods)]
-            if self.per_scansione {
-                round[a..z].sort_by(|x, y| by_mz(x, y).then(x.pos.cmp(&y.pos)));
-            } else {
-                round[a..z].sort_by(by_mz);
-            }
+            // a round filled by passes is in scan order, so a stable sort keeps equal m/z so; `carica` joins groups, `pos` orders them
+            ordina(&mut round[a..z], &mut tmp, self.per_scansione)?;
         }
         let r = self.emit(out, off, &round);
         self.round = Vec::new();
