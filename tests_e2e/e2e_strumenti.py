@@ -304,7 +304,7 @@ try:
             pg.keyboard.press("Control+a"); pg.keyboard.type("CALCOL"); pg.wait_for_timeout(200)
             assert pg.inner_text("#pal-l #pal-o-0").startswith("Calcolatrice") or "Calcolatrice m/z" in pg.inner_text("#pal-o-0"), pg.inner_text("#pal-l")
             pg.keyboard.press("Control+a"); pg.keyboard.type("perdita"); pg.wait_for_timeout(200); assert "Perdite neutre" in pg.inner_text("#pal-l")       # singular finds the plural entry through its keywords
-            pg.keyboard.press("Control+a"); pg.keyboard.type("zzzzqq"); pg.wait_for_timeout(200); assert "Nessun comando" in pg.inner_text("#pal-l")
+            pg.keyboard.press("Control+a"); pg.keyboard.type("zzzzqq"); pg.wait_for_timeout(200); assert "Nessun risultato" in pg.inner_text("#paletta")
             pg.keyboard.press("Control+a"); pg.keyboard.type("metodo"); pg.wait_for_timeout(200); assert "Metodo di acquisizione" in pg.inner_text("#pal-l")
             pg.keyboard.press("Control+a"); pg.keyboard.type("pannello"); pg.wait_for_timeout(200)
             assert pg.locator("#pal-l li[role=option]").count() >= 3, "several matches: the side of the panel, pin"

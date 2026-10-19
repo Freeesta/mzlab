@@ -13,6 +13,8 @@ declare class FileReaderSync { readAsArrayBuffer(blob: Blob): ArrayBuffer; }
 declare var FileSystemObserver: any;
 declare var MAPFEAT: any;
 declare var IMPCOMP: any;
+// generated index of the Teoria search (teoria/indice-ricerca.js), loaded on demand by ricerca.js
+declare var INDICE_RICERCA: string[][];
 declare var TPMINE: any;
 
 /** An entry of the loading table (ST.files) as ruoli-*.js reads it: `role`/`sub` are campioni/2 `tipo` and `tipo_bianco`, `time` is in minutes, `gT` = proposed from the name. */

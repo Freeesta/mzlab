@@ -29,7 +29,8 @@
     btn.className = "tb"; btn.innerHTML = window.TCMD.icona("impostazioni") + '<span class="l">Impostazioni</span>'; btn.title = "Impostazioni";
     btn.setAttribute("aria-label", "Impostazioni");
     tbar.appendChild(btn);
-  } else if (top && !embedded) top.appendChild(btn); else { btn.classList.add("float"); document.body.appendChild(btn); }
+  } else if (top && !embedded) top.appendChild(btn);
+  // inside the program (iframe) there is no button of its own: the gear of the program header opens the panel through TEORIA.settings
 
   const panel = document.createElement("div");
   panel.id = "a11y-panel"; panel.className = "impset"; panel.hidden = true; panel.setAttribute("role", "dialog"); panel.setAttribute("aria-label", "Impostazioni");
@@ -45,6 +46,7 @@
   function open() { lastFocus = document.activeElement; panel.hidden = false; btn.setAttribute("aria-expanded", "true"); (panel.querySelector("input:checked") || panel.querySelector("input,button")).focus(); }
   function close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); (lastFocus && lastFocus.focus ? lastFocus : btn).focus(); }
   btn.onclick = () => (panel.hidden ? open() : close());
+  (window.TEORIA = window.TEORIA || {}).settings = () => btn.onclick();
   $(".x", panel).onclick = close;
   panel.addEventListener("keydown", e => {
     if (e.key === "Escape") { e.stopPropagation(); close(); return; }
@@ -69,6 +71,7 @@
   });
   // only the settings go back to the factory values (theme included): the progress of the Pratica and the reading positions are never touched
   $("#a11y-reset", panel).onclick = () => {
+    try { localStorage.removeItem("mzlab.teoria.itnote"); } catch (_) { /* no storage: nothing to forget */ }
     S = {}; Q.write({}); if (window.QTEMA && QTEMA.get() !== "auto") QTEMA.set("auto");
     sync(); document.dispatchEvent(new Event("tcmd-stato")); dispatchEvent(new Event("resize"));
   };

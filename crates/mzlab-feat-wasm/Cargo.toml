@@ -19,6 +19,8 @@ mrm = []
 finder = ["mzlab-feat/chem"]
 finder_msn = ["mzlab-feat/chem"]
 finder_edge = ["mzlab-feat/chem"]
+# `interp` = the interpretation of the rows of a table (`interp/1`, `docs/agenti/interp.md`): a .wasm of its own, loaded only when a table has its block written; NOT among the defaults.
+interp = ["mzlab-feat/interp"]
 # `untargeted` = the pipeline after mzmine 3.9.0 (detect_untargeted_to, align_untargeted_to; `docs/agenti/attributio.md`): a .wasm of its own, NOT among the defaults.
 untargeted = ["mzlab-feat/untargeted"]
 

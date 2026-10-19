@@ -53,12 +53,12 @@ fn refuse_newer(meta: &Value, kind: &str) -> Result<()> {
 }
 
 /// A container opened: its meta and where its data start. The arrays are read by offset, one column at a time, never the whole file.
-struct Opened {
-    meta: Value,
-    start: u64,
+pub(crate) struct Opened {
+    pub(crate) meta: Value,
+    pub(crate) start: u64,
 }
 
-fn open<R: ReadAt>(r: &mut R, size: u64, kind: &str) -> Result<Opened> {
+pub(crate) fn open<R: ReadAt>(r: &mut R, size: u64, kind: &str) -> Result<Opened> {
     let mut h = [0u8; 16];
     if size < 16 {
         return Err(bad());
@@ -90,7 +90,7 @@ fn open<R: ReadAt>(r: &mut R, size: u64, kind: &str) -> Result<Opened> {
 
 impl Opened {
     /// `(count, offset)` of the array `name` when it has `dtype`.
-    fn entry(&self, name: &str, dtype: &str) -> Result<(usize, u64)> {
+    pub(crate) fn entry(&self, name: &str, dtype: &str) -> Result<(usize, u64)> {
         let e = self.meta.get("arrays").map(|a| a.arr()).unwrap_or(&[]);
         let e = e
             .iter()
@@ -104,7 +104,7 @@ impl Opened {
     }
 
     /// Rows `rows` (all when `None`) of the array `name`, decoded `N` bytes at a time and read in pieces.
-    fn col<R: ReadAt, T, const N: usize>(
+    pub(crate) fn col<R: ReadAt, T, const N: usize>(
         &self,
         r: &mut R,
         size: u64,
