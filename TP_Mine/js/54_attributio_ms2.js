@@ -28,9 +28,7 @@
   /** the files of the campaign plus the extra files of the request under `__ms2/` @param {Ctx} ctx @param {File[]} extra */
   const withExtra = (ctx, extra) => [...ctx.files(), ...extra.map(f => ({ path: "__ms2/" + f.name, file: f }))];
 
-  /** @param {HTMLElement} host @param {Ctx} ctx */
-  function mount(host, ctx) {
-    host.innerHTML = `<details class="at-ms2"><summary>MS2 engine (experimental)</summary>
+  const MARKUP = `<details class="at-ms2"><summary>MS2 engine (experimental)</summary>
       <p class="mut">Evidence only: no level changes and nothing is written into the campaign.</p>
       <div class="row"><label>Library files <input type="file" id="ms2-lib" multiple accept=".json,.jsonl,.msp" aria-label="MS2 library files"></label>
         <button type="button" class="at-x" id="ms2-run" aria-label="Run MS2 engine" disabled>Run MS2 engine</button>
@@ -47,6 +45,10 @@
         <label>SMILES to predict <input type="text" id="ms2-smiles" size="24" aria-label="SMILES to predict"></label>
         <button type="button" class="at-x" id="ms2-predict" aria-label="Predict retention time" disabled>Predict RT</button></div>
       <div id="ms2-out" class="tp" role="region" aria-label="MS2 engine result" tabindex="0"></div></details>`;
+
+  /** @param {HTMLElement} host @param {Ctx} ctx */
+  function mount(host, ctx) {
+    host.innerHTML = MARKUP;
     const q = (/** @type {string} */ s) => /** @type {any} */ (host.querySelector(s));
     const out = /** @type {HTMLElement} */ (q("#ms2-out"));
     /** @type {{ pos: string, neg: string } | null} */
