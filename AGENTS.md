@@ -34,7 +34,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 
 ## 3. Verifica e test
 - **Verifica**: `python3 tools/verifica.py` (~9 min con 4 CPU; `--cambiati` = solo gli e2e dei file cambiati rispetto a `origin/main`; log in `.verifica/log/`, letti dal `verificatore`). Prima del merge: `--cambiati` + la CI della PR (`test.yml`, 4 job obbligatori di «main protetto»); ogni notte `notte.yml`. Livelli, mappa (`python3 tools/indice.py`, non è nel repository), soglie (`tools/controlla.py`) e `noti_rossi.txt`: `docs/agenti/test.md`.
-- **Dati**: il repository privato si trova da solo (accanto, sopra, nella home o con `MZLAB_DATI=<percorso>`) tramite l'unico risolutore `tools/dati_percorsi.py` / `.rs` (tabella `tools/dati_mappa.tsv`: test e tool chiedono `percorso("dati/…")`, mai percorsi o variabili a mano); senza, `tools/dati_sintetici.py` crea file simili e i test che chiedono dati veri si saltano (tabella `NEEDS`). Test che usano il sito costruito (`e2e13`, `e2e_tpmine*`): prima `python3 tools/build_site.py` (scrive `site/`, da cancellare dopo).
+- **Dati**: il repository privato si trova da solo (accanto, sopra, nella home o con `MZLAB_DATI=<percorso>`) tramite l'unico risolutore `tools/dati_percorsi.py` / `.rs` (test e tool chiedono `percorso("dati/…")`, mai percorsi o variabili a mano); senza, `tools/dati_sintetici.py` crea file simili e i test che chiedono dati veri si saltano (tabella `NEEDS`). Test che usano il sito costruito (`e2e13`, `e2e_tpmine*`): prima `python3 tools/build_site.py` (scrive `site/`, da cancellare dopo).
 - **Struttura e test nuovi**: `tests/` = pytest, `tests_e2e/` = script Playwright (uno per argomento, `lib.py` → `Run`); regole e aiuti in `docs/agenti/test.md`.
 
 ## 4. Architettura

@@ -8,7 +8,7 @@ Scopo: un `.raw` Thermo, anche un DDA da 600 MB, si apre, si indicizza, si navig
   Legge attraverso una cache a blocchi di 256 KB come `JsMember` del modulo e conta le letture; stampa il picco di memoria (VmHWM).
 - **Dove va il tempo**: `valgrind --tool=callgrind target/release/examples/raw_tempi FILE.raw --no-cen` su un file piccolo (≤ 20 MB), poi `callgrind_annotate --inclusive=yes`.
 - **Modulo `thermo` in WASM**: `wasm-bindgen --target nodejs` del `.wasm` di `tools/build_lettori_wasm.sh`, poi uno script Node che chiama `apri`, `indice`, `scansione` per ogni k, `testata`, `metodo`, `to_mzml` e legge `memory.buffer.byteLength` dopo ogni passo (il WASM non restituisce memoria: il massimo è il picco). Il pacchetto RV-01 lo trasforma in `tools/bench_raw.py`.
-- File: il DDA grande è PRIDE PXD070375 `BAF_GEE_37.raw` (Q Exactive Plus, DDA HCD Top-N, CC0), 594 980 630 B; URL e SHA-256 stanno in `dati_formati/_grandi_thermo_aperti.tsv` del repository privato. Gli altri sono i `.raw` di `dati_formati/` e due Orbitrap del laboratorio (nel testo: LAB-A, 87 MB, 7952 scansioni «FTMS + c»; LAB-B, Orbitrap a profilo «FTMS + p»); i percorsi degli alias sono in `dati_formati/raw_veloce_alias.tsv` del repository privato.
+- File: il DDA grande è PRIDE PXD070375 `BAF_GEE_37.raw` (Q Exactive Plus, DDA HCD Top-N, CC0), 594 980 630 B; URL e SHA-256 stanno in `dati/formati/_grandi_thermo_aperti.tsv` del repository privato. Gli altri sono i `.raw` di `dati/formati/` e due Orbitrap del laboratorio (nel testo: LAB-A, 87 MB, 7952 scansioni «FTMS + c»; LAB-B, Orbitrap a profilo «FTMS + p»); i percorsi degli alias sono in `dati/formati/raw_veloce_alias.tsv` del repository privato.
 - Macchina: container cloud a 4 CPU; profilo `release` dello spazio di lavoro (`opt-level = "z"`, LTO, 1 unità). I tempi nel browser sono ~1,7× quelli nativi (misura su LAB-A, `to_mzml`).
 
 ## 2. Misure
@@ -95,7 +95,7 @@ La mappa e i suoi gesti hanno già misure e pacchetti in `docs/agenti/mappa-flui
 
 ### 2.8 Inventario di tutte le strutture del `.raw`
 
-Misurato su 30 `.raw` aperti di `dati_formati/` (sonda temporanea su `RawFileReader`). Colonne: cosa contiene; se opentfraw la legge; dove arriva oggi in mzLab; pacchetto per ciò che manca. «campi» = `metodo/1.campi` (regola «nessuna perdita», `docs/agenti/grezzi-non-estratti.md`).
+Misurato su 30 `.raw` aperti di `dati/formati/` (sonda temporanea su `RawFileReader`). Colonne: cosa contiene; se opentfraw la legge; dove arriva oggi in mzLab; pacchetto per ciò che manca. «campi» = `metodo/1.campi` (regola «nessuna perdita», `docs/agenti/grezzi-non-estratti.md`).
 
 | Struttura | Contenuto | opentfraw | mzLab oggi | Manca → pacchetto |
 |---|---|---|---|---|
@@ -139,7 +139,7 @@ Misurato su 30 `.raw` aperti di `dati_formati/` (sonda temporanea su `RawFileRea
 | mzML del BAF (nativo) | 13,99 s | ≤ 6 s con zlib veloce; ≤ 4 s con numpress (opzione) |
 | Centroidi del file segnati come profilo | −82 % dei picchi | 0 scansioni ricentroidate per errore |
 | Modulo per scansione (WASM) | 99 µs | ≤ 40 µs |
-| `.raw` di `dati_formati/` aperti | 30/41 | ≥ 38/41 |
+| `.raw` di `dati/formati/` aperti | 30/41 | ≥ 38/41 |
 | Dati → Tabui, campione a centroidi | 0 s (indice riusato) | 0 s |
 | Dati → Tabui, LAB-B (oggi segnato profilo) | ~4,8 s nativi, ~8 s nel sito, −82 % picchi | 0 s (RV-02) |
 | `.raw` scelto in Tabui | non accettato | accettato; pronto nel tempo dell'indice di Dati, con barra |
