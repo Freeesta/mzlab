@@ -407,7 +407,7 @@ fn notes(r: &Result3, water: bool, prot: Option<&Protomer>) -> Vec<String> {
         n.push(crate::eht::NOTE.to_string());
     } else {
         let q = if r.hirshfeld {
-            "Hirshfeld populations (numerical integration of the valence density with Slater orbitals; neutral valence-shell reference atoms)"
+            "Hirshfeld populations"
         } else {
             "Mulliken charges"
         };
