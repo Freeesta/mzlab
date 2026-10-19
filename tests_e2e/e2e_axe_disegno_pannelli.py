@@ -16,20 +16,18 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
         pg.click("#nav [data-v=draw]")
-        for _ in range(300):
-            if pg.evaluate("() => !!(window.TPDraw && TPDraw.ready())"): break
-            pg.wait_for_timeout(100)
+        attendi(pg, "window.TPDraw && TPDraw.ready()", 60000)
         pg.add_script_tag(path=AXE)
         def contrast(theme, extra=None):
             pg.evaluate("t => { document.documentElement.dataset.theme = t[0]; if (t[1]) document.documentElement.dataset.a11yBg = t[1]; else delete document.documentElement.dataset.a11yBg; }", [theme, extra])
-            pg.mouse.move(2, 2); pg.wait_for_timeout(200)                          # at rest: the hover background must not be what makes it readable
+            pg.mouse.move(2, 2); frames(pg)                          # at rest: the hover background must not be what makes it readable
             v = pg.evaluate(CC); assert not v, v
             ratio = pg.evaluate("""() => { const b = document.querySelector('#side-toggle'), c = getComputedStyle(b);
               return [c.backgroundColor, c.color, c.borderTopColor] }""")
             assert ratio[0] != "rgba(0, 0, 0, 0)", ("the pill needs its own background", ratio)
         for hidden in (False, True):
             name = "panels hidden («Show panels»)" if hidden else "panels shown («Hide panels»)"
-            if hidden and not pg.evaluate("document.querySelector('#v-draw').classList.contains('noside')"): pg.click("#side-toggle"); pg.wait_for_timeout(300)
+            if hidden and not pg.evaluate("document.querySelector('#v-draw').classList.contains('noside')"): pg.click("#side-toggle"); attendi(pg, "document.querySelector('#v-draw').classList.contains('noside')")
             step(f"dark theme, {name}: text contrast", lambda: contrast("dark"))
             step(f"high-contrast dark, {name}: text contrast", lambda: contrast("dark", "hc"))
             step(f"light theme, {name}: text contrast", lambda: contrast("light"))
