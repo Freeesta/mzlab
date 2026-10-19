@@ -76,7 +76,13 @@
    "id": "modified_cosine",
    "title": "Modified cosine",
    "doc": "Peaks may also pair at the precursor difference, for analogues that differ by one modification (modified_cosine in scores.rs).",
-   "source": "doi:10.1073/pnas.1203689109",
+   "references": [
+    {
+     "doi": "10.1073/pnas.1203689109",
+     "citation_key": "watrous2012mass",
+     "note": "modified cosine: peaks matched directly or shifted by the precursor mass difference"
+    }
+   ],
    "applicability": {
     "ms_levels": [
      2
@@ -89,7 +95,13 @@
    "id": "spectral_entropy",
    "title": "Spectral entropy",
    "doc": "Entropy similarity of the merged spectrum (entropy_from_pairs in scores.rs).",
-   "source": "doi:10.1038/s41592-021-01331-z",
+   "references": [
+    {
+     "doi": "10.1038/s41592-021-01331-z",
+     "citation_key": "li2021spectral",
+     "note": "entropy similarity and its intensity weighting"
+    }
+   ],
    "applicability": {
     "ms_levels": [
      2

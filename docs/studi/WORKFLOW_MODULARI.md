@@ -77,7 +77,8 @@ Files of the study:
 6. Errors stop at the step: `prov/1` writes the activity with `error`, the outputs already made stay valid and cached.
 
 **Alternatives per step** (detail and comparison: `COMUNICAZIONE.md` §4). A step has a default algorithm (`default_algorithm`: the best known for the typical case, justified by a bench measure) and others selectable with the SAME ports.
-Each entry of `algorithms[]`: `id`, `version`, `title`, `doc`, `source` (DOI of the paper it is written from), `applicability` (when it applies: `resolution`, `polarity`, `ms_levels`, `spectrum_mode`, `peak_fwhm_s`, `min_files`, `needs` such as `internal_standards`), its own `params` (those common to all are in the step `params`), `status` (`available` or `planned`). The interface suggests the algorithms whose applicability matches the input facets.
+Each entry of `algorithms[]`: `id`, `version`, `title`, `doc`, `references` (`doi`, `citation_key`, `note`: the verified paper(s) it is written from; keys shared with the `references.json` bibliography of the untargeted book study, and copied into `prov/1` so a run cites its methods; a step may carry `references` too).
+  Then `applicability` (when it applies: `resolution`, `polarity`, `ms_levels`, `spectrum_mode`, `peak_fwhm_s`, `min_files`, `needs` such as `internal_standards`), its own `params` (those common to all are in the step `params`), `status` (`available` or `planned`). The interface suggests the algorithms whose applicability matches the input facets.
 
 | Step | Default | Alternatives |
 |---|---|---|

@@ -132,7 +132,13 @@
    "id": "centwave",
    "title": "CentWave",
    "doc": "Regions of interest in m/z, then a continuous wavelet transform over the expected peak widths.",
-   "source": "doi:10.1186/1471-2105-9-504",
+   "references": [
+    {
+     "doi": "10.1186/1471-2105-9-504",
+     "citation_key": "tautenhahn2008highly",
+     "note": "CentWave: ROI detection and the wavelet peak model"
+    }
+   ],
    "applicability": {
     "resolution": [
      "hr"

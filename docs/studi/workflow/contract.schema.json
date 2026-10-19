@@ -218,9 +218,9 @@
      "type": "string",
      "description": "one paragraph for the help of the form, in English"
     },
-    "source": {
-     "type": "string",
-     "description": "the original paper (DOI) the implementation is written from"
+    "references": {
+     "$ref": "#/$defs/references",
+     "description": "the paper(s) the implementation is written from (never copied code)"
     },
     "applicability": {
      "$ref": "#/$defs/applicability"
@@ -273,6 +273,10 @@
     "doc": {
      "type": "string",
      "description": "one paragraph for the help of the form, in English"
+    },
+    "references": {
+     "$ref": "#/$defs/references",
+     "description": "papers that define the step as a whole (e.g. a level scale); per-method papers go on algorithms[]"
     },
     "icon": {
      "type": "string",
@@ -682,6 +686,13 @@
        "algorithm": {
         "type": "string",
         "description": "the algorithm that ran, id@version (e.g. masstrace@1)"
+       },
+       "references": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        },
+        "description": "citation_key of every reference of the step and of the algorithm that ran, copied from the descriptors, so a run record cites its methods"
        }
       }
      }
@@ -760,6 +771,38 @@
      "description": "identification level of the product (docs/agenti/livelli.md)"
     }
    }
+  },
+  "reference": {
+   "type": "object",
+   "description": "a paper a step or an algorithm derives from. Real, verified papers only (DOI resolved before it is written). citation_key is shared with the bibliography of the untargeted book (references.json, owned by that study), so the help, the UI and prov/1 show the same entry",
+   "required": [
+    "doi",
+    "citation_key"
+   ],
+   "properties": {
+    "doi": {
+     "type": "string",
+     "pattern": "^10\\.[0-9]{4,9}/\\S+$",
+     "description": "bare DOI, without the doi: or https://doi.org/ prefix"
+    },
+    "citation_key": {
+     "type": "string",
+     "pattern": "^[a-z][a-z0-9]*[0-9]{4}[a-z0-9]*$",
+     "description": "author + year + first word, lower case, e.g. tautenhahn2008highly; a key of references.json"
+    },
+    "note": {
+     "type": "string",
+     "description": "what is taken from the paper, e.g. the score definition or the parameters of a preset"
+    }
+   },
+   "additionalProperties": false
+  },
+  "references": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/reference"
+   },
+   "minItems": 1
   }
  }
 }

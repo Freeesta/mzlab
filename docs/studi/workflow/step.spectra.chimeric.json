@@ -90,7 +90,13 @@
    "id": "library_deconvolution",
    "title": "Library-assisted deconvolution",
    "doc": "Explains the spectrum as a non-negative mix of the library spectra of the precursor and of the intruders, and returns the residual as the cleaned spectrum.",
-   "source": "doi:10.1038/s41592-021-01195-3",
+   "references": [
+    {
+     "doi": "10.1038/s41592-021-01195-3",
+     "citation_key": "stancliffe2021decoid",
+     "note": "library-assisted deconvolution of chimeric MS2 spectra"
+    }
+   ],
    "applicability": {
     "resolution": [
      "hr"
