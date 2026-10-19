@@ -115,12 +115,32 @@ try:
             pg.evaluate("document.querySelector('#refdlg').close()")
             pg.evaluate("LISTE.open({})"); pg.wait_for_timeout(1500)
             n = pg.evaluate("document.querySelectorAll('#lst-src-checks input[type=checkbox]').length"); assert n == 0, "one list only: no switch"
-            t = pg.inner_text("#lst-src-checks"); assert "Keller" in t, t
+            t = pg.inner_text("#lst-src-checks"); assert "Keller" not in t and "Anal. Chim" not in t and "contaminanti" in t.lower(), t
+            assert pg.locator("#lst-mode-seg").count() == 0 and pg.is_visible("#lst-view-seg"), "no files: HR version, no mode switch"
+            assert pg.locator("#lst-tbody tr").first.locator("td").count() == 9 and "." in pg.inner_text("#lst-tbody tr >> nth=0")
             # two lists (the built-in one + a simulated user list): the switches come back
             pg.evaluate("LISTE.addUserListFromCsv('prova.csv','mz,name,formula,polarity\\n100.1,Test,,1\\n')"); pg.wait_for_timeout(600)
             pg.evaluate("LISTE.open({})"); pg.wait_for_timeout(800)
             n = pg.evaluate("document.querySelectorAll('#lst-src-checks input[type=checkbox]').length"); assert n == 2, n
         step("Reference lists: no switch with one list, switches with two", reflists)
+        def lists_lr():
+            pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
+            pg.evaluate("window.__fake={gone:false,polarity:'positive',name:'x'}; E.files.push(window.__fake); HR.__ish=HR.isHr; HR.isHr=()=>false")
+            try:
+                pg.evaluate("LISTE.open({})"); pg.wait_for_selector("#lst-tbody tr", timeout=8000)
+                assert pg.locator("#lst-tbody tr").first.locator("td").count() == 4 and pg.locator("#lst-table-wrap thead th:visible").count() == 4
+                assert not pg.is_visible("#lst-view-seg") and not pg.is_visible("#lst-tol-wrap") and not pg.is_visible("#lst-cont-signs")
+                import re
+                mzs = pg.evaluate("[...document.querySelectorAll('#lst-tbody tr td:first-child')].map(t=>t.textContent)"); assert mzs and all(re.fullmatch(r"\d+", m) for m in mzs), mzs[:5]      # m/z rounded to the unit in LR
+                pg.fill("#lst-mz", "63.3"); t = pg.inner_text("#lst-tbody"); assert "63" in t and "PEG" in t, t[:200]
+                assert "Keller" not in pg.inner_text("#lst-ref-box") and pg.locator("#lst-ref-box a").count() == 0
+                assert not pg.is_visible("#sb-help")
+                pg.set_viewport_size({"width": 400, "height": 800}); pg.wait_for_timeout(200)
+                assert pg.evaluate("document.documentElement.scrollWidth <= window.innerWidth"), "no horizontal scroll at 400 px"
+                pg.set_viewport_size({"width": 1440, "height": 900})
+            finally:
+                pg.evaluate("E.files.splice(E.files.indexOf(window.__fake),1); HR.isHr=HR.__ish")
+        step("Reference lists in LR: four columns, m/z rounded, no references", lists_lr)
         def ptable():
             pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
             pg.click("#np-pt"); pg.wait_for_timeout(500)

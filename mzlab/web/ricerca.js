@@ -35,7 +35,7 @@ function ricClassify(q) {
   return "word";
 }
 
-const ricHrNow = () => (typeof window.QHR_ON === "function" ? !!window.QHR_ON() : true);
+const ricHrNow = () => (typeof window.TBL_HR === "function" ? !!window.TBL_HR() : true);
 const ricSub = (/** @type {string} */ f) => ricEsc(f).replace(/(\d+)/g, "<sub>$1</sub>");
 const ricSg = (/** @type {number} */ x) => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(4);
 const ricLang = () => (I18N.lang === "it" ? "it" : "en");
