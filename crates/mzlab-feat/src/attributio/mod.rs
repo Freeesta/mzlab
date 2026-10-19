@@ -29,6 +29,7 @@ pub mod sorbents;
 pub mod sources;
 pub mod table;
 pub mod toml;
+pub mod tox;
 pub mod untid;
 
 pub use campaign::{Campaign, Env, POLARITIES};
