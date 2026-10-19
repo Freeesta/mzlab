@@ -1,0 +1,112 @@
+scheda	riga	campo_produttore	oracolo	nome_oracolo	metodo	stato	normalizzazione
+agilent	1	Moduli: nome, modello, seriale, firmware, tipo	mzml	instrumentConfiguration	strumento.*, strumento.moduli[]	L	testo
+agilent	2	Programma e versione di acquisizione, data, tecnica (GC/LC)	mzml	softwareList | startTimeStamp	strumento.software, origine.file_creato	L	iso8601
+agilent	3	Sample name, vial/position, injection volume, method file, dilution, sample type, comment	mzml	sampleList	campione.*	L	testo
+agilent	4	Operator (`SequenceOperator`, `OperatorName`), computer	nessuno	-	operatore.* (identita)	L	testo
+agilent	5	Metodo GC/MS (tune EI, intervallo di massa, gruppi SIM con dwell, soglia, solvent delay)	mzml	-	ms.sorgente, ms.periodi[0].esperimenti[], grezzo	L	testo
+agilent	6	Forno GC, iniettore, colonna, gas di trasporto, flusso	nessuno	-	campi, grezzo	C	testo
+agilent	7	Metodo LC/MS (pompa, gradiente, forno, campionatore, rivelatore)	nessuno	-	lc, campionatore, rivelatori	L	testo
+agilent	8	Metodo MS (sorgente, gas, temperature, Vcap, frammentatore, skimmer, segmenti di tempo)	nessuno	-	ms.sorgente.parametri, ms.periodi[]	L	testo
+agilent	9	Transizioni MRM/dMRM (Q1, Q3, CE, frammentatore, dwell, RT e finestra, polarità, nome)	mzml	SRM SIC	transizioni[]	L	testo
+agilent	10	Liste di riferimento (lock) e di precursori preferiti/esclusi del Q-TOF	nessuno	-	ms.calibrazione, inclusione[]	L	testo
+agilent	11	Segmenti di tempo, numero di scansioni	nessuno	-	ms.periodi[]	L	testo
+agilent	12	Per scansione: tipo, livello, polarità, ionizzazione, `MzOfInterest`, CE, frammentatore, TIC, BPI	mzml	-	scansioni	L	testo
+agilent	13	Taratura per scansione (A, T0, polinomio) e di riserva	nessuno	-	campi	L	testo
+agilent	14	Valori effettivi per scansione (gas, temperature, tensioni)	nessuno	-	—	?	testo
+agilent	15	DAD: spettri e λ singole; tracce di pompa (pressione), forno, campionatore	rainbow	.cd	campi (byte, SHA-1), avvisi	N	testo
+agilent	16	Metodo di analisi dati `*.M/`, quantificazione `DaMethod/Quant`	nessuno	-	campi, quantificazione (solo .m)	C	testo
+agilent	17	Registro di audit	nessuno	-	campi	C	testo
+agilent	18	Intestazione di `MSScan.bin`, coda di `MSTree2.bin`, tabella dopo i record di `data.ms`	nessuno	-	avvisi, campi (byte, SHA-1)	N	iso8601
+agilent	19	Mobilità 6560 (`IMFrame*`, `IMBin`)	msconvert	-	—	N	testo
+bruker	1	InstrumentName, InstrumentFamily, InstrumentRevision, InstrumentSerialNumber, InstrumentVendor	mzml;sql;timsdata	timsdata | instrumentConfiguration	strumento.*	L	testo
+bruker	2	AcquisitionSoftware, AcquisitionSoftwareVersion, AcquisitionFirmwareVersion	mzml	softwareList	strumento.software, campi	L	testo
+bruker	3	AcquisitionDateTime, OperatorName, SampleName, MethodName, Description	sql	-	origine.file_creato, operatore.utente (identita), campione.nome, campi	L	iso8601
+bruker	4	TimsCompressionType, MaxNumPeaksPerScan, DigitizerNumSamples, MzAcqRangeLower/Upper, OneOverK0AcqRangeLower/Upper	sql	-	campi	L	testo
+bruker	5	Frames: Time, Polarity, ScanMode, MsMsType, TIC, MaxIntensity, NumScans, AccumulationTime, RampTime, T1, T2, Pressure, Denoised	sql;timsdata	timsdata	scansioni, campi (intervalli)	L	testo
+bruker	6	Proprietà per frame (tensioni, temperature, gas, tutte le `PropertyDefinitions`)	sql	-	campi	L	testo
+bruker	7	Precursori PASEF: Mz, Charge, ScanNumBegin/End, CollisionEnergy, IsolationMz/Width	mzml;timsdata	timsdata | precursor	precursori delle MS2	L	testo
+bruker	8	Finestre diaPASEF e PRM	mzml;sql	-	esperimenti, isolamento	L	testo
+bruker	9	Calibrazione m/z (ModelType, coefficienti, temperature di riferimento, correzione per frame T1/T2)	timsdata	timsdata | indexToMz	campi; applicata agli m/z	L	testo
+bruker	10	Calibrazione di mobilità (ModelType 2, C0-C9)	timsdata	timsdata | scanNumToOneOverK0	campi; 1/K0 N	N	testo
+bruker	11	Segmenti, errori, messaggi di acquisizione	sql	-	—	?	testo
+bruker	12	Metodo completo (`*.m/` dentro la cartella: `microTOFQImpacTemAcquisition.method`, LC)	nessuno	-	grezzo?	?	testo
+bruker	13	HyStar: campione, vial, LC	nessuno	-	campione, lc	?	testo
+bruker	14	TSF: spettri in linee o profilo, Frames	timsdata	timsdata | tsf	spettri	L	testo
+sciex	1	Instrument model, serial number	mzml	instrumentConfiguration | MS:1000529	strumento.modello, .seriale	L	testo
+sciex	2	Analyst/SCIEX OS version	mzml	softwareList	strumento.software	L	testo
+sciex	3	Creation date	mzml	run@startTimeStamp	origine.file_creato	L	iso8601
+sciex	4	Acquisition start/end	nessuno	-	campi	L	testo
+sciex	5	User, computer	nessuno	-	operatore.* (identita)	L	testo
+sciex	6	Sample name	mzml	<wiff>-<nome>.mzML	campione.nome	L	testo
+sciex	7	Vial/plate position	nessuno	-	campione.vial	?	testo
+sciex	8	Sample ID, type, comment, dilution, injection volume, rack, plate, batch	nessuno	-	campi (estesi)	C	testo
+sciex	9	Audit trail (CFR)	nessuno	-	campi (estesi)	C	testo
+sciex	10	Scan type per esperimento (full, MRM, EPI, PIS, NL, MS3, ER, EMC, TOF)	mzml	MS:1000580	ms.periodi[].esperimenti[].tipo	L	testo
+sciex	11	Polarity	mzml	MS:1000130/129	esperimenti, scansioni	L	testo
+sciex	12	Precursor/fixed mass	mzml	precursor	esperimenti, precursore_mz	L	testo
+sciex	13	Mass ranges, step, scan time, dwell	mzml	scanWindow | dwell	parametri, transizioni[].dwell_ms	L	testo
+sciex	14	Q1, Q3, CE, DP, EP, CXP per transizione; nome del composto	mzml	SRM SIC | MS:1000045	transizioni[]	L	testo
+sciex	15	Scheduled MRM: RT atteso, finestra, target scan time	nessuno	-	programmato, finestra_s (estesi)	L	testo
+sciex	16	Source/gas parameters (CUR, IS, TEM, GS1, GS2, CAD, ihe) per periodo	nessuno	-	ms.sorgente.parametri	L	testo
+sciex	17	Source type	nessuno	-	ms.sorgente.tipo	L	testo
+sciex	18	Periodi multipli (durata, cicli)	nessuno	-	—	N	testo
+sciex	19	Criteri IDA (soglie, esclusione, numero di candidati)	mzml	-	—	N	testo
+sciex	20	Metodo LC (pompe, gradiente, forno) e autocampionatore	nessuno	-	lc, campionatore	L	testo
+sciex	21	Tracce dei dispositivi (pressione, temperatura del forno, ADC)	msconvert;mzml	-	—	N	testo
+sciex	22	DAD (matrice tempo × λ, TWC, λ singole)	nessuno	-	cromatogrammi Pda (mAU)	L	testo
+sciex	23	Configurazione MS, tabella di taratura di massa, risoluzione	nessuno	-	—	N	testo
+sciex	24	Stato dello strumento (vuoto, temperature) durante la corsa	nessuno	-	grezzo	C	testo
+shimadzu	1	Nome dello strumento, configurazione	mzml	.lcd	strumento.modello	L	testo
+shimadzu	2	Versione del file e del software	nessuno	-	strumento.software, campi	L	testo
+shimadzu	3	generatedBy, modifiedBy, date	nessuno	-	campi (identita)	L	iso8601
+shimadzu	4	Sample name, sample ID, vial, injection volume	mzml	sampleList	campione.*	L	testo
+shimadzu	5	Operatore, data di acquisizione	nessuno	-	operatore.utente (identita), origine.file_creato	L	iso8601
+shimadzu	6	Percorsi dei file di dati, metodo, tune, batch	nessuno	-	campi (identita, non nell'mzML)	L	testo
+shimadzu	7	Eventi: tipo (scan/SIM), intervallo m/z, ioni SIM, tempi	mzml	.lcd	ms.periodi[].esperimenti[]	L	testo
+shimadzu	8	Polarità per evento	mzml	.lcd	scansioni	N	testo
+shimadzu	9	Transizioni MRM: Q1, Q3, polarità	mzml	SRM SIC	transizioni[]	L	testo
+shimadzu	10	CE, dwell, pausa, Q1/Q3 pre-bias	msconvert;mzml	-	—	N	testo
+shimadzu	11	Metodo GC: forno, iniettore, colonna, gas	nessuno	-	— (avvisi)	N	testo
+shimadzu	12	Tune e stato MS (vuoto, filamento, detector, temperature)	nessuno	-	— (avvisi)	N	testo
+shimadzu	13	PDA: spettri e λ singole	nessuno	-	— (avvisi)	N	testo
+shimadzu	14	Metodo incorporato `.qgm`	nessuno	-	— (avvisi)	N	testo
+shimadzu	15	9030 / IT-TOF (spettri TOF)	msconvert	-	—	N	testo
+thermo	1	Instrument Model, Name, Serial Number, Software Version, Hardware Version	mzml;trfp	InstrumentModel | SerialNumber | SoftwareVersion | instrumentConfiguration	strumento.modello, .serie, .software, .hardware	L	testo
+thermo	2	File version, creation date, file creator	mzml;trfp	CreationDate | run@startTimeStamp	origine.file_creato, campi	L	iso8601
+thermo	3	Operator (audit tag), computer	trfp	Operator	operatore.utente, .computer (identita)	L	testo
+thermo	4	Sample Name, Sample ID, Vial, Inj Vol, Dilution, Sample Wt, Sample Vol, ISTD Amt, Comment, Instrument Method, Processing Method, Calibration File	trfp	SampleData	campione.*	L	testo
+thermo	5	Sample Type, Row Number, Level Name, User Text 0-4, Path, Raw File Name	trfp	-	campi	?	testo
+thermo	6	Start/End Time, Low/High Mass, number of scans, expected run time, mass resolution, tolerance unit	trfp	StartTime | EndTime | NumberOfMs1Scans	campi	L	testo
+thermo	7	Instrument method (testo per dispositivo: MS, LC, autocampionatore)	trfp	-m	grezzo, lc, campionatore, ms.impostazioni[], ms.periodi[0].esperimenti[]	L	testo
+thermo	8	Lista di inclusione/esclusione	nessuno	-	ms.periodi[].esperimenti[].inclusione[]	L	testo
+thermo	9	Tabella SRM del TSQ (Q1, Q3, CE, RF/Tube Lens, Dwell, tempi, polarità)	mzml	SRM SIC	transizioni[]	L	testo
+thermo	10	Scan filter per scansione	mzml;trfp	filter string | MS:1000512	scansioni (filterString)	L	testo
+thermo	11	MS order, polarity, scan mode, analyzer, ionization, activation, CE, isolation width e offset, multiplex, SPS	mzml;trfp	precursor | activation	scansioni; esperimenti dall'XML	L	testo
+thermo	12	Trailer extra (62 campi: Ion Injection Time, AGC Target, Monoisotopic M/Z, Charge State, Master Scan Number, FT Resolution, LM Correction (ppm), Micro Scan Count, HCD Energy, FAIMS CV, Scan Description…)	mzml;trfp	-L	campi (valore o intervallo); alcuni nelle scansioni	L	testo
+thermo	13	Status log (pressioni, temperature, tensioni, flussi per canale e tempo)	nessuno	-	campi (thermo-raw:StatusLog), serie_registro, /api/registro	L	testo
+thermo	14	Error log	nessuno	-	registro[]	L	testo
+thermo	15	Tune data (Spray Voltage, Capillary Temp, Sheath/Aux/Sweep Gas, S-Lens RF, Heater Temp…)	sdk;trfp	GetTuneData	—	N	iso8601
+thermo	16	Lock mass: modo, elenchi, numero nel trailer, correzione	nessuno	-	ms.calibrazione.lock_mass	L	testo
+thermo	17	Coefficienti di taratura di massa per scansione (A, B, C…)	nessuno	-	—	N	testo
+thermo	18	Canali analogici e UV a una λ (nome, unità, campioni, driver, modello, seriale)	msconvert;mzml	-	cromatogrammi analogici/UV, campi	L	testo
+thermo	19	PDA 3D (spettri UV per istante)	nessuno	-	— (avvisi «UV 3D field»)	N	testo
+thermo	20	Rivelatori UV (lunghezze d'onda, banda, riferimento, campo 3D, velocità)	nessuno	-	rivelatori[]	L	testo
+thermo	21	Dati dei centroidi per picco (rumore, baseline, risoluzione, carica)	sdk	GetCentroidStream	—	N	testo
+thermo	22	Profilo e centroidi dello strumento	nessuno	-	spettri (profilo)	L	testo
+thermo	23	Sequence/batch (`.sld`)	nessuno	-	—	?	testo
+waters	1	Instrument (modello#seriale)	mzml	instrumentConfiguration	strumento.modello, .seriale	L	testo
+waters	2	Acquired Name, Date, Time	mzml	startTimeStamp	origine.file_creato, campi	L	iso8601
+waters	3	Sample Description, Bottle Number, Sample ID, Job Code, Task, Conditions, Plate Desc	nessuno	-	campione.nome, .vial, .id, campi	L	testo
+waters	4	User Name, Submitter, Laboratory Name	nessuno	-	operatore.* (identita)	L	testo
+waters	5	Software (MassLynx version), Instrument Type, Encoding	mzml	softwareList	strumento.software, campi	L	testo
+waters	6	`Cal Function N` (polinomio, T0/T1), Cal MS1/MS2 Static/Dynamic, temperature correction	nessuno	-	campi (applicata agli m/z)	L	testo
+waters	7	Funzioni: tipo, sottotipo, tempo di ciclo, `tof_depth`, dwell, Q1/Q3 o intervallo ×32	mzml	function=N	ms.periodi[0].esperimenti[], transizioni[]	L	testo
+waters	8	Sorgente: capillare, cono, temperature, gas desolvatazione/cono, modo, polarità, rampa o CE per funzione	nessuno	-	ms.sorgente.parametri, esperimenti	L	testo
+waters	9	Gradiente LC, flusso, forno, durata, campionatore	nessuno	-	lc, campionatore	L	testo
+waters	10	Tracce analogiche (pressione, flusso, % solventi, UV, temperature)	msconvert;mzml	-	cromatogrammi analogici, campi	L	testo
+waters	11	Nomi dei composti dei canali	nessuno	-	transizioni[].nome	L	testo
+waters	12	Statistiche per scansione: Set Mass, Collision Energy	mzml	precursor	precursore, CE	L	testo
+waters	13	Altre colonne di `.STS` (pressioni, tensioni per scansione, LteffMulti, temperatura del TOF)	sdk	GetScanItems	—	N	testo
+waters	14	Lock mass: funzione di riferimento, m/z, finestra, frequenza	sdk	LockMass	ms.calibrazione.lock_mass («not applied»)	L	testo
+waters	15	Deriva IMS: bin, tempo per bin, onda (velocità, altezza)	msconvert;sdk	-	— (avvisi)	N	testo
+waters	16	Storia dei trattamenti	nessuno	-	—	N	testo
