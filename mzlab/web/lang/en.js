@@ -474,8 +474,6 @@ I18N.add("en", {
   "help.numpress.title": "MS-Numpress compression",
   "help.numpress.body": "<p style=\"margin:0\">The compression is lossy: m/z and intensity values are rounded (relative error about 1e-4). It only affects the mzML files converted here.</p>",
   "conv.dl.needsApp": "Update the desktop app to save the mzML",
-  "help.filetypes.title": "File formats",
-  "help.filetypes.body": "<p style=\"margin:0 0 6px\">A <b>.wiff</b> goes with its <b>.wiff.scan</b>. An Agilent <b>.D</b> is a folder: drop it whole. <b>.raw</b> and <b>.mzML</b> files load on their own.</p>",
   "conv.help.summary": "Don't have mzML files?",
   "conv.help.hint": "You loaded {types} files: convert them like this.",
   "conv.help.step1": "Waters, Shimadzu and Bruker files are not read directly: convert them to mzML with MSConvert. Download <b>ProteoWizard</b> (it includes MSConvert), free, for Windows: <a href=\"https://proteowizard.sourceforge.io/download.html\" target=\"_blank\" rel=\"noopener noreferrer\">proteowizard.sourceforge.io</a>.",
