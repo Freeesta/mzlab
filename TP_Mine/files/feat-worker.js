@@ -60,6 +60,14 @@ function createCore(opts) {
       try { slot.w.postMessage({ ...msg, id }, transfer || []); } catch (e) { slot.calls.delete(id); reject(Object.assign(fail("error.featWorker", {}, String(e)), { fatal: true })); }
     });
   }
+  // the table of chemical classes, a file beside the `.wasm` `attributio_rev` (admin only), fetched once when the first review opens; "" without it
+  let classes = null;
+  async function classesText() {
+    const u = wasm.attributio_rev && wasm.attributio_rev.classesUrl;
+    if (!u) return "";
+    if (classes === null) classes = await (await fetch(u)).text();
+    return classes;
+  }
   async function ensure(slot, which) {          // load the .wasm of `which` in the worker once
     if (slot.loaded.has(which)) return;
     const m = wasm[which];
@@ -101,9 +109,15 @@ function createCore(opts) {
     return new Promise((resolve, reject) => { queue.push({ run, resolve, reject, tried: false }); pump(); });
   }
   const copy = list => list.map(b => b.slice());      // inputs of a job that may run again are copied, never transferred
-  return { st, slots, queue, spawn, call, submit, kill, copy, rest };
+  return { st, slots, queue, spawn, call, submit, kill, copy, rest, classesText };
 }
 
+// Runs a .wasm export that reads the job's files through `read(k, off, len)` and writes into memory; resolves with { bytes }.
+function viaFiles(m, run) {
+  const out = memSink(), rd = new FileReaderSync();
+  run((k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len))), out.write);
+  return { bytes: out.bytes() };
+}
 // The exports of a campaign folder (admin mode): `kind` = schymanski | publication | quantify | gradient (`.wasm` `attributio_export`) or evidence (`.wasm` `attributio_rev`, it needs the review);
 // `extra` = { matrix?, generated? }. Resolves with { files: [{ name, text } | { name, rows: { hojas } }], warnings }.
 function exportOps(submit, call) {
@@ -165,11 +179,12 @@ function proofOps(submit, call, copy, opts) {
         return { state: h.state, tried: h.tried, found: h.found, registry: h.registry, ms: Math.round(performance.now() - t0) };
       });
     },
-    evidence({ table, state, minutes, parentMz, parentRt, recipe }) {
+    // `stored` and `paths` (the .mzfeatf and the .mzidx of the series) let the proofs measure the rows in the files; without them the proofs are the ones of the table alone.
+    evidence({ table, state, minutes, parentMz, parentRt, recipe, stored, paths }) {
       return submit(async (slot, load) => {
         await load("proofs");
         const t0 = performance.now();
-        const e = await call(slot, { op: "evidence", table: table.slice(), state: state.slice(), minutes, parentMz, parentRt, recipe, budgetMb: opts.budgetMb || 0 });
+        const e = await call(slot, { op: "evidence", table: table.slice(), state: state.slice(), minutes, parentMz, parentRt, recipe, budgetMb: opts.budgetMb || 0, ...(stored && paths ? { files: copy(stored), paths } : {}) });
         slot.recycle = true;
         if (opts.onProgress) opts.onProgress({ phase: "proofs", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: e.mem / 1048576 });
         return { table: e.bytes };
@@ -203,11 +218,13 @@ function rowOps(submit, call) {
         return (await call(slot, { op: "formula_id", mz: Float64Array.from(mz), y: Float64Array.from(y), featureMz, params: params || "" })).text;
       });
     },
+    interpBuild: m => submit(async (slot, load) => { await load("interp"); return (await call(slot, { op: "interp_build", ...m, table: m.table.slice() })).bytes; }),
+    interpRow: m => submit(async (slot, load) => { await load("interp"); return (await call(slot, { op: "table_interp", ...m, table: m.table.slice() })).text; }),
   };
 }
 
 export function createFeatPool(opts) {
-  const { st, slots, queue, spawn, call, submit, kill, copy, rest } = createCore(opts);
+  const { st, slots, queue, spawn, call, submit, kill, copy, rest, classesText } = createCore(opts);
 
 
   return {
@@ -258,7 +275,7 @@ export function createFeatPool(opts) {
       return submit(async (slot, load) => {
         await load("attributio_rev");
         const names = JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
-        const r = await call(slot, { op: "attributio_review", files: files.map(f => f.file), names, pol, feature: id });
+        const r = await call(slot, { op: "attributio_review", files: files.map(f => f.file), names, pol, feature: id, classes: await classesText() });
         return JSON.parse(new TextDecoder().decode(r.bytes));
       });
     },
@@ -289,7 +306,7 @@ export function createFeatPool(opts) {
     // both phases in a row (hypotheses worker, then proofs worker). Resolves with { table, tried, found, registry, msHypotheses }.
     async proofs({ table, stored, paths, rules, parent, parentRt, minutes, parentMz, recipe }) {
       const h = await this.hypotheses({ stored, paths, rules, parent, parentRt, recipe });
-      const e = await this.evidence({ table, state: h.state, minutes, parentMz, parentRt, recipe });
+      const e = await this.evidence({ table, state: h.state, minutes, parentMz, parentRt, recipe, stored, paths });
       return { table: e.table, tried: h.tried, found: h.found, registry: h.registry, msHypotheses: h.ms };
     },
     // the archive worker (the only one that writes OPFS): path = "mzlab/feat/<name>"
@@ -326,13 +343,10 @@ let hypo = null;                              // Hypotheses of the last run_hypo
 let scratch = new Uint8Array(1 << 16);        // buffer reused by the reads of the .mzidx
 
 async function dirOf(parts, create) {
-  let d = await navigator.storage.getDirectory();
-  for (const p of parts) d = await d.getDirectoryHandle(p, { create });
-  return d;
+  let d = await navigator.storage.getDirectory(); for (const p of parts) d = await d.getDirectoryHandle(p, { create }); return d;
 }
 async function openSync(path) {
-  const parts = path.split("/").filter(Boolean), name = parts.pop();
-  const fh = await (await dirOf(parts, false)).getFileHandle(name);
+  const parts = path.split("/").filter(Boolean), name = parts.pop(), fh = await (await dirOf(parts, false)).getFileHandle(name);
   for (let i = 0; ; i++) {   // a handle of a worker that has just died is released a moment later
     try { const h = await fh.createSyncAccessHandle(); return { h, size: h.getSize() }; }
     catch (e) { if (i >= 40 || e.name !== "NoModificationAllowedError") throw e; await new Promise(r => setTimeout(r, 50)); }
@@ -370,7 +384,6 @@ async function init(m) {
 }
 const reply = (id, r, transfer) => self.postMessage({ id, ok: true, ...r }, transfer || []);
 const arrays = list => list.map(b => (b instanceof Uint8Array ? b : new Uint8Array(b)));
-
 // the sink of a step of the .wasm: write(offset, bytes) into one growing buffer (JavaScript memory, not the 256 MB of the .wasm); the step answers { bytes, sha256 }
 function memSink() {
   let buf = new Uint8Array(1 << 20), n = 0;
@@ -378,8 +391,7 @@ function memSink() {
     write: (off, b) => {
       if (off + b.length > buf.length) { const g = new Uint8Array(Math.max(off + b.length, buf.length * 2)); g.set(buf.subarray(0, n)); buf = g; }
       buf.set(b, off); n = Math.max(n, off + b.length);
-    },
-    bytes: () => buf.slice(0, n),
+    }, bytes: () => buf.slice(0, n),
   };
 }
 const OPS = {
@@ -388,6 +400,8 @@ const OPS = {
     const f = await openAll([m.path]), out = memSink();
     try { mods.feat.detect_file_to(f.read, f.sizes[0], m.name, m.recipe, out.write); return { bytes: out.bytes() }; } finally { f.close(); }
   },
+  async interp_build(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table), out = memSink(); try { mods.interp.interp_build((_, off, len) => t.subarray(off, off + len), t.length, m.parent, m.registry, m.polarity, f.read, f.sizes, m.infusion, out.write); } finally { f.close(); } return { bytes: out.bytes() }; },
+  async table_interp(m) { const t = new Uint8Array(m.table); return { text: mods.interp.table_interp((_, off, len) => t.subarray(off, off + len), t.length, m.id) }; },
   async detect_unt(m) {
     const f = await openAll([m.path]), out = memSink();
     try { mods.untargeted.detect_untargeted_to(f.read, f.sizes[0], m.name, m.params, out.write); return { bytes: out.bytes() }; } finally { f.close(); }
@@ -427,8 +441,10 @@ const OPS = {
     if (!m.state) throw Object.assign(new Error("error.featNoHypotheses"), { key: "error.featNoHypotheses" });
     if (hypo) hypo.free();
     hypo = mods.proofs.load_hypotheses(new Uint8Array(m.state));
-    const nan = v => (v == null ? NaN : v), table = new Uint8Array(m.table), out = memSink();
-    mods.proofs.build_evidence_to((_, off, len) => table.subarray(off, off + len), table.length, hypo, Float64Array.from(m.minutes, nan), nan(m.parentMz), nan(m.parentRt), m.recipe, out.write, m.budgetMb || 0, m.campioni || undefined);
+    const nan = v => (v == null ? NaN : v), table = new Uint8Array(m.table), out = memSink(), f = m.files && m.paths ? await openAll(m.paths) : null;
+    try {
+      mods.proofs.build_evidence_to((_, off, len) => table.subarray(off, off + len), table.length, hypo, Float64Array.from(m.minutes, nan), nan(m.parentMz), nan(m.parentRt), m.recipe, out.write, m.budgetMb || 0, m.campioni || undefined, f ? arrays(m.files) : undefined, f ? f.read : undefined, f ? f.sizes : undefined);
+    } finally { if (f) f.close(); }
     return { bytes: out.bytes() };
   },
   async ms2file(m) {
@@ -458,18 +474,8 @@ function describe(e) {
 }
 // the Banco 2b (`.wasm` `attributio_rev`): the review of one feature, and the decisions file after a decision
 Object.assign(OPS, {
-  async attributio_review(m) {
-    const out = memSink(), rd = new FileReaderSync();
-    const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
-    mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, out.write);
-    return { bytes: out.bytes() };
-  },
-  async attributio_export(m) {
-    const out = memSink(), rd = new FileReaderSync();
-    const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
-    mods[m.which].export_to(read, m.names, m.kind, out.write);
-    return { bytes: out.bytes() };
-  },
+  attributio_review: m => viaFiles(m, (read, write) => mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, m.classes || "", write)),
+  attributio_export: m => viaFiles(m, (read, write) => mods[m.which].export_to(read, m.names, m.kind, write)),
   async attributio_decision(m) {
     const out = memSink(), rd = new FileReaderSync();
     const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));

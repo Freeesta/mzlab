@@ -16,6 +16,8 @@ chem = []
 attributio = ["dep:mzlab-lib", "chem"]
 # `untargeted`: detection of the features from the raw data after the algorithms of mzmine 3.9.0 (`src/untargeted/`), rewritten from scratch. Off by default.
 untargeted = []
+# `interp`: the interpretation of each row of the feature table of the products (`interp/1`, `filtri/1`; `docs/agenti/interp.md`). Off by default; the `.wasm` `interp` carries it.
+interp = ["chem"]
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
@@ -98,3 +100,11 @@ required-features = ["untargeted"]
 [[test]]
 name = "untargeted_formula_id"
 required-features = ["untargeted"]
+
+[[test]]
+name = "interp"
+required-features = ["interp"]
+
+[[test]]
+name = "interp_sintetico"
+required-features = ["interp"]

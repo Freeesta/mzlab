@@ -7,18 +7,19 @@ part=${2:-all}
 want() { [ "$part" = all ] || [ "$part" = "$1" ]; }
 # Limit of every other .wasm after wasm-opt -Oz, bytes (the rule of the project: it does not go up; measured: detect 418400, proofs 450711, finder 436274, attributio 432347, finder_msn 296579, mrm 226834, grafo 199697).
 limit=512000
-limit_rev=942080   # attributio-rev carries the table of levels AND the review of one feature (libraries, spectra, formulas, isotopes); measured 912955 (+3 %)
+limit_rev=942080   # attributio-rev carries the table of levels AND the review of one feature (libraries, spectra, formulas, isotopes); measured 912955 (+3 %); the table of chemical classes is a file beside it
 limit_export=659456   # attributio-export carries the cascade AND the four spreadsheet exports (Schymanski folder, publication table, quantification, gradient); measured 636757 (+3 %)
 limit_lr=741376   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 717874 (+3 %)
+limit_interp=512000   # interp: the interpretation of the rows (interp/1) with the MSn tree of the infusion; above 470000 the tree is built by finder_msn (docs/agenti/interp.md)
 limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)
 out=${1:-site/static}/wasm-feat
 R=target/wasm32-unknown-unknown/release
 # the wasm-bindgen + wasm-opt of each module run in the background while cargo builds the next one (tools/wasm_paralleli.sh); wasm_wait below joins them
 . tools/wasm_paralleli.sh
-for which in detect proofs mrm finder finder_edge finder_msn untargeted; do
+for which in detect proofs mrm finder finder_edge finder_msn untargeted interp; do
   case $which in detect|proofs|mrm|finder) want a || continue ;; *) want b || continue ;; esac
   cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features $which
-  wasm_pack "$out/$([ $which = detect ] && echo feat || echo $which | tr _ -)" $R/mzlab_feat_wasm.wasm $limit "mzFinder $which"
+  wasm_pack "$out/$([ $which = detect ] && echo feat || echo $which | tr _ -)" $R/mzlab_feat_wasm.wasm $([ $which = interp ] && echo $limit_interp || echo $limit) "mzFinder $which"
 done
 if want a; then
 # the third one, loaded only when a table is shown or exported (views, report, CSV, MGF, .ms): crates/mzlab-feat-table-wasm
@@ -41,6 +42,7 @@ wasm_pack "$out/attributio" $R/mzlab_attributio_wasm.wasm $limit "mzFinder attri
 # the Banco 2b of Attributio (review of one feature, saving of a decision), loaded only when the Banco opens: the same crate with the feature rev
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features rev
 wasm_pack "$out/attributio-rev" $R/mzlab_attributio_wasm.wasm $limit_rev "mzFinder attributio-rev"
+mkdir -p "$out/attributio-rev" && cp crates/mzlab-feat/data/classi-1.json "$out/attributio-rev/classi-1.json"
 # the exports of Attributio (Schymanski folder, publication table, quantification, gradient), loaded only when the Export menu is used: the same crate with the feature export
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features export
 wasm_pack "$out/attributio-export" $R/mzlab_attributio_wasm.wasm $limit_export "mzFinder attributio-export"
@@ -66,6 +68,7 @@ m["mrm"] = {"js": "mrm/mzlab_feat_wasm.js", "wasm": "mrm/mzlab_feat_wasm_bg.wasm
 m["finder"] = {"js": "finder/mzlab_feat_wasm.js", "wasm": "finder/mzlab_feat_wasm_bg.wasm", "sha256": sha("finder")}
 m["finder_edge"] = {"js": "finder-edge/mzlab_feat_wasm.js", "wasm": "finder-edge/mzlab_feat_wasm_bg.wasm", "sha256": sha("finder-edge")}
 m["finder_msn"] = {"js": "finder-msn/mzlab_feat_wasm.js", "wasm": "finder-msn/mzlab_feat_wasm_bg.wasm", "sha256": sha("finder-msn")}
+m["interp"] = {"js": "interp/mzlab_feat_wasm.js", "wasm": "interp/mzlab_feat_wasm_bg.wasm", "sha256": sha("interp")}
 m["untargeted"] = {"js": "untargeted/mzlab_feat_wasm.js", "wasm": "untargeted/mzlab_feat_wasm_bg.wasm", "sha256": sha("untargeted")}
 m["grafo"] = {"js": "grafo/mzlab_feat_grafo_wasm.js", "wasm": "grafo/mzlab_feat_grafo_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/grafo/mzlab_feat_grafo_wasm_bg.wasm", "rb").read()).hexdigest()}
@@ -76,6 +79,7 @@ m["import"] = {"js": "import/mzlab_feat_import_wasm.js", "wasm": "import/mzlab_f
 m["attributio"] = {"js": "attributio/mzlab_attributio_wasm.js", "wasm": "attributio/mzlab_attributio_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/attributio/mzlab_attributio_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["attributio_rev"] = {"js": "attributio-rev/mzlab_attributio_wasm.js", "wasm": "attributio-rev/mzlab_attributio_wasm_bg.wasm",
+              "classes": "attributio-rev/classi-1.json",
               "sha256": hashlib.sha256(open(f"{o}/attributio-rev/mzlab_attributio_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["attributio_export"] = {"js": "attributio-export/mzlab_attributio_wasm.js", "wasm": "attributio-export/mzlab_attributio_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/attributio-export/mzlab_attributio_wasm_bg.wasm", "rb").read()).hexdigest()}

@@ -85,6 +85,7 @@
     "../../mzlab/web/tavola-periodica.js",
     "../../mzlab/web/tables.js",
     "../../mzlab/web/barra.js",
+    "../../mzlab/web/ricerca.js",
     "../../mzlab/web/paletta.js",
     "../../mzlab/web/help.js",
     "../../mzlab/web/molui.js",
