@@ -384,16 +384,6 @@ async function init(m) {
 }
 const reply = (id, r, transfer) => self.postMessage({ id, ok: true, ...r }, transfer || []);
 const arrays = list => list.map(b => (b instanceof Uint8Array ? b : new Uint8Array(b)));
-// the sink of a step of the .wasm: write(offset, bytes) into one growing buffer (JavaScript memory, not the 256 MB of the .wasm); the step answers { bytes, sha256 }
-function memSink() {
-  let buf = new Uint8Array(1 << 20), n = 0;
-  return {
-    write: (off, b) => {
-      if (off + b.length > buf.length) { const g = new Uint8Array(Math.max(off + b.length, buf.length * 2)); g.set(buf.subarray(0, n)); buf = g; }
-      buf.set(b, off); n = Math.max(n, off + b.length);
-    }, bytes: () => buf.slice(0, n),
-  };
-}
 const OPS = {
   async init(m) { await init(m); return { version: mods[m.which].version(), crate: mods[m.which].crate_version() }; },
   async detect(m) {
@@ -466,6 +456,16 @@ const OPS = {
   async die() { throw new WebAssembly.RuntimeError("unreachable"); },       // for the tests: a trap of the .wasm
 };
 
+// the sink of a step of the .wasm: write(offset, bytes) into one growing buffer (JavaScript memory, not the 256 MB of the .wasm); the step answers { bytes, sha256 }
+function memSink() {
+  let buf = new Uint8Array(1 << 20), n = 0;
+  return {
+    write: (off, b) => {
+      if (off + b.length > buf.length) { const g = new Uint8Array(Math.max(off + b.length, buf.length * 2)); g.set(buf.subarray(0, n)); buf = g; }
+      buf.set(b, off); n = Math.max(n, off + b.length);
+    }, bytes: () => buf.slice(0, n),
+  };
+}
 // JSON { error_key, params } of the .wasm, or a JavaScript error
 function describe(e) {
   const text = String(e && e.message || e);
