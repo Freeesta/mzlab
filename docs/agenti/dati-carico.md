@@ -19,3 +19,7 @@
 ## Bassa e alta risoluzione insieme
 - Se la tabella di carico contiene file LR e HR (`f.hr`, dal motore), `#hrmix` (`hrMixNote()` in `shell.js`) mostra una nota con stato (non un errore) e due scelte, «Solo LR (n)» / «Solo HR (n)» (`aria-pressed` sul mondo attivo): `hrMixPick()` spunta un mondo e toglie la spunta all'altro, i file non scelti restano in elenco per un secondo caricamento.
 - All'arrivo di file nuovi `hrMixPreselect()` sceglie il mondo più numeroso (a parità, LR); se l'utente rispunta entrambi i mondi, «Carica dati» resta disabilitato (`checkGo()`) finché non ne sceglie uno. L'errore `err.hr.mix` del motore resta come rete di sicurezza (file già aperti dell'altro mondo). Prova: `e2e_carico_lrhr`.
+
+## Rilascio sull'elenco dei file
+- Trascinare file o una cartella sul pannello `#dfiles` (con una sessione aperta, fuori dalla tabella di carico) li aggiunge subito: `#fl-dz` mostra la zona di rilascio, `shell.js` arma `DIRECT`, usa lo stesso `upload()`/`CartCarica.fromDrop` e, a caricamento finito (`directDone()`), `openStaged()` apre i file come il pulsante «Carica dati», senza schermata di caricamento (avanzamento = barra dell'elenco, `E.pending`). I duplicati li scarta `dropDups`.
+- I file di risoluzione diversa da quelli aperti (o il mondo meno numeroso di un rilascio misto) non si aprono: restano nella tabella di carico, senza spunta; `#fl-note` (`role=status`, 9 s) lo dice senza errori. Prova: `e2e_elenco_file`.
