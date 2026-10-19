@@ -104,21 +104,14 @@ function createCore(opts) {
   return { st, slots, queue, spawn, call, submit, kill, copy, rest };
 }
 
+// Runs a .wasm export that reads the job's files through `read(k, off, len)` and writes into memory; resolves with { bytes }.
+function viaFiles(m, run) {
+  const out = memSink(), rd = new FileReaderSync();
+  run((k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len))), out.write);
+  return { bytes: out.bytes() };
+}
 // The exports of a campaign folder (admin mode): `kind` = schymanski | publication | quantify | gradient (`.wasm` `attributio_export`) or evidence (`.wasm` `attributio_rev`, it needs the review);
 // `extra` = { matrix?, generated? }. Resolves with { files: [{ name, text } | { name, rows: { hojas } }], warnings }.
-function ms2Ops(submit, call) {
-  return {
-    // A request of the MS2 engine (`.wasm` `attributio_ms2`): `request.op` = engine | insilico | rearrange | rt | chimeric; libraries and candidate lists are in `files` under `__ms2/`.
-    attributioMs2(files, root, request) {
-      return submit(async (slot, load) => {
-        await load("attributio_ms2");
-        const names = JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
-        const r = await call(slot, { op: "attributio_ms2", files: files.map(f => f.file), names, request: JSON.stringify(request) });
-        return JSON.parse(new TextDecoder().decode(r.bytes));
-      });
-    },
-  };
-}
 function exportOps(submit, call) {
   return {
     attributioExport(files, root, kind, extra = {}) {
@@ -130,6 +123,12 @@ function exportOps(submit, call) {
         return JSON.parse(new TextDecoder().decode(r.bytes));
       });
     },
+    // MS2 engine (`.wasm` `attributio_ms2`): `request.op` = engine | insilico | rearrange | rt | chimeric; extra files travel under `__ms2/`.
+    attributioMs2: (files, root, request) => submit(async (slot, load) => {
+      await load("attributio_ms2");
+      const names = JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
+      return JSON.parse(new TextDecoder().decode((await call(slot, { op: "attributio_ms2", files: files.map(f => f.file), names, request: JSON.stringify(request) })).bytes));
+    }),
   };
 }
 
@@ -285,7 +284,6 @@ export function createFeatPool(opts) {
       });
     },
     ...exportOps(submit, call),
-    ...ms2Ops(submit, call),
     ...previewOps(submit, call, opts),
     ...driftOps(submit, call, copy),
     ...proofOps(submit, call, copy, opts),
@@ -472,24 +470,9 @@ function describe(e) {
 }
 // the Banco 2b (`.wasm` `attributio_rev`): the review of one feature, and the decisions file after a decision
 Object.assign(OPS, {
-  async attributio_review(m) {
-    const out = memSink(), rd = new FileReaderSync();
-    const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
-    mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, out.write);
-    return { bytes: out.bytes() };
-  },
-  async attributio_export(m) {
-    const out = memSink(), rd = new FileReaderSync();
-    const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
-    mods[m.which].export_to(read, m.names, m.kind, out.write);
-    return { bytes: out.bytes() };
-  },
-  async attributio_ms2(m) {
-    const out = memSink(), rd = new FileReaderSync();
-    const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
-    mods.attributio_ms2.ms2_to(read, m.names, m.request, out.write);
-    return { bytes: out.bytes() };
-  },
+  attributio_review: m => viaFiles(m, (read, write) => mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, write)),
+  attributio_export: m => viaFiles(m, (read, write) => mods[m.which].export_to(read, m.names, m.kind, write)),
+  attributio_ms2: m => viaFiles(m, (read, write) => mods.attributio_ms2.ms2_to(read, m.names, m.request, write)),
   async attributio_decision(m) {
     const out = memSink(), rd = new FileReaderSync();
     const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
