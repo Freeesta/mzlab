@@ -108,3 +108,7 @@ required-features = ["interp"]
 [[test]]
 name = "interp_sintetico"
 required-features = ["interp"]
+
+[[test]]
+name = "interp_sito"
+required-features = ["interp"]

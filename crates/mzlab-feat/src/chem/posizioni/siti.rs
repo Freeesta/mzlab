@@ -8,10 +8,12 @@ use crate::chem::frammenti::apply_delta;
 use crate::chem::grafo::Mol;
 
 /// One atom where the change can sit. `kind`: `aromatic_oh`, `aliphatic_oh`, `n_oxide`, `s_oxide`, `demethyl`, `carbonyl`, `aromatic_cl`, `aromatic_br`.
-/// `class` is the symmetry class of the atom (`symmetry_classes`); `tp_formula` the Hill formula of the product.
+/// `class` is the symmetry class of the atom (`symmetry_classes`); `tp_formula` the Hill formula of the product. The kind `dehydro` (`-2H`) is a bond:
+/// `atom` and `partner` are its two carbons and `class` joins their two symmetry classes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Site {
     pub atom: usize,
+    pub partner: Option<usize>,
     pub kind: &'static str,
     pub class: u32,
     pub tp_formula: String,
@@ -26,6 +28,7 @@ pub(super) fn delta_of(kind: &str) -> Vec<(i64, Formula)> {
     match kind {
         "demethyl" => vec![(-1, vec![("C".into(), 1), ("H".into(), 2)])],
         "carbonyl" => vec![(1, f("O", 1)), (-1, f("H", 2))],
+        "dehydro" => vec![(-1, f("H", 2))],
         "aromatic_cl" => vec![(1, f("Cl", 1)), (-1, f("H", 1))],
         "aromatic_br" => vec![(1, f("Br", 1)), (-1, f("H", 1))],
         _ => vec![(1, f("O", 1))],
@@ -43,6 +46,7 @@ fn kinds_of(transform: &str) -> Result<&'static [&'static str]> {
         "+O" => &["aromatic_oh", "aliphatic_oh", "n_oxide", "s_oxide"],
         "-CH2" => &["demethyl"],
         "+O-2H" | "+O-H2" => &["carbonyl"],
+        "-2H" => &["dehydro"],
         "+Cl-H" => &["aromatic_cl"],
         "+Br-H" => &["aromatic_br"],
         _ => return Err(Error::new("error.posiz.transform").with("transform", transform)),
@@ -88,6 +92,9 @@ pub fn sites(mol: &Mol, transform: &str) -> Result<Vec<Site>> {
     let kinds = kinds_of(transform)?;
     let cls = symmetry_classes(mol);
     let parent = mol.formula();
+    if kinds == ["dehydro"] {
+        return checked(dehydro_sites(mol, &cls, &parent)?, transform);
+    }
     let mut out = Vec::new();
     for (i, class) in cls.iter().enumerate() {
         let Some(kind) = kinds.iter().find(|k| can_take(mol, i, k)) else {
@@ -96,15 +103,44 @@ pub fn sites(mol: &Mol, transform: &str) -> Result<Vec<Site>> {
         let tp = apply_delta(&parent, &delta_of(kind))?;
         out.push(Site {
             atom: i,
+            partner: None,
             kind,
             class: *class,
             tp_formula: elements::fmt(&tp),
         });
     }
+    checked(out, transform)
+}
+
+fn checked(out: Vec<Site>, transform: &str) -> Result<Vec<Site>> {
     if out.is_empty() {
         return Err(Error::new("error.posiz.noSites").with("transform", transform));
     }
     check_formulas(&out)?;
+    Ok(out)
+}
+
+/// `-2H`: every single C-C bond between two sp3 carbons that both keep an H (a ring bond too: the double bond closes inside the ring).
+fn dehydro_sites(mol: &Mol, cls: &[u32], parent: &Formula) -> Result<Vec<Site>> {
+    let tp = elements::fmt(&apply_delta(parent, &delta_of("dehydro"))?);
+    let sp3 = |i: usize| mol.sp3_c(i) && mol.atoms[i].h >= 1;
+    let mut out: Vec<Site> = mol
+        .bonds
+        .iter()
+        .filter(|b| b.order == 1.0 && sp3(b.a) && sp3(b.b))
+        .map(|b| {
+            let (a, p) = (b.a.min(b.b), b.a.max(b.b));
+            let (lo, hi) = (cls[a].min(cls[p]), cls[a].max(cls[p]));
+            Site {
+                atom: a,
+                partner: Some(p),
+                kind: "dehydro",
+                class: lo * 65536 + hi,
+                tp_formula: tp.clone(),
+            }
+        })
+        .collect();
+    out.sort_by_key(|s| (s.atom, s.partner));
     Ok(out)
 }
 

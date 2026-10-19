@@ -21,9 +21,9 @@ GONE = "() => new Promise(res => { if (window.__held) { window.__held.close(); w
 
 def title_static():
     html = (ROOT / "mzlab/web/index.html").read_text(encoding="utf-8")
-    assert "<title>{APP} · Analisi MS</title>" in html
+    assert "<title>{APP} • MS Analysis</title>" in html
     built = (ROOT / "site/index.html").read_text(encoding="utf-8")
-    assert re.search(r"<title>[^<]*· Analisi MS</title>", built) and 'og:title" content="' in built and "Analisi MS" in re.search(r'og:title" content="([^"]*)"', built).group(1)
+    assert re.search(r"<title>mzLab • MS Analysis</title>", built) and 'og:title" content="' in built and "Analisi MS" in re.search(r'og:title" content="([^"]*)"', built).group(1)
 
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)

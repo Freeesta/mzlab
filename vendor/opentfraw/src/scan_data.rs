@@ -540,6 +540,49 @@ pub fn read_scan_srm_v66<R: Read + Seek>(
     })?
 }
 
+/// Read the peaks of a v66 full-scan record that ends in a 56-byte footer (TSQ GC full scan).
+///
+/// `footer_offset` is the scan index offset: the footer holds `0` (u32), the scan window
+/// (`low_mz`, `high_mz` as f32), the start of the scan's data (u32 at byte 20, from `data_addr`)
+/// and its peak bytes (u32 at byte 48). The peaks are `(mz: f32, intensity: f32)` pairs at the start.
+/// Returns an empty list when the bytes are not such a footer, so an empty SRM record stays empty.
+pub fn read_scan_footer_v66<R: Read + Seek>(
+    source: &mut R,
+    data_addr: u64,
+    footer_offset: u64,
+    low_mz: f64,
+    high_mz: f64,
+) -> Result<Vec<Peak>> {
+    let abs_footer = data_addr.saturating_add(footer_offset);
+    source.seek(SeekFrom::Start(abs_footer))?;
+    let mut r = BinaryReader::new(source);
+    let footer = r.read_bytes(56)?;
+    let close = |a: f32, b: f64| (a as f64 - b).abs() < 1e-3 * b.abs().max(1.0);
+    let n_bytes = read_u32_le(&footer, 48)? as u64;
+    let start = read_u32_le(&footer, 20)? as u64;
+    if read_u32_le(&footer, 0)? != 0
+        || !close(read_f32_le(&footer, 4)?, low_mz)
+        || !close(read_f32_le(&footer, 8)?, high_mz)
+        || n_bytes == 0
+        || n_bytes % 8 != 0
+        || start.saturating_add(n_bytes) > footer_offset
+    {
+        return Ok(Vec::new());
+    }
+    r.seek_to(data_addr.saturating_add(start))?;
+    let n = r.block_len(n_bytes / 8, 8)?;
+    con_blocco(&mut r, n, |b| {
+        b.chunks_exact(8)
+            .map(|c| {
+                Ok(Peak {
+                    mz: read_f32_le(c, 0)? as f64,
+                    abundance: read_f32_le(c, 4)?,
+                })
+            })
+            .collect::<Result<Vec<Peak>>>()
+    })?
+}
+
 /// Read the Q3 isolation window table from an SRM v66 scan record.
 ///
 /// Returns one `(lo_mz, hi_mz)` pair per active transition channel,
@@ -630,6 +673,44 @@ pub fn search_v63_transition(data: &[u8], q3_center_target: f64) -> Option<(f64,
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    /// Peaks, then a footer (56 bytes) that describes them, as a TSQ GC full-scan record.
+    fn footer_record(peaks: &[(f32, f32)], start: u32) -> Vec<u8> {
+        let mut b = vec![0u8; start as usize];
+        for (mz, i) in peaks {
+            b.extend(mz.to_le_bytes());
+            b.extend(i.to_le_bytes());
+        }
+        let footer_at = b.len();
+        let mut f = vec![0u8; 56];
+        f[4..8].copy_from_slice(&50.0f32.to_le_bytes());
+        f[8..12].copy_from_slice(&500.0f32.to_le_bytes());
+        f[20..24].copy_from_slice(&start.to_le_bytes());
+        f[48..52].copy_from_slice(&((peaks.len() * 8) as u32).to_le_bytes());
+        b.extend(f);
+        assert_eq!(b.len(), footer_at + 56);
+        b
+    }
+
+    #[test]
+    fn footer_record_gives_its_peaks() {
+        let data = footer_record(&[(53.5, 10.0), (60.25, 20.0)], 12);
+        let at = (data.len() - 56) as u64;
+        let p = read_scan_footer_v66(&mut Cursor::new(data), 0, at, 50.0, 500.0).unwrap();
+        assert_eq!(p.len(), 2);
+        assert_eq!((p[1].mz, p[1].abundance), (60.25, 20.0));
+    }
+
+    #[test]
+    fn footer_with_another_window_or_no_room_is_empty() {
+        let data = footer_record(&[(53.5, 10.0)], 0);
+        let at = (data.len() - 56) as u64;
+        let other = read_scan_footer_v66(&mut Cursor::new(data.clone()), 0, at, 70.0, 500.0);
+        assert!(other.unwrap().is_empty());
+        // The peaks would overlap the footer.
+        let short = read_scan_footer_v66(&mut Cursor::new(data), 0, at - 4, 50.0, 500.0);
+        assert!(short.map(|p| p.is_empty()).unwrap_or(true));
+    }
 
     fn header_with(
         descriptor_list_size: u32,

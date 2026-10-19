@@ -123,6 +123,7 @@ pub struct MembershipRow {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct EcotoxValue {
     pub cas: String,
+    pub ik1: String,
     pub kind: String,
     pub taxon: String,
     pub species: String,
@@ -253,6 +254,7 @@ pub fn read_ecotox_values(csv: &str) -> Result<Vec<EcotoxValue>> {
             let t = |n: &str| text(&f, r, n);
             EcotoxValue {
                 cas: t("cas"),
+                ik1: t("ik1"),
                 kind: t("kind"),
                 taxon: t("taxon"),
                 species: t("species"),
@@ -296,6 +298,51 @@ pub fn read_ecosar(csv: &str) -> Result<Vec<EcosarEndpoint>> {
                 in_domain: t("in_domain").eq_ignore_ascii_case("true"),
                 excluded_because: t("excluded_because"),
             }
+        })
+        .collect())
+}
+
+/// `ecotox_curated.csv`: the curated hazard decisions.
+pub fn read_curated(csv: &str) -> Result<Vec<super::hazard::Curated>> {
+    let f = Frame::parse(csv, ';')?;
+    Ok((0..f.len())
+        .map(|r| {
+            let t = |n: &str| text(&f, r, n);
+            super::hazard::Curated {
+                ik1: t("ik1"),
+                label: t("label"),
+                acute: t("acute"),
+                chronic: t("chronic"),
+                basis: t("basis"),
+                tier: t("tier"),
+                note: t("note"),
+            }
+        })
+        .collect())
+}
+
+/// `ecotox_structures.csv`: structures given to identity names by a decision.
+pub fn read_overrides(csv: &str) -> Result<Vec<super::hazard::StructureOverride>> {
+    let f = Frame::parse(csv, ';')?;
+    Ok((0..f.len())
+        .map(|r| super::hazard::StructureOverride {
+            pattern: text(&f, r, "pattern"),
+            compound: text(&f, r, "compound"),
+            inchikey: text(&f, r, "inchikey"),
+        })
+        .collect())
+}
+
+/// `registry_members.csv`, identity rows only.
+pub fn read_identity_members(csv: &str) -> Result<Vec<super::hazard::IdentityMember>> {
+    let f = Frame::parse(csv, ';')?;
+    Ok((0..f.len())
+        .filter(|r| text(&f, *r, "member_type") == "identity")
+        .map(|r| super::hazard::IdentityMember {
+            campaign: text(&f, r, "campaign"),
+            name: text(&f, r, "name"),
+            formula: text(&f, r, "formula"),
+            first_block: text(&f, r, "first_block"),
         })
         .collect())
 }
