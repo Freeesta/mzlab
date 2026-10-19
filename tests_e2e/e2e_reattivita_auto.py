@@ -1,7 +1,7 @@
 """Automatic reactivity of the parent in Tabui (TP_Mine/lazy/reatt-auto.js, TP_Mine/files/chem-worker.js; docs/agenti/reattivita.md).
 The 38 synthetic files of tests/data/gruppi go in through the page. Without «mzlab.admin» a Dig fetches no .wasm «chem» and shows no bar. With it: after a Dig the panel goes
 waiting -> computing -> done and the table has the values (bentazone, a public compound); a new Dig while it computes stops the worker, the panel waits and the calculation runs again after the TPs;
-a cancelled Dig starts nothing; the same SMILES and options give the session's copy; the options (solvent, conformers) and «Recompute»; the time of a Dig does not grow with the reactivity armed.
+a cancelled Dig starts nothing; the same SMILES and options give the session's copy; the options (solvent, conformers, form at pH 7) and «Recompute»; the time of a Dig does not grow with the reactivity armed.
 Builds the site and static/wasm-feat; SKIP without cargo and wasm-bindgen. MZLAB_PIPE_SITE=<built site with static/wasm-feat> reuses one. Run from the repo root: python3 tests_e2e/e2e_reattivita_auto.py"""
 import os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
@@ -106,7 +106,11 @@ try:
             pg.wait_for_function("window.TPREATTAUTO.info().cached === 2 && window.TPREATTAUTO.info().phase === 'done'", timeout=120000)
             pg.click("#tp-reatt #tpr-t5"); j = pg.inner_text("#tp-reatt #tpr-p pre"); assert '"solvent": "none"' in j, j[:300]
             pg.select_option(CTL + " .tpra-sol", "water"); pg.fill(CTL + " .tpra-conf", "4")
-        step("«Recompute» with the options Solvent and Conformers", options)
+            pg.select_option(CTL + " .tpra-form", "ph7"); pg.click(CTL + " .tpra-re")
+            pg.wait_for_function("window.TPREATTAUTO.info().cached === 3 && window.TPREATTAUTO.info().phase === 'done'", timeout=120000)
+            pg.click("#tp-reatt #tpr-t5"); j = pg.inner_text("#tp-reatt #tpr-p pre"); assert '"protomer"' in j and '"ph": 7' in j, j[:300]
+            pg.select_option(CTL + " .tpra-form", "none")
+        step("«Recompute» with the options Solvent, Conformers and Form (pH 7)", options)
 
         def restart():
             pg.select_option(CTL + " .tpra-sol", "water"); pg.fill(CTL + " .tpra-conf", "16"); pg.click(CTL + " .tpra-re")
@@ -117,7 +121,7 @@ try:
             assert pg.inner_text(CTL + " .tpra-st") == "waiting for TPs" and pg.locator(CTL + " .tpra-re").is_disabled(), "Recompute is enabled during the TPs"
             pg.wait_for_function("document.getElementById('tp-msg').textContent === 'Done.'", timeout=300000)
             pg.wait_for_function("window.TPREATTAUTO.info().phase === 'done'", timeout=120000)
-            assert pg.evaluate("window.TPREATTAUTO.info().cached") == 3, "the new run was not calculated after the TPs"
+            assert pg.evaluate("window.TPREATTAUTO.info().cached") == 4, "the new run was not calculated after the TPs"
         step("a new Dig during the calculation stops it (worker terminated), waits, and the calculation runs after the TPs", restart)
 
         def cancelled():

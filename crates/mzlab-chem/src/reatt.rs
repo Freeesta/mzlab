@@ -5,6 +5,7 @@
 use crate::embed::{embed, Conf, DEFAULT_CONFORMERS};
 use crate::fukui::{ch_sites, Fukui, Site};
 use crate::mol3d::{hbonds, symbol, Mol3d};
+use crate::protomer::{self, Protomer};
 use crate::xtb::{alpb, System};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, round, Out};
@@ -14,6 +15,8 @@ use mzlab_feat::chem::grafo::Mol;
 pub const ENGINE: &str = "mzlab-chem/1";
 /// GFN2-xTB is the published method; the extended Hückel fallback is used only when an SCC does not converge.
 pub const PUBLISH_GFN2: bool = true;
+/// Whether the pH 7 form is the default (`docs/agenti/reattivita.md`, section «Protomero a pH 7»).
+pub const PROTOMER_DEFAULT: bool = false;
 /// Conformers on which f(−) is also computed, to give its spread.
 const SPREAD_CONFORMERS: usize = 3;
 
@@ -23,6 +26,8 @@ pub struct Opts {
     pub water: bool,
     pub conformers: usize,
     pub seed: u64,
+    /// `"protomer":"ph7"` computes the most probable form at pH 7 (`protomer.rs`) instead of the SMILES as written.
+    pub ph7: bool,
 }
 
 impl Opts {
@@ -31,6 +36,7 @@ impl Opts {
             water: true,
             conformers: DEFAULT_CONFORMERS,
             seed: 42,
+            ph7: PROTOMER_DEFAULT,
         };
         if text.trim().is_empty() {
             return Ok(o);
@@ -46,6 +52,13 @@ impl Opts {
         }
         if let Some(n) = v.get("conformers").and_then(|n| n.f64()) {
             o.conformers = (n as usize).clamp(1, 16);
+        }
+        if let Some(s) = v.get("protomer").and_then(|s| s.str()) {
+            o.ph7 = match s {
+                "ph7" => true,
+                "none" => false,
+                _ => return Err(bad("protomer")),
+            };
         }
         if let Some(n) = v.get("seed").and_then(|n| n.f64()) {
             o.seed = n.max(0.0) as u64;
@@ -150,14 +163,24 @@ pub fn compute(m: &Mol3d, confs: &[Conf], water: bool) -> Result<Result3> {
 /// `reatt/1` of a SMILES; `opts_json` as in `Opts` (empty for the defaults).
 pub fn reactivity_json(smiles: &str, opts_json: &str) -> Result<String> {
     let o = Opts::parse(opts_json)?;
-    let mol =
+    let written =
         Mol::parse(smiles).map_err(|e| Error::new("error.chem.smiles").with("reason", e.key))?;
+    let prot = o.ph7.then(|| protomer::assign(smiles, &written));
+    let mol = prot.as_ref().map_or(written, |p| p.mol.clone());
     let mut m = Mol3d::from_mol(&mol)?;
     let confs = embed(&m, o.seed, o.conformers)?;
     let r = compute(&m, &confs, o.water)?;
     m.xyz = confs[0].xyz.clone();
     let sites = ch_sites(&mol, &m, &r.fukui.f_minus);
-    Ok(write(smiles, &m, &r, &sites, confs.len(), o.water))
+    Ok(write(
+        smiles,
+        &m,
+        &r,
+        &sites,
+        confs.len(),
+        o.water,
+        prot.as_ref(),
+    ))
 }
 
 fn write(
@@ -167,6 +190,7 @@ fn write(
     sites: &[Site],
     nconf: usize,
     water: bool,
+    prot: Option<&Protomer>,
 ) -> String {
     let mut o = Out::default();
     o.raw("{\"format\":\"reatt\",\"version\":1,\"engine\":")
@@ -177,6 +201,9 @@ fn write(
         .str(if water { "water" } else { "none" })
         .raw(",\"smiles\":")
         .str(smiles);
+    if let Some(p) = prot {
+        write_protomer(&mut o, p);
+    }
     write_atoms(&mut o, m, &r.fukui);
     o.raw(",\"hbonds\":[");
     for (k, (h, a)) in hbonds(m, &m.xyz).iter().enumerate() {
@@ -204,24 +231,9 @@ fn write(
         it[1],
         it[2]
     ));
-    o.raw(",\"ch_sites\":[");
-    for (k, s) in sites.iter().enumerate() {
-        o.raw(if k > 0 { "," } else { "" })
-            .raw("{\"class\":")
-            .str(&s.class);
-        o.raw(&format!(
-            ",\"heavy_index\":{},\"n_h\":{},\"f_minus\":",
-            s.heavy_index, s.n_h
-        ))
-        .num(round(s.f_minus, 4));
-        o.raw(&format!(
-            ",\"rank\":{},\"tie_first\":{}}}",
-            s.rank,
-            b(s.tie_first)
-        ));
-    }
+    write_sites(&mut o, sites);
     o.raw("],\"notes\":[");
-    for (k, n) in notes(r, water).iter().enumerate() {
+    for (k, n) in notes(r, water, prot).iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" }).str(n);
     }
     o.raw("],\"cite\":[");
@@ -235,6 +247,55 @@ fn write(
     }
     o.raw("]}");
     o.0
+}
+
+/// Field `protomer`: the form used (SMILES, total charge, groups changed with their typical pKa) and the one-form statement.
+fn write_protomer(o: &mut Out, p: &Protomer) {
+    o.raw(",\"protomer\":{\"ph\":7,\"smiles\":")
+        .str(&p.smiles)
+        .raw(&format!(",\"charge\":{},\"changes\":[", p.charge));
+    for (k, c) in p.changes.iter().enumerate() {
+        o.raw(if k > 0 { "," } else { "" })
+            .raw("{\"group\":")
+            .str(c.group)
+            .raw(&format!(",\"heavy_index\":{},\"action\":", c.atom))
+            .str(if c.deprotonated {
+                "deprotonated"
+            } else {
+                "protonated"
+            })
+            .raw(",\"pka\":")
+            .num(round(c.pka, 1))
+            .raw("}");
+    }
+    o.raw("],\"note\":").str(protomer_note(p)).raw("}");
+}
+
+fn protomer_note(p: &Protomer) -> &'static str {
+    if p.changes.len() > 1 {
+        "Several ionisable groups: the single most probable charge form at pH 7 from typical pKa values (no enumeration of protomers, no quantum pKa)."
+    } else {
+        "Most probable charge form at pH 7 from typical pKa values (no quantum pKa)."
+    }
+}
+
+fn write_sites(o: &mut Out, sites: &[Site]) {
+    o.raw(",\"ch_sites\":[");
+    for (k, s) in sites.iter().enumerate() {
+        o.raw(if k > 0 { "," } else { "" })
+            .raw("{\"class\":")
+            .str(&s.class);
+        o.raw(&format!(
+            ",\"heavy_index\":{},\"n_h\":{},\"f_minus\":",
+            s.heavy_index, s.n_h
+        ))
+        .num(round(s.f_minus, 4));
+        o.raw(&format!(
+            ",\"rank\":{},\"tie_first\":{}}}",
+            s.rank,
+            if s.tie_first { "true" } else { "false" }
+        ));
+    }
 }
 
 fn write_atoms(o: &mut Out, m: &Mol3d, f: &Fukui) {
@@ -278,11 +339,14 @@ fn write_atoms(o: &mut Out, m: &Mol3d, f: &Fukui) {
     o.raw("]");
 }
 
-fn notes(r: &Result3, water: bool) -> Vec<String> {
+fn notes(r: &Result3, water: bool, prot: Option<&Protomer>) -> Vec<String> {
     let mut n = vec![
         "ETKDG geometry, no force-field refinement; the lowest-energy conformer is used."
             .to_string(),
     ];
+    if let Some(p) = prot {
+        n.push(protomer_note(p).to_string());
+    }
     if r.method == "EHT" {
         n.push(crate::eht::NOTE.to_string());
     } else {
