@@ -13,6 +13,8 @@ r = Run(port=8870, wd="/tmp/wd_teoadmin")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
+        # the editor asks the author's local server (tools/server_teoria.py, port 8765) for the chapter; here it is not running and the editor falls back to the page: a stub answer keeps the console clean
+        pg.context.route("http://127.0.0.1:8765/**", lambda rt: rt.fulfill(status=200, content_type="application/json", headers={"access-control-allow-origin": "*"}, body='{"ok": false}'))
         tf = lambda: next(x for x in pg.frames if "/teoria/" in x.url)
         pg.click("#nav [data-v=theory]"); pg.wait_for_selector("#stbar [data-tcmd=indice]", timeout=15000)
         def gear():

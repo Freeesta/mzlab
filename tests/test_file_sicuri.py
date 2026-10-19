@@ -8,7 +8,7 @@ NODE = shutil.which("node")
 
 def run(js):
     code = SRC.read_text() + "\n" + js
-    r = subprocess.run([NODE, "-e", code], capture_output=True, text=True, timeout=30)
+    r = subprocess.run([NODE, "-e", code], capture_output=True, text=True, encoding="utf-8", timeout=30)
     assert r.returncode == 0, r.stderr
     return json.loads(r.stdout)
 

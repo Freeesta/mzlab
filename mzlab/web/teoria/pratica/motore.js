@@ -1,12 +1,12 @@
 /* mzLab - Pratica: shared engine of the exercises and games (classic script; also loadable by node for the tests).
-   - progress kept ONLY in this browser (localStorage "qqq.pratica"): nothing is sent anywhere, no leaderboard;
+   - progress kept ONLY in this browser (localStorage "mzlab.pratica"): nothing is sent anywhere, no leaderboard;
    - a level per skill with an Elo-like rule (Pelánek 2016): p = 1/(1+e^-(theta-d)), theta += K (s - p), K = 0.4/(1+0.05 n);
    - spaced repetition of the items that went badly (1, 3, 7, 21 days: Leitner boxes);
    - challenge codes: a short code = a seed, so a class plays the same problems without a server;
    - pure chemistry helpers (formula, nominal and exact mass, rings plus double bonds, unit-resolution isotope pattern). */
 "use strict";
 const PAL = (() => {
-  const KEY = "qqq.pratica", DAY = 864e5; // kept from the old name: renaming it would lose the users' data
+  const KEY = "mzlab.pratica", OLD = "qqq.pratica", DAY = 864e5; // the old name is still read, so the users' progress is kept
   const SKILLS = {
     M: "Ione molecolare", iso: "Isotopi ed elementi", formula: "Formula, azoto e RDB", serie: "Serie e ioni caratteristici",
     perdite: "Perdite neutre", meccanismi: "Meccanismi di frammentazione", struttura: "Struttura dallo spettro EI",
@@ -18,7 +18,7 @@ const PAL = (() => {
   let mem = null;
   function load() {
     if (mem) return mem;
-    try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); mem = s && s.v === 1 ? s : blank(); } catch (_) { mem = blank(); }
+    try { const s = JSON.parse(localStorage.getItem(KEY) ?? localStorage.getItem(OLD) ?? "null"); mem = s && s.v === 1 ? s : blank(); } catch (_) { mem = blank(); }
     return mem;
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(mem || blank())); } catch (_) { /* storage not available: progress lives until the page closes */ } }

@@ -10,7 +10,7 @@ def catalog():
     src = (JS / "40_tabui_testi.js").read_text(encoding="utf-8")
     if shutil.which("node"):
         code = "global.window={};global.location={search:''};" + "eval(require('fs').readFileSync(process.argv[1],'utf8'));console.log(JSON.stringify(window.TABUI_T))"
-        return json.loads(subprocess.run(["node", "-e", code, str(JS / "40_tabui_testi.js")], check=True, capture_output=True, text=True).stdout)
+        return json.loads(subprocess.run(["node", "-e", code, str(JS / "40_tabui_testi.js")], check=True, capture_output=True, text=True, encoding="utf-8").stdout)
     out = {}
     for lang in ("en",):
         body = re.search(rf"\n  {lang}: \{{(.*?)\n  \}}", src, re.S).group(1)
@@ -40,7 +40,7 @@ def engine_messages():
     if not shutil.which("node"):
         return None
     code = "global.window={};global.location={search:''};eval(require('fs').readFileSync(process.argv[1],'utf8'));console.log(JSON.stringify([window.TABUI_E,window.TE('error.io'),window.TE('error.unknownThing',{message:'raw'}),window.TE('tpmine.centroided',{name:'a.mzML'})]))"
-    return json.loads(subprocess.run(["node", "-e", code, str(JS / "40_tabui_testi.js")], check=True, capture_output=True, text=True).stdout)
+    return json.loads(subprocess.run(["node", "-e", code, str(JS / "40_tabui_testi.js")], check=True, capture_output=True, text=True, encoding="utf-8").stdout)
 
 
 def test_engine_messages_are_english_only_and_cover_the_keys():
@@ -71,7 +71,7 @@ def test_net_change_cell_has_subscripts_and_the_export_stays_plain():
     assert '.replace(/([A-Za-z)])(\\d+)/g, "$1<sub>$2</sub>")' in src          # the cell of «Net change (formula)»
     assert 'r.net_change ?? ""' in src                                      # the export keeps the plain text
     if shutil.which("node"):
-        out = subprocess.run(["node", "-e", 'console.log("\\u2212C2H2 +O3".replace(/([A-Za-z)])(\\d+)/g, "$1<sub>$2</sub>"))'], check=True, capture_output=True, text=True).stdout.strip()
+        out = subprocess.run(["node", "-e", 'console.log("\\u2212C2H2 +O3".replace(/([A-Za-z)])(\\d+)/g, "$1<sub>$2</sub>"))'], check=True, capture_output=True, text=True, encoding="utf-8").stdout.strip()
         assert out == "−C<sub>2</sub>H<sub>2</sub> +O<sub>3</sub>"
 
 

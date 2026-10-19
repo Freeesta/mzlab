@@ -16,7 +16,7 @@ pytestmark = pytest.mark.skipif(not shutil.which("node"), reason="node missing")
 
 
 def nodo(js: str):
-    r = subprocess.run(["node", "-e", f"const D=require({str(ROOT / 'mzlab/web/diagnosi.js')!r});process.stdout.write(JSON.stringify({js}))"], capture_output=True, text=True, check=True)
+    r = subprocess.run(["node", "-e", f"const D=require({str(ROOT / 'mzlab/web/diagnosi.js')!r});process.stdout.write(JSON.stringify({js}))"], capture_output=True, text=True, encoding="utf-8", check=True)
     return json.loads(r.stdout)
 
 

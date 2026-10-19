@@ -19,7 +19,7 @@ needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 def node(body, data):
     code = f"const R=require({json.dumps(str(JS))});const d=JSON.parse(require('fs').readFileSync(0,'utf8'));{body}"
-    return json.loads(subprocess.run(["node", "-e", code], input=json.dumps(data), capture_output=True, text=True, check=True).stdout)
+    return json.loads(subprocess.run(["node", "-e", code], input=json.dumps(data), capture_output=True, text=True, encoding="utf-8", check=True).stdout)
 
 
 @needs_node

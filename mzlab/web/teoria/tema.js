@@ -72,7 +72,7 @@
   });
   // the app changed the theme: the simulations read their colours once, so the page is simply loaded again, at the same place
   addEventListener("message", function (e) {
-    if (!e.data || e.data.type !== "qqq-theme") return;
+    if (!e.data || (e.data.type !== "mzlab-theme" && e.data.type !== "qqq-theme")) return;
     var before = R.getAttribute("data-theme"); apply(e.data.theme || "auto");
     if (before !== R.getAttribute("data-theme")) { try { sessionStorage.setItem("qqq.teoria.y", String(scrollY)); } catch (x) { /* nothing to keep */ } location.reload(); }
   });
