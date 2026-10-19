@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [ole, xmltree_methodinfo, mzmlhead, idxread, raw, wiff, mzlib_msp_mgf]
+        target: [ole, xmltree_methodinfo, mzmlhead, idxread, raw, wiff, mzlib_msp_mgf, lettori_aperti, lettori_andi, lettori_thermo, lettori_agilent, lettori_sciex, lettori_waters, lettori_shimadzu, lettori_bruker]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
