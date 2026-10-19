@@ -123,7 +123,7 @@ In ordine di peso stimato (da verificare con MZ-00, che lo misura invece di supp
 
 
 ## 6. Piano a pacchetti (due binari)
-Un pacchetto = una chat DEV = una PR unita a CI verde, pubblicata subito dietro la modalità amministratore. Prompt in `docs/studi/PROMPT_ATTRIBUTIO/<pacchetto>.md`. I pacchetti che toccano lo stesso `.wasm` vanno in serie; gli altri della stessa onda vanno in parallelo (file diversi). Stato: «da fare» finché la PR del pacchetto non riscrive la sua riga con i numeri misurati.
+Un pacchetto = una chat DEV = una PR unita a CI verde, pubblicata subito dietro la modalità amministratore. I pacchetti che toccano lo stesso `.wasm` vanno in serie; gli altri della stessa onda vanno in parallelo (file diversi). Stato: «da fare» finché la PR del pacchetto non riscrive la sua riga con i numeri misurati.
 
 | Pacchetto | Contenuto | Onda | Dipende da | `.wasm` | Stima (giorni-chat) | Stato |
 |---|---|---|---|---|---|---|

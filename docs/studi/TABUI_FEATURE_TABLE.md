@@ -1,6 +1,6 @@
 # Tabui: la tabella delle feature e la riga che si espande
 
-Studio dell'Architetto per Federico. Solo stato e proposte. Prompt delle chat DEV: `docs/studi/PROMPT_TABUI_FEATURE_TABLE/` (ordine in `LEGGIMI.md`).
+Studio dell'Architetto per Federico. Solo stato e proposte.
 Vincoli di Federico: semplice, poco denso, fluido; niente finestre piene di dettagli; ogni cosa con un aiuto chiaro in italiano e in inglese; Tabui esiste solo con la modalità amministratore (5 clic sul logo, a interruttore); nessun lucchetto o blocco nascosto oltre a quella.
 
 ## 1. La decisione
@@ -9,7 +9,7 @@ Vincoli di Federico: semplice, poco denso, fluido; niente finestre piene di dett
 Dove era già scritta (si riprende così com'è):
 - `docs/agenti/mzfinder-tabella.md:6`: nella tabella dei prodotti HR la riga si apre sotto sé stessa, una alla volta; il nodo `#tp-det` è unico e viene spostato sotto la riga (`tr.tpt-exp`); tastiera completa. È già il modello di questo studio.
 - `docs/agenti/mzfinder-untargeted.md:27-28`: in «group by identity» il clic su una riga apre massa neutra, letture alternative e prove di ogni arco.
-- `docs/studi/PROMPT_ATTRIBUTIO/AT-04.md:10`: Attributio mostra la tabella delle feature con livello e identità.
+- Attributio mostra la tabella delle feature con livello e identità.
 - `docs/studi/TABUI_MS2_LR.md` §7 e M4: gli abbinamenti MS2 a bassa risoluzione hanno la loro scheda «MS2 matches» in Tabui.
 
 Dove oggi è diverso (da portare alla decisione):
@@ -115,7 +115,7 @@ Etichette brevi in inglese (m/z, RT, XIC, MS2 non si traducono); ogni intestazio
 - D4 Livello deciso: (a) ricordato nel browser (`qqq.tabui.decisions`, per impronta della serie) ed esportato; (b) solo nelle esportazioni.
 
 ## 9. Pacchetti
-Ogni pacchetto è una chat DEV (Sonnet) con il prompt in `docs/studi/PROMPT_TABUI_FEATURE_TABLE/`. Solo FT-03 tocca Rust; nessuno tocca i workflow o `mzlab/web/teoria/`.
+Ogni pacchetto è una chat DEV (Sonnet). Solo FT-03 tocca Rust; nessuno tocca i workflow o `mzlab/web/teoria/`.
 
 | Pacchetto | Cosa | File toccati | e2e | Dipende da |
 |---|---|---|---|---|
