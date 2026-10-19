@@ -201,6 +201,43 @@ fn in_parallelo<T: Num>(
     })
 }
 
+#[cfg(test)]
+mod tests_secchi {
+    use super::*;
+
+    /// Ordering the buckets of a round on several threads gives what ordering them one after the other gives.
+    #[test]
+    fn buckets_in_parallel_are_the_same() {
+        let mut x = 99u64;
+        let mut next = move || {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            x
+        };
+        // 40 buckets of unequal size (one empty), 1-unit wide in m/z, enough peaks to use the threads
+        let (mut round, mut ends) = (Vec::new(), Vec::new());
+        for b in 0..40u64 {
+            let n = if b == 7 { 0 } else { 3000 + (next() % 9000) as usize };
+            for _ in 0..n {
+                let mz = 100.0 + b as f64 + (next() % 4096) as f64 / 4096.0;
+                round.push(Peak {
+                    mz,
+                    it: (next() % 1000) as f64,
+                    pos: (next() % 50) as u32,
+                });
+            }
+            ends.push(round.len());
+        }
+        for per_scansione in [false, true] {
+            let (mut a, mut b) = (round.clone(), round.clone());
+            ordina_secchi(&mut a, 0, &ends, per_scansione).unwrap();
+            sequenziale(&mut b, 0, &ends, per_scansione).unwrap();
+            assert!(a.iter().zip(&b).all(|(p, q)| p.mz == q.mz && p.it == q.it && p.pos == q.pos));
+        }
+    }
+}
+
 /// Bits that order like the value, NaN last, `-0.0` as `0.0` (as `by_mz`): the 32 of an `f32` m/z, the scan below them.
 #[inline(always)]
 fn key32<T: Num>(p: &Peak<T>) -> u64 {
@@ -268,38 +305,6 @@ mod tests {
             .unwrap();
             b.sort_by_key(|p| p.k);
             assert_eq!(a, b);
-        }
-    }
-
-    /// Ordering the buckets of a round on several threads gives what ordering them one after the other gives.
-    #[test]
-    fn buckets_in_parallel_are_the_same() {
-        let mut x = 99u64;
-        let mut next = move || {
-            x ^= x << 13;
-            x ^= x >> 7;
-            x ^= x << 17;
-            x
-        };
-        // 40 buckets of unequal size (one empty), 1-unit wide in m/z, enough peaks to use the threads
-        let (mut round, mut ends) = (Vec::new(), Vec::new());
-        for b in 0..40u64 {
-            let n = if b == 7 { 0 } else { 3000 + (next() % 9000) as usize };
-            for _ in 0..n {
-                let mz = 100.0 + b as f64 + (next() % 4096) as f64 / 4096.0;
-                round.push(Peak {
-                    mz,
-                    it: (next() % 1000) as f64,
-                    pos: (next() % 50) as u32,
-                });
-            }
-            ends.push(round.len());
-        }
-        for per_scansione in [false, true] {
-            let (mut a, mut b) = (round.clone(), round.clone());
-            ordina_secchi(&mut a, 0, &ends, per_scansione).unwrap();
-            sequenziale(&mut b, 0, &ends, per_scansione).unwrap();
-            assert!(a.iter().zip(&b).all(|(p, q)| p.mz == q.mz && p.it == q.it && p.pos == q.pos));
         }
     }
 }
