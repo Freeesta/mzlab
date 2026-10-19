@@ -20,7 +20,7 @@ pub const PROTOMER_DEFAULT: bool = false;
 /// Whether Fukui values are the Boltzmann average over the conformers by default (`docs/agenti/reattivita.md`, «Conformeri pesati»).
 pub const BOLTZMANN_DEFAULT: bool = false;
 /// Conformers on which f(−) is also computed, to give its spread.
-pub(crate) const SPREAD_CONFORMERS: usize = 3;
+const SPREAD_CONFORMERS: usize = 3;
 
 /// Options of `reactivity_json` (JSON object, every field optional).
 pub struct Opts {
@@ -369,7 +369,7 @@ fn write_atoms(o: &mut Out, m: &Mol3d, f: &Fukui) {
 
 fn notes(r: &Result3, water: bool, prot: Option<&Protomer>) -> Vec<String> {
     let mut n = vec![if r.weights.is_some() {
-        "ETKDG geometry, no force-field refinement; charges and Fukui values are the Boltzmann average over the conformers (weights from the force-field single-point energy of each geometry, 298 K); the lowest-energy conformer is shown."
+        "ETKDG geometry, no force-field refinement; charges and Fukui values are the Boltzmann average over the conformers (298 K, force-field energies); the lowest-energy conformer is shown."
     } else {
         "ETKDG geometry, no force-field refinement; the lowest-energy conformer is used."
     }
