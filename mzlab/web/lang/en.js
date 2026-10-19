@@ -2785,6 +2785,8 @@ I18N.add("en", {
   "a11y.empty": "Chart with no data to show.",
   "a11y.line": "{title}. Chromatogram: {n} traces; x axis retention time (min) from {a} to {b}; y axis intensity up to {y}; {p} integrated peaks. T opens the data table, D reads this description again, + and - zoom, [ and ] move the visible range, 0 shows everything.",
   "a11y.spec": "{title}. Mass spectrum: x axis m/z from {a} to {b}; y axis intensity; {n} peaks above the threshold. T opens the data table, D reads this description again, + and - zoom, [ and ] move the visible range, 0 shows everything.",
+  "a11y.mapPda": "{title}. Retention time by PDA wavelength map: RT from {a} to {b} min, from {c} to {d} nm. T opens the table of the most intense cells, D reads this description again.",
+  "tdati.col.mau": "Absorbance (mAU)",
   "a11y.map": "{title}. Retention time by m/z map: RT from {a} to {b} min, m/z from {c} to {d}. T opens the table of the most intense cells, D reads this description again.",
   "tdati.btn": "Data",
   "tdati.series": "Series {n}",

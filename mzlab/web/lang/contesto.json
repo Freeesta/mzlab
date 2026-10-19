@@ -201,6 +201,7 @@
   "tdati.note.map": "Nota sopra la tabella; {n} = numero di celle.",
   "a11y.line": "Descrizione letta dai lettori di schermo; {title} titolo, {n} tracce, {a}-{b} tempo, {y} massimo, {p} picchi integrati.",
   "a11y.spec": "Descrizione letta dai lettori di schermo; {title} titolo, {a}-{b} m/z, {n} picchi.",
+  "a11y.mapPda": "Descrizione letta dai lettori di schermo; {title} titolo, {a}-{b} RT, {c}-{d} nm.",
   "a11y.map": "Descrizione letta dai lettori di schermo; {title} titolo, {a}-{b} RT, {c}-{d} m/z.",
   "tdati.series": "Nome di una serie di un grafico senza nome; {n} = numero d'ordine.",
   "a11y.small": "Descrizione letta dai lettori di schermo; {title} titolo, {n} serie, {xl}/{yl} nomi degli assi, {a}-{b} x, {c}-{d} y.",

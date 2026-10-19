@@ -87,8 +87,8 @@ class Writer:
     def __init__(self):
         self.scan, self.streams, self.table, self.expect = bytearray(), {}, [], {}
 
-    def sample(self, n, blocks, method=None, log=None):
-        """blocks: [("scan", points, time_ms, tic[, version]) | ("mrm", values, time_ms, tic)] in file order; `log`: the model of the Log; a method path that starts with `Period` is taken whole."""
+    def sample(self, n, blocks, method=None, log=None, dad=None):
+        """blocks: [("scan", points, time_ms, tic[, version]) | ("mrm", values, time_ms, tic)] in file order; `log`: the model of the Log; `dad`: (times in min, first nm, step nm, rows of absorbance in mAU) for the optical detector; a method path that starts with `Period` is taken whole."""
         start = len(self.scan)
         self.scan += bytes(44)
         idx, off = bytearray(32), 0
@@ -101,6 +101,15 @@ class Writer:
         self.streams[f"SampleSubtree/Sample{n}/Idx"] = bytes(idx)
         for path, data in (method or {}).items():
             self.streams[f"MethodSubtree/Method{n}/DeviceMethod0/{path if path.startswith('Period') else 'Period0/' + path}"] = data
+        if dad:
+            ts, wl0, step, rows = dad
+            nch = len(rows[0]); h = bytearray(86)
+            struct.pack_into("<IIf", h, 34, len(ts), nch, ts[-1]); struct.pack_into("<fff", h, 50, wl0, wl0 + (nch - 1) * step, step)
+            idx = bytearray(32)
+            for t, r in zip(ts, rows): idx += struct.pack("<ff", t, sum(r))
+            base = f"SampleSubtree/Sample{n}/Devices/Device_0/DAD/"
+            self.streams[base + "DADSampleHeader"] = bytes(h); self.streams[base + "DADIdx"] = bytes(idx)
+            self.streams[base + "DADRealTimeData"] = bytes(32) + b"".join(struct.pack(f"<{nch}f", *r) for r in rows)
         if log:
             self.streams[f"SampleSubtree/Sample{n}/Log"] = b"\0\0" + f"Mass Spectrometer: Config Table, Component ID: {log}, Version: 1".encode("utf-16le") + b"\0\0"
 
