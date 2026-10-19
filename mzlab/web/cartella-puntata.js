@@ -43,12 +43,11 @@ const CartPuntVista = (() => {
   const isLoaded = x => S.opened.has(x.path) || loadedNames().has(x.name.toLowerCase());
   // ---- page
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-  const KIND = { method: "cartp.kind.dam", library: "cartp.kind.lib", table: "cartp.kind.tab" };
   function rowHtml(x, i) {
     const T = (k, p) => I18N.t(k, p), done = isLoaded(x), st = S.stats.get(x.path), size = st && typeof sz === "function" ? " · " + sz(st.size) : "";
-    const kind = KIND[x.kind] ? ` · ${T(KIND[x.kind])}` : "", state = T(done ? "cartp.loaded" : "cartp.notloaded");
-    const one = x.kind === "table" || done ? "" : `<button type="button" class="sec sm cpone" data-i="${i}" aria-label="${esc(T("cartp.one.aria", { name: x.name }))}">${T("cartp.one")}</button>`;
-    return `<li class="cpli"><button type="button" class="cprow${done ? " done" : ""}" data-i="${i}" aria-label="${esc(T("cartp.row.label", { name: x.name, state }))}"><span class="cpn">${esc(x.dir + x.name)}</span><span class="cpm">${esc(state + kind + size)}</span></button>${one}</li>`;
+    const state = T(done ? "cartp.loaded" : "cartp.notloaded");
+    const one = done ? "" : `<button type="button" class="sec sm cpone" data-i="${i}" aria-label="${esc(T("cartp.one.aria", { name: x.name }))}">${T("cartp.one")}</button>`;
+    return `<li class="cpli"><button type="button" class="cprow${done ? " done" : ""}" data-i="${i}" aria-label="${esc(T("cartp.row.label", { name: x.name, state }))}"><span class="cpn">${esc(x.dir + x.name)}</span><span class="cpm">${esc(state + size)}</span></button>${one}</li>`;
   }
   function render() {
     const box = document.getElementById("cartbody"), pick = document.getElementById("cartpick");
@@ -59,13 +58,12 @@ const CartPuntVista = (() => {
     if ((!nat && (!supported() || !S.handle)) || (nat && !S.name)) { box.innerHTML = ""; return; }
     const head = `<div class="sm"><b>${T("cartp.where", { name: esc(S.name) })}</b> <button type="button" class="sec" id="cartforget">${T("cartp.forget")}</button> <button type="button" class="sec" id="cartrefresh">${T("cartp.refresh")}</button></div>`;
     let body;
-    if (!nat && S.perm !== "granted") body = `<p class="sm">${T(S.perm === "denied" ? "cartp.denied" : "cartp.grant", { name: esc(S.name) })}</p><button type="button" class="go" id="cartgrant">${T("cartp.grant.btn")}</button>`;
+    if (!nat && S.perm !== "granted") body = `${S.perm === "denied" ? `<p class="sm">${T("cartp.denied", { name: esc(S.name) })}</p>` : ""}<button type="button" class="go" id="cartgrant">${T("cartp.grant.btn")}</button>`;
     else {
-      const vis = visible(S.items), idx = x => S.items.indexOf(x), data = vis.filter(x => x.kind === "data" || x.kind === "scan"), other = vis.filter(x => x.kind !== "data" && x.kind !== "scan");
+      const idx = x => S.items.indexOf(x), data = visible(S.items).filter(x => x.kind === "data" || x.kind === "scan");
       const list = a => `<ul class="cplist">${a.map(x => rowHtml(x, idx(x))).join("")}</ul>`;
-      body = !vis.length ? `<p class="sm muted">${T("cartp.empty")}</p>`
-        : `<h4>${T("cartp.data")} <span class="muted">${T("cartp.count", { n: data.length })}</span></h4>${data.length ? list(data) : ""}`
-          + `<h4>${T("cartp.others")} <span class="muted">${T("cartp.count", { n: other.length })}</span></h4><p class="sm muted">${T("cartp.others.hint")}</p>${other.length ? list(other) : ""}`;
+      body = !data.length ? `<p class="sm muted">${T("cartp.empty")}</p>`
+        : `<h4>${T("cartp.data")} <span class="muted">${T("cartp.count", { n: data.length })}</span></h4>${list(data)}`;
     }
     const todo = visible(S.items).filter(x => x.kind === "data" && !isLoaded(x)), go = (nat || S.perm === "granted") && todo.length ? `<button type="button" class="go" id="cartgo">${T("cartp.all")}</button>` : "";
     box.innerHTML = head + go + `<div role="status" aria-live="polite">${body}</div>`;
@@ -84,14 +82,9 @@ const CartPuntApri = (() => {
   async function open(x) {
     const T = (k, p) => I18N.t(k, p);
     try {
-      if (x.kind === "table") { CartCarica.note(T("cartp.tab.msg")); return; }
       const f = CartCarica.setDir(await fileOf(x), x.dir);
-      if (x.kind === "method") await upload([f], "dam");
-      else if (x.kind === "library") { await LIB.open(); await LIB.addFiles([f]); }
-      else {
-        const sc = /\.wiff$/i.test(x.name) ? pairScan(S.items, x) : null;
-        await upload(sc ? [f, CartCarica.setDir(await fileOf(sc), x.dir)] : [f], "data");
-      }
+      const sc = /\.wiff$/i.test(x.name) ? pairScan(S.items, x) : null;
+      await upload(sc ? [f, CartCarica.setDir(await fileOf(sc), x.dir)] : [f], "data");
       S.opened.add(x.path);
     } catch (e) { CartCarica.note(T("cartp.error", { name: x.name, message: String(e.message || e) })); }
     CartPuntVista.render();
