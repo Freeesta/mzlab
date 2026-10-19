@@ -1,6 +1,6 @@
-# Attributio: liste regolatorie come istantanea in sola lettura (Q5, pacchetto RL)
+# Attributio: liste regolatorie come istantanea in sola lettura (Q5, dentro RG-03 e RG-05)
 
-Proposta, nessun codice. Fonti: `docs/studi/ATTRIBUTIO.md` §1 (destino «Dati») e §8 Q5; il pacchetto Python `reglists` di Attributio letto per noi dalla chat locale (~2 760 righe + `sources/` ~1 350); PR #1053/#1054/#1058 (binario RG: registro, ecotox, liste). Tabui resta solo in inglese; Attributio è dietro `uipAdminOn()`.
+Proposta, nessun codice; parti da realizzare dentro RG-03 e RG-05. Fonti: `docs/studi/ATTRIBUTIO.md` §1 (destino «Dati») e §8 Q5; il pacchetto Python `reglists` di Attributio letto per noi dalla chat locale (~2 760 righe + `sources/` ~1 350); PR #1053/#1054/#1058 (binario RG: registro, ecotox, liste). Tabui resta solo in inglese; Attributio è dietro `uipAdminOn()`.
 
 ## 1. Cosa serve davvero all'utente
 - **Domanda 1 (identità nota)**: «questa feature, che il Banco ha già riportato a una struttura, sta in qualche lista regolatoria o prioritaria, e perché?» Chiave: InChIKey intero; se manca, solo il primo blocco (14 caratteri), sempre segnalato come ripiego.
@@ -10,7 +10,7 @@ Proposta, nessun codice. Fonti: `docs/studi/ATTRIBUTIO.md` §1 (destino «Dati»
 - **Fuori da RL**: costruzione delle liste (rete, PDF, ECHA a mano) e `resolve`/`build` (RG-04); `amenability` come calcolo (RG-03: qui si **legge** il valore già calcolato); `confirm` B3 (SIRIUS/MetFrag) e `compare` P3; ecotossicologia (RG-02).
 
 ## 2. Rapporto con il binario RG (da decidere con il Coordinatore)
-Il piano RG (#1053) mette le liste in RG-03 (logica) e RG-05 (pannello). RG-00 (#1054) ha già `tox/snapshot.rs` con le 18 colonne di `reglist_membership.csv` (`MEMBERSHIP_COLUMNS`, `MembershipRow`) e mini-istantanee inventate. RL **non rifà** quel lettore: RL aggiunge (a) il formato compatto servito al sito e il suo scrittore, (b) B1 e B2 in sola lettura sopra quel tipo, (c) la scheda «Regulatory lists» a metà di RG-05. Proposta di divisione: RL prende da RG-03 solo `match` e `screen` (+ la tabella di appartenenza); RG-03 tiene `schema`, `catalog`, `confirm`, `compare`, `amenability`. Se il Coordinatore preferisce un solo pacchetto, RL si fonde in RG-03/RG-05 e questo documento diventa la sua sezione.
+Il piano RG (#1053) mette le liste in RG-03 (logica) e RG-05 (pannello). RG-00 (#1054) ha già `tox/snapshot.rs` con le 18 colonne di `reglist_membership.csv` (`MEMBERSHIP_COLUMNS`, `MembershipRow`) e mini-istantanee inventate. RL **non rifà** quel lettore: RL aggiunge (a) il formato compatto servito al sito e il suo scrittore, (b) B1 e B2 in sola lettura sopra quel tipo, (c) la scheda «Regulatory lists» a metà di RG-05. **Decisione**: nessun pacchetto RL separato. Le parti di questo documento entrano in RG-03 (`match`, `screen`, tabella di appartenenza, scrittore e formato `reglists/1`) e in RG-05 (scheda «Regulatory lists», `.wasm`); `schema`, `catalog`, `confirm`, `compare` e `amenability` restano in RG-03 come da piano. «RL» nei paragrafi seguenti indica queste parti.
 
 ## 3. Formato compatto `reglists/1`
 Un solo file, testo UTF-8 a sezioni (nessuna dipendenza nuova: lo legge `frame.rs`), servito da `static/` e caricato **a richiesta** quando l'utente apre la scheda; il `.wasm` non contiene dati.
@@ -46,7 +46,7 @@ Dal catalogo: **PlastChem** CC BY-NC 4.0 (2 845 voci); **WHO_PEST_HAZARD** e **W
 - **e2e**: scheda dietro amministratore, tabella dei colpi, distintivo nel Banco, esportazione, nessuna chiamata di rete, `MZLAB_LR_MISS` vuota.
 - **Nomi vietati**: `tests/test_esempi_anonimi.py` resta valido (nessun nome di persona nelle liste).
 
-## 8. Domande aperte
-- **Q-RL1** (Federico): predefinito del §4 (sito senza liste NC/SA e senza quelle senza licenza)? Alternativa: includere EDLISTS e HHP_PAN citandole.
-- **Q-RL2** (Coordinatore): RL come pacchetto proprio con la divisione del §2 oppure fuso in RG-03/RG-05? Va coordinato con la chat locale «loc RG», che lavora su #1053/#1054/#1058.
-- **Q-RL3**: le classi dei colpi di massa (A-D, X) si portano tali e quali da `screen.py`; i loro criteri esatti li rileggo dal sorgente all'inizio del codice.
+## 8. Decisioni
+- **Q-RL1** (deciso): fuori dal sito PlastChem, WHO_PEST_HAZARD, WHO_MIA, EDLISTS e HHP_PAN (§4); l'istantanea completa resta per l'utente.
+- **Q-RL2** (deciso): fuso in RG-03/RG-05, coordinato con #1053/#1054/#1058.
+- **Q-RL3**: le classi dei colpi di massa (A-D, X) si portano tali e quali da `screen.py`; i criteri esatti si rileggono dal sorgente all'inizio del codice di RG-03.
