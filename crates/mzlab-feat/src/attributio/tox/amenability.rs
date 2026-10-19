@@ -138,10 +138,7 @@ fn permanent_cation(frag: &str) -> i64 {
 /// The exact mass of a SMILES fragment from the molecular graph of mzLab (RDKit's `ExactMolWt` in the reference tool).
 fn fragment_mass(frag: &str) -> Option<f64> {
     let m = Mol::parse(frag).ok()?;
-    let f: elements::Formula = m
-        .formula()
-        .into_iter()
-        .collect();
+    let f: elements::Formula = m.formula().into_iter().collect();
     Some(elements::mass(&f))
 }
 
