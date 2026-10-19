@@ -1,0 +1,14 @@
+[package]
+name = "fukui_valida"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Standalone tool (not a workspace member): runs `reactivity_json` of mzlab-chem and prints one JSON line per SMILES.
+[dependencies]
+mzlab-chem = { path = "../../crates/mzlab-chem" }
+
+[workspace]
+
+[profile.release]
+opt-level = 3

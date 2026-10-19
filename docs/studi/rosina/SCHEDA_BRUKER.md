@@ -10,7 +10,7 @@ Legenda e indice: `SCHEDE.md`. Lettore: modulo `bruker` (`crates/mzlab-lettori/s
 - Quota: Bruker 7 % degli studi MS MetaboLights, 3 % di Workbench, 8 % di PRIDE (5,5 % timsTOF).
 
 ## Cosa manca
-1. V1 con `timsdata` (SDK Bruker gratuito; librerie solo per Linux e Windows: sul Mac arm64 non c'è, `opentimspy` dà solo indici TOF e scansione; gira nel workflow `oracoli.yml` del privato, `ROSINA.md` decisione 1; se anche lì non va, «oracolo assente» per m/z e 1/K0 e restano le fixture con mobilità di ProteoWizard come V2) per 1/K0 e per gli spettri della compressione 2 (PXD037766, PXD058337 in ELENCO-1).
+1. V1 con `timsdata` (SDK Bruker gratuito; librerie solo per Linux e Windows: sul Mac arm64 non c'è, `opentimspy` dà solo indici TOF e scansione; gira su Windows (Parallels) tramite la chat locale, `ROSINA.md` decisione 1; se anche lì non va, «oracolo assente» per m/z e 1/K0 e restano le fixture con mobilità di ProteoWizard come V2) per 1/K0 e per gli spettri della compressione 2 (PXD037766, PXD058337 in ELENCO-1).
 2. 1/K0: due strade. (a) Tabelle di riferimento: per ogni file del corpus `timsdata` dà 1/K0 per scansione; se un modello chiuso (polinomio sui parametri di `TimsCalibration`) le riproduce a 1e-5, si scrive. (b) Se non riesce, 1/K0 solo nell'app desktop con `timsdata` come libreria (decisione di Federico: peso e licenza).
 3. TSF: V1 con `timsdata` (stessa libreria) o msconvert.
 4. Metadati delle tabelle oltre `GlobalMetadata`/`Properties` (segmenti, errori, `Precursors` completi nel `metodo/1`) da elencare.
