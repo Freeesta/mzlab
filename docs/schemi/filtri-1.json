@@ -1,0 +1,27 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "filtri/1",
+ "title": "filtri/1: the filters that hide rows of the feature table, in order, with the rows each one hid",
+ "description": "The `filtri` key of the `interp` object in the meta of the `.mzfeat` (crates/mzlab-feat/src/interp/filtri.rs). A row is hidden by the first filter that applies; nothing is deleted and every hidden row keeps its id. English only.",
+ "type": "object",
+ "required": ["schema", "stages", "decoys"],
+ "properties": {
+  "schema": {"const": "filtri/1"},
+  "stages": {
+   "type": "array",
+   "description": "F1 Peak quality, F2 Same molecule (an isotopologue of another row), F3 Formed by the treatment, F4 Not an in-source fragment, F5 Mass error (against the per-file calibration, tolerance max(3 ppm, 2 MAD), at most 5 ppm)",
+   "items": {
+    "type": "object",
+    "required": ["id", "name", "hidden", "ids", "why"],
+    "properties": {
+     "id": {"enum": ["F1", "F2", "F3", "F4", "F5"]},
+     "name": {"type": "string"},
+     "hidden": {"type": "integer", "description": "number of rows this filter hid"},
+     "ids": {"type": "array", "items": {"type": "integer"}, "description": "ids of those rows"},
+     "why": {"type": "string", "description": "the reason shown to the user"}
+    }
+   }
+  },
+  "decoys": {"type": ["object", "null"], "description": "decoy deltas tried against the filters and how many survived (the estimate of false matches); null until the validation fills it", "properties": {"rules": {"type": "integer"}, "survived": {"type": "integer"}}}
+ }
+}

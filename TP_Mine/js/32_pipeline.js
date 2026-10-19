@@ -64,7 +64,7 @@
     const url = URL.createObjectURL(new Blob([c.files["feat-worker.js"]], { type: "text/javascript" }));
     const mod = await import(url);
     const w = m => ({ jsUrl: u(m.js), wasmUrl: u(m.wasm), sha256: m.sha256 });
-    st.pool = mod.createFeatPool({ workerUrl: url, size: 1, wasm: { feat: w(man.feat), proofs: w(man.proofs), ...(man.table ? { table: w(man.table) } : {}), ...(man.untargeted ? { untargeted: w(man.untargeted) } : {}), ...(man.attributio ? { attributio: w(man.attributio) } : {}) }, notify: (k, p) => say(msg(k, p)) });
+    st.pool = mod.createFeatPool({ workerUrl: url, size: 1, wasm: { feat: w(man.feat), proofs: w(man.proofs), ...(man.table ? { table: w(man.table) } : {}), ...(man.untargeted ? { untargeted: w(man.untargeted) } : {}), ...(man.attributio ? { attributio: w(man.attributio) } : {}), ...(man.interp ? { interp: w(man.interp) } : {}) }, notify: (k, p) => say(msg(k, p)) });
     st.crate = await st.pool.crateVersion();
     return st.pool;
   }

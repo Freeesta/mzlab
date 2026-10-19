@@ -23,7 +23,7 @@ mzlab-core = { path = "../mzlab-core" }
 mzlab-lettori = { path = "../mzlab-lettori", features = ["tutte"] }
 # mzFinder natively: the same steps and adapter that the .wasm of mzFinder runs (`run`, `legacy`) and the table views of the Pipeline panel
 mzlab-chem = { path = "../mzlab-chem" }
-mzlab-feat = { path = "../mzlab-feat", features = ["chem", "untargeted", "attributio"] }
+mzlab-feat = { path = "../mzlab-feat", features = ["chem", "untargeted", "attributio", "interp"] }
 mzlab-feat-wasm = { path = "../mzlab-feat-wasm", default-features = false, features = ["detect", "proofs", "finder", "untargeted"] }
 mzlab-feat-table-wasm = { path = "../mzlab-feat-table-wasm" }
 memmap2 = "0.9"

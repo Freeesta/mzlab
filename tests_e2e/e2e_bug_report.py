@@ -17,6 +17,8 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=f"http://127.0.0.1:{r.port}")
+        assert pg.is_visible("#bug-btn"), "the button is there for everybody"
+        pg.reload(); pg.wait_for_function('window.qqReady===true', timeout=60000)
         def icon():
             b = pg.locator("#bug-btn"); assert b.count() == 1 and b.is_visible()
             assert b.get_attribute("aria-label") == "Segnala un bug" and b.get_attribute("title") == "Segnala un bug" and b.locator("svg").count() == 1
