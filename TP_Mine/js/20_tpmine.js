@@ -424,7 +424,7 @@
     let pvT = 0, OCLp = null;
     const ocl = () => (OCLp = OCLp || import(new URL("vendor/openchemlib.js", ctx().base).href));
     const smilesInfo = async t => { try { const m = (await ocl()).Molecule.fromSmiles(t); return { mol: m, formula: MOLUI.hillOf(m.getMolecularFormula().formula) }; } catch (_) { return null; } };
-    /** @type {{ smiles: string, note: string } | null} */ let drawnPartial = null;       // set by «Use this structure» for a drawing with a delta or an uncertain position; any edit of the fields drops it
+    /** @type {{ smiles: string, delta: string, level: number, note: string } | null} */ let drawnPartial = null;       // set by «Use this structure» for a drawing with a delta or an uncertain position; any edit of the fields drops it
     const preview = () => {
       clearTimeout(pvT);
       pvT = setTimeout(async () => {
@@ -545,7 +545,7 @@
       drawnPartial = null; let f = "";
       if (p && (p.delta || p.positionUnknown)) {       // brackets with a delta and/or an attachment to one of several atoms: formula and m/z of the SMILES with the delta
         f = (p.info && p.info.formula) || "";
-        drawnPartial = { smiles: t, note: (p.delta ? `Δ ${p.delta}, ` : "") + "position uncertain" };
+        drawnPartial = { smiles: t, delta: p.delta || "", level: p.level || 3, note: (p.delta ? `Δ ${p.delta}, ` : "") + `position uncertain, level ${p.level || 3}` };
       }
       $("#tp-smi").value = t; $("#tp-mol").value = f; preview(); back();
     };
