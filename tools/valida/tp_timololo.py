@@ -56,8 +56,8 @@ def measure(data: dict, truth: dict) -> dict:
         want = t.get("region")
         if hit and want:
             name = t.get("id", t.get("name", "?"))
-            # rows that cannot say anything (few fragments, change lost) have no region to compare: no evidence, not a disagreement
-            if all(r["confidence"] == "cannot_say" for r in hit):
+            # rows with no change proposed (empty confidence) or that cannot say (few fragments, change lost) have no region to compare: no evidence
+            if all(r["confidence"] in ("", "cannot_say") for r in hit):
                 no_evidence.append((name, want, sorted({x for r in hit for x in r.get("reasons", [])})))
                 continue
             region_n += 1
@@ -79,7 +79,7 @@ def render(m: dict) -> str:
            f"- rows interpreted: {m['rows']}",
            f"- literature products in view: {m['tp_in_view']} / {m['tp_literature']}",
            f"- regions in agreement: {m['region_agree']} / {m['region_checked']} (products with a position verdict)",
-           f"- products with no evidence for a position (cannot_say): {len(m['no_evidence'])}",
+           f"- products with no evidence for a position (no change or cannot_say): {len(m['no_evidence'])}",
            f"- decoys: {m['decoys']}  (FDR {m['fdr_decoys']})",
            "- agreement with the mzmine gold: not measured here (the list comes from the local chat)", "", "## Position disagreements to review"]
     out += [f"- {a}: literature {b}, program {c}" for a, b, c in m["site_disagreements"]] or ["- none"]

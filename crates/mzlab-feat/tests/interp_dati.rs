@@ -23,7 +23,8 @@ use mzlab_feat::trace::Params;
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
-const PARENT: &str = r#"{"neutral":"C13H24N4O3S"}"#;
+// the SMILES is what lets the engine localise a change (without it every row has `site: null`); timolol is C13H24N4O3S
+const PARENT: &str = r#"{"smiles":"CC(C)(C)NCC(O)COc1nsnc1N1CCOCC1"}"#;
 const PROTON: f64 = 1.007_276;
 // the net changes the rules of the registry would propose for the parent: +O, +2O, -CH2, -2H
 const RULES: [&str; 4] = ["C13H24N4O4S", "C13H24N4O5S", "C12H22N4O3S", "C13H22N4O3S"];
