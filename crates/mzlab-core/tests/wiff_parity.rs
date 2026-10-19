@@ -9,7 +9,6 @@ use std::process::Command;
 
 use mzlab_core::mzml::{self, Run};
 use mzlab_core::wiff::{container, samples, Wiff};
-
 use serde_json::Value;
 
 #[path = "../../../tools/dati_percorsi.rs"]
@@ -26,157 +25,69 @@ fn close(a: f64, b: f64, tol: f64) -> bool {
 fn reference() -> Option<(PathBuf, Value)> {
     // one folder per call: the tests of this file run in parallel threads of one process and would write the same files
     static CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-    let out = std::env::temp_dir().join(format!(
-        "mzlab_wiff_{}_{}",
-        std::process::id(),
-        CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
-    ));
-    let ok = Command::new("python3")
-        .arg(root().join("tools/wiff_riferimento.py"))
-        .arg(&out)
-        .output()
-        .ok()
-        .filter(|o| o.status.success());
+    let out = std::env::temp_dir().join(format!("mzlab_wiff_{}_{}", std::process::id(), CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst)));
+    let ok = Command::new("python3").arg(root().join("tools/wiff_riferimento.py")).arg(&out).output().ok().filter(|o| o.status.success());
     if ok.is_none() {
-        assert!(
-            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
-            "python3 not available"
-        );
+        assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "python3 not available");
         eprintln!("SKIP wiff_parity: python3 not available");
         return None;
     }
-    Some((
-        out.clone(),
-        serde_json::from_slice(&std::fs::read(out.join("riferimento.json")).unwrap()).unwrap(),
-    ))
+    Some((out.clone(), serde_json::from_slice(&std::fs::read(out.join("riferimento.json")).unwrap()).unwrap()))
 }
 
 fn nums(v: &Value) -> Vec<f64> {
-    v.as_array()
-        .unwrap()
-        .iter()
-        .map(|x| x.as_f64().unwrap())
-        .collect()
+    v.as_array().unwrap().iter().map(|x| x.as_f64().unwrap()).collect()
 }
 
 fn open(dir: &Path, name: &str, sample: u32) -> (Wiff, Vec<u8>) {
-    let ole = container(
-        std::fs::read(dir.join(format!("{name}.wiff"))).unwrap(),
-        name,
-    )
-    .unwrap();
+    let ole = container(std::fs::read(dir.join(format!("{name}.wiff"))).unwrap(), name).unwrap();
     let scan = std::fs::read(dir.join(format!("{name}.wiff.scan"))).unwrap();
-    (
-        Wiff::open(&ole, name, Some(scan.len() as u64), sample).unwrap(),
-        scan,
-    )
+    (Wiff::open(&ole, name, Some(scan.len() as u64), sample).unwrap(), scan)
 }
 
 #[test]
 fn synthetic_pairs_match_the_reference() {
-    let Some((dir, want)) = reference() else {
-        return;
-    };
+    let Some((dir, want)) = reference() else { return };
     for name in ["one", "two", "serie"] {
-        let ole = container(
-            std::fs::read(dir.join(format!("{name}.wiff"))).unwrap(),
-            name,
-        )
-        .unwrap();
+        let ole = container(std::fs::read(dir.join(format!("{name}.wiff"))).unwrap(), name).unwrap();
         let all = samples(&ole);
-        assert_eq!(
-            all.len(),
-            want[name].as_object().unwrap().len(),
-            "{name}: samples"
-        );
+        assert_eq!(all.len(), want[name].as_object().unwrap().len(), "{name}: samples");
         for s in all {
             let (w, mut scan) = open(&dir, name, s);
             let run = w.run(&mut scan).unwrap();
             let r = &want[name][s.to_string()];
-            assert_eq!(
-                w.polarity as i64,
-                r["polarity"].as_i64().unwrap(),
-                "{name}/{s}: polarity"
-            );
+            assert_eq!(w.polarity as i64, r["polarity"].as_i64().unwrap(), "{name}/{s}: polarity");
             let sp = r["spectra"].as_array().unwrap();
             assert_eq!(run.spectra.len(), sp.len(), "{name}/{s}: spectra");
             for (g, e) in run.spectra.iter().zip(sp) {
                 assert_eq!(g.id, e["id"].as_str().unwrap());
-                assert_eq!(
-                    g.level as i64,
-                    e["level"].as_i64().unwrap(),
-                    "{}: level",
-                    g.id
-                );
+                assert_eq!(g.level as i64, e["level"].as_i64().unwrap(), "{}: level", g.id);
                 assert_eq!(g.precursor, e["precursor"].as_f64(), "{}: precursor", g.id);
-                assert!(
-                    g.profile && close(g.rt, e["rt"].as_f64().unwrap(), 1e-12),
-                    "{}: rt",
-                    g.id
-                );
+                assert!(g.profile && close(g.rt, e["rt"].as_f64().unwrap(), 1e-12), "{}: rt", g.id);
                 let (mz, it) = (nums(&e["mz"]), nums(&e["intensity"]));
                 assert_eq!(g.mz.len(), mz.len(), "{}: points", g.id);
                 for k in 0..mz.len() {
-                    assert!(
-                        close(g.mz[k], mz[k], 1e-9) && close(g.intensity_f64(k), it[k], 1e-9),
-                        "{} point {k}",
-                        g.id
-                    );
+                    assert!(close(g.mz[k], mz[k], 1e-9) && close(g.intensity_f64(k), it[k], 1e-9), "{} point {k}", g.id);
                 }
             }
             // the mzML written from the sample reads back as the same run
             let mut bytes = Vec::new();
-            w.to_mzml(&mut scan, &mut bytes, &format!("{name}.wiff"))
-                .unwrap();
+            w.to_mzml(&mut scan, &mut bytes, &format!("{name}.wiff")).unwrap();
             let back = mzml::read(&bytes[..]).unwrap();
-            assert_eq!(
-                back.spectra.len(),
-                run.spectra.len(),
-                "{name}/{s}: mzML spectra"
-            );
+            assert_eq!(back.spectra.len(), run.spectra.len(), "{name}/{s}: mzML spectra");
             for (b, g) in back.spectra.iter().zip(&run.spectra) {
-                assert!(
-                    b.id == g.id
-                        && b.level == g.level
-                        && b.precursor == g.precursor
-                        && b.polarity == g.polarity
-                        && b.profile
-                        && b.mz == g.mz
-                        && b.wide == g.wide
-                        && b.rt == g.rt,
-                    "{}: mzML",
-                    g.id
-                );
+                assert!(b.id == g.id && b.level == g.level && b.precursor == g.precursor && b.polarity == g.polarity && b.profile && b.mz == g.mz && b.wide == g.wide && b.rt == g.rt, "{}: mzML", g.id);
             }
-            assert_eq!(
-                back.chromatograms.len(),
-                run.chromatograms.len(),
-                "{name}/{s}: mzML chromatograms"
-            );
+            assert_eq!(back.chromatograms.len(), run.chromatograms.len(), "{name}/{s}: mzML chromatograms");
             for (b, g) in back.chromatograms.iter().zip(&run.chromatograms) {
-                assert!(
-                    b.id == g.id && b.time == g.time && b.intensity == g.intensity,
-                    "{}: mzML",
-                    g.id
-                );
+                assert!(b.id == g.id && b.time == g.time && b.intensity == g.intensity, "{}: mzML", g.id);
             }
             let ch = r["chromatograms"].as_array().unwrap();
-            assert_eq!(
-                run.chromatograms.len(),
-                ch.len(),
-                "{name}/{s}: chromatograms"
-            );
+            assert_eq!(run.chromatograms.len(), ch.len(), "{name}/{s}: chromatograms");
             for (g, e) in run.chromatograms.iter().zip(ch) {
                 assert_eq!(g.id, e["id"].as_str().unwrap());
                 let (t, i) = (nums(&e["time"]), nums(&e["intensity"]));
-                assert!(
-                    g.time.len() == t.len()
-                        && (0..t.len())
-                            .all(|k| close(g.time[k], t[k], 1e-12)
-                                && close(g.intensity[k], i[k], 1e-9)),
-                    "{}",
-                    g.id
-                );
+                assert!(g.time.len() == t.len() && (0..t.len()).all(|k| close(g.time[k], t[k], 1e-12) && close(g.intensity[k], i[k], 1e-9)), "{}", g.id);
             }
         }
     }
@@ -185,88 +96,32 @@ fn synthetic_pairs_match_the_reference() {
 #[test]
 fn a_wiff_without_scan_or_not_a_wiff_is_refused() {
     let Some((dir, _)) = reference() else { return };
-    let ole = container(
-        std::fs::read(dir.join("lonely.wiff")).unwrap(),
-        "lonely.wiff",
-    )
-    .unwrap();
-    assert_eq!(
-        Wiff::open(&ole, "lonely.wiff", None, 1).err().unwrap().key,
-        "err.file.wiffNoScan"
-    );
-    assert_eq!(
-        container(vec![1, 2, 3], "x.wiff").err().unwrap().key,
-        "err.file.notWiff"
-    );
+    let ole = container(std::fs::read(dir.join("lonely.wiff")).unwrap(), "lonely.wiff").unwrap();
+    assert_eq!(Wiff::open(&ole, "lonely.wiff", None, 1).err().unwrap().key, "err.file.wiffNoScan");
+    assert_eq!(container(vec![1, 2, 3], "x.wiff").err().unwrap().key, "err.file.notWiff");
 }
 
 fn sample_of(id: &str) -> Option<u32> {
-    id.split("sample=")
-        .nth(1)?
-        .split_whitespace()
-        .next()?
-        .parse()
-        .ok()
+    id.split("sample=").nth(1)?.split_whitespace().next()?.parse().ok()
 }
 
 fn compare(w: &Wiff, got: &Run, want: &Run, label: &str) -> usize {
     // msconvert pads profile peaks with zeros and mis-reads the last block of a file: compare the points above zero, all but the last spectrum
     let n = want.spectra.len().saturating_sub(1);
     for e in &want.spectra[..n] {
-        let g = got
-            .spectra
-            .iter()
-            .find(|g| g.id == e.id)
-            .unwrap_or_else(|| panic!("{label}: {} missing", e.id));
-        assert!(
-            close(g.rt, e.rt, 1e-9) && g.level == e.level && g.polarity == e.polarity,
-            "{label} {}: rt/level/polarity",
-            e.id
-        );
-        assert!(
-            g.precursor
-                .zip(e.precursor)
-                .is_none_or(|(a, b)| close(a, b, 1e-9))
-                && g.precursor.is_some() == e.precursor.is_some(),
-            "{label} {}: precursor",
-            e.id
-        );
-        let pts: Vec<(f64, f64)> = (0..e.mz.len())
-            .map(|k| (e.mz[k], e.intensity_f64(k)))
-            .filter(|p| p.1 > 0.0)
-            .collect();
+        let g = got.spectra.iter().find(|g| g.id == e.id).unwrap_or_else(|| panic!("{label}: {} missing", e.id));
+        assert!(close(g.rt, e.rt, 1e-9) && g.level == e.level && g.polarity == e.polarity, "{label} {}: rt/level/polarity", e.id);
+        assert!(g.precursor.zip(e.precursor).is_none_or(|(a, b)| close(a, b, 1e-9)) && g.precursor.is_some() == e.precursor.is_some(), "{label} {}: precursor", e.id);
+        let pts: Vec<(f64, f64)> = (0..e.mz.len()).map(|k| (e.mz[k], e.intensity_f64(k))).filter(|p| p.1 > 0.0).collect();
         assert_eq!(g.mz.len(), pts.len(), "{label} {}: points", e.id);
         for (k, p) in pts.iter().enumerate() {
-            assert!(
-                close(g.mz[k], p.0, 1e-9)
-                    && close(
-                        g.intensity_f64(k),
-                        p.1,
-                        if e.wide.is_some() { 1e-9 } else { 1e-6 }
-                    ),
-                "{label} {} point {k}",
-                e.id
-            );
+            assert!(close(g.mz[k], p.0, 1e-9) && close(g.intensity_f64(k), p.1, if e.wide.is_some() { 1e-9 } else { 1e-6 }), "{label} {} point {k}", e.id);
         }
     }
     for e in &want.chromatograms {
-        let Some(g) = got.chromatograms.iter().find(|g| {
-            e.q1.is_some() && g.q1 == e.q1 && g.q3 == e.q3 || g.kind == e.kind && e.q1.is_none()
-        }) else {
-            continue;
-        };
-        assert_eq!(
-            g.time.len(),
-            e.time.len(),
-            "{label} {}: chromatogram length",
-            e.id
-        );
-        assert!(
-            (0..e.time.len()).all(|k| close(g.time[k], e.time[k], 1e-9)
-                && close(g.intensity[k], e.intensity[k], 1e-6)),
-            "{label} {}",
-            e.id
-        );
+        let Some(g) = got.chromatograms.iter().find(|g| e.q1.is_some() && g.q1 == e.q1 && g.q3 == e.q3 || g.kind == e.kind && e.q1.is_none()) else { continue };
+        assert_eq!(g.time.len(), e.time.len(), "{label} {}: chromatogram length", e.id);
+        assert!((0..e.time.len()).all(|k| close(g.time[k], e.time[k], 1e-9) && close(g.intensity[k], e.intensity[k], 1e-6)), "{label} {}", e.id);
     }
     let _ = w;
     n
@@ -279,38 +134,16 @@ fn real_files_match_proteowizard() {
         return;
     };
     let mut done = 0;
-    for (wiff, prefix, dir) in [
-        ("FullMass", "B_FullMass-", "dati/3200 qtrap/mzML_profilo"),
-        ("MS2", "B_MS2-", "dati/3200 qtrap/mzML_profilo"),
-        ("MRM", "B_MRM-", "dati/3200 qtrap/mzML"),
-    ] {
-        let Ok(bytes) = std::fs::read(folder.join(format!("{wiff}.wiff"))) else {
-            continue;
-        };
+    for (wiff, prefix, dir) in [("FullMass", "B_FullMass-", "dati/3200 qtrap/mzML_profilo"), ("MS2", "B_MS2-", "dati/3200 qtrap/mzML_profilo"), ("MRM", "B_MRM-", "dati/3200 qtrap/mzML")] {
+        let Ok(bytes) = std::fs::read(folder.join(format!("{wiff}.wiff"))) else { continue };
         let ole = container(bytes, wiff).unwrap();
         let mut scan = std::fs::read(folder.join(format!("{wiff}.wiff.scan"))).unwrap();
         let len = scan.len() as u64;
-        let mut files: Vec<PathBuf> = std::fs::read_dir(dati_percorsi::percorso(dir).unwrap())
-            .unwrap()
-            .flatten()
-            .map(|e| e.path())
-            .filter(|p| p.file_name().unwrap().to_string_lossy().starts_with(prefix))
-            .collect();
+        let mut files: Vec<PathBuf> = std::fs::read_dir(dati_percorsi::percorso(dir).unwrap()).unwrap().flatten().map(|e| e.path()).filter(|p| p.file_name().unwrap().to_string_lossy().starts_with(prefix)).collect();
         files.sort();
         for f in files {
-            let want =
-                mzml::read(std::io::BufReader::new(std::fs::File::open(&f).unwrap())).unwrap();
-            let id = want
-                .spectra
-                .first()
-                .map(|s| s.id.clone())
-                .or_else(|| {
-                    want.chromatograms
-                        .iter()
-                        .find(|c| c.id.contains("sample="))
-                        .map(|c| c.id.clone())
-                })
-                .unwrap();
+            let want = mzml::read(std::io::BufReader::new(std::fs::File::open(&f).unwrap())).unwrap();
+            let id = want.spectra.first().map(|s| s.id.clone()).or_else(|| want.chromatograms.iter().find(|c| c.id.contains("sample=")).map(|c| c.id.clone())).unwrap();
             let w = Wiff::open(&ole, wiff, Some(len), sample_of(&id).unwrap()).unwrap();
             let got = w.run(&mut scan).unwrap();
             compare(&w, &got, &want, &f.display().to_string());
@@ -326,30 +159,18 @@ fn real_files_match_proteowizard() {
 fn the_mzml_of_a_sample_reads_back_the_same() {
     let Some((dir, _)) = reference() else { return };
     for name in ["one", "two", "serie"] {
-        let ole = container(
-            std::fs::read(dir.join(format!("{name}.wiff"))).unwrap(),
-            name,
-        )
-        .unwrap();
+        let ole = container(std::fs::read(dir.join(format!("{name}.wiff"))).unwrap(), name).unwrap();
         for s in samples(&ole) {
             let (w, mut scan) = open(&dir, name, s);
             let (want, mut xml) = (w.run(&mut scan).unwrap(), Vec::new());
-            w.to_mzml(&mut scan, &mut xml, &format!("{name}.wiff"))
-                .unwrap();
+            w.to_mzml(&mut scan, &mut xml, &format!("{name}.wiff")).unwrap();
             let got = mzml::read(&xml[..]).unwrap();
             assert_eq!(got.spectra.len(), want.spectra.len(), "{name}/{s}: spectra");
             for (g, e) in got.spectra.iter().zip(&want.spectra) {
-                assert_eq!(
-                    (&g.id, g.level, g.polarity, g.profile, g.precursor, g.rt),
-                    (&e.id, e.level, e.polarity, e.profile, e.precursor, e.rt),
-                    "{name}/{s}"
-                );
+                assert_eq!((&g.id, g.level, g.polarity, g.profile, g.precursor, g.rt), (&e.id, e.level, e.polarity, e.profile, e.precursor, e.rt), "{name}/{s}");
                 assert_eq!((&g.mz, &g.wide), (&e.mz, &e.wide), "{}: points", e.id);
             }
-            assert_eq!(
-                got.chromatograms, want.chromatograms,
-                "{name}/{s}: chromatograms"
-            );
+            assert_eq!(got.chromatograms, want.chromatograms, "{name}/{s}: chromatograms");
         }
     }
 }
@@ -361,18 +182,14 @@ fn the_centroid_mzml_keeps_the_scans_and_reduces_the_points() {
     let (w, mut scan) = open(&dir, "serie", 1);
     let want = w.run(&mut scan).unwrap();
     let mut xml = Vec::new();
-    w.to_mzml_progress(&mut scan, &mut xml, "serie.wiff", true, &mut |_, _| {})
-        .unwrap();
+    w.to_mzml_progress(&mut scan, &mut xml, "serie.wiff", true, &mut |_, _| {}).unwrap();
     let text = String::from_utf8_lossy(&xml);
     assert!(text.contains("MS:1000035") && text.contains("mzLab centroidi"));
     let got = mzml::read(&xml[..]).unwrap();
     assert_eq!(got.spectra.len(), want.spectra.len());
     let (mut before, mut after) = (0, 0);
     for (g, e) in got.spectra.iter().zip(&want.spectra) {
-        assert_eq!(
-            (&g.id, g.level, g.rt, g.profile),
-            (&e.id, e.level, e.rt, false)
-        );
+        assert_eq!((&g.id, g.level, g.rt, g.profile), (&e.id, e.level, e.rt, false));
         before += e.mz.len();
         after += g.mz.len();
         assert!(g.mz.windows(2).all(|p| p[0] < p[1]));
@@ -384,12 +201,8 @@ fn the_centroid_mzml_keeps_the_scans_and_reduces_the_points() {
 /// The header of the mzML of a real file names the model the Log gives, the creation time and the SHA-1 of both files.
 #[test]
 fn the_header_of_a_real_file_carries_model_time_and_hashes() {
-    let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else {
-        return;
-    };
-    let Ok(bytes) = std::fs::read(folder.join("MRM.wiff")) else {
-        return;
-    };
+    let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else { return };
+    let Ok(bytes) = std::fs::read(folder.join("MRM.wiff")) else { return };
     let ole = container(bytes.clone(), "MRM.wiff").unwrap();
     let mut scan = std::fs::read(folder.join("MRM.wiff.scan")).unwrap();
     let s = samples(&ole)[0];
@@ -398,24 +211,12 @@ fn the_header_of_a_real_file_carries_model_time_and_hashes() {
     let mut xml = Vec::new();
     w.to_mzml(&mut scan, &mut xml, "MRM.wiff").unwrap();
     let head = String::from_utf8_lossy(&xml[..xml.len().min(20000)]).to_string();
-    assert!(
-        w.model
-            .as_deref()
-            .is_some_and(|m| m.replace(' ', "").contains("QTRAP")),
-        "{:?}",
-        w.model
-    );
-    assert!(
-        head.contains("MS:1000651") && head.contains("startTimeStamp=\"20"),
-        "{head}"
-    );
+    assert!(w.model.as_deref().is_some_and(|m| m.replace(' ', "").contains("QTRAP")), "{:?}", w.model);
+    assert!(head.contains("MS:1000651") && head.contains("startTimeStamp=\"20"), "{head}");
     let hashes = mzlab_core::metodo::source_sha1s(&head);
     assert_eq!(hashes.len(), 2);
     assert_eq!(hashes[0].1, ole.sha1_hex());
     let n = scan.len() as u64;
-    assert_eq!(
-        hashes[1].1,
-        mzlab_core::metodo::sha1_hex(&mut scan, n).unwrap()
-    );
+    assert_eq!(hashes[1].1, mzlab_core::metodo::sha1_hex(&mut scan, n).unwrap());
     eprintln!("model {:?} created {:?}", w.model, w.created);
 }

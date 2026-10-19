@@ -12,10 +12,6 @@ use mzlab_core::wiff::{container, samples, Wiff};
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
-fn root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
-}
-
 fn set(dir: &Path, name: &str) -> FileSet {
     let member = |file: String| {
         let bytes = std::fs::read(dir.join(&file)).unwrap();
@@ -113,6 +109,10 @@ fn same(dir: &Path, name: &str) -> usize {
         );
     }
     checked
+}
+
+fn root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
 #[test]
