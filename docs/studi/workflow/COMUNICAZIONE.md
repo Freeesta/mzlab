@@ -1,58 +1,58 @@
-# Come si parlano i moduli: porte, compatibilità, ordine, parallelismo, preset
+# How modules talk: ports, compatibility, order, parallelism, algorithms
 
-Parte di `docs/studi/WORKFLOW_MODULARI.md` (§4b). È il cuore del contratto: la futura sezione «Flow» (una tela con moduli trascinabili e collegati) è solo un modo di disegnare quello che sta qui. La grafica non è in questo studio. Segni: **V** verificato nel codice o misurato, **I** ipotesi. Lo schema è `contratto.schema.json` (campi citati tra apici inversi).
+Part of `docs/studi/WORKFLOW_MODULARI.md` (§4b). This is the core of the contract: the future «Flow» section (a canvas of draggable, wired modules) is only a way of drawing what is here. Graphics are out of scope. Marks: **V** verified in the code or measured, **I** hypothesis. The schema is `contract.schema.json` (fields in backquotes).
 
-## 1. Cosa viaggia su un filo
-- **Un filo porta un riferimento, mai i byte.** Il dato vive nel deposito (OPFS nel browser, una cartella nell'app desktop) e il filo porta il suo **descrittore**: `type`, `sha256`, `bytes`, versione del formato e poche **faccette** lette dal dato (risoluzione `hr`/`lr`, polarità, livelli MS presenti, numero di campioni). Motivo: un `.mzidx` o un mzML pesa da megabyte a gigabyte; oggi mzML e `.mzidx` stanno già in OPFS e i moduli li leggono a fette (`ReadAt`, `Index<R>`; V).
-- **Il dato è immutabile e indirizzato dal contenuto**: stesso SHA-256 = stesso dato. Un passo non riscrive mai il suo ingresso (correzione 7 di `PROVE_SU_CARTA.md`). Due fili che portano lo stesso dato non lo copiano.
-- **Versione del formato nel descrittore**: un dato di formato più nuovo del programma si apre in sola lettura con `error.newerFormat` (regola già in uso per `.mzidx`, `.mzfeat`, `.mzfeatf`: `docs/agenti/formato-nuovo.md`, V).
+## 1. What travels on a wire
+- **A wire carries a reference, never bytes.** The data lives in the store (OPFS in the browser, a folder in the desktop app) and the wire carries its **descriptor**: `type`, `sha256`, `bytes`, format version and a few **facets** read from the data (resolution `hr`/`lr`, polarity, MS levels present, number of samples). Reason: an `.mzidx` or an mzML weighs megabytes to gigabytes; mzML and `.mzidx` already live in OPFS and modules read them in slices (`ReadAt`, `Index<R>`; V).
+- **Data are immutable and content-addressed**: same SHA-256 = same data. A step never rewrites its input (correction 7 of `PROVE_SU_CARTA.md`). Two wires carrying the same data do not copy it.
+- **Format version in the descriptor**: data of a format newer than the program open read-only with `error.newerFormat` (rule already used for `.mzidx`, `.mzfeat`, `.mzfeatf`: `docs/agenti/formato-nuovo.md`, V).
 
-## 2. Regola di compatibilità (quando un'uscita si può collegare a un ingresso)
-Un filo da `A.out` a `B.in` è valido se valgono tutte:
-1. **Tipo**: `out.type` = `in.type`, oppure `out.type` è nella lista `in.accepts` (es. un passo che legge sia `mzidx` sia `table`).
-2. **Cardinalità**: `many → many` sì (stesso ordine); `one → many` sì (lista di uno); più fili verso una porta `many` si **raccolgono** nell'ordine di `ingressi` del file, mai nell'ordine in cui l'utente ha tirato i fili (il risultato non deve dipendere dal disegno); `many → one` solo se il passo ha `per_item: true`, cioè gira una volta per elemento (§3).
-3. **Faccette**: `in.requires` (es. `{"resolution": ["hr"]}` per `tp.link` e `annot.*`: Principio 1, nel mondo LR niente TP né formule come verità; `{"ms_levels": [2]}` per `features.ms2_link`). Se la faccetta è già nota (dopo l'importazione) il controllo è immediato; se no, il passo lo rifà quando parte e risponde con una chiave d'errore.
-4. **Grafo aciclico**: nessun filo chiude un ciclo.
-Ogni violazione è una voce `{instance, port, error_key, params}` con chiavi del tipo `err.flow.type`, `err.flow.cardinality`, `err.flow.facet`, `err.flow.cycle`: la tela colora il filo e mostra il testo dal catalogo, nessun testo scritto a mano.
+## 2. Compatibility rule (when an output can be wired to an input)
+A wire from `A.out` to `B.in` is valid when all of these hold:
+1. **Type**: `out.type` = `in.type`, or `out.type` is in `in.accepts` (e.g. a step that reads both `mzidx` and `table`).
+2. **Cardinality**: `many → many` yes (same order); `one → many` yes (a list of one); several wires into a `many` port are **gathered** in the order of `inputs` in the file, never in the order the user drew them (the result must not depend on the drawing); `many → one` only if the step has `per_item: true`, i.e. it runs once per element (§3).
+3. **Facets**: `in.requires` (e.g. `{"resolution": ["hr"]}` for `tp.link` and `annot.*`: principle 1, in the LR world no TP and no formula as truth; `{"ms_levels": [2]}` for `features.ms2_link`). When the facet is already known (after import) the check is immediate; otherwise the step checks again when it starts and answers with an error key.
+4. **Acyclic graph**: no wire closes a cycle.
+Each violation is an entry `{instance, port, error_key, params}` with keys such as `err.flow.type`, `err.flow.cardinality`, `err.flow.facet`, `err.flow.cycle`: the canvas colours the wire and shows the text from the catalogue, never a hand-written text.
 
-**Il passo mancante si propone, non si inserisce da solo.** I passi di conversione dichiarano `converts: {from, to}`. Se l'utente collega `raw` a una porta `mzidx`, il programma cerca il cammino più breve nel grafo delle conversioni registrate (ricerca in ampiezza; a parità vince quello con `cost` minore, poi l'ordine del registro) e propone «Insert: Build index» con un clic.
-Esempio vero: `raw → mzidx` esiste diretto (`upload::indicizza_lettore`) e passando per l'mzML (`lettori_mzml::scrivi` + `build_mzml_spill`), e le due vie danno le stesse feature (V, §6.1 del principale): il diretto è più corto e vince. Entrano nel grafo SOLO le conversioni registrate: il secondo scrittore di mzML (`raw::to_mzml`, aree diverse a valle, V) non c'è.
+**A missing step is proposed, not inserted silently.** Conversion steps declare `converts: {from, to}`. When the user wires `raw` to an `mzidx` port, the program looks for the shortest path in the graph of registered conversions (breadth-first; ties go to the lowest `cost`, then registry order) and proposes «Insert: Build index» with one click.
+Real example: `raw → mzidx` exists directly (`upload::indicizza_lettore`) and through mzML (`lettori_mzml::scrivi` + `build_mzml_spill`), and both give the same features (V, §6.1 of the main file): the direct path is shorter and wins. ONLY registered conversions enter the graph: the second mzML writer (`raw::to_mzml`, different areas downstream, V) does not.
 
-## 3. Ordine di esecuzione e parallelismo (ricavati, mai scritti dall'utente)
-- **Ordine**: ordinamento topologico del grafo (algoritmo di Kahn); a parità, l'ordine di `steps` nel file. Lo stesso file dà sempre lo stesso piano.
-- **Parallelo fra rami**: un'istanza parte quando tutti i suoi antenati sono finiti; due istanze senza dipendenza reciproca girano insieme (es. i due rami `tp.generate` di `PROVE_SU_CARTA.md` D).
-- **Parallelo per file**: un passo `per_item: true` su una porta `many` gira una volta per elemento, in parallelo; le uscite si raccolgono per INDICE, non per ordine di arrivo. Oggi il rilevamento è già per file (`run::detect` per file, poi `read_files` e `align`: V in `mzlab-cli`).
-- **Dove**: nel browser un worker per istanza attiva, che carica il modulo `.wasm` del passo (`runs_in.wasm`; oggi ci sono già `rust-worker.js`, `feat-worker.js`, `tpmine-worker.js`: V); nell'app desktop fili nativi (`rayon` è già una dipendenza di `mzlab-desktop`: V).
-- **Memoria come unica risorsa condivisa**: nessun conflitto di scrittura (dati immutabili), quindi l'unico limite è la memoria. Il pianificatore ammette un passo solo se la somma dei `memory_hint_bytes` dei passi attivi sta nel bilancio del dispositivo (il contratto di memoria di `mzlab-core::budget`, `docs/agenti/memoria.md`: V che esiste; uso nel pianificatore: I). La stima viene dalle misure di `prov/1` (`heap_peak_bytes`) dei giri precedenti.
-- **Determinismo con il parallelo**: un passo non legge l'orologio né il caso senza seme; il risultato non dipende dall'ordine di arrivo. Prova: lo stesso piano con 1 worker e con N worker dà gli stessi `generated.sha256` (da aggiungere alla prova 3 del §7).
-- **Errori e annullamento**: un passo che fallisce ferma solo i suoi discendenti; i rami fratelli finiscono e restano in cache. Annullare un passo ferma lui e i discendenti.
-- **Cache come `make`**: chiave = (SHA-256 degli ingressi, `id@versione`, `params_sha256`). Cambiare un parametro di X invalida X e i discendenti, nient'altro; un giro ripetuto senza cambi non ricalcola nulla e `prov/1` scrive `cached: true`.
+## 3. Execution order and parallelism (derived, never written by the user)
+- **Order**: topological sort of the graph (Kahn's algorithm); ties follow the order of `steps` in the file. The same file always gives the same plan.
+- **Parallel branches**: an instance starts when all its ancestors are done; two instances with no mutual dependency run together (e.g. the two `tp.generate` branches of `PROVE_SU_CARTA.md` D).
+- **Parallel per file**: a `per_item: true` step on a `many` port runs once per element, in parallel; outputs are gathered by INDEX, not by arrival. Detection is already per file (`run::detect` per file, then `read_files` and `align`: V in `mzlab-cli`).
+- **Where**: in the browser one worker per active instance, loading the step's `.wasm` module (`runs_in.wasm`; `rust-worker.js`, `feat-worker.js`, `tpmine-worker.js` exist: V); in the desktop app native threads (`rayon` is already a dependency of `mzlab-desktop`: V).
+- **Memory is the only shared resource**: no write conflicts (immutable data), so the only limit is memory. The planner admits a step only if the sum of `memory_hint_bytes` of the active steps fits the device budget (the memory contract of `mzlab-core::budget`, `docs/agenti/memoria.md`: V that it exists; use in the planner: I). The hint comes from `heap_peak_bytes` of earlier runs in `prov/1`.
+- **Determinism with parallelism**: a step reads neither the clock nor unseeded randomness; the result does not depend on arrival order. Test: the same plan with 1 worker and with N workers gives the same `generated.sha256` (to add to test 3 of §7).
+- **Errors and cancel**: a failing step stops only its descendants; sibling branches finish and stay cached. Cancelling a step stops it and its descendants.
+- **Cache like `make`**: key = (input SHA-256, `id@version`, algorithm `id@version`, `params_sha256`). Changing a parameter of X invalidates X and its descendants, nothing else; a repeated run without changes recomputes nothing and `prov/1` writes `cached: true`.
 
-## 4. Algoritmi, preset e confronto
-- **Algoritmi** (`algorithms[]`, `default_algorithm`): il passo (es. `features.detect`) è la «casella» della tela; le **alternative** sono algoritmi dentro lo stesso passo, con le stesse porte (stessi nomi e tipi): si scambiano senza ricollegare fili. Ogni voce dichiara `id`, `version`, `title`, `doc`, `source` (DOI dell'articolo da cui si riscrive: mai codice copiato, §9 del principale), `applicability`, `params` propri e `status` (`available` o `planned`, che la tela mostra in grigio).
-  I `params` del passo sono quelli comuni a tutti gli algoritmi. Esempi veri nei file `step.features.detect.json` (`masstrace` available; `centwave`, `threshold` planned) e `step.spectra.match.json` (`cosine`, `modified_cosine`, `spectral_entropy`, tutti in `mzlab-lib/src/scores.rs`, V).
-- **Applicabilità e suggerimento**: `applicability` usa le faccette dell'ingresso (`resolution`, `polarity`, `ms_levels`, `spectrum_mode`) più ciò che il metodo chiede (`peak_fwhm_s`, `min_files`, `needs`: `internal_standards`, `ms2`, `blank`, `reference_sample`, `library`) e una `note`. La tela mette in testa gli algoritmi che tornano; gli altri restano selezionabili con il motivo (es. «needs internal standards»), il controllo del piano li rifiuta solo se manca un ingresso obbligatorio.
-- **Predefinito**: `default_algorithm` è il migliore noto per il caso tipico e si giustifica con numeri del banco (`tools/bench/`, prova 1 del §7), non con un'opinione.
-- **Preset** (`presets`, `default_preset`): insiemi di parametri con nome, ognuno per un `algorithm` (assente = il predefinito). Un preset può avere `when` sulle faccette dell'ingresso (es. `hr`, `lr`): la scelta «Auto» prende il primo che corrisponde. Esiste già nel codice: `run::recipe_for` sceglie la ricetta ad alta risoluzione o quella del profilo a risoluzione unitaria dal primo file, e la CLI ha `--preset auto|pos|neg` (V).
-- **Nel file**: un'istanza scrive `step`, eventualmente `algorithm` e `preset`, e in `params` solo le differenze. La forma canonica (regola 1 del §4 del principale) risolve algoritmo + preset + differenze + stime in valori completi; `prov/1` scrive l'algoritmo (`id@version`), il preset e i valori risolti; la chiave della cache comprende l'algoritmo.
-- **Scambio di algoritmo**: i parametri comuni restano; quelli propri prendono il preset del nuovo algoritmo; la tela mostra la differenza prima di confermare.
-- **Confronto** (`meta.compare@1`, `step.meta.compare.json`): un meta-passo che esegue il passo nominato in `params.step` con 2 o più `variants` (`algorithm`, `preset`, `params`, `label`) sugli stessi ingressi. Le porte d'ingresso sono quelle del passo avvolto (`ports_from: wrapped`); le uscite sono una per variante (`cmp.A.peaks`, `cmp.B.peaks`) e un `comparison`. Varianti uguali sono un errore (`err.flow.compare.sameVariant`). Le varianti girano in parallelo con le regole del §3 (la memoria si somma).
-- **Metriche del confronto**, per tipo d'uscita: `peaks`/`table`: abbinate entro `mz_tolerance_ppm` (o `mz_tolerance_da` a risoluzione unitaria) e `rt_tolerance_min`, solo in A, solo in B, mediana di Δm/z in ppm e di ΔRT, mediana di |log2| del rapporto delle aree, Spearman delle aree abbinate; `rtmap`: scarto di RT per ancora; `annot` (punteggi MS2): correlazione di rango (Kendall), accordo del primo candidato, sovrapposizione dei primi k. Ogni metrica porta l'elenco delle righe che la spiegano, così la tela mostra le differenze, non solo i numeri.
-- **Usi**: scegliere il predefinito su prove; validare una nuova implementazione contro la vecchia (stessi ingressi, stesso hash di partenza); metodologia e didattica (lo studente vede cosa cambia con il metodo). Nel mondo LR il confronto mostra picchi diversi, mai TP o rette (principio 1).
+## 4. Algorithms, presets and comparison
+- **Algorithms** (`algorithms[]`, `default_algorithm`): the step (e.g. `features.detect`) is the «slot» of the canvas; **alternatives** are algorithms inside the same step, with the same ports (same names and types): they swap without rewiring. Each entry declares `id`, `version`, `title`, `doc`, `source` (DOI of the paper it is written from: never copied code, §9 of the main file), `applicability`, its own `params` and `status` (`available` or `planned`, greyed out on the canvas).
+  The `params` of the step are those common to every algorithm. Real examples in `step.features.detect.json` (`masstrace` available; `centwave`, `threshold` planned) and `step.spectra.match.json` (`cosine`, `modified_cosine`, `spectral_entropy`, all in `mzlab-lib/src/scores.rs`, V).
+- **Applicability and suggestion**: `applicability` uses the facets of the input (`resolution`, `polarity`, `ms_levels`, `spectrum_mode`) plus what the method needs (`peak_fwhm_s`, `min_files`, `needs`: `internal_standards`, `ms2`, `blank`, `reference_sample`, `library`) and a `note`. The canvas lists the matching algorithms first; the others stay selectable with the reason (e.g. «needs internal standards»); the plan check rejects them only when a mandatory input is missing.
+- **Default**: `default_algorithm` is the best known for the typical case and is justified by bench numbers (`tools/bench/`, test 1 of §7), not by opinion.
+- **Presets** (`presets`, `default_preset`): named parameter sets, each for one `algorithm` (absent = the default). A preset may have `when` on the input facets (e.g. `hr`, `lr`): «Auto» takes the first that matches. It already exists in the code: `run::recipe_for` picks the high-resolution recipe or the unit-resolution profile from the first file, and the CLI has `--preset auto|pos|neg` (V).
+- **In the file**: an instance writes `step`, optionally `algorithm` and `preset`, and in `params` only the differences. The canonical form (rule 1 of §4 of the main file) resolves algorithm + preset + differences + estimates into complete values; `prov/1` writes the algorithm (`id@version`), the preset and the resolved values; the cache key includes the algorithm.
+- **Swapping algorithm**: common parameters stay; algorithm-specific ones take the preset of the new algorithm; the canvas shows the difference before confirming.
+- **Comparison** (`meta.compare@1`, `step.meta.compare.json`): a meta-step that runs the step named in `params.step` with 2 or more `variants` (`algorithm`, `preset`, `params`, `label`) on the same inputs. Its input ports are those of the wrapped step (`ports_from: wrapped`); its outputs are one per variant (`cmp.A.peaks`, `cmp.B.peaks`) and one `comparison`. Identical variants are an error (`err.flow.compare.sameVariant`). Variants run in parallel under the rules of §3 (memory adds up).
+- **Comparison metrics**, per output type: `peaks`/`table`: matched within `mz_tolerance_ppm` (or `mz_tolerance_da` at unit resolution) and `rt_tolerance_min`, only in A, only in B, median Δm/z in ppm and ΔRT, median |log2| of the area ratio, Spearman of matched areas; `rtmap`: RT offset per anchor; `annot` (MS2 scores, identities): rank correlation (Kendall), top-1 agreement, top-k overlap, changed identification levels. Each metric carries the list of rows behind it, so the canvas shows the differences, not just numbers.
+- **Uses**: choosing the default on evidence; validating a new implementation against the old one (same inputs, same starting hash); methodology and teaching (students see what a method changes). In the LR world the comparison shows different peaks, never TPs or calibration lines (principle 1).
 
-## 5. Il dialogo tra tela e motore (messaggi)
-Solo JSON piccoli; i dati restano nel deposito.
-| Messaggio | Da → a | Contenuto |
+## 5. Canvas ↔ engine dialogue (messages)
+Only small JSON; data stay in the store.
+| Message | From → to | Content |
 |---|---|---|
-| `plan.check` | tela → controllo (Rust) | il `mzflow/2`; risposta: problemi `{instance, port, error_key, params}` e proposte di conversione |
-| `plan.run` | tela → pianificatore | il piano controllato; il pianificatore manda le istanze pronte ai worker |
-| `step.started` / `step.progress` | worker → tela | `{instance, done, total}`, la stessa forma della barra unica di oggi (`progresso.js`, `PROGRESSO`: V) |
-| `step.done` | worker → tela | `{instance, generated: [descrittori], ms, heap_peak_bytes, cached}` |
-| `step.failed` | worker → tela | `{instance, error, error_key, params}` (forma dell'API: V) |
-| `plan.done` | pianificatore → tela | il `prov/1` completo |
-La logica del controllo e della canonica sta in Rust (regola «Tutto in Rust»); il pianificatore nel browser smista soltanto, come fa già `feat-worker.js` con i passi della Pipeline (V).
+| `plan.check` | canvas → checker (Rust) | the `mzflow/2`; answer: problems `{instance, port, error_key, params}` and conversion proposals |
+| `plan.run` | canvas → planner | the checked plan; the planner sends ready instances to workers |
+| `step.started` / `step.progress` | worker → canvas | `{instance, done, total}`, the same shape as today's single progress bar (`progresso.js`, `PROGRESSO`: V) |
+| `step.done` | worker → canvas | `{instance, generated: [descriptors], ms, heap_peak_bytes, cached}` |
+| `step.failed` | worker → canvas | `{instance, error, error_key, params}` (API shape: V) |
+| `plan.done` | planner → canvas | the complete `prov/1` |
+Plan checking and canonical form live in Rust (rule «everything in Rust»); the browser planner only dispatches, as `feat-worker.js` already does with the Pipeline steps (V).
 
-## 6. Esempio: due rami, un preset, una conversione proposta
+## 6. Example: two branches, a preset, a proposed conversion
 ```json
 {"format":"mzflow/2","program":{"name":"mzLab","version":"x"},
  "inputs":[{"name":"t0.raw","sha256":"…","type":"raw"},{"name":"t60.raw","sha256":"…","type":"raw"},{"name":"samples.json","sha256":"…","type":"samples"}],
@@ -64,9 +64,9 @@ La logica del controllo e della canonica sta in Rust (regola «Tutto in Rust»);
   {"id":"tp","step":"tp.link@1","in":{"table":"aln.table","spectra":"ms2.spectra"}},
   {"id":"csv","step":"export.table_csv@1","in":{"table":"aln.table"}}]}
 ```
-Piano ricavato: `idx` (per file, 2 in parallelo) → `det` (per file, 2 in parallelo) → `aln` → poi `ms2` e `csv` insieme → `tp`.
+Derived plan: `idx` (per file, 2 in parallel) → `det` (per file, 2 in parallel) → `aln` → then `ms2` and `csv` together → `tp`.
 
-## 7. Cosa resta da provare
-- Il controllo del piano in Rust e la ricerca delle conversioni: costo in byte del modulo (I) e tempo su piani di 50 istanze (I).
-- Il pianificatore con N worker: picco di memoria reale nel browser e prova «1 worker = N worker» (I).
-- La raccolta per indice nel rilevamento parallelo della Pipeline di oggi: da verificare che l'ordine delle uscite non dipenda dall'arrivo (I).
+## 7. Still to test
+- Plan check and conversion search in Rust: module size in bytes (I) and time on plans of 50 instances (I).
+- The planner with N workers: real memory peak in the browser and the «1 worker = N workers» test (I).
+- Gathering by index in today's parallel Pipeline detection: check that output order does not depend on arrival (I).

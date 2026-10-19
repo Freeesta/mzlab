@@ -1,30 +1,30 @@
-# Pubblicazione delle librerie (solo analisi)
+# Publishing the libraries (analysis only)
 
-Parte di `docs/studi/WORKFLOW_MODULARI.md` (§12). Nessuna pubblicazione: ogni azione verso l'esterno (crates.io, npm, nomi riservati, DOI) richiede il «via» di Federico. Segni: **V** verificato nel repository, **I** ipotesi.
+Part of `docs/studi/WORKFLOW_MODULARI.md` (§12). Nothing is published: every outward action (crates.io, npm, reserved names, DOI) needs Federico's go-ahead. Marks: **V** verified in the repository, **I** hypothesis.
 
-## 1. Candidati e ordine
-| Ordine | Crate | Perché | Cosa manca |
+## 1. Candidates and order
+| Order | Crate | Why | What is missing |
 |---|---|---|---|
-| 1 | codec numpress, staccato da `mzlab-core` (`src/numpress.rs`, 321 righe, V) | piccolo, nessuna dipendenza, specifica esterna (MS-Numpress, Teleman 2014) e file di riferimento pubblici della specifica: verità esterna pronta | crate a sé, nomi in inglese, prova contro i vettori della specifica |
-| 2 | `mzlab-lib` (formato `.mzlib`, parser delle librerie, punteggi; nessuna dipendenza interna, V) | utile da solo, API già raccolta in un crate | API stabile, documentazione, prova contro MassBank/MoNA pubbliche |
-| 3 | `mzlab-lettori` + parte di lettura di `mzlab-core` (trait `Lettore`, `apri`, scrittura mzML) | il pezzo più raro (lettura nativa senza librerie del produttore) | dipende dalla parte grande di `mzlab-core`: va prima separata; mzML da validare con il validatore PSI (prova 2 del §7) |
-| 4 | npm: `mzlab-lettori-wasm` | lo stesso del 3 nel browser | solo dopo il 3; pacchetto con `.wasm` + glue, tetti di byte invariati |
+| 1 | numpress codec, split from `mzlab-core` (`src/numpress.rs`, 321 lines, V) | small, no dependencies, external specification (MS-Numpress, Teleman 2014) and public reference files of the specification: external truth ready | a crate of its own, English names, a test against the specification vectors |
+| 2 | `mzlab-lib` (`.mzlib` format, library parsers, scores; no internal dependency, V) | useful alone, API already gathered in one crate | stable API, documentation, a test against public MassBank/MoNA |
+| 3 | `mzlab-lettori` + the reading part of `mzlab-core` (trait `Lettore`, `apri`, mzML writing) | the rarest piece (native reading without vendor libraries) | depends on the large part of `mzlab-core`: to be split first; mzML to validate with the PSI validator (test 2 of §7) |
+| 4 | npm: `mzlab-lettori-wasm` | the same as 3 in the browser | only after 3; package with `.wasm` + glue, byte ceilings unchanged |
 
-**Non candidati**: `mzlab-feat` (≈ 68 mila righe, contratti ancora in movimento), `mzlab-desktop`, `mzlab-cli`, i `*-wasm` di pagina (legati all'interfaccia). `opentfraw` (in `vendor/`, Apache-2.0 con le nostre modifiche in `vendor/opentfraw/MODIFICHE-MZLAB.md`, V): non si ripubblica, si propongono le modifiche al progetto originale.
+**Not candidates**: `mzlab-feat` (≈ 68 thousand lines, contracts still moving), `mzlab-desktop`, `mzlab-cli`, the page `*-wasm` crates (tied to the interface). `opentfraw` (in `vendor/`, Apache-2.0 with our changes in `vendor/opentfraw/MODIFICHE-MZLAB.md`, V): not republished; the changes are offered to the original project.
 
-## 2. Licenza e dipendenze
-- `LICENSE`: MIT, © 2026 Federico Cristaudo (V); i crate la ereditano con `license.workspace = true` (V in `mzlab-lib`).
-- Le licenze delle dipendenze sono già controllate a ogni PR dal job `deny` di `.github/workflows/rust.yml` con `deny.toml` (V): ammesse MIT, Apache-2.0, BSD-2/3, MPL-2.0, ISC, Unicode, Zlib, OFL-1.1, CDLA-Permissive-2.0 (`webpki-roots`, solo dati dei certificati), sorgenti solo da crates.io. Tutte compatibili con MIT per la distribuzione; MPL-2.0 chiede di pubblicare le modifiche ai SUOI file, non al nostro codice.
-- Doppia licenza: dove una dipendenza è «MIT OR Apache-2.0» (es. `r-efi`) si sceglie MIT.
-- `opentfraw` (Apache-2.0): chi lo ridistribuisce deve portare licenza e NOTICE delle modifiche; oggi vale per il sito e l'app (I: controllo del pacchetto dell'app non fatto in questo studio).
-- patRoon è GPL-3: nessun codice copiato (§9 del principale), quindi nessun vincolo GPL sui crate.
-- Nessun crate ha oggi `publish = false` (0 su 18, V): un `cargo publish` per errore partirebbe. Proposta: aggiungerlo a tutti finché Federico non dà il via, e toglierlo solo dal crate scelto.
+## 2. Licence and dependencies
+- `LICENSE`: MIT, © 2026 Federico Cristaudo (V); crates inherit it with `license.workspace = true` (V in `mzlab-lib`).
+- Dependency licences are already checked on every PR by the `deny` job of `.github/workflows/rust.yml` with `deny.toml` (V): allowed MIT, Apache-2.0, BSD-2/3, MPL-2.0, ISC, Unicode, Zlib, OFL-1.1, CDLA-Permissive-2.0 (`webpki-roots`, certificate data only), sources only from crates.io. All compatible with MIT for distribution; MPL-2.0 asks to publish changes to ITS files, not to our code.
+- Dual licence: where a dependency is «MIT OR Apache-2.0» (e.g. `r-efi`) MIT is chosen.
+- `opentfraw` (Apache-2.0): whoever redistributes it must carry the licence and the NOTICE of the changes; this applies to the site and the app today (I: the app package was not checked in this study).
+- patRoon is GPL-3: no code copied (§9 of the main file), hence no GPL constraint on the crates.
+- No crate has `publish = false` today (0 of 18, V): an accidental `cargo publish` would go through. Proposal: add it to all crates until Federico gives the go-ahead, and remove it only from the chosen crate.
 
-## 3. Cosa serve a una libreria pubblica
-- **API stabile con semver**: oggi i nomi pubblici sono in italiano (`apri`, `scrivi`, `Limiti`, `Lettore`): serve una facciata in inglese, poi `1.0` solo quando non cambia più; prima `0.x`.
-- **Documentazione**: rustdoc su ogni elemento pubblico (`#![deny(missing_docs)]`), un README con un esempio che si compila (doctest), MSRV dichiarata.
-- **Test con verità esterna**: vettori di riferimento della specifica (numpress), file pubblici con valori noti (serie `verita/1` del banco di ROSINA.md F), mzML validato dal validatore PSI; niente test che chiedono il repository privato.
-- **Citazione**: `CITATION.cff` esiste già nella radice (V); per ogni crate un DOI (Zenodo) solo con il via di Federico.
-- **Niente dati privati**: il pacchetto si controlla con `cargo package --list` (nessun file di `mzlab-dati`, nessun cognome di `nomi_vietati.txt`: lo stesso controllo di `tests/test_esempi_anonimi.py`).
-- **Nome libero** su crates.io e npm: non verificato (I).
-- **Manutenzione**: CHANGELOG per crate, `cargo semver-checks` in CI prima di ogni versione (I: non installato).
+## 3. What a public library needs
+- **Stable API with semver**: public names are Italian today (`apri`, `scrivi`, `Limiti`, `Lettore`): an English facade is needed, then `1.0` only when it stops changing; `0.x` before.
+- **Documentation**: rustdoc on every public item (`#![deny(missing_docs)]`), a README with an example that compiles (doctest), a declared MSRV.
+- **Tests with external truth**: reference vectors of the specification (numpress), public files with known values (the `verita/1` series of the ROSINA.md F bench), mzML validated by the PSI validator; no test that needs the private repository.
+- **Citation**: `CITATION.cff` already exists at the root (V); a DOI (Zenodo) per crate only with Federico's go-ahead.
+- **No private data**: the package is checked with `cargo package --list` (no file of `mzlab-dati`, no surname of `nomi_vietati.txt`: the same check as `tests/test_esempi_anonimi.py`).
+- **Free name** on crates.io and npm: not verified (I).
+- **Maintenance**: a CHANGELOG per crate, `cargo semver-checks` in CI before each release (I: not installed).

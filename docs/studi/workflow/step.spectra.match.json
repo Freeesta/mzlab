@@ -2,25 +2,28 @@
  "schema": "step/1",
  "id": "spectra.match",
  "version": 1,
+ "package": "attributio",
  "title": "Compare MS2 spectra",
- "doc": "Scores each query MS2 spectrum against the reference spectra and keeps the best hits.",
+ "doc": "Scores each query MS2 spectrum against a spectral library and keeps the best candidates per feature (identity search: precursor window, then peak scores; search::identity in crates/mzlab-lib/src/search.rs).",
  "in": {
   "query": {
    "type": "spectra",
-   "title": "Query spectra"
+   "title": "Query spectra",
+   "requires": {
+    "ms_levels": [
+     2
+    ]
+   }
   },
-  "reference": {
-   "type": "spectra",
-   "title": "Reference spectra",
-   "accepts": [
-    "table"
-   ]
+  "library": {
+   "type": "library",
+   "title": "Spectral library"
   }
  },
  "out": {
   "hits": {
-   "type": "annot",
-   "title": "Best hits per spectrum"
+   "type": "candidates",
+   "title": "Library candidates per feature"
   }
  },
  "params": {
@@ -38,6 +41,13 @@
     "type": "integer",
     "minimum": 1,
     "default": 5
+   },
+   "precursor_tolerance_ppm": {
+    "title": "Precursor tolerance",
+    "type": "number",
+    "minimum": 0,
+    "default": 10,
+    "x-unit": "ppm"
    }
   }
  },
@@ -47,7 +57,8 @@
  },
  "deterministic": true,
  "errors": [
-  "err.lib.spectrum"
+  "err.lib.spectrum",
+  "error.memoryBudget"
  ],
  "algorithms": [
   {
@@ -65,7 +76,7 @@
    "id": "modified_cosine",
    "title": "Modified cosine",
    "doc": "Peaks may also pair at the precursor difference, for analogues that differ by one modification (modified_cosine in scores.rs).",
-   "source": "doi:10.1021/ci300058c",
+   "source": "doi:10.1073/pnas.1203689109",
    "applicability": {
     "ms_levels": [
      2

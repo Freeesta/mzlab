@@ -1,178 +1,205 @@
-# Studio «workflow modulari»: il contratto dei passi e il formato dei workflow di mzLab
+# Study «modular workflows»: the step contract and the workflow format of mzLab
 
-Obiettivo (Federico, 19/10/2026): mzLab legge i grezzi di ogni produttore, li converte in mzML e permette di COMPORRE workflow (pretrattamento → picchi → cromatogrammi → feature → annotazione/TP), riuniti in un'interfaccia, sul web o scaricato. Questo studio sceglie il contratto di un passo e il formato del workflow su prove (file veri di terzi, il nostro codice, un prototipo misurato), non su ideali. Base: `main` a `f072fcd`.
+Goal (Federico, 19/10/2026): mzLab reads the raw files of every vendor, converts them to mzML and lets users COMPOSE workflows (preprocessing → peaks → chromatograms → features → identification → TPs), gathered in one interface, on the web or downloaded. Attributio (identification, regulatory lists, ecotox) and Tabui (TPs, transformations, positions, drawing) become families of modules inside Flow, not separate apps. This study chooses the contract of a step and the workflow format on evidence (real third-party files, our code, a measured prototype), not on ideals. Base: `main` at `f072fcd`.
 
-File dello studio:
-- questo: verdetto, fonti, standard, contratto, prototipo, prove esterne, piano, vincoli, cosa non fare;
-- `docs/studi/workflow/MATRICE.md`: passo → chi lo ha (mzmine, OpenMS, XCMS, patRoon, mzLab) → parametri; catalogo e buchi;
-- `docs/studi/workflow/PROVE_SU_CARTA.md`: quattro workflow veri di terzi riscritti nel formato, cosa non si esprime e le correzioni nate;
-- `docs/studi/workflow/contract.schema.json`: la bozza (JSON Schema 2020-12) di `step/1`, `mzflow/2` e `prov/1`;
-- `docs/studi/workflow/example.mzflow.json`: un workflow grezzo → mzML → feature con un confronto di preset; `step.features.detect.json`: il descrittore del rilevamento con i campi e i predefiniti veri di `trace::Params` e tre algoritmi; `step.spectra.match.json`: il confronto di MS2 con i tre punteggi di `mzlab-lib`; `step.meta.compare.json`: il meta-passo di confronto (tutti validano la bozza, V);
-- `docs/studi/workflow/COMUNICAZIONE.md`: come si parlano i moduli della futura tela «Flow» (porte, compatibilità, passo mancante proposto, ordine e parallelismo ricavati, preset e alternative; §4b);
-- `docs/studi/workflow/PUBBLICAZIONE.md`: quali crate pubblicare e in che ordine, licenze, cosa serve (§12, solo analisi);
-- `crates/mzlab-cli/examples/flow.rs`: il prototipo (§6).
+Files of the study:
+- this one: verdict, sources, standards, contract, prototype, external tests, plan, constraints, what not to do;
+- `docs/studi/workflow/MATRICE.md`: step → who has it (mzmine, OpenMS, XCMS, patRoon, mzLab) → parameters; identification steps with their external truth (§3); Attributio and Tabui mapped to steps and ports (§5); catalogue and gaps;
+- `docs/studi/workflow/PROVE_SU_CARTA.md`: four real third-party workflows rewritten in the format, what cannot be expressed and the corrections they produced;
+- `docs/studi/workflow/contract.schema.json`: the draft (JSON Schema 2020-12) of `step/1`, `mzflow/2` and `prov/1`;
+- `docs/studi/workflow/example.mzflow.json`: a raw → mzML → features workflow with a preset comparison; step descriptors `step.features.detect.json` (real fields and defaults of `trace::Params`, three algorithms), `step.spectra.match.json` (the three scores of `mzlab-lib`), `step.spectra.chimeric.json` (co-isolation), `step.meta.compare.json` (all validate the draft, V);
+- `docs/studi/workflow/COMUNICAZIONE.md`: how the modules of the future «Flow» canvas talk (ports, compatibility, proposed missing step, derived order and parallelism, algorithms, presets and comparison; §4b);
+- `docs/studi/workflow/PUBBLICAZIONE.md`: which crates to publish and in which order, licences, what is needed (§12, analysis only);
+- `crates/mzlab-cli/examples/flow.rs`: the prototype (§6).
 
-**Segni**: **V** = verificato (letto in un file vero o nel codice, o misurato qui); **I** = ipotesi (non letto o non provato).
+**Marks**: **V** = verified (read in a real file or in the code, or measured here); **I** = hypothesis (not read or not tested).
 
-**Lingua**: tutto ciò che appartiene ai moduli è in INGLESE: nomi dei campi, id di passi, porte, parametri e algoritmi, descrizioni, etichette, chiavi e testi d'errore, l'interfaccia «Flow». L'italiano resta solo nei documenti interni di studio come questo. Schema, esempi e prototipo la rispettano (V); fanno eccezione solo i nomi di record che esistono già (`campioni/2`, `interp/1`) e le chiavi di `mzflow/1`, che un lettore riconosce (`formato`, `programma`, `operazioni`).
+**Language**: everything that belongs to the modules is in ENGLISH: field names, ids of steps, ports, parameters and algorithms, descriptions, labels, error keys and texts, the Flow interface, and the internal documentation and studies such as this one. Italian stays only for Teoria, Drawing texts for students and laboratory data. Schema, examples and prototype follow the rule (V); the only exceptions are names of records that already exist (`campioni/2`, `interp/1`, `livelli/1`) and the `mzflow/1` keys, which a reader maps (`formato`, `programma`, `operazioni`).
 
-## 0. Verdetto
-1. **Non serve un formato nuovo da zero**: mzLab ha già `mzflow/1` (`mzlab/web/workflow.js`: SHA-256 dei file, versione, commit, parametri, operazioni in ordine; V) e lo schema `feature_pipeline/1` (`docs/schemi/`, ricetta, prove delle stime, hash della tabella; V). Il formato proposto è **`mzflow/2`** = `mzflow/1` + un campo `steps` (il PIANO dichiarativo, un grafo), accanto a `operations` (il REGISTRO di `mzflow/1`, invariato; chiavi in inglese, §4).
-2. **Il pezzo che manca è il descrittore del passo** (`step/1`): oggi i parametri sono strutture Rust (`Recipe`, `trace::Params`, V) e il pannello Pipeline li disegna a mano. Con `step/1` (porte tipizzate, algoritmi alternativi, parametri in JSON Schema, versione legata al risultato, chiavi d'errore, modulo `.wasm`) il modulo si disegna da sé.
-3. **Provenienza = sottoinsieme di PROV-JSON** (`prov/1`): entità con SHA-256, attività con parametri canonici, tempo e memoria. Il prototipo lo scrive già (V).
-4. **Determinismo provato sul tratto grezzo → mzML → feature**: stessi byte su due giri, nativo e WASM (V, §6). Due difetti trovati: due scrittori di mzML con risultati diversi a valle, e l'impronta della ricetta calcolata sul testo `Debug` di Rust (§6.3).
-5. **Prima catena da chiudere**: grezzo → mzML → indice → feature → tabella → TP del timololo (§8), con oracoli esterni (mzmine, OpenMS, ThermoRawFileParser) già cablati in `tools/bench/` (V).
+## 0. Verdict
+1. **No new format from scratch is needed**: mzLab already has `mzflow/1` (`mzlab/web/workflow.js`: file SHA-256, version, commit, parameters, operations in order; V) and the `feature_pipeline/1` schema (`docs/schemi/`, recipe, proofs of the estimates, table hash; V). The proposed format is **`mzflow/2`** = `mzflow/1` + a `steps` field (the declarative PLAN, a graph), beside `operations` (the LOG of `mzflow/1`, unchanged; English keys, §4).
+2. **The missing piece is the step descriptor** (`step/1`): parameters are Rust structs today (`Recipe`, `trace::Params`, V) and the Pipeline panel draws them by hand. With `step/1` (typed ports, alternative algorithms, parameters in JSON Schema, a version tied to the result, error keys, `.wasm` module, palette family) a module draws itself.
+3. **Provenance = a subset of PROV-JSON** (`prov/1`): entities with SHA-256, activities with canonical parameters, time and memory. The prototype already writes it (V).
+4. **Determinism proven on raw → mzML → features**: same bytes on two runs, native and WASM (V, §6). Two defects found: two mzML writers with different results downstream, and the recipe fingerprint computed on the Rust `Debug` text (§6.3).
+5. **The chain reaches identification**: chimeric handling → formula from MS1 and MS2 → library match (three scores) → in silico candidates → RT plausibility → Schymanski level → regulatory and hazard records, and back to TPs through `structure`/`transform` (§4d, `MATRICE.md` §3 and §5). Every step already exists as code, in `main` or in open PRs, except library-assisted deconvolution (V).
+6. **First chain to close**: raw → mzML → index → features → table → identification → timolol TPs (§8), with external oracles (mzmine, OpenMS, ThermoRawFileParser, public libraries) and the tests of §7.
 
-## 1. Materiale grezzo letto
-- **mzmine 4.0.2**: batch FBMN vero, `https://raw.githubusercontent.com/lfnothias/FBMN_annotation_fusion_visualization_Cytoscape/main/results_download/mzmine/mzmine_microbial_workshop.mzbatch.xml` (935 righe; V). Radice `<batch mzmine_version>`, passi piatti `<batchstep method parameter_version>`, parametri per etichetta umana, ingresso implicito `BATCH_LAST_FEATURELISTS`; nessun hash, nessun errore, nessun grafo (V).
-- **OpenMS**: `.ini` di FeatureFinderMetabo 2.8.0, `https://raw.githubusercontent.com/PayamEmami/nf-core-metabolinden/5a0b165eff54b1f62e366545365ff61ee65c9d07/assets/parameters/FeatureFinderMetabo.ini` (V). `<PARAMETERS version>` + `<NODE>`/`<ITEM name value type restrictions advanced>`; un `.ini` per strumento, la catena sta fuori (Nextflow, KNIME). Nessun `.ini` letto per MapAligner e FeatureLinker (I).
-- **XCMS**: vignetta `https://raw.githubusercontent.com/sneumann/xcms/devel/vignettes/xcms.Rmd` (V): `findChromPeaks(CentWaveParam)` → `refineChromPeaks` → `adjustRtime(ObiwarpParam)` → `groupChromPeaks(PeakDensityParam)` → `fillChromPeaks`. Script, nessun file di workflow; i parametri viaggiano nell'oggetto (I).
-- **patRoon 3.1.0** (GPL-3): handbook `https://rickhelmus.github.io/patRoon/handbook_bd/` pagine `features`, `filtering`, `genTPs`, `TPsExamples` (V; solo nomi di funzioni e argomenti, nessun codice copiato). Studio dedicato: `docs/studi/patRoon_TP.md` (PR #1092, aperta).
-- **PSI**: schema `mzML1.1.1.xsd` (58 KB) e esempio `1min.mzML` dal repository HUPO-PSI (V); `psi-ms.obo` `data-version 4.2.6` del 14/10/2026 (V); schema di mzQC 1.0.0 (V); mzTab-M 2.1-dev: pagine di dettaglio non lette (I).
-- **Nostro codice** (V): trait `Lettore` e `apri` (`crates/mzlab-core/src/lettori.rs`, `crates/mzlab-lettori/src/lib.rs`), `lettori_mzml::scrivi`, `mzidx::build_mzml_spill`, `upload::indicizza_lettore`, `mzlab_feat_wasm::run::{recipe_for, detect, read_files, align}`, `pipeline::analyse`, `recipe::Recipe` (testo + impronta FNV), `mzlab-cli` (`docs/agenti/cli.md`), `TP_Mine/files/feat-worker.js` (orchestra già i passi in JS), le esportazioni di 10 moduli `.wasm` (da 2 a 32 funzioni ciascuno).
-- **Dati con verità**: corpus e `verita/1` di Rosina (`docs/studi/ROSINA.md` §F; nel privato), serie D1 (MetaboLights, MAF) e D2 (sintetica) del banco (`docs/agenti/mzfinder-benchmark.md`, V), verità del timololo `timolol_truth.json` (privato). Per il prototipo: `small.RAW` (LTQ, 48 spettri, 1,5 MB) dei test di ThermoRawFileParser (Apache-2.0), usato solo in locale e mai salvato nel repository.
+## 1. Raw material read
+- **mzmine 4.0.2**: a real FBMN batch, `https://raw.githubusercontent.com/lfnothias/FBMN_annotation_fusion_visualization_Cytoscape/main/results_download/mzmine/mzmine_microbial_workshop.mzbatch.xml` (935 lines; V). Root `<batch mzmine_version>`, flat steps `<batchstep method parameter_version>`, parameters by human label, implicit input `BATCH_LAST_FEATURELISTS`; no hash, no error, no graph (V).
+- **OpenMS**: FeatureFinderMetabo 2.8.0 `.ini`, `https://raw.githubusercontent.com/PayamEmami/nf-core-metabolinden/5a0b165eff54b1f62e366545365ff61ee65c9d07/assets/parameters/FeatureFinderMetabo.ini` (V). `<PARAMETERS version>` + `<NODE>`/`<ITEM name value type restrictions advanced>`; one `.ini` per tool, the chain lives outside (Nextflow, KNIME). No `.ini` read for MapAligner and FeatureLinker (I).
+- **XCMS**: vignette `https://raw.githubusercontent.com/sneumann/xcms/devel/vignettes/xcms.Rmd` (V): `findChromPeaks(CentWaveParam)` → `refineChromPeaks` → `adjustRtime(ObiwarpParam)` → `groupChromPeaks(PeakDensityParam)` → `fillChromPeaks`. A script, no workflow file; parameters travel in the object (I).
+- **patRoon 3.1.0** (GPL-3): handbook `https://rickhelmus.github.io/patRoon/handbook_bd/` pages `features`, `filtering`, `genTPs`, `TPsExamples` (V; only function and argument names, no code copied). Dedicated study: `docs/studi/patRoon_TP.md`.
+- **PSI**: schema `mzML1.1.1.xsd` (58 KB) and example `1min.mzML` from the HUPO-PSI repository (V); `psi-ms.obo` `data-version 4.2.6` of 14/10/2026 (V); mzQC 1.0.0 schema (V); mzTab-M 2.1-dev: detail pages not read (I).
+- **Identification papers** (metadata read on PubMed, V): DecoID, library-assisted deconvolution of chimeric spectra (Stancliffe et al., Nat. Methods 2021, doi:10.1038/s41592-021-01195-3); spectral entropy (Li et al., Nat. Methods 2021, doi:10.1038/s41592-021-01331-z); modified cosine in molecular networking (Watrous et al., PNAS 2012, doi:10.1073/pnas.1203689109). Levels: Schymanski et al. 2014, the reference of `data/livelli-1.json` (V).
+- **Our code** (V): trait `Lettore` and `apri` (`crates/mzlab-core/src/lettori.rs`, `crates/mzlab-lettori/src/lib.rs`), `lettori_mzml::scrivi`, `mzidx::build_mzml_spill`, `upload::indicizza_lettore`, `mzlab_feat_wasm::run::{recipe_for, detect, read_files, align}`, `pipeline::analyse`, `recipe::Recipe` (text + FNV fingerprint), `mzlab-cli` (`docs/agenti/cli.md`), `TP_Mine/files/feat-worker.js` (already orchestrates steps in JS), the exports of 10 `.wasm` modules (2 to 32 functions each).
+  For identification: `mzlab-lib/src/{search,scores,decoy}.rs`, `attributio/{ms2_engine,annotate,identity,tox}`, `mzlab-core/src/subformulas.rs`, `interp/ms2link.rs` (`MATRICE.md` §3, §5).
+- **Data with truth**: Rosina corpus and `verita/1` (`docs/studi/ROSINA.md` §F; private), series D1 (MetaboLights, MAF) and D2 (synthetic) of the bench (`docs/agenti/mzfinder-benchmark.md`, V), timolol truth `timolol_truth.json` (private). For the prototype: `small.RAW` (LTQ, 48 spectra, 1.5 MB) from the ThermoRawFileParser tests (Apache-2.0), used only locally and never saved in the repository.
 
-## 2. Standard prima di inventare
-| Standard | Cosa riusiamo | Cosa no, e perché |
+## 2. Standards before inventing
+| Standard | What we reuse | What not, and why |
 |---|---|---|
-| mzML 1.1 (PSI) | il tipo `mzml` così com'è; `dataProcessingList/processingMethod` con un termine PSI-MS per OGNI passo che cambia gli spettri | come formato di workflow o di provenienza: solo una lista lineare per file, senza ingressi né parametri tipizzati (V) |
-| PSI-MS (`psi-ms.obo` 4.2.6) | ~10 accessioni nel campo `cv` del passo (MS:1000544 conversione, MS:1000035 peak picking, MS:1000593 riduzione della linea di base, MS:1000594 rimozione dei punti deboli, MS:1000745 allineamento RT; V) | spedire l'OBO (1,9 MB) nel sito |
-| mzQC 1.0 | il modello di `inputFiles` (nome, formato, proprietà con checksum) e `analysisSoftware`; un export `qc` futuro | come contenitore della provenienza: non ha grafo dei passi (V) |
-| mzTab-M 2.x | un export della tabella in futuro, dopo aver letto le specifiche | come formato interno della tabella: pesante (MTD obbligatorio, studio/assay), orientato all'identificazione (I) |
-| CWL v1.2 / Nextflow | la forma della porta (`type`, `doc`, `default`, `format`) e l'idea del passo che dichiara ingressi e uscite (V) | il motore: nessuno dei due gira nel browser; i file degli studenti non lasciano il computer |
-| W3C PROV-JSON | `entity`/`activity`/`agent`/`used`/`wasGeneratedBy`: è `prov/1` | il resto (bundle, delega, qualificazioni): non serve. È una Member Submission, non una Recommendation (V) |
-| RO-Crate 1.2 + Workflow Run Crate | più avanti un export «pacchetto» zip (`CreateAction` con `instrument`/`object`/`result`) | ora: JSON-LD verboso, nessun beneficio per lo studente (V) |
-| JSON Schema 2020-12 | i parametri del passo e la generazione del modulo (`title`, `description`, `default`, `minimum`, `maximum`, `enum`; V); già usato in `docs/schemi/` | un validatore generico in Rust: dipendenze; basta un controllo ridotto (tipo, limiti, enum, parametri dell'algorithm scelto) |
+| mzML 1.1 (PSI) | the `mzml` type as is; `dataProcessingList/processingMethod` with a PSI-MS term for EVERY step that changes spectra | as a workflow or provenance format: only a linear list per file, no inputs or typed parameters (V) |
+| PSI-MS (`psi-ms.obo` 4.2.6) | ~10 accessions in the `cv` field of a step (MS:1000544 conversion, MS:1000035 peak picking, MS:1000593 baseline reduction, MS:1000594 low intensity data point removal, MS:1000745 RT alignment; V) | shipping the OBO (1.9 MB) in the site |
+| mzQC 1.0 | the model of `inputFiles` (name, format, properties with checksum) and `analysisSoftware`; a future `qc` export | as a provenance container: it has no step graph (V) |
+| mzTab-M 2.x | a future table export, after reading the specification | as the internal table format: heavy (mandatory MTD, study/assay), identification oriented (I) |
+| CWL v1.2 / Nextflow | the port shape (`type`, `doc`, `default`, `format`) and the idea of a step that declares inputs and outputs (V) | the engine: neither runs in the browser; students' files never leave the computer |
+| W3C PROV-JSON | `entity`/`activity`/`agent`/`used`/`wasGeneratedBy`: this is `prov/1` | the rest (bundles, delegation, qualifications): not needed. It is a Member Submission, not a Recommendation (V) |
+| RO-Crate 1.2 + Workflow Run Crate | later a zip «package» export (`CreateAction` with `instrument`/`object`/`result`) | now: verbose JSON-LD, no benefit for students (V) |
+| JSON Schema 2020-12 | step parameters and form generation (`title`, `description`, `default`, `minimum`, `maximum`, `enum`; V); already used in `docs/schemi/` | a generic validator in Rust: dependencies; a reduced check is enough (type, limits, enum, parameters of the chosen algorithm) |
+| Schymanski levels (2014) | the scale of `annot.level` (1, 2a, 2b, 3a, 3b, 4, 5), already in `livelli-1.json` (V) | a verdict without evidence: each level carries the evidence that reached it |
 
-## 3. Matrice e buchi (dettaglio: `workflow/MATRICE.md`)
-- mzLab copre l'intero tratto grezzo → tabella → TP (V), ma come chiamate interne senza descrittore.
-- Buchi veri: lisciatura come passo a sé, allineamento RT per deformazione continua (abbiamo solo ancore), export mzTab-M e mzQC, TP da struttura (esclusa, §9).
-- Unici nostri: lettura nativa nel browser, stima dei parametri con prova (`params::estimate`), posizione della sostituzione, livelli con prove.
+## 3. Matrix and gaps (detail: `workflow/MATRICE.md`)
+- mzLab covers the whole raw → table → identification → TP stretch (V; part in open PRs), but as internal calls without descriptors.
+- Real gaps: smoothing as a step, continuous-warping RT alignment (only anchors), library-assisted deconvolution of chimeric spectra, InChIKey computation, mzTab-M and mzQC export, TPs from structure (excluded, §9).
+- Ours only: native reading in the browser, parameter estimation with proof (`params::estimate`), position of the substitution, levels with evidence, regulatory and hazard records next to the identification.
 
-## 4. Il contratto (bozza in `workflow/contract.schema.json`)
-**Tipi dei dati** (`dataType`, 16): `raw`, `mzml`, `mzidx`, `xic`, `peaks`, `rtmap`, `table`, `samples`, `spectra`, `annot`, `tp`, `structure`, `transform`, `comparison`, `qc`, `report`. `mzidx` è un tipo a sé perché è la moneta vera del motore: ogni passo dopo la lettura lavora sull'indice (V: `Index<R>` nelle firme di `pipeline::analyse`, `params::estimate`, `run::detect`).
+## 4. The contract (draft in `workflow/contract.schema.json`)
+**Data types** (`dataType`, 19): `raw`, `mzml`, `mzidx`, `xic`, `peaks`, `rtmap`, `table`, `samples`, `spectra`, `library`, `formulas`, `candidates`, `annot`, `tp`, `structure`, `transform`, `comparison`, `qc`, `report`. `mzidx` is a type of its own because it is the real currency of the engine: every step after reading works on the index (V: `Index<R>` in the signatures of `pipeline::analyse`, `params::estimate`, `run::detect`).
 
-**Il passo `step/1`** (uno per tipo e versione, spedito con il modulo che lo esegue):
-- `id` (`features.detect`), `version` intera: SALE quando gli stessi ingressi e parametri possono dare un'uscita diversa (come `parameter_version` di mzmine, ma legata al risultato);
-- `title`, `doc`, `icon` (chiave di `QICON`), `cv` (termine PSI-MS se esiste), tutti in inglese;
-- `in`/`out`: porte con `type`, `many` (una per file della serie), `optional`;
-- `params`: JSON Schema con `x-unit`, `x-advanced` (dietro «More», come `advanced` di OpenMS), `x-group`, `x-estimate` (valore assente = lo stima il passo e ne scrive la prova, come `floor` oggi), `x-noresult` (non cambia il risultato: memoria, fili; fuori dall'impronta);
-- `runs_in`: modulo `.wasm` con il suo tetto, e/o `native`; `deterministic`; `errors`: le chiavi che può dare, nella forma dell'API `{error, error_key, params}`;
-- `algorithms[]` e `default_algorithm`: i metodi scambiabili con le stesse porte (sotto); `presets` (ognuno nomina il suo `algorithm`) e `default_preset`.
+**The step `step/1`** (one per kind and version, shipped with the module that runs it):
+- `id` (`features.detect`), integer `version`: RAISED whenever the same inputs and parameters can give a different output (like mzmine `parameter_version`, but tied to the result);
+- `title`, `doc`, `icon` (a `QICON` key), `cv` (PSI-MS term when one exists), `package` (palette family: `core`, `attributio`, `tabui`);
+- `in`/`out`: ports with `type`, `many` (one per file of the series), `optional`, `accepts`, `requires`;
+- `params`: JSON Schema with `x-unit`, `x-advanced` (behind «More», like OpenMS `advanced`), `x-group`, `x-estimate` (absent value = estimated by the step, which writes its proof, like `floor` today), `x-noresult` (does not change the result: memory, threads; left out of the fingerprint);
+- `runs_in`: `.wasm` module with its ceiling, and/or `native`; `deterministic`; `errors`: the keys it may return, in the API shape `{error, error_key, params}`;
+- `algorithms[]` and `default_algorithm`: interchangeable methods with the same ports (below); `presets` (each names its `algorithm`) and `default_preset`.
 
-**Il workflow `mzflow/2`**: `format`, `program` (`name`, `version`, `commit`), `inputs` (nome, SHA-256, byte, tipo) e `steps` (istanze: `id` unico, `step` = `id@versione`, `algorithm`, `preset`, `in` = riferimenti `file:NAME` o `STEP.OUTPUT`, `params` solo diversi dai predefiniti). È un grafo aciclico; l'interfaccia mostra una catena finché il grafo ha un solo cammino. `operations` è il registro di `mzflow/1`; il lettore apre ancora i vecchi file e ne mappa le chiavi italiane (`formato` → `format`, `programma` → `program`, `operazioni` → `operations`).
+**The workflow `mzflow/2`**: `format`, `program` (`name`, `version`, `commit`), `inputs` (name, SHA-256, bytes, type) and `steps` (instances: unique `id`, `step` = `id@version`, `algorithm`, `preset`, `in` = references `file:NAME` or `STEP.OUTPUT`, `params` only where they differ from the defaults). It is an acyclic graph; the interface shows a chain while the graph has a single path. `operations` is the log of `mzflow/1`; the reader still opens old files and maps their Italian keys (`formato` → `format`, `programma` → `program`, `operazioni` → `operations`).
 
-**La provenienza `prov/1`**: `agent` (mzLab, versione, commit, `wasm` o `native`), `plan_sha256`, `entity` (SHA-256, byte, tipo, etichetta), `activity` (passo, `algorithm`, parametri CANONICI con le stime, `params_sha256`, `used`, `generated`, `ms`, `heap_peak_bytes`, `error`).
+**Provenance `prov/1`**: `agent` (mzLab, version, commit, `wasm` or `native`), `plan_sha256`, `entity` (SHA-256, bytes, type, label), `activity` (step, `algorithm`, CANONICAL parameters with the estimates, `params_sha256`, `used`, `generated`, `ms`, `heap_peak_bytes`, `error`).
 
-**Regole**:
-1. Parametri canonici = JSON con chiavi ordinate, ogni valore presente (predefiniti e stime compresi), numeri nella forma più corta che si rilegge uguale; l'impronta è lo SHA-256 di quel testo, senza le chiavi `x-noresult`.
-2. Chiave della cache = (SHA-256 degli ingressi, `id@versione`, algoritmo `id@versione`, `params_sha256`); stessa chiave → stesso risultato, si riusa senza rifare.
-3. Ingressi immutabili: un passo non cambia mai un dato, ne produce uno nuovo (correzione 7 di `PROVE_SU_CARTA.md`).
-4. Unità esplicite: `mz_tol {da, ppm}`, RT in `min` o `s` dichiarati; mai codici di segno.
-5. Prima di partire il piano si controlla tutto: tipi delle porte, riferimenti, versioni presenti, passo disponibile sulla piattaforma (`err.flow.unavailable`), parametri entro i limiti.
-6. Gli errori si fermano al passo: `prov/1` scrive l'attività con `error`, le uscite già fatte restano valide e in cache.
+**Rules**:
+1. Canonical parameters = JSON with sorted keys, every value present (defaults and estimates included), numbers in the shortest form that reads back equal; the fingerprint is the SHA-256 of that text, without the `x-noresult` keys.
+2. Cache key = (input SHA-256, `id@version`, algorithm `id@version`, `params_sha256`); same key → same result, reused without recomputing.
+3. Immutable inputs: a step never changes data, it produces new data (correction 7 of `PROVE_SU_CARTA.md`).
+4. Explicit units: `mz_tol {da, ppm}`, RT in declared `min` or `s`; never sign codes.
+5. Before starting, the whole plan is checked: port types, references, versions present, step available on the platform (`err.flow.unavailable`), parameters within limits.
+6. Errors stop at the step: `prov/1` writes the activity with `error`, the outputs already made stay valid and cached.
 
-**Alternative per passo** (dettaglio e confronto: `COMUNICAZIONE.md` §4). Un passo ha un algoritmo predefinito (`default_algorithm`: il migliore noto per il caso tipico, giustificato da una misura del banco) e altri selezionabili con le STESSE porte.
-Ogni voce di `algorithms[]`: `id`, `version`, `title`, `doc`, `source` (DOI dell'articolo da cui si riscrive), `applicability` (quando si applica: `resolution`, `polarity`, `ms_levels`, `spectrum_mode`, `peak_fwhm_s`, `min_files`, `needs` come `internal_standards`), `params` propri (quelli comuni a tutti stanno nei `params` del passo), `status` (`available` o `planned`). L'interfaccia suggerisce gli algoritmi la cui applicabilità torna con le faccette dell'ingresso.
+**Alternatives per step** (detail and comparison: `COMUNICAZIONE.md` §4). A step has a default algorithm (`default_algorithm`: the best known for the typical case, justified by a bench measure) and others selectable with the SAME ports.
+Each entry of `algorithms[]`: `id`, `version`, `title`, `doc`, `source` (DOI of the paper it is written from), `applicability` (when it applies: `resolution`, `polarity`, `ms_levels`, `spectrum_mode`, `peak_fwhm_s`, `min_files`, `needs` such as `internal_standards`), its own `params` (those common to all are in the step `params`), `status` (`available` or `planned`). The interface suggests the algorithms whose applicability matches the input facets.
 
-| Passo | Predefinito | Alternative |
+| Step | Default | Alternatives |
 |---|---|---|
-| `features.detect` (picchi) | `masstrace` (`trace::detect`, available, V) | `centwave` (Tautenhahn 2008, HR, planned), `threshold` (soglia e derivata, LR, planned) |
-| `series.rt_align` | `anchors` (`rtmap` con le ancore, available, V) | `internal_standards` (needs `internal_standards`, planned), `linear`, `obiwarp` (Prince 2006, planned) |
-| `spectra.match` (MS2) | `spectral_entropy` | `cosine`, `modified_cosine` (tutti e tre in `mzlab-lib/src/scores.rs`, available, V) |
+| `features.detect` (peaks) | `masstrace` (`trace::detect`, available, V) | `centwave` (Tautenhahn 2008, HR, planned), `threshold` (threshold and derivative, LR, planned) |
+| `series.rt_align` | `anchors` (`rtmap` with anchors, available, V) | `internal_standards` (needs `internal_standards`, planned), `linear`, `obiwarp` (Prince 2006, planned) |
+| `spectra.match` (MS2) | `spectral_entropy` | `cosine`, `modified_cosine` (all three in `mzlab-lib/src/scores.rs`, available, V) |
+| `spectra.chimeric` | `purity_flag` (`fill_purity`, available, V) | `intruders` (PR #1061), `library_deconvolution` (DecoID-like, planned) |
 
-**Confronto** (`meta.compare@1`): un meta-passo che esegue lo stesso passo con 2 o più varianti (algoritmo, preset, parametri) sugli stessi ingressi e scrive un dato `comparison`: feature abbinate, solo in A, solo in B, mediana di Δm/z (ppm) e di ΔRT, |log2| del rapporto delle aree, Spearman; per i punteggi correlazione di rango e accordo del primo candidato. Serve a scegliere il predefinito su prove, a validare un'implementazione nuova contro la vecchia e, nella didattica, a mostrare cosa cambia con il metodo.
+**Comparison** (`meta.compare@1`): a meta-step that runs the same step with 2 or more variants (algorithm, preset, parameters) on the same inputs and writes `comparison` data: matched features, only in A, only in B, median Δm/z (ppm) and ΔRT, |log2| of the area ratio, Spearman; for scores, rank correlation, top-1 agreement and changed levels. It serves to choose the default on evidence, to validate a new implementation against the old one and, in teaching, to show what a method changes.
 
-**Interfaccia generata** (I, da provare): un modulo per passo dallo schema (numero con unità e limiti, menu da `enum`, gruppi da `x-group`, «More» per `x-advanced`, «Auto» per `x-estimate` con la prova accanto), solo in inglese, icone da `QICON`, transizioni morbide spente da `prefers-reduced-motion`, tastiera e `aria-label` dai `title`. Pochi clic: un workflow salvato si riapplica con «Open» → scegli i file → «Run».
+**Generated interface** (I, to test): one form per step from the schema (number with unit and limits, menu from `enum`, groups from `x-group`, «More» for `x-advanced`, «Auto» for `x-estimate` with the proof beside it), English only, icons from `QICON`, transitions off under `prefers-reduced-motion`, keyboard and `aria-label` from the `title`s. Few clicks: a saved workflow is re-applied with «Open» → choose files → «Run».
 
-## 4c. Perché JSON
-- **JSON (scelto per contratti, descrittori, workflow e `prov/1`)**: è già la lingua di `mzflow/1`, `feature_pipeline/1`, `campioni/2` e di tutte le rotte `/api` (V); il motore ha già il suo lettore e scrittore senza dipendenze (`mzlab_core::json`, usato dal prototipo, V) e il browser ha `JSON.parse`; JSON Schema 2020-12 valida e genera i moduli; la forma canonica (chiavi ordinate, numeri più corti, regola 1) dà un'impronta stabile. I file sono piccoli (`example.mzflow.json` 1 295 B, V) e si leggono in un diff.
-- **YAML**: più comodo a mano e con commenti, ma specifica grande, tipi impliciti (`no` → falso, `1.10` → 1.1), nessun lettore nel motore: una dipendenza in più nei moduli vicini al tetto (I: byte non misurati) e una canonica difficile. I workflow li salva il programma, non si scrivono a mano; le note stanno in `doc` e `label`.
-- **TOML**: ottimo per configurazioni piatte (`Cargo.toml`), scomodo per un grafo di istanze con `in` e `params` annidati; nessun lettore nel motore e nessuno schema standard (si valida solo dopo averlo convertito in JSON).
-- **MessagePack, CBOR, protobuf**: compatti e veloci, ma illeggibili e senza diff in git per file di pochi KB, dove la velocità non conta; protobuf chiede uno schema compilato. CBOR ha una codifica deterministica (RFC 8949 §4.2): servirebbe solo per firmare record binari, oggi no.
-- **Dati grandi**: in formati standard o binari, mai dentro un JSON: mzML (`indexedmzML`, numpress), `.mzidx`, `.mzfeat`/`.mzfeatf`, `.mzlib`. Il workflow e `prov/1` li citano per SHA-256 e tipo.
+## 4b. How modules talk (detail: `workflow/COMUNICAZIONE.md`)
+A wire carries a descriptor (`type`, `sha256`, facets such as `hr`/`lr`), never bytes. An output can be wired to an input if type (or `accepts`), cardinality, facets (`requires`) and acyclicity hold; if a registered conversion (`converts`) is missing, the program PROPOSES it with one click.
+Order (Kahn) and parallelism (independent branches, `per_item` per file; workers in the browser, threads in the app) are derived from what each step reads and writes; the only shared resource is memory (`memory_hint_bytes`). Each step has presets with `when` on the facets (e.g. `hr`, `lr`, as `run::recipe_for` already does, V) and alternative algorithms inside the same step, with the same ports. The fields are in the draft and the examples validate it (V).
+Chemical structure is a port like any other (`structure`, format of the dedicated study `docs/studi/STRUTTURA_DATO*.md`, record `mol/1`): it enters from Drawing, from pasted text or from a result with one click, and leaves as a drawing. Parent → product transformations are a type of their own (`transform`: Δ, rule, atom mapping, sites with support), read by `tp.link`, by the positions and by the drawing; the readers of a structure are in `MATRICE.md` §4.
 
-## 4b. Come si parlano i moduli (dettaglio: `workflow/COMUNICAZIONE.md`)
-Un filo porta un descrittore (`type`, `sha256`, faccette come `hr`/`lr`), mai i byte. Un'uscita si collega a un ingresso se tipo (o `accepts`), cardinalità, faccette (`requires`) e aciclicità tornano; se manca una conversione registrata (`converts`), il programma la PROPONE con un clic.
-Ordine (Kahn) e parallelismo (rami indipendenti, `per_item` per file; worker nel browser, fili nell'app) si ricavano da ciò che ogni passo legge e scrive; l'unica risorsa condivisa è la memoria (`memory_hint_bytes`). Ogni passo ha preset con `when` sulle faccette (es. `hr`, `lr`, come fa già `run::recipe_for`, V) e algoritmi alternativi dentro lo stesso passo, con le stesse porte. I campi sono nella bozza e gli esempi la validano (V).
-La struttura chimica è una porta come le altre (`structure`, formato dello studio dedicato `docs/studi/STRUTTURA_DATO*.md`, record `mol/1`): entra da Disegno, da un testo incollato o da un risultato con un clic, ed esce come disegno. Le trasformazioni genitore → prodotto sono un tipo a sé (`transform`: Δ, regola, mappatura atomica, siti con supporto), letto da `tp.link`, dalle posizioni e dal disegno; chi legge una struttura è nella `MATRICE.md` §4.
+## 4c. Why JSON
+- **JSON (chosen for contracts, descriptors, workflows and `prov/1`)**: it is already the language of `mzflow/1`, `feature_pipeline/1`, `campioni/2` and all `/api` routes (V); the engine already has its own reader and writer with no dependency (`mzlab_core::json`, used by the prototype, V) and the browser has `JSON.parse`; JSON Schema 2020-12 validates and generates the forms; the canonical form (sorted keys, shortest numbers, rule 1) gives a stable fingerprint. Files are small (`example.mzflow.json` 1 295 B, V) and read well in a diff.
+- **YAML**: handier by hand and with comments, but a large specification, implicit types (`no` → false, `1.10` → 1.1), no reader in the engine: one more dependency in modules close to their ceiling (I: bytes not measured) and a hard canonical form. Workflows are saved by the program, not written by hand; notes go in `doc` and `label`.
+- **TOML**: excellent for flat configuration (`Cargo.toml`), awkward for a graph of instances with nested `in` and `params`; no reader in the engine and no standard schema (it validates only after conversion to JSON).
+- **MessagePack, CBOR, protobuf**: compact and fast, but unreadable and without git diffs for files of a few KB, where speed does not matter; protobuf needs a compiled schema. CBOR has a deterministic encoding (RFC 8949 §4.2): useful only to sign binary records, not needed today.
+- **Large data**: in standard or binary formats, never inside a JSON: mzML (`indexedmzML`, numpress), `.mzidx`, `.mzfeat`/`.mzfeatf`, `.mzlib`. Workflows and `prov/1` cite them by SHA-256 and type.
 
-## 5. Prova su carta (dettaglio: `workflow/PROVE_SU_CARTA.md`)
-Quattro workflow veri (mzmine FBMN, OpenMS FFM, XCMS vignetta, patRoon TP) riscritti nel formato. Si esprimono tutti nel tratto rilevamento → allineamento → riempimento; non si esprimono gli algoritmi che non abbiamo (centWave, Obiwarp, lisciatura a sé) né i programmi esterni (BioTransformer, CTS, MetFrag).
-Undici correzioni, già nella bozza: `id` per istanza, tolleranze composte, `algorithms[]` e `algorithm` dell'istanza per la scelta del metodo, riferimenti espliciti, `x-advanced`, conversioni dichiarate, dati immutabili, `samples` come tipo, `err.flow.unavailable`, liste dell'utente come ingressi con hash, grafo dal primo giorno.
+## 4d. Identification and the Attributio and Tabui families (detail: `workflow/MATRICE.md` §3 and §5)
+- **Chain** (all `requires: {"resolution": ["hr"]}`; the LR world stops at peaks, principle 1): `features.ms2_link` → `spectra.chimeric` (purity, intruders, deconvolution) → `formula.ms1` (exact mass + isotopes) and `formula.ms2` (fragment subformulas, neutral losses, H shifts) → `spectra.match` (library: cosine, modified cosine, spectral entropy; decoys and q-values) and `spectra.insilico` (MetFrag-like candidates) → `rt.predict` → `annot.level` (Schymanski) → `annot.regulatory`, `annot.hazard` → `export.attributio`.
+- **Scores aware of chimeric spectra**: `spectra.chimeric` writes purity and intruders into `spectra`; `spectra.match` and `formula.ms2` read them (peaks explained by an intruder do not count for the precursor; low purity caps the level at 3), so the evidence of `annot.level` names the purity.
+- **Families**: `package: attributio` for identification, regulatory lists and ecotox; `package: tabui` for TP generation, linking, positions, reactivity and drawing; `package: core` for the rest. On the palette a family is a group of modules; a whole Attributio or Tabui session is just a saved `mzflow/2`.
+- **Fusion through ports**: Tabui gives Attributio `transform` and `structure` (a TP becomes a suspect, with `modified_cosine` at the Δ of the transformation); Attributio gives Tabui an identified parent (`annot` level 1-2), RT and formula constraints, and regulatory or hazard records on the TP row. Both write `candidates` and `annot` with the same fields (one identity record).
 
-## 6. Prototipo minimo: grezzo → mzML → feature
-`crates/mzlab-cli/examples/flow.rs` (prototipo, non va nel sito): legge un `mzflow/2` (chiavi in inglese, passi `convert.mzml@1` → `features.table@1`) a catena lineare (`convert.mzml` → `features.table`), esegue i passi con il codice del motore (`mzlab_lettori::apri`, `lettori_mzml::scrivi`, `mzlab_cli::features`, resa pubblica per poter passare la cartella di lavoro: in WASI non c'è una cartella temporanea) e scrive `prov.json` con SHA-256, tempo e picco della memoria di ogni passo (allocatore che conta, come `examples/mzml_memoria.rs`).
+## 5. Paper test (detail: `workflow/PROVE_SU_CARTA.md`)
+Four real workflows (mzmine FBMN, OpenMS FFM, XCMS vignette, patRoon TP) rewritten in the format. All of them are expressed along detection → alignment → filling; the algorithms we do not have (centWave, Obiwarp, standalone smoothing) and external programs (BioTransformer, CTS, MetFrag) are not.
+Eleven corrections, already in the draft: `id` per instance, compound tolerances, `algorithms[]` and the instance `algorithm` for the choice of method, explicit references, `x-advanced`, declared conversions, immutable data, `samples` as a type, `err.flow.unavailable`, user lists as inputs with a hash, a graph from day one.
+
+## 6. Minimal prototype: raw → mzML → features
+`crates/mzlab-cli/examples/flow.rs` (prototype, not in the site): reads an `mzflow/2` (English keys, steps `convert.mzml@1` → `features.table@1`) as a linear chain, runs the steps with the engine code (`mzlab_lettori::apri`, `lettori_mzml::scrivi`, `mzlab_cli::features`, made public to pass the work folder: WASI has no temporary folder) and writes `prov.json` with SHA-256, time and heap peak of each step (counting allocator, as in `examples/mzml_memoria.rs`).
 ```
-cargo run --release -p mzlab-cli --example flow -- FLOW.json WORKDIR                        # nativo
+cargo run --release -p mzlab-cli --example flow -- FLOW.json WORKDIR                        # native
 cargo build --release --target wasm32-wasip1 -p mzlab-cli --example flow                    # WASM (WASI)
-node wasi.mjs target/wasm32-wasip1/release/examples/flow.wasm DIR /d/FLOW.json /d/OUT       # Node 22, node:wasi, DIR montata in /d
+node wasi.mjs target/wasm32-wasip1/release/examples/flow.wasm DIR /d/FLOW.json /d/OUT       # Node 22, node:wasi, DIR mounted on /d
 ```
 
-### 6.1 Misure (V, container cloud x86_64, 4 CPU, `small.RAW` LTQ 1 504 354 B, 48 spettri)
-| Esecuzione | conversione (ms) | feature (ms) | picco heap conversione | picco heap feature | processo |
+### 6.1 Measures (V, cloud container x86_64, 4 CPU, `small.RAW` LTQ 1 504 354 B, 48 spectra)
+| Run | conversion (ms) | features (ms) | conversion heap peak | features heap peak | process |
 |---|---|---|---|---|---|
-| nativo, giro 1 / 2 | 52,1 / 51,1 | 49,6 / 49,0 | 2 231 848 B | 6 426 896 B | 0,11 s, RSS 11,1 MB |
-| WASM (Node 22 WASI), giro 1 / 2 | 124 / 119,4 | 118,1 / 110,3 | 2 156 824 B | 6 102 097 B | memoria lineare 7,1 MB; compilazione 10 ms |
-- **Hash identici** su quattro giri: `conv.mzML` (1 829 427 B) SHA-256 `92dd492951bfec2c…`, `feat.csv` `4bd43e415156e608…`, uguali tra nativo e WASM, e uguali dopo il passaggio alle chiavi inglesi; il `prov.json` di entrambi valida `prov1` della bozza (V). Il picco di heap differisce (puntatori a 32 bit in WASM), il risultato no.
-- **Via diretta = via mzML**: `mzlab-cli features small.RAW` e `features conv.mzML` danno le stesse 3 righe e le stesse aree (V).
-- **Scala**: il file è piccolo (3 feature); tempi e memoria su file veri vanno misurati con lo stesso esempio sui file di Rosina e del timololo (F8 di Rosina, sul Mac). WASI non è il sito: nel browser i passi girano nei moduli esistenti (§9).
+| native, run 1 / 2 | 52.1 / 51.1 | 49.6 / 49.0 | 2 231 848 B | 6 426 896 B | 0.11 s, RSS 11.1 MB |
+| WASM (Node 22 WASI), run 1 / 2 | 124 / 119.4 | 118.1 / 110.3 | 2 156 824 B | 6 102 097 B | linear memory 7.1 MB; compile 10 ms |
+- **Identical hashes** on four runs: `conv.mzML` (1 829 427 B) SHA-256 `92dd492951bfec2c…`, `feat.csv` `4bd43e415156e608…`, equal between native and WASM, and equal after the switch to English keys; the `prov.json` of both validates `prov1` of the draft (V). The heap peak differs (32-bit pointers in WASM), the result does not.
+- **Direct path = mzML path**: `mzlab-cli features small.RAW` and `features conv.mzML` give the same 3 rows and the same areas (V).
+- **Scale**: the file is small (3 features); time and memory on real files are to be measured with the same example on the Rosina and timolol files (F8 of Rosina, on the Mac). WASI is not the site: in the browser the steps run in the existing modules (§9).
 
-### 6.2 Cosa ha mostrato il prototipo
-1. **Due scrittori di mzML**: `raw::to_mzml` (esempio `raw2mzml`, software «opentfraw 0.1.0», 1 846 674 B) e `lettori_mzml::scrivi` (software «mzlab 1.0.1», 1 829 427 B). Le feature dal primo hanno aree diverse dello 0,014 % (es. 2 853 741,7 contro 2 853 340,2; altezze uguali; causa non cercata, I). Nel contratto il passo `convert.mzml` è UNO e la versione nomina lo scrittore.
-2. **L'mzML scritto non è `indexedmzML`** (nessun `<offset>`), dichiara il CV 4.1.163 (attuale 4.2.6) e un solo `processingMethod` (conversione). Per la prova F6 di Rosina e per §7.2 servono indice, CV aggiornato e un `processingMethod` per ogni passo che tocca gli spettri.
-3. **I nomi delle colonne del CSV vengono dal nome del file** (`datafile:small_1:area`): due file identici con nomi diversi danno CSV diversi. Nel contratto l'identità è lo SHA-256, il nome è un'etichetta; i confronti di hash si fanno a nomi uguali.
+### 6.2 What the prototype showed
+1. **Two mzML writers**: `raw::to_mzml` (example `raw2mzml`, software «opentfraw 0.1.0», 1 846 674 B) and `lettori_mzml::scrivi` (software «mzlab 1.0.1», 1 829 427 B). Features from the first have areas 0.014 % different (e.g. 2 853 741.7 against 2 853 340.2; same heights; cause not investigated, I). In the contract `convert.mzml` is ONE step and its version names the writer.
+2. **The written mzML is not `indexedmzML`** (no `<offset>`), declares CV 4.1.163 (current 4.2.6) and a single `processingMethod` (conversion). Test F6 of Rosina and §7.2 need the index, the updated CV and one `processingMethod` per step that touches spectra.
+3. **CSV column names come from the file name** (`datafile:small_1:area`): two identical files with different names give different CSVs. In the contract identity is the SHA-256, the name is a label; hash comparisons are made with equal names.
 
-### 6.3 Cosa ha mostrato il codice
-- `Recipe::file_text` è il testo `{:?}` (`Debug`) delle strutture Rust con un'impronta FNV a 128 bit (V): basta rinominare un campo o cambiare il formato di un `f64` per cambiare l'impronta senza cambiare il risultato. Va bene come chiave interna della cache; per il contratto serve la forma canonica della regola 1 (§4).
-- `Recipe::row_window` usa `ppm < 0` per dire «Da» (V): ammesso dentro il motore, vietato nel contratto (regola 4).
+### 6.3 What the code showed
+- `Recipe::file_text` is the `{:?}` (`Debug`) text of the Rust structs with a 128-bit FNV fingerprint (V): renaming a field or changing an `f64` format changes the fingerprint without changing the result. Fine as an internal cache key; the contract needs the canonical form of rule 1 (§4).
+- `Recipe::row_window` uses `ppm < 0` to mean «Da» (V): allowed inside the engine, forbidden in the contract (rule 4).
 
-## 7. Prove esterne (progettate, non eseguite)
-1. **Stessa tabella di mzmine e OpenMS**: stesso file mzML, `tools/bench/` (V: `corri_mzmine.py` batch headless 3.9.0, `corri_openms.py` FeatureFinderMetabo + legame KD, adattatori `da_csv` per mzmine, XCMS, OpenMS, patRoon). Abbinamento di una riga: HR |Δm/z| ≤ 5 ppm e |ΔRT| ≤ 0,1 min; LR |Δm/z| ≤ 0,5 Da e |ΔRT| ≤ 0,1 min.
-Esiti dichiarati prima: richiamo delle righe dell'oracolo sopra 10 volte il rumore ≥ 0,9; mediana di |log2(area mzLab / area oracolo)| ≤ 0,15; Spearman delle aree ≥ 0,9. Concordanza misurata, non uguaglianza (l'oracolo non è la verità); la verità sta in D1, D2 e nel timololo.
-2. **mzML validato**: XSD `mzML1.1.1.xsd` e lo schema `idx` della pagina PSI (nome da riverificare), validatore semantico Java di HUPO-PSI con `ms-mapping.xml` fuori rete, `FileInfo -v` di OpenMS; rilettura = lettore (F6 di Rosina). Oggi fallirebbe sull'indice (§6.2 punto 2: I, non eseguito).
-3. **Riesecuzione con hash identico**: ogni passo, due giri e tre piattaforme (Linux x86_64, Mac arm64, WASM in Chromium); il primo pezzo è fatto (§6.1). In CI: `cargo test` di un piccolo `mzflow/2` sintetico che confronta i `generated.sha256` con valori scritti.
-4. **Compito del timololo con meno clic di mzmine**: dai 13 `.raw` alla tabella dei TP; si contano clic e tasti con Playwright (mzLab) e con una registrazione dello schermo (mzmine 4.10 sul Mac, batch caricato contro batch costruito). Criterio: mzLab ≤ metà dei clic di mzmine con lo stesso risultato entro le tolleranze della prova 1.
+## 7. External tests (designed, not run)
+1. **Same table as mzmine and OpenMS**: same mzML file, `tools/bench/` (V: `corri_mzmine.py` headless batch 3.9.0, `corri_openms.py` FeatureFinderMetabo + KD linking, `da_csv` adapters for mzmine, XCMS, OpenMS, patRoon). A row matches at HR |Δm/z| ≤ 5 ppm and |ΔRT| ≤ 0.1 min; at LR |Δm/z| ≤ 0.5 Da and |ΔRT| ≤ 0.1 min.
+   Outcomes declared beforehand: recall of the oracle rows above 10 times the noise ≥ 0.9; median |log2(mzLab area / oracle area)| ≤ 0.15; Spearman of the areas ≥ 0.9. Agreement is measured, not equality (the oracle is not the truth); the truth is in D1, D2 and the timolol series.
+2. **Validated mzML**: XSD `mzML1.1.1.xsd` and the `idx` schema of the PSI page (name to re-check), the HUPO-PSI Java semantic validator with `ms-mapping.xml` offline, OpenMS `FileInfo -v`; reading back = reader (F6 of Rosina). It would fail on the index today (§6.2 point 2: I, not run).
+3. **Re-run with identical hash**: every step, two runs and three platforms (Linux x86_64, Mac arm64, WASM in Chromium); the first piece is done (§6.1). In CI: a `cargo test` of a small synthetic `mzflow/2` that compares `generated.sha256` with written values.
+4. **The timolol task with fewer clicks than mzmine**: from the 13 `.raw` to the TP table; clicks and keys counted with Playwright (mzLab) and with a screen recording (mzmine 4.10 on the Mac, loaded batch against built batch). Criterion: mzLab ≤ half the clicks of mzmine with the same result within the tolerances of test 1.
+5. **Library match with external truth**: compounds present in two public libraries (MassBank against GNPS or MoNA; licences per record to read, I): the spectra of one library are the queries, the other is the library, with the decoys of `decoy.rs`. Measured per score (`cosine`, `modified_cosine`, `spectral_entropy`): rank-1 rate, q-value at 1 % FDR. Declared beforehand: spectral entropy ≥ cosine on rank-1 (the claim of Li et al. 2021, checked on our code), every score deterministic between native and WASM.
+6. **Formula from MS2**: MassBank records and CASMI 2016/2017 challenges with known formula (I: licences to read). Declared beforehand: with MS2 subformulas the true formula ranks first more often than with MS1 alone; the gain is reported with its confidence interval, not assumed.
+7. **Chimeric spectra**: pairs of MassBank spectra of known compounds mixed in silico (ratios 1:1 to 1:10, precursors 0.3-1.5 Da apart, window 1 Da), the truth being the mix. Declared beforehand: the purity written by `spectra.chimeric` is within 0.05 of the true share; with intruders discounted the true compound ranks first more often than without; deconvolution is measured only when implemented.
+8. **Levels**: fixed fixtures, one per Schymanski level, with exactly the evidence of the 2014 paper (standard, library, diagnostic fragments, formula only, mass only); `annot.level` must return the level and name the evidence. On the timolol series the levels are compared with the private truth (`timolol_truth.json`), never shipped.
 
-## 8. Primo workflow di punta e piano di lavoro
-Catena: `import.raw` (13 `.raw` del timololo) → `convert.mzml` (facoltativo, per l'esportazione) → `index.mzidx` → `features.estimate` → `features.detect` → `features.align` → `features.gapfill` → `table.filter` (`campioni/2`) → `features.ms2_link` → `tp.link` (`interp/1`, `tp/1`) → `tp.position` → Disegno («Open in Draw»). Tutti i passi esistono come codice (V, `MATRICE.md`); mancano descrittori, canonica, `prov/1` e il modulo generato.
+## 8. First flagship workflow and work plan
+Chain: `import.raw` (the 13 timolol `.raw`) → `convert.mzml` (optional, for export) → `index.mzidx` → `features.estimate` → `features.detect` → `features.align` → `features.gapfill` → `table.filter` (`campioni/2`) → `features.ms2_link` → `spectra.chimeric` → `formula.ms1`/`formula.ms2` → `spectra.match` → `annot.level` → `tp.link` (`interp/1`, `tp/1`) → `tp.position` → Drawing («Open in Draw»). All steps exist as code (V, `MATRICE.md`; some in open PRs); descriptors, canonical form, `prov/1` and the generated form are missing.
 
-| Chat DEV (Sonnet) | Perimetro | Prova |
+| DEV chat (Sonnet) | Scope | Test |
 |---|---|---|
-| W-1 descrittori | `step/1` dei passi della catena come dati Rust accanto al codice, esportati in JSON; nessun cambio di risultato | i descrittori validano lo schema; le uscite dei passi sono byte per byte quelle di oggi |
-| W-2 canonica e `prov/1` | parametri canonici, `params_sha256`, `prov/1` in `mzlab-core`; `mzflow/2` letto e controllato (regola 5) | riesecuzione con hash identico, nativo e WASM (prova 3) |
-| W-3 un solo mzML | `convert.mzml` = `lettori_mzml::scrivi` con `indexedmzML`, CV 4.2.6, `processingMethod` per passo; `raw::to_mzml` solo dietro questo | prova 2 sui file di Rosina (F6) |
-| W-4 modulo generato | form dallo schema nel pannello Pipeline (inglese, `QICON`, `prefers-reduced-motion`, tastiera, axe) | `e2e_pipeline` e `e2e_axe_grafici` verdi; tour valido |
-| W-5 oracoli | prova 1 sui file di D1 e del timololo con `tools/bench/` | numeri nel privato, esiti contro le soglie dichiarate |
-| W-6 clic | prova 4 | conteggio scritto in `misure.md` |
-Ordine: W-1 e W-3 in parallelo; W-2 dopo W-1; W-4 dopo W-2; W-5 e W-6 dopo W-4. Locale (Mac): mzmine 4.10, ThermoRawFileParser, misure F8.
+| W-1 descriptors | `step/1` of the core steps of the chain as Rust data next to the code, exported to JSON; no change of result | descriptors validate the schema; step outputs are byte for byte today's |
+| W-2 canonical form and `prov/1` | canonical parameters, `params_sha256`, `prov/1` in `mzlab-core`; `mzflow/2` read and checked (rule 5) | re-run with identical hash, native and WASM (test 3) |
+| W-3 one mzML | `convert.mzml` = `lettori_mzml::scrivi` with `indexedmzML`, CV 4.2.6, one `processingMethod` per step; `raw::to_mzml` only behind it | test 2 on the Rosina files (F6) |
+| W-4 generated form | form from the schema in the Pipeline panel (English, `QICON`, `prefers-reduced-motion`, keyboard, axe) | `e2e_pipeline` and `e2e_axe_grafici` green; tour valid |
+| W-5 oracles | test 1 on the D1 and timolol files with `tools/bench/` | numbers in the private repository, outcomes against the declared thresholds |
+| W-6 clicks | test 4 | count written in `misure.md` |
+| W-7 identification descriptors | `step/1` (`package: attributio`) of `spectra.chimeric`, `formula.ms1`, `formula.ms2`, `spectra.match`, `spectra.insilico`, `rt.predict`, `annot.level`, `annot.regulatory`, `annot.hazard`; the shared `candidates` and `annot` records | descriptors validate; outputs unchanged against the parity data of each package |
+| W-8 Tabui steps and fusion | `step/1` (`package: tabui`) of `tp.generate`, `tp.link`, `tp.position`, `structure.reactivity`, `structure.render`; adapters `interp/1` → `tp`, sites → `transform.sites`; a TP as a suspect of `spectra.match` | the timolol TPs found with and without the fusion, levels compared with the private truth |
+| W-9 identification truth | tests 5-8 with public data in `tools/bench/`, results in the private repository | outcomes against the thresholds declared in §7 |
+Order: W-1 and W-3 in parallel; W-2 after W-1; W-4 after W-2; W-5 and W-6 after W-4. W-7 after W-1 and after the MS PRs below are merged; W-8 after W-7; W-9 can start with W-7 (it only needs the existing entry points). Local (Mac): mzmine 4.10, ThermoRawFileParser, F8 measures.
 
-## 9. Vincoli
-- **Tetti `.wasm` non alzabili** (V: `tools/build_feat_wasm.sh`, `pages.yml`): finder 512 000 B, `sciex` 327 680, `chem` 569 344, motore 1 703 936. Il descrittore e la canonica sono piccoli ma non entrano in un modulo già vicino al tetto: nel browser i passi restano nei moduli che li hanno; il controllo del piano e `prov/1` vanno in un modulo NUOVO (tetto da fissare alla prima misura, I) o nel motore solo se la misura lo consente. L'orchestrazione resta nel worker in JS come fa già `feat-worker.js` (V): chiama i moduli, non calcola.
-- **Licenze**: mzLab MIT; patRoon GPL-3 → algoritmi riscritti dalle fonti originali (articoli), mai codice copiato o tradotto (`docs/studi/patRoon_TP.md` §5, PR #1092). mzmine, OpenMS e XCMS: licenze da leggere prima di riusare qualunque cosa (I: OpenMS BSD-3, XCMS GPL, mzmine 4 con termini propri); stessi limiti, si leggono i file di parametri, non il codice. Dati esterni solo con licenza letta.
-- **Lingua dei moduli**: inglese per ogni nome, id, descrizione, etichetta ed errore (paragrafo «Lingua» in testa), m/z, RT, XIC, TIC, MS2 come sempre; Teoria e Pratica non cambiano.
-- **Principio 1**: nel mondo LR un workflow non produce TP né rette: i passi `tp.*` e `annot.*` sono `runs_in` HR o mzFinder.
+**Open PRs: what changes, so that no work is redone** (state read on GitHub on 19/10/2026):
+- **#1059, #1060, #1061, #1065 (MS-02..05: in silico, rearrange, RT prediction and chimeric intruders, `.wasm` and admin panel)**: nothing to rewrite. They become the algorithms and steps `spectra.insilico`, `formula.ms2`, `rt.predict`, `spectra.chimeric` (`intruders`).
+  Only asks: entry points stay pure functions of typed inputs (no I/O, deterministic, as their parity tests already require); the worker op names of #1065 stay stable, because the Flow planner will call them; the new `.wasm` keeps its own measured ceiling (no existing ceiling raised). Descriptors come later from W-7, next to the code.
+- **#1064, #1070 (RG-02, RG-03: hazard records T1-T5, regulatory lists, amenability)**: the versioned snapshots are already what correction 10 asks (inputs with a hash); they become `annot.hazard` and `annot.regulatory`. Ask: keep the snapshot readers separate from the row logic, as `tox/snapshot.rs` already does (V).
+- **#1091 (TT-R2, merged)**: `chem/posizioni`, `localize`, `interp/sito.rs` and `interp/disegno.rs` are `tp.position` and `structure.render`; the `site` and `drawing` keys of `interp/1` map to `transform.sites` and to the drawing. Nothing to redo.
 
-## 10. Cosa NON fare (e perché)
-1. Non adottare CWL, Nextflow, Galaxy o KNIME come motore: non girano nel browser e i dati non devono uscire (V per CWL/Nextflow).
-2. Non usare mzTab-M o mzML come formato di workflow o di tabella interna: non hanno grafo né parametri tipizzati (V per mzML; I per mzTab-M).
-3. Non chiamare programmi esterni da un passo (R, Java, BioTransformer, CTS, MetFrag, SIRIUS): pesanti, rete, licenze.
-4. Non copiare né tradurre codice GPL (patRoon, XCMS): solo idee e articoli.
-5. Non inventare un secondo formato di sessione: `mzflow/2` estende `mzflow/1`, che resta leggibile.
-6. Non fare dipendere l'identità di un dato dal nome del file né l'impronta dal testo `Debug` (§6.2-6.3).
-7. Non tenere due convertitori in mzML equivalenti in apparenza (§6.2 punto 1).
-8. Non mettere il motore dei workflow nel modulo principale vicino al tetto; non alzare i tetti.
-9. Non promettere equivalenza con i parametri di mzmine o OpenMS: un import di batch è una traduzione dichiarata (`PROVE_SU_CARTA.md` B).
-10. Non costruire la tela «Flow» prima del controllo del piano in Rust: la tela disegna e basta, compatibilità e ordine li decide il motore (COMUNICAZIONE.md §5), altrimenti le regole si scrivono due volte.
-11. Non fare di ogni algoritmo un passo a sé: le alternative stanno in `algorithms[]` dello stesso passo, così si scambiano senza ricollegare fili e il confronto ha le stesse porte.
-12. Non mettere italiano nei moduli (campi, id, testi, errori): una seconda lingua nei contratti vuol dire due nomi per la stessa cosa e mappe da mantenere.
-13. Non scrivere i workflow in YAML o TOML né in binario (§4c).
+## 9. Constraints
+- **`.wasm` ceilings may not be raised** (V: `tools/build_feat_wasm.sh`, `pages.yml`): finder 512 000 B, `sciex` 327 680, `chem` 569 344, engine 1 703 936. The descriptor and the canonical form are small but do not fit in a module already near its ceiling: in the browser steps stay in the modules that have them; plan checking and `prov/1` go into a NEW module (ceiling fixed at the first measure, I) or into the engine only if the measure allows it. Orchestration stays in the JS worker as `feat-worker.js` already does (V): it calls modules, it does not compute.
+- **Licences**: mzLab MIT; patRoon GPL-3 → algorithms rewritten from the original papers, never copied or translated code (`docs/studi/patRoon_TP.md` §5). mzmine, OpenMS, XCMS: licences to read before reusing anything (I: OpenMS BSD-3, XCMS GPL, mzmine 4 with its own terms); same limits, parameter files are read, not code. External data only with a licence read (MassBank, GNPS, CASMI, RepoRT: I).
+- **Module language**: English for every name, id, description, label and error (paragraph «Language» at the top), m/z, RT, XIC, TIC, MS2 as always; Teoria and Pratica do not change.
+- **Principle 1**: in the LR world a workflow produces no TPs, no formulas and no calibration lines: the `tp.*`, `formula.*`, `spectra.match`, `spectra.insilico` and `annot.*` steps require `hr`, or run in mzFinder.
 
-## 11. Decisioni da prendere (raccomandazione)
-1. **Nome e posto**: `mzflow/2` con `steps`; `step/1` e `prov/1` in `docs/schemi/` quando W-1 e W-2 li implementano (oggi bozze qui).
-2. **Dove gira il controllo del piano nel browser**: modulo nuovo piccolo (raccomandato) contro motore (solo se la misura lo permette).
-3. **Scrittore unico di mzML**: `lettori_mzml::scrivi` (raccomandato: è quello del registro e dà le stesse aree della via diretta).
-4. **Import dei batch di mzmine**: solo dopo W-4, come traduzione con avviso dei parametri non tradotti (come `parametri_non_letti` di `tools/bench`).
+## 10. What NOT to do (and why)
+1. Do not adopt CWL, Nextflow, Galaxy or KNIME as the engine: they do not run in the browser and data must not leave (V for CWL/Nextflow).
+2. Do not use mzTab-M or mzML as the workflow or internal table format: no graph and no typed parameters (V for mzML; I for mzTab-M).
+3. Do not call external programs from a step (R, Java, BioTransformer, CTS, MetFrag, SIRIUS): heavy, network, licences.
+4. Do not copy or translate GPL code (patRoon, XCMS): only ideas and papers.
+5. Do not invent a second session format: `mzflow/2` extends `mzflow/1`, which stays readable.
+6. Do not make data identity depend on the file name, nor the fingerprint on the `Debug` text (§6.2-6.3).
+7. Do not keep two seemingly equivalent mzML converters (§6.2 point 1).
+8. Do not put the workflow engine in the main module near its ceiling; do not raise ceilings.
+9. Do not promise equivalence with mzmine or OpenMS parameters: a batch import is a declared translation (`PROVE_SU_CARTA.md` B).
+10. Do not build the «Flow» canvas before the plan check in Rust: the canvas draws, compatibility and order are decided by the engine (COMUNICAZIONE.md §5), otherwise the rules are written twice.
+11. Do not make each algorithm a step of its own: alternatives live in `algorithms[]` of the same step, so they swap without rewiring and the comparison has the same ports.
+12. Do not put Italian in the modules (fields, ids, texts, errors) or in new studies: a second language in the contracts means two names for the same thing and maps to maintain.
+13. Do not write workflows in YAML or TOML, nor in binary (§4c).
+14. Do not keep Attributio and Tabui as apps that read each other's files: they meet only through typed ports (`structure`, `transform`, `candidates`, `annot`), otherwise every change breaks the other side.
+15. Do not score a chimeric spectrum as if it were pure: purity and intruders travel with the spectrum and cap the level (§4d).
 
-## 12. Pubblicazione delle librerie (dettaglio: `workflow/PUBBLICAZIONE.md`)
-Ordine proposto: prima il codec numpress staccato da `mzlab-core` (piccolo, verità esterna nella specifica), poi `mzlab-lib`, poi i lettori; npm dopo. Licenza MIT; le licenze delle dipendenze sono già controllate a ogni PR da `cargo deny` (V). Mancano API in inglese e stabile, rustdoc, `publish = false` su tutti i crate finché Federico non dà il via. Nessuna azione esterna senza il suo «via».
+## 11. Decisions to take (recommendation)
+1. **Name and place**: `mzflow/2` with `steps`; `step/1` and `prov/1` in `docs/schemi/` when W-1 and W-2 implement them (drafts here today).
+2. **Where the plan check runs in the browser**: a new small module (recommended) against the engine (only if the measure allows it).
+3. **Single mzML writer**: `lettori_mzml::scrivi` (recommended: it is the one of the registry and gives the same areas as the direct path).
+4. **mzmine batch import**: only after W-4, as a translation that warns about untranslated parameters (like `parametri_non_letti` of `tools/bench`).
+5. **Default MS2 score**: `spectral_entropy` until test 5 says otherwise (recommended on the published evidence; to confirm on ours).
+
+## 12. Publishing the libraries (detail: `workflow/PUBBLICAZIONE.md`)
+Proposed order: first the numpress codec split from `mzlab-core` (small, external truth in the specification), then `mzlab-lib`, then the readers; npm afterwards. MIT licence; dependency licences are already checked on every PR by `cargo deny` (V). Missing: an English and stable API, rustdoc, `publish = false` on all crates until Federico's go-ahead. No outward action without his go-ahead.

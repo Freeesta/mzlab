@@ -2,6 +2,7 @@
  "schema": "step/1",
  "id": "meta.compare",
  "version": 1,
+ "package": "core",
  "title": "Compare algorithms",
  "doc": "Runs the wrapped step two or more times on the same inputs, once per variant, and measures how the outputs differ: features found by one variant only, m/z and RT shifts, area ratios, rank agreement of scores.",
  "in": {},

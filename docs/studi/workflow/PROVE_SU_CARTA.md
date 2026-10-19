@@ -1,8 +1,8 @@
-# Prova su carta: quattro workflow veri di terzi nel formato `mzflow/2`
+# Paper test: four real third-party workflows in the `mzflow/2` format
 
-Parte di `docs/studi/WORKFLOW_MODULARI.md` (§5). Ogni workflow è stato letto in un file vero (URL nel §1 del principale) e riscritto a mano nel formato della bozza (`contract.schema.json`). Per ogni caso: come si scrive, cosa non si esprime, quale correzione del contratto ne è nata. Le correzioni sono già nella bozza.
+Part of `docs/studi/WORKFLOW_MODULARI.md` (§5). Each workflow was read in a real file (URLs in §1 of the main file) and rewritten by hand in the draft format (`contract.schema.json`). For each case: how it is written, what cannot be expressed, which contract correction came from it. The corrections are already in the draft; the JSON blocks below validate it (V).
 
-## A. mzmine 4.0.2, batch FBMN (`mzmine_microbial_workshop.mzbatch.xml`, 20 passi)
+## A. mzmine 4.0.2, FBMN batch (`mzmine_microbial_workshop.mzbatch.xml`, 20 steps)
 ```json
 {"format":"mzflow/2","program":{"name":"mzLab","version":"x"},"inputs":[{"name":"S1.mzML","sha256":"…"}],
  "steps":[
@@ -15,11 +15,12 @@ Parte di `docs/studi/WORKFLOW_MODULARI.md` (§5). Ogni workflow è stato letto i
   {"id":"aln","step":"features.align@1","in":{"peaks":["iso.peaks"]},"params":{"mz_tol":{"da":0.0015,"ppm":5},"rt_tol_min":0.1,"weight_mz":3,"weight_rt":1}},
   {"id":"gap","step":"features.gapfill@1","in":{"table":"aln.table","index":["md1.index"]},"params":{"rt_tol_min":0.1,"min_points":3}}]}
 ```
-- **Si esprime**: passi 1-10 (import → gap filling), con la stessa sequenza e gli stessi numeri.
-- **Non si esprime**: lisciatura come passo a sé (nostro `features.smooth` non esiste: buco della matrice); «Original feature list = REMOVE» (gestione della memoria della sessione, non un risultato); passi 12-16 (correlazione, ion identity networking, reti spettrali, lipidi) e gli export GNPS/SIRIUS/GraphML (nessun modulo mzLab o solo in parte).
-- **Correzioni nate qui**: (1) lo stesso tipo di passo compare due volte (Mass detection su MS1 e MS2) → `id` unico per ISTANZA, il tipo sta in `step`; (2) le tolleranze sono coppie Da + ppm → tipo composto `mz_tol {da, ppm}` con unità esplicite (mai «ppm negativo = Da» di `Recipe::row_window`); (3) la scelta di un algoritmo con i suoi parametri (`selected_item` + `<module>`) → `algorithms[]` del passo con i parametri propri di ognuno, e `algorithm` dell'istanza; (4) l'ingresso implicito `BATCH_LAST_FEATURELISTS` → riferimenti espliciti `STEP.OUTPUT` (un importatore li ricostruisce in ordine).
+- **Expressed**: steps 1-10 (import → gap filling), same sequence and same numbers.
+- **Not expressed**: smoothing as a step of its own (our `features.smooth` does not exist: a gap of the matrix); «Original feature list = REMOVE» (session memory management, not a result); steps 12-16 (correlation, ion identity networking, spectral networks, lipids) and the GNPS/SIRIUS/GraphML exports (no mzLab module, or only in part).
+- **Corrections born here**: (1) the same kind of step appears twice (Mass detection on MS1 and MS2) → a unique `id` per INSTANCE, the kind is in `step`; (2) tolerances are Da + ppm pairs → a compound type `mz_tol {da, ppm}` with explicit units (never the «negative ppm = Da» of `Recipe::row_window`);
+  (3) choosing an algorithm with its own parameters (`selected_item` + `<module>`) → `algorithms[]` of the step, each with its own parameters, and `algorithm` of the instance; (4) the implicit input `BATCH_LAST_FEATURELISTS` → explicit `STEP.OUTPUT` references (an importer rebuilds them in order).
 
-## B. OpenMS: FeatureFinderMetabo (`.ini` vero, versione 2.8.0) e catena tipica
+## B. OpenMS: FeatureFinderMetabo (real `.ini`, version 2.8.0) and the usual chain
 ```json
 {"steps":[
   {"id":"ffm","step":"features.detect@1","in":{"index":["file:a.mzML","file:b.mzML"]},"params":{"noise_floor":10.0,"mz_tol":{"ppm":20},"min_trace_s":5.0,"snr_min":3.0,"fwhm_s":5.0}},
@@ -27,11 +28,11 @@ Parte di `docs/studi/WORKFLOW_MODULARI.md` (§5). Ogni workflow è stato letto i
   {"id":"rt","step":"series.rt_align@1","in":{"peaks":"iso.peaks"}},
   {"id":"link","step":"features.align@1","in":{"peaks":"iso.peaks","rtmap":"rt.rtmap"}}]}
 ```
-- **Si esprime**: il rilevamento (con nomi nostri e unità dichiarate) e la catena FFM → allineamento → legame.
-- **Non si esprime**: FFM in OpenMS fa tracce + profilo + isotopi in UN solo strumento; da noi sono tre passi, e `features.detect` di mzLab non accetta i parametri di FFM uno a uno (nomi e significati diversi: `noise_threshold_int` è sull'intensità grezza, il nostro `floor` può essere stimato). Un import di `.ini` resta quindi una TRADUZIONE dichiarata, non un'equivalenza. `MapAlignerPoseClustering` e `FeatureLinkerUnlabeledKD`: nessun `.ini` letto (ipotesi). Gli ingressi «file:» qui sono mzML: serve un passo implicito `index.mzidx`.
-- **Correzioni**: (5) il flag `advanced` di OpenMS → `x-advanced` (il modulo mostra prima i 3-5 parametri che contano: pochi clic); (6) un ingresso «file:» di un tipo diverso da quello della porta (mzML verso `mzidx`) si converte da solo SOLO con i passi di conversione dichiarati nel registro, e la provenienza li scrive come attività vere.
+- **Expressed**: detection (with our names and declared units) and the chain FFM → alignment → linking.
+- **Not expressed**: FFM does traces + profile + isotopes in ONE tool; we have three steps, and mzLab `features.detect` does not take the FFM parameters one by one (different names and meanings: `noise_threshold_int` is on raw intensity, our `floor` can be estimated). An `.ini` import is therefore a declared TRANSLATION, not an equivalence. `MapAlignerPoseClustering` and `FeatureLinkerUnlabeledKD`: no `.ini` read (hypothesis). The «file:» inputs here are mzML: an implicit `index.mzidx` step is needed.
+- **Corrections**: (5) the OpenMS `advanced` flag → `x-advanced` (the form shows first the 3-5 parameters that matter: few clicks); (6) a «file:» input of a type other than the port's (mzML into `mzidx`) is converted automatically ONLY through the conversion steps declared in the registry, and provenance writes them as real activities.
 
-## C. XCMS, vignetta (`xcms.Rmd`, ramo `devel`)
+## C. XCMS vignette (`xcms.Rmd`, `devel` branch)
 ```json
 {"steps":[
   {"id":"cw","step":"features.detect@1","in":{"index":["file:ko15.mzML","file:wt15.mzML"]},"algorithm":"centwave","params":{"peak_width_s":[20,80],"noise":5000,"prefilter":[6,5000]}},
@@ -40,11 +41,11 @@ Parte di `docs/studi/WORKFLOW_MODULARI.md` (§5). Ogni workflow è stato letto i
   {"id":"grp","step":"features.align@1","in":{"peaks":"mrg.peaks","rtmap":"rt.rtmap","samples":"file:samples.json"},"params":{"bandwidth_s":30,"min_fraction":0.4}},
   {"id":"fill","step":"features.gapfill@1","in":{"table":"grp.table"}}]}
 ```
-- **Si esprime**: la sequenza intera; `sampleGroups` diventa un ingresso tipizzato `samples` (`campioni/2`), non un parametro.
-- **Non si esprime oggi**: centWave e Obiwarp non sono algoritmi di mzLab (nel descrittore sono voci `planned` di `algorithms[]`; oggi sono `available` solo `masstrace` e `anchors`); `refineChromPeaks` non ha un passo nostro. La vignetta ripete l'allineamento con parametri diversi su un sottoinsieme (`pdp_subs`): due istanze dello stesso passo sullo stesso ingresso = ramo del grafo.
-- **Correzioni**: (7) XCMS modifica l'oggetto sul posto (`adjustRtime` cambia gli RT) → da noi ogni passo produce un dato NUOVO (`rtmap`), gli ingressi sono immutabili: è ciò che rende la riesecuzione e la cache per hash possibili; (8) i gruppi di campioni sono un tipo (`samples`), con il proprio hash.
+- **Expressed**: the whole sequence; `sampleGroups` becomes a typed `samples` input (`campioni/2`), not a parameter.
+- **Not expressed today**: centWave and Obiwarp are not mzLab algorithms (in the descriptor they are `planned` entries of `algorithms[]`; only `masstrace` and `anchors` are `available`); `refineChromPeaks` has no step of ours. The vignette repeats the alignment with other parameters on a subset (`pdp_subs`): two instances of the same step on the same input = a branch of the graph (or a `meta.compare`).
+- **Corrections**: (7) XCMS changes the object in place (`adjustRtime` changes the RTs) → our steps produce NEW data (`rtmap`), inputs are immutable: this is what makes re-running and the hash cache possible; (8) sample groups are a type (`samples`), with their own hash.
 
-## D. patRoon, percorso TP «logic» e «library» (handbook, cap. 7)
+## D. patRoon, TP workflow «logic» and «library» (handbook, ch. 7)
 ```json
 {"steps":[
   {"id":"fg","step":"features.align@1","in":{"peaks":"det.peaks"}},
@@ -54,14 +55,14 @@ Parte di `docs/studi/WORKFLOW_MODULARI.md` (§5). Ogni workflow è stato letto i
   {"id":"tpb","step":"tp.generate@1","in":{"structure":"file:timolol.mol"},"algorithm":"library","params":{"library":"file:pubchem_trans.csv"}},
   {"id":"lnk","step":"tp.link@1","in":{"table":"flt.table","spectra":"ms2.spectra","tp":["tpl.tp","tpb.tp"]},"params":{"rt_direction":true,"min_spec_sim":0.75,"min_frag_matches":1}}]}
 ```
-- **Si esprime**: entrambi i rami e la loro unione (`tp` con `many`), cioè un grafo, non una catena.
-- **Non si esprime né si esegue**: `algorithm = "biotransformer"` e CTS (programmi Java esterni e servizio web: fuori dai principi, §8 del principale); `convertToMFDB` + MetFrag; il confronto «before/after» per fold change di `as.data.table(FCParams)` (nessun passo nostro: c'è `tp/1` con la forma della serie, ma non con la stessa logica, ipotesi). `estimateIDConfidence` ≈ i nostri livelli, ma con criteri diversi.
-- **Correzioni**: (9) un passo dichiarato nel registro ma non disponibile su una piattaforma (`runs_in` senza `wasm`) → il controllo del piano lo rifiuta PRIMA di partire con una chiave `err.flow.unavailable` e il nome del passo; (10) le liste dell'utente (trasformazioni, librerie) sono INGRESSI con hash, mai parametri di testo; (11) il grafo serve dal primo giorno nel formato (rami di patRoon e di XCMS), mentre l'interfaccia può mostrare solo catene all'inizio.
+- **Expressed**: both branches and their union (`tp` with `many`), i.e. a graph, not a chain.
+- **Neither expressed nor run**: `algorithm = "biotransformer"` and CTS (external Java programs and a web service: outside the principles, §8 of the main file); `convertToMFDB` + MetFrag (our `spectra.insilico` is the in-house replacement, PR #1059); the «before/after» fold-change comparison of `as.data.table(FCParams)` (no step of ours: `tp/1` has the series shape, but not the same logic, hypothesis). `estimateIDConfidence` ≈ our `annot.level`, with different criteria.
+- **Corrections**: (9) a step declared in the registry but not available on a platform (`runs_in` without `wasm`) → the plan check rejects it BEFORE starting, with the key `err.flow.unavailable` and the step name; (10) user lists (transformations, libraries, regulatory snapshots) are INPUTS with a hash, never text parameters; (11) the graph is needed from day one in the format (patRoon and XCMS branches), while the interface may show only chains at first.
 
-## Esito
-| Workflow (conteggi a mano) | Passi letti | Espressi | Eseguibili oggi in mzLab | Cosa manca |
+## Outcome
+| Workflow (counted by hand) | Steps read | Expressed | Runnable in mzLab today | Missing |
 |---|---|---|---|---|
-| A mzmine FBMN | 20 | 9 di 20 | 8 di 20 (manca la lisciatura) | lisciatura; reti molecolari ed export GNPS: fuori perimetro |
-| B OpenMS | 4 (1 letto) | 4 | 4, con nomi e significati nostri | equivalenza dei parametri: solo traduzione dichiarata |
-| C XCMS | 5 | 5 | 3 (manca centWave, Obiwarp, refine) | algoritmi alternativi, se mai si vorranno |
-| D patRoon TP | 10 | 8 | 6 | BioTransformer, CTS, MetFrag: fuori dai principi |
+| A mzmine FBMN | 20 | 9 of 20 | 8 of 20 (smoothing missing) | smoothing; molecular networks and GNPS export: out of scope |
+| B OpenMS | 4 (1 read) | 4 | 4, with our names and meanings | parameter equivalence: declared translation only |
+| C XCMS | 5 | 5 | 3 (centWave, Obiwarp, refine missing) | alternative algorithms, if ever wanted |
+| D patRoon TP | 10 | 8 | 6 | BioTransformer, CTS, MetFrag: outside the principles |

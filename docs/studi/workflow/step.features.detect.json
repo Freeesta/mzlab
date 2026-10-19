@@ -5,6 +5,7 @@
  "title": "Detect features",
  "doc": "Finds the chromatographic peaks of the MS1 scans of each file. The parameters are common to every algorithm; each algorithm adds its own.",
  "cv": "MS:1000035",
+ "package": "core",
  "in": {
   "index": {
    "type": "mzidx",
