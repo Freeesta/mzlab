@@ -19,6 +19,116 @@ const CUT: f64 = 16.0;
 const TINY: f64 = 1e-5;
 const TINY_W: f64 = 1e-10;
 
+impl System {
+    /// Electrons of each atom (Hirshfeld partition) for every density matrix in `ps`, summing to the exact electron count.
+    pub fn hirshfeld_populations(&self, ps: &[&DMatrix<f64>], nel: &[usize]) -> Vec<Vec<f64>> {
+        let n = self.el.len();
+        let b = &self.basis;
+        let nao = b.ao.len();
+        let par = |a: usize| get_gfn2_params(self.el[a]).expect("supported element");
+        let stos: Vec<_> =
+            b.ao.iter()
+                .map(|&(a, sh, ..)| sto(par(a).pqn[sh], par(a).slater[sh]))
+                .collect();
+        // Promolecule: (atom, norm², exponent, power, occupation) of each occupied shell.
+        let mut pros = Vec::new();
+        for a in 0..n {
+            let p = par(a);
+            for s in (0..p.nshell).filter(|&s| p.ref_occ[s] > 0.0) {
+                let (nm, z, pw) = sto(p.pqn[s], p.slater[s]);
+                pros.push((a, nm * nm, z, pw, p.ref_occ[s]));
+            }
+        }
+        let mut pop = vec![vec![0.0; n]; ps.len()];
+        let (mut dst, mut pro, mut cell) = (vec![0.0; n], vec![0.0; n], vec![0.0; n]);
+        let (mut phi, mut idx) = (vec![0.0; nao], Vec::new());
+        for a in 0..n {
+            let rm = if self.el[a] == 1 { 1.0 } else { 1.5 };
+            for i in 1..=RADIAL {
+                let th = i as f64 * PI / (RADIAL + 1) as f64;
+                let x = th.cos();
+                let r = rm * (1.0 + x) / (1.0 - x);
+                let jac = th.sin() * 2.0 * rm / (1.0 - x).powi(2) * r * r;
+                let w = jac * 4.0 * PI * PI / ((RADIAL + 1) * ANGULAR) as f64;
+                for d in sphere(ANGULAR) {
+                    let pt: [f64; 3] = std::array::from_fn(|k| self.pos[a][k] + r * d[k]);
+                    pro.fill(0.0);
+                    for (d, p) in dst.iter_mut().zip(&self.pos) {
+                        *d = dist(&pt, p);
+                    }
+                    for &(c, n2, z, pw, occ) in &pros {
+                        if z * dst[c] <= CUT {
+                            pro[c] += occ * n2 * dst[c].powi(2 * pw) * (-2.0 * z * dst[c]).exp()
+                                / (4.0 * PI);
+                        }
+                    }
+                    let tot: f64 = pro.iter().sum();
+                    if tot < 1e-14 {
+                        continue;
+                    }
+                    self.cells(&dst, &mut cell);
+                    let wa = w * cell[a] / cell.iter().sum::<f64>();
+                    if wa < TINY_W {
+                        continue;
+                    }
+                    self.orbitals(&pt, &dst, &stos, &mut phi, &mut idx);
+                    for (k, p) in ps.iter().enumerate() {
+                        let rho = density(p.as_slice(), &phi, &idx);
+                        for (o, w) in pop[k].iter_mut().zip(&pro) {
+                            *o += wa * w / tot * rho;
+                        }
+                    }
+                }
+            }
+        }
+        for (k, v) in pop.iter_mut().enumerate() {
+            let s: f64 = v.iter().sum();
+            v.iter_mut().for_each(|x| *x *= nel[k] as f64 / s);
+        }
+        pop
+    }
+}
+
+impl System {
+    /// Becke cell weights of every atom at a point with distances `dst` to the atoms.
+    fn cells(&self, dst: &[f64], cell: &mut [f64]) {
+        let n = dst.len();
+        cell.fill(1.0);
+        for c in 0..n {
+            for e in (c + 1)..n {
+                let rab = dist(&self.pos[c], &self.pos[e]).max(1e-9);
+                let s = becke((dst[c] - dst[e]) / rab);
+                cell[c] *= s;
+                cell[e] *= 1.0 - s;
+            }
+        }
+    }
+
+    /// Orbital values `phi` at `pt` and the indices of those above `TINY`.
+    fn orbitals(
+        &self,
+        pt: &[f64; 3],
+        dst: &[f64],
+        stos: &[(f64, f64, i32)],
+        phi: &mut [f64],
+        idx: &mut Vec<usize>,
+    ) {
+        idx.clear();
+        for (m, &(c, _, l, mm)) in self.basis.ao.iter().enumerate() {
+            let (nm, z, pw) = stos[m];
+            let rc = dst[c];
+            phi[m] = 0.0;
+            if z * rc <= CUT && (rc > 1e-12 || l == 0) {
+                let u: [f64; 3] = std::array::from_fn(|k| (pt[k] - self.pos[c][k]) / rc.max(1e-12));
+                phi[m] = nm * rc.powi(pw) * (-z * rc).exp() * harmonic(l, mm, &u);
+                if phi[m].abs() > TINY {
+                    idx.push(m);
+                }
+            }
+        }
+    }
+}
+
 /// Normalisation, exponent and n − 1 of a radial Slater function.
 fn sto(n: u8, zeta: f64) -> (f64, f64, i32) {
     let k = 2 * n as i32;
@@ -47,105 +157,16 @@ fn becke(mu: f64) -> f64 {
     0.5 * (1.0 - f)
 }
 
-impl System {
-    /// Electrons of each atom (Hirshfeld partition) for every density matrix in `ps`, summing to the exact electron count.
-    pub fn hirshfeld_populations(&self, ps: &[&DMatrix<f64>], nel: &[usize]) -> Vec<Vec<f64>> {
-        let n = self.el.len();
-        let b = &self.basis;
-        let nao = b.ao.len();
-        let par = |a: usize| get_gfn2_params(self.el[a]).expect("supported element");
-        let stos: Vec<_> =
-            b.ao.iter()
-                .map(|&(a, sh, ..)| sto(par(a).pqn[sh], par(a).slater[sh]))
-                .collect();
-        // Promolecule: (atom, norm², exponent, power, occupation) of each occupied shell.
-        let mut pros = Vec::new();
-        for a in 0..n {
-            let p = par(a);
-            for s in (0..p.nshell).filter(|&s| p.ref_occ[s] > 0.0) {
-                let (nm, z, pw) = sto(p.pqn[s], p.slater[s]);
-                pros.push((a, nm * nm, z, pw, p.ref_occ[s]));
-            }
+/// Electron density Σ Pμν φμ φν over the orbitals `idx` (column-major symmetric `p`, `phi` the orbital values).
+fn density(p: &[f64], phi: &[f64], idx: &[usize]) -> f64 {
+    let nao = phi.len();
+    let mut rho = 0.0;
+    for (j, &m) in idx.iter().enumerate() {
+        let mut s = 0.5 * p[m * nao + m] * phi[m];
+        for &q in &idx[..j] {
+            s += p[m * nao + q] * phi[q];
         }
-        let rab = |c: usize, e: usize| dist(&self.pos[c], &self.pos[e]).max(1e-9);
-        let mut pop = vec![vec![0.0; n]; ps.len()];
-        let (mut dst, mut pro, mut cell) = (vec![0.0; n], vec![0.0; n], vec![0.0; n]);
-        let (mut phi, mut idx) = (vec![0.0; nao], Vec::new());
-        for a in 0..n {
-            let rm = if self.el[a] == 1 { 1.0 } else { 1.5 };
-            for i in 1..=RADIAL {
-                let th = i as f64 * PI / (RADIAL + 1) as f64;
-                let x = th.cos();
-                let r = rm * (1.0 + x) / (1.0 - x);
-                let w = PI / (RADIAL + 1) as f64 * th.sin() * 2.0 * rm / (1.0 - x).powi(2)
-                    * r
-                    * r
-                    * 4.0
-                    * PI
-                    / ANGULAR as f64;
-                for d in sphere(ANGULAR) {
-                    let pt: [f64; 3] = std::array::from_fn(|k| self.pos[a][k] + r * d[k]);
-                    pro.fill(0.0);
-                    for (d, p) in dst.iter_mut().zip(&self.pos) {
-                        *d = dist(&pt, p);
-                    }
-                    for &(c, n2, z, pw, occ) in &pros {
-                        if z * dst[c] <= CUT {
-                            pro[c] += occ * n2 * dst[c].powi(2 * pw) * (-2.0 * z * dst[c]).exp()
-                                / (4.0 * PI);
-                        }
-                    }
-                    let tot: f64 = pro.iter().sum();
-                    if tot < 1e-14 {
-                        continue;
-                    }
-                    cell.fill(1.0);
-                    for c in 0..n {
-                        for e in (c + 1)..n {
-                            let s = becke((dst[c] - dst[e]) / rab(c, e));
-                            cell[c] *= s;
-                            cell[e] *= 1.0 - s;
-                        }
-                    }
-                    let wa = w * cell[a] / cell.iter().sum::<f64>();
-                    if wa < TINY_W {
-                        continue;
-                    }
-                    idx.clear();
-                    for (m, &(c, _, l, mm)) in b.ao.iter().enumerate() {
-                        let (nm, z, pw) = stos[m];
-                        let rc = dst[c];
-                        phi[m] = 0.0;
-                        if z * rc <= CUT && (rc > 1e-12 || l == 0) {
-                            let u: [f64; 3] =
-                                std::array::from_fn(|k| (pt[k] - self.pos[c][k]) / rc.max(1e-12));
-                            phi[m] = nm * rc.powi(pw) * (-z * rc).exp() * harmonic(l, mm, &u);
-                            if phi[m].abs() > TINY {
-                                idx.push(m);
-                            }
-                        }
-                    }
-                    for (k, p) in ps.iter().enumerate() {
-                        let p = p.as_slice();
-                        let mut rho = 0.0;
-                        for (j, &m) in idx.iter().enumerate() {
-                            let mut s = 0.5 * p[m * nao + m] * phi[m];
-                            for &q in &idx[..j] {
-                                s += p[m * nao + q] * phi[q];
-                            }
-                            rho += 2.0 * phi[m] * s;
-                        }
-                        for (o, w) in pop[k].iter_mut().zip(&pro) {
-                            *o += wa * w / tot * rho;
-                        }
-                    }
-                }
-            }
-        }
-        for (k, v) in pop.iter_mut().enumerate() {
-            let s: f64 = v.iter().sum();
-            v.iter_mut().for_each(|x| *x *= nel[k] as f64 / s);
-        }
-        pop
+        rho += 2.0 * phi[m] * s;
     }
+    rho
 }
