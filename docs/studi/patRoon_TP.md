@@ -34,9 +34,9 @@ Nota di studio per Federico. Solo documento, nessun codice di prodotto. Sorgenti
 | Cosa fa patRoon | Cosa fa mzLab | Lacuna | Idea da adottare |
 |---|---|---|---|
 | Genera TP attesi da librerie (`library`, PubChem) e programmi (BioTransformer, CTS) | Nessuna previsione dei TP dalla struttura. `ipotesi/1` dà Δ di formula note (es. +O, −2H) e `interp` sceglie quella entro 5 ppm | Nessun elenco di TP attesi per un genitore con la struttura | Solo **dati**: piccola libreria locale di trasformazioni note come tabella (genitore → TP, anche solo formule) da proporre come ipotesi con la fonte. Niente rete, niente Java |
-| `logic`: Δm elementari con colonna `retDir` | `ipotesi/1` ha le Δ; la direzione di RT non è nella regola (ipotesi: non verificato nel registro) | Le regole non portano la direzione attesa di RT | Aggiungere alla regola una direzione attesa (−1/0/+1) come campo facoltativo, mostrata come segnalazione, mai come scarto |
+| `logic`: Δm elementari con colonna `retDir` | `ipotesi/1` ha le Δ; la direzione di RT non è nel blocco `interp` (verificato: nessun `retDir`/logP in `interp/` né `tp`); non ho letto il registro `ipotesi/1` | Le regole non portano la direzione attesa di RT | Aggiungere alla regola una direzione attesa (−1/0/+1) come campo facoltativo, mostrata come segnalazione, mai come scarto |
 | Controllo `logic` con le formule: elementi tolti/aggiunti presenti nelle formule di genitore e TP | `iso_check` (M+1, M+2, conteggio di S) e Δ di formula in `modifica.rs` | Controllo simile, ma non sugli elementi della regola | Già coperto in sostanza; nessuna azione |
-| Coseno MS/MS genitore-TP con 3 allineamenti | `against_dda`: coseno modificato (sposta di Δ), entropia, frammenti uguali e spostati | Nessuna: il coseno modificato corrisponde all'allineamento «precursore» di patRoon | Controllare in una prova che un singolo punteggio riassuntivo (come `specSimilarityBoth`) sia mostrato accanto agli altri |
+| Coseno MS/MS genitore-TP con 3 allineamenti | `against_dda`: coseno modificato (sposta di Δ), entropia, frammenti uguali e spostati | Nessuna (verificato in `ms2sim.rs` e `legacy/similarity.rs`, §6): il coseno modificato con picchi traslati di Δ corrisponde all'allineamento «precursore» di patRoon | Controllare in una prova che un singolo punteggio riassuntivo (come `specSimilarityBoth`) sia mostrato accanto agli altri |
 | Frammenti e perdite neutre condivisi, per formula | `by_formula` (uguali/spostati per massa della formula) e perdite contro il consenso DDA | Nessuna sostanziale | Nessuna. Il conteggio «solo conteggi unici» di patRoon è un'idea di presentazione: un numero unico per riga |
 | `retDir` da logP, soglia `minLogPDiff`, `minRTDiff` | Attributio ha RT contro logP (`rtlogp`, fit, z robusto); `TABUI_TP_TIMOLOLO` §1 punto 9 propone l'anomalia di RT per i TP (ipotesi: non so se è in `interp`) | Nella riga `interp` non c'è una direzione di RT attesa contro osservata | **Adottare**: per ogni TP, direzione osservata (RT − RT genitore, oltre una soglia) contro direzione attesa (da logP o dalla regola); se contrastano, nota «RT anomaly», mai scarto. Regola semplice, spiegabile a lezione |
 | `minRTDiff`: sotto la soglia la direzione è 0 | Non c'è una soglia dichiarata nella riga | Possibile rumore sui TP quasi coeluiti | Stessa soglia esplicita, in secondi, visibile nella riga |
@@ -54,7 +54,7 @@ Nota di studio per Federico. Solo documento, nessun codice di prodotto. Sorgenti
 
 **NON adottare**
 - **Dipendenze R, Java, BioTransformer, OpenBabel, CTS**: contrastano con il principio «leggero, tutto nel browser, tutto in Rust» e con la regola «niente rete» (i file degli studenti non lasciano il computer).
-- **Codice di patRoon**: è GPL-3; riscrivere un'idea è lecito, copiare codice no (il sito ha altre licenze: **ipotesi**, da verificare prima di ogni riuso diretto).
+- **Codice di patRoon**: è GPL-3; riscrivere un'idea è lecito, copiare codice no: mzLab è MIT (`LICENSE`, verificato), patRoon GPL-3. Vedi §5.
 - **Punteggio unico tipo TP Score** e previsione di TP da struttura con modelli esterni: il programma non deve fare da oracolo.
 - **Un'integrazione con patRoon** (chiamarlo, importare i suoi risultati) non è necessaria; resta comunque possibile importare una tabella di TP già calcolata come CSV, se un utente la porta (**ipotesi**, nessuno l'ha chiesto).
 
@@ -64,3 +64,21 @@ Nota di studio per Federico. Solo documento, nessun codice di prodotto. Sorgenti
 - Guardare `ipotesi/1` per capire se una direzione di RT vi si può aggiungere senza cambiare lo schema.
 - Leggere gli esempi del capitolo 7.3 (`TPsExamples.html`), non letti qui.
 - Letteratura: Schollee et al. 2015, Anal. Chem. 87:12121 (regole `logic`); Helmus et al. 2025, Environ. Sci. Technol. 59:3723 (`ann_form`/`ann_comp`).
+
+## 5. Licenze e regola proposta
+- **mzLab**: MIT, © 2026 Federico Cristaudo (letto: `LICENSE`, `pyproject.toml`, `Cargo.toml`). **patRoon**: GPL-3 (letto: `DESCRIPTION`, README). Copiare o tradurre codice di patRoon in mzLab obbligherebbe a rilasciare quel pezzo sotto GPL-3, incompatibile con il rilascio MIT di tutto il programma (**ipotesi** giuridica, non parere di un avvocato).
+- **Libreria PubChem Transformations** (usata da patRoon come `library`): su Zenodo è «Creative Commons Attribution 4.0 International» (letto sul record Zenodo, versione PubChemTrans-0.2.3 del marzo 2026; il DOI 10.5281/zenodo.5644560 citato da patRoon porta a un record più nuovo, 10.5281/zenodo.19150892). CC BY 4.0 permette riuso e ridistribuzione con l'indicazione dell'autore, quindi un estratto di reazioni sarebbe riusabile con attribuzione. I dati derivano da PubChem; la sua politica d'uso **non è stata letta** (la pagina era bloccata da un controllo anti-robot): da verificare prima di incorporare dati.
+- **BioTransformer**: licenza e riuso delle regole di reazione **non trovati** (la pagina Bitbucket non era leggibile da un lettore web). Ipotesi: non adottare le sue regole finché non si legge la licenza a mano. **CTS (EPA)**: nessuna licenza né condizioni sulla pagina principale; le librerie di reazioni (`/cts/about/reactionlibs`) e la guida utente non sono state lette.
+- **Regola proposta**: gli algoritmi si riscrivono dalle fonti originali (Schollée et al. 2015 per le trasformazioni elementari con direzione di RT; coseno modificato di GNPS per la somiglianza MS/MS), mai da codice di patRoon, e senza leggerne il sorgente mentre si scrive il nostro. Dati esterni (reazioni, Δ) solo con licenza letta e fonte citata in `ipotesi/1`.
+
+## 6. Cosa abbiamo già (letto nel codice)
+| Funzione | Dove | Stato |
+|---|---|---|
+| Coseno semplice e **coseno modificato** con picchi traslati di Δ = m/z precursore − m/z candidato (tolleranza 0,5 Da, radice delle intensità, abbinamento goloso uno a uno) | `crates/mzlab-core/src/ms2sim.rs` (`ms2_similarity`, anche `subset_score` e «X tra i prodotti di P») | verificato |
+| Coseno modificato, entropia, picchi uguali, spostati e **perdite neutre in comune** genitore-prodotto (`pair_components`, tolleranza 0,5 Da a risoluzione unitaria) | `crates/mzlab-feat/src/legacy/similarity.rs`, usato da `interp/confronto.rs::against_dda` | verificato nelle intestazioni e nelle firme; i dettagli del calcolo delle perdite non sono stati letti |
+| Frammenti per formula (uguali o spostati) contro la libreria dell'infusione | `interp/confronto.rs::by_formula` | verificato (doc `interp.md`) |
+| Direzione di ritenzione attesa e **ΔlogP** nella riga `interp` | — | **non esiste** (nessuna occorrenza di `retDir`/logP in `interp/` e `tp`) |
+| RT contro logP | solo Attributio (`attributio/review/rtlogp`, `checks`) | verificato per esistenza; non collegato ai TP |
+| Δ di formula note | registro `ipotesi/1` | esiste (doc); contenuto non letto |
+
+**Conclusione**: la somiglianza MS/MS è già coperta quanto in patRoon (anzi con entropia in più). La lacuna da colmare è una sola: direzione di RT attesa (ΔlogP o regola) contro osservata, riusando il lavoro RT–logP di Attributio.
