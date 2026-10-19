@@ -1,4 +1,4 @@
-/* mzLab - Teoria: five clicks on the logo switch the administrator mode on or off (QADMIN of teoria.js, key «qqq.admin» in localStorage): extended Teoria and chapter editor.
+/* mzLab - Teoria: five clicks on the logo switch the administrator mode on or off (QADMIN of teoria.js, key «mzlab.admin» in localStorage): extended Teoria and chapter editor.
    Each click grows the logo (the image, not the link: the focus ring stays); the fifth one «bursts» it, a status message says what happened and the
    page unlocks the editor and extended mode (or locks them again) after a reload. The logo stays a link: a click that is not followed by another within 600 ms goes where the link goes.
    No animation under reduced motion (the system setting or data-a11y-reduce). Classic script, no network: it works from file:// too. */

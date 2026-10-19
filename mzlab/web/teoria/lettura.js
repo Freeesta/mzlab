@@ -10,9 +10,9 @@
   if (!side || !menu) return;
   const here = location.pathname.split("/").pop() || "index.html";
   const cur = (typeof CHAPTERS !== "undefined" ? CHAPTERS : []).find(c => c[0] === here);
-  const KEY = "qqq.teoria.pos"; // {last: file, pos: {file: ratio}}; reading position only, never sent anywhere
+  const KEY = "mzlab.teoria.pos", OLD = "qqq.teoria.pos"; // {last: file, pos: {file: ratio}}; reading position only, never sent anywhere
   const store = {
-    get() { try { return JSON.parse(localStorage.getItem(KEY)) || { pos: {} }; } catch (_) { return { pos: {} }; } },
+    get() { try { return JSON.parse(localStorage.getItem(KEY) ?? localStorage.getItem(OLD)) || { pos: {} }; } catch (_) { return { pos: {} }; } },
     set(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (_) { /* storage blocked: no memory of the position */ } },
   };
   const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.hasAttribute("data-a11y-reduce");

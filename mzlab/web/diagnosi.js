@@ -55,7 +55,7 @@ const DIAG = {
     // the phase that was active at time `t` (ms of performance.now())
     faseA(t) { let f = ""; for (const m of this.marks) { if (m.t <= t) f = m.fase; else break; } return f; },
     registra(start, dur) { this.list.push({ t: Math.round(start), dur: Math.round(dur), fase: this.faseA(start) }); if (this.list.length > this.max) this.list.shift(); },
-    avvia() { try { new PerformanceObserver(l => { for (const e of l.getEntries()) this.registra(e.startTime, e.duration); }).observe({ type: "longtask", buffered: true }); } catch (_) { /* no Long Tasks API: nothing is recorded */ } },
+    avvia() { try { if (!(PerformanceObserver.supportedEntryTypes || []).includes("longtask")) return; new PerformanceObserver(l => { for (const e of l.getEntries()) this.registra(e.startTime, e.duration); }).observe({ type: "longtask", buffered: true }); } catch (_) { /* no Long Tasks API: nothing is recorded */ } },
     da(since = 0) { return this.list.filter(x => x.t >= since); },
     // lines for the text to copy: how many, the longest, then the ten longest with their phase
     righe(since = 0) {

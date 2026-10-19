@@ -23,7 +23,7 @@ def run_node(code: str) -> dict:
       process.exit(1);
     }});
     """
-    r = subprocess.run(["node", "-e", full_code], capture_output=True, text=True)
+    r = subprocess.run(["node", "-e", full_code], capture_output=True, text=True, encoding="utf-8")
     assert r.returncode == 0, f"Node script failed:\nSTDOUT: {r.stdout}\nSTDERR: {r.stderr}"
     lines = [line.strip() for line in r.stdout.strip().splitlines() if line.strip()]
     return json.loads(lines[-1])

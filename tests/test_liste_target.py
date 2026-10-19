@@ -42,7 +42,7 @@ const out = {
 };
 console.log(JSON.stringify(out));
 """
-    res = subprocess.run([NODE, "-e", code, str(TARGET_JS), str(CSV_PATH)], capture_output=True, text=True, check=True)
+    res = subprocess.run([NODE, "-e", code, str(TARGET_JS), str(CSV_PATH)], capture_output=True, text=True, encoding="utf-8", check=True)
     data = json.loads(res.stdout)
 
     assert data["count"] == 645
@@ -83,7 +83,7 @@ spectra.push({ level: 2, rt: 2.51, precursor: 166.122641, mz: [148.11, 133.09], 
 const matches = LT.cercaTargets(targets, spectra, { tolerance_ppm: 5.0, min_sn: 3.0, min_area: 10.0, adducts: ['[M+H]+'] });
 console.log(JSON.stringify(matches));
 """
-    res = subprocess.run([NODE, "-e", code, str(TARGET_JS)], capture_output=True, text=True, check=True)
+    res = subprocess.run([NODE, "-e", code, str(TARGET_JS)], capture_output=True, text=True, encoding="utf-8", check=True)
     return json.loads(res.stdout)
 
 
@@ -148,7 +148,7 @@ const matches = LT.cercaTargets(targets, spectra, {
 
 console.log(JSON.stringify(matches));
 """
-    res = subprocess.run([NODE, "-e", code, str(TARGET_JS)], capture_output=True, text=True, check=True)
+    res = subprocess.run([NODE, "-e", code, str(TARGET_JS)], capture_output=True, text=True, encoding="utf-8", check=True)
     matches = json.loads(res.stdout)
     assert len(matches) == 0
 
@@ -183,7 +183,7 @@ const sampleMatches = [
 const csv = LT.csvExport(sampleMatches);
 console.log(csv);
 """
-    res = subprocess.run([NODE, "-e", code, str(TARGET_JS)], capture_output=True, text=True, check=True)
+    res = subprocess.run([NODE, "-e", code, str(TARGET_JS)], capture_output=True, text=True, encoding="utf-8", check=True)
     csv_text = res.stdout.strip()
 
     assert csv_text.startswith("# mzLab Target screening export")
@@ -210,7 +210,7 @@ const out = {
 };
 console.log(JSON.stringify(out));
 """
-    res = subprocess.run([NODE, "-e", code, str(LISTE_JS)], capture_output=True, text=True, check=True)
+    res = subprocess.run([NODE, "-e", code, str(LISTE_JS)], capture_output=True, text=True, encoding="utf-8", check=True)
     out = json.loads(res.stdout)
     assert out["hasOpenTarget"] is True
     assert out["hasTargetMethod"] is True

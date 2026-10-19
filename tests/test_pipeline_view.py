@@ -48,7 +48,7 @@ def run_node(tmp_path, body):
     p.write_bytes(series())
     js = f"""globalThis.UNT = require({json.dumps(str(JS / '25_untarget.js'))}); const V = require({json.dumps(str(JS / '33_pipeline_view.js'))});
 const f = V.readFeat(require('fs').readFileSync({json.dumps(str(p))})); {body}"""
-    out = subprocess.run(["node", "-e", js], capture_output=True, text=True, timeout=60)
+    out = subprocess.run(["node", "-e", js], capture_output=True, text=True, encoding="utf-8", timeout=60)
     assert out.returncode == 0, out.stderr
     return json.loads(out.stdout)
 
@@ -71,5 +71,5 @@ def test_table_enters_unt(tmp_path):
 
 
 def test_not_a_mzfeat(tmp_path):
-    p = subprocess.run(["node", "-e", f"const V = require({json.dumps(str(JS / '33_pipeline_view.js'))}); try {{ V.readFeat(new Uint8Array(40)); }} catch (e) {{ console.log(e.key); }}"], capture_output=True, text=True)
+    p = subprocess.run(["node", "-e", f"const V = require({json.dumps(str(JS / '33_pipeline_view.js'))}); try {{ V.readFeat(new Uint8Array(40)); }} catch (e) {{ console.log(e.key); }}"], capture_output=True, text=True, encoding="utf-8")
     assert p.stdout.strip() == "error.badMzfeat"

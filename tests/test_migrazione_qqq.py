@@ -21,7 +21,7 @@ def run_node(code: str) -> dict:
     const NOMI = require({json.dumps(str(WEB / "nomi.js"))});
     {code}
     """
-    r = subprocess.run(["node", "-e", full_code], capture_output=True, text=True)
+    r = subprocess.run(["node", "-e", full_code], capture_output=True, text=True, encoding="utf-8")
     assert r.returncode == 0, f"Node script failed:\nSTDOUT: {r.stdout}\nSTDERR: {r.stderr}"
     lines = [line.strip() for line in r.stdout.strip().splitlines() if line.strip()]
     return json.loads(lines[-1])
@@ -29,7 +29,7 @@ def run_node(code: str) -> dict:
 
 def run_node_esm(code: str) -> dict:
     """Execute an ESM snippet in Node and return the parsed JSON output."""
-    r = subprocess.run(["node", "--input-type=module", "-e", code], capture_output=True, text=True)
+    r = subprocess.run(["node", "--input-type=module", "-e", code], capture_output=True, text=True, encoding="utf-8")
     assert r.returncode == 0, f"Node ESM script failed:\nSTDOUT: {r.stdout}\nSTDERR: {r.stderr}"
     lines = [line.strip() for line in r.stdout.strip().splitlines() if line.strip()]
     return json.loads(lines[-1])

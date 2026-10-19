@@ -28,7 +28,7 @@ def run_node(code: str) -> dict:
       process.exit(1);
     }});
     """
-    r = subprocess.run(["node", "-e", full_code], capture_output=True, text=True)
+    r = subprocess.run(["node", "-e", full_code], capture_output=True, text=True, encoding="utf-8")
     assert r.returncode == 0, f"Node script failed:\nSTDOUT: {r.stdout}\nSTDERR: {r.stderr}"
     lines = [line.strip() for line in r.stdout.strip().splitlines() if line.strip()]
     return json.loads(lines[-1])
@@ -36,7 +36,7 @@ def run_node(code: str) -> dict:
 
 def test_pending_to_ready_0_1_3_uploads_order():
     code = f"""
-    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+    const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     
     // 1) 0 uploads
     AVVIO._resetTest('pending');
@@ -84,7 +84,7 @@ def test_pending_to_ready_0_1_3_uploads_order():
 
 def test_pending_to_failed_no_exceptions_resolves_false():
     code = f"""
-    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+    const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     AVVIO._resetTest('pending');
 
     let failReported = [];
@@ -124,7 +124,7 @@ def test_pending_to_failed_no_exceptions_resolves_false():
 
 def test_double_segna_pronto_idempotent():
     code = f"""
-    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+    const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     AVVIO._resetTest('pending');
 
     AVVIO.segnaPronto();
@@ -143,7 +143,7 @@ def test_double_segna_pronto_idempotent():
 
 def test_segna_fallito_after_ready_ignored():
     code = f"""
-    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+    const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     AVVIO._resetTest('pending');
 
     AVVIO.segnaPronto();
@@ -166,7 +166,7 @@ def test_segna_fallito_after_ready_ignored():
 
 def test_annulla_cancels_waiting_uploads():
     code = f"""
-    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+    const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     AVVIO._resetTest('pending');
 
     let out1 = null;
@@ -196,7 +196,7 @@ def test_annulla_cancels_waiting_uploads():
 
 def test_segna_fallito_translates_catalog_key_before_fail():
     code = f"""
-    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+    const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     AVVIO._resetTest('pending');
 
     let failedArg = null;
@@ -258,7 +258,7 @@ def test_render_drop_stato_coda_e_annulla_dom():
     """DOM test of renderDropStato queue counts with parameters and cancel button."""
     code = f"""
     {DOM_HELPERS}
-    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+    const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
 
     // 0 file (senza parametri)
     AVVIO._resetTest('pending');
@@ -301,7 +301,7 @@ def test_render_drop_stato_transizioni_e_fallback_dom():
     """DOM test of renderDropStato state transitions and fallback without I18N."""
     code = f"""
     {DOM_HELPERS}
-    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+    const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
 
     // Transizione ready
     AVVIO._resetTest('pending');
@@ -341,7 +341,7 @@ def test_duplicate_file_while_waiting_real_upload_drop_dups():
     assert m is not None, "Could not extract upload and dropDups from shell.js"
 
     code = f"""
-    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+    const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
 
     global.window = global;
     global.I18N = {{ t: (k, p) => k }};
@@ -392,7 +392,7 @@ def test_duplicate_file_while_waiting_real_upload_drop_dups():
 
 def test_segna_fallito_object_and_fallback_without_i18n():
     code = f"""
-    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+    const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     AVVIO._resetTest('pending');
     global.window = {{
       fail: () => {{}},
@@ -416,7 +416,7 @@ def test_segna_fallito_object_and_fallback_without_i18n():
 def test_render_fase_dom_and_sessione_scheletro():
     code = f"""
     {DOM_HELPERS}
-    const AVVIO = require('{WEB / "avvio-progressivo.js"}');
+    const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     const faseEl = makeEl('avvio-fase');
     const dropEl = makeEl('drop');
     const skelEl = makeEl('drop-skeleton');

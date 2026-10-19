@@ -41,13 +41,13 @@ const CHAPTERS = [
 const APP = typeof APP_NAME === "string" ? APP_NAME : "mzLab";        // appname.js is loaded first by every page
 CHAPTERS.forEach(c => { c[2] = c[2].split("{APP}").join(APP); });
 // «Teoria estesa»: part of the administrator mode (5 clicks on the logo, sblocco.js); a chapter with a 5th field `true` is listed only then
-// One administrator switch for the whole site: localStorage «qqq.admin» = «1» (5 clicks on the logo); the older flag «qqq.teoria.esteso» still counts.
+// One administrator switch for the whole site: localStorage «mzlab.admin» = «1» (5 clicks on the logo); the older flags «qqq.admin» and «teoria.esteso» still count.
 window.QADMIN = window.QADMIN || (() => {
   const get = k => { try { return localStorage.getItem(k) === "1"; } catch (_) { return false; } };
   return {
-    on: () => get("qqq.admin") || get("qqq.teoria.esteso"),
-    set() { try { localStorage.setItem("qqq.admin", "1"); } catch (_) { /* not stored: nothing unlocks */ } },
-    clear() { try { localStorage.removeItem("qqq.admin"); localStorage.removeItem("qqq.teoria.esteso"); } catch (_) { /* nothing to clear */ } },
+    on: () => get("mzlab.admin") || get("qqq.admin") || get("mzlab.teoria.esteso") || get("qqq.teoria.esteso"),
+    set() { try { localStorage.setItem("mzlab.admin", "1"); } catch (_) { /* not stored: nothing unlocks */ } },
+    clear() { try { for (const k of ["mzlab.admin", "qqq.admin", "mzlab.teoria.esteso", "qqq.teoria.esteso"]) localStorage.removeItem(k); } catch (_) { /* nothing to clear */ } },
   };
 })();
 const ESTESO = QADMIN.on();
