@@ -66,7 +66,10 @@ Il motore Rust rifiuta già `[H]` (`error.grafo.element`), quindi oggi la trappo
 ## 6. Lista dei sospetti di Tabui (`TP_Mine/data/composti.csv`)
 625 righe: InChIKey coerente con lo SMILES in 625 (0 solo scheletro, 0 diverse); 286 con elementi stereo, 111 con almeno uno non specificato; nessun `.`. Oggi il motore scarta la stereo di tutte e 286.
 
-## 7. Comandi
+## 7. Seconda prova indipendente
+L'ARCH dei workflow modulari (ramo `claude/workflow-modulari`, commit `ad83c2b76809e6c21e36f255dbc3b88425909223`, file `docs/studi/STRUTTURA_DATO.md` di quel commit) ha fatto per conto suo un giro simile con RDKit 2024.09.6: SMILES diversi fra RDKit e Open Babel in 15 casi su 20, racemo = enantiomero in InChI standard, piridone = idrossipiridina, chetone ≠ enolo, stereo persa senza cunei; un grafo con stereo esplicita torna uguale in 19 su 20 (il sale per un limite del suo decodificatore). Fatti in più, ricontrollati qui sul codice: `[13CH3]O` diventa CH4O senza avviso (le cifre dell'isotopo si saltano); un sale dà `error.grafo.mixture` (`smiles.rs` r. 200); `C1=CC=CC=C1` e `c1ccccc1` danno due grafi diversi (nessuna percezione dell'aromaticità, intestazione di `grafo.rs`). Da lui, non ricontrollato qui: `make2D` e lo scrittore V3000 di Open Babel perdono la stereo tetraedrica; il `.wasm` di RDKit MinimalLib pesa 7,38 MB.
+
+## 8. Comandi
 ```
 pip install rdkit openbabel-wheel ziglang
 python3 tools/struttura_dato/confronto.py --json /tmp/x/conf.json --molfiles /tmp/x/mol
