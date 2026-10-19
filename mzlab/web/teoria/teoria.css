@@ -220,7 +220,6 @@ body.noex main>:not(.kicker):not(h1):not(.phex):not(.pn){display:none!important}
 :root[data-a11y-ruler] #a11y-ruler{display:block}
 #a11y-btn{font:inherit;font-size:14px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:3px 10px;color:var(--ink);cursor:pointer;font-weight:700}
 #a11y-btn:hover,#a11y-btn:focus-visible{border-color:var(--accent);outline:2px solid var(--accent)}
-#a11y-btn.float{position:fixed;top:10px;right:14px;z-index:40;box-shadow:0 1px 4px rgba(0,0,0,.2)}
 #a11y-panel{position:fixed;top:0;right:0;bottom:0;width:min(360px,100vw);z-index:70;background:var(--panel);color:var(--ink);border-left:1px solid var(--line);box-shadow:-4px 0 18px rgba(0,0,0,.25);overflow:auto;padding:14px 16px 24px;font-size:15px;line-height:1.5;letter-spacing:normal;word-spacing:normal}
 #a11y-panel[hidden]{display:none}
 #a11y-panel .a-hd{display:flex;align-items:center;justify-content:space-between;margin:0 0 4px}
@@ -384,6 +383,8 @@ html.phone #top #a11y-btn{margin-left:0}
 @media (min-width:981px){#cbar #cb-nav{display:none}}
 @media (max-width:980px){#tbar .tsep,#tbar #tnav{display:none}}
 @media (max-width:640px){#top #tabs a{padding:0 6px;min-width:44px;justify-content:center}#tbar{gap:2px}#tbar .l{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
+/* same compact bar as the header of the program with a mouse; touch keeps the 44 px targets */
+@media (pointer:fine){#top{padding:4px 12px;gap:10px}#tabs a{min-height:33px;font-size:14px}#top #logo{min-height:33px;min-width:33px}#top #logo img{height:22px;width:auto}#top .tb{min-height:32px;min-width:32px;font-size:13px;padding:0 10px}}
 @media (prefers-reduced-motion:reduce){#top,#top *{transition:none!important}}
 @media print{#tbar{display:none}}
 

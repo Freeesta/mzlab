@@ -2,6 +2,8 @@
 
 Obiettivo: mzLab legge così come sono, senza conversione manuale in mzML, i file di ogni produttore, a bassa e ad alta risoluzione, con ogni tipo di esperimento. Questo studio dice cosa si legge oggi (con la prova nel codice), cosa manca, cosa si può fare nel browser e in che ordine. Base: `main` a `e450dce`.
 
+Seguito: il progetto «Rosina» (`docs/studi/ROSINA.md`, schede per formato in `docs/studi/rosina/`) aggiunge verità esterne, metadati campo per campo e il piano delle chat; la colonna dello stato di §1 e §2 si aggiorna dal suo protocollo di prova.
+
 ## 0. Il vincolo che decide tutto: il peso del motore
 
 - Il `.wasm` del motore pesa **1 703 607 B** (log del job `build` di `pages.yml`, run 38642852060, commit `e450dce`: «engine .wasm (optimised): 1703607 bytes»). Il tetto è **1 703 936 B** (`.github/workflows/pages.yml:61`, `tools/wasm_opt.sh`). **Margine: 329 byte.** Nessun lettore nuovo, nemmeno il più piccolo, entra nel motore così com'è.
