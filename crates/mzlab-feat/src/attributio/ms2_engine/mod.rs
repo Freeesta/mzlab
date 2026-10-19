@@ -6,6 +6,7 @@
 
 pub mod compile;
 pub mod hits;
+pub mod insilico;
 pub mod matcher;
 
 pub use compile::{clean_library_name, compile_library, EngineEntry};

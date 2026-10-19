@@ -133,3 +133,53 @@ fn engine_hits_are_evidence_not_levels() {
             == 2
     );
 }
+
+/// MS-02: the fragmenter score equals the pure-Python reference on the explained sets of the Rust fragmenter; the explained sets themselves equal the RDKit
+/// ones for at least 90 % of the structures (the same bar as the fragmenter, `attributio_spiegazioni`: there is no RDKit in the engine).
+#[test]
+fn insilico_score_follows_the_reference() {
+    use mzlab_feat::attributio::ms2_engine::insilico::{
+        fragmenter_score, rank, read_candidates, InSilicoOpts,
+    };
+    use mzlab_feat::attributio::review::fragmenter::fragment_molecule;
+    let p = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/data/attributio/ms2_engine/insilico.json"
+    );
+    let g: Value = serde_json::from_str(&std::fs::read_to_string(p).unwrap()).unwrap();
+    let (mut same, mut total) = (0, 0);
+    for m in g["molecole"].as_array().unwrap() {
+        let (peaks, ints) = (nums(&m["peaks"]), nums(&m["intensities"]));
+        let pairs: Vec<(f64, f64)> = peaks.iter().cloned().zip(ints).collect();
+        let pol = m["pol"].as_str().unwrap();
+        let fr = fragment_molecule(m["smiles"].as_str().unwrap(), pol, &peaks, 10.0, 200).unwrap();
+        let mut got: Vec<f64> = fr.explained.iter().map(|e| e.peak).collect();
+        got.sort_by(f64::total_cmp);
+        got.dedup();
+        let mut want = nums(&m["explained"]);
+        want.sort_by(f64::total_cmp);
+        total += 1;
+        if got == want {
+            same += 1;
+            let d = (fragmenter_score(&pairs, &got) - m["score"].as_f64().unwrap()).abs();
+            assert!(d < 1e-12, "{} score {d}", m["smiles"]);
+        }
+    }
+    eprintln!("explained sets equal: {same}/{total}");
+    assert!(same as f64 / total as f64 >= 0.90, "{same}/{total}");
+
+    // hand case: caffeine (194.0804) is found among three candidates, the others are out of the mass window
+    let list = "Identifier,CompoundName,SMILES,MolecularFormula\n1,Caffeine,Cn1cnc2c1c(=O)n(C)c(=O)n2C,C8H10N4O2\n2,Theophylline,Cn1cnc2c1c(=O)[nH]c(=O)n2C,C7H8N4O2\n3,Ethanol,CCO,C2H6O\n";
+    let cands = read_candidates(list);
+    assert_eq!(cands.len(), 3);
+    let r = rank(
+        195.0877,
+        "POS",
+        &[(138.0662, 100.0), (110.0713, 40.0), (42.0, 5.0)],
+        &cands,
+        &InSilicoOpts::default(),
+    );
+    assert_eq!(r.len(), 1);
+    assert_eq!(r[0].candidate.name, "Caffeine");
+    assert!(r[0].mass_ppm.abs() < 1.0);
+}
