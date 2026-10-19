@@ -41,8 +41,10 @@ try:
             assert pg.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--diff-pos').trim()") != ""
         step("the XIC and the TIC differences are there", xic)
         def plots():
-            assert pg.evaluate(f"{M}.rd.textContent.includes(' − ')"), pg.evaluate(f"{M}.rd.textContent")   # the readout says A − B
-        step("the readout names A − B", plots)
+            assert pg.evaluate(f"!!{M}._mz.spec && !!{M}._mz.spec.signed"), "spectrum is difference A - B"
+            leg = pg.evaluate(f"{M}.leg.textContent")
+            assert "minus" in leg or "meno" in leg or " − " in leg, leg
+        step("the difference A − B is shown on spectrum and legend", plots)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

@@ -31,10 +31,11 @@ try:
             for m in (*mods, *late): pg.keyboard.up(m)
         def latch(k):
             pg.evaluate(MP + ".cv.focus()"); pg.keyboard.press(k)
+        CTRL = "Meta" if sys.platform == "darwin" else "Control"
         def held_pan():
-            zoomed(); z0 = z(); drag(["Shift", "Control"], 70, 12, lambda: attendi(pg, f"{MP}.rd.textContent.includes('Solo RT')"))
+            zoomed(); z0 = z(); drag(["Shift", CTRL], 70, 12, lambda: attendi(pg, f"MAPPA.st({MP}).guide && MAPPA.st({MP}).guide.ax === 'x'"))
             z1 = z(); assert z1[0] != z0[0] and z1[1] == z0[1], ("held, mostly horizontal: only RT moves", z0, z1)
-            drag(["Shift", "Control"], 12, 70); z2 = z(); assert z2[1] != z1[1] and z2[0] == z1[0], ("held, mostly vertical: only m/z moves", z1, z2)
+            drag(["Shift", CTRL], 12, 70); z2 = z(); assert z2[1] != z1[1] and z2[0] == z1[0], ("held, mostly vertical: only m/z moves", z1, z2)
             drag(["Shift"], 40, 40); z3 = z(); assert z3[0] != z2[0] and z3[1] != z2[1], ("free: both move", z2, z3)
         step("pan with Ctrl+Shift held: the axis is the dominant direction", held_pan)
         def latched_pan():
