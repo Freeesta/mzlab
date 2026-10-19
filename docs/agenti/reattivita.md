@@ -74,3 +74,9 @@ Solo in modalità amministratore (`uipAdminOn()`); testi in inglese senza chiavi
 - **Restano come scritti**: ammine aromatiche, ammidi, uree, azoti piridinici e azolici (imidazolo 7,0), sulfonammidi N–H (compresi i sulfamidici N-eteroarilici e il bentazone, in realtà acidi), tioli, ammonio quaternario e nitro.
 - **Validazione prima/dopo** (`validazione.rs`, `baseline` e `baseline_ph7`; siti C–H, 32 righe; tutti gli atomi tra parentesi): top-1/3/5 → top-1 19 → 19 (1 → 1), top-3 29 → 27 (10 → 10), top-5 30 → 30 (18 → 19). Guadagno nullo o negativo: per questo l'opzione resta spenta.
 - **Prove**: `tests/protomero.rs` (ammina, acido, fenoli, zwitterione, lisina, diammine, gruppi che non cambiano, forma riletta dal parser, campo `protomer` e cariche somma di q); `e2e_reattivita_auto.py` (menu `Form`).
+
+## Quota di HOMO e LUMO per atomo e prove scartate
+- **HOMO/LUMO per atomo** (`System::frontier_shares`): ogni atomo di `atoms` ha `homo` e `lumo` (quota di |ψ|² per partizione di Mulliken, ciascuna lista somma 1); la tabella di Tabui mostra le colonne «HOMO share» e «LUMO share», anche nel CSV e in `TDATI`. Con il ripiego EHT i campi mancano.
+- **Cariche di Hirshfeld scartate**: popolazioni di Hirshfeld (integrazione su griglie di Becke) al posto di Mulliken per i Fukui non hanno migliorato i siti C–H (19/29/30 identico, top-1/3/5), costavano circa 12 kB di `.wasm` `chem` e non sono nel codice. CM5 non provato (costanti non verificabili).
+- **Media di Boltzmann sui conformeri** provata: nessun guadagno su C33 (19/29/30), non adottata.
+- **Prove**: `tests/frontier.rs` (somme HOMO/LUMO = 1, quote del fenolo e dell'acetato).

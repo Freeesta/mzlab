@@ -75,13 +75,16 @@ pub struct Result3 {
     pub lumo_ev: f64,
     pub converged: [bool; 3],
     pub iterations: [usize; 3],
+    /// Share of the HOMO and of the LUMO on each atom (empty for the EHT fallback).
+    pub homo_share: Vec<f64>,
+    pub lumo_share: Vec<f64>,
     pub spread: Option<f64>,
 }
 
-/// Fukui values, HOMO and LUMO (eV), converged and iterations of N, N+1 and N−1.
-pub type Gfn2 = (Fukui, f64, f64, [bool; 3], [usize; 3]);
+/// Fukui values, HOMO and LUMO (eV), converged, iterations of N, N+1 and N−1, and the HOMO and LUMO share of each atom.
+pub type Gfn2 = (Fukui, f64, f64, [bool; 3], [usize; 3], [Vec<f64>; 2]);
 
-/// GFN2-xTB of N, N+1 and N−1 for one geometry: (Fukui, HOMO, LUMO, converged, iterations).
+/// GFN2-xTB of N, N+1 and N−1 for one geometry: (Fukui, HOMO, LUMO, converged, iterations, frontier shares).
 pub fn gfn2(m: &Mol3d, xyz: &[[f64; 3]], water: bool) -> Result<Gfn2> {
     let sys = System::new(&m.el, xyz, water.then_some(&alpb::WATER))?;
     let charge: i32 = m.charge.iter().map(|&c| c as i32).sum();
@@ -90,12 +93,14 @@ pub fn gfn2(m: &Mol3d, xyz: &[[f64; 3]], water: bool) -> Result<Gfn2> {
     let c = sys.solve(charge + 1, Some(&n.guess))?;
     let nel = (sys.electrons() as i64 - charge as i64) as usize;
     let (h, l) = n.frontier(nel);
+    let (hs, ls) = sys.frontier_shares(&n, nel);
     Ok((
         Fukui::from_charges(&n.q, &a.q, &c.q),
         h,
         l,
         [n.converged, a.converged, c.converged],
         [n.iterations, a.iterations, c.iterations],
+        [hs, ls],
     ))
 }
 
@@ -133,7 +138,8 @@ fn spread(m: &Mol3d, confs: &[Conf], f0: &[f64], water: bool) -> Option<f64> {
 pub fn compute(m: &Mol3d, confs: &[Conf], water: bool) -> Result<Result3> {
     let xyz = &confs[0].xyz;
     if PUBLISH_GFN2 {
-        let (fukui, homo_ev, lumo_ev, converged, iterations) = gfn2(m, xyz, water)?;
+        let (fukui, homo_ev, lumo_ev, converged, iterations, [homo_share, lumo_share]) =
+            gfn2(m, xyz, water)?;
         if converged.iter().all(|&c| c) {
             let spread = spread(m, confs, &fukui.f_minus, water);
             return Ok(Result3 {
@@ -143,6 +149,8 @@ pub fn compute(m: &Mol3d, confs: &[Conf], water: bool) -> Result<Result3> {
                 lumo_ev,
                 converged,
                 iterations,
+                homo_share,
+                lumo_share,
                 spread,
             });
         }
@@ -156,6 +164,8 @@ pub fn compute(m: &Mol3d, confs: &[Conf], water: bool) -> Result<Result3> {
         lumo_ev,
         converged: [true, false, false],
         iterations: [1, 0, 0],
+        homo_share: Vec::new(),
+        lumo_share: Vec::new(),
         spread: None,
     })
 }
@@ -204,7 +214,7 @@ fn write(
     if let Some(p) = prot {
         write_protomer(&mut o, p);
     }
-    write_atoms(&mut o, m, &r.fukui);
+    write_atoms(&mut o, m, r);
     o.raw(",\"hbonds\":[");
     for (k, (h, a)) in hbonds(m, &m.xyz).iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" })
@@ -298,7 +308,8 @@ fn write_sites(o: &mut Out, sites: &[Site]) {
     }
 }
 
-fn write_atoms(o: &mut Out, m: &Mol3d, f: &Fukui) {
+fn write_atoms(o: &mut Out, m: &Mol3d, r: &Result3) {
+    let f = &r.fukui;
     o.raw(",\"atoms\":[");
     for i in 0..m.len() {
         o.raw(if i > 0 { "," } else { "" })
@@ -324,7 +335,14 @@ fn write_atoms(o: &mut Out, m: &Mol3d, f: &Fukui) {
             .opt(f.f_zero[i].map(|v| round(v, 4)))
             .raw(",\"f_minus\":")
             .num(round(f.f_minus[i], 4));
-        o.raw(",\"dual\":").num(round(f.dual(i), 4)).raw("}");
+        o.raw(",\"dual\":").num(round(f.dual(i), 4));
+        if let (Some(h), Some(l)) = (r.homo_share.get(i), r.lumo_share.get(i)) {
+            o.raw(",\"homo\":")
+                .num(round(*h, 4))
+                .raw(",\"lumo\":")
+                .num(round(*l, 4));
+        }
+        o.raw("}");
     }
     o.raw("],\"bonds\":[");
     for (k, &(a, b, ord)) in m.bonds.iter().enumerate() {

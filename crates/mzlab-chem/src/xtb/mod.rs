@@ -38,19 +38,6 @@ pub struct Guess {
     x: Vec<f64>,
 }
 
-/// Result of one SCC.
-pub struct Scf {
-    /// Mulliken atomic charges.
-    pub q: Vec<f64>,
-    /// Orbital energies (eV), ascending.
-    pub emo_ev: Vec<f64>,
-    /// Electronic energy (Hartree): band, second and third order, multipoles, self-consistent D4, solvation, entropy.
-    pub energy: f64,
-    pub converged: bool,
-    pub iterations: usize,
-    pub guess: Guess,
-}
-
 impl System {
     /// Elements (atomic numbers), positions in Å, optional solvent.
     pub fn new(el: &[u8], xyz: &[[f64; 3]], solvent: Option<&alpb::Solvent>) -> Result<System> {
@@ -98,6 +85,37 @@ impl System {
         let x0 = guess.map_or_else(|| vec![0.0; len], |g| g.x.clone());
         Ok(self.scc(nel as usize, x0))
     }
+}
+
+impl System {
+    /// Share of the HOMO and of the LUMO on each atom (Mulliken partition of |ψ|², each list sums to 1) for `nel` electrons.
+    pub fn frontier_shares(&self, scf: &Scf, nel: usize) -> (Vec<f64>, Vec<f64>) {
+        let sc = &self.ints.s * &scf.c;
+        let share = |k: usize| {
+            let mut v = vec![0.0; self.el.len()];
+            for (m, ao) in self.basis.ao.iter().enumerate() {
+                v[ao.0] += scf.c[(m, k)] * sc[(m, k)];
+            }
+            v
+        };
+        let h = (nel / 2).max(1) - 1;
+        (share(h), share((nel / 2).min(scf.emo_ev.len() - 1)))
+    }
+}
+
+/// Result of one SCC.
+pub struct Scf {
+    /// Mulliken atomic charges.
+    pub q: Vec<f64>,
+    /// Orbital energies (eV), ascending.
+    pub emo_ev: Vec<f64>,
+    /// Electronic energy (Hartree): band, second and third order, multipoles, self-consistent D4, solvation, entropy.
+    pub energy: f64,
+    pub converged: bool,
+    pub iterations: usize,
+    pub guess: Guess,
+    /// Molecular-orbital coefficients (columns, ascending energy).
+    pub c: DMatrix<f64>,
 }
 
 impl Scf {

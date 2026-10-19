@@ -8,7 +8,7 @@
   const G = /** @type {any} */ (window);
   const esc = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"]/g, c => /** @type {any} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const admin = () => typeof G.uipAdminOn === "function" && G.uipAdminOn();
-  /** @typedef {{ i: number, el: string, heavy_index: number|null, x: number, y: number, z: number, q: number|null, f_plus: number, f_zero: number|null, f_minus: number, dual: number }} RAtom */
+  /** @typedef {{ i: number, el: string, heavy_index: number|null, x: number, y: number, z: number, q: number|null, f_plus: number, f_zero: number|null, f_minus: number, dual: number, homo?: number, lumo?: number }} RAtom */
   /** @typedef {{ format: string, version: number, engine?: string, method?: string, solvent?: string, smiles: string, atoms: RAtom[], bonds?: {a:number,b:number,order?:number}[], hbonds?: {donor_h:number,acceptor:number}[], global?: Record<string, number|null>, conformers?: {n?:number, chosen?:number, f_minus_spread?:number|null}, scc?: {converged?: boolean|boolean[], iterations?: number|number[]}, protomer?: {ph: number, smiles: string, charge: number, changes: {group: string, heavy_index: number, action: string, pka: number}[], note?: string}, notes?: string[], cite?: any[], ch_sites?: {class:string, heavy_index:number, n_h:number, f_minus:number}[] }} Reatt */
 
   const CARDS = /** @type {{ id: string, label: string, key: keyof RAtom }[]} */ ([
@@ -58,8 +58,8 @@
   }
   /** @param {Reatt} r @returns {string} CSV of the table per atom */
   function csv(r) {
-    const h = ["index", "atom", "element", "heavy_index", "q", "f_plus", "f_zero", "f_minus", "dual"];
-    return [h.join(","), ...r.atoms.map(a => [indexOf(a), a.i, a.el, a.heavy_index ?? "", a.q, a.f_plus, a.f_zero, a.f_minus, a.dual].join(","))].join("\n") + "\n";
+    const mo = r.atoms.some(a => a.homo != null), h = ["index", "atom", "element", "heavy_index", "q", "f_plus", "f_zero", "f_minus", "dual", ...(mo ? ["homo_share", "lumo_share"] : [])];
+    return [h.join(","), ...r.atoms.map(a => [indexOf(a), a.i, a.el, a.heavy_index ?? "", a.q, a.f_plus, a.f_zero, a.f_minus, a.dual, ...(mo ? [a.homo, a.lumo] : [])].join(","))].join("\n") + "\n";
   }
   /** @param {string} name @param {string} text @param {string} type */
   const download = (name, text, type) => { if (typeof G.dl === "function") G.dl(name, text, type, false); };
@@ -145,12 +145,12 @@
 
   /** builds the table per atom for the card in `view.card`, sortable @param {Reatt} r @param {{ card: number, thr: number, sort: string, dir: number }} view @returns {string} */
   function tableHtml(r, view) {
-    const key = CARDS[view.card].key, cols = /** @type {[string, string][]} */ ([["idx", "Index"], ["el", "Element"], ["q", "q"], ["f_plus", "f(+)"], ["f_zero", "f(0)"], ["f_minus", "f(−)"], ["dual", "Dual"]]);
+    const key = CARDS[view.card].key, cols = /** @type {[string, string][]} */ ([["idx", "Index"], ["el", "Element"], ["q", "q"], ["f_plus", "f(+)"], ["f_zero", "f(0)"], ["f_minus", "f(−)"], ["dual", "Dual"], ...(r.atoms.some(a => a.homo != null) ? [["homo", "HOMO share"], ["lumo", "LUMO share"]] : [])]);
     const val = (/** @type {RAtom} */ a, /** @type {string} */ c) => c === "idx" ? (a.heavy_index == null ? 1e6 + a.i : a.heavy_index) : c === "el" ? a.el : /** @type {any} */ (a)[c];
     const rows = r.atoms.slice().sort((a, b) => { const x = val(a, view.sort), y = val(b, view.sort); return (typeof x === "string" ? x.localeCompare(y) : x - y) * view.dir; });
     const head = cols.map(([c, l]) => `<th scope="col" aria-sort="${view.sort === c ? (view.dir > 0 ? "ascending" : "descending") : "none"}"><button type="button" data-sort="${c}" aria-label="Sort by ${esc(l)}">${esc(l)}</button></th>`).join("") + `<th scope="col">Above</th>`;
     const body = rows.map(a => { const over = /** @type {number} */ (a[key]) >= view.thr && /** @type {number} */ (a[key]) > 0;
-      return `<tr${over ? ' class="over"' : ""} data-over="${over ? 1 : 0}"><td>${esc(indexOf(a))}</td><td>${esc(a.el)}</td><td>${num(a.q)}</td><td>${num(a.f_plus)}</td><td>${num(a.f_zero)}</td><td>${num(a.f_minus)}</td><td>${num(a.dual)}</td><td>${over ? "▲ yes" : ""}</td></tr>`; }).join("");
+      return `<tr${over ? ' class="over"' : ""} data-over="${over ? 1 : 0}"><td>${esc(indexOf(a))}</td><td>${esc(a.el)}</td><td>${num(a.q)}</td><td>${num(a.f_plus)}</td><td>${num(a.f_zero)}</td><td>${num(a.f_minus)}</td><td>${num(a.dual)}</td>${a.homo != null ? `<td>${num(a.homo)}</td><td>${num(a.lumo)}</td>` : ""}<td>${over ? "▲ yes" : ""}</td></tr>`; }).join("");
     return `<table class="tpr-t" aria-label="Values per atom, card ${esc(CARDS[view.card].label)}, threshold ${view.thr}"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
   }
   /** @param {Reatt} r @returns {string} the sites C–H by class of symmetry, when the `reatt/1` carries them */
@@ -182,7 +182,7 @@
       const el = f.querySelector("svg");
       if (el && G.TDATI) { G.TDATI.describe(el, `2D structure with halos, card ${CARDS[view.card].label}, ${byHeavy.length} heavy atoms.`); G.TDATI.addButton(el, tdati); }
     };
-    const tdati = () => ({ title: `Reactivity per atom, ${CARDS[view.card].label}`, head: ["Index", "Element", "q", "f(+)", "f(0)", "f(−)", "Dual"], rows: r.atoms.map(a => [indexOf(a), a.el, num(a.q), num(a.f_plus), num(a.f_zero), num(a.f_minus), num(a.dual)]) });
+    const tdati = () => ({ title: `Reactivity per atom, ${CARDS[view.card].label}`, head: ["Index", "Element", "q", "f(+)", "f(0)", "f(−)", "Dual", ...(r.atoms.some(a => a.homo != null) ? ["HOMO share", "LUMO share"] : [])], rows: r.atoms.map(a => [indexOf(a), a.el, num(a.q), num(a.f_plus), num(a.f_zero), num(a.f_minus), num(a.dual), ...(a.homo != null ? [num(a.homo), num(a.lumo)] : [])]) });
     const refreshTable = () => { const t = panel.querySelector(".tpr-tab"); if (!t) return; t.innerHTML = tableHtml(r, view) + sitesHtml(r); bindSort(); };
     const refreshViews = () => {
       const key = CARDS[view.card].key;
