@@ -245,3 +245,28 @@ pub(super) fn same_formula_alts(
         None => Vec::new(),
     }
 }
+
+/// The chemical classes of the MS2 block from the rules table (`classi/1`), or null without MS2 or when the rules cannot run.
+pub(super) fn classes_json(
+    b: &Bench,
+    f: &Feature,
+    mgf: Option<&MgfBlock>,
+    table: Option<&str>,
+) -> J {
+    use crate::classi::{evaluate, to_json, Polarity, Table};
+    let (Some(m), Some(table)) = (mgf, table) else {
+        return J::Null;
+    };
+    let pol = if f.pol == "POS" {
+        Polarity::Pos
+    } else {
+        Polarity::Neg
+    };
+    let peaks: Vec<(f64, f64)> = m.mz.iter().copied().zip(m.it.iter().copied()).collect();
+    let Some(prec) = Some(m.prec).filter(|p| *p > 0.0).or(f.mz) else {
+        return J::Null;
+    };
+    let report =
+        Table::parse(table).and_then(|t| evaluate(&t, &peaks, prec, pol, b.settings.ppm_frag));
+    report.map_or(J::Null, |r| J::Raw(to_json(&r)))
+}
