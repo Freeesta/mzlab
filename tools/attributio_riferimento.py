@@ -25,8 +25,6 @@ LIBRERIE = ROOT / "tests/data/attributio/librerie_sintetiche"
 FONTI = ROOT / "tests/data/attributio/fonti_sintetiche"
 SORBENTI = ROOT / "tests/data/attributio/campagna_sorbenti"
 USCITA_SORBENTI = ROOT / "tests/golden/attributio/sorbenti"
-ISTANTANEE = ROOT / "tests/data/attributio/istantanee_sintetiche"
-USCITA_TOX = ROOT / "tests/golden/attributio/tox"
 POLS = ("POS", "NEG")
 LEVEL_COLS = ["_pol", "_id", "level", "level_sub", "level_basis", "name"]
 
@@ -693,37 +691,6 @@ def stadio_gradiente(src):
     return out
 
 
-def stadio_tox_ghs():
-    """Thresholds of ecotox/ghs.py on a grid of values, taxon sets and H-statements."""
-    from attributio.ecotox import ghs
-    vals = [None, float("nan"), 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5, 10, 50, 100, 500]
-    flags = (False, True)
-    out = {"acute": [[v, ghs.acute_from_value(v)] for v in vals],
-           "noec": [[v, r, ghs.chronic_from_noec(v, r)] for v in vals for r in flags],
-           "from_acute": [[v, r, k, b, ghs.chronic_from_acute(v, r, k, b)]
-                          for v in vals for r in flags for k in (None, 3.9, 4.0) for b in (None, 100, 500)]}
-    cases = [({"fish": 0.5}, {}), ({"fish": 5, "algae": 50}, {}), ({}, {}), ({"fish": 0.5, "crustacean": 20}, {"fish": 0.5}),
-             ({"fish": 50, "crustacean": 0.8}, {"fish": 2, "algae": 3}), ({"fish": 5}, {"fish": 0.005, "crustacean": 0.3, "algae": 4})]
-    out["classify"] = [[a, c, r, ghs.classify(a, c, r, 4.2, None)] for a, c in cases for r in flags]
-    codes = [[], ["H400"], ["H401", "H402"], ["H410", "H413"], ["H412"], ["H400", "H411", "H413", "H319"], ["H402", "H401"]]
-    out["h_codes"] = [[c, ghs.from_h_codes(c)] for c in codes]
-    return out
-
-
-def stadio_tox_istantanee(dir_: Path):
-    """The snapshot readers (registry, membership, ECOTOX values, ECOSAR endpoints) on the synthetic snapshots."""
-    from attributio.chem import registry
-    from attributio.ecotox import hazard
-    from attributio.reglists import schema
-    registry.registry_path = lambda name="registry": dir_ / registry.FILES[name]
-    hazard._paths.ecotox_dir = lambda: dir_
-    hazard.clear_caches()
-    snap = hazard.snapshot()
-    return {"registry": frame_rows(registry.load_registry()),
-            "membership": frame_rows(schema.read_membership(dir_ / "reglist_membership.csv")),
-            "values": frame_rows(snap["values"]), "ecosar": frame_rows(snap["ecosar"])}
-
-
 def controlla(uscita: Path, campagna: Path) -> int:
     got = json.loads((uscita / "livelli.json").read_text(encoding="utf-8"))["features"]
     with open(campagna / "livelli_attesi.csv", encoding="utf-8", newline="") as fh:
@@ -744,6 +711,8 @@ def controlla(uscita: Path, campagna: Path) -> int:
 
 
 def main() -> int:
+    from attributio_tox_riferimento import stadi_tox
+
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--campagna", type=Path, default=CAMPAGNA)
     ap.add_argument("--uscita", type=Path, default=USCITA)
@@ -783,10 +752,9 @@ def main() -> int:
         "standard": lambda: scrivi(a.uscita, "standard.json", stadio_standard(C)),
         "spiegazioni": lambda: scrivi(a.uscita, "spiegazioni.json", stadio_spiegazioni()),
         "frammenti": lambda: scrivi(a.uscita, "frammenti.json", stadio_frammenti()),
-        "tox-ghs": lambda: scrivi(USCITA_TOX, "ghs.json", stadio_tox_ghs()),
-        "tox-istantanee": lambda: scrivi(USCITA_TOX, "istantanee.json", stadio_tox_istantanee(ISTANTANEE)),
         "sorbenti": lambda: scrivi(a.uscita_sorbenti, "sorbenti.json", stadio_sorbenti(carica(root, a.sorbenti.resolve()))),
     }
+    stadi.update(stadi_tox(frame_rows, scrivi))
     for nome in a.solo or list(stadi):
         stadi[nome]()
     return controlla(a.uscita, a.campagna) if a.controlla else 0

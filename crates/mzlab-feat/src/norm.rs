@@ -14,12 +14,7 @@ use crate::samples::Sample;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Reference {
     Id(u32),
-    Nearest {
-        mz: f64,
-        rt: f64,
-        ppm: f64,
-        rt_tol: f64,
-    },
+    Nearest { mz: f64, rt: f64, ppm: f64, rt_tol: f64 },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -70,12 +65,7 @@ fn mean(v: &[f64]) -> f64 {
 fn standard(t: &Aligned, r: &Reference) -> Result<usize> {
     match *r {
         Reference::Id(id) => t.row_of_id(id),
-        Reference::Nearest {
-            mz,
-            rt,
-            ppm,
-            rt_tol,
-        } => {
+        Reference::Nearest { mz, rt, ppm, rt_tol } => {
             let tol = mz * ppm * 1e-6;
             (0..t.len())
                 .filter(|&i| (t.mz[i] - mz).abs() <= tol && (t.rt[i] - rt).abs() <= rt_tol)
@@ -122,16 +112,7 @@ pub fn factors(t: &Aligned, samples: &[Sample], method: &Method) -> Result<Vec<f
         Method::Sum => mean(&counted),
         _ => median(counted),
     };
-    Ok(stat
-        .iter()
-        .map(|&s| {
-            if s.is_finite() && s > 0.0 {
-                target / s
-            } else {
-                f64::NAN
-            }
-        })
-        .collect())
+    Ok(stat.iter().map(|&s| if s.is_finite() && s > 0.0 { target / s } else { f64::NAN }).collect())
 }
 
 /// The normalised area of a cell, `None` where the file has no peak.
@@ -152,12 +133,7 @@ impl Method {
                 j.str("istd").raw(",\"istd\":");
                 match r {
                     Reference::Id(id) => j.raw("{\"id\":").int(i64::from(*id)),
-                    Reference::Nearest {
-                        mz,
-                        rt,
-                        ppm,
-                        rt_tol,
-                    } => j
+                    Reference::Nearest { mz, rt, ppm, rt_tol } => j
                         .raw("{\"mz\":")
                         .num(*mz)
                         .raw(",\"rt\":")
