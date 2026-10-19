@@ -1,20 +1,11 @@
 //! The one place that knows where the private data repository (mzlab-dati) is and how it is laid out (Rust twin of `dati_percorsi.py`).
-//! Included by the tests with `#[path = ".../tools/dati_percorsi.rs"] mod dati_percorsi;`; reads `dati_mappa.tsv`, so both languages share the layout.
+//! Included by the tests with `#[path = ".../tools/dati_percorsi.rs"] mod dati_percorsi;`
 #![allow(dead_code)]
 
 use std::path::{Path, PathBuf};
 
-const MAPPA: &str = include_str!("dati_mappa.tsv");
-// A folder is the data repository when it has the new index or one of the legacy top folders.
-const MARKERS: [&str; 7] = [
-    "dati/INDICE.md",
-    "nomi_vietati.txt",
-    "mzML",
-    "dati_formati",
-    "3200 qtrap",
-    "HRMS",
-    "scratchpad",
-];
+// A folder is the data repository when it has the data index.
+const MARKERS: [&str; 1] = ["dati/INDICE.md"];
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf()
@@ -36,19 +27,8 @@ pub fn radice() -> Option<PathBuf> {
         .find(|c| MARKERS.iter().any(|m| c.join(m).exists()))
 }
 
-/// Existing path for `rel` (new layout, else legacy), or None when there is no data repository or no such path.
+/// Existing path for `rel`, or None when there is no data repository or no such path.
 pub fn percorso(rel: &str) -> Option<PathBuf> {
-    let r = radice()?;
-    if r.join(rel).exists() {
-        return Some(r.join(rel));
-    }
-    // longest matching prefix wins
-    let (nuovo, vecchio) = MAPPA
-        .lines()
-        .filter(|l| !l.is_empty() && !l.starts_with('#'))
-        .filter_map(|l| l.split_once('\t'))
-        .filter(|(n, _)| rel == *n || rel.strip_prefix(n).is_some_and(|t| t.starts_with('/')))
-        .max_by_key(|(n, _)| n.len())?;
-    let p = r.join(format!("{vecchio}{}", &rel[nuovo.len()..]));
+    let p = radice()?.join(rel);
     p.exists().then_some(p)
 }

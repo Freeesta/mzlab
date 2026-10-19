@@ -287,7 +287,7 @@ def load_private():
     else:
         warn.append("nomi_vietati.txt not found in the data repository: check (c) skipped")
     grams = None
-    src = sorted((d / "Sbobine_elaborate" / "testo").glob("*.txt"))   # not in dati_mappa.tsv: still at the root of the repository
+    src = sorted((d / "Sbobine_elaborate" / "testo").glob("*.txt"))
     if src:
         grams = set()
         for s in src:

@@ -85,3 +85,20 @@ export function urlIssue(p) {
   url = mk(cutAt(lo) + p.cut);
   return { url, troncato: true };
 }
+
+/** longest mailto link (characters, already percent-encoded): many mail programs refuse longer ones */
+export const MAIL_MAX = 1900;
+
+/** The mailto link with the report as body, cut like the GitHub link when it is too long. The address comes in as two parts and is joined here, so it is never written whole in the page.
+ * @param {{user: string, host: string, subject: string, body: string, cut: string}} p */
+export function urlEmail(p) {
+  const to = p.user + "@" + p.host;
+  const mk = (/** @type {string} */ body) => `mailto:${to}?subject=${encodeURIComponent(p.subject)}&body=${encodeURIComponent(body)}`;
+  let url = mk(p.body);
+  if (url.length <= MAIL_MAX) return { url, troncato: false };
+  const cutAt = (/** @type {number} */ n) => { const h = p.body.slice(0, n); return /[\uD800-\uDBFF]$/.test(h) ? h.slice(0, -1) : h; };
+  let lo = 0, hi = p.body.length;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (mk(cutAt(mid) + p.cut).length <= MAIL_MAX) lo = mid; else hi = mid - 1; }
+  url = mk(cutAt(lo) + p.cut);
+  return { url, troncato: true };
+}

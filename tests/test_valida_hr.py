@@ -119,8 +119,9 @@ def test_robustness_end_to_end_on_files_named_like_the_dda_ones(tmp_path):
 
 def test_trova_hr_cerca_anche_nella_radice(tmp_path, monkeypatch):
     from valida import hr
-    (tmp_path / "HRMS").mkdir()
+    (tmp_path / "dati" / "HRMS").mkdir(parents=True)
+    (tmp_path / "dati" / "INDICE.md").write_text("x")
     monkeypatch.setenv("MZLAB_DATI", str(tmp_path))
     assert hr.trova_hr(None) is None
-    (tmp_path / "HRMS" / "Orbitrap_Fusion_DDApos_1-2min.mzML").write_bytes(b"")
-    assert hr.trova_hr(None) == tmp_path / "HRMS"
+    (tmp_path / "dati" / "HRMS" / "Orbitrap_Fusion_DDApos_1-2min.mzML").write_bytes(b"")
+    assert hr.trova_hr(None) == tmp_path / "dati" / "HRMS"

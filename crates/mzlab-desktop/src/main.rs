@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use mzlab_desktop::cartella;
+use mzlab_desktop::{cartella, dialogo};
 use mzlab_desktop::librerie::{self, Config};
 use mzlab_desktop::release;
 use mzlab_desktop::scarica::{self, Policy};
@@ -52,7 +52,7 @@ async fn pick_files(
     state: tauri::State<'_, Arc<State>>,
     dam: bool,
 ) -> Result<Vec<PickedFile>, String> {
-    let dlg = app.dialog().file();
+    let dlg = dialogo::at_desktop(&app);
     let dlg = if dam {
         dlg.add_filter("DAM", &["dam", "DAM"])
     } else {
@@ -112,7 +112,7 @@ fn folder_name(p: &std::path::Path) -> String {
 /// System dialog to point at the folder of the data; its name, None if the user cancels. The path stays in this side: the page only sees the name.
 #[tauri::command]
 async fn data_choose_dir(app: AppHandle) -> Result<Option<String>, String> {
-    let dlg = app.dialog().file();
+    let dlg = dialogo::at_desktop(&app);
     let picked = tauri::async_runtime::spawn_blocking(move || dlg.blocking_pick_folder())
         .await
         .map_err(|e| e.to_string())?;
@@ -274,7 +274,7 @@ async fn lib_choose_dir(
     app: AppHandle,
     state: tauri::State<'_, Arc<State>>,
 ) -> Result<Option<String>, String> {
-    let dlg = app.dialog().file();
+    let dlg = dialogo::at_desktop(&app);
     let picked = tauri::async_runtime::spawn_blocking(move || dlg.blocking_pick_folder())
         .await
         .map_err(|e| e.to_string())?;

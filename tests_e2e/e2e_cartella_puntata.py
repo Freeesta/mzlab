@@ -13,7 +13,7 @@ def step(name, fn):
 D = Path(tempfile.mkdtemp(prefix="cartp_e2e_")); synth.write_full(D / "a.mzML", 5, seed=1); synth.write_full(D / "c.mzML", 15, seed=3)
 A = base64.b64encode((D / "a.mzML").read_bytes()).decode(); C = base64.b64encode((D / "c.mzML").read_bytes()).decode()
 INIT = """(() => { if (localStorage.getItem('nopicker')) { delete window.showDirectoryPicker; return; }
-  window.showDirectoryPicker = async () => { const r = await navigator.storage.getDirectory(); return r.getDirectoryHandle('prova', { create: true }); };
+  window.showDirectoryPicker = async (o) => { window.__pickOpts = o; const r = await navigator.storage.getDirectory(); return r.getDirectoryHandle('prova', { create: true }); };
   const q = FileSystemDirectoryHandle.prototype.queryPermission;
   FileSystemDirectoryHandle.prototype.queryPermission = async function (o) { return localStorage.getItem('perm') === 'prompt' ? 'prompt' : q.call(this, o); };
   FileSystemDirectoryHandle.prototype.requestPermission = async () => { localStorage.removeItem('perm'); return 'granted'; }; })()"""
@@ -33,12 +33,15 @@ try:
         for a in (["a.mzML", A, None], ["sub/b.mzML", A, None], ["m.dam", None, "x"], ["l.msp", None, "Name: x\n"], ["t.csv", None, "a,b\n"], ["note.txt", None, "x"], ["sub/.hid.mzML", A, None]): pg.evaluate(PUT, a)
         def grey():
             pg.click("#cartpick"); pg.wait_for_selector("#cartbody .cprow")
-            assert rows(pg) == ["a.mzML", "sub/b.mzML", "l.msp", "m.dam", "t.csv"], rows(pg)
-            t = pg.inner_text("#cartbody"); assert "Dati" in t and "Altri" in t and "non caricato" in t, t
+            assert rows(pg) == ["a.mzML", "sub/b.mzML"], rows(pg)
+            t = pg.inner_text("#cartbody"); assert "Dati" in t and "Altri" not in t and "non caricato" in t, t
             assert pg.evaluate("getComputedStyle(document.querySelector('.cprow')).color") != pg.evaluate("getComputedStyle(document.body).color")
             assert "non caricato" in pg.get_attribute(".cprow", "aria-label")
             assert count(pg) == 0
-        step("rows in grey (Data / Others), unknown and hidden files absent, nothing loaded", grey)
+        step("rows in grey (Data only), unknown and hidden files absent, nothing loaded", grey)
+        def desktop():
+            o = pg.evaluate("window.__pickOpts"); assert o and o.get("startIn") == "desktop" and o.get("id") == "mzlab-dati", o
+        step("the folder picker opens on the Desktop with a fixed id", desktop)
         def load():
             pg.click('.cprow:has-text("a.mzML")'); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=90000)
             pg.wait_for_function("document.querySelector('.cprow.done')"); assert "caricato" in pg.inner_text(".cprow.done")
@@ -50,12 +53,9 @@ try:
         def added():
             pg.evaluate(PUT, ["c.mzML", C, None])
             pg.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
-            pg.wait_for_function("document.querySelectorAll('#cartbody .cprow').length>=6", timeout=30000)
+            pg.wait_for_function("document.querySelectorAll('#cartbody .cprow').length>=3", timeout=30000)
             assert "c.mzML" in rows(pg), rows(pg)
         step("a file added to the folder appears when the tab is shown again", added)
-        def table():
-            pg.click('.cprow:has-text("t.csv")'); t = pg.inner_text("#cartinfo"); assert "tabella" in t and "pannello" in t, t
-        step("a table explains where it is imported", table)
         def grant():
             pg.evaluate("localStorage.setItem('perm','prompt')"); pg.reload(); pg.wait_for_selector("#cartgrant", timeout=60000)
             assert not pg.query_selector("#cartbody .cprow")
