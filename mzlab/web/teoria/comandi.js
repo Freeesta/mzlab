@@ -70,13 +70,12 @@
         { id: "tavola", etichetta: "Tavola periodica", run: strum("tavola") },
         { id: "perdite", etichetta: "Perdite", run: strum("frammenta", "#fr-loss") },
       ] },
-      { id: "impostazioni", icona: "impostazioni", etichetta: "Impostazioni", titolo: "Impostazioni di lettura", gruppo: "fine", run: () => { const b = $("#a11y-btn"); if (b) b.click(); } },
+      { id: "impostazioni", icona: "impostazioni", etichetta: "Impostazioni", titolo: "Impostazioni di lettura", gruppo: "fine", run: () => T().settings && T().settings() },
     ],
     icona: svg,
     per: id => TCMD.lista.find(c => c.id === id),
   };
   window.TCMD = TCMD;
-  T().settings = () => { const b = $("#a11y-btn"); if (b) b.click(); };      // the gear of the program opens the settings of the Teoria
   // F toggles the index (not while typing, not with modifiers)
   document.addEventListener("keydown", e => {
     if ((e.key === "f" || e.key === "F") && !e.ctrlKey && !e.metaKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || "") && !e.target.isContentEditable) indice();
@@ -105,6 +104,16 @@
   if (embedded) { document.dispatchEvent(new Event("tcmd-pronto")); return; }   // in the program the bar of the app draws them
 
   // ---------------------------------------------------------------- the bar of the standalone page
+  // full screen of the page, like the button of the program header (absent where the browser has no Fullscreen API, e.g. iPhone)
+  function fullscreenBtn(parent) {
+    const de = document.documentElement; if (!de.requestFullscreen) return;
+    const en = T().lang === "en", L = { in: en ? "Full screen" : "Schermo intero", out: en ? "Exit full screen (Esc)" : "Esci dallo schermo intero (Esc)" };
+    const p = d => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+    const b = document.createElement("button"); b.type = "button"; b.className = "tb"; b.id = "tc-schermo";
+    const sync = () => { const on = !!document.fullscreenElement; b.innerHTML = p(on ? "M13 7H9V3M9 7l4.5-4.5M3 9h4v4M7 9l-4.5 4.5" : "M9.5 2.5h4v4M13.5 2.5 9 7M6.5 13.5h-4v-4M2.5 13.5 7 9"); b.title = on ? L.out : L.in; b.setAttribute("aria-label", b.title); b.setAttribute("aria-pressed", String(on)); };
+    b.onclick = () => (document.fullscreenElement ? document.exitFullscreen() : de.requestFullscreen({ navigationUI: "hide" })).catch(() => {});
+    document.addEventListener("fullscreenchange", sync); sync(); parent.appendChild(b);
+  }
   const top = $("#top"); if (!top) return;
   const phone = document.documentElement.classList.contains("phone");
   const bar = document.createElement("div"); bar.id = "tbar"; bar.setAttribute("role", "toolbar"); bar.setAttribute("aria-label", "Comandi della Teoria");
@@ -126,6 +135,7 @@
   const put = (id, parent = bar) => { if (cmd(id).nascosto) return null; const el = btn(cmd(id)); parent.appendChild(el); return el; };   // no previous at the first chapter, no next at the last: the button is absent
   if (!phone) {   // on a phone the index button sits in the fixed bar of lettura.js, previous / next too
     const n = document.createElement("span"); n.className = "tgrp"; n.id = "tnav"; ["indice", "prec", "succ"].forEach(id => put(id, n)); bar.appendChild(n); bar.appendChild(sep());
+    fullscreenBtn(bar);
   }
   // the gear is added by impostazioni.js (#a11y-btn) at the end of the bar
   const sp = $(".sp", top);   // logo · title · tabs · spacer · commands
