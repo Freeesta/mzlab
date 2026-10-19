@@ -24,7 +24,7 @@ pub(crate) fn radix<P: Copy + Default>(
 ) -> Result<()> {
     let n = s.len();
     let mut hist = [[0u32; 256]; 8];
-    let first = s.first().map_or(0, |p| key(p));
+    let first = s.first().map_or(0, &key);
     for p in s.iter() {
         let k = key(p);
         for (d, h) in hist[from..].iter_mut().enumerate() {
