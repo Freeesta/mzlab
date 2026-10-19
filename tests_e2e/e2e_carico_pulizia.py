@@ -36,7 +36,7 @@ try:
         narrow = pg.evaluate("document.querySelector('#fsel').getBoundingClientRect().width")
         assert narrow <= wide, (narrow, wide)
         steps.append(("file menu width follows its content and never exceeds the available space", "ok"))
-        pg.click("#fnext"); pg.wait_for_timeout(200)
+        pg.click("#fnext"); frames(pg)
         pg.focus("#fsel"); assert pg.evaluate("document.activeElement.id") == "fsel"
         steps.append(("keyboard: menu reachable by focus", "ok"))
 finally:
