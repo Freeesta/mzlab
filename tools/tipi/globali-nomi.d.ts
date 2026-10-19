@@ -203,6 +203,7 @@ declare var TOL0: any;
 declare var TOUCH: any;
 declare var TOUR: any;
 declare var TOURDOPO: any;
+declare var TRACE_LW: any;
 declare var TYPORD: any;
 declare var UIP: any;
 declare var UIP_GROUP_KEY: any;

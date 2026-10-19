@@ -114,6 +114,15 @@ try:
             assert "precursore" in s["t"] and "CE" in s["t"], s
             assert pg.evaluate("document.querySelector('.pnl.spec:not([style*=\"display: none\"]) canvas')") is not None
         step("S6/G2: MS2 spectrum starts in %, no lock, shows precursor and CE", ms2)
+        def thin_trace():
+            # the TIC is a thin line (like the vendor software): every stroke of the trace is at most 1.25 px, and none is thinner than 1 px
+            w = pg.evaluate("""(async () => { const seen = [], o = CanvasRenderingContext2D.prototype.stroke;
+                CanvasRenderingContext2D.prototype.stroke = function () { seen.push(this.lineWidth); return o.apply(this, arguments); };
+                try { await draw(%s); } finally { CanvasRenderingContext2D.prototype.stroke = o; }
+                return seen; })()""" % CH)
+            assert w and min(w) >= 1 and 1.25 in w, w
+            assert pg.evaluate("TRACE_LW") == 1.25
+        step("TIC line is thin (1.25 px)", thin_trace)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()
