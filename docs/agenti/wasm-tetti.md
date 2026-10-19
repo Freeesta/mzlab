@@ -4,3 +4,4 @@ Il tetto di un .wasm (byte dopo `wasm-opt -Oz`) sta in UN punto: la variabile `l
 - **Attributio, misure**: 1 258 944 B, tetto `limit_attributio` 1 388 544 (misura x 1,10, multiplo di 4 KiB); i quattro separati misuravano 2 494 394 B con tetti 512 000 + 942 080 + 659 456 + 479 232.
 - **Tetto di gruppo**: un modulo fuso ha UN tetto (misura x 1,10 arrotondato a 4 KiB, mai oltre la somma dei tetti dei moduli che sostituisce); i vecchi tetti per modulo valgono solo per la build separata. Non cambiano: motore 1 703 936, chem 569 344, sciex 327 680 e ogni modulo non fuso.
 - **Build separata**: `MZLAB_WASM_SEPARATI=1 tools/build_feat_wasm.sh <site/static>` costruisce i moduli come prima (stesso manifest, file diversi); i caricatori (`feat-worker.js`) caricano una volta sola i file con lo stesso URL.
+- **Margine di `attributio-rev`**: il modulo separato misurava 938 756 B contro un tetto di 942 080 (3 KB di margine); nel modulo fuso vale solo il tetto di gruppo.
