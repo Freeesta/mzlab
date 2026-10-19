@@ -1,35 +1,20 @@
 #![cfg(feature = "shimadzu")]
-//! The Shimadzu module on the real files of the private data repository (`MZLAB_DATI` or `mzlab-dati` beside this repository, folder `dati_formati/shimadzu/`); every test skips
+//! The Shimadzu module on the real files of the private data repository (`MZLAB_DATI` or `mzlab-dati` beside this repository, folder `dati/formati/shimadzu/`); every test skips
 //! without them. There is no msconvert mzML nor `.cdf` of these files in that repository, so the checks are those the files allow: the TIC stream of the container equals the sum of
 //! the intensities decoded from the records, times grow, and the SRM transitions are the ones the method lists.
-use std::path::{Path, PathBuf};
-
 use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
 use mzlab_core::mzml::ChromKind;
 
-fn dati() -> Option<PathBuf> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    for up in Path::new(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .skip(1)
-        .take(3)
-    {
-        cands.push(up.join("mzlab-dati"));
-    }
-    cands
-        .into_iter()
-        .find(|p| p.join("dati_formati/shimadzu").is_dir())
-}
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 fn apri(rel: &str) -> Option<Box<dyn Lettore>> {
-    let p = dati()?.join("dati_formati/shimadzu").join(rel);
-    if !p.is_file() {
+    let Some(p) =
+        dati_percorsi::percorso(&format!("dati/formati/shimadzu/{rel}")).filter(|p| p.is_file())
+    else {
         eprintln!("SKIP shimadzu_dati: {rel} not found");
         return None;
-    }
+    };
     let bytes = std::fs::read(&p).unwrap();
     let fs = FileSet {
         membri: vec![Membro {

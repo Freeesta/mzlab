@@ -6,7 +6,8 @@ mod comune;
 
 use comune::shimadzu::*;
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
-use std::path::PathBuf;
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 fn insieme(byte: Vec<u8>) -> FileSet {
     FileSet {
@@ -20,30 +21,12 @@ fn insieme(byte: Vec<u8>) -> FileSet {
 }
 
 fn reali() -> Vec<Vec<u8>> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    for up in std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .skip(1)
-        .take(3)
-    {
-        cands.push(up.join("mzlab-dati"));
-    }
-    let Some(d) = cands
-        .into_iter()
-        .find(|p| p.join("dati_formati/shimadzu").is_dir())
-    else {
+    let Some(d) = dati_percorsi::percorso("dati/formati/shimadzu").filter(|p| p.is_dir()) else {
         eprintln!("SKIP robustezza_shimadzu: no data repository, synthetic seeds only");
         return Vec::new();
     };
     let mut v = Vec::new();
-    for sub in std::fs::read_dir(d.join("dati_formati/shimadzu"))
-        .into_iter()
-        .flatten()
-        .flatten()
-    {
+    for sub in std::fs::read_dir(d).into_iter().flatten().flatten() {
         let mut fs: Vec<_> = std::fs::read_dir(sub.path())
             .into_iter()
             .flatten()

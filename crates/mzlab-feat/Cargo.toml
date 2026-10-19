@@ -24,8 +24,8 @@ mzlab-lib = { path = "../mzlab-lib", optional = true }
 
 [dev-dependencies]
 serde_json = { version = "1", features = ["float_roundtrip"] }
-sha2 = { version = "0.11", default-features = false }
 mzlab-lib = { path = "../mzlab-lib" }
+sha2 = { version = "0.11", default-features = false }
 
 [[test]]
 name = "untargeted_join"
