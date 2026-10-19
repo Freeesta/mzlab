@@ -179,11 +179,12 @@ function proofOps(submit, call, copy, opts) {
         return { state: h.state, tried: h.tried, found: h.found, registry: h.registry, ms: Math.round(performance.now() - t0) };
       });
     },
-    evidence({ table, state, minutes, parentMz, parentRt, recipe }) {
+    // `stored` and `paths` (the .mzfeatf and the .mzidx of the series) let the proofs measure the rows in the files; without them the proofs are the ones of the table alone.
+    evidence({ table, state, minutes, parentMz, parentRt, recipe, stored, paths }) {
       return submit(async (slot, load) => {
         await load("proofs");
         const t0 = performance.now();
-        const e = await call(slot, { op: "evidence", table: table.slice(), state: state.slice(), minutes, parentMz, parentRt, recipe, budgetMb: opts.budgetMb || 0 });
+        const e = await call(slot, { op: "evidence", table: table.slice(), state: state.slice(), minutes, parentMz, parentRt, recipe, budgetMb: opts.budgetMb || 0, ...(stored && paths ? { files: copy(stored), paths } : {}) });
         slot.recycle = true;
         if (opts.onProgress) opts.onProgress({ phase: "proofs", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: e.mem / 1048576 });
         return { table: e.bytes };
@@ -305,7 +306,7 @@ export function createFeatPool(opts) {
     // both phases in a row (hypotheses worker, then proofs worker). Resolves with { table, tried, found, registry, msHypotheses }.
     async proofs({ table, stored, paths, rules, parent, parentRt, minutes, parentMz, recipe }) {
       const h = await this.hypotheses({ stored, paths, rules, parent, parentRt, recipe });
-      const e = await this.evidence({ table, state: h.state, minutes, parentMz, parentRt, recipe });
+      const e = await this.evidence({ table, state: h.state, minutes, parentMz, parentRt, recipe, stored, paths });
       return { table: e.table, tried: h.tried, found: h.found, registry: h.registry, msHypotheses: h.ms };
     },
     // the archive worker (the only one that writes OPFS): path = "mzlab/feat/<name>"
@@ -440,8 +441,10 @@ const OPS = {
     if (!m.state) throw Object.assign(new Error("error.featNoHypotheses"), { key: "error.featNoHypotheses" });
     if (hypo) hypo.free();
     hypo = mods.proofs.load_hypotheses(new Uint8Array(m.state));
-    const nan = v => (v == null ? NaN : v), table = new Uint8Array(m.table), out = memSink();
-    mods.proofs.build_evidence_to((_, off, len) => table.subarray(off, off + len), table.length, hypo, Float64Array.from(m.minutes, nan), nan(m.parentMz), nan(m.parentRt), m.recipe, out.write, m.budgetMb || 0, m.campioni || undefined);
+    const nan = v => (v == null ? NaN : v), table = new Uint8Array(m.table), out = memSink(), f = m.files && m.paths ? await openAll(m.paths) : null;
+    try {
+      mods.proofs.build_evidence_to((_, off, len) => table.subarray(off, off + len), table.length, hypo, Float64Array.from(m.minutes, nan), nan(m.parentMz), nan(m.parentRt), m.recipe, out.write, m.budgetMb || 0, m.campioni || undefined, f ? arrays(m.files) : undefined, f ? f.read : undefined, f ? f.sizes : undefined);
+    } finally { if (f) f.close(); }
     return { bytes: out.bytes() };
   },
   async ms2file(m) {
