@@ -53,6 +53,8 @@ fn infusion_exception(got: &mut Value, want: &Value) {
     let Some(o) = got.as_object_mut() else {
         return;
     };
+    // `hr` (the loading table groups high-resolution files apart) exists only in the Rust engine
+    o.remove("hr");
     if let Some(m) = o.remove("msn") {
         if let Some(inf) = o.get("infusion").and_then(Value::as_bool) {
             assert_eq!(inf, !m.is_null(), "infusion and msn disagree");

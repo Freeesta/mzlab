@@ -61,7 +61,7 @@ fn hr_profile<R: ReadAt, M: Scansioni + ?Sized>(
     .any(|w| low.contains(w)))
 }
 
-/// `{kind, scans, srm, polarity, mixed, spectrum_mode, hr_profile, hint, msn}` of a whole file (`msn`: `infusione.rs`).
+/// `{kind, scans, srm, polarity, mixed, spectrum_mode, hr_profile, hr, hint, msn}` of a whole file (`msn`: `infusione.rs`).
 pub fn sniff<R: ReadAt, M: ReadAt>(
     idx: &mut Index<R>,
     m: &mut Mzml<M>,
@@ -95,6 +95,13 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
     crate::sortc::slice_ord(&mut prec);
     prec.dedup();
     let hrp = hr_profile(idx, &mut m.r, &facts.instrument)?;
+    // high resolution (survey or product-ion scans), as the file list of an opened item reports it
+    let hr = ["prof1", "prof2"].iter().any(|k| {
+        v.get(k)
+            .and_then(|p| p.get("hr"))
+            .and_then(json::Value::bool)
+            .unwrap_or(false)
+    });
     let mut o = Out::default();
     o.raw("{\"kind\":")
         .str(kind)
@@ -130,6 +137,7 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
         .str(v.get("spectrum_mode").and_then(|x| x.str()).unwrap_or(""))
         .raw(",\"hr_profile\":")
         .raw(if hrp { "true" } else { "false" });
+    o.raw(",\"hr\":").raw(if hr { "true" } else { "false" });
     o.raw(",\"hint\":");
     match hint(file_name) {
         Some(h) => o.str(h),

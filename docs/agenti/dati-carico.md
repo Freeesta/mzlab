@@ -11,3 +11,7 @@
   gli altri sono in `E.pending` (righe grigie `.fl.pend` in fondo all'elenco, casella disabilitata, `aria-busy`, nome e «in caricamento», pulsante × per toglierli; barra `.pendbar` `role=progressbar` finché ne manca uno) e `openRest` li aggiunge uno alla volta, nell'ordine della lista, con `api/explore` + `append:true` (`Session.add`: la sessione è quella di sempre, il risultato è uguale all'apertura di tutta la lista in una chiamata).
   Mentre la lista si apre così (`E._seq`, test `e2e_carica_scheda`) i passi successivi non cambiano scheda: resta quella del primo passo; un file aggiunto più tardi apre la scheda del suo tipo.
   `bootSession` ricarica la vista al massimo ogni ~200 ms (un solo ridisegno per gruppo di file arrivati); i file nuovi seguono le regole del primo caricamento (HR: si apre solo il primo). Un file che fallisce resta in rosso col messaggio, gli altri continuano; un file tolto dall'elenco non si legge. `e2e_progressivo`.
+
+## Gruppi della tabella e riepilogo
+- La tabella di carico raggruppa prima per strumento (`loadGrp` in `shell.js`: bassa risoluzione, poi alta risoluzione `f.hr`, campo di `sniff.rs`), poi per esperimento; un file con più parti (Full Scan + DDA/IDA) ha un gruppo suo, mai quello dell'MS2 puro. Test: `e2e_carico_gruppi`.
+- Il riquadro sotto la tabella (`CONVROWS.summary()`) elenca solo errori, annullati e file con scansioni mancanti; se è andato tutto bene non compare.

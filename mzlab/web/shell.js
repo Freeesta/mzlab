@@ -71,8 +71,11 @@ function mergeFiles(list){const old=Object.fromEntries(ST.files.map(f=>[f.name,f
   // roles and times proposed from the names by the engine (campioni/2)
   sortFiles();renderFiles();RUOLI.propose(()=>ST.files).then(c=>{if(c){sortFiles();renderFiles()}})}
 // order of the table: experiment (Full Scan, MS2, MRM, the rest), then blank, standards, samples; inside each, the rule of ordine.js (time, else concentration, else natural name)
-const EXPORD={full:0,ms2:1,mrm:2,infusion:3},TYPORD={blank:0,standard:1,sample:2};
-function sortFiles(){const c=fileComparator(ST.files,f=>f.conc==null?null:f.conc*CU[ST.unit][1]);ST.files.sort((a,b)=>(EXPORD[a.kind]??4)-(EXPORD[b.kind]??4)||TYPORD[a.type]-TYPORD[b.type]||c(a,b))}
+const GORD={full:0,ms2:1,mrm:2,infusion:3},TYPORD={blank:0,standard:1,sample:2};
+// groups of the table: low resolution first, then high resolution (f.hr, from the engine); a file with several parts (Full Scan + MS2: DDA/IDA) has a group of its own, never the one of its MS2 part
+const loadGrp=f=>{const b=GORD[f.kind];if(b==null)return {o:30,key:"other"};const mx=!!(f.mixed&&f.mixed.length>1),hr=!!f.hr;return {o:(hr?10:0)+(mx?4:b),key:(hr?"hr:":"lr:")+(mx?"mix:"+mixedText(f.mixed):f.kind)}};
+const loadGrpName=f=>{const o=loadGrp(f).o;if(o===30)return I18N.t("load.group.other");const n=f.mixed&&f.mixed.length>1?mixedText(f.mixed):expn(f.kind);return f.hr?I18N.t("load.group.hr",{name:n}):n};
+function sortFiles(){const c=fileComparator(ST.files,f=>f.conc==null?null:f.conc*CU[ST.unit][1]);ST.files.sort((a,b)=>{const x=loadGrp(a),y=loadGrp(b);return x.o-y.o||(x.key<y.key?-1:x.key>y.key?1:0)||TYPORD[a.type]-TYPORD[b.type]||c(a,b)})}
 // the formats of instrument methods the program reads TODAY (one line per format; the field, the file picker and the texts all come from here)
 const METHOD_FORMATS=[{ext:".dam",maker:"SCIEX"}];
 const isMethodFile=name=>METHOD_FORMATS.some(x=>name.toLowerCase().endsWith(x.ext));
@@ -90,16 +93,16 @@ function nameWarn(f){return f.kind&&!f.mixed&&f.hint&&f.hint!==f.kind?` <div cla
 function renderFiles(){const F=ST.files,el=$("#flist");
   const hasCal=F.some(f=>f.use&&isCal(f)),hasTime=F.some(f=>f.time!=null),tu=tunitGet(),tuSel=`<select id="tunit" title="${I18N.t("load.table.tunit.title")}" aria-label="${I18N.t("load.table.tunit.title")}">${Object.keys(TIME_UNITS).map(k=>`<option value="${k}" ${k===tu?"selected":""}>${tunitLabel(k)}</option>`).join("")}</select>`,unitSel=`<select id="cunit" title="${I18N.t("load.table.unit.title")}">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
   // GUESS: concentration cells
-  const ncol=7+(hasCal?1:0),GN={0:"Full Scan",1:"MS2 (Product Ion)",2:"MRM",3:I18N.t("inf.name"),4:I18N.t("load.group.other")},GUESS=` title="${I18N.t("load.guess.title")}"`;
+  const ncol=7+(hasCal?1:0),GUESS=` title="${I18N.t("load.guess.title")}"`;
   let last=-1,rows="";
-  F.forEach((f,i)=>{const g=EXPORD[f.kind]??4;
-    if(g!==last){last=g;rows+=`<tr class="grp"><td colspan="${ncol}">${GN[g]}${typeof polHead==="function"&&g<3?polHead(F.filter(x=>(EXPORD[x.kind]??4)===g)):""} <span class="muted">${I18N.t("load.group.count",{n:F.filter(x=>(EXPORD[x.kind]??4)===g).length})}</span></td></tr>`}
+  F.forEach((f,i)=>{const g=loadGrp(f).key;
+    if(g!==last){last=g;const mem=F.filter(x=>loadGrp(x).key===g);rows+=`<tr class="grp"><td colspan="${ncol}">${loadGrpName(f)}${typeof polHead==="function"&&["full","ms2","mrm"].includes(f.kind)&&!(f.mixed&&f.mixed.length>1)?polHead(mem):""} <span class="muted">${I18N.t("load.group.count",{n:mem.length})}</span></td></tr>`}
     rows+=`<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)} ${typeof polSign==="function"?polSign(f,F):""}${nameWarn(f)}</td><td>${expCell(f)}</td>`+
    RUOLI.roleCell(f,i)+RUOLI.timeCell(f,i,tu)+
    (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}></td>`:f.type==="blank"?`<td class="num"><input type="text" disabled aria-label="${I18N.t("load.table.conc")}" style="width:90px" data-i="${i}" data-k="conc" value=""></td>`:"<td></td>"):"")+
    `<td class="num muted">${sz(f.size)}</td><td style="white-space:nowrap">${CONV.has(f.name)?`<button type="button" class="sec sm" data-dl="${esc(f.name)}" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dl")}</button> `:""}<button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`});
   rows+=CONVROWS.html(ncol);
-  el.innerHTML=(F.length||CONVROWS.running().length?(CONV.native().length?`<div class="muted" style="margin-top:8px"><label><input type="checkbox" id="npress" ${CONV.numpress?"checked":""}> ${I18N.t("conv.np")}</label> <span id="npnote" ${CONV.numpress?"":"hidden"}>${I18N.t("conv.np.note")}</span></div>`:"")+(CONV.size>1?`<div style="margin-top:8px"><button type="button" class="sec sm" id="dlall" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>`:"")+`<table style="margin-top:8px"><tr><th></th><th scope="col">${I18N.t("load.table.file")}</th><th scope="col">${I18N.t("load.table.experiment")}</th><th scope="col">${I18N.t("load.table.type")}</th><th scope="col" class="num">${I18N.t("load.table.time.col")}${hasTime?` ${tuSel}`:""}</th>${hasCal?`<th scope="col" class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th scope="col" class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+rows+`</table>`:"")+CONVROWS.summary();
+  el.innerHTML=(F.length||CONVROWS.running().length?(CONV.native().length?`<details class="muted sm" id="advconv" style="margin-top:8px"><summary>${I18N.t("conv.adv")}</summary><label><input type="checkbox" id="npress" ${CONV.numpress?"checked":""}> ${I18N.t("conv.np")}</label><button type="button" class="hq" data-help="numpress" aria-label="${I18N.t("help.numpress.title")}">?</button></details>`:"")+(CONV.size>1?`<div style="margin-top:8px"><button type="button" class="sec sm" id="dlall" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>`:"")+`<table style="margin-top:8px"><tr><th></th><th scope="col">${I18N.t("load.table.file")}</th><th scope="col">${I18N.t("load.table.experiment")}</th><th scope="col">${I18N.t("load.table.type")}</th><th scope="col" class="num">${I18N.t("load.table.time.col")}${hasTime?` ${tuSel}`:""}</th>${hasCal?`<th scope="col" class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th scope="col" class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+rows+`</table>`:"")+CONVROWS.summary();
   CONVROWS.wire(el);
   el.querySelectorAll("[data-k]").forEach(x=>{
     x.onchange=()=>{const f=F[+x.dataset.i],k=x.dataset.k,keep=document.activeElement===x?{name:f.name,k}:null;let v=x.value;
@@ -113,7 +116,7 @@ function renderFiles(){const F=ST.files,el=$("#flist");
         if(nk){const i=F.findIndex(q=>q.name===nk.name),b=el.querySelector(nk.rm?`[data-rm="${i}"]`:`[data-i="${i}"][data-k="${nk.k}"]`);if(b){b.focus();if(b.type==="text")b.setSelectionRange(b.value.length,b.value.length)}}};
       if(keep)go();else setTimeout(go,0)};
     if(x.dataset.k==="conc")x.addEventListener("keydown",e=>{if(e.key==="Enter"){F[+x.dataset.i].gC=false;x.classList.remove("guess");x.title="";modeNote()}})});
-  el.querySelectorAll("[data-dl]").forEach(b=>b.onclick=()=>CONV.download(b.dataset.dl));const npc=$("#npress");if(npc)npc.onchange=()=>{CONV.numpress=npc.checked;const nn=$("#npnote");if(nn)nn.hidden=!npc.checked};const dla=$("#dlall");if(dla)dla.onclick=()=>CONV.downloadAll();
+  el.querySelectorAll("[data-dl]").forEach(b=>b.onclick=()=>CONV.download(b.dataset.dl));const npc=$("#npress");if(npc)npc.onchange=()=>{CONV.numpress=npc.checked};const dla=$("#dlall");if(dla)dla.onclick=()=>CONV.downloadAll();
   const tuEl=$("#tunit");if(tuEl)tuEl.onchange=()=>{tunitSet(tuEl.value);renderFiles()};
   const cu=$("#cunit");if(cu)cu.onchange=()=>{const k=cu.value,r=CU[ST.unit][1]/CU[k][1];F.forEach(f=>{if(f.conc!=null)f.conc=roundc(f.conc*r)});ST.unit=k;renderFiles()};
   el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];const j=await post("api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});checkGo();modeNote()}
@@ -159,7 +162,7 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 (()=>{const b=$("#fs-btn"),de=document.documentElement;if(!b)return;if(!de.requestFullscreen){b.hidden=true;return}
   const sync=()=>{const on=!!document.fullscreenElement,k=on?"header.fullscreen.exit":"header.fullscreen";b.setAttribute("aria-pressed",on);b.querySelector(".fs-in").hidden=on;b.querySelector(".fs-out").hidden=!on;b.title=I18N.t(k);b.setAttribute("aria-label",b.title);b.dataset.i18nTitle=b.dataset.i18nAriaLabel=k};
   b.onclick=()=>{(document.fullscreenElement?document.exitFullscreen():de.requestFullscreen({navigationUI:"hide"})).catch(()=>{})};document.addEventListener("fullscreenchange",sync)})();
-(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.nativo){d.title=I18N.t("load.dropWiff.tip");CONVERT_RAW=true}else $("#convhelp").hidden=false}); else $("#convhelp").hidden=false})()   // the .raw note only where the Rust engine can read it
+(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.nativo){CONVERT_RAW=true}else $("#convhelp").hidden=false}); else $("#convhelp").hidden=false})()   // the .raw note only where the Rust engine can read it
 // a Thermo .raw is read as it is by the Rust engine (rust-nativo.js): each file is a sample `x.mzML` and no mzML is written; without the engine the recipe is shown
 async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.nativo||!files.some(f=>/\.raw$/i.test(f.name)))return files;
   return NATIVO.raws(files,(ST.files||[]).map(x=>x.name))}
@@ -317,11 +320,13 @@ async function upload0(files,into,box,signal){
   // in the browser the engine builds the indexes of several files at once (pool of workers)
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);
   await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
-function showStart(d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView();armStuck()}
-// start screen still without files after 10 s: a quiet way out, «Full reset», that opens the same question as «New session» (reset.js)
-let stuckTimer=0;
-function armStuck(){if(stuckTimer)return;stuckTimer=setTimeout(()=>{const s=$("#start"),p=$("#stuck");if(!s||!p||s.hidden||S.sess||ST.files.length)return;
-  $("#stuckbtn").onclick=()=>QQRESET.ask();p.style.visibility="visible"},10000)}   // its line is in the page from the first paint (space kept, invisible): when it shows, nothing moves
+function showStart(d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
+// a loading (or the engine start) that stays busy for STUCK_MS shows a quiet way out, «Full reset», that opens the same question as «New session» (reset.js); it never shows on an idle screen or after a loading ended
+const STUCK_MS=15000;let stuckTimer=0;
+function armStuck(){if(stuckTimer)return;let since=0;stuckTimer=setInterval(()=>{const s=$("#start"),p=$("#stuck");if(!s||!p)return;
+  if(s.hidden||(window.qqReady&&UPBUSY===0)){since=0;p.style.visibility="hidden";return}
+  since=since||Date.now();if(Date.now()-since>=STUCK_MS){$("#stuckbtn").onclick=()=>QQRESET.ask();p.style.visibility="visible"}},1000)}   // its line is in the page from the first paint (space kept, invisible): when it shows, nothing moves
+armStuck();
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=e=>{CartCarica.fromInput(e.target.files);e.target.value=""};
 $("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};
