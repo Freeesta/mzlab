@@ -1,4 +1,5 @@
 /* QqQ lab - Teoria. Plain CSS, no build, works from file:// and from the local server. */
+@import url(impostazioni-comp.css);
 :root{color-scheme:light;--bg:#fbfbf9;--panel:#ffffff;--line:#e4e2dc;--ink:#24231f;--muted:#6b675c;--accent:#2b5c8a;--accent2:#c2410c;--ok:#047857;--bad:#b42318;--warn:#92400e;--sel:#eef3f8;--code:#f4f3ef;
   --c1:#2b5c8a;--c2:#c2410c;--c3:#047857;--c4:#7c3aed;--c5:#b45309;--c6:#0e7490}
 /* dark theme (tema.js sets data-theme on <html>; the media query only avoids a flash before the script runs) */
@@ -224,39 +225,9 @@ body.noex main>:not(.kicker):not(h1):not(.phex):not(.pn){display:none!important}
 #a11y-panel[hidden]{display:none}
 #a11y-panel .a-hd{display:flex;align-items:center;justify-content:space-between;margin:0 0 4px}
 #a11y-panel h2{font-size:18px;margin:0}
-#a11y-panel fieldset{border:0;margin:0;padding:10px 0 0}#a11y-panel legend{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:0;margin:0 0 6px}
-#a11y-panel .opts{display:grid;gap:6px}#a11y-panel .seg3{grid-template-columns:repeat(3,1fr)}#a11y-panel .f3{grid-template-columns:repeat(3,1fr)}#a11y-panel .f4{grid-template-columns:repeat(4,1fr)}
-#a11y-panel .opt{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:48px;padding:6px 4px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.2;text-align:center;cursor:pointer}
-#a11y-panel .opt input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
-#a11y-panel .opt>:not(input){pointer-events:none}
-#a11y-panel .opt:hover{border-color:var(--accent)}
-#a11y-panel .opt:has(input:checked){border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--sel)}
-#a11y-panel .opt:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:2px}
-#a11y-panel .seg svg{color:var(--accent)}
-#a11y-panel .aa{font-size:22px;line-height:1;font-weight:600}
-#a11y-panel .aa[data-f=atkinson]{font-family:"Atkinson Hyperlegible Next",system-ui,sans-serif}#a11y-panel .aa[data-f=dyslexic]{font-family:"OpenDyslexic","Comic Sans MS",system-ui,sans-serif}
-#a11y-panel .bg{padding-top:8px}
-#a11y-panel .chip{position:relative;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;border:2px solid var(--muted);background:var(--c,var(--bg));color:transparent}
-#a11y-panel .chip[data-v=""]{background:linear-gradient(135deg,var(--bg) 50%,var(--panel) 50%)}
-#a11y-panel .chip[data-v=cream]{--c:#faf3e0}#a11y-panel .chip[data-v=blue]{--c:#e8f1f8}#a11y-panel .chip[data-v=hc]{background:linear-gradient(135deg,#fff 50%,#000 50%)}
-:root[data-theme=dark] #a11y-panel .chip[data-v=cream]{--c:#1e1b16}:root[data-theme=dark] #a11y-panel .chip[data-v=blue]{--c:#14212b}
-#a11y-panel .opt:has(input:checked) .chip{border-color:var(--accent);color:#fff;box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--accent)}
-#a11y-panel .opt:has(input:checked) .chip .tick{background:var(--accent);border-radius:50%;padding:3px;width:18px;height:18px}
-#a11y-panel .swrow{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px;padding:2px 0;cursor:pointer}
-#a11y-panel input[type=checkbox][role=switch]{appearance:none;-webkit-appearance:none;flex:none;position:relative;width:44px;height:26px;margin:0;border-radius:13px;border:2px solid var(--muted);background:var(--bg);cursor:pointer}
-#a11y-panel input[role=switch]::before{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:transform .15s}
-#a11y-panel input[role=switch]:checked{background:var(--accent);border-color:var(--accent)}
-#a11y-panel input[role=switch]:checked::before{transform:translateX(18px);background:#fff}
-#a11y-panel input[role=switch]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-#a11y-prev{margin:14px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.5}
-:root[data-a11y-font=atkinson] #a11y-prev{font-family:"Atkinson Hyperlegible Next",system-ui,sans-serif}:root[data-a11y-font=dyslexic] #a11y-prev{font-family:"OpenDyslexic","Comic Sans MS",system-ui,sans-serif}
-:root[data-a11y-space] #a11y-prev{line-height:1.7;letter-spacing:.12em;word-spacing:.16em}
-:root[data-a11y-nums] #a11y-prev{font-variant-numeric:lining-nums tabular-nums}
 #a11y-panel .row{display:flex;justify-content:center;margin-top:14px}
 #a11y-panel #a11y-reset{background:transparent;border-color:transparent;color:var(--muted);text-decoration:underline;font-size:13.5px}
 #a11y-panel #a11y-reset:hover,#a11y-panel #a11y-reset:focus-visible{color:var(--ink)}
-#a11y-panel button{font:inherit;font-size:14px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 10px;color:var(--ink);cursor:pointer}
-#a11y-panel button:hover,#a11y-panel button:focus-visible{border-color:var(--accent);outline:2px solid var(--accent)}
 #a11y-panel .x{min-width:36px;min-height:36px;font-size:20px;line-height:1;padding:0}
 
 /* keyboard: a visible focus everywhere (WCAG 2.4.7) and «Salta al contenuto» (shown only when focused) */
