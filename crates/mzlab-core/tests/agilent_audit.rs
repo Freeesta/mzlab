@@ -12,23 +12,8 @@ use std::path::{Path, PathBuf};
 use mzlab_core::agilent::scan::{mapped_fields, Layout};
 use mzlab_core::agilent::{meta, AgilentD, Files};
 
-fn dati() -> Option<PathBuf> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .canonicalize()
-        .ok()?;
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    cands.extend(
-        root.ancestors()
-            .skip(1)
-            .take(3)
-            .map(|up| up.join("mzlab-dati")),
-    );
-    cands.into_iter().find(|p| p.join("GC-MS").is_dir())
-}
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 /// Every file of the folder, as a path relative to it.
 fn walk(dir: &Path, base: &Path, out: &mut Vec<String>) {
@@ -238,11 +223,11 @@ fn lost(l: &Loaded, d: &AgilentD) -> Vec<String> {
 
 #[test]
 fn nothing_of_the_real_folders_is_lost() {
-    let Some(data) = dati() else {
+    let Some(gc) = dati_percorsi::percorso("dati/GC-MS") else {
         eprintln!("SKIP agilent_audit: no data repository (MZLAB_DATI)");
         return;
     };
-    let mut folders: Vec<PathBuf> = std::fs::read_dir(data.join("GC-MS"))
+    let mut folders: Vec<PathBuf> = std::fs::read_dir(gc)
         .unwrap()
         .flatten()
         .map(|e| e.path())
