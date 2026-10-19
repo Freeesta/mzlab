@@ -107,6 +107,8 @@ def test_copied_runs(tmp_path):
 def test_private_checks_read_the_data_repository(tmp_path, monkeypatch):
     d = tmp_path / "dati"
     (d / "Sbobine_elaborate" / "testo").mkdir(parents=True)
+    (d / "dati").mkdir()
+    (d / "dati" / "INDICE.md").write_text("x", encoding="utf-8")
     (d / "nomi_vietati.txt").write_text("# comment\nacido ossalico\n", encoding="utf-8")
     (d / "Sbobine_elaborate" / "testo" / "a.txt").write_text("x " + LONG + " y", encoding="utf-8")
     monkeypatch.setenv("MZLAB_DATI", str(d))
@@ -128,7 +130,8 @@ def test_without_private_data_it_warns_and_passes(tmp_path, monkeypatch):
     monkeypatch.setenv("MZLAB_DATI", str(tmp_path / "vuota"))                 # folder that does not exist: same
     assert ct.run(tmp_path, {})[2]
     d = tmp_path / "d"
-    (d / "scratchpad").mkdir(parents=True)                                    # recognised as the data repository by its marker
+    (d / "dati").mkdir(parents=True)                                          # recognised as the data repository by its marker
+    (d / "dati" / "INDICE.md").write_text("x", encoding="utf-8")
     monkeypatch.setenv("MZLAB_DATI", str(d))                                  # repository without the lists: warns for both
     assert len(ct.run(tmp_path, {})[2]) == 2
 

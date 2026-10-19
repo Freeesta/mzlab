@@ -16,10 +16,15 @@ export function rimanente(frac, ms, min = 0.05) { return frac == null || frac < 
 
 /**
  * @param {HTMLElement} box where the panel goes
- * @param {{ title: string, n: number, cancel?: boolean, signal?: AbortController, t?: (k: string, p?: any) => string, eta?: number }} o `cancel: false` when the caller has its own «Cancel»;
+ * @param {{ title: string, n: number, cancel?: boolean, signal?: AbortController, t?: (k: string, p?: any) => string, eta?: number, silent?: boolean }} o `cancel: false` when the caller has its own «Cancel»;
  * `signal` is aborted by «Cancel»; `t` gives the texts of the catalog keys when the caller is not in the language of the page (Tabui: English only); `eta` = the fraction from which the time left is shown
  */
 export function avanza(box, o) {
+  /** @param {HTMLElement} e */
+  const fadeOut = e => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { e.remove(); return; }
+    e.style.transition = "opacity .5s"; e.style.opacity = "0"; setTimeout(() => e.remove(), 550);
+  };
   const w = /** @type {any} */ (globalThis), T = o.t || ((/** @type {string} */ k, /** @type {any} */ p = undefined) => w.I18N.t(k, p)), esc = (/** @type {any} */ s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] || c);
   const ctl = o.signal || new AbortController(), t0 = Date.now(), el = document.createElement("div");
   el.className = "convprog avanza"; el.setAttribute("role", "group"); el.setAttribute("aria-label", o.title);
@@ -67,6 +72,8 @@ export function avanza(box, o) {
       if (d && D) D.cabla(el, d.diag, w.MZLAB_VERSION || "", T);
       else if (d) { const c = q("copy"); c.onclick = async () => { try { await navigator.clipboard.writeText(d.diag); c.textContent = T("diag.copied"); } catch (_) { c.textContent = T("diag.copyFail"); } }; }
       q("close").onclick = () => el.remove();
+      // `silent`: a clean finish leaves no summary: the panel fades away (at once with reduced motion); only a failure or a cancel stays on the page
+      if (o.silent && !fails.length && !cancelled) { fadeOut(el); return; }
       if (!fails.length) setTimeout(() => el.remove(), KEEP);
     },
     remove() { clearInterval(timer); el.remove(); },

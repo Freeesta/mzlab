@@ -12,6 +12,8 @@ declare class FileReaderSync { readAsArrayBuffer(blob: Blob): ArrayBuffer; }
 // Browser API not yet in lib.dom (File System Observer) and globals of the TP_Mine scripts, which load lazily after the page.
 declare var FileSystemObserver: any;
 declare var MAPFEAT: any;
+// generated index of the Teoria search (teoria/indice-ricerca.js), loaded on demand by ricerca.js
+declare var INDICE_RICERCA: string[][];
 declare var TPMINE: any;
 
 /** An entry of the loading table (ST.files) as ruoli-*.js reads it: `role`/`sub` are campioni/2 `tipo` and `tipo_bianco`, `time` is in minutes, `gT` = proposed from the name. */

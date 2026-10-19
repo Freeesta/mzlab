@@ -6,24 +6,18 @@ use mzlab_core::elements;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{self, Value};
-use mzlab_feat::evid::rowproofs::row_signs;
-use mzlab_feat::evid::{build_graph, graph_json, GraphStream, Inputs, Kinetics, PointsTable};
+use mzlab_feat::evid::PointsTable;
 use mzlab_feat::facts::{file_facts, FileFacts};
-use mzlab_feat::hypo::{
-    generate, HypoParams, Hypothesis, Inputs as HypoInputs, Registry, Rules, Structure,
-};
-use mzlab_feat::kinetic::{parent_kinetics, ChainBank, FormBank, Setup, K_PARENT_MIN};
+use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules, Structure};
 use mzlab_feat::recipe::{Mode, Recipe};
 use mzlab_feat::series::{align_and_fill, analyse_file, source_sha256};
 use mzlab_feat::slabs::{align_and_fill_stored, Stored};
 use mzlab_feat::store::{
-    origin_from_meta, read_file, read_meta_mz, read_table_from, write_file_to, write_table_to,
-    write_table_tp, write_table_with_evid, Origin, Slice,
+    origin_from_meta, read_file, read_meta_mz, write_file_to, write_table_to,
+    write_table_with_evid, Origin, Slice,
 };
 use mzlab_feat::table::{FileFeatures, RowIdent};
-use mzlab_feat::target::join::JoinParams;
 use mzlab_feat::target::{run, TargetParams, TargetResult};
-use mzlab_feat::tp::{build as build_tp, build_by_role, TpBlock, TpInputs, TpParams, TpRoles};
 
 /// Recipe from `{"polarity": 1 | -1 | null, "mode": "ion" | "family"}`; anything else keeps the default of the crate.
 pub fn recipe_from_json(text: &str) -> Result<Recipe> {
@@ -307,7 +301,7 @@ pub fn hypotheses_stored<R: ReadAt>(
 }
 
 /// Bytes of the memory that an identity of the graph takes while the graph is built whole (its proofs, members and arcs), for the estimate.
-const IDENTITY_BYTES: usize = 2400;
+pub(crate) const IDENTITY_BYTES: usize = 2400;
 
 /// Graph of the proofs on the table of a series (`.mzfeat` bytes): `minutes[k]` is the treatment time of file `k` (NaN = a control).
 /// Returns the same table with the `evid/1` document in its `evid` section. The family arcs are not stored in the files, so the graph has none.
@@ -326,16 +320,20 @@ pub fn evidence(
     Ok(out)
 }
 
+/// True when the recipe in the meta of the table is the unit-resolution one.
+pub(crate) fn is_unit(meta: &Value) -> bool {
+    meta.get("recipe")
+        .and_then(Value::str)
+        .is_some_and(mzlab_feat::recipe::is_unit_text)
+}
+
 /// Computes the identity columns of the table and gives the table of points: the unit-resolution one (windows in Da) when the recipe in the meta says so.
-fn points_and_identity(
+pub(crate) fn points_and_identity(
     aligned: &mut mzlab_feat::table::Aligned,
     hypo: &HypoRun,
     meta: &Value,
 ) -> Result<PointsTable> {
-    let unit = meta
-        .get("recipe")
-        .and_then(Value::str)
-        .is_some_and(mzlab_feat::recipe::is_unit_text);
+    let unit = is_unit(meta);
     let win = if unit {
         mzlab_feat::axis::da(mzlab_feat::axis::LR_TOL)
     } else {
@@ -362,119 +360,7 @@ pub fn evidence_to<R: ReadAt, W: WriteAt>(
     evidence_roles_to(table, size, hypo, minutes, None, parent, r, budget, sink)
 }
 
-/// `evidence_to` with the roles of the files (`campioni/2`): gate 1 of the view of the products reads them (`tp::build_by_role`).
-#[allow(clippy::too_many_arguments)]
-pub fn evidence_roles_to<R: ReadAt, W: WriteAt>(
-    table: &mut R,
-    size: u64,
-    hypo: &HypoRun,
-    minutes: &[f64],
-    roles: Option<&TpRoles>,
-    parent: Option<(f64, f64)>,
-    r: &Recipe,
-    budget: &MemBudget,
-    sink: &mut W,
-) -> Result<()> {
-    let (mut aligned, meta) = read_table_from(table, size)?;
-    hypo.result
-        .add_missing_to(&mut aligned, &JoinParams::default());
-    aligned.sort_rows();
-    let origin = origin_from_meta(&meta);
-    let points = points_and_identity(&mut aligned, hypo, &meta)?;
-    let minutes = roles.map_or(minutes, |ro| &ro.minutes);
-    let (treated, controls) = TpRoles::kinetic_files(minutes, roles);
-    let times: Vec<f64> = treated.iter().map(|&k| minutes[k]).collect();
-    let (forms, chain) = (FormBank::new(&times), ChainBank::new(&times, K_PARENT_MIN));
-    let y = parent
-        .and_then(|(mz, rt)| nearest_row(&aligned, mz, rt))
-        .map(|row| {
-            treated
-                .iter()
-                .map(|&k| aligned.area[row * aligned.n_files + k])
-                .collect()
-        })
-        .unwrap_or_else(|| vec![1.0; times.len()]);
-    let setup = Setup {
-        times: &times,
-        forms: &forms,
-        chain: &chain,
-        parent: parent_kinetics(&forms, &times, &y, None),
-        pseudo: mzlab_feat::trace::FLOOR * 3.0,
-    };
-    let inp = Inputs {
-        table: &points,
-        aligned: &aligned,
-        facts: &[],
-        arcs: &[],
-        registry: &hypo.registry,
-        libs: &[],
-        external: &[],
-        kinetics: Some(Kinetics {
-            setup: &setup,
-            treated: &treated,
-            controls: &controls,
-        }),
-        parent,
-    };
-    let rules = hypo.rules()?;
-    let tp = tp_block(&inp, minutes, roles, &hypo.registry.hyps, parent, rules.as_ref());
-    let rows = aligned.len();
-    let held = aligned.heap_bytes() + tp.heap_bytes();
-    if budget.in_memory(held + rows * IDENTITY_BYTES) {
-        let json = graph_json(&build_graph(&inp), &points);
-        return write_table_tp(sink, &aligned, &tp, r, &origin, &mut json.as_bytes());
-    }
-    let need = held + rows * GraphStream::bytes_per_row();
-    let _g = budget.reserve("proofs", need)?;
-    let mut graph = GraphStream::new(&inp);
-    write_table_tp(sink, &aligned, &tp, r, &origin, &mut graph)
-}
-
-/// The view of the products of the table (`tp/1`): empty without a parent in the table or without controls to read the gates against.
-fn tp_block(
-    inp: &Inputs,
-    minutes: &[f64],
-    roles: Option<&TpRoles>,
-    hyps: &[Hypothesis],
-    parent: Option<(f64, f64)>,
-    rules: Option<&Rules>,
-) -> TpBlock {
-    let Some(parent) = parent else {
-        return TpBlock::default();
-    };
-    let signs = row_signs(inp);
-    let tp = TpInputs {
-        aligned: inp.aligned,
-        minutes,
-        hyps,
-        signs: &signs,
-        parent,
-        fragments: None,
-        params: &TpParams::default(),
-        rules,
-    };
-    match roles {
-        Some(ro) => build_by_role(&tp, ro),
-        None => build_tp(&tp),
-    }
-    .ok()
-    .flatten()
-    .unwrap_or_default()
-}
-
-/// The row within 5 ppm and 0.3 min of the parent with the largest area (the parent decay is read from it).
-fn nearest_row(t: &mzlab_feat::table::Aligned, mz: f64, rt: f64) -> Option<usize> {
-    let area = |r: usize| {
-        t.area[r * t.n_files..(r + 1) * t.n_files]
-            .iter()
-            .copied()
-            .filter(|a| a.is_finite())
-            .fold(0.0, f64::max)
-    };
-    (0..t.len())
-        .filter(|&r| (t.mz[r] - mz).abs() <= mz * 5e-6 && (t.rt[r] - rt).abs() <= 0.3)
-        .max_by(|&a, &b| area(a).total_cmp(&area(b)))
-}
+pub use crate::run_evid::{evidence_roles_to, evidence_sources_to, RowSources};
 
 /// Preview of one file (see `mzlab_feat::params`): the floor of the recipe is used if it was given, else the one estimated from the intensities.
 pub fn preview<R: ReadAt>(index: &mut Index<R>, r: &Recipe, floor_given: bool) -> Result<String> {

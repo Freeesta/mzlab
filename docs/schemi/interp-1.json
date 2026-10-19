@@ -1,0 +1,96 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "interp/1",
+ "title": "interp/1: the interpretation of one row of the feature table of the products",
+ "description": "One JSON per row, in the block `interp` of the `.mzfeat` (crates/mzlab-feat/src/interp/, route `table_interp(id)` of the .wasm `interp`). Only rows that pass the filters F1-F4 of `filtri/1` and have a status of product in `tp/1` are interpreted. All text is English; no intensity is ever compared with the infusion.",
+ "type": "object",
+ "required": ["schema", "id", "parent", "change", "ms1", "ms2", "vs_parent", "tree", "hidden"],
+ "properties": {
+  "schema": {"const": "interp/1"},
+  "id": {"type": "integer", "description": "id of the row in the table"},
+  "parent": {
+   "type": "object",
+   "required": ["ion_formula", "mz"],
+   "properties": {"smiles": {"type": ["string", "null"]}, "ion_formula": {"type": "string"}, "mz": {"type": "number"}}
+  },
+  "change": {
+   "type": ["object", "null"],
+   "description": "the modification of the neutral formula given by the closest hypothesis of `ipotesi/1` within 5 ppm (the others are `alternatives`); null when no hypothesis matches",
+   "required": ["delta", "neutral_formula", "ion_formula", "ppm", "source", "alternatives"],
+   "properties": {
+    "delta": {"type": "string", "description": "signed change with the true minus U+2212, gains first: '+O', '−2H', '+O−2H'"},
+    "neutral_formula": {"type": "string"},
+    "ion_formula": {"type": "string"},
+    "ppm": {"type": "number"},
+    "source": {"enum": ["rule", "cleavage", "network", "formula"]},
+    "alternatives": {"type": "array", "items": {"type": "object", "required": ["delta", "ion_formula", "ppm"], "properties": {"delta": {"type": "string"}, "ion_formula": {"type": "string"}, "ppm": {"type": "number"}}}}
+   }
+  },
+  "ms1": {
+   "type": ["object", "null"],
+   "description": "isotope check of the best file: observed and expected M+1 and M+2 ratios, and whether the M+2 agrees with the number of sulfur atoms of the formula",
+   "properties": {
+    "m1": {"$ref": "#/$defs/pair"},
+    "m2": {"$ref": "#/$defs/pair"},
+    "s_count": {"enum": ["consistent", "inconsistent", "unknown"]},
+    "mz_obs": {"type": "number"},
+    "file": {"type": "integer"}
+   }
+  },
+  "ms2": {
+   "type": "object",
+   "required": ["scans", "files_with_ms2", "consensus", "isomers"],
+   "properties": {
+    "scans": {
+     "type": "array",
+     "description": "every DDA MS2 scan of the series that isolates the row (the infusion is not among them), with the purity of the precursor interpolated in time between the MS1 scans before and after",
+     "items": {
+      "type": "object",
+      "required": ["file", "scan", "rt", "precursor", "iso", "purity", "chimeric"],
+      "properties": {
+       "file": {"type": "integer"}, "scan": {"type": "integer"}, "rt": {"type": "number"}, "precursor": {"type": "number"},
+       "iso": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "isolation window, lower and upper m/z"},
+       "ce": {"type": ["number", "null"], "description": "collision energy; from the filter text when the index has none"},
+       "scan_range": {"type": ["array", "null"], "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
+       "purity": {"type": "number", "description": "precursor (±5 ppm) over the total intensity in the isolation window"},
+       "chimeric": {"type": "boolean", "description": "purity below 0.8: left out of the consensus"}
+      }
+     }
+    },
+    "files_with_ms2": {"type": "integer"},
+    "consensus": {"$ref": "#/$defs/spectrum"},
+    "isomers": {"enum": ["single", "separated", "not_separated"], "description": "two groups of scans whose fragment traces correlate below 0.5 (Pearson) are `separated` and each has its consensus in `isomer_consensus`; fewer than 4 clean scans are `single`"},
+    "isomer_consensus": {"type": "array", "items": {"$ref": "#/$defs/spectrum"}}
+   }
+  },
+  "vs_parent": {
+   "type": ["object", "null"],
+   "description": "the consensus against the MS2 of the parent in the series (DDA) and against the library of the infusion; null when there is no consensus or no reference",
+   "required": ["ref"],
+   "properties": {
+    "ref": {"enum": ["dda", "infusion", "both"]},
+    "cos_mod": {"type": "number", "description": "modified cosine"},
+    "entropy": {"type": "number", "description": "spectral entropy similarity"},
+    "equal": {"type": "array", "items": {"type": "number"}, "description": "fragments of the product that are fragments of the parent"},
+    "shifted": {"type": "array", "items": {"type": "number"}, "description": "fragments that are those of the parent moved by the change"},
+    "losses": {"type": "array", "items": {"type": "number"}},
+    "formula_equal": {"type": "array", "items": {"type": "number"}},
+    "formula_shifted": {"type": "array", "items": {"type": "number"}}
+   }
+  },
+  "tree": {
+   "type": ["object", "null"],
+   "description": "the nodes of the MSn tree of the parent (infusion) seen in the product: same, shifted by the change, absent, or not checkable (outside the scan range of the MS2)",
+   "properties": {
+    "nodes": {"type": "array", "items": {"type": "object", "required": ["id", "formula", "mz", "state"], "properties": {"id": {"type": "string"}, "formula": {"type": "string"}, "mz": {"type": "number"}, "state": {"enum": ["same", "shifted", "absent", "not_checkable"]}}}},
+    "n_same": {"type": "integer"},
+    "n_shifted": {"type": "integer"}
+   }
+  },
+  "hidden": {"type": ["string", "null"], "description": "code of the filter that hid the row after the interpretation (F5, mass error), else null"}
+ },
+ "$defs": {
+  "pair": {"type": "object", "properties": {"obs": {"type": "number"}, "exp": {"type": "number"}}},
+  "spectrum": {"type": ["object", "null"], "properties": {"mz": {"type": "array", "items": {"type": "number"}}, "rel": {"type": "array", "items": {"type": "number"}, "description": "relative intensity, 0-100"}}}
+ }
+}
