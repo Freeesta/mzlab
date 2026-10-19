@@ -19,7 +19,7 @@ fn read(name: &str) -> String {
 
 use mzlab_feat::attributio::reglists::b1::{match_campaign, B1Config, IdentityIn, StructRow, B1};
 use mzlab_feat::attributio::reglists::catalog;
-use mzlab_feat::attributio::reglists::p3::cross_table;
+use mzlab_feat::attributio::reglists::p3::{cross_table, CrossSummary};
 
 fn s(v: &Value) -> String {
     v.as_str().unwrap_or("").to_string()
@@ -197,7 +197,13 @@ fn check_cross(tag: &str, res: &[(&str, &B1)], want: &Value) {
             };
             let col = |c: &str| w[format!("{name}_{c}")].clone();
             assert_eq!(
-                json!([&sd.identity, sd.level as f64, sd.group, &sd.sites, sd.matched]),
+                json!([
+                    &sd.identity,
+                    sd.level as f64,
+                    sd.group,
+                    &sd.sites,
+                    sd.matched
+                ]),
                 json!([
                     col("identity"),
                     json!(col("level").as_f64().unwrap()),
@@ -209,6 +215,10 @@ fn check_cross(tag: &str, res: &[(&str, &B1)], want: &Value) {
             );
         }
     }
+    check_cross_summary(tag, res, &sm, want);
+}
+
+fn check_cross_summary(tag: &str, res: &[(&str, &B1)], sm: &[CrossSummary], want: &Value) {
     let ws = want["summary"].as_array().unwrap();
     assert_eq!(sm.len(), ws.len());
     for (r, w) in sm.iter().zip(ws) {
