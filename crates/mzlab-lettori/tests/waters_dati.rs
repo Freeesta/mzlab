@@ -1,35 +1,23 @@
 #![cfg(feature = "waters")]
-//! MassLynx folders read through the module, on real files only (the private data repository, `MZLAB_DATI` or `mzlab-dati` beside this one, folder `dati_formati/`); every
-//! test skips without them. Parity with the mzML of msconvert where the repository has one: `waters_raw/xevo_tqxs_pair_ST004453/` (SRM chromatograms and the analog traces).
+//! MassLynx folders read through the module, on real files only (the private data repository, `MZLAB_DATI` or `mzlab-dati` beside this one, folder `dati/formati/`); every
+//! test skips without them. Parity with the mzML of msconvert where the repository has one: `waters/raw/xevo_tqxs_pair_ST004453/` (SRM chromatograms and the analog traces).
 //! The TOF, MSe, DDA and old TQ folders have no mzML of msconvert there: their numbers are checked against the index of the folder itself (the TIC of each scan).
 mod comune_waters;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
 use mzlab_core::mzml::{self, Chromatogram, Item};
 
-pub fn dati() -> Option<PathBuf> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    for up in Path::new(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .skip(1)
-        .take(3)
-    {
-        cands.push(up.join("mzlab-dati"));
-    }
-    cands.into_iter().find(|p| p.join("dati_formati").is_dir())
-}
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
-/// The folder `rel` (under `dati_formati/`) as a set of members named `X.raw/<file>`, read from disk by position.
+/// The folder `rel` (under `dati/formati/`) as a set of members named `X.raw/<file>`, read from disk by position.
 pub fn cartella(rel: &str) -> Option<FileSet> {
-    let d = dati()?.join("dati_formati").join(rel);
-    if !d.is_dir() {
+    let Some(d) = dati_percorsi::percorso(&format!("dati/formati/{rel}")).filter(|p| p.is_dir())
+    else {
         eprintln!("SKIP waters_dati: {rel} not found");
         return None;
-    }
+    };
     let nome = d.file_name()?.to_string_lossy().to_string();
     let mut membri = Vec::new();
     for e in std::fs::read_dir(&d).ok()? {
@@ -57,19 +45,19 @@ pub fn apri(rel: &str) -> Option<Box<dyn Lettore>> {
 }
 
 const CARTELLE: &[&str] = &[
-    "waters_raw/xevo_tqxs_pair_ST004453/ST004453_TQXS_04292022_038.raw",
-    "waters_raw/xevo_tqxs_mrm_MTBLS12109/MTBLS12109_MP189_NAD_pos_ESI_CAL_0_1.raw",
-    "waters_raw/xevo_tqs_mrm_MTBLS685/MTBLS685_MousePlasma_Set1_057.raw",
-    "waters_raw/tqs_mrm_MTBLS2612/MTBLS2612_E1101118e02.raw",
-    "waters_raw/xevo_tq_mrm_MTBLS661/MTBLS661_S48.raw",
-    "waters_raw/xevo_tq_abs_desi_mrm_zenodo10807654/gp_lung_01.raw",
-    "waters_raw/xevo_g2s_MTBLS1198/MTBLS1198_20190321_MS.raw",
-    "waters_raw/synapt_hdms_MTBLS178/MTBLS178_Neg_R57.raw",
-    "waters_raw/synapt_g2si_reims_MTBLS957/MTBLS957_JH_171129_QQC093C.raw",
-    "lettori_open_test/pwiz/Waters/SONAR_Short.raw",
-    "lettori_open_test/pwiz/Waters/HDMSe_Short_noLM.raw",
-    "lettori_open_test/pwiz/Waters/HDDDA_Short_noLM.raw",
-    "lettori_open_test/pwiz/Waters/HDMRM_Short_noLM.raw",
+    "waters/raw/xevo_tqxs_pair_ST004453/ST004453_TQXS_04292022_038.raw",
+    "waters/raw/xevo_tqxs_mrm_MTBLS12109/MTBLS12109_MP189_NAD_pos_ESI_CAL_0_1.raw",
+    "waters/raw/xevo_tqs_mrm_MTBLS685/MTBLS685_MousePlasma_Set1_057.raw",
+    "waters/raw/tqs_mrm_MTBLS2612/MTBLS2612_E1101118e02.raw",
+    "waters/raw/xevo_tq_mrm_MTBLS661/MTBLS661_S48.raw",
+    "waters/raw/xevo_tq_abs_desi_mrm_zenodo10807654/gp_lung_01.raw",
+    "waters/raw/xevo_g2s_MTBLS1198/MTBLS1198_20190321_MS.raw",
+    "waters/raw/synapt_hdms_MTBLS178/MTBLS178_Neg_R57.raw",
+    "waters/raw/synapt_g2si_reims_MTBLS957/MTBLS957_JH_171129_QQC093C.raw",
+    "aperti/lettori_open_test/pwiz/Waters/SONAR_Short.raw",
+    "aperti/lettori_open_test/pwiz/Waters/HDMSe_Short_noLM.raw",
+    "aperti/lettori_open_test/pwiz/Waters/HDDDA_Short_noLM.raw",
+    "aperti/lettori_open_test/pwiz/Waters/HDMRM_Short_noLM.raw",
 ];
 
 #[test]
@@ -140,19 +128,18 @@ fn mzml_cromi(p: &Path) -> Vec<Chromatogram> {
 
 #[test]
 fn chromatograms_match_the_msconvert_mzml() {
-    let Some(d) = dati() else {
+    if dati_percorsi::radice().is_none() {
         eprintln!("SKIP waters_dati: no data repository (MZLAB_DATI)");
         return;
-    };
-    let rel = "waters_raw/xevo_tqxs_pair_ST004453/ST004453_TQXS_04292022_038";
-    let mz = d.join("dati_formati").join(format!("{rel}.mzML"));
+    }
+    let rel = "waters/raw/xevo_tqxs_pair_ST004453/ST004453_TQXS_04292022_038";
     let Some(mut l) = apri(&format!("{rel}.raw")) else {
         return;
     };
-    if !mz.is_file() {
+    let Some(mz) = dati_percorsi::percorso(&format!("dati/formati/{rel}.mzML")) else {
         eprintln!("SKIP waters_dati: no mzML for {rel}");
         return;
-    }
+    };
     let theirs = mzml_cromi(&mz);
     assert!(l.indice(0).unwrap().is_empty(), "MRM folder has no spectra");
     let mine = l.cromatogrammi(0).unwrap();
@@ -207,8 +194,8 @@ fn chromatograms_match_the_msconvert_mzml() {
 #[test]
 fn folders_without_function_table_are_refused_with_a_key() {
     for rel in [
-        "waters_raw/xevo_g2xs_lipid_MTBLS1584/MTBLS1584_USF_Oct18_LCMS_CMH_lipidomics_046n.raw",
-        "waters_raw/cyclic_ims_PXD052561/20230920_NM4_1187_ECD_2_CID_25.raw",
+        "waters/raw/xevo_g2xs_lipid_MTBLS1584/MTBLS1584_USF_Oct18_LCMS_CMH_lipidomics_046n.raw",
+        "waters/raw/cyclic_ims_PXD052561/20230920_NM4_1187_ECD_2_CID_25.raw",
     ] {
         let Some(fs) = cartella(rel) else { continue };
         match mzlab_lettori::apri_nudo(fs, &Limiti::sito()) {

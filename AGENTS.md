@@ -14,7 +14,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
   4. A risoluzione unitaria un m/z è un candidato, non un'identificazione (spiegato in Teoria, senza avvisi ripetuti nell'interfaccia).
   5. **Teoria e Pratica**: niente traduzioni, aggiunte o tagli senza un'istruzione esplicita di Federico; l'accessibilità (presentazione) è ammessa.
   6. **Accessibilità**: colori solo da variabili CSS, `prefers-reduced-motion`, tastiera e `aria-label`, grafici leggibili dai daltonici (Okabe-Ito); **ogni grafico nuovo nasce con la sua tabella dei dati** (`TDATI`, `docs/agenti/dati.md`), con bersagli di almeno 24×24 px (40 px al tocco) e zoom/spostamento senza trascinamento (WCAG 2.2 AA; `e2e_axe_grafici`).
-- **Dati del laboratorio**: MAI nel repository (pubblico); stanno nel repository PRIVATO `Freeesta/mzlab-dati` (`mzML/`, `dam/`, `HRMS/`; prompt in `scratchpad/`). Eccezione: i file anonimi di `mzlab/web/esempi/`. I cognomi elencati in `nomi_vietati.txt` del repository privato non compaiono mai nel repository pubblico (interfaccia, Teoria, esempi, test, commit, PR; `tests/test_esempi_anonimi.py` lo controlla); nessun composto è vietato.
+- **Dati del laboratorio**: MAI nel repository (pubblico); stanno nel repository PRIVATO `Freeesta/mzlab-dati` (`dati/` (`3200 qtrap/`, `HRMS/`, `GC-MS/`, `librerie/`, `formati/`, `INDICE.md`), `corso/`, `studio/`, `coordinamento/`, `strumenti/`, `esperimenti/`, verità `*_truth.json` in `scratchpad/`). Eccezione: i file anonimi di `mzlab/web/esempi/`. I cognomi elencati in `nomi_vietati.txt` del repository privato non compaiono mai nel repository pubblico (interfaccia, Teoria, esempi, test, commit, PR; `tests/test_esempi_anonimi.py` lo controlla); nessun composto è vietato.
 
 ## 2. Regole di lavoro
 - **Consegna = sito pubblicato**: il lavoro è finito quando è in `main` e il workflow «pages» di quel commit è riuscito.
@@ -34,7 +34,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 
 ## 3. Verifica e test
 - **Verifica**: `python3 tools/verifica.py` (~9 min con 4 CPU; `--cambiati` = solo gli e2e dei file cambiati rispetto a `origin/main`; log in `.verifica/log/`, letti dal `verificatore`). Prima del merge: `--cambiati` + la CI della PR (`test.yml`, 4 job obbligatori di «main protetto»); ogni notte `notte.yml`. Livelli, mappa (`python3 tools/indice.py`, non è nel repository), soglie (`tools/controlla.py`) e `noti_rossi.txt`: `docs/agenti/test.md`.
-- **Dati**: il repository privato si trova da solo (accanto, sopra, nella home o con `MZLAB_DATI=<percorso>`); senza, `tools/dati_sintetici.py` crea file simili e i test che chiedono dati veri si saltano (tabella `NEEDS`). Test che usano il sito costruito (`e2e13`, `e2e_tpmine*`): prima `python3 tools/build_site.py` (scrive `site/`, da cancellare dopo).
+- **Dati**: il repository privato si trova da solo (accanto, sopra, nella home o con `MZLAB_DATI=<percorso>`) tramite l'unico risolutore `tools/dati_percorsi.py` / `.rs` (tabella `tools/dati_mappa.tsv`: test e tool chiedono `percorso("dati/…")`, mai percorsi o variabili a mano); senza, `tools/dati_sintetici.py` crea file simili e i test che chiedono dati veri si saltano (tabella `NEEDS`). Test che usano il sito costruito (`e2e13`, `e2e_tpmine*`): prima `python3 tools/build_site.py` (scrive `site/`, da cancellare dopo).
 - **Struttura e test nuovi**: `tests/` = pytest, `tests_e2e/` = script Playwright (uno per argomento, `lib.py` → `Run`); regole e aiuti in `docs/agenti/test.md`.
 
 ## 4. Architettura

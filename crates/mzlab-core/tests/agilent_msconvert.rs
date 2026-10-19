@@ -1,5 +1,5 @@
-//! The Agilent `.D` reader against the mzML that ProteoWizard msconvert made from the same runs (private data repository, `GC-MS/mzML/<run>.mzML` next to
-//! `GC-MS/<run>.D`; skipped without it): the spectra one by one (time, level, polarity, points, m/z, intensity) and the TIC chromatogram.
+//! The Agilent `.D` reader against the mzML that ProteoWizard msconvert made from the same runs (private data repository, `dati/GC-MS/mzML/<run>.mzML` next to
+//! `dati/GC-MS/<run>.D`; skipped without it): the spectra one by one (time, level, polarity, points, m/z, intensity) and the TIC chromatogram.
 //! Differences that are known and accepted: msconvert names a scan `scanId=N` (here `scan=N`, the form the program reads scan numbers from), writes m/z as
 //! shorter decimals than the f32 values of the file (up to 2e-5 apart), and adds one SIM chromatogram per ion (the program builds XICs from the spectra).
 
@@ -10,23 +10,8 @@ use std::path::{Path, PathBuf};
 use mzlab_core::agilent::{AgilentD, Files};
 use mzlab_core::mzml::{self, Run};
 
-fn dati() -> Option<PathBuf> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .canonicalize()
-        .ok()?;
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    cands.extend(
-        root.ancestors()
-            .skip(1)
-            .take(3)
-            .map(|up| up.join("mzlab-dati")),
-    );
-    cands.into_iter().find(|p| p.join("GC-MS/mzML").is_dir())
-}
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 fn ours(folder: &Path) -> Run {
     let acq = folder.join("AcqData");
@@ -96,12 +81,12 @@ fn compare(got: &Run, want: &Run, label: &str) -> f64 {
 
 #[test]
 fn real_runs_match_msconvert() {
-    let Some(d) = dati() else {
+    let Some(gc) = dati_percorsi::percorso("dati/GC-MS").filter(|g| g.join("mzML").is_dir()) else {
         eprintln!("SKIP agilent_msconvert: no data repository (MZLAB_DATI)");
         return;
     };
     let mut done = 0;
-    for e in std::fs::read_dir(d.join("GC-MS")).unwrap().flatten() {
+    for e in std::fs::read_dir(&gc).unwrap().flatten() {
         let folder = e.path();
         let Some(stem) = folder
             .file_name()
@@ -111,7 +96,7 @@ fn real_runs_match_msconvert() {
         else {
             continue;
         };
-        let Ok(f) = std::fs::File::open(d.join("GC-MS/mzML").join(format!("{stem}.mzML"))) else {
+        let Ok(f) = std::fs::File::open(gc.join("mzML").join(format!("{stem}.mzML"))) else {
             continue;
         };
         let want = mzml::read(std::io::BufReader::new(f)).unwrap();
@@ -123,24 +108,7 @@ fn real_runs_match_msconvert() {
 }
 
 fn lc_dir() -> Option<PathBuf> {
-    dati()
-        .map(|d| d.join("dati_formati/agilent_D"))
-        .or_else(|| {
-            let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-            let mut c: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-                .map(PathBuf::from)
-                .into_iter()
-                .collect();
-            c.extend(
-                root.ancestors()
-                    .skip(1)
-                    .take(3)
-                    .map(|u| u.join("mzlab-dati")),
-            );
-            c.into_iter()
-                .map(|p| p.join("dati_formati/agilent_D"))
-                .find(|p| p.is_dir())
-        })
+    dati_percorsi::percorso("dati/formati/agilent/D")
 }
 
 /// The profile spectra of a Q-TOF run (`MSProfile.bin`: flight times, and the mass calibration of each scan) against the profile mzML of msconvert. The two are not
