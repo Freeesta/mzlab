@@ -8,33 +8,6 @@ use std::collections::BTreeSet;
 
 type Res = Result<(), MolError>;
 
-fn bad(msg: String) -> Res {
-    Err(MolError::Invalid(msg))
-}
-
-/// Neighbour lists of the bonds, after the bonds themselves passed `check_bonds`.
-fn adjacency(m: &Mol) -> Vec<Vec<u32>> {
-    let mut adj = vec![Vec::new(); m.atoms.len()];
-    for b in &m.bonds {
-        if let Some(v) = adj.get_mut(b.a as usize) {
-            v.push(b.b);
-        }
-        if let Some(v) = adj.get_mut(b.b as usize) {
-            v.push(b.a);
-        }
-    }
-    adj
-}
-
-/// Strictly ascending: sorted and without repeats.
-fn ascending(v: &[u32]) -> bool {
-    v.iter().zip(v.iter().skip(1)).all(|(x, y)| x < y)
-}
-
-fn bonded(adj: &[Vec<u32>], x: u32, y: u32) -> bool {
-    adj.get(x as usize).is_some_and(|v| v.contains(&y))
-}
-
 impl Mol {
     /// Checks every rule of the format; `from_json` calls it, builders should call it before trusting a record.
     pub fn validate(&self) -> Result<(), MolError> {
@@ -250,4 +223,31 @@ impl Mol {
         }
         Ok(())
     }
+}
+
+/// Neighbour lists of the bonds, after the bonds themselves passed `check_bonds`.
+fn adjacency(m: &Mol) -> Vec<Vec<u32>> {
+    let mut adj = vec![Vec::new(); m.atoms.len()];
+    for b in &m.bonds {
+        if let Some(v) = adj.get_mut(b.a as usize) {
+            v.push(b.b);
+        }
+        if let Some(v) = adj.get_mut(b.b as usize) {
+            v.push(b.a);
+        }
+    }
+    adj
+}
+
+/// Strictly ascending: sorted and without repeats.
+fn ascending(v: &[u32]) -> bool {
+    v.iter().zip(v.iter().skip(1)).all(|(x, y)| x < y)
+}
+
+fn bonded(adj: &[Vec<u32>], x: u32, y: u32) -> bool {
+    adj.get(x as usize).is_some_and(|v| v.contains(&y))
+}
+
+fn bad(msg: String) -> Res {
+    Err(MolError::Invalid(msg))
 }
