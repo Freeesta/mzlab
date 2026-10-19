@@ -35,26 +35,36 @@ pub fn reduce(m: &[f32], nt: usize, nl: usize, ft: usize, fl: usize) -> (Vec<f32
     (out, rt, rl)
 }
 
+/// The values to send and their shape: the matrix as read, or averaged into at most `MAP_MAX_RT` x `MAP_MAX_NM` bins. Also the block size along the wavelengths and whether it was reduced.
+fn map_values(dad: &DadData) -> (Vec<f32>, usize, usize, usize, bool) {
+    let (nt, nl) = (dad.points(), dad.channels());
+    let (ft, fl) = (nt.div_ceil(MAP_MAX_RT), nl.div_ceil(MAP_MAX_NM));
+    if ft > 1 || fl > 1 {
+        let (v, rt, rl) = reduce(&dad.matrix_mau, nt, nl, ft, fl);
+        (v, rt, rl, fl, true)
+    } else {
+        (dad.matrix_mau.clone(), nt, nl, 1, false)
+    }
+}
+
+/// The values as little-endian `f32`, base64.
+fn encode_f32(vals: &[f32]) -> String {
+    use base64::Engine;
+    let mut bytes = Vec::with_capacity(vals.len().saturating_mul(4));
+    for &val in vals {
+        bytes.extend_from_slice(&val.to_le_bytes());
+    }
+    base64::engine::general_purpose::STANDARD.encode(&bytes)
+}
+
 /// Encodes the 2D absorbance matrix of `dad` as JSON for `/api/map?kind=pda`; `agg` says whether it was reduced (`mean`) or sent as read (`none`).
 pub fn dad_to_map_json(dad: &DadData) -> String {
     let (rt0, rt1) = (
         dad.time_min.first().copied().unwrap_or(0.0),
         dad.time_min.last().copied().unwrap_or(dad.duration_min),
     );
-    let (nt, nl) = (dad.points(), dad.channels());
-    let (ft, fl) = (nt.div_ceil(MAP_MAX_RT), nl.div_ceil(MAP_MAX_NM));
-    let reduced = ft > 1 || fl > 1;
-    let (vals, nrt, nmz) = if reduced {
-        reduce(&dad.matrix_mau, nt, nl, ft, fl)
-    } else {
-        (dad.matrix_mau.clone(), nt, nl)
-    };
-    let mut bytes = Vec::with_capacity(vals.len().saturating_mul(4));
-    for &val in &vals {
-        bytes.extend_from_slice(&val.to_le_bytes());
-    }
-    use base64::Engine;
-    let b64_data = base64::engine::general_purpose::STANDARD.encode(&bytes);
+    let (vals, nrt, nmz, fl, reduced) = map_values(dad);
+    let b64_data = encode_f32(&vals);
     format!(
         "{{\"data\":\"{b64_data}\",\"rt0\":{rt0},\"rt1\":{rt1},\"nrt\":{nrt},\"mz0\":{},\"mz1\":{},\"nmz\":{nmz},\"dmz\":{},\"level\":1,\"region\":false,\"agg\":\"{}\",\"log\":false,\"bg\":false,\"hr\":false,\"kind\":\"pda\"}}",
         dad.wl_start_nm,
