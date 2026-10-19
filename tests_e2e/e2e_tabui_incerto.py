@@ -1,5 +1,5 @@
 """Tabui, «Draw» with an uncertain position: a drawing with brackets and a delta («+O») comes back to mzFinder with the SMILES, the formula and the m/z computed with the
-delta and the note «position uncertain» (a candidate, not an identification); a plain drawing comes back exactly as before (no note, the formula of the SMILES).
+delta and the note «position uncertain, level 3» (a candidate, not an identification); a plain drawing comes back exactly as before (no note, the formula of the SMILES).
 Needs site/static/wasm-feat/grafo (tools/build_feat_wasm.sh); SKIP without it.
 Run from the repo root: python3 tests_e2e/e2e_tabui_incerto.py"""
 import os, shutil, subprocess, sys, tempfile, time, urllib.request
@@ -50,7 +50,7 @@ try:
             pg.evaluate(f"{KET}.setMolecule('c1ccccc1CCO')"); pg.wait_for_function(f"{KET}.editor.struct().atoms.size === 9", timeout=10000)
             pg.click("#tp-draw-use"); pg.wait_for_function("document.querySelector('#tp-smi').value.length > 0", timeout=10000)
             pg.wait_for_function("document.querySelector('#tp-prev').innerText.includes('C8H10O')", timeout=30000)
-            t = pg.inner_text("#tp-prev"); assert "uncertain" not in t and pg.input_value("#tp-mol") == "C8H10O", (t, pg.input_value("#tp-mol"))
+            t = pg.inner_text("#tp-prev"); assert "uncertain" not in t and "level" not in t and pg.input_value("#tp-mol") == "C8H10O", (t, pg.input_value("#tp-mol"))
         step("a plain drawing: as before (formula of the SMILES), no note", plain)
         def uncertain():
             pg.click("#tp-draw"); pg.wait_for_function("TPDraw.ready() && !document.querySelector('#tp-draw-use').disabled", timeout=90000)
@@ -63,9 +63,9 @@ try:
             pg.click("#tp-draw-use")
             pg.wait_for_function("document.querySelector('#tp-mol').value === 'C8H10O2'", timeout=20000)
             pg.wait_for_function("document.querySelector('#tp-prev').innerText.includes('position uncertain')", timeout=30000)
-            t = pg.inner_text("#tp-prev"); assert "139.0" in t and "Δ +O" in t, t                       # [M+H]+ of C8H10O2 at unit decimals
+            t = pg.inner_text("#tp-prev"); assert "139.0" in t and "Δ +O" in t and "level 3" in t, t                       # [M+H]+ of C8H10O2 at unit decimals
             assert pg.inner_text("#tp-warn") == "", pg.inner_text("#tp-warn")
-        step("brackets with «+O»: formula and m/z with the delta and the note «position uncertain»", uncertain)
+        step("brackets with «+O»: formula and m/z with the delta and the note «position uncertain, level 3»", uncertain)
         def edited():
             pg.click("#tp-draw-no") if pg.is_visible("#tp-draw-no") else None
             pg.fill("#tp-mol", "C8H10O"); pg.wait_for_function("!document.querySelector('#tp-prev').innerText.includes('position uncertain')", timeout=20000)
