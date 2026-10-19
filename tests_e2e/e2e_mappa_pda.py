@@ -17,11 +17,11 @@ M = "E.panels.find(q=>q.type==='map')"
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [str(F)]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [str(F)])
         pg.click("text=Carica dati"); ready(pg)
         def trace_only():
             assert pg.evaluate("E.files[0].pda") is True
-            pg.click("#np-map"); ready(pg); pg.wait_for_timeout(1500)
+            pg.click("#np-map"); ready(pg); attendi(pg, "E.files[0]._pdaMap === false")
             assert pg.evaluate(f"!{M}.el.querySelector('select[data-o=mapKind]')"), "PDA offered without a matrix"
             assert pg.evaluate(f"{M}.el.querySelector('.mzlv').textContent.startsWith('MS')")
         step("a PDA trace without matrix: no MS / PDA selector on the map", trace_only)
