@@ -8,11 +8,28 @@
   const fmtA = v => /** @type {any} */ (window).TPTAB ? /** @type {any} */ (window).TPTAB.area(v) : String(Math.round(v));   // engineering notation, e.g. 821.43e+6
   const TYPES = { sample: "sample", blank: "blank", standard: "standard", control: "control" };
   const KINDS = { full: "Full scan", ms2: "MS2", mrm: "MRM", hr: "LC-HRMS", msn: "MSn (infusion)", empty: "empty", error: "error" };
+  /** the reactivity of the parent as told by TPREATT (`tp-reatt`): the heavy atoms with the highest Prev. f(−) go in the summary @type {{ smiles: string, atoms: any[] }|null} */
+  let fukR = null;
+  const fukHtml = () => {
+    const host = document.getElementById("tp-reatt");
+    if (!fukR || !host || host.dataset.smiles !== fukR.smiles) return "";
+    const top = fukR.atoms.filter(a => a.heavy_index != null && Number.isFinite(+a.f_minus)).sort((a, b) => b.f_minus - a.f_minus).slice(0, 3);
+    if (!top.length) return "";
+    const txt = top.map(a => `${esc(a.el)}${a.heavy_index + 1} ${(+a.f_minus).toFixed(3)}`).join(" · ");
+    return `<span class="hc" data-k="fukui" tabindex="0" aria-label="Prev. Fukui f minus, highest heavy atoms: ${txt}"><span class="hl">Prev. f(−)</span> <b>${txt}</b></span>`;
+  };
+  window.addEventListener("tp-reatt", (/** @type {any} */ e) => {
+    const d = e.detail || {};
+    fukR = d.reatt && Array.isArray(d.reatt.atoms) ? { smiles: d.smiles, atoms: d.reatt.atoms } : null;
+    const h = document.getElementById("tp-fuk"); if (h) h.innerHTML = fukHtml();
+  });
   const LAB = { forte: "strong", possibile: "possible", debole: "weak", progenitore: "parent" };
 
   const CSS = `
 .tp{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:14px;align-items:start;padding:12px 16px}
 @media(max-width:1000px){.tp{grid-template-columns:1fr}}
+.tp.tp-nol{grid-template-columns:1fr}.tp.tp-nol #tp-left{display:none}
+.tp-tools{padding:8px 16px 0}.tp-tools button{box-sizing:border-box;min-height:28px;min-width:28px;padding:2px 10px;font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink)}.tp-tools button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}@media(pointer:coarse){.tp-tools button{min-height:40px}}
 .tp h3{margin:0 0 6px;font-size:14px}.tp .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:10px}
 .tp .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0}.tp .grow{flex:1;min-width:120px}.tp input[type=text],.tp textarea,.tp input[type=number]{width:100%;box-sizing:border-box}
 .tp .mut{color:var(--muted);font-size:12px}.tp table{border-collapse:collapse;width:100%;font-size:12px}.tp th,.tp td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
@@ -198,6 +215,7 @@
     if (!document.getElementById("tp-css")) { const st = document.createElement("style"); st.id = "tp-css"; st.textContent = CSS; document.head.appendChild(st); }
     const W = /** @type {any} */ (window), dt = k => (W.TPHELP ? ` data-tt="${k}"` : "");
     sec.innerHTML = `<div class="tp-wrap">
+<div class="tp-tools"><button type="button" id="tp-sb" aria-controls="tp-left" aria-pressed="false" aria-label="Hide the loading panel">Hide panel</button></div>
 <div class="tp">
 <div id="tp-left">
  <div class="card"><h3>1 · Files</h3>
@@ -229,6 +247,16 @@
     if (W.TPHELP) W.TPHELP.attach(sec);
     const FIELD = () => W.TPFIELD, parentFields = () => [$("#tp-mol"), $("#tp-smi")];
     if (W.TPFIELD) W.TPFIELD.watch(sec, () => { if ($("#tp-msg").dataset.field) msg(""); });       // the group returns to normal on a click or a key in it; so does its message
+    // the loading panel can be hidden to give the whole width to the tables; the choice is kept (mzlab.tabui.side = "0" hidden)
+    {
+      const tp = /** @type {HTMLElement} */ ($(".tp")), b = /** @type {HTMLButtonElement} */ ($("#tp-sb"));
+      const set = (/** @type {boolean} */ hide, /** @type {boolean} */ keep) => {
+        tp.classList.toggle("tp-nol", hide); b.setAttribute("aria-pressed", String(hide)); b.textContent = hide ? "Show panel" : "Hide panel"; b.setAttribute("aria-label", hide ? "Show the loading panel" : "Hide the loading panel");
+        if (keep) try { localStorage.setItem("mzlab.tabui.side", hide ? "0" : "1"); } catch (_) { /* storage may be blocked */ }
+      };
+      let was = false; try { was = localStorage.getItem("mzlab.tabui.side") === "0"; } catch (_) { /* storage may be blocked */ }
+      set(was, false); b.onclick = () => set(!tp.classList.contains("tp-nol"), true);
+    }
     /** @type {any} */
     const st = { files: [], showAll: false, summary: null, sel: null, view: "tab", took: 0, pname: "", weakOn: false, cond: null, gnames: /** @type {string[]} */ ([]), gctl: null, gv: null };
     const msg = (t, err) => { const m = $("#tp-msg"); m.textContent = t || ""; m.className = "mut" + (err ? " err" : ""); delete m.dataset.field; };
@@ -635,7 +663,7 @@
       const oIt = it("ions", "Ions analysed", s.rows.length, "ft.sum.ions") + it("took", "Computed in", `${(st.took / 1000).toFixed(1)} s`, "ft.sum.took");
       const nMs2 = s.ms2_links && s.ms2_links.links ? s.ms2_links.links.length : 0, ms2c = window.TPMS2 ? window.TPMS2.card(s) : "", mrmc = mrmCard(s.mrm);
       R.innerHTML = `<div class="hero" role="region" aria-label="Summary of the results">
-        <section class="hero-b" aria-labelledby="tp-h-par"><h2 id="tp-h-par">Parent</h2><div class="hero-i">${pIt}</div></section>
+        <section class="hero-b" aria-labelledby="tp-h-par"><h2 id="tp-h-par">Parent</h2><div class="hero-i">${pIt}<span id="tp-fuk" role="status">${fukHtml()}</span></div></section>
         <section class="hero-b" aria-labelledby="tp-h-out"><h2 id="tp-h-out">Output</h2><div class="hero-i"><span id="tp-cnt">${words}</span>${oIt}</div></section>
         <section class="hero-b" aria-labelledby="tp-h-dl"><h2 id="tp-h-dl">Download</h2><div class="hero-x" role="group" aria-labelledby="tp-h-dl"><button type="button" id="tp-x-xlsx"${dt("ft.sum.xlsx")}>Excel (.xlsx)</button><button type="button" id="tp-x-csv"${dt("ft.sum.csv")}>CSV</button><button type="button" id="tp-x-json"${dt("ft.sum.json")}>JSON</button><button type="button" id="tp-x-txt"${dt("ft.sum.txt")}>Copy summary</button></div></section></div>
         ${s.parent_ok === false ? `<p id="tp-nopar" role="status">In these files the ion of the parent is not a chromatographic peak that falls over time, so no product is proposed. Check the formula and the adduct of the parent and the files of the series; the criteria are in the parent row.</p>` : ""}
