@@ -126,7 +126,7 @@ pub fn prepare_con<R: ReadAt>(
             (sha256, probe)
         }
     };
-    Ok(da_tabella_mzml(&t, name, size, sha256, probe))
+    Ok(da_tabella_mzml(t, name, size, sha256, probe))
 }
 
 /// Native only: `prepare` with the fingerprints taken by a second thread (`r2`, a second reader of the same file) while the scan table is read.
@@ -144,16 +144,33 @@ pub fn prepare_parallelo<R: ReadAt, R2: ReadAt + Send>(
             .join()
             .unwrap_or_else(|_| Err(Error::new("err.file.unknown")));
         let (sha256, _, probe) = prints?;
-        Ok(da_tabella_mzml(&t?, name, size, sha256, probe))
+        Ok(da_tabella_mzml(t?, name, size, sha256, probe))
     })
 }
 
-fn da_tabella_mzml(t: &Table, name: &str, size: u64, sha256: String, probe: String) -> Prepared {
+fn da_tabella_mzml(mut t: Table, name: &str, size: u64, sha256: String, probe: String) -> Prepared {
     let mut source = Out::default();
     source_head(&mut source, name, size, &probe, &sha256);
     source.raw("}");
-    let scans_json = t.rows_json().into_bytes();
-    prepared(t, scans_json, source.0, sha256, probe)
+    let (json, c) = t.drain_json();
+    let run = format!(
+        "{{\"nce\":{},\"hr1\":{},\"n_chromatograms\":{}}}",
+        t.nce, t.hr1, t.n_chromatograms
+    );
+    Prepared {
+        table: ScanTable {
+            level: c.level,
+            polarity: c.polarity,
+            rt: c.rt,
+            tic: c.tic,
+            scans_json: json.into_bytes(),
+            source_json: source.0,
+            run_json: run,
+            hr1: t.hr1,
+        },
+        sha256,
+        probe,
+    }
 }
 
 /// The opening of the `source` object, up to `sha256`.

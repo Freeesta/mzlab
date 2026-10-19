@@ -17,7 +17,9 @@ const DIAG = {
     const r = String(raw || "");
     if (/quota|NS_ERROR_FILE_NO_DEVICE_SPACE|no space left|disk is full/i.test(r)) return "quota";
     if (/NotReadable|NotFoundError|NotAllowed|could not be read|permission|SecurityError|file.*(changed|moved|deleted)/i.test(r)) return "read";
-    if (/out of memory|memory access|allocation|RangeError|Array buffer allocation|unreachable|memory budget|oom|indexCrash|memoryBudget/i.test(r)) return "memory";
+    // a WASM trap ("unreachable": a panic or a failed allocation inside the engine) says nothing about the memory of the computer
+    if (/unreachable|panicked/i.test(r) && !/memoryBudget/.test(r)) return "engine";
+    if (/out of memory|memory access|allocation|RangeError|Array buffer allocation|memory budget|oom|indexCrash|memoryBudget/i.test(r)) return "memory";
     if (/xml|parse|parsing|unexpected|malformed|invalid|truncated|end of file|eof|not an? (mzml|mzxml)|zlib|inflate|base64|numpress|offset|checksum|index list/i.test(r)) return fase === "decode" ? "decode" : "format";
     return "unknown";
   },

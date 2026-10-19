@@ -16,6 +16,8 @@ pub const BLOCK: u64 = 16384;
 const ALIGN: u64 = 64;
 const HEADER: usize = 64;
 pub(crate) const NB: usize = 10000;
+/// Bytes the build holds per scan for its membership list (`member`): the vector header and the small allocation behind it.
+const MEMBER_BYTES: usize = 104;
 /// Default bytes of peaks held in memory (the WASM memory is 256 MB at most).
 pub const DEFAULT_BUDGET: usize = 64 << 20;
 
@@ -484,8 +486,9 @@ impl Gruppo {
     }
 
     fn held(&self) -> usize {
-        self.kept.len() * std::mem::size_of::<Peak<f64>>()
-            + self.kept32.len() * std::mem::size_of::<Peak<f32>>()
+        // capacity, not length: a vector that doubles holds up to twice what it uses
+        self.kept.capacity() * std::mem::size_of::<Peak<f64>>()
+            + self.kept32.capacity() * std::mem::size_of::<Peak<f32>>()
     }
 
     fn lascia(&mut self) {
@@ -494,7 +497,7 @@ impl Gruppo {
     }
 }
 
-/// Pass 1 of the builder: the groups, filled one scan at a time. `budget / 2` bytes of peaks are kept; past that, with a scratch file (`spill`) they go to it
+/// Pass 1 of the builder: the groups, filled one scan at a time. `budget / 4` bytes of peaks (counted by capacity: a growing vector briefly holds twice) are kept; past that, with a scratch file (`spill`) they go to it
 /// split by m/z (`mzidx_spill`) and the rounds read them from there; without one they are dropped and the rounds decode again.
 pub(crate) struct Prima<'a> {
     gruppi: Vec<Gruppo>,
@@ -561,7 +564,7 @@ impl<'a> Prima<'a> {
         self.visti += 1;
         if self.keep {
             let held: usize = self.gruppi.iter().map(Gruppo::held).sum();
-            if held > self.budget / 2 {
+            if held > self.budget / 4 {
                 self.keep = false;
                 if let Some(sp) = self.spill.as_deref_mut() {
                     self.parti = Some(avvia(&mut self.gruppi, sp)?);
@@ -829,15 +832,25 @@ pub(crate) fn build_dopo(
             .map(|b| secs.iter().map(|s| s.cost(b)).sum())
             .collect();
         let cost = |b: usize| costs[b];
+        // A round holds its peaks and, while it is written, the same peaks as byte arrays (about one more round): so it may use half of the
+        // budget, minus what the build holds whatever the round (table, member lists, per-scan arrays of the sections).
+        let fixed = table.scans_json.len()
+            + n_scans * (18 + MEMBER_BYTES)
+            + infos.iter().map(|s| s.ids.len() * 33).sum::<usize>();
+        let round_cap = (budget / 2).saturating_sub(fixed).max(budget / 8);
         let mut lo = 0usize;
         while lo < NB {
             let (mut hi, mut used) = (lo, 0usize);
-            while hi < NB && (used + cost(hi) <= budget || hi == lo && cost(hi) <= budget * 2) {
+            while hi < NB && (used + cost(hi) <= round_cap || hi == lo && cost(hi) <= budget * 2) {
                 used += cost(hi);
                 hi += 1;
             }
             if hi == lo {
-                return Err(Error::memory_budget());
+                return Err(crate::budget::refusal(
+                    "index",
+                    fixed + 2 * cost(lo),
+                    budget,
+                ));
             }
             if used > 0 {
                 for sec in secs.iter_mut() {

@@ -5,7 +5,6 @@
 
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
-use crate::json::Out;
 use crate::lettori::Posizione;
 
 const ANALYZERS: [&str; 5] = ["FTMS", "ITMS", "TOFMS", "TQMS", "SQMS"];
@@ -435,8 +434,10 @@ fn find(h: &[u8], pat: &[u8]) -> Option<usize> {
     None
 }
 
+mod json;
 mod rows;
 
+pub use json::Columns;
 use rows::Head;
 pub(crate) use rows::Rows;
 
@@ -459,10 +460,10 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
 
     // the spans of the spectra
     let offs = src.offsets()?;
-    let mut spans: Vec<(u64, u64, String)> = Vec::new();
+    // each header becomes its row as soon as it is read: keeping the headers of every spectrum (about 1.5 KB each) would hold hundreds of MB
     let mut last_end = 0u64;
-    fn push(spans: &mut Vec<(u64, u64, String)>, a: u64, b: u64, h: &[u8]) {
-        spans.push((a, b, String::from_utf8_lossy(h).into_owned()));
+    fn push(rows: &mut Rows, a: u64, b: u64, h: &[u8]) {
+        rows.spectrum(a, b, &String::from_utf8_lossy(h));
     }
     let mut done = false;
     if let Some(offs) = offs {
@@ -511,14 +512,13 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
                         }
                     }
                 };
-                push(&mut spans, a, b, &chunk[..c.unwrap_or(chunk.len())]);
+                push(&mut rows, a, b, &chunk[..c.unwrap_or(chunk.len())]);
                 last_end = b;
             }
             done = true;
         }
     }
     if !done {
-        spans.clear();
         let mut pos = 0u64;
         let mut buf: Vec<u8> = Vec::new();
         let mut buf_off = 0u64;
@@ -554,7 +554,7 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
                 if let Some(p) = find(&chunk, b"</spectrum>") {
                     let b = a + p as u64 + 11;
                     let hdr_end = find(&chunk[..p], b"<binaryDataArrayList").unwrap_or(p);
-                    push(&mut spans, a, b, &chunk[..hdr_end]);
+                    push(&mut rows, a, b, &chunk[..hdr_end]);
                     break Some(b);
                 }
                 if a + n >= size {
@@ -566,11 +566,6 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
             last_end = b;
             pos = b;
         }
-    }
-
-    // the rows
-    for (a, b, h) in &spans {
-        rows.spectrum(*a, *b, h);
     }
 
     // chromatograms after the last spectrum
@@ -589,176 +584,4 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
         pos += chunk.len() as u64 - 13;
     }
     Ok(rows.finish(n_chrom))
-}
-
-/// Columns 21 (type) and 22 (mobility `[value, unit]`) only for the scans that have one, so an index without any stays as it was.
-fn tail_columns(o: &mut Out, r: &Row) {
-    if r.kind.is_none() && r.mob.is_none() {
-        return;
-    }
-    o.raw(",");
-    match r.kind {
-        Some(k) => o.str(k),
-        None => o.raw("null"),
-    };
-    if let Some((v, u)) = r.mob {
-        o.raw(",[");
-        py_float(o, v);
-        o.raw(",").str(u).raw("]");
-    }
-}
-
-fn py_float(o: &mut Out, v: f64) {
-    if !v.is_finite() {
-        o.raw("null");
-        return;
-    }
-    let s = format!("{v:?}");
-    if let Some((m, e)) = s.split_once('e') {
-        let n: i32 = e.parse().unwrap_or(0);
-        o.raw(&format!(
-            "{m}e{}{:02}",
-            if n < 0 { '-' } else { '+' },
-            n.abs()
-        ));
-    } else {
-        o.raw(&s);
-    }
-}
-
-fn opt(o: &mut Out, v: Option<f64>) {
-    match v {
-        Some(x) => py_float(o, x),
-        None => {
-            o.raw("null");
-        }
-    }
-}
-
-impl Table {
-    /// The rows of `SCAN_COLUMNS` as compact JSON (`json.dumps(rows, separators=(",", ":"))`); a row of a vendor file (`k` set) starts with
-    /// `[membro,offset,lunghezza]` or `null`, and `k` (version 2, `docs/agenti/mzidx.md`).
-    pub fn rows_json(&self) -> String {
-        let mut o = Out::default();
-        o.raw("[");
-        for (i, r) in self.rows.iter().enumerate() {
-            o.raw(if i > 0 { ",[" } else { "[" });
-            match (r.k, r.posizione) {
-                (None, _) => o.int(r.start as i64).raw(",").int(r.end as i64),
-                (Some(k), None) => o.raw("null,").int(k as i64),
-                (Some(k), Some(p)) => {
-                    let (m, n) = (i64::from(p.membro), i64::from(p.lunghezza));
-                    o.raw("[")
-                        .int(m)
-                        .raw(",")
-                        .int(p.offset as i64)
-                        .raw(",")
-                        .int(n)
-                        .raw("],")
-                        .int(k as i64)
-                }
-            };
-            o.raw(",").int(r.level as i64).raw(",");
-            py_float(&mut o, r.rt);
-            o.raw(",").int(r.polarity as i64).raw(",");
-            py_float(&mut o, r.tic);
-            o.raw(",");
-            opt(&mut o, r.precursor);
-            o.raw(",");
-            opt(&mut o, r.ce);
-            o.raw(",")
-                .str(&r.filter)
-                .raw(if r.profile { ",true," } else { ",false," });
-            match r.parent {
-                Some(p) => o.int(p as i64),
-                None => o.raw("null"),
-            };
-            o.raw(",");
-            match r.iso {
-                Some((a, b)) => {
-                    o.raw("[");
-                    py_float(&mut o, a);
-                    o.raw(",");
-                    py_float(&mut o, b);
-                    o.raw("]");
-                }
-                None => {
-                    o.raw("null");
-                }
-            }
-            o.raw(",");
-            match &r.act {
-                Some(a) => o.str(a),
-                None => o.raw("null"),
-            };
-            o.raw(",");
-            opt(&mut o, r.res);
-            o.raw(",").str(&r.an).raw(",");
-            opt(&mut o, r.pint);
-            o.raw(",");
-            match &r.path {
-                Some(p) => {
-                    o.raw("[");
-                    for (j, (m, a, c)) in p.iter().enumerate() {
-                        if j > 0 {
-                            o.raw(",");
-                        }
-                        o.raw("[");
-                        py_float(&mut o, *m);
-                        o.raw(",").str(a).raw(",");
-                        py_float(&mut o, *c);
-                        o.raw("]");
-                    }
-                    o.raw("]");
-                }
-                None => {
-                    o.raw("null");
-                }
-            }
-            o.raw(",[");
-            for (j, e) in r.precs.iter().enumerate() {
-                if j > 0 {
-                    o.raw(",");
-                }
-                o.raw("{\"target\":");
-                opt(&mut o, e.target);
-                o.raw(",\"lo\":");
-                opt(&mut o, e.lo);
-                o.raw(",\"hi\":");
-                opt(&mut o, e.hi);
-                o.raw(",\"selected\":");
-                opt(&mut o, e.selected);
-                o.raw(",\"charge\":");
-                match e.charge {
-                    Some(c) => o.int(c),
-                    None => o.raw("null"),
-                };
-                o.raw(",\"ref\":");
-                match &e.refer {
-                    Some(s) => o.str(s),
-                    None => o.raw("null"),
-                };
-                o.raw(",\"act\":");
-                match e.act {
-                    Some(s) => o.str(s),
-                    None => o.raw("null"),
-                };
-                o.raw(",\"ce\":");
-                opt(&mut o, e.ce);
-                o.raw(",\"pint\":");
-                opt(&mut o, e.pint);
-                o.raw("}");
-            }
-            o.raw("],");
-            match r.charge {
-                Some(c) => o.int(c),
-                None => o.raw("null"),
-            };
-            o.raw(",").str(&r.native);
-            tail_columns(&mut o, r);
-            o.raw("]");
-        }
-        o.raw("]");
-        o.0
-    }
 }
