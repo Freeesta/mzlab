@@ -1,11 +1,12 @@
 """«Report a bug» (header button #bug-btn, bug-report.js): the icon is in Dati, Disegno and Teoria; Enter opens the dialog, Esc closes it and gives the focus back, Tab stays inside;
-the diagnostics hold NO name of a loaded file (a file with a recognisable name is loaded) nor of an error; «Copy report» fills the clipboard; «Open on GitHub» has the expected link (form bug.yml, label bug, <= 6000 characters).
+the diagnostics hold NO name of a loaded file (a file with a recognisable name is loaded) nor of an error; «Copy» fills the clipboard; «GitHub» has the expected link (form bug.yml, label bug, <= 6000 characters).
 Run from the repo root: python3 tests_e2e/e2e_bug_report.py"""
 import os, shutil, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from urllib.parse import urlparse, parse_qs
 steps = []
+def report(): return pg.evaluate("BUGREP.corpo()")
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:300]))
@@ -29,29 +30,39 @@ try:
             pg.evaluate("window.ERRORI && ERRORI.segnala(new Error('Cannot read %s.mzML and %s'), 'prova')" % (SECRET, SECRET))
             pg.locator("#bug-btn").focus(); pg.keyboard.press("Enter"); pg.wait_for_selector("#bugdlg:not([hidden])", timeout=10000)
             assert pg.evaluate("document.activeElement.id") == "bug-what" and pg.get_attribute("#bugdlg [role=dialog]", "aria-modal") == "true"
-            t = pg.input_value("#bug-prev")
+            assert pg.locator("#bug-prev").count() == 0 and pg.locator("#bugdlg textarea[readonly]").count() == 0, "no report text box"
+            assert not pg.is_visible("#bug-info"); pg.click("#bug-i"); assert pg.is_visible("#bug-info") and pg.get_attribute("#bug-i", "aria-expanded") == "true"
+            t = pg.inner_text("#bug-diagtxt")
             assert "- mzLab:" in t and "- Mode: web" in t and "- Loaded files: 1 (mzML" in t and "- Service worker:" in t and "Recent errors:" in t, t
             assert SECRET not in t and "ZZ" not in t, "no name of the loaded file in the report"
             assert "<file>" in t, "the error line is kept, without the name"
         step("Enter opens the dialog; the diagnostics hold no file name", opens)
         def fields():
             pg.fill("#bug-what", "Il grafico " + SECRET + " non si apre"); pg.fill("#bug-exp", "che si apra")
-            t = pg.input_value("#bug-prev"); assert "## Cosa è successo\n\nIl grafico" in t and "che si apra" in t
-            pg.uncheck("#bug-diag"); t = pg.input_value("#bug-prev"); assert "Diagnostica" not in t and "- mzLab:" not in t
-            pg.check("#bug-diag"); assert "- mzLab:" in pg.input_value("#bug-prev")
+            t = report(); assert "## Cosa è successo\n\nIl grafico" in t and "che si apra" in t
+            pg.uncheck("#bug-diag"); t = report(); assert "Diagnostica" not in t and "- mzLab:" not in t
+            pg.check("#bug-diag"); assert "- mzLab:" in report()
         step("fields and the diagnostics checkbox rebuild the text (the user's own words stay)", fields)
         def copy():
             pg.click("#bug-copy"); attendi(pg, "document.querySelector('#bug-st').textContent !== ''")
-            clip = pg.evaluate("navigator.clipboard.readText()"); assert clip == pg.input_value("#bug-prev") and "## Cosa è successo" in clip
+            clip = pg.evaluate("navigator.clipboard.readText()"); assert clip == report() and "## Cosa è successo" in clip
             assert pg.inner_text("#bug-st") == "Rapporto copiato"
         step("Copy report puts the whole text on the clipboard", copy)
         def link():
             a = pg.locator("#bug-go"); href = a.get_attribute("href"); u = urlparse(href); q = parse_qs(u.query)
             assert u.netloc == "github.com" and u.path == "/Freeesta/mzlab/issues/new" and q["template"] == ["bug.yml"] and q["labels"] == ["bug"], href
             assert q["title"][0].startswith("[Bug] Il grafico") and "che si apra" in q["cosa"][0] and len(href) <= 6000 and q["ambiente"][0].startswith("Mozilla/5.0")
-            assert a.get_attribute("target") == "_blank" and "noopener" in a.get_attribute("rel") and a.inner_text() == "Apri su GitHub"
+            assert a.get_attribute("target") == "_blank" and "noopener" in a.get_attribute("rel") and a.inner_text() == "GitHub"
             pg.fill("#bug-what", "x" * 20000); h = pg.get_attribute("#bug-go", "href"); assert len(h) <= 6000 and pg.inner_text("#bug-st"), "long text: the link is cut and the dialog says so"
             pg.fill("#bug-what", "")
+        def mail():
+            assert pg.evaluate("document.documentElement.outerHTML.includes('federico.cristaudo@unito.it')") is False, "the address is not written whole in the page"
+            pg.fill("#bug-what", "Il grafico non si apre")
+            m = pg.evaluate("BUGREP.mailUrl()"); u = urlparse(m["url"]); q = parse_qs(u.query)
+            assert u.scheme == "mailto" and u.path == "federico.cristaudo@unito.it" and q["subject"][0].startswith("[Bug] Il grafico") and "Il grafico non si apre" in q["body"][0], m
+            pg.fill("#bug-what", "x" * 20000); m = pg.evaluate("BUGREP.mailUrl()"); assert len(m["url"]) <= 1900 and m["troncato"]
+            assert pg.inner_text("#bug-mail") == "Invia per email"; pg.fill("#bug-what", "Il grafico " + SECRET + " non si apre")
+        step("Send by email: the address is joined at runtime, mailto with the report, cut at 1900 characters", mail)
         step("Open on GitHub: expected link, new tab, never more than 6000 characters", link)
         def keys():
             for _ in range(12): pg.keyboard.press("Tab")
@@ -63,15 +74,15 @@ try:
             for v in ("draw", "theory"):
                 pg.click(f"#nav button[data-v={v}]"); attendi(pg, f"document.querySelector('#nav button[data-v={v}]').classList.contains('on')")
                 assert pg.is_visible("#bug-btn"), v
-            pg.click("#bug-btn"); pg.wait_for_selector("#bugdlg:not([hidden])"); assert "theory" in pg.input_value("#bug-prev"); pg.keyboard.press("Escape")
+            pg.click("#bug-btn"); pg.wait_for_selector("#bugdlg:not([hidden])"); assert "theory" in report(); pg.keyboard.press("Escape")
             pg.click("#nav button[data-v=data]")
         step("the icon is there in Dati, Disegno and Teoria", other_views)
         def english():
             pg.evaluate("I18N.set('en')"); pg.wait_for_function("document.querySelector('#bug-btn') && document.querySelector('#bug-btn').getAttribute('aria-label') === 'Report a bug'", timeout=60000)
             assert pg.get_attribute("#bug-btn", "aria-label") == "Report a bug"
             pg.click("#bug-btn"); pg.wait_for_selector("#bugdlg:not([hidden])")
-            assert pg.inner_text("#bugdlg h2") == "Report a bug" and pg.inner_text("#bug-go") == "Open on GitHub" and pg.inner_text("#bug-copy") == "Copy report"
-            assert "## What happened" in pg.input_value("#bug-prev"); pg.keyboard.press("Escape"); pg.evaluate("I18N.set('it')"); pg.wait_for_function("document.querySelector('#bug-btn') && document.querySelector('#bug-btn').getAttribute('aria-label') === 'Segnala un bug'", timeout=60000)
+            assert pg.inner_text("#bugdlg h2") == "Report a bug" and pg.inner_text("#bug-go") == "GitHub" and pg.inner_text("#bug-copy") == "Copy" and pg.inner_text("#bug-mail") == "Send by email" and pg.get_attribute("#bug-i", "aria-label") == "What is included"
+            assert "## What happened" in report(); pg.keyboard.press("Escape"); pg.evaluate("I18N.set('it')"); pg.wait_for_function("document.querySelector('#bug-btn') && document.querySelector('#bug-btn').getAttribute('aria-label') === 'Segnala un bug'", timeout=60000)
         step("English", english)
         def narrow():
             pg.set_viewport_size({"width": 390, "height": 800}); attendi(pg, "innerWidth === 390")
