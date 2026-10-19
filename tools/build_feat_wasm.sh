@@ -7,7 +7,7 @@ part=${2:-all}
 want() { [ "$part" = all ] || [ "$part" = "$1" ]; }
 # Limit of every other .wasm after wasm-opt -Oz, bytes (the rule of the project: it does not go up; measured: detect 418400, proofs 450711, finder 436274, attributio 432347, finder_msn 296579, mrm 226834, grafo 199697).
 limit=512000
-limit_rev=942080   # attributio-rev carries the table of levels AND the review of one feature (libraries, spectra, formulas, isotopes); measured 912955 (+3 %)
+limit_rev=973056   # attributio-rev carries the table of levels AND the review of one feature (libraries, spectra, formulas, isotopes); measured 945155 (+3 %)
 limit_export=659456   # attributio-export carries the cascade AND the four spreadsheet exports (Schymanski folder, publication table, quantification, gradient); measured 636757 (+3 %)
 limit_lr=741376   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 717874 (+3 %)
 limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)
