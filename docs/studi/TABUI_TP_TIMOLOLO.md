@@ -1,6 +1,6 @@
 # Tabui: una feature table dei prodotti di trasformazione, dal grezzo alla struttura (serie del timololo)
 
-Studio dell'Architetto per Federico. Solo stato e proposte; nessun codice di prodotto. Prompt delle chat: `docs/studi/PROMPT_TABUI_TP_TIMOLOLO/`. Numeri veri (m/z, tempi, conteggi delle MS2, esiti): solo nel repository privato, `scratchpad/consegne/TABUI_TP_TIMOLOLO_DATI.md`, `scratchpad/timolol_truth.json` e `scratchpad/timolol_msn_truth.json`.
+Studio dell'Architetto per Federico. Solo stato e proposte; nessun codice di prodotto. Prompt delle chat: `docs/studi/PROMPT_TABUI_TP_TIMOLOLO/`. Numeri veri (m/z, tempi, conteggi delle MS2, esiti): solo nel repository privato, `coordinamento/consegne/TABUI_TP_TIMOLOLO_DATI.md`, `scratchpad/timolol_truth.json` e `scratchpad/timolol_msn_truth.json`.
 
 ## 0. Verdetto
 - **Una sola tabella**: la feature table della Pipeline (T3 di `TABUI_FEATURE_TABLE.md`: rilevamento alla mzmine 4.10 in Rust → `.mzfeat` → `tp/1` → `TPTAB` + riga espansa `TPRIGA`). Lo Scavo HR (T2, `legacy/`) non diventa la tabella: i suoi pezzi migliori (albero MSn del genitore, libreria dei frammenti, `localize`, `similarity`) si riusano come librerie dentro un passo nuovo.
@@ -29,13 +29,13 @@ Studio dell'Architetto per Federico. Solo stato e proposte; nessun codice di pro
 ## 2. Il materiale più grezzo
 | Materiale | Dove | Cosa dà che l'elaborato non dà | Stato |
 |---|---|---|---|
-| 13 mzML della serie (buio, t0…t120) | privato `HRMS/Timolol/` e Mac | MS1 a centroidi, DDA HCD con precursore, finestra di isolamento, CE nel filtro, intensità del precursore | c'è; DDA verificata in un file (privato, `TABUI_TP_TIMOLOLO_DATI.md`) |
+| 13 mzML della serie (buio, t0…t120) | privato `dati/HRMS/Timolol/` e Mac | MS1 a centroidi, DDA HCD con precursore, finestra di isolamento, CE nel filtro, intensità del precursore | c'è; DDA verificata in un file (privato, `TABUI_TP_TIMOLOLO_DATI.md`) |
 | `.raw` della serie | non nel privato né sul Mac | stepped NCE per passo, esclusione dinamica, lock mass, AGC e tempo di iniezione, profilo (se acquisito), metodo strumentale | **da chiedere** |
 | mzML dell'infusione MSn del genitore | privato | albero dei cammini MSn (CID in trappola), formule esatte dei frammenti | c'è; verità dell'albero in `timolol_msn_truth.json` |
 | `.raw` dell'infusione | da chiedere | energia e attivazione per passo senza dubbi di conversione | da chiedere |
 | Bianco di solvente | non c'è | contaminanti, carry-over | **da chiedere** |
 | Tune e calibrazione del giorno | da chiedere | errore di massa atteso | facoltativo |
-| Manoscritto (ET&I) e SI | privato `HRMS/Timolol/` | TP, frammenti, regioni: verità dell'autore | c'è; in `timolol_truth.json` |
+| Manoscritto (ET&I) e SI | privato `dati/HRMS/Timolol/` | TP, frammenti, regioni: verità dell'autore | c'è; in `timolol_truth.json` |
 | Letteratura indipendente | §8 | TP e frammenti pubblicati da altri | da estrarre (chat locale) |
 | Oro di mzmine 4.10 | da generare sul Mac | confronto del rilevamento, non verità | da fare (chat locale) |
 
@@ -169,7 +169,7 @@ Testa della riga chiusa: la colonna «Identity» mostra «+O (ring A?)» quando 
 
 **Criteri di accettazione** (i numeri attesi stanno nel privato): almeno l'80 % dei TP di `timolol_truth.json` con RT osservato nella vista; nessun ISF noto accettato come TP senza la nota; per i casi `loc_test` la regione giusta in `site` o `region` (come `timolol_msn_truth.json` `localization.cases`, `min_correct`), nessun `site` sbagliato; i casi ambigui (`ambiguous_ids`) mai `site`; isomeri della componente tripla separati o `isomers_not_separated`; concordanza delle righe con mzmine misurata e scritta in `misure.md`.
 
-**In CI (dati sintetici)**: serie sintetica di `tools/dati_sintetici.py` estesa con un genitore che ha un sito unico noto e un isomero di posizione, un'infusione MSn sintetica (`finder_msn_e2e.json` esiste) e MS2 DDA chimeriche; test `cargo test -p mzlab-feat --test interp*` (parità con un riferimento Python in `tools/interp_riferimento.py` che usa RDKit per i siti, se installato, altrimenti salta solo quella parte); e2e `e2e_tabui_struttura.py` (scheda Structure, disegno, tastiera, axe). **Con i dati veri** (salto senza `MZLAB_DATI`): `tests/interp_dati.rs` legge le due verità del privato; `tools/valida/tp_timololo.py` scrive le metriche nel privato (`scratchpad/consegne/`).
+**In CI (dati sintetici)**: serie sintetica di `tools/dati_sintetici.py` estesa con un genitore che ha un sito unico noto e un isomero di posizione, un'infusione MSn sintetica (`finder_msn_e2e.json` esiste) e MS2 DDA chimeriche; test `cargo test -p mzlab-feat --test interp*` (parità con un riferimento Python in `tools/interp_riferimento.py` che usa RDKit per i siti, se installato, altrimenti salta solo quella parte); e2e `e2e_tabui_struttura.py` (scheda Structure, disegno, tastiera, axe). **Con i dati veri** (salto senza `MZLAB_DATI`): `tests/interp_dati.rs` legge le due verità del privato; `tools/valida/tp_timololo.py` scrive le metriche nel privato (`coordinamento/consegne/`).
 
 ## 11. Mappa del codice
 **Da toccare** (righe da ricontrollare con `grep -n` al momento):
