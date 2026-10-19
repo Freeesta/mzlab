@@ -34,19 +34,24 @@ def sample(pg, cdp_pid):
 def one(r, p, spec, tmp):
     f = make(tmp, spec)
     size_gb = f.stat().st_size / 1e9
-    b = p.chromium.launch()
-    ctx = b.new_context(viewport={"width": 1400, "height": 900}, reduced_motion="reduce", locale="it-IT")
+    # a persistent profile (on disk, like a student's browser): the OPFS of a plain context lives in memory and refuses a file of this size
+    prof = tmp / "profilo"
+    ctx = p.chromium.launch_persistent_context(str(prof), viewport={"width": 1400, "height": 900}, reduced_motion="reduce", locale="it-IT")
     ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
     ctx.add_init_script(INIT)
-    pg = ctx.new_page(); errs = []
+    pg = ctx.pages[0] if ctx.pages else ctx.new_page(); errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)[:200]))
     pg.goto(f"http://127.0.0.1:{r.port}/?perf=1"); attendi(pg, "window.qqReady === true"); ready(pg)
     root = browser_pid()
     peak_r, peak_w, how = 0.0, [], "loaded"
     pg.set_input_files("#pick", [str(f)])
-    pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=600000)
-    pg.click("#opbtn")
-    for _ in range(4000):
+    # the file row, or the error block of the start screen (the engine can die while it reads the file)
+    pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1 || document.querySelector('.diag')", timeout=600000)
+    if pg.evaluate("!!document.querySelector('.diag')"):
+        how = "error: " + pg.evaluate("document.body.innerText").split("Dettagli")[0][-200:].replace("\n", " ").strip()
+    else:
+        pg.click("#opbtn")
+    for _ in range(4000 if how == "loaded" else 0):
         rend, wasm = sample(pg, root)
         peak_r = max(peak_r, rend)
         if sum(m for _, m in wasm) > sum(m for _, m in peak_w): peak_w = wasm
@@ -55,12 +60,12 @@ def one(r, p, spec, tmp):
         if bad.strip(): how = "error: " + bad.strip().replace("\n", " ")[:160]; break
         pg.wait_for_timeout(1500)
     else:
-        how = "not finished"
+        if how == "loaded": how = "not finished"
     st = pg.evaluate("navigator.storage.estimate().then(s => s.usage / 1048576)")
     miss = pg.evaluate("(window.MZLAB_LR_MISS || []).length")
     row = {"file_gb": round(size_gb, 2), "renderer_pss_peak_mb": round(peak_r, 1), "wasm_peak": peak_w, "wasm_peak_sum_mb": round(sum(m for _, m in peak_w), 1),
            "opfs_mb": round(st, 0), "result": how, "page_errors": errs[:3], "lr_miss": miss}
-    b.close(); f.unlink(missing_ok=True)
+    ctx.close(); f.unlink(missing_ok=True)
     return row
 
 
