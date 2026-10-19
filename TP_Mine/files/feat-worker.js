@@ -472,7 +472,7 @@ function describe(e) {
 }
 // the Banco 2b (`.wasm` `attributio_rev`): the review of one feature, and the decisions file after a decision
 Object.assign(OPS, {
-  attributio_review: m => viaFiles(m, (read, write) => mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, write)),
+  attributio_review: m => viaFiles(m, (read, write) => mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, m.classes || "", write)),
   attributio_export: m => viaFiles(m, (read, write) => mods[m.which].export_to(read, m.names, m.kind, write)),
   async attributio_decision(m) {
     const out = memSink(), rd = new FileReaderSync();
