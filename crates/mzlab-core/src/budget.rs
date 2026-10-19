@@ -90,12 +90,16 @@ impl MemBudget {
     }
 }
 
-/// `error.memoryBudget` with `{fase, stima_mb, budget_mb}`.
+/// `error.memoryBudget` with `{fase, stima_mb, budget_mb, eccesso_mb}` (the excess is what the phase asks above the budget, at least 1).
 pub fn refusal(phase: &'static str, estimate: usize, cap: usize) -> Error {
     Error::memory_budget()
         .with("fase", phase)
         .with("stima_mb", estimate.div_ceil(MB))
         .with("budget_mb", cap / MB)
+        .with(
+            "eccesso_mb",
+            estimate.saturating_sub(cap).div_ceil(MB).max(1),
+        )
 }
 
 /// An empty `Vec` with room for `n` items, or the memory error (never a trap).

@@ -24,7 +24,7 @@ def nodo(js: str):
     ("copy", "QuotaExceededError: The quota has been exceeded", "quota"),
     ("copy", "NotReadableError: The requested file could not be read", "read"),
     ("index", '{"error_key":"error.memoryBudget"}', "memory"),
-    ("index", "RuntimeError: unreachable", "memory"),
+    ("index", "RuntimeError: unreachable", "engine"),
     ("index", "xml: unexpected end of file at offset 1234", "format"),
     ("decode", "zlib: invalid stored block lengths in scan 55", "decode"),
     ("open", "something odd", "unknown"),
