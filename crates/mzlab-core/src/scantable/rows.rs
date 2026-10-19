@@ -170,6 +170,12 @@ impl Rows {
         }
     }
 
+    /// Room for `n` more rows in one allocation: a vector that doubles holds the old and the new buffer together while it grows, which at a million
+    /// scans is the peak of the whole load.
+    pub(crate) fn reserve(&mut self, n: usize) {
+        self.rows.reserve_exact(n);
+    }
+
     /// Level and polarity of the row added last: what the `.mzidx` builder groups the scan by (the text of an extra can say more than the scan does).
     pub(crate) fn ultima(&self) -> Option<(u8, i8)> {
         self.rows.last().map(|r| (r.level, r.polarity))

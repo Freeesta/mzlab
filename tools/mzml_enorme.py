@@ -1,11 +1,11 @@
 """A synthetic DDA mzML of any size (GB) or any number of scans, written as a stream, to measure the memory of the loading without laboratory data.
 
-    python3 tools/mzml_enorme.py OUT.mzML --gb 4 [--ms2 10] [--peaks1 1500] [--peaks2 150] [--indexed] [--seed 7]
-    python3 tools/mzml_enorme.py OUT.mzML --scans 1200000 --peaks1 40 --peaks2 25 --indexed
+    python3 tools/mzml_enorme.py OUT.mzML --gb 4 [--ms2 10] [--peaks1 1500] [--peaks2 150] [--no-index] [--seed 7]
+    python3 tools/mzml_enorme.py OUT.mzML --scans 1200000 --peaks1 40 --peaks2 25
 
 One MS1 survey scan is followed by `--ms2` MS2 scans (data dependent). The size comes from `--gb` (the number of scans is computed from the average
 size of a cycle, so the header count is right) or from `--scans`. Nothing but a buffer is held in memory: the arrays come from a small pool of
-variants encoded once, only the header (scan number, RT, precursor) changes. `--indexed` wraps the file as an indexed-mzML (offset list and SHA-1).
+variants encoded once, only the header (scan number, RT, precursor) changes. Indexed-mzML (offset list and SHA-1) is the default, `--no-index` writes a plain mzML.
 """
 import argparse
 import base64
@@ -91,7 +91,8 @@ def main():
     ap.add_argument("--peaks1", type=int, default=1500)
     ap.add_argument("--peaks2", type=int, default=150)
     ap.add_argument("--variants", type=int, default=16)
-    ap.add_argument("--indexed", action="store_true")
+    ap.add_argument("--no-index", dest="indexed", action="store_false", help="a plain mzML (an indexed-mzML is the default, as msconvert writes it)")
+    ap.add_argument("--indexed", dest="indexed", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("--seed", type=int, default=7)
     a = ap.parse_args()
     if (a.gb is None) == (a.scans is None):

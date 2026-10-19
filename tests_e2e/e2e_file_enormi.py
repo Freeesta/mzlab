@@ -13,7 +13,7 @@ from e2e_memoria_misure import INIT, pss, procs, browser_pid
 
 def make(tmp, spec):
     out = tmp / "enorme.mzML"
-    args = ["--scans", "1200000", "--peaks1", "40", "--peaks2", "25", "--indexed"] if spec == "m" else ["--gb", spec]
+    args = ["--scans", "1200000", "--peaks1", "40", "--peaks2", "25"]  if spec == "m" else ["--gb", spec]
     subprocess.run([sys.executable, str(ROOT / "tools" / "mzml_enorme.py"), str(out), *args], check=True)
     return out
 
