@@ -20,6 +20,7 @@ pub mod gradient_pick;
 pub mod identity;
 pub mod io;
 pub mod members;
+pub mod ms2_engine;
 pub mod names;
 pub mod pattern;
 pub mod quantify;
@@ -29,6 +30,7 @@ pub mod sorbents;
 pub mod sources;
 pub mod table;
 pub mod toml;
+pub mod tox;
 pub mod untid;
 
 pub use campaign::{Campaign, Env, POLARITIES};

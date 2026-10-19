@@ -120,7 +120,7 @@ fn key_of(chiave: &[(f64, String, f64)]) -> Key {
 }
 
 /// m/z of the singly charged cation with these counts.
-fn ion_mass(v: &[i64], els: &[&str]) -> f64 {
+pub(crate) fn ion_mass(v: &[i64], els: &[&str]) -> f64 {
     v.iter()
         .zip(els)
         .map(|(n, e)| *n as f64 * mass_of(e).unwrap_or(f64::NAN))
