@@ -15,3 +15,7 @@
 ## Gruppi della tabella e riepilogo
 - La tabella di carico raggruppa prima per strumento (`loadGrp` in `shell.js`: bassa risoluzione, poi alta risoluzione `f.hr`, campo di `sniff.rs`), poi per esperimento; un file con più parti (Full Scan + DDA/IDA) ha un gruppo suo, mai quello dell'MS2 puro. Test: `e2e_carico_gruppi`.
 - Il riquadro sotto la tabella (`CONVROWS.summary()`) elenca solo errori, annullati e file con scansioni mancanti; se è andato tutto bene non compare.
+
+## Bassa e alta risoluzione insieme
+- Se la tabella di carico contiene file LR e HR (`f.hr`, dal motore), `#hrmix` (`hrMixNote()` in `shell.js`) mostra una nota con stato (non un errore) e due scelte, «Solo LR (n)» / «Solo HR (n)» (`aria-pressed` sul mondo attivo): `hrMixPick()` spunta un mondo e toglie la spunta all'altro, i file non scelti restano in elenco per un secondo caricamento.
+- All'arrivo di file nuovi `hrMixPreselect()` sceglie il mondo più numeroso (a parità, LR); se l'utente rispunta entrambi i mondi, «Carica dati» resta disabilitato (`checkGo()`) finché non ne sceglie uno. L'errore `err.hr.mix` del motore resta come rete di sicurezza (file già aperti dell'altro mondo). Prova: `e2e_carico_lrhr`.
