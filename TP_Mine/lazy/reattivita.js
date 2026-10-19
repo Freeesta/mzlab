@@ -9,7 +9,7 @@
   const esc = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"]/g, c => /** @type {any} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const admin = () => typeof G.uipAdminOn === "function" && G.uipAdminOn();
   /** @typedef {{ i: number, el: string, heavy_index: number|null, x: number, y: number, z: number, q: number|null, f_plus: number, f_zero: number|null, f_minus: number, dual: number, homo?: number, lumo?: number }} RAtom */
-  /** @typedef {{ format: string, version: number, engine?: string, method?: string, solvent?: string, smiles: string, atoms: RAtom[], bonds?: {a:number,b:number,order?:number}[], hbonds?: {donor_h:number,acceptor:number}[], global?: Record<string, number|null>, conformers?: {n?:number, chosen?:number, f_minus_spread?:number|null}, scc?: {converged?: boolean|boolean[], iterations?: number|number[]}, protomer?: {ph: number, smiles: string, charge: number, changes: {group: string, heavy_index: number, action: string, pka: number}[], note?: string}, notes?: string[], cite?: any[], ch_sites?: {class:string, heavy_index:number, n_h:number, f_minus:number}[] }} Reatt */
+  /** @typedef {{ format: string, version: number, engine?: string, method?: string, solvent?: string, smiles: string, atoms: RAtom[], bonds?: {a:number,b:number,order?:number}[], hbonds?: {donor_h:number,acceptor:number}[], global?: Record<string, number|null>, conformers?: {n?:number, chosen?:number, f_minus_spread?:number|null}, scc?: {converged?: boolean|boolean[], iterations?: number|number[]}, protomer?: {ph: number, smiles: string, charge: number, changes: {group: string, heavy_index: number, action: string, pka: number}[], note?: string}, notes?: string[], cite?: any[], ch_sites?: {class:string, heavy_index:number, n_h:number, f_minus:number, radical_kcal?:number, score?:number, score_f_minus?:number, score_radical?:number}[] }} Reatt */
 
   const CARDS = /** @type {{ id: string, label: string, key: keyof RAtom }[]} */ ([
     { id: "fminus", label: "f(−)", key: "f_minus" }, { id: "fzero", label: "f(0)", key: "f_zero" }, { id: "fplus", label: "f(+)", key: "f_plus" }]);
@@ -156,8 +156,12 @@
   /** @param {Reatt} r @returns {string} the sites C–H by class of symmetry, when the `reatt/1` carries them */
   function sitesHtml(r) {
     if (!r.ch_sites || !r.ch_sites.length) return "";
-    return `<h4>C–H sites by class of symmetry</h4><table class="tpr-t" aria-label="C–H sites by class of symmetry"><thead><tr><th scope="col">Class</th><th scope="col">Heavy atom</th><th scope="col">H</th><th scope="col">Prev. f(−)</th></tr></thead><tbody>`
-      + r.ch_sites.map(s => `<tr><td>${esc(s.class)}</td><td>${s.heavy_index + 1}</td><td>${s.n_h}</td><td>${num(s.f_minus)}</td></tr>`).join("") + `</tbody></table>`;
+    const both = r.ch_sites.some(s => s.score != null);
+    const th = (/** @type {string} */ t) => `<th scope="col">${t}</th>`;
+    const head = th("Class") + th("Heavy atom") + th("H") + th("Prev. f(−)") + (both ? th("Radical ΔE (kcal/mol)") + th("Score") + th("f(−) part") + th("Radical part") : "");
+    const cells = (/** @type {any} */ s) => both ? `<td>${num(s.radical_kcal)}</td><td>${num(s.score)}</td><td>${num(s.score_f_minus)}</td><td>${num(s.score_radical)}</td>` : "";
+    return `<h4>C–H sites by class of symmetry</h4><table class="tpr-t" aria-label="C–H sites by class of symmetry"><thead><tr>${head}</tr></thead><tbody>`
+      + r.ch_sites.map(s => `<tr><td>${esc(s.class)}</td><td>${s.heavy_index + 1}</td><td>${s.n_h}</td><td>${num(s.f_minus)}</td>${cells(s)}</tr>`).join("") + `</tbody></table>`;
   }
 
   /** @param {HTMLElement} host @param {Reatt} r the `reatt/1` @returns {boolean} true when the panel was drawn */

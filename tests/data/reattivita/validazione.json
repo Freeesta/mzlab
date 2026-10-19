@@ -1032,5 +1032,63 @@
    "n_atom": 5,
    "n_ch": 2
   }
+ },
+ "baseline_bde": {
+  "O3/literatura": {
+   "atom": [
+    0,
+    0,
+    0
+   ],
+   "ch": [
+    1,
+    1,
+    1
+   ],
+   "n_atom": 4,
+   "n_ch": 1
+  },
+  "OH/bozza": {
+   "atom": [
+    1,
+    6,
+    8
+   ],
+   "ch": [
+    8,
+    9,
+    9
+   ],
+   "n_atom": 9,
+   "n_ch": 9
+  },
+  "OH/literatura": {
+   "atom": [
+    0,
+    4,
+    9
+   ],
+   "ch": [
+    10,
+    15,
+    18
+   ],
+   "n_atom": 39,
+   "n_ch": 20
+  },
+  "metabolism/literatura": {
+   "atom": [
+    0,
+    0,
+    1
+   ],
+   "ch": [
+    1,
+    1,
+    1
+   ],
+   "n_atom": 5,
+   "n_ch": 2
+  }
  }
 }
