@@ -5,26 +5,11 @@
 
 use std::fs::File;
 use std::io::BufReader;
-use std::path::PathBuf;
 
 use mzlab_core::{mzml, raw};
 
-fn dati() -> Option<PathBuf> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    let here = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    for up in here.ancestors().skip(1).take(3) {
-        cands.push(up.join("mzlab-dati"));
-        cands.push(
-            up.parent()
-                .map(|p| p.join("mzlab-dati"))
-                .unwrap_or_default(),
-        );
-    }
-    cands.into_iter().find(|p| p.join("HRMS").is_dir())
-}
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 fn scan_of(id: &str) -> Option<u32> {
     id.split("scan=")
@@ -37,11 +22,11 @@ fn scan_of(id: &str) -> Option<u32> {
 
 #[test]
 fn raw_matches_msconvert_mzml() {
-    let Some(d) = dati() else {
+    let Some(d) = dati_percorsi::percorso("dati/HRMS") else {
         eprintln!("skipped: no data repository (MZLAB_DATI)");
         return;
     };
-    let Some(rawp) = std::fs::read_dir(d.join("HRMS"))
+    let Some(rawp) = std::fs::read_dir(&d)
         .into_iter()
         .flatten()
         .flatten()
@@ -113,12 +98,12 @@ fn not_a_raw_file_is_an_error_with_a_key() {
 
 #[test]
 fn the_instrument_method_text_of_a_raw_is_text() {
-    let Some(d) = dati() else {
+    let Some(d) = dati_percorsi::percorso("dati/HRMS") else {
         eprintln!("skipped: no data repository (MZLAB_DATI)");
         return;
     };
     for sub in ["Esempio raw e mzML", "Profile raw"] {
-        let Some(rawp) = std::fs::read_dir(d.join("HRMS").join(sub))
+        let Some(rawp) = std::fs::read_dir(d.join(sub))
             .into_iter()
             .flatten()
             .flatten()

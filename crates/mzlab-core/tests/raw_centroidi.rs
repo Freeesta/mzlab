@@ -10,11 +10,13 @@ use std::path::PathBuf;
 use opentfraw::mzml::extract_spectrum;
 use opentfraw::ScanMode;
 
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
+
 fn raws() -> Vec<PathBuf> {
-    let Some(root) = std::env::var_os("MZLAB_DATI") else {
+    let Some(dir) = dati_percorsi::percorso("dati/formati") else {
         return Vec::new();
     };
-    let dir = PathBuf::from(root).join("dati_formati");
     let Ok(rd) = std::fs::read_dir(dir) else {
         return Vec::new();
     };
@@ -32,7 +34,7 @@ fn raws() -> Vec<PathBuf> {
 fn centroid_lists_are_not_marked_as_profile() {
     let files = raws();
     if files.is_empty() {
-        eprintln!("SKIP raw_centroidi: no MZLAB_DATI/dati_formati/*.raw");
+        eprintln!("SKIP raw_centroidi: no MZLAB_DATI/dati/formati/*.raw");
         return;
     }
     for path in files {

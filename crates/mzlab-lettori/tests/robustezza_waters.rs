@@ -4,7 +4,8 @@
 mod comune_waters;
 use comune_waters::*;
 use mzlab_core::lettori::{Limiti, Membro};
-use std::path::PathBuf;
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 fn tutto(file: Vec<(String, Vec<u8>)>) {
     let Ok(mut l) = mzlab_lettori::apri_nudo(insieme(file), &Limiti::sito()) else {
@@ -29,21 +30,10 @@ fn tutto(file: Vec<(String, Vec<u8>)>) {
 }
 
 fn reale() -> Option<Vec<(String, Vec<u8>)>> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    for up in std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .skip(1)
-        .take(3)
-    {
-        cands.push(up.join("mzlab-dati"));
-    }
-    let d = cands
-        .into_iter()
-        .map(|p| p.join("dati_formati/waters_raw/xevo_g2s_MTBLS1198/MTBLS1198_20190321_MS.raw"))
-        .find(|p| p.is_dir())?;
+    let d = dati_percorsi::percorso(
+        "dati/formati/waters/raw/xevo_g2s_MTBLS1198/MTBLS1198_20190321_MS.raw",
+    )
+    .filter(|p| p.is_dir())?;
     let mut out = Vec::new();
     for e in std::fs::read_dir(d).ok()? {
         let p = e.ok()?.path();

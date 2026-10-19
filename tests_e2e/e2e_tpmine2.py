@@ -1,12 +1,13 @@
 """mzFinder (internal name TP Mine) (b)+(c): the engine in Pyodide and the mzFinder tab. Synthetic LR demo + the real B_ series if the mzML are there.
-Run from the repo root: python3 tests_e2e/e2e_tpmine2.py   (env: TPMINE_SRC, QQQ_MZML)"""
+Run from the repo root: python3 tests_e2e/e2e_tpmine2.py   (env: TPMINE_SRC, MZLAB_MZML)"""
 import os, shutil, subprocess, sys, time, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
 SRC = Path(os.environ.get("TPMINE_SRC", ROOT / "TP_Mine"))
-MZ = Path(os.environ.get("QQQ_MZML", ROOT.parent / "Data" / "mzML"))
+from dati_percorsi import percorso
+MZ = Path(os.environ.get("MZLAB_MZML") or os.environ.get("QQQ_MZML") or percorso("dati/3200 qtrap/mzML") or ROOT.parent / "Data" / "mzML")
 from lib import free_port; PORT = free_port()
 steps = []
 def step(name, fn):

@@ -4,27 +4,12 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 use std::collections::BTreeSet;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use mzlab_core::agilent::{AgilentD, Files};
 
-fn dati() -> Option<PathBuf> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .canonicalize()
-        .ok()?;
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    cands.extend(
-        root.ancestors()
-            .skip(1)
-            .take(3)
-            .map(|up| up.join("mzlab-dati")),
-    );
-    cands.into_iter().find(|p| p.join("GC-MS/mzML").is_dir())
-}
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 /// msconvert writes things we leave out on purpose: the title of the spectrum (a text made of the file name), the instrument as a direct inlet (wrong for a GC),
 /// the data processing, the software of the maker with the wrong version, the file-level indexing and the one SIC chromatogram per ion (derived data).
@@ -106,12 +91,12 @@ fn ours(folder: &Path) -> String {
 
 #[test]
 fn every_cv_of_msconvert_is_in_our_mzml() {
-    let Some(d) = dati() else {
+    let Some(gc) = dati_percorsi::percorso("dati/GC-MS").filter(|g| g.join("mzML").is_dir()) else {
         eprintln!("SKIP agilent_cv: no data repository (MZLAB_DATI)");
         return;
     };
     let mut missing = Vec::new();
-    for e in std::fs::read_dir(d.join("GC-MS")).unwrap().flatten() {
+    for e in std::fs::read_dir(&gc).unwrap().flatten() {
         let folder = e.path();
         let Some(stem) = folder
             .file_name()
@@ -121,7 +106,7 @@ fn every_cv_of_msconvert_is_in_our_mzml() {
         else {
             continue;
         };
-        let Ok(theirs) = std::fs::read_to_string(d.join("GC-MS/mzML").join(format!("{stem}.mzML")))
+        let Ok(theirs) = std::fs::read_to_string(gc.join("mzML").join(format!("{stem}.mzML")))
         else {
             continue;
         };

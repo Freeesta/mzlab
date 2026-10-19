@@ -50,10 +50,21 @@
   const mzOf = (a, M) => (a.k * M + a.shift) / Math.abs(a.z);
   const fmtAd = n => H(n).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>").replace(/(\d?[+-])$/, "<sup>$1</sup>");
   const sgn = x => (x >= 0 ? "+" : "&minus;");
-  // the less common adducts stay folded until the student opens them
-  const AD_MORE = { 1: false, "-1": false };
+  // The world of the loaded files picks the view of the Adducts and Neutral losses panels: unit resolution (LR) = rounded to the unit, few columns;
+  // high resolution (an Orbitrap / Q-TOF file is loaded) = four decimals and more details. No file open = the detailed view.
+  const hrOn = () => {
+    if (!(window.HR && typeof E !== "undefined")) return true;
+    const fs = E.files.filter(f => !f.gone);
+    return !fs.length || fs.some(f => HR.isHr(f, 1) || HR.isHr(f, 2));
+  };
+  // the world of the loaded data, shared with the lists panel: true = HR (or no data), false = low resolution
+  window.TBL_HR = hrOn;
+  const NL_CHEV = '<svg class="nlch" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6l3 3 3-3"/></svg>';
+  // the less common adducts stay folded until the student opens them (one fold for the shown polarity)
+  const AD = { pol: 1, more: false, open: new Set() };
+  const adPolStart = () => { AD.pol = typeof E !== "undefined" && E.files.some(f => f.polarity === "negative") && !E.files.some(f => f.polarity === "positive") ? -1 : 1; };
 
-  // Differences between adducts, to recognise pairs of peaks of the same compound (Huang et al. 1999). Only the essential pairs: references, never labels on the user's spectrum
+  // Differences between adducts, to recognise pairs of peaks of the same compound. Only the essential pairs: references, never labels on the user's spectrum
   function calcAdductDiffs() {
     const shift = n => { const a = ADD.find(x => x.n === n); return a ? a.shift : 0; };
     return [
@@ -67,49 +78,67 @@
   }
   window.QADD_DIFFS = calcAdductDiffs();
 
+  // The one source of the displayed values: shifts and m/z rounded to the unit in LR, four decimals in HR. M = neutral mass typed by the student (or null).
   const fmtSh = x => sgn(x) + Math.abs(x).toFixed(4);
+  const fmtShLr = x => { const r = Math.round(x); return r === 0 ? "0" : sgn(r) + Math.abs(r); };
+  function adductView(hr, M) {
+    return ADD.map(a => {
+      const div = Math.abs(a.z) > 1 ? " &divide;" + Math.abs(a.z) : "";
+      return { n: a.n, pol: Math.sign(a.z), common: !!a.exp, note: a.note,
+        shift: (a.k > 1 ? a.k + "M " : "") + (hr ? fmtSh(a.shift) : fmtShLr(a.shift)) + div,
+        mz: M == null ? "" : hr ? mzOf(a, M).toFixed(4) : String(Math.round(mzOf(a, M))) };
+    });
+  }
+  window.QADD_VIEW = adductView;
   function diffsHtml() {
     const rows = calcAdductDiffs().map(d => `<tr><th scope="row" class="num">${fmtSh(d.d)}</th><td>${d.pair}</td><td class="muted">${d.p > 0 ? "ESI+" : "ESI&minus;"}</td></tr>`).join("");
-    return `<div class="ad-diffs"><h4>${I18N.t("tbl.diff.title")}</h4>
+    return `<details class="ad-diffs"><summary>${I18N.t("tbl.diff.title")}</summary>
       <div class="muted sm">${I18N.t("tbl.diff.intro")}</div>
-      <table class="adt"><tbody>${rows}</tbody></table>
-      <div class="muted ad-src">${I18N.t("tbl.diff.src")} <a href="static/teoria/06-esi.html#addotti-differenze" target="_blank" rel="noopener" aria-label="${I18N.t("tbl.diff.full.aria")}">${I18N.t("tbl.diff.full")}</a></div></div>`;
+      <table class="adt"><tbody>${rows}</tbody></table></details>`;
   }
 
-  // One table: a thin group header per polarity; every adduct = one data row + one note row (colspan) under it
+  // One list for the shown polarity: a row per adduct (name | shift | m/z of the typed mass), the row is the button that opens its one-line note
   function adducts(M) {
+    const hr = hrOn(), l = adductView(hr, M).filter(a => a.pol === AD.pol);
     const row = a => {
-      const sh = (a.k > 1 ? a.k + "M " : "") + fmtSh(a.shift) + (Math.abs(a.z) > 1 ? " &divide;" + Math.abs(a.z) : "");
-      return `<tr class="adr${a.exp ? " exp" : ""}"><th scope="row">${fmtAd(a.n)}</th><td class="num">${sh}</td><td class="num">${M != null ? mzOf(a, M).toFixed(4) : ""}</td></tr><tr class="adn${a.exp ? " exp" : ""}"><td colspan="3">${I18N.t(a.note)}</td></tr>`;
+      const open = AD.open.has(a.n);
+      return `<div class="ar${a.common ? " exp" : ""}" data-n="${H(a.n)}"><button type="button" class="arow" aria-expanded="${open}" aria-controls="adn-${ADD.findIndex(x => x.n === a.n)}"><span class="arn">${fmtAd(a.n)}</span><span class="ars">${a.shift}</span>${a.mz ? `<span class="arm"><i>m/z</i> ${a.mz}</span>` : ""}${NL_CHEV}</button><div class="adnote" id="adn-${ADD.findIndex(x => x.n === a.n)}"${open ? "" : " hidden"}>${I18N.t(a.note)}</div></div>`;
     };
-    const group = pol => { const l = ADD.filter(a => Math.sign(a.z) === pol);
-      const open = AD_MORE[pol];
-      return `<tbody><tr class="adh"><th scope="colgroup" colspan="3">${pol > 0 ? "ESI+" : "ESI&minus;"} &middot; ${I18N.t(pol > 0 ? "tbl.add.esiPos" : "tbl.add.esiNeg")}</th></tr>`
-        + l.filter(a => a.exp).map(row).join("")
-        + `<tr class="admore" data-pol="${pol}"><td colspan="3"><button type="button" class="adtog" aria-expanded="${open ? "true" : "false"}">${open ? "&#9662;" : "&#9656;"} ${I18N.t("tbl.add.more")}</button></td></tr>`
-        + (open ? l.filter(a => !a.exp).map(row).join("") : "") + `</tbody>`; };
-    const head = `<thead><tr><th scope="col">${I18N.t("tbl.add.col.adduct")}</th><th scope="col" class="num">${I18N.t("tbl.add.col.shift")}</th><th scope="col" class="num">${I18N.t("tbl.add.col.exact")}</th></tr></thead>`;
-    // the polarity of the loaded files first
-    const neg = typeof E !== "undefined" && E.files.some(f => f.polarity === "negative") && !E.files.some(f => f.polarity === "positive");
-    return `<table class="adt">${head}${neg ? group(-1) + group(1) : group(1) + group(-1)}</table>` + diffsHtml();
+    return l.filter(a => a.common).map(row).join("")
+      + `<div class="admore"><button type="button" class="adtog" aria-expanded="${AD.more}">${I18N.t("tbl.add.more")}</button></div>`
+      + (AD.more ? l.filter(a => !a.common).map(row).join("") : "")
+      + (hr ? diffsHtml() : "");
   }
   function adductTab() {
-    return `<div class="adbar" style="margin-bottom:8px"><div class="sb-search-box"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input id="ad-in" placeholder="${I18N.t("tbl.add.placeholder")}" autocomplete="off"></div><div id="ad-msg" class="muted sm" style="margin-top:4px"></div></div>
+    adPolStart();
+    return `<div class="adbar"><div class="sb-search-box"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input id="ad-in" placeholder="${I18N.t("tbl.add.placeholder")}" autocomplete="off"></div>
+      <span class="seg" id="ad-pol"><button type="button" data-p="1" class="${AD.pol > 0 ? "on" : ""}">ESI+</button><button type="button" data-p="-1" class="${AD.pol < 0 ? "on" : ""}">ESI&minus;</button></span></div>
+      <div id="ad-msg" class="muted sm"></div><div class="nlhint muted" id="ad-hint">ⓘ ${I18N.t("tbl.add.hint")}</div>
       <div id="ad-tbl">${adducts(null)}</div>`;
   }
   function bindAdducts(root) {
     const inp = root.querySelector("#ad-in"), msg = root.querySelector("#ad-msg"), tb = root.querySelector("#ad-tbl");
-    // the table is rebuilt at every keystroke: the open / folded state lives in AD_MORE
+    // the list is rebuilt at every keystroke: the open / folded state lives in AD
     let lastM = null;
     const redo = () => { tb.innerHTML = adducts(lastM); };
-    tb.onclick = e => { const t = e.target.closest(".adtog"); if (!t) return; e.preventDefault(); const pol = t.closest("tr").dataset.pol; AD_MORE[pol] = !AD_MORE[pol]; redo(); const nt = tb.querySelector(`.admore[data-pol="${pol}"] .adtog`); if (nt) nt.focus(); };
+    tb.onclick = e => {
+      const t = e.target.closest(".adtog");
+      if (t) { e.preventDefault(); AD.more = !AD.more; redo(); const nt = tb.querySelector(".adtog"); if (nt) nt.focus(); return; }
+      const b = e.target.closest(".arow"); if (!b) return;
+      const n = b.closest(".ar").dataset.n, d = b.nextElementSibling;
+      if (AD.open.has(n)) AD.open.delete(n); else AD.open.add(n);
+      d.hidden = !AD.open.has(n); b.setAttribute("aria-expanded", String(AD.open.has(n)));
+    };
+    root.querySelectorAll("#ad-pol button").forEach(b => b.onclick = () => {
+      AD.pol = +b.dataset.p; root.querySelectorAll("#ad-pol button").forEach(x => x.classList.toggle("on", x === b)); redo();
+    });
     inp.oninput = async () => {
       const t = inp.value.trim().replace(",", ".");
       if (!t) { msg.textContent = ""; lastM = null; redo(); return; }
       if (/^\d+(\.\d*)?$/.test(t)) { msg.textContent = ""; lastM = +t; redo(); return; }
       try { const r = await (await fetch("api/formula?f=" + encodeURIComponent(t))).json(); if (r.error) throw new Error(r.error);
         let M = r.neutral; try { M = massOf(r.formula); } catch (_) { /* element without isotope data here: use the server value */ }
-        msg.innerHTML = `${sub(r.formula)}: M = ${M.toFixed(4)}`; lastM = M; redo(); }
+        msg.innerHTML = `${sub(r.formula)}: M = ${hrOn() ? M.toFixed(4) : Math.round(M)}`; lastM = M; redo(); }
       catch (e) { msg.textContent = I18N.t("tbl.add.invalid"); lastM = null; redo(); }
     };
   }
@@ -123,10 +152,7 @@
   // state kept while the window is open (the ruler of the spectrum can fill q)
   const NL = { q: "", pols: new Set(["+", "-"]), open: new Set() };
   const fl = f => sub(f.replace(/^(CH3|NO2|Cl)$/, "•$1")).replace(/^•/, "•");   // radicals are written with the dot
-  // high resolution (an Orbitrap / Q-TOF file is loaded): the exact mass of each loss is shown and «Cerca Δm» looks within 3 mDa instead of 0.5 Da
-  const hrOn = () => !!(window.HR && typeof E !== "undefined" && E.files.some(f => !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2))));
   const NL_TOL = () => hrOn() ? 0.003 : 0.5, NL_DEC = () => hrOn() ? 4 : 0;
-  const NL_CHEV = '<svg class="nlch" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6l3 3 3-3"/></svg>';
   const lossDet = l => {
     const m = massOf(l.f);
     // unit resolution: no exact mass (it would need mass accuracy); HR adds it with four decimals

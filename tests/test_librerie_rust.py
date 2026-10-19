@@ -23,11 +23,11 @@ pytestmark = [
 @pytest.fixture(scope="module")
 def result(tmp_path_factory):
     d = hr._dati()
-    q, allq = hr._queries(d)
+    q, allq = hr._queries(d["hrms"])
     tmp = tmp_path_factory.mktemp("rust_ident")
     qf = tmp / "q.json"
     qf.write_text(json.dumps({"queries": q, "all": allq}))
-    p = subprocess.run(["cargo", "run", "--release", "--quiet", "-p", "mzlab-lib", "--example", "valida", "--", str(d / "librerie" / "massbank_eu_qft_pos.msp"), str(qf)],
+    p = subprocess.run(["cargo", "run", "--release", "--quiet", "-p", "mzlab-lib", "--example", "valida", "--", str(d["lib"]), str(qf)],
                        capture_output=True, encoding="utf-8", check=True, cwd=ROOT)
     return json.loads(p.stdout)
 

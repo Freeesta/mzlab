@@ -5,26 +5,10 @@
 mod comune;
 
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-fn dati() -> Option<PathBuf> {
-    let mut c: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    let qui = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    c.extend(
-        qui.ancestors()
-            .skip(1)
-            .take(3)
-            .map(|u| u.join("mzlab-dati")),
-    );
-    if let Some(h) = std::env::var_os("HOME") {
-        c.push(PathBuf::from(h).join("mzlab-dati"));
-    }
-    c.into_iter()
-        .find(|p| p.join("dati_formati/INDICE.md").exists())
-}
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 fn membri(radice: &Path, dir: &Path, out: &mut Vec<Membro>) {
     for e in std::fs::read_dir(dir).unwrap().flatten() {
@@ -50,11 +34,10 @@ fn membri(radice: &Path, dir: &Path, out: &mut Vec<Membro>) {
 
 #[test]
 fn il_cdf_esportato_dice_quello_che_dice_la_sua_cartella_d() {
-    let Some(d) = dati() else {
+    let Some(cartella) = dati_percorsi::percorso("dati/formati/aperti/netcdf_cdf") else {
         eprintln!("SKIP andi parita: no data repository (MZLAB_DATI)");
         return;
     };
-    let cartella = d.join("dati_formati/netcdf_cdf");
     let tmp = std::env::temp_dir().join(format!("mzlab-andi-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&tmp);
     std::fs::create_dir_all(&tmp).unwrap();

@@ -5,16 +5,18 @@
     python3 tools/controlla_teoria.py --base           # rewrite the base with the errors of the EXISTING pages (public checks only)
 
 Checks: (a) structure, (b) accessibility, (e) leftover markers, (f) noindex on extended chapters: always, no private data needed.
-With MZLAB_DATI=<private repository> also (c) forbidden names (nomi_vietati.txt, one per line) and (d) runs of >= 10 consecutive words
+With the private data repository (tools/dati_percorsi.py, or MZLAB_DATI=<path>) also (c) forbidden names (nomi_vietati.txt, one per line) and (d) runs of >= 10 consecutive words
 copied from Sbobine_elaborate/testo/*.txt; without it these two are skipped with a warning. Errors of (c) and (d) never go in the base."""
 import argparse
 import json
-import os
 import re
 import sys
 from collections import Counter
 from html.parser import HTMLParser
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dati_percorsi import radice  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 TEORIA = ROOT / "mzlab" / "web" / "teoria"
@@ -274,26 +276,25 @@ def visible_text(text):
 
 def load_private():
     """(forbidden terms, set of hashed 10-grams, warnings)."""
-    d = os.environ.get("MZLAB_DATI")
+    d = radice()
     warn = []
-    if not d or not Path(d).is_dir():
-        return None, None, ["MZLAB_DATI not set: checks (c) forbidden names and (d) copying from the sources skipped"]
-    d = Path(d)
+    if d is None:
+        return None, None, ["private data repository not found: checks (c) forbidden names and (d) copying from the sources skipped"]
     terms = None
     f = d / "nomi_vietati.txt"
     if f.exists():
         terms = [t.strip().lower() for t in f.read_text(encoding="utf-8").splitlines() if t.strip() and not t.startswith("#")]
     else:
-        warn.append("nomi_vietati.txt not found in MZLAB_DATI: check (c) skipped")
+        warn.append("nomi_vietati.txt not found in the data repository: check (c) skipped")
     grams = None
-    src = sorted((d / "Sbobine_elaborate" / "testo").glob("*.txt"))
+    src = sorted((d / "Sbobine_elaborate" / "testo").glob("*.txt"))   # not in dati_mappa.tsv: still at the root of the repository
     if src:
         grams = set()
         for s in src:
             w = words(s.read_text(encoding="utf-8", errors="replace"))
             grams.update(hash(tuple(w[i:i + RUN])) for i in range(len(w) - RUN + 1))
     else:
-        warn.append("Sbobine_elaborate/testo/*.txt not found in MZLAB_DATI: check (d) skipped")
+        warn.append("Sbobine_elaborate/testo/*.txt not found in the data repository: check (d) skipped")
     return terms, grams, warn
 
 
