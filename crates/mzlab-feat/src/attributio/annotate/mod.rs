@@ -120,12 +120,6 @@ pub fn load_annotations(
     let sites: Vec<String> = sites.map_or_else(|| every.clone(), <[String]>::to_vec);
     let s = AnnotationSettings::for_campaign(c)?;
     let mut warnings = src.warnings.clone();
-    if s.use_ms2_engine {
-        warnings.push(
-            "use_ms2_engine is not available in this engine: the MS2 Engine hits are ignored"
-                .into(),
-        );
-    }
     if (s.gnps_mass_tol_ppm - GNPS_MASS_TOL_PPM).abs() > 0.0 {
         warnings.push(format!(
             "gnps_mass_tol_ppm = {} is not applied: the GNPS2 hits are read with {GNPS_MASS_TOL_PPM} ppm",

@@ -3,10 +3,13 @@
 //! that belong to each. Rows of the sorbent twins that were joined into another feature move to the kept row first (the best hit stays).
 
 use super::settings::AnnotationSettings;
-use super::types::{CsiEvidence, Feature, GnpsEvidence, MzlibEvidence, SpecEvidence};
+use super::types::{
+    CsiEvidence, EngineEvidence, Feature, GnpsEvidence, MzlibEvidence, SpecEvidence,
+};
 use crate::attributio::campaign::{Campaign, POLARITIES};
 use crate::attributio::detection::Detection;
 use crate::attributio::error::Result;
+use crate::attributio::ms2_engine::EngineHitRow;
 use crate::attributio::readers::gnps::{GnpsHit, GnpsNode};
 use crate::attributio::readers::mzmine::MzmineHit;
 use crate::attributio::readers::sirius::{Canopus, SpectralMatch, Structure};
@@ -38,6 +41,7 @@ pub struct Remapped {
     pub gnps: Vec<GnpsHit>,
     pub mzmine: Vec<MzmineHit>,
     pub network: Vec<GnpsNode>,
+    pub engine: Vec<EngineHitRow>,
 }
 
 fn flag(b: bool) -> Option<f64> {
@@ -61,6 +65,7 @@ pub fn remap_sources(src: &Sources) -> Remapped {
             .iter()
             .flat_map(|p| p.gnps_network.clone())
             .collect(),
+        engine: src.pols.iter().flat_map(|p| p.engine.clone()).collect(),
     };
     for p in &src.pols {
         let (tm, pol) = (p.twins.as_slice(), p.pol.as_str());
@@ -211,6 +216,7 @@ pub fn join(
     let sp = index(&rm.spectral, |x| (x.pol.as_str(), x.id));
     let gn = index(&rm.gnps, |x| (x.pol.as_str(), x.id));
     let ml = index(&rm.mzmine, |x| (x.pol.as_str(), x.id));
+    let en = index(&rm.engine, |x| (x.pol.as_str(), x.id));
     let nw = index(&rm.network, |x| (x.pol.as_str(), x.id));
     let sd = index(std, |x| (x.pol.as_str(), x.id));
     det.into_iter()
@@ -251,6 +257,15 @@ pub fn join(
             if let Some(&n) = nw.get(&key) {
                 f.gnps_component = rm.network[n].component;
                 f.gnps_component_size = Some(rm.network[n].component_size);
+            }
+            if let (true, Some(&n)) = (s.use_ms2_engine, en.get(&key)) {
+                let x = &rm.engine[n];
+                f.engine = EngineEvidence {
+                    name: Some(x.name.clone()),
+                    score: Some(x.score),
+                    precursor_mz: Some(x.precursor_mz),
+                    library_id: Some(x.library_id.clone()),
+                };
             }
             f.std = sd.get(&key).map(|&n| std[n].clone());
             f

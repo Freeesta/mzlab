@@ -8,6 +8,8 @@ use super::detection::{detection_table, Detection};
 use super::error::{CampaignError, Result};
 use super::frame::Frame;
 use super::io::{join, Io, MemFiles};
+use super::ms2_engine::load_engine_hits;
+use super::ms2_engine::EngineHitRow;
 use super::readers::feature_decisions::{load_feature_decisions, DecisionTable, FeatureKey};
 use super::readers::gnps::{load_gnps_library, load_gnps_network, GnpsHit, GnpsNode};
 use super::readers::ms2::{
@@ -92,6 +94,8 @@ pub struct PolSources {
     pub mzmine: Vec<MzmineHit>,
     pub gnps_library: Vec<GnpsHit>,
     pub gnps_network: Vec<GnpsNode>,
+    /// MS2 Engine hits (`<data>/engine/engine_<pol>.csv`), read when the file exists and used only with `use_ms2_engine`.
+    pub engine: Vec<EngineHitRow>,
     pub feature_spectra: HashMap<i64, Spectrum>,
     pub library_spectra: RefLibrary,
 }
@@ -225,6 +229,7 @@ fn read_pol(
         mzmine: load_mzmine_library(c, io, &table, pol)?,
         gnps_library: load_gnps_library(c, io, pol, GNPS_MASS_TOL_PPM)?,
         gnps_network: load_gnps_network(c, io, pol)?,
+        engine: load_engine_hits(c, io, pol),
         table,
         twins,
         feature_spectra,
@@ -241,6 +246,9 @@ fn count_rows(s: &Sources, pol_counts: bool) -> Vec<(String, usize)> {
         out.push(n("mzmine hits", p.mzmine.len()));
         out.push(n("gnps hits", p.gnps_library.len()));
         out.push(n("gnps nodes", p.gnps_network.len()));
+        if !p.engine.is_empty() {
+            out.push(n("engine hits", p.engine.len()));
+        }
         out.push(n("feature spectra", p.feature_spectra.len()));
         out.push(n(
             "library spectra",

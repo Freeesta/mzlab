@@ -4,14 +4,16 @@
 use mzlab_core::elements::{mass, parse_formula, Formula};
 use mzlab_core::idxread::{Index, ReadAt};
 
-use super::albero::{self, LibNode, NodeState};
+use super::albero::{self, LibNode, NodeState, TreeCtx};
 use super::confronto::{self, VsParent};
+use super::disegno::{self, Drawing};
 use super::filtri::{self, FileCal, RowFacts};
 use super::modifica::{self, Candidate, IsoCheck};
 use super::ms2link::{self, Isomers, Ms2Scan, Pooled};
+use super::sito::{self, SiteReport};
 use crate::axis::half;
+use crate::chem::posizioni::{Peak, Pol};
 use crate::legacy::ms2::Consensus;
-use crate::legacy::msn::{self, library};
 use crate::legacy::series::{Hyp, Parent};
 use crate::sweep::windows;
 use crate::table::{Aligned, CELL_ABSENT};
@@ -41,6 +43,9 @@ pub struct RowInterp {
     pub pooled: Pooled,
     pub vs_parent: Option<VsParent>,
     pub tree: Vec<NodeState>,
+    /// The position of the change and the form of its drawing (None without a structure of the parent or a known change).
+    pub site: Option<SiteReport>,
+    pub drawing: Option<Drawing>,
     /// The code of the filter that hid the row after the interpretation (F5).
     pub hidden: Option<&'static str>,
 }
@@ -243,34 +248,6 @@ fn read_file<R: ReadAt>(
     Ok((parent_scans, perr))
 }
 
-/// The tree of the infusion and the library with the DDA of the parent: `(nodes, entries)`, empty without an infusion.
-fn library_of<R: ReadAt>(
-    infusion: Option<&mut Index<R>>,
-    inp: &Inputs,
-    dda: &Consensus,
-) -> Res<(Vec<LibNode>, Vec<LibNode>)> {
-    let Some(ix) = infusion else {
-        return Ok((vec![], vec![]));
-    };
-    let scans = msn::scans_of(ix)?;
-    let ion = mzlab_core::elements::fmt(&inp.parent.ion);
-    let tree = msn::build_tree(&scans, &ion, inp.parent.smiles.as_deref(), "auto")?;
-    let lib = library::build(
-        &tree,
-        (!dda.mz.is_empty()).then_some((&dda.mz[..], &dda.rel[..])),
-    );
-    let entries = lib
-        .entries
-        .iter()
-        .map(|(f, e)| LibNode {
-            id: String::new(),
-            formula: f.clone(),
-            mz: msn::ion_mass(&e.vec, &tree.els),
-        })
-        .collect();
-    Ok((albero::nodes_of(&tree), entries))
-}
-
 /// The whole pass. `open(k)` gives the index of file `k` of the series; `infusion` the one of the infusion file (role `infusion`), when there is one.
 pub fn build<R: ReadAt>(
     inp: &Inputs,
@@ -309,7 +286,7 @@ pub fn build<R: ReadAt>(
     }
     let all_parent: Vec<Ms2Scan> = parent_scans.iter().flatten().cloned().collect();
     let dda = ms2link::pool(&all_parent).consensus;
-    let (nodes, entries) = library_of(infusion, inp, &dda)?;
+    let (nodes, entries, ctx) = albero::library_of(infusion, inp.parent, &dda)?;
     let cals: Vec<FileCal> = (0..t.n_files)
         .map(|k| {
             let mut e = fragment_errors(&parent_scans[k], &entries);
@@ -327,6 +304,7 @@ pub fn build<R: ReadAt>(
                 &dda,
                 &nodes,
                 &entries,
+                ctx.as_ref(),
                 &cals,
                 w,
                 &mut registry,
@@ -351,6 +329,7 @@ fn interpret(
     dda: &Consensus,
     nodes: &[LibNode],
     entries: &[LibNode],
+    ctx: Option<&TreeCtx>,
     cals: &[FileCal],
     w: Work,
     registry: &mut filtri::Registry,
@@ -390,6 +369,15 @@ fn interpret(
         .len();
     let delta = delta_mass(&inp.parent.neutral, change.first(), mz, inp.parent.mz);
     let (vs_parent, tree) = compare(inp, dda, nodes, entries, &w.scans, &pooled, mz, delta);
+    let (site, drawing) = position(
+        inp,
+        ctx,
+        !dda.mz.is_empty(),
+        &w.scans,
+        &pooled,
+        change.first(),
+        mz,
+    );
     RowInterp {
         row: w.row,
         id: t.id(w.row),
@@ -401,8 +389,56 @@ fn interpret(
         pooled,
         vs_parent,
         tree,
+        site,
+        drawing,
         hidden,
     }
+}
+
+/// The position of the change of a row and its drawing; none without the structure of the parent or a change.
+fn position(
+    inp: &Inputs,
+    ctx: Option<&TreeCtx>,
+    has_dda: bool,
+    scans: &[Ms2Scan],
+    pooled: &Pooled,
+    change: Option<&Candidate>,
+    mz: f64,
+) -> (Option<SiteReport>, Option<Drawing>) {
+    let (Some(smiles), Some(c)) = (inp.parent.smiles.as_deref(), change) else {
+        return (None, None);
+    };
+    let Ok(tp) = parse_formula(&c.neutral_formula) else {
+        return (None, None);
+    };
+    let facts = sito::Facts {
+        scans: scans.len(),
+        clean: scans.iter().filter(|s| !s.chimeric).count(),
+        isomers: match pooled.isomers {
+            Isomers::Single => "single",
+            Isomers::Separated(_) => "separated",
+            Isomers::NotSeparated => "not_separated",
+        },
+        has_reference: ctx.is_some() || has_dda,
+    };
+    let pol = if inp.polarity < 0 { Pol::Neg } else { Pol::Pos };
+    let rep = match sito::candidates(smiles, &inp.parent.neutral, &tp) {
+        Ok(cand) => {
+            let cons = &pooled.consensus;
+            let peaks: Vec<Peak> = cons
+                .mz
+                .iter()
+                .zip(&cons.rel)
+                .map(|(&mz, &inten)| Peak { mz, inten })
+                .collect();
+            let tree = ctx
+                .and_then(|x| albero::tree_votes(x, &cand, inp.parent, c, cons, mz, inp.polarity));
+            sito::analyse(&cand, &peaks, pol, &facts, tree)
+        }
+        Err(reason) => sito::undetermined(&c.delta, vec![reason]),
+    };
+    let drawing = disegno::drawing(smiles, &rep);
+    (Some(rep), Some(drawing))
 }
 
 #[allow(clippy::too_many_arguments)]

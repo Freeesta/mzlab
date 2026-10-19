@@ -3,7 +3,9 @@
 //! only when `use_ms2_engine` is on; reading never writes into the campaign.
 
 use super::matcher::SearchHit;
+use crate::attributio::campaign::Campaign;
 use crate::attributio::frame::to_csv;
+use crate::attributio::io::{join, Io};
 
 pub const ENGINE_COLUMNS: [&str; 6] = [
     "_pol",
@@ -85,4 +87,19 @@ pub fn read_engine_hits(text: &str) -> Vec<EngineHitRow> {
         });
     }
     out
+}
+
+/// Hits of a polarity from `<data_dir>/engine/engine_<pos|neg>.csv`; none when the file is missing.
+pub fn load_engine_hits(c: &Campaign, io: &Io, pol: &str) -> Vec<EngineHitRow> {
+    let p = if pol == "POS" { "pos" } else { "neg" };
+    let path = join(&c.data_dir, &format!("engine/engine_{p}.csv"));
+    io.text(&path)
+        .map(|t| {
+            let mut r = read_engine_hits(&t);
+            for x in r.iter_mut() {
+                x.pol = pol.to_string();
+            }
+            r
+        })
+        .unwrap_or_default()
 }

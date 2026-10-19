@@ -60,6 +60,15 @@ pub struct MzlibEvidence {
     pub exact: bool,
 }
 
+/// The best MS2 Engine hit: evidence only, never a gate, a level or an identity.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct EngineEvidence {
+    pub name: Option<String>,
+    pub score: Option<f64>,
+    pub precursor_mz: Option<f64>,
+    pub library_id: Option<String>,
+}
+
 /// CSI:FingerID: the structure with its COSMIC confidence.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CsiEvidence {
@@ -113,6 +122,7 @@ pub struct Feature {
     pub spec: SpecEvidence,
     pub gnps: GnpsEvidence,
     pub mzlib: MzlibEvidence,
+    pub engine: EngineEvidence,
     pub std: Option<StandardMatch>,
     pub gnps_component: Option<i64>,
     pub gnps_component_size: Option<i64>,
@@ -148,6 +158,18 @@ impl Feature {
     /// The text of a site flag.
     pub fn in_site(&self, site: &str) -> bool {
         self.in_site.iter().any(|(s, v)| s == site && *v)
+    }
+    /// Whether the MS2 Engine hit names what the cascade calls the feature (letters and digits, case ignored); `None` without a hit or without a name to compare.
+    pub fn engine_agrees(&self) -> Option<bool> {
+        let key = |t: &str| {
+            t.chars()
+                .filter(|c| c.is_alphanumeric())
+                .flat_map(char::to_lowercase)
+                .collect::<String>()
+        };
+        let hit = self.engine.name.as_deref().filter(|n| !n.is_empty())?;
+        let ours = self.identity().or(self.disp_name.as_deref())?;
+        Some(key(hit) == key(ours))
     }
     /// The CSI:FingerID structure name (the column `name` of the reference tool).
     pub fn name(&self) -> Option<&str> {
