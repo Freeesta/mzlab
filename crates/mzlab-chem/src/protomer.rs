@@ -292,7 +292,14 @@ pub fn assign(smiles: &str, mol: &Mol) -> Protomer {
     }
     let mut cations = fixed_cations(mol, &nb);
     let mut cand = bases(mol, &nb);
-    cand.sort_by(|a, b| b.2.total_cmp(&a.2));
+    // insertion sort, strongest base first (a library sort costs several KB of .wasm)
+    for k in 1..cand.len() {
+        let mut j = k;
+        while j > 0 && cand[j - 1].2 < cand[j].2 {
+            cand.swap(j - 1, j);
+            j -= 1;
+        }
+    }
     for (atom, group, pka) in cand {
         if coupled_pka(&nb, atom, pka, &cations) > PH {
             m.atoms[atom].h += 1;
@@ -306,7 +313,6 @@ pub fn assign(smiles: &str, mol: &Mol) -> Protomer {
             });
         }
     }
-    changes.sort_by_key(|c| c.atom);
     let charge = m.atoms.iter().map(|a| a.charge).sum();
     let smiles = rewrite(smiles, &m, &changes);
     Protomer {
@@ -320,7 +326,7 @@ pub fn assign(smiles: &str, mol: &Mol) -> Protomer {
 /// The atom as a bracket SMILES atom with its explicit hydrogens and charge.
 fn bracket_atom(a: &Atom) -> String {
     let sym = if a.arom {
-        a.el.to_lowercase()
+        a.el.to_ascii_lowercase()
     } else {
         a.el.clone()
     };
