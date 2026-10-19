@@ -11,7 +11,7 @@ use crate::mzidx::Prima;
 use crate::mzidx_spill::Spill;
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{self, MzmlWriter};
-use crate::scantable::{Rows, Table};
+use crate::scantable::{Dove, Rows, Table};
 
 /// Scan `k` of sample `c` as the mzML written by `lettori_mzml::scrivi` reads back: the arrays cut to the shorter of m/z and intensity.
 pub(crate) fn spettro(l: &mut dyn Lettore, c: usize, k: usize) -> Result<Spectrum> {
@@ -130,8 +130,10 @@ pub(crate) fn righe_prima_doppie(
 /// The rows of version 2: `[membro, offset, lunghezza]` (or `null` when the reader gives no position) and `k` in place of `start, end`.
 pub fn rows_json(t: &mut Table, voci: &[VoceScansione]) -> String {
     for (k, r) in t.rows.iter_mut().enumerate() {
-        r.k = Some(k);
-        r.posizione = voci.get(k).and_then(|v| v.posizione);
+        r.dove = Some(Box::new(Dove {
+            k,
+            posizione: voci.get(k).and_then(|v| v.posizione),
+        }));
     }
     t.rows_json()
 }

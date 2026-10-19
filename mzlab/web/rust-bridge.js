@@ -15,6 +15,7 @@ import { wiffApi } from "./rust-convert.js";
 import { makeNativo } from "./rust-nativo-pagina.js";
 import { makeRecycler } from "./rust-recycle.js";
 import { compileOnce, ordered, judgeDeath, forgetFaults } from "./rust-supervisor.js";
+import * as BUD from "./rust-budget.js";
 
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
@@ -22,18 +23,18 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   let worker = null, seq = 0, peakMem = 0;
   const pending = new Map();               // id -> { res, worker }
   const stats = { rust: 0, python: 0, restarts: 0, mzml: 0 };       // mzml: how many times a file was read as an mzML (not from its index)
-  const api = { enabled: true, disabled: false, stats, budgetMb: 0, halved: false, lastPanic: /** @type {string | null} */ (null) };
+  const api = BUD.attach({ enabled: true, disabled: false, stats, budgetMb: 0, halved: false, lastPanic: /** @type {string | null} */ (null) });
   const death = { restarts: /** @type {number[]} */ ([]), api, stats };       // for judgeDeath
   const base = n => String(n || "").split(/[\\/]/).pop() || "";
   const recycler = api.recycler = makeRecycler({ pending, worker: () => worker, recycleNow: () => { stop(worker, { dead: true }); stats.recycled = (stats.recycled || 0) + 1; respawn(); }, disabled: () => api.disabled });
   const wasmModule = compileOnce(new URL("wasm/mzlab_wasm_bg.wasm", workerUrl));
   function spawn() {
-    const w = /** @type {Worker & { send?: any }} */ (new Worker(workerUrl, { type: "module" })); peakMem = 0; w.send = ordered(w, wasmModule, () => api.budgetMb, () => ++seq);
+    const w = /** @type {Worker & { send?: any }} */ (new Worker(workerUrl, { type: "module" })); peakMem = 0; w.send = ordered(w, wasmModule, () => api.budgetMb, () => ++seq, BUD.policy);
     w.onmessage = ev => {
       const m = ev.data;
       if (m.op === "ready") return;
       if (m.op === "blocked") { onBlocked(); return; }                                                     // the saved files are held by another tab
-      if (m.op === "notice") { notify(m.key); return; }                                                    // e.g. error.memoryBudget from the pool of the indexes
+      if (m.op === "notice") { notify(m.key); return; }  if (m.op === "budget-choice") { BUD.chosen(api, m.choice); return; }   // notice: e.g. error.memoryBudget from the pool of the indexes
       if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);
       if (!p) { if (m.buf) recycle(m.buf); return; }
@@ -63,7 +64,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   function died(w, info) {
     if (w !== worker) return;
     stop(w, { dead: true });
-    const act = judgeDeath(death, info, peakMem);
+    const act = judgeDeath(death, info, peakMem); if (act === "halve") BUD.halved(api);
     if (act === "restart" || act === "halve") { respawn(); notify("error.engineRestarted"); return; }
     api.disabled = true; slots.forEach(s => { if (s) s.bad = true; }); notify(act === "oom" ? "error.memoryBudget" : "error.engineFallback");
   }
@@ -89,7 +90,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (!s.idx) { s.mzml = openMzml(k, s); return s.mzml; }
     });
   }
-  api.start = () => { if (!worker && !api.disabled) spawn(); };
+  api.start = () => { if (!worker && !api.disabled) spawn(); }; BUD.wire(api, () => worker);
   api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } };
   api.noteRemove = name => { blobs.delete(base(name)); if (api.unmarkNative) api.unmarkNative(name); };
   api.noteNew = () => { blobs.clear(); api.noteExplore(null); };

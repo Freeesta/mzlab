@@ -3,9 +3,13 @@
 //! header of each spectrum (up to `<binaryDataArrayList`) is read. Text is searched as the Python regular expressions do, without a
 //! regex engine (it would cost size in the WASM).
 
+use std::sync::Arc;
+
+use crate::budget::MemBudget;
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::lettori::Posizione;
+use crate::stima;
 
 const ANALYZERS: [&str; 5] = ["FTMS", "ITMS", "TOFMS", "TQMS", "SQMS"];
 
@@ -16,41 +20,101 @@ struct Prec {
     hi: Option<f64>,
     selected: Option<f64>,
     charge: Option<i64>,
-    refer: Option<String>,
+    refer: Option<Arc<str>>,
     act: Option<&'static str>,
     ce: Option<f64>,
     pint: Option<f64>,
+}
+
+/// What only a scan with a precursor (or a vendor file) has: kept behind one pointer so that a survey scan does not carry the room for it.
+#[derive(Debug, Clone, Default)]
+pub struct Detail {
+    pub precursor: Option<f64>,
+    ce: Option<f64>,
+    iso: Option<(f64, f64)>,
+    act: Option<Arc<str>>,
+    pint: Option<f64>,
+    path: Option<Vec<(f64, String, f64)>>,
+    precs: Vec<Prec>,
+    charge: Option<i64>,
+}
+
+impl Detail {
+    const EMPTY: Detail = Detail {
+        precursor: None,
+        ce: None,
+        iso: None,
+        act: None,
+        pint: None,
+        path: None,
+        precs: Vec::new(),
+        charge: None,
+    };
+
+    /// Gives back the room that `push` left in the lists (a `Vec` takes room for four precursors at the first one, 576 bytes).
+    fn shrink(&mut self) {
+        self.precs.shrink_to_fit();
+        if let Some(p) = self.path.as_mut() {
+            p.shrink_to_fit();
+        }
+    }
+
+    /// Whether the scan has nothing of what a `Detail` holds (then it has none).
+    fn is_empty(&self) -> bool {
+        self.precursor.is_none()
+            && self.ce.is_none()
+            && self.iso.is_none()
+            && self.act.is_none()
+            && self.pint.is_none()
+            && self.path.is_none()
+            && self.precs.is_empty()
+            && self.charge.is_none()
+    }
+}
+
+/// Where a scan of a vendor file lies: the number of the scan in `Lettore::indice` and its place (written in place of `start`, `end`).
+#[derive(Debug, Clone, Copy)]
+pub struct Dove {
+    pub k: usize,
+    pub posizione: Option<Posizione>,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct Row {
     pub start: u64,
     pub end: u64,
-    /// A row of a vendor file: the number of the scan in `Lettore::indice` and where it lies (written in place of `start`, `end`).
-    pub k: Option<usize>,
-    pub posizione: Option<Posizione>,
+    /// A row of a vendor file (`mzidx_lettore::rows_json`).
+    pub dove: Option<Box<Dove>>,
     pub level: u8,
     pub rt: f64,
     pub polarity: i8,
     pub tic: f64,
-    pub precursor: Option<f64>,
-    ce: Option<f64>,
-    pub filter: String,
+    /// The filter string, shared by all the rows that have the same text (`Rows::intern`).
+    pub filter: Arc<str>,
     pub profile: bool,
     parent: Option<usize>,
-    iso: Option<(f64, f64)>,
-    act: Option<String>,
     res: Option<f64>,
-    pub an: String,
-    pint: Option<f64>,
-    path: Option<Vec<(f64, String, f64)>>,
-    precs: Vec<Prec>,
-    charge: Option<i64>,
-    pub native: String,
+    /// The analyzer: one of `ANALYZERS`, or `?`.
+    pub an: &'static str,
+    /// The native id, the same allocation as the key of `Rows::level_of`.
+    pub native: Arc<str>,
     /// Scan type that is not a plain full or product-ion scan (`PREC`, `NL`, `NG`, `EPI`): see `kind_of`.
     pub kind: Option<&'static str>,
     /// The mobility of the whole scan (a scan attribute) and its unit (`k0` or `ms`).
     pub mob: Option<(f64, &'static str)>,
+    detail: Option<Box<Detail>>,
+}
+
+impl Row {
+    fn d(&self) -> &Detail {
+        static NONE: Detail = Detail::EMPTY;
+        self.detail.as_deref().unwrap_or(&NONE)
+    }
+
+    /// The precursor m/z of the scan.
+    pub fn precursor(&self) -> Option<f64> {
+        self.d().precursor
+    }
 }
 
 /// The table, with what the `run` object of the metadata needs.
@@ -125,7 +189,7 @@ fn attr<'a>(t: &'a str, name: &str) -> Option<&'a str> {
     Some(&t[s..s + e])
 }
 
-fn precursor_element(e: &str, refer: Option<String>) -> Prec {
+fn precursor_element(e: &str, refer: Option<Arc<str>>) -> Prec {
     // _RX_PCV.findall: every accession of the set that has a value in its tag; the first occurrence of each wins
     const SET: [&str; 7] = ["827", "828", "829", "744", "041", "045", "042"];
     let mut found: Vec<(&str, Option<f64>)> = Vec::new();
@@ -255,7 +319,7 @@ fn immediate<'a>(
     precs: &'a [Prec],
     path: &Option<Vec<(f64, String, f64)>>,
     level: u8,
-    level_of: &std::collections::HashMap<String, u8>,
+    level_of: &std::collections::HashMap<Arc<str>, u8>,
 ) -> Option<&'a Prec> {
     if precs.is_empty() {
         return None;
@@ -309,7 +373,7 @@ fn is_hr(rows: &[&Row]) -> bool {
     }
     let mut counts: Vec<(&str, usize)> = Vec::new();
     for r in rows {
-        let a = if r.an.is_empty() { "?" } else { r.an.as_str() };
+        let a = if r.an.is_empty() { "?" } else { r.an };
         match counts.iter_mut().find(|(k, _)| *k == a) {
             Some(c) => c.1 += 1,
             None => counts.push((a, 1)),
@@ -441,8 +505,160 @@ pub use json::Columns;
 use rows::Head;
 pub(crate) use rows::Rows;
 
+fn push(rows: &mut Rows, a: u64, b: u64, h: &[u8]) {
+    rows.spectrum(a, b, &String::from_utf8_lossy(h));
+}
+
+/// Reads the headers of the spectra whose offsets the file lists: the end of the last spectrum, or `None` when it cannot be found.
+fn read_listed<R: ReadAt>(
+    src: &mut Source<'_, R>,
+    offs: &[u64],
+    rows: &mut Rows,
+) -> Result<Option<u64>> {
+    let size = src.size;
+    let mut last_end = 0u64;
+    // end of the last spectrum
+    let tail_from = *offs.last().unwrap();
+    let mut n = 1 << 16;
+    let mut last = None;
+    loop {
+        let chunk = src.read(tail_from, tail_from + n)?;
+        if let Some(p) = find(&chunk, b"</spectrum>") {
+            last = Some(tail_from + p as u64);
+            break;
+        }
+        if tail_from + n >= size {
+            break;
+        }
+        n *= 4;
+    }
+    if let Some(last) = last {
+        let limits: Vec<u64> = offs[1..]
+            .iter()
+            .copied()
+            .chain(std::iter::once(last + 11 + 1))
+            .collect();
+        for (&a, &limit) in offs.iter().zip(&limits) {
+            let mut n: u64 = 4096;
+            let (chunk, c) = loop {
+                let chunk = src.read(a, (a + n).min(limit))?;
+                let c = find(&chunk, b"<binaryDataArrayList");
+                if c.is_some() || a + n >= limit {
+                    break (chunk, c);
+                }
+                n *= 4;
+            };
+            let b = match c {
+                None => {
+                    let e = chunk.windows(11).rposition(|w| w == b"</spectrum>");
+                    a + e.map_or(chunk.len(), |e| e + 11) as u64
+                }
+                Some(_) => {
+                    let from = limit.saturating_sub(64).max(a);
+                    let tail = src.read(from, limit)?;
+                    match tail.windows(11).rposition(|w| w == b"</spectrum>") {
+                        Some(e) => from + e as u64 + 11,
+                        None => limit,
+                    }
+                }
+            };
+            push(rows, a, b, &chunk[..c.unwrap_or(chunk.len())]);
+            last_end = b;
+        }
+        return Ok(Some(last_end));
+    }
+    Ok(None)
+}
+
+/// Finds the spectra by walking the file (no list of offsets); the estimate of the table is made every `EVERY` scans. Returns the end of the last one.
+fn read_walked<R: ReadAt>(
+    src: &mut Source<'_, R>,
+    rows: &mut Rows,
+    budget: Option<&MemBudget>,
+) -> Result<u64> {
+    let size = src.size;
+    let mut last_end = 0u64;
+    let mut pos = 0u64;
+    let mut buf: Vec<u8> = Vec::new();
+    let mut buf_off = 0u64;
+    loop {
+        // find "<spectrum " from pos
+        let a = loop {
+            let rel = pos.saturating_sub(buf_off) as usize;
+            if buf_off <= pos && rel <= buf.len() {
+                if let Some(p) = find(&buf[rel..], b"<spectrum ") {
+                    break Some(pos + p as u64);
+                }
+            }
+            if buf_off <= pos && buf_off + buf.len() as u64 >= size {
+                break None;
+            }
+            let next = if buf_off <= pos && pos < buf_off + buf.len() as u64 {
+                (buf_off + buf.len() as u64).saturating_sub(10).max(pos)
+            } else {
+                pos
+            };
+            if next >= size {
+                break None;
+            }
+            buf = src.read(next, next + (1 << 20))?;
+            buf_off = next;
+            pos = next;
+        };
+        let Some(a) = a else { break };
+        if let Some(b) = budget {
+            stima::check_walk(b, rows.len(), a, size)?;
+        }
+        // find "</spectrum>" after a
+        let mut n: u64 = 1 << 16;
+        let b = loop {
+            let chunk = src.read(a, a + n)?;
+            if let Some(p) = find(&chunk, b"</spectrum>") {
+                let b = a + p as u64 + 11;
+                let hdr_end = find(&chunk[..p], b"<binaryDataArrayList").unwrap_or(p);
+                push(rows, a, b, &chunk[..hdr_end]);
+                break Some(b);
+            }
+            if a + n >= size {
+                break None;
+            }
+            n *= 4;
+        };
+        let Some(b) = b else { break };
+        last_end = b;
+        pos = b;
+    }
+    Ok(last_end)
+}
+
+/// The chromatograms after the last spectrum.
+fn count_chromatograms<R: ReadAt>(src: &mut Source<'_, R>, last_end: u64) -> Result<usize> {
+    let size = src.size;
+    let mut n_chrom = 0usize;
+    let mut pos = last_end;
+    while pos < size {
+        let chunk = src.read(pos, (pos + (1 << 20)).min(size))?;
+        let mut i = 0;
+        while let Some(p) = find(&chunk[i..], b"<chromatogram ") {
+            n_chrom += 1;
+            i += p + 1;
+        }
+        if pos + chunk.len() as u64 >= size {
+            break;
+        }
+        pos += chunk.len() as u64 - 13;
+    }
+    Ok(n_chrom)
+}
+
 /// Reads the scan table of an mzML of `size` bytes.
 pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
+    read_in(r, size, None)
+}
+
+/// `read` that refuses in order (`error.memoryBudget`, phase `table`) when the rows would not fit in `budget`: the estimate (`stima`) is made from the
+/// count of the spectra in the index of offsets before the first row is kept, or from the progress of the walk when the file has no index.
+pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> Result<Table> {
     let mut src = Source { r, size };
     // header: instrument configurations and the default one
     let head_end = {
@@ -461,130 +677,20 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
     // the spans of the spectra
     let offs = src.offsets()?;
     if let Some(o) = &offs {
+        if let Some(b) = budget {
+            stima::check_table(b, o.len())?;
+        }
         rows.reserve(o.len());
     }
     // each header becomes its row as soon as it is read: keeping the headers of every spectrum (about 1.5 KB each) would hold hundreds of MB
-    let mut last_end = 0u64;
-    fn push(rows: &mut Rows, a: u64, b: u64, h: &[u8]) {
-        rows.spectrum(a, b, &String::from_utf8_lossy(h));
-    }
-    let mut done = false;
-    if let Some(offs) = offs {
-        // end of the last spectrum
-        let tail_from = *offs.last().unwrap();
-        let mut n = 1 << 16;
-        let mut last = None;
-        loop {
-            let chunk = src.read(tail_from, tail_from + n)?;
-            if let Some(p) = find(&chunk, b"</spectrum>") {
-                last = Some(tail_from + p as u64);
-                break;
-            }
-            if tail_from + n >= size {
-                break;
-            }
-            n *= 4;
-        }
-        if let Some(last) = last {
-            let limits: Vec<u64> = offs[1..]
-                .iter()
-                .copied()
-                .chain(std::iter::once(last + 11 + 1))
-                .collect();
-            for (&a, &limit) in offs.iter().zip(&limits) {
-                let mut n: u64 = 4096;
-                let (chunk, c) = loop {
-                    let chunk = src.read(a, (a + n).min(limit))?;
-                    let c = find(&chunk, b"<binaryDataArrayList");
-                    if c.is_some() || a + n >= limit {
-                        break (chunk, c);
-                    }
-                    n *= 4;
-                };
-                let b = match c {
-                    None => {
-                        let e = chunk.windows(11).rposition(|w| w == b"</spectrum>");
-                        a + e.map_or(chunk.len(), |e| e + 11) as u64
-                    }
-                    Some(_) => {
-                        let from = limit.saturating_sub(64).max(a);
-                        let tail = src.read(from, limit)?;
-                        match tail.windows(11).rposition(|w| w == b"</spectrum>") {
-                            Some(e) => from + e as u64 + 11,
-                            None => limit,
-                        }
-                    }
-                };
-                push(&mut rows, a, b, &chunk[..c.unwrap_or(chunk.len())]);
-                last_end = b;
-            }
-            done = true;
-        }
-    }
-    if !done {
-        let mut pos = 0u64;
-        let mut buf: Vec<u8> = Vec::new();
-        let mut buf_off = 0u64;
-        loop {
-            // find "<spectrum " from pos
-            let a = loop {
-                let rel = pos.saturating_sub(buf_off) as usize;
-                if buf_off <= pos && rel <= buf.len() {
-                    if let Some(p) = find(&buf[rel..], b"<spectrum ") {
-                        break Some(pos + p as u64);
-                    }
-                }
-                if buf_off <= pos && buf_off + buf.len() as u64 >= size {
-                    break None;
-                }
-                let next = if buf_off <= pos && pos < buf_off + buf.len() as u64 {
-                    (buf_off + buf.len() as u64).saturating_sub(10).max(pos)
-                } else {
-                    pos
-                };
-                if next >= size {
-                    break None;
-                }
-                buf = src.read(next, next + (1 << 20))?;
-                buf_off = next;
-                pos = next;
-            };
-            let Some(a) = a else { break };
-            // find "</spectrum>" after a
-            let mut n: u64 = 1 << 16;
-            let b = loop {
-                let chunk = src.read(a, a + n)?;
-                if let Some(p) = find(&chunk, b"</spectrum>") {
-                    let b = a + p as u64 + 11;
-                    let hdr_end = find(&chunk[..p], b"<binaryDataArrayList").unwrap_or(p);
-                    push(&mut rows, a, b, &chunk[..hdr_end]);
-                    break Some(b);
-                }
-                if a + n >= size {
-                    break None;
-                }
-                n *= 4;
-            };
-            let Some(b) = b else { break };
-            last_end = b;
-            pos = b;
-        }
-    }
-
-    // chromatograms after the last spectrum
-    let mut n_chrom = 0usize;
-    let mut pos = last_end;
-    while pos < size {
-        let chunk = src.read(pos, (pos + (1 << 20)).min(size))?;
-        let mut i = 0;
-        while let Some(p) = find(&chunk[i..], b"<chromatogram ") {
-            n_chrom += 1;
-            i += p + 1;
-        }
-        if pos + chunk.len() as u64 >= size {
-            break;
-        }
-        pos += chunk.len() as u64 - 13;
-    }
+    let listed = match &offs {
+        Some(o) => read_listed(&mut src, o, &mut rows)?,
+        None => None,
+    };
+    let last_end = match listed {
+        Some(e) => e,
+        None => read_walked(&mut src, &mut rows, budget)?,
+    };
+    let n_chrom = count_chromatograms(&mut src, last_end)?;
     Ok(rows.finish(n_chrom))
 }

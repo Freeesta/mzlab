@@ -17,10 +17,10 @@ export function oomSign(/** @type {{ panic?: string | null, text?: string, mem?:
   return /unreachable|rust_oom|out of memory|memory access|memoryBudget/i.test(String((info && (info.panic || info.text)) || "")) && Math.max(peak, (info && info.mem) || 0) > 64 * 1048576;
 }
 
-// Orders the messages to a worker: the compiled module goes first (null = it compiles by itself), then the budget when the supervisor lowered it, then everything else in the order sent.
-export function ordered(/** @type {any} */ w, /** @type {() => Promise<WebAssembly.Module | null>} */ compile, /** @type {() => number} */ budget, /** @type {() => number} */ nextId) {
+// Orders the messages to a worker: the compiled module goes first (null = it compiles by itself), then the policy of the memory budget (what the engine decides it from), then the budget when the supervisor lowered it, then everything else in the order sent.
+export function ordered(/** @type {any} */ w, /** @type {() => Promise<WebAssembly.Module | null>} */ compile, /** @type {() => number} */ budget, /** @type {() => number} */ nextId, /** @type {() => object | null} */ policy = () => null) {
   let sent = false;
-  const first = compile().then(module => { w.postMessage({ op: "module", module }); if (budget()) w.postMessage({ op: "budget", mb: budget(), id: nextId() }); sent = true; });
+  const first = compile().then(module => { w.postMessage({ op: "module", module }); const p = policy(); if (p) w.postMessage({ op: "policy", ...p }); if (budget()) w.postMessage({ op: "budget", mb: budget(), id: nextId() }); sent = true; });
   return (/** @type {any} */ msg, /** @type {Transferable[] | undefined} */ transfer) => { if (sent) w.postMessage(msg, transfer); else first.then(() => w.postMessage(msg, transfer)); };
 }
 

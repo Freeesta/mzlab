@@ -121,8 +121,11 @@ try:
             st = pg.evaluate(JSON, "api/state")["j"]
             # the engine reads the infusion MSn of a file (`msn`, mzlab-core/src/infusione.rs); the Python reference does not
             nomsn = lambda x: {k: nomsn(v) for k, v in x.items() if k != "msn"} if isinstance(x, dict) else [nomsn(v) for v in x] if isinstance(x, list) else x
-            json_close(nomsn(st["files"]), py["state"]["files"], path="state.files")
-            json_close(nomsn({k: v for k, v in sess.items() if k not in ("workdir", "commit")}), {k: v for k, v in py["session"].items() if k not in ("workdir", "commit")}, path="session")
+            # `hr` (high-resolution flag of a file, `sniff.rs`) is the engine's alone, in every `files` list
+            nohr = lambda x: {k: ([{a: b for a, b in f.items() if a != "hr"} if isinstance(f, dict) else f for f in nohr(v)] if k == "files" and isinstance(v, list) else nohr(v)) for k, v in x.items()} if isinstance(x, dict) else [nohr(v) for v in x] if isinstance(x, list) else x
+            nofl = lambda x: [{a: b for a, b in f.items() if a != "hr"} if isinstance(f, dict) else f for f in x]
+            json_close(nomsn(nofl(st["files"])), py["state"]["files"], path="state.files")
+            json_close(nomsn(nohr({k: v for k, v in sess.items() if k not in ("workdir", "commit")})), {k: v for k, v in py["session"].items() if k not in ("workdir", "commit")}, path="session")
         step("api/state and api/session: the JSON of the Python reference", state_same)
         def routes_same():
             names = ref["names"]; k = {n.split("#")[0]: i for i, n in reversed(list(enumerate(names)))}

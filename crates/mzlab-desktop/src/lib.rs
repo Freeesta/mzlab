@@ -18,6 +18,7 @@ pub mod mapped;
 mod nativi;
 mod nativi_slots;
 pub mod protocol;
+mod ram;
 pub mod release;
 pub mod rpc;
 mod rpc_lr;

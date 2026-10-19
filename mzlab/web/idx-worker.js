@@ -67,7 +67,7 @@ onmessage = async ev => {
         return fonte.read(off, len);
       };
       const [levels, pols, rt, tic, rows, source, run, hr1] = m.inputs;
-      stats = build_mzidx(blob.size, read, write, levels, pols, rt, tic, rows, source, run, hr1, m.budget, spill ? spill.put : undefined, spill ? spill.get : undefined);
+      stats = build_mzidx(blob.size, read, write, levels, pols, rt, tic, rows, source, run, hr1, m.budget, spill ? spill.put : undefined, spill ? spill.get : undefined, m.cap || 0);
     }
     if (fonte) { fonte.close(); fonte = null; }
     ah.flush();

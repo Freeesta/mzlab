@@ -1,7 +1,8 @@
 //! The rows of the scan table, one spectrum header at a time: from the headers of an mzML (`read`) or the headers `mzmlwrite` would write
 //! for the scans of a `Lettore` (`mzidx_lettore`).
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use super::*;
 use crate::mzml::Spectrum;
@@ -97,16 +98,15 @@ impl Head {
         })
     }
 
-    fn analyzer(&self, filt: &str, icref: Option<&str>) -> String {
+    fn analyzer(&self, filt: &str, icref: Option<&str>) -> &'static str {
         let tok = filt.split(' ').next().unwrap_or("").to_uppercase();
-        if ANALYZERS.contains(&tok.as_str()) {
-            return tok;
+        if let Some(a) = ANALYZERS.iter().find(|a| **a == tok) {
+            return a;
         }
         let look = |k: &str| self.ic.iter().find(|(n, _)| n == k).map(|(_, a)| *a);
         look(icref.unwrap_or(""))
             .or_else(|| look(self.default_ic.as_deref().unwrap_or("")))
             .unwrap_or("?")
-            .to_string()
     }
 }
 
@@ -142,22 +142,10 @@ fn analyzer_names(block: &str) -> Vec<String> {
 pub(crate) struct Rows {
     head: Head,
     rows: Vec<Row>,
-    refs: HashMap<usize, String>,
-    level_of: HashMap<String, u8>,
-}
-
-/// The retention time of a spectrum header, in minutes.
-fn rt_minutes(h: &str) -> f64 {
-    let mut rt = cv(h, "MS:1000016").and_then(float).unwrap_or(0.0);
-    if let Some(p) = h.find("accession=\"MS:1000016\"") {
-        let tag_end = h[p..].find('>').map_or(h.len(), |g| p + g);
-        if let Some(u) = attr(&h[p..tag_end], "unitName") {
-            if u.starts_with("second") {
-                rt /= 60.0;
-            }
-        }
-    }
-    rt
+    refs: HashMap<usize, Arc<str>>,
+    level_of: HashMap<Arc<str>, u8>,
+    /// The texts that many rows repeat (filter strings, activation names): one allocation each.
+    pool: HashSet<Arc<str>>,
 }
 
 impl Rows {
@@ -167,13 +155,42 @@ impl Rows {
             rows: Vec::new(),
             refs: HashMap::new(),
             level_of: HashMap::new(),
+            pool: HashSet::new(),
         }
     }
 
-    /// Room for `n` more rows in one allocation: a vector that doubles holds the old and the new buffer together while it grows, which at a million
-    /// scans is the peak of the whole load.
+    /// The rows kept so far.
+    pub(crate) fn len(&self) -> usize {
+        self.rows.len()
+    }
+
+    /// Room for `n` more rows in one allocation (a vector that doubles holds the old and the new buffer together: the peak of a million-scan load).
     pub(crate) fn reserve(&mut self, n: usize) {
         self.rows.reserve_exact(n);
+    }
+
+    /// The shared allocation of a text that rows repeat.
+    fn intern(&mut self, t: &str) -> Arc<str> {
+        if let Some(a) = self.pool.get(t) {
+            return a.clone();
+        }
+        let a: Arc<str> = Arc::from(t);
+        self.pool.insert(a.clone());
+        a
+    }
+
+    /// The text of a reference to another scan: the allocation of that scan's native id when it is already known (a precursor comes after its parent).
+    fn shared(&self, t: &str) -> Arc<str> {
+        self.level_of
+            .get_key_value(t)
+            .map_or_else(|| Arc::from(t), |(k, _)| k.clone())
+    }
+
+    /// The native id of a row, and the key of `level_of` for it: one allocation for both.
+    fn native_id(&mut self, id: &str, level: u8) -> Arc<str> {
+        let a: Arc<str> = Arc::from(id);
+        self.level_of.insert(a.clone(), level);
+        a
     }
 
     /// Level and polarity of the row added last: what the `.mzidx` builder groups the scan by (the text of an extra can say more than the scan does).
@@ -201,6 +218,20 @@ impl Rows {
     }
 }
 
+/// The retention time of a spectrum header, in minutes.
+fn rt_minutes(h: &str) -> f64 {
+    let mut rt = cv(h, "MS:1000016").and_then(float).unwrap_or(0.0);
+    if let Some(p) = h.find("accession=\"MS:1000016\"") {
+        let tag_end = h[p..].find('>').map_or(h.len(), |g| p + g);
+        if let Some(u) = attr(&h[p..tag_end], "unitName") {
+            if u.starts_with("second") {
+                rt /= 60.0;
+            }
+        }
+    }
+    rt
+}
+
 /// The resolution of a spectrum header (`hs` is its part before the precursors).
 fn resolution(hs: &str, h: &str) -> Option<f64> {
     cv(hs, "MS:1000800").and_then(float).or_else(|| {
@@ -219,12 +250,15 @@ impl Rows {
             head,
             mut rows,
             refs,
-            ..
+            level_of,
+            pool,
         } = self;
+        // only reading needed them; the tables below are what the peak of this step is made of
+        drop((level_of, pool));
         let by_native: HashMap<&str, usize> = rows
             .iter()
             .enumerate()
-            .map(|(i, r)| (r.native.as_str(), i))
+            .map(|(i, r)| (&*r.native, i))
             .collect();
         let mut parents: Vec<Option<usize>> = vec![None; rows.len()];
         let mut last: HashMap<i8, usize> = HashMap::new();
@@ -235,24 +269,20 @@ impl Rows {
                 continue;
             }
             if s.level == 2 {
-                let mut p = refs
-                    .get(&i)
-                    .and_then(|r| by_native.get(r.as_str()).copied());
+                let mut p = refs.get(&i).and_then(|r| by_native.get(&**r).copied());
                 if p.is_none() {
                     p = last.get(&s.polarity).or_else(|| last.get(&0)).copied();
                 }
                 parents[i] = p;
-            } else if let Some(pa) = &s.path {
+            } else if let Some(pa) = &s.d().path {
                 parents[i] = last_path
                     .get(&(s.level - 1, path_key(&pa[..pa.len() - 1])))
                     .copied();
             } else {
-                let j = refs
-                    .get(&i)
-                    .and_then(|r| by_native.get(r.as_str()).copied());
+                let j = refs.get(&i).and_then(|r| by_native.get(&**r).copied());
                 parents[i] = j.filter(|&j| rows[j].level == s.level - 1);
             }
-            if let Some(pa) = &s.path {
+            if let Some(pa) = &s.d().path {
                 last_path.insert((s.level, path_key(pa)), i);
             }
         }
@@ -299,9 +329,9 @@ impl Rows {
         let rt = rt_minutes(h);
         let level = lvl.and_then(float).map_or(1, |v| v as u8);
         let hs = h.split("<precursorList").next().unwrap_or("");
-        let filt = cv(hs, "MS:1000512").unwrap_or("").to_string();
+        let filt = cv(hs, "MS:1000512").unwrap_or("");
         let mut m = if level > 1 {
-            self.msn(h, level, &filt)
+            self.msn(h, level, filt)
         } else {
             Msn::default()
         };
@@ -314,11 +344,26 @@ impl Rows {
             attr(tag, "instrumentConfigurationRef")
         });
         let res = resolution(hs, h);
+        let native = match &id {
+            Some(i) => self.native_id(i, level),
+            None => self.intern(""),
+        };
+        let act = m.act.map(|a| self.intern(&a));
+        let mut detail = Detail {
+            precursor: m.prec,
+            ce: m.ce,
+            iso: m.iso,
+            act,
+            pint: m.pint,
+            path: m.path,
+            precs: m.precs,
+            charge: m.charge,
+        };
+        detail.shrink();
         let row = Row {
             start: a,
             end: b,
-            k: None,
-            posizione: None,
+            dove: None,
             level,
             rt,
             polarity: pol,
@@ -326,26 +371,16 @@ impl Rows {
                 .and_then(float)
                 .filter(|v| *v != 0.0)
                 .unwrap_or(0.0),
-            precursor: m.prec,
-            ce: m.ce,
-            an: self.head.analyzer(&filt, icref),
-            kind: super::kind_of(h, &filt).filter(|_| level > 1),
+            an: self.head.analyzer(filt, icref),
+            kind: super::kind_of(h, filt).filter(|_| level > 1),
             mob: super::mobility_of_header(h),
-            filter: filt,
+            filter: self.intern(filt),
             profile: h.contains("accession=\"MS:1000128\""),
             parent: None,
-            iso: m.iso,
-            act: m.act,
             res,
-            pint: m.pint,
-            path: m.path,
-            precs: m.precs,
-            charge: m.charge,
-            native: id.clone().unwrap_or_default(),
+            native,
+            detail: (!detail.is_empty()).then(|| Box::new(detail)),
         };
-        if let Some(i) = id {
-            self.level_of.insert(i, level);
-        }
         self.rows.push(row);
     }
 }
@@ -414,6 +449,7 @@ impl Rows {
         }
         let native = esc(&sp.id);
         let filt = esc(&sp.filter);
+        let filt = filt.as_str();
         let level = sp.level;
         let polarity = match sp.polarity {
             1 => 1,
@@ -422,7 +458,7 @@ impl Rows {
         };
         let mut m = Msn::default();
         if level > 1 {
-            m.path = filter_path(&filt);
+            m.path = filter_path(filt);
             if let Some(p) = sp.precursor {
                 m.precs.push(Prec {
                     target: Some(p),
@@ -435,7 +471,7 @@ impl Rows {
             if m.act.is_none() {
                 m.act = match &m.path {
                     Some(p) => Some(p[p.len() - 1].1.clone()),
-                    None => activation_in_filter(&filt),
+                    None => activation_in_filter(filt),
                 };
             }
         }
@@ -444,33 +480,36 @@ impl Rows {
             .iter()
             .find(|(k, _)| k == "opentfraw.resolution")
             .and_then(|(_, v)| float(&esc(v)));
-        let row = Row {
-            start: 0,
-            end: 0,
-            k: None,
-            posizione: None,
-            level,
-            rt: sp.rt,
-            polarity,
-            tic: Some(tic).filter(|v| *v != 0.0).unwrap_or(0.0),
+        let act = m.act.map(|a| self.intern(&a));
+        let mut detail = Detail {
             precursor: m.prec,
             ce: m.ce,
-            an: self.head.analyzer(&filt, None),
-            kind: super::kind_of("", &filt).filter(|_| level > 1),
-            filter: filt,
-            profile: sp.profile,
-            parent: None,
             iso: m.iso,
-            act: m.act,
-            res,
+            act,
             pint: m.pint,
             path: m.path,
             precs: m.precs,
             charge: m.charge,
-            native: native.clone(),
-            mob: None,
         };
-        self.level_of.insert(native, level);
+        detail.shrink();
+        let row = Row {
+            start: 0,
+            end: 0,
+            dove: None,
+            level,
+            rt: sp.rt,
+            polarity,
+            tic: Some(tic).filter(|v| *v != 0.0).unwrap_or(0.0),
+            an: self.head.analyzer(filt, None),
+            kind: super::kind_of("", filt).filter(|_| level > 1),
+            filter: self.intern(filt),
+            profile: sp.profile,
+            parent: None,
+            res,
+            native: self.native_id(&native, level),
+            mob: None,
+            detail: (!detail.is_empty()).then(|| Box::new(detail)),
+        };
         self.rows.push(row);
         true
     }
@@ -511,7 +550,7 @@ impl Rows {
                 break;
             };
             let body = &h[after + g + 1..after + g + 1 + close];
-            let rf = attr(attrs, "spectrumRef").map(String::from);
+            let rf = attr(attrs, "spectrumRef").map(|r| self.shared(r));
             m.precs.push(precursor_element(body, rf));
             from = after + g + 1 + close + 12;
         }

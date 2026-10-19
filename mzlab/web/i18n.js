@@ -103,7 +103,10 @@
     if (!j || !j.error_key) return new Error(j && j.error ? j.error : String(j));
     // a refusal of the memory contract names the phase, the estimate and the budget: its own text says by how much the file overshoots
     const k = j.error_key === "error.memoryBudget" && j.params && j.params.fase ? "error.memoryBudgetFase" : j.error_key;
-    return Object.assign(new Error(t(k, j.params || {})), { key: j.error_key, params: j.params });
+    // the phase has a name for people when the catalog has one (`memory.phase.<id>`)
+    const ph = j.params && j.params.fase && cat[lang]["memory.phase." + j.params.fase] ? t(`memory.phase.${j.params.fase}`) : "";
+    const params = ph ? Object.assign({}, j.params, { fase: ph }) : j.params;
+    return Object.assign(new Error(t(k, params || {})), { key: j.error_key, params: j.params });
   }
 
   // static HTML: the Italian text stays in the page (works before JS); tools/controlla_i18n.py checks that it matches it.js

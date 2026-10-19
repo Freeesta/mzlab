@@ -147,6 +147,7 @@ impl IdxBuilder {
                 )?),
             };
             let table = table.unwrap_or_else(|| &letta.as_ref().expect("read above").table);
+            crate::ram::check_index(table)?;
             mzidx::build_mzml_spill(
                 table,
                 Cursor::new(map.bytes()),

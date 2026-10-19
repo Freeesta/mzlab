@@ -66,6 +66,22 @@ impl mzidx::Output for Nulla {
     }
 }
 
+/// SHA-256 of a file, read in pieces (the index is as large as the mzML).
+fn sha256_file(path: &str) -> String {
+    use sha2::{Digest, Sha256};
+    use std::io::Read;
+    let mut f = File::open(path).expect("index");
+    let (mut h, mut b) = (Sha256::new(), vec![0u8; 1 << 20]);
+    loop {
+        let n = f.read(&mut b).expect("read");
+        if n == 0 {
+            break;
+        }
+        h.update(&b[..n]);
+    }
+    h.finalize().iter().map(|x| format!("{x:02x}")).collect()
+}
+
 fn main() {
     let a: Vec<String> = std::env::args().skip(1).collect();
     let path = a
@@ -101,5 +117,8 @@ fn main() {
     .expect("index");
     let sp_mb = std::fs::metadata(&spool).map(|m| m.len()).unwrap_or(0) as f64 / 1048576.0;
     println!("mzidx     heap peak {:>7.1} MB, rss peak {:>7.1} MB | {} passes, mzidx {:.1} MB, scratch file {:.1} MB", picco(), rss_max(), st.passes, st.bytes as f64 / 1048576.0, sp_mb);
+    if std::env::var("MZ_NULL").is_err() {
+        println!("mzidx     sha256 {}", sha256_file(&idx));
+    }
     let _ = (std::fs::remove_file(&idx), std::fs::remove_file(&spool));
 }
