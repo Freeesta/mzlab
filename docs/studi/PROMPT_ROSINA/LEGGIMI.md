@@ -4,7 +4,7 @@ Un file per pacchetto; piano, ordine e dipendenze in `docs/studi/ROSINA.md` E; s
 
 - [LOC-1](LOC-1.md): Scaricare ELENCO-1, contare MassIVE, provare gli oracoli sul Mac (fatto il 19/10)
 - [R-00](R-00.md): Banco comune: verità `verita/1`, strumenti `tools/rosina/`, test di parità e fuzz dei moduli
-- [LOC-2](LOC-2.md): Oracoli su tutto il corpus: TRFP sul Mac, workflow `oracoli.yml` per msconvert e `timsdata`, verità
+- [LOC-2](LOC-2.md): Oracoli su tutto il corpus: TRFP sul Mac, msconvert e `timsdata` su Windows (Parallels), verità
 - [R-01](R-01.md): Convertitore mzML: validazione, profilo e centroidi dichiarati, andata e ritorno
 - [R-02](R-02.md): Thermo `.raw`: TSQ, trappole, tune, SPS/MS3, metadati contro TRFP
 - [R-03](R-03.md): SCIEX `.wiff`: QTRAP oltre il 3200, polarità mista, metadati; TripleTOF/ZenoTOF nel modulo `sciex-tof`
