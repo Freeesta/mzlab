@@ -67,6 +67,119 @@ fn find(rule: &Rule, peaks: &[(f64, f64)], base: f64, precursor: f64, ppm: f64) 
     best.map(|(i, _)| i)
 }
 
+/// One spectrum and its settings, shared by the matching helpers.
+struct Ctx<'a> {
+    table: &'a Table,
+    peaks: &'a [(f64, f64)],
+    base: f64,
+    precursor: f64,
+    polarity: Polarity,
+    ppm: f64,
+}
+
+fn applies(c: &Ctx, r: &Rule) -> bool {
+    r.polarity.is_none_or(|p| p == c.polarity)
+}
+
+fn hit_of(c: &Ctx, r: &Rule) -> Option<usize> {
+    find(r, c.peaks, c.base, c.precursor, c.ppm)
+}
+
+fn evidence_of(c: &Ctx, r: &Rule, pi: usize) -> Evidence {
+    let (mz, inten) = c.peaks[pi];
+    let (observed, ppm) = match r.kind {
+        Kind::Frag => (mz, (mz - r.value) / r.value * 1e6),
+        Kind::Loss => (
+            c.precursor - mz,
+            (c.precursor - mz - r.value) / c.precursor * 1e6,
+        ),
+    };
+    let mut also: Vec<String> = c
+        .table
+        .rules
+        .iter()
+        .filter(|o| o.class != r.class && applies(c, o) && hit_of(c, o) == Some(pi))
+        .map(|o| c.table.classes[o.class].0.clone())
+        .collect();
+    also.sort();
+    also.dedup();
+    Evidence {
+        rule: r.id.clone(),
+        kind: r.kind,
+        role: r.role,
+        formula: r.formula.clone(),
+        theoretical: r.value,
+        observed,
+        peak_mz: mz,
+        ppm,
+        rel_intensity: if c.base > 0.0 { inten / c.base } else { 0.0 },
+        why: r.why.clone(),
+        also,
+    }
+}
+
+/// The class `ci` if a diagnostic rule matched and the score reaches `SCORE_MIN`.
+fn class_hit(c: &Ctx, ci: usize) -> Option<ClassHit> {
+    let rules: Vec<&Rule> = c
+        .table
+        .rules
+        .iter()
+        .filter(|r| r.class == ci && applies(c, r))
+        .collect();
+    // Diagnostic rules are alternatives (one is enough): the full score is the strongest of them plus every supporting rule.
+    let weights = |role: Role| {
+        rules
+            .iter()
+            .filter(move |r| r.role == role)
+            .map(|r| r.weight)
+    };
+    let total = weights(Role::Diagnostic).fold(0.0, f64::max) + weights(Role::Support).sum::<f64>();
+    let (mut got, mut evidence, mut unmet) = (0.0, Vec::new(), Vec::new());
+    for r in rules {
+        match hit_of(c, r) {
+            Some(pi) => {
+                got += r.weight;
+                evidence.push(evidence_of(c, r, pi));
+            }
+            None => unmet.push(Unmet {
+                rule: r.id.clone(),
+                kind: r.kind,
+                role: r.role,
+                theoretical: r.value,
+                why: r.why.clone(),
+            }),
+        }
+    }
+    let diagnostic = || evidence.iter().filter(|e| e.role == Role::Diagnostic);
+    let diag = diagnostic().count();
+    let score = if total > 0.0 {
+        (got / total).min(1.0)
+    } else {
+        0.0
+    };
+    if diag == 0 || score < SCORE_MIN {
+        return None;
+    }
+    let mut ambiguous_with: Vec<String> = diagnostic().flat_map(|e| e.also.clone()).collect();
+    ambiguous_with.sort();
+    ambiguous_with.dedup();
+    let level = if diag >= 2 && score >= SCORE_3A && ambiguous_with.is_empty() {
+        "3a"
+    } else {
+        "3b"
+    };
+    let (id, name) = c.table.classes[ci].clone();
+    Some(ClassHit {
+        id,
+        name,
+        score,
+        level,
+        ambiguous_with,
+        evidence,
+        unmet,
+    })
+}
+
 pub fn evaluate(
     table: &Table,
     peaks: &[(f64, f64)],
@@ -81,105 +194,17 @@ pub fn evaluate(
         return Err(Error::new("error.classi.input"));
     }
     let base = peaks.iter().map(|p| p.1).fold(0.0, f64::max);
-    let applies = |r: &Rule| r.polarity.map_or(true, |p| p == polarity);
-    let hit_of = |r: &Rule| find(r, peaks, base, precursor_mz, ppm);
-    let mut classes = Vec::new();
-    for (ci, (id, name)) in table.classes.iter().enumerate() {
-        let rules: Vec<&Rule> = table
-            .rules
-            .iter()
-            .filter(|r| r.class == ci && applies(r))
-            .collect();
-        // Diagnostic rules are alternatives (one is enough): the full score is the strongest of them plus every supporting rule.
-        let strongest = rules
-            .iter()
-            .filter(|r| r.role == Role::Diagnostic)
-            .map(|r| r.weight)
-            .fold(0.0, f64::max);
-        let total: f64 = strongest
-            + rules
-                .iter()
-                .filter(|r| r.role == Role::Support)
-                .map(|r| r.weight)
-                .sum::<f64>();
-        let (mut got, mut evidence, mut unmet) = (0.0, Vec::new(), Vec::new());
-        for r in rules {
-            match hit_of(r) {
-                Some(pi) => {
-                    let (mz, inten) = peaks[pi];
-                    let (observed, ppm_err) = match r.kind {
-                        Kind::Frag => (mz, (mz - r.value) / r.value * 1e6),
-                        Kind::Loss => (
-                            precursor_mz - mz,
-                            (precursor_mz - mz - r.value) / precursor_mz * 1e6,
-                        ),
-                    };
-                    let mut also: Vec<String> = table
-                        .rules
-                        .iter()
-                        .filter(|o| o.class != ci && applies(o) && hit_of(o) == Some(pi))
-                        .map(|o| table.classes[o.class].0.clone())
-                        .collect();
-                    also.sort();
-                    also.dedup();
-                    got += r.weight;
-                    evidence.push(Evidence {
-                        rule: r.id.clone(),
-                        kind: r.kind,
-                        role: r.role,
-                        formula: r.formula.clone(),
-                        theoretical: r.value,
-                        observed,
-                        peak_mz: mz,
-                        ppm: ppm_err,
-                        rel_intensity: if base > 0.0 { inten / base } else { 0.0 },
-                        why: r.why.clone(),
-                        also,
-                    });
-                }
-                None => unmet.push(Unmet {
-                    rule: r.id.clone(),
-                    kind: r.kind,
-                    role: r.role,
-                    theoretical: r.value,
-                    why: r.why.clone(),
-                }),
-            }
-        }
-        let diag = evidence
-            .iter()
-            .filter(|e| e.role == Role::Diagnostic)
-            .count();
-        let score = if total > 0.0 {
-            (got / total).min(1.0)
-        } else {
-            0.0
-        };
-        if diag == 0 || score < SCORE_MIN {
-            continue;
-        }
-        let mut ambiguous_with: Vec<String> = evidence
-            .iter()
-            .filter(|e| e.role == Role::Diagnostic)
-            .flat_map(|e| e.also.clone())
-            .collect();
-        ambiguous_with.sort();
-        ambiguous_with.dedup();
-        let level = if diag >= 2 && score >= SCORE_3A && ambiguous_with.is_empty() {
-            "3a"
-        } else {
-            "3b"
-        };
-        classes.push(ClassHit {
-            id: id.clone(),
-            name: name.clone(),
-            score,
-            level,
-            ambiguous_with,
-            evidence,
-            unmet,
-        });
-    }
+    let ctx = Ctx {
+        table,
+        peaks,
+        base,
+        precursor: precursor_mz,
+        polarity,
+        ppm,
+    };
+    let mut classes: Vec<ClassHit> = (0..table.classes.len())
+        .filter_map(|ci| class_hit(&ctx, ci))
+        .collect();
     classes.sort_by(|a, b| b.score.total_cmp(&a.score).then_with(|| a.id.cmp(&b.id)));
     Ok(Report {
         polarity,
