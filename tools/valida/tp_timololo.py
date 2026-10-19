@@ -21,11 +21,11 @@ PPM = 10.0
 RT_TOL = 0.3
 
 
-def run_pass(dati: Path) -> dict:
+def run_pass() -> dict:
     """The rows interpreted by `cargo test` (tests/interp_dati.rs) as the JSON it writes in MZLAB_MISURE_OUT."""
     with tempfile.TemporaryDirectory() as d:
         out = Path(d) / "misure.json"
-        env = {**os.environ, "MZLAB_DATI": str(dati), "MZLAB_MISURE_OUT": str(out)}
+        env = {**os.environ, "MZLAB_MISURE_OUT": str(out)}
         cmd = ["cargo", "test", "--release", "-p", "mzlab-feat", "--features", "interp", "--test", "interp_dati"]
         subprocess.run(cmd, cwd=ROOT, env=env, check=True, capture_output=True)
         return json.loads(out.read_text()) if out.exists() else {}
@@ -88,9 +88,9 @@ def main() -> int:
     radice = dati_percorsi.radice()
     truth_path = dati_percorsi.percorso("scratchpad/timolol_truth.json")
     if radice is None or truth_path is None:
-        print("SKIP tp_timololo: no data repository (MZLAB_DATI)")
+        print("SKIP tp_timololo: no data repository")
         return 0
-    data = run_pass(radice)
+    data = run_pass()
     if not data:
         print("SKIP tp_timololo: the test did not write the measures (series or parent missing)")
         return 0
