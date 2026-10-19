@@ -3,7 +3,6 @@
 // Context help: every <button class="hq" data-help="key"> opens a short explanation (HELP[key]) next to it.
 // Texts for students, in the catalogs (keys help.<key>.title / .body). To add one: a key here and a "?" button where it is needed. Classic script.
 const HELP = {
-  "filetypes": [I18N.t("help.filetypes.title"), I18N.t("help.filetypes.body")],
   "numpress": [I18N.t("help.numpress.title"), I18N.t("help.numpress.body")],
   "start": [I18N.t("help.start.title"), I18N.t("help.start.body")],
   "filegrandi": [I18N.t("help.filegrandi.title"), I18N.t("help.filegrandi.body")],

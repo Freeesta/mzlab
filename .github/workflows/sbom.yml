@@ -13,14 +13,14 @@ jobs:
   sbom:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
       - name: cargo-cyclonedx
         run: cargo install cargo-cyclonedx --locked
       - name: Generate the SBOM (one JSON file per crate)
         run: cargo cyclonedx --format json --spec-version 1.5
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sbom
           path: "**/*.cdx.json"

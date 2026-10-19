@@ -93,10 +93,12 @@ fn find(t: &Aligned, mz: f64, rt: f64) -> Option<usize> {
 #[test]
 fn pipeline_matches_the_final_list_of_mzmine() {
     let Some(mut ixs) = synthetic() else { return };
-    let p = UntParams {
+    let mut p = UntParams {
         polarity: Some(1),
         ..UntParams::default()
     };
+    // the gold data are those of mzmine 3.9.0: no zero next to the edges (the default of the product follows 4.10)
+    p.resolve.adjust_edges = false;
     let lists: Vec<_> = ixs.iter_mut().map(|ix| run_file(ix, &p).unwrap()).collect();
     let files: Vec<String> = (1..=4).map(|i| format!("oro_{i}")).collect();
     let t = run_series(&lists, &mut ixs, &files, &p).unwrap();
@@ -177,4 +179,13 @@ fn recipe_json_overrides_only_what_it_names() {
     ] {
         assert!(UntParams::from_json(bad).is_err(), "{bad}");
     }
+}
+
+#[test]
+fn adjust_edges_is_on_by_default_and_the_recipe_can_turn_it_off() {
+    assert!(UntParams::default().resolve.adjust_edges);
+    assert!(UntParams::from_json("").unwrap().resolve.adjust_edges);
+    let off = UntParams::from_json(r#"{"resolve":{"adjust_edges":false}}"#).unwrap();
+    assert!(!off.resolve.adjust_edges);
+    assert!(UntParams::from_json(r#"{"resolve":{"adjust_edges":3}}"#).is_err());
 }

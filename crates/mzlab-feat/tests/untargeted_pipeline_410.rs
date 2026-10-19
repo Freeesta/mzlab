@@ -107,10 +107,12 @@ fn pipeline_matches_the_final_list_of_mzmine() {
         return;
     };
     let Some(mut ixs) = synthetic() else { return };
+    // the default of the product: mzmine 4.10 takes the zero next to an edge in (`adjustStartAndEnd`)
     let p = UntParams {
         polarity: Some(1),
         ..UntParams::default()
     };
+    assert!(p.resolve.adjust_edges);
     let lists: Vec<_> = ixs.iter_mut().map(|ix| run_file(ix, &p).unwrap()).collect();
     let files: Vec<String> = (1..=4).map(|i| format!("oro_{i}")).collect();
     let t = run_series(&lists, &mut ixs, &files, &p).unwrap();

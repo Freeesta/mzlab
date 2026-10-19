@@ -110,6 +110,7 @@ pub mod rng;
 pub mod rois;
 pub mod roi_cluster;
 pub mod roles;
+pub mod ricerca;
 pub mod routes;
 pub mod scaninfo;
 pub(crate) mod scanrow;

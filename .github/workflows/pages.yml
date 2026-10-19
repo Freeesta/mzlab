@@ -10,8 +10,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # No run is ever cancelled: a running build/deploy finishes (the site always gets a new version), and of the runs waiting
 # GitHub keeps only the newest, so quick merges in a row end in one more deploy of the last commit, never in none.
@@ -23,8 +21,8 @@ jobs:
       group: pages-build
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.13"
       - name: Build the site
@@ -33,7 +31,7 @@ jobs:
         run: rustup show
       # every run restores the newest cache; a new one is saved only when the Rust sources (crates/, vendor/, Cargo.lock) changed: the 10 GB of caches of the repository are not filled by copies of the same build
       - id: rcache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.cargo/registry
@@ -59,7 +57,7 @@ jobs:
       - name: Build the mzFinder WASM engines (the .wasm of their own, under 500 KB each, with their SHA-256; never committed)
         run: tools/build_feat_wasm.sh site/static
       - name: Save the Rust cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: steps.rcache.outputs.cache-hit != 'true'
         with:
           path: |
@@ -70,7 +68,7 @@ jobs:
           key: ${{ steps.rcache.outputs.cache-primary-key }}
       - name: Restore the spectral-library packages from the cache (pinned MassBank release, built with the Rust builder, never committed)
         id: libcache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: site/static/librerie
           key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
@@ -89,7 +87,7 @@ jobs:
       - name: Restore the MassBank download
         if: steps.libcache.outputs.cache-hit != 'true'
         id: mbcache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: .massbank-cache
           key: massbank-zip-${{ steps.pin.outputs.massbank }}
@@ -119,26 +117,26 @@ jobs:
           fi
       - name: Save the MassBank download
         if: steps.libcache.outputs.cache-hit != 'true' && steps.mbcache.outputs.cache-hit != 'true' && hashFiles('.massbank-cache/massbank.zip') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: .massbank-cache
           key: massbank-zip-${{ steps.pin.outputs.massbank }}
       - name: Save the packages in the cache
         if: steps.libcache.outputs.cache-hit != 'true' && hashFiles('site/static/librerie/catalogo.json') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: site/static/librerie
           key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
       - name: Restore the suspect index from the cache (pinned CC BY sources, never committed)
         id: suscache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: site/static/mzfinder/sospetti
           key: sospetti-${{ hashFiles('tools/genera_sospetti.py') }}
       - name: Restore the suspect sources
         if: steps.suscache.outputs.cache-hit != 'true'
         id: fonticache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: .sospetti-fonti
           key: sospetti-fonti-${{ steps.pin.outputs.fonti }}
@@ -148,17 +146,17 @@ jobs:
         run: python tools/genera_sospetti.py --fonte .sospetti-fonti --pacchetto site/static/mzfinder/sospetti
       - name: Save the suspect sources
         if: steps.suscache.outputs.cache-hit != 'true' && steps.fonticache.outputs.cache-hit != 'true' && hashFiles('site/static/mzfinder/sospetti/catalogo.json') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: .sospetti-fonti
           key: sospetti-fonti-${{ steps.pin.outputs.fonti }}
       - name: Save the suspect index in the cache
         if: steps.suscache.outputs.cache-hit != 'true' && hashFiles('site/static/mzfinder/sospetti/catalogo.json') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: site/static/mzfinder/sospetti
           key: sospetti-${{ hashFiles('tools/genera_sospetti.py') }}
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: site
 
@@ -166,6 +164,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     concurrency:
       group: pages-deploy
       cancel-in-progress: false
@@ -174,4 +176,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

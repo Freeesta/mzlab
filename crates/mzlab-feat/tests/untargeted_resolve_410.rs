@@ -88,7 +88,11 @@ fn resolver_matches_mzmine_410() {
         return;
     };
     let rt = axis();
-    let p = MinParams::default();
+    // mzmine 4.10 takes the zero next to an edge in (`adjustStartAndEnd`)
+    let p = MinParams {
+        adjust_edges: true,
+        ..MinParams::default()
+    };
     let expected = rows("resolved.csv");
     let adap = rows("adap.csv");
     let mut found: Vec<(String, String, Feature)> = Vec::new();
