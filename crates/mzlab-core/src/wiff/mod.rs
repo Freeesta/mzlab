@@ -5,6 +5,7 @@
 //! The scans are PROFILE data as the file holds them (no peak picking): `Spectrum::profile` is true.
 
 pub mod dad;
+#[cfg(feature = "mappa-dad")]
 pub mod dad_map;
 pub mod idx;
 pub mod lettore;
