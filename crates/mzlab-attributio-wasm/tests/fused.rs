@@ -40,12 +40,15 @@ fn the_fused_module_serves_the_exports_and_the_evidence() {
         list.join(",")
     );
     let files = Files::from_json(&names).expect("names");
-    let fetch = |k: usize, off: u64, len: u64| {
-        Some(data[k].1[off as usize..(off + len) as usize].to_vec())
-    };
+    let fetch =
+        |k: usize, off: u64, len: u64| Some(data[k].1[off as usize..(off + len) as usize].to_vec());
     for kind in ["schymanski", "evidence"] {
         let r = export_with(&files, &fetch, &names, kind).expect(kind);
-        assert!(r.contains("\"files\":["), "{kind}: {}", &r[..120.min(r.len())]);
+        assert!(
+            r.contains("\"files\":["),
+            "{kind}: {}",
+            &r[..120.min(r.len())]
+        );
     }
     assert!(export_with(&files, &fetch, &names, "nonsense").is_err());
 }

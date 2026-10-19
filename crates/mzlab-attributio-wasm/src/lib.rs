@@ -269,7 +269,10 @@ fn js_fetch(read: &Function, k: usize, off: u64, len: u64) -> Option<Vec<u8>> {
     Some(v.dyn_into::<Uint8Array>().ok()?.to_vec())
 }
 
-#[cfg(any(not(any(feature = "rev", feature = "export", feature = "ms2")), feature = "all"))]
+#[cfg(any(
+    not(any(feature = "rev", feature = "export", feature = "ms2")),
+    feature = "all"
+))]
 fn go(read: Function, names_json: &str, write: Function, kind: &str) -> Result<String, JsValue> {
     let files = Files::from_json(names_json).map_err(js_err)?;
     let run = run_with(&files, &|k, o, l| js_fetch(&read, k, o, l)).map_err(js_err)?;
@@ -285,21 +288,30 @@ fn go(read: Function, names_json: &str, write: Function, kind: &str) -> Result<S
 }
 
 /// The table as JSON `{"columns","rows"}` to `write`; answers `{n_features, by_level, fingerprint, settings, warnings}`.
-#[cfg(any(not(any(feature = "rev", feature = "export", feature = "ms2")), feature = "all"))]
+#[cfg(any(
+    not(any(feature = "rev", feature = "export", feature = "ms2")),
+    feature = "all"
+))]
 #[wasm_bindgen]
 pub fn annotate_to(read: Function, names_json: &str, write: Function) -> Result<String, JsValue> {
     go(read, names_json, write, "json")
 }
 
 /// The table as CSV (`;`, UTF-8) to `write`; answers the same summary.
-#[cfg(any(not(any(feature = "rev", feature = "export", feature = "ms2")), feature = "all"))]
+#[cfg(any(
+    not(any(feature = "rev", feature = "export", feature = "ms2")),
+    feature = "all"
+))]
 #[wasm_bindgen]
 pub fn table_csv(read: Function, names_json: &str, write: Function) -> Result<String, JsValue> {
     go(read, names_json, write, "csv")
 }
 
 /// The rows of the sheet `{"hojas":[{"nombre","filas"}]}` that the page zips into an XLSX, to `write`; answers the same summary.
-#[cfg(any(not(any(feature = "rev", feature = "export", feature = "ms2")), feature = "all"))]
+#[cfg(any(
+    not(any(feature = "rev", feature = "export", feature = "ms2")),
+    feature = "all"
+))]
 #[wasm_bindgen]
 pub fn table_xlsx_rows(
     read: Function,
