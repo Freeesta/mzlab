@@ -35,3 +35,4 @@ required-features = ["untargeted"]
 [dev-dependencies]
 # the example `nativo` reads a SMILES like the page does (the .wasm of the proofs keeps `chem` off)
 mzlab-feat = { path = "../mzlab-feat" }
+sha2 = { version = "0.11", default-features = false }
