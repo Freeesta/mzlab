@@ -1,7 +1,9 @@
 //! Choice among the charges of the isotope finder: every charge that scores is ranked, the best one is the pattern of the feature and the close ones
 //! are kept as alternatives, each with a probability. After `IsotopeFinderEngine.detect` (mzmine 4.10.90); the automatic detection of the elements is not done.
 
-use super::{ChargeEval, Engine, Pt};
+use super::auto::{self, Composition};
+use super::envelope::m1_bounds;
+use super::{ChargeEval, ElementMode, Engine, Pt};
 
 /// An alternative is kept if its quality is within this of the best one...
 pub const ALT_MARGIN: f64 = 0.15;
@@ -26,23 +28,79 @@ pub struct Detection {
     pub patterns: Vec<IsotopePattern>,
     /// `(charge, probability)` of every charge that scored, best first; they sum to 1.
     pub probabilities: Vec<(i32, f64)>,
+    /// Heavy elements found in the spectrum around the winning pattern (empty when the automatic detection is off or finds none).
+    pub composition: Composition,
+}
+
+/// A charge that scored, with the candidates it was scored on.
+struct Scored {
+    eval: ChargeEval,
+    cands: Vec<Pt>,
 }
 
 /// Charges that score, best first: by `raw`, ties by `quality` (stable, so equal charges keep the lower one first).
-fn ranked(engine: &Engine, mz: &[f64], y: &[f64], feature_mz: f64, sign: i32) -> Vec<ChargeEval> {
-    let mut out: Vec<ChargeEval> = (1..=engine.cfg.max_charge)
+fn ranked(engine: &Engine, mz: &[f64], y: &[f64], feature_mz: f64, sign: i32) -> Vec<Scored> {
+    let mut out: Vec<Scored> = (1..=engine.cfg.max_charge)
         .filter_map(|z| {
             let cands = engine.candidates(z, mz, y, feature_mz);
-            engine.score_charge(z, feature_mz, &cands, sign)
+            let eval = engine.score_charge(z, feature_mz, &cands, sign)?;
+            (eval.raw > 0.0).then_some(Scored { eval, cands })
         })
-        .filter(|e| e.raw > 0.0)
         .collect();
     out.sort_by(|a, b| {
-        b.raw
-            .total_cmp(&a.raw)
-            .then(b.quality.total_cmp(&a.quality))
+        b.eval
+            .raw
+            .total_cmp(&a.eval.raw)
+            .then(b.eval.quality.total_cmp(&a.eval.quality))
     });
     out
+}
+
+/// Second pass on the winner: the heavy elements seen in the raw spectrum around its pattern widen the upper bound of its envelope and that charge is
+/// scored again. The winner stays first. Returns the elements found.
+fn refine_winner(
+    engine: &Engine,
+    scored: &mut [Scored],
+    mz: &[f64],
+    y: &[f64],
+    feature_mz: f64,
+    sign: i32,
+) -> Composition {
+    let cfg = &engine.cfg;
+    if cfg.mode == ElementMode::UserDefined {
+        return Vec::new();
+    }
+    let w = &scored[0];
+    let z = w.eval.charge;
+    let lo = w.eval.kept.iter().fold(feature_mz, |m, p| m.min(p.0));
+    let hi = w.eval.kept.iter().fold(feature_mz, |m, p| m.max(p.0));
+    let window = auto::detection_window(mz, y, lo, hi, z);
+    let candidates: Vec<&str> = cfg.auto_candidates.iter().map(String::as_str).collect();
+    let found = auto::detect(&window, z, &cfg.tol, &candidates);
+    if found.is_empty() {
+        return found;
+    }
+    let counts: Vec<(&str, i64)> = found
+        .iter()
+        .map(|f| (f.symbol.as_str(), f.atoms.max(1)))
+        .collect();
+    let user = cfg.elements.iter().map(String::as_str).collect::<Vec<_>>();
+    let env = cfg.model.build(
+        feature_mz,
+        z,
+        sign,
+        &user,
+        Some(&counts),
+        cfg.mode == ElementMode::UserPlusAuto,
+    );
+    let bounds = m1_bounds(&cfg.model, feature_mz, z, sign);
+    if let Some(e) = engine
+        .score_with(z, feature_mz, &w.cands, &env, bounds)
+        .filter(|e| e.raw > 0.0)
+    {
+        scored[0].eval = e;
+    }
+    found
 }
 
 /// Detects the isotope pattern and charge of the feature at `feature_mz` in the spectrum `(mz, y)`; `sign` is the polarity (+1, -1, 0 unknown).
@@ -54,12 +112,17 @@ pub fn detect(
     feature_mz: f64,
     sign: i32,
 ) -> Option<Detection> {
-    let scored = ranked(engine, mz, y, feature_mz, sign);
-    let best = scored.first()?.quality;
-    let sum: f64 = scored.iter().map(|e| e.quality).sum();
+    let mut scored = ranked(engine, mz, y, feature_mz, sign);
+    if scored.is_empty() {
+        return None;
+    }
+    let composition = refine_winner(engine, &mut scored, mz, y, feature_mz, sign);
+    let evals: Vec<&ChargeEval> = scored.iter().map(|s| &s.eval).collect();
+    let best = evals.iter().fold(0.0f64, |m, e| m.max(e.quality));
+    let sum: f64 = evals.iter().map(|e| e.quality).sum();
     let prob = |e: &ChargeEval| if sum > 0.0 { e.quality / sum } else { 0.0 };
-    let probabilities = scored.iter().map(|e| (e.charge, prob(e))).collect();
-    let patterns = scored
+    let probabilities = evals.iter().map(|e| (e.charge, prob(e))).collect();
+    let patterns = evals
         .iter()
         .enumerate()
         .filter(|(i, e)| {
@@ -70,12 +133,13 @@ pub fn detect(
             peaks: e.kept.clone(),
             score: e.quality * e.intensity_agreement,
             probability: prob(e),
-            eval: e.clone(),
+            eval: (*e).clone(),
         })
-        .collect::<Vec<_>>();
+        .collect();
     Some(Detection {
-        best_charge: scored[0].charge,
+        best_charge: evals[0].charge,
         patterns,
         probabilities,
+        composition,
     })
 }

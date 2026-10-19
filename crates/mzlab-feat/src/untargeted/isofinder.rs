@@ -7,6 +7,7 @@
 //! score of ONE charge ([`Engine::score_charge`]) and the choice among the charges (`select`: pattern, alternatives, probabilities). The isotope masses come from `mzlab_core::isoscore::isotopes_of`. Not done: the filter of
 //! explainable signals (off by default), the refinement across scans (`CrossScanRefiner`), mobility.
 
+pub mod auto;
 pub mod envelope;
 pub mod ladder;
 mod score;
@@ -67,6 +68,20 @@ pub struct Config {
     pub tol: Tol,
     pub require_c13: bool,
     pub model: CarbonModel,
+    pub mode: ElementMode,
+    /// Elements the automatic detection may find (empty: none).
+    pub auto_candidates: Vec<String>,
+}
+
+/// Where the heavy-isotope upper bound takes its elements from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ElementMode {
+    /// The listed elements only.
+    UserDefined,
+    /// The elements found in the spectrum only.
+    AutoDetect,
+    /// Both (mzmine default).
+    UserPlusAuto,
 }
 
 impl Default for Config {
@@ -77,6 +92,8 @@ impl Default for Config {
             tol: Tol::default(),
             require_c13: true,
             model: CarbonModel::default(),
+            mode: ElementMode::UserPlusAuto,
+            auto_candidates: auto::DEFAULT_CANDIDATES.map(String::from).to_vec(),
         }
     }
 }

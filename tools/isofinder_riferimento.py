@@ -42,12 +42,65 @@ def case(name, mz0, z, n_c, base=1e6, drop=(), noise=()):
     }
 
 
+ISO = {
+    "H": [(1.00782503207, 0.999885), (2.0141017778, 0.000115)],
+    "C": [(12.0, 0.9893), (13.0033548378, 0.0107)],
+    "N": [(14.0030740048, 0.99636), (15.0001088982, 0.00364)],
+    "O": [(15.99491461956, 0.99757), (16.99913170, 0.00038), (17.9991610, 0.00205)],
+    "S": [(31.97207100, 0.9499), (32.97145876, 0.0075), (33.96786690, 0.0425)],
+    "Si": [(27.9769265325, 0.92223), (28.976494700, 0.04685), (29.97377017, 0.03092)],
+    "Cl": [(34.96885268, 0.7576), (36.96590259, 0.2424)],
+    "Br": [(78.9183371, 0.5069), (80.9162906, 0.4931)],
+}
+PROTON = 1.007276466
+
+
+def fine_pattern(formula, floor=1e-4):
+    """[M+H]+ pattern of a formula by exact convolution of the isotopes of every atom, merged per nominal mass (weighted mean m/z)."""
+    dist = {0: (0.0, 1.0)}  # nominal offset -> (sum of mass x abundance, abundance)
+    mono = 0.0
+    for el, n in formula.items():
+        iso = ISO[el]
+        base = iso[0]
+        mono += n * base[0]
+        for _ in range(n):
+            new = {}
+            for off, (mw, ab) in dist.items():
+                for m, a in iso:
+                    k = off + round(m - base[0])
+                    cur = new.get(k, (0.0, 0.0))
+                    new[k] = (cur[0] + (mw + ab * (m - base[0])) * a, cur[1] + ab * a)
+            dist = {k: v for k, v in new.items() if v[1] > 1e-9}
+    out = []
+    top = max(v[1] for v in dist.values())
+    for k in sorted(dist):
+        mw, ab = dist[k]
+        if ab / top >= floor:
+            out.append((mono + PROTON + (mw / ab if ab else 0.0), ab / top))
+    return out
+
+
+def element_case(name, formula, expect):
+    pat = fine_pattern(formula)
+    return {"name": name, "formula": formula, "mz": [p[0] for p in pat], "y": [p[1] * 1e6 for p in pat], "expect": expect}
+
+
 cases = [
     case("c10_z1", 151.0, 1, 10),
     case("c20_z1", 301.0, 1, 20),
     case("c40_z2", 501.25, 2, 40),
     case("no_m1", 200.0, 1, 12, drop=(1,)),
 ]
+elements = [
+    element_case("cl2", {"C": 15, "H": 12, "Cl": 2, "O": 1}, ["Cl"]),
+    element_case("br1", {"C": 12, "H": 9, "Br": 1, "O": 1}, ["Br"]),
+    element_case("s2", {"C": 10, "H": 8, "S": 2, "O": 2}, ["S"]),
+    element_case("chno", {"C": 20, "H": 25, "N": 1, "O": 3}, []),
+    element_case("si1", {"C": 14, "H": 24, "O": 1, "Si": 1}, ["Si"]),
+]
+out = pathlib.Path(__file__).resolve().parent.parent / "tests/data/untargeted/isofinder/elementi.json"
+out.write_text(json.dumps(elements, separators=(",", ":")))
+print(out, len(elements))
 out = pathlib.Path(__file__).resolve().parent.parent / "tests/data/untargeted/isofinder/casi.json"
 out.write_text(json.dumps(cases, separators=(",", ":")))
 print(out, len(cases))
