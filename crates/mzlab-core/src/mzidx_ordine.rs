@@ -195,10 +195,20 @@ fn in_parallelo<T: Num>(
             .into_iter()
             .map(|(h, rel)| s.spawn(move || sequenziale(h, 0, &rel, per_scansione)))
             .collect();
-        hs.into_iter()
-            .map(|h| h.join().unwrap_or_else(|_| Err(Error::memory_budget())))
-            .collect::<Result<()>>()
+        primo_errore(hs)
     })
+}
+
+// Joins every thread (the scope would anyway) and keeps the first error.
+fn primo_errore(hs: Vec<std::thread::ScopedJoinHandle<'_, Result<()>>>) -> Result<()> {
+    let mut res = Ok(());
+    for h in hs {
+        let r = h.join().unwrap_or_else(|_| Err(Error::memory_budget()));
+        if res.is_ok() {
+            res = r;
+        }
+    }
+    res
 }
 
 #[cfg(test)]
@@ -218,7 +228,11 @@ mod tests_secchi {
         // 40 buckets of unequal size (one empty), 1-unit wide in m/z, enough peaks to use the threads
         let (mut round, mut ends) = (Vec::new(), Vec::new());
         for b in 0..40u64 {
-            let n = if b == 7 { 0 } else { 3000 + (next() % 9000) as usize };
+            let n = if b == 7 {
+                0
+            } else {
+                3000 + (next() % 9000) as usize
+            };
             for _ in 0..n {
                 let mz = 100.0 + b as f64 + (next() % 4096) as f64 / 4096.0;
                 round.push(Peak {
@@ -233,7 +247,10 @@ mod tests_secchi {
             let (mut a, mut b) = (round.clone(), round.clone());
             ordina_secchi(&mut a, 0, &ends, per_scansione).unwrap();
             sequenziale(&mut b, 0, &ends, per_scansione).unwrap();
-            assert!(a.iter().zip(&b).all(|(p, q)| p.mz == q.mz && p.it == q.it && p.pos == q.pos));
+            assert!(a
+                .iter()
+                .zip(&b)
+                .all(|(p, q)| p.mz == q.mz && p.it == q.it && p.pos == q.pos));
         }
     }
 }
