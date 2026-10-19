@@ -123,6 +123,7 @@ pub mod sniff;
 pub mod sorgente;
 pub mod srm;
 pub mod stima;
+pub mod step;
 pub mod scantable;
 pub mod specdiff;
 pub mod specpeaks;

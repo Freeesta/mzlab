@@ -83,7 +83,7 @@ Python è il riferimento dei test di parità: Rust lo eguaglia sui dati d'oro.
   `.wasm` assente o non caricabile = pool spento per la sessione (`unavailable()`), l'upload fallisce con un errore con chiave.
 
 ## Altri file
-- Motore nella pagina, inventario delle rotte `api/...` e file Thermo `.raw`: `docs/agenti/rust-rotte.md`. App desktop (Tauri, `mzlab://`, `prepare.py`): `docs/agenti/rust-desktop.md`.
+- Rotte `api/...` e `.raw` Thermo: `docs/agenti/rust-rotte.md`. App desktop (Tauri, `mzlab://`): `docs/agenti/rust-desktop.md`. Descrittori `step/1`: `docs/agenti/rust-step.md`.
 
 ## Prove e trappole
 - **Provare**: `cargo test --release -p mzlab-core`; `python3 tools/verifica.py --senza-e2e`; il sito con il `.wasm` in CI (`sito-rust.yml`, `workflow_dispatch` con `solo=e2e_lr,e2e13`) o in locale con `wasm-bindgen` e `wasm-opt` installati come in `docs/studi/OTTIMIZZAZIONE_CORE.md` §1. Il peso del `.wasm` del motore (limite 1,625 MB = 1 703 936 byte) e della libreria (600 KB) si controlla in `tools/wasm_opt.sh`, usato anche da `pages.yml`.
