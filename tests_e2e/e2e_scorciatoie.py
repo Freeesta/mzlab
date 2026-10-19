@@ -114,7 +114,7 @@ try:
             pg.evaluate("document.activeElement && document.activeElement.blur()")
             k0 = pg.evaluate("E.cur"); pg.keyboard.press("Alt+ArrowRight"); attendi(pg, f"E.cur !== {k0}")
             pg.keyboard.press("Alt+ArrowLeft"); attendi(pg, f"E.cur === {k0}")
-            pg.focus("#calcin") if pg.query_selector("#calcin") else pg.evaluate("(()=>{const i=document.createElement('input'); i.id='tmpin'; document.body.appendChild(i); i.focus()})()")
+            pg.evaluate("(()=>{const i=document.createElement('input'); i.id='tmpin'; document.body.appendChild(i); i.focus()})()")
             pg.keyboard.press("Alt+ArrowRight"); frames(pg, 3); assert pg.evaluate("E.cur") == k0, "Alt+Right in a text field must not change file"
             pg.evaluate("document.activeElement.blur(); document.getElementById('tmpin')?.remove()")
         step("Alt+Left/Right: previous/next file, not in a text field", files)
