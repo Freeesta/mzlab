@@ -208,3 +208,44 @@ fn registry_rules_match_the_golden_data() {
         assert_eq!(json!(ghs_acute_category(v)), r[3]);
     }
 }
+
+// ------------------------------------------------------------------------------------------------------------------ hazard records (RG-02)
+use mzlab_feat::attributio::tox::hazard::{coverage, record, HazardData};
+
+fn hazard_data() -> HazardData {
+    HazardData {
+        registry: read_registry(&read("compound_registry.csv")).unwrap(),
+        members: read_identity_members(&read("registry_members.csv")).unwrap(),
+        curated: read_curated(&read("ecotox_curated.csv")).unwrap(),
+        overrides: read_overrides(&read("ecotox_structures.csv")).unwrap(),
+        values: read_ecotox_values(&read("ecotox_values.csv")).unwrap(),
+        ecosar: read_ecosar(&read("ecosar_endpoints.csv")).unwrap(),
+    }
+}
+
+#[test]
+fn hazard_records_match_the_golden_data() {
+    let (d, g) = (hazard_data(), golden("tox", "pericolo.json"));
+    let (cases, want) = (
+        g["cases"].as_array().unwrap(),
+        g["records"].as_array().unwrap(),
+    );
+    let mut table = Vec::new();
+    for (c, w) in cases.iter().zip(want) {
+        let r = record(&d, c[0].as_str().unwrap(), c[2].as_str(), c[1].as_i64());
+        let got = json!({
+            "identity": r.identity, "blocks": r.blocks, "structure_basis": r.structure_basis, "acute": r.acute, "acute_tier": r.acute_tier,
+            "acute_basis": r.acute_basis, "chronic": r.chronic, "chronic_tier": r.chronic_tier, "chronic_basis": r.chronic_basis,
+            "chronic_route": r.chronic_route, "degradability": r.degradability, "ecosar_classes": r.ecosar_classes,
+            "log_kow": r.log_kow, "caveat": r.caveat, "cross_check": r.cross_check,
+        });
+        same(&got, w, &format!("record {}", r.identity));
+        table.push(r);
+    }
+    let anthropogenic: Vec<bool> = (0..table.len()).map(|i| i % 2 == 0).collect();
+    let got: serde_json::Map<String, Value> = coverage(&table, Some(&anthropogenic))
+        .into_iter()
+        .map(|(k, v)| (k, json!(v)))
+        .collect();
+    same(&Value::Object(got), &g["coverage"], "coverage");
+}

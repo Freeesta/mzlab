@@ -3,6 +3,7 @@
 //! versioned snapshots (registry, list membership, ECOTOX values, ECOSAR endpoints). Nothing here touches the network: the snapshots are text the caller reads.
 
 pub mod ghs;
+pub mod hazard;
 pub mod registry;
 pub mod snapshot;
 pub mod vocab;

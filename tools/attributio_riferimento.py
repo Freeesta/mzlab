@@ -757,6 +757,25 @@ def stadio_tox_registro():
     return out
 
 
+def stadio_tox_pericolo(dir_: Path):
+    """Hazard records of the synthetic snapshots: tiers, cross-checks, caveats, ECOSAR rules, coverage."""
+    import pandas as pd
+    from attributio.chem import registry
+    from attributio.ecotox import hazard
+    registry.registry_path = lambda name="registry": dir_ / registry.FILES[name]
+    hazard._paths.ecotox_dir = lambda: dir_
+    hazard.CURATION_DATA_DIR = dir_
+    hazard.clear_caches()
+    cases = [("Alphazol (herbicide)", None), ("Alphazol", None), ("Alphazol (herbicide) isomer, RT 5.2 min", None), ("Betamine", None), ("Gammaxin", None),
+             ("Deltacide", 3), ("Epsilon", None), ("Zetafen", None), ("Unknown glycol [C4H10O3]", None), ("Thetadecane", None),
+             ("Mystery compound", None), ("Nothing known", 3), ("Alphazol", 2)]
+    recs = [hazard.record(n, "SYN" if i % 2 == 0 else None, lv) for i, (n, lv) in enumerate(cases)]
+    table = pd.DataFrame([r.as_dict() for r in recs])
+    return {"cases": [[n, lv, "SYN" if i % 2 == 0 else None] for i, (n, lv) in enumerate(cases)],
+            "records": [r.as_dict() for r in recs],
+            "coverage": hazard.coverage(table, pd.Series([True, False] * 6 + [True]))}
+
+
 def controlla(uscita: Path, campagna: Path) -> int:
     got = json.loads((uscita / "livelli.json").read_text(encoding="utf-8"))["features"]
     with open(campagna / "livelli_attesi.csv", encoding="utf-8", newline="") as fh:
@@ -819,6 +838,7 @@ def main() -> int:
         "tox-ghs": lambda: scrivi(USCITA_TOX, "ghs.json", stadio_tox_ghs()),
         "tox-istantanee": lambda: scrivi(USCITA_TOX, "istantanee.json", stadio_tox_istantanee(ISTANTANEE)),
         "tox-registro": lambda: scrivi(USCITA_TOX, "registro.json", stadio_tox_registro()),
+        "tox-pericolo": lambda: scrivi(USCITA_TOX, "pericolo.json", stadio_tox_pericolo(ISTANTANEE)),
         "sorbenti": lambda: scrivi(a.uscita_sorbenti, "sorbenti.json", stadio_sorbenti(carica(root, a.sorbenti.resolve()))),
     }
     for nome in a.solo or list(stadi):
