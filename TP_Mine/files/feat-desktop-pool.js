@@ -132,6 +132,8 @@ export function createDesktopPool(opts = {}) {
     },
     /** an export of the folder (schymanski | publication | quantify | gradient | evidence): the native route `feat/attributio/export`, same answer as the pool of the browser @param {{ path: string, file: File }[]} files @param {string} root @param {string} kind @param {{ matrix?: string, generated?: string }} [extra] */
     async attributioExport(files, root, kind, extra = {}) { return json("feat/attributio/export", { ...extra, root, kind, files: await texts(files) }); },
+    /** a request of the MS2 engine (engine | insilico | rearrange | rt | chimeric): the native route `feat/attributio/ms2`, same answer as the pool of the browser @param {{ path: string, file: File }[]} files @param {string} root @param {any} request */
+    async attributioMs2(files, root, request) { return json("feat/attributio/ms2", { root, request: JSON.stringify(request), files: await texts(files) }); },
     /** a table of another program (mzMine, FBMN/GNPS2, MS-DIAL) from its files: the table as JSON text, the readers are the native route `feat/import` @param {{name: string, sha256: string, text: string}[]} files @param {number} pol @param {number} maxFeatures */
     async importBuild(files, pol, maxFeatures) { return (await call("feat/import", { kind: "build", files, pol, max_features: maxFeatures })).text(); },
     /** `check_structure` of many annotations at once: the list of the answers (`{ok, ppm, adduct}`) @param {{formula: string, precursor: number | null, adduct: string, pol: number, tol: number}[]} calls */

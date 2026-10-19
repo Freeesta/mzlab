@@ -172,6 +172,7 @@
     "../../TP_Mine/js/50_attributio.js",
     "../../TP_Mine/js/51_attributio_table.js",
     "../../TP_Mine/js/52_attributio_banco.js",
-    "../../TP_Mine/js/53_attributio_export.js"
+    "../../TP_Mine/js/53_attributio_export.js",
+    "../../TP_Mine/js/54_attributio_ms2.js"
   ]
 }

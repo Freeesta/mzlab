@@ -271,3 +271,102 @@ fn rt_forest_follows_scikit_learn() {
     );
     assert!(RtModel::train(&train[..5], 42).is_none());
 }
+
+/// MS-05: the explicit command. The library is made of the campaign's own POS feature spectra (renamed), so every feature with a spectrum finds itself.
+#[test]
+fn generate_hits_finds_the_campaign_spectra() {
+    use mzlab_feat::attributio::ms2_engine::generate::generate_hits;
+    use mzlab_feat::attributio::ms2_engine::{engine_hits_csv, read_engine_hits, EngineEntry};
+    let fx = fixture("campagna_sintetica");
+    with_io!(fx, io);
+    let src = load_sources(&fx.campaign, &io).unwrap();
+    let p = src.pol("POS").unwrap();
+    let entries: Vec<EngineEntry> = p
+        .feature_keys()
+        .iter()
+        .filter_map(|k| {
+            let sp = p.feature_spectra.get(&k.id)?;
+            Some(EngineEntry {
+                id: format!("LIB{}", k.id),
+                name: format!("Invented {}", k.id),
+                precursor_mz: k.mz?,
+                pol: 1,
+                adduct: "[M+H]+".into(),
+                mz: sp.mz.clone(),
+                it: sp.intensity.clone(),
+            })
+        })
+        .collect();
+    assert!(!entries.is_empty());
+    let n = entries.len();
+    let lib = Ms2Library::new(entries);
+    let rows = generate_hits(
+        &src,
+        "POS",
+        &lib,
+        &SearchOpts {
+            min_shared: 1,
+            ..SearchOpts::default()
+        },
+    );
+    assert!(!rows.is_empty() && rows.len() <= n);
+    assert!(rows.iter().all(|r| r.score > 0.99
+        && r.name == format!("Invented {}", r.id)
+        && r.library_id == format!("LIB{}", r.id)));
+    let back = read_engine_hits(&engine_hits_csv(&rows));
+    assert_eq!(back.len(), rows.len());
+    assert_eq!(back[0].library_id, rows[0].library_id);
+    assert!(generate_hits(&src, "NEG", &lib, &SearchOpts::default()).is_empty());
+}
+
+/// The request layer: every op answers JSON on the synthetic campaign (libraries and candidate lists come from the extra files).
+#[test]
+fn request_layer_answers_every_op() {
+    use mzlab_feat::attributio::ms2_engine::run::ms2_json;
+    let fx = fixture("campagna_sintetica");
+    with_io!(fx, io);
+    let src = load_sources(&fx.campaign, &io).unwrap();
+    let p = src.pol("POS").unwrap();
+    let id = *p.feature_spectra.keys().min().unwrap();
+    let k = p.feature_keys().into_iter().find(|k| k.id == id).unwrap();
+    let sp = &p.feature_spectra[&id];
+    let peaks: Vec<Value> = sp
+        .mz
+        .iter()
+        .zip(&sp.intensity)
+        .map(|(m, i)| serde_json::json!([m, i]))
+        .collect();
+    let lib = serde_json::to_string(&[serde_json::json!({
+        "spectrum_id": "LIB1", "Compound_Name": "Invented", "Precursor_MZ": k.mz, "Ion_Mode": "POSITIVE", "peaks_json": Value::Array(peaks).to_string()
+    })])
+    .unwrap();
+    let list = "Identifier,CompoundName,SMILES,MolecularFormula\n1,Caffeine,Cn1cnc2c1c(=O)n(C)c(=O)n2C,C8H10N4O2\n";
+    let extra = |p: &str| match p {
+        "__ms2/lib.json" => Some(lib.clone().into_bytes()),
+        "__ms2/list.csv" => Some(list.as_bytes().to_vec()),
+        _ => None,
+    };
+    let ask = |req: Value| -> Value {
+        serde_json::from_str(&ms2_json(&io, "x", &extra, &req.to_string()).unwrap()).unwrap()
+    };
+    let r =
+        ask(serde_json::json!({"op": "engine", "libraries": ["__ms2/lib.json"], "min_shared": 1}));
+    assert_eq!(r["library"], 1);
+    assert!(r["pos_hits"].as_i64().unwrap() >= 1 && r["pos"].as_str().unwrap().contains("LIB1"));
+    let r = ask(
+        serde_json::json!({"op": "insilico", "pol": "POS", "id": id, "candidates": "__ms2/list.csv"}),
+    );
+    assert_eq!(r["candidates"], 1);
+    let r =
+        ask(serde_json::json!({"op": "rearrange", "pol": "POS", "id": id, "formula": "C8H10N4O2"}));
+    assert!(r.get("attribution").is_some());
+    let train: Vec<Value> = (0..12)
+        .map(|i| serde_json::json!(["C".repeat(i + 1), 1.0 + i as f64 * 0.3]))
+        .collect();
+    let r = ask(serde_json::json!({"op": "rt", "train": train, "predict": ["CCCCC"]}));
+    assert_eq!(r["model"], true);
+    assert!(r["predictions"][0]["rt"].as_f64().is_some());
+    let r = ask(serde_json::json!({"op": "chimeric", "pol": "POS", "id": id}));
+    assert!(r["isolation_window"].as_f64().unwrap() > 0.0 && r["intruders"].is_array());
+    assert!(ms2_json(&io, "x", &extra, "{\"op\":\"nope\"}").is_err());
+}

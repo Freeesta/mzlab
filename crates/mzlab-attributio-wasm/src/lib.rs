@@ -16,12 +16,14 @@ use wasm_bindgen::prelude::*;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with. The build with the feature `rev` (the Banco 2b) is the
 /// `.wasm` `attributio-rev`: it exports the review, the decision and the evidence export; the build with `export` is the `.wasm` `attributio-export`: the four spreadsheet exports only; the one without them exports the table only.
-#[cfg(not(any(feature = "rev", feature = "export")))]
+#[cfg(not(any(feature = "rev", feature = "export", feature = "ms2")))]
 const BRIDGE: &str = "mzfeat-attributio/1";
 #[cfg(feature = "rev")]
 const BRIDGE: &str = "mzfeat-attributio-rev/1";
 #[cfg(feature = "export")]
 const BRIDGE: &str = "mzfeat-attributio-export/1";
+#[cfg(feature = "ms2")]
+const BRIDGE: &str = "mzfeat-attributio-ms2/1";
 
 #[wasm_bindgen]
 pub fn version() -> String {
@@ -246,7 +248,7 @@ fn js_fetch(read: &Function, k: usize, off: u64, len: u64) -> Option<Vec<u8>> {
     Some(v.dyn_into::<Uint8Array>().ok()?.to_vec())
 }
 
-#[cfg(not(any(feature = "rev", feature = "export")))]
+#[cfg(not(any(feature = "rev", feature = "export", feature = "ms2")))]
 fn go(read: Function, names_json: &str, write: Function, kind: &str) -> Result<String, JsValue> {
     let files = Files::from_json(names_json).map_err(js_err)?;
     let run = run_with(&files, &|k, o, l| js_fetch(&read, k, o, l)).map_err(js_err)?;
@@ -262,21 +264,21 @@ fn go(read: Function, names_json: &str, write: Function, kind: &str) -> Result<S
 }
 
 /// The table as JSON `{"columns","rows"}` to `write`; answers `{n_features, by_level, fingerprint, settings, warnings}`.
-#[cfg(not(any(feature = "rev", feature = "export")))]
+#[cfg(not(any(feature = "rev", feature = "export", feature = "ms2")))]
 #[wasm_bindgen]
 pub fn annotate_to(read: Function, names_json: &str, write: Function) -> Result<String, JsValue> {
     go(read, names_json, write, "json")
 }
 
 /// The table as CSV (`;`, UTF-8) to `write`; answers the same summary.
-#[cfg(not(any(feature = "rev", feature = "export")))]
+#[cfg(not(any(feature = "rev", feature = "export", feature = "ms2")))]
 #[wasm_bindgen]
 pub fn table_csv(read: Function, names_json: &str, write: Function) -> Result<String, JsValue> {
     go(read, names_json, write, "csv")
 }
 
 /// The rows of the sheet `{"hojas":[{"nombre","filas"}]}` that the page zips into an XLSX, to `write`; answers the same summary.
-#[cfg(not(any(feature = "rev", feature = "export")))]
+#[cfg(not(any(feature = "rev", feature = "export", feature = "ms2")))]
 #[wasm_bindgen]
 pub fn table_xlsx_rows(
     read: Function,
@@ -354,6 +356,37 @@ pub fn export_to(
         names_json,
         kind,
     )
+    .map_err(js_err)?;
+    let mut put = |off: u64, b: &[u8]| {
+        write
+            .call2(&JsValue::NULL, &(off as f64).into(), &Uint8Array::from(b))
+            .is_ok()
+    };
+    if !text_to(&text, &mut put) {
+        return Err(js_err(Error::new("error.io")));
+    }
+    Ok(format!("{{\"bytes\":{}}}", text.len()))
+}
+
+/// A request of the MS2 engine (`mzlab_feat::attributio::ms2_engine::run`): libraries and candidate lists are files of the list under `__ms2/`, the campaign is the rest.
+/// The answer JSON goes to `write`; answers `{"bytes": n}`.
+#[cfg(feature = "ms2")]
+#[wasm_bindgen]
+pub fn ms2_to(
+    read: Function,
+    names_json: &str,
+    request_json: &str,
+    write: Function,
+) -> Result<String, JsValue> {
+    let files = Files::from_json(names_json).map_err(js_err)?;
+    let fetch = |k, o, l| js_fetch(&read, k, o, l);
+    let extra = |p: &str| {
+        let &(k, size) = files.by_path.get(p)?;
+        fetch(k, 0, size)
+    };
+    let text = with_io(&files, &fetch, &|io| {
+        mzlab_feat::attributio::ms2_engine::run::ms2_json(io, &files.root, &extra, request_json)
+    })
     .map_err(js_err)?;
     let mut put = |off: u64, b: &[u8]| {
         write

@@ -106,6 +106,19 @@ function createCore(opts) {
 
 // The exports of a campaign folder (admin mode): `kind` = schymanski | publication | quantify | gradient (`.wasm` `attributio_export`) or evidence (`.wasm` `attributio_rev`, it needs the review);
 // `extra` = { matrix?, generated? }. Resolves with { files: [{ name, text } | { name, rows: { hojas } }], warnings }.
+function ms2Ops(submit, call) {
+  return {
+    // A request of the MS2 engine (`.wasm` `attributio_ms2`): `request.op` = engine | insilico | rearrange | rt | chimeric; libraries and candidate lists are in `files` under `__ms2/`.
+    attributioMs2(files, root, request) {
+      return submit(async (slot, load) => {
+        await load("attributio_ms2");
+        const names = JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
+        const r = await call(slot, { op: "attributio_ms2", files: files.map(f => f.file), names, request: JSON.stringify(request) });
+        return JSON.parse(new TextDecoder().decode(r.bytes));
+      });
+    },
+  };
+}
 function exportOps(submit, call) {
   return {
     attributioExport(files, root, kind, extra = {}) {
@@ -244,6 +257,7 @@ export function createFeatPool(opts) {
       });
     },
     ...exportOps(submit, call),
+    ...ms2Ops(submit, call),
     ...previewOps(submit, call, opts),
     ...driftOps(submit, call, copy),
     ...proofOps(submit, call, copy, opts),
@@ -452,6 +466,12 @@ Object.assign(OPS, {
     const out = memSink(), rd = new FileReaderSync();
     const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
     mods[m.which].export_to(read, m.names, m.kind, out.write);
+    return { bytes: out.bytes() };
+  },
+  async attributio_ms2(m) {
+    const out = memSink(), rd = new FileReaderSync();
+    const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
+    mods.attributio_ms2.ms2_to(read, m.names, m.request, out.write);
     return { bytes: out.bytes() };
   },
   async attributio_decision(m) {

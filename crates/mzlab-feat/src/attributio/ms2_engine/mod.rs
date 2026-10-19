@@ -6,11 +6,13 @@
 
 pub mod chimeric;
 pub mod compile;
+pub mod generate;
 pub mod hits;
 pub mod insilico;
 pub mod matcher;
 pub mod rearrange;
 pub mod rtpredict;
+pub mod run;
 
 pub use compile::{clean_library_name, compile_library, EngineEntry};
 pub use hits::{engine_hits_csv, load_engine_hits, read_engine_hits, EngineHitRow, ENGINE_COLUMNS};

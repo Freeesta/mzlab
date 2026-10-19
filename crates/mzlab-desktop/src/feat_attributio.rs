@@ -2,6 +2,7 @@
 //! `{op: "feat/attributio/annotate", root, kind: "json" | "csv" | "xlsx", files: [{path, text}]}`: the page sends the text files of the folder (the engine reads only
 //! the ones `campaign.toml` names); the answer is `{summary, text}` with the summary of the run and the table in the asked rendering.
 //! The route `feat/attributio/export` gives the exports (`schymanski`, `publication`, `quantify`, `gradient`, `sirius`, `evidence`) as the JSON of their files.
+//! The route `feat/attributio/ms2` answers a request of the MS2 engine (`{root, request, files}`, extra files under `__ms2/`).
 //! The route `feat/attributio/review` is the Banco 2b: `{root, files, kind: "review", pol, id}` answers the JSON of the review of one feature; `{root, files, kind: "decision",
 //! decision, folder?}` answers `{path, added, replaced, unchanged, text, written}`, and writes the decisions file straight into `folder` (the campaign folder on disk) when it is given.
 
@@ -9,6 +10,7 @@ use mzlab_core::json::Out;
 use mzlab_core::{Error, Result};
 use mzlab_feat::attributio::export::run::{run, Options};
 use mzlab_feat::attributio::io::{Io, MemFiles};
+use mzlab_feat::attributio::ms2_engine::run::ms2_json;
 use mzlab_feat::attributio::review::banco::review_json;
 use mzlab_feat::attributio::review::evidence::evidence_json;
 use mzlab_feat::attributio::review::save::decision_text;
@@ -66,6 +68,18 @@ impl State {
         } else {
             run(&io, root, kind, &o)
         };
+        text(out.map_err(|e| Error::new("error.attributio").with("detail", e.to_string()))?)
+    }
+
+    /// A request of the MS2 engine: `{root, request, files}` (libraries and candidate lists under `__ms2/` in `files`) answers the JSON of `ms2_engine::run::ms2_json`.
+    pub(crate) fn feat_attributio_ms2(&self, p: &Value) -> Result<Answer> {
+        let files = mem_files(p);
+        let read = |q: &str| files.read(q);
+        let list = |d: &str| files.list(d);
+        let io = Io::new(&read, &list);
+        let root = p["root"].as_str().unwrap_or("");
+        let request = p["request"].as_str().unwrap_or("{}");
+        let out = ms2_json(&io, root, &|q: &str| files.read(q), request);
         text(out.map_err(|e| Error::new("error.attributio").with("detail", e.to_string()))?)
     }
 
