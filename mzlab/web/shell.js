@@ -297,7 +297,7 @@ async function cancelLoads(){for(const c of LOADS)c.abort();const rb=window.MZLA
 async function upload(files,into){if(typeof AVVIO!=="undefined"&&!(await AVVIO.pronto()))return;const box=$("#up");fail();files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)));if(!UPBUSY)CONVROWS.clearDone();UPBUSY++;checkGo();const mine=files,ctl=new AbortController();LOADS.add(ctl);CONVROWS.onCancel=cancelLoads;
   // for the diagnosis of the loading
   try{navigator.storage.estimate().then(e=>{window.MZLAB_STIMA=`${Math.round((e.usage||0)/1e6)} of ${Math.round((e.quota||0)/1e6)} MB`}).catch(()=>{})}catch(_){}
-  try{await upload0(files,into,box,ctl.signal)}finally{LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));UPBUSY--;checkGo();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();if(UPBAR){UPBAR();UPBAR=null}IDLE.splice(0).forEach(ok=>ok());if(DIRECT.armed&&!S.adding){DIRECT.armed=false;directDone()}}}}
+  try{await upload0(files,into,box,ctl.signal)}finally{LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));UPBUSY--;checkGo();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();if(UPBAR){UPBAR();UPBAR=null}IDLE.splice(0).forEach(ok=>ok())}}}
 async function upload0(files,into,box,signal){
   const rep=/** @type {any} */ ({unopen:[],other:[],errs:{},moved:{dam:[],data:[]},notes:[]}),rejected=/** @type {any[]} */ ([]);
   const one=async f=>{const isDam=isMethodFile(f.name);
@@ -370,7 +370,7 @@ async function openStaged(scroll){
   await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();if(rest)rest()}
 // Files dropped on the side panel of the data view are added at once: the same upload() and the same opening as the loading table, without the loading screen (the progress is the bar of the list, E.pending);
 // files of the other resolution than the open ones stay in the loading table, unticked, and a note says so
-const DIRECT={armed:false,tm:0};
+const DIRECT={tm:0};
 const dropReady=()=>!!(S.sess&&!S.adding&&!$("#v-data").hidden);
 const dropHasFiles=e=>[...((e.dataTransfer&&e.dataTransfer.types)||[])].includes("Files");
 function directNote(key,p){const n=$("#fl-note");clearTimeout(DIRECT.tm);n.textContent=key?I18N.t(key,p):"";n.hidden=!key;if(key)DIRECT.tm=setTimeout(()=>directNote(""),9000)}
@@ -390,9 +390,9 @@ async function directDone(){
   ["dragenter","dragover"].forEach(t=>dz.addEventListener(t,e=>{if(!dropReady()||!dropHasFiles(e))return;e.preventDefault();dropZone(true)}));
   dz.addEventListener("dragleave",e=>{if(!dz.contains(e.relatedTarget))dropZone(false)});
   dz.addEventListener("drop",e=>{dropZone(false);if(!dropReady()||!dropHasFiles(e))return;e.preventDefault();e.stopPropagation();
-    const fs=[...e.dataTransfer.files];DIRECT.armed=true;directNote("files.drop.adding");
-    if(!CartCarica.fromDrop(e))upload(fs,"data")});
-  $("#addf").addEventListener("click",()=>{DIRECT.armed=false;directNote("")})})();
+    const fs=[...e.dataTransfer.files],done=()=>{if(!UPBUSY&&dropReady())directDone()};directNote("files.drop.adding");
+    if(!CartCarica.fromDrop(e,done))upload(fs,"data").then(done)});
+  $("#addf").addEventListener("click",()=>directNote(""))})();
 $("#hrmix-lr").onclick=()=>{hrMixPick(false);renderFiles()};$("#hrmix-hr").onclick=()=>{hrMixPick(true);renderFiles()};
 $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
   try{if(UPBUSY>0){WAITING=true;WAIT0=Date.now();waitStato();const tk=setInterval(waitStato,1000);ldAction(I18N.t("conv.cancel"),cancelLoads);try{await idle()}finally{clearInterval(tk);ldAction("");WAITING=false;loadingStato(null)}}
