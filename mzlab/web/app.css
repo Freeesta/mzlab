@@ -109,7 +109,7 @@ body.sb-dragging,body.sb-dragging *{cursor:grabbing!important;user-select:none!i
 /* the button of the session is always in the header (hidden = invisible, space kept): when it comes nothing moves */
 header #newrun[hidden]{display:inline-flex!important;visibility:hidden}
 /* header texts are translated before the first paint (index.html): its space is kept, invisible, until then */
-html.i18n-wait header{visibility:hidden}html.i18n-wait header #sb-toggle,html.i18n-wait header #fs-btn,html.i18n-wait header #bug-btn,html.i18n-wait header .hq{visibility:visible}header .ib .ic{min-width:16px;min-height:16px}
+html.i18n-wait header{visibility:hidden}html.i18n-wait header #sb-toggle,html.i18n-wait header #fs-btn,html.i18n-wait header #bug-btn,html.i18n-wait header .hq{visibility:visible}header .ib .ic{min-width:16px;min-height:16px}header #bug-btn[hidden]{display:none}
 /* toolbar of the header */
 #stbar{flex:1 1 0;min-width:0;height:30px;min-height:30px;display:flex;align-items:center;justify-content:flex-end;gap:3px;overflow:hidden;white-space:nowrap}
 @media (max-width:760px){header{flex-wrap:wrap}#stbar{flex:1 1 100%;order:20;justify-content:flex-start}}

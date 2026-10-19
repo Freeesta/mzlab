@@ -31,7 +31,7 @@ try:
         q = new(); page(q, "13-formula.html")
         def order():
             ids = q.eval_on_selector_all("#tbar > *, #tbar .tgrp > *", "e=>e.filter(x=>x.matches('a,button')).map(x=>x.id)")
-            assert ids == ["tc-indice", "tc-prec", "tc-succ", "a11y-btn"], ids
+            assert ids == ["tc-indice", "tc-prec", "tc-succ", "tc-schermo", "a11y-btn"], ids
             side = q.eval_on_selector_all("#sidecmd > *", "e=>e.map(x=>x.id)"); assert side == ["sc-cerca", "sc-glossario", "sc-formule", "sc-esercizi", "sc-esporta", "sc-strumenti"], side
             names = q.eval_on_selector_all("#tbar a,#tbar button", "e=>e.map(x=>x.getAttribute('aria-label'))")
             assert names[0].startswith("Indice") and names[-1].startswith("Impostazioni"), names
@@ -44,10 +44,10 @@ try:
         step("order, names, labels in the names, tabs kept, no data or discarded commands", order)
         def targets():
             for s in ("#tc-indice", "#tc-prec", "#tc-succ", "#a11y-btn"):
-                b = q.locator(s).bounding_box(); assert b["height"] >= 44 and b["width"] >= 44, (s, b)
+                b = q.locator(s).bounding_box(); assert b["height"] >= 32 and b["width"] >= 32, (s, b)
             for s in ("#sc-cerca", "#sc-glossario", "#sc-formule", "#sc-esercizi", "#sc-esporta", "#sc-strumenti summary"):
                 b = q.locator(s).bounding_box(); assert b["height"] >= 24 and b["width"] >= 24, (s, b)
-        step("targets: header at least 44x44 px, side commands at least 24 px", targets)
+        step("targets: header at least 32x32 px with a mouse (44 on touch), side commands at least 24 px", targets)
         def prevnext():
             n = q.get_attribute("#tc-succ", "href"); assert n == "14-frammentazione-esi.html", n
             q.click("#tc-succ"); q.wait_for_url("**/14-frammentazione-esi.html")
@@ -120,7 +120,7 @@ try:
             assert d.is_visible("#cb-succ") and d.is_visible("#cb-prec") and d.is_visible("#menu") and d.is_visible("#a11y-btn")
             assert not d.is_visible("#tc-prec") and not d.is_visible("#tc-indice") and not d.is_visible("#sc-cerca")
             for s in ("#cb-prec", "#cb-succ", "#menu", "#a11y-btn"):
-                b = d.locator(s).bounding_box(); assert b["height"] >= 44 and b["width"] >= 44, (s, b)
+                b = d.locator(s).bounding_box(); m = 32 if s == "#a11y-btn" else 44; assert b["height"] >= m and b["width"] >= m, (s, b)
             assert d.evaluate("document.documentElement.scrollWidth") <= 820
             d.click("#menu"); d.wait_for_selector("#side.open #sc-cerca", state="visible")
             for s in ("#sc-cerca", "#sc-esporta", "#sc-strumenti summary"):

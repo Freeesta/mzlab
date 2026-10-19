@@ -17,6 +17,10 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=f"http://127.0.0.1:{r.port}")
+        assert pg.is_hidden("#bug-btn"), "the button is for the administrator mode only"
+        # the administrator mode that shows it is tried in e2e_intestazione_unica; here it is shown by hand, also after a reload (language change)
+        pg.context.add_init_script("document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('bug-btn'); if (b) b.hidden = false; })")
+        pg.reload(); pg.wait_for_function('window.qqReady===true', timeout=60000)
         def icon():
             b = pg.locator("#bug-btn"); assert b.count() == 1 and b.is_visible()
             assert b.get_attribute("aria-label") == "Segnala un bug" and b.get_attribute("title") == "Segnala un bug" and b.locator("svg").count() == 1
