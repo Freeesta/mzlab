@@ -6,7 +6,7 @@
 // in order of request, when the screen is free. `mostra()` says whether it showed the hint; a hint that no longer applies returns false and leaves the queue. Classic script.
 const SUGG = (() => {
   /** The elements of the hints that are on screen now (the tour dialog is `TOUR.active`). */
-  const SEL = ["#tour-invito", "#bar-hint", "#aff-hint"];
+  const SEL = ["#tour-invito", "#bar-hint"];
   /** @type {{ id: string, mostra: () => boolean, fine: number, dopo: number }[]} */
   let coda = [];
   let timer = 0;
