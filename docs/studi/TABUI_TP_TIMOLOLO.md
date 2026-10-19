@@ -1,6 +1,6 @@
 # Tabui: una feature table dei prodotti di trasformazione, dal grezzo alla struttura (serie del timololo)
 
-Studio dell'Architetto per Federico. Solo stato e proposte; nessun codice di prodotto. Prompt delle chat: `docs/studi/PROMPT_TABUI_TP_TIMOLOLO/`. Numeri veri (m/z, tempi, conteggi delle MS2, esiti): solo nel repository privato, `scratchpad/consegne/TABUI_TP_TIMOLOLO_DATI.md`, `scratchpad/timolol_truth.json` e `scratchpad/timolol_msn_truth.json`.
+Studio dell'Architetto per Federico. Solo stato e proposte; nessun codice di prodotto. Prompt delle chat: `docs/studi/PROMPT_TABUI_TP_TIMOLOLO/`. Numeri veri (m/z, tempi, conteggi delle MS2, esiti): solo nel repository privato, `coordinamento/consegne/TABUI_TP_TIMOLOLO_DATI.md`, `scratchpad/timolol_truth.json` e `scratchpad/timolol_msn_truth.json`.
 
 ## 0. Verdetto
 - **Una sola tabella**: la feature table della Pipeline (T3 di `TABUI_FEATURE_TABLE.md`: rilevamento alla mzmine 4.10 in Rust → `.mzfeat` → `tp/1` → `TPTAB` + riga espansa `TPRIGA`). Lo Scavo HR (T2, `legacy/`) non diventa la tabella: i suoi pezzi migliori (albero MSn del genitore, libreria dei frammenti, `localize`, `similarity`) si riusano come librerie dentro un passo nuovo.
@@ -29,13 +29,13 @@ Studio dell'Architetto per Federico. Solo stato e proposte; nessun codice di pro
 ## 2. Il materiale più grezzo
 | Materiale | Dove | Cosa dà che l'elaborato non dà | Stato |
 |---|---|---|---|
-| 13 mzML della serie (buio, t0…t120) | privato `HRMS/Timolol/` e Mac | MS1 a centroidi, DDA HCD con precursore, finestra di isolamento, CE nel filtro, intensità del precursore | c'è; DDA verificata in un file (privato, `TABUI_TP_TIMOLOLO_DATI.md`) |
+| 13 mzML della serie (buio, t0…t120) | privato `dati/HRMS/Timolol/` e Mac | MS1 a centroidi, DDA HCD con precursore, finestra di isolamento, CE nel filtro, intensità del precursore | c'è; DDA verificata in un file (privato, `TABUI_TP_TIMOLOLO_DATI.md`) |
 | `.raw` della serie | non nel privato né sul Mac | stepped NCE per passo, esclusione dinamica, lock mass, AGC e tempo di iniezione, profilo (se acquisito), metodo strumentale | **da chiedere** |
-| mzML dell'infusione MSn del genitore | privato | albero dei cammini MSn (CID in trappola), formule esatte dei frammenti | c'è; verità dell'albero in `timolol_msn_truth.json` |
+| mzML dell'infusione MSn del genitore | privato | albero dei cammini MSn (CID in trappola), formule esatte dei frammenti | c'è; annotazione a mano dell'albero in `timolol_msn_truth.json` (ipotesi, non verità) |
 | `.raw` dell'infusione | da chiedere | energia e attivazione per passo senza dubbi di conversione | da chiedere |
 | Bianco di solvente | non c'è | contaminanti, carry-over | **da chiedere** |
 | Tune e calibrazione del giorno | da chiedere | errore di massa atteso | facoltativo |
-| Manoscritto (ET&I) e SI | privato `HRMS/Timolol/` | TP, frammenti, regioni: verità dell'autore | c'è; in `timolol_truth.json` |
+| Manoscritto (ET&I) e SI | privato `dati/HRMS/Timolol/` | TP, frammenti, regioni: ipotesi dell'autore, trovate a mano | c'è; in `timolol_truth.json` |
 | Letteratura indipendente | §8 | TP e frammenti pubblicati da altri | da estrarre (chat locale) |
 | Oro di mzmine 4.10 | da generare sul Mac | confronto del rilevamento, non verità | da fare (chat locale) |
 
@@ -132,12 +132,12 @@ Motivi di `cannot_say` (`reasons`): `no_ms2` (nessuna MS2 in nessun file: «need
 - **Pagina**: `TP_Mine/js/46_tp_mol.js` (nuovo, `TPMOL.svg(molfile, drawing)`: il genitore dalle coordinate di Ketcher, poi `drawMulticenter` o `drawBrackets` di `mzlab/web/parentesi.js`, modulo puro SVG già scritto perché mzFinder lo riusi): legami singoli/doppi/tripli e aromatici, etichette degli eteroatomi, colori Okabe-Ito da variabili CSS per le classi, simboli oltre al colore (numero della classe accanto all'atomo); `role="img"` con `aria-label` («Timolol with +O; candidate atoms: …») e la tabella delle classi come `TDATI`. Nessuna animazione oltre una dissolvenza (rispetta `prefers-reduced-motion`).
 - **Pochi clic** (regola 26): la scheda «Structure» si apre già disegnata (nessun pulsante «Compute»); un solo disegno, un pulsante con icona «Open in Draw» lo apre nel Disegno con `TPDraw.load` di un molfile V3000 con lo S-group DAT `MZLAB` (la Δ) e `MZLAB_ENDPTS` (il multicentro), cioè il formato `parz/1` che `TPDraw.partial()` già legge. Nessuna conferma.
 - **Disegno (chat C08)**: non si tocca `draw.js`, `disegno-parziali.js`, `parentesi.js` né Ketcher: si chiamano solo `TPDraw.load` e le funzioni esportate. La chat U prova per prima cosa che Ketcher conservi DAT e ENDPTS caricati da fuori; se non li conserva, lo chiede alla chat C08 e intanto «Open in Draw» apre il genitore con la Δ nel nome.
-- **Prova esterna del disegno**: le posizioni pubblicate (§10) per i TP con sito noto; la zona tra parentesi (o l'anello del multicentro) deve contenere il sito pubblicato; con `site`, l'atomo disegnato deve essere quello pubblicato.
+- **Confronto esterno del disegno**: le posizioni proposte in letteratura (§10) sono ipotesi, non verità: si misura se la zona tra parentesi (o l'anello del multicentro) contiene il sito proposto e, con `site`, se l'atomo disegnato coincide; ogni disaccordo va nella lista per la revisione di Federico, perché può sbagliare il programma o l'ipotesi.
 
 ## 8b. Chimica computazionale: cosa manca
 **C'è già** (non si rifà): conformeri ETKDG, GFN2-xTB con ALPB, Fukui f(+), f(0), f(−) e descrittore duale, HOMO/LUMO/IP/EA nel `.wasm` `chem` (`reatt/1`, `reattivita.md`); il `prior` f(−) in `posiz/1`, mostrato come «Prev.» e mai usato per riordinare. Lo studio C32 dice già: niente precalcolo per ora, circa 1 s a composto al volo, nessun insieme pubblico di Fukui.
 
-**I Fukui migliorano la posizione?** Non come prova. I siti pubblicati per il timololo (§10) sono soprattutto C–H alifatici α a N e a O (morfolina, terz-butilammina, catena) e il taglio C–O della catena: chimica di estrazione di H e di ossidazione dell'ammina, che i Fukui di un π-sistema descrivono male. Possono servire solo a ORDINARE dentro una classe che la MS2 non separa (es. C α a N contro C α a O della stessa morfolina), e solo dopo la validazione del punto 1. Mai a cambiare la confidenza.
+**I Fukui migliorano la posizione?** Non come prova. I siti proposti in letteratura per il timololo (§10, ipotesi) sono soprattutto C–H alifatici α a N e a O (morfolina, terz-butilammina, catena) e il taglio C–O della catena: chimica di estrazione di H e di ossidazione dell'ammina, che i Fukui di un π-sistema descrivono male. Possono servire solo a ORDINARE dentro una classe che la MS2 non separa (es. C α a N contro C α a O della stessa morfolina), e solo dopo la validazione del punto 1. Mai a cambiare la confidenza.
 
 **Proposte, in ordine di utilità/costo**:
 | # | Cosa | Che decisione serve | Costo e dove gira | Peso, licenza | Prova esterna | Vale? |
@@ -149,7 +149,7 @@ Motivi di `cannot_say` (`reasons`): `no_ms2` (nessuna MS2 in nessun file: «need
 | 5 | cariche e sito di protonazione qualitativi | quale frammento porta la carica | basso; Mulliken già nel `chem` | 0 B | — | poco |
 | 6 | QCEIMS, stati di transizione DFT, siti da apprendimento automatico | — | troppo per il beneficio o senza dati di addestramento | — | — | no |
 
-**Prova esterna comune**: siti del manoscritto, Chen 2013 e Tekle-Röttering 2016 per il timololo; l'insieme di ≥ 20 composti •OH per la regola generale. Senza questa prova nessun numero di chimica computazionale entra nella riga.
+**Confronto esterno comune**: le ipotesi di letteratura per il timololo (manoscritto, Chen 2013, Tekle-Röttering 2016) e l'insieme di ≥ 20 composti •OH per la regola generale, scelti dove la regioselettività è provata (standard, NMR) e non solo proposta dalla MS. Senza questo confronto nessun numero di chimica computazionale entra nella riga.
 
 ## 9. La riga espansa: cosa si aggiunge
 Si tengono le schede di `TABUI_FEATURE_TABLE.md` §6 (Overview, Samples, Identity, Quality) e se ne aggiungono due, dopo Identity:
@@ -158,18 +158,18 @@ Si tengono le schede di `TABUI_FEATURE_TABLE.md` §6 (Overview, Samples, Identit
 Testa della riga chiusa: la colonna «Identity» mostra «+O (ring A?)» quando la confidenza è `region`, «+O (?)» quando `uncertain`; mai un nome di composto.
 
 ## 10. Prove esterne e piano di prova
-**Prove che non dipendono da noi**:
-1. **Letteratura indipendente** (TP e frammenti pubblicati, da estrarre con DOI nel privato): Chen et al. 2013, fotodegradazione sensibilizzata del timololo, taglio C-O della catena e ossidazione dell'anello a sei ([doi:10.1016/j.jhazmat.2013.02.035](https://doi.org/10.1016/j.jhazmat.2013.02.035)); Ofrydopoulou et al. 2021, fotolisi di una miscela con il timololo, Orbitrap ([doi:10.1016/j.scitotenv.2020.144079](https://doi.org/10.1016/j.scitotenv.2020.144079)); Lejwoda et al. 2024, fotodegradanti con HRMS/MS ([doi:10.3390/ph17010098](https://doi.org/10.3390/ph17010098)); Devrukhakar et al. 2018, prodotti di idrolisi e fotolisi ([doi:10.1016/j.jpba.2018.02.057](https://doi.org/10.1016/j.jpba.2018.02.057)); per la chimica della morfolina, Tekle-Röttering et al. 2016 ([doi:10.1016/j.watres.2015.11.027](https://doi.org/10.1016/j.watres.2015.11.027)). Fonte: PubMed. Il manoscritto di Federico è una verità, ma dello stesso autore: conta come «autore», non come indipendente.
-2. **Standard autentici**: se il laboratorio ha uno standard di un TP (es. un prodotto di dealchilazione in commercio), RT + MS2 = livello 1 e verità piena del sito. Da chiedere a Federico.
+**Confronti che non dipendono da noi** (nessuno è un oracolo: i TP e i siti di letteratura sono ipotesi trovate a mano e possono essere sbagliati):
+1. **Ipotesi di letteratura** (TP e frammenti proposti, da estrarre con DOI nel privato): Chen et al. 2013, fotodegradazione sensibilizzata del timololo, taglio C-O della catena e ossidazione dell'anello a sei ([doi:10.1016/j.jhazmat.2013.02.035](https://doi.org/10.1016/j.jhazmat.2013.02.035)); Ofrydopoulou et al. 2021, fotolisi di una miscela con il timololo, Orbitrap ([doi:10.1016/j.scitotenv.2020.144079](https://doi.org/10.1016/j.scitotenv.2020.144079)); Lejwoda et al. 2024, fotodegradanti con HRMS/MS ([doi:10.3390/ph17010098](https://doi.org/10.3390/ph17010098)); Devrukhakar et al. 2018, prodotti di idrolisi e fotolisi ([doi:10.1016/j.jpba.2018.02.057](https://doi.org/10.1016/j.jpba.2018.02.057)); per la chimica della morfolina, Tekle-Röttering et al. 2016 ([doi:10.1016/j.watres.2015.11.027](https://doi.org/10.1016/j.watres.2015.11.027)). Fonte: PubMed. Il manoscritto di Federico è un'ipotesi dello stesso autore: conta come «autore», non come indipendente. Nel motore, nell'interfaccia e nei documenti si chiamano «literature hypothesis»: un confronto («agrees / disagrees with literature»), mai un verdetto.
+2. **Standard autentici**: se il laboratorio ha uno standard di un TP (es. un prodotto di dealchilazione in commercio), RT + MS2 = livello 1: l'unico riferimento che vale come verità. Da chiedere a Federico.
 3. **Altri programmi sugli stessi file**: mzmine 4.10 (righe, aree, allineamento), SIRIUS (formule dei TP e dei frammenti); concordanza misurata, non uguaglianza richiesta.
 4. **Prova cieca**: un'altra serie della cartella HRMS con sito noto (scelta da Federico senza dire i TP alla chat che sviluppa), o un composto con un sito d'idrossilazione unico e pubblicato; i parametri si congelano prima.
 5. **Coerenza cinetica**: i TP di prima generazione hanno il massimo prima di quelli di seconda; nessun TP accettato segue il genitore con rapporto costante (sarebbe ISF).
 6. **Esche**: FDR stimato per F1-F5 e per la classe `site` (librerie permutate): obiettivo FDR ≤ 10 % per `site`.
-7. **Revisione di Federico**: i primi 20 TP della vista in Tabui, con `TPDEC`: per ciascuno «agree / disagree / not a TP» su modifica, confidenza e sito; le risposte si esportano e diventano verità del privato.
+7. **Revisione di Federico**: i primi 20 TP della vista in Tabui, con `TPDEC`: per ciascuno «agree / disagree / not a TP» su modifica, confidenza e sito; le risposte si esportano nel privato come giudizio del chimico, accanto alle ipotesi di letteratura (anche questo è un'ipotesi, più informata).
 
-**Criteri di accettazione** (i numeri attesi stanno nel privato): almeno l'80 % dei TP di `timolol_truth.json` con RT osservato nella vista; nessun ISF noto accettato come TP senza la nota; per i casi `loc_test` la regione giusta in `site` o `region` (come `timolol_msn_truth.json` `localization.cases`, `min_correct`), nessun `site` sbagliato; i casi ambigui (`ambiguous_ids`) mai `site`; isomeri della componente tripla separati o `isomers_not_separated`; concordanza delle righe con mzmine misurata e scritta in `misure.md`.
+**Criteri di accettazione**: veri cancelli solo dove il riferimento è costruito o provato (dati sintetici, esche, standard autentici); sui dati veri si MISURA la concordanza con le ipotesi (numeri nel privato): quota dei TP di `timolol_truth.json` con RT osservato nella vista (obiettivo indicativo 80 %); casi `loc_test` con la regione proposta in `site` o `region`; `site` in disaccordo con l'ipotesi; casi ambigui (`ambiguous_ids`) dati come `site`; isomeri della componente tripla separati o `isomers_not_separated`; concordanza delle righe con mzmine. Ogni disaccordo è una voce da rivedere (programma o ipotesi), non un test rosso; un TP trovato dal programma e assente nelle ipotesi è un candidato nuovo, non un falso positivo.
 
-**In CI (dati sintetici)**: serie sintetica di `tools/dati_sintetici.py` estesa con un genitore che ha un sito unico noto e un isomero di posizione, un'infusione MSn sintetica (`finder_msn_e2e.json` esiste) e MS2 DDA chimeriche; test `cargo test -p mzlab-feat --test interp*` (parità con un riferimento Python in `tools/interp_riferimento.py` che usa RDKit per i siti, se installato, altrimenti salta solo quella parte); e2e `e2e_tabui_struttura.py` (scheda Structure, disegno, tastiera, axe). **Con i dati veri** (salto senza `MZLAB_DATI`): `tests/interp_dati.rs` legge le due verità del privato; `tools/valida/tp_timololo.py` scrive le metriche nel privato (`scratchpad/consegne/`).
+**In CI (dati sintetici)**: serie sintetica di `tools/dati_sintetici.py` estesa con un genitore che ha un sito unico noto e un isomero di posizione, un'infusione MSn sintetica (`finder_msn_e2e.json` esiste) e MS2 DDA chimeriche; test `cargo test -p mzlab-feat --test interp*` (parità con un riferimento Python in `tools/interp_riferimento.py` che usa RDKit per i siti, se installato, altrimenti salta solo quella parte); e2e `e2e_tabui_struttura.py` (scheda Structure, disegno, tastiera, axe). **Con i dati veri** (salto senza `MZLAB_DATI`): `tests/interp_dati.rs` legge le due ipotesi del privato e ne verifica solo la lettura e l'assenza di errori; `tools/valida/tp_timololo.py` scrive le metriche nel privato (`coordinamento/consegne/`).
 
 ## 11. Mappa del codice
 **Da toccare** (righe da ricontrollare con `grep -n` al momento):
@@ -207,9 +207,10 @@ Prompt: `PROMPT_TABUI_TP_TIMOLOLO/R.md`, `U.md`, `LOCALE.md`. Conflitti: la chat
 - D6 Controlli senza bianco: «dark + t0», detto nella riga, finché il bianco non arriva.
 - D7 Δ multiple (+2O, +3O): parentesi sulla zona con «+2O», mai combinazioni di siti.
 - D8 Chimica computazionale: prima la validazione dei Fukui già calcolati (§8b punto 1); BDE C–H solo se validata e in un modulo a parte.
+- D9 TP e siti di letteratura (e del manoscritto) = ipotesi: confronto misurato, mai cancello; i cancelli veri sono i dati sintetici, le esche e gli standard autentici.
 
 ## 14. Trappole
-- I m/z, i tempi e i nomi dei TP veri non vanno nel pubblico: i test con dati veri leggono la verità del privato e saltano senza (`eprintln!("SKIP ...")`).
+- I m/z, i tempi e i nomi dei TP veri non vanno nel pubblico: i test con dati veri leggono le ipotesi del privato e saltano senza (`eprintln!("SKIP ...")`).
 - `default_groups` scrive nomi italiani: Tabui è solo in inglese (`tests/test_tabui_inglese.py`), quindi vanno tradotti prima di arrivare alla pagina.
 - `localize` è in parità con il riferimento Python di mzFinder: un'entrata nuova si aggiunge accanto, la vecchia non cambia numeri.
 - La CE «media» del filtro non è la CE dello spettro: non usarla come chiave di raggruppamento con l'infusione.
