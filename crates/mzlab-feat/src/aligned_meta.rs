@@ -104,10 +104,6 @@ impl RowMeta {
     }
 
     pub fn heap_bytes(&self) -> usize {
-        (self.rt_lo.capacity() * 4) * 6
-            + self.charge.capacity()
-            + self.qreason.capacity()
-            + self.ms2_file.capacity() * 4
-            + self.iso_m1.capacity() * 4
+        (self.rt_lo.capacity() * 4) * 6 + self.charge.capacity() + self.qreason.capacity() + self.ms2_file.capacity() * 4 + self.iso_m1.capacity() * 4
     }
 }
