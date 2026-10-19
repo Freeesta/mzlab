@@ -2,7 +2,8 @@
 //! the formula against the calibration of the file. A filter hides a row with a reason, it never deletes one; each row carries the first filter that
 //! hid it. Used by `interp::build`.
 
-use crate::tp::{ST_CONTROL, ST_ISF};
+use crate::legacy::series::Hyp;
+use crate::tp::{ST_CONTROL, ST_ISF, ST_PARENT};
 
 pub const SCHEMA: &str = "filtri/1";
 /// Floor and ceiling of the tolerance of a formula, ppm.
@@ -46,6 +47,55 @@ pub fn first_hidden(f: &RowFacts) -> Option<usize> {
     } else {
         None
     }
+}
+
+/// Mass defect added to the delta of a rule (Da) to make a decoy, times k = 1..=`DECOY_K`; a decoy match is a match by chance.
+pub const DECOY_STEP: f64 = 0.0137;
+pub const DECOY_K: u32 = 5;
+/// A decoy must lie beyond this many ppm of every true delta, and a row matches a decoy within it.
+pub const DECOY_PPM: f64 = 10.0;
+
+/// The decoy m/z: the ion m/z of each rule shifted by `DECOY_STEP` x k, dropping the ones within `DECOY_PPM` of any rule (a true match).
+pub fn decoy_masses(rule_mz: &[f64]) -> Vec<f64> {
+    let near = |a: f64, b: f64| (a - b).abs() / b.abs().max(1.0) * 1e6 <= DECOY_PPM;
+    let mut out: Vec<f64> = vec![];
+    for &m in rule_mz {
+        for k in 1..=DECOY_K {
+            let d = m + DECOY_STEP * f64::from(k);
+            if !rule_mz.iter().any(|&r| near(d, r)) && !out.iter().any(|&o| near(d, o)) {
+                out.push(d);
+            }
+        }
+    }
+    out
+}
+
+/// `decoys` of the registry: how many decoys there are and how many of them are matched by a row that passes F1-F5. `rows` = (m/z, passes).
+pub fn registry_decoys(
+    rule_mz: &[f64],
+    rows: impl IntoIterator<Item = (f64, bool)>,
+) -> Option<(usize, usize)> {
+    let (masses, rows) = (decoy_masses(rule_mz), rows.into_iter().collect::<Vec<_>>());
+    let hit = |d: f64| {
+        rows.iter()
+            .any(|&(mz, ok)| ok && (mz - d).abs() / d * 1e6 <= DECOY_PPM)
+    };
+    (!masses.is_empty()).then(|| (masses.len(), masses.iter().filter(|&&d| hit(d)).count()))
+}
+
+/// `registry_decoys` over a table: the rows that are not the parent, with their `mz`, `status` and the facts the filters read.
+pub fn table_decoys(
+    hyps: &[Hyp],
+    mz: &[f64],
+    status: &[u8],
+    facts: &[RowFacts],
+) -> Option<(usize, usize)> {
+    let rule_mz: Vec<f64> = hyps.iter().map(|h| h.mz).collect();
+    let rows = (0..mz.len()).filter(|&r| status[r] != ST_PARENT);
+    registry_decoys(
+        &rule_mz,
+        rows.map(|r| (mz[r], first_hidden(&facts[r]).is_none())),
+    )
 }
 
 /// Median of a slice (NaN when empty).

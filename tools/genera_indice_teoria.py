@@ -62,11 +62,13 @@ def plain(h: str) -> str:
     return re.sub(r"\s+", " ", htmllib.unescape(h)).strip()
 
 
-def chapters() -> list[tuple[str, str, str]]:
-    src = (D / "teoria.js").read_text(encoding="utf-8")
+def chapters(src: str | None = None) -> list[tuple[str, str, str]]:
+    """The rows of CHAPTERS in teoria.js; a row may carry a 5th field (`true` = administrator-only chapter), which is indexed too."""
+    if src is None:
+        src = (D / "teoria.js").read_text(encoding="utf-8")
     block = src[src.index("const CHAPTERS = ["):src.index("];", src.index("const CHAPTERS = ["))]
     out = []
-    for f, n, t, _p in re.findall(r'\["([^"]+)", "([^"]+)", "([^"]+)", "([^"]+)"\]', block):
+    for f, n, t, _p in re.findall(r'\["([^"]+)", "([^"]+)", "([^"]+)", "([^"]+)"(?:, *\w+)?\]', block):
         out.append((f, n, t.replace("{APP}", APP)))
     return out
 

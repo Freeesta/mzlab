@@ -108,6 +108,13 @@ fn the_block_is_built_from_the_dda_of_the_series_and_read_by_row() {
         .unwrap()
         .expect("the block is there");
     assert_eq!(meta.get("version").and_then(|v| v.f64()), Some(1.0));
+    // five decoys for the one rule of the registry, none of them matched by a row that passes the filters
+    let decoys = meta
+        .get("filtri")
+        .and_then(|f| f.get("decoys"))
+        .expect("decoys");
+    assert_eq!(decoys.get("rules").and_then(|v| v.f64()), Some(5.0));
+    assert_eq!(decoys.get("survived").and_then(|v| v.f64()), Some(0.0));
     assert!(
         !ids.contains(&t.id(parent)),
         "the parent is not interpreted"
