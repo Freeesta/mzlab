@@ -12,9 +12,26 @@ const IN_WORKER = typeof WorkerGlobalScope !== "undefined" && self instanceof Wo
 
 // ---------------------------------------------------------------- page side
 export const poolSize = (small, cores) => { const n = Math.max(1, Math.min((cores || 2) - 1, 4)); return small ? Math.min(n, 2) : n; };
+// The memory of a .wasm never shrinks: a pool idle for this long closes its workers (the next job starts one again, a few tens of ms)
+const IDLE_MS = 20000;
 const fail = (key, params, text) => Object.assign(new Error(text || key), { key, params: params || {} });
 
-// opts: { workerUrl, wasm: { feat: { jsUrl, wasmUrl, sha256? }, proofs: { ... }, table: { ... } }, size, budgetMb (working memory of a step of the .wasm, MB; 0 = 192), notify(key, params), onProgress(info), WorkerClass }
+// nothing queued, nothing running, no call to the archive worker for `idleMs`: the workers go (the state of a job lives in the page, never in an idle worker)
+function idleRest(idleMs, st, slots, queue, kill) {
+  let idle = null;
+  const rest = () => {
+    clearTimeout(idle);
+    if (!idleMs) return;
+    idle = setTimeout(() => {
+      if (queue.length || [...slots].some(s => s.busy) || (st.archive && st.archive.calls.size)) return rest();
+      for (const s of [...slots]) kill(s);
+      if (st.archive) { try { st.archive.w.terminate(); } catch (_) { /* gone */ } st.archive = null; }
+    }, idleMs);
+  };
+  return rest;
+}
+
+// opts: { workerUrl, wasm: { feat: { jsUrl, wasmUrl, sha256? }, proofs: { ... }, table: { ... } }, size, budgetMb (working memory of a step of the .wasm, MB; 0 = 192), idleMs (a pool with nothing to do for this long closes its workers, 0 = never; IDLE_MS), notify(key, params), onProgress(info), WorkerClass }
 // The recipe is a JSON string: {"polarity": 1 | -1 | null, "mode": "ion" | "family"}.
 // the supervisor: the workers alive, the queue of jobs, the replacement of a worker that dies
 function createCore(opts) {
@@ -23,6 +40,7 @@ function createCore(opts) {
   const slots = new Set();                      // every worker alive: { w, busy, loaded:Set, dead }
   const st = { archive: null, cancelled: false };
   const queue = [];                             // jobs waiting for a worker: { run(slot), resolve, reject, tried }
+  const rest = idleRest(opts.idleMs ?? IDLE_MS, st, slots, queue, s => kill(s));
 
   function spawn() {
     const slot = { w: new WorkerClass(workerUrl, { type: "module" }), busy: false, loaded: new Set(), dead: false, calls: new Map(), seq: 0 };
@@ -76,13 +94,14 @@ function createCore(opts) {
       } else job.reject(e);
     }
     pump();
+    rest();
   }
   function submit(run) {
     if (st.cancelled) return Promise.reject(fail("tpmine.feat.cancelled"));
     return new Promise((resolve, reject) => { queue.push({ run, resolve, reject, tried: false }); pump(); });
   }
   const copy = list => list.map(b => b.slice());      // inputs of a job that may run again are copied, never transferred
-  return { st, slots, queue, spawn, call, submit, kill, copy };
+  return { st, slots, queue, spawn, call, submit, kill, copy, rest };
 }
 
 // The exports of a campaign folder (admin mode): `kind` = schymanski | publication | quantify | gradient (`.wasm` `attributio_export`) or evidence (`.wasm` `attributio_rev`, it needs the review);
@@ -160,7 +179,7 @@ function proofOps(submit, call, copy, opts) {
 }
 
 export function createFeatPool(opts) {
-  const { st, slots, queue, spawn, call, submit, kill, copy } = createCore(opts);
+  const { st, slots, queue, spawn, call, submit, kill, copy, rest } = createCore(opts);
 
 
   return {
@@ -262,7 +281,7 @@ export function createFeatPool(opts) {
     fs: {
       async _call(msg, transfer) {
         if (!st.archive || st.archive.dead) st.archive = spawn();
-        return call(st.archive, msg, transfer);
+        try { return await call(st.archive, msg, transfer); } finally { rest(); }
       },
       write(path, bytes) { return this._call({ op: "fs.write", path, bytes }, [bytes.buffer]); },
       async read(path) { return (await this._call({ op: "fs.read", path })).bytes; },

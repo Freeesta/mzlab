@@ -8,7 +8,15 @@
 //  - held key = about 15 scans/s, Maiusc = 5 scans, Space = play/pause. Classic script, loaded after explore.js.
 
 // ---- cache of single scans: key = file | level | precursor | scan index (position in the chromatogram of the same selection)
-const SC = { m: new Map(), n: new Map(), fl: new Map(), max: 400 };
+// a scan is two JS arrays of 8 bytes a value: besides the 400 scans, the cache holds at most `maxBytes` (the oldest leave first; a refetch costs one request)
+const SC = { m: new Map(), n: new Map(), fl: new Map(), max: 400, maxBytes: 96 << 20 };
+const scBytes = s => 8 * ((s.mz ? s.mz.length : 0) + (s.y ? s.y.length : 0) + (s.pmz ? s.pmz.length : 0) + (s.py ? s.py.length : 0)) + 200;
+// `fresh` = the scans just stored: they are the newest, so they stay (a visible scan is never evicted by the fetch that brought it)
+function scTrim(fresh = 1) {
+  let b = 0;
+  for (const s of SC.m.values()) b += scBytes(s);
+  for (const [k, s] of SC.m) { if (SC.m.size <= fresh || (SC.m.size <= SC.max && b <= SC.maxBytes)) break; SC.m.delete(k); b -= scBytes(s); }
+}
 const SC_AHEAD = 20;
 const scBase = (k, lv, pr) => `${k}|${lv}|${pr ?? ""}`;
 function scGet(k, lv, pr, i) {
@@ -29,7 +37,7 @@ function scFetch(k, lv, pr, i0, i1) {
   const pm = (window.HR && f && HR.isHr(f, lv) ? scBin(`api/scanbin?${q}`) : J(`api/spectra?${q}`)).then(j => {
     SC.n.set(b, j.n);
     for (const s of j.scans) SC.m.set(b + "|" + s.i, s);
-    while (SC.m.size > SC.max) SC.m.delete(SC.m.keys().next().value);
+    scTrim(j.scans.length);
   }).finally(() => SC.fl.delete(fk));
   SC.fl.set(fk, pm); return pm;
 }

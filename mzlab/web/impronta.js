@@ -3,6 +3,8 @@
 // worker (impronta-worker.js) that receives each piece as a Transferable after it was written and hashes it on another core while the copy goes on; without a Worker (or `mode: "qui"`) it hashes in the
 // worker of the copy at each piece. At most WINDOW pieces wait for the hash worker (the copy waits for it beyond that: the memory never holds the file).
 const WINDOW = 4;
+// the hash worker closes after this long without a member to hash (the memory of its .wasm never shrinks); the next member starts one again
+const IDLE_MS = 10000;
 
 /** @typedef {{ add: (b: Uint8Array) => Promise<void> | void, end: () => Promise<string[] | null> }} Presa */
 
@@ -10,6 +12,8 @@ const WINDOW = 4;
 export function createImpronte({ Passata, workerUrl, module, mode }) {
   /** @type {Worker | null} */ let w = null;
   let dead = mode === "qui", seq = 0;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */ let idle;
+  const rest = () => { clearTimeout(idle); idle = setTimeout(() => { if (!jobs.size && w) { w.terminate(); w = null; } }, IDLE_MS); };
   /** @type {Map<number, { ack: (() => void) | null, out: ((v: string[] | null) => void) | null, open: number }>} */
   const jobs = new Map();
   const fail = () => { dead = true; w = null; for (const j of jobs.values()) { j.open = 0; j.ack?.(); j.out?.(null); } jobs.clear(); };
@@ -20,7 +24,7 @@ export function createImpronte({ Passata, workerUrl, module, mode }) {
       x.onmessage = ev => {
         const m = ev.data, j = jobs.get(m.id);
         if (!j) return;
-        if (m.op === "ack") { j.open--; if (j.open < WINDOW) { const a = j.ack; j.ack = null; a?.(); } } else if (m.op === "fine") { jobs.delete(m.id); j.out?.(m.out || null); }
+        if (m.op === "ack") { j.open--; if (j.open < WINDOW) { const a = j.ack; j.ack = null; a?.(); } } else if (m.op === "fine") { jobs.delete(m.id); j.out?.(m.out || null); if (!jobs.size) rest(); }
       };
       x.onerror = fail; x.onmessageerror = fail;
       x.postMessage({ op: "module", module: module() });
@@ -31,6 +35,7 @@ export function createImpronte({ Passata, workerUrl, module, mode }) {
   return {
     /** the fingerprints of a member of `size` bytes: `add(piece)` in file order (the piece goes to the worker: do not use it afterwards), then `end()` gives [sha256, sha1, probe] or null */
     start(/** @type {number} */ size) {
+      clearTimeout(idle);
       const wk = worker();
       if (wk) {
         const id = ++seq, j = { ack: /** @type {(() => void) | null} */ (null), out: /** @type {((v: string[] | null) => void) | null} */ (null), open: 0 };

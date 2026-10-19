@@ -142,7 +142,8 @@ function closePanel(p) {
   if (p._ro) p._ro();
   if (p._ac) p._ac.abort();                              // every listener the panel put on document/window goes with it
   p._a = null;
-  if (p.el) p.el.remove();
+  // the bitmaps go back now: whatever still holds the detached canvas (a late draw, the undo list) holds 1x1, not the picture (the undo draws a new panel)
+  if (p.el) { p.el.querySelectorAll("canvas").forEach(c => { c.width = c.height = 1; }); p.el.remove(); }
   if (E.active === p) setActive(null);
   STATO.rimuovi(p, "close");
 }

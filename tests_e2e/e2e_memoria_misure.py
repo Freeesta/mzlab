@@ -45,11 +45,12 @@ HOOK = r"""
   };
   if (typeof WorkerGlobalScope !== 'undefined' && g instanceof WorkerGlobalScope) {
     const pm = g.postMessage.bind(g); g.postMessage = (m, t) => { note(m, t); return pm(m, t); };
-  } else {
+  }
+  {
     if (g.Worker) {
       const pp = Worker.prototype.postMessage; Worker.prototype.postMessage = function (m, t) { note(m, t); return pp.call(this, m, t); };
       g.Worker = new Proxy(g.Worker, { construct(t, a, nt) {
-        let [u, o] = a; o = Object.assign({}, o); const abs = new URL(String(u), location.href).href;
+        let [u, o] = a; o = Object.assign({}, o); let abs; try { abs = new URL(String(u), location.href).href; } catch (_) { return Reflect.construct(t, a, nt); }
         let label = abs.split('/').pop();
         if (abs.startsWith('blob:')) { label = 'blob:' + (mz.blobs.get(g.__mzUrl && g.__mzUrl[abs]) || '?'); if (!o.name) o.name = label; return Reflect.construct(t, [u, o], nt); }
         o.name = o.name || label;
@@ -58,7 +59,7 @@ HOOK = r"""
         mz.workers.push({ label, abs }); return w;
       } });
     }
-    if (g.HTMLCanvasElement) {
+    if (typeof document !== 'undefined' && g.HTMLCanvasElement) {
       const gc = HTMLCanvasElement.prototype.getContext;
       HTMLCanvasElement.prototype.getContext = function (...a) { if (!this.__mzReg) { this.__mzReg = 1; mz.cv.push(new WeakRef(this)); } return gc.apply(this, a); };
     }
@@ -237,6 +238,13 @@ def rows_of(snap):
     return [(round(mb, 1), lab, kind, how) for mb, lab, kind, how in out]
 
 
+def attendi_workers(pg, n0, limit_s=40):
+    """Wait, sampling once a second, until a worker is gone or `limit_s` seconds pass (bounded: the baseline never closes one)."""
+    import time as _t
+    t0 = _t.time()
+    while len(pg.workers) >= n0 and _t.time() - t0 < limit_s: pg.wait_for_function("document.readyState === 'complete'"); _t.sleep(1)
+
+
 def scenario(r, p, files):
     b = p.chromium.launch()
     ctx = b.new_context(viewport={"width": 1400, "height": 900}, reduced_motion="reduce", locale="it-IT")
@@ -264,6 +272,35 @@ def scenario(r, p, files):
         notes.append("Tabui state: " + pg.evaluate("(document.querySelector('#tp-load')||{}).textContent + ' | ' + (document.querySelector('#tp-files')||{}).innerText")[:300])
     ready(pg)
     snaps["5_after_tabui"] = measure(pg, ctx, cdp)
+    # the Pipeline of Tabui on the files already open: preview, confirm the times proposed from the names, run on the series
+    try:
+        pg.evaluate("PIPE.open()"); pg.wait_for_selector("#pipe[open]", timeout=30000)
+        pg.click("#pipe-go"); pg.wait_for_function("document.querySelector('#pipe-n').textContent.length > 0", timeout=60000)
+        pg.wait_for_selector("#pr-all", timeout=20000)
+        rows = pg.evaluate("[...document.querySelectorAll('#pr-tab .pr-role')].map(e => e.closest('tr').innerText)")
+        for i, txt in enumerate(r_.split("\t")[0] for r_ in rows):          # roles and times by the names of the series (the panel proposes them only when the notebook knows them)
+            role = "blank" if "blank" in txt else "dark" if "dark" in txt else "t0" if "-t0" in txt else "sample"
+            pg.select_option(f"#pr-r{i}", role)
+            tm = {"-t0": "0", "-t5": "5", "-t10": "10"}.get(next((k for k in ("-t10", "-t5", "-t0") if k in txt), ""))
+            if tm is not None and not pg.is_disabled(f"#pr-t{i}"): pg.fill(f"#pr-t{i}", tm); pg.press(f"#pr-t{i}", "Enter")
+        pg.click("#pr-all")
+        pg.wait_for_function("!document.querySelector('#pipe-run-go').disabled", timeout=20000)
+        pg.click("#pipe-run-go")
+        pg.wait_for_function("document.querySelectorAll('#pv-list .pv-row').length > 0 || document.querySelector('#pipe-tab #ft-t')", timeout=120000)
+    except Exception as e:
+        notes.append("Pipeline step incomplete: " + str(e).splitlines()[0][:120])
+    ready(pg)
+    snaps["6_after_pipeline"] = measure(pg, ctx, cdp)
+    # idle: the workers of the Pipeline and of Tabui are not needed any more; wait (by state, bounded) until one of them is gone
+    n0 = len(pg.workers)
+    attendi_workers(pg, n0)
+    snaps["7_pipeline_idle"] = measure(pg, ctx, cdp)
+    notes.append(f"workers alive: {n0} after the Pipeline, {len(pg.workers)} after the idle wait")
+    # back to the Data tab, every panel closed: what the canvases of the closed panels keep
+    pg.keyboard.press("Escape"); pg.wait_for_function("!document.querySelector('#pipe[open]')", timeout=10000)
+    pg.click('#nav button[data-v="data"]'); ready(pg)
+    pg.evaluate("[...E.panels].forEach(p => closePanel(p))"); ready(pg)
+    snaps["8_panels_closed"] = measure(pg, ctx, cdp)
     notes.append("lr_miss=%d" % pg.evaluate("(window.MZLAB_LR_MISS || []).length"))
     b.close()
     return snaps, notes
@@ -285,8 +322,9 @@ def main():
     tmp = Path(tempfile.mkdtemp(prefix="c39_"))
     try:
         files = []
-        for i, t in enumerate((0, 8, 20)):
-            f = tmp / f"B_FullMass-t{t}.mzML"; ds.full_scan(f, t, np.random.default_rng(i + 1)); files.append(f)
+        # a series with the controls the Pipeline asks for (blank, dark) and three times: roles and times are proposed from the names
+        for i, (nm, t) in enumerate((("blank", 0), ("dark", 0), ("t0", 0), ("t5", 5), ("t10", 10))):
+            f = tmp / f"B_FullMass-{nm}.mzML"; ds.full_scan(f, t, np.random.default_rng(i + 1)); files.append(f)
         with sync_playwright() as p:
             snaps, notes = scenario(r, p, files)
     finally:
