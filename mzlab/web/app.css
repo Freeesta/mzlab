@@ -363,3 +363,7 @@ html:not(.phone) #avvio-copia,html:not(.phone) #avvio-reset,html:not(.phone) #de
 #fl-dz{margin:6px;padding:14px 10px;border:2px dashed var(--accent);border-radius:6px;text-align:center;font-weight:600;color:var(--accent)}#fl-note{margin:6px 8px}#sb-pane.dz-over{outline:2px dashed var(--accent);outline-offset:-3px}#rmall:disabled{opacity:.4;cursor:default}
 
 .lst-onelist .lst-src-col{display:none}
+#tour-later{position:fixed;z-index:7000;max-width:240px;padding:8px 12px;border-radius:8px;background:var(--panel);color:var(--ink);border:1px solid var(--line);box-shadow:0 4px 16px rgba(0,0,0,.18);font-size:13px;line-height:1.4;opacity:0;transition:opacity .3s ease}
+#tour-later.on{opacity:1}
+#tour-later::before{content:"";position:absolute;top:-6px;right:var(--tip,16px);width:10px;height:10px;background:var(--panel);border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg)}
+@media (prefers-reduced-motion:reduce){#tour-later{transition:none}}

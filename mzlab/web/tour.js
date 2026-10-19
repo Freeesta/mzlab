@@ -599,7 +599,7 @@ const TOUR = (() => {
           <button type="button" id="tour-inv-si" style="background:var(--accent,#2b5c8a);color:#fff;border:1px solid var(--accent,#2b5c8a);border-radius:5px;padding:4px 12px;font-weight:500;cursor:pointer">${I18N.t("tour.invito.si")}</button>
         </div>
       `;
-      document.body.appendChild(div);
+      document.body.appendChild(div); TOURDOPO.centra(div);
 
       let idle = 0;
       const closeInv = () => {
@@ -612,7 +612,7 @@ const TOUR = (() => {
 
       const onInvKeyDown = e => {
         if (e.key === "Escape") {
-          closeInv();
+          closeInv(); TOURDOPO.mostra();
         }
       };
 
@@ -626,7 +626,7 @@ const TOUR = (() => {
         TOUR.inizia(1, 0);
       };
       div.querySelector("#tour-inv-no").onclick = () => {
-        closeInv();
+        closeInv(); TOURDOPO.mostra();
         try { document.getElementById("np-set")?.focus({ preventScroll: true }); } catch (_) { /* focus is only a help: the settings panel works without it */ }
       };
     },
