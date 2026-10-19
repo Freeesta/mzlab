@@ -105,6 +105,23 @@ try:
             assert pg.locator("#pal-l .pal-k").count() >= 1, ("the palette shows the key of the report", dbg)
             pg.keyboard.press("Escape")
         step("the palette shows the key", palette_key)
+        def side_bar():
+            pg.evaluate("document.activeElement && document.activeElement.blur()")
+            o = pg.evaluate("BARRA.open"); pg.keyboard.press("Shift+H"); attendi(pg, f"BARRA.open === {str(not o).lower()}")
+            pg.keyboard.press("Shift+H"); attendi(pg, f"BARRA.open === {str(o).lower()}")
+        step("Shift+H shows/hides the side panels", side_bar)
+        def files():
+            pg.evaluate("document.activeElement && document.activeElement.blur()")
+            k0 = pg.evaluate("E.cur"); pg.keyboard.press("Alt+ArrowRight"); attendi(pg, f"E.cur !== {k0}")
+            pg.keyboard.press("Alt+ArrowLeft"); attendi(pg, f"E.cur === {k0}")
+            pg.evaluate("(()=>{const i=document.createElement('input'); i.id='tmpin'; document.body.appendChild(i); i.focus()})()")
+            pg.keyboard.press("Alt+ArrowRight"); frames(pg, 3); assert pg.evaluate("E.cur") == k0, "Alt+Right in a text field must not change file"
+            pg.evaluate("document.activeElement.blur(); document.getElementById('tmpin')?.remove()")
+        step("Alt+Left/Right: previous/next file, not in a text field", files)
+        def remove_all_shows_bar():
+            pg.evaluate("BARRA.close(false)"); attendi(pg, "!BARRA.open")
+            pg.evaluate("removeAllFiles()"); attendi(pg, "BARRA.open && BARRA.curTab === 'file'")
+        step("Remove all brings the side bar back when hidden", remove_all_shows_bar)
 finally:
     r.close(); r.report()
 print("\nSTEPS"); [print(" ", s) for s in steps]

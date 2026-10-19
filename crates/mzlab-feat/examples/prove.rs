@@ -9,7 +9,8 @@
 use std::path::{Path, PathBuf};
 
 use mzlab_core::idxread::Index;
-use mzlab_feat::evid::producers::{isotope_score, network_share, neutral_of, FeatIndex, Peaks};
+use mzlab_feat::evid::producers::{FeatIndex, Peaks};
+use mzlab_feat::evid::rowfacts::{row_facts, row_near};
 use mzlab_feat::evid::*;
 use mzlab_feat::family::{analyse_families, FamParams, Families};
 use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules};
@@ -70,13 +71,6 @@ fn analyse_all(files: &[String], r: &Recipe) -> Series {
         s.links.push(links);
     }
     s
-}
-
-fn row_near(t: &Aligned, mz: f64, rt: f64, rt_tol: f64) -> Option<usize> {
-    let tol = mz * 5e-6;
-    (0..t.len())
-        .filter(|&r| (t.mz[r] - mz).abs() <= tol && (t.rt[r] - rt).abs() <= rt_tol)
-        .max_by(|&a, &b| area_of(t, a).total_cmp(&area_of(t, b)))
 }
 
 fn area_of(t: &Aligned, r: usize) -> f64 {
@@ -253,33 +247,9 @@ fn facts_of(
     parent: Option<(f64, f64)>,
     r: &Recipe,
 ) -> (Vec<Facts>, Vec<Option<(Peaks, f32)>>) {
-    let pol = r.detect.polarity;
-    let sign = pol.unwrap_or(1);
     let idx: Vec<FeatIndex> = s.feats.iter().map(FeatIndex::new).collect();
-    let spec = row_spectra(files, s, aligned, &idx, pol);
-    let parent_row = parent.and_then(|(mz, rt)| row_near(aligned, mz, rt, 0.3));
-    let parent_spec = parent_row.and_then(|r| spec[r].as_ref().map(|x| x.0.clone()));
-    let parent_neutral = parent.map(|p| neutral_of(p.0, sign));
-    let facts = (0..aligned.len())
-        .map(|row| {
-            let mz = aligned.mz[row];
-            let hyp = reg.hyps.iter().find(|h| (h.mz - mz).abs() <= mz * 5e-6);
-            let isotope =
-                hyp.and_then(|h| isotope_score(&idx, mz, aligned.rt[row], &h.formula, sign));
-            let network = match (hyp, &parent_spec, &spec[row], parent_neutral) {
-                (Some(h), Some(ps), Some((cs, _)), Some(pn)) if parent_row != Some(row) => {
-                    network_share(cs, ps, h.neutral - pn, 0.01)
-                }
-                _ => None,
-            };
-            Facts {
-                isotope,
-                fragments: None,
-                purity: spec[row].as_ref().map(|x| f64::from(x.1)),
-                network,
-            }
-        })
-        .collect();
+    let spec = row_spectra(files, s, aligned, &idx, r.detect.polarity);
+    let (facts, _) = row_facts(aligned, reg, parent, &spec, &idx, false);
     (facts, spec)
 }
 

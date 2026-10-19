@@ -8,14 +8,15 @@ publish = false
 [package.metadata]
 cargo-fuzz = true
 
-# the entry points live in ingressi.rs, pulled in by #[path]; machete does not follow it
+# the entry points live in ingressi.rs and ingressi_lettori.rs, pulled in by #[path]; machete does not follow them
 [package.metadata.cargo-machete]
-ignored = ["mzlab-core", "mzlab-lib"]
+ignored = ["mzlab-core", "mzlab-lib", "mzlab-lettori"]
 
 [dependencies]
 libfuzzer-sys = "0.4"
 mzlab-core = { path = "../crates/mzlab-core" }
 mzlab-lib = { path = "../crates/mzlab-lib" }
+mzlab-lettori = { path = "../crates/mzlab-lettori", features = ["tutte"] }
 
 [workspace]
 
@@ -64,6 +65,62 @@ bench = false
 [[bin]]
 name = "mzlib_msp_mgf"
 path = "fuzz_targets/mzlib_msp_mgf.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lettori_aperti"
+path = "fuzz_targets/lettori_aperti.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lettori_andi"
+path = "fuzz_targets/lettori_andi.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lettori_thermo"
+path = "fuzz_targets/lettori_thermo.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lettori_agilent"
+path = "fuzz_targets/lettori_agilent.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lettori_sciex"
+path = "fuzz_targets/lettori_sciex.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lettori_waters"
+path = "fuzz_targets/lettori_waters.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lettori_shimadzu"
+path = "fuzz_targets/lettori_shimadzu.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lettori_bruker"
+path = "fuzz_targets/lettori_bruker.rs"
 test = false
 doc = false
 bench = false

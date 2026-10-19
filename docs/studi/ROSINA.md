@@ -47,10 +47,10 @@ Documenti dello studio:
 ## 3. Metodi e strumenti
 | Strumento | Cosa fa nello studio | Dove gira |
 |---|---|---|
-| msconvert (ProteoWizard, DLL dei produttori) | mzML di riferimento (64 bit, zlib, senza peak picking) e una seconda conversione con `peakPicking vendor` (centroidi del produttore) | Linux x86_64: workflow `oracoli.yml` del privato (GitHub Actions, avvio a mano), non sul Mac arm64 (Wine aborta, nessuna libreria macOS: `coordinamento/dati_esterni/rosina/ORACOLI.md`) (Docker `proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses`); ripiego: PC Windows |
+| msconvert (ProteoWizard, DLL dei produttori) | mzML di riferimento (64 bit, zlib, senza peak picking) e una seconda conversione con `peakPicking vendor` (centroidi del produttore) | Windows di Federico (Parallels sul Mac), tramite la chat locale; esiti in `coordinamento/dati_esterni/rosina/ORACOLI.md` del privato; non sul Mac arm64 (Wine aborta) |
 | ThermoRawFileParser (RawFileReader) | mzML di riferimento Thermo e metadati in JSON (`-m 0`) | Mac (.NET), nativo |
-| `timsdata` (SDK Bruker) via opentims/alphatims | 1/K0 per scansione, m/z dei frame, verità della mobilità | Linux x86_64: workflow `oracoli.yml` del privato (GitHub Actions, avvio a mano), non sul Mac arm64 (Wine aborta, nessuna libreria macOS: `coordinamento/dati_esterni/rosina/ORACOLI.md`) (`opentims_bruker_bridge` porta `libtimsdata` per Linux); sul Mac `opentimspy` dà solo indici TOF e scansione |
-| MassLynx Raw SDK (Waters) | m/z con e senza lock mass, tempo di deriva, intestazioni di funzione | Linux x86_64 (workflow `oracoli.yml`); licenza da leggere prima |
+| `timsdata` (SDK Bruker) via opentims/alphatims | 1/K0 per scansione, m/z dei frame, verità della mobilità | Windows di Federico (Parallels sul Mac), tramite la chat locale; esiti in `coordinamento/dati_esterni/rosina/ORACOLI.md` del privato (libreria per Windows); sul Mac `opentimspy` dà solo indici TOF e scansione |
+| MassLynx Raw SDK (Waters) | m/z con e senza lock mass, tempo di deriva, intestazioni di funzione | Windows di Federico (Parallels); licenza da leggere prima |
 | Software del produttore (Analyst, Xcalibur, MassHunter, MassLynx, LabSolutions, DataAnalysis) | metadati «come li vede l'utente» (File Information, Method Report) copiati a mano in un modulo fisso | PC degli strumenti (Analyst del 3200 al laboratorio); altri solo se Federico ne ha accesso |
 | OpenMS `FileInfo -v`, `xmllint --schema mzML1.1.0_idx.xsd` | validazione sintattica e semantica dell'mzML scritto da mzLab | Mac e CI (pacchetti Linux) |
 | pyteomics, pymzml, OpenMS, mzmine 4 | rilettura dell'mzML di mzLab (prova di andata e ritorno con lettori terzi) | Mac e CI (`tools/`) |
@@ -73,12 +73,12 @@ Il convertitore mzML ha in più: validatore PSI superato, rilettura uguale con 3
 
 | Formato | V1 possibile? | V2 | V3 | V4 | Prova minima per dire «L» |
 |---|---|---|---|---|---|
-| Thermo `.raw` | sì: TRFP sul Mac (provato: Q Exactive, TSQ Quantum Access Max; anche metadati JSON), msconvert su Linux | rara (PXD con mzML) | Xcalibur se disponibile | opentfraw (già la base: non indipendente) | V1 su 1 file per famiglia di strumento (TSQ, Q Exactive, Orbitrap Tribrid, trappola) |
+| Thermo `.raw` | sì: TRFP sul Mac (provato: Q Exactive, TSQ Quantum Access Max; anche metadati JSON), msconvert su Windows (Parallels) | rara (PXD con mzML) | Xcalibur se disponibile | opentfraw (già la base: non indipendente) | V1 su 1 file per famiglia di strumento (TSQ, Q Exactive, Orbitrap Tribrid, trappola) |
 | SCIEX `.wiff` | sì: msconvert (Windows/Wine) | sì: PIS/NL di Zenodo 7897576, MTBLS1381 | **sì: Analyst del 3200 al laboratorio** | opensxraw (dichiarato inaffidabile) | V1 o V2 per strumento ed esperimento |
 | SCIEX `.wiff2` | sì: msconvert o SCIEX MS Data Converter | rara | SCIEX OS | nessuno | nessun lettore: solo guida |
 | Agilent `.D` | sì: msconvert (MHDAC) | sì: ST003656, ST004061, ST004922 (già usati) | MassHunter se disponibile | openaraw, rainbow (DAD) | V1/V2 per QqQ, Q-TOF profilo, centroidi, DAD |
 | Waters `.raw` | sì: msconvert; MassLynx SDK Linux per lock mass e deriva | sì: ST004453 (TQ-XS), ST003942, ST003984 | MassLynx se disponibile | openwraw | V1 per TOF, MSe, DDA, lock mass |
-| Bruker TDF/TSF | sì solo su Linux: `timsdata` (m/z e 1/K0) e msconvert nel workflow; sul Mac assente | fixture di ProteoWizard | DataAnalysis se disponibile | timsrust, alphatims | V1 per 1/K0 e compressione 2 |
+| Bruker TDF/TSF | sì su Windows: `timsdata` (m/z e 1/K0) e msconvert (Parallels); sul Mac assente | fixture di ProteoWizard | DataAnalysis se disponibile | timsrust, alphatims | V1 per 1/K0 e compressione 2 |
 | Bruker BAF | sì: msconvert, `baf2sql` | rara | DataAnalysis | nessuno | nessun lettore: solo guida |
 | Shimadzu `.lcd`/`.qgd` | sì: msconvert (DLL Shimadzu, solo LC) | nessuno trovato | LabSolutions se disponibile | openszraw (immaturo) | V1 per LC; per `.qgd` V3 o `.cdf` esportato dallo stesso file |
 | netCDF/ANDI | no (formato aperto) | `.D` della stessa corsa (già fatto) | software che l'ha esportato | netCDF4-python, xcms | V2/V4 + specifica ASTM |
@@ -158,7 +158,7 @@ Prompt in `docs/studi/PROMPT_ROSINA/` (regole comuni come quelle dei pacchetti D
 |---|---|---|---|---|
 | LOC-1 | **Fatto il 19/10**: ELENCO-1 sul Mac, MassIVE contato (A.4), oracoli provati (`ORACOLI.md` del privato) | `~/mzLab/rosina-dati/`, privato | — | chat locale |
 | R-00 | Banco comune: formato `verita/1`, `tools/rosina/` (verità da mzML e da TRFP, scaricamento, indice), test Rust `verita.rs` per famiglia, confronto dei metadati, bersagli fuzz di `mzlab-lettori`, workflow notturno del privato | `tools/rosina/`, `crates/mzlab-lettori/tests/`, `fuzz/`, privato | — | — |
-| LOC-2 | Oracoli su tutto il corpus: JSON e mzML di TRFP sul Mac; msconvert (senza peak picking e con `peakPicking vendor`) e 1/K0 di `timsdata` dal workflow `oracoli.yml` del privato (scritto in R-00); verità con gli script di R-00 | privato | R-00, LOC-1 | chat locale (TRFP, avvio del workflow) |
+| LOC-2 | Oracoli su tutto il corpus: JSON e mzML di TRFP sul Mac; msconvert (senza peak picking e con `peakPicking vendor`) e 1/K0 di `timsdata` su Windows (Parallels); verità con gli script di R-00; scala (dimensioni, tempi, RAM) | privato | R-00, LOC-1 | chat locale e Federico, guidati dal Coordinatore |
 | R-01 | Convertitore mzML: validazione XSD e semantica, profilo/centroidi dichiarati, andata e ritorno con lettori terzi | `lettori_mzml`, `lettori_centroidi`, scrittori | R-00 | — |
 | R-02 | Thermo: TSQ, PDA, lock mass, trappole, metadati contro TRFP | modulo `thermo`, `metodo_raw` | R-00, LOC-2 | — |
 | R-03 | SCIEX `.wiff`: QTRAP 4000-7500, periodi multipli, EPI, vial, DAD; TripleTOF/ZenoTOF in un modulo nuovo `sciex-tof` | modulo `sciex`, nuovo `sciex-tof` | R-00, LOC-2 | Federico: Analyst del 3200 |
@@ -175,7 +175,7 @@ Ordine: LOC-1 e R-00 subito e in parallelo; LOC-2 dopo R-00; R-01…R-08 dopo LO
 
 ### F.1 Il file di verità `verita/1`
 JSON per file nativo (uno per campione nei contenitori a più campioni): `schema`, `file` (nome logico, SHA-256), `oracolo` (`nome`, `versione`, `opzioni`, `data`, `piattaforma`), `conteggi` (spettri per livello, cromatogrammi per tipo), `scansioni[]` (`id`, `rt_min`, `livello`, `polarita`, `precursore_mz`, `isolamento`, `ce`, `attivazione`, `profilo`, `n_punti`, `tic`, `bpi_mz`, `bpi`), `punti` (per 8 scansioni scelte: prima, ultima, mediana, TIC massimo, e una per livello: m/z e intensità interi), `cromatogrammi[]` (`id`, `tipo`, `n`, `somma`, `massimo`, 16 punti campione).
-`metadati`: campo → valore come lo dà l'oracolo, con il nome del produttore e il percorso `metodo/1` atteso, da `SCHEDE.md`. Si genera dall'mzML di riferimento (`tools/rosina/verita.py MZML`) o dall'oracolo (TRFP JSON, `timsdata`). Dimensione tipica: 50-500 KB.
+`metadati`: campo → valore come lo dà l'oracolo, con il nome del produttore e il percorso `metodo/1` atteso, da `SCHEDE.md`. Si genera dall'mzML di riferimento (`tools/rosina/verita.py MZML`) o dall'oracolo (TRFP JSON con `verita_trfp.py`, tabella 1/K0 di `timsdata` con `verita_timsdata.py`: gli oracoli girano su Mac o Windows, gli script leggono quello che hanno prodotto). Campi facoltativi: `tolleranza` (`hr`, `lr` o oggetto che cambia singole soglie) e `mobilita` (Bruker). Dimensione tipica: 50-500 KB.
 
 ### F.2 Livelli di prova (ogni lettore, ogni file del corpus)
 | Livello | Controllo | Tolleranza |
@@ -193,7 +193,7 @@ Esito per file: `L` (F0-F5 contro V1 o V2), `P` (manca un livello, scritto), `NV
 
 ### F.3 Dove gira
 - **CI pubblica** (`test.yml`): F0-F4 e F6 sui sintetici e sui piccoli pubblici; F5 sui documenti `metodo/1` dei sintetici.
-- **CI privata** (nuovo workflow notturno in `mzlab-dati`, proposto in R-00): checkout di `Freeesta/mzlab` `main`, `cargo test -p mzlab-lettori --features tutte --test verita` su ogni `scratchpad/rosina/verita/**/*.verita.json` (file ≤ 90 MB); il riassunto (formato × livello) in un artefatto, mai nel pubblico.
+- **CI privata** (workflow notturno in `mzlab-dati`, testo in `rosina/WORKFLOW_NOTTE.md`): checkout di `Freeesta/mzlab` `main`, `cargo test -p mzlab-lettori --features tutte --test 'verita_*'` (un test per famiglia, `tests/verita_<famiglia>.rs`) su ogni `scratchpad/rosina/verita/**/*.verita.json` (file ≤ 90 MB); il riassunto (formato × livello) in un artefatto, mai nel pubblico.
 - **Locale** (Mac): F8 e i file in `~/mzLab/rosina-dati/`, con lo stesso test e `MZLAB_DATI_GRANDI=<percorso>`.
 
 ### F.4 Casi limite: ogni cella vuota è «nessun file», da cercare
@@ -212,8 +212,8 @@ Esito per file: `L` (F0-F5 contro V1 o V2), `P` (manca un livello, scritto), `NV
 | endianness | LE | LE | LE | LE | LE (SQLite BE) | LE |
 
 ## Decisioni (raccomandazione per ogni scelta aperta)
-1. **Oracoli** (provati sul Mac il 19/10): ThermoRawFileParser va sul Mac (arm64) e resta l'oracolo Thermo. msconvert (Docker amd64 + Wine) e `timsdata` non vanno sul Mac arm64. Raccomandazione: un workflow `oracoli.yml` nel repository privato su GitHub Actions `ubuntu-latest` (x86_64: Docker e Wine nativi, `libtimsdata` per Linux), avviato a mano, che scarica i nativi dagli URL pubblici di `GRANDI.tsv`/`INDICE.tsv`, produce gli mzML di riferimento e la tabella di 1/K0 e salva nel privato solo le verità.
-   Ripiego: PC Windows dell'università. Finché il workflow non c'è: mzML pubblicati negli stessi depositi (V2) e, per Bruker, confronto interno («oracolo assente» per m/z e 1/K0).
+1. **Oracoli** (deciso dal Coordinatore il 19/10): i dati stanno solo sul Mac. ThermoRawFileParser gira sul Mac (arm64) ed è l'oracolo Thermo; msconvert e `timsdata`, che sul Mac arm64 non vanno, li esegue Federico su Windows (Parallels) tramite la chat locale, con gli esiti in `coordinamento/dati_esterni/rosina/ORACOLI.md`. Nessun oracolo in GitHub Actions; un oracolo su Linux x86_64 si riapre solo se serve.
+   Finché un oracolo manca per un file: mzML pubblicati nello stesso deposito (V2) e, per Bruker, confronto interno («oracolo assente» per m/z e 1/K0).
 2. **`.wiff2`**: nessun lettore. Guida di conversione (msconvert o SCIEX MS Data Converter) e richiesta scritta a SCIEX per un progetto didattico; si riapre se SCIEX documenta il formato.
 3. **Bruker BAF**: nessun lettore nel sito; guida (DataAnalysis o msconvert). `baf2sql` di Bruker è un SDK nativo: nemmeno nell'app desktop (licenza e peso), salvo richiesta di Federico.
 4. **Lock mass Waters**: lettura come oggi (m/z del file) per default; la correzione con la funzione di riferimento diventa un'opzione dichiarata nell'mzML, provata contro il MassLynx SDK (R-05).

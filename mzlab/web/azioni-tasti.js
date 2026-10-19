@@ -43,6 +43,13 @@
   const vista = (k, v, code, nome) => reg({ id: "app." + k, gruppo: "tools", viste: ["*"], icona: "side", scorciatoia: { code, alt: true, dove: "view", et: "scorc." + k },
     nome, tip: () => T("scorc.vista.tip"), disponibile: () => typeof setView === "function", esegui: () => setView(v) });
   vista("dati", "data", "Digit1", () => T("scorc.dati")); vista("disegno", "draw", "Digit2", () => T("scorc.disegno")); vista("teoria", "theory", "Digit3", () => T("scorc.teoria"));
+  // Shift+H shows/hides the side panels like Ctrl/Cmd+B; Alt+Left/Right step through the files like the arrows next to the file menu (not while typing: the field keeps its keys)
+  const inField = () => !!(document.activeElement && document.activeElement.closest("input,textarea,select,[contenteditable='true'],[contenteditable='']"));
+  reg({ id: "app.pannelli", gruppo: "view", viste: ["*"], icona: "side", scorciatoia: { tasto: "h", shift: true, dove: "view", et: "scorc.pannelli" },
+    nome: () => T("scorc.pannelli"), tip: () => T("scorc.pannelli.tip"), disponibile: () => inData() && !!window.BARRA, esegui: () => BARRA.toggleDrawer() });
+  const passo = (/** @type {string} */ k, /** @type {string} */ et, /** @type {string} */ tasto, /** @type {number} */ d) => reg({ id: `app.${k}`, gruppo: "view", viste: ["*"], icona: "list", scorciatoia: { tasto, alt: true, dove: "view", et },
+    nome: () => T(et), tip: () => T("scorc.file.tip"), disponibile: () => inData() && !inField() && typeof goFile === "function" && tabFiles().length > 1, esegui: () => goFile(d) });
+  passo("filePrec", "scorc.filePrec", "ArrowLeft", -1); passo("fileSucc", "scorc.fileSucc", "ArrowRight", 1);
   reg({ id: "app.scorciatoie", gruppo: "help", viste: ["*"], icona: "book", scorciatoia: { tasto: "?", dove: "view", et: "scorc.titolo" },
     nome: () => T("scorc.titolo"), tip: () => T("scorc.titolo.tip"), disponibile: () => inData(), esegui: () => PANNELLO.apri() });
 
