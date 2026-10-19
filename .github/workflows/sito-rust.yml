@@ -119,8 +119,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: wasm-feat-a
-          path: |
-            site/static/wasm-feat
+          # a single path would drop its own name from the artifact: site/static holds only wasm-feat here, so the prefix stays
+          path: site/static
           retention-days: 1
 
   sito-wasm-feat-b:
