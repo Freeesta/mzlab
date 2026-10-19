@@ -172,16 +172,6 @@ fn experimental_sites_ranking_ph7() {
     );
 }
 
-/// The same measure with the C–H radical option (task C37): locked in `baseline_bde`.
-#[test]
-fn experimental_sites_ranking_bde() {
-    assert_eq!(
-        measure("{\"protomer\":\"none\",\"bde\":true}"),
-        data()["baseline_bde"],
-        "the counts with the radical option differ from baseline_bde in validazione.json"
-    );
-}
-
 #[test]
 fn dataset_is_well_formed() {
     let d = data();

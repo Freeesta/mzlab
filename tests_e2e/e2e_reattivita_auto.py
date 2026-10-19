@@ -109,11 +109,8 @@ try:
             pg.select_option(CTL + " .tpra-form", "ph7"); pg.click(CTL + " .tpra-re")
             pg.wait_for_function("window.TPREATTAUTO.info().cached === 3 && window.TPREATTAUTO.info().phase === 'done'", timeout=120000)
             pg.click("#tp-reatt #tpr-t5"); j = pg.inner_text("#tp-reatt #tpr-p pre"); assert '"protomer"' in j and '"ph": 7' in j, j[:300]
-            pg.select_option(CTL + " .tpra-form", "none"); pg.select_option(CTL + " .tpra-bde", "1"); pg.click(CTL + " .tpra-re")
-            pg.wait_for_function("window.TPREATTAUTO.info().cached === 4 && window.TPREATTAUTO.info().phase === 'done'", timeout=180000)
-            assert "Radical part" in pg.inner_text("#tp-reatt .tpr-tab"), "the C–H table lacks the radical columns"
-            pg.select_option(CTL + " .tpra-bde", "0")
-        step("«Recompute» with the options Solvent, Conformers, Form (pH 7) and C–H ranking (radical energy)", options)
+            pg.select_option(CTL + " .tpra-form", "none")
+        step("«Recompute» with the options Solvent, Conformers and Form (pH 7)", options)
 
         def restart():
             pg.select_option(CTL + " .tpra-sol", "water"); pg.fill(CTL + " .tpra-conf", "16"); pg.click(CTL + " .tpra-re")
@@ -124,7 +121,7 @@ try:
             assert pg.inner_text(CTL + " .tpra-st") == "waiting for TPs" and pg.locator(CTL + " .tpra-re").is_disabled(), "Recompute is enabled during the TPs"
             pg.wait_for_function("document.getElementById('tp-msg').textContent === 'Done.'", timeout=300000)
             pg.wait_for_function("window.TPREATTAUTO.info().phase === 'done'", timeout=120000)
-            assert pg.evaluate("window.TPREATTAUTO.info().cached") == 5, "the new run was not calculated after the TPs"
+            assert pg.evaluate("window.TPREATTAUTO.info().cached") == 4, "the new run was not calculated after the TPs"
         step("a new Dig during the calculation stops it (worker terminated), waits, and the calculation runs after the TPs", restart)
 
         def cancelled():

@@ -1,6 +1,5 @@
 //! mzLab chemistry engine: 3D geometry from SMILES, GFN2-xTB with ALPB water and condensed Fukui functions (`reatt/1`) (`docs/agenti/reattivita.md`).
 
-pub mod bde;
 pub mod eht;
 pub mod embed;
 pub mod fukui;

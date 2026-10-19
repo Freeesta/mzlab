@@ -2,7 +2,6 @@
 //! molecule, the cation and the anion at the same geometry (ALPB water by default), condensed Fukui functions, f(−) on the lowest
 //! conformers, C–H sites by symmetry class; extended Hückel as the fallback when an SCC does not converge.
 
-use crate::bde::{combine, radical_energies};
 use crate::embed::{embed, Conf, DEFAULT_CONFORMERS};
 use crate::fukui::{ch_sites, Fukui, Site};
 use crate::mol3d::{hbonds, symbol, Mol3d};
@@ -18,8 +17,6 @@ pub const ENGINE: &str = "mzlab-chem/1";
 pub const PUBLISH_GFN2: bool = true;
 /// Whether the pH 7 form is the default (`docs/agenti/reattivita.md`, section «Protomero a pH 7»).
 pub const PROTOMER_DEFAULT: bool = false;
-/// Radical-energy option for the C–H sites (`bde.rs`): off by default, it did not improve the validated sites.
-pub const BDE_DEFAULT: bool = false;
 /// Conformers on which f(−) is also computed, to give its spread.
 const SPREAD_CONFORMERS: usize = 3;
 
@@ -31,8 +28,6 @@ pub struct Opts {
     pub seed: u64,
     /// `"protomer":"ph7"` computes the most probable form at pH 7 (`protomer.rs`) instead of the SMILES as written.
     pub ph7: bool,
-    /// `"bde": true` adds the C–H radical energy of each site and a combined score with f(−) (`bde.rs`).
-    pub bde: bool,
 }
 
 impl Opts {
@@ -42,7 +37,6 @@ impl Opts {
             conformers: DEFAULT_CONFORMERS,
             seed: 42,
             ph7: PROTOMER_DEFAULT,
-            bde: BDE_DEFAULT,
         };
         if text.trim().is_empty() {
             return Ok(o);
@@ -65,9 +59,6 @@ impl Opts {
                 "none" => false,
                 _ => return Err(bad("protomer")),
             };
-        }
-        if let Some(b) = v.get("bde") {
-            o.bde = b.bool().ok_or_else(|| bad("bde"))?;
         }
         if let Some(n) = v.get("seed").and_then(|n| n.f64()) {
             o.seed = n.max(0.0) as u64;
@@ -190,11 +181,7 @@ pub fn reactivity_json(smiles: &str, opts_json: &str) -> Result<String> {
     let confs = embed(&m, o.seed, o.conformers)?;
     let r = compute(&m, &confs, o.water)?;
     m.xyz = confs[0].xyz.clone();
-    let mut sites = ch_sites(&mol, &m, &r.fukui.f_minus);
-    let bde = o.bde && r.method == "GFN2-xTB";
-    if let Some(e) = bde.then(|| radical_energies(&m, &sites, o.water)).flatten() {
-        combine(&mut sites, &e);
-    }
+    let sites = ch_sites(&mol, &m, &r.fukui.f_minus);
     Ok(write(
         smiles,
         &m,
@@ -256,10 +243,7 @@ fn write(
     ));
     write_sites(&mut o, sites);
     o.raw("],\"notes\":[");
-    for (k, n) in notes(r, water, prot, sites.iter().any(|s| s.parts.is_some()))
-        .iter()
-        .enumerate()
-    {
+    for (k, n) in notes(r, water, prot).iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" }).str(n);
     }
     o.raw("],\"cite\":[");
@@ -316,12 +300,6 @@ fn write_sites(o: &mut Out, sites: &[Site]) {
             s.heavy_index, s.n_h
         ))
         .num(round(s.f_minus, 4));
-        if let (Some(e), Some(p)) = (s.bde, s.parts) {
-            o.raw(",\"radical_kcal\":").num(round(e, 2));
-            o.raw(",\"score\":").num(round(p[0], 3));
-            o.raw(",\"score_f_minus\":").num(round(p[1], 3));
-            o.raw(",\"score_radical\":").num(round(p[2], 3));
-        }
         o.raw(&format!(
             ",\"rank\":{},\"tie_first\":{}}}",
             s.rank,
@@ -379,7 +357,7 @@ fn write_atoms(o: &mut Out, m: &Mol3d, r: &Result3) {
     o.raw("]");
 }
 
-fn notes(r: &Result3, water: bool, prot: Option<&Protomer>, bde: bool) -> Vec<String> {
+fn notes(r: &Result3, water: bool, prot: Option<&Protomer>) -> Vec<String> {
     let mut n = vec![
         "ETKDG geometry, no force-field refinement; the lowest-energy conformer is used."
             .to_string(),
@@ -401,12 +379,6 @@ fn notes(r: &Result3, water: bool, prot: Option<&Protomer>, bde: bool) -> Vec<St
         }
     }
     n.push(format!("C–H sites: unsaturated carbons with hydrogens, f(−) averaged over each symmetry class; sites within {} of the first are a tie.", crate::fukui::TIE));
-    if bde {
-        n.push(
-            "Score: mean of min-max f(−) and radical energy (kcal/mol, lower = easier H· loss)."
-                .to_string(),
-        );
-    }
     n
 }
 

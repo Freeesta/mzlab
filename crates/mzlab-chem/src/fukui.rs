@@ -48,9 +48,6 @@ pub struct Site {
     pub rank: usize,
     /// Within `TIE` of the first site.
     pub tie_first: bool,
-    /// With the C–H radical option (`bde.rs`): radical formation energy (kcal/mol) and [combined score, Fukui part, radical part].
-    pub bde: Option<f64>,
-    pub parts: Option<[f64; 3]>,
 }
 
 /// Unsaturated carbons bearing hydrogens, grouped by symmetry class, highest mean f(−) first.
@@ -89,8 +86,6 @@ pub fn ch_sites(mol: &Mol, m: &Mol3d, f_minus: &[f64]) -> Vec<Site> {
             f_minus: atoms.iter().map(|&i| f_minus[i]).sum::<f64>() / atoms.len() as f64,
             rank: 0,
             tie_first: false,
-            bde: None,
-            parts: None,
         })
         .collect();
     sites.sortc_by(|a, b| b.f_minus.total_cmp(&a.f_minus));
