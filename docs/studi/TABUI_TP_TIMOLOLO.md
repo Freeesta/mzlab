@@ -5,7 +5,8 @@ Studio dell'Architetto per Federico. Solo stato e proposte; nessun codice di pro
 ## 0. Verdetto
 - **Una sola tabella**: la feature table della Pipeline (T3 di `TABUI_FEATURE_TABLE.md`: rilevamento alla mzmine 4.10 in Rust → `.mzfeat` → `tp/1` → `TPTAB` + riga espansa `TPRIGA`). Lo Scavo HR (T2, `legacy/`) non diventa la tabella: i suoi pezzi migliori (albero MSn del genitore, libreria dei frammenti, `localize`, `similarity`) si riusano come librerie dentro un passo nuovo.
 - **Il pezzo nuovo è l'interpretazione per riga** (`interp/1`): un modulo Rust che, per ogni riga che passa i cancelli di `tp/1`, collega TUTTE le MS2 DDA della serie, le confronta col genitore (DDA e albero di infusione), propone la modifica, la localizza con una confidenza dichiarata e prepara le strutture da disegnare. Si scrive nel `.mzfeat` come blocco `interp` (come `tp/1`); la riga lo mostra nella scheda nuova «Structure» e nella scheda «MS2».
-- **Il disegno**: il programma disegna il TP sul genitore (SMILES + Δ + sito). Sito certo: una struttura. Sito incerto: il genitore con gli atomi candidati colorati per classe e il punteggio di ciascuna, più le varianti («+O on N16», «+O on C18»…), con la scritta «Position uncertain». Le strutture le costruisce Rust (molfile con le coordinate del genitore); la pagina le disegna in SVG e le apre nel Disegno con `TPDraw.load` in un clic.
+- **Il disegno** (§8): il programma disegna il TP sul genitore con la notazione del chimico, non con tutte le posizioni esatte. Sito certo: la struttura. Sostituzione su un anello aromatico con più posizioni possibili: legame multicentro dal centro dell'anello (stile ChemDraw). Modifica in una zona: parentesi quadre sulla zona con l'etichetta della Δ («+O», «−2H»), la zona indicata dai frammenti evidenziata e la scritta «Position uncertain». Rust sceglie la forma e gli atomi; la pagina disegna con `parentesi.js` (già nel sito) e apre nel Disegno con `TPDraw.load` in un clic.
+- **Chimica computazionale** (§8b): i Fukui ci sono già (`reatt/1`) ma non sono una prova di posizione; per il timololo servono poco (siti alifatici α a N/O). Prima si validano su un insieme esterno; il pezzo nuovo che vale davvero è la BDE C–H, solo se validata.
 - **Il programma propone, il chimico decide**: livello proposto al più 3a/3b (`posiz/1`, `livelli.md`); 2b solo dal chimico (`TPDEC`); nessuna struttura è scritta come identificazione.
 - **Il grezzo serve**: con i 13 mzML si fa quasi tutto; i `.raw` della serie servono per tre cose che l'mzML non dice (§2): energia di collisione per passo (stepped NCE), esclusione dinamica e lock mass. Si chiedono a Federico (§10).
 
@@ -46,8 +47,8 @@ ThermoRawFileParser non è installato sul Mac: serve per leggere il metodo e le 
 | ThermoRawFileParser | metadati e metodo dei `.raw`; mzML di confronto per il lettore nativo | Mac (chat locale), mai nel sito |
 | mzmine 4.10 (batch di riferimento) | oro del rilevamento e dell'allineamento sugli stessi 13 file; concordanza di righe e aree con `untargeted/` | Mac; confronto in `tools/bench/` |
 | SIRIUS (CSI:FingerID, alberi) | formule dei TP e albero di frammentazione indipendente; confronto delle formule dei frammenti con la libreria del genitore | Mac; Attributio legge già le sue tabelle |
-| MetFrag / MS-FINDER | punteggio di ogni variante di struttura sulla MS2 del TP | in Rust: `attributio/ms2_engine/insilico.rs` (MS-02, PR aperta) e `rearrange.rs` (MS-03); MS-FINDER non gira (Windows) |
-| RDKit | enumerazione indipendente dei siti e delle varianti (SMARTS di idrossilazione, N-ossidazione, deidrogenazione) per controllare `chem/posizioni.rs` | solo in `tools/` (riferimento di parità), mai nel sito |
+| MetFrag / MS-FINDER | punteggio di ogni zona candidata (struttura di prova interna, mai mostrata) sulla MS2 del TP | in Rust: `attributio/ms2_engine/insilico.rs` (MS-02, PR aperta) e `rearrange.rs` (MS-03); MS-FINDER non gira (Windows) |
+| RDKit | enumerazione indipendente dei siti (SMARTS di idrossilazione, N-ossidazione, deidrogenazione) per controllare `chem/posizioni.rs` | solo in `tools/` (riferimento di parità), mai nel sito |
 | Coseno modificato ed entropia | `similarity::pair_components`: frammenti uguali, spostati della Δ, perdite comuni, con le due misure | Rust, riusato così com'è |
 | `legacy/msn` | albero MSn del genitore (`build_tree`), libreria dei frammenti (`library::build`, anche con la DDA del genitore), `localize` (verosimiglianza sugli insiemi di atomi) | Rust, riusato |
 | `chem/posizioni.rs` | siti chimicamente possibili per tipo di modifica, classi di simmetria, prove con/senza modifica dai tagli del grafo | Rust, riusato |
@@ -73,7 +74,7 @@ Una riga che passa F1-F5 entra nella vista dei TP; quelle nascoste si contano in
 2. **MS2 collegate**: tutte le scansioni DDA di tutti i file con centro di isolamento entro 10 ppm e tempo dentro i bordi del picco del file (`legacy/ms2.rs::select` con i bordi del `.mzfeat`), ciascuna con file, tempo, CE, finestra, purezza; consenso per file e per serie (`consensus`); gli isomeri separati per correlazione dei frammenti (§1.8).
 3. **Confronto col genitore**: `pair_components` contro la DDA del genitore (stessa HCD) e contro i nodi dell'albero dell'infusione (per formula); coseno modificato ed entropia mostrati.
 4. **Albero**: per ogni nodo dell'albero del genitore, il frammento nel TP: uguale (formula del nodo), spostato (formula + Δ), assente (sopra il taglio di scansione o sotto la soglia) o non verificabile (fuori dalla finestra di scansione).
-5. **Posizione** (§7): siti possibili, punteggi, classe di confidenza, varianti da disegnare.
+5. **Posizione** (§7): siti possibili, punteggi, classe di confidenza, forma del disegno (§8).
 6. **Livello proposto e prove**: cascata di `livelli/1` più `proposal.sublevel` (3a/3b); cinetica, controlli, RT.
 
 ## 5. Modello dati della riga
@@ -88,7 +89,7 @@ Una riga che passa F1-F5 entra nella vista dei TP; quelle nascoste si contano in
  tree:{nodes:[{path:[mz], formula, state:"same|shifted|absent|not_checkable", mz}], n_same, n_shifted},
  site:{confidence:"site|region|uncertain|cannot_say", reasons:[code], region, margin,
        classes:[{id, atoms:[i], kind, support, status:"supported|undistinguished|excluded", for:[mz], against:[mz]}],
-       variants:[{class, smiles, molfile}]},
+       drawing:{mode:"structure|multicenter|bracket|none", atoms:[i], ends:[i], delta, label, uncertainty:"none|zone|whole"}},
  proposal:{sublevel:"3a|3b", why}, rt:{vs_parent:"earlier|later|same", note},
  kinetics:{shape, tmax, generation_hint}, flags:[{code, why}]}
 ```
@@ -109,9 +110,9 @@ Una riga che passa F1-F5 entra nella vista dei TP; quelle nascoste si contano in
 | Classe | Quando | Disegno |
 |---|---|---|
 | `site` | una sola classe `supported`, margine ≥ 2 unità di log-verosimiglianza sulla seconda, ≥ 3 frammenti informativi (≥ 5 % del picco base, formula ≤ 5 ppm), nessun frammento contro, purezza ≥ 0,8, isomero unico | la struttura del TP |
-| `region` | tutte le classi entro il margine stanno nello stesso gruppo (anello o catena) | il genitore con la regione colorata e le varianti della regione; «Position uncertain within ring A» |
-| `uncertain` | classi in gruppi diversi entro il margine | tutte le varianti, ognuna col suo supporto; «Position uncertain» |
-| `cannot_say` | motivi sotto | nessuna variante; il motivo in parole |
+| `region` | tutte le classi entro il margine stanno nello stesso gruppo (anello o catena) | parentesi sulla regione (o multicentro se è un anello aromatico); «Position uncertain within ring A» |
+| `uncertain` | classi in gruppi diversi entro il margine | parentesi sull'intero genitore, zone colorate per supporto; «Position uncertain» |
+| `cannot_say` | motivi sotto | parentesi sull'intero genitore con la Δ e «Position not determined»; il motivo in parole |
 
 Motivi di `cannot_say` (`reasons`): `no_ms2` (nessuna MS2 in nessun file: «needs targeted MS2»), `chimeric` (purezza < 0,8 in tutte), `isomers_not_separated`, `no_reference` (né albero né DDA del genitore), `few_fragments` (< 3 informativi), `multiple_changes` (+2O, +3O, +2O+2H: le combinazioni di siti sono troppe per dirne una; si mostra solo la regione se c'è), `ring_opening` (la modifica apre un anello: `posizioni` non apre anelli; si dice «ring A opened» se la regione è certa, senza struttura), `change_lost` (la Δ si perde come neutro in tutti i frammenti, es. H2O da +O: nessun frammento la porta), `unsupported_change` (Δ fuori dalle trasformazioni note a `posizioni`).
 
@@ -119,11 +120,36 @@ Motivi di `cannot_say` (`reasons`): `no_ms2` (nessuna MS2 in nessun file: «need
 
 ## 8. Il disegno del TP
 - **Coordinate**: il genitore ha bisogno di coordinate 2D una volta. Raccomandazione: le dà Ketcher (il Disegno, già nel sito, sandbox): al primo disegno della serie la pagina chiama `TPDraw.load(smiles)` e ne legge il molfile, ricordato con l'impronta del genitore (IndexedDB `mzlab_lab`); se il chimico ha già disegnato il genitore («Use this structure»), si usa quel molfile. Nessun generatore di coordinate nuovo in Rust (costoso e peggiore di Ketcher).
-- **Varianti in Rust**: `interp::variants(parent_molfile, transform, class)` → molfile del TP (atomo nuovo con coordinate sulla bisettrice esterna dell'atomo del sito, idrogeni impliciti tolti, ordine degli atomi del genitore conservato) e SMILES; formula verificata con `check_formulas`. Trasformazioni disegnabili: quelle di `posizioni` più `-2H`; le perdite si disegnano come «parte tenuta» (atomi persi in grigio tratteggiato); apertura d'anello e Δ multiple: niente disegno (§7).
-- **Pagina**: `TP_Mine/js/46_tp_mol.js` (nuovo, `TPMOL.svg(molfile, {highlight:[{atoms, color, label}]})`): legami singoli/doppi/tripli e aromatici, etichette degli eteroatomi, colori Okabe-Ito da variabili CSS per le classi, simboli oltre al colore (numero della classe accanto all'atomo); `role="img"` con `aria-label` («Timolol with +O; candidate atoms: …») e la tabella delle classi come `TDATI`. Nessuna animazione oltre una dissolvenza (rispetta `prefers-reduced-motion`).
-- **Pochi clic** (regola 26): la scheda «Structure» si apre già disegnata (nessun pulsante «Compute»); le varianti sono miniature in fila (la prima = classe col supporto più alto), un clic la ingrandisce, un pulsante con icona «Open in Draw» la apre nel Disegno con `TPDraw.load` (con il multicentro se incerta, come `TPDraw.partial()`). Nessuna conferma.
-- **Disegno (chat C08)**: non si tocca `draw.js`, `disegno-parziali.js` né Ketcher: si chiamano solo `TPDraw.load` e il molfile che restituisce. Se serve una funzione nuova del Disegno, si chiede alla chat C08.
-- **Prova esterna del disegno**: le posizioni pubblicate (§10) per i TP con sito noto; la variante col supporto più alto deve contenere il sito pubblicato o essere marcata `uncertain`/`region` con la regione giusta.
+- **Notazione del chimico, non varianti**: non si costruisce una struttura per ogni sito. Rust (`interp/disegno.rs`) sceglie UNA forma per riga, la più semplice che dice il vero:
+  | Caso | Forma (`drawing.mode`) | Cosa si vede |
+  |---|---|---|
+  | `site` | `structure` | il TP disegnato (atomo nuovo sulla bisettrice esterna dell'atomo del sito); per le perdite la parte tenuta, gli atomi persi in grigio tratteggiato |
+  | sostituzione su un anello aromatico o eteroaromatico, candidati tutti nello stesso anello | `multicenter` | legame dal centro dell'anello alla Δ (`ends` = atomi candidati dell'anello) |
+  | ogni altra zona: +O alifatico, −2H, +O−2H, apertura d'anello, Δ multiple, `region` | `bracket` | parentesi quadre attorno agli atomi della zona con l'etichetta della Δ («+O», «−2H», «+2O»), la zona più sostenuta evidenziata |
+  | candidati in gruppi diversi (`uncertain`) | `bracket` sull'intero genitore | le zone candidate colorate per supporto |
+  | `cannot_say` | `bracket` sull'intero genitore | la Δ fuori parentesi e «Position not determined» |
+  `drawing.uncertainty` dice se la posizione è certa (`none`), in una zona (`zone`) o non detta (`whole`); la scritta sotto il disegno viene da qui. La tabella delle classi col loro supporto resta sotto il disegno: chi vuole il dettaglio lo legge lì, il disegno resta leggibile.
+- **Pagina**: `TP_Mine/js/46_tp_mol.js` (nuovo, `TPMOL.svg(molfile, drawing)`: il genitore dalle coordinate di Ketcher, poi `drawMulticenter` o `drawBrackets` di `mzlab/web/parentesi.js`, modulo puro SVG già scritto perché mzFinder lo riusi): legami singoli/doppi/tripli e aromatici, etichette degli eteroatomi, colori Okabe-Ito da variabili CSS per le classi, simboli oltre al colore (numero della classe accanto all'atomo); `role="img"` con `aria-label` («Timolol with +O; candidate atoms: …») e la tabella delle classi come `TDATI`. Nessuna animazione oltre una dissolvenza (rispetta `prefers-reduced-motion`).
+- **Pochi clic** (regola 26): la scheda «Structure» si apre già disegnata (nessun pulsante «Compute»); un solo disegno, un pulsante con icona «Open in Draw» lo apre nel Disegno con `TPDraw.load` di un molfile V3000 con lo S-group DAT `MZLAB` (la Δ) e `MZLAB_ENDPTS` (il multicentro), cioè il formato `parz/1` che `TPDraw.partial()` già legge. Nessuna conferma.
+- **Disegno (chat C08)**: non si tocca `draw.js`, `disegno-parziali.js`, `parentesi.js` né Ketcher: si chiamano solo `TPDraw.load` e le funzioni esportate. La chat U prova per prima cosa che Ketcher conservi DAT e ENDPTS caricati da fuori; se non li conserva, lo chiede alla chat C08 e intanto «Open in Draw» apre il genitore con la Δ nel nome.
+- **Prova esterna del disegno**: le posizioni pubblicate (§10) per i TP con sito noto; la zona tra parentesi (o l'anello del multicentro) deve contenere il sito pubblicato; con `site`, l'atomo disegnato deve essere quello pubblicato.
+
+## 8b. Chimica computazionale: cosa manca
+**C'è già** (non si rifà): conformeri ETKDG, GFN2-xTB con ALPB, Fukui f(+), f(0), f(−) e descrittore duale, HOMO/LUMO/IP/EA nel `.wasm` `chem` (`reatt/1`, `reattivita.md`); il `prior` f(−) in `posiz/1`, mostrato come «Prev.» e mai usato per riordinare. Lo studio C32 dice già: niente precalcolo per ora, circa 1 s a composto al volo, nessun insieme pubblico di Fukui.
+
+**I Fukui migliorano la posizione?** Non come prova. I siti pubblicati per il timololo (§10) sono soprattutto C–H alifatici α a N e a O (morfolina, terz-butilammina, catena) e il taglio C–O della catena: chimica di estrazione di H e di ossidazione dell'ammina, che i Fukui di un π-sistema descrivono male. Possono servire solo a ORDINARE dentro una classe che la MS2 non separa (es. C α a N contro C α a O della stessa morfolina), e solo dopo la validazione del punto 1. Mai a cambiare la confidenza.
+
+**Proposte, in ordine di utilità/costo**:
+| # | Cosa | Che decisione serve | Costo e dove gira | Peso, licenza | Prova esterna | Vale? |
+|---|---|---|---|---|---|---|
+| 1 | validare f(−)/f(0) già calcolati sui siti noti | se mostrare «Prev.» in `interp` | mezza chat, nativo in `tools/`, nessun codice nel sito | 0 B, nostro | criterio di `CHIMICA_COMPUTAZIONALE.md`: sito vero tra i primi 2 in ≥ 70 % di ≥ 20 composti con regioselettività •OH nota, più il timololo | sì, prima di tutto |
+| 2 | punteggio in silico dei frammenti per ogni zona candidata (MetFrag-like di Attributio, `ms2_engine/insilico`) | ordine delle zone quando l'albero manca | già in Rust; solo collegarlo dopo l'unione delle PR MS | 0 B nuovi in `interp` (chiamata alla libreria) | stessi TP con sito noto | sì, costo minimo |
+| 3 | BDE C–H α all'eteroatomo, GFN2 a guscio aperto (CC-B6) | ordine dei siti alifatici, dove i Fukui tacciono | medio-alto: un radicale per C–H; prima nativo in `tools/`, poi nel sito se passa | il `.wasm` `chem` ha circa 18 KB di margine e il tetto non si alza: modulo a parte con tetto suo (decisione del Coordinatore) | BDE di riferimento pubblicate per ammine e eteri, più i siti noti | sì, solo se validata |
+| 4 | CFM-ID come controllo indipendente dei frammenti | plausibilità per il paper | solo sul Mac, mai nel sito | licenza da verificare prima | spettri della libreria | forse, solo paper |
+| 5 | cariche e sito di protonazione qualitativi | quale frammento porta la carica | basso; Mulliken già nel `chem` | 0 B | — | poco |
+| 6 | QCEIMS, stati di transizione DFT, siti da apprendimento automatico | — | troppo per il beneficio o senza dati di addestramento | — | — | no |
+
+**Prova esterna comune**: siti del manoscritto, Chen 2013 e Tekle-Röttering 2016 per il timololo; l'insieme di ≥ 20 composti •OH per la regola generale. Senza questa prova nessun numero di chimica computazionale entra nella riga.
 
 ## 9. La riga espansa: cosa si aggiunge
 Si tengono le schede di `TABUI_FEATURE_TABLE.md` §6 (Overview, Samples, Identity, Quality) e se ne aggiungono due, dopo Identity:
@@ -154,7 +180,7 @@ Testa della riga chiusa: la colonna «Identity» mostra «+O (ring A?)» quando 
 - `crates/mzlab-feat-wasm` (feature nuova `interp`), `tools/build_feat_wasm.sh` (una riga, tetto comune 512 000 B), `TP_Mine/files/feat-worker.js` e `feat-desktop-pool.js` (una rotta), `crates/mzlab-desktop/src/feat.rs`.
 - `TP_Mine/js/44_tp_riga.js` (due schede), `42_tp_table.js` (testo di Identity, «Hidden: N»), `40_tabui_testi.js` (aiuti), `23_tpmine_albero.js` (dati da `interp/1`: solo l'ingresso).
 **Da inventare**:
-- `crates/mzlab-feat/src/interp/` (`mod.rs`, `ms2link.rs`, `confronto.rs`, `albero.rs`, `sito.rs`, `varianti.rs`, `filtri.rs`, `json.rs`), prove `crates/mzlab-feat/tests/interp*.rs`; `docs/schemi/interp-1.json`, `filtri-1.json`; `docs/agenti/interp.md` (file d'area nuovo).
+- `crates/mzlab-feat/src/interp/` (`mod.rs`, `ms2link.rs`, `confronto.rs`, `albero.rs`, `sito.rs`, `disegno.rs`, `filtri.rs`, `json.rs`), prove `crates/mzlab-feat/tests/interp*.rs`; `docs/schemi/interp-1.json`, `filtri-1.json`; `docs/agenti/interp.md` (file d'area nuovo).
 - `.wasm` `interp` (feature di `mzlab-feat-wasm`, cartella `wasm-feat/interp/`): lettura del `.mzfeat` e degli `.mzidx`, albero MSn, `localize`, `similarity`, `posizioni` + grafo. Stima: 380-460 KB dopo `wasm-opt -Oz` (`finder_msn` 320 KB + grafo/posizioni circa 80 KB + store); sotto il tetto di 512 000 B. **Cancello**: se la prima misura supera 470 000 B, l'albero si costruisce col `.wasm` `finder_msn` esistente (che esporta `msnlib`) e `interp` legge solo la libreria. Caricato solo con SMILES del genitore e modalità amministratore.
 - `TP_Mine/js/46_tp_mol.js` (disegno SVG), `tests_e2e/e2e_tabui_struttura.py`.
 - `tools/valida/tp_timololo.py`, `tools/interp_riferimento.py` (RDKit, solo test).
@@ -166,7 +192,7 @@ Regola 25: un pacchetto Rust e uno di interfaccia, ognuno in UNA chat che fa le 
 |---|---|---|---|
 | TT-D | locale (Mac, `mz-loc`) | oro mzmine 4.10 dei 13 file; copertura DDA per TP e file; letteratura estratta (§10.1) in `timolol_lit.json`; metodo dai `.raw` quando arrivano | nulla |
 | TT-R1 | R (Rust, Sonnet) | `interp/` passi 1-4 di §4 (modifica, MS2 collegate con purezza e isomeri, confronto, albero), blocco nel `.mzfeat`, `filtri/1`, rotta e `.wasm` `interp`, misura del peso | nulla (parallelo a TT-D) |
-| TT-R2 | R (stessa chat) | posizione (§7): fusione `posizioni` + `localize`, confidenza, motivi, varianti (molfile), `-2H` | TT-R1 unita |
+| TT-R2 | R (stessa chat) | posizione (§7): fusione `posizioni` + `localize`, confidenza, motivi, forma del disegno (`disegno.rs`), `-2H` | TT-R1 unita |
 | TT-R3 | R (stessa chat) | prove sui dati veri e `tools/valida/tp_timololo.py`, esche e FDR | TT-R2, TT-D |
 | TT-U1 | U (pagina, Sonnet) | schede MS2 e Structure, `46_tp_mol.js`, «Hidden: N» col registro, testi, e2e | TT-R1 per MS2; TT-R2 per Structure (due PR) |
 | TT-P | Coordinatore + Federico | revisione dei primi 20 TP, frase e tabella per il paper | TT-U1, TT-R3 |
@@ -175,11 +201,12 @@ Prompt: `PROMPT_TABUI_TP_TIMOLOLO/R.md`, `U.md`, `LOCALE.md`. Conflitti: la chat
 ## 13. Decisioni (raccomandazioni; i prompt usano queste)
 - D1 La tabella unica è la Pipeline (T3), non lo Scavo HR.
 - D2 `riga/1` non cambia; `interp/1` è una rotta e un blocco a parte.
-- D3 Coordinate del genitore da Ketcher, una volta per serie.
+- D3 Coordinate del genitore da Ketcher, una volta per serie; il disegno usa la notazione del chimico (struttura, multicentro, parentesi), mai una variante per sito.
 - D4 Intensità dell'infusione mai confrontate con la DDA: solo formule (CID contro HCD stepped).
 - D5 Livello proposto al più 3a/3b; `site` non alza mai il livello oltre la proposta.
 - D6 Controlli senza bianco: «dark + t0», detto nella riga, finché il bianco non arriva.
-- D7 Δ multiple (+2O, +3O): solo regione, mai varianti combinatorie.
+- D7 Δ multiple (+2O, +3O): parentesi sulla zona con «+2O», mai combinazioni di siti.
+- D8 Chimica computazionale: prima la validazione dei Fukui già calcolati (§8b punto 1); BDE C–H solo se validata e in un modulo a parte.
 
 ## 14. Trappole
 - I m/z, i tempi e i nomi dei TP veri non vanno nel pubblico: i test con dati veri leggono la verità del privato e saltano senza (`eprintln!("SKIP ...")`).
