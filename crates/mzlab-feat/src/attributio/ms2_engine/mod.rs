@@ -4,11 +4,13 @@
 //! reach a level (the chemist decides 2b). Off by default (`use_ms2_engine`), visible only in administrator mode. The deep-learning embedding search of the Python
 //! original (MS2DeepScore) is not ported: its score is not an identity and it needs a neural network that does not run here.
 
+pub mod chimeric;
 pub mod compile;
 pub mod hits;
 pub mod insilico;
 pub mod matcher;
 pub mod rearrange;
+pub mod rtpredict;
 
 pub use compile::{clean_library_name, compile_library, EngineEntry};
 pub use hits::{engine_hits_csv, load_engine_hits, read_engine_hits, EngineHitRow, ENGINE_COLUMNS};

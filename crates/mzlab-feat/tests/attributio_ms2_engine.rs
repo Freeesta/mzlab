@@ -231,3 +231,43 @@ fn rearrangement_attribution_equals_the_reference() {
     }
     assert!(moved >= 5, "{moved} rearranged peaks");
 }
+
+/// MS-04: the forest follows scikit-learn's on the same invented retention times. Not equality (other bits, other bootstrap draws): the error on the held-out
+/// structures stays within 25 % + 0.1 min of scikit-learn's and no worse than 10 % above the mean predictor (with 30 training structures neither forest has a strong signal).
+#[test]
+fn rt_forest_follows_scikit_learn() {
+    use mzlab_feat::attributio::ms2_engine::rtpredict::RtModel;
+    let p = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/data/attributio/ms2_engine/rtpredict.json"
+    );
+    let g: Value = serde_json::from_str(&std::fs::read_to_string(p).unwrap()).unwrap();
+    let rows = |k: &str| -> Vec<(String, f64)> {
+        g[k].as_array()
+            .unwrap()
+            .iter()
+            .map(|r| (r[0].as_str().unwrap().to_string(), r[1].as_f64().unwrap()))
+            .collect()
+    };
+    let (train, test) = (rows("train"), rows("test"));
+    let m = RtModel::train(&train, 42).unwrap();
+    let got: Vec<f64> = test.iter().map(|(s, _)| m.predict(s).unwrap()).collect();
+    let mae = got
+        .iter()
+        .zip(&test)
+        .map(|(p, (_, t))| (p - t).abs())
+        .sum::<f64>()
+        / got.len() as f64;
+    let sk_mae = g["sklearn_mae"].as_f64().unwrap();
+    let base = {
+        let mean = train.iter().map(|r| r.1).sum::<f64>() / train.len() as f64;
+        test.iter().map(|(_, t)| (t - mean).abs()).sum::<f64>() / test.len() as f64
+    };
+    eprintln!("rt forest: mae {mae:.3} (scikit-learn {sk_mae:.3}, mean predictor {base:.3})");
+    assert!(mae <= sk_mae * 1.25 + 0.1, "mae {mae} vs {sk_mae}");
+    assert!(
+        mae <= base * 1.1,
+        "mae {mae} against the mean predictor {base}"
+    );
+    assert!(RtModel::train(&train[..5], 42).is_none());
+}
