@@ -60,6 +60,14 @@ function createCore(opts) {
       try { slot.w.postMessage({ ...msg, id }, transfer || []); } catch (e) { slot.calls.delete(id); reject(Object.assign(fail("error.featWorker", {}, String(e)), { fatal: true })); }
     });
   }
+  // the table of chemical classes, a file beside the `.wasm` `attributio_rev` (admin only), fetched once when the first review opens; "" without it
+  let classes = null;
+  async function classesText() {
+    const u = wasm.attributio_rev && wasm.attributio_rev.classesUrl;
+    if (!u) return "";
+    if (classes === null) classes = await (await fetch(u)).text();
+    return classes;
+  }
   async function ensure(slot, which) {          // load the .wasm of `which` in the worker once
     if (slot.loaded.has(which)) return;
     const m = wasm[which];
@@ -101,7 +109,7 @@ function createCore(opts) {
     return new Promise((resolve, reject) => { queue.push({ run, resolve, reject, tried: false }); pump(); });
   }
   const copy = list => list.map(b => b.slice());      // inputs of a job that may run again are copied, never transferred
-  return { st, slots, queue, spawn, call, submit, kill, copy, rest };
+  return { st, slots, queue, spawn, call, submit, kill, copy, rest, classesText };
 }
 
 // The exports of a campaign folder (admin mode): `kind` = schymanski | publication | quantify | gradient (`.wasm` `attributio_export`) or evidence (`.wasm` `attributio_rev`, it needs the review);
@@ -210,7 +218,7 @@ function rowOps(submit, call) {
 }
 
 export function createFeatPool(opts) {
-  const { st, slots, queue, spawn, call, submit, kill, copy, rest } = createCore(opts);
+  const { st, slots, queue, spawn, call, submit, kill, copy, rest, classesText } = createCore(opts);
 
 
   return {
@@ -261,7 +269,7 @@ export function createFeatPool(opts) {
       return submit(async (slot, load) => {
         await load("attributio_rev");
         const names = JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
-        const r = await call(slot, { op: "attributio_review", files: files.map(f => f.file), names, pol, feature: id });
+        const r = await call(slot, { op: "attributio_review", files: files.map(f => f.file), names, pol, feature: id, classes: await classesText() });
         return JSON.parse(new TextDecoder().decode(r.bytes));
       });
     },
@@ -468,7 +476,7 @@ Object.assign(OPS, {
   async attributio_review(m) {
     const out = memSink(), rd = new FileReaderSync();
     const read = (k, off, len) => new Uint8Array(rd.readAsArrayBuffer(m.files[k].slice(off, off + len)));
-    mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, out.write);
+    mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, m.classes || "", out.write);
     return { bytes: out.bytes() };
   },
   async attributio_export(m) {

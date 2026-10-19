@@ -114,6 +114,18 @@
   }
 
   /** @param {any} rev */
+  function classesHtml(rev) {
+    const c = rev.classes;
+    if (!c) return "";
+    const rows = (c.classes || []).map((/** @type {any} */ k) => `<tr><td>${esc(k.name)}</td><td>${esc(k.level)}</td><td>${num(k.score, 2)}</td>`
+      + `<td>${(k.evidence || []).map((/** @type {any} */ e) => esc(`${e.rule} ${e.kind} ${num(e.observed, 4)} (${num(e.ppm, 1)} ppm): ${e.why}`)).join("<br>")}</td>`
+      + `<td>${(k.unmet || []).map((/** @type {any} */ u) => esc(`${u.rule}: ${u.why}`)).join("<br>")}</td></tr>`).join("");
+    return `<h4>Chemical classes from diagnostic fragments and neutral losses</h4>${rows
+      ? `<table><caption class="sr-only">Chemical classes from the rules table</caption><thead><tr><th scope="col">class</th><th scope="col">level</th><th scope="col">score</th><th scope="col">evidence</th><th scope="col">rules not met</th></tr></thead><tbody>${rows}</tbody></table>`
+      : "<p>no rule of the table is met</p>"}`;
+  }
+
+  /** @param {any} rev */
   function body(rev) {
     const p = rev.proposal, ev = p.evidence, view = ev.view || {}, cur = rev.current;
     const reasons = (p.reasons || []).map((/** @type {string} */ r) => `<li>${esc(r)}</li>`).join("") || "<li>no reasons recorded</li>";
@@ -135,6 +147,7 @@
         <h4>RT versus logP</h4>${rtSvg(rt) || ""}<p>${esc(rt.note || (rt.ok == null ? "" : rt.ok ? "within the window" : "outside the window"))}</p></div></div>
       <h4>Fragments explained (${ev.n_explained ?? 0} of ${ev.n_peaks ?? 0})</h4>
       ${frag ? `<table><caption class="sr-only">Fragments explained</caption><thead><tr><th scope="col">m/z</th><th scope="col">%</th><th scope="col">fragment ion formula</th><th scope="col">ppm</th><th scope="col">loss</th></tr></thead><tbody>${frag}</tbody></table>` : "<p>none</p>"}
+      ${classesHtml(rev)}
       <h4>Alternatives with the same formula</h4>
       ${alts ? `<table><caption class="sr-only">Alternatives with the same formula</caption><thead><tr><th scope="col">name</th><th scope="col">source</th><th scope="col">score</th><th scope="col">peaks</th><th scope="col">logP</th></tr></thead><tbody>${alts}</tbody></table>` : "<p>none found in the libraries of the campaign</p>"}
       <fieldset class="row"><legend>Checklist (tick what you have seen)</legend><ul class="bn-chk">${checks}</ul></fieldset>

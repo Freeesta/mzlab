@@ -109,7 +109,7 @@ body.sb-dragging,body.sb-dragging *{cursor:grabbing!important;user-select:none!i
 /* the button of the session is always in the header (hidden = invisible, space kept): when it comes nothing moves */
 header #newrun[hidden]{display:inline-flex!important;visibility:hidden}
 /* header texts are translated before the first paint (index.html): its space is kept, invisible, until then */
-html.i18n-wait header{visibility:hidden}html.i18n-wait header #sb-toggle,html.i18n-wait header #fs-btn,html.i18n-wait header #bug-btn,html.i18n-wait header .hq{visibility:visible}header .ib .ic{min-width:16px;min-height:16px}
+html.i18n-wait header{visibility:hidden}html.i18n-wait header #sb-toggle,html.i18n-wait header #fs-btn,html.i18n-wait header #bug-btn,html.i18n-wait header .hq{visibility:visible}header .ib .ic{min-width:16px;min-height:16px}header #bug-btn[hidden]{display:none}
 /* toolbar of the header */
 #stbar{flex:1 1 0;min-width:0;height:30px;min-height:30px;display:flex;align-items:center;justify-content:flex-end;gap:3px;overflow:hidden;white-space:nowrap}
 @media (max-width:760px){header{flex-wrap:wrap}#stbar{flex:1 1 100%;order:20;justify-content:flex-start}}
@@ -139,10 +139,13 @@ header .hq:focus-visible{outline-offset:1px}
 #paletta input{width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:12px 14px;font-size:15px;background:var(--panel);color:var(--ink);outline:none;box-sizing:border-box}
 #paletta input:focus-visible{box-shadow:inset 0 -2px 0 var(--accent)}
 #pal-l{list-style:none;margin:0;padding:4px;max-height:min(50vh,360px);overflow-y:auto}
-#pal-l li{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;cursor:pointer;min-height:34px}
+#pal-l li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:7px 10px;border-radius:6px;cursor:pointer;min-height:34px}
 #pal-l li[aria-selected=true]{background:var(--sel);outline:1px solid var(--accent)}
-#pal-l .pal-i{display:inline-flex;color:var(--accent);flex:none}#pal-l .pal-t{flex:1;min-width:0}#pal-l .pal-g{font-size:11px;color:var(--muted);flex:none}#pal-l .pal-k{font:inherit;font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 5px;color:var(--muted);flex:none}
-#pal-l li.pal-e{cursor:default;color:var(--muted)}
+#pal-l .pal-i{display:inline-flex;color:var(--accent);flex:none}#pal-l .pal-t{flex:1 1 11em;min-width:0}#pal-l .pal-g{font-size:11px;color:var(--muted);flex:none}#pal-l .pal-k{font:inherit;font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 5px;color:var(--muted);flex:none}
+#pal-l li.pal-h{display:block;min-height:0;padding:6px 12px 2px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);cursor:default}
+#pal-l .pal-c{font-size:11px;flex:none;border:1px solid var(--line);border-radius:999px;padding:0 8px;color:var(--ink)}
+#pal-l .pal-d{color:var(--muted);font-size:12px}#pal-l .pal-t b{font-weight:600}
+#pal-e{color:var(--muted);padding:8px 12px;font-size:.9em}#pal-e:empty{display:none}
 #paletta .pal-f{display:flex;justify-content:space-between;gap:8px;padding:6px 12px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
 .pal-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @media (pointer:coarse){#pal-l li{min-height:44px}}
