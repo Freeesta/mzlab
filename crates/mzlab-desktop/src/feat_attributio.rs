@@ -1,7 +1,7 @@
 //! The route `feat/attributio/annotate` of `rpc`: the table of levels of a campaign folder of `mzlab_feat::attributio::table`, the same code as the `.wasm` «attributio».
 //! `{op: "feat/attributio/annotate", root, kind: "json" | "csv" | "xlsx", files: [{path, text}]}`: the page sends the text files of the folder (the engine reads only
 //! the ones `campaign.toml` names); the answer is `{summary, text}` with the summary of the run and the table in the asked rendering.
-//! The route `feat/attributio/export` gives the exports (`schymanski`, `publication`, `quantify`, `gradient`, `evidence`) as the JSON of their files.
+//! The route `feat/attributio/export` gives the exports (`schymanski`, `publication`, `quantify`, `gradient`, `sirius`, `evidence`) as the JSON of their files.
 //! The route `feat/attributio/review` is the Banco 2b: `{root, files, kind: "review", pol, id}` answers the JSON of the review of one feature; `{root, files, kind: "decision",
 //! decision, folder?}` answers `{path, added, replaced, unchanged, text, written}`, and writes the decisions file straight into `folder` (the campaign folder on disk) when it is given.
 
