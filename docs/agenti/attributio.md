@@ -33,5 +33,8 @@ Studio e piano: `docs/studi/ATTRIBUTIO.md`. Tutto ciò che si vede nella pagina 
 - **Prova senza sorgente**: `tests/test_attributio_oro.py` (non importa Attributio): i JSON esistono, sono sotto 100 KB l'uno e 300 KB in tutto, e `livelli.json` coincide con `livelli_attesi.csv`.
 - **Soglie di parità** (§3 dello studio): uguaglianza per livelli, sottolivelli, basi, nomi, identità, conteggi e classi di proposta; numeri 1e-9 relativo; frammenti assegnati con la stessa formula e ppm entro 0,005; frammentatore senza RDKit ≥ 0,90 di frammenti spiegati uguali. Le campagne vere le confronta l'agente locale sul Mac (`MZLAB_DATI`); qui solo numeri aggregati.
 
+## Binario MS
+Motore MS2 sperimentale, frammentazione in silico, attribuzione dei frammenti e previsione dell'RT: `docs/agenti/attributio-ms2.md`.
+
 ## Binario MZ
 Rilevamento alla mzmine 3.9.0 dai grezzi (ADAP, risolutore, join, riempimento, isotopi, identità, ingresso della cascata): `docs/agenti/attributio-mz.md`.
