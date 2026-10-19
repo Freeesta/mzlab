@@ -800,8 +800,6 @@ I18N.add("en", {
   "aff.undo": "Undo",
   "aff.undone": "Arrangement restored",
   "aff.where": "Panel {n}: row {r} of {t}, position {i} of {m}",
-  "aff.hint": "Drag here to place side by side",
-  "aff.hint.close": "Close the hint",
   "aff.menu.reset": "Reset layout",
   "aff.reset.done": "One panel per row",
   "cmd.disp.affianca.lab": "Side by side",

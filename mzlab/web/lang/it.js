@@ -800,8 +800,6 @@ I18N.add("it", {
   "aff.undo": "Annulla",
   "aff.undone": "Disposizione ripristinata",
   "aff.where": "Pannello {n}: riga {r} di {t}, posizione {i} di {m}",
-  "aff.hint": "Trascina qui per affiancare",
-  "aff.hint.close": "Chiudi il suggerimento",
   "aff.menu.reset": "Ripristina disposizione",
   "aff.reset.done": "Un pannello per riga",
   "cmd.disp.affianca.lab": "Affianca",

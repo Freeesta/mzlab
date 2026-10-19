@@ -156,7 +156,7 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
  const setOpen=on=>{ch.hidden=!on;ch.style.display=on?"flex":"none";b.setAttribute("aria-expanded",on?"true":"false")};
  b.onclick=()=>setOpen(ch.hidden);
  ch.querySelectorAll("[data-demo]").forEach(o=>o.onclick=async()=>{const files=DEMO_SETS[o.dataset.demo];setOpen(false);b.disabled=true;let got=0;
-  const A=(await import("./avanzamento.js")).avanza(d,{title:I18N.t("load.demo.job"),n:files.length});      // the shared progress panel: item, true percentage (Content-Length), time, «Cancel», summary
+  const A=(await import("./avanzamento.js")).avanza(d,{title:I18N.t("load.demo.job"),n:files.length,silent:true});      // the shared progress panel: item, true percentage (Content-Length), time, «Cancel», summary
   let all=null;try{const fs=[];for(const [i,n] of files.entries()){A.item(i+1,n);const r=await fetch("static/esempi/"+n,{signal:A.signal});if(!r.ok)throw new Error(n);const len=+(r.headers.get("content-length")||0),parts=[];let mine=0;
     const step=()=>A.set(len?(i+Math.min(1,mine/len))/files.length:i/files.length,I18N.t("load.demo.mb",{mb:I18N.fix(got/1e6,1)}));step();
     if(r.body&&r.body.getReader){const rd=r.body.getReader();for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;mine+=value.length;step()}}
@@ -373,7 +373,9 @@ async function openStaged(scroll){
 const DIRECT={tm:0};
 const dropReady=()=>!!(S.sess&&!S.adding&&!$("#v-data").hidden);
 const dropHasFiles=e=>[...((e.dataTransfer&&e.dataTransfer.types)||[])].includes("Files");
-function directNote(key,p){const n=$("#fl-note");clearTimeout(DIRECT.tm);n.textContent=key?I18N.t(key,p):"";n.hidden=!key;if(key)DIRECT.tm=setTimeout(()=>directNote(""),9000)}
+// a clean «added» is only announced and then fades away; warnings and failures stay 9 s
+function directNote(key,p){const n=$("#fl-note");clearTimeout(DIRECT.tm);n.textContent=key?I18N.t(key,p):"";n.hidden=!key;n.style.opacity="";
+  if(key==="files.drop.done"){DIRECT.tm=setTimeout(()=>{n.style.opacity="0";DIRECT.tm=setTimeout(()=>directNote(""),600)},900)}else if(key)DIRECT.tm=setTimeout(()=>directNote(""),9000)}
 function dropZone(on){$("#sb-pane").classList.toggle("dz-over",on);$("#fl-dz").hidden=!on}
 async function directDone(){
   const open=f=>E.files.some(x=>!x.gone&&(x.file===f.name||x.file.startsWith(f.name+"#")));
