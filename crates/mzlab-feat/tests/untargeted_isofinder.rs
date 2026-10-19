@@ -75,7 +75,7 @@ fn a_doubly_charged_envelope_scores_for_charge_two_and_not_for_one() {
     let c1 = e.candidates(1, &mz, &y, mz0);
     let ev1 = e.score_charge(1, mz0, &c1, 1);
     assert!(
-        ev1.as_ref().map_or(true, |v| v.raw < ev2.raw),
+        ev1.as_ref().is_none_or(|v| v.raw < ev2.raw),
         "{ev1:?} vs {ev2:?}"
     );
 }
