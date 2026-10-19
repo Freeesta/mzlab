@@ -4,7 +4,7 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 use std::collections::BTreeSet;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use mzlab_core::agilent::{AgilentD, Files};
 

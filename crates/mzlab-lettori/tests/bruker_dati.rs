@@ -74,7 +74,8 @@ fn confronta(s: &Spectrum, rif: &Spectrum, ppm: f64, etichetta: &str) {
 }
 
 fn confronta_cartella(cartella: &str, mzml_rif: &str) {
-    let Some(base) = dati_percorsi::percorso("dati/formati/aperti/lettori_open_test/pwiz/Bruker") else {
+    let Some(base) = dati_percorsi::percorso("dati/formati/aperti/lettori_open_test/pwiz/Bruker")
+    else {
         eprintln!("SKIP bruker {cartella}: no data repository (MZLAB_DATI)");
         return;
     };
@@ -164,7 +165,8 @@ fn diapasef_pulita() {
 #[test]
 fn cartelle_sintetiche_di_timsrust() {
     // the files of timsrust's tests have no MzCalibration: they open, the spectra give an error with a key
-    let Some(d) = dati_percorsi::percorso("dati/formati/bruker/timstof_lettori/timsrust_tests") else {
+    let Some(d) = dati_percorsi::percorso("dati/formati/bruker/timstof_lettori/timsrust_tests")
+    else {
         return;
     };
     for f in ["test.d", "dia_test.d"] {

@@ -138,11 +138,7 @@ fn coppie() -> Vec<(PathBuf, PathBuf)> {
         return Vec::new();
     };
     let mut out = Vec::new();
-    for e in std::fs::read_dir(d)
-        .into_iter()
-        .flatten()
-        .flatten()
-    {
+    for e in std::fs::read_dir(d).into_iter().flatten().flatten() {
         let p = e.path();
         if p.extension()
             .is_some_and(|x| x.eq_ignore_ascii_case("mzxml"))
@@ -221,11 +217,7 @@ fn i_mzxml_veri_si_aprono_e_i_conti_tornano() {
         eprintln!("SKIP aperti_mzxml: no data repository (MZLAB_DATI)");
         return;
     };
-    for e in std::fs::read_dir(d)
-        .into_iter()
-        .flatten()
-        .flatten()
-    {
+    for e in std::fs::read_dir(d).into_iter().flatten().flatten() {
         let p = e.path();
         if !p
             .extension()

@@ -9,6 +9,9 @@ use std::process::Command;
 use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
 use mzlab_core::wiff::{container, samples, Wiff};
 
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
+
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
@@ -112,17 +115,6 @@ fn same(dir: &Path, name: &str) -> usize {
     checked
 }
 
-fn dati() -> Option<PathBuf> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    for up in root().canonicalize().ok()?.ancestors().skip(1).take(3) {
-        cands.push(up.join("mzlab-dati"));
-    }
-    cands.into_iter().find(|p| p.join("3200 qtrap").is_dir())
-}
-
 #[test]
 fn the_synthetic_pairs_read_the_same_through_the_registry() {
     let out = std::env::temp_dir().join(format!("mzlab_wiff_lettore_{}", std::process::id()));
@@ -214,11 +206,10 @@ fn one_sample(dir: &Path, name: &str) {
 
 #[test]
 fn the_real_files_read_the_same_through_the_registry() {
-    let Some(d) = dati() else {
+    let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else {
         eprintln!("SKIP wiff_lettore: no data repository (MZLAB_DATI)");
         return;
     };
-    let folder = d.join("3200 qtrap/wiff inquinanti 25-26 B");
     let n: usize = ["FullMass", "MS2", "MRM"]
         .iter()
         .filter(|n| folder.join(format!("{n}.wiff")).exists())

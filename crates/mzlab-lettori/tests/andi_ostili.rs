@@ -95,11 +95,7 @@ fn i_cdf_veri_si_aprono_e_i_conti_tornano() {
         eprintln!("SKIP andi: no data repository (MZLAB_DATI)");
         return;
     };
-    for e in std::fs::read_dir(d)
-        .into_iter()
-        .flatten()
-        .flatten()
-    {
+    for e in std::fs::read_dir(d).into_iter().flatten().flatten() {
         let p = e.path();
         if !p.extension().is_some_and(|x| x.eq_ignore_ascii_case("cdf")) {
             continue;

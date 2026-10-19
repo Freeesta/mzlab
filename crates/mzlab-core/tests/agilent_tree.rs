@@ -3,8 +3,6 @@
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
-use std::path::{Path, PathBuf};
-
 use mzlab_core::agilent::{AgilentD, Files};
 
 #[path = "../../../tools/dati_percorsi.rs"]
@@ -35,11 +33,7 @@ fn the_tree_after_the_head_holds_the_tic_and_the_ion_traces() {
         return;
     };
     let mut checked = 0;
-    for d in std::fs::read_dir(gc)
-        .unwrap()
-        .flatten()
-        .map(|e| e.path())
-    {
+    for d in std::fs::read_dir(gc).unwrap().flatten().map(|e| e.path()) {
         let acq = d.join("AcqData");
         let (Ok(tree), Ok(idx)) = (
             std::fs::read(acq.join("MSTree2.bin")),
