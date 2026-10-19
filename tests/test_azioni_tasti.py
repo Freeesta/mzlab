@@ -18,6 +18,8 @@ def tasti():
     src = (WEB / "azioni-tasti.js").read_text(encoding="utf8")
     for k, v, code in re.findall(r'vista\("(\w+)", "(\w+)", "(Digit\d)"', src):
         out.append(("app." + k, {"code": f'"{code}"', "alt": "true", "dove": '"view"'}))
+    for k, tasto in re.findall(r'passo\("(\w+)", "[\w.]+", "(Arrow\w+)"', src):
+        out.append(("app." + k, {"tasto": f'"{tasto}"', "alt": "true", "dove": '"view"'}))
     return out
 
 
@@ -28,7 +30,7 @@ def chiave(s):
 
 def test_found_the_wanted_keys():
     ids = {i for i, _ in tasti()}
-    for want in ("spec.xic", "chrom.specAtRt", "spec.peak", "chrom.intAuto", "spec.measureKey", "view.fullscreen", "app.apri", "app.esporta", "app.dati", "app.disegno", "app.teoria", "app.scorciatoie"):
+    for want in ("spec.xic", "chrom.specAtRt", "spec.peak", "chrom.intAuto", "spec.measureKey", "view.fullscreen", "app.apri", "app.esporta", "app.dati", "app.disegno", "app.teoria", "app.scorciatoie", "app.pannelli", "app.filePrec", "app.fileSucc"):
         assert want in ids, want
 
 

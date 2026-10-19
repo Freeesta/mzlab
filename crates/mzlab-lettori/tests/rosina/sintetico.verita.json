@@ -1,0 +1,242 @@
+{
+ "schema": "verita/1",
+ "file": {
+  "nome": "sintetico.mzML",
+  "sha256": "cb9d0b3a36911c37d0e6aca1176b34a8d1cf8c0201b5e0e304776253245448ba",
+  "campione": null
+ },
+ "oracolo": {
+  "nome": "generatore sintetico",
+  "versione": "1",
+  "opzioni": "tools/mzml_msconvert_sintetico.py",
+  "data": "2026-10-19",
+  "piattaforma": "Linux x86_64"
+ },
+ "conteggi": {
+  "spettri": {
+   "ms1": 1,
+   "ms2": 3
+  },
+  "cromatogrammi": {
+   "tic": 1
+  }
+ },
+ "scansioni": [
+  {
+   "id": "controllerType=0 controllerNumber=1 scan=1",
+   "rt_min": 0.0,
+   "livello": 1,
+   "polarita": 1,
+   "precursore_mz": null,
+   "isolamento": null,
+   "ce": null,
+   "attivazione": null,
+   "profilo": false,
+   "n_punti": 12,
+   "tic": 438721.6562,
+   "bpi_mz": 953.7845,
+   "bpi": 153444.7344
+  },
+  {
+   "id": "controllerType=0 controllerNumber=1 scan=2",
+   "rt_min": 0.0005,
+   "livello": 2,
+   "polarita": 1,
+   "precursore_mz": 369.0,
+   "isolamento": {
+    "mz": 369.0,
+    "inf": null,
+    "sup": null
+   },
+   "ce": 30.0,
+   "attivazione": "HCD",
+   "profilo": false,
+   "n_punti": 6,
+   "tic": 1092769.125,
+   "bpi_mz": 202.29016,
+   "bpi": 527950.6875
+  },
+  {
+   "id": "controllerType=0 controllerNumber=1 scan=3",
+   "rt_min": 0.001,
+   "livello": 2,
+   "polarita": 1,
+   "precursore_mz": 588.0,
+   "isolamento": {
+    "mz": 588.0,
+    "inf": null,
+    "sup": null
+   },
+   "ce": 30.0,
+   "attivazione": "HCD",
+   "profilo": false,
+   "n_punti": 6,
+   "tic": 100674.0625,
+   "bpi_mz": 402.73049,
+   "bpi": 25418.2969
+  },
+  {
+   "id": "controllerType=0 controllerNumber=1 scan=4",
+   "rt_min": 0.0015,
+   "livello": 2,
+   "polarita": 1,
+   "precursore_mz": 807.0,
+   "isolamento": {
+    "mz": 807.0,
+    "inf": null,
+    "sup": null
+   },
+   "ce": 30.0,
+   "attivazione": "HCD",
+   "profilo": false,
+   "n_punti": 6,
+   "tic": 208732.8438,
+   "bpi_mz": 482.90332,
+   "bpi": 86829.4219
+  }
+ ],
+ "punti": {
+  "0": {
+   "mz": [
+    124.80320191876153,
+    229.74365144767037,
+    380.6483068094369,
+    468.27922273224516,
+    480.9938040753181,
+    560.6394622302311,
+    584.3289818973503,
+    594.6343189057536,
+    778.1617978073259,
+    844.9323344383976,
+    953.7845024235195,
+    955.4173266933418
+   ],
+   "intensita": [
+    7297.73193359375,
+    17251.16796875,
+    10687.4033203125,
+    54082.68359375,
+    23378.759765625,
+    14204.5107421875,
+    6816.74462890625,
+    14976.111328125,
+    22297.130859375,
+    14568.189453125,
+    153444.734375,
+    99716.5
+   ]
+  },
+  "3": {
+   "mz": [
+    131.3571196817261,
+    155.38894246107438,
+    425.8077983017914,
+    482.9033178551406,
+    491.3002886239915,
+    500.7946955156023
+   ],
+   "intensita": [
+    10382.1162109375,
+    82350.59375,
+    4413.0390625,
+    86829.421875,
+    21373.451171875,
+    3384.212890625
+   ]
+  },
+  "2": {
+   "mz": [
+    71.77608216531158,
+    84.29226853243158,
+    302.63473558697206,
+    340.7240947930119,
+    402.73049302665623,
+    518.9480611643612
+   ],
+   "intensita": [
+    7904.28271484375,
+    19770.267578125,
+    5339.42138671875,
+    19007.6171875,
+    25418.296875,
+    23234.169921875
+   ]
+  },
+  "1": {
+   "mz": [
+    138.35860482631978,
+    202.29016222495395,
+    347.67477055108884,
+    448.6344674254435,
+    578.9114565150827,
+    583.4589772688729
+   ],
+   "intensita": [
+    18326.869140625,
+    527950.6875,
+    4154.58935546875,
+    12501.357421875,
+    471727.8125,
+    58107.76171875
+   ]
+  }
+ },
+ "cromatogrammi": [
+  {
+   "id": "TIC",
+   "tipo": "tic",
+   "n": 1,
+   "somma": 59758987.65153226,
+   "massimo": 59758987.65153226,
+   "campione": [
+    [
+     0.0,
+     59758987.65153226
+    ]
+   ]
+  }
+ ],
+ "metadati": {
+  "mzml:software:Xcalibur": {
+   "valore": "5.0"
+  },
+  "mzml:software:pwiz": {
+   "valore": "3.0.24288"
+  },
+  "mzml:source": {
+   "valore": "electrospray ionization"
+  },
+  "mzml:analyzer": {
+   "valore": "orbitrap"
+  },
+  "mzml:detector": {
+   "valore": "inductive detector"
+  },
+  "mzml:instrument:Orbitrap Exploris 120": {
+   "valore": true
+  },
+  "mzml:instrument:instrument serial number": {
+   "valore": "INVENTED1",
+   "metodo": "strumento.serie"
+  },
+  "mzml:sourceFile:nome": {
+   "valore": "sintetico.raw"
+  },
+  "mzml:sourceFile:Thermo nativeID format": {
+   "valore": true
+  },
+  "mzml:sourceFile:Thermo RAW format": {
+   "valore": true
+  },
+  "mzml:sourceFile:SHA-1": {
+   "valore": "0000000000000000000000000000000000000000"
+  },
+  "mzml:run@startTimeStamp": {
+   "valore": "2026-01-01T00:00:00Z",
+   "metodo": "origine.file_creato"
+  },
+  "mzml:run@id": {
+   "valore": "Run_sintetico_ddaPOS"
+  }
+ }
+}
