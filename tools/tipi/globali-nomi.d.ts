@@ -23,6 +23,7 @@ declare var CAMPIONI: any;
 declare var CARTELLA: any;
 declare var CDOC: any;
 declare var CEN_EXT: any;
+declare var CHROM1: any;
 declare var CIC: any;
 declare var CIVIDIS: any;
 declare var CIVIDIS_DARK: any;

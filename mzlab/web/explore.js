@@ -358,18 +358,18 @@ const getMs2Tr = k => memo(`m2t${k}`, () => J(`api/ms2tr?k=${k}`)).then(d => d.f
 })();
 const getChrom = (k, kind, lv, mz0, mz1, prec, filt) => {
   const key = `c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}|${filt ?? ""}`;
-  const f = E.files[k];
-  const name = f ? f.file : null;
+  const f = E.files[k], name = f ? f.file : null;
   const early = (kind === "tic" && mz0 == null && mz1 == null && prec == null && !filt && name) ? ((E.earlyTic && E.earlyTic.get(name)) || (/** @type {any} */ (window).MZLAB_LR?.earlyTic?.(name))) : null;
+  const url = `api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(filt);
   if (early && !CACHE.has(key)) {
-    J(`api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(filt)).then(res => {
+    CHROM1.once(key, () => J(url).then(res => {
       if (f) delete f._provisional;
       CACHE.set(key, Promise.resolve(res));
       redrawAll();
-    }).catch(() => {});
+    }).catch(() => {}));
     return Promise.resolve({ rt: early.rt, y: early.y || early.tic, provvisorio: true });
   }
-  return memo(key, () => J(`api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(filt)));
+  return CHROM1.sent(memo(key, () => J(url)));
 };
 const getXic = (k, mz, tol, lv) => memo(`x${k}|${mz}|${tol}|${lv}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0]));
 // + "&hr=0" when high resolution is switched off (hr.js)
@@ -416,7 +416,7 @@ async function bootSession0() {
   E.files.forEach(f => { mem[f.file] = f; });
   const oldVis = mem;
   E.key = key;
-  CACHE.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
+  CACHE.clear(); CHROM1.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
   // seq: a list opened file by file, this is not its first step
   const seq = !!E._seq, waiting = !!(E.pending && E.pending.some(x => x.state === "wait"));
   E._seq = waiting; E._mem = waiting ? mem : null;
