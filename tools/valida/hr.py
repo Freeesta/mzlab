@@ -7,13 +7,13 @@ Aggregated numbers only; the document is `cancello_hr/1`, written in the work fo
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 import numpy as np
 
 from . import cancello, cancello_misure as M, hr_nativo as H, nativo
 from .tabelle import Tabella, leggi_mzmine
+from dati_percorsi import percorso
 
 FORMATO = "cancello_hr/1"
 ID_ROBUSTEZZA = ("hr_robustezza_gira", "hr_robustezza_deterministica", "hr_robustezza_soglia", "hr_robustezza_stati_coerenti")
@@ -62,10 +62,10 @@ def concordanza_d5(nativa: Tabella, csv: str | None, colonne: list[int]) -> tupl
 
 
 def trova_hr(cartella: str | None) -> Path | None:
-    """The folder of the DDA files: `--robustezza`, else the first of `$MZLAB_DATI/HRMS` and `$MZLAB_DATI/HRMS/Esempio raw e mzML` that holds the files; None when there is none."""
+    """The folder of the DDA files: `--robustezza`, else the first of `dati/HRMS` and `dati/HRMS/Esempio raw e mzML` of the data repository that holds the files; None when there is none."""
     if cartella:
         return Path(cartella) if Path(cartella).is_dir() else None
-    radice = Path(os.environ["MZLAB_DATI"]) / "HRMS" if os.environ.get("MZLAB_DATI") else None
+    radice = percorso("dati/HRMS")
     cand = [radice, radice / "Esempio raw e mzML"] if radice else []
     return next((c for c in cand if c.is_dir() and any(c.glob("Orbitrap_*_DDApos_*.mzML"))), None)
 

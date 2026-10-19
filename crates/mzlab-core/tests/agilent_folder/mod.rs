@@ -6,22 +6,12 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::agilent::{AgilentD, Files};
 
-pub fn dati() -> Option<PathBuf> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .canonicalize()
-        .ok()?;
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    cands.extend(
-        root.ancestors()
-            .skip(1)
-            .take(3)
-            .map(|up| up.join("mzlab-dati")),
-    );
-    cands.into_iter().find(|p| p.join("GC-MS").is_dir())
+#[path = "../../../../tools/dati_percorsi.rs"]
+pub mod dati_percorsi;
+
+/// The `GC-MS` folder of the data repository, if there is one (see `tools/dati_percorsi.rs`).
+pub fn gcms() -> Option<PathBuf> {
+    dati_percorsi::percorso("dati/GC-MS")
 }
 
 pub fn read(d: &Path, f: &str) -> Option<Vec<u8>> {
@@ -98,8 +88,8 @@ impl Folder {
 }
 
 pub fn folders() -> Option<Vec<PathBuf>> {
-    let data = dati()?;
-    let mut v: Vec<PathBuf> = std::fs::read_dir(data.join("GC-MS"))
+    let data = gcms()?;
+    let mut v: Vec<PathBuf> = std::fs::read_dir(data)
         .unwrap()
         .flatten()
         .map(|e| e.path())

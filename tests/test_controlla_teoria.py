@@ -128,7 +128,7 @@ def test_without_private_data_it_warns_and_passes(tmp_path, monkeypatch):
     monkeypatch.setenv("MZLAB_DATI", str(tmp_path / "vuota"))                 # folder that does not exist: same
     assert ct.run(tmp_path, {})[2]
     d = tmp_path / "d"
-    d.mkdir()
+    (d / "scratchpad").mkdir(parents=True)                                    # recognised as the data repository by its marker
     monkeypatch.setenv("MZLAB_DATI", str(d))                                  # repository without the lists: warns for both
     assert len(ct.run(tmp_path, {})[2]) == 2
 

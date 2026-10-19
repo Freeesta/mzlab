@@ -18,7 +18,7 @@ def synth(name="hr"):
 
 
 def real_cuttings():
-    """The two real Orbitrap cuttings of QqQ-lab-dati/HRMS (private repository), or []."""
+    """The two real Orbitrap cuttings of dati/HRMS (private data repository), or []."""
     import verifica
     out = []
     for d in verifica.hrms_dirs():

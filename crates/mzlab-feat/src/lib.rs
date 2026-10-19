@@ -14,6 +14,7 @@ pub mod axis;
 mod channels;
 #[cfg(feature = "chem")]
 pub mod chem;
+pub mod classi;
 pub mod deconvolve;
 pub mod evid;
 pub mod export;

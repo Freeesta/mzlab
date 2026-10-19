@@ -6,7 +6,9 @@ mod comune;
 use comune::*;
 use mzlab_core::lettori::Limiti;
 use mzlab_core::numpress::Np;
-use std::path::PathBuf;
+
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 // ---- hostile files ----
 
@@ -109,28 +111,12 @@ fn righe_oltre_il_limite_sono_un_errore() {
 
 // ---- real files (the private data repository) ----
 
-fn dati() -> Option<PathBuf> {
-    let mut c: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    let qui = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    for up in qui.ancestors().skip(1).take(3) {
-        c.push(up.join("mzlab-dati"));
-    }
-    if let Some(h) = std::env::var_os("HOME") {
-        c.push(PathBuf::from(h).join("mzlab-dati"));
-    }
-    c.into_iter()
-        .find(|p| p.join("dati_formati/INDICE.md").exists())
-}
-
 fn vero(nome: &str) -> Option<Vec<u8>> {
-    let Some(d) = dati() else {
+    let Some(d) = dati_percorsi::percorso("dati/formati/aperti/mzML_numpress") else {
         eprintln!("SKIP aperti_numpress {nome}: no data repository (MZLAB_DATI)");
         return None;
     };
-    std::fs::read(d.join("dati_formati/mzML_numpress").join(nome)).ok()
+    std::fs::read(d.join(nome)).ok()
 }
 
 /// The TIC an mzML header states against the sum of the decoded intensities.

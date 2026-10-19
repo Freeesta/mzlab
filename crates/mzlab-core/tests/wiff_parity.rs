@@ -11,6 +11,9 @@ use mzlab_core::mzml::{self, Run};
 use mzlab_core::wiff::{container, samples, Wiff};
 use serde_json::Value;
 
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
+
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
@@ -98,14 +101,6 @@ fn a_wiff_without_scan_or_not_a_wiff_is_refused() {
     assert_eq!(container(vec![1, 2, 3], "x.wiff").err().unwrap().key, "err.file.notWiff");
 }
 
-fn dati() -> Option<PathBuf> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI").map(PathBuf::from).into_iter().collect();
-    for up in root().canonicalize().ok()?.ancestors().skip(1).take(3) {
-        cands.push(up.join("mzlab-dati"));
-    }
-    cands.into_iter().find(|p| p.join("3200 qtrap").is_dir())
-}
-
 fn sample_of(id: &str) -> Option<u32> {
     id.split("sample=").nth(1)?.split_whitespace().next()?.parse().ok()
 }
@@ -134,18 +129,17 @@ fn compare(w: &Wiff, got: &Run, want: &Run, label: &str) -> usize {
 
 #[test]
 fn real_files_match_proteowizard() {
-    let Some(d) = dati() else {
+    let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else {
         eprintln!("SKIP wiff_parity: no data repository (MZLAB_DATI)");
         return;
     };
-    let folder = d.join("3200 qtrap/wiff inquinanti 25-26 B");
     let mut done = 0;
-    for (wiff, prefix, dir) in [("FullMass", "B_FullMass-", "mzML_profilo"), ("MS2", "B_MS2-", "mzML_profilo"), ("MRM", "B_MRM-", "mzML")] {
+    for (wiff, prefix, dir) in [("FullMass", "B_FullMass-", "dati/3200 qtrap/mzML_profilo"), ("MS2", "B_MS2-", "dati/3200 qtrap/mzML_profilo"), ("MRM", "B_MRM-", "dati/3200 qtrap/mzML")] {
         let Ok(bytes) = std::fs::read(folder.join(format!("{wiff}.wiff"))) else { continue };
         let ole = container(bytes, wiff).unwrap();
         let mut scan = std::fs::read(folder.join(format!("{wiff}.wiff.scan"))).unwrap();
         let len = scan.len() as u64;
-        let mut files: Vec<PathBuf> = std::fs::read_dir(d.join(dir)).unwrap().flatten().map(|e| e.path()).filter(|p| p.file_name().unwrap().to_string_lossy().starts_with(prefix)).collect();
+        let mut files: Vec<PathBuf> = std::fs::read_dir(dati_percorsi::percorso(dir).unwrap()).unwrap().flatten().map(|e| e.path()).filter(|p| p.file_name().unwrap().to_string_lossy().starts_with(prefix)).collect();
         files.sort();
         for f in files {
             let want = mzml::read(std::io::BufReader::new(std::fs::File::open(&f).unwrap())).unwrap();
@@ -207,8 +201,7 @@ fn the_centroid_mzml_keeps_the_scans_and_reduces_the_points() {
 /// The header of the mzML of a real file names the model the Log gives, the creation time and the SHA-1 of both files.
 #[test]
 fn the_header_of_a_real_file_carries_model_time_and_hashes() {
-    let Some(d) = dati() else { return };
-    let folder = d.join("3200 qtrap/wiff inquinanti 25-26 B");
+    let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else { return };
     let Ok(bytes) = std::fs::read(folder.join("MRM.wiff")) else { return };
     let ole = container(bytes.clone(), "MRM.wiff").unwrap();
     let mut scan = std::fs::read(folder.join("MRM.wiff.scan")).unwrap();

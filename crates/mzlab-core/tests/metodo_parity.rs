@@ -7,20 +7,9 @@ use mzlab_core::methodinfo::read_methods;
 use mzlab_core::metodo::{self, Source, SrcFile};
 use mzlab_core::metodo_wiff::from_wiff;
 use mzlab_core::ole::Ole;
-use std::path::PathBuf;
 
-fn dati() -> Option<PathBuf> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    if let Ok(cwd) = std::env::current_dir() {
-        for up in cwd.ancestors() {
-            cands.push(up.join("mzlab-dati"));
-        }
-    }
-    cands.into_iter().find(|p| p.join("3200 qtrap").is_dir())
-}
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 fn src(name: &str, bytes: &[u8], sample: u32) -> Source {
     let mut d = bytes.to_vec();
@@ -74,7 +63,7 @@ fn ms_of(doc: &str) -> String {
 }
 
 /// One sample of a `.wiff`: the sections of the document, the method equal to the `.dam` it names. Gives 1 when a `.dam` of the repository was compared.
-fn check_sample(d: &std::path::Path, ole: &Ole, wiff: &str, bytes: &[u8], sample: u32) -> usize {
+fn check_sample(ole: &Ole, wiff: &str, bytes: &[u8], sample: u32) -> usize {
     let doc = from_wiff(ole, sample, &src(wiff, bytes, sample));
     let v =
         json::parse(doc.as_bytes()).unwrap_or_else(|e| panic!("{wiff} {sample}: not JSON: {e:?}"));
@@ -103,7 +92,9 @@ fn check_sample(d: &std::path::Path, ole: &Ole, wiff: &str, bytes: &[u8], sample
     let mut checked = 0;
     // the .dam named by the sample, when the repository has it: every parameter of the method the same
     if let (Some(name), true) = (text("campione", "metodo_file"), v.get("ms").is_some()) {
-        if let Ok(dam) = std::fs::read(d.join("dam").join(&name)) {
+        if let Some(dam) = dati_percorsi::percorso(&format!("dati/3200 qtrap/dam/{name}"))
+            .and_then(|p| std::fs::read(p).ok())
+        {
             let m = read_methods(dam, &name).unwrap().remove(0);
             let source = Source {
                 format: "sciex-dam",
@@ -126,11 +117,12 @@ fn check_sample(d: &std::path::Path, ole: &Ole, wiff: &str, bytes: &[u8], sample
 
 #[test]
 fn the_wiff_method_is_the_dam_it_names_and_the_sha1_is_the_one_of_the_mzml() {
-    let Some(d) = dati() else {
+    if dati_percorsi::radice().is_none() {
         eprintln!("SKIP metodo_parity: no data repository (MZLAB_DATI)");
         return;
-    };
-    let dir = d.join("3200 qtrap/wiff inquinanti 25-26 B");
+    }
+    let dir = dati_percorsi::percorso("dati/3200 qtrap/wiff")
+        .expect("the .wiff folder of the repository");
     let mut checked = 0;
     for wiff in ["MRM.wiff", "FullMass.wiff", "MS2.wiff"] {
         let bytes = std::fs::read(dir.join(wiff)).unwrap();
@@ -138,13 +130,14 @@ fn the_wiff_method_is_the_dam_it_names_and_the_sha1_is_the_one_of_the_mzml() {
         for sample in
             (1..=16u32).filter(|n| ole.has(&format!("SampleSubtree/Sample{n}/SampleDABE/DATA")))
         {
-            checked += check_sample(&d, &ole, wiff, &bytes, sample);
+            checked += check_sample(&ole, wiff, &bytes, sample);
         }
     }
     assert!(checked >= 1, "no .dam of the repository matched a .wiff");
     // the mzML of ProteoWizard says the SHA-1 of the .wiff it was made from (its name differs: B_MRM.wiff)
-    let mzml = d.join("mzML/B_MRM-STD_0_6ppm.mzML");
-    if let Ok(t) = std::fs::read(&mzml) {
+    if let Some(t) = dati_percorsi::percorso("dati/3200 qtrap/mzML/B_MRM-STD_0_6ppm.mzML")
+        .and_then(|p| std::fs::read(p).ok())
+    {
         let head = String::from_utf8_lossy(&t[..t.len().min(8000)]).to_string();
         let mut bytes = std::fs::read(dir.join("MRM.wiff")).unwrap();
         let sha = metodo::sha1_hex(
