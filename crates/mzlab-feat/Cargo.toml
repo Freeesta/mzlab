@@ -78,3 +78,7 @@ required-features = ["untargeted"]
 [[test]]
 name = "untargeted_smooth"
 required-features = ["untargeted"]
+
+[[test]]
+name = "untargeted_localmax"
+required-features = ["untargeted"]
