@@ -50,25 +50,12 @@ pub struct SearchHit {
     pub ppm: f64,
 }
 
-struct Prepared {
-    entry_ix: usize,
-    prec: f64,
-    spec: Spec,
-}
-
-/// A library cleaned and sorted by precursor, one list per polarity.
-pub struct Ms2Library {
-    entries: Vec<EngineEntry>,
-    pos: Vec<Prepared>,
-    neg: Vec<Prepared>,
-}
-
 fn f32r(v: f64) -> f64 {
     v as f32 as f64
 }
 
 /// `ms_entropy` cleaning: peaks in m/z [10, 1000] as float32, then the default cleaning (precursor region, 1 % noise, 0.05 Da centroiding), maximum 1.
-fn prepare(prec: f64, mz: &[f64], it: &[f64]) -> Option<Spec> {
+fn clean_spec(prec: f64, mz: &[f64], it: &[f64]) -> Option<Spec> {
     let (m, i): (Vec<f64>, Vec<f64>) = mz
         .iter()
         .zip(it)
@@ -87,11 +74,24 @@ fn prepare(prec: f64, mz: &[f64], it: &[f64]) -> Option<Spec> {
     })
 }
 
+struct Prepared {
+    entry_ix: usize,
+    prec: f64,
+    spec: Spec,
+}
+
+/// A library cleaned and sorted by precursor, one list per polarity.
+pub struct Ms2Library {
+    entries: Vec<EngineEntry>,
+    pos: Vec<Prepared>,
+    neg: Vec<Prepared>,
+}
+
 impl Ms2Library {
     pub fn new(entries: Vec<EngineEntry>) -> Ms2Library {
         let (mut pos, mut neg) = (Vec::new(), Vec::new());
         for (k, e) in entries.iter().enumerate() {
-            if let Some(spec) = prepare(e.precursor_mz, &e.mz, &e.it) {
+            if let Some(spec) = clean_spec(e.precursor_mz, &e.mz, &e.it) {
                 let p = Prepared {
                     entry_ix: k,
                     prec: e.precursor_mz,
@@ -120,7 +120,7 @@ impl Ms2Library {
 
     /// Hits of one query, best score first; empty when the query has no usable peak.
     pub fn search(&self, q: &Query, o: &SearchOpts) -> Vec<SearchHit> {
-        let Some(spec) = prepare(q.precursor_mz, &q.mz, &q.it) else {
+        let Some(spec) = clean_spec(q.precursor_mz, &q.mz, &q.it) else {
             return Vec::new();
         };
         let list = if q.pol > 0 { &self.pos } else { &self.neg };
