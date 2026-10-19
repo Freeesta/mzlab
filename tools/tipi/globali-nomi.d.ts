@@ -607,6 +607,7 @@ declare var pairArrows: any;
 declare var palCss: any;
 declare var panelRec: any;
 declare var parseDecimal: any;
+declare var pdaMapOk: any;
 declare var peakParams: any;
 declare var pendHint: any;
 declare var pendKey: any;
