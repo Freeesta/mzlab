@@ -104,6 +104,13 @@ function createCore(opts) {
   return { st, slots, queue, spawn, call, submit, kill, copy, rest };
 }
 
+// The interpretation of the rows (`interp/1`, `.wasm` `interp`, loaded on request): interpBuild({ table, parent, registry, polarity, paths, infusion }) resolves with the .mzfeat bytes that have the block
+// (`paths` = the .mzidx of the series in OPFS, `infusion` = position of the infusion file among them, -1 = none); interpRow({ table, id }) with the JSON text of one row ("null" when not interpreted).
+function interpOps(submit, call) {
+  const run = (msg, key) => submit(async (slot, load) => { await load("interp"); return (await call(slot, { ...msg, table: msg.table.slice() }))[key]; });
+  return { interpBuild: m => run({ op: "interp_build", ...m }, "bytes"), interpRow: m => run({ op: "table_interp", ...m }, "text") };
+}
+
 // The exports of a campaign folder (admin mode): `kind` = schymanski | publication | quantify | gradient (`.wasm` `attributio_export`) or evidence (`.wasm` `attributio_rev`, it needs the review);
 // `extra` = { matrix?, generated? }. Resolves with { files: [{ name, text } | { name, rows: { hojas } }], warnings }.
 function exportOps(submit, call) {
@@ -261,6 +268,7 @@ export function createFeatPool(opts) {
         return (await call(slot, { op: "rowtraces", table: table.slice(), samples, id, ppm, paths })).text;
       });
     },
+    ...interpOps(submit, call),
     // L4-L6: alignment and gap filling of the series in one worker. `stored`: .mzfeatf bytes in the order of `paths`. Resolves with the .mzfeat bytes.
     align(stored, paths, recipe) {
       return submit(async (slot, load) => {
@@ -356,6 +364,15 @@ async function init(m) {
 const reply = (id, r, transfer) => self.postMessage({ id, ok: true, ...r }, transfer || []);
 const arrays = list => list.map(b => (b instanceof Uint8Array ? b : new Uint8Array(b)));
 
+const INTERP_OPS = {   // the ops of the .wasm `interp`
+  async interp_build(m) {
+    const f = await openAll(m.paths), t = new Uint8Array(m.table), out = memSink();
+    try { mods.interp.interp_build((_, off, len) => t.subarray(off, off + len), t.length, m.parent, m.registry, m.polarity, f.read, f.sizes, m.infusion, out.write); } finally { f.close(); }
+    return { bytes: out.bytes() };
+  },
+  async table_interp(m) { const t = new Uint8Array(m.table); return { text: mods.interp.table_interp((_, off, len) => t.subarray(off, off + len), t.length, m.id) }; },
+};
+
 // the sink of a step of the .wasm: write(offset, bytes) into one growing buffer (JavaScript memory, not the 256 MB of the .wasm); the step answers { bytes, sha256 }
 function memSink() {
   let buf = new Uint8Array(1 << 20), n = 0;
@@ -368,6 +385,7 @@ function memSink() {
   };
 }
 const OPS = {
+  ...INTERP_OPS,
   async init(m) { await init(m); return { version: mods[m.which].version(), crate: mods[m.which].crate_version() }; },
   async detect(m) {
     const f = await openAll([m.path]), out = memSink();

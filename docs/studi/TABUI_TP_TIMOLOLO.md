@@ -191,7 +191,7 @@ Regola 25: un pacchetto Rust e uno di interfaccia, ognuno in UNA chat che fa le 
 | Pacchetto | Chat | Cosa | Dipende da |
 |---|---|---|---|
 | TT-D | locale (Mac, `mz-loc`) | oro mzmine 4.10 dei 13 file; copertura DDA per TP e file; letteratura estratta (§10.1) in `timolol_lit.json`; metodo dai `.raw` quando arrivano | nulla |
-| TT-R1 | R (Rust, Sonnet) | `interp/` passi 1-4 di §4 (modifica, MS2 collegate con purezza e isomeri, confronto, albero), blocco nel `.mzfeat`, `filtri/1`, rotta e `.wasm` `interp`, misura del peso | nulla (parallelo a TT-D) |
+| TT-R1 | R (Rust, Sonnet) | `interp/` passi 1-4 di §4 (modifica, MS2 collegate con purezza e isomeri, confronto, albero), blocco nel `.mzfeat`, `filtri/1`, rotta e `.wasm` `interp`, misura del peso (fatto: `docs/agenti/interp.md`) | nulla (parallelo a TT-D) |
 | TT-R2 | R (stessa chat) | posizione (§7): fusione `posizioni` + `localize`, confidenza, motivi, forma del disegno (`disegno.rs`), `-2H` | TT-R1 unita |
 | TT-R3 | R (stessa chat) | prove sui dati veri e `tools/valida/tp_timololo.py`, esche e FDR | TT-R2, TT-D |
 | TT-U1 | U (pagina, Sonnet) | schede MS2 e Structure, `46_tp_mol.js`, «Hidden: N» col registro, testi, e2e | TT-R1 per MS2; TT-R2 per Structure (due PR) |

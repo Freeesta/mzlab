@@ -10,15 +10,16 @@ limit=512000
 limit_rev=942080   # attributio-rev carries the table of levels AND the review of one feature (libraries, spectra, formulas, isotopes); measured 912955 (+3 %)
 limit_export=659456   # attributio-export carries the cascade AND the four spreadsheet exports (Schymanski folder, publication table, quantification, gradient); measured 636757 (+3 %)
 limit_lr=741376   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 717874 (+3 %)
+limit_interp=512000   # interp: the interpretation of the rows (interp/1) with the MSn tree of the infusion; above 470000 the tree is built by finder_msn (docs/agenti/interp.md)
 limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)
 out=${1:-site/static}/wasm-feat
 R=target/wasm32-unknown-unknown/release
 # the wasm-bindgen + wasm-opt of each module run in the background while cargo builds the next one (tools/wasm_paralleli.sh); wasm_wait below joins them
 . tools/wasm_paralleli.sh
-for which in detect proofs mrm finder finder_edge finder_msn untargeted; do
+for which in detect proofs mrm finder finder_edge finder_msn untargeted interp; do
   case $which in detect|proofs|mrm|finder) want a || continue ;; *) want b || continue ;; esac
   cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features $which
-  wasm_pack "$out/$([ $which = detect ] && echo feat || echo $which | tr _ -)" $R/mzlab_feat_wasm.wasm $limit "mzFinder $which"
+  wasm_pack "$out/$([ $which = detect ] && echo feat || echo $which | tr _ -)" $R/mzlab_feat_wasm.wasm $([ $which = interp ] && echo $limit_interp || echo $limit) "mzFinder $which"
 done
 if want a; then
 # the third one, loaded only when a table is shown or exported (views, report, CSV, MGF, .ms): crates/mzlab-feat-table-wasm
@@ -66,6 +67,7 @@ m["mrm"] = {"js": "mrm/mzlab_feat_wasm.js", "wasm": "mrm/mzlab_feat_wasm_bg.wasm
 m["finder"] = {"js": "finder/mzlab_feat_wasm.js", "wasm": "finder/mzlab_feat_wasm_bg.wasm", "sha256": sha("finder")}
 m["finder_edge"] = {"js": "finder-edge/mzlab_feat_wasm.js", "wasm": "finder-edge/mzlab_feat_wasm_bg.wasm", "sha256": sha("finder-edge")}
 m["finder_msn"] = {"js": "finder-msn/mzlab_feat_wasm.js", "wasm": "finder-msn/mzlab_feat_wasm_bg.wasm", "sha256": sha("finder-msn")}
+m["interp"] = {"js": "interp/mzlab_feat_wasm.js", "wasm": "interp/mzlab_feat_wasm_bg.wasm", "sha256": sha("interp")}
 m["untargeted"] = {"js": "untargeted/mzlab_feat_wasm.js", "wasm": "untargeted/mzlab_feat_wasm_bg.wasm", "sha256": sha("untargeted")}
 m["grafo"] = {"js": "grafo/mzlab_feat_grafo_wasm.js", "wasm": "grafo/mzlab_feat_grafo_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/grafo/mzlab_feat_grafo_wasm_bg.wasm", "rb").read()).hexdigest()}
