@@ -711,6 +711,8 @@ def controlla(uscita: Path, campagna: Path) -> int:
 
 
 def main() -> int:
+    from attributio_tox_riferimento import stadi_tox
+
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--campagna", type=Path, default=CAMPAGNA)
     ap.add_argument("--uscita", type=Path, default=USCITA)
@@ -752,6 +754,7 @@ def main() -> int:
         "frammenti": lambda: scrivi(a.uscita, "frammenti.json", stadio_frammenti()),
         "sorbenti": lambda: scrivi(a.uscita_sorbenti, "sorbenti.json", stadio_sorbenti(carica(root, a.sorbenti.resolve()))),
     }
+    stadi.update(stadi_tox(frame_rows, scrivi))
     for nome in a.solo or list(stadi):
         stadi[nome]()
     return controlla(a.uscita, a.campagna) if a.controlla else 0

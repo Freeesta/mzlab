@@ -1,0 +1,2063 @@
+{
+ "acute": [
+  [
+   null,
+   null
+  ],
+  [
+   null,
+   null
+  ],
+  [
+   0.005,
+   "Acute 1"
+  ],
+  [
+   0.01,
+   "Acute 1"
+  ],
+  [
+   0.05,
+   "Acute 1"
+  ],
+  [
+   0.1,
+   "Acute 1"
+  ],
+  [
+   0.5,
+   "Acute 1"
+  ],
+  [
+   1,
+   "Acute 1"
+  ],
+  [
+   5,
+   "Acute 2"
+  ],
+  [
+   10,
+   "Acute 2"
+  ],
+  [
+   50,
+   "Acute 3"
+  ],
+  [
+   100,
+   "Acute 3"
+  ],
+  [
+   500,
+   "Not classified"
+  ]
+ ],
+ "classify": [
+  [
+   {
+    "fish": 0.5
+   },
+   {},
+   false,
+   {
+    "acute": "Acute 1",
+    "chronic": "Chronic 1",
+    "chronic_route": "acute data"
+   }
+  ],
+  [
+   {
+    "fish": 0.5
+   },
+   {},
+   true,
+   {
+    "acute": "Acute 1",
+    "chronic": "Chronic 1",
+    "chronic_route": "acute data"
+   }
+  ],
+  [
+   {
+    "algae": 50,
+    "fish": 5
+   },
+   {},
+   false,
+   {
+    "acute": "Acute 2",
+    "chronic": "Chronic 2",
+    "chronic_route": "acute data"
+   }
+  ],
+  [
+   {
+    "algae": 50,
+    "fish": 5
+   },
+   {},
+   true,
+   {
+    "acute": "Acute 2",
+    "chronic": "Chronic 2",
+    "chronic_route": "acute data"
+   }
+  ],
+  [
+   {},
+   {},
+   false,
+   {
+    "acute": null,
+    "chronic": null,
+    "chronic_route": null
+   }
+  ],
+  [
+   {},
+   {},
+   true,
+   {
+    "acute": null,
+    "chronic": null,
+    "chronic_route": null
+   }
+  ],
+  [
+   {
+    "crustacean": 20,
+    "fish": 0.5
+   },
+   {
+    "fish": 0.5
+   },
+   false,
+   {
+    "acute": "Acute 1",
+    "chronic": "Chronic 2",
+    "chronic_route": "chronic data"
+   }
+  ],
+  [
+   {
+    "crustacean": 20,
+    "fish": 0.5
+   },
+   {
+    "fish": 0.5
+   },
+   true,
+   {
+    "acute": "Acute 1",
+    "chronic": "Chronic 3",
+    "chronic_route": "chronic data"
+   }
+  ],
+  [
+   {
+    "crustacean": 0.8,
+    "fish": 50
+   },
+   {
+    "algae": 3,
+    "fish": 2
+   },
+   false,
+   {
+    "acute": "Acute 1",
+    "chronic": "Chronic 1",
+    "chronic_route": "both (acute data of crustacean more stringent)"
+   }
+  ],
+  [
+   {
+    "crustacean": 0.8,
+    "fish": 50
+   },
+   {
+    "algae": 3,
+    "fish": 2
+   },
+   true,
+   {
+    "acute": "Acute 1",
+    "chronic": "Chronic 1",
+    "chronic_route": "both (acute data of crustacean more stringent)"
+   }
+  ],
+  [
+   {
+    "fish": 5
+   },
+   {
+    "algae": 4,
+    "crustacean": 0.3,
+    "fish": 0.005
+   },
+   false,
+   {
+    "acute": "Acute 2",
+    "chronic": "Chronic 1",
+    "chronic_route": "chronic data"
+   }
+  ],
+  [
+   {
+    "fish": 5
+   },
+   {
+    "algae": 4,
+    "crustacean": 0.3,
+    "fish": 0.005
+   },
+   true,
+   {
+    "acute": "Acute 2",
+    "chronic": "Chronic 1",
+    "chronic_route": "chronic data"
+   }
+  ]
+ ],
+ "from_acute": [
+  [
+   null,
+   false,
+   null,
+   null,
+   null
+  ],
+  [
+   null,
+   false,
+   null,
+   100,
+   null
+  ],
+  [
+   null,
+   false,
+   null,
+   500,
+   null
+  ],
+  [
+   null,
+   false,
+   3.9,
+   null,
+   null
+  ],
+  [
+   null,
+   false,
+   3.9,
+   100,
+   null
+  ],
+  [
+   null,
+   false,
+   3.9,
+   500,
+   null
+  ],
+  [
+   null,
+   false,
+   4.0,
+   null,
+   null
+  ],
+  [
+   null,
+   false,
+   4.0,
+   100,
+   null
+  ],
+  [
+   null,
+   false,
+   4.0,
+   500,
+   null
+  ],
+  [
+   null,
+   true,
+   null,
+   null,
+   null
+  ],
+  [
+   null,
+   true,
+   null,
+   100,
+   null
+  ],
+  [
+   null,
+   true,
+   null,
+   500,
+   null
+  ],
+  [
+   null,
+   true,
+   3.9,
+   null,
+   null
+  ],
+  [
+   null,
+   true,
+   3.9,
+   100,
+   null
+  ],
+  [
+   null,
+   true,
+   3.9,
+   500,
+   null
+  ],
+  [
+   null,
+   true,
+   4.0,
+   null,
+   null
+  ],
+  [
+   null,
+   true,
+   4.0,
+   100,
+   null
+  ],
+  [
+   null,
+   true,
+   4.0,
+   500,
+   null
+  ],
+  [
+   null,
+   false,
+   null,
+   null,
+   null
+  ],
+  [
+   null,
+   false,
+   null,
+   100,
+   null
+  ],
+  [
+   null,
+   false,
+   null,
+   500,
+   null
+  ],
+  [
+   null,
+   false,
+   3.9,
+   null,
+   null
+  ],
+  [
+   null,
+   false,
+   3.9,
+   100,
+   null
+  ],
+  [
+   null,
+   false,
+   3.9,
+   500,
+   null
+  ],
+  [
+   null,
+   false,
+   4.0,
+   null,
+   null
+  ],
+  [
+   null,
+   false,
+   4.0,
+   100,
+   null
+  ],
+  [
+   null,
+   false,
+   4.0,
+   500,
+   null
+  ],
+  [
+   null,
+   true,
+   null,
+   null,
+   null
+  ],
+  [
+   null,
+   true,
+   null,
+   100,
+   null
+  ],
+  [
+   null,
+   true,
+   null,
+   500,
+   null
+  ],
+  [
+   null,
+   true,
+   3.9,
+   null,
+   null
+  ],
+  [
+   null,
+   true,
+   3.9,
+   100,
+   null
+  ],
+  [
+   null,
+   true,
+   3.9,
+   500,
+   null
+  ],
+  [
+   null,
+   true,
+   4.0,
+   null,
+   null
+  ],
+  [
+   null,
+   true,
+   4.0,
+   100,
+   null
+  ],
+  [
+   null,
+   true,
+   4.0,
+   500,
+   null
+  ],
+  [
+   0.005,
+   false,
+   null,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.005,
+   false,
+   null,
+   100,
+   "Chronic 1"
+  ],
+  [
+   0.005,
+   false,
+   null,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.005,
+   false,
+   3.9,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.005,
+   false,
+   3.9,
+   100,
+   "Chronic 1"
+  ],
+  [
+   0.005,
+   false,
+   3.9,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.005,
+   false,
+   4.0,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.005,
+   false,
+   4.0,
+   100,
+   "Chronic 1"
+  ],
+  [
+   0.005,
+   false,
+   4.0,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.005,
+   true,
+   null,
+   null,
+   "Not classified"
+  ],
+  [
+   0.005,
+   true,
+   null,
+   100,
+   "Not classified"
+  ],
+  [
+   0.005,
+   true,
+   null,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.005,
+   true,
+   3.9,
+   null,
+   "Not classified"
+  ],
+  [
+   0.005,
+   true,
+   3.9,
+   100,
+   "Not classified"
+  ],
+  [
+   0.005,
+   true,
+   3.9,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.005,
+   true,
+   4.0,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.005,
+   true,
+   4.0,
+   100,
+   "Not classified"
+  ],
+  [
+   0.005,
+   true,
+   4.0,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.01,
+   false,
+   null,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.01,
+   false,
+   null,
+   100,
+   "Chronic 1"
+  ],
+  [
+   0.01,
+   false,
+   null,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.01,
+   false,
+   3.9,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.01,
+   false,
+   3.9,
+   100,
+   "Chronic 1"
+  ],
+  [
+   0.01,
+   false,
+   3.9,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.01,
+   false,
+   4.0,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.01,
+   false,
+   4.0,
+   100,
+   "Chronic 1"
+  ],
+  [
+   0.01,
+   false,
+   4.0,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.01,
+   true,
+   null,
+   null,
+   "Not classified"
+  ],
+  [
+   0.01,
+   true,
+   null,
+   100,
+   "Not classified"
+  ],
+  [
+   0.01,
+   true,
+   null,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.01,
+   true,
+   3.9,
+   null,
+   "Not classified"
+  ],
+  [
+   0.01,
+   true,
+   3.9,
+   100,
+   "Not classified"
+  ],
+  [
+   0.01,
+   true,
+   3.9,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.01,
+   true,
+   4.0,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.01,
+   true,
+   4.0,
+   100,
+   "Not classified"
+  ],
+  [
+   0.01,
+   true,
+   4.0,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.05,
+   false,
+   null,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.05,
+   false,
+   null,
+   100,
+   "Chronic 1"
+  ],
+  [
+   0.05,
+   false,
+   null,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.05,
+   false,
+   3.9,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.05,
+   false,
+   3.9,
+   100,
+   "Chronic 1"
+  ],
+  [
+   0.05,
+   false,
+   3.9,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.05,
+   false,
+   4.0,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.05,
+   false,
+   4.0,
+   100,
+   "Chronic 1"
+  ],
+  [
+   0.05,
+   false,
+   4.0,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.05,
+   true,
+   null,
+   null,
+   "Not classified"
+  ],
+  [
+   0.05,
+   true,
+   null,
+   100,
+   "Not classified"
+  ],
+  [
+   0.05,
+   true,
+   null,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.05,
+   true,
+   3.9,
+   null,
+   "Not classified"
+  ],
+  [
+   0.05,
+   true,
+   3.9,
+   100,
+   "Not classified"
+  ],
+  [
+   0.05,
+   true,
+   3.9,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.05,
+   true,
+   4.0,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.05,
+   true,
+   4.0,
+   100,
+   "Not classified"
+  ],
+  [
+   0.05,
+   true,
+   4.0,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.1,
+   false,
+   null,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.1,
+   false,
+   null,
+   100,
+   "Chronic 1"
+  ],
+  [
+   0.1,
+   false,
+   null,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.1,
+   false,
+   3.9,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.1,
+   false,
+   3.9,
+   100,
+   "Chronic 1"
+  ],
+  [
+   0.1,
+   false,
+   3.9,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.1,
+   false,
+   4.0,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.1,
+   false,
+   4.0,
+   100,
+   "Chronic 1"
+  ],
+  [
+   0.1,
+   false,
+   4.0,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.1,
+   true,
+   null,
+   null,
+   "Not classified"
+  ],
+  [
+   0.1,
+   true,
+   null,
+   100,
+   "Not classified"
+  ],
+  [
+   0.1,
+   true,
+   null,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.1,
+   true,
+   3.9,
+   null,
+   "Not classified"
+  ],
+  [
+   0.1,
+   true,
+   3.9,
+   100,
+   "Not classified"
+  ],
+  [
+   0.1,
+   true,
+   3.9,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.1,
+   true,
+   4.0,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.1,
+   true,
+   4.0,
+   100,
+   "Not classified"
+  ],
+  [
+   0.1,
+   true,
+   4.0,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.5,
+   false,
+   null,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.5,
+   false,
+   null,
+   100,
+   "Chronic 1"
+  ],
+  [
+   0.5,
+   false,
+   null,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.5,
+   false,
+   3.9,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.5,
+   false,
+   3.9,
+   100,
+   "Chronic 1"
+  ],
+  [
+   0.5,
+   false,
+   3.9,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.5,
+   false,
+   4.0,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.5,
+   false,
+   4.0,
+   100,
+   "Chronic 1"
+  ],
+  [
+   0.5,
+   false,
+   4.0,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.5,
+   true,
+   null,
+   null,
+   "Not classified"
+  ],
+  [
+   0.5,
+   true,
+   null,
+   100,
+   "Not classified"
+  ],
+  [
+   0.5,
+   true,
+   null,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.5,
+   true,
+   3.9,
+   null,
+   "Not classified"
+  ],
+  [
+   0.5,
+   true,
+   3.9,
+   100,
+   "Not classified"
+  ],
+  [
+   0.5,
+   true,
+   3.9,
+   500,
+   "Chronic 1"
+  ],
+  [
+   0.5,
+   true,
+   4.0,
+   null,
+   "Chronic 1"
+  ],
+  [
+   0.5,
+   true,
+   4.0,
+   100,
+   "Not classified"
+  ],
+  [
+   0.5,
+   true,
+   4.0,
+   500,
+   "Chronic 1"
+  ],
+  [
+   1,
+   false,
+   null,
+   null,
+   "Chronic 1"
+  ],
+  [
+   1,
+   false,
+   null,
+   100,
+   "Chronic 1"
+  ],
+  [
+   1,
+   false,
+   null,
+   500,
+   "Chronic 1"
+  ],
+  [
+   1,
+   false,
+   3.9,
+   null,
+   "Chronic 1"
+  ],
+  [
+   1,
+   false,
+   3.9,
+   100,
+   "Chronic 1"
+  ],
+  [
+   1,
+   false,
+   3.9,
+   500,
+   "Chronic 1"
+  ],
+  [
+   1,
+   false,
+   4.0,
+   null,
+   "Chronic 1"
+  ],
+  [
+   1,
+   false,
+   4.0,
+   100,
+   "Chronic 1"
+  ],
+  [
+   1,
+   false,
+   4.0,
+   500,
+   "Chronic 1"
+  ],
+  [
+   1,
+   true,
+   null,
+   null,
+   "Not classified"
+  ],
+  [
+   1,
+   true,
+   null,
+   100,
+   "Not classified"
+  ],
+  [
+   1,
+   true,
+   null,
+   500,
+   "Chronic 1"
+  ],
+  [
+   1,
+   true,
+   3.9,
+   null,
+   "Not classified"
+  ],
+  [
+   1,
+   true,
+   3.9,
+   100,
+   "Not classified"
+  ],
+  [
+   1,
+   true,
+   3.9,
+   500,
+   "Chronic 1"
+  ],
+  [
+   1,
+   true,
+   4.0,
+   null,
+   "Chronic 1"
+  ],
+  [
+   1,
+   true,
+   4.0,
+   100,
+   "Not classified"
+  ],
+  [
+   1,
+   true,
+   4.0,
+   500,
+   "Chronic 1"
+  ],
+  [
+   5,
+   false,
+   null,
+   null,
+   "Chronic 2"
+  ],
+  [
+   5,
+   false,
+   null,
+   100,
+   "Chronic 2"
+  ],
+  [
+   5,
+   false,
+   null,
+   500,
+   "Chronic 2"
+  ],
+  [
+   5,
+   false,
+   3.9,
+   null,
+   "Chronic 2"
+  ],
+  [
+   5,
+   false,
+   3.9,
+   100,
+   "Chronic 2"
+  ],
+  [
+   5,
+   false,
+   3.9,
+   500,
+   "Chronic 2"
+  ],
+  [
+   5,
+   false,
+   4.0,
+   null,
+   "Chronic 2"
+  ],
+  [
+   5,
+   false,
+   4.0,
+   100,
+   "Chronic 2"
+  ],
+  [
+   5,
+   false,
+   4.0,
+   500,
+   "Chronic 2"
+  ],
+  [
+   5,
+   true,
+   null,
+   null,
+   "Not classified"
+  ],
+  [
+   5,
+   true,
+   null,
+   100,
+   "Not classified"
+  ],
+  [
+   5,
+   true,
+   null,
+   500,
+   "Chronic 2"
+  ],
+  [
+   5,
+   true,
+   3.9,
+   null,
+   "Not classified"
+  ],
+  [
+   5,
+   true,
+   3.9,
+   100,
+   "Not classified"
+  ],
+  [
+   5,
+   true,
+   3.9,
+   500,
+   "Chronic 2"
+  ],
+  [
+   5,
+   true,
+   4.0,
+   null,
+   "Chronic 2"
+  ],
+  [
+   5,
+   true,
+   4.0,
+   100,
+   "Not classified"
+  ],
+  [
+   5,
+   true,
+   4.0,
+   500,
+   "Chronic 2"
+  ],
+  [
+   10,
+   false,
+   null,
+   null,
+   "Chronic 2"
+  ],
+  [
+   10,
+   false,
+   null,
+   100,
+   "Chronic 2"
+  ],
+  [
+   10,
+   false,
+   null,
+   500,
+   "Chronic 2"
+  ],
+  [
+   10,
+   false,
+   3.9,
+   null,
+   "Chronic 2"
+  ],
+  [
+   10,
+   false,
+   3.9,
+   100,
+   "Chronic 2"
+  ],
+  [
+   10,
+   false,
+   3.9,
+   500,
+   "Chronic 2"
+  ],
+  [
+   10,
+   false,
+   4.0,
+   null,
+   "Chronic 2"
+  ],
+  [
+   10,
+   false,
+   4.0,
+   100,
+   "Chronic 2"
+  ],
+  [
+   10,
+   false,
+   4.0,
+   500,
+   "Chronic 2"
+  ],
+  [
+   10,
+   true,
+   null,
+   null,
+   "Not classified"
+  ],
+  [
+   10,
+   true,
+   null,
+   100,
+   "Not classified"
+  ],
+  [
+   10,
+   true,
+   null,
+   500,
+   "Chronic 2"
+  ],
+  [
+   10,
+   true,
+   3.9,
+   null,
+   "Not classified"
+  ],
+  [
+   10,
+   true,
+   3.9,
+   100,
+   "Not classified"
+  ],
+  [
+   10,
+   true,
+   3.9,
+   500,
+   "Chronic 2"
+  ],
+  [
+   10,
+   true,
+   4.0,
+   null,
+   "Chronic 2"
+  ],
+  [
+   10,
+   true,
+   4.0,
+   100,
+   "Not classified"
+  ],
+  [
+   10,
+   true,
+   4.0,
+   500,
+   "Chronic 2"
+  ],
+  [
+   50,
+   false,
+   null,
+   null,
+   "Chronic 3"
+  ],
+  [
+   50,
+   false,
+   null,
+   100,
+   "Chronic 3"
+  ],
+  [
+   50,
+   false,
+   null,
+   500,
+   "Chronic 3"
+  ],
+  [
+   50,
+   false,
+   3.9,
+   null,
+   "Chronic 3"
+  ],
+  [
+   50,
+   false,
+   3.9,
+   100,
+   "Chronic 3"
+  ],
+  [
+   50,
+   false,
+   3.9,
+   500,
+   "Chronic 3"
+  ],
+  [
+   50,
+   false,
+   4.0,
+   null,
+   "Chronic 3"
+  ],
+  [
+   50,
+   false,
+   4.0,
+   100,
+   "Chronic 3"
+  ],
+  [
+   50,
+   false,
+   4.0,
+   500,
+   "Chronic 3"
+  ],
+  [
+   50,
+   true,
+   null,
+   null,
+   "Not classified"
+  ],
+  [
+   50,
+   true,
+   null,
+   100,
+   "Not classified"
+  ],
+  [
+   50,
+   true,
+   null,
+   500,
+   "Chronic 3"
+  ],
+  [
+   50,
+   true,
+   3.9,
+   null,
+   "Not classified"
+  ],
+  [
+   50,
+   true,
+   3.9,
+   100,
+   "Not classified"
+  ],
+  [
+   50,
+   true,
+   3.9,
+   500,
+   "Chronic 3"
+  ],
+  [
+   50,
+   true,
+   4.0,
+   null,
+   "Chronic 3"
+  ],
+  [
+   50,
+   true,
+   4.0,
+   100,
+   "Not classified"
+  ],
+  [
+   50,
+   true,
+   4.0,
+   500,
+   "Chronic 3"
+  ],
+  [
+   100,
+   false,
+   null,
+   null,
+   "Chronic 3"
+  ],
+  [
+   100,
+   false,
+   null,
+   100,
+   "Chronic 3"
+  ],
+  [
+   100,
+   false,
+   null,
+   500,
+   "Chronic 3"
+  ],
+  [
+   100,
+   false,
+   3.9,
+   null,
+   "Chronic 3"
+  ],
+  [
+   100,
+   false,
+   3.9,
+   100,
+   "Chronic 3"
+  ],
+  [
+   100,
+   false,
+   3.9,
+   500,
+   "Chronic 3"
+  ],
+  [
+   100,
+   false,
+   4.0,
+   null,
+   "Chronic 3"
+  ],
+  [
+   100,
+   false,
+   4.0,
+   100,
+   "Chronic 3"
+  ],
+  [
+   100,
+   false,
+   4.0,
+   500,
+   "Chronic 3"
+  ],
+  [
+   100,
+   true,
+   null,
+   null,
+   "Not classified"
+  ],
+  [
+   100,
+   true,
+   null,
+   100,
+   "Not classified"
+  ],
+  [
+   100,
+   true,
+   null,
+   500,
+   "Chronic 3"
+  ],
+  [
+   100,
+   true,
+   3.9,
+   null,
+   "Not classified"
+  ],
+  [
+   100,
+   true,
+   3.9,
+   100,
+   "Not classified"
+  ],
+  [
+   100,
+   true,
+   3.9,
+   500,
+   "Chronic 3"
+  ],
+  [
+   100,
+   true,
+   4.0,
+   null,
+   "Chronic 3"
+  ],
+  [
+   100,
+   true,
+   4.0,
+   100,
+   "Not classified"
+  ],
+  [
+   100,
+   true,
+   4.0,
+   500,
+   "Chronic 3"
+  ],
+  [
+   500,
+   false,
+   null,
+   null,
+   "Not classified"
+  ],
+  [
+   500,
+   false,
+   null,
+   100,
+   "Not classified"
+  ],
+  [
+   500,
+   false,
+   null,
+   500,
+   "Not classified"
+  ],
+  [
+   500,
+   false,
+   3.9,
+   null,
+   "Not classified"
+  ],
+  [
+   500,
+   false,
+   3.9,
+   100,
+   "Not classified"
+  ],
+  [
+   500,
+   false,
+   3.9,
+   500,
+   "Not classified"
+  ],
+  [
+   500,
+   false,
+   4.0,
+   null,
+   "Not classified"
+  ],
+  [
+   500,
+   false,
+   4.0,
+   100,
+   "Not classified"
+  ],
+  [
+   500,
+   false,
+   4.0,
+   500,
+   "Not classified"
+  ],
+  [
+   500,
+   true,
+   null,
+   null,
+   "Not classified"
+  ],
+  [
+   500,
+   true,
+   null,
+   100,
+   "Not classified"
+  ],
+  [
+   500,
+   true,
+   null,
+   500,
+   "Not classified"
+  ],
+  [
+   500,
+   true,
+   3.9,
+   null,
+   "Not classified"
+  ],
+  [
+   500,
+   true,
+   3.9,
+   100,
+   "Not classified"
+  ],
+  [
+   500,
+   true,
+   3.9,
+   500,
+   "Not classified"
+  ],
+  [
+   500,
+   true,
+   4.0,
+   null,
+   "Not classified"
+  ],
+  [
+   500,
+   true,
+   4.0,
+   100,
+   "Not classified"
+  ],
+  [
+   500,
+   true,
+   4.0,
+   500,
+   "Not classified"
+  ]
+ ],
+ "h_codes": [
+  [
+   [],
+   {
+    "acute": null,
+    "chronic": null
+   }
+  ],
+  [
+   [
+    "H400"
+   ],
+   {
+    "acute": "Acute 1",
+    "chronic": null
+   }
+  ],
+  [
+   [
+    "H401",
+    "H402"
+   ],
+   {
+    "acute": "Acute 2",
+    "chronic": null
+   }
+  ],
+  [
+   [
+    "H410",
+    "H413"
+   ],
+   {
+    "acute": null,
+    "chronic": "Chronic 1"
+   }
+  ],
+  [
+   [
+    "H412"
+   ],
+   {
+    "acute": null,
+    "chronic": "Chronic 3"
+   }
+  ],
+  [
+   [
+    "H400",
+    "H411",
+    "H413",
+    "H319"
+   ],
+   {
+    "acute": "Acute 1",
+    "chronic": "Chronic 2"
+   }
+  ],
+  [
+   [
+    "H402",
+    "H401"
+   ],
+   {
+    "acute": "Acute 2",
+    "chronic": null
+   }
+  ]
+ ],
+ "noec": [
+  [
+   null,
+   false,
+   null
+  ],
+  [
+   null,
+   true,
+   null
+  ],
+  [
+   null,
+   false,
+   null
+  ],
+  [
+   null,
+   true,
+   null
+  ],
+  [
+   0.005,
+   false,
+   "Chronic 1"
+  ],
+  [
+   0.005,
+   true,
+   "Chronic 1"
+  ],
+  [
+   0.01,
+   false,
+   "Chronic 1"
+  ],
+  [
+   0.01,
+   true,
+   "Chronic 1"
+  ],
+  [
+   0.05,
+   false,
+   "Chronic 1"
+  ],
+  [
+   0.05,
+   true,
+   "Chronic 2"
+  ],
+  [
+   0.1,
+   false,
+   "Chronic 1"
+  ],
+  [
+   0.1,
+   true,
+   "Chronic 2"
+  ],
+  [
+   0.5,
+   false,
+   "Chronic 2"
+  ],
+  [
+   0.5,
+   true,
+   "Chronic 3"
+  ],
+  [
+   1,
+   false,
+   "Chronic 2"
+  ],
+  [
+   1,
+   true,
+   "Chronic 3"
+  ],
+  [
+   5,
+   false,
+   "Not classified"
+  ],
+  [
+   5,
+   true,
+   "Not classified"
+  ],
+  [
+   10,
+   false,
+   "Not classified"
+  ],
+  [
+   10,
+   true,
+   "Not classified"
+  ],
+  [
+   50,
+   false,
+   "Not classified"
+  ],
+  [
+   50,
+   true,
+   "Not classified"
+  ],
+  [
+   100,
+   false,
+   "Not classified"
+  ],
+  [
+   100,
+   true,
+   "Not classified"
+  ],
+  [
+   500,
+   false,
+   "Not classified"
+  ],
+  [
+   500,
+   true,
+   "Not classified"
+  ]
+ ]
+}
