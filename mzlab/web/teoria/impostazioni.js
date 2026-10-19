@@ -17,19 +17,9 @@
     tema: [["auto", "Sistema", "Come il sistema"], ["light", "Chiaro"], ["dark", "Scuro"]],
   };
   const tema = () => (window.QTEMA ? QTEMA.get() : "auto");
-  const ico = d => `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
-  const TICON = {
-    auto: ico('<circle cx="10" cy="10" r="6.5"/><path d="M10 3.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/>'),
-    light: ico('<circle cx="10" cy="10" r="3.2"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"/>'),
-    dark: ico('<path d="M16 11.6A6.3 6.3 0 0 1 8.4 4 6.3 6.3 0 1 0 16 11.6z"/>'),
-  };
-  const TICK = '<svg class="tick" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5l2.7 2.7L11 4.5"/></svg>';
-  // the radios stay real (name a11y-*, arrows move the choice); the label draws the option and the input covers it, so a click always hits the input
-  const radios = (name, cur, kind) => OPT[name].map(([v, t, tip]) => {
-    const mark = kind === "seg" ? TICON[v] + `<span>${t}</span>` : kind === "font" ? `<b class="aa" data-f="${v}">Aa</b><span>${t}</span>` : `<i class="chip" data-v="${v}">${TICK}</i><span>${t}</span>`;
-    return `<label class="opt ${kind}"${tip ? ` title="${tip}"` : ""}><input type="radio" name="a11y-${name}" value="${v}"${(cur || "") === v ? " checked" : ""}>${mark}</label>`;
-  }).join("");
-  const sw = (key, text, hint, attr = `data-k="${key}"`, on = S[key]) => `<label class="swrow"${hint ? ` title="${hint}"` : ""}><span>${text}</span><input type="checkbox" role="switch" ${attr}${on ? " checked" : ""}></label>`;
+  const C = window.IMPCOMP;
+  const radios = (name, cur, kind) => C.radios("a11y-" + name, OPT[name], cur, kind);
+  const sw = (key, text, hint, attr = `data-k="${key}"`, on = S[key]) => C.sw(text, hint, attr, on);
 
   const btn = document.createElement("button");
   btn.id = "a11y-btn"; btn.type = "button"; btn.textContent = "Aa"; btn.title = "Impostazioni";
@@ -43,13 +33,12 @@
   // inside the program (iframe) there is no button of its own: the gear of the program header opens the panel through TEORIA.settings
 
   const panel = document.createElement("div");
-  panel.id = "a11y-panel"; panel.hidden = true; panel.setAttribute("role", "dialog"); panel.setAttribute("aria-label", "Impostazioni");
+  panel.id = "a11y-panel"; panel.className = "impset"; panel.hidden = true; panel.setAttribute("role", "dialog"); panel.setAttribute("aria-label", "Impostazioni");
   panel.innerHTML = `<div class="a-hd"><h2 title="Le scelte restano su questo computer">Impostazioni</h2><button type="button" class="x" aria-label="Chiudi">&times;</button></div>
     <fieldset><legend>Tema</legend><div class="opts seg3">${radios("tema", tema(), "seg")}</div></fieldset>
     <fieldset><legend>Carattere</legend><div class="opts f3">${radios("font", S.font, "font")}</div></fieldset>
     <fieldset><legend>Sfondo</legend><div class="opts f4">${radios("bg", S.bg, "bg")}</div></fieldset>
     <fieldset><legend>Lettura</legend>${sw("space", "Spaziatura ampia", "Più aria tra righe e lettere")}${sw("nums", "Numeri leggibili", "Cifre della stessa larghezza")}${sw("ruler", "Righello di lettura", "Attenua il resto della pagina")}${sw("", "Riduci animazioni", "Anche quando il sistema non lo chiede", 'data-motion="1"', S.motion === "always")}</fieldset>
-    <p id="a11y-prev" aria-hidden="true">Il rapporto m/z 1234,5678 individua lo ione molecolare del composto.</p>
     <div class="row"><button type="button" id="a11y-reset" title="Riporta testo, tema e colori ai valori iniziali">Ripristina predefinite</button></div>`;
   document.body.appendChild(panel);
 

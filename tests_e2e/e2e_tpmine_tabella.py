@@ -99,7 +99,7 @@ try:
             assert tg.get_attribute("aria-expanded") == "true", "the toggle says expanded"
             pg.wait_for_selector("#tp-det .tpr-ch svg", timeout=60000)
             ids = pg.evaluate("[...document.querySelectorAll('#hr-t tr.tpt-exp')].length"); assert ids == 1, ids
-            assert [t for t in pg.locator("#tp-det [role=tab]").all_inner_texts()] == ["Overview", "Samples", "Identity", "Quality"], pg.locator("#tp-det [role=tab]").all_inner_texts()
+            assert [t for t in pg.locator("#tp-det [role=tab]").all_inner_texts()] == ["Overview", "Samples", "Identity", "Quality", "Structure"], pg.locator("#tp-det [role=tab]").all_inner_texts()
             hb = pg.locator("#tp-det .tpt-head .lvb").first.inner_text(); assert hb.startswith("L"), hb
             assert pg.locator("#tp-det .tpt-head .tpr-sum").count() >= 2, "the summary of the closed row"
             assert pg.locator("#tp-det .tpr-ov svg").count() == 2, ("XIC of the row (from the traces) and the spectrum", pg.locator("#tp-det .tpr-ov svg").count(), pg.inner_text("#tp-det")[:600])

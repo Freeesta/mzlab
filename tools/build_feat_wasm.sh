@@ -9,6 +9,7 @@ want() { [ "$part" = all ] || [ "$part" = "$1" ]; }
 limit=512000
 limit_rev=942080   # attributio-rev carries the table of levels AND the review of one feature (libraries, spectra, formulas, isotopes); measured 912955 (+3 %); the table of chemical classes is a file beside it
 limit_export=659456   # attributio-export carries the cascade AND the four spreadsheet exports (Schymanski folder, publication table, quantification, gradient); measured 636757 (+3 %)
+limit_ms2=479232   # attributio-ms2 carries the sources of a campaign AND the MS2 engine (library search, in-silico ranking, hydrogen rearrangements, RT forest); measured 464210 (+3 %)
 limit_lr=741376   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 717874 (+3 %)
 limit_interp=512000   # interp: the interpretation of the rows (interp/1) with the MSn tree of the infusion; above 470000 the tree is built by finder_msn (docs/agenti/interp.md)
 limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)
@@ -46,6 +47,9 @@ mkdir -p "$out/attributio-rev" && cp crates/mzlab-feat/data/classi-1.json "$out/
 # the exports of Attributio (Schymanski folder, publication table, quantification, gradient), loaded only when the Export menu is used: the same crate with the feature export
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features export
 wasm_pack "$out/attributio-export" $R/mzlab_attributio_wasm.wasm $limit_export "mzFinder attributio-export"
+# the MS2 engine of Attributio (library search, in-silico ranking, hydrogen rearrangements, RT forest, chimeric intruders), loaded only when its panel runs: the same crate with the feature ms2
+cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features ms2
+wasm_pack "$out/attributio-ms2" $R/mzlab_attributio_wasm.wasm $limit_ms2 "mzFinder attributio-ms2"
 # the low-resolution Dig of mzFinder (crates/mzlab-finder-lr-wasm), loaded by the worker of mzFinder only for a series of full-scan unit-resolution files
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-finder-lr-wasm
 wasm_pack "$out/finder-lr" $R/mzlab_finder_lr_wasm.wasm $limit_lr "mzFinder finder-lr"
@@ -83,6 +87,8 @@ m["attributio_rev"] = {"js": "attributio-rev/mzlab_attributio_wasm.js", "wasm": 
               "sha256": hashlib.sha256(open(f"{o}/attributio-rev/mzlab_attributio_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["attributio_export"] = {"js": "attributio-export/mzlab_attributio_wasm.js", "wasm": "attributio-export/mzlab_attributio_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/attributio-export/mzlab_attributio_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["attributio_ms2"] = {"js": "attributio-ms2/mzlab_attributio_wasm.js", "wasm": "attributio-ms2/mzlab_attributio_wasm_bg.wasm",
+              "sha256": hashlib.sha256(open(f"{o}/attributio-ms2/mzlab_attributio_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["finder_lr"] = {"js": "finder-lr/mzlab_finder_lr_wasm.js", "wasm": "finder-lr/mzlab_finder_lr_wasm_bg.wasm",
                  "sha256": hashlib.sha256(open(f"{o}/finder-lr/mzlab_finder_lr_wasm_bg.wasm", "rb").read()).hexdigest()}
 json.dump(m, open(f"{o}/manifest.json", "w"), indent=1)

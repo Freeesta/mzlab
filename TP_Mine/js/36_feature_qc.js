@@ -58,7 +58,24 @@
     return JSON.parse(await pool.formulaId({ mz, y, featureMz, params }));
   }
 
-  /** a session on one table: `a` = { base, bytes (.mzfeat), names (stems of the files), inputs ([{name, sha256}] of the table), pol, pool() (for the traces) } */
+  /** the interpretation of the rows (`interp/1`): the block is built once, on the first row asked for, from the .mzidx of the series (`a.interp` = { parent (JSON), registry (text|bytes), pol, infusion (position|-1) }); `rows` keeps the rows already read, for the Identity column */
+  function interpFeed(/** @type {any} */ a, /** @type {Uint8Array} */ bytes, onBuilt = /** @type {((built: Promise<Uint8Array>) => void) | null} */ (null)) {
+    const o = a.interp; if (!o) return {};
+    /** @type {Map<number, any>} */ const rows = new Map();
+    /** @type {Promise<{ pool: any, table: Uint8Array }> | null} */ let built = null;
+    const registry = typeof o.registry === "string" ? o.registry : o.registry ? new TextDecoder().decode(o.registry) : "";
+    const build = () => built || (built = ((p) => { if (onBuilt) onBuilt(p.then(b => b.table)); return p; })(a.pool().then(async (/** @type {any} */ pool) => ({ pool, table: await pool.interpBuild({ table: bytes, parent: o.parent, registry, polarity: o.pol < 0 ? -1 : 1, infusion: o.infusion, paths: a.names.map((/** @type {string} */ n) => "mzlab/idx/" + n + ".mzidx") }) }))));
+    return {
+      interp: async (/** @type {number} */ id) => {
+        if (rows.has(id)) return rows.get(id);
+        const b = await build(), r = JSON.parse(await b.pool.interpRow({ table: b.table, id }));
+        rows.set(id, r); return r;
+      },
+      interpCached: (/** @type {number} */ id) => rows.get(id) || null,
+    };
+  }
+
+  /** a session on one table: `a` = { interp (optional, see interpFeed), base, bytes (.mzfeat), names (stems of the files), inputs ([{name, sha256}] of the table), pol, pool() (for the traces) } */
   async function open(/** @type {any} */ a) {
     if (window.MZLAB_DESKTOP) return openNative(a);
     const m = await engine(a.base), bytes = /** @type {Uint8Array} */ (a.bytes), size = bytes.length;
@@ -77,20 +94,23 @@
       traces: async (/** @type {number} */ id, /** @type {number} */ ppm) => JSON.parse(await tracesVia(a, bytes, samples, id, ppm)),
       composition: (/** @type {number[]} */ mz, /** @type {number[]} */ y, /** @type {number} */ featureMz, /** @type {string} */ params) => compositionVia(a, mz, y, featureMz, params),
       file: (/** @type {string} */ spec, /** @type {string} */ kind) => run(() => m.export_table(read, size, samples, spec, sha, a.pol, kind)),
+      ...interpFeed(a, bytes),
     };
   }
 
   /** the same session in the app: every call is the native route `feat/table` (the table the last step of the Pipeline holds in the app, named by its SHA-256), so the methods answer with a Promise */
   async function openNative(/** @type {any} */ a) {
-    const bytes = /** @type {Uint8Array} */ (a.bytes), size = bytes.length, sha = await G.UNT.sha256Hex(bytes);
+    const bytes = /** @type {Uint8Array} */ (a.bytes), size = bytes.length, sha0 = await G.UNT.sha256Hex(bytes);
+    let sha = sha0, gate = Promise.resolve();
     const url = URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["feat-desktop-pool.js"]], { type: "text/javascript" }));
     const pool = (await import(url)).createDesktopPool();
     /** @type {(kind: string, p: Record<string, any>) => Promise<string>} */ const T = (kind, p) => pool.table(kind, p);       // its errors carry `key` and `params`
     const proposed = await T("samples", { files: JSON.stringify({ files: a.names.map((/** @type {string} */ n, /** @type {number} */ i) => ({ name: n + ".mzML", sha256: (a.inputs[i] || {}).sha256 || "" })) }) });
     const samples = a.campioni ? withRoles(proposed, a.campioni) : proposed;
-    /** @type {(kind: string, spec: string, more?: Record<string, any>) => Promise<string>} */ const V = (kind, spec, more) => T(kind, { samples, spec, sha256: sha, polarity: a.pol, ...more });
+    // the app holds the table with the interpretation block once it is built: later requests name that one
+    /** @type {(kind: string, spec: string, more?: Record<string, any>) => Promise<string>} */ const V = async (kind, spec, more) => { await gate; return T(kind, { samples, spec, sha256: sha, polarity: a.pol, ...more }); };
     return {
-      samples, sha, size, bytes,
+      samples, sha: sha0, size, bytes,
       qc: async (/** @type {string} */ spec) => JSON.parse(await V("qc", spec)),
       view: async (/** @type {string} */ spec) => JSON.parse(await V("view", spec)),
       rows: async (/** @type {string} */ spec) => JSON.parse(await V("export", spec, { export_kind: "xlsx_rows" })).hojas[0].filas,
@@ -99,6 +119,7 @@
       traces: async (/** @type {number} */ id, /** @type {number} */ ppm) => JSON.parse(await tracesVia(a, bytes, samples, id, ppm)),
       composition: (/** @type {number[]} */ mz, /** @type {number[]} */ y, /** @type {number} */ featureMz, /** @type {string} */ params) => compositionVia(a, mz, y, featureMz, params),
       file: (/** @type {string} */ spec, /** @type {string} */ kind) => V("export", spec, { export_kind: kind }),
+      ...interpFeed(a, bytes, built => { gate = built.then(async t => { sha = await G.UNT.sha256Hex(t); }, () => undefined); }),
     };
   }
 

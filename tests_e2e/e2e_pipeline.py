@@ -333,6 +333,11 @@ try:
             pg.click("#tp-det [data-tab=samples]")
             assert pg.locator("#tp-det table.tpr tbody tr").count() == len(names), pg.inner_text("#tp-det")[:300]
             pg.click("#tp-det [data-tab=quality]"); qt = pg.inner_text("#tp-det"); assert "S/N" in qt and "FWHM" in qt, qt[:300]
+            # the Structure tab reads the interp/1 of the row that the page builds from the parent, the hypotheses and the .mzidx of the series (an interpreted row has its figure, any other says why)
+            pg.click("#tp-det [data-tab=structure]")
+            pg.wait_for_function("document.querySelector('#tp-det .tps, #tp-det .tpr-none')", timeout=120000)
+            st_txt = pg.inner_text("#tp-det"); print("  Structure tab:", st_txt.replace("\n", " ")[:160])
+            assert "is not built" not in st_txt, st_txt[:300]
             pg.click("#tp-det [data-tab=overview]")
             pg.click("#ft-t tbody tr.clk >> nth=3")                      # another row closes the first one
             pg.wait_for_function("document.querySelectorAll('#ft-t tr.tpt-exp').length === 1")

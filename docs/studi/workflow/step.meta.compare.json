@@ -1,0 +1,84 @@
+{
+ "schema": "step/1",
+ "id": "meta.compare",
+ "version": 1,
+ "package": "core",
+ "title": "Compare algorithms",
+ "doc": "Runs the wrapped step two or more times on the same inputs, once per variant, and measures how the outputs differ: features found by one variant only, m/z and RT shifts, area ratios, rank agreement of scores.",
+ "in": {},
+ "out": {
+  "comparison": {
+   "type": "comparison",
+   "title": "Differences between variants"
+  }
+ },
+ "params": {
+  "type": "object",
+  "required": [
+   "step",
+   "variants"
+  ],
+  "properties": {
+   "step": {
+    "title": "Step",
+    "type": "string",
+    "pattern": "^[a-z]+(\\.[a-z][a-z0-9_]*)+@[0-9]+$"
+   },
+   "variants": {
+    "title": "Variants",
+    "type": "array",
+    "minItems": 2,
+    "items": {
+     "type": "object",
+     "required": [
+      "algorithm"
+     ],
+     "properties": {
+      "label": {
+       "type": "string"
+      },
+      "algorithm": {
+       "type": "string"
+      },
+      "preset": {
+       "type": "string"
+      },
+      "params": {
+       "type": "object"
+      }
+     }
+    }
+   },
+   "mz_tolerance_ppm": {
+    "title": "m/z match tolerance",
+    "type": "number",
+    "minimum": 0,
+    "default": 5,
+    "x-unit": "ppm"
+   },
+   "mz_tolerance_da": {
+    "title": "m/z match tolerance (unit resolution)",
+    "type": "number",
+    "minimum": 0,
+    "default": 0.5,
+    "x-unit": "Da"
+   },
+   "rt_tolerance_min": {
+    "title": "RT match tolerance",
+    "type": "number",
+    "minimum": 0,
+    "default": 0.1,
+    "x-unit": "min"
+   }
+  }
+ },
+ "runs_in": {
+  "native": true
+ },
+ "deterministic": true,
+ "errors": [
+  "err.flow.compare.sameVariant"
+ ],
+ "ports_from": "wrapped",
+ "per_item": false
+}

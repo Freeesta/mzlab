@@ -18,7 +18,7 @@ try:
         def tf():
             return next(x for x in pg.frames if "/teoria/" in x.url)
         def open_dark():
-            pg.click("#np-set"); pg.wait_for_timeout(200); pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(300); pg.keyboard.press("Escape"); pg.mouse.click(5, 5)
+            pg.click("#np-set"); pg.wait_for_timeout(200); pg.check("input[name=uip-th][value=dark]", force=True); pg.wait_for_timeout(300); pg.keyboard.press("Escape"); pg.mouse.click(5, 5)
             pg.click("#nav button[data-v=theory]"); pg.wait_for_timeout(1500)
             f = tf()
             assert f.evaluate("document.documentElement.dataset.theme") == "dark"

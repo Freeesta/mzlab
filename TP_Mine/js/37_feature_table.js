@@ -54,7 +54,7 @@
     const timed = o.cs ? o.cs.map((/** @type {any} */ c, /** @type {number} */ i) => ({ i, t: c.tipo === "t0" ? 0 : c.tipo === "sample" ? c.tempo_min : null })).filter((/** @type {any} */ x) => x.t != null).sort((/** @type {any} */ a, /** @type {any} */ b) => a.t - b.t) : [];
     const levelOf = (/** @type {FtRow} */ r) => (o.levels ? o.levels.get(r.id) : null);
     const best = (/** @type {FtRow} */ r) => Math.max(0, ...r.areas);
-    const identText = (/** @type {FtRow} */ r) => { const x = (o.identsOf(r.id) || [])[0]; return x && x.formula ? x.formula : `m/z ${r.mz.toFixed(4)}`; };
+    const identText = (/** @type {FtRow} */ r) => { const iv = o.interpText ? o.interpText(r.id) : ""; if (iv) return iv; const x = (o.identsOf(r.id) || [])[0]; return x && x.formula ? x.formula : `m/z ${r.mz.toFixed(4)}`; };
     /** @type {any[]} */ const cols = [
       { key: "level", label: "Lvl", help: "ft.col.level", sticky: true, width: 60, sort: (/** @type {FtRow} */ r) => String(levelOf(r) || "z"), cell: (/** @type {FtRow} */ r) => (levelOf(r) ? TT.level(levelOf(r)) : ""), text: (/** @type {FtRow} */ r) => String(levelOf(r) || "") },
       { key: "identity", label: "Identity", help: "ft.col.identity", sticky: true, width: 200, sort: identText, cell: (/** @type {FtRow} */ r) => esc(identText(r)), text: identText },
@@ -80,10 +80,12 @@
   }
   /** the open row: `riga/1` and `riga_tracce/1` once per row (cache) and the model TpRiga built from them */
   function rowModels(/** @type {any} */ o, /** @type {any} */ cols, /** @type {(r: FtRow) => string} */ identText, /** @type {(r: FtRow) => any} */ levelOf, /** @type {(t: string) => void} */ warn) {
-    /** @type {Map<number, { row?: any, rowErr?: string, tr?: any, trErr?: string, rowP?: Promise<void>, trP?: Promise<void> }>} */ const cache = new Map();
+    /** @type {Map<number, { row?: any, rowErr?: string, interp?: any, interpErr?: string, tr?: any, trErr?: string, rowP?: Promise<void>, trP?: Promise<void> }>} */ const cache = new Map();
     const entry = (/** @type {number} */ id) => { let e = cache.get(id); if (!e) cache.set(id, e = {}); return e; };
     const msg = (/** @type {any} */ e) => (o.say ? o.say(e) : String((e && e.message) || e));
-    const loadRow = (/** @type {number} */ id) => { const e = entry(id); return e.rowP || (e.rowP = Promise.resolve(o.session.row(id)).then((/** @type {any} */ v) => { e.row = v; }, (/** @type {any} */ x) => { e.rowErr = msg(x); })); };
+    const loadRow = (/** @type {number} */ id) => { const e = entry(id); return e.rowP || (e.rowP = Promise.all([Promise.resolve(o.session.row(id)).then((/** @type {any} */ v) => { e.row = v; }, (/** @type {any} */ x) => { e.rowErr = msg(x); }), loadInterp(e, id)]).then(() => undefined)); };
+    /** the `interp/1` row of the series (`session.interp`, when the series has the block); a failure leaves the tab with its reason */
+    const loadInterp = (/** @type {any} */ e, /** @type {number} */ id) => (o.session.interp ? Promise.resolve(o.session.interp(id)).then((/** @type {any} */ v) => { e.interp = v; }, (/** @type {any} */ x) => { e.interpErr = msg(x); }) : Promise.resolve());
     const loadTr = (/** @type {number} */ id) => { const e = entry(id); return e.trP || (e.trP = Promise.resolve(o.session.traces(id, o.ppm())).then((/** @type {any} */ v) => { e.tr = v; }, (/** @type {any} */ x) => { e.trErr = msg(x); })); };
     /** the cells of the row (typed and timed) by file @param {FtRow} r @param {any} e */
     const sampleOf = (r, e, j) => { const c = e.row && e.row.cells && e.row.cells[j]; return { file: o.names[j], type: c ? c.type : (o.cs && o.cs[j] ? o.cs[j].tipo : undefined), time: c ? c.time : (o.cs && o.cs[j] ? o.cs[j].tempo_min : null), area: c ? c.area : r.areas[j] || null, state: c ? c.state : r.states[j],
@@ -93,12 +95,13 @@
       const e = entry(r.id), w = e.row, t = e.tr, idents = o.identsOf(r.id) || [], ii = w && w.ident;
       const missing = /** @type {Record<string, string>} */ ({});
       if (!w) { const why = e.rowErr || "reading the row"; missing.quality = missing.identity = why; }
+      if (!o.session.interp) missing.structure = "the interpretation of the series is not built"; else if (e.interpErr) missing.structure = e.interpErr;
       if (!t) missing.xic = missing.spectrum = e.trErr || "reading the .mzidx files";
       const samples = r.areas.map((_, j) => sampleOf(r, e, j));
       const best = r.areas.reduce((b, a, j) => (a > (r.areas[b] || 0) ? j : b), 0);
       const sources = ii && ii.sources && ii.sources.length ? "Found by " + ii.sources.join(", ") : "";
       const m = {
-        title: identText(r), level: levelOf(r) || undefined, missing, samples, decide: dec ? { series: dec.series(), key: dec.key(r), level: dec.level(r) } : undefined,
+        interp: e.interp, title: identText(r), level: levelOf(r) || undefined, missing, samples, decide: dec ? { series: dec.series(), key: dec.key(r), level: dec.level(r) } : undefined,
         summary: [{ label: "Identity", value: identText(r), help: "ft.col.identity" }, { label: "m/z", value: r.mz.toFixed(4), help: "ft.col.mz" }, { label: "RT", value: r.rt == null ? "" : (+r.rt).toFixed(2) + " min", help: "ft.col.rt" }, { label: "Found by", value: sources.replace(/^Found by /, "") }],
         open: { xic: () => showInData(o.names[best], r.mz) },
         xic: t ? t.xic.map((/** @type {any} */ x, /** @type {number} */ j) => ({ file: x.file, group: samples[j].type, time: samples[j].time, rt: x.rt, y: x.y })) : [],

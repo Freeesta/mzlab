@@ -48,17 +48,17 @@ try:
             stage(pg, synth.make_series("/tmp/s_lingua", [0, 15, 60])); pg.click("text=Carica dati"); ready(pg)
             n = pg.evaluate("E.files.length"); assert n >= 3
             pg.click("#np-set"); pg.wait_for_timeout(200)
-            assert pg.inner_text("#uipset label, #uipset .row >> nth=0").startswith("Lingua / Language")
-            assert pg.evaluate("document.querySelector('#uip-lang').value") == "it"
+            assert pg.inner_text("#uipset legend >> nth=0").lower().startswith("lingua / language")
+            assert pg.evaluate("document.querySelector('input[name=uip-lang]:checked').value") == "it"
             saved(pg)        # the open files come back from the saved session: wait until it is written
-            with pg.expect_navigation(): pg.select_option("#uip-lang", "en")
+            with pg.expect_navigation(): pg.click("input[name=uip-lang][value=en]", force=True)
             attendi(pg, "typeof I18N !== 'undefined' && I18N.lang === 'en'", 60000); ready(pg)
             assert pg.evaluate("I18N.lang") == "en" and pg.evaluate("localStorage.getItem('mzlab.lang')") == "en"
             assert nav(pg) == ["Data", "Drawing", "Theory"]
             attendi(pg, f"E.files.length === {n}", 60000)
             assert pg.evaluate("E.files.length") == n, "open files must come back after the language change"
-            pg.click("#np-set"); pg.wait_for_timeout(200); assert pg.evaluate("document.querySelector('#uip-lang').value") == "en"
-            assert pg.inner_text("#uipset .row >> nth=0").startswith("Lingua / Language"), "the label stays bilingual"
+            pg.click("#np-set"); pg.wait_for_timeout(200); assert pg.evaluate("document.querySelector('input[name=uip-lang]:checked').value") == "en"
+            assert pg.inner_text("#uipset legend >> nth=0").lower().startswith("lingua / language"), "the label stays bilingual"
         step("gear: choice remembered (mzlab.lang), page reloads in English, open files stay", gear)
         def remembered():
             pg = page("it-IT"); pg.evaluate("localStorage.setItem('mzlab.lang','en')"); pg.reload(); pg.wait_for_timeout(600)

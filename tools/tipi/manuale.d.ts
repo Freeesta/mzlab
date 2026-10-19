@@ -12,6 +12,7 @@ declare class FileReaderSync { readAsArrayBuffer(blob: Blob): ArrayBuffer; }
 // Browser API not yet in lib.dom (File System Observer) and globals of the TP_Mine scripts, which load lazily after the page.
 declare var FileSystemObserver: any;
 declare var MAPFEAT: any;
+declare var IMPCOMP: any;
 // generated index of the Teoria search (teoria/indice-ricerca.js), loaded on demand by ricerca.js
 declare var INDICE_RICERCA: string[][];
 declare var TPMINE: any;
