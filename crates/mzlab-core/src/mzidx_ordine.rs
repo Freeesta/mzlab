@@ -121,6 +121,86 @@ pub(crate) fn ordina<T: Num>(
     }
 }
 
+/// Orders every bucket of `round` (`ends`: where each bucket ends, in order; the first begins at `start`) as `ordina` does. The buckets are independent,
+/// so on a computer with several cores (not in the browser) groups of them are ordered at the same time; the result is the same.
+pub(crate) fn ordina_secchi<T: Num>(
+    round: &mut [Peak<T>],
+    start: usize,
+    ends: &[usize],
+    per_scansione: bool,
+) -> Result<()> {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let n = ends.last().map_or(0, |e| e - start);
+        let t = std::thread::available_parallelism()
+            .map_or(1, usize::from)
+            .min(8);
+        if t > 1 && n >= PARALLELO {
+            return in_parallelo(round, start, ends, per_scansione, t);
+        }
+    }
+    sequenziale(round, start, ends, per_scansione)
+}
+
+fn sequenziale<T: Num>(
+    round: &mut [Peak<T>],
+    start: usize,
+    ends: &[usize],
+    per_scansione: bool,
+) -> Result<()> {
+    let (mut tmp, mut a) = (Vec::new(), start);
+    for &z in ends {
+        ordina(&mut round[a..z], &mut tmp, per_scansione)?;
+        a = z;
+    }
+    Ok(())
+}
+
+/// Fewer peaks than this in a round are not worth the threads.
+#[cfg(not(target_arch = "wasm32"))]
+const PARALLELO: usize = 1 << 16;
+
+/// `t` threads, each with consecutive buckets holding about the same number of peaks.
+#[cfg(not(target_arch = "wasm32"))]
+fn in_parallelo<T: Num>(
+    round: &mut [Peak<T>],
+    start: usize,
+    ends: &[usize],
+    per_scansione: bool,
+    t: usize,
+) -> Result<()> {
+    let total = ends.last().map_or(0, |e| e - start);
+    let mut rest = &mut round[start..];
+    let (mut from, mut at) = (0, start);
+    let mut parts = Vec::new();
+    for i in 0..t {
+        let to = if i + 1 == t {
+            ends.len()
+        } else {
+            let goal = start + total * (i + 1) / t;
+            ends.partition_point(|&e| e < goal)
+                .max(from)
+                .min(ends.len())
+        };
+        let end = if to == from { at } else { ends[to - 1] };
+        let (head, tail) = std::mem::take(&mut rest).split_at_mut(end - at);
+        rest = tail;
+        // the ends of this group, relative to its own slice
+        let rel: Vec<usize> = ends[from..to].iter().map(|e| e - at).collect();
+        parts.push((head, rel));
+        (from, at) = (to, end);
+    }
+    std::thread::scope(|s| {
+        let hs: Vec<_> = parts
+            .into_iter()
+            .map(|(h, rel)| s.spawn(move || sequenziale(h, 0, &rel, per_scansione)))
+            .collect();
+        hs.into_iter()
+            .map(|h| h.join().unwrap_or_else(|_| Err(Error::memory_budget())))
+            .collect::<Result<()>>()
+    })
+}
+
 /// Bits that order like the value, NaN last, `-0.0` as `0.0` (as `by_mz`): the 32 of an `f32` m/z, the scan below them.
 #[inline(always)]
 fn key32<T: Num>(p: &Peak<T>) -> u64 {
@@ -188,6 +268,38 @@ mod tests {
             .unwrap();
             b.sort_by_key(|p| p.k);
             assert_eq!(a, b);
+        }
+    }
+
+    /// Ordering the buckets of a round on several threads gives what ordering them one after the other gives.
+    #[test]
+    fn buckets_in_parallel_are_the_same() {
+        let mut x = 99u64;
+        let mut next = move || {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            x
+        };
+        // 40 buckets of unequal size (one empty), 1-unit wide in m/z, enough peaks to use the threads
+        let (mut round, mut ends) = (Vec::new(), Vec::new());
+        for b in 0..40u64 {
+            let n = if b == 7 { 0 } else { 3000 + (next() % 9000) as usize };
+            for _ in 0..n {
+                let mz = 100.0 + b as f64 + (next() % 4096) as f64 / 4096.0;
+                round.push(Peak {
+                    mz,
+                    it: (next() % 1000) as f64,
+                    pos: (next() % 50) as u32,
+                });
+            }
+            ends.push(round.len());
+        }
+        for per_scansione in [false, true] {
+            let (mut a, mut b) = (round.clone(), round.clone());
+            ordina_secchi(&mut a, 0, &ends, per_scansione).unwrap();
+            sequenziale(&mut b, 0, &ends, per_scansione).unwrap();
+            assert!(a.iter().zip(&b).all(|(p, q)| p.mz == q.mz && p.it == q.it && p.pos == q.pos));
         }
     }
 }
