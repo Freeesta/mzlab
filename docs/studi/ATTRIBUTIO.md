@@ -28,7 +28,7 @@ Percorsi relativi a `src/attributio/`. «Porta» = riscritto in Rust con parità
 | `diagnostics/schymanski_export.py`, `publication_table.py`, `review/evidence.py::export_evidence` | esportazioni (prove, cartella di Schymanski, tabella per la pubblicazione) | Porta | AT-08 |
 | `quantify.py` (88), `gradient.py` (310) | quantificazione semplice, gradiente | Porta (priorità: Q6) | AT-08 |
 | `diagnostics/*` restanti (`identity_review`, `level1_review`, `lvl2a_mass_qc`, `rt_logp`, `rt_tolerance`, `dup_report`, `label_files`) | controlli e rapporti per il curatore | Porta solo ciò che il Banco mostra (AT-06, AT-07); il resto Fuori | AT-06, AT-07 |
-| `chem/registry.py`, `reglists/*`, `ecotox/*`, `chem/{pubchem,comptox,norman,zenodo,http,pubchemlite}.py` | costruzione di registri e liste regolatorie dalla rete, da PDF o con Java | Dati (istantanee in sola lettura, Q5) | RG-00..05 (§6) |
+| `chem/registry.py`, `reglists/*`, `ecotox/*`, `chem/{pubchem,comptox,norman,zenodo,http,pubchemlite}.py` | costruzione di registri e liste regolatorie dalla rete, da PDF o con Java | Porta (logica) + costruttore nativo + istantanee (Q5) | RG-00..05 (§6) |
 | `ms2_engine/*`, `plugins/*` (MetFrag, MS-Finder, …) | motore MS2 sperimentale (`use_ms2_engine = false` di serie), estensioni esterne | Fuori | — |
 | `provenance/*`, `qc.py`, `cli.py`, `plots.py`, `palette.py`, `tools/*`, `review/server.py`, `review/demo.py`, `review/update.py`, `review/progress.py`, `review/downloads.py`, `templates/` | provenienza dei file, riga di comando, grafici matplotlib, server locale, aggiornamento e scaricamento delle librerie | Fuori (in mzLab: taccuino, grafici con tabella dei dati, librerie di `mzlab-libs`) | — |
 
