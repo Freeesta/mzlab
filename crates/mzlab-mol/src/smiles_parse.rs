@@ -5,44 +5,6 @@ use crate::codec::MolError;
 use crate::elements::is_element;
 use std::collections::BTreeMap;
 
-/// Bond symbol as written; `Up`/`Down` are `/` and `\`, read from the first atom of the bond to the second.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum Sym {
-    None,
-    Single,
-    Double,
-    Triple,
-    Aromatic,
-    Up,
-    Down,
-}
-
-pub(crate) struct RawAtom {
-    pub el: String,
-    pub aromatic: bool,
-    pub bracket: bool,
-    pub iso: u16,
-    pub chg: i8,
-    pub h: u8,
-    /// `Some(true)` for `@@`, `Some(false)` for `@`.
-    pub chiral: Option<bool>,
-    /// Written after another atom of the same component (so that atom is its first neighbour).
-    pub has_parent: bool,
-}
-
-pub(crate) struct RawBond {
-    pub from: usize,
-    pub to: usize,
-    pub sym: Sym,
-}
-
-pub(crate) struct Raw {
-    pub atoms: Vec<RawAtom>,
-    pub bonds: Vec<RawBond>,
-    /// Per atom, the ids of its bonds in the order of the text: incoming bond, ring digits, then branches and the chain.
-    pub slots: Vec<Vec<usize>>,
-}
-
 impl Raw {
     /// The atom at the other end of bond `b` seen from `x`.
     pub fn other(&self, b: usize, x: usize) -> usize {
@@ -53,53 +15,6 @@ impl Raw {
             e.from
         }
     }
-}
-
-fn err<T>(msg: impl Into<String>) -> Result<T, MolError> {
-    Err(MolError::Smiles(msg.into()))
-}
-
-struct Parser {
-    s: Vec<char>,
-    i: usize,
-    raw: Raw,
-    prev: Option<usize>,
-    stack: Vec<Option<usize>>,
-    sym: Sym,
-    open: BTreeMap<u32, usize>,
-}
-
-/// Parses the SMILES part (no CXSMILES tail).
-pub(crate) fn parse(text: &str) -> Result<Raw, MolError> {
-    let mut p = Parser {
-        s: text.chars().collect(),
-        i: 0,
-        raw: Raw {
-            atoms: Vec::new(),
-            bonds: Vec::new(),
-            slots: Vec::new(),
-        },
-        prev: None,
-        stack: Vec::new(),
-        sym: Sym::None,
-        open: BTreeMap::new(),
-    };
-    while p.i < p.s.len() {
-        p.step()?;
-    }
-    if !p.stack.is_empty() {
-        return err("unclosed branch '('");
-    }
-    if let Some(n) = p.open.keys().next() {
-        return err(format!("ring closure {n} is never closed"));
-    }
-    if p.sym != Sym::None {
-        return err("bond symbol at the end of the string");
-    }
-    if p.raw.atoms.is_empty() {
-        return err("no atoms");
-    }
-    Ok(p.raw)
 }
 
 impl Parser {
@@ -367,6 +282,54 @@ impl Parser {
     }
 }
 
+/// Bond symbol as written; `Up`/`Down` are `/` and `\`, read from the first atom of the bond to the second.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Sym {
+    None,
+    Single,
+    Double,
+    Triple,
+    Aromatic,
+    Up,
+    Down,
+}
+
+pub(crate) struct RawAtom {
+    pub el: String,
+    pub aromatic: bool,
+    pub bracket: bool,
+    pub iso: u16,
+    pub chg: i8,
+    pub h: u8,
+    /// `Some(true)` for `@@`, `Some(false)` for `@`.
+    pub chiral: Option<bool>,
+    /// Written after another atom of the same component (so that atom is its first neighbour).
+    pub has_parent: bool,
+}
+
+pub(crate) struct RawBond {
+    pub from: usize,
+    pub to: usize,
+    pub sym: Sym,
+}
+
+pub(crate) struct Raw {
+    pub atoms: Vec<RawAtom>,
+    pub bonds: Vec<RawBond>,
+    /// Per atom, the ids of its bonds in the order of the text: incoming bond, ring digits, then branches and the chain.
+    pub slots: Vec<Vec<usize>>,
+}
+
+struct Parser {
+    s: Vec<char>,
+    i: usize,
+    raw: Raw,
+    prev: Option<usize>,
+    stack: Vec<Option<usize>>,
+    sym: Sym,
+    open: BTreeMap<u32, usize>,
+}
+
 fn atom(el: String, aromatic: bool, bracket: bool) -> RawAtom {
     RawAtom {
         el,
@@ -378,4 +341,41 @@ fn atom(el: String, aromatic: bool, bracket: bool) -> RawAtom {
         chiral: None,
         has_parent: false,
     }
+}
+
+/// Parses the SMILES part (no CXSMILES tail).
+pub(crate) fn parse(text: &str) -> Result<Raw, MolError> {
+    let mut p = Parser {
+        s: text.chars().collect(),
+        i: 0,
+        raw: Raw {
+            atoms: Vec::new(),
+            bonds: Vec::new(),
+            slots: Vec::new(),
+        },
+        prev: None,
+        stack: Vec::new(),
+        sym: Sym::None,
+        open: BTreeMap::new(),
+    };
+    while p.i < p.s.len() {
+        p.step()?;
+    }
+    if !p.stack.is_empty() {
+        return err("unclosed branch '('");
+    }
+    if let Some(n) = p.open.keys().next() {
+        return err(format!("ring closure {n} is never closed"));
+    }
+    if p.sym != Sym::None {
+        return err("bond symbol at the end of the string");
+    }
+    if p.raw.atoms.is_empty() {
+        return err("no atoms");
+    }
+    Ok(p.raw)
+}
+
+fn err<T>(msg: impl Into<String>) -> Result<T, MolError> {
+    Err(MolError::Smiles(msg.into()))
 }

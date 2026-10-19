@@ -6,23 +6,6 @@ use crate::codec::MolError;
 use crate::model::{GroupKind, Mol, Parity, Status, Stereo};
 use std::collections::BTreeMap;
 
-fn fail<T>(msg: impl Into<String>) -> Result<T, MolError> {
-    Err(MolError::Smiles(msg.into()))
-}
-
-struct Walk<'a> {
-    m: &'a Mol,
-    /// Neighbours with the order of the bond joining them, ascending.
-    adj: Vec<Vec<(u32, u8)>>,
-    parent: Vec<Option<usize>>,
-    pos: Vec<usize>,
-    children: Vec<Vec<usize>>,
-    closures: Vec<Vec<usize>>,
-    order: Vec<usize>,
-    /// For a directional bond `(lo, hi)`: whether `hi` sits above `lo`.
-    up: BTreeMap<(u32, u32), bool>,
-}
-
 impl Mol {
     /// SMILES (with a CXSMILES tail when there are stereo groups) and, for every written atom, its index in this record.
     pub fn to_smiles_with_order(&self) -> Result<(String, Vec<u32>), MolError> {
@@ -280,4 +263,21 @@ impl<'a> Walk<'a> {
             format!(" |{}|", parts.join(","))
         }
     }
+}
+
+struct Walk<'a> {
+    m: &'a Mol,
+    /// Neighbours with the order of the bond joining them, ascending.
+    adj: Vec<Vec<(u32, u8)>>,
+    parent: Vec<Option<usize>>,
+    pos: Vec<usize>,
+    children: Vec<Vec<usize>>,
+    closures: Vec<Vec<usize>>,
+    order: Vec<usize>,
+    /// For a directional bond `(lo, hi)`: whether `hi` sits above `lo`.
+    up: BTreeMap<(u32, u32), bool>,
+}
+
+fn fail<T>(msg: impl Into<String>) -> Result<T, MolError> {
+    Err(MolError::Smiles(msg.into()))
 }
