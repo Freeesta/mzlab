@@ -60,7 +60,7 @@ fn find(rule: &Rule, peaks: &[(f64, f64)], base: f64, precursor: f64, ppm: f64) 
     let mut best: Option<(usize, f64)> = None;
     for (i, &(mz, inten)) in peaks.iter().enumerate() {
         let d = (mz - target).abs();
-        if d <= tol && inten >= MIN_REL * base && best.map_or(true, |(_, bd)| d < bd) {
+        if d <= tol && inten >= MIN_REL * base && best.is_none_or(|(_, bd)| d < bd) {
             best = Some((i, d));
         }
     }
@@ -187,8 +187,9 @@ pub fn evaluate(
     polarity: Polarity,
     ppm: f64,
 ) -> Result<Report> {
-    if !(ppm > 0.0 && ppm <= 2000.0)
-        || !(precursor_mz > 0.0)
+    let ok = |x: f64, max: f64| x.is_finite() && x > 0.0 && x <= max;
+    if !ok(ppm, 2000.0)
+        || !ok(precursor_mz, f64::MAX)
         || peaks.iter().any(|p| !p.0.is_finite() || !p.1.is_finite())
     {
         return Err(Error::new("error.classi.input"));
