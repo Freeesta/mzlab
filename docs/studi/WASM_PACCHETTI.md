@@ -9,7 +9,7 @@ Studio per il Coordinatore e per Federico. Solo numeri e proposte: nessun codice
 - Ogni modulo separato costa circa 3 richieste in fila (manifest, glue JS, wasm): con RTT 130 ms sono ~0,4 s prima ancora dei byte. Fondere conviene quando il modulo è piccolo e quasi sempre usato insieme all'altro.
 - Fondere il gruppo HR (detect, proofs, mrm, finder, finder-edge, finder-msn) dà 469 KB gzip contro 913 KB: **-48,6 %**, perché il codice condiviso si paga una volta sola. Una corsa HR tipica passa da 586 KB a 469 KB e da 9 a 3 richieste.
 - I tetti stretti dei moduli admin (chem 0,9 %, export 1,0 %, finder-lr 3,2 %, attributio-rev 3,1 %) e di alcuni lettori (sciex 246 byte, andi 2 KB) causano cicli di CI inutili: nessuno studente ci guadagna.
-- Proposta: tetti in **un solo file**, regola «misura x 1,10» alzabile nella stessa PR con una riga di nota; non alzabile solo il motore.
+- Proposta: tetti in **un solo file**, regola «misura x 1,10» alzabile nella stessa PR con una riga di nota; non alzabili motore, chem e finder.
 
 ## 1. Inventario
 
@@ -96,7 +96,7 @@ Resta vero a favore della divisione: (a) il pubblico (lo studente non scarica co
 | table, import | fondere nel gruppo HR se si tollerano +230 KB grezzi; altrimenti restano | sono piccoli e usati con Tabui; da misurare prima |
 | untargeted | resta | marginale 92 KB gzip, uso raro |
 | finder-lr | resta | modalità diversa, 325 KB gzip |
-| chem | resta, ma senza tetto proprio | solo admin, margine 5 KB: il tetto non protegge nessuno |
+| chem | resta, tetto 569 344 non alzabile | margine 5 KB: se serve spazio si alleggerisce il codice |
 | attributio, rev, export | **fondere in uno** dopo aver tolto l'esclusività `cfg` | -43 % gzip stimato; gli ultimi 2 hanno margini di 29 KB e 6 KB |
 | 8 lettori | restano per famiglia | un utente usa 1 famiglia; ma i tetti vanno allargati (sciex 246 byte, andi 2 KB) |
 
@@ -108,7 +108,7 @@ Tetti troppo larghi (512 000 contro 175-227 KB gzip): librerie, finder-edge, imp
 2. **Quando dividere.** Si divide solo se gzip(X) > quota d'uso insieme all'ospite x ~300 KB. Sotto ~150 KB gzip non si divide mai. Le tabelle di dati sono file, non pacchetti.
 3. **Dove stanno i tetti.** In un solo file (es. `tools/wasm_tetti.txt`) letto da script, workflow e test; oggi sono in 6+ posti.
 4. **Come si alza.** Tetto = misura x 1,10 arrotondato a 4 KiB, deciso alla nascita. Chi lo supera lo alza nella stessa PR fino a misura x 1,10 e aggiunge una riga di nota nel file d'area (misura, tetto, motivo). Decide il Coordinatore solo oltre +25 % in una PR o se si tocca il motore.
-5. **Non alzabile**: solo il motore. Per chem Federico deve scegliere: alzare con la regola oppure toglierlo dal tetto per modulo.
+5. **Non alzabili** (decisione del Coordinatore): motore (1 703 936), chem (569 344) e finder (512 000). Se chem ha bisogno di più spazio si alleggerisce il codice, non si alza il tetto.
 
 ## 6. Cosa cambia se si fonde (non fatto)
 
