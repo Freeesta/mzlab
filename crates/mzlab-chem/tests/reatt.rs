@@ -120,3 +120,36 @@ fn hydrogen_bond_geometry() {
         .collect();
     assert!(mzlab_chem::mol3d::hbonds(&m, &far).is_empty());
 }
+
+#[test]
+fn boltzmann_average_writes_weights_and_keeps_default_off() {
+    let smiles = "COc1ccc(CCNCC(O)COc2ccccc2)cc1";
+    let off: serde_json::Value =
+        serde_json::from_str(&reactivity_json(smiles, "").unwrap()).unwrap();
+    assert!(off["conformers"].get("weights").is_none());
+    let on: serde_json::Value =
+        serde_json::from_str(&reactivity_json(smiles, "{\"average\":\"boltzmann\"}").unwrap())
+            .unwrap();
+    let w: Vec<f64> = on["conformers"]["weights"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_f64().unwrap())
+        .collect();
+    assert_eq!(w.len(), on["conformers"]["n"].as_u64().unwrap() as usize);
+    assert!((w.iter().sum::<f64>() - 1.0).abs() < 1e-3);
+    assert!(w.windows(2).all(|p| p[0] >= p[1]), "lowest energy first");
+    let sum_f: f64 = on["atoms"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|a| a["f_minus"].as_f64().unwrap())
+        .sum();
+    assert!((sum_f - 1.0).abs() < 1e-2, "{sum_f}");
+    assert!(reactivity_json(smiles, "{\"average\":\"x\"}").is_err());
+    let one: serde_json::Value = serde_json::from_str(
+        &reactivity_json("CCO", "{\"average\":\"boltzmann\",\"conformers\":1}").unwrap(),
+    )
+    .unwrap();
+    assert!(one["conformers"].get("weights").is_none());
+}

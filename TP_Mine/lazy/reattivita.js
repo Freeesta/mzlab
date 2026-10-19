@@ -9,7 +9,7 @@
   const esc = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"]/g, c => /** @type {any} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const admin = () => typeof G.uipAdminOn === "function" && G.uipAdminOn();
   /** @typedef {{ i: number, el: string, heavy_index: number|null, x: number, y: number, z: number, q: number|null, f_plus: number, f_zero: number|null, f_minus: number, dual: number }} RAtom */
-  /** @typedef {{ format: string, version: number, engine?: string, method?: string, solvent?: string, smiles: string, atoms: RAtom[], bonds?: {a:number,b:number,order?:number}[], hbonds?: {donor_h:number,acceptor:number}[], global?: Record<string, number|null>, conformers?: {n?:number, chosen?:number, f_minus_spread?:number|null}, scc?: {converged?: boolean|boolean[], iterations?: number|number[]}, protomer?: {ph: number, smiles: string, charge: number, changes: {group: string, heavy_index: number, action: string, pka: number}[], note?: string}, notes?: string[], cite?: any[], ch_sites?: {class:string, heavy_index:number, n_h:number, f_minus:number}[] }} Reatt */
+  /** @typedef {{ format: string, version: number, engine?: string, method?: string, solvent?: string, smiles: string, atoms: RAtom[], bonds?: {a:number,b:number,order?:number}[], hbonds?: {donor_h:number,acceptor:number}[], global?: Record<string, number|null>, conformers?: {n?:number, chosen?:number, f_minus_spread?:number|null, weights?:number[]}, scc?: {converged?: boolean|boolean[], iterations?: number|number[]}, protomer?: {ph: number, smiles: string, charge: number, changes: {group: string, heavy_index: number, action: string, pka: number}[], note?: string}, notes?: string[], cite?: any[], ch_sites?: {class:string, heavy_index:number, n_h:number, f_minus:number}[] }} Reatt */
 
   const CARDS = /** @type {{ id: string, label: string, key: keyof RAtom }[]} */ ([
     { id: "fminus", label: "f(−)", key: "f_minus" }, { id: "fzero", label: "f(0)", key: "f_zero" }, { id: "fplus", label: "f(+)", key: "f_plus" }]);
@@ -131,6 +131,7 @@
     const ev = (/** @type {string} */ k, /** @type {string} */ l) => g[k] == null ? "" : row(l, num(g[k], 3) + " eV");
     return `<table class="tpr-t"><tbody>${row("Method", r.method)}${row("Solvent", r.solvent && r.solvent !== "none" ? r.solvent.charAt(0).toUpperCase() + r.solvent.slice(1) : "None")}${row("Engine", r.engine)}${row("SMILES", r.smiles)}${row("Form", form)}${row("Total charge", charge)}${row("Protonation changes", groups)}${row("Form note", p && p.note)}${row("Atoms", r.atoms.length)}`
       + `${row("Conformers", c.n !== undefined ? `${c.n}${c.chosen !== undefined ? ", chosen " + c.chosen : ""}${c.f_minus_spread != null ? ", spread of f(−) " + num(c.f_minus_spread, 3) : ""}` : "")}`
+      + `${row("Boltzmann weights", Array.isArray(c.weights) ? c.weights.map((/** @type {number} */ w) => num(w, 3)).join(" / ") : "")}`
       + `${ev("homo_ev", "HOMO")}${ev("lumo_ev", "LUMO")}${ev("gap_ev", "HOMO–LUMO gap")}${ev("ip_ev", "Ionisation potential")}${ev("ea_ev", "Electron affinity")}${ev("mu_ev", "Chemical potential μ")}${ev("eta_ev", "Hardness η")}${ev("omega_ev", "Electrophilicity ω")}`
       + `${row("SCC converged", conv)}${row("SCC iterations", Array.isArray(s.iterations) ? s.iterations.join(" / ") : s.iterations)}</tbody></table>`;
   }

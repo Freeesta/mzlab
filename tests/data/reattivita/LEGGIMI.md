@@ -7,3 +7,4 @@ Molecola → sito sperimentale, per misurare il motore di `crates/mzlab-chem` (p
 - `baseline`: conteggi top-1/3/5 per `reazione/tier` misurati col motore attuale; la prova li confronta uno a uno. Se il motore cambia di proposito: `cargo test --release -p mzlab-chem --test validazione -- --nocapture`, riga `BASELINE`, e aggiorna il campo.
 - `baseline_ph7`: gli stessi conteggi con `{"protomer":"ph7"}` (forma a pH 7, `crates/mzlab-chem/src/protomer.rs`); la prova `experimental_sites_ranking_ph7` li confronta uno a uno.
 - Escluse (sito non ricavabile): paracetamolo di `tp_noti` (nome del prodotto incoerente), trasformazioni senza posizione (timololo, atenololo, terbutilazina), triclosan «C6» (descrizione incoerente), cloro (nessun dato di sito nel repository).
+- `baseline_boltzmann`: gli stessi conteggi con `{"average":"boltzmann"}` (media pesata sui conformeri); la prova `experimental_sites_ranking_boltzmann` li confronta uno a uno.

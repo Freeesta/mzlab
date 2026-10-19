@@ -17,8 +17,10 @@ pub const ENGINE: &str = "mzlab-chem/1";
 pub const PUBLISH_GFN2: bool = true;
 /// Whether the pH 7 form is the default (`docs/agenti/reattivita.md`, section «Protomero a pH 7»).
 pub const PROTOMER_DEFAULT: bool = false;
+/// Whether Fukui values are the Boltzmann average over the conformers by default (`docs/agenti/reattivita.md`, «Conformeri pesati»).
+pub const BOLTZMANN_DEFAULT: bool = false;
 /// Conformers on which f(−) is also computed, to give its spread.
-const SPREAD_CONFORMERS: usize = 3;
+pub(crate) const SPREAD_CONFORMERS: usize = 3;
 
 /// Options of `reactivity_json` (JSON object, every field optional).
 pub struct Opts {
@@ -28,6 +30,8 @@ pub struct Opts {
     pub seed: u64,
     /// `"protomer":"ph7"` computes the most probable form at pH 7 (`protomer.rs`) instead of the SMILES as written.
     pub ph7: bool,
+    /// `"average":"boltzmann"` averages charges and Fukui values over the conformers with Boltzmann weights.
+    pub boltzmann: bool,
 }
 
 impl Opts {
@@ -37,6 +41,7 @@ impl Opts {
             conformers: DEFAULT_CONFORMERS,
             seed: 42,
             ph7: PROTOMER_DEFAULT,
+            boltzmann: BOLTZMANN_DEFAULT,
         };
         if text.trim().is_empty() {
             return Ok(o);
@@ -60,6 +65,13 @@ impl Opts {
                 _ => return Err(bad("protomer")),
             };
         }
+        if let Some(s) = v.get("average").and_then(|s| s.str()) {
+            o.boltzmann = match s {
+                "boltzmann" => true,
+                "lowest" => false,
+                _ => return Err(bad("average")),
+            };
+        }
         if let Some(n) = v.get("seed").and_then(|n| n.f64()) {
             o.seed = n.max(0.0) as u64;
         }
@@ -76,6 +88,8 @@ pub struct Result3 {
     pub converged: [bool; 3],
     pub iterations: [usize; 3],
     pub spread: Option<f64>,
+    /// Boltzmann weight of every conformer when the values are averaged (0 for one that did not converge).
+    pub weights: Option<Vec<f64>>,
 }
 
 /// Fukui values, HOMO and LUMO (eV), converged and iterations of N, N+1 and N−1.
@@ -129,12 +143,16 @@ fn spread(m: &Mol3d, confs: &[Conf], f0: &[f64], water: bool) -> Option<f64> {
     )
 }
 
-/// The calculation behind `reatt/1` on the lowest-energy conformer.
-pub fn compute(m: &Mol3d, confs: &[Conf], water: bool) -> Result<Result3> {
+/// The calculation behind `reatt/1`: the lowest-energy conformer, or the Boltzmann average over all of them.
+pub fn compute(m: &Mol3d, confs: &[Conf], water: bool, average: bool) -> Result<Result3> {
     let xyz = &confs[0].xyz;
     if PUBLISH_GFN2 {
-        let (fukui, homo_ev, lumo_ev, converged, iterations) = gfn2(m, xyz, water)?;
-        if converged.iter().all(|&c| c) {
+        let first = gfn2(m, xyz, water)?;
+        if first.3.iter().all(|&c| c) {
+            if average && confs.len() > 1 {
+                return Ok(crate::average::averaged(m, confs, water, first));
+            }
+            let (fukui, homo_ev, lumo_ev, converged, iterations) = first;
             let spread = spread(m, confs, &fukui.f_minus, water);
             return Ok(Result3 {
                 method: "GFN2-xTB",
@@ -144,6 +162,7 @@ pub fn compute(m: &Mol3d, confs: &[Conf], water: bool) -> Result<Result3> {
                 converged,
                 iterations,
                 spread,
+                weights: None,
             });
         }
     }
@@ -157,6 +176,7 @@ pub fn compute(m: &Mol3d, confs: &[Conf], water: bool) -> Result<Result3> {
         converged: [true, false, false],
         iterations: [1, 0, 0],
         spread: None,
+        weights: None,
     })
 }
 
@@ -169,7 +189,7 @@ pub fn reactivity_json(smiles: &str, opts_json: &str) -> Result<String> {
     let mol = prot.as_ref().map_or(written, |p| p.mol.clone());
     let mut m = Mol3d::from_mol(&mol)?;
     let confs = embed(&m, o.seed, o.conformers)?;
-    let r = compute(&m, &confs, o.water)?;
+    let r = compute(&m, &confs, o.water, o.boltzmann)?;
     m.xyz = confs[0].xyz.clone();
     let sites = ch_sites(&mol, &m, &r.fukui.f_minus);
     Ok(write(
@@ -219,7 +239,15 @@ fn write(
     o.raw(&format!(
         ",\"conformers\":{{\"n\":{nconf},\"chosen\":0,\"f_minus_spread\":"
     ));
-    o.opt(r.spread.map(|s| round(s, 4))).raw("}");
+    o.opt(r.spread.map(|s| round(s, 4)));
+    if let Some(w) = &r.weights {
+        o.raw(",\"weights\":[");
+        for (k, v) in w.iter().enumerate() {
+            o.raw(if k > 0 { "," } else { "" }).num(round(*v, 4));
+        }
+        o.raw("]");
+    }
+    o.raw("}");
     let b = |v: bool| if v { "true" } else { "false" };
     let (c, it) = (r.converged, r.iterations);
     o.raw(&format!(
@@ -340,10 +368,12 @@ fn write_atoms(o: &mut Out, m: &Mol3d, f: &Fukui) {
 }
 
 fn notes(r: &Result3, water: bool, prot: Option<&Protomer>) -> Vec<String> {
-    let mut n = vec![
+    let mut n = vec![if r.weights.is_some() {
+        "ETKDG geometry, no force-field refinement; charges and Fukui values are the Boltzmann average over the conformers (weights from the force-field single-point energy of each geometry, 298 K); the lowest-energy conformer is shown."
+    } else {
         "ETKDG geometry, no force-field refinement; the lowest-energy conformer is used."
-            .to_string(),
-    ];
+    }
+    .to_string()];
     if let Some(p) = prot {
         n.push(protomer_note(p).to_string());
     }

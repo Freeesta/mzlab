@@ -7,8 +7,8 @@
   "use strict";
   const G = /** @type {any} */ (window);
   const admin = () => typeof G.uipAdminOn === "function" && G.uipAdminOn();
-  const DEFAULTS = { solvent: "water", conformers: 4, protomer: "none" };
-  /** @type {{ host: HTMLElement|null, ctl: HTMLElement|null, smiles: string, gen: number, worker: Worker|null, workerUrl: string, tpsBusy: boolean, ready: boolean, timer: any, phase: string, opts: { solvent: string, conformers: number, protomer: string }, cache: Map<string, any>, version: string, native: Promise<any>|null, pool: any, calls: Map<number, { ok: (r: any) => void, ko: (e: any) => void }>, seq: number, man: any, canon: Map<string, string> }} */
+  const DEFAULTS = { solvent: "water", conformers: 4, protomer: "none", average: "lowest" };
+  /** @type {{ host: HTMLElement|null, ctl: HTMLElement|null, smiles: string, gen: number, worker: Worker|null, workerUrl: string, tpsBusy: boolean, ready: boolean, timer: any, phase: string, opts: { solvent: string, conformers: number, protomer: string, average: string }, cache: Map<string, any>, version: string, native: Promise<any>|null, pool: any, calls: Map<number, { ok: (r: any) => void, ko: (e: any) => void }>, seq: number, man: any, canon: Map<string, string> }} */
   const st = { host: null, ctl: null, smiles: "", gen: 0, worker: null, workerUrl: "", tpsBusy: false, ready: false, timer: null, phase: "idle", opts: { ...DEFAULTS }, cache: new Map(), version: "", native: null, pool: null, calls: new Map(), seq: 0, man: null, canon: new Map() };
 
   const CSS = `.tpra{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:6px 0;font-size:12px}.tpra label{display:inline-flex;align-items:center;gap:4px}
@@ -30,11 +30,12 @@
     st.ctl.innerHTML = `<div class="tpra" role="group" aria-label="Reactivity calculation"><span class="tpra-st" role="status"></span>`
       + `<label>Solvent <select class="tpra-sol" aria-label="Solvent"><option value="water">Water</option><option value="none">None</option></select></label>`
       + `<label>Form <select class="tpra-form" aria-label="Protonation form"><option value="none">As drawn</option><option value="ph7">Most probable at pH 7</option></select></label>`
+      + `<label>Average <select class="tpra-avg" aria-label="Conformer averaging"><option value="lowest">Lowest conformer</option><option value="boltzmann">Boltzmann average</option></select></label>`
       + `<label>Conformers <input class="tpra-conf" type="number" min="1" max="16" step="1" value="${DEFAULTS.conformers}" aria-label="Conformers"></label>`
       + `<button type="button" class="tpra-re">Recompute</button><button type="button" class="tpra-retry" hidden>Retry</button></div>`;
-    const sol = /** @type {HTMLSelectElement} */ (st.ctl.querySelector(".tpra-sol")), conf = /** @type {HTMLInputElement} */ (st.ctl.querySelector(".tpra-conf")), form = /** @type {HTMLSelectElement} */ (st.ctl.querySelector(".tpra-form"));
-    const read = () => { st.opts = { solvent: sol.value === "none" ? "none" : "water", conformers: Math.min(16, Math.max(1, Math.round(+conf.value) || DEFAULTS.conformers)), protomer: form.value === "ph7" ? "ph7" : "none" }; };
-    sol.addEventListener("change", read); form.addEventListener("change", read); conf.addEventListener("change", () => { read(); conf.value = String(st.opts.conformers); });
+    const sol = /** @type {HTMLSelectElement} */ (st.ctl.querySelector(".tpra-sol")), conf = /** @type {HTMLInputElement} */ (st.ctl.querySelector(".tpra-conf")), form = /** @type {HTMLSelectElement} */ (st.ctl.querySelector(".tpra-form")), avg = /** @type {HTMLSelectElement} */ (st.ctl.querySelector(".tpra-avg"));
+    const read = () => { st.opts = { solvent: sol.value === "none" ? "none" : "water", conformers: Math.min(16, Math.max(1, Math.round(+conf.value) || DEFAULTS.conformers)), protomer: form.value === "ph7" ? "ph7" : "none", average: avg.value === "boltzmann" ? "boltzmann" : "lowest" }; };
+    sol.addEventListener("change", read); form.addEventListener("change", read); avg.addEventListener("change", read); conf.addEventListener("change", () => { read(); conf.value = String(st.opts.conformers); });
     const go = () => { read(); recompute(); };
     /** @type {HTMLElement} */ (st.ctl.querySelector(".tpra-re")).addEventListener("click", go);
     /** @type {HTMLElement} */ (st.ctl.querySelector(".tpra-retry")).addEventListener("click", go);
@@ -98,12 +99,12 @@
     const gen = ++st.gen, host = st.host, smiles = st.smiles, opts = { ...st.opts };
     setPhase("computing"); status("computing…"); G.TPREATT.state(host, "computing");
     try {
-      const canon = await canonical(smiles), key = `${canon}|${st.version}|${opts.solvent}|${opts.conformers}|${opts.protomer}`, hit = st.version ? st.cache.get(key) : null;
+      const canon = await canonical(smiles), key = `${canon}|${st.version}|${opts.solvent}|${opts.conformers}|${opts.protomer}|${opts.average}`, hit = st.version ? st.cache.get(key) : null;
       if (gen !== st.gen) return;
       if (hit) { G.TPREATT.mount(host, hit); setPhase("done"); status("done (kept from this session)"); return; }
       const res = await (G.MZLAB_DESKTOP ? viaNative : viaWorker)(smiles, JSON.stringify(opts));
       if (gen !== st.gen) return;
-      const r = JSON.parse(res.json); st.version = res.version; st.cache.set(`${canon}|${st.version}|${opts.solvent}|${opts.conformers}|${opts.protomer}`, r);
+      const r = JSON.parse(res.json); st.version = res.version; st.cache.set(`${canon}|${st.version}|${opts.solvent}|${opts.conformers}|${opts.protomer}|${opts.average}`, r);
       G.TPREATT.mount(host, r); setPhase("done"); status(`done in ${(res.ms / 1000).toFixed(1)} s`);
     } catch (e) {
       if (gen !== st.gen || (e && /** @type {any} */ (e).error_key === "cancelled")) return;

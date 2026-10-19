@@ -172,6 +172,16 @@ fn experimental_sites_ranking_ph7() {
     );
 }
 
+/// The same measure with the Boltzmann average over the 4 conformers (task C35): locked in `baseline_boltzmann`.
+#[test]
+fn experimental_sites_ranking_boltzmann() {
+    assert_eq!(
+        measure("{\"protomer\":\"none\",\"average\":\"boltzmann\"}"),
+        data()["baseline_boltzmann"],
+        "the counts with the Boltzmann average differ from baseline_boltzmann in validazione.json"
+    );
+}
+
 #[test]
 fn dataset_is_well_formed() {
     let d = data();
