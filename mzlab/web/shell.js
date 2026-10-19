@@ -170,7 +170,7 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 // full screen of the whole app (Fullscreen API; the button stays hidden where the browser has none, e.g. iPhone)
 // «Report a bug»: the dialog is loaded on the first click
 // the button belongs to the administrator mode (5 clicks on the logo): it shows when that mode turns on
-{const b=$("#bug-btn");if(b){const adm=()=>{try{return localStorage.getItem("mzlab.admin")==="1"||localStorage.getItem("mzlab.teoria.esteso")==="1"}catch(e){return false}};b.hidden=!adm();document.addEventListener("mzlab:admin",()=>{b.hidden=!adm()});
+{const b=$("#bug-btn");if(b){
   b.onclick=()=>carica("m:bug-report.js").then(()=>(/** @type {any} */(window)).BUGREP.apri()).catch(console.error)}}
 (()=>{const b=$("#fs-btn"),de=document.documentElement;if(!b)return;if(!de.requestFullscreen){b.hidden=true;return}
   const sync=()=>{const on=!!document.fullscreenElement,k=on?"header.fullscreen.exit":"header.fullscreen";b.setAttribute("aria-pressed",on);b.querySelector(".fs-in").hidden=on;b.querySelector(".fs-out").hidden=!on;b.title=I18N.t(k);b.setAttribute("aria-label",b.title);b.dataset.i18nTitle=b.dataset.i18nAriaLabel=k};
