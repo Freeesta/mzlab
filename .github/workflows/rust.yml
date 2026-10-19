@@ -39,6 +39,109 @@ jobs:
             echo "rust=false" >> "$GITHUB_OUTPUT"
           fi
 
+  # The three Rust jobs run in parallel (own caches, own target/): lint (fmt, clippy), wasm (builds, guards), rust (native tests, the slowest).
+  rust-lint:
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      - id: rcache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: rust-${{ runner.os }}-lint-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          # the kind-specific caches first, then any older cache (the one of the single job) so the first run is not cold
+          restore-keys: |
+            rust-${{ runner.os }}-lint-
+            rust-${{ runner.os }}-
+      - name: fmt and clippy against the base (tools/controlla_rust.py, tools/clippy_base.json)
+        run: python3 tools/controlla_rust.py
+      # saved last and also after a red step (main only)
+      - uses: actions/cache/save@v4
+        if: always() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
+
+  rust-wasm:
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      - id: rcache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: rust-${{ runner.os }}-wasm-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          # the kind-specific caches first, then any older cache (the one of the single job) so the first run is not cold
+          restore-keys: |
+            rust-${{ runner.os }}-wasm-
+            rust-${{ runner.os }}-
+      - name: numpy (the guards write the synthetic files with tools/golden.py)
+        run: python -m pip install numpy
+      - name: WASM build (release)
+        run: cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
+      - name: The libraries crates and mzlab-feat build for WASM
+        run: |
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib -p mzlab-lib-wasm -p mzlab-feat -p mzlab-feat-grafo-wasm
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features detect
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features proofs
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features mrm
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-table-wasm
+      # installed before the cache is saved: ~/.cargo/bin/wasm-bindgen is in the cached paths, and installing it after the save recompiled it on every run (~90 s)
+      - name: wasm-bindgen CLI (the version of Cargo.lock)
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
+      - name: No native dependencies in the WASM graph
+        run: |
+          for p in mzlab-wasm mzlab-lib mzlab-lib-wasm mzlab-feat mzlab-feat-wasm mzlab-feat-table-wasm mzlab-feat-grafo-wasm; do
+            tree=$(cargo tree --locked -e no-dev --target wasm32-unknown-unknown -p $p)
+            if echo "$tree" | grep -E '(^|[^A-Za-z0-9_-])(memmap2|zstd-sys|libz-sys|cc) v'; then
+              echo "::error::forbidden dependency in the WASM graph of $p"; exit 1
+            fi
+          done
+      - name: Guards of memory and same bytes under a reduced budget (docs/agenti/memoria.md)
+        run: |
+          python -m pip install pytest
+          python -m pytest -q tests/test_guardie_memoria.py tests/test_feat_wasm.py
+      # saved last and also after a red step (main only)
+      - uses: actions/cache/save@v4
+        if: always() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
+
   rust:
     needs: changes
     if: needs.changes.outputs.rust == 'true'
@@ -59,13 +162,15 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
-          restore-keys: rust-${{ runner.os }}-
+          key: rust-${{ runner.os }}-test-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          # the kind-specific caches first, then any older cache (the one of the single job) so the first run is not cold
+          restore-keys: |
+            rust-${{ runner.os }}-test-
+            rust-${{ runner.os }}-
       - name: numpy (the parity tests write the synthetic files with tools/golden.py)
         run: python -m pip install numpy
       # The native test binaries are optimised (opt-level 3) but without the LTO and the single codegen unit of the .wasm profile:
-      # these two settings only make the .wasm small, and on ~150 test binaries they cost ~10 minutes of linking. Only this step,
-      # so the .wasm built below (and by the guards) are the ones of Cargo.toml [profile.release], byte for byte.
+      # these two settings only make the .wasm small, and on ~150 test binaries they cost ~10 minutes of linking.
       - name: Tests (parity with tests/golden/)
         env:
           MZLAB_GOLDEN_STRICT: "1"
@@ -74,23 +179,9 @@ jobs:
           CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
           CARGO_PROFILE_RELEASE_OPT_LEVEL: "3"
         run: cargo test --locked --release
-      - name: WASM build (release)
-        run: cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
-      - name: The libraries crates and mzlab-feat build for WASM
-        run: |
-          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib -p mzlab-lib-wasm -p mzlab-feat -p mzlab-feat-grafo-wasm
-          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features detect
-          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features proofs
-          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features mrm
-          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-table-wasm
-      # installed before the cache is saved: ~/.cargo/bin/wasm-bindgen is in the cached paths, and installing it after the save (as the guards step did) recompiled it on every run (~90 s)
-      - name: wasm-bindgen CLI (the version of Cargo.lock)
-        run: |
-          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
-          wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
-      # saved right after the builds, so a red guard or clippy does not lose the cache (main only)
+      # saved last and also after a red step (main only)
       - uses: actions/cache/save@v4
-        if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        if: always() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
         with:
           path: |
             ~/.cargo/registry
@@ -98,20 +189,6 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             target
           key: ${{ steps.rcache.outputs.cache-primary-key }}
-      - name: No native dependencies in the WASM graph
-        run: |
-          for p in mzlab-wasm mzlab-lib mzlab-lib-wasm mzlab-feat mzlab-feat-wasm mzlab-feat-table-wasm mzlab-feat-grafo-wasm; do
-            tree=$(cargo tree --locked -e no-dev --target wasm32-unknown-unknown -p $p)
-            if echo "$tree" | grep -E '(^|[^A-Za-z0-9_-])(memmap2|zstd-sys|libz-sys|cc) v'; then
-              echo "::error::forbidden dependency in the WASM graph of $p"; exit 1
-            fi
-          done
-      - name: Guards of memory and same bytes under a reduced budget (docs/agenti/memoria.md)
-        run: |
-          python -m pip install pytest
-          python -m pytest -q tests/test_guardie_memoria.py tests/test_feat_wasm.py
-      - name: fmt and clippy against the base (tools/controlla_rust.py, tools/clippy_base.json)
-        run: python3 tools/controlla_rust.py
 
   # Licences and sources of the dependencies (deny.toml). The advisories (RustSec) change every day: they are checked by .github/workflows/advisories.yml, not here.
   deny:
@@ -125,16 +202,16 @@ jobs:
         with:
           command: check licenses sources
 
-  # The one name for the protection of main: green when rust and deny passed, or were skipped because no Rust path changed.
+  # The one name for the protection of main: green when rust, rust-wasm, rust-lint and deny passed, or were skipped because no Rust path changed.
   rust-ok:
     if: always()
-    needs: [changes, rust, deny]
+    needs: [changes, rust, rust-wasm, rust-lint, deny]
     runs-on: ubuntu-latest
     steps:
-      - name: rust and deny passed or were skipped
+      - name: rust, rust-wasm, rust-lint and deny passed or were skipped
         env:
-          RESULTS: ${{ needs.changes.result }} ${{ needs.rust.result }} ${{ needs.deny.result }}
+          RESULTS: ${{ needs.changes.result }} ${{ needs.rust.result }} ${{ needs.rust-wasm.result }} ${{ needs.rust-lint.result }} ${{ needs.deny.result }}
         run: |
-          echo "changes rust deny: $RESULTS"
+          echo "changes rust rust-wasm rust-lint deny: $RESULTS"
           case "$RESULTS" in *failure*|*cancelled*) exit 1;; esac
           [ "${{ needs.changes.result }}" = "success" ]

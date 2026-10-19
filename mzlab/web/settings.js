@@ -116,7 +116,7 @@ function uipOpen(btn) {
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-hc"> <span>${I18N.t("settings.hc.label")}</span></label>
     <div class="row">${I18N.t("settings.pal.label")} <select id="uip-pal" title="${I18N.t("settings.pal.title")}">${["file", ...Object.keys(PALS).filter(k => k !== "file")].map(k => `<option value="${k}">${I18N.t(`settings.pal.${k}`)}</option>`).join("")}</select></div>
     </details>
-    <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>${I18N.t("settings.merge")}</span></label>
+    ${(typeof E === "undefined" || !E.files || !E.files.length || E.files.some(f => f.spectrum_mode !== "profile" || (window.HR && HR.isHr(f)))) ? `<label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>${I18N.t("settings.merge")}</span></label>` : ""}
     <label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.beside.title")}"><input type="checkbox" id="uip-beside" ${UIP.beside ? "checked" : ""}> <span>${I18N.t("settings.beside")}</span></label>
     ${(typeof E !== "undefined" && E.files && E.files.some(f => window.HR && HR.isHr(f))) ? `
     <div class="row">${I18N.t("settings.libs.label")} <button id="uip-lib" title="${I18N.t("settings.libs.title")}">${I18N.t("settings.libs.button")}</button></div>` : ""}
@@ -156,7 +156,7 @@ function uipOpen(btn) {
   }
   d.querySelector("#uip-th").value = UIP.theme; d.querySelector("#uip-pal").value = UIP.pal;
   const r = btn.getBoundingClientRect(); d.style.top = r.bottom + 6 + "px"; d.style.left = Math.max(8, Math.min(r.left, innerWidth - d.offsetWidth - 8)) + "px";
-  d.querySelector("#uip-merge").onchange = e => {            // spectra are asked again to the server with / without the merge
+  const mg = d.querySelector("#uip-merge"); if (mg) mg.onchange = e => {            // spectra are asked again to the server with / without the merge
     UIP.merge = e.target.checked; uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof redrawAll === "function") redrawAll();
   };

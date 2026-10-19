@@ -24,8 +24,8 @@ struct Pred {
     ch_groups: Vec<Vec<usize>>,
 }
 
-fn predict(smiles: &str) -> Pred {
-    let json: Value = serde_json::from_str(&reactivity_json(smiles, "").unwrap()).unwrap();
+fn predict(smiles: &str, opts: &str) -> Pred {
+    let json: Value = serde_json::from_str(&reactivity_json(smiles, opts).unwrap()).unwrap();
     assert_eq!(json["method"], "GFN2-xTB", "{smiles}");
     assert!(
         json["scc"]["converged"]
@@ -95,13 +95,13 @@ fn add(hits: &mut [usize; 3], r: Option<usize>) {
     }
 }
 
-#[test]
-fn experimental_sites_ranking() {
+/// Counts for every reaction/tier with the engine options `opts`.
+fn measure(opts: &str) -> Value {
     let d = data();
     let mols = d["molecules"].as_object().unwrap();
     let preds: BTreeMap<&str, Pred> = mols
         .iter()
-        .map(|(k, v)| (k.as_str(), predict(v.as_str().unwrap())))
+        .map(|(k, v)| (k.as_str(), predict(v.as_str().unwrap(), opts)))
         .collect();
     let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
     for row in d["rows"].as_array().unwrap() {
@@ -150,10 +150,25 @@ fn experimental_sites_ranking() {
         );
     }
     println!("BASELINE {}", serde_json::to_string(&out).unwrap());
+    serde_json::to_value(&out).unwrap()
+}
+
+#[test]
+fn experimental_sites_ranking() {
     assert_eq!(
-        serde_json::to_value(&out).unwrap(),
-        d["baseline"],
+        measure("{\"protomer\":\"none\"}"),
+        data()["baseline"],
         "the measured counts differ from the baseline in validazione.json: update it if the engine changed on purpose"
+    );
+}
+
+/// The same measure on the form at pH 7 (task C34): locked in `baseline_ph7`.
+#[test]
+fn experimental_sites_ranking_ph7() {
+    assert_eq!(
+        measure("{\"protomer\":\"ph7\"}"),
+        data()["baseline_ph7"],
+        "the counts at pH 7 differ from baseline_ph7 in validazione.json"
     );
 }
 

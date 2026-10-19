@@ -63,21 +63,17 @@ try:
         def alive(): assert still <= 5, f"the loading was still for {still:.1f} s"
         step("the visible text never stays the same for more than 5 s", alive)
         def loaded():
-            items = pg.locator("#flist .cvsum li").all_inner_texts()
-            assert len(items) == 4 and all("Loaded ✓ (700 scans," in t and t.rstrip().endswith("s)") for t in items), items
+            assert pg.locator("#flist .cvsum").count() == 0, "a loading that went well shows no summary box"
             assert pg.locator("#flist tr[aria-busy=true]").count() == 0
-            tot = pg.inner_text("#flist .cvsum [data-cvtot]")
-            assert re.fullmatch(r"4 files: 4 full scan · \d+:\d\d", tot.strip()), tot
-            pg.locator("#flist .cvsum [data-cvact=close]").click()
-            assert pg.locator("#flist .cvsum").count() == 0 and pg.evaluate("CONVROWS.rows.length") == 0
-        step("each sample keeps «Loaded ✓ (n scans, t s)» until «Close»", loaded)
+            assert pg.evaluate("CONVROWS.rows.filter(r => r.state === 'done').length") == 4
+            pg.evaluate("CONVROWS.clearDone()")
+        step("a loading that went well leaves no «Loading finished» box", loaded)
         def again():                                    # the same pair again: its samples come from the browser storage, nothing is copied or indexed again and the list has no duplicates
             t0 = pg.evaluate("Date.now()")
             pg.set_input_files("#pick", [str(D / "lotto.wiff"), str(D / "lotto.wiff.scan")])
             pg.wait_for_function("UPBUSY === 0 && CONVROWS.rows.length === 4", timeout=60000)
-            items = pg.locator("#flist .cvsum li").all_inner_texts()
-            assert all("Loaded from cache ✓ (700 scans)" in t for t in items), items
-            assert "4 from cache" in pg.inner_text("#flist .cvsum [data-cvtot]")
+            assert pg.locator("#flist .cvsum").count() == 0
+            assert pg.evaluate("CONVROWS.rows.filter(r => r.state === 'done').length") == 4
             assert sorted(n for n in pg.evaluate("ST.files.map(f => f.name)") if n.startswith("lotto")) == [f"lotto_s{i}.mzML" for i in range(1, 5)]
             assert pg.evaluate("Date.now()") - t0 < 10000
             pg.locator("#flist .cvsum [data-cvact=close]").click()
@@ -98,6 +94,7 @@ try:
             li = pg.locator("#flist .cvsum li[data-cvmiss]")
             assert li.count() == 1, pg.inner_text("#flist .cvsum")
             n, t = int(li.get_attribute("data-cvmiss")), li.inner_text()
+            assert li.count() == 1 and pg.locator("#flist .cvsum li").count() == 1, "only the file with a warning is listed"
             assert 0 < n < 200 and f"{n} scans missing: the .wiff.scan ends before them" in t and "Loaded ✓" in t, t
             assert "1 with scans missing" in pg.inner_text("#flist .cvsum [data-cvtot]")
             pg.locator("#flist .cvsum [data-cvact=close]").click()

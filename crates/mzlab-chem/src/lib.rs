@@ -6,6 +6,7 @@ pub mod fukui;
 pub mod lengths;
 pub mod minimize;
 pub mod mol3d;
+pub mod protomer;
 pub mod reatt;
 pub mod xtb;
 

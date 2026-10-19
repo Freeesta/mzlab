@@ -512,6 +512,8 @@ function calcPlace() {
 }
 // outside the Dati view the calculator is a drop-down under its toolbar button (in the Dati view it is the "Calcolatrice" panel of the drawer)
 window.calcToggleFloat = () => {
+  // before the Dati view is shown the dialog can still sit docked in the (invisible) side panel: take it out first, or the toggle would only "close" it
+  if (calcBox.classList.contains("sb-docked") || calcBox.parentElement !== document.body) { document.body.appendChild(calcBox); calcBox.classList.remove("sb-docked"); calcBox.hidden = true; }
   if (!calcBox.hidden) return calcBox.close();
   calcBox.hidden = false;
   calcPlace();
