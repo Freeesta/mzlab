@@ -226,7 +226,17 @@ impl Candidates {
         add(&mut self.acute, "T3", ha.as_deref(), b.clone());
         add(&mut self.chronic, "T3", hc.as_deref(), b);
     }
+}
 
+fn order_of(chronic: bool) -> &'static [&'static str] {
+    if chronic {
+        &CHRONIC_ORDER
+    } else {
+        &ACUTE_ORDER
+    }
+}
+
+impl Candidates {
     pub fn predicted(&mut self, d: &HazardData, blocks: &[String]) {
         let Some(key) = blocks
             .iter()
@@ -289,37 +299,35 @@ impl Candidates {
             }
         }
     }
+}
 
+/// The first of the lowest-ranked items.
+fn best_by<'a>(
+    items: impl Iterator<Item = &'a str>,
+    rank: impl Fn(&str) -> f64,
+) -> Option<&'a str> {
+    items.fold(None, |b, x| {
+        if b.is_none_or(|y| rank(x) < rank(y)) {
+            Some(x)
+        } else {
+            b
+        }
+    })
+}
+
+impl Candidates {
     /// The best acute (`chronic` false) or chronic candidate, if any.
     pub fn pick(&self, chronic: bool) -> Option<Picked> {
-        let (lst, order) = if chronic {
-            (&self.chronic, &CHRONIC_ORDER[..])
-        } else {
-            (&self.acute, &ACUTE_ORDER[..])
-        };
-        let best_tier = lst
-            .iter()
-            .map(|(t, _, _)| t.as_str())
-            .fold(None::<&str>, |b, t| {
-                if b.is_none_or(|x| tier_rank(t) < tier_rank(x)) {
-                    Some(t)
-                } else {
-                    b
-                }
-            })?;
+        let lst = if chronic { &self.chronic } else { &self.acute };
+        let order = order_of(chronic);
+        let best_tier = best_by(lst.iter().map(|(t, _, _)| t.as_str()), tier_rank)?;
         let same: Vec<(&str, &str)> = lst
             .iter()
             .filter(|(t, _, _)| t == best_tier)
             .map(|(_, c, b)| (c.as_str(), b.as_str()))
             .collect();
-        let pos = |c: &str| order.iter().position(|o| *o == c).unwrap_or(99);
-        let cat = same.iter().map(|(c, _)| *c).fold(None::<&str>, |b, c| {
-            if b.is_none_or(|x| pos(c) < pos(x)) {
-                Some(c)
-            } else {
-                b
-            }
-        })?;
+        let pos = |c: &str| order.iter().position(|o| *o == c).unwrap_or(99) as f64;
+        let cat = best_by(same.iter().map(|(c, _)| *c), pos)?;
         let basis = same
             .iter()
             .filter(|(c, _)| *c == cat)
