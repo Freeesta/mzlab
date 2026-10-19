@@ -101,15 +101,16 @@ try:
         def clear_all():
             pg.goto(base + "?reset=files"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)
             load_files(); pg.evaluate("STATO.aggiunta(true, 'adding'); applyView()"); pg.wait_for_selector("#clearall")
-            assert pg.inner_text("#clearall") == "Delete all files" and pg.inner_text("#loaded").startswith("Files already loaded ("), pg.inner_text("#loaded")
-            pg.click("#clearall"); assert "Really delete" in pg.inner_text("#clearall") and pg.evaluate("E.files.length") >= 2, "the first press only asks"
+            assert pg.inner_text("#clearall") == "Clear loaded data" and pg.inner_text("#loaded").startswith("Files already loaded ("), pg.inner_text("#loaded")
+            pg.evaluate("location.hash = '#/dati'")                                               # a hash in the address must not stop the reload
+            pg.click("#clearall"); assert "Clear the" in pg.inner_text("#clearall") and pg.evaluate("E.files.length") >= 2, "the first press only asks"
             pg.click("#clearall"); pg.wait_for_function("location.search === '' && window.qqReady && typeof E !== 'undefined' && E.files.length === 0", timeout=60000)
             attendi(pg, "(async () => { const n = []; for await (const [k] of (await navigator.storage.getDirectory()).entries()) n.push(k); return n.includes('librerie') && !S.sess; })()", 30000)   # settled: the reset finished writing
             s = pg.evaluate(STATE)
             assert s["files"] == 0 and not s["sess"] and s["mzlab"] == [], s                     # memory released: the files and their indexes are gone
             assert "librerie" in s["opfs"] and "mzlab.lang" in s["ls"], s                         # the same as «Files and session only»
             stage(pg, [EX / "FullScan_t0.mzML"]); pg.click("#opbtn"); ready(pg); assert pg.evaluate("E.files.length") >= 1, "loading again works"
-        step("«Delete all files» of the card of the loaded files: two presses, empty list, memory released, loading again works", clear_all)
+        step("«Clear loaded data» of the card of the loaded files: two presses, empty list, memory released, loading again works", clear_all)
         b.close()
     r.close()
 except Exception as e:
