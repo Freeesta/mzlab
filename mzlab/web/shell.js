@@ -40,7 +40,7 @@ function applyView(){const v=S.view,d=v==="data";
   _lastV=v;
   document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   // one title per view (WCAG 2.4.2)
-  document.title=(v==="data"?I18N.t("app.title",{app:window.APP_NAME||""}):I18N.t("nav."+(v==="draw"?"draw":"theory"))+" · "+(window.APP_NAME||""));
+  { const T=(v==="data"?I18N.t("app.title",{app:window.APP_NAME||""}):I18N.t("nav."+(v==="draw"?"draw":"theory"))+" · "+(window.APP_NAME||"")); if(document.title!==T)document.title=T; }
   document.dispatchEvent(new CustomEvent("tpview",{detail:{view:v}}))}
 // the header stays in view (sticky): --hh is its real height (it can wrap on a narrow window), used by the file list, the full-screen panel and the scrolls to a panel
 {const hd=document.querySelector("header"),hh=()=>{document.documentElement.style.setProperty("--hh",hd.offsetHeight+"px");hd.classList.toggle("scrolled",scrollY>4)};

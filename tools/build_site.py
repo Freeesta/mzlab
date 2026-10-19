@@ -26,7 +26,8 @@ APP_NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "web" / "app
 
 # Address of the published site (GitHub Pages): link previews (WhatsApp, Telegram, Slack...) need ABSOLUTE addresses for the page and the picture
 SITE_URL = "https://freeesta.github.io/mzlab/"
-TAGLINE = "Analisi MS"         # same as the static <title> of index.html and as the catalog key app.title
+TAGLINE = "Analisi MS"         # Italian tagline of the link previews (the previews are Italian)
+TITLE_TAG = "MS Analysis"      # tagline of the static <title>: the English one, the default language; same as index.html and as the catalog key app.title in English
 DESCRIPTION = "Esplora cromatogrammi, spettri, XIC e MRM dei tuoi file LC-MS/MS nel browser. Nessuna installazione: i dati restano sul tuo computer."
 
 
@@ -142,7 +143,7 @@ def main() -> None:
     assert tel in html
     html = html.replace(tel, tel + '\n<script src="static/browser.js"></script>', 1)
     # the name in the title is written here, not by appname.js: the apps that build link previews do not run JavaScript
-    html = re.sub(r"<title>\{APP\}[^<]*</title>", lambda m: f"<title>{APP_NAME} · {TAGLINE}</title>", html, count=1)
+    html = re.sub(r"<title>\{APP\}[^<]*</title>", lambda m: f"<title>{APP_NAME} • {TITLE_TAG}</title>", html, count=1)
     html = html.replace("</head>", preview_tags() + "\n</head>", 1)
     # installable app (PWA): manifest at the site root + theme colour; the local program does not use it
     html = html.replace("</head>", '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#ffffff"></head>', 1)
