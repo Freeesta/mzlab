@@ -96,7 +96,7 @@ def senza_cromatogrammi(cartella: Path) -> dict[str, str]:
 
 def esegui(xml: Path, mm: Path, tmp: Path) -> subprocess.CompletedProcess:
     """`bin/mzmine -b xml -t tmp` (the package carries its JDK); the log goes next to the batch as `<xml>.log`."""
-    # mzmine 4 refuses every batch without a logged-in user: `MZMINE_USER_FILE` is the .mzuser file of a (free) account
+    # mzmine 4 refuses every batch without a logged-in user: `MZMINE_USER_FILE` is the .mzuser file of a (free) account; the script runs on a machine where the user is logged in, not in the CI
     utente = ["-u", os.environ["MZMINE_USER_FILE"]] if os.environ.get("MZMINE_USER_FILE") else []
     r = subprocess.run([str(mm / "bin" / "mzmine"), "-b", str(xml), "-t", str(tmp), *utente], capture_output=True, text=True)
     xml.with_suffix(".log").write_text(r.stdout + r.stderr, encoding="utf-8")

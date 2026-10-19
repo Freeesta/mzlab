@@ -120,6 +120,215 @@ fn sorted_join<'a>(it: impl Iterator<Item = &'a str>, sep: &str) -> String {
 }
 
 /// B1. `lists` is the set to compare (`None`: every list of the table); it is put in catalogue order.
+type Owners<'a> = BTreeMap<&'a str, BTreeSet<&'a str>>;
+
+/// Inner join of the structures with a first block and the list entries on that block, in the order of the structures then of the entries.
+fn join_long(structs: &[&StructRow], mem: &[&MembershipRow]) -> Vec<LongRow> {
+    let mut long = Vec::new();
+    for s in structs.iter().filter(|s| s.first_block.is_some()) {
+        let fb = s.first_block.as_deref().unwrap_or("");
+        for m in mem.iter().filter(|m| m.first_block == fb) {
+            let full = s.inchikey.as_deref().unwrap_or("") == m.inchikey;
+            long.push(LongRow {
+                nome_comune: s.nome_comune.clone(),
+                identity: s.identity.clone(),
+                first_block: fb.to_string(),
+                list_id: m.list_id.clone(),
+                list_name: m.name.clone(),
+                list_attribute: m.list_attribute.clone(),
+                list_inchikey: m.inchikey.clone(),
+                matched: if full { MATCH_FULL } else { MATCH_BLOCK },
+            });
+        }
+    }
+    long
+}
+
+/// The identities that own each first block (more than one means a MERGE).
+fn block_owners<'a>(with_block: &[&&'a StructRow]) -> Owners<'a> {
+    let mut owners: Owners = BTreeMap::new();
+    for s in with_block {
+        owners
+            .entry(s.first_block.as_deref().unwrap_or(""))
+            .or_default()
+            .insert(s.nome_comune.as_str());
+    }
+    owners
+}
+
+/// The per-identity row before the list labels: sites, structure keys and SPLIT / MERGE flags.
+fn identity_out(
+    i: &IdentityIn,
+    mine: &[&&&StructRow],
+    owners: &Owners,
+    cfg: &B1Config,
+) -> IdentityOut {
+    let blocks: Vec<String> = mine
+        .iter()
+        .map(|s| s.first_block.clone().unwrap_or_default())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    let merged = blocks
+        .iter()
+        .any(|b| owners.get(b.as_str()).is_some_and(|o| o.len() > 1));
+    let merge = if merged {
+        blocks
+            .iter()
+            .flat_map(|b| owners.get(b.as_str()).into_iter().flatten().copied())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>()
+            .join("; ")
+    } else {
+        String::new()
+    };
+    let present = |k: usize| i.in_site.get(k).copied().unwrap_or(false);
+    let mut out = IdentityOut {
+        nome_comune: i.nome_comune.clone(),
+        group: i.group.clone(),
+        best_level: i.best_level,
+        split: blocks.len() > 1,
+        merge,
+        sites: cfg
+            .sites
+            .iter()
+            .zip(&i.in_site)
+            .filter(|(_, p)| **p)
+            .map(|(s, _)| s.as_str())
+            .collect::<Vec<_>>()
+            .join(", "),
+        in_sub: cfg
+            .submatrices
+            .iter()
+            .map(|(_, ix)| ix.iter().any(|k| present(*k)))
+            .collect(),
+        all_sites: (0..cfg.sites.len()).all(present),
+        ..IdentityOut::default()
+    };
+    if !mine.is_empty() {
+        out.inchikeys = Some(sorted_join(
+            mine.iter().filter_map(|s| s.inchikey.as_deref()),
+            " | ",
+        ));
+        out.key_origin = Some(sorted_join(
+            mine.iter().map(|s| s.key_origin.as_str()),
+            " | ",
+        ));
+        out.structure_basis = Some(sorted_join(mine.iter().map(|s| s.ik_basis.as_str()), " | "));
+    }
+    out.first_blocks = blocks;
+    out
+}
+
+/// The label of one identity in one list: the entries it matched, the first-block-only ones flagged.
+fn list_label(long: &[LongRow], lid: &str, name: &str) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    for r in long
+        .iter()
+        .filter(|r| r.list_id == lid && r.nome_comune == name)
+    {
+        let flag = if r.matched == MATCH_BLOCK {
+            " {first block}"
+        } else {
+            ""
+        };
+        let p = format!("{} [{}]{flag}", r.list_name, r.list_attribute);
+        if !parts.contains(&p) {
+            parts.push(p);
+        }
+    }
+    parts.join(" || ")
+}
+
+fn fill_labels(ident: &mut [IdentityOut], lists: &[String], long: &[LongRow]) {
+    for i in ident {
+        i.labels = lists
+            .iter()
+            .map(|lid| list_label(long, lid, &i.nome_comune))
+            .collect();
+        i.n_lists = i.labels.iter().filter(|l| !l.is_empty()).count();
+        i.lists = lists
+            .iter()
+            .zip(&i.labels)
+            .filter(|(_, l)| !l.is_empty())
+            .map(|(l, _)| catalog::label(l))
+            .collect::<Vec<_>>()
+            .join(", ");
+    }
+}
+
+fn summary_row(
+    k: usize,
+    lid: &str,
+    mem: &[&MembershipRow],
+    ident: &[IdentityOut],
+    long: &[LongRow],
+    cfg: &B1Config,
+) -> SummaryRow {
+    let entries: Vec<&&MembershipRow> = mem.iter().filter(|m| m.list_id == lid).collect();
+    let hit: Vec<&IdentityOut> = ident.iter().filter(|i| !i.labels[k].is_empty()).collect();
+    let full: BTreeSet<&str> = long
+        .iter()
+        .filter(|r| r.list_id == lid && r.matched == MATCH_FULL)
+        .map(|r| r.nome_comune.as_str())
+        .collect();
+    let in_win = |m: &&&MembershipRow| in_window(&m.mono_mass, cfg.window);
+    let amenable = |m: &&&MembershipRow, doubtful: bool| {
+        (m.lc_esi_amenable == "true" || (doubtful && m.lc_esi_amenable == "doubtful")) && in_win(m)
+    };
+    let by_key = |i: &&&IdentityOut| full.contains(i.nome_comune.as_str());
+    SummaryRow {
+        list_id: lid.to_string(),
+        group: catalog::group_of(lid).to_string(),
+        list: catalog::label(lid),
+        question: catalog::question(lid).to_string(),
+        entries: entries
+            .iter()
+            .map(|m| m.first_block.as_str())
+            .collect::<BTreeSet<_>>()
+            .len(),
+        y_true_in_window: entries.iter().filter(|m| amenable(m, false)).count(),
+        y_true_doubtful_in_window: entries.iter().filter(|m| amenable(m, true)).count(),
+        x_identities: hit.len(),
+        x_anthropogenic: hit.iter().filter(|i| i.group == "contaminant").count(),
+        x_natural: hit.iter().filter(|i| i.group != "contaminant").count(),
+        x_by_inchikey: hit.iter().filter(by_key).count(),
+        x_first_block_only: hit.iter().filter(|i| !by_key(i)).count(),
+        in_sub: (0..cfg.submatrices.len())
+            .map(|s| hit.iter().filter(|i| i.in_sub[s]).count())
+            .collect(),
+        all_sites: hit.iter().filter(|i| i.all_sites).count(),
+        matched: hit
+            .iter()
+            .map(|i| i.nome_comune.as_str())
+            .collect::<Vec<_>>()
+            .join(", "),
+    }
+}
+
+fn coverage_of(ident: &[IdentityOut]) -> Vec<(&'static str, usize)> {
+    let has = |i: &&IdentityOut| !i.first_blocks.is_empty();
+    let anthro = |i: &&IdentityOut| i.group == "contaminant";
+    let n = |f: &dyn Fn(&&IdentityOut) -> bool| ident.iter().filter(|i| f(i)).count();
+    vec![
+        ("identities Lvl1-3 (canonical dedup)", ident.len()),
+        ("of which with >= 1 structure (registry)", n(&has)),
+        ("anthropogenic", n(&anthro)),
+        (
+            "anthropogenic with >= 1 structure",
+            n(&|i| anthro(i) && has(i)),
+        ),
+        ("identities with SPLIT (> 1 first block)", n(&|i| i.split)),
+        (
+            "identities involved in a MERGE",
+            n(&|i| !i.merge.is_empty()),
+        ),
+        ("identities in >= 1 list", n(&|i| i.n_lists > 0)),
+        ("identities without structure", n(&|i| !has(i))),
+    ]
+}
+
 pub fn match_campaign(
     idents: &[IdentityIn],
     structs: &[StructRow],
@@ -143,36 +352,9 @@ pub fn match_campaign(
     };
     let lists = catalog::ordered(&all_lists);
     let mem: Vec<&MembershipRow> = mem.iter().filter(|m| lists.contains(&m.list_id)).collect();
-    // inner join on the first block, in the order of the structures then of the entries
-    let mut long = Vec::new();
-    for s in structs.iter().filter(|s| s.first_block.is_some()) {
-        let fb = s.first_block.as_deref().unwrap_or("");
-        for m in mem.iter().filter(|m| m.first_block == fb) {
-            let matched = if s.inchikey.as_deref().unwrap_or("") == m.inchikey {
-                MATCH_FULL
-            } else {
-                MATCH_BLOCK
-            };
-            long.push(LongRow {
-                nome_comune: s.nome_comune.clone(),
-                identity: s.identity.clone(),
-                first_block: fb.to_string(),
-                list_id: m.list_id.clone(),
-                list_name: m.name.clone(),
-                list_attribute: m.list_attribute.clone(),
-                list_inchikey: m.inchikey.clone(),
-                matched,
-            });
-        }
-    }
+    let long = join_long(&structs, &mem);
     let with_block: Vec<&&StructRow> = structs.iter().filter(|s| s.first_block.is_some()).collect();
-    let mut owners: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
-    for s in &with_block {
-        owners
-            .entry(s.first_block.as_deref().unwrap_or(""))
-            .or_default()
-            .insert(s.nome_comune.as_str());
-    }
+    let owners = block_owners(&with_block);
     let mut ident: Vec<IdentityOut> = idents
         .iter()
         .map(|i| {
@@ -180,107 +362,10 @@ pub fn match_campaign(
                 .iter()
                 .filter(|s| s.nome_comune == i.nome_comune)
                 .collect();
-            let blocks: Vec<String> = mine
-                .iter()
-                .map(|s| s.first_block.clone().unwrap_or_default())
-                .collect::<BTreeSet<_>>()
-                .into_iter()
-                .collect();
-            let has = !mine.is_empty();
-            let merged = blocks
-                .iter()
-                .any(|b| owners.get(b.as_str()).is_some_and(|o| o.len() > 1));
-            let merge = if merged {
-                blocks
-                    .iter()
-                    .flat_map(|b| owners.get(b.as_str()).into_iter().flatten().copied())
-                    .collect::<BTreeSet<_>>()
-                    .into_iter()
-                    .collect::<Vec<_>>()
-                    .join("; ")
-            } else {
-                String::new()
-            };
-            let mut out = IdentityOut {
-                nome_comune: i.nome_comune.clone(),
-                group: i.group.clone(),
-                best_level: i.best_level,
-                split: blocks.len() > 1,
-                merge,
-                sites: cfg
-                    .sites
-                    .iter()
-                    .zip(&i.in_site)
-                    .filter(|(_, p)| **p)
-                    .map(|(s, _)| s.as_str())
-                    .collect::<Vec<_>>()
-                    .join(", "),
-                in_sub: cfg
-                    .submatrices
-                    .iter()
-                    .map(|(_, ix)| {
-                        ix.iter()
-                            .any(|k| i.in_site.get(*k).copied().unwrap_or(false))
-                    })
-                    .collect(),
-                all_sites: cfg
-                    .sites
-                    .iter()
-                    .enumerate()
-                    .all(|(k, _)| i.in_site.get(k).copied().unwrap_or(false)),
-                ..IdentityOut::default()
-            };
-            if has {
-                out.inchikeys = Some(sorted_join(
-                    mine.iter().filter_map(|s| s.inchikey.as_deref()),
-                    " | ",
-                ));
-                out.key_origin = Some(sorted_join(
-                    mine.iter().map(|s| s.key_origin.as_str()),
-                    " | ",
-                ));
-                out.structure_basis =
-                    Some(sorted_join(mine.iter().map(|s| s.ik_basis.as_str()), " | "));
-            }
-            out.first_blocks = blocks;
-            out
+            identity_out(i, &mine, &owners, cfg)
         })
         .collect();
-    for i in &mut ident {
-        i.labels = lists
-            .iter()
-            .map(|lid| {
-                let mut parts: Vec<String> = Vec::new();
-                for r in long
-                    .iter()
-                    .filter(|r| &r.list_id == lid && r.nome_comune == i.nome_comune)
-                {
-                    let p = format!(
-                        "{} [{}]{}",
-                        r.list_name,
-                        r.list_attribute,
-                        if r.matched == MATCH_BLOCK {
-                            " {first block}"
-                        } else {
-                            ""
-                        }
-                    );
-                    if !parts.contains(&p) {
-                        parts.push(p);
-                    }
-                }
-                parts.join(" || ")
-            })
-            .collect();
-        i.n_lists = i.labels.iter().filter(|l| !l.is_empty()).count();
-        i.lists = lists
-            .iter()
-            .zip(&i.labels)
-            .filter(|(_, l)| !l.is_empty())
-            .map(|(l, _)| catalog::label(l))
-            .collect::<Vec<_>>()
-            .join(", ");
-    }
+    fill_labels(&mut ident, &lists, &long);
     ident.sort_by(|a, b| {
         b.n_lists
             .cmp(&a.n_lists)
@@ -290,88 +375,9 @@ pub fn match_campaign(
     let summary = lists
         .iter()
         .enumerate()
-        .map(|(k, lid)| {
-            let entries: Vec<&&MembershipRow> = mem.iter().filter(|m| &m.list_id == lid).collect();
-            let hit: Vec<&IdentityOut> = ident.iter().filter(|i| !i.labels[k].is_empty()).collect();
-            let full: BTreeSet<&str> = long
-                .iter()
-                .filter(|r| &r.list_id == lid && r.matched == MATCH_FULL)
-                .map(|r| r.nome_comune.as_str())
-                .collect();
-            let win = |m: &&&MembershipRow| in_window(&m.mono_mass, cfg.window);
-            SummaryRow {
-                list_id: lid.clone(),
-                group: catalog::group_of(lid).to_string(),
-                list: catalog::label(lid),
-                question: catalog::question(lid).to_string(),
-                entries: entries
-                    .iter()
-                    .map(|m| m.first_block.as_str())
-                    .collect::<BTreeSet<_>>()
-                    .len(),
-                y_true_in_window: entries
-                    .iter()
-                    .filter(|m| m.lc_esi_amenable == "true" && win(m))
-                    .count(),
-                y_true_doubtful_in_window: entries
-                    .iter()
-                    .filter(|m| {
-                        (m.lc_esi_amenable == "true" || m.lc_esi_amenable == "doubtful") && win(m)
-                    })
-                    .count(),
-                x_identities: hit.len(),
-                x_anthropogenic: hit.iter().filter(|i| i.group == "contaminant").count(),
-                x_natural: hit.iter().filter(|i| i.group != "contaminant").count(),
-                x_by_inchikey: hit
-                    .iter()
-                    .filter(|i| full.contains(i.nome_comune.as_str()))
-                    .count(),
-                x_first_block_only: hit
-                    .iter()
-                    .filter(|i| !full.contains(i.nome_comune.as_str()))
-                    .count(),
-                in_sub: (0..cfg.submatrices.len())
-                    .map(|s| hit.iter().filter(|i| i.in_sub[s]).count())
-                    .collect(),
-                all_sites: hit.iter().filter(|i| i.all_sites).count(),
-                matched: hit
-                    .iter()
-                    .map(|i| i.nome_comune.as_str())
-                    .collect::<Vec<_>>()
-                    .join(", "),
-            }
-        })
+        .map(|(k, lid)| summary_row(k, lid, &mem, &ident, &long, cfg))
         .collect();
-    let has = |i: &&IdentityOut| !i.first_blocks.is_empty();
-    let anthro = |i: &&IdentityOut| i.group == "contaminant";
-    let coverage = vec![
-        ("identities Lvl1-3 (canonical dedup)", ident.len()),
-        (
-            "of which with >= 1 structure (registry)",
-            ident.iter().filter(has).count(),
-        ),
-        ("anthropogenic", ident.iter().filter(anthro).count()),
-        (
-            "anthropogenic with >= 1 structure",
-            ident.iter().filter(|i| anthro(i) && has(i)).count(),
-        ),
-        (
-            "identities with SPLIT (> 1 first block)",
-            ident.iter().filter(|i| i.split).count(),
-        ),
-        (
-            "identities involved in a MERGE",
-            ident.iter().filter(|i| !i.merge.is_empty()).count(),
-        ),
-        (
-            "identities in >= 1 list",
-            ident.iter().filter(|i| i.n_lists > 0).count(),
-        ),
-        (
-            "identities without structure",
-            ident.iter().filter(|i| !has(i)).count(),
-        ),
-    ];
+    let coverage = coverage_of(&ident);
     B1 {
         lists,
         ident,

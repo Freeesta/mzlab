@@ -1,4 +1,4 @@
-"""Addotti tab: compact table (no nominal column), common adducts first, the rest folded, no pair tool, lists aligned with the Python ones, one rounding rule (JS rh = Python round_half_up). No data files needed."""
+"""Adducts tab: one row per adduct (shift, m/z of the typed mass), ESI+/ESI- switch, rare ones behind More, LR rounded to the unit, HR pairs closed, no references; lists aligned with the Python ones, one rounding rule. No data files needed."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from lib import *
@@ -14,88 +14,103 @@ r = Run(port=8828 + 100, wd="/tmp/wd28")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        ROWS = "[...document.querySelectorAll('#ad-tbl table.adt tr.adr')].map(tr=>[tr.className,...[...tr.children].map(c=>c.textContent)])"
+        ROWS = "[...document.querySelectorAll('#ad-tbl .ar')].map(r=>[r.className,r.querySelector('.arn').textContent,r.querySelector('.ars').textContent,(r.querySelector('.arm')||{textContent:''}).textContent.replace('m/z','').trim()])"
+        def reopen():
+            pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())"); pg.click("#np-ad"); pg.wait_for_timeout(400)
         def table():
             pg.click("#np-ad"); pg.wait_for_timeout(500)
-            t = pg.inner_text("#refbody"); assert "nominale" not in t and "nominal" not in t.lower() and "Altri addotti (meno comuni)" in t and "M +" not in t and "m/z =" not in t, t[:600]
+            t = pg.inner_text("#refbody"); assert "nominale" not in t and "nominal" not in t.lower() and "Altri" in t and "M +" not in t and "Huang" not in t and "Keller" not in t, t[:600]
+            assert pg.locator("#refbody a").count() == 0, "no link to the Theory in the panel"
+            assert pg.locator("#refbody .help-q, #refbody [data-help]").count() == 0, "no question mark"
             pg.fill("#ad-in", "363.0665"); pg.wait_for_timeout(400)
             rows = pg.evaluate(ROWS)
-            hrow = [x for x in rows if x[1].startswith("[M+H]")][0]; assert "exp" in hrow[0] and hrow[2] == "+1.0073" and hrow[3] == "364.0738", hrow
-            assert [x for x in rows if x[1].startswith("[M-H]-")][0][2] == "\u22121.0073"
-            na = [x for x in rows if x[1].startswith("[M+Na]+")][0]; assert "exp" in na[0] and na[3] == "386.0557", na
-            k = [x for x in rows if x[1].startswith("[M+K]+")][0]; assert "exp" in k[0], k
-            shown = [x[1] for x in rows]; assert shown == ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+", "[M-H]-", "[M+HCOO]-", "[M+Cl]-"], shown      # only the common ones until the fold is opened
-            pg.locator("#ad-tbl .adtog").first.click(); pg.wait_for_timeout(200)
+            shown = [x[1] for x in rows]; assert shown == ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+"], shown      # ESI+ common ones until More is opened
+            assert rows[0][2] == "+1.0073" and rows[0][3] == "364.0738" and rows[2][3] == "386.0557", rows
+            pg.click("#ad-pol button[data-p='-1']")
+            neg = pg.evaluate(ROWS); assert [x[1] for x in neg] == ["[M-H]-", "[M+HCOO]-", "[M+Cl]-"], neg
+            assert neg[0][2] == "\u22121.0073", neg
+            pg.click("#ad-pol button[data-p='1']")
+            pg.locator("#ad-tbl .adtog").first.click()
             more = [x[1] for x in pg.evaluate(ROWS)]; assert "[2M+H]+" in more and "[M+H-H2O]+" in more, more
-            assert pg.evaluate("document.activeElement.classList.contains('adtog')"), "focus stays on the fold button"
+            assert pg.evaluate("document.activeElement.classList.contains('adtog')"), "focus stays on More"
             pg.fill("#ad-in", "363.0665"); pg.wait_for_timeout(300)
-            assert "[2M+H]+" in [x[1] for x in pg.evaluate(ROWS)], "the fold stays open while typing"
-            pg.locator("#ad-tbl .adtog").first.click(); pg.wait_for_timeout(200)
+            assert "[2M+H]+" in [x[1] for x in pg.evaluate(ROWS)], "More stays open while typing"
+            pg.locator("#ad-tbl .adtog").first.click()
             assert "[2M+H]+" not in [x[1] for x in pg.evaluate(ROWS)]
-        step("table: no nominal column, signed shifts without «M +», expected adducts first, fold", table)
-        def structure():
-            # real table, row headers, one note row (colspan) under every adduct, thin group headers, 3 columns only
-            assert pg.evaluate("document.querySelectorAll('#ad-tbl table.adt thead th[scope=col]').length") == 3
-            assert pg.evaluate("[...document.querySelectorAll('#ad-tbl table.adt tr.adr th')].every(h=>h.scope==='row')")
-            assert pg.evaluate("[...document.querySelectorAll('#ad-tbl table.adt tr.adr')].every(tr=>tr.nextElementSibling.classList.contains('adn') && tr.nextElementSibling.children.length===1 && tr.nextElementSibling.children[0].colSpan===3)")
-            assert pg.evaluate("document.querySelectorAll('#ad-tbl tr.adh th[scope=colgroup]').length") == 2
-            note = pg.evaluate("document.querySelector('#ad-tbl tr.adn td').textContent.split(/\\s+/).length"); assert note <= 10, note
-            assert pg.evaluate("document.querySelector('#ad-tbl .adtog').getAttribute('aria-expanded')") == "false"
-        step("structure: table with row headers, colspan note row, ESI group headers", structure)
+        step("list: one row per adduct, shift and m/z, ESI+/ESI- switch, More, no references", table)
+        def rows_open():
+            pg.fill("#ad-in", ""); pg.wait_for_timeout(200)
+            b = pg.locator("#ad-tbl .arow").first
+            assert b.get_attribute("aria-expanded") == "false" and not pg.locator("#ad-tbl .adnote").first.is_visible()
+            b.click(); assert b.get_attribute("aria-expanded") == "true" and pg.locator("#ad-tbl .adnote").first.is_visible()
+            note = pg.inner_text("#ad-tbl .adnote >> nth=0"); assert 0 < len(note.split()) <= 14, note
+            b.click(); assert not pg.locator("#ad-tbl .adnote").first.is_visible()
+        step("a click on the row opens and closes its note", rows_open)
+        def lr():
+            pg.evaluate("window.__fake={gone:false,polarity:'positive',name:'x'}; E.files.push(window.__fake); HR.__ish=HR.isHr; HR.isHr=()=>false")
+            reopen()
+            try:
+                pg.fill("#ad-in", "363.0665"); pg.wait_for_timeout(300)
+                rows = pg.evaluate(ROWS); assert [x[2] for x in rows] == ["+1", "+18", "+23", "+39"], rows
+                assert [x[3] for x in rows] == ["364", "381", "386", "402"], rows
+                assert pg.locator("#ad-tbl details.ad-diffs").count() == 0, "no pair table in LR"
+                pg.click("#ad-pol button[data-p='-1']")
+                assert [x[2] for x in pg.evaluate(ROWS)] == ["\u22121", "+45", "+35"], pg.evaluate(ROWS)
+                assert not __import__("re").search(r"\d\.\d", pg.inner_text("#ad-tbl")), "no decimals in LR"
+                pg.click("#ad-pol button[data-p='1']")
+                pg.locator("#ad-tbl .adtog").first.click()
+                assert not __import__("re").search(r"\d\.\d", pg.inner_text("#ad-tbl")), "no decimals in LR (More)"
+                pg.locator("#ad-tbl .adtog").first.click()
+            finally:
+                pg.evaluate("E.files.splice(E.files.indexOf(window.__fake),1); HR.isHr=HR.__ish")
+        step("LR: shifts and m/z rounded to the unit, no decimals, no pair table", lr)
+        def hr_pairs():
+            reopen()
+            d = pg.locator("details.ad-diffs"); assert d.count() == 1 and d.get_attribute("open") is None, "pairs closed by default"
+            d.locator("summary").click()
+            rows = pg.evaluate("[...document.querySelectorAll('.ad-diffs tbody tr')].map(tr=>[...tr.children].map(c=>c.textContent))")
+            assert 5 <= len(rows) <= 6 and rows[0][0] == "+21.9819", rows
+            t = pg.inner_text(".ad-diffs"); assert "Huang" not in t and pg.locator(".ad-diffs a").count() == 0, t
+        step("HR: characteristic pairs in a closed section, no source, no link", hr_pairs)
         def geometry():
-            pg.evaluate("(()=>{const b=document.querySelector('#refbody'); b.style.width='400px'; b.style.maxHeight='800px'})()"); pg.wait_for_timeout(200)
-            pg.locator("#ad-tbl .adtog").first.click(); pg.wait_for_timeout(200)
-            g = pg.evaluate("""(()=>{const t=document.querySelector('#ad-tbl table.adt'),rows=[...t.querySelectorAll('tr.adr')];
-              const top=t.getBoundingClientRect().top, last=rows[11].nextElementSibling.getBoundingClientRect().bottom;
-              return {h:Math.max(...rows.map(r=>r.getBoundingClientRect().height)),n:rows.length,span:last-top}})()""")
-            assert g["h"] <= 36 and g["n"] >= 12 and g["span"] <= 800, g         # 12 adducts (data + note rows) fit in 800 px
-            pg.fill("#ad-in", ""); pg.locator("#ad-tbl .adtog").first.click(); pg.locator("#ad-tbl .adtog").nth(1).click(); pg.wait_for_timeout(150)
-        step("geometry: data rows <= 36 px", geometry)
+            sz = pg.evaluate("[...document.querySelectorAll('#ad-tbl .arow, #ad-tbl .adtog, #ad-pol button')].map(b=>{const r=b.getBoundingClientRect();return [r.width,r.height]})")
+            assert all(w >= 24 and h >= 24 for w, h in sz), sz
+            pg.evaluate("(()=>{const b=document.querySelector('#refbody'); b.style.maxHeight='800px'})()")
+        step("targets >= 24 px", geometry)
         def widths():
             for w in (280, 400, 560):
-                pg.evaluate("w=>{const b=document.querySelector('#refbody'); b.style.width=w+'px'; b.style.maxHeight='800px'}", w); pg.wait_for_timeout(150)
-                g = pg.evaluate("(()=>{const t=document.querySelector('#ad-tbl table.adt'); return [t.scrollWidth, t.parentElement.clientWidth, document.querySelector('#refbody').scrollWidth, document.querySelector('#refbody').clientWidth]})()")
+                pg.evaluate("w=>{const b=document.querySelector('#refbody'); b.style.width=w+'px'}", w); pg.wait_for_timeout(150)
+                g = pg.evaluate("[document.querySelector('#ad-tbl').scrollWidth, document.querySelector('#ad-tbl').clientWidth, document.querySelector('#refbody').scrollWidth, document.querySelector('#refbody').clientWidth]")
                 assert g[0] <= g[1] + 1 and g[2] <= g[3] + 1, (w, g)          # nothing cut, no sideways scroll
         step("widths 280 / 400 / 560 px: no cut, no sideways scroll", widths)
         def themes():
             for th in ("light", "dark"):
                 pg.evaluate("t=>document.documentElement.setAttribute('data-theme',t)", th); pg.wait_for_timeout(100)
-                c = pg.evaluate("(()=>{const n=document.querySelector('#ad-tbl tr.adn td'),h=document.querySelector('#ad-tbl tr.adr th');return [getComputedStyle(n).color,getComputedStyle(h).color,getComputedStyle(document.querySelector('#refbody')).backgroundColor]})()")
+                c = pg.evaluate("(()=>{const n=document.querySelector('#ad-tbl .ars'),h=document.querySelector('#ad-tbl .arn');return [getComputedStyle(n).color,getComputedStyle(h).color]})()")
                 assert c[0] != c[1], (th, c)
             pg.evaluate("document.documentElement.removeAttribute('data-theme')")
-        step("themes: note text dimmed in light and dark", themes)
+        step("themes: shift dimmed in light and dark", themes)
         def keyboard():
-            pg.focus("#ad-in"); pg.keyboard.press("Tab")
-            assert pg.evaluate("document.activeElement.classList.contains('adtog')"), "Tab reaches the fold button"
-            pg.keyboard.press("Enter"); pg.wait_for_timeout(200)
-            assert "[2M+H]+" in [x[1] for x in pg.evaluate(ROWS)] or "[M+H-H2O]+" in [x[1] for x in pg.evaluate(ROWS)]
-            pg.keyboard.press("Enter"); pg.wait_for_timeout(200)
-        step("keyboard: Tab then Enter open and close the fold", keyboard)
-        def diffs():
-            d = pg.evaluate("[...document.querySelectorAll('.ad-diffs tbody tr')].map(tr=>[...tr.children].map(c=>c.textContent))")
-            assert 5 <= len(d) <= 6 and d[0][0] == "+21.9819", d
-            t = pg.inner_text(".ad-diffs"); assert "Huang" in t and "nominal" not in t.lower(), t
-            assert pg.evaluate("document.querySelectorAll('.ad-diffs a').length") == 1
-            a = pg.locator(".ad-diffs a"); assert a.get_attribute("href") == "static/teoria/06-esi.html#addotti-differenze" and "noopener" in a.get_attribute("rel") and a.get_attribute("aria-label")
-        step("pairs: at most 6 rows, source line, no nominal, one link to the Theory", diffs)
-        def theory():
-            reqs = []
-            with pg.context.expect_page() as np_:
-                pg.locator(".ad-diffs a").focus(); pg.keyboard.press("Enter")
-            tp = np_.value; tp.on("request", lambda q: reqs.append(q.url)); tp.wait_for_load_state(); tp.wait_for_timeout(800)
-            assert tp.url.endswith("/static/teoria/06-esi.html#addotti-differenze"), tp.url
-            h = tp.evaluate("document.querySelector('#addotti-differenze').getBoundingClientRect().top"); assert -5 < h < 700, h
-            assert tp.evaluate("document.querySelectorAll('#addotti-differenze + p + .tw caption').length") == 1
-            assert tp.evaluate("document.querySelectorAll('#addotti-differenze + p + .tw tbody tr').length") == 14
-            hd = tp.evaluate("[...document.querySelectorAll('#addotti-differenze + p + .tw thead th')].map(h=>h.scope+':'+h.textContent)")
-            assert hd == ["col:Coppia di addotti", "col:\u0394 m/z esatto", "col:\u0394 nominale", "col:Modo", "col:Nota e significato didattico"], hd
-            tp.set_viewport_size({"width": 390, "height": 800}); tp.wait_for_timeout(300)
-            assert tp.evaluate("document.documentElement.scrollWidth <= window.innerWidth"), "no horizontal page scroll at 390 px"
-            for th in ("light", "dark"):
-                tp.evaluate(f"document.documentElement.setAttribute('data-theme','{th}')")
-            bad = [u for u in reqs if any(k in u.lower() for k in ("pyodide", ".wasm", "mzlab.zip"))]; assert not bad, bad
-            tp.close()
-        step("full table opens in the Theory (14 rows, headers, 390 px, no engine)", theory)
+            pg.focus("#ad-in"); pg.keyboard.press("Tab"); pg.keyboard.press("Tab"); pg.keyboard.press("Tab")
+            assert pg.evaluate("document.activeElement.classList.contains('arow')"), pg.evaluate("document.activeElement.outerHTML.slice(0,80)")
+            pg.keyboard.press("Enter"); assert pg.evaluate("document.activeElement.getAttribute('aria-expanded')") == "true"
+            pg.keyboard.press("Enter"); assert pg.evaluate("document.activeElement.getAttribute('aria-expanded')") == "false"
+        step("keyboard: Tab reaches a row, Enter opens and closes it", keyboard)
+        def i18n():
+            for lg in ("en", "it"):
+                pg.evaluate("l=>I18N.setLang?I18N.setLang(l):0", lg); reopen()
+                t = pg.inner_text("#ad-tbl"); assert "tbl." not in t, t
+        step("i18n: no missing keys in en and it", i18n)
+        def narrow():
+            pg.set_viewport_size({"width": 400, "height": 800}); pg.wait_for_timeout(300)
+            assert pg.evaluate("document.documentElement.scrollWidth <= window.innerWidth"), "no horizontal scroll at 400 px"
+            pg.set_viewport_size({"width": 1440, "height": 900}); pg.wait_for_timeout(300)
+        step("400 px: no horizontal scroll", narrow)
+        def axe():
+            AXE = axe_path(); assert AXE, "axe-core not available"
+            pg.add_script_tag(path=AXE)
+            v = pg.evaluate("""() => axe.run(document.querySelector('#refdlg'), {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.map(v => [v.id, v.impact, v.nodes.length]))"""); assert not v, v
+        step("axe without violations", axe)
         def reflists():
             pg.evaluate("document.querySelector('#refdlg').close()")
             pg.evaluate("LISTE.open({})"); pg.wait_for_timeout(1500)

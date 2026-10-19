@@ -4,6 +4,7 @@
 
 pub mod adap;
 pub mod arpls;
+pub mod formula_id;
 pub mod gapfill;
 pub mod ident;
 pub mod isofinder;
