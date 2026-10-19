@@ -109,7 +109,7 @@ body.sb-dragging,body.sb-dragging *{cursor:grabbing!important;user-select:none!i
 /* the button of the session is always in the header (hidden = invisible, space kept): when it comes nothing moves */
 header #newrun[hidden]{display:inline-flex!important;visibility:hidden}
 /* header texts are translated before the first paint (index.html): its space is kept, invisible, until then */
-html.i18n-wait header{visibility:hidden}html.i18n-wait header #sb-toggle,html.i18n-wait header #fs-btn,html.i18n-wait header #bug-btn,html.i18n-wait header .hq{visibility:visible}header .ib .ic{min-width:16px;min-height:16px}header #bug-btn[hidden]{display:none}
+html.i18n-wait header{visibility:hidden}html.i18n-wait header :is(.logo,#np-set,#sb-toggle,#fs-btn,#bug-btn,.hq){visibility:visible}header .ib .ic{min-width:16px;min-height:16px}header #bug-btn[hidden]{display:none}
 /* toolbar of the header */
 #stbar{flex:1 1 0;min-width:0;height:30px;min-height:30px;display:flex;align-items:center;justify-content:flex-end;gap:3px;overflow:hidden;white-space:nowrap}
 @media (max-width:760px){header{flex-wrap:wrap}#stbar{flex:1 1 100%;order:20;justify-content:flex-start}}
@@ -363,3 +363,7 @@ html:not(.phone) #avvio-copia,html:not(.phone) #avvio-reset,html:not(.phone) #de
 #fl-dz{margin:6px;padding:14px 10px;border:2px dashed var(--accent);border-radius:6px;text-align:center;font-weight:600;color:var(--accent)}#fl-note{margin:6px 8px;transition:opacity .5s}@media (prefers-reduced-motion:reduce){#fl-note{transition:none}}#sb-pane.dz-over{outline:2px dashed var(--accent);outline-offset:-3px}#rmall:disabled{opacity:.4;cursor:default}
 
 .lst-onelist .lst-src-col{display:none}
+#tour-later{position:fixed;z-index:7000;max-width:240px;padding:8px 12px;border-radius:8px;background:var(--panel);color:var(--ink);border:1px solid var(--line);box-shadow:0 4px 16px rgba(0,0,0,.18);font-size:13px;line-height:1.4;opacity:0;transition:opacity .3s ease}
+#tour-later.on{opacity:1}
+#tour-later::before{content:"";position:absolute;top:-6px;right:var(--tip,16px);width:10px;height:10px;background:var(--panel);border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg)}
+@media (prefers-reduced-motion:reduce){#tour-later{transition:none}}

@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'sha256-yQTf2FkSynU34XEFDRUa6EdtRLk88QLwig45Rj08y7E=' 'sha256-KQVN84UmXQOj2eeRlIzdw25ebptfmr/eD/A39JOcJo8=' 'sha256-G0Gd939aHyFE4WkNxdOBk+dPs/SBpplqrSz1bneXZyw=' 'sha256-CsV279Ev5RLUhUa8Q1yFNbZMK7ovSotHvKWptdF3384=' 'sha256-f2uv1bdcxv0XBa8jz4OiK1GGxn8piowhqvxTEhO45e4=' 'sha256-Y2oGefysEipuwd3/N+m8TUk/SZIPBPXPr33oGguXNTg=' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' mzlab: http://mzlab.localhost ipc: http://ipc.localhost blob:; object-src 'none'; base-uri 'none'; form-action 'self'",
+      "csp": "default-src 'self'; script-src 'self' 'sha256-yQTf2FkSynU34XEFDRUa6EdtRLk88QLwig45Rj08y7E=' 'sha256-KQVN84UmXQOj2eeRlIzdw25ebptfmr/eD/A39JOcJo8=' 'sha256-y7YEH/7183O3lZFJiv/LISZTgCfu+To2FOzVCphiI3o=' 'sha256-CsV279Ev5RLUhUa8Q1yFNbZMK7ovSotHvKWptdF3384=' 'sha256-f2uv1bdcxv0XBa8jz4OiK1GGxn8piowhqvxTEhO45e4=' 'sha256-Y2oGefysEipuwd3/N+m8TUk/SZIPBPXPr33oGguXNTg=' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' mzlab: http://mzlab.localhost ipc: http://ipc.localhost blob:; object-src 'none'; base-uri 'none'; form-action 'self'",
       "dangerousDisableAssetCspModification": true
     }
   },

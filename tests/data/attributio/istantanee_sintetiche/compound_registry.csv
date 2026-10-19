@@ -1,4 +1,14 @@
 inchikey;inchikey_first_block;canonical_name;pubchem_title;formula;monoisotopic_mass;smiles;pubchem_cid;cas;dtxsid;norman_ids;norman_sle;xlogp;xlogp_source;pcl_categories;in_pubchemlite;pcl_annotation_count;roles;project_names;best_level;project_group;project_category;suspect_lists;ik_basis;ghs_aquatic;norman_pred_acute;sources;updated_on
-AAAAAAAAAAAAAA-UHFFFAOYSA-N;AAAAAAAAAAAAAA;Alphazol;Alphazole;C9H10N2O;162.0793;CC1=CC=C(C=C1)N=C(N)O;9000001;111-11-1;DTXSID0000001;NS00000001;S0;1.3;PubChem;AgroChemInfo;True;4;identity;Alphazol (herbicide);2;contaminant;herbicide;HHP_PAN;PubChem name;H400;Acute 1;PubChem;2026-01-01
-BBBBBBBBBBBBBB-UHFFFAOYSA-N;BBBBBBBBBBBBBB;Betamine;Betamine;C7H9N;107.0735;CC1=CC=CC=C1N;9000002;222-22-2;;;;;;;False;;identity;Betamine;3;contaminant;drug;;source structure;;;PubChem;2026-01-01
-CCCCCCCCCCCCCC-UHFFFAOYSA-N;CCCCCCCCCCCCCC;Gammaxin;Gammaxin;C12H14O3;206.0943;CCOC(=O)C1=CC=CC=C1OC;9000003;333-33-3;DTXSID0000003;;;3.35;PubChemLite;;False;0;suspect;;;;;WHO_MIA;suspect list;H412;;PubChem;2026-01-01
+AAAAAAAAAAAAAA-UHFFFAOYSA-N;AAAAAAAAAAAAAA;Alphazol;Alphazol;C9H10N2O;;;9000001;;;;;1.3;;;False;;;;;;;;;H400;;PubChem;2026-01-01
+BBBBBBBBBBBBBB-UHFFFAOYSA-N;BBBBBBBBBBBBBB;Betamine;Betamine;C7H9N;;;9000002;;;;;;;;False;;;;;;;;;;;PubChem;2026-01-01
+CCCCCCCCCCCCCC-UHFFFAOYSA-N;CCCCCCCCCCCCCC;Gammaxin;Gammaxin;C12H14O3;;;9000003;;;;;3.35;;;False;;;;;;;;;H412;;PubChem;2026-01-01
+DDDDDDDDDDDDDD-UHFFFAOYSA-N;DDDDDDDDDDDDDD;Deltacide;Deltacide;C6H6O2;;;9000004;;;;;2.1;;;False;;;;;;;;;;;PubChem;2026-01-01
+EEEEEEEEEEEEEE-UHFFFAOYSA-N;EEEEEEEEEEEEEE;Epsilon;Epsilon;C5H5N;;;9000005;;;;;;;;False;;;;;;;;;H402;;PubChem;2026-01-01
+FFFFFFFFFFFFFF-UHFFFAOYSA-N;FFFFFFFFFFFFFF;Zetafen;Zetafen;C14H10;;;9000006;;;;;4.5;;;False;;;;;;;;;H412|H410;;PubChem;2026-01-01
+GGGGGGGGGGGGGG-UHFFFAOYSA-N;GGGGGGGGGGGGGG;Etaglycol;Etaglycol;C4H10O3;;;9000007;;;;;-1.0;;;False;;;;;;;;;;;PubChem;2026-01-01
+HHHHHHHHHHHHHH-UHFFFAOYSA-N;HHHHHHHHHHHHHH;Thetadecane;Thetadecane;C20H42;;;9000008;;;;;;;;False;;;;;;;;;;;PubChem;2026-01-01
+RYYVLZVUVIJVGH-UHFFFAOYSA-N;RYYVLZVUVIJVGH;Caffeine;Caffeine;;;;;;;;;;;;False;;;;;;;;;;;PubChem;2026-01-01
+IIIIIIIIIIIIII-UHFFFAOYSA-N;IIIIIIIIIIIIII;Fictazine;Fictazine;;;;;;;;;;;;False;;;;;;;;;;;PubChem;2026-01-01
+JJJJJJJJJJJJJJ-UHFFFAOYSA-N;JJJJJJJJJJJJJJ;Fictolol;Fictolol;;;;;;;;;;;;False;;;;;;;;;;;PubChem;2026-01-01
+KKKKKKKKKKKKKK-UHFFFAOYSA-N;KKKKKKKKKKKKKK;Standard A;Standard A;;;;;;;;;;;;False;;;;;;;;;;;PubChem;2026-01-01
+LLLLLLLLLLLLLL-UHFFFAOYSA-N;LLLLLLLLLLLLLL;Fictacin B;Fictacin B;;;;;;;;;;;;False;;;;;;;;;;;PubChem;2026-01-01

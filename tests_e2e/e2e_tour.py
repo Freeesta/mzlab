@@ -32,8 +32,9 @@ try:
         # bottom-left corner of the window, compact, non-modal dialog
         bb = pg.locator("#tour-invito").bounding_box()
         vp = pg.viewport_size
-        assert bb["x"] < 40 and bb["y"] + bb["height"] > vp["height"] - 40, (bb, vp)
-        assert bb["width"] < 330, bb
+        assert bb["y"] + bb["height"] > vp["height"] - 40, (bb, vp)
+        side = pg.locator("#dfiles").bounding_box()
+        assert abs((bb["x"] - side["x"]) - (side["x"] + side["width"] - bb["x"] - bb["width"])) <= 2, ("centred under the side panel", bb, side)
         assert pg.get_attribute("#tour-invito", "role") == "dialog"
         assert pg.get_attribute("#tour-invito", "aria-modal") == "false"
         assert "Inizia il tour" in inv_text, inv_text
@@ -42,6 +43,12 @@ try:
         pg.click("#tour-inv-no")
         attendi(pg, "!document.querySelector('#tour-invito') || document.querySelector('#tour-invito').hidden || !document.querySelector('#tour-invito').offsetParent", 5000)
         assert not pg.is_visible("#tour-invito"), "invitation closed by Non ora"
+        pg.wait_for_selector("#tour-later.on")
+        assert pg.inner_text("#tour-later") == "Potrai fare il tour più tardi dalle Impostazioni." and pg.get_attribute("#tour-later", "aria-live") == "polite"
+        lb, gb = pg.locator("#tour-later").bounding_box(), pg.locator("#np-set").bounding_box()
+        assert lb["y"] >= gb["y"] + gb["height"] and lb["x"] <= gb["x"] + gb["width"] and lb["x"] + lb["width"] >= gb["x"], ("bubble under the gear", lb, gb)
+        pg.mouse.click(300, 300)
+        attendi(pg, "!document.querySelector('#tour-later')", 3000)
         st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr'))")
         assert st["stato"] == "invitato", st
 

@@ -1,0 +1,4 @@
+ik1;label;acute;chronic;basis;tier;confidence;note;decided_on;rationale
+EEEEEEEEEEEEEE;Epsilon;Acute 1;Chronic 1;CLP harmonised;T1;confirmed;CLP H400/H410;2026-01-01;invented
+;Mystery compound;Acute 2;;read-across;T4;tentative;from analogue;2026-01-01;invented
+BBBBBBBBBBBBBB;Betamine;Acute 3;Chronic 3;measured value (literature);T2;confirmed;;2026-01-01;invented

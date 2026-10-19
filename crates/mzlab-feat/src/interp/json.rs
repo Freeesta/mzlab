@@ -50,6 +50,7 @@ pub fn row_json(r: &RowInterp, parent: &Parent) -> String {
     ms2(&mut o, r);
     vs_parent(&mut o, r);
     tree(&mut o, r);
+    super::sito_json::write(&mut o, r);
     o.raw(",\"hidden\":");
     match r.hidden {
         Some(h) => o.str(h),

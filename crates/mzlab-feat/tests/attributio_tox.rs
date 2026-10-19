@@ -147,3 +147,129 @@ fn italian_vocabulary_reads_as_english() {
     assert_eq!(canon("dubbio | falso"), "doubtful | false");
     assert_eq!(canon("anything else"), "anything else");
 }
+
+// ------------------------------------------------------------------------------------------------------------------ registry rules (RG-01)
+use mzlab_feat::attributio::tox::registry::*;
+
+fn parse(v: &Value) -> Option<f64> {
+    v.as_str()
+        .and_then(|s| s.trim().parse::<f64>().ok())
+        .filter(|x| !x.is_nan())
+}
+
+#[test]
+fn registry_rules_match_the_golden_data() {
+    let g = golden("tox", "registro.json");
+    let props: Vec<(i64, String)> = g["props"]
+        .as_object()
+        .unwrap()
+        .iter()
+        .map(|(k, v)| (k.parse().unwrap(), v.as_str().unwrap().to_string()))
+        .collect();
+    for r in g["representative"].as_array().unwrap() {
+        let got = representative_cid(r[0].as_str().unwrap(), &props, r[1].as_str());
+        assert_eq!(
+            got.map_or(Value::Null, |c| json!(c)),
+            r[2],
+            "representative {r:?}"
+        );
+    }
+    for r in g["synonyms"].as_array().unwrap() {
+        let syn: Vec<&str> = r[0]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| s.as_str().unwrap())
+            .collect();
+        assert_eq!(json!(dtxsid_from_synonyms(&syn)), r[1], "dtxsid {syn:?}");
+        assert_eq!(json!(cas_from_synonyms(&syn)), r[2], "cas {syn:?}");
+    }
+    for r in g["h_codes"].as_array().unwrap() {
+        let t: Vec<&str> = r[0]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| s.as_str().unwrap())
+            .collect();
+        assert_eq!(json!(h_aquatic_codes(&t)), r[1], "h codes {t:?}");
+    }
+    for r in g["categories"].as_array().unwrap() {
+        let mut counts = [None; 10];
+        for (i, v) in r[0].as_array().unwrap().iter().enumerate() {
+            counts[i] = v.as_f64().or_else(|| parse(v));
+        }
+        assert_eq!(json!(pcl_categories(&counts)), r[1], "categories {r:?}");
+    }
+    for r in g["predicted"].as_array().unwrap() {
+        let c = r[0].as_array().unwrap();
+        let (v, w) = predicted_lowest_lc50_mg_l(&[parse(&c[0]), parse(&c[1]), parse(&c[2])]);
+        same(&v.map_or(Value::Null, |x| json!(x)), &r[1], "lc50");
+        assert_eq!(json!(w), r[2]);
+        assert_eq!(json!(ghs_acute_category(v)), r[3]);
+    }
+}
+
+// ------------------------------------------------------------------------------------------------------------------ hazard records (RG-02)
+use mzlab_feat::attributio::tox::hazard::{coverage, record, HazardData};
+
+fn hazard_data() -> HazardData {
+    HazardData {
+        registry: read_registry(&read("compound_registry.csv")).unwrap(),
+        members: read_identity_members(&read("registry_members.csv")).unwrap(),
+        curated: read_curated(&read("ecotox_curated.csv")).unwrap(),
+        overrides: read_overrides(&read("ecotox_structures.csv")).unwrap(),
+        values: read_ecotox_values(&read("ecotox_values.csv")).unwrap(),
+        ecosar: read_ecosar(&read("ecosar_endpoints.csv")).unwrap(),
+    }
+}
+
+#[test]
+fn hazard_records_match_the_golden_data() {
+    let (d, g) = (hazard_data(), golden("tox", "pericolo.json"));
+    let (cases, want) = (
+        g["cases"].as_array().unwrap(),
+        g["records"].as_array().unwrap(),
+    );
+    let mut table = Vec::new();
+    for (c, w) in cases.iter().zip(want) {
+        let r = record(&d, c[0].as_str().unwrap(), c[2].as_str(), c[1].as_i64());
+        let got = json!({
+            "identity": r.identity, "blocks": r.blocks, "structure_basis": r.structure_basis, "acute": r.acute, "acute_tier": r.acute_tier,
+            "acute_basis": r.acute_basis, "chronic": r.chronic, "chronic_tier": r.chronic_tier, "chronic_basis": r.chronic_basis,
+            "chronic_route": r.chronic_route, "degradability": r.degradability, "ecosar_classes": r.ecosar_classes,
+            "log_kow": r.log_kow, "caveat": r.caveat, "cross_check": r.cross_check,
+        });
+        same(&got, w, &format!("record {}", r.identity));
+        table.push(r);
+    }
+    let anthropogenic: Vec<bool> = (0..table.len()).map(|i| i % 2 == 0).collect();
+    let got: serde_json::Map<String, Value> = coverage(&table, Some(&anthropogenic))
+        .into_iter()
+        .map(|(k, v)| (k, json!(v)))
+        .collect();
+    same(&Value::Object(got), &g["coverage"], "coverage");
+}
+
+// ------------------------------------------------------------------------------------------------------------------ amenability (RG-03)
+use mzlab_feat::attributio::tox::amenability::lc_esi_amenable;
+
+#[test]
+fn lc_esi_amenability_matches_the_golden_data() {
+    let g = golden("tox", "amenabilita.json");
+    for c in g["cases"].as_array().unwrap() {
+        let (verdict, rule) = lc_esi_amenable(
+            c[0].as_str().unwrap_or(""),
+            c[1].as_f64(),
+            c[2].as_str(),
+            c[3].as_i64(),
+            c[4].as_f64(),
+            c[5].as_str().unwrap(),
+        );
+        assert_eq!(
+            json!([verdict, rule]),
+            c[6],
+            "amenability {:?}",
+            &c.as_array().unwrap()[..6]
+        );
+    }
+}

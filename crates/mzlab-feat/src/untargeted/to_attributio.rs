@@ -129,6 +129,7 @@ pub fn build(
         mzmine: Vec::new(),
         gnps_library: Vec::new(),
         gnps_network: Vec::new(),
+        engine: Vec::new(),
         feature_spectra,
         library_spectra: Default::default(),
     };

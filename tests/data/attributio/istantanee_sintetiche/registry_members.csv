@@ -1,0 +1,10 @@
+member_type;campaign;name;group;category;best_level;n_features;first_block;inchikey;smiles;ik_basis;name_sources;lookup_name;lists;formula;mono_mass;note
+identity;SYN;Alphazol (herbicide);contaminant;;;;AAAAAAAAAAAAAA;;;;;;;C9H10N2O;;
+identity;SYN;Betamine;contaminant;;;;BBBBBBBBBBBBBB;;;;;;;;;
+identity;SYN;Gammaxin;contaminant;;;;CCCCCCCCCCCCCC;;;;;;;;;
+identity;SYN;Deltacide;contaminant;;;;DDDDDDDDDDDDDD;;;;;;;;;
+identity;SYN;Epsilon;contaminant;;;;EEEEEEEEEEEEEE;;;;;;;;;
+identity;SYN;Zetafen;contaminant;;;;FFFFFFFFFFFFFF;;;;;;;;;
+identity;SYN;Thetadecane;contaminant;;;;HHHHHHHHHHHHHH;;;;;;;;;
+identity;SYNTH;Fictacin B;natural;;;;LLLLLLLLLLLLLL;;;PubChem name;;;;;;
+identity;SYNTH;TestStandardA;natural;;;;KKKKKKKKKKKKKK;;;suspect list;;;;;;
