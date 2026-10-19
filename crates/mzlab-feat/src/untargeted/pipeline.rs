@@ -49,7 +49,11 @@ impl Default for UntParams {
         UntParams {
             polarity: None,
             adap: AdapParams::default(),
-            resolve: MinParams::default(),
+            // the product follows mzmine 4.10: the zero next to an edge enters the feature (`MinParams::adjust_edges`)
+            resolve: MinParams {
+                adjust_edges: true,
+                ..MinParams::default()
+            },
             join: JoinParams::default(),
             // the mass list the filler reads is the one of the mass detector
             gap: GapParams {
@@ -116,18 +120,7 @@ impl UntParams {
         num(a, "tol_da", &mut p.adap.tol_da)?;
         num(a, "tol_ppm", &mut p.adap.tol_ppm)?;
         p.gap.noise = p.adap.noise;
-        num(r, "chrom_threshold", &mut p.resolve.chrom_threshold)?;
-        num(r, "search_rt", &mut p.resolve.search_rt)?;
-        num(r, "min_ratio", &mut p.resolve.min_ratio)?;
-        num(r, "min_abs_height", &mut p.resolve.min_abs_height)?;
-        num(r, "min_rel_height", &mut p.resolve.min_rel_height)?;
-        count(r, "min_points", &mut p.resolve.min_points)?;
-        if let Some(d) = r.get("duration") {
-            match (d.at(0).and_then(Value::f64), d.at(1).and_then(Value::f64)) {
-                (Some(lo), Some(hi)) if lo.is_finite() && hi >= lo => p.resolve.duration = (lo, hi),
-                _ => return Err(bad()),
-            }
-        }
+        read_resolve(r, &mut p.resolve)?;
         num(j, "tol_da", &mut p.join.tol_da)?;
         num(j, "tol_ppm", &mut p.join.tol_ppm)?;
         num(j, "w_mz", &mut p.join.w_mz)?;
@@ -141,6 +134,27 @@ impl UntParams {
         num(g, "noise", &mut p.gap.noise)?;
         read_iso(&v, &mut p).map(|()| p)
     }
+}
+
+/// The `"resolve"` object: the numbers of [`MinParams`] by their names, `duration` as `[min, max]` and `adjust_edges` as a boolean.
+fn read_resolve(r: &Value, m: &mut MinParams) -> Result<()> {
+    num(r, "chrom_threshold", &mut m.chrom_threshold)?;
+    num(r, "search_rt", &mut m.search_rt)?;
+    num(r, "min_ratio", &mut m.min_ratio)?;
+    num(r, "min_abs_height", &mut m.min_abs_height)?;
+    num(r, "min_rel_height", &mut m.min_rel_height)?;
+    count(r, "min_points", &mut m.min_points)?;
+    match r.get("adjust_edges") {
+        None => {}
+        Some(v) => m.adjust_edges = v.bool().ok_or_else(bad)?,
+    }
+    if let Some(d) = r.get("duration") {
+        match (d.at(0).and_then(Value::f64), d.at(1).and_then(Value::f64)) {
+            (Some(lo), Some(hi)) if lo.is_finite() && hi >= lo => m.duration = (lo, hi),
+            _ => return Err(bad()),
+        }
+    }
+    Ok(())
 }
 
 impl From<&super::resolve::Feature> for Feature {
