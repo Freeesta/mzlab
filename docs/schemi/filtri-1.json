@@ -22,6 +22,6 @@
     }
    }
   },
-  "decoys": {"type": ["object", "null"], "description": "decoy deltas tried against the filters and how many survived (the estimate of false matches); null until the validation fills it", "properties": {"rules": {"type": "integer"}, "survived": {"type": "integer"}}}
+  "decoys": {"type": ["object", "null"], "description": "decoy deltas tried against the filters and how many survived (the estimate of false matches); null when the registry has no rule; the decoys are the rule masses plus 0.0137 Da x k, k = 1..5, dropped within 10 ppm of a rule", "properties": {"rules": {"type": "integer"}, "survived": {"type": "integer"}}}
  }
 }

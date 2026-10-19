@@ -3,7 +3,7 @@
 //! licence in their headers; MIT, (c) 2004-2022 The mzmine Development Team; paper MZmine 3, Schmid et al., Nat. Biotechnol. 41:447 (2023),
 //! doi:10.1038/s41587-023-01690-2); this file only connects them, so there is nothing of mzmine to attribute beyond what those headers say.
 //!
-//! The recipe is the JSON `{"engine": "untargeted", "polarity": 1 | -1 | null, "adap": {...}, "resolve": {...}, "join": {...}, "gap": {...}, "iso": {...}, "ident": {...}}` (`"iso": null` leaves out the isotope groups and identities); a missing key
+//! The recipe is the JSON `{"engine": "untargeted", "polarity": 1 | -1 | null, "adap": {...}, "baseline": null | {...}, "resolve": {...}, "join": {...}, "gap": {...}, "iso": {...}, "ident": {...}}` (`"iso": null` leaves out the isotope groups and identities); a missing key
 //! keeps the default of the module (the values of `tools/bench/parametri/mzmine/predefinita.json`). The names inside each object are the Rust fields of the
 //! parameter structs, with the label of mzmine in the comments there. The features of a file travel between the two steps as a `.mzfeatf` (the usual store:
 //! m/z, RT, limits, area in counts x seconds, height); to make that round trip exact the features of `run_file` are already rounded to what the store keeps
@@ -14,6 +14,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{self, Value};
 
 use super::adap::{each_slab, AdapParams, Chrom as AdapChrom, Ms1Scan};
+use super::arpls;
 use super::gapfill::{fill, GapParams};
 use super::ident::{ident, IdentParams};
 use super::isotopes::{group, IsoParams, Representative};
@@ -29,12 +30,44 @@ const SLAB_BYTES: usize = 64 << 20;
 /// Counts x seconds per intensity x minute.
 const MIN_TO_S: f64 = 60.0;
 
+/// Optional arPLS baseline correction of each chromatogram before the resolver (mzmine 4.10 «Baseline correction»; off in the gold batches).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BaselineParams {
+    pub lambda: f64,
+    pub max_iter: usize,
+    /// «Exclude peaks»: fit the baseline on the trace with its peaks bridged.
+    pub exclude_peaks: bool,
+}
+
+impl Default for BaselineParams {
+    fn default() -> Self {
+        BaselineParams {
+            lambda: 1e5,
+            max_iter: 50,
+            exclude_peaks: false,
+        }
+    }
+}
+
+impl BaselineParams {
+    /// The trace `y` on the RT axis `x` (minutes) without its baseline.
+    pub fn apply(&self, x: &[f64], y: &[f64]) -> Vec<f64> {
+        if self.exclude_peaks {
+            arpls::correct_excluding_peaks(x, y, self.lambda, self.max_iter)
+        } else {
+            arpls::correct(y, self.lambda, self.max_iter)
+        }
+    }
+}
+
 /// The numbers of the whole pipeline.
 #[derive(Debug, Clone)]
 pub struct UntParams {
     /// Polarity of the MS1 scans used (`None` = all of them); also the polarity of the gap filler.
     pub polarity: Option<i8>,
     pub adap: AdapParams,
+    /// `None` (the default, as in the mzmine 4.10 gold batches) leaves the traces as the ADAP builder gives them.
+    pub baseline: Option<BaselineParams>,
     pub resolve: MinParams,
     pub join: JoinParams,
     pub gap: GapParams,
@@ -49,6 +82,7 @@ impl Default for UntParams {
         UntParams {
             polarity: None,
             adap: AdapParams::default(),
+            baseline: None,
             // the product follows mzmine 4.10: the zero next to an edge enters the feature (`MinParams::adjust_edges`)
             resolve: MinParams {
                 adjust_edges: true,
@@ -120,6 +154,7 @@ impl UntParams {
         num(a, "tol_da", &mut p.adap.tol_da)?;
         num(a, "tol_ppm", &mut p.adap.tol_ppm)?;
         p.gap.noise = p.adap.noise;
+        read_baseline(&v, &mut p)?;
         read_resolve(r, &mut p.resolve)?;
         num(j, "tol_da", &mut p.join.tol_da)?;
         num(j, "tol_ppm", &mut p.join.tol_ppm)?;
@@ -134,6 +169,28 @@ impl UntParams {
         num(g, "noise", &mut p.gap.noise)?;
         read_iso(&v, &mut p).map(|()| p)
     }
+}
+
+/// The `"baseline"` object (`lambda`, `max_iter`, `exclude_peaks`); absent, `null` or `false` leaves the correction off, `true` or `{}` turns it on with the defaults.
+fn read_baseline(v: &Value, p: &mut UntParams) -> Result<()> {
+    let b = match v.get("baseline") {
+        None | Some(Value::Null) => return Ok(()),
+        Some(x) if x.bool() == Some(false) => return Ok(()),
+        Some(x) => x,
+    };
+    let mut q = BaselineParams::default();
+    if b.bool() != Some(true) {
+        num(b, "lambda", &mut q.lambda)?;
+        count(b, "max_iter", &mut q.max_iter)?;
+        if let Some(e) = b.get("exclude_peaks") {
+            q.exclude_peaks = e.bool().ok_or_else(bad)?;
+        }
+    }
+    if q.lambda <= 0.0 {
+        return Err(bad());
+    }
+    p.baseline = Some(q);
+    Ok(())
 }
 
 /// The `"resolve"` object: the numbers of [`MinParams`] by their names, `duration` as `[min, max]` and `adjust_edges` as a boolean.
@@ -269,7 +326,10 @@ pub fn run_file<R: ReadAt>(ix: &mut Index<R>, p: &UntParams) -> Result<Vec<Featu
     let mut out = Vec::new();
     each_slab(&scans, &p.adap, p.slab_bytes, |chroms| {
         for c in &chroms {
-            let t = full_trace(c, scans.len());
+            let mut t = full_trace(c, scans.len());
+            if let Some(b) = &p.baseline {
+                t.y = b.apply(&axis, &t.y);
+            }
             out.extend(
                 resolve(&t, &axis, &p.resolve)
                     .iter()

@@ -152,12 +152,19 @@
   async function tableSteps() {
     const gate = st.ctx.gate(), chart = st.ctx.chart, say = e => st.ctx.msg(e.key || "error.featFailed", e.params) + (e.key ? "" : " " + (e.message || ""));
     try {
-      const out = st.out, session = await /** @type {any} */ (window).PIPEQC.open({ base: window.QTOOLS.ctx.base, bytes: out.evid || out.table, names: st.names, inputs: st.data.meta.inputs || [], campioni: st.cs, pol: st.ctx.values().polarity, pool: st.ctx.pool });
+      const out = st.out, session = await /** @type {any} */ (window).PIPEQC.open({ base: window.QTOOLS.ctx.base, bytes: out.evid || out.table, names: st.names, inputs: st.data.meta.inputs || [], campioni: st.cs, pol: st.ctx.values().polarity, pool: st.ctx.pool, interp: interpInput(out) });
       st.session = session; const g = { ...gate, table: gate.table === true };
       await /** @type {any} */ (window).PIPEQC.render($("#pipe-qc"), { session, gate: g, chart });
-      const tab = /** @type {any} */ (window).PIPET.mount($("#pipe-tab"), { session, names: st.names, gate: g, say, cs: st.cs, ppm: () => st.ctx.values().ppm, pol: () => st.ctx.values().polarity, formula: ($("#pipe-pf").value || "").trim(), levels: levelMap(), identsOf: id => (st.cand ? st.all.filter(x => x.row === id - 1) : []) });
+      const tab = /** @type {any} */ (window).PIPET.mount($("#pipe-tab"), { session, names: st.names, gate: g, say, cs: st.cs, ppm: () => st.ctx.values().ppm, pol: () => st.ctx.values().polarity, formula: ($("#pipe-pf").value || "").trim(), levels: levelMap(), identsOf: id => (st.cand ? st.all.filter(x => x.row === id - 1) : []), interpText: id => { const T = /** @type {any} */ (window).TPSTRUCT; return T && session.interpCached ? T.identText(session.interpCached(id)) : ""; } });
       /** @type {any} */ (window).PIPEX.mount($("#pipe-exp"), { session, spec: () => (tab ? tab.spec() : ""), names: st.names, pool: st.ctx.pool, pol: st.ctx.values().polarity, say, stem: "tabui_" + session.sha.slice(0, 8) });
     } catch (e) { $("#pipe-qc").innerHTML = `<p class="err">${esc(say(e))}</p>`; }
+  }
+  /** what the interpretation of the rows needs (parent, hypotheses, infusion); none without a gate table or without a parent */
+  function interpInput(out) {
+    const smi = ($("#pipe-psmi").value || "").trim(), neutral = ($("#pipe-pf").value || "").trim(), pol = st.ctx.values().polarity;
+    if (!out.evid || !(smi || neutral)) return null;
+    const rt = parseFloat($("#pipe-prt").value);
+    return { parent: JSON.stringify({ ...(smi ? { smiles: smi } : { neutral }), adduct: pol < 0 ? "[M-H]-" : "[M+H]+", ...(Number.isFinite(rt) ? { rt } : {}) }), registry: out.registry || "", pol, infusion: st.cs ? st.cs.findIndex(c => c.tipo === "infusion") : -1 };
   }
   /** level of the best identity of each row of the table (row id = position + 1), none without the gate */
   function levelMap() {
