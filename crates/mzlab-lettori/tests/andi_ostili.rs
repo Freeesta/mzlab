@@ -5,7 +5,9 @@
 mod comune;
 
 use comune::andi::*;
-use std::path::PathBuf;
+
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 fn buono() -> Vec<u8> {
     andi_ms(&PIATTA)
@@ -86,33 +88,14 @@ fn point_count_negativo_o_indici_fuori_dai_punti_non_panicano() {
     }
 }
 
-fn dati() -> Option<PathBuf> {
-    let mut c: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    let qui = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    c.extend(
-        qui.ancestors()
-            .skip(1)
-            .take(3)
-            .map(|u| u.join("mzlab-dati")),
-    );
-    if let Some(h) = std::env::var_os("HOME") {
-        c.push(PathBuf::from(h).join("mzlab-dati"));
-    }
-    c.into_iter()
-        .find(|p| p.join("dati_formati/INDICE.md").exists())
-}
-
 /// Every real `.cdf` of the data repository: the scans counted, the points sorted and finite, the TIC of the file equal to the sum of the points, the times increasing.
 #[test]
 fn i_cdf_veri_si_aprono_e_i_conti_tornano() {
-    let Some(d) = dati() else {
+    let Some(d) = dati_percorsi::percorso("dati/formati/aperti/netcdf_cdf") else {
         eprintln!("SKIP andi: no data repository (MZLAB_DATI)");
         return;
     };
-    for e in std::fs::read_dir(d.join("dati_formati/netcdf_cdf"))
+    for e in std::fs::read_dir(d)
         .into_iter()
         .flatten()
         .flatten()

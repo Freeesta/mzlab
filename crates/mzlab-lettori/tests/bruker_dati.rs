@@ -3,23 +3,10 @@
 
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::mzml::{self, Item, Spectrum};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-fn dati() -> Option<PathBuf> {
-    let mut c: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    let qui = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    for up in qui.ancestors().skip(1).take(3) {
-        c.push(up.join("mzlab-dati"));
-    }
-    if let Some(h) = std::env::var_os("HOME") {
-        c.push(PathBuf::from(h).join("mzlab-dati"));
-    }
-    c.into_iter()
-        .find(|p| p.join("dati_formati/INDICE.md").exists())
-}
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 /// The files of a real `.d` folder (not its subfolders) as a `FileSet`.
 fn set_of(dir: &Path) -> FileSet {
@@ -87,11 +74,10 @@ fn confronta(s: &Spectrum, rif: &Spectrum, ppm: f64, etichetta: &str) {
 }
 
 fn confronta_cartella(cartella: &str, mzml_rif: &str) {
-    let Some(d) = dati() else {
+    let Some(base) = dati_percorsi::percorso("dati/formati/aperti/lettori_open_test/pwiz/Bruker") else {
         eprintln!("SKIP bruker {cartella}: no data repository (MZLAB_DATI)");
         return;
     };
-    let base = d.join("dati_formati/lettori_open_test/pwiz/Bruker");
     let mut l = mzlab_lettori::apri_nudo(set_of(&base.join(cartella)), &Limiti::desktop()).unwrap();
     let rif = spettri_mzml(&base.join(mzml_rif));
     assert_eq!(l.indice(0).unwrap().len(), rif.len());
@@ -127,15 +113,13 @@ fn mrm_come_msconvert() {
     confronta_cartella("ThyroglobMRM000003.d", "ThyroglobMRM000003-combineIMS.mzML");
 }
 
-/// Opens the folder `rel` (under `dati_formati/`) and reads every spectrum (at most `max`): no error, m/z increasing and finite, the TIC of the index equal to the sum of the points
+/// Opens the folder `rel` (under `dati/formati/`) and reads every spectrum (at most `max`): no error, m/z increasing and finite, the TIC of the index equal to the sum of the points
 /// for a survey scan. Returns (spectra, levels seen).
 fn percorri(rel: &str, max: usize) -> Option<(usize, Vec<u8>)> {
-    let d = dati()?;
-    let dir = d.join("dati_formati").join(rel);
-    if !dir.exists() {
+    let Some(dir) = dati_percorsi::percorso(&format!("dati/formati/{rel}")) else {
         eprintln!("SKIP bruker {rel}: not in the data repository");
         return None;
-    }
+    };
     let mut l = mzlab_lettori::apri_nudo(set_of(&dir), &Limiti::desktop()).unwrap();
     let ix = l.indice(0).unwrap().to_vec();
     let mut livelli = Vec::new();
@@ -169,7 +153,7 @@ fn percorri(rel: &str, max: usize) -> Option<(usize, Vec<u8>)> {
 #[test]
 fn diapasef_pulita() {
     let r = percorri(
-        "bruker_timstof_dia/asalt_mzio_hela_dia_slice/hela_dia_iildlisespik_rt21_60_21_78.d",
+        "bruker/timstof_dia/asalt_mzio_hela_dia_slice/hela_dia_iildlisespik_rt21_60_21_78.d",
         400,
     );
     if let Some((n, liv)) = r {
@@ -180,11 +164,11 @@ fn diapasef_pulita() {
 #[test]
 fn cartelle_sintetiche_di_timsrust() {
     // the files of timsrust's tests have no MzCalibration: they open, the spectra give an error with a key
-    let Some(d) = dati() else { return };
+    let Some(d) = dati_percorsi::percorso("dati/formati/bruker/timstof_lettori/timsrust_tests") else {
+        return;
+    };
     for f in ["test.d", "dia_test.d"] {
-        let dir = d
-            .join("dati_formati/bruker_timstof_lettori/timsrust_tests")
-            .join(f);
+        let dir = d.join(f);
         if !dir.exists() {
             continue;
         }

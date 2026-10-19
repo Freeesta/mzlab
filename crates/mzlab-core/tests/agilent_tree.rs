@@ -7,23 +7,8 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::agilent::{AgilentD, Files};
 
-fn dati() -> Option<PathBuf> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .canonicalize()
-        .ok()?;
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    cands.extend(
-        root.ancestors()
-            .skip(1)
-            .take(3)
-            .map(|up| up.join("mzlab-dati")),
-    );
-    cands.into_iter().find(|p| p.join("GC-MS").is_dir())
-}
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 fn u32_at(b: &[u8], o: usize) -> usize {
     u32::from_le_bytes(b[o..o + 4].try_into().unwrap()) as usize
@@ -45,12 +30,12 @@ fn after_times(b: &[u8]) -> (usize, usize) {
 
 #[test]
 fn the_tree_after_the_head_holds_the_tic_and_the_ion_traces() {
-    let Some(data) = dati() else {
+    let Some(gc) = dati_percorsi::percorso("dati/GC-MS") else {
         eprintln!("SKIP agilent_tree: no data repository (MZLAB_DATI)");
         return;
     };
     let mut checked = 0;
-    for d in std::fs::read_dir(data.join("GC-MS"))
+    for d in std::fs::read_dir(gc)
         .unwrap()
         .flatten()
         .map(|e| e.path())
