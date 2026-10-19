@@ -12,23 +12,15 @@ use mzlab_core::{lettori_mzml, rawlettore, Result};
 use mzlab_lettori_wasm::sessione::Sessioni;
 use mzlab_wasm::esterno::{LettoreEsterno, Modulo};
 
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
+
 fn raw_files() -> Vec<PathBuf> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    for up in Path::new(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .skip(1)
-        .take(3)
-    {
-        cands.push(up.join("mzlab-dati"));
-    }
-    let Some(d) = cands.into_iter().find(|p| p.join("HRMS").is_dir()) else {
+    let Some(hrms) = dati_percorsi::percorso("dati/HRMS").filter(|p| p.is_dir()) else {
         return Vec::new();
     };
     let mut out = Vec::new();
-    let mut stack = vec![d.join("HRMS")];
+    let mut stack = vec![hrms];
     while let Some(dir) = stack.pop() {
         for e in std::fs::read_dir(dir).into_iter().flatten().flatten() {
             let p = e.path();

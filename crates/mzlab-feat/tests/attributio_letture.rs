@@ -21,6 +21,9 @@ use mzlab_feat::attributio::toml::{self, Value as T};
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
+
 // ------------------------------------------------------------------------------------------------------------------ the campaign
 #[test]
 fn campaign_matches_the_golden_data() {
@@ -430,7 +433,7 @@ fn find_campaigns(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) {
 
 #[test]
 fn real_campaigns_are_read_without_errors() {
-    let Some(base) = std::env::var_os("MZLAB_DATI").map(PathBuf::from) else {
+    let Some(base) = dati_percorsi::radice() else {
         eprintln!("SKIP attributio real campaigns: MZLAB_DATI is not set");
         return;
     };

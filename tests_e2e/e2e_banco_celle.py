@@ -2,6 +2,7 @@
 low-resolution world. Synthetic Orbitrap DDA file; the infusion MSn file of the private data repository (skipped without it) for the paths of fragmentation."""
 import sys, os, glob; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+from dati_percorsi import percorso  # noqa: E402  (tools/ is on sys.path through lib)
 from lib_hr import synth, load
 steps = []
 def step(name, fn):
@@ -95,9 +96,8 @@ except Exception as e:
     steps.append(("lr", "FAIL " + str(e)[:300]))
     try: r.close()
     except Exception: pass
-F = None
-for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), "/home/user/mzlab-dati", "/home/user/QqQ-lab-dati"):
-    if c and glob.glob(c + "/HRMS/*/*direct-infusion_MSn.mzML"): F = glob.glob(c + "/HRMS/*/*direct-infusion_MSn.mzML")[0]; break
+HRMS = percorso("dati/HRMS")    # None without the private data repository: the block is skipped
+F = next(iter(glob.glob(f"{HRMS}/*/*direct-infusion_MSn.mzML")), None) if HRMS else None
 if F:
     r = Run(port=8977, wd="/tmp/wd_msncelle")
     try:

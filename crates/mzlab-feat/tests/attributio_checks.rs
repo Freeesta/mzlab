@@ -16,6 +16,9 @@ use mzlab_feat::attributio::rt_logp::{
 use mzlab_feat::attributio::sources::load_sources;
 use std::path::{Path, PathBuf};
 
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
+
 fn caffeine() -> Compound {
     Compound {
         first_block: "RYYVLZVUVIJVGH".into(),
@@ -270,7 +273,7 @@ fn find_campaigns(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) {
 
 #[test]
 fn real_campaigns_get_a_level_and_a_basis_for_every_feature() {
-    let Some(base) = std::env::var_os("MZLAB_DATI").map(PathBuf::from) else {
+    let Some(base) = dati_percorsi::radice() else {
         eprintln!("SKIP attributio real levels: MZLAB_DATI is not set");
         return;
     };

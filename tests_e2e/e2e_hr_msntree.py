@@ -1,6 +1,7 @@
 """H4: «Albero MSn del file…» on the direct-infusion MSn file of the private data repository (skipped without it): the tree, the formulas, the peaks of a node, a wrong formula."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+from dati_percorsi import percorso  # noqa: E402  (tools/ is on sys.path through lib)
 from lib_hr import load
 import glob
 steps = []
@@ -9,9 +10,8 @@ def step(name, fn):
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_hr_msntree.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
-F = None
-for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), "/home/user/mzlab-dati", "/home/user/QqQ-lab-dati", str(ROOT.parent / "QqQ-lab-dati")):
-    if c and glob.glob(c + "/HRMS/*/*direct-infusion_MSn.mzML"): F = glob.glob(c + "/HRMS/*/*direct-infusion_MSn.mzML")[0]; break
+HRMS = percorso("dati/HRMS")    # None without the private data repository: the test is skipped
+F = next(iter(glob.glob(f"{HRMS}/*/*direct-infusion_MSn.mzML")), None) if HRMS else None
 if not F:
     print("SKIP e2e_hr_msntree: infusion MSn file not available"); sys.exit(0)
 r = Run(port=8971, wd="/tmp/wd_hrmsn")

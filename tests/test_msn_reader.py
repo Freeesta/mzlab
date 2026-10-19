@@ -1,14 +1,16 @@
 """WP0: the reader keeps the whole fragmentation path and every <precursor> of an MSn scan (synthetic files; the DDA files stay as they were)."""
 import base64
 import glob
-import os
 import re
+import sys
 from pathlib import Path
 
 import numpy as np
 import pytest
 
-from mzlab.reader.mzml import Run
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+from dati_percorsi import percorso  # noqa: E402
+from mzlab.reader.mzml import Run  # noqa: E402
 
 
 def _arr(name, acc, v):
@@ -121,20 +123,15 @@ def test_release_gives_back_the_read_ahead_window_and_reads_again(tmp_path):
         r.close()
 
 
-def _dati():
-    d = os.environ.get("MZLAB_DATI", os.environ.get("QQQ_DATI"))
-    if d and Path(d).is_dir():
-        return Path(d)
-    for c in (Path(__file__).resolve().parents[2] / "mzlab-dati", Path(__file__).resolve().parents[2] / "QqQ-lab-dati"):
-        if c.is_dir():
-            return c
-    return None
+def _hrms():
+    d = percorso("dati/HRMS")
+    return d if d and d.is_dir() else None
 
 
-@pytest.mark.skipif(_dati() is None or not list((_dati() or Path()).glob("HRMS/Orbitrap_*_DDApos_*.mzML")), reason="MZLAB_DATI / QQQ_DATI: files DDA not available")
+@pytest.mark.skipif(_hrms() is None or not list(_hrms().glob("Orbitrap_*_DDApos_*.mzML")), reason="MZLAB_DATI / QQQ_DATI: files DDA not available")
 def test_real_dda_precursor_and_isolation_as_before():
     """Independent oracle: the first selected ion / isolation window of the header, which is what the reader gave before WP0."""
-    for f in sorted(glob.glob(str(_dati() / "HRMS" / "Orbitrap_*_DDApos_*.mzML"))):
+    for f in sorted(glob.glob(str(_hrms() / "Orbitrap_*_DDApos_*.mzML"))):
         r = Run(f)
         n = 0
         for s in r.scans:

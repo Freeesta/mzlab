@@ -6,8 +6,8 @@
     python3 tools/verifica.py --ultimi-falliti   # only the e2e that were FAIL in the previous run (.verifica/ultimo.md)
     python3 tools/verifica.py --setup         # first install what is missing (pytest, playwright + chromium), then check
 
-Data, in this order: MZLAB_MZML (or legacy QQQ_MZML); the PRIVATE data repository "mzlab-dati" or "QqQ-lab-dati" (Freeesta/mzlab-dati or Freeesta/QqQ-lab-dati: mzML/ + dam/, real lab
-files; found by itself next to this repository, in a parent folder, in the home or in /workspace, or with MZLAB_DATI=<path> or QQQ_DATI=<path>);
+Data, in this order: MZLAB_MZML (or legacy QQQ_MZML); the PRIVATE data repository (Freeesta/mzlab-dati: dati/3200 qtrap/mzML + dam/, real lab files; found by tools/dati_percorsi.py
+next to this repository, in a parent folder, in the home or in /workspace, or with MZLAB_DATI=<path> or QQQ_DATI=<path>);
 Federico's Mac folders (../Data/mzML); otherwise synthetic look-alikes written by tools/dati_sintetici.py into
 .verifica/dati_sintetici/ (then the summary says "sintetici": a pass on synthetic data is weaker than on real data).
 Some e2e only make sense with the real data or with a .dam method (MZLAB_DAM or QQQ_DAM): they are reported as SKIP, with why.
@@ -27,6 +27,9 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dati_percorsi import percorso  # the one resolver of the private data repository
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / ".verifica"
@@ -162,7 +165,7 @@ def noti_verdi(results, noti: dict[str, str]):
 
 
 def teoria(results) -> None:
-    """Teoria chapters: structure, accessibility, markers, noindex; with MZLAB_DATI also forbidden names and copying (tools/controlla_teoria.py)."""
+    """Teoria chapters: structure, accessibility, markers, noindex; with the data repository also forbidden names and copying (tools/controlla_teoria.py)."""
     t0 = time.time()
     p = subprocess.run([sys.executable, str(ROOT / "tools" / "controlla_teoria.py")], capture_output=True, text=True, encoding="utf-8", errors="replace")
     out = (p.stdout or "") + (p.stderr or "")
@@ -203,24 +206,9 @@ def pytest(results, timeout) -> None:
     results.append(("pytest", "OK" if rc == 0 else "FAIL", dt, (fails or []) + last if rc else last))
 
 
-def dati_repo() -> Path | None:
-    """The private data repository mzlab-dati / QqQ-lab-dati (real lab files: mzML/ and dam/), wherever it was cloned."""
-    env = get_env("DATI")
-    cands = [Path(env)] if env else []
-    for base in (ROOT.parent, ROOT.parent.parent, Path.home(), Path("/workspace"), Path("/workspaces"), Path("/repos"), Path("/tmp")):
-        for name in ("mzlab-dati", "QqQ-lab-dati"):
-            cands += [base / name, base / "Data" / name]
-            try:
-                cands += sorted(base.glob(f"*/{name}"))
-            except OSError:
-                pass
-    return next((c for c in cands if (c / "mzML" / "B_FullMass-t0.mzML").exists()), None)
-
-
 def data_dir() -> tuple[Path, str]:
     """Real lab mzML if found (MZLAB_MZML / QQQ_MZML, the data repository, the Mac folders), otherwise synthetic look-alikes."""
-    repo = dati_repo()
-    for cand in (get_env("MZML"), repo / "mzML" if repo else None, ROOT.parent / "Data" / "mzML",
+    for cand in (get_env("MZML"), percorso("dati/3200 qtrap/mzML"), ROOT.parent / "Data" / "mzML",
                  ROOT.parent / "esempio_conversione" / "mzml"):
         if cand and (Path(cand) / "B_FullMass-t0.mzML").exists():
             return Path(cand), "veri"
@@ -244,9 +232,8 @@ def con_golden(n: str) -> bool:
 
 def hrms_dirs() -> list[Path]:
     """Folders with high-resolution Orbitrap files: the two cuttings of the private data repository (HRMS/) and, on Federico's Mac, the whole files."""
-    repo = dati_repo()
     hrms_env = get_env("HRMS")
-    c = [repo / "HRMS" if repo else None, Path(hrms_env) if hrms_env else None, ROOT.parent / "Data" / "HRMS"]
+    c = [percorso("dati/HRMS"), Path(hrms_env) if hrms_env else None, ROOT.parent / "Data" / "HRMS"]
     return [d for d in c if d and d.is_dir() and any(d.glob("*.mzML"))]
 
 
@@ -262,9 +249,8 @@ def prova_hr(results) -> None:
 
 
 def dam_file() -> Path | None:
-    repo = dati_repo()
     name = "Lab_inq_FullMass_pos_max480.dam"            # e2e15 also wants Lab_inq_MRM_Flufe.dam in the same folder
-    for cand in (get_env("DAM"), repo / "dam" / name if repo else None, ROOT.parent / "Data" / "dam - Metodi" / name,
+    for cand in (get_env("DAM"), percorso(f"dati/3200 qtrap/dam/{name}"), ROOT.parent / "Data" / "dam - Metodi" / name,
                  ROOT.parent / "QqQ" / "Metodi inquinanti" / name):
         if cand and Path(cand).exists():
             return Path(cand)
@@ -423,7 +409,7 @@ def main() -> None:
     ap.add_argument("--senza-e2e", action="store_true")
     ap.add_argument("--browser", choices=("chromium", "firefox", "webkit"), help="browser dei test e2e (predefinito chromium; webkit = il motore di Safari)")
     ap.add_argument("--fumo", action="store_true", help="solo gli e2e di fumo (SMOKE), senza sintassi JS e pytest: è il giro del job «browser» della CI")
-    ap.add_argument("--teoria", action="store_true", help="in più, il controllo dei capitoli della Teoria (tools/controlla_teoria.py; con MZLAB_DATI anche nomi vietati e copia dalle fonti)")
+    ap.add_argument("--teoria", action="store_true", help="in più, il controllo dei capitoli della Teoria (tools/controlla_teoria.py; con il repo dati anche nomi vietati e copia dalle fonti)")
     ap.add_argument("--setup", action="store_true", help="installa pytest, playwright e chromium se mancano")
     ap.add_argument("--timeout", type=int, default=600, help="secondi per ogni e2e (predefinito 600)")
     ap.add_argument("--paralleli", type=int, default=max(1, min(6, (os.cpu_count() or 2) - 1)),
