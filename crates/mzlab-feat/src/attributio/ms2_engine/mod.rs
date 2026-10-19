@@ -9,5 +9,5 @@ pub mod hits;
 pub mod matcher;
 
 pub use compile::{clean_library_name, compile_library, EngineEntry};
-pub use hits::{engine_hits_csv, read_engine_hits, EngineHitRow, ENGINE_COLUMNS};
+pub use hits::{engine_hits_csv, load_engine_hits, read_engine_hits, EngineHitRow, ENGINE_COLUMNS};
 pub use matcher::{Ms2Library, Query, SearchHit, SearchOpts};

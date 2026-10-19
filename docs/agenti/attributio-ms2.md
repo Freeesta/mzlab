@@ -8,3 +8,9 @@ Studio e piano: `docs/studi/ATTRIBUTIO.md` §6 (righe MS-00..MS-04). Tutto in Ru
 - **Uscita** (`hits.rs`): `engine_<pos|neg>.csv` (`_pol,_id,engine_name,engine_score,engine_precursor_mz,engine_id`); lettura senza scrivere nella campagna.
 - **Non portato**: la ricerca MS2DeepScore (rete neurale; il punteggio non è un'identità).
 - **Parità**: `cargo test -p mzlab-feat --features attributio --test attributio_ms2_engine`; dati d'oro `tests/data/attributio/ms2_engine/golden.json` da `tools/ms2_engine_riferimento.py` (richiede `ms_entropy`): stessi insiemi di risultati e punteggi entro 1e-6.
+
+## MS-01: prove nella cascata
+- `readers`: `ms2_engine::load_engine_hits` legge `<data>/engine/engine_<pos|neg>.csv` in `PolSources::engine` (file assente = nessuna riga; il conteggio «engine hits» compare solo se ci sono righe).
+- `annotate/join.rs`: con `[annotation] use_ms2_engine = true` il migliore risultato di ogni feature va in `Feature::engine` (`EngineEvidence`: nome, punteggio, precursore, id di libreria); senza l'opzione i file sono ignorati. Nessun cancello, nessun livello, nessuna identità cambia (provato: livelli uguali con e senza).
+- `Feature::engine_agrees()` confronta il nome del motore con identità o nome mostrato (lettere e cifre, senza maiuscole): `Some(false)` è un disaccordo da far vedere al chimico, non un conflitto che sposta il livello. Il nome entra nel conflitto solo come prova mostrata; la colonna nella tabella e nel Banco arriva con la voce di amministratore (MS-04).
+- Prova: `attributio_ms2_engine::engine_hits_are_evidence_not_levels`.
