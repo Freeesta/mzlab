@@ -54,7 +54,20 @@ def installa(versione: str) -> Path:
 def _finder_passo(fasi: Path) -> str:
     tol = ('<parameter name="m/z tolerance (feature-to-scan)"><absolutetolerance>0.005</absolutetolerance><ppmtolerance>15.0</ppmtolerance></parameter>'
            '<parameter name="Require 13C isotope peak">true</parameter><parameter name="Maximum charge of isotope m/z">3</parameter>')
-    return (f'<batchstep method="{FINDER}" parameter_version="2">{FL}<parameter name="Algorithm" selected="automatic"><module name="automatic">{tol}</module></parameter></batchstep>\n')
+    return (f'<batchstep method="{FINDER}" parameter_version="2">{FL}<parameter name="Algorithm" selected_item="automatic"><module name="automatic">{tol}</module></parameter></batchstep>\n')
+
+
+# 4.10 parameters of type ModuleOptionsEnumComboParameter: the selected option is the attribute `selected_item` (the 3.9 ModuleComboParameter wrote `selected`; mzmine 4.10
+# ignores it WITHOUT A WORD and takes the default, for the mass detector the AUTO one whose noise level is far below the one of the batch)
+MODULO_ENUM = ("Mass detector", "Algorithm")
+
+
+def controlla_selected(xml: str) -> None:
+    """Refuses a batch in which a parameter of type ModuleOptionsEnumComboParameter names its option with `selected` instead of `selected_item`, or is missing it."""
+    for nome in MODULO_ENUM:
+        for m in re.finditer(r'<parameter name="' + re.escape(nome) + r'"([^>]*)>', xml):
+            if "selected_item=" not in m.group(1) or " selected=" in m.group(1):
+                raise SystemExit(f"parameter {nome!r}: it must use selected_item=..., found{m.group(1)!r}")
 
 
 def batch_xml(files: list[Path], fasi: Path, par: dict, versione: str, finder: bool = False, isotopi: bool = False) -> str:
@@ -63,9 +76,11 @@ def batch_xml(files: list[Path], fasi: Path, par: dict, versione: str, finder: b
     x = x.replace('mzmine_version="3.9.0"', f'mzmine_version="{versione}"')
     # the centroid detector of 4.10 has no `Detect isotope signals below noise level` any more
     x = x.replace('<parameter name="Detect isotope signals below noise level" selected="false"/>', "")
+    x = x.replace('<parameter name="Mass detector" selected="Centroid">', '<parameter name="Mass detector" selected_item="Centroid">')
     if finder:
         x = re.sub(r'<batchstep method="' + re.escape(GROUPER) + r'".*?</batchstep>\n', lambda _m: _finder_passo(fasi), x, flags=re.S)
         x = x.replace("/isotopi_{}.csv", "/finder_{}.csv")
+    controlla_selected(x)
     return x
 
 
