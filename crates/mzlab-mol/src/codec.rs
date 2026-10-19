@@ -12,6 +12,8 @@ pub enum MolError {
     Json(String),
     /// The record breaks a rule of the format (message names the field).
     Invalid(String),
+    /// The text is not a SMILES (or CXSMILES) the reader understands, or the record cannot be written as one.
+    Smiles(String),
 }
 
 impl fmt::Display for MolError {
@@ -19,6 +21,7 @@ impl fmt::Display for MolError {
         match self {
             MolError::Json(m) => write!(f, "mol/1 JSON: {m}"),
             MolError::Invalid(m) => write!(f, "mol/1 invalid: {m}"),
+            MolError::Smiles(m) => write!(f, "SMILES: {m}"),
         }
     }
 }

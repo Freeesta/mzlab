@@ -219,3 +219,51 @@ fn rejects_broken_records() {
     invalid(&m, "group on a non-stereo atom");
     assert!(matches!(Mol::from_json("{"), Err(MolError::Json(_))));
 }
+
+/// Moving the atoms of the written-order record by RDKit's canonical permutation gives RDKit's own canonical-order record: refs, parities,
+/// cis/trans, groups and the hash all follow. Bond orders inside aromatic rings are left out (RDKit may Kekulise the two orders differently).
+#[test]
+fn renumbering_matches_rdkit_canonical_order() {
+    let g = golden();
+    for c in g["cases"].as_array().expect("cases") {
+        let name = c["name"].as_str().unwrap_or_default();
+        let perm: Vec<u32> = c["canonical_perm"]
+            .as_array()
+            .expect("perm")
+            .iter()
+            .map(|v| v.as_u64().unwrap_or(0) as u32)
+            .collect();
+        let written = Mol::from_json(&c["records"]["input_order"].to_string()).expect("written");
+        let moved: Value =
+            serde_json::to_value(written.renumbered(&perm).expect("permutation")).expect("json");
+        let truth = &c["records"]["rdkit_canonical"];
+        for key in ["atoms", "stereo", "groups"] {
+            assert_eq!(moved[key], truth[key], "{name}: {key}");
+        }
+        let pairs = |v: &Value| -> Vec<(u64, u64)> {
+            v["bonds"]
+                .as_array()
+                .expect("bonds")
+                .iter()
+                .map(|b| (b["a"].as_u64().unwrap_or(0), b["b"].as_u64().unwrap_or(0)))
+                .collect()
+        };
+        assert_eq!(pairs(&moved), pairs(truth), "{name}: bond pairs");
+        if c["aromatic"].as_array().is_some_and(|a| a.is_empty()) {
+            assert_eq!(moved["bonds"], truth["bonds"], "{name}: bond orders");
+            let m = written.renumbered(&perm).expect("permutation");
+            assert_eq!(
+                Some(m.core_hash_hex().as_str()),
+                c["core_sha256"]["rdkit_canonical"].as_str(),
+                "{name}: hash"
+            );
+        }
+    }
+}
+
+#[test]
+fn renumbering_rejects_a_non_permutation() {
+    let m = minimal();
+    assert!(m.renumbered(&[0]).is_err());
+    assert!(m.renumbered(&vec![0; m.atoms.len()]).is_err());
+}
