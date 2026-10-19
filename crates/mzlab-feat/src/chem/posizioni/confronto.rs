@@ -136,7 +136,10 @@ fn candidates(mol: &Mol, sites: &[Site], pol: Pol, used: &[Peak], tol: Tol) -> V
         .map(|g| {
             let frags = expected_fragments(mol, g[0], pol);
             let mut c = Cand {
-                sites: g.iter().map(|s| s.atom).collect(),
+                sites: g
+                    .iter()
+                    .flat_map(|s| std::iter::once(s.atom).chain(s.partner))
+                    .collect(),
                 rep: g[0].clone(),
                 frags,
                 with: vec![None; used.len()],

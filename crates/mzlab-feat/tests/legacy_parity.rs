@@ -371,3 +371,63 @@ fn msn_tree_library_and_localization_match_python() {
         }
     }
 }
+
+/// `localize_sites` scores the sites it is given with the same likelihood `localize` gives its best site, and English group names exist.
+#[test]
+fn localize_sites_scores_given_masks_like_localize() {
+    let mut checked = 0;
+    for c in golden()["msn"].as_array().unwrap() {
+        let t = msn::build_tree(
+            &scans_of(&c["scans"]),
+            c["ion"].as_str().unwrap(),
+            c["smiles"].as_str(),
+            c["calibrate"].as_str().unwrap(),
+        )
+        .unwrap();
+        let Some(subs) = t.subs.as_ref() else {
+            continue;
+        };
+        let dda = c["dda"].as_array().map(|d| (floats(&d[0]), floats(&d[1])));
+        let lib = msn::library::build(&t, dda.as_ref().map(|d| (&d.0[..], &d.1[..])));
+        let top = vec_of(t.nodes[0].formula.as_deref().unwrap(), &t.els).unwrap();
+        for l in c["localize"].as_array().unwrap() {
+            let tp = vec_of(l["tp"].as_str().unwrap(), &t.els).unwrap();
+            let (mz, rel) = (floats(&l["mz"]), floats(&l["rel"]));
+            let loc = msn::localize::localize(
+                &tp,
+                &top,
+                &t.els,
+                &mz,
+                &rel,
+                &lib,
+                subs,
+                l["tp_mz"].as_f64(),
+            );
+            let Some(found) = loc.found else { continue };
+            let (_, ll, atoms) = &found.top_sites[0];
+            let mask = atoms.iter().fold(0u64, |m, a| m | 1 << a);
+            let again = msn::localize::localize_sites(
+                &tp,
+                &top,
+                &t.els,
+                &mz,
+                &rel,
+                &lib,
+                subs,
+                l["tp_mz"].as_f64(),
+                &[mask],
+            );
+            let f = again.found.expect("the given site has evidence");
+            assert_eq!(f.all_ll.len(), 1);
+            assert!((f.all_ll[0] - ll).abs() < 1e-9, "{} vs {ll}", f.all_ll[0]);
+            checked += 1;
+        }
+    }
+    assert!(checked > 0, "no case with evidence");
+    let g = mzlab_feat::legacy::fragtree::Graph::parse("CCc1ccccc1").unwrap();
+    let names: Vec<String> = msn::localize::default_groups_en(&g)
+        .into_iter()
+        .map(|x| x.0)
+        .collect();
+    assert_eq!(names, ["ring A", "chain A"]);
+}

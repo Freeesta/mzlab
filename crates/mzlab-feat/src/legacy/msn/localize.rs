@@ -40,6 +40,8 @@ pub struct Found {
     /// For a loss: the atoms kept and their description.
     pub retained: Option<(Vec<usize>, String)>,
     pub n_groups: usize,
+    /// The log-likelihood of every site scored, in the order of the masks.
+    pub all_ll: Vec<f64>,
 }
 
 /// The dict of `localize` (plus `n_atoms` and `n_groups` that the engine adds).
@@ -57,6 +59,15 @@ pub struct Localization {
 
 /// Names for the atoms: every ring system (fused rings joined) `anello A`..., then every connected set of the atoms on no ring `catena A`...
 pub fn default_groups(g: &Graph) -> Vec<(String, BTreeSet<usize>)> {
+    groups_named(g, "anello", "catena")
+}
+
+/// The same groups with English names (`ring A`, `chain A`), for the interface of Tabui.
+pub fn default_groups_en(g: &Graph) -> Vec<(String, BTreeSet<usize>)> {
+    groups_named(g, "ring", "chain")
+}
+
+fn groups_named(g: &Graph, ring: &str, chain: &str) -> Vec<(String, BTreeSet<usize>)> {
     let mut ring_atoms = BTreeSet::new();
     let mut systems: Vec<BTreeSet<usize>> = Vec::new();
     for ring in g.rings() {
@@ -74,7 +85,7 @@ pub fn default_groups(g: &Graph) -> Vec<(String, BTreeSet<usize>)> {
     let mut out: Vec<(String, BTreeSet<usize>)> = systems
         .into_iter()
         .enumerate()
-        .map(|(k, s)| (format!("anello {}", letter(k)), s))
+        .map(|(k, s)| (format!("{ring} {}", letter(k)), s))
         .collect();
     let mut seen = ring_atoms.clone();
     let mut k = 0;
@@ -91,7 +102,7 @@ pub fn default_groups(g: &Graph) -> Vec<(String, BTreeSet<usize>)> {
             }
         }
         seen.extend(comp.iter().copied());
-        out.push((format!("catena {}", letter(k)), comp));
+        out.push((format!("{chain} {}", letter(k)), comp));
         k += 1;
     }
     out
@@ -350,6 +361,7 @@ fn found(
         fraction_explained: ev.iter().map(|e| e.rel).fold(0.0, |a, b| a + b) / strong.max(1e-12),
         retained,
         n_groups: groups.iter().filter(|g| !g.1.is_disjoint(&atoms)).count(),
+        all_ll: ll.to_vec(),
     }
 }
 
@@ -366,6 +378,38 @@ pub fn localize(
     subs: &Subs,
     tp_mz: Option<f64>,
 ) -> Localization {
+    run(tp, reference, els, mz, rel, lib, subs, tp_mz, None)
+}
+
+/// `localize` that scores the given sites (masks of atoms, bit `j` = atom `j`) instead of the ones `candidate_sites` of the type of change
+/// gives; the type of change is not needed, so any change can be scored. `Found::all_ll` is in the order of `sites`.
+#[allow(clippy::too_many_arguments)]
+pub fn localize_sites(
+    tp: &[i64],
+    reference: &[i64],
+    els: &[&str],
+    mz: &[f64],
+    rel: &[f64],
+    lib: &Library,
+    subs: &Subs,
+    tp_mz: Option<f64>,
+    sites: &[u64],
+) -> Localization {
+    run(tp, reference, els, mz, rel, lib, subs, tp_mz, Some(sites))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn run(
+    tp: &[i64],
+    reference: &[i64],
+    els: &[&str],
+    mz: &[f64],
+    rel: &[f64],
+    lib: &Library,
+    subs: &Subs,
+    tp_mz: Option<f64>,
+    given: Option<&[u64]>,
+) -> Localization {
     let delta: Vec<i64> = tp.iter().zip(reference).map(|(a, b)| a - b).collect();
     let abs: Vec<i64> = delta.iter().map(|d| d.abs()).collect();
     let kind = change_type(&delta, els);
@@ -380,7 +424,13 @@ pub fn localize(
         n_atoms: subs.g.atoms.len(),
         ..Localization::default()
     };
-    let (r, names) = sites(&delta, els, subs, kind);
+    let (r, names) = match given {
+        Some(masks) => (
+            masks.to_vec(),
+            masks.iter().map(|&m| mask_name(m, subs)).collect(),
+        ),
+        None => sites(&delta, els, subs, kind),
+    };
     out.n_sites = r.len();
     if r.is_empty() {
         out.note = if kind == "other" {
@@ -400,4 +450,11 @@ pub fn localize(
     let ll = log_likelihood(&r, &out.evidence, lib, subs);
     out.found = Some(found(&ll, &r, &names, subs, &out.evidence, rel, kind));
     out
+}
+
+fn mask_name(m: u64, subs: &Subs) -> String {
+    atoms_of(m, subs.g.atoms.len())
+        .into_iter()
+        .map(|j| format!("{}{j}", subs.g.atoms[j]))
+        .collect()
 }
