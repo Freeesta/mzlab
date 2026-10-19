@@ -23,7 +23,9 @@ pub struct AnnotationSettings {
     pub library_conflict_margin: f64,
     pub gnps_mass_tol_ppm: f64,
     pub mzlib_mass_tol_ppm: f64,
-    /// COSMIC confidence of the Level 3 gate (~10 % FDR).
+    /// COSMIC confidence of the Level 3 gate. 0.64 is the threshold Hoffmann et al. (Nat Biotechnol 40:411, 2022) use for their confidence score,
+    /// "roughly corresponding to FDR 10 %", a practical guide and "no guarantee in either direction". The paper does not define the exact/approximate
+    /// modes of SIRIUS; this tool applies the threshold to `ConfidenceScoreApproximate` (the reference tool's choice), so the 10 % is not verified for it.
     pub cosmic_min: f64,
     /// A CANOPUS class is shown (and gives Level 4) at or above this probability.
     pub canopus_min: f64,
@@ -82,5 +84,16 @@ mod tests {
         assert_eq!(basis_level("MS2DeepScore"), 0);
         let s = AnnotationSettings::default();
         assert_eq!(s.label("MS2DeepScore"), s.label("none"));
+    }
+}
+
+#[cfg(test)]
+mod cosmic_tests {
+    use super::*;
+
+    // 0.64: the confidence-score threshold of Hoffmann et al. 2022 (roughly FDR 10 %)
+    #[test]
+    fn cosmic_default_is_the_published_threshold() {
+        assert_eq!(AnnotationSettings::default().cosmic_min, 0.64);
     }
 }

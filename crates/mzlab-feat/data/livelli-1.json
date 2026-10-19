@@ -322,7 +322,7 @@
     {
      "livello": "3a",
      "base": "CSI:FingerID",
-     "regola": "CSI:FingerID structure with COSMIC (ConfidenceScoreApproximate) >= cosmic_min (~10% FDR, Hoffmann et al. 2022); never downgrades a library match"
+     "regola": "CSI:FingerID structure with COSMIC (ConfidenceScoreApproximate) >= cosmic_min (0.64 is roughly 10% FDR for the paper's confidence score, a guide with no guarantee; applied here to the Approximate score, Hoffmann et al. 2022); never downgrades a library match"
     },
     {
      "livello": "4",
