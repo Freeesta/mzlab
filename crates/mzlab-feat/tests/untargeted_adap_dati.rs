@@ -1,33 +1,18 @@
-//! ADAP builder against the ADAP lists of mzmine 3.9.0 on real files of the private series (HR, `HRMS/Timolol/`). Skipped without the data repository
-//! (`MZLAB_DATI`) or without the lists `scratchpad/mzmine39/adap_<file>.csv` (columns of `tests/data/untargeted/mzmine39/adap.csv`, written by
+//! ADAP builder against the ADAP lists of mzmine 3.9.0 on real files of the private series (HR, `dati/HRMS/Timolol/`). Skipped without the data repository
+//! (`MZLAB_DATI`) or without the lists `coordinamento/mzmine39/adap_<file>.csv` (columns of `tests/data/untargeted/mzmine39/adap.csv`, written by
 //! `python3 tools/bench/oro_mzmine.py --reale HRMS_DIR DEST`). Threshold: >= 0.97 of the rows of mzmine matched within 1e-4 m/z.
 #![cfg(feature = "untargeted")]
 
 mod untargeted_common;
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Instant;
 
 use mzlab_feat::untargeted::adap::{build, AdapParams};
 use untargeted_common::{rows, same, scans_of, shape};
 
-fn dati() -> Option<PathBuf> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .canonicalize()
-        .ok()?;
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    cands.extend(
-        root.ancestors()
-            .skip(1)
-            .take(3)
-            .map(|up| up.join("mzlab-dati")),
-    );
-    cands.into_iter().find(|p| p.join("HRMS").is_dir())
-}
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 /// Peak resident memory of the process in MB (Linux), 0 elsewhere.
 fn peak_mb() -> f64 {
@@ -41,15 +26,13 @@ fn peak_mb() -> f64 {
 
 #[test]
 fn parity_with_mzmine39_on_real_files() {
-    let Some(root) = dati() else {
-        eprintln!("SKIP untargeted_adap_dati: no data repository (MZLAB_DATI)");
+    let Some(lists) = dati_percorsi::percorso("coordinamento/mzmine39") else {
+        eprintln!("SKIP untargeted_adap_dati: no data repository (MZLAB_DATI) or no ADAP list of mzmine in coordinamento/mzmine39");
         return;
     };
-    let lists = root.join("scratchpad/mzmine39");
-    let mut files: Vec<PathBuf> = std::fs::read_dir(root.join("HRMS/Timolol"))
+    let mut files: Vec<PathBuf> = dati_percorsi::percorso("dati/HRMS/Timolol")
         .into_iter()
-        .flatten()
-        .flatten()
+        .flat_map(|t| std::fs::read_dir(t).into_iter().flatten().flatten())
         .map(|e| e.path())
         .filter(|p| p.extension().is_some_and(|x| x == "mzML"))
         .collect();
@@ -63,7 +46,7 @@ fn parity_with_mzmine39_on_real_files() {
             .is_file()
     });
     if files.is_empty() {
-        eprintln!("SKIP untargeted_adap_dati: no ADAP list of mzmine in scratchpad/mzmine39");
+        eprintln!("SKIP untargeted_adap_dati: no ADAP list of mzmine in coordinamento/mzmine39");
         return;
     }
     let p = AdapParams::default();

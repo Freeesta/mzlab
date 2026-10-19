@@ -1,7 +1,6 @@
 """Private run (skipped without the data repository): how many of the 100 most intense peaks of 10 MS1 spectra of the real Orbitrap files are flagged by the built-in list,
 and which entries come up most often (it tells which background the instruments of the laboratory show). The numbers are printed (pytest -s), nothing is asserted but sanity."""
 import bisect
-import os
 import sys
 from collections import Counter
 from pathlib import Path
@@ -10,22 +9,22 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tools"))
+from dati_percorsi import percorso  # noqa: E402
 
 
-def _dati():
-    for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), str(ROOT.parent / "QqQ-lab-dati")):
-        if c and list((Path(c) / "HRMS").glob("*.mzML")):
-            return Path(c)
-    return None
+def _hrms():
+    d = percorso("dati/HRMS")
+    return d if d and list(d.glob("*.mzML")) else None
 
 
-@pytest.mark.skipif(_dati() is None, reason="MZLAB_DATI / QQQ_DATI with HRMS/ not available")
+@pytest.mark.skipif(_hrms() is None, reason="MZLAB_DATI / QQQ_DATI with HRMS/ not available")
 def test_contaminanti_nei_file_orbitrap():
     from mzlab.chem.contaminants import builtin
     from mzlab.reader.mzml import Run
     items = sorted((i for i in builtin()["items"] if i["pol"] == 1), key=lambda i: i["mz"]); mzs = [i["mz"] for i in items]
     tot = Counter(); flagged = n = 0
-    for f in sorted((_dati() / "HRMS").glob("*.mzML")):
+    for f in sorted(_hrms().glob("*.mzML")):
         r = Run(str(f)); ms1 = [s for s in r.scans if s.level == 1 and getattr(s, "polarity", 1) != -1][::max(1, len(r.scans) // 40)][:5]
         for s in ms1:
             a, b = r.read(s.index)

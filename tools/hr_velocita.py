@@ -3,7 +3,8 @@ Local server by default; the built site (Pyodide) with MZLAB_SITE=1 or QQQ_SITE=
 import os, subprocess, sys, time, json
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests_e2e"))
 from lib import *
-f = os.environ.get("HR_FILE") or str(Path(os.environ.get("MZLAB_DATI") or os.environ.get("QQQ_DATI", "/home/user/QqQ-lab-dati")) / "HRMS" / "Orbitrap_Exploris120_DDApos_10-15min.mzML")
+from dati_percorsi import percorso
+f = os.environ.get("HR_FILE") or str(percorso("dati/HRMS/Orbitrap_Exploris120_DDApos_10-15min.mzML") or "dati/HRMS/Orbitrap_Exploris120_DDApos_10-15min.mzML")
 SITE = os.environ.get("MZLAB_SITE") == "1" or os.environ.get("QQQ_SITE") == "1"
 MEAS = """async()=>{
   const k=E.files.find(x=>x.kind==='full').k, out={};
