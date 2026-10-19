@@ -215,7 +215,7 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 - Rendering colore accelerato (`grafici.js`, `mapImage`): scrittura a 32 bit con `Uint32Array` (`buf32` e `tab32`) e campionamento a 10 000 celle per il 99,5° percentile: generazione `ImageData` su griglia 600×901 ridotta da 314 ms a 52 ms (6× più veloce), cambio file caldo su HRC ≤ 50 ms.
 
 ## Moduli lettori (`tools/build_lettori_wasm.sh`, dopo `wasm_opt -Oz`)
-- `.wasm` per famiglia, in byte (tetto): `aperti` 401 463 (524 288), `thermo` 470 380 (614 400), `agilent` 418 744 (458 752), `sciex` 303 705 (327 680), `bruker` 416 514 (524 288, con `ruzstd`). Il `.wasm` del motore pesa 1 439 240 B (senza il lettore Thermo, che sta nel modulo `thermo`).
+- `.wasm` di mzFinder e dei lettori: misure, tetti (un modulo fuso ha un tetto di gruppo, non quelli per modulo) e build separata in `docs/agenti/wasm-tetti.md`. Il `.wasm` del motore pesa 1 439 240 B (senza il lettore Thermo, che sta nel modulo `thermo`).
 - Memoria del modulo `thermo` (`tools/bench_raw.py`, memoria iniziale 32 MB) sul BAF DDA da 595 MB (56 061 scansioni): dopo `apri` 33,5 MB (`apri` 1,0 s), dopo `indice` 48,0 MB (186 ms, JSON da 13,7 MB), picco di tutti i passi 122 MB (`to_mzml` 21,8 s); su file più piccoli 44,4 MB per 7 952 scansioni e 85,1 MB per 16 524 (prima della memoria compatta).
 
 ## Profilo `desktop` (`Cargo.toml`, `opt-level = 3` contro `"z"`)

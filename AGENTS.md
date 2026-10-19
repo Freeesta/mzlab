@@ -100,6 +100,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | gruppi di esperimenti in Tabui: condizioni, `gruppi/1`, `crates/mzlab-feat/src/gruppi/` | `docs/agenti/gruppi.md` |
 | ruoli dei file e tempi dei campioni (`campioni/2`, `mzlab-core/src/campioni/`: proposte dai nomi, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
 | derivati (`.mzidx`, `.mzfeat`, `.mzfeatf`) di formato più nuovo del programma: `error.newerFormat`, sola lettura | `docs/agenti/formato-nuovo.md` |
+| tetti dei .wasm di mzFinder, moduli fusi (gruppo HR), build separata `MZLAB_WASM_SEPARATI` | `docs/agenti/wasm-tetti.md` |
 | contratto di memoria dei moduli WASM (`mzlab-core::budget`, uscite a offset, lastre, flusso delle prove) | `docs/agenti/memoria.md` |
 | formato `.mzidx` | `docs/agenti/mzidx.md` |
 | cosa i file grezzi contengono e non estraiamo ancora (regola «nessuna perdita») | `docs/agenti/grezzi-non-estratti.md` |

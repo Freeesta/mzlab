@@ -94,7 +94,10 @@ const sha = async b => [...new Uint8Array(await crypto.subtle.digest("SHA-256", 
 /** the module `key` of the manifest, checked against its SHA-256 @param {string} key */
 async function load(key) {
   if (mods[key]) return mods[key];
-  const m = (await manifest())[key], bytes = await (await fetch(featUrl(m.wasm))).arrayBuffer();
+  const m = (await manifest())[key], twin = Object.keys(mods).find(k => man[k].wasm === m.wasm);
+  // keys that name the same .wasm (the fused HR module) share one instance
+  if (twin) return (mods[key] = mods[twin]);
+  const bytes = await (await fetch(featUrl(m.wasm))).arrayBuffer();
   if (m.sha256 && await sha(bytes) !== m.sha256) throw new Error("the engine of Tabui does not match its manifest: reload the page");
   const mod = await import(featUrl(m.js));
   await mod.default({ module_or_path: bytes });

@@ -68,10 +68,10 @@ function createCore(opts) {
     if (classes === null) classes = await (await fetch(u)).text();
     return classes;
   }
-  async function ensure(slot, which) {          // load the .wasm of `which` in the worker once
+  async function ensure(slot, which) {          // load the .wasm of `which` in the worker once; keys that name the same .wasm (fused module) share the instance
     if (slot.loaded.has(which)) return;
-    const m = wasm[which];
-    const r = await call(slot, { op: "init", which, jsUrl: m.jsUrl, wasmUrl: m.wasmUrl, sha256: m.sha256 || "" });
+    const m = wasm[which], twin = [...slot.loaded].find(k => wasm[k].wasmUrl === m.wasmUrl);
+    const r = await call(slot, twin ? { op: "alias", which, of: twin } : { op: "init", which, jsUrl: m.jsUrl, wasmUrl: m.wasmUrl, sha256: m.sha256 || "" });
     slot.crate = r.crate || slot.crate;
     slot.loaded.add(which);
   }
@@ -387,6 +387,7 @@ const reply = (id, r, transfer) => self.postMessage({ id, ok: true, ...r }, tran
 const arrays = list => list.map(b => (b instanceof Uint8Array ? b : new Uint8Array(b)));
 const OPS = {
   async init(m) { await init(m); return { version: mods[m.which].version(), crate: mods[m.which].crate_version() }; },
+  async alias(m) { mods[m.which] = mods[m.of]; mems[m.which] = mems[m.of]; return {}; },
   async detect(m) {
     const f = await openAll([m.path]), out = memSink();
     try { mods.feat.detect_file_to(f.read, f.sizes[0], m.name, m.recipe, out.write); return { bytes: out.bytes() }; } finally { f.close(); }
