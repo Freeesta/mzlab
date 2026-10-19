@@ -47,6 +47,8 @@ function removeFile(/** @type {any} */ f) {
 function removeAllFiles() {
   const rs = E.files.filter(f => !f.gone).map(fileRemoval); if (!rs.length) return;
   rs.forEach(r => r.take());
+  // removed from a hidden side bar (palette, shortcut): bring it back so the notice and the empty list are in view
+  if (window.BARRA && BARRA.isDataView() && !BARRA.open) BARRA.show("file");
   const all = (/** @type {"take" | "back"} */ k) => () => (k === "back" ? [...rs].reverse() : rs).forEach(r => r[k]());
   if (STORIA) STORIA.tolto({ what: I18N.t("files.removeAll.what", { n: rs.length }), dati: String(rs.length), undo: all("back"), redo: all("take"), scade: window.MZLAB_BROWSER ? () => rs.forEach(r => r.free()) : null });
   else rs.forEach(r => r.free());

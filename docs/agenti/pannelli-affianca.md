@@ -1,7 +1,6 @@
 # Affiancare e spostare i pannelli (`affianca.js`, `AFFIANCA`)
 
 - Maniglia `.aff-grip` nell'intestazione del pannello; trascinarla mostra l'anteprima del rettangolo finale senza ridisegnare; Esc annulla. Senza trascinare: menu della maniglia e Alt+frecce. `rifai()` applica una mossa a una pila (vera o copiata).
-- Suggerimento «Trascina qui per affiancare» (`#aff-hint`, chiave `qqq.pannelli.affianca.hint`): una sola volta per browser, con almeno due pannelli e spazio, quando nessun altro fumetto è aperto (`SUGG`); × ed Esc lo chiudono, il primo affiancamento lo chiude per sempre.
 - Le stesse mosse della maniglia stanno nel menu del tasto destro e nella paletta (azioni `disp.*`, `docs/agenti/azioni.md`); `disp.ripristina` rimette ogni pannello a tutta larghezza (si annulla con Ctrl+Z); `layout.js` non nomina mai un esperimento (guardia in `controlla.py`).
 - Opzione «Spettro accanto al cromatogramma» (Impostazioni, `UIP.beside`, spenta di base, ricordata in `qqq.prefs`): `newSpec` (`eventi.js`) chiama `AFFIANCA.accanto(spettro, origine)`, che mette lo spettro a destra se l'origine è sola nella sua riga e i due stanno; altrimenti resta sotto. Si annulla con Ctrl+Z; nessuna logica per tipo di esperimento.
 - Zone di rilascio a croce sul pannello bersaglio (`zona()`): 30% in alto = «Sopra» (riga propria prima del bersaglio), 30% in basso = «Sotto», fascia centrale metà sinistra / metà destra = «A sinistra» / «A destra»; «Spazio insufficiente» se non entra. Ogni zona ha la sua etichetta nell'anteprima.

@@ -1,5 +1,5 @@
-# Release: a tag `vX.Y.Z` builds the site as a zip, the installers (macOS, Windows, Linux), the SBOM and SHA256SUMS, and prepares a DRAFT
-# release with the notes of CHANGELOG.md. Nothing is published by itself: the owner reads the draft and presses "Publish release"
+# Release: a tag `vX.Y.Z` builds the site as a zip, the installers (macOS, Windows, Linux), the SBOMs in one zip and SHA256SUMS, and prepares a DRAFT
+# release with a download table and the notes of CHANGELOG.md (English). Nothing is published by itself: the owner reads the draft and presses "Publish release"
 # (that is also what makes Zenodo archive it). Steps for the owner: docs/agenti/rilascio.md.
 # Without a terminal: Actions > release > Run workflow on main, with the version typed twice. The draft is made from the head of main; the tag is
 # created when the owner publishes it. With the version left empty it is a dry run: everything is built and kept as artifacts, no release is made.
@@ -244,20 +244,32 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: pezzi
-      - name: Gather the files and compute SHA256SUMS
+      # Uniform names (tools/note_release.py is the one list of them): the Tauri and zip names stay inside the build jobs.
+      - name: Name the files, zip the SBOMs and compute SHA256SUMS
+        env:
+          TAG: ${{ needs.controllo.outputs.tag }}
         run: |
+          v="${TAG#v}"; p="mzLab-$v-"
           mkdir dist
-          find pezzi -type f ! -name NOTE.md -exec cp {} dist/ \;
+          one() { f=$(find "pezzi/$1" -type f -name "$2"); [ "$(printf '%s\n' "$f" | wc -l)" = 1 ] && cp "$f" "dist/$p$3" || { echo "::error::expected one $2 in $1"; exit 1; }; }
+          one mzlab-desktop-Windows '*.exe' Windows.exe
+          one mzlab-desktop-macOS '*.dmg' Mac.dmg
+          one mzlab-desktop-Linux '*.AppImage' Linux.AppImage
+          one mzlab-desktop-Linux '*.deb' Linux.deb
+          one sito 'mzlab-site-*.zip' sito.zip
+          (cd pezzi && zip -qr "../dist/${p}sicurezza-SBOM.zip" sbom sito/sbom-js.cdx.json)
           cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
-      - name: Draft release with the notes of CHANGELOG.md
+      - name: Draft release (download table on top, then the notes of CHANGELOG.md)
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.controllo.outputs.tag }}
         run: |
+          python3 tools/note_release.py --tag "$TAG" --repo "$GITHUB_REPOSITORY" --notes pezzi/note/NOTE.md > RELEASE_NOTES.md
           target=()
           if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then target=(--target "$GITHUB_SHA"); fi      # from the dispatch: the tag is created when the draft is published
           gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --draft "${target[@]}" \
-            --title "mzLab ${TAG}" --notes-file pezzi/note/NOTE.md
+            --title "mzLab ${TAG}" --notes-file RELEASE_NOTES.md
