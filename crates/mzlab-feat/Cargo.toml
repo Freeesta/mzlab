@@ -94,3 +94,7 @@ required-features = ["untargeted"]
 [[test]]
 name = "untargeted_finder_410"
 required-features = ["untargeted"]
+
+[[test]]
+name = "untargeted_formula_id"
+required-features = ["untargeted"]
