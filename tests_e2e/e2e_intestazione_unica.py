@@ -16,7 +16,8 @@ try:
         def new(w, lang, admin):
             c = r.b.new_context(viewport={"width": w, "height": 800}); q = c.new_page()
             q.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-            q.add_init_script(f"try {{ localStorage.setItem('mzlab.lang', '{lang}'); {'localStorage.setItem(\"mzlab.admin\", \"1\")' if admin else 'localStorage.removeItem(\"mzlab.admin\")'} }} catch (e) {{}}")
+            adm = 'localStorage.setItem("mzlab.admin", "1")' if admin else 'localStorage.removeItem("mzlab.admin")'
+            q.add_init_script("try { localStorage.setItem('mzlab.lang', '" + lang + "'); " + adm + " } catch (e) {}")
             return c, q
         def same():
             for lang, names in (("it", ["Dati", "Disegno", "Teoria"]), ("en", ["Data", "Drawing", "Theory"])):
