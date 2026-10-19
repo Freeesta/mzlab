@@ -2529,8 +2529,6 @@ I18N.add("en", {
   "settings.cen.fail": "Cannot reduce {name}.",
   "settings.a11y.title": "Accessibility",
   "reset.title": "Start a new session?",
-  "start.stuck": "Not starting, or nothing loads?",
-  "start.stuck.btn": "Full reset…",
   "reset.all.btn": "Full reset",
   "reset.all.sub": "Everything, as the first time",
   "reset.files.btn": "Files and session only",

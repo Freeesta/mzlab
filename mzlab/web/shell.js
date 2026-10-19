@@ -321,12 +321,6 @@ async function upload0(files,into,box,signal){
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);
   await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
 function showStart(d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
-// a loading (or the engine start) that stays busy for STUCK_MS shows a quiet way out, «Full reset», that opens the same question as «New session» (reset.js); it never shows on an idle screen or after a loading ended
-const STUCK_MS=15000;let stuckTimer=0;
-function armStuck(){if(stuckTimer)return;let since=0;stuckTimer=setInterval(()=>{const s=$("#start"),p=$("#stuck");if(!s||!p)return;
-  if(s.hidden||(window.qqReady&&UPBUSY===0)){since=0;p.style.visibility="hidden";return}
-  since=since||Date.now();if(Date.now()-since>=STUCK_MS){$("#stuckbtn").onclick=()=>QQRESET.ask();p.style.visibility="visible"}},1000)}   // its line is in the page from the first paint (space kept, invisible): when it shows, nothing moves
-armStuck();
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=e=>{CartCarica.fromInput(e.target.files);e.target.value=""};
 $("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};

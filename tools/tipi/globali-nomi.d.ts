@@ -730,7 +730,6 @@ declare var stackOrder: any;
 declare var stdColor: any;
 declare var stepMsg: any;
 declare var stepScan: any;
-declare var stuckTimer: any;
 declare var subText: any;
 declare var syncBrowse: any;
 declare var syncT: any;

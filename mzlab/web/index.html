@@ -112,7 +112,6 @@
   <input type="file" id="pickdam" multiple hidden>
   <div id="mlist"></div></div>
  <div class="card"><div id="hrnote" class="muted sm" hidden data-i18n-html="load.hrnote">File in profilo ad alta risoluzione: molto pesante. Convertilo con il peak picking del vendor, per esempio <code>msconvert file.raw --mzML --zlib --filter "peakPicking vendor msLevel=1-"</code> (ricetta completa nella guida, «File ad alta risoluzione e file grandi»).</div><div id="modenote" class="muted sm" hidden data-i18n="load.modenote">Alcuni file sono in profilo e altri centroidi: le intensità dei due gruppi non sono confrontabili.</div><button class="go" id="opbtn" disabled data-i18n="load.go">Carica dati</button><button id="cancadd" hidden data-i18n="common.cancel">Annulla</button><div id="gomsg" class="fail"></div></div>
-<p id="stuck" class="muted sm" style="text-align:center;visibility:hidden"><span data-i18n="start.stuck">Non parte o non carica niente?</span> <button type="button" class="sec" id="stuckbtn" data-i18n="start.stuck.btn">Reset completo…</button></p>
 </section>
 <script>/* synchronous i18n application before first paint; the header stays invisible (not hidden: its space is kept) until its texts are in the language of the page */(function(){if(window.I18N&&window.I18N.apply)window.I18N.apply(document);document.documentElement.classList.remove("i18n-wait")})()</script>
 <script src="static/avvio-progressivo.js"></script>
