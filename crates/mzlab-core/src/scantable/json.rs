@@ -93,21 +93,7 @@ pub struct Columns {
 
 /// One row as the JSON array of `SCAN_COLUMNS` (without the separator before it).
 fn write_row(o: &mut Out, r: &Row) {
-    match (r.k, r.posizione) {
-        (None, _) => o.int(r.start as i64).raw(",").int(r.end as i64),
-        (Some(k), None) => o.raw("null,").int(k as i64),
-        (Some(k), Some(p)) => {
-            let (m, n) = (i64::from(p.membro), i64::from(p.lunghezza));
-            o.raw("[")
-                .int(m)
-                .raw(",")
-                .int(p.offset as i64)
-                .raw(",")
-                .int(n)
-                .raw("],")
-                .int(k as i64)
-        }
-    };
+    write_where(o, r);
     o.raw(",").int(r.level as i64).raw(",");
     py_float(o, r.rt);
     o.raw(",").int(r.polarity as i64).raw(",");
@@ -212,4 +198,23 @@ fn write_precs(o: &mut Out, r: &Row) {
         o.raw("}");
     }
     o.raw("],");
+}
+
+/// Where the scan lies: the span of the mzML, or the place in a vendor file set.
+fn write_where(o: &mut Out, r: &Row) {
+    match (r.k, r.posizione) {
+        (None, _) => o.int(r.start as i64).raw(",").int(r.end as i64),
+        (Some(k), None) => o.raw("null,").int(k as i64),
+        (Some(k), Some(p)) => {
+            let (m, n) = (i64::from(p.membro), i64::from(p.lunghezza));
+            o.raw("[")
+                .int(m)
+                .raw(",")
+                .int(p.offset as i64)
+                .raw(",")
+                .int(n)
+                .raw("],")
+                .int(k as i64)
+        }
+    };
 }
