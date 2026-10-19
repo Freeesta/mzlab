@@ -358,3 +358,5 @@ html:not(.phone) #avvio-copia,html:not(.phone) #avvio-reset,html:not(.phone) #de
 
 .hrmix{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;border:1px solid var(--accent);border-left-width:4px;border-radius:6px;background:var(--soft);font-size:14px}.hrmix-ic{flex:none;color:var(--accent)}.hrmix button{min-height:24px}@media (pointer:coarse){.hrmix button{min-height:40px}}
 #fl-dz{margin:6px;padding:14px 10px;border:2px dashed var(--accent);border-radius:6px;text-align:center;font-weight:600;color:var(--accent)}#fl-note{margin:6px 8px}#sb-pane.dz-over{outline:2px dashed var(--accent);outline-offset:-3px}#rmall:disabled{opacity:.4;cursor:default}
+
+.lst-onelist .lst-src-col{display:none}
