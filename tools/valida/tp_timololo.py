@@ -49,21 +49,27 @@ def find(rows: list[dict], t: dict) -> list[dict]:
 def measure(data: dict, truth: dict) -> dict:
     rows = data.get("rows", [])
     tps = [t for t in truth.get("tps", []) if isinstance(t, dict) and t.get("mz") is not None]
-    seen, region_ok, region_n, site_diff, new_rows = 0, 0, 0, [], []
+    seen, region_ok, region_n, site_diff, no_evidence, new_rows = 0, 0, 0, [], [], []
     for t in tps:
         hit = find(rows, t)
         seen += bool(hit)
         want = t.get("region")
         if hit and want:
+            name = t.get("id", t.get("name", "?"))
+            # rows that cannot say anything (few fragments, change lost) have no region to compare: no evidence, not a disagreement
+            if all(r["confidence"] == "cannot_say" for r in hit):
+                no_evidence.append((name, want, sorted({x for r in hit for x in r.get("reasons", [])})))
+                continue
             region_n += 1
-            region_ok += any(want.lower() in (r.get("region") or "").lower() for r in hit)
-            if not any(want.lower() in (r.get("region") or "").lower() for r in hit):
-                site_diff.append((t.get("id", t.get("name", "?")), want, sorted({r["confidence"] for r in hit})))
+            agree = any(want.lower() in (r.get("region") or "").lower() for r in hit)
+            region_ok += agree
+            if not agree:
+                site_diff.append((name, want, sorted({r["confidence"] for r in hit})))
     known = {r["id"] for t in tps for r in find(rows, t)}
     new_rows = [r for r in rows if r["id"] not in known and r.get("delta")]
     dec = data.get("decoys") or {}
     return {"rows": len(rows), "tp_literature": len(tps), "tp_in_view": seen, "region_agree": region_ok, "region_checked": region_n,
-            "site_disagreements": site_diff, "new_candidates": new_rows, "decoys": dec,
+            "site_disagreements": site_diff, "no_evidence": no_evidence, "new_candidates": new_rows, "decoys": dec,
             "fdr_decoys": (dec["survived"] / dec["rules"]) if dec.get("rules") else None}
 
 
@@ -72,10 +78,13 @@ def render(m: dict) -> str:
            "Hypotheses of the literature are not the truth: the lists below are to be reviewed by hand.", "",
            f"- rows interpreted: {m['rows']}",
            f"- literature products in view: {m['tp_in_view']} / {m['tp_literature']}",
-           f"- regions in agreement: {m['region_agree']} / {m['region_checked']}",
+           f"- regions in agreement: {m['region_agree']} / {m['region_checked']} (products with a position verdict)",
+           f"- products with no evidence for a position (cannot_say): {len(m['no_evidence'])}",
            f"- decoys: {m['decoys']}  (FDR {m['fdr_decoys']})",
            "- agreement with the mzmine gold: not measured here (the list comes from the local chat)", "", "## Position disagreements to review"]
     out += [f"- {a}: literature {b}, program {c}" for a, b, c in m["site_disagreements"]] or ["- none"]
+    out += ["", "## No evidence (the engine cannot say; not disagreements)"]
+    out += [f"- {a}: literature {b}, reasons {', '.join(c) or 'n/a'}" for a, b, c in m["no_evidence"]] or ["- none"]
     out += ["", "## New candidates (rows with a change that no literature entry explains)"]
     out += [f"- m/z {r['mz']:.4f}, RT {r['rt']:.2f}: {r['delta']} ({r['confidence']})" for r in m["new_candidates"]] or ["- none"]
     return "\n".join(out) + "\n"
