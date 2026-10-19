@@ -44,6 +44,10 @@ const ISO: [(&str, &[(f64, f64)]); 13] = [
     ("Br", &[(78.9183376, 0.5069), (80.9162897, 0.4931)]),
     ("I", &[(126.9044719, 1.0)]),
 ];
+/// Natural isotopes of an element as `(exact mass, abundance)`, the most abundant NOT necessarily first; `None` for an element outside the table.
+pub fn isotopes_of(el: &str) -> Option<&'static [(f64, f64)]> {
+    ISO.iter().find(|(e, _)| *e == el).map(|(_, p)| *p)
+}
 const MERGE_TOL: f64 = 0.0005;
 const MAX_SHIFT: f64 = 6.0;
 

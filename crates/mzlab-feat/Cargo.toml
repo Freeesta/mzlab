@@ -82,3 +82,7 @@ required-features = ["untargeted"]
 [[test]]
 name = "untargeted_localmax"
 required-features = ["untargeted"]
+
+[[test]]
+name = "untargeted_isofinder"
+required-features = ["untargeted"]
