@@ -4,7 +4,15 @@
 //! The steps themselves are in `run`, shared with the native example, so the browser and the desktop write the same bytes.
 #![forbid(unsafe_code)]
 // the .wasm of `finder` (or `finder_msn`) alone has no step that writes to a sink or reads the stored files
-#![cfg_attr(not(any(feature = "detect", feature = "proofs", feature = "mrm", feature = "untargeted")), allow(dead_code))]
+#![cfg_attr(
+    not(any(
+        feature = "detect",
+        feature = "proofs",
+        feature = "mrm",
+        feature = "untargeted"
+    )),
+    allow(dead_code)
+)]
 use js_sys::{Array, Function, Uint8Array};
 #[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted"))]
 use mzlab_core::budget::MemBudget;
@@ -26,6 +34,7 @@ pub mod interp;
 #[cfg(feature = "finder_msn")]
 pub mod msn;
 pub mod run;
+pub mod run_evid;
 #[cfg(feature = "proofs")]
 pub mod state;
 #[cfg(feature = "untargeted")]
@@ -400,9 +409,13 @@ pub fn run_hypotheses(
 
 #[cfg(feature = "proofs")]
 /// The roles of the files from a `campioni/2` (None or empty = only the minutes, as before).
-fn roles_of(campioni: Option<&str>) -> std::result::Result<Option<mzlab_feat::tp::TpRoles>, JsValue> {
+fn roles_of(
+    campioni: Option<&str>,
+) -> std::result::Result<Option<mzlab_feat::tp::TpRoles>, JsValue> {
     match campioni.filter(|c| !c.is_empty()) {
-        Some(c) => mzlab_feat::tp::TpRoles::from_json(c).map(Some).map_err(js_err),
+        Some(c) => mzlab_feat::tp::TpRoles::from_json(c)
+            .map(Some)
+            .map_err(js_err),
         None => Ok(None),
     }
 }
@@ -410,7 +423,9 @@ fn roles_of(campioni: Option<&str>) -> std::result::Result<Option<mzlab_feat::tp
 #[cfg(feature = "proofs")]
 /// L8-L9: the graph of the proofs on the `.mzfeat` of the series, read by offsets with `table_read(offset, length)`, written to `write(offset, bytes)`:
 /// `{"bytes", "sha256"}` of the `.mzfeat` with the `evid` section. `minutes[k]` is the treatment time of file `k` (NaN = a control); `parent_mz` NaN = no
-/// parent in the table. `campioni` (optional) is a `campioni/2`: gate 1 of the products then reads the roles of the files. The same bytes whatever `budget_mb` (0/NaN = 192): the graph whole, or made identity by identity (`error.memoryBudget` if not even so).
+/// parent in the table. `campioni` (optional) is a `campioni/2`: gate 1 of the products then reads the roles of the files. `stored` (the `.mzfeatf` of the series, in the order of
+/// the indexes) with `mzidx_read`/`mzidx_sizes` (the `.mzidx` of the same files, read by offsets) let the proofs measure the rows: isotope patterns, MS2 purity, the share of the MS2
+/// the parent explains and its fragments; without them the bytes are the ones of before. The same bytes whatever `budget_mb` (0/NaN = 192): the graph whole, or made identity by identity (`error.memoryBudget` if not even so).
 #[wasm_bindgen]
 pub fn build_evidence_to(
     table_read: Function,
@@ -423,6 +438,9 @@ pub fn build_evidence_to(
     write: Function,
     budget_mb: f64,
     campioni: Option<String>,
+    stored: Option<Array>,
+    mzidx_read: Option<Function>,
+    mzidx_sizes: Option<Vec<f64>>,
 ) -> std::result::Result<String, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
     let roles = roles_of(campioni.as_deref())?;
@@ -434,7 +452,17 @@ pub fn build_evidence_to(
     };
     to_sink(write, |sink| {
         let size = table_size as u64;
-        run::evidence_roles_to(
+        let mut files = stored.map(|files| JsStored { files });
+        let sizes = mzidx_sizes.unwrap_or_default();
+        let mut open = |k: usize| open_one(mzidx_read.as_ref().expect("read"), k, sizes[k]);
+        let src = match (files.as_mut(), mzidx_read.is_some() && !sizes.is_empty()) {
+            (Some(stored), true) => Some(run::RowSources {
+                stored,
+                open: &mut open,
+            }),
+            _ => None,
+        };
+        run::evidence_sources_to(
             &mut table,
             size,
             &hypotheses.inner,
@@ -443,6 +471,7 @@ pub fn build_evidence_to(
             parent,
             &r,
             &budget,
+            src,
             sink,
         )
     })
