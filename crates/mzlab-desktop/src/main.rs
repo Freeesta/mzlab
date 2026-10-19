@@ -12,8 +12,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use mzlab_desktop::cartella;
-use mzlab_desktop::dialogo;
+use mzlab_desktop::{cartella, dialogo};
 use mzlab_desktop::librerie::{self, Config};
 use mzlab_desktop::release;
 use mzlab_desktop::scarica::{self, Policy};
