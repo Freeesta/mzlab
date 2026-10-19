@@ -6,7 +6,7 @@ use crate::embed::{embed, Conf, DEFAULT_CONFORMERS};
 use crate::fukui::{ch_sites, Fukui, Site};
 use crate::mol3d::{hbonds, symbol, Mol3d};
 use crate::protomer::{self, Protomer};
-use crate::xtb::{alpb, valence, System};
+use crate::xtb::{alpb, System};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, round, Out};
 use mzlab_feat::chem::grafo::Mol;
@@ -17,8 +17,6 @@ pub const ENGINE: &str = "mzlab-chem/1";
 pub const PUBLISH_GFN2: bool = true;
 /// Whether the pH 7 form is the default (`docs/agenti/reattivita.md`, section «Protomero a pH 7»).
 pub const PROTOMER_DEFAULT: bool = false;
-/// Whether Fukui values come from Hirshfeld instead of Mulliken charges by default (`docs/agenti/reattivita.md`, «Cariche di Hirshfeld»).
-pub const HIRSHFELD_DEFAULT: bool = false;
 /// Conformers on which f(−) is also computed, to give its spread.
 const SPREAD_CONFORMERS: usize = 3;
 
@@ -30,8 +28,6 @@ pub struct Opts {
     pub seed: u64,
     /// `"protomer":"ph7"` computes the most probable form at pH 7 (`protomer.rs`) instead of the SMILES as written.
     pub ph7: bool,
-    /// `"charges":"hirshfeld"` takes q and the Fukui values from Hirshfeld populations (`xtb/hirshfeld.rs`) instead of Mulliken.
-    pub hirshfeld: bool,
 }
 
 impl Opts {
@@ -41,7 +37,6 @@ impl Opts {
             conformers: DEFAULT_CONFORMERS,
             seed: 42,
             ph7: PROTOMER_DEFAULT,
-            hirshfeld: HIRSHFELD_DEFAULT,
         };
         if text.trim().is_empty() {
             return Ok(o);
@@ -65,13 +60,6 @@ impl Opts {
                 _ => return Err(bad("protomer")),
             };
         }
-        if let Some(s) = v.get("charges").and_then(|s| s.str()) {
-            o.hirshfeld = match s {
-                "hirshfeld" => true,
-                "mulliken" => false,
-                _ => return Err(bad("charges")),
-            };
-        }
         if let Some(n) = v.get("seed").and_then(|n| n.f64()) {
             o.seed = n.max(0.0) as u64;
         }
@@ -87,24 +75,17 @@ pub struct Result3 {
     pub lumo_ev: f64,
     pub converged: [bool; 3],
     pub iterations: [usize; 3],
-    pub spread: Option<f64>,
     /// Share of the HOMO and of the LUMO on each atom (empty for the EHT fallback).
     pub homo_share: Vec<f64>,
     pub lumo_share: Vec<f64>,
-    /// Fukui values from Hirshfeld populations.
-    pub hirshfeld: bool,
+    pub spread: Option<f64>,
 }
 
 /// Fukui values, HOMO and LUMO (eV), converged, iterations of N, N+1 and N−1, and the HOMO and LUMO share of each atom.
 pub type Gfn2 = (Fukui, f64, f64, [bool; 3], [usize; 3], [Vec<f64>; 2]);
 
-/// GFN2-xTB of N, N+1 and N−1 for one geometry with Mulliken charges.
+/// GFN2-xTB of N, N+1 and N−1 for one geometry: (Fukui, HOMO, LUMO, converged, iterations, frontier shares).
 pub fn gfn2(m: &Mol3d, xyz: &[[f64; 3]], water: bool) -> Result<Gfn2> {
-    gfn2_with(m, xyz, water, false)
-}
-
-/// GFN2-xTB of N, N+1 and N−1 for one geometry; `hirshfeld` replaces the Mulliken charges by Hirshfeld populations.
-pub fn gfn2_with(m: &Mol3d, xyz: &[[f64; 3]], water: bool, hirshfeld: bool) -> Result<Gfn2> {
     let sys = System::new(&m.el, xyz, water.then_some(&alpb::WATER))?;
     let charge: i32 = m.charge.iter().map(|&c| c as i32).sum();
     let n = sys.solve(charge, None)?;
@@ -113,16 +94,8 @@ pub fn gfn2_with(m: &Mol3d, xyz: &[[f64; 3]], water: bool, hirshfeld: bool) -> R
     let nel = (sys.electrons() as i64 - charge as i64) as usize;
     let (h, l) = n.frontier(nel);
     let (hs, ls) = sys.frontier_shares(&n, nel);
-    let fukui = if hirshfeld {
-        let pop = sys.hirshfeld_populations(&[&n.p, &a.p, &c.p], &[nel, nel + 1, nel - 1]);
-        let q =
-            |k: usize| -> Vec<f64> { (0..m.len()).map(|i| valence(m.el[i]) - pop[k][i]).collect() };
-        Fukui::from_charges(&q(0), &q(1), &q(2))
-    } else {
-        Fukui::from_charges(&n.q, &a.q, &c.q)
-    };
     Ok((
-        fukui,
+        Fukui::from_charges(&n.q, &a.q, &c.q),
         h,
         l,
         [n.converged, a.converged, c.converged],
@@ -162,18 +135,13 @@ fn spread(m: &Mol3d, confs: &[Conf], f0: &[f64], water: bool) -> Option<f64> {
 }
 
 /// The calculation behind `reatt/1` on the lowest-energy conformer.
-pub fn compute(m: &Mol3d, confs: &[Conf], water: bool, hirshfeld: bool) -> Result<Result3> {
+pub fn compute(m: &Mol3d, confs: &[Conf], water: bool) -> Result<Result3> {
     let xyz = &confs[0].xyz;
     if PUBLISH_GFN2 {
         let (fukui, homo_ev, lumo_ev, converged, iterations, [homo_share, lumo_share]) =
-            gfn2_with(m, xyz, water, hirshfeld)?;
+            gfn2(m, xyz, water)?;
         if converged.iter().all(|&c| c) {
-            // The spread is computed with Mulliken charges only.
-            let spread = if hirshfeld {
-                None
-            } else {
-                spread(m, confs, &fukui.f_minus, water)
-            };
+            let spread = spread(m, confs, &fukui.f_minus, water);
             return Ok(Result3 {
                 method: "GFN2-xTB",
                 fukui,
@@ -181,10 +149,9 @@ pub fn compute(m: &Mol3d, confs: &[Conf], water: bool, hirshfeld: bool) -> Resul
                 lumo_ev,
                 converged,
                 iterations,
-                spread,
                 homo_share,
                 lumo_share,
-                hirshfeld,
+                spread,
             });
         }
     }
@@ -197,10 +164,9 @@ pub fn compute(m: &Mol3d, confs: &[Conf], water: bool, hirshfeld: bool) -> Resul
         lumo_ev,
         converged: [true, false, false],
         iterations: [1, 0, 0],
-        spread: None,
         homo_share: Vec::new(),
         lumo_share: Vec::new(),
-        hirshfeld: false,
+        spread: None,
     })
 }
 
@@ -213,7 +179,7 @@ pub fn reactivity_json(smiles: &str, opts_json: &str) -> Result<String> {
     let mol = prot.as_ref().map_or(written, |p| p.mol.clone());
     let mut m = Mol3d::from_mol(&mol)?;
     let confs = embed(&m, o.seed, o.conformers)?;
-    let r = compute(&m, &confs, o.water, o.hirshfeld)?;
+    let r = compute(&m, &confs, o.water)?;
     m.xyz = confs[0].xyz.clone();
     let sites = ch_sites(&mol, &m, &r.fukui.f_minus);
     Ok(write(
@@ -247,10 +213,6 @@ fn write(
         .str(smiles);
     if let Some(p) = prot {
         write_protomer(&mut o, p);
-    }
-    if r.method != "EHT" {
-        o.raw(",\"charges\":")
-            .str(if r.hirshfeld { "hirshfeld" } else { "mulliken" });
     }
     write_atoms(&mut o, m, r);
     o.raw(",\"hbonds\":[");
@@ -406,12 +368,7 @@ fn notes(r: &Result3, water: bool, prot: Option<&Protomer>) -> Vec<String> {
     if r.method == "EHT" {
         n.push(crate::eht::NOTE.to_string());
     } else {
-        let q = if r.hirshfeld {
-            "Hirshfeld populations"
-        } else {
-            "Mulliken charges"
-        };
-        n.push(format!("GFN2-xTB {q} of N, N+1 and N−1 electrons at the same geometry (300 K Fermi smearing, no spin polarisation): f(+) = q(N) − q(N+1), f(−) = q(N−1) − q(N), f(0) = their mean, dual = f(+) − f(−)."));
+        n.push("GFN2-xTB Mulliken charges of N, N+1 and N−1 electrons at the same geometry (300 K Fermi smearing, no spin polarisation): f(+) = q(N) − q(N+1), f(−) = q(N−1) − q(N), f(0) = their mean, dual = f(+) − f(−).".to_string());
         n.push(if water {
             "Implicit water: ALPB for GFN2-xTB (Ehlert et al. 2021 water parameters), Born electrostatics and hydrogen-bond term coupled to the charges; the surface-tension term, which does not change the charges, is left out.".to_string()
         } else {

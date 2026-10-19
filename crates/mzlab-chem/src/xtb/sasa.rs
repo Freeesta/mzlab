@@ -8,12 +8,11 @@ const POINTS: usize = 230;
 /// Half width of the smooth step (Å).
 const WIDTH: f64 = 0.3;
 
-/// `n` points of the Fibonacci sphere.
-pub(super) fn sphere(n: usize) -> Vec<[f64; 3]> {
+fn sphere() -> Vec<[f64; 3]> {
     let golden = std::f64::consts::PI * (3.0 - 5f64.sqrt());
-    (0..n)
+    (0..POINTS)
         .map(|k| {
-            let z = 1.0 - (2.0 * k as f64 + 1.0) / n as f64;
+            let z = 1.0 - (2.0 * k as f64 + 1.0) / POINTS as f64;
             let r = (1.0 - z * z).sqrt();
             let phi = golden * k as f64;
             [r * phi.cos(), r * phi.sin(), z]
@@ -35,7 +34,7 @@ fn step(u: f64, w: f64) -> f64 {
 /// Exposed fraction (0…1) per atom; positions and radii in bohr.
 pub fn exposed(pos: &[[f64; 3]], rad: &[f64]) -> Vec<f64> {
     let w = WIDTH * ANGSTROM_TO_BOHR;
-    let grid = sphere(POINTS);
+    let grid = sphere();
     (0..pos.len())
         .map(|i| {
             let near: Vec<usize> = (0..pos.len())

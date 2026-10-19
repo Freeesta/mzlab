@@ -6,7 +6,6 @@
 mod aes;
 pub mod alpb;
 mod basis;
-mod hirshfeld;
 mod sasa;
 mod scc;
 mod water;
@@ -19,16 +18,9 @@ use sci_form::xtb::gfn2_params;
 pub use basis::{ANGSTROM_TO_BOHR, EV_PER_HARTREE};
 pub use scc::MAX_ITER;
 
-/// Valence electrons of the neutral atom of atomic number `z`.
-pub fn valence(z: u8) -> f64 {
-    basis::par(z).ref_occ.iter().sum()
-}
-
 /// Geometry-dependent part of a GFN2-xTB calculation.
 pub struct System {
     el: Vec<u8>,
-    /// Positions in bohr.
-    pos: Vec<[f64; 3]>,
     basis: basis::Basis,
     ints: basis::Ints,
     h0: DMatrix<f64>,
@@ -71,7 +63,6 @@ impl System {
             d4: D4Model::new(el, &pos),
             solv: solvent.map(|s| alpb::matrix(el, &pos, s)),
             el: el.to_vec(),
-            pos,
             basis: b,
             ints,
             h0,
@@ -123,8 +114,7 @@ pub struct Scf {
     pub converged: bool,
     pub iterations: usize,
     pub guess: Guess,
-    /// Density matrix (atomic-orbital basis) and molecular-orbital coefficients (columns, ascending energy).
-    pub p: DMatrix<f64>,
+    /// Molecular-orbital coefficients (columns, ascending energy).
     pub c: DMatrix<f64>,
 }
 
