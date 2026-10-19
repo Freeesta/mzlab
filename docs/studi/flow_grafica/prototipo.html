@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flow prototype</title>
+<link rel="stylesheet" href="flow-proto.css">
+</head>
+<body>
+<!-- Study probe for docs/studi/FLOW_GRAFICA.md: fake modules, no engine, no data. Not shipped in the site. -->
+<header id="bar" role="toolbar" aria-label="Flow tools">
+  <button id="b-add" aria-haspopup="dialog" title="Add step (A)">+ Step</button>
+  <button id="b-run" title="Run (R)">▶ Run</button>
+  <button id="b-save" title="Save JSON">Save</button>
+  <label class="btn" title="Open JSON">Open<input id="b-open" type="file" accept=".json,application/json" hidden></label>
+  <span class="sep"></span>
+  <button id="b-zout" aria-label="Zoom out">−</button>
+  <button id="b-fit" aria-label="Fit to view">Fit</button>
+  <button id="b-zin" aria-label="Zoom in">+</button>
+  <span class="sep"></span>
+  <label>Extra nodes <select id="b-stress" aria-label="Extra nodes for the stress test">
+    <option>0</option><option>50</option><option>200</option><option>500</option></select></label>
+  <span id="msg" role="status" aria-live="polite"></span>
+</header>
+<main id="view" tabindex="-1" aria-label="Flow canvas. Arrow keys move the focused step; Enter on a port starts or ends a link; Escape cancels.">
+  <div id="world">
+    <svg id="wires" aria-hidden="false"></svg>
+    <div id="nodes"></div>
+  </div>
+</main>
+<aside id="insp" hidden aria-label="Step settings"></aside>
+<div id="pop" role="dialog" aria-modal="false" hidden></div>
+<dialog id="palette" aria-label="Add step">
+  <input id="pal-q" type="search" placeholder="Search steps" aria-label="Search steps">
+  <ul id="pal-list" role="listbox" aria-label="Steps"></ul>
+</dialog>
+<script src="flow-proto-model.js"></script>
+<script src="flow-proto.js"></script>
+</body>
+</html>
