@@ -125,14 +125,14 @@ try:
             pg.click("#stbar [data-cmd=adducts]"); pg.wait_for_timeout(300)
             pg.evaluate("BARRA.setWidth(320)"); pg.evaluate("BARRA.setSide('right')")
             st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert st["w"] == 320 and st["tab"] == "adducts" and st["open"] and "pinned" not in st, st
-            pg.reload(); ready(pg); pg.wait_for_timeout(500)
+            pg.reload(); ready(pg)
             assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.side === 'right' && BARRA.width === 320 && BARRA.curTab === 'adducts'"), "open, tool, side and width come back"
             assert pg.is_visible("#sb-panel-adducts"), "the restored panel is painted"
-            pg.click("#sb-x"); pg.evaluate("BARRA.setSide('left')"); pg.reload(); ready(pg); pg.wait_for_timeout(400)
+            pg.click("#sb-x"); pg.evaluate("BARRA.setSide('left')"); pg.reload(); ready(pg)
             assert not pg.is_visible("#dfiles"), "hidden when it was left hidden"
-            pg.evaluate("localStorage.setItem('mzlab.barra.lato','bogus'); localStorage.setItem('mzlab.barra.lr', JSON.stringify({tab:'calc', pinned:true, open:true, w:0}))"); pg.reload(); ready(pg); pg.wait_for_timeout(400)
+            pg.evaluate("localStorage.setItem('mzlab.barra.lato','bogus'); localStorage.setItem('mzlab.barra.lr', JSON.stringify({tab:'calc', pinned:true, open:true, w:0}))"); pg.reload(); ready(pg)
             st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert "pinned" not in st and st["w"] == 300 and pg.evaluate("localStorage.getItem('mzlab.barra.lato')") == "left", st
-            pg.evaluate("localStorage.setItem('mzlab.barra.lr', JSON.stringify({tab:'file', open:true, w:99999}))"); pg.reload(); ready(pg); pg.wait_for_timeout(400)
+            pg.evaluate("localStorage.setItem('mzlab.barra.lr', JSON.stringify({tab:'file', open:true, w:99999}))"); pg.reload(); ready(pg)
             assert pg.evaluate("BARRA.width") <= 560, "a width out of range goes back to the default"
             pg.evaluate("localStorage.removeItem('mzlab.barra.lr'); localStorage.removeItem('mzlab.barra.lato')"); pg.reload(); ready(pg)
             assert pg.is_visible("#dfiles"), "first start: open"
@@ -163,7 +163,7 @@ try:
             assert pg.evaluate("typeof BARRA.setLabels") == "undefined" and pg.evaluate(FIT)["lvl"] == "all"
             pg.click("#np-set"); pg.wait_for_selector("#uip-th"); assert pg.locator("#uip-etich").count() == 0, "no labels option in the settings"
             pg.keyboard.press("Escape")
-            pg.evaluate("localStorage.setItem('mzlab.barra.etichette','hidden')"); pg.reload(); ready(pg); pg.wait_for_timeout(400)
+            pg.evaluate("localStorage.setItem('mzlab.barra.etichette','hidden')"); pg.reload(); ready(pg)
             assert pg.evaluate(FIT)["lvl"] == "all", "an old saved value is ignored: the labels follow the width"
             pg.set_viewport_size({"width": 1024, "height": 800}); pg.wait_for_timeout(500)
             f = pg.evaluate(FIT); assert not f["clipped"] and f["wrapped"] == 0, f

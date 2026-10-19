@@ -1,5 +1,5 @@
 """Guided tour of the Dati view (low-resolution only): invitation, 15 steps, try-it steps, keyboard, EN, HR exclusion, example file."""
-import sys, os, shutil
+import json, sys, os, shutil
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -7,6 +7,15 @@ from lib import *
 
 r = Run(port=8894, wd="/tmp/wd94")
 steps = []
+
+def wait_hd(pg, txt):
+    """Wait until the tour header shows `txt`; on timeout fail with what it shows."""
+    try:
+        pg.wait_for_function("document.querySelector('#tour-dialog .tour-hd')?.innerText.includes(%s)" % json.dumps(txt), timeout=10000)
+    except Exception:
+        found = pg.evaluate("document.querySelector('#tour-dialog .tour-hd')?.innerText")
+        raise AssertionError(f"tour header {txt!r} not shown, found {found!r}")
+
 
 # Prepare example files in /tmp with requested names
 TMP_LR = "/tmp/Esempio_FullScan_t15.mzML"
@@ -78,7 +87,7 @@ try:
 
         # Advance to Step 2: gruppi
         pg.click("#tour-btn-next")
-        pg.wait_for_timeout(300)
+        wait_hd(pg, "Passo 2 di 7 · I tuoi dati")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
         assert "Passo 2 di 7 · I tuoi dati" in hd, hd
@@ -86,15 +95,15 @@ try:
 
         # Test Back button returns to Step 1
         pg.click("#tour-btn-back")
-        pg.wait_for_timeout(300)
+        wait_hd(pg, "Passo 1 di 7 · I tuoi dati")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         assert "Passo 1 di 7 · I tuoi dati" in hd, hd
 
         # Advance again to Step 2, then Step 3: TIC
         pg.click("#tour-btn-next")
-        pg.wait_for_timeout(200)
+        wait_hd(pg, "Passo 2 di 7")
         pg.click("#tour-btn-next")
-        pg.wait_for_timeout(300)
+        wait_hd(pg, "Passo 3 di 7 · I tuoi dati")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
         assert "Passo 3 di 7 · I tuoi dati" in hd, hd
@@ -104,7 +113,7 @@ try:
 
         # Advance to Step 4: istante (Try it step)
         pg.click("#tour-btn-next")
-        pg.wait_for_timeout(300)
+        wait_hd(pg, "Passo 4 di 7 · I tuoi dati")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
         assert "Passo 4 di 7 · I tuoi dati" in hd, hd
@@ -121,7 +130,7 @@ try:
 
         # Advance to Step 6: xic (Try it step)
         pg.click("#tour-btn-next")
-        pg.wait_for_timeout(300)
+        wait_hd(pg, "Passo 6 di 7 · I tuoi dati")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
         assert "Passo 6 di 7 · I tuoi dati" in hd, hd
@@ -150,7 +159,7 @@ try:
 
         # Click Continua to go to Chapter 2
         pg.click("#tour-btn-cont")
-        pg.wait_for_timeout(300)
+        wait_hd(pg, "Passo 1 di 9 · Strumenti e movimenti")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
         assert "Passo 1 di 9 · Strumenti e movimenti" in hd, hd
@@ -163,7 +172,7 @@ try:
 
         # Enter advances to Step 2: tasti
         pg.keyboard.press("Enter")
-        pg.wait_for_timeout(300)
+        wait_hd(pg, "Passo 2 di 9 · Strumenti e movimenti")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
         assert "Passo 2 di 9 · Strumenti e movimenti" in hd, hd
@@ -171,19 +180,19 @@ try:
 
         # ArrowLeft goes back to Step 1
         pg.keyboard.press("ArrowLeft")
-        pg.wait_for_timeout(300)
+        wait_hd(pg, "Passo 1 di 9 · Strumenti e movimenti")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         assert "Passo 1 di 9 · Strumenti e movimenti" in hd, hd
 
         # ArrowRight advances to Step 2
         pg.keyboard.press("ArrowRight")
-        pg.wait_for_timeout(300)
+        wait_hd(pg, "Passo 2 di 9 · Strumenti e movimenti")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         assert "Passo 2 di 9 · Strumenti e movimenti" in hd, hd
 
         # Escape exits and saves saltato
         pg.keyboard.press("Escape")
-        pg.wait_for_timeout(300)
+        pg.wait_for_selector("#tour-dialog", state="hidden", timeout=10000)
         assert not pg.is_visible("#tour-dialog"), "dialog closed by Escape"
         st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr'))")
         assert st["stato"] == "saltato", st
@@ -194,7 +203,7 @@ try:
 
         # 4. Finish all steps of Chapter 2
         pg.evaluate("TOUR.vai(2, 2)") # go to step 3
-        pg.wait_for_timeout(200)
+        wait_hd(pg, "Passo 3 di 9")
 
         # Step 3: navfile
         hd = pg.inner_text("#tour-dialog .tour-hd")
@@ -244,7 +253,7 @@ try:
 
         # Click Fine -> finishes and saves fatto
         pg.click("#tour-btn-fine")
-        pg.wait_for_timeout(300)
+        pg.wait_for_selector("#tour-dialog", state="hidden", timeout=10000)
         assert not pg.is_visible("#tour-dialog")
         st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr'))")
         assert st["stato"] == "fatto", st
@@ -257,7 +266,8 @@ try:
         SPOT = "(()=>{const s=document.querySelector('#tour-spotlight');if(!s)return null;const r=s.getBoundingClientRect();return [Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)]})()"
         for cap, n in ((1, 7), (2, 9)):
             for i in range(n):
-                pg.evaluate(f"TOUR.vai({cap}, {i})"); pg.wait_for_timeout(350)
+                pg.evaluate(f"TOUR.vai({cap}, {i})")
+                wait_hd(pg, f"Passo {i + 1} di {n}")
                 hd = pg.inner_text("#tour-dialog .tour-hd")
                 assert f"Passo {i + 1} di {n}" in hd, (cap, i, hd)           # a step with no target is skipped: the number would jump
                 sp = pg.evaluate(SPOT); assert sp and sp[2] > 10 and sp[3] > 10, (cap, i, sp)
@@ -282,7 +292,7 @@ try:
         pg.goto(f"http://127.0.0.1:{r.port}/?lang=en")
         ready(pg)
         pg.evaluate("TOUR.inizia(1, 0)")
-        pg.wait_for_timeout(300)
+        wait_hd(pg, "Step 1 of 7 · Your data")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
         btn_txt = pg.inner_text("#tour-btn-next")
@@ -300,11 +310,11 @@ try:
         # 6. HR mode: no invitation, no entry in settings
         pg.evaluate("fetch('api/new', {method:'POST', body:JSON.stringify({fresh:true})})")
         pg.reload()
-        pg.wait_for_timeout(1000)
+        pg.wait_for_selector("#drop", timeout=60000)
         pg.evaluate("localStorage.removeItem('mzlab.tour.lr')")
 
         pg.set_input_files("#pick", [TMP_HR])
-        pg.wait_for_timeout(800)
+        pg.wait_for_selector("text=Carica dati", timeout=30000)
         pg.click("text=Carica dati")
         ready(pg)
 
@@ -320,7 +330,7 @@ try:
         # 7. Without data: "Fai il tour con un file di esempio" loads single file and starts at step 1
         pg.evaluate("fetch('api/new', {method:'POST', body:JSON.stringify({fresh:true})})")
         pg.reload()
-        pg.wait_for_timeout(1000)
+        pg.wait_for_selector("#drop", timeout=60000)
         pg.evaluate("localStorage.removeItem('mzlab.tour.lr')")
 
         # In start screen without data
