@@ -22,6 +22,7 @@ Studio e piano: `docs/studi/ATTRIBUTIO.md`. Tutto ciò che si vede nella pagina 
   - `ghs.rs`: categorie CLP/GHS acute e croniche (`classify`, `from_h_codes`).
   - `registry.rs`: regole pure del registro (CID rappresentativo, CAS/DTXSID dai sinonimi, codici H acquatici, categorie PubChemLite, tossicità prevista di SusDat, conteggi).
   - `hazard.rs`: record di pericolo acuto e cronico T1-T5 (`resolve_blocks`, `record`, `coverage`); ECOSAR con regole d'uso e «nessun effetto a saturazione».
+  - `candidates.rs` e `ecosar.rs`: candidati per livello (curato, misurato, notificato, previsto) e scelta del migliore; valori per taxon di ECOSAR con le regole d'uso.
   - `snapshot.rs`: lettori tipizzati di `compound_registry.csv`, `reglist_membership.csv`, `ecotox_values.csv`, `ecosar_endpoints.csv`.
   - Prova: `cargo test --release -p mzlab-feat --features attributio --test attributio_tox`, parità con `tests/golden/attributio/tox/{ghs,istantanee,registro,pericolo}.json` (istantanee inventate in `tests/data/attributio/istantanee_sintetiche/`); dati d'oro: `tools/attributio_tox_riferimento.py` via `tools/attributio_riferimento.py --solo tox-ghs tox-istantanee tox-registro` con Python 3.12.
 - **Esportazioni (AT-08)**: prove, cartella di Schymanski, tabella per la pubblicazione, quantificazione e gradiente in `crates/mzlab-feat/src/attributio/export/` e `review/evidence.rs`; `.wasm` `attributio-export`; moduli e prova in `docs/agenti/attributio-export.md`.
