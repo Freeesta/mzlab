@@ -35,7 +35,7 @@ try:
         step("4.2: the row is the button: click and keyboard open exact mass, mechanism, source, name", details)
         def groups():
             g = pg.locator("#nl-list .nlr[data-f^=g]"); assert g.count() == 2, g.count()      # with + : 28 and 42 (46 and 80 need a negative-only loss)
-            row = pg.locator('#nl-list [data-f="g28"] .nlrow'); t = row.inner_text(); assert "CO" in t and "C₂H₄" in t and "risoluzione unitaria" in t, t
+            row = pg.locator('#nl-list [data-f="g28"] .nlrow'); t = row.inner_text().replace("₂", "2").replace("₄", "4"); assert "CO" in t and "C2H4" in t and "risoluzione unitaria" in t, t
             row.click(); d = pg.inner_text('#nl-list [data-f="g28"] .nldet'); assert "Fonti" not in d and d.count("meccanismo") == 2, d
             row.click()
             # Click ESI- to activate both + and -
@@ -60,10 +60,10 @@ try:
         def polarity():
             # Turn off + so only - is active
             pg.click("#nl-pol [data-p='+']"); pg.wait_for_timeout(200)
-            ids = pg.evaluate("[...document.querySelectorAll('#nl-list .nlr')].map(r=>r.dataset.f)"); assert "NO2" in ids and "SO3" in ids and "NH3" not in ids, ids
+            ids = pg.evaluate("[...document.querySelectorAll('#nl-list .nlr')].map(r=>r.dataset.f)"); assert "g46" in ids and "g80" in ids and "NH3" not in ids, ids      # NO2 (46) and SO3 (80) sit on shared lines
             # Turn on + and turn off -
             pg.click("#nl-pol [data-p='+']"); pg.wait_for_timeout(100); pg.click("#nl-pol [data-p='-']"); pg.wait_for_timeout(200)
-            ids = pg.evaluate("[...document.querySelectorAll('#nl-list .nlr')].map(r=>r.dataset.f)"); assert "NH3" in ids and "SO3" not in ids and "H2O" in ids, ids
+            ids = pg.evaluate("[...document.querySelectorAll('#nl-list .nlr')].map(r=>r.dataset.f)"); assert "NH3" in ids and "g80" not in ids and "H2O" in ids, ids
             shut(pg, "#refx")
         step("4.6: +/- toggle filter", polarity)
         def a2():
@@ -98,7 +98,7 @@ try:
             v = pg.evaluate(RUN); assert not v, v
             for w, h in [(1440, 900), (400, 800)]:
                 pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(300)
-                if not pg.is_visible("#sb-panel-losses"): pg.click("#np-nl"); pg.wait_for_timeout(300)
+                if not pg.is_visible("#sb-panel-losses"): pg.evaluate("BARRA.setTab('losses')"); pg.wait_for_timeout(300)
                 sw = pg.evaluate("(()=>{const r=document.querySelector('#sb-panel-losses');return [r.scrollWidth>r.clientWidth+1,document.documentElement.scrollWidth>innerWidth]})()"); assert not any(sw), (w, sw)
                 tgt = pg.evaluate("[...document.querySelectorAll('#nl-list .nlrow')].every(b=>{const q=b.getBoundingClientRect();return q.width>=24&&q.height>=24})"); assert tgt, w
             pg.set_viewport_size({"width": 1400, "height": 1000}); pg.wait_for_timeout(200)
