@@ -9,7 +9,7 @@
   const esc = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"]/g, c => /** @type {any} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const admin = () => typeof G.uipAdminOn === "function" && G.uipAdminOn();
   /** @typedef {{ i: number, el: string, heavy_index: number|null, x: number, y: number, z: number, q: number|null, f_plus: number, f_zero: number|null, f_minus: number, dual: number }} RAtom */
-  /** @typedef {{ format: string, version: number, engine?: string, method?: string, solvent?: string, smiles: string, atoms: RAtom[], bonds?: {a:number,b:number,order?:number}[], hbonds?: {donor_h:number,acceptor:number}[], global?: Record<string, number|null>, conformers?: {n?:number, chosen?:number, f_minus_spread?:number|null}, scc?: {converged?: boolean|boolean[], iterations?: number|number[]}, notes?: string[], cite?: any[], ch_sites?: {class:string, heavy_index:number, n_h:number, f_minus:number}[] }} Reatt */
+  /** @typedef {{ format: string, version: number, engine?: string, method?: string, solvent?: string, smiles: string, atoms: RAtom[], bonds?: {a:number,b:number,order?:number}[], hbonds?: {donor_h:number,acceptor:number}[], global?: Record<string, number|null>, conformers?: {n?:number, chosen?:number, f_minus_spread?:number|null}, scc?: {converged?: boolean|boolean[], iterations?: number|number[]}, protomer?: {ph: number, smiles: string, charge: number, changes: {group: string, heavy_index: number, action: string, pka: number}[], note?: string}, notes?: string[], cite?: any[], ch_sites?: {class:string, heavy_index:number, n_h:number, f_minus:number}[] }} Reatt */
 
   const CARDS = /** @type {{ id: string, label: string, key: keyof RAtom }[]} */ ([
     { id: "fminus", label: "f(−)", key: "f_minus" }, { id: "fzero", label: "f(0)", key: "f_zero" }, { id: "fplus", label: "f(+)", key: "f_plus" }]);
@@ -125,8 +125,11 @@
     const g = r.global || {}, c = r.conformers || {}, s = r.scc || {};
     const row = (/** @type {string} */ k, /** @type {any} */ v) => v === undefined || v === null || v === "" ? "" : `<tr><th scope="row" style="text-align:left">${esc(k)}</th><td style="text-align:left">${esc(v)}</td></tr>`;
     const conv = Array.isArray(s.converged) ? s.converged.map(x => (x ? "yes" : "no")).join(" / ") + " (N, N+1, N−1)" : s.converged === undefined ? "" : s.converged ? "yes" : "no";
+    const p = r.protomer, sgn = (/** @type {number} */ n) => (n > 0 ? "+" : n < 0 ? "−" : "") + Math.abs(n);
+    const form = p ? `pH ${p.ph}, ${p.smiles}` : "As drawn", charge = p ? sgn(p.charge) : "";
+    const groups = p ? (p.changes.length ? p.changes.map(x => `${x.group} (typical pKa ${x.pka}, atom ${x.heavy_index + 1}) ${x.action}`).join("; ") : "none changed") : "";
     const ev = (/** @type {string} */ k, /** @type {string} */ l) => g[k] == null ? "" : row(l, num(g[k], 3) + " eV");
-    return `<table class="tpr-t"><tbody>${row("Method", r.method)}${row("Solvent", r.solvent && r.solvent !== "none" ? r.solvent.charAt(0).toUpperCase() + r.solvent.slice(1) : "None")}${row("Engine", r.engine)}${row("SMILES", r.smiles)}${row("Atoms", r.atoms.length)}`
+    return `<table class="tpr-t"><tbody>${row("Method", r.method)}${row("Solvent", r.solvent && r.solvent !== "none" ? r.solvent.charAt(0).toUpperCase() + r.solvent.slice(1) : "None")}${row("Engine", r.engine)}${row("SMILES", r.smiles)}${row("Form", form)}${row("Total charge", charge)}${row("Protonation changes", groups)}${row("Form note", p && p.note)}${row("Atoms", r.atoms.length)}`
       + `${row("Conformers", c.n !== undefined ? `${c.n}${c.chosen !== undefined ? ", chosen " + c.chosen : ""}${c.f_minus_spread != null ? ", spread of f(−) " + num(c.f_minus_spread, 3) : ""}` : "")}`
       + `${ev("homo_ev", "HOMO")}${ev("lumo_ev", "LUMO")}${ev("gap_ev", "HOMO–LUMO gap")}${ev("ip_ev", "Ionisation potential")}${ev("ea_ev", "Electron affinity")}${ev("mu_ev", "Chemical potential μ")}${ev("eta_ev", "Hardness η")}${ev("omega_ev", "Electrophilicity ω")}`
       + `${row("SCC converged", conv)}${row("SCC iterations", Array.isArray(s.iterations) ? s.iterations.join(" / ") : s.iterations)}</tbody></table>`;
