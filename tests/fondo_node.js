@@ -1,6 +1,7 @@
 // Node check of FONDO (mzlab/web/fondo.js): the properties the background correction promises. Exits 1 on the first failure.
 const fs = require("fs"), assert = require("assert");
 const FONDO = new Function(fs.readFileSync(process.argv[2], "utf8").replace("const FONDO", "var FONDO") + ";return FONDO")();
+const FONDOSP = new Function("FONDO", fs.readFileSync(process.argv[3], "utf8").replace("const FONDOSP", "var FONDOSP") + ";return FONDOSP")(FONDO);
 let seed = 12345; const rnd = () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const gauss = () => Math.sqrt(-2 * Math.log(rnd() + 1e-12)) * Math.cos(2 * Math.PI * rnd());
 const N = 3000, x = Array.from({ length: N }, (_, i) => i * 0.01), sd = 1000;
@@ -51,5 +52,15 @@ const ib = { mode: "mean", a: [0.2, 2], b: null };
   const fr = peak(80000, 0.8, 0.25), y = noise().map((v, i) => v + fr[i]), e = FONDO.front(x, y);
   assert(e != null && e > 0.8 && e < 1.6, "front end " + e);
   assert.strictEqual(FONDO.front(x, noise()), null);
+}
+// 8. automatic background windows for the spectrum: waste (zeros) + solvent front + stable state + gradient with a peak; the best window is quiet, after the front, and holds no peak
+{
+  const fr = peak(5e6, 2.0, 0.3), pk = peak(2e5, 6, 0.2), y = noise().map((v, i) => x[i] < 1.5 ? 0 : v + fr[i] + pk[i] + (x[i] > 10 ? (x[i] - 10) * 4000 : 0)), r = FONDOSP.regioni(x, y);
+  assert(r && r.lead > 2 && r.lead < 3.5, "lead " + (r && r.lead));
+  assert(r.cands.length === 3 && r.cands.every(c => c[0] >= r.lead && c[1] > c[0]), JSON.stringify(r));
+  assert(r.cands[0][1] < 10 && !(r.cands[0][0] <= 6 && r.cands[0][1] >= 6), "best " + r.cands[0]);
+  const ov = (a, b) => a[0] < b[1] && b[0] < a[1]; assert(!ov(r.cands[0], r.cands[1]) && !ov(r.cands[1], r.cands[2]) && !ov(r.cands[0], r.cands[2]), "overlap");
+  assert(FONDOSP.waste(x, y) >= 1.4 && FONDOSP.waste(x, noise()) === 0, "waste");
+  assert.strictEqual(FONDOSP.regioni([0, 1, 2], [1, 1, 1]), null);
 }
 console.log("ok");

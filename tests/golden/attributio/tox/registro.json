@@ -1,0 +1,223 @@
+{
+ "categories": [
+  [
+   [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   ""
+  ],
+  [
+   [
+    "3",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "x",
+    "1",
+    "",
+    ""
+   ],
+   "AgroChemInfo|KnownUse"
+  ],
+  [
+   [
+    "0",
+    "0",
+    "0",
+    "0.5",
+    "0",
+    "0",
+    "0",
+    "0",
+    "0",
+    "12"
+   ],
+   "FoodRelated|Identification"
+  ]
+ ],
+ "h_codes": [
+  [
+   [
+    "Warning H400 Very toxic",
+    "H410",
+    "xH411",
+    "H4120",
+    "H413."
+   ],
+   [
+    "H400",
+    "H410",
+    "H413"
+   ]
+  ],
+  [
+   [
+    "H401, H402 and H319"
+   ],
+   [
+    "H401",
+    "H402"
+   ]
+  ],
+  [
+   [
+    "nothing"
+   ],
+   []
+  ],
+  [
+   [
+    "H410 H410 H400"
+   ],
+   [
+    "H400",
+    "H410"
+   ]
+  ]
+ ],
+ "predicted": [
+  [
+   [
+    null,
+    null,
+    null
+   ],
+   null,
+   "",
+   ""
+  ],
+  [
+   [
+    "5000",
+    null,
+    null
+   ],
+   5.0,
+   "Daphnia 48 h LC50",
+   "Acute 2"
+  ],
+  [
+   [
+    "5000",
+    "200",
+    "200"
+   ],
+   0.2,
+   "algae 72 h EC50",
+   "Acute 1"
+  ],
+  [
+   [
+    null,
+    "1000000",
+    "abc"
+   ],
+   1000.0,
+   "algae 72 h EC50",
+   "Not classified"
+  ],
+  [
+   [
+    "nan",
+    null,
+    null
+   ],
+   null,
+   "",
+   ""
+  ],
+  [
+   [
+    "50000",
+    null,
+    null
+   ],
+   50.0,
+   "Daphnia 48 h LC50",
+   "Acute 3"
+  ],
+  [
+   [
+    "500",
+    null,
+    null
+   ],
+   0.5,
+   "Daphnia 48 h LC50",
+   "Acute 1"
+  ]
+ ],
+ "props": {
+  "2": "CCCCCCCCCCCCCC-QQQQQQQQQQ-M",
+  "3": "AAAAAAAAAAAAAA-ABCDEFGHIJ-N",
+  "4": "CCCCCCCCCCCCCC-RRRRRRRRRR-L",
+  "5": "AAAAAAAAAAAAAA-UHFFFAOYSA-N",
+  "7": "AAAAAAAAAAAAAA-ZZZZZZZZZZ-O",
+  "9": "BBBBBBBBBBBBBB-ZZZZZZZZZZ-O"
+ },
+ "representative": [
+  [
+   "AAAAAAAAAAAAAA",
+   null,
+   5
+  ],
+  [
+   "AAAAAAAAAAAAAA",
+   "AAAAAAAAAAAAAA-ABCDEFGHIJ-N",
+   3
+  ],
+  [
+   "BBBBBBBBBBBBBB",
+   null,
+   9
+  ],
+  [
+   "CCCCCCCCCCCCCC",
+   null,
+   2
+  ],
+  [
+   "DDDDDDDDDDDDDD",
+   null,
+   null
+  ]
+ ],
+ "synonyms": [
+  [
+   [
+    "Foo",
+    "DTXSID123",
+    "DTXSID1234567",
+    "50-00-0",
+    "1234567-89-0",
+    "12345678-90-1"
+   ],
+   "DTXSID1234567",
+   "50-00-0"
+  ],
+  [
+   [],
+   "",
+   ""
+  ],
+  [
+   [
+    "CAS 50-00-0",
+    "7732-18-5"
+   ],
+   "",
+   "7732-18-5"
+  ]
+ ]
+}

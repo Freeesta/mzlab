@@ -42,9 +42,43 @@ def stadio_tox_istantanee(dir_: Path, frame_rows):
             "values": frame_rows(snap["values"]), "ecosar": frame_rows(snap["ecosar"])}
 
 
+def stadio_tox_registro():
+    """Pure registry rules: representative CID, synonyms, aquatic H-codes, PubChemLite categories, predicted NORMAN toxicity."""
+    from attributio.chem import norman, pubchem, pubchemlite
+    props = {5: {"InChIKey": "AAAAAAAAAAAAAA-UHFFFAOYSA-N"}, 3: {"InChIKey": "AAAAAAAAAAAAAA-ABCDEFGHIJ-N"},
+             7: {"InChIKey": "AAAAAAAAAAAAAA-ZZZZZZZZZZ-O"}, 9: {"InChIKey": "BBBBBBBBBBBBBB-ZZZZZZZZZZ-O"},
+             2: {"InChIKey": "CCCCCCCCCCCCCC-QQQQQQQQQQ-M"}, 4: {"InChIKey": "CCCCCCCCCCCCCC-RRRRRRRRRR-L"}}
+    reps = []
+    for block, prefer in (("AAAAAAAAAAAAAA", None), ("AAAAAAAAAAAAAA", "AAAAAAAAAAAAAA-ABCDEFGHIJ-N"), ("BBBBBBBBBBBBBB", None),
+                          ("CCCCCCCCCCCCCC", None), ("DDDDDDDDDDDDDD", None)):
+        reps.append([block, prefer, pubchem.representative_cid(block, props, prefer)])
+    syn = [["Foo", "DTXSID123", "DTXSID1234567", "50-00-0", "1234567-89-0", "12345678-90-1"], [], ["CAS 50-00-0", "7732-18-5"]]
+    out = {"props": {str(k): v["InChIKey"] for k, v in props.items()}, "representative": reps,
+           "synonyms": [[s, pubchem.dtxsid_from_synonyms(s), pubchem.cas_from_synonyms(s)] for s in syn]}
+    texts = [["Warning H400 Very toxic", "H410", "xH411", "H4120", "H413."], ["H401, H402 and H319"], ["nothing"], ["H410 H410 H400"]]
+    codes = []
+    for t in texts:
+        pubchem.fetch = lambda url, offline=None, _t=t: {"A": [{"String": x} for x in _t], "n": {"String": 3}}
+        codes.append([t, pubchem.ghs_aquatic(1)])
+    out["h_codes"] = codes
+    rows = [{c: 0 for c in pubchemlite.CATEGORIES}, {**{c: "" for c in pubchemlite.CATEGORIES}, "AgroChemInfo": "3", "ToxicityInfo": "x", "KnownUse": "1"},
+            {**{c: "0" for c in pubchemlite.CATEGORIES}, "FoodRelated": "0.5", "Identification": "12"}]
+    out["categories"] = [[[r[c] for c in pubchemlite.CATEGORIES], pubchemlite.categories(r)] for r in rows]
+    tox = [{}, {"LC50_48_hr_ug/L": "5000"}, {"LC50_48_hr_ug/L": "5000", "EC50_72_hr_ug/L": "200", "LC50_96_hr_ug/L": "200"},
+           {"LC50_96_hr_ug/L": "abc", "EC50_72_hr_ug/L": "1000000"}, {"LC50_48_hr_ug/L": "nan"}, {"LC50_48_hr_ug/L": "50000"}, {"LC50_48_hr_ug/L": "500"}]
+    cols = list(norman.TOX_COLUMNS)
+    pred = []
+    for r in tox:
+        v, w = norman.predicted_lowest_lc50_mg_l(r)
+        pred.append([[r.get(c) for c in cols], v, w, norman.ghs_acute_category(v)])
+    out["predicted"] = pred
+    return out
+
+
 def stadi_tox(frame_rows, scrivi) -> dict:
     """The stage table: name -> function writing its golden file."""
     return {
         "tox-ghs": lambda: scrivi(USCITA_TOX, "ghs.json", stadio_tox_ghs()),
         "tox-istantanee": lambda: scrivi(USCITA_TOX, "istantanee.json", stadio_tox_istantanee(ISTANTANEE, frame_rows)),
+        "tox-registro": lambda: scrivi(USCITA_TOX, "registro.json", stadio_tox_registro()),
     }
