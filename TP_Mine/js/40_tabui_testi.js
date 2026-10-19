@@ -85,6 +85,7 @@
     "ft.tab.overview": "XIC of all the samples with the peak borders, and the spectrum (MS1 with isotopes, MS2).",
     "ft.tab.samples": "For every sample: type and time, area, state, apex RT and peak borders.",
     "ft.tab.identity": "Neutral mass, adduct, candidates with their evidence, proposed level and decided level.",
+    "ft.tab.structure": "The product drawn on its parent: a certain site as a full structure, a ring as one bond from its centre, another zone in square brackets. Fragments rank positions; they do not prove one.",
     "ft.tab.quality": "Peak shape, signal/noise, width, M+1 isotope, presence in blank and t0.",
     "ft.peak.borders": "Start and end of the peak (median of the files that detected it).",
     "ft.q.flags": "Peak warnings: irregular shape, low signal/noise, few points.",
