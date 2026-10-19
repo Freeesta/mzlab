@@ -45,6 +45,15 @@ fn register(state: &State, paths: Vec<PathBuf>) -> Vec<PickedFile> {
         .collect()
 }
 
+/// A file dialog that opens on the Desktop folder (the OS remembers the last folder used afterwards).
+fn dialog_at_desktop(app: &AppHandle) -> tauri_plugin_dialog::FileDialogBuilder<tauri::Wry> {
+    let dlg = app.dialog().file();
+    match app.path().desktop_dir() {
+        Ok(dir) => dlg.set_directory(dir),
+        Err(_) => dlg,
+    }
+}
+
 /// System file dialog (`dam`: only `.dam` files; otherwise mzML and Thermo `.raw`).
 #[tauri::command]
 async fn pick_files(
@@ -52,7 +61,7 @@ async fn pick_files(
     state: tauri::State<'_, Arc<State>>,
     dam: bool,
 ) -> Result<Vec<PickedFile>, String> {
-    let dlg = app.dialog().file();
+    let dlg = dialog_at_desktop(&app);
     let dlg = if dam {
         dlg.add_filter("DAM", &["dam", "DAM"])
     } else {
@@ -112,7 +121,7 @@ fn folder_name(p: &std::path::Path) -> String {
 /// System dialog to point at the folder of the data; its name, None if the user cancels. The path stays in this side: the page only sees the name.
 #[tauri::command]
 async fn data_choose_dir(app: AppHandle) -> Result<Option<String>, String> {
-    let dlg = app.dialog().file();
+    let dlg = dialog_at_desktop(&app);
     let picked = tauri::async_runtime::spawn_blocking(move || dlg.blocking_pick_folder())
         .await
         .map_err(|e| e.to_string())?;
@@ -274,7 +283,7 @@ async fn lib_choose_dir(
     app: AppHandle,
     state: tauri::State<'_, Arc<State>>,
 ) -> Result<Option<String>, String> {
-    let dlg = app.dialog().file();
+    let dlg = dialog_at_desktop(&app);
     let picked = tauri::async_runtime::spawn_blocking(move || dlg.blocking_pick_folder())
         .await
         .map_err(|e| e.to_string())?;

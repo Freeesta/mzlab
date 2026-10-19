@@ -155,7 +155,7 @@ const CartPunt = (() => {
   async function choose() {
     if (S.native) return S.native.choose();
     try {
-      const h = await /** @type {any} */ (window).showDirectoryPicker({ id: "mzlab-dati", mode: "read" });
+      const h = await /** @type {any} */ (window).showDirectoryPicker({ id: "mzlab-dati", startIn: "desktop", mode: "read" });
       S.handle = h; S.name = h.name; S.items = []; S.stats.clear(); S.opened.clear(); await keep(h); await rescan(); follow();
     } catch (e) { /* cancelled */ }
   }

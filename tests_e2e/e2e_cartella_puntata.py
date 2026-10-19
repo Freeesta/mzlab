@@ -13,7 +13,7 @@ def step(name, fn):
 D = Path(tempfile.mkdtemp(prefix="cartp_e2e_")); synth.write_full(D / "a.mzML", 5, seed=1); synth.write_full(D / "c.mzML", 15, seed=3)
 A = base64.b64encode((D / "a.mzML").read_bytes()).decode(); C = base64.b64encode((D / "c.mzML").read_bytes()).decode()
 INIT = """(() => { if (localStorage.getItem('nopicker')) { delete window.showDirectoryPicker; return; }
-  window.showDirectoryPicker = async () => { const r = await navigator.storage.getDirectory(); return r.getDirectoryHandle('prova', { create: true }); };
+  window.showDirectoryPicker = async (o) => { window.__pickOpts = o; const r = await navigator.storage.getDirectory(); return r.getDirectoryHandle('prova', { create: true }); };
   const q = FileSystemDirectoryHandle.prototype.queryPermission;
   FileSystemDirectoryHandle.prototype.queryPermission = async function (o) { return localStorage.getItem('perm') === 'prompt' ? 'prompt' : q.call(this, o); };
   FileSystemDirectoryHandle.prototype.requestPermission = async () => { localStorage.removeItem('perm'); return 'granted'; }; })()"""
@@ -39,6 +39,9 @@ try:
             assert "non caricato" in pg.get_attribute(".cprow", "aria-label")
             assert count(pg) == 0
         step("rows in grey (Data only), unknown and hidden files absent, nothing loaded", grey)
+        def desktop():
+            o = pg.evaluate("window.__pickOpts"); assert o and o.get("startIn") == "desktop" and o.get("id") == "mzlab-dati", o
+        step("the folder picker opens on the Desktop with a fixed id", desktop)
         def load():
             pg.click('.cprow:has-text("a.mzML")'); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=90000)
             pg.wait_for_function("document.querySelector('.cprow.done')"); assert "caricato" in pg.inner_text(".cprow.done")
