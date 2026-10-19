@@ -122,3 +122,64 @@ fn unknown_elements_and_bad_charges_are_refused() {
     })
     .is_err());
 }
+
+mod selection {
+    use super::*;
+    use mzlab_feat::untargeted::isofinder::select::{detect, ALT_MARGIN, MIN_ALT_QUALITY};
+
+    const C13: f64 = 1.003354831;
+
+    fn spectrum(m0: f64, step: f64, heights: &[f64]) -> (Vec<f64>, Vec<f64>) {
+        let mz = (0..heights.len()).map(|i| m0 + i as f64 * step).collect();
+        (mz, heights.iter().map(|h| h * 1e6).collect())
+    }
+
+    #[test]
+    fn one_valid_charge_gives_one_pattern_with_probability_one() {
+        let (mz, y, mz0, _) = case("c10_z1");
+        let d = detect(&engine(true), &mz, &y, mz0, 1).expect("detected");
+        assert_eq!(d.best_charge, 1);
+        assert_eq!(d.patterns.len(), 1);
+        assert_eq!(d.probabilities.len(), 1);
+        assert!((d.patterns[0].probability - 1.0).abs() < 1e-12);
+        assert_eq!(d.patterns[0].peaks.len(), mz.len());
+        let p = &d.patterns[0];
+        assert!((p.score - p.eval.quality * p.eval.intensity_agreement).abs() < 1e-12);
+    }
+
+    #[test]
+    fn a_doubly_charged_envelope_wins_as_charge_two() {
+        let (mz, y, mz0, _) = case("c40_z2");
+        let d = detect(&engine(true), &mz, &y, mz0, 1).expect("detected");
+        assert_eq!(d.best_charge, 2);
+        assert_eq!(d.patterns[0].charge, 2);
+    }
+
+    #[test]
+    fn close_charges_are_ranked_and_the_probabilities_sum_to_one() {
+        // half-step peaks with a full 13C ladder on top: charges 1 and 2 both find support; the winner goes by `raw` (quality and the peak-count reward), so its probability, which is quality only, need not be the largest
+        let (mz, y) = spectrum(400.0, C13 / 2.0, &[1.0, 0.45, 0.4, 0.2, 0.1, 0.04, 0.02]);
+        let d = detect(&engine(false), &mz, &y, 400.0, 1).expect("detected");
+        let sum: f64 = d.probabilities.iter().map(|p| p.1).sum();
+        assert_eq!(d.probabilities.len(), 2, "{:?}", d.probabilities);
+        assert_eq!(d.patterns.len(), 2);
+        assert!((sum - 1.0).abs() < 1e-12, "{:?}", d.probabilities);
+        assert_eq!(d.patterns[0].charge, d.best_charge);
+        let best = d.patterns[0].eval.quality;
+        for p in &d.patterns[1..] {
+            assert!(
+                p.eval.quality >= best - ALT_MARGIN && p.eval.quality >= MIN_ALT_QUALITY,
+                "{p:?}"
+            );
+            assert!(p.eval.raw <= d.patterns[0].eval.raw);
+        }
+        assert!(d.patterns.len() <= d.probabilities.len());
+    }
+
+    #[test]
+    fn no_charge_scoring_gives_none() {
+        let (mz, y, mz0, z) = case("no_m1");
+        assert!(detect(&engine(true), &mz, &y, mz0, 1).is_none(), "z={z}");
+        assert!(detect(&engine(true), &[100.0], &[1e5], 100.0, 1).is_none());
+    }
+}
