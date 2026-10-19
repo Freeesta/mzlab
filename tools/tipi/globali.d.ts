@@ -74,6 +74,7 @@ declare var QA11Y: any;
 declare var QADD: any;
 declare var QADD_DIFFS: any;
 declare var QADD_VIEW: any;
+declare var QHR_ON: any;
 declare var QICON: any;
 declare var QQQRef: any;
 declare var QQQ_BROWSER: any;
@@ -205,6 +206,7 @@ interface Window {
   PROFILO: typeof PROFILO;
   QAQC: typeof QAQC;
   RAPPORTO: typeof RAPPORTO;
+  RICERCA: typeof RICERCA;
   RIFERIMENTO: typeof RIFERIMENTO;
   STAT: typeof STAT;
   SUGG: typeof SUGG;

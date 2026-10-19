@@ -57,6 +57,8 @@
     const fs = E.files.filter(f => !f.gone);
     return !fs.length || fs.some(f => HR.isHr(f, 1) || HR.isHr(f, 2));
   };
+  // the search box (ricerca.js) reads the world of the files from here
+  window.QHR_ON = hrOn;
   const NL_CHEV = '<svg class="nlch" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6l3 3 3-3"/></svg>';
   // the less common adducts stay folded until the student opens them (one fold for the shown polarity)
   const AD = { pol: 1, more: false, open: new Set() };

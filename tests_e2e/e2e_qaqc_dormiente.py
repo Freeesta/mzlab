@@ -35,7 +35,7 @@ try:
         def paletta_spenta():
             for q in ("qaqc", "QA/QC", "controllo qualità", "rapporto"):
                 assert "QA/QC" not in palette(pg, q), q
-            assert "Nessun comando" in palette(pg, "qaqc")
+            assert "Nessun risultato" in palette(pg, "qaqc")
             assert "Rapporto di studio" in palette(pg, "rapporto"), "the study report stays"
         step("off: the palette neither finds nor shows it; the study report stays", paletta_spenta)
 
