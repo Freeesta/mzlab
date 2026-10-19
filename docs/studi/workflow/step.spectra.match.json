@@ -1,0 +1,116 @@
+{
+ "schema": "step/1",
+ "id": "spectra.match",
+ "version": 1,
+ "package": "attributio",
+ "title": "Compare MS2 spectra",
+ "doc": "Scores each query MS2 spectrum against a spectral library and keeps the best candidates per feature (identity search: precursor window, then peak scores; search::identity in crates/mzlab-lib/src/search.rs).",
+ "in": {
+  "query": {
+   "type": "spectra",
+   "title": "Query spectra",
+   "requires": {
+    "ms_levels": [
+     2
+    ]
+   }
+  },
+  "library": {
+   "type": "library",
+   "title": "Spectral library"
+  }
+ },
+ "out": {
+  "hits": {
+   "type": "candidates",
+   "title": "Library candidates per feature"
+  }
+ },
+ "params": {
+  "type": "object",
+  "properties": {
+   "tolerance": {
+    "title": "Fragment tolerance",
+    "type": "number",
+    "minimum": 0,
+    "default": 0.01,
+    "x-unit": "Da"
+   },
+   "top": {
+    "title": "Hits kept",
+    "type": "integer",
+    "minimum": 1,
+    "default": 5
+   },
+   "precursor_tolerance_ppm": {
+    "title": "Precursor tolerance",
+    "type": "number",
+    "minimum": 0,
+    "default": 10,
+    "x-unit": "ppm"
+   }
+  }
+ },
+ "runs_in": {
+  "wasm": "lib",
+  "native": true
+ },
+ "deterministic": true,
+ "errors": [
+  "err.lib.spectrum",
+  "error.memoryBudget"
+ ],
+ "algorithms": [
+  {
+   "id": "cosine",
+   "title": "Cosine",
+   "doc": "One-to-one peak pairs within the tolerance, highest intensity product first (cosine_from_pairs in crates/mzlab-lib/src/scores.rs).",
+   "applicability": {
+    "ms_levels": [
+     2
+    ]
+   },
+   "status": "available"
+  },
+  {
+   "id": "modified_cosine",
+   "title": "Modified cosine",
+   "doc": "Peaks may also pair at the precursor difference, for analogues that differ by one modification (modified_cosine in scores.rs).",
+   "references": [
+    {
+     "doi": "10.1073/pnas.1203689109",
+     "citation_key": "watrous2012mass",
+     "note": "modified cosine: peaks matched directly or shifted by the precursor mass difference"
+    }
+   ],
+   "applicability": {
+    "ms_levels": [
+     2
+    ],
+    "note": "Analogues and transformation products of a known parent"
+   },
+   "status": "available"
+  },
+  {
+   "id": "spectral_entropy",
+   "title": "Spectral entropy",
+   "doc": "Entropy similarity of the merged spectrum (entropy_from_pairs in scores.rs).",
+   "references": [
+    {
+     "doi": "10.1038/s41592-021-01331-z",
+     "citation_key": "li2021spectral",
+     "note": "entropy similarity and its intensity weighting"
+    }
+   ],
+   "applicability": {
+    "ms_levels": [
+     2
+    ],
+    "note": "Library search with noisy spectra"
+   },
+   "status": "available"
+  }
+ ],
+ "default_algorithm": "spectral_entropy",
+ "per_item": true
+}

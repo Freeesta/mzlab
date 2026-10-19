@@ -37,7 +37,7 @@ try:
         step("header in English", header)
         def start():
             t = pg.inner_text("#start")
-            for w in ("1. Data files", "Drop the files here", ".mzML · .raw · .wiff · .D", "Try the example files", "2. Acquisition method", "OPTIONAL", "Load data"): assert w in t.replace("optional", "OPTIONAL"), (w, t)
+            for w in ("1. Data files", "Drop data files here", ".mzML · .raw · .wiff (with .wiff.scan) · .D (folder)", "Try the example files", "2. Acquisition method", "OPTIONAL", "Load data"): assert w in t.replace("optional", "OPTIONAL"), (w, t)
             assert not italian_on_screen(pg), italian_on_screen(pg)
         step("start screen in English, no Italian words", start)
         def demo():
@@ -73,9 +73,9 @@ try:
         step("open the files", load)
         def gear():
             pg.click("#np-set"); pg.wait_for_selector("#uip-a11y")
-            pg.evaluate("document.getElementById('uip-a11y').open = true")       # the chart colours are in the Accessibility submenu
+            pg.evaluate("document.querySelectorAll('#uipset details.imp-g').forEach(g => g.open = true)")       # every group open
             t = pg.inner_text("#uipset")
-            for w in ("Settings", "Theme", "Like the system", "Chart colors", "Merge the centroids of the same nominal mass"): assert w in t, (w, t)
+            for w in ("Settings", "Theme", "Like the system", "Chart colors", "Merge the centroids of the same nominal mass"): assert w.lower() in t.lower(), (w, t)
             assert "By file (default)" in pg.evaluate("[...document.querySelectorAll('#uip-pal option')].map(o => o.textContent)"), "palette names"
         step("gear in English", gear)
         def phrase():

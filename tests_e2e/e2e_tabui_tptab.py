@@ -228,9 +228,9 @@ try:
             assert pg.locator("#tp-det .tpt-head .lvb.pd-2").count() == 1 and pg.locator("#tp-det .tpt-head .lvb.lv-3").count() == 0, "the level only in the closed row"
             assert pg.locator("#tp-det .tpt-head .tpr-sum").count() == 3 and pg.locator('#tp-det .tpt-head .tpr-sum[data-tt="ft.col.net"]').count() == 1, "the summary of the closed row, with its help"
             pg.click('#tp-det [data-act="copy"]'); assert pg.evaluate("window.__act") == "copy"
-            assert [t for t in pg.locator("#tp-det [role=tab]").all_inner_texts()] == ["Overview", "Samples", "Identity", "Quality"]
+            assert [t for t in pg.locator("#tp-det [role=tab]").all_inner_texts()] == ["Overview", "Samples", "Identity", "Quality", "Structure"]
             small = pg.evaluate("[...document.querySelectorAll('#tp-det .tpr-act')].filter(e => e.getBoundingClientRect().height < 24).length"); assert small == 0
-        step("TPRIGA: head with Prev. 2, the summary of the row, actions; four tabs", riga_head)
+        step("TPRIGA: head with Prev. 2, the summary of the row, actions; five tabs", riga_head)
 
         def riga_overview():
             r = pg.evaluate("[...document.querySelectorAll('#tp-det .tpr-ov > .tpr-ch svg')].map(s => { const b = s.getBoundingClientRect(); return [b.left, b.top, b.width] })"); assert len(r) == 2, r

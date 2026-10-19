@@ -385,6 +385,6 @@ const TP = (() => {
   // sblocco.js: 5 clicks on the logo unlock the extended Teoria; strumenti/pannello.js: TEORIA.strumenti.* (each tool is read when opened)
   // editor.js: in-page chapter editor (Alt+E or Modifica button) with auto-save, syntax checks, git commit and push
   // esporta.js: export modal (PDF, Word, Markdown, HTML) for single chapters and complete course
-  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); ["comandi.js", "impostazioni.js", "lettura.js", "cerca.js", "sblocco.js", "strumenti/pannello.js", "editor.js", "esporta.js"].forEach(load); });
+  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); ["comandi.js", "impostazioni-comp.js", "impostazioni.js", "lettura.js", "cerca.js", "sblocco.js", "strumenti/pannello.js", "editor.js", "esporta.js"].forEach(load); });
   return { reduced: () => document.documentElement.hasAttribute("data-a11y-reduce"), $, controls, buttons, canvas, axes, line, sticks, label, legend, nice, DASH, fmt, sci, sup };
 })();

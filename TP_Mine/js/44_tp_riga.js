@@ -19,7 +19,7 @@
    * @typedef {{ title?: string, level?: string | number, pred?: number, decided?: string | number | null, summary?: TpSum[], words?: string, actions?: TpAction[], xic?: TpXic[], xicTip?: string, apexRt?: number | null, lo?: number | null, hi?: number | null,
    *   composition?: { run: () => Promise<any> }, spectrum?: TpSpec | null, spectrum2?: TpSpec | null, open?: { xic?: () => void, ms2?: () => void }, samples?: TpSample[], identity?: { neutral?: number | string | null, adduct?: string, candidates?: TpCand[] } | null,
    *   quality?: { shape?: number | string | null, snr?: number | null, fwhm?: number | null, flags?: string[], isoM1?: number | string | null, blank?: any, t0?: any, rejected?: string[] } | null,
-   *   decide?: { series: any, key: string, level?: string | number | null, name?: string }, missing?: Record<string, string> }} TpRiga
+   *   decide?: { series: any, key: string, level?: string | number | null, name?: string }, interp?: any, missing?: Record<string, string> }} TpRiga
    */
 
   const CSS = `
@@ -224,6 +224,7 @@
     { key: "samples", label: "Samples", help: "ft.tab.samples" },
     { key: "identity", label: "Identity", help: "ft.tab.identity" },
     { key: "quality", label: "Quality", help: "ft.tab.quality" },
+    { key: "structure", label: "Structure", help: "ft.tab.structure" },
   ];
 
   /** @param {HTMLElement} panel @param {TpRiga} m */
@@ -387,7 +388,7 @@
    * @param {HTMLElement} panel @param {string} tab @param {TpRiga} m */
   function fill(panel, tab, m) {
     register(); panel.innerHTML = "";
-    if (tab === "samples") samples(panel, m); else if (tab === "identity") { identity(panel, m); if (G.TPCOMP && m.composition) G.TPCOMP.mount(panel, m.composition); } else if (tab === "quality") quality(panel, m); else overview(panel, m);
+    if (tab === "samples") samples(panel, m); else if (tab === "identity") { identity(panel, m); if (G.TPCOMP && m.composition) G.TPCOMP.mount(panel, m.composition); } else if (tab === "quality") quality(panel, m); else if (tab === "structure") { if (G.TPSTRUCT) G.TPSTRUCT.fill(panel, m.interp, m.missing && m.missing.structure); } else overview(panel, m);
   }
 
   /** the options of `TPTAB.mount` that put these panels in the open row: `TPRIGA.hook(r => model)` @param {(r: any) => TpRiga} model */

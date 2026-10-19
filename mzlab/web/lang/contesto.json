@@ -75,7 +75,6 @@
   "load.loaded.title": "Titolo del riquadro quando si aggiungono altri file a una sessione aperta; {n} = numero di file.",
   "settings.libs.title": "Il nome tra virgolette è la voce del menu del clic destro sullo spettro MS2 (parte HR): le due traduzioni devono coincidere.",
   "settings.space.value": "Riga dell'ingranaggio (solo nel sito); {files} e {idx} = dimensioni già scritte, es. «31.9 MB».",
-  "settings.hrPpm": "Riga dell'ingranaggio; {input} = il campo numerico (HTML).",
   "err.http": "Errore di rete senza dettagli; {status} = codice HTTP.",
   "files.pendingBar": "{done} = file già aperti, {n} = file della lista.",
   "files.pendingRemove": "{name} = nome del file.",
