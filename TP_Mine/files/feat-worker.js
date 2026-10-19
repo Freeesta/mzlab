@@ -109,7 +109,7 @@ function createCore(opts) {
     return new Promise((resolve, reject) => { queue.push({ run, resolve, reject, tried: false }); pump(); });
   }
   const copy = list => list.map(b => b.slice());      // inputs of a job that may run again are copied, never transferred
-  return { st, slots, queue, spawn, call, submit, kill, copy, rest };
+  return { st, slots, queue, spawn, call, submit, kill, copy, rest, classesText };
 }
 
 // The exports of a campaign folder (admin mode): `kind` = schymanski | publication | quantify | gradient (`.wasm` `attributio_export`) or evidence (`.wasm` `attributio_rev`, it needs the review);
@@ -187,7 +187,7 @@ function proofOps(submit, call, copy, opts) {
 }
 
 export function createFeatPool(opts) {
-  const { st, slots, queue, spawn, call, submit, kill, copy, rest } = createCore(opts);
+  const { st, slots, queue, spawn, call, submit, kill, copy, rest, classesText } = createCore(opts);
 
 
   return {
