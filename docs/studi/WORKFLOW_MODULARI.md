@@ -9,7 +9,6 @@ File dello studio:
 - `docs/studi/workflow/contratto.schema.json`: la bozza (JSON Schema 2020-12) di `passo/1`, `mzflow/2` e `prov/1`;
 - `docs/studi/workflow/esempio.mzflow.json`: un workflow grezzo → mzML → feature; `passo-features.detect.json`: il descrittore del rilevamento con i campi e i predefiniti veri di `trace::Params` (entrambi validano la bozza, V);
 - `docs/studi/workflow/COMUNICAZIONE.md`: come si parlano i moduli della futura tela «Flow» (porte, compatibilità, passo mancante proposto, ordine e parallelismo ricavati, preset e alternative; §4b);
-- `docs/studi/STRUTTURA_DATO.md`: la struttura chimica come dato di prima classe (`strutt/1`: stereo esplicita, sali, coordinate e incertezza a strati), confronto dei formati su 20 molecole vere, InChI nel browser; esempio `workflow/esempio-timololo.strutt.json`;
 - `docs/studi/workflow/PUBBLICAZIONE.md`: quali crate pubblicare e in che ordine, licenze, cosa serve (§12, solo analisi);
 - `crates/mzlab-cli/examples/flusso.rs`: il prototipo (§6).
 
@@ -75,7 +74,7 @@ File dello studio:
 ## 4b. Come si parlano i moduli (dettaglio: `workflow/COMUNICAZIONE.md`)
 Un filo porta un descrittore (`type`, `sha256`, faccette come `hr`/`lr`), mai i byte. Un'uscita si collega a un ingresso se tipo (o `accepts`), cardinalità, faccette (`requires`) e aciclicità tornano; se manca una conversione registrata (`converts`), il programma la PROPONE con un clic.
 Ordine (Kahn) e parallelismo (rami indipendenti, `per_item` per file; worker nel browser, fili nell'app) si ricavano da ciò che ogni passo legge e scrive; l'unica risorsa condivisa è la memoria (`memory_hint_bytes`). Ogni famiglia ha preset con `when` sulle faccette (es. `hr`, `lr`, come fa già `run::recipe_for`, V) e alternative scambiabili con la stessa firma di porte. I campi sono nella bozza e i cinque esempi la validano (V).
-La struttura chimica (`structure`) entra da Disegno, da un testo incollato o da un risultato con un clic, ed esce come disegno con le zone incerte evidenziate; fra i passi viaggia come grafo `strutt/1`, mai come SMILES (`STRUTTURA_DATO.md`).
+La struttura chimica è una porta come le altre (`structure`, formato dello studio dedicato `docs/studi/STRUTTURA_DATO.md`): entra da Disegno, da un testo incollato o da un risultato con un clic, ed esce come disegno. Le trasformazioni genitore → prodotto sono un tipo a sé (`transform`: Δ, regola, mappatura atomica, siti con supporto), letto da `tp.link`, dalle posizioni e dal disegno; chi legge una struttura è nella `MATRICE.md` §4.
 
 ## 5. Prova su carta (dettaglio: `workflow/PROVE_SU_CARTA.md`)
 Quattro workflow veri (mzmine FBMN, OpenMS FFM, XCMS vignetta, patRoon TP) riscritti nel formato. Si esprimono tutti nel tratto rilevamento → allineamento → riempimento; non si esprimono gli algoritmi che non abbiamo (centWave, Obiwarp, lisciatura a sé) né i programmi esterni (BioTransformer, CTS, MetFrag). Undici correzioni, già nella bozza: `id` per istanza, tolleranze composte, `oneOf` per l'algoritmo, riferimenti espliciti, `x-advanced`, conversioni dichiarate, dati immutabili, `samples` come tipo, `err.flow.unavailable`, liste dell'utente come ingressi con hash, grafo dal primo giorno.

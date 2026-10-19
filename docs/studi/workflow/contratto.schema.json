@@ -5,7 +5,7 @@
  "description": "Study draft (docs/studi/WORKFLOW_MODULARI.md §4), not used by the program yet. Three documents: a step describes itself (passo/1, one per step and version, shipped with the module that runs it); a workflow lists step instances wired by references (passi of mzflow/2, beside operazioni of mzflow/1); a run writes what it used and made (prov/1, a subset of PROV-JSON). User-facing strings are in English.",
  "$defs": {
   "dataType": {
-   "description": "Typed data between steps. raw = vendor file set (one sample); mzml = mzML 1.1 (indexedmzML when written by mzLab); mzidx = mzLab scan index (docs/agenti/mzidx.md); xic = one chromatogram; peaks = features of one file (.mzfeatf); rtmap = RT correction of a series; table = aligned feature table (.mzfeat); samples = roles and times (campioni/2); spectra = MS2 lists; annot = row annotations (interp/1, levels); tp = product view (tp/1); structure = strutt/1, a molecular graph with explicit stereo, components, optional coordinates and uncertainty layers (docs/studi/STRUTTURA_DATO.md); SMILES, molfile and InChI are imports and exports only; qc = quality numbers; report = terminal export (CSV, XLSX, HTML).",
+   "description": "Typed data between steps. raw = vendor file set (one sample); mzml = mzML 1.1 (indexedmzML when written by mzLab); mzidx = mzLab scan index (docs/agenti/mzidx.md); xic = one chromatogram; peaks = features of one file (.mzfeatf); rtmap = RT correction of a series; table = aligned feature table (.mzfeat); samples = roles and times (campioni/2); spectra = MS2 lists; annot = row annotations (interp/1, levels); tp = product view (tp/1); structure = a chemical structure, format owned by the structure study (docs/studi/STRUTTURA_DATO.md, not this draft); transform = a parent -> product transformation with atom mapping (transform1); qc = quality numbers; report = terminal export (CSV, XLSX, HTML).",
    "enum": [
     "raw",
     "mzml",
@@ -19,6 +19,7 @@
     "annot",
     "tp",
     "structure",
+    "transform",
     "qc",
     "report"
    ]
@@ -489,7 +490,7 @@
   },
   "facets": {
    "type": "object",
-   "description": "facets of the data read from it: resolution (hr, lr), polarity, ms_levels, samples, and for a structure: stereo, uncertain, components",
+   "description": "facets of the data read from it: resolution (hr, lr), polarity, ms_levels, samples",
    "properties": {
     "resolution": {
      "type": "array",
@@ -516,334 +517,80 @@
       "type": "integer",
       "minimum": 1
      }
-    },
-    "stereo": {
-     "type": "array",
-     "items": {
-      "enum": [
-       "full",
-       "partial",
-       "none"
-      ]
-     }
-    },
-    "uncertain": {
-     "type": "array",
-     "items": {
-      "type": "boolean"
-     }
-    },
-    "components": {
-     "type": "array",
-     "items": {
-      "type": "integer",
-      "minimum": 1
-     }
     }
    },
    "additionalProperties": false
   },
-  "strutt1": {
+  "transform1": {
    "type": "object",
-   "description": "draft of the structure data (docs/studi/STRUTTURA_DATO.md §3); written and read in Rust only",
+   "description": "parent -> product of one transformation, with the atom mapping; the structures are referenced by hash, never copied",
    "required": [
-    "schema",
-    "atoms",
-    "bonds"
+    "parent",
+    "delta"
    ],
    "properties": {
-    "schema": {
-     "const": "strutt/1"
+    "parent": {
+     "type": "string",
+     "pattern": "^[0-9a-f]{64}$",
+     "description": "sha256 of the parent structure"
     },
-    "atoms": {
-     "type": "array",
-     "items": {
-      "type": "object",
-      "required": [
-       "el",
-       "h"
-      ],
-      "properties": {
-       "el": {
-        "type": "string"
-       },
-       "h": {
-        "type": "integer",
-        "minimum": 0
-       },
-       "iso": {
-        "type": "integer"
-       },
-       "chg": {
-        "type": "integer"
-       },
-       "rad": {
-        "type": "integer"
-       },
-       "map": {
-        "type": "integer"
-       }
-      },
-      "additionalProperties": false
-     }
+    "product": {
+     "type": "string",
+     "pattern": "^[0-9a-f]{64}$",
+     "description": "sha256 of the product structure; absent when only the change is known (partial structure, level 3b)"
     },
-    "bonds": {
-     "type": "array",
-     "items": {
-      "type": "object",
-      "required": [
-       "a",
-       "b",
-       "order"
-      ],
-      "properties": {
-       "a": {
-        "type": "integer"
-       },
-       "b": {
-        "type": "integer"
-       },
-       "order": {
-        "enum": [
-         1,
-         2,
-         3
-        ]
-       }
-      },
-      "additionalProperties": false
-     },
-     "description": "Kekule form only; aromaticity is computed, never stored"
+    "delta": {
+     "type": "string",
+     "description": "formula change, e.g. +O -H2 (as parz/1 and the hypotheses)"
     },
-    "stereo": {
-     "type": "object",
-     "properties": {
-      "tetra": {
-       "type": "array",
-       "items": {
-        "type": "object",
-        "required": [
-         "atom",
-         "nbrs",
-         "turn"
-        ],
-        "properties": {
-         "atom": {
-          "type": "integer"
-         },
-         "nbrs": {
-          "type": "array",
-          "items": {
-           "type": "integer"
-          }
-         },
-         "turn": {
-          "enum": [
-           "cw",
-           "ccw"
-          ]
-         }
-        }
-       }
-      },
-      "db": {
-       "type": "array",
-       "items": {
-        "type": "object",
-        "required": [
-         "bond",
-         "ref",
-         "cfg"
-        ],
-        "properties": {
-         "bond": {
-          "type": "integer"
-         },
-         "ref": {
-          "type": "array",
-          "items": {
-           "type": "integer"
-          },
-          "minItems": 2,
-          "maxItems": 2
-         },
-         "cfg": {
-          "enum": [
-           "same",
-           "opposite"
-          ]
-         }
-        }
-       }
-      },
-      "undefined": {
-       "type": "array",
-       "items": {
-        "type": "object",
-        "required": [
-         "kind",
-         "at"
-        ],
-        "properties": {
-         "kind": {
-          "enum": [
-           "atom",
-           "bond"
-          ]
-         },
-         "at": {
-          "type": "integer"
-         }
-        }
-       },
-       "description": "possible stereo centres left unspecified (an absent list says there are none)"
-      },
-      "groups": {
-       "type": "array",
-       "items": {
-        "type": "object",
-        "required": [
-         "kind",
-         "atoms"
-        ],
-        "properties": {
-         "kind": {
-          "enum": [
-           "abs",
-           "and",
-           "or"
-          ]
-         },
-         "atoms": {
-          "type": "array",
-          "items": {
-           "type": "integer"
-          }
-         }
-        }
-       }
-      }
-     },
-     "additionalProperties": false
+    "rule": {
+     "type": "string",
+     "description": "id of the rule or library entry that proposed it (e.g. a regole_tp/2 rule)"
     },
-    "components": {
-     "type": "array",
-     "items": {
-      "type": "object",
-      "required": [
-       "atoms"
-      ],
-      "properties": {
-       "atoms": {
-        "type": "array",
-        "items": {
-         "type": "integer"
-        }
-       },
-       "role": {
-        "enum": [
-         "parent",
-         "counterion",
-         "solvent"
-        ]
-       }
-      }
-     }
-    },
-    "coords2d": {
+    "map": {
      "type": "array",
      "items": {
       "type": "array",
-      "items": {
-       "type": "number"
-      },
+      "prefixItems": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": [
+         "integer",
+         "null"
+        ]
+       }
+      ],
       "minItems": 2,
       "maxItems": 2
-     }
+     },
+     "description": "[parent atom, product atom or null when lost]"
     },
-    "coords3d": {
+    "sites": {
      "type": "array",
      "items": {
-      "type": "array",
-      "items": {
-       "type": "number"
-      },
-      "minItems": 3,
-      "maxItems": 3
-     }
-    },
-    "id": {
-     "type": "object",
-     "properties": {
-      "canon": {
-       "type": "string",
-       "pattern": "^[0-9a-f]{64}$"
-      },
-      "inchikey": {
-       "type": "string",
-       "pattern": "^[A-Z]{14}-[A-Z]{10}-[A-Z]$"
-      },
-      "source": {
-       "type": "string"
-      }
-     }
-    },
-    "uncertainty": {
-     "type": "object",
-     "properties": {
-      "regions": {
-       "type": "array",
-       "items": {
-        "type": "object",
-        "required": [
-         "atoms"
-        ],
-        "properties": {
-         "atoms": {
-          "type": "array",
-          "items": {
-           "type": "integer"
-          }
-         },
-         "delta": {
-          "type": "string"
-         },
-         "mode": {
-          "enum": [
-           "zone",
-           "whole",
-           "multicenter"
-          ]
-         },
-         "confidence": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
-         }
-        }
-       }
-      },
-      "sites": {
-       "type": "array",
-       "items": {
-        "type": "object",
-        "required": [
-         "atom",
-         "p"
-        ],
-        "properties": {
-         "atom": {
-          "type": "integer"
-         },
-         "p": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
-         }
-        }
+      "type": "object",
+      "required": [
+       "atom",
+       "p"
+      ],
+      "properties": {
+       "atom": {
+        "type": "integer"
+       },
+       "p": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
        }
       }
-     }
+     },
+     "description": "parent atoms where the change may be, with their support (as posiz/1)"
+    },
+    "level": {
+     "type": "string",
+     "description": "identification level of the product (docs/agenti/livelli.md)"
     }
    },
    "additionalProperties": false
