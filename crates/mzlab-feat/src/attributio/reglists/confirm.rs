@@ -323,7 +323,7 @@ pub fn evaluate(
         .filter(|h| ["A", "B", "C"].contains(&h.class.as_str()))
     {
         let sir = sirius.get(&h.polarity).ok_or_else(|| {
-            CampaignError::value(&format!("no SIRIUS input for polarity {}", h.polarity))
+            CampaignError::value(format!("no SIRIUS input for polarity {}", h.polarity))
         })?;
         let short: String = h.suspect.chars().take(30).collect();
         rows.push(verdict_row(

@@ -344,7 +344,7 @@ fn class_rank(c: &str) -> usize {
 }
 
 /// Isolated adducts go one class down, hits on a feature already annotated as another compound become X, then the hits are sorted.
-fn finish_hits(hits: &mut Vec<Hit>) {
+fn finish_hits(hits: &mut [Hit]) {
     let mut mh: HashMap<String, Vec<f64>> = HashMap::new();
     for h in hits.iter().filter(|h| h.adduct == "[M+H]+") {
         mh.entry(h.suspect.clone()).or_default().push(h.rt);
