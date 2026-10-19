@@ -151,16 +151,16 @@ const CONVROWS = {
     const t0 = Math.min(...end.map(r => r.t0 || 0)), t1 = Math.max(...end.map(r => (r.t0 || 0) + 1000 * (r.secs || 0)));
     return T("conv.sum.head", { n: I18N.fix(end.length, 0), parts: parts.join(", "), time: convElapsed(t1 - t0) });
   },
-  // the files whose loading ended, under the table: «Loaded ✓ (scans, time)», the error with «Details» and «Copy diagnosis», «Cancelled»; «Close» once nothing runs
+  // under the table only what needs attention: the error with «Details» and «Copy diagnosis», «Cancelled», a file with scans missing; a loading that went well shows nothing; «Close» once nothing runs
   summary() {
-    const end = this.rows.filter(r => CONV_FINAL.includes(r.state)); if (!end.length) return "";
+    const all = this.rows.filter(r => CONV_FINAL.includes(r.state)), end = all.filter(r => r.state !== "done" || r.missing); if (!end.length) return "";
     const T = (k, p) => I18N.t(k, p), run = this.running().length;
     const li = end.map(r => {
       const lab = r.state === "cancel" ? T("conv.row.cancel") : this.label(r);
       return `<li data-cvrow="${esc(r.name)}" data-cvend="${r.state}"${r.missing ? ` data-cvmiss="${r.missing}"` : ""}>${esc(r.name)}: ${r.state === "fail" ? `<span class="fail" data-cvtxt>${esc(lab)}</span>${r.diag && typeof DIAG !== "undefined" ? DIAG.html(r.diag, esc, T) : ""}` : `<span data-cvtxt>${esc(lab)}</span>`}</li>`;
     }).join("");
-    return `<div class="cvsum" role="group" aria-label="${esc(T(run ? "conv.row.group" : "conv.row.groupDone"))}"><p class="sm"><b>${T(run ? "conv.row.group" : "conv.row.groupDone")}</b> <span class="muted">${T("load.prog.count", { done: end.length, n: this.rows.length })}</span>` +
-      `${run ? "" : ` <button type="button" class="sec sm" data-cvact="close">${T("common.close")}</button>`}</p>${run ? "" : `<p class="sm" data-cvtot>${esc(this.totals(end))}</p>`}<ul class="sm">${li}</ul></div>`;
+    return `<div class="cvsum" role="group" aria-label="${esc(T(run ? "conv.row.group" : "conv.row.groupDone"))}"><p class="sm"><b>${T(run ? "conv.row.group" : "conv.row.groupDone")}</b> <span class="muted">${T("load.prog.count", { done: all.length, n: this.rows.length })}</span>` +
+      `${run ? "" : ` <button type="button" class="sec sm" data-cvact="close">${T("common.close")}</button>`}</p>${run ? "" : `<p class="sm" data-cvtot>${esc(this.totals(all))}</p>`}<ul class="sm">${li}</ul></div>`;
   },
   // the buttons of the rows, after renderFiles has drawn them in `el`
   wire(el) {
