@@ -7,3 +7,4 @@ pub mod confirm;
 pub mod p3;
 pub mod schema;
 pub mod screen;
+pub mod screen_types;
