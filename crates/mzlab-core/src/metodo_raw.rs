@@ -157,6 +157,20 @@ fn raw_texts(blocks: &[String]) -> Vec<V> {
     out
 }
 
+/// The warning that the file has scans but no readable scan trailer.
+fn trailer_warning(raw: &RawFileReader) -> Vec<Option<V>> {
+    let missing = raw.version >= 64 && raw.num_scans > 0 && raw.scan_parameters.is_empty();
+    missing
+        .then(|| {
+            obj(vec![
+                ("chiave", Some(V::s("meta.nonDecodificato"))),
+                ("dove", Some(V::s("Scan trailer: records not found"))),
+            ])
+        })
+        .into_iter()
+        .collect()
+}
+
 /// The warning that the status log is there and was not decoded.
 fn status_warning(raw: &RawFileReader) -> Vec<Option<V>> {
     let missing = raw.status_log.is_none() && raw.run_header.sample_info.inst_log_length > 0;
@@ -280,6 +294,7 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
         v
     });
     warn.extend(status_warning(raw));
+    warn.extend(trailer_warning(raw));
     let (exps, settings) = experiments_of(&blocks, &items, &mut warn);
     if rivelatori::has_3d_field(&blocks) {
         warn.push(obj(vec![

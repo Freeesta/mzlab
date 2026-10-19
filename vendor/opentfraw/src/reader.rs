@@ -653,6 +653,13 @@ impl RawFileReader {
                 None
             };
             match GenericDataHeader::find_forward(&mut r, scan_distance, expected_record_size)? {
+                // A schema whose records do not fit between scan_params_addr and the end of the
+                // file is not the trailer schema (e.g. a TSQ GC file keeps a few bytes per scan
+                // there and the search lands on the tune-file schema): the trailer is absent.
+                Some(hdr) if !trailer_records_fit(tail, num_scans, hdr.fixed_record_size()) => (
+                    GenericDataHeader { fields: Vec::new() },
+                    GenericRecordStream::empty(),
+                ),
                 Some(hdr) => {
                     // Records start directly at scan_params_addr - no stream preamble. They stay in the
                     // file (`scan_parameters` reads one when asked): a DDA file has 600 bytes of them per scan.
@@ -1132,7 +1139,18 @@ impl RawFileReader {
         scan_number: u32,
     ) -> Result<Vec<Peak>> {
         let entry = self.scan_index_entry(scan_number)?;
-        read_scan_srm_v66(source, self.data_addr, entry.offset, entry.data_size)
+        let peaks = read_scan_srm_v66(source, self.data_addr, entry.offset, entry.data_size)?;
+        if !peaks.is_empty() {
+            return Ok(peaks);
+        }
+        // A full-scan record ends in its footer, which is what the index points to.
+        crate::scan_data::read_scan_footer_v66(
+            source,
+            self.data_addr,
+            entry.offset,
+            entry.low_mz,
+            entry.high_mz,
+        )
     }
 
     /// Read a single scan's peaks using whichever decoder matches this file's
@@ -1933,10 +1951,24 @@ impl<'a> StatusLogEntry<'a> {
     }
 }
 
+/// True when `num_scans` records of `record_size` bytes fit in the `tail` bytes after `scan_params_addr`.
+fn trailer_records_fit(tail: u64, num_scans: u32, record_size: usize) -> bool {
+    (num_scans as u64).saturating_mul(record_size as u64) <= tail
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    // The trailer region of a TSQ GC file holds 4 + N bytes for N scans; the schema found
+    // before it is the 300-byte tune-file one.
+    #[test]
+    fn trailer_records_that_do_not_fit_are_absent() {
+        assert!(!trailer_records_fit(7496, 7492, 300));
+        assert!(trailer_records_fit(2_082_584, 3359, 620));
+        assert!(trailer_records_fit(0, 0, 300));
+    }
 
     fn inst_id_block(model1: &str, model2: &str) -> Vec<u8> {
         let mut bytes = vec![0u8; 12];
