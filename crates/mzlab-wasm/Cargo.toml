@@ -11,5 +11,5 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 js-sys = "0.3.106"
 # the Thermo reader (feature `thermo`) is not in the engine: the page loads the `thermo` readers module and the engine reads it through `esterno.rs`
-mzlab-core = { path = "../mzlab-core", default-features = false }
+mzlab-core = { path = "../mzlab-core", default-features = false, features = ["mappa-dad"] }
 wasm-bindgen = "0.2"
