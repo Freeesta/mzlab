@@ -42,17 +42,13 @@ pub fn percorso(rel: &str) -> Option<PathBuf> {
     if r.join(rel).exists() {
         return Some(r.join(rel));
     }
-    let mut righe: Vec<(&str, &str)> = MAPPA
+    // longest matching prefix wins
+    let (nuovo, vecchio) = MAPPA
         .lines()
         .filter(|l| !l.is_empty() && !l.starts_with('#'))
         .filter_map(|l| l.split_once('\t'))
-        .collect();
-    righe.sort_by_key(|(n, _)| std::cmp::Reverse(n.len()));
-    for (nuovo, vecchio) in righe {
-        if rel == nuovo || rel.strip_prefix(nuovo).is_some_and(|t| t.starts_with('/')) {
-            let p = r.join(format!("{vecchio}{}", &rel[nuovo.len()..]));
-            return p.exists().then_some(p);
-        }
-    }
-    None
+        .filter(|(n, _)| rel == *n || rel.strip_prefix(n).is_some_and(|t| t.starts_with('/')))
+        .max_by_key(|(n, _)| n.len())?;
+    let p = r.join(format!("{vecchio}{}", &rel[nuovo.len()..]));
+    p.exists().then_some(p)
 }
