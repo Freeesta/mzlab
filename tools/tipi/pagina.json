@@ -59,6 +59,7 @@
     "../../mzlab/web/lista-file.js",
     "../../mzlab/web/layout.js",
     "../../mzlab/web/fondo.js",
+    "../../mzlab/web/fondo-spettro.js",
     "../../mzlab/web/mappa-vicino.js",
     "../../mzlab/web/pannelli.js",
     "../../mzlab/web/affianca.js",

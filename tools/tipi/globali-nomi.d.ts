@@ -69,6 +69,7 @@ declare var FIG: any;
 declare var FILESICURI: any;
 declare var FILE_COLORS: any;
 declare var FONDO: any;
+declare var FONDOSP: any;
 declare var FRAME: any;
 declare var FT: any;
 declare var GORD: any;
