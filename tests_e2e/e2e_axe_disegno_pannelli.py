@@ -22,7 +22,7 @@ try:
         pg.add_script_tag(path=AXE)
         def contrast(theme, extra=None):
             pg.evaluate("t => { document.documentElement.dataset.theme = t[0]; if (t[1]) document.documentElement.dataset.a11yBg = t[1]; else delete document.documentElement.dataset.a11yBg; }", [theme, extra])
-            pg.wait_for_timeout(200)
+            pg.mouse.move(2, 2); pg.wait_for_timeout(200)                          # at rest: the hover background must not be what makes it readable
             v = pg.evaluate(CC); assert not v, v
             ratio = pg.evaluate("""() => { const b = document.querySelector('#side-toggle'), c = getComputedStyle(b);
               return [c.backgroundColor, c.color, c.borderTopColor] }""")
