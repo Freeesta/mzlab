@@ -23,8 +23,8 @@ try:
         step("an old saved value (font, tips/num false) is read: the removed options are ignored", legacy)
         def gear():
             pg.click("#np-set"); pg.wait_for_timeout(200); assert pg.is_visible("#uipset")
-            assert pg.locator("#uipset [data-f]").count() == 0 and "Dimensione testo" not in pg.inner_text("#uipset"), "no text size buttons any more"
-            pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(500)
+            assert "Dimensione testo" not in pg.inner_text("#uipset"), "no text size buttons any more"
+            pg.check("input[name=uip-th][value=dark]", force=True); pg.wait_for_timeout(500)
             assert pg.evaluate("document.documentElement.dataset.theme") == "dark"
             saved = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.prefs'))"); print(saved)
             assert saved == {"theme": "dark", "v": 2, "pal": "file", "merge": True}, saved
@@ -35,7 +35,7 @@ try:
         step("settings survive a reload", reload)
         def reset():
             pg.click("#np-set"); pg.wait_for_timeout(200)
-            pg.select_option("#uip-th", "auto"); pg.wait_for_timeout(400)
+            pg.check("input[name=uip-th][value=auto]", force=True); pg.wait_for_timeout(400)
             assert pg.evaluate("!document.documentElement.dataset.theme")
         step("back to defaults", reset)
     r.close()

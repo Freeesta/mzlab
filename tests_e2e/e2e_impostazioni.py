@@ -28,15 +28,15 @@ try:
             assert pg.locator("#uip-arch-all").count() == 0 and "Reset completo" not in t
             assert pg.locator("#uip-arch-rm").count() == 0 and pg.locator("#uip-arch-der").count() == 0
             assert pg.evaluate("document.getElementById('uip-a11y').open") is False
-            assert pg.evaluate("[...document.querySelectorAll('#uip-a11y #uip-font, #uip-a11y #uip-hc, #uip-a11y #uip-pal')].length") == 3
+            assert pg.evaluate("[...document.querySelectorAll('#uip-a11y input[name=uip-font], #uip-a11y #uip-hc, #uip-g-look #uip-pal')].length") == 5
             assert pg.locator("#uip-lib").count() == 0, "spectral libraries only with HRMS files"
-            assert pg.evaluate("getComputedStyle(document.getElementById('uip-font')).appearance") == "none", "select without native arrow"
+            assert pg.evaluate("getComputedStyle(document.getElementById('uip-pal')).appearance") == "none", "select without native arrow"
             pg.keyboard.press("Escape")
         step("settings: no storage section, one full reset, accessibility submenu closed", gear)
         def tour_from_draw():
             pg.click("#nav button[data-v=draw]"); pg.wait_for_timeout(800)
             assert pg.evaluate("S.view") == "draw"
-            pg.click("#np-set"); pg.wait_for_selector("#uip-tour"); assert pg.is_enabled("#uip-tour")
+            pg.click("#np-set"); pg.wait_for_selector("#uipset"); pg.evaluate("document.getElementById('uip-g-app').open = true"); assert pg.is_enabled("#uip-tour")
             pg.click("#uip-tour")
             attendi(pg, "!!(window.TOUR && TOUR.active)")
             assert pg.evaluate("S.view") == "draw", "the tour of Disegno starts in Disegno"

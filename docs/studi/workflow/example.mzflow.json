@@ -1,0 +1,89 @@
+{
+ "format": "mzflow/2",
+ "program": {
+  "name": "mzLab",
+  "version": "1.0.1"
+ },
+ "inputs": [
+  {
+   "name": "small.RAW",
+   "sha256": "071f845dec57b5fe3a6023326acba6b179d03eae4a8e86dba416b8b50ec42e63",
+   "bytes": 1504354,
+   "type": "raw"
+  }
+ ],
+ "steps": [
+  {
+   "id": "conv",
+   "step": "convert.mzml@1",
+   "in": {
+    "raw": "file:small.RAW"
+   }
+  },
+  {
+   "id": "idx",
+   "step": "index.mzidx@1",
+   "in": {
+    "mzml": "conv.mzml"
+   }
+  },
+  {
+   "id": "det",
+   "step": "features.detect@1",
+   "in": {
+    "index": [
+     "idx.index"
+    ]
+   },
+   "algorithm": "masstrace",
+   "preset": "hr",
+   "params": {
+    "polarity": 1
+   }
+  },
+  {
+   "id": "cmp",
+   "step": "meta.compare@1",
+   "in": {
+    "index": [
+     "idx.index"
+    ]
+   },
+   "params": {
+    "step": "features.detect@1",
+    "variants": [
+     {
+      "label": "A",
+      "algorithm": "masstrace",
+      "preset": "hr"
+     },
+     {
+      "label": "B",
+      "algorithm": "masstrace",
+      "preset": "lr"
+     }
+    ]
+   }
+  },
+  {
+   "id": "aln",
+   "step": "features.align@1",
+   "in": {
+    "peaks": "det.peaks",
+    "index": [
+     "idx.index"
+    ]
+   }
+  },
+  {
+   "id": "csv",
+   "step": "export.table_csv@1",
+   "in": {
+    "table": "aln.table"
+   },
+   "params": {
+    "layout": "full"
+   }
+  }
+ ]
+}

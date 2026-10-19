@@ -13,6 +13,8 @@ crate-type = ["cdylib", "rlib"]
 rev = []
 # The four spreadsheet exports (Schymanski folder, publication table, quantification, gradient) with the cascade as a .wasm of its own, `attributio-export`; the evidence export is in `attributio-rev`
 export = []
+# The MS2 engine (library search, in-silico ranking, hydrogen rearrangements, RT forest, chimeric intruders) as a .wasm of its own, `attributio-ms2`
+ms2 = []
 
 [dependencies]
 js-sys = "0.3.106"
