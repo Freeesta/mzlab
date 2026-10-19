@@ -141,7 +141,6 @@ fn fragment_mass(frag: &str) -> Option<f64> {
     let f: elements::Formula = m
         .formula()
         .into_iter()
-        .map(|(e, n)| (e, n as u64))
         .collect();
     Some(elements::mass(&f))
 }
@@ -262,7 +261,7 @@ pub fn lc_esi_amenable(
     let Some(mm) = mono_mass else {
         return ("false", "monoisotopic mass not available".into());
     };
-    if mm < MASS_MIN || mm > MASS_MAX {
+    if !(MASS_MIN..=MASS_MAX).contains(&mm) {
         return ("false", format!("mass out of range {MASS_MIN:.0}-{MASS_MAX:.0} Da (single charge workflow annotation window)"));
     }
     let fstr = formula.unwrap_or("None");
