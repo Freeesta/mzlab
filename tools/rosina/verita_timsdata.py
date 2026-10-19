@@ -6,8 +6,12 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import verita
+import importlib.util
+
+# the sibling `verita.py`, by path: tools/bench has a module of the same name
+_spec = importlib.util.spec_from_file_location("rosina_verita", Path(__file__).resolve().parent / "verita.py")
+verita = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(verita)
 
 
 def leggi_tabella(p: Path) -> dict:

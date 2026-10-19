@@ -13,12 +13,23 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 STR = ROOT / "tools" / "rosina"
 FIX = ROOT / "crates/mzlab-lettori/tests/rosina"
-sys.path.insert(0, str(STR))
-import indice
-import scarica
-import verita
-import verita_timsdata
-import verita_trfp
+sys.path.append(str(STR))
+import importlib.util
+
+
+def _carica(nome: str):
+    """A tool of tools/rosina/ by path: tools/indice.py and tools/bench/verita.py have the same names."""
+    spec = importlib.util.spec_from_file_location("rosina_" + nome, STR / (nome + ".py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+indice = _carica("indice")
+scarica = _carica("scarica")
+verita = _carica("verita")
+verita_timsdata = _carica("verita_timsdata")
+verita_trfp = _carica("verita_trfp")
 
 
 def _senza_variabili(d: dict) -> dict:
