@@ -185,6 +185,18 @@ impl Param {
             Kind::Choice(values.iter().map(|v| Value::Num(*v)).collect()),
         )
     }
+}
+
+/// A paper an algorithm or step derives from; the DOI is resolved before it is written here.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Reference {
+    pub doi: &'static str,
+    /// First author + year + first word of the title, lower case.
+    pub citation_key: &'static str,
+    pub note: &'static str,
+}
+
+impl Param {
     pub fn default_num(mut self, v: f64) -> Param {
         self.default = Some(Value::Num(v));
         self
@@ -229,15 +241,6 @@ impl Param {
     pub fn default_f64(&self) -> Option<f64> {
         self.default.as_ref().and_then(Value::f64)
     }
-}
-
-/// A paper an algorithm or step derives from; the DOI is resolved before it is written here.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Reference {
-    pub doi: &'static str,
-    /// First author + year + first word of the title, lower case.
-    pub citation_key: &'static str,
-    pub note: &'static str,
 }
 
 /// When an algorithm fits the data.

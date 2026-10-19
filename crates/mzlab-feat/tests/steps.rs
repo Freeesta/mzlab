@@ -23,11 +23,15 @@ const IDS: [&str; 10] = [
 ];
 
 fn default_of(p: &Param) -> Value {
-    p.default.clone().unwrap_or_else(|| panic!("{} has no default", p.name))
+    p.default
+        .clone()
+        .unwrap_or_else(|| panic!("{} has no default", p.name))
 }
 
 fn num(p: &Param) -> f64 {
-    default_of(p).f64().unwrap_or_else(|| panic!("{} is not a number", p.name))
+    default_of(p)
+        .f64()
+        .unwrap_or_else(|| panic!("{} is not a number", p.name))
 }
 
 fn axis_of(p: &Param) -> MassAxis {
@@ -126,13 +130,20 @@ fn defaults_rebuild_the_recipe_of_today() {
     let step = |id: &str| find(&reg, id).unwrap();
     let mut r = perturbed();
     let (now, today) = (Recipe::default(), perturbed());
-    assert_ne!(now.table_hash(), today.table_hash(), "the starting recipe must differ");
+    assert_ne!(
+        now.table_hash(),
+        today.table_hash(),
+        "the starting recipe must differ"
+    );
     apply_detect(&mut r, step("features.detect"));
     apply_align(&mut r, step("features.align"));
     apply_fill(&mut r, step("features.gapfill"));
     apply_ms2(&mut r, step("features.ms2_link"));
     let p = |id: &str, n: &str| num(step(id).param(n).unwrap());
-    assert_eq!(p("features.estimate", "polarity"), p("features.detect", "polarity"));
+    assert_eq!(
+        p("features.estimate", "polarity"),
+        p("features.detect", "polarity")
+    );
     assert_eq!(p("features.detect", "budget") as usize, now.detect.budget);
     assert_eq!(r.file_hash(), now.file_hash());
     assert_eq!(r.table_hash(), now.table_hash());
@@ -146,11 +157,26 @@ fn every_default_is_inside_its_own_limits() {
         for p in s.params.iter().chain(algs) {
             let Some(d) = &p.default else { continue };
             if let (Some(x), Kind::Number | Kind::Integer) = (d.f64(), &p.kind) {
-                assert!(p.min.is_none_or(|m| x >= m), "{} {} below its minimum", s.id, p.name);
-                assert!(p.max.is_none_or(|m| x <= m), "{} {} above its maximum", s.id, p.name);
+                assert!(
+                    p.min.is_none_or(|m| x >= m),
+                    "{} {} below its minimum",
+                    s.id,
+                    p.name
+                );
+                assert!(
+                    p.max.is_none_or(|m| x <= m),
+                    "{} {} above its maximum",
+                    s.id,
+                    p.name
+                );
             }
             if let Kind::Choice(values) = &p.kind {
-                assert!(values.contains(d), "{} {} default is not a choice", s.id, p.name);
+                assert!(
+                    values.contains(d),
+                    "{} {} default is not a choice",
+                    s.id,
+                    p.name
+                );
             }
         }
     }
@@ -161,10 +187,12 @@ fn exported_json_is_standard_json_and_is_the_committed_file() {
     let text = registry_json(&registry());
     let v: serde_json::Value = serde_json::from_str(&text).expect("valid JSON");
     assert_eq!(v.as_array().unwrap().len(), IDS.len());
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/schemi/steps-1.json");
+    let path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/schemi/steps-1.json");
     if std::env::var_os("MZLAB_UPDATE_STEPS").is_some() {
         std::fs::write(&path, &text).unwrap();
     }
-    let committed = std::fs::read_to_string(&path).expect("docs/schemi/steps-1.json (MZLAB_UPDATE_STEPS=1 writes it)");
+    let committed = std::fs::read_to_string(&path)
+        .expect("docs/schemi/steps-1.json (MZLAB_UPDATE_STEPS=1 writes it)");
     assert_eq!(committed, text, "docs/schemi/steps-1.json is stale: MZLAB_UPDATE_STEPS=1 cargo test -p mzlab-feat --test steps");
 }
