@@ -157,12 +157,156 @@ def stadio_tox_b1(dir_: Path, frame_rows, carica_tox):
     return out
 
 
+def stadio_tox_schema(dir_: Path, frame_rows):
+    """Schema A1 and the membership tables: read, normalise, collapse by first block, write, long and wide join tables."""
+    import io
+    import pandas as pd
+    from attributio.reglists import schema as S
+    raw = S.read_list(dir_ / "list_a1.csv")
+    norm = S.normalise(raw)
+    col = S.collapse_by_skeleton(raw)
+    buf = io.StringIO()
+    S.normalise(raw).sort_values(["inchikey_skeleton", "name"], kind="mergesort").to_csv(buf, sep=";", index=False)
+    lists = {"HHP_PAN": col, "WHO_MIA": col.assign(list_id="WHO_MIA")}
+    long = S.membership(lists, {"HHP_PAN": "pesticides", "WHO_MIA": "drugs"})
+    wide = S.membership_wide(long, ["WHO_MIA", "EU_X"])
+    mbuf = io.StringIO()
+    long.to_csv(mbuf, sep=";", index=False)
+    return {"read": frame_rows(raw), "normalised": frame_rows(norm), "collapsed": frame_rows(col), "written": buf.getvalue(),
+            "long": frame_rows(long), "long_csv": mbuf.getvalue(), "wide": frame_rows(wide), "wide_columns": list(wide.columns)}
+
+
+def _b2_ambiente(dir_: Path, frame_rows):
+    """Invented features for B2/B3: the calibration of RT against logP, every adduct and class, the isolated adducts, the already identified suspects."""
+    import numpy as np
+    import pandas as pd
+    from types import SimpleNamespace as NS
+    from attributio.chem import registry
+    from attributio.reglists import screen as SC
+    registry.registry_path = lambda name="registry": dir_ / registry.FILES[name]
+    P = 1.007276
+    sites, sorbents = ["SiteA", "SiteB"], ["PA", "PE"]
+    rows = []
+
+    def add(pol, i, mz, rt, level=4, xlogp=None, formula="", a=1, b=0, pa=1, pe=0):
+        rows.append({"_pol": pol, "_id": i, "mz": mz, "rt": rt, "level": level, "xlogp": xlogp, "formula": formula,
+                     "in_SiteA": bool(a), "in_SiteB": bool(b), "any_PA": bool(pa), "any_PE": bool(pe)})
+    noise = [0.2, -0.3, 0.4, -0.2, 0.1, -0.4, 0.3, -0.1]
+    for n, (lp, e) in enumerate(zip([0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.5], noise)):
+        add("POS", 101 + n, 500.1 + n, 2.0 * lp + 1.0 + e, level=2 + n % 2, xlogp=lp, formula="C20H30")
+    add("POS", 109, 520.2, 20.0, level=3, xlogp=1.0)
+    k, q, _, _ = SC.rt_model(pd.DataFrame(rows).assign(rt=lambda d: d["rt"].astype(float)))
+    pred = lambda lp: k * lp + q
+    add("POS", 1, 162.0793 + P + 0.0001, pred(1.5), formula="C9H10N2O", a=1, b=1, pa=1, pe=1)
+    add("POS", 2, 162.0793 + 18.033823, pred(1.5) + 0.05, a=1)
+    add("POS", 10, 162.0793 + 22.989218, pred(1.5) + 0.5, formula="C9H10N2O", b=1)
+    add("POS", 3, 110.0368 + P, pred(2.1) + 5.0, formula="C6H6O2", pa=0, pe=1)
+    add("POS", 4, 110.0368 + P + 0.0003, pred(2.1) + 0.1, pa=0, pe=0)
+    add("POS", 5, 178.0783 + P, pred(4.5), level=3, formula="C14H10")
+    add("NEG", 6, 132.0575 - P, pred(2.0) + 4.0, formula="C9H8O")
+    add("NEG", 7, 132.0575 + 34.969402, pred(2.0) - 6.0)
+    add("POS", 8, 112.0080 + P, pred(3.0), formula="C6H4Cl")
+    add("POS", 9, 161.9139 + 22.989218, pred(1.0))
+    add("POS", 11, 162.0793 + P + 0.01, pred(1.5))
+    feat = pd.DataFrame(rows)
+    info = {("POS", i): (i not in (4, 11), "2/3" if i == 3 else "0") for i in range(1, 12) if i != 9}
+    info.update({("NEG", 6): (True, "1/3"), ("NEG", 7): (True, "0")})
+    ann = {("POS", 5): "Other compound"}
+    SC.ms2_and_blank = lambda C, s: info
+    SC._annotated = lambda C, f, b1: ann
+    import attributio.annotate as AN
+    AN.load_annotations_cached = lambda C, s, verbose=False: feat
+    structures = pd.DataFrame({"nome_comune": ["Fictazine", "Betamine", "Betamine"], "first_block": ["IIIIIIIIIIIIII", "BBBBBBBBBBBBBB", None]})
+    b1 = NS(sites=sites, structures=structures)
+    C = NS(id="synthetic", sorbents=sorbents)
+    out = {"sites": sites, "sorbents": sorbents,
+           "features": frame_rows(feat), "info": [[p, i, bool(m), b] for (p, i), (m, b) in info.items()],
+           "annotated": [[p, i, n] for (p, i), n in ann.items()], "structures": frame_rows(structures), "cases": []}
+    return SC, C, b1, out
+
+
+B2_CASI = (([100.0, 400.0], ["HHP_PAN", "WHO_MIA", "EU_PS_2026_805"], {"PA": "HLB"}), (None, ["WHO_MIA"], {}))
+
+
+def stadio_tox_b2(dir_: Path, frame_rows):
+    """B2 on the invented features, with and without the MS1 window."""
+    SC, C, b1, out = _b2_ambiente(dir_, frame_rows)
+    for window, lists, labels in B2_CASI:
+        cfg = {"b2_lists": lists, "mz_window": window, "sorbent_labels": labels}
+        SC.reglists_config = lambda C, _c=cfg: _c
+        b = SC.screen_campaign(C, b1, mem_path=dir_ / "b2_membership.csv")
+        assert "Crippen" not in set(b.suspects["logp_source"]), (b.suspects[["name", "logp_source"]], "Crippen logP is not ported")
+        out["cases"].append({"cfg": cfg, "suspects": frame_rows(b.suspects), "already": frame_rows(b.already), "hits": frame_rows(b.hits),
+                             "summary": frame_rows(b.summary), "rt_model": list(b.rt_model), "lists": b.lists,
+                             "method": SC.method_lines(b, window)})
+    out["m2"] = [[f, SC.m2_ratio(f)] for f in ["C6H5Cl", "C2H2Cl2Br", "C4H3BrS2", "C5H5N", "CSi", "NaCl", "C3H8Sn", "Cl10"]]
+    return out
+
+
+def stadio_tox_b3(dir_: Path, frame_rows):
+    """B3 on the B2 candidates: SIRIUS tables (B3 export for POS, the campaign's top-1 for NEG), a MetFrag summary and the chemist's decisions."""
+    import tempfile
+    import pandas as pd
+    from types import SimpleNamespace as NS
+    from attributio.reglists import confirm as CF
+    SC, C, b1, out = _b2_ambiente(dir_, frame_rows)
+    window, lists, labels = B2_CASI[0]
+    cfg = {"b2_lists": lists, "mz_window": window, "sorbent_labels": labels}
+    SC.reglists_config = lambda C, _c=cfg: _c
+    b2 = SC.screen_campaign(C, b1, mem_path=dir_ / "b2_membership.csv")
+    st = [{"mappingFeatureId": 1, "structurePerIdRank": 1, "InChIkey2D": "AAAAAAAAAAAAAA", "name": "Alphazol", "ConfidenceScoreApproximate": 0.9},
+          {"mappingFeatureId": 8, "structurePerIdRank": 3, "InChIkey2D": "MMMMMMMMMMMMMM", "name": "Other", "ConfidenceScoreApproximate": 0.3},
+          {"mappingFeatureId": 8, "structurePerIdRank": 1, "InChIkey2D": "ZZZZZZZZZZZZZZ", "name": "Other", "ConfidenceScoreApproximate": 0.3},
+          {"mappingFeatureId": 2, "structurePerIdRank": 7, "InChIkey2D": "AAAAAAAAAAAAAA", "name": "Alphazol", "ConfidenceScoreApproximate": 0.1},
+          {"mappingFeatureId": 2, "structurePerIdRank": 1, "InChIkey2D": "ZZZZZZZZZZZZZZ", "name": "Other", "ConfidenceScoreApproximate": 0.1},
+          {"mappingFeatureId": 10, "structurePerIdRank": 2, "InChIkey2D": "AAAAAAAAAAAAAA", "name": "Alphazol", "ConfidenceScoreApproximate": 0.5},
+          {"mappingFeatureId": 10, "structurePerIdRank": 1, "InChIkey2D": "ZZZZZZZZZZZZZZ", "name": "Other", "ConfidenceScoreApproximate": 0.5},
+          {"mappingFeatureId": 3, "structurePerIdRank": 1, "InChIkey2D": "DDDDDDDDDDDDDD", "name": "Deltacide", "ConfidenceScoreApproximate": 0.7}]
+    fo = [{"mappingFeatureId": 1, "formulaRank": 1, "molecularFormula": "C9H10N2O"}, {"mappingFeatureId": 8, "formulaRank": 1, "molecularFormula": "C6H5ClO"},
+          {"mappingFeatureId": 8, "formulaRank": 2, "molecularFormula": "ClC6H5"}, {"mappingFeatureId": 10, "formulaRank": 1, "molecularFormula": "N2OC9H10"},
+          {"mappingFeatureId": 3, "formulaRank": 1, "molecularFormula": "C6H6O2"}]
+    sm = [{"mappingFeatureId": 1, "InChIkey2D": "AAAAAAAAAAAAAA", "similarity": 0.85, "sharedPeaks": 8, "analogHit": "false"},
+          {"mappingFeatureId": 1, "InChIkey2D": "AAAAAAAAAAAAAA", "similarity": 0.75, "sharedPeaks": 12, "analogHit": "False"},
+          {"mappingFeatureId": 2, "InChIkey2D": "AAAAAAAAAAAAAA", "similarity": 0.9, "sharedPeaks": 9, "analogHit": "true"},
+          {"mappingFeatureId": 3, "InChIkey2D": "DDDDDDDDDDDDDD", "similarity": 0.8, "sharedPeaks": 5, "analogHit": "false"}]
+    neg = {"structure_identifications": pd.DataFrame([{"_id": 6, "InChIkey2D": "KKKKKKKKKKKKKK", "name": "Standard A"}]),
+           "formula_identifications": pd.DataFrame([{"_id": 6, "molecularFormula": "C9H8O"}])}
+    tables = {"structure_identifications_top-5.tsv": pd.DataFrame(st), "formula_identifications_top-5.tsv": pd.DataFrame(fo),
+              "spectral_matches_top-5.tsv": pd.DataFrame(sm)}
+    metfrag = [{"pol": "POS", "fid": 8, "adduct": "[M+H]+", "suspect": "Chloroxen", "mf_rank": 2, "expl": 5, "npk": 7, "n_cand": 40}]
+    decisions = [{"suspect": "Alphazol", "polarity": "", "feature_id": "", "verdetto": "respinto", "nota": "general", "decided_on": "2026-10-01", "decided_by": "fc"},
+                 {"suspect": "Alphazol", "polarity": "POS", "feature_id": "10", "verdetto": "Livello 3 con riserva", "nota": "RT anchor",
+                  "decided_on": "2026-10-02", "decided_by": "fc"},
+                 {"suspect": "Deltacide", "polarity": "NEG", "feature_id": "", "verdetto": "rejected", "nota": "wrong polarity", "decided_on": "", "decided_by": ""}]
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        (tmp / "metfrag").mkdir()
+        pd.DataFrame(metfrag).to_csv(tmp / "metfrag" / "metfrag_summary.csv", sep=";", index=False)
+        pd.DataFrame(decisions).to_csv(tmp / "dec.csv", sep=";", index=False)
+        CF.b3_dir = lambda C: tmp
+        CF.decisions_path = lambda C: tmp / "dec.csv"
+        CF._b3_exports = lambda C, pol: (Path("synthetic"), "B3 v2") if pol == "POS" else (None, "")
+        CF._read_tsv = lambda d, names: tables.get(names[0], pd.DataFrame())
+        C.load_sirius = lambda table, pol, missing_ok=False: neg.get(table, pd.DataFrame()) if pol == "NEG" else pd.DataFrame()
+        ev, info = CF.evaluate(C, b2)
+    acc = CF.accepted(ev)
+    return {"hits": frame_rows(b2.hits), "sirius": {"POS": {"kind": "B3 v2", "structures": st, "formulas": fo, "matches": sm},
+                                                     "NEG": {"kind": info["sirius"]["NEG"], "structures": frame_rows(neg["structure_identifications"]),
+                                                             "formulas": frame_rows(neg["formula_identifications"]), "matches": []}},
+            "metfrag": metfrag, "decisions": decisions, "rows": frame_rows(ev), "info": info,
+            "accepted": [[r["suspect"], r["polarity"], int(r["feature_id"])] for _, r in acc.iterrows()], "method": CF.METHOD,
+            "formulas": [[f, CF.parse_formula(f)] for f in ["C9H10N2O", "N2OC9H10", "ClC6H5", "C6H5Cl", "Cl10", "", "H2O", "NaCl", "CSi"]]}
+
+
 def stadi_tox(frame_rows, scrivi, carica_tox) -> dict:
     """The stage table: name -> function writing its golden file."""
     return {
         "tox-ghs": lambda: scrivi(USCITA_TOX, "ghs.json", stadio_tox_ghs()),
         "tox-istantanee": lambda: scrivi(USCITA_TOX, "istantanee.json", stadio_tox_istantanee(ISTANTANEE, frame_rows)),
         "tox-amenabilita": lambda: scrivi(USCITA_TOX, "amenabilita.json", stadio_tox_amenabilita()),
+        "tox-schema": lambda: scrivi(USCITA_TOX, "schema.json", stadio_tox_schema(ISTANTANEE, frame_rows)),
+        "tox-b2": lambda: scrivi(USCITA_TOX, "b2.json", stadio_tox_b2(ISTANTANEE, frame_rows)),
+        "tox-b3": lambda: scrivi(USCITA_TOX, "b3.json", stadio_tox_b3(ISTANTANEE, frame_rows)),
         "tox-b1": lambda: scrivi(USCITA_TOX, "b1.json", stadio_tox_b1(ISTANTANEE, frame_rows, carica_tox)),
         "tox-pericolo": lambda: scrivi(USCITA_TOX, "pericolo.json", stadio_tox_pericolo(ISTANTANEE)),
         "tox-registro": lambda: scrivi(USCITA_TOX, "registro.json", stadio_tox_registro()),

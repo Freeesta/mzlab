@@ -13,6 +13,11 @@ const ALIASES: &[(&str, &str)] = &[
     ("falso", FALSE),
     ("si", "yes"),
     ("sì", "yes"),
+    ("Livello 2a", "Level 2a"),
+    ("Livello 3", "Level 3"),
+    ("Livello 3 con riserva", "Level 3 with reservation"),
+    ("respinto", "rejected"),
+    ("non confermato", "unconfirmed"),
     ("struttura della fonte", "source structure"),
     ("CID della fonte", "source CID"),
     ("nome", "name"),
@@ -43,6 +48,15 @@ pub fn canon(value: &str) -> String {
     let s = value.trim();
     if let Some((_, en)) = ALIASES.iter().find(|(it, _)| *it == s) {
         return en.to_string();
+    }
+    // Verdicts followed by more text: the failed rules, or a chemist's variant such as «Livello 3 (...)».
+    for (it, en) in [
+        ("non confermato (", "unconfirmed ("),
+        ("Livello ", "Level "),
+    ] {
+        if let Some(rest) = s.strip_prefix(it) {
+            return format!("{en}{rest}");
+        }
     }
     for sep in [" ; ", " | "] {
         if s.contains(sep) {
