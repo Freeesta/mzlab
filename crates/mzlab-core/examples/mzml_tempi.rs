@@ -97,6 +97,11 @@ fn main() {
         "prepare (prints apart)  {:>8.3} s",
         t.elapsed().as_secs_f64()
     );
+    indici(path, &p, budget);
+}
+
+/// Times the `.mzidx` build without and with a spool, and prints the heap peak of each.
+fn indici(path: &str, p: &upload::Prepared, budget: usize) {
     // without a spool every round decodes the file again; with a spool (a scratch file next to the mzML) it is decoded once
     for con in [false, true] {
         let spool_path = format!("{path}.spool");
