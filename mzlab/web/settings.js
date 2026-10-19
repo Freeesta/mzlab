@@ -106,6 +106,7 @@ function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.
 // --- popup of the gear
 function uipOpen(btn) {
   const old = Q("#uipset"); if (old) { old.remove(); return; }
+  const mem = window.MZLAB_RUST && window.MZLAB_RUST.budgetRow ? window.MZLAB_RUST.budgetRow() : null;      // the memory budget of the engine: automatic or chosen
   const d = document.createElement("div"); d.id = "uipset"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", I18N.t("settings.title"));
   d.innerHTML = `<div class="sm" style="font-weight:600;margin-bottom:6px">${I18N.t("settings.title")}</div>
     <div class="row"><span>${I18N.t("settings.language.label")}</span> <select id="uip-lang" title="${I18N.t("settings.language.title")}" aria-label="${I18N.t("settings.language.label")}"><option value="it">Italiano</option><option value="en">English</option></select></div>
@@ -124,6 +125,7 @@ function uipOpen(btn) {
     <div class="row hr-only" title="${I18N.t("settings.hrDec.title")}">${I18N.t("settings.hrDec")} <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
     ` : ""}
     <div class="uip-arch" id="uip-space-row" style="margin:8px 0;padding-top:8px;border-top:1px solid var(--line)">${window.MZLAB_BROWSER && typeof centroidTargets === "function" && centroidTargets().length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px"><button id="uip-cen" type="button" title="${I18N.t("settings.cen.title")}">${I18N.t("settings.cen.btn")}</button><button id="uip-cen-x" type="button" hidden>${I18N.t("settings.cen.stop")}</button><span class="sm" id="uip-cen-st" role="status" aria-live="polite"></span></div>` : ""}</div>
+    ${mem ? mem.html : ""}
     ${window.DESKUPD ? DESKUPD.row() : ""}
     ${window.MZLAB_DESKTOP ? `<label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.ext.title")}"><input type="checkbox" id="uip-ext"> <span>${I18N.t("settings.ext")}</span></label>` : ""}
     ${!(window.BANCO && BANCO.on()) ? `
@@ -132,6 +134,7 @@ function uipOpen(btn) {
     `;
   document.body.appendChild(d);
   if (window.DESKUPD) DESKUPD.bind(d);
+  if (mem) mem.bind(d);
   const uipLang = d.querySelector("#uip-lang"); uipLang.value = I18N.lang;   // the label is always bilingual: whoever cannot read the current language finds it
   uipLang.onchange = e => I18N.set(e.target.value);                         // remembered in qqq.lang, then the page reloads (open files come back with the session)
   const sub = /** @type {HTMLDetailsElement} */ (d.querySelector("#uip-a11y"));      // closed at first, then as the user left it

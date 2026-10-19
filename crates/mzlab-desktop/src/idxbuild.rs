@@ -9,7 +9,9 @@ use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use mzlab_core::budget::MemBudget;
 use mzlab_core::mzidx::{self, ScanTable, Stats, DEFAULT_BUDGET};
+use mzlab_core::{budget_auto, stima};
 use mzlab_core::{upload, Error};
 
 use crate::mapped::Mapped;
@@ -125,6 +127,35 @@ pub(crate) fn clean(name: &str) -> Result<&str, Error> {
     Ok(name)
 }
 
+/// RAM of the computer in MB, 0 when it cannot be read (Windows has no simple source without a system call: the budget then takes its default).
+fn ram_mb() -> f64 {
+    if let Ok(t) = std::fs::read_to_string("/proc/meminfo") {
+        let kb = t.lines().find_map(|l| l.strip_prefix("MemTotal:"));
+        return kb
+            .and_then(|v| v.trim().trim_end_matches("kB").trim().parse::<f64>().ok())
+            .map_or(0.0, |kb| kb / 1024.0);
+    }
+    let out = std::process::Command::new("sysctl")
+        .args(["-n", "hw.memsize"])
+        .output();
+    out.ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .and_then(|t| t.trim().parse::<f64>().ok())
+        .map_or(0.0, |b| b / (1024.0 * 1024.0))
+}
+
+/// The budget in MB the program chooses for this computer (`budget_auto`, mode Automatic).
+fn native_budget_mb() -> f64 {
+    let cores = std::thread::available_parallelism().map_or(0, |n| n.get() as u32);
+    let m = budget_auto::Machine {
+        native: true,
+        ram_mb: ram_mb(),
+        cores,
+        ..Default::default()
+    };
+    budget_auto::auto(&m).mb as f64
+}
+
 impl IdxBuilder {
     /// Builds the index of `source` (an mzML of the disk) as `<name>.mzidx`; waits for a free thread of the pool when several files are being built.
     /// `table`: the scan table the page sent; `None` reads it here (`upload::prepare_parallelo`: the SHA-256 is taken on a second thread meanwhile).
@@ -147,6 +178,14 @@ impl IdxBuilder {
                 )?),
             };
             let table = table.unwrap_or_else(|| &letta.as_ref().expect("read above").table);
+            // refuse in order, before the builder takes memory, a file whose index would not fit the budget chosen for this machine
+            let budget = MemBudget::mb(native_budget_mb());
+            stima::check_index(
+                &budget,
+                table.level.len(),
+                table.scans_json.len(),
+                DEFAULT_BUDGET,
+            )?;
             mzidx::build_mzml_spill(
                 table,
                 Cursor::new(map.bytes()),

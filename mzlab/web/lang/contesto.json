@@ -620,5 +620,7 @@
   "tip.raw": "Piccolo valore nel riquadro del mouse, accanto a quello corretto. {v} = valore della traccia prima del fondo, già formattato.",
   "load.cell.of": "Nome accessibile di una cella della tabella di caricamento; {f} = nome del file, {col} = nome della colonna.",
   "inf.skip": "Suggerimento di una riga dell'albero dei precursori: quante generazioni mancano tra il nodo e il suo genitore ({n}).",
-  "method.reg.go": "Nome accessibile del pulsante di una voce del registro errori nella finestra del metodo: porta il cursore al suo tempo; {t} = tempo in minuti."
+  "method.reg.go": "Nome accessibile del pulsante di una voce del registro errori nella finestra del metodo: porta il cursore al suo tempo; {t} = tempo in minuti.",
+  "settings.mem.status": "Riga di stato del budget di memoria nelle impostazioni; {mb} = budget in MB, {scans} = scansioni massime circa, {reason} = motivo della scelta, {conf} = affidabilità.",
+  "settings.mem.inputs": "Dati della macchina usati per scegliere il budget; {gb} = memoria del dispositivo in GB, {cores} = core logici, {hard} = limite massimo in MB."
 }

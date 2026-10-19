@@ -48,6 +48,11 @@ fn opt(o: &mut Out, v: Option<f64>) {
     }
 }
 
+/// Size of the pieces in which `drain_json` writes.
+const PIECE: usize = 1 << 20;
+/// Room kept above `PIECE` for the row that crosses it, so that a piece never doubles.
+const SLACK: usize = 1 << 16;
+
 impl Table {
     /// The rows of `SCAN_COLUMNS` as compact JSON (`json.dumps(rows, separators=(",", ":"))`); a row of a vendor file (`k` set) starts with
     /// `[membro,offset,lunghezza]` or `null`, and `k` (version 2, `docs/agenti/mzidx.md`).
@@ -64,12 +69,28 @@ impl Table {
 
     /// `rows_json` that frees each row as soon as it is written, and the four columns the index builder needs
     /// (levels, polarities, RT, TIC): the rows and their JSON never coexist whole, which is a third of the peak for a run of 100000 scans.
+    /// The JSON is written in pieces of about `PIECE` bytes and joined at the end, when the rows are gone: a vector that doubles would hold the old and
+    /// the new buffer together at the point where it is largest.
     pub fn drain_json(&mut self) -> (String, Columns) {
-        let mut o = Out::default();
-        o.raw("[");
         let rows = std::mem::take(&mut self.rows);
+        let n = rows.len();
         let mut c = Columns::default();
+        c.level.reserve_exact(n);
+        c.polarity.reserve_exact(n);
+        c.rt.reserve_exact(n);
+        c.tic.reserve_exact(n);
+        let mut pieces: Vec<String> = Vec::new();
+        let mut o = Out(String::with_capacity(PIECE + SLACK));
+        o.raw("[");
+        let mut total = 1;
         for (i, r) in rows.into_iter().enumerate() {
+            if o.0.len() >= PIECE {
+                total += o.0.len();
+                pieces.push(std::mem::replace(
+                    &mut o.0,
+                    String::with_capacity(PIECE + SLACK),
+                ));
+            }
             o.raw(if i > 0 { ",[" } else { "[" });
             write_row(&mut o, &r);
             c.level.push(r.level);
@@ -77,8 +98,14 @@ impl Table {
             c.rt.push(r.rt);
             c.tic.push(r.tic);
         }
-        o.raw("]");
-        (o.0, c)
+        total += o.0.len() + 1;
+        pieces.push(o.0);
+        let mut all = String::with_capacity(total);
+        for p in pieces {
+            all.push_str(&p);
+        }
+        all.push(']');
+        (all, c)
     }
 }
 
@@ -99,9 +126,9 @@ fn write_row(o: &mut Out, r: &Row) {
     o.raw(",").int(r.polarity as i64).raw(",");
     py_float(o, r.tic);
     o.raw(",");
-    opt(o, r.precursor);
+    opt(o, r.d().precursor);
     o.raw(",");
-    opt(o, r.ce);
+    opt(o, r.d().ce);
     o.raw(",")
         .str(&r.filter)
         .raw(if r.profile { ",true," } else { ",false," });
@@ -110,7 +137,7 @@ fn write_row(o: &mut Out, r: &Row) {
         None => o.raw("null"),
     };
     o.raw(",");
-    match r.iso {
+    match r.d().iso {
         Some((a, b)) => {
             o.raw("[");
             py_float(o, a);
@@ -123,16 +150,16 @@ fn write_row(o: &mut Out, r: &Row) {
         }
     }
     o.raw(",");
-    match &r.act {
+    match &r.d().act {
         Some(a) => o.str(a),
         None => o.raw("null"),
     };
     o.raw(",");
     opt(o, r.res);
-    o.raw(",").str(&r.an).raw(",");
-    opt(o, r.pint);
+    o.raw(",").str(r.an).raw(",");
+    opt(o, r.d().pint);
     o.raw(",");
-    match &r.path {
+    match &r.d().path {
         Some(p) => {
             o.raw("[");
             for (j, (m, a, c)) in p.iter().enumerate() {
@@ -152,7 +179,7 @@ fn write_row(o: &mut Out, r: &Row) {
         }
     }
     write_precs(o, r);
-    match r.charge {
+    match r.d().charge {
         Some(c) => o.int(c),
         None => o.raw("null"),
     };
@@ -164,7 +191,7 @@ fn write_row(o: &mut Out, r: &Row) {
 /// The precursors of a row as the JSON list of objects, followed by the comma that goes before the next column.
 fn write_precs(o: &mut Out, r: &Row) {
     o.raw(",[");
-    for (j, e) in r.precs.iter().enumerate() {
+    for (j, e) in r.d().precs.iter().enumerate() {
         if j > 0 {
             o.raw(",");
         }
@@ -202,10 +229,10 @@ fn write_precs(o: &mut Out, r: &Row) {
 
 /// Where the scan lies: the span of the mzML, or the place in a vendor file set.
 fn write_where(o: &mut Out, r: &Row) {
-    match (r.k, r.posizione) {
-        (None, _) => o.int(r.start as i64).raw(",").int(r.end as i64),
-        (Some(k), None) => o.raw("null,").int(k as i64),
-        (Some(k), Some(p)) => {
+    match r.dove.as_deref().map(|d| (d.k, d.posizione)) {
+        None => o.int(r.start as i64).raw(",").int(r.end as i64),
+        Some((k, None)) => o.raw("null,").int(k as i64),
+        Some((k, Some(p))) => {
             let (m, n) = (i64::from(p.membro), i64::from(p.lunghezza));
             o.raw("[")
                 .int(m)

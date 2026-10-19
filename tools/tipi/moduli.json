@@ -64,6 +64,7 @@
     "../../mzlab/web/rust-opfs.js",
     "../../mzlab/web/rust-recycle.js",
     "../../mzlab/web/rust-supervisor.js",
+    "../../mzlab/web/rust-budget.js",
     "../../mzlab/web/rust-scans.js",
     "../../mzlab/web/metodo-registro.js",
     "../../mzlab/web/registro-serie.js",

@@ -317,15 +317,15 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
             id: if r.native.is_empty() {
                 format!("index={k}")
             } else {
-                r.native.clone()
+                r.native.to_string()
             },
             rt: r.rt,
             livello: r.level,
             polarita: r.polarity,
             tic: r.tic,
             picco_base: None,
-            filtro: r.filter.clone(),
-            precursore: r.precursor,
+            filtro: r.filter.to_string(),
+            precursore: r.precursor(),
             posizione: Some(Posizione {
                 membro: 0,
                 offset: r.start,

@@ -1,7 +1,7 @@
 // Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, XIC and single scans as
 // Float64Arrays that are moved (not copied) to the page. The page gives the arrays back ("recycle") once drawn, so a frame
 // allocates nothing. If this worker dies, rust-bridge.js starts a new one (the WASM instance cannot be reused after a trap).
-import init, { Engine, native_samples, native_to_mzml, native_srm, native_external, Passata, version, prepare_upload, formula_mz, provenance, composition, stat_post, campioni, mrm_diff_post } from "./wasm/mzlab_wasm.js";
+import init, { Engine, native_samples, native_to_mzml, native_srm, native_external, Passata, version, prepare_upload, budget_choice, formula_mz, provenance, composition, stat_post, campioni, mrm_diff_post } from "./wasm/mzlab_wasm.js";
 import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
@@ -236,11 +236,11 @@ async function lrIndex(m) {
   const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.indexJob(m.name), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
   if (CANCELLED.has(m.name)) throw cancelled();
   const onProgress = p => postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase, done: p.done, total: p.total, wait: p.wait, early_tic: p.early_tic });      // wait: the pool has no free worker yet
-  const inputs = job ? null : Array.from(prepare_upload(f.size, readerFor(f), m.name, ...prints(m.name, f.size))).slice(0, 8);
+  const inputs = job ? null : Array.from(prepare_upload(f.size, readerFor(f), m.name, ...prints(m.name, f.size), BUDGET_MB)).slice(0, 8);
   const early_tic = earlyTicOf(job, inputs);
   if (early_tic) onProgress({ frac: 0.05, phase: "scan", done: 0, total: early_tic.rt.length, early_tic });
   const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, onProgress }
-    : { name: m.name, blob: f, inputs, part, onProgress });      // frac: how far the builder has read
+    : { name: m.name, blob: f, inputs, part, cap: BUDGET_MB, onProgress });      // frac: how far the builder has read
   if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
     if (res.ok && res.stats && res.stats.cen) await ARCH.promote("idx", partCen, m.name + ".cen.mzidx"); else await ARCH.remove("idx", partCen);
   }
@@ -324,9 +324,18 @@ async function natSame(/** @type {any} */ m) {
   return JSON.stringify({ names: out });
 }
 
+// The memory budget of the engine in MB (0 = the default of the Rust side, 192): the rule that chooses it is `budget_choice`; the page keeps the log.
+let BUDGET_MB = 0;
+function applyPolicy(/** @type {any} */ m) {
+  const choice = JSON.parse(budget_choice(m.device_gb || 0, m.cores || 0, !!m.small, m.manual || 0));
+  BUDGET_MB = choice.mb; engine.set_budget_mb(choice.mb);
+  postMessage({ op: "budget-choice", choice });
+}
+
 async function handle(ev) {
   const m = ev.data;
   if (m.op === "module") { startInit(m.module); return; } startInit(null);
+  if (m.op === "policy") { await ready; applyPolicy(m); return; }
   if (m.op === "recycle") { for (const b of m.bufs) if (b.byteLength) pool.push(b); if (pool.length > 8) pool.splice(0, pool.length - 8); return; }
   await ready;
   await ARCH.wake();                                                              // the read handles parked while idle are reopened before the request reads
@@ -384,7 +393,7 @@ async function handle(ev) {
       case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error
       case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;        // api/mrm with ref, from the transitions of the files
       case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;
-      case "budget": engine.set_budget_mb(m.mb); break;                                  // the supervisor lowers it after a death by lack of memory
+      case "budget": BUDGET_MB = m.mb; engine.set_budget_mb(m.mb); break;                                  // the supervisor lowers it after a death by lack of memory
       case "close": engine.close(m.slot); blobs.delete(m.slot); tileName.delete(m.slot); break;   case "reset": engine.close_all(); blobs.clear(); tileName.clear(); break;
       case "crash": if (m.grow) wasmMem.grow(m.grow * 16); engine.crash(); break;        // test hook: the supervisor must recover (grow = MB of memory taken first, the signature of a lack of memory)
       case "tic": out = take(2 * engine.count(m.slot, m.level)); n = engine.tic(m.slot, m.level, m.px || 0, out); break;

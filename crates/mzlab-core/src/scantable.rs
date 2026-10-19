@@ -3,9 +3,13 @@
 //! header of each spectrum (up to `<binaryDataArrayList`) is read. Text is searched as the Python regular expressions do, without a
 //! regex engine (it would cost size in the WASM).
 
+use std::sync::Arc;
+
+use crate::budget::MemBudget;
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::lettori::Posizione;
+use crate::stima;
 
 const ANALYZERS: [&str; 5] = ["FTMS", "ITMS", "TOFMS", "TQMS", "SQMS"];
 
@@ -16,41 +20,101 @@ struct Prec {
     hi: Option<f64>,
     selected: Option<f64>,
     charge: Option<i64>,
-    refer: Option<String>,
+    refer: Option<Arc<str>>,
     act: Option<&'static str>,
     ce: Option<f64>,
     pint: Option<f64>,
+}
+
+/// What only a scan with a precursor (or a vendor file) has: kept behind one pointer so that a survey scan does not carry the room for it.
+#[derive(Debug, Clone, Default)]
+pub struct Detail {
+    pub precursor: Option<f64>,
+    ce: Option<f64>,
+    iso: Option<(f64, f64)>,
+    act: Option<Arc<str>>,
+    pint: Option<f64>,
+    path: Option<Vec<(f64, String, f64)>>,
+    precs: Vec<Prec>,
+    charge: Option<i64>,
+}
+
+impl Detail {
+    const EMPTY: Detail = Detail {
+        precursor: None,
+        ce: None,
+        iso: None,
+        act: None,
+        pint: None,
+        path: None,
+        precs: Vec::new(),
+        charge: None,
+    };
+
+    /// Gives back the room that `push` left in the lists (a `Vec` takes room for four precursors at the first one, 576 bytes).
+    fn shrink(&mut self) {
+        self.precs.shrink_to_fit();
+        if let Some(p) = self.path.as_mut() {
+            p.shrink_to_fit();
+        }
+    }
+
+    /// Whether the scan has nothing of what a `Detail` holds (then it has none).
+    fn is_empty(&self) -> bool {
+        self.precursor.is_none()
+            && self.ce.is_none()
+            && self.iso.is_none()
+            && self.act.is_none()
+            && self.pint.is_none()
+            && self.path.is_none()
+            && self.precs.is_empty()
+            && self.charge.is_none()
+    }
+}
+
+/// Where a scan of a vendor file lies: the number of the scan in `Lettore::indice` and its place (written in place of `start`, `end`).
+#[derive(Debug, Clone, Copy)]
+pub struct Dove {
+    pub k: usize,
+    pub posizione: Option<Posizione>,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct Row {
     pub start: u64,
     pub end: u64,
-    /// A row of a vendor file: the number of the scan in `Lettore::indice` and where it lies (written in place of `start`, `end`).
-    pub k: Option<usize>,
-    pub posizione: Option<Posizione>,
+    /// A row of a vendor file (`mzidx_lettore::rows_json`).
+    pub dove: Option<Box<Dove>>,
     pub level: u8,
     pub rt: f64,
     pub polarity: i8,
     pub tic: f64,
-    pub precursor: Option<f64>,
-    ce: Option<f64>,
-    pub filter: String,
+    /// The filter string, shared by all the rows that have the same text (`Rows::intern`).
+    pub filter: Arc<str>,
     pub profile: bool,
     parent: Option<usize>,
-    iso: Option<(f64, f64)>,
-    act: Option<String>,
     res: Option<f64>,
-    pub an: String,
-    pint: Option<f64>,
-    path: Option<Vec<(f64, String, f64)>>,
-    precs: Vec<Prec>,
-    charge: Option<i64>,
-    pub native: String,
+    /// The analyzer: one of `ANALYZERS`, or `?`.
+    pub an: &'static str,
+    /// The native id, the same allocation as the key of `Rows::level_of`.
+    pub native: Arc<str>,
     /// Scan type that is not a plain full or product-ion scan (`PREC`, `NL`, `NG`, `EPI`): see `kind_of`.
     pub kind: Option<&'static str>,
     /// The mobility of the whole scan (a scan attribute) and its unit (`k0` or `ms`).
     pub mob: Option<(f64, &'static str)>,
+    detail: Option<Box<Detail>>,
+}
+
+impl Row {
+    fn d(&self) -> &Detail {
+        static NONE: Detail = Detail::EMPTY;
+        self.detail.as_deref().unwrap_or(&NONE)
+    }
+
+    /// The precursor m/z of the scan.
+    pub fn precursor(&self) -> Option<f64> {
+        self.d().precursor
+    }
 }
 
 /// The table, with what the `run` object of the metadata needs.
@@ -125,7 +189,7 @@ fn attr<'a>(t: &'a str, name: &str) -> Option<&'a str> {
     Some(&t[s..s + e])
 }
 
-fn precursor_element(e: &str, refer: Option<String>) -> Prec {
+fn precursor_element(e: &str, refer: Option<Arc<str>>) -> Prec {
     // _RX_PCV.findall: every accession of the set that has a value in its tag; the first occurrence of each wins
     const SET: [&str; 7] = ["827", "828", "829", "744", "041", "045", "042"];
     let mut found: Vec<(&str, Option<f64>)> = Vec::new();
@@ -255,7 +319,7 @@ fn immediate<'a>(
     precs: &'a [Prec],
     path: &Option<Vec<(f64, String, f64)>>,
     level: u8,
-    level_of: &std::collections::HashMap<String, u8>,
+    level_of: &std::collections::HashMap<Arc<str>, u8>,
 ) -> Option<&'a Prec> {
     if precs.is_empty() {
         return None;
@@ -309,7 +373,7 @@ fn is_hr(rows: &[&Row]) -> bool {
     }
     let mut counts: Vec<(&str, usize)> = Vec::new();
     for r in rows {
-        let a = if r.an.is_empty() { "?" } else { r.an.as_str() };
+        let a = if r.an.is_empty() { "?" } else { r.an };
         match counts.iter_mut().find(|(k, _)| *k == a) {
             Some(c) => c.1 += 1,
             None => counts.push((a, 1)),
@@ -443,6 +507,12 @@ pub(crate) use rows::Rows;
 
 /// Reads the scan table of an mzML of `size` bytes.
 pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
+    read_in(r, size, None)
+}
+
+/// `read` that refuses in order (`error.memoryBudget`, phase `table`) when the rows would not fit in `budget`: the estimate (`stima`) is made from the
+/// count of the spectra in the index of offsets before the first row is kept, or from the progress of the walk when the file has no index.
+pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> Result<Table> {
     let mut src = Source { r, size };
     // header: instrument configurations and the default one
     let head_end = {
@@ -461,6 +531,9 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
     // the spans of the spectra
     let offs = src.offsets()?;
     if let Some(o) = &offs {
+        if let Some(b) = budget {
+            stima::check_table(b, o.len())?;
+        }
         rows.reserve(o.len());
     }
     // each header becomes its row as soon as it is read: keeping the headers of every spectrum (about 1.5 KB each) would hold hundreds of MB
@@ -550,6 +623,9 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
                 pos = next;
             };
             let Some(a) = a else { break };
+            if let Some(b) = budget {
+                stima::check_walk(b, rows.len(), a, size)?;
+            }
             // find "</spectrum>" after a
             let mut n: u64 = 1 << 16;
             let b = loop {

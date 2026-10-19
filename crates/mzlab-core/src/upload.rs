@@ -5,6 +5,7 @@
 use sha1::{Digest as _, Sha1};
 use sha2::Sha256;
 
+use crate::budget::MemBudget;
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::json::Out;
@@ -118,7 +119,18 @@ pub fn prepare_con<R: ReadAt>(
     name: &str,
     known: Option<(String, String)>,
 ) -> Result<Prepared> {
-    let t = scantable::read(&mut Windowed::new(r, size), size)?;
+    prepare_in(r, size, name, known, None)
+}
+
+/// `prepare_con` that refuses in order (`error.memoryBudget`, phase `table`, `stima`) a file whose scan table does not fit in `budget`.
+pub fn prepare_in<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    name: &str,
+    known: Option<(String, String)>,
+    budget: Option<&MemBudget>,
+) -> Result<Prepared> {
+    let t = scantable::read_in(&mut Windowed::new(r, size), size, budget)?;
     let (sha256, probe) = match known {
         Some(k) => k,
         None => {
