@@ -107,10 +107,12 @@ fn pipeline_matches_the_final_list_of_mzmine() {
         return;
     };
     let Some(mut ixs) = synthetic() else { return };
+    // the default of the product: mzmine 4.10 takes the zero next to an edge in (`adjustStartAndEnd`)
     let p = UntParams {
         polarity: Some(1),
         ..UntParams::default()
     };
+    assert!(p.resolve.adjust_edges);
     let lists: Vec<_> = ixs.iter_mut().map(|ix| run_file(ix, &p).unwrap()).collect();
     let files: Vec<String> = (1..=4).map(|i| format!("oro_{i}")).collect();
     let t = run_series(&lists, &mut ixs, &files, &p).unwrap();
@@ -122,7 +124,6 @@ fn pipeline_matches_the_final_list_of_mzmine() {
         .len();
     eprintln!("pipeline: {} rows against {nrows} of mzmine", t.len());
     let (mut agree, mut gold_cells) = (0usize, 0usize);
-    let mut ratios: Vec<f64> = Vec::new();
     let mut seen = vec![false; t.len() * files.len()];
     for r in &g {
         gold_cells += 1;
@@ -136,9 +137,9 @@ fn pipeline_matches_the_final_list_of_mzmine() {
         if t.state[c] != CELL_ABSENT
             && filled == (r["state"] == "ESTIMATED")
             && close(t.height[c] as f64, num(r, "height"))
+            && close(t.area[c], num(r, "area") * 60.0)
         {
             agree += 1;
-            ratios.push(t.area[c] / (num(r, "area") * 60.0));
         } else {
             eprintln!(
                 "cell off: row {} {} -> {:?}",
@@ -156,16 +157,4 @@ fn pipeline_matches_the_final_list_of_mzmine() {
         "{agree}/{gold_cells}"
     );
     assert_eq!(spurious, 0);
-    // KNOWN DIFFERENCE (the resolver of 4.10 takes in a zero point next to an edge, `adjustStartAndEnd`): the areas of 4.10 are a little larger than ours; the heights agree
-    ratios.sort_by(f64::total_cmp);
-    eprintln!(
-        "area of ours / area of 4.10: min {:.3} median {:.3} max {:.3}",
-        ratios[0],
-        ratios[ratios.len() / 2],
-        ratios[ratios.len() - 1]
-    );
-    assert!(
-        ratios.iter().all(|r| *r <= 1.0011 && *r >= 0.96),
-        "{ratios:?}"
-    );
 }
