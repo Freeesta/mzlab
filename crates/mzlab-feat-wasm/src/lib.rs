@@ -21,6 +21,8 @@ use wasm_bindgen::prelude::*;
 pub mod finder;
 #[cfg(feature = "finder_edge")]
 pub mod finder_edge;
+#[cfg(feature = "interp")]
+pub mod interp;
 #[cfg(feature = "finder_msn")]
 pub mod msn;
 pub mod run;

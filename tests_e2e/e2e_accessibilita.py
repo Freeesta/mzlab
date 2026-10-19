@@ -137,7 +137,8 @@ try:
             attendi(pg, "(() => { const f = document.querySelector('#tframe'); try { return f.contentDocument.documentElement.getAttribute('data-a11y-bg') === 'cream' } catch (e) { return false } })()", 60000)
             f = next(x for x in pg.frames if "/teoria/" in x.url)
             assert f.evaluate("document.documentElement.getAttribute('data-a11y-bg')") == "cream" and f.evaluate("document.documentElement.hasAttribute('data-a11y-space')")
-            assert f.is_visible("#a11y-btn"); f.click("#a11y-btn"); f.check("input[name=a11y-bg][value=blue]")
+            assert f.evaluate("!document.querySelector('#a11y-btn')"), "no floating Aa in the app"
+            f.wait_for_function("typeof TEORIA.settings === 'function'"); f.evaluate("TEORIA.settings()"); f.wait_for_selector("#a11y-panel:not([hidden])"); f.check("input[name=a11y-bg][value=blue]")
             assert f.evaluate("document.documentElement.getAttribute('data-a11y-bg')") == "blue"
             pg.screenshot(path=SH + "a11y_nell_app.png")
         step("the Teoria inside the app (#tframe) applies and changes the preferences", inapp)
