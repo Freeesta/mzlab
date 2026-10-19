@@ -1,5 +1,5 @@
 //! Agilent LC/MS `.D` folders (QqQ MRM/dMRM, Q-TOF centroid/profile/MS2, both polarities) through the module reader, on the real runs of the private data repository
-//! (`dati_formati/agilent_D/<run>/<name>.d`, next to the mzML of msconvert for the pairs; the tests are skipped without it).
+//! (`dati/formati/agilent/D/<run>/<name>.d`, next to the mzML of msconvert for the pairs; the tests are skipped without it).
 
 #![cfg(feature = "agilent")]
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
@@ -9,25 +9,11 @@ use std::path::{Path, PathBuf};
 use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
 use mzlab_core::mzml::{self, ChromKind};
 
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
+
 fn root() -> Option<PathBuf> {
-    let here = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .canonicalize()
-        .ok()?;
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    cands.extend(
-        here.ancestors()
-            .skip(1)
-            .take(3)
-            .map(|up| up.join("mzlab-dati")),
-    );
-    cands
-        .into_iter()
-        .map(|p| p.join("dati_formati/agilent_D"))
-        .find(|p| p.is_dir())
+    dati_percorsi::percorso("dati/formati/agilent/D").filter(|p| p.is_dir())
 }
 
 /// The `.d` folders of the run directories, sorted.

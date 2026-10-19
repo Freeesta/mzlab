@@ -108,3 +108,21 @@ fn the_routes_give_the_bytes_of_the_steps() {
     );
     assert!(bad.is_err());
 }
+
+/// `feat/formula_id` answers the JSON `formula_id/1` of the module (caffeine, [M+H]+, the pattern from the natural abundances) and refuses mismatched arrays.
+#[test]
+fn the_route_formula_id_gives_the_json_of_the_module() {
+    let st = State::new();
+    let ask = |v: Value| st.rpc("feat/formula_id", &v, &[]);
+    let v = json!({
+        "mz": [195.0876520311805, 196.09015386499837, 197.09225064161305],
+        "y": [1000000.0, 103166.01515119415, 8936.76966493754],
+        "feature_mz": 195.0876520311805,
+        "params": "",
+    });
+    let got: Value = serde_json::from_str(&text(ask(v).unwrap())).unwrap();
+    assert_eq!(got["v"], "formula_id/1");
+    assert_eq!(got["candidates"][0]["neutral"], "C8H10N4O2");
+    assert_eq!(got["chosen"], 0);
+    assert!(ask(json!({"mz": [195.0], "y": [], "feature_mz": 195.0})).is_err());
+}

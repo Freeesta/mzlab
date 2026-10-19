@@ -1,6 +1,6 @@
 """A Thermo .raw is read by the engine THROUGH the `thermo` readers module (crates/mzlab-lettori-wasm, mzlab/web/lettore-esterno.js, crates/mzlab-wasm/src/esterno.rs): no mzML in between, the module is downloaded
 only when a .raw arrives, and what the page shows is what the engine gave while the Thermo reader was linked in it: the TIC, a scan and «Download .mzML» (byte for byte) against `raw_referenza`
-(crates/mzlab-core/examples, the reader of the core). Needs the private data repository (MZLAB_DATI, or `mzlab-dati` beside this one: the smallest .raw of HRMS/; skipped without it), cargo, the site and both .wasm:
+(crates/mzlab-core/examples, the reader of the core). Needs the private data repository (the data repository found by tools/dati_percorsi.py, or MZLAB_DATI: the smallest .raw of dati/HRMS; skipped without it), cargo, the site and both .wasm:
 python tools/build_site.py, tools/build_lettori_wasm.sh site/static (MZLAB_PIPE_SITE=<built site> reuses a site). Run from the repo root: python3 tests_e2e/e2e_thermo_modulo.py"""
 import hashlib, json, os, shutil, socket, subprocess, sys, tempfile, threading
 from pathlib import Path
@@ -8,6 +8,7 @@ from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
 import agilent_sintetico
+from dati_percorsi import percorso
 
 steps = []
 def step(name, fn):
@@ -15,8 +16,8 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e)[:900]))
 
 def find_raw():
-    cands = [os.environ.get("MZLAB_DATI"), str(ROOT.parent / "mzlab-dati")]
-    raws = [p for d in cands if d and (Path(d) / "HRMS").is_dir() for p in (Path(d) / "HRMS").rglob("*.raw") if p.is_file()]
+    hrms = percorso("dati/HRMS")
+    raws = [p for p in hrms.rglob("*.raw") if p.is_file()] if hrms else []
     return min(raws, key=lambda p: p.stat().st_size) if raws else None
 
 raw = find_raw()
@@ -108,7 +109,8 @@ try:
         step("a truncated .raw is refused", broken)
         def baf():
             # the big DDA (595 MB, 56 061 scans) opens in the site and the map appears; skipped when the file is not around
-            cands = [os.environ.get("MZLAB_RAW_BAF")] + [str(Path(d) / "dati_formati" / "thermo_raw" / "BAF_GEE_37.raw") for d in (os.environ.get("MZLAB_DATI"), str(ROOT.parent / "mzlab-dati")) if d]
+            baf = percorso("dati/formati/thermo/raw/BAF_GEE_37.raw")
+            cands = [os.environ.get("MZLAB_RAW_BAF"), str(baf) if baf else None]
             big = next((Path(c) for c in cands if c and Path(c).is_file()), None)
             if big is None:
                 print("   SKIP e2e_thermo_modulo BAF: the big .raw is not around (MZLAB_RAW_BAF)"); return

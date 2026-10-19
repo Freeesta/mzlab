@@ -24,6 +24,9 @@ use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::sorgente::{Scansioni, SorgenteLettore, Tracce, TracceMzml};
 use mzlab_core::{lettori_mzml, mzidx, upload};
 
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
+
 const BIG: usize = mzidx::DEFAULT_BUDGET;
 /// Indexes built in more than one pass with the small budget.
 static MANY: AtomicUsize = AtomicUsize::new(0);
@@ -227,19 +230,6 @@ fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-fn dati() -> Option<PathBuf> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    for up in root().canonicalize().ok()?.ancestors().skip(1).take(3) {
-        cands.push(up.join("mzlab-dati"));
-    }
-    cands
-        .into_iter()
-        .find(|p| p.is_dir() && p.join("nomi_vietati.txt").exists())
-}
-
 fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
     let mut v: Vec<PathBuf> = std::fs::read_dir(dir)
         .into_iter()
@@ -332,14 +322,16 @@ fn the_synthetic_wiff_pairs_give_the_index_of_their_mzml() {
 
 #[test]
 fn the_real_files_give_the_index_of_their_mzml() {
-    let Some(d) = dati() else {
+    if dati_percorsi::radice().is_none() {
         eprintln!("SKIP lettori_mzidx: no data repository (MZLAB_DATI)");
         return;
-    };
+    }
     let mut files = Vec::new();
-    walk(&d.join("3200 qtrap"), &mut files);
-    walk(&d.join("GC-MS"), &mut files);
-    walk(&d.join("HRMS"), &mut files);
+    for dir in ["dati/3200 qtrap/wiff", "dati/GC-MS", "dati/HRMS"] {
+        if let Some(d) = dati_percorsi::percorso(dir) {
+            walk(&d, &mut files);
+        }
+    }
     let ext = |p: &Path, e: &str| p.extension().is_some_and(|x| x.eq_ignore_ascii_case(e));
     let (mut samples, mut scans) = (0usize, 0usize);
     let mut count = |label: &str, make: &dyn Fn() -> FileSet| {

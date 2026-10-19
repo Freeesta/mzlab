@@ -10,27 +10,13 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
-fn dati() -> Option<PathBuf> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    let here = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    for up in here.ancestors().skip(1).take(3) {
-        cands.push(up.join("mzlab-dati"));
-        cands.push(
-            up.parent()
-                .map(|p| p.join("mzlab-dati"))
-                .unwrap_or_default(),
-        );
-    }
-    cands.into_iter().find(|p| p.join("HRMS").is_dir())
-}
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
-/// Every `.raw` with an mzML beside it (same stem) under `HRMS`.
+/// Every `.raw` with an mzML beside it (same stem) under `dati/HRMS`.
 fn pairs(d: &Path) -> Vec<(PathBuf, PathBuf)> {
     let mut out = vec![];
-    let mut dirs = vec![d.join("HRMS")];
+    let mut dirs = vec![d.to_path_buf()];
     while let Some(dir) = dirs.pop() {
         for e in std::fs::read_dir(&dir).into_iter().flatten().flatten() {
             let p = e.path();
@@ -71,7 +57,7 @@ fn text<'a>(v: &'a Value, path: &[&str]) -> Option<&'a str> {
 
 #[test]
 fn the_raw_method_agrees_with_msconvert_and_with_the_script() {
-    let Some(d) = dati() else {
+    let Some(d) = dati_percorsi::percorso("dati/HRMS") else {
         eprintln!("skipped: no data repository (MZLAB_DATI)");
         return;
     };
@@ -121,7 +107,7 @@ fn the_raw_method_agrees_with_msconvert_and_with_the_script() {
 
 #[test]
 fn the_conversion_carries_the_document() {
-    let Some(d) = dati() else {
+    let Some(d) = dati_percorsi::percorso("dati/HRMS") else {
         eprintln!("skipped: no data repository (MZLAB_DATI)");
         return;
     };
@@ -158,7 +144,7 @@ fn the_conversion_carries_the_document() {
 
 #[test]
 fn the_pump_pressure_is_the_one_msconvert_wrote_in_the_unit_of_the_file() {
-    let Some(d) = dati() else {
+    let Some(d) = dati_percorsi::percorso("dati/HRMS") else {
         eprintln!("skipped: no data repository (MZLAB_DATI)");
         return;
     };
@@ -207,7 +193,7 @@ fn the_pump_pressure_is_the_one_msconvert_wrote_in_the_unit_of_the_file() {
 
 #[test]
 fn every_channel_of_the_status_log_is_a_field_and_the_log_is_no_longer_a_warning() {
-    let Some(d) = dati() else {
+    let Some(d) = dati_percorsi::percorso("dati/HRMS") else {
         eprintln!("skipped: no data repository (MZLAB_DATI)");
         return;
     };
@@ -260,7 +246,7 @@ fn every_channel_of_the_status_log_is_a_field_and_the_log_is_no_longer_a_warning
 
 #[test]
 fn the_instrument_log_is_listed_and_each_series_is_served_on_demand() {
-    let Some(d) = dati() else {
+    let Some(d) = dati_percorsi::percorso("dati/HRMS") else {
         eprintln!("skipped: no data repository (MZLAB_DATI)");
         return;
     };

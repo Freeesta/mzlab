@@ -4,14 +4,16 @@ The readers are Rust (crates/mzlab-feat/src/import; the .wasm for node is built 
 The fixtures in tests/data/untargeted/ are written by hand in the format of each program (nothing real). The parity with the synthetic campaign of the data repository runs only with MZLAB_DATI."""
 import csv
 import json
-import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tools"))
+from dati_percorsi import percorso  # noqa: E402
 WEB, JS, DATA = ROOT / "mzlab" / "web", ROOT / "TP_Mine" / "js", ROOT / "tests" / "data" / "untargeted"
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
@@ -162,15 +164,11 @@ def test_external_name_conflict_and_isomers_not_discriminated():
 
 # ------------------------------------------------------------ parity with the synthetic campaign of the data repository (only with MZLAB_DATI)
 def _campaign():
-    for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), str(ROOT.parent / "mzlab-dati"), "/home/user/mzlab-dati"):
-        if c:
-            p = Path(c) / "scratchpad" / "da_copiare" / "attributio_synthetic_campaign"
-            if (p / "livelli_attesi.csv").is_file():
-                return p
-    return None
+    p = percorso("coordinamento/da_copiare/attributio_synthetic_campaign")
+    return p if p and (p / "livelli_attesi.csv").is_file() else None
 
 
-@pytest.mark.skipif(_campaign() is None, reason="MZLAB_DATI with scratchpad/da_copiare/attributio_synthetic_campaign not available")
+@pytest.mark.skipif(_campaign() is None, reason="MZLAB_DATI with coordinamento/da_copiare/attributio_synthetic_campaign not available")
 def test_parity_with_the_synthetic_campaign_for_features_decided_by_mzmine_and_gnps2():
     c = _campaign()
     gold = {(r["_pol"], r["_id"]): r for r in csv.DictReader((c / "livelli_attesi.csv").open(encoding="utf-8"), delimiter=";")}
