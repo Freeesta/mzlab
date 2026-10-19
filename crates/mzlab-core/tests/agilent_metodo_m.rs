@@ -5,7 +5,7 @@
 
 mod agilent_folder;
 
-use agilent_folder::dati;
+use agilent_folder::gcms;
 use mzlab_core::agilent::{meta, quant::metodo_m};
 use serde_json::Value;
 use std::path::Path;
@@ -73,12 +73,9 @@ fn schema_has_all_keys(doc: &Value, comp: &[Value]) {
 
 #[test]
 fn the_geosmin_and_mib_methods_say_what_quantitative_xml_says() {
-    let Some(d) = dati() else { return };
+    let Some(d) = gcms() else { return };
     for (m, rts, sim) in [("scan", [7.195, 10.0], false), ("SIM", [7.7, 10.6], true)] {
-        let (doc, n_items) = document(
-            &d.join("GC-MS")
-                .join(format!("Geosmin and MIB method for {m}.m")),
-        );
+        let (doc, n_items) = document(&d.join(format!("Geosmin and MIB method for {m}.m")));
         assert_eq!(doc["schema"], "metodo/1");
         assert_eq!(doc["origine"]["formato"], "agilent-m");
         let q = &doc["quantificazione"];

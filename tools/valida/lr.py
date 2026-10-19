@@ -2,7 +2,7 @@
 ones when the private data are there. Aggregated numbers only (no names of compounds, no data); the document is `cancello_lr/1`, written in the work folder and
 never committed by this tool.
 
-Real data are read from a local path (`MZLAB_DATI`/`mzML` or `--serie-lr`) and the criteria that need them stay `ok` null (skipped, never passed) without it.
+Real data are read from the data repository (`dati/3200 qtrap/mzML`) or from `--serie-lr` and the criteria that need them stay `ok` null (skipped, never passed) without it.
 The full scan is judged against reference ions: on the synthetic series the frozen ions of the former Python engine (`tests/golden/finder_lr_riferimento.json`);
 the real series has no public reference, so its full scan criteria stay unmeasured (only the determinism of the run is measured)."""
 from __future__ import annotations
@@ -12,6 +12,7 @@ import os
 import sys
 from pathlib import Path
 
+from dati_percorsi import percorso
 from . import ROOT, cancello, lr_criteri as C, lr_nativo as N, lr_sintetici as S, nativo
 
 sys.path.insert(0, str(ROOT / "TP_Mine" / "tests"))
@@ -72,8 +73,8 @@ def sintetici(lavoro: Path, seme: int = 5) -> tuple[list[dict], dict]:
 
 
 def trova_reale(cartella: str | None) -> Path | None:
-    """The folder of the real mzML: `--serie-lr`, else `$MZLAB_DATI/mzML`; None when it does not exist."""
-    base = Path(cartella) if cartella else (Path(os.environ["MZLAB_DATI"]) / "mzML" if os.environ.get("MZLAB_DATI") else None)
+    """The folder of the real mzML: `--serie-lr`, else `dati/3200 qtrap/mzML` of the data repository; None when it does not exist."""
+    base = Path(cartella) if cartella else percorso("dati/3200 qtrap/mzML")
     return base if base and base.is_dir() else None
 
 

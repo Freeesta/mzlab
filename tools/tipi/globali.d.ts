@@ -88,6 +88,7 @@ declare var SCORCIATOIE: any;
 declare var SUBREF: any;
 declare var TABELLA: any;
 declare var TAVOLA: any;
+declare var TBL_HR: any;
 declare var TDATI: any;
 declare var TDATI_P: any;
 declare var TIME_UNITS: any;

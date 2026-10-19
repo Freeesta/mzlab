@@ -5,8 +5,8 @@ Time to open the files (upload + first TIC drawn), time for the TIC and five XIC
 works) and the resident memory of the whole browser (Linux: sum of /proc RSS of the Chromium processes). It does not interpret the
 numbers: AGENTS.md decides what they mean. Needs the site (python3 tools/build_site.py) and site/static/wasm (see .github/workflows/pages.yml).
 Usage: python3 tools/bench.py [--files N] [--json]
---librerie: the spectral libraries (docs/agenti/librerie.md): synthetic libraries of 1e5 and 1e6 spectra (and the MassBank of the data repository when MZLAB_DATI
-finds one), imported and searched through LIB in Chromium with the old JavaScript path (?libjs=1, only up to 1e5) and the WebAssembly engine
+--librerie: the spectral libraries (docs/agenti/librerie.md): synthetic libraries of 1e5 and 1e6 spectra (and the MassBank of the data repository when it is found
+by tools/dati_percorsi.py), imported and searched through LIB in Chromium with the old JavaScript path (?libjs=1, only up to 1e5) and the WebAssembly engine
 (site/static/wasm-lib), and the native builder (cargo example `build`); --gb adds an MGF of about 1 GB. Measure only, no interpretation.
 Files: MZLAB_MZML or the usual data folders (tests_e2e/lib.py); Chromium: MZLAB_CHROMIUM = path of an executable, if needed."""
 import argparse, json, os, subprocess, sys, tempfile, time
@@ -15,6 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests_e2e"))
 from lib import MZ  # noqa: E402
+from dati_percorsi import percorso  # noqa: E402
 
 MZS = [200, 250, 300, 364, 400]
 GETB = """async u => { const t = performance.now(); const r = await fetch(u); if (!r.ok) throw new Error(u + " " + r.status); await r.arrayBuffer(); return performance.now() - t; }"""
@@ -204,9 +205,8 @@ def main_librerie(gb: bool) -> list:
         print(f"writing {label} ...", file=sys.stderr)
         ident, analog = synth_library(path, n)
         jobs.append((label, path, ident, analog, n <= 100_000))
-    dati = next((Path(c) for c in (os.environ.get("MZLAB_DATI"), str(ROOT.parent / "mzlab-dati")) if c and (Path(c) / "librerie" / "massbank_eu_qft_pos.msp").is_file()), None)
-    if dati:
-        mb = dati / "librerie" / "massbank_eu_qft_pos.msp"
+    mb = percorso("dati/librerie/massbank_eu_qft_pos.msp")
+    if mb:
         ident = []
         jobs.append(("MassBank (data repository)", mb, None, None, True))
     port = 8860

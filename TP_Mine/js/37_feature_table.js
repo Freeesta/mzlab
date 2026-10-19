@@ -103,6 +103,7 @@
         open: { xic: () => showInData(o.names[best], r.mz) },
         xic: t ? t.xic.map((/** @type {any} */ x, /** @type {number} */ j) => ({ file: x.file, group: samples[j].type, time: samples[j].time, rt: x.rt, y: x.y })) : [],
         apexRt: r.rt, lo: w ? w.rt_lo : r.lo, hi: w ? w.rt_hi : r.hi,
+        composition: t && t.ms1 && t.ms1.mz.length && o.session.composition ? { run: () => o.session.composition(t.ms1.mz, t.ms1.y, r.mz, JSON.stringify({ ion: ii && ii.adduct ? ii.adduct : ((o.pol ? o.pol() : 1) < 0 ? "[M-H]-" : "[M+H]+"), tol_ppm: o.ppm() })) } : undefined,
         spectrum: t && t.ms1 && t.ms1.mz.length ? { kind: "ms1", mz: t.ms1.mz, y: t.ms1.y, iso: isoOf(t.ms1, r.mz) } : null,
         spectrum2: t && t.ms2 && t.ms2.mz.length ? { kind: "ms2", mz: t.ms2.mz, y: t.ms2.y } : null,
         xicTip: w ? lineOf(w) : "",

@@ -3,7 +3,8 @@
 //! reading, never a panic, and what is read (index, SRM traces, UV channels, method) never panics either. Without the data the seed is a bare header, which must
 //! be refused with a key. No data of the laboratory is copied: the mutations are made in memory.
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
-use std::path::PathBuf;
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
 
 fn insieme(byte: Vec<u8>) -> FileSet {
     FileSet {
@@ -17,30 +18,16 @@ fn insieme(byte: Vec<u8>) -> FileSet {
 }
 
 fn semi() -> Vec<Vec<u8>> {
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
-        .map(PathBuf::from)
-        .into_iter()
-        .collect();
-    for up in std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .skip(1)
-        .take(3)
-    {
-        cands.push(up.join("mzlab-dati"));
-    }
-    let Some(d) = cands
-        .into_iter()
-        .find(|p| p.join("dati_formati/thermo_raw").is_dir())
-    else {
+    if dati_percorsi::percorso("dati/formati/thermo/raw").is_none() {
         eprintln!("SKIP robustezza_thermo: no data repository, bare header only");
         return vec![vec![0x01, 0xA1, 0x46, 0x00, 0x69, 0x00, 0x6e, 0x00, 0x6e, 0x00]; 1];
-    };
+    }
     [
-        "thermo_raw/MTBLS7889_Fermentation_3_Media_test_001.raw",
-        "thermo_pda/MTBLS9839_MET-2021-P17-YG_neg_MS2dd30k_1121_EB_076.raw",
+        "dati/formati/thermo/raw/MTBLS7889_Fermentation_3_Media_test_001.raw",
+        "dati/formati/thermo/pda/MTBLS9839_MET-2021-P17-YG_neg_MS2dd30k_1121_EB_076.raw",
     ]
     .iter()
-    .filter_map(|r| std::fs::read(d.join("dati_formati").join(r)).ok())
+    .filter_map(|r| dati_percorsi::percorso(r).and_then(|p| std::fs::read(p).ok()))
     .collect()
 }
 
