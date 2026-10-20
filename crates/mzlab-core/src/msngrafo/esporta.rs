@@ -85,7 +85,7 @@ pub fn esporta(g: &Grafo, formato: Formato, pulito: bool, nodo: Option<&str>) ->
     let sel: Vec<&SpettroG> = g
         .spettri
         .iter()
-        .filter(|s| nodo.map_or(true, |n| s.albero == n))
+        .filter(|s| nodo.is_none_or(|n| s.albero == n))
         .collect();
     match formato {
         Formato::Csv => csv(g, &sel, pulito),
