@@ -7,10 +7,6 @@ use crate::model::{Mol, Status, Stereo};
 use crate::trasf::{Evidence, TRegion, TSite, Trasf};
 use std::collections::BTreeSet;
 
-fn invalid<T>(what: impl Into<String>) -> Result<T, MolError> {
-    Err(MolError::Invalid(format!("trasf/1: {}", what.into())))
-}
-
 impl Stereo {
     /// The atoms that name the element: the centre of a tetrahedral one, both ends of a double bond.
     pub(crate) fn key_atoms(&self) -> Vec<u32> {
@@ -171,4 +167,8 @@ impl Trasf {
         out.validate()?;
         Ok(out)
     }
+}
+
+fn invalid<T>(what: impl Into<String>) -> Result<T, MolError> {
+    Err(MolError::Invalid(format!("trasf/1: {}", what.into())))
 }

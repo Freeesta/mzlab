@@ -11,21 +11,6 @@ use std::collections::BTreeSet;
 /// The value of the `format` field.
 pub const TRASF_FORMAT: &str = "trasf/1";
 
-fn invalid<T>(what: impl Into<String>) -> Result<T, MolError> {
-    Err(MolError::Invalid(format!("trasf/1: {}", what.into())))
-}
-
-fn is_hash(s: &str) -> bool {
-    s.len() == 64
-        && s.bytes()
-            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-}
-
-/// Strictly ascending and below `limit`.
-fn ascending(list: &[u32], limit: usize) -> bool {
-    list.windows(2).all(|w| w[0] < w[1]) && list.iter().all(|&x| (x as usize) < limit)
-}
-
 impl Trasf {
     /// Reads and validates a record.
     pub fn from_json(text: &str) -> Result<Trasf, MolError> {
@@ -229,4 +214,19 @@ pub struct Trasf {
     pub level: Option<String>,
     #[serde(default)]
     pub evidence: Vec<Evidence>,
+}
+
+fn invalid<T>(what: impl Into<String>) -> Result<T, MolError> {
+    Err(MolError::Invalid(format!("trasf/1: {}", what.into())))
+}
+
+fn is_hash(s: &str) -> bool {
+    s.len() == 64
+        && s.bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
+
+/// Strictly ascending and below `limit`.
+fn ascending(list: &[u32], limit: usize) -> bool {
+    list.windows(2).all(|w| w[0] < w[1]) && list.iter().all(|&x| (x as usize) < limit)
 }
