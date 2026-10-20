@@ -7,6 +7,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+from tools.libro import grezzo  # noqa: E402
 from tools.libro.errori import LibroError  # noqa: E402
 from tools.libro.pagina import converti  # noqa: E402
 
@@ -79,7 +80,8 @@ CAP = """<!-- script: sim-misc.js -->
 """
 
 
-def test_teoria_chapter_constructs():
+def test_teoria_chapter_constructs(monkeypatch):
+    monkeypatch.setattr(grezzo, "ammesso", lambda f: True)
     h = converti(CAP, "08-prova.md", teoria=True)
     assert '<div class="kicker">Capitolo 8</div>\n<h1>Dalla prova</h1>' in h
     assert '<p class="lead">Un riassunto breve.</p>' in h and '<p class="note">Una nota.</p>' in h
@@ -96,6 +98,12 @@ def test_teoria_chapter_constructs():
     ("# T\n\n```html\n<p>a</p>\n", r":3: ```html block without closing"),
     ("# T\n\n::: duo\n> [!lr] a\n> b\n", r":3: ::: duo without closing"),
 ])
-def test_raw_and_duo_errors(text, msg):
+def test_raw_and_duo_errors(text, msg, monkeypatch):
+    monkeypatch.setattr(grezzo, "ammesso", lambda f: True)
     with pytest.raises(LibroError, match=msg):
         converti(text, "X.md")
+
+
+def test_raw_block_refused_in_new_chapters():
+    with pytest.raises(LibroError, match=r"X\.md:3: a raw ```html block is only allowed"):
+        converti("# T\n\n```html\n<p>a</p>\n```\n", "X.md")
