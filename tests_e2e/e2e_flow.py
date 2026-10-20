@@ -264,6 +264,19 @@ try:
             attendi(pg, "!document.querySelector('.flw-rv-note').hidden")
             pg.click('.flw-rv-acts button:has-text("Skip")'); assert pg.locator(".flw-rv progress").get_attribute("value") == "1"
             pg.click('.flw-rv button:has-text("Download decisions")')
+        def feat_view():
+            # a .mzfeat chosen from disk: the page reads its meta, opens the session of the table and mounts the table (both engines are replaced by stubs, as the test site has no table .wasm)
+            pg.evaluate("""() => {
+              window.PIPEQC = window.PIPEQC || {}; window.PIPET = window.PIPET || {};
+              PIPEQC.open = async a => { window.__fa = a; return {}; }; PIPET.mount = (box, o) => { window.__fo = o; box.textContent = "mounted"; };
+              const meta = new TextEncoder().encode(JSON.stringify({ rows: 3, files: 2, inputs: [{ name: "a.mzidx" }, { name: "b.mzidx" }], arrays: [] }));
+              const head = new Uint8Array(16); head.set(new TextEncoder().encode("MZFEAT01")); new DataView(head.buffer).setBigUint64(8, BigInt(meta.length), true);
+              FLOW.openResult({ type: "table", label: "demo.mzfeat", file: new File([head, meta], "demo.mzfeat"), text: async () => "" });
+            }""")
+            attendi(pg, "window.__fo && /3 rows in 2 files/.test(document.querySelector('.flx-res-body').textContent)")
+            assert pg.evaluate("window.__fa.names.join()") == "a,b" and pg.evaluate("window.__fa.pol") == 1
+            pg.click('.flx-res button[aria-label="Close the results"]')
+        step("results: a .mzfeat from disk opens the feature table with the names of its files", feat_view)
         step("results: the Review screen asks for a note only when the level changes and moves to the next feature", review_view)
         def mgf_view():
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Check mixed spectra")')
