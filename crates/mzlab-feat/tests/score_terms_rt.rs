@@ -1,6 +1,8 @@
 //! The RT-logP residual opened in its terms (observed value, intercept, one term per descriptor with the negative of its coefficient): they add up to the
 //! residual to 1e-12, and the residual of the check itself (rounded to 0.01) is the same number.
 
+#![cfg(feature = "attributio")]
+
 use mzlab_feat::attributio::review::rtlogp::{
     calibrate, check, check_terms, CalPoint, LogPValues, MIN_N,
 };

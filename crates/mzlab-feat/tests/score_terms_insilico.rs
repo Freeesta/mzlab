@@ -1,6 +1,8 @@
 //! The in-silico score (`fragmenter_score`) opened in its terms: the share of each explained peak. They add up to the score to 1e-12 on every molecule of the
 //! reference set, the score does not change with the option, and without it the ranking carries no record.
 
+#![cfg(feature = "attributio")]
+
 use mzlab_feat::attributio::ms2_engine::insilico::{
     fragmenter_contributions, fragmenter_score, rank, read_candidates, InSilicoOpts,
 };
