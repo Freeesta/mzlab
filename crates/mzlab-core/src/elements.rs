@@ -248,7 +248,7 @@ pub fn ion_mz(neutral: f64, adduct: &str) -> Option<f64> {
 pub const NO_ADDUCT: &str = "none";
 
 /// The adduct written inside the text of an ion (`C14H13F4N3O4S+H`, `C9H10Cl2N2O [M+Na]+`, `C9H8O4-H`): the formula without it and the adduct of the table, if any.
-fn embedded_adduct(text: &str) -> (String, Option<&'static str>) {
+pub(crate) fn embedded_adduct(text: &str) -> (String, Option<&'static str>) {
     let t: String = text.split_whitespace().collect();
     let names: Vec<&'static str> = adducts().iter().map(|(a, _)| *a).collect();
     if let Some(i) = t.find("[M") {

@@ -4,7 +4,9 @@
 
 use std::collections::BTreeMap;
 
-use super::{Arco, Avviso, Conteggi, Grafo, Ingresso, Misura, NodoG, Opzioni, Spettro, PERDITE};
+use super::{
+    Arco, Avviso, Conteggi, Grafo, Ingresso, Misura, NodoG, Opzioni, Spettro, SpettroG, PERDITE,
+};
 
 /// 13C - 12C.
 const C13: f64 = 1.003355;
@@ -23,6 +25,8 @@ struct Oss {
     prec_di: Option<usize>,
     /// Index (in the observations) of the peak whose M+1 it is.
     iso_di: Option<usize>,
+    /// Its M+1 in the same spectrum, % of it (any intensity, not only above `min_rel`).
+    m1: Option<f64>,
 }
 
 /// The peaks of a spectrum as (m/z, % of the base peak), in m/z order.
@@ -54,8 +58,13 @@ fn precursore(s: Option<&Spettro>, nominale: f64) -> (Option<(f64, f64)>, bool) 
 }
 
 /// The peaks of the spectrum of a node of the tree that enter the graph: the most intense above `min_rel`, not heavier than the precursor,
-/// not the precursor itself; with `iso` = index (in the result) of the peak whose M+1 it is.
-fn picchi(s: &Spettro, prec: f64, o: &Opzioni, c: &mut Conteggi) -> Vec<(f64, f64, Option<usize>)> {
+/// not the precursor itself; with the index (in the result) of the peak whose M+1 it is, and its own M+1 in % of it.
+fn picchi(
+    s: &Spettro,
+    prec: f64,
+    o: &Opzioni,
+    c: &mut Conteggi,
+) -> Vec<(f64, f64, Option<usize>, Option<f64>)> {
     let tutti = relativi(s);
     let mut forti: Vec<(f64, f64)> = tutti.iter().copied().filter(|p| p.1 >= o.min_rel).collect();
     crate::sortc::by(&mut forti, |a, b| {
@@ -65,7 +74,7 @@ fn picchi(s: &Spettro, prec: f64, o: &Opzioni, c: &mut Conteggi) -> Vec<(f64, f6
     c.deboli += tutti.len() - forti.len();
     crate::sortc::by(&mut forti, |a, b| a.0.total_cmp(&b.0));
     let tp = o.tol(prec);
-    let mut out: Vec<(f64, f64, Option<usize>)> = vec![];
+    let mut out: Vec<(f64, f64, Option<usize>, Option<f64>)> = vec![];
     for (m, r) in forti {
         if m > prec + tp {
             c.pesanti += 1;
@@ -82,7 +91,12 @@ fn picchi(s: &Spettro, prec: f64, o: &Opzioni, c: &mut Conteggi) -> Vec<(f64, f6
             c.isotopi += 1;
             continue;
         }
-        out.push((m, r, mono));
+        let m1 = tutti
+            .iter()
+            .filter(|q| (q.0 - m - C13).abs() <= o.tol(m))
+            .map(|q| q.1)
+            .fold(None, |a: Option<f64>, x| Some(a.map_or(x, |a| a.max(x))));
+        out.push((m, r, mono, m1.map(|x| x / r * 100.0)));
     }
     out
 }
@@ -109,12 +123,14 @@ fn osserva(ing: &Ingresso, o: &Opzioni, c: &mut Conteggi, avvisi: &mut Vec<Avvis
             avvisi.push(Avviso {
                 chiave: "warn.msngrafo.isolation",
                 albero: n.id.clone(),
+                nodo: None,
             });
         }
         if trovato.is_none() {
             avvisi.push(Avviso {
                 chiave: "warn.msngrafo.precNotFound",
                 albero: n.id.clone(),
+                nodo: None,
             });
         }
         let (pm, pr) = trovato.unwrap_or((n.chiave.last().unwrap().0, 0.0));
@@ -126,12 +142,13 @@ fn osserva(ing: &Ingresso, o: &Opzioni, c: &mut Conteggi, avvisi: &mut Vec<Avvis
             livello: lp,
             prec_di: Some(t),
             iso_di: None,
+            m1: None,
         });
         let Some(s) = ing.spettri.get(t).filter(|_| attiva(o, att)) else {
             continue;
         };
         let base = obs.len();
-        for (m, r, mono) in picchi(s, pm, o, c) {
+        for (m, r, mono, m1) in picchi(s, pm, o, c) {
             obs.push(Oss {
                 mz: m,
                 rel: r,
@@ -139,6 +156,7 @@ fn osserva(ing: &Ingresso, o: &Opzioni, c: &mut Conteggi, avvisi: &mut Vec<Avvis
                 livello: n.livello,
                 prec_di: None,
                 iso_di: mono.map(|i| base + i),
+                m1,
             });
         }
     }
@@ -202,6 +220,7 @@ fn nodo(gr: &[usize], obs: &[Oss], ing: &Ingresso) -> NodoG {
     let mut sorg: Vec<Option<usize>> = picchi.iter().map(|x| x.sorg).collect();
     crate::sortc::slice_ord(&mut sorg);
     sorg.dedup();
+    let forte = picchi.iter().max_by(|a, b| a.rel.total_cmp(&b.rel));
     NodoG {
         mz,
         dev_ppm: gr
@@ -213,8 +232,71 @@ fn nodo(gr: &[usize], obs: &[Oss], ing: &Ingresso) -> NodoG {
         osservazioni: sorg.len(),
         rel_max: gr.iter().map(|&i| obs[i].rel).fold(0.0, f64::max),
         isotopo_di: None,
+        // the M+1 of the most intense peak of the node, and the windows that let it through
+        m1: forte.and_then(|x| x.m1),
+        larghezza: gr
+            .iter()
+            .filter_map(|&i| obs[i].prec_di.and_then(|t| larghezza(ing, t)))
+            .reduce(f64::max),
+        a_monte: forte.and_then(|x| x.sorg).and_then(|t| a_monte(ing, t)),
+        non_spiegati: None,
         pos: (0, 0),
+        formula: None,
     }
+}
+
+fn larghezza(ing: &Ingresso, t: usize) -> Option<f64> {
+    ing.larghezze.get(t).copied().flatten()
+}
+
+/// The narrowest known isolation window on the path of node `t` of the tree (itself and its ancestors).
+fn a_monte(ing: &Ingresso, t: usize) -> Option<f64> {
+    let mut m: Option<f64> = None;
+    let mut c = Some(t);
+    while let Some(k) = c {
+        if let Some(w) = larghezza(ing, k) {
+            m = Some(m.map_or(w, |x| x.min(w)));
+        }
+        c = ing.albero.nodi[k].genitore;
+    }
+    m
+}
+
+/// Every spectrum of the tree in the graph, with its peaks and their nodes.
+fn spettri(
+    ing: &Ingresso,
+    o: &Opzioni,
+    obs: &[Oss],
+    di: &[usize],
+    prec: &[usize],
+) -> Vec<SpettroG> {
+    let mut out = vec![];
+    for (t, n) in ing.albero.nodi.iter().enumerate() {
+        let (_, att, ce) = n
+            .chiave
+            .last()
+            .cloned()
+            .expect("a node of the tree has a path");
+        if ing.spettri.get(t).is_none() || !attiva(o, &att) {
+            continue;
+        }
+        let picchi = obs
+            .iter()
+            .enumerate()
+            .filter(|(_, x)| x.sorg == Some(t) && x.prec_di.is_none())
+            .map(|(i, x)| (x.mz, x.rel, Some(di[i])))
+            .collect();
+        out.push(SpettroG {
+            albero: n.id.clone(),
+            livello: n.livello,
+            att,
+            ce,
+            precursore: Some(prec[t]),
+            larghezza: larghezza(ing, t),
+            picchi,
+        });
+    }
+    out
 }
 
 /// The spectrum of node `t` of the tree as a measure of an arc.
@@ -285,6 +367,7 @@ fn archi(
                     .filter(|(_, pm)| (perdita - pm).abs() <= t)
                     .map(|(f, _)| *f)
                     .collect(),
+                formula: None,
                 isolamento,
                 misure,
             }
@@ -333,6 +416,7 @@ pub(super) fn unisci(ing: &Ingresso, o: &Opzioni) -> Grafo {
         }
     }
     let archi = archi(ing, &obs, &di, &prec, &nodi, o);
+    let spettri = spettri(ing, o, &obs, &di, &prec);
     let radici = (0..nodi.len()).filter(|&i| nodi[i].livello == 1).collect();
     Grafo {
         nodi,
@@ -341,5 +425,7 @@ pub(super) fn unisci(ing: &Ingresso, o: &Opzioni) -> Grafo {
         polarita: ing.polarita,
         scartati,
         avvisi,
+        spettri,
+        ..Grafo::default()
     }
 }

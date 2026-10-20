@@ -1,12 +1,18 @@
 //! The fragmentation graph of an MSn infusion (`msngrafo/1`, `docs/agenti/msn-grafo.md`): the nodes of the precursor tree (`msnalbero`) and
 //! their consensus spectra become ONE graph of ions, a node per ion seen at any level, energy or path, an arc per precursor → fragment
-//! observed in the spectrum of that precursor, with the neutral loss. A DAG ordered by m/z, never a verdict: masses only, no chemistry.
+//! observed in the spectrum of that precursor, with the neutral loss. A DAG ordered by m/z, never a verdict: with the formula of the ion
+//! of the root given by the user, each fragment gets the sub-formulas within the window of ppm (`formule`), and the others leave the graph.
 
+mod annota;
+mod candidati;
+mod formule;
 mod json;
+mod leggi;
 mod posa;
 mod unisci;
 
 pub use json::json;
+pub use leggi::{leggi, Letto};
 
 use crate::msnalbero::Albero;
 
@@ -25,6 +31,18 @@ pub struct Opzioni {
     pub isotopi: bool,
     /// Only the spectra whose last stage has this activation (`cid`, `hcd`, ...; case ignored); `None` = all.
     pub attivazione: Option<String>,
+    /// The ion of the root as typed (`C8H11N4O2+`, `C8H10N4O2+H`, `C8H10N4O2 [M+H]+`); `None` = masses only.
+    pub formula: Option<String>,
+    /// The structure of the molecule, only written back in the JSON (the page draws the fragments on it).
+    pub smiles: Option<String>,
+    /// A sub-formula is a candidate of a fragment within this many ppm of its m/z.
+    pub ppm_formula: f64,
+    /// Below this m/z the window may widen to `ppm_basso`, for a candidate with at least `prove_min` evidences.
+    pub mz_basso: f64,
+    pub ppm_basso: f64,
+    pub prove_min: usize,
+    /// Formulas chosen by the user among the candidates: (m/z of the node, formula of the ion).
+    pub scelte: Vec<(f64, String)>,
 }
 
 impl Default for Opzioni {
@@ -36,6 +54,13 @@ impl Default for Opzioni {
             max_picchi: 120,
             isotopi: false,
             attivazione: None,
+            formula: None,
+            smiles: None,
+            ppm_formula: 10.0,
+            mz_basso: 150.0,
+            ppm_basso: 20.0,
+            prove_min: 1,
+            scelte: vec![],
         }
     }
 }
@@ -60,6 +85,8 @@ pub struct Ingresso<'a> {
     pub albero: &'a Albero,
     pub ms1: Option<&'a Spettro>,
     pub spettri: &'a [Spettro],
+    /// Width of the isolation window (Da) of each node of the tree, `None` when the file does not say; an empty slice = none known.
+    pub larghezze: &'a [Option<f64>],
     /// 1 or -1 (written as it is).
     pub polarita: i8,
 }
@@ -87,6 +114,8 @@ pub struct Arco {
     pub perdita: f64,
     /// Known neutral losses within the tolerance (formulas, «compatible with», never assigned).
     pub compatibili: Vec<&'static str>,
+    /// The loss between the chosen formulas of the two nodes and its error in ppm of the m/z of `da`, when both have one.
+    pub formula: Option<(String, f64)>,
     /// The arc is a step of a path that was isolated (`a` is the precursor of a child of the spectrum).
     pub isolamento: bool,
     pub misure: Vec<Misura>,
@@ -106,15 +135,87 @@ pub struct NodoG {
     pub osservazioni: usize,
     pub rel_max: f64,
     pub isotopo_di: Option<usize>,
+    /// The M+1 of its most intense observation, % of it.
+    pub m1: Option<f64>,
+    /// Its own isolation window (Da), when it is isolated and the file says.
+    pub larghezza: Option<f64>,
+    /// The narrowest window on the path to the spectrum of its most intense observation: below `STRETTA` its M+1 is not expected there.
+    pub a_monte: Option<f64>,
+    /// With a formula: the peaks of its spectra that no sub-formula explains (their nodes left the graph).
+    pub non_spiegati: Option<NonSpiegati>,
     /// Column and row of the drawing.
     pub pos: (usize, usize),
+    pub formula: Option<FormulaNodo>,
+}
+
+/// The unexplained peaks of the spectra of a node: how many, and the 3 most intense (m/z, % of the base peak).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct NonSpiegati {
+    pub n: usize,
+    pub picchi: Vec<(f64, f64)>,
+}
+
+/// One spectrum of the tree as the graph uses it: its peaks (after `min_rel`, `max_picchi`, heavy and isotope peaks) and the node of each,
+/// `None` when it left the graph (no sub-formula of the root): the clean spectrum is the peaks with a node.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SpettroG {
+    /// `Nodo::id` of the tree.
+    pub albero: String,
+    pub livello: u8,
+    pub att: String,
+    pub ce: f64,
+    /// The node of its precursor.
+    pub precursore: Option<usize>,
+    pub larghezza: Option<f64>,
+    /// (m/z in this spectrum, % of its base peak, node).
+    pub picchi: Vec<(f64, f64, Option<usize>)>,
+}
+
+/// A window narrower than this does not take the M+1 of a singly charged ion (±1.00336 Da around its centre).
+pub const STRETTA: f64 = 2.0 * 1.003355;
+
+/// A sub-formula of the ion of the root that explains a node.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Candidato {
+    pub formula: String,
+    pub mz_teorico: f64,
+    /// Error of the m/z of the node from `mz_teorico`.
+    pub ppm: f64,
+    pub dbe: f64,
+    pub pari: bool,
+    /// The window it is in: `ppm_formula`, or `ppm_basso` with its evidences.
+    pub finestra: f64,
+    /// `perdita`, `isotopi`, `msn`: why a candidate of the wide window counts.
+    pub prove: Vec<&'static str>,
+}
+
+/// The formulas of a node: the candidates, never a proposal; a choice only when there is one candidate or the user made it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FormulaNodo {
+    /// By |ppm|, then Hill order.
+    pub candidati: Vec<Candidato>,
+    pub scelta: Option<String>,
+    /// `radice`, `unica` or `utente` (with a choice).
+    pub fonte: Option<&'static str>,
+}
+
+/// The ion of the root: its formula, and how far the node of the graph is from it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Ione {
+    pub formula: String,
+    pub mz_teorico: f64,
+    pub mz_osservato: f64,
+    pub ppm: f64,
 }
 
 /// A note on one node of the tree (`warn.msngrafo.*`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Avviso {
     pub chiave: &'static str,
+    /// Node of the tree (empty when the note is about the graph).
     pub albero: String,
+    /// Node of the graph the note is about.
+    pub nodo: Option<usize>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -122,6 +223,8 @@ pub struct Conteggi {
     pub pesanti: usize,
     pub isotopi: usize,
     pub deboli: usize,
+    /// Nodes with no sub-formula of the root in their window (only with a formula).
+    pub formula: usize,
 }
 
 /// The graph: nodes in the order (level, m/z), arcs in the order (from, to).
@@ -133,6 +236,8 @@ pub struct Grafo {
     pub polarita: i8,
     pub scartati: Conteggi,
     pub avvisi: Vec<Avviso>,
+    pub ione: Option<Ione>,
+    pub spettri: Vec<SpettroG>,
 }
 
 /// Losses a chemist expects in ESI CID/HCD, even-electron first; matched by mass only.
@@ -158,9 +263,12 @@ pub(crate) const PERDITE: [(&str, f64); 16] = [
 /// The graph of the tree and its spectra (`spettri[i]` = consensus of `albero.nodi[i]`).
 pub fn costruisci(ing: &Ingresso, o: &Opzioni) -> Grafo {
     let mut g = unisci::unisci(ing, o);
+    formule::assegna(&mut g, o);
     posa::posa(&mut g);
     g
 }
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_formule;
