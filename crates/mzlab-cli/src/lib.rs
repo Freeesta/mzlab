@@ -23,10 +23,12 @@ mod flow_inclusion;
 mod flow_level;
 mod flow_match;
 mod flow_ms2;
+mod flow_report;
 
 const HELP: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
 
 usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params FILE.json]
+       mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
 
   FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
   --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
@@ -203,6 +205,14 @@ pub fn execute(args: &[String]) -> Outcome {
     let mut args = args.iter().cloned();
     match args.next().as_deref() {
         Some("features") => {}
+        Some("flow") => {
+            return match args.next().as_deref() {
+                Some("report") => {
+                    flow_report::run(args).map_or_else(|e| Outcome::fail(&e), Outcome::ok)
+                }
+                _ => Outcome::fail("usage: mzlab-cli flow report RUNDIR [--out FILE]"),
+            }
+        }
         Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Some(c) => return Outcome::fail(&format!("unknown command {c}")),
     }
@@ -247,3 +257,5 @@ mod flow_ident_tests;
 mod flow_level_tests;
 #[cfg(test)]
 mod flow_ms2_tests;
+#[cfg(test)]
+mod flow_report_tests;

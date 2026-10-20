@@ -4,9 +4,12 @@
 
 use super::banco::Run;
 use crate::attributio::annotate::Feature;
-use crate::attributio::error::Result;
+use crate::attributio::campaign::Env;
+use crate::attributio::error::{CampaignError, Result};
 use crate::attributio::io::Io;
 use crate::attributio::readers::feature_decisions::{DecisionTable, COLUMNS};
+use crate::attributio::table;
+use crate::attributio::Campaign;
 
 /// `decided_by` of the rows this module writes.
 pub const AUTO: &str = "auto";
@@ -62,12 +65,26 @@ pub fn with_auto(user: &DecisionTable, auto: &DecisionTable) -> DecisionTable {
     DecisionTable { columns, rows }
 }
 
+/// Whether `campaign.toml` at the root of `io` turns the automatic 2b on (read without loading the review).
+fn enabled(io: &Io, root: &str) -> Result<bool> {
+    let text = io
+        .text("campaign.toml")
+        .ok_or_else(|| CampaignError::not_found("campaign.toml is not in the folder"))?;
+    Ok(Campaign::from_toml(&text, "campaign.toml", root, Env::default())?.auto_2b)
+}
+
+/// The table of levels with the automatic 2b applied when the campaign asks for it (`table::run` otherwise): the entry of the `.wasm` and the app.
+pub fn table_with_auto(io: &Io, root: &str) -> Result<table::Run> {
+    let auto = auto_2b_table(io, root)?;
+    table::run_auto(io, root, (!auto.is_empty()).then_some(&auto))
+}
+
 /// The automatic 2b rows of the campaign at the root of `io`: empty unless `[levels] auto_2b = true`.
 pub fn auto_2b_table(io: &Io, root: &str) -> Result<DecisionTable> {
-    let run = Run::load(io, root)?;
-    if !run.b.campaign.auto_2b {
+    if !enabled(io, root)? {
         return Ok(auto_rows(&[]));
     }
+    let run = Run::load(io, root)?;
     let proposals: Vec<_> = run
         .b
         .features

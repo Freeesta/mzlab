@@ -8,6 +8,8 @@ use super::campaign::Env;
 use super::curation::TableCuration;
 use super::error::{CampaignError, Result};
 use super::io::Io;
+use super::readers::feature_decisions::DecisionTable;
+use super::review::auto2b::with_auto;
 use super::sources::load_sources;
 use super::Campaign;
 use mzlab_core::json::Out;
@@ -107,11 +109,19 @@ fn agrees_word(f: &Feature, words: [&'static str; 3]) -> &'static str {
 
 /// The levels of the campaign whose `campaign.toml` is at the root of `io` (`root` is the name of the folder).
 pub fn run(io: &Io, root: &str) -> Result<Run> {
+    run_auto(io, root, None)
+}
+
+/// `run` with the decision rows of the programme (`review::auto2b`) placed in front of the chemist's own.
+pub fn run_auto(io: &Io, root: &str, auto: Option<&DecisionTable>) -> Result<Run> {
     let text = io
         .text("campaign.toml")
         .ok_or_else(|| CampaignError::not_found("campaign.toml is not in the folder"))?;
     let c = Campaign::from_toml(&text, "campaign.toml", root, Env::default())?;
-    let src = load_sources(&c, io)?;
+    let mut src = load_sources(&c, io)?;
+    if let Some(auto) = auto {
+        src.decisions = with_auto(&src.decisions, auto);
+    }
     let cur = TableCuration::load(&c, io)?;
     let a = load_annotations(&c, &src, None, &cur, &gnps_comparer)?;
     let settings = AnnotationSettings::for_campaign(&c)?;
