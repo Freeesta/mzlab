@@ -23,6 +23,12 @@
   };
   /** the text of a file the last run wrote @param {string} name */
   const read = name => post("flow/read", { name });
+  /** the bytes of a binary file the last run wrote (a .mzfeat): the route answers {base64}; any other answer is an error, so the file stays a button of the Results @param {string} name @returns {Promise<File>} */
+  const readFile = async name => {
+    const a = JSON.parse(await post("flow/read", { name, encoding: "base64" }));
+    if (!a || typeof a.base64 !== "string") throw new Error("not base64");
+    return new File([Uint8Array.from(atob(a.base64), c => c.charCodeAt(0))], name);
+  };
   F.runners.desktop = { name: "This computer", available, run };
 
   /** the run box of the desktop: a button and one slot per step (waiting, done with its time, or the reason it failed) @param {any} S */
@@ -37,10 +43,11 @@
       try {
         const res = await run(S), by = new Map(res.steps.map((/** @type {any} */ s) => [s.id, s]));
         list.textContent = ""; S.results = {};
-        for (const s of res.steps) S.results[s.id] = s.made.map((/** @type {any} */ m) => ({ ...m, text: () => read(m.label) }));
+        for (const s of res.steps) S.results[s.id] = s.made.map((/** @type {any} */ m) => ({ ...m, text: () => read(m.label), load: /\.mzfeat$/i.test(m.label) ? () => readFile(m.label) : undefined }));
         if (S.redraw) S.redraw();
         for (const inst of S.plan.steps) { const s = /** @type {any} */ (by.get(inst.id)); list.append(slot(inst, !s ? "skipped" : s.error ? F.message({ key: s.error.key, params: s.error.params }) : `done in ${(s.ms / 1000).toFixed(1)} s`)); }
         note.textContent = `Finished. The results are in ${res.dir}.`;
+        await F.afterRun(S);
       } catch (e) { list.textContent = ""; note.textContent = F.message(/** @type {any} */ (e)); }
       go.disabled = false;
     }, "Run on this computer");
