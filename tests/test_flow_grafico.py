@@ -80,3 +80,7 @@ def test_the_tabui_views_read_their_files():
 
 def test_the_review_view_queues_and_words_the_decisions():
     assert node("flow_review.js").strip() == "ok"
+
+
+def test_the_settings_digest_is_read_from_the_evidence_summary():
+    assert node("flow_digest.js").strip() == "ok"
