@@ -61,7 +61,8 @@ fn object(o: &mut Out, mut kv: Vec<(&str, &Value)>) {
 }
 
 /// The canonical JSON text of one value.
-pub(super) fn value_text(v: &Value) -> String {
+/// The canonical JSON text of `v` (keys sorted, the shortest numbers).
+pub fn value_text(v: &Value) -> String {
     let mut o = Out::default();
     write(&mut o, v);
     o.0

@@ -3,20 +3,19 @@
 //! `mzlab-cli flow run`, the route `flow/run` of the desktop app, `examples/flow.rs` and the tests; native and WASI.
 
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Instant;
 
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::{parse, Artifact, Job, Outcome, Plan, Run, Runner};
+use mzlab_core::flow::{Artifact, Job, Outcome, Runner};
 use mzlab_core::json::Value;
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
+use crate::flow_cache::Cache;
 use crate::flow_match::Named;
+pub use crate::flow_run::{fill_inputs, run_plan, run_plan_cached};
 
 pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)
@@ -68,6 +67,46 @@ pub fn steps() -> Vec<Step> {
     all
 }
 
+/// The runners of `flow run` and of `run_plan_cached`, which keep a cache.
+impl FileRunner {
+    /// The runner of `flow run`: inputs found by name in `inputs`, one progress line per job for the instances in `order`, the cache of `work`
+    /// unless `fresh`.
+    pub(crate) fn located(
+        work: &Path,
+        inputs: HashMap<String, PathBuf>,
+        order: Vec<String>,
+        meter: Option<Meter>,
+        fresh: bool,
+    ) -> FileRunner {
+        FileRunner {
+            inputs,
+            progress: Some(order),
+            cache: Some(crate::flow_cache::Cache::open(work, fresh)),
+            ..FileRunner::new(work, work, meter)
+        }
+    }
+
+    /// The runner of `run_plan_cached`: `new` with the cache of `work` (`Some(fresh)`).
+    pub(crate) fn cached(
+        dir: &Path,
+        work: &Path,
+        meter: Option<Meter>,
+        fresh: Option<bool>,
+    ) -> FileRunner {
+        FileRunner {
+            cache: fresh.map(|f| Cache::open(work, f)),
+            ..FileRunner::new(dir, work, meter)
+        }
+    }
+
+    /// Writes the index of the cache, when the runner keeps one.
+    pub(crate) fn save_cache(&self) -> Result<()> {
+        self.cache
+            .as_ref()
+            .map_or(Ok(()), crate::flow_cache::Cache::save)
+    }
+}
+
 /// Hooks of the caller to measure the heap (the library has no allocator of its own): reset the peak, read it.
 #[derive(Clone, Copy)]
 pub struct Meter {
@@ -85,6 +124,8 @@ pub struct FileRunner {
     lineage: Mutex<HashMap<String, Lineage>>,
     /// Instance ids in the order of the run: one line per job on stderr when set.
     progress: Option<Vec<String>>,
+    /// The cache of `work` (`flow_cache.rs`); none: every job runs and nothing is kept.
+    cache: Option<crate::flow_cache::Cache>,
 }
 
 impl FileRunner {
@@ -97,6 +138,7 @@ impl FileRunner {
             made: Mutex::new(HashMap::new()),
             lineage: Mutex::new(HashMap::new()),
             progress: None,
+            cache: None,
         }
     }
 
@@ -126,15 +168,19 @@ impl FileRunner {
     }
 }
 
-/// Where a file made by the run comes from: what the next feature step needs and the plan does not carry (the recipe, the indexes, the peaks).
-#[derive(Clone, Default)]
+/// Where a file made by the run comes from: what the next feature step needs and the plan does not carry. The recipe is kept as the way to make it
+/// again (the first index of the series and the parameters each feature step wrote on top), so that a step taken from the cache hands it on too.
+#[derive(Clone, Default, Debug, PartialEq)]
 pub(crate) struct Lineage {
     /// Name of the file the index was made from (the sample name of the detection).
     pub name: String,
     /// The instance and item that made an index.
     pub instance: String,
     pub item: Option<usize>,
-    pub recipe: Option<mzlab_feat::recipe::Recipe>,
+    /// The index the profile of the recipe is read from.
+    pub first: Option<PathBuf>,
+    /// Step and parameters written by each feature step, in order.
+    pub layers: Vec<(String, Vec<(String, Value)>)>,
     pub index: Vec<PathBuf>,
     pub peaks: Vec<PathBuf>,
 }
@@ -174,20 +220,6 @@ impl FileRunner {
         l.unwrap_or_else(|| a.label.clone().unwrap_or_default())
     }
 
-    /// The runner of `flow run`: inputs found by name in `inputs`, one progress line per job for the instances in `order`.
-    pub(crate) fn located(
-        work: &Path,
-        inputs: HashMap<String, PathBuf>,
-        order: Vec<String>,
-        meter: Option<Meter>,
-    ) -> FileRunner {
-        FileRunner {
-            inputs,
-            progress: Some(order),
-            ..FileRunner::new(work, work, meter)
-        }
-    }
-
     /// The first index (item 0) made by the instance that made the index `a`.
     pub(crate) fn first_of_series(&self, a: &Artifact) -> Option<PathBuf> {
         let me = self.lineage(a)?;
@@ -198,54 +230,6 @@ impl FileRunner {
         let made = self.made.lock().unwrap_or_else(|e| e.into_inner());
         made.get(first.0).cloned()
     }
-}
-
-fn convert_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let input = r.path(&job.inputs[0].1[0]);
-    let name = input
-        .file_name()
-        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    let dim = std::fs::metadata(&input).map_err(io)?.len();
-    let fs = FileSet {
-        membri: vec![Membro {
-            nome: name,
-            dim,
-            dati: Box::new(File::open(&input).map_err(io)?),
-            sha1: None,
-        }],
-    };
-    let mut reader = mzlab_lettori::apri(fs, &Limiti::desktop())?;
-    let out = r.work.join(format!(
-        "{}-{}.mzML",
-        job.instance.id,
-        job.item.unwrap_or(0)
-    ));
-    let w = BufWriter::new(File::create(&out).map_err(io)?);
-    mzlab_core::lettori_mzml::scrivi_indicizzato(
-        &mut *reader,
-        0,
-        w,
-        &mut |_, _| {},
-        mzlab_core::mzmlwrite::Opzioni::default(),
-        &[],
-    )?;
-    r.keep(out, DataType::Mzml)
-}
-
-fn table_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let files: Vec<PathBuf> = job
-        .inputs
-        .iter()
-        .flat_map(|(_, v)| v)
-        .map(|a| r.path(a))
-        .collect();
-    let tmp = r.work.join(format!("{}.tmp", job.instance.id));
-    std::fs::create_dir_all(&tmp).map_err(io)?;
-    let csv = crate::features(&files, &job.resolved.text(), &tmp);
-    let _ = std::fs::remove_dir_all(&tmp);
-    let out = r.work.join(format!("{}.csv", job.instance.id));
-    std::fs::write(&out, csv?).map_err(io)?;
-    r.keep(out, DataType::Report)
 }
 
 fn one_input(r: &FileRunner, job: &Job, port: &str) -> Result<PathBuf> {
@@ -397,7 +381,10 @@ enum Exec {
 
 /// The steps that run natively, the one list: `executable` and the runner read it.
 const EXECUTORS: &[(&str, Exec)] = &[
-    ("convert.mzml", Exec::File("mzml", convert_job)),
+    (
+        "convert.mzml",
+        Exec::File("mzml", crate::flow_base::convert_job),
+    ),
     ("index.mzidx", Exec::Made(crate::flow_base::index_job)),
     ("features.detect", Exec::Made(crate::flow_base::detect_job)),
     ("features.align", Exec::Made(crate::flow_base::align_job)),
@@ -405,7 +392,10 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "features.gapfill",
         Exec::Made(crate::flow_base::gapfill_job),
     ),
-    ("features.table", Exec::File("report", table_job)),
+    (
+        "features.table",
+        Exec::File("report", crate::flow_base::table_job),
+    ),
     ("spectra.match", Exec::File("hits", match_job)),
     ("formula.ms1", Exec::File("formulas", formula_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),
@@ -436,13 +426,21 @@ impl Runner for FileRunner {
             (m.reset)();
         }
         let start = Instant::now();
-        let made = dispatch(self, job);
+        let key = self.cache.as_ref().map(|_| Cache::key(job));
+        let hit = self
+            .cache
+            .as_ref()
+            .zip(key.as_deref())
+            .and_then(|(c, k)| c.take(self, job, k));
+        let cached = hit.is_some();
+        let made = hit.map_or_else(|| dispatch(self, job), Ok);
+        if let (Ok(m), Some(c), Some(k), false) = (&made, &self.cache, key, cached) {
+            c.put(k, m, self.lineage(&m.artifact));
+        }
         let ms = start.elapsed().as_secs_f64() * 1e3;
         if let Some(order) = &self.progress {
-            eprintln!(
-                "{}",
-                crate::flow_run::progress_line(order, job, ms, made.as_ref().err())
-            );
+            let line = crate::flow_run::progress_line(order, job, ms, cached, made.as_ref().err());
+            eprintln!("{line}");
         }
         let made = made?;
         Ok(Outcome {
@@ -450,38 +448,7 @@ impl Runner for FileRunner {
             estimates: made.estimates,
             ms,
             heap_peak_bytes: self.meter.map(|m| (m.peak)()),
-            ..Outcome::default()
+            cached,
         })
     }
-}
-
-/// The inputs of the plan that name no hash get it from the file `locate` gives; one that names a hash must match it.
-pub(crate) fn fill_inputs(plan: &mut Plan, locate: impl Fn(&str) -> PathBuf) -> Result<()> {
-    for f in &mut plan.inputs {
-        let bytes = std::fs::read(locate(&f.name)).map_err(|e| io(e).with("input", &f.name))?;
-        let sha = sha256_hex(&bytes);
-        if !f.sha256.is_empty() && f.sha256 != sha {
-            return Err(Error::new("err.flow.input.sha").with("input", &f.name));
-        }
-        f.sha256 = sha;
-        f.bytes = Some(bytes.len() as u64);
-    }
-    Ok(())
-}
-
-/// Reads, checks and runs a workflow file; returns the run and its `prov/1` text. Files of the plan are read from `dir`, outputs written to `work`.
-pub fn run_plan(
-    text: &[u8],
-    dir: &Path,
-    work: &Path,
-    workers: usize,
-    meter: Option<Meter>,
-) -> Result<(Run, String)> {
-    let mut plan = parse(text)?;
-    fill_inputs(&mut plan, |n| dir.join(n))?;
-    let plan = crate::flow_run::prepare(plan, &steps())?.map_err(|problems| {
-        let list: Vec<String> = problems.iter().map(crate::flow_run::problem_text).collect();
-        Error::new("err.flow.check").with("problems", list.join(" "))
-    })?;
-    crate::flow_run::run_checked(&plan, text, &FileRunner::new(dir, work, meter), workers)
 }

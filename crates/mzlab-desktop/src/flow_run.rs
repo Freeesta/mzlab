@@ -35,15 +35,17 @@ impl State {
         )?)
     }
 
-    /// `{plan: "<mzflow/2 text>"}` -> `{prov: "<prov/1 text>", dir: "<folder of the outputs>"}`. A file the plan names that is not registered is `err.flow.input.missing`.
+    /// `{plan: "<mzflow/2 text>", fresh?: bool}` -> `{prov: "<prov/1 text>", dir: "<folder of the outputs>"}`; the steps of the last runs whose key is
+    /// unchanged are taken again (`cached` in `prov/1`) unless `fresh`. A file the plan names that is not registered is `err.flow.input.missing`.
     pub(crate) fn flow_run(&self, p: &Value) -> Result<Answer> {
         let plan_text = p["plan"]
             .as_str()
             .ok_or_else(|| Error::new("err.flow.json"))?;
         let plan = parse(plan_text.as_bytes())?;
         let root = std::env::temp_dir().join("mzlab-flow");
-        let _ = std::fs::remove_dir_all(&root);
         let (inputs, work) = (root.join("in"), root.join("out"));
+        // the outputs stay: their cache gives back the steps whose key did not change (`fresh` recomputes all)
+        let _ = std::fs::remove_dir_all(&inputs);
         for d in [&inputs, &work] {
             std::fs::create_dir_all(d).map_err(|e| crate::rpc::io_error(&e))?;
         }
@@ -58,10 +60,17 @@ impl State {
                 entry.ok_or_else(|| Error::new("err.flow.input.missing").with("input", name))?;
             link(&entry.path, &inputs.join(name)).map_err(|e| crate::rpc::io_error(&e))?;
         }
+        let fresh = p["fresh"].as_bool().unwrap_or(false);
         let workers = std::thread::available_parallelism()
             .map_or(1, |n| n.get().saturating_sub(1).clamp(1, 4));
-        let (_, prov) =
-            mzlab_cli::flow::run_plan(plan_text.as_bytes(), &inputs, &work, workers, None)?;
+        let (_, prov) = mzlab_cli::flow::run_plan_cached(
+            plan_text.as_bytes(),
+            &inputs,
+            &work,
+            workers,
+            None,
+            Some(fresh),
+        )?;
         // the folder is a run folder for `flow/report`: prov.json beside the files of the steps
         std::fs::write(work.join("prov.json"), &prov).map_err(|e| crate::rpc::io_error(&e))?;
         text(json!({ "prov": prov, "dir": work.to_string_lossy() }).to_string())
