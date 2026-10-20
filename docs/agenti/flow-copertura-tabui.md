@@ -1,0 +1,38 @@
+# Copertura di Tabui (mzFinder) da parte di mzFlow
+Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzione di Tabui, il passo o il modello di mzFlow che la copre e se oggi si può eseguire. «Eseguibile» = il passo ha un esecutore in `EXECUTORS` di `crates/mzlab-cli/src/flow.rs` (`flow::executable`), quindi gira con `mzlab-cli flow run` e con «Run on this computer» dell'app desktop (`flow/run`, stesso motore). Sul sito nessun passo è eseguibile: la pagina Flow esporta il piano e non ha un esecutore web (`F.runners` ha solo `cli` e, nell'app, `desktop`).
+
+## Prove fatte sul codice
+- Il registro del CLI (`flow::steps()`) contiene la catena di base, `features.table`, i nove passi di Attributio, `spectra.ms2`, `meta.compare` e, dei passi di Tabui, SOLO `tp.network`. Un piano con `tp.generate`, `tp.filter`, `tp.link`, `tp.position`, `structure.*` dà `err.flow.step.unknown` (provato con `flow run --dry-run` su `tp.filter`).
+- I passi nel registro ma senza esecutore (`table.filter`, `table.drift`, `table.stats`, `table.pca`, `table.kmd`, `features.estimate`, `features.ms2_link`, `export.table_csv`, `export.mztab`, `import.raw`, `spectra.chimeric`, `spectra.insilico`, `rt.predict`, `annot.regulatory`, `annot.hazard`) danno `err.flow.step.native` (provato con `table.kmd`).
+- Esecutori oggi (14): `convert.mzml`, `index.mzidx`, `features.detect`, `features.align`, `features.gapfill`, `features.table`, `spectra.match`, `formula.ms1`, `formula.ms2`, `spectra.ms2`, `annot.level`, `tp.network` (con un `tp/1` dato come file), `meta.compare`, `export.inclusion` (vuole un `tp/1`).
+- Non provato a mano nel sito costruito: la sola prova nel browser è `e2e_flow.py` (piano, modelli, viste dei file); nessun piano è stato eseguito dal sito perché non può.
+
+## Tabella
+| Funzione di Tabui | Passo / modello di mzFlow | Stato | Cosa serve |
+|---|---|---|---|
+| File e ruoli dei campioni (1 · Files, tempi, bianchi) | `convert.mzml`, `index.mzidx`, ingresso `samples` (`campioni/2`) | Coperta ed eseguibile (app, CLI); `import.raw` ha il passo ma non l'esecutore (gli ingressi li leggono i lettori del CLI) | Sito: esecutore web. Il passo `table.filter` che usa `samples` non ha esecutore |
+| Campi del genitore (nome, formula neutra, SMILES) | Ingresso `parent` di `tp.generate`, `tp.position`, `structure.*` | Passo c'è ma non eseguibile (CLI: `step.unknown`) | Registrare i passi di Tabui nel CLI e scrivere gli esecutori |
+| Ricerca per nome (`composti.csv`, PubChem) | Nessun passo | Manca (è interfaccia) | Un campo nell'ispettore del genitore; il motore non cambia |
+| Struttura / SMILES / Disegno | `structure.draw`, `structure.render` | `draw`: non eseguibile per natura (editor, `native: false`); `render`: passo c'è ma non eseguibile | Esecutore di `structure.render`; per `draw` serve un ingresso file |
+| Previsione dei prodotti di trasformazione | `tp.generate` (modelli «Find transformation products», «TP time series») | Passo c'è ma non eseguibile (sito, app, CLI) | Esecutore Rust di `tp.generate` nel CLI (il motore `hr` esiste già nel `.wasm`) |
+| Filtri dei prodotti (tolleranze, criteri) | `tp.filter` (nodo «Filter products») | Passo c'è ma non eseguibile | Come sopra |
+| Confronto HR: rivelazione, allineamento, riempimento | `features.detect`, `features.align`, `features.gapfill`, `features.table` (modello «Just build the feature table») | Coperta ed eseguibile (app, CLI) | Sito: esecutore web |
+| Abbinamento ipotesi ↔ feature con MS2 | `tp.link`, `features.ms2_link`, `spectra.ms2` | `spectra.ms2` eseguibile; `tp.link` e `features.ms2_link` no | Esecutori di `tp.link` e `features.ms2_link` |
+| MS2, libreria, albero MSn del genitore | `spectra.match` (eseguibile), grafo `msngrafo/1` e albero (`frag_tree`) | Ricerca in libreria coperta; albero e grafo mancano come passi | Un passo che produca `msngrafo/1`; oggi è solo vista di un file |
+| Posizione della sostituzione | `tp.position` | Passo c'è ma non eseguibile | Esecutore e registrazione nel CLI |
+| Rete dei prodotti | `tp.network` (nodo «Product network») | Eseguibile solo con un `tp/1` già pronto; nessun passo eseguibile lo produce | Esecutori di `tp.generate` e `tp.link` |
+| Reattività del genitore | `structure.reactivity` | Passo c'è ma non eseguibile (nel sito la vista legge un `reatt/1` da disco) | Esecutore (il motore `chem` è nel `.wasm`) |
+| Confronto fra condizioni / gruppi | `meta.compare`, `table.stats` | `meta.compare` eseguibile; `table.stats` no | Esecutore di `table.stats`; i grafici sono già viste di Flow |
+| Modalità diretta («Dig» con avanzamento in diretta) | Nessun passo; l'avanzamento di Flow è solo a fine corsa | Manca | Avanzamento per passo (debito 6) |
+| Untargeted (formule da MS1, abbinamento, identità) | `formula.ms1`, `formula.ms2`, `spectra.match`, `annot.level` (modelli «Find and identify…», «Targeted check») | Coperta ed eseguibile (app, CLI) | Sito: esecutore web |
+| Pipeline: stima parametri, QC, deriva, PCA, KMD | `features.estimate`, `table.filter`, `table.drift`, `table.pca`, `table.kmd` (modelli «Standards check», «Blank-corrected table») | Passi ci sono ma non eseguibili | Esecutori dei passi `table.*` e `features.estimate` |
+| Attributio: MS2 in silico, RT, cimeriche, liste regolatorie, pericolosità | `spectra.insilico`, `rt.predict`, `spectra.chimeric`, `annot.regulatory`, `annot.hazard` | Passi ci sono ma non eseguibili; il registro di pericolosità non è in Rust | Esecutori; per `annot.hazard` anche il registro in Rust |
+| Revisione e decisioni (livelli 2b/3, difficoltà) | Vista Review di Flow sul risultato di `annot.level` | Coperta come vista di un file; nessuna decisione è un passo | Nulla di bloccante: le decisioni restano del chimico |
+| Esportazioni (CSV, mzTab-M, lista d'inclusione, Schymanski) | `export.inclusion` (eseguibile), `export.table_csv`, `export.mztab`; menu «Export» della campagna | Una su tre eseguibile; la cartella di Schymanski e le altre sono del pannello della campagna | Esecutori di `export.table_csv` e `export.mztab` |
+| Viste dei risultati (tabella dei prodotti `tptab/1`, gruppi, UpSet, rete, 3D) | Viste registrate con `F.registerView` | Coperta (sito e app) per file già prodotti | Nulla; senza passi eseguibili i file vengono ancora da Tabui |
+
+## Conclusione
+- Il modello più vicino a «usare Tabui» è «TP time series» (`tp.generate`, `tp.link`, `tp.filter`, `table.filter`, `tp.network` sopra la catena di base): ha lo stesso percorso di Tabui (genitore → ipotesi → abbinamento → filtri → rete), ma oggi non si esegue da nessuna parte. Il più vicino fra quelli che si eseguono davvero in app è «Find and identify compounds in my samples», che non cerca prodotti.
+- Per renderlo eseguibile nell'app e nel CLI: registrare nel CLI i passi di Tabui oltre a `tp.network` e scrivere gli esecutori di `tp.generate`, `tp.link`, `tp.filter` e `table.filter` (più `tp.position` e `features.ms2_link` per la parità con Tabui), tutti sopra motori già in Rust.
+- Per il sito: serve un esecutore web (terza voce di `F.runners`, oggi parcheggiato) che chiami gli stessi esecutori compilati in `.wasm`; finché non c'è, il sito costruisce e controlla il piano e non lo esegue.
+- Non coperte e senza passo: ricerca per nome del composto, albero di frammentazione come passo, avanzamento in diretta.
