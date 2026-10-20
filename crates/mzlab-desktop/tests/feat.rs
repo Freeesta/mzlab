@@ -314,3 +314,32 @@ fn files_route_lists_the_indexed_files() {
     want.sort();
     assert_eq!(e.json("feat/files", json!({})), json!(want));
 }
+
+#[test]
+fn polpair_route_pairs_the_held_run_with_the_kept_one_and_holds_the_kept_one_again() {
+    let e = setup();
+    let (_, table) = detect_and_align(&e);
+    // nothing kept: the state error, and the held table stays
+    assert!(e
+        .st
+        .rpc("feat/polpair", &json!({"step": "pair", "pol": 1}), &[])
+        .is_err());
+    e.r("feat/polpair", json!({"step": "stash"}));
+    // the run of the "other polarity" replaces the held table (here the same files: the pairing finds no pair)
+    e.json("feat/align", json!({"names": NAMES, "recipe": ""}));
+    let pairs = e.json("feat/polpair", json!({"step": "pair", "pol": 1}));
+    assert_eq!(pairs["schema"], "polpair/1");
+    let held = text(
+        e.st.rpc(
+            "feat/table",
+            &json!({"kind": "bytes", "off": 0, "len": table.len()}),
+            &[],
+        )
+        .map(|a| match a {
+            Answer::Bytes(b) => Answer::Text(sha(&b)),
+            t => t,
+        })
+        .unwrap(),
+    );
+    assert_eq!(held, sha(&table));
+}

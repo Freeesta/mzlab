@@ -118,6 +118,10 @@ export function createDesktopPool(opts = {}) {
     ms2File(a) { return pool.table("ms2", { samples: a.samples, spec: a.spec, sha256: a.sha, polarity: a.pol, export_kind: a.kind, names: a.paths.map(nameOf) }); },
     /** the traces of one row (`riga_tracce/1`): XIC of every file, MS1 at the best apex and MS2, read from the index of each file @param {{ samples: string, sha: string, id: number, ppm: number, paths: string[] }} a */
     rowTraces(a) { return pool.table("row_traces", { samples: a.samples, sha256: a.sha, id: a.id, ppm: a.ppm, names: a.paths.map(nameOf) }); },
+    /** the run of the other polarity replaces the held table: the app sets the held run aside before it and takes it back after the pairing (`feat/polpair`) */
+    async polpairBegin() { await json("feat/polpair", { step: "stash" }); },
+    /** the proof of the other polarity (`polpair/1` text) of the held run (the other polarity) and the one set aside; `pol` is the polarity of the one set aside @param {{ pol: number }} a */
+    async crossPolarity(a) { return (await call("feat/polpair", { step: "pair", pol: a.pol })).text(); },
     /** the interpretation of the rows (`interp/1`): the app holds the table and replaces it with the one that has the block @param {{ parent: string, registry: string, polarity: number, paths: string[], infusion: number }} a */
     async interpBuild(a) {
       const r = await json("feat/interp/build", { parent: a.parent, registry: a.registry, polarity: a.polarity, names: a.paths.map(nameOf), infusion: a.infusion });

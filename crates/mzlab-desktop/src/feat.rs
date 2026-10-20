@@ -309,6 +309,40 @@ impl State {
         text(row.unwrap_or_else(|| "null".into()))
     }
 
+    /// `feat/polpair`: the proof of the other polarity. `step` = `stash` (keep the table and the files of the run just done) or `pair` (the held table is the run of the
+    /// other polarity: pair it with the kept one, `pol` = polarity of the kept run, and hold the kept run again). Answers the `polpair/1` text.
+    fn feat_polpair(&self, p: &Value) -> Result<Answer> {
+        let mut g = self.feat_lock();
+        if p["step"].as_str() == Some("stash") {
+            g.keep = g.table.clone().map(|t| (t, g.files.clone()));
+            return text("null");
+        }
+        let ((main, files), other) = match (g.keep.take(), g.table.take()) {
+            (Some(k), Some(o)) => (k, o),
+            (k, o) => {
+                g.keep = k;
+                g.table = o;
+                return Err(Error::new("error.featState"));
+            }
+        };
+        let (pos, neg) = if p["pol"].as_i64().unwrap_or(1) < 0 {
+            (&other, &main)
+        } else {
+            (&main, &other)
+        };
+        let out = mzlab_feat::polpair::cross_polarity(
+            &mut Slice(pos),
+            pos.len() as u64,
+            &mut Slice(neg),
+            neg.len() as u64,
+            "",
+        );
+        g.table = Some(main);
+        g.files = files;
+        g.hypo = None;
+        text(out?)
+    }
+
     /// The routes of mzFinder (`feat/*`, `finder/*`).
     pub(crate) fn op_feat(&self, op: &str, p: &Value) -> Result<Answer> {
         match op {
@@ -322,6 +356,7 @@ impl State {
             "feat/table" => self.feat_table(p),
             "feat/interp/build" => self.feat_interp_build(p),
             "feat/interp/row" => self.feat_interp_row(p),
+            "feat/polpair" => self.feat_polpair(p),
             "feat/version" => text(format!("\"{}\"", mzlab_feat::CRATE_VERSION)),
             "feat/preview" => self.feat_preview(p),
             "feat/files" => self.feat_files(),
@@ -379,6 +414,8 @@ fn num(v: &Value) -> f64 {
 pub struct FeatState {
     pub(crate) files: HashMap<String, Vec<u8>>,
     pub(crate) table: Option<Vec<u8>>,
+    /// the table and the files of a run set aside while the run of the other polarity is done (`feat/polpair`)
+    pub(crate) keep: Option<(Vec<u8>, HashMap<String, Vec<u8>>)>,
     pub(crate) hypo: Option<HypoRun>,
     pub(crate) dig: Option<Dig>,
     /// the Dig of a low-resolution series (`finder/lr_dig`); `dig` and `lr` are never both held, and `lr` holds the names of its columns
