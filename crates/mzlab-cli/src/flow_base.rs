@@ -68,7 +68,26 @@ fn recipe(job: &Job, mut base: Recipe) -> Result<(Recipe, Vec<Estimate>)> {
                 && !job.resolved.noresult.contains(k)
                 && resolved.iter().find(|x| x.0 == *k).map(|x| &x.1) != Some(v)
         })
-        .map(|(k, v)| (k, v, proof.clone()))
+        .map(|(k, v)| {
+            let why = match (k.as_str(), base.min_height_basis) {
+                ("min_height", Some((mode, sigma))) => Value::Obj(vec![
+                    (
+                        "basis".into(),
+                        Value::Str(
+                            "noise lump of the intensities of the first file of the series".into(),
+                        ),
+                    ),
+                    (
+                        "factor".into(),
+                        Value::Num(mzlab_feat::params_height::MIN_HEIGHT_FACTOR),
+                    ),
+                    ("mode".into(), Value::Num(mode)),
+                    ("sigma".into(), Value::Num(sigma)),
+                ]),
+                _ => proof.clone(),
+            };
+            (k, v, why)
+        })
         .collect();
     Ok((base, estimates))
 }
@@ -102,7 +121,7 @@ fn rebuild(lin: &Lineage) -> Result<Recipe> {
         .first
         .as_ref()
         .ok_or_else(|| Error::new("err.flow.lineage"))?;
-    let mut r = run::recipe_for("", &mut open(first)?)?;
+    let mut r = run::recipe_for_estimated("", &mut open(first)?)?;
     for (step, params) in &lin.layers {
         recipe_map::apply(&mut r, step, params)?;
     }
@@ -114,7 +133,7 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let input = &job.inputs[0].1[0];
     let path = r.path(input);
     let first = r.first_of_series(input).unwrap_or_else(|| path.clone());
-    let (recipe, estimates) = recipe(job, run::recipe_for("", &mut open(&first)?)?)?;
+    let (recipe, estimates) = recipe(job, run::recipe_for_estimated("", &mut open(&first)?)?)?;
     let name = r.source_name(input);
     let bytes = run::detect(&mut open(&path)?, &name, &recipe)?;
     let out = out_path(r, job, "mzfeatf");

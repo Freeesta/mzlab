@@ -30,6 +30,11 @@ pub fn recipe_for<R: ReadAt>(text: &str, index: &mut Index<R>) -> Result<Recipe>
     recipe_on(text, Recipe::for_index(index)?)
 }
 
+/// `recipe_for` with the minimum height estimated from the noise of the file (`Recipe::for_index_estimated`): the recipe of the Flow steps.
+pub fn recipe_for_estimated<R: ReadAt>(text: &str, index: &mut Index<R>) -> Result<Recipe> {
+    recipe_on(text, Recipe::for_index_estimated(index)?)
+}
+
 fn recipe_on(text: &str, base: Recipe) -> Result<Recipe> {
     let v = if text.trim().is_empty() {
         Value::Null
