@@ -39,6 +39,12 @@ const nameOf = s => s.replace(/^.*\//, "").replace(/\.mzidx$/, "");
 /** the recipe is the JSON text of the six numbers (or empty) @param {any} r */
 const recipeText = r => (typeof r === "string" ? r : r ? JSON.stringify(r) : "");
 
+/** the proof of the other polarity: the run of the other polarity replaces the held table, so the app sets the held run aside before it (`polpairBegin`) and takes it back after the pairing (`crossPolarity`, the `polpair/1` text; `pol` = polarity of the run set aside) @param {any} pool */
+function withPolpair(pool) {
+  pool.polpairBegin = async () => { await json("feat/polpair", { step: "stash" }); };
+  pool.crossPolarity = async (/** @type {{ pol: number }} */ a) => (await call("feat/polpair", { step: "pair", pol: a.pol })).text();
+  return pool;
+}
 /** @param {{ notify?: (key: string, params?: any) => void }} [opts] */
 export function createDesktopPool(opts = {}) {
   const pool = {
@@ -157,5 +163,5 @@ export function createDesktopPool(opts = {}) {
     cancel() {},
     resume() {},
   };
-  return pool;
+  return withPolpair(pool);
 }

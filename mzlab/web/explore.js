@@ -134,6 +134,8 @@ function seqColor(u) {
   return "#" + A.map((v, k) => Math.round(v + (B[k] - v) * f).toString(16).padStart(2, "0")).join("");
 }
 const DASHES = [[], [6, 3], [2, 3], [10, 3, 2, 3]];
+/** The one back / forward arrow of the program (the same drawing as the file arrows of the header): a chevron. @param {number} d -1 = back, 1 = forward @param {number} [n] size in px */
+const chevron = (d, n = 16) => `<svg width="${n}" height="${n}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${d < 0 ? "M10 3L5 8l5 5" : "M6 3l5 5-5 5"}"/></svg>`;
 const LWX = () => PALS[UIP.pal].lw || 0;                      // extra line width (px) of the high contrast palette
 // line style of a file: solid, so that blanks and standards read as plain traces (neutral grey carries the distinction); with the colour-blind /
 // high-contrast palettes the files of the time scale are also told apart by line style (second code besides the colour)
@@ -434,7 +436,7 @@ async function bootSession0() {
       // low resolution: only the first file of the list is open (also with mixed Full Scan / MS2 / MRM), the others wait in the list and a click opens them
       vis = (k === 0);
     }
-    return { ...s, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: oldVis[s.file] ? oldVis[s.file].label : s.label, lv: s.kind === "ms2" ? 2 : 1 };
+    return { ...s, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: oldVis[s.file] ? oldVis[s.file].label : s.dda ? String(s.label).replace(/ · Full Scan(?=[+−-]?$)/, "") : s.label, lv: s.kind === "ms2" ? 2 : 1 };
   });
   paintFiles();
   if (window.HR) HR.notice(E.files);
@@ -785,6 +787,7 @@ function renderFileList() {
   const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isExpOpen(gkOf(G)) && !grpClosed(G.g) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
   Q("#flst").setAttribute("aria-busy", waiting ? "true" : "false");
   Q("#flst").innerHTML = pendBar + pre + body + pendRows;
+  if (window.BARRA) BARRA.fitNames();
   Q("#flst").querySelectorAll("[data-pend-rm]").forEach(b => b.onclick = () => { E.pending.splice(+b.dataset.pendRm, 1); renderFileList(); });
   Q("#flst").querySelectorAll("input[data-pr]").forEach(x => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));
   { const dl = Q("#ddalist"); if (dl) dl.onclick = () => DDA.openList(); }

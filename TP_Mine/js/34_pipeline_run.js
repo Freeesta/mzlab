@@ -26,7 +26,6 @@
   function mount(box, ctx) {
     st.ctx = ctx; box.innerHTML = html(); st.box = box;
     $("#pipe-run-go").onclick = () => run();
-    if (window.MZLAB_DESKTOP) { const b = $("#pipe-both"); b.disabled = true; b.title = "Not available in the desktop app yet"; }
     $("#pipe-again").onclick = again; ctx.onRefresh(armAgain); armAgain();
     const sync = async () => { st.files = await ctx.listIdx(); await loadRoles(); };
     ctx.onRefresh(sync); sync();
@@ -65,8 +64,9 @@
     if (!pool.crossPolarity) return;                      // the app has no pool method for it: no pairs
     if (r.engine === "untargeted" || !(r.polarity === 1 || r.polarity === -1)) return;
     msg("Other polarity...");
+    if (pool.polpairBegin) await pool.polpairBegin();
     const o2 = await mod.runFeatPipeline(pool, { files, recipe: JSON.stringify({ ...r, polarity: -r.polarity }), parent: null, onPhase: p => msg(p.state === "start" ? "Other polarity: " + p.phase + "..." : "") });
-    const text = await pool.crossPolarity(r.polarity > 0 ? { pos: out.table, neg: o2.table } : { pos: o2.table, neg: out.table });
+    const text = await pool.crossPolarity(r.polarity > 0 ? { pol: 1, pos: out.table, neg: o2.table } : { pol: -1, pos: o2.table, neg: out.table });
     const by = new Map(), mine = r.polarity > 0 ? "pos" : "neg", other = r.polarity > 0 ? "neg" : "pos";
     for (const q of JSON.parse(text).pairs) { const k = q["id_" + mine]; if (!by.has(k)) by.set(k, []); by.get(k).push({ id: q["id_" + other], ionHere: q["ion_" + mine], ionThere: q["ion_" + other], ppm: q.ppm * (r.polarity > 0 ? 1 : -1), dRt: q.d_rt * (r.polarity > 0 ? 1 : -1), r: q.r, n: q.n_common }); }
     st.pair = by; window.PIPEPOL = { pol: r.polarity, rows: id => by.get(id) || [] };

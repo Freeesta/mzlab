@@ -50,7 +50,8 @@ fn recipe_on(text: &str, base: Recipe) -> Result<Recipe> {
     Ok(r)
 }
 
-/// The numbers of the panel "Pipeline" (`floor`, `min_height`, `min_points`, `ppm`, `rt_tol`, `fill`); a missing key keeps the default.
+/// The numbers of the panel "Pipeline" (`floor`, `min_height`, `min_points`, `ppm`, `rt_tol`, `fill`) and the choices of the MS2 spectrum of a row
+/// (`ms2_spectrum`: `best` or `consensus`; `ms2_background`); a missing key keeps the default.
 fn apply_params(r: &mut Recipe, v: &Value) {
     let num = |k: &str| {
         v.get(k)
@@ -79,6 +80,8 @@ fn apply_params(r: &mut Recipe, v: &Value) {
     if let Some(b) = v.get("fill").and_then(Value::bool) {
         r.fill_gaps = b;
     }
+    r.ms2.consensus = v.get("ms2_spectrum").and_then(Value::str) == Some("consensus");
+    r.ms2.background = v.get("ms2_background").and_then(Value::bool) == Some(true);
 }
 
 /// Layer L1-L3 of one file written to `sink`: the `.mzfeatf` (the name and SHA-256 of the source go in the meta; no times, so the bytes repeat).
