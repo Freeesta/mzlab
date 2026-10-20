@@ -11,6 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
+mzlab-lib = { path = "../mzlab-lib" }
 mzlab-lettori = { path = "../mzlab-lettori", features = ["tutte"] }
 # the same features as mzlab-desktop: one build of each crate in the workspace
 mzlab-feat = { path = "../mzlab-feat", features = ["chem", "untargeted", "attributio"] }

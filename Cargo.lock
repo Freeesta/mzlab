@@ -1997,6 +1997,7 @@ dependencies = [
  "mzlab-feat-table-wasm",
  "mzlab-feat-wasm",
  "mzlab-lettori",
+ "mzlab-lib",
 ]
 
 [[package]]
