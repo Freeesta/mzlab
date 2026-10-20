@@ -1,0 +1,249 @@
+{
+ "format": "livelli-casi/1",
+ "note": "Cases of the level rule run by tests/test_livelli_schymanski.py (JS) and by crates/mzlab-cli (Rust); native=false: not in the native executor.",
+ "cases": [
+  {
+   "name": "reference standard",
+   "profile": "mzlab",
+   "native": false,
+   "input": {
+    "cands": [
+     {
+      "name": "A",
+      "ik": "AAAAAAAAAAAAAA-X",
+      "ent": 0.9,
+      "cos": 0.85,
+      "shared": 8,
+      "dprec": 2,
+      "lib": "LIB",
+      "nlib": 30
+     }
+    ],
+    "nScans": 3,
+    "std": {
+     "name": "S",
+     "drt": 0.05,
+     "ent": 0.85,
+     "dprec": 2
+    }
+   },
+   "level": "1",
+   "why": "standard"
+  },
+  {
+   "name": "library spectrum",
+   "profile": "mzlab",
+   "input": {
+    "cands": [
+     {
+      "name": "A",
+      "ik": "AAAAAAAAAAAAAA-X",
+      "ent": 0.9,
+      "cos": 0.85,
+      "shared": 8,
+      "dprec": 2,
+      "lib": "LIB",
+      "nlib": 30
+     }
+    ],
+    "nScans": 3
+   },
+   "level": "2a",
+   "why": "2a"
+  },
+  {
+   "name": "weak library match",
+   "profile": "mzlab",
+   "input": {
+    "cands": [
+     {
+      "name": "A",
+      "ik": "AAAAAAAAAAAAAA-X",
+      "ent": 0.9,
+      "cos": 0.85,
+      "shared": 8,
+      "dprec": 2,
+      "lib": "LIB",
+      "nlib": 30
+     }
+    ],
+    "nScans": 1
+   },
+   "level": "3a",
+   "why": "confirm"
+  },
+  {
+   "name": "analogue only",
+   "profile": "mzlab",
+   "input": {
+    "cands": [],
+    "analogs": [
+     {
+      "name": "An",
+      "mcos": 0.8,
+      "matched": 6,
+      "delta": 15.9949
+     }
+    ]
+   },
+   "level": "3b",
+   "why": "analogo"
+  },
+  {
+   "name": "unique formula",
+   "profile": "mzlab",
+   "input": {
+    "cands": [],
+    "formulaUnique": true
+   },
+   "level": "4",
+   "why": "formula"
+  },
+  {
+   "name": "exact mass only",
+   "profile": "mzlab",
+   "input": {
+    "cands": []
+   },
+   "level": "5",
+   "why": "empty"
+  },
+  {
+   "name": "unit resolution",
+   "profile": "lr",
+   "input": {
+    "cands": [
+     {
+      "name": "A",
+      "ik": "AAAAAAAAAAAAAA-X",
+      "ent": 0.9,
+      "cos": 0.85,
+      "shared": 8,
+      "dprec": 2,
+      "lib": "LIB",
+      "nlib": 30
+     }
+    ],
+    "nScans": 3
+   },
+   "level": "4",
+   "why": "tetto"
+  },
+  {
+   "name": "few shared peaks, provisional",
+   "profile": "mzlab",
+   "input": {
+    "cands": [
+     {
+      "name": "A",
+      "ik": "AAAAAAAAAAAAAA-X",
+      "ent": 0.9,
+      "cos": 0.85,
+      "shared": 5,
+      "dprec": 2,
+      "lib": "LIB",
+      "nlib": 30
+     }
+    ],
+    "nScans": 3
+   },
+   "level": "3a",
+   "why": "provvisorio"
+  },
+  {
+   "name": "few shared peaks in a small library",
+   "profile": "mzlab",
+   "input": {
+    "cands": [
+     {
+      "name": "A",
+      "ik": "AAAAAAAAAAAAAA-X",
+      "ent": 0.9,
+      "cos": 0.85,
+      "shared": 4,
+      "dprec": 2,
+      "lib": "LIB",
+      "nlib": 4
+     }
+    ],
+    "nScans": 3
+   },
+   "level": "2a",
+   "why": "2a"
+  },
+  {
+   "name": "two structures not told apart",
+   "profile": "mzlab",
+   "input": {
+    "cands": [
+     {
+      "name": "A",
+      "ik": "AAAAAAAAAAAAAA-X",
+      "ent": 0.9,
+      "cos": 0.85,
+      "shared": 8,
+      "dprec": 2,
+      "lib": "LIB",
+      "nlib": 30
+     },
+     {
+      "name": "B",
+      "ik": "BBBBBBBBBBBBBB-X",
+      "ent": 0.88,
+      "cos": 0.85,
+      "shared": 8,
+      "dprec": 2,
+      "lib": "LIB",
+      "nlib": 30
+     }
+    ],
+    "nScans": 3
+   },
+   "level": "3a",
+   "why": "confirm"
+  },
+  {
+   "name": "precursor off, low score",
+   "profile": "mzlab",
+   "input": {
+    "cands": [
+     {
+      "name": "A",
+      "ik": "AAAAAAAAAAAAAA-X",
+      "ent": 0.5,
+      "cos": 0.85,
+      "shared": 8,
+      "dprec": 9,
+      "lib": "LIB",
+      "nlib": 30
+     }
+    ],
+    "nScans": 3
+   },
+   "level": "5",
+   "why": "none"
+  },
+  {
+   "name": "weak match and a unique formula",
+   "profile": "mzlab",
+   "input": {
+    "cands": [
+     {
+      "name": "A",
+      "ik": "AAAAAAAAAAAAAA-X",
+      "ent": 0.5,
+      "cos": 0.85,
+      "shared": 8,
+      "dprec": 9,
+      "lib": "LIB",
+      "nlib": 30
+     }
+    ],
+    "nScans": 3,
+    "formulaUnique": true
+   },
+   "level": "4",
+   "why": "formula"
+  }
+ ]
+}
