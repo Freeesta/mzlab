@@ -88,7 +88,8 @@ fn scrivi_in<W: Write>(
     progress(0, n);
     for k in 0..n {
         let s = l.scansione(c, k)?;
-        w.spectrum_with(&s, &l.extra_mzml(&s))?;
+        let extra = l.extra_scansione(c, k, &s);
+        w.spectrum_with(&s, &extra)?;
         if (k + 1) % 32 == 0 {
             progress(k + 1, n);
         }

@@ -1,4 +1,5 @@
 # Copertura di Tabui (mzFinder) da parte di mzFlow
+Pacchetto per colmare i buchi: `flow-pacchetto-tabui.md`.
 Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzione di Tabui, il passo o il modello di mzFlow che la copre e se oggi si può eseguire. «Eseguibile» = il passo ha un esecutore in `EXECUTORS` di `crates/mzlab-cli/src/flow.rs` (`flow::executable`), quindi gira con `mzlab-cli flow run` e con «Run on this computer» dell'app desktop (`flow/run`, stesso motore). Sul sito nessun passo è eseguibile: la pagina Flow esporta il piano e non ha un esecutore web (`F.runners` ha solo `cli` e, nell'app, `desktop`).
 
 ## Prove fatte sul codice

@@ -125,6 +125,9 @@ impl Lettore for Centroidato {
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
         self.l.extra_mzml(s)
     }
+    fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
+        self.l.extra_scansione(c, k, s)
+    }
 }
 
 /// `l` with its profile scans as centroids.
