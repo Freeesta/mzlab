@@ -35,6 +35,8 @@ pub struct Recipe {
     pub fill_gaps: bool,
     /// Weak tier: peaks from `WEAK_RATIO` of `detect.min_height` up are kept as rows only if this many files show them (0 = no weak tier).
     pub weak_files: usize,
+    /// How the MS2 spectrum of a row is made for the proofs and the exports; not part of the text, so the `.mzfeatf` keep their fingerprint.
+    pub ms2: crate::ms2spec::SpecOpts,
 }
 
 /// The weak tier goes down to this fraction of the minimum height (3 times the noise when the minimum is 10 times).
@@ -62,6 +64,7 @@ impl Default for Recipe {
             fill: FillParams::default(),
             fill_gaps: true,
             weak_files: WEAK_FILES,
+            ms2: crate::ms2spec::SpecOpts::default(),
         }
     }
 }

@@ -63,7 +63,12 @@
   /** @param {any} S @param {any} inst @param {FlowPort} port */
   const fixFor = (S, inst, port) => {
     if (F.INPUT_TYPES.includes(port.type)) {
-      return { label: `Add ${F.INPUT_NAMES[port.type].toLowerCase()}`, run() { F.setPort(inst, port, ["file:" + F.addInput(S.plan, port.type).name]); } };
+      // a sample list is filled from the files open in Data in the same click when there are any
+      const data = port.type === "samples" && F.samplesFromData ? F.samplesFromData() : null;
+      return { label: data ? "Add sample list from Data" : `Add ${F.INPUT_NAMES[port.type].toLowerCase()}`, run() {
+        const input = F.addInput(S.plan, port.type); F.setPort(inst, port, ["file:" + input.name]);
+        if (data) void F.samplesSet(S, input, data).then(() => { if (S.redraw) S.redraw(); });
+      } };
     }
     const prod = S.reg.steps.find((/** @type {any} */ s) => s.id !== "meta.compare" && !F.findStep(S.plan, s.id) && F.ports(s.out).some((/** @type {FlowPort} */ o) => F.fit(S.reg, o.type, port) === "ok"));
     if (!prod) return null;

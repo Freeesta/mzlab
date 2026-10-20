@@ -392,8 +392,13 @@
     if (tab === "samples") samples(panel, m); else if (tab === "identity") { identity(panel, m); if (G.TPCOMP && m.composition) G.TPCOMP.mount(panel, m.composition); } else if (tab === "quality") quality(panel, m); else if (tab === "structure") { if (G.TPSTRUCT) G.TPSTRUCT.fill(panel, m.interp, m.missing && m.missing.structure); } else overview(panel, m);
   }
 
-  /** the options of `TPTAB.mount` that put these panels in the open row: `TPRIGA.hook(r => model)` @param {(r: any) => TpRiga} model */
-  function hook(model) { return { tabs: TABS, head: (/** @type {any} */ r, /** @type {HTMLElement} */ box) => head(box, model(r)), onOpen: (/** @type {any} */ r, /** @type {HTMLElement} */ p, /** @type {string} */ t) => fill(p, t, model(r)) }; }
+  /** the options of `TPTAB.mount` that put these panels in the open row: `TPRIGA.hook(r => model, extra)`; `extra` = tabs of the caller, `[{key, label, help?, fill(panel, row)}]`, after the built-in ones
+   * @param {(r: any) => TpRiga} model @param {{key: string, label: string, help?: string, fill: (panel: HTMLElement, row: any) => void}[]} [extra] */
+  function hook(model, extra) {
+    const more = extra || [];
+    return { tabs: more.length ? [...TABS, ...more.map(x => ({ key: x.key, label: x.label, help: x.help }))] : TABS, head: (/** @type {any} */ r, /** @type {HTMLElement} */ box) => head(box, model(r)),
+      onOpen: (/** @type {any} */ r, /** @type {HTMLElement} */ p, /** @type {string} */ t) => { const x = more.find(e => e.key === t); if (x) { p.innerHTML = ""; x.fill(p, r); } else fill(p, t, model(r)); } };
+  }
 
   if (!document.getElementById("tpr-css")) { const s = document.createElement("style"); s.id = "tpr-css"; s.textContent = CSS; document.head.appendChild(s); }
   G.TPRIGA = { tabs: TABS, head, fill, slot, hook, details, texts: TXT, toData: { xic: toDataXic, ms2: toDataMs2 } };

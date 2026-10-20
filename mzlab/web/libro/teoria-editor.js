@@ -27,6 +27,10 @@ const fail = (t) => {
   $("msg").textContent = t;
 };
 
+const NOT_TOKEN = "This is not a token: it must start with github_pat_";
+/** A fine-grained token starts with github_pat_, a classic one with ghp_. @param {string} t */
+const looksLikeToken = (t) => /^(github_pat_|ghp_)\S+$/.test(t);
+
 /** @param {unknown} e */
 function explain(e) {
   if (e instanceof GhError) return e.message;
@@ -64,8 +68,11 @@ async function connect(/** @type {string} */ token) {
       b.addEventListener("click", () => openChapter(n, b));
       nav.append(b);
     }
-    say(`Connected · converter ${c.version}`);
+    say("Connected");
+    $("status").title = `Converter ${c.version}`;
     showOpen();
+    const first = nav.querySelector("button");
+    if (first) openChapter(names[0], first);
   } catch (e) {
     client = null;
     say(explain(e), true);
@@ -164,6 +171,7 @@ function wire() {
   $("t-tab").addEventListener("click", () => {
     const t = $("in-token").value.trim();
     if (!t) return ($("t-msg").textContent = "Paste the token first.");
+    if (!looksLikeToken(t)) return ($("t-msg").textContent = NOT_TOKEN);
     vault.keepForTab(t, SLOT);
     useToken(t);
   });
@@ -171,6 +179,7 @@ function wire() {
     const t = $("in-token").value.trim();
     const p = $("in-pass").value;
     if (!t || !p) return ($("t-msg").textContent = "Paste the token and invent a passphrase.");
+    if (!looksLikeToken(t)) return ($("t-msg").textContent = NOT_TOKEN);
     if (!(await vault.seal(t, p, SLOT))) $("t-msg").textContent = "This browser refuses to store it; using it for this tab only.";
     useToken(t);
   });
@@ -183,6 +192,13 @@ function wire() {
   $("u-go").addEventListener("click", async () => {
     const t = await vault.unseal($("in-unlock").value, SLOT);
     if (!t) return ($("u-msg").textContent = "Wrong passphrase.");
+    if (!looksLikeToken(t)) {
+      // what was sealed is not a token (the two fields were swapped): drop it and ask again
+      vault.forget(SLOT);
+      $("dlg-unlock").close();
+      $("t-msg").textContent = "The saved text was not a token and was removed. Paste the github_pat_… key in the Token field.";
+      return $("dlg-token").showModal();
+    }
     useToken(t);
   });
   $("u-other").addEventListener("click", () => {

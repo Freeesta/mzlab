@@ -325,6 +325,7 @@ declare var cancelLoads: any;
 declare var centroidAll: any;
 declare var centroidTargets: any;
 declare var checkGo: any;
+declare var chevron: any;
 declare var chiudiPannello: any;
 declare var chromPeak: any;
 declare var clampView: any;
