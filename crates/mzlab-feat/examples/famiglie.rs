@@ -2,6 +2,8 @@
 //!
 //!     cargo run --release -p mzlab-feat --example famiglie -- <file.mzidx>... [--neg] [--truth verita.json] [--mz M]...
 //!
+//! `--json <file>` writes the `famiglia/1` records (one JSON line per input file) to `<file>`.
+//!
 //! `--truth` reads `verita.json` of `tools/valida/sintetici_identita.py`: for every base ion (parent, products, isomers) the members it has in
 //! the file are looked for and the family, the roles and the open readings are compared with the truth.
 
@@ -205,6 +207,8 @@ fn show(f: &FileFeatures, fam: &Families, mz: f64, rt: Option<f64>) {
 fn main() {
     let (mut p, mut files, mut truth) = (Params::default(), Vec::new(), None::<Value>);
     let (mut shown, mut at_rt): (Vec<f64>, Option<f64>) = (Vec::new(), None);
+    let mut json = None::<String>;
+    let mut records = String::new();
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -214,6 +218,7 @@ fn main() {
                     serde_json::from_slice(&std::fs::read(t).expect("truth")).expect("json")
                 })
             }
+            "--json" => json = args.next(),
             "--rt" => at_rt = args.next().and_then(|v| v.parse().ok()),
             "--mz" => shown.extend(args.next().and_then(|v| v.parse::<f64>().ok())),
             _ => files.push(a),
@@ -229,11 +234,16 @@ fn main() {
         let fam = analyse_families(&mut ix, &mut f, &links, &p, &FamParams::default())
             .unwrap_or_else(|e| panic!("{path}: {e}"));
         summary(path, &f, &fam, t0.elapsed().as_secs_f64());
+        records.push_str(&mzlab_feat::famrecord::record(path, &f, &fam));
+        records.push('\n');
         for &m in &shown {
             show(&f, &fam, m, at_rt);
         }
         if let Some(t) = &truth {
             report(&judge(&f, t));
         }
+    }
+    if let Some(j) = json {
+        std::fs::write(j, records).expect("write json");
     }
 }
