@@ -31,40 +31,40 @@ impl Indice {
         self.pos += b.len() as u64;
         self.sha.update(b);
     }
+}
 
-    /// The text after `</mzML>`: index list, its offset and the checksum of every byte up to and including the opening `<fileChecksum>` tag.
-    pub fn tail(mut self) -> String {
-        let mut lists = String::new();
-        let mut n = 0;
-        for (name, v) in [("spectrum", &self.spectra), ("chromatogram", &self.chroms)] {
-            if v.is_empty() {
-                continue;
-            }
-            n += 1;
-            lists += &format!("<index name=\"{name}\">");
-            for (id, off) in v {
-                lists += &format!("<offset idRef=\"{}\">{off}</offset>", super::esc(id));
-            }
-            lists += "</index>";
+/// The text after `</mzML>`: index list, its offset and the checksum of every byte up to and including the opening `<fileChecksum>` tag.
+fn tail(mut i: Indice) -> String {
+    let mut lists = String::new();
+    let mut n = 0;
+    for (name, v) in [("spectrum", &i.spectra), ("chromatogram", &i.chroms)] {
+        if v.is_empty() {
+            continue;
         }
-        if n == 0 {
-            // the schema wants one index even when the run holds no spectrum and no chromatogram
-            n = 1;
-            lists = "<index name=\"spectrum\"/>".into();
+        n += 1;
+        lists += &format!("<index name=\"{name}\">");
+        for (id, off) in v {
+            lists += &format!("<offset idRef=\"{}\">{off}</offset>", super::esc(id));
         }
-        let list_at = self.pos;
-        let mut s = format!("<indexList count=\"{n}\">{lists}</indexList>\n<indexListOffset>{list_at}</indexListOffset>\n<fileChecksum>");
-        self.sha.update(s.as_bytes());
-        let hex: String = self
-            .sha
-            .finalize()
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect();
-        s += &hex;
-        s += "</fileChecksum>\n</indexedmzML>\n";
-        s
+        lists += "</index>";
     }
+    if n == 0 {
+        // the schema wants one index even when the run holds no spectrum and no chromatogram
+        n = 1;
+        lists = "<index name=\"spectrum\"/>".into();
+    }
+    let list_at = i.pos;
+    let mut s = format!("<indexList count=\"{n}\">{lists}</indexList>\n<indexListOffset>{list_at}</indexListOffset>\n<fileChecksum>");
+    i.sha.update(s.as_bytes());
+    let hex: String = i
+        .sha
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
+    s += &hex;
+    s += "</fileChecksum>\n</indexedmzML>\n";
+    s
 }
 
 impl<W: Write> MzmlWriter<W> {
@@ -97,7 +97,7 @@ impl<W: Write> MzmlWriter<W> {
     /// After `</mzML>`: the index list and the checksum, when the file is indexed.
     pub(super) fn close_index(&mut self) -> Result<()> {
         match self.idx.take() {
-            Some(i) => self.out.write_all(i.tail().as_bytes()).map_err(io),
+            Some(i) => self.out.write_all(tail(i).as_bytes()).map_err(io),
             None => Ok(()),
         }
     }
