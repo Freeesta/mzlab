@@ -33,6 +33,8 @@
      "status": {"enum": ["ok", "cached", "error"]},
      "error_key": {"type": "string"},
      "ms": {"type": "number", "minimum": 0},
+     "mem_mb": {"type": "number", "minimum": 0},
+     "via": {"enum": ["memory", "slabs", "refused"]},
      "params_sha256": {"type": "string"},
      "params": {
       "type": "array",

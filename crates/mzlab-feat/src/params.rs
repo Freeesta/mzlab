@@ -426,6 +426,7 @@ pub fn preview_json(est: &Estimate, f: &FileFeatures, examples: &[Example]) -> S
             o.raw("null");
         }
     }
+    crate::params_height::min_height_json(&mut o, est.noise.as_ref());
     o.raw(",\"ppm\":{\"value\":")
         .opt(est.ppm)
         .raw(",\"sigma\":")

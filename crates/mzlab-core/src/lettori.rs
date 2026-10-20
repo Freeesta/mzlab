@@ -55,7 +55,7 @@ pub struct Limiti {
 }
 
 impl Limiti {
-    /// The browser: 256 MB per WASM instance, 192 of them for work (`budget::WASM_BUDGET_MB`).
+    /// The browser: the floor of its budgets, 192 MB (`budget::WASM_BUDGET_MB`); a bigger budget changes the way (memory or slabs), not these limits.
     pub const fn sito() -> Limiti {
         Limiti {
             profondita: 256,
