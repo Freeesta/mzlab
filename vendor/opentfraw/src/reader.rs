@@ -1144,13 +1144,37 @@ impl RawFileReader {
             return Ok(peaks);
         }
         // A full-scan record ends in its footer, which is what the index points to.
-        crate::scan_data::read_scan_footer_v66(
+        let footer = crate::scan_data::read_scan_footer_v66(
             source,
             self.data_addr,
             entry.offset,
             entry.low_mz,
             entry.high_mz,
+        )?;
+        if !footer.is_empty() {
+            return Ok(footer);
+        }
+        // A TSQ run written with the older layout: the index holds the end of the record, which ends in `(m/z, intensity)` pairs.
+        Ok(
+            read_flat_peaks(source, self.data_addr, entry.offset, entry.data_size)
+                .unwrap_or_default(),
         )
+    }
+
+    /// The filter of an SRM scan from its own event: `+ c NSI SRM ms2 528.296 [343.207-343.209, ...]`; `None` without a reaction and ranges.
+    fn srm_event_filter(&self, idx: usize) -> Option<String> {
+        let event = self.scan_events.get(idx)?;
+        if event.preamble.scan_type() != Some(crate::ScanType::Srm) {
+            return None;
+        }
+        let q1 = event.reactions.first()?.precursor_mz;
+        let ranges: Vec<String> = event
+            .fraction_collectors
+            .iter()
+            .map(|f| format!("{:.3}-{:.3}", f.low_mz, f.high_mz))
+            .collect();
+        let ion = event.preamble.ionization().map_or("ESI", |i| i.as_str());
+        Some(format!("+ c {ion} SRM ms2 {q1:.3} [{}]", ranges.join(", ")))
     }
 
     /// Read a single scan's peaks using whichever decoder matches this file's
@@ -1280,8 +1304,13 @@ impl RawFileReader {
         // SRM files have no scan events; build the filter string from
         // the pre-loaded Q1 and Q3 window maps.
         if self.flat_peaks {
-            let q1 = self.srm_q1_by_event.get(&entry.scan_event).copied()?;
-            let windows = self.srm_q3_windows.get(&entry.scan_event)?;
+            let (Some(&q1), Some(windows)) = (
+                self.srm_q1_by_event.get(&entry.scan_event),
+                self.srm_q3_windows.get(&entry.scan_event),
+            ) else {
+                // A TSQ run whose events are one per scan (no event class): the event itself holds Q1 and the product ranges.
+                return self.srm_event_filter(idx);
+            };
             // v63 (TSQ Quantum/Vantage): NSI ionization, @cid{CE:.2} after Q1.
             // v66 (TSQ Quantiva/Altis): ESI ionization, no CE in filter.
             use crate::scan_format::ScanDataFormat;
@@ -1528,11 +1557,7 @@ impl<'a> ScanParams<'a> {
             .or_else(|| self.0.get_f64("MS2 Isolation M/Z:"))
             .or_else(|| self.0.get_f64("Isolation Center M/Z:"))
             .or_else(|| self.0.get_f64("Precursor M/Z:"))?;
-        if v > 0.0 {
-            Some(v)
-        } else {
-            None
-        }
+        if v > 0.0 { Some(v) } else { None }
     }
 
     /// Number of micro-scans averaged into this scan.
