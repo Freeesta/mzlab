@@ -188,6 +188,21 @@ try:
             pg.click('[data-tab="plan"]'); assert '"format": "mzflow/2"' in pg.inner_text(".flx-plan")
             pg.click('[data-tab="list"]'); attendi(pg, "document.querySelectorAll('.fl-card').length >= 3"); pg.click('[data-tab="canvas"]')
         step("canvas: the plan view and the list view show the same plan", sheets)
+        def desktop_run():
+            # the app is faked: the page asks the native route flow/run and lists what each step did from the prov/1 it answers
+            pg.evaluate("""() => { window.MZLAB_DESKTOP = true; window.__runs = 0; const real = window.fetch.bind(window);
+              window.fetch = async (u, o) => { if (!String(u).includes('/rpc')) return real(u, o);
+                const plan = JSON.parse(JSON.parse(o.body).plan); window.__runs++;
+                if (window.__runs === 1) return new Response(JSON.stringify({ error_key: 'err.flow.input.missing', params: { input: 'a.mzML' } }), { status: 400 });
+                const activity = {}; plan.steps.forEach(x => { activity[x.id] = { step: x.step, ms: 1200, used: [], generated: [] }; });
+                return new Response(JSON.stringify({ prov: JSON.stringify({ schema: 'prov/1', activity }), dir: '/tmp/mzlab-flow/out' }), { status: 200 }); }; }""")
+            pg.click('button[aria-label="Export the plan and run it"]')
+            slots = ".fl-slots li"; assert pg.locator(slots).count() >= 3 and "waiting" in pg.inner_text(slots + ":first-child")
+            go = 'button[aria-label="Run the plan on this computer"]'
+            pg.click(go); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.includes('Data tab')")
+            pg.click(go); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.startsWith('Finished')")
+            assert "done in 1.2 s" in pg.inner_text(slots + ":first-child") and "/tmp/mzlab-flow/out" in pg.inner_text(".fl-cli .fl-note")
+        step("desktop: «Run on this computer» says which file to open first, then lists each step as done", desktop_run)
         b.close()
 finally:
     srv.terminate()

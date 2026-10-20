@@ -1,7 +1,7 @@
 // @ts-check
 // Flow (administrator mode): the shell around the canvas. Top bar (templates, add an analysis, Simple | Advanced, undo, fit, checklist, run), the three views (Canvas,
 // List, Plan) over ONE plan, the inspector, the empty-state template cards and small menus. The List view is the editor of F.mount (also the accessible alternative to
-// the canvas); both draw the same plan and redraw on `flow:changed`. Running goes through F.runners: only the command line exists today.
+// the canvas); both draw the same plan and redraw on `flow:changed`. Running goes through F.runners: the command line, and «This computer» in the desktop app (flow-desktop.js).
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
@@ -105,8 +105,9 @@
     const showRun = () => {
       const r = F.runners.cli.run(S);
       planView.hidden = false;
-      const box = el("div", { class: "fl-cli" }, el("strong", { text: r.title }), el("p", { text: "Flow does not run the chain yet. Download the plan, put it in a folder with your files and run it with the native runner:" }), el("code", { text: r.text }),
+      const box = el("div", { class: "fl-cli" }, el("strong", { text: r.title }), el("p", { text: F.runners.desktop.available() ? "Run it here, or download the plan and use the command line:" : "On the web Flow exports the plan. Download it, put it in a folder with your files and run it with the native runner:" }), el("code", { text: r.text }),
         el("div", { class: "fl-meta" }, btn("export", "Download the plan", S.download, "Download plan"), btn("copy", "Copy the command", () => navigator.clipboard && navigator.clipboard.writeText(r.text), "Copy command"), btn("x", "Close", () => box.remove(), "Close")));
+      if (F.runners.desktop.available()) box.append(F.desktopRunUi(S));
       root.querySelectorAll(".fl-cli").forEach(n => n.remove()); bar.after(box);
     };
     const open = btn("import", "Open a plan (mzflow/2)", () => { const f = listHost.querySelector("#fl-file"); if (f) /** @type {HTMLElement} */ (f).click(); }, "Open");
