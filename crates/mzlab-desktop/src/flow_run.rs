@@ -27,8 +27,13 @@ impl State {
     /// `{name}` -> the text of the output file `name` of the last run (a plain file name, at most 4 MB).
     pub(crate) fn flow_read(&self, p: &Value) -> Result<Answer> {
         let name = crate::store::clean(p["name"].as_str().unwrap_or(""))?;
-        let path = std::env::temp_dir().join("mzlab-flow").join("out").join(name);
-        let size = std::fs::metadata(&path).map_err(|e| crate::rpc::io_error(&e))?.len();
+        let path = std::env::temp_dir()
+            .join("mzlab-flow")
+            .join("out")
+            .join(name);
+        let size = std::fs::metadata(&path)
+            .map_err(|e| crate::rpc::io_error(&e))?
+            .len();
         if size > READ_MAX {
             return Err(Error::new("err.flow.read.big").with("name", name));
         }
