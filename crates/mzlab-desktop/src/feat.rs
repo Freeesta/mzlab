@@ -410,12 +410,15 @@ fn num(v: &Value) -> f64 {
 }
 
 /// The results of the steps, by the name of the file (the `.mzfeatf`) or one only (the rest).
+/// A held run set aside: its `.mzfeat` and its `.mzfeatf` by file name.
+pub(crate) type Kept = (Vec<u8>, HashMap<String, Vec<u8>>);
+
 #[derive(Default)]
 pub struct FeatState {
     pub(crate) files: HashMap<String, Vec<u8>>,
     pub(crate) table: Option<Vec<u8>>,
     /// the table and the files of a run set aside while the run of the other polarity is done (`feat/polpair`)
-    pub(crate) keep: Option<(Vec<u8>, HashMap<String, Vec<u8>>)>,
+    pub(crate) keep: Option<Kept>,
     pub(crate) hypo: Option<HypoRun>,
     pub(crate) dig: Option<Dig>,
     /// the Dig of a low-resolution series (`finder/lr_dig`); `dig` and `lr` are never both held, and `lr` holds the names of its columns
