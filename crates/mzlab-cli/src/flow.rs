@@ -16,6 +16,8 @@ use mzlab_core::flow::{
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
+use crate::flow_match::Named;
+
 fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)
 }
@@ -166,15 +168,42 @@ fn one_input(r: &FileRunner, job: &Job, port: &str) -> Result<PathBuf> {
         .ok_or_else(|| Error::new("err.flow.port.missing").with("port", port))
 }
 
-fn match_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let text = crate::flow_match::match_text(
-        job,
-        &one_input(r, job, "query")?,
-        &one_input(r, job, "library")?,
-    )?;
+/// A file read whole: its name and its bytes (the executors take names and bytes, never paths).
+type Loaded = (String, Vec<u8>);
+
+fn load(path: PathBuf) -> Result<Loaded> {
+    let name = path
+        .file_name()
+        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
+    Ok((name, std::fs::read(&path).map_err(io)?))
+}
+
+fn read_one(r: &FileRunner, job: &Job, port: &str) -> Result<Loaded> {
+    load(one_input(r, job, port)?)
+}
+
+fn read_all(r: &FileRunner, job: &Job, port: &str) -> Result<Vec<Loaded>> {
+    all_inputs(r, job, port).into_iter().map(load).collect()
+}
+
+fn named(v: &[Loaded]) -> Vec<Named<'_>> {
+    v.iter().map(|f| (f.0.as_str(), f.1.as_slice())).collect()
+}
+
+fn blobs(v: &[Loaded]) -> Vec<&[u8]> {
+    v.iter().map(|f| f.1.as_slice()).collect()
+}
+
+fn write_made(r: &FileRunner, job: &Job, text: String, ty: DataType) -> Result<Artifact> {
     let out = r.work.join(format!("{}.json", job.instance.id));
     std::fs::write(&out, text).map_err(io)?;
-    r.keep(out, DataType::Candidates)
+    r.keep(out, ty)
+}
+
+fn match_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let (query, library) = (read_one(r, job, "query")?, read_one(r, job, "library")?);
+    let text = crate::flow_match::match_text(job, (&query.0, &query.1), (&library.0, &library.1))?;
+    write_made(r, job, text, DataType::Candidates)
 }
 
 fn all_inputs(r: &FileRunner, job: &Job, port: &str) -> Vec<PathBuf> {
@@ -188,31 +217,22 @@ fn all_inputs(r: &FileRunner, job: &Job, port: &str) -> Vec<PathBuf> {
 
 fn formula_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let text = if job.step.id == "formula.ms1" {
-        crate::flow_formula::ms1_text(
-            job,
-            &one_input(r, job, "features")?,
-            &all_inputs(r, job, "index"),
-        )?
+        let (table, index) = (read_one(r, job, "features")?, read_all(r, job, "index")?);
+        crate::flow_formula::ms1_text(job, &table.1, &named(&index))?
     } else {
-        crate::flow_formula::ms2_text(
-            job,
-            &one_input(r, job, "spectra")?,
-            &all_inputs(r, job, "formulas"),
-        )?
+        let (spectra, formulas) = (read_one(r, job, "spectra")?, read_all(r, job, "formulas")?);
+        crate::flow_formula::ms2_text(job, (&spectra.0, &spectra.1), &blobs(&formulas))?
     };
-    let out = r.work.join(format!("{}.json", job.instance.id));
-    std::fs::write(&out, text).map_err(io)?;
-    r.keep(out, DataType::Formulas)
+    write_made(r, job, text, DataType::Formulas)
 }
 
 fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let text = crate::flow_level::level_text(
-        &all_inputs(r, job, "candidates"),
-        &all_inputs(r, job, "formulas"),
-    )?;
-    let out = r.work.join(format!("{}.json", job.instance.id));
-    std::fs::write(&out, text).map_err(io)?;
-    r.keep(out, DataType::Annot)
+    let (hits, formulas) = (
+        read_all(r, job, "candidates")?,
+        read_all(r, job, "formulas")?,
+    );
+    let text = crate::flow_level::level_text(&blobs(&hits), &blobs(&formulas))?;
+    write_made(r, job, text, DataType::Annot)
 }
 
 impl Runner for FileRunner {

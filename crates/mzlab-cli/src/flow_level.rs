@@ -2,16 +2,10 @@
 //! (`formulas/1`). The rule is `mzlab/web/livelli.js` (`assess`) read from the same data (`mzlab-feat/data/livelli-1.json`, profile `mzlab`), so the
 //! thresholds are never typed twice; `tests/livelli_casi.json` runs the same cases through both. Level 2b is never given: the chemist decides it.
 
-use std::path::{Path, PathBuf};
-
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, round, Out, Value};
 
 const DATA: &str = include_str!("../../mzlab-feat/data/livelli-1.json");
-
-fn io(e: std::io::Error) -> Error {
-    Error::new("err.flow.io").with("detail", e)
-}
 
 /// A hit of a library on one query: the fields of `assess` (`ent` and `cos` are scores of different algorithms and are never mixed).
 #[derive(Clone, Debug, Default)]
@@ -244,19 +238,15 @@ fn by_best(p: &Value, e: &Evidence, list: &[Cand], score: &str, res: &mut Assess
     provisional
 }
 
-fn read(path: &Path) -> Result<Value> {
-    json::parse(&std::fs::read(path).map_err(io)?)
-}
-
 fn text(v: &Value, k: &str) -> String {
     v.get(k).and_then(Value::str).unwrap_or("").to_string()
 }
 
 /// The evidence of every query named by a `candidates/1` file, by query id in file order; replicate spectra whose best hit is the same entry count as scans.
-fn from_hits(files: &[PathBuf]) -> Result<Vec<(String, Evidence)>> {
+fn from_hits(files: &[&[u8]]) -> Result<Vec<(String, Evidence)>> {
     let mut all: Vec<(String, Evidence)> = Vec::new();
     for f in files {
-        let doc = read(f)?;
+        let doc = json::parse(f)?;
         for h in doc.get("hits").map(Value::arr).unwrap_or(&[]) {
             let id = text(h, "query");
             let n = match all.iter().position(|(q, _)| *q == id) {
@@ -294,10 +284,10 @@ fn from_hits(files: &[PathBuf]) -> Result<Vec<(String, Evidence)>> {
 }
 
 /// How many candidate formulas each feature or spectrum has in a `formulas/1` file.
-fn formula_counts(files: &[PathBuf]) -> Result<Vec<(String, usize)>> {
+fn formula_counts(files: &[&[u8]]) -> Result<Vec<(String, usize)>> {
     let mut out: Vec<(String, usize)> = Vec::new();
     for f in files {
-        let doc = read(f)?;
+        let doc = json::parse(f)?;
         let rows = doc
             .get("features")
             .or_else(|| doc.get("spectra"))
@@ -334,7 +324,7 @@ fn scans_of(rows: &[(String, Evidence)], e: &Evidence) -> f64 {
 }
 
 /// `annot.level`: one row per query of the hits and per feature or spectrum of the formulas, with the level, why and the gates of the best hit.
-pub fn level_text(hits: &[PathBuf], formulas: &[PathBuf]) -> Result<String> {
+pub fn level_text(hits: &[&[u8]], formulas: &[&[u8]]) -> Result<String> {
     let mut rows = from_hits(hits)?;
     let counts = formula_counts(formulas)?;
     for (id, _) in &counts {
