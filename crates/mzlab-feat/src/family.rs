@@ -36,7 +36,18 @@ pub use traces::Traces;
 /// Version of the rules of the families (the proofs have their own, `PROOF_VERSION`).
 pub const FAMILY_VERSION: u32 = 1;
 
-#[derive(Debug, Clone)]
+/// How a dependent is told from its parent when both ends could depend on the other.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Orient {
+    /// The dependent must be at least `parent_factor` times weaker than its parent.
+    #[default]
+    Factor,
+    /// A definitive arc (an adduct step with co-elution and correlation, or an in-source fragment found in the MS2 of its parent) needs no factor: the
+    /// proof of the arc is what says who depends on whom. An arc that two readings explain keeps the factor.
+    Evidence,
+}
+
+#[derive(Clone)]
 pub struct FamParams {
     pub rules: Rules,
     /// Shape correlation needed to join two peaks.
@@ -45,6 +56,22 @@ pub struct FamParams {
     pub trace_ppm: f64,
     /// An in-source fragment needs a parent at least this many times higher.
     pub parent_factor: f32,
+    pub orient: Orient,
+}
+
+/// Same text as a derived `Debug` while `orient` is the default, so that the fingerprints of the recipes (which hash this text) do not move.
+impl std::fmt::Debug for FamParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut d = f.debug_struct("FamParams");
+        d.field("rules", &self.rules)
+            .field("r_min", &self.r_min)
+            .field("trace_ppm", &self.trace_ppm)
+            .field("parent_factor", &self.parent_factor);
+        if self.orient != Orient::Factor {
+            d.field("orient", &self.orient);
+        }
+        d.finish()
+    }
 }
 
 impl Default for FamParams {
@@ -54,6 +81,7 @@ impl Default for FamParams {
             r_min: 0.9,
             trace_ppm: 6.0,
             parent_factor: 2.0,
+            orient: Orient::Factor,
         }
     }
 }
@@ -108,6 +136,12 @@ impl Families {
         f.family_id = self.family_id.clone();
         f.role = self.role.clone();
         f.alt = self.alt.clone();
+    }
+
+    /// Whether `arc` is used only because `Orient::Evidence` lets its proof stand in for the factor (always false with `Orient::Factor`).
+    pub fn by_evidence(&self, f: &FileFeatures, arc: &Arc) -> bool {
+        self.params.orient == Orient::Evidence
+            && roles::by_evidence(f, arc, self.params.parent_factor)
     }
 
     /// Number of families (rows with `ROLE_M`).
@@ -196,7 +230,7 @@ pub fn build_families(
             });
         }
     }
-    let a = roles::assign(f, &arcs, p.parent_factor)?;
+    let a = roles::assign(f, &arcs, p.parent_factor, p.orient == Orient::Evidence)?;
     let alternatives = alternatives(f, &arcs, &a.family, &t);
     Ok(Families {
         version: FAMILY_VERSION,
