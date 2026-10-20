@@ -54,3 +54,14 @@ def test_no_text_of_the_private_libro_in_this_repository():
         text = re.sub(r"\s+", " ", p.read_text(encoding="utf-8", errors="replace"))
         hits += [f"{rel}: {ln[:60]}…" for ln in lines if ln in text]
     assert not hits, "text of the private Libro found in the public repository:\n" + "\n".join(hits[:10])
+
+
+def test_editor_bundle_is_loaded_only_by_the_editor_page():
+    """The 1.7 MB bundle must never be reachable from the public pages (Teoria, app): only libro/editor.html names it."""
+    users = []
+    for p in WEB.rglob("*"):
+        if not p.is_file() or "vendor/libro" in p.as_posix() or p.suffix not in {".html", ".js", ".css", ".json"}:
+            continue
+        if "vendor/libro" in p.read_text(encoding="utf-8", errors="replace"):
+            users.append(p.relative_to(WEB).as_posix())
+    assert users == ["libro/editor.html"], users
