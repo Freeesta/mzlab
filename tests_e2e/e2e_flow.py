@@ -96,7 +96,7 @@ try:
             # the here-doc is the plan itself: the shell rewrites the same bytes the export gave
             body = text.split("<<'MZFLOW'\n", 1)[1].split("\nMZFLOW\n", 1)[0]
             with pg.expect_download() as d: pg.click('button[aria-label="Export the plan as mzflow/2 JSON"]')
-            assert json.loads(body) == json.loads(Path(d.value.path()).read_text())
+            got = json.loads(Path(d.value.path()).read_text()); assert json.loads(body) == got, (body[:400], json.dumps(got)[:400])
         step("Copy command shows the shell text built by the engine, with the plan inside", copy_command)
         def parameters():
             pg.fill("#fl-p-detect-floor", "5000"); pg.keyboard.press("Tab")
