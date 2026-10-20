@@ -423,6 +423,7 @@ fn extra_inerte(sp: &Spectrum, extra: &SpectrumExtra) -> bool {
         return false;
     }
     // precursors, maker totals and cvParams are read from the text the writer gives them
+    #[cfg(feature = "precursori")]
     if !extra.precursors.is_empty()
         || extra.tic.is_some()
         || extra.base_peak.is_some()

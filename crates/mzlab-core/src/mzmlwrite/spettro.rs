@@ -1,7 +1,7 @@
 //! What a spectrum header carries beyond the points: the precursor chain (`<precursorList>`) and the cvParams of `<spectrum>` and `<scan>`.
 //! Used by `spectrum_head` and filled by the readers through `SpectrumExtra` (`Lettore::extra_mzml`, `Lettore::extra_scansione`).
 
-use super::{cv, esc, mz_cv};
+use super::{cv, esc, mz_cv, unit_cv_str};
 
 /// A cvParam with an optional unit: accession, name, value and (accession, name) of the unit (`UO:` units get `unitCvRef="UO"`, the others `MS`).
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -23,19 +23,22 @@ impl CvPar {
     }
 
     pub(super) fn xml(&self) -> String {
+        let value = esc(&self.value);
         match &self.unit {
-            Some((ua, un)) => format!(
-                "<cvParam cvRef=\"MS\" accession=\"{}\" name=\"{}\" value=\"{}\" unitCvRef=\"{}\" unitAccession=\"{}\" unitName=\"{}\"/>",
-                esc(&self.accession),
-                esc(&self.name),
-                esc(&self.value),
-                if ua.starts_with("UO:") { "UO" } else { "MS" },
-                esc(ua),
-                esc(un)
-            ),
-            None => cv(&self.accession, &esc(&self.name), esc(&self.value)),
+            Some((ua, un)) => unit_cv_str(&self.accession, &esc(&self.name), &value, if ua.starts_with("UO:") { "UO" } else { "MS" }, ua, un),
+            None => cv(&self.accession, &esc(&self.name), value),
         }
     }
+}
+
+/// The cvParams of `list` in order (nothing without the `precursori` feature).
+#[cfg(feature = "precursori")]
+pub(super) fn params_xml(list: &[CvPar]) -> String {
+    let mut s = String::new();
+    for p in list {
+        s += &p.xml();
+    }
+    s
 }
 
 /// One precursor of a spectrum: where the ion was isolated, which ion it was, and how it was fragmented.
@@ -84,16 +87,22 @@ fn energy_term(accession: &str) -> Option<(&'static str, &'static str, &'static 
 }
 
 /// The `<precursorList>` of `list` (empty for none).
+#[cfg(feature = "precursori")]
 pub(super) fn precursor_list(list: &[Precursore]) -> String {
     if list.is_empty() {
         return String::new();
     }
-    let mut s = format!("<precursorList count=\"{}\">", list.len());
+    let mut s = String::from("<precursorList count=\"");
+    s += &list.len().to_string();
+    s += "\">";
     for p in list {
-        match &p.spectrum_ref {
-            Some(r) => s += &format!("<precursor spectrumRef=\"{}\">", esc(r)),
-            None => s += "<precursor>",
+        s += "<precursor";
+        if let Some(r) = &p.spectrum_ref {
+            s += " spectrumRef=\"";
+            s += &esc(r);
+            s += "\"";
         }
+        s += ">";
         if p.iso_target.is_some() || p.iso_lower.is_some() || p.iso_upper.is_some() {
             s += "<isolationWindow>";
             if let Some(v) = p.iso_target {
@@ -111,7 +120,7 @@ pub(super) fn precursor_list(list: &[Precursore]) -> String {
             s += "<selectedIonList count=\"1\"><selectedIon>";
             s += &mz_cv("MS:1000744", "selected ion m/z", mz);
             if let Some(z) = p.charge {
-                s += &cv("MS:1000041", "charge state", z);
+                s += &cv("MS:1000041", "charge state", z.to_string());
             }
             if let Some(i) = p.intensity {
                 s += &cv("MS:1000042", "peak intensity", i);
@@ -124,7 +133,7 @@ pub(super) fn precursor_list(list: &[Precursore]) -> String {
         }
         if let Some((a, v)) = &p.energy {
             if let Some((n, ua, un)) = energy_term(a) {
-                s += &CvPar::new(a, n, v).with_unit(ua, un).xml();
+                s += &unit_cv_str(a, n, &v.to_string(), "UO", ua, un);
             }
         }
         s += "</activation></precursor>";

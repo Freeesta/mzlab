@@ -108,10 +108,7 @@ impl LettoreMzxml {
             wide: p.a_64_bit.then(|| p.intensita.clone()),
             mz: p.mz,
         };
-        if self.noti.is_empty() {
-            self.noti = self.indice.iter().map(|v| v.id.clone()).collect();
-        }
-        Ok((s, extra_di(&t, &self.noti)))
+        Ok((s, extra_di(&t, &self.indice)))
     }
 }
 
@@ -329,8 +326,6 @@ pub struct LettoreMzxml {
     sha1: Option<Option<String>>,
     /// The extra of the spectrum `scansione` read last (the writer asks for it right after).
     ultima: RefCell<Option<(usize, SpectrumExtra)>>,
-    /// The ids of the scans, built when the first scan of an MSn level is written (a `spectrumRef` must name a scan of the file).
-    noti: std::collections::HashSet<String>,
 }
 
 fn riconosci(fs: &mut FileSet) -> Fiducia {
@@ -401,9 +396,16 @@ fn voce(k: usize, r: Riga, t: &Testa) -> Result<VoceScansione> {
     })
 }
 
+/// Whether the file has the scan `id` (`scan=N`): the scans come in ascending number, so a bisection finds it.
+fn nel_file(indice: &[VoceScansione], id: &str) -> bool {
+    let n = |s: &str| s.strip_prefix("scan=").and_then(|x| x.parse::<u64>().ok());
+    let Some(want) = n(id) else { return false };
+    indice.binary_search_by_key(&want, |v| n(&v.id).unwrap_or(0)).is_ok()
+}
+
 /// The precursors of a scan as the mzML has them, outermost first: the m/z, charge, intensity, isolation width and activation of each `precursorMz`
 /// and the collision energy of the scan (on the last one). The parent scan is named only if the file has it.
-fn precursori_di(t: &Testa, noti: &std::collections::HashSet<String>) -> Vec<Precursore> {
+fn precursori_di(t: &Testa, indice: &[VoceScansione]) -> Vec<Precursore> {
     let mut v: Vec<Precursore> = t
         .precursori
         .iter()
@@ -422,7 +424,7 @@ fn precursori_di(t: &Testa, noti: &std::collections::HashSet<String>) -> Vec<Pre
                     .map(|(a, n)| vec![(a.to_string(), n.to_string())])
                     .unwrap_or_default(),
                 energy: None,
-                spectrum_ref: noti.contains(&radice).then_some(radice),
+                spectrum_ref: nel_file(indice, &radice).then_some(radice),
             })
         })
         .collect();
@@ -433,12 +435,12 @@ fn precursori_di(t: &Testa, noti: &std::collections::HashSet<String>) -> Vec<Pre
 }
 
 /// The `userParam`s, the window and the precursors of a scan for the mzML we write.
-fn extra_di(t: &Testa, noti: &std::collections::HashSet<String>) -> SpectrumExtra {
+fn extra_di(t: &Testa, indice: &[VoceScansione]) -> SpectrumExtra {
     let mut e = SpectrumExtra {
         sim: attr(t.scan, "scanType").eq_ignore_ascii_case("SIM"),
         observed: numero(t.scan, "lowMz").is_some() && numero(t.scan, "highMz").is_some(),
         window: numero(t.scan, "startMz").zip(numero(t.scan, "endMz")),
-        precursors: precursori_di(t, noti),
+        precursors: precursori_di(t, indice),
         ..SpectrumExtra::default()
     };
     let mut aggiungi = |g: Tag, nomi: &[&str]| {
@@ -506,7 +508,6 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         cabina: Cabina::default(),
         sha1: None,
         ultima: RefCell::new(None),
-        noti: Default::default(),
     };
     l.leggi_testa()?;
     l.costruisci_indice()?;

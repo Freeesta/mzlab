@@ -252,12 +252,17 @@ pub struct SpectrumExtra {
     /// userParams of the spectrum: (name, value).
     pub params: Vec<(String, String)>,
     /// The precursors, in order (the chain of an MSn scan is one per level, outermost first). Empty: `Spectrum::precursor` is written as target and selected ion.
+    #[cfg(feature = "precursori")]
     pub precursors: Vec<Precursore>,
     /// `MS:1000285` total ion current and `MS:1000504` / `MS:1000505` base peak (m/z, intensity) as the maker reports them; `None`: summed from the points.
+    #[cfg(feature = "precursori")]
     pub tic: Option<f64>,
+    #[cfg(feature = "precursori")]
     pub base_peak: Option<(f64, f64)>,
     /// cvParams of `<scan>` (ion injection time, FAIMS voltage, ...) and of `<spectrum>` (any other term with an accession).
+    #[cfg(feature = "precursori")]
     pub scan_params: Vec<CvPar>,
+    #[cfg(feature = "precursori")]
     pub cv_params: Vec<CvPar>,
 }
 
@@ -387,13 +392,22 @@ impl<W: Write> MzmlWriter<W> {
     }
 }
 
+/// Total ion current and base peak (m/z, intensity) summed from the points; the `precursori` build takes the maker's values where the reader gives them.
+fn totals(sp: &Spectrum, extra: &SpectrumExtra) -> (f64, Option<(f64, f64)>) {
+    let tic: f64 = (0..sp.mz.len()).map(|i| sp.intensity_f64(i)).sum();
+    let base = (0..sp.mz.len()).max_by(|&a, &b| sp.intensity_f64(a).total_cmp(&sp.intensity_f64(b))).map(|b| (sp.mz[b], sp.intensity_f64(b)));
+    #[cfg(feature = "precursori")]
+    return (extra.tic.unwrap_or(tic), extra.base_peak.or(base));
+    #[cfg(not(feature = "precursori"))]
+    {
+        let _ = extra;
+        (tic, base)
+    }
+}
+
 /// The text of a spectrum up to its arrays (`<spectrum ...>` and every header element before `<binaryDataArrayList`): what `scantable` reads.
 pub(crate) fn spectrum_head(index: usize, sp: &Spectrum, extra: &SpectrumExtra) -> String {
-    let tic = extra.tic.unwrap_or_else(|| (0..sp.mz.len()).map(|i| sp.intensity_f64(i)).sum());
-    let base = extra.base_peak.or_else(|| {
-        let b = (0..sp.mz.len()).max_by(|&a, &b| sp.intensity_f64(a).total_cmp(&sp.intensity_f64(b)))?;
-        Some((sp.mz[b], sp.intensity_f64(b)))
-    });
+    let (tic, base) = totals(sp, extra);
     let mut s = format!("<spectrum index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">", index, esc(&sp.id), sp.mz.len());
     s += &cv("MS:1000511", "ms level", sp.level);
     s += &if sp.level <= 1 { cv("MS:1000579", "MS1 spectrum", "") } else { cv("MS:1000580", "MSn spectrum", "") };
@@ -415,16 +429,21 @@ pub(crate) fn spectrum_head(index: usize, sp: &Spectrum, extra: &SpectrumExtra) 
         s += &mz_cv("MS:1000528", "lowest observed m/z", lo);
         s += &mz_cv("MS:1000527", "highest observed m/z", hi);
     }
-    s += &extra.cv_params.iter().map(CvPar::xml).collect::<String>();
+    #[cfg(feature = "precursori")]
+    {
+        s += &params_xml(&extra.cv_params);
+    }
     for (k, v) in &extra.params { #[cfg(feature = "sciex")] if let Some(acc) = k.strip_prefix("cv:") { s += &cv(acc, v, ""); continue; }
         s += &format!("<userParam name=\"{}\" value=\"{}\"/>", esc(k), esc(v));
     }
     // The filter string is a scan-level term: the CV only allows it under <scan>.
     let filter = if sp.filter.is_empty() { String::new() } else { cv("MS:1000512", "filter string", esc(&sp.filter)) };
-    s += &format!("<scanList count=\"1\">{}<scan><cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>{}{}{}</scan></scanList>", cv("MS:1000795", "no combination", ""), sp.rt, filter, extra.scan_params.iter().map(CvPar::xml).collect::<String>(), window_xml(extra.window));
+    s += &format!("<scanList count=\"1\">{}<scan><cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>{}{}{}</scan></scanList>", cv("MS:1000795", "no combination", ""), sp.rt, filter, scan_xml(extra), window_xml(extra.window));
+    #[cfg(feature = "precursori")]
     if !extra.precursors.is_empty() {
-        s += &precursor_list(&extra.precursors);
-    } else if let Some(p) = sp.precursor {
+        return s + &precursor_list(&extra.precursors);
+    }
+    if let Some(p) = sp.precursor {
         s += &format!("<precursorList count=\"1\"><precursor><isolationWindow>{}</isolationWindow><selectedIonList count=\"1\"><selectedIon>{}</selectedIon></selectedIonList></precursor></precursorList>", mz_cv("MS:1000827", "isolation window target m/z", p), mz_cv("MS:1000744", "selected ion m/z", p));
     }
     s
@@ -457,8 +476,20 @@ fn mz_cv(acc: &str, name: &str, value: f64) -> String {
     unit_cv(acc, name, value, "MS:1000040", "m/z")
 }
 
+#[cfg(feature = "precursori")]
+fn unit_cv(acc: &str, name: &str, value: f64, unit_acc: &str, unit_name: &str) -> String {
+    unit_cv_str(acc, name, &value.to_string(), "MS", unit_acc, unit_name)
+}
+
+#[cfg(not(feature = "precursori"))]
 fn unit_cv(acc: &str, name: &str, value: f64, unit_acc: &str, unit_name: &str) -> String {
     format!("<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\" unitCvRef=\"MS\" unitAccession=\"{unit_acc}\" unitName=\"{unit_name}\"/>")
+}
+
+#[cfg(feature = "precursori")]
+/// A cvParam with a unit whose value is already text; `unit_ref` is the CV that defines the unit (`MS` or `UO`).
+fn unit_cv_str(acc: &str, name: &str, value: &str, unit_ref: &str, unit_acc: &str, unit_name: &str) -> String {
+    ["<cvParam cvRef=\"MS\" accession=\"", acc, "\" name=\"", name, "\" value=\"", value, "\" unitCvRef=\"", unit_ref, "\" unitAccession=\"", unit_acc, "\" unitName=\"", unit_name, "\"/>"].concat()
 }
 
 /// The `sourceFileList` of the header; the schema wants at least one child, so no source means no list.
@@ -489,9 +520,23 @@ fn component_list(h: &Header) -> String {
     s + "</componentList>"
 }
 
+#[cfg(feature = "precursori")]
 mod spettro;
+#[cfg(feature = "precursori")]
 pub use spettro::{attivazione_da_nome, CvPar, Precursore};
-use spettro::precursor_list;
+#[cfg(feature = "precursori")]
+use spettro::{params_xml, precursor_list};
+
+/// The cvParams of `<scan>` the reader gives besides the start time and the filter.
+fn scan_xml(extra: &SpectrumExtra) -> String {
+    #[cfg(feature = "precursori")]
+    return params_xml(&extra.scan_params);
+    #[cfg(not(feature = "precursori"))]
+    {
+        let _ = extra;
+        String::new()
+    }
+}
 #[cfg(not(target_family = "wasm"))]
 mod indice;
 #[cfg(target_family = "wasm")]
@@ -501,7 +546,7 @@ mod indice;
 mod tests;
 #[cfg(test)]
 mod tests_indice;
-#[cfg(test)]
+#[cfg(all(test, feature = "precursori"))]
 mod tests_precursori;
 #[cfg(test)]
 mod tests_xsd;
