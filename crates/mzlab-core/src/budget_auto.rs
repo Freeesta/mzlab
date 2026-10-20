@@ -125,7 +125,6 @@ pub fn manual(m: &Machine, mb: f64) -> Choice {
 }
 
 /// RAM of this computer in MB, 0 when it cannot be read (no `/proc/meminfo` and no `sysctl`: Windows, WASI).
-#[cfg(not(target_arch = "wasm32"))]
 fn ram_mb() -> f64 {
     if let Ok(t) = std::fs::read_to_string("/proc/meminfo") {
         let kb = t.lines().find_map(|l| l.strip_prefix("MemTotal:"));
@@ -143,7 +142,6 @@ fn ram_mb() -> f64 {
 }
 
 /// The automatic budget in MB of a native process (desktop app, `mzlab-cli`) on this computer.
-#[cfg(not(target_arch = "wasm32"))]
 pub fn native_auto_mb() -> f64 {
     let cores = std::thread::available_parallelism().map_or(0, |n| n.get() as u32);
     let m = Machine {
