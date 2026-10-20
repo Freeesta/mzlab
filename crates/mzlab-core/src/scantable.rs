@@ -498,6 +498,7 @@ fn find(h: &[u8], pat: &[u8]) -> Option<usize> {
     None
 }
 
+mod inerte;
 mod json;
 mod rows;
 

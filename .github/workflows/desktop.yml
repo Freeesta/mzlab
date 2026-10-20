@@ -15,8 +15,10 @@ on:
 permissions:
   contents: read
 
+# The event is part of the group: when release.yml calls this workflow github.event_name is the caller's (workflow_dispatch or tag push),
+# so a push to main can no longer displace the release's installers from the single waiting slot of the group.
 concurrency:
-  group: desktop-${{ github.ref }}
+  group: desktop-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
 
 jobs:
