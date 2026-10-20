@@ -29,7 +29,7 @@
     const prov = JSON.parse(out.prov), ent = prov.entity || {};
     const steps = Object.entries(prov.activity || {}).map(([id, a]) => { const x = /** @type {any} */ (a);
       const made = (x.generated || []).map((/** @type {string} */ k) => ({ type: ent[k] && ent[k].type, label: ent[k] && ent[k].label })).filter((/** @type {any} */ m) => m.type && m.label);
-      return { id, ms: x.ms, made, error: x.error ? { key: x.error.error_key, params: x.error.params } : null }; });
+      return { id, ms: x.ms, cached: !!x.cached, made, error: x.error ? { key: x.error.error_key, params: x.error.params } : null }; });
     return { dir: out.dir, steps, excluded, warns };
   };
   /** the text of a file the last run wrote @param {string} name */
@@ -60,9 +60,10 @@
         list.textContent = ""; S.results = {};
         for (const s of res.steps) S.results[s.id] = s.made.map((/** @type {any} */ m) => ({ ...m, text: () => read(m.label), load: /\.mzfeat$/i.test(m.label) ? () => readFile(m.label) : undefined }));
         if (S.redraw) S.redraw();
-        for (const inst of S.plan.steps) { const s = /** @type {any} */ (by.get(inst.id)); list.append(slot(inst, !s ? "skipped" : s.error ? F.message({ key: s.error.key, params: s.error.params }) : `done in ${(s.ms / 1000).toFixed(1)} s`)); }
+        for (const inst of S.plan.steps) { const s = /** @type {any} */ (by.get(inst.id)); list.append(slot(inst, !s ? "skipped" : s.error ? F.message({ key: s.error.key, params: s.error.params }) : s.cached ? "reused (nothing changed)" : `done in ${(s.ms / 1000).toFixed(1)} s`)); }
+        const reused = res.steps.filter((/** @type {any} */ s) => s.cached).length, made = res.steps.filter((/** @type {any} */ s) => !s.error).length - reused;
         const cut = res.excluded.length ? ` ${res.excluded.length} file${res.excluded.length > 1 ? "s" : ""} excluded (not held by the app): ${res.excluded.join(", ")}.` : "";
-        note.textContent = `Finished. The results are in ${res.dir}.${cut}${res.warns.length ? " Warning: " + res.warns.join(" ") : ""}`;
+        note.textContent = `Finished. ${reused} steps reused, ${made} computed. The results are in ${res.dir}.${cut}${res.warns.length ? " Warning: " + res.warns.join(" ") : ""}`;
         rep.disabled = false;
         await F.afterRun(S);
       } catch (e) { list.textContent = ""; note.textContent = F.message(/** @type {any} */ (e)); }
