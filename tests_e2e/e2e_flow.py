@@ -238,6 +238,23 @@ try:
             pg.select_option('.flx-res select[aria-label="Spectrum to draw"]', "1"); attendi(pg, "document.querySelectorAll('.flx-sticks .flx-stick').length === 1")
             pg.click('.flx-res button[aria-label="Close the results"]')
         step("results: an MGF file lists its spectra, draws one as sticks and gives its peak table", mgf_view)
+        def tabui_views():
+            # the products table with its conditions (bars + data table), and the reactivity of the parent as a table of atoms
+            pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Transformation products")'); pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Where it reacts")')
+            pg.click('.fln:has-text("Link product spectra")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Link product spectra'")
+            tp = b'{"schema":"tptab/1","times":[0,30],"rows":[{"row":1,"id":7,"mz":200.1,"rt":4.5,"status":0,"kinship":3,"via":1,"n_det":4,"max_area":1500,"tmax":30,"in_t0":false,"in_blank":false}],"gruppi":{"format":"gruppi/1","conditions":[{"id":"O2","parent":{"k":0.05,"half_life":13.9,"remaining":0.2}},{"id":"N2","parent":{}}],"rows":[{"row":1,"tp_name":"TP 7","mz":200.1,"rt":4.5,"neutral_formula":"C8H9","cond":[{"present":true,"area":900,"ratio_ref":1},{"present":false,"area":0}]}],"sets":[{"conditions":["O2"],"rows":[1]}]}}'
+            pg.set_input_files('.fl-insp input[type=file]', files=[{"name": "tp.json", "mimeType": "application/json", "buffer": tp}])
+            attendi(pg, "document.querySelectorAll('.flx-sticks .flx-bar').length === 2")
+            assert "Probable" in pg.inner_text(".flx-res-body") and "present, area 900" in pg.inner_text(".flx-res-body") and "absent" in pg.inner_text(".flx-res-body")
+            assert pg.locator(".flx-sticks").get_attribute("role") == "img" and pg.locator(".flx-one .flx-table td").nth(1).inner_text() == "900"
+            pg.click('.flx-res button[aria-label="Close the results"]')
+            pg.click('.fln:has-text("Where it reacts")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Where it reacts'")
+            re_ = b'{"format":"reatt/1","atoms":[{"i":0,"el":6,"heavy_index":0,"q":-0.1,"f_plus":0.1,"f_zero":0.2,"f_minus":0.3333,"dual":0}]}'
+            pg.set_input_files('.fl-insp input[type=file]', files=[{"name": "reatt.json", "mimeType": "application/json", "buffer": re_}])
+            attendi(pg, "document.querySelectorAll('.flx-res-body .flx-table tbody tr').length === 1")
+            assert pg.locator(".flx-res-body .flx-table td").nth(6).inner_text() == "0.333"
+            pg.click('.flx-res button[aria-label="Close the results"]')
+        step("results: a products file shows its table, the conditions with a chart and its data, and a reactivity file shows its atoms", tabui_views)
         def desktop_run():
             # the app is faked: the page asks the native route flow/run and lists what each step did from the prov/1 it answers
             pg.evaluate("""() => { window.MZLAB_DESKTOP = true; window.__runs = 0; const real = window.fetch.bind(window);
@@ -253,7 +270,7 @@ try:
             pg.click(go); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.includes('Data tab')")
             pg.click(go); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.startsWith('Finished')")
             assert "done in 1.2 s" in pg.inner_text(slots + ":first-child") and "/tmp/mzlab-flow/out" in pg.inner_text(".fl-cli .fl-note")
-            pg.click('.fln:has-text("Build feature table")'); pg.click('.fl-insp button[aria-label="Open t.csv"]')
+            pg.click('button[aria-label="Fit all steps in view"]'); pg.click('.fln:has-text("Build feature table")'); pg.click('.fl-insp button[aria-label="Open t.csv"]')
             attendi(pg, "document.querySelector('.flx-table td') && document.querySelector('.flx-table td').textContent === '1'")
         step("desktop: «Run on this computer» says which file to open first, then lists each step as done", desktop_run)
         b.close()
