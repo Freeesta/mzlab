@@ -147,6 +147,7 @@ pub mod stats;
 pub mod tracestat;
 pub mod subformulas;
 pub mod campioni;
+pub mod disegno;
 pub mod tpmine_irls;
 
 pub use error::{Error, Result};

@@ -5,7 +5,7 @@
  "description": "Study draft (docs/studi/WORKFLOW_MODULARI.md §4), not used by the program yet. Three documents: a step describes itself (step/1, one per step and version, shipped with the module that runs it, with its selectable algorithms); a workflow lists step instances wired by references (steps of mzflow/2, beside the operations log of mzflow/1); a run writes what it used and made (prov/1, a subset of PROV-JSON). Every name, id, description, label and error key of the modules is in English.",
  "$defs": {
   "dataType": {
-   "description": "Typed data between steps. raw = vendor file set (one sample); mzml = mzML 1.1 (indexedmzML when written by mzLab); mzidx = mzLab scan index (docs/agenti/mzidx.md); xic = one chromatogram; peaks = features of one file (.mzfeatf); rtmap = RT correction of a series; table = aligned feature table (.mzfeat); samples = roles and times (the campioni/2 record); spectra = MS2 lists; library = a spectral library (.mzlib, or MSP/MGF/GNPS JSON compiled to it); formulas = ranked molecular formula candidates per feature, with the MS1 isotope and MS2 subformula evidence; candidates = ranked identity candidates per feature (library hits, in silico structures, suspects) with scores and evidence; annot = the chosen annotation per row with its identification level (interp/1, levels); tp = product view (tp/1); structure = a mol/1 record, format owned by the structure study (docs/studi/STRUTTURA_DATO*.md, not this draft); transform = a parent -> product transformation with atom mapping (transform1, a subset of trasf/1 of that study); comparison = differences between the outputs of two or more algorithms run on the same data (written by meta.compare); qc = quality numbers; report = terminal export (CSV, XLSX, HTML).",
+   "description": "Typed data between steps. raw = vendor file set (one sample); mzml = mzML 1.1 (indexedmzML when written by mzLab); mzidx = mzLab scan index (docs/agenti/mzidx.md); xic = one chromatogram; peaks = features of one file (.mzfeatf); rtmap = RT correction of a series; table = aligned feature table (.mzfeat); samples = roles and times (the campioni/2 record); design = the experimental design: conditions, reference, comparisons, factors and batches (the disegno/1 record); spectra = MS2 lists; library = a spectral library (.mzlib, or MSP/MGF/GNPS JSON compiled to it); formulas = ranked molecular formula candidates per feature, with the MS1 isotope and MS2 subformula evidence; candidates = ranked identity candidates per feature (library hits, in silico structures, suspects) with scores and evidence; annot = the chosen annotation per row with its identification level (interp/1, levels); tp = product view (tp/1); structure = a mol/1 record, format owned by the structure study (docs/studi/STRUTTURA_DATO*.md, not this draft); transform = a parent -> product transformation with atom mapping (transform1, a subset of trasf/1 of that study); comparison = differences between the outputs of two or more algorithms run on the same data (written by meta.compare); qc = quality numbers; report = terminal export (CSV, XLSX, HTML).",
    "enum": [
     "raw",
     "mzml",
@@ -15,6 +15,7 @@
     "rtmap",
     "table",
     "samples",
+    "design",
     "spectra",
     "library",
     "formulas",
