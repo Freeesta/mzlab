@@ -105,47 +105,47 @@ impl FileRunner {
             label,
         })
     }
+}
 
-    fn convert(&self, job: &Job) -> Result<Artifact> {
-        let input = self.path(&job.inputs[0].1[0]);
-        let name = input
-            .file_name()
-            .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-        let dim = std::fs::metadata(&input).map_err(io)?.len();
-        let fs = FileSet {
-            membri: vec![Membro {
-                nome: name,
-                dim,
-                dati: Box::new(File::open(&input).map_err(io)?),
-                sha1: None,
-            }],
-        };
-        let mut reader = mzlab_lettori::apri(fs, &Limiti::desktop())?;
-        let out = self.work.join(format!(
-            "{}-{}.mzML",
-            job.instance.id,
-            job.item.unwrap_or(0)
-        ));
-        let w = BufWriter::new(File::create(&out).map_err(io)?);
-        mzlab_core::lettori_mzml::scrivi(&mut *reader, 0, w, &mut |_, _| {})?;
-        self.keep(out, DataType::Mzml)
-    }
+fn convert_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let input = r.path(&job.inputs[0].1[0]);
+    let name = input
+        .file_name()
+        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
+    let dim = std::fs::metadata(&input).map_err(io)?.len();
+    let fs = FileSet {
+        membri: vec![Membro {
+            nome: name,
+            dim,
+            dati: Box::new(File::open(&input).map_err(io)?),
+            sha1: None,
+        }],
+    };
+    let mut reader = mzlab_lettori::apri(fs, &Limiti::desktop())?;
+    let out = r.work.join(format!(
+        "{}-{}.mzML",
+        job.instance.id,
+        job.item.unwrap_or(0)
+    ));
+    let w = BufWriter::new(File::create(&out).map_err(io)?);
+    mzlab_core::lettori_mzml::scrivi(&mut *reader, 0, w, &mut |_, _| {})?;
+    r.keep(out, DataType::Mzml)
+}
 
-    fn table(&self, job: &Job) -> Result<Artifact> {
-        let files: Vec<PathBuf> = job
-            .inputs
-            .iter()
-            .flat_map(|(_, v)| v)
-            .map(|a| self.path(a))
-            .collect();
-        let tmp = self.work.join(format!("{}.tmp", job.instance.id));
-        std::fs::create_dir_all(&tmp).map_err(io)?;
-        let csv = crate::features(&files, &job.resolved.text(), &tmp);
-        let _ = std::fs::remove_dir_all(&tmp);
-        let out = self.work.join(format!("{}.csv", job.instance.id));
-        std::fs::write(&out, csv?).map_err(io)?;
-        self.keep(out, DataType::Report)
-    }
+fn table_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let files: Vec<PathBuf> = job
+        .inputs
+        .iter()
+        .flat_map(|(_, v)| v)
+        .map(|a| r.path(a))
+        .collect();
+    let tmp = r.work.join(format!("{}.tmp", job.instance.id));
+    std::fs::create_dir_all(&tmp).map_err(io)?;
+    let csv = crate::features(&files, &job.resolved.text(), &tmp);
+    let _ = std::fs::remove_dir_all(&tmp);
+    let out = r.work.join(format!("{}.csv", job.instance.id));
+    std::fs::write(&out, csv?).map_err(io)?;
+    r.keep(out, DataType::Report)
 }
 
 impl Runner for FileRunner {
@@ -155,8 +155,8 @@ impl Runner for FileRunner {
         }
         let start = Instant::now();
         let (port, artifact) = match job.step.id {
-            "convert.mzml" => ("mzml", self.convert(job)?),
-            "features.table" => ("report", self.table(job)?),
+            "convert.mzml" => ("mzml", convert_job(self, job)?),
+            "features.table" => ("report", table_job(self, job)?),
             id => return Err(Error::new("err.flow.unknownStep").with("step", id)),
         };
         Ok(Outcome {

@@ -190,6 +190,28 @@ fn references(step: &Step, algorithm: Option<&str>) -> Vec<String> {
     keys
 }
 
+/// What the outcomes made, port by port in declaration order, and the keys of all of it.
+fn gather(inst: &Instance, step: &Step, outcomes: &[Outcome]) -> (Made, Vec<String>) {
+    let mut made: Made = Vec::new();
+    let mut generated = Vec::new();
+    for port in &step.outs {
+        let mut list: Vec<Keyed> = Vec::new();
+        for o in outcomes {
+            for (name, a) in o.outputs.iter().filter(|(n, _)| n == port.name) {
+                let key = if port.many {
+                    format!("{}.{name}[{}]", inst.id, list.len())
+                } else {
+                    format!("{}.{name}", inst.id)
+                };
+                list.push((key, a.clone()));
+            }
+        }
+        generated.extend(list.iter().map(|k| k.0.clone()));
+        made.push((port.name.to_string(), list));
+    }
+    (made, generated)
+}
+
 /// The activity of an instance and, when it did not fail, what it made.
 fn settle(
     inst: &Instance,
@@ -236,22 +258,8 @@ fn settle(
             }
         }
     }
-    let mut made: Made = Vec::new();
-    for port in &step.outs {
-        let mut list: Vec<Keyed> = Vec::new();
-        for o in &outcomes {
-            for (name, a) in o.outputs.iter().filter(|(n, _)| n == port.name) {
-                let key = if port.many {
-                    format!("{}.{name}[{}]", inst.id, list.len())
-                } else {
-                    format!("{}.{name}", inst.id)
-                };
-                list.push((key, a.clone()));
-            }
-        }
-        act.generated.extend(list.iter().map(|k| k.0.clone()));
-        made.push((port.name.to_string(), list));
-    }
+    let (made, generated) = gather(inst, step, &outcomes);
+    act.generated = generated;
     for o in &outcomes {
         act.ms += o.ms;
         act.cached &= o.cached;
