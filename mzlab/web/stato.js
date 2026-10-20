@@ -7,6 +7,8 @@ const E = { files: /** @type {any[]} */ ([]), panels: /** @type {any[]} */ ([]),
 const NB = { ui: null, session: null };   // notebook: state of the interface (+ drawing, see draw.js)
 // addresses of the views: #/dati, #/disegno (and #/teoria, which the head script of index.html sends to the standalone Teoria on a cold start)
 const VIEW_HASH = { data: "dati", draw: "disegno", theory: "teoria" }, HASH_VIEW = { dati: "data", disegno: "draw", teoria: "theory" };
+// views that moved into another one: the old name still works (Attributio is now a step of Flow)
+const VIEW_ALIAS = { attributio: "flow" };
 const hashView = () => { const m = /^#\/(\w+)/.exec(location.hash); return m && HASH_VIEW[m[1]] || null; };
 const S = { view: hashView() || "data", sess: null, adding: false, ref: { on: {}, k: "auto", factor: 1, norm: "none", istd: "", rttol: 0.1, clip: false } };
 const ST = { files: [], methods: [] };
