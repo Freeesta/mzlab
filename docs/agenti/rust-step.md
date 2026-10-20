@@ -48,3 +48,4 @@ They run in the `.wasm` `hr`, `interp` and `chem` with their ceilings written as
 - `features.detect` polarity default is 1 (`Recipe::default`); `recipe_on` reads an absent key as all MS1 scans.
 - `tp.generate` merges all its sources in one pass (the absent inputs switch a source off), so it has one algorithm; the alternatives of `meta.compare` are parameter variants (`max_steps`, `nominal`). The `citation_key` takes the first letters-only word of the title (`bannwarth2019gfn` for «GFN2-xTB…»).
 - `annot.level` runs natively in `mzlab-cli` (`flow_level.rs`) with the rule of `livelli.js` on the data of `livelli-1.json`, not with the Attributio cascade its parameters describe; see `rust-flow.md`.
+- `meta.compare` has its descriptor in `mzlab-cli` (`flow_compare.rs`), not in the registry of `mzlab-feat`: the plan is expanded before the check, so the descriptor describes the expanded compare instance (`step`, `labels`); see `rust-flow.md`.

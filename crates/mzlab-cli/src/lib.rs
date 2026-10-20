@@ -17,6 +17,7 @@ use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
 
 pub mod flow;
+mod flow_compare;
 mod flow_formula;
 mod flow_level;
 mod flow_match;
@@ -236,6 +237,8 @@ pub fn execute(args: &[String]) -> Outcome {
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod flow_compare_tests;
 #[cfg(test)]
 mod flow_ident_tests;
 #[cfg(test)]
