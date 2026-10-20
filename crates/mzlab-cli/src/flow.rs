@@ -51,10 +51,11 @@ pub fn table_step() -> Step {
     }
 }
 
-/// The steps a plan can use here: the registry of the flagship chain and `features.table`.
+/// The steps a plan can use here: the registry of the flagship chain, `features.table` and the identification steps.
 pub fn steps() -> Vec<Step> {
     let mut all = mzlab_feat::steps::registry();
     all.push(table_step());
+    all.extend(mzlab_feat::steps::attributio());
     all
 }
 
@@ -155,6 +156,27 @@ fn table_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     r.keep(out, DataType::Report)
 }
 
+fn one_input(r: &FileRunner, job: &Job, port: &str) -> Result<PathBuf> {
+    let a = job
+        .inputs
+        .iter()
+        .find(|(p, _)| p == port)
+        .and_then(|(_, v)| v.first());
+    a.map(|a| r.path(a))
+        .ok_or_else(|| Error::new("err.flow.port.missing").with("port", port))
+}
+
+fn match_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let text = crate::flow_match::match_text(
+        job,
+        &one_input(r, job, "query")?,
+        &one_input(r, job, "library")?,
+    )?;
+    let out = r.work.join(format!("{}.json", job.instance.id));
+    std::fs::write(&out, text).map_err(io)?;
+    r.keep(out, DataType::Candidates)
+}
+
 impl Runner for FileRunner {
     fn run(&self, job: &Job) -> Result<Outcome> {
         if let Some(m) = self.meter {
@@ -164,6 +186,7 @@ impl Runner for FileRunner {
         let (port, artifact) = match job.step.id {
             "convert.mzml" => ("mzml", convert_job(self, job)?),
             "features.table" => ("report", table_job(self, job)?),
+            "spectra.match" => ("hits", match_job(self, job)?),
             id => return Err(Error::new("err.flow.unknownStep").with("step", id)),
         };
         Ok(Outcome {
