@@ -12,6 +12,8 @@ crate-type = ["rlib"]
 # `chem`: the structure graph (SMILES -> groups, cleavages). On by default; the engine of the proofs (`mzlab-feat-wasm`) turns it off so its .wasm does not carry it.
 default = ["chem"]
 chem = []
+# `record`: the structure graph built from a `mol/1` record (`grafo::Mol::from_record`, crate `mzlab-mol`). Off by default and in every .wasm: no site module changes until an engine asks for it.
+record = ["chem", "dep:mzlab-mol"]
 # `attributio`: reading of the campaign folders of Attributio (campaign.toml, mzMine/SIRIUS/GNPS2 tables, decisions), its review matching on top of `mzlab-lib` and its level cascade and table (`docs/agenti/attributio.md`). Off by default; the `.wasm` `attributio` (`crates/mzlab-attributio-wasm`) and the desktop app carry it.
 attributio = ["dep:mzlab-lib", "chem"]
 # `untargeted`: detection of the features from the raw data after the algorithms of mzmine 3.9.0 (`src/untargeted/`), rewritten from scratch. Off by default.
@@ -23,11 +25,16 @@ interp = ["chem"]
 mzlab-core = { path = "../mzlab-core" }
 libm = "0.2"
 mzlab-lib = { path = "../mzlab-lib", optional = true }
+mzlab-mol = { path = "../mzlab-mol", optional = true }
 
 [dev-dependencies]
 serde_json = { version = "1", features = ["float_roundtrip"] }
 mzlab-lib = { path = "../mzlab-lib" }
 sha2 = { version = "0.11", default-features = false }
+
+[[test]]
+name = "grafo_record"
+required-features = ["record"]
 
 [[test]]
 name = "untargeted_join"
