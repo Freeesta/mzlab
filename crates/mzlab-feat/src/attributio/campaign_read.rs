@@ -37,7 +37,10 @@ impl Campaign {
         k.read_sirius_gnps(&sec("sirius"), &sec("gnps"))?;
         k.read_standards(&cfg, &sec("curation"))?;
         let lv = sec("levels");
-        let unknown: Vec<&str> = lv.t.keys().filter(|x| *x != "count_2b_as_2").collect();
+        let unknown: Vec<&str> =
+            lv.t.keys()
+                .filter(|x| !["count_2b_as_2", "auto_2b"].contains(x))
+                .collect();
         if !unknown.is_empty() {
             let mut u = unknown;
             u.sortc();
@@ -47,6 +50,7 @@ impl Campaign {
             )));
         }
         k.count_2b_as_2 = lv.bool_or("count_2b_as_2", true)?;
+        k.auto_2b = lv.bool_or("auto_2b", false)?;
         k.presence_blank_fold = sec("presence")
             .t
             .get("blank_fold")
@@ -122,6 +126,7 @@ impl Campaign {
             diagnostics_matrix: None,
             rt_logp_watchlist: Vec::new(),
             count_2b_as_2: true,
+            auto_2b: false,
             review: Table::default(),
             annotation: Table::default(),
             presence_blank_fold: None,

@@ -172,12 +172,13 @@ impl Run {
     }
 }
 
-/// Features per level, keyed by level and sublevel ("2a", "3b", "4").
+/// Features per level, keyed by level and sublevel ("2a", "3b", "4"); a 2b set by the programme (`[levels] auto_2b`) is counted apart, as "2b-auto".
 fn level_counts(features: &[Feature]) -> BTreeMap<String, usize> {
     let mut counts = BTreeMap::new();
     for f in features {
+        let auto = if f.decision.auto_2b { "-auto" } else { "" };
         *counts
-            .entry(format!("{}{}", f.level, f.level_sub))
+            .entry(format!("{}{}{auto}", f.level, f.level_sub))
             .or_insert(0) += 1;
     }
     counts

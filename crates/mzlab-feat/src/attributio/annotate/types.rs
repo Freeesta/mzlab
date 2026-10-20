@@ -88,6 +88,8 @@ pub struct Decision {
     pub feature_decision: String,
     pub group_override: Option<String>,
     pub decision_2b: bool,
+    /// The 2b was set by the programme (`decided_by = auto`, `[levels] auto_2b`), not by the chemist.
+    pub auto_2b: bool,
     /// The chemist wrote `3b` (a generic class with many plausible isomers): the Level 3 is 3b instead of 3a.
     pub sub_3b: bool,
     /// `evidence_*` columns of a 2b decision.
@@ -160,18 +162,22 @@ pub struct Feature {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct AuditEntry {
     pub field: &'static str,
+    /// `user` (a row of the chemist) or `auto` (a row of the programme).
+    pub by: &'static str,
     pub auto: String,
     pub chosen: String,
     pub reason: String,
 }
 
 impl Feature {
-    /// `user` when a decision of the chemist changed something the programme chose, `auto` otherwise.
+    /// `user` when a decision of the chemist changed something the programme chose, `auto-2b` when the 2b is the programme's own decision, `auto` otherwise.
     pub fn origin(&self) -> &'static str {
-        if self.audit.is_empty() {
-            "auto"
-        } else {
+        if self.audit.iter().any(|e| e.by == "user") {
             "user"
+        } else if self.decision.auto_2b {
+            "auto-2b"
+        } else {
+            "auto"
         }
     }
     /// The text of a site flag.

@@ -65,22 +65,30 @@ fn snapshot(f: &Feature) -> [String; 3] {
 }
 
 /// Writes an audit entry for each field of `auto` that the decision just applied to `f` changed.
-fn record_changes(f: &mut Feature, auto: [String; 3], reason: &str) {
+fn record_changes(f: &mut Feature, auto: [String; 3], by: &'static str, reason: &str) {
     let now = snapshot(f);
     for ((field, auto), chosen) in ["level", "name", "group"].into_iter().zip(auto).zip(now) {
-        record(f, field, auto, chosen, reason);
+        record(f, field, by, (auto, chosen), reason);
     }
 }
 
 /// Keeps what the programme chose in the first decision of a field and moves `chosen` and `reason` to the last one; a decision that changes nothing leaves no entry.
-fn record(f: &mut Feature, field: &'static str, auto: String, chosen: String, reason: &str) {
+fn record(
+    f: &mut Feature,
+    field: &'static str,
+    by: &'static str,
+    (auto, chosen): (String, String),
+    reason: &str,
+) {
     match f.audit.iter_mut().find(|e| e.field == field) {
         Some(e) => {
+            e.by = by;
             e.chosen = chosen;
             e.reason = reason.to_string();
         }
         None if auto != chosen => f.audit.push(AuditEntry {
             field,
+            by,
             auto,
             chosen,
             reason: reason.to_string(),
@@ -98,6 +106,7 @@ fn undo_2b(f: &mut Feature, before: &mut Vec<(usize, Before)>, i: usize) {
         f.level_label = label;
     }
     f.decision.decision_2b = false;
+    f.decision.auto_2b = false;
     f.decision.evidence.clear();
 }
 
@@ -156,6 +165,7 @@ pub fn apply_decisions(
                         " -- counted as Level 3 (campaign.toml [levels] count_2b_as_2 = false)"
                     };
                 f.decision.decision_2b = true;
+                f.decision.auto_2b = rec.by == "auto";
                 f.decision.evidence = rec
                     .evidence
                     .iter()
@@ -171,7 +181,8 @@ pub fn apply_decisions(
         }
         f.decision.feature_decision = rec.justification.clone();
         f.level_sub = level_sub(f).into();
-        record_changes(f, auto, &rec.justification);
+        let by = if rec.by == "auto" { "auto" } else { "user" };
+        record_changes(f, auto, by, &rec.justification);
     }
     for f in feats.iter_mut() {
         f.cec_headline = f.cec.as_ref().is_some_and(|c| cur.is_headline(&c.0));
