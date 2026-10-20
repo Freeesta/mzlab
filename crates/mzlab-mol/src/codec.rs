@@ -14,6 +14,8 @@ pub enum MolError {
     Invalid(String),
     /// The text is not a SMILES (or CXSMILES) the reader understands, or the record cannot be written as one.
     Smiles(String),
+    /// The text is not a molfile (V2000 or V3000) the reader understands.
+    Molfile(String),
 }
 
 impl fmt::Display for MolError {
@@ -22,6 +24,7 @@ impl fmt::Display for MolError {
             MolError::Json(m) => write!(f, "mol/1 JSON: {m}"),
             MolError::Invalid(m) => write!(f, "mol/1 invalid: {m}"),
             MolError::Smiles(m) => write!(f, "SMILES: {m}"),
+            MolError::Molfile(m) => write!(f, "molfile: {m}"),
         }
     }
 }
