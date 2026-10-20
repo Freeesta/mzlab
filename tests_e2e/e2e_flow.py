@@ -144,6 +144,13 @@ try:
             assert pg.get_attribute('[data-mode="simple"]', "aria-pressed") == "true"
             assert pg.locator(".flx-pal").is_hidden()
         step("canvas: the base is already there and connected, templates are offered, Simple is the default", first_screen)
+        def file_list_untouched():
+            # the stylesheet of Flow is now in the page: a file-list row (class «fl», the same bare class Flow once used as its root) must keep its own layout, dark theme included
+            pg.evaluate("document.documentElement.setAttribute('data-theme','dark')")
+            got = pg.evaluate("""() => { const p = document.createElement('div'); p.className = 'fl'; p.style.cssText = 'position:absolute;left:0;top:0;width:300px';
+              p.innerHTML = '<span>box</span><span>name</span>'; document.body.append(p); const c = getComputedStyle(p), r = [c.display, c.paddingLeft, c.gridTemplateColumns, p.getBoundingClientRect().height]; p.remove(); return r; }""")
+            assert got[0] != "grid" and got[1] == "0px" and got[3] <= 56, got
+        step("the stylesheet of Flow leaves the rows of the file list alone (class «fl»)", file_list_untouched)
         def template():
             pg.click('.flx-tc[data-tpl="identify"]')
             attendi(pg, "document.querySelectorAll('.fln').length === 7")

@@ -19,7 +19,7 @@
     const pal = F.palette(reg, stepId => { F.addStep(S.plan, reg, stepId); refresh(`fl-card-${S.plan.steps[S.plan.steps.length - 1].id}`); });
     const top = el("div", { class: "fl-top" }), inputs = el("div", { class: "fl-inputs" }), chain = el("div"), goal = el("div", { class: "fl-goal", role: "status" });
     const cli = el("div"), main = el("div", { class: "fl-main" }, inputs, goal, chain, cli);
-    const root = el("div", { class: "fl", id: "fl-root" }, top, pal.root, main);
+    const root = el("div", { class: "flw", id: "fl-root" }, top, pal.root, main);
     sec.textContent = ""; sec.append(root);
 
     const download = () => {
