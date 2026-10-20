@@ -462,7 +462,7 @@
       const el = $("#tp-struct"); if (!el) return;
       const rh = $("#tp-reatt"); if (rh && rh.dataset.smiles !== t) { rh.dataset.smiles = t; reattPanel(rh, t); }    // panel of reactivity (administrator mode only; its scripts load on the first structure; its calculation is started elsewhere)
       if (!t) { el.innerHTML = ""; return; }
-      ocl().then(OCL => { el.innerHTML = `<div class="struct">${MOLUI.svg(OCL.Molecule.fromSmiles(t).toSVG(300, 170))}</div>`; }).catch(() => { el.innerHTML = ""; });
+      ocl().then(OCL => { el.innerHTML = `<div class="struct">${MOLUI.svg(OCL.Molecule.fromSmiles(t).toSVG(300, 170, "", MOLUI.SVG_OPTS))}</div>`; }).catch(() => { el.innerHTML = ""; });
     }
     $("#tp-mol").oninput = () => { drawnPartial = null; preview(); }; $("#tp-smi").oninput = () => { drawnPartial = null; preview(); }; $("#tp-add").onchange = preview;
 
