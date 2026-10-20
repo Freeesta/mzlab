@@ -57,12 +57,15 @@
       F.btn("plus", "Zoom in", () => zoom(1.25, true)), F.btn("minus", "Zoom out", () => zoom(1 / 1.25, true)), F.btn("fit", "Fit all steps in view", fit), F.btn("one", "Show at 100%", () => { v.k = 1; v.x = 0; v.y = 0; apply(true); }));
     const root = el("div", { class: "fl-cv" }, view, tools);
 
+    // keys already drawn: only a card that is new plays the entrance animation
+    const seen = new Set();
     /** @param {any} node */
     const card = node => {
+      const fresh = !seen.has(node.key);
       const probs = F.nodeProblems(S, node), cat = F.CATS[node.cat], sel = ui.selected() === node.key, bad = probs.length > 0;
       const chip = el("span", { class: "fln-chip " + (bad ? "bad" : "ok") }, icon(bad ? "warn" : "ok", 12), el("span", { text: bad ? "Needs attention" : "Ready" }));
-      const c = el("div", { class: "fln" + (sel ? " sel" : "") + (bad ? " bad" : ""), tabindex: 0, role: "button", "data-key": node.key, "aria-pressed": sel,
-        "aria-label": `${node.title}. ${F.summary(S, node)}. ${bad ? probs[0].text : "Ready"}`, style: `left:${node.x}px;top:${node.y}px;--cc:${cat.color}`,
+      const c = el("div", { class: "fln" + (sel ? " sel" : "") + (bad ? " bad" : "") + (fresh ? " fl-new" : ""), tabindex: 0, role: "button", "data-key": node.key, "aria-pressed": sel,
+        "aria-label": `${node.title}. ${cat.word}. ${F.summary(S, node)}. ${bad ? probs[0].text : "Ready"}`, style: `left:${node.x}px;top:${node.y}px;--cc:${cat.color}`,
         onclick: () => ui.select(node.key),
         onkeydown: (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ui.select(node.key); } else if ((e.key === "Delete" || e.key === "Backspace") && !node.locked && node.kind !== "input") { e.preventDefault(); ui.remove(node); } } },
       el("span", { class: "fln-ic" }, icon(cat.icon, 20)), el("span", { class: "fln-tx" }, el("span", { class: "fln-t", text: node.title }), el("span", { class: "fln-s", text: F.summary(S, node) })), chip);
@@ -82,6 +85,7 @@
       }
       const order = [...model.nodes].sort((m, n) => m.x - n.x || m.y - n.y);
       for (const n of order) stage.append(card(n));
+      seen.clear(); for (const n of order) seen.add(n.key);
       if (hadFocus) { const t = stage.querySelector(`[data-key="${CSS.escape(hadFocus)}"]`); if (t instanceof HTMLElement) t.focus({ preventScroll: true }); }
     };
     /** moves the view so the card is in the middle @param {string} key */

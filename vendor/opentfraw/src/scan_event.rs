@@ -202,6 +202,32 @@ impl ScanEventPreamble {
     }
 }
 
+/// The product ranges of a v66 SRM event (TSQ run with one reaction per event, at body offset 4): the count follows the reaction block, the
+/// pairs follow the count, one per monitored product. `None` unless every pair is a plausible window inside the body.
+fn srm_ranges(
+    preamble: &ScanEventPreamble,
+    reactions: &[Reaction],
+    body: &[u8],
+) -> Option<Vec<FractionCollector>> {
+    if preamble.scan_type() != Some(crate::ScanType::Srm) || reactions.len() != 1 {
+        return None;
+    }
+    let count_at = 4 + 32 + 24;
+    let n = crate::bytes::read_u32_le(body, count_at).ok()? as usize;
+    if n == 0 || count_at + 4 + n * 16 > body.len() {
+        return None;
+    }
+    (0..n)
+        .map(|i| {
+            let at = count_at + 4 + i * 16;
+            let low_mz = crate::bytes::read_f64_le(body, at).ok()?;
+            let high_mz = crate::bytes::read_f64_le(body, at + 8).ok()?;
+            (low_mz.is_finite() && low_mz >= 0.1 && low_mz <= high_mz && high_mz <= 50_000.0)
+                .then_some(FractionCollector { low_mz, high_mz })
+        })
+        .collect()
+}
+
 impl ScanEvent {
     /// Read one scan event.
     ///
@@ -315,7 +341,7 @@ impl ScanEvent {
                 None
             }
         });
-        let (fc_offset, fraction_collectors) = match fc_match {
+        let (fc_offset, mut fraction_collectors) = match fc_match {
             Some((off, fc)) => (Some(off), vec![fc]),
             None => (None, Vec::new()),
         };
@@ -454,6 +480,11 @@ impl ScanEvent {
                     unknown_long2: crate::bytes::read_u32_le(&body, 32)?,
                 });
             }
+        }
+
+        // A TSQ SRM event lists its product ranges after the reaction: 24 zero bytes, a u32 count and `(low, high)` f64 pairs.
+        if let Some(ranges) = srm_ranges(&preamble, &reactions, &body) {
+            fraction_collectors = ranges;
         }
 
         Ok(Self {

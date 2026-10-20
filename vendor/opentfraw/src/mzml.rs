@@ -802,7 +802,10 @@ fn srm_chromatograms(
 /// Assemble every chromatogram trace `raw` can supply: always a TIC and BPC
 /// (when the file has scans), plus one SRM chromatogram per transition for
 /// flat-peak SRM files. Records are indexed sequentially in emission order.
-fn build_chromatograms(raw: &RawFileReader) -> Vec<msc::ChromatogramRecord> {
+fn build_chromatograms<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+) -> Vec<msc::ChromatogramRecord> {
     let mut out = Vec::new();
     out.extend(tic_record(&raw.tic_chromatogram()));
     out.extend(bpc_record(&raw.bpc_chromatogram()));
@@ -820,10 +823,28 @@ fn build_chromatograms(raw: &RawFileReader) -> Vec<msc::ChromatogramRecord> {
         ));
     }
 
+    out.extend(raw.srm_traces(source).iter().map(srm_trace_record));
+
     for (i, rec) in out.iter_mut().enumerate() {
         rec.index = i;
     }
     out
+}
+
+/// The record of one transition of a TSQ run.
+fn srm_trace_record(t: &crate::SrmTrace) -> msc::ChromatogramRecord {
+    msc::ChromatogramRecord {
+        index: 0,
+        id: t.id(),
+        chromatogram_type: Some(msc::CvTerm::new(
+            "MS:1000627",
+            "selected reaction monitoring chromatogram",
+        )),
+        precursor_mz: Some(t.q1),
+        product_mz: Some(t.q3),
+        time_sec: t.time_min.iter().map(|&m| (m * 60.0) as f32).collect(),
+        intensity: t.intensity.clone(),
+    }
 }
 
 /// Pascals in one unit of a pressure channel (`psi`, `bar`, ...); `None` when the unit is not a pressure.
@@ -1069,7 +1090,7 @@ impl<'a, R: Read + Seek> msc::SpectrumSource for OpenTfRawSource<'a, R> {
     fn iter_chromatograms<'s>(
         &'s mut self,
     ) -> Box<dyn Iterator<Item = msc::ChromatogramRecord> + 's> {
-        let mut recs = build_chromatograms(self.raw);
+        let mut recs = build_chromatograms(self.raw, &mut *self.source);
         let traces = self
             .raw
             .analog_traces(&mut *self.source)

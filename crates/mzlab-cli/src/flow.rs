@@ -53,11 +53,12 @@ pub fn table_step() -> Step {
     }
 }
 
-/// The steps a plan can use here: the registry of the flagship chain, `features.table` and the identification steps.
+/// The steps a plan can use here: the registry of the flagship chain, `features.table`, the identification steps and `spectra.ms2`.
 pub fn steps() -> Vec<Step> {
     let mut all = mzlab_feat::steps::registry();
     all.push(table_step());
     all.extend(mzlab_feat::steps::attributio());
+    all.push(crate::flow_ms2::ms2_step());
     all.push(crate::flow_compare::compare_step());
     all
 }
@@ -227,6 +228,14 @@ fn formula_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     write_made(r, job, text, DataType::Formulas)
 }
 
+fn ms2_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let files = read_all(r, job, "source")?;
+    let text = crate::flow_ms2::ms2_text(job, &named(&files))?;
+    let out = r.work.join(format!("{}.mgf", job.instance.id));
+    std::fs::write(&out, text).map_err(io)?;
+    r.keep(out, DataType::Spectra)
+}
+
 fn compare_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let text_of = |name: &str| {
         let found = job.resolved.params.iter().find(|(k, _)| k == name);
@@ -260,6 +269,7 @@ impl Runner for FileRunner {
             "spectra.match" => ("hits", match_job(self, job)?),
             "formula.ms1" => ("formulas", formula_job(self, job)?),
             "formula.ms2" => ("formulas", formula_job(self, job)?),
+            "spectra.ms2" => ("spectra", ms2_job(self, job)?),
             "annot.level" => ("annot", level_job(self, job)?),
             "meta.compare" => ("comparison", compare_job(self, job)?),
             id => return Err(Error::new("err.flow.unknownStep").with("step", id)),

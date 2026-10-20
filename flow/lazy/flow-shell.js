@@ -1,7 +1,7 @@
 // @ts-check
 // Flow (administrator mode): the shell around the canvas. Top bar (templates, add an analysis, Simple | Advanced, undo, fit, checklist, run), the three views (Canvas,
 // List, Plan) over ONE plan, the inspector, the empty-state template cards and small menus. The List view is the editor of F.mount (also the accessible alternative to
-// the canvas); both draw the same plan and redraw on `flow:changed`. Running goes through F.runners: only the command line exists today.
+// the canvas); both draw the same plan and redraw on `flow:changed`. Running goes through F.runners: the command line, and «This computer» in the desktop app (flow-desktop.js).
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
@@ -12,9 +12,11 @@
   F.menu = (anchor, items, host) => {
     host.querySelectorAll(".flx-pop").forEach(n => n.remove());
     const pop = F.el("div", { class: "flx-pop", role: "menu" });
-    const close = () => { pop.remove(); document.removeEventListener("pointerdown", out, true); anchor.focus({ preventScroll: true }); };
-    const out = (/** @type {Event} */ e) => { if (!pop.contains(/** @type {Node} */ (e.target)) && e.target !== anchor) { pop.remove(); document.removeEventListener("pointerdown", out, true); } };
-    for (const it of items) pop.append(F.el("button", { type: "button", role: "menuitem", class: it.on ? "on" : "", onclick: () => { pop.remove(); document.removeEventListener("pointerdown", out, true); it.run(); } },
+    const shut = () => { pop.remove(); document.removeEventListener("pointerdown", out, true); anchor.setAttribute("aria-expanded", "false"); };
+    const close = () => { shut(); anchor.focus({ preventScroll: true }); };
+    const out = (/** @type {Event} */ e) => { if (!pop.contains(/** @type {Node} */ (e.target)) && e.target !== anchor) shut(); };
+    anchor.setAttribute("aria-haspopup", "menu"); anchor.setAttribute("aria-expanded", "true");
+    for (const it of items) pop.append(F.el("button", { type: "button", role: "menuitem", class: it.on ? "on" : "", onclick: () => { shut(); it.run(); } },
       F.el("span", { text: (it.on ? "✓ " : "") + it.label }), it.line ? F.el("small", { text: it.line }) : null));
     if (!items.length) pop.append(F.el("p", { class: "fl-note", text: "Nothing to add here." }));
     pop.addEventListener("keydown", e => { if (e.key === "Escape") close(); else if (e.key === "ArrowDown" || e.key === "ArrowUp") { const b = [...pop.querySelectorAll("button")], i = b.indexOf(/** @type {any} */ (document.activeElement)); b[(i + (e.key === "ArrowDown" ? 1 : -1) + b.length) % b.length].focus(); e.preventDefault(); } });
@@ -53,7 +55,8 @@
     const inspHost = el("aside", { class: "flx-insp", "aria-label": "Settings of the selected step" }), palHost = el("aside", { class: "flx-pal flx-adv-only", "aria-label": "All steps" });
     const pal = F.palette(reg0, (/** @type {string} */ id) => { let made = /** @type {any} */ (null); go(() => { made = F.addStep(S.plan, S.reg, id); }); selected = made.id; redraw(); cv.reveal(made.id); });
     palHost.append(pal.root); const pf = pal.root.querySelector("#fl-filter"); if (pf) pf.id = "flx-filter";
-    const tplBox = el("div", { class: "flx-tpl", role: "region", "aria-label": "Start from a template" });
+    const tplBox = el("div", { class: "flx-tpl", role: "dialog", "aria-label": "Start from a template" });
+    tplBox.addEventListener("keydown", e => { if (e.key === "Escape") { dismissed = true; redraw(); tplBtn.focus(); } });
     cv.root.append(tplBox);
     const planView = el("pre", { class: "flx-plan", tabindex: 0, "aria-label": "The plan as mzflow/2" });
     const status = el("span", { class: "fl-st", role: "status", id: "flx-status" });
@@ -76,6 +79,7 @@
       planView.textContent = F.exportText(S.plan);
       tplBox.classList.toggle("show", !F.hasAddons(S.plan) && tab === "canvas" && !dismissed);
       root.classList.toggle("flx-simple", simple);
+      const planTab = tabs[2]; planTab.hidden = simple; if (simple && tab === "plan") setTab("canvas");
       body.classList.toggle("flx-adv", !simple);
       for (const b of modeBtns) b.setAttribute("aria-pressed", String((b.dataset.mode === "simple") === simple));
     }
@@ -105,8 +109,9 @@
     const showRun = () => {
       const r = F.runners.cli.run(S);
       planView.hidden = false;
-      const box = el("div", { class: "fl-cli" }, el("strong", { text: r.title }), el("p", { text: "Flow does not run the chain yet. Download the plan, put it in a folder with your files and run it with the native runner:" }), el("code", { text: r.text }),
+      const box = el("div", { class: "fl-cli" }, el("strong", { text: r.title }), el("p", { text: F.runners.desktop.available() ? "Run it here, or download the plan and use the command line:" : "On the web Flow exports the plan. Download it, put it in a folder with your files and run it with the native runner:" }), el("code", { text: r.text }),
         el("div", { class: "fl-meta" }, btn("export", "Download the plan", S.download, "Download plan"), btn("copy", "Copy the command", () => navigator.clipboard && navigator.clipboard.writeText(r.text), "Copy command"), btn("x", "Close", () => box.remove(), "Close")));
+      if (F.runners.desktop.available()) box.append(F.desktopRunUi(S));
       root.querySelectorAll(".fl-cli").forEach(n => n.remove()); bar.after(box);
     };
     const open = btn("import", "Open a plan (mzflow/2)", () => { const f = listHost.querySelector("#fl-file"); if (f) /** @type {HTMLElement} */ (f).click(); }, "Open");
@@ -122,6 +127,6 @@
     listHost.addEventListener("flow:changed", () => { undoBtn.disabled = !S.history.length; redraw(); });
     tplCards(); planView.hidden = true; undoBtn.disabled = true;
     redraw(); requestAnimationFrame(() => cv.fit());
-    /** @type {any} */ (sec).__flow = S; /** @type {any} */ (sec).__shell = { select: cvUi.select, model };
+    S.redraw = redraw; /** @type {any} */ (sec).__flow = S; /** @type {any} */ (sec).__shell = { select: cvUi.select, model };
   };
 })();

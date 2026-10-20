@@ -321,6 +321,8 @@ impl State {
         match op {
             "natsamples" => return self.nat_samples(p),                                     // reading a container takes its time: it does not hold the engine either
             "nat2mzml" => return self.nat_to_mzml(p),
+            "flow/read" => return self.flow_read(p),
+            "flow/run" => return self.flow_run(p),                                      // a whole plan: it does not hold the engine
             _ => {}
         }
         if op.starts_with("feat/") || op.starts_with("finder/") {

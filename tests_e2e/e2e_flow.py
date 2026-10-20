@@ -183,11 +183,52 @@ try:
             pg.focus("#fl-canvas"); before = pg.evaluate("document.querySelector('.fl-stage').style.transform")
             pg.keyboard.press("ArrowLeft"); assert pg.evaluate("document.querySelector('.fl-stage').style.transform") != before
             assert pg.evaluate("getComputedStyle(document.querySelector('.fln')).animationName") == "none"
+        def menus_and_redraw():
+            # a redraw after an edit does not replay the entrance of the cards that were already there
+            pg.focus('.fln:has-text("Import data")'); pg.keyboard.press("Enter")
+            attendi(pg, "document.querySelectorAll('.fln').length > 0")
+            assert pg.locator(".fln.fl-new").count() == 0
+            assert "Process" in pg.get_attribute(".fln >> nth=1", "aria-label") or "Data in" in pg.get_attribute(".fln >> nth=0", "aria-label")
+            pg.click("#flx-add"); assert pg.get_attribute("#flx-add", "aria-haspopup") == "menu" and pg.get_attribute("#flx-add", "aria-expanded") == "true"
+            pg.keyboard.press("Escape"); assert pg.get_attribute("#flx-add", "aria-expanded") == "false"
+            assert pg.get_attribute(".flx-tpl", "role") == "dialog"
+        step("canvas: menus say they are open, the template card is a dialog, a redraw does not replay the entrance", menus_and_redraw)
         step("canvas: Advanced shows every step and the palette; Enter selects, arrows move the view, reduced motion stops the animation", advanced_and_keys)
         def sheets():
-            pg.click('[data-tab="plan"]'); assert '"format": "mzflow/2"' in pg.inner_text(".flx-plan")
-            pg.click('[data-tab="list"]'); attendi(pg, "document.querySelectorAll('.fl-card').length >= 3"); pg.click('[data-tab="canvas"]')
+            assert not pg.locator('[data-tab="plan"]').is_visible()
+            pg.click('[data-mode="advanced"]'); pg.click('[data-tab="plan"]'); assert '"format": "mzflow/2"' in pg.inner_text(".flx-plan")
+            pg.click('[data-tab="list"]'); attendi(pg, "document.querySelectorAll('.fl-card').length >= 3"); pg.click('[data-tab="canvas"]'); pg.click('[data-mode="simple"]')
         step("canvas: the plan view and the list view show the same plan", sheets)
+        def results_from_disk():
+            pg.click('.fln:has-text("Build feature table")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Build feature table'")
+            pg.set_input_files('.fl-insp input[type=file]', files=[{"name": "peaks.csv", "mimeType": "text/csv", "buffer": b'mz,rt,area\n241.3,3.0,"1,5"\n257.3,4.2,7\n'}])
+            attendi(pg, "document.querySelectorAll('.flx-res-body .flx-tablewrap')[1].querySelectorAll('tbody tr').length === 2")
+            data = '.flx-res-body > .flx-tablewrap:last-child .flx-table'
+            assert pg.locator(data + " th").all_inner_texts() == ["mz", "rt", "area"] and pg.locator(data + " td").nth(2).inner_text() == "1,5"
+            # the column summary: one row per column, numbers counted from the whole file
+            pg.click('.flx-qc summary'); qc = '.flx-qc .flx-table tbody tr'
+            got = pg.locator(qc).nth(0).inner_text().split(); assert pg.locator(qc).count() == 3 and got == ["mz", "2", "0", "241.3", "257.3"], got
+            assert pg.locator(".flx-res").get_attribute("aria-label") == "Results" and pg.evaluate("document.activeElement.closest('.flx-res') !== null")
+            pg.click('.flx-res button[aria-label="Close the results"]'); assert pg.locator(".flx-res").count() == 0
+        step("results: a table chosen from disk opens under the canvas as a real table, readable by keyboard and closable", results_from_disk)
+        def desktop_run():
+            # the app is faked: the page asks the native route flow/run and lists what each step did from the prov/1 it answers
+            pg.evaluate("""() => { window.MZLAB_DESKTOP = true; window.__runs = 0; const real = window.fetch.bind(window);
+              window.fetch = async (u, o) => { if (!String(u).includes('/rpc')) return real(u, o);
+                if (JSON.parse(o.body).op === 'flow/read') return new Response('a,b\\n1,2\\n', { status: 200 });
+                const plan = JSON.parse(JSON.parse(o.body).plan || '{"steps":[]}'); window.__runs++;
+                if (window.__runs === 1) return new Response(JSON.stringify({ error_key: 'err.flow.input.missing', params: { input: 'a.mzML' } }), { status: 400 });
+                const activity = {}; plan.steps.forEach(x => { activity[x.id] = { step: x.step, ms: 1200, used: [], generated: ['k'] }; });
+                return new Response(JSON.stringify({ prov: JSON.stringify({ schema: 'prov/1', entity: { k: { type: 'table', label: 't.csv' } }, activity }), dir: '/tmp/mzlab-flow/out' }), { status: 200 }); }; }""")
+            pg.click('button[aria-label="Export the plan and run it"]')
+            slots = ".fl-slots li"; assert pg.locator(slots).count() >= 3 and "waiting" in pg.inner_text(slots + ":first-child")
+            go = 'button[aria-label="Run the plan on this computer"]'
+            pg.click(go); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.includes('Data tab')")
+            pg.click(go); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.startsWith('Finished')")
+            assert "done in 1.2 s" in pg.inner_text(slots + ":first-child") and "/tmp/mzlab-flow/out" in pg.inner_text(".fl-cli .fl-note")
+            pg.click('.fln:has-text("Build feature table")'); pg.click('.fl-insp button[aria-label="Open t.csv"]')
+            attendi(pg, "document.querySelector('.flx-table td') && document.querySelector('.flx-table td').textContent === '1'")
+        step("desktop: «Run on this computer» says which file to open first, then lists each step as done", desktop_run)
         b.close()
 finally:
     srv.terminate()

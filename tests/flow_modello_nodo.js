@@ -4,7 +4,7 @@ const fs = require("fs"), vm = require("vm"), path = require("path"), assert = r
 const eq = (a, b) => assert.strictEqual(JSON.stringify(a), JSON.stringify(b));
 const root = path.resolve(__dirname, "..");
 const ctx = vm.createContext({});
-for (const f of ["registry", "check", "plan", "inputs", "names", "fix"]) vm.runInContext(fs.readFileSync(path.join(root, "flow/lazy/flow-" + f + ".js"), "utf8"), ctx);
+for (const f of ["registry", "check", "plan", "inputs", "names", "fix", "results"]) vm.runInContext(fs.readFileSync(path.join(root, "flow/lazy/flow-" + f + ".js"), "utf8"), ctx);
 const F = ctx.FLOW;
 const reg = F.registry(["steps-1", "steps-attributio-1", "steps-tabui-1"].map(n => JSON.parse(fs.readFileSync(path.join(root, "docs/schemi", n + ".json"), "utf8"))));
 const problems = plan => F.check(F.normalize(F.exportPlan(plan)), reg, "native").map(F.problemLine);
@@ -68,4 +68,13 @@ for (const t of F.TEMPLATES) {
   eq(problems(p), []);
   assert.ok(F.canvasModel({ plan: p, reg }, true).nodes.length < F.canvasModel({ plan: p, reg }, false).nodes.length || p.steps.length === 4, t.id);
 }
+// the CSV of a result: quotes, doubled quotes, CRLF, a tab-separated file, a missing last newline
+eq(F.parseCsv('a,b\r\n"x,1","say ""hi"""\r\n3,4'), [["a", "b"], ["x,1", 'say "hi"'], ["3", "4"]]);
+eq(F.parseCsv("a\tb\n1\t2\n"), [["a", "b"], ["1", "2"]]);
+eq(F.tableSummary([["id", "mz", "name"], ["1", "100.5", "a"], ["2", "", ""], ["3", "99", "b"]]),
+  [{ name: "id", filled: 3, empty: 0, min: 1, max: 3 }, { name: "mz", filled: 2, empty: 1, min: 99, max: 100.5 }, { name: "name", filled: 2, empty: 1 }]);
+// every add-on names steps of the registry, and the Attributio steps are all reachable from «Add analysis»
+for (const a of F.ADDONS) for (const id of a.steps) assert.ok(F.NAMES[id], a.id + " " + id);
+for (const id of ["spectra.chimeric", "formula.ms1", "formula.ms2", "spectra.match", "spectra.insilico", "rt.predict", "annot.level", "annot.regulatory", "annot.hazard"]) assert.ok(F.ADDONS.some(a => a.steps.includes(id)), id);
+assert.ok(F.viewFor("table") && F.viewFor("annot") && !F.viewFor("raw"));
 console.log("ok");
