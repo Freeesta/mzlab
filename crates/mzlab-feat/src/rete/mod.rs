@@ -140,7 +140,7 @@ pub fn build(
     let kept: Vec<(usize, usize)> = found.iter().map(|f| (f.0, f.1)).collect();
     let nodes = layout::nodes(&all, &kept, tp);
     let mut arcs: Vec<Arc> = found.into_iter().map(|f| f.2).collect();
-    arcs.sort_by(|a, b| (a.from, a.to).cmp(&(b.from, b.to)));
+    arcs.sort_by_key(|a| (a.from, a.to));
     Rete {
         params: params.clone(),
         parent: parent.id,
