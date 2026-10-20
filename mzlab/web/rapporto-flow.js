@@ -126,10 +126,12 @@ window.RAPPORTO_FLOW = (() => {
     }
     const on = (/** @type {string} */ k) => !opts.sections || opts.sections[k] !== false;
     const b = bodies(corsa);
-    el.innerHTML = `<article class="rf"><h1>Flow run report</h1><div class="bar"><fieldset><legend>Sections</legend>${
+    // every piece is escaped by esc() where it is built (this module also runs alone, without html-sicuro.js)
+    const html = `<article class="rf"><h1>Flow run report</h1><div class="bar"><fieldset><legend>Sections</legend>${
       SECTIONS.map(([k, t]) => `<label><input type="checkbox" data-sec="${k}"${on(k) ? " checked" : ""}> ${esc(t)}</label>`).join(" ")}</fieldset>` +
       `<button type="button" data-rf="json">Download JSON</button><button type="button" data-rf="print">Print</button></div>` +
       SECTIONS.map(([k, t]) => `<section id="rf-${k}" aria-labelledby="rf-${k}-h"${on(k) ? "" : " hidden"}><h2 id="rf-${k}-h">${esc(t)}</h2>${b[/** @type {keyof typeof b} */ (k)]}</section>`).join("") + `</article>`;
+    el.innerHTML = html;
     for (const cb of el.querySelectorAll("input[data-sec]")) {
       cb.addEventListener("change", () => { const s = el.querySelector("#rf-" + /** @type {HTMLElement} */ (cb).dataset.sec); if (s) /** @type {HTMLElement} */ (s).hidden = !/** @type {HTMLInputElement} */ (cb).checked; });
     }

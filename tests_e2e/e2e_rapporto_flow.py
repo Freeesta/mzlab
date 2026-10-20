@@ -1,6 +1,6 @@
 """Report page of a Flow run (mzlab/web/rapporto-flow.js): the sections, the tables under the figure, the same HTML from the same JSON, the XSS escape, the toggles,
 the JSON download, printing to PDF, axe-core and the time with 5000 features. The module is served alone (no engine needed) with a copy of the colours of the app."""
-import sys, os, json, tempfile, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys, os, json, tempfile, shutil, threading; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,7 +34,7 @@ try:
     import urllib.request
     for _ in range(100):
         try: urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=1).read(); break
-        except Exception: time.sleep(0.1)
+        except Exception: threading.Event().wait(0.1)
     errs = []
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = b.new_page(accept_downloads=True)
