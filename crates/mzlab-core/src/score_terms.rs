@@ -108,7 +108,7 @@ impl ScoreTerms {
 
 /// The `shown` strongest contributions `(m/z, value)` as terms named by their m/z, the rest in one term; all of weight 1.
 fn strongest(mut parts: Vec<(f64, f64)>, shown: usize) -> Vec<Term> {
-    parts.sort_by(|x, y| y.1.total_cmp(&x.1));
+    crate::sortc::by(&mut parts, |x, y| y.1.total_cmp(&x.1));
     let mut terms: Vec<Term> = parts
         .iter()
         .take(shown)
