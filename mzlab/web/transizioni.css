@@ -17,6 +17,8 @@ section[id^="v-"]:not([hidden]){animation:tr-fade var(--t-med) var(--ease-out)}
 details[open]>:not(summary){animation:tr-fade var(--t-med) var(--ease-out)}
 .toast-msg{transition:opacity var(--t-med) var(--ease-out),transform var(--t-med) var(--ease-out)}
 :where(button,select,summary){transition:background-color var(--t-fast),border-color var(--t-fast),color var(--t-fast)}
+/* file-drop highlight eases in and out (0ms under reduced motion through the tokens) */
+#drop,#dropdam{transition:background-color var(--t-fast),border-color var(--t-fast),box-shadow var(--t-fast)}
 /* the side panel while it slides out (transizioni.js keeps it on screen for one animation) */
 #dfiles.sb-leaving{display:flex!important;position:fixed!important;margin:0;pointer-events:none}
 /* reduced motion or no animation on the first paint: nothing moves */
