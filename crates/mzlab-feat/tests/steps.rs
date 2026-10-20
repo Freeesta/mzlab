@@ -7,7 +7,14 @@ use mzlab_core::step::json::registry_json;
 use mzlab_core::step::{find, Kind, Param, Step};
 use mzlab_feat::axis::MassAxis;
 use mzlab_feat::recipe::{Mode, Recipe};
-use mzlab_feat::steps::registry;
+use mzlab_feat::steps::{recipe_map, registry};
+
+const FEATURE_STEPS: [&str; 4] = [
+    "features.detect",
+    "features.align",
+    "features.gapfill",
+    "features.ms2_link",
+];
 
 const IDS: [&str; 13] = [
     "import.raw",
@@ -35,13 +42,6 @@ fn num(p: &Param) -> f64 {
     default_of(p)
         .f64()
         .unwrap_or_else(|| panic!("{} is not a number", p.name))
-}
-
-fn axis_of(p: &Param) -> MassAxis {
-    match default_of(p).str() {
-        Some("ppm") => MassAxis::Ppm,
-        other => panic!("axis default {other:?}"),
-    }
 }
 
 /// A recipe with every field the descriptors name set to a value that is not the default.
@@ -73,50 +73,23 @@ fn perturbed() -> Recipe {
     r
 }
 
-fn apply_detect(r: &mut Recipe, s: &Step) {
-    let alg = |n: &str| s.algorithm_param("masstrace", n).unwrap();
-    r.detect.polarity = match num(s.param("polarity").unwrap()) as i32 {
-        0 => None,
-        p => Some(p as i8),
-    };
-    r.detect.floor = num(s.param("floor").unwrap());
-    r.detect.min_height = num(s.param("min_height").unwrap());
-    r.detect.axis = axis_of(s.param("axis").unwrap());
-    r.detect.min_points = num(alg("min_points")) as u32;
-    r.detect.max_gap = num(alg("max_gap")) as u32;
-    r.detect.long_trace = num(alg("long_trace")) as u32;
+/// The defaults of `s` (its own parameters and those of its default algorithm), as a plan would resolve them.
+fn defaults(s: &Step) -> Vec<(String, Value)> {
+    let alg = s
+        .algorithms
+        .iter()
+        .find(|a| Some(a.id) == s.default_algorithm);
+    let own = s
+        .params
+        .iter()
+        .chain(alg.into_iter().flat_map(|a| a.params.iter()));
+    own.filter_map(|p| p.default.clone().map(|d| (p.name.to_string(), d)))
+        .collect()
 }
 
-fn apply_align(r: &mut Recipe, s: &Step) {
-    let p = |n: &str| s.param(n).unwrap();
-    r.mode = match default_of(p("mode")).str() {
-        Some("family") => Mode::Family,
-        Some("ion") => Mode::Ion,
-        other => panic!("mode default {other:?}"),
-    };
-    r.align.ion.ppm = num(p("ppm"));
-    r.align.ion.rt_gap = num(p("rt_gap"));
-    r.align.ion.max_ppm_span = num(p("max_ppm_span"));
-    r.align.ion.drop_artefacts = default_of(p("drop_artefacts")) == Value::Bool(true);
-    r.align.ion.split_gap = Some(num(p("split_gap")));
-    r.weak_files = num(p("weak_files")) as usize;
-}
-
-fn apply_fill(r: &mut Recipe, s: &Step) {
-    let p = |n: &str| num(s.param(n).unwrap());
-    r.fill.floor = p("floor");
-    r.fill.ppm = p("ppm");
-    r.fill.rt_tol = p("rt_tol");
-    r.fill.min_points = p("min_points") as usize;
-    r.fill.max_gap = p("max_gap") as usize;
-    r.fill.long_trace = p("long_trace") as usize;
-}
-
-fn apply_ms2(r: &mut Recipe, s: &Step) {
-    let p = |n: &str| num(s.param(n).unwrap());
-    r.steps.ms2.default_half_window = p("default_half_window");
-    r.steps.ms2.tol_ppm = p("tol_ppm");
-    r.steps.ms2.weak = p("weak") as f32;
+/// The defaults of `s` written onto `r` with the mapping of the native runner.
+fn apply_defaults(r: &mut Recipe, s: &Step) {
+    recipe_map::apply(r, s.id, &defaults(s)).unwrap();
 }
 
 #[test]
@@ -138,10 +111,9 @@ fn defaults_rebuild_the_recipe_of_today() {
         today.table_hash(),
         "the starting recipe must differ"
     );
-    apply_detect(&mut r, step("features.detect"));
-    apply_align(&mut r, step("features.align"));
-    apply_fill(&mut r, step("features.gapfill"));
-    apply_ms2(&mut r, step("features.ms2_link"));
+    for id in FEATURE_STEPS {
+        apply_defaults(&mut r, step(id));
+    }
     let p = |id: &str, n: &str| num(step(id).param(n).unwrap());
     assert_eq!(
         p("features.estimate", "polarity"),
@@ -151,6 +123,31 @@ fn defaults_rebuild_the_recipe_of_today() {
     assert_eq!(r.file_hash(), now.file_hash());
     assert_eq!(r.table_hash(), now.table_hash());
     assert_eq!(r.file_text(), now.file_text());
+}
+
+/// `values` reads back what `apply` wrote: the defaults of every feature step, through the recipe.
+#[test]
+fn recipe_map_reads_back_what_it_writes() {
+    let reg = registry();
+    for id in FEATURE_STEPS {
+        let s = find(&reg, id).unwrap();
+        let mut r = perturbed();
+        apply_defaults(&mut r, s);
+        let mut want = defaults(s);
+        mzlab_core::sortc::slice_by(&mut want, |a, b| a.0.cmp(&b.0));
+        let got: Vec<(String, Value)> = recipe_map::values(&r, id)
+            .into_iter()
+            .filter(|(k, _)| want.iter().any(|w| w.0 == *k))
+            .collect();
+        assert_eq!(got, want, "{id}");
+    }
+    let mut r = Recipe::default();
+    let unknown = recipe_map::apply(
+        &mut r,
+        "features.align",
+        &[("nope".into(), Value::Num(1.0))],
+    );
+    assert_eq!(unknown.unwrap_err().key, "err.flow.param.unknown");
 }
 
 #[test]

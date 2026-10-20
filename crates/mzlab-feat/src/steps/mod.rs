@@ -7,6 +7,7 @@ mod ident;
 mod ident_annot;
 mod ident_formula;
 mod ident_spectra;
+pub mod recipe_map;
 pub mod records;
 mod table;
 mod tabui;
