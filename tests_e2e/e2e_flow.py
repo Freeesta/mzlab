@@ -243,10 +243,15 @@ try:
               const rev = (id, level) => ({ pol: "POS", id, mz: 200.1, rt: 3.2, current: { level, sub: "", name: "x", group: "" }, alternatives: [{ name: "Caffeine", score: 0.91 }], rtlogp: { ok: true },
                 proposal: { class: "2b-check", proposed: level === "3" ? "2b" : "3", reasons: ["one reason"], evidence: { n_peaks: 5, n_explained: 3, frac_explained: 0.6, view: { peaks: [{ mz: 138.07, rel: 100, frag: { formula: "C6H8N3", ppm: 1.2, loss: "CO" } }] } } } });
               window.__saved = [];
-              ATTRIBUTIO_CORE.pool = async () => ({ attributioReview: async (f, r, pol, id) => rev(id, id === 1 ? "2" : "3"), attributioDecision: async (f, r, d) => { window.__saved.push(JSON.parse(d)); return { summary: { path: "decisions/feature_decisions.csv" }, text: "csv" }; } });
+              ATTRIBUTIO_CORE.pool = async () => ({ attributioExport: async (f, r, k) => ({ files: [{ name: 'out_' + k + '.csv', text: 'a;b' }], warnings: [] }), attributioReview: async (f, r, pol, id) => rev(id, id === 1 ? "2" : "3"), attributioDecision: async (f, r, d) => { window.__saved.push(JSON.parse(d)); return { summary: { path: "decisions/feature_decisions.csv" }, text: "csv" }; } });
               const data = { columns: [], rows: [["POS", 1, 200.1, 3.2, 2, "b", "b", "x", "", ""], ["POS", 2, 201.1, 3.4, 3, "a", "b", "y", "", ""]] };
               FLOW.openResult({ type: "annot", label: "demo (campaign folder)", campaign: { root: "demo", files: [], data, summary: {} }, text: async () => "" });
             }""")
+            # the engine exports of Attributio hang on the same campaign: six items, one file downloads
+            assert pg.locator('.flx-res #at-export:not([disabled])').count() == 1 and pg.locator('.flx-res #at-export-menu button').count() == 6
+            pg.click('.flx-res #at-export')
+            with pg.expect_download() as dl: pg.click('.flx-res #at-export-menu button[data-kind=schymanski]')
+            assert dl.value.suggested_filename == "out_schymanski.csv"
             pg.click('.flx-res button:has-text("Review")'); attendi(pg, "document.querySelector('.flw-rv h3') && /POS 1/.test(document.querySelector('.flw-rv h3').textContent)")
             assert "3 of 5 peaks explained" in pg.inner_text(".flw-rv-proofs") and pg.locator(".flw-rv-acts button").count() == 5
             pg.fill('.flw-rv input[aria-label="Reviewer"]', "ab")
