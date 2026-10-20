@@ -8,7 +8,7 @@ use opentfraw::extra::scan_extras_with;
 use opentfraw::mzml::{
     extract_arrays, extract_spectrum, scan_metadata, scan_metadata_with, ScanMetadata,
 };
-use opentfraw::{ExtraFields, RawFileReader, ScanParams};
+use opentfraw::{Activation, Analyzer, ExtraFields, RawFileReader, ScanParams};
 
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
@@ -18,7 +18,7 @@ use crate::lettori::{
 };
 use crate::metodo::{self, sha1_hex};
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
-use crate::mzmlwrite::Header;
+use crate::mzmlwrite::{CvPar, Header, Precursore, SpectrumExtra};
 
 const MAGIC: [u8; 18] = [
     0x01, 0xA1, b'F', 0, b'i', 0, b'n', 0, b'n', 0, b'i', 0, b'g', 0, b'a', 0, b'n', 0,
@@ -372,6 +372,79 @@ impl Lettore for LettoreRaw {
         self.one(c)?;
         Ok(Some(testata(self)))
     }
+
+    /// The precursor, the activation, the maker's totals, the injection time, FAIMS and the trailer of scan `k` (`extra_di_scansione`).
+    fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
+        if self.one(c).is_err() {
+            return SpectrumExtra::default();
+        }
+        extra_di_scansione(self, k, s).unwrap_or_default()
+    }
+}
+
+/// The dissociation terms the Thermo activation maps to (as the converters of the maker's data write them); none for the ones PSI-MS has no term for.
+fn termini_attivazione(a: Activation, analyzer: Option<Analyzer>) -> Vec<(String, String)> {
+    const BEAM: (&str, &str) = ("MS:1000422", "beam-type collision-induced dissociation");
+    const ETD: (&str, &str) = ("MS:1000598", "electron transfer dissociation");
+    let t: &[(&str, &str)] = match a {
+        Activation::HCD => &[BEAM],
+        Activation::ETD => &[ETD],
+        Activation::EThcD => &[
+            ETD,
+            ("MS:1002631", "electron-transfer/higher-energy collision dissociation"),
+        ],
+        Activation::CID if analyzer == Some(Analyzer::FTMS) => &[BEAM],
+        Activation::CID => &[("MS:1000133", "collision-induced dissociation")],
+        Activation::MPID => &[("MS:1000435", "photodissociation")],
+        Activation::ECD => &[("MS:1000250", "electron capture dissociation")],
+        Activation::IRMPD => &[("MS:1000262", "infrared multiphoton dissociation")],
+        Activation::PQD => &[("MS:1000599", "pulsed q dissociation")],
+        Activation::UVPD => &[("MS:1003246", "ultraviolet photodissociation")],
+        Activation::SID => &[("MS:1000136", "surface-induced dissociation")],
+        Activation::PD => &[],
+    };
+    t.iter().map(|(a, n)| (a.to_string(), n.to_string())).collect()
+}
+
+/// What the mzML says of scan `k` besides its points. The parent of an MSn scan is the last scan of the level above that came before it (the "Master
+/// Index" of the trailer is not a scan number). `None` when the scan cannot be read: the writer then falls back to the plain precursor of the spectrum.
+fn extra_di_scansione(l: &mut LettoreRaw, k: usize, s: &Spectrum) -> Option<SpectrumExtra> {
+    let idx = l.row(k).ok()?;
+    let first = l.raw.run_header.sample_info.first_scan_number;
+    let params = l.raw.scan_params(&mut l.src, first + idx);
+    let m = scan_metadata_with(&l.raw, idx, params.as_ref().map(|p| p.borrowed()))?;
+    let mut e = SpectrumExtra {
+        tic: Some(m.total_ion_current),
+        base_peak: Some((m.base_peak_mz, m.base_peak_intensity)),
+        window: (m.high_mz > m.low_mz).then_some((m.low_mz, m.high_mz)),
+        ..SpectrumExtra::default()
+    };
+    if let Some(v) = m.ion_injection_time_ms {
+        e.scan_params.push(CvPar::new("MS:1000927", "ion injection time", v).with_unit("UO:0000028", "millisecond"));
+    }
+    if let Some(v) = m.faims_cv {
+        e.scan_params.push(CvPar::new("MS:1001581", "FAIMS compensation voltage", v).with_unit("UO:0000218", "volt"));
+    }
+    if let Some(p) = &m.precursor {
+        let level = l.indice.get(k)?.livello;
+        let parent = (level >= 2)
+            .then(|| l.indice[..k].iter().rev().find(|v| v.livello + 1 == level))
+            .flatten();
+        let half = p.isolation_width.map(|w| w / 2.0);
+        e.precursors.push(Precursore {
+            selected_mz: p.selected_mz.or(p.target_mz).or(s.precursor),
+            charge: p.charge.filter(|&z| z > 0),
+            intensity: None,
+            iso_target: p.target_mz,
+            iso_lower: half,
+            iso_upper: half,
+            activation: p.activation.map(|a| termini_attivazione(a, p.analyzer)).unwrap_or_default(),
+            energy: p.collision_energy.map(|v| (if p.ce_is_nce { "MS:1000138" } else { "MS:1000045" }.to_string(), v)),
+            spectrum_ref: parent.map(|v| v.id.clone()),
+        });
+    }
+    e.params = scan_extras_with(&l.raw, params, &m, &ExtraFields::All).into_iter().collect();
+    Some(e)
 }
 
 fn median(mut v: Vec<f32>) -> f32 {

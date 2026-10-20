@@ -15,7 +15,7 @@ use mzlab_core::lettori::{
     Campione, Campo, Formato, Lettore, Posizione, VoceCromatogramma, VoceScansione,
 };
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
-use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
+use mzlab_core::mzmlwrite::{CvPar, Header, Precursore, SpectrumExtra};
 
 /// A tiny deterministic generator (xorshift), so the scans are the same on every run.
 pub struct Caso(pub u64);
@@ -165,6 +165,39 @@ impl Finto {
             }
             if k % 29 == 4 {
                 extra.params.push(("note".into(), "see MS:1000744".into()));
+            }
+            // the maker's totals, an injection time and a precursor chain: the rows are then read from the text the writer gives them
+            if k % 17 == 6 {
+                extra.tic = Some(1234.5);
+                extra.base_peak = Some((111.25, 77.0));
+                extra.scan_params.push(
+                    CvPar::new("MS:1000927", "ion injection time", 12.5)
+                        .with_unit("UO:0000028", "millisecond"),
+                );
+            }
+            if k % 19 == 7 {
+                extra
+                    .cv_params
+                    .push(CvPar::new("MS:1000129", "negative scan", ""));
+            }
+            if level > 1 && k % 7 == 3 {
+                extra.precursors.push(Precursore {
+                    selected_mz: sp.precursor,
+                    charge: Some(2),
+                    intensity: Some(555.5),
+                    iso_target: sp.precursor,
+                    iso_lower: Some(1.5),
+                    iso_upper: Some(0.5),
+                    activation: vec![(
+                        "MS:1000422".into(),
+                        "beam-type collision-induced dissociation".into(),
+                    )],
+                    energy: Some(("MS:1000138".into(), 30.0)),
+                    spectrum_ref: Some(format!(
+                        "controllerType=0 controllerNumber=1 scan={}",
+                        k
+                    )),
+                });
             }
             if k % 23 == 7 {
                 extra.params.push(("scan \"mode\"".into(), "a<b&c".into()));

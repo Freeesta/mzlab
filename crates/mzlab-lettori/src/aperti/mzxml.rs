@@ -15,7 +15,7 @@ use mzlab_core::lettori::{
 use mzlab_core::metodo::sha1_hex;
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 
-use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
+use mzlab_core::mzmlwrite::{attivazione_da_nome, Header, Precursore, SpectrumExtra};
 
 use super::mzxml_indice::{self, Riga};
 
@@ -108,7 +108,10 @@ impl LettoreMzxml {
             wide: p.a_64_bit.then(|| p.intensita.clone()),
             mz: p.mz,
         };
-        Ok((s, extra_di(&t)))
+        if self.noti.is_empty() {
+            self.noti = self.indice.iter().map(|v| v.id.clone()).collect();
+        }
+        Ok((s, extra_di(&t, &self.noti)))
     }
 }
 
@@ -326,6 +329,8 @@ pub struct LettoreMzxml {
     sha1: Option<Option<String>>,
     /// The extra of the spectrum `scansione` read last (the writer asks for it right after).
     ultima: RefCell<Option<(usize, SpectrumExtra)>>,
+    /// The ids of the scans, built when the first scan of an MSn level is written (a `spectrumRef` must name a scan of the file).
+    noti: std::collections::HashSet<String>,
 }
 
 fn riconosci(fs: &mut FileSet) -> Fiducia {
@@ -396,13 +401,45 @@ fn voce(k: usize, r: Riga, t: &Testa) -> Result<VoceScansione> {
     })
 }
 
-/// The `userParam`s and the window of a scan for the mzML we write.
-fn extra_di(t: &Testa) -> SpectrumExtra {
+/// The precursors of a scan as the mzML has them, outermost first: the m/z, charge, intensity, isolation width and activation of each `precursorMz`
+/// and the collision energy of the scan (on the last one). The parent scan is named only if the file has it.
+fn precursori_di(t: &Testa, noti: &std::collections::HashSet<String>) -> Vec<Precursore> {
+    let mut v: Vec<Precursore> = t
+        .precursori
+        .iter()
+        .filter_map(|(g, mz)| {
+            let mz: f64 = mz.trim().parse().ok().filter(|x: &f64| x.is_finite())?;
+            let meta = numero(*g, "windowWideness").map(|w| w / 2.0);
+            let radice = format!("scan={}", attr(*g, "precursorScanNum").trim());
+            Some(Precursore {
+                selected_mz: Some(mz),
+                charge: numero(*g, "precursorCharge").map(|z| z as i32).filter(|&z| z > 0),
+                intensity: numero(*g, "precursorIntensity"),
+                iso_target: Some(mz),
+                iso_lower: meta,
+                iso_upper: meta,
+                activation: attivazione_da_nome(attr(*g, "activationMethod"))
+                    .map(|(a, n)| vec![(a.to_string(), n.to_string())])
+                    .unwrap_or_default(),
+                energy: None,
+                spectrum_ref: noti.contains(&radice).then_some(radice),
+            })
+        })
+        .collect();
+    if let (Some(p), Some(e)) = (v.last_mut(), numero(t.scan, "collisionEnergy")) {
+        p.energy = Some(("MS:1000045".into(), e));
+    }
+    v
+}
+
+/// The `userParam`s, the window and the precursors of a scan for the mzML we write.
+fn extra_di(t: &Testa, noti: &std::collections::HashSet<String>) -> SpectrumExtra {
     let mut e = SpectrumExtra {
         sim: attr(t.scan, "scanType").eq_ignore_ascii_case("SIM"),
         observed: numero(t.scan, "lowMz").is_some() && numero(t.scan, "highMz").is_some(),
         window: numero(t.scan, "startMz").zip(numero(t.scan, "endMz")),
-        params: Vec::new(),
+        precursors: precursori_di(t, noti),
+        ..SpectrumExtra::default()
     };
     let mut aggiungi = |g: Tag, nomi: &[&str]| {
         for n in nomi {
@@ -469,6 +506,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         cabina: Cabina::default(),
         sha1: None,
         ultima: RefCell::new(None),
+        noti: Default::default(),
     };
     l.leggi_testa()?;
     l.costruisci_indice()?;

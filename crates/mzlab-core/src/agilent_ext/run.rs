@@ -344,6 +344,7 @@ impl AgilentD {
             observed: true,
             window,
             params,
+            ..SpectrumExtra::default()
         }
     }
 }

@@ -14,6 +14,9 @@ use crate::error::{Error, Result};
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
 use crate::numpress::{self, Np};
 
+/// The version of the PSI-MS CV every file declares, indexed or not.
+const CV_VERSION: &str = "4.2.6";
+
 /// The zlib level of the arrays. Level 1 is the fastest and 6 the default of zlib: on the synthetic spectra of `examples/mzml_scrivi.rs` level 1 writes 2.3 times faster than 6 and the file is 0.3 % larger.
 pub const LIVELLO_ZLIB: u32 = 1;
 
@@ -49,7 +52,7 @@ impl<W: Write> MzmlWriter<W> {
         let mut s = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
         if indexed { s += "<indexedmzML xmlns=\"http://psi.hupo.org/ms/mzml\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://psi.hupo.org/ms/mzml http://psi.hupo.org/ms/mzml/mzML1.1.2_idx.xsd\">\n"; }
         s += "<mzML xmlns=\"http://psi.hupo.org/ms/mzml\" version=\"1.1.0\" id=\"mzlab\">\n";
-        s += &format!("<cvList count=\"2\"><cv id=\"MS\" fullName=\"Proteomics Standards Initiative Mass Spectrometry Ontology\" version=\"{}\" URI=\"https://raw.githubusercontent.com/HUPO-PSI/psi-ms-CV/master/psi-ms.obo\"/><cv id=\"UO\" fullName=\"Unit Ontology\" version=\"09:04:2014\" URI=\"https://raw.githubusercontent.com/bio-ontology-research-group/unit-ontology/master/unit.obo\"/></cvList>\n", if indexed { "4.2.6" } else { "4.1.163" });
+        s += &format!("<cvList count=\"2\"><cv id=\"MS\" fullName=\"Proteomics Standards Initiative Mass Spectrometry Ontology\" version=\"{CV_VERSION}\" URI=\"https://raw.githubusercontent.com/HUPO-PSI/psi-ms-CV/master/psi-ms.obo\"/><cv id=\"UO\" fullName=\"Unit Ontology\" version=\"09:04:2014\" URI=\"https://raw.githubusercontent.com/bio-ontology-research-group/unit-ontology/master/unit.obo\"/></cvList>\n");
         let content = cv("MS:1000579", "MS1 spectrum", "") + &h.content.iter().map(|(a, n)| cv(a, n, "")).collect::<String>();
         s += &format!("<fileDescription><fileContent>{content}</fileContent>{}</fileDescription>\n", source_list(h));
         if let Some((id, name)) = &h.sample {
@@ -248,6 +251,14 @@ pub struct SpectrumExtra {
     pub window: Option<(f64, f64)>,
     /// userParams of the spectrum: (name, value).
     pub params: Vec<(String, String)>,
+    /// The precursors, in order (the chain of an MSn scan is one per level, outermost first). Empty: `Spectrum::precursor` is written as target and selected ion.
+    pub precursors: Vec<Precursore>,
+    /// `MS:1000285` total ion current and `MS:1000504` / `MS:1000505` base peak (m/z, intensity) as the maker reports them; `None`: summed from the points.
+    pub tic: Option<f64>,
+    pub base_peak: Option<(f64, f64)>,
+    /// cvParams of `<scan>` (ion injection time, FAIMS voltage, ...) and of `<spectrum>` (any other term with an accession).
+    pub scan_params: Vec<CvPar>,
+    pub cv_params: Vec<CvPar>,
 }
 
 pub struct MzmlWriter<W: Write> {
@@ -378,8 +389,11 @@ impl<W: Write> MzmlWriter<W> {
 
 /// The text of a spectrum up to its arrays (`<spectrum ...>` and every header element before `<binaryDataArrayList`): what `scantable` reads.
 pub(crate) fn spectrum_head(index: usize, sp: &Spectrum, extra: &SpectrumExtra) -> String {
-    let tic: f64 = (0..sp.mz.len()).map(|i| sp.intensity_f64(i)).sum();
-    let base = (0..sp.mz.len()).max_by(|&a, &b| sp.intensity_f64(a).total_cmp(&sp.intensity_f64(b)));
+    let tic = extra.tic.unwrap_or_else(|| (0..sp.mz.len()).map(|i| sp.intensity_f64(i)).sum());
+    let base = extra.base_peak.or_else(|| {
+        let b = (0..sp.mz.len()).max_by(|&a, &b| sp.intensity_f64(a).total_cmp(&sp.intensity_f64(b)))?;
+        Some((sp.mz[b], sp.intensity_f64(b)))
+    });
     let mut s = format!("<spectrum index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">", index, esc(&sp.id), sp.mz.len());
     s += &cv("MS:1000511", "ms level", sp.level);
     s += &if sp.level <= 1 { cv("MS:1000579", "MS1 spectrum", "") } else { cv("MS:1000580", "MSn spectrum", "") };
@@ -389,9 +403,9 @@ pub(crate) fn spectrum_head(index: usize, sp: &Spectrum, extra: &SpectrumExtra) 
         _ => {}
     }
     s += &if sp.profile { cv("MS:1000128", "profile spectrum", "") } else { cv("MS:1000127", "centroid spectrum", "") };
-    if let Some(b) = base {
-        s += &mz_cv("MS:1000504", "base peak m/z", sp.mz[b]);
-        s += &unit_cv("MS:1000505", "base peak intensity", sp.intensity_f64(b), "MS:1000131", "number of detector counts");
+    if let Some((mz, int)) = base {
+        s += &mz_cv("MS:1000504", "base peak m/z", mz);
+        s += &unit_cv("MS:1000505", "base peak intensity", int, "MS:1000131", "number of detector counts");
     }
     s += &cv("MS:1000285", "total ion current", tic);
     if extra.sim {
@@ -401,13 +415,16 @@ pub(crate) fn spectrum_head(index: usize, sp: &Spectrum, extra: &SpectrumExtra) 
         s += &mz_cv("MS:1000528", "lowest observed m/z", lo);
         s += &mz_cv("MS:1000527", "highest observed m/z", hi);
     }
+    s += &extra.cv_params.iter().map(CvPar::xml).collect::<String>();
     for (k, v) in &extra.params { #[cfg(feature = "sciex")] if let Some(acc) = k.strip_prefix("cv:") { s += &cv(acc, v, ""); continue; }
         s += &format!("<userParam name=\"{}\" value=\"{}\"/>", esc(k), esc(v));
     }
     // The filter string is a scan-level term: the CV only allows it under <scan>.
     let filter = if sp.filter.is_empty() { String::new() } else { cv("MS:1000512", "filter string", esc(&sp.filter)) };
-    s += &format!("<scanList count=\"1\">{}<scan><cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>{}{}</scan></scanList>", cv("MS:1000795", "no combination", ""), sp.rt, filter, window_xml(extra.window));
-    if let Some(p) = sp.precursor {
+    s += &format!("<scanList count=\"1\">{}<scan><cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>{}{}{}</scan></scanList>", cv("MS:1000795", "no combination", ""), sp.rt, filter, extra.scan_params.iter().map(CvPar::xml).collect::<String>(), window_xml(extra.window));
+    if !extra.precursors.is_empty() {
+        s += &precursor_list(&extra.precursors);
+    } else if let Some(p) = sp.precursor {
         s += &format!("<precursorList count=\"1\"><precursor><isolationWindow>{}</isolationWindow><selectedIonList count=\"1\"><selectedIon>{}</selectedIon></selectedIonList></precursor></precursorList>", mz_cv("MS:1000827", "isolation window target m/z", p), mz_cv("MS:1000744", "selected ion m/z", p));
     }
     s
@@ -472,6 +489,9 @@ fn component_list(h: &Header) -> String {
     s + "</componentList>"
 }
 
+mod spettro;
+pub use spettro::{attivazione_da_nome, CvPar, Precursore};
+use spettro::precursor_list;
 #[cfg(not(target_family = "wasm"))]
 mod indice;
 #[cfg(target_family = "wasm")]
@@ -481,5 +501,7 @@ mod indice;
 mod tests;
 #[cfg(test)]
 mod tests_indice;
+#[cfg(test)]
+mod tests_precursori;
 #[cfg(test)]
 mod tests_xsd;

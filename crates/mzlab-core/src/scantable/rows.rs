@@ -422,6 +422,15 @@ fn extra_inerte(sp: &Spectrum, extra: &SpectrumExtra) -> bool {
     if acc(&sp.id) || acc(&sp.filter) {
         return false;
     }
+    // precursors, maker totals and cvParams are read from the text the writer gives them
+    if !extra.precursors.is_empty()
+        || extra.tic.is_some()
+        || extra.base_peak.is_some()
+        || !extra.scan_params.is_empty()
+        || !extra.cv_params.is_empty()
+    {
+        return false;
+    }
     extra
         .params
         .iter()

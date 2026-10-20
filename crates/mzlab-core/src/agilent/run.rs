@@ -326,6 +326,7 @@ impl AgilentD {
             observed: true,
             window,
             params: Vec::new(),
+            ..SpectrumExtra::default()
         }
     }
 }
