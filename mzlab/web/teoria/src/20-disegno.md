@@ -1,0 +1,81 @@
+# Disegnare le molecole {kicker: Capitolo 20}
+
+{.lead} Come usare l'editor chimico della scheda Disegno (Ketcher) per molecole, ioni, frammenti e vie di trasformazione. Sotto ogni struttura compaiono da soli formula e massa e sopra ogni freccia la differenza di formula; gli schemi, gli ioni e i frammenti li disegnate voi.
+
+```html
+<figure>
+<img src="../esempio-trasformazione-m.png" data-full="../esempio-trasformazione.png" width="1400" height="487" loading="lazy" decoding="async" alt="Schema di trasformazione: una molecola madre e tre prodotti collegati da frecce, con nome o TP e m/z sopra ogni struttura" style="max-width:100%;height:auto">
+<figcaption><b>Schema di trasformazione</b> esportato dalla scheda Disegno (esempio: paracetamolo). Sopra la madre il nome; sopra ogni prodotto (TP) il numero e l'<i>m/z</i> dell'ione che si osserva; sopra le frecce la differenza di formula. Un TP pu&ograve; derivare da un altro TP (madre &rarr; TP1 &rarr; TP2).</figcaption>
+</figure>
+```
+
+```html
+<figure>
+<img src="../esempio-frammentazione-m.png" data-full="../esempio-frammentazione.png" width="1400" height="217" loading="lazy" decoding="async" alt="Schema di frammentazione: lo ione precursore e i suoi frammenti, tutti con la carica, con le perdite neutre sulle frecce" style="max-width:100%;height:auto">
+<figcaption><b>Schema di frammentazione</b> (stesso composto). Precursore e frammenti sono ioni, tutti con la carica; sulle frecce la perdita neutra; sotto ogni ione formula e <i>m/z</i>.</figcaption>
+</figure>
+```
+
+```html
+<div class="box"><b>Due schemi, due significati</b><p>Nello schema di <b>trasformazione</b> i prodotti sono <i>molecole</i> (neutre: quelle che si formano nel reattore) e la freccia &egrave; una reazione chimica; l'<i>m/z</i> scritto sopra un TP &egrave; quello dell'ione che si sceglie di osservare, di solito [M+H]<sup>+</sup>. Nello schema di <b>frammentazione</b> tutto avviene in fase gassosa dentro lo strumento: il precursore e ogni frammento sono <i>ioni</i> (a numero pari di elettroni), tutti con la carica, e la freccia &egrave; una dissociazione; sopra la freccia va la <b>perdita neutra</b> (&minus;NH<sub>3</sub>, &minus;H<sub>2</sub>O, &minus;CO ...), che nello spettro non si vede. Nei due esempi gli <i>m/z</i> sono calcolati dal programma; la posizione degli OH nei TP &egrave; un'ipotesi plausibile, non l'unica possibile: a risoluzione unitaria l'<i>m/z</i> non la decide.</p></div>
+```
+
+## Comandi e consigli
+
+### Atomi
+
+```html
+<p>scegli l'elemento nella barra a destra (o il tasto: <kbd>C</kbd>, <kbd>N</kbd>, <kbd>O</kbd>, <kbd>S</kbd>, <kbd>L</kbd> = Cl, <kbd>B</kbd> = Br) e fai clic su un atomo per sostituirlo, o su un punto vuoto per aggiungerlo.</p>
+```
+
+### Carica + o −
+
+```html
+<p>strumenti <b>A+</b> e <b>A&minus;</b> nella barra a sinistra (tasti <kbd>=</kbd> e <kbd>-</kbd>), poi clic sull'atomo. Ogni clic aggiunge una carica. Per uno ione [M+H]<sup>+</sup> metti la carica sull'atomo protonato (di solito N od O) e aggiungi l'H: la formula diventa quella dello ione e la scritta mostra <i>m/z</i>. Se invece disegni la molecola neutra e vuoi mostrare l'ione, scegli l'addotto nel menu <b>Ione</b> della barra a destra.</p>
+```
+
+### Aggiungere un atomo (es. +O)
+
+```html
+<p>per una struttura vera, scegli O e fai clic su un atomo della molecola (si crea il legame). Per una semplice scritta accanto a una freccia (&laquo;+O&raquo;, &laquo;&minus;CH<sub>2</sub>&raquo;, &laquo;+H<sub>2</sub>O&raquo;) usa lo strumento testo <b>T</b> (<kbd>Alt</kbd>+<kbd>T</kbd>); nel riquadro del testo ci sono i pulsanti pedice e apice.</p>
+```
+
+### Parentesi
+
+```html
+<p>Ketcher non ha parentesi semplici per gli ioni (gli S-Group mettono parentesi da polimero, con una &laquo;n&raquo;). Per uno ione la cosa corretta &egrave; mettere la carica sull'atomo con <b>A+</b>: la scritta sotto diventa m/z. Se vuoi proprio la notazione [&nbsp;]<sup>+</sup>, scrivila con lo strumento testo <b>T</b> (pulsante apice per il +).</p>
+```
+
+### Vie di trasformazione
+
+freccia di reazione e segno + nella barra a sinistra. Se disegni composto di partenza → freccia → prodotto, sopra la freccia compare da sola la differenza (es. «+O Δm +16»). Il nome o il numero di un composto («Paracetamolo», «TP1 *m/z* 168») lo scrivi tu con lo strumento testo **T**, sopra la struttura: l'*m/z* lo calcoli tu in base alla composizione elementare attesa. Con più prodotti metti le strutture una accanto all'altra o su righe diverse, con una freccia per ogni passaggio.
+
+### Un frammento senza rompere legami
+
+```html
+<p>seleziona solo gli atomi del pezzo (rettangolo di selezione, oppure clic sugli atomi tenendo premuto <kbd>Maiusc</kbd>) e premi <kbd>Alt</kbd>+<kbd>C</kbd> (&laquo;Valori calcolati&raquo; di Ketcher): d&agrave; formula e massa della parte selezionata. Quale ione sia (H spostati, dove sta la carica) lo decidi tu.</p>
+```
+
+### Rompere un legame (frammenti)
+
+```html
+<p>strumento <b>gomma</b> (<kbd>Del</kbd>) e clic sul legame: la molecola si divide e sotto ogni pezzo compaiono formula e massa. Attenzione: un frammento in MS/MS &egrave; uno <i>ione</i>, quasi sempre con un H spostato; aggiungi carica e H dove servono e confronta l'm/z con lo spettro di ioni prodotto. Se sbagli: <kbd>Ctrl</kbd>+<kbd>Z</kbd>.</p>
+```
+
+### Altro
+
+```html
+<p><kbd>Ctrl</kbd>+<kbd>A</kbd> seleziona tutto, <kbd>Ctrl</kbd>+<kbd>L</kbd> riordina il disegno, <kbd>Ctrl</kbd>+rotella ingrandisce.</p>
+```
+
+```html
+<div class="box"><b>SMILES, disegno veloce e propriet&agrave; previste</b><p>Nel riquadro <b>Disegna veloce</b> incolli uno SMILES e la molecola compare sulla tela. Se invece selezioni una molecola, o anche solo un pezzo (rettangolo di selezione o <kbd>Maiusc</kbd>+clic), a destra compare il suo <b>SMILES</b> con il pulsante Copia; i legami tagliati sono chiusi con H. Sotto, le <b>propriet&agrave; previste</b> dalla struttura (se non selezioni nulla, di tutte le strutture della tela): <b>logP</b>, logS, superficie polare (TPSA) e numero di donatori/accettori di legame H. Servono per ragionare sulla ritenzione in fase inversa: a parit&agrave; di condizioni, un composto pi&ugrave; polare (logP pi&ugrave; basso) esce prima su C18. Limiti e precisione delle stime (forma neutra, errore del logP, logD): nel &laquo;?&raquo; del riquadro. Il logP aiuta a confrontare candidati simili, non decide da solo quale sia un TP.</p></div>
+```
+
+```html
+<div class="box"><b>Formula e massa</b><p>Le due spunte in cima alla barra a destra scelgono cosa scrivere sotto ogni struttura: la formula bruta, la massa monoisotopica (M per una specie neutra, <i>m/z</i> se c'&egrave; una carica) o tutte e due. Per la massa si sceglie il numero di decimali (0 = all'unit&agrave;, come nello spettro a risoluzione unitaria). Il menu <b>Ione</b> mostra invece la molecola come ione ([M+H]<sup>+</sup>, [M+Na]<sup>+</sup>, [M&minus;H]<sup>&minus;</sup> ...): sotto compare la formula dello ione con la carica e, sotto ancora, l'<i>m/z</i>. Se la struttura ha gi&agrave; una carica disegnata, vale quella e il menu non cambia nulla. La scritta compare anche nelle immagini esportate.</p></div>
+```
+
+```html
+<div class="box"><b>Esportare</b><p>PNG e JPEG sono salvati ad alta risoluzione (almeno 3 volte la dimensione a schermo, circa 3600 pixel di larghezza); l'SVG &egrave; vettoriale e si ingrandisce senza perdere qualit&agrave;. Lo sfondo &egrave; bianco; con la spunta <b>Sfondo trasparente</b> PNG e SVG hanno lo sfondo trasparente (il JPEG non lo supporta e in quella modalit&agrave; &egrave; disattivato). I file si chiamano <code>disegno_data_ora</code> (stesso nome per i quattro formati dello stesso minuto, <code>_trasparente</code> se lo sfondo &egrave; trasparente); il campo <b>Nome file</b> permette di sceglierne uno diverso.</p></div>
+```

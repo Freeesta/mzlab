@@ -10,6 +10,7 @@ from .liste import ITEM, Liste
 from .speciali import FIG, Speciali
 
 HEAD = re.compile(r"^(#{1,3}) +(.+?)\s*$")
+EXPLICIT_ID = re.compile(r"\s*\{#([\w-]+)\}\s*$")
 KICKER = re.compile(r"\s*\{kicker: *([^}]+)\}\s*$")
 
 
@@ -27,6 +28,9 @@ class Parser(Speciali, Liste, Grezzo):
         self.head: list[str] = []
         self.caption = None
         self.scripts: list[str] = []
+        self.scripts_before: list[str] = []
+        self.page_title = ""
+        self.no_appname = False
 
     def err(self, line: int, msg: str):
         raise LibroError(self.file, line, msg)
@@ -78,11 +82,14 @@ class Parser(Speciali, Liste, Grezzo):
         k = KICKER.search(text) if level == 1 else None
         kicker = k.group(1) if k else self.prefix
         text = text[:k.start()] if k else text
+        e = EXPLICIT_ID.search(text)
+        text = text[:e.start()] if e else text
         self.ctx["titoli"].append((level, text))
         h = self.inl(text, at)
         if level == 1:
             return f'<div class="kicker">{escape(kicker)}</div>\n<h1>{h}</h1>'
-        return f'<h{level} id="{slug(text)}">{h}</h{level}>'
+        hid = e.group(1) if e else (None if self.ctx.get("teoria") else slug(text))
+        return f"<h{level}{f' id={chr(34)}{hid}{chr(34)}' if hid else ''}>{h}</h{level}>"
 
     def paragraph(self, lines, i, base):
         j = i

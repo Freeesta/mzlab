@@ -243,12 +243,15 @@ try:
               const rev = (id, level) => ({ pol: "POS", id, mz: 200.1, rt: 3.2, current: { level, sub: "", name: "x", group: "" }, alternatives: [{ name: "Caffeine", score: 0.91 }], rtlogp: { ok: true },
                 proposal: { class: "2b-check", proposed: level === "3" ? "2b" : "3", reasons: ["one reason"], evidence: { n_peaks: 5, n_explained: 3, frac_explained: 0.6, view: { peaks: [{ mz: 138.07, rel: 100, frag: { formula: "C6H8N3", ppm: 1.2, loss: "CO" } }] } } } });
               window.__saved = [];
-              ATTRIBUTIO_CORE.pool = async () => ({ attributioExport: async (f, r, k) => ({ files: [{ name: 'out_' + k + '.csv', text: 'a;b' }], warnings: [] }), attributioReview: async (f, r, pol, id) => rev(id, id === 1 ? "2" : "3"), attributioDecision: async (f, r, d) => { window.__saved.push(JSON.parse(d)); return { summary: { path: "decisions/feature_decisions.csv" }, text: "csv" }; } });
+              ATTRIBUTIO_CORE.pool = async () => ({ attributioExport: async (f, r, k) => ({ files: k === 'evidence' ? [{ name: 'evidence_demo.json', text: '{"settings_hash":"0123456789ab","settings":"tol=0.5","features":2}' }] : [{ name: 'out_' + k + '.csv', text: 'a;b' }], warnings: [] }), attributioReview: async (f, r, pol, id) => rev(id, id === 1 ? "2" : "3"), attributioDecision: async (f, r, d) => { window.__saved.push(JSON.parse(d)); return { summary: { path: "decisions/feature_decisions.csv" }, text: "csv" }; } });
               const data = { columns: [], rows: [["POS", 1, 200.1, 3.2, 2, "b", "b", "x", "", ""], ["POS", 2, 201.1, 3.4, 3, "a", "b", "y", "", ""]] };
               FLOW.openResult({ type: "annot", label: "demo (campaign folder)", campaign: { root: "demo", files: [], data, summary: {} }, text: async () => "" });
             }""")
+            pg.click('.flx-res button:has-text("Settings digest")'); attendi(pg, "document.querySelector('.flw-digest code') && document.querySelector('.flw-digest code').textContent === '0123456789ab'")
+            assert pg.locator('.flx-res .flw-digest button:has-text("Copy")').count() == 1
             # the engine exports of Attributio hang on the same campaign: six items, one file downloads
             assert pg.locator('.flx-res #at-export:not([disabled])').count() == 1 and pg.locator('.flx-res #at-export-menu button').count() == 6
+            assert pg.locator('.flx-res .flw-ms2 #ms2-insilico').count() == 1 and pg.locator('.flx-res .flw-ms2 #ms2-predict').count() == 1  # the MS2 panel
             pg.click('.flx-res #at-export')
             with pg.expect_download() as dl: pg.click('.flx-res #at-export-menu button[data-kind=schymanski]')
             assert dl.value.suggested_filename == "out_schymanski.csv"
@@ -264,6 +267,19 @@ try:
             attendi(pg, "!document.querySelector('.flw-rv-note').hidden")
             pg.click('.flw-rv-acts button:has-text("Skip")'); assert pg.locator(".flw-rv progress").get_attribute("value") == "1"
             pg.click('.flw-rv button:has-text("Download decisions")')
+        def feat_view():
+            # a .mzfeat chosen from disk: the page reads its meta, opens the session of the table and mounts the table (both engines are replaced by stubs, as the test site has no table .wasm)
+            pg.evaluate("""() => {
+              window.PIPEQC = window.PIPEQC || {}; window.PIPET = window.PIPET || {};
+              PIPEQC.open = async a => { window.__fa = a; return {}; }; PIPET.mount = (box, o) => { window.__fo = o; box.textContent = "mounted"; };
+              const meta = new TextEncoder().encode(JSON.stringify({ rows: 3, files: 2, inputs: [{ name: "a.mzidx" }, { name: "b.mzidx" }], arrays: [] }));
+              const head = new Uint8Array(16); head.set(new TextEncoder().encode("MZFEAT01")); new DataView(head.buffer).setBigUint64(8, BigInt(meta.length), true);
+              FLOW.openResult({ type: "table", label: "demo.mzfeat", file: new File([head, meta], "demo.mzfeat"), text: async () => "" });
+            }""")
+            attendi(pg, "window.__fo && /3 rows in 2 files/.test(document.querySelector('.flx-res-body').textContent)")
+            assert pg.evaluate("window.__fa.names.join()") == "a,b" and pg.evaluate("window.__fa.pol") == 1
+            pg.click('.flx-res button[aria-label="Close the results"]')
+        step("results: a .mzfeat from disk opens the feature table with the names of its files", feat_view)
         step("results: the Review screen asks for a note only when the level changes and moves to the next feature", review_view)
         def mgf_view():
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Check mixed spectra")')

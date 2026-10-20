@@ -152,9 +152,9 @@ fn several_isomers_never_give_a_site() {
 #[test]
 fn a_change_posizioni_does_not_know_is_named() {
     let parent = parse_formula("C8H10O").unwrap();
-    let three_o = parse_formula("C8H10O4").unwrap();
+    let four_o = parse_formula("C8H10O5").unwrap();
     assert_eq!(
-        candidates(PHENOL, &parent, &three_o).err(),
+        candidates(PHENOL, &parent, &four_o).err(),
         Some("multiple_changes")
     );
     let nitro = parse_formula("C8H11NO").unwrap();
@@ -162,9 +162,9 @@ fn a_change_posizioni_does_not_know_is_named() {
         candidates(PHENOL, &parent, &nitro).err(),
         Some("unsupported_change")
     );
-    let r = undetermined("+3O", vec!["multiple_changes"]);
+    let r = undetermined("+4O", vec!["multiple_changes"]);
     let d = drawing(PHENOL, &r);
-    assert_eq!((d.mode, d.delta.as_str()), ("bracket", "+3O"));
+    assert_eq!((d.mode, d.delta.as_str()), ("bracket", "+4O"));
 }
 
 #[test]

@@ -1,2 +1,14 @@
 # Chapters (file names) where a raw ```html block is allowed: the ones imported from the old Teoria HTML.
 # New chapters never use it; remove a name here once its chapter no longer needs the block.
+08-vuoto.md
+01-tp.md
+17-origine.md
+20-disegno.md
+19-hr-dda.md
+23-tempi.md
+02-fotocatalisi.md
+03-cromatografia.md
+04-lc.md
+05-gc.md
+07-ei-ci.md
+10-qqq.md

@@ -202,6 +202,8 @@
     "../../flow/lazy/flow-results.js",
     "../../flow/lazy/flow-views-attributio.js",
     "../../flow/lazy/flow-campaign.js",
+    "../../flow/lazy/flow-digest.js",
+    "../../flow/lazy/flow-views-features.js",
     "../../flow/lazy/flow-review.js",
     "../../flow/lazy/flow-views-tabui.js",
     "../../flow/lazy/flow-desktop.js"

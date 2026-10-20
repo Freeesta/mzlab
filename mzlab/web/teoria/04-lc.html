@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema--><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cromatografia liquida (HPLC) · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 4</div>
 <h1>Cromatografia liquida (HPLC)</h1>
 <p class="lead">La cromatografia separa nel tempo ciò che lo spettrometro non sa separare in massa. Per un quadrupolo a risoluzione unitaria il tempo di ritenzione è metà dell'informazione. Le grandezze di base (k, α, N, R<sub>s</sub>, van Deemter) sono nel capitolo 3: qui le applichiamo all'HPLC in fase inversa (RP-HPLC).</p>
-
 <h2>Lo strumento</h2>
 <figure>
 <svg viewBox="0 0 860 200" role="img" aria-label="Schema di un sistema HPLC-MS: pompa, autocampionatore, forno con colonna C18, PDA e rivelatore ESI-MS QqQ" aria-describedby="fd-04-0">
@@ -34,7 +34,6 @@
 <li><b>Colonna</b> termostatata: la temperatura riduce la viscosità e cambia un po' la selettività; va tenuta costante per tempi riproducibili.</li>
 <li><b>Rivelatori</b>: UV-Vis e <b>PDA</b> (assorbanza secondo Lambert-Beer, A = ε b c: serve un cromoforo; il PDA registra tutto lo spettro 200-400 nm per ogni istante), fluorescenza (molto sensibile, solo per molecole fluorescenti), indice di rifrazione (universale, poco sensibile, niente gradienti) e soprattutto la <b>spettrometria di massa</b>. Nei sistemi con PDA e MS in serie, il rivelatore ottico è posto a monte dello spettrometro (capitolo 12).</li>
 </ul>
-
 <h2>Le colonne</h2>
 <p>La fase stazionaria più usata è <b>silice</b> porosa con catene alchiliche legate chimicamente ai silanoli (Si–O–Si–R). Dopo la funzionalizzazione restano silanoli liberi, acidi: si «chiudono» con gruppi trimetilsilile (<b>end-capping</b>) perché con le basi protonate darebbero code.</p>
 <table>
@@ -45,10 +44,8 @@
 <tr><td>Fasi «polar-embedded», C18 per acqua al 100%</td><td>Non collassano in acqua pura</td><td>Molecole molto polari (alcuni TP)</td></tr>
 </table>
 <p>Formati: lunghezza 50-150 mm, diametro interno 2,1 mm (LC-MS, 0,2-0,5 mL/min) o 4,6 mm (UV, 1 mL/min); particelle totalmente porose da 5, 3 o sub-2 µm, oppure <b>core-shell</b> (nucleo pieno e guscio poroso, 2,6-2,7 µm) che danno quasi l'efficienza delle sub-2 µm con metà della pressione (termini A e C più piccoli, capitolo 3). La silice si scioglie sopra pH ~8 e perde le catene sotto pH ~2: ogni colonna ha il suo intervallo di pH.</p>
-
 <h2>Perché serve la separazione</h2>
 <p>Un campione degradato contiene il parent, decine di intermedi, sali, componenti della matrice. Se entrassero tutti insieme nella sorgente avremmo tre problemi: <b>spettri sovrapposti</b> (impossibile capire quale ione viene da quale molecola), <b>isomeri indistinguibili</b> (stesso m/z) e <b>soppressione ionica</b> (capitolo 6: le molecole competono per la carica). La colonna distribuisce i componenti nel tempo, e ciascuno arriva alla sorgente in una finestra di pochi secondi.</p>
-
 <h2>Il meccanismo di ritenzione</h2>
 <p>In fase inversa la fase stazionaria è apolare (silice con catene C<sub>18</sub> legate) e la fase mobile è polare (acqua + solvente organico, qui acetonitrile). Le molecole si ripartiscono tra le due fasi: più una molecola è idrofoba, più tempo passa tra le catene alchiliche e più tardi esce.</p>
 <span class="eq"><i>t</i><sub>R</sub> = <i>t</i><sub>0</sub>(1 + <i>k</i>), &nbsp;&nbsp; <i>k</i> = <span class="frac"><span><i>n</i><sub>stazionaria</sub></span><span><i>n</i><sub>mobile</sub></span></span>, &nbsp;&nbsp; log <i>k</i> ≈ log <i>k</i><sub>w</sub> − <i>S</i> φ<span class="no">(4.1)</span></span>
@@ -57,7 +54,6 @@
 <p>I due TP polari usciranno presto e vicini; il parent con k alto, largo e basso; il prodotto idrofobo forse non uscirà nella corsa. Con un gradiente 10 → 95% tutti escono con picchi stretti di larghezza simile. Prova anche a rendere il gradiente più lento (durata maggiore): i picchi si allontanano, la risoluzione cresce, la corsa si allunga.</p></details>
 <div class="sim" id="sim-gradiente"><h4>Isocratica o gradiente in fase inversa</h4>
 <p class="note">Quattro composti modello con parametri LSS diversi (log k<sub>w</sub> e S). In gradiente ogni banda accelera man mano che la percentuale di organico sale: il programma integra il moto della banda lungo la colonna. Il tratteggio è la % di acetonitrile che arriva in colonna.</p></div>
-
 <figure>
 <svg viewBox="0 0 860 330" role="img" aria-label="Cromatogramma in gradiente: picchi dai sali ai TP polari fino al parent, con la linea tratteggiata del % di ACN" aria-describedby="fd-04-1">
 <style>.ax{stroke:#9b978c}.t{font:12px system-ui,sans-serif;fill:#6b675c}.b{font:600 12.5px system-ui,sans-serif}</style>
@@ -83,7 +79,6 @@
 </svg><details class="figdesc" id="fd-04-1"><summary>Descrizione della figura</summary><p>Asse orizzontale: tempo di ritenzione; verticale: intensità. Da sinistra: «sali, t₀», «TP molto polare», «+OH (due isomeri)» (un picco pieno e uno tratteggiato vicino), «dealchilato» e infine «parent», il più alto. Una linea tratteggiata mostra il % organico: parte da 5–10% ACN, sale fino al 95% ACN e poi scende di colpo.</p></details>
 <figcaption><b>Figura 4.2</b> Quadro tipico, non una regola: i TP ossidati o dealchilati sono più polari del parent ed eluiscono prima. Due idrossilazioni in posizioni diverse danno due picchi con lo stesso m/z. Il ritorno alle condizioni iniziali a fine corsa serve a riequilibrare la colonna.</figcaption>
 </figure>
-
 <h2>Gli altri modi della cromatografia liquida</h2>
 <table>
 <tr><th>Modo</th><th>Fase stazionaria / mobile</th><th>Separa per</th><th>Uso</th></tr>
@@ -93,7 +88,6 @@
 <tr><td>Scambio ionico (IC)</td><td>Gruppi carichi / tamponi acquosi</td><td>Carica</td><td>Ioni inorganici, acidi organici, proteine</td></tr>
 <tr><td>Esclusione dimensionale (SEC)</td><td>Particelle con pori di dimensione definita</td><td>Dimensione (le molecole grandi escono prima)</td><td>Polimeri, proteine, materia organica disciolta</td></tr>
 </table>
-
 <h2>La polarità dei TP e il tempo di ritenzione</h2>
 <ul>
 <li><b>Idrossilazione, N-ossidazione, formazione di acidi</b>: aggiungono gruppi polari o ionizzabili → di solito <i>t</i><sub>R</sub> minore.</li>
@@ -103,7 +97,6 @@
 </ul>
 <div class="box key"><b>Concetto chiave</b>
 <p>Ogni m/z va letto insieme al suo tempo di ritenzione. <b>Stesso m/z a RT diversi</b> = isomeri (o molecole diverse con la stessa massa nominale). <b>m/z diversi esattamente allo stesso RT e con la stessa forma di picco del parent</b> = quasi sempre ioni del parent stesso (addotti, isotopi, frammenti in sorgente), non TP. Lo riprendiamo nei capitoli 6 e 18.</p></div>
-
 <h2>Fasi mobili compatibili con l'elettrospray</h2>
 <p>La fase mobile deve servire due padroni: la colonna e la sorgente.</p>
 <table>
@@ -115,31 +108,23 @@
 </table>
 <div class="box warn"><b>Conseguenza per l'interpretazione</b>
 <p>Parent e TP eluiscono a percentuali diverse di acetonitrile e hanno basicità diverse: anche a pari concentrazione danno aree diverse. Per questo le aree dei TP descrivono un <em>andamento</em>, non una concentrazione.</p></div>
-
 <h2>Forma del picco e campionamento</h2>
 <p>Un picco cromatografico largo 10–20 s alla base deve essere descritto da abbastanza punti per essere integrato bene: in pratica <b>almeno 10–15 punti per picco</b>. Ogni punto è uno spettro (full scan) o un ciclo di transizioni (MRM). Il tempo di ciclo dello spettrometro deve quindi stare sotto 1–2 s; lo vedremo nel capitolo 10, dove dwell time e numero di transizioni decidono quanti punti avete.</p>
 <p>La qualità della separazione si descrive con il numero di piatti teorici <i>N</i> e la risoluzione cromatografica tra due picchi (capitolo 3, equazioni 3.3 e 3.5):</p>
 <span class="eq"><i>N</i> = 5,54 <span class="frac"><span><i>t</i><sub>R</sub><sup>2</sup></span><span><i>w</i><sub>1/2</sub><sup>2</sup></span></span>, &nbsp;&nbsp; <i>R</i><sub>s</sub> = 1,18 <span class="frac"><span><i>t</i><sub>R,2</sub> − <i>t</i><sub>R,1</sub></span><span><i>w</i><sub>1/2,1</sub> + <i>w</i><sub>1/2,2</sub></span></span><span class="no">(4.2)</span></span>
 <p>Con <i>R</i><sub>s</sub> ≥ 1,5 due picchi sono separati alla base. Se due isomeri non sono risolti, nell'XIC vedrete un picco unico (eventualmente con una spalla): lo spettrometro non vi aiuterà, perché hanno la stessa massa e spesso frammenti simili.</p>
-
 <div class="box key"><b>Parametri operativi tipici in RP-LC-MS</b>
 <p>Configurazione rappresentativa: colonna C18, fase mobile acqua acidificata (acido formico 0,05% per promuovere la protonazione in ESI positivo) e acetonitrile, gradiente di eluizione a polarità decrescente, accoppiamento in serie PDA ed ESI-MS. Prima dell'iniezione, campioni contenenti particolato o catalizzatori eterogenei vanno rigorosamente filtrati a 0,22 o 0,45 µm per prevenire l'intasamento di capillari e colonna.</p></div>
-
 <div class="box oral"><b>Concetti chiave e domande di ripasso</b>
 <p>Disegnare lo strumento HPLC e spiegare ogni parte; perché la pressione cresce con particelle piccole (UHPLC); meccanismo della fase inversa e ordine di eluizione; isocratica contro gradiente e modello del solvente forte; end-capping e code delle basi; HILIC contro fase inversa; perché in LC-MS si usano additivi volatili; rivelatore UV contro MS.</p></div>
-
 <h2>Verifica</h2>
 <details class="q"><summary>Passando da particelle di 5 µm a particelle di 1,7 µm, a parità di colonna e velocità, quanto cresce la pressione?</summary>
 <p>Δ<i>P</i> ∝ 1/<i>d</i><sub>p</sub><sup>2</sup>: (5/1,7)<sup>2</sup> ≈ 8,7 volte. Per questo le particelle sub-2 µm richiedono strumenti UHPLC.</p></details>
-<details class="q"><summary>Un TP molto polare esce al tempo morto su C18 anche con il 2% di acetonitrile. Che cosa provi?</summary>
-<p>Una colonna C18 compatibile con il 100% di acqua o con fase polare inclusa, oppure la cromatografia HILIC, dove i composti polari sono trattenuti; in alternativa un pH che renda neutra la molecola (se è ionizzabile).</p></details>
-<details class="q"><summary>Nell'XIC di m/z (parent + 16) vedete tre picchi. Che cosa vi dice?</summary>
-<p>Probabilmente tre isomeri monoidrossilati (o altre ossidazioni +O: N-ossido, solfossido) con posizioni diverse del gruppo introdotto, separati dalla colonna. Vanno trattati come tre candidati distinti, ciascuno con il suo andamento nel tempo e il suo MS2.</p></details>
-<details class="q"><summary>Perché non si usa tampone fosfato in LC-ESI-MS?</summary>
-<p>Non è volatile: si deposita nella sorgente e sull'orifizio, riduce la sensibilità nel tempo e compete con l'analita per la carica alla superficie delle gocce.</p></details>
+<details class="q"><summary>Un TP molto polare esce al tempo morto su C18 anche con il 2% di acetonitrile. Che cosa provi?</summary><p>Una colonna C18 compatibile con il 100% di acqua o con fase polare inclusa, oppure la cromatografia HILIC, dove i composti polari sono trattenuti; in alternativa un pH che renda neutra la molecola (se è ionizzabile).</p></details>
+<details class="q"><summary>Nell'XIC di m/z (parent + 16) vedete tre picchi. Che cosa vi dice?</summary><p>Probabilmente tre isomeri monoidrossilati (o altre ossidazioni +O: N-ossido, solfossido) con posizioni diverse del gruppo introdotto, separati dalla colonna. Vanno trattati come tre candidati distinti, ciascuno con il suo andamento nel tempo e il suo MS2.</p></details>
+<details class="q"><summary>Perché non si usa tampone fosfato in LC-ESI-MS?</summary><p>Non è volatile: si deposita nella sorgente e sull'orifizio, riduce la sensibilità nel tempo e compete con l'analita per la carica alla superficie delle gocce.</p></details>
 <details class="q"><summary>Un "TP" compare allo stesso identico RT del parent, con un picco della stessa forma, e la sua area segue esattamente quella del parent nel tempo. Che cosa sospettate?</summary>
 <p>Che non sia un TP ma uno ione generato dal parent stesso nella sorgente: un addotto ([M+Na]<sup>+</sup>, [M+NH<sub>4</sub>]<sup>+</sup>), un isotopo, un dimero o un frammento in sorgente. Un vero TP ha una sua ritenzione e un andamento nel tempo diverso dal parent.</p></details>
-
 <h2>Per approfondire</h2>
 <ul class="refs">
 <li><span class="tag">libro</span>Snyder L.R., Kirkland J.J., Dolan J.W. <i>Introduction to Modern Liquid Chromatography</i>, 3ª ed., Wiley, 2010: il riferimento per ritenzione, gradiente e sviluppo dei metodi.</li>
