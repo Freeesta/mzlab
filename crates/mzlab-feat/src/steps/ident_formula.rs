@@ -197,6 +197,10 @@ fn logp_window() -> Algorithm {
                 .unit("min")
                 .doc("Dwell volume over flow; the gradient itself ([[t, %B], ...]) is read from the campaign")
                 .advanced(),
+            Param::boolean("rt_logp_terms", "Score terms")
+                .default_bool(false)
+                .advanced()
+                .doc("On: the check also writes its residual as a sum of named terms (observed value, intercept, one term per descriptor) and the key of its formula in the Theory; the residual itself does not change"),
         ],
         ..algorithm(
             "logp_window",

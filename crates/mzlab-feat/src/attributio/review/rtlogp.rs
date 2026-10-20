@@ -370,3 +370,33 @@ pub fn check(model: &Model, logp: &LogPValues, y_obs: Option<f64>, k: f64, floor
         class: logp.class.clone(),
     }
 }
+
+/// The residual of `check` opened in its terms: `y - pred = y - a - Σ b·x`, so the observed value (weight 1), the intercept and each descriptor with the
+/// negative of its coefficient. `None` where `check` has no prediction.
+pub fn check_terms(
+    model: &Model,
+    logp: &LogPValues,
+    y_obs: Option<f64>,
+) -> Option<mzlab_core::score_terms::ScoreTerms> {
+    use mzlab_core::score_terms::{ScoreTerms, Term};
+    let (fit, xv, y) = (model.fit.as_ref()?, logp.get(model.source)?, y_obs?);
+    let f = logp
+        .class
+        .as_ref()
+        .and_then(|c| model.per_class.get(c))
+        .and_then(|f| f.as_ref())
+        .unwrap_or(fit);
+    let mut terms = vec![
+        Term::new("observed", y, 1.0),
+        Term::new("intercept", f.a, -1.0),
+    ];
+    match f.kind {
+        FitKind::Mlr => {
+            for (k, (b, v)) in f.b.iter().zip(logp.vector(xv)).enumerate() {
+                terms.push(Term::new(format!("descriptor {}", k + 1), v, -b));
+            }
+        }
+        FitKind::Line => terms.push(Term::new("logP", xv, -f.b[0])),
+    }
+    Some(ScoreTerms::sum("rt_residual", terms, "score/rt-residual"))
+}

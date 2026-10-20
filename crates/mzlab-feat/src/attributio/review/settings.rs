@@ -106,6 +106,8 @@ settings! {
     rt_logp_k: f64 = 3.0;
     /// its floor (0 = 3 %B with a gradient, 1.0 min without)
     rt_logp_floor: f64 = 0.0;
+    /// 1: the check also writes its residual as a sum of named terms (`score_terms`)
+    rt_logp_terms: f64 = 0.0;
     // reference fetch by USI (fallback when a spectrum is not in a local library)
     fetch_timeout_s: f64 = 15.0;
     /// the whole fetch step never takes longer than this

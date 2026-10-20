@@ -426,3 +426,62 @@ fn decoys_spectrum_gives_the_q_values_of_search_fdr() {
 fn is_null(x: &mzlab_core::json::Value, key: &str) -> bool {
     x.get(key).is_none_or(|v| v.f64().is_none())
 }
+
+/// `score_terms` off (the default) leaves the hits as they are; on, every hit of each algorithm carries its score as a weighted sum of named terms that
+/// gives the score back to 1e-12, and the score itself does not change.
+#[test]
+fn score_terms_open_every_score_and_leave_it_unchanged() {
+    let dir = mix_fixture("terms");
+    run(&dir, "spectral_entropy", "{}");
+    let plain = std::fs::read(dir.join("work/m.json")).unwrap();
+    run(&dir, "spectral_entropy", r#"{"score_terms":false}"#);
+    assert_eq!(plain, std::fs::read(dir.join("work/m.json")).unwrap());
+    assert!(!String::from_utf8(plain.clone())
+        .unwrap()
+        .contains("score_terms"));
+    for alg in ["spectral_entropy", "cosine", "modified_cosine"] {
+        run(&dir, alg, r#"{"score_terms":true}"#);
+        let on = hits(&dir);
+        let list = on.get("hits").unwrap().arr();
+        assert!(!list.is_empty(), "{alg}");
+        for h in list {
+            let t = h.get("score_terms").unwrap();
+            let value = t.get("value").unwrap().f64().unwrap();
+            let sum: f64 = t
+                .get("terms")
+                .unwrap()
+                .arr()
+                .iter()
+                .map(|x| {
+                    x.get("weight").unwrap().f64().unwrap() * x.get("value").unwrap().f64().unwrap()
+                })
+                .sum();
+            assert!((sum - value).abs() < 1e-12, "{alg}: {sum} vs {value}");
+            assert!(
+                (h.get("score").unwrap().f64().unwrap() - value).abs() < 1e-6,
+                "{alg}"
+            );
+            assert!(t
+                .get("formula_ref")
+                .unwrap()
+                .str()
+                .unwrap()
+                .starts_with("score/"));
+        }
+        if alg == "spectral_entropy" {
+            // the hits are the same as without the terms
+            run(&dir, alg, "{}");
+            let off = hits(&dir);
+            let score = |v: &mzlab_core::json::Value| {
+                v.get("hits")
+                    .unwrap()
+                    .arr()
+                    .iter()
+                    .map(|h| h.get("score").unwrap().f64().unwrap())
+                    .collect::<Vec<_>>()
+            };
+            assert_eq!(score(&on), score(&off));
+        }
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
