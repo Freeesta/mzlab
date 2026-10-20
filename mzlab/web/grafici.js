@@ -73,7 +73,7 @@ async function ms2trSeries(p) {
   const sel = p.tr === "__all" ? list.slice(0, MS2TR_MAX) : list.filter(t => t.key === p.tr);
   const out = await Promise.all(mf.flatMap((f, fi) => sel.map(t => getChrom(f.k, "tic", f.lv, t.q3 - 0.5, t.q3 + 0.5, t.q1, p.filt).then(d => ({
     x: d.rt, y: d.y, k: f.k, key: `c|${f.k}|tr|${t.key}`, ion: t.key, time: f.time, color: PAL[list.indexOf(t) % PAL.length],
-    dash: f.type === "blank" ? [4, 3] : fi > 0 ? DASHES[fi % 4] : [], name: mf.length > 1 ? `${t.key} \u00b7 ${f.label}` : t.key, tid_label: t.key })))));
+    dash: fi > 0 ? DASHES[fi % 4] : [], name: mf.length > 1 ? `${t.key} \u00b7 ${f.label}` : t.key, tid_label: t.key })))));
   return out.filter(s => s.x.length);
 }
 async function rawSeries(p) {
@@ -93,7 +93,7 @@ async function rawSeries(p) {
     const ts = p.traces, out = [];
     scanFiles(files).forEach((f, fi) => ts.forEach((t, ti) => out.push(getXic(f.k, ...(t.ion && window.HR ? HR.xicArgs(f, t, p) : [t.mz, t.w ?? p.tol]), f.lv).then(d => ({
       x: d.rt, y: d.y, k: f.k, mz: t.mz, tid: t.id, key: `x|${f.k}|${t.mz}`, ion: t.label, time: f.time,
-      color: ts.length === 1 ? f.color : PAL[ti % PAL.length], dash: f.type === "blank" ? [4, 3] : ts.length > 1 ? (fi > 0 ? DASHES[fi % 4] : []) : fdash(f),
+      color: ts.length === 1 ? f.color : PAL[ti % PAL.length], dash: ts.length > 1 ? (fi > 0 ? DASHES[fi % 4] : []) : fdash(f),
       name: ts.length === 1 ? f.label : `${t.label} · ${f.label}`, tid_label: t.label })))));
     return Promise.all(out);
   }
@@ -110,7 +110,7 @@ async function rawSeries(p) {
     const ti = list.findIndex(l => l.key === key), single = !!p.tr && !Array.isArray(p.tr);
     const multiTr = Array.isArray(p.tr) && p.tr.length > 1;
     out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, time: f.time, color: (single && mf.length > 1) ? f.color : PAL[ti % PAL.length],
-      dash: f.type === "blank" ? [4, 3] : (!single && !multiTr && fi > 0) ? DASHES[fi % 4] : (multiTr && fi > 0) ? DASHES[fi % 4] : (single && mf.length > 1) ? fdash(f) : [], name: mf.length > 1 ? `${key} · ${f.label}` : `${key} ${t.name || ""}`.trim(), tid_label: `${key} ${t.name || ""}`.trim() });
+      dash: (!single && !multiTr && fi > 0) ? DASHES[fi % 4] : (multiTr && fi > 0) ? DASHES[fi % 4] : (single && mf.length > 1) ? fdash(f) : [], name: mf.length > 1 ? `${key} · ${f.label}` : `${key} ${t.name || ""}`.trim(), tid_label: `${key} ${t.name || ""}`.trim() });
   }));
   return out;
 }

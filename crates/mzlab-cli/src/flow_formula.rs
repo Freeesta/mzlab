@@ -45,15 +45,15 @@ fn opts(job: &Job) -> Opts {
 }
 
 /// The feature table as the CSV "full": header and rows; the area columns are `datafile:NAME:area`.
-struct Table {
-    id: usize,
-    mz: usize,
-    rt: usize,
-    areas: Vec<(String, usize)>,
-    rows: Vec<Vec<String>>,
+pub(crate) struct Table {
+    pub(crate) id: usize,
+    pub(crate) mz: usize,
+    pub(crate) rt: usize,
+    pub(crate) areas: Vec<(String, usize)>,
+    pub(crate) rows: Vec<Vec<String>>,
 }
 
-fn read_table(bytes: &[u8]) -> Result<Table> {
+pub(crate) fn read_table(bytes: &[u8]) -> Result<Table> {
     let text = String::from_utf8_lossy(bytes);
     let mut lines = text.lines();
     let head: Vec<&str> = lines.next().unwrap_or("").split(',').collect();

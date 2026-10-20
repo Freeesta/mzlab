@@ -79,8 +79,11 @@ fn write(r: &Report, smiles: &str, transform: &str, prior: Option<&[Prior]>) -> 
             .raw(",\"symmetry\":")
             .int(s.class as i64)
             .raw(",\"kind\":")
-            .str(s.kind)
-            .raw("}");
+            .str(s.kind);
+        if let (true, Some(p)) = (super::siti::is_pair(s.kind), s.partner) {
+            o.raw(",\"partner\":").int(p as i64);
+        }
+        o.raw("}");
     }
     o.raw("],\"classes\":[");
     for (i, c) in r.classes.iter().enumerate() {

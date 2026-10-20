@@ -1,6 +1,6 @@
 // @ts-check
 // Flow (administrator mode): the comparison of alternatives (`meta.compare@1`). A step with two or more available algorithms gets a «Compare algorithms» button that adds a
-// comparison next to it: the same inputs, one variant per algorithm. The Rust checker has no descriptor for `meta.compare` yet, so the page checks it here and leaves it out
+// comparison next to it: the same inputs, one variant per algorithm. The native checker (`flow_compare::check` in the CLI crate) gives the same answers, but the page has no .wasm for it, so the page checks it here and leaves it out
 // of the parity check (F.withoutCompare); the runner refuses a plan with a comparison until the executor exists.
 (() => {
   "use strict";

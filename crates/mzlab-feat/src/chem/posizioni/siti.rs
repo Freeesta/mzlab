@@ -9,7 +9,8 @@ use crate::chem::grafo::Mol;
 
 /// One atom where the change can sit. `kind`: `aromatic_oh`, `aliphatic_oh`, `n_oxide`, `s_oxide`, `demethyl`, `carbonyl`, `aromatic_cl`, `aromatic_br`.
 /// `class` is the symmetry class of the atom (`symmetry_classes`); `tp_formula` the Hill formula of the product. The kind `dehydro` (`-2H`) is a bond:
-/// `atom` and `partner` are its two carbons and `class` joins their two symmetry classes.
+/// `atom` and `partner` are its two carbons and `class` joins their two symmetry classes. The kinds `dioxid` (`+2O`) and `carbonyl_oh` (`+2O-2H`) are
+/// PAIRS of atoms that each take one change (`atom` and `partner`; `carbonyl_oh`: `atom` is the carbonyl); their `class` is unique to the pair.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Site {
     pub atom: usize,
@@ -23,15 +24,37 @@ fn f(el: &str, n: u64) -> Formula {
     vec![(el.to_string(), n)]
 }
 
+/// True for the kinds whose site is two atoms that each take a change, not a bond.
+pub fn is_pair(kind: &str) -> bool {
+    matches!(kind, "dioxid" | "carbonyl_oh")
+}
+
 /// The signed formula change of a kind of site.
 pub(super) fn delta_of(kind: &str) -> Vec<(i64, Formula)> {
     match kind {
+        "dioxid" => vec![(2, f("O", 1))],
+        "carbonyl_oh" => vec![(2, f("O", 1)), (-1, f("H", 2))],
         "demethyl" => vec![(-1, vec![("C".into(), 1), ("H".into(), 2)])],
         "carbonyl" => vec![(1, f("O", 1)), (-1, f("H", 2))],
         "dehydro" => vec![(-1, f("H", 2))],
         "aromatic_cl" => vec![(1, f("Cl", 1)), (-1, f("H", 1))],
         "aromatic_br" => vec![(1, f("Br", 1)), (-1, f("H", 1))],
         _ => vec![(1, f("O", 1))],
+    }
+}
+
+/// The atoms of a site with the change each one takes (a bond or a single atom: one entry; a pair: one per atom).
+pub(super) fn atom_deltas(site: &Site) -> Vec<(usize, Vec<(i64, Formula)>)> {
+    match (site.kind, site.partner) {
+        ("dioxid", Some(p)) => vec![
+            (site.atom, delta_of("aliphatic_oh")),
+            (p, delta_of("aliphatic_oh")),
+        ],
+        ("carbonyl_oh", Some(p)) => vec![
+            (site.atom, delta_of("carbonyl")),
+            (p, delta_of("aliphatic_oh")),
+        ],
+        _ => vec![(site.atom, delta_of(site.kind))],
     }
 }
 
@@ -49,6 +72,8 @@ fn kinds_of(transform: &str) -> Result<&'static [&'static str]> {
         "-2H" => &["dehydro"],
         "+Cl-H" => &["aromatic_cl"],
         "+Br-H" => &["aromatic_br"],
+        "+2O" => &["dioxid"],
+        "+2O-2H" | "+2O-H4" => &["carbonyl_oh"],
         _ => return Err(Error::new("error.posiz.transform").with("transform", transform)),
     })
 }
@@ -95,6 +120,9 @@ pub fn sites(mol: &Mol, transform: &str) -> Result<Vec<Site>> {
     if kinds == ["dehydro"] {
         return checked(dehydro_sites(mol, &cls, &parent)?, transform);
     }
+    if is_pair(kinds[0]) {
+        return checked(pair_sites(mol, kinds[0], &parent)?, transform);
+    }
     let mut out = Vec::new();
     for (i, class) in cls.iter().enumerate() {
         let Some(kind) = kinds.iter().find(|k| can_take(mol, i, k)) else {
@@ -117,6 +145,38 @@ fn checked(out: Vec<Site>, transform: &str) -> Result<Vec<Site>> {
         return Err(Error::new("error.posiz.noSites").with("transform", transform));
     }
     check_formulas(&out)?;
+    Ok(out)
+}
+
+/// `+2O` and `+2O-2H`: every pair of distinct atoms that can each take one of the two changes (an oxygen on each, or a carbonyl and an oxygen).
+/// Two atoms with the same symmetry may still be placed differently from each other, so the class of a pair is the pair itself.
+fn pair_sites(mol: &Mol, kind: &'static str, parent: &Formula) -> Result<Vec<Site>> {
+    let oxid = |i: usize| {
+        ["aromatic_oh", "aliphatic_oh", "n_oxide", "s_oxide"]
+            .iter()
+            .any(|k| can_take(mol, i, k))
+    };
+    let tp = elements::fmt(&apply_delta(parent, &delta_of(kind))?);
+    let n = mol.atoms.len();
+    let mut out = Vec::new();
+    for a in 0..n {
+        for b in 0..n {
+            let ok = if kind == "dioxid" {
+                a < b && oxid(a) && oxid(b)
+            } else {
+                a != b && can_take(mol, a, "carbonyl") && oxid(b)
+            };
+            if ok {
+                out.push(Site {
+                    atom: a,
+                    partner: Some(b),
+                    kind,
+                    class: (a * 65536 + b) as u32,
+                    tp_formula: tp.clone(),
+                });
+            }
+        }
+    }
     Ok(out)
 }
 

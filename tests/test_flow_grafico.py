@@ -76,3 +76,7 @@ def test_flow_is_shipped_with_the_descriptors():
 
 def test_the_tabui_views_read_their_files():
     assert node("flow_viste_tabui.js").strip() == "ok"
+
+
+def test_the_review_view_queues_and_words_the_decisions():
+    assert node("flow_review.js").strip() == "ok"

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Libro editor</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../vendor/libro/editor-bundle.css">
+<link rel="stylesheet" href="editor.css">
+</head>
+<body>
+<header class="bar">
+  <h1>Libro editor</h1>
+  <span id="status" role="status" aria-live="polite">Not connected</span>
+  <span class="grow"></span>
+  <button id="btn-history" type="button" disabled aria-label="Show earlier versions of this file">&#x1F552; History</button>
+  <button id="btn-save" type="button" class="primary" disabled aria-label="Save this file to the Libro (Ctrl+S)">&#x1F4BE; Save</button>
+  <button id="btn-token" type="button" aria-label="Change or forget the GitHub token">&#x1F511; Token</button>
+</header>
+<div class="layout">
+  <nav id="sections" aria-label="Sections of the Libro"><p class="hint">Connect with your token to see the sections.</p></nav>
+  <main>
+    <div class="tabs" role="tablist" aria-label="Parts of the section">
+      <button role="tab" id="tab-text" data-tab="text" aria-selected="true" type="button">Text</button>
+      <button role="tab" id="tab-notes" data-tab="notes" aria-selected="false" type="button">My notes</button>
+      <button role="tab" id="tab-qa" data-tab="qa" aria-selected="false" type="button">Questions &amp; answers</button>
+    </div>
+    <p id="path" class="hint"></p>
+    <div id="root" role="tabpanel" aria-label="Editor"></div>
+  </main>
+  <aside id="history" hidden aria-label="Earlier versions"></aside>
+</div>
+
+<dialog id="dlg-token" aria-labelledby="t-title">
+  <h2 id="t-title">Connect to GitHub</h2>
+  <p>The Libro is private, so this page needs a key (a "token") that works only on the <b>mzlab-dati</b> repository. You create it once:</p>
+  <ol>
+    <li>On GitHub: your picture &rarr; <b>Settings</b> &rarr; <b>Developer settings</b> &rarr; <b>Personal access tokens</b> &rarr; <b>Fine-grained tokens</b> &rarr; <b>Generate new token</b>.</li>
+    <li>Name: "Libro editor". Expiration: 90 days. Repository access: <b>Only select repositories</b> &rarr; <b>mzlab-dati</b>.</li>
+    <li>Permissions &rarr; Repository permissions &rarr; <b>Contents: Read and write</b>. Nothing else.</li>
+    <li>Click <b>Generate token</b> and copy the text (it starts with <code>github_pat_</code>). Paste it below.</li>
+  </ol>
+  <label for="in-token">Token</label>
+  <input id="in-token" type="password" autocomplete="off" spellcheck="false">
+  <label for="in-pass">Passphrase (to keep the token on this computer; invent one, you will type it each time)</label>
+  <input id="in-pass" type="password" autocomplete="new-password">
+  <p id="t-msg" class="err" role="alert"></p>
+  <div class="row">
+    <button id="t-seal" type="button" class="primary">Save with passphrase</button>
+    <button id="t-tab" type="button">Use for this tab only</button>
+    <button id="t-forget" type="button">Forget saved token</button>
+    <button id="t-close" type="button">Close</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-unlock" aria-labelledby="u-title">
+  <h2 id="u-title">Unlock</h2>
+  <label for="in-unlock">Passphrase</label>
+  <input id="in-unlock" type="password" autocomplete="current-password">
+  <p id="u-msg" class="err" role="alert"></p>
+  <div class="row">
+    <button id="u-go" type="button" class="primary">Unlock</button>
+    <button id="u-other" type="button">Use another token</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-conflict" aria-labelledby="c-title">
+  <h2 id="c-title">This file changed while you were editing</h2>
+  <p>Someone else (maybe Claude) saved a newer version. <b>Nothing was overwritten.</b> Your text is below: copy it if you need it, then load the latest version.</p>
+  <textarea id="c-mine" readonly rows="8" aria-label="Your text"></textarea>
+  <div class="row">
+    <button id="c-copy" type="button">Copy my text</button>
+    <button id="c-load" type="button" class="primary">Load the latest version</button>
+    <button id="c-keep" type="button">Keep editing</button>
+  </div>
+</dialog>
+
+<script src="../vendor/libro/editor-bundle.js"></script>
+<script type="module" src="editor.js"></script>
+</body></html>

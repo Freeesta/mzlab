@@ -3,9 +3,11 @@ import re
 from html import escape
 
 BOXES = {"nota": ("key", "Concetto chiave"), "attenzione": ("warn", "Errore frequente"), "lab": ("lab", "Esempio"),
-         "formula": ("math", "Formula"), "esercizio": ("gym", "Esercizio")}
+         "formula": ("math", "Formula"), "esercizio": ("gym", "Esercizio"),
+         "lr": ("lr", "Bassa risoluzione"), "hr": ("hr", "Alta risoluzione"), "oral": ("oral", "Ripasso")}
 FIG = re.compile(r'^!\[([^\]]*)\]\(([^)\s"]+)(?: "([^"]*)")?\)\s*\{#fig:([\w-]+)\}\s*$')
 EQEND = re.compile(r"\$\$\s*(?:\{#eq:([\w-]+)\})?\s*$")
+FOLLOW = re.compile(r"^\{#eq:([\w-]+)\}\s*$")
 NCLS = ' class="n"'
 NUMCELL = re.compile(r"^[−+-]?\d[\d.,\s·⁰¹²³⁴⁵⁶⁷⁸⁹⁻]*$")
 
@@ -21,6 +23,9 @@ class Speciali:
         m = EQEND.search(body)
         tex = body[2:m.start()].strip()
         eid = m.group(1)
+        nxt = next((k for k in range(j + 1, min(j + 3, len(lines))) if lines[k].strip()), None)
+        if not eid and nxt is not None and FOLLOW.match(lines[nxt]):
+            eid, j = FOLLOW.match(lines[nxt]).group(1), nxt
         label = ""
         if eid:
             if eid in self.ctx["eq"]:

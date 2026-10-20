@@ -63,8 +63,8 @@ try:
             d = {t: hexof(c) for t, c, _ in f}; print(d)
             assert d["blank"] == "#8a8a8a" and d["standard"] == "#4d4d4d" and all(x[2] is None for x in f)
             dash = pg.evaluate("E.files.map(f=>[f.type,JSON.stringify(fdash(f))])"); print(dash)
-            assert any(t == "blank" and v == "[4,3]" for t, v in dash) and any(t == "standard" and v == "[10,4]" for t, v in dash)
-        step("blank and standard stay out of the scale (neutral greys, dashed)", neutral)
+            assert all(v == "[]" for t, v in dash if t in ("blank", "standard")), dash
+        step("blank and standard stay out of the scale (neutral greys, solid line)", neutral)
         def list_colours():
             sw = pg.evaluate("[...document.querySelectorAll('#flst .fl i')].map(i=>getComputedStyle(i).backgroundColor)")
             cols = {hexof(x[1]) for x in pg.evaluate(COLORS)}; assert cols <= {hexof(s) for s in sw}, (cols, sw)
