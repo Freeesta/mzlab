@@ -29,7 +29,8 @@ pub fn expected_fragments(mol: &Mol, site: &Site, pol: Pol) -> Vec<Frag> {
         if on_ring[k] || bd.order != 1.0 {
             continue;
         }
-        if site.kind == "demethyl" && (bd.a == site.atom || bd.b == site.atom) {
+        let lost = |x: usize| x == site.atom || (site.kind == "deethyl" && Some(x) == site.partner);
+        if matches!(site.kind, "demethyl" | "deethyl") && (lost(bd.a) || lost(bd.b)) {
             continue;
         }
         // The bond that becomes the double bond is not cut.

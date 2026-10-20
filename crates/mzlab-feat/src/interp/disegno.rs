@@ -48,7 +48,7 @@ fn added_of(kind: &str) -> Option<&'static str> {
     match kind {
         "aromatic_cl" => Some("Cl"),
         "aromatic_br" => Some("Br"),
-        "demethyl" | "dehydro" => None,
+        "demethyl" | "deethyl" | "dehydro" => None,
         _ => Some("O"),
     }
 }
@@ -148,7 +148,7 @@ fn structure(mol: &Mol, site: &SiteReport, delta: &str) -> Drawing {
     };
     let mut atoms = vec![s.atom];
     atoms.extend(s.partner);
-    let lost = if s.kind == "demethyl" {
+    let lost = if matches!(s.kind, "demethyl" | "deethyl") {
         atoms.clone()
     } else {
         vec![]

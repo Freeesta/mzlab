@@ -80,8 +80,11 @@ fn write(r: &Report, smiles: &str, transform: &str, prior: Option<&[Prior]>) -> 
             .int(s.class as i64)
             .raw(",\"kind\":")
             .str(s.kind);
-        if let (true, Some(p)) = (super::siti::is_pair(s.kind), s.partner) {
+        if let (true, Some(p)) = (super::siti::is_multi(s.kind), s.partner) {
             o.raw(",\"partner\":").int(p as i64);
+            if let Some(t) = s.third {
+                o.raw(",\"third\":").int(t as i64);
+            }
         }
         o.raw("}");
     }
