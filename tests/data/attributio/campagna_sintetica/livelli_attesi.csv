@@ -3,7 +3,7 @@ POS;1;200.102;5.2;1;;reference standard;;Level 1: reference standard, mass + RT 
 POS;2;250.1234;6.0;3;a;expert review;;All gates passed (mzMine library), but the chemist's decision takes it to Level 3.
 POS;3;195.0875;4.0;2;a;spectral library;;Level 2a: GNPS2 passes every gate.
 POS;4;300.15;4.1;3;a;CSI:FingerID;Fictastructin;"No library source passes its gates; the level rests on the CSI:FingerID structure (COSMIC 0.80 ≥ 0.64)."
-POS;5;320.2;7.5;4;;CANOPUS class;;Nothing above the gates.
+POS;5;320.2;7.5;0;;none;;Nothing above the gates.
 POS;6;310.3;8.0;0;;none;;"Nothing above the gates; mzMine library (Fictoxin): 3 shared ions < 4."
 POS;8;301.1547;9.0;3;a;name conflict;Fictamine isomer;"Valid libraries name different structures and the best match is ahead by less than 0.05 cosine: the spectrum does not tell them apart (Level 3). best library match: mzMine library 'Fictamine' (cosine 0.90, 7 ions) over SIRIUS spectral 'Fictamine isomer' (cosine 0.88, 6 ions); margin 0.020 < 0.05."
 POS;9;299.1754;9.5;2;a;spectral library;Fictagel;Level 2a: mzMine library passes every gate.
@@ -12,5 +12,5 @@ POS;11;222.1;8.0;3;a;isomers not discriminated;;The same compound is matched at 
 POS;12;240.2;10.0;2;a;spectral library;;Level 2a: GNPS2 passes every gate.
 POS;13;240.2;12.0;3;a;CSI:FingerID;Fictolol;"No library source passes its gates; the level rests on the CSI:FingerID structure (COSMIC 0.80 ≥ 0.64)."
 POS;14;200.102;9.0;3;a;RT isomer;;A reference standard of this compound elutes at another retention time: another isomer.
-NEG;1;220.05;5.5;4;;CANOPUS class;;Nothing above the gates.
+NEG;1;220.05;5.5;0;;none;;Nothing above the gates.
 NEG;2;230.07;6.5;0;;none;;Nothing above the gates.

@@ -62,3 +62,7 @@ def test_flow_is_shipped_with_the_descriptors():
     tool = (ROOT / "flow/js/flow-tool.js").read_text(encoding="utf-8")
     for part in (ROOT / "flow/lazy").glob("flow-*.js"):
         assert part.name in tool, part.name
+
+
+def test_the_tabui_views_read_their_files():
+    assert node("flow_viste_tabui.js").strip() == "ok"

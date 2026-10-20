@@ -69,7 +69,7 @@
     if (t.fragments && t.fragments.rows.length) F.drawTable(host, { caption: `${item.label}, explained fragments`, head: t.fragments.head, rows: t.fragments.rows, label: `Fragments of ${item.label}` });
   } });
   jsonView("candidates", "Library hits", ["candidates"], F.readCandidates);
-  jsonView("annot", "Confidence levels", ["annot"], F.readAnnot);
+  jsonView("annot", "Confidence levels", ["annot"], j => j.atoms && F.readReatt ? F.readReatt(j) : F.readAnnot(j));
   jsonView("formulas", "Formulas", ["formulas"], F.readFormulas);
 
   /** a stick chart of one spectrum: colours from CSS variables; the data table sits beside it @param {{peaks: [number, number][], pepmass: number}} sp @param {string} label */

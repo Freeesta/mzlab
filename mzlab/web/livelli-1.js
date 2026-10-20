@@ -68,7 +68,6 @@ window.LIVELLI_DATI = {
     "precursore_ppm_max": 15.0,
     "margine_conflitto_coseno": 0.05,
     "cosmic_min": 0.64,
-    "canopus_prob_min": 0.70,
     "struttura_libreria_ppm_max": 20.0,
     "rt_gruppo_tol_min": 0.20
    },
@@ -91,7 +90,6 @@ window.LIVELLI_DATI = {
     {"livello": "3a", "base": "expert review", "regola": "the chemist judges a 2a match insufficient"},
     {"livello": "3a", "base": "putative library", "regola": "OFF by default (putative_library_level3): a library entry named 'Spectral Match to ...' or propagated, that passes the gates of a source"},
     {"livello": "3a", "base": "CSI:FingerID", "regola": "CSI:FingerID structure with COSMIC (ConfidenceScoreApproximate) >= cosmic_min (0.64 is roughly 10% FDR for the paper's confidence score, a guide with no guarantee; applied here to the Approximate score, Hoffmann et al. 2022); never downgrades a library match"},
-    {"livello": "4", "base": "CANOPUS class", "regola": "CANOPUS class only (NPClassifier pathway or ClassyFire superclass) with probability >= canopus_prob_min"},
     {"livello": "0", "base": "suspect-RT", "regola": "standard found by mass + RT but MS/MS not confirmed: outside the counts"},
     {"livello": "0", "base": "none", "regola": "detected, no annotation"}
    ],
@@ -117,7 +115,6 @@ window.LIVELLI_DATI = {
     "expert review": "Spectral library match judged insufficient by the chemist (L3a)",
     "putative library": "Putative library match (analog/in-silico, L3a)",
     "CSI:FingerID": "CSI:FingerID structure (COSMIC conf >= {cosmic}, ~10% FDR, L3a)",
-    "CANOPUS class": "CANOPUS class only, probability >= {canopus} (L4)",
     "suspect-RT": "Reference standard, mass + RT only, MS/MS not confirmed (suspect-RT, L0)",
     "none": "Unannotated (DETECTED)"
    }

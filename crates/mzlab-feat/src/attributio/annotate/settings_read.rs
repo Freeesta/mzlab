@@ -85,7 +85,6 @@ impl AnnotationSettings {
             "isomers not discriminated" => "Spectral library match of the same compound at two or more retention times: the spectrum does not tell the isomers apart (L3a)".into(),
             "RT isomer" => "Spectral library match at a retention time other than the reference standard's: another isomer (L3a)".into(),
             "suspect-RT" => "Reference standard, mass + RT only, MS/MS not confirmed (suspect-RT, L0)".into(),
-            "CANOPUS class" => format!("CANOPUS class only, probability ≥ {:.2} (L4)", self.canopus_min),
             _ => "Unannotated (DETECTED)".into(),
         }
     }
