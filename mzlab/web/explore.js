@@ -135,14 +135,12 @@ function seqColor(u) {
 }
 const DASHES = [[], [6, 3], [2, 3], [10, 3, 2, 3]];
 const LWX = () => PALS[UIP.pal].lw || 0;                      // extra line width (px) of the high contrast palette
-// line style of a file: blank dashed, Full Scan standard dash-dot (both neutral grey); with the colour-blind / high-contrast palettes the files of the
-// time scale are also told apart by line style (second code besides the colour)
+// line style of a file: solid, so that blanks and standards read as plain traces (neutral grey carries the distinction); with the colour-blind /
+// high-contrast palettes the files of the time scale are also told apart by line style (second code besides the colour)
 // true while every file takes a categorical colour (palette "file", or "time" with no file that has a time)
 let PLAIN = false;
 function fdash(f) {
-  if (f.type === "blank") return [4, 3];
   if (PLAIN) return [];
-  if (f.kind === "full" && f.type === "standard") return [10, 4];
   return PALS[UIP.pal].dash && f.rank != null ? DASHES[f.rank % 4] : [];
 }
 /** @type {(s: string) => any} */
