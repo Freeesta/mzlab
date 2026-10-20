@@ -17,6 +17,8 @@ pub struct Row {
     pub name: String,
     pub delta: Delta,
     pub comment: String,
+    /// Times the change may repeat; `None` = the default of the rules (the text of mzFinder has no such column).
+    pub max_repeat: Option<u32>,
 }
 
 /// `parse_delta` of mzFinder: '+O', '-H2', '-Cl+H', '+C2H4O' -> signed counts (what is not a sign followed by letters and digits is skipped).
@@ -74,6 +76,7 @@ pub fn parse(text: &str) -> Res<Vec<Row>> {
             name: parts[0].to_string(),
             delta: parse_delta(parts[1])?,
             comment: parts.get(2).map_or("", |s| s).to_string(),
+            max_repeat: None,
         });
     }
     Ok(rows)
@@ -116,7 +119,10 @@ fn new_rule(r: &Row) -> Value {
         ("id".into(), s(&r.name)),
         ("nome".into(), s(&r.name)),
         ("delta_formula".into(), Value::Str(delta_text(&r.delta))),
-        ("passi_max".into(), Value::Num(2.0)),
+        (
+            "passi_max".into(),
+            Value::Num(f64::from(r.max_repeat.unwrap_or(2))),
+        ),
         ("livello_previsione".into(), Value::Num(4.0)),
         ("fonte".into(), s("transformation_table")),
         ("direzione_rt".into(), s("libera")),
@@ -150,7 +156,7 @@ fn emit(v: &Value, o: &mut Out) {
 
 /// The `regole_tp/1` file `base` with the rows of `text` as rules.
 pub fn merge(base: &[u8], text: &str) -> Res<Vec<u8>> {
-    let rows = parse(text)?;
+    let rows = crate::liste::from_legacy_text(text)?.transformation_rows();
     let unreadable = || "the rules of Tabui cannot be read".to_string();
     let mut file = json::parse(base).map_err(|_| unreadable())?;
     let Value::Obj(top) = &mut file else {
