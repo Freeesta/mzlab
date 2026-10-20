@@ -81,35 +81,26 @@ fn one_ring(smiles: &str, atoms: &[usize]) -> bool {
 
 /// The form of the drawing of a row; `smiles` = the parent.
 pub fn drawing(smiles: &str, site: &SiteReport) -> Drawing {
-    match Mol::parse(smiles) {
-        Ok(mol) => drawing_of(&mol, smiles, site),
-        Err(_) => unreadable(&delta_label(&site.transform)),
-    }
-}
-
-fn unreadable(delta: &str) -> Drawing {
-    Drawing {
-        mode: "bracket",
-        atoms: vec![],
-        uncertainty: "whole",
-        ..empty(delta)
-    }
-}
-
-fn drawing_of(mol: &Mol, smiles: &str, site: &SiteReport) -> Drawing {
     let delta = delta_label(&site.transform);
+    let Ok(mol) = Mol::parse(smiles) else {
+        return Drawing {
+            mode: "bracket",
+            atoms: vec![],
+            uncertainty: "whole",
+            ..empty(&delta)
+        };
+    };
+    by_confidence(&mol, smiles, site, &delta)
+}
+
+fn by_confidence(mol: &Mol, smiles: &str, site: &SiteReport, delta: &str) -> Drawing {
     match site.confidence {
-        "site" => structure(mol, site, &delta),
-        "region" => zone(mol, smiles, site, &delta),
-        "uncertain" => whole(
-            mol,
-            &delta,
-            &format!("{delta}: position uncertain"),
-            "whole",
-        ),
+        "site" => structure(mol, site, delta),
+        "region" => zone(mol, smiles, site, delta),
+        "uncertain" => whole(mol, delta, &format!("{delta}: position uncertain"), "whole"),
         _ => whole(
             mol,
-            &delta,
+            delta,
             &format!("{delta}: position not determined"),
             "whole",
         ),
@@ -237,8 +228,14 @@ impl Drawing {
 /// `drawing` for a parent given as a `mol/1` record (feature `record`); `smiles` is the text the rings are read from.
 #[cfg(feature = "record")]
 pub fn drawing_record(rec: &mzlab_mol::Mol, smiles: &str, site: &SiteReport) -> Drawing {
+    let delta = delta_label(&site.transform);
     match Mol::from_record(rec, true) {
-        Ok(mol) => drawing_of(&mol, smiles, site),
-        Err(_) => unreadable(&delta_label(&site.transform)),
+        Ok(mol) => by_confidence(&mol, smiles, site, &delta),
+        Err(_) => Drawing {
+            mode: "bracket",
+            atoms: vec![],
+            uncertainty: "whole",
+            ..empty(&delta)
+        },
     }
 }
