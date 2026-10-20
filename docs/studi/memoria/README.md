@@ -1,16 +1,17 @@
 # Memoria elastica del motore nel browser (studio)
 
-Problema: 12 file `.raw` Orbitrap (≈4,2 milioni di picchi e ≈7950 scansioni ciascuno) fermano il Dig di Tabui in «Alignment and filters» con `error.memoryBudget {fase: align, stima_mb: 188, budget_mb: 192, eccesso_mb: 1}`. Questo studio dice dove va la memoria, perché la stima è 188 MB, come rendere il budget adattivo e in che ordine lavorare. Nessun dato reale: i numeri vengono dal codice, dalle guardie, da conti algebrici e dalle misure aggregate della chat locale (pipeline nativa, stessa ricetta).
+Problema: 12 file `.raw` Orbitrap (≈4,2 milioni di picchi e ≈7950 scansioni ciascuno) fermano il Dig di Tabui in «Alignment and filters» con `error.memoryBudget {fase: align, stima_mb: 188, budget_mb: 192, eccesso_mb: 1}`. Questo studio dice dove va la memoria, perché la stima è 188 MB, come rendere il budget adattivo e in che ordine lavorare. Nessun dato reale: numeri dal codice, dalle guardie, da conti e dalle misure aggregate della chat locale.
 
 ## 0. Sintesi
-- La causa principale NON è il tetto: il Dig usa il modo «famiglia» (`Recipe::default`, `mode: Mode::Family`; `feat-worker.js` manda solo `{polarity, mode}`) e in `slabs::align_and_fill_stored` il modo famiglia è SEMPRE in memoria: le lastre esistono solo per il modo «ione». Rendere il modo famiglia divisibile in lastre (pacchetto M1) fa entrare la serie anche a 192 MB, con gli stessi byte.
-- Seconda causa: il Dig non riceve il budget adattivo: `feat-worker.js` usa `opts.budgetMb || 0` e nessun chiamante lo imposta, quindi ogni passo di Tabui gira a 192 MB anche sul computer che ne avrebbe di più.
-- Causa a monte (misurata): 141 000-144 000 feature per file entrano in align (1,72 M righe) perché la soglia fissa (`MIN_HEIGHT` 2e5) sta sotto il rumore di questi dati (altezza mediana delle feature 4e5); con 5e5 le righe scendono a ≈50 000 per file e align passa, con 1e6 a ≈14 700. La soglia stimata dai dati (`params::noise_from_hist`) è in corso nella chat locale (M7): riduce il bisogno di memoria di circa 10 volte e vale più di qualunque tetto.
-- Il messaggio inganna: `eccesso_mb` è calcolato contro il tetto (192) e non contro lo spazio libero (≈177 MB), così «stima 188, budget 192» sembra entrare. Si corregge in M2.
+- Il rifiuto non è colpa del tetto: il Dig usa il modo «famiglia» (`Recipe::default`) e in `slabs::align_and_fill_stored` la famiglia è SEMPRE in memoria (lastre solo per «ione»). La famiglia a lastre (M1) fa entrare la serie a 192 MB, stessi byte.
+- Il pool delle feature non riceve il budget adattivo (`opts.budgetMb || 0`, nessun chiamante lo imposta): ogni passo gira a 192 MB anche dove ce n'è di più.
+- Causa a monte (misurata): 141 000-144 000 feature per file (1,72 M righe) perché la soglia fissa 2e5 sta sotto il rumore di questi dati; con 5e5 ≈50 000 per file e align passa, con 1e6 ≈14 700. La soglia stimata (M7, chat locale) riduce il bisogno di ≈10 volte: vale più di qualunque tetto.
+- Il messaggio inganna: `eccesso_mb` è calcolato contro il tetto e non contro lo spazio libero (≈178 MB): «stima 188, budget 192» sembra entrare (M2).
 - Dopo M1 si alza il tetto (4 GiB) con un budget a livelli scelto in Rust dai fatti del dispositivo, una prova di crescita all'avvio, un solo worker «grande» alla volta, avviso prima e discesa a gradini dopo una morte.
+- Destinazione: Tabui confluisce in mzFlow e non si modifica più. Il contratto vale per i passi di mzFlow sul sito (runner web, da costruire) e nell'app desktop o `mzlab-cli flow run` (nativo, budget = RAM/4): stessa stima per passo, stessa via (memoria o lastre), stessi byte.
 
 ## 1. Dove va la memoria oggi
-Le guardie (`tests/test_guardie_memoria.py`, `tools/guardie_memoria.json`) sulle serie sintetiche restano al pavimento di 32 MB (memoria iniziale) in ogni fase; solo `completo` alle prove sale a 45 154 304 B (43 MB) e a 24 MB va a lastre restando a 32 MB. Quindi le guardie provano l'assenza di regressioni, ma non dicono come cresce la memoria con serie vere: per quello valgono i pesi per riga delle stime, che sono la base delle decisioni del motore.
+Le guardie (`tests/test_guardie_memoria.py`, `tools/guardie_memoria.json`) restano al pavimento di 32 MB in ogni fase; solo `completo` alle prove sale a 45 154 304 B (43 MB), a 24 MB resta a 32 MB. Provano l'assenza di regressioni, non la crescita con serie vere: per quella valgono i pesi per riga delle stime.
 
 | Fase | Peso stimato (codice) | Via oltre il budget |
 |---|---|---|
@@ -24,16 +25,16 @@ Le guardie (`tests/test_guardie_memoria.py`, `tools/guardie_memoria.json`) sulle
 | Prove L8-L9 (`run::evidence_to`) | `righe × 2400 B` (`IDENTITY_BYTES`) + tabella | `GraphStream`: due passate, stessi byte |
 | Motore Dati (`mzlab-wasm`) | cache LRU 5/6 del budget (160 MB) + lavoro 1/6 (32 MB) | espulsione LRU |
 
-Memoria della scheda: il motore Dati, fino a `min(core−1, 4)` worker di `feat-worker.js`, fino a 4 worker dell'indice (cancello comune) e l'mzML di una conversione in un Blob. Ogni istanza può crescere fino al suo tetto e la memoria WASM non si restringe: solo chiudere il worker la rende.
+Scheda: motore Dati + fino a `min(core−1, 4)` worker delle feature + fino a 4 worker dell'indice + l'mzML di una conversione in un Blob. La memoria WASM non si restringe: solo chiudere il worker la rende.
 
 ## 2. Perché align a 12 file stima 188 MB
 - Conto: nel modo famiglia `whole = righe × 79 + tabella`, con tabella = `più_larga × 1,5 × (n × 21 + 28)`. Prima si riservano `righe × 8` per `s.all`, quindi lo spazio libero è `192 MB − 8 × righe`. Il rifiuto arriva quando `whole` supera il libero.
 - Con 12 file simili (più larga ≈ righe/12) `whole ≈ righe × 114 B`: 188 MB corrispondono a ≈1,7 milioni di righe, cioè ≈145 000 feature per file; il libero è ≈178 MB, da cui il rifiuto anche se 188 < 192.
-- Costo teorico delle sole righe lean: 39 B × 1,7 M ≈ 63 MB. La stima è 3× quel valore: 40 B/riga di lavoro (copie ordinate, logaritmi) e ≈60 MB di tabella stimata. Non è uno spreco della stima: `align_grouped` passa due volte su tutti i file e `link` tiene `group_of` per ogni riga.
+- Costo teorico delle righe lean: 39 B × 1,7 M ≈ 63 MB; la stima è 3× (40 B/riga di lavoro e ≈60 MB di tabella), giustificata: `align_grouped` passa due volte su tutti i file e `link` tiene `group_of` per ogni riga.
 - Inefficienza strutturale: il modo famiglia ha bisogno di tutto solo per `famalign::link`, che per ogni riga usa `group_of`, `role`, `family_id`, `charge`, `rt`. I gruppi di ioni si formano per m/z: si possono fare a lastre come nel modo ione, tenendo solo la tabella allineata e `group_of` (4 B/riga), e poi contare voti e legami leggendo un file alla volta. Peso a lastre: tabella + 4 B/riga + una lastra + un file, ≈1/4 di oggi (M1).
 - Strato debole: se align passa, `finish` tiene insieme le tabelle deboli di tutti i file (29 B/riga, soglia `WEAK_RATIO` 0,3 × 2e5): con molte feature deboli è il prossimo rifiuto `align`. Si sposta fuori dalla memoria lineare e si allinea a lastre (M1, seconda parte).
 - Misura nativa (12 file, ricetta predefinita, `--budget-mb 192`): stesso rifiuto del sito (188/192). Senza tetto: detect 40 s, totale 74 s, align 0,4 s per ione e 0,9 s per famiglia; per ione a 192 MB passa già a lastre (71 s). Il rifiuto è solo del modo famiglia, come previsto dal conto sopra.
-- Feature di rumore: le 1,72 M righe sono quasi tutte sotto il rumore reale (altezza minima 1,3e5, mediana 4e5); un allineamento di riferimento con mzmine ne trova ≈7600 per file. La correzione a monte è la soglia stimata (M7); M1 resta necessario perché serie più lunghe o soglie più basse in modo famiglia arrivano allo stesso muro.
+- Feature di rumore: la soglia 2e5 sta sotto il rumore reale (altezze delle feature: minimo 1,3e5, mediana 4e5); mzmine ne trova ≈7600 per file. Correzione a monte: soglia stimata (M7). M1 resta necessario: serie più lunghe in modo famiglia arrivano allo stesso muro.
 
 ## 3. Contratto di memoria v2
 
@@ -51,14 +52,14 @@ Memoria della scheda: il motore Dati, fino a `min(core−1, 4)` worker di `feat-
 | computer, `deviceMemory` 8, core ≥ 8 | 2048 | 3072 |
 | computer, `deviceMemory` sconosciuto (Firefox, Safari) | 512 | 2048 |
 
-- Poi `alto = min(alto, prova)` e `sicuro = min(sicuro, alto)`, dove `prova` è il massimo concesso dalla prova di crescita (3.2). Affidabilità come oggi: `high` se il numero viene dal dispositivo, `medium` se è un predefinito.
+- Poi `alto = min(alto, prova)` e `sicuro = min(sicuro, alto)` (`prova` = massimo della prova di crescita, 3.2); affidabilità come oggi.
 - Discesa: una morte per memoria (firma del supervisore) porta `sicuro` al livello sotto quello in uso e `alto = sicuro`; la seconda morte entro un minuto porta a 192; la terza ferma con `error.memoryBudget`. La discesa vale per la sessione (`sessionStorage`), si scrive nel registro `mzlab.memBudget.log` con chi = supervisore.
 
 ### 3.2 Prova di avvio
 - Cosa: un worker usa e getta (`rust-sonda.js`, modulo ES) crea `new WebAssembly.Memory({initial: 1, maximum: 65536})` e chiama `grow(4096)` (256 MB) a gradini fino a 3072 MB o al primo errore; poi il worker si chiude. Non scrive le pagine: misura il limite del browser, non la RAM libera (quella viene da `deviceMemory`).
 - Perché un'istanza a parte: la memoria WASM non si restringe; una prova dentro il motore gli lascerebbe gigabyte.
 - Costo: atteso < 20 ms sul computer (pagine non toccate); tetto 2 s, oltre si registra `prova: null` e vale la tabella. Si fa una volta per sessione, a pagina ferma (`requestIdleCallback`), prima della prima richiesta grande; risultato in `sessionStorage` `mzlab.memProbe` e nel registro (`inputs.probe_mb`, `inputs.probe_ms`).
-- Altri fatti: `navigator.deviceMemory`, `hardwareConcurrency`, `telefono.js`, `performance.memory.jsHeapSizeLimit` se c'è (solo registro, non decide: su Chromium desktop vale ≈4 GB ovunque). `measureUserAgentSpecificMemory` richiede l'isolamento cross-origin, che GitHub Pages non dà: escluso.
+- Altri fatti: `deviceMemory`, `hardwareConcurrency`, `telefono.js`, `performance.memory.jsHeapSizeLimit` se c'è (solo registro). `measureUserAgentSpecificMemory` richiede l'isolamento cross-origin, che GitHub Pages non dà.
 
 ### 3.3 Chi decide
 - Rust decide (`mzlab-core::budget_auto`, esportato come oggi da `budget_choice`): riceve i fatti `{device_gb, cores, small, ios, probe_mb}` e restituisce `{sicuro_mb, alto_mb, livelli, reason, confidence, inputs}`. Anche la discesa (`budget_down(attuale)`) è in Rust. Prova Rust: tabella dei casi.
@@ -66,37 +67,36 @@ Memoria della scheda: il motore Dati, fino a `min(core−1, 4)` worker di `feat-
 - Ogni fase continua a stimare prima di allocare: il budget più grande cambia solo la via (memoria o lastre), mai i byte del risultato.
 
 ### 3.4 Più worker, una scheda
-- Un solo «permesso grande» per scheda e per origine: un worker usa più di 192 MB solo dopo aver preso il Web Lock `mzlab-mem-grande` (esclusivo, vale anche fra schede); gli altri lavorano a 192. Lo prendono le fasi lunghe di Tabui (align, prove) e, in seguito, il motore Dati per una mappa grande.
-- Chi ha usato il permesso chiude il proprio worker a fine fase se la sua memoria supera 512 MB (la memoria non torna indietro); il pool lo ricrea alla richiesta successiva.
+- Un solo «permesso grande» per scheda e per origine: un worker usa più di 192 MB solo dopo aver preso il Web Lock `mzlab-mem-grande` (esclusivo, vale anche fra schede); gli altri lavorano a 192. Lo prendono i passi lunghi di mzFlow (`features.align`, `features.gapfill`, prove) e, in seguito, il motore Dati per una mappa grande.
+- Chi ha usato il permesso chiude il proprio worker a fine passo se la sua memoria supera 512 MB (la memoria non torna indietro); l'orchestratore lo ricrea alla richiesta successiva.
 - Motore Dati: la cache LRU resta a `min(5/6 × budget, 512 MB)`; il resto del budget è lavoro. Il riciclo di `rust-bridge.js` scatta quando `mem` supera `sicuro_mb` (non più 192 fisso) e il motore è fermo da 30 s.
 - Somma della scheda: al massimo `alto` + 192 × (worker attivi − 1) + heap JS; i pool restano a `poolSize` di oggi.
 
 ### 3.5 OPFS e heap JS come appoggio
 - I dati intermedi grandi che una fase rilegge per intero (tabelle lean per lastra, tabelle deboli) non stanno nella memoria lineare: passano per un tratto `Spill` (scrivi un blocco, rileggi un intervallo di m/z) che nel worker è prima un array JS (fuori dai 256 MB, M1) e poi un file OPFS con `createSyncAccessHandle` (M5).
-- Già in OPFS: sorgenti, `.mzidx`, scratch dell'indice, `.mzfeatf`. Oggi però `feat-worker.js` copia tutti i `.mzfeatf` della serie nell'heap del worker (`copy(stored)`) e `Stored::bytes(k)` copia un file intero nella memoria WASM per ogni lastra; M5 li legge a intervalli dall'OPFS.
+- Già in OPFS: sorgenti, `.mzidx`, scratch dell'indice, `.mzfeatf`. Ma il pool delle feature copia tutti i `.mzfeatf` nell'heap del worker e `Stored::bytes(k)` copia un file intero nella memoria WASM a ogni lastra: M5 li legge a intervalli dall'OPFS.
 - Non conviene lo spill della tabella allineata (letta a caso da `finish` e `rowmeta`) né della cache del motore (già rifatta dall'indice).
 
 ### 3.6 Browser
-- Chromium desktop: 4 GiB per istanza da Chrome 83; `deviceMemory` si ferma a 8. Chromium Android: `memory.grow` fallisce spesso fra 1 e 2 GB; la prova lo misura e comunque è «telefono».
-- Firefox desktop: 4 GiB; niente `deviceMemory` né `performance.memory` (livello «sconosciuto»).
-- Safari macOS e iOS: da provare che un modulo con massimo 4 GiB si istanzi (il commento attuale di `.cargo/config.toml` parla di 256 MB come limite di iPadOS). Prova in M2: Federico apre il sito sull'iPad e su Safari macOS e guarda «Diagnostica». Se iOS rifiuta il modulo, ripiego già pronto da provare nello stesso pacchetto: `--import-memory`, con la `WebAssembly.Memory` creata dalla pagina con il massimo scelto (stesso `.wasm` per tutti).
-- iOS chiude le schede oltre ≈1-1,5 GB: resta 192.
+- Chromium desktop e Firefox: 4 GiB per istanza; `deviceMemory` solo in Chromium (massimo 8). Chromium Android: `memory.grow` fallisce spesso fra 1 e 2 GB (la prova lo misura; comunque «telefono»).
+- Safari macOS e iOS: da provare che un modulo con massimo 4 GiB si istanzi (`.cargo/config.toml` cita 256 MB come limite di iPadOS). Prova in M2 sull'iPad di Federico; se fallisce, ripiego `--import-memory` (la pagina crea la `WebAssembly.Memory` col massimo scelto, stesso `.wasm`). iOS chiude le schede oltre ≈1-1,5 GB: resta 192.
 
 ## 4. Esperienza d'uso
 - Predefinito sicuro: nessuna domanda finché la stima entra in `sicuro`. Le lastre sono silenziose (stessi byte); si vede solo l'avanzamento.
-- Avviso (prima di partire, una sola volta per serie): quando la stima della fase supera `sicuro` ma entra in `alto`. Due pulsanti, Invio = il primo: «Lavora a parti (più lento)» e «Usa più memoria». Se la fase non ha lastre il primo pulsante è «Annulla». La scelta vale per la sessione.
-- Testo (Tabui, solo inglese): «This step needs about 1.4 GB of memory; this browser safely gives 1 GB. If the tab closes, finished steps are kept.» Pulsanti «Work in parts (slower)», «Use more memory», «Cancel».
+- Stima nella tela: ogni passo di mzFlow mostra prima di eseguire «≈ X MB» e la via («in memory» o «in parts»); il pulsante Run riassume il passo più pesante. Avviso (prima di partire, una sola volta per corsa): quando la stima di un passo supera `sicuro` ma entra in `alto`. Due pulsanti, Invio = il primo: «Work in parts (slower)» e «Use more memory». Se il passo non ha lastre il primo pulsante è «Cancel». Freno: stima oltre `alto` = Run disattivato con il motivo e il consiglio. La scelta vale per la corsa.
+- Testo (tela di mzFlow, in inglese come il resto della tela): «features.align needs about 1.4 GB of memory; this browser safely gives 1 GB. If the tab closes, finished steps are kept.» Pulsanti «Work in parts (slower)», «Use more memory», «Cancel».
 - Dati (`lang/`, it/en): «Questa fase richiede circa 1,4 GB di memoria; il browser ne garantisce 1 GB. Se la scheda si chiude, le fasi finite restano salvate.» / «Lavora a parti (più lento)», «Usa più memoria», «Annulla».
-- Dopo una morte: barra in alto del pannello, non una finestra: «The engine ran out of memory during Alignment. Finished steps are saved; it restarts with less memory.» + pulsante «Resume». In italiano «Il motore ha finito la memoria durante l'allineamento. Le fasi finite sono salvate; riparte con meno memoria.» + «Riprendi».
+- Dopo una morte: riga nello stato della corsa, non una finestra: «The engine ran out of memory in features.align. Finished steps are saved; it restarts with less memory.» + pulsante «Resume» (riparte dal passo, i precedenti dalla cache `cache_key`). Nella vista Dati (`lang/`): «Il motore ha finito la memoria durante l'allineamento. Le fasi finite sono salvate; riparte con meno memoria.» + «Riprendi».
 - Rifiuto (anche a lastre non entra): il testo di `error.memoryBudgetFase` con i numeri corretti (`eccesso` contro il libero) più un consiglio: «Try fewer files at once.» / «Prova con meno file insieme.».
-- Avanzamento a lastre: «Alignment, part 3 of 9» nella barra del passo (Tabui) e la fase con «parte N di M» nella barra di `progresso.js` (Dati).
+- Avanzamento a lastre: «part 3 of 9» accanto al passo nella tela di mzFlow e la fase con «parte N di M» nella barra di `progresso.js` (Dati). Mai errori muti: un passo fallito mostra sempre chiave, numeri e consiglio nella tela.
 
 ## 5. Pacchetti DEV (in serie)
-Ordine: M7 (chat locale) per prima; M1 e M2 in parallelo (file diversi); poi M3; poi M4; M5 dopo M4; M6 dopo M3. Ogni PR misura i `.wasm` prima e dopo (`tools/build_feat_wasm.sh`, `limit*`) e riporta i numeri: finder ≤ 512 000 B, gruppo HR 1 118 979 su 1 212 416, table 447 688 su 512 000, libro 152 008 su 159 744, motore principale ≈231 B di margine (un aumento sopra il tetto chiede l'assenso di Federico nella PR, mai un tetto alzato in silenzio).
+Ordine: M7 (chat locale) per prima; M1, M2 e M4a in parallelo (file diversi); poi M3; poi M4b e M4c; M5 dopo M4b; M6 dopo M3.
+Chi: M1 nuova DEV Rust; M2 e M3 la DEV «memoria wasm»; M4a la chat «CLI 2»; M4b una nuova DEV del runner web; M4c la chat «Flow grafico 2». Ogni PR misura i `.wasm` prima e dopo (`tools/build_feat_wasm.sh`, `limit*`) e riporta i numeri: finder ≤ 512 000 B, gruppo HR 1 118 979 su 1 212 416, table 447 688 su 512 000, libro 152 008 su 159 744, motore principale ≈231 B di margine (un aumento sopra il tetto chiede l'assenso di Federico nella PR, mai un tetto alzato in silenzio).
 
 ### 5.1 M1 · Align «famiglia» e strato debole a lastre (nuova DEV, Rust)
 - Obiettivo: il modo famiglia (`famalign::align_families`) e lo strato debole (`series::finish`) seguono la regola di `slabs.rs`: in memoria se entra in metà del libero, altrimenti a lastre di m/z, con gli stessi byte del `.mzfeat`.
-- Perimetro: `crates/mzlab-feat/src/{slabs,famalign,align,series,store_read}.rs`, `crates/mzlab-feat/tests/slabs.rs`, `TP_Mine/files/feat-worker.js` solo per il callback `Spill`, `docs/agenti/memoria.md` (riga «slabs» e «Strato debole») e `docs/agenti/mzfeat.md` se cita le vie.
+- Perimetro: `crates/mzlab-feat/src/{slabs,famalign,align,series,store_read}.rs`, `crates/mzlab-feat/tests/slabs.rs`, il callback `Spill` come argomento facoltativo della funzione WASM (assente = `Vec` in memoria, così `feat-worker.js` non cambia; lo passa il runner web di M4b), `docs/agenti/memoria.md` (riga «slabs» e «Strato debole») e `docs/agenti/mzfeat.md` se cita le vie.
 - Disegno: prima passata `align_grouped` senza mappa a lastre (cuts di oggi) → tabella intera → `RtMap`; seconda passata con mappa a lastre, `group_of[k]` (u32 per riga, indice globale del file = partizione + locale); `collect` legge un file alla volta solo `role`, `family_id`, `charge`, `rt` (nuovo `Want`); poi `link` e `rows` come oggi.
 - Strato debole: ogni tabella debole va in un `Spill` (tratto nuovo: `put(k, bytes)`, `get(k, range_mz)`); in WASM è un callback verso array JS del worker; poi allineamento a lastre come il modo ione. Nativo e test: `Vec<Vec<u8>>`.
 - Vincoli: nessun file della DEV «memoria wasm» (`mzlab-core/src/budget*.rs`, `cache.rs`, `.cargo/config.toml`, `rust-*.js`); stima prima di allocare; niente soglie cambiate; tetto di `finder`/`table` misurato.
@@ -109,8 +109,8 @@ Ordine: M7 (chat locale) per prima; M1 e M2 in parallelo (file diversi); poi M3;
 - Perimetro: `.cargo/config.toml`, `crates/mzlab-core/src/{budget,budget_auto,stima,lettori,mzidx}.rs`, `crates/mzlab-wasm/src/{cache,budget_js}.rs` (cache = `min(5/6, 512 MB)`), `crates/mzlab-desktop/src/ram.rs` solo se cambia la firma; i suoi file già toccati.
 - Vincoli: aritmetica delle stime con `checked_mul`/`saturating_mul` (usize a 32 bit: oltre 2 GiB `n × size` trabocca), ogni `Vec` grande con `try_reserve`; i byte dei risultati non cambiano; il motore principale ha ≈231 B di margine: la tabella dei livelli come dati costanti, misura prima/dopo.
 - Prove: `cargo test -p mzlab-core budget`, tabella dei casi 3.1 (incluse le combinazioni con `probe_mb`), test di trabocco (stima con 600 M righe → rifiuto ordinato, non panic); `tests/test_guardie_memoria.py`; build dei `.wasm` con `limit*`.
-- Accettazione: Chromium del container istanzia ogni `.wasm` con massimo 4 GiB; parità dei byte a 24 MB e in memoria invariata (`test_feat_wasm.py`); `eccesso_mb ≥ 1` e `stima ≤ budget` non compaiono più insieme senza `libero_mb`.
-- Prova Safari: chiede a Federico (tramite il Coordinatore) di aprire il sito dalla PR su iPad e su Safari macOS; se il modulo non si istanzia, nello stesso pacchetto prova `--import-memory` e lo propone.
+- Accettazione: Chromium del container istanzia ogni `.wasm` con massimo 4 GiB; parità dei byte a 24 MB e in memoria invariata (`test_feat_wasm.py`); ogni rifiuto porta `libero_mb`.
+- Prova Safari: Federico (tramite il Coordinatore) apre la build della PR su iPad e Safari macOS; se il modulo non si istanzia, prova `--import-memory` (3.6).
 - Consegna: PR, SHA, misure dei `.wasm` prima/dopo, esito Safari.
 
 ### 5.3 M3 · Prova di avvio, fatti e supervisore (DEV «memoria wasm», dopo M2)
@@ -121,24 +121,39 @@ Ordine: M7 (chat locale) per prima; M1 e M2 in parallelo (file diversi); poi M3;
 - Accettazione: in Chromium del container la scelta automatica dà `sicuro`/`alto` coerenti con la tabella (`deviceMemory` forzato con `addInitScript` a 2, 4, 8); dopo una morte simulata il registro ha la voce `supervisor` e il livello sceso.
 - Consegna: PR, SHA, CI, pages.
 
-### 5.4 M4 · Tabui usa il budget: permesso grande, avviso, avanzamento (dopo M1 e M3)
-- Obiettivo: il pool di `feat-worker.js` riceve `budgetMb = sicuro_mb` (oggi 0 = 192); align e prove chiedono prima la stima (esportazione nuova e leggera `align_estimate`/`evidence_estimate` dal sondaggio dei `.mzfeatf`) e, se supera `sicuro` ed entra in `alto`, mostrano l'avviso (4); con «Usa più memoria» prendono il Web Lock `mzlab-mem-grande` e lavorano ad `alto`; il worker oltre 512 MB si chiude a fine fase; «parte N di M» nella barra del passo.
-- Perimetro: `TP_Mine/files/feat-worker.js`, `TP_Mine/js/24_tpmine_diretta.js` e il pannello Pipeline (`TP_Mine/js/32_pipeline.js`), `crates/mzlab-feat-wasm/src/{lib,run}.rs` per la stima e il callback di avanzamento; `docs/agenti/mzfeat-wasm.md`, `docs/agenti/mzfinder.md`.
-- Vincoli: Tabui solo in inglese (nessuna chiave `lang/`, guardie `test_tabui_inglese.py`); un solo avviso per serie; Invio = predefinito; tetti dei `.wasm` del gruppo HR e table misurati.
-- Prove: serie sintetica che con budget 24 MB è rifiutata in una fase senza lastre e con 64 MB completa, stesso SHA-256 del nativo (scala del caso 192 → 512, in CI); nella notte (`notte.yml`) la stessa serie a scala vera 192 → 512; e2e di Tabui con l'avviso (scelta «Work in parts» e «Use more memory»: stessi byte); `e2e_axe_grafici` e il tour invariati.
-- Accettazione: il Dig sulla serie sintetica grande non chiede nulla se entra in `sicuro`; mostra l'avviso una volta se no; due worker non tengono insieme il permesso (prova con due schede).
-- Consegna: PR, SHA, CI, pages.
+### 5.4 M4 · mzFlow con il contratto di memoria (sostituisce il lavoro su Tabui, che non si tocca)
+Tre pacchetti senza file in comune. Prerequisiti: M1 e M2 per tutti; M3 per M4b e M4c; M7 per la prova (d).
+
+#### M4a · Runner nativo e stima per passo (chat «CLI 2», session_018kSawbhNiD1N4vwTZbp14Q)
+- Obiettivo: `features.align`/`features.gapfill` di `flow run` passano per `slabs::align_and_fill_stored` con un `MemBudget` (oggi `run::align` tiene tutte le tabelle senza budget): nativo = `budget_auto` (RAM/4, 1-16 GB), `--budget-mb N` per le prove. Una funzione Rust `flow::stima_passo(job, ingressi) -> {mb, via}` per `features.detect`, `features.align`, `features.gapfill` e prove (dal sondaggio dei `.mzfeatf` e dalle scansioni del `.mzidx`), usata da CLI, desktop e web; `prov/1` e `corsa/1` riportano `mem_mb` e `via` per passo.
+- Perimetro: `crates/mzlab-cli/src/{flow_base,flow,flow_run,flow_out,flow_report}.rs` e i loro test, `crates/mzlab-core/src/flow/{corsa,prov}.rs` (campi nuovi; schema `corsa-1.json` aggiornato), funzione di stima in `crates/mzlab-feat/src/slabs.rs` solo come `pub fn stima(...)` sul sondaggio (coordinarsi con M1: la scrive M1, M4a la chiama), `docs/agenti/cli.md`, `docs/agenti/rust-flow.md`.
+- Ricetta: nessuna soglia nei passi; tutto viene da `Recipe::for_index` (ripreso da M7), così sito, CLI e Flow hanno la stessa ricetta. Prova: un `.mzfeatf` di `flow run` e uno di `mzlab-cli features` sulla stessa serie hanno lo stesso SHA-256.
+- Prove: `cargo test -p mzlab-cli --lib flow`, `cargo test -p mzlab-core --lib flow::corsa`, `tests/test_corsa_schema.py`; `flow run --budget-mb 24` e senza budget sulla serie sintetica `completo` in modo famiglia: stesso SHA-256 del `.mzfeat`.
+- Accettazione (d, nativo): sui 12 file Orbitrap (prova della chat locale, dati privati) `flow run` con il piano equivalente al Dig e `--budget-mb 192` finisce senza rifiuto, tempo ≤ 1,5 × la corsa senza budget (oggi 74 s); in CI la serie sintetica a 24 MB.
+
+#### M4b · Runner web dei passi delle feature (nuova DEV, dopo M3)
+- Obiettivo: la terza voce di `F.runners` («This browser»), come in `docs/studi/workflow/WEB_RUNNER.md` ma limitata ai passi `features.detect`, `features.align`, `features.gapfill` e prove: orchestratore JS che esegue i livelli del piano, chiede la stima (`flow::stima_passo` esportata dal `.wasm` delle feature), applica il budget (`sicuro`/`alto` di M3), prende il Web Lock `mzlab-mem-grande` per i passi grandi, chiude il worker oltre 512 MB a fine passo, salva ogni uscita in OPFS con `cache_key` (passi finiti = ripresa dopo una morte).
+- Perimetro: file nuovi `flow/lazy/flow-web-run.js` (orchestratore, `// @ts-check`, progetto in `tools/tipi/`) e `flow/lazy/flow-web-worker.js` se serve; usa `TP_Mine/files/feat-worker.js` solo dalla sua API pubblica (`budgetMb` nelle opzioni), senza modificarlo; esportazione della stima in `crates/mzlab-feat-wasm/src/lib.rs`; `docs/agenti/flow-grafica.md` (riga «Esecutore web»), `docs/agenti/mzfeat-wasm.md`.
+- Vincoli: nessun file di Tabui (`TP_Mine/js`, `TP_Mine/lazy`) né della tela (lo fa M4c: M4b espone `F.runners` e gli eventi `{passo, stato, mb, via, parte, di}`); `.wasm` del gruppo HR e `table` misurati; `MZLAB_LR_MISS` vuoto.
+- Prove: e2e `tests_e2e/e2e_flow_web.py`: piano detect → align → gapfill su 3 file sintetici, `.mzfeat` con lo stesso SHA-256 di `flow run`; serie con budget forzato 24 MB rifiutata in un passo senza lastre e completata a 64 MB (scala del caso 192 → 512), stessi byte; morte simulata del worker a metà align: ripresa dal passo, detect non rifatto.
+- Accettazione (d, web): la serie sintetica a 12 file (generatore `tools/feat_mirato.py`, ≈140 000 righe per file come la misura, soglia fissa) gira a 192 MB senza rifiuto; notte (`notte.yml`) la stessa a scala vera.
+
+#### M4c · Tela: stima, avviso, freno, stato (chat «Flow grafico 2», session_01T46TDPXiMnP8hNAn6QwuAz, dopo M4b)
+- Obiettivo: la sezione 4 nella tela di mzFlow: «≈ X MB · in memory/in parts» su ogni passo (dagli eventi di M4b o, per il desktop, dalla rotta `flow/run`), avviso a due pulsanti prima di Run, Run disattivato oltre `alto` con il motivo, «part N of M», riga dopo una morte con «Resume», nessun errore muto (chiave, numeri, consiglio).
+- Perimetro: `flow/lazy/{flow-canvas,flow-shell,flow-desktop,flow-run-end,flow-issues}.js` e i test della tela (`tests_e2e/e2e_flow*.py`, `e2e_tour.py` se cambia un bersaglio); `docs/agenti/flow-grafica.md`. Non tocca `flow-web-run.js` (M4b) né Rust.
+- Vincoli: testi in inglese come il resto della tela; Invio = predefinito sicuro; accessibilità (tastiera, `aria-label`, colori da variabili); il tour resta valido.
+- Prove: e2e con budget forzato (`?mem=24`): avviso, scelta «Work in parts» e «Use more memory» danno lo stesso `.mzfeat`; Run disattivato oltre `alto`; `e2e_axe_grafici` invariato.
 
 ### 5.5 M5 · Appoggio in OPFS per la serie (dopo M4)
-- Obiettivo: `Stored` e `Spill` del worker leggono e scrivono file OPFS con `createSyncAccessHandle` a intervalli, invece di copiare tutti i `.mzfeatf` nell'heap del worker e un file intero nella memoria WASM a ogni lastra.
-- Perimetro: `TP_Mine/files/feat-worker.js`, `crates/mzlab-feat/src/{slabs,store_read}.rs` (lettura per intervallo di m/z dall'offset), `archivio.js` solo per i nomi in `feat/` e la pulizia dei `.part`; `docs/agenti/memoria.md`, `docs/agenti/dati-esporta.md` se tocca `export/`.
+- Obiettivo: `Stored` e `Spill` del runner web (M4b) leggono e scrivono file OPFS con `createSyncAccessHandle` a intervalli, invece di copiare tutti i `.mzfeatf` nell'heap del worker e un file intero nella memoria WASM a ogni lastra.
+- Perimetro: `flow/lazy/flow-web-run.js` e il suo worker (dopo M4b, d'accordo con chi lo tiene), `crates/mzlab-feat/src/{slabs,store_read}.rs` (lettura per intervallo di m/z), `archivio.js` solo per i nomi in `feat/`; `docs/agenti/memoria.md`.
 - Prove: stessi SHA-256 di M1/M4; misura con `tests_e2e/e2e_memoria_misure.py` (heap del worker prima/dopo); `ensureRoom` prima di scrivere oltre 50 MB.
 - Accettazione: heap JS del worker durante align ≤ una lastra + un file; nessuna regressione di tempo oltre +30 % sulla serie `completo`.
 
 ### 5.6 M6 · Motore Dati con il budget nuovo (dopo M3, piccolo)
-- Obiettivo: il motore Dati usa `sicuro_mb` (lavoro = budget − cache), il riciclo segue `sicuro_mb`; mappe e `subxic` invariati. Il permesso grande serve solo se una rotta stima oltre `sicuro` (oggi nessuna): solo il punto d'aggancio.
+- Obiettivo: il motore Dati usa `sicuro_mb` (lavoro = budget − cache), il riciclo segue `sicuro_mb`; mappe e `subxic` invariati. Perimetro: `crates/mzlab-wasm/src/routes*.rs` e `rust-worker.js` (dopo M3, stessa DEV o una piccola).
 - Prove: guardie `engine_*` invariate; `e2e_memoria_riduzioni.py`; misura della scheda prima/dopo.
 
-### 5.7 M7 · Soglia del rumore nel Dig (in corso nella chat locale, fuori da questo studio)
-- La chat locale porta la soglia predefinita del Dig a quella stimata dai dati (`params::noise_from_hist`), aggiunge il ripiego «famiglia → ione» con avviso e un errore con i numeri. Questo studio non la ripete.
-- Coordinamento con M1: quando M1 è unito, il ripiego per ione non serve più per la memoria (la famiglia va a lastre); resta solo se la famiglia fallisce per altro. Con M2 l'errore riporta `libero_mb`: il testo della chat locale deve usare quei campi.
+### 5.7 M7 · Soglia del rumore (chat locale, fuori da questo studio)
+- La chat locale porta la soglia predefinita a quella stimata dai dati (`params::noise_from_hist`) e aggiunge il ripiego «famiglia → ione» con avviso. Va messa in `Recipe::for_index`, così sito, `mzlab-cli` e i passi di mzFlow hanno la stessa ricetta (prova in M4a).
+- Con M1 unito il ripiego per ione non serve più per la memoria; con M2 l'errore porta `libero_mb` e il testo del ripiego usa quei campi.
