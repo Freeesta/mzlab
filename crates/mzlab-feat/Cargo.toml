@@ -37,6 +37,10 @@ name = "grafo_record"
 required-features = ["record"]
 
 [[test]]
+name = "posizioni_record"
+required-features = ["record"]
+
+[[test]]
 name = "untargeted_join"
 required-features = ["untargeted"]
 

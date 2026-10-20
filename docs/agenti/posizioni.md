@@ -14,6 +14,7 @@ Codice: `crates/mzlab-feat/src/chem/posizioni.rs` e `posizioni/` (feature `chem`
 - `match_spectrum(mol, sites, peaks, tol, pol) -> Result<Report>`; `Tol::Da` (LR, tipico 0,5) o `Tol::Ppm` (HR).
 - `positions_json(smiles, transform, peaks_json, tol, ppm, positive) -> Result<String>`: picchi `[[mz,int],..]` o `[{"mz","i"},..]`; `ppm` false = Da. `error.posiz.peaks`, `error.posiz.tol`.
 - `positions_prior_json(..., reatt_json)`: lo stesso con il `reatt/1` del genitore (`mzlab-chem`; stringa vuota = nessuno) e il campo `prior` in più (`prior.rs`, `prior_of(sites, n, reatt)`); `error.posiz.prior` con `reason` `json`, `format` o `atoms` (un atomo pesante senza f(−) o un `heavy_index` fuori dal genitore).
+- `positions_record_json(rec, parent, transform, peaks_json, tol, ppm, positive, reatt_json)` (feature `record`, in nessun `.wasm`): lo stesso report partendo da un record `mol/1` (`mzlab_mol::Mol`) invece dello SMILES; il grafo è `grafo::Mol::from_record(rec, true)` (aromaticità percepita dalla forma Kekulé), `parent` è solo l'etichetta del campo `parent`. Prova di parità col percorso SMILES: `tests/posizioni_record.rs`.
 
 ## Contratto `posiz/1`
 `{format:"posiz", version:1, parent, transform, tp_formula, tp_mz, pol:"+|-", tol, tol_unit:"da|ppm", sites:[{atom, symmetry, kind}], classes:[{id, atoms, kind, status, support:[{mz, frag_formula, side_atoms, iso_mz?}], against:[..]}], ox_type:{h2o_loss, minus_o}|null, unexplained:[mz], suggest:[..], proposal:{sublevel:"3a|3b", why}}`.
