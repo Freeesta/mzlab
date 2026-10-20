@@ -8,6 +8,8 @@ Eight more, `package: tabui`: `tp.generate` (`hypo::generate`, `ipotesi/1`; its 
 `structure.render` (`interp::disegno`, the one form of the drawing) and `structure.draw` (Ketcher, page only: no `.wasm`, `deterministic: false`) and `structure.reactivity` (`mzlab-chem`, defaults read from `Opts::parse("")`; algorithms `gfn2_xtb`, `extended_huckel` as the engine fallback).
 They run in the `.wasm` `hr`, `interp` and `chem` with their ceilings written as data.
 
+`table.stats`, `table.pca` and `table.kmd` (`steps/stats.rs`, native only, engine `stat/`) are in the same registry: `stat.md`.
+
 ## Functions
 - `step::Step`, `Port`, `Param`, `Algorithm`, `Preset`, `Reference`, `Applicability`, `Facets`, `RunsIn`, `DataType`: plain structs of `step/1` (`mzlab-core/src/step/mod.rs`); no serde, the JSON is written with `json::Out`.
 - `Step::core(id, title, doc)`: a `core` step at version 1 with empty ports and parameters; descriptors fill the rest with struct update syntax.
