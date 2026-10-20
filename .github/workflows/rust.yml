@@ -138,6 +138,12 @@ jobs:
         run: |
           python -m pip install pytest
           python -m pytest -q tests/test_guardie_memoria.py tests/test_feat_wasm.py
+      # the same synthetic workflow native and as WASI under node gives the same SHA-256 (docs/agenti/rust-flow.md)
+      - name: Workflow determinism, native and WASI
+        run: |
+          rustup target add wasm32-wasip1
+          python -m pip install jsonschema
+          python -m pytest -q tests/test_flow_determinismo.py
       # saved last and also after a red step (main only)
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: always() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
