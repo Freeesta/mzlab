@@ -74,6 +74,7 @@ pub fn annotations_fingerprint(
         sorted.join(","),
         format!("{s:?}"),
         c.count_2b_as_2.to_string(),
+        c.auto_2b.to_string(),
     ];
     for p in source_files(c, io) {
         let data = io.read(&p).unwrap_or_default();

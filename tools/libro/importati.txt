@@ -19,3 +19,7 @@
 14-frammentazione-esi.md
 15-ei-metodo.md
 16-ei-famiglie.md
+18-strategia.md
+21-glossario.md
+22-formulario.md
+12-dati.md

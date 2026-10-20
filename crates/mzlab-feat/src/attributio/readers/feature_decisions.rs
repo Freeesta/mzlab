@@ -307,6 +307,8 @@ pub struct MatchedDecision {
     pub name: String,
     pub justification: String,
     pub group: String,
+    /// `decided_by` of the row: `auto` for the 2b rows of the programme (`review::auto2b`).
+    pub by: String,
     pub evidence: Vec<(String, String)>,
 }
 
@@ -342,6 +344,7 @@ pub fn match_decisions(
             name: d.get(r, "name").into(),
             justification: d.get(r, "justification").into(),
             group: d.get(r, "group").into(),
+            by: d.get(r, "decided_by").trim().into(),
             evidence: EVIDENCE_COLUMNS
                 .iter()
                 .map(|c| (c.to_string(), d.get(r, c).to_string()))

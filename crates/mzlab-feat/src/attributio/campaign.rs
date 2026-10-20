@@ -188,6 +188,8 @@ pub struct Campaign {
     /// `[diagnostics] rt_logp_watchlist`, lowercase: names flagged for a hand check in the publication table.
     pub rt_logp_watchlist: Vec<String>,
     pub count_2b_as_2: bool,
+    /// `[levels] auto_2b`: the Level 3 features whose review proposal is `2b-strong` get a 2b decision of the programme (`decided_by = auto`); off by default.
+    pub auto_2b: bool,
     pub review: Table,
     pub annotation: Table,
     pub presence_blank_fold: Option<f64>,

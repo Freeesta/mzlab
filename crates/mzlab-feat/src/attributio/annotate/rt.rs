@@ -315,6 +315,7 @@ pub fn apply_rt_coherence(
                     ));
                 }
                 f.decision.decision_2b = false;
+                f.decision.auto_2b = false;
             }
         }
         f.level_sub = level_sub(f).into();

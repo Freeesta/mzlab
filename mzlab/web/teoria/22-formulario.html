@@ -1,55 +1,47 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema--><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Formulario · Teoria mzLab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 22</div>
 <h1>Formulario essenziale</h1>
 <p class="lead">Le relazioni fondamentali di cromatografia, sorgenti, vuoto, analizzatori ed elaborazione degli spettri. Per ciascuna formula: significato fisico, parametri critici, ordini di grandezza tipici e capitolo di derivazione.</p>
-
 <div class="box key"><b>Come usarlo</b>
 <p>Non serve memorizzare le formule come stringhe astratte di simboli, ma comprenderne a fondo il significato operativo. Per ogni relazione è utile chiedersi: <b>da che cosa dipende</b> (cosa accade al variare di ciascun parametro?), <b>da dove deriva</b> (quale principio fisico governa il fenomeno) e <b>quali ordini di grandezza</b> caratterizzano la strumentazione reale. Con il pulsante sottostante le formule possono essere nascoste per testare la propria preparazione.</p>
 <p class="noprint"><button id="hide" type="button">Nascondi le formule (mettiti alla prova)</button></p></div>
-
 <p class="note">Simboli comuni: <i>z</i> numero di cariche, <i>e</i> = 1,602·10<sup>−19</sup> C carica elementare, <i>m</i> massa dello ione in kg (1 u = 1,6605·10<sup>−27</sup> kg), <i>k</i><sub>B</sub> = 1,381·10<sup>−23</sup> J/K, 1 eV = 96,49 kJ/mol. Nelle formule degli analizzatori <i>m</i>/<i>z</i> compare come <i>m</i>/(<i>ze</i>): con <i>m</i> in u e <i>z</i> intero si ottiene il valore che leggete sullo spettro.</p>
-
 <h2>1. Cromatografia (capitoli 3, 4, 5)</h2>
 <h3>Ritenzione e selettività</h3>
 <span class="eq"><i>k</i> = <span class="frac"><span><i>t</i><sub>R</sub> − <i>t</i><sub>0</sub></span><span><i>t</i><sub>0</sub></span></span> = <span class="frac"><span><i>K</i></span><span>β</span></span>, &nbsp;&nbsp; <i>t</i><sub>R</sub> = <i>t</i><sub>0</sub>(1 + <i>k</i>), &nbsp;&nbsp; α = <span class="frac"><span><i>k</i><sub>2</sub></span><span><i>k</i><sub>1</sub></span></span><span class="no">(3.1–3.2)</span></span>
 <p>Fattore di ritenzione <i>k</i>: quante volte più tempo l'analita passa nella fase stazionaria che nella mobile. <i>K</i> è la costante di ripartizione, β il rapporto di fase (volume di fase mobile / volume di fase stazionaria). Selettività α: rapporto dei <i>k</i> di due composti vicini, dipende solo dalla chimica (fasi, temperatura, solvente), non dalla colonna lunga o corta. Buoni valori: 1 &lt; <i>k</i> &lt; 10.</p>
 <span class="eq">β = <span class="frac"><span><i>r</i><sub>c</sub></span><span>2 <i>d</i><sub>f</sub></span></span> &nbsp;&nbsp; (colonna capillare GC)</span>
 <p>Raggio interno della colonna su due volte lo spessore del film. Colonna 0,25 mm × 0,25 µm: β = 125 / 0,5 = 250. Film più spesso → β più piccolo → <i>k</i> più grande (più ritenzione, utile per i volatili).</p>
-
 <h3>Efficienza: piatti teorici e allargamento</h3>
 <span class="eq"><i>N</i> = <span class="frac"><span><i>t</i><sub>R</sub><sup>2</sup></span><span>σ<sup>2</sup></span></span> = 16 <span class="frac"><span><i>t</i><sub>R</sub><sup>2</sup></span><span><i>w</i><sub>b</sub><sup>2</sup></span></span> = 5,54 <span class="frac"><span><i>t</i><sub>R</sub><sup>2</sup></span><span><i>w</i><sub>1/2</sub><sup>2</sup></span></span>, &nbsp;&nbsp; <i>H</i> = <span class="frac"><span><i>L</i></span><span><i>N</i></span></span><span class="no">(3.3)</span></span>
 <p>Picco gaussiano: larghezza di base <i>w</i><sub>b</sub> = 4σ, a metà altezza <i>w</i><sub>1/2</sub> = 2,355σ (5,54 = 2,355<sup>2</sup>). <i>H</i> (altezza equivalente a un piatto) è la grandezza che si confronta fra colonne: per una colonna impaccata HPLC buona <i>H</i> ≈ 2–2,5 <i>d</i><sub>p</sub> (particelle da 3 µm → <i>H</i> ≈ 7 µm, cioè ≈ 14 000 piatti in 10 cm).</p>
 <span class="eq"><i>H</i> = <i>A</i> + <span class="frac"><span><i>B</i></span><span><i>u</i></span></span> + <i>C</i> · <i>u</i>, &nbsp;&nbsp; <i>u</i><sub>opt</sub> = √(<i>B</i>/<i>C</i>), &nbsp;&nbsp; <i>H</i><sub>min</sub> = <i>A</i> + 2√(<i>BC</i>)<span class="no">(3.4)</span></span>
 <p>Van Deemter: <i>A</i> cammini multipli (solo colonne impaccate; nella capillare GC <i>A</i> = 0: equazione di Golay), <i>B</i>/<i>u</i> diffusione longitudinale (∝ coefficiente di diffusione <i>D</i><sub>m</sub>: grande nei gas), <i>C</i>·<i>u</i> trasferimento di massa (∝ <i>d</i><sub>p</sub><sup>2</sup>/<i>D</i><sub>m</sub>). Per questo in GC H<sub>2</sub> ed He hanno ottimi più veloci e più piatti di N<sub>2</sub>, e in HPLC le particelle piccole spostano il minimo a velocità più alte. Velocità lineare media: <i>ū</i> = <i>L</i>/<i>t</i><sub>0</sub>.</p>
-
 <h3>Risoluzione</h3>
 <span class="eq"><i>R</i><sub>s</sub> = <span class="frac"><span>2 (<i>t</i><sub>R,2</sub> − <i>t</i><sub>R,1</sub>)</span><span><i>w</i><sub>b,1</sub> + <i>w</i><sub>b,2</sub></span></span> = 1,18 <span class="frac"><span><i>t</i><sub>R,2</sub> − <i>t</i><sub>R,1</sub></span><span><i>w</i><sub>1/2,1</sub> + <i>w</i><sub>1/2,2</sub></span></span><span class="no">(3.5)</span></span>
 <span class="eq"><i>R</i><sub>s</sub> = <span class="frac"><span>√<i>N</i></span><span>4</span></span> · <span class="frac"><span>α − 1</span><span>α</span></span> · <span class="frac"><span><i>k</i><sub>2</sub></span><span>1 + <i>k</i><sub>2</sub></span></span><span class="no">(3.6)</span></span>
 <p>Equazione di Purnell: tre leve indipendenti, efficienza, selettività, ritenzione. <i>R</i><sub>s</sub> = 1,5 è la separazione «alla linea di base». Esempio: <i>N</i> = 10 000, α = 1,05, <i>k</i> = 5 → <i>R</i><sub>s</sub> = 25 × 0,048 × 0,83 ≈ 1,0. Raddoppiare <i>N</i> (colonna lunga il doppio, tempo doppio) dà solo √2 = 1,41 volte la risoluzione; portare α da 1,05 a 1,10 la quasi raddoppia. Da qui i piatti necessari: <i>N</i><sub>req</sub> = 16 <i>R</i><sub>s</sub><sup>2</sup> (α/(α−1))<sup>2</sup> ((1+<i>k</i>)/<i>k</i>)<sup>2</sup>.</p>
 <span class="eq"><i>n</i><sub>c</sub> ≈ 1 + <span class="frac"><span><i>t</i><sub>g</sub></span><span><i>w</i></span></span> &nbsp;&nbsp; (capacità di picchi in gradiente)</span>
 <p>Quanti picchi ci stanno, uno accanto all'altro, nel tempo del gradiente <i>t</i><sub>g</sub> con larghezza di base media <i>w</i>. Gradiente di 20 min, picchi larghi 12 s → circa 100.</p>
-
 <h3>Indici di ritenzione (GC)</h3>
 <span class="eq"><i>I</i> = 100 [<i>n</i> + <span class="frac"><span>log <i>t</i>'<sub><i>x</i></sub> − log <i>t</i>'<sub><i>n</i></sub></span><span>log <i>t</i>'<sub><i>n</i>+1</sub> − log <i>t</i>'<sub><i>n</i></sub></span></span>] &nbsp; (isoterma), &nbsp;&nbsp; <i>I</i> = 100 [<i>n</i> + <span class="frac"><span><i>t</i><sub><i>x</i></sub> − <i>t</i><sub><i>n</i></sub></span><span><i>t</i><sub><i>n</i>+1</sub> − <i>t</i><sub><i>n</i></sub></span></span>] &nbsp; (programmata)<span class="no">(5.1–5.2)</span></span>
 <p>Il tempo di ritenzione riportato sulla scala degli <i>n</i>-alcani (C<sub><i>n</i></sub> ha indice 100<i>n</i>). Indipendente da lunghezza della colonna e flusso: insieme allo spettro EI è il secondo criterio di identificazione in GC-MS. <i>t</i>' = <i>t</i><sub>R</sub> − <i>t</i><sub>0</sub> tempo ridotto.</p>
-
 <h3>HPLC: fase inversa e pressione</h3>
 <span class="eq">log <i>k</i> ≈ log <i>k</i><sub>w</sub> − <i>S</i> φ<span class="no">(4.1)</span></span>
 <p>Modello del solvente forte (LSS): in fase inversa log <i>k</i> cala linearmente con la frazione di organico φ. <i>S</i> ≈ 3–5 per molecole piccole: +10% di metanolo divide <i>k</i> per circa 2–3. È la base del gradiente.</p>
 <span class="eq">Δ<i>P</i> = <span class="frac"><span>φ<sub>R</sub> η <i>L</i> <i>u</i></span><span><i>d</i><sub>p</sub><sup>2</sup></span></span> &nbsp;&nbsp; (legge di Darcy, φ<sub>R</sub> ≈ 500–1000)</span>
 <p>La pressione cresce con viscosità η, lunghezza e velocità, e con l'inverso del <b>quadrato</b> del diametro delle particelle: passando da 5 a 1,7 µm la pressione aumenta di quasi 9 volte (UHPLC). Esempio: acqua (η = 1 mPa·s), 10 cm, <i>u</i> = 2 mm/s, 3 µm, φ<sub>R</sub> = 700 → circa 160 bar.</p>
-
 <h2>2. Ionizzazione, vuoto e trasporto degli ioni (capitoli 6, 7, 8)</h2>
 <h3>Ionizzazione elettronica e chimica</h3>
 <span class="eq">M + e<sup>−</sup> (70 eV) → M<sup>+•</sup> + 2 e<sup>−</sup>, &nbsp;&nbsp; λ<sub>e</sub> = <span class="frac"><span><i>h</i></span><span>√(2 <i>m</i><sub>e</sub> <i>E</i>)</span></span> ≈ <span class="frac"><span>1,226 nm</span><span>√(<i>E</i>/eV)</span></span><span class="no">(7.1)</span></span>
 <p>A 70 eV la lunghezza d'onda di de Broglie dell'elettrone (≈ 0,15 nm) è confrontabile con le lunghezze di legame: il trasferimento di energia è massimo e gli spettri sono riproducibili da uno strumento all'altro (librerie). Le energie di ionizzazione delle molecole organiche sono 8–11 eV: l'eccesso, in media qualche eV, finisce come energia interna e frammenta lo ione radicale (catione a elettroni dispari).</p>
 <span class="eq">BH<sup>+</sup> + M → MH<sup>+</sup> + B, &nbsp;&nbsp; −Δ<i>H</i> = PA(M) − PA(B)<span class="no">(7.2)</span></span>
 <p>Ionizzazione chimica: il trasferimento di protone avviene se l'affinità protonica di M supera quella della base coniugata del gas reagente; la differenza è l'energia in eccesso che può frammentare MH<sup>+</sup>. PA: CH<sub>4</sub> 544, isobutene 802, NH<sub>3</sub> 854 kJ/mol: metano è il reagente «duro», ammoniaca il più «morbido» (spesso solo [M+NH<sub>4</sub>]<sup>+</sup>).</p>
-
 <h3>Elettrospray</h3>
 <span class="eq"><i>q</i><sub>R</sub> = 8π (ε<sub>0</sub> γ <i>R</i><sup>3</sup>)<sup>1/2</sup><span class="no">(6.1)</span></span>
 <p>Limite di Rayleigh: carica massima di una goccia di raggio <i>R</i> e tensione superficiale γ. Il solvente evapora, <i>R</i> cala a carica costante, la repulsione supera la tensione superficiale e la goccia esplode in goccioline più piccole (fissione coulombiana). Solventi a γ bassa (metanolo, acetonitrile) facilitano lo spray rispetto all'acqua pura.</p>
@@ -57,13 +49,11 @@
 <p>Ioni multicarica [M+<i>z</i>H]<sup><i>z</i>+</sup>: da due picchi adiacenti della serie (<i>p</i><sub>1</sub> &gt; <i>p</i><sub>2</sub>, cariche <i>z</i> e <i>z</i>+1) si ricavano carica e massa. In un singolo gruppo isotopico la distanza fra picchi è 1/<i>z</i>.</p>
 <span class="eq">ME (%) = <span class="frac"><span>area in matrice (dopo l'estrazione)</span><span>area in solvente</span></span> × 100 − 100<span class="no">(6.3)</span></span>
 <p>Effetto matrice: negativo = soppressione (i componenti della matrice competono per la carica e la superficie delle gocce, equazione 6.2), positivo = esaltazione. Si corregge con standard interni marcati isotopicamente o calibrazione in matrice.</p>
-
 <h3>Vuoto</h3>
 <span class="eq">λ = <span class="frac"><span><i>k</i><sub>B</sub><i>T</i></span><span>√2 π <i>d</i><sup>2</sup> <i>p</i></span></span> &nbsp;&nbsp; ⇒ &nbsp; per N<sub>2</sub> a 25 °C: &nbsp; λ (cm) ≈ <span class="frac"><span>6,8·10<sup>−3</sup></span><span><i>p</i> (mbar)</span></span><span class="no">(8.1)</span></span>
 <p>Cammino libero medio: a pressione atmosferica ≈ 70 nm, a 1 mbar ≈ 70 µm, a 10<sup>−5</sup> mbar ≈ 7 m. Nell'analizzatore (lungo 20 cm) λ deve essere molto più lungo del percorso: per questo si scende a 10<sup>−5</sup> mbar, e servono stadi di pompaggio differenziale fra la sorgente a pressione atmosferica e il quadrupolo.</p>
 <span class="eq"><i>zeU</i> = ½ <i>m</i> <i>v</i><sup>2</sup> &nbsp;&nbsp; ⇒ &nbsp; <i>v</i> = √(2<i>zeU</i>/<i>m</i>)</span>
 <p>Uno ione accelerato da una differenza di potenziale <i>U</i> acquista energia cinetica <i>zeU</i> (in eV: <i>z</i> × <i>U</i>), uguale per tutti gli ioni con la stessa carica; la velocità invece dipende da <i>m</i>/<i>z</i>. È la base del TOF e del settore magnetico.</p>
-
 <h2>3. Analizzatori (capitoli 9, 10, 11)</h2>
 <h3>Quadrupolo</h3>
 <span class="eq">Φ<sub>0</sub>(<i>t</i>) = <i>U</i> − <i>V</i> cos Ω<i>t</i>, &nbsp;&nbsp; Φ(<i>x</i>, <i>y</i>, <i>t</i>) = Φ<sub>0</sub>(<i>t</i>) <span class="frac"><span><i>x</i><sup>2</sup> − <i>y</i><sup>2</sup></span><span><i>r</i><sub>0</sub><sup>2</sup></span></span><span class="no">(9.1–9.2)</span></span>
@@ -74,25 +64,20 @@
 <p>Passa solo lo ione la cui <i>q</i> cade nel piccolo tratto della linea di scansione dentro la regione stabile, vicino al vertice (<i>q</i>* ≈ 0,706). La massa trasmessa è <b>proporzionale a <i>V</i></b>: si scandisce lo spettro aumentando <i>V</i> (e <i>U</i> insieme). Esempio con <i>r</i><sub>0</sub> = 4 mm e 1 MHz: <i>m</i>/<i>z</i> 300 richiede <i>V</i> ≈ 350 V (circa 1,16 V per unità di <i>m</i>/<i>z</i>). Più <i>U</i>/<i>V</i> si avvicina a 0,168, più la finestra si stringe: più risoluzione, meno trasmissione.</p>
 <span class="eq"><i>a</i> = 0: stabili tutti gli ioni con 0 &lt; <i>q</i> &lt; 0,908; &nbsp;&nbsp; <i>D</i> ≈ <span class="frac"><span><i>q V</i></span><span>4</span></span> (in volt, <i>q</i> ≲ 0,4)<span class="no">(9.10)</span></span>
 <p>Quadrupolo solo RF (q0, cella di collisione q2): guida di ioni senza selezione, con un <b>taglio di bassa massa</b> (gli ioni con <i>q</i> &gt; 0,908 sono persi). <i>D</i> è la profondità della buca di pseudopotenziale che rifocalizza gli ioni sull'asse dopo gli urti.</p>
-
 <h3>Triplo quadrupolo e CID</h3>
 <span class="eq"><i>E</i><sub>cm</sub> = <i>E</i><sub>lab</sub> <span class="frac"><span><i>m</i><sub>gas</sub></span><span><i>m</i><sub>gas</sub> + <i>m</i><sub>ione</sub></span></span><span class="no">(10.1)</span></span>
 <p>Energia del centro di massa: la parte dell'energia di collisione che può diventare energia interna in un singolo urto. Ione di <i>m</i>/<i>z</i> 300 a 30 eV: con N<sub>2</sub> (28) 2,6 eV, con Ar (40) 3,5 eV. Ioni più pesanti, a parità di CE, ricevono meno energia per urto; nella cella ci sono decine di urti e l'energia si accumula (attivazione lenta).</p>
 <span class="eq">tempo di ciclo = Σ (dwell + pausa) &nbsp;&nbsp; ⇒ &nbsp; punti per picco = <span class="frac"><span>larghezza del picco cromatografico</span><span>tempo di ciclo</span></span> ≥ 10–15</span>
 <p>In MRM il quadrupolo «guarda» una transizione alla volta (duty cycle ≈ 100% per transizione, ma diviso fra le transizioni). 20 transizioni × (20 ms + 5 ms) = 0,5 s: un picco largo 6 s ha 12 punti, appena sufficienti per quantificare.</p>
-
 <h3>Tempo di volo (TOF)</h3>
 <span class="eq"><i>t</i> = <i>L</i> <span class="frac"><span>1</span><span>√(2<i>zeU</i>)</span></span> √<i>m</i>, &nbsp;&nbsp; <span class="frac"><span><i>m</i></span><span><i>z</i></span></span> = <span class="frac"><span>2<i>eU</i></span><span><i>L</i><sup>2</sup></span></span> <i>t</i><sup>2</sup>, &nbsp;&nbsp; <i>R</i> = <span class="frac"><span><i>m</i></span><span>Δ<i>m</i></span></span> = <span class="frac"><span><i>t</i></span><span>2Δ<i>t</i></span></span><span class="no">(11.3)</span></span>
 <p>Il tempo di volo cresce con √(<i>m</i>/<i>z</i>). Esempio: <i>L</i> = 1 m, <i>U</i> = 20 kV, <i>m</i>/<i>z</i> 300 → <i>t</i> ≈ 8,8 µs. Il fattore 2 in <i>R</i> viene da <i>m</i> ∝ <i>t</i><sup>2</sup>. Il reflectron corregge la dispersione di energia cinetica iniziale e allunga il percorso: <i>R</i> 20 000–60 000.</p>
-
 <h3>Orbitrap e FT-ICR</h3>
 <span class="eq">ω<sub><i>z</i></sub> = √(<i>k</i> · <i>z</i>/<i>m</i>) &nbsp;&nbsp; (Orbitrap), &nbsp;&nbsp;&nbsp; <i>f</i><sub>c</sub> = <span class="frac"><span><i>zeB</i></span><span>2π<i>m</i></span></span> &nbsp;&nbsp; (FT-ICR)<span class="no">(11.4)</span></span>
 <p>Nell'Orbitrap la frequenza delle oscillazioni assiali dipende solo da <i>m</i>/<i>z</i> (non dall'energia): <i>m</i>/<i>z</i> ∝ 1/ω<sup>2</sup>. Nell'FT-ICR la frequenza di ciclotrone è ∝ <i>B</i>/(<i>m</i>/<i>z</i>): con 7 T, <i>m</i>/<i>z</i> 300 → ≈ 360 kHz. In entrambi la risoluzione cresce con la durata del transiente <i>T</i> (Δ<i>f</i> ≈ 1/<i>T</i>) e cala con la massa: <i>R</i> ∝ 1/√(<i>m</i>/<i>z</i>) nell'Orbitrap (per questo si dichiara «a <i>m</i>/<i>z</i> 200»), <i>R</i> ∝ 1/(<i>m</i>/<i>z</i>) nell'FT-ICR.</p>
-
 <h3>Settore magnetico e trappola ionica</h3>
 <span class="eq"><span class="frac"><span><i>m</i></span><span><i>z</i></span></span> = <span class="frac"><span><i>B</i><sup>2</sup> <i>r</i><sup>2</sup> <i>e</i></span><span>2<i>U</i></span></span> &nbsp;&nbsp; (settore magnetico), &nbsp;&nbsp;&nbsp; <i>q</i><sub><i>z</i></sub> = <span class="frac"><span>8 <i>zeV</i></span><span><i>m</i> (<i>r</i><sub>0</sub><sup>2</sup> + 2<i>z</i><sub>0</sub><sup>2</sup>) Ω<sup>2</sup></span></span> &nbsp;&nbsp; (trappola di Paul)</span>
 <p>Settore: forza di Lorentz = forza centripeta (<i>zevB</i> = <i>mv</i><sup>2</sup>/<i>r</i>) con <i>v</i> dall'accelerazione <i>zeU</i> = ½<i>mv</i><sup>2</sup>; a <i>r</i> e <i>U</i> fissi si scandisce <i>B</i>. Esempio: 1 T, <i>r</i> = 0,3 m, 8 kV → <i>m</i>/<i>z</i> ≈ 540. Trappola: stesse equazioni di Mathieu del quadrupolo; con <i>U</i> = 0 gli ioni vengono espulsi in ordine di <i>m</i>/<i>z</i> aumentando <i>V</i> fino a <i>q</i><sub><i>z</i></sub> = 0,908 (instabilità selettiva in massa).</p>
-
 <h3>Risoluzione e accuratezza</h3>
 <span class="eq"><i>R</i> = <span class="frac"><span><i>m</i></span><span>Δ<i>m</i><sub>FWHM</sub></span></span>, &nbsp;&nbsp; errore (ppm) = <span class="frac"><span><i>m</i><sub>mis</sub> − <i>m</i><sub>teor</sub></span><span><i>m</i><sub>teor</sub></span></span> × 10<sup>6</sup><span class="no">(11.1–11.2)</span></span>
 <p>Per separare due ioni di massa <i>m</i><sub>1</sub> e <i>m</i><sub>2</sub> serve almeno <i>R</i> ≈ <i>m</i>/(<i>m</i><sub>2</sub> − <i>m</i><sub>1</sub>). CO<sup>+•</sup> (27,9949) e N<sub>2</sub><sup>+•</sup> (28,0061): <i>R</i> ≈ 2500. A <i>m</i>/<i>z</i> 300, 5 ppm = 1,5 mDa. Il quadrupolo ha Δ<i>m</i> ≈ 0,7 costante (<i>R</i> cresce con la massa: «risoluzione unitaria»); gli analizzatori ad alta risoluzione hanno <i>R</i> da 10<sup>4</sup> a 10<sup>6</sup>.</p>
@@ -104,7 +89,6 @@
 <tr><td>Orbitrap</td><td>frequenza assiale</td><td><i>f</i> ∝ 1/√(<i>m</i>/<i>z</i>)</td><td>1,5·10<sup>4</sup>–5·10<sup>5</sup> a <i>m</i>/<i>z</i> 200</td><td>1–3 ppm</td></tr>
 <tr><td>FT-ICR</td><td>frequenza di ciclotrone</td><td><i>f</i> ∝ 1/(<i>m</i>/<i>z</i>)</td><td>10<sup>5</sup>–10<sup>7</sup></td><td>&lt; 1 ppm</td></tr>
 </table>
-
 <h2>4. Leggere uno spettro (capitoli 13, 15)</h2>
 <span class="eq">RDB = <i>c</i> − <span class="frac"><span><i>h</i> + <i>x</i></span><span>2</span></span> + <span class="frac"><span><i>n</i></span><span>2</span></span> + 1<span class="no">(13.1)</span></span>
 <p>Anelli più doppi legami da C<sub><i>c</i></sub>H<sub><i>h</i></sub>N<sub><i>n</i></sub>O<sub><i>o</i></sub>X<sub><i>x</i></sub> (X = alogeni; O e S non contano; Si come C, P come N). Intero per una molecola o uno ione a elettroni dispari (M<sup>+•</sup>), semintero per uno ione a elettroni pari: è il controllo della notazione dei frammenti. Benzene 4, un C=O 1.</p>
@@ -120,13 +104,11 @@
 <tr><th></th><td>P 30,973762</td><td>S 31,972071</td><td>Cl 34,968853</td><td>Br 78,918338</td><td>I 126,904473</td></tr>
 <tr><th>Elettrone, protone</th><td colspan="2">e<sup>−</sup> 0,000549</td><td colspan="3">H<sup>+</sup> 1,007276 (massa di [M+H]<sup>+</sup> = M + 1,007276)</td></tr>
 </table>
-
 <h2>5. Cinetica e dati quantitativi (capitoli 2, 12)</h2>
 <span class="eq"><i>C</i>(<i>t</i>) = <i>C</i><sub>0</sub> e<sup>−<i>k</i><sub>app</sub><i>t</i></sup> &nbsp;&nbsp;⇔&nbsp;&nbsp; ln(<i>C</i><sub>0</sub>/<i>C</i>) = <i>k</i><sub>app</sub> <i>t</i>, &nbsp;&nbsp; <i>t</i><sub>1/2</sub> = ln 2 / <i>k</i><sub>app</sub><span class="no">(2.3)</span></span>
 <p>Pseudo-primo ordine (Langmuir–Hinshelwood a bassa concentrazione, equazione 2.2): la retta di ln(<i>C</i><sub>0</sub>/<i>C</i>) contro il tempo dà <i>k</i><sub>app</sub>. Per un prodotto di trasformazione intermedio A → B → C l'area di B sale, passa per un massimo a <i>t</i><sub>max</sub> = ln(<i>k</i><sub>2</sub>/<i>k</i><sub>1</sub>)/(<i>k</i><sub>2</sub> − <i>k</i><sub>1</sub>) e poi cala (equazione 2.4).</p>
 <span class="eq">LOD ≈ 3,3 <span class="frac"><span><i>s</i></span><span><i>b</i></span></span>, &nbsp;&nbsp; LOQ ≈ 10 <span class="frac"><span><i>s</i></span><span><i>b</i></span></span><span class="no">(12.1)</span></span>
 <p><i>s</i> deviazione standard del segnale del bianco (o dei residui della retta), <i>b</i> pendenza della retta di taratura. In pratica: segnale/rumore 3 per rivelare, 10 per quantificare.</p>
-
 <h2>Verifica</h2>
 <details class="q"><summary>Un quadrupolo trasmette m/z 300 con V = 350 V. Che V serve per m/z 450, a parità di U/V?</summary><p>La massa trasmessa è proporzionale a V (equazione 9.9): V = 350 × 450/300 = 525 V. U cresce nella stessa proporzione, così il rapporto U/V (e quindi la risoluzione relativa al vertice) resta lo stesso.</p></details>
 <details class="q"><summary>Raddoppio la lunghezza della colonna. Di quanto migliora la risoluzione? E il tempo di analisi?</summary><p>N raddoppia, R<sub>s</sub> ∝ √N cresce di √2 ≈ 1,4 volte; il tempo di analisi raddoppia (e in HPLC anche la pressione). Cambiare la selettività (fase stazionaria, solvente, temperatura) è quasi sempre più efficace.</p></details>

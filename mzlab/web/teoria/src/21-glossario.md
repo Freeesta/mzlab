@@ -1,0 +1,207 @@
+# Glossario e bibliografia {kicker: Capitolo 21}
+
+{.lead} I termini usati in queste pagine, con il capitolo in cui sono spiegati, e le letture per approfondire.
+
+## Glossario
+
+```html
+<dl class="gl">
+<dt id="g-a-q-parametri-di-mathieu">a, q (parametri di Mathieu)</dt><dd>Numeri adimensionali proporzionali alla tensione continua U e all'ampiezza RF V, divisi per m/z. Decidono da soli se la traiettoria di uno ione nel quadrupolo è stabile. <a href="09-quadrupolo.html">Cap. 9</a></dd>
+<dt id="g-accuratezza-di-massa-errore-in-ppm">Accuratezza di massa / errore in ppm</dt><dd>Scarto fra massa misurata e teorica, in milionesimi: (m<sub>mis</sub> − m<sub>teor</sub>)/m<sub>teor</sub> × 10<sup>6</sup>. TOF e Orbitrap: 1-5 ppm. <a href="11-risoluzione.html">Cap. 11</a></dd>
+<dt id="g-addotto">Addotto</dt><dd>Ione formato dall'associazione della molecola con un catione o una molecola presente in soluzione: [M+Na]<sup>+</sup>, [M+NH<sub>4</sub>]<sup>+</sup>, [M+H+ACN]<sup>+</sup>. <a href="06-esi.html">Cap. 6</a></dd>
+<dt id="g-affinita-protonica-pa">Affinità protonica (PA)</dt><dd>Basicità in fase gas: entalpia liberata da M + H<sup>+</sup> → [M+H]<sup>+</sup>. Decide il sito di protonazione e quale frammento tiene la carica. <a href="14-frammentazione-esi.html">Cap. 14</a></dd>
+<dt id="g-aop">AOP</dt><dd>Processi di ossidazione avanzata: trattamenti che generano radicali •OH (fotocatalisi, O<sub>3</sub>/H<sub>2</sub>O<sub>2</sub>, foto-Fenton, UV/H<sub>2</sub>O<sub>2</sub>). <a href="02-fotocatalisi.html">Cap. 2</a></dd>
+<dt id="g-apci">APCI</dt><dd>Ionizzazione chimica a pressione atmosferica: l'eluato è vaporizzato in un nebulizzatore caldo e ionizzato da una scarica a corona attraverso reazioni ione-molecola in fase gas. Adatta a molecole poco polari e termicamente stabili; meno sensibile all'effetto matrice dell'ESI. <a href="06-esi.html">Cap. 6</a></dd>
+<dt id="g-band-gap">Band gap</dt><dd>Energia tra banda di valenza e banda di conduzione di un semiconduttore; per TiO<sub>2</sub> anatasio ≈ 3,2 eV. <a href="02-fotocatalisi.html">Cap. 2</a></dd>
+<dt id="g-bpc">BPC</dt><dd>Base peak chromatogram: intensità dello ione più intenso di ogni spettro nel tempo. <a href="12-dati.html">Cap. 12</a></dd>
+<dt id="g-cad">CAD</dt><dd>Collisionally activated dissociation: sinonimo di CID; negli strumenti SCIEX è anche il nome del parametro del gas di collisione. <a href="10-qqq.html">Cap. 10</a></dd>
+<dt id="g-capacita-di-picchi">Capacità di picchi</dt><dd>Numero massimo di picchi che entrano, separati, in un cromatogramma (in gradiente ≈ 1 + t<sub>g</sub>/w). <a href="03-cromatografia.html">Cap. 3</a></dd>
+<dt id="g-ce">CE</dt><dd>Collision energy: differenza di potenziale che accelera il precursore nella cella di collisione; energia nel laboratorio z·CE (eV). <a href="10-qqq.html">Cap. 10</a></dd>
+<dt id="g-cid">CID</dt><dd>Dissociazione indotta da collisione: frammentazione dello ione per urti con un gas inerte. <a href="10-qqq.html">Cap. 10</a>, <a href="14-frammentazione-esi.html">8</a></dd>
+<dt id="g-co-eluizione">Co-eluizione</dt><dd>Uscita di due composti dalla colonna allo stesso tempo di ritenzione: i loro cromatogrammi si sovrappongono. Un frammento in sorgente co-eluisce sempre con il suo progenitore; due molecole diverse possono farlo per caso. <a href="17-origine.html">Cap. 17</a></dd>
+<dt id="g-cono-di-taylor">Cono di Taylor</dt><dd>Forma conica assunta dal menisco del liquido al capillare ESI sotto un campo elettrico intenso; dalla sua punta esce il getto che forma le gocce. <a href="06-esi.html">Cap. 6</a></dd>
+<dt id="g-cur-curtain-gas">CUR (curtain gas)</dt><dd>Gas di tenda: N<sub>2</sub> che fluisce dall'interfaccia verso la sorgente e respinge neutri e gocce. <a href="08-vuoto.html">Cap. 8</a></dd>
+<dt id="g-dda">DDA</dt><dd>Data-dependent acquisition: lo strumento sceglie da ogni full scan gli ioni più intensi e ne acquisisce automaticamente lo spettro MS2. <a href="19-hr-dda.html">Cap. 19</a></dd>
+<dt id="g-declustering-potential-dp">Declustering potential (DP)</dt><dd>Tensione applicata dopo l'orifizio di ingresso del 3200 QTRAP: stacca i solventi dagli ioni e, se alta, li rompe già in sorgente. Alzarla aumenta i frammenti in sorgente. <a href="17-origine.html">Cap. 17</a></dd>
+<dt id="g-derivatizzazione">Derivatizzazione</dt><dd>Trasformazione chimica dei gruppi –OH, –COOH, –NH (sililazione, metilazione, acilazione) per rendere una molecola volatile e stabile in GC. <a href="05-gc.html">Cap. 5</a></dd>
+<dt id="g-difetto-di-massa">Difetto di massa</dt><dd>Differenza fra la massa esatta e la massa nominale (H +0,0078, O −0,0051, Cl −0,0311): a parità di massa nominale distingue formule diverse. <a href="13-formula.html">Cap. 13</a></dd>
+<dt id="g-dp">DP</dt><dd>Declustering potential: tensione dell'orifizio che rompe i cluster; se troppo alta frammenta gli ioni in sorgente. <a href="08-vuoto.html">Cap. 8</a></dd>
+<dt id="g-duty-cycle">Duty cycle</dt><dd>Frazione del tempo in cui l'analizzatore osserva un dato ione. Bassa in full scan, alta in SIM/MRM. <a href="10-qqq.html">Cap. 10</a></dd>
+<dt id="g-dwell-time">Dwell time</dt><dd>Tempo dedicato a ogni transizione MRM in un ciclo. <a href="10-qqq.html">Cap. 10</a></dd>
+<dt id="g-ecm">E<sub>cm</sub></dt><dd>Energia nel sistema del centro di massa: massima energia convertibile in energia interna in un urto. <a href="10-qqq.html">Cap. 10</a></dd>
+<dt id="g-effetto-matrice-soppressione-ionica">Effetto matrice / soppressione ionica</dt><dd>Variazione della risposta ESI dovuta a specie coeluenti che competono per carica e superficie delle gocce. <a href="06-esi.html">Cap. 6</a></dd>
+<dt id="g-ep-cep-cxp">EP, CEP, CXP</dt><dd>Potenziali delle ottiche ioniche SCIEX: entrance potential (Q0), collision cell entrance e exit potential. <a href="10-qqq.html">Cap. 10</a></dd>
+<dt id="g-esi">ESI</dt><dd>Ionizzazione elettrospray: forma ioni in fase gas da una soluzione nebulizzata in un campo elettrico. Ionizzazione soft. <a href="06-esi.html">Cap. 6</a></dd>
+<dt id="g-fattore-di-ritenzione">Fattore di ritenzione</dt><dd>k = (t<sub>R</sub> − t<sub>0</sub>)/t<sub>0</sub>: quanto più a lungo l'analita resta nella fase stazionaria rispetto alla mobile. Valori utili fra 1 e 10. <a href="03-cromatografia.html">Cap. 3</a></dd>
+<dt id="g-fissione-coulombiana">Fissione coulombiana</dt><dd>Divisione di una goccia carica vicino al limite di Rayleigh in goccioline figlie con alto rapporto carica/massa. <a href="06-esi.html">Cap. 6</a></dd>
+<dt id="g-frammentazione-in-sorgente-isf">Frammentazione in sorgente (ISF)</dt><dd>Rottura di uno ione prima di Q1, nella regione della sorgente, per urti accelerati dal declustering potential. Il frammento è uno ione vero e si vede nel full scan come un prodotto di trasformazione, ma ha il profilo cromatografico del suo progenitore. <a href="17-origine.html">Cap. 17</a></dd>
+<dt id="g-ft-icr">FT-ICR</dt><dd>Risonanza ionica di ciclotrone in trasformata di Fourier: gli ioni ruotano in un campo magnetico con frequenza f = zeB/(2πm). La risoluzione più alta disponibile. <a href="11-risoluzione.html">Cap. 11</a></dd>
+<dt id="g-full-scan-q1-ms">Full scan (Q1 MS)</dt><dd>Acquisizione di spettri completi in un intervallo di m/z. <a href="12-dati.html">Cap. 12</a></dd>
+<dt id="g-fwhm">FWHM</dt><dd>Larghezza di un picco a metà altezza; per un quadrupolo in risoluzione unitaria ≈ 0,7 Da. <a href="09-quadrupolo.html">Cap. 9</a></dd>
+<dt id="g-iem-crm-cem">IEM, CRM, CEM</dt><dd>Meccanismi di formazione degli ioni in ESI: evaporazione ionica (piccoli ioni), residuo carico (macroioni globulari), espulsione di catena (polimeri). <a href="06-esi.html">Cap. 6</a></dd>
+<dt id="g-indice-di-ritenzione-indice-di-kovats">Indice di ritenzione / indice di Kováts</dt><dd>Tempo di ritenzione espresso sulla scala degli n-alcani (C<sub>n</sub> = 100n). Non dipende da lunghezza della colonna e flusso: con lo spettro EI serve a identificare in GC-MS. <a href="05-gc.html">Cap. 5</a></dd>
+<dt id="g-ione-acilio">Ione acilio</dt><dd>Catione R–C≡O<sup>+</sup> formato dalla rottura di acidi, esteri, ammidi; perde spesso CO. <a href="14-frammentazione-esi.html">Cap. 14</a></dd>
+<dt id="g-ione-molecolare">Ione molecolare</dt><dd>Lo ione M<sup>+•</sup> della molecola intatta che ha perso un elettrone: dà la massa molecolare. Debole o assente per alcoli, ramificati, eteri, ammine alifatiche. <a href="15-ei-metodo.html">Cap. 15</a></dd>
+<dt id="g-ione-precursore">Ione precursore</dt><dd>Ione selezionato in Q1 e mandato nella cella di collisione per essere frammentato. <a href="10-qqq.html">Cap. 10</a></dd>
+<dt id="g-ione-prodotto">Ione prodotto</dt><dd>Frammento formato dalla CID del precursore; Q3 lo misura scansionando (product ion scan) o fisso su un m/z (MRM). <a href="10-qqq.html">Cap. 10</a></dd>
+<dt id="g-ione-tropilio">Ione tropilio</dt><dd>C<sub>7</sub>H<sub>7</sub><sup>+</sup>, m/z 91: catione aromatico a sette termini che si forma dai composti benzilici; perde acetilene e dà m/z 65. <a href="16-ei-famiglie.html">Cap. 16</a></dd>
+<dt id="g-ionizzazione-chimica-ci">Ionizzazione chimica (CI)</dt><dd>Ionizzazione per reazioni ione-molecola con un gas reagente (metano, isobutano, ammoniaca): dà [M+H]<sup>+</sup> e addotti con poca frammentazione, utile per vedere la massa molecolare. <a href="07-ei-ci.html">Cap. 7</a></dd>
+<dt id="g-ionizzazione-elettronica-ei">Ionizzazione elettronica (EI)</dt><dd>Ionizzazione per urto con elettroni da 70 eV in vuoto: dà il radicale catione M<sup>+•</sup> e molti frammenti, con spettri riproducibili confrontabili con le librerie. <a href="07-ei-ci.html">Cap. 7</a></dd>
+<dt id="g-kapp">k<sub>app</sub></dt><dd>Costante apparente di pseudo-primo ordine della degradazione. <a href="02-fotocatalisi.html">Cap. 2</a></dd>
+<dt id="g-libero-cammino-medio">Libero cammino medio</dt><dd>Distanza media percorsa da una particella tra due urti; decide la pressione necessaria nell'analizzatore. <a href="08-vuoto.html">Cap. 8</a></dd>
+<dt id="g-limite-di-rayleigh">Limite di Rayleigh</dt><dd>Carica massima che una goccia di raggio R e tensione superficiale γ può sostenere: q<sub>R</sub> = 8π(ε<sub>0</sub>γR<sup>3</sup>)<sup>1/2</sup>. <a href="06-esi.html">Cap. 6</a></dd>
+<dt id="g-livelli-di-confidenza">Livelli di confidenza</dt><dd>Scala di Schymanski (1–5) per comunicare quanto è certa un'identificazione in MS. <a href="01-tp.html">Cap. 1</a></dd>
+<dt id="g-lod-loq">LOD, LOQ</dt><dd>Limite di rivelabilità e di quantificazione. <a href="12-dati.html">Cap. 12</a></dd>
+<dt id="g-massa-di-kendrick">Massa di Kendrick</dt><dd>Massa riportata sulla scala in cui CH<sub>2</sub> pesa 14,0000: gli omologhi di una serie hanno lo stesso difetto di massa di Kendrick. <a href="13-formula.html">Cap. 13</a></dd>
+<dt id="g-massa-nominale-monoisotopica">Massa nominale / monoisotopica</dt><dd>Nominale: somma delle masse intere degli isotopi più abbondanti. Monoisotopica: somma delle masse esatte degli stessi isotopi. <a href="12-dati.html">Cap. 12</a></dd>
+<dt id="g-mathieu-equazione-di">Mathieu (equazione di)</dt><dd>Equazione differenziale lineare a coefficiente periodico che descrive il moto di uno ione nel quadrupolo. <a href="09-quadrupolo.html">Cap. 9</a></dd>
+<dt id="g-mclafferty-riarrangiamento-di">McLafferty (riarrangiamento di)</dt><dd>Trasferimento di un H in γ al gruppo insaturo attraverso uno stato di transizione a sei termini, con perdita di un alchene: dà uno ione a elettroni dispari (m/z 58 per i metilchetoni, 74 per gli esteri metilici). <a href="15-ei-metodo.html">Cap. 15</a></dd>
+<dt id="g-mrm-srm">MRM / SRM</dt><dd>Monitoraggio di reazioni selezionate: Q1 e Q3 fissi su una coppia precursore → frammento. <a href="10-qqq.html">Cap. 10</a></dd>
+<dt id="g-ms2-product-ion-scan">MS2 / product ion scan</dt><dd>Spettro dei frammenti di un precursore selezionato. <a href="10-qqq.html">Cap. 10</a></dd>
+<dt id="g-neutral-loss-scan">Neutral loss scan</dt><dd>Q1 e Q3 in scansione sfalsati di una differenza costante: rivela i precursori che perdono una data molecola neutra. <a href="10-qqq.html">Cap. 10</a></dd>
+<dt id="g-orbitrap">Orbitrap</dt><dd>Trappola elettrostatica in cui gli ioni oscillano lungo l'asse con frequenza ∝ 1/√(m/z), misurata dalla corrente immagine con la trasformata di Fourier. Risoluzione fino a centinaia di migliaia. <a href="11-risoluzione.html">Cap. 11</a></dd>
+<dt id="g-perdita-neutra">Perdita neutra</dt><dd>Differenza di massa tra precursore e frammento (o tra due frammenti), corrispondente alla molecola neutra persa. <a href="14-frammentazione-esi.html">Cap. 14</a></dd>
+<dt id="g-piatti-teorici">Piatti teorici</dt><dd>Misura dell'efficienza di una colonna: N = 5,54 (t<sub>R</sub>/w<sub>1/2</sub>)<sup>2</sup>; H = L/N è l'altezza equivalente a un piatto. <a href="03-cromatografia.html">Cap. 3</a></dd>
+<dt id="g-picco-base">Picco base</dt><dd>Lo ione più intenso di uno spettro (100 %): gli altri picchi si esprimono come percentuale di questo. Nel BPC se ne traccia l'intensità nel tempo. <a href="12-dati.html">Cap. 12</a></dd>
+<dt id="g-potere-risolutivo">Potere risolutivo</dt><dd>R = m/Δm, con Δm larghezza del picco a metà altezza (FWHM): capacità di separare due ioni di massa vicina. <a href="11-risoluzione.html">Cap. 11</a></dd>
+<dt id="g-precursor-ion-scan">Precursor ion scan</dt><dd>Q1 in scansione, Q3 fisso su un frammento: rivela i precursori che producono quel frammento. <a href="10-qqq.html">Cap. 10</a></dd>
+<dt id="g-protone-mobile">Protone mobile</dt><dd>Migrazione del protone verso siti meno basici durante l'attivazione; la rottura avviene vicino al sito protonato (frammentazione diretta dalla carica). <a href="14-frammentazione-esi.html">Cap. 14</a></dd>
+<dt id="g-pseudopotenziale">Pseudopotenziale</dt><dd>Potenziale efficace medio con cui un campo RF confina gli ioni (quadrupolo solo RF). <a href="09-quadrupolo.html">Cap. 9</a></dd>
+<dt id="g-qet-rrkm">QET / RRKM</dt><dd>Teoria statistica della velocità di frammentazione in funzione dell'energia interna. <a href="14-frammentazione-esi.html">Cap. 14</a></dd>
+<dt id="g-radicale-catione">Radicale catione</dt><dd>Ione a elettroni dispari, come lo ione molecolare M<sup>+•</sup> prodotto in EI. Si frammenta per scissioni semplici (perde un radicale) o riarrangiamenti (perde una molecola). <a href="07-ei-ci.html">Cap. 7</a></dd>
+<dt id="g-rapporto-ionico">Rapporto ionico</dt><dd>Rapporto tra le aree di qualificatore e quantificatore in MRM; criterio di conferma dell'identità. <a href="10-qqq.html">Cap. 10</a></dd>
+<dt id="g-rdbe">RDBE</dt><dd>Ring and double bond equivalents: numero di anelli più doppi legami di una formula. <a href="12-dati.html">Cap. 12</a></dd>
+<dt id="g-regola-degli-elettroni-pari">Regola degli elettroni pari</dt><dd>Uno ione a elettroni pari si frammenta preferibilmente in uno ione a elettroni pari più una molecola neutra stabile. <a href="14-frammentazione-esi.html">Cap. 14</a></dd>
+<dt id="g-regola-del-13">Regola del 13</dt><dd>Dalla massa nominale M una formula idrocarburica di partenza: M/13 = n con resto r dà C<sub>n</sub>H<sub>n+r</sub>; poi si sostituiscono gli eteroatomi. <a href="13-formula.html">Cap. 13</a></dd>
+<dt id="g-regola-dell-azoto">Regola dell'azoto</dt><dd>Massa nominale dispari della molecola neutra ⇔ numero dispari di atomi di N. <a href="12-dati.html">Cap. 12</a></dd>
+<dt id="g-regola-di-stevenson">Regola di Stevenson</dt><dd>In una scissione la carica resta di preferenza sul frammento con l'energia di ionizzazione più bassa. <a href="15-ei-metodo.html">Cap. 15</a></dd>
+<dt id="g-retta-di-lavoro-scan-line">Retta di lavoro (scan line)</dt><dd>Retta a = (2U/V)q nel diagramma di stabilità su cui giacciono tutti gli ioni a U/V fissato. <a href="09-quadrupolo.html">Cap. 9</a></dd>
+<dt id="g-risoluzione-cromatografica">Risoluzione cromatografica</dt><dd>R<sub>s</sub> = 2Δt<sub>R</sub>/(w<sub>b1</sub> + w<sub>b2</sub>); 1,5 significa separazione alla linea di base. L'equazione di Purnell la scompone in efficienza, selettività e ritenzione. <a href="03-cromatografia.html">Cap. 3</a></dd>
+<dt id="g-risoluzione-unitaria">Risoluzione unitaria</dt><dd>Risoluzione sufficiente a separare masse nominali adiacenti (FWHM ≈ 0,7 Da) su tutta la scala. <a href="09-quadrupolo.html">Cap. 9</a></dd>
+<dt id="g-rt-tr">RT, t<sub>R</sub></dt><dd>Tempo di ritenzione cromatografico. <a href="04-lc.html">Cap. 4</a></dd>
+<dt id="g-scissione">Scissione α</dt><dd>Rottura del legame adiacente al carbonio che porta l'eteroatomo o il gruppo con il radicale: dà ioni acilio, immonio, ossonio stabilizzati. Si perde di preferenza il radicale più grande. <a href="15-ei-metodo.html">Cap. 15</a></dd>
+<dt id="g-selettivita">Selettività</dt><dd>α = k<sub>2</sub>/k<sub>1</sub>: rapporto dei fattori di ritenzione di due composti vicini. Dipende dalla chimica di fasi, solvente e temperatura; è la leva più efficace sulla risoluzione. <a href="03-cromatografia.html">Cap. 3</a></dd>
+<dt id="g-serie-di-ioni">Serie di ioni</dt><dd>Ioni che differiscono di 14 (CH<sub>2</sub>) e indicano la famiglia: 29, 43, 57, 71 per gli alcani, 41, 55, 69 per alcheni e cicloalcani, 39, 51, 65, 77 per gli aromatici. <a href="16-ei-famiglie.html">Cap. 16</a></dd>
+<dt id="g-split-splitless">Split / splitless</dt><dd>Modi dell'iniettore GC: in split solo una frazione del vapore entra in colonna (campioni concentrati), in splitless tutto per circa un minuto (tracce). <a href="05-gc.html">Cap. 5</a></dd>
+<dt id="g-spostamento-cinetico">Spostamento cinetico</dt><dd>Differenza tra la barriera di una reazione e l'energia necessaria per osservarla nel tempo disponibile nello strumento. <a href="14-frammentazione-esi.html">Cap. 14</a></dd>
+<dt id="g-taglio-di-bassa-massa">Taglio di bassa massa</dt><dd>m/z sotto il quale un quadrupolo solo RF perde gli ioni (q &gt; 0,908). <a href="09-quadrupolo.html">Cap. 9</a></dd>
+<dt id="g-tempo-di-volo-tof">Tempo di volo (TOF)</dt><dd>Analizzatore che misura il tempo che ioni accelerati con la stessa energia impiegano a percorrere un tubo: t ∝ √(m/z). Con il reflectron raggiunge R 20 000-60 000. <a href="11-risoluzione.html">Cap. 11</a></dd>
+<dt id="g-tic">TIC</dt><dd>Total ion current: somma delle intensità di ogni spettro nel tempo. <a href="12-dati.html">Cap. 12</a></dd>
+<dt id="g-tp">TP</dt><dd>Prodotto di trasformazione di un contaminante. <a href="01-tp.html">Cap. 1</a></dd>
+<dt id="g-transizione">Transizione</dt><dd>Coppia m/z del precursore → m/z del prodotto (con la sua CE) monitorata in MRM. <a href="10-qqq.html">Cap. 10</a></dd>
+<dt id="g-trappola-ionica">Trappola ionica</dt><dd>Analizzatore che intrappola gli ioni con un campo a radiofrequenza e li espelle in ordine di m/z; permette MS<sup>n</sup>. <a href="11-risoluzione.html">Cap. 11</a></dd>
+<dt id="g-van-deemter-equazione-di">Van Deemter (equazione di)</dt><dd>H = A + B/u + C·u: allargamento dei picchi per cammini multipli, diffusione longitudinale e trasferimento di massa, in funzione della velocità della fase mobile. Nelle colonne capillari A = 0 (equazione di Golay). <a href="03-cromatografia.html">Cap. 3</a></dd>
+<dt id="g-xic-eic">XIC / EIC</dt><dd>Cromatogramma di uno ione estratto entro una finestra di m/z. <a href="12-dati.html">Cap. 12</a></dd>
+</dl>
+```
+
+## Bibliografia
+
+### Manuali
+
+```html
+<ul class="refs">
+<li><span class="tag">libro</span>Gross J.H. (2017) <i>Mass Spectrometry: A Textbook</i>, 3ª ed., Springer. <a href="https://doi.org/10.1007/978-3-319-54398-7" target="_blank" rel="noopener">doi:10.1007/978-3-319-54398-7</a></li>
+<li><span class="tag">libro</span>de Hoffmann E., Stroobant V. (2007) <i>Mass Spectrometry: Principles and Applications</i>, 3ª ed., Wiley.</li>
+<li><span class="tag">libro</span>McLafferty F.W., Tureček F. (1993) <i>Interpretation of Mass Spectra</i>, 4ª ed., University Science Books.</li>
+<li><span class="tag">libro</span>Dawson P.H. (ed.) (1976) <i>Quadrupole Mass Spectrometry and its Applications</i>, Elsevier.</li>
+<li><span class="tag">libro</span>Snyder L.R., Kirkland J.J., Dolan J.W. (2010) <i>Introduction to Modern Liquid Chromatography</i>, 3ª ed., Wiley.</li>
+</ul>
+```
+
+### Spettrometria di massa
+
+```html
+<ul class="refs">
+<li>Murray K.K. et al. (2013) Definitions of terms relating to mass spectrometry (IUPAC Recommendations 2013). <i>Pure Appl. Chem.</i> 85, 1515–1609. <a href="https://doi.org/10.1351/PAC-REC-06-04-06" target="_blank" rel="noopener">doi:10.1351/PAC-REC-06-04-06</a></li>
+<li>Miller P.E., Denton M.B. (1986) The quadrupole mass filter: basic operating concepts. <i>J. Chem. Educ.</i> 63, 617. <a href="https://doi.org/10.1021/ed063p617" target="_blank" rel="noopener">doi:10.1021/ed063p617</a></li>
+<li>Douglas D.J. (2009) Linear quadrupoles in mass spectrometry. <i>Mass Spectrom. Rev.</i> 28, 937–960. <a href="https://doi.org/10.1002/mas.20249" target="_blank" rel="noopener">doi:10.1002/mas.20249</a></li>
+<li>Paul W. (1990) Electromagnetic traps for charged and neutral particles. <i>Rev. Mod. Phys.</i> 62, 531. <a href="https://doi.org/10.1103/RevModPhys.62.531" target="_blank" rel="noopener">doi:10.1103/RevModPhys.62.531</a></li>
+<li>Kebarle P., Verkerk U.H. (2009) Electrospray: from ions in solution to ions in the gas phase, what we know now. <i>Mass Spectrom. Rev.</i> 28, 898–917. <a href="https://doi.org/10.1002/mas.20247" target="_blank" rel="noopener">doi:10.1002/mas.20247</a></li>
+<li>Konermann L. et al. (2013) Unraveling the mechanism of electrospray ionization. <i>Anal. Chem.</i> 85, 2–9. <a href="https://doi.org/10.1021/ac302789c" target="_blank" rel="noopener">doi:10.1021/ac302789c</a></li>
+<li>Fenn J.B. et al. (1989) Electrospray ionization for mass spectrometry of large biomolecules. <i>Science</i> 246, 64–71. <a href="https://doi.org/10.1126/science.2675315" target="_blank" rel="noopener">doi:10.1126/science.2675315</a></li>
+<li>Demarque D.P. et al. (2016) Fragmentation reactions using electrospray ionization mass spectrometry. <i>Nat. Prod. Rep.</i> 33, 432–455. <a href="https://doi.org/10.1039/C5NP00073D" target="_blank" rel="noopener">doi:10.1039/C5NP00073D</a></li>
+<li>Karni M., Mandelbaum A. (1980) The "even-electron rule". <i>Org. Mass Spectrom.</i> 15. <a href="https://doi.org/10.1002/oms.1210150202" target="_blank" rel="noopener">doi:10.1002/oms.1210150202</a></li>
+<li>Thurman E.M. et al. (2007) The even-electron rule in electrospray mass spectra of pesticides. <i>Rapid Commun. Mass Spectrom.</i> 21. <a href="https://doi.org/10.1002/rcm.3271" target="_blank" rel="noopener">doi:10.1002/rcm.3271</a></li>
+<li>Ramanathan R. et al. (2000) Liquid chromatography/mass spectrometry methods for distinguishing N-oxides from hydroxylated compounds. <i>Anal. Chem.</i> 72. <a href="https://doi.org/10.1021/ac9911692" target="_blank" rel="noopener">doi:10.1021/ac9911692</a></li>
+<li>McLuckey S.A. (1992) Principles of collisional activation in analytical mass spectrometry. <i>J. Am. Soc. Mass Spectrom.</i> 3, 599–614. <a href="https://doi.org/10.1016/1044-0305(92)85001-Z" target="_blank" rel="noopener">doi:10.1016/1044-0305(92)85001-Z</a></li>
+<li>Holčapek M., Jirásko R., Lísa M. (2010) Basic rules for the interpretation of atmospheric pressure ionization mass spectra of small molecules. <i>J. Chromatogr. A</i> 1217, 3908–3921. <a href="https://pubmed.ncbi.nlm.nih.gov/20303090/" target="_blank" rel="noopener">PubMed 20303090</a></li>
+<li>De Vijlder T. et al. (2018) A tutorial in small molecule identification via electrospray ionization-mass spectrometry. <i>Mass Spectrom. Rev.</i> 37, 607–629. <a href="https://doi.org/10.1002/mas.21551" target="_blank" rel="noopener">doi:10.1002/mas.21551</a></li>
+<li>Annesley T.M. (2003) Ion suppression in mass spectrometry. <i>Clin. Chem.</i> 49, 1041–1044. <a href="https://doi.org/10.1373/49.7.1041" target="_blank" rel="noopener">doi:10.1373/49.7.1041</a></li>
+<li>Matuszewski B.K. et al. (2003) Strategies for the assessment of matrix effect in quantitative bioanalytical methods based on HPLC−MS/MS. <i>Anal. Chem.</i> 75, 3019–3030. <a href="https://doi.org/10.1021/ac020361s" target="_blank" rel="noopener">doi:10.1021/ac020361s</a></li>
+</ul>
+```
+
+### Fotocatalisi e prodotti di trasformazione
+
+```html
+<ul class="refs">
+<li>Hoffmann M.R. et al. (1995) Environmental applications of semiconductor photocatalysis. <i>Chem. Rev.</i> 95, 69–96. <a href="https://doi.org/10.1021/cr00033a004" target="_blank" rel="noopener">doi:10.1021/cr00033a004</a></li>
+<li>Fujishima A., Zhang X., Tryk D.A. (2008) TiO<sub>2</sub> photocatalysis and related surface phenomena. <i>Surf. Sci. Rep.</i> 63, 515–582. <a href="https://doi.org/10.1016/j.surfrep.2008.10.001" target="_blank" rel="noopener">doi:10.1016/j.surfrep.2008.10.001</a></li>
+<li>Malato S. et al. (2009) Decontamination and disinfection of water by solar photocatalysis: recent overview and trends. <i>Catal. Today</i> 147, 1–59. <a href="https://www.sciencedirect.com/science/article/abs/pii/S0920586109003344" target="_blank" rel="noopener">ScienceDirect</a></li>
+<li>Loeb S.K. et al. (2019) The technology horizon for photocatalytic water treatment: sunrise or sunset? <i>Environ. Sci. Technol.</i> <a href="https://doi.org/10.1021/acs.est.8b05041" target="_blank" rel="noopener">doi:10.1021/acs.est.8b05041</a></li>
+<li>Escher B.I., Fenner K. (2011) Recent advances in environmental risk assessment of transformation products. <i>Environ. Sci. Technol.</i> 45, 3835–3847. <a href="https://doi.org/10.1021/es1030799" target="_blank" rel="noopener">doi:10.1021/es1030799</a></li>
+<li>Kern S. et al. (2009) Identification of transformation products of organic contaminants in natural waters by computer-aided prediction and high-resolution mass spectrometry. <i>Environ. Sci. Technol.</i> 43, 7039–7046. <a href="https://doi.org/10.1021/es901979h" target="_blank" rel="noopener">doi:10.1021/es901979h</a></li>
+<li>Schymanski E.L. et al. (2014) Identifying small molecules via high resolution mass spectrometry: communicating confidence. <i>Environ. Sci. Technol.</i> 48, 2097–2098. <a href="https://doi.org/10.1021/es5002105" target="_blank" rel="noopener">doi:10.1021/es5002105</a></li>
+</ul>
+```
+
+### Cromatografia
+
+```html
+<ul class="refs">
+<li><span class="tag">libro</span>McNair H.M., Miller J.M., Snow N.H. (2019) <i>Basic Gas Chromatography</i>, 3ª ed., Wiley.</li>
+<li>van Deemter J.J., Zuiderweg F.J., Klinkenberg A. (1956) Longitudinal diffusion and resistance to mass transfer as causes of nonideality in chromatography. <i>Chem. Eng. Sci.</i> 5, 271–289. <a href="https://doi.org/10.1016/0009-2509(56)80003-1" target="_blank" rel="noopener">doi:10.1016/0009-2509(56)80003-1</a></li>
+<li>Kováts E. (1958) Gas-chromatographische Charakterisierung organischer Verbindungen. <i>Helv. Chim. Acta</i> 41, 1915–1932. <a href="https://doi.org/10.1002/hlca.19580410703" target="_blank" rel="noopener">doi:10.1002/hlca.19580410703</a></li>
+<li>van den Dool H., Kratz P.D. (1963) A generalization of the retention index system including linear temperature programmed gas-liquid partition chromatography. <i>J. Chromatogr.</i> 11, 463–471. <a href="https://doi.org/10.1016/S0021-9673(01)80947-X" target="_blank" rel="noopener">doi:10.1016/S0021-9673(01)80947-X</a></li>
+</ul>
+```
+
+### Spettri EI, alta risoluzione e formule
+
+```html
+<ul class="refs">
+<li><span class="tag">libro</span>Smith R.M. (2004) <i>Understanding Mass Spectra: A Basic Approach</i>, 2ª ed., Wiley.</li>
+<li>McLafferty F.W. (1959) Mass spectrometric analysis. Molecular rearrangements. <i>Anal. Chem.</i> 31, 82–87. <a href="https://doi.org/10.1021/ac60145a015" target="_blank" rel="noopener">doi:10.1021/ac60145a015</a></li>
+<li>Horai H. et al. (2010) MassBank: a public repository for sharing mass spectral data for life sciences. <i>J. Mass Spectrom.</i> 45, 703–714 (gli spettri EI dei capitoli 15-16 e della Pratica). <a href="https://doi.org/10.1002/jms.1777" target="_blank" rel="noopener">doi:10.1002/jms.1777</a></li>
+<li>Jimenez J.L., <i>CHEM 5181: Mass Spectrometry and Chromatography</i>, University of Colorado Boulder, lezioni sull'interpretazione degli spettri EI (in rete).</li>
+<li>Guilhaus M. (1995) Principles and instrumentation in time-of-flight mass spectrometry. <i>J. Mass Spectrom.</i> 30, 1519–1532. <a href="https://doi.org/10.1002/jms.1190301102" target="_blank" rel="noopener">doi:10.1002/jms.1190301102</a></li>
+<li>Makarov A. (2000) Electrostatic axially harmonic orbital trapping: a high-performance technique of mass analysis. <i>Anal. Chem.</i> 72, 1156–1162. <a href="https://doi.org/10.1021/ac991131p" target="_blank" rel="noopener">doi:10.1021/ac991131p</a></li>
+<li>Marshall A.G., Hendrickson C.L., Jackson G.S. (1998) Fourier transform ion cyclotron resonance mass spectrometry: a primer. <i>Mass Spectrom. Rev.</i> 17, 1–35.</li>
+<li>Kendrick E. (1963) A mass scale based on CH<sub>2</sub> = 14.0000 for high resolution mass spectrometry of organic compounds. <i>Anal. Chem.</i> 35, 2146–2154. <a href="https://doi.org/10.1021/ac60206a048" target="_blank" rel="noopener">doi:10.1021/ac60206a048</a></li>
+<li>Kind T., Fiehn O. (2007) Seven Golden Rules for heuristic filtering of molecular formulas obtained by accurate mass spectrometry. <i>BMC Bioinformatics</i> 8, 105. <a href="https://doi.org/10.1186/1471-2105-8-105" target="_blank" rel="noopener">doi:10.1186/1471-2105-8-105</a></li>
+</ul>
+```
+
+### Come sono costruite la Teoria e la Pratica
+
+```html
+<ul class="refs">
+<li>Roediger H.L., Karpicke J.D. (2006) Test-enhanced learning: taking memory tests improves long-term retention. <i>Psychol. Sci.</i> 17, 249–255. <a href="https://doi.org/10.1111/j.1467-9280.2006.01693.x" target="_blank" rel="noopener">doi:10.1111/j.1467-9280.2006.01693.x</a></li>
+<li>Dunlosky J. et al. (2013) Improving students' learning with effective learning techniques. <i>Psychol. Sci. Public Interest</i> 14, 4–58. <a href="https://doi.org/10.1177/1529100612453266" target="_blank" rel="noopener">doi:10.1177/1529100612453266</a></li>
+<li>Sweller J., van Merriënboer J.J.G., Paas F. (1998) Cognitive architecture and instructional design. <i>Educ. Psychol. Rev.</i> 10, 251–296. <a href="https://doi.org/10.1023/A:1022193728205" target="_blank" rel="noopener">doi:10.1023/A:1022193728205</a></li>
+<li>Pelánek R. (2016) Applications of the Elo rating system in adaptive educational systems. <i>Comput. Educ.</i> 98, 169–179. <a href="https://doi.org/10.1016/j.compedu.2016.03.017" target="_blank" rel="noopener">doi:10.1016/j.compedu.2016.03.017</a></li>
+</ul>
+```
+
+### Strumenti e banche dati gratuite
+
+```html
+<ul class="refs">
+<li><a href="https://pubchem.ncbi.nlm.nih.gov" target="_blank" rel="noopener">PubChem</a> · <a href="https://massbank.eu/MassBank/" target="_blank" rel="noopener">MassBank Europe</a> · <a href="https://cfmid.wishartlab.com/" target="_blank" rel="noopener">CFM-ID</a> · <a href="https://msbi.ipb-halle.de/MetFrag/" target="_blank" rel="noopener">MetFrag</a> · <a href="https://envipath.org" target="_blank" rel="noopener">enviPath</a> · <a href="https://biotransformer.ca" target="_blank" rel="noopener">BioTransformer</a></li>
+</ul>
+```
+
+### Manuali e trattati di riferimento
+
+```html
+<ul class="refs">
+<li>Gross J.H. <i>Mass Spectrometry: A Textbook</i>, 3ª ed., Springer, 2017.</li>
+<li>De Hoffmann E., Stroobant V. <i>Mass Spectrometry: Principles and Applications</i>, 3ª ed., Wiley, 2007.</li>
+<li>McLafferty F.W., Tureček F. <i>Interpretation of Mass Spectra</i>, 4ª ed., University Science Books, 1993.</li>
+</ul>
+```
+
+```html
+<div class="box"><b>Nota sui link</b><p>I DOI rimandano alla versione dell'editore; molti articoli sono accessibili dalla rete d'ateneo o tramite il proxy della biblioteca. I collegamenti richiedono internet; il resto di queste pagine funziona offline.</p></div>
+```

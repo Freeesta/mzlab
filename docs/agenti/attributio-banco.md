@@ -1,6 +1,6 @@
 # Attributio: Banco 2b (revisione guidata di una feature)
 
-Il chimico rivede le feature una per una; il programma propone e mostra le prove, non decide mai un 2b. Studio in `docs/studi/ATTRIBUTIO.md`; cascata in `docs/agenti/attributio.md`; proposte e prove in `docs/agenti/attributio-revisione.md`.
+Il chimico rivede le feature una per una; il programma propone e mostra le prove e decide un 2b solo con `[levels] auto_2b = true` (`docs/agenti/attributio.md`). Studio in `docs/studi/ATTRIBUTIO.md`; cascata in `docs/agenti/attributio.md`; proposte e prove in `docs/agenti/attributio-revisione.md`.
 
 - **Regole** (`crates/mzlab-feat/src/attributio/review/rules.rs`, da `review/rules.py`): `page_level(level, sub, decision_2b)` (`1`, `2a`, `2b`, `3`; un 2b contato come 3 resta `2b`), `decision_changes(&Current, &Rec)` (messaggi `level X -> Y`, `identity rejected`, `name -> N`), `note_required` (vera quando la decisione cambia livello, nome o gruppo), `livello_to_level`.
 - **Alternative con la stessa formula** (`review/alternatives.rs`, nuove in mzLab): `same_formula(formula, &LibraryIndex, &AltSources{csi, exp, tol, st}) -> Vec<Alt{name, source, entry, ik1, smiles, score, matched, logp}>` dalle librerie già indicizzate e dai candidati CSI:FingerID della campagna (nessuna rete); stesso composto = stesso primo blocco InChIKey, altrimenti stesso nome; ordine per coseno decrescente, poi senza punteggio, poi per nome; il logP viene da CSI.

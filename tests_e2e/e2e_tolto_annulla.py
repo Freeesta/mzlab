@@ -18,32 +18,31 @@ try:
         pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")])
         pg.click("#opbtn"); ready(pg)
         mod = "Meta" if pg.evaluate("/Mac/.test(navigator.platform)") else "Control"
-        notice = lambda: pg.locator("#tolto-box .tolto").count()
+        notice = lambda: pg.evaluate("document.getElementById('tolto-box') ? 1 : 0")
+        pending = "STORIA.pila.v.some(e => e.tipo === 'tolto' && e.scade)"
         dialogs = lambda: pg.evaluate("document.querySelectorAll('dialog[open]').length")
         FK = "E.files.find(f => f.kind === 'full' && !f.gone).k"
         def file_undo():
-            k = pg.evaluate(FK); assert pg.evaluate("document.getElementById('tolto-box')") is None
-            pg.evaluate(f"removeFile(E.files[{k}])"); attendi(pg, f"E.files[{k}].gone === true && !!document.querySelector('#tolto-box .tolto')")
+            k = pg.evaluate(FK); assert notice() == 0
+            pg.evaluate(f"removeFile(E.files[{k}])"); attendi(pg, f"E.files[{k}].gone === true && {pending}")
             assert dialogs() == 0, "no question"
-            assert pg.get_attribute("#tolto-box", "role") == "status"
-            assert "Undo" in pg.inner_text("#tolto-box") or "Annulla" in pg.inner_text("#tolto-box")
+            assert notice() == 0, "no visible notice"
+            assert "Removed" in pg.evaluate("document.getElementById('sb-live').textContent") or "Tolto" in pg.evaluate("document.getElementById('sb-live').textContent"), "announced to screen readers"
             pg.keyboard.press(f"{mod}+z"); attendi(pg, f"E.files[{k}].gone === false")
             assert pg.evaluate(f"E.files[{k}].vis") is True, "Ctrl+Z puts the file back"
-            assert notice() == 0, "the notice goes with the undo"
             pg.keyboard.press(f"{mod}+Shift+z"); attendi(pg, f"E.files[{k}].gone === true")
-        step("file: no question, notice, Ctrl+Z puts it back, Shift+Ctrl+Z removes it", file_undo)
+        step("file: no question, no notice, Ctrl+Z puts it back, Shift+Ctrl+Z removes it", file_undo)
         def file_button():
             k = pg.evaluate("E.files.findIndex(f => f.gone)")
-            pg.evaluate(f"E.files[{k}].gone=false;E.files[{k}].vis=true;renderFileList()"); pg.evaluate(f"removeFile(E.files[{k}])"); attendi(pg, "!!document.querySelector('#tolto-box .tolto button')")
-            pg.click("#tolto-box .tolto button"); attendi(pg, f"E.files[{k}].gone === false")
-            assert notice() == 0, "the button of the notice puts it back"
-        step("file: the button of the notice", file_button)
+            pg.evaluate(f"E.files[{k}].gone=false;E.files[{k}].vis=true;renderFileList()"); pg.evaluate(f"removeFile(E.files[{k}])"); attendi(pg, f"E.files[{k}].gone === true")
+            pg.click("#np-undo"); attendi(pg, f"E.files[{k}].gone === false")
+        step("file: the Undo button of the panel bar", file_button)
         def panel_close():
             pg.evaluate("reveal(addPanel('chrom', { k: E.files.find(f => f.kind === 'full' && !f.gone).k }))"); ready(pg)
             pid = pg.evaluate("E.panels.filter(q => q.type === 'chrom').slice(-1)[0].id")
             pg.evaluate(f"(()=>{{const q=E.panels.find(x=>x.id=={pid});q.zoom=[2,6];q.title='Prova tolto'}})()")
             n0 = pg.evaluate("E.panels.length"); y0 = pg.evaluate(f"E.panels.find(x=>x.id=={pid}).y")
-            pg.evaluate(f"E.panels.find(x=>x.id=={pid}).el.querySelector('.x').click()"); attendi(pg, f"E.panels.length === {n0 - 1} && !!document.querySelector('#tolto-box .tolto')")
+            pg.evaluate(f"E.panels.find(x=>x.id=={pid}).el.querySelector('.x').click()"); attendi(pg, f"E.panels.length === {n0 - 1}")
             assert dialogs() == 0
             pg.keyboard.press(f"{mod}+z"); attendi(pg, f"E.panels.length === {n0} && E.panels.some(x => x.title === 'Prova tolto')"); ready(pg)
             q = pg.evaluate("(()=>{const q=E.panels.find(x=>x.title==='Prova tolto');return {zoom:q.zoom,tab:q.tab,y:q.y,in:q.el.isConnected}})()")
@@ -56,19 +55,19 @@ try:
             pg.evaluate(M + ".el.scrollIntoView({block:'start'})")
             pg.evaluate(f"MAPPA.addPointAt({M}, 9.0, 305.07, 0.2)"); pg.evaluate(f"MAPPA.addPointAt({M}, 14.3, 364.4, 0.2)")
             attendi(pg, f"({M}._mz.rows || []).length === 2 && !!document.querySelector('.pnl.map .mztab')")
-            pg.click(".pnl.map .mztab [data-t=clear]"); attendi(pg, f"MAPPA.pts({M}).length === 0 && !!document.querySelector('#tolto-box .tolto')")
+            pg.click(".pnl.map .mztab [data-t=clear]"); attendi(pg, f"MAPPA.pts({M}).length === 0")
             assert dialogs() == 0
-            pg.click("#tolto-box .tolto button"); attendi(pg, f"MAPPA.pts({M}).length === 2")
+            pg.click("#np-undo"); attendi(pg, f"MAPPA.pts({M}).length === 2")
             pg.click(".pnl.map .mztab [data-t=clear]"); attendi(pg, f"MAPPA.pts({M}).length === 0")
             pg.evaluate("document.activeElement && document.activeElement.blur()")
             pg.keyboard.press(f"{mod}+z"); attendi(pg, f"MAPPA.pts({M}).length === 2")
-        step("marks: clearing them asks nothing, the notice and Ctrl+Z put them back", marks)
+        step("marks: clearing them asks nothing, Undo and Ctrl+Z put them back", marks)
         def timed():
-            pg.evaluate("removeFile(E.files[E.files.findIndex(f => !f.gone && f.kind === 'full')])"); attendi(pg, "!!document.querySelector('#tolto-box .tolto')")
-            pg.mouse.move(2, 2); t0 = time.time()
-            attendi(pg, "!document.querySelector('#tolto-box .tolto')", 12000)
+            pg.evaluate("removeFile(E.files[E.files.findIndex(f => !f.gone && f.kind === 'full')])"); attendi(pg, pending)
+            t0 = time.time()
+            attendi(pg, f"!({pending})", 12000)
             assert 5 <= time.time() - t0 <= 9, time.time() - t0
-        step("the notice lasts 6 s", timed)
+        step("the undo window of a file lasts 6 s", timed)
         def keys_in_field():
             live = lambda: pg.evaluate("document.getElementById('sb-live').textContent")
             pg.evaluate("document.activeElement && document.activeElement.blur()")
