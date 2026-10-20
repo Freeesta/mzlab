@@ -69,6 +69,7 @@ declare var PERF: any;
 declare var PERF_EARLY: any;
 declare var PIPE: any;
 declare var PIPEFORM: any;
+declare var PIPEPOL: any;
 declare var PIPER: any;
 declare var PROGRESSO: any;
 declare var PROG_NET: any;

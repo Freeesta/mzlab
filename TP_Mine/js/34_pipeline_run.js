@@ -20,7 +20,7 @@
       <div class="row"><strong>Roles and times</strong><label>Time unit <select id="pr-unit" aria-label="Unit of the times of the files">${["min", "s", "h", "d"].map(u => `<option>${u}</option>`).join("")}</select></label>
         <button type="button" id="pr-all" title="Accept the times proposed from the names (yellow)">Confirm times</button></div>
       <table id="pr-tab"><caption class="mut">Role and treatment time of each file; a time proposed from the name is yellow until you confirm it (Enter or «Confirm times»)</caption></table><div id="pr-warn" role="status"></div></div>
-    <div class="row"><button type="button" id="pipe-run-go" class="imp">Run</button><button type="button" id="pipe-again" disabled title="Runs the last recipe of the session or of the opened .mzflow again and compares the table">Re-apply the recipe</button><span id="pipe-run-msg" class="mut" role="status"></span></div>
+    <div class="row"><button type="button" id="pipe-run-go" class="imp">Run</button><label class="pipe-both"><input type="checkbox" id="pipe-both" aria-label="Both polarities: run the other polarity too and look for the same neutral mass in it"> Both polarities</label><button type="button" id="pipe-again" disabled title="Runs the last recipe of the session or of the opened .mzflow again and compares the table">Re-apply the recipe</button><span id="pipe-run-msg" class="mut" role="status"></span></div>
     <div id="pipe-res"></div></details>`;
 
   function mount(box, ctx) {
@@ -58,6 +58,18 @@
     return { rules: typeof rules === "string" ? new TextEncoder().encode(rules) : rules, parent: f, parentMz: num("#pipe-pmz"), parentRt: num("#pipe-prt"), minutes: files.map((_, i) => { const m = st.tp ? st.tp.minuti[i] : null; return m == null ? NaN : m; }),
       smiles, structure: await structureOf(smiles), campioni: st.cs ? (await st.R.canonical(st.call, st.cs)).json : "" };
   }
+  /** the run of the other polarity (same files, same recipe, no proofs) and the pairs of neutral masses between the two tables (`polpair/1`): kept for the rows of the table of this run */
+  async function otherPolarity(pool, mod, files, recipe, out) {
+    let r; try { r = JSON.parse(recipe); } catch (_) { return; }
+    if (!pool.crossPolarity) return;                      // the app has no pool method for it: no pairs
+    if (r.engine === "untargeted" || !(r.polarity === 1 || r.polarity === -1)) return;
+    msg("Other polarity...");
+    const o2 = await mod.runFeatPipeline(pool, { files, recipe: JSON.stringify({ ...r, polarity: -r.polarity }), parent: null, onPhase: p => msg(p.state === "start" ? "Other polarity: " + p.phase + "..." : "") });
+    const text = await pool.crossPolarity(r.polarity > 0 ? { pos: out.table, neg: o2.table } : { pos: o2.table, neg: out.table });
+    const by = new Map(), mine = r.polarity > 0 ? "pos" : "neg", other = r.polarity > 0 ? "neg" : "pos";
+    for (const q of JSON.parse(text).pairs) { const k = q["id_" + mine]; if (!by.has(k)) by.set(k, []); by.get(k).push({ id: q["id_" + other], ionHere: q["ion_" + mine], ionThere: q["ion_" + other], ppm: q.ppm * (r.polarity > 0 ? 1 : -1), dRt: q.d_rt * (r.polarity > 0 ? 1 : -1), r: q.r, n: q.n_common }); }
+    st.pair = by; window.PIPEPOL = { pol: r.polarity, rows: id => by.get(id) || [] };
+  }
   async function run(op) {
     if (st.busy) return;
     const files = st.files.map(n => ({ name: n, path: "mzlab/idx/" + n }));
@@ -68,6 +80,8 @@
       const pool = await st.ctx.pool(), url = URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["feat-run.js"]], { type: "text/javascript" })), mod = await import(url);
       const recipe = op ? op.recipe : st.ctx.recipe(), parent = await parentOf(files);
       const out = await mod.runFeatPipeline(pool, { files, recipe, parent, onPhase: p => msg(p.state === "start" ? p.phase + "..." : "") });
+      st.pair = null; window.PIPEPOL = null;
+      if ($("#pipe-both").checked) await otherPolarity(pool, mod, files, recipe, out);
       st.out = out; st.data = PV().readFeat(out.evid || out.table); st.names = files.map(f => f.name.replace(/\.mzidx$/, ""));
       msg(`${st.data.rows.toLocaleString("en")} rows in ${(out.totalMs / 1000).toFixed(1)} s`); show();
       await recordRun(recipe, parent, op);
