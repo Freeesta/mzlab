@@ -294,15 +294,20 @@ fn queries(tabui: &[&Molecola]) -> Vec<String> {
     out
 }
 
-#[test]
-fn search_gives_what_the_name_box_of_tabui_gave() {
+/// The 625 compounds of the old Tabui list, in its order (timolol came after).
+fn old_tabui_compounds() -> Vec<Molecola> {
     let (_, all) = catalogue();
     let mut tabui: Vec<Molecola> = all
         .into_iter()
         .filter(|m| m.origine.catalogo.contains(&"tabui".to_string()))
         .collect();
-    // the gold data come from the 625 compounds of the old list; timolol came after
     tabui.truncate(625);
+    tabui
+}
+
+#[test]
+fn search_gives_what_the_name_box_of_tabui_gave() {
+    let tabui = old_tabui_compounds();
     let common: Vec<usize> = (0..tabui.len())
         .filter(|&k| tabui[k].origine.catalogo.len() == 2)
         .collect();
