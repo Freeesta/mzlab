@@ -3033,7 +3033,6 @@ I18N.add("en", {
   "scorc.fileSucc": "Next file",
   "scorc.file.tip": "Goes to the file before or after in the list, like the arrows next to the file menu.",
   "scorc.vista.tip": "Changes view: Alt+1 Data, Alt+2 Draw, Alt+3 Theory.",
-  "storia.annulla": "Undo",
   "storia.pannello": "panel",
   "storia.marcature": "marks",
   "storia.niente": "Nothing to undo",

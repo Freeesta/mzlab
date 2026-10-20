@@ -33,12 +33,12 @@ try:
         def remove_all():
             assert pg.is_visible("#rmall") and pg.get_attribute("#rmall", "aria-label")
             n = pg.evaluate(LIVE); assert n >= 2
-            pg.click("#rmall"); attendi(pg, f"{LIVE} === 0 && !!document.querySelector('#tolto-box .tolto')")
+            pg.click("#rmall"); attendi(pg, f"{LIVE} === 0")
             assert pg.evaluate("document.querySelectorAll('dialog[open]').length") == 0, "no question"
-            assert pg.locator("#tolto-box .tolto").count() == 1 and pg.is_disabled("#rmall")
-            pg.click("#tolto-box .tolto button"); attendi(pg, f"{LIVE} === {n}")
-            assert pg.locator("#tolto-box .tolto").count() == 0 and not pg.is_disabled("#rmall")
-        step("remove all: one notice, no question, Undo puts every file back", remove_all)
+            assert pg.evaluate("document.getElementById('tolto-box')") is None and pg.is_disabled("#rmall")
+            pg.keyboard.press("Control+z"); attendi(pg, f"{LIVE} === {n}")      # the bar is hidden with no files: the key undoes
+            assert not pg.is_disabled("#rmall")
+        step("remove all: no notice, no question, Ctrl+Z puts every file back", remove_all)
         def drop_lr():
             n = pg.evaluate(LIVE)
             drop(pg, [D / "B_FullMass-t5.mzML"])
