@@ -43,6 +43,14 @@ pub(super) fn base(pol: i32) -> &'static str {
     }
 }
 
+/// Shift and multiplier of the adduct form `name` of polarity `pol` (`m/z = M * mult + shift`), for the callers outside this module.
+pub fn form_shift(pol: i32, name: &str) -> Option<(f64, f64)> {
+    forms(&Iimn::new(), pol)
+        .into_iter()
+        .find(|x| x.0 == name)
+        .map(|x| (x.1, x.2))
+}
+
 /// `_cross_pairs`: differences between two adducts that are not the base ion.
 pub(super) fn cross_pairs(f: &[Form]) -> Vec<(String, f64)> {
     let ad: Vec<&Form> = f.iter().filter(|x| !x.3 && x.2 == 1.0).collect();
@@ -124,7 +132,7 @@ pub(super) fn pair_relations(
 }
 
 /// `_shape_r`: Pearson r over the samples where both are detected, the number of them and which.
-pub(super) fn shape_r(a: &[f64], b: &[f64], min_common: usize) -> (Option<f64>, usize, Vec<usize>) {
+pub fn shape_r(a: &[f64], b: &[f64], min_common: usize) -> (Option<f64>, usize, Vec<usize>) {
     let k: Vec<usize> = (0..a.len()).filter(|&s| a[s] > 0.0 && b[s] > 0.0).collect();
     if k.len() < min_common {
         return (None, k.len(), k);

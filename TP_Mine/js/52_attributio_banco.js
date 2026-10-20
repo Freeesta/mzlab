@@ -292,5 +292,5 @@
     return show(ctx.index);
   }
 
-  W.ATTRIBUTIO_BANCO = { open, close, changes };
+  W.ATTRIBUTIO_BANCO = { open, close, changes, writeInFolder };
 })();

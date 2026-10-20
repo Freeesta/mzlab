@@ -29,7 +29,7 @@
   };
 
   F.registerView({ id: "campaign", title: "Levels of a campaign folder", types: ["annot"], accepts: (/** @type {any} */ item) => !!item.campaign, open: async (/** @type {HTMLElement} */ host, /** @type {any} */ item) => {
-    const { el } = F, c = item.campaign, say = el("p", { class: "fl-note", role: "status" }), box = el("div", { class: "tp" });
+    const { el } = F, c = item.campaign, say = el("p", { class: "fl-note", id: "flx-camp-say", role: "status" }), box = el("div", { class: "tp" });
     const out = (/** @type {"csv" | "xlsx"} */ kind) => () => exportTable(c, kind).then(() => { say.textContent = ""; }, (/** @type {any} */ e) => { say.textContent = "Export failed: " + (e && e.message || e); });
     const rv = el("div", { class: "flw-review" }), exp = el("span", { class: "flw-exp" }), digest = el("span", { class: "flw-digest-bar" });
     // the Review screen replaces the table; leaving it redraws the table when a decision was saved (the cascade runs again once)
@@ -43,6 +43,23 @@
     };
     host.append(el("div", { class: "fl-meta" }, F.btn("ok", "Review the features that wait for a decision, one at a time", startReview, "Review"), F.btn("export", "Export the table as CSV", out("csv"), "CSV"), F.btn("export", "Export the table as XLSX", out("xlsx"), "XLSX"), exp, digest), say, rv, box);
     F.digestMount(digest, c, say);
+    // the automatic 2b (off by default; any decision of the chemist overrules it): campaign.toml is rewritten in memory and the cascade runs again
+    const ct = c.files.find((/** @type {any} */ f) => f.path === "campaign.toml");
+    const auto = /** @type {HTMLInputElement} */ (el("input", { type: "checkbox", id: "flx-auto2b", "aria-label": "Automatic 2b" }));
+    if (ct) ct.file.text().then((/** @type {string} */ t) => { auto.checked = /^\s*auto_2b\s*=\s*true/m.test(t); });
+    else auto.disabled = true;
+    auto.onchange = async () => {
+      const at = c.files.findIndex((/** @type {any} */ f) => f.path === "campaign.toml");
+      if (at < 0) return;
+      try {
+        const text = withAuto2b(await c.files[at].file.text(), auto.checked);
+        c.files[at] = { path: "campaign.toml", file: new File([text], "campaign.toml", { type: "text/plain" }) };
+        say.textContent = "Running the cascade again…"; say.setAttribute("role", "status");
+        Object.assign(c, await F.campaignRun(c.files, c.root)); draw();
+        say.textContent = ((c.summary && c.summary.warnings) || []).join(" · ") || "Done.";
+      } catch (e) { say.textContent = "Attributio: " + ((/** @type {any} */ (e)) && (/** @type {any} */ (e)).message || e); say.setAttribute("role", "alert"); }
+    };
+    host.append(el("label", { class: "fl-meta" }, auto, " Automatic 2b: the programme sets 2b for the strongest proposals of the Bench 2b (off by default; any decision of yours overrules it)"));
     // the six engine exports of Attributio (evidence, Schymanski folder, publication table, quantification, gradient, SIRIUS) on the same campaign files
     G.ATTRIBUTIO_EXPORT.mount(exp, { pool: G.ATTRIBUTIO_CORE.pool, files: () => c.files, root: () => c.root, say: (/** @type {string} */ t, /** @type {boolean} */ err) => { say.textContent = t; if (err) say.setAttribute("role", "alert"); else say.setAttribute("role", "status"); } });
     // the MS2 panel (library search, in-silico ranking, hydrogen shifts, retention-time prediction, co-isolated features) is evidence only: it writes nothing into the campaign
@@ -55,7 +72,7 @@
     // a saved decision replaces the decisions file in memory, the cascade runs again and the table is drawn from the new levels
     const review = async (/** @type {any[]} */ list, /** @type {number} */ index) => {
       try {
-        await G.ATTRIBUTIO_BANCO.open({ pool: await G.ATTRIBUTIO_CORE.pool(), files: c.files, root: c.root, list, index, host: bench, onSaved: async (/** @type {string} */ text, /** @type {string} */ path) => {
+        await G.ATTRIBUTIO_BANCO.open({ pool: await G.ATTRIBUTIO_CORE.pool(), files: c.files, root: c.root, list, index, host: bench, dir: c.dir, onSaved: async (/** @type {string} */ text, /** @type {string} */ path) => {
           const file = new File([text], path.split("/").pop() || "feature_decisions.csv", { type: "text/csv" }), at = c.files.findIndex((/** @type {any} */ f) => f.path === path);
           if (at >= 0) c.files[at] = { path, file }; else c.files.push({ path, file });
           Object.assign(c, await F.campaignRun(c.files, c.root)); draw();
@@ -67,21 +84,41 @@
     if (G.WORKFLOW && G.WORKFLOW.logOp) G.WORKFLOW.logOp("attributio", { attributio: { fingerprint: c.summary.fingerprint, settings: c.summary.settings, counts: c.summary.by_level } });
   } });
 
+  /** `campaign.toml` with `[levels] auto_2b` set or removed: the files are in memory, so the choice never touches the folder @param {string} text @param {boolean} on */
+  function withAuto2b(text, on) {
+    const lines = text.split("\n").filter(l => !/^\s*auto_2b\s*=/.test(l));
+    if (!on) return lines.join("\n");
+    const at = lines.findIndex(l => /^\s*\[levels\]\s*$/.test(l));
+    if (at >= 0) lines.splice(at + 1, 0, "auto_2b = true");
+    else lines.push("", "[levels]", "auto_2b = true", "");
+    return lines.join("\n");
+  }
+
   // the block of the «Confidence level» node: choose a folder, the table opens under the canvas
   F.extraResults.push((S, node) => {
     if (!ready() || !(node.ids || []).some((/** @type {string} */ id) => { const i = F.instanceOf(S.plan, id); return i && i.step.split("@")[0] === "annot.level"; })) return null;
     const { el } = F, id = node.ids[0], say = el("p", { class: "fl-note", role: "status" });
+    // one entry for both ways of choosing: the picker gives a folder handle (the Review can write its decisions file there), the input only the files
+    const open = async (/** @type {string} */ root, /** @type {{path: string, file: File}[]} */ files, /** @type {any} */ dir) => {
+      say.textContent = `Reading ${root} (${files.length} files)…`;
+      try {
+        const run = await F.campaignRun(files, root), item = { type: "annot", label: `${root} (campaign folder)`, campaign: { root, files, dir: dir || null, ...run }, text: async () => "" };
+        S.results = S.results || {}; S.results[id] = [...(S.results[id] || []).filter((/** @type {any} */ r) => r.label !== item.label), item];
+        say.textContent = ""; F.openResult(item); if (S.redraw) S.redraw();
+      } catch (err) { const x = /** @type {any} */ (err); say.textContent = "Attributio: " + ((x && x.params && x.params.detail) || (x && x.message) || String(err)); }
+    };
     const pick = /** @type {HTMLInputElement} */ (el("input", { type: "file", hidden: true, webkitdirectory: true, multiple: true, "aria-label": "Choose a campaign folder", onchange: async (/** @type {any} */ e) => {
       const list = /** @type {File[]} */ ([...e.target.files]).slice(0, G.ATTRIBUTIO_CORE.MAX_FILES);
       if (!list.length) return;
       const { root, files } = F.campaignFiles(list);
-      say.textContent = `Reading ${root} (${files.length} files)…`;
-      try {
-        const run = await F.campaignRun(files, root), item = { type: "annot", label: `${root} (campaign folder)`, campaign: { root, files, ...run }, text: async () => "" };
-        S.results = S.results || {}; S.results[id] = [...(S.results[id] || []).filter((/** @type {any} */ r) => r.label !== item.label), item];
-        say.textContent = ""; F.openResult(item); if (S.redraw) S.redraw();
-      } catch (err) { const x = /** @type {any} */ (err); say.textContent = "Attributio: " + ((x && x.params && x.params.detail) || (x && x.message) || String(err)); }
+      await open(root, files, null);
     } }));
-    return el("div", { class: "fl-results" }, pick, F.btn("import", "Open a campaign folder", () => pick.click(), "Open a campaign folder…"), say);
+    const choose = async () => {
+      const W = /** @type {any} */ (window);
+      if (typeof W.showDirectoryPicker !== "function") { pick.click(); return; }
+      try { const dir = await W.showDirectoryPicker(), files = /** @type {{path: string, file: File}[]} */ ([]); await G.ATTRIBUTIO_CORE.walk(dir, "", files); await open(dir.name, files, dir); }
+      catch (err) { if (!(err && /** @type {any} */ (err).name === "AbortError")) say.textContent = "Attributio: " + ((/** @type {any} */ (err)).message || err); }
+    };
+    return el("div", { class: "fl-results" }, pick, F.btn("import", "Open a campaign folder", choose, "Open a campaign folder…"), say);
   });
 })();

@@ -39,12 +39,8 @@ export function isSection(p) {
   return /\.md$/.test(p) && !/\.(appunti|qa)\.md$/.test(p) && !/(^|\/)(LEGGIMI|README)\.md$/i.test(p);
 }
 
-/**
- * @param {{token: string, fetchFn?: typeof fetch, repo?: typeof REPO}} o
- */
-export function makeClient({ token, fetchFn = (...a) => fetch(...a), repo = REPO }) {
-  const base = `${API}/repos/${repo.owner}/${repo.repo}`;
-
+/** The authenticated fetch of the GitHub API, shared by the Libro client here and the Teoria pull-request client (pr.js). Errors are GhError. @param {string} token @param {typeof fetch} fetchFn */
+export function makeCall(token, fetchFn) {
   /** @param {string} url @param {RequestInit} [init] */
   async function call(url, init = {}) {
     let res;
@@ -66,6 +62,16 @@ export function makeClient({ token, fetchFn = (...a) => fetch(...a), repo = REPO
     if (res.status === 409 || res.status === 422) throw new GhError("conflict", msg, res.status);
     throw new GhError("other", msg, res.status);
   }
+  return call;
+}
+
+/**
+ * @param {{token: string, fetchFn?: typeof fetch, repo?: typeof REPO}} o
+ */
+export function makeClient({ token, fetchFn = (...a) => fetch(...a), repo = REPO }) {
+  const base = `${API}/repos/${repo.owner}/${repo.repo}`;
+
+  const call = makeCall(token, fetchFn);
 
   /** @param {string} p */
   const enc = (p) => p.split("/").map(encodeURIComponent).join("/");
