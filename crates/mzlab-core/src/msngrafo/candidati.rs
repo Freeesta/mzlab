@@ -38,41 +38,6 @@ pub(super) struct Elementi {
     pub perdite: Vec<(&'static str, Vec<u32>)>,
 }
 
-pub(super) fn elementi(f: &Formula, pol: i8) -> Elementi {
-    let mut v: Vec<(String, f64, u32, u32, u32)> = f
-        .iter()
-        .filter(|(_, n)| *n > 0)
-        .map(|(e, n)| {
-            let (_, z, val) = ATOMI
-                .iter()
-                .find(|a| a.0 == e)
-                .copied()
-                .unwrap_or(("", 0, 0));
-            (e.clone(), mass_of(e).unwrap_or(0.0), z, val, *n as u32)
-        })
-        .collect();
-    crate::sortc::slice_by(&mut v, |a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
-    let mut e = Elementi {
-        sim: v.iter().map(|x| x.0.clone()).collect(),
-        massa: v.iter().map(|x| x.1).collect(),
-        z: v.iter().map(|x| x.2).collect(),
-        valenza: v.iter().map(|x| x.3).collect(),
-        max: v.iter().map(|x| x.4).collect(),
-        pol,
-        perdite: vec![],
-    };
-    e.perdite = PERDITE
-        .iter()
-        .filter_map(|(n, _)| {
-            parse_formula(n)
-                .ok()
-                .and_then(|f| e.conta(&f))
-                .map(|c| (*n, c))
-        })
-        .collect();
-    e
-}
-
 impl Elementi {
     pub fn massa(&self, c: &[u32]) -> f64 {
         crate::pysum::pysum(c.iter().zip(&self.massa).map(|(n, m)| *n as f64 * m))
@@ -129,7 +94,15 @@ impl Elementi {
         }
         Some(c)
     }
+}
 
+/// `a` is a sub-formula of `b`, element by element.
+pub(super) fn sotto(a: &[u32], b: &[u32]) -> bool {
+    a.iter().zip(b).all(|(x, y)| x <= y)
+}
+
+/// The enumeration of the sub-formulas, cut on the mass.
+impl Elementi {
     /// Every sub-formula of the root whose ion has an m/z within [lo, hi] and a DBE ≥ −0.5, in the order of the enumeration.
     pub fn candidati(&self, lo: f64, hi: f64) -> Vec<Vec<u32>> {
         let sh = self.pol as f64 * ELECTRON;
@@ -181,9 +154,39 @@ impl Elementi {
     }
 }
 
-/// `a` is a sub-formula of `b`, element by element.
-pub(super) fn sotto(a: &[u32], b: &[u32]) -> bool {
-    a.iter().zip(b).all(|(x, y)| x <= y)
+pub(super) fn elementi(f: &Formula, pol: i8) -> Elementi {
+    let mut v: Vec<(String, f64, u32, u32, u32)> = f
+        .iter()
+        .filter(|(_, n)| *n > 0)
+        .map(|(e, n)| {
+            let (_, z, val) = ATOMI
+                .iter()
+                .find(|a| a.0 == e)
+                .copied()
+                .unwrap_or(("", 0, 0));
+            (e.clone(), mass_of(e).unwrap_or(0.0), z, val, *n as u32)
+        })
+        .collect();
+    crate::sortc::slice_by(&mut v, |a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
+    let mut e = Elementi {
+        sim: v.iter().map(|x| x.0.clone()).collect(),
+        massa: v.iter().map(|x| x.1).collect(),
+        z: v.iter().map(|x| x.2).collect(),
+        valenza: v.iter().map(|x| x.3).collect(),
+        max: v.iter().map(|x| x.4).collect(),
+        pol,
+        perdite: vec![],
+    };
+    e.perdite = PERDITE
+        .iter()
+        .filter_map(|(n, _)| {
+            parse_formula(n)
+                .ok()
+                .and_then(|f| e.conta(&f))
+                .map(|c| (*n, c))
+        })
+        .collect();
+    e
 }
 
 /// An odd-electron fragment ion: CID and HCD of ESI ions give mostly even-electron fragments, but radicals exist.
