@@ -121,7 +121,11 @@ fn can_take(m: &Mol, i: usize, kind: &str) -> bool {
         "dechloro_oh" => a.el == "Cl" && m.adj[i].iter().any(|(j, _)| m.atoms[*j].arom),
         "amino_oh" => a.el == "N" && neutral && !a.arom && a.h == 2 && m.heavy(i) == 1,
         "methyl_cooh" => {
-            a.el == "C" && !a.arom && a.h == 3 && m.heavy(i) == 1 && m.adj[i].iter().all(|(j, _)| m.atoms[*j].el == "C")
+            a.el == "C"
+                && !a.arom
+                && a.h == 3
+                && m.heavy(i) == 1
+                && m.adj[i].iter().all(|(j, _)| m.atoms[*j].el == "C")
         }
         "deethyl" => {
             a.el == "C"
