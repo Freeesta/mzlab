@@ -34,6 +34,31 @@ pub enum DataType {
 }
 
 impl DataType {
+    pub const ALL: [DataType; 19] = [
+        DataType::Raw,
+        DataType::Mzml,
+        DataType::Mzidx,
+        DataType::Xic,
+        DataType::Peaks,
+        DataType::Rtmap,
+        DataType::Table,
+        DataType::Samples,
+        DataType::Spectra,
+        DataType::Library,
+        DataType::Formulas,
+        DataType::Candidates,
+        DataType::Annot,
+        DataType::Tp,
+        DataType::Structure,
+        DataType::Transform,
+        DataType::Comparison,
+        DataType::Qc,
+        DataType::Report,
+    ];
+    /// The type called `name` in a file (`raw`, `mzidx`, ...).
+    pub fn from_name(name: &str) -> Option<DataType> {
+        DataType::ALL.into_iter().find(|t| t.name() == name)
+    }
     pub fn name(self) -> &'static str {
         match self {
             DataType::Raw => "raw",

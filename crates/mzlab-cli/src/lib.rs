@@ -16,6 +16,8 @@ use mzlab_core::upload::{impronte, indicizza_lettore, prepare};
 use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
 
+pub mod flow;
+
 const HELP: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
 
 usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params FILE.json]
