@@ -58,6 +58,7 @@ impl Lettore for Contato {
     fn mancanti(&mut self, c: usize) -> usize { self.l.mancanti(c) }
     fn testata_mzml(&mut self, c: usize) -> mzlab_core::Result<Option<mzlab_core::mzmlwrite::Header>> { self.l.testata_mzml(c) }
     fn extra_mzml(&self, s: &mzlab_core::mzml::Spectrum) -> mzlab_core::mzmlwrite::SpectrumExtra { self.l.extra_mzml(s) }
+    fn extra_scansione(&mut self, c: usize, k: usize, s: &mzlab_core::mzml::Spectrum) -> mzlab_core::mzmlwrite::SpectrumExtra { self.l.extra_scansione(c, k, s) }
 }
 
 /// The reader of the dataset for the index of sample `c`: phase 4 (`tell`) begins, the dataset opens (a SCIEX pair reads only the blocks of sample `c`, `wiff::lettore::apri_solo`:

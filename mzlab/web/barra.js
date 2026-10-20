@@ -14,7 +14,7 @@ const BARRA = (() => {
   const K_HR = NOMI.KEY("barra.hr");
   const K_SIDE = NOMI.KEY("barra.lato");
   const K_HINT = NOMI.KEY("barra.hint");   // first-visit hint under the toolbar: shown once per browser
-  const HR_PANELS = ["hdr", "lst", "fil", "alb", "cmp", "iso", "idn", "disp"];
+  const HR_PANELS = ["hdr", "lst", "fil", "alb", "gra", "cmp", "iso", "idn", "disp"];
   const MIN_W = 280, MAX_W = 560;
   const SHEET = 900;                // below this width the panel is a sheet that replaces the workspace
   const AUTO_W = 1100;              // below this width the panel hides by itself (the first thing to go, before the charts); a tool button brings it back
@@ -80,7 +80,7 @@ const BARRA = (() => {
     panel: IC('<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M9.5 2.5v11"/><path d="M11 5.5h1.5M11 8h1.5" stroke-width="1.2"/>'),
     left: IC('<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M6.5 2.5v11"/>'),
     right: IC('<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M9.5 2.5v11"/>')
-  }; ICONS.alb = IC('<path d="M8 2v4M8 6H4v3M8 6h4v3M4 9v3M12 9v3"/>');         // alb: the precursor tree of an MSn infusion
+  }; ICONS.gra = IC('<rect x="1.5" y="6" width="4" height="4" rx=".8"/><rect x="10.5" y="2" width="4" height="4" rx=".8"/><rect x="10.5" y="10" width="4" height="4" rx=".8"/><path d="M5.5 8h2.5V4h2.5M8 8v4h2.5"/>'); ICONS.alb = IC('<path d="M8 2v4M8 6H4v3M8 6h4v3M4 9v3M12 9v3"/>');         // alb: the precursor tree of an MSn infusion
 
   // ---------------------------------------------------------------- the list of commands
   // id: key of cmd.<id>.* in lang/; dom: id given to the toolbar button (kept for tests and scripts); ic: icon; panel: drawer panel the
@@ -96,13 +96,14 @@ const BARRA = (() => {
     
     { id: "ptable", dom: "np-pt", ic: () => QI("pt"), run: () => window.QQQRef && QQQRef.open("pt") },
     // HR only (after a separator): two menus and one direct button
-    { id: "scan", hr: true, items: ["hdr", "lst", "fil", "alb"], ic: () => ICONS[_last.scan] },
+    { id: "scan", hr: true, items: ["hdr", "lst", "fil", "alb", "gra"], ic: () => ICONS[_last.scan] },
     { id: "form", hr: true, items: ["cmp", "iso"], ic: () => ICONS[_last.form] },
     { id: "idn", hr: true, ic: () => ICONS.idn, panel: "idn", run: () => toggle("idn") },
     // items of the HR menus (panels of the drawer, bodies in banco.js)
     { id: "hdr", item: "scan", ic: () => ICONS.hdr, panel: "hdr", run: () => pick("scan", "hdr") },
     { id: "lst", item: "scan", ic: () => ICONS.lst, panel: "lst", run: () => pick("scan", "lst") },
     { id: "fil", item: "scan", ic: () => ICONS.fil, panel: "fil", run: () => pick("scan", "fil") }, { id: "alb", item: "scan", ic: () => ICONS.alb, panel: "alb", visible: () => !!window.INF && INF.any(), run: () => pick("scan", "alb") },
+    { id: "gra", item: "scan", ic: () => ICONS.gra, panel: "gra", visible: () => !!window.INF && INF.single(), run: () => pick("scan", "gra") },
     { id: "cmp", item: "form", ic: () => ICONS.cmp, panel: "cmp", run: () => pick("form", "cmp") },
     { id: "iso", item: "form", ic: () => ICONS.iso, panel: "iso", run: () => pick("form", "iso") },
     // display options of a chart (right click on a chromatogram or a spectrum): only in the palette, the panel is in the drawer
@@ -164,7 +165,7 @@ const BARRA = (() => {
     _tab = validTab(s.tab) ? s.tab : "file";
     _open = s.open === undefined ? innerWidth >= AUTO_W : s.open === true;      // first visit: the panel (File list) is open, except on a narrow screen where it would replace the workspace
     if (s.last && typeof s.last === "object") {
-      if (["hdr", "lst", "fil", "alb"].includes(s.last.scan)) _last.scan = s.last.scan;
+      if (["hdr", "lst", "fil", "alb", "gra"].includes(s.last.scan)) _last.scan = s.last.scan;
       if (["cmp", "iso"].includes(s.last.form)) _last.form = s.last.form;
     }
     let side = null;

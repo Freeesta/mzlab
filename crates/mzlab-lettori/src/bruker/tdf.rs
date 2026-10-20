@@ -26,7 +26,7 @@ use mzlab_core::metodo::SrcFile;
 
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 
-use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
+use mzlab_core::mzmlwrite::{Header, Precursore, SpectrumExtra};
 
 const UNITA: &str = "Arbitrary Intensity Units";
 
@@ -397,6 +397,7 @@ impl Lettore for LettoreBruker {
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
         let num = |k: &str| self.dati.meta.get(k).and_then(|v| v.parse::<f64>().ok());
         let mut params = Vec::new();
+        let mut precursors = Vec::new();
         if let Some(d) = self.desc.get(s.index) {
             if !self.tsf {
                 let r: Vec<String> = d.scan.iter().map(|x| format!("{}-{}", x.0, x.1)).collect();
@@ -408,6 +409,16 @@ impl Lettore for LettoreBruker {
                     w.larghezza.to_string(),
                 ));
                 params.push(("mzLab collision energy (eV)".to_string(), w.ce.to_string()));
+                // the window the instrument isolated and the energy it applied; the dissociation method is not said in the file
+                let meta = w.larghezza / 2.0;
+                precursors.extend(s.precursor.map(|mz| Precursore {
+                    selected_mz: Some(mz),
+                    iso_target: Some(mz),
+                    iso_lower: Some(meta),
+                    iso_upper: Some(meta),
+                    energy: (w.ce > 0.0).then(|| ("MS:1000045".to_string(), w.ce)),
+                    ..Precursore::default()
+                }));
             }
         }
         SpectrumExtra {
@@ -415,6 +426,8 @@ impl Lettore for LettoreBruker {
             observed: false,
             window: num("MzAcqRangeLower").zip(num("MzAcqRangeUpper")),
             params,
+            precursors,
+            ..SpectrumExtra::default()
         }
     }
 }

@@ -121,7 +121,7 @@ fn indexed_offsets_checksum_and_read_back() {
     assert_eq!(&t[tag..tag + 40], hex);
     // the same spectra and chromatograms as the plain file, which keeps the old CV and no index
     let p = String::from_utf8(plain.clone()).unwrap();
-    assert!(!p.contains("indexedmzML") && p.contains("version=\"4.1.163\""));
+    assert!(!p.contains("indexedmzML") && p.contains("version=\"4.2.6\""));
     let body = |s: &str| s[s.find("<spectrumList").unwrap()..s.find("</run>").unwrap()].to_string();
     assert_eq!(body(&p), body(&t));
     let (a, b) = (

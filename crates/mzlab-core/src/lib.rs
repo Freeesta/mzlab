@@ -149,6 +149,7 @@ pub mod stats;
 pub mod tracestat;
 pub mod subformulas;
 pub mod campioni;
+pub mod molecules;
 pub mod disegno;
 pub mod tpmine_irls;
 

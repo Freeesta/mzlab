@@ -7,8 +7,10 @@ license.workspace = true
 
 [features]
 # the Thermo `.raw` reader (`raw`, `rawlettore`, `rawfilter`, `metodo_raw`, the `opentfraw` dependency): the engine (mzlab-wasm) leaves it off and reaches it through the `thermo` readers module
-default = ["thermo", "mappa-dad"]
+default = ["thermo", "mappa-dad", "precursori"]
 thermo = ["dep:opentfraw"]
+# the precursor chain, activation and energy of `<precursorList>` in the mzML writer (`mzmlwrite/spettro.rs`): the readers that fill `SpectrumExtra::precursors` turn it on; the engine and the other readers modules (under a size limit) leave it off
+precursori = []
 # variants of the readers served only by the readers module (crates/mzlab-lettori), never by the engine (mzlab-wasm leaves it off)
 estesi = []
 # the 2D map of the optical detector of a `.wiff` (`wiff/dad_map.rs`, `dad_map` of the `Lettore` trait): the engine and the desktop app serve it, the readers module (`sciex`, under a size limit) only converts and leaves it off
