@@ -25,20 +25,21 @@ function safe(f) {
   }
 }
 
-/** Seal the token with a passphrase and store it. Returns false when the browser refuses to store. @param {string} token @param {string} pass */
-export async function seal(token, pass) {
+/** Seal the token with a passphrase and store it. Returns false when the browser refuses to store. @param {string} token @param {string} pass @param {string} [slot] */
+export async function seal(token, pass, slot = KEY) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await key(pass, salt), new TextEncoder().encode(token)));
-  const ok = safe(() => (localStorage.setItem(KEY, JSON.stringify({ v: 1, salt: toB64(salt), iv: toB64(iv), ct: toB64(ct) })), true));
+  const ok = safe(() => (localStorage.setItem(slot, JSON.stringify({ v: 1, salt: toB64(salt), iv: toB64(iv), ct: toB64(ct) })), true));
   return !!ok;
 }
 
-export const hasSealed = () => !!safe(() => localStorage.getItem(KEY));
+/** @param {string} [slot] */
+export const hasSealed = (slot = KEY) => !!safe(() => localStorage.getItem(slot));
 
-/** The sealed token, or null when the passphrase is wrong. @param {string} pass */
-export async function unseal(pass) {
-  const raw = safe(() => localStorage.getItem(KEY));
+/** The sealed token, or null when the passphrase is wrong. @param {string} pass @param {string} [slot] */
+export async function unseal(pass, slot = KEY) {
+  const raw = safe(() => localStorage.getItem(slot));
   if (!raw) return null;
   try {
     const o = JSON.parse(raw);
@@ -49,11 +50,13 @@ export async function unseal(pass) {
   }
 }
 
-/** Keep the token for this tab only. @param {string} token */
-export const keepForTab = (token) => !!safe(() => (sessionStorage.setItem(KEY, token), true));
-export const tabToken = () => safe(() => sessionStorage.getItem(KEY));
+/** Keep the token for this tab only. @param {string} token @param {string} [slot] */
+export const keepForTab = (token, slot = KEY) => !!safe(() => (sessionStorage.setItem(slot, token), true));
+/** @param {string} [slot] */
+export const tabToken = (slot = KEY) => safe(() => sessionStorage.getItem(slot));
 
-export function forget() {
-  safe(() => localStorage.removeItem(KEY));
-  safe(() => sessionStorage.removeItem(KEY));
+/** @param {string} [slot] */
+export function forget(slot = KEY) {
+  safe(() => localStorage.removeItem(slot));
+  safe(() => sessionStorage.removeItem(slot));
 }

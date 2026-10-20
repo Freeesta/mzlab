@@ -43,6 +43,7 @@ pub mod params;
 pub mod params_drift;
 pub mod params_unit;
 pub mod pipeline;
+pub mod polpair;
 mod post;
 pub mod qc;
 pub mod quality;

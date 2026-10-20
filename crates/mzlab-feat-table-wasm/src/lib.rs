@@ -113,6 +113,13 @@ pub fn export_ms2(table_read: Function, size: f64, samples_json: &str, spec: &st
     core::ms2_file(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256, polarity, kind, open).map_err(js_err)
 }
 
+/// The `polpair/1` of two `.mzfeat` of the same files, one per polarity: the rows of the positive table that have the same neutral mass, RT and course in
+/// the negative one. Files that differ are `error.polpair.files`; `params_json` may be empty.
+#[wasm_bindgen]
+pub fn cross_polarity(read_pos: Function, size_pos: f64, read_neg: Function, size_neg: f64, params_json: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::polpair::cross_polarity(&mut table_reader(read_pos), size_pos as u64, &mut table_reader(read_neg), size_neg as u64, params_json).map_err(js_err)
+}
+
 /// The `riga/1` of the row with `id`: summaries, identity and one cell per file. An id the table does not have is `error.rowNotFound`.
 #[wasm_bindgen]
 pub fn table_row(table_read: Function, size: f64, samples_json: &str, id: u32) -> std::result::Result<String, JsValue> {
