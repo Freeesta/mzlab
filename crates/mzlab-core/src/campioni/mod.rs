@@ -6,7 +6,7 @@ mod json;
 mod nomi;
 mod valida;
 
-pub use json::{da_legacy, digest, from_json, to_json};
+pub use json::{da_legacy, digest, from_json, from_value, to_json};
 pub use nomi::{proponi, tipo_v1};
 pub use valida::{per_tp, per_tp_json, valida, valida_json, Avviso, PerTp};
 
