@@ -247,3 +247,58 @@ fn every_basis_has_its_text_in_the_attributio_profile_of_the_levels() {
         assert!(text.contains(basis), "{basis}");
     }
 }
+
+#[test]
+fn a_decision_of_the_chemist_leaves_the_automatic_choice_in_the_audit_log() {
+    use mzlab_feat::attributio::annotate::decide::{apply_decisions, feature_keys};
+    use mzlab_feat::attributio::annotate::{AnnotationSettings, BasicCuration, Feature};
+    use mzlab_feat::attributio::readers::feature_decisions::load_feature_decisions;
+
+    let head = "pol;feature_id;mz;rt;level;name;identity;decided_on;decided_by;justification;group;evidence_type;evidence_library;evidence_entry;evidence_cosine;evidence_matched;evidence_delta_mz;evidence_delta_formula;evidence_note\n";
+    let table = load_feature_decisions(
+        Some(&format!(
+            "{head}POS;15;152.0706;3.10;3;;;2026-09-01;t;match too weak\n"
+        )),
+        "d.csv",
+    )
+    .expect("table");
+    let make = |id: i64| Feature {
+        pol: "POS".into(),
+        id,
+        mz: Some(152.0706),
+        rt: Some(3.10),
+        level: 2,
+        level_sub: "a".into(),
+        level_basis: "spectral library".into(),
+        ..Feature::default()
+    };
+    let mut feats = vec![make(15), make(16)];
+    let c = fixture("campagna_sintetica").campaign;
+    let s = AnnotationSettings::for_campaign(&c).expect("settings");
+    let mut warnings = Vec::new();
+    let every = feature_keys(&feats);
+    apply_decisions(
+        &mut feats,
+        &table,
+        &every,
+        &c,
+        &s,
+        &BasicCuration,
+        &mut warnings,
+    );
+    let (decided, untouched) = (&feats[0], &feats[1]);
+    assert_eq!(decided.origin(), "user");
+    assert_eq!(decided.audit.len(), 1);
+    let e = &decided.audit[0];
+    assert_eq!(
+        (
+            e.field,
+            e.auto.as_str(),
+            e.chosen.as_str(),
+            e.reason.as_str()
+        ),
+        ("level", "2a", "3a", "match too weak")
+    );
+    assert_eq!(untouched.origin(), "auto");
+    assert!(untouched.audit.is_empty());
+}

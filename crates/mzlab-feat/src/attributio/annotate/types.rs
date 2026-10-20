@@ -152,9 +152,28 @@ pub struct Feature {
     pub rt_info: RtInfo,
     pub level_why: String,
     pub level_decisive: String,
+    pub audit: Vec<AuditEntry>,
+}
+
+/// One change the chemist made over what the programme chose by itself (`field`: `level`, `name` or `group`), kept with the automatic value so the choice can be
+/// restored (drop the decision row) and exported as an audit log.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct AuditEntry {
+    pub field: &'static str,
+    pub auto: String,
+    pub chosen: String,
+    pub reason: String,
 }
 
 impl Feature {
+    /// `user` when a decision of the chemist changed something the programme chose, `auto` otherwise.
+    pub fn origin(&self) -> &'static str {
+        if self.audit.is_empty() {
+            "auto"
+        } else {
+            "user"
+        }
+    }
     /// The text of a site flag.
     pub fn in_site(&self, site: &str) -> bool {
         self.in_site.iter().any(|(s, v)| s == site && *v)

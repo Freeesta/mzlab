@@ -14,7 +14,7 @@ use mzlab_core::json::Out;
 use std::collections::BTreeMap;
 
 /// Columns of the table, in order. The last three are the best MS2 Engine hit of the feature: evidence beside the level, empty without a hit.
-pub const COLUMNS: [&str; 13] = [
+pub const COLUMNS: [&str; 14] = [
     "pol",
     "id",
     "mz",
@@ -28,6 +28,7 @@ pub const COLUMNS: [&str; 13] = [
     "engine_name",
     "engine_score",
     "engine_agrees",
+    "origin",
 ];
 
 /// One run: the features with their levels, the warnings, the fingerprint of the files and settings, and the count per level (`1`, `2a`, `3b`, `4`, `0`).
@@ -91,7 +92,8 @@ fn row_json(o: &mut Out, f: &Feature) {
     o.raw(",").str(&f.level_why).raw(",");
     text_or_null(o, f.engine.name.as_deref());
     o.raw(",").opt(f.engine.score).raw(",");
-    o.raw(agrees_word(f, ["true", "false", "null"])).raw("]");
+    o.raw(agrees_word(f, ["true", "false", "null"])).raw(",");
+    o.str(f.origin()).raw("]");
 }
 
 /// The words for "the MS2 Engine hit names the same compound as the cascade": agrees, differs, no hit to compare.
@@ -182,7 +184,7 @@ fn level_counts(features: &[Feature]) -> BTreeMap<String, usize> {
 }
 
 /// The cells of one feature as text, in the order of `COLUMNS`.
-fn csv_cells(f: &Feature) -> [String; 13] {
+fn csv_cells(f: &Feature) -> [String; 14] {
     [
         f.pol.clone(),
         f.id.to_string(),
@@ -197,6 +199,7 @@ fn csv_cells(f: &Feature) -> [String; 13] {
         f.engine.name.clone().unwrap_or_default(),
         num_text(f.engine.score),
         agrees_word(f, ["yes", "no", ""]).to_string(),
+        f.origin().to_string(),
     ]
 }
 
@@ -210,6 +213,27 @@ fn text_or_null(o: &mut Out, v: Option<&str>) {
 fn num_text(v: Option<f64>) -> String {
     v.filter(|v| v.is_finite())
         .map_or(String::new(), |v| v.to_string())
+}
+
+impl Run {
+    /// The audit log as text with `;`: one row per change of the chemist over what the programme chose (`auto` is the automatic value, `chosen` the final one).
+    pub fn audit_csv_to(&self, emit: &mut dyn FnMut(&str)) {
+        emit("pol;id;field;auto;chosen;reason\n");
+        for f in &self.features {
+            for e in &f.audit {
+                let cells = [
+                    f.pol.as_str(),
+                    &f.id.to_string(),
+                    e.field,
+                    &e.auto,
+                    &e.chosen,
+                    &e.reason,
+                ]
+                .map(quote);
+                emit(&format!("{}\n", cells.join(";")));
+            }
+        }
+    }
 }
 
 fn quote(s: &str) -> String {
@@ -260,16 +284,16 @@ mod tests {
         r.csv_to(&mut |t| csv.push_str(t));
         let lines: Vec<Vec<&str>> = csv.lines().map(|l| l.split(';').collect()).collect();
         assert_eq!(
-            lines[0][10..],
+            lines[0][10..13],
             ["engine_name", "engine_score", "engine_agrees"]
         );
-        assert_eq!(lines[1][10..], ["Caffeine", "0.91", "yes"]);
-        assert_eq!(lines[2][10..], ["Atrazine", "0.5", "no"]);
-        assert_eq!(lines[3][10..], ["", "", ""]);
+        assert_eq!(lines[1][10..], ["Caffeine", "0.91", "yes", "auto"]);
+        assert_eq!(lines[2][10..], ["Atrazine", "0.5", "no", "auto"]);
+        assert_eq!(lines[3][10..], ["", "", "", "auto"]);
         let mut json = String::new();
         r.json_to(&mut |t| json.push_str(t));
-        assert!(json.contains("\"Caffeine\",0.91,true]"), "{json}");
-        assert!(json.contains("\"Atrazine\",0.5,false]"), "{json}");
-        assert!(json.contains("null,null,null]"), "{json}");
+        assert!(json.contains("\"Caffeine\",0.91,true,\"auto\"]"), "{json}");
+        assert!(json.contains("\"Atrazine\",0.5,false,\"auto\"]"), "{json}");
+        assert!(json.contains("null,null,null,\"auto\"]"), "{json}");
     }
 }
