@@ -11,7 +11,7 @@ r = Run(port=8879, wd="/tmp/wd79")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
         pg.click("text=Carica dati"); ready(pg)
         def open_below():
             pg.click("#np-calc2"); pg.wait_for_timeout(300)

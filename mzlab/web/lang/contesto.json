@@ -508,6 +508,7 @@
   "unopen.other": "Riga dell'avviso unico: file ignorati perché di formato sconosciuto; {n} = quanti, {names} = primi nomi.",
   "cart.found": "Avviso sotto il riquadro di caricamento dopo la lettura di una cartella (più file); {n} = file compatibili, {name} = nome della cartella.",
   "cart.found.one": "Come cart.found ma con un solo file compatibile; {name} = nome della cartella.",
+  "cart.loose": "Avviso dopo un rilascio di file di una cartella .D senza la cartella; {n} = numero di file.",
   "cart.none": "Avviso quando la cartella non contiene nessun file compatibile; {name} = nome della cartella.",
   "cart.method": "Frase accodata all'avviso della cartella: più cartelle di metodo Agilent (.m) riconosciute, non sono file ignorati; {n} = quante, {name} = i loro nomi.",
   "method.m.title": "Titolo della sezione di una cartella di metodo Agilent (.m) nella finestra Metodo; {name} = nome della cartella.",

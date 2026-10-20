@@ -165,3 +165,16 @@ fn the_recipe_sets_or_leaves_out_the_signs() {
     assert!(UntParams::from_json(r#"{"iso":{"representative":"x"}}"#).is_err());
     assert!(UntParams::from_json(r#"{"iso":{"rt_tol":-1}}"#).is_err());
 }
+
+/// Documented difference from the ion identity networking of mzmine (Schmid et al. 2021): the link is by neutral mass and RT only, so the heights
+/// of the two ions (here five orders of magnitude apart) play no part; no peak-shape or cross-sample correlation is used (`ident.rs` header).
+#[test]
+fn the_link_uses_mass_and_rt_only_not_intensity() {
+    let m = 301.1234;
+    let t = table(&[
+        (ion_mz(m, "[M+H]+").unwrap(), 4.2, 9e8),
+        (ion_mz(m, "[M+Na]+").unwrap(), 4.25, 9e3),
+    ]);
+    let r = ident(&t, &IsoGroups::default(), 1, &IdentParams::default());
+    assert_eq!(r.family, vec![1, 1]);
+}

@@ -75,10 +75,6 @@ impl AnnotationSettings {
             "reference standard" => "Confirmed by reference standard: mass + RT + MS/MS (L1)".into(),
             "spectral library" => "Spectral library match (L2a)".into(),
             "putative library" => "Putative library match (analog/in-silico, L3a)".into(),
-            "MS2DeepScore" => format!(
-                "AI Structural Similarity (MS2DeepScore ≥ {:.2}, L3a)",
-                self.engine_dl_sim_min
-            ),
             "CSI:FingerID" => format!(
                 "CSI:FingerID structure (COSMIC conf ≥ {:.2}, ~10% FDR, L3a)",
                 self.cosmic_min

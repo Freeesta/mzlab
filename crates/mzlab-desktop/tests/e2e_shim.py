@@ -227,11 +227,15 @@ try:
             assert not pg2.evaluate("window.MZLAB_LR_MISS || []"), pg2.evaluate("window.MZLAB_LR_MISS")
             c2.close()
         step("high-resolution files: dda, spectra, scans, maps, origin, sub-formulas, the binary block: the Python reference's JSON, nothing left to Python", hr)
+        def open_upd():
+            # the update button lives in the collapsed "app" group of the settings panel
+            pg.click("#np-set"); pg.wait_for_selector("#uipset"); pg.evaluate("document.getElementById('uip-g-app').open = true")
+            pg.wait_for_selector("#uip-upd"); pg.click("#uip-upd")
         def upd_set(check):
             pg.evaluate("c => { window.__UPD.check = c; window.__UPD.calls.length = 0; window.__UPD.progress.length = 0; }", check)
         def gear_check():
             pg.evaluate("document.querySelector('#updbox') && document.querySelector('#updbox').remove()")
-            pg.click("#np-set"); pg.wait_for_selector("#uip-upd"); pg.click("#uip-upd")
+            open_upd()
             pg.wait_for_function("document.querySelector('#updbox') && !/…/.test(document.querySelector('#updbox').textContent)", timeout=10000)
             return pg.inner_text("#updbox")
         def t(key, **kw): return pg.evaluate("([k, kw]) => I18N.t(k, kw)", [key, kw])
@@ -272,7 +276,7 @@ try:
             pg.evaluate("document.querySelector('#updbox') && document.querySelector('#updbox').remove()")
             upd_set({"status": "available", "version": "d", "files": 2, "bytes": 2000000})
             pg.evaluate("() => { window.__UPD.delay = 1500; DESKUPD.check(true); }"); pg.wait_for_function("window.__UPD.calls.length === 1")
-            pg.click("#np-set"); pg.wait_for_selector("#uip-upd"); pg.click("#uip-upd")
+            open_upd()
             pg.wait_for_selector("#updbox button[data-a=go]", timeout=10000)
             assert pg.evaluate("window.__UPD.calls.length") == 1, pg.evaluate("window.__UPD.calls"); assert t("update.notice") not in pg.inner_text("#updbox"), pg.inner_text("#updbox")
             pg.evaluate("window.__UPD.delay = 0")

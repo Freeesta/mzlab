@@ -47,6 +47,14 @@ subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--e
                 "--rules", str(ROOT / "TP_Mine" / "data" / "regole_tp.json")], cwd=ROOT, check=True, capture_output=True)
 native = {"run": json.loads((nat / "run.json").read_text()), "detail": json.loads((nat / "detail.json").read_text())}
 # the MSn file of the standard (a structure with the formula of the parent) and the frozen answers of the former Python engine on it
+
+
+def wasm_dir(key):
+    # folder of the module named by the manifest key (the fused HR build shares one)
+    man = json.loads((site / "static" / "wasm-feat" / "manifest.json").read_text(encoding="utf-8"))
+    return man[key]["wasm"].split("/")[0]
+
+
 G = json.loads((ROOT / "tests" / "golden" / "finder_msn_e2e.json").read_text(encoding="utf-8"))
 sys.path.insert(0, str(ROOT / "TP_Mine" / "tests")); import msn_synth  # noqa: E402
 from mzlab.reader import mzidx as MZI  # noqa: E402
@@ -179,7 +187,7 @@ try:
 
         def module():
             dda, cases, want = G["module"]["dda"], G["module"]["cases"], G["module"]["want"]
-            got_ = pg.evaluate(MODULE, ["/static/wasm-feat/finder-msn/", "static/dati_finder/" + MSN + ".mzidx", json.dumps({"name": "parent", "smiles": SMI}), dda, cases])
+            got_ = pg.evaluate(MODULE, ["/static/wasm-feat/" + wasm_dir("finder_msn") + "/", "static/dati_finder/" + MSN + ".mzidx", json.dumps({"name": "parent", "smiles": SMI}), dda, cases])
             close(got_["tree"], G["tree"], "tree")
             assert any(w["l"].get("ok") for w in want), [w["l"].get("note") for w in want]
             for i, (a, w) in enumerate(zip(got_["loc"], want)): close(a, w, f"case {i}")
@@ -206,8 +214,8 @@ try:
         def no_pyodide():
             py = [u for u in reqs if "pyodide" in u.lower()]
             assert not py, py[:5]
-            assert [u for u in reqs if "wasm-feat/finder/" in u], "the finder .wasm was fetched"
-            assert [u for u in reqs if "wasm-feat/finder-msn/" in u], "the finder_msn .wasm was fetched"
+            assert [u for u in reqs if "wasm-feat/" + wasm_dir("finder") + "/" in u], "the finder .wasm was fetched"
+            assert [u for u in reqs if "wasm-feat/" + wasm_dir("finder_msn") + "/" in u], "the finder_msn .wasm was fetched"
         step("no pyodide* request with high-resolution input", no_pyodide)
         b.close()
 finally:

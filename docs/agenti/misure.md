@@ -215,7 +215,7 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 - Rendering colore accelerato (`grafici.js`, `mapImage`): scrittura a 32 bit con `Uint32Array` (`buf32` e `tab32`) e campionamento a 10 000 celle per il 99,5° percentile: generazione `ImageData` su griglia 600×901 ridotta da 314 ms a 52 ms (6× più veloce), cambio file caldo su HRC ≤ 50 ms.
 
 ## Moduli lettori (`tools/build_lettori_wasm.sh`, dopo `wasm_opt -Oz`)
-- `.wasm` per famiglia, in byte (tetto): `aperti` 401 463 (524 288), `thermo` 470 380 (614 400), `agilent` 418 744 (458 752), `sciex` 303 705 (327 680), `bruker` 416 514 (524 288, con `ruzstd`). Il `.wasm` del motore pesa 1 439 240 B (senza il lettore Thermo, che sta nel modulo `thermo`).
+- `.wasm` di mzFinder e dei lettori: misure, tetti (un modulo fuso ha un tetto di gruppo, non quelli per modulo) e build separata in `docs/agenti/wasm-tetti.md`. Il `.wasm` del motore pesa 1 439 240 B (senza il lettore Thermo, che sta nel modulo `thermo`).
 - Memoria del modulo `thermo` (`tools/bench_raw.py`, memoria iniziale 32 MB) sul BAF DDA da 595 MB (56 061 scansioni): dopo `apri` 33,5 MB (`apri` 1,0 s), dopo `indice` 48,0 MB (186 ms, JSON da 13,7 MB), picco di tutti i passi 122 MB (`to_mzml` 21,8 s); su file più piccoli 44,4 MB per 7 952 scansioni e 85,1 MB per 16 524 (prima della memoria compatta).
 
 ## Profilo `desktop` (`Cargo.toml`, `opt-level = 3` contro `"z"`)
@@ -233,5 +233,8 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 20 file (3 condizioni, bianco, standard): indici 90 ms, pipeline + Dig 130 ms, `summary` con `gruppi` 2 ms, picco di memoria 8,1 MB. 40 file (6 condizioni, bianco, standard, 2 repliche in più): 170-195 ms, 240-300 ms, 3 ms, 11,3 MB. Rapporto 40/20: tempo 1,9-2,3×, memoria 1,4×. `finder-lr.wasm` senza `wasm-opt`: 1 925 570 → 2 055 819 byte (+6,8 %).
 - Browser (`tools/misura_gruppi.py`, Chromium headless, sito costruito senza `wasm-opt`, 2 file per condizione: t0 e t10): Dig da «Run» alla tabella, 20 file (10 condizioni) 0,9-1,9 s (mediana 1,3 s), 40 file (20 condizioni) 2,4-2,9 s (mediana 2,4 s): rapporto 1,8× (singole prove 1,5-2,7×, tempi brevi e rumorosi). Picco di memoria del browser durante il Dig 770-840 MB con 20 file, 850-915 MB con 40 (1,03-1,1×). Primo disegno della vista «Compare conditions» 38-67 ms.
 
+## Interpretazione dei TP sui dati veri (`tools/valida/tp_timololo.py`)
+Metriche (numeri solo nel repository privato): TP di letteratura in vista, regioni concordi, disaccordi di posizione da rivedere, candidati nuovi, FDR delle esche (`decoys.survived / decoys.rules`), distribuzione nulla del margine, concordanza con l'oro di mzmine (se la lista c'è).
+
 ## `.wasm` interp (`tools/build_feat_wasm.sh`, `cargo build --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features interp`)
-Dopo `wasm-bindgen --target web` e `wasm-opt -Oz` (binaryen da npm): 496 569 B dopo `wasm-opt` (388 039 B senza i siti e il disegno): sopra il cancello di 470 000 B e sotto il tetto di 512 000 B, che non si alza; l'albero MSn lo costruisce ancora `interp` stesso e la decisione di spostarlo in `finder_msn` è del Coordinatore. Gli altri `.wasm` non cambiano peso.
+Dopo `wasm-bindgen --target web` e `wasm-opt -Oz` (binaryen da npm): 496 569 B dopo `wasm-opt` (388 039 B senza i siti e il disegno): sopra il cancello di 470 000 B e sotto il tetto di 512 000 B, che non si alza; l'albero MSn lo costruisce ancora `interp` stesso e è un'eccezione accettata per ora: `interp` non deve crescere oltre; ogni peso nuovo si paga prima spostando l'albero in `finder_msn` (piccola PR a parte). Gli altri `.wasm` non cambiano peso.

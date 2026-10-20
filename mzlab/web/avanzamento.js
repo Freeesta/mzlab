@@ -69,6 +69,7 @@ export function avanza(box, o) {
       const d = fails.find(f => f.diag), D = d && typeof d.diag !== "string" ? w.DIAG : null;
       const li = fails.map(f => h`<li class="fail">${f.name ? f.name + ": " + f.msg : f.msg}</li>`);
       el.innerHTML = h`<p class="sm" data-r="sum"><b>${o.title}</b>: ${parts.join(", ")} · ${tempo(Date.now() - t0)} <button type="button" class="sec sm" data-r="close">${T("common.close")}</button></p>${raw(fails.length ? h`<ul class="sm">${li.map(raw)}</ul>` : "")}${raw(d && D ? D.html(d.diag, esc, T) : d ? h`<button type="button" class="sec sm" data-r="copy">${T("diag.copy")}</button>` : "")}`;
+      if (!fails.length && !cancelled) q("sum").classList.add("cp-done");
       if (d && D) D.cabla(el, d.diag, w.MZLAB_VERSION || "", T);
       else if (d) { const c = q("copy"); c.onclick = async () => { try { await navigator.clipboard.writeText(d.diag); c.textContent = T("diag.copied"); } catch (_) { c.textContent = T("diag.copyFail"); } }; }
       q("close").onclick = () => el.remove();

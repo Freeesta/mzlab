@@ -35,7 +35,7 @@ else:
     d["js"] = sorted(f.name for f in (ROOT / "TP_Mine" / "js").glob("*.js")); ix.write_text(json.dumps(d))
 man = json.loads((site / "static" / "wasm-feat" / "manifest.json").read_text())
 size = (site / "static" / "wasm-feat" / man["attributio"]["wasm"]).stat().st_size
-assert size < 512000, size
+assert size < lib.wasm_cap(man, "attributio"), size
 print("  attributio .wasm:", size, "bytes")
 
 want = {}
