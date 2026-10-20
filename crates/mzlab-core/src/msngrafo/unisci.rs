@@ -23,6 +23,8 @@ struct Oss {
     prec_di: Option<usize>,
     /// Index (in the observations) of the peak whose M+1 it is.
     iso_di: Option<usize>,
+    /// Its M+1 in the same spectrum, % of it (any intensity, not only above `min_rel`).
+    m1: Option<f64>,
 }
 
 /// The peaks of a spectrum as (m/z, % of the base peak), in m/z order.
@@ -54,8 +56,13 @@ fn precursore(s: Option<&Spettro>, nominale: f64) -> (Option<(f64, f64)>, bool) 
 }
 
 /// The peaks of the spectrum of a node of the tree that enter the graph: the most intense above `min_rel`, not heavier than the precursor,
-/// not the precursor itself; with `iso` = index (in the result) of the peak whose M+1 it is.
-fn picchi(s: &Spettro, prec: f64, o: &Opzioni, c: &mut Conteggi) -> Vec<(f64, f64, Option<usize>)> {
+/// not the precursor itself; with the index (in the result) of the peak whose M+1 it is, and its own M+1 in % of it.
+fn picchi(
+    s: &Spettro,
+    prec: f64,
+    o: &Opzioni,
+    c: &mut Conteggi,
+) -> Vec<(f64, f64, Option<usize>, Option<f64>)> {
     let tutti = relativi(s);
     let mut forti: Vec<(f64, f64)> = tutti.iter().copied().filter(|p| p.1 >= o.min_rel).collect();
     crate::sortc::by(&mut forti, |a, b| {
@@ -65,7 +72,7 @@ fn picchi(s: &Spettro, prec: f64, o: &Opzioni, c: &mut Conteggi) -> Vec<(f64, f6
     c.deboli += tutti.len() - forti.len();
     crate::sortc::by(&mut forti, |a, b| a.0.total_cmp(&b.0));
     let tp = o.tol(prec);
-    let mut out: Vec<(f64, f64, Option<usize>)> = vec![];
+    let mut out: Vec<(f64, f64, Option<usize>, Option<f64>)> = vec![];
     for (m, r) in forti {
         if m > prec + tp {
             c.pesanti += 1;
@@ -82,7 +89,12 @@ fn picchi(s: &Spettro, prec: f64, o: &Opzioni, c: &mut Conteggi) -> Vec<(f64, f6
             c.isotopi += 1;
             continue;
         }
-        out.push((m, r, mono));
+        let m1 = tutti
+            .iter()
+            .filter(|q| (q.0 - m - C13).abs() <= o.tol(m))
+            .map(|q| q.1)
+            .fold(None, |a: Option<f64>, x| Some(a.map_or(x, |a| a.max(x))));
+        out.push((m, r, mono, m1.map(|x| x / r * 100.0)));
     }
     out
 }
@@ -128,12 +140,13 @@ fn osserva(ing: &Ingresso, o: &Opzioni, c: &mut Conteggi, avvisi: &mut Vec<Avvis
             livello: lp,
             prec_di: Some(t),
             iso_di: None,
+            m1: None,
         });
         let Some(s) = ing.spettri.get(t).filter(|_| attiva(o, att)) else {
             continue;
         };
         let base = obs.len();
-        for (m, r, mono) in picchi(s, pm, o, c) {
+        for (m, r, mono, m1) in picchi(s, pm, o, c) {
             obs.push(Oss {
                 mz: m,
                 rel: r,
@@ -141,6 +154,7 @@ fn osserva(ing: &Ingresso, o: &Opzioni, c: &mut Conteggi, avvisi: &mut Vec<Avvis
                 livello: n.livello,
                 prec_di: None,
                 iso_di: mono.map(|i| base + i),
+                m1,
             });
         }
     }
@@ -215,6 +229,11 @@ fn nodo(gr: &[usize], obs: &[Oss], ing: &Ingresso) -> NodoG {
         osservazioni: sorg.len(),
         rel_max: gr.iter().map(|&i| obs[i].rel).fold(0.0, f64::max),
         isotopo_di: None,
+        // the M+1 of the most intense peak of the node
+        m1: picchi
+            .iter()
+            .max_by(|a, b| a.rel.total_cmp(&b.rel))
+            .and_then(|x| x.m1),
         pos: (0, 0),
         formula: None,
     }

@@ -1,5 +1,5 @@
-//! Candidate formulas of a fragment: every sub-formula of the ion of the root within the tolerance, with its DBE, its electron parity and
-//! the terms of its score. A formula here is a vector of counts aligned with the elements of the root (`Elementi`).
+//! Candidate formulas of a fragment: every sub-formula of the ion of the root within a window of m/z, with its DBE, its electron parity
+//! and its expected M+1, and the known losses. A formula here is a vector of counts aligned with the elements of the root (`Elementi`).
 
 use super::PERDITE;
 use crate::elements::{fmt, mass_of, parse_formula, Formula, ELECTRON};
@@ -189,32 +189,38 @@ pub(super) fn elementi(f: &Formula, pol: i8) -> Elementi {
     e
 }
 
-/// An odd-electron fragment ion: CID and HCD of ESI ions give mostly even-electron fragments, but radicals exist.
-const DISPARI: f64 = -0.5;
-/// A loss in the list of the losses a chemist expects (`PERDITE`).
-const NOTA: f64 = 0.3;
-/// A radical neutral loss (CH3•, H•, OH•): rarer than an even-electron one.
-const RADICALE: f64 = -0.3;
+/// Abundance of the heavier isotope one mass unit up, % of the lightest (13C, 2H, 15N, 17O, 33S, 29Si, 77Se).
+const M1: [(&str, f64); 7] = [
+    ("C", 1.0816),
+    ("H", 0.0115),
+    ("N", 0.3653),
+    ("O", 0.0381),
+    ("S", 0.7893),
+    ("Si", 5.0778),
+    ("Se", 0.8),
+];
+/// An M+1 is coherent within this fraction of the expected one...
+const M1_REL: f64 = 0.3;
+/// ...or this many points of % (the M+1 of a small fragment is a few % and noisy).
+const M1_ABS: f64 = 2.0;
 
-/// The score of a candidate alone: its error over the tolerance, its electron parity.
-pub(super) fn punteggio(e: &Elementi, c: &[u32], ppm: f64, tol_ppm: f64) -> f64 {
-    let p = -ppm.abs() / tol_ppm;
-    if e.pari(c, e.pol) {
-        p
-    } else {
-        p + DISPARI
-    }
+/// The M+1 of the formula, % of the monoisotopic peak.
+pub(super) fn m1_atteso(e: &Elementi, c: &[u32]) -> f64 {
+    e.sim
+        .iter()
+        .zip(c)
+        .map(|(s, n)| *n as f64 * M1.iter().find(|x| x.0 == s).map_or(0.0, |x| x.1))
+        .sum()
 }
 
-/// The score of the loss from `p` to `c` (`c` under `p`).
-pub(super) fn punteggio_perdita(e: &Elementi, p: &[u32], c: &[u32]) -> f64 {
+/// The observed M+1 (% of the peak) agrees with the formula.
+pub(super) fn m1_coerente(e: &Elementi, c: &[u32], osservato: f64) -> bool {
+    let a = m1_atteso(e, c);
+    (osservato - a).abs() <= (M1_REL * a).max(M1_ABS)
+}
+
+/// The loss from `p` to `c` (`c` under `p`) is a known one.
+pub(super) fn perdita_nota(e: &Elementi, p: &[u32], c: &[u32]) -> bool {
     let d: Vec<u32> = p.iter().zip(c).map(|(a, b)| a - b).collect();
-    let mut s = 0.0;
-    if e.perdite.iter().any(|(_, c)| *c == d) {
-        s += NOTA;
-    }
-    if !e.pari(&d, 0) {
-        s += RADICALE;
-    }
-    s
+    e.perdite.iter().any(|(_, x)| *x == d)
 }

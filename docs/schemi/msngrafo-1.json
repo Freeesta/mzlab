@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "msngrafo/1",
  "title": "msngrafo/1: the fragmentation graph of an MSn infusion",
- "description": "Format «msngrafo/1» (crates/mzlab-core/src/msngrafo/, docs/agenti/msn-grafo.md): one node per ion seen at any level, energy or path, one arc per precursor → fragment with the neutral loss. With the formula of the ion of the root (opzioni.formula) every node below it gets a proposed sub-formula, with alternatives and reason; without it the formulas are null. Same input, same bytes.",
+ "description": "Format «msngrafo/1» (crates/mzlab-core/src/msngrafo/, docs/agenti/msn-grafo.md): one node per ion seen at any level, energy or path, one arc per precursor → fragment with the neutral loss. With the formula of the ion of the root given by the user (opzioni.formula) every fragment gets the sub-formulas of the root within its window (candidates, never a proposal) and the fragments with none leave the graph; without it the formulas are null. Same input, same bytes.",
  "type": "object",
  "required": [
   "formato",
@@ -12,7 +12,6 @@
   "polarita",
   "radici",
   "ione",
-  "calibrazione",
   "conteggi",
   "avvisi",
   "nodi",
@@ -50,8 +49,12 @@
     "isotopi",
     "attivazione",
     "formula",
-    "calibra",
-    "fissate"
+    "smiles",
+    "ppm_formula",
+    "mz_basso",
+    "ppm_basso",
+    "prove_min",
+    "scelte"
    ],
    "properties": {
     "ppm": {
@@ -87,11 +90,34 @@
      ],
      "description": "The ion of the root as typed (C8H11N4O2+, C8H10N4O2+H, C8H10N4O2 [M+H]+)"
     },
-    "calibra": {
-     "type": "boolean",
-     "default": true
+    "smiles": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "description": "The structure of the molecule, written back for the drawing of the fragments"
     },
-    "fissate": {
+    "ppm_formula": {
+     "type": "number",
+     "default": 10,
+     "description": "Window of the sub-formulas, ppm"
+    },
+    "mz_basso": {
+     "type": "number",
+     "default": 150,
+     "description": "Below this m/z the window may widen to ppm_basso"
+    },
+    "ppm_basso": {
+     "type": "number",
+     "default": 20
+    },
+    "prove_min": {
+     "type": "integer",
+     "minimum": 0,
+     "default": 1,
+     "description": "Evidences a candidate of the wide window needs"
+    },
+    "scelte": {
      "type": "array",
      "items": {
       "type": "object",
@@ -109,7 +135,7 @@
        }
       }
      },
-     "description": "Formulas chosen by the user, found again on the node within the tolerance"
+     "description": "Formulas chosen by the user, found again on the node within its window"
     }
    }
   },
@@ -156,31 +182,6 @@
     }
    ]
   },
-  "calibrazione": {
-   "oneOf": [
-    {
-     "type": "null"
-    },
-    {
-     "type": "object",
-     "required": [
-      "ppm",
-      "n"
-     ],
-     "additionalProperties": false,
-     "properties": {
-      "ppm": {
-       "type": "number",
-       "description": "Median error removed from every m/z"
-      },
-      "n": {
-       "type": "integer",
-       "minimum": 3
-      }
-     }
-    }
-   ]
-  },
   "conteggi": {
    "type": "object",
    "required": [
@@ -188,7 +189,8 @@
     "archi",
     "scartati_pesanti",
     "scartati_isotopi",
-    "scartati_deboli"
+    "scartati_deboli",
+    "scartati_formula"
    ],
    "properties": {
     "nodi": {
@@ -210,6 +212,11 @@
     "scartati_deboli": {
      "type": "integer",
      "minimum": 0
+    },
+    "scartati_formula": {
+     "type": "integer",
+     "minimum": 0,
+     "description": "Nodes with no sub-formula of the root in their window (they are not in nodi)"
     }
    }
   },
@@ -232,7 +239,7 @@
        "warn.msngrafo.rootMissing",
        "warn.msngrafo.fixedNotFound",
        "warn.msngrafo.userConflict",
-       "warn.msngrafo.noFormula"
+       "warn.msngrafo.isolatedUnexplained"
       ]
      },
      "albero": {
@@ -263,6 +270,7 @@
      "osservazioni",
      "rel_max",
      "isotopo_di",
+     "m1",
      "pos",
      "formula"
     ],
@@ -323,7 +331,7 @@
       }
      },
      "formula": {
-      "description": "The proposed formula of the ion (a proposal, never an identification)",
+      "description": "The sub-formulas of the ion of the root that explain the node: candidates, never an identification",
       "oneOf": [
        {
         "type": "null"
@@ -332,103 +340,89 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
-         "proposta",
-         "ppm",
-         "dbe",
-         "elettroni",
-         "n_candidati",
-         "alternative",
-         "motivo",
-         "fonte",
-         "ambigua"
+         "candidati",
+         "scelta",
+         "fonte"
         ],
         "properties": {
-         "proposta": {
-          "type": "string"
-         },
-         "ppm": {
-          "type": "number"
-         },
-         "dbe": {
-          "type": "number"
-         },
-         "elettroni": {
-          "enum": [
-           "pari",
-           "dispari"
-          ]
-         },
-         "n_candidati": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Sub-formulas of the root within the tolerance, before the constraints of the graph"
-         },
-         "alternative": {
+         "candidati": {
           "type": "array",
-          "maxItems": 4,
+          "minItems": 1,
           "items": {
            "type": "object",
+           "additionalProperties": false,
            "required": [
             "formula",
+            "mz_teorico",
             "ppm",
             "dbe",
-            "punteggio"
+            "elettroni",
+            "finestra",
+            "prove"
            ],
-           "additionalProperties": false,
            "properties": {
             "formula": {
              "type": "string"
             },
-            "ppm": {
+            "mz_teorico": {
              "type": "number"
+            },
+            "ppm": {
+             "type": "number",
+             "description": "(m/z of the node − mz_teorico) / mz_teorico"
             },
             "dbe": {
              "type": "number"
             },
-            "punteggio": {
-             "type": "number"
+            "elettroni": {
+             "enum": [
+              "pari",
+              "dispari"
+             ]
+            },
+            "finestra": {
+             "type": "number",
+             "description": "ppm_formula, or ppm_basso for a candidate with evidences"
+            },
+            "prove": {
+             "type": "array",
+             "items": {
+              "enum": [
+               "perdita",
+               "isotopi",
+               "msn"
+              ]
+             }
             }
            }
-          }
+          },
+          "description": "By |ppm|, then Hill order"
          },
-         "motivo": {
-          "type": "object",
-          "required": [
-           "chiave",
-           "parametri"
+         "scelta": {
+          "type": [
+           "string",
+           "null"
           ],
-          "additionalProperties": false,
-          "properties": {
-           "chiave": {
-            "enum": [
-             "why.msngrafo.root",
-             "why.msngrafo.user",
-             "why.msngrafo.unique",
-             "why.msngrafo.tree",
-             "why.msngrafo.best"
-            ]
-           },
-           "parametri": {
-            "type": "object",
-            "additionalProperties": {
-             "type": "number"
-            }
-           }
-          }
+          "description": "Only with one candidate, or chosen by the user"
          },
          "fonte": {
           "enum": [
-           "auto",
+           "radice",
+           "unica",
            "utente",
-           "radice"
+           null
           ]
-         },
-         "ambigua": {
-          "type": "boolean"
          }
         }
        }
       ]
+     },
+     "m1": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "description": "The M+1 of its most intense observation, % of it"
      }
     }
    }
@@ -470,7 +464,7 @@
          "string",
          "null"
         ],
-        "description": "Precursor formula minus fragment formula (usual name for a known loss)"
+        "description": "Chosen formula of the precursor minus that of the fragment (usual name for a known loss)"
        },
        "ppm": {
         "type": [
