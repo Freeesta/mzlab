@@ -18,10 +18,14 @@ pub fn tabui() -> Vec<Step> {
     all
 }
 
-/// `structure.reactivity`: condensed Fukui functions of the parent (`reactivity_json`, `reatt/1`), shown as a prior of the sites, never as a decision.
-pub fn reactivity() -> Step {
-    let d = Opts::parse("").expect("empty options are the defaults");
-    let algorithm = |id, title, doc, applicability| Algorithm {
+/// An available algorithm at version 1 without references or parameters.
+fn algorithm(
+    id: &'static str,
+    title: &'static str,
+    doc: &'static str,
+    applicability: Applicability,
+) -> Algorithm {
+    Algorithm {
         id,
         version: 1,
         title,
@@ -30,8 +34,11 @@ pub fn reactivity() -> Step {
         applicability,
         params: Vec::new(),
         status: Status::Available,
-    };
-    let gfn2 = Algorithm {
+    }
+}
+
+fn gfn2() -> Algorithm {
+    Algorithm {
         references: vec![
             Reference {
                 doi: "10.1021/acs.jctc.8b01176",
@@ -55,8 +62,11 @@ pub fn reactivity() -> Step {
             "ETKDG geometry, GFN2-xTB of the neutral molecule, the cation and the anion at the same geometry; f(+), f(-), f(0) and the dual from the Mulliken charges, f(-) also on the lowest conformers for its spread; C-H sites by symmetry class (reactivity_json in crates/mzlab-chem/src/reatt.rs).",
             Applicability::default(),
         )
-    };
-    let huckel = Algorithm {
+    }
+}
+
+fn extended_huckel() -> Algorithm {
+    Algorithm {
         references: vec![Reference {
             doi: "10.1063/1.1734456",
             citation_key: "hoffmann1963extended",
@@ -71,7 +81,12 @@ pub fn reactivity() -> Step {
                 ..Applicability::default()
             },
         )
-    };
+    }
+}
+
+/// `structure.reactivity`: condensed Fukui functions of the parent (`reactivity_json`, `reatt/1`), shown as a prior of the sites, never as a decision.
+pub fn reactivity() -> Step {
+    let d = Opts::parse("").expect("empty options are the defaults");
     Step {
         package: "tabui",
         ins: vec![Port::new("parent", DataType::Structure, "Parent compound (SMILES)")],
@@ -97,7 +112,7 @@ pub fn reactivity() -> Step {
             native: true,
         },
         errors: vec!["error.chem.smiles", "error.chem.opts", "error.chem.embed", "error.chem.scc"],
-        algorithms: vec![gfn2, huckel],
+        algorithms: vec![gfn2(), extended_huckel()],
         default_algorithm: Some("gfn2_xtb"),
         references: vec![Reference {
             doi: "10.1021/acs.jcim.5b00654",
