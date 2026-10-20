@@ -57,6 +57,7 @@ PROFILI = {
                      passo=0.1, famiglie_extra=30, t_sat=20.0, n_rumore=8000, n_regole=12, n_esche=400),
 }
 ESTESO = dict(catene={"3": 6, "2": 12}, f_isf_tp=0.5, n_isf_variabile=6, n_travestiti=8, escala_k=1.0, t_limite=72.0, gap_tmax=1.5, n_alogenati=8, gruppi_per_dt=3)
+PROFILI["piccolo-degdma"] = {**PROFILI["piccolo"], "degdma": True}
 PROFILI["V1X"] = {**PROFILI["completo"], "esteso": ESTESO}
 PROFILI["V1X-piccolo"] = {**PROFILI["piccolo"], "esteso": {**ESTESO, "catene": {"3": 2, "2": 3}, "n_isf_variabile": 2, "n_travestiti": 4, "escala_k": 3.0, "t_limite": 16.0, "gap_tmax": 0.5,
                                                             "n_alogenati": 4, "gruppi_per_dt": 1}}
@@ -242,7 +243,7 @@ class Costruttore(Derivati):
         """An ion of a molecule (neutral formula)."""
         o = Ione(id=id, ruolo=ruolo, famiglia=famiglia, rt=float(rt), sg=float(sg), amp=amp, **kw)
         if neutra is not None:
-            o.ion = E.fmt(somma(neutra, {"[M+H]+": {"H": 1}, "[M+Na]+": {"Na": 1}, "[M+NH4]+": {"N": 1, "H": 4}}[adduct]))
+            o.ion = E.fmt(somma(neutra, {"[M+H]+": {"H": 1}, "[M+Na]+": {"Na": 1}, "[M+NH4]+": {"N": 1, "H": 4}, "[M+K]+": {"K": 1}}[adduct]))
             o.picchi, mz, rel = modello(o.ion)
             o.mz = float(mz[0])
         self.ioni.append(o)
@@ -376,6 +377,9 @@ def costruisci(seme: int, profilo: str) -> Costruttore:
     prodotti_cinetici(c, padre, neutra)
     isomeri(c, padre, neutra)
     chimeriche(c, padre, neutra)
+    if c.P.get("degdma"):
+        from valida import sintetici_degdma                    # a hard family: weak [M+H]+, strong adducts, base-peak in-source fragment, same m/z from a product
+        sintetici_degdma.aggiungi(c, somma, modello, Ione, frammenti_di)
     if c.P.get("esteso"):
         from valida import sintetici_esteso                    # V1X: chains, in-source fragments of the products, halogens, close isomers
         sintetici_esteso.estendi(c)

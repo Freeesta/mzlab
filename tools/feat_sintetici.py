@@ -9,6 +9,10 @@ background, none) and their `.mzidx`: `<name>.mzidx` for `trace_parity.rs` (answ
 
 writes the small synthetic identity series (seed 7, `tools/valida/sintetici_identita.py`) in OUT/identita/ and the `.mzidx` of every file
 (`OUT/ri_<name>.mzidx`); `OUT/identita.mzidx` is the one of SIN_t10min (answers: `iso_ms2_identita.json`, `famiglie_*.json`, `riempimento.json`).
+    python3 tools/feat_sintetici.py OUT --solo degdma
+
+writes the hard family of `tools/valida/sintetici_degdma.py` (weak [M+H]+, strong Na/K/NH4 adducts, a base-peak in-source fragment, the same m/z from a later product):
+OUT/degdma.mzidx and OUT/degdma/verita.json.
 No compound names: every ion is a number.
 """
 import shutil
@@ -55,11 +59,23 @@ def identita(out: Path) -> int:
     return len(files)
 
 
+def degdma(out: Path) -> int:
+    """The hard family (`sintetici_degdma.py`): only the file at 10 min is indexed, OUT/degdma.mzidx, with the truth in OUT/degdma/verita.json."""
+    from valida import sintetici_identita as si
+    d = out / "degdma"
+    si.genera(7, "piccolo-degdma", d)
+    indice(d / "SIN_t10min.mzML", out / "degdma.mzidx")
+    return 1
+
+
 def main(argv) -> int:
     out = Path(argv[0])
     out.mkdir(parents=True, exist_ok=True)
     if "--solo" in argv and argv[argv.index("--solo") + 1] == "identita":
         print("identita", identita(out))
+        return 0
+    if "--solo" in argv and argv[argv.index("--solo") + 1] == "degdma":
+        print("degdma", degdma(out))
         return 0
     for nome, (seed, ioni, fine) in piani().items():
         mz = out / f"{nome}.mzML"
