@@ -1,6 +1,6 @@
 // @ts-check
 // Flow (administrator mode): the results of a node. A VIEW is registered for the data types it can show (F.registerView); a node whose steps make such a type gets a
-// «Results» block in its panel: the file the last run made (desktop) or a file chosen from disk (web). The view opens under the canvas. Only a CSV table view exists so far.
+// «Results» block in its panel: the file the last run made (desktop) or a file chosen from disk (web). The view opens under the canvas. Views: CSV tables here; JSON and MGF results in flow-views-attributio.js.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
@@ -9,7 +9,19 @@
   F.VIEWS = [];
   /** a view shows the files of some data types: open(host, item) fills host; item = {type, label, text: () => Promise<string>} @param {any} v */
   F.registerView = v => { F.VIEWS.push(v); };
-  F.viewFor = (/** @type {string} */ type) => F.VIEWS.find((/** @type {any} */ v) => v.types.includes(type));
+  /** the view for a type; with the item, a view that accepts it wins, then one that takes any file of the type @param {string} type @param {any} [item] */
+  F.viewFor = (type, item) => {
+    const mine = F.VIEWS.filter((/** @type {any} */ v) => v.types.includes(type));
+    return (item && mine.find((/** @type {any} */ v) => v.accepts && v.accepts(item))) || mine.find((/** @type {any} */ v) => !v.accepts) || mine[0];
+  };
+
+  /** a table with its caption from head and rows of strings (the first MAX_ROWS rows) @param {HTMLElement} host @param {{caption: string, head: string[], rows: string[][], label: string}} t */
+  F.drawTable = (host, t) => {
+    const { el } = F, body = t.rows.slice(0, MAX_ROWS);
+    host.append(el("div", { class: "flx-tablewrap", tabindex: 0, role: "region", "aria-label": t.label }, el("table", { class: "flx-table" }, el("caption", { text: `${t.caption}: ${body.length} of ${t.rows.length} rows` }),
+      el("thead", {}, el("tr", {}, ...t.head.map(h => el("th", { scope: "col", text: h })))),
+      el("tbody", {}, ...body.map(r => el("tr", {}, ...r.map(c => el("td", { text: c }))))))));
+  };
 
   /** CSV text to rows: quoted cells, doubled quotes, CRLF; a tab-separated file is told by its first line @param {string} text @returns {string[][]} */
   F.parseCsv = text => {
@@ -43,7 +55,7 @@
     });
   };
 
-  F.registerView({ id: "table", title: "Table", types: ["table", "annot", "tp", "candidates", "formulas", "library"], open: async (host, item) => {
+  F.registerView({ id: "table", title: "Table", types: ["table", "annot", "tp", "candidates", "formulas", "library", "spectra"], accepts: item => /\.(csv|tsv|txt)$/i.test(item.label), open: async (host, item) => {
     const { el } = F;
     if (!/\.(csv|tsv|txt)$/i.test(item.label)) { host.append(el("p", { class: "fl-note", text: `${item.label} is not a text table, so there is nothing to show here.` })); return; }
     const rows = F.parseCsv(await item.text()), head = rows[0] || [], body = rows.slice(1, MAX_ROWS + 1), cols = Math.min(head.length, MAX_COLS);
@@ -60,7 +72,7 @@
 
   /** shows a result under the canvas, with a way back @param {any} item */
   F.openResult = async item => {
-    const root = document.getElementById("flx-root"), view = F.viewFor(item.type);
+    const root = document.getElementById("flx-root"), view = F.viewFor(item.type, item);
     if (!root || !view) return;
     root.querySelectorAll(".flx-res").forEach(n => n.remove());
     const { el } = F, host = el("div", { class: "flx-res-body" }), head = el("h3", { tabindex: -1, text: `${view.title}: ${item.label}` });
@@ -82,7 +94,7 @@
     for (const { id, port } of mine) {
       const made = (S.results[id] || []).filter((/** @type {any} */ r) => r.type === port.type);
       for (const r of made) box.append(F.btn("file", `Open ${r.label}`, () => F.openResult(r), r.label));
-      const pick = el("input", { type: "file", hidden: true, accept: ".csv,.tsv,.txt", "aria-label": `Choose a ${port.title} file`, onchange: (/** @type {any} */ e) => {
+      const pick = el("input", { type: "file", hidden: true, accept: ".csv,.tsv,.txt,.json,.mgf,.msp", "aria-label": `Choose a ${port.title} file`, onchange: (/** @type {any} */ e) => {
         const f = e.target.files && e.target.files[0]; if (!f) return;
         const item = { type: port.type, label: f.name, text: () => f.text() };
         S.results[id] = [...(S.results[id] || []).filter((/** @type {any} */ r) => r.label !== f.name), item];

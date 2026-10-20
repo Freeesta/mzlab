@@ -4,7 +4,7 @@ const fs = require("fs"), vm = require("vm"), path = require("path"), assert = r
 const eq = (a, b) => assert.strictEqual(JSON.stringify(a), JSON.stringify(b));
 const root = path.resolve(__dirname, "..");
 const ctx = vm.createContext({});
-for (const f of ["registry", "check", "plan", "inputs", "names", "fix", "results"]) vm.runInContext(fs.readFileSync(path.join(root, "flow/lazy/flow-" + f + ".js"), "utf8"), ctx);
+for (const f of ["registry", "check", "plan", "inputs", "names", "fix", "results", "views-attributio"]) vm.runInContext(fs.readFileSync(path.join(root, "flow/lazy/flow-" + f + ".js"), "utf8"), ctx);
 const F = ctx.FLOW;
 const reg = F.registry(["steps-1", "steps-attributio-1", "steps-tabui-1"].map(n => JSON.parse(fs.readFileSync(path.join(root, "docs/schemi", n + ".json"), "utf8"))));
 const problems = plan => F.check(F.normalize(F.exportPlan(plan)), reg, "native").map(F.problemLine);
@@ -77,4 +77,13 @@ eq(F.tableSummary([["id", "mz", "name"], ["1", "100.5", "a"], ["2", "", ""], ["3
 for (const a of F.ADDONS) for (const id of a.steps) assert.ok(F.NAMES[id], a.id + " " + id);
 for (const id of ["spectra.chimeric", "formula.ms1", "formula.ms2", "spectra.match", "spectra.insilico", "rt.predict", "annot.level", "annot.regulatory", "annot.hazard"]) assert.ok(F.ADDONS.some(a => a.steps.includes(id)), id);
 assert.ok(F.viewFor("table") && F.viewFor("annot") && !F.viewFor("raw"));
+// the identification views: JSON shapes become tables, the MGF reader keeps title, precursor, RT and peaks; a file is routed to the view that accepts it
+eq(F.readCandidates({ hits: [{ query: "q1", name: "A", formula: "C2H6O", score: 0.91234, shared: 3, mass_ppm: 1.234, source: "lib", algorithm: "cosine" }] }).rows, [["q1", "A", "C2H6O", "0.9123", "3", "1.23", "lib", "cosine"]]);
+eq(F.readAnnot({ rows: [{ id: "q1", level: "2a", why: "2a", name: "A", gates: [{ id: "score", ok: false, value: 0.5, threshold: 0.7 }] }] }).rows, [["q1", "2a", "2a", "A", "", "score 0.5 / 0.7 (not met)"]]);
+eq(F.readFormulas({ features: [{ id: "f1", mz: 100, rt: 2, file: "a", scan: 5, result: { chosen: "C5H8", candidates: [{ formula: "C6H10", error_ppm: 1 }, { formula: "C5H8", error_ppm: 0.5, score: 0.8, confidence: "high" }] } }, { id: "f2", mz: 1, rt: 1, error: "err.x" }] }).rows.map(r => [r[0], r[5], r[9]]), [["f1", "C5H8", ""], ["f2", "", "err.x"]]);
+const fs2 = F.readFormulas({ spectra: [{ query: "s1", precursor: 150.1, peaks: 4, candidates: [{ formula: "C9H10", adduct: "[M+H]+", ppm_ion: 1, n_explained: 1, frac_explained: 0.5, score: 0.4, fragments: [{ mz: 91.05, intensity: 10, formula: "C7H7", mz_th: 91.054, ppm: 2, loss: "C2H3" }] }] }] });
+eq([fs2.rows.length, fs2.fragments.rows.length], [1, 1]);
+const mgf = F.readMgf("BEGIN IONS\nTITLE=s1\nPEPMASS=150.1 1000\nCHARGE=1+\nRTINSECONDS=12.5\n91.05 10\n120 5.5\nEND IONS\nBEGIN IONS\nTITLE=s2\nEND IONS\n");
+eq([mgf.length, mgf[0].title, mgf[0].pepmass, mgf[0].rt, mgf[0].peaks], [2, "s1", 150.1, 12.5, [[91.05, 10], [120, 5.5]]]);
+eq([F.viewFor("candidates", { label: "x.json" }).id, F.viewFor("spectra", { label: "x.mgf" }).id, F.viewFor("annot", { label: "x.csv" }).id], ["candidates", "spectra", "table"]);
 console.log("ok");

@@ -60,6 +60,9 @@
     { id: "regulatory", name: "Regulatory lists", line: "Flag regulated and suspected substances.", steps: ["annot.regulatory"] },
     { id: "hazard", name: "Aquatic hazard", line: "Estimate the hazard of each compound to water life.", steps: ["annot.hazard"] },
     { id: "tp", name: "Transformation products", line: "Predict and look for the products of a parent.", steps: ["tp.generate", "tp.link"] },
+    { id: "tpfilter", name: "Filter products", line: "Keep the products that show up in your data.", steps: ["tp.filter"] },
+    { id: "position", name: "Where it changed", line: "Propose which part of the molecule was modified.", steps: ["tp.position"] },
+    { id: "reactivity", name: "Where it reacts", line: "Estimate which parts of the parent are most reactive.", steps: ["structure.reactivity"] },
   ];
   F.TEMPLATES = [
     { id: "identify", name: "Find and identify compounds in my samples", good: "Good for: unknown compounds in real samples.", addons: ["formulas", "match", "level"] },

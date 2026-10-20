@@ -118,7 +118,7 @@
     const bar = el("div", { class: "flx-bar" }, el("h2", { text: "Flow" }), tplBtn, addBtn, el("span", { class: "flx-seg", role: "group", "aria-label": "Mode" }, ...modeBtns), undoBtn, fitBtn, check, open, run, status);
     const tabs = ["canvas", "list", "plan"].map(t => el("button", { type: "button", role: "tab", "aria-selected": String(t === tab), "data-tab": t, onclick: () => setTab(t) }, el("span", { text: t === "canvas" ? "Canvas" : t === "list" ? "List view" : "Plan (JSON)" })));
     const body = el("div", { class: "flx-body" }, palHost, cv.root, inspHost);
-    const root = el("div", { class: "fl flx", id: "flx-root" }, bar, el("div", { class: "flx-tabs", role: "tablist", "aria-label": "Views" }, ...tabs), live, body, planView, listHost);
+    const root = el("div", { class: "flw flx", id: "flx-root" }, bar, el("div", { class: "flx-tabs", role: "tablist", "aria-label": "Views" }, ...tabs), live, body, planView, listHost);
     function setTab(/** @type {string} */ t) {
       tab = t; tabs.forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
       body.hidden = t !== "canvas"; planView.hidden = t !== "plan"; listHost.hidden = t !== "list"; redraw(); if (t === "canvas") cv.fit();

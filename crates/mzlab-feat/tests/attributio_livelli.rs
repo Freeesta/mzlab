@@ -204,12 +204,12 @@ fn the_chemists_2b_decision_beats_the_library_and_the_structure() {
 }
 
 #[test]
-fn step_4_csi_fingerid_gives_level_3_above_cosmic_and_canopus_gives_level_4_above_its_threshold() {
+fn step_4_csi_fingerid_gives_level_3_above_cosmic_and_a_canopus_class_gives_no_level() {
     let a = run(&fixture("campagna_sintetica"));
     is(&a, "POS", 4, (3, "a", "CSI:FingerID"));
-    is(&a, "POS", 5, (4, "", "CANOPUS class"));
-    let a = run(&variant("canopus_min = 0.99", "", &[]));
+    // POS 5 has a CANOPUS class above the threshold and nothing else: the class is shown, the level stays 0
     is(&a, "POS", 5, (0, "", "none"));
+    assert!(find(&a, "POS", 5).classes[0].is_some() || find(&a, "POS", 5).classes[3].is_some());
     let a = run(&variant("cosmic_min = 0.99", "", &[]));
     assert_ne!(find(&a, "POS", 4).level_basis, "CSI:FingerID");
 }
@@ -243,7 +243,6 @@ fn every_basis_has_its_text_in_the_attributio_profile_of_the_levels() {
         "reference standard",
         "spectral library",
         "CSI:FingerID",
-        "CANOPUS class",
     ] {
         assert!(text.contains(basis), "{basis}");
     }

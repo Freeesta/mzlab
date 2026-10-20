@@ -5,7 +5,7 @@
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
   const CSS = `
-.fl.flx{display:flex;flex-direction:column;gap:8px;min-width:0;padding:0}.flx *{box-sizing:border-box}
+.flw.flx{display:flex;flex-direction:column;gap:8px;min-width:0;padding:0}.flx *{box-sizing:border-box}
 .flx .flx-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.flx .flx-bar h2{margin:0;font-size:16px;margin-right:4px}
 .flx .flx-seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.flx .flx-seg button{border:0;background:var(--panel);color:var(--ink);min-height:28px;padding:2px 12px;cursor:pointer}
 .flx .flx-seg button[aria-pressed=true]{background:var(--accent);color:var(--bg)}.flx .flx-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
@@ -43,6 +43,7 @@
 .flx.flx-simple .flx-adv-only{display:none}
 .flx .fl-results{display:flex;flex-direction:column;gap:6px;margin-top:10px}.flx .fl-results h4{margin:0}.flx .flx-res{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:8px}
 .flx .flx-res h3{flex:1;margin:0;overflow-wrap:anywhere}.flx .flx-tablewrap{max-height:50vh;overflow:auto;margin-top:6px}.flx .flx-table{border-collapse:collapse;font-size:12px}
+.flx .flx-sticks{width:100%;max-width:640px;height:auto;display:block}.flx .flx-stick{stroke:var(--accent);stroke-width:2}.flx .flx-prec{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 3}.flx .flx-ax{stroke:var(--line);stroke-width:1}.flx .flx-tick{fill:var(--muted);font-size:11px}.flx{--gv1:#0072B2;--gv2:#E69F00;--gv3:#009E73;--gv4:#D55E00;--gv5:#CC79A7;--gv6:#56B4E9;--gv7:#F0E442;--gv8:var(--ink)}.flx .flx-one{margin-top:6px}
 .flx .flx-qc{margin-top:6px}.flx .flx-qc summary{cursor:pointer;min-height:24px}.flx .flx-table th[scope=row]{background:none;position:static;font-weight:600}.flx .flx-table caption{text-align:left;color:var(--muted);padding:4px 0}.flx .flx-table th,.flx .flx-table td{border:1px solid var(--line);padding:3px 8px;text-align:left;white-space:nowrap}.flx .flx-table th{position:sticky;top:0;background:var(--soft)}
 @media (max-width:900px){.flx .flx-body,.flx .flx-body.flx-adv{grid-template-columns:minmax(0,1fr)}.flx .fl-insp{max-height:none}}
 @media (pointer:coarse){.flx .fln-next{width:40px;height:40px;right:-20px;margin-top:-20px}.flx .flx-seg button,.flx .flx-tabs button{min-height:40px}}

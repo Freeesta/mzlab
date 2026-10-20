@@ -1,6 +1,6 @@
 // Ported from Attributio annotate.py.
 //! The gates of each source and the basis of the level: the first that holds wins (reference standard, spectral library, putative library, CSI:FingerID,
-//! suspect-RT, CANOPUS class, none). Also the structure that a feature carries (SIRIUS, GNPS2 exact, mzMine) and the sorbents and sites it was detected in.
+//! suspect-RT, none). Also the structure that a feature carries (SIRIUS, GNPS2 exact, mzMine) and the sorbents and sites it was detected in.
 
 use super::settings::{basis_level, AnnotationSettings};
 use super::types::Feature;
@@ -74,7 +74,6 @@ fn basis_of(f: &Feature) -> &'static str {
     let g = &f.gates;
     let lib = g.sirius_spectral || g.gnps2 || g.mzmine_library;
     let putative = g.spec_putative || g.gnps_putative || g.mzlib_putative;
-    let class = f.classes[0].is_some() || f.classes[3].is_some();
     if g.l1 {
         "reference standard"
     } else if lib {
@@ -85,8 +84,6 @@ fn basis_of(f: &Feature) -> &'static str {
         "CSI:FingerID"
     } else if g.std_rt {
         "suspect-RT"
-    } else if class {
-        "CANOPUS class"
     } else {
         "none"
     }
