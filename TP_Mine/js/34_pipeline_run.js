@@ -26,6 +26,7 @@
   function mount(box, ctx) {
     st.ctx = ctx; box.innerHTML = html(); st.box = box;
     $("#pipe-run-go").onclick = () => run();
+    if (window.MZLAB_DESKTOP) { const b = $("#pipe-both"); b.disabled = true; b.title = "Not available in the desktop app yet"; }
     $("#pipe-again").onclick = again; ctx.onRefresh(armAgain); armAgain();
     const sync = async () => { st.files = await ctx.listIdx(); await loadRoles(); };
     ctx.onRefresh(sync); sync();
