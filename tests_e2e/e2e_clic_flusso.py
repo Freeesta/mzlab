@@ -2,7 +2,7 @@
 capture listeners in the page (trusted click, key chord, no modifier alone). The OS file dialog (click on «Choose files...», Ctrl+A, Enter) and the paste of the SMILES (click on the field, Ctrl+V)
 cannot be driven by Playwright, so they are added as declared constants; opening Tabui (5 clicks on the logo, once per browser) is reported apart. The line «MISURA» goes in docs/agenti/misure-clic.md.
 Run from the repo root: python3 tests_e2e/e2e_clic_flusso.py"""
-import subprocess, sys, tempfile, time
+import subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
@@ -24,13 +24,17 @@ subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", 
 from lib_sito import add_wasm; add_wasm(tmp / "site")
 from lib import build_feat; build_feat(tmp / "site" / "static", dict(__import__("os").environ, RUNNER_TEMP=str(tmp / "rt")))      # the engine of mzFinder
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(tmp / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1); errs = []
+import socket
+for _ in range(2000):                 # the server answers once the port is open (a refused connection returns at once)
+    try: socket.create_connection(("127.0.0.1", PORT), timeout=1).close(); break
+    except OSError: pass
+errs = []
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1500, "height": 1400}, reduced_motion="reduce").new_page()
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
-        pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_timeout(3200)
+        pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
         pg.evaluate(COUNT)
         def flow():
