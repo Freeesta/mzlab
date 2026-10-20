@@ -18,12 +18,14 @@ use wasm_bindgen::prelude::*;
 /// `.wasm` `attributio-rev`: it exports the review, the decision and the evidence export; the build with `export` is the `.wasm` `attributio-export`: the four spreadsheet exports only; the one without them exports the table only.
 #[cfg(not(any(feature = "rev", feature = "export", feature = "ms2")))]
 const BRIDGE: &str = "mzfeat-attributio/1";
-#[cfg(feature = "rev")]
+#[cfg(all(feature = "rev", not(feature = "all")))]
 const BRIDGE: &str = "mzfeat-attributio-rev/1";
-#[cfg(feature = "export")]
+#[cfg(all(feature = "export", not(feature = "all")))]
 const BRIDGE: &str = "mzfeat-attributio-export/1";
-#[cfg(feature = "ms2")]
+#[cfg(all(feature = "ms2", not(feature = "all")))]
 const BRIDGE: &str = "mzfeat-attributio-ms2/1";
+#[cfg(feature = "all")]
+const BRIDGE: &str = "mzfeat-attributio-all/1";
 
 #[wasm_bindgen]
 pub fn version() -> String {
@@ -156,7 +158,7 @@ pub fn export_with(
     with_io(files, fetch, &|io| export_kind(io, &files.root, kind, &o))
 }
 
-#[cfg(feature = "export")]
+#[cfg(all(feature = "export", not(feature = "all")))]
 fn export_kind(
     io: &Io,
     root: &str,
@@ -166,7 +168,7 @@ fn export_kind(
     mzlab_feat::attributio::export::run::run(io, root, kind, o)
 }
 
-#[cfg(feature = "rev")]
+#[cfg(all(feature = "rev", not(feature = "all")))]
 fn export_kind(
     io: &Io,
     root: &str,
@@ -179,6 +181,21 @@ fn export_kind(
         ));
     }
     mzlab_feat::attributio::review::evidence::evidence_json(io, root)
+}
+
+/// The merged `.wasm`: the evidence export needs the review, the others the cascade of the exports.
+#[cfg(feature = "all")]
+fn export_kind(
+    io: &Io,
+    root: &str,
+    kind: &str,
+    o: &Options,
+) -> mzlab_feat::attributio::error::Result<String> {
+    if kind == "evidence" {
+        mzlab_feat::attributio::review::evidence::evidence_json(io, root)
+    } else {
+        mzlab_feat::attributio::export::run::run(io, root, kind, o)
+    }
 }
 
 /// `text` written to `write` in pieces of about 64 KiB at increasing offsets.
@@ -252,7 +269,10 @@ fn js_fetch(read: &Function, k: usize, off: u64, len: u64) -> Option<Vec<u8>> {
     Some(v.dyn_into::<Uint8Array>().ok()?.to_vec())
 }
 
-#[cfg(not(any(feature = "rev", feature = "export", feature = "ms2")))]
+#[cfg(any(
+    not(any(feature = "rev", feature = "export", feature = "ms2")),
+    feature = "all"
+))]
 fn go(read: Function, names_json: &str, write: Function, kind: &str) -> Result<String, JsValue> {
     let files = Files::from_json(names_json).map_err(js_err)?;
     let run = run_with(&files, &|k, o, l| js_fetch(&read, k, o, l)).map_err(js_err)?;
@@ -268,21 +288,30 @@ fn go(read: Function, names_json: &str, write: Function, kind: &str) -> Result<S
 }
 
 /// The table as JSON `{"columns","rows"}` to `write`; answers `{n_features, by_level, fingerprint, settings, warnings}`.
-#[cfg(not(any(feature = "rev", feature = "export", feature = "ms2")))]
+#[cfg(any(
+    not(any(feature = "rev", feature = "export", feature = "ms2")),
+    feature = "all"
+))]
 #[wasm_bindgen]
 pub fn annotate_to(read: Function, names_json: &str, write: Function) -> Result<String, JsValue> {
     go(read, names_json, write, "json")
 }
 
 /// The table as CSV (`;`, UTF-8) to `write`; answers the same summary.
-#[cfg(not(any(feature = "rev", feature = "export", feature = "ms2")))]
+#[cfg(any(
+    not(any(feature = "rev", feature = "export", feature = "ms2")),
+    feature = "all"
+))]
 #[wasm_bindgen]
 pub fn table_csv(read: Function, names_json: &str, write: Function) -> Result<String, JsValue> {
     go(read, names_json, write, "csv")
 }
 
 /// The rows of the sheet `{"hojas":[{"nombre","filas"}]}` that the page zips into an XLSX, to `write`; answers the same summary.
-#[cfg(not(any(feature = "rev", feature = "export", feature = "ms2")))]
+#[cfg(any(
+    not(any(feature = "rev", feature = "export", feature = "ms2")),
+    feature = "all"
+))]
 #[wasm_bindgen]
 pub fn table_xlsx_rows(
     read: Function,

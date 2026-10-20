@@ -15,6 +15,8 @@ rev = []
 export = []
 # The MS2 engine (library search, in-silico ranking, hydrogen rearrangements, RT forest, chimeric intruders) as a .wasm of its own, `attributio-ms2`
 ms2 = []
+# The four of the above in ONE .wasm (`attributio`, the cascade of the table, the review, the exports and the MS2 engine): the module the site loads
+all = ["rev", "export", "ms2"]
 
 [dependencies]
 js-sys = "0.3.106"
