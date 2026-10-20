@@ -138,7 +138,7 @@ fn the_levels_are_the_expected_ones_and_the_csv_has_a_line_each() {
     assert_eq!(got.len(), 16, "header + 15 features");
     assert_eq!(
         got[0].join(";"),
-        "pol;id;mz;rt;level;sub;basis;name;identity;reasons;engine_name;engine_score;engine_agrees"
+        "pol;id;mz;rt;level;sub;basis;name;identity;reasons;engine_name;engine_score;engine_agrees;origin"
     );
     // livelli_attesi: _pol;_id;mz;rt;level;level_sub;level_basis;name;level_decisive
     let pick = |r: &Vec<String>, i: [usize; 5]| i.map(|k| r[k].clone());

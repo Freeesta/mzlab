@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 UNSAFE = re.compile(r"<\s*(script|iframe|object|embed|link|meta|base|form)\b|\son\w+\s*=|javascript:", re.I)
-SCRIPT = re.compile(r"^script: *([\w-]+\.js)$")
+SCRIPT = re.compile(r"^(script|script-before): *([\w./-]+\.js)$")
 IMPORTATI = Path(__file__).with_name("importati.txt")
 TITLE = re.compile(r"^title: *(.+)$")
 PARA_CLASS = re.compile(r"^\{\.(lead|note)\} +")
@@ -52,7 +52,7 @@ class Grezzo:
             elif t:
                 self.page_title = t.group(1)
             elif m:
-                self.scripts.append(m.group(1))
+                (self.scripts_before if m.group(1) == "script-before" else self.scripts).append(m.group(2))
             else:
                 self.head.append(ln[4:-3].strip())
         return "", i + 1

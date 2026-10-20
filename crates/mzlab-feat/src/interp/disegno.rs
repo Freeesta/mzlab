@@ -48,7 +48,7 @@ fn added_of(kind: &str) -> Option<&'static str> {
     match kind {
         "aromatic_cl" => Some("Cl"),
         "aromatic_br" => Some("Br"),
-        "demethyl" | "deethyl" | "dehydro" => None,
+        "demethyl" | "deethyl" | "dehydro" | "dechloro_oh" | "amino_oh" | "methyl_cooh" => None,
         _ => Some("O"),
     }
 }

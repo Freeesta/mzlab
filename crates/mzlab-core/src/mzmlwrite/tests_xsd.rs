@@ -1,6 +1,7 @@
 //! The indexed file against the PSI schema `mzML1.1.2_idx.xsd` (`xmllint`). The schema files are fetched once into a cache folder; without `xmllint`,
 //! `curl` or network the test says so and passes, so only a machine that can check really checks.
-use super::tests_indice::indexed_sample;
+use super::tests_indice::{indexed_header, indexed_sample};
+use crate::mzmlwrite::Header;
 use crate::mzmlwrite::ProcStep;
 use std::path::PathBuf;
 use std::process::Command;
@@ -44,8 +45,14 @@ fn the_indexed_file_validates_against_the_psi_schema() {
         version: "1".into(),
         params: vec![("min_height".into(), "1000".into())],
     };
-    for steps in [Vec::new(), vec![step]] {
-        let (_, idx) = indexed_sample(steps);
+    // a header with no source file and no component, which must leave out both lists
+    let bare = indexed_header(Header {
+        run: "x".into(),
+        ..Default::default()
+    })
+    .1;
+    let full = [Vec::new(), vec![step]].map(|steps| indexed_sample(steps).1);
+    for idx in std::iter::once(bare).chain(full) {
         let file = dir.join(format!("sample-{}.mzML", std::process::id()));
         std::fs::write(&file, &idx).unwrap();
         let out = Command::new("xmllint")

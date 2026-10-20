@@ -51,15 +51,7 @@ impl<W: Write> MzmlWriter<W> {
         s += "<mzML xmlns=\"http://psi.hupo.org/ms/mzml\" version=\"1.1.0\" id=\"mzlab\">\n";
         s += &format!("<cvList count=\"2\"><cv id=\"MS\" fullName=\"Proteomics Standards Initiative Mass Spectrometry Ontology\" version=\"{}\" URI=\"https://raw.githubusercontent.com/HUPO-PSI/psi-ms-CV/master/psi-ms.obo\"/><cv id=\"UO\" fullName=\"Unit Ontology\" version=\"09:04:2014\" URI=\"https://raw.githubusercontent.com/bio-ontology-research-group/unit-ontology/master/unit.obo\"/></cvList>\n", if indexed { "4.2.6" } else { "4.1.163" });
         let content = cv("MS:1000579", "MS1 spectrum", "") + &h.content.iter().map(|(a, n)| cv(a, n, "")).collect::<String>();
-        s += &format!("<fileDescription><fileContent>{}</fileContent><sourceFileList count=\"{}\">", content, h.sources.len());
-        for (i, f) in h.sources.iter().enumerate() {
-            let mut inner: String = h.source_cv.iter().map(|(a, n)| cv(a, n, "")).collect();
-            if let Some(x) = h.source_sha1.get(i) {
-                inner += &cv("MS:1000569", "SHA-1", x);
-            }
-            s += &format!("<sourceFile id=\"SRC{}\" name=\"{}\" location=\"file:///\">{inner}</sourceFile>", i + 1, esc(f));
-        }
-        s += "</sourceFileList></fileDescription>\n";
+        s += &format!("<fileDescription><fileContent>{content}</fileContent>{}</fileDescription>\n", source_list(h));
         if let Some((id, name)) = &h.sample {
             s += &format!("<sampleList count=\"1\"><sample id=\"{}\" name=\"{}\"/></sampleList>\n", esc(id), esc(name));
         }
@@ -72,11 +64,8 @@ impl<W: Write> MzmlWriter<W> {
         if let Some(sn) = &h.serial {
             s += &cv("MS:1000529", "instrument serial number", esc(sn));
         }
-        s += &format!("<componentList count=\"{}\">", h.components.len());
-        for (i, (kind, acc, name)) in h.components.iter().enumerate() {
-            s += &format!("<{kind} order=\"{}\">{}</{kind}>", i + 1, cv(acc, name, ""));
-        }
-        s += "</componentList><softwareRef ref=\"mzlab\"/></instrumentConfiguration></instrumentConfigurationList>\n";
+        s += &component_list(h);
+        s += "<softwareRef ref=\"mzlab\"/></instrumentConfiguration></instrumentConfigurationList>\n";
         s += "<dataProcessingList count=\"1\"><dataProcessing id=\"conversion\"><processingMethod order=\"0\" softwareRef=\"mzlab\">";
         s += &cv("MS:1000544", "Conversion to mzML", "");
         if h.centroided {
@@ -450,6 +439,34 @@ fn window_xml(w: Option<(f64, f64)>) -> String {
 
 fn mz_cv(acc: &str, name: &str, value: f64) -> String {
     format!("<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\" unitCvRef=\"MS\" unitAccession=\"MS:1000040\" unitName=\"m/z\"/>")
+}
+
+/// The `sourceFileList` of the header; the schema wants at least one child, so no source means no list.
+fn source_list(h: &Header) -> String {
+    if h.sources.is_empty() {
+        return String::new();
+    }
+    let mut s = format!("<sourceFileList count=\"{}\">", h.sources.len());
+    for (i, f) in h.sources.iter().enumerate() {
+        let mut inner: String = h.source_cv.iter().map(|(a, n)| cv(a, n, "")).collect();
+        if let Some(x) = h.source_sha1.get(i) {
+            inner += &cv("MS:1000569", "SHA-1", x);
+        }
+        s += &format!("<sourceFile id=\"SRC{}\" name=\"{}\" location=\"file:///\">{inner}</sourceFile>", i + 1, esc(f));
+    }
+    s + "</sourceFileList>"
+}
+
+/// The `componentList` of the instrument, left out when empty (same schema rule).
+fn component_list(h: &Header) -> String {
+    if h.components.is_empty() {
+        return String::new();
+    }
+    let mut s = format!("<componentList count=\"{}\">", h.components.len());
+    for (i, (kind, acc, name)) in h.components.iter().enumerate() {
+        s += &format!("<{kind} order=\"{}\">{}</{kind}>", i + 1, cv(acc, name, ""));
+    }
+    s + "</componentList>"
 }
 
 #[cfg(not(target_family = "wasm"))]

@@ -1,16 +1,15 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema--><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fondamenti di cromatografia · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 3</div>
 <h1>Fondamenti di cromatografia</h1>
 <p class="lead">GC e LC sono due versioni dello stesso fenomeno: molecole che si ripartiscono fra una fase che si muove e una che sta ferma. Le grandezze di questo capitolo (k, α, N, H, R<sub>s</sub>) valgono per entrambe e costituiscono i parametri essenziali per comprendere e ottimizzare qualsiasi separazione cromatografica.</p>
-
 <h2>Che cos'è una separazione cromatografica</h2>
 <p>Un campione viene introdotto in testa a una <b>colonna</b> che contiene una <b>fase stazionaria</b>; una <b>fase mobile</b> (un gas in GC, un liquido in LC) la attraversa e trascina le molecole. Ogni molecola passa continuamente dall'una all'altra fase: avanza solo quando è nella fase mobile. Molecole che preferiscono la fase stazionaria restano indietro. All'uscita un rivelatore registra il segnale nel tempo: il <b>cromatogramma</b>.</p>
 <p>La preferenza per la fase stazionaria si misura con la <b>costante di distribuzione</b> (o di ripartizione) <i>K</i> = <i>c</i><sub>S</sub>/<i>c</i><sub>M</sub>, rapporto fra le concentrazioni all'equilibrio nelle due fasi. Il meccanismo che la determina cambia: ripartizione in un liquido (GC con colonne capillari, LC in fase inversa), adsorbimento su una superficie (fase normale, GC gas-solido), scambio ionico, esclusione dimensionale.</p>
-
 <figure>
 <svg viewBox="0 0 860 250" role="img" aria-label="Cromatogramma con un picco non trattenuto a t₀ e due picchi a tR,1 e tR,2, con le larghezze w½ e wb" aria-describedby="fd-03-0">
 <style>.ax{stroke:#9b978c}.t{font:12.5px system-ui,sans-serif;fill:#6b675c}.b{font:600 13px system-ui,sans-serif;fill:#24231f}</style>
@@ -25,7 +24,6 @@
 </svg><details class="figdesc" id="fd-03-0"><summary>Descrizione della figura</summary><p>Asse orizzontale: tempo. Da sinistra: un picco piccolo e stretto, «non trattenuto», a t₀; un picco alto a tR,1, con una linea orizzontale a metà altezza (w½) e due tangenti ai fianchi che indicano la larghezza alla base (wb); un secondo picco più basso e più largo a tR,2.</p></details>
 <figcaption><b>Figura 3.1</b> Le misure di un cromatogramma. t<sub>0</sub> (tempo morto) è il tempo di una molecola che non interagisce con la fase stazionaria; la larghezza alla base w<sub>b</sub> si misura fra le intersezioni delle tangenti nei punti di flesso con la linea di base (w<sub>b</sub> = 4σ per un picco gaussiano, w½ = 2,355σ).</figcaption>
 </figure>
-
 <h2>Ritenzione: k e α</h2>
 <p>Il tempo di ritenzione <i>t</i><sub>R</sub> dipende dalla colonna e dal flusso; per confrontare colonne diverse si usa il <b>fattore di ritenzione</b> <i>k</i> (un tempo «normalizzato»), che è anche il rapporto fra le quantità di analita nelle due fasi:</p>
 <span class="eq"><i>k</i> = <span class="frac"><span><i>t</i><sub>R</sub> − <i>t</i><sub>0</sub></span><span><i>t</i><sub>0</sub></span></span> = <span class="frac"><span><i>n</i><sub>S</sub></span><span><i>n</i><sub>M</sub></span></span> = <i>K</i> · <span class="frac"><span><i>V</i><sub>S</sub></span><span><i>V</i><sub>M</sub></span></span> = <span class="frac"><span><i>K</i></span><span>β</span></span>, &nbsp;&nbsp; <i>t</i><sub>R</sub> = <i>t</i><sub>0</sub> (1 + <i>k</i>)<span class="no">(3.1)</span></span>
@@ -33,12 +31,10 @@
 <p>La <b>selettività</b> (o fattore di separazione) α confronta due picchi adiacenti:</p>
 <span class="eq">α = <span class="frac"><span><i>k</i><sub>2</sub></span><span><i>k</i><sub>1</sub></span></span> = <span class="frac"><span><i>K</i><sub>2</sub></span><span><i>K</i><sub>1</sub></span></span> ≥ 1<span class="no">(3.2)</span></span>
 <p>α dipende solo dalla chimica: natura delle due fasi e temperatura. Se α = 1 nessuna colonna, per quanto efficiente, separerà i due composti.</p>
-
 <h2>Allargamento della banda: N e H</h2>
 <p>Una banda stretta all'iniezione esce larga: le molecole dello stesso composto non percorrono tutte lo stesso cammino né restano lo stesso tempo nella fase stazionaria. Se l'allargamento è dovuto a tanti piccoli passi casuali il picco è <b>gaussiano</b>, con varianza σ<sup>2</sup> che cresce in proporzione alla lunghezza percorsa. L'efficienza si esprime con il <b>numero di piatti teorici</b> <i>N</i> e con l'<b>altezza equivalente a un piatto teorico</b> <i>H</i> (HETP):</p>
 <span class="eq"><i>N</i> = <span class="frac"><span><i>t</i><sub>R</sub><sup>2</sup></span><span>σ<sup>2</sup></span></span> = 16 <span class="frac"><span><i>t</i><sub>R</sub><sup>2</sup></span><span><i>w</i><sub>b</sub><sup>2</sup></span></span> = 5,54 <span class="frac"><span><i>t</i><sub>R</sub><sup>2</sup></span><span><i>w</i><sub>1/2</sub><sup>2</sup></span></span>, &nbsp;&nbsp; <i>H</i> = <span class="frac"><span><i>L</i></span><span><i>N</i></span></span><span class="no">(3.3)</span></span>
 <p>Il «piatto» è un'eredità della distillazione: non esiste fisicamente, è solo un modo di misurare la varianza per unità di lunghezza. Ordini di grandezza: colonna HPLC da 15 cm con particelle da 3 µm, N ≈ 15 000-25 000; colonna capillare GC da 30 m, N ≈ 100 000-150 000.</p>
-
 <h3>L'equazione di van Deemter</h3>
 <p>Van Deemter, Zuiderweg e Klinkenberg (1956) scomposero H in tre contributi che dipendono in modo diverso dalla velocità lineare media della fase mobile <i>u</i> = <i>L</i>/<i>t</i><sub>0</sub>:</p>
 <span class="eq"><i>H</i> = <i>A</i> + <span class="frac"><span><i>B</i></span><span><i>u</i></span></span> + <i>C</i> · <i>u</i><span class="no">(3.4)</span></span>
@@ -49,18 +45,14 @@
 <tr><td><b>C·u</b>, resistenza al trasferimento di massa</td><td>Lo scambio fra le fasi non è istantaneo: mentre una molecola diffonde dentro un poro o nel film, quelle nella fase mobile vanno avanti</td><td><i>d</i><sub>p</sub><sup>2</sup>/<i>D</i><sub>M</sub> (LC), <i>r</i><sup>2</sup>/<i>D</i><sub>M</sub> e <i>d</i><sub>f</sub><sup>2</sup>/<i>D</i><sub>S</sub> (GC capillare); pesa ad alta velocità</td></tr>
 </table>
 <p>La somma ha un minimo: la <b>velocità ottimale</b> <i>u</i><sub>ott</sub> = √(B/C), con <i>H</i><sub>min</sub> = A + 2√(BC). Nelle colonne capillari della GC il termine A non c'è e l'equazione prende il nome di <b>Golay</b> (1958).</p>
-
 <details class="poe"><summary>Prima di provare: che cosa ti aspetti se dimezzi il diametro delle particelle?</summary>
 <p>A e C diminuiscono (C come d<sub>p</sub><sup>2</sup>): il minimo si abbassa e la curva diventa più piatta a destra. Si può lavorare più veloci senza perdere efficienza. Il prezzo è la pressione, che cresce come 1/d<sub>p</sub><sup>2</sup>: è la ragione dell'UHPLC. Muovi i cursori e controlla.</p></details>
 <div class="sim" id="sim-vandeemter" data-mode="lc"><h4>Curva di van Deemter per una colonna HPLC</h4>
 <p class="note">H in funzione della velocità per quattro tipi di particelle. I cursori cambiano i coefficienti ridotti (a, b, c, in unità di d<sub>p</sub>): i punti segnano il minimo di ogni curva. Nel capitolo 5 la stessa figura per la GC (curve di Golay con tre gas).</p></div>
-
 <div class="duo"><div class="box key"><b>In GC</b><p>Il gas diffonde 10<sup>4</sup> volte più del liquido: il termine B è importante e la velocità ottimale è alta (decine di cm/s). La scelta del gas di trasporto (N<sub>2</sub>, He, H<sub>2</sub>) sposta il minimo.</p></div>
 <div class="box key"><b>In LC</b><p>La diffusione nel liquido è lenta: B conta poco, dominano A e C, cioè le particelle. Velocità ottimali di pochi mm/s; particelle piccole (sub-2 µm) o core-shell per guadagnare efficienza e velocità.</p></div></div>
-
 <h3>Allargamento fuori dalla colonna</h3>
 <p>Anche iniettore, tubi, celle del rivelatore e connessioni contribuiscono alla varianza (le varianze si sommano: σ<sup>2</sup><sub>tot</sub> = σ<sup>2</sup><sub>colonna</sub> + σ<sup>2</sup><sub>extra</sub>). Conta soprattutto con colonne corte e strette e picchi molto stretti (UHPLC): volumi morti di pochi µL bastano a rovinare la separazione.</p>
-
 <h2>Risoluzione</h2>
 <p>La <b>risoluzione</b> dice quanto due picchi adiacenti sono separati rispetto alla loro larghezza:</p>
 <span class="eq"><i>R</i><sub>s</sub> = <span class="frac"><span>2 (<i>t</i><sub>R,2</sub> − <i>t</i><sub>R,1</sub>)</span><span><i>w</i><sub>b,1</sub> + <i>w</i><sub>b,2</sub></span></span> = 1,18 <span class="frac"><span><i>t</i><sub>R,2</sub> − <i>t</i><sub>R,1</sub></span><span><i>w</i><sub>1/2,1</sub> + <i>w</i><sub>1/2,2</sub></span></span><span class="no">(3.5)</span></span>
@@ -76,7 +68,6 @@
 <p>Dalla 3.6: √N = 1,5 · 4 · 1,02/0,02 · 6/5 ≈ 367, cioè N ≈ 135 000. Una colonna HPLC non ci arriva; una capillare GC sì. Per due isomeri «difficili» si cambia α, non N.</p></details>
 <div class="sim" id="sim-risoluzione"><h4>Risoluzione di due picchi</h4>
 <p class="note">Due picchi gaussiani (tratteggio) e il segnale che vede il rivelatore (linea piena). La riga sotto scompone R<sub>s</sub> nei tre termini dell'equazione di Purnell.</p></div>
-
 <h2>Forma del picco</h2>
 <p>Un picco ideale è gaussiano. Nella realtà si vedono spesso picchi asimmetrici, descritti dal <b>fattore di asimmetria</b> <i>A</i><sub>s</sub> = <i>b</i>/<i>a</i> (semiampiezze posteriore e anteriore al 10% dell'altezza) o dal <b>fattore di coda USP</b> <i>T</i> = (<i>a</i> + <i>b</i>)/2<i>a</i> al 5%.</p>
 <table>
@@ -86,13 +77,11 @@
 <tr><td><b>Picco sdoppiato</b></td><td>Iniezione in un solvente troppo forte, colonna con un vuoto in testa, due composti quasi coeluiti</td></tr>
 </table>
 <p>Il programma calcola N, w½ e il fattore di coda dei picchi integrati (capitolo 12): parametri utili per valutare e documentare la qualità del cromatogramma e delle separazioni.</p>
-
 <h2>Il problema generale dell'eluizione</h2>
 <p>Con condizioni costanti (eluizione <b>isocratica</b> in LC, <b>isoterma</b> in GC) un campione con composti di polarità o volatilità molto diverse dà un cromatogramma sbilanciato: i primi picchi escono vicini e mal risolti (k piccolo), gli ultimi larghi, bassi e in ritardo (k grande). La soluzione è cambiare le condizioni durante la corsa in modo che ogni composto esca con un k «buono»:</p>
 <div class="duo"><div class="box key"><b>GC: programmata di temperatura</b><p>La temperatura del forno sale durante la corsa (per esempio 60 → 300 °C a 10 °C/min): K diminuisce con la temperatura e i composti meno volatili escono prima di quanto farebbero in isoterma. Capitolo 5.</p></div>
 <div class="box key"><b>LC: gradiente di eluizione</b><p>La percentuale di solvente organico sale durante la corsa (per esempio 5 → 95% di acetonitrile): k diminuisce in modo esponenziale con la frazione di organico. Capitolo 4.</p></div></div>
 <p>In gradiente o in programmata i picchi hanno larghezza simile lungo tutta la corsa; il potere separativo si misura con la <b>capacità di picco</b>, il numero massimo di picchi che entrano affiancati nella finestra della corsa (n<sub>c</sub> ≈ 1 + t<sub>G</sub>/w, con t<sub>G</sub> la durata del gradiente e w la larghezza media alla base): con w = 6 s e un gradiente di 15 min, n<sub>c</sub> ≈ 150.</p>
-
 <h2>Dal picco al numero: la quantificazione</h2>
 <p>Per un rivelatore lineare l'<b>area</b> del picco è proporzionale alla quantità di analita (l'altezza solo se il picco non cambia forma). Le strategie:</p>
 <ul>
@@ -101,7 +90,6 @@
 <li><b>Aggiunte standard</b> e <b>taratura in matrice</b>: quando la matrice cambia la risposta e non c'è uno standard marcato.</li>
 </ul>
 <p>Limiti di rivelabilità e di quantificazione (LOD ≈ 3,3 σ/pendenza, LOQ ≈ 10 σ/pendenza, oppure da S/N = 3 e 10), linearità e campo di lavoro si ricavano dalla retta di taratura costruita con le aree MRM (capitolo 12).</p>
-
 <h2>GC o LC?</h2>
 <table>
 <tr><th></th><th>Gascromatografia (GC)</th><th>Cromatografia liquida (LC)</th></tr>
@@ -113,20 +101,13 @@
 </table>
 <div class="box key"><b>Applicazione pratica: LC-MS vs GC-MS</b>
 <p>Quando le molecole d'interesse e i rispettivi prodotti di degradazione sono specie polari o termolabili, la scelta d'elezione è la LC-ESI-MS. I prodotti di trasformazione sono in genere <em>più</em> polari del composto di partenza (capitolo 4), rendendo l'analisi in GC complessa o impraticabile senza preventiva derivatizzazione chimica.</p></div>
-
 <div class="box oral"><b>Concetti chiave e domande di ripasso</b>
 <p>Punti essenziali da dominare: definire k, α, N, H, R<sub>s</sub> e saperle ricavare da un cromatogramma; comprendere l'origine fisica dei tre termini della curva di van Deemter (e perché in GC capillare manca il termine di impaccamento A); applicare l'equazione di Purnell per individuare il parametro più efficace da ottimizzare; distinguere tra eluizione isocratica e a gradiente (o isoterma e programmata in GC); argomentare la scelta motivata tra GC e LC; comprendere vantaggi e limiti della taratura con standard interno rispetto allo standard esterno.</p></div>
-
 <h2>Verifica</h2>
-<details class="q"><summary>Un picco esce a 7,5 min, il tempo morto è 1,5 min e w½ = 6 s. Calcola k e N.</summary>
-<p>k = (7,5 − 1,5)/1,5 = 4. N = 5,54 (450 s / 6 s)<sup>2</sup> = 5,54 · 5625 ≈ 31 000 piatti.</p></details>
-<details class="q"><summary>Due picchi con k = 4,0 e 4,4 su una colonna da 20 000 piatti: sono separati? Che cosa cambieresti?</summary>
-<p>α = 1,10; R<sub>s</sub> = (141/4)·(0,10/1,10)·(4,4/5,4) ≈ 35,4 · 0,091 · 0,815 ≈ 2,6: separati. Se α fosse 1,03, R<sub>s</sub> ≈ 0,83: conviene cambiare α (fase stazionaria, solvente, pH, temperatura), perché per arrivare a 1,5 con N servirebbe una colonna 3,3 volte più lunga.</p></details>
-<details class="q"><summary>Perché in GC capillare la curva H-u non ha il termine A?</summary>
-<p>Perché la colonna è un tubo aperto con la fase stazionaria come film sulla parete: non ci sono particelle e quindi non ci sono cammini di lunghezza diversa. Restano diffusione longitudinale e trasferimento di massa (equazione di Golay).</p></details>
-<details class="q"><summary>Perché lo standard interno ideale in LC-MS è l'analita marcato isotopicamente?</summary>
-<p>Ha le stesse proprietà chimiche: stesso recupero nell'estrazione, stessa ritenzione (coeluisce) e quindi lo stesso effetto matrice in sorgente; lo spettrometro lo distingue per la massa diversa. Il rapporto delle aree corregge tutte le variazioni che colpiscono allo stesso modo analita e standard.</p></details>
-
+<details class="q"><summary>Un picco esce a 7,5 min, il tempo morto è 1,5 min e w½ = 6 s. Calcola k e N.</summary><p>k = (7,5 − 1,5)/1,5 = 4. N = 5,54 (450 s / 6 s)<sup>2</sup> = 5,54 · 5625 ≈ 31 000 piatti.</p></details>
+<details class="q"><summary>Due picchi con k = 4,0 e 4,4 su una colonna da 20 000 piatti: sono separati? Che cosa cambieresti?</summary><p>α = 1,10; R<sub>s</sub> = (141/4)·(0,10/1,10)·(4,4/5,4) ≈ 35,4 · 0,091 · 0,815 ≈ 2,6: separati. Se α fosse 1,03, R<sub>s</sub> ≈ 0,83: conviene cambiare α (fase stazionaria, solvente, pH, temperatura), perché per arrivare a 1,5 con N servirebbe una colonna 3,3 volte più lunga.</p></details>
+<details class="q"><summary>Perché in GC capillare la curva H-u non ha il termine A?</summary><p>Perché la colonna è un tubo aperto con la fase stazionaria come film sulla parete: non ci sono particelle e quindi non ci sono cammini di lunghezza diversa. Restano diffusione longitudinale e trasferimento di massa (equazione di Golay).</p></details>
+<details class="q"><summary>Perché lo standard interno ideale in LC-MS è l'analita marcato isotopicamente?</summary><p>Ha le stesse proprietà chimiche: stesso recupero nell'estrazione, stessa ritenzione (coeluisce) e quindi lo stesso effetto matrice in sorgente; lo spettrometro lo distingue per la massa diversa. Il rapporto delle aree corregge tutte le variazioni che colpiscono allo stesso modo analita e standard.</p></details>
 <h2>Per approfondire</h2>
 <ul class="refs">
 <li><span class="tag">articolo</span>Ettre L.S. (1993) Nomenclature for chromatography (IUPAC Recommendations 1993). <i>Pure Appl. Chem.</i> 65, 819-872. <a href="https://doi.org/10.1351/pac199365040819" target="_blank" rel="noopener">doi:10.1351/pac199365040819</a></li>

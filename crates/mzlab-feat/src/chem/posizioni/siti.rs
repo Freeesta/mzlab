@@ -35,6 +35,9 @@ pub(super) fn delta_of(kind: &str) -> Vec<(i64, Formula)> {
     match kind {
         "dioxid" => vec![(2, f("O", 1))],
         "trioxid" => vec![(3, f("O", 1))],
+        "dechloro_oh" => vec![(-1, f("Cl", 1)), (1, f("O", 1)), (1, f("H", 1))],
+        "amino_oh" => vec![(-1, f("N", 1)), (-1, f("H", 1)), (1, f("O", 1))],
+        "methyl_cooh" => vec![(2, f("O", 1)), (-1, f("H", 2))],
         "deethyl" => vec![(-1, vec![("C".into(), 2), ("H".into(), 4)])],
         "carbonyl_oh" => vec![(2, f("O", 1)), (-1, f("H", 2))],
         "demethyl" => vec![(-1, vec![("C".into(), 1), ("H".into(), 2)])],
@@ -84,7 +87,10 @@ fn kinds_of(transform: &str) -> Result<&'static [&'static str]> {
         "+2O" => &["dioxid"],
         "+3O" => &["trioxid"],
         "-C2H4" => &["deethyl"],
-        "+2O-2H" | "+2O-H4" => &["carbonyl_oh"],
+        "+2O-2H" | "+2O-H4" => &["carbonyl_oh", "methyl_cooh"],
+        "-Cl+OH" => &["dechloro_oh"],
+        "NH2>OH" => &["amino_oh"],
+        "CH3>COOH" => &["methyl_cooh"],
         _ => return Err(Error::new("error.posiz.transform").with("transform", transform)),
     })
 }
@@ -110,6 +116,16 @@ fn can_take(m: &Mol, i: usize, kind: &str) -> bool {
         }
         "s_oxide" => {
             a.el == "S" && neutral && !a.arom && a.h == 0 && m.heavy(i) == 2 && all_single(m, i)
+        }
+        // The atom is the one replaced: the Cl of an aryl chloride, the N of a primary amine, the carbon of a methyl on a carbon.
+        "dechloro_oh" => a.el == "Cl" && m.adj[i].iter().any(|(j, _)| m.atoms[*j].arom),
+        "amino_oh" => a.el == "N" && neutral && !a.arom && a.h == 2 && m.heavy(i) == 1,
+        "methyl_cooh" => {
+            a.el == "C"
+                && !a.arom
+                && a.h == 3
+                && m.heavy(i) == 1
+                && m.adj[i].iter().all(|(j, _)| m.atoms[*j].el == "C")
         }
         "deethyl" => {
             a.el == "C"
@@ -143,10 +159,12 @@ pub fn sites(mol: &Mol, transform: &str) -> Result<Vec<Site>> {
     if kinds == ["dehydro"] {
         return checked(dehydro_sites(mol, &cls, &parent)?, transform);
     }
-    if is_multi(kinds[0]) {
-        return checked(multi_sites(mol, kinds[0], &parent)?, transform);
-    }
-    let mut out = Vec::new();
+    // `+2O-2H` also holds the single-atom sites of `CH3>COOH` (same net change), after the sets of atoms.
+    let mut out = if is_multi(kinds[0]) {
+        multi_sites(mol, kinds[0], &parent)?
+    } else {
+        Vec::new()
+    };
     for (i, class) in cls.iter().enumerate() {
         let Some(kind) = kinds.iter().find(|k| can_take(mol, i, k)) else {
             continue;

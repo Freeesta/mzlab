@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema--><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gascromatografia (GC) · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 5</div>
 <h1>Gascromatografia (GC)</h1>
 <p class="lead">La GC separa molecole volatili in un gas che scorre in una colonna capillare lunga decine di metri. È la tecnica più efficiente della cromatografia ed è nata insieme alla spettrometria di massa a impatto elettronico: la GC-MS è il punto di partenza per capire gli spettri EI del capitolo 15.</p>
-
 <h2>Che cosa si può analizzare in GC</h2>
 <p>Una molecola, per essere analizzata in GC, deve passare in fase gas alla temperatura della colonna (di solito sotto i 300-350 °C) <b>senza decomporsi</b>. In pratica: molecole poco o mediamente polari, con massa molare fino a ~500-600, punto di ebollizione fino a ~450-500 °C. Gruppi che formano legami a idrogeno (–OH, –COOH, –NH<sub>2</sub>, –NH–) abbassano la volatilità, danno code e possono decomporsi nell'iniettore: si <b>derivatizzano</b>.</p>
 <table>
@@ -15,7 +15,6 @@
 <tr><td>Metilazione (esterificazione)</td><td>BF<sub>3</sub>/metanolo, TMSH, diazometano</td><td>Acidi carbossilici</td><td>Esteri metilici (es. FAME degli acidi grassi), McLafferty a m/z 74 in EI</td></tr>
 <tr><td>Acilazione</td><td>Anidride trifluoroacetica (TFAA), PFPA</td><td>Ammine, alcoli, fenoli</td><td>Volatilità e, con il fluoro, sensibilità al rivelatore a cattura di elettroni</td></tr>
 </table>
-
 <h2>Lo strumento</h2>
 <figure>
 <svg viewBox="0 0 860 230" role="img" aria-label="Schema di un gascromatografo: gas di trasporto, iniettore, forno con colonna capillare, transfer line e rivelatore" aria-describedby="fd-05-0">
@@ -34,7 +33,6 @@
 </svg><details class="figdesc" id="fd-05-0"><summary>Descrizione della figura</summary><p>Gas di trasporto (He, H₂ o N₂); iniettore split/splitless a 250-280 °C con liner, setto e linea di split; forno programmato (40-350 °C) con colonna capillare 30 m × 0,25 mm × 0,25 µm; transfer line a circa 280 °C; rivelatore FID, ECD… o MS (EI, vuoto).</p></details>
 <figcaption><b>Figura 5.1</b> Gascromatografo accoppiato a uno spettrometro di massa. Con un rivelatore a ionizzazione di fiamma (FID) o a cattura di elettroni (ECD) la colonna finisce nel rivelatore; con la MS una linea di trasferimento riscaldata porta la colonna direttamente nella sorgente sotto vuoto.</figcaption>
 </figure>
-
 <h3>Il gas di trasporto</h3>
 <p>Il gas non interagisce con gli analiti: serve solo a spostarli. Conta la sua <b>velocità lineare</b> media <i>u</i> (cm/s), che si regola con la pressione in testa alla colonna (a pressione o a flusso costante; con la programmata la viscosità del gas aumenta con la temperatura e, a pressione costante, il flusso cala). La scelta del gas cambia la curva di Golay (capitolo 3):</p>
 <ul>
@@ -46,7 +44,6 @@
 <p>Nell'equazione di Golay B ∝ D<sub>G</sub> e C ∝ r²/D<sub>G</sub>: nel prodotto BC il coefficiente di diffusione si semplifica, e H<sub>min</sub> = 2√(BC) dipende dal raggio della colonna e da k, non dal gas. Cambia invece la velocità ottimale √(B/C) ∝ D<sub>G</sub>: il gas che diffonde di più (H<sub>2</sub>) ha l'ottimo più veloce.</p></details>
 <div class="sim" id="sim-vandeemter" data-mode="gc"><h4>Curve di Golay per tre gas di trasporto</h4>
 <p class="note">Colonna capillare a film sottile, equazione di Golay senza il termine della fase stazionaria. Prova a stringere la colonna (diametro 0,10-0,18 mm: «fast GC») e a cambiare k.</p></div>
-
 <h3>L'iniettore</h3>
 <p>Il campione (1 µL di soluzione) si vaporizza in un <b>liner</b> di vetro a 250-280 °C. Una colonna capillare tollera pochi nanogrammi per componente: la modalità di iniezione decide quanto campione entra.</p>
 <table>
@@ -56,7 +53,6 @@
 <tr><td>On-column, PTV</td><td>Iniezione diretta a freddo in colonna; iniettore a temperatura programmata (anche per grandi volumi)</td><td>Composti termolabili, campioni molto diluiti</td></tr>
 </table>
 <p>Problemi tipici dell'iniettore: discriminazione dei composti poco volatili, degradazione termica, siti attivi nel liner (code per i composti polari), contaminazione del setto (picchi «fantasma» di silossani).</p>
-
 <h3>La colonna capillare</h3>
 <p>Un tubo di silice fusa (rivestito all'esterno di poliimmide per renderlo flessibile) con la fase stazionaria come film sulla parete interna (colonne WCOT). Dimensioni tipiche 30 m × 0,25 mm × 0,25 µm. Il film più spesso trattiene di più i volatili (β più piccolo); la colonna più stretta è più efficiente ma accetta meno campione.</p>
 <table>
@@ -68,14 +64,12 @@
 <tr><td>Polietilenglicole (WAX)</td><td>polare</td><td>legami a idrogeno</td><td>alcoli, acidi liberi, aromi; temperatura massima più bassa (~250 °C)</td></tr>
 </table>
 <p>Le colonne «ms» hanno una fase con poco <b>sanguinamento</b> (column bleed): ad alta temperatura la fase silossanica si degrada in silossani ciclici che danno un fondo crescente e ioni caratteristici a m/z 207 e 281 negli spettri EI. Riconoscerli evita di scambiarli per analiti.</p>
-
 <h2>La ritenzione in GC e la programmata di temperatura</h2>
 <p>In GC la ritenzione dipende dalla <b>tensione di vapore</b> dell'analita alla temperatura della colonna (quanto «vuole» stare nel gas) e dalle sue <b>interazioni</b> con la fase stazionaria (dispersione, dipolo, legame a idrogeno). Su una colonna apolare l'ordine di eluizione segue grosso modo il punto di ebollizione. La costante di distribuzione diminuisce in modo esponenziale con la temperatura (ln K ≈ a + b/T): circa la metà ogni 15-20 °C. Per questo:</p>
 <ul>
 <li>in <b>isoterma</b> i composti di una serie omologa escono con tempi corretti (t'<sub>R</sub> = t<sub>R</sub> − t<sub>0</sub>) che crescono in modo geometrico: log t'<sub>R</sub> è lineare nel numero di atomi di carbonio;</li>
 <li>in <b>programmata</b> (per esempio 2 min a 60 °C, poi 10 °C/min fino a 300 °C) ogni composto resta quasi fermo in testa alla colonna finché la temperatura non arriva vicino alla sua «temperatura di eluizione», poi corre: picchi di larghezza simile e corse molto più corte. Gli n-alcani escono quasi equidistanti nel tempo.</li>
 </ul>
-
 <h3>Gli indici di ritenzione</h3>
 <p>Il tempo di ritenzione cambia da strumento a strumento; l'<b>indice di ritenzione</b> lo trasforma in un numero confrontabile, interpolando l'analita fra gli n-alcani che escono prima e dopo (l'alcano a n atomi di carbonio vale 100·n per definizione).</p>
 <span class="eq">Isoterma (Kováts): &nbsp; <i>I</i> = 100 [<i>n</i> + <span class="frac"><span>log <i>t</i>'<sub>x</sub> − log <i>t</i>'<sub>n</sub></span><span>log <i>t</i>'<sub>n+1</sub> − log <i>t</i>'<sub>n</sub></span></span>]<span class="no">(5.1)</span></span>
@@ -83,7 +77,6 @@
 <p>Lo stesso composto sulla stessa fase stazionaria ha un indice quasi costante anche cambiando colonna, rampa e strumento (variazioni di pochi punti). Le librerie EI (NIST) riportano gli indici per tipo di fase: un candidato proposto dalla libreria con un indice molto diverso da quello misurato va scartato. È il corrispettivo GC del tempo di ritenzione relativo in LC.</p>
 <div class="sim" id="sim-indici"><h4>Programmata di temperatura e indice di ritenzione</h4>
 <p class="note">Una serie di n-alcani (grigio) e un analita (arancio). Cambia la rampa o la temperatura iniziale: i tempi cambiano, l'indice calcolato con la 5.2 resta quello. Modello illustrativo (gli alcani escono circa ogni 16 °C).</p></div>
-
 <h2>I rivelatori</h2>
 <table>
 <tr><th>Rivelatore</th><th>Principio</th><th>Selettivo per</th><th>Limite tipico</th></tr>
@@ -93,7 +86,6 @@
 <tr><td>TCD (conducibilità termica)</td><td>Variazione della conducibilità del gas</td><td>Universale, anche gas permanenti</td><td>ng: poco sensibile</td></tr>
 <tr><td><b>MS</b></td><td>Ionizzazione EI (o CI) e analizzatore di massa</td><td>Universale in full scan, molto selettivo in SIM o MRM</td><td>pg (full scan), fg (SIM/MRM); dà anche l'identità</td></tr>
 </table>
-
 <h2>GC-MS</h2>
 <ul>
 <li><b>Interfaccia</b>: la colonna capillare entra direttamente nella sorgente attraverso una linea di trasferimento riscaldata. Il vuoto della MS sopporta 1-2 mL/min di gas: proprio il flusso di una capillare da 0,25 mm. Per questo GC e MS si accoppiano senza le complicazioni dell'LC (capitolo 6).</li>
@@ -102,7 +94,6 @@
 <li><b>Identificazione</b>: confronto dello spettro con la libreria (punteggio di somiglianza) + indice di ritenzione + interpretazione dello spettro (capitoli 15-16). In un picco con più composti coeluiti si usano la sottrazione del fondo e la <b>deconvoluzione</b> (es. AMDIS del NIST).</li>
 <li><b>Alta risoluzione</b>: GC-TOF e GC-Orbitrap danno masse esatte anche dei frammenti EI (capitolo 11); GC×GC (due colonne di selettività diversa con un modulatore) moltiplica la capacità di picco per campioni complessi come petroli e aria.</li>
 </ul>
-
 <h2>Preparazione del campione per l'analisi ambientale</h2>
 <table>
 <tr><th>Tecnica</th><th>Come funziona</th><th>Per che cosa</th></tr>
@@ -111,20 +102,14 @@
 <tr><td>Microestrazione in fase solida (SPME)</td><td>Una fibra rivestita assorbe gli analiti dal campione o dallo spazio di testa e si desorbe direttamente nell'iniettore; senza solvente</td><td>Volatili e semivolatili, odori</td></tr>
 <tr><td>Spazio di testa (statico) e purge &amp; trap (dinamico)</td><td>Si analizza il vapore in equilibrio con il campione, oppure si strippano i volatili con un gas e si raccolgono su una trappola</td><td>Solventi clorurati, BTEX nell'acqua potabile</td></tr>
 </table>
-
 <div class="box oral"><b>Concetti chiave e domande di ripasso</b>
 <p>Saper descrivere lo schema di un gascromatografo e la funzione di ciascun componente; iniezione split contro splitless (ed effetto solvente); criteri di scelta della fase stazionaria; principi e vantaggi della programmata di temperatura; indici di ritenzione di Kováts e Van den Dool-Kratz (formula e significato); confronto fra rivelatori (FID, ECD, MS); condizioni di accoppiamento GC-MS; quando e come ricorrere alla derivatizzazione chimica. Collegamento metodologico: un composto analizzato in GC-MS produce uno spettro EI (capitoli 7, 15 e 16).</p></div>
-
 <h2>Verifica</h2>
 <details class="q"><summary>Un analita esce a 12,40 min, fra n-tridecano (12,10 min) e n-tetradecano (13,30 min), in programmata. Qual è il suo indice di ritenzione?</summary>
 <p>I = 100 [13 + (12,40 − 12,10)/(13,30 − 12,10)] = 100 (13 + 0,25) = 1325.</p></details>
-<details class="q"><summary>Devi misurare tracce di un pesticido organoclorurato in acqua. Che iniezione e che rivelatore scegli?</summary>
-<p>Splitless (tracce), dopo estrazione e concentrazione (SPE o LLE). Rivelatore: ECD se basta la quantificazione di composti noti (molto sensibile agli alogenati), MS in SIM o GC-MS/MS se serve anche la conferma dell'identità; il cluster isotopico del cloro aiuta a riconoscerli.</p></details>
-<details class="q"><summary>Perché un acido carbossilico dà un picco con una lunga coda in GC, e come si risolve?</summary>
-<p>Il gruppo –COOH forma legami a idrogeno con i silanoli e i siti attivi di liner e colonna (adsorbimento): coda e perdita di segnale. Si derivatizza (esterificazione a estere metilico o sililazione a estere TMS) oppure si usa una colonna polare adatta agli acidi liberi.</p></details>
-<details class="q"><summary>Nel cromatogramma GC-MS la linea di base sale verso la fine e negli spettri compaiono m/z 207 e 281. Che cos'è?</summary>
-<p>Il sanguinamento della colonna: ad alta temperatura la fase polisilossanica si degrada in silossani ciclici. Non sono analiti; si riduce con colonne «ms», temperature massime più basse e un buon condizionamento.</p></details>
-
+<details class="q"><summary>Devi misurare tracce di un pesticido organoclorurato in acqua. Che iniezione e che rivelatore scegli?</summary><p>Splitless (tracce), dopo estrazione e concentrazione (SPE o LLE). Rivelatore: ECD se basta la quantificazione di composti noti (molto sensibile agli alogenati), MS in SIM o GC-MS/MS se serve anche la conferma dell'identità; il cluster isotopico del cloro aiuta a riconoscerli.</p></details>
+<details class="q"><summary>Perché un acido carbossilico dà un picco con una lunga coda in GC, e come si risolve?</summary><p>Il gruppo –COOH forma legami a idrogeno con i silanoli e i siti attivi di liner e colonna (adsorbimento): coda e perdita di segnale. Si derivatizza (esterificazione a estere metilico o sililazione a estere TMS) oppure si usa una colonna polare adatta agli acidi liberi.</p></details>
+<details class="q"><summary>Nel cromatogramma GC-MS la linea di base sale verso la fine e negli spettri compaiono m/z 207 e 281. Che cos'è?</summary><p>Il sanguinamento della colonna: ad alta temperatura la fase polisilossanica si degrada in silossani ciclici. Non sono analiti; si riduce con colonne «ms», temperature massime più basse e un buon condizionamento.</p></details>
 <h2>Per approfondire</h2>
 <ul class="refs">
 <li><span class="tag">articolo</span>Kováts E. (1958) Gas-chromatographische Charakterisierung organischer Verbindungen. Teil 1. <i>Helv. Chim. Acta</i> 41, 1915-1932. <a href="https://doi.org/10.1002/hlca.19580410703" target="_blank" rel="noopener">doi:10.1002/hlca.19580410703</a></li>

@@ -82,5 +82,9 @@ def test_the_review_view_queues_and_words_the_decisions():
     assert node("flow_review.js").strip() == "ok"
 
 
+def test_the_feature_table_view_reads_the_names_of_its_files():
+    assert node("flow_feat_view.js").strip() == "ok"
+
+
 def test_the_settings_digest_is_read_from_the_evidence_summary():
     assert node("flow_digest.js").strip() == "ok"

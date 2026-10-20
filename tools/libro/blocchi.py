@@ -28,6 +28,7 @@ class Parser(Speciali, Liste, Grezzo):
         self.head: list[str] = []
         self.caption = None
         self.scripts: list[str] = []
+        self.scripts_before: list[str] = []
         self.page_title = ""
         self.no_appname = False
 
