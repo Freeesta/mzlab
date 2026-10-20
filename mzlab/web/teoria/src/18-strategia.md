@@ -1,0 +1,161 @@
+<!-- script: sim-misc.js -->
+<!-- title: Strategia per i TP -->
+# Strategia per trovare (e non inventare) i TP {kicker: Capitolo 18}
+
+{.lead} Il metodo di lavoro sistematico, passo per passo, dalla caratterizzazione del precursore all'identificazione dei prodotti di trasformazione. Include un esempio pratico dettagliato e criteri rigorosi per stabilire il livello di confidenza di ciascun candidato.
+
+## Il flusso di lavoro
+
+```html
+<figure>
+<svg viewBox="0 0 880 210" role="img" aria-label="Flusso di lavoro in cinque passi: dal parent ai candidati confermati in MS2" aria-describedby="fd-18-0">
+<style>.b{fill:#fff;stroke:#c9c5bb;stroke-width:1.3}.n{font:700 20px system-ui,sans-serif;fill:#2b5c8a}.t{font:600 13px system-ui,sans-serif;fill:#24231f}.s{font:11.5px system-ui,sans-serif;fill:#6b675c}</style>
+<defs><marker id="m9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#9b978c"/></marker></defs>
+<g><rect class="b" x="6" y="20" width="160" height="170" rx="8"/><text class="n" x="18" y="48">1</text><text class="t" x="18" y="72">Conoscere il parent</text><text class="s" x="18" y="94">[M+H]⁺, addotti, RT,</text><text class="s" x="18" y="110">isotopi, MS2 a più CE,</text><text class="s" x="18" y="126">transizioni MRM</text><text class="s" x="18" y="150">standard</text></g>
+<path d="M168 105 H182" stroke="#9b978c" stroke-width="1.6" marker-end="url(#m9)"/>
+<g><rect class="b" x="184" y="20" width="160" height="170" rx="8"/><text class="n" x="196" y="48">2</text><text class="t" x="196" y="72">Quantificare il parent</text><text class="s" x="196" y="94">MRM, retta di taratura,</text><text class="s" x="196" y="110">C/C₀ e k nel tempo</text><text class="s" x="196" y="150">campioni t0–t60</text></g>
+<path d="M346 105 H360" stroke="#9b978c" stroke-width="1.6" marker-end="url(#m9)"/>
+<g><rect class="b" x="362" y="20" width="160" height="170" rx="8"/><text class="n" x="374" y="48">3</text><text class="t" x="374" y="72">Trovare i candidati</text><text class="s" x="374" y="94">full scan: t0 vs tₙ,</text><text class="s" x="374" y="110">bianco, XIC di ipotesi,</text><text class="s" x="374" y="126">mappa RT–m/z</text><text class="s" x="374" y="150">full scan</text></g>
+<path d="M524 105 H538" stroke="#9b978c" stroke-width="1.6" marker-end="url(#m9)"/>
+<g><rect class="b" x="540" y="20" width="160" height="170" rx="8"/><text class="n" x="552" y="48">4</text><text class="t" x="552" y="72">Filtrare e ipotizzare</text><text class="s" x="552" y="94">criteri, Δm, isotopi,</text><text class="s" x="552" y="110">regola dell'azoto, RT</text><text class="s" x="552" y="150">ragionamento</text></g>
+<path d="M702 105 H716" stroke="#9b978c" stroke-width="1.6" marker-end="url(#m9)"/>
+<g><rect class="b" x="718" y="20" width="156" height="170" rx="8"/><text class="n" x="730" y="48">5</text><text class="t" x="730" y="72">Confermare in MS2</text><text class="s" x="730" y="94">frammenti condivisi</text><text class="s" x="730" y="110">o spostati rispetto</text><text class="s" x="730" y="126">al parent; struttura</text><text class="s" x="730" y="150">MS2 al tempo migliore</text></g>
+</svg><details class="figdesc" id="fd-18-0"><summary>Descrizione della figura</summary><p>Cinque riquadri in sequenza: 1 Conoscere il parent ([M+H]⁺, addotti, RT, isotopi, MS2 a più CE, transizioni MRM); 2 Quantificare il parent (MRM, retta di taratura, C/C₀ e k nel tempo; t0–t60); 3 Trovare i candidati (full scan t0 vs tₙ, bianco, XIC di ipotesi, mappa RT–m/z); 4 Filtrare e ipotizzare (Δm, isotopi, regola dell'azoto, RT); 5 Confermare in MS2 (frammenti condivisi o spostati rispetto al parent).</p></details>
+<figcaption><b>Figura 18.1</b> Il percorso dall'esperimento alla proposta strutturale. I passi 3–5 si ripetono: ogni MS2 può suggerire nuove masse da cercare nel full scan.</figcaption>
+</figure>
+```
+
+## 1. Conoscere il parent
+
+Tutto il lavoro successivo è un confronto con il parent, quindi la sua caratterizzazione deve essere completa:
+
+```html
+<ul>
+<li>m/z osservato di [M+H]<sup>+</sup> (con l'offset dello strumento), addotti (Na, K, NH<sub>4</sub>), eventuali dimeri e frammenti in sorgente <em>allo stesso RT</em>: tutti questi m/z vanno annotati come "non TP";</li>
+<li>cluster isotopico (alogeni? zolfo?);</li>
+<li>spettro MS2 a più energie: frammenti principali, perdite neutre, a che porzione della molecola corrispondono;</li>
+<li>tempo di ritenzione e forma del picco.</li>
+</ul>
+```
+
+## 2. Quantificare il parent
+
+Retta MRM, concentrazioni nei campioni, grafico di scomparsa e costante pseudo-primo ordine (capitoli 2 e 12). Confrontate t0 con lo standard per stimare l'adsorbimento sul TiO~2~.
+
+## 3. Trovare i candidati nel full scan
+
+Due approcci complementari:
+
+```html
+<ul>
+<li><b>Guidato da ipotesi (suspect)</b>: calcolate gli m/z attesi per le trasformazioni tipiche (tabella del capitolo 2, calcolatrice qui sotto) ed estraete gli XIC in tutti i tempi.</li>
+<li><b>Guidato dai dati (non-target)</b>: confrontate t0 e i tempi intermedi cercando segnali nuovi: BPC sovrapposti, spettri sottratti tra un tempo e t0 alla stessa finestra di RT, mappa RT–m/z con differenza tra file. Questo cattura anche TP che non avevate previsto.</li>
+</ul>
+```
+
+```html
+<div class="sim" id="sim-dm"><h4>Calcolatrice di differenze di massa</h4>
+<p class="note">Inserite l'm/z del parent e quello di un candidato (stesso tipo di ione, ad esempio entrambi [M+H]<sup>+</sup>). Vengono elencate le trasformazioni, singole o in coppia, con la stessa differenza nominale. Sono ipotesi da verificare: a risoluzione unitaria molte coincidono.</p></div>
+```
+
+## 4. Filtrare i candidati
+
+Un segnale diventa un candidato TP credibile se supera questi criteri; ognuno va opportunamente verificato e documentato.
+
+```html
+<table>
+<tr><th>Criterio</th><th>Domanda</th><th>Se fallisce</th></tr>
+<tr><td>Picco vero</td><td>Forma cromatografica, S/N ≥ 3 (meglio 10), presente in più tempi?</td><td>Rumore o spike</td></tr>
+<tr><td>Bianco e t0</td><td>Assente (o molto minore) nel bianco e a t0?</td><td>Fondo, impurezza dello standard</td></tr>
+<tr><td>RT proprio</td><td>RT diverso dal parent e forma del picco indipendente?</td><td>Addotto, isotopo o frammento in sorgente del parent</td></tr>
+<tr><td>Andamento</td><td>Cresce nel tempo (ed eventualmente cala)?</td><td>Se segue esattamente il parent, è legato al parent stesso</td></tr>
+<tr><td>Isotopi</td><td>Il cluster è coerente con la trasformazione ipotizzata (alogeni mantenuti o persi)?</td><td>Ipotesi di formula sbagliata</td></tr>
+<tr><td>Regola dell'azoto, RDBE</td><td>La formula ipotizzata è possibile?</td><td>Formula impossibile</td></tr>
+<tr><td>Ritenzione plausibile</td><td>Un TP ossidato/dealchilato esce prima del parent?</td><td>Non escludente, ma da discutere</td></tr>
+</table>
+```
+
+## 5. Confermare in MS2
+
+Al tempo in cui il candidato è più abbondante si registra il suo product ion scan e lo si confronta con quello del parent, frammento per frammento:
+
+```html
+<ul>
+<li><b>frammento identico</b> a uno del parent → quella porzione è intatta;</li>
+<li><b>frammento spostato di Δ</b> (lo stesso Δ del precursore) → la modifica sta in quella porzione;</li>
+<li><b>perdita neutra caratteristica conservata</b> (es. −42 del propene) → il gruppo che la genera è ancora presente;</li>
+<li><b>perdita neutra scomparsa</b> → quel gruppo è stato rimosso o trasformato.</li>
+</ul>
+```
+
+Con questi vincoli si disegnano le strutture candidate (scheda Disegno di QqQ lab), si verifica che formula e m/z tornino (calcolatrice m/z) e si propone una via di trasformazione.
+
+## Esempio svolto: l'atrazina
+
+L'atrazina (C~8~H~14~ClN~5~, erbicida triazinico, vietato nell'UE dal 2004 ma ancora presente nelle acque sotterranee) è un caso di scuola della fotocatalisi su TiO~2~, studiato a fondo anche a Torino. I numeri sono teorici; gli m/z osservati su uno strumento con offset sarebbero spostati di qualche decimo.
+
+```html
+<table>
+<tr><th>Specie</th><th>Formula</th><th class="n">[M+H]<sup>+</sup> esatto</th><th class="n">nominale</th><th>Cl</th><th class="n">Δ dal parent</th></tr>
+<tr><td>Atrazina (parent)</td><td>C<sub>8</sub>H<sub>14</sub>ClN<sub>5</sub></td><td class="n">216,1010</td><td class="n">216</td><td>sì</td><td class="n">—</td></tr>
+<tr><td>Desetil-atrazina (DEA)</td><td>C<sub>6</sub>H<sub>10</sub>ClN<sub>5</sub></td><td class="n">188,0697</td><td class="n">188</td><td>sì</td><td class="n">−28 (−C<sub>2</sub>H<sub>4</sub>)</td></tr>
+<tr><td>Desisopropil-atrazina (DIA)</td><td>C<sub>5</sub>H<sub>8</sub>ClN<sub>5</sub></td><td class="n">174,0541</td><td class="n">174</td><td>sì</td><td class="n">−42 (−C<sub>3</sub>H<sub>6</sub>)</td></tr>
+<tr><td>Idrossi-atrazina (HA)</td><td>C<sub>8</sub>H<sub>15</sub>N<sub>5</sub>O</td><td class="n">198,1349</td><td class="n">198</td><td>no</td><td class="n">−18 (−Cl +OH)</td></tr>
+<tr><td>Desetil-desisopropil-atrazina</td><td>C<sub>3</sub>H<sub>4</sub>ClN<sub>5</sub></td><td class="n">146,0228</td><td class="n">146</td><td>sì</td><td class="n">−70 (−28 −42)</td></tr>
+<tr><td>Acido cianurico (prodotto finale)</td><td>C<sub>3</sub>H<sub>3</sub>N<sub>3</sub>O<sub>3</sub></td><td class="n">130,0247</td><td class="n">130</td><td>no</td><td class="n">—</td></tr>
+</table>
+```
+
+### Il ragionamento
+
+```html
+<ol>
+<li><b>Il parent</b>: [M+H]<sup>+</sup> 216 con M+2 (218) al ~32%: un cloro. m/z pari ⇒ numero dispari di N (5 ✓). In MS2 il frammento principale è 174, perdita di 42 (propene dal gruppo isopropilammino): è la classica transizione MRM 216 → 174.</li>
+<li><b>Candidato a m/z 188</b>, assente a t0, cresce e poi cala, RT minore del parent, cluster ancora 3:1. Δ = −28: −C<sub>2</sub>H<sub>4</sub> o −CO? L'atrazina non ha carbonili, mentre ha un etile su azoto: N-deetilazione, coerente con l'attacco di •OH in α all'azoto. In MS2 ci si aspetta che 188 perda ancora 42 (→ 146): l'isopropile è intatto.</li>
+<li><b>Candidato a m/z 174</b>: Δ = −42, cloro conservato: N-deisopropilazione. In MS2 la perdita di 42 non dovrebbe più esserci; può comparire invece la perdita di etene (−28) dall'etile rimasto.</li>
+<li><b>Candidato a m/z 198</b>: il pattern del cloro sparisce, Δ = −18 nominale (−34,97 + 17,00). m/z pari come il parent: la parità degli N non cambia ✓. Ipotesi: sostituzione idrolitica/ossidativa di Cl con OH.</li>
+<li><b>Candidato a m/z 146</b>: attenzione, 146 è anche il frammento MS2 di 188. Se l'XIC di 146 nel full scan ha un picco <em>allo stesso RT della DEA</em>, è un frammento in sorgente della DEA; se ha un picco proprio, a RT ancora minore, e compare più tardi nel tempo (profilo di seconda generazione), è il prodotto di doppia dealchilazione.</li>
+<li><b>Il prodotto finale</b>, l'acido cianurico, è molto polare (poco trattenuto in C18) e si ionizza male in ESI positivo: probabilmente non lo vedreste. La sua assenza dai dati non prova che non si formi.</li>
+</ol>
+```
+
+```html
+<div class="box warn"><b>Livello di confidenza</b>
+<p>Senza standard, tutte queste attribuzioni restano al livello 3 di Schymanski: per esempio, l'idrossilazione al posto del cloro è la spiegazione più ragionevole di Δ = −18 con perdita del cloro, ma non è l'unica formula con quella massa nominale. Con gli standard commerciali di DEA, DIA e HA (stesso RT e stesso MS2) si arriverebbe al livello 1.</p></div>
+```
+
+## Checklist di sintesi analitica
+
+```html
+<ul>
+<li>Parent: [M+H]<sup>+</sup> osservato e teorico, addotti, RT, cluster isotopico, MS2 con frammenti assegnati, transizioni MRM scelte e perché.</li>
+<li>Retta di taratura con residui, intervallo, LOD/LOQ; concentrazioni nei campioni; grafico C/C<sub>0</sub> e ln(C<sub>0</sub>/C) contro t, costante e t<sub>1/2</sub>.</li>
+<li>Tabella dei candidati: m/z osservato, RT, criteri superati, cluster isotopico, Δ dal parent, trasformazione ipotizzata, ioni prodotto caratteristici, livello di confidenza.</li>
+<li>Grafico delle aree dei TP contro il tempo (forma delle curve, non confronto di quantità tra TP diversi).</li>
+<li>Via di trasformazione proposta, con le strutture disegnate e le ambiguità dichiarate (isomeri di posizione, Δ con più interpretazioni).</li>
+<li>Limiti: risoluzione unitaria, solo ESI positivo, nessuno standard per i TP, bilancio di massa non chiuso.</li>
+</ul>
+```
+
+## Verifica
+
+??? Un candidato ha Δ = +16, RT maggiore del parent e lo stesso andamento nel tempo del parent. Che ne pensate?
+È sospetto: un'idrossilazione di solito riduce la ritenzione e un TP non segue il parent ma cresce mentre il parent cala. Verificate che non sia un'impurezza dello standard o un addotto/cluster; se sopravvive ai controlli, va discusso esplicitamente.
+
+??? Due picchi a RT diversi nell'XIC di (parent + 16), entrambi in crescita. Come li riportate?
+Come due candidati distinti (isomeri), ciascuno con RT, andamento e MS2. Se gli MS2 differiscono, i frammenti indicano in quale porzione si trova l'ossigeno; la posizione esatta resta di solito indeterminata (livello 3).
+
+??? Perché è utile ripetere la ricerca nel full scan dopo aver visto gli MS2?
+Perché gli MS2 suggeriscono nuove ipotesi (per esempio una seconda generazione di prodotti che combina due trasformazioni già osservate) e permettono di riconoscere i frammenti in sorgente da non confondere con TP.
+
+## Per approfondire
+
+```html
+<ul class="refs">
+<li><span class="tag">metodo</span>Schymanski E.L. et al. (2014), livelli di confidenza: <a href="https://doi.org/10.1021/es5002105" target="_blank" rel="noopener">doi:10.1021/es5002105</a></li>
+<li><span class="tag">metodo</span>Kern S. et al. (2009), predizione e ricerca dei TP: <a href="https://doi.org/10.1021/es901979h" target="_blank" rel="noopener">doi:10.1021/es901979h</a></li>
+<li><span class="tag">tutorial</span>De Vijlder T. et al. (2018), identificazione di piccole molecole in ESI-MS: <a href="https://doi.org/10.1002/mas.21551" target="_blank" rel="noopener">doi:10.1002/mas.21551</a></li>
+<li><span class="tag">esempio</span>Fotocatalisi delle s-triazine (Pelizzetti, Minero e coll., anni '90): <a href="https://scholar.google.com/scholar?q=Pelizzetti+photocatalytic+degradation+atrazine+s-triazine+herbicides" target="_blank" rel="noopener">ricerca su Google Scholar</a></li>
+<li><span class="tag">strumento</span><a href="https://envipath.org" target="_blank" rel="noopener">enviPath</a> e <a href="https://biotransformer.ca" target="_blank" rel="noopener">BioTransformer</a> per generare ipotesi di TP (da verificare sempre sui dati).</li>
+</ul>
+```

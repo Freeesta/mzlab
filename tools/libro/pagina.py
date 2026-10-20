@@ -9,6 +9,7 @@ import tema_testa  # noqa: E402
 
 from .blocchi import Parser  # noqa: E402
 from .errori import LibroError  # noqa: E402
+from .snippet import POSITION, testo  # noqa: E402
 
 SKELETON = """<!doctype html>
 <html lang="it" data-esteso><head><meta charset="utf-8">
@@ -28,7 +29,7 @@ SKELETON = """<!doctype html>
 TEORIA = """<!doctype html>
 <html lang="it"@HTMLATTR@><head><meta charset="utf-8">
 @HEAD@<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>@TITLE@ · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
+<title>@TITLE@</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 @BODY@
@@ -53,8 +54,9 @@ def converti(text: str, nome: str, pubblico: bool = False, teoria: bool = False)
     title = p.page_title or re.sub(r"[`*$]", "", p.ctx["titoli"][0][1])
     if teoria:
         head = "".join(f"<!--{h}-->\n" for h in p.head)
-        scripts = "".join(f'<script src="{x}"></script>' for x in [*([] if p.no_appname else ["../appname.js"]), *p.scripts_before, "teoria.js", *p.scripts])
-        page = TEORIA.replace("@HTMLATTR@", "".join(f' {k}="{v}"' for k, v in p.html_attrs)).replace("@HEAD@", head).replace("@TITLE@", escape(title)).replace("@BODY@", body).replace("@SCRIPTS@", scripts)
+        tags = "".join(f'<script src="{x}"></script>' for x in [*([] if p.no_appname else ["../appname.js"]), *p.scripts_before, "teoria.js", *p.scripts])
+        scripts = "".join(testo(n) + "\n" for n in p.snippets if POSITION[n] == "before") + tags + "".join("\n" + testo(n) for n in p.snippets if POSITION[n] == "after")
+        page = TEORIA.replace("@HTMLATTR@", "".join(f' {k}="{v}"' for k, v in p.html_attrs)).replace("@HEAD@", head).replace("@TITLE@", p.full_title or escape(title) + " · Teoria QqQ lab").replace("@BODY@", body).replace("@SCRIPTS@", scripts)
         return tema_testa.inject(page, "teoria")
     page = SKELETON.replace("@HEAD@", "\n".join(h.replace("--", "-") for h in p.head)).replace("@TITLE@", escape(title)).replace("@BODY@", body)
     return tema_testa.inject(page, "teoria")
