@@ -15,3 +15,8 @@ const md = "# T\n\nUno due.\n";
 console.log("marked " + /<p data-src="3-3">Uno due\.<\/p>/.test(w.preview_chapter(md, "01-x.md", false)));
 console.log("edited " + JSON.stringify(w.edit_preview_block(md, "01-x.md", false, "3-3", "Uno <b>tre</b>.")));
 try { w.edit_preview_block(md, "01-x.md", false, "3-3", "a *b* c"); } catch (e) { console.log("refused " + e); }
+// retitled sections: the headings check, and the search index rebuilt for one chapter
+console.log("retitled " + w.headings_retitled("# T\n\n## A {#a}\n", "# T\n\n## B {#a}\n", "01-x.md"));
+try { w.headings_retitled("# T\n\n## A {#a}\n", "# T\n", "01-x.md"); } catch (e) { console.log("refusedh " + e); }
+const idx = "// h\n// [..]\nconst INDICE_RICERCA = [\n[\"T\", \"capitolo\", \"01-x.html\", \"Cap. 1\", \"t\"],\n[\"A\", \"sezione\", \"01-x.html#a\", \"Cap. 1\", \"a\"]\n];\n";
+console.log("reindexed " + JSON.stringify(w.reindex_chapter(idx, "01-x.html", '<h2 id="a">B &amp; c</h2>')));

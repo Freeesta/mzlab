@@ -3,13 +3,17 @@
 mod blocks;
 mod edit;
 mod frag;
+mod index;
 mod inline;
 mod page;
 mod scan;
 mod special;
+mod titles;
 
 pub use edit::{edit_block, preview};
+pub use index::{heading_anchor, reindex};
 pub use page::{convert, Options};
+pub use titles::retitled;
 
 /// The one error type: always carries file and line, so an unsupported construct stops the build instead of being guessed.
 #[derive(Debug, Clone, PartialEq, Eq)]

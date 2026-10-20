@@ -2,6 +2,7 @@
 //! an edited block comes back as inline HTML, goes back into the source at its lines and is accepted only if the converter then makes the same HTML from it.
 //! Used by the Teoria editor through the `.wasm` (`crates/mzlab-libro-wasm`).
 use crate::frag::{canon, parse, plain, to_md};
+use crate::index::heading_anchor;
 use crate::page::{convert, Options};
 use crate::scan::item;
 use crate::splitlines;
@@ -41,7 +42,13 @@ pub fn edit_block(
     if !text.contains('\u{a0}') {
         md = md.replace('\u{a0}', " ");
     }
-    let (new_lines, key) = replace(&lines, src, &md)?;
+    // a retitled section keeps the anchor it has now: links to it (and the search index) point to the old id
+    let anchor = if src.starts_with('h') {
+        old_anchor(text, name, opt, src)?
+    } else {
+        String::new()
+    };
+    let (new_lines, key) = replace(&lines, src, &md, &anchor)?;
     let mut new_text = new_lines.join("\n");
     if text.ends_with('\n') {
         new_text.push('\n');
@@ -62,7 +69,12 @@ fn num(s: &str) -> Result<usize, String> {
 }
 
 /// The lines with the block replaced, and the `data-src` key the block has afterwards.
-fn replace(lines: &[&str], src: &str, md: &str) -> Result<(Vec<String>, String), String> {
+fn replace(
+    lines: &[&str],
+    src: &str,
+    md: &str,
+    anchor: &str,
+) -> Result<(Vec<String>, String), String> {
     let mut out: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
     let at = |n: usize| {
         lines
@@ -71,7 +83,7 @@ fn replace(lines: &[&str], src: &str, md: &str) -> Result<(Vec<String>, String),
             .ok_or_else(|| "Unknown block.".to_string())
     };
     if src.starts_with(|c: char| c.is_ascii_alphabetic()) {
-        return replace_text(lines, src, md);
+        return replace_text(lines, src, md, anchor);
     }
     if let Some((l, c)) = src.split_once(':') {
         let (l, c) = (
@@ -115,7 +127,12 @@ fn cell_line(line: &str, c: usize, md: &str) -> Result<String, String> {
 }
 
 /// Blocks whose key starts with a letter: `t<n>` table caption, `f<n>` figure caption, `qs<n>` question, `qa<a>-<b>` its answer.
-fn replace_text(lines: &[&str], src: &str, md: &str) -> Result<(Vec<String>, String), String> {
+fn replace_text(
+    lines: &[&str],
+    src: &str,
+    md: &str,
+    anchor: &str,
+) -> Result<(Vec<String>, String), String> {
     let mut out: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
     let unknown = || "Unknown block.".to_string();
     let at = |n: usize| lines.get(n - 1).copied().ok_or_else(unknown);
@@ -125,6 +142,10 @@ fn replace_text(lines: &[&str], src: &str, md: &str) -> Result<(Vec<String>, Str
         at(a)?;
         out.splice(a - 1..b.min(lines.len()), [md.to_string()]);
         return Ok((out, format!("qa{a}-{a}")));
+    }
+    if let Some(n) = src.strip_prefix('h') {
+        let l = num(n)?;
+        return Ok((retitle(&mut out, at(l)?, l, md, anchor)?, src.to_string()));
     }
     let (kind, n) = match src.strip_prefix("qs") {
         Some(r) => ("qs", r),
@@ -179,4 +200,34 @@ fn find_inner(page: &str, key: &str) -> Option<String> {
         }
         pos = close + close_tag.len();
     }
+}
+
+/// The anchor the section at `src` (`h<line>`) has in the page now.
+fn old_anchor(text: &str, name: &str, opt: &Options, src: &str) -> Result<String, String> {
+    let page = preview(text, name, opt)?;
+    let inner = find_inner(&page, src).ok_or_else(|| "Unknown block.".to_string())?;
+    heading_anchor(&inner)
+}
+
+/// The heading line with a new title; the `{#id}` it has is kept, and one is added (the old anchor) when it has none.
+fn retitle(
+    out: &mut [String],
+    line: &str,
+    l: usize,
+    md: &str,
+    anchor: &str,
+) -> Result<Vec<String>, String> {
+    let (level, text) = crate::scan::head(line)
+        .filter(|h| h.0 > 1)
+        .ok_or_else(|| "Unknown block.".to_string())?;
+    if md.contains("{#") {
+        return Err("A title cannot contain {# here.".into());
+    }
+    let id = match crate::scan::explicit_id(&text) {
+        Some((_, id)) => id,
+        None if anchor.is_empty() => return Err("This section has no anchor to keep.".into()),
+        None => anchor.to_string(),
+    };
+    out[l - 1] = format!("{} {md} {{#{id}}}", "#".repeat(level));
+    Ok(out.to_vec())
 }
