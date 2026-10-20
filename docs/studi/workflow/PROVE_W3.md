@@ -13,3 +13,8 @@ The Rosina files are private; CI covers the same properties on synthetic data (`
 
 ## Result on a real Thermo Q Exactive file (200616_AC_05_BR_1.raw, 52.9 MB)
 convert.mzml@1: 25 962 591 B, `<indexedmzML`, no error, 0.8 s, RSS 177 MB; two runs give the same SHA-256; 3362 offsets, 0 wrong; `indexListOffset` and SHA-1 checksum correct; features on the mzML and on the raw file: 1301 rows each with the same columns. XSD, OpenMS `FileInfo` and the PSI validator were not available on the Mac: not run. Against `raw::to_mzml`: 1299 against 1301 rows, areas identical on the 1299 matched, 2 extra rows and none lost (cause not investigated).
+
+## Schema and semantic checks on synthetic files (cloud)
+- XSD `mzML1.1.2_idx.xsd`: CI (`mzmlwrite/tests_xsd.rs`, `xmllint`) validates an indexed file with an empty header and with a full one, with and without processing steps. An empty `sourceFileList` or `componentList` was invalid; the writer now leaves them out.
+- OpenMS semantic check (`pyopenms` 3.6.0, `MzMLFile().isSemanticallyValid`, installed in a scratch folder, not in CI): `base peak intensity` (MS:1000505) had no unit, now `MS:1000131 number of detector counts`. Still reported on the synthetic header only: no instrument model term in `instrumentConfiguration`, and a `sourceFile` without the three required terms (file format, native ID format, SHA-1). The readers fill these in; to confirm on the real file, run step 5 with `isSemanticallyValid` on `c-0.mzML`.
+- HUPO-PSI Java semantic validator: not run (the release download is blocked from the cloud).
