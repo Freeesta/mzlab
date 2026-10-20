@@ -185,6 +185,19 @@ try:
             pg.click('.fl-fix:has-text("Molecular formulas")'); attendi(pg, "document.querySelectorAll('.fl-needs li').length === 1")
             assert "Remove" in pg.inner_text(".fl-insp")
         step("canvas: a missing input is said on the card with a one-click fix; removing can be undone", needs_and_fix)
+        def issues_and_hints():
+            # after the previous step «Confidence level» still needs the library match: Issues lists it with its remedy; an estimated value says how and can be fixed; each step of the base has a «?» to the Theory
+            attendi(pg, "document.querySelectorAll('.flx-issues li').length === 1")
+            assert "Issues (1)" in pg.inner_text(".flx-issues h3")
+            pg.click('.flx-issues li button:has-text("Show")'); attendi(pg, "document.querySelector('.fln.sel')")
+            pg.click('.flx-issues button:has-text("Add “Match to library”")'); attendi(pg, "document.querySelectorAll('.flx-issues li').length === 0")
+            assert "Nothing needs attention" in pg.inner_text(".flx-issues")
+            pg.click('.fln:has-text("Build feature table")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Build feature table'")
+            q = pg.locator(".fl-insp-hd a.flx-q"); assert q.count() == 1 and q.get_attribute("href").startswith("teoria/21-glossario.html#g-"), q.count()
+            for m in pg.locator('.fl-insp summary:has-text("More")').all(): m.click()
+            assert pg.locator('.fl-insp .flx-est').count() >= 1, pg.inner_text(".fl-insp")[:400]
+            pg.locator('.fl-insp .flx-est button:has-text("Use fixed")').first.click(); attendi(pg, "FLOW.current.plan.steps.some(s => s.params && Object.values(s.params).length)")
+        step("canvas: Issues lists the needs with their remedy; an estimated value says how and can be fixed; «?» opens the Theory", issues_and_hints)
         def advanced_and_keys():
             pg.click('[data-mode="advanced"]'); attendi(pg, "!document.querySelector('.flx-pal').offsetParent === false")
             assert pg.locator(".flx-pal").is_visible() and pg.locator(".fln").count() > 3
