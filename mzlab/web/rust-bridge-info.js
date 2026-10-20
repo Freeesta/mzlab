@@ -1,11 +1,15 @@
 // @ts-check
 // @ts-strict
-// The routes of the bridge that read the head of a file or one answer per file from the indexes: `api/ms2tr`, `api/fileinfo`, `api/msn_grafo` (the graph) and `api/msn_grafo/export` (its spectra as text) and the `api/chrom` of an MRM file.
+// The routes of the bridge that read the head of a file or one answer per file from the indexes: `api/ms2tr`, `api/fileinfo`, `api/msn_grafo` (the graph) and `api/msn_grafo/export` (its spectra as text), `api/msnlib/aggiungi` (POST) and the `api/chrom` of an MRM file.
 // Returns { status, text, ms } or null (the route is unavailable: browser.js answers err.route.unavailable).
-import { grafoRoute } from "./rust-msngrafo-pagina.js";
+import { grafoRoute, libreriaRoute } from "./rust-msngrafo-pagina.js";
 
-/** @param {string} path  @param {URL} u  @param {{slots: any[], rpc: (m: any) => Promise<any>, base: (n: string) => string, stats: any, t0: number}} env */
-export async function infoRoute(path, u, { slots, rpc, base, stats, t0 }) {
+/** @param {string} path  @param {URL} u  @param {{slots: any[], rpc: (m: any) => Promise<any>, base: (n: string) => string, stats: any, t0: number, init?: any}} env */
+export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) {
+  if (path === "/api/msnlib/aggiungi") {                               // add an entry to the msnlib/1 library of the user (POST)
+    const r = await libreriaRoute({ slots, rpc, stats }, init);
+    return r && { ...r, ms: performance.now() - t0 };
+  }
   if (path === "/api/msn_grafo" || path === "/api/msn_grafo/export") {                                     // the fragmentation graph (the .wasm msngrafo, rust-msngrafo-pagina.js)
     const r = await grafoRoute({ slots, rpc, stats }, Number(u.searchParams.get("k")), u.search, path.endsWith("/export"));
     return r && { ...r, ms: performance.now() - t0 };
