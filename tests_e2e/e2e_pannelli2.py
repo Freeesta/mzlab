@@ -18,7 +18,7 @@ try:
         def corr_out():
             assert pg.is_visible(".pnl.chrom [data-o=corr]"), "Correzione is in the header, not hidden in the popover"
             assert pg.evaluate(f"!{CH}.el.querySelector('.cpop').contains({CH}.el.querySelector('.corrb'))")
-            pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_timeout(200)
+            pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_selector(".pnl.chrom .corrm", state="visible")
             t = pg.inner_text(".pnl.chrom .corrw >> nth=0 >> .corrm"); print(t)
             assert t.count("Sottrai file:") == 1 and pg.locator(".pnl.chrom .corrm option").count() == 3, t      # one entry, any of the 3 files in its chooser, not only the blank
             pg.keyboard.press("Escape")
@@ -47,16 +47,16 @@ try:
             attendi(pg, f"document.querySelector('{B} .cidot').hidden")
         step("Correzioni: one icon opens the summary popover (Esc / click outside close it), the dot follows the state", corr_info)
         def subtract():
-            pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_timeout(200)
-            pg.locator(".pnl.chrom .corri", has_text="Sottrai file").first.click(); pg.wait_for_timeout(1500)
+            pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_selector(".pnl.chrom .corri", state="visible")
+            pg.locator(".pnl.chrom .corri", has_text="Sottrai file").first.click(); pg.wait_for_function(f"(()=>{{const b={CH}.bk;return b!=='' && b!=null}})()", timeout=10000)
             assert pg.evaluate(f"{CH}.bk") not in ("", None), "a file was chosen"
-            pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_timeout(200); pg.locator(".pnl.chrom .corri", has_text="Nessuna").first.click(); pg.wait_for_timeout(800)
+            pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_selector(".pnl.chrom .corri", state="visible"); pg.locator(".pnl.chrom .corri", has_text="Nessuna").first.click(); pg.wait_for_function(f"(()=>{{const b={CH}.bk;return b==='' || b==null}})()", timeout=10000)
         step("a non-blank file is subtracted from the chromatogram", subtract)
         def rt():
-            pg.click(".pnl.chrom [data-a=cpar]"); pg.wait_for_timeout(200)
-            pg.fill(".pnl.chrom [data-o=rt0]", "13"); pg.press(".pnl.chrom [data-o=rt0]", "Tab"); pg.fill(".pnl.chrom [data-o=rt1]", "16"); pg.press(".pnl.chrom [data-o=rt1]", "Tab"); pg.wait_for_timeout(800)
+            pg.click(".pnl.chrom [data-a=cpar]"); pg.wait_for_selector(".pnl.chrom [data-o=rt0]", state="visible")
+            pg.fill(".pnl.chrom [data-o=rt0]", "13"); pg.press(".pnl.chrom [data-o=rt0]", "Tab"); pg.fill(".pnl.chrom [data-o=rt1]", "16"); pg.press(".pnl.chrom [data-o=rt1]", "Tab"); pg.wait_for_function(f"(()=>{{const z={CH}.zoom;return !!z && Math.abs(z[0]-13)<1e-6 && Math.abs(z[1]-16)<1e-6}})()", timeout=10000)
             z = pg.evaluate(f"{CH}.zoom"); assert z and abs(z[0] - 13) < 1e-6 and abs(z[1] - 16) < 1e-6, z
-            pg.fill(".pnl.chrom [data-o=rt0]", ""); pg.fill(".pnl.chrom [data-o=rt1]", ""); pg.press(".pnl.chrom [data-o=rt1]", "Tab"); pg.wait_for_timeout(500)
+            pg.fill(".pnl.chrom [data-o=rt0]", ""); pg.fill(".pnl.chrom [data-o=rt1]", ""); pg.press(".pnl.chrom [data-o=rt1]", "Tab"); pg.wait_for_function(f"{CH}.zoom == null", timeout=10000)
             assert pg.evaluate(f"{CH}.zoom") is None
             pg.keyboard.press("Escape"); pg.mouse.click(5, 5)
         step("RT from ... to ... sets the visible interval; empty = whole run", rt)
