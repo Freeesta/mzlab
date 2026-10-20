@@ -1,0 +1,10 @@
+{
+  "name": "mzlab-libro-editor-bundle",
+  "private": true,
+  "description": "Build-only package: bundles the Milkdown (Crepe) visual editor with KaTeX into mzlab/web/vendor/libro/. Not used by the site at run time.",
+  "scripts": { "build": "node build.mjs" },
+  "dependencies": {
+    "@milkdown/crepe": "7.22.3",
+    "esbuild": "0.25.12"
+  }
+}
