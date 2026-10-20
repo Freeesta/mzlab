@@ -148,6 +148,10 @@ jobs:
           else
             cargo install tauri-cli --version "=$TAURI_CLI" --locked --force
           fi
+      # the restored cache of target/ may hold installers of an older version: the artifact must carry only the ones built now
+      - name: Remove stale bundles
+        shell: bash
+        run: rm -rf target/desktop/bundle target/universal-apple-darwin/desktop/bundle
       - name: Installer
         working-directory: crates/mzlab-desktop
         env:
