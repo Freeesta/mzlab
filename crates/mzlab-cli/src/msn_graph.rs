@@ -9,7 +9,7 @@ use mzlab_core::elements::{fmt, parse_formula};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out};
 use mzlab_core::msnalbero::Raggruppa;
-use mzlab_core::msngrafo::{grafo_json, Grafo, Opzioni};
+use mzlab_core::msngrafo::{esporta, grafo_json, Formato, Grafo, Opzioni};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 
 pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/1) of an MSn infusion.
@@ -27,6 +27,10 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
   --scelta MZ=ION      the formula chosen for the node at MZ (repeatable)
   --verita FILE        paths and formulas expected ({nodes: [{path, formula}]})
   --riassunto          one line of numbers instead of the graph
+  --export FORMAT      the spectra of the tree as csv, mgf or msp text instead of the graph
+  --pulito             with --export: only the peaks a node of the graph explains
+  --nodo ID            with --export: nK = the spectra of which node nK of the graph is the precursor; msn:<id> or <id> = those of that node of
+                       the tree; tutto = all
   --out PATH           write there instead of the standard output";
 
 pub struct Args {
@@ -34,6 +38,7 @@ pub struct Args {
     o: Opzioni,
     verita: Option<PathBuf>,
     riassunto: bool,
+    export: Option<(Formato, bool, Option<String>)>,
     pub out: Option<PathBuf>,
 }
 
@@ -48,6 +53,7 @@ pub fn parse_args(
 ) -> std::result::Result<Option<Args>, String> {
     let (mut file, mut o) = (None, Opzioni::default());
     let (mut verita, mut riassunto, mut out) = (None, false, None);
+    let (mut export, mut pulito, mut nodo) = (None, false, None);
     while let Some(x) = a.next() {
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
@@ -66,6 +72,14 @@ pub fn parse_args(
             }
             "--verita" => verita = a.next().map(PathBuf::from),
             "--riassunto" => riassunto = true,
+            "--export" => {
+                export = Some(
+                    Formato::da_nome(&a.next().unwrap_or_default())
+                        .map_err(|_| "--export needs csv, mgf or msp")?,
+                )
+            }
+            "--pulito" => pulito = true,
+            "--nodo" => nodo = a.next(),
             "--out" => out = a.next().map(PathBuf::from),
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),
             f => return Err(format!("unknown argument {f}")),
@@ -75,11 +89,13 @@ pub fn parse_args(
     if riassunto && verita.is_none() {
         return Err("--riassunto needs --verita".into());
     }
+    let export = export.map(|f| (f, pulito, nodo));
     Ok(Some(Args {
         file,
         o,
         verita,
         riassunto,
+        export,
         out,
     }))
 }
@@ -208,6 +224,9 @@ pub fn riassunto(g: &Grafo, verita: &str) -> Result<String> {
 /// The text the command prints: the graph, or the line of numbers.
 pub fn esegui(a: &Args, tmp: &Path) -> Result<String> {
     let (g, j) = grafo(&a.file, &a.o, tmp)?;
+    if let Some((f, pulito, nodo)) = &a.export {
+        return Ok(esporta(&g, *f, *pulito, nodo.as_deref()));
+    }
     if !a.riassunto {
         return Ok(j + "\n");
     }

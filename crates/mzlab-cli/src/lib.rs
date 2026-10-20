@@ -226,6 +226,18 @@ fn msn_graph_cmd(args: impl Iterator<Item = String>) -> Outcome {
     }
 }
 
+/// `mzlab-cli flow command PLAN.json`: the script that reruns the plan, on stdout.
+fn flow_command(args: Vec<String>) -> Outcome {
+    let [path] = args.as_slice() else {
+        return Outcome::fail("usage: mzlab-cli flow command PLAN.json");
+    };
+    let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"));
+    match text.and_then(|t| mzlab_core::flow::command_route(&t).map_err(|e| e.to_string())) {
+        Ok(s) => Outcome::ok(s.into_bytes()),
+        Err(e) => Outcome::fail(&e),
+    }
+}
+
 /// `mzlab-cli <args>`: `args` without the program name.
 pub fn execute(args: &[String]) -> Outcome {
     let mut args = args.iter().cloned();
@@ -237,7 +249,8 @@ pub fn execute(args: &[String]) -> Outcome {
                     flow_report::run(args).map_or_else(|e| Outcome::fail(&e), Outcome::ok)
                 }
                 Some("run") => flow_run::run(args.collect(), None),
-                _ => Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow report RUNDIR [--out FILE]"),
+                Some("command") => flow_command(args.collect()),
+                _ => Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow command PLAN.json"),
             }
         }
         Some("msn-graph") => return msn_graph_cmd(args),
@@ -281,6 +294,8 @@ mod tests;
 mod flow_budget_tests;
 #[cfg(test)]
 mod flow_cache_tests;
+#[cfg(test)]
+mod flow_command_tests;
 #[cfg(test)]
 mod flow_compare_tests;
 #[cfg(test)]

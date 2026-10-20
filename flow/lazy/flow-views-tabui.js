@@ -11,12 +11,13 @@
   const VIA = /** @type {[number, string][]} */ ([[1, "rule"], [2, "cleavage"], [4, "imported"], [8, "MS2"], [16, "network"]]);
   const word = (/** @type {string[]} */ list, /** @type {any} */ n) => n === null || n === undefined ? "" : list[n] || String(n);
 
-  /** tptab/1 → products table @param {any} j @returns {{head: string[], rows: string[][]}} */
+  /** tptab/1 → products table @param {any} j @returns {{head: string[], rows: string[][], ids: any[]}} */
   F.readTptab = j => ({
     head: ["Row", "ID", "m/z", "RT", "Status", "Kinship", "Explained by", "Files detected", "Largest area", "Time of maximum", "In time 0", "In blank"],
     rows: (j.rows || []).map((/** @type {any} */ r) => [txt(r.row), txt(r.id), fx(r.mz, 4), fx(r.rt, 2), word(STATUS, r.status), word(KIN, r.kinship),
       r.via ? VIA.filter(([b]) => r.via & b).map(x => x[1]).join(", ") : "", txt(r.n_det), fx(r.max_area, 0), fx(r.tmax, 1),
       r.in_t0 ? `yes (×${fx(r.t0_ratio, 2)})` : "no", r.in_blank ? `yes (×${fx(r.blank_ratio, 2)})` : "no"]),
+    ids: (j.rows || []).map((/** @type {any} */ r) => r.row),
   });
 
   /** gruppi/1 → the presence matrix (one row per product, one column per condition), the sets, the parent's kinetics @param {any} g */
@@ -24,8 +25,8 @@
     const ids = (g.conditions || []).map((/** @type {any} */ c) => c.id);
     const cell = (/** @type {any} */ c) => !c.present ? "absent" : `present, area ${fx(c.area, 0)}${c.ratio_ref !== null && c.ratio_ref !== undefined && c.ratio_ref !== 1 ? `, ×${fx(c.ratio_ref, 2)} of the reference` : ""}`;
     return {
-      matrix: { head: ["Product", "m/z", "RT", "Neutral formula", ...ids], rows: (g.rows || []).map((/** @type {any} */ r) => [txt(r.tp_name), fx(r.mz, 4), fx(r.rt, 2), txt(r.neutral_formula), ...(r.cond || []).map(cell)]) },
-      sets: { head: ["Conditions", "Products"], rows: (g.sets || []).map((/** @type {any} */ s) => [(s.conditions || []).join(" + "), String((s.rows || []).length)]) },
+      matrix: { ids: (g.rows || []).map((/** @type {any} */ r) => r.row), head: ["Product", "m/z", "RT", "Neutral formula", ...ids], rows: (g.rows || []).map((/** @type {any} */ r) => [txt(r.tp_name), fx(r.mz, 4), fx(r.rt, 2), txt(r.neutral_formula), ...(r.cond || []).map(cell)]) },
+      sets: { members: (g.sets || []).map((/** @type {any} */ s) => s.rows || []), head: ["Conditions", "Products"], rows: (g.sets || []).map((/** @type {any} */ s) => [(s.conditions || []).join(" + "), String((s.rows || []).length)]) },
       parent: { head: ["Condition", "Rate constant k (1/min)", "Half-life (min)", "Share left"], rows: (g.conditions || []).map((/** @type {any} */ c) => [c.id, fx(c.parent && c.parent.k, 5), fx(c.parent && c.parent.half_life, 1), fx(c.parent && c.parent.remaining, 3)]) },
       ids,
     };
@@ -70,15 +71,15 @@
     return svg;
   };
 
-  /** @param {HTMLElement} host @param {string} caption @param {{head: string[], rows: string[][]}} t @param {string} label */
-  const table = (host, caption, t, label) => t.rows.length && F.drawTable(host, { caption, head: t.head, rows: t.rows, label });
+  /** @param {HTMLElement} host @param {string} caption @param {{head: string[], rows: string[][], ids?: any[], members?: any[][]}} t @param {string} label */
+  const table = (host, caption, t, label) => t.rows.length && F.drawTable(host, { caption, head: t.head, rows: t.rows, label, ids: t.ids, members: t.members });
 
   /** the conditions block of a tptab/1: matrix, a chart of the area of one product per condition with its table, the sets and the parent @param {HTMLElement} host @param {any} g @param {string} name */
   const conditions = (host, g, name) => {
     const { el } = F, d = F.readGruppi(g);
     table(host, `${name}, conditions`, d.matrix, `Conditions of ${name}`);
     if (g.rows && g.rows.length && d.ids.length) {
-      const show = el("div", { class: "flx-one" }), pick = /** @type {HTMLSelectElement} */ (el("select", { "aria-label": "Product to draw", onchange: () => draw(Number(pick.value)) }, ...g.rows.slice(0, 300).map((/** @type {any} */ r, /** @type {number} */ i) => el("option", { value: String(i), text: `${r.tp_name} (m/z ${fx(r.mz, 4)})` }))));
+      const show = el("div", { class: "flx-one" }), pick = /** @type {HTMLSelectElement} */ (el("select", { "aria-label": "Product to draw", onchange: () => { draw(Number(pick.value)); F.select(String(g.rows[Number(pick.value)].row), "conditions"); } }, ...g.rows.slice(0, 300).map((/** @type {any} */ r, /** @type {number} */ i) => el("option", { value: String(i), text: `${r.tp_name} (m/z ${fx(r.mz, 4)})` }))));
       /** @param {number} i */
       const draw = i => {
         const r = g.rows[i], items = d.ids.map((/** @type {string} */ id, /** @type {number} */ k) => ({ id, v: Number(r.cond && r.cond[k] && r.cond[k].area) || 0 }));
@@ -86,6 +87,12 @@
         F.drawTable(show, { caption: `Area of ${r.tp_name}`, head: ["Condition", "Area"], rows: items.map((/** @type {any} */ x) => [x.id, fx(x.v, 0)]), label: `Area of ${r.tp_name} per condition` });
       };
       host.append(el("label", { class: "fl-note" }, "Product ", pick), show); draw(0);
+      // the product picked in another view of the same table is the one drawn here
+      const stop = F.onSelect((/** @type {string | null} */ id, /** @type {string} */ from) => {
+        if (!host.isConnected) { stop(); return; }
+        const at = g.rows.slice(0, 300).findIndex((/** @type {any} */ r) => String(r.row) === id);
+        if (from !== "conditions" && at >= 0) { pick.value = String(at); draw(at); }
+      });
     }
     table(host, `${name}, sets`, d.sets, `Sets of ${name}`); table(host, `${name}, parent`, d.parent, `Parent of ${name}`);
   };
@@ -93,6 +100,7 @@
   /** JSON → the view of its format; a wrong shape says so @param {string} text @param {string} label @param {HTMLElement} host */
   const open = (text, label, host) => {
     const { el } = F, j = JSON.parse(text), kind = j.schema || j.format;
+    if (kind === "tptab/1" || kind === "gruppi/1") F.watchRows(host, "products");
     if (kind === "tptab/1") {
       if (!j.rows || !j.rows.length) { host.append(el("p", { class: "fl-note", text: `${label} has no products to show.` })); return; }
       table(host, label, F.readTptab(j), `Table ${label}`);

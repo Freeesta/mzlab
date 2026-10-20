@@ -7,7 +7,8 @@ use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::Error;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
-use mzlab_core::msngrafo::{da_richiesta, grafo_json};
+use mzlab_core::msngrafo::Grafo;
+use mzlab_core::msngrafo::{da_richiesta, da_richiesta_export, esporta, grafo_json};
 use mzlab_core::routes::Query;
 use wasm_bindgen::prelude::*;
 
@@ -52,14 +53,13 @@ pub fn version() -> String {
     format!("mzlab-msngrafo/1 {}", env!("CARGO_PKG_VERSION"))
 }
 
-fn grafo(
+fn calcola(
     read_idx: Function,
     idx_size: f64,
     read_file: Function,
     nome: &str,
-    query: &str,
-) -> mzlab_core::Result<String> {
-    let q = Query::parse(query);
+    q: &Query,
+) -> mzlab_core::Result<(Grafo, String)> {
     let req = da_richiesta(&|k| q.get(k).map(String::from))?;
     let bad = || Error::new("error.badIndex");
     if idx_size.is_nan() || idx_size < 0.0 {
@@ -75,7 +75,7 @@ fn grafo(
     drop(bytes);
     let scans = Index::open(JsReader { read: read_idx }, size)?.scans;
     let mut m = JsReader { read: read_file };
-    Ok(grafo_json(&scans, &mut m, (nome, &sha), (&req.0, &req.1))?.1)
+    grafo_json(&scans, &mut m, (nome, &sha), (&req.0, &req.1))
 }
 
 /// The `msngrafo/1` of the file `nome` for the query string `query` (`formula`, `tol`, `ce`, `ppm_formula`, ..., `scelte`; `api/msn_grafo`).
@@ -88,5 +88,23 @@ pub fn msn_grafo(
     nome: &str,
     query: &str,
 ) -> Result<String, JsValue> {
-    grafo(read_idx, idx_size, read_file, nome, query).map_err(js_err)
+    let q = Query::parse(query);
+    calcola(read_idx, idx_size, read_file, nome, &q)
+        .map(|g| g.1)
+        .map_err(js_err)
+}
+
+/// The spectra of the same graph as text (`api/msn_grafo/export`: `formato=csv|mgf|msp`, `pulito=1`, `nodo=<id>` besides the query of the graph).
+#[wasm_bindgen]
+pub fn msn_grafo_export(
+    read_idx: Function,
+    idx_size: f64,
+    read_file: Function,
+    nome: &str,
+    query: &str,
+) -> Result<String, JsValue> {
+    let q = Query::parse(query);
+    let (f, pulito, nodo) = da_richiesta_export(&|k| q.get(k).map(String::from)).map_err(js_err)?;
+    let (g, _) = calcola(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+    Ok(esporta(&g, f, pulito, nodo.as_deref()))
 }

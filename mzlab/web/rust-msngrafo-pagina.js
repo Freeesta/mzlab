@@ -4,15 +4,15 @@
 
 /**
  * @param {{ slots: any[], rpc: (msg: any) => Promise<any>, stats: { rust: number } }} c
- * @param {number} k @param {string} search the query string of the request
- * @returns {Promise<{ status: number, text: string } | null>}
+ * @param {number} k @param {string} search the query string of the request @param {boolean} [esporta] the spectra as text (api/msn_grafo/export)
+ * @returns {Promise<{ status: number, text: string, type?: string, disposition?: string } | null>}
  */
-export async function grafoRoute({ slots, rpc, stats }, k, search) {
+export async function grafoRoute({ slots, rpc, stats }, k, search, esporta = false) {
   const s = slots[k];
   if (!s) return null;
   await s.opening;
   if (s.bad || !s.idx || !s.blob) return null;
-  const r = await rpc({ op: "msngrafo", slot: k, query: search, blob: s.blob });
+  const r = await rpc({ op: "msngrafo", slot: k, query: search, blob: s.blob, esporta });
   if (r.dead) return null;
   if (r.error) {
     /** @type {any} */ let e = null;
@@ -21,5 +21,8 @@ export async function grafoRoute({ slots, rpc, stats }, k, search) {
     return { status: 400, text: JSON.stringify({ error: e.error_key, error_key: e.error_key, params: e.params || {} }) };
   }
   stats.rust++;
-  return { status: 200, text: r.info };
+  if (!esporta) return { status: 200, text: r.info };
+  const f = new URLSearchParams(search).get("formato");
+  const ext = f === "csv" || f === "mgf" || f === "msp" ? f : "txt";
+  return { status: 200, text: r.info, type: f === "csv" ? "text/csv" : "text/plain", disposition: `attachment; filename="msn-graph.${ext}"` };
 }

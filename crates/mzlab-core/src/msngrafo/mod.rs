@@ -5,6 +5,7 @@
 
 mod annota;
 mod candidati;
+mod esporta;
 mod formule;
 mod json;
 mod leggi;
@@ -12,6 +13,7 @@ mod posa;
 mod rotta;
 mod unisci;
 
+pub use esporta::{da_richiesta_export, esporta, Formato};
 pub use json::json;
 pub use leggi::{leggi, Letto};
 pub use rotta::{da_richiesta, grafo_json};
