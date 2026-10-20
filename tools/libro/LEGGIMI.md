@@ -10,4 +10,6 @@ Supported (anything else stops the build with `file:line`):
 - `[text](Other.md#x)` becomes `Other.html#x`; `[@key; @key]` citation; `[I]` hypothesis badge (a `--pubblico` build fails if any is left); `@eq:id`, `@fig:id` references.
 - `$$ tex $$ {#eq:id}` numbered `(S1.k)` (prefix = file name up to the first `_` or `.`); TeX is kept escaped in `span.tex` for KaTeX in the browser.
 - `> [!nota|attenzione|lab|formula|esercizio] optional title` boxes; `Tabella: caption` + pipe table; `![alt](img/x.svg "caption"){#fig:id}` (alt up to 125 characters); `??? question` + answer on the next line(s).
-- Raw HTML is never passed through: it is escaped.
+- Raw HTML is never passed through: it is escaped. The only exception is the import-only fenced block ```` ```html ... ``` ````, copied verbatim (svg, simulators, existing equation markup); `<script>`, `<iframe>`, `on*=`, `javascript:` and similar stop the build.
+- Import constructs: `::: duo` ... `:::` (side-by-side boxes; extra box kinds `[!lr]`, `[!hr]`, `[!oral]`), `{.lead}` / `{.note}` at the start of a paragraph, `# Title {kicker: Capitolo 8}`, `<!-- script: sim-misc.js -->` before the first heading.
+- `--teoria` writes published chapters (Teoria head and scripts, no noindex); `tests/test_libro_generato.py` checks every `mzlab/web/teoria/src/NN-*.md` against the HTML next to it.

@@ -52,3 +52,50 @@ def test_public_build_drops_private_and_refuses_hypothesis():
 def test_errors_carry_line(text, msg):
     with pytest.raises(LibroError, match=msg):
         converti(text, "X.md")
+
+
+CAP = """<!-- script: sim-misc.js -->
+# Dalla prova {kicker: Capitolo 8}
+
+{.lead} Un riassunto breve.
+
+## Sezione
+
+```html
+<span class="eq"><i>x</i> = 1<span class="no">(8.1)</span></span>
+
+<div class="sim" id="sim-a"><h4>Prova</h4></div>
+```
+
+::: duo
+> [!lr] Quadrupolo
+> Testo uno.
+
+> [!hr] Orbitrap
+> Testo due.
+:::
+
+{.note} Una nota.
+"""
+
+
+def test_teoria_chapter_constructs():
+    h = converti(CAP, "08-prova.md", teoria=True)
+    assert '<div class="kicker">Capitolo 8</div>\n<h1>Dalla prova</h1>' in h
+    assert '<p class="lead">Un riassunto breve.</p>' in h and '<p class="note">Una nota.</p>' in h
+    assert '<div class="sim" id="sim-a"><h4>Prova</h4></div>' in h and '<span class="no">(8.1)</span>' in h
+    assert '<div class="duo"><div class="box lr"><b>Quadrupolo</b>' in h and '<div class="box hr"><b>Orbitrap</b>' in h
+    assert h.rstrip().endswith('<script src="../appname.js"></script><script src="teoria.js"></script><script src="sim-misc.js"></script>\n</body></html>')
+    assert "noindex" not in h and "data-esteso" not in h and "· Teoria QqQ lab</title>" in h
+    assert converti(CAP, "08-prova.md", teoria=True) == h
+
+
+@pytest.mark.parametrize("text,msg", [
+    ("# T\n\n```html\n<script>x</script>\n```\n", r":3: raw HTML block contains '<script'"),
+    ("# T\n\n```html\n<a onclick=\"x\">y</a>\n```\n", r"which is not allowed"),
+    ("# T\n\n```html\n<p>a</p>\n", r":3: ```html block without closing"),
+    ("# T\n\n::: duo\n> [!lr] a\n> b\n", r":3: ::: duo without closing"),
+])
+def test_raw_and_duo_errors(text, msg):
+    with pytest.raises(LibroError, match=msg):
+        converti(text, "X.md")

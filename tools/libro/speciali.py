@@ -3,7 +3,8 @@ import re
 from html import escape
 
 BOXES = {"nota": ("key", "Concetto chiave"), "attenzione": ("warn", "Errore frequente"), "lab": ("lab", "Esempio"),
-         "formula": ("math", "Formula"), "esercizio": ("gym", "Esercizio")}
+         "formula": ("math", "Formula"), "esercizio": ("gym", "Esercizio"),
+         "lr": ("lr", "Bassa risoluzione"), "hr": ("hr", "Alta risoluzione"), "oral": ("oral", "Ripasso")}
 FIG = re.compile(r'^!\[([^\]]*)\]\(([^)\s"]+)(?: "([^"]*)")?\)\s*\{#fig:([\w-]+)\}\s*$')
 EQEND = re.compile(r"\$\$\s*(?:\{#eq:([\w-]+)\})?\s*$")
 FOLLOW = re.compile(r"^\{#eq:([\w-]+)\}\s*$")
