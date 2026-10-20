@@ -71,6 +71,9 @@
       "err.flow.instance": `A step has no ${q.field}.`,
       "err.flow.input": `An input file has no ${q.field}.`,
       "err.flow.compare.sameVariant": "Two variants of the comparison are identical.",
+      "err.flow.input.missing": `Open the file ${q.input} in the Data tab first, then run again.`,
+      "err.flow.check": `The plan has problems: ${q.problems}.`,
+      "err.flow.run": "The run could not start.",
       "err.flow.compare.few": "A comparison needs at least two variants.",
     };
     return M[p.key] || p.key;

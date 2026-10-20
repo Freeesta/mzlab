@@ -26,6 +26,8 @@ mzlab-chem = { path = "../mzlab-chem" }
 mzlab-feat = { path = "../mzlab-feat", features = ["chem", "untargeted", "attributio", "interp"] }
 mzlab-feat-wasm = { path = "../mzlab-feat-wasm", default-features = false, features = ["detect", "proofs", "finder", "untargeted"] }
 mzlab-feat-table-wasm = { path = "../mzlab-feat-table-wasm" }
+# the engine of the plans of the graphical Flow (`flow/run`): the same one as `cargo run -p mzlab-cli --example flow`
+mzlab-cli = { path = "../mzlab-cli" }
 memmap2 = "0.9"
 # the builds of the .mzidx of several files run on a thread pool (native only, never in the WASM graph)
 rayon = "1"
