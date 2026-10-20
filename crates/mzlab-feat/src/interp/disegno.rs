@@ -81,26 +81,34 @@ fn one_ring(smiles: &str, atoms: &[usize]) -> bool {
 
 /// The form of the drawing of a row; `smiles` = the parent.
 pub fn drawing(smiles: &str, site: &SiteReport) -> Drawing {
+    match Mol::parse(smiles) {
+        Ok(mol) => drawing_of(&mol, smiles, site),
+        Err(_) => unreadable(&delta_label(&site.transform)),
+    }
+}
+
+fn unreadable(delta: &str) -> Drawing {
+    Drawing {
+        mode: "bracket",
+        atoms: vec![],
+        uncertainty: "whole",
+        ..empty(delta)
+    }
+}
+
+fn drawing_of(mol: &Mol, smiles: &str, site: &SiteReport) -> Drawing {
     let delta = delta_label(&site.transform);
-    let Ok(mol) = Mol::parse(smiles) else {
-        return Drawing {
-            mode: "bracket",
-            atoms: vec![],
-            uncertainty: "whole",
-            ..empty(&delta)
-        };
-    };
     match site.confidence {
-        "site" => structure(&mol, site, &delta),
-        "region" => zone(&mol, smiles, site, &delta),
+        "site" => structure(mol, site, &delta),
+        "region" => zone(mol, smiles, site, &delta),
         "uncertain" => whole(
-            &mol,
+            mol,
             &delta,
             &format!("{delta}: position uncertain"),
             "whole",
         ),
         _ => whole(
-            &mol,
+            mol,
             &delta,
             &format!("{delta}: position not determined"),
             "whole",
@@ -223,5 +231,14 @@ impl Drawing {
             self.fallback = None;
         }
         self
+    }
+}
+
+/// `drawing` for a parent given as a `mol/1` record (feature `record`); `smiles` is the text the rings are read from.
+#[cfg(feature = "record")]
+pub fn drawing_record(rec: &mzlab_mol::Mol, smiles: &str, site: &SiteReport) -> Drawing {
+    match Mol::from_record(rec, true) {
+        Ok(mol) => drawing_of(&mol, smiles, site),
+        Err(_) => unreadable(&delta_label(&site.transform)),
     }
 }

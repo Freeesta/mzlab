@@ -107,8 +107,17 @@ pub fn candidates(
     parent: &Formula,
     tp: &Formula,
 ) -> Result<Candidates, &'static str> {
-    let transform = transform_of(parent, tp)?;
     let mol = Mol::parse(smiles).map_err(|_| "unsupported_change")?;
+    candidates_of(mol, smiles, parent, tp)
+}
+
+fn candidates_of(
+    mol: Mol,
+    smiles: &str,
+    parent: &Formula,
+    tp: &Formula,
+) -> Result<Candidates, &'static str> {
+    let transform = transform_of(parent, tp)?;
     let sites = posizioni::sites(&mol, transform).map_err(|_| "unsupported_change")?;
     Ok(Candidates {
         mol,
@@ -116,6 +125,18 @@ pub fn candidates(
         transform,
         sites,
     })
+}
+
+/// `candidates` for a parent given as a `mol/1` record (feature `record`); `smiles` is still the text the groups of the supposed tree are read from.
+#[cfg(feature = "record")]
+pub fn candidates_record(
+    rec: &mzlab_mol::Mol,
+    smiles: &str,
+    parent: &Formula,
+    tp: &Formula,
+) -> Result<Candidates, &'static str> {
+    let mol = Mol::from_record(rec, true).map_err(|_| "unsupported_change")?;
+    candidates_of(mol, smiles, parent, tp)
 }
 
 /// The atoms of each site as a mask (the bond of a `-2H` takes both carbons), for `localize_sites`; None above 64 atoms.
