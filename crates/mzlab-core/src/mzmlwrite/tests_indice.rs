@@ -28,6 +28,15 @@ pub(super) fn indexed_sample(steps: Vec<ProcStep>) -> (Vec<u8>, Vec<u8>) {
     let h = Header {
         run: "x".into(),
         steps,
+        // the schema wants a source file and the three kinds of component
+        sources: vec!["x.raw".into()],
+        components: [
+            ("source", "MS:1000073", "electrospray ionization"),
+            ("analyzer", "MS:1000081", "quadrupole"),
+            ("detector", "MS:1000253", "electron multiplier"),
+        ]
+        .map(|(k, a, n)| (k.into(), a.into(), n.into()))
+        .to_vec(),
         ..Default::default()
     };
     let write = |idx: bool| {
