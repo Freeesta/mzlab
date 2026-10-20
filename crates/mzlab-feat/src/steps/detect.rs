@@ -191,6 +191,7 @@ fn centwave() -> Algorithm {
             spectrum_mode: vec!["centroid"],
             peak_fwhm_s: Some((2.0, 60.0)),
             note: "High resolution centroided data with a known range of peak widths",
+            ..Applicability::default()
         },
         params: vec![
             Param::number("ppm", "m/z deviation").min(0.0).default_num(25.0).unit("ppm"),

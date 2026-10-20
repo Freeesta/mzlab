@@ -138,6 +138,8 @@ pub enum Kind {
     Number,
     Integer,
     Bool,
+    /// Free text (a list of element ranges, a path).
+    Text,
     /// Two numbers, the second not below the first (a range), each at least the `f64`.
     Pair(f64),
     /// One of these values (numbers or strings).
@@ -195,6 +197,9 @@ impl Param {
             .map(|s| Value::Str((*s).to_string()))
             .collect();
         Param::new(name, title, Kind::Choice(v))
+    }
+    pub fn text(name: &'static str, title: &'static str) -> Param {
+        Param::new(name, title, Kind::Text)
     }
     pub fn pair(name: &'static str, title: &'static str, min: f64) -> Param {
         Param::new(name, title, Kind::Pair(min))
@@ -275,6 +280,9 @@ pub struct Applicability {
     pub spectrum_mode: Vec<&'static str>,
     /// Range of chromatographic peak widths (FWHM, seconds) where the method is known to work.
     pub peak_fwhm_s: Option<(f64, f64)>,
+    pub ms_levels: Vec<u32>,
+    /// Inputs the method cannot work without (`library`, `ms2`, `internal_standards`, `blank`, `reference_sample`).
+    pub needs: Vec<&'static str>,
     pub note: &'static str,
 }
 

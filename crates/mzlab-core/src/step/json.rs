@@ -125,11 +125,12 @@ fn ports(o: &mut Out, ps: &[Port]) {
 fn param(o: &mut Out, p: &Param) {
     o.str("title").raw(":").str(p.title);
     match &p.kind {
-        Kind::Number | Kind::Integer | Kind::Bool => {
+        Kind::Number | Kind::Integer | Kind::Bool | Kind::Text => {
             key(o, "type");
             o.str(match p.kind {
                 Kind::Number => "number",
                 Kind::Integer => "integer",
+                Kind::Text => "string",
                 _ => "boolean",
             });
         }
@@ -219,6 +220,16 @@ fn applicability(o: &mut Out, a: &Applicability) {
     if let Some((lo, hi)) = a.peak_fwhm_s {
         open(o, "peak_fwhm_s");
         o.floats(&[lo, hi]);
+    }
+    if !a.ms_levels.is_empty() {
+        open(o, "ms_levels");
+        list(o, &a.ms_levels, |o, l| {
+            o.int(i64::from(*l));
+        });
+    }
+    if !a.needs.is_empty() {
+        open(o, "needs");
+        strs(o, &a.needs);
     }
     if !a.note.is_empty() {
         open(o, "note");
