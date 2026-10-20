@@ -22,7 +22,7 @@ function pickFileColor(f) {
 function colorFile(f, ev) {
   Q("#colpop")?.remove();
   const d = document.createElement("div"); d.id = "colpop";
-  d.innerHTML = `<div class="sm" style="margin-bottom:4px">${I18N.t("files.color.of", { label: EH(f.label) })}</div><div class="sw">${FILE_COLORS.map(c => `<button data-c="${c}" style="background:${c}" title="${c}"></button>`).join("")}</div><label class="sm">${I18N.t("files.color.custom")} <input type="color" value="${/^#[0-9a-f]{6}$/i.test(f.color) ? f.color : "#1f77b4"}"></label>`;
+  d.innerHTML = h`<div class="sm" style="margin-bottom:4px">${raw(I18N.t("files.color.of", { label: EH(f.label) }))}</div><div class="sw">${FILE_COLORS.map(c => h`<button data-c="${c}" style="background:${c}" title="${c}"></button>`)}</div><label class="sm">${raw(I18N.t("files.color.custom"))} <input type="color" value="${/^#[0-9a-f]{6}$/i.test(f.color) ? f.color : "#1f77b4"}"></label>`;
   const set = c => { f.color = c; f.colorSet = true; d.remove(); renderFileList(); redrawAll(); uiSave(); };
   d.querySelectorAll("[data-c]").forEach(b => b.onclick = () => set(b.dataset.c));
   d.querySelector("input").onchange = e => set(e.target.value);
@@ -39,7 +39,7 @@ function fileMenu(btn) {
   const d = document.createElement("div"); d.id = "fpop";
   const paint = () => {
     const gs = []; tabFiles().forEach(f => { const g = grpOf(f); let G = gs.find(x => x.g === g); if (!G) gs.push(G = { g, fs: [] }); G.fs.push(f); });
-    d.innerHTML = `<div class="fpb"><button data-all="1">${I18N.t("files.pop.all")}</button><button data-all="0">${I18N.t("files.pop.none")}</button></div>` + gs.map(G => `<div class="fgh"><span>${EH(grpLabel(G.g))}</span></div>` + G.fs.map(f => `<label><input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""}><i style="background:${f.color}"></i><span class="fn" data-k="${f.k}" title="${I18N.t("files.pop.only.title")}">${EH(f.label)}</span></label>`).join("")).join("");
+    d.innerHTML = h`<div class="fpb"><button data-all="1">${raw(I18N.t("files.pop.all"))}</button><button data-all="0">${raw(I18N.t("files.pop.none"))}</button></div>` + gs.map(G => h`<div class="fgh"><span>${grpLabel(G.g)}</span></div>${G.fs.map(f => h`<label><input type="checkbox" data-k="${f.k}" ${raw(f.vis ? "checked" : "")}><i style="background:${f.color}"></i><span class="fn" data-k="${f.k}" title="${raw(I18N.t("files.pop.only.title"))}">${f.label}</span></label>`)}`).join("");
     const done = () => { renderFileList(); renderNav(); redrawAll(); uiSave(); };
     d.querySelectorAll("[data-all]").forEach(b => b.onclick = () => { tabFiles().forEach(f => f.vis = b.dataset.all === "1"); if (b.dataset.all === "0") cleanupOrphanPanels(); paint(); done(); });
     d.querySelectorAll("input").forEach(i => i.onchange = () => { E.files[+i.dataset.k].vis = i.checked; if (!i.checked) cleanupOrphanPanels(); done(); });
