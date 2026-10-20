@@ -5,7 +5,6 @@
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
   const LISTS = ["steps-1.json", "steps-attributio-1.json", "steps-tabui-1.json"];
-  const CLI = (/** @type {string} */ file) => `cargo run --release -p mzlab-cli --example flow -- ${file} workdir 4`;
 
   /** every problem of the plan as the Rust checker would report it (F.validateExtra adds the checks of what the checker does not know yet) @param {any} plan @param {any} reg */
   F.validate = (plan, reg) => {
@@ -60,7 +59,7 @@
     const drawCli = () => {
       cli.textContent = "";
       if (!S.cli) return;
-      const text = CLI("flow.mzflow.json");
+      const text = F.cliCommand("flow.mzflow.json");
       cli.append(el("div", { class: "fl-cli" }, el("strong", { text: "Run with the command line" }),
         el("p", { text: "Flow does not run the chain. Download the plan, put it in a folder with the input files, and run it with the native runner:" }), el("code", { text }),
         el("div", { class: "fl-meta" }, btn("export", "Download the plan", download, "Download plan"), btn("copy", "Copy the command", () => navigator.clipboard && navigator.clipboard.writeText(text), "Copy command")),

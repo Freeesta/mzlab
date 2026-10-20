@@ -186,6 +186,7 @@
     "../../flow/lazy/flow-registry.js",
     "../../flow/lazy/flow-check.js",
     "../../flow/lazy/flow-plan.js",
+    "../../flow/lazy/flow-inputs.js",
     "../../flow/lazy/flow-ui.js",
     "../../flow/lazy/flow-palette.js",
     "../../flow/lazy/flow-form.js",

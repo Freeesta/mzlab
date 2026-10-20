@@ -4,7 +4,7 @@ const fs = require("fs"), vm = require("vm"), path = require("path"), assert = r
 const eq = (a, b) => assert.strictEqual(JSON.stringify(a), JSON.stringify(b));
 const root = path.resolve(__dirname, "..");
 const ctx = vm.createContext({});
-for (const f of ["registry", "check", "plan"]) vm.runInContext(fs.readFileSync(path.join(root, "flow/lazy/flow-" + f + ".js"), "utf8"), ctx);
+for (const f of ["registry", "check", "plan", "inputs"]) vm.runInContext(fs.readFileSync(path.join(root, "flow/lazy/flow-" + f + ".js"), "utf8"), ctx);
 const F = ctx.FLOW;
 const reg = F.registry(["steps-1", "steps-attributio-1", "steps-tabui-1"].map(n => JSON.parse(fs.readFileSync(path.join(root, "docs/schemi", n + ".json"), "utf8"))));
 const problems = plan => F.check(F.normalize(F.exportPlan(plan)), reg, "native").map(F.problemLine);
