@@ -11,7 +11,7 @@ mod prov;
 mod run;
 mod write;
 
-pub use canon::{cache_key, canonical, Resolved};
+pub use canon::{cache_key, canonical, value_text, Resolved};
 pub use check::{check, conversion_path, Platform, Problem};
 pub use corsa::{build as corsa_build, Corsa, Uscita};
 pub use order::{levels, plan_order};

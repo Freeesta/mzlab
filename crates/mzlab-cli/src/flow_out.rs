@@ -10,7 +10,8 @@ use crate::flow::{FileRunner, Meter};
 use crate::flow_run::{fail, run_checked};
 use crate::Outcome;
 
-/// Runs `ready` (the checked, expanded form of `plan`) with the inputs `found` and writes the run folder `out`.
+/// Runs `ready` (the checked, expanded form of `plan`) with the inputs `found` and writes the run folder `out`; the steps whose result is already in
+/// the cache of `out` are taken again, unless `fresh`.
 pub(crate) fn write_run(
     plan: &Plan,
     ready: &Plan,
@@ -18,6 +19,7 @@ pub(crate) fn write_run(
     out: PathBuf,
     workers: usize,
     meter: Option<Meter>,
+    fresh: bool,
 ) -> Outcome {
     if let Err(e) = std::fs::create_dir_all(&out) {
         return fail(
@@ -33,7 +35,7 @@ pub(crate) fn write_run(
         .map(|k| ready.steps[k].id.clone())
         .collect();
     let steps = order.len();
-    let runner = FileRunner::located(&out, found, order, meter);
+    let runner = FileRunner::located(&out, found, order, meter, fresh);
     let written = std::fs::write(out.join("plan.json"), &text);
     let (run, prov) = match written
         .map_err(crate::flow::io)
