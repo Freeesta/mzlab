@@ -124,6 +124,32 @@ fn write_rows(o: &mut Out, rows: &[super::Row]) {
     o.raw("]");
 }
 
+/// The ANOVA family as an object: the refusal, if any, and one row per feature.
+fn write_anova(o: &mut Out, a: &super::Anova) {
+    o.raw("{\"refused\":");
+    match a.refused {
+        Some(r) => o.str(r),
+        None => o.raw("null"),
+    };
+    o.raw(",\"rows\":[");
+    for (i, r) in a.rows.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"feature\":")
+            .int(r.feature as i64);
+        for (k, x) in [
+            ("f", r.f),
+            ("df1", r.df1),
+            ("df2", r.df2),
+            ("p", r.p),
+            ("q", r.q),
+        ] {
+            o.raw(",\"").raw(k).raw("\":").num(x);
+        }
+        o.raw("}");
+    }
+    o.raw("]}");
+}
+
 /// The `stat/1` text of a comparison run: groups, warnings, comparisons with their rows, the ANOVA and the heat map.
 pub fn write_stats(s: &StatsOut, lay: &Layout) -> String {
     let mut o = Out::default();
@@ -171,28 +197,9 @@ pub fn write_stats(s: &StatsOut, lay: &Layout) -> String {
         write_rows(&mut o, &c.rows);
         o.raw("}");
     }
-    o.raw("],\"anova\":{\"refused\":");
-    match s.anova.refused {
-        Some(r) => o.str(r),
-        None => o.raw("null"),
-    };
-    o.raw(",\"rows\":[");
-    for (i, r) in s.anova.rows.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"feature\":")
-            .int(r.feature as i64);
-        for (k, x) in [
-            ("f", r.f),
-            ("df1", r.df1),
-            ("df2", r.df2),
-            ("p", r.p),
-            ("q", r.q),
-        ] {
-            o.raw(",\"").raw(k).raw("\":").num(x);
-        }
-        o.raw("}");
-    }
-    o.raw("]},\"heat\":{\"groups\":[");
+    o.raw("],\"anova\":");
+    write_anova(&mut o, &s.anova);
+    o.raw(",\"heat\":{\"groups\":[");
     o.raw(
         &s.heat_groups
             .iter()
