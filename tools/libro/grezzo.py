@@ -6,6 +6,7 @@ from pathlib import Path
 UNSAFE = re.compile(r"<\s*(script|iframe|object|embed|link|meta|base|form)\b|\son\w+\s*=|javascript:", re.I)
 SCRIPT = re.compile(r"^script: *([\w-]+\.js)$")
 IMPORTATI = Path(__file__).with_name("importati.txt")
+TITLE = re.compile(r"^title: *(.+)$")
 PARA_CLASS = re.compile(r"^\{\.(lead|note)\} +")
 
 
@@ -45,8 +46,10 @@ class Grezzo:
         if not ln.endswith("-->"):
             self.err(base + i, "multi-line HTML comments are not supported")
         if not self.ctx["titoli"]:
-            m = SCRIPT.match(ln[4:-3].strip())
-            if m:
+            m, t = SCRIPT.match(ln[4:-3].strip()), TITLE.match(ln[4:-3].strip())
+            if t:
+                self.page_title = t.group(1)
+            elif m:
                 self.scripts.append(m.group(1))
             else:
                 self.head.append(ln[4:-3].strip())

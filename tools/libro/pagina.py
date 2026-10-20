@@ -27,7 +27,8 @@ SKELETON = """<!doctype html>
 
 TEORIA = """<!doctype html>
 <html lang="it"><head><meta charset="utf-8">
-@HEAD@<title>@TITLE@ · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
+@HEAD@<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>@TITLE@ · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 @BODY@
@@ -42,13 +43,14 @@ def converti(text: str, nome: str, pubblico: bool = False, teoria: bool = False)
     With `teoria` the page is a published Teoria chapter (own head, scripts from `<!-- script: x.js -->`) instead of a hidden Libro draft."""
     prefix = nome.split("_")[0].split(".")[0]
     p = Parser(nome, prefix, pubblico)
+    p.ctx["teoria"] = teoria
     body = p.blocks(text.splitlines(), 1)
     if pubblico and p.ctx.get("ipotesi"):
         raise LibroError(nome, 1, f"{p.ctx['ipotesi']} unresolved [I] tag(s): not allowed in a public build")
     body = re.sub(r"\{\{(eq|fig):([\w-]+)\}\}", lambda m: _ref(p, m, nome), body)
     if not p.ctx["titoli"]:
         raise LibroError(nome, 1, "the section has no heading")
-    title = re.sub(r"[`*$]", "", p.ctx["titoli"][0][1])
+    title = p.page_title or re.sub(r"[`*$]", "", p.ctx["titoli"][0][1])
     if teoria:
         head = "".join(f"<!--{h}-->\n" for h in p.head)
         scripts = "".join(f'<script src="{x}"></script>' for x in ["../appname.js", "teoria.js", *p.scripts])
