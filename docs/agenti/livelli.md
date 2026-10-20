@@ -10,8 +10,23 @@ Definizioni scelte da Federico. Valgono per Tabui (MS2 a bassa risoluzione), Att
 - **L3b**: classi generiche con molti isomeri plausibili (proposto per il solo analogo; strutture parziali del Disegno `parz/1`, `level: "3b"`).
 - **L4** formula univoca; **L5** massa esatta, **L0** rilevata senza annotazione.
 - Una classe CANOPUS (ClassyFire, NPClassifier) è un'annotazione separata (colonne `classes`/`class_probs`, soglia `canopus_min`): non assegna né alza alcun livello, in nessun profilo.
-- A risoluzione unitaria (profilo `lr`) il tetto è L4: una massa nominale è un candidato e una MS2 non alza il livello.
+- A risoluzione unitaria (profilo `lr`, `tetto` "4" in `livelli-1.json`) una massa nominale è un candidato e una MS2 non alza il livello: oggi il profilo emette solo 4 (la formula nominale basta a spiegare lo ione) o 5.
 - **Tabui** (risoluzione unitaria): il programma non propone alcun livello di Schymanski (`level` null, colonna «Lvl» vuota) e mostra solo «Prev. N» della regola; il livello lo sceglie il chimico nella riga aperta (`TPDEC`, il 2b resta rifiutato senza livello proposto). `level_text` dice cosa reggono i dati: «Proposed formula» vuole un picco cromatografico vero, il progenitore che decade, un solo passo e una classe di ipotesi sopra il caso (`legacy/lr/summary.rs`, `docs/agenti/mzfinder-lr.md`). Una MS2 abbinata non cambia nulla (D6 = no).
+
+## Livelli raggiungibili per risoluzione
+Principio: il programma non mostra mai un livello oltre il `tetto` del profilo; in bassa risoluzione (LR) tetto 4 (decisione D6 di Tabui), quindi L1-L3 non si emettono. La regola resta `livelli.js` / `livelli-1.json` (parità `tests/livelli_casi.json`).
+
+| Livello | Servono | Emesso in LR |
+|---|---|---|
+| L1 | standard: massa, RT, MS2 | no (profilo `lr` senza `standard`, sopra il tetto) |
+| L2a | MS2 sperimentale ad alta risoluzione + libreria | no (spettro HR) |
+| L2b | frammenti diagnostici / in silico / contesto, deciso dal chimico | no (sopra il tetto) |
+| L3a/L3b | candidati posizionali o classe + MS2 o libreria | no (sopra il tetto) |
+| L4 | formula univoca | sì: la formula nominale basta a spiegare lo ione |
+| L5 | massa esatta | sì (senza prove) |
+| L0 | rilevata, nessuna annotazione | sì |
+
+Tabui emette `level` null anche dove la tabella dice sì: il livello lo sceglie il chimico (`TPDEC`).
 
 ## Due scale, due etichette
 - Scala di Schymanski: etichetta «L» + livello, sottolivello in minuscolo («L2a», «L3b»); in JS `LIVELLI.tag(lv)`, classi colore `.lv-2a`, `.lv-3a`, `.lv-3b`… (variabili `--lv*` in `app.css`). Nelle esportazioni (CSV, JSON) i valori restano senza «L» (`2a`, `3b`).
