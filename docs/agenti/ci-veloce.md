@@ -22,6 +22,11 @@
   `rois_parity` dura 30 s (era 66 s): `tools/roi_riferimento.py` elabora i file in parallelo, un processo per CPU, e ogni file scrive solo i propri `<stem>.mzidx` e `.rois.json`.
   Le guardie di memoria (`tests/test_guardie_memoria.py`, `tests/test_feat_wasm.py`) costruiscono, generano le serie e misurano in parallelo, ciascuna misura nella sua cartella: 112 s → 57 s con le build in cache.
 
+- **Misura dei job Rust** (mediana su PR verdi, cache calde, secondi): `rust` (feat) 107, `rust-core` 172, `rust-misc` 155, `rust-wasm` 186, `rust-lint` 30, `deny` 23; tempo totale del workflow 563. Il job più lungo è `rust-wasm`: dividerlo darebbe meno di un minuto.
+- **Misura di `sito-rust`** (stessa base): `sito-wasm-core` 254 (motore, librerie e circa 160 s di lettori), `sito-wasm-feat-a` 166, `sito-wasm-feat-b` 190, `sito-e2e` 174; tempo totale 807. Il job più lungo della costruzione è `sito-wasm-core`.
+
+- **Tagli valutati e scartati**: dividere `rust-wasm` (meno di 60 s), un quarto gruppo di test fra `rust-core` e `rust-misc` (circa 0) e un job `sito-wasm-lettori` a parte (costruzione di `sito-rust` da 254 a circa 190 s per un runner in più, con la coda dei runner che pesa di più).
+
 ## Dieci regole pratiche prima di aprire una PR
 Prima di aprire la PR: `python3 tools/pre_pr.py` (1-2 minuti: mappa, soglie, i18n, Teoria, globali, tsc, import degli e2e, `cargo fmt` e clippy se hai toccato `crates/`, poi `verifica.py --cambiati`; `--senza-e2e` salta l'ultimo passo).
 1. **File nuovo = indicizzato subito**: `python3 tools/indice.py` e il file sta in un gruppo (la CI lo controlla con `--controlla`).
