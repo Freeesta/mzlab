@@ -58,6 +58,7 @@ pub fn steps() -> Vec<Step> {
     let mut all = mzlab_feat::steps::registry();
     all.push(table_step());
     all.extend(mzlab_feat::steps::attributio());
+    all.push(crate::flow_compare::compare_step());
     all
 }
 
@@ -226,6 +227,18 @@ fn formula_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     write_made(r, job, text, DataType::Formulas)
 }
 
+fn compare_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let text_of = |name: &str| {
+        let found = job.resolved.params.iter().find(|(k, _)| k == name);
+        found.and_then(|(_, v)| v.str()).unwrap_or("").to_string()
+    };
+    let (step, labels) = (text_of("step"), text_of("labels"));
+    let files = read_all(r, job, "variants")?;
+    let labels: Vec<&str> = labels.split(',').collect();
+    let text = crate::flow_compare::compare_text(&step, &labels, &blobs(&files))?;
+    write_made(r, job, text, DataType::Comparison)
+}
+
 fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let (hits, formulas) = (
         read_all(r, job, "candidates")?,
@@ -248,6 +261,7 @@ impl Runner for FileRunner {
             "formula.ms1" => ("formulas", formula_job(self, job)?),
             "formula.ms2" => ("formulas", formula_job(self, job)?),
             "annot.level" => ("annot", level_job(self, job)?),
+            "meta.compare" => ("comparison", compare_job(self, job)?),
             id => return Err(Error::new("err.flow.unknownStep").with("step", id)),
         };
         Ok(Outcome {
@@ -284,6 +298,7 @@ pub fn run_plan(
     let mut plan = parse(text)?;
     fill_inputs(&mut plan, dir)?;
     let reg = steps();
+    let plan = crate::flow_compare::expand(plan, &reg)?;
     let problems = check(&plan, &reg, Platform::current());
     if !problems.is_empty() {
         let list: Vec<String> = problems
