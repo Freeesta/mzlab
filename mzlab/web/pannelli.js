@@ -967,10 +967,10 @@ function splitPanel(p) {
 }
 
 
-/** ◀ ▶ next to the file menu of the 2D map: the neighbouring file of the menu, disabled (not hidden) when there is none; the reference of the difference is jumped. */
+/** ‹ › next to the file menu of the 2D map: the neighbouring file of the menu, disabled (not hidden) when there is none; the reference of the difference is jumped. */
 function mapNav(/** @type {Pannello} */ p, /** @type {any[]} */ files, /** @type {boolean} */ fol, /** @type {number | null} */ ref, /** @type {number} */ d) {
   const t = I18N.t(d < 0 ? "ctl.map.prev" : "ctl.map.next");
-  return `<button class="bt mzstep" type="button" data-a="mapnav" data-d="${d}"${MAPVICINO.vicino(files.map(x => x.k), fol ? E.cur : p.k, d, ref) == null ? " disabled" : ""} title="${t}" aria-label="${t}">${d < 0 ? "&#9664;" : "&#9654;"}</button>`;
+  return `<button class="bt mzstep" type="button" data-a="mapnav" data-d="${d}"${MAPVICINO.vicino(files.map(x => x.k), fol ? E.cur : p.k, d, ref) == null ? " disabled" : ""} title="${t}" aria-label="${t}">${chevron(d)}</button>`;
 }
 function mapNavWire(/** @type {Pannello} */ p, /** @type {HTMLElement} */ c) {      // same reference and same window: the zoom belongs to the panel
   c.querySelectorAll('[data-a="mapnav"]').forEach(b => { /** @type {HTMLElement} */ (b).onclick = () => {

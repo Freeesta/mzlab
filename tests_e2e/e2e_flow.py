@@ -53,12 +53,12 @@ try:
         # the list view is the editor under the canvas: the same plan, started empty here; the setup clicks are not part of the budget below
         pg.click('[data-tab="list"]'); pg.click('button[aria-label="Start a new plan"]'); pg.evaluate("document.querySelector('.flx-pal').remove()")
         def palette():
-            assert pg.locator(".fl-it").count() == 29, pg.locator(".fl-it").count()
+            assert pg.locator(".fl-it").count() == 30, pg.locator(".fl-it").count()
             assert pg.locator(".fl-pal details").count() == 3
             pg.fill("#fl-filter", "formula"); attendi(pg, "[...document.querySelectorAll('.fl-it')].filter(b => !b.hidden).length >= 2")
-            assert pg.locator(".fl-it:visible").count() < 29
+            assert pg.locator(".fl-it:visible").count() < 30
             pg.fill("#fl-filter", "")
-        step("palette: 29 steps in three packages, the filter narrows it", palette)
+        step("palette: 30 steps in three packages, the filter narrows it", palette)
         def build():
             pg.evaluate("window.__n = {click: 1, key: 0}")      # the tab click counts; the palette checks and the list-view setup before do not
             for s in ["convert.mzml", "index.mzidx", "features.detect", "features.align"]: add(pg, s)
@@ -344,6 +344,29 @@ try:
             assert pg.evaluate("document.querySelector('#selhost tr[data-id=\"3\"]').classList.contains('flx-sel')") and not pg.evaluate("document.querySelector('#selhost tr[data-id=\"7\"]').classList.contains('flx-sel')")
             pg.evaluate("() => { FLOW.select(null); document.querySelector('#selhost').remove(); }")
         step("one selection: a row clicked in a table is marked in the others with an outline", selection)
+        def family_hooks():
+            # the Feature table gets a column «Family» (read once per row as it comes into view) and a tab with the ions of the family
+            pg.evaluate("""async () => {
+              window.__redraws = 0;
+              PIPEQC.open = async a => ({ row: async id => (id === 3 ? { family: { size: 2, members: [{ mz: 301.1, rt: 5.0, role: "M" }, { mz: 323.09, rt: 5.0, role: "adduct" }] } } : { family: null }) });
+              PIPET.mount = (box, o) => { window.__fo = o; box.textContent = "mounted"; return { redraw: () => { window.__redraws++; } }; };
+              const meta = new TextEncoder().encode(JSON.stringify({ rows: 3, files: 2, inputs: [{ name: "a.mzidx" }, { name: "b.mzidx" }], arrays: [] }));
+              const head = new Uint8Array(16); head.set(new TextEncoder().encode("MZFEAT01")); new DataView(head.buffer).setBigUint64(8, BigInt(meta.length), true);
+              window.__fo = null; await FLOW.openResult({ type: "table", label: "fam.mzfeat", file: new File([head, meta], "fam.mzfeat"), text: async () => "" });
+            }""")
+            attendi(pg, "window.__fo && window.__fo.extraCols && window.__fo.extraTabs")
+            assert pg.evaluate("__fo.extraCols[0].cell({ id: 3 })") == "", "unknown until read"
+            attendi(pg, "window.__redraws >= 1 && __fo.extraCols[0].cell({ id: 3 }) === '2'")
+            assert pg.evaluate("__fo.extraCols[0].sort({ id: 77 })") == -1, "a row not read yet sorts first"
+            pg.evaluate("() => { window.__panel = document.createElement('div'); document.body.append(window.__panel); __fo.extraTabs[0].fill(window.__panel, { id: 3 }); }")
+            attendi(pg, "window.__panel.querySelectorAll('tbody tr').length === 2")
+            assert "reference ion is first" in pg.evaluate("window.__panel.textContent")
+            pg.evaluate("() => { window.__panel.textContent = ''; __fo.extraTabs[0].fill(window.__panel, { id: 9 }); }")
+            attendi(pg, "/one row per ion/.test(window.__panel.textContent)")
+            pg.evaluate("() => window.__panel.remove()")
+            pg.click('.flx-res button[aria-label="Close the results"]')
+        step("the Feature table has the column and the tab «Family»", family_hooks)
+
         step("results: the Review screen asks for a note only when the level changes and moves to the next feature", review_view)
         def mgf_view():
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Check mixed spectra")')

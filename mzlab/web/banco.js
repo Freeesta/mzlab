@@ -13,8 +13,7 @@ const BANCO = (() => {
 .hrw #g-add,.hrw .pnl.spec [data-a="par"]{display:none}
 #hrbar{display:inline-flex;align-items:center;gap:var(--sp-4)}#hrbar[hidden]{display:none}
 #hrbar [hidden]{display:none!important}#hrbar .hg{display:inline-flex;align-items:center;gap:4px}#hrbar .hg+.hg{border-left:1px solid var(--line);padding-left:8px}
-#hrbar button{min-width:32px;height:30px;padding:0 7px;display:inline-flex;align-items:center;justify-content:center;gap:4px}#hrbar .hcap{font-size:12px;color:var(--muted);white-space:nowrap}
-#hrbar button:disabled{opacity:.35;cursor:default}#tools.nolab #hrbar .hl,#tools.nolab #hrbar .hcap{display:none}
+#hrbar button{min-width:32px;height:30px;padding:0 7px;display:inline-flex;align-items:center;justify-content:center;gap:4px}#hrbar button:disabled{opacity:.35;cursor:default}#tools.nolab #hrbar .hl{display:none}
 #tools.one{flex-wrap:nowrap;overflow:hidden;align-items:center}#tools.one .tbx{flex-wrap:nowrap}#tools.one #fsel{min-width:110px;max-width:min(34vw,340px)}#tools.one .sp{flex:1 1 0;min-width:0}#tools.one #navfile{display:inline-flex;align-items:center;gap:var(--sp-2);flex-wrap:nowrap}#tools.one .tbx,#tools.one #hrbar,#tools.one #np-method{flex:none}#tools.one #g-file{flex:0 1 auto}#tools.one #fsel{flex:0 1 auto}
 #hrinfo{margin-top:10px;display:flex;flex-direction:column;resize:vertical;overflow:hidden;height:340px;min-height:170px;max-height:80vh;padding:0}
 #hrinfo[hidden]{display:none}#sb-panels>#hrinfo{height:auto!important;min-height:100%;max-height:none;resize:none;margin:0;border:0;border-radius:0}
@@ -293,7 +292,7 @@ const BANCO = (() => {
   // ---------------------------------------------------------------- the toolbar of the bench (WP-H3b, master-prompt §3.3): in the place of the tabs of the experiments
   const svg = d => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const ICON = {
-    prev: svg('<path d="M10 3L5 8l5 5"/>'), next: svg('<path d="M6 3l5 5-5 5"/>'), zall: svg('<path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/>'),
+    zall: svg('<path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/>'),
     add: svg('<path d="M8 3v10M3 8h10"/>'), type: svg('<path d="M3 5h8M3 11h8"/><path d="M9 3l2 2-2 2M7 9l-2 2 2 2"/>'), lib: svg('<circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/>'), tree: svg('<path d="M8 2v4M8 6H4v3M8 6h4v3M4 9v3M12 9v3"/>'),
   };
   const act = () => (E.active && E.panels.includes(E.active) ? E.active : E.panels[0] || null);
@@ -328,8 +327,6 @@ const BANCO = (() => {
     o.el.querySelector(".x").click(); setActive(n); relayout(); fitHost(); uiSave();
   }
   const FN = {
-    prev: () => { const a = walkTarget(false); if (a) stepScan(a, -1); else info(I18N.t("bn.putCursor")); },
-    next: () => { const a = walkTarget(false); if (a) stepScan(a, 1); else info(I18N.t("bn.putCursor")); },
     zall: () => { E.panels.forEach(q => { pushZh(q); q.zoom = null; q.zoomY = null; if (q.type === "spec") q.lock = null; draw(q); }); uiSave(); },
     lib: () => { let a = act(); if (a && a.type !== "spec") a = E.panels.find(q => q.type === "spec" && q.link === a.id); if (a && window.LIB && a.level === 2) LIB.searchFrom(a); else info(I18N.t("bn.pickMs2")); },
     tree: () => { const f = tabFiles("ms2")[0]; if (f && window.COMP) COMP.tree(f.k); else info(I18N.t("bn.treeOnly")); },
@@ -552,8 +549,7 @@ const BANCO = (() => {
       b = document.createElement("div"); b.id = "hrbar"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", I18N.t("bn.toolbar"));
       // one row: the buttons of the bench sit in #tools, between the file arrows and «Method»
       const sp = host.querySelector(":scope > .sp"); host.insertBefore(b, sp);
-      b.innerHTML = h`${raw(`<span class="hg"><span class="hcap" aria-hidden="true">${EH(I18N.t("bn.lab.scan"))}</span>${barBtn("prev", I18N.t("bn.bar.prev"), ICON.prev)}${barBtn("next", I18N.t("bn.bar.next"), ICON.next)}</span>` +
-        `<span class="hg">${barBtn("zall", I18N.t("bn.bar.zall"), ICON.zall, null, I18N.t("bn.lab.zall"))}</span>` +
+      b.innerHTML = h`${raw(`<span class="hg">${barBtn("zall", I18N.t("bn.bar.zall"), ICON.zall, null, I18N.t("bn.lab.zall"))}</span>` +
         `<span class="hg">${barBtn("add", I18N.t("bn.bar.addcell"), ICON.add, null, I18N.t("bn.cell"))}${barBtn("type", I18N.t("bn.bar.type"), ICON.type, null, I18N.t("bn.lab.type"))}</span>` +
         `<span class="hg">${barBtn("lib", I18N.t("bn.bar.lib"), ICON.lib, null, I18N.t("bn.lab.lib"))}${barBtn("tree", I18N.t("bn.bar.tree"), ICON.tree, null, I18N.t("bn.lab.tree"))}</span>` +
         `<span class="hg" id="hr-moreg" hidden><button type="button" id="hr-more" aria-haspopup="menu" title="${EH(I18N.t("bn.more"))}" aria-label="${EH(I18N.t("bn.more"))}">\u22EF</button></span>`)}`;
