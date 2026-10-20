@@ -140,7 +140,7 @@ try:
         def first_screen():
             attendi(pg, "document.querySelectorAll('.fln').length === 2")
             assert "Import data" in pg.inner_text(".fln") and pg.locator(".fl-lines path").count() == 1
-            assert pg.locator(".fln .fln-chip.ok").count() == 2 and pg.locator(".flx-tpl.show").count() == 1 and pg.locator(".flx-tc").count() == 4
+            assert pg.locator(".fln .fln-chip.ok").count() == 2 and pg.locator(".flx-tpl.show").count() == 1 and pg.locator(".flx-tc").count() == 7
             assert pg.get_attribute('[data-mode="simple"]', "aria-pressed") == "true"
             assert pg.locator(".flx-pal").is_hidden()
         step("canvas: the base is already there and connected, templates are offered, Simple is the default", first_screen)
@@ -152,11 +152,15 @@ try:
             assert got[0] != "grid" and got[1] == "0px" and got[3] <= 56, got
         step("the stylesheet of Flow leaves the rows of the file list alone (class «fl»)", file_list_untouched)
         def template():
+            ids = pg.evaluate("[...document.querySelectorAll('.flx-tc')].map(b => b.dataset.tpl)")
+            assert ids[-3:] == ["tpseries", "standards", "blankfree"] and len(ids) == 7, ids
+            assert pg.evaluate("[...document.querySelectorAll('.flx-tc small')].every(s => s.textContent.startsWith('Good for:'))")
             pg.click('.flx-tc[data-tpl="identify"]')
             attendi(pg, "document.querySelectorAll('.fln').length === 7")
             assert "Ready to run" in pg.inner_text("#flx-status"), pg.inner_text("#flx-status")
             n = pg.evaluate("window.__n"); total = n["click"] + n["key"]
             print(f"MISURA clic_canvas: tab 1 + template 1 = {total} clicks to a complete valid chain; with the {ADMIN} clicks of the logo {total + ADMIN}")
+            print(f"MISURA clic_modello: {total} clicks from the empty sheet to a ready plan (7 templates offered)")
             assert total <= 3, n
         step("canvas: one template click gives a complete valid chain", template)
         def inspector():

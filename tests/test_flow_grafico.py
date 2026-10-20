@@ -88,3 +88,7 @@ def test_the_feature_table_view_reads_the_names_of_its_files():
 
 def test_the_settings_digest_is_read_from_the_evidence_summary():
     assert node("flow_digest.js").strip() == "ok"
+
+
+def test_every_start_template_is_a_valid_plan():
+    assert node("flow_modelli_partenza.js").strip() == "ok"

@@ -36,6 +36,7 @@
     "tp.generate": ["Predict transformation products", "search", "Lists the products a parent compound could turn into."],
     "tp.filter": ["Filter products", "search", "Keeps the products that show up in your data."],
     "tp.link": ["Link product spectra", "search", "Attaches the fragment spectra to each product."],
+    "tp.network": ["Product network", "search", "Links the products that come from each other, with the evidence for each link."],
     "tp.position": ["Where it changed", "search", "Proposes which part of the molecule was modified."],
     "structure.render": ["Draw the change", "output", "Draws the parent with the modified position marked."],
     "structure.draw": ["Draw a structure", "input", "Lets you draw the parent compound."],
@@ -60,6 +61,8 @@
     { id: "regulatory", name: "Regulatory lists", line: "Flag regulated and suspected substances.", steps: ["annot.regulatory"] },
     { id: "hazard", name: "Aquatic hazard", line: "Estimate the hazard of each compound to water life.", steps: ["annot.hazard"] },
     { id: "tp", name: "Transformation products", line: "Predict and look for the products of a parent.", steps: ["tp.generate", "tp.link"] },
+    { id: "reliable", name: "Keep reliable rows", line: "Drop the rows seen too rarely, too small or no bigger than the blank.", steps: ["table.filter"] },
+    { id: "network", name: "Product network", line: "Link the products that come from each other.", steps: ["tp.network"] },
     { id: "tpfilter", name: "Filter products", line: "Keep the products that show up in your data.", steps: ["tp.filter"] },
     { id: "position", name: "Where it changed", line: "Propose which part of the molecule was modified.", steps: ["tp.position"] },
     { id: "reactivity", name: "Where it reacts", line: "Estimate which parts of the parent are most reactive.", steps: ["structure.reactivity"] },
@@ -69,6 +72,9 @@
     { id: "targeted", name: "Targeted check", good: "Good for: a list of compounds you already suspect.", addons: ["formulas", "match", "level", "regulatory"] },
     { id: "tp", name: "Find transformation products", good: "Good for: degradation or metabolism studies.", addons: ["tp"] },
     { id: "table", name: "Just build the feature table", good: "Good for: a first look at your data.", addons: [] },
+    { id: "tpseries", name: "TP time series", good: "Good for: how products rise and fall over the minutes of a treatment (needs a sample list with times).", addons: ["tp", "tpfilter", "reliable", "network"] },
+    { id: "standards", name: "Standards check", good: "Good for: checking that the standards and the blanks behave before you trust a table (needs a sample list).", addons: ["reliable"], params: { "table.filter": { qc_cv_max: 30 } } },
+    { id: "blankfree", name: "Blank-corrected table", good: "Good for: a table without what the blanks also show (needs a sample list with blanks).", addons: ["reliable"], params: { "table.filter": { blank_ratio: 3 } } },
   ];
   /** @param {string} id */
   F.nameOf = id => (F.NAMES[id] || [id, "process", ""]);
