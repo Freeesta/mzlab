@@ -14,7 +14,12 @@ Questo testo è **inventato**: una traccia è la *serie* di un ione, con $m/z$ e
 
   e poi un altro paragrafo dentro l'elemento.
 1. Passo uno
-2. Passo due, richiama @eq:soglia
+2. Passo due, richiama @eq:soglia e @eq:energia
+
+$$
+E = mc^2
+$$
+{#eq:energia}
 
 > [!nota] Da ricordare
 > Il **massimo** vince. Vale @eq:soglia.
