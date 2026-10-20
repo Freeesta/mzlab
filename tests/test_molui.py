@@ -76,3 +76,15 @@ def test_heteroatom_colours_readable_on_both_themes():
         assert ratio(v, "#ffffff") >= 3, k
     for k, v in pal["D"].items():
         assert ratio(v, "#1d2127") >= 3 and ratio(v, "#14171b") >= 3, k
+
+
+def test_svg_options_drop_abs_and_cip_text():
+    code = (
+        f"const M=require({str(JS)!r});const O=require('node:fs');"
+        "import(process.env.OCL).then(L=>{const m=L.Molecule.fromSmiles('CC(N)[C@H](O)C(F)Cl');"
+        "const a=m.toSVG(300,170),b=m.toSVG(300,170,'',M.SVG_OPTS);"
+        "console.log(JSON.stringify([/abs/.test(a),/abs/.test(b),/>\\(?[RS]\\)?</.test(b)]));});"
+    )
+    ocl = JS.parent / "vendor" / "openchemlib.js"
+    out = subprocess.run(["node", "-e", code], check=True, capture_output=True, text=True, env={"OCL": ocl.as_uri(), "PATH": "/usr/bin:/usr/local/bin"}).stdout
+    assert json.loads(out) == [True, False, False]
