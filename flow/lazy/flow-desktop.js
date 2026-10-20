@@ -54,7 +54,7 @@
     }, "Report");
     rep.disabled = true;
     const go = btn("run", "Run the plan on this computer", async () => {
-      go.disabled = true; note.textContent = "Running…"; waiting();
+      go.dataset.busy = "1"; go.disabled = true; note.textContent = "Running…"; waiting();
       try {
         const res = await run(S), by = new Map(res.steps.map((/** @type {any} */ s) => [s.id, s]));
         list.textContent = ""; S.results = {};
@@ -67,9 +67,20 @@
         rep.disabled = false;
         await F.afterRun(S);
       } catch (e) { list.textContent = ""; note.textContent = F.message(/** @type {any} */ (e)); }
-      go.disabled = false;
+      go.dataset.busy = ""; go.disabled = S.problems.length > 0;
     }, "Run on this computer");
     waiting();
-    return el("div", { class: "fl-meta" }, go, rep, note, list);
+    const box = el("div", { class: "fl-meta" }, go, rep, note, list);
+    // a plan with problems does not run: the reason stays next to the button and follows the plan
+    const gate = () => {
+      if (!box.isConnected && box.dataset.shown) { document.removeEventListener("flow:changed", gate); return; }
+      box.dataset.shown = "1";
+      const bad = S.problems.length;
+      go.disabled = go.dataset.busy === "1" || bad > 0;
+      if (bad) note.textContent = `Cannot run yet: the plan has ${bad} problem${bad === 1 ? "" : "s"}. Open the checklist to see what to fix.`;
+      else if (note.textContent.startsWith("Cannot run yet")) note.textContent = "";
+    };
+    document.addEventListener("flow:changed", gate); gate();
+    return box;
   };
 })();
