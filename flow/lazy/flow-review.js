@@ -65,12 +65,12 @@
   /** the review screen in `host` for the campaign `c`; `hooks.onSaved(text, path)` takes the new decisions file, `hooks.expert(list, index)` opens the Bench 2b, `hooks.close(changed)` goes back @param {HTMLElement} host @param {any} c @param {any} hooks */
   F.reviewMount = (host, c, hooks) => {
     css();
-    const { el } = F, list = F.reviewQueue(c.data), done = /** @type {Set<string>} */ (new Set()), st = { at: 0, rev: /** @type {any} */ (null), busy: false, text: "", path: "" };
+    const { el } = F, list = F.reviewQueue(c.data), done = /** @type {Set<string>} */ (new Set()), st = { at: 0, rev: /** @type {any} */ (null), busy: false, text: "", path: "", wrote: false };
     const root = el("section", { class: "flw-rv", "aria-label": "Review", tabindex: -1 }), key = (/** @type {any} */ f) => f.pol + f.id;
     host.replaceChildren(root);
     const download = () => G.ATTRIBUTIO_CORE.download(st.path.split("/").pop() || "feature_decisions.csv", st.text, "text/csv;charset=utf-8");
     const back = () => F.btn("flow", "Back to the table", () => hooks.close(!!st.text), "Back to the table");
-    const saved = () => (st.text ? F.btn("export", "Download the decisions file", download, "Download decisions") : null);
+    const saved = () => (!st.text ? null : st.wrote ? F.el("span", { class: "mut", role: "status", text: `Saved in ${st.path}.` }) : F.btn("export", "Download the decisions file", download, "Download decisions"));
     // the next feature without a decision in the direction d, or -1
     const next = (/** @type {number} */ d) => { for (let k = 1; k <= list.length; k++) { const i = (st.at + d * k + list.length * k) % list.length; if (!done.has(key(list[i]))) return i; } return -1; };
     const go = (/** @type {number} */ d) => { const n = next(d); if (n >= 0 && n !== st.at) show(n); };
@@ -87,7 +87,10 @@
       try {
         const d = F.reviewDecision(rev, { level, group, note: f.note.value.trim(), by: f.by.value.trim() });
         const r = await (await G.ATTRIBUTIO_CORE.pool()).attributioDecision(c.files, c.root, JSON.stringify(d), "");
-        st.text = r.text; st.path = r.summary.path; hooks.onSaved(r.text, r.summary.path);
+        st.text = r.text; st.path = r.summary.path;
+        // a folder chosen with the browser's picker takes the decisions file in place; else it stays in memory and the button downloads it
+        if (c.dir) st.wrote = !!(r.summary.written || await G.ATTRIBUTIO_BANCO.writeInFolder(c.dir, st.path, r.text));
+        hooks.onSaved(r.text, r.summary.path);
         if (G.WORKFLOW && G.WORKFLOW.logOp) G.WORKFLOW.logOp("attributio", { attributio: { decision: { pol: d.pol, id: d.id, level: d.level, by: d.decided_by, on: d.decided_on }, feature_decisions: r.text } });
         done.add(key(list[st.at])); st.busy = false;
         const n = next(1); if (n < 0) finish(); else show(n);
