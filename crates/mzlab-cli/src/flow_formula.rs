@@ -2,7 +2,6 @@
 //! (sub-formulas of the candidates that explain the peaks of an MS2 spectrum: `review::explain`, `ms2_engine::rearrange`). Both write JSON `formulas/1`.
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
@@ -13,11 +12,7 @@ use mzlab_feat::attributio::review::explain::{explain, fmt_formula, parse_formul
 use mzlab_feat::attributio::review::settings::ReviewSettings;
 use mzlab_feat::untargeted::formula_id::{identify, to_json, Opts};
 
-use crate::flow_match::{num, query_id, read_spectra};
-
-fn io(e: std::io::Error) -> Error {
-    Error::new("err.flow.io").with("detail", e)
-}
+use crate::flow_match::{num, query_id, read_spectra, Named};
 
 fn param<'a>(job: &'a Job, name: &str) -> Option<&'a Value> {
     job.resolved
@@ -58,8 +53,8 @@ struct Table {
     rows: Vec<Vec<String>>,
 }
 
-fn read_table(path: &Path) -> Result<Table> {
-    let text = std::fs::read_to_string(path).map_err(io)?;
+fn read_table(bytes: &[u8]) -> Result<Table> {
+    let text = String::from_utf8_lossy(bytes);
     let mut lines = text.lines();
     let head: Vec<&str> = lines.next().unwrap_or("").split(',').collect();
     let col = |n: &str| {
@@ -87,9 +82,8 @@ fn read_table(path: &Path) -> Result<Table> {
     })
 }
 
-fn stem(p: &Path) -> String {
-    p.file_stem()
-        .map_or(String::new(), |s| s.to_string_lossy().into_owned())
+fn stem(name: &str) -> String {
+    name.rsplit_once('.').map_or(name, |p| p.0).to_string()
 }
 
 /// The MS1 scan of `run` closest in RT to `rt` whose polarity is `sign` (or not said).
@@ -112,7 +106,7 @@ fn nearest_ms1(run: &Run, rt: f64, sign: i8) -> Option<(usize, Vec<f64>, Vec<f64
 }
 
 /// `formula.ms1`: for each feature the MS1 scan at the apex, in the file where the feature is largest, goes to `formula_id::identify`.
-pub fn ms1_text(job: &Job, features: &Path, files: &[PathBuf]) -> Result<String> {
+pub fn ms1_text(job: &Job, features: &[u8], files: &[Named]) -> Result<String> {
     let t = read_table(features)?;
     let o = opts(job);
     let sign = if o.ion.ends_with('-') { -1 } else { 1 };
@@ -134,16 +128,15 @@ pub fn ms1_text(job: &Job, features: &Path, files: &[PathBuf]) -> Result<String>
             }
         });
         let path = best
-            .and_then(|b| files.iter().find(|f| stem(f) == b.0))
+            .and_then(|b| files.iter().find(|f| stem(f.0) == b.0))
             .or(if files.len() == 1 {
                 files.first()
             } else {
                 None
             })
             .ok_or_else(|| Error::new("err.flow.formula.file"))?;
-        if let std::collections::hash_map::Entry::Vacant(e) = runs.entry(stem(path)) {
-            let bytes = std::fs::read(path).map_err(io)?;
-            e.insert(mzlab_core::mzml::read(&bytes[..])?);
+        if let std::collections::hash_map::Entry::Vacant(e) = runs.entry(stem(path.0)) {
+            e.insert(mzlab_core::mzml::read(path.1)?);
         }
         out.raw(if n > 0 { "," } else { "" })
             .raw("{\"id\":")
@@ -152,8 +145,8 @@ pub fn ms1_text(job: &Job, features: &Path, files: &[PathBuf]) -> Result<String>
             .num(mz)
             .raw(",\"rt\":")
             .num(rt);
-        out.raw(",\"file\":").str(&stem(path));
-        match nearest_ms1(&runs[&stem(path)], rt, sign) {
+        out.raw(",\"file\":").str(&stem(path.0));
+        match nearest_ms1(&runs[&stem(path.0)], rt, sign) {
             None => {
                 out.raw(",\"error\":\"err.flow.formula.scan\"}");
             }
@@ -184,10 +177,10 @@ struct Cand {
     formula: String,
 }
 
-fn candidates(files: &[PathBuf]) -> Result<Vec<Cand>> {
+fn candidates(files: &[&[u8]]) -> Result<Vec<Cand>> {
     let mut all = Vec::new();
     for f in files {
-        let v = json::parse(&std::fs::read(f).map_err(io)?)?;
+        let v = json::parse(f)?;
         for feat in v.get("features").map(Value::arr).unwrap_or(&[]) {
             let id = feat.get("id").and_then(Value::str).unwrap_or("");
             let list = feat
@@ -338,7 +331,7 @@ fn write_explained(o: &mut Out, c: &Cand, x: &Explained) {
 }
 
 /// `formula.ms2`: every candidate formula whose ion fits the precursor of a spectrum explains its cleaned peaks with sub-formulas.
-pub fn ms2_text(job: &Job, spectra: &Path, formulas: &[PathBuf]) -> Result<String> {
+pub fn ms2_text(job: &Job, spectra: Named, formulas: &[&[u8]]) -> Result<String> {
     let alg = job
         .resolved
         .algorithm
