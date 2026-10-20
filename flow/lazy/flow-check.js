@@ -100,13 +100,22 @@
     return null;
   };
 
-  /** the check of a plan for a platform; returns every problem in file order, cycles last
-   * @param {any} plan the result of F.normalize @param {{steps: any[], byId: Map<string, any>}} reg @param {"native" | "wasm"} platform */
-  F.check = (plan, reg, platform) => {
-    /** @type {any[]} */ let problems = [];
+  /** the facets of the data an instance reads, from its input files and the instances before it */
+  function observedBy(/** @type {any} */ plan, /** @type {any} */ i, /** @type {any[]} */ seen) {
+    const o = { resolution: /** @type {any[]} */ ([]), polarity: /** @type {any[]} */ ([]), ms_levels: /** @type {any[]} */ ([]) };
+    for (const r of i.ins.flatMap((/** @type {any} */ x) => x[1])) {
+      const k = r.file != null ? -1 : plan.steps.findIndex((/** @type {any} */ x) => x.id === r.instance);
+      const s = r.file != null ? (plan.inputs.find((/** @type {any} */ x) => x.name === r.file) || {}).observed : k >= 0 ? seen[k] : null;
+      if (s) { o.ms_levels.push(...s.ms_levels); o.polarity.push(...s.polarity); o.resolution.push(...s.resolution); }
+    }
+    return o;
+  }
+  /** the closures of one check: the problems found so far (`st.problems`) and the checks of a step, its parameters, its ports and the facets of its data */
+  const makeChecker = (/** @type {any} */ plan, /** @type {{steps: any[], byId: Map<string, any>}} */ reg, /** @type {"native" | "wasm"} */ platform) => {
+    const st = { problems: /** @type {any[]} */ ([]) };
     const add = (/** @type {any} */ i, /** @type {string} */ port, /** @type {string} */ key, /** @type {Record<string, string>} */ params = {}) => {
       const p = { instance: i.id, port, key, params };
-      if (!problems.some(x => x.instance === p.instance && x.port === p.port && x.key === p.key && JSON.stringify(x.params) === JSON.stringify(p.params))) problems.push(p);
+      if (!st.problems.some(x => x.instance === p.instance && x.port === p.port && x.key === p.key && JSON.stringify(x.params) === JSON.stringify(p.params))) st.problems.push(p);
     };
     const stepOf = (/** @type {any} */ i) => { const s = reg.byId.get(i.step); return s && s.version === i.version ? s : null; };
     const stepLevel = (/** @type {any} */ i) => {
@@ -161,17 +170,8 @@
       }
       facets(i, declared, seen);
     };
-    const sees = (/** @type {any} */ i, /** @type {any[]} */ seen) => {
-      const o = { resolution: /** @type {any[]} */ ([]), polarity: /** @type {any[]} */ ([]), ms_levels: /** @type {any[]} */ ([]) };
-      for (const r of i.ins.flatMap((/** @type {any} */ x) => x[1])) {
-        const k = r.file != null ? -1 : plan.steps.findIndex((/** @type {any} */ x) => x.id === r.instance);
-        const s = r.file != null ? (plan.inputs.find((/** @type {any} */ x) => x.name === r.file) || {}).observed : k >= 0 ? seen[k] : null;
-        if (s) { o.ms_levels.push(...s.ms_levels); o.polarity.push(...s.polarity); o.resolution.push(...s.resolution); }
-      }
-      return o;
-    };
     const facets = (/** @type {any} */ i, /** @type {FlowPort[]} */ declared, /** @type {any[]} */ seen) => {
-      const have = sees(i, seen);
+      const have = observedBy(plan, i, seen);
       /** known and not all of what is required is in it (unknown = checked when the step starts) */
       const misses = (/** @type {any[]} */ want, /** @type {any[]} */ h, /** @type {(w: any) => boolean} */ has) => h.length > 0 && !want.every(has);
       for (const port of declared) {
@@ -182,26 +182,34 @@
       }
     };
 
+    return { st, add, stepLevel, paramsOf, portsOf };
+  };
+
+  /** the check of a plan for a platform; returns every problem in file order, cycles last
+   * @param {any} plan the result of F.normalize @param {{steps: any[], byId: Map<string, any>}} reg @param {"native" | "wasm"} platform */
+  function check(plan, reg, platform) {
+    const { st, add, stepLevel, paramsOf, portsOf } = makeChecker(plan, reg, platform);
     plan.steps.forEach((/** @type {any} */ i, /** @type {number} */ k) => { if (plan.steps.slice(0, k).some((/** @type {any} */ x) => x.id === i.id)) add(i, "", "err.flow.instance.duplicate"); });
-    const duplicates = problems; problems = [];
+    const duplicates = st.problems; st.problems = [];
     const order = F.planOrder(plan) || plan.steps.map((/** @type {any} */ _, /** @type {number} */ k) => k);
     const seen = plan.steps.map(() => ({ resolution: [], polarity: [], ms_levels: [] }));
     /** @type {any[][]} */ const byInstance = plan.steps.map(() => []);
     for (const k of order) {
-      const i = plan.steps[k], before = problems.length, step = stepLevel(i);
+      const i = plan.steps[k], before = st.problems.length, step = stepLevel(i);
       if (step) {
         paramsOf(i, step); portsOf(i, step, seen);
         // the facets of the data pass through an instance unchanged, to the outputs that still are the scans
-        if (Object.values(step.out || {}).some((/** @type {any} */ o) => ["raw", "mzml", "mzidx"].includes(o.type))) seen[k] = sees(i, seen);
+        if (Object.values(step.out || {}).some((/** @type {any} */ o) => ["raw", "mzml", "mzidx"].includes(o.type))) seen[k] = observedBy(plan, i, seen);
       }
-      byInstance[k] = problems.splice(before);
+      byInstance[k] = st.problems.splice(before);
     }
     const all = [...duplicates, ...byInstance.flat()];
     const at = (/** @type {any} */ p) => plan.steps.findIndex((/** @type {any} */ x) => x.id === p.instance);
-    problems = all.map((p, n) => [p, n]).sort((a, b) => at(a[0]) - at(b[0]) || a[1] - b[1]).map(x => x[0]);
+    st.problems = all.map((p, n) => [p, n]).sort((a, b) => at(a[0]) - at(b[0]) || a[1] - b[1]).map(x => x[0]);
     for (const k of cyclic(plan)) add(plan.steps[k], "", "err.flow.cycle");
-    return problems;
-  };
+    return st.problems;
+  }
+  F.check = check;
   /** the line the Rust test helper and the shared cases use: instance|port|key|k=v,k=v @param {any} p */
   F.problemLine = p => `${p.instance}|${p.port}|${p.key}|${Object.entries(p.params).map(([k, v]) => k + "=" + v).join(",")}`;
 })();
