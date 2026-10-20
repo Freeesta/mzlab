@@ -53,22 +53,6 @@ impl Mol {
     }
 }
 
-fn huckel(electrons: Option<usize>) -> bool {
-    electrons.is_some_and(|e| e % 4 == 2)
-}
-
-struct Ring {
-    atoms: Vec<usize>,
-    bonds: Vec<usize>,
-}
-
-struct Graph<'a> {
-    m: &'a Mol,
-    /// (neighbour, bond index)
-    adj: Vec<Vec<(usize, usize)>>,
-    in_ring: Vec<bool>,
-}
-
 impl<'a> Graph<'a> {
     fn new(m: &'a Mol) -> Self {
         let mut adj = vec![Vec::new(); m.atoms.len()];
@@ -180,4 +164,20 @@ impl<'a> Graph<'a> {
             _ => None,
         }
     }
+}
+
+struct Ring {
+    atoms: Vec<usize>,
+    bonds: Vec<usize>,
+}
+
+struct Graph<'a> {
+    m: &'a Mol,
+    /// (neighbour, bond index)
+    adj: Vec<Vec<(usize, usize)>>,
+    in_ring: Vec<bool>,
+}
+
+fn huckel(electrons: Option<usize>) -> bool {
+    electrons.is_some_and(|e| e % 4 == 2)
 }
