@@ -171,6 +171,29 @@ def history_and_draft(pg, src):
     step("the draft never holds the token", lambda: not pg.evaluate("() => Object.values(localStorage).some(v => v.includes('github_pat_'))") or (_ for _ in ()).throw(AssertionError("token in storage")))
 
 
+def retitle_and_send(pg, w):
+    """A section title is written in the page: its anchor is written out, and the pull request carries the rebuilt search index as a third file."""
+    pg.reload()
+    until(pg, "document.getElementById('source').value.length > 100")
+    until(pg, "document.getElementById('preview').contentDocument && document.getElementById('preview').contentDocument.querySelector('h2[data-src]')")
+    first = len(w)
+    def retitle():
+        h = pg.frame_locator("#preview").locator("h2[data-src]").first
+        h.click(); pg.keyboard.press("Control+End"); pg.keyboard.type(" Zzz")
+        pg.keyboard.press("Enter")
+        until(pg, "document.getElementById('source').value.includes(' Zzz {#')")
+        assert pg.inner_text("#msg") == "", pg.inner_text("#msg")
+    step("a section title is written in the page and keeps its anchor", retitle)
+    def send_with_index():
+        pg.fill("#summary", "retitle a section"); pg.click("#btn-send")
+        until(pg, "document.getElementById('result').textContent.includes('pull/9')")
+        kinds = [x[0] for x in w[first:]]
+        assert kinds == ["ref", "put", "put", "put", "pr", "graphql"], kinds
+        index = [x for x in w[first:] if x[0] == "put" and x[1].endswith("indice-ricerca.js")]
+        assert index and " Zzz" in base64.b64decode(index[0][2]["content"]).decode(), "the index has the new title"
+    step("the pull request carries the rebuilt search index", send_with_index)
+
+
 def main():
     if not all(shutil.which(x) for x in ("cargo", "wasm-bindgen")):
         print("SKIP e2e_teoria_editor: cargo or wasm-bindgen not available"); return 0
@@ -178,7 +201,8 @@ def main():
     build_site(tmp)
     md_path, html_path = f"mzlab/web/teoria/src/{CHAPTER}.md", f"mzlab/web/teoria/{CHAPTER}.html"
     files = {md_path: {"text": (ROOT / md_path).read_text(encoding="utf-8"), "sha": "m1"}, html_path: {"text": (ROOT / html_path).read_text(encoding="utf-8"), "sha": "h1"},
-             "tools/libro/importati.txt": {"text": (ROOT / "tools/libro/importati.txt").read_text(encoding="utf-8"), "sha": "i1"}}
+             "tools/libro/importati.txt": {"text": (ROOT / "tools/libro/importati.txt").read_text(encoding="utf-8"), "sha": "i1"},
+             "mzlab/web/teoria/indice-ricerca.js": {"text": (ROOT / "mzlab/web/teoria/indice-ricerca.js").read_text(encoding="utf-8"), "sha": "x1"}}
     state = {"open": [], "writes": []}
 
     gh = mock_github(files, md_path, state)
@@ -200,7 +224,7 @@ def main():
         step("a text that is not a token is refused in red", lambda: "must start with github_pat_" in pg.inner_text("#t-msg") or (_ for _ in ()).throw(AssertionError(pg.inner_text("#t-msg"))))
         pg.fill("#in-token", TOKEN); pg.click("#t-tab")
         step("connects and lists the chapters", lambda: pg.wait_for_selector("#sections button") and None)
-        step("the converter version is in the status tooltip", lambda: until(pg, "document.getElementById('status').title.includes('mzlab-libro/2')"))
+        step("the converter version is in the status tooltip", lambda: until(pg, "document.getElementById('status').title.includes('mzlab-libro/3')"))
         step("only the chapter files, not the guide", lambda: pg.locator("#sections button").count() == 1 or (_ for _ in ()).throw(AssertionError("buttons")))
         step("status says Connected", lambda: until(pg, "document.getElementById('status').textContent === 'Connected'"))
         step("the first chapter opens by itself", lambda: until(pg, "document.getElementById('source').value.length > 100"))
@@ -222,7 +246,7 @@ def main():
         step("converter error shows file and line", lambda: (pg.fill("#source", src + "\n\n[x](ftp://bad)\n"), pg.click("#btn-preview"), until(pg, f"document.getElementById('msg').textContent.includes('{CHAPTER}.md:')"), None)[3])
         pg.fill("#source", src.replace("\n", "\n\n## Nuova sezione\n", 1) if "\n# " not in src else src + "\n\n## Nuova sezione\n\nTesto.\n")
         pg.click("#btn-send")
-        step("a heading change is refused", lambda: until(pg, "document.getElementById('msg').textContent.includes('headings changed')"))
+        step("a heading change is refused", lambda: until(pg, "document.getElementById('msg').textContent.includes('added, removed')"))
         pg.fill("#source", "\n".join(lines))
         pg.click("#btn-send")
         step("pull request opened with auto-merge", lambda: until(pg, "document.getElementById('result').textContent.includes('pull/9') && document.getElementById('result').textContent.includes('merge by itself')"))
@@ -231,6 +255,7 @@ def main():
         step("source committed as typed", lambda: base64.b64decode(w[1][2]["content"]).decode() == "\n".join(lines) or (_ for _ in ()).throw(AssertionError("source differs")))
         step("page committed is the converter output with the edit", lambda: ("Prova." in base64.b64decode(w[2][2]["content"]).decode() and w[2][1] == html_path) or (_ for _ in ()).throw(AssertionError("page")))
         step("branch name", lambda: w[0][1]["ref"].startswith(f"refs/heads/libro/teoria-{CHAPTER}-") or (_ for _ in ()).throw(AssertionError(w[0][1])))
+        retitle_and_send(pg, w)
         step("token only as a header to api.github.com", lambda: all(c[2] == "Bearer " + TOKEN for c in calls) and not other or (_ for _ in ()).throw(AssertionError(other)))
         step("no CSP violation", lambda: not csp or (_ for _ in ()).throw(AssertionError(csp[:2])))
         b.close()

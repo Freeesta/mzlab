@@ -101,6 +101,8 @@ fn every_editable_block_of_every_chapter_survives_an_unchanged_edit() {
             total += 1;
             match mzlab_libro::edit_block(&md, n, &opt, key, inner) {
                 Ok(new) if new == md => {}
+                // a section title without a fixed anchor gets the one it has now written out: allowed by the headings check, and the anchor is what it was
+                Ok(new) if key.starts_with('h') && mzlab_libro::retitled(&md, &new, n).is_ok() => {}
                 Ok(_) => bad.push(format!("{n} {key}: source changed by an unchanged edit")),
                 Err(e) => bad.push(format!(
                     "{n} {key}: {e} | {}",

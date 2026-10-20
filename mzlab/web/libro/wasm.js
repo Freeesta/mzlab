@@ -1,7 +1,7 @@
 // @ts-check
 // Loads the Rust Libro converter (crates/mzlab-libro-wasm) built by tools/build_feat_wasm.sh: the manifest of wasm-feat/ gives its file and SHA-256, the bytes are checked before they run.
 
-/** @typedef {{version: string, convert: (text: string, name: string, rawOk: boolean) => string, preview: (text: string, name: string, rawOk: boolean) => string, edit: (text: string, name: string, rawOk: boolean, src: string, html: string) => string}} Converter */
+/** @typedef {{version: string, convert: (text: string, name: string, rawOk: boolean) => string, preview: (text: string, name: string, rawOk: boolean) => string, edit: (text: string, name: string, rawOk: boolean, src: string, html: string) => string, retitled: (oldText: string, newText: string, name: string) => boolean, reindex: (indexJs: string, file: string, html: string) => string}} Converter */
 
 /** @param {ArrayBuffer} bytes */
 async function sha256(bytes) {
@@ -23,5 +23,7 @@ export async function loadConverter(dir = "../wasm-feat/") {
   return { version: mod.version(), convert: (text, name, rawOk) => mod.convert_chapter(text, name, rawOk),
     preview: (text, name, rawOk) => mod.preview_chapter(text, name, rawOk),
     edit: (text, name, rawOk, src, html) => mod.edit_preview_block(text, name, rawOk, src, html),
+    retitled: (oldText, newText, name) => mod.headings_retitled(oldText, newText, name),
+    reindex: (indexJs, file, html) => mod.reindex_chapter(indexJs, file, html),
   };
 }
