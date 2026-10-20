@@ -424,11 +424,22 @@ try:
             # the products table with its conditions (bars + data table), and the reactivity of the parent as a table of atoms
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Transformation products")'); pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Where it reacts")')
             pg.click('.fln:has-text("Link product spectra")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Link product spectra'")
-            tp = b'{"schema":"tptab/1","times":[0,30],"rows":[{"row":1,"id":7,"mz":200.1,"rt":4.5,"status":0,"kinship":3,"via":1,"n_det":4,"max_area":1500,"tmax":30,"in_t0":false,"in_blank":false}],"gruppi":{"format":"gruppi/1","conditions":[{"id":"O2","parent":{"k":0.05,"half_life":13.9,"remaining":0.2}},{"id":"N2","parent":{}}],"rows":[{"row":1,"tp_name":"TP 7","mz":200.1,"rt":4.5,"neutral_formula":"C8H9","cond":[{"present":true,"area":900,"ratio_ref":1},{"present":false,"area":0}]}],"sets":[{"conditions":["O2"],"rows":[1]}]}}'
+            tp = b'{"schema":"tptab/1","times":[0,30],"rows":[{"row":1,"id":7,"mz":200.1,"rt":4.5,"status":0,"kinship":3,"via":1,"n_det":4,"max_area":1500,"tmax":30,"in_t0":false,"in_blank":false},{"row":2,"id":8,"mz":216.1,"rt":5.1,"status":0,"kinship":2,"via":1,"n_det":3,"max_area":800,"tmax":30,"in_t0":false,"in_blank":false}],"gruppi":{"format":"gruppi/1","conditions":[{"id":"O2","parent":{"k":0.05,"half_life":13.9,"remaining":0.2}},{"id":"N2","parent":{}}],"rows":[{"row":1,"tp_name":"TP 7","mz":200.1,"rt":4.5,"neutral_formula":"C8H9","cond":[{"present":true,"area":900,"ratio_ref":1},{"present":false,"area":0}]},{"row":2,"tp_name":"TP 8","mz":216.1,"rt":5.1,"neutral_formula":"C8H9O","cond":[{"present":true,"area":300,"ratio_ref":1},{"present":true,"area":120}]}],"sets":[{"conditions":["O2"],"rows":[1]},{"conditions":["O2","N2"],"rows":[2]}]}}'
             pg.set_input_files('.fl-insp input[type=file]', files=[{"name": "tp.json", "mimeType": "application/json", "buffer": tp}])
             attendi(pg, "document.querySelectorAll('.flx-sticks .flx-bar').length === 2")
             assert "Probable" in pg.inner_text(".flx-res-body") and "present, area 900" in pg.inner_text(".flx-res-body") and "absent" in pg.inner_text(".flx-res-body")
             assert pg.locator(".flx-sticks").get_attribute("role") == "img" and pg.locator(".flx-one .flx-table td").nth(1).inner_text() == "900"
+            # one selection: a click on a product (or Enter on the focused row) draws it in the conditions block and marks the sets it belongs to; the picker answers the other way
+            rows = ".flx-res-body .flx-table tbody tr[data-id]"
+            pg.click(rows + '[data-id="2"]'); attendi(pg, "document.querySelector('.flx-res-body select').value === '1'")
+            assert "TP 8" in pg.locator(".flx-sticks").get_attribute("aria-label") and pg.locator(".flx-res-body tr.flx-sel").count() >= 2
+            sets = ".flx-res-body tr[data-members]"
+            assert pg.locator(sets + ".flx-member").count() == 1 and "O2 + N2" in pg.locator(sets + ".flx-member").inner_text()
+            pg.locator(rows + '[data-id="1"]').first.focus(); pg.keyboard.press("Enter")
+            attendi(pg, "document.querySelector('.flx-res-body select').value === '0'")
+            assert "O2" == pg.locator(sets + ".flx-member td").first.inner_text()
+            pg.select_option('.flx-res-body select[aria-label="Product to draw"]', "1")
+            attendi(pg, "document.querySelector('.flx-res-body tr[data-id=\"2\"].flx-sel') !== null")
             pg.click('.flx-res button[aria-label="Close the results"]')
             pg.click('.fln:has-text("Where it reacts")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Where it reacts'")
             re_ = b'{"format":"reatt/1","atoms":[{"i":0,"el":6,"heavy_index":0,"q":-0.1,"f_plus":0.1,"f_zero":0.2,"f_minus":0.3333,"dual":0}]}'
