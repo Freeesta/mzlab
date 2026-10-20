@@ -79,6 +79,8 @@
   async function load(box, files, root, dir, dirPath) {
     if (st.busy) return;
     st.busy = true; st.files = files; st.root = root; st.dir = dir || null; st.dirPath = dirPath || "";
+    const ct = files.find(f => f.path === "campaign.toml");
+    /** @type {HTMLInputElement} */ (box.querySelector("#at-auto2b")).checked = !!ct && /^\s*auto_2b\s*=\s*true/m.test(await ct.file.text());
     /** @type {HTMLElement} */ (box.querySelector("#at-banco-host")).textContent = "";
     const tab = /** @type {HTMLElement} */ (box.querySelector("#at-out"));
     tab.textContent = "";
@@ -95,6 +97,30 @@
       st.busy = false;
       for (const b of box.querySelectorAll(".at-pick")) b.disabled = false;
     }
+  }
+
+  /** `campaign.toml` with `[levels] auto_2b` set or removed: the files are in memory, so the choice never touches the folder @param {string} text @param {boolean} on */
+  function withAuto2b(text, on) {
+    const lines = text.split("\n").filter(l => !/^\s*auto_2b\s*=/.test(l));
+    if (!on) return lines.join("\n");
+    const at = lines.findIndex(l => /^\s*\[levels\]\s*$/.test(l));
+    if (at >= 0) lines.splice(at + 1, 0, "auto_2b = true");
+    else lines.push("", "[levels]", "auto_2b = true", "");
+    return lines.join("\n");
+  }
+
+  /** the automatic 2b on or off, then the cascade again @param {HTMLElement} box @param {boolean} on */
+  async function setAuto2b(box, on) {
+    const at = st.files.findIndex(f => f.path === "campaign.toml");
+    if (at < 0 || st.busy) return;
+    try {
+      const text = withAuto2b(await st.files[at].file.text(), on);
+      st.files[at] = { path: "campaign.toml", file: new File([text], "campaign.toml", { type: "text/plain" }) };
+      st.busy = true; say(box, "Running the cascade again…");
+      await refresh(box);
+      say(box, ((st.summary && st.summary.warnings) || []).join(" · ") || "Done.");
+    } catch (e) { say(box, "Attributio: " + ((/** @type {any} */ (e) && /** @type {any} */ (e).message) || e), true); }
+    finally { st.busy = false; }
   }
 
   /** @param {HTMLElement} box @param {"csv" | "xlsx"} kind */
@@ -120,6 +146,7 @@
       <div class="row"><button type="button" class="at-pick" id="at-pick" aria-label="Choose campaign folder">Choose campaign folder</button>
       <input type="file" id="at-dir" webkitdirectory multiple hidden aria-label="Campaign folder">
       <button type="button" class="at-x" id="at-csv" aria-label="Export CSV" disabled>Export CSV</button><button type="button" class="at-x" id="at-xlsx" aria-label="Export XLSX" disabled>Export XLSX</button><span id="at-export-host"></span></div>
+      <label class="row"><input type="checkbox" id="at-auto2b" aria-label="Automatic 2b"> Automatic 2b: the programme sets 2b for the strongest proposals of the Bench 2b (off by default; any decision of yours overrules it)</label>
       <div id="at-ms2-host"></div>
       <p id="at-msg" class="mut" role="status"></p><div id="at-banco-host"></div><div id="at-out" class="tp"></div></div>`;
     const q = (/** @type {string} */ s) => /** @type {any} */ (sec.querySelector(s));
@@ -137,6 +164,7 @@
     };
     /** @type {any} */ (window).ATTRIBUTIO_EXPORT.mount(q("#at-export-host"), { pool: getPool, files: () => st.files, root: () => st.root, say: (/** @type {string} */ t, /** @type {boolean} */ err) => say(sec, t, err) });
     /** @type {any} */ (window).ATTRIBUTIO_MS2.mount(q("#at-ms2-host"), { pool: getPool, files: () => st.files, root: () => st.root, say: (/** @type {string} */ t, /** @type {boolean} */ err) => say(sec, t, err) });
+    q("#at-auto2b").onchange = (/** @type {Event} */ ev) => setAuto2b(sec, /** @type {HTMLInputElement} */ (ev.target).checked);
     q("#at-csv").onclick = () => exportTable(sec, "csv");
     q("#at-xlsx").onclick = () => exportTable(sec, "xlsx");
   }

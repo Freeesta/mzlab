@@ -5,6 +5,10 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
 use mzlab_core::json::{round, Out};
 use mzlab_lib::build::{build_in_memory, BuildOpts};
+use mzlab_lib::decoy::{
+    best_scores, fdr_note, is_decoy, lib_fdr, quantize, with_decoys, Best, DecoyKind, LibFdr,
+    DEFAULT_SEED,
+};
 use mzlab_lib::parse::{detect, parse_all};
 use mzlab_lib::read::{Library, CACHE_BYTES};
 use mzlab_lib::scores::modified_cosine;
@@ -23,11 +27,18 @@ pub(crate) fn read_spectra((name, bytes): Named) -> Result<Vec<Spectrum>> {
     Ok(parse_all(fmt, bytes).0)
 }
 
-fn open_library(file: Named) -> Result<Lib> {
+/// The library of the step; with `decoys` every entry gets a decoy beside it (text libraries only: an `.mzlib` is read as it is).
+fn open_library(file: Named, decoys: bool) -> Result<Lib> {
     let bytes = if file.0.ends_with(".mzlib") {
+        if decoys {
+            return Err(Error::new("err.flow.match.decoysLibrary"));
+        }
         file.1.to_vec()
     } else {
-        let spectra = read_spectra(file)?;
+        let mut spectra = read_spectra(file)?;
+        if decoys {
+            spectra = with_decoys(&spectra, DecoyKind::Fragments, DEFAULT_SEED);
+        }
         build_in_memory(&spectra, BuildOpts::default())
             .map_err(|_| Error::new("err.flow.match.library"))?
             .0
@@ -133,7 +144,54 @@ fn analogues(lib: &Lib, q: &Query, job: &Job) -> Result<Vec<Cand>> {
         .collect())
 }
 
-fn write_cand(o: &mut Out, lib: &Lib, qid: &str, alg: &str, c: &Cand) -> Result<()> {
+/// The target-decoy numbers of one query: its best target and decoy and the q-value of the best target within the batch.
+struct Fdr {
+    best: Best,
+    fdr: LibFdr,
+}
+
+/// The identity search of every query of the batch against the library with decoys (the entropy score, as `decoy::search_fdr`), one `Fdr` per query.
+fn batch_fdr(lib: &Lib, queries: &[Option<Query>], job: &Job) -> Result<Vec<Fdr>> {
+    let mut best = Vec::with_capacity(queries.len());
+    for q in queries {
+        best.push(match q {
+            Some(q) => {
+                let o = IdentityOpts {
+                    prec_tol: Tol::Ppm(num(job, "precursor_ppm")),
+                    frag_da: num(job, "tol_da"),
+                    pol: q.pol,
+                    top: usize::MAX,
+                };
+                best_scores(lib, q, &o).map_err(|_| Error::new("err.flow.match.library"))?
+            }
+            None => Best::default(),
+        });
+    }
+    let target = |b: &Best| {
+        if b.index.is_some() {
+            b.target
+        } else {
+            f32::NAN
+        }
+    };
+    let t: Vec<f32> = best.iter().map(target).collect();
+    let d: Vec<f32> = best.iter().map(|b| b.decoy).collect();
+    let f = lib_fdr(&t, &d, DecoyKind::Fragments);
+    Ok(best
+        .into_iter()
+        .zip(f)
+        .map(|(best, fdr)| Fdr { best, fdr })
+        .collect())
+}
+
+fn write_cand(
+    o: &mut Out,
+    lib: &Lib,
+    qid: &str,
+    alg: &str,
+    c: &Cand,
+    fdr: Option<&Fdr>,
+) -> Result<()> {
     let m = lib
         .meta(c.index)
         .map_err(|_| Error::new("err.flow.match.library"))?;
@@ -155,9 +213,19 @@ fn write_cand(o: &mut Out, lib: &Lib, qid: &str, alg: &str, c: &Cand) -> Result<
     o.raw(",\"explained\":").rounded(&c.explained, 4);
     o.raw(",\"mass_ppm\":").num(round(c.mass_ppm, 3));
     o.raw(",\"precursor_delta\":").num(round(c.delta, 4));
-    o.raw(",\"source\":\"library\",\"algorithm\":")
-        .str(alg)
-        .raw("}");
+    o.raw(",\"source\":\"library\",\"algorithm\":").str(alg);
+    // only the best target of the query carries a q-value (the score the decoys were counted on)
+    if let Some(f) = fdr {
+        if f.best.index.is_some() && quantize(c.score) == f.best.target {
+            o.raw(",\"decoy_q\":").num(r(f.fdr.q_value as f64));
+            o.raw(",\"decoy_targets_ge\":")
+                .int(f.fdr.n_target_ge as i64);
+            o.raw(",\"decoy_ge\":").int(f.fdr.n_decoy_ge as i64);
+        } else {
+            o.raw(",\"decoy_q\":null");
+        }
+    }
+    o.raw("}");
     Ok(())
 }
 
@@ -170,21 +238,47 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         .as_ref()
         .map_or("spectral_entropy", |a| a.0.as_str())
         .to_string();
-    let lib = open_library(library)?;
+    let decoys = job
+        .resolved
+        .params
+        .iter()
+        .any(|(k, v)| k == "decoys" && v.str() == Some("spectrum"));
+    if decoys && alg != "spectral_entropy" {
+        return Err(Error::new("err.flow.match.decoysAlgorithm"));
+    }
+    let lib = open_library(library, decoys)?;
     let top = num(job, "top_n").max(1.0) as usize;
     let mut o = Out::default();
     o.raw("{\"format\":\"candidates/1\",\"step\":\"spectra.match@1\",\"algorithm\":")
-        .str(&alg)
-        .raw(",\"hits\":[");
+        .str(&alg);
+    if decoys {
+        o.raw(",\"decoys\":\"spectrum\",\"fdr_note\":")
+            .str(fdr_note());
+    }
+    o.raw(",\"hits\":[");
+    let spectra = read_spectra(query)?;
+    let queries: Vec<Option<Query>> = spectra
+        .iter()
+        .map(|s| Query::new(s.prec, s.pol, &s.mz, &s.it))
+        .collect();
+    let fdr = if decoys {
+        Some(batch_fdr(&lib, &queries, job)?)
+    } else {
+        None
+    };
     let mut first = true;
-    for (k, s) in read_spectra(query)?.iter().enumerate() {
+    for (k, s) in spectra.iter().enumerate() {
         let qid = query_id(k, s);
-        let Some(q) = Query::new(s.prec, s.pol, &s.mz, &s.it) else {
+        let Some(q) = &queries[k] else {
             continue;
         };
-        let mut c = exact(&lib, &q, job, &alg)?;
+        let mut c = exact(&lib, q, job, &alg)?;
         if alg == "modified_cosine" {
-            c.extend(analogues(&lib, &q, job)?);
+            c.extend(analogues(&lib, q, job)?);
+        }
+        if decoys {
+            // the decoys are scored to count the errors, never listed
+            c.retain(|h| lib.meta(h.index).is_ok_and(|m| !is_decoy(&m.accession)));
         }
         by_score(&mut c, top);
         for h in &c {
@@ -192,7 +286,7 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
                 o.raw(",");
             }
             first = false;
-            write_cand(&mut o, &lib, &qid, &alg, h)?;
+            write_cand(&mut o, &lib, &qid, &alg, h, fdr.as_ref().map(|f| &f[k]))?;
         }
     }
     o.raw("]}");

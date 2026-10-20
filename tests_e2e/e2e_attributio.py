@@ -88,6 +88,17 @@ try:
             assert pg.evaluate("document.querySelector('#at-table').tagName") == "TABLE" and pg.evaluate("document.querySelectorAll('#at-table thead th[scope=col]').length") >= 5
         step("the synthetic folder gives 15 features with the levels of livelli_attesi.csv (rows of the component)", load)
 
+        def auto2b():
+            assert not pg.is_checked("#at-auto2b"), "the automatic 2b is off by default"
+            pg.check("#at-auto2b")
+            pg.wait_for_function("document.querySelector('#at-msg').textContent === 'Done.' || document.querySelector('#at-msg').className === 'err'", timeout=60000)
+            assert pg.inner_text("#at-msg") == "Done.", pg.inner_text("#at-msg")
+            # no Level 3 feature of the synthetic campaign has a strong proposal: the table is the same, nothing is set by the programme
+            txt = pg.inner_text("#at-counts"); assert txt.startswith("15 features") and "by the programme" not in txt, txt
+            pg.uncheck("#at-auto2b")
+            pg.wait_for_function("document.querySelector('#at-msg').textContent === 'Done.'", timeout=60000)
+        step("the automatic 2b is an option, off by default; on a campaign without strong proposals it changes nothing", auto2b)
+
         def chips():
             pg.click("[data-chip=l3]")
             n = pg.evaluate("document.querySelectorAll('#at-table tbody tr.clk').length")
