@@ -15,6 +15,7 @@ use crate::pipeline::analyse;
 use crate::quality::assess;
 use crate::recipe::{Mode, Recipe, WEAK_RATIO};
 use crate::rtmap::{build, RtMap};
+use crate::spill::{Spill, Weak};
 use crate::table::{Aligned, FileFeatures, FLAG_GOOD, FLAG_ISOTOPE};
 use crate::trace::{detect, Params};
 
@@ -90,7 +91,7 @@ pub fn align_and_fill<R: ReadAt>(
             ..FileFeatures::default()
         })
     };
-    let (mut table, filled) = finish(table, &mut { pos }, files.len(), r, None, open)?;
+    let (mut table, filled) = finish(table, &mut { pos }, files.len(), r, None, None, open)?;
     crate::rowmeta::compute_in(&mut table, r.row_window(), &mut |k, (lo, hi)| {
         let mut part = FileFeatures {
             dt: files[k].dt,
@@ -116,23 +117,15 @@ pub(crate) fn finish<R: ReadAt>(
     n: usize,
     r: &Recipe,
     budget: Option<&MemBudget>,
+    spill: Option<&mut dyn Spill>,
     mut open: impl FnMut(usize) -> Result<Index<R>>,
 ) -> Result<(Aligned, usize)> {
     if r.weak_files > 0 {
-        let mut weak = Vec::with_capacity(n);
-        let mut held = 0usize;
+        let mut weak = Weak::new(spill);
         for k in 0..n {
-            let w = weak_tier(&mut open(k)?, &strong(k)?, r)?;
-            // the weak tables of all the files are held together (7 columns, 29 bytes a row) and aligned: past the budget the phase is refused in order
-            held += w.len() * 29;
-            if let Some(b) = budget.filter(|b| held > b.left() / 2) {
-                return Err(b.refuse("align", held * 2));
-            }
-            weak.push(w);
+            weak.add(weak_tier(&mut open(k)?, &strong(k)?, r)?, budget)?;
         }
-        let refs: Vec<&FileFeatures> = weak.iter().collect();
-        let mut ions = align(&refs, &r.align.ion)?;
-        ions.retain_recurring(r.weak_files);
+        let ions = weak.recurring(r, budget)?;
         table.append_unheld(&ions, r.align.ion.ppm, r.fill.rt_tol);
     }
     let map: RtMap = build(&table, &r.rt);
