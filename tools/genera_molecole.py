@@ -46,6 +46,10 @@ def record(name, synonyms, formula, smiles, inchikey, catalogs, extra):
     }
 
 
+# Records added to the catalogue after the two old lists (name, synonyms, formula, SMILES, InChIKey, catalogs).
+ADDED = [("timolol", [], "C13H24N4O3S", "CC(C)(C)NC[C@H](O)COc1nsnc1N1CCOCC1", "BLJRIMJGRPQVNF-JTQLQIEISA-N", ["tabui", "hrms"])]
+
+
 def hrms_extra(r):
     classes = [f"{k}:{r[c].strip()}" for c, k in CLASS_KEYS if r[c].strip()]
     return {"classes": classes, "cas": r["cas"].strip(), "cid": r["pubchem_cid"].strip(), "notes": r["check"].strip()}
@@ -70,6 +74,7 @@ def main():
     for r in hrms:
         if r["inchikey"].strip() not in in_tabui:
             rows.append(record(r["name_en"], hrms_names(r)[1:], r["neutral_formula"], r["smiles"], r["inchikey"], ["hrms"], hrms_extra(r)))
+    rows += [record(n, sy, f, sm, ik, cat, {}) for n, sy, f, sm, ik, cat in ADDED]
     OUT.parent.mkdir(parents=True, exist_ok=True)
     with open(OUT, "w", encoding="utf-8", newline="") as fh:
         fh.write(";".join(COLUMNS) + "\n")

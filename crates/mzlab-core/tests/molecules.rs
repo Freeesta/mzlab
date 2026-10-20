@@ -250,15 +250,16 @@ fn levels_replace_by_id_and_come_back() {
 #[test]
 fn the_catalogue_is_canonical_and_complete() {
     let (text, all) = catalogue();
-    assert_eq!(all.len(), 625 + 645 - 43);
+    // the last record (timolol) was added after the two old lists
+    assert_eq!(all.len(), 625 + 645 - 43 + 1);
     assert_eq!(to_csv(&all), text, "mzlab/web/molecole/catalogo.csv is not in the canonical form: run tools/genera_molecole.py");
     let both = all.iter().filter(|m| m.origine.catalogo.len() == 2).count();
-    assert_eq!(both, 43);
+    assert_eq!(both, 43 + 1);
     assert_eq!(
         all.iter()
             .filter(|m| m.origine.catalogo.contains(&"tabui".to_string()))
             .count(),
-        625
+        625 + 1
     );
 }
 
@@ -296,10 +297,12 @@ fn queries(tabui: &[&Molecola]) -> Vec<String> {
 #[test]
 fn search_gives_what_the_name_box_of_tabui_gave() {
     let (_, all) = catalogue();
-    let tabui: Vec<Molecola> = all
+    let mut tabui: Vec<Molecola> = all
         .into_iter()
         .filter(|m| m.origine.catalogo.contains(&"tabui".to_string()))
         .collect();
+    // the gold data come from the 625 compounds of the old list; timolol came after
+    tabui.truncate(625);
     let common: Vec<usize> = (0..tabui.len())
         .filter(|&k| tabui[k].origine.catalogo.len() == 2)
         .collect();

@@ -35,8 +35,10 @@ def hill(f):
 def test_counts_and_order():
     rows, by_key = catalogue()
     tabui, hrms = read("TP_Mine/data/composti.csv"), read("mzlab/web/sostanze_hrms.csv")
-    assert (len(tabui), len(hrms), len(rows)) == (625, 645, 625 + 645 - 43)
+    # the last record (timolol) was added after the two old lists
+    assert (len(tabui), len(hrms), len(rows)) == (625, 645, 625 + 645 - 43 + 1)
     assert len(by_key) == len(rows)
+    rows = rows[:-1]
     # the rows of composti.csv come first, in their order
     assert [r["inchikey"] for r in rows[:625]] == [r["inchikey"] for r in tabui]
     assert all(r["catalog"].split("|")[0] == "tabui" for r in rows[:625])

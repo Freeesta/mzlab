@@ -14,13 +14,13 @@ try:
         call = lambda op, body: pg.evaluate(post, [op, body])
         cat = pg.evaluate("fetch('static/molecole/catalogo.csv').then(r => r.text())")
         loaded = json.loads(call("carica", {"catalogo": cat}))
-        assert loaded["errori"] == [] and loaded["totale"] == 1227, loaded
+        assert loaded["errori"] == [] and loaded["totale"] == 1228, loaded
         hit = json.loads(call("cerca", {"q": "paracetamol"}))
         assert hit and hit[0]["nome"] == "acetaminophen" and hit[0]["formula"] == "C8H9NO2", hit[:1]
         assert any(h["nome"] == "acetaminophen" for h in json.loads(call("cerca", {"q": "C8H9NO2"})))
         by_mass = json.loads(call("cerca", {"q": "151.0633", "ppm": 10}))
         assert by_mass and by_mass[0]["nome"] == "acetaminophen" and by_mass[0]["punteggio"] < 10, by_mass[:1]
-        print("OK  catalogue loaded (1227), found by name, formula and mass")
+        print("OK  catalogue loaded (1228), found by name, formula and mass")
 
         csv = "name;molecular_formula;synonyms\nEsempina;C10H15NO;Ex-1\n"
         doc = call("da_csv", {"csv": csv, "file": "mine.csv"})
