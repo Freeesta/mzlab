@@ -78,7 +78,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
 | metodo di acquisizione (`metodo/1`, `metodo.rs`, `metodo_wiff`, `metodo_raw`, schema) | `docs/agenti/metodo.md` |
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (tabelle untargeted e identità: `mzfinder-untargeted.md`; tabelle terze parti: `mzfinder-import.md`; validazione: `mzfinder-validazione.md`; tabella prodotti HR: `mzfinder-tabella.md`; indice sospetti: `sospetti.md`; scavo LR: `mzfinder-lr.md`, bersagli: `mzfinder-lr-bersagli.md`, passo «1 · Files»: `mzfinder-file.md`, interfaccia MS2: `mzfinder-ms2.md`, regola MS2: `mzfinder-ms2-regola.md`) |
-| mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` |
+| mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` (famiglia di un file a richiesta, `family_record`: `mzfeat-wasm-famiglia.md`) |
 | lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` (altri strumenti SCIEX, sMRM, PIS/NL, DAD, feature `estesi`: `wiff-varianti.md`; specifica binaria: `wiff_specifica_completa.md`) |
 | lettore cartelle Agilent `.D` (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
 | Agilent `.D` LC/MS: QqQ MRM/dMRM, Q-TOF profilo/centroidi/MS2, metodo LC/MS, DAD (`crates/mzlab-core/src/agilent_ext/`, feature `estesi`) | `docs/agenti/agilent-lcms.md` |
