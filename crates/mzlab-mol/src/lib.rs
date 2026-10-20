@@ -2,6 +2,7 @@
 //! enhanced-stereo groups, and optional coordinate, id, property and region layers. Used by the readers and writers of this crate and,
 //! later, by every engine that needs a molecule; it links nothing beyond serde and sha2 and is not part of any site .wasm yet.
 
+mod aromatic;
 mod canon;
 mod codec;
 mod cxsmiles;
