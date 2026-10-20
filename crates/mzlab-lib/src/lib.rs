@@ -5,6 +5,7 @@ pub mod all_pairs;
 pub mod build;
 pub mod clean;
 pub mod codec;
+pub mod contrib;
 pub mod decoy;
 pub mod error;
 pub mod format;

@@ -1,0 +1,142 @@
+//! The one mapping between the parameters of the feature descriptors (`features.detect`, `features.align`, `features.gapfill`, `features.ms2_link`) and
+//! the fields of `Recipe`: `apply` writes values onto a recipe, `values` reads them back. Used by the native runner of plans (`mzlab-cli`) and by
+//! `tests/steps.rs`.
+
+use mzlab_core::error::{Error, Result};
+use mzlab_core::json::Value;
+
+use crate::axis::MassAxis;
+use crate::recipe::{Mode, Recipe};
+
+fn bad(step: &str, name: &str) -> Error {
+    Error::new("err.flow.param.type")
+        .with("instance", step)
+        .with("param", name)
+}
+
+/// Writes `params` (descriptor names, any order; `axis` is applied before `mass_defect`) of `step` onto `r`. An unknown name is `err.flow.param.unknown`.
+pub fn apply(r: &mut Recipe, step: &str, params: &[(String, Value)]) -> Result<()> {
+    let mut sorted: Vec<&(String, Value)> = params.iter().collect();
+    mzlab_core::sortc::slice_by_key(&mut sorted, |(k, _)| k.as_str() != "axis");
+    for (k, v) in sorted {
+        set(r, step, k, v)?;
+    }
+    Ok(())
+}
+
+fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
+    let num = || v.f64().ok_or_else(|| bad(step, k));
+    let int = || num().map(|x| x as usize);
+    match (step, k) {
+        ("features.detect", "polarity") => {
+            r.detect.polarity = match num()? as i32 {
+                0 => None,
+                p => Some(p as i8),
+            }
+        }
+        ("features.detect", "floor") => r.detect.floor = num()?,
+        ("features.detect", "min_height") => r.detect.min_height = num()?,
+        ("features.detect", "axis") => {
+            r.detect.axis = match (v.str(), r.detect.axis) {
+                (Some("ppm"), _) => MassAxis::Ppm,
+                (Some("Da"), MassAxis::Da { defect }) => MassAxis::Da { defect },
+                (Some("Da"), MassAxis::Ppm) => MassAxis::Da { defect: 0.0 },
+                _ => return Err(bad(step, k)),
+            }
+        }
+        // the defect only exists on the unit axis
+        ("features.detect", "mass_defect") => {
+            if let MassAxis::Da { defect } = &mut r.detect.axis {
+                *defect = num()?;
+            }
+        }
+        ("features.detect", "budget") => r.detect.budget = int()?,
+        ("features.detect", "min_points") => r.detect.min_points = num()? as u32,
+        ("features.detect", "max_gap") => r.detect.max_gap = num()? as u32,
+        ("features.detect", "long_trace") => r.detect.long_trace = num()? as u32,
+        ("features.align", "mode") => {
+            r.mode = match v.str() {
+                Some("family") => Mode::Family,
+                Some("ion") => Mode::Ion,
+                _ => return Err(bad(step, k)),
+            }
+        }
+        ("features.align", "ppm") => r.align.ion.ppm = num()?,
+        ("features.align", "rt_gap") => r.align.ion.rt_gap = num()?,
+        ("features.align", "max_ppm_span") => r.align.ion.max_ppm_span = num()?,
+        ("features.align", "drop_artefacts") => {
+            r.align.ion.drop_artefacts = v.bool().ok_or_else(|| bad(step, k))?
+        }
+        ("features.align", "split_gap") => r.align.ion.split_gap = Some(num()?),
+        ("features.align", "weak_files") => r.weak_files = int()?,
+        ("features.gapfill", "floor") => r.fill.floor = num()?,
+        ("features.gapfill", "ppm") => r.fill.ppm = num()?,
+        ("features.gapfill", "rt_tol") => r.fill.rt_tol = num()?,
+        ("features.gapfill", "min_points") => r.fill.min_points = int()?,
+        ("features.gapfill", "max_gap") => r.fill.max_gap = int()?,
+        ("features.gapfill", "long_trace") => r.fill.long_trace = int()?,
+        ("features.ms2_link", "default_half_window") => r.steps.ms2.default_half_window = num()?,
+        ("features.ms2_link", "tol_ppm") => r.steps.ms2.tol_ppm = num()?,
+        ("features.ms2_link", "weak") => r.steps.ms2.weak = num()? as f32,
+        _ => {
+            return Err(Error::new("err.flow.param.unknown")
+                .with("instance", step)
+                .with("param", k))
+        }
+    }
+    Ok(())
+}
+
+/// The values `r` holds for every parameter of `step` that `apply` knows (sorted by name; `mass_defect` only on the unit axis).
+pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
+    let n = |x: f64| Value::Num(x);
+    let mut v: Vec<(&str, Value)> = match step {
+        "features.detect" => {
+            let mut v = vec![
+                ("polarity", n(r.detect.polarity.map_or(0.0, f64::from))),
+                ("floor", n(r.detect.floor)),
+                ("min_height", n(r.detect.min_height)),
+                ("budget", n(r.detect.budget as f64)),
+                ("min_points", n(f64::from(r.detect.min_points))),
+                ("max_gap", n(f64::from(r.detect.max_gap))),
+                ("long_trace", n(f64::from(r.detect.long_trace))),
+            ];
+            match r.detect.axis {
+                MassAxis::Ppm => v.push(("axis", Value::Str("ppm".into()))),
+                MassAxis::Da { defect } => {
+                    v.push(("axis", Value::Str("Da".into())));
+                    v.push(("mass_defect", n(defect)));
+                }
+            }
+            v
+        }
+        "features.align" => vec![
+            (
+                "mode",
+                Value::Str(if r.mode == Mode::Ion { "ion" } else { "family" }.into()),
+            ),
+            ("ppm", n(r.align.ion.ppm)),
+            ("rt_gap", n(r.align.ion.rt_gap)),
+            ("max_ppm_span", n(r.align.ion.max_ppm_span)),
+            ("drop_artefacts", Value::Bool(r.align.ion.drop_artefacts)),
+            ("split_gap", r.align.ion.split_gap.map_or(Value::Null, n)),
+            ("weak_files", n(r.weak_files as f64)),
+        ],
+        "features.gapfill" => vec![
+            ("floor", n(r.fill.floor)),
+            ("ppm", n(r.fill.ppm)),
+            ("rt_tol", n(r.fill.rt_tol)),
+            ("min_points", n(r.fill.min_points as f64)),
+            ("max_gap", n(r.fill.max_gap as f64)),
+            ("long_trace", n(r.fill.long_trace as f64)),
+        ],
+        "features.ms2_link" => vec![
+            ("default_half_window", n(r.steps.ms2.default_half_window)),
+            ("tol_ppm", n(r.steps.ms2.tol_ppm)),
+            ("weak", n(f64::from(r.steps.ms2.weak))),
+        ],
+        _ => Vec::new(),
+    };
+    mzlab_core::sortc::slice_by(&mut v, |a, b| a.0.cmp(b.0));
+    v.into_iter().map(|(k, x)| (k.to_string(), x)).collect()
+}

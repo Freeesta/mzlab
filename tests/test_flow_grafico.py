@@ -88,3 +88,22 @@ def test_the_feature_table_view_reads_the_names_of_its_files():
 
 def test_the_settings_digest_is_read_from_the_evidence_summary():
     assert node("flow_digest.js").strip() == "ok"
+
+
+def test_every_start_template_is_a_valid_plan():
+    assert node("flow_modelli_partenza.js").strip() == "ok"
+
+
+def test_every_step_of_the_base_has_a_valid_theory_anchor():
+    import re
+    src = (ROOT / "flow" / "lazy" / "flow-issues.js").read_text(encoding="utf-8")
+    entries = {k: (f, a) for k, f, a in re.findall(r'"([a-z0-9_.]+)": \["([^"]+)", "([^"]+)"\]', src)}
+    names = (ROOT / "flow" / "lazy" / "flow-names.js").read_text(encoding="utf-8")
+    base = re.findall(r'steps: \[([^\]]*)\] \},\n', names.split("F.BASE = [")[1].split("];")[0] + "\n")
+    base_steps = [s for group in base for s in re.findall(r'"([a-z0-9_.]+)"', group)]
+    assert base_steps, "no step of the base found"
+    for step in base_steps:
+        assert step in entries, f"{step} has no entry of the Theory"
+    for step, (file, anchor) in entries.items():
+        html = (ROOT / "mzlab" / "web" / "teoria" / file).read_text(encoding="utf-8")
+        assert f'id="{anchor}"' in html, (step, file, anchor)

@@ -64,6 +64,40 @@ def mock_github(files, md_path, state):
     return gh
 
 
+def edit_in_the_page(pg, src):
+    """Editing in the preview: a paragraph lands in the source, a title is locked, bold and italic stay markup, a meaning-changing text is refused."""
+    step("the page is shown by itself", lambda: until(pg, "!document.getElementById('preview').hidden"))
+    fr = pg.frame_locator("#preview")
+    until(pg, "document.getElementById('preview').contentDocument && document.getElementById('preview').contentDocument.querySelector('[data-src]')")
+    def edit_first_paragraph():
+        p1 = fr.locator("p[data-src]").first
+        p1.click(); pg.keyboard.press("Control+End"); pg.keyboard.type(" Zeta."); pg.keyboard.press("Enter")
+        until(pg, "document.getElementById('source').value.includes(' Zeta.')")
+        now = pg.input_value("#source")
+        assert len(now.split("\n")) == len(src.split("\n")) and now != src, "one line changed"
+        assert pg.inner_text("#msg") == "", pg.inner_text("#msg")
+    step("a paragraph is written in the page and lands in the source", edit_first_paragraph)
+    def locked_block():
+        fr.locator("h1").first.click()
+        until(pg, "document.getElementById('msg').textContent.includes('cannot be changed in the page')")
+    step("a title is locked with a pointer to the source box", locked_block)
+    def inline_kept():
+        until(pg, "document.getElementById('preview').contentDocument.querySelector('p[data-src] b, p[data-src] i')")
+        el = fr.locator("p[data-src]:has(b, i)").first
+        word = el.locator("b, i").first.inner_text()
+        el.click(); pg.keyboard.press("Control+End"); pg.keyboard.type(" Eta."); pg.keyboard.press("Enter")
+        until(pg, "document.getElementById('source').value.includes(' Eta.')")
+        assert ("**" + word + "**" in pg.input_value("#source")) or ("*" + word + "*" in pg.input_value("#source")), word
+    step("bold and italic stay markup in the source", inline_kept)
+    def refused_text():
+        before = pg.input_value("#source")
+        el = fr.locator("p[data-src]").first
+        el.click(); pg.keyboard.press("Control+End"); pg.keyboard.type(" *x*"); pg.keyboard.press("Enter")
+        until(pg, "document.getElementById('msg').textContent.includes('edit it in the source box')")
+        assert pg.input_value("#source") == before, "refused edit must not touch the source"
+    step("text that would change meaning is refused", refused_text)
+
+
 def main():
     if not all(shutil.which(x) for x in ("cargo", "wasm-bindgen")):
         print("SKIP e2e_teoria_editor: cargo or wasm-bindgen not available"); return 0
@@ -93,13 +127,15 @@ def main():
         step("a text that is not a token is refused in red", lambda: "must start with github_pat_" in pg.inner_text("#t-msg") or (_ for _ in ()).throw(AssertionError(pg.inner_text("#t-msg"))))
         pg.fill("#in-token", TOKEN); pg.click("#t-tab")
         step("connects and lists the chapters", lambda: pg.wait_for_selector("#sections button") and None)
-        step("the converter version is in the status tooltip", lambda: until(pg, "document.getElementById('status').title.includes('mzlab-libro/1')"))
+        step("the converter version is in the status tooltip", lambda: until(pg, "document.getElementById('status').title.includes('mzlab-libro/2')"))
         step("only the chapter files, not the guide", lambda: pg.locator("#sections button").count() == 1 or (_ for _ in ()).throw(AssertionError("buttons")))
         step("status says Connected", lambda: until(pg, "document.getElementById('status').textContent === 'Connected'"))
         step("the first chapter opens by itself", lambda: until(pg, "document.getElementById('source').value.length > 100"))
         step("loads the source (the converter reproduces the page on main)", lambda: until(pg, "document.getElementById('source').value.length > 100 && !document.getElementById('source').disabled"))
         step("no message after the load", lambda: pg.inner_text("#msg") == "" or (_ for _ in ()).throw(AssertionError(pg.inner_text("#msg"))))
         src = pg.input_value("#source")
+        edit_in_the_page(pg, src)
+        pg.fill("#source", src)
         lines = src.split("\n")
         k = next(i for i, l in enumerate(lines) if l[:1].isalpha() and not l.startswith(("Tabella", "script")))
         lines[k] += " Prova."

@@ -25,7 +25,7 @@
     const num = p.type === "number" || p.type === "integer";
     return el("input", {
       type: num ? "number" : "text", id, "data-fk": id, value: cur ?? "", step: p.type === "integer" ? 1 : "any", min: p.minimum, max: p.maximum,
-      placeholder: p["x-estimate"] ? "estimated from the data" : "", onchange: (/** @type {any} */ e) => { const t = e.target.value; set(t === "" ? null : num ? +t : t); },
+      placeholder: p["x-estimate"] ? "estimated" : "", onchange: (/** @type {any} */ e) => { const t = e.target.value; set(t === "" ? null : num ? +t : t); },
     });
   };
 
@@ -37,7 +37,11 @@
       const set = (/** @type {any} */ v) => { F.setParam(inst, step, name, v); done(); };
       const label = el("label", { for: p.type === "array" ? undefined : id, text: p.title + (p["x-unit"] ? ` (${p["x-unit"]})` : "") });
       const reset = explicit ? F.btn("reset", `Back to the default: ${p.title}`, () => set(null)) : el("span");
-      rows.push(label, el("span", { class: "fl-meta" }, control(p, name, cur, set, id), reset));
+      // a value the program estimates from the data when the plan runs: say so, say how, and offer to fix it at the default
+      const est = p["x-estimate"] && !explicit && defaults[name] !== undefined ? el("span", { class: "flx-est" },
+        el("button", { type: "button", class: "fl-b", "aria-label": `How ${p.title} is estimated`, title: "Left empty, the program estimates this from your files when the plan runs (from the scan index of the first files) and records the value it used. Type a number, or use the fixed value, to decide it yourself." }, "ⓘ"),
+        F.btn("ok", `Use a fixed value for ${p.title}`, () => { inst.params = inst.params || {}; inst.params[name] = defaults[name]; done(); }, "Use fixed")) : null;
+      rows.push(label, el("span", { class: "fl-meta" }, control(p, name, cur, set, id), est, reset));
       if (p.description) rows.push(el("span", { class: "fl-ds", text: p.description }));
     }
     return rows;

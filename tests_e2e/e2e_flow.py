@@ -53,12 +53,12 @@ try:
         # the list view is the editor under the canvas: the same plan, started empty here; the setup clicks are not part of the budget below
         pg.click('[data-tab="list"]'); pg.click('button[aria-label="Start a new plan"]'); pg.evaluate("document.querySelector('.flx-pal').remove()")
         def palette():
-            assert pg.locator(".fl-it").count() == 29, pg.locator(".fl-it").count()
+            assert pg.locator(".fl-it").count() == 30, pg.locator(".fl-it").count()
             assert pg.locator(".fl-pal details").count() == 3
             pg.fill("#fl-filter", "formula"); attendi(pg, "[...document.querySelectorAll('.fl-it')].filter(b => !b.hidden).length >= 2")
-            assert pg.locator(".fl-it:visible").count() < 29
+            assert pg.locator(".fl-it:visible").count() < 30
             pg.fill("#fl-filter", "")
-        step("palette: 29 steps in three packages, the filter narrows it", palette)
+        step("palette: 30 steps in three packages, the filter narrows it", palette)
         def build():
             pg.evaluate("window.__n = {click: 1, key: 0}")      # the tab click counts; the palette checks and the list-view setup before do not
             for s in ["convert.mzml", "index.mzidx", "features.detect", "features.align"]: add(pg, s)
@@ -140,7 +140,7 @@ try:
         def first_screen():
             attendi(pg, "document.querySelectorAll('.fln').length === 2")
             assert "Import data" in pg.inner_text(".fln") and pg.locator(".fl-lines path").count() == 1
-            assert pg.locator(".fln .fln-chip.ok").count() == 2 and pg.locator(".flx-tpl.show").count() == 1 and pg.locator(".flx-tc").count() == 4
+            assert pg.locator(".fln .fln-chip.ok").count() == 2 and pg.locator(".flx-tpl.show").count() == 1 and pg.locator(".flx-tc").count() == 7
             assert pg.get_attribute('[data-mode="simple"]', "aria-pressed") == "true"
             assert pg.locator(".flx-pal").is_hidden()
         step("canvas: the base is already there and connected, templates are offered, Simple is the default", first_screen)
@@ -152,11 +152,15 @@ try:
             assert got[0] != "grid" and got[1] == "0px" and got[3] <= 56, got
         step("the stylesheet of Flow leaves the rows of the file list alone (class «fl»)", file_list_untouched)
         def template():
+            ids = pg.evaluate("[...document.querySelectorAll('.flx-tc')].map(b => b.dataset.tpl)")
+            assert ids[-3:] == ["tpseries", "standards", "blankfree"] and len(ids) == 7, ids
+            assert pg.evaluate("[...document.querySelectorAll('.flx-tc small')].every(s => s.textContent.startsWith('Good for:'))")
             pg.click('.flx-tc[data-tpl="identify"]')
             attendi(pg, "document.querySelectorAll('.fln').length === 7")
             assert "Ready to run" in pg.inner_text("#flx-status"), pg.inner_text("#flx-status")
             n = pg.evaluate("window.__n"); total = n["click"] + n["key"]
             print(f"MISURA clic_canvas: tab 1 + template 1 = {total} clicks to a complete valid chain; with the {ADMIN} clicks of the logo {total + ADMIN}")
+            print(f"MISURA clic_modello: {total} clicks from the empty sheet to a ready plan (7 templates offered)")
             assert total <= 3, n
         step("canvas: one template click gives a complete valid chain", template)
         def inspector():
@@ -181,6 +185,19 @@ try:
             pg.click('.fl-fix:has-text("Molecular formulas")'); attendi(pg, "document.querySelectorAll('.fl-needs li').length === 1")
             assert "Remove" in pg.inner_text(".fl-insp")
         step("canvas: a missing input is said on the card with a one-click fix; removing can be undone", needs_and_fix)
+        def issues_and_hints():
+            # after the previous step «Confidence level» still needs the library match: Issues lists it with its remedy; an estimated value says how and can be fixed; each step of the base has a «?» to the Theory
+            attendi(pg, "document.querySelectorAll('.flx-issues li').length === 1")
+            assert "Issues (1)" in pg.inner_text(".flx-issues h3")
+            pg.click('.flx-issues li button:has-text("Show")'); attendi(pg, "document.querySelector('.fln.sel')")
+            pg.click('.flx-issues button:has-text("Add “Match to library”")'); attendi(pg, "document.querySelectorAll('.flx-issues li').length === 0")
+            assert "Nothing needs attention" in pg.inner_text(".flx-issues")
+            pg.click('.fln:has-text("Build feature table")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Build feature table'")
+            q = pg.locator(".fl-insp-hd a.flx-q"); assert q.count() == 1 and q.get_attribute("href").startswith("teoria/21-glossario.html#g-"), q.count()
+            for m in pg.locator('.fl-insp summary:has-text("More")').all(): m.click()
+            assert pg.locator('.fl-insp .flx-est').count() >= 1, pg.inner_text(".fl-insp")[:400]
+            pg.locator('.fl-insp .flx-est button:has-text("Use fixed")').first.click(); attendi(pg, "FLOW.current.plan.steps.some(s => s.params && Object.values(s.params).length)")
+        step("canvas: Issues lists the needs with their remedy; an estimated value says how and can be fixed; «?» opens the Theory", issues_and_hints)
         def advanced_and_keys():
             pg.click('[data-mode="advanced"]'); attendi(pg, "!document.querySelector('.flx-pal').offsetParent === false")
             assert pg.locator(".flx-pal").is_visible() and pg.locator(".fln").count() > 3

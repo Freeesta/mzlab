@@ -15,7 +15,7 @@ use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
 
 /// An mzML of Q1 scans every 3 s: a flat noise floor and two ions, one growing with the treatment time `t`.
-fn mzml(t: f64) -> Vec<u8> {
+pub(crate) fn mzml(t: f64) -> Vec<u8> {
     let mut w = MzmlWriter::new(
         Vec::new(),
         &Header {
@@ -55,8 +55,11 @@ fn mzml(t: f64) -> Vec<u8> {
     w.finish().unwrap()
 }
 
-/// The CSV of the app on `files` (name, mzML bytes): the chain of the page, indexes in memory.
-fn page_csv(files: &[(String, Vec<u8>)], params: &str) -> String {
+/// The table (`.mzfeat`) of the app on `files` (name, mzML bytes) and the files it names: the chain of the page, indexes in memory.
+pub(crate) fn page_table(
+    files: &[(String, Vec<u8>)],
+    params: &str,
+) -> (Vec<u8>, Vec<(String, String)>) {
     let idxs: Vec<Vec<u8>> = files
         .iter()
         .map(|(name, b)| {
@@ -73,10 +76,18 @@ fn page_csv(files: &[(String, Vec<u8>)], params: &str) -> String {
         .map(|(k, (n, _))| run::detect(&mut open(k).unwrap(), n, &r).unwrap())
         .collect();
     let (tables, origin) = run::read_files(&det).unwrap();
-    let table = run::align(&tables, &origin, &r, open).unwrap();
+    (
+        run::align(&tables, &origin, &r, open).unwrap(),
+        origin.inputs.clone(),
+    )
+}
+
+/// The CSV of the app on `files`: the export "full" of `page_table`.
+fn page_csv(files: &[(String, Vec<u8>)], params: &str) -> String {
+    let (table, inputs) = page_table(files, params);
     let mut list = Out::default();
     list.raw("{\"files\":[");
-    for (k, (n, s)) in origin.inputs.iter().enumerate() {
+    for (k, (n, s)) in inputs.iter().enumerate() {
         list.raw(if k > 0 { ",{\"name\":" } else { "{\"name\":" })
             .str(n)
             .raw(",\"sha256\":")

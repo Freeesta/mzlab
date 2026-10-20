@@ -14,6 +14,11 @@ use crate::table::*;
 use crate::trace::filled;
 use mzlab_core::error::Result;
 
+/// Whether the arc is oriented only because `Orient::Evidence` lets its proof stand in for the factor.
+pub(super) fn by_evidence(f: &FileFeatures, a: &Arc, factor: f32) -> bool {
+    orient(f, a, factor, false).is_none() && orient(f, a, factor, true).is_some()
+}
+
 pub(super) const NO_PARENT: u32 = u32::MAX;
 
 struct Dep {
@@ -34,7 +39,7 @@ fn points(a: &Arc) -> f32 {
 
 /// `(dependent, parent, role, rank)` of an arc (rank 0 = definitive, 1 = undetermined); None when the step is no relation or the dependent is
 /// not at least `factor` times weaker than its parent (a stronger «adduct» or «fragment» could be a product: it stays out of the family).
-fn orient(f: &FileFeatures, a: &Arc, factor: f32) -> Option<(u32, u32, u8, u8)> {
+fn orient(f: &FileFeatures, a: &Arc, factor: f32, evidence: bool) -> Option<(u32, u32, u8, u8)> {
     let (lo, up) = (a.lo, a.up);
     let (hl, hu) = (f.height[lo as usize], f.height[up as usize]);
     let (adduct, dimer, loss) = (
@@ -45,7 +50,9 @@ fn orient(f: &FileFeatures, a: &Arc, factor: f32) -> Option<(u32, u32, u8, u8)> 
     if a.kind == EdgeKind::Other {
         return None;
     }
-    let (lo_dep, up_dep) = (hu >= factor * hl, hl >= factor * hu);
+    // with `Orient::Evidence` a definitive arc (kind Adduct or Isf) is oriented by its proof alone: the factor does not bind
+    let free = evidence && matches!(a.kind, EdgeKind::Adduct | EdgeKind::Isf);
+    let (lo_dep, up_dep) = (free || hu >= factor * hl, free || hl >= factor * hu);
     // which end can depend on the other, by the readings: a fragment is the lighter, an adduct or dimer the heavier
     let (frag_ok, add_ok) = (loss && lo_dep, (adduct || dimer) && up_dep);
     match a.kind {
@@ -88,12 +95,17 @@ fn excluded(f: &FileFeatures, i: usize) -> bool {
     f.flags[i] & (FLAG_BACKGROUND | FLAG_FT_LOBE) != 0
 }
 
-pub(super) fn assign(f: &FileFeatures, arcs: &[Arc], factor: f32) -> Result<Assigned> {
+pub(super) fn assign(
+    f: &FileFeatures,
+    arcs: &[Arc],
+    factor: f32,
+    evidence: bool,
+) -> Result<Assigned> {
     let n = f.len();
     let mut deps: Vec<Dep> = arcs
         .iter()
         .filter_map(|a| {
-            orient(f, a, factor).map(|(dep, par, role, rank)| Dep {
+            orient(f, a, factor, evidence).map(|(dep, par, role, rank)| Dep {
                 dep,
                 par,
                 role,
