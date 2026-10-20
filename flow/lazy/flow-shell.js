@@ -6,7 +6,7 @@
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
   /** where a plan can run: each runner has a name and a function; the desktop and web runners plug in here later */
-  F.runners = { cli: { name: "Command line", run: (/** @type {any} */ S) => ({ title: "Run with the command line", text: F.cliCommand("flow.mzflow.json"), plan: S }) } };
+  F.runners = { cli: { name: "Command line", run: async (/** @type {any} */ S) => ({ title: "Run with the command line", text: await F.cliCommand(S.plan).catch((/** @type {Error} */ e) => "The command could not be built: " + e.message), plan: S }) } };
 
   /** a small menu under `anchor`; items {label, line, on?, run}. Closes on Escape, on a click outside and after a choice @param {HTMLElement} anchor @param {any[]} items @param {HTMLElement} host */
   F.menu = (anchor, items, host) => {
@@ -107,8 +107,8 @@
     }, "Checklist");
     const run = btn("run", "Export the plan and run it", () => showRun(), "Run");
     run.classList.add("flx-run"); run.id = "flx-run";
-    const showRun = () => {
-      const r = F.runners.cli.run(S);
+    const showRun = async () => {
+      const r = await F.runners.cli.run(S);
       planView.hidden = false;
       const box = el("div", { class: "fl-cli" }, el("strong", { text: r.title }), el("p", { text: F.runners.desktop.available() ? "Run it here, or download the plan and use the command line:" : "On the web Flow exports the plan. Download it, put it in a folder with your files and run it with the native runner:" }), el("code", { text: r.text }),
         el("div", { class: "fl-meta" }, btn("export", "Download the plan", S.download, "Download plan"), btn("copy", "Copy the command", () => navigator.clipboard && navigator.clipboard.writeText(r.text), "Copy command"), btn("x", "Close", () => box.remove(), "Close")));

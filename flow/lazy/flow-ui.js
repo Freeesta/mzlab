@@ -113,6 +113,10 @@
     if (document.getElementById("fl-css")) return;
     const s = document.createElement("style"); s.id = "fl-css"; s.textContent = CSS; document.head.append(s);
   };
-  /** the command that runs an exported plan with the native runner @param {string} file */
-  F.cliCommand = file => `cargo run --release -p mzlab-cli --example flow -- ${file} workdir 4`;
+  /** the script that reruns a plan with the native runner, built by the engine (`flow::command` in Rust), never by the page @param {any} plan @returns {Promise<string>} */
+  F.cliCommand = async plan => {
+    const r = await fetch("api/flow/command", { method: "POST", body: F.exportText(plan) }), t = await r.text();
+    if (!r.ok) throw new Error(t);
+    return t;
+  };
 })();
