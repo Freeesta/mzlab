@@ -39,3 +39,11 @@ def test_wasm_and_cli_give_the_same_graph(pkg, query, args):
 def test_a_bad_number_is_a_keyed_error(pkg):
     r = subprocess.run(["node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), "ppm_formula=abc"], capture_output=True, encoding="utf-8")
     assert r.returncode != 0 and "err.request.badNumber" in r.stderr
+
+
+@pytest.mark.parametrize("fmt,clean", [("csv", False), ("mgf", False), ("msp", True), ("csv", True)])
+def test_wasm_and_cli_give_the_same_export(pkg, fmt, clean):
+    q = f"formato={fmt}" + ("&pulito=1" if clean else "")
+    got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q, "export").stdout
+    want = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(MZML), "--export", fmt, *(["--pulito"] if clean else [])).stdout
+    assert got == want and got.strip()
