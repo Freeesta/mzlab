@@ -1,5 +1,5 @@
 //! The `Lettore` of a MassLynx `.raw` folder: the functions of `_FUNCTNS.INF`, the scans of the scanning ones (MS, MSe, DDA) by position in `_FUNCnnn.DAT`, and the SIR/MRM channels,
-//! the TIC, the lock mass and the analog traces as chromatograms (`cromi.rs`). The lock mass function is not in the spectra and its correction is not applied.
+//! the TIC, the lock mass and the analog traces as chromatograms (`cromi.rs`). The lock mass function is also in the spectra (level 1, filter "lock mass", as msconvert does); its correction is not applied.
 
 use super::cartella::{errore, testo, Cartella};
 use super::dat::{decodifica, Codifica, Taratura};
@@ -27,11 +27,11 @@ pub const VOCE: VoceLettore = VoceLettore {
 };
 
 impl LettoreWaters {
-    /// The spectra: every scan with points of a scanning function that is not the lock mass, in the order of time.
+    /// The spectra: every scan with points of a scanning function (the lock mass included, marked in its filter), in the order of time.
     fn costruisci_indice(&mut self) {
         let mut v: Vec<(f32, usize, usize)> = Vec::new();
         for (i, f) in self.funs.iter().enumerate() {
-            if f.f.mirato() || f.f.riferimento() || f.cod.is_none() || f.dat.is_none() {
+            if f.f.mirato() || f.cod.is_none() || f.dat.is_none() {
                 continue;
             }
             v.extend(
@@ -62,7 +62,11 @@ impl LettoreWaters {
                 polarita: f.polarita,
                 tic: f64::from(r.tic),
                 picco_base: None,
-                filtro: format!("function {}", f.f.indice),
+                filtro: if f.f.riferimento() {
+                    format!("function {} lock mass", f.f.indice)
+                } else {
+                    format!("function {}", f.f.indice)
+                },
                 precursore,
                 posizione: f.dat.map(|m| Posizione {
                     membro: u16::try_from(m).unwrap_or(0),
@@ -162,6 +166,16 @@ impl Lettore for LettoreWaters {
                 "collision energy ramp",
                 format!("{a}-{b}"),
                 Some("eV"),
+            ));
+        }
+        if f.f.riferimento() {
+            out.push(campo("role", "lock mass reference".into(), None));
+        } else if f.livello == 2 && v.precursore.is_none() {
+            // MSe: the whole range is fragmented, msconvert's 775 +- 725 m/z "precursor" is only the scan range
+            out.push(campo(
+                "acquisition",
+                "MSe, no precursor selection".into(),
+                None,
             ));
         }
         if let Some(p) = v.precursore {
@@ -283,6 +297,9 @@ fn opzionale(c: &mut Cartella, nome: &str) -> Option<Vec<u8>> {
 
 fn livello_di(funs: &[Fun], i: usize) -> u8 {
     let (f, x) = (&funs[i].f, &funs[i].ext);
+    if f.riferimento() {
+        return 1;
+    }
     match x.modo {
         Modo::Riferimento => 1,
         Modo::Msms | Modo::Figlie => 2,
