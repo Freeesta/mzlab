@@ -438,6 +438,10 @@ fn mz_cv(acc: &str, name: &str, value: f64) -> String {
     format!("<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\" unitCvRef=\"MS\" unitAccession=\"MS:1000040\" unitName=\"m/z\"/>")
 }
 
+#[cfg(not(target_family = "wasm"))]
+mod indice;
+#[cfg(target_family = "wasm")]
+#[path = "mzmlwrite/indice_wasm.rs"]
 mod indice;
 #[cfg(test)]
 mod tests;
