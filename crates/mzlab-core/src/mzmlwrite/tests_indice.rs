@@ -3,7 +3,7 @@ use super::*;
 use crate::mzml;
 use sha1::{Digest as _, Sha1};
 
-fn indexed_sample(steps: Vec<ProcStep>) -> (Vec<u8>, Vec<u8>) {
+pub(super) fn indexed_sample(steps: Vec<ProcStep>) -> (Vec<u8>, Vec<u8>) {
     let sp = |i: usize| Spectrum {
         index: i,
         id: format!("scan={}", i + 1),
