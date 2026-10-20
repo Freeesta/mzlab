@@ -28,7 +28,11 @@ impl State {
     pub(crate) fn flow_read(&self, p: &Value) -> Result<Answer> {
         let name = crate::store::clean(p["name"].as_str().unwrap_or(""))?;
         let dir = std::env::temp_dir().join("mzlab-flow").join("out");
-        text(read_out(&dir, name, p["encoding"].as_str() == Some("base64"))?)
+        text(read_out(
+            &dir,
+            name,
+            p["encoding"].as_str() == Some("base64"),
+        )?)
     }
 
     /// `{plan: "<mzflow/2 text>"}` -> `{prov: "<prov/1 text>", dir: "<folder of the outputs>"}`. A file the plan names that is not registered is `err.flow.input.missing`.
@@ -84,7 +88,9 @@ fn to_base64(bytes: &[u8]) -> String {
     const A: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for c in bytes.chunks(3) {
-        let n = ((c[0] as u32) << 16) | ((*c.get(1).unwrap_or(&0) as u32) << 8) | (*c.get(2).unwrap_or(&0) as u32);
+        let n = ((c[0] as u32) << 16)
+            | ((*c.get(1).unwrap_or(&0) as u32) << 8)
+            | (*c.get(2).unwrap_or(&0) as u32);
         for k in 0..4 {
             if k <= c.len() {
                 out.push(A[((n >> (18 - 6 * k)) & 63) as usize] as char);
@@ -102,7 +108,15 @@ mod tests {
 
     #[test]
     fn base64_matches_the_rfc_vectors() {
-        for (raw, want) in [("", ""), ("f", "Zg=="), ("fo", "Zm8="), ("foo", "Zm9v"), ("foob", "Zm9vYg=="), ("fooba", "Zm9vYmE="), ("foobar", "Zm9vYmFy")] {
+        for (raw, want) in [
+            ("", ""),
+            ("f", "Zg=="),
+            ("fo", "Zm8="),
+            ("foo", "Zm9v"),
+            ("foob", "Zm9vYg=="),
+            ("fooba", "Zm9vYmE="),
+            ("foobar", "Zm9vYmFy"),
+        ] {
             assert_eq!(to_base64(raw.as_bytes()), want);
         }
     }
