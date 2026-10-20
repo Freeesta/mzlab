@@ -198,6 +198,7 @@
     "../../flow/lazy/flow-canvas.js",
     "../../flow/lazy/flow-inspect.js",
     "../../flow/lazy/flow-shell-css.js",
-    "../../flow/lazy/flow-shell.js"
+    "../../flow/lazy/flow-shell.js",
+    "../../flow/lazy/flow-desktop.js"
   ]
 }
