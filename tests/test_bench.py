@@ -261,6 +261,21 @@ def test_mzmine_batch_has_the_seven_steps_and_the_parameter_names(tmp_path):
     assert x.count('name="m/z tolerance (sample-to-sample)"') == 2 and 'unit="MINUTES"' in x                  # the names the headless batch accepts
 
 
+def test_mzmine410_batch_has_scan_filters_and_selected_item(tmp_path):
+    from bench import oro_mzmine410 as o
+    from bench import corri
+    par = corri.parametri("mzmine", "predefinita")
+    files = [tmp_path / "a.mzML"]
+    for fin in (False, True):
+        x = o.batch_xml(files, tmp_path, par, o.VERSIONE, finder=fin)
+        assert x.count('<parameter name="Scan filters" selected="true">') == 2 and '<parameter name="Scans">' not in x
+        assert '<parameter name="Mass detector" selected_item="Centroid">' in x
+    with pytest.raises(SystemExit):
+        o.controlla_filtro(x.replace('<parameter name="Scan filters" selected="true">', '<parameter name="Scans">'))
+    with pytest.raises(SystemExit):
+        o.controlla_filtro(x.replace('<parameter name="Scan filters" selected="true">', '<parameter name="Scan filters">', 1))
+
+
 def test_report_from_tables_with_groups(tmp_path):
     """Two tables of the same three files and a truth with expected ratios: the CLI of the tables writes the report; the group names become column indices."""
     verita = {"composti": [{"id": f"c{i}", "mz": 100.0 + i, "rt": 2.0, "atteso": 2.0, "visto": True} for i in range(6)] + [{"id": "x", "mz": 500.0, "rt": 3.0, "atteso": 1.0, "visto": False}]}

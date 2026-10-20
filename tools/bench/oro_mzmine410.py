@@ -70,6 +70,14 @@ def controlla_selected(xml: str) -> None:
                 raise SystemExit(f"parameter {nome!r}: it must use selected_item=..., found{m.group(1)!r}")
 
 
+def controlla_filtro(xml: str) -> None:
+    """Refuses a batch whose mass detection or ADAP step lacks the 4.10 scan filter: the parameter is `Scan filters` with `selected="true"` (the 3.9 name `Scans` is ignored WITHOUT A WORD
+    and the step then runs on every scan, MS2 included, which on interleaved MS1/MS2 files breaks the consecutive-scan rule)."""
+    for m in re.finditer(r'<batchstep method="[^"]*\.(MassDetectionModule|ModularADAPChromatogramBuilderModule)".*?</batchstep>', xml, re.S):
+        if '<parameter name="Scan filters" selected="true">' not in m.group(0) or '<parameter name="Scans">' in m.group(0):
+            raise SystemExit(f"step {m.group(1)}: the scan filter must be <parameter name=\"Scan filters\" selected=\"true\">")
+
+
 def batch_xml(files: list[Path], fasi: Path, par: dict, versione: str, finder: bool = False, isotopi: bool = False) -> str:
     """The batch of `corri_mzmine.batch_xml` for the 4.10 file format; `finder`: the isotope grouper step is replaced by the reworked finder (it removes no row)."""
     x = corri_mzmine.batch_xml(files, fasi / "finale.csv", par, fasi=fasi, isotopi=isotopi or finder)
@@ -80,7 +88,9 @@ def batch_xml(files: list[Path], fasi: Path, par: dict, versione: str, finder: b
     if finder:
         x = re.sub(r'<batchstep method="' + re.escape(GROUPER) + r'".*?</batchstep>\n', lambda _m: _finder_passo(fasi), x, flags=re.S)
         x = x.replace("/isotopi_{}.csv", "/finder_{}.csv")
+    x = x.replace('<parameter name="Scans">', '<parameter name="Scan filters" selected="true">')
     controlla_selected(x)
+    controlla_filtro(x)
     return x
 
 
