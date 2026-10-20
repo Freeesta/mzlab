@@ -15,6 +15,7 @@ limit_ms2=479232   # attributio-ms2 carries the sources of a campaign AND the MS
 limit_lr=741376   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 717874 (+3 %)
 limit_interp=512000   # interp: the interpretation of the rows (interp/1) with the MSn tree of the infusion; above 470000 the tree is built by finder_msn (docs/agenti/interp.md)
 limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)
+limit_libro=106496   # libro: the Markdown converter of the Teoria editor; measured 103280 (+3 %)
 out=${1:-site/static}/wasm-feat
 R=target/wasm32-unknown-unknown/release
 # the wasm-bindgen + wasm-opt of each module run in the background while cargo builds the next one (tools/wasm_paralleli.sh); wasm_wait below joins them
@@ -44,6 +45,9 @@ wasm_pack "$out/grafo" $R/mzlab_feat_grafo_wasm.wasm $limit "mzFinder grafo"
 # the reactivity of the parent (crates/mzlab-chem-wasm: reatt/1), loaded only in administrator mode
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-chem-wasm
 wasm_pack "$out/chem" $R/mzlab_chem_wasm.wasm $limit_chem "mzFinder chem"
+# the Libro converter (crates/mzlab-libro-wasm: Markdown chapter -> Teoria HTML), loaded only by the administrator Teoria editor
+cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-libro-wasm
+wasm_pack "$out/libro" $R/mzlab_libro_wasm.wasm $limit_libro "Libro converter"
 # the readers of the tables of other programs (mzMine, FBMN/GNPS2, MS-DIAL), loaded only when the user opens one: crates/mzlab-feat-import-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-import-wasm
 wasm_pack "$out/import" $R/mzlab_feat_import_wasm.wasm $limit "mzFinder import"
@@ -99,6 +103,8 @@ m["grafo"] = {"js": "grafo/mzlab_feat_grafo_wasm.js", "wasm": "grafo/mzlab_feat_
               "sha256": hashlib.sha256(open(f"{o}/grafo/mzlab_feat_grafo_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["chem"] = {"js": "chem/mzlab_chem_wasm.js", "wasm": "chem/mzlab_chem_wasm_bg.wasm",
              "sha256": hashlib.sha256(open(f"{o}/chem/mzlab_chem_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["libro"] = {"js": "libro/mzlab_libro_wasm.js", "wasm": "libro/mzlab_libro_wasm_bg.wasm",
+              "sha256": hashlib.sha256(open(f"{o}/libro/mzlab_libro_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["import"] = {"js": "import/mzlab_feat_import_wasm.js", "wasm": "import/mzlab_feat_import_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/import/mzlab_feat_import_wasm_bg.wasm", "rb").read()).hexdigest()}
 def attributio(dirname):
