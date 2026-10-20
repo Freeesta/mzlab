@@ -95,7 +95,8 @@ try:
             assert "<<'MZFLOW'" in text and '--in "$MZLAB_IN"' in text, text[:300]
             # the here-doc is the plan itself: the shell rewrites the same bytes the export gave
             body = text.split("<<'MZFLOW'\n", 1)[1].split("\nMZFLOW\n", 1)[0]
-            assert json.loads(body) == json.loads((tmp / "plan.json").read_text())
+            with pg.expect_download() as d: pg.click('button[aria-label="Export the plan as mzflow/2 JSON"]')
+            assert json.loads(body) == json.loads(Path(d.value.path()).read_text())
         step("Copy command shows the shell text built by the engine, with the plan inside", copy_command)
         def parameters():
             pg.fill("#fl-p-detect-floor", "5000"); pg.keyboard.press("Tab")
@@ -139,7 +140,7 @@ try:
             assert c["params"]["step"] == "spectra.match@1" and c["params"]["mz_tolerance_ppm"] == 7 and set(c["in"]) == set(next(x for x in plan["steps"] if x["id"] == "match")["in"]), c
         step("a comparison of algorithms is offered where two are available, checked on the page and exported", compare)
         def cli():
-            pg.click('button[aria-label="Export and run with the command line"]')
+            # the box was opened by the step «Copy command» and stays open
             attendi(pg, "document.querySelector('.fl-cli code') && document.querySelector('.fl-cli code').textContent.includes('mzlab-cli flow run')")
         step("«Run with the CLI» shows the command of the native runner", cli)
 
