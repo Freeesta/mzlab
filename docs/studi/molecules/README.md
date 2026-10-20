@@ -97,6 +97,6 @@ Soglie per ogni PR: `tools/controlla.py` (funzioni ≤ 80 righe, file ≤ 500, d
 5. Nessun nome reale nei file nuovi: `tests/test_esempi_anonimi.py` e il controllo dei cognomi; il catalogo pubblico esiste già e resta l'unico file con nomi di composti.
 6. Solo sul Mac di Federico: l'app desktop (file nella cartella dell'utente, giro salva e riapri) e la migrazione IndexedDB 3→4 su un profilo vero con liste dell'utente già salvate.
 
-## 6. Domande per Federico
-- Unire nel catalogo anche le sostanze dello screening HR (sì nel piano) o tenerle come una raccolta a parte che si vede solo in quello strumento? Il contratto regge entrambe; cambia solo il filtro.
-- Dove si apre la finestra «Molecole»: proposta = menu dell'intestazione + link «Gestisci» sotto ogni campo di ricerca.
+## 6. Decisioni prese
+- Le sostanze dello screening HR entrano nel catalogo: un solo database, filtrato per `catalog` dove serve.
+- La finestra «Molecole» si apre da una voce del menu dell'intestazione e dal link «Gestisci» sotto ogni campo di ricerca.
