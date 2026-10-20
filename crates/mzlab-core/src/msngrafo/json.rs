@@ -1,11 +1,84 @@
 //! The JSON `msngrafo/1` of a graph (`docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers, the same bytes for the same
-//! input. The formulas (`ione`, `calibrazione`, `formula`) are `null` until the graph has them.
+//! input. The formulas (`ione`, `calibrazione`, `formula`) are `null` without the formula of the ion of the root.
 
-use super::{Arco, Grafo, NodoG, Opzioni};
+use super::{Arco, FormulaNodo, Grafo, NodoG, Opzioni};
 use crate::json::{round, Out};
 
 fn bool_(o: &mut Out, b: bool) {
     o.raw(if b { "true" } else { "false" });
+}
+
+fn opt_str(o: &mut Out, s: Option<&str>) {
+    match s {
+        Some(s) => o.str(s),
+        None => o.raw("null"),
+    };
+}
+
+fn id(o: &mut Out, i: Option<usize>) {
+    match i {
+        Some(i) => o.str(&format!("n{i}")),
+        None => o.raw("null"),
+    };
+}
+
+fn opzioni(o: &mut Out, op: &Opzioni) {
+    o.raw(",\"opzioni\":{\"ppm\":")
+        .num(op.ppm)
+        .raw(",\"da_min\":")
+        .num(op.da_min);
+    o.raw(",\"min_rel\":")
+        .num(op.min_rel)
+        .raw(",\"max_picchi\":")
+        .int(op.max_picchi as i64)
+        .raw(",\"isotopi\":");
+    bool_(o, op.isotopi);
+    o.raw(",\"attivazione\":");
+    opt_str(
+        o,
+        op.attivazione.as_ref().map(|a| a.to_lowercase()).as_deref(),
+    );
+    o.raw(",\"formula\":");
+    opt_str(o, op.formula.as_deref());
+    o.raw(",\"calibra\":");
+    bool_(o, op.calibra);
+    o.raw(",\"fissate\":[");
+    for (i, (mz, f)) in op.fissate.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"mz\":")
+            .num(round(*mz, 5))
+            .raw(",\"formula\":")
+            .str(f)
+            .raw("}");
+    }
+    o.raw("]}");
+}
+
+fn ione(o: &mut Out, g: &Grafo) {
+    o.raw(",\"ione\":");
+    match &g.ione {
+        Some(i) => o
+            .raw("{\"formula\":")
+            .str(&i.formula)
+            .raw(",\"mz_teorico\":")
+            .num(round(i.mz_teorico, 5))
+            .raw(",\"mz_osservato\":")
+            .num(round(i.mz_osservato, 5))
+            .raw(",\"ppm\":")
+            .num(round(i.ppm, 2))
+            .raw("}"),
+        None => o.raw("null"),
+    };
+    o.raw(",\"calibrazione\":");
+    match g.calibrazione {
+        Some((ppm, n)) => o
+            .raw("{\"ppm\":")
+            .num(round(ppm, 2))
+            .raw(",\"n\":")
+            .int(n as i64)
+            .raw("}"),
+        None => o.raw("null"),
+    };
 }
 
 fn testa(o: &mut Out, g: &Grafo, op: &Opzioni, sorgente: Option<(&str, &str)>) {
@@ -21,29 +94,16 @@ fn testa(o: &mut Out, g: &Grafo, op: &Opzioni, sorgente: Option<(&str, &str)>) {
             .raw("}"),
         None => o.raw("null"),
     };
-    o.raw(",\"opzioni\":{\"ppm\":")
-        .num(op.ppm)
-        .raw(",\"da_min\":")
-        .num(op.da_min);
-    o.raw(",\"min_rel\":")
-        .num(op.min_rel)
-        .raw(",\"max_picchi\":")
-        .int(op.max_picchi as i64)
-        .raw(",\"isotopi\":");
-    bool_(o, op.isotopi);
-    o.raw(",\"attivazione\":");
-    match &op.attivazione {
-        Some(a) => o.str(&a.to_lowercase()),
-        None => o.raw("null"),
-    };
-    o.raw("},\"polarita\":")
+    opzioni(o, op);
+    o.raw(",\"polarita\":")
         .int(g.polarita as i64)
         .raw(",\"radici\":[");
     for (i, r) in g.radici.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(&format!("n{r}"));
     }
-    o.raw("],\"ione\":null,\"calibrazione\":null,\"conteggi\":{\"nodi\":")
-        .int(g.nodi.len() as i64);
+    o.raw("]");
+    ione(o, g);
+    o.raw(",\"conteggi\":{\"nodi\":").int(g.nodi.len() as i64);
     o.raw(",\"archi\":")
         .int(g.archi.len() as i64)
         .raw(",\"scartati_pesanti\":")
@@ -59,7 +119,9 @@ fn testa(o: &mut Out, g: &Grafo, op: &Opzioni, sorgente: Option<(&str, &str)>) {
             .str(a.chiave)
             .raw(",\"albero\":")
             .str(&a.albero)
-            .raw("}");
+            .raw(",\"nodo\":");
+        id(o, a.nodo);
+        o.raw("}");
     }
     o.raw("]");
 }
@@ -84,15 +146,57 @@ fn nodo(o: &mut Out, i: usize, n: &NodoG) {
         .raw(",\"rel_max\":")
         .num(round(n.rel_max, 1));
     o.raw(",\"isotopo_di\":");
-    match n.isotopo_di {
-        Some(k) => o.str(&format!("n{k}")),
-        None => o.raw("null"),
-    };
+    id(o, n.isotopo_di);
     o.raw(",\"pos\":{\"col\":")
         .int(n.pos.0 as i64)
         .raw(",\"riga\":")
         .int(n.pos.1 as i64)
-        .raw("},\"formula\":null}");
+        .raw("},\"formula\":");
+    match &n.formula {
+        Some(f) => formula(o, f),
+        None => {
+            o.raw("null");
+        }
+    }
+    o.raw("}");
+}
+
+fn formula(o: &mut Out, f: &FormulaNodo) {
+    o.raw("{\"proposta\":")
+        .str(&f.proposta)
+        .raw(",\"ppm\":")
+        .num(round(f.ppm, 2));
+    o.raw(",\"dbe\":")
+        .num(f.dbe)
+        .raw(",\"elettroni\":")
+        .str(if f.pari { "pari" } else { "dispari" })
+        .raw(",\"n_candidati\":")
+        .int(f.n_candidati as i64);
+    o.raw(",\"alternative\":[");
+    for (i, a) in f.alternative.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"formula\":")
+            .str(&a.formula)
+            .raw(",\"ppm\":")
+            .num(round(a.ppm, 2));
+        o.raw(",\"dbe\":")
+            .num(a.dbe)
+            .raw(",\"punteggio\":")
+            .num(round(a.punteggio, 3))
+            .raw("}");
+    }
+    o.raw("],\"motivo\":{\"chiave\":")
+        .str(f.motivo.0)
+        .raw(",\"parametri\":{");
+    for (i, (k, v)) in f.motivo.1.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .str(k)
+            .raw(":")
+            .num(round(*v, 2));
+    }
+    o.raw("}},\"fonte\":").str(f.fonte).raw(",\"ambigua\":");
+    bool_(o, f.ambigua);
+    o.raw("}");
 }
 
 fn arco(o: &mut Out, a: &Arco) {
@@ -102,7 +206,14 @@ fn arco(o: &mut Out, a: &Arco) {
         .str(&format!("n{}", a.a));
     o.raw(",\"perdita\":{\"da_massa\":")
         .num(round(a.perdita, 5))
-        .raw(",\"formula\":null,\"ppm\":null,\"compatibile\":[");
+        .raw(",\"formula\":");
+    opt_str(o, a.formula.as_ref().map(|f| f.0.as_str()));
+    o.raw(",\"ppm\":");
+    match &a.formula {
+        Some((_, p)) => o.num(round(*p, 2)),
+        None => o.raw("null"),
+    };
+    o.raw(",\"compatibile\":[");
     for (j, f) in a.compatibili.iter().enumerate() {
         o.raw(if j > 0 { "," } else { "" }).str(f);
     }

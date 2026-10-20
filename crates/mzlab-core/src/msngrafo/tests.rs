@@ -7,7 +7,7 @@ type Step = (f64, String, f64);
 type Sintetico = (Vec<Vec<Step>>, Vec<(&'static str, Spettro)>, Spettro);
 
 /// m/z of the singly charged cation of a formula.
-fn ion(f: &str) -> f64 {
+pub(super) fn ion(f: &str) -> f64 {
     mass(&parse_formula(f).unwrap()) - ELECTRON
 }
 
@@ -24,7 +24,7 @@ fn path(v: &[(f64, &str, f64)]) -> Vec<Step> {
 
 /// A caffeine-like infusion (formulas as sub-formulas of C8H11N4O2, as `msn_synth.py`): MS2 of 195 at CID 30, MS3 of 138 at CID 30 and HCD 45,
 /// MS4 of 110 from the CID MS3. The spectra by node id of the tree.
-fn sintetico() -> Sintetico {
+pub(super) fn sintetico() -> Sintetico {
     let paths = vec![
         path(&[(195.0, "CID", 30.0)]),
         path(&[(195.0, "CID", 30.0), (138.0, "CID", 30.0)]),
@@ -69,7 +69,20 @@ fn sintetico() -> Sintetico {
 
 /// The graph of the synthetic infusion, its scans given in `ordine` (indices of the paths, any order; 3 scans each).
 fn grafo(o: &Opzioni, ordine: &[usize], inverti: bool) -> (Grafo, String) {
-    let (paths, spettri, ms1) = sintetico();
+    grafo_spostato(o, ordine, inverti, 0.0)
+}
+
+/// The same, every m/z of the spectra off by `ppm` (an uncalibrated instrument).
+pub(super) fn grafo_spostato(
+    o: &Opzioni,
+    ordine: &[usize],
+    inverti: bool,
+    ppm: f64,
+) -> (Grafo, String) {
+    let (paths, mut spettri, mut ms1) = sintetico();
+    for s in spettri.iter_mut().map(|x| &mut x.1).chain([&mut ms1]) {
+        s.mz.iter_mut().for_each(|m| *m *= 1.0 + ppm * 1e-6);
+    }
     let mut scans: Vec<(u8, Option<&[Step]>)> = vec![(1, None)];
     for &i in ordine {
         for _ in 0..3 {
@@ -107,7 +120,7 @@ fn grafo(o: &Opzioni, ordine: &[usize], inverti: bool) -> (Grafo, String) {
     (g, j)
 }
 
-fn trova(g: &Grafo, f: &str) -> usize {
+pub(super) fn trova(g: &Grafo, f: &str) -> usize {
     let m = ion(f);
     g.nodi
         .iter()
@@ -115,7 +128,7 @@ fn trova(g: &Grafo, f: &str) -> usize {
         .unwrap_or_else(|| panic!("no node for {f}"))
 }
 
-fn arco<'a>(g: &'a Grafo, da: &str, a: &str) -> Option<&'a Arco> {
+pub(super) fn arco<'a>(g: &'a Grafo, da: &str, a: &str) -> Option<&'a Arco> {
     let (p, f) = (trova(g, da), trova(g, a));
     g.archi.iter().find(|x| x.da == p && x.a == f)
 }

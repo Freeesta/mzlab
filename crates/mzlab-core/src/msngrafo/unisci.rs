@@ -109,12 +109,14 @@ fn osserva(ing: &Ingresso, o: &Opzioni, c: &mut Conteggi, avvisi: &mut Vec<Avvis
             avvisi.push(Avviso {
                 chiave: "warn.msngrafo.isolation",
                 albero: n.id.clone(),
+                nodo: None,
             });
         }
         if trovato.is_none() {
             avvisi.push(Avviso {
                 chiave: "warn.msngrafo.precNotFound",
                 albero: n.id.clone(),
+                nodo: None,
             });
         }
         let (pm, pr) = trovato.unwrap_or((n.chiave.last().unwrap().0, 0.0));
@@ -214,6 +216,7 @@ fn nodo(gr: &[usize], obs: &[Oss], ing: &Ingresso) -> NodoG {
         rel_max: gr.iter().map(|&i| obs[i].rel).fold(0.0, f64::max),
         isotopo_di: None,
         pos: (0, 0),
+        formula: None,
     }
 }
 
@@ -285,6 +288,7 @@ fn archi(
                     .filter(|(_, pm)| (perdita - pm).abs() <= t)
                     .map(|(f, _)| *f)
                     .collect(),
+                formula: None,
                 isolamento,
                 misure,
             }
@@ -341,5 +345,6 @@ pub(super) fn unisci(ing: &Ingresso, o: &Opzioni) -> Grafo {
         polarita: ing.polarita,
         scartati,
         avvisi,
+        ..Grafo::default()
     }
 }

@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "msngrafo/1",
  "title": "msngrafo/1: the fragmentation graph of an MSn infusion",
- "description": "Format «msngrafo/1» (crates/mzlab-core/src/msngrafo/, docs/agenti/msn-grafo.md): one node per ion seen at any level, energy or path, one arc per precursor → fragment with the neutral loss. Masses only: every formula is null until the graph proposes them. Same input, same bytes.",
+ "description": "Format «msngrafo/1» (crates/mzlab-core/src/msngrafo/, docs/agenti/msn-grafo.md): one node per ion seen at any level, energy or path, one arc per precursor → fragment with the neutral loss. With the formula of the ion of the root (opzioni.formula) every node below it gets a proposed sub-formula, with alternatives and reason; without it the formulas are null. Same input, same bytes.",
  "type": "object",
  "required": [
   "formato",
@@ -48,7 +48,10 @@
     "min_rel",
     "max_picchi",
     "isotopi",
-    "attivazione"
+    "attivazione",
+    "formula",
+    "calibra",
+    "fissate"
    ],
    "properties": {
     "ppm": {
@@ -76,6 +79,37 @@
       "string",
       "null"
      ]
+    },
+    "formula": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "description": "The ion of the root as typed (C8H11N4O2+, C8H10N4O2+H, C8H10N4O2 [M+H]+)"
+    },
+    "calibra": {
+     "type": "boolean",
+     "default": true
+    },
+    "fissate": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "mz",
+       "formula"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "mz": {
+        "type": "number"
+       },
+       "formula": {
+        "type": "string"
+       }
+      }
+     },
+     "description": "Formulas chosen by the user, found again on the node within the tolerance"
     }
    }
   },
@@ -92,10 +126,60 @@
    }
   },
   "ione": {
-   "type": "null"
+   "oneOf": [
+    {
+     "type": "null"
+    },
+    {
+     "type": "object",
+     "required": [
+      "formula",
+      "mz_teorico",
+      "mz_osservato",
+      "ppm"
+     ],
+     "additionalProperties": false,
+     "properties": {
+      "formula": {
+       "type": "string"
+      },
+      "mz_teorico": {
+       "type": "number"
+      },
+      "mz_osservato": {
+       "type": "number"
+      },
+      "ppm": {
+       "type": "number"
+      }
+     }
+    }
+   ]
   },
   "calibrazione": {
-   "type": "null"
+   "oneOf": [
+    {
+     "type": "null"
+    },
+    {
+     "type": "object",
+     "required": [
+      "ppm",
+      "n"
+     ],
+     "additionalProperties": false,
+     "properties": {
+      "ppm": {
+       "type": "number",
+       "description": "Median error removed from every m/z"
+      },
+      "n": {
+       "type": "integer",
+       "minimum": 3
+      }
+     }
+    }
+   ]
   },
   "conteggi": {
    "type": "object",
@@ -135,17 +219,32 @@
     "type": "object",
     "required": [
      "chiave",
-     "albero"
+     "albero",
+     "nodo"
     ],
     "properties": {
      "chiave": {
       "enum": [
        "warn.msngrafo.isolation",
-       "warn.msngrafo.precNotFound"
+       "warn.msngrafo.precNotFound",
+       "warn.msngrafo.polarity",
+       "warn.msngrafo.badFormula",
+       "warn.msngrafo.rootMissing",
+       "warn.msngrafo.fixedNotFound",
+       "warn.msngrafo.userConflict",
+       "warn.msngrafo.noFormula"
       ]
      },
      "albero": {
-      "type": "string"
+      "type": "string",
+      "description": "Node of the tree; empty when the note is about the graph"
+     },
+     "nodo": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "pattern": "^n[0-9]+$"
      }
     }
    }
@@ -224,8 +323,112 @@
       }
      },
      "formula": {
-      "type": "null",
-      "description": "The proposed formula of the fragment (not yet filled)"
+      "description": "The proposed formula of the ion (a proposal, never an identification)",
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "proposta",
+         "ppm",
+         "dbe",
+         "elettroni",
+         "n_candidati",
+         "alternative",
+         "motivo",
+         "fonte",
+         "ambigua"
+        ],
+        "properties": {
+         "proposta": {
+          "type": "string"
+         },
+         "ppm": {
+          "type": "number"
+         },
+         "dbe": {
+          "type": "number"
+         },
+         "elettroni": {
+          "enum": [
+           "pari",
+           "dispari"
+          ]
+         },
+         "n_candidati": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Sub-formulas of the root within the tolerance, before the constraints of the graph"
+         },
+         "alternative": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+           "type": "object",
+           "required": [
+            "formula",
+            "ppm",
+            "dbe",
+            "punteggio"
+           ],
+           "additionalProperties": false,
+           "properties": {
+            "formula": {
+             "type": "string"
+            },
+            "ppm": {
+             "type": "number"
+            },
+            "dbe": {
+             "type": "number"
+            },
+            "punteggio": {
+             "type": "number"
+            }
+           }
+          }
+         },
+         "motivo": {
+          "type": "object",
+          "required": [
+           "chiave",
+           "parametri"
+          ],
+          "additionalProperties": false,
+          "properties": {
+           "chiave": {
+            "enum": [
+             "why.msngrafo.root",
+             "why.msngrafo.user",
+             "why.msngrafo.unique",
+             "why.msngrafo.tree",
+             "why.msngrafo.best"
+            ]
+           },
+           "parametri": {
+            "type": "object",
+            "additionalProperties": {
+             "type": "number"
+            }
+           }
+          }
+         },
+         "fonte": {
+          "enum": [
+           "auto",
+           "utente",
+           "radice"
+          ]
+         },
+         "ambigua": {
+          "type": "boolean"
+         }
+        }
+       }
+      ]
      }
     }
    }
@@ -263,10 +466,18 @@
         "exclusiveMinimum": 0
        },
        "formula": {
-        "type": "null"
+        "type": [
+         "string",
+         "null"
+        ],
+        "description": "Precursor formula minus fragment formula (usual name for a known loss)"
        },
        "ppm": {
-        "type": "null"
+        "type": [
+         "number",
+         "null"
+        ],
+        "description": "Error of the loss in ppm of the m/z of the precursor"
        },
        "compatibile": {
         "type": "array",

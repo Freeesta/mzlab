@@ -1,9 +1,13 @@
 //! The fragmentation graph of an MSn infusion (`msngrafo/1`, `docs/agenti/msn-grafo.md`): the nodes of the precursor tree (`msnalbero`) and
 //! their consensus spectra become ONE graph of ions, a node per ion seen at any level, energy or path, an arc per precursor → fragment
-//! observed in the spectrum of that precursor, with the neutral loss. A DAG ordered by m/z, never a verdict: masses only, no chemistry.
+//! observed in the spectrum of that precursor, with the neutral loss. A DAG ordered by m/z, never a verdict: with the formula of the ion
+//! of the root, each node gets a proposed sub-formula (`formule`), with its alternatives and the reason of the choice.
 
+mod candidati;
+mod formule;
 mod json;
 mod posa;
+mod scelta;
 mod unisci;
 
 pub use json::json;
@@ -25,6 +29,12 @@ pub struct Opzioni {
     pub isotopi: bool,
     /// Only the spectra whose last stage has this activation (`cid`, `hcd`, ...; case ignored); `None` = all.
     pub attivazione: Option<String>,
+    /// The ion of the root as typed (`C8H11N4O2+`, `C8H10N4O2+H`, `C8H10N4O2 [M+H]+`); `None` = masses only.
+    pub formula: Option<String>,
+    /// One shift in ppm, the median error of the nodes with a single candidate, applied to every m/z before the choice.
+    pub calibra: bool,
+    /// Formulas chosen by the user: (m/z of the node, formula of the ion).
+    pub fissate: Vec<(f64, String)>,
 }
 
 impl Default for Opzioni {
@@ -36,6 +46,9 @@ impl Default for Opzioni {
             max_picchi: 120,
             isotopi: false,
             attivazione: None,
+            formula: None,
+            calibra: true,
+            fissate: vec![],
         }
     }
 }
@@ -87,6 +100,8 @@ pub struct Arco {
     pub perdita: f64,
     /// Known neutral losses within the tolerance (formulas, «compatible with», never assigned).
     pub compatibili: Vec<&'static str>,
+    /// The loss between the formulas of the two nodes and its error in ppm of the m/z of `da`, when both have one.
+    pub formula: Option<(String, f64)>,
     /// The arc is a step of a path that was isolated (`a` is the precursor of a child of the spectrum).
     pub isolamento: bool,
     pub misure: Vec<Misura>,
@@ -108,13 +123,55 @@ pub struct NodoG {
     pub isotopo_di: Option<usize>,
     /// Column and row of the drawing.
     pub pos: (usize, usize),
+    pub formula: Option<FormulaNodo>,
+}
+
+/// Another candidate of a node, with its score.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Alternativa {
+    pub formula: String,
+    pub ppm: f64,
+    pub dbe: f64,
+    pub punteggio: f64,
+}
+
+/// The formula proposed for a node: a sub-formula of the ion of the root, never an identification.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FormulaNodo {
+    pub proposta: String,
+    /// Error of the (calibrated) m/z of the node from the m/z of the formula.
+    pub ppm: f64,
+    pub dbe: f64,
+    pub pari: bool,
+    /// Sub-formulas of the root within the tolerance, before the constraints of the graph.
+    pub n_candidati: usize,
+    /// At most 4, best first.
+    pub alternative: Vec<Alternativa>,
+    /// `why.msngrafo.*` and its numeric parameters.
+    pub motivo: (&'static str, Vec<(&'static str, f64)>),
+    /// `auto`, `utente` or `radice`.
+    pub fonte: &'static str,
+    /// The second candidate scores within `AMBIGUA` of the first.
+    pub ambigua: bool,
+}
+
+/// The ion of the root: its formula, and how far the node of the graph is from it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Ione {
+    pub formula: String,
+    pub mz_teorico: f64,
+    pub mz_osservato: f64,
+    pub ppm: f64,
 }
 
 /// A note on one node of the tree (`warn.msngrafo.*`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Avviso {
     pub chiave: &'static str,
+    /// Node of the tree (empty when the note is about the graph).
     pub albero: String,
+    /// Node of the graph the note is about.
+    pub nodo: Option<usize>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -133,6 +190,9 @@ pub struct Grafo {
     pub polarita: i8,
     pub scartati: Conteggi,
     pub avvisi: Vec<Avviso>,
+    pub ione: Option<Ione>,
+    /// (shift in ppm, nodes it is the median of).
+    pub calibrazione: Option<(f64, usize)>,
 }
 
 /// Losses a chemist expects in ESI CID/HCD, even-electron first; matched by mass only.
@@ -158,9 +218,12 @@ pub(crate) const PERDITE: [(&str, f64); 16] = [
 /// The graph of the tree and its spectra (`spettri[i]` = consensus of `albero.nodi[i]`).
 pub fn costruisci(ing: &Ingresso, o: &Opzioni) -> Grafo {
     let mut g = unisci::unisci(ing, o);
+    formule::assegna(&mut g, o);
     posa::posa(&mut g);
     g
 }
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_formule;
