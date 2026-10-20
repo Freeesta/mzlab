@@ -23,8 +23,8 @@ try:
         step("only the first file (by time) is open", first_only)
         def groups():
             g = pg.evaluate(GROUPS)
-            assert sorted(g) == sorted(["DDA|1", "Full Scan|1", "MS2 (Product Ion)|1", "Infusione|1"]), g
-        step("groups DDA (one row for both parts), Full Scan, MS2, Infusione", groups)
+            assert sorted(g) == sorted(["Full Scan|2", "MS2 (Product Ion)|1", "Infusione|1"]), g
+        step("no DDA group: the DDA file is one row among the Full Scan; MS2, Infusione", groups)
         def click_opens():
             if not pg.is_visible("#flst"): pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(500)       # the side bar starts folded
             pg.click("#flst .fl:has-text('HR_inf')"); pg.wait_for_timeout(500)
@@ -34,14 +34,22 @@ try:
         step("a click on a closed file opens it; the DDA check box opens both parts", click_opens)
         def compact():
             pg.set_viewport_size({"width": 1000, "height": 1200}); pg.wait_for_timeout(300); pg.evaluate("renderFileList()"); drawer(pg, pin=False)         # narrow window: the drawer only opens on demand
-            assert pg.locator("#flst .fgh[data-gg]").count() == 4
-            pg.click("#flst .fgh[data-gg='hr.dda']"); pg.wait_for_timeout(200)
-            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.flgrp'))['hr.dda']") == 1
+            assert pg.locator("#flst .fgh[data-gg]").count() == 3
+            pg.click("#flst .fgh[data-gg='hr.full']"); pg.wait_for_timeout(200)
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.flgrp'))['hr.full']") == 1
             assert not pg.is_visible("#flst .fl:has-text('HR_DDA')")
-            pg.evaluate("renderFileList()"); assert pg.get_attribute("#flst .fgh[data-gg='hr.dda'] .chv", "aria-expanded") == "false"
+            pg.evaluate("renderFileList()"); assert pg.get_attribute("#flst .fgh[data-gg='hr.full'] .chv", "aria-expanded") == "false"
             pg.set_viewport_size({"width": 1500, "height": 2200}); pg.wait_for_timeout(300); pg.evaluate("renderFileList()"); drawer(pg)
             assert pg.locator("#flst .fgh[data-gg]").count() == 0 and pg.is_visible("#flst .fl:has-text('HR_DDA')")
         step("narrow list: groups fold with memory; wide window unchanged", compact)
+        def own_group():
+            pg.evaluate("renderFileList()")
+            pg.evaluate("window.ask = async () => 'Mia'; groupFiles(E.files.find(f => f.file.startsWith('HR_DDA')))"); pg.wait_for_function("E.files.some(f => f.ugrp)")
+            g = pg.evaluate(GROUPS); assert any(x.startswith("Mia|") for x in g) and not any(x.startswith("DDA") for x in g), g
+            assert pg.evaluate("E.files.filter(f => f.ugrp === 'Mia').every(f => f.file.startsWith('HR_DDA')||f.vis)")
+            pg.evaluate("groupFiles(E.files.find(f => f.ugrp), true)"); pg.wait_for_function("!E.files.some(f => f.ugrp)")
+            assert not any(x.startswith("Mia") for x in pg.evaluate(GROUPS))
+        step("the user groups the shown files and dissolves the group", own_group)
 finally:
     r.close()
 for s in steps: print(s)

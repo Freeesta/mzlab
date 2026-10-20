@@ -79,7 +79,7 @@ def test_time_read_from_the_name_with_units_and_raw():
 
 @needs_node
 def test_hr_group_table():
-    cases = [({"kind": "full"}, "full"), ({"kind": "ms2"}, "ms2"), ({"kind": "full", "dda": True}, "dda"), ({"kind": "ms2", "dda": True}, "dda"),
+    cases = [({"kind": "full"}, "full"), ({"kind": "ms2"}, "ms2"), ({"kind": "full", "dda": True}, "full"), ({"kind": "ms2", "dda": True}, "full"), ({"kind": "ms2", "ugrp": "A"}, "u:A"),
              ({"kind": "full", "infusion": True}, "infusion"), ({"kind": "ms2", "dda": True, "infusion": True}, "infusion"), ({"kind": "full", "dda": False}, "full")]
     assert run(f"console.log(JSON.stringify({json.dumps([c for c, _ in cases])}.map(o.hrGroup)))") == [g for _, g in cases]
     assert run("console.log(JSON.stringify(['a.mzML','a.mzML#MS2','b#MS1'].map(o.fileBase)))") == ["a.mzML", "a.mzML", "b"]
