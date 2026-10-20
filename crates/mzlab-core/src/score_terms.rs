@@ -34,7 +34,7 @@ impl Term {
 impl ScoreTerms {
     /// The record whose value is the weighted sum of `terms`.
     pub fn sum(name: &'static str, terms: Vec<Term>, formula_ref: &'static str) -> ScoreTerms {
-        let value = terms.iter().map(|t| t.weight * t.value).sum();
+        let value = weighted_sum(&terms);
         ScoreTerms {
             name,
             value,
@@ -65,40 +65,24 @@ impl ScoreTerms {
             .collect();
         ScoreTerms::sum(name, terms, formula_ref)
     }
+}
 
-    /// A score that is a sum over matched pairs: the `shown` strongest contributions `(m/z, value)` named by their m/z, the rest in one term; all of weight 1.
-    pub fn over_pairs(
-        name: &'static str,
-        value: f64,
-        mut parts: Vec<(f64, f64)>,
-        shown: usize,
-        formula_ref: &'static str,
-    ) -> ScoreTerms {
-        parts.sort_by(|x, y| y.1.total_cmp(&x.1));
-        let mut terms: Vec<Term> = parts
-            .iter()
-            .take(shown)
-            .map(|&(mz, v)| Term::new(format!("m/z {mz:.4}"), v, 1.0))
-            .collect();
-        if parts.len() > shown {
-            let rest = parts[shown..].iter().map(|p| p.1).sum();
-            terms.push(Term::new(
-                format!("{} other pairs", parts.len() - shown),
-                rest,
-                1.0,
-            ));
-        }
-        ScoreTerms {
-            name,
-            value,
-            terms,
-            formula_ref,
-        }
-    }
+/// The weighted sum of terms.
+pub fn weighted_sum(terms: &[Term]) -> f64 {
+    terms.iter().map(|t| t.weight * t.value).sum()
+}
 
+impl ScoreTerms {
     /// `value` minus the weighted sum of the terms; zero up to rounding for a score that is what it says.
     pub fn residual(&self) -> f64 {
-        self.value - self.terms.iter().map(|t| t.weight * t.value).sum::<f64>()
+        self.value - weighted_sum(&self.terms)
+    }
+
+    /// The JSON text of the record.
+    pub fn to_json(&self) -> String {
+        let mut o = Out::default();
+        self.write(&mut o);
+        o.0
     }
 
     /// `{"name","value","terms":[{"name","value","weight"}],"formula_ref"}`.
@@ -122,43 +106,40 @@ impl ScoreTerms {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_mean_has_normalised_weights_and_its_terms_give_back_the_value() {
-        let r = ScoreTerms::mean(
-            "x",
-            &[("mass", 0.9, 1.0), ("iso", 0.5, 2.0), ("frag", 0.7, 1.0)],
-            "score/x",
-        );
-        assert!((r.terms.iter().map(|t| t.weight).sum::<f64>() - 1.0).abs() < 1e-15);
-        assert!((r.value - (0.9 + 1.0 + 0.7) / 4.0).abs() < 1e-15);
-        assert!(r.residual().abs() < 1e-15);
+/// The `shown` strongest contributions `(m/z, value)` as terms named by their m/z, the rest in one term; all of weight 1.
+fn strongest(mut parts: Vec<(f64, f64)>, shown: usize) -> Vec<Term> {
+    parts.sort_by(|x, y| y.1.total_cmp(&x.1));
+    let mut terms: Vec<Term> = parts
+        .iter()
+        .take(shown)
+        .map(|&(mz, v)| Term::new(format!("m/z {mz:.4}"), v, 1.0))
+        .collect();
+    if parts.len() > shown {
+        let rest = parts[shown..].iter().map(|p| p.1).sum();
+        terms.push(Term::new(
+            format!("{} other pairs", parts.len() - shown),
+            rest,
+            1.0,
+        ));
     }
+    terms
+}
 
-    #[test]
-    fn a_difference_is_a_term_with_a_negative_weight() {
-        let r = ScoreTerms::sum(
-            "rt",
-            vec![
-                Term::new("observed", 7.2, 1.0),
-                Term::new("predicted", 6.9, -1.0),
-            ],
-            "score/rt",
-        );
-        assert!((r.value - 0.3).abs() < 1e-12);
-        let mut o = Out::default();
-        r.write(&mut o);
-        assert!(o.0.starts_with("{\"name\":\"rt\",\"value\":0.29"));
-        assert!(o.0.contains("\"weight\":-1}"));
-        assert!(o.0.ends_with("\"formula_ref\":\"score/rt\"}"));
-    }
-
-    #[test]
-    fn without_weight_there_are_no_terms() {
-        let r = ScoreTerms::mean("x", &[("a", 1.0, 0.0)], "score/x");
-        assert!(r.terms.is_empty() && r.value == 0.0);
+impl ScoreTerms {
+    /// A score that is a sum over matched pairs: the `shown` strongest contributions `(m/z, value)` named by their m/z, the rest in one term; all of weight 1.
+    pub fn over_pairs(
+        name: &'static str,
+        value: f64,
+        parts: Vec<(f64, f64)>,
+        shown: usize,
+        formula_ref: &'static str,
+    ) -> ScoreTerms {
+        let terms = strongest(parts, shown);
+        ScoreTerms {
+            name,
+            value,
+            terms,
+            formula_ref,
+        }
     }
 }

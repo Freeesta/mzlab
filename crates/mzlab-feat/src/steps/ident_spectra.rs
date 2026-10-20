@@ -271,6 +271,10 @@ pub(super) fn insilico() -> Step {
                 .doc("A candidate is broken bond by bond up to this many bonds")
                 .advanced(),
             Param::integer("top", "Candidates kept").min(1.0).default_num(5.0),
+            Param::boolean("score_terms", "Score terms")
+                .default_bool(false)
+                .advanced()
+                .doc("On: every candidate also carries score_terms, its score as the share of each explained peak and the key of its formula in the Theory; the scores themselves do not change"),
         ],
         algorithms: vec![fragmenter()],
         default_algorithm: Some("fragmenter"),

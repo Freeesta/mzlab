@@ -6,15 +6,16 @@ use mzlab_core::flow::Job;
 use mzlab_core::json::{round, Out};
 use mzlab_core::score_terms::ScoreTerms;
 use mzlab_lib::build::{build_in_memory, BuildOpts};
+use mzlab_lib::contrib::{
+    cosine_contributions, entropy_contributions, modified_cosine_contributions,
+};
 use mzlab_lib::decoy::{
     best_scores, fdr_note, is_decoy, lib_fdr, quantize, with_decoys, Best, DecoyKind, LibFdr,
     DEFAULT_SEED,
 };
 use mzlab_lib::parse::{detect, parse_all};
 use mzlab_lib::read::{Library, CACHE_BYTES};
-use mzlab_lib::scores::{
-    cosine_contributions, entropy_contributions, modified_cosine, modified_cosine_contributions,
-};
+use mzlab_lib::scores::modified_cosine;
 use mzlab_lib::search::{analogs, identity, AnalogOpts, IdentityOpts, Query, Tol};
 use mzlab_lib::spec::Spectrum;
 

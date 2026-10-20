@@ -198,3 +198,48 @@ fn the_options_come_from_json() {
         assert!(Opts::from_json(bad).is_err(), "{bad}");
     }
 }
+
+/// `score_terms` opens the score of every candidate as the weighted mean of its mass and isotope terms: the terms give the value back to 1e-12, the value is
+/// the score up to its rounding, and with the option off the text is the one of before.
+#[test]
+fn score_terms_open_the_combined_score_and_leave_it_unchanged() {
+    for name in [
+        "glucose",
+        "caffeine",
+        "paracetamol",
+        "atrazine",
+        "bromazepam",
+    ] {
+        let (mz, y, _) = case(name);
+        let plain = identify(&mz, &y, mz[0], &Opts::default()).unwrap();
+        let on = Opts {
+            score_terms: true,
+            ..Opts::default()
+        };
+        let with = identify(&mz, &y, mz[0], &on).unwrap();
+        assert!(!to_json(&plain).contains("score_terms"), "{name}");
+        assert_eq!(plain.candidates.len(), with.candidates.len(), "{name}");
+        for (p, w) in plain.candidates.iter().zip(&with.candidates) {
+            assert_eq!(
+                (p.score, p.confidence, &p.formula),
+                (w.score, w.confidence, &w.formula)
+            );
+            let t = w.score_terms.as_ref().unwrap();
+            assert!(t.residual().abs() < 1e-12, "{name}");
+            assert!((t.terms.iter().map(|x| x.weight).sum::<f64>() - 1.0).abs() < 1e-12);
+            if w.iso_term.is_some() {
+                assert!(
+                    (t.value - w.score).abs() < 1e-4,
+                    "{name}: {} vs {}",
+                    t.value,
+                    w.score
+                );
+            }
+        }
+        let j: Value = serde_json::from_str(&to_json(&with)).unwrap();
+        assert_eq!(
+            j["candidates"][0]["score_terms"]["formula_ref"],
+            "score/composition"
+        );
+    }
+}

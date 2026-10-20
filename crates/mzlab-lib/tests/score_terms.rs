@@ -1,10 +1,10 @@
 //! The contributions of the matched pairs add up to the library scores (entropy similarity, cosine, modified cosine) to 1e-12, on every case of a small family
 //! of synthetic spectra (shared peaks, extra peaks, a precursor shift).
 
-use mzlab_lib::scores::{
-    cosine_contributions, entropy_contributions, match_peaks, modified_cosine,
-    modified_cosine_contributions, pair_scores, Spec,
+use mzlab_lib::contrib::{
+    cosine_contributions, entropy_contributions, modified_cosine_contributions,
 };
+use mzlab_lib::scores::{match_peaks, modified_cosine, pair_scores, Spec};
 
 /// A deterministic pseudo-random spectrum of `n` peaks above `base` m/z.
 fn spec(seed: u64, n: usize, base: f64, prec: f64) -> Spec {
