@@ -6,12 +6,19 @@ use mzlab_core::flow::Job;
 use mzlab_core::mzml::{self, Spectrum};
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
+use crate::flow_formula::{read_table, Table};
 use crate::flow_match::Named;
 
 /// `spectra.ms2@1`: one MGF record per MS2 scan of the files that passes the intensity threshold and the isolation window.
 pub fn ms2_step() -> Step {
     Step {
-        ins: vec![Port::new("source", DataType::Mzml, "mzML files with data-dependent MS2").many()],
+        ins: vec![
+            Port::new("source", DataType::Mzml, "mzML files with data-dependent MS2").many(),
+            Port {
+                optional: true,
+                ..Port::new("features", DataType::Report, "Feature table: keep the scans of its features")
+            },
+        ],
         outs: vec![Port::new("spectra", DataType::Spectra, "MS2 spectra as MGF")],
         params: vec![
             Param::number("min_intensity", "Peak threshold")
@@ -23,6 +30,16 @@ pub fn ms2_step() -> Step {
                 .min(0.0)
                 .unit("Da")
                 .doc("Scans whose isolation window is wider are dropped; off when absent, and a scan that does not say its window is kept"),
+            Param::number("tol_da", "Precursor tolerance")
+                .min(0.0)
+                .default_num(0.02)
+                .unit("Da")
+                .doc("With a feature table: largest distance between the precursor and the m/z of the feature"),
+            Param::number("rt_tol", "RT tolerance")
+                .min(0.0)
+                .default_num(0.2)
+                .unit("min")
+                .doc("With a feature table: largest distance between the scan and the RT of the feature"),
         ],
         runs_in: RunsIn {
             wasm: Some("wasip1 (mzlab-cli)"),
@@ -33,7 +50,7 @@ pub fn ms2_step() -> Step {
         ..Step::core(
             "spectra.ms2",
             "MS2 spectra from mzML",
-            "Reads the MS2 scans of data-dependent runs and writes them as spectra with precursor m/z and intensity, charge, RT and scan number.",
+            "Reads the MS2 scans of data-dependent runs and writes them as spectra with precursor m/z and intensity, charge, RT and scan number; given a feature table it keeps the scans of its features and names each spectrum with the feature id.",
         )
     }
 }
@@ -80,14 +97,20 @@ fn stem(name: &str) -> &str {
     name.rsplit_once('.').map_or(name, |p| p.0)
 }
 
-fn record(out: &mut String, title: &str, s: &Spectrum, e: Extra, peaks: &[(f64, f64)]) {
+fn record(
+    out: &mut String,
+    (title, id): (&str, &str),
+    s: &Spectrum,
+    e: Extra,
+    peaks: &[(f64, f64)],
+) {
     let (sign, mode) = match s.polarity {
         1 => ('+', "Positive"),
         -1 => ('-', "Negative"),
         _ => ('+', ""),
     };
     out.push_str(&format!(
-        "BEGIN IONS\nTITLE={title}\nSPECTRUMID={title}\nPEPMASS={:.5}",
+        "BEGIN IONS\nTITLE={title}\nSPECTRUMID={id}\nPEPMASS={:.5}",
         s.precursor.unwrap_or(0.0)
     ));
     if let Some(i) = e.prec_int {
@@ -98,6 +121,9 @@ fn record(out: &mut String, title: &str, s: &Spectrum, e: Extra, peaks: &[(f64, 
         s.rt * 60.0,
         s.index + 1
     ));
+    if id != title {
+        out.push_str(&format!("FEATURE_ID={id}\n"));
+    }
     if let Some(c) = e.charge.filter(|c| *c > 0) {
         out.push_str(&format!("CHARGE={c}{sign}\n"));
     }
@@ -110,10 +136,35 @@ fn record(out: &mut String, title: &str, s: &Spectrum, e: Extra, peaks: &[(f64, 
     out.push_str("END IONS\n");
 }
 
-/// Runs the step of `job` on the mzML files and returns the MGF text: files in the given order, scans in file order, `TITLE` and `SPECTRUMID` (the query id of `spectra.match`) `<file>.<scan>`.
-pub fn ms2_text(job: &Job, files: &[Named]) -> Result<String> {
+/// The id of the feature of the table that a scan belongs to: present in this file (area above zero), RT and precursor within the tolerances, the closest
+/// in m/z (the first row on a tie).
+fn feature_of(t: &Table, file: &str, s: &Spectrum, tol: (f64, f64)) -> Option<String> {
+    let prec = s.precursor?;
+    let area = t.areas.iter().find(|a| a.0 == file).map(|a| a.1);
+    let num = |row: &Vec<String>, k: usize| row.get(k).and_then(|v| v.parse::<f64>().ok());
+    let near = t.rows.iter().filter(|r| {
+        let (mz, rt) = (num(r, t.mz), num(r, t.rt));
+        mz.zip(rt)
+            .is_some_and(|(mz, rt)| (mz - prec).abs() <= tol.0 && (rt - s.rt).abs() <= tol.1)
+            && area.is_none_or(|k| num(r, k).is_some_and(|a| a > 0.0))
+    });
+    let best = near.min_by(|a, b| {
+        let d = |r: &Vec<String>| (num(r, t.mz).unwrap_or(0.0) - prec).abs();
+        d(a).total_cmp(&d(b))
+    });
+    best.and_then(|r| r.get(t.id)).cloned()
+}
+
+/// Runs the step of `job` on the mzML files and returns the MGF text: files in the given order, scans in file order, `TITLE` `<file>.<scan>`.
+/// `SPECTRUMID` (the query id of `spectra.match`) is the same, or with a feature table the id of the feature of the scan, and the scans of no feature go.
+pub fn ms2_text(job: &Job, files: &[Named], features: Option<&[u8]>) -> Result<String> {
     let floor = param(job, "min_intensity").unwrap_or(0.0);
     let widest = param(job, "max_isolation");
+    let tol = (
+        param(job, "tol_da").unwrap_or(0.02),
+        param(job, "rt_tol").unwrap_or(0.2),
+    );
+    let table = features.map(read_table).transpose()?;
     let mut out = String::new();
     for (name, bytes) in files {
         let run = mzml::read(*bytes)?;
@@ -131,18 +182,20 @@ pub fn ms2_text(job: &Job, files: &[Named]) -> Result<String> {
             if widest.zip(e.width).is_some_and(|(max, w)| w > max) {
                 continue;
             }
+            let title = format!("{}.{}", stem(name), s.index + 1);
+            let id = match &table {
+                Some(t) => match feature_of(t, stem(name), s, tol) {
+                    Some(id) => id,
+                    None => continue,
+                },
+                None => title.clone(),
+            };
             let peaks: Vec<(f64, f64)> = (0..s.mz.len())
                 .map(|i| (s.mz[i], s.intensity_f64(i)))
                 .filter(|p| p.1 >= floor && p.1 > 0.0)
                 .collect();
             if !peaks.is_empty() {
-                record(
-                    &mut out,
-                    &format!("{}.{}", stem(name), s.index + 1),
-                    s,
-                    e,
-                    &peaks,
-                );
+                record(&mut out, (&title, &id), s, e, &peaks);
             }
         }
     }

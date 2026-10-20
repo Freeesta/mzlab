@@ -230,7 +230,14 @@ fn formula_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
 
 fn ms2_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let files = read_all(r, job, "source")?;
-    let text = crate::flow_ms2::ms2_text(job, &named(&files))?;
+    let has_table = job.inputs.iter().any(|(p, _)| p == "features");
+    let table = if has_table {
+        Some(read_one(r, job, "features")?)
+    } else {
+        None
+    };
+    let text =
+        crate::flow_ms2::ms2_text(job, &named(&files), table.as_ref().map(|t| t.1.as_slice()))?;
     let out = r.work.join(format!("{}.mgf", job.instance.id));
     std::fs::write(&out, text).map_err(io)?;
     r.keep(out, DataType::Spectra)

@@ -161,3 +161,87 @@ fn descriptor_export_is_up_to_date() {
         "stale: MZLAB_UPDATE_STEPS=1 cargo test -p mzlab-cli --lib flow_ms2"
     );
 }
+
+/// The caffeine run of `caffeine_mzml` with three MS2 scans added: at the feature (195.08765, 3.0 min), at an ion that is no feature, and at the
+/// feature m/z but 1.5 min late.
+fn caffeine_dda() -> Vec<u8> {
+    let mut w = MzmlWriter::new(
+        Vec::new(),
+        &Header {
+            run: "caf".into(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let frag = [(83.06037, 150.0), (110.07127, 600.0), (138.06619, 1000.0)];
+    w.open_spectra(123).unwrap();
+    let mut k = 0;
+    for i in 0..120 {
+        let rt = 0.5 + 0.05 * i as f64;
+        let a = 3.0e6 * (-0.5 * ((rt - 3.0) / 0.07f64).powi(2)).exp();
+        let ms1 = [
+            (195.08765, a as f32),
+            (196.09100, (a * 0.101) as f32),
+            (197.09435, (a * 0.0065) as f32),
+        ];
+        let ms1: Vec<_> = ms1.into_iter().filter(|p| p.1 > 100.0).collect();
+        w.spectrum(&scan(k, 1, rt, None, &ms1)).unwrap();
+        k += 1;
+        let ms2 = match i {
+            50 => Some((195.08765, rt)),
+            51 => Some((400.1234, rt)),
+            80 => Some((195.08765, rt)),
+            _ => None,
+        };
+        if let Some((prec, rt)) = ms2 {
+            w.spectrum(&scan(k, 2, rt, Some(prec), &frag)).unwrap();
+            k += 1;
+        }
+    }
+    w.close_spectra().unwrap();
+    w.finish().unwrap()
+}
+
+/// `features.table` → `spectra.ms2` (with the table) → `spectra.match`: only the scan at the feature stays, named with the id of the feature, and the
+/// matcher gives that id to its hit.
+#[test]
+fn feature_table_selects_the_scans_and_names_them() {
+    let dir = fixture("ms2join");
+    std::fs::write(dir.join("caf.mzML"), caffeine_dda()).unwrap();
+    std::fs::write(
+        dir.join("lib.msp"),
+        "Name: Caffeine\nPrecursorMZ: 195.08765\nPrecursor_type: [M+H]+\nIon_mode: Positive\nFormula: C8H10N4O2\nNum Peaks: 3\n83.06037 150\n110.07127 600\n138.06619 1000\n\n",
+    )
+    .unwrap();
+    let plan = r#"{"format":"mzflow/2","inputs":[{"name":"caf.mzML","type":"mzml"},{"name":"lib.msp","type":"library"}],"steps":[
+        {"id":"t","step":"features.table@1","in":{"source":["file:caf.mzML"]},"params":{"polarity":1}},
+        {"id":"s","step":"spectra.ms2@1","in":{"source":["file:caf.mzML"],"features":"t.report"}},
+        {"id":"m","step":"spectra.match@1","in":{"query":"s.spectra","library":"file:lib.msp"}}]}"#;
+    let (run, prov) =
+        crate::flow::run_plan(plan.as_bytes(), &dir, &dir.join("work"), 1, None).unwrap();
+    assert!(
+        run.skipped.is_empty() && !prov.contains("\"error\""),
+        "{prov}"
+    );
+    let csv = std::fs::read_to_string(dir.join("work/t.csv")).unwrap();
+    let head: Vec<&str> = csv.lines().next().unwrap().split(',').collect();
+    let id = csv
+        .lines()
+        .nth(1)
+        .unwrap()
+        .split(',')
+        .nth(head.iter().position(|h| *h == "id").unwrap())
+        .unwrap()
+        .to_string();
+    let mgf = std::fs::read_to_string(dir.join("work/s.mgf")).unwrap();
+    assert_eq!(mgf.matches("BEGIN IONS").count(), 1, "{mgf}");
+    assert!(
+        mgf.contains(&format!("SPECTRUMID={id}\n")) && mgf.contains(&format!("FEATURE_ID={id}\n")),
+        "{mgf}"
+    );
+    let hits = mzlab_core::json::parse(&std::fs::read(dir.join("work/m.json")).unwrap()).unwrap();
+    let first = &hits.get("hits").unwrap().arr()[0];
+    assert_eq!(first.get("query").unwrap().str(), Some(id.as_str()));
+    assert_eq!(first.get("name").unwrap().str(), Some("Caffeine"));
+    let _ = std::fs::remove_dir_all(&dir);
+}
