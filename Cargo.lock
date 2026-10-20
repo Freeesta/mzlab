@@ -2167,6 +2167,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-msngrafo-wasm"
+version = "1.0.1"
+dependencies = [
+ "js-sys",
+ "mzlab-core",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-target"
 version = "1.0.1"
 dependencies = [

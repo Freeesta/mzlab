@@ -1,0 +1,39 @@
+// @ts-check
+// The fragmentation graph of an MSn infusion in the worker of the engine (rust-worker.js, op "msngrafo"): the .wasm `msngrafo` of
+// wasm-feat/manifest.json (crates/mzlab-msngrafo-wasm) is fetched on the first request, checked against its SHA-256, and reads the .mzidx of
+// OPFS and the mzML of the file through `readerFor`. The engine itself is not touched. docs/agenti/msn-grafo.md.
+
+/** @type {any} */ let mod = null;
+/** @type {Promise<any> | null} */ let loading = null;
+
+async function load() {
+  if (mod) return mod;
+  if (!loading) loading = (async () => {
+    const base = new URL("./wasm-feat/", import.meta.url);
+    const man = (await (await fetch(new URL("manifest.json", base))).json()).msngrafo;
+    if (!man) throw JSON.stringify({ error_key: "err.route.unavailable", params: {} });
+    const bytes = await (await fetch(new URL(man.wasm, base))).arrayBuffer();
+    const hex = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map(x => x.toString(16).padStart(2, "0")).join("");
+    if (hex !== man.sha256) throw JSON.stringify({ error_key: "error.featWasmHash", params: {} });
+    const m = await import(new URL(man.js, base).href);
+    await m.default({ module_or_path: bytes });
+    return (mod = m);
+  })().catch(e => { loading = null; throw e; });
+  return loading;
+}
+
+/** the .mzidx of a file, where the index builder put it in OPFS @param {string} name */
+async function indexOf(name) {
+  const root = await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab");
+  return (await (await root.getDirectoryHandle("idx")).getFileHandle(name + ".mzidx")).getFile();
+}
+
+/**
+ * The `msngrafo/1` of the file `name` (a JSON string); a failure is thrown as the JSON string `{error_key, params}` of the module.
+ * @param {string} name @param {Blob} blob the mzML @param {string} query the query string of the request
+ * @param {(blob: Blob) => (offset: number, length: number) => Uint8Array} readerFor
+ */
+export async function msnGrafo(name, blob, query, readerFor) {
+  const [m, idx] = await Promise.all([load(), indexOf(name)]);
+  return m.msn_grafo(readerFor(idx), idx.size, readerFor(blob), name, query);
+}

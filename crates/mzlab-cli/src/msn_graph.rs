@@ -9,7 +9,7 @@ use mzlab_core::elements::{fmt, parse_formula};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out};
 use mzlab_core::msnalbero::Raggruppa;
-use mzlab_core::msngrafo::{costruisci, json, leggi, Grafo, Ingresso, Opzioni};
+use mzlab_core::msngrafo::{grafo_json, Grafo, Opzioni};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 
 pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/1) of an MSn infusion.
@@ -95,22 +95,10 @@ pub fn grafo(file: &Path, o: &Opzioni, tmp: &Path) -> Result<(Grafo, String)> {
     let sha = sha256_hex(&std::fs::read(&idx).map_err(io)?);
     let scans = crate::open(&idx)?.scans;
     let mut m = std::fs::File::open(file).map_err(io)?;
-    let l = leggi(&scans, &mut m, &Raggruppa::default())?;
-    let g = costruisci(
-        &Ingresso {
-            albero: &l.albero,
-            ms1: l.ms1.as_ref(),
-            spettri: &l.spettri,
-            larghezze: &l.larghezze,
-            polarita: l.polarita,
-        },
-        o,
-    );
     let nome = file
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    let j = json(&g, o, Some((&nome, &sha)));
-    Ok((g, j))
+    grafo_json(&scans, &mut m, (&nome, &sha), (o, &Raggruppa::default()))
 }
 
 /// The nominal path of a node of the tree (`317@cid35>261@cid35` → [317, 261]).
