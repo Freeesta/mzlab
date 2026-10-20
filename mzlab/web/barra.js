@@ -57,16 +57,7 @@ const BARRA = (() => {
   const tcmd = () => { try { const f = Q1("#tframe"); return (f && f.contentWindow && f.contentWindow.TCMD) || null; } catch (_) { return null; } };
   const sheet = () => window.innerWidth < SHEET;
   const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(window.innerWidth / 2)));
-  // width that holds the longest file name of the list (label + box, colour square and padding), between the minimum and the default width
-  let _mc = null;
-  const namesW = () => {
-    const names = typeof E !== "undefined" && E.files ? E.files.filter(f => !f.gone).map(f => String(f.label || "")) : [];
-    if (!names.length) return defaultW();
-    const g = (_mc ||= document.createElement("canvas").getContext("2d")), nm = Q1("#flst .nm");
-    g.font = nm ? getComputedStyle(nm).font : "600 13px system-ui, sans-serif";
-    return Math.ceil(Math.max(...names.map(n => g.measureText(n).width)) + 110);
-  };
-  const effW = () => Math.max(MIN_W, Math.min(maxW(), _wUser ? _w : Math.min(defaultW(), namesW())));
+  const effW = () => Math.max(MIN_W, Math.min(maxW(), _wUser ? _w : Math.min(defaultW(), typeof namesWidth === "function" ? namesWidth(defaultW()) : defaultW())));
   const validTab = id => ["file", "calc", "losses", "adducts", "lists", "stat"].includes(id) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
 
   // ---------------------------------------------------------------- icons
