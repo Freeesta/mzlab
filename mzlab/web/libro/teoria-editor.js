@@ -2,7 +2,7 @@
 // Teoria editor (administrator page): edit the Markdown source of a Teoria chapter, check it with the Rust converter, preview the page and send the change
 // as one pull request with auto-merge (pr.js). Text and token live in memory; the token may be sealed with a passphrase (vault.js, own slot).
 import { GhError } from "./gh.js";
-import { BRANCH_PREFIX, headings, makePrClient } from "./pr.js";
+import { BRANCH_PREFIX, makePrClient } from "./pr.js";
 import * as vault from "./vault.js";
 import { clearDraft, loadDraft, makeHistory, saveDraft } from "./storia.js";
 import { loadConverter } from "./wasm.js";
@@ -15,7 +15,7 @@ const $ = (id) => /** @type {any} */ (document.getElementById(id));
 let client = null;
 /** @type {import("./wasm.js").Converter | null} */
 let conv = null;
-/** @type {{name: string, md: {text: string, sha: string}, html: {text: string, sha: string}, rawOk: boolean} | null} */
+/** @type {{name: string, md: {text: string, sha: string}, html: {text: string, sha: string}, index: {text: string, sha: string}, rawOk: boolean} | null} */
 let cur = null;
 /** @type {ReturnType<typeof makeHistory> | null} */
 let hist = null;
@@ -111,7 +111,7 @@ async function openChapter(name, btn) {
       same = false;
     }
     if (!same) return fail(`The converter does not reproduce ${name}.html from its source: not editable here.`);
-    cur = { name, md: l.md, html: l.html, rawOk: l.rawOk };
+    cur = { name, md: l.md, html: l.html, index: l.index, rawOk: l.rawOk };
     $("source").value = l.md.text;
     $("source").disabled = false;
     $("summary").value = "";
@@ -312,13 +312,20 @@ async function send() {
   fail("");
   const r = convert();
   if (r.error) return fail(r.error);
-  if (JSON.stringify(headings($("source").value)) !== JSON.stringify(headings(cur.md.text))) {
-    return fail("The headings changed. Titles and sections feed the search index, which this page cannot rebuild: change headings with a normal pull request.");
+  // retitled sections are allowed (with their anchors); the search index of the chapter is then rebuilt by the same converter
+  /** @type {{text: string, loadedSha: string} | undefined} */
+  let index;
+  try {
+    if (conv?.retitled(cur.md.text, $("source").value, cur.name)) {
+      index = { text: conv.reindex(cur.index.text, cur.name.replace(/\.md$/, ".html"), /** @type {string} */ (r.html)), loadedSha: cur.index.sha };
+    }
+  } catch (e) {
+    return fail(String(e));
   }
   $("btn-send").disabled = true;
   say("Sending…");
   try {
-    const pr = await client.submit({ name: cur.name, md: $("source").value, html: /** @type {string} */ (r.html), loaded: { md: cur.md, html: cur.html }, summary: $("summary").value.trim() });
+    const pr = await client.submit({ name: cur.name, md: $("source").value, html: /** @type {string} */ (r.html), loaded: { md: cur.md, html: cur.html }, summary: $("summary").value.trim(), index });
     clearTimeout(commitTimer);
     clearDraft(cur.name);
     cur.md = { text: $("source").value, sha: "" };

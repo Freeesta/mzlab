@@ -7,6 +7,7 @@ import { GhError, b64dec, b64enc, makeCall } from "./gh.js";
 export const REPO = { owner: "Freeesta", repo: "mzlab", base: "main" };
 const SRC = "mzlab/web/teoria/src";
 const PAGES = "mzlab/web/teoria";
+const INDEX = `${PAGES}/indice-ricerca.js`;
 export const BRANCH_PREFIX = "libro/teoria-";
 const API = "https://api.github.com";
 
@@ -19,6 +20,19 @@ export const stem = (name) => name.replace(/\.md$/, "");
 /** Heading lines (`#`..`###`) of a source, in order: an edit that changes them needs a regenerated search index, which the editor cannot do. @param {string} md */
 export function headings(md) {
   return md.split("\n").filter((l) => /^#{1,3} /.test(l)).map((l) => l.trimEnd());
+}
+
+/** Switch on auto-merge (squash) for a pull request: false when GitHub refuses (it may not be allowed in the repository settings). @param {ReturnType<typeof makeCall>} call @param {string} nodeId */
+async function autoMerge(call, nodeId) {
+  try {
+    const g = await call(`${API}/graphql`, {
+      method: "POST",
+      body: JSON.stringify({ query: "mutation($id: ID!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) { pullRequest { number } } }", variables: { id: nodeId } }),
+    });
+    return !(g.errors && g.errors.length);
+  } catch (e) {
+    return false;
+  }
 }
 
 /** @param {{token: string, fetchFn?: typeof fetch, repo?: typeof REPO, now?: () => Date}} o */
@@ -58,24 +72,31 @@ export function makePrClient({ token, fetchFn = (...a) => fetch(...a), repo = RE
     },
     /** The source, its generated page and the list of imported chapters, all from main. @param {string} name */
     async load(name) {
-      const [md, html, listed] = await Promise.all([read(`${SRC}/${name}`, repo.base), read(`${PAGES}/${stem(name)}.html`, repo.base), read("tools/libro/importati.txt", repo.base)]);
-      if (!md || !html) throw new GhError("notfound", `${name} is not on ${repo.base}.`, 404);
+      const [md, html, listed, index] = await Promise.all([
+        read(`${SRC}/${name}`, repo.base),
+        read(`${PAGES}/${stem(name)}.html`, repo.base),
+        read("tools/libro/importati.txt", repo.base),
+        read(INDEX, repo.base),
+      ]);
+      if (!md || !html || !index) throw new GhError("notfound", `${name} is not on ${repo.base}.`, 404);
       const imported = (listed ? listed.text : "").split("\n").map((l) => l.split("#")[0].trim()).filter(Boolean);
-      return { md, html, rawOk: imported.includes(name) };
+      return { md, html, index, rawOk: imported.includes(name) };
     },
     openPrs,
     /**
      * Send the edit: branch from main, commit the source and its page, open the pull request, switch on auto-merge.
      * `loaded` = the blobs read by load(); if main moved on those files since, nothing is written (GhError "conflict").
-     * @param {{name: string, md: string, html: string, loaded: {md: {sha: string}, html: {sha: string}}, summary: string}} e
+     * `index` = the rebuilt search index when a section was retitled, with the blob it was made from.
+     * @param {{name: string, md: string, html: string, loaded: {md: {sha: string}, html: {sha: string}}, summary: string, index?: {text: string, loadedSha: string}}} e
      */
-    async submit({ name, md, html, loaded, summary }) {
+    async submit({ name, md, html, loaded, summary, index }) {
       const open = await openPrs();
       if (open.length) throw new GhError("conflict", `Pull request #${open[0].number} of the editor is still open. Wait until it is merged.`, 409);
       const mdPath = `${SRC}/${name}`;
       const htmlPath = `${PAGES}/${stem(name)}.html`;
-      const [curMd, curHtml] = await Promise.all([read(mdPath, repo.base), read(htmlPath, repo.base)]);
-      if (!curMd || !curHtml || curMd.sha !== loaded.md.sha || curHtml.sha !== loaded.html.sha) throw new GhError("conflict", "The chapter changed on main while you were editing. Nothing was written.", 409);
+      const [curMd, curHtml, curIndex] = await Promise.all([read(mdPath, repo.base), read(htmlPath, repo.base), index ? read(INDEX, repo.base) : Promise.resolve(null)]);
+      const indexMoved = !!index && (!curIndex || curIndex.sha !== index.loadedSha);
+      if (!curMd || !curHtml || indexMoved || curMd.sha !== loaded.md.sha || curHtml.sha !== loaded.html.sha) throw new GhError("conflict", "The chapter changed on main while you were editing. Nothing was written.", 409);
       const head = await call(`${base}/git/ref/heads/${repo.base}`);
       const stamp = now().toISOString().replace(/[-:T]/g, "").slice(0, 12);
       const branch = `${BRANCH_PREFIX}${stem(name)}-${stamp}`;
@@ -83,20 +104,14 @@ export function makePrClient({ token, fetchFn = (...a) => fetch(...a), repo = RE
       const msg = `Teoria ${stem(name)}: ${summary}`;
       await call(`${base}/contents/${enc(mdPath)}`, { method: "PUT", body: JSON.stringify({ message: msg, content: b64enc(md), branch, sha: curMd.sha }) });
       await call(`${base}/contents/${enc(htmlPath)}`, { method: "PUT", body: JSON.stringify({ message: `${msg} (generated page)`, content: b64enc(html), branch, sha: curHtml.sha }) });
+      if (index && curIndex) {
+        await call(`${base}/contents/${enc(INDEX)}`, { method: "PUT", body: JSON.stringify({ message: `${msg} (search index)`, content: b64enc(index.text), branch, sha: curIndex.sha }) });
+      }
       const pr = await call(`${base}/pulls`, {
         method: "POST",
         body: JSON.stringify({ title: msg, head: branch, base: repo.base, body: `Edit of the Teoria chapter ${stem(name)} made with the Teoria editor (source and generated page; CI checks the page against the Python converter).\n\n${summary}` }),
       });
-      let auto = true;
-      try {
-        const g = await call(`${API}/graphql`, {
-          method: "POST",
-          body: JSON.stringify({ query: "mutation($id: ID!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) { pullRequest { number } } }", variables: { id: pr.node_id } }),
-        });
-        if (g.errors && g.errors.length) auto = false;
-      } catch (e) {
-        auto = false;
-      }
+      const auto = await autoMerge(call, pr.node_id);
       return { number: /** @type {number} */ (pr.number), url: /** @type {string} */ (pr.html_url), branch, autoMerge: auto };
     },
   };

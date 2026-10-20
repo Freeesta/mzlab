@@ -15,7 +15,7 @@ limit_ms2=479232   # attributio-ms2 carries the sources of a campaign AND the MS
 limit_lr=741376   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 717874 (+3 %)
 limit_interp=512000   # interp: the interpretation of the rows (interp/1) with the MSn tree of the infusion; above 470000 the tree is built by finder_msn (docs/agenti/interp.md)
 limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)
-limit_libro=135168   # libro: the Markdown converter and the preview edits of the Teoria editor; measured 127345 (+3 %)
+limit_libro=159744   # libro: the Markdown converter, the preview edits and the search index of the Teoria editor; measured 152008 (+3 %)
 out=${1:-site/static}/wasm-feat
 R=target/wasm32-unknown-unknown/release
 # the wasm-bindgen + wasm-opt of each module run in the background while cargo builds the next one (tools/wasm_paralleli.sh); wasm_wait below joins them

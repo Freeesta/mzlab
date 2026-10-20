@@ -155,7 +155,14 @@ impl<'a> Parser<'a> {
             .filter(|x| !x.is_empty())
             .map(|x| format!(" id=\"{x}\""))
             .unwrap_or_default();
-        Ok(format!("<h{level}{id}>{h}</h{level}>"))
+        // a section title (h2, h3) can be retitled from the preview
+        // (not in the glossary: its terms have index rows of their own)
+        let src = if level > 1 && !self.file.starts_with("21-") {
+            self.src_attr(&format!("h{at}"), &h)
+        } else {
+            String::new()
+        };
+        Ok(format!("<h{level}{id}{src}>{h}</h{level}>"))
     }
 
     fn paragraph(&mut self, lines: &[&str], i: usize, base: usize) -> R<(String, usize)> {
