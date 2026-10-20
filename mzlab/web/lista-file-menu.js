@@ -31,7 +31,8 @@ function colorFile(f, ev) {
 }
 function fileCtx(e, f) {
   if (!f) return; e.stopPropagation();
-  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameFile(f) }, { label: I18N.t("files.ctx.color"), fn: () => colorFile(f, e) }, { label: I18N.t("files.ctx.resetColors"), fn: resetColors }, "-", { label: I18N.t("files.ctx.remove"), fn: () => removeFile(f) }]);
+  const hr = grpOf(f).startsWith("hr."), own = hr && f.ugrp;
+  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameFile(f) }, ...(hr ? [{ label: I18N.t("files.ctx.group"), fn: () => groupFiles(f) }] : []), ...(own ? [{ label: I18N.t("files.ctx.ungroup"), fn: () => groupFiles(f, true) }] : []), { label: I18N.t("files.ctx.color"), fn: () => colorFile(f, e) }, { label: I18N.t("files.ctx.resetColors"), fn: resetColors }, "-", { label: I18N.t("files.ctx.remove"), fn: () => removeFile(f) }]);
 }
 // quick file chooser opened from a graph header: tick/untick files (same switch as the list on the left), click a name to show only that file
 function fileMenu(btn) {

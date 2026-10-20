@@ -125,6 +125,15 @@ function migrateBrowse(/** @type {any} */ u) {
   E.files.forEach(f => { if (f.vis && !keep.has(f.k) && E.files.some(g => g.kind === f.kind && keep.has(g.k) && g.vis)) f.vis = false; });
 }
 
+// HR list: the shown files (or this one) go into a group named by the user; with `off` the whole group is dissolved
+async function groupFiles(f, off = false) {
+  const set = (/** @type {any} */ fs, /** @type {any} */ v) => { fs.forEach((/** @type {any} */ x) => { x.ugrp = v || undefined; }); renderFileList(); uiSave(); };
+  if (off) return set(E.files.filter(x => x.ugrp === f.ugrp), "");
+  const v = await ask(I18N.t("files.group.prompt"), f.ugrp || ""), name = v && v.trim();
+  if (!name) return;
+  const bases = new Set((f.vis ? E.files.filter(x => x.vis && !x.gone) : [f]).map(x => fileBase(x.file)));
+  set(E.files.filter(x => !x.gone && grpOf(x).startsWith("hr.") && bases.has(fileBase(x.file))), name);
+}
 /** Side bar width that holds the longest file name (label + box, colour square and padding); the default width when no file is open. */
 let _nameCtx = /** @type {CanvasRenderingContext2D | null} */ (null);
 function namesWidth(/** @type {number} */ dflt) {
