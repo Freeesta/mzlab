@@ -133,9 +133,11 @@ def importa(src: str, nome: str):
     h1 = inline_md(kids[1])
     if h1 is None:
         raise LibroError(nome, 1, "the h1 holds markup the dialect cannot say")
-    scripts = [Path(s.attrs["src"]).name for s in root_scripts(root) if s.attrs.get("src") not in ("../appname.js", "teoria.js")]
-    meta = ["<!-- no-appname -->"] if not any(s.attrs.get("src") == "../appname.js" for s in root_scripts(root)) else []
-    meta += [f"<!-- script: {s} -->" for s in scripts]
+    srcs = [s.attrs["src"] for s in root_scripts(root) if "src" in s.attrs]
+    cut = srcs.index("teoria.js") if "teoria.js" in srcs else len(srcs)
+    before = [x for x in srcs[:cut] if x != "../appname.js"]
+    meta = ["<!-- no-appname -->"] if "../appname.js" not in srcs else []
+    meta += [f"<!-- script-before: {x} -->" for x in before] + [f"<!-- script: {x} -->" for x in srcs[cut + 1:]]
     if h1.strip() != title:
         meta.append(f"<!-- title: {title} -->")
     parts.append("\n".join(meta + [f"# {h1.strip()} {{kicker: {kids[0].text().strip()}}}"]))

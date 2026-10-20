@@ -1,16 +1,15 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema--><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Triplo quadrupolo e CID · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 10</div>
 <h1>Il triplo quadrupolo e la dissociazione per collisione</h1>
 <p class="lead">Due filtri di massa con una cella di collisione in mezzo: come si rompe uno ione in modo controllato e come cinque combinazioni di "fisso" e "scansione" rispondono a domande diverse.</p>
-
 <h2>Perché due stadi di massa</h2>
 <p>Uno spettro ESI di una piccola molecola contiene quasi solo lo ione molecolare: ci dice la massa nominale, non la struttura. E in un campione reale, allo stesso m/z possono arrivare ioni di molecole diverse. La spettrometria di massa <b>tandem</b> (MS/MS) risolve entrambi i problemi: un primo analizzatore <em>seleziona</em> uno ione (il precursore), lo si <em>frammenta</em>, un secondo analizzatore <em>analizza</em> i frammenti (ioni prodotto). La selezione in Q1 elimina tutto ciò che ha m/z diverso; i frammenti raccontano come è fatto lo ione.</p>
 <p>Nel triplo quadrupolo i tre stadi sono separati <b>nello spazio</b> (Q1, cella, Q3), e funzionano contemporaneamente. In una trappola ionica sono separati <b>nel tempo</b> (isolare, frammentare, analizzare nello stesso volume, uno dopo l'altro). Lo spazio permette modalità che il tempo non consente, come la scansione dei precursori e delle perdite neutre.</p>
-
 <h2>Architettura</h2>
 <figure>
 <svg viewBox="0 0 880 250" role="img" aria-label="Schema del triplo quadrupolo: ESI, orifizio, Q0, Q1, cella di collisione q2, Q3 e rivelatore, con i potenziali" aria-describedby="fd-10-0">
@@ -31,7 +30,6 @@
 </svg><details class="figdesc" id="fd-10-0"><summary>Descrizione della figura</summary><p>Da sinistra: sorgente ESI, orifizio, Q0 (guida RF), Q1 (filtro di massa DC+RF), q2 (cella di collisione, solo RF, N₂ a mTorr), Q3 (filtro di massa DC+RF), rivelatore. Sono indicati i potenziali DP, EP, CEP, CE e CXP. Nota: i potenziali sono riferiti a terra; CE è la differenza fra il potenziale di Q0 e quello della cella.</p></details>
 <figcaption><b>Figura 10.1</b> Schema di un triplo quadrupolo SCIEX (non in scala). DP: declustering potential; EP: entrance potential; CEP: collision cell entrance potential; CE: energia di collisione; CXP: collision cell exit potential. La "q" minuscola indica un quadrupolo solo RF, che non seleziona le masse.</figcaption>
 </figure>
-
 <h2>La dissociazione indotta da collisione (CID)</h2>
 <h3>Energia nel laboratorio e nel centro di massa</h3>
 <p>Lo ione entra nella cella con energia cinetica <i>E</i><sub>lab</sub> = <i>z</i>·CE. In un urto con una molecola di gas ferma solo una parte di questa energia può trasformarsi in energia interna: al massimo l'energia nel sistema del centro di massa,</p>
@@ -48,7 +46,6 @@
 <p class="note">E<sub>cm</sub> è calcolata con l'eq. 10.1. La curva di breakdown è illustrativa: tre frammentazioni consecutive con soglie definite in energia nel centro di massa.</p></div>
 <h3>Come si rompono gli ioni [M+H]<sup>+</sup></h3>
 <p>Gli ioni prodotti dall'ESI sono <b>a elettroni pari</b> e in CID tendono a perdere <b>molecole neutre stabili</b> (H<sub>2</sub>O, NH<sub>3</sub>, CO, alcheni, CO<sub>2</sub>…), con rotture guidate dal sito in cui si trova il protone. La chimica di queste reazioni (energia interna e velocità di reazione, affinità protonica, regola degli elettroni pari, reazioni tipiche per classe di composti, perdite neutre e come usarle per i TP) ha un capitolo dedicato: <a href="14-frammentazione-esi.html">capitolo 14, Come si frammentano gli ioni</a>.</p>
-
 <h2>Le modalità di scansione</h2>
 <table>
 <tr><th>Modalità</th><th>Q1</th><th>q2</th><th>Q3</th><th>Che cosa risponde</th></tr>
@@ -62,7 +59,6 @@
 <p class="note">Miscela fittizia di un "parent X" con un gruppo isopropile (perdita di 42) e un nucleo che dà il frammento 152, due suoi TP e un interferente. I pallini sono ioni: quelli che non soddisfano il filtro deviano verso le barre. In basso lo spettro (o il cromatogramma) che si costruisce.</p></div>
 <div class="box key"><b>Concetto chiave</b>
 <p>Precursor ion e neutral loss scan sono potenti strumenti di <em>suspect screening</em>: se la molecola madre perde un frammento o una molecola neutra caratteristica, tutti i derivati che conservano quella porzione mostrano lo stesso comportamento, consentendo un confronto sistematico con gli spettri MS2 (capitolo 18).</p></div>
-
 <h2>MRM in dettaglio</h2>
 <h3>Perché è così sensibile</h3>
 <p>Il guadagno dell'MRM non viene da più ioni prodotti, ma da due fattori: <b>tempo</b> (il quadrupolo sta sempre sull'ione che interessa invece di spazzare centinaia di masse) e <b>selettività</b> (per dare segnale una specie deve avere quel precursore <em>e</em> produrre quel frammento: il rumore chimico crolla). Il rapporto segnale/rumore migliora di ordini di grandezza rispetto al full scan.</p>
@@ -77,7 +73,6 @@
 <p>Ogni transizione viene osservata per un <b>dwell time</b> (tipicamente 20–200 ms), poi lo strumento passa alla successiva dopo una breve pausa. Il <b>tempo di ciclo</b> è la somma su tutte le transizioni. Per integrare bene un picco servono almeno 10–15 punti: più transizioni ci sono, più corto deve essere il dwell, meno ioni si contano per punto. Il compromesso si allenta con l'MRM programmato (ogni transizione è acquisita solo in una finestra attorno al suo tempo di ritenzione).</p>
 <div class="sim" id="sim-dwell"><h4>Dwell, ciclo e duty cycle</h4>
 <p class="note">Pausa tra transizioni fissata a 5 ms. Il confronto con il full scan considera il tempo speso su una unità di massa durante una scansione.</p></div>
-
 <h2>Il rivelatore</h2>
 <p>Gli ioni che escono da Q3 colpiscono un <b>dinodo di conversione</b> ad alta tensione, che emette particelle secondarie (elettroni o ioni) dirette su un <b>moltiplicatore di elettroni</b> a dinodo continuo: ogni ione genera una valanga di 10<sup>6</sup>–10<sup>8</sup> elettroni. Gli strumenti SCIEX lavorano in <b>conteggio di impulsi</b>: l'intensità è in conteggi al secondo (cps). Due limiti da conoscere:</p>
 <ul>
@@ -86,17 +81,11 @@
 </ul>
 <div class="box key"><b>Configurazioni ibride e metodi strumentali</b>
 <p>In strumenti triplo quadrupolo avanzati o ibridi (come i QTRAP), Q3 può funzionare sia da quadrupolo standard sia da trappola ionica lineare per generare spettri ad alta sensibilità (Enhanced Product Ion, EPI). Nei workflow analitici tipici le acquisizioni si organizzano combinando metodi complementari: <code>Full scan</code> per lo screening generale degli ioni, <code>Product ion scan (MS2)</code> mirato per la delucidazione strutturale dei precursori d'interesse, e <code>MRM</code> per la quantificazione sensibile e selettiva.</p></div>
-
 <h2>Verifica</h2>
-<details class="q"><summary>Perché per uno ione a m/z 600 servono CE più alte che per uno a m/z 200?</summary>
-<p>A parità di CE, l'energia trasferibile per urto (E<sub>cm</sub>) è minore per lo ione più pesante (eq. 10.1), e lo ione più grande ha più gradi di libertà su cui distribuire l'energia interna.</p></details>
-<details class="q"><summary>Avete 40 transizioni MRM tutte attive per tutta la corsa, dwell 50 ms, picchi larghi 12 s. Funziona?</summary>
-<p>Il ciclo è circa 40 × 55 ms = 2,2 s: circa 5 punti per picco, troppo pochi per un'integrazione affidabile. Serve l'MRM programmato o meno transizioni per periodo.</p></details>
-<details class="q"><summary>Quale modalità usereste per trovare tutti i TP che conservano un gruppo isopropile del parent?</summary>
-<p>Una neutral loss scan di 42 Da (se il parent perde propene in CID). I TP che hanno perso o modificato l'isopropile non compariranno.</p></details>
-<details class="q"><summary>Nel product ion scan di un TP compare un frammento a m/z (frammento del parent + 16). Che cosa suggerisce?</summary>
-<p>Che l'atomo di ossigeno aggiunto si trova nella porzione della molecola che genera quel frammento. Se invece un frammento compare identico a quello del parent, quella porzione non è stata modificata.</p></details>
-
+<details class="q"><summary>Perché per uno ione a m/z 600 servono CE più alte che per uno a m/z 200?</summary><p>A parità di CE, l'energia trasferibile per urto (E<sub>cm</sub>) è minore per lo ione più pesante (eq. 10.1), e lo ione più grande ha più gradi di libertà su cui distribuire l'energia interna.</p></details>
+<details class="q"><summary>Avete 40 transizioni MRM tutte attive per tutta la corsa, dwell 50 ms, picchi larghi 12 s. Funziona?</summary><p>Il ciclo è circa 40 × 55 ms = 2,2 s: circa 5 punti per picco, troppo pochi per un'integrazione affidabile. Serve l'MRM programmato o meno transizioni per periodo.</p></details>
+<details class="q"><summary>Quale modalità usereste per trovare tutti i TP che conservano un gruppo isopropile del parent?</summary><p>Una neutral loss scan di 42 Da (se il parent perde propene in CID). I TP che hanno perso o modificato l'isopropile non compariranno.</p></details>
+<details class="q"><summary>Nel product ion scan di un TP compare un frammento a m/z (frammento del parent + 16). Che cosa suggerisce?</summary><p>Che l'atomo di ossigeno aggiunto si trova nella porzione della molecola che genera quel frammento. Se invece un frammento compare identico a quello del parent, quella porzione non è stata modificata.</p></details>
 <h2>Per approfondire</h2>
 <ul class="refs">
 <li><span class="tag">review</span>McLuckey S.A. (1992) Principles of collisional activation in analytical mass spectrometry. <i>J. Am. Soc. Mass Spectrom.</i> 3, 599–614. <a href="https://doi.org/10.1016/1044-0305(92)85001-Z" target="_blank" rel="noopener">doi:10.1016/1044-0305(92)85001-Z</a></li>
