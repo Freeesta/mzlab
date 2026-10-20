@@ -12,7 +12,7 @@ Studio e piano: `docs/studi/ATTRIBUTIO.md` §6 (righe MS-00..MS-04). Tutto in Ru
 ## MS-01: prove nella cascata
 - `readers`: `ms2_engine::load_engine_hits` legge `<data>/engine/engine_<pos|neg>.csv` in `PolSources::engine` (file assente = nessuna riga; il conteggio «engine hits» compare solo se ci sono righe).
 - `annotate/join.rs`: con `[annotation] use_ms2_engine = true` il migliore risultato di ogni feature va in `Feature::engine` (`EngineEvidence`: nome, punteggio, precursore, id di libreria); senza l'opzione i file sono ignorati. Nessun cancello, nessun livello, nessuna identità cambia (provato: livelli uguali con e senza).
-- `Feature::engine_agrees()` confronta il nome del motore con identità o nome mostrato (lettere e cifre, senza maiuscole): `Some(false)` è un disaccordo da far vedere al chimico, non un conflitto che sposta il livello. Il nome entra nel conflitto solo come prova mostrata; la colonna nella tabella e nel Banco arriva con la voce di amministratore (MS-04).
+- `Feature::engine_agrees()` confronta il nome del motore con identità o nome mostrato (lettere e cifre, senza maiuscole): `Some(false)` è un disaccordo da far vedere al chimico, non un conflitto che sposta il livello. Il nome entra nel conflitto solo come prova mostrata; la tabella dei livelli ha le colonne `engine_name`, `engine_score` e `engine_agrees` (vuote senza risultato; nella pagina «MS2 engine», nascosta di default, e una riga nella scheda della riga aperta); il Banco 2b non le mostra.
 - Prova: `attributio_ms2_engine::engine_hits_are_evidence_not_levels`.
 
 ## MS-02: frammentazione in silico alla MetFrag

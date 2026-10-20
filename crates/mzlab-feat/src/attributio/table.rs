@@ -13,9 +13,21 @@ use super::Campaign;
 use mzlab_core::json::Out;
 use std::collections::BTreeMap;
 
-/// Columns of the table, in order.
-pub const COLUMNS: [&str; 10] = [
-    "pol", "id", "mz", "rt", "level", "sub", "basis", "name", "identity", "reasons",
+/// Columns of the table, in order. The last three are the best MS2 Engine hit of the feature: evidence beside the level, empty without a hit.
+pub const COLUMNS: [&str; 13] = [
+    "pol",
+    "id",
+    "mz",
+    "rt",
+    "level",
+    "sub",
+    "basis",
+    "name",
+    "identity",
+    "reasons",
+    "engine_name",
+    "engine_score",
+    "engine_agrees",
 ];
 
 /// One run: the features with their levels, the warnings, the fingerprint of the files and settings, and the count per level (`1`, `2a`, `3b`, `4`, `0`).
@@ -76,7 +88,19 @@ fn row_json(o: &mut Out, f: &Feature) {
     text_or_null(o, f.name());
     o.raw(",");
     text_or_null(o, f.identity());
-    o.raw(",").str(&f.level_why).raw("]");
+    o.raw(",").str(&f.level_why).raw(",");
+    text_or_null(o, f.engine.name.as_deref());
+    o.raw(",").opt(f.engine.score).raw(",");
+    o.raw(agrees_word(f, ["true", "false", "null"])).raw("]");
+}
+
+/// The words for "the MS2 Engine hit names the same compound as the cascade": agrees, differs, no hit to compare.
+fn agrees_word(f: &Feature, words: [&'static str; 3]) -> &'static str {
+    match f.engine_agrees() {
+        Some(true) => words[0],
+        Some(false) => words[1],
+        None => words[2],
+    }
 }
 
 /// The levels of the campaign whose `campaign.toml` is at the root of `io` (`root` is the name of the folder).
@@ -123,19 +147,7 @@ impl Run {
     pub fn csv_to(&self, emit: &mut dyn FnMut(&str)) {
         emit(&format!("{}\n", COLUMNS.join(";")));
         for f in &self.features {
-            let cells = [
-                f.pol.clone(),
-                f.id.to_string(),
-                num_text(f.mz),
-                num_text(f.rt),
-                f.level.to_string(),
-                f.level_sub.clone(),
-                f.level_basis.clone(),
-                f.name().unwrap_or("").to_string(),
-                f.identity().unwrap_or("").to_string(),
-                f.level_why.clone(),
-            ];
-            let line: Vec<String> = cells.iter().map(|c| quote(c)).collect();
+            let line: Vec<String> = csv_cells(f).iter().map(|c| quote(c)).collect();
             emit(&format!("{}\n", line.join(";")));
         }
     }
@@ -169,6 +181,25 @@ fn level_counts(features: &[Feature]) -> BTreeMap<String, usize> {
     counts
 }
 
+/// The cells of one feature as text, in the order of `COLUMNS`.
+fn csv_cells(f: &Feature) -> [String; 13] {
+    [
+        f.pol.clone(),
+        f.id.to_string(),
+        num_text(f.mz),
+        num_text(f.rt),
+        f.level.to_string(),
+        f.level_sub.clone(),
+        f.level_basis.clone(),
+        f.name().unwrap_or("").to_string(),
+        f.identity().unwrap_or("").to_string(),
+        f.level_why.clone(),
+        f.engine.name.clone().unwrap_or_default(),
+        num_text(f.engine.score),
+        agrees_word(f, ["yes", "no", ""]).to_string(),
+    ]
+}
+
 fn text_or_null(o: &mut Out, v: Option<&str>) {
     match v {
         Some(s) => o.str(s),
@@ -186,5 +217,59 @@ fn quote(s: &str) -> String {
         format!("\"{}\"", s.replace('"', "\"\""))
     } else {
         s.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::attributio::annotate::types::EngineEvidence;
+
+    fn feature(id: i64, name: Option<&str>, score: Option<f64>, disp: Option<&str>) -> Feature {
+        Feature {
+            pol: "POS".into(),
+            id,
+            engine: EngineEvidence {
+                name: name.map(String::from),
+                score,
+                ..Default::default()
+            },
+            disp_name: disp.map(String::from),
+            ..Default::default()
+        }
+    }
+
+    fn table_of(features: Vec<Feature>) -> Run {
+        Run {
+            features,
+            warnings: vec![],
+            fingerprint: String::new(),
+            settings: AnnotationSettings::default(),
+            counts: BTreeMap::new(),
+        }
+    }
+
+    #[test]
+    fn the_engine_columns_carry_the_hit_and_whether_it_agrees() {
+        let r = table_of(vec![
+            feature(1, Some("Caffeine"), Some(0.91), Some("caffeine")),
+            feature(2, Some("Atrazine"), Some(0.5), Some("Diuron")),
+            feature(3, None, None, Some("Diuron")),
+        ]);
+        let mut csv = String::new();
+        r.csv_to(&mut |t| csv.push_str(t));
+        let lines: Vec<Vec<&str>> = csv.lines().map(|l| l.split(';').collect()).collect();
+        assert_eq!(
+            lines[0][10..],
+            ["engine_name", "engine_score", "engine_agrees"]
+        );
+        assert_eq!(lines[1][10..], ["Caffeine", "0.91", "yes"]);
+        assert_eq!(lines[2][10..], ["Atrazine", "0.5", "no"]);
+        assert_eq!(lines[3][10..], ["", "", ""]);
+        let mut json = String::new();
+        r.json_to(&mut |t| json.push_str(t));
+        assert!(json.contains("\"Caffeine\",0.91,true]"), "{json}");
+        assert!(json.contains("\"Atrazine\",0.5,false]"), "{json}");
+        assert!(json.contains("null,null,null]"), "{json}");
     }
 }
