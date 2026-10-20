@@ -129,8 +129,8 @@ fn round_trip_of_the_table() {
     assert_eq!(r.mtd["assay[2]-ms_run_ref"], "ms_run[2]");
     assert!(r.mtd["study_variable[1]-assay_refs"].starts_with("assay[1]"));
 
-    assert_eq!((r.sml.len(), r.smf.len(), r.sme.len()), (2, 2, 1));
-    // Areas and states: absent cells are NaN, never zero.
+    assert_eq!((r.sml.len(), r.smf.len(), r.sme.len()), (2, 2, 0));
+    // Areas: absent cells are NaN, never zero.
     assert_eq!(r.sml[0]["abundance_assay[1]"], "1000000");
     assert_eq!(r.sml[1]["abundance_assay[1]"], "NaN");
     assert_eq!(r.sml[1]["abundance_assay[3]"], "400000");
@@ -139,29 +139,28 @@ fn round_trip_of_the_table() {
     assert_eq!(r.smf[0]["retention_time_in_seconds"], "330");
     assert_eq!(r.smf[1]["retention_time_in_seconds"], "420");
     assert_eq!(r.smf[0]["charge"], "1");
-    // Only the named row has evidence, with its adduct and the theoretical m/z; no level is raised.
-    assert_eq!(r.smf[0]["SME_ID_REFS"], "1");
-    assert_eq!(r.smf[1]["SME_ID_REFS"], "null");
-    assert_eq!(r.sme[0]["adduct_ion"], "[M+H]+");
-    assert_eq!(r.sme[0]["theoretical_mass_to_charge"], "317.16418");
-    assert_eq!(r.sml[0]["theoretical_neutral_mass"], "316.1569");
+    // A named row carries only its adduct: no identity, no neutral mass without a database, no level raised.
+    assert_eq!(r.smf[0]["adduct_ion"], "[M+H]+");
+    assert_eq!(r.smf[1]["adduct_ion"], "null");
+    assert_eq!(r.sml[0]["adduct_ions"], "[M+H]+");
+    assert_eq!(r.sml[0]["theoretical_neutral_mass"], "null");
+    assert_eq!(r.sml[0]["chemical_name"], "null");
+    assert!(r.smf.iter().all(|m| m["SME_ID_REFS"] == "null"));
     assert!(r.sml.iter().all(|m| m["reliability"] == "4"));
     assert_eq!(r.sml[1]["adduct_ions"], "null");
-    // The default reliability scheme is not redeclared; the unit and the ontology terms are the ones of the PSI-MS CV.
-    assert!(!r
-        .mtd
-        .contains_key("small_molecule-identification_reliability"));
+    // The scheme of the reliability is declared (the validator asks for it); the unit is a term of the PSI-MS CV.
+    assert_eq!(
+        r.mtd["small_molecule-identification_reliability"],
+        "[MS, MS:1002896, compound identification confidence level, ]"
+    );
     assert_eq!(
         r.mtd["small_molecule-quantification_unit"],
         "[MS, MS:1001844, MS1 feature area, ]"
     );
-    // The evidence maps to the run with the largest area (the third file) and carries the mass error, not a level.
-    assert_eq!(r.sme[0]["spectra_ref"], "ms_run[3]");
-    assert_eq!(r.sme[0]["id_confidence_measure[1]"], "0.07");
     // No empty cell and no scientific notation anywhere in a table line.
     for l in text
         .lines()
-        .filter(|l| l.starts_with("SM") || l.starts_with("SF") || l.starts_with("SE"))
+        .filter(|l| l.starts_with("SM") || l.starts_with("SF"))
     {
         assert!(l.split('\t').all(|f| !f.is_empty()), "{l}");
         assert!(

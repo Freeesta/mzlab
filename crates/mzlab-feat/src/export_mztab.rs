@@ -1,9 +1,7 @@
-//! The feature table as mzTab-M 2.0 (tab separated; sections MTD, SMH/SML, SFH/SMF, SEH/SME), written from the public specification of the format
-//! (Hoffmann et al., Anal. Chem. 2019, 91, 3302; https://github.com/HUPO-PSI/mzTab). One small molecule and one feature per row of the view, one
-//! evidence per row whose identity names a hypothesis. It adds no identity and raises no level: every row is reliability 4 (unknown compound) and a
-//! named row only carries its neutral mass and adduct. Used by the `export.mztab` step.
-
-use mzlab_core::elements;
+//! The feature table as mzTab-M 2.0 (tab separated; sections MTD, SMH/SML, SFH/SMF), written from the public specification of the format
+//! (Hoffmann et al., Anal. Chem. 2019, 91, 3302; https://github.com/HUPO-PSI/mzTab). One small molecule and one feature per row of the view. It adds
+//! no identity and raises no level: every row is level 4 (unknown compound), and a row that names a hypothesis only carries its adduct. The evidence
+//! section is not written: it needs the reference of a source spectrum, which the table does not keep. Used by the `export.mztab` step.
 
 use crate::export::{fix, sig8, Ctx};
 use crate::rowident::adduct_names;
@@ -93,8 +91,8 @@ fn metadata(out: &mut String, c: &Ctx, svs: &[(String, Vec<usize>)]) {
         "[MS, MS:1001844, MS1 feature area, ]".into(),
     );
     m(
-        "id_confidence_measure[1]",
-        "[,, mass error in ppm, ]".into(),
+        "small_molecule-identification_reliability",
+        "[MS, MS:1002896, compound identification confidence level, ]".into(),
     );
     m("database[1]", "[,, no database, null]".into());
     m("database[1]-prefix", NULL.into());
@@ -159,50 +157,27 @@ struct Body<'a> {
     rows: Vec<usize>,
     svs: Vec<(String, Vec<usize>)>,
     adducts: [&'static str; 7],
-    /// Number of the evidence of each row (position in `rows`), for the rows that can carry one.
-    evidence_of: Vec<Option<usize>>,
 }
 
 impl<'a> Body<'a> {
     fn new(c: &'a Ctx<'a>) -> Self {
-        let mut b = Body {
+        Body {
             c,
             rows: c.rows(),
             svs: study_variables(c),
             adducts: adduct_names(),
-            evidence_of: Vec::new(),
-        };
-        let mut n = 0;
-        b.evidence_of = b
-            .rows
-            .iter()
-            .map(|&r| {
-                b.theoretical(r).map(|_| {
-                    n += 1;
-                    n
-                })
-            })
-            .collect();
-        b
+        }
     }
 
-    /// Neutral mass and adduct of the hypothesis a row names (None without one).
-    fn named(&self, r: usize) -> Option<(f64, Option<&'static str>)> {
+    /// Adduct of the hypothesis a row names (None without one or without a matched adduct).
+    fn adduct(&self, r: usize) -> Option<&'static str> {
         let id = &self.c.table.ident;
-        (!id.is_empty() && id.src[r] >> 1 != 0).then(|| {
-            (
-                id.neutral[r],
-                self.adducts
-                    .get(usize::from(id.ion[r]).wrapping_sub(1))
-                    .copied(),
-            )
-        })
-    }
-
-    /// The theoretical m/z of the ion of a named row; only a row with a known adduct can carry evidence.
-    fn theoretical(&self, r: usize) -> Option<f64> {
-        self.named(r)
-            .and_then(|(m, a)| a.and_then(|a| elements::ion_mz(m, a)))
+        if id.is_empty() || id.src[r] >> 1 == 0 {
+            return None;
+        }
+        self.adducts
+            .get(usize::from(id.ion[r]).wrapping_sub(1))
+            .copied()
     }
 
     fn area(&self, r: usize, k: usize) -> Option<f64> {
@@ -242,11 +217,6 @@ fn small_molecules(body: &Body, out: &mut String) {
     line(out, &head);
     for (i, &r) in body.rows.iter().enumerate() {
         let id = (i + 1).to_string();
-        let (mass, ion) = body
-            .named(r)
-            .map_or((NULL.to_string(), NULL.to_string()), |(m, a)| {
-                (fix(m, 5), a.unwrap_or(NULL).to_string())
-            });
         let mut cells: Vec<String> = vec![
             "SML".into(),
             id.clone(),
@@ -255,10 +225,10 @@ fn small_molecules(body: &Body, out: &mut String) {
             NULL.into(),
             NULL.into(),
             NULL.into(),
-            format!("row {}", body.c.table.id(r)),
             NULL.into(),
-            mass,
-            ion,
+            NULL.into(),
+            NULL.into(),
+            body.adduct(r).unwrap_or(NULL).into(),
             RELIABILITY.into(),
             NULL.into(),
             NULL.into(),
@@ -305,11 +275,11 @@ fn features(body: &Body, out: &mut String) {
             .map(|q| i32::from(q.charge))
             .filter(|&z| z != 0)
             .unwrap_or(i32::from(c.polarity.signum()));
-        let ion = body.named(r).and_then(|(_, a)| a).unwrap_or(NULL);
+        let ion = body.adduct(r).unwrap_or(NULL);
         let mut cells: Vec<String> = vec![
             "SMF".into(),
             (i + 1).to_string(),
-            body.evidence_of[i].map_or(NULL.to_string(), |e| e.to_string()),
+            NULL.into(),
             NULL.into(),
             ion.into(),
             NULL.into(),
@@ -324,68 +294,6 @@ fn features(body: &Body, out: &mut String) {
     }
 }
 
-fn evidence(body: &Body, out: &mut String) {
-    let (c, t) = (body.c, body.c.table);
-    let head = [
-        "SEH",
-        "SME_ID",
-        "evidence_input_id",
-        "database_identifier",
-        "chemical_formula",
-        "smiles",
-        "inchi",
-        "chemical_name",
-        "uri",
-        "derivatized_form",
-        "adduct_ion",
-        "exp_mass_to_charge",
-        "charge",
-        "theoretical_mass_to_charge",
-        "spectra_ref",
-        "identification_method",
-        "ms_level",
-        "id_confidence_measure[1]",
-        "rank",
-    ];
-    line(out, &head.map(String::from));
-    for (i, &r) in body.rows.iter().enumerate() {
-        let (Some(e), Some(theo), Some((_, ion))) =
-            (body.evidence_of[i], body.theoretical(r), body.named(r))
-        else {
-            continue;
-        };
-        // The run with the largest area of the row is the one the evidence maps to.
-        let best = (0..c.samples.len()).max_by(|&a, &b| {
-            body.area(r, a)
-                .unwrap_or(-1.0)
-                .total_cmp(&body.area(r, b).unwrap_or(-1.0))
-        });
-        let ppm = (t.mz[r] - theo) / theo * 1e6;
-        let cells: Vec<String> = vec![
-            "SME".into(),
-            e.to_string(),
-            format!("row_{}", t.id(r)),
-            NULL.into(),
-            NULL.into(),
-            NULL.into(),
-            NULL.into(),
-            NULL.into(),
-            NULL.into(),
-            NULL.into(),
-            ion.unwrap_or(NULL).into(),
-            fix(t.mz[r], 5),
-            i32::from(c.polarity.signum()).to_string(),
-            fix(theo, 5),
-            format!("ms_run[{}]", best.map_or(1, |k| k + 1)),
-            "[,, mass match to a hypothesis, ]".into(),
-            "[MS, MS:1000511, ms level, 1]".into(),
-            fix(ppm, 2),
-            "1".into(),
-        ];
-        line(out, &cells);
-    }
-}
-
 /// The mzTab-M file of the rows of the view; the bytes depend only on the table, the samples and the view.
 pub fn mztab(c: &Ctx) -> String {
     let body = Body::new(c);
@@ -395,9 +303,5 @@ pub fn mztab(c: &Ctx) -> String {
     small_molecules(&body, &mut out);
     out.push('\n');
     features(&body, &mut out);
-    if body.evidence_of.iter().any(Option::is_some) {
-        out.push('\n');
-        evidence(&body, &mut out);
-    }
     out
 }
