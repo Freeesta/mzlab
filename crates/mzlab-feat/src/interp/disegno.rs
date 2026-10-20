@@ -90,18 +90,17 @@ pub fn drawing(smiles: &str, site: &SiteReport) -> Drawing {
             ..empty(&delta)
         };
     };
+    by_confidence(&mol, smiles, site, &delta)
+}
+
+fn by_confidence(mol: &Mol, smiles: &str, site: &SiteReport, delta: &str) -> Drawing {
     match site.confidence {
-        "site" => structure(&mol, site, &delta),
-        "region" => zone(&mol, smiles, site, &delta),
-        "uncertain" => whole(
-            &mol,
-            &delta,
-            &format!("{delta}: position uncertain"),
-            "whole",
-        ),
+        "site" => structure(mol, site, delta),
+        "region" => zone(mol, smiles, site, delta),
+        "uncertain" => whole(mol, delta, &format!("{delta}: position uncertain"), "whole"),
         _ => whole(
-            &mol,
-            &delta,
+            mol,
+            delta,
             &format!("{delta}: position not determined"),
             "whole",
         ),
@@ -223,5 +222,20 @@ impl Drawing {
             self.fallback = None;
         }
         self
+    }
+}
+
+/// `drawing` for a parent given as a `mol/1` record (feature `record`); `smiles` is the text the rings are read from.
+#[cfg(feature = "record")]
+pub fn drawing_record(rec: &mzlab_mol::Mol, smiles: &str, site: &SiteReport) -> Drawing {
+    let delta = delta_label(&site.transform);
+    match Mol::from_record(rec, true) {
+        Ok(mol) => by_confidence(&mol, smiles, site, &delta),
+        Err(_) => Drawing {
+            mode: "bracket",
+            atoms: vec![],
+            uncertainty: "whole",
+            ..empty(&delta)
+        },
     }
 }
