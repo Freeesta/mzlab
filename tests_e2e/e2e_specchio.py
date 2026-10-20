@@ -57,11 +57,11 @@ try:
             pg.click("#lib-x")
         pg = fresh(); open_row(pg)
         def nolib():
-            pg.wait_for_timeout(800)
+            assert not pg.evaluate("LIB.call('list').then(l => l.libs.length)"), "the library list must be empty"
             assert pg.locator(".ft-cmp-go:visible").count() == 0, "the button must not show without a library"
         step("no installed library: no «Compare with library» button", nolib)
         add_lib(pg)
-        pg.click("#spc-host #ft-t tbody tr"); pg.wait_for_timeout(300); open_row(pg)
+        pg.click("#spc-host #ft-t tbody tr"); lib.attendi(pg, "!document.querySelector('#spc-host .ft-cmp')"); open_row(pg)
         clicks = 0
         def button():
             pg.wait_for_selector(".ft-cmp-go:visible", timeout=10000)
