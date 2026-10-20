@@ -28,6 +28,7 @@ GROUPS = [  # (title, path prefix, one line per file?)
     ("Rust, WASM e desktop (`crates/mzlab-wasm`, `crates/mzlab-desktop`)", "crates/", True),
     ("Strumenti (`tools/`)", "tools/", True),
     ("mzFinder (`TP_Mine/`)", "TP_Mine/", False),
+    ("Flow grafico (`flow/`)", "flow/", False),
     ("Test (`tests/`, `tests_e2e/`)", "tests", False),
     ("Fuzzing dei parser (`fuzz/`)", "fuzz/", False),
     ("Controlli indipendenti (`docs/controlli/`)", "docs/controlli/", False),

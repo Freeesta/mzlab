@@ -1,0 +1,674 @@
+[
+  {
+    "expect": [],
+    "name": "a valid chain from a vendor file to the aligned table",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.raw",
+          "sha256": "",
+          "type": "raw"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "cv",
+          "in": {
+            "raw": "file:a.raw"
+          },
+          "step": "convert.mzml@1"
+        },
+        {
+          "id": "ix",
+          "in": {
+            "source": "cv.mzml"
+          },
+          "step": "index.mzidx@1"
+        },
+        {
+          "algorithm": "masstrace",
+          "id": "de",
+          "in": {
+            "index": [
+              "ix.index"
+            ]
+          },
+          "params": {
+            "polarity": 1
+          },
+          "preset": "hr",
+          "step": "features.detect@1"
+        },
+        {
+          "id": "al",
+          "in": {
+            "peaks": [
+              "de.peaks"
+            ]
+          },
+          "step": "features.align@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [],
+    "name": "a raw file straight into the index (the index step converts it)",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.raw",
+          "sha256": "",
+          "type": "raw"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "ix",
+          "in": {
+            "source": "file:a.raw"
+          },
+          "step": "index.mzidx@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "a||err.flow.step.unknown|step=spectra.nothing",
+      "b||err.flow.instance.duplicate|",
+      "b||err.flow.step.version|step=features.detect,version=7,available=1"
+    ],
+    "name": "unknown step, wrong version and a duplicated id",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.raw",
+          "sha256": "",
+          "type": "raw"
+        },
+        {
+          "name": "a.mzML",
+          "sha256": "",
+          "type": "mzml"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "a",
+          "step": "spectra.nothing@1"
+        },
+        {
+          "id": "b",
+          "in": {
+            "index": [
+              "file:a.mzML"
+            ]
+          },
+          "step": "features.detect@7"
+        },
+        {
+          "id": "b",
+          "in": {
+            "source": "file:a.raw"
+          },
+          "step": "index.mzidx@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "ix|mzml|err.flow.port.unknown|port=mzml",
+      "ix|source|err.flow.port.missing|port=source"
+    ],
+    "name": "a port that does not exist and a required port left empty",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.mzML",
+          "sha256": "",
+          "type": "mzml"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "ix",
+          "in": {
+            "mzml": "file:a.mzML"
+          },
+          "step": "index.mzidx@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "x|index|err.flow.type|from=table,to=mzidx"
+    ],
+    "name": "a wrong type: a table into a scan index",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.raw",
+          "sha256": "",
+          "type": "raw"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "cv",
+          "in": {
+            "raw": "file:a.raw"
+          },
+          "step": "convert.mzml@1"
+        },
+        {
+          "id": "ix",
+          "in": {
+            "source": "cv.mzml"
+          },
+          "step": "index.mzidx@1"
+        },
+        {
+          "algorithm": "masstrace",
+          "id": "de",
+          "in": {
+            "index": [
+              "ix.index"
+            ]
+          },
+          "params": {
+            "polarity": 1
+          },
+          "preset": "hr",
+          "step": "features.detect@1"
+        },
+        {
+          "id": "al",
+          "in": {
+            "peaks": [
+              "de.peaks"
+            ]
+          },
+          "step": "features.align@1"
+        },
+        {
+          "id": "x",
+          "in": {
+            "index": [
+              "al.table"
+            ]
+          },
+          "step": "features.detect@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "fo|table|err.flow.cardinality|port=table,count=2"
+    ],
+    "name": "cardinality: two files into a single port and a list into a single port",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "t1.csv",
+          "sha256": "",
+          "type": "table"
+        },
+        {
+          "name": "t2.csv",
+          "sha256": "",
+          "type": "table"
+        },
+        {
+          "name": "s.json",
+          "sha256": "",
+          "type": "samples"
+        },
+        {
+          "name": "a.raw",
+          "sha256": "",
+          "type": "raw"
+        },
+        {
+          "name": "b.raw",
+          "sha256": "",
+          "type": "raw"
+        },
+        {
+          "name": "p.mzfeatf",
+          "sha256": "",
+          "type": "peaks"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "fo",
+          "in": {
+            "samples": "file:s.json",
+            "table": [
+              "file:t1.csv",
+              "file:t2.csv"
+            ]
+          },
+          "step": "table.filter@1"
+        },
+        {
+          "id": "ix",
+          "in": {
+            "source": [
+              "file:a.raw",
+              "file:b.raw"
+            ]
+          },
+          "step": "index.mzidx@1"
+        },
+        {
+          "id": "g",
+          "in": {
+            "index": "ix.index",
+            "table": "al.table"
+          },
+          "step": "features.gapfill@1"
+        },
+        {
+          "id": "al",
+          "in": {
+            "peaks": [
+              "file:p.mzfeatf"
+            ]
+          },
+          "step": "features.align@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "d1||err.flow.param.type|param=floor",
+      "d1||err.flow.param.range|param=min_height",
+      "d1||err.flow.param.unknown|param=nope",
+      "d1||err.flow.param.range|param=polarity",
+      "d1|index|err.flow.type|from=mzml,to=mzidx",
+      "d2||err.flow.algorithm.unavailable|step=features.detect,algorithm=centwave",
+      "d2|index|err.flow.type|from=mzml,to=mzidx",
+      "d3||err.flow.algorithm.unknown|algorithm=wavelets",
+      "d3|index|err.flow.type|from=mzml,to=mzidx",
+      "d4||err.flow.preset.unknown|preset=medium",
+      "d4|index|err.flow.type|from=mzml,to=mzidx"
+    ],
+    "name": "parameters: unknown, wrong type, out of range, planned algorithm, unknown algorithm and preset",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.mzML",
+          "sha256": "",
+          "type": "mzml"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "d1",
+          "in": {
+            "index": "file:a.mzML"
+          },
+          "params": {
+            "floor": "high",
+            "min_height": -5,
+            "nope": 1,
+            "polarity": 7
+          },
+          "step": "features.detect@1"
+        },
+        {
+          "algorithm": "centwave",
+          "id": "d2",
+          "in": {
+            "index": "file:a.mzML"
+          },
+          "step": "features.detect@1"
+        },
+        {
+          "algorithm": "wavelets",
+          "id": "d3",
+          "in": {
+            "index": "file:a.mzML"
+          },
+          "step": "features.detect@1"
+        },
+        {
+          "id": "d4",
+          "in": {
+            "index": "file:a.mzML"
+          },
+          "preset": "medium",
+          "step": "features.detect@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "d1||err.flow.algorithm.unavailable|step=features.detect,algorithm=centwave",
+      "d1||err.flow.param.range|param=peak_width_s",
+      "d1|index|err.flow.type|from=mzml,to=mzidx",
+      "d2||err.flow.param.type|param=min_points",
+      "d2||err.flow.param.unknown|param=snr",
+      "d2|index|err.flow.type|from=mzml,to=mzidx"
+    ],
+    "name": "parameters of the algorithm: a pair, an integer and a name of another algorithm",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.mzML",
+          "sha256": "",
+          "type": "mzml"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "algorithm": "centwave",
+          "id": "d1",
+          "in": {
+            "index": [
+              "file:a.mzML"
+            ]
+          },
+          "params": {
+            "peak_width_s": [
+              30,
+              5
+            ],
+            "snr": 10
+          },
+          "step": "features.detect@1"
+        },
+        {
+          "algorithm": "masstrace",
+          "id": "d2",
+          "in": {
+            "index": [
+              "file:a.mzML"
+            ]
+          },
+          "params": {
+            "min_points": 2.5,
+            "snr": 3
+          },
+          "step": "features.detect@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "ix|source|err.flow.input.unknown|ref=missing.raw",
+      "de|index|err.flow.ref.unknown|ref=gone.index",
+      "de2|index|err.flow.port.unknown|ref=ix.nothing"
+    ],
+    "name": "references to things that are not there",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.raw",
+          "sha256": "",
+          "type": "raw"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "ix",
+          "in": {
+            "source": "file:missing.raw"
+          },
+          "step": "index.mzidx@1"
+        },
+        {
+          "id": "de",
+          "in": {
+            "index": [
+              "gone.index"
+            ]
+          },
+          "step": "features.detect@1"
+        },
+        {
+          "id": "de2",
+          "in": {
+            "index": [
+              "ix.nothing"
+            ]
+          },
+          "step": "features.detect@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "a|index|err.flow.type|from=mzml,to=mzidx",
+      "a||err.flow.cycle|",
+      "b||err.flow.cycle|"
+    ],
+    "name": "a cycle",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.mzML",
+          "sha256": "",
+          "type": "mzml"
+        },
+        {
+          "name": "s.json",
+          "sha256": "",
+          "type": "samples"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "a",
+          "in": {
+            "index": "file:a.mzML",
+            "table": "b.table"
+          },
+          "step": "features.gapfill@1"
+        },
+        {
+          "id": "b",
+          "in": {
+            "samples": "file:s.json",
+            "table": "a.table"
+          },
+          "step": "table.filter@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "f|features|err.flow.facet|facet=resolution"
+    ],
+    "name": "facets: low resolution data into a step that wants high resolution",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "facets": {
+            "ms_levels": [
+              2
+            ],
+            "resolution": [
+              "lr"
+            ]
+          },
+          "name": "a.mzML",
+          "sha256": "",
+          "type": "mzml"
+        },
+        {
+          "name": "t.mzfeat",
+          "sha256": "",
+          "type": "table"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "f",
+          "in": {
+            "features": "file:t.mzfeat",
+            "index": [
+              "file:a.mzML"
+            ]
+          },
+          "step": "formula.ms1@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [],
+    "name": "a file input that names no type is not checked",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "x",
+          "sha256": ""
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "de",
+          "in": {
+            "index": [
+              "file:x"
+            ]
+          },
+          "step": "features.detect@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": null,
+    "name": "a reference that is neither file: nor instance.port",
+    "parse_error": "err.flow.ref",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "a",
+          "in": {
+            "peaks": "nodots"
+          },
+          "step": "features.align@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": null,
+    "name": "a step text without @version",
+    "parse_error": "err.flow.step",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "a",
+          "step": "features.align"
+        }
+      ]
+    }
+  },
+  {
+    "expect": null,
+    "name": "another format",
+    "parse_error": "err.flow.format",
+    "plan": {
+      "format": "mzflow/3",
+      "steps": []
+    }
+  },
+  {
+    "expect": null,
+    "name": "an instance without id",
+    "parse_error": "err.flow.instance",
+    "plan": {
+      "steps": [
+        {
+          "step": "index.mzidx@1"
+        }
+      ]
+    }
+  }
+]
