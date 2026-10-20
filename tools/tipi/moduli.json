@@ -70,6 +70,8 @@
     "../../mzlab/web/rust-diff.js",
     "../../mzlab/web/rust-metodo.js",
     "../../mzlab/web/rust-opfs.js",
+    "../../mzlab/web/rust-msngrafo.js",
+    "../../mzlab/web/rust-msngrafo-pagina.js",
     "../../mzlab/web/rust-recycle.js",
     "../../mzlab/web/rust-supervisor.js",
     "../../mzlab/web/rust-budget.js",

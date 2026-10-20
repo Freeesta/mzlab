@@ -11,7 +11,8 @@ use mzlab_feat::facts::{file_facts, FileFacts};
 use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules, Structure};
 use mzlab_feat::recipe::{Mode, Recipe};
 use mzlab_feat::series::{align_and_fill, analyse_file, source_sha256};
-use mzlab_feat::slabs::{align_and_fill_stored, Stored};
+use mzlab_feat::slabs::{align_and_fill_spilling, align_and_fill_stored, Stored};
+use mzlab_feat::spill::Spill;
 use mzlab_feat::store::{
     origin_from_meta, read_file, read_meta_mz, write_file_to, write_table_to,
     write_table_with_evid, Origin, Slice,
@@ -27,6 +28,11 @@ pub fn recipe_from_json(text: &str) -> Result<Recipe> {
 /// `recipe_from_json` on the recipe that fits the index: the default one for high resolution, the unit-resolution one (m/z axis in Da) otherwise.
 pub fn recipe_for<R: ReadAt>(text: &str, index: &mut Index<R>) -> Result<Recipe> {
     recipe_on(text, Recipe::for_index(index)?)
+}
+
+/// `recipe_for` with the minimum height estimated from the noise of the file (`Recipe::for_index_estimated`): the recipe of the Flow steps.
+pub fn recipe_for_estimated<R: ReadAt>(text: &str, index: &mut Index<R>) -> Result<Recipe> {
+    recipe_on(text, Recipe::for_index_estimated(index)?)
 }
 
 fn recipe_on(text: &str, base: Recipe) -> Result<Recipe> {
@@ -158,12 +164,24 @@ pub fn align_to<R: ReadAt, W: WriteAt>(
     src: &mut dyn Stored,
     budget: &MemBudget,
     r: &Recipe,
+    open: impl FnMut(usize) -> Result<Index<R>>,
+    sink: &mut W,
+) -> Result<()> {
+    align_to_spilling(src, budget, r, open, sink, None)
+}
+
+/// `align_to` with a `Spill` for the weak tables of the files (the page keeps them outside the memory of the module).
+pub fn align_to_spilling<R: ReadAt, W: WriteAt>(
+    src: &mut dyn Stored,
+    budget: &MemBudget,
+    r: &Recipe,
     mut open: impl FnMut(usize) -> Result<Index<R>>,
     sink: &mut W,
+    spill: Option<&mut dyn Spill>,
 ) -> Result<()> {
     let mut origin = origin_of(src)?;
     origin.facts = facts_of(src.count(), &mut open)?;
-    let (table, _) = align_and_fill_stored(src, budget, r, open)?;
+    let (table, _) = align_and_fill_spilling(src, budget, r, open, spill)?;
     write_table_to(sink, &table, r, &origin, &mut (&[][..]))
 }
 

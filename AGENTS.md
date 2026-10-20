@@ -29,6 +29,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
   Mai a un subagente: decisioni, codice nuovo, testi di Teoria, asserzioni dei test, commit, push, merge.
 - **Agente locale** (Mac di Federico, `~/mzLab/`): può fare commit e push su `main`; non cancella file, li sposta in `~/mzLab/_cestino/<data>_<motivo>/`.
 - **Regola Tutto in Rust**: ogni calcolo, elaborazione numerica o logica di motore sta solo in Rust (`crates/`, anche `.wasm`), con il suo test di parità; Python solo per test, `tools/` e riferimento; JS solo interfaccia. `tests/test_guardie_regole.py` e `tests/test_regola_rust.py` rifiutano script Python di calcolo runtime non autorizzati in `mzlab/` (lista chiusa, si accorcia soltanto); cosa resta da migrare: `docs/inventari/PYTHON_DA_MIGRARE.md`.
+- **Regola CLI**: ogni modulo nuovo nasce con la riga di comando e ogni parametro del suo descrittore `step/1` ha il suo `--set ISTANZA.NOME=VALORE`; lista di controllo in `docs/agenti/cli.md` (un solo registro `mzlab_cli::flow::steps()`, esecutore in `FileRunner`, parità CLI = pagina, `flow_rule_tests.rs` verde, buchi noti in `BUCHI`).
 - **Regola Tabui solo in inglese**: il modulo Tabui (`TP_Mine/`) adotta esclusivamente la lingua inglese per stringhe utente, tooltip ed esportazioni. Non usa cataloghi `lang/` (niente chiavi `lang/`, niente `I18N`) e rispetta la regola aurea: la parola «formula» non compare mai da sola (sempre «Neutral formula», «[M+H]+ formula», «Ion formula»). Guardie in `tests/test_guardie_regole.py` e `tests/test_tabui_inglese.py`.
 - Un front end non provato nel browser è rotto. Niente `pkill -f` con parole presenti nel comando: ferma i server con il PID.
 
@@ -100,6 +101,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | classi chimiche da regole (`crates/mzlab-feat/src/classi/`, tabella `data/classi-1.json`, `classi/1`: frammenti diagnostici e perdite neutre) | `docs/agenti/classi.md` |
 | livelli di identificazione (scala di Schymanski 2a/2b/3a/3b, scala di previsione, etichette «L3» e «Prev. 2», Tabui, Attributio, untargeted) | `docs/agenti/livelli.md` |
 | gruppi di esperimenti in Tabui: condizioni, `gruppi/1`, `crates/mzlab-feat/src/gruppi/` | `docs/agenti/gruppi.md` |
+| statistica come passi: Welch/ANOVA con BH, PCA e KMD in Rust (`crates/mzlab-feat/src/stat/`, `table.stats`, `table.pca`, `table.kmd`, `stat/1`) | `docs/agenti/stat.md` |
 | liste dell'utente (trasformazioni, addotti, sospetti: CSV con errori per riga, `liste/1`, SHA-256 per `prov/1`) | `docs/agenti/liste.md` |
 | database delle molecole (`crates/mzlab-core/src/molecules/`, `molecules/1`: record, CSV e JSON canonico, ricerca, livelli catalogo/importata/utente, catalogo `mzlab/web/molecole/catalogo.csv`, rotte `api/molecules/*`) | `docs/agenti/molecules.md` (studio e piano a PR: `docs/studi/molecules/README.md`) |
 | ruoli dei file e tempi dei campioni (`campioni/2`, `mzlab-core/src/campioni/`: proposte dai nomi, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |

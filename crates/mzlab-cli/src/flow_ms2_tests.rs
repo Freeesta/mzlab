@@ -149,7 +149,11 @@ fn threshold_and_isolation_window_filter_the_scans() {
 /// `docs/schemi/steps-cli-1.json` is the export of the steps that live in this crate (`MZLAB_UPDATE_STEPS=1 cargo test -p mzlab-cli --lib flow_ms2` rewrites it).
 #[test]
 fn descriptor_export_is_up_to_date() {
-    let text = mzlab_core::step::json::registry_json(&[crate::flow_ms2::ms2_step()]);
+    let text = mzlab_core::step::json::registry_json(&[
+        crate::flow::table_step(),
+        crate::flow_ms2::ms2_step(),
+        crate::flow_compare::compare_step(),
+    ]);
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/schemi/steps-cli-1.json");
     if std::env::var_os("MZLAB_UPDATE_STEPS").is_some() {
         std::fs::write(&path, &text).unwrap();

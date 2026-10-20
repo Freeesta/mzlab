@@ -9,10 +9,11 @@ use mzlab_core::{Error, Result};
 use serde_json::{json, Value};
 
 use crate::engine::State;
+use crate::flow_stage::stage_inputs;
 use crate::rpc::{text, Answer};
 
 /// A link to `from` named `to`: a symbolic link where the system has them, else a hard link, else a copy.
-fn link(from: &Path, to: &Path) -> std::io::Result<()> {
+pub(crate) fn link(from: &Path, to: &Path) -> std::io::Result<()> {
     #[cfg(unix)]
     if std::os::unix::fs::symlink(from, to).is_ok() {
         return Ok(());
@@ -35,33 +36,40 @@ impl State {
         )?)
     }
 
-    /// `{plan: "<mzflow/2 text>"}` -> `{prov: "<prov/1 text>", dir: "<folder of the outputs>"}`. A file the plan names that is not registered is `err.flow.input.missing`.
+    /// `{plan: "<mzflow/2 text>", fresh?: bool, files?: {name: text}}` (`files`: inputs the page holds as text, the sample lists, which need no registering) -> `{prov: "<prov/1 text>", dir: "<folder of the outputs>"}`; the steps of the last runs whose key is
+    /// unchanged are taken again (`cached` in `prov/1`) unless `fresh`. A file the plan names that is not registered is `err.flow.input.missing`.
     pub(crate) fn flow_run(&self, p: &Value) -> Result<Answer> {
         let plan_text = p["plan"]
             .as_str()
             .ok_or_else(|| Error::new("err.flow.json"))?;
         let plan = parse(plan_text.as_bytes())?;
         let root = std::env::temp_dir().join("mzlab-flow");
-        let _ = std::fs::remove_dir_all(&root);
         let (inputs, work) = (root.join("in"), root.join("out"));
+        // the outputs stay: their cache gives back the steps whose key did not change (`fresh` recomputes all)
+        let _ = std::fs::remove_dir_all(&inputs);
         for d in [&inputs, &work] {
             std::fs::create_dir_all(d).map_err(|e| crate::rpc::io_error(&e))?;
         }
-        for f in &plan.inputs {
-            let name = crate::store::clean(&f.name)?;
-            let entry = self
-                .store
+        let names: Vec<&str> = plan.inputs.iter().map(|f| f.name.as_str()).collect();
+        let held = |name: &str| {
+            self.store
                 .lock()
                 .unwrap_or_else(|e| e.into_inner())
-                .get(name);
-            let entry =
-                entry.ok_or_else(|| Error::new("err.flow.input.missing").with("input", name))?;
-            link(&entry.path, &inputs.join(name)).map_err(|e| crate::rpc::io_error(&e))?;
-        }
+                .get(name)
+                .map(|e| e.path)
+        };
+        stage_inputs(&names, &p["files"], &held, &inputs)?;
+        let fresh = p["fresh"].as_bool().unwrap_or(false);
         let workers = std::thread::available_parallelism()
             .map_or(1, |n| n.get().saturating_sub(1).clamp(1, 4));
-        let (_, prov) =
-            mzlab_cli::flow::run_plan(plan_text.as_bytes(), &inputs, &work, workers, None)?;
+        let (_, prov) = mzlab_cli::flow::run_plan_cached(
+            plan_text.as_bytes(),
+            &inputs,
+            &work,
+            workers,
+            None,
+            Some(fresh),
+        )?;
         // the folder is a run folder for `flow/report`: prov.json beside the files of the steps
         std::fs::write(work.join("prov.json"), &prov).map_err(|e| crate::rpc::io_error(&e))?;
         text(json!({ "prov": prov, "dir": work.to_string_lossy() }).to_string())

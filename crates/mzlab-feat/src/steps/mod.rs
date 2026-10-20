@@ -9,6 +9,7 @@ mod ident_formula;
 mod ident_spectra;
 pub mod recipe_map;
 pub mod records;
+mod stats;
 mod table;
 mod tabui;
 mod tabui_draw;
@@ -40,6 +41,9 @@ pub fn registry() -> Vec<Step> {
         table::gapfill(),
         table::filter(),
         table::drift(),
+        stats::stats(),
+        stats::pca(),
+        stats::kmd(),
         detect::ms2_link(),
         table::export_csv(),
         table::export_inclusion(),

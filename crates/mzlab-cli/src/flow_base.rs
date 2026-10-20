@@ -1,14 +1,17 @@
-//! The base chain of the Flow canvas run on files: `index.mzidx`, `features.detect`, `features.align`, `features.gapfill`. The recipe of the engine is
+//! The feature steps run on files: `convert.mzml`, `features.table` and the base chain of the Flow canvas (`index.mzidx`, `features.detect`,
+//! `features.align`, `features.gapfill`). The recipe of the engine is
 //! the one the Pipeline panel takes with no setting (`run::recipe_for`: the profile of the first file of the series) with the values the plan writes on
 //! top (`steps::recipe_map`); a value the plan leaves out that differs from the canonical one is reported as an estimate. Called by `flow.rs`.
 
 use std::fs::File;
+use std::io::BufWriter;
 use std::path::PathBuf;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::Job;
+use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::idxread::Index;
 use mzlab_core::json::Value;
+use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
@@ -65,7 +68,26 @@ fn recipe(job: &Job, mut base: Recipe) -> Result<(Recipe, Vec<Estimate>)> {
                 && !job.resolved.noresult.contains(k)
                 && resolved.iter().find(|x| x.0 == *k).map(|x| &x.1) != Some(v)
         })
-        .map(|(k, v)| (k, v, proof.clone()))
+        .map(|(k, v)| {
+            let why = match (k.as_str(), base.min_height_basis) {
+                ("min_height", Some((mode, sigma))) => Value::Obj(vec![
+                    (
+                        "basis".into(),
+                        Value::Str(
+                            "noise lump of the intensities of the first file of the series".into(),
+                        ),
+                    ),
+                    (
+                        "factor".into(),
+                        Value::Num(mzlab_feat::params_height::MIN_HEIGHT_FACTOR),
+                    ),
+                    ("mode".into(), Value::Num(mode)),
+                    ("sigma".into(), Value::Num(sigma)),
+                ]),
+                _ => proof.clone(),
+            };
+            (k, v, why)
+        })
         .collect();
     Ok((base, estimates))
 }
@@ -93,21 +115,36 @@ pub(crate) fn index_job(r: &FileRunner, job: &Job) -> Result<Made> {
     Ok(Made::new("index", a))
 }
 
+/// The recipe a lineage means: the one of the panel on its first index, then the parameters of each feature step.
+fn rebuild(lin: &Lineage) -> Result<Recipe> {
+    let first = lin
+        .first
+        .as_ref()
+        .ok_or_else(|| Error::new("err.flow.lineage"))?;
+    let mut r = run::recipe_for_estimated("", &mut open(first)?)?;
+    for (step, params) in &lin.layers {
+        recipe_map::apply(&mut r, step, params)?;
+    }
+    Ok(r)
+}
+
 /// `features.detect`: the features of one indexed file (`.mzfeatf`), named after the file the index was made from.
 pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let input = &job.inputs[0].1[0];
     let path = r.path(input);
     let first = r.first_of_series(input).unwrap_or_else(|| path.clone());
-    let (recipe, estimates) = recipe(job, run::recipe_for("", &mut open(&first)?)?)?;
+    let (recipe, estimates) = recipe(job, run::recipe_for_estimated("", &mut open(&first)?)?)?;
     let name = r.source_name(input);
     let bytes = run::detect(&mut open(&path)?, &name, &recipe)?;
     let out = out_path(r, job, "mzfeatf");
     std::fs::write(&out, bytes).map_err(io)?;
     let a = r.keep(out, DataType::Peaks)?;
+    let layers = vec![(job.step.id.to_string(), written(job))];
     r.trace(
         &a,
         Lineage {
-            recipe: Some(recipe),
+            first: Some(first),
+            layers,
             index: vec![path],
             ..Lineage::default()
         },
@@ -118,8 +155,8 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     })
 }
 
-/// Aligns the peaks of `lin` with `recipe` and writes the table of `job`.
-fn table(r: &FileRunner, job: &Job, recipe: Recipe, lin: Lineage) -> Result<Made> {
+/// Aligns the peaks of `lin` with `recipe` and writes the table of `job`; the table hands on `lin` with the parameters of `job`.
+fn table(r: &FileRunner, job: &Job, recipe: Recipe, mut lin: Lineage) -> Result<Made> {
     let files: Vec<Vec<u8>> = lin
         .peaks
         .iter()
@@ -130,13 +167,8 @@ fn table(r: &FileRunner, job: &Job, recipe: Recipe, lin: Lineage) -> Result<Made
     let out = out_path(r, job, "mzfeat");
     std::fs::write(&out, bytes).map_err(io)?;
     let a = r.keep(out, DataType::Table)?;
-    r.trace(
-        &a,
-        Lineage {
-            recipe: Some(recipe),
-            ..lin
-        },
-    );
+    lin.layers.push((job.step.id.to_string(), written(job)));
+    r.trace(&a, lin);
     Ok(Made::new("table", a))
 }
 
@@ -144,17 +176,18 @@ fn table(r: &FileRunner, job: &Job, recipe: Recipe, lin: Lineage) -> Result<Made
 pub(crate) fn align_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let peaks: Vec<_> = job.inputs.iter().flat_map(|(_, v)| v).collect();
     let mut lin = Lineage::default();
-    let mut base = None;
     for p in &peaks {
         let l = r
             .lineage(p)
             .ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id))?;
-        base = base.or(l.recipe);
+        if lin.first.is_none() {
+            (lin.first, lin.layers) = (l.first, l.layers);
+        }
         lin.index.extend(l.index);
         lin.peaks.push(r.path(p));
     }
-    let base = base.ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id))?;
-    let (mut recipe, estimates) = recipe(job, base)?;
+    let (mut recipe, estimates) =
+        recipe(job, rebuild(&lin).map_err(|e| e.with("step", job.step.id))?)?;
     recipe.fill_gaps = false;
     Ok(Made {
         estimates,
@@ -172,13 +205,62 @@ pub(crate) fn gapfill_job(r: &FileRunner, job: &Job) -> Result<Made> {
         .and_then(|(_, v)| v.first());
     let lin = input
         .and_then(|a| r.lineage(a))
-        .filter(|l| l.recipe.is_some() && !l.peaks.is_empty());
+        .filter(|l| l.first.is_some() && !l.peaks.is_empty());
     let lin = lin.ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id))?;
-    let base = lin.recipe.clone().unwrap_or_default();
-    let (mut recipe, estimates) = recipe(job, base)?;
+    let (mut recipe, estimates) = recipe(job, rebuild(&lin)?)?;
     recipe.fill_gaps = true;
     Ok(Made {
         estimates,
         ..table(r, job, recipe, lin)?
     })
+}
+
+/// `convert.mzml`: one file of a reader of the registry written as indexed mzML.
+pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let input = r.path(&job.inputs[0].1[0]);
+    let name = input
+        .file_name()
+        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
+    let dim = std::fs::metadata(&input).map_err(io)?.len();
+    let fs = FileSet {
+        membri: vec![Membro {
+            nome: name,
+            dim,
+            dati: Box::new(File::open(&input).map_err(io)?),
+            sha1: None,
+        }],
+    };
+    let mut reader = mzlab_lettori::apri(fs, &Limiti::desktop())?;
+    let out = r.work.join(format!(
+        "{}-{}.mzML",
+        job.instance.id,
+        job.item.unwrap_or(0)
+    ));
+    let w = BufWriter::new(File::create(&out).map_err(io)?);
+    mzlab_core::lettori_mzml::scrivi_indicizzato(
+        &mut *reader,
+        0,
+        w,
+        &mut |_, _| {},
+        mzlab_core::mzmlwrite::Opzioni::default(),
+        &[],
+    )?;
+    r.keep(out, DataType::Mzml)
+}
+
+/// `features.table`: the chain of `mzlab-cli features` on the files of the series, as CSV.
+pub(crate) fn table_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let files: Vec<PathBuf> = job
+        .inputs
+        .iter()
+        .flat_map(|(_, v)| v)
+        .map(|a| r.path(a))
+        .collect();
+    let tmp = r.work.join(format!("{}.tmp", job.instance.id));
+    std::fs::create_dir_all(&tmp).map_err(io)?;
+    let csv = crate::features(&files, &job.resolved.text(), &tmp);
+    let _ = std::fs::remove_dir_all(&tmp);
+    let out = r.work.join(format!("{}.csv", job.instance.id));
+    std::fs::write(&out, csv?).map_err(io)?;
+    r.keep(out, DataType::Report)
 }

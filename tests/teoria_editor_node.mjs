@@ -4,10 +4,11 @@ import { b64enc, b64dec } from "../mzlab/web/libro/gh.js";
 
 const SRC = "mzlab/web/teoria/src/12-dati.md";
 const PAGE = "mzlab/web/teoria/12-dati.html";
+const INDEX = "mzlab/web/teoria/indice-ricerca.js";
 
-function fake({ open = [], moved = false, graphql = "ok" } = {}) {
+function fake({ open = [], moved = false, indexMoved = false, graphql = "ok" } = {}) {
   const calls = [];
-  const files = { [SRC]: { text: "# Dati\n\nUno.\n", sha: "m1" }, [PAGE]: { text: "<p>Uno</p>", sha: "h1" }, "tools/libro/importati.txt": { text: "12-dati.md\n# x\n", sha: "i1" } };
+  const files = { [SRC]: { text: "# Dati\n\nUno.\n", sha: "m1" }, [PAGE]: { text: "<p>Uno</p>", sha: "h1" }, "tools/libro/importati.txt": { text: "12-dati.md\n# x\n", sha: "i1" }, [INDEX]: { text: "const INDICE_RICERCA = [\n];\n", sha: indexMoved ? "x2" : "x1" } };
   if (moved) files[SRC].sha = "m2";
   const json = (o, status = 200) => ({ ok: status < 300, status, statusText: "", json: async () => o });
   const fn = async (url, init = {}) => {
@@ -60,6 +61,18 @@ const now = () => new Date("2026-10-20T14:05:30Z");
   const g = fake({ graphql: "err" });
   const c = makePrClient({ token: "t", fetchFn: g.fn, now });
   out.noAuto = (await c.submit(edit)).autoMerge;
+}
+{
+  const g = fake();
+  const c = makePrClient({ token: "t", fetchFn: g.fn, now });
+  await c.submit({ ...edit, index: { text: "NEW INDEX", loadedSha: "x1" } });
+  out.withIndex = g.calls.filter((x) => x.method === "PUT").map((x) => ({ p: x.path.split("/contents/")[1], sha: x.body.sha, content: b64dec(x.body.content), message: x.body.message }));
+}
+{
+  const g = fake({ indexMoved: true });
+  const c = makePrClient({ token: "t", fetchFn: g.fn, now });
+  out.staleIndex = await c.submit({ ...edit, index: { text: "NEW INDEX", loadedSha: "x1" } }).then(() => "sent", (e) => e.kind);
+  out.staleIndexWrites = g.calls.filter((x) => x.method !== "GET").length;
 }
 out.headings = headings("# A\n\ntext\n## B {#b}\n#### no\n### C\n#nospace\n");
 console.log(JSON.stringify(out));

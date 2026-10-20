@@ -83,3 +83,13 @@ def test_draft_is_kept_per_chapter_and_never_holds_the_token(storia):
 
 def test_a_blocked_storage_does_not_break_the_editor(storia):
     assert storia["blocked"] == [False, None]
+
+
+def test_a_retitled_section_sends_the_rebuilt_search_index_as_a_third_file(flow):
+    puts = flow["withIndex"]
+    assert [p["p"] for p in puts] == ["mzlab/web/teoria/src/12-dati.md", "mzlab/web/teoria/12-dati.html", "mzlab/web/teoria/indice-ricerca.js"]
+    assert puts[2]["content"] == "NEW INDEX" and puts[2]["sha"] == "x1" and puts[2]["message"].endswith("(search index)")
+
+
+def test_nothing_is_written_when_the_search_index_moved(flow):
+    assert flow["staleIndex"] == "conflict" and flow["staleIndexWrites"] == 0

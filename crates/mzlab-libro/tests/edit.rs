@@ -170,3 +170,69 @@ fn a_caption_that_cannot_be_written_back_is_refused() {
     assert!(edit("qs22", "").is_err() && edit("qa23-24", "<b> </b>").is_err());
     assert!(edit("f21", "x").is_err(), "a key that is not a figure line");
 }
+
+const SEZ: &str = "# T\n\n## Prima sezione\n\nTesto.\n\n### Dettaglio {#dett}\n\nAltro.\n";
+
+fn edit_sez(src: &str, html: &str) -> Result<String, String> {
+    edit_block(SEZ, "01-prova.md", &opt(), src, html)
+}
+
+#[test]
+fn section_titles_are_editable_and_keep_their_anchor() {
+    let p = preview(SEZ, "01-prova.md", &opt()).unwrap();
+    assert!(
+        p.contains("<h2 data-src=\"h3\">")
+            && p.contains("<h3 id=\"dett\" data-src=\"h7\">")
+            && !p.contains("<h1 data-src")
+    );
+    assert_eq!(
+        edit_sez("h3", "Nuova <i>sezione</i>").unwrap(),
+        SEZ.replace("## Prima sezione", "## Nuova *sezione* {#prima-sezione}")
+    );
+    assert_eq!(
+        edit_sez("h7", "Dettaglio nuovo").unwrap(),
+        SEZ.replace("### Dettaglio {#dett}", "### Dettaglio nuovo {#dett}")
+    );
+    assert!(edit_sez("h3", "uno {#x}").is_err());
+    assert!(
+        edit_sez("h1", "x").is_err(),
+        "the title of the chapter is not a section"
+    );
+}
+
+#[test]
+fn the_headings_check_allows_only_retitled_sections_with_their_anchors() {
+    use mzlab_libro::retitled;
+    let n = "01-prova.md";
+    assert_eq!(retitled(SEZ, SEZ, n), Ok(false));
+    let ok = SEZ.replace("## Prima sezione", "## Altro titolo {#prima-sezione}");
+    assert_eq!(retitled(SEZ, &ok, n), Ok(true));
+    assert!(
+        retitled(SEZ, &SEZ.replace("## Prima sezione", "## Altro titolo"), n)
+            .unwrap_err()
+            .contains("{#prima-sezione}")
+    );
+    assert!(retitled(SEZ, &SEZ.replace("{#dett}", "{#altro}"), n)
+        .unwrap_err()
+        .contains("must stay"));
+    assert!(retitled(SEZ, &SEZ.replace("# T\n", "# Altro\n"), n)
+        .unwrap_err()
+        .contains("title of the chapter"));
+    assert!(retitled(
+        SEZ,
+        &SEZ.replace("### Dettaglio {#dett}", "## Dettaglio {#dett}"),
+        n
+    )
+    .unwrap_err()
+    .contains("level"));
+    assert!(retitled(SEZ, &format!("{SEZ}\n## Nuova\n"), n)
+        .unwrap_err()
+        .contains("added, removed"));
+    assert!(retitled(
+        &ok,
+        &ok.replace("Altro titolo", "Ancora"),
+        "21-glossario.md"
+    )
+    .unwrap_err()
+    .contains("glossary"));
+}
