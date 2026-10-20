@@ -139,6 +139,10 @@ pub(super) fn match_spectra() -> Step {
             Param::choice("decoys", "Decoys", &["none", "spectrum"])
                 .default_str("none")
                 .doc("spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Needs a text library and the spectral entropy; none leaves the hits as they are"),
+            Param::boolean("score_terms", "Score terms")
+                .default_bool(false)
+                .advanced()
+                .doc("On: every candidate also carries score_terms, its score as a weighted sum of named terms (the contribution of each matched pair, the rest in one term) and the key of its formula in the Theory; the scores themselves do not change"),
         ],
         runs_in: RunsIn {
             wasm: Some("lib"),
