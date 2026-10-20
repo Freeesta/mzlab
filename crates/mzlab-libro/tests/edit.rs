@@ -1,0 +1,129 @@
+//! Editing from the preview: which blocks carry `data-src`, how an edited block goes back into the source, and what is refused.
+use mzlab_libro::{edit_block, preview, Options};
+
+const MD: &str = "# Titolo\n\n{.lead} Un paragrafo con **grassetto** e H~2~O.\n\nSecondo paragrafo semplice.\n\n- voce uno\n- voce due\n\n1. primo\n\nTabella: Prova\n| A | B |\n|---|---|\n| 1 |  testo |\n\n> [!nota] Riquadro\n> Dentro il riquadro.\n";
+
+fn opt() -> Options {
+    Options {
+        teoria: true,
+        ..Options::default()
+    }
+}
+
+fn edit(src: &str, html: &str) -> Result<String, String> {
+    edit_block(MD, "01-prova.md", &opt(), src, html)
+}
+
+#[test]
+fn only_simple_top_level_blocks_are_editable() {
+    let p = preview(MD, "01-prova.md", &opt()).unwrap();
+    for key in ["3-3", "5-5", "7", "8", "10", "13:0", "13:1", "15:0", "15:1"] {
+        assert!(
+            p.contains(&format!("data-src=\"{key}\"")),
+            "{key} missing in {p}"
+        );
+    }
+    assert_eq!(
+        p.matches("data-src").count(),
+        9,
+        "headings, the box and its paragraph stay locked"
+    );
+    assert!(!p.contains("<h1 data-src"));
+}
+
+#[test]
+fn a_preview_without_the_marks_is_the_real_page() {
+    let real = mzlab_libro::convert(MD, "01-prova.md", &opt()).unwrap();
+    let marked = preview(MD, "01-prova.md", &opt()).unwrap();
+    let mut stripped = marked.clone();
+    while let Some(a) = stripped.find(" data-src=\"") {
+        let end = a + 11 + stripped[a + 11..].find('"').unwrap() + 1;
+        stripped.replace_range(a..end, "");
+    }
+    assert_eq!(stripped, real);
+}
+
+#[test]
+fn a_changed_word_goes_to_the_right_line() {
+    let r = edit("5-5", "Secondo paragrafo <i>cambiato</i>.").unwrap();
+    assert_eq!(
+        r,
+        MD.replace(
+            "Secondo paragrafo semplice.",
+            "Secondo paragrafo *cambiato*."
+        )
+    );
+}
+
+#[test]
+fn inline_markup_is_kept_and_the_lead_class_too() {
+    let r = edit(
+        "3-3",
+        "Un paragrafo con <b>grassetto</b> e H<sub>2</sub>O in <em>più</em>.",
+    )
+    .unwrap();
+    assert!(
+        r.contains("{.lead} Un paragrafo con **grassetto** e H~2~O in _più_.\n"),
+        "{r}"
+    );
+}
+
+#[test]
+fn the_browser_spellings_are_accepted() {
+    let r = edit("5-5", "Secondo&nbsp;paragrafo <strong>forte</strong> &amp; <span style=\"color: red\">rosso</span><br>").unwrap();
+    assert!(r.contains("Secondo paragrafo **forte** & rosso\n"), "{r}");
+}
+
+#[test]
+fn list_items_keep_their_marker() {
+    assert!(edit("7", "voce <b>1</b>")
+        .unwrap()
+        .contains("- voce **1**\n- voce due\n"));
+    assert!(edit("10", "uno").unwrap().contains("\n1. uno\n"));
+}
+
+#[test]
+fn a_table_cell_keeps_the_padding_of_the_row() {
+    assert!(edit("15:1", "nuovo testo")
+        .unwrap()
+        .contains("| 1 |  nuovo testo |\n"));
+    assert!(edit("13:0", "Colonna")
+        .unwrap()
+        .contains("| Colonna | B |\n"));
+}
+
+#[test]
+fn what_would_change_meaning_is_refused() {
+    for html in [
+        "a *b* c",
+        "a `b` c",
+        "[x](y.md)",
+        "a $b$ c",
+        "a [@k] c",
+        "a @eq:x c",
+        "a_b_c _d_ e",
+    ] {
+        let e = edit("5-5", html).unwrap_err();
+        assert!(e.contains("edit it in the source box"), "{html}: {e}");
+    }
+    assert!(
+        edit("5-5", "- una voce")
+            .unwrap_err()
+            .contains("source box"),
+        "a typed marker would make a list"
+    );
+    assert!(edit("5-5", "# titolo").unwrap_err().contains("source box"));
+}
+
+#[test]
+fn unknown_markup_and_empty_blocks_are_refused() {
+    assert!(edit("5-5", "a <u>b</u>")
+        .unwrap_err()
+        .contains("can't be kept"));
+    assert!(edit("5-5", "<img src=x>")
+        .unwrap_err()
+        .contains("can't be kept"));
+    assert!(edit("5-5", "<b>  </b>").is_err());
+    assert!(edit("15:1", "a | b").unwrap_err().contains("| character"));
+    assert!(edit("99-99", "x").is_err());
+}

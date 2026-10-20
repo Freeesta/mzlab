@@ -9,6 +9,7 @@ mod order;
 mod parse;
 mod prov;
 mod run;
+mod write;
 
 pub use canon::{cache_key, canonical, Resolved};
 pub use check::{check, conversion_path, Platform, Problem};
@@ -17,6 +18,7 @@ pub use order::{levels, plan_order};
 pub use parse::parse;
 pub use prov::{prov_json, Activity, Agent, ErrorRecord};
 pub use run::{execute, Artifact, Job, Outcome, Run, Runner};
+pub use write::plan_json;
 
 use crate::json::Value;
 

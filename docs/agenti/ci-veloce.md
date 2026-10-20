@@ -43,3 +43,5 @@ Prima di aprire la PR: `python3 tools/pre_pr.py` (1-2 minuti: mappa, soglie, i18
 ## Pull request che toccano solo la Teoria
 - `tools/ci_solo_teoria.py <sha base>` (primo passo, id `solo`, dei job `pytest` e `browser` di `test.yml`) scrive `solo=true` solo se OGNI file cambiato è `mzlab/web/teoria/src/NN-*.md`, `mzlab/web/teoria/NN-*.html` o `mzlab/web/teoria/indice-ricerca.js` (rinominati e cancellati contano con il vecchio percorso); un file fuori elenco, nessun file o un push su `main` danno `false`.
 - Con `solo=true` i job restano verdi ma saltano toolchain Rust, wasm-bindgen e cache e lanciano solo i test della lista `PYTEST` (capitoli, Libro, nomi vietati) e i 4 e2e `E2E` (`verifica.py --fumo --solo`); ogni altra PR esegue tutto. Prova: `tests/test_ci_solo_teoria.py`.
+
+Stato delle PR aperte (sola lettura, senza token, libreria standard): `python3 tools/stato_pr.py [--stato stato.json]` stampa una riga per PR (SHA di testa, check richiesti della branch protection N/M, `mergeable_state`, auto-merge, minuti dall'ultimo evento, chat se è in `stato.json` del repository privato) e l'esito dell'ultimo run «test» su `main`.

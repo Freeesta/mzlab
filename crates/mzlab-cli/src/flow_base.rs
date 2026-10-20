@@ -1,0 +1,184 @@
+//! The base chain of the Flow canvas run on files: `index.mzidx`, `features.detect`, `features.align`, `features.gapfill`. The recipe of the engine is
+//! the one the Pipeline panel takes with no setting (`run::recipe_for`: the profile of the first file of the series) with the values the plan writes on
+//! top (`steps::recipe_map`); a value the plan leaves out that differs from the canonical one is reported as an estimate. Called by `flow.rs`.
+
+use std::fs::File;
+use std::path::PathBuf;
+
+use mzlab_core::error::{Error, Result};
+use mzlab_core::flow::Job;
+use mzlab_core::idxread::Index;
+use mzlab_core::json::Value;
+use mzlab_core::mzidx::DEFAULT_BUDGET;
+use mzlab_core::step::DataType;
+use mzlab_feat::recipe::Recipe;
+use mzlab_feat::steps::recipe_map;
+use mzlab_feat_wasm::run;
+
+use crate::flow::{io, FileRunner, Lineage, Made};
+
+/// A value the plan leaves out: name, value, proof.
+type Estimate = (String, Value, Value);
+
+fn open(path: &PathBuf) -> Result<Index<File>> {
+    let f = File::open(path).map_err(io)?;
+    let size = f.metadata().map_err(io)?.len();
+    Index::open(f, size)
+}
+
+fn item_path(r: &FileRunner, job: &Job) -> PathBuf {
+    r.path(&job.inputs[0].1[0])
+}
+
+fn out_path(r: &FileRunner, job: &Job, ext: &str) -> PathBuf {
+    match job.item {
+        Some(k) => r.work.join(format!("{}-{k}.{ext}", job.instance.id)),
+        None => r.work.join(format!("{}.{ext}", job.instance.id)),
+    }
+}
+
+/// What the plan writes for `job`: the values of its preset, then its own parameters (descriptor names).
+fn written(job: &Job) -> Vec<(String, Value)> {
+    let mut v: Vec<(String, Value)> = Vec::new();
+    let preset = job.instance.preset.as_deref();
+    let presets = job.step.presets.iter().filter(|p| Some(p.id) == preset);
+    for (k, x) in presets.flat_map(|p| p.params.iter()) {
+        v.push((k.to_string(), x.clone()));
+    }
+    for (k, x) in &job.instance.params {
+        v.retain(|(n, _)| n != k);
+        v.push((k.clone(), x.clone()));
+    }
+    v
+}
+
+/// The recipe of `job`: `base` with what the plan writes, and the values the plan leaves out that differ from the canonical ones (the estimates).
+fn recipe(job: &Job, mut base: Recipe) -> Result<(Recipe, Vec<Estimate>)> {
+    let w = written(job);
+    recipe_map::apply(&mut base, job.step.id, &w)?;
+    let resolved = &job.resolved.params;
+    let proof = Value::Str("profile of the first file of the series".into());
+    let estimates = recipe_map::values(&base, job.step.id)
+        .into_iter()
+        .filter(|(k, v)| {
+            !w.iter().any(|x| x.0 == *k)
+                && !job.resolved.noresult.contains(k)
+                && resolved.iter().find(|x| x.0 == *k).map(|x| &x.1) != Some(v)
+        })
+        .map(|(k, v)| (k, v, proof.clone()))
+        .collect();
+    Ok((base, estimates))
+}
+
+/// `index.mzidx`: the index of one file (mzML or any single file a reader takes).
+pub(crate) fn index_job(r: &FileRunner, job: &Job) -> Result<Made> {
+    let source = item_path(r, job);
+    let budget = job.resolved.params.iter().find(|p| p.0 == "budget");
+    let budget = budget
+        .and_then(|p| p.1.f64())
+        .map_or(DEFAULT_BUDGET, |b| b as usize);
+    let out = out_path(r, job, "mzidx");
+    crate::build_index(&source, &out, budget)?;
+    let name = r.source_name(&job.inputs[0].1[0]);
+    let a = r.keep(out, DataType::Mzidx)?;
+    r.trace(
+        &a,
+        Lineage {
+            name,
+            instance: job.instance.id.clone(),
+            item: job.item,
+            ..Lineage::default()
+        },
+    );
+    Ok(Made::new("index", a))
+}
+
+/// `features.detect`: the features of one indexed file (`.mzfeatf`), named after the file the index was made from.
+pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
+    let input = &job.inputs[0].1[0];
+    let path = r.path(input);
+    let first = r.first_of_series(input).unwrap_or_else(|| path.clone());
+    let (recipe, estimates) = recipe(job, run::recipe_for("", &mut open(&first)?)?)?;
+    let name = r.source_name(input);
+    let bytes = run::detect(&mut open(&path)?, &name, &recipe)?;
+    let out = out_path(r, job, "mzfeatf");
+    std::fs::write(&out, bytes).map_err(io)?;
+    let a = r.keep(out, DataType::Peaks)?;
+    r.trace(
+        &a,
+        Lineage {
+            recipe: Some(recipe),
+            index: vec![path],
+            ..Lineage::default()
+        },
+    );
+    Ok(Made {
+        estimates,
+        ..Made::new("peaks", a)
+    })
+}
+
+/// Aligns the peaks of `lin` with `recipe` and writes the table of `job`.
+fn table(r: &FileRunner, job: &Job, recipe: Recipe, lin: Lineage) -> Result<Made> {
+    let files: Vec<Vec<u8>> = lin
+        .peaks
+        .iter()
+        .map(|p| std::fs::read(p).map_err(io))
+        .collect::<Result<_>>()?;
+    let (tables, origin) = run::read_files(&files)?;
+    let bytes = run::align(&tables, &origin, &recipe, |k| open(&lin.index[k]))?;
+    let out = out_path(r, job, "mzfeat");
+    std::fs::write(&out, bytes).map_err(io)?;
+    let a = r.keep(out, DataType::Table)?;
+    r.trace(
+        &a,
+        Lineage {
+            recipe: Some(recipe),
+            ..lin
+        },
+    );
+    Ok(Made::new("table", a))
+}
+
+/// `features.align`: the table of the series without gap filling (`features.gapfill` fills it).
+pub(crate) fn align_job(r: &FileRunner, job: &Job) -> Result<Made> {
+    let peaks: Vec<_> = job.inputs.iter().flat_map(|(_, v)| v).collect();
+    let mut lin = Lineage::default();
+    let mut base = None;
+    for p in &peaks {
+        let l = r
+            .lineage(p)
+            .ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id))?;
+        base = base.or(l.recipe);
+        lin.index.extend(l.index);
+        lin.peaks.push(r.path(p));
+    }
+    let base = base.ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id))?;
+    let (mut recipe, estimates) = recipe(job, base)?;
+    recipe.fill_gaps = false;
+    Ok(Made {
+        estimates,
+        ..table(r, job, recipe, lin)?
+    })
+}
+
+/// `features.gapfill`: the table of `features.align` with its gaps filled. The stored table is not filled after the fact: alignment and filling run
+/// again on the peaks of that table (same run), which gives the bytes of the page's single call.
+pub(crate) fn gapfill_job(r: &FileRunner, job: &Job) -> Result<Made> {
+    let input = job
+        .inputs
+        .iter()
+        .find(|(p, _)| p == "table")
+        .and_then(|(_, v)| v.first());
+    let lin = input
+        .and_then(|a| r.lineage(a))
+        .filter(|l| l.recipe.is_some() && !l.peaks.is_empty());
+    let lin = lin.ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id))?;
+    let base = lin.recipe.clone().unwrap_or_default();
+    let (mut recipe, estimates) = recipe(job, base)?;
+    recipe.fill_gaps = true;
+    Ok(Made {
+        estimates,
+        ..table(r, job, recipe, lin)?
+    })
+}

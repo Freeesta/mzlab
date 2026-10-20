@@ -10,3 +10,8 @@ for (const f of fs.readdirSync(src).filter(n => n.endsWith(".md")).sort()) {
   fs.writeFileSync(path.join(out, f.replace(/\.md$/, ".html")), w.convert_chapter(fs.readFileSync(src + "/" + f, "utf8"), f, imported.has(f)));
 }
 try { w.convert_chapter("no heading here\n", "x.md", false); } catch (e) { console.log("error " + e); }
+// the preview marks the editable blocks; an edit goes back into the source or is refused with a message
+const md = "# T\n\nUno due.\n";
+console.log("marked " + /<p data-src="3-3">Uno due\.<\/p>/.test(w.preview_chapter(md, "01-x.md", false)));
+console.log("edited " + JSON.stringify(w.edit_preview_block(md, "01-x.md", false, "3-3", "Uno <b>tre</b>.")));
+try { w.edit_preview_block(md, "01-x.md", false, "3-3", "a *b* c"); } catch (e) { console.log("refused " + e); }

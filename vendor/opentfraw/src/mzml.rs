@@ -201,7 +201,7 @@ pub fn scan_metadata_with(
                 collision_energy: srm_ce,
                 ce_is_nce: false,
                 master_scan_number: None,
-                activation: event.and_then(|e| e.preamble.activation()),
+                activation: event.and_then(|e| e.activation()),
                 analyzer: event.and_then(|e| e.preamble.analyzer()),
             }
         } else {
@@ -250,7 +250,7 @@ pub fn scan_metadata_with(
                 collision_energy: ae,
                 ce_is_nce: ae_is_nce,
                 master_scan_number: master,
-                activation: event.and_then(|e| e.preamble.activation()),
+                activation: event.and_then(|e| e.activation()),
                 analyzer: event.and_then(|e| e.preamble.analyzer()),
             }
         };
@@ -643,7 +643,12 @@ fn to_msc_record(
         ce_is_nce: p.ce_is_nce,
         precursor_native_id: p.master_scan_number.map(native_id_for),
         activation: convert_activation(p.activation),
-        analyzer: convert_analyzer(p.analyzer),
+        // The writer renders CID on an FTMS precursor as beam-type CID; a CID the event reports as such stays CID.
+        analyzer: if p.activation == Some(Activation::CID) {
+            None
+        } else {
+            convert_analyzer(p.analyzer)
+        },
         ccs: None,
     });
     msc::SpectrumRecord {

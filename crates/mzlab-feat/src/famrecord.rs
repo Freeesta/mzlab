@@ -72,7 +72,7 @@ fn member(o: &mut Out, f: &FileFeatures, fam: &Families, i: usize) {
     o.raw("}");
 }
 
-fn arc(o: &mut Out, f: &FileFeatures, a: &Arc) {
+fn arc(o: &mut Out, f: &FileFeatures, fam: &Families, a: &Arc) {
     let (lo, up) = (a.lo as usize, a.up as usize);
     o.raw("{\"lo\":")
         .int(i64::from(a.lo))
@@ -86,6 +86,12 @@ fn arc(o: &mut Out, f: &FileFeatures, a: &Arc) {
         .num(round(f64::from(a.r), 3))
         .raw(",\"kind\":")
         .str(kind_name(a.kind))
+        .raw(",\"admitted_by\":")
+        .str(if fam.by_evidence(f, a) {
+            "evidence"
+        } else {
+            "factor"
+        })
         .raw(",\"readings\":[");
     for (k, r) in a.readings.iter().enumerate() {
         if k > 0 {
@@ -162,7 +168,7 @@ pub fn record(file: &str, f: &FileFeatures, fam: &Families) -> String {
                 o.raw(",");
             }
             sep = true;
-            arc(&mut o, f, a);
+            arc(&mut o, f, fam, a);
         }
         o.raw("]}");
     }

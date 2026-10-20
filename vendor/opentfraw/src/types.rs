@@ -90,8 +90,7 @@ pub enum Activation {
     ETD,
     /// Higher-energy collisional dissociation - Q Exactive style (code 1).
     HCD,
-    /// Collision-induced dissociation / beam-type HCD - Fusion/Exploris style (code 4).
-    /// Renders as "cid" on ITMS analyzers, "hcd" on FTMS analyzers.
+    /// Collision-induced dissociation (code 4; on FTMS scans `ScanEvent::activation` turns the beam-type ones into HCD).
     CID,
     /// Electron-capture dissociation (code 5).
     ECD,
@@ -275,9 +274,6 @@ impl Activation {
 
     /// Short identifier used in Thermo scan filter strings (e.g. "hcd", "etd").
     ///
-    /// For [`Activation::CID`] on FTMS instruments the filter string conventionally
-    /// uses "hcd" instead; callers should substitute via
-    /// [`crate::scan_filter::activation_str`].
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::HCD => "hcd",
