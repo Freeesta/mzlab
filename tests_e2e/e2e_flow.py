@@ -188,20 +188,31 @@ try:
             pg.click('[data-tab="plan"]'); assert '"format": "mzflow/2"' in pg.inner_text(".flx-plan")
             pg.click('[data-tab="list"]'); attendi(pg, "document.querySelectorAll('.fl-card').length >= 3"); pg.click('[data-tab="canvas"]')
         step("canvas: the plan view and the list view show the same plan", sheets)
+        def results_from_disk():
+            pg.click('.fln:has-text("Build feature table")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Build feature table'")
+            pg.set_input_files('.fl-insp input[type=file]', files=[{"name": "peaks.csv", "mimeType": "text/csv", "buffer": b'mz,rt,area\n241.3,3.0,"1,5"\n257.3,4.2,7\n'}])
+            attendi(pg, "document.querySelectorAll('.flx-table tbody tr').length === 2")
+            assert pg.locator(".flx-table th").all_inner_texts() == ["mz", "rt", "area"] and pg.locator(".flx-table td").nth(2).inner_text() == "1,5"
+            assert pg.locator(".flx-res").get_attribute("aria-label") == "Results" and pg.evaluate("document.activeElement.closest('.flx-res') !== null")
+            pg.click('.flx-res button[aria-label="Close the results"]'); assert pg.locator(".flx-res").count() == 0
+        step("results: a table chosen from disk opens under the canvas as a real table, readable by keyboard and closable", results_from_disk)
         def desktop_run():
             # the app is faked: the page asks the native route flow/run and lists what each step did from the prov/1 it answers
             pg.evaluate("""() => { window.MZLAB_DESKTOP = true; window.__runs = 0; const real = window.fetch.bind(window);
               window.fetch = async (u, o) => { if (!String(u).includes('/rpc')) return real(u, o);
-                const plan = JSON.parse(JSON.parse(o.body).plan); window.__runs++;
+                if (JSON.parse(o.body).op === 'flow/read') return new Response('a,b\\n1,2\\n', { status: 200 });
+                const plan = JSON.parse(JSON.parse(o.body).plan || '{"steps":[]}'); window.__runs++;
                 if (window.__runs === 1) return new Response(JSON.stringify({ error_key: 'err.flow.input.missing', params: { input: 'a.mzML' } }), { status: 400 });
-                const activity = {}; plan.steps.forEach(x => { activity[x.id] = { step: x.step, ms: 1200, used: [], generated: [] }; });
-                return new Response(JSON.stringify({ prov: JSON.stringify({ schema: 'prov/1', activity }), dir: '/tmp/mzlab-flow/out' }), { status: 200 }); }; }""")
+                const activity = {}; plan.steps.forEach(x => { activity[x.id] = { step: x.step, ms: 1200, used: [], generated: ['k'] }; });
+                return new Response(JSON.stringify({ prov: JSON.stringify({ schema: 'prov/1', entity: { k: { type: 'table', label: 't.csv' } }, activity }), dir: '/tmp/mzlab-flow/out' }), { status: 200 }); }; }""")
             pg.click('button[aria-label="Export the plan and run it"]')
             slots = ".fl-slots li"; assert pg.locator(slots).count() >= 3 and "waiting" in pg.inner_text(slots + ":first-child")
             go = 'button[aria-label="Run the plan on this computer"]'
             pg.click(go); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.includes('Data tab')")
             pg.click(go); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.startsWith('Finished')")
             assert "done in 1.2 s" in pg.inner_text(slots + ":first-child") and "/tmp/mzlab-flow/out" in pg.inner_text(".fl-cli .fl-note")
+            pg.click('.fln:has-text("Build feature table")'); pg.click('.fl-insp button[aria-label="Open t.csv"]')
+            attendi(pg, "document.querySelector('.flx-table td') && document.querySelector('.flx-table td').textContent === '1'")
         step("desktop: «Run on this computer» says which file to open first, then lists each step as done", desktop_run)
         b.close()
 finally:

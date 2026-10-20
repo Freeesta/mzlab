@@ -20,7 +20,22 @@ fn link(from: &Path, to: &Path) -> std::io::Result<()> {
     std::fs::hard_link(from, to).or_else(|_| std::fs::copy(from, to).map(|_| ()))
 }
 
+/// The largest output file the page may read back, in bytes.
+const READ_MAX: u64 = 4 << 20;
+
 impl State {
+    /// `{name}` -> the text of the output file `name` of the last run (a plain file name, at most 4 MB).
+    pub(crate) fn flow_read(&self, p: &Value) -> Result<Answer> {
+        let name = crate::store::clean(p["name"].as_str().unwrap_or(""))?;
+        let path = std::env::temp_dir().join("mzlab-flow").join("out").join(name);
+        let size = std::fs::metadata(&path).map_err(|e| crate::rpc::io_error(&e))?.len();
+        if size > READ_MAX {
+            return Err(Error::new("err.flow.read.big").with("name", name));
+        }
+        let bytes = std::fs::read(&path).map_err(|e| crate::rpc::io_error(&e))?;
+        text(String::from_utf8_lossy(&bytes))
+    }
+
     /// `{plan: "<mzflow/2 text>"}` -> `{prov: "<prov/1 text>", dir: "<folder of the outputs>"}`. A file the plan names that is not registered is `err.flow.input.missing`.
     pub(crate) fn flow_run(&self, p: &Value) -> Result<Answer> {
         let plan_text = p["plan"]
