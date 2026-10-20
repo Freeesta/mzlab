@@ -58,6 +58,9 @@ fn problem(inst: &Instance, key: &'static str, params: &[(&'static str, &str)]) 
     }
 }
 
+/// Algorithm, preset and sorted parameters: what makes two variants the same.
+type VariantKey<'a> = (Option<&'a str>, &'a str, Vec<(String, Value)>);
+
 /// The problems of one `meta.compare` as the page reports them (`F.validateExtra`): unknown step or version, fewer than two variants, an algorithm that is
 /// unknown or not available, a variant written twice. Ports and the other parameters of the instance are not looked at.
 fn compare_problems(inst: &Instance, registry: &[Step]) -> Vec<Problem> {
@@ -81,7 +84,7 @@ fn compare_problems(inst: &Instance, registry: &[Step]) -> Vec<Problem> {
     if list.len() < 2 {
         out.push(problem(inst, "err.flow.compare.few", &[]));
     }
-    let mut seen: Vec<(Option<&str>, &str, Vec<(String, Value)>)> = Vec::new();
+    let mut seen: Vec<VariantKey> = Vec::new();
     for v in list {
         let algorithm = v.get("algorithm").and_then(Value::str);
         let name = algorithm.unwrap_or("");
