@@ -42,7 +42,11 @@ fn a_small_budget_aligns_in_slabs_and_writes_the_same_bytes() {
     assert!(data(&free).iter().any(|(n, _)| n == "gap.mzfeat"));
     // the two records tell the way and the memory of the step
     assert!(text(&free, "prov.json").contains("\"via\":\"memory\""));
-    assert!(text(&small, "prov.json").contains("\"via\":\"slabs\""));
+    assert!(
+        text(&small, "prov.json").contains("\"via\":\"slabs\""),
+        "{}",
+        text(&small, "prov.json")
+    );
     assert!(text(&small, "corsa.json").contains("\"via\":\"slabs\""));
     assert!(text(&small, "corsa.json").contains("\"mem_mb\":"));
 }
@@ -89,4 +93,12 @@ fn the_family_mode_gives_the_same_bytes_with_and_without_a_budget() {
     };
     let (free, capped) = (run("fam_free", &[]), run("fam_24", &["--budget-mb", "24"]));
     assert_eq!(data(&free), data(&capped));
+    // the family mode works in slabs too when the whole table does not fit
+    let small = run("fam_small", &["--budget-mb", "0.001"]);
+    assert_eq!(data(&free), data(&small));
+    assert!(
+        text(&small, "prov.json").contains("\"via\":\"slabs\""),
+        "{}",
+        text(&small, "prov.json")
+    );
 }
