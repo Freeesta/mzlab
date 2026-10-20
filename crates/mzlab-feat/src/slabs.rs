@@ -96,6 +96,74 @@ pub(crate) fn cuts(all: &mut [f64], slab_rows: usize, ppm: f64) -> Vec<f64> {
     cuts
 }
 
+/// The way a series is aligned (the three ways of the module).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Via {
+    Memory,
+    Slabs,
+    Refused,
+}
+
+impl Via {
+    /// The word `prov/1` and `corsa/1` report: `memory`, `slabs` or `refused`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Via::Memory => "memory",
+            Via::Slabs => "slabs",
+            Via::Refused => "refused",
+        }
+    }
+}
+
+/// What the alignment of a series asks for: the way and the bytes it holds at once (the whole estimate in memory, the survey, the slab and the table in
+/// slabs, what it would need when refused).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Stima {
+    pub bytes: usize,
+    pub via: Via,
+}
+
+/// Features in each file of a stored series, from their metadata only.
+pub fn rows_of(src: &mut dyn Stored) -> Result<Vec<usize>> {
+    (0..src.count())
+        .map(|k| Ok(read_meta_mz(&src.bytes(k)?)?.1.len()))
+        .collect()
+}
+
+/// The way for a series of `rows` features per file under a free budget of `left` bytes (after the survey of m/z is reserved); `sorted` is false when a
+/// file does not list its features by m/z (the slabs need that order). The one rule `align_and_fill_stored` follows.
+fn route(rows: &[usize], r: &Recipe, left: usize, sorted: bool) -> Stima {
+    let (total, widest, n) = (
+        rows.iter().sum::<usize>(),
+        rows.iter().copied().max().unwrap_or(0),
+        rows.len(),
+    );
+    let table_guess = widest * 3 / 2 * (n * CELL + TABLE_ROW);
+    let whole = total * (LEAN_ROW + WORK_ROW) + table_guess;
+    if whole <= left / 2 || !sorted {
+        let via = if whole > left {
+            Via::Refused
+        } else {
+            Via::Memory
+        };
+        return Stima { bytes: whole, via };
+    }
+    let slab = (left / 4).max(16 * (LEAN_ROW + WORK_ROW));
+    // "per family" mode also keeps the group of every row (4 bytes)
+    let groups = if r.mode == Mode::Family { total * 4 } else { 0 };
+    Stima {
+        bytes: total * 8 + groups + slab + table_guess,
+        via: Via::Slabs,
+    }
+}
+
+/// The way and the memory of aligning a series whose files hold `rows` features each, under `budget_bytes` (the features listed by m/z, as the
+/// files are written). What `flow` reports for the step and what the page asks before it starts.
+pub fn stima(rows: &[usize], r: &Recipe, budget_bytes: usize) -> Stima {
+    let survey = rows.iter().sum::<usize>() * 8;
+    route(rows, r, budget_bytes.saturating_sub(survey), true)
+}
+
 /// Aligns and fills a series stored as `.mzfeatf` (see the module). `open(k)` gives the index of file `k`. Returns the table and the cells filled.
 pub fn align_and_fill_stored<R: ReadAt>(
     src: &mut dyn Stored,
@@ -116,16 +184,14 @@ pub fn align_and_fill_spilling<R: ReadAt>(
 ) -> Result<(Aligned, usize)> {
     let n = src.count();
     let mut s = survey(src, budget)?;
-    let total: usize = s.rows.iter().sum();
     let widest = s.rows.iter().copied().max().unwrap_or(0);
     let _all = budget.reserve("align", s.all.len() * 8)?;
-    let table_guess = widest * 3 / 2 * (n * CELL + TABLE_ROW);
-    let whole = total * (LEAN_ROW + WORK_ROW) + table_guess;
-    let table = if budget.in_memory(whole) || !s.sorted {
-        if whole > budget.left() {
-            return Err(budget.refuse("align", whole));
+    let way = route(&s.rows, r, budget.left(), s.sorted);
+    let table = if way.via != Via::Slabs {
+        if way.via == Via::Refused {
+            return Err(budget.refuse("align", way.bytes));
         }
-        let _g = budget.reserve("align", whole)?;
+        let _g = budget.reserve("align", way.bytes)?;
         in_memory(src, n, r)?
     } else if r.mode == Mode::Family {
         family_slabs(src, &mut s, budget, r, widest * 3 / 2)?
