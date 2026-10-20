@@ -153,16 +153,71 @@ fn summary(areas: &[Option<f64>]) -> (String, String) {
     (sig8(mean), cv)
 }
 
-/// The mzTab-M file of the rows of the view; the bytes depend only on the table, the samples and the view.
-pub fn mztab(c: &Ctx) -> String {
-    let t = c.table;
-    let svs = study_variables(c);
-    let adducts = adduct_names();
-    let mut out = String::new();
-    metadata(&mut out, c, &svs);
-    out.push('\n');
+/// What the three table sections read: the rows of the view and the identity each one names.
+struct Body<'a> {
+    c: &'a Ctx<'a>,
+    rows: Vec<usize>,
+    svs: Vec<(String, Vec<usize>)>,
+    adducts: [&'static str; 7],
+    /// Number of the evidence of each row (position in `rows`), for the rows that can carry one.
+    evidence_of: Vec<Option<usize>>,
+}
 
-    let n_sv = svs.len();
+impl<'a> Body<'a> {
+    fn new(c: &'a Ctx<'a>) -> Self {
+        let mut b = Body {
+            c,
+            rows: c.rows(),
+            svs: study_variables(c),
+            adducts: adduct_names(),
+            evidence_of: Vec::new(),
+        };
+        let mut n = 0;
+        b.evidence_of = b
+            .rows
+            .iter()
+            .map(|&r| {
+                b.theoretical(r).map(|_| {
+                    n += 1;
+                    n
+                })
+            })
+            .collect();
+        b
+    }
+
+    /// Neutral mass and adduct of the hypothesis a row names (None without one).
+    fn named(&self, r: usize) -> Option<(f64, Option<&'static str>)> {
+        let id = &self.c.table.ident;
+        (!id.is_empty() && id.src[r] >> 1 != 0).then(|| {
+            (
+                id.neutral[r],
+                self.adducts
+                    .get(usize::from(id.ion[r]).wrapping_sub(1))
+                    .copied(),
+            )
+        })
+    }
+
+    /// The theoretical m/z of the ion of a named row; only a row with a known adduct can carry evidence.
+    fn theoretical(&self, r: usize) -> Option<f64> {
+        self.named(r)
+            .and_then(|(m, a)| a.and_then(|a| elements::ion_mz(m, a)))
+    }
+
+    fn area(&self, r: usize, k: usize) -> Option<f64> {
+        self.c.area(r, k).filter(|a| a.is_finite())
+    }
+
+    fn areas(&self, r: usize) -> Vec<String> {
+        (0..self.c.samples.len())
+            .map(|k| self.area(r, k).map_or(NAN.into(), sig8))
+            .collect()
+    }
+}
+
+fn small_molecules(body: &Body, out: &mut String) {
+    let n_sv = body.svs.len();
     let mut head: Vec<String> = [
         "SMH",
         "SML_ID",
@@ -181,39 +236,17 @@ pub fn mztab(c: &Ctx) -> String {
     ]
     .map(String::from)
     .to_vec();
-    head.extend((1..=c.samples.len()).map(|n| format!("abundance_assay[{n}]")));
+    head.extend((1..=body.c.samples.len()).map(|n| format!("abundance_assay[{n}]")));
     head.extend((1..=n_sv).map(|n| format!("abundance_study_variable[{n}]")));
     head.extend((1..=n_sv).map(|n| format!("abundance_variation_study_variable[{n}]")));
-    line(&mut out, &head);
-
-    let rows = c.rows();
-    // Identity of each row: the adduct and neutral mass of a named hypothesis.
-    let named = |r: usize| {
-        (!t.ident.is_empty() && t.ident.src[r] >> 1 != 0).then(|| {
-            (
-                t.ident.neutral[r],
-                adducts
-                    .get(usize::from(t.ident.ion[r]).wrapping_sub(1))
-                    .copied(),
-            )
-        })
-    };
-    // The theoretical m/z of the ion of a named row; only a row with a known adduct can carry evidence.
-    let theoretical = |r: usize| named(r).and_then(|(m, a)| a.and_then(|a| elements::ion_mz(m, a)));
-    let area = |r: usize, k: usize| c.area(r, k).filter(|a| a.is_finite());
-    let mut evidence_of: Vec<Option<usize>> = vec![None; rows.len()];
-    let mut n_ev = 0;
-    for (i, &r) in rows.iter().enumerate() {
-        if theoretical(r).is_some() {
-            n_ev += 1;
-            evidence_of[i] = Some(n_ev);
-        }
-    }
-    for (i, &r) in rows.iter().enumerate() {
+    line(out, &head);
+    for (i, &r) in body.rows.iter().enumerate() {
         let id = (i + 1).to_string();
-        let (mass, ion) = named(r).map_or((NULL.to_string(), NULL.to_string()), |(m, a)| {
-            (fix(m, 5), a.unwrap_or(NULL).to_string())
-        });
+        let (mass, ion) = body
+            .named(r)
+            .map_or((NULL.to_string(), NULL.to_string()), |(m, a)| {
+                (fix(m, 5), a.unwrap_or(NULL).to_string())
+            });
         let mut cells: Vec<String> = vec![
             "SML".into(),
             id.clone(),
@@ -222,7 +255,7 @@ pub fn mztab(c: &Ctx) -> String {
             NULL.into(),
             NULL.into(),
             NULL.into(),
-            format!("row {}", t.id(r)),
+            format!("row {}", body.c.table.id(r)),
             NULL.into(),
             mass,
             ion,
@@ -230,17 +263,20 @@ pub fn mztab(c: &Ctx) -> String {
             NULL.into(),
             NULL.into(),
         ];
-        cells.extend((0..c.samples.len()).map(|k| area(r, k).map_or(NAN.into(), sig8)));
-        let sums: Vec<(String, String)> = svs
+        cells.extend(body.areas(r));
+        let sums: Vec<(String, String)> = body
+            .svs
             .iter()
-            .map(|(_, a)| summary(&a.iter().map(|&k| area(r, k)).collect::<Vec<_>>()))
+            .map(|(_, a)| summary(&a.iter().map(|&k| body.area(r, k)).collect::<Vec<_>>()))
             .collect();
         cells.extend(sums.iter().map(|s| s.0.clone()));
         cells.extend(sums.iter().map(|s| s.1.clone()));
-        line(&mut out, &cells);
+        line(out, &cells);
     }
-    out.push('\n');
+}
 
+fn features(body: &Body, out: &mut String) {
+    let (c, t) = (body.c, body.c.table);
     let mut head: Vec<String> = [
         "SFH",
         "SMF_ID",
@@ -257,9 +293,9 @@ pub fn mztab(c: &Ctx) -> String {
     .map(String::from)
     .to_vec();
     head.extend((1..=c.samples.len()).map(|n| format!("abundance_assay[{n}]")));
-    line(&mut out, &head);
+    line(out, &head);
     let seconds = |m: f64| fix(m * 60.0, 2);
-    for (i, &r) in rows.iter().enumerate() {
+    for (i, &r) in body.rows.iter().enumerate() {
         let q = (!t.meta.is_empty()).then(|| t.meta.get(r));
         let edge = |v: Option<f32>| {
             v.filter(|x| x.is_finite())
@@ -269,11 +305,11 @@ pub fn mztab(c: &Ctx) -> String {
             .map(|q| i32::from(q.charge))
             .filter(|&z| z != 0)
             .unwrap_or(i32::from(c.polarity.signum()));
-        let ion = named(r).and_then(|(_, a)| a).unwrap_or(NULL);
+        let ion = body.named(r).and_then(|(_, a)| a).unwrap_or(NULL);
         let mut cells: Vec<String> = vec![
             "SMF".into(),
             (i + 1).to_string(),
-            evidence_of[i].map_or(NULL.to_string(), |e| e.to_string()),
+            body.evidence_of[i].map_or(NULL.to_string(), |e| e.to_string()),
             NULL.into(),
             ion.into(),
             NULL.into(),
@@ -283,70 +319,85 @@ pub fn mztab(c: &Ctx) -> String {
             edge(q.map(|q| q.rt_lo)),
             edge(q.map(|q| q.rt_hi)),
         ];
-        cells.extend((0..c.samples.len()).map(|k| area(r, k).map_or(NAN.into(), sig8)));
-        line(&mut out, &cells);
+        cells.extend(body.areas(r));
+        line(out, &cells);
     }
+}
 
-    if n_ev > 0 {
-        out.push('\n');
-        let head = [
-            "SEH",
-            "SME_ID",
-            "evidence_input_id",
-            "database_identifier",
-            "chemical_formula",
-            "smiles",
-            "inchi",
-            "chemical_name",
-            "uri",
-            "derivatized_form",
-            "adduct_ion",
-            "exp_mass_to_charge",
-            "charge",
-            "theoretical_mass_to_charge",
-            "spectra_ref",
-            "identification_method",
-            "ms_level",
-            "id_confidence_measure[1]",
-            "rank",
+fn evidence(body: &Body, out: &mut String) {
+    let (c, t) = (body.c, body.c.table);
+    let head = [
+        "SEH",
+        "SME_ID",
+        "evidence_input_id",
+        "database_identifier",
+        "chemical_formula",
+        "smiles",
+        "inchi",
+        "chemical_name",
+        "uri",
+        "derivatized_form",
+        "adduct_ion",
+        "exp_mass_to_charge",
+        "charge",
+        "theoretical_mass_to_charge",
+        "spectra_ref",
+        "identification_method",
+        "ms_level",
+        "id_confidence_measure[1]",
+        "rank",
+    ];
+    line(out, &head.map(String::from));
+    for (i, &r) in body.rows.iter().enumerate() {
+        let (Some(e), Some(theo), Some((_, ion))) =
+            (body.evidence_of[i], body.theoretical(r), body.named(r))
+        else {
+            continue;
+        };
+        // The run with the largest area of the row is the one the evidence maps to.
+        let best = (0..c.samples.len()).max_by(|&a, &b| {
+            body.area(r, a)
+                .unwrap_or(-1.0)
+                .total_cmp(&body.area(r, b).unwrap_or(-1.0))
+        });
+        let ppm = (t.mz[r] - theo) / theo * 1e6;
+        let cells: Vec<String> = vec![
+            "SME".into(),
+            e.to_string(),
+            format!("row_{}", t.id(r)),
+            NULL.into(),
+            NULL.into(),
+            NULL.into(),
+            NULL.into(),
+            NULL.into(),
+            NULL.into(),
+            NULL.into(),
+            ion.unwrap_or(NULL).into(),
+            fix(t.mz[r], 5),
+            i32::from(c.polarity.signum()).to_string(),
+            fix(theo, 5),
+            format!("ms_run[{}]", best.map_or(1, |k| k + 1)),
+            "[,, mass match to a hypothesis, ]".into(),
+            "[MS, MS:1000511, ms level, 1]".into(),
+            fix(ppm, 2),
+            "1".into(),
         ];
-        line(&mut out, &head.map(String::from));
-        for (i, &r) in rows.iter().enumerate() {
-            let (Some(e), Some(theo), Some((_, ion))) = (evidence_of[i], theoretical(r), named(r))
-            else {
-                continue;
-            };
-            // The run with the largest area of the row is the one the evidence maps to.
-            let best = (0..c.samples.len()).max_by(|&a, &b| {
-                area(r, a)
-                    .unwrap_or(-1.0)
-                    .total_cmp(&area(r, b).unwrap_or(-1.0))
-            });
-            let ppm = (t.mz[r] - theo) / theo * 1e6;
-            let charge = i32::from(c.polarity.signum());
-            let cells: Vec<String> = vec![
-                "SME".into(),
-                e.to_string(),
-                format!("row_{}", t.id(r)),
-                NULL.into(),
-                NULL.into(),
-                NULL.into(),
-                NULL.into(),
-                NULL.into(),
-                NULL.into(),
-                NULL.into(),
-                ion.unwrap_or(NULL).into(),
-                fix(t.mz[r], 5),
-                charge.to_string(),
-                fix(theo, 5),
-                format!("ms_run[{}]", best.map_or(1, |k| k + 1)),
-                "[,, mass match to a hypothesis, ]".into(),
-                "[MS, MS:1000511, ms level, 1]".into(),
-                fix(ppm, 2),
-                "1".into(),
-            ];
-            line(&mut out, &cells);
-        }
+        line(out, &cells);
+    }
+}
+
+/// The mzTab-M file of the rows of the view; the bytes depend only on the table, the samples and the view.
+pub fn mztab(c: &Ctx) -> String {
+    let body = Body::new(c);
+    let mut out = String::new();
+    metadata(&mut out, c, &body.svs);
+    out.push('\n');
+    small_molecules(&body, &mut out);
+    out.push('\n');
+    features(&body, &mut out);
+    if body.evidence_of.iter().any(Option::is_some) {
+        out.push('\n');
+        evidence(&body, &mut out);
     }
     out
 }
