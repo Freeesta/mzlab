@@ -243,10 +243,12 @@ try:
               const rev = (id, level) => ({ pol: "POS", id, mz: 200.1, rt: 3.2, current: { level, sub: "", name: "x", group: "" }, alternatives: [{ name: "Caffeine", score: 0.91 }], rtlogp: { ok: true },
                 proposal: { class: "2b-check", proposed: level === "3" ? "2b" : "3", reasons: ["one reason"], evidence: { n_peaks: 5, n_explained: 3, frac_explained: 0.6, view: { peaks: [{ mz: 138.07, rel: 100, frag: { formula: "C6H8N3", ppm: 1.2, loss: "CO" } }] } } } });
               window.__saved = [];
-              ATTRIBUTIO_CORE.pool = async () => ({ attributioExport: async (f, r, k) => ({ files: [{ name: 'out_' + k + '.csv', text: 'a;b' }], warnings: [] }), attributioReview: async (f, r, pol, id) => rev(id, id === 1 ? "2" : "3"), attributioDecision: async (f, r, d) => { window.__saved.push(JSON.parse(d)); return { summary: { path: "decisions/feature_decisions.csv" }, text: "csv" }; } });
+              ATTRIBUTIO_CORE.pool = async () => ({ attributioExport: async (f, r, k) => ({ files: k === 'evidence' ? [{ name: 'evidence_demo.json', text: '{"settings_hash":"0123456789ab","settings":"tol=0.5","features":2}' }] : [{ name: 'out_' + k + '.csv', text: 'a;b' }], warnings: [] }), attributioReview: async (f, r, pol, id) => rev(id, id === 1 ? "2" : "3"), attributioDecision: async (f, r, d) => { window.__saved.push(JSON.parse(d)); return { summary: { path: "decisions/feature_decisions.csv" }, text: "csv" }; } });
               const data = { columns: [], rows: [["POS", 1, 200.1, 3.2, 2, "b", "b", "x", "", ""], ["POS", 2, 201.1, 3.4, 3, "a", "b", "y", "", ""]] };
               FLOW.openResult({ type: "annot", label: "demo (campaign folder)", campaign: { root: "demo", files: [], data, summary: {} }, text: async () => "" });
             }""")
+            pg.click('.flx-res button:has-text("Settings digest")'); attendi(pg, "document.querySelector('.flw-digest code') && document.querySelector('.flw-digest code').textContent === '0123456789ab'")
+            assert pg.locator('.flx-res .flw-digest button:has-text("Copy")').count() == 1
             # the engine exports of Attributio hang on the same campaign: six items, one file downloads
             assert pg.locator('.flx-res #at-export:not([disabled])').count() == 1 and pg.locator('.flx-res #at-export-menu button').count() == 6
             assert pg.locator('.flx-res .flw-ms2 #ms2-insilico').count() == 1 and pg.locator('.flx-res .flw-ms2 #ms2-predict').count() == 1  # the MS2 panel
