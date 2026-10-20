@@ -122,7 +122,7 @@ Chi: M1 nuova DEV Rust; M2 e M3 la DEV «memoria wasm»; M4a la chat «CLI 2»; 
 - Consegna: PR, SHA, CI, pages.
 
 ### 5.4 M4 · mzFlow con il contratto di memoria (sostituisce il lavoro su Tabui, che non si tocca)
-Tre pacchetti senza file in comune. Prerequisiti: M1 e M2 per tutti; M3 per M4b e M4c; M7 per la prova (d).
+Tre pacchetti senza file in comune. M4a parte subito (usa `align_and_fill_stored` e il `budget_auto` nativo di oggi; la stima della famiglia a lastre arriva con M1); M4b e M4c dopo M1, M2 e M3; la prova (d) dopo M7.
 
 #### M4a · Runner nativo e stima per passo (chat «CLI 2», session_018kSawbhNiD1N4vwTZbp14Q)
 - Obiettivo: `features.align`/`features.gapfill` di `flow run` passano per `slabs::align_and_fill_stored` con un `MemBudget` (oggi `run::align` tiene tutte le tabelle senza budget): nativo = `budget_auto` (RAM/4, 1-16 GB), `--budget-mb N` per le prove. Una funzione Rust `flow::stima_passo(job, ingressi) -> {mb, via}` per `features.detect`, `features.align`, `features.gapfill` e prove (dal sondaggio dei `.mzfeatf` e dalle scansioni del `.mzidx`), usata da CLI, desktop e web; `prov/1` e `corsa/1` riportano `mem_mb` e `via` per passo.
