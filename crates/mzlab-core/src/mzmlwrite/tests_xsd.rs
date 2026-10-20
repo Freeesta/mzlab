@@ -34,10 +34,6 @@ fn schemas() -> Result<PathBuf, String> {
 
 #[test]
 fn the_indexed_file_validates_against_the_psi_schema() {
-    let dir = match schemas() {
-        Ok(d) => d,
-        Err(e) => return eprintln!("skipped: {e}"),
-    };
     let step = ProcStep {
         accession: "MS:1000035".into(),
         name: "peak picking".into(),
@@ -53,17 +49,30 @@ fn the_indexed_file_validates_against_the_psi_schema() {
     .1;
     let full = [Vec::new(), vec![step]].map(|steps| indexed_sample(steps).1);
     for idx in std::iter::once(bare).chain(full) {
-        let file = dir.join(format!("sample-{}.mzML", std::process::id()));
-        std::fs::write(&file, &idx).unwrap();
-        let out = Command::new("xmllint")
-            .args(["--noout", "--huge", "--schema"])
-            .arg(dir.join("mzML1.1.2_idx.xsd"))
-            .arg(&file)
-            .output();
-        std::fs::remove_file(&file).ok();
-        match out {
-            Err(e) => return eprintln!("skipped: xmllint: {e}"),
-            Ok(o) => assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr)),
-        }
+        valida(&idx);
+    }
+}
+
+/// `idx` against the indexed schema; a machine without `xmllint`, `curl` or network says so and passes.
+pub(super) fn valida(idx: &[u8]) {
+    let dir = match schemas() {
+        Ok(d) => d,
+        Err(e) => return eprintln!("skipped: {e}"),
+    };
+    let file = dir.join(format!(
+        "sample-{}-{:?}.mzML",
+        std::process::id(),
+        std::thread::current().id()
+    ));
+    std::fs::write(&file, idx).unwrap();
+    let out = Command::new("xmllint")
+        .args(["--noout", "--huge", "--schema"])
+        .arg(dir.join("mzML1.1.2_idx.xsd"))
+        .arg(&file)
+        .output();
+    std::fs::remove_file(&file).ok();
+    match out {
+        Err(e) => eprintln!("skipped: xmllint: {e}"),
+        Ok(o) => assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr)),
     }
 }

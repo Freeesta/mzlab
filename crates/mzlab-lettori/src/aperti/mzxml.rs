@@ -18,6 +18,7 @@ use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
 use super::mzxml_indice::{self, Riga};
+use super::mzxml_precursori::precursori_di;
 
 use super::mzxml_scan::{self as scan, attr, each, Tag, Testa};
 
@@ -108,7 +109,7 @@ impl LettoreMzxml {
             wide: p.a_64_bit.then(|| p.intensita.clone()),
             mz: p.mz,
         };
-        Ok((s, extra_di(&t)))
+        Ok((s, extra_di(&t, &self.indice)))
     }
 }
 
@@ -340,7 +341,7 @@ fn riconosci(fs: &mut FileSet) -> Fiducia {
     }
 }
 
-fn numero(t: Tag, n: &str) -> Option<f64> {
+pub(super) fn numero(t: Tag, n: &str) -> Option<f64> {
     attr(t, n)
         .trim()
         .parse()
@@ -396,13 +397,14 @@ fn voce(k: usize, r: Riga, t: &Testa) -> Result<VoceScansione> {
     })
 }
 
-/// The `userParam`s and the window of a scan for the mzML we write.
-fn extra_di(t: &Testa) -> SpectrumExtra {
+/// The `userParam`s, the window and the precursors of a scan for the mzML we write.
+fn extra_di(t: &Testa, indice: &[VoceScansione]) -> SpectrumExtra {
     let mut e = SpectrumExtra {
         sim: attr(t.scan, "scanType").eq_ignore_ascii_case("SIM"),
         observed: numero(t.scan, "lowMz").is_some() && numero(t.scan, "highMz").is_some(),
         window: numero(t.scan, "startMz").zip(numero(t.scan, "endMz")),
-        params: Vec::new(),
+        precursors: precursori_di(t, indice),
+        ..SpectrumExtra::default()
     };
     let mut aggiungi = |g: Tag, nomi: &[&str]| {
         for n in nomi {

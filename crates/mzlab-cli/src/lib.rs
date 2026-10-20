@@ -29,12 +29,14 @@ mod flow_network;
 mod flow_out;
 pub mod flow_report;
 mod flow_run;
+pub mod msn_graph;
 
 const HELP: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
 
 usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params FILE.json]
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
+       mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
 
   FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
   --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
@@ -79,7 +81,7 @@ pub(crate) fn build_index(path: &Path, idx: &Path, budget: usize) -> Result<()> 
     Ok(())
 }
 
-fn open(idx: &Path) -> Result<Index<File>> {
+pub(crate) fn open(idx: &Path) -> Result<Index<File>> {
     let f = File::open(idx).map_err(io)?;
     let size = f.metadata().map_err(io)?.len();
     Index::open(f, size)
@@ -199,6 +201,43 @@ impl Outcome {
     }
 }
 
+/// `mzlab-cli msn-graph ...`: the graph (or the line of numbers) to the standard output or `--out`.
+fn msn_graph_cmd(args: impl Iterator<Item = String>) -> Outcome {
+    let a = match msn_graph::parse_args(args) {
+        Ok(Some(a)) => a,
+        Ok(None) => return Outcome::ok(format!("{}\n", msn_graph::HELP).into_bytes()),
+        Err(e) => return Outcome::fail(&e),
+    };
+    // one folder per call: the tests run several in one process
+    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-msn{k}", std::process::id()));
+    let r = std::fs::create_dir_all(&tmp)
+        .map_err(io)
+        .and_then(|_| msn_graph::esegui(&a, &tmp));
+    let _ = std::fs::remove_dir_all(&tmp);
+    match (r, &a.out) {
+        (Err(e), _) => Outcome::fail(&e.to_string()),
+        (Ok(t), None) => Outcome::ok(t.into_bytes()),
+        (Ok(t), Some(p)) => std::fs::write(p, t).map_or_else(
+            |e| Outcome::fail(&e.to_string()),
+            |_| Outcome::ok(Vec::new()),
+        ),
+    }
+}
+
+/// `mzlab-cli flow command PLAN.json`: the script that reruns the plan, on stdout.
+fn flow_command(args: Vec<String>) -> Outcome {
+    let [path] = args.as_slice() else {
+        return Outcome::fail("usage: mzlab-cli flow command PLAN.json");
+    };
+    let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"));
+    match text.and_then(|t| mzlab_core::flow::command_route(&t).map_err(|e| e.to_string())) {
+        Ok(s) => Outcome::ok(s.into_bytes()),
+        Err(e) => Outcome::fail(&e),
+    }
+}
+
 /// `mzlab-cli <args>`: `args` without the program name.
 pub fn execute(args: &[String]) -> Outcome {
     let mut args = args.iter().cloned();
@@ -210,9 +249,11 @@ pub fn execute(args: &[String]) -> Outcome {
                     flow_report::run(args).map_or_else(|e| Outcome::fail(&e), Outcome::ok)
                 }
                 Some("run") => flow_run::run(args.collect(), None),
-                _ => Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow report RUNDIR [--out FILE]"),
+                Some("command") => flow_command(args.collect()),
+                _ => Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow command PLAN.json"),
             }
         }
+        Some("msn-graph") => return msn_graph_cmd(args),
         Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Some(c) => return Outcome::fail(&format!("unknown command {c}")),
     }
@@ -250,7 +291,11 @@ pub fn execute(args: &[String]) -> Outcome {
 mod tests;
 
 #[cfg(test)]
+mod flow_budget_tests;
+#[cfg(test)]
 mod flow_cache_tests;
+#[cfg(test)]
+mod flow_command_tests;
 #[cfg(test)]
 mod flow_compare_tests;
 #[cfg(test)]
@@ -264,4 +309,8 @@ mod flow_network_tests;
 #[cfg(test)]
 mod flow_report_tests;
 #[cfg(test)]
+mod flow_rule_tests;
+#[cfg(test)]
 mod flow_run_tests;
+#[cfg(test)]
+mod msn_graph_tests;

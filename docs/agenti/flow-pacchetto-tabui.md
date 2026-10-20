@@ -1,0 +1,25 @@
+# Pacchetto «passi di Tabui in mzFlow»: prompt DEV pronto
+Obiettivo: far eseguire a `mzlab-cli flow run` (e a «Run on this computer») i passi che Tabui ha e mzFlow descrive soltanto. Stato di partenza e tabella completa: `flow-copertura-tabui.md`. Regole: calcolo solo in Rust sui motori già esistenti, ogni parametro del descrittore con il suo `--set ISTANZA.NOME=VALORE`, un registro (`flow::steps()`), esecutori in `EXECUTORS`, test di parità CLI = pagina, `flow_rule_tests.rs` verde, buchi nuovi in `BUCHI`. Una PR per passo, nell'ordine sotto.
+
+## Prompt DEV (copialo in una chat nuova)
+Sei il DEV «Flow Tabui». Zona: `crates/mzlab-cli` e i motori già in `crates/mzlab-feat`. Leggi `docs/agenti/cli.md`, `rust-flow.md`, `flow-copertura-tabui.md`. Porta in `EXECUTORS` (`crates/mzlab-cli/src/flow.rs`) i passi seguenti, uno per PR, con un file `flow_<nome>.rs` + `flow_<nome>_tests.rs` ciascuno (modello: `flow_network.rs` e `flow_ms2.rs`; `flow.rs` ≤ 500 righe, funzioni ≤ 80).
+
+Per ogni passo: (1) registra il descrittore nel registro del CLI (`flow::steps()`; i descrittori Tabui stanno in `crates/mzlab-feat/src/steps/tabui*.rs`, esportati in `docs/schemi/steps-tabui-1.json`), (2) esecutore che legge gli ingressi come file e produce un file del tipo della porta d'uscita, (3) test: stesso risultato di Tabui sugli stessi dati sintetici (mai dati del laboratorio), (4) una riga nel file d'area. Non toccare `.github/workflows`, non alzare i tetti dei `.wasm`.
+
+## Passi, nell'ordine
+1. **`table.filter`** (ingressi `table`, `samples`; uscita `table`): motore `crates/mzlab-feat/src/filters.rs` (`apply`, `from_json`, `to_json`) con ruoli da `campioni/2` (`crates/mzlab-core/src/campioni/`); il più piccolo e sblocca i modelli «Blank-corrected table» e «Standards check».
+2. **`tp.generate`** (ingressi `parent`, `features`; uscita `hypotheses`): `crates/mzlab-feat/src/hypo.rs` (`generate(rules, inp, p)`, `HypoParams::default()`, `Registry::to_json`) e le regole in `hypo/rules.rs`, `hypo/sources.rs`; ingresso `parent` come campi nome/formula neutra/SMILES (ingresso testuale o file piccolo), parametri da `HypoParams`.
+3. **`tp.link`** (ingressi `table`, `spectra`, `hypotheses`; uscita `tp`): abbinamento ipotesi ↔ feature in `crates/mzlab-feat/src/steps/tabui_link.rs` (descrittore) e nel codice che costruisce `tp/1` (`interp/`, `evid.rs`); l'uscita `tp/1` è l'ingresso già accettato da `tp.network` (`flow_network.rs`).
+4. **`tp.filter`** (ingresso `table`; uscita `table`): filtri dei prodotti di `crates/mzlab-feat/src/interp/filtri.rs` (`filtri/1`), stessa forma di `table.filter` ma sulle righe `tp/1`.
+5. **`tp.position`** (ingressi `tp`, `parent`; uscita `sites`): `posiz/1`, vedi `docs/agenti/posizioni.md` (`chem/posizioni.rs`); prova: classi compatibili con la MS2 identiche a quelle della pagina.
+6. **`features.ms2_link`** (ingressi `index`, `peaks`; uscita `peaks`): `crates/mzlab-feat/src/ms2.rs` (`link`) e, per la bassa risoluzione, `crates/mzlab-finder-lr-wasm/src/ms2link.rs`; parità con `tests/lr_ms2link.rs`.
+
+## Quando finisce il pacchetto
+- Il piano del modello «TP time series» (`tp.generate` → `tp.link` → `tp.filter` → `table.filter` → `tp.network`) gira con `flow run` e rifà la corsa con gli stessi byte (test di cache e di rigioco come in `flow_run_tests.rs`).
+- `flow run --dry-run` non dà più `err.flow.step.unknown` per i sei passi; `executable()` è vera; `flow-copertura-tabui.md` e `cli.md` riscritti allo stato nuovo; l'elenco dei buchi qui sotto accorciato.
+
+## Buchi per modulo (oggi)
+- **Registro CLI**: `tp.generate`, `tp.link`, `tp.filter`, `tp.position`, `structure.*` non sono in `flow::steps()` (`err.flow.step.unknown`); i sei passi di questo pacchetto sono la parte Tabui.
+- **Senza esecutore** (`err.flow.step.native`): `table.drift`, `table.stats`, `table.pca`, `table.kmd` (motori in `crates/mzlab-feat/src/stat/`, `drift.rs`), `features.estimate` (`params.rs`), `export.table_csv`, `export.mztab` (`export_mztab.rs`), `import.raw`, `spectra.chimeric`, `spectra.insilico`, `rt.predict`, `annot.regulatory`, `annot.hazard` (il registro di pericolosità non è in Rust).
+- **Mancano come passi**: albero/grafo MSn (`msngrafo/1`), centroidazione prima di `features.detect` (`lettori_centroidi.rs`), ricerca per nome del composto, avanzamento in diretta.
+- **Sito**: nessun passo è eseguibile dal browser (manca la terza voce di `F.runners`); il sito costruisce il piano e dà il comando da copiare.

@@ -85,7 +85,7 @@
   };
   const ready = lrInit();
   ready.catch(() => {});
-  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|spectra|spectrum|dda|mrm|filters|scanlist|nearest_scan|scaninfo|scan|scanavg|scanbin|scan_axis|ms2tr|fileinfo|msntree|msn_albero)\b/;
+  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|spectra|spectrum|dda|mrm|filters|scanlist|nearest_scan|scaninfo|scan|scanavg|scanbin|scan_axis|ms2tr|fileinfo|msntree|msn_albero|msn_grafo)\b/;
 
   const realFetch = window.fetch.bind(window);
   const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
@@ -106,7 +106,7 @@
     const rb = await rustReady;
     if (rb && method === "GET" && RUST_ROUTES.test(url)) {
       const r = await rb.handle(method, url);
-      if (r) return new Response(r.buf || r.text, { status: r.status, headers: { "Content-Type": r.buf ? "application/octet-stream" : "application/json", "X-Py-Ms": String(r.ms || 0), "X-Engine": "rust" } });
+      if (r) return new Response(r.buf || r.text, { status: r.status, headers: { "Content-Type": r.buf ? "application/octet-stream" : r.type || "application/json", "X-Py-Ms": String(r.ms || 0), "X-Engine": "rust", ...(r.disposition ? { "Content-Disposition": r.disposition } : {}) } });
     }
     const a = await lr.handle(method, url, init);
     if (a) return new Response(a.text, { status: a.status, headers: { "Content-Type": "application/json", "X-Engine": "rust" } });

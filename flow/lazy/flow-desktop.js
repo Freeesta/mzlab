@@ -1,6 +1,6 @@
 // @ts-check
 // Flow (administrator mode): the «This computer» runner, only in the desktop app (window.MZLAB_DESKTOP). It sends the plan to the native engine (route `flow/run` of mzlab://,
-// the engine of mzlab-cli) and lists what each step did from the `prov/1` it answers. The files the plan names must be open in the Data tab. The web exports the plan instead.
+// the engine of mzlab-cli; the sample lists the page holds go along as text) and lists what each step did from the `prov/1` it answers. The files open in the Data tab become the scan inputs of the plan (a file the app does not hold is left out and reported). The web exports the plan instead.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
@@ -13,13 +13,24 @@
     return text;
   };
 
-  /** runs the plan of S in the app; resolves with {dir, steps: [{id, ms, error, made}]} (made: the files the step wrote) , rejects with {key, params} @param {any} S */
+  /** runs the plan of S in the app with the files open in the Data tab as its scan inputs; a file the app does not hold is left out and the run goes on with the others;
+   * resolves with {dir, steps: [{id, ms, cached, error, made}], excluded: [name], warns}, rejects with {key, params} @param {any} S */
   const run = async S => {
-    const out = JSON.parse(await post("flow/run", { plan: F.exportText(S.plan) })), prov = JSON.parse(out.prov), ent = prov.entity || {};
+    const { plan, names, warns } = F.runPlanFromData(S), excluded = /** @type {string[]} */ ([]);
+    let out;
+    for (;;) {
+      try { out = JSON.parse(await post("flow/run", { plan: F.exportText(plan), files: S.samplesJson || {} })); break; }
+      catch (e) {
+        const x = /** @type {any} */ (e), bad = x && x.key === "err.flow.input.missing" ? x.params.input : null;
+        if (!bad || !names.includes(bad) || names.length < 2) throw e;
+        F.removeInput(plan, bad); names.splice(names.indexOf(bad), 1); excluded.push(bad);
+      }
+    }
+    const prov = JSON.parse(out.prov), ent = prov.entity || {};
     const steps = Object.entries(prov.activity || {}).map(([id, a]) => { const x = /** @type {any} */ (a);
       const made = (x.generated || []).map((/** @type {string} */ k) => ({ type: ent[k] && ent[k].type, label: ent[k] && ent[k].label })).filter((/** @type {any} */ m) => m.type && m.label);
-      return { id, ms: x.ms, made, error: x.error ? { key: x.error.error_key, params: x.error.params } : null }; });
-    return { dir: out.dir, steps };
+      return { id, ms: x.ms, cached: !!x.cached, made, error: x.error ? { key: x.error.error_key, params: x.error.params } : null }; });
+    return { dir: out.dir, steps, excluded, warns };
   };
   /** the text of a file the last run wrote @param {string} name */
   const read = name => post("flow/read", { name });
@@ -43,20 +54,33 @@
     }, "Report");
     rep.disabled = true;
     const go = btn("run", "Run the plan on this computer", async () => {
-      go.disabled = true; note.textContent = "Running…"; waiting();
+      go.dataset.busy = "1"; go.disabled = true; note.textContent = "Running…"; waiting();
       try {
         const res = await run(S), by = new Map(res.steps.map((/** @type {any} */ s) => [s.id, s]));
         list.textContent = ""; S.results = {};
         for (const s of res.steps) S.results[s.id] = s.made.map((/** @type {any} */ m) => ({ ...m, text: () => read(m.label), load: /\.mzfeat$/i.test(m.label) ? () => readFile(m.label) : undefined }));
         if (S.redraw) S.redraw();
-        for (const inst of S.plan.steps) { const s = /** @type {any} */ (by.get(inst.id)); list.append(slot(inst, !s ? "skipped" : s.error ? F.message({ key: s.error.key, params: s.error.params }) : `done in ${(s.ms / 1000).toFixed(1)} s`)); }
-        note.textContent = `Finished. The results are in ${res.dir}.`;
+        for (const inst of S.plan.steps) { const s = /** @type {any} */ (by.get(inst.id)); list.append(slot(inst, !s ? "skipped" : s.error ? F.message({ key: s.error.key, params: s.error.params }) : s.cached ? "reused (nothing changed)" : `done in ${(s.ms / 1000).toFixed(1)} s`)); }
+        const reused = res.steps.filter((/** @type {any} */ s) => s.cached).length, made = res.steps.filter((/** @type {any} */ s) => !s.error).length - reused;
+        const cut = res.excluded.length ? ` ${res.excluded.length} file${res.excluded.length > 1 ? "s" : ""} excluded (not held by the app): ${res.excluded.join(", ")}.` : "";
+        note.textContent = `Finished. ${reused} steps reused, ${made} computed. The results are in ${res.dir}.${cut}${res.warns.length ? " Warning: " + res.warns.join(" ") : ""}`;
         rep.disabled = false;
         await F.afterRun(S);
       } catch (e) { list.textContent = ""; note.textContent = F.message(/** @type {any} */ (e)); }
-      go.disabled = false;
+      go.dataset.busy = ""; go.disabled = S.problems.length > 0;
     }, "Run on this computer");
     waiting();
-    return el("div", { class: "fl-meta" }, go, rep, note, list);
+    const box = el("div", { class: "fl-meta" }, go, rep, note, list);
+    // a plan with problems does not run: the reason stays next to the button and follows the plan
+    const gate = () => {
+      if (!box.isConnected && box.dataset.shown) { document.removeEventListener("flow:changed", gate); return; }
+      box.dataset.shown = "1";
+      const bad = S.problems.length;
+      go.disabled = go.dataset.busy === "1" || bad > 0;
+      if (bad) note.textContent = `Cannot run yet: the plan has ${bad} problem${bad === 1 ? "" : "s"}. Open the checklist to see what to fix.`;
+      else if (note.textContent.startsWith("Cannot run yet")) note.textContent = "";
+    };
+    document.addEventListener("flow:changed", gate); gate();
+    return box;
   };
 })();

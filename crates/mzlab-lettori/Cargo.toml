@@ -7,15 +7,15 @@ license.workspace = true
 
 [features]
 # one feature per family (docs/agenti/lettori-modulo.md); `tutte` is for the desktop app and for cargo test
-aperti = []
+aperti = ["mzlab-core/precursori"]
 andi = []
-thermo = ["mzlab-core/thermo"]
+thermo = ["mzlab-core/thermo", "mzlab-core/precursori"]
 agilent = []
 sciex = ["mzlab-core/sciex"]
 waters = []
 shimadzu = []
 # the SQLite reader is written in the crate (bruker/sqlite_min.rs); ruzstd (MIT, pure Rust) decodes the blocks of analysis.tdf_bin
-bruker = ["dep:ruzstd"]
+bruker = ["dep:ruzstd", "mzlab-core/precursori"]
 tutte = ["aperti", "andi", "thermo", "agilent", "sciex", "waters", "shimadzu", "bruker"]
 
 [dependencies]

@@ -55,7 +55,7 @@ pub struct Limiti {
 }
 
 impl Limiti {
-    /// The browser: 256 MB per WASM instance, 192 of them for work (`budget::WASM_BUDGET_MB`).
+    /// The browser: the floor of its budgets, 192 MB (`budget::WASM_BUDGET_MB`); a bigger budget changes the way (memory or slabs), not these limits.
     pub const fn sito() -> Limiti {
         Limiti {
             profondita: 256,
@@ -211,6 +211,11 @@ pub trait Lettore {
     /// What the mzML says of a spectrum besides its points (SIM mark, scan window).
     fn extra_mzml(&self, _s: &Spectrum) -> SpectrumExtra {
         SpectrumExtra::default()
+    }
+    /// `extra_mzml` for a reader that has to read the file again to answer (the trailer of a Thermo scan): scan `k` of sample `c`, whose points are `s`. The mzML
+    /// writer asks this one; the index builders ask `extra_mzml` (cheap, no read), so what only this one gives is in the mzML and not in the rows of an index.
+    fn extra_scansione(&mut self, _c: usize, _k: usize, s: &Spectrum) -> SpectrumExtra {
+        self.extra_mzml(s)
     }
     /// The scans the index of sample `c` lists but that lie beyond the end of the data file (a truncated copy): they are not in the index.
     fn mancanti(&mut self, _c: usize) -> usize {

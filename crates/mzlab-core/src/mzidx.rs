@@ -19,7 +19,7 @@ const HEADER: usize = 64;
 pub(crate) const NB: usize = 10000;
 /// Bytes the build holds per scan for its membership list (`member`): the vector header and the small allocation behind it.
 const MEMBER_BYTES: usize = 104;
-/// Default bytes of peaks held in memory (the WASM memory is 256 MB at most).
+/// Default bytes of peaks held in memory (the browser budget is 192 MB at the least).
 pub const DEFAULT_BUDGET: usize = 64 << 20;
 
 /// Where the file goes: writes at absolute offsets (gaps read as zeros). Files, `Cursor<Vec<u8>>` and the browser's callback implement it.

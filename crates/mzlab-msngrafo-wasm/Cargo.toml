@@ -1,0 +1,14 @@
+[package]
+name = "mzlab-msngrafo-wasm"
+description = "wasm-bindgen bridge of mzlab_core::msngrafo (the fragmentation graph msngrafo/1 of an MSn infusion); a .wasm of its own, loaded by the worker of the engine on the first request of the graph"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+js-sys = "0.3.106"
+mzlab-core = { path = "../mzlab-core" }
+wasm-bindgen = "0.2"

@@ -4,6 +4,7 @@
 
 mod canon;
 mod check;
+mod command;
 mod corsa;
 mod order;
 mod parse;
@@ -13,10 +14,11 @@ mod write;
 
 pub use canon::{cache_key, canonical, value_text, Resolved};
 pub use check::{check, conversion_path, Platform, Problem};
+pub use command::{command, route as command_route};
 pub use corsa::{build as corsa_build, Corsa, Uscita};
 pub use order::{levels, plan_order};
 pub use parse::parse;
-pub use prov::{prov_json, Activity, Agent, ErrorRecord};
+pub use prov::{prov_json, Activity, Agent, ErrorRecord, Mem};
 pub use run::{execute, Artifact, Job, Outcome, Run, Runner};
 pub use write::plan_json;
 

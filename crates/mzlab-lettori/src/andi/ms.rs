@@ -336,7 +336,7 @@ impl Lettore for LettoreAndi {
             sim: self.sim,
             observed: false,
             window: self.finestre.get(s.index).copied().flatten(),
-            params: Vec::new(),
+            ..SpectrumExtra::default()
         }
     }
 }

@@ -1,10 +1,10 @@
 // @ts-check
-// Flow (administrator mode): the page. Loads the three lists of descriptors, keeps the plan (an mzflow/2 object), draws the palette, the inputs and the chain,
+// Flow (administrator mode): the page. Loads the four lists of descriptors, keeps the plan (an mzflow/2 object), draws the palette, the inputs and the chain,
 // validates after every change and exports / imports the plan. Running the chain is not here: the plan is run by the native runner (mzlab-cli, example `flow`).
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
-  const LISTS = ["steps-1.json", "steps-attributio-1.json", "steps-tabui-1.json"];
+  const LISTS = ["steps-1.json", "steps-attributio-1.json", "steps-tabui-1.json", "steps-cli-1.json"];
 
   /** every problem of the plan as the Rust checker would report it (F.validateExtra adds the checks of what the checker does not know yet) @param {any} plan @param {any} reg */
   F.validate = (plan, reg) => {
@@ -15,7 +15,7 @@
   /** the page in `sec`; `lists` are the three parsed descriptor files @param {HTMLElement} sec @param {any[][]} lists */
   F.mount = (sec, lists, start) => {
     const { el, btn } = F, reg = F.registry(lists);
-    /** @type {any} */ const S = { plan: start || F.newPlan(), reg, problems: [], history: [], snap: "", cli: false, note: "" };
+    /** @type {any} */ const S = { plan: start || F.newPlan(), reg, problems: [], history: [], future: [], snap: "", cli: false, note: "" };
     F.current = S;
     const pal = F.palette(reg, stepId => { F.addStep(S.plan, reg, stepId); refresh(`fl-card-${S.plan.steps[S.plan.steps.length - 1].id}`); });
     const top = el("div", { class: "fl-top" }), inputs = el("div", { class: "fl-inputs" }), chain = el("div"), goal = el("div", { class: "fl-goal", role: "status" });
@@ -34,7 +34,8 @@
       if (r.error) { S.note = F.message({ key: r.error.key, params: r.error.params }); refresh(); return; }
       S.plan = r.plan; S.note = `Opened ${f.name}.`; refresh();
     } });
-    const doUndo = () => { const prev = S.history.pop(); if (prev) { S.plan = JSON.parse(prev); S.snap = prev; refresh(null, true); } };
+    const doUndo = () => { const prev = S.history.pop(); if (prev) { S.future.push(S.snap); S.plan = JSON.parse(prev); S.snap = prev; refresh(null, true); } };
+    const doRedo = () => { const next = S.future.pop(); if (next) { S.history.push(S.snap); S.plan = JSON.parse(next); S.snap = next; refresh(null, true); } };
     const undo = btn("undo", "Undo", doUndo);
     const status = el("span", { class: "fl-st", role: "status", id: "fl-status" });
 
@@ -58,13 +59,15 @@
         : g.canReach ? `The chain does not reach the identification level yet.${g.next.length ? " Next: " + names(g.next) + "." : ""}`
           : `The chain cannot reach the identification level from these inputs. Add an input of type ${g.missing.join(" and ") || "…"}.`;
     };
+    let cliSeq = 0;
     const drawCli = () => {
       cli.textContent = "";
       if (!S.cli) return;
-      const text = F.cliCommand("flow.mzflow.json");
+      const mine = ++cliSeq, code = el("code", { text: "…" });
+      F.cliCommand(S.plan).catch((/** @type {Error} */ e) => "The command could not be built: " + e.message).then((/** @type {string} */ t) => { if (mine === cliSeq) code.textContent = t; });
       cli.append(el("div", { class: "fl-cli" }, el("strong", { text: "Run with the command line" }),
-        el("p", { text: "Flow does not run the chain. Download the plan, put it in a folder with the input files, and run it with the native runner:" }), el("code", { text }),
-        el("div", { class: "fl-meta" }, btn("export", "Download the plan", download, "Download plan"), btn("copy", "Copy the command", () => navigator.clipboard && navigator.clipboard.writeText(text), "Copy command")),
+        el("p", { text: "Flow does not run the chain. Download the plan, put it in a folder with the input files, and run it with the native runner:" }), code,
+        el("div", { class: "fl-meta" }, btn("export", "Download the plan", download, "Download plan"), btn("copy", "Copy the command", () => navigator.clipboard && navigator.clipboard.writeText(code.textContent || ""), "Copy command")),
         S.problems.length ? el("p", { class: "fl-note", text: `The plan has ${S.problems.length} problem(s); the runner refuses it until they are solved.` }) : null));
     };
     const note = el("span", { class: "fl-note", role: "status", id: "fl-msg" });
@@ -85,7 +88,7 @@
     function refresh(focus, fromUndo) {
       const active = /** @type {HTMLElement | null} */ (document.activeElement), key = focus === undefined ? active && active.dataset && active.dataset.fk : focus;
       const now = JSON.stringify(S.plan);
-      if (!fromUndo && S.snap && now !== S.snap) { S.history.push(S.snap); if (S.history.length > 50) S.history.shift(); }
+      if (!fromUndo && S.snap && now !== S.snap) { S.history.push(S.snap); S.future = []; if (S.history.length > 50) S.history.shift(); }
       S.snap = now;
       // the chain is drawn again from nothing: the page keeps its place, or a click that caused the redraw would land elsewhere
       const held = /** @type {[HTMLElement, number][]} */ (scrollers(root).map(n => [n, n.scrollTop]));
@@ -96,7 +99,7 @@
       if (key) { const t = root.querySelector(`[data-fk="${CSS.escape(key)}"], #${CSS.escape(key)}`); if (t instanceof HTMLElement) t.focus({ preventScroll: !key.startsWith("fl-card-") }); }
       sec.dispatchEvent(new CustomEvent("flow:changed", { bubbles: true }));
     }
-    S.refresh = refresh; S.undo = doUndo; S.download = download;
+    S.refresh = refresh; S.undo = doUndo; S.redo = doRedo; S.download = download;
     /** @type {any} */ (sec).__flow = S;
     refresh(null);
   };

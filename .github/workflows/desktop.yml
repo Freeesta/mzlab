@@ -15,8 +15,10 @@ on:
 permissions:
   contents: read
 
+# The event is part of the group: when release.yml calls this workflow github.event_name is the caller's (workflow_dispatch or tag push),
+# so a push to main can no longer displace the release's installers from the single waiting slot of the group.
 concurrency:
-  group: desktop-${{ github.ref }}
+  group: desktop-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
 
 jobs:
@@ -148,6 +150,10 @@ jobs:
           else
             cargo install tauri-cli --version "=$TAURI_CLI" --locked --force
           fi
+      # the restored cache of target/ may hold installers of an older version: the artifact must carry only the ones built now
+      - name: Remove stale bundles
+        shell: bash
+        run: rm -rf target/desktop/bundle target/universal-apple-darwin/desktop/bundle
       - name: Installer
         working-directory: crates/mzlab-desktop
         env:

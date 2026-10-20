@@ -6,7 +6,7 @@
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
   /** where a plan can run: each runner has a name and a function; the desktop and web runners plug in here later */
-  F.runners = { cli: { name: "Command line", run: (/** @type {any} */ S) => ({ title: "Run with the command line", text: F.cliCommand("flow.mzflow.json"), plan: S }) } };
+  F.runners = { cli: { name: "Command line", run: async (/** @type {any} */ S) => ({ title: "Run with the command line", text: await F.cliCommand(S.plan).catch((/** @type {Error} */ e) => "The command could not be built: " + e.message), plan: S }) } };
 
   /** a small menu under `anchor`; items {label, line, on?, run}. Closes on Escape, on a click outside and after a choice @param {HTMLElement} anchor @param {any[]} items @param {HTMLElement} host */
   F.menu = (anchor, items, host) => {
@@ -100,6 +100,7 @@
       run: () => { let made = /** @type {any} */ (null); go(() => { made = F.addAddon(S, a); }); if (made) { const n = nodeOfStep(made.id); selected = n ? n.key : ""; redraw(); if (n) cv.reveal(n.key); } } })), root), "Add analysis");
     addBtn.id = "flx-add";
     const undoBtn = btn("undo", "Undo the last change", () => S.undo(), "Undo");
+    const redoBtn = btn("redo", "Redo the change you undid", () => S.redo(), "Redo");
     const fitBtn = btn("fit", "Fit all steps in view", () => cv.fit(), "Fit");
     const check = btn("warn", "Show what needs attention", (/** @type {Event} */ e) => {
       const items = S.problems.map((/** @type {any} */ p) => { const f = F.friendly(S, p), n = nodeOfStep(p.instance); return { label: `${n ? n.title : p.instance}: ${f.text}`, line: "Show me", run: () => { if (n) { selected = n.key; redraw(); cv.reveal(n.key); } } }; });
@@ -107,8 +108,8 @@
     }, "Checklist");
     const run = btn("run", "Export the plan and run it", () => showRun(), "Run");
     run.classList.add("flx-run"); run.id = "flx-run";
-    const showRun = () => {
-      const r = F.runners.cli.run(S);
+    const showRun = async () => {
+      const r = await F.runners.cli.run(S);
       planView.hidden = false;
       const box = el("div", { class: "fl-cli" }, el("strong", { text: r.title }), el("p", { text: F.runners.desktop.available() ? "Run it here, or download the plan and use the command line:" : "On the web Flow exports the plan. Download it, put it in a folder with your files and run it with the native runner:" }), el("code", { text: r.text }),
         el("div", { class: "fl-meta" }, btn("export", "Download the plan", S.download, "Download plan"), btn("copy", "Copy the command", () => navigator.clipboard && navigator.clipboard.writeText(r.text), "Copy command"), btn("x", "Close", () => box.remove(), "Close")));
@@ -116,7 +117,7 @@
       root.querySelectorAll(".fl-cli").forEach(n => n.remove()); bar.after(box);
     };
     const open = btn("import", "Open a plan (mzflow/2)", () => { const f = listHost.querySelector("#fl-file"); if (f) /** @type {HTMLElement} */ (f).click(); }, "Open");
-    const bar = el("div", { class: "flx-bar" }, el("h2", { text: "Flow" }), tplBtn, addBtn, el("span", { class: "flx-seg", role: "group", "aria-label": "Mode" }, ...modeBtns), undoBtn, fitBtn, check, open, run, status);
+    const bar = el("div", { class: "flx-bar" }, el("h2", { text: "Flow" }), tplBtn, addBtn, el("span", { class: "flx-seg", role: "group", "aria-label": "Mode" }, ...modeBtns), undoBtn, redoBtn, fitBtn, check, open, run, status);
     const tabs = ["canvas", "list", "plan"].map(t => el("button", { type: "button", role: "tab", "aria-selected": String(t === tab), "data-tab": t, onclick: () => setTab(t) }, el("span", { text: t === "canvas" ? "Canvas" : t === "list" ? "List view" : "Plan (JSON)" })));
     const issuesHost = el("div", { class: "flx-issues-host" });
     const body = el("div", { class: "flx-body" }, palHost, cv.root, inspHost);
@@ -125,9 +126,16 @@
       tab = t; tabs.forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
       body.hidden = t !== "canvas"; issuesHost.hidden = t !== "canvas"; planView.hidden = t !== "plan"; listHost.hidden = t !== "list"; redraw(); if (t === "canvas") cv.fit();
     }
+    // Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) outside text fields
+    root.addEventListener("keydown", e => {
+      const t = /** @type {HTMLElement} */ (e.target);
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable) return;
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey) { e.preventDefault(); S.undo(); } else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); S.redo(); }
+    });
     sec.textContent = ""; sec.append(root);
-    listHost.addEventListener("flow:changed", () => { undoBtn.disabled = !S.history.length; redraw(); });
-    tplCards(); planView.hidden = true; undoBtn.disabled = true;
+    listHost.addEventListener("flow:changed", () => { undoBtn.disabled = !S.history.length; redoBtn.disabled = !S.future.length; redraw(); });
+    tplCards(); planView.hidden = true; undoBtn.disabled = true; redoBtn.disabled = true;
     redraw(); requestAnimationFrame(() => cv.fit());
     S.redraw = redraw; /** @type {any} */ (sec).__flow = S; /** @type {any} */ (sec).__shell = { select: cvUi.select, model };
   };

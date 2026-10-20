@@ -29,6 +29,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
   Mai a un subagente: decisioni, codice nuovo, testi di Teoria, asserzioni dei test, commit, push, merge.
 - **Agente locale** (Mac di Federico, `~/mzLab/`): può fare commit e push su `main`; non cancella file, li sposta in `~/mzLab/_cestino/<data>_<motivo>/`.
 - **Regola Tutto in Rust**: ogni calcolo, elaborazione numerica o logica di motore sta solo in Rust (`crates/`, anche `.wasm`), con il suo test di parità; Python solo per test, `tools/` e riferimento; JS solo interfaccia. `tests/test_guardie_regole.py` e `tests/test_regola_rust.py` rifiutano script Python di calcolo runtime non autorizzati in `mzlab/` (lista chiusa, si accorcia soltanto); cosa resta da migrare: `docs/inventari/PYTHON_DA_MIGRARE.md`.
+- **Regola CLI**: ogni modulo nuovo nasce con la riga di comando e ogni parametro del suo descrittore `step/1` ha il suo `--set ISTANZA.NOME=VALORE`; lista di controllo in `docs/agenti/cli.md` (un solo registro `mzlab_cli::flow::steps()`, esecutore in `FileRunner`, parità CLI = pagina, `flow_rule_tests.rs` verde, buchi noti in `BUCHI`).
 - **Regola Tabui solo in inglese**: il modulo Tabui (`TP_Mine/`) adotta esclusivamente la lingua inglese per stringhe utente, tooltip ed esportazioni. Non usa cataloghi `lang/` (niente chiavi `lang/`, niente `I18N`) e rispetta la regola aurea: la parola «formula» non compare mai da sola (sempre «Neutral formula», «[M+H]+ formula», «Ion formula»). Guardie in `tests/test_guardie_regole.py` e `tests/test_tabui_inglese.py`.
 - Un front end non provato nel browser è rotto. Niente `pkill -f` con parole presenti nel comando: ferma i server con il PID.
 
@@ -77,7 +78,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
 | metodo di acquisizione (`metodo/1`, `metodo.rs`, `metodo_wiff`, `metodo_raw`, schema) | `docs/agenti/metodo.md` |
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (tabelle untargeted e identità: `mzfinder-untargeted.md`; tabelle terze parti: `mzfinder-import.md`; validazione: `mzfinder-validazione.md`; tabella prodotti HR: `mzfinder-tabella.md`; indice sospetti: `sospetti.md`; scavo LR: `mzfinder-lr.md`, bersagli: `mzfinder-lr-bersagli.md`, passo «1 · Files»: `mzfinder-file.md`, interfaccia MS2: `mzfinder-ms2.md`, regola MS2: `mzfinder-ms2-regola.md`) |
-| mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` |
+| mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` (famiglia di un file a richiesta, `family_record`: `mzfeat-wasm-famiglia.md`) |
 | lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` (altri strumenti SCIEX, sMRM, PIS/NL, DAD, feature `estesi`: `wiff-varianti.md`; specifica binaria: `wiff_specifica_completa.md`) |
 | lettore cartelle Agilent `.D` (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
 | Agilent `.D` LC/MS: QqQ MRM/dMRM, Q-TOF profilo/centroidi/MS2, metodo LC/MS, DAD (`crates/mzlab-core/src/agilent_ext/`, feature `estesi`) | `docs/agenti/agilent-lcms.md` |
@@ -100,6 +101,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | classi chimiche da regole (`crates/mzlab-feat/src/classi/`, tabella `data/classi-1.json`, `classi/1`: frammenti diagnostici e perdite neutre) | `docs/agenti/classi.md` |
 | livelli di identificazione (scala di Schymanski 2a/2b/3a/3b, scala di previsione, etichette «L3» e «Prev. 2», Tabui, Attributio, untargeted) | `docs/agenti/livelli.md` |
 | gruppi di esperimenti in Tabui: condizioni, `gruppi/1`, `crates/mzlab-feat/src/gruppi/` | `docs/agenti/gruppi.md` |
+| statistica come passi: Welch/ANOVA con BH, PCA e KMD in Rust (`crates/mzlab-feat/src/stat/`, `table.stats`, `table.pca`, `table.kmd`, `stat/1`) | `docs/agenti/stat.md` |
 | liste dell'utente (trasformazioni, addotti, sospetti: CSV con errori per riga, `liste/1`, SHA-256 per `prov/1`) | `docs/agenti/liste.md` |
 | ruoli dei file e tempi dei campioni (`campioni/2`, `mzlab-core/src/campioni/`: proposte dai nomi, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
 | derivati (`.mzidx`, `.mzfeat`, `.mzfeatf`) di formato più nuovo del programma: `error.newerFormat`, sola lettura | `docs/agenti/formato-nuovo.md` |

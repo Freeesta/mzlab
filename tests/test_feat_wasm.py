@@ -62,15 +62,31 @@ def test_wasm_and_native_give_the_same_mzfeat_bytes(built):
 @pytest.mark.parametrize("mode", ["ion", "family"])
 def test_a_reduced_budget_gives_the_same_sha256_native_and_in_node(built, mode):
     """The contract of memory: the `.mzfeatf`, the `.mzfeat` and the one with `evid` have the same SHA-256 in memory and under a budget (slabs of m/z,
-    graph made identity by identity), natively and in the .wasm. Per family the series is not cut: it is in memory (3 MB here) or refused."""
+    graph made identity by identity), natively and in the .wasm. Per family too (the groups of ions made slab by slab, the votes read a file at a time)."""
     root, idx, pkg = built
     recipe = ("--recipe", '{"mode":"%s"}' % mode)
     ref, _ = native(root, idx, f"ref-{mode}", *recipe)
-    for mb in (192, 3) if mode == "family" else (192, 1, 0.5):
+    for mb in (192, 3, 1.5) if mode == "family" else (192, 1, 0.5):
         nat, _ = native(root, idx, f"nat-{mode}-{mb}", *recipe, "--budget-mb", str(mb))
         assert nat == ref, f"native, {mb} MB"
         got, _ = wasm(root, idx, pkg, f"wasm-{mode}-{mb}", *recipe, "--budget-mb", str(mb))
         assert got == ref, f"wasm, {mb} MB"
+
+
+@pytest.mark.parametrize("mb", [1.5, 0.5])
+def test_the_weak_tables_in_a_spill_of_the_page_give_the_same_sha256(built, mb):
+    """The optional `spill` of `align_series_to` (an object of the page with `put` and `get`) changes where the weak tables wait, not the bytes."""
+    root, idx, pkg = built
+    recipe = ("--recipe", '{"mode":"family"}')
+    ref, _ = native(root, idx, f"ref-spill", *recipe)
+    out = root / f"spill-{mb}"
+    out.mkdir(exist_ok=True)
+    p = subprocess.run(["node", str(ROOT / "tests" / "feat_wasm_node.js"), str(pkg), str(out), *idx, *PARENT, *recipe, "--budget-mb", str(mb), "--spill", "1"],
+                       cwd=ROOT, capture_output=True, encoding="utf-8")
+    assert p.returncode == 0, p.stderr
+    assert p.stdout == ref, f"{mb} MB"
+    # the synthetic weak tables are small: the object is accepted and the plumbing is exercised even when nothing needs to wait outside
+    assert "spill puts" in p.stderr
 
 
 def test_a_budget_that_fits_nothing_is_refused_with_the_key_and_the_files_saved(built):

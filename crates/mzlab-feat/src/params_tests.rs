@@ -1,4 +1,5 @@
 use super::*;
+use crate::params_height::{min_height_from_noise, MIN_HEIGHT_FACTOR};
 use mzlab_core::rng::Pcg64;
 
 /// Uniform in (0, 1) from the generator.
@@ -121,4 +122,47 @@ fn the_void_front_ends_where_the_tic_comes_back() {
     assert!(dead_time(&rt, &tic).is_none());
     let (rt, tic) = run(Some((0.6, 5.0))); // a front that lasts beyond a third of the run is not a void
     assert!(dead_time(&rt, &tic).is_none());
+}
+
+#[test]
+fn the_minimum_height_is_ten_times_the_mode_of_the_noise() {
+    for (noise, seed) in [(2e4, 5), (1e5, 6)] {
+        let n = noise_from_hist(&synthetic(noise, seed)).unwrap();
+        let h = min_height_from_noise(&n);
+        assert!(
+            (h / (MIN_HEIGHT_FACTOR * noise) - 1.0).abs() <= 0.3,
+            "noise {noise}: min height {h} ({n:?})"
+        );
+    }
+    // the preview carries the proposal with the numbers it comes from, and null without a lump
+    let est = |noise| Estimate {
+        intensities: Hist::new(),
+        noise,
+        ppm: None,
+        ppm_sigma: 0.0,
+        ppm_n: 0,
+        fwhm: None,
+        fwhm_n: 0,
+        rt_tol: None,
+        da: None,
+        da_sigma: 0.0,
+        da_n: 0,
+        dead: None,
+        defect: None,
+    };
+    let f = crate::table::FileFeatures::default();
+    let with = preview_json(
+        &est(Some(Noise {
+            floor: 3e6,
+            mode: 1e5,
+            sigma: 0.5,
+        })),
+        &f,
+        &[],
+    );
+    assert!(
+        with.contains("\"min_height\":{\"value\":1000000,\"factor\":10,\"mode\":100000}"),
+        "{with}"
+    );
+    assert!(preview_json(&est(None), &f, &[]).contains("\"min_height\":null"));
 }

@@ -52,16 +52,13 @@ pub fn table_step() -> Step {
     }
 }
 
-/// The steps a plan can use here: the registry of the flagship chain, `features.table`, the identification steps, `tp.network` and `spectra.ms2`.
+/// The steps a plan can use here, every family of descriptors: the registry of the flagship chain, `features.table`, Attributio, the whole Tabui
+/// family, `spectra.ms2` and `meta.compare`. Whether a step also runs here is `executable`.
 pub fn steps() -> Vec<Step> {
     let mut all = mzlab_feat::steps::registry();
     all.push(table_step());
     all.extend(mzlab_feat::steps::attributio());
-    all.extend(
-        mzlab_feat::steps::tabui()
-            .into_iter()
-            .filter(|s| s.id == "tp.network"),
-    );
+    all.extend(mzlab_chem::step::tabui());
     all.push(crate::flow_ms2::ms2_step());
     all.push(crate::flow_compare::compare_step());
     all
@@ -126,6 +123,8 @@ pub struct FileRunner {
     progress: Option<Vec<String>>,
     /// The cache of `work` (`flow_cache.rs`); none: every job runs and nothing is kept.
     cache: Option<crate::flow_cache::Cache>,
+    /// Working memory in MB of the alignment (`--budget-mb`; else the automatic one of this computer). The bytes written do not depend on it.
+    pub(crate) budget_mb: f64,
 }
 
 impl FileRunner {
@@ -139,7 +138,16 @@ impl FileRunner {
             lineage: Mutex::new(HashMap::new()),
             progress: None,
             cache: None,
+            budget_mb: mzlab_core::budget_auto::native_auto_mb(),
         }
+    }
+
+    /// The runner with the working memory of the alignment set to `mb` (None: the automatic budget).
+    pub(crate) fn with_budget(mut self, mb: Option<f64>) -> FileRunner {
+        if let Some(mb) = mb {
+            self.budget_mb = mb;
+        }
+        self
     }
 
     pub(crate) fn path(&self, a: &Artifact) -> PathBuf {
@@ -388,10 +396,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("index.mzidx", Exec::Made(crate::flow_base::index_job)),
     ("features.detect", Exec::Made(crate::flow_base::detect_job)),
     ("features.align", Exec::Made(crate::flow_base::align_job)),
-    (
-        "features.gapfill",
-        Exec::Made(crate::flow_base::gapfill_job),
-    ),
+    ("features.gapfill", Exec::Made(crate::flow_base::align_job)),
     (
         "features.table",
         Exec::File("report", crate::flow_base::table_job),
@@ -443,11 +448,13 @@ impl Runner for FileRunner {
             eprintln!("{line}");
         }
         let made = made?;
+        let mem = crate::flow_base::align_mem(self, job);
         Ok(Outcome {
             outputs: vec![(made.port.to_string(), made.artifact)],
             estimates: made.estimates,
             ms,
             heap_peak_bytes: self.meter.map(|m| (m.peak)()),
+            mem,
             cached,
         })
     }

@@ -29,7 +29,7 @@ def test_riassunto_file_senza_nomi():
 
 
 def test_rapporto_e_diagnostica():
-    out = nodo("(()=>{const d=B.righeDiagnostica({version:'1.0.1',commit:'abc',date:'D',ua:'UA',mode:'web',view:'data (#/dati)',files:'0',sw:'none',errors:[]});return B.rapporto({what:'boom',expected:'',diag:d},k=>k)})()")
+    out = nodo("(()=>{const d=B.righeDiagnostica({version:'1.0.0',commit:'abc',date:'D',ua:'UA',mode:'web',view:'data (#/dati)',files:'0',sw:'none',errors:[]});return B.rapporto({what:'boom',expected:'',diag:d},k=>k)})()")
     assert "## bug.r.what\n\nboom" in out and "bug.r.none" in out and "- Mode: web" in out and "- Recent errors: none" in out
     assert "## bug.r.diag" not in nodo("B.rapporto({what:'a',expected:'b',diag:null},k=>k)")
 

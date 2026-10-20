@@ -25,7 +25,7 @@ concurrency:
   group: sito-rust-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
 
-# The .wasm are built once, in three parallel jobs (engine + libraries, mzFinder part a, mzFinder part b + readers), and `sito-e2e` downloads them as artifacts.
+# The .wasm are built once, in three parallel jobs (engine + libraries + readers, mzFinder part a, mzFinder part b), and `sito-e2e` downloads them as artifacts.
 jobs:
   sito-wasm-core:
     runs-on: ubuntu-latest
@@ -60,6 +60,8 @@ jobs:
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
           tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries
+          # the readers (8 families, own manifest) build here, not in part b of build_feat_wasm.sh: it evens out the three jobs
+          tools/build_lettori_wasm.sh site/static
       # saved right after the build, so a red e2e does not lose the cache (main only)
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
@@ -76,6 +78,7 @@ jobs:
           path: |
             site/static/wasm
             site/static/wasm-lib
+            site/static/wasm-lettori
           retention-days: 1
 
   sito-wasm-feat-a:
@@ -164,9 +167,8 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: wasm-feat-b
-          path: |
-            site/static/wasm-feat
-            site/static/wasm-lettori
+          # a single path would drop its own name from the artifact: site/static holds only wasm-feat here, so the prefix stays
+          path: site/static
           retention-days: 1
 
   sito-e2e:

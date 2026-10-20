@@ -3,7 +3,8 @@
 La pipeline di `crates/mzlab-feat` gira anche sui dati LR (SCIEX 3200 QTRAP, Q1 full scan, MS2 EPI) con una ricetta propria; i test usano solo dati sintetici (`tests/lr_fullscan.rs`).
 
 ## Scelta del profilo
-- `Recipe::for_index(&mut Index)` (`recipe_lr.rs`): se `Index::hr1()` è vero la ricetta è quella predefinita (HR, invariata), altrimenti `Recipe::lr(difetto, LR_FLOOR, LR_MIN_HEIGHT)`. Il crate wasm la sceglie da solo (`run::recipe_for`) in rilevamento, anteprima, allineamento e ipotesi; `build_evidence*` usa la ricetta passata.
+- `Recipe::for_index(&mut Index)` (`recipe_lr.rs`): se `Index::hr1()` è vero la ricetta è quella predefinita (HR), altrimenti `Recipe::lr(difetto, LR_FLOOR, LR_MIN_HEIGHT)`. Il crate wasm la sceglie da solo (`run::recipe_for`) in rilevamento, anteprima, allineamento e ipotesi; `build_evidence*` usa la ricetta passata.
+- Nei passi Flow (`flow_base.rs`, `run::recipe_for_estimated`, `Recipe::for_index_estimated`) l'altezza minima ad alta risoluzione è stimata dal rumore del file (`params_height::estimated_min_height`: 10 × la moda del lump del rumore, a due cifre, mai sotto 2e5; senza lump resta 2e5; `Recipe.min_height_basis` porta moda e sigma, fuori dal testo della ricetta; un valore esplicito del piano la sostituisce, `flow run` la riporta fra le stime; sito e pannello usano `recipe_for`, con 2e5).
 - Asse di massa: `MassAxis::{Ppm, Da{defect}}` (`axis.rs`). Una tolleranza negativa vale «Da»: `half(mz, tol)` è `-tol` se `tol < 0`, altrimenti `mz·tol·1e-6`. Costanti: `LR_TOL` 0,35 Da, `LR_TOUCH` 0,1, `LR_TRACE` 0,3, `LR_STITCH` 0,2.
 - In Da i canali sono larghi 1 Da, con coordinata `mz − difetto + 0,5` e due griglie sfalsate di 0,5. Il difetto di massa è la moda circolare delle parti frazionarie dei picchi forti (`estimate_defect`); l'anteprima lo riporta in `"defect"` (solo in Da).
 
