@@ -17,17 +17,21 @@ use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
 
 pub mod flow;
+mod flow_base;
 mod flow_compare;
 mod flow_formula;
 mod flow_inclusion;
 mod flow_level;
 mod flow_match;
 mod flow_ms2;
+mod flow_out;
 mod flow_report;
+mod flow_run;
 
 const HELP: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
 
 usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params FILE.json]
+       mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
 
   FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
@@ -40,8 +44,9 @@ fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
 }
 
-/// The `.mzidx` of `path` written to `idx`: an mzML through its scan table, any other file through the reader of the registry.
-fn build_index(path: &Path, idx: &Path) -> Result<()> {
+/// The `.mzidx` of `path` written to `idx` with `budget` bytes of working memory: an mzML through its scan table, any other file through the reader of
+/// the registry.
+pub(crate) fn build_index(path: &Path, idx: &Path, budget: usize) -> Result<()> {
     let name = path
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
@@ -53,7 +58,7 @@ fn build_index(path: &Path, idx: &Path) -> Result<()> {
             &p.table,
             BufReader::new(File::open(path).map_err(io)?),
             &mut out,
-            DEFAULT_BUDGET,
+            budget,
             None,
         )?;
     } else {
@@ -67,15 +72,7 @@ fn build_index(path: &Path, idx: &Path) -> Result<()> {
         };
         let imp = impronte(&mut fs)?;
         let mut l = mzlab_lettori::apri(fs, &Limiti::desktop())?;
-        indicizza_lettore(
-            &mut *l,
-            0,
-            &imp,
-            &name,
-            &mut out,
-            DEFAULT_BUDGET,
-            &mut |_| {},
-        )?;
+        indicizza_lettore(&mut *l, 0, &imp, &name, &mut out, budget, &mut |_| {})?;
     }
     Ok(())
 }
@@ -93,7 +90,7 @@ pub fn features(files: &[PathBuf], params: &str, tmp: &Path) -> Result<String> {
         .collect();
     for (f, i) in files.iter().zip(&idxs) {
         eprintln!("index {}", f.display());
-        build_index(f, i)?;
+        build_index(f, i, DEFAULT_BUDGET)?;
     }
     let recipe = run::recipe_for(params, &mut open(&idxs[0])?)?;
     let mut detected = Vec::new();
@@ -210,7 +207,8 @@ pub fn execute(args: &[String]) -> Outcome {
                 Some("report") => {
                     flow_report::run(args).map_or_else(|e| Outcome::fail(&e), Outcome::ok)
                 }
-                _ => Outcome::fail("usage: mzlab-cli flow report RUNDIR [--out FILE]"),
+                Some("run") => flow_run::run(args.collect(), None),
+                _ => Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow report RUNDIR [--out FILE]"),
             }
         }
         Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),
@@ -259,3 +257,5 @@ mod flow_level_tests;
 mod flow_ms2_tests;
 #[cfg(test)]
 mod flow_report_tests;
+#[cfg(test)]
+mod flow_run_tests;

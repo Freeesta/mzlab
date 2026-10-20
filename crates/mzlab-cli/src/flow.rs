@@ -1,5 +1,6 @@
-//! A workflow file run on real files: the `features.table@1` step (the whole chain of `features` as one step), the registry that holds it, and the
-//! `FileRunner` that gives `mzlab_core::flow::execute` its files and its clock. Used by `examples/flow.rs` and by the tests; native and WASI.
+//! A workflow file run on real files: the `features.table@1` step (the whole chain of `features` as one step), the registry that holds it, the one table
+//! of the steps that run natively (`EXECUTORS`) and the `FileRunner` that gives `mzlab_core::flow::execute` its files and its clock. Used by
+//! `mzlab-cli flow run`, the route `flow/run` of the desktop app, `examples/flow.rs` and the tests; native and WASI.
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -10,15 +11,14 @@ use std::time::Instant;
 
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::{
-    check, execute, parse, prov_json, Agent, Artifact, Job, Outcome, Plan, Platform, Run, Runner,
-};
+use mzlab_core::flow::{parse, Artifact, Job, Outcome, Plan, Run, Runner};
+use mzlab_core::json::Value;
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_match::Named;
 
-fn io(e: std::io::Error) -> Error {
+pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)
 }
 
@@ -70,12 +70,16 @@ pub struct Meter {
     pub peak: fn() -> u64,
 }
 
-/// Runs the steps of this crate on files: inputs are read from `dir`, what steps make is written to `work`.
+/// Runs the steps of this crate on files: inputs are found by name in `inputs`, else in `dir`; what steps make is written to `work`.
 pub struct FileRunner {
     dir: PathBuf,
-    work: PathBuf,
+    pub(crate) work: PathBuf,
+    inputs: HashMap<String, PathBuf>,
     meter: Option<Meter>,
     made: Mutex<HashMap<String, PathBuf>>,
+    lineage: Mutex<HashMap<String, Lineage>>,
+    /// Instance ids in the order of the run: one line per job on stderr when set.
+    progress: Option<Vec<String>>,
 }
 
 impl FileRunner {
@@ -83,19 +87,24 @@ impl FileRunner {
         FileRunner {
             dir: dir.to_path_buf(),
             work: work.to_path_buf(),
+            inputs: HashMap::new(),
             meter,
             made: Mutex::new(HashMap::new()),
+            lineage: Mutex::new(HashMap::new()),
+            progress: None,
         }
     }
 
-    fn path(&self, a: &Artifact) -> PathBuf {
+    pub(crate) fn path(&self, a: &Artifact) -> PathBuf {
         let made = self.made.lock().unwrap_or_else(|e| e.into_inner());
+        let label = a.label.clone().unwrap_or_default();
         made.get(&a.sha256)
+            .or_else(|| self.inputs.get(&label))
             .cloned()
-            .unwrap_or_else(|| self.dir.join(a.label.clone().unwrap_or_default()))
+            .unwrap_or_else(|| self.dir.join(label))
     }
 
-    fn keep(&self, path: PathBuf, ty: DataType) -> Result<Artifact> {
+    pub(crate) fn keep(&self, path: PathBuf, ty: DataType) -> Result<Artifact> {
         let bytes = std::fs::read(&path).map_err(io)?;
         let sha256 = sha256_hex(&bytes);
         let label = path.file_name().map(|n| n.to_string_lossy().into_owned());
@@ -109,6 +118,80 @@ impl FileRunner {
             ty,
             label,
         })
+    }
+}
+
+/// Where a file made by the run comes from: what the next feature step needs and the plan does not carry (the recipe, the indexes, the peaks).
+#[derive(Clone, Default)]
+pub(crate) struct Lineage {
+    /// Name of the file the index was made from (the sample name of the detection).
+    pub name: String,
+    /// The instance and item that made an index.
+    pub instance: String,
+    pub item: Option<usize>,
+    pub recipe: Option<mzlab_feat::recipe::Recipe>,
+    pub index: Vec<PathBuf>,
+    pub peaks: Vec<PathBuf>,
+}
+
+/// What an executor made: the output port, its file and the values it measured (name, value, proof).
+pub(crate) struct Made {
+    pub port: &'static str,
+    pub artifact: Artifact,
+    pub estimates: Vec<(String, Value, Value)>,
+}
+
+impl Made {
+    pub fn new(port: &'static str, artifact: Artifact) -> Made {
+        Made {
+            port,
+            artifact,
+            estimates: Vec::new(),
+        }
+    }
+}
+
+/// The lineage of the files the run makes (what the feature steps hand on).
+impl FileRunner {
+    pub(crate) fn trace(&self, a: &Artifact, l: Lineage) {
+        let mut map = self.lineage.lock().unwrap_or_else(|e| e.into_inner());
+        map.insert(a.sha256.clone(), l);
+    }
+
+    pub(crate) fn lineage(&self, a: &Artifact) -> Option<Lineage> {
+        let map = self.lineage.lock().unwrap_or_else(|e| e.into_inner());
+        map.get(&a.sha256).cloned()
+    }
+
+    /// The name of the file an index was made from, else the file name of `a`.
+    pub(crate) fn source_name(&self, a: &Artifact) -> String {
+        let l = self.lineage(a).map(|l| l.name).filter(|n| !n.is_empty());
+        l.unwrap_or_else(|| a.label.clone().unwrap_or_default())
+    }
+
+    /// The runner of `flow run`: inputs found by name in `inputs`, one progress line per job for the instances in `order`.
+    pub(crate) fn located(
+        work: &Path,
+        inputs: HashMap<String, PathBuf>,
+        order: Vec<String>,
+        meter: Option<Meter>,
+    ) -> FileRunner {
+        FileRunner {
+            inputs,
+            progress: Some(order),
+            ..FileRunner::new(work, work, meter)
+        }
+    }
+
+    /// The first index (item 0) made by the instance that made the index `a`.
+    pub(crate) fn first_of_series(&self, a: &Artifact) -> Option<PathBuf> {
+        let me = self.lineage(a)?;
+        let map = self.lineage.lock().unwrap_or_else(|e| e.into_inner());
+        let first = map
+            .iter()
+            .find(|(_, l)| l.instance == me.instance && l.item == Some(0))?;
+        let made = self.made.lock().unwrap_or_else(|e| e.into_inner());
+        made.get(first.0).cloned()
     }
 }
 
@@ -284,37 +367,75 @@ fn inclusion_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     r.keep(out, DataType::Report)
 }
 
+/// How a step runs natively: an executor that makes one file for `port`, or one that says itself what it made.
+enum Exec {
+    File(&'static str, fn(&FileRunner, &Job) -> Result<Artifact>),
+    Made(fn(&FileRunner, &Job) -> Result<Made>),
+}
+
+/// The steps that run natively, the one list: `executable` and the runner read it.
+const EXECUTORS: &[(&str, Exec)] = &[
+    ("convert.mzml", Exec::File("mzml", convert_job)),
+    ("index.mzidx", Exec::Made(crate::flow_base::index_job)),
+    ("features.detect", Exec::Made(crate::flow_base::detect_job)),
+    ("features.align", Exec::Made(crate::flow_base::align_job)),
+    (
+        "features.gapfill",
+        Exec::Made(crate::flow_base::gapfill_job),
+    ),
+    ("features.table", Exec::File("report", table_job)),
+    ("spectra.match", Exec::File("hits", match_job)),
+    ("formula.ms1", Exec::File("formulas", formula_job)),
+    ("formula.ms2", Exec::File("formulas", formula_job)),
+    ("spectra.ms2", Exec::File("spectra", ms2_job)),
+    ("annot.level", Exec::File("annot", level_job)),
+    ("meta.compare", Exec::File("comparison", compare_job)),
+    ("export.inclusion", Exec::File("report", inclusion_job)),
+];
+
+/// Does the native runner execute the step `id`?
+pub fn executable(id: &str) -> bool {
+    EXECUTORS.iter().any(|(k, _)| *k == id)
+}
+
+fn dispatch(r: &FileRunner, job: &Job) -> Result<Made> {
+    let exec = EXECUTORS.iter().find(|(k, _)| *k == job.step.id);
+    match exec.map(|e| &e.1) {
+        Some(Exec::File(port, f)) => Ok(Made::new(port, f(r, job)?)),
+        Some(Exec::Made(f)) => f(r, job),
+        None => Err(Error::new("err.flow.unknownStep").with("step", job.step.id)),
+    }
+}
+
 impl Runner for FileRunner {
     fn run(&self, job: &Job) -> Result<Outcome> {
         if let Some(m) = self.meter {
             (m.reset)();
         }
         let start = Instant::now();
-        let (port, artifact) = match job.step.id {
-            "convert.mzml" => ("mzml", convert_job(self, job)?),
-            "features.table" => ("report", table_job(self, job)?),
-            "spectra.match" => ("hits", match_job(self, job)?),
-            "formula.ms1" => ("formulas", formula_job(self, job)?),
-            "formula.ms2" => ("formulas", formula_job(self, job)?),
-            "spectra.ms2" => ("spectra", ms2_job(self, job)?),
-            "annot.level" => ("annot", level_job(self, job)?),
-            "meta.compare" => ("comparison", compare_job(self, job)?),
-            "export.inclusion" => ("report", inclusion_job(self, job)?),
-            id => return Err(Error::new("err.flow.unknownStep").with("step", id)),
-        };
+        let made = dispatch(self, job);
+        let ms = start.elapsed().as_secs_f64() * 1e3;
+        if let Some(order) = &self.progress {
+            eprintln!(
+                "{}",
+                crate::flow_run::progress_line(order, job, ms, made.as_ref().err())
+            );
+        }
+        let made = made?;
         Ok(Outcome {
-            outputs: vec![(port.to_string(), artifact)],
-            ms: start.elapsed().as_secs_f64() * 1e3,
+            outputs: vec![(made.port.to_string(), made.artifact)],
+            estimates: made.estimates,
+            ms,
             heap_peak_bytes: self.meter.map(|m| (m.peak)()),
             ..Outcome::default()
         })
     }
 }
 
-/// The inputs of the plan that name no hash get it from the file; one that names a hash must match it.
-fn fill_inputs(plan: &mut Plan, dir: &Path) -> Result<()> {
+/// The inputs of the plan that name no hash get it from the file `locate` gives; one that names a hash must match it.
+pub(crate) fn fill_inputs(plan: &mut Plan, locate: impl Fn(&str) -> PathBuf) -> Result<()> {
     for f in &mut plan.inputs {
-        let bytes = std::fs::read(dir.join(&f.name)).map_err(io)?;
+        let bytes = std::fs::read(locate(&f.name)).map_err(|e| io(e).with("input", &f.name))?;
         let sha = sha256_hex(&bytes);
         if !f.sha256.is_empty() && f.sha256 != sha {
             return Err(Error::new("err.flow.input.sha").with("input", &f.name));
@@ -334,39 +455,10 @@ pub fn run_plan(
     meter: Option<Meter>,
 ) -> Result<(Run, String)> {
     let mut plan = parse(text)?;
-    fill_inputs(&mut plan, dir)?;
-    let reg = steps();
-    // the comparisons are checked as written, then expanded and the whole plan is checked again
-    let mut problems = crate::flow_compare::check(&plan, &reg, Platform::current());
-    let plan = if problems.is_empty() {
-        let plan = crate::flow_compare::expand(plan, &reg)?;
-        problems = check(&plan, &reg, Platform::current());
-        plan
-    } else {
-        plan
-    };
-    if !problems.is_empty() {
-        let list: Vec<String> = problems
-            .iter()
-            .map(|p| {
-                format!(
-                    "{}{}{}:{}",
-                    p.instance,
-                    if p.port.is_empty() { "" } else { "." },
-                    p.port,
-                    p.error_key
-                )
-            })
-            .collect();
-        return Err(Error::new("err.flow.check").with("problems", list.join(" ")));
-    }
-    let run = execute(&plan, &reg, &FileRunner::new(dir, work, meter), workers)?;
-    let agent = Agent {
-        name: "mzLab".into(),
-        version: env!("CARGO_PKG_VERSION").into(),
-        commit: None,
-        platform: Platform::current().name(),
-    };
-    let prov = prov_json(&agent, Some(&sha256_hex(text)), &run);
-    Ok((run, prov))
+    fill_inputs(&mut plan, |n| dir.join(n))?;
+    let plan = crate::flow_run::prepare(plan, &steps())?.map_err(|problems| {
+        let list: Vec<String> = problems.iter().map(crate::flow_run::problem_text).collect();
+        Error::new("err.flow.check").with("problems", list.join(" "))
+    })?;
+    crate::flow_run::run_checked(&plan, text, &FileRunner::new(dir, work, meter), workers)
 }
