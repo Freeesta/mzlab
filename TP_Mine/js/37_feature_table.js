@@ -101,6 +101,7 @@
       const best = r.areas.reduce((b, a, j) => (a > (r.areas[b] || 0) ? j : b), 0);
       const sources = ii && ii.sources && ii.sources.length ? "Found by " + ii.sources.join(", ") : "";
       const m = {
+        polpair: window.PIPEPOL ? window.PIPEPOL.rows(r.id) : undefined,
         interp: e.interp, title: identText(r), level: levelOf(r) || undefined, missing, samples, decide: dec ? { series: dec.series(), key: dec.key(r), level: dec.level(r) } : undefined,
         summary: [{ label: "Identity", value: identText(r), help: "ft.col.identity" }, { label: "m/z", value: r.mz.toFixed(4), help: "ft.col.mz" }, { label: "RT", value: r.rt == null ? "" : (+r.rt).toFixed(2) + " min", help: "ft.col.rt" }, { label: "Found by", value: sources.replace(/^Found by /, "") }],
         open: { xic: () => showInData(o.names[best], r.mz) },

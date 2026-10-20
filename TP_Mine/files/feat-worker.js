@@ -219,6 +219,7 @@ function rowOps(submit, call) {
         return (await call(slot, { op: "formula_id", mz: Float64Array.from(mz), y: Float64Array.from(y), featureMz, params: params || "" })).text;
       });
     },
+    crossPolarity: ({ pos, neg, params }) => submit(async (slot, load) => { await load("table"); return (await call(slot, { op: "cross_polarity", pos: pos.slice(), neg: neg.slice(), params: params || "" })).text; }),
     interpBuild: m => submit(async (slot, load) => { await load("interp"); return (await call(slot, { op: "interp_build", ...m, table: m.table.slice() })).bytes; }),
     interpRow: m => submit(async (slot, load) => { await load("interp"); return (await call(slot, { op: "table_interp", ...m, table: m.table.slice() })).text; }),
   };
@@ -226,8 +227,6 @@ function rowOps(submit, call) {
 
 export function createFeatPool(opts) {
   const { st, slots, queue, spawn, call, submit, kill, copy, rest, classesText } = createCore(opts);
-
-
   return {
     notify: (k, p) => (opts.notify || (() => {}))(k, p),
     // L1-L3 of every file, in parallel; `files`: [{ name, path }] (path: OPFS path of the .mzidx). Resolves with the .mzfeatf bytes in the order of `files`.
@@ -441,6 +440,7 @@ const OPS = {
     const f = await openAll(m.paths), t = new Uint8Array(m.table);
     try { return { text: mods.table.export_ms2((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.spec, m.sha, m.pol, m.kind, f.read, f.sizes) }; } finally { f.close(); }
   },
+  async cross_polarity(m) { const p = new Uint8Array(m.pos), n = new Uint8Array(m.neg); return { text: mods.table.cross_polarity((_, off, len) => p.subarray(off, off + len), p.length, (_, off, len) => n.subarray(off, off + len), n.length, m.params) }; },
   async rowtraces(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table); try { return { text: mods.table.table_row_traces((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.id, f.read, f.sizes, m.ppm) }; } finally { f.close(); } },
   async "fs.write"(m) { await writeFile(m.path, m.bytes); return {}; },
   async "fs.read"(m) {

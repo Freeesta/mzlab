@@ -19,7 +19,7 @@
    * @typedef {{ title?: string, level?: string | number, pred?: number, decided?: string | number | null, summary?: TpSum[], words?: string, actions?: TpAction[], xic?: TpXic[], xicTip?: string, apexRt?: number | null, lo?: number | null, hi?: number | null,
    *   composition?: { run: () => Promise<any> }, spectrum?: TpSpec | null, spectrum2?: TpSpec | null, open?: { xic?: () => void, ms2?: () => void }, samples?: TpSample[], identity?: { neutral?: number | string | null, adduct?: string, candidates?: TpCand[] } | null,
    *   quality?: { shape?: number | string | null, snr?: number | null, fwhm?: number | null, flags?: string[], isoM1?: number | string | null, blank?: any, t0?: any, rejected?: string[] } | null,
-   *   decide?: { series: any, key: string, level?: string | number | null, name?: string }, interp?: any, missing?: Record<string, string> }} TpRiga
+   *   polpair?: { id: number, ionHere: string, ionThere: string, ppm: number, dRt: number, r: number | null, n: number }[], decide?: { series: any, key: string, level?: string | number | null, name?: string }, interp?: any, missing?: Record<string, string> }} TpRiga
    */
 
   const CSS = `
@@ -286,6 +286,7 @@
   /** @param {HTMLElement} panel @param {TpRiga} m */
   function identity(panel, m) {
     const id = m.identity;
+    if (m.polpair && m.polpair.length) { const p = document.createElement("p"); p.className = "tpr-id"; const pol = G.PIPEPOL && G.PIPEPOL.pol < 0 ? "ESI+" : "ESI−"; p.append(`Same neutral mass in ${pol}: ` + m.polpair.slice(0, 3).map(q => `${q.ionThere} row ${q.id} (Δ ${q.ppm.toFixed(1)} ppm, ΔRT ${q.dRt.toFixed(2)} min, r ${q.r == null ? "–" : q.r.toFixed(2)})`).join("; ")); panel.appendChild(p); }
     if (G.TPDEC && m.decide) { const p = document.createElement("p"); p.className = "tpr-id"; p.append("Decided level ", G.TPDEC.control(m.decide.series, { ...m.decide, name: m.title }, null)); panel.appendChild(p); }
     if (!id) { none(panel, "Identity", m.missing && m.missing.identity); return; }
     const cs = id.candidates || [];
