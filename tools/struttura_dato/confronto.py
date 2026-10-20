@@ -182,7 +182,7 @@ def potential_sites(m):
 
 def stereo_golden(path):
     """Golden data for the stereogenicity tests of crates/mzlab-mol: per SMILES (the 20 study cases, the extra cases, the rows of composti.csv)
-    the potential stereo elements RDKit finds, in the written atom order."""
+    the potential stereo elements RDKit finds and its aromatic bonds ("a-b"), in the written atom order."""
     import csv
 
     smiles = [smi for _n, smi, _ in SET] + [x.split(" |")[0] for x in SMILES_EXTRA]
@@ -192,7 +192,7 @@ def stereo_golden(path):
     for smi in smiles:
         m = Chem.MolFromSmiles(smi)
         if m is not None:
-            rows.append([smi, potential_sites(m)])
+            rows.append([smi, potential_sites(m), [f"{x}-{y}" for x, y in aromatic_pairs(m)]])
     doc = {"generator": "tools/struttura_dato/confronto.py --golden-stereo", "rdkit": Chem.rdBase.rdkitVersion, "sites": rows}
     pathlib.Path(path).write_text(json.dumps(doc, separators=(",", ":")) + "\n")
 

@@ -127,3 +127,62 @@ fn stereo_and_status_are_part_of_the_identity() {
         "cis and trans"
     );
 }
+
+#[test]
+fn aromatic_bonds_match_rdkit() {
+    let g = truth();
+    let (mut bad, mut total) = (Vec::new(), 0);
+    for row in g["sites"].as_array().expect("sites") {
+        let smi = row[0].as_str().unwrap_or_default();
+        let m = Mol::from_smiles(smi).expect("smiles");
+        let mut mine: Vec<String> = m
+            .aromatic_bonds()
+            .iter()
+            .zip(&m.bonds)
+            .filter(|(f, _)| **f)
+            .map(|(_, b)| format!("{}-{}", b.a, b.b))
+            .collect();
+        mine.sort();
+        let mut want: Vec<String> = row[2]
+            .as_array()
+            .expect("list")
+            .iter()
+            .map(|v| v.as_str().unwrap_or_default().to_string())
+            .collect();
+        want.sort();
+        total += 1;
+        if mine != want {
+            bad.push(format!("{smi}\n   mine {mine:?}\n   rdkit {want:?}"));
+        }
+    }
+    assert!(
+        bad.is_empty(),
+        "{} of {total} differ:\n{}",
+        bad.len(),
+        bad.join("\n")
+    );
+}
+
+#[test]
+fn aromatic_rule_on_textbook_rings() {
+    // (SMILES, aromatic bonds, bonds): counts as RDKit gives them
+    let cases = [
+        ("C1=CC=CC=C1", 6),
+        ("C1=CCC=CC1", 0),
+        ("O=C1C=CC(=O)C=C1", 0),
+        ("C1=CC=CC=CC=C1", 0),
+        ("[CH+]1C=CC=CC=C1", 7),
+        ("C1=CC=C2C=CC=C2C=C1", 10),
+        ("C1=C[NH]C=C1", 5),
+        ("O=C1C=CC=CN1", 6),
+        ("[CH-]1C=CC=C1", 5),
+    ];
+    for (smi, want) in cases {
+        let m = Mol::from_smiles(smi).expect("smiles");
+        assert_eq!(
+            m.aromatic_bonds().iter().filter(|f| **f).count(),
+            want,
+            "{smi}"
+        );
+    }
+}
