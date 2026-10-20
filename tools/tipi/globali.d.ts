@@ -166,6 +166,7 @@ declare var naturalCmp: any;
 declare var nbEnsure: any;
 declare var noiseSD: any;
 declare var numIt: any;
+declare var onkeydown: any;
 declare var openOrigin: any;
 declare var orderFiles: any;
 declare var parseDecimal: any;

@@ -237,6 +237,29 @@ try:
             # the campaign folder is offered next to the file picker (the cascade itself needs the attributio module)
             assert pg.locator('.fl-insp input[type=file][webkitdirectory]').count() == 1 and pg.locator('.fl-insp button:has-text("Open a campaign folder")').count() == 1
         step("results: candidate and level JSON files open as tables", identification_views)
+        def review_view():
+            # the engine is replaced by a stub: the Review screen is driven by keyboard through two features, one saved without a note, one that asks for it
+            pg.evaluate("""() => {
+              const rev = (id, level) => ({ pol: "POS", id, mz: 200.1, rt: 3.2, current: { level, sub: "", name: "x", group: "" }, alternatives: [{ name: "Caffeine", score: 0.91 }], rtlogp: { ok: true },
+                proposal: { class: "2b-check", proposed: level === "3" ? "2b" : "3", reasons: ["one reason"], evidence: { n_peaks: 5, n_explained: 3, frac_explained: 0.6, view: { peaks: [{ mz: 138.07, rel: 100, frag: { formula: "C6H8N3", ppm: 1.2, loss: "CO" } }] } } } });
+              window.__saved = [];
+              ATTRIBUTIO_CORE.pool = async () => ({ attributioReview: async (f, r, pol, id) => rev(id, id === 1 ? "2" : "3"), attributioDecision: async (f, r, d) => { window.__saved.push(JSON.parse(d)); return { summary: { path: "decisions/feature_decisions.csv" }, text: "csv" }; } });
+              const data = { columns: [], rows: [["POS", 1, 200.1, 3.2, 2, "b", "b", "x", "", ""], ["POS", 2, 201.1, 3.4, 3, "a", "b", "y", "", ""]] };
+              FLOW.openResult({ type: "annot", label: "demo (campaign folder)", campaign: { root: "demo", files: [], data, summary: {} }, text: async () => "" });
+            }""")
+            pg.click('.flx-res button:has-text("Review")'); attendi(pg, "document.querySelector('.flw-rv h3') && /POS 1/.test(document.querySelector('.flw-rv h3').textContent)")
+            assert "3 of 5 peaks explained" in pg.inner_text(".flw-rv-proofs") and pg.locator(".flw-rv-acts button").count() == 5
+            pg.fill('.flw-rv input[aria-label="Reviewer"]', "ab")
+            pg.focus("#flw-rv-h"); pg.keyboard.press("a")  # level 2 -> 3 changes the level: the note is asked, nothing is saved
+            attendi(pg, "!document.querySelector('.flw-rv-note').hidden"); assert pg.evaluate("window.__saved.length") == 0
+            pg.fill('.flw-rv-note', "seen the fragments"); pg.click('.flw-rv-acts button:has-text("Accept")')
+            attendi(pg, "window.__saved.length === 1 && /POS 2/.test(document.querySelector('.flw-rv h3').textContent)")
+            got = pg.evaluate("window.__saved[0]"); assert got["level"] == "3" and got["decided_by"] == "ab" and got["justification"] == "seen the fragments", got
+            pg.keyboard.press("a")  # proposed 2b on a level 3 row: a note is asked again
+            attendi(pg, "!document.querySelector('.flw-rv-note').hidden")
+            pg.click('.flw-rv-acts button:has-text("Skip")'); assert pg.locator(".flw-rv progress").get_attribute("value") == "1"
+            pg.click('.flw-rv button:has-text("Download decisions")')
+        step("results: the Review screen asks for a note only when the level changes and moves to the next feature", review_view)
         def mgf_view():
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Check mixed spectra")')
             pg.click('.fln:has-text("Check mixed spectra")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Check mixed spectra'")
