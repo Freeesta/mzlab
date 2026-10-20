@@ -1,6 +1,6 @@
 # Il record `mol/1` (`crates/mzlab-mol`)
 
-Struttura chimica come dato: una molecola (un componente) con atomi, legami in forma di Kekulé, elementi stereo con stato, gruppi di stereo avanzata e strati facoltativi. Studio e motivi: `docs/studi/STRUTTURA_DATO.md` (+ `_PROVE`, `_TRASFORMAZIONI`). Il crate dipende solo da `serde`, `serde_json`, `sha2`; non è collegato a nessun `.wasm` del sito; `mzlab-feat::chem::grafo` non lo usa ancora. Uscite e formati esistenti non cambiano.
+Struttura chimica come dato: una molecola (un componente) con atomi, legami in forma di Kekulé, elementi stereo con stato, gruppi di stereo avanzata e strati facoltativi. Studio e motivi: `docs/studi/STRUTTURA_DATO.md` (+ `_PROVE`, `_TRASFORMAZIONI`). Il crate dipende solo da `serde`, `serde_json`, `sha2`; non è collegato a nessun `.wasm` del sito; `mzlab-feat` lo usa solo con la feature `record` (spenta in ogni `.wasm`). Uscite e formati esistenti non cambiano.
 
 ## Schema JSON
 Compatto, ordine dei campi fisso (quello dei tipi di `model.rs`), campi vuoti omessi; stessa molecola e stesso ordine degli atomi = stessi byte.
@@ -46,3 +46,6 @@ Compatto, ordine dei campi fisso (quello dei tipi di `model.rs`), campi vuoti om
 - Aromaticità (`tests/stereo.rs`): i legami aromatici dei 717 SMILES coincidono con quelli di RDKit (dati d'oro `golden_stereo.json`, terza colonna) e 9 anelli di scuola (benzene, chinone, ciclottatetraene, tropilio, azulene, pirrolo, piridone, ciclopentadienile) hanno il numero atteso.
 - Ordine canonico (`tests/stereo.rs`): per ogni SMILES e per la sua versione con i siti, tre permutazioni casuali danno lo stesso JSON canonico e lo stesso `can`; enantiomeri, E/Z, definito/sconosciuto e cis/trans su anello hanno `can` diversi.
 - Regole di dimensione: file ≤ 500 righe, funzioni ≤ 80 (`tools/controlla.py`).
+- Vista per i motori (`crates/mzlab-feat/src/chem/grafo_record.rs`, feature `record` di `mzlab-feat`): `grafo::Mol::from_record(&rec, aromatic)` costruisce il grafo di mzFinder dal record: atomi e H del record, legami ordinati per coppia; con `aromatic` gli anelli percepiti da `aromatic_bonds()` prendono flag e ordine 1,5, senza restano in Kekulé. Isotopi e radicali non entrano; come `parse` rifiuta elementi senza valenza normale e più di 200 atomi, accetta pezzi staccati.
+- Prova `tests/grafo_record.rs` (`--features record`, riga in `rust.yml`): stesso grafo di `parse` e `from_molfile` su casi di studio, extra, composti.csv e molfile (insieme dei legami). Il lettore V2000 vecchio non conosce i radicali e somma lo spostamento di H della carica a quello della valenza: il record ha ragione e il test ammette la differenza sugli H dei soli atomi carichi o radicali.
+- I `.wasm` grafo, interp, chem e attributio sono identici byte per byte a prima (stessi hash). I consumatori (`posiz/1`, `frag/1`, `interp/1`, `Mol3d`) passano al record in PR successive, ciascuna con i propri goldens.

@@ -3,6 +3,8 @@
 
 pub mod frammenti;
 pub mod grafo;
+#[cfg(feature = "record")]
+mod grafo_record;
 mod gruppi;
 pub mod posizioni;
 mod smiles;

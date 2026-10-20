@@ -2043,6 +2043,7 @@ dependencies = [
  "libm",
  "mzlab-core",
  "mzlab-lib",
+ "mzlab-mol",
  "serde_json",
  "sha2 0.11.1",
 ]
