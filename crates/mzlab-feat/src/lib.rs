@@ -18,6 +18,7 @@ pub mod classi;
 pub mod deconvolve;
 pub mod evid;
 pub mod export;
+pub mod export_inclusione;
 pub mod export_ms;
 pub mod facts;
 pub mod famalign;
