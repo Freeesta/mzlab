@@ -4,7 +4,7 @@
 
 use super::candidati::{m1_coerente, perdita_nota, sotto, Elementi};
 use super::formule::avviso;
-use super::{Avviso, Candidato, FormulaNodo, Grafo, Opzioni};
+use super::{Avviso, Candidato, FormulaNodo, Grafo, NonSpiegati, Opzioni, STRETTA};
 use crate::elements::parse_formula;
 
 struct Cand {
@@ -138,7 +138,9 @@ fn prove(g: &Grafo, st: &Stato, j: usize, c: &[u32]) -> Vec<&'static str> {
     if perdita {
         v.push("perdita");
     }
-    if g.nodi[j].m1.is_some_and(|x| m1_coerente(st.e, c, x)) {
+    // behind a window narrower than the M+1 the isotopes are not expected: no evidence for or against
+    let stretta = g.nodi[j].a_monte.is_some_and(|w| w < STRETTA);
+    if !stretta && g.nodi[j].m1.is_some_and(|x| m1_coerente(st.e, c, x)) {
         v.push("isotopi");
     }
     let msn = !g.nodi[j].albero.is_empty()
@@ -284,8 +286,37 @@ fn filtra<T>(v: &mut Vec<T>, tieni: &[bool]) {
     v.retain(|_| *f.next().unwrap_or(&false));
 }
 
-/// The nodes with a formula stay (with their isotopes), the others leave the graph; ids, arcs and notes follow.
+/// The peaks of each spectrum whose node leaves the graph, on the node of its precursor: how many nodes, the 3 most intense.
+fn non_spiegati(g: &mut Grafo, tieni: &[bool]) {
+    let mut per: Vec<Vec<(usize, f64, f64)>> = vec![vec![]; g.nodi.len()];
+    for sp in &g.spettri {
+        let Some(p) = sp.precursore.filter(|&p| tieni[p]) else {
+            continue;
+        };
+        for &(mz, rel, k) in &sp.picchi {
+            if let Some(k) = k.filter(|&k| !tieni[k]) {
+                per[p].push((k, mz, rel));
+            }
+        }
+    }
+    for (p, mut v) in per.into_iter().enumerate() {
+        if v.is_empty() {
+            continue;
+        }
+        // one entry per node left out, its most intense peak
+        crate::sortc::slice_by(&mut v, |a, b| a.0.cmp(&b.0).then(b.2.total_cmp(&a.2)));
+        v.dedup_by_key(|x| x.0);
+        crate::sortc::slice_by(&mut v, |a, b| b.2.total_cmp(&a.2).then(a.1.total_cmp(&b.1)));
+        g.nodi[p].non_spiegati = Some(NonSpiegati {
+            n: v.len(),
+            picchi: v.iter().take(3).map(|x| (x.1, x.2)).collect(),
+        });
+    }
+}
+
+/// The nodes with a formula stay (with their isotopes), the others leave the graph; ids, arcs, spectra and notes follow.
 fn togli(g: &mut Grafo, tieni: &[bool]) {
+    non_spiegati(g, tieni);
     let mut nuovo = vec![None; g.nodi.len()];
     let mut k = 0;
     for (i, t) in tieni.iter().enumerate() {
@@ -311,6 +342,12 @@ fn togli(g: &mut Grafo, tieni: &[bool]) {
         (a.da, a.a) = (nuovo[a.da].unwrap(), nuovo[a.a].unwrap());
     }
     g.radici = g.radici.iter().filter_map(|&r| nuovo[r]).collect();
+    for sp in g.spettri.iter_mut() {
+        sp.precursore = sp.precursore.and_then(|x| nuovo[x]);
+        for p in sp.picchi.iter_mut() {
+            p.2 = p.2.and_then(|x| nuovo[x]);
+        }
+    }
     for a in g.avvisi.iter_mut() {
         a.nodo = a.nodo.and_then(|x| nuovo[x]);
     }

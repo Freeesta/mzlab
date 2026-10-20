@@ -95,13 +95,14 @@ pub fn grafo(file: &Path, o: &Opzioni, tmp: &Path) -> Result<(Grafo, String)> {
     let sha = sha256_hex(&std::fs::read(&idx).map_err(io)?);
     let scans = crate::open(&idx)?.scans;
     let mut m = std::fs::File::open(file).map_err(io)?;
-    let (albero, ms1, spettri, polarita) = leggi(&scans, &mut m, &Raggruppa::default())?;
+    let l = leggi(&scans, &mut m, &Raggruppa::default())?;
     let g = costruisci(
         &Ingresso {
-            albero: &albero,
-            ms1: ms1.as_ref(),
-            spettri: &spettri,
-            polarita,
+            albero: &l.albero,
+            ms1: l.ms1.as_ref(),
+            spettri: &l.spettri,
+            larghezze: &l.larghezze,
+            polarita: l.polarita,
         },
         o,
     );
@@ -122,6 +123,43 @@ fn percorso(id: &str) -> Vec<i64> {
 
 fn hill(f: &str) -> String {
     parse_formula(f.trim_end_matches(['+', '-'])).map_or(f.to_string(), |x| fmt(&x))
+}
+
+/// Nodes of each MS level, and the peaks of the spectra of each level: kept (with a node) and discarded (unexplained).
+fn per_livello(o: &mut Out, g: &Grafo) {
+    o.raw("\"per_livello\":{");
+    let max = g.nodi.iter().map(|n| n.livello).max().unwrap_or(0);
+    for l in 1..=max {
+        let k = g.nodi.iter().filter(|n| n.livello == l).count();
+        o.raw(if l > 1 { "," } else { "" })
+            .str(&l.to_string())
+            .raw(":")
+            .int(k as i64);
+    }
+    // peaks of the spectra of each MS level: kept (with a node) and discarded (unexplained)
+    o.raw("},\"picchi_per_livello\":{");
+    let lv = g.spettri.iter().map(|s| s.livello).max().unwrap_or(0);
+    let mut primo = true;
+    for l in 2..=lv {
+        let pk = g
+            .spettri
+            .iter()
+            .filter(|s| s.livello == l)
+            .flat_map(|s| &s.picchi);
+        let (t, d) = pk.fold((0, 0), |(t, d), p| {
+            if p.2.is_some() {
+                (t + 1, d)
+            } else {
+                (t, d + 1)
+            }
+        });
+        if t + d > 0 {
+            o.raw(if primo { "" } else { "," }).str(&l.to_string());
+            o.raw(":[").int(t).raw(",").int(d).raw("]");
+            primo = false;
+        }
+    }
+    o.raw("}");
 }
 
 /// One line of numbers: the graph against the paths of a truth file.
@@ -173,18 +211,9 @@ pub fn riassunto(g: &Grafo, verita: &str) -> Result<String> {
         .int(annotati.saturating_sub(1) as i64);
     o.raw(",\"scartati_formula\":")
         .int(g.scartati.formula as i64);
-    o.raw(",\"avvisi\":")
-        .int(g.avvisi.len() as i64)
-        .raw(",\"per_livello\":{");
-    let max = g.nodi.iter().map(|n| n.livello).max().unwrap_or(0);
-    for l in 1..=max {
-        let k = g.nodi.iter().filter(|n| n.livello == l).count();
-        o.raw(if l > 1 { "," } else { "" })
-            .str(&l.to_string())
-            .raw(":")
-            .int(k as i64);
-    }
-    o.raw("}}\n");
+    o.raw(",\"avvisi\":").int(g.avvisi.len() as i64).raw(",");
+    per_livello(&mut o, g);
+    o.raw("}\n");
     Ok(o.0)
 }
 

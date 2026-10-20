@@ -1,7 +1,7 @@
 //! The JSON `msngrafo/1` of a graph (`docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers, the same bytes for the same
 //! input. `ione` and the formulas are `null` without the formula of the ion of the root.
 
-use super::{Arco, Candidato, FormulaNodo, Grafo, NodoG, Opzioni};
+use super::{Arco, Candidato, FormulaNodo, Grafo, NodoG, Opzioni, SpettroG, STRETTA};
 use crate::json::{round, Out};
 
 fn bool_(o: &mut Out, b: bool) {
@@ -11,6 +11,13 @@ fn bool_(o: &mut Out, b: bool) {
 fn opt_str(o: &mut Out, s: Option<&str>) {
     match s {
         Some(s) => o.str(s),
+        None => o.raw("null"),
+    };
+}
+
+fn opt_num(o: &mut Out, v: Option<f64>, cifre: usize) {
+    match v {
+        Some(x) => o.num(round(x, cifre)),
         None => o.raw("null"),
     };
 }
@@ -148,10 +155,31 @@ fn nodo(o: &mut Out, i: usize, n: &NodoG) {
     o.raw(",\"isotopo_di\":");
     id(o, n.isotopo_di);
     o.raw(",\"m1\":");
-    match n.m1 {
-        Some(x) => o.num(round(x, 1)),
-        None => o.raw("null"),
-    };
+    opt_num(o, n.m1, 1);
+    o.raw(",\"isolamento\":{\"larghezza\":");
+    opt_num(o, n.larghezza, 3);
+    o.raw(",\"a_monte\":");
+    opt_num(o, n.a_monte, 3);
+    o.raw(",\"stretto\":");
+    bool_(o, n.a_monte.is_some_and(|w| w < STRETTA));
+    o.raw("},\"non_spiegati\":");
+    match &n.non_spiegati {
+        Some(x) => {
+            o.raw("{\"n\":").int(x.n as i64).raw(",\"picchi\":[");
+            for (i, (mz, rel)) in x.picchi.iter().enumerate() {
+                o.raw(if i > 0 { "," } else { "" })
+                    .raw("{\"mz\":")
+                    .num(round(*mz, 5))
+                    .raw(",\"rel\":")
+                    .num(round(*rel, 1))
+                    .raw("}");
+            }
+            o.raw("]}");
+        }
+        None => {
+            o.raw("null");
+        }
+    }
     o.raw(",\"pos\":{\"col\":")
         .int(n.pos.0 as i64)
         .raw(",\"riga\":")
@@ -239,6 +267,33 @@ fn arco(o: &mut Out, a: &Arco) {
     o.raw("]}");
 }
 
+fn spettro(o: &mut Out, s: &SpettroG) {
+    o.raw("{\"albero\":")
+        .str(&s.albero)
+        .raw(",\"livello\":")
+        .int(s.livello as i64);
+    o.raw(",\"att\":")
+        .str(&s.att.to_lowercase())
+        .raw(",\"ce\":")
+        .num(s.ce)
+        .raw(",\"precursore\":");
+    id(o, s.precursore);
+    o.raw(",\"larghezza\":");
+    opt_num(o, s.larghezza, 3);
+    o.raw(",\"picchi\":[");
+    for (i, (mz, rel, n)) in s.picchi.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"mz\":")
+            .num(round(*mz, 5))
+            .raw(",\"rel\":")
+            .num(round(*rel, 1))
+            .raw(",\"nodo\":");
+        id(o, *n);
+        o.raw("}");
+    }
+    o.raw("]}");
+}
+
 /// The graph as `msngrafo/1`; `sorgente` = (name of the file, SHA-256 of its `.mzidx`) when the caller knows them.
 pub fn json(g: &Grafo, op: &Opzioni, sorgente: Option<(&str, &str)>) -> String {
     let mut o = Out::default();
@@ -256,6 +311,13 @@ pub fn json(g: &Grafo, op: &Opzioni, sorgente: Option<(&str, &str)>) -> String {
             o.raw(",");
         }
         arco(&mut o, a);
+    }
+    o.raw("],\"spettri\":[");
+    for (i, s) in g.spettri.iter().enumerate() {
+        if i > 0 {
+            o.raw(",");
+        }
+        spettro(&mut o, s);
     }
     o.raw("]}");
     o.0

@@ -12,7 +12,7 @@ mod posa;
 mod unisci;
 
 pub use json::json;
-pub use leggi::leggi;
+pub use leggi::{leggi, Letto};
 
 use crate::msnalbero::Albero;
 
@@ -85,6 +85,8 @@ pub struct Ingresso<'a> {
     pub albero: &'a Albero,
     pub ms1: Option<&'a Spettro>,
     pub spettri: &'a [Spettro],
+    /// Width of the isolation window (Da) of each node of the tree, `None` when the file does not say; an empty slice = none known.
+    pub larghezze: &'a [Option<f64>],
     /// 1 or -1 (written as it is).
     pub polarita: i8,
 }
@@ -135,10 +137,42 @@ pub struct NodoG {
     pub isotopo_di: Option<usize>,
     /// The M+1 of its most intense observation, % of it.
     pub m1: Option<f64>,
+    /// Its own isolation window (Da), when it is isolated and the file says.
+    pub larghezza: Option<f64>,
+    /// The narrowest window on the path to the spectrum of its most intense observation: below `STRETTA` its M+1 is not expected there.
+    pub a_monte: Option<f64>,
+    /// With a formula: the peaks of its spectra that no sub-formula explains (their nodes left the graph).
+    pub non_spiegati: Option<NonSpiegati>,
     /// Column and row of the drawing.
     pub pos: (usize, usize),
     pub formula: Option<FormulaNodo>,
 }
+
+/// The unexplained peaks of the spectra of a node: how many, and the 3 most intense (m/z, % of the base peak).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct NonSpiegati {
+    pub n: usize,
+    pub picchi: Vec<(f64, f64)>,
+}
+
+/// One spectrum of the tree as the graph uses it: its peaks (after `min_rel`, `max_picchi`, heavy and isotope peaks) and the node of each,
+/// `None` when it left the graph (no sub-formula of the root): the clean spectrum is the peaks with a node.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SpettroG {
+    /// `Nodo::id` of the tree.
+    pub albero: String,
+    pub livello: u8,
+    pub att: String,
+    pub ce: f64,
+    /// The node of its precursor.
+    pub precursore: Option<usize>,
+    pub larghezza: Option<f64>,
+    /// (m/z in this spectrum, % of its base peak, node).
+    pub picchi: Vec<(f64, f64, Option<usize>)>,
+}
+
+/// A window narrower than this does not take the M+1 of a singly charged ion (±1.00336 Da around its centre).
+pub const STRETTA: f64 = 2.0 * 1.003355;
 
 /// A sub-formula of the ion of the root that explains a node.
 #[derive(Debug, Clone, PartialEq)]
@@ -203,6 +237,7 @@ pub struct Grafo {
     pub scartati: Conteggi,
     pub avvisi: Vec<Avviso>,
     pub ione: Option<Ione>,
+    pub spettri: Vec<SpettroG>,
 }
 
 /// Losses a chemist expects in ESI CID/HCD, even-electron first; matched by mass only.

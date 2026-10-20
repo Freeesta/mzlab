@@ -24,23 +24,44 @@ fn consenso_di<M: Scansioni + ?Sized>(
     Ok(Spettro { mz, rel })
 }
 
-/// The tree, the consensus of the MS1 (`None` without MS1 scans), of each node of the tree, and the polarity of the file (that of most scans).
-pub fn leggi<M: Scansioni + ?Sized>(
-    scans: &[Scan],
-    m: &mut M,
-    r: &Raggruppa,
-) -> Result<(Albero, Option<Spettro>, Vec<Spettro>, i8)> {
+/// What the graph is built from.
+pub struct Letto {
+    pub albero: Albero,
+    /// The consensus of the MS1, `None` without MS1 scans.
+    pub ms1: Option<Spettro>,
+    /// The consensus of each node of the tree.
+    pub spettri: Vec<Spettro>,
+    /// The widest isolation window (Da) among the scans of each node of the tree.
+    pub larghezze: Vec<Option<f64>>,
+    /// The polarity of most scans.
+    pub polarita: i8,
+}
+
+/// The tree of the scans and the consensus spectra of its nodes.
+pub fn leggi<M: Scansioni + ?Sized>(scans: &[Scan], m: &mut M, r: &Raggruppa) -> Result<Letto> {
     let a = albero(scans, r);
     let ms1 = if a.ms1.is_empty() {
         None
     } else {
         Some(consenso_di(scans, &a.ms1, m)?)
     };
-    let mut spettri = Vec::with_capacity(a.nodi.len());
+    let (mut spettri, mut larghezze) = (Vec::with_capacity(a.nodi.len()), vec![]);
     for n in &a.nodi {
         spettri.push(consenso_di(scans, &n.scansioni, m)?);
+        larghezze.push(
+            n.scansioni
+                .iter()
+                .filter_map(|&i| scans[i].iso.map(|(lo, hi)| hi - lo))
+                .reduce(f64::max),
+        );
     }
     let neg = scans.iter().filter(|s| s.polarity < 0).count();
     let pol = if neg * 2 > scans.len() { -1 } else { 1 };
-    Ok((a, ms1, spettri, pol))
+    Ok(Letto {
+        albero: a,
+        ms1,
+        spettri,
+        larghezze,
+        polarita: pol,
+    })
 }

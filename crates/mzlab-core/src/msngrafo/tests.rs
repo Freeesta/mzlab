@@ -79,9 +79,29 @@ pub(super) fn grafo_spostato(
     inverti: bool,
     ppm: f64,
 ) -> (Grafo, String) {
+    grafo_con(o, ordine, inverti, ppm, &Strumento::default())
+}
+
+/// How the synthetic infusion was acquired: the isolation window of every node, the polarity (in negative the anions of the same
+/// formulas, 2 electrons heavier).
+#[derive(Default)]
+pub(super) struct Strumento {
+    pub larghezza: Option<f64>,
+    pub negativo: bool,
+}
+
+pub(super) fn grafo_con(
+    o: &Opzioni,
+    ordine: &[usize],
+    inverti: bool,
+    ppm: f64,
+    st: &Strumento,
+) -> (Grafo, String) {
     let (paths, mut spettri, mut ms1) = sintetico();
+    let e = if st.negativo { 2.0 * ELECTRON } else { 0.0 };
     for s in spettri.iter_mut().map(|x| &mut x.1).chain([&mut ms1]) {
-        s.mz.iter_mut().for_each(|m| *m *= 1.0 + ppm * 1e-6);
+        s.mz.iter_mut()
+            .for_each(|m| *m = (*m + e) * (1.0 + ppm * 1e-6));
     }
     let mut scans: Vec<(u8, Option<&[Step]>)> = vec![(1, None)];
     for &i in ordine {
@@ -112,7 +132,8 @@ pub(super) fn grafo_spostato(
             albero: &al,
             ms1: Some(&ms1),
             spettri: &per_nodo,
-            polarita: 1,
+            larghezze: &vec![st.larghezza; al.nodi.len()],
+            polarita: if st.negativo { -1 } else { 1 },
         },
         o,
     );
@@ -248,6 +269,7 @@ fn a_chain_of_close_peaks_is_split() {
             albero: &al,
             ms1: Some(&ms1),
             spettri: &spettri,
+            larghezze: &[],
             polarita: 1,
         },
         &Opzioni::default(),
@@ -282,6 +304,7 @@ fn a_precursor_missing_from_its_parent_is_noted() {
             albero: &al,
             ms1: Some(&ms1),
             spettri: &spettri,
+            larghezze: &[],
             polarita: 1,
         },
         &Opzioni::default(),

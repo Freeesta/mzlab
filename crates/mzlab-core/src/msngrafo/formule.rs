@@ -5,8 +5,9 @@ use super::candidati::elementi;
 use super::{annota, Avviso, Grafo, Ione, Opzioni};
 use crate::elements::{embedded_adduct, parse_formula, Formula};
 
-/// What an adduct adds to the neutral (`+1`) or takes from it (`-1`), and its polarity.
-const ADDOTTI: [(&str, &str, i8, i8); 7] = [
+/// What an adduct adds to the neutral (`+1`) or takes from it (`-1`), and its polarity: the adducts of `elements::adducts`, then
+/// acetate (written `[M+CH3COO]-` or `+CH3COO`), which that table does not list.
+const ADDOTTI: [(&str, &str, i8, i8); 9] = [
     ("[M+H]+", "H", 1, 1),
     ("[M+NH4]+", "NH4", 1, 1),
     ("[M+Na]+", "Na", 1, 1),
@@ -14,6 +15,8 @@ const ADDOTTI: [(&str, &str, i8, i8); 7] = [
     ("[M-H]-", "H", -1, -1),
     ("[M+Cl]-", "Cl", 1, -1),
     ("[M+HCOO]-", "CHO2", 1, -1),
+    ("[M+CH3COO]-", "C2H3O2", 1, -1),
+    ("+CH3COO", "C2H3O2", 1, -1),
 ];
 
 /// The root is looked for within this distance when no node is within the tolerance (the isolation window of the MS2).
@@ -36,23 +39,30 @@ pub(super) fn ione(testo: &str, pol: i8) -> Result<Formula, &'static str> {
         Some(f) => format!("{f}{}", &t[t.len() - 1..]),
         None => t,
     };
-    let (resto, addotto) = embedded_adduct(&testo);
-    let segno = |c: char| match c {
-        '+' => 1,
-        _ => -1,
-    };
-    let (base, carica) = match addotto {
-        Some(a) => (resto, ADDOTTI.iter().find(|x| x.0 == a).map(|x| x.3)),
+    let addotto = |a: &str| ADDOTTI.iter().find(|x| x.0 == a);
+    let (base, add) = match ADDOTTI[7..].iter().find(|x| testo.ends_with(x.0)) {
+        Some(x) => (testo[..testo.len() - x.0.len()].to_string(), Some(x)),
         None => {
-            let t = resto.trim_end_matches(['+', '-']);
-            (t.to_string(), resto[t.len()..].chars().next().map(segno))
+            let (resto, a) = embedded_adduct(&testo);
+            (resto, a.and_then(addotto))
+        }
+    };
+    let (base, carica) = match add {
+        Some(x) => (base, Some(x.3)),
+        None => {
+            let t = base.trim_end_matches(['+', '-']);
+            let segno = base[t.len()..]
+                .chars()
+                .next()
+                .map(|c| if c == '+' { 1 } else { -1 });
+            (t.to_string(), segno)
         }
     };
     if carica.is_some_and(|c| c != pol) {
         return Err("warn.msngrafo.polarity");
     }
     let mut f = parse_formula(&base).map_err(|_| "warn.msngrafo.badFormula")?;
-    if let Some((_, atomi, verso, _)) = addotto.and_then(|a| ADDOTTI.iter().find(|x| x.0 == a)) {
+    if let Some((_, atomi, verso, _)) = add {
         for (el, n) in parse_formula(atomi).expect("adduct formulas are valid") {
             match (f.iter_mut().find(|(e, _)| *e == el), *verso) {
                 (Some(x), 1) => x.1 += n,

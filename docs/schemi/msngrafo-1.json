@@ -15,7 +15,8 @@
   "conteggi",
   "avvisi",
   "nodi",
-  "archi"
+  "archi",
+  "spettri"
  ],
  "additionalProperties": false,
  "properties": {
@@ -271,6 +272,8 @@
      "rel_max",
      "isotopo_di",
      "m1",
+     "isolamento",
+     "non_spiegati",
      "pos",
      "formula"
     ],
@@ -423,6 +426,77 @@
        "null"
       ],
       "description": "The M+1 of its most intense observation, % of it"
+     },
+     "isolamento": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "larghezza",
+       "a_monte",
+       "stretto"
+      ],
+      "properties": {
+       "larghezza": {
+        "type": [
+         "number",
+         "null"
+        ],
+        "description": "Its own isolation window (Da), when it is isolated and the file says"
+       },
+       "a_monte": {
+        "type": [
+         "number",
+         "null"
+        ],
+        "description": "The narrowest window on the path to the spectrum of its most intense observation (Da)"
+       },
+       "stretto": {
+        "type": "boolean",
+        "description": "a_monte < 2·1.00336 Da: its M+1 is not expected there, the isotopes are no evidence"
+       }
+      }
+     },
+     "non_spiegati": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "n",
+         "picchi"
+        ],
+        "properties": {
+         "n": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Fragments of its spectra that left the graph (no sub-formula)"
+         },
+         "picchi": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+           "type": "object",
+           "additionalProperties": false,
+           "required": [
+            "mz",
+            "rel"
+           ],
+           "properties": {
+            "mz": {
+             "type": "number"
+            },
+            "rel": {
+             "type": "number"
+            }
+           }
+          }
+         }
+        }
+       }
+      ]
      }
     }
    }
@@ -528,6 +602,82 @@
          "type": "number",
          "minimum": 0,
          "description": "% of the base peak of the spectrum; 0 for an isolated precursor not found there"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "spettri": {
+   "type": "array",
+   "description": "Every spectrum of the tree in the graph, with its peaks: a peak with nodo null left the graph (unexplained); the clean spectrum is the others",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "albero",
+     "livello",
+     "att",
+     "ce",
+     "precursore",
+     "larghezza",
+     "picchi"
+    ],
+    "properties": {
+     "albero": {
+      "type": "string"
+     },
+     "livello": {
+      "type": "integer",
+      "minimum": 2
+     },
+     "att": {
+      "type": "string"
+     },
+     "ce": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "precursore": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "pattern": "^n[0-9]+$"
+     },
+     "larghezza": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "description": "Isolation window (Da)"
+     },
+     "picchi": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "mz",
+        "rel",
+        "nodo"
+       ],
+       "properties": {
+        "mz": {
+         "type": "number"
+        },
+        "rel": {
+         "type": "number"
+        },
+        "nodo": {
+         "type": [
+          "string",
+          "null"
+         ],
+         "pattern": "^n[0-9]+$"
         }
        }
       }

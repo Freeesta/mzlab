@@ -4,7 +4,9 @@
 
 use std::collections::BTreeMap;
 
-use super::{Arco, Avviso, Conteggi, Grafo, Ingresso, Misura, NodoG, Opzioni, Spettro, PERDITE};
+use super::{
+    Arco, Avviso, Conteggi, Grafo, Ingresso, Misura, NodoG, Opzioni, Spettro, SpettroG, PERDITE,
+};
 
 /// 13C - 12C.
 const C13: f64 = 1.003355;
@@ -218,6 +220,7 @@ fn nodo(gr: &[usize], obs: &[Oss], ing: &Ingresso) -> NodoG {
     let mut sorg: Vec<Option<usize>> = picchi.iter().map(|x| x.sorg).collect();
     crate::sortc::slice_ord(&mut sorg);
     sorg.dedup();
+    let forte = picchi.iter().max_by(|a, b| a.rel.total_cmp(&b.rel));
     NodoG {
         mz,
         dev_ppm: gr
@@ -229,14 +232,71 @@ fn nodo(gr: &[usize], obs: &[Oss], ing: &Ingresso) -> NodoG {
         osservazioni: sorg.len(),
         rel_max: gr.iter().map(|&i| obs[i].rel).fold(0.0, f64::max),
         isotopo_di: None,
-        // the M+1 of the most intense peak of the node
-        m1: picchi
+        // the M+1 of the most intense peak of the node, and the windows that let it through
+        m1: forte.and_then(|x| x.m1),
+        larghezza: gr
             .iter()
-            .max_by(|a, b| a.rel.total_cmp(&b.rel))
-            .and_then(|x| x.m1),
+            .filter_map(|&i| obs[i].prec_di.and_then(|t| larghezza(ing, t)))
+            .reduce(f64::max),
+        a_monte: forte.and_then(|x| x.sorg).and_then(|t| a_monte(ing, t)),
+        non_spiegati: None,
         pos: (0, 0),
         formula: None,
     }
+}
+
+fn larghezza(ing: &Ingresso, t: usize) -> Option<f64> {
+    ing.larghezze.get(t).copied().flatten()
+}
+
+/// The narrowest known isolation window on the path of node `t` of the tree (itself and its ancestors).
+fn a_monte(ing: &Ingresso, t: usize) -> Option<f64> {
+    let mut m: Option<f64> = None;
+    let mut c = Some(t);
+    while let Some(k) = c {
+        if let Some(w) = larghezza(ing, k) {
+            m = Some(m.map_or(w, |x| x.min(w)));
+        }
+        c = ing.albero.nodi[k].genitore;
+    }
+    m
+}
+
+/// Every spectrum of the tree in the graph, with its peaks and their nodes.
+fn spettri(
+    ing: &Ingresso,
+    o: &Opzioni,
+    obs: &[Oss],
+    di: &[usize],
+    prec: &[usize],
+) -> Vec<SpettroG> {
+    let mut out = vec![];
+    for (t, n) in ing.albero.nodi.iter().enumerate() {
+        let (_, att, ce) = n
+            .chiave
+            .last()
+            .cloned()
+            .expect("a node of the tree has a path");
+        if ing.spettri.get(t).is_none() || !attiva(o, &att) {
+            continue;
+        }
+        let picchi = obs
+            .iter()
+            .enumerate()
+            .filter(|(_, x)| x.sorg == Some(t) && x.prec_di.is_none())
+            .map(|(i, x)| (x.mz, x.rel, Some(di[i])))
+            .collect();
+        out.push(SpettroG {
+            albero: n.id.clone(),
+            livello: n.livello,
+            att,
+            ce,
+            precursore: Some(prec[t]),
+            larghezza: larghezza(ing, t),
+            picchi,
+        });
+    }
+    out
 }
 
 /// The spectrum of node `t` of the tree as a measure of an arc.
@@ -356,6 +416,7 @@ pub(super) fn unisci(ing: &Ingresso, o: &Opzioni) -> Grafo {
         }
     }
     let archi = archi(ing, &obs, &di, &prec, &nodi, o);
+    let spettri = spettri(ing, o, &obs, &di, &prec);
     let radici = (0..nodi.len()).filter(|&i| nodi[i].livello == 1).collect();
     Grafo {
         nodi,
@@ -364,6 +425,7 @@ pub(super) fn unisci(ing: &Ingresso, o: &Opzioni) -> Grafo {
         polarita: ing.polarita,
         scartati,
         avvisi,
+        spettri,
         ..Grafo::default()
     }
 }

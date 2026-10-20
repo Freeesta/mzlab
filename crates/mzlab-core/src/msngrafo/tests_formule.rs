@@ -1,4 +1,4 @@
-use super::tests::{arco, grafo_spostato, ion, trova};
+use super::tests::{arco, grafo_con, grafo_spostato, ion, trova, Strumento};
 use super::*;
 
 /// The fragments of the synthetic infusion (`tests::sintetico`) and their formulas.
@@ -252,4 +252,99 @@ fn the_choice_of_the_user_wins_and_conflicts_are_noted() {
         v.get("opzioni").unwrap().get("scelte").unwrap().arr().len(),
         3
     );
+}
+
+#[test]
+fn a_negative_infusion_is_read_the_same_way() {
+    let neg = Strumento {
+        negativo: true,
+        ..Strumento::default()
+    };
+    for t in [
+        "C8H11N4O2-",
+        "C8H12N4O2 [M-H]-",
+        "C8H12N4O2-H",
+        "C6H8N4 [M+CH3COO]-",
+        "C6H8N4+CH3COO",
+    ] {
+        let (g, _) = grafo_con(&con(t), &[0, 1, 2, 3], false, 0.0, &neg);
+        let ione = g
+            .ione
+            .as_ref()
+            .unwrap_or_else(|| panic!("{t}: {:?}", g.avvisi));
+        assert_eq!((g.polarita, ione.formula.as_str()), (-1, "C8H11N4O2"));
+        // the electron is added, not taken: the anions are 2 electrons above the cations
+        assert!(ione.ppm.abs() < 0.01, "{t}: {}", ione.ppm);
+        for x in FRAMMENTI {
+            let n = f(&g, nodo(&g, x).unwrap_or_else(|| panic!("{t}: {x}")));
+            assert!(n.candidati[0].ppm.abs() < 0.01 && n.scelta.as_deref() == Some(x));
+        }
+        assert!(chiavi(&g).is_empty(), "{t}: {:?}", g.avvisi);
+    }
+    // a positive adduct on a negative file
+    let (g, _) = grafo_con(&con("C8H10N4O2 [M+H]+"), &[0, 1, 2, 3], false, 0.0, &neg);
+    assert_eq!(chiavi(&g), vec![("warn.msngrafo.polarity", None)]);
+}
+
+#[test]
+fn behind_a_narrow_window_the_isotopes_are_no_evidence() {
+    // 15 ppm off (the wide window): the 138 has only its M+1 as evidence
+    let stretta = Strumento {
+        larghezza: Some(1.0),
+        ..Strumento::default()
+    };
+    let (g, j) = grafo_con(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0, &stretta);
+    assert!(nodo(&g, "C6H8N3O").is_none());
+    let r = radice(&g);
+    assert_eq!(g.nodi[r].larghezza, Some(1.0));
+    let n124 = &g.nodi[nodo(&g, "C7H8O2").unwrap()];
+    assert_eq!(n124.a_monte, Some(1.0));
+    let v = crate::json::parse(j.as_bytes()).unwrap();
+    let iso = |i: usize| {
+        v.get("nodi").unwrap().arr()[i]
+            .get("isolamento")
+            .unwrap()
+            .get("stretto")
+            .unwrap()
+            .clone()
+    };
+    assert_eq!(
+        iso(nodo(&g, "C7H8O2").unwrap()),
+        crate::json::Value::Bool(true)
+    );
+    // a window that takes the M+1: the evidence counts
+    let larga = Strumento {
+        larghezza: Some(3.0),
+        ..Strumento::default()
+    };
+    let (g, _) = grafo_con(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0, &larga);
+    let n = f(&g, nodo(&g, "C6H8N3O").unwrap());
+    assert_eq!(n.candidati[0].prove, vec!["isotopi"]);
+}
+
+#[test]
+fn the_unexplained_peaks_are_counted_on_their_precursor() {
+    let (g, _) = grafo_spostato(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0);
+    let ns = |x: &str| g.nodi[nodo(&g, x).unwrap()].non_spiegati.clone().unwrap();
+    // the 138 lost the 109 of its MS3; the 110 lost the 69 and the 42 of its MS4, the stronger first
+    assert_eq!(ns("C6H8N3O").n, 1);
+    let n110 = ns("C5H8N3");
+    assert_eq!((n110.n, n110.picchi.len()), (2, 2));
+    assert!(n110.picchi[0].1 >= n110.picchi[1].1);
+    assert!(g.nodi[radice(&g)].non_spiegati.is_none());
+    // in the spectra a peak with no node is an unexplained one: the clean spectrum is the others
+    let ms4 = g
+        .spettri
+        .iter()
+        .find(|s| s.albero == "195@cid30>138@cid30>110@cid35")
+        .unwrap();
+    assert_eq!(ms4.picchi.iter().filter(|p| p.2.is_none()).count(), 2);
+    assert_eq!(ms4.precursore, nodo(&g, "C5H8N3"));
+    // without a formula every peak has its node
+    let (g0, _) = grafo_spostato(&Opzioni::default(), &[0, 1, 2, 3], false, 15.0);
+    assert_eq!(g0.spettri.len(), 4);
+    assert!(g0
+        .spettri
+        .iter()
+        .all(|s| s.picchi.iter().all(|p| p.2.is_some())));
 }
