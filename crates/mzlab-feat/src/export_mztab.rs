@@ -11,7 +11,7 @@ use crate::rowident::adduct_names;
 /// `null`: the value does not apply; `NaN`: it applies but was not measured.
 const NULL: &str = "null";
 const NAN: &str = "NaN";
-/// Reliability of every small molecule: unknown compound.
+/// Reliability of every small molecule in the default scheme of the format (1-4): unknown compound.
 const RELIABILITY: &str = "4";
 
 /// A field without the characters that split the lines and the fields.
@@ -86,15 +86,15 @@ fn metadata(out: &mut String, c: &Ctx, svs: &[(String, Vec<usize>)]) {
     );
     m(
         "small_molecule-quantification_unit",
-        "[,, Peak area, ]".into(),
+        "[MS, MS:1001844, MS1 feature area, ]".into(),
     );
     m(
         "small_molecule_feature-quantification_unit",
-        "[,, Peak area, ]".into(),
+        "[MS, MS:1001844, MS1 feature area, ]".into(),
     );
     m(
-        "small_molecule-identification_reliability",
-        "[MS, MS:1002955, hr-ms compound identification confidence level, ]".into(),
+        "id_confidence_measure[1]",
+        "[,, mass error in ppm, ]".into(),
     );
     m("database[1]", "[,, no database, null]".into());
     m("database[1]-prefix", NULL.into());
@@ -130,7 +130,7 @@ fn metadata(out: &mut String, c: &Ctx, svs: &[(String, Vec<usize>)]) {
     }
     m("cv[1]-label", "MS".into());
     m("cv[1]-full_name", "PSI-MS controlled vocabulary".into());
-    m("cv[1]-version", "4.1.0".into());
+    m("cv[1]-version", "4.2.6".into());
     m(
         "cv[1]-uri",
         "https://raw.githubusercontent.com/HUPO-PSI/psi-ms-CV/master/psi-ms.obo".into(),
@@ -198,11 +198,13 @@ pub fn mztab(c: &Ctx) -> String {
             )
         })
     };
+    // The theoretical m/z of the ion of a named row; only a row with a known adduct can carry evidence.
+    let theoretical = |r: usize| named(r).and_then(|(m, a)| a.and_then(|a| elements::ion_mz(m, a)));
     let area = |r: usize, k: usize| c.area(r, k).filter(|a| a.is_finite());
     let mut evidence_of: Vec<Option<usize>> = vec![None; rows.len()];
     let mut n_ev = 0;
     for (i, &r) in rows.iter().enumerate() {
-        if named(r).is_some() {
+        if theoretical(r).is_some() {
             n_ev += 1;
             evidence_of[i] = Some(n_ev);
         }
@@ -310,12 +312,17 @@ pub fn mztab(c: &Ctx) -> String {
         ];
         line(&mut out, &head.map(String::from));
         for (i, &r) in rows.iter().enumerate() {
-            let (Some(e), Some((neutral, ion))) = (evidence_of[i], named(r)) else {
+            let (Some(e), Some(theo), Some((_, ion))) = (evidence_of[i], theoretical(r), named(r))
+            else {
                 continue;
             };
-            let theo = ion
-                .and_then(|a| elements::ion_mz(neutral, a))
-                .map_or(NULL.to_string(), |m| fix(m, 5));
+            // The run with the largest area of the row is the one the evidence maps to.
+            let best = (0..c.samples.len()).max_by(|&a, &b| {
+                area(r, a)
+                    .unwrap_or(-1.0)
+                    .total_cmp(&area(r, b).unwrap_or(-1.0))
+            });
+            let ppm = (t.mz[r] - theo) / theo * 1e6;
             let charge = i32::from(c.polarity.signum());
             let cells: Vec<String> = vec![
                 "SME".into(),
@@ -331,11 +338,11 @@ pub fn mztab(c: &Ctx) -> String {
                 ion.unwrap_or(NULL).into(),
                 fix(t.mz[r], 5),
                 charge.to_string(),
-                theo,
-                NULL.into(),
+                fix(theo, 5),
+                format!("ms_run[{}]", best.map_or(1, |k| k + 1)),
                 "[,, mass match to a hypothesis, ]".into(),
                 "[MS, MS:1000511, ms level, 1]".into(),
-                "[,, level (automatic), 4]".into(),
+                fix(ppm, 2),
                 "1".into(),
             ];
             line(&mut out, &cells);

@@ -143,6 +143,30 @@ fn round_trip_of_the_table() {
     assert_eq!(r.sml[0]["theoretical_neutral_mass"], "316.1569");
     assert!(r.sml.iter().all(|m| m["reliability"] == "4"));
     assert_eq!(r.sml[1]["adduct_ions"], "null");
+    // The default reliability scheme is not redeclared; the unit and the ontology terms are the ones of the PSI-MS CV.
+    assert!(!r
+        .mtd
+        .contains_key("small_molecule-identification_reliability"));
+    assert_eq!(
+        r.mtd["small_molecule-quantification_unit"],
+        "[MS, MS:1001844, MS1 feature area, ]"
+    );
+    // The evidence maps to the run with the largest area (the third file) and carries the mass error, not a level.
+    assert_eq!(r.sme[0]["spectra_ref"], "ms_run[3]");
+    assert_eq!(r.sme[0]["id_confidence_measure[1]"], "0.07");
+    // No empty cell and no scientific notation anywhere in a table line.
+    for l in text
+        .lines()
+        .filter(|l| l.starts_with("SM") || l.starts_with("SF") || l.starts_with("SE"))
+    {
+        assert!(l.split('\t').all(|f| !f.is_empty()), "{l}");
+        assert!(
+            !l.split('\t')
+                .skip(1)
+                .any(|f| f.parse::<f64>().is_ok() && f.contains(['e', 'E'])),
+            "{l}"
+        );
+    }
 }
 
 #[test]
