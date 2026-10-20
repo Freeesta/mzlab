@@ -4,7 +4,7 @@
 use mzlab_core::elements::{self, Formula};
 
 use super::confronto::Pol;
-use super::siti::{delta_of, Site};
+use super::siti::{atom_deltas, Site};
 use crate::chem::frammenti::apply_delta;
 use crate::chem::grafo::{add_h, hydrolysable, Mol};
 
@@ -22,7 +22,7 @@ pub struct Frag {
 /// amide or sulfonamide bond a side may take OH instead. A demethylation drops the bonds of the lost methyl (they do not exist in the product).
 pub fn expected_fragments(mol: &Mol, site: &Site, pol: Pol) -> Vec<Frag> {
     let on_ring = mol.ring_bonds();
-    let delta = delta_of(site.kind);
+    let deltas = atom_deltas(site);
     let adduct = pol.adduct();
     let mut out = Vec::new();
     for (k, bd) in mol.bonds.iter().enumerate() {
@@ -33,9 +33,10 @@ pub fn expected_fragments(mol: &Mol, site: &Site, pol: Pol) -> Vec<Frag> {
             continue;
         }
         // The bond that becomes the double bond is not cut.
-        if site
-            .partner
-            .is_some_and(|p| (bd.a, bd.b) == (site.atom, p) || (bd.b, bd.a) == (site.atom, p))
+        if site.kind == "dehydro"
+            && site
+                .partner
+                .is_some_and(|p| (bd.a, bd.b) == (site.atom, p) || (bd.b, bd.a) == (site.atom, p))
         {
             continue;
         }
@@ -48,12 +49,13 @@ pub fn expected_fragments(mol: &Mol, site: &Site, pol: Pol) -> Vec<Frag> {
         for mask in [sa, sb] {
             for (h, o) in variants {
                 let base: Formula = add_h(mol.formula_of(&mask), *h, *o);
-                let modified = mask[site.atom];
-                let Ok(fm) = (if modified {
-                    apply_delta(&base, &delta)
-                } else {
-                    Ok(base)
-                }) else {
+                let mut modified = false;
+                let mut fm = Ok(base);
+                for (_, delta) in deltas.iter().filter(|d| mask[d.0]) {
+                    modified = true;
+                    fm = fm.and_then(|f| apply_delta(&f, delta));
+                }
+                let Ok(fm) = fm else {
                     continue;
                 };
                 if fm.is_empty() {
