@@ -93,7 +93,7 @@ def pack_mzfinder(static: Path) -> None:
     for n in sorted((flow / "js").glob("*.js")):
         shutil.copy2(n, dst / n.name)
         js.append(n.name)
-    for n in ("steps-attributio-1.json", "steps-tabui-1.json"):
+    for n in ("steps-attributio-1.json", "steps-tabui-1.json", "steps-cli-1.json"):
         shutil.copy2(ROOT / "docs" / "schemi" / n, dst / n)
     lazy = [f.name for f in sorted((src / "lazy").glob("*.js"))] if (src / "lazy").is_dir() else []      # loaded on demand through TPLAZY.load, not at the start of Tabui
     lazy += [f.name for f in sorted((flow / "lazy").glob("*.js"))]

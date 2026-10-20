@@ -53,12 +53,12 @@ try:
         # the list view is the editor under the canvas: the same plan, started empty here; the setup clicks are not part of the budget below
         pg.click('[data-tab="list"]'); pg.click('button[aria-label="Start a new plan"]'); pg.evaluate("document.querySelector('.flx-pal').remove()")
         def palette():
-            assert pg.locator(".fl-it").count() == 30, pg.locator(".fl-it").count()
+            assert pg.locator(".fl-it").count() == 35, pg.locator(".fl-it").count()
             assert pg.locator(".fl-pal details").count() == 3
             pg.fill("#fl-filter", "formula"); attendi(pg, "[...document.querySelectorAll('.fl-it')].filter(b => !b.hidden).length >= 2")
-            assert pg.locator(".fl-it:visible").count() < 30
+            assert pg.locator(".fl-it:visible").count() < 35
             pg.fill("#fl-filter", "")
-        step("palette: 30 steps in three packages, the filter narrows it", palette)
+        step("palette: 35 steps in three packages, the filter narrows it", palette)
         def build():
             pg.evaluate("window.__n = {click: 1, key: 0}")      # the tab click counts; the palette checks and the list-view setup before do not
             for s in ["convert.mzml", "index.mzidx", "features.detect", "features.align"]: add(pg, s)
