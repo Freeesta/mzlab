@@ -228,6 +228,14 @@ fn srm_ranges(
         .collect()
 }
 
+/// Marks `sizes` of `ScanEvent::read` for a v66 table of counted events (see `read_counted`).
+pub(crate) const COUNTED_BODY: usize = usize::MAX;
+/// Body of an event without reactions (an MS1 scan) and bytes added by each reaction.
+pub(crate) const COUNTED_BASE: usize = 96;
+pub(crate) const COUNTED_STEP: usize = 56;
+/// Largest reaction count believed (MS8 has seven).
+pub(crate) const COUNTED_MAX: usize = 16;
+
 impl ScanEvent {
     /// Read one scan event.
     ///
@@ -241,6 +249,9 @@ impl ScanEvent {
         sizes: [usize; 3],
     ) -> Result<Self> {
         let [body_primary, body_dependent, body_independent] = sizes;
+        if version >= 66 && sizes == [COUNTED_BODY; 3] {
+            return Self::read_counted(r, version);
+        }
         let preamble_size = ScanEventPreamble::size_for_version(version);
         let preamble_bytes = r.read_bytes(preamble_size)?;
         let preamble = ScanEventPreamble {
@@ -265,7 +276,7 @@ impl ScanEvent {
             let is_tribrid_dep = body_primary != body_dependent
                 && !is_primary
                 && preamble.bytes.get(10).copied() == Some(1);
-            Self::read_v66(r, preamble, body_size, is_tribrid_dep)
+            Self::read_v66(r, preamble, body_size, is_tribrid_dep, 32)
         } else {
             Self::read_pre_v66(r, preamble)
         }
@@ -288,11 +299,26 @@ impl ScanEvent {
     ///   body[body_size-88..body_size-72]: FractionCollector (scan window)
     ///
     /// In both cases nparam + coefficients live at body[body_size-64..].
+    /// An event of a table whose events grow with the number of reactions (Fusion MSn chains): the body is
+    /// `COUNTED_BASE + COUNTED_STEP * n` bytes, `n` being the u32 that opens it, and each reaction takes
+    /// `COUNTED_STEP` bytes (the 32-byte record and 24 more).
+    fn read_counted<R: Read + Seek>(r: &mut BinaryReader<R>, version: u32) -> Result<Self> {
+        let preamble = ScanEventPreamble {
+            bytes: r.read_bytes(ScanEventPreamble::size_for_version(version))?,
+        };
+        let at = r.position();
+        let n = r.read_u32()? as usize;
+        r.seek_to(at)?;
+        Self::read_v66(r, preamble, COUNTED_BASE + COUNTED_STEP * n.min(COUNTED_MAX), true, COUNTED_STEP)
+    }
+
+    /// `stride` is the distance between two reaction records of a tribrid event.
     fn read_v66<R: Read + Seek>(
         r: &mut BinaryReader<R>,
         preamble: ScanEventPreamble,
         body_size: usize,
         is_tribrid_dep: bool,
+        stride: usize,
     ) -> Result<Self> {
         let body = r.read_bytes(body_size)?;
 
@@ -397,13 +423,13 @@ impl ScanEvent {
                 0
             };
             let rxn_start = 4usize;
-            let max_np = body_size.saturating_sub(rxn_start + 32) / 32;
+            let max_np = body_size.saturating_sub(rxn_start + 32) / stride;
             if np == 0 || np > max_np.max(1) {
                 Vec::new()
             } else {
                 let mut rxs = Vec::with_capacity(np);
                 for i in 0..np {
-                    let off = rxn_start + i * 32;
+                    let off = rxn_start + i * stride;
                     if off + 32 > body_size {
                         break;
                     }
@@ -546,5 +572,46 @@ impl FractionCollector {
         let low_mz = r.read_f64()?;
         let high_mz = r.read_f64()?;
         Ok(Self { low_mz, high_mz })
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod counted_tests {
+    use super::*;
+    use crate::reader::BinaryReader;
+    use std::io::Cursor;
+
+    /// A counted v66 event of MS level `power`: preamble, then the count, one 56-byte slot per precursor, the scan window and one coefficient.
+    pub(crate) fn counted_event(precursors: &[f64]) -> Vec<u8> {
+        let mut pre = vec![0u8; 136];
+        pre[6] = precursors.len() as u8 + 1;
+        let mut body = vec![0u8; COUNTED_BASE + COUNTED_STEP * precursors.len()];
+        body[0..4].copy_from_slice(&(precursors.len() as u32).to_le_bytes());
+        for (i, mz) in precursors.iter().enumerate() {
+            let at = 4 + i * COUNTED_STEP;
+            body[at..at + 8].copy_from_slice(&mz.to_le_bytes());
+            body[at + 16..at + 24].copy_from_slice(&25.0f64.to_le_bytes());
+        }
+        let fc = body.len() - 88;
+        body[fc..fc + 8].copy_from_slice(&50.0f64.to_le_bytes());
+        body[fc + 8..fc + 16].copy_from_slice(&340.0f64.to_le_bytes());
+        body[fc + 16..fc + 20].copy_from_slice(&1u32.to_le_bytes());
+        body[fc + 20..fc + 28].copy_from_slice(&1.5f64.to_le_bytes());
+        [pre, body].concat()
+    }
+
+    #[test]
+    fn a_counted_event_gives_every_precursor_of_its_chain() {
+        let chain = [317.0, 261.0, 244.0, 200.0, 172.0, 145.0, 112.0];
+        let bytes = [counted_event(&[]), counted_event(&chain)].concat();
+        let mut r = BinaryReader::new(Cursor::new(bytes));
+        let ms1 = ScanEvent::read(&mut r, 66, [COUNTED_BODY; 3]).unwrap();
+        assert!(ms1.reactions.is_empty());
+        let ms8 = ScanEvent::read(&mut r, 66, [COUNTED_BODY; 3]).unwrap();
+        let got: Vec<f64> = ms8.reactions.iter().map(|x| x.precursor_mz).collect();
+        assert_eq!(got, chain);
+        assert_eq!(ms8.reactions[6].energy, 25.0);
+        assert_eq!((ms8.fraction_collectors[0].low_mz, ms8.fraction_collectors[0].high_mz), (50.0, 340.0));
+        assert_eq!(ms8.coefficients, vec![1.5]);
     }
 }
