@@ -4,3 +4,6 @@
 - **Risultato: 4 clic + 3 tasti = 7 azioni**: scheda Tabui (1 clic), file (1 clic + 2 tasti), SMILES del genitore (1 clic + 1 tasto), «Dig» (1 clic). Con i 5 clic sul logo che mostrano Tabui (una volta per browser) sono 12.
 - Il test fallisce oltre 10 azioni (senza il logo): un passo in più fra i file e la tabella è una regressione. Nessuna conferma, nessun pulsante «Compute» in mezzo; la Pipeline non serve per questo percorso.
 - Termine di confronto (test 4 dello studio `WORKFLOW_MODULARI.md`: mzLab ≤ metà dei clic di mzmine 4.10, stesso risultato): si misura sul Mac con la registrazione dello schermo di mzmine, batch caricato e batch costruito; il numero va aggiunto qui. I 13 `.raw` veri non sono nel repository: la misura qui è sulla serie sintetica, che ha gli stessi passi dell'utente.
+
+## Rete dei prodotti: dal nodo alla riga (`python3 tests_e2e/e2e_rete.py`, riga «MISURA clic_rete_riga»)
+- Un clic su un nodo della rete sceglie la riga della tabella (`onSelect(rowId)`); con la tastiera Invio o Spazio sul nodo. Il test fallisce oltre 1 clic. `selectRow(rowId)` sceglie il nodo dalla tabella senza richiamare `onSelect`.

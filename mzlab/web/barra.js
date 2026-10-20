@@ -31,6 +31,8 @@ const BARRA = (() => {
   let _forced = false;              // the user opened it in a narrow window: it stays until the window widens
   let _side = "left";
   let _w = 260;
+  // false = the width follows the longest file name (never wider than the default); true = set by hand
+  let _wUser = false, _appliedW = 0;
   let _last = { scan: "hdr", form: "cmp" };
   let _mode = null;
   let _mounted = false;
@@ -55,7 +57,7 @@ const BARRA = (() => {
   const tcmd = () => { try { const f = Q1("#tframe"); return (f && f.contentWindow && f.contentWindow.TCMD) || null; } catch (_) { return null; } };
   const sheet = () => window.innerWidth < SHEET;
   const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(window.innerWidth / 2)));
-  const effW = () => Math.max(MIN_W, Math.min(maxW(), _w));
+  const effW = () => Math.max(MIN_W, Math.min(maxW(), _wUser ? _w : Math.min(defaultW(), typeof namesWidth === "function" ? namesWidth(defaultW()) : defaultW())));
   const validTab = id => ["file", "calc", "losses", "adducts", "lists", "stat"].includes(id) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
 
   // ---------------------------------------------------------------- icons
@@ -155,7 +157,10 @@ const BARRA = (() => {
   function loadState() {
     let s = {};
     s = lsObj(storageKey());
-    _w = typeof s.w === "number" && isFinite(s.w) && s.w >= MIN_W && s.w <= MAX_W ? Math.round(s.w) : defaultW();
+    const okW = typeof s.w === "number" && isFinite(s.w) && s.w >= MIN_W && s.w <= MAX_W;
+    _w = okW ? Math.round(s.w) : defaultW();
+    _wUser = okW && (s.u === true || (s.u === undefined && _w !== defaultW()));
+    if (!_wUser) _w = defaultW();
     _tab = validTab(s.tab) ? s.tab : "file";
     _open = s.open === undefined ? innerWidth >= AUTO_W : s.open === true;      // first visit: the panel (File list) is open, except on a narrow screen where it would replace the workspace
     if (s.last && typeof s.last === "object") {
@@ -176,14 +181,14 @@ const BARRA = (() => {
 
   function saveState() {
     try {
-      localStorage.setItem(storageKey(), JSON.stringify({ tab: _tab, open: _open || _restore, w: _w, last: _last }));
+      localStorage.setItem(storageKey(), JSON.stringify({ tab: _tab, open: _open || _restore, w: _w, u: _wUser, last: _last }));
       localStorage.setItem(K_SIDE, _side);
     } catch (_) { /* no storage */ }
   }
 
   // ---------------------------------------------------------------- layout of the drawer
   function applyWidth() {
-    document.documentElement.style.setProperty("--sb-w", effW() + "px");
+    document.documentElement.style.setProperty("--sb-w", (_appliedW = effW()) + "px");
   }
 
   // one redraw per frame, whatever fires it: the workspace changes width when the panel shows, hides or is resized
@@ -426,6 +431,7 @@ const BARRA = (() => {
   }
 
   function setWidth(w) {
+    _wUser = true;
     _w = Math.max(MIN_W, Math.min(maxW(), Math.round(w)));
     applyLayout();
     saveState();
@@ -778,6 +784,7 @@ const BARRA = (() => {
       const pane = Q1("#sb-pane");
       if (!pane) return;
       const rect = pane.getBoundingClientRect();
+      _wUser = true;
       _w = Math.max(MIN_W, Math.min(maxW(), Math.round(_side === "right" ? rect.right - e.clientX : e.clientX - rect.left)));
       applyLayout();
     };
@@ -800,7 +807,7 @@ const BARRA = (() => {
       e.preventDefault();
     };
     handle.ondblclick = () => {
-      _w = defaultW();
+      _wUser = false; _w = defaultW();
       applyLayout();
       saveState();
     };
@@ -811,7 +818,7 @@ const BARRA = (() => {
       else if (e.key === "ArrowRight") w = effW() + (_side === "right" ? -step : step);
       else if (e.key === "Home") w = MIN_W;
       else if (e.key === "End") w = maxW();
-      else if (e.key === "Enter") w = defaultW();
+      else if (e.key === "Enter") { e.preventDefault(); _wUser = false; _w = defaultW(); applyLayout(); saveState(); return; }
       if (w == null) return;
       e.preventDefault();
       setWidth(w);
@@ -1102,6 +1109,8 @@ const BARRA = (() => {
     get curTab() { return _tab; },
     get side() { return _side; },
     get width() { return effW(); },
+    /** The list changed: an automatic width follows the longest name. */
+    fitNames() { if (!_wUser && _appliedW !== effW()) applyLayout(); },
     get open() { return _open && inData(); },
     get sheet() { return _open && inData() && sheet(); },
     get dockedWidth() { return _open && inData() && !sheet() ? effW() : 0; },

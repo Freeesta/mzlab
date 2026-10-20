@@ -134,6 +134,8 @@ function seqColor(u) {
   return "#" + A.map((v, k) => Math.round(v + (B[k] - v) * f).toString(16).padStart(2, "0")).join("");
 }
 const DASHES = [[], [6, 3], [2, 3], [10, 3, 2, 3]];
+/** The one back / forward arrow of the program (the same drawing as the file arrows of the header): a chevron. @param {number} d -1 = back, 1 = forward @param {number} [n] size in px */
+const chevron = (d, n = 16) => `<svg width="${n}" height="${n}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${d < 0 ? "M10 3L5 8l5 5" : "M6 3l5 5-5 5"}"/></svg>`;
 const LWX = () => PALS[UIP.pal].lw || 0;                      // extra line width (px) of the high contrast palette
 // line style of a file: solid, so that blanks and standards read as plain traces (neutral grey carries the distinction); with the colour-blind /
 // high-contrast palettes the files of the time scale are also told apart by line style (second code besides the colour)
@@ -162,8 +164,7 @@ const lrTog = () => !(window.BANCO && BANCO.on());
 const tabPanels = t => (t === undefined ? E.panels : E.panels.filter(p => p.tab === (t ?? E.tab)));
 // group of a file in the list: in LR strictly the experiment name (Full Scan, MS2, MRM); in HR bench sub-groups
 const grpOf = f => (window.BANCO && BANCO.on()) ? (f.kind === "mrm" ? (["standard", "sample", "blank"].includes(f.type) ? f.type : "sample") : "hr." + hrGroup(f)) : kindOf(f);
-const GRP_HR = { "hr.full": () => I18N.t("files.group.full"), "hr.ms2": () => I18N.t("files.group.ms2"), "hr.infusion": () => I18N.t("files.group.infusion") };
-const grpLabel = g => g.startsWith("hr.u:") ? g.slice(5) : GRP_HR[g] ? GRP_HR[g]() : ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
+const GRP_HR = { "hr.full": () => I18N.t("files.group.full"), "hr.ms2": () => I18N.t("files.group.ms2"), "hr.infusion": () => I18N.t("files.group.infusion") }; const grpLabel = g => g.startsWith("hr.u:") ? g.slice(5) : GRP_HR[g] ? GRP_HR[g]() : ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
 // the entries of a physical file that is open together (the Full Scan and the MS2 part of a DDA file)
 const sibsOf = f => E.files.filter(x => fileBase(x.file) === fileBase(f.file));
 const TOL0 = 1.0;                                   // strumento datato: finestra XIC di +-1 Da
@@ -434,7 +435,7 @@ async function bootSession0() {
       // low resolution: only the first file of the list is open (also with mixed Full Scan / MS2 / MRM), the others wait in the list and a click opens them
       vis = (k === 0);
     }
-    return { ...s, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: oldVis[s.file] ? oldVis[s.file].label : s.label, lv: s.kind === "ms2" ? 2 : 1 };
+    return { ...s, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: oldVis[s.file] ? oldVis[s.file].label : s.dda ? String(s.label).replace(/ · Full Scan(?=[+−-]?$)/, "") : s.label, lv: s.kind === "ms2" ? 2 : 1 };
   });
   paintFiles();
   if (window.HR) HR.notice(E.files);
@@ -785,6 +786,7 @@ function renderFileList() {
   const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isExpOpen(gkOf(G)) && !grpClosed(G.g) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
   Q("#flst").setAttribute("aria-busy", waiting ? "true" : "false");
   Q("#flst").innerHTML = pendBar + pre + body + pendRows;
+  if (window.BARRA) BARRA.fitNames();
   Q("#flst").querySelectorAll("[data-pend-rm]").forEach(b => b.onclick = () => { E.pending.splice(+b.dataset.pendRm, 1); renderFileList(); });
   Q("#flst").querySelectorAll("input[data-pr]").forEach(x => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));
   { const dl = Q("#ddalist"); if (dl) dl.onclick = () => DDA.openList(); }
@@ -854,8 +856,7 @@ function colorFile(f, ev) {
 }
 function fileCtx(e, f) {
   if (!f) return; e.stopPropagation();
-  const hr = grpOf(f).startsWith("hr."), own = hr && f.ugrp;
-  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameFile(f) }, ...(hr ? [{ label: I18N.t("files.ctx.group"), fn: () => groupFiles(f) }] : []), ...(own ? [{ label: I18N.t("files.ctx.ungroup"), fn: () => groupFiles(f, true) }] : []), { label: I18N.t("files.ctx.color"), fn: () => colorFile(f, e) }, { label: I18N.t("files.ctx.resetColors"), fn: resetColors }, "-", { label: I18N.t("files.ctx.remove"), fn: () => removeFile(f) }]);
+  const hr = grpOf(f).startsWith("hr."), own = hr && f.ugrp; menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameFile(f) }, ...(hr ? [{ label: I18N.t("files.ctx.group"), fn: () => groupFiles(f) }] : []), ...(own ? [{ label: I18N.t("files.ctx.ungroup"), fn: () => groupFiles(f, true) }] : []), { label: I18N.t("files.ctx.color"), fn: () => colorFile(f, e) }, { label: I18N.t("files.ctx.resetColors"), fn: resetColors }, "-", { label: I18N.t("files.ctx.remove"), fn: () => removeFile(f) }]);
 }
 // quick file chooser opened from a graph header: tick/untick files (same switch as the list on the left), click a name to show only that file
 function fileMenu(btn) {

@@ -26,7 +26,7 @@
         p.fix ? el("button", { type: "button", class: "fl-b fl-fix", onclick: () => { p.fix.run(); c.done(); } }, icon("plus", 14), el("span", { text: p.fix.label })) : null)));
       box.append(ul);
     } else box.append(el("p", { class: "fl-ready" }, icon("ok", 14), " Ready."));
-    if (node.kind === "input") { box.append(el("p", { class: "fl-note", text: "The file is chosen when the plan is run." }));
+    if (node.kind === "input") { box.append(node.file && node.file.type === "samples" && F.samplesEditor ? F.samplesEditor(S, node.file) : el("p", { class: "fl-note", text: "The file is chosen when the plan is run." }));
       if (!c.simple) box.append(F.btn("x", `Remove ${node.title}`, () => c.remove(node), "Remove")); return box; }
     for (const id of node.ids) {
       const inst = F.instanceOf(S.plan, id), step = inst && (F.stepOf ? F.stepOf(S.reg, inst) : S.reg.byId.get(inst.step.split("@")[0]));
