@@ -250,3 +250,21 @@ fn no_arc_leaves_the_parent_alone() {
     assert_eq!((r.nodes.len(), r.arcs.len()), (1, 0));
     assert!(r.to_json().ends_with("\"n_arcs\":0}"));
 }
+
+/// The network the view is tried on (`TP_Mine/tests/rete_fixture.json`, copied from here so that the page and the engine agree): the five products of
+/// `rows()` with the MS2 of two of them compared with the parent's. `MZLAB_WRITE_FIXTURE=1` rewrites the file.
+#[test]
+fn the_fixture_of_the_view_is_the_output_of_the_engine() {
+    let mut v = rows();
+    v[1].has_ms2 = true;
+    v[1].equal = vec![100.1, 116.2, 130.1];
+    v[1].shifted = vec![132.2, 146.1];
+    v[4].has_ms2 = true;
+    v[4].equal = vec![100.1];
+    let got = net(&v, &ReteParams::default()).to_json();
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../TP_Mine/tests/rete_fixture.json");
+    if std::env::var("MZLAB_WRITE_FIXTURE").is_ok() {
+        std::fs::write(&path, &got).unwrap();
+    }
+    assert_eq!(got, std::fs::read_to_string(&path).unwrap());
+}
