@@ -100,6 +100,8 @@ fn transform_of(parent: &Formula, tp: &Formula) -> Result<&'static str, &'static
         [("O", 3)] => "+3O",
         [("C", -2), ("H", -4)] => "-C2H4",
         [("H", -2), ("O", 2)] => "+2O-2H",
+        [("Cl", -1), ("H", 1), ("O", 1)] => "-Cl+OH",
+        [("H", -1), ("N", -1), ("O", 1)] => "NH2>OH",
         _ if d.iter().any(|x| x.0 == "O" && x.1 >= 2) => return Err("multiple_changes"),
         _ => return Err("unsupported_change"),
     })
@@ -349,7 +351,7 @@ fn decide(
     };
     // Two changes are never reported as a single position: the best case is the region that holds both.
     let alone = within.len() == 1
-        && !sites.iter().any(|s| posizioni::is_multi(s.kind))
+        && !posizioni::is_multi(&alive[0].kind)
         && alive[0].status == "supported"
         && alive[0].n_against == 0
         && same(alive[0]);
