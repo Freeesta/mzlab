@@ -23,6 +23,7 @@ pub mod facts;
 pub mod famalign;
 pub mod family;
 pub mod famrecord;
+pub mod drift;
 pub mod filters;
 pub mod gapfill;
 pub mod gruppi;
