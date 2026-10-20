@@ -20,7 +20,7 @@
   const molSvg = new Map();
   const structure = async (smi, w, h) => {
     const k = smi + "|" + w + "x" + h;
-    if (!molSvg.has(k)) molSvg.set(k, ocl().then(O => O.Molecule.fromSmiles(smi).toSVG(w, h)).catch(() => ""));
+    if (!molSvg.has(k)) molSvg.set(k, ocl().then(O => O.Molecule.fromSmiles(smi).toSVG(w, h, "", window.MOLUI ? MOLUI.SVG_OPTS : undefined)).catch(() => ""));
     return molSvg.get(k);
   };
 

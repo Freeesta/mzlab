@@ -2,7 +2,7 @@
 """Release notes of the GitHub release: a download table (Windows / Mac / Linux) on top, then the CHANGELOG.md section.
 Also the single place that names the release files, so release.yml and the table cannot drift apart. Used by release.yml (job `bozza`).
 
-    python3 tools/note_release.py --tag v1.0.1 --repo Freeesta/mzlab --notes NOTE.md > RELEASE_NOTES.md
+    python3 tools/note_release.py --tag v1.0.0 --repo Freeesta/mzlab --notes NOTE.md > RELEASE_NOTES.md
 """
 from __future__ import annotations
 

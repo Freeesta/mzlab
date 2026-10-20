@@ -137,3 +137,16 @@ fn the_text_of_mzfinder_gives_the_same_rows_through_the_list() {
         "the errors are those of the text"
     );
 }
+
+/// Today's `liste/1` reading of the synthetic suspects file; M6 turns the same file into a molecules collection named like the file.
+#[test]
+fn synthetic_suspects_fixture_reads_today() {
+    let csv = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/dati/sospetti_sintetici.csv"
+    ))
+    .unwrap();
+    let (list, json) = round(Kind::Suspects, &csv);
+    assert_eq!(list.len(), 3);
+    assert!(json.contains("\"nome\":\"Esempina\"") && json.contains("\"massa\":234.1012"));
+}

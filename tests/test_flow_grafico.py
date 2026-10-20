@@ -67,7 +67,7 @@ def test_flow_is_english_only():
 
 def test_flow_is_shipped_with_the_descriptors():
     site = (ROOT / "tools/build_site.py").read_text(encoding="utf-8")
-    for name in ("steps-1.json", "steps-attributio-1.json", "steps-tabui-1.json", '"flow"'):
+    for name in ("steps-1.json", "steps-attributio-1.json", "steps-tabui-1.json", "steps-cli-1.json", '"flow"'):
         assert name in site, name
     tool = (ROOT / "flow/js/flow-tool.js").read_text(encoding="utf-8")
     for part in (ROOT / "flow/lazy").glob("flow-*.js"):

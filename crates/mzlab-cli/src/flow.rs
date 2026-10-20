@@ -52,16 +52,13 @@ pub fn table_step() -> Step {
     }
 }
 
-/// The steps a plan can use here: the registry of the flagship chain, `features.table`, the identification steps, `tp.network` and `spectra.ms2`.
+/// The steps a plan can use here, every family of descriptors: the registry of the flagship chain, `features.table`, Attributio, the whole Tabui
+/// family, `spectra.ms2` and `meta.compare`. Whether a step also runs here is `executable`.
 pub fn steps() -> Vec<Step> {
     let mut all = mzlab_feat::steps::registry();
     all.push(table_step());
     all.extend(mzlab_feat::steps::attributio());
-    all.extend(
-        mzlab_feat::steps::tabui()
-            .into_iter()
-            .filter(|s| s.id == "tp.network"),
-    );
+    all.extend(mzlab_chem::step::tabui());
     all.push(crate::flow_ms2::ms2_step());
     all.push(crate::flow_compare::compare_step());
     all
