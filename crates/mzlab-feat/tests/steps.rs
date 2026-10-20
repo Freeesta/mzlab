@@ -9,7 +9,7 @@ use mzlab_feat::axis::MassAxis;
 use mzlab_feat::recipe::{Mode, Recipe};
 use mzlab_feat::steps::registry;
 
-const IDS: [&str; 12] = [
+const IDS: [&str; 13] = [
     "import.raw",
     "convert.mzml",
     "index.mzidx",
@@ -18,6 +18,7 @@ const IDS: [&str; 12] = [
     "features.align",
     "features.gapfill",
     "table.filter",
+    "table.drift",
     "features.ms2_link",
     "export.table_csv",
     "export.inclusion",
