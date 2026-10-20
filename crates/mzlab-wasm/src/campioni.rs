@@ -7,3 +7,9 @@ use wasm_bindgen::prelude::*;
 pub fn campioni(op: &str, input: &str) -> Result<String, JsValue> {
     mzlab_core::campioni::route(op, input).map_err(|e| crate::error_json(&e))
 }
+
+/// The script that reruns an `mzflow/2` plan on the command line (`mzlab_core::flow::command_route`): text in, text out.
+#[wasm_bindgen]
+pub fn flow_command(plan: &str) -> Result<String, JsValue> {
+    mzlab_core::flow::command_route(plan).map_err(|e| crate::error_json(&e))
+}

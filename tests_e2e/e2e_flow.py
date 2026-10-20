@@ -88,6 +88,14 @@ try:
             pg.set_input_files("#fl-file", {"name": "bad.json", "mimeType": "application/json", "buffer": b"{"})
             attendi(pg, "document.querySelector('#fl-msg').textContent.includes('not valid JSON')")
         step("the exported plan opens again; a broken file says why", roundtrip)
+        def copy_command():
+            attendi(pg, "(document.querySelector('.fl-cli code') || {textContent: ''}).textContent.includes('mzlab-cli flow run')")
+            text = pg.inner_text(".fl-cli code")
+            assert "<<'MZFLOW'" in text and '--in "$MZLAB_IN"' in text, text[:300]
+            # the here-doc is the plan itself: the shell rewrites the same bytes the export gave
+            body = text.split("<<'MZFLOW'\n", 1)[1].split("\nMZFLOW\n", 1)[0]
+            assert json.loads(body) == json.loads((tmp / "plan.json").read_text())
+        step("Copy command shows the shell text built by the engine, with the plan inside", copy_command)
         def parameters():
             pg.fill("#fl-p-detect-floor", "5000"); pg.keyboard.press("Tab")
             attendi(pg, "!!document.querySelector('#fl-card-detect button[aria-label^=\"Back to the default\"]')")
