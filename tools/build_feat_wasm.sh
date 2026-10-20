@@ -81,7 +81,8 @@ fi
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-finder-lr-wasm
 wasm_pack "$out/finder-lr" $R/mzlab_finder_lr_wasm.wasm $limit_lr "mzFinder finder-lr"
 # the readers module (crates/mzlab-lettori-wasm), loaded only when a file needs it: tools/build_lettori_wasm.sh (it has its own jobs: it overlaps with the ones above)
-tools/build_lettori_wasm.sh "${1:-site/static}"
+# part b leaves the readers to the job of the engine in sito-rust.yml (it balances the three jobs); all (pages, release) builds them here
+[ "$part" = b ] || tools/build_lettori_wasm.sh "${1:-site/static}"
 fi
 wasm_wait
 [ "$part" = all ] || [ "$part" = manifest ] || exit 0
