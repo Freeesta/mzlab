@@ -262,7 +262,8 @@ fn the_fixture_of_the_view_is_the_output_of_the_engine() {
     v[4].has_ms2 = true;
     v[4].equal = vec![100.1];
     let got = net(&v, &ReteParams::default()).to_json();
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../TP_Mine/tests/rete_fixture.json");
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../TP_Mine/tests/rete_fixture.json");
     if std::env::var("MZLAB_WRITE_FIXTURE").is_ok() {
         std::fs::write(&path, &got).unwrap();
     }
