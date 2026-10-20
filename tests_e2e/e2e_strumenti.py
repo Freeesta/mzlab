@@ -90,10 +90,10 @@ try:
             assert pg.evaluate("BARRA.width") == 316 and pg.evaluate("Q('#dpanels').clientWidth") < w300, "left panel: → widens it, the charts narrow"
             pg.keyboard.press("Home"); pg.wait_for_timeout(100); assert pg.evaluate("BARRA.width") == 280
             pg.keyboard.press("End"); pg.wait_for_timeout(100); assert pg.evaluate("BARRA.width") == 560
-            pg.keyboard.press("Enter"); pg.wait_for_timeout(100); assert pg.evaluate("BARRA.width") == 300
+            pg.keyboard.press("Enter"); pg.wait_for_timeout(100); assert 280 <= pg.evaluate("BARRA.width") <= 300
             pg.evaluate("BARRA.setWidth(1000)"); assert pg.evaluate("BARRA.width") == 560, "never wider than 560 px"
             assert pg.evaluate("E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)"), "the charts follow the narrower page"
-            h.dblclick(); pg.wait_for_timeout(200); assert pg.evaluate("BARRA.width") == 300, "double click = default"
+            h.dblclick(); pg.wait_for_timeout(200); assert 280 <= pg.evaluate("BARRA.width") <= 300, "double click = the automatic width"
             pg.click("#sb-x"); pg.wait_for_timeout(300)
         step("splitter (role separator): keyboard, Home/End, double click, 280-560 px", larghezza)
 

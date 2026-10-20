@@ -434,7 +434,9 @@ async function bootSession0() {
       // low resolution: only the first file of the list is open (also with mixed Full Scan / MS2 / MRM), the others wait in the list and a click opens them
       vis = (k === 0);
     }
-    return { ...s, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: oldVis[s.file] ? oldVis[s.file].label : s.label, lv: s.kind === "ms2" ? 2 : 1 };
+    // a DDA file is one row, not a «Full Scan» part: the suffix of its survey part is not shown
+    const label = oldVis[s.file] ? oldVis[s.file].label : s.dda ? String(s.label).replace(/ · Full Scan(?=[+−-]?$)/, "") : s.label;
+    return { ...s, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label, lv: s.kind === "ms2" ? 2 : 1 };
   });
   paintFiles();
   if (window.HR) HR.notice(E.files);
@@ -785,6 +787,7 @@ function renderFileList() {
   const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isExpOpen(gkOf(G)) && !grpClosed(G.g) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
   Q("#flst").setAttribute("aria-busy", waiting ? "true" : "false");
   Q("#flst").innerHTML = pendBar + pre + body + pendRows;
+  if (window.BARRA) BARRA.fitNames();
   Q("#flst").querySelectorAll("[data-pend-rm]").forEach(b => b.onclick = () => { E.pending.splice(+b.dataset.pendRm, 1); renderFileList(); });
   Q("#flst").querySelectorAll("input[data-pr]").forEach(x => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));
   { const dl = Q("#ddalist"); if (dl) dl.onclick = () => DDA.openList(); }
