@@ -264,6 +264,26 @@ fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     write_made(r, job, text, DataType::Annot)
 }
 
+fn inclusion_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let find = |name: &str| {
+        job.resolved
+            .params
+            .iter()
+            .find(|(k, _)| k == name)
+            .map(|(_, v)| v)
+    };
+    let adducts = find("adducts")
+        .and_then(|v| v.str())
+        .unwrap_or("[M+H]+")
+        .to_string();
+    let half = find("rt_window").and_then(|v| v.f64()).unwrap_or(0.5);
+    let products = read_one(r, job, "tp")?;
+    let text = crate::flow_inclusion::inclusion_text(&products.1, &adducts, half)?;
+    let out = r.work.join(format!("{}.csv", job.instance.id));
+    std::fs::write(&out, text).map_err(io)?;
+    r.keep(out, DataType::Report)
+}
+
 impl Runner for FileRunner {
     fn run(&self, job: &Job) -> Result<Outcome> {
         if let Some(m) = self.meter {
@@ -279,6 +299,7 @@ impl Runner for FileRunner {
             "spectra.ms2" => ("spectra", ms2_job(self, job)?),
             "annot.level" => ("annot", level_job(self, job)?),
             "meta.compare" => ("comparison", compare_job(self, job)?),
+            "export.inclusion" => ("report", inclusion_job(self, job)?),
             id => return Err(Error::new("err.flow.unknownStep").with("step", id)),
         };
         Ok(Outcome {

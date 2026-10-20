@@ -1,0 +1,73 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "rete/1",
+ "title": "rete/1: the network of the transformation products",
+ "description": "The parent and the accepted products of tp/1 as nodes in columns by step, and an arc for every rule whose change of the ion formula takes one to another. Computed by crates/mzlab-feat/src/rete/; the view draws what it finds here. A network is not an identification and raises no level.",
+ "type": "object",
+ "required": ["schema", "params", "parent", "columns", "nodes", "arcs", "n_arcs"],
+ "properties": {
+  "schema": {"const": "rete/1"},
+  "params": {
+   "type": "object",
+   "required": ["ppm", "min_fragments"],
+   "properties": {
+    "ppm": {"type": "number", "description": "largest error of the observed difference of m/z against the mass of the change, ppm of the product"},
+    "min_fragments": {"type": "integer", "minimum": 0, "description": "an arc from the parent with an MS2 compared is kept with at least this many fragments in common (equal or shifted)"}
+   }
+  },
+  "parent": {"type": "integer", "minimum": 1, "description": "id of the row of the parent"},
+  "columns": {"type": "integer", "minimum": 0, "description": "largest step plus one"},
+  "nodes": {"type": "array", "items": {"$ref": "#/$defs/nodo"}, "description": "by step, then m/z, RT and id; the parent first"},
+  "arcs": {"type": "array", "items": {"$ref": "#/$defs/arco"}, "description": "by source id, then target id"},
+  "n_arcs": {"type": "integer", "minimum": 0}
+ },
+ "$defs": {
+  "nodo": {
+   "type": "object",
+   "required": ["id", "row", "mz", "rt", "neutral_formula", "ion_formula", "kinship", "step", "pos"],
+   "properties": {
+    "id": {"type": "integer", "minimum": 1},
+    "row": {"type": "integer", "minimum": 0, "description": "index in the table and in the arrays of tp/1 (id = row + 1)"},
+    "mz": {"type": "number"},
+    "rt": {"type": "number"},
+    "neutral_formula": {"type": "string"},
+    "ion_formula": {"type": "string"},
+    "kinship": {"type": "integer", "minimum": 0, "maximum": 4, "description": "kinship of tp/1 (0 none, 1 doubtful, 2 possible, 3 probable, 4 certain); 0 for the parent"},
+    "step": {"type": "integer", "minimum": 0, "description": "arcs away from the parent (0 = the parent); a group the parent does not reach starts at 1 from its earliest node"},
+    "pos": {"type": "integer", "minimum": 0, "description": "place in the column, by m/z, then RT, then id"}
+   }
+  },
+  "arco": {
+   "type": "object",
+   "required": ["from", "to", "rule", "scope", "delta", "dm", "ppm", "delta_rt", "kinetic", "ms2", "reason"],
+   "properties": {
+    "from": {"type": "integer", "minimum": 1},
+    "to": {"type": "integer", "minimum": 1},
+    "rule": {"type": "string"},
+    "scope": {"enum": ["literature", "class", "generic"]},
+    "delta": {"type": "string", "description": "change of the ion formula, gains first, true minus"},
+    "dm": {"type": "number", "description": "change of mass, Da"},
+    "ppm": {"type": "number"},
+    "delta_rt": {"type": "number", "description": "RT of the target minus RT of the source, min"},
+    "kinetic": {"enum": ["consistent", "against", "n/a"]},
+    "ms2": {
+     "description": "MS2 of the product against the parent; null when the source is not the parent or no MS2 was compared",
+     "oneOf": [
+      {"type": "null"},
+      {
+       "type": "object",
+       "required": ["equal", "shifted", "n_equal", "n_shifted"],
+       "properties": {
+        "equal": {"type": "array", "items": {"type": "number"}},
+        "shifted": {"type": "array", "items": {"type": "number"}},
+        "n_equal": {"type": "integer"},
+        "n_shifted": {"type": "integer"}
+       }
+      }
+     ]
+    },
+    "reason": {"type": "string"}
+   }
+  }
+ }
+}

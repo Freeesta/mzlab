@@ -19,6 +19,7 @@ use mzlab_feat_wasm::run;
 pub mod flow;
 mod flow_compare;
 mod flow_formula;
+mod flow_inclusion;
 mod flow_level;
 mod flow_match;
 mod flow_ms2;

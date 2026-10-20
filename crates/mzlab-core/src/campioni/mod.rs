@@ -4,11 +4,13 @@
 
 mod json;
 mod nomi;
+mod posizioni;
 mod ricollega;
 mod valida;
 
 pub use json::{da_legacy, digest, from_json, from_value, to_json};
-pub use nomi::{proponi, tipo_v1};
+pub use nomi::{proponi, proponi_spiegato, tipo_v1};
+pub use posizioni::{proposte_json, Posizione, Proposta};
 pub use ricollega::{ricollega, ricollega_json, Abbinamento};
 pub use valida::{per_tp, per_tp_json, valida, valida_json, Avviso, PerTp};
 
@@ -142,11 +144,11 @@ pub fn number_replicates(cs: &mut [Campione]) {
     }
 }
 
-/// The bindings: `op` is `proponi` (`{"files":[{"name","sha256","kind"}]}`), `valida`, `per_tp`, `canonico` or `digest` (a `campioni/2`), `ricollega` (`{"campioni","file":[{"percorso","sha256"}]}`) or `da_legacy`
+/// The bindings: `op` is `proponi` or `proponi_spiegato` (`{"files":[{"name","sha256","kind"}]}`; the second adds the spans of the name), `valida`, `per_tp`, `canonico` or `digest` (a `campioni/2`), `ricollega` (`{"campioni","file":[{"percorso","sha256"}]}`) or `da_legacy`
 /// (`{"session","qaqc","campioni1","mzflow"}`, see `json::da_legacy`); JSON in, JSON out.
 pub fn route(op: &str, input: &str) -> Result<String> {
     match op {
-        "proponi" => {
+        "proponi" | "proponi_spiegato" => {
             let v = crate::json::parse(input.as_bytes())?;
             let s = |f: &crate::json::Value, k: &str| {
                 f.get(k).and_then(|x| x.str()).unwrap_or("").to_string()
@@ -158,6 +160,9 @@ pub fn route(op: &str, input: &str) -> Result<String> {
                 .iter()
                 .map(|f| (s(f, "name"), s(f, "sha256"), s(f, "kind")))
                 .collect();
+            if op == "proponi_spiegato" {
+                return Ok(proposte_json(&proponi_spiegato(&files)));
+            }
             Ok(to_json(&proponi(&files)))
         }
         "valida" => Ok(valida_json(&valida(&from_json(input.as_bytes())?))),

@@ -143,3 +143,7 @@ required-features = ["interp"]
 [[test]]
 name = "steps_attributio_parity"
 required-features = ["attributio", "untargeted"]
+
+[[test]]
+name = "rete_interp"
+required-features = ["interp"]
