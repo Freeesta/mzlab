@@ -17,12 +17,12 @@
     return (item && mine.find((/** @type {any} */ v) => v.accepts && v.accepts(item))) || mine.find((/** @type {any} */ v) => !v.accepts) || mine[0];
   };
 
-  /** a table with its caption from head and rows of strings (the first MAX_ROWS rows) @param {HTMLElement} host @param {{caption: string, head: string[], rows: string[][], label: string}} t */
+  /** a table with its caption from head and rows of strings (the first MAX_ROWS rows) @param {HTMLElement} host @param {{caption: string, head: string[], rows: string[][], label: string, ids?: (string | number)[], members?: (string | number)[][]}} t `ids`: the row id of each row (the row takes part in the one selection of flow-select.js), `members`: the ids a row groups (it is marked when the selection is one of them) */
   F.drawTable = (host, t) => {
     const { el } = F, body = t.rows.slice(0, MAX_ROWS);
     host.append(el("div", { class: "flx-tablewrap", tabindex: 0, role: "region", "aria-label": t.label }, el("table", { class: "flx-table" }, el("caption", { text: `${t.caption}: ${body.length} of ${t.rows.length} rows` }),
       el("thead", {}, el("tr", {}, ...t.head.map(h => el("th", { scope: "col", text: h })))),
-      el("tbody", {}, ...body.map(r => el("tr", {}, ...r.map(c => el("td", { text: c }))))))));
+      el("tbody", {}, ...body.map((r, k) => el("tr", t.ids && t.ids[k] != null ? { "data-id": String(t.ids[k]), tabindex: "0" } : t.members && t.members[k] ? { "data-members": t.members[k].join(",") } : {}, ...r.map(c => el("td", { text: c }))))))));
   };
 
   /** CSV text to rows: quoted cells, doubled quotes, CRLF; a tab-separated file is told by its first line @param {string} text @returns {string[][]} */

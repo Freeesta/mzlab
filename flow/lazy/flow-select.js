@@ -24,14 +24,27 @@
     });
   };
 
+  /** marks the rows of `host` that group the selected row (`tr[data-members]`, the sets of a comparison) with a dashed outline and `data-member` @param {HTMLElement} host @param {string | null} id */
+  const markMembers = (host, id) => host.querySelectorAll("tr[data-members]").forEach(tr => {
+    const on = id != null && /** @type {HTMLElement} */ (tr).dataset.members?.split(",").includes(id);
+    tr.classList.toggle("flx-member", !!on);
+    if (on) tr.setAttribute("data-member", "true"); else tr.removeAttribute("data-member");
+  });
+
   /** the rows of the tables of `host` publish their id on a click and show the selection of the other views; `name` says who asks @param {HTMLElement} host @param {string} name */
   F.watchRows = (host, name) => {
     host.addEventListener("click", e => {
       const tr = /** @type {HTMLElement} */ (e.target).closest("tr[data-id]");
       if (tr && host.contains(tr) && !(/** @type {HTMLElement} */ (e.target)).closest("a,input,select,textarea")) F.select(/** @type {HTMLElement} */ (tr).dataset.id || null, name);
     });
-    const stop = F.onSelect((/** @type {string | null} */ id) => { if (!host.isConnected) { stop(); return; } F.markRow(host, id); });
-    new MutationObserver(() => F.markRow(host, F.selected)).observe(host, { childList: true, subtree: true });
-    F.markRow(host, F.selected);
+    // a row that takes focus (tabindex 0) is chosen with Enter or Space
+    host.addEventListener("keydown", e => {
+      const tr = /** @type {HTMLElement} */ (e.target).closest("tr[data-id][tabindex]");
+      if (tr && tr === e.target && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); F.select(/** @type {HTMLElement} */ (tr).dataset.id || null, name); }
+    });
+    const mark = (/** @type {string | null} */ id) => { F.markRow(host, id); markMembers(host, id); };
+    const stop = F.onSelect((/** @type {string | null} */ id) => { if (!host.isConnected) { stop(); return; } mark(id); });
+    new MutationObserver(() => mark(F.selected)).observe(host, { childList: true, subtree: true });
+    mark(F.selected);
   };
 })();
