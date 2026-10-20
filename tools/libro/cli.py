@@ -13,12 +13,13 @@ def main(argv=None) -> int:
     ap.add_argument("--src", required=True, type=Path)
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--pubblico", action="store_true", help="drop <!-- privato --> blocks and refuse unresolved [I]")
+    ap.add_argument("--teoria", action="store_true", help="write published Teoria chapters (their own head and scripts), not hidden drafts")
     a = ap.parse_args(argv)
     files = sorted(f for f in a.src.rglob("*.md") if not f.name.endswith((".appunti.md", ".qa.md")) and f.name != "LEGGIMI.md")
     a.out.mkdir(parents=True, exist_ok=True)
     try:
         for f in files:
-            (a.out / (f.stem + ".html")).write_text(converti(f.read_text(encoding="utf-8"), f.name, a.pubblico), encoding="utf-8", newline="\n")
+            (a.out / (f.stem + ".html")).write_text(converti(f.read_text(encoding="utf-8"), f.name, a.pubblico, a.teoria), encoding="utf-8", newline="\n")
     except LibroError as e:
         print(e, file=sys.stderr)
         return 1

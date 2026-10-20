@@ -25,8 +25,21 @@ SKELETON = """<!doctype html>
 """
 
 
-def converti(text: str, nome: str, pubblico: bool = False) -> str:
-    """Convert the Markdown of section `nome` (a file name such as A2_tracce.md) to a full HTML page."""
+TEORIA = """<!doctype html>
+<html lang="it"><head><meta charset="utf-8">
+@HEAD@<title>@TITLE@ · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
+<body>
+<div class="wrap"><nav id="side"></nav><main>
+@BODY@
+</main></div>
+@SCRIPTS@
+</body></html>
+"""
+
+
+def converti(text: str, nome: str, pubblico: bool = False, teoria: bool = False) -> str:
+    """Convert the Markdown of section `nome` (a file name such as A2_tracce.md) to a full HTML page.
+    With `teoria` the page is a published Teoria chapter (own head, scripts from `<!-- script: x.js -->`) instead of a hidden Libro draft."""
     prefix = nome.split("_")[0].split(".")[0]
     p = Parser(nome, prefix, pubblico)
     body = p.blocks(text.splitlines(), 1)
@@ -36,6 +49,11 @@ def converti(text: str, nome: str, pubblico: bool = False) -> str:
     if not p.ctx["titoli"]:
         raise LibroError(nome, 1, "the section has no heading")
     title = re.sub(r"[`*$]", "", p.ctx["titoli"][0][1])
+    if teoria:
+        head = "".join(f"<!--{h}-->\n" for h in p.head)
+        scripts = "".join(f'<script src="{x}"></script>' for x in ["../appname.js", "teoria.js", *p.scripts])
+        page = TEORIA.replace("@HEAD@", head).replace("@TITLE@", escape(title)).replace("@BODY@", body).replace("@SCRIPTS@", scripts)
+        return tema_testa.inject(page, "teoria")
     page = SKELETON.replace("@HEAD@", "\n".join(h.replace("--", "-") for h in p.head)).replace("@TITLE@", escape(title)).replace("@BODY@", body)
     return tema_testa.inject(page, "teoria")
 
