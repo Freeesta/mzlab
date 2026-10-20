@@ -1,0 +1,280 @@
+<!-- script: sim-esi.js -->
+<!-- title: Elettrospray -->
+# Elettrospray (ESI) e sorgenti a pressione atmosferica {kicker: Capitolo 6}
+
+{.lead} Come una soluzione che esce da una colonna a pressione atmosferica diventa un fascio di ioni isolati in fase gas, e perché questo passaggio decide che cosa vedrete (e che cosa non vedrete) nei dati.
+
+## Il problema dell'interfaccia
+
+Un flusso HPLC di 0,3 mL/min di acqua corrisponde, vaporizzato, a circa 0,4 L/min di vapore: troppo per il sistema da vuoto di uno spettrometro. Inoltre le molecole che separiamo in LC sono spesso polari, poco volatili e termolabili: non si possono semplicemente evaporare e ionizzare per impatto elettronico come in GC-MS. Le sorgenti a **pressione atmosferica** (API: ESI, APCI, APPI) risolvono entrambi i problemi: formano gli ioni fuori dal vuoto e lasciano entrare solo una piccola frazione del gas, ricca di ioni.
+
+L'ESI, sviluppata per l'analisi di macromolecole da John Fenn (premio Nobel per la chimica 2002), è oggi la sorgente di gran lunga più usata in LC-MS. È una ionizzazione **soft**: produce quasi solo lo ione molecolare (protonato o cationizzato), con poca o nessuna frammentazione. Per avere informazioni strutturali bisogna frammentare dopo, nella cella di collisione (capitolo 10).
+
+## La sorgente
+
+```html
+<figure>
+<svg viewBox="0 0 880 380" role="img" aria-label="Schema della sorgente elettrospray: capillare, gocce che evaporano, piastra di tenda, orifizio e guida di ioni Q0" aria-describedby="fd-06-0">
+<defs><marker id="m4o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0L10,5L0,10z" fill="#b45309"/></marker><marker id="m4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0L10,5L0,10z" fill="#2b5c8a"/></marker>
+<marker id="m4g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0L10,5L0,10z" fill="#047857"/></marker>
+<radialGradient id="pl" cx="0" cy="0.5" r="1"><stop offset="0" stop-color="#c2410c" stop-opacity=".35"/><stop offset="1" stop-color="#c2410c" stop-opacity="0"/></radialGradient></defs>
+<style>.l{font:12.5px system-ui,sans-serif;fill:#24231f}.s{font:11.5px system-ui,sans-serif;fill:#6b675c}.h{font:700 12.5px system-ui,sans-serif}</style>
+<!-- sprayer -->
+<rect x="70" y="40" width="26" height="150" fill="#e7e2d6" stroke="#9b978c"/><rect x="78" y="40" width="10" height="168" fill="#c9c5bb" stroke="#6b675c"/>
+<path d="M78 208 L83 226 L88 208z" fill="#9fb5cc" stroke="#2b5c8a"/>
+<text class="h" x="104" y="56" fill="#2b5c8a">capillare (IS = +5500 V)</text><text class="s" x="104" y="72">eluente dalla colonna</text>
+<path d="M60 70 V200" stroke="#047857" stroke-width="2" marker-end="url(#m4g)"/><path d="M106 90 V200" stroke="#047857" stroke-width="2" marker-end="url(#m4g)"/>
+<text class="s" x="114" y="196" fill="#047857">GS1: gas di nebulizzazione</text><text class="s" x="114" y="210" fill="#047857">(coassiale)</text>
+<!-- plume -->
+<path d="M83 226 Q140 300 440 260 L440 330 Q160 340 83 226z" fill="url(#pl)"/>
+<g fill="#9fb5cc" stroke="#2b5c8a" stroke-width=".8"><circle cx="120" cy="268" r="9"/><circle cx="168" cy="280" r="7"/><circle cx="214" cy="288" r="5.5"/><circle cx="262" cy="292" r="4"/><circle cx="300" cy="294" r="3"/></g>
+<g fill="#c2410c"><circle cx="318" cy="288" r="2"/><circle cx="332" cy="300" r="2"/><circle cx="348" cy="292" r="2"/><circle cx="366" cy="298" r="2"/><circle cx="384" cy="294" r="2"/><circle cx="404" cy="296" r="2"/></g>
+<text class="s" x="112" y="322">gocce cariche → evaporazione → fissioni → ioni</text>
+<!-- heater gas -->
+<path d="M250 120 L330 230" stroke="#b45309" stroke-width="2.4" marker-end="url(#m4o)"/><path d="M290 110 L370 220" stroke="#b45309" stroke-width="2.4" marker-end="url(#m4o)"/>
+<text class="l" x="236" y="104" fill="#b45309">GS2: gas riscaldato (TEM)</text>
+<!-- curtain plate -->
+<rect x="460" y="40" width="10" height="250" fill="#c9c5bb"/><rect x="460" y="310" width="10" height="50" fill="#c9c5bb"/>
+<text class="h" x="402" y="30">piastra di tenda</text>
+<path d="M500 300 L448 300" stroke="#047857" stroke-width="2.2" marker-end="url(#m4g)"/><path d="M500 300 L470 270" stroke="#047857" stroke-width="1.6" marker-end="url(#m4g)"/><path d="M500 300 L470 330" stroke="#047857" stroke-width="1.6" marker-end="url(#m4g)"/>
+<text class="s" x="476" y="378" fill="#047857">CUR: N₂ che esce verso la sorgente</text>
+<!-- orifice plate -->
+<rect x="540" y="60" width="10" height="234" fill="#9b978c"/><rect x="540" y="306" width="10" height="54" fill="#9b978c"/>
+<text class="h" x="510" y="52">orifizio (DP)</text>
+<!-- Q0 rods -->
+<rect x="610" y="270" width="200" height="12" rx="6" fill="#c9d6e3" stroke="#2b5c8a"/><rect x="610" y="318" width="200" height="12" rx="6" fill="#c9d6e3" stroke="#2b5c8a"/>
+<text class="h" x="610" y="260">Q0: guida di ioni RF (pochi mTorr)</text>
+<path d="M440 300 H860" stroke="#c2410c" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round"/>
+<text class="s" x="610" y="352">EP: entrance potential → verso Q1</text>
+<text class="s" x="560" y="120">pressione:</text><text class="l" x="560" y="138">760 Torr → ~1 Torr → mTorr</text>
+</svg><details class="figdesc" id="fd-06-0"><summary>Descrizione della figura</summary><p>A sinistra il capillare (IS = +5500 V) con l'eluente e il gas di nebulizzazione GS1; sotto, le gocce cariche che evaporano, subiscono fissioni e diventano ioni. Frecce di GS2 (gas riscaldato, TEM) puntano verso le gocce. A destra: piastra di tenda con CUR (N₂ verso la sorgente), orifizio (DP), poi la guida di ioni RF Q0 (EP, verso Q1). Pressione: 760 Torr → ~1 Torr → mTorr.</p></details>
+<figcaption><b>Figura 6.1</b> Sorgente elettrospray con geometria ortogonale, come quella SCIEX del laboratorio (schema non in scala). L'eluente esce da un capillare ad alta tensione; il gas di nebulizzazione e quello riscaldato aiutano a formare ed evaporare le gocce; il gas di tenda, che esce dall'apertura verso la sorgente, lascia passare gli ioni (spinti dal campo elettrico) ma respinge solvente, gocce non evaporate e neutri.</figcaption>
+</figure>
+```
+
+```html
+<div class="box lab"><b>I parametri della sorgente del laboratorio</b>
+<p>Li trovate nel popup <b>Metodo</b> di QqQ lab, letti dai file dei metodi Analyst. Che cosa fanno:</p>
+<table>
+<tr><th>Sigla</th><th>Nome</th><th>Ruolo fisico</th></tr>
+<tr><td>IS</td><td>Ion spray voltage (+5500 V nel metodo)</td><td>Crea il campo che deforma il menisco in cono di Taylor e carica le gocce</td></tr>
+<tr><td>GS1</td><td>Gas 1, nebulizzazione</td><td>Assistenza pneumatica: rompe il getto in gocce piccole, permette flussi da HPLC convenzionale</td></tr>
+<tr><td>GS2</td><td>Gas 2, riscaldato (temperatura TEM)</td><td>Accelera l'evaporazione delle gocce</td></tr>
+<tr><td>CUR</td><td>Curtain gas</td><td>Barriera di N<sub>2</sub> tra sorgente e orifizio: protegge il vuoto e riduce cluster e rumore chimico</td></tr>
+<tr><td>DP</td><td>Declustering potential</td><td>Tensione dell'orifizio: rompe i cluster ione–solvente. Troppo alta → <b>frammentazione in sorgente</b></td></tr>
+<tr><td>EP</td><td>Entrance potential</td><td>Guida e focalizza gli ioni attraverso Q0</td></tr>
+</table></div>
+```
+
+## Dal liquido alle gocce: il cono di Taylor
+
+Il capillare ad alcuni kV, a pochi millimetri dal controelettrodo, genera un campo elettrico di 10^6^ V/m alla punta. Nella soluzione (che contiene ioni: H^+^, HCOO^−^, Na^+^…) il campo separa le cariche: in modalità positiva gli ioni positivi si accumulano sulla superficie del menisco, i negativi migrano verso l'interno. La forza elettrica tira il menisco verso il controelettrodo, la tensione superficiale lo trattiene: l'equilibrio è un cono (Taylor, 1964) dalla cui punta esce un getto sottile che si rompe in goccioline con un **eccesso di carica positiva**.
+
+```html
+<div class="box key"><b>L'ESI è una cella elettrochimica</b>
+<p>Perché la sorgente emetta continuamente gocce positive, al capillare deve avvenire un'ossidazione che bilancia la corrente (es. 2 H<sub>2</sub>O → O<sub>2</sub> + 4 H<sup>+</sup> + 4 e<sup>−</sup>, oppure ossidazione del metallo). La corrente ESI è piccola (decine–centinaia di nA) e <b>limitata</b>: la quantità di carica in eccesso disponibile per unità di tempo è fissata. È la radice della saturazione e della soppressione ionica che vedremo tra poco.</p></div>
+```
+
+## La vita di una goccia: limite di Rayleigh e fissioni
+
+Una goccia carica evapora a carica (quasi) costante: la densità di carica superficiale cresce finché la repulsione coulombiana eguaglia la tensione superficiale. È il **limite di Rayleigh**:
+
+```html
+<span class="eq"><i>q</i><sub>R</sub> = 8π (ε<sub>0</sub> γ <i>R</i><sup>3</sup>)<sup>1/2</sup><span class="no">(6.1)</span></span>
+```
+
+con γ tensione superficiale, *R* raggio, ε~0~ permittività del vuoto. Poco prima di raggiungerlo (circa al 70–90%) la goccia diventa instabile ed espelle una scia di goccioline figlie molto più piccole, che portano via circa il **2% della massa ma il 15% della carica** (Kebarle & Verkerk, 2009). Le figlie hanno quindi un rapporto carica/massa molto più alto della madre e ripetono rapidamente il ciclo.
+
+```html
+<div class="sim" id="sim-drop"><h4>La vita di una goccia</h4>
+<p class="note">Evaporazione a carica costante, fissione al raggiungimento della soglia, perdita del 2% della massa e del 15% della carica a ogni fissione. Tensione superficiale e velocità di evaporazione della miscela sono interpolate linearmente (approssimazione). Il tempo è in unità arbitrarie.</p></div>
+```
+
+Due conseguenze pratiche, entrambe nell'equazione 6.1:
+
+```html
+<ul>
+<li><b>Il solvente organico aiuta.</b> Acetonitrile e metanolo hanno γ circa tre volte inferiore all'acqua: a parità di raggio la goccia sopporta meno carica, arriva prima al limite e si divide prima; inoltre evaporano più in fretta. Gocce più piccole significano desolvatazione più completa e più ioni. Per questo la risposta di un analita dipende da quanta acqua c'è nell'eluente quando esce.</li>
+<li><b>Flussi bassi aiutano.</b> Gocce iniziali più piccole (nano-ESI, micro-flussi) danno una conversione più efficiente da molecole in soluzione a ioni in fase gas. L'ESI risponde alla <em>concentrazione</em> dell'analita nell'eluente, non alla quantità assoluta che arriva al secondo.</li>
+</ul>
+```
+
+```html
+<div class="sim" id="sim-rayleigh"><h4>Limite di Rayleigh e dimensione della goccia</h4>
+<p class="note">Numero di cariche elementari al limite di Rayleigh, eq. 6.1, per tre solventi puri a 25 °C.</p></div>
+```
+
+## Dalle ultime gocce agli ioni in fase gas
+
+Come esca l'ultimo ione dalla goccia è stato discusso per decenni. Il quadro oggi condiviso (Konermann et al., 2013) prevede tre meccanismi, a seconda dell'analita:
+
+```html
+<table>
+<tr><th>Meccanismo</th><th>Per chi</th><th>Che cosa succede</th></tr>
+<tr><td><b>IEM</b>, evaporazione ionica (Iribarne &amp; Thomson, 1976)</td><td>Piccoli ioni, come i nostri analiti (&lt; 1000 Da)</td><td>Quando la goccia è di pochi nm, il campo alla superficie è così intenso che uno ione solvatato viene espulso direttamente</td></tr>
+<tr><td><b>CRM</b>, residuo carico (Dole, 1968)</td><td>Macroioni globulari (proteine native)</td><td>La goccia evapora fino a secchezza attorno all'analita, che eredita le cariche residue</td></tr>
+<tr><td><b>CEM</b>, espulsione di catena</td><td>Polimeri e proteine denaturate</td><td>Una catena idrofoba migra in superficie e viene espulsa progressivamente</td></tr>
+</table>
+```
+
+```html
+<div class="box key"><b>Concetto chiave: conta la superficie</b>
+<p>In tutti i meccanismi, gli analiti che stanno sulla superficie della goccia hanno più probabilità di diventare ioni in fase gas. Molecole con una parte idrofoba e un sito carico (tensioattive) sono favorite; molecole molto idrofile restano nel cuore della goccia e si ionizzano peggio. Due molecole che arrivano insieme alla sorgente competono per la superficie e per la carica.</p></div>
+```
+
+## Quali ioni vedete in ESI positivo
+
+Per molecole piccole lo ione principale è quasi sempre monocarica: il valore di m/z coincide con la massa dello ione.
+
+```html
+<table>
+<tr><th>Ione</th><th class="n">m/z (M = massa monoisotopica)</th><th>Quando</th></tr>
+<tr><td>[M+H]<sup>+</sup></td><td class="n">M + 1,007</td><td>Molecole con siti basici (ammine, eterocicli azotati, ammidi); favorito dall'acido formico</td></tr>
+<tr><td>[M+NH<sub>4</sub>]<sup>+</sup></td><td class="n">M + 18,034</td><td>Con sali d'ammonio in fase mobile; molecole con O ma poco basiche</td></tr>
+<tr><td>[M+Na]<sup>+</sup></td><td class="n">M + 22,989</td><td>Ubiquitario (vetreria, reagenti); frammenta male in CID</td></tr>
+<tr><td>[M+K]<sup>+</sup></td><td class="n">M + 38,964</td><td>Come il sodio, meno intenso</td></tr>
+<tr><td>[M+H+CH<sub>3</sub>CN]<sup>+</sup></td><td class="n">M + 42,034</td><td>Addotto con acetonitrile</td></tr>
+<tr><td>[2M+H]<sup>+</sup>, [2M+Na]<sup>+</sup></td><td class="n">2M + 1,007 / 22,989</td><td>Dimeri non covalenti ad alta concentrazione (es. negli standard)</td></tr>
+<tr><td>[M+H−H<sub>2</sub>O]<sup>+</sup> e altri frammenti</td><td class="n">M + 1,007 − 18,011 …</td><td>Frammentazione in sorgente (DP alto, molecole fragili)</td></tr>
+</table>
+```
+
+```html
+<p>Coppie utili da riconoscere: [M+Na]<sup>+</sup> − [M+H]<sup>+</sup> = 21,98 (nominale 22); [M+K]<sup>+</sup> − [M+H]<sup>+</sup> = 37,96 (38); [M+NH<sub>4</sub>]<sup>+</sup> − [M+H]<sup>+</sup> = 17,03 (17). Se nello spettro del parent vedete due picchi a distanza 22, quasi certamente sono lo stesso composto. La scheda <b>Addotti</b> (pulsante in alto) ha uno strumento che confronta la distanza fra due vostri picchi con le differenze fra addotti, e una colonna con la massa <b>nominale</b>: sugli spettri del laboratorio il picco può cadere fino a circa 0,4 Da sopra il valore calcolato (calibrazione). M è la massa monoisotopica: per composti con Cl o Br il picco più alto può essere M+2.</p>
+```
+
+```html
+<h3 id="addotti-differenze">Differenze caratteristiche fra gli addotti (riconoscere le coppie nello spettro)</h3>
+```
+
+```html
+<p>In ESI lo stesso composto genera spesso più addotti contemporaneamente. Le distanze costanti fra i picchi allo stesso tempo di ritenzione (per esempio <b>+22</b> fra [M+H]<sup>+</sup> e [M+Na]<sup>+</sup>, o <b>+17</b> fra [M+H]<sup>+</sup> e [M+NH<sub>4</sub>]<sup>+</sup>) permettono di trovare le coppie nello spettro e di confermare la massa neutra <i>M</i>. Sono però indizi, non prove: a risoluzione unitaria due picchi a quella distanza restano un candidato da verificare.</p>
+```
+
+```html
+<table>
+<caption>Differenze di m/z fra addotti dello stesso composto (<i>M</i> = massa neutra monoisotopica).</caption>
+<thead><tr><th scope="col">Coppia di addotti</th><th scope="col" class="n">Δ <i>m/z</i> esatto</th><th scope="col" class="n">Δ nominale</th><th scope="col">Modo</th><th scope="col">Nota e significato didattico</th></tr></thead>
+<tbody>
+<tr><th scope="row">[M+Na]<sup>+</sup> − [M+H]<sup>+</sup></th><td class="n">+21,9819</td><td class="n">+22</td><td>ESI+</td><td>Coppia molto frequente: conferma quasi certa della massa neutra <i>M</i>.</td></tr>
+<tr><th scope="row">[M+NH<sub>4</sub>]<sup>+</sup> − [M+H]<sup>+</sup></th><td class="n">+17,0265</td><td class="n">+17</td><td>ESI+</td><td>Con sali di ammonio (formiato, acetato) in fase mobile.</td></tr>
+<tr><th scope="row">[M+K]<sup>+</sup> − [M+H]<sup>+</sup></th><td class="n">+37,9559</td><td class="n">+38</td><td>ESI+</td><td>Addotto del potassio, spesso presente insieme al sodio.</td></tr>
+<tr><th scope="row">[M+K]<sup>+</sup> − [M+Na]<sup>+</sup></th><td class="n">+15,9739</td><td class="n">+16</td><td>ESI+</td><td>Distanza caratteristica fra gli addotti alcalini K e Na.</td></tr>
+<tr><th scope="row">[M+H+CH<sub>3</sub>CN]<sup>+</sup> − [M+H]<sup>+</sup></th><td class="n">+41,0265</td><td class="n">+41</td><td>ESI+</td><td>Acetonitrile della fase mobile.</td></tr>
+<tr><th scope="row">[M+CH<sub>3</sub>OH+H]<sup>+</sup> − [M+H]<sup>+</sup></th><td class="n">+32,0262</td><td class="n">+32</td><td>ESI+</td><td>Metanolo della fase mobile.</td></tr>
+<tr><th scope="row">[2M+H]<sup>+</sup> − [M+H]<sup>+</sup></th><td class="n">+<i>M</i></td><td class="n">+<i>M</i></td><td>ESI+</td><td>Dimero: la differenza è esattamente la massa neutra <i>M</i>.</td></tr>
+<tr><th scope="row">[M+H]<sup>+</sup> − [M+H−H<sub>2</sub>O]<sup>+</sup></th><td class="n">+18,0106</td><td class="n">+18</td><td>ESI+</td><td>Perdita d'acqua in sorgente (alcoli, acidi).</td></tr>
+<tr><th scope="row">[M+HCOO]<sup>−</sup> − [M−H]<sup>−</sup></th><td class="n">+46,0055</td><td class="n">+46</td><td>ESI−</td><td>Acido formico / formiato in fase mobile.</td></tr>
+<tr><th scope="row">[M+CH<sub>3</sub>COO]<sup>−</sup> − [M−H]<sup>−</sup></th><td class="n">+60,0211</td><td class="n">+60</td><td>ESI−</td><td>Acido acetico / acetato in fase mobile.</td></tr>
+<tr><th scope="row">[M+Cl]<sup>−</sup> − [M−H]<sup>−</sup></th><td class="n">+35,9767</td><td class="n">+36</td><td>ESI−</td><td>Cloruro: doppietto isotopico <sup>35</sup>Cl/<sup>37</sup>Cl a 3:1.</td></tr>
+<tr><th scope="row">[M+Na−2H]<sup>−</sup> − [M−H]<sup>−</sup></th><td class="n">+21,9819</td><td class="n">+22</td><td>ESI−</td><td>Sale di sodio in ESI negativo.</td></tr>
+<tr><th scope="row">[2M−H]<sup>−</sup> − [M−H]<sup>−</sup></th><td class="n">+<i>M</i></td><td class="n">+<i>M</i></td><td>ESI−</td><td>Dimero: la differenza è la massa neutra <i>M</i>.</td></tr>
+<tr><th scope="row">[M−H]<sup>−</sup> − [M−H−H<sub>2</sub>O]<sup>−</sup></th><td class="n">+18,0106</td><td class="n">+18</td><td>ESI−</td><td>Perdita d'acqua in sorgente in ESI negativo.</td></tr>
+</tbody>
+</table>
+```
+
+Fonte: Huang N. et al., *J. Am. Soc. Mass Spectrom.* **10** (1999) 1166–1173. I valori esatti sono ricalcolati con le masse monoisotopiche del programma.
+
+```html
+<div class="box warn"><b>Assenza di segnale ≠ assenza di molecola</b>
+<p>Un TP che ha perso il sito basico (es. un'ammina trasformata in ammide o un prodotto acido di apertura dell'anello) può ionizzarsi poco in positivo e molto meglio in negativo ([M−H]<sup>−</sup>). Se le acquisizioni sono condotte unicamente in polarità positiva, tali composti restano invisibili: è un limite analitico da dichiarare con trasparenza.</p></div>
+```
+
+## Risposta, linearità e saturazione
+
+Poiché la carica disponibile è limitata dalla corrente ESI, le specie presenti nella goccia se la dividono. Un modello semplice e istruttivo (Enke; Tang & Kebarle) scrive il segnale dell'analita A in presenza di un elettrolita E come
+
+```html
+<span class="eq"><i>I</i><sub>A</sub> = <i>p f</i> · <i>I</i> · <span class="frac"><span><i>k</i><sub>A</sub>[A]</span><span><i>k</i><sub>A</sub>[A] + <i>k</i><sub>E</sub>[E]</span></span><span class="no">(6.2)</span></span>
+```
+
+dove *I* è la corrente ESI, *p* l'efficienza di trasferimento nello spettrometro, *f* la frazione di carica che diventa ioni in fase gas e *k* coefficienti che misurano l'affinità di ciascuna specie per la superficie. Due casi limite:
+
+```html
+<ul>
+<li>[A] piccola: <i>I</i><sub>A</sub> ∝ [A] → <b>risposta lineare</b>, utile per la quantificazione;</li>
+<li>[A] grande (oltre circa 10<sup>−5</sup> M di specie cariche totali): <i>I</i><sub>A</sub> → <i>pfI</i>, <b>il segnale smette di crescere</b>. La stessa saturazione colpisce l'analita se l'elettrolita è troppo concentrato.</li>
+</ul>
+```
+
+```html
+<div class="sim" id="sim-comp"><h4>Competizione per la carica</h4>
+<p class="note">Equazione 4.2 con k<sub>E</sub>/k<sub>A</sub> = 0,1 e una specie di matrice coeluente aggiuntiva. Il tratteggio è l'estrapolazione lineare del primo tratto.</p></div>
+```
+
+```html
+<div class="box key"><b>Linearità e saturazione nelle curve di calibrazione</b>
+<p>Un composto organico a 7,5 mg/L con massa molare intorno a 300 g/mol corrisponde a circa 2,5·10<sup>−5</sup> M: proprio nella zona in cui la risposta ESI può iniziare a deviare dalla linearità (a cui può sommarsi la saturazione del rivelatore). Per questo le rette di taratura vanno verificate ispezionando i grafici dei residui, non solo il coefficiente R<sup>2</sup>, e i campioni sovra-concentrati vanno opportunamente diluiti (capitolo 12).</p></div>
+```
+
+## Soppressione ionica ed effetto matrice
+
+Qualsiasi specie che coeluisce con l'analita (sali, sostanza organica naturale, altri TP, tensioattivi) può sottrargli carica o superficie, o aumentare viscosità e tensione superficiale delle gocce: il segnale cala senza che la concentrazione sia cambiata. Si quantifica confrontando la pendenza (o l'area) in matrice e in solvente puro (Matuszewski et al., 2003):
+
+```html
+<span class="eq">ME (%) = <span class="frac"><span>area in matrice (dopo l'estrazione)</span><span>area in solvente</span></span> × 100 − 100<span class="no">(6.3)</span></span>
+```
+
+```html
+<p>ME &lt; 0 indica soppressione, ME &gt; 0 esaltazione. Rimedi: separare meglio, diluire, tarare in matrice, usare uno standard interno marcato isotopicamente (che coeluisce e subisce la stessa soppressione). Anche in matrici pulite, il composto progenitore ad alta concentrazione può causare una marcata soppressione ionica sui prodotti di trasformazione che coeluiscono con esso.</p>
+```
+
+## Ioni multicarica (cenno)
+
+```html
+<p>Molecole grandi con molti siti basici (peptidi, proteine) prendono molti protoni: [M+<i>z</i>H]<sup><i>z</i>+</sup>. Lo spettro mostra una serie di picchi; due picchi adiacenti <i>p</i><sub>1</sub> &gt; <i>p</i><sub>2</sub> differiscono di una carica, e se <i>z</i> è la carica di <i>p</i><sub>1</sub>:</p>
+```
+
+```html
+<span class="eq"><i>z</i> = <span class="frac"><span><i>p</i><sub>2</sub> − 1,007</span><span><i>p</i><sub>1</sub> − <i>p</i><sub>2</sub></span></span>, &nbsp;&nbsp; <i>M</i> = <i>z</i> (<i>p</i><sub>1</sub> − 1,007)<span class="no">(6.4)</span></span>
+```
+
+```html
+<p>Esempio: picchi a 1431,5 e 1301,5 → <i>z</i> = 1300,5/130,0 = 10 e <i>M</i> ≈ 14 305 Da (lisozima). È così che un quadrupolo con limite di 1000–3000 m/z "vede" proteine da decine di kDa. Per le piccole molecole organiche (massa &lt; 1000 Da) si osserva invece tipicamente <i>z</i> = 1.</p>
+```
+
+## ESI, APCI, APPI
+
+```html
+<table>
+<tr><th></th><th>ESI</th><th>APCI</th><th>APPI</th></tr>
+<tr><td>Principio</td><td>Ioni già formati in soluzione, liberati dalle gocce</td><td>Evaporazione a 350–500 °C, poi ionizzazione chimica in fase gas da una scarica a corona</td><td>Evaporazione, poi fotoionizzazione (lampada UV, spesso con un dopante)</td></tr>
+<tr><td>Analiti</td><td>Polari, ionizzabili, anche grandi e termolabili</td><td>Medio–poco polari, volatilizzabili, &lt; ~1500 Da</td><td>Poco polari e apolari (es. IPA)</td></tr>
+<tr><td>Soppressione</td><td>Più sensibile alla matrice</td><td>Meno</td><td>Meno</td></tr>
+</table>
+```
+
+```html
+<p>Il confronto con le sorgenti della GC-MS (impatto elettronico e ionizzazione chimica in vuoto) e con il MALDI è nel capitolo 7. La differenza da ricordare: l'ESI produce ioni <b>a elettroni pari</b> ([M+H]<sup>+</sup>) con poca energia interna, l'EI <b>radicali cationi</b> M<sup>+•</sup> con molta energia; per questo le regole di frammentazione dei capitoli 14 (CID) e 15 (EI) sono diverse.</p>
+```
+
+## Verifica
+
+```html
+<details class="q"><summary>Nello spettro dello standard vedete m/z X e X+22 allo stesso RT. Che cosa sono?</summary>
+<p>[M+H]<sup>+</sup> e [M+Na]<sup>+</sup> dello stesso composto (differenza 21,98). Non sono due molecole diverse.</p></details>
+```
+
+??? Aumentate il DP da 50 a 150 V e nel full scan dello standard compare un nuovo picco allo stesso RT del parent. Che cos'è?
+Un frammento formato in sorgente (in-source CID): gli ioni accelerati dal DP urtano il gas residuo prima di Q1. Se lo stesso m/z compare nell'MS2 del parent, la conferma è quasi certa.
+
+??? Perché lo stesso analita dà un segnale più alto se eluisce al 70% di acetonitrile rispetto al 20%?
+Tensione superficiale più bassa e maggiore volatilità: gocce più piccole, fissioni più precoci, desolvatazione più efficiente (eq. 6.1).
+
+??? Un TP acido carbossilico non compare in ESI positivo. È stato mineralizzato?
+Non necessariamente: può semplicemente ionizzarsi male in positivo (nessun sito basico). Servirebbe un'analisi in ESI negativo o il controllo del TOC.
+
+## Per approfondire
+
+```html
+<ul class="refs">
+<li><span class="tag">review</span>Kebarle P., Verkerk U.H. (2009) Electrospray: from ions in solution to ions in the gas phase, what we know now. <i>Mass Spectrom. Rev.</i> 28, 898–917. <a href="https://doi.org/10.1002/mas.20247" target="_blank" rel="noopener">doi:10.1002/mas.20247</a></li>
+<li><span class="tag">review</span>Konermann L., Ahadi E., Rodriguez A.D., Vahidi S. (2013) Unraveling the mechanism of electrospray ionization. <i>Anal. Chem.</i> 85, 2–9. <a href="https://doi.org/10.1021/ac302789c" target="_blank" rel="noopener">doi:10.1021/ac302789c</a></li>
+<li><span class="tag">storico</span>Fenn J.B. et al. (1989) Electrospray ionization for mass spectrometry of large biomolecules. <i>Science</i> 246, 64–71. <a href="https://doi.org/10.1126/science.2675315" target="_blank" rel="noopener">doi:10.1126/science.2675315</a></li>
+<li><span class="tag">review</span>Annesley T.M. (2003) Ion suppression in mass spectrometry. <i>Clin. Chem.</i> 49, 1041–1044. <a href="https://doi.org/10.1373/49.7.1041" target="_blank" rel="noopener">doi:10.1373/49.7.1041</a></li>
+<li><span class="tag">metodo</span>Matuszewski B.K., Constanzer M.L., Chavez-Eng C.M. (2003) Strategies for the assessment of matrix effect in quantitative bioanalytical methods based on HPLC−MS/MS. <i>Anal. Chem.</i> 75, 3019–3030. <a href="https://doi.org/10.1021/ac020361s" target="_blank" rel="noopener">doi:10.1021/ac020361s</a></li>
+<li><span class="tag">web</span><a href="https://en.wikipedia.org/wiki/Electrospray_ionization" target="_blank" rel="noopener">Electrospray ionization</a> (Wikipedia) e <a href="https://www.nobelprize.org/prizes/chemistry/2002/fenn/lecture/" target="_blank" rel="noopener">lezione Nobel di J.B. Fenn</a>.</li>
+<li><span class="tag">libro</span>Cole R.B. (ed.) <i>Electrospray and MALDI Mass Spectrometry</i>, 2ª ed., Wiley, 2010.</li>
+</ul>
+```

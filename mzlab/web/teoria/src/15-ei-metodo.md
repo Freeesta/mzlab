@@ -1,0 +1,359 @@
+<!-- script: pratica/ei-dati.js -->
+<!-- script: ei-spettri.js -->
+# Risolvere uno spettro EI: il metodo {kicker: Capitolo 15}
+
+{.lead} Di fronte a uno spettro EI incognito, l'obiettivo è risalire alla struttura molecolare spiegando razionalmente ogni passaggio. Non serve intuito: serve un metodo sistematico, quello di McLafferty, applicato con ordine e rigore. Questo capitolo lo presenta passo per passo, con spettri sperimentali reali; il capitolo 16 raccoglie le «firme» delle famiglie di composti e la Pratica consente di cimentarsi su decine di problemi strutturali.
+
+## Il procedimento in una pagina
+
+Il procedimento è quello classico di McLafferty e Tureček (capitolo 5 del loro trattato), con la numerazione standard dei passaggi analitici. **Regola aurea**: ogni affermazione sullo spettro va argomentata indicando il criterio che la giustifica, ad esempio «passo 2.3, regola dell'azoto: M = 101 dispari, dunque un numero dispari di azoti».
+
+```html
+<table>
+<tr><th>Fase</th><th>Passi</th></tr>
+<tr><td><b>1. Composizione elementare</b></td><td>1.1 scegli i gruppi di picchi, partendo dall'alto · 1.2 tabella dei rapporti isotopici · 1.3 elementi A+2 (Cl, Br, S, Si) · 1.4 elementi A+1 (numero di C da M+1; N) · 1.5 ossigeno · 1.6 perdite di H · 1.7 elementi A (H, F, P, I) a completare la massa · 1.8 elementi insoliti · 1.9 anelli + doppi legami · 1.10 livello del rumore</td></tr>
+<tr><td><b>2. Ione molecolare</b></td><td>2.1 candidato M · 2.2 è a elettroni dispari? · 2.3 regola dell'azoto su M e frammenti · 2.4 i frammenti sono quasi tutti a elettroni pari? · 2.5 segna gli ioni a elettroni dispari importanti · 2.6 ioni pari o dispari a bassa m/z · 2.7 spiega i frammenti importanti · 2.8 perdite neutre logiche · 2.9 M contiene il numero massimo di atomi di ogni elemento visto nei frammenti · 2.10 abbondanza di M e tipo di molecola</td></tr>
+<tr><td><b>3. Aspetto generale</b></td><td>3.1 stabilità della molecola · 3.2 serie di ioni a bassa massa · 3.3 ioni caratteristici</td></tr>
+<tr><td><b>4. Verifica</b></td><td>4.1 confronto con spettri di composti simili · 4.2 confronto con una banca dati o con lo spettro di riferimento della struttura proposta</td></tr>
+</table>
+```
+
+```html
+<div class="box key"><b>Perché proprio quest'ordine</b>
+<p>Si parte da ciò che è più certo (isotopi e massa) e si arriva a ciò che è più interpretativo (meccanismi). Ogni passo restringe le possibilità per il successivo: con la formula di M e il numero di insaturazioni le strutture possibili sono già poche, e i frammenti servono a scegliere fra queste, non a inventarne di nuove.</p></div>
+```
+
+## Prima di interpretare: leggere lo spettro
+
+```html
+<ul>
+<li><b>Intensità relative</b>: il picco più alto (<b>picco base</b>) vale 100% (o 999 nelle librerie); tutto è riferito a lui. Il picco base non è lo ione molecolare, se non per molecole molto stabili.</li>
+<li><b>Gruppi di picchi</b>: i picchi vicini (M, M−1, M−2, M+1, M+2…) formano gruppi separati da «vuoti». In ogni gruppo il picco più importante è quello con più idrogeni (il più alto del gruppo che non sia un isotopo).</li>
+<li><b>Si parte dall'alto</b>: le masse alte hanno meno spiegazioni possibili per ogni frammento, ma sono quelle che dicono di più (perdite piccole da M); le masse basse dicono che famiglia di composto è (serie di ioni).</li>
+<li><b>Il rumore</b>: nelle librerie i picchi piccoli possono avere un errore di ±10% della loro intensità o di ±0,2% del picco base, se maggiore; per questo i rapporti isotopici si leggono su picchi intensi.</li>
+<li><b>Picchi che non sono del composto</b>: aria (18 H<sub>2</sub>O, 28 N<sub>2</sub>, 32 O<sub>2</sub>, 40 Ar, 44 CO<sub>2</sub>), sanguinamento della colonna (73, 207, 281), ftalati (149), il calibrante perfluorotributilammina (69, 131, 219, 264, 502), un composto coeluito. Il picco a massa più alta può essere fondo.</li>
+</ul>
+```
+
+```html
+<div class="eispec" data-ei="2-esanone" data-table="1"></div>
+```
+
+Un esempio di lettura: lo spettro del 2-esanone ha il picco base a m/z 43, un gruppo intenso a 58, un piccolo gruppo a 85 e 100 come ultimo picco importante. La tabella sotto il grafico (le dieci intensità maggiori) è il modo in cui le librerie e spesso gli esercizi riportano uno spettro.
+
+## Fase 1: la composizione elementare
+
+Si applicano gli strumenti del capitolo 13 al gruppo più alto (e poi agli altri gruppi importanti):
+
+```html
+<ol>
+<li><b>A+2 prima di tutto</b> (1.3): M+2 grande → Cl o Br (rapporti 3:1, 1:1, 9:6:1…); 4-5% → S; con M+1 anomalo (5%) → Si; sotto il 3% → nessuno di questi.</li>
+<li><b>Carboni</b> (1.4): n<sub>C</sub> ≈ [M+1]/[M] × 100 / 1,1 (togliendo il contributo di N e degli altri elementi). Errore ±1 per picchi intensi. <b>Attenzione</b>: alcoli, ammine, eteri e alcuni chetoni danno in sorgente anche [M+H]<sup>+</sup> per autoprotonazione (reazione fra ioni e molecole quando c'è molto campione): M+1 risulta più alto dell'atteso e i carboni vengono sovrastimati. Se M+1 è sproporzionato rispetto alla massa, non usarlo.</li>
+<li><b>Ossigeno e idrogeno</b> (1.5-1.7): l'ossigeno si vede poco dagli isotopi (0,2% per atomo a M+2): si deduce dalla massa che avanza e dalle perdite (18, 28, 31, 45). Gli H completano la massa, con valenze sensate.</li>
+<li><b>RDB</b> (1.9): con la formula di M si calcola anelli + doppi legami: 0 = saturo e aciclico; 1 = un doppio legame (C=O, C=C) o un anello; ≥ 4 = probabile anello aromatico.</li>
+</ol>
+```
+
+```html
+<div class="eispec" data-ei="clorobenzene" data-h="200"></div>
+```
+
+Il clorobenzene mostra il gruppo 112/114 con rapporto 100:32: un cloro (1.3). M+1 di 112 è circa 7%: sei carboni (1.4). 112 − 35 − 72 = 5: C~6~H~5~Cl (1.7), RDB = 6 − (5+1)/2 + 1 = 4 (1.9): un anello benzenico. La perdita di 35 (112 → 77) conferma.
+
+## Fase 2: lo ione molecolare
+
+### I tre test per M
+
+Un picco è un candidato ione molecolare (2.1) solo se:
+
+1. è il picco **a massa più alta** dello spettro (a parte i suoi isotopi e il fondo);
+1. è un ione **a elettroni dispari** (2.2): RDB intero; per la regola dell'azoto (2.3) massa pari con 0 o 2 azoti, dispari con un numero dispari di azoti;
+1. da lui si arriva agli ioni importanti della zona alta con **perdite neutre logiche** (2.8).
+
+Se un candidato fallisce il primo o il secondo test non è M; se li passa tutti _può_ essere M. La conferma migliore viene da una ionizzazione soffice (CI, capitolo 7).
+
+```html
+<table>
+<tr><th>Perdita da M</th><th>Che cosa si perde</th><th>Che cosa suggerisce</th></tr>
+<tr><td class="n">1</td><td>H•</td><td>H labile: aldeidi, ammine, alcuni aromatici; M−1 intenso</td></tr>
+<tr><td class="n">15</td><td>CH<sub>3</sub>•</td><td>metile su un C ramificato o vicino a un eteroatomo</td></tr>
+<tr><td class="n">17 / 18</td><td>OH• / H<sub>2</sub>O</td><td>acidi, alcoli (M−18 frequente negli alcoli)</td></tr>
+<tr><td class="n">19 / 20</td><td>F• / HF</td><td>fluorurati</td></tr>
+<tr><td class="n">26 / 27</td><td>C<sub>2</sub>H<sub>2</sub> / HCN</td><td>aromatici / composti azotati aromatici</td></tr>
+<tr><td class="n">28</td><td>CO, C<sub>2</sub>H<sub>4</sub> (o N<sub>2</sub>)</td><td>fenoli, chinoni, chetoni ciclici / McLafferty, etil-esteri</td></tr>
+<tr><td class="n">29</td><td>CHO•, C<sub>2</sub>H<sub>5</sub>•</td><td>aldeidi, fenoli / etili</td></tr>
+<tr><td class="n">30</td><td>CH<sub>2</sub>O, NO</td><td>eteri aromatici (anisoli) / nitrocomposti</td></tr>
+<tr><td class="n">31 / 32</td><td>CH<sub>3</sub>O• / CH<sub>3</sub>OH</td><td>esteri metilici, eteri metilici / effetto orto</td></tr>
+<tr><td class="n">35-36</td><td>Cl• / HCl</td><td>clorurati (con il cluster)</td></tr>
+<tr><td class="n">42</td><td>CH<sub>2</sub>=C=O, C<sub>3</sub>H<sub>6</sub></td><td>acetati, acetammidi / McLafferty</td></tr>
+<tr><td class="n">43</td><td>CH<sub>3</sub>CO•, C<sub>3</sub>H<sub>7</sub>•</td><td>metilchetoni / propili</td></tr>
+<tr><td class="n">44 / 45</td><td>CO<sub>2</sub> / COOH•, C<sub>2</sub>H<sub>5</sub>O•</td><td>acidi, anidridi / acidi, esteri etilici</td></tr>
+<tr><td class="n">46</td><td>NO<sub>2</sub>•</td><td>nitrocomposti</td></tr>
+<tr><td class="n">79-81</td><td>Br• / HBr</td><td>bromurati</td></tr>
+</table>
+```
+
+```html
+<div class="box warn"><b>Perdite impossibili</b>
+<p>Un ione importante a 4-14 o 21-25 unità sotto il candidato M vuol dire che il candidato <b>non è</b> lo ione molecolare: nessuna molecola neutra o radicale stabile ha quella massa (perdere 3-14 H non succede, e un CH<sub>2</sub> isolato non si stacca). Allora M non si vede, oppure il picco più alto è fondo o un'impurezza.</p></div>
+```
+
+### Quando lo ione molecolare non c'è
+
+L'abbondanza di M (2.10) dipende dalla stabilità dello ione: cresce con insaturazioni, anelli aromatici ed eteroatomi che si ionizzano facilmente (N, S); cala con le ramificazioni e i legami deboli. Alcoli terziari, alcani molto ramificati, alcuni alogenuri ed esteri danno M debolissimo o assente.
+
+```html
+<div class="eigrid"><div class="eispec" data-ei="terz-butanolo" data-h="190"></div><div class="eispec" data-ei="tetracloruro-di-carbonio" data-h="190"></div></div>
+```
+
+Nel terz-butanolo (M = 74) l'ultimo picco importante è 59: la perdita di 15 da un M invisibile. Nel tetracloruro di carbonio il gruppo più alto è 117/119/121 con il profilo di _tre_ cloro, ma la formula CCl~4~ ne ha quattro: il gruppo è CCl~3~^+^ (M−35), lo ione molecolare a 152 manca. Per il passo 2.9 lo ione molecolare deve contenere almeno tanti atomi di ogni elemento quanti se ne vedono nei frammenti.
+
+### Ioni a elettroni pari e dispari
+
+```html
+<ul>
+<li>M<sup>+•</sup> è a elettroni dispari (OE). Rompendo <b>un solo legame</b> si ottengono uno ione a elettroni pari (EE) e un radicale: è la via più comune, e quindi la maggior parte dei frammenti è EE (2.4).</li>
+<li>Rompendo <b>due legami</b> (riarrangiamenti con trasferimento di H, rottura di anelli) si ottengono uno ione OE e una molecola neutra. Gli <b>ioni OE importanti</b> (2.5) indicano quindi un riarrangiamento o un anello: vanno sempre segnati sullo spettro. Senza azoto sono a massa pari.</li>
+<li><b>Regola degli elettroni pari</b>: uno ione EE perde di solito molecole neutre (H<sub>2</sub>O, CO, C<sub>2</sub>H<sub>4</sub>…), non radicali, e resta EE.</li>
+<li>A bassa massa un picco pari intenso (30, 44, 58…) contiene di solito un azoto (2.6): è uno ione iminio EE, non un OE.</li>
+</ul>
+```
+
+## I meccanismi
+
+Dopo la ionizzazione la carica e l'elettrone spaiato stanno dove c'era l'elettrone meno legato: su un doppietto libero (n) di N, S, O, alogeni; poi su un legame π; infine su un legame σ. Da lì partono le reazioni. Due principi decidono quali frammenti sono intensi:
+
+```html
+<ul>
+<li>conta soprattutto la <b>stabilità dello ione prodotto</b> (risonanza, condivisione di elettroni con un eteroatomo, carbocationi terziari e benzilici) e, meno, quella del neutro (molecole piccole e stabili: H<sub>2</sub>O, CO, C<sub>2</sub>H<sub>4</sub>, HCl…);</li>
+<li><b>regola di Stevenson</b>: quando un legame si rompe, la carica resta di preferenza sul frammento con energia di ionizzazione più bassa; e fra due radicali possibili si perde di preferenza il <b>più grande</b>.</li>
+</ul>
+```
+
+### Scissione σ
+
+Negli alcani non ci sono doppietti né legami π: si ionizza un legame σ C–C, che si indebolisce e si rompe. La rottura è favorita ai carboni **ramificati**, perché dà carbocationi secondari o terziari, e con la perdita del ramo più grande. Gli alcani lineari danno la «staccionata» C~n~H~2n+1~^+^ (29, 43, 57, 71…).
+
+### Scissione α (sito radicalico)
+
+L'elettrone spaiato sull'eteroatomo tende ad accoppiarsi: forma un nuovo legame con il carbonio adiacente (il carbonio α) e rompe il legame successivo; si stacca un radicale e resta uno ione EE stabilizzato dall'eteroatomo (iminio, ossonio, acilio). Tendenza: **N > S, O, legami π, radicali alchilici > Cl, Br > H** (le ammine danno la scissione α più forte).
+
+```html
+<span class="eq">(C<sub>2</sub>H<sub>5</sub>)<sub>2</sub>N<sup>+•</sup>–CH<sub>2</sub>–CH<sub>3</sub> &nbsp;→&nbsp; (C<sub>2</sub>H<sub>5</sub>)<sub>2</sub>N<sup>+</sup>=CH<sub>2</sub> (m/z 86) + CH<sub>3</sub><sup>•</sup><span class="no">(15.1)</span></span>
+```
+
+```html
+<span class="eq">CH<sub>3</sub>–C(=O<sup>+•</sup>)–C<sub>4</sub>H<sub>9</sub> &nbsp;→&nbsp; CH<sub>3</sub>–C≡O<sup>+</sup> (m/z 43) + C<sub>4</sub>H<sub>9</sub><sup>•</sup><span class="no">(15.2)</span></span>
+```
+
+```html
+<div class="eispec" data-ei="trietilammina" data-keys="1" data-h="200"></div>
+```
+
+### Scissione induttiva (sito di carica, «i»)
+
+La carica positiva attira la coppia di elettroni del legame adiacente: il legame si rompe in modo eterolitico e la carica si sposta sull'altro frammento. È tipica degli alogenuri e degli eteri e compete con la scissione α; la tendenza segue l'elettronegatività (alogeni > O, S >> N, C).
+
+```html
+<span class="eq">C<sub>4</sub>H<sub>9</sub>–Br<sup>+•</sup> &nbsp;→&nbsp; C<sub>4</sub>H<sub>9</sub><sup>+</sup> (m/z 57) + Br<sup>•</sup><span class="no">(15.3)</span></span>
+```
+
+### Riarrangiamento di McLafferty
+
+```html
+<figure>
+<svg viewBox="0 0 860 250" role="img" aria-label="Riarrangiamento di McLafferty del 2-esanone: trasferimento di H in un anello a sei atomi e formazione di m/z 58" aria-describedby="fd-15-0">
+<style>.a{font:600 17px Georgia,serif;fill:#24231f}.s{font:12.5px system-ui,sans-serif;fill:#6b675c}.r{font:600 14px system-ui,sans-serif;fill:#7c3aed}</style>
+<defs><marker id="hh" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0 0 L10 4 L0 4 z" fill="#c2410c"/></marker></defs>
+<text class="a" x="150" y="52">O</text><text class="r" x="166" y="40">+•</text>
+<text class="a" x="90" y="112">H₃C</text><text class="a" x="145" y="112">C</text>
+<text class="a" x="190" y="160">CH₂</text><text class="s" x="190" y="182">α</text>
+<text class="a" x="275" y="160">CH₂</text><text class="s" x="275" y="182">β</text>
+<text class="a" x="300" y="98">CH</text><text class="s" x="330" y="90">γ</text>
+<text class="a" x="250" y="48">H</text>
+<text class="a" x="350" y="122">CH₃</text>
+<path d="M154 60 V94 M160 60 V94" stroke="#24231f" stroke-width="1.6"/>
+<path d="M123 106 H143 M160 116 L188 148 M226 155 H272 M296 146 L308 104 M330 100 L352 112 M310 82 L262 54" stroke="#24231f" stroke-width="1.6"/>
+<path d="M170 46 Q210 20 246 44" stroke="#9b978c" stroke-dasharray="4 3" fill="none"/>
+<path d="M286 64 Q232 6 176 38" fill="none" stroke="#c2410c" stroke-width="1.8" marker-end="url(#hh)"/>
+<path d="M248 152 Q262 120 296 128" fill="none" stroke="#c2410c" stroke-width="1.8" marker-end="url(#hh)"/>
+<path d="M232 160 Q216 196 202 166" fill="none" stroke="#c2410c" stroke-width="1.8" marker-end="url(#hh)"/>
+<text class="s" x="40" y="225">anello a sei atomi: O, C, Cα, Cβ, Cγ, H (stato di transizione)</text>
+<path d="M410 120 H480" stroke="#24231f" stroke-width="2" marker-end="url(#hh)"/>
+<text class="a" x="505" y="100">H₂C=C(OH)–CH₃</text><text class="r" x="660" y="88">+•</text>
+<text class="s" x="505" y="126">m/z 58, ione enolico a elettroni dispari</text>
+<text class="a" x="505" y="180">+ CH₂=CH–CH₃</text>
+<text class="s" x="505" y="204">propene, neutro (42), non si vede</text>
+</svg><details class="figdesc" id="fd-15-0"><summary>Descrizione della figura</summary><p>Il 2-esanone ionizzato (+•) con O, C, Cα, Cβ, Cγ e H; tre frecce curve: una dal legame Cγ–H all'ossigeno (trasferimento dell'idrogeno), due dal legame Cα–Cβ, verso il legame Cβ–Cγ e verso Cα; una linea tratteggiata unisce O e H. Anello a sei atomi (stato di transizione). Prodotti: H₂C=C(OH)–CH₃ (+•), m/z 58, ione enolico a elettroni dispari, e CH₂=CH–CH₃, propene, neutro (42), che non si vede.</p></details>
+<figcaption><b>Figura 15.1</b> McLafferty del 2-esanone. L'ossigeno radicale strappa un idrogeno dal carbonio γ attraverso uno stato di transizione a sei atomi; il legame Cα–Cβ si rompe e si forma il doppio legame Cβ=Cγ dell'alchene che se ne va. Le frecce a mezza punta muovono un elettrone ciascuna. Due legami rotti: lo ione prodotto è a elettroni dispari e a massa pari.</figcaption>
+</figure>
+```
+
+Condizioni: un gruppo insaturo (C=O, C=C, C≡N, anello aromatico) e un **idrogeno sul carbonio γ**. Gli ioni di McLafferty sono a massa pari (senza azoto) e diagnostici: **44** aldeidi, **58** metilchetoni, **59** ammidi primarie, **60** acidi, **74** esteri metilici, **88** esteri etilici, **92** alchilbenzeni con catena ≥ C~3~, **41** nitrili. Se la catena dall'altra parte del carbonile ha anch'essa un γ-H, può avvenire un secondo McLafferty.
+
+```html
+<div class="eispec" data-ei="2-esanone" data-keys="1" data-h="210"></div>
+```
+
+### Retro-Diels-Alder
+
+Un cicloesene ionizzato si apre come la reazione di Diels-Alder al contrario: un diene e un alchene (dienofilo). Si rompono due legami, quindi lo ione è OE; la carica va (Stevenson) al frammento con energia di ionizzazione più bassa, di solito il diene. Localizza il doppio legame nell'anello: limonene → isoprene (m/z 68).
+
+```html
+<span class="eq">C<sub>6</sub>H<sub>10</sub><sup>+•</sup> (cicloesene, 82) &nbsp;→&nbsp; C<sub>4</sub>H<sub>6</sub><sup>+•</sup> (butadiene, 54) + C<sub>2</sub>H<sub>4</sub><span class="no">(15.4)</span></span>
+```
+
+### Benzile e tropilio, fenile, benzoile
+
+Un anello con una catena laterale si rompe al legame benzilico: il catione benzile C~7~H~7~^+^ si riarrangia nel **tropilio**, aromatico a sette atomi, molto stabile (m/z 91), che perde acetilene (91 → 65). Gli anelli con un carbonile danno il **benzoile** C~6~H~5~CO^+^ (105) che perde CO (→ 77, fenile) e poi acetilene (→ 51). Le coppie 91/65 e 105/77/51 sono fra gli ioni caratteristici più utili.
+
+### Altri riarrangiamenti utili
+
+```html
+<ul>
+<li><b>Effetto orto</b>: due sostituenti vicini su un anello si scambiano un H ed eliminano una molecola (salicilato di metile: −CH<sub>3</sub>OH, m/z 120); gli isomeri meta e para non lo fanno.</li>
+<li><b>Eliminazioni</b> di H<sub>2</sub>O (alcoli), HCl, H<sub>2</sub>S, CH<sub>3</sub>COOH (acetati): ioni OE a M−18, M−36, M−34, M−60.</li>
+<li><b>Doppio trasferimento di H</b> negli esteri: acido protonato (61 negli acetati).</li>
+<li><b>Perdita di CO</b> da fenoli e chinoni, <b>di HCN</b> da aniline e piridine, <b>di NO e NO<sub>2</sub></b> dai nitroareni.</li>
+</ul>
+```
+
+## Fase 3: serie di ioni e ioni caratteristici
+
+```html
+<table>
+<tr><th>Serie</th><th>Formula</th><th>m/z</th><th>Indica</th></tr>
+<tr><td>alchilica</td><td>C<sub>n</sub>H<sub>2n+1</sub><sup>+</sup></td><td class="n">15, 29, 43, 57, 71, 85</td><td>catena alchilica (ma 43, 57, 71… sono anche acili)</td></tr>
+<tr><td>alchenilica / cicloalchilica</td><td>C<sub>n</sub>H<sub>2n−1</sub><sup>+</sup></td><td class="n">27, 41, 55, 69, 83</td><td>doppio legame o anello</td></tr>
+<tr><td>acilio</td><td>C<sub>n</sub>H<sub>2n−1</sub>O<sup>+</sup></td><td class="n">43, 57, 71, 85</td><td>chetoni, esteri</td></tr>
+<tr><td>ossonio</td><td>C<sub>n</sub>H<sub>2n+1</sub>O<sup>+</sup></td><td class="n">31, 45, 59, 73</td><td>alcoli, eteri</td></tr>
+<tr><td>iminio</td><td>C<sub>n</sub>H<sub>2n+2</sub>N<sup>+</sup></td><td class="n">30, 44, 58, 72, 86</td><td>ammine (massa pari!)</td></tr>
+<tr><td>solfonio</td><td>C<sub>n</sub>H<sub>2n+1</sub>S<sup>+</sup></td><td class="n">47, 61, 75</td><td>tioli, solfuri</td></tr>
+<tr><td>aromatica</td><td></td><td class="n">39, 50-52, 63-65, 76-78</td><td>anello benzenico</td></tr>
+<tr><td>aromatica «alta»</td><td></td><td class="n">40, 53, 66, 79</td><td>eterocicli e aromatici con N, O</td></tr>
+</table>
+```
+
+```html
+<ul>
+<li><b>Il righello</b>: usa la serie alchilica come scala di riferimento (15, 29, 43, 57… e, sopra 100, 113, 127, 141…). Un picco intenso 2 unità sotto la serie indica un'insaturazione o un anello; 1 unità sopra spesso un azoto (iminio) o un ossigeno (ossonio, +2).</li>
+<li><b>Ioni caratteristici</b> (3.3): 30 ammine primarie, 31 alcoli primari ed eteri metilici, 43 acetile o propile, 45 alcoli secondari ed eteri, 60 acidi, 74 esteri metilici, 77 fenile, 91 benzile/tropilio, 105 benzoile, 149 ftalati.</li>
+<li>Per distinguere 43 acetile (C<sub>2</sub>H<sub>3</sub>O<sup>+</sup>) da propile (C<sub>3</sub>H<sub>7</sub><sup>+</sup>) a risoluzione unitaria guardate il 44 (13C): circa 2,2% del 43 per C<sub>2</sub>, 3,3% per C<sub>3</sub>; e guardate il resto dello spettro (un carbonile?). Ad alta risoluzione la domanda non si pone (capitolo 11).</li>
+</ul>
+```
+
+## Fase 4: proporre e verificare la struttura
+
+1. Metti insieme i pezzi: formula di M (fase 1), gruppi funzionali dalle perdite e dagli ioni caratteristici, scheletro dalle serie e dai frammenti α (i radicali persi dicono quanto sono lunghe le catene ai due lati del gruppo).
+1. Scrivi le strutture compatibili (di solito poche) e per ognuna prevedi i frammenti principali con i meccanismi; scegli quella che spiega gli ioni più importanti, in particolare quelli a elettroni dispari.
+1. Controlla (4.1-4.2): uno spettro di riferimento della struttura proposta o di un isomero. Ricorda i limiti: isomeri di posizione sugli anelli (orto, meta, para), stereoisomeri e talvolta isomeri di catena danno spettri quasi uguali; la cromatografia (indice di ritenzione, capitolo 5) li distingue.
+
+## Esempio svolto: 2-esanone
+
+Riprendiamo lo spettro all'inizio del capitolo, come se fosse un incognito.
+
+```html
+<table>
+<tr><th>Passo</th><th>Osservazione e deduzione</th></tr>
+<tr><td>1.1</td><td>Gruppi a 41-43, 57-58, 85, 100. L'ultimo picco importante è 100.</td></tr>
+<tr><td>1.3-1.4</td><td>Il 102 è minimo: niente Cl, Br, S, Si. 101/100 ≈ 8% → 6-7 carboni (±1).</td></tr>
+<tr><td>1.5-1.7, 1.9</td><td>100 − 72 = 28: C<sub>6</sub>H<sub>12</sub>O (o C<sub>7</sub>H<sub>16</sub>, ma vedi sotto). RDB di C<sub>6</sub>H<sub>12</sub>O = 1: un C=O o un C=C o un anello.</td></tr>
+<tr><td>2.1-2.3</td><td>100 è pari e a elettroni dispari: nessun azoto. Le perdite verso 85 (−15, CH<sub>3</sub>) e 58 (−42, C<sub>3</sub>H<sub>6</sub>) sono logiche: 100 è M.</td></tr>
+<tr><td>2.5</td><td>58 è pari e importante: ione a elettroni dispari → un riarrangiamento. 58 = C<sub>3</sub>H<sub>6</sub>O<sup>+•</sup>: è il McLafferty dei metilchetoni.</td></tr>
+<tr><td>2.7, 3.3</td><td>43 picco base: CH<sub>3</sub>CO<sup>+</sup> (acetile) da scissione α con perdita di C<sub>4</sub>H<sub>9</sub>; 85 = M − CH<sub>3</sub>, scissione α dall'altro lato. Un gruppo CH<sub>3</sub>–CO– con una catena di quattro carboni.</td></tr>
+<tr><td>Struttura</td><td>CH<sub>3</sub>–CO–CH<sub>2</sub>–CH<sub>2</sub>–CH<sub>2</sub>–CH<sub>3</sub>. Il McLafferty richiede un H in γ: presente (catena lineare). Un 3-esanone darebbe invece 57 e 71 (acili C<sub>2</sub>H<sub>5</sub>CO<sup>+</sup> e C<sub>3</sub>H<sub>7</sub>CO<sup>+</sup>) e il McLafferty a 72; il C<sub>7</sub>H<sub>16</sub> non darebbe ioni OE a massa pari.</td></tr>
+</table>
+```
+
+## Esempio a metà: butirrofenone
+
+```html
+<div class="eispec" data-ei="butirrofenone" data-h="210"></div>
+```
+
+Fase 1 svolta: M = 148, M+1 ≈ 10% → 9-10 C; nessun A+2; con un ossigeno C~10~H~12~O, RDB 5 (un anello aromatico e un C=O). Continua tu:
+
+```html
+<details class="q"><summary>2.1-2.5: che cosa dicono 105, 77 e 120?</summary>
+<p>105 e 77 sono la coppia benzoile → fenile (−CO): c'è un gruppo C<sub>6</sub>H<sub>5</sub>–CO–. 148 − 105 = 43: si perde un propile per scissione α. 120 è pari e importante: ione a elettroni dispari, M − 28 (C<sub>2</sub>H<sub>4</sub>): un McLafferty.</p></details>
+```
+
+??? Struttura? Perché non è l'isobutirrofenone?
+C~6~H~5~–CO–CH~2~CH~2~CH~3~ (butirrofenone): il McLafferty a 120 richiede un H sul carbonio γ della catena, che c'è nella catena propilica lineare. Nell'isobutirrofenone, C~6~H~5~–CO–CH(CH~3~)~2~, i carboni dopo il Cα sono metili in posizione β e non c'è un carbonio γ: niente McLafferty a 120.
+
+## Tre spettri da risolvere
+
+Applica il procedimento e scrivi i numeri dei passi; la soluzione si apre sotto ogni spettro. Altri problemi, con suggerimenti e correzione passo per passo, sono nella Pratica.
+
+```html
+<div class="eispec" data-ei="benzoato-di-metile" data-hide="1" data-table="1" data-h="200"></div>
+```
+
+```html
+<div class="eispec" data-ei="dietilammina" data-hide="1" data-table="1" data-h="200"></div>
+```
+
+```html
+<div class="eispec" data-ei="1-butantiolo" data-hide="1" data-table="1" data-h="200"></div>
+```
+
+```html
+<div class="box oral"><b>Guida metodologica: lo schema d'interpretazione</b>
+<p>Schema logico consigliato per presentare o documentare l'interpretazione (tempo indicativo: 10–15 minuti), associando a ogni deduzione il relativo passaggio numerato:</p>
+<ol>
+<li>«Il picco base è …; l'ultimo gruppo importante è a m/z …» (lettura, 1.1).</li>
+<li>«M+2 è …: ci sono / non ci sono Cl, Br, S. M+1 è …: circa n carboni» (1.3-1.4).</li>
+<li>«Propongo M = …: è il picco più alto, è pari/dispari quindi … azoti, le perdite verso … sono logiche» (2.1-2.3, 2.8). Se M manca, evidenziarlo e spiegarne il motivo fisico (2.10).</li>
+<li>«Formula …, RDB …» (1.7-1.9).</li>
+<li>«Gli ioni a elettroni dispari importanti sono …: indicano un riarrangiamento di …» (2.5).</li>
+<li>«Le serie e gli ioni caratteristici indicano la famiglia: … (alcol, chetone, aromatico…)» (3.2-3.3).</li>
+<li>«Due o tre frammenti chiave illustrati con meccanismo e frecce elettroniche».</li>
+<li>«Struttura proposta; coerenza complessiva; eventuali ambiguità di isomeria posizionale, risolvibili mediante indice di ritenzione o spettro di riferimento» (4.1-4.2).</li>
+</ol></div>
+```
+
+```html
+<div class="box warn"><b>Gli errori metodologici più frequenti</b>
+<ol>
+<li>Prendere il picco base per lo ione molecolare.</li>
+<li>Prendere per M un picco di fondo, un M−1 o il gruppo più alto di una molecola che non dà M (CCl<sub>4</sub>, terz-butanolo).</li>
+<li>Leggere i rapporti isotopici su picchi piccoli o rumorosi.</li>
+<li>Confondere il gruppo di due cloro con quello di un bromo (100:64:10 contro 100:97).</li>
+<li>Applicare la regola dell'azoto al contrario per un frammento a elettroni pari.</li>
+<li>Una formula con RDB semintero per M.</li>
+<li>Una perdita da M fra 4 e 14 unità.</li>
+<li>Un frammento che contiene più atomi di un elemento di quanti ne abbia M.</li>
+<li>Spiegare uno ione a elettroni dispari con una scissione semplice (servono due legami rotti).</li>
+<li>Affermare con certezza un singolo isomero posizionale (es. para) quando l'EI non distingue orto, meta e para.</li>
+</ol></div>
+```
+
+```html
+<div class="box gym"><b>Allenati nella Pratica</b>
+<p><a href="pratica-ei.html">Dallo spettro alla struttura</a>: problemi su spettri sperimentali reali, dal livello guidato alla modalità autonoma (senza aiuti, con verifica del ragionamento e soluzione commentata).</p></div>
+```
+
+## Verifica
+
+??? Il picco più alto è a m/z 120, il successivo importante a 115. Che cosa concludi?
+Una perdita di 5 è impossibile (4-14): 120 non è lo ione molecolare dei picchi importanti; è fondo, un'impurezza o un coeluito, oppure 115 e 120 vengono da molecole diverse. Cerca M fra i gruppi successivi e controlla le perdite.
+
+??? Uno spettro ha m/z 30 come picco base e M a 87, debole. Che famiglia?
+M dispari: un azoto (2.3). 30 pari e intenso a bassa massa: lo ione iminio CH~2~=NH~2~^+^ (2.6) da scissione α: un'ammina primaria con il gruppo NH~2~ su un CH~2~. 87 = C~5~H~13~N: una pentilammina primaria (a catena lineare o ramificata lontano dall'azoto).
+
+??? Perché gli ioni di McLafferty sono a massa pari, mentre gli ioni α degli stessi chetoni sono a massa dispari?
+Il McLafferty rompe due legami e perde una molecola neutra: lo ione resta a elettroni dispari come M, e senza azoto un OE ha massa pari. La scissione α rompe un legame e perde un radicale: lo ione è a elettroni pari e, senza azoto, a massa dispari.
+
+## Per approfondire
+
+```html
+<ul class="refs">
+<li><span class="tag">libro</span>McLafferty F.W., Tureček F. <i>Interpretation of Mass Spectra</i>, 4ª ed., University Science Books, 1993: capitoli 2-5 (il procedimento, i meccanismi) e 9 (le classi di composti), con gli spettri incogniti da risolvere. Testo classico di riferimento.</li>
+<li><span class="tag">libro</span>Smith R.M. <i>Understanding Mass Spectra: A Basic Approach</i>, 2ª ed., Wiley, 2004. <a href="https://doi.org/10.1002/0471479357" target="_blank" rel="noopener">doi:10.1002/0471479357</a> (più semplice del McLafferty: buona prima lettura)</li>
+<li><span class="tag">articolo</span>Mikaia A. (2022) Protocol for Structure Determination of Unknowns by EI Mass Spectrometry. I. Diagnostic Ions for Acyclic Compounds with up to One Functional Group. <i>J. Phys. Chem. Ref. Data</i> 51, 031501. <a href="https://doi.org/10.1063/5.0091956" target="_blank" rel="noopener">doi:10.1063/5.0091956</a> (gratuito dal sito NIST)</li>
+<li><span class="tag">articolo</span>McLafferty F.W. (1959) Mass spectrometric analysis. Molecular rearrangements. <i>Anal. Chem.</i> 31, 82-87. <a href="https://doi.org/10.1021/ac60145a015" target="_blank" rel="noopener">doi:10.1021/ac60145a015</a></li>
+<li><span class="tag">articolo</span>Stevenson D.P. (1951) Ionization and dissociation by electronic impact. <i>Discuss. Faraday Soc.</i> 10, 35. <a href="https://doi.org/10.1039/df9511000035" target="_blank" rel="noopener">doi:10.1039/df9511000035</a></li>
+<li><span class="tag">web</span>Lezioni «MS Interpretation» di J.-L. Jimenez, University of Colorado (CHEM-5181), che seguono il McLafferty capitolo per capitolo: <a href="https://cires1.colorado.edu/jimenez/CHEM-5181/Lect/" target="_blank" rel="noopener">cires1.colorado.edu/jimenez/CHEM-5181</a>.</li>
+<li><span class="tag">dati</span>Spettri: MassBank Europe (<a href="https://massbank.eu" target="_blank" rel="noopener">massbank.eu</a>), record EI-B, licenza CC BY-NC-SA; riferimento: Horai H. et al. (2010) <i>J. Mass Spectrom.</i> 45, 703-714. <a href="https://doi.org/10.1002/jms.1777" target="_blank" rel="noopener">doi:10.1002/jms.1777</a></li>
+</ul>
+```
