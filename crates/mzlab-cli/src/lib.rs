@@ -264,4 +264,6 @@ mod flow_network_tests;
 #[cfg(test)]
 mod flow_report_tests;
 #[cfg(test)]
+mod flow_rule_tests;
+#[cfg(test)]
 mod flow_run_tests;

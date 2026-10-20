@@ -136,7 +136,7 @@ fn instance_index(plan: &Plan, who: &str) -> Result<usize, String> {
 }
 
 /// Applies one `--set` (`INSTANCE.NAME=VALUE`) to `plan`, its value typed by the descriptor.
-fn apply_set(plan: &mut Plan, reg: &[Step], set: &str) -> Result<(), String> {
+pub(crate) fn apply_set(plan: &mut Plan, reg: &[Step], set: &str) -> Result<(), String> {
     let bad = || format!("--set {set}: expected INSTANCE.NAME=VALUE");
     let (lhs, text) = set.split_once('=').ok_or_else(bad)?;
     let (who, name) = lhs.rsplit_once('.').ok_or_else(bad)?;
