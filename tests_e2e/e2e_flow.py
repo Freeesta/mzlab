@@ -53,12 +53,12 @@ try:
         # the list view is the editor under the canvas: the same plan, started empty here; the setup clicks are not part of the budget below
         pg.click('[data-tab="list"]'); pg.click('button[aria-label="Start a new plan"]'); pg.evaluate("document.querySelector('.flx-pal').remove()")
         def palette():
-            assert pg.locator(".fl-it").count() == 27, pg.locator(".fl-it").count()
+            assert pg.locator(".fl-it").count() == 29, pg.locator(".fl-it").count()
             assert pg.locator(".fl-pal details").count() == 3
             pg.fill("#fl-filter", "formula"); attendi(pg, "[...document.querySelectorAll('.fl-it')].filter(b => !b.hidden).length >= 2")
-            assert pg.locator(".fl-it:visible").count() < 27
+            assert pg.locator(".fl-it:visible").count() < 29
             pg.fill("#fl-filter", "")
-        step("palette: 27 steps in three packages, the filter narrows it", palette)
+        step("palette: 29 steps in three packages, the filter narrows it", palette)
         def build():
             pg.evaluate("window.__n = {click: 1, key: 0}")      # the tab click counts; the palette checks and the list-view setup before do not
             for s in ["convert.mzml", "index.mzidx", "features.detect", "features.align"]: add(pg, s)
@@ -301,6 +301,68 @@ try:
             assert pg.evaluate("window.__fa.campioni") is None
             pg.click('.flx-res button[aria-label="Close the results"]')
         step("a finished run opens the Feature table by itself, with the sample roles of the plan", end_of_run)
+        def samples_in_place():
+            # the sample list is filled in place: «From Data» takes the open files, «Edit» changes a row, the input keeps the SHA-256 of the canonical document
+            pg.evaluate("""() => { const S = FLOW.current; S.samples = {}; S.plan.inputs = S.plan.inputs.filter(i => i.type !== 'samples'); FLOW.addInput(S.plan, 'samples'); S.redraw(); }""")
+            pg.click('.fln:has-text("Sample list")'); attendi(pg, "document.querySelector('.flx-smp')")
+            assert pg.locator('.flx-smp button[aria-label^="Take"]').is_disabled(), "From Data needs open files"
+            pg.evaluate("""() => { window.__e = E.files; E.files = [{ file: 'blank.mzML', role: 'blank', type: 'blank' }, { file: 'x_t5.mzML', role: 'sample', time: 5, type: 'sample' }]; FLOW.current.redraw(); }""")
+            pg.click('.fln:has-text("Sample list")'); attendi(pg, "document.querySelector('.flx-smp') && !document.querySelector('.flx-smp button[aria-label^=Take]').disabled")
+            pg.click('.flx-smp button[aria-label^="Take"]')
+            attendi(pg, "document.querySelectorAll('.flx-smp tbody tr').length === 2 && /^[0-9a-f]{12}/.test(document.querySelector('.flx-smp-sha').textContent)")
+            sha = pg.evaluate("FLOW.current.plan.inputs.find(i => i.type === 'samples').sha256"); assert len(sha) == 64, sha
+            pg.fill('.flx-smp tbody tr:nth-child(2) input[aria-label^="Time of"]', "10"); pg.press('.flx-smp tbody tr:nth-child(2) input[aria-label^="Time of"]', "Tab")
+            attendi(pg, "FLOW.current.plan.inputs.find(i => i.type === 'samples').sha256 !== '%s'" % sha)
+            assert pg.evaluate("Object.values(FLOW.current.samples)[0].campioni[1].tempo_min") == 10
+            pg.evaluate("() => { E.files = window.__e; }")
+        step("the sample list is filled from Data or edited in place, and the input keeps its SHA-256", samples_in_place)
+
+        def samples_fix():
+            # a step that asks for the sample list: the one-click remedy adds it filled from the files open in Data (MISURA clic_campioni)
+            pg.evaluate("""() => { const S = FLOW.current; S.samples = {}; S.plan.inputs = S.plan.inputs.filter(i => i.type !== 'samples'); window.__e = E.files; E.files = [{ file: 'blank.mzML', role: 'blank', type: 'blank' }, { file: 'x_t5.mzML', role: 'sample', time: 5, type: 'sample' }];
+              FLOW.addStep(S.plan, S.reg, 'table.filter'); for (const i of S.plan.inputs.filter(i => i.type === 'samples')) FLOW.removeInput(S.plan, i.name); S.redraw(); }""")
+            # no step asks for the list yet (the port is optional), so the remedy is built from the problem the checker would give
+            label = pg.evaluate("""() => { const S = FLOW.current, inst = S.plan.steps.find(s => s.step.startsWith('table.filter')); window.__fix = FLOW.friendly(S, { key: 'err.flow.port.missing', instance: inst.id, port: 'samples' }).fix; return window.__fix.label; }""")
+            assert label == "Add sample list from Data", label
+            pg.evaluate("() => window.__fix.run()")
+            attendi(pg, "FLOW.current.plan.inputs.some(i => i.type === 'samples' && i.sha256.length === 64) && Object.values(FLOW.current.samples)[0].campioni.length === 2")
+            print("MISURA clic_campioni: 1 click (the remedy) from a step that asks for the list to the list filled from Data")
+            pg.evaluate("() => { E.files = window.__e; }")
+        step("the remedy of a step that needs the sample list fills it from Data in one click", samples_fix)
+
+        def selection():
+            # one selection: a click on a row of a table is seen by the other listeners, the row gets an outline and aria-current
+            pg.evaluate("""() => { const host = document.createElement('div'); host.id = 'selhost'; host.innerHTML = '<table><tbody><tr data-id="3"><td>a</td></tr><tr data-id="7"><td>b</td></tr></tbody></table>'; document.querySelector('#flx-root').append(host); window.__seen = []; FLOW.onSelect((id, from) => window.__seen.push([id, from])); FLOW.watchRows(host, 'test'); }""")
+            pg.click('#selhost tr[data-id="7"] td')
+            assert pg.evaluate("window.__seen") == [["7", "test"]], pg.evaluate("window.__seen")
+            assert pg.evaluate("document.querySelector('#selhost tr[data-id=\"7\"]').getAttribute('aria-current')") == "true"
+            pg.evaluate("() => FLOW.select('3', 'other')")
+            assert pg.evaluate("document.querySelector('#selhost tr[data-id=\"3\"]').classList.contains('flx-sel')") and not pg.evaluate("document.querySelector('#selhost tr[data-id=\"7\"]').classList.contains('flx-sel')")
+            pg.evaluate("() => { FLOW.select(null); document.querySelector('#selhost').remove(); }")
+        step("one selection: a row clicked in a table is marked in the others with an outline", selection)
+        def family_hooks():
+            # the Feature table gets a column «Family» (read once per row as it comes into view) and a tab with the ions of the family
+            pg.evaluate("""async () => {
+              window.__redraws = 0;
+              PIPEQC.open = async a => ({ row: async id => (id === 3 ? { family: { size: 2, members: [{ mz: 301.1, rt: 5.0, role: "M" }, { mz: 323.09, rt: 5.0, role: "adduct" }] } } : { family: null }) });
+              PIPET.mount = (box, o) => { window.__fo = o; box.textContent = "mounted"; return { redraw: () => { window.__redraws++; } }; };
+              const meta = new TextEncoder().encode(JSON.stringify({ rows: 3, files: 2, inputs: [{ name: "a.mzidx" }, { name: "b.mzidx" }], arrays: [] }));
+              const head = new Uint8Array(16); head.set(new TextEncoder().encode("MZFEAT01")); new DataView(head.buffer).setBigUint64(8, BigInt(meta.length), true);
+              window.__fo = null; await FLOW.openResult({ type: "table", label: "fam.mzfeat", file: new File([head, meta], "fam.mzfeat"), text: async () => "" });
+            }""")
+            attendi(pg, "window.__fo && window.__fo.extraCols && window.__fo.extraTabs")
+            assert pg.evaluate("__fo.extraCols[0].cell({ id: 3 })") == "", "unknown until read"
+            attendi(pg, "window.__redraws >= 1 && __fo.extraCols[0].cell({ id: 3 }) === '2'")
+            assert pg.evaluate("__fo.extraCols[0].sort({ id: 77 })") == -1, "a row not read yet sorts first"
+            pg.evaluate("() => { window.__panel = document.createElement('div'); document.body.append(window.__panel); __fo.extraTabs[0].fill(window.__panel, { id: 3 }); }")
+            attendi(pg, "window.__panel.querySelectorAll('tbody tr').length === 2")
+            assert "reference ion is first" in pg.evaluate("window.__panel.textContent")
+            pg.evaluate("() => { window.__panel.textContent = ''; __fo.extraTabs[0].fill(window.__panel, { id: 9 }); }")
+            attendi(pg, "/one row per ion/.test(window.__panel.textContent)")
+            pg.evaluate("() => window.__panel.remove()")
+            pg.click('.flx-res button[aria-label="Close the results"]')
+        step("the Feature table has the column and the tab «Family»", family_hooks)
+
         step("results: the Review screen asks for a note only when the level changes and moves to the next feature", review_view)
         def mgf_view():
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Check mixed spectra")')

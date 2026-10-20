@@ -26,6 +26,7 @@ Il nucleo è in AGENTS.md.
 
 - **Tabella dei picchi**: `Run.table(livello, polarità)` è una vista sul `.mzidx` del file (formato in `docs/agenti/mzidx.md`), costruito alla prima richiesta e riaperto senza rileggere gli spettri; XIC, TIC, mappa e spettri leggono fette (`PeakTable.iter_chunks`, `sum_by_scan`, `base_peaks`), la memoria resta piatta. Cartella degli indici nel server di sviluppo: `$MZLAB_CACHE` (predefinita `~/.cache/mzlab`; i test ne usano una temporanea).
   Nel sito file e indici stanno in OPFS (vedi `mzidx.md`); l'ingranaggio ha un solo pulsante per toglierli, «Nuova sessione» dell'header (finestra con «Reset completo» e «Solo file e sessione»); «Rimuovi dalla sessione» sul file toglie anche la copia in OPFS e i suoi indici (`removeFile`, `lista-file.js`).
+  Menu del tasto destro su un file (rinomina, colore, rimuovi: `fileCtx`) e selettore rapido dell'intestazione di un grafico (`fileMenu`) stanno in `lista-file-menu.js`.
 
 ## Schede e grafici
 - **Vista unica**: niente schede né pulsante «Tempi ed esperimenti» (non reintrodurre). Full Scan / MS2 / MRM hanno ciascuno il suo blocco di grafici sulla stessa pagina (mai grafici misti; `tabs.js` `ensureBlocks`, `stackBlocks` per le sessioni salvate a una scheda per volta); l'elenco file ha un gruppo per tipo (conteggio, tooltip dello schema Q1→q2→Q3). `E.tab` = tipo del file corrente: un clic su un file di un altro gruppo (`goToFileTab`) lo imposta e porta al suo blocco (`scrollToBlock`); i pulsanti della barra strumenti seguono i tipi che hanno file (`toolbar()`).

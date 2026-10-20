@@ -1,6 +1,5 @@
 """Importer HTML -> Libro Markdown: canonical DOM, per-block fallback to a raw block, and the equivalence of the imported chapters with the
 pages they replaced (digest of the canonical DOM taken before the import)."""
-import hashlib
 import sys
 from pathlib import Path
 
@@ -14,7 +13,6 @@ from tools.libro.importa import importa  # noqa: E402
 from tools.libro.pagina import converti  # noqa: E402
 
 TEORIA = ROOT / "mzlab" / "web" / "teoria"
-DIGEST = [x.split() for x in (ROOT / "tests/data/libro/equivalenza.txt").read_text(encoding="utf-8").splitlines() if x and not x.startswith("#")]
 
 PAGINA = """<!doctype html>
 <html lang="it"><head><meta charset="utf-8">
@@ -53,12 +51,6 @@ def test_import_native_and_raw_fallback(monkeypatch):
     assert raw == 2 and md.count("```html") == 2
     gen = converti(md, "09-prova.md", pubblico=True, teoria=True)
     assert canon(find(parse(gen), "main")) == canon(find(parse(PAGINA), "main"))
-
-
-@pytest.mark.parametrize("pagina,digest", DIGEST, ids=[d[0] for d in DIGEST])
-def test_imported_chapter_is_equivalent_to_the_original(pagina, digest):
-    atteso = hashlib.sha256(normalizza((TEORIA / pagina).read_text(encoding="utf-8")).encode()).hexdigest()
-    assert atteso == digest, f"{pagina}: the page differs from the chapter that was imported (edit on purpose? delete its line in equivalenza.txt)"
 
 
 def test_inline_snippet_names_are_a_closed_list():

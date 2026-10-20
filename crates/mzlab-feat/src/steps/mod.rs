@@ -39,6 +39,7 @@ pub fn registry() -> Vec<Step> {
         table::align(),
         table::gapfill(),
         table::filter(),
+        table::drift(),
         detect::ms2_link(),
         table::export_csv(),
         table::export_inclusion(),
