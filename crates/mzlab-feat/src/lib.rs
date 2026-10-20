@@ -20,6 +20,7 @@ pub mod evid;
 pub mod export;
 pub mod export_inclusione;
 pub mod export_ms;
+pub mod export_mztab;
 pub mod facts;
 pub mod famalign;
 pub mod family;

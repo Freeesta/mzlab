@@ -95,7 +95,7 @@ pub fn table_qc(table_read: Function, size: f64, samples_json: &str, spec: &str)
     core::qc_json(&mut table_reader(table_read), size as u64, samples_json, spec).map_err(js_err)
 }
 
-/// A table file: `kind` is `full`, `full_mzmine`, `quant`, `csv_semicolon` or `xlsx_rows` (see `core::table_file`).
+/// A table file: `kind` is `full`, `full_mzmine`, `quant`, `csv_semicolon`, `xlsx_rows` or `mztab` (see `core::table_file`).
 #[wasm_bindgen]
 pub fn export_table(table_read: Function, size: f64, samples_json: &str, spec: &str, table_sha256: &str, polarity: i32, kind: &str) -> std::result::Result<String, JsValue> {
     core::table_file(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256, polarity, kind).map_err(js_err)
