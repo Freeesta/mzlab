@@ -1,0 +1,14 @@
+[package]
+name = "mzlab-mol"
+description = "mzLab chemical structure record mol/1: atoms, Kekulé bonds, explicit stereo with status, groups; deterministic JSON and core hash"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+sha2 = { version = "0.11", default-features = false }

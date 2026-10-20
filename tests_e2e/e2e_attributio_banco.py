@@ -37,7 +37,8 @@ else:
     ix = site / "static" / "mzfinder" / "indice.json"; d = json.loads(ix.read_text())
     d["js"] = sorted(f.name for f in (ROOT / "TP_Mine" / "js").glob("*.js")); ix.write_text(json.dumps(d))
 man = json.loads((site / "static" / "wasm-feat" / "manifest.json").read_text())
-for key, cap in (("attributio", 512000), ("attributio_rev", 942080), ("attributio_export", 659456)):
+for key in ("attributio", "attributio_rev", "attributio_export"):
+    cap = lib.wasm_cap(man, key)
     size = (site / "static" / "wasm-feat" / man[key]["wasm"]).stat().st_size
     assert size < cap, (key, size)
     print(f"  {key} .wasm:", size, "bytes")

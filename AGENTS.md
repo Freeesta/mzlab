@@ -100,14 +100,15 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | gruppi di esperimenti in Tabui: condizioni, `gruppi/1`, `crates/mzlab-feat/src/gruppi/` | `docs/agenti/gruppi.md` |
 | ruoli dei file e tempi dei campioni (`campioni/2`, `mzlab-core/src/campioni/`: proposte dai nomi, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
 | derivati (`.mzidx`, `.mzfeat`, `.mzfeatf`) di formato più nuovo del programma: `error.newerFormat`, sola lettura | `docs/agenti/formato-nuovo.md` |
-| tetti dei .wasm di mzFinder, moduli fusi (gruppo HR), build separata `MZLAB_WASM_SEPARATI` | `docs/agenti/wasm-tetti.md` |
+| tetti dei .wasm di mzFinder, moduli fusi (gruppo HR e Attributio), build separata `MZLAB_WASM_SEPARATI` | `docs/agenti/wasm-tetti.md` |
 | contratto di memoria dei moduli WASM (`mzlab-core::budget`, uscite a offset, lastre, flusso delle prove) | `docs/agenti/memoria.md` |
 | formato `.mzidx` | `docs/agenti/mzidx.md` |
 | cosa i file grezzi contengono e non estraiamo ancora (regola «nessuna perdita») | `docs/agenti/grezzi-non-estratti.md` |
 | errori di lettura dei file: causa breve, «Dettagli», «Copia diagnosi» (`diagnosi.js`), mzML sintetico stile msconvert | `docs/agenti/diagnosi.md` |
 | riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature table in CSV dallo stesso motore e dalla stessa ricetta della pagina) | `docs/agenti/cli.md` |
 | lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, fasi di avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
-| motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`, `rust-step.md`: descrittori `step/1`, `rust-flow.md`: piani `mzflow/2`, controllo e `prov/1`) |
+| motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`, `rust-mzidx.md`, `rust-step.md`: descrittori `step/1`, `rust-flow.md`: piani `mzflow/2`, controllo e `prov/1`) |
+| record della struttura chimica `mol/1` (`crates/mzlab-mol`: tipi, JSON, hash del nucleo; lettori SMILES/molfile) | `docs/agenti/mol.md` (studio: `docs/studi/STRUTTURA_DATO.md`) |
 | misure dei motori (ultima misura per sezione) | `docs/agenti/misure.md` |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
 | workflow GitHub condizionali (concurrency, pages, job saltati) | `docs/agenti/ci-veloce.md` |

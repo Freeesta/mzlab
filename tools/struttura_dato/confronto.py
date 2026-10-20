@@ -1,6 +1,6 @@
 """Study tool for docs/studi/STRUTTURA_DATO.md: what SMILES, molfile and InChI keep or lose on a small real set, and a round trip through the
 proposed `mol/1` record (atoms, Kekulé bonds, explicit stereo with status). RDKit and Open Babel are references only (pip install rdkit
-openbabel-wheel); nothing here runs in the site. Usage: python3 tools/struttura_dato/confronto.py [--json OUT] [--molfiles DIR]"""
+openbabel-wheel); nothing here runs in the site. Usage: python3 tools/struttura_dato/confronto.py [--json OUT] [--molfiles DIR] [--composti CSV] [--golden OUT]"""
 
 import argparse
 import json
@@ -71,53 +71,81 @@ def stereo_status(m):
 # --- mol/1: the proposed record (prototype) ---------------------------------------------------------------------------------------------
 
 
-def to_record(m):
-    """RDKit mol -> mol/1 dict: atoms in canonical order, Kekulé orders + aromatic flag, stereo with explicit refs and status, groups."""
-    order = list(Chem.CanonicalRankAtoms(m, breakTies=True))
-    perm = sorted(range(m.GetNumAtoms()), key=lambda i: order[i])
-    m = Chem.RenumberAtoms(m, perm)
+def to_record(m, renumber=True):
+    """RDKit mol -> mol/1 dict (the golden data of crates/mzlab-mol). Atoms in RDKit canonical order (renumber=True) or as written; Kekulé orders;
+    bonds and double-bond centres with a < b; tetrahedral refs ascending, parity = RDKit chiral tag for the refs in that order with the implicit
+    H or lone pair last; unknown elements carry no refs/parity/cfg."""
+    if renumber:
+        order = list(Chem.CanonicalRankAtoms(m, breakTies=True))
+        m = Chem.RenumberAtoms(m, sorted(range(m.GetNumAtoms()), key=lambda i: order[i]))
     k = Chem.Mol(m)
     Chem.Kekulize(k, clearAromaticFlags=False)
-    atoms = []
-    for a in m.GetAtoms():
-        atoms.append({"el": a.GetSymbol(), "iso": a.GetIsotope(), "chg": a.GetFormalCharge(), "rad": a.GetNumRadicalElectrons(), "h": a.GetTotalNumHs()})
-    bonds = []
-    for b in k.GetBonds():
-        o = {Chem.BondType.SINGLE: 1, Chem.BondType.DOUBLE: 2, Chem.BondType.TRIPLE: 3}[b.GetBondType()]
-        bonds.append({"a": b.GetBeginAtomIdx(), "b": b.GetEndAtomIdx(), "o": o, "arom": b.GetIsAromatic()})
+    atoms = [{"el": a.GetSymbol(), "iso": a.GetIsotope(), "chg": a.GetFormalCharge(), "rad": a.GetNumRadicalElectrons(), "h": a.GetTotalNumHs()} for a in m.GetAtoms()]
+    orders = {Chem.BondType.SINGLE: 1, Chem.BondType.DOUBLE: 2, Chem.BondType.TRIPLE: 3}
+    bonds = sorted(
+        ({"a": min(b.GetBeginAtomIdx(), b.GetEndAtomIdx()), "b": max(b.GetBeginAtomIdx(), b.GetEndAtomIdx()), "o": orders[b.GetBondType()]} for b in k.GetBonds()),
+        key=lambda b: (b["a"], b["b"]),
+    )
     stereo = []
     for si in Chem.FindPotentialStereo(m):
         defined = str(si.specified).endswith("Specified")
+        status = "defined" if defined else "unknown"
         if si.type == Chem.StereoType.Atom_Tetrahedral:
             c = m.GetAtomWithIdx(si.centeredOn)
-            refs = [n.GetIdx() for n in c.GetNeighbors()]
-            # parity in neighbour order of the atom as RDKit holds it: the record rewrites it on its own sorted refs
-            tag = c.GetChiralTag()
-            par = None
+            ent = {"t": "tetra", "c": si.centeredOn}
             if defined:
-                cw = tag == Chem.ChiralType.CHI_TETRAHEDRAL_CW
+                refs = [n.GetIdx() for n in c.GetNeighbors()]
                 srt = sorted(refs)
-                # an odd permutation from RDKit's order to the sorted order flips the sense
                 perm_ = [refs.index(r) for r in srt]
                 inv = sum(1 for i in range(len(perm_)) for j in range(i + 1, len(perm_)) if perm_[i] > perm_[j])
-                cw = cw ^ (inv % 2 == 1)
-                par = "cw" if cw else "ccw"
-                refs = srt
-            stereo.append({"t": "tetra", "c": si.centeredOn, "refs": refs, "implicitH": c.GetTotalNumHs() == 1, "par": par, "status": "defined" if defined else "unknown"})
+                cw = (c.GetChiralTag() == Chem.ChiralType.CHI_TETRAHEDRAL_CW) ^ (inv % 2 == 1)
+                ent.update({"refs": srt, "implicitH": c.GetTotalNumHs() == 1, "par": "cw" if cw else "ccw"})
+            ent["status"] = status
+            stereo.append(ent)
         elif si.type == Chem.StereoType.Bond_Double:
             b = m.GetBondWithIdx(si.centeredOn)
-            ent = {"t": "db", "a": b.GetBeginAtomIdx(), "b": b.GetEndAtomIdx(), "status": "defined" if defined else "unknown"}
+            ba, ea = sorted((b.GetBeginAtomIdx(), b.GetEndAtomIdx()))
+            ent = {"t": "db", "a": ba, "b": ea}
             if defined:
-                ba, ea = b.GetBeginAtomIdx(), b.GetEndAtomIdx()
-                r1 = min(n.GetIdx() for n in b.GetBeginAtom().GetNeighbors() if n.GetIdx() != ea)
-                r2 = min(n.GetIdx() for n in b.GetEndAtom().GetNeighbors() if n.GetIdx() != ba)
+                r1 = min(n.GetIdx() for n in m.GetAtomWithIdx(ba).GetNeighbors() if n.GetIdx() != ea)
+                r2 = min(n.GetIdx() for n in m.GetAtomWithIdx(ea).GetNeighbors() if n.GetIdx() != ba)
                 ent.update({"refs": [r1, r2], "cfg": cis_trans(m, ba, ea, r1, r2)})
+            ent["status"] = status
             stereo.append(ent)
+    stereo.sort(key=lambda e: (e["t"] != "tetra", e.get("c", e.get("a"))))
     groups = []
+    kinds = {Chem.StereoGroupType.STEREO_ABSOLUTE: "abs", Chem.StereoGroupType.STEREO_AND: "and", Chem.StereoGroupType.STEREO_OR: "or"}
     for g in m.GetStereoGroups():
-        kind = {Chem.StereoGroupType.STEREO_ABSOLUTE: "abs", Chem.StereoGroupType.STEREO_AND: "and", Chem.StereoGroupType.STEREO_OR: "or"}[g.GetGroupType()]
-        groups.append({"kind": kind, "atoms": sorted(a.GetIdx() for a in g.GetAtoms())})
+        groups.append({"kind": kinds[g.GetGroupType()], "atoms": sorted(a.GetIdx() for a in g.GetAtoms())})
+    groups.sort(key=lambda g: g["atoms"])
     return {"format": "mol/1", "atoms": atoms, "bonds": bonds, "stereo": stereo, "groups": groups}
+
+
+def core_sha256(rec):
+    """SHA-256 of the compact JSON of the core (atoms, bonds, stereo, groups): the same bytes crates/mzlab-mol hashes."""
+    import hashlib
+
+    core = {k: rec[k] for k in ("atoms", "bonds", "stereo", "groups")}
+    return hashlib.sha256(json.dumps(core, separators=(",", ":")).encode()).hexdigest()
+
+
+def golden(path):
+    """Golden data for the Rust tests: per case the input, the RDKit answers (CXSMILES, InChIKey) and the record in written and canonical order."""
+    out = []
+    for name, smi, _note in SET:
+        m = Chem.MolFromSmiles(smi)
+        recs = {"input_order": to_record(m, renumber=False), "rdkit_canonical": to_record(m)}
+        out.append(
+            {
+                "name": name,
+                "input": smi,
+                "rdkit_cx": cx(m),
+                "inchikey": Chem.MolToInchiKey(m),
+                "records": recs,
+                "core_sha256": {k: core_sha256(v) for k, v in recs.items()},
+            }
+        )
+    pathlib.Path(path).write_text(json.dumps({"generator": "tools/struttura_dato/confronto.py --golden", "rdkit": Chem.rdBase.rdkitVersion, "cases": out}, separators=(",", ":")) + "\n")
 
 
 def cis_trans(m, ba, ea, r1, r2):
@@ -234,7 +262,11 @@ def main():
     ap.add_argument("--json")
     ap.add_argument("--molfiles")
     ap.add_argument("--composti", help="TP_Mine/data/composti.csv")
+    ap.add_argument("--golden", help="write the golden data of crates/mzlab-mol (crates/mzlab-mol/tests/data/golden.json)")
     a = ap.parse_args()
+    if a.golden:
+        golden(a.golden)
+        return
     if a.composti:
         composti(a.composti)
         return
