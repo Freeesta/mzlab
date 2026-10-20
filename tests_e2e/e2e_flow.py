@@ -89,6 +89,7 @@ try:
             attendi(pg, "document.querySelector('#fl-msg').textContent.includes('not valid JSON')")
         step("the exported plan opens again; a broken file says why", roundtrip)
         def copy_command():
+            pg.click('button[aria-label="Export and run with the command line"]')
             attendi(pg, "(document.querySelector('.fl-cli code') || {textContent: ''}).textContent.includes('mzlab-cli flow run')")
             text = pg.inner_text(".fl-cli code")
             assert "<<'MZFLOW'" in text and '--in "$MZLAB_IN"' in text, text[:300]
@@ -139,7 +140,7 @@ try:
         step("a comparison of algorithms is offered where two are available, checked on the page and exported", compare)
         def cli():
             pg.click('button[aria-label="Export and run with the command line"]')
-            assert "mzlab-cli --example flow" in pg.inner_text(".fl-cli")
+            attendi(pg, "document.querySelector('.fl-cli code') && document.querySelector('.fl-cli code').textContent.includes('mzlab-cli flow run')")
         step("«Run with the CLI» shows the command of the native runner", cli)
 
         pg = fresh(True, reduced=True)
@@ -464,7 +465,7 @@ try:
                 window.__jobs = [{ id: plan.steps[0].id, item: null, ms: 900, cached: false, error: null }]; await new Promise(r => setTimeout(r, 2200));
                 const activity = {}; plan.steps.forEach((x, i) => { activity[x.id] = { step: x.step, ms: 1200, used: [], generated: ['k'], ...(i === plan.steps.length - 1 ? { cached: true } : {}) }; });
                 return new Response(JSON.stringify({ prov: JSON.stringify({ schema: 'prov/1', entity: { k: { type: 'table', label: 't.csv' } }, activity }), dir: '/tmp/mzlab-flow/out' }), { status: 200 }); }; }""")
-            pg.click('button[aria-label="Export the plan and run it"]')
+            pg.click('button[aria-label="Export the plan and run it"]'); attendi(pg, "document.querySelectorAll('.fl-slots li').length >= 3")
             slots = ".fl-slots li"; assert pg.locator(slots).count() >= 3 and "waiting" in pg.inner_text(slots + ":first-child")
             go = 'button[aria-label="Run the plan on this computer"]'
             pg.click(go); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.includes('Data tab')")
