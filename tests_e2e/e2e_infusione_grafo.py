@@ -84,7 +84,7 @@ try:
             assert "Isotopes are not expected" in pg.inner_text("#ig-node") or pg.evaluate("I18N.lang") != "en"
         step("isolation window and unexplained peaks are written", notes)
         def draw():
-            pg.click(".ig-node[data-id=n2]"); pg.fill("#ig-smi", "CCOC(=O)c1ccccc1N"); pg.dispatch_event("#ig-smi", "change"); pg.wait_for_timeout(400)
+            pg.click(".ig-node[data-id=n2]"); pg.fill("#ig-smi", "CCOC(=O)c1ccccc1N"); pg.dispatch_event("#ig-smi", "change"); attendi(pg, "INFG.G.smiles")
             pg.click(".ig-node[data-id=n0]"); pg.wait_for_selector("[data-a=draw]", timeout=10000)
             assert pg.locator("[data-a=draw]").count() == 1 and pg.locator("[data-a=save]").count() == 1
             assert pg.locator(".ig-draw .muted").count() >= 1
@@ -104,20 +104,20 @@ try:
             for fmt, name, body in got:
                 assert name.endswith("." + fmt) and f"export {fmt} clean=1 node=tutto" in body, (fmt, name, body[:80])
             pg.select_option("#ig-scope", index=1); pg.select_option("#ig-clean", "0"); pg.select_option("#ig-fmt", "mgf")
-            pg.click("#ig-exp [data-a=copy]"); pg.wait_for_timeout(300)
+            pg.click("#ig-exp [data-a=copy]"); attendi(pg, "navigator.clipboard.readText().then(t => t.includes('export mgf'))")
             clip = pg.evaluate("navigator.clipboard.readText()")
             assert "export mgf clean=0 node=n2" in clip, clip[:80]
         step("clean spectra: CSV, MGF, MSP for the tree, copy for a node (all, discarded marked)", exports)
         def library():
-            pg.click("#ig-lib"); pg.wait_for_timeout(500)
+            pg.click("#ig-lib"); attendi(pg, "window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').length >= 1")
             n1 = pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').length"); assert n1 == 1
-            pg.click("#ig-lib"); pg.wait_for_timeout(500)
+            pg.click("#ig-lib"); attendi(pg, "window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').length >= 2")
             body = json.loads(pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').slice(-1)[0][2]"))
             assert body["libreria"] and body["formula"].startswith("C14H15N3O5"), body
             assert pg.evaluate("document.body.textContent").count("already in the library") > 0 or pg.evaluate("I18N.lang") != "en"
         step("Add to library: the second time says the entry is already there", library)
         def data():
-            pg.click("#ig-copyd"); pg.wait_for_timeout(300)
+            pg.click("#ig-copyd"); attendi(pg, "navigator.clipboard.readText().then(t => t.includes('n2'))")
             clip = pg.evaluate("navigator.clipboard.readText()"); assert "n2" in clip and "C13H10NO4" in clip, clip[:200]
             pg.click("#ig-data"); pg.wait_for_selector("dialog#tdati table", timeout=5000)
             assert pg.locator("dialog#tdati tbody tr").count() == len(fx["nodi"]) + len(fx["archi"])
@@ -129,11 +129,11 @@ try:
             sel = pg.evaluate("INFG.G.sel"); assert sel in ("n1", "n2", "n3"), sel
             pg.keyboard.press("ArrowDown"); pg.keyboard.press("ArrowLeft")
             assert pg.evaluate("INFG.G.sel") == "n0", pg.evaluate("INFG.G.sel")
-            pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(200)
+            pg.keyboard.press("ArrowRight"); attendi(pg, "INFG.G.sel !== 'n0'")
             cur = pg.evaluate("INFG.G.sel"); node = [n for n in fx["nodi"] if n["id"] == cur][0]
             pg.keyboard.press("Enter")
             if node["albero"]: attendi(pg, f"E.panels.some(p=>p.type==='spec' && p.filt==='msn:{node['albero'][0]}')", 15000)
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+            pg.keyboard.press("Escape"); attendi(pg, "INFG.G.sel === null")
             assert pg.evaluate("INFG.G.sel") is None
         step("arrows move between ions, Enter puts the spectrum in the active cell, Esc clears", keys)
         def zoom():
@@ -155,7 +155,7 @@ try:
         def names():
             pg.fill("#ig-ion", "Exam"); pg.wait_for_selector(".ig-sugb", timeout=5000)
             pg.click(".ig-sugb"); pg.wait_for_function("INFG.G.mol && INFG.G.mol.id==='ik:TESTONLY'", timeout=5000)
-            pg.wait_for_timeout(500)
+            attendi(pg, "window.__REQ.filter(r=>r[0]==='api/msn_grafo').slice(-1)[0][1].includes('smiles=')")
             last = pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msn_grafo').slice(-1)[0][1]")
             assert "formula=C14H15N3O5+%5BM%2BH%5D%2B" in last.replace("%20", "+") and "smiles=" in last, last
         step("a name fills the ion formula with the adduct and the SMILES; the id is kept", names)
