@@ -37,7 +37,7 @@ try:
         pg.click("#opbtn"); pg.wait_for_function("E.files.length>=2", timeout=90000); pg.wait_for_timeout(3000)
         def bench():
             it = italian(pg); assert not it, it
-            assert "Previous scan" in pg.get_attribute("#hrbar [data-hb=prev]", "title"), pg.get_attribute("#hrbar [data-hb=prev]", "title")
+            assert "Automatic zoom" in pg.get_attribute("#hrbar [data-hb=zall]", "title"), pg.get_attribute("#hrbar [data-hb=zall]", "title")
         step("bench toolbar and cells", bench)
         def info_tabs():
             labs = pg.evaluate("[...document.querySelectorAll('#stbar button.tb')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.getAttribute('aria-label'))")

@@ -18,7 +18,7 @@ try:
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         def tabs_gone():
             assert pg.is_visible("#hrbar") and pg.locator("#dtabs").count() == 0, "the toolbar of the bench is the only bar"
-            n = pg.locator("#hrbar button[data-hb]").count(); assert n == 7, n
+            n = pg.locator("#hrbar button[data-hb]").count(); assert n == 5, n
             assert not pg.is_visible("#g-add"), "the old «+ Cromatogramma» group is replaced by the menu «Cella»"
         step("toolbar instead of the tabs, with its buttons", tabs_gone)
         def no_badges():
@@ -42,11 +42,12 @@ try:
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'))")
             box = pg.locator(".pnl.chrom canvas").first.bounding_box(); pg.mouse.click(box["x"] + box["width"] * 0.4, box["y"] + box["height"] * 0.5); pg.wait_for_timeout(1200)
             c0 = pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full').cur")
-            pg.click("#hrbar [data-hb=next]"); pg.wait_for_timeout(1200)
+            assert pg.locator("#hrbar [data-hb=next], #hrbar [data-hb=prev]").count() == 0, "no scan arrows in the toolbar"
+            pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(1200)
             c1 = pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full').cur"); assert c1 is not None and c0 is not None and c1 > c0, (c0, c1)
-            pg.click("#hrbar [data-hb=prev]"); pg.wait_for_timeout(1200)
+            pg.keyboard.press("ArrowLeft"); pg.wait_for_timeout(1200)
             assert pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full').cur") < c1
-        step("previous / next scan from the toolbar", steps_)
+        step("the scans go with the arrow keys, no arrows in the toolbar", steps_)
         def pin():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='spec'&&p.link!=null&&p.dda==null))"); pg.click(".pnl.act [data-bf=pin]"); pg.wait_for_timeout(500)
             assert pg.evaluate("E.active.pin") is True
@@ -81,7 +82,7 @@ try:
         def no_dup():
             # a button of the bar above must not repeat a button of the header of a cell: the bar keeps global actions or actions on several cells
             bar = set(pg.evaluate("[...document.querySelectorAll('#hrbar [data-hb]')].map(b=>b.dataset.hb)"))
-            assert bar == {"prev", "next", "zall", "add", "type", "lib", "tree"}, bar
+            assert bar == {"zall", "add", "type", "lib", "tree"}, bar
             same = {"pin": "pin", "del": "x", "norm": "disp", "peaks": "iauto", "copy": "dl", "xls": "dl", "zundo": "undo", "zredo": "redo", "zoom": "fit"}
             hd = set(pg.evaluate("[...document.querySelectorAll('.pnl .hd [data-a],.pnl .hd [data-bf]')].map(b=>b.dataset.a||b.dataset.bf)")) | {"x"}
             assert not [k for k in same if k in bar and same[k] in hd], bar
