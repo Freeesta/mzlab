@@ -19,19 +19,26 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 6000, 2)
-        pg.wait_for_timeout(2500)
+        attendi(pg, "E.panels.some(q => q.type === 'spec' && q.link != null)")
+        def bad(w):
+            """The first problem found at this width, or None (the second pass of fitHd runs 300 ms after the resize: the caller retries)."""
+            for h in pg.evaluate(BOXES):
+                if h["over"] > 1: return (w, "header wider than its panel", h["over"])
+                for a, b in zip(h["l"], h["l"][1:]):
+                    if a[2] > b[1] + 1: return (w, "overlap", a, b)
+                # a label never spills out of its box (the title and the file menu cut with «…» on purpose)
+                spill = [c for c in h["l"] if c[3] > 1 and c[0] != "SELECT" and "ttl" not in c[0]]
+                if spill: return (w, "text spills", spill)
         def no_overlap():
             for w in (1440, 1100, 900):
-                pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(1200)
-                for h in pg.evaluate(BOXES):
-                    assert h["over"] <= 1, (w, "header wider than its panel", h["over"])
-                    for a, b in zip(h["l"], h["l"][1:]):
-                        assert a[2] <= b[1] + 1, (w, "overlap", a, b)
-                    # a label never spills out of its box (the title and the file menu cut with «…» on purpose)
-                    assert all(c[3] <= 1 for c in h["l"] if c[0] not in ("SELECT",) and "ttl" not in c[0]), (w, [c for c in h["l"] if c[3] > 1])
+                pg.set_viewport_size({"width": w, "height": 900}); attendi(pg, f"innerWidth === {w}")
+                for _ in range(10):
+                    frames(pg, 10); problem = bad(w)
+                    if not problem: break
+                assert not problem, problem
         step("the controls of the spectrum header do not overlap (1440, 1100, 900 px)", no_overlap)
         def menu():
-            pg.set_viewport_size({"width": 1440, "height": 900}); pg.wait_for_timeout(1200)
+            pg.set_viewport_size({"width": 1440, "height": 900}); attendi(pg, "innerWidth === 1440"); frames(pg, 8)
             w = pg.evaluate("E.panels.filter(q => q.type === 'spec').map(q => q.el.querySelector('.ctl select').getBoundingClientRect().width)")
             assert all(x >= 100 for x in w), w
         step("the file menu keeps at least 100 px", menu)
