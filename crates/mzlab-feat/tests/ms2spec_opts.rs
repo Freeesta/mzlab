@@ -377,7 +377,7 @@ fn hypothesis(mz: f64) -> Hypothesis {
 fn network_of(product: &[(f64, f32)], o: &SpecOpts) -> Option<f64> {
     let parent = [(250.0, 900.0), (200.0, 800.0), (150.0, 700.0)];
     let scan = |rt: f64, p: &[(f64, f32)]| (rt, p.to_vec());
-    let files = vec![
+    let files = [
         file(
             "a",
             300.0,

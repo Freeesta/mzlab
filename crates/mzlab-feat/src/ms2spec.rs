@@ -299,7 +299,7 @@ fn consensus_spectra<R: ReadAt>(
                 }
             };
             let mx = rel.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-            if mz.is_empty() || !(mx > 0.0) {
+            if mz.is_empty() || !mx.is_finite() || mx <= 0.0 {
                 return None;
             }
             let it = rel.iter().map(|r| 100.0 * r / mx).collect();
