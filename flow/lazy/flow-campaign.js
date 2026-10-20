@@ -80,7 +80,7 @@
       } catch (e) { say.textContent = "Bench 2b: " + ((/** @type {any} */ (e)).message || e); }
     };
     const draw = () => { box.textContent = ""; G.ATTRIBUTIO_TABLE.mount(box, c.data, { onReview: review }); };
-    draw(); host.append(bench);
+    draw(); host.append(bench, F.legend({ levels: true }));
     if (G.WORKFLOW && G.WORKFLOW.logOp) G.WORKFLOW.logOp("attributio", { attributio: { fingerprint: c.summary.fingerprint, settings: c.summary.settings, counts: c.summary.by_level } });
   } });
 

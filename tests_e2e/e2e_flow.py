@@ -53,12 +53,12 @@ try:
         # the list view is the editor under the canvas: the same plan, started empty here; the setup clicks are not part of the budget below
         pg.click('[data-tab="list"]'); pg.click('button[aria-label="Start a new plan"]'); pg.evaluate("document.querySelector('.flx-pal').remove()")
         def palette():
-            assert pg.locator(".fl-it").count() == 26, pg.locator(".fl-it").count()
+            assert pg.locator(".fl-it").count() == 27, pg.locator(".fl-it").count()
             assert pg.locator(".fl-pal details").count() == 3
             pg.fill("#fl-filter", "formula"); attendi(pg, "[...document.querySelectorAll('.fl-it')].filter(b => !b.hidden).length >= 2")
-            assert pg.locator(".fl-it:visible").count() < 26
+            assert pg.locator(".fl-it:visible").count() < 27
             pg.fill("#fl-filter", "")
-        step("palette: 26 steps in three packages, the filter narrows it", palette)
+        step("palette: 27 steps in three packages, the filter narrows it", palette)
         def build():
             pg.evaluate("window.__n = {click: 1, key: 0}")      # the tab click counts; the palette checks and the list-view setup before do not
             for s in ["convert.mzml", "index.mzidx", "features.detect", "features.align"]: add(pg, s)
@@ -280,6 +280,27 @@ try:
             assert pg.evaluate("window.__fa.names.join()") == "a,b" and pg.evaluate("window.__fa.pol") == 1
             pg.click('.flx-res button[aria-label="Close the results"]')
         step("results: a .mzfeat from disk opens the feature table with the names of its files", feat_view)
+        def end_of_run():
+            # the run ended with a .mzfeat made: the Feature table opens by itself (0 clicks) with the roles of the sample list of the plan and «Not in blank» on
+            pg.evaluate("""async () => {
+              PIPET.mount = (box, o) => { window.__fo = o; box.innerHTML = '<button data-fc="blank" aria-pressed="false">Not in blank</button>'; box.firstChild.onclick = e => e.target.setAttribute("aria-pressed", "true"); };
+              const S = FLOW.current, inp = FLOW.addInput(S.plan, "samples");
+              S.samples = { [inp.name]: { schema: "campioni/2", campioni: [{ file: "a.mzML", tipo: "blank", tempo_min: null }, { file: "b.mzML", tipo: "sample", tempo_min: 5 }] } };
+              const meta = new TextEncoder().encode(JSON.stringify({ rows: 3, files: 2, inputs: [{ name: "a.mzidx" }, { name: "b.mzidx" }], arrays: [] }));
+              const head = new Uint8Array(16); head.set(new TextEncoder().encode("MZFEAT01")); new DataView(head.buffer).setBigUint64(8, BigInt(meta.length), true);
+              S.results = { s1: [{ type: "table", label: "run.mzfeat", text: async () => "", load: async () => new File([head, meta], "run.mzfeat") }] };
+              window.__fo = null; window.__fa = null; await FLOW.afterRun(S);
+            }""")
+            attendi(pg, "window.__fo && /3 rows in 2 files/.test(document.querySelector('.flx-res-body').textContent)")
+            assert pg.evaluate("window.__fa.campioni.map(c => c.tipo).join()") == "blank,sample", pg.evaluate("window.__fa.campioni")
+            assert pg.evaluate("document.querySelector('.flx-res [data-fc=blank]').getAttribute('aria-pressed')") == "true"
+            assert pg.locator(".flx-res .flx-leg .flx-auto").count() == 1
+            print("MISURA clic_risultato: 0 clicks from the end of the run to the Feature table")
+            pg.evaluate("""async () => { const S = FLOW.current; S.samples = {}; window.__fo = null; await FLOW.afterRun(S); }""")
+            attendi(pg, "window.__fo && /does not|no content yet/.test(document.querySelector('.flx-res-body').textContent)")
+            assert pg.evaluate("window.__fa.campioni") is None
+            pg.click('.flx-res button[aria-label="Close the results"]')
+        step("a finished run opens the Feature table by itself, with the sample roles of the plan", end_of_run)
         step("results: the Review screen asks for a note only when the level changes and moves to the next feature", review_view)
         def mgf_view():
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Check mixed spectra")')
