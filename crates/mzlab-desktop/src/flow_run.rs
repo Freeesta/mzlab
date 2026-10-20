@@ -10,6 +10,9 @@ use serde_json::{json, Value};
 
 use crate::engine::State;
 use crate::flow_stage::stage_inputs;
+
+/// The jobs finished so far in the run of `flow_run` (one run at a time).
+static PROGRESS: std::sync::Mutex<Vec<Value>> = std::sync::Mutex::new(Vec::new());
 use crate::rpc::{text, Answer};
 
 /// A link to `from` named `to`: a symbolic link where the system has them, else a hard link, else a copy.
@@ -62,17 +65,29 @@ impl State {
         let fresh = p["fresh"].as_bool().unwrap_or(false);
         let workers = std::thread::available_parallelism()
             .map_or(1, |n| n.get().saturating_sub(1).clamp(1, 4));
-        let (_, prov) = mzlab_cli::flow::run_plan_cached(
+        PROGRESS.lock().unwrap_or_else(|e| e.into_inner()).clear();
+        let done: mzlab_cli::flow::DoneFn = std::sync::Arc::new(|id, item, ms, cached, err| {
+            let job = json!({ "id": id, "item": item, "ms": ms, "cached": cached, "error": err });
+            PROGRESS.lock().unwrap_or_else(|e| e.into_inner()).push(job);
+        });
+        let (_, prov) = mzlab_cli::flow::run_plan_notify(
             plan_text.as_bytes(),
             &inputs,
             &work,
             workers,
             None,
             Some(fresh),
+            Some(done),
         )?;
         // the folder is a run folder for `flow/report`: prov.json beside the files of the steps
         std::fs::write(work.join("prov.json"), &prov).map_err(|e| crate::rpc::io_error(&e))?;
         text(json!({ "prov": prov, "dir": work.to_string_lossy() }).to_string())
+    }
+
+    /// `{}` -> `{jobs: [{id, item, ms, cached, error}]}`: the jobs of the run in progress (or the last one) that have finished, so the page can show the steps as they end.
+    pub(crate) fn flow_progress(&self, _p: &Value) -> Result<Answer> {
+        let jobs = PROGRESS.lock().unwrap_or_else(|e| e.into_inner()).clone();
+        text(json!({ "jobs": jobs }).to_string())
     }
 
     /// `{}` -> the `corsa/1` report (`mzlab-cli flow report`) of the last run of `flow/run`, for the report page of the Flow.

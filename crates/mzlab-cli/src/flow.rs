@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use mzlab_core::budget::sha256_hex;
@@ -15,7 +15,7 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_cache::Cache;
 use crate::flow_match::Named;
-pub use crate::flow_run::{fill_inputs, run_plan, run_plan_cached};
+pub use crate::flow_run::{fill_inputs, run_plan, run_plan_cached, run_plan_notify};
 
 pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)
@@ -96,6 +96,12 @@ impl FileRunner {
         }
     }
 
+    /// The runner that calls `done` after each job.
+    pub(crate) fn with_done(mut self, done: Option<DoneFn>) -> FileRunner {
+        self.done = done;
+        self
+    }
+
     /// Writes the index of the cache, when the runner keeps one.
     pub(crate) fn save_cache(&self) -> Result<()> {
         self.cache
@@ -111,6 +117,9 @@ pub struct Meter {
     pub peak: fn() -> u64,
 }
 
+/// Told after each job of a run: instance id, item of a per-file step, milliseconds, taken from the cache, and the error text when it failed.
+pub type DoneFn = Arc<dyn Fn(&str, Option<usize>, f64, bool, Option<String>) + Send + Sync>;
+
 /// Runs the steps of this crate on files: inputs are found by name in `inputs`, else in `dir`; what steps make is written to `work`.
 pub struct FileRunner {
     dir: PathBuf,
@@ -121,6 +130,8 @@ pub struct FileRunner {
     lineage: Mutex<HashMap<String, Lineage>>,
     /// Instance ids in the order of the run: one line per job on stderr when set.
     progress: Option<Vec<String>>,
+    /// Called after each job (the desktop app shows the steps as they finish).
+    done: Option<DoneFn>,
     /// The cache of `work` (`flow_cache.rs`); none: every job runs and nothing is kept.
     cache: Option<crate::flow_cache::Cache>,
     /// Working memory in MB of the alignment (`--budget-mb`; else the automatic one of this computer). The bytes written do not depend on it.
@@ -137,6 +148,7 @@ impl FileRunner {
             made: Mutex::new(HashMap::new()),
             lineage: Mutex::new(HashMap::new()),
             progress: None,
+            done: None,
             cache: None,
             budget_mb: mzlab_core::budget_auto::native_auto_mb(),
         }
@@ -446,6 +458,15 @@ impl Runner for FileRunner {
         if let Some(order) = &self.progress {
             let line = crate::flow_run::progress_line(order, job, ms, cached, made.as_ref().err());
             eprintln!("{line}");
+        }
+        if let Some(done) = &self.done {
+            done(
+                &job.instance.id,
+                job.item,
+                ms,
+                cached,
+                made.as_ref().err().map(|e| e.to_string()),
+            );
         }
         let made = made?;
         let mem = crate::flow_base::align_mem(self, job);

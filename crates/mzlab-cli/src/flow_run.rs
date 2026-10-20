@@ -12,7 +12,7 @@ use mzlab_core::flow::{
 use mzlab_core::json::Value;
 use mzlab_core::step::{Kind, Step};
 
-use crate::flow::{executable, steps, FileRunner, Meter};
+use crate::flow::{executable, steps, DoneFn, FileRunner, Meter};
 use crate::Outcome;
 
 pub(crate) const HELP: &str = "mzlab-cli flow run: runs a whole mzflow/2 plan (the plan of the Flow page) on files.
@@ -486,12 +486,25 @@ pub fn run_plan_cached(
     meter: Option<Meter>,
     fresh: Option<bool>,
 ) -> mzlab_core::Result<(Run, String)> {
+    run_plan_notify(text, dir, work, workers, meter, fresh, None)
+}
+
+/// `run_plan_cached` that also calls `done` after each job, for a caller that shows the run while it goes.
+pub fn run_plan_notify(
+    text: &[u8],
+    dir: &Path,
+    work: &Path,
+    workers: usize,
+    meter: Option<Meter>,
+    fresh: Option<bool>,
+    done: Option<DoneFn>,
+) -> mzlab_core::Result<(Run, String)> {
     let mut plan = parse(text)?;
     fill_inputs(&mut plan, |n| dir.join(n))?;
     let plan = prepare(plan, &steps())?.map_err(|problems| {
         let list: Vec<String> = problems.iter().map(problem_text).collect();
         mzlab_core::Error::new("err.flow.check").with("problems", list.join(" "))
     })?;
-    let runner = FileRunner::cached(dir, work, meter, fresh);
+    let runner = FileRunner::cached(dir, work, meter, fresh).with_done(done);
     run_checked(&plan, text, &runner, workers)
 }
