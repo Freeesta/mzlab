@@ -145,13 +145,20 @@ fn write_cand(o: &mut Out, lib: &Lib, qid: &str, alg: &str, c: &Cand) -> Result<
         .meta(c.index)
         .map_err(|_| Error::new("err.flow.match.library"))?;
     let r = |v: f64| round(v, 6);
+    let peaks = lib
+        .peaks(c.index)
+        .map_err(|_| Error::new("err.flow.match.library"))?
+        .0
+        .len();
     o.raw("{\"query\":").str(qid);
     o.raw(",\"id\":").str(&m.accession);
     o.raw(",\"name\":").str(&m.name);
+    o.raw(",\"inchikey\":").str(&m.inchikey);
     o.raw(",\"smiles\":").str(&m.smiles);
     o.raw(",\"formula\":").str(&m.formula);
     o.raw(",\"score\":").num(r(c.score));
     o.raw(",\"shared\":").int(c.shared as i64);
+    o.raw(",\"library_peaks\":").int(peaks as i64);
     o.raw(",\"explained\":").rounded(&c.explained, 4);
     o.raw(",\"mass_ppm\":").num(round(c.mass_ppm, 3));
     o.raw(",\"precursor_delta\":").num(round(c.delta, 4));

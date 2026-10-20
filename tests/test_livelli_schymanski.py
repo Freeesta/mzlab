@@ -45,3 +45,11 @@ def test_diagnostic_fragments_reach_2b_only_by_the_chemist():
     r = run("""const r = L.assess({cands: [lib], nScans: 3}); const a = L.decide(r, '2b');
       const none = L.assess({cands: []}); console.log(JSON.stringify([r.proposed, a.ok, L.shown(r), L.decide(none, '2b').ok, L.decide(none, '1').ok]))""")
     assert r == ["2a", True, "2b", False, False]
+
+
+def test_shared_cases_agree_with_the_rust_rule():
+    """`livelli_casi.json` is also run by the native rule (`crates/mzlab-cli`, `flow_ident_tests.rs`): both must give these levels."""
+    cases = json.loads((Path(__file__).parent / "livelli_casi.json").read_text(encoding="utf-8"))["cases"]
+    for c in cases:
+        r = run(f"const r = L.assess({json.dumps(c['input'])}, {c['profile']!r}); console.log(JSON.stringify([r.proposed, r.why]))")
+        assert r == [c["level"], c["why"]], c["name"]
