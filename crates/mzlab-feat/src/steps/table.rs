@@ -190,3 +190,33 @@ pub(super) fn export_csv() -> Step {
         )
     }
 }
+
+/// `export.inclusion`: the inclusion list of the products expected in the plan, to inject the samples again in targeted MS2 (`export_inclusione`).
+pub(super) fn export_inclusion() -> Step {
+    let params = vec![
+        Param::text("adducts", "Adducts")
+            .default_str("[M+H]+")
+            .doc("Adducts of the ion table separated by commas; one row per product and adduct"),
+        Param::number("rt_window", "RT half window")
+            .min(0.0)
+            .default_num(0.5)
+            .unit("min")
+            .doc("Each row spans the expected RT of the product plus and minus this; the start is never below 0"),
+    ];
+    Step {
+        ins: vec![Port::new("tp", DataType::Tp, "Expected products with their RT")],
+        outs: vec![Port::new("report", DataType::Report, "Inclusion list as CSV")],
+        params,
+        runs_in: RunsIn {
+            wasm: Some("table"),
+            wasm_ceiling_bytes: Some(FEAT_CEILING),
+            native: true,
+        },
+        errors: vec!["error.export.adduct", "error.newerFormat"],
+        ..Step::core(
+            "export.inclusion",
+            "Export inclusion list",
+            "Writes the m/z and RT windows of the expected products as a CSV in the columns of the inclusion list of mzFinder, sorted by RT; it adds no level and no verdict.",
+        )
+    }
+}
