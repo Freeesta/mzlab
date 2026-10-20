@@ -1973,6 +1973,7 @@ version = "1.0.1"
 dependencies = [
  "mzlab-core",
  "mzlab-feat",
+ "mzlab-mol",
  "nalgebra",
  "sci-form",
  "serde_json",

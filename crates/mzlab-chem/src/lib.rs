@@ -6,6 +6,8 @@ pub mod fukui;
 pub mod lengths;
 pub mod minimize;
 pub mod mol3d;
+#[cfg(feature = "record")]
+pub mod mol3d_record;
 pub mod protomer;
 pub mod reatt;
 pub mod step;
