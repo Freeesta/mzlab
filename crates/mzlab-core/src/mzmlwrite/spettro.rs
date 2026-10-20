@@ -14,7 +14,12 @@ pub struct CvPar {
 
 impl CvPar {
     pub fn new(accession: &str, name: &str, value: impl ToString) -> Self {
-        CvPar { accession: accession.into(), name: name.into(), value: value.to_string(), unit: None }
+        CvPar {
+            accession: accession.into(),
+            name: name.into(),
+            value: value.to_string(),
+            unit: None,
+        }
     }
 
     pub fn with_unit(mut self, accession: &str, name: &str) -> Self {
@@ -25,7 +30,14 @@ impl CvPar {
     pub(super) fn xml(&self) -> String {
         let value = esc(&self.value);
         match &self.unit {
-            Some((ua, un)) => unit_cv_str(&self.accession, &esc(&self.name), &value, if ua.starts_with("UO:") { "UO" } else { "MS" }, ua, un),
+            Some((ua, un)) => unit_cv_str(
+                &self.accession,
+                &esc(&self.name),
+                &value,
+                if ua.starts_with("UO:") { "UO" } else { "MS" },
+                ua,
+                un,
+            ),
             None => cv(&self.accession, &esc(&self.name), value),
         }
     }

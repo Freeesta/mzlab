@@ -59,7 +59,11 @@ pub(super) fn valida(idx: &[u8]) {
         Ok(d) => d,
         Err(e) => return eprintln!("skipped: {e}"),
     };
-    let file = dir.join(format!("sample-{}-{:?}.mzML", std::process::id(), std::thread::current().id()));
+    let file = dir.join(format!(
+        "sample-{}-{:?}.mzML",
+        std::process::id(),
+        std::thread::current().id()
+    ));
     std::fs::write(&file, idx).unwrap();
     let out = Command::new("xmllint")
         .args(["--noout", "--huge", "--schema"])
