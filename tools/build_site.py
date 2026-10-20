@@ -83,6 +83,9 @@ def pack_mzfinder(static: Path) -> None:
     data = [f.name for f in sorted((src / "data").iterdir()) if f.suffix == ".csv" or f.name in ("cancello.json", "regole_tp.json")] if (src / "data").is_dir() else []      # curated lists and the gate of quality, read by the scripts through QTOOLS.ctx.files
     for n in data:
         shutil.copy2(src / "data" / n, dst / n)
+    # the step/1 descriptors that generate the form of the Pipeline panel (one datum, the Rust side is checked against it)
+    shutil.copy2(ROOT / "docs" / "schemi" / "steps-1.json", dst / "steps-1.json")
+    data.append("steps-1.json")
     for n in js:
         shutil.copy2(src / "js" / n, dst / n)
     lazy = [f.name for f in sorted((src / "lazy").glob("*.js"))] if (src / "lazy").is_dir() else []      # loaded on demand through TPLAZY.load, not at the start of Tabui

@@ -144,6 +144,21 @@ try:
             assert not small, small
         step("WCAG 2.5.8: the controls of the panel are at least 24 x 24 px", keyboard_and_targets)
 
+        def generated_form():
+            d = pg.evaluate("PIPEFORM.defaults(PIPEFORM.load(QTOOLS.ctx.files))")
+            D = pg.evaluate("PIPE.DEF")
+            assert (d["ppm"], d["floor"], d["hmin"], d["npts"], d["rt"], d["fill"]) == (D["ppm"], D["floor"], D["min_height"], D["min_points"], D["rt_tol"], D["fill"]), (d, D)
+            assert pg.evaluate("PIPEFORM.MAP.every(m => document.querySelector('#pipe-' + m.id))"), "ids"
+            assert pg.locator("#pipe label[for=pipe-ppm]").text_content() == "m/z tolerance (ppm)"
+            assert pg.locator("#pipe details:has(#pipe-pol)").count() == 1, "details"
+            assert pg.locator("#pipe-pol").is_hidden(), "More is closed"
+            pg.fill("#pipe-floor", "5e4"); assert pg.locator("[data-rs=floor]").is_enabled(), "Auto enabled"
+            pg.focus("[data-rs=floor]"); pg.keyboard.press("Enter")
+            assert "estimated" in pg.inner_text("#pipe-floor-why") and pg.locator("[data-rs=floor]").is_disabled() and pg.evaluate("PIPE.state.auto.floor"), (pg.inner_text("#pipe-floor-why"), pg.evaluate("PIPE.state.auto.floor"))
+            pg.fill("#pipe-npts", "9"); pg.click("[data-rs=npts]"); assert pg.input_value("#pipe-npts") == "5" and pg.locator("[data-rs=npts]").is_disabled(), pg.input_value("#pipe-npts")
+            pg.fill("#pipe-floor", "5e4")                    # the later steps go on with the chosen floor
+        step("the form is generated from the step/1 descriptors: same defaults, ids kept, Auto and Reset by keyboard", generated_form)
+
         def roles_proposed():
             pg.evaluate("PIPE.open()"); pg.wait_for_function("document.querySelectorAll('#pr-tab .pr-role').length === %d" % len(names), timeout=60000)
             roles = pg.evaluate("[...document.querySelectorAll('#pr-tab .pr-role')].map(e => e.value)")

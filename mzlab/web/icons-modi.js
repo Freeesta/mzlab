@@ -21,6 +21,8 @@ const QICON = (() => {
     mrm: wrap(box(0) + fixed(0) + box(1) + hit(1) + box(2) + fixed(2), I18N.t("icon.mrm")),
     // TP Mine (secret module): a pickaxe and a gem, square
     mine: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="TP Mine"><path d="M5 21.5L13 6.6"/><path d="M3.5 12.5C6 5.5 16 3.5 21 9" stroke-width="2.2"/><path d="M3.5 12.5l.9 2.4M21 9l-2.4-.8" stroke-width="1.4"/><path d="M16.5 16l2.2-2.8 2.2 2.8-2.2 3.2z" fill="currentColor" fill-opacity=".25" stroke-width="1.4"/></svg>`,
+    // counter-clockwise arrow: back to the default (form of the Pipeline panel of mzFinder)
+    reset: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 4v5h5"/></svg>`,
     // square icons for the header buttons (24x24): periodic table, adducts, new session
     pt: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="${I18N.t('icon.pt')}"><rect x="3" y="4" width="3.4" height="3.8" rx=".8" fill="currentColor" fill-opacity=".3"/><rect x="18" y="4" width="3.4" height="3.8" rx=".8" fill="currentColor" fill-opacity=".3"/><rect x="3" y="10" width="3.4" height="3.8" rx=".8"/><rect x="8" y="10" width="3.4" height="3.8" rx=".8"/><rect x="13" y="10" width="3.4" height="3.8" rx=".8"/><rect x="18" y="10" width="3.4" height="3.8" rx=".8"/><rect x="3" y="16" width="3.4" height="3.8" rx=".8"/><rect x="8" y="16" width="3.4" height="3.8" rx=".8"/><rect x="13" y="16" width="3.4" height="3.8" rx=".8"/><rect x="18" y="16" width="3.4" height="3.8" rx=".8"/></svg>`,
     iso: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" role="img" aria-label="${I18N.t('icon.iso')}"><path d="M5 20V5M11 20V12M17 20V16"/><path d="M3 20.5h18" stroke-width="1.5"/></svg>`,
@@ -30,7 +32,7 @@ const QICON = (() => {
     liste: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="${I18N.t('icon.liste')}"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>`,
     newrun: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="${I18N.t('icon.newrun')}"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" fill="currentColor" fill-opacity=".1"/><path d="M14 3v5h5"/><path d="M12 11.5v6M9 14.5h6"/></svg>`,
     get(k, px = 20) {
-      const w = ["mine", "pt", "adduct", "newrun", "iso", "nl", "calc", "liste"].includes(k) ? px : Math.round(px * 48 / 20);
+      const w = ["mine", "pt", "adduct", "newrun", "iso", "nl", "calc", "liste", "reset"].includes(k) ? px : Math.round(px * 48 / 20);
       const svg = this[k] || "";
       return svg ? svg.replace("<svg ", `<svg width="${w}" height="${px}" `) : "";
     },
