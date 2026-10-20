@@ -167,6 +167,31 @@ SMILES_EXTRA = [
 ]
 
 
+def molfile_golden(path):
+    """Golden molfiles for crates/mzlab-mol: per SMILES the 2D molblock RDKit writes (wedges; V3000 with STERAC/STEREL/STEABS when there are groups),
+    the same V2000 with the bond stereo field zeroed (wedges lost), and with the aromatic bonds as type 4. Atom order = SMILES order."""
+    out = []
+    for smi in [c[1] for c in SET] + SMILES_EXTRA:
+        m = Chem.MolFromSmiles(smi)
+        m2 = Chem.Mol(m)
+        AllChem.Compute2DCoords(m2)
+        entry = {"input": smi, "mol": Chem.MolToMolBlock(m2)}
+        lines = entry["mol"].splitlines()
+        if "V2000" in lines[3]:
+            na, nb = int(lines[3][0:3]), int(lines[3][3:6])
+            nw = list(lines)
+            for i in range(4 + na, 4 + na + nb):
+                nw[i] = nw[i][:9] + "  0" + nw[i][12:]
+            if nw != lines:
+                entry["nowedge"] = "\n".join(nw) + "\n"
+            if any(b.GetIsAromatic() for b in m.GetBonds()):
+                entry["type4"] = Chem.MolToMolBlock(m2, kekulize=False)
+        out.append(entry)
+    ocl = json.loads(__import__("subprocess").check_output(["node", str(pathlib.Path(__file__).with_name("ocl_ordine.mjs")), "--json"], text=True))
+    doc = {"generator": "tools/struttura_dato/confronto.py --golden-molfile", "rdkit": Chem.rdBase.rdkitVersion, "molfiles": out, "openchemlib": ocl}
+    pathlib.Path(path).write_text(json.dumps(doc, separators=(",", ":")) + "\n")
+
+
 def canonical_perm(m):
     """new index of every atom when the atoms are put in RDKit canonical order (the permutation `to_record` applies)."""
     order = list(Chem.CanonicalRankAtoms(m, breakTies=True))
@@ -323,10 +348,14 @@ def main():
     ap.add_argument("--json")
     ap.add_argument("--molfiles")
     ap.add_argument("--composti", help="TP_Mine/data/composti.csv")
+    ap.add_argument("--golden-molfile", help="write the golden molfiles of crates/mzlab-mol (crates/mzlab-mol/tests/data/golden_molfile.json)")
     ap.add_argument("--golden", help="write the golden data of crates/mzlab-mol (crates/mzlab-mol/tests/data/golden.json)")
     a = ap.parse_args()
     if a.golden:
         golden(a.golden)
+        return
+    if a.golden_molfile:
+        molfile_golden(a.golden_molfile)
         return
     if a.composti:
         composti(a.composti)

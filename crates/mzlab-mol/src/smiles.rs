@@ -4,11 +4,11 @@
 
 use crate::codec::MolError;
 use crate::cxsmiles;
-use crate::kekule::kekulize;
+use crate::kekule::{assign, Facts};
 use crate::model::{Atom, Bond, Mol, Status, Stereo, StereoGroup};
 use crate::smiles_parse::{parse, Raw, RawBond, Sym};
 use crate::smiles_stereo::{double, tetra};
-use crate::valence::{needs_double, shortfall};
+use crate::valence::shortfall;
 
 impl Mol {
     /// Reads a SMILES with an optional CXSMILES tail (`CC[C@H](C)O |&1:2|`). Explicit `[H]` atoms stay atoms.
@@ -52,39 +52,20 @@ fn written_order(raw: &Raw, e: &RawBond) -> u8 {
 fn resolve(raw: &Raw) -> Result<(Vec<u8>, Vec<u8>), MolError> {
     let n = raw.atoms.len();
     let mut orders: Vec<u8> = raw.bonds.iter().map(|e| written_order(raw, e)).collect();
-    let aromatic: Vec<usize> = (0..orders.len()).filter(|&i| orders[i] == 0).collect();
-    if !aromatic.is_empty() {
-        let mut total = vec![0u32; n];
-        let mut in_ring = vec![false; n];
-        for (i, e) in raw.bonds.iter().enumerate() {
-            let o = u32::from(orders[i].max(1));
-            total[e.from] += o;
-            total[e.to] += o;
-            if orders[i] == 0 {
-                in_ring[e.from] = true;
-                in_ring[e.to] = true;
-            }
-        }
-        let needy: Vec<bool> = (0..n)
-            .map(|i| {
-                let a = &raw.atoms[i];
-                in_ring[i] && needs_double(&a.el, i32::from(a.chg), total[i] + u32::from(a.h))
-            })
-            .collect();
-        let pairs: Vec<(usize, usize)> = aromatic
-            .iter()
-            .map(|&i| (raw.bonds[i].from, raw.bonds[i].to))
-            .collect();
-        let Some(doubles) = kekulize(n, &pairs, &needy) else {
-            return Err(MolError::Smiles(
-                "the aromatic system cannot be kekulised".into(),
-            ));
-        };
-        for &i in &aromatic {
-            let (f, t) = (raw.bonds[i].from, raw.bonds[i].to);
-            let double = doubles.contains(&(f.min(t), f.max(t)));
-            orders[i] = if double { 2 } else { 1 };
-        }
+    let ends: Vec<(usize, usize)> = raw.bonds.iter().map(|e| (e.from, e.to)).collect();
+    let facts: Vec<Facts> = raw
+        .atoms
+        .iter()
+        .map(|a| Facts {
+            el: &a.el,
+            chg: i32::from(a.chg),
+            h: u32::from(a.h),
+        })
+        .collect();
+    if !assign(&ends, &mut orders, &facts) {
+        return Err(MolError::Smiles(
+            "the aromatic system cannot be kekulised".into(),
+        ));
     }
     let mut sum = vec![0u32; n];
     for (e, &o) in raw.bonds.iter().zip(&orders) {
