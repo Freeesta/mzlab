@@ -5,7 +5,10 @@
 use mzlab_core::flow::{check, parse, Platform};
 use mzlab_feat::steps::{attributio, registry, tabui};
 
-const PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/data/flow_check_cases.json");
+const PATH: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/data/flow_check_cases.json"
+);
 
 /// The answer of the checker for one case: `instance|port|key|k=v,k=v` lines, or the key of the error of the reader.
 fn answer(plan: &str) -> Result<Vec<String>, String> {
@@ -17,7 +20,13 @@ fn answer(plan: &str) -> Result<Vec<String>, String> {
         .iter()
         .map(|p| {
             let params: Vec<String> = p.params.iter().map(|(k, v)| format!("{k}={v}")).collect();
-            format!("{}|{}|{}|{}", p.instance, p.port, p.error_key, params.join(","))
+            format!(
+                "{}|{}|{}|{}",
+                p.instance,
+                p.port,
+                p.error_key,
+                params.join(",")
+            )
         })
         .collect())
 }
