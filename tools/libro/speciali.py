@@ -6,6 +6,7 @@ BOXES = {"nota": ("key", "Concetto chiave"), "attenzione": ("warn", "Errore freq
          "formula": ("math", "Formula"), "esercizio": ("gym", "Esercizio")}
 FIG = re.compile(r'^!\[([^\]]*)\]\(([^)\s"]+)(?: "([^"]*)")?\)\s*\{#fig:([\w-]+)\}\s*$')
 EQEND = re.compile(r"\$\$\s*(?:\{#eq:([\w-]+)\})?\s*$")
+NCLS = ' class="n"'
 NUMCELL = re.compile(r"^[−+-]?\d[\d.,\s·⁰¹²³⁴⁵⁶⁷⁸⁹⁻]*$")
 
 
@@ -57,7 +58,8 @@ class Speciali:
         for k, r in enumerate(rows[2:]):
             if len(r) != len(rows[0]):
                 self.err(base + i + 2 + k, f"row has {len(r)} cells, header has {len(rows[0])}")
-            body.append("<tr>" + "".join(f'<td{" class=\"n\"" if NUMCELL.match(c) else ""}>{self.inl(c, base + i + 2 + k)}</td>' for c in r) + "</tr>")
+            cells = [f"<td{NCLS if NUMCELL.match(c) else ''}>{self.inl(c, base + i + 2 + k)}</td>" for c in r]
+            body.append("<tr>" + "".join(cells) + "</tr>")
         return f'<table>\n<caption>{self.inl(cap, base + i)}</caption>\n<tr>{head}</tr>\n' + "\n".join(body) + "\n</table>", j
 
     def figure(self, m, at):
