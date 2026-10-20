@@ -2230,6 +2230,7 @@ I18N.add("en", {
   "lv.dec.3prov": "L3a: tentative; {name} does not pass: {gates}",
   "lv.dec.3an": "L3b: an analog only (generic class): {name} (modified cosine {cos}, Δm {delta})",
   "lv.dec.none": "No source above the gates; the closest: {name}: {gate}",
+  "lv.decoyq": "decoy q {q} (lower bound)",
   "lv.dec.4": "L4: a single formula compatible with mass, isotopes and fragments",
   "lv.dec.5": "L5: exact mass only",
   "lv.dec.0": "L0: detected, no annotation",

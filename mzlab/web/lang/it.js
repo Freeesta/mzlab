@@ -2230,6 +2230,7 @@ I18N.add("it", {
   "lv.dec.3prov": "L3a: provvisorio; {name} non passa: {gates}",
   "lv.dec.3an": "L3b: solo un analogo (classe generica): {name} (coseno modificato {cos}, Δm {delta})",
   "lv.dec.none": "Nessuna fonte sopra i cancelli; la più vicina: {name}: {gate}",
+  "lv.decoyq": "decoy q {q} (limite inferiore)",
   "lv.dec.4": "L4: una sola formula compatibile con massa, isotopi e frammenti",
   "lv.dec.5": "L5: solo la massa esatta",
   "lv.dec.0": "L0: rilevata, nessuna annotazione",
