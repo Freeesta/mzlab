@@ -183,10 +183,21 @@ try:
             pg.focus("#fl-canvas"); before = pg.evaluate("document.querySelector('.fl-stage').style.transform")
             pg.keyboard.press("ArrowLeft"); assert pg.evaluate("document.querySelector('.fl-stage').style.transform") != before
             assert pg.evaluate("getComputedStyle(document.querySelector('.fln')).animationName") == "none"
+        def menus_and_redraw():
+            # a redraw after an edit does not replay the entrance of the cards that were already there
+            pg.focus('.fln:has-text("Import data")'); pg.keyboard.press("Enter")
+            attendi(pg, "document.querySelectorAll('.fln').length > 0")
+            assert pg.locator(".fln.fl-new").count() == 0
+            assert "Process" in pg.get_attribute(".fln >> nth=1", "aria-label") or "Data in" in pg.get_attribute(".fln >> nth=0", "aria-label")
+            pg.click("#flx-add"); assert pg.get_attribute("#flx-add", "aria-haspopup") == "menu" and pg.get_attribute("#flx-add", "aria-expanded") == "true"
+            pg.keyboard.press("Escape"); assert pg.get_attribute("#flx-add", "aria-expanded") == "false"
+            assert pg.get_attribute(".flx-tpl", "role") == "dialog"
+        step("canvas: menus say they are open, the template card is a dialog, a redraw does not replay the entrance", menus_and_redraw)
         step("canvas: Advanced shows every step and the palette; Enter selects, arrows move the view, reduced motion stops the animation", advanced_and_keys)
         def sheets():
-            pg.click('[data-tab="plan"]'); assert '"format": "mzflow/2"' in pg.inner_text(".flx-plan")
-            pg.click('[data-tab="list"]'); attendi(pg, "document.querySelectorAll('.fl-card').length >= 3"); pg.click('[data-tab="canvas"]')
+            assert not pg.locator('[data-tab="plan"]').is_visible()
+            pg.click('[data-mode="advanced"]'); pg.click('[data-tab="plan"]'); assert '"format": "mzflow/2"' in pg.inner_text(".flx-plan")
+            pg.click('[data-tab="list"]'); attendi(pg, "document.querySelectorAll('.fl-card').length >= 3"); pg.click('[data-tab="canvas"]'); pg.click('[data-mode="simple"]')
         step("canvas: the plan view and the list view show the same plan", sheets)
         def desktop_run():
             # the app is faked: the page asks the native route flow/run and lists what each step did from the prov/1 it answers
