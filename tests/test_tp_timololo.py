@@ -24,3 +24,17 @@ def test_agreement_disagreement_and_new_candidates():
 
 def test_a_row_outside_the_ppm_window_is_not_found():
     assert M.find(ROWS, {"mz": 300.2, "rt": 5.0}) == []
+
+
+def test_cannot_say_is_no_evidence_not_disagreement():
+    rows = [{"id": 2, "mz": 400.0, "rt": 3.0, "delta": "+2O", "confidence": "cannot_say", "region": "", "reasons": ["few_fragments"]}]
+    m = M.measure({"rows": rows}, {"tps": [{"id": "c", "mz": 400.0, "rt": 3.0, "region": "ring A"}]})
+    assert (m["region_checked"], m["site_disagreements"]) == (0, [])
+    assert m["no_evidence"] == [("c", "ring A", ["few_fragments"])]
+
+
+def test_a_row_without_change_is_no_evidence():
+    rows = [{"id": 3, "mz": 500.0, "rt": 2.0, "delta": "", "confidence": "", "region": ""}]
+    m = M.measure({"rows": rows}, {"tps": [{"id": "d", "mz": 500.0, "region": "chain A"}]})
+    assert (m["region_checked"], len(m["no_evidence"])) == (0, 1)
+    assert m["no_evidence"][0][2] == ["no_change_proposal"]
