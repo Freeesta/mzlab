@@ -4,6 +4,7 @@
 
 mod canon;
 mod check;
+mod corsa;
 mod order;
 mod parse;
 mod prov;
@@ -11,6 +12,7 @@ mod run;
 
 pub use canon::{cache_key, canonical, Resolved};
 pub use check::{check, conversion_path, Platform, Problem};
+pub use corsa::{build as corsa_build, Corsa, Uscita};
 pub use order::{levels, plan_order};
 pub use parse::parse;
 pub use prov::{prov_json, Activity, Agent, ErrorRecord};
