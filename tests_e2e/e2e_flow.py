@@ -182,7 +182,7 @@ try:
             pg.click('button[aria-label="Undo the last change"]'); attendi(pg, "document.querySelectorAll('.fln').length === 8")
             pg.keyboard.press("Control+z"); attendi(pg, "document.querySelectorAll('.fln').length === 7")
             pg.keyboard.press("Control+y"); attendi(pg, "document.querySelectorAll('.fln').length === 8")
-            assert pg.locator('button[aria-label="Redo the change you undid"]').is_disabled()
+            assert pg.locator('button[aria-label="Redo the change you undid"]').is_enabled()
             pg.click('button[aria-label="Start from a template"]'); pg.click('.flx-tc[data-tpl="table"]'); attendi(pg, "document.querySelectorAll('.fln').length === 2")
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Confidence level")'); attendi(pg, "document.querySelectorAll('.fln').length === 3")
             pg.click('.fln:has-text("Confidence level")')
