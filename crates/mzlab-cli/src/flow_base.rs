@@ -7,6 +7,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
 
+use mzlab_core::budget::MemBudget;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::idxread::Index;
@@ -15,6 +16,7 @@ use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
+use mzlab_feat::slabs::Stored;
 use mzlab_feat::steps::recipe_map;
 use mzlab_feat_wasm::run;
 
@@ -136,15 +138,31 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     })
 }
 
-/// Aligns the peaks of `lin` with `recipe` and writes the table of `job`; the table hands on `lin` with the parameters of `job`.
+/// The `.mzfeatf` of a series on disk, one file at a time (the slabs of the alignment read them again).
+struct Files(Vec<PathBuf>);
+
+impl Stored for Files {
+    fn count(&self) -> usize {
+        self.0.len()
+    }
+    fn bytes(&mut self, k: usize) -> Result<Vec<u8>> {
+        std::fs::read(&self.0[k]).map_err(io)
+    }
+}
+
+/// Aligns the peaks of `lin` with `recipe` under the memory budget of the runner and writes the table of `job`; the table hands on `lin` with the
+/// parameters of `job`.
 fn table(r: &FileRunner, job: &Job, recipe: Recipe, mut lin: Lineage) -> Result<Made> {
-    let files: Vec<Vec<u8>> = lin
-        .peaks
-        .iter()
-        .map(|p| std::fs::read(p).map_err(io))
-        .collect::<Result<_>>()?;
-    let (tables, origin) = run::read_files(&files)?;
-    let bytes = run::align(&tables, &origin, &recipe, |k| open(&lin.index[k]))?;
+    let budget = MemBudget::mb(r.budget_mb);
+    let mut bytes = Vec::new();
+    let mut src = Files(lin.peaks.clone());
+    run::align_to(
+        &mut src,
+        &budget,
+        &recipe,
+        |k| open(&lin.index[k]),
+        &mut bytes,
+    )?;
     let out = out_path(r, job, "mzfeat");
     std::fs::write(&out, bytes).map_err(io)?;
     let a = r.keep(out, DataType::Table)?;

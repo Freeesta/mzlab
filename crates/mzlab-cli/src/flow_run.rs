@@ -17,7 +17,7 @@ use crate::Outcome;
 
 pub(crate) const HELP: &str = "mzlab-cli flow run: runs a whole mzflow/2 plan (the plan of the Flow page) on files.
 
-usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set INSTANCE.NAME=VALUE...] [--workers N] [--dry-run] [--fresh]
+usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set INSTANCE.NAME=VALUE...] [--workers N] [--budget-mb N] [--dry-run] [--fresh]
 
   PLAN.json                the plan; its inputs are files named in it
   --in FILE|FOLDER...      where the inputs are: a file is matched by its name, a folder holds files with those names (default: the folder of the plan)
@@ -25,6 +25,8 @@ usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set 
   --set INSTANCE.NAME=V    a parameter of a step instance (INSTANCE is its id, or the step id when the plan has one instance of it);
                            NAME may also be `algorithm` or `preset`; repeat for more
   --workers N              threads for the steps of a level and the files of a per-file step (default 1; the outputs do not depend on it)
+  --budget-mb N            working memory of the alignment in MB (default: a share of the RAM); a series that does not fit in memory is aligned
+                           in slabs of m/z, and the outputs are the same bytes whatever N is
   --dry-run                checks the plan, the settings and the inputs and prints what would run; writes nothing
   --fresh                  computes every step again; without it a step whose inputs, parameters and program are those of a run already in
                            FOLDER is reused (`... reused`, `cached` in prov.json)
@@ -42,6 +44,7 @@ struct Args {
     workers: usize,
     dry: bool,
     fresh: bool,
+    budget_mb: Option<f64>,
 }
 
 fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
@@ -63,6 +66,15 @@ fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
                     .ok()
                     .filter(|&n| n > 0)
                     .ok_or(format!("--workers {n}: not a positive number"))?;
+            }
+            "--budget-mb" => {
+                let n = value("a number of MB")?;
+                a.budget_mb = Some(
+                    n.parse()
+                        .ok()
+                        .filter(|&n: &f64| n.is_finite() && n > 0.0)
+                        .ok_or(format!("--budget-mb {n}: not a positive number"))?,
+                );
             }
             "--dry-run" => a.dry = true,
             "--fresh" => a.fresh = true,
@@ -435,7 +447,16 @@ pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
         };
     }
     let out = a.out.unwrap_or_default();
-    crate::flow_out::write_run(&plan, &ready, found, out, a.workers, meter, a.fresh)
+    crate::flow_out::write_run(
+        &plan,
+        &ready,
+        found,
+        out,
+        a.workers,
+        meter,
+        a.fresh,
+        a.budget_mb,
+    )
 }
 
 /// The inputs of the plan that name no hash get it from the file `locate` gives; one that names a hash must match it.

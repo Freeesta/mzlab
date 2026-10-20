@@ -278,6 +278,8 @@ pub fn execute(args: &[String]) -> Outcome {
 mod tests;
 
 #[cfg(test)]
+mod flow_budget_tests;
+#[cfg(test)]
 mod flow_cache_tests;
 #[cfg(test)]
 mod flow_compare_tests;

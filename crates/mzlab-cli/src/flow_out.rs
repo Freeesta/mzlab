@@ -20,6 +20,7 @@ pub(crate) fn write_run(
     workers: usize,
     meter: Option<Meter>,
     fresh: bool,
+    budget_mb: Option<f64>,
 ) -> Outcome {
     if let Err(e) = std::fs::create_dir_all(&out) {
         return fail(
@@ -35,7 +36,7 @@ pub(crate) fn write_run(
         .map(|k| ready.steps[k].id.clone())
         .collect();
     let steps = order.len();
-    let runner = FileRunner::located(&out, found, order, meter, fresh);
+    let runner = FileRunner::located(&out, found, order, meter, fresh).with_budget(budget_mb);
     let written = std::fs::write(out.join("plan.json"), &text);
     let (run, prov) = match written
         .map_err(crate::flow::io)
