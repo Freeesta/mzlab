@@ -21,7 +21,8 @@ def test_page_csp_is_strict_and_allows_only_the_converter_wasm():
     assert d["script-src"] == "'self' 'wasm-unsafe-eval'", "no inline script, no eval; wasm only for the converter"
     assert d["connect-src"] == "'self' https://api.github.com"
     assert "noindex" in html and not re.search(r"<script(?![^>]*\bsrc=)[^>]*>", html)
-    assert "<iframe" in html and re.search(r"<iframe[^>]*\bsandbox\b(?!=)", html) and "allow-scripts" not in html and "allow-same-origin" not in html
+    frame = re.search(r"<iframe[^>]*>", html).group(0)
+    assert 'sandbox="allow-same-origin"' in frame and "allow-scripts" not in html, "the page of the preview runs no script; the same origin only lets the editor reach its blocks"
 
 
 @pytest.fixture(scope="module")

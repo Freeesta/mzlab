@@ -87,7 +87,7 @@ impl Parser<'_> {
         } else {
             self.inl(rest, base + i)?
         };
-        let inner_html = self.blocks(&inner[1..], base + i + 1)?;
+        let inner_html = self.nested(&inner[1..], base + i + 1)?;
         Ok((
             format!("<div class=\"box {cls}\"><b>{title}</b>\n{inner_html}\n</div>"),
             j,
@@ -127,11 +127,10 @@ impl Parser<'_> {
             );
         };
         let mut head = String::new();
-        for c in &rows[0] {
-            head.push_str(&format!(
-                "<th scope=\"col\">{}</th>",
-                self.inl(c, base + i)?
-            ));
+        for (n, c) in rows[0].iter().enumerate() {
+            let html = self.inl(c, base + i)?;
+            let src = self.src_attr(&format!("{}:{n}", base + i), &html);
+            head.push_str(&format!("<th scope=\"col\"{src}>{html}</th>"));
         }
         let mut body = Vec::new();
         for (k, r) in rows[2..].iter().enumerate() {
@@ -142,12 +141,11 @@ impl Parser<'_> {
                 );
             }
             let mut cells = String::new();
-            for c in r {
+            for (n, c) in r.iter().enumerate() {
                 let ncls = if numcell(c) { " class=\"n\"" } else { "" };
-                cells.push_str(&format!(
-                    "<td{ncls}>{}</td>",
-                    self.inl(c, base + i + 2 + k)?
-                ));
+                let html = self.inl(c, base + i + 2 + k)?;
+                let src = self.src_attr(&format!("{}:{n}", base + i + 2 + k), &html);
+                cells.push_str(&format!("<td{ncls}{src}>{html}</td>"));
             }
             body.push(format!("<tr>{cells}</tr>"));
         }

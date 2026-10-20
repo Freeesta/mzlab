@@ -22,13 +22,14 @@
   <nav id="sections" aria-label="Chapters of the Teoria"><p class="hint">Connect with your token to see the chapters.</p></nav>
   <main>
     <p id="path" class="hint"></p>
-    <label for="source" class="sr">Markdown source of the chapter</label>
-    <textarea id="source" spellcheck="true" disabled aria-label="Markdown source of the chapter"></textarea>
     <label for="summary">What did you change? (one line, becomes the title of the pull request)</label>
     <input id="summary" type="text" maxlength="120" autocomplete="off">
     <p id="msg" class="err" role="alert"></p>
     <p id="result" class="hint" role="status"></p>
-    <iframe id="preview" title="Preview of the chapter" sandbox hidden></iframe>
+    <p class="hint" id="how">Click a paragraph, a list item or a table cell in the page below to write there. Enter or a click elsewhere keeps the change; Esc cancels it. Titles, formulas, boxes and figures are changed in the source box.</p>
+    <iframe id="preview" title="Preview of the chapter" sandbox="allow-same-origin" hidden></iframe>
+    <label for="source" class="hint" id="src-label">Source of the chapter (Markdown, for what the page above cannot change)</label>
+    <textarea id="source" spellcheck="true" disabled aria-label="Markdown source of the chapter"></textarea>
   </main>
 </div>
 

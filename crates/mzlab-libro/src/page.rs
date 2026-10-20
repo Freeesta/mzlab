@@ -19,6 +19,8 @@ pub struct Options {
     pub teoria: bool,
     /// The file is listed in tools/libro/importati.txt (raw ```html blocks allowed).
     pub raw_ok: bool,
+    /// Preview build: editable blocks carry `data-src` (source lines); never used for the committed page.
+    pub annotate: bool,
 }
 
 /// Position of a fixed inline snippet: `true` = ahead of ../appname.js, `false` = at the end of the page.

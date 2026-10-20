@@ -62,3 +62,59 @@ fn every_chapter_matches_the_committed_html() {
     }
     assert!(bad.is_empty(), "{}", bad.join("\n"));
 }
+
+/// Every editable block of every chapter, handed back unchanged, must give the same source: otherwise the preview would offer an edit it then refuses.
+#[test]
+fn every_editable_block_of_every_chapter_survives_an_unchanged_edit() {
+    let src = root().join("mzlab/web/teoria/src");
+    let listed = fs::read_to_string(root().join("tools/libro/importati.txt")).unwrap();
+    let imported: Vec<&str> = listed
+        .lines()
+        .map(|l| l.split('#').next().unwrap().trim())
+        .collect();
+    let mut names: Vec<_> = fs::read_dir(&src)
+        .unwrap()
+        .map(|e| e.unwrap().file_name().into_string().unwrap())
+        .filter(|n| n.ends_with(".md"))
+        .collect();
+    names.sort();
+    let (mut total, mut bad) = (0, Vec::new());
+    for n in &names {
+        let md = fs::read_to_string(src.join(n)).unwrap();
+        let opt = Options {
+            teoria: true,
+            raw_ok: imported.contains(&n.as_str()),
+            ..Options::default()
+        };
+        let page = mzlab_libro::preview(&md, n, &opt).unwrap();
+        let mut rest = page.as_str();
+        while let Some(at) = rest.find(" data-src=\"") {
+            let after = &rest[at + 11..];
+            let key = &after[..after.find('"').unwrap()];
+            let open = rest[..at].rfind('<').unwrap();
+            let tag: String = rest[open + 1..]
+                .chars()
+                .take_while(|c| c.is_ascii_alphanumeric())
+                .collect();
+            let start = at + 11 + after.find('>').unwrap() + 1;
+            let inner = &rest[start..start + rest[start..].find(&format!("</{tag}>")).unwrap()];
+            total += 1;
+            match mzlab_libro::edit_block(&md, n, &opt, key, inner) {
+                Ok(new) if new == md => {}
+                Ok(_) => bad.push(format!("{n} {key}: source changed by an unchanged edit")),
+                Err(e) => bad.push(format!(
+                    "{n} {key}: {e} | {}",
+                    inner.chars().take(80).collect::<String>()
+                )),
+            }
+            rest = &rest[start..];
+        }
+    }
+    assert!(total > 200, "editable blocks found: {total}");
+    assert!(
+        bad.is_empty(),
+        "{} of {total} blocks:\n{}",
+        bad.len(),
+        bad.iter().take(15).cloned().collect::<Vec<_>>().join("\n")
+    );
+}
