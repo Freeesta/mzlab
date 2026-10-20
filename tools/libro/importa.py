@@ -134,7 +134,8 @@ def importa(src: str, nome: str):
     if h1 is None:
         raise LibroError(nome, 1, "the h1 holds markup the dialect cannot say")
     scripts = [Path(s.attrs["src"]).name for s in root_scripts(root) if s.attrs.get("src") not in ("../appname.js", "teoria.js")]
-    meta = [f"<!-- script: {s} -->" for s in scripts]
+    meta = ["<!-- no-appname -->"] if not any(s.attrs.get("src") == "../appname.js" for s in root_scripts(root)) else []
+    meta += [f"<!-- script: {s} -->" for s in scripts]
     if h1.strip() != title:
         meta.append(f"<!-- title: {title} -->")
     parts.append("\n".join(meta + [f"# {h1.strip()} {{kicker: {kids[0].text().strip()}}}"]))
@@ -148,6 +149,13 @@ def root_scripts(root: Node):
     return [k for k in body.kids if isinstance(k, Node) and k.tag == "script"]
 
 
+def con_viewport(src: str) -> str:
+    """The generated chapters always carry the viewport meta; a chapter that lacks it is compared as if it had it."""
+    if "viewport" in src:
+        return src
+    return src.replace("<title>", '<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>', 1)
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--html", required=True, type=Path)
@@ -156,7 +164,7 @@ def main(argv=None) -> int:
     src = a.html.read_text(encoding="utf-8")
     md, raw = importa(src, a.out.name)
     gen = converti(md, a.out.name, pubblico=True, teoria=True)
-    if normalizza(gen) != normalizza(src):
+    if normalizza(gen) != normalizza(con_viewport(src)):
         print(f"{a.html.name}: the generated page is not equivalent to the original", file=sys.stderr)
         return 1
     a.out.parent.mkdir(parents=True, exist_ok=True)

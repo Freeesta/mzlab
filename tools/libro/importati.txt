@@ -3,3 +3,6 @@
 08-vuoto.md
 01-tp.md
 17-origine.md
+20-disegno.md
+19-hr-dda.md
+23-tempi.md
