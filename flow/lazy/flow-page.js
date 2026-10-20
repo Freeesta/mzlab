@@ -16,6 +16,7 @@
   F.mount = (sec, lists, start) => {
     const { el, btn } = F, reg = F.registry(lists);
     /** @type {any} */ const S = { plan: start || F.newPlan(), reg, problems: [], history: [], snap: "", cli: false, note: "" };
+    F.current = S;
     const pal = F.palette(reg, stepId => { F.addStep(S.plan, reg, stepId); refresh(`fl-card-${S.plan.steps[S.plan.steps.length - 1].id}`); });
     const top = el("div", { class: "fl-top" }), inputs = el("div", { class: "fl-inputs" }), chain = el("div"), goal = el("div", { class: "fl-goal", role: "status" });
     const cli = el("div"), main = el("div", { class: "fl-main" }, inputs, goal, chain, cli);
