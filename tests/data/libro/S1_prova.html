@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="it" data-esteso><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<!--
+CC0 synthetic fixture for tests/test_libro.py: invented text, no real data
+stato: draft
+-->
+<meta name="robots" content="noindex">
+<title>S1 — Sezione di prova · Libro</title><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
+<body>
+<div class="wrap"><nav id="side"></nav><main>
+<div class="kicker">S1</div>
+<h1>S1 — Sezione di prova</h1>
+<p>Questo testo è <b>inventato</b>: una traccia è la <i>serie</i> di un ione, con <span class="tex">m/z</span> e <code>codice</code>. Vedi <a href="S2_altra.html#esempio">la seconda sezione</a> <span class="cit">[autore2020; altri2021]</span>.</p>
+<h2 id="idea">Idea</h2>
+<ul>
+<li>Primo punto con una nota <span class="ipotesi" title="hypothesis, to be verified">[I]</span></li>
+<li><p>Secondo punto:</p>
+<span class="eq" id="eq-soglia"><span class="tex">t = \max(a, b)</span><span class="no">(S1.1)</span></span>
+<p>e poi un altro paragrafo dentro l'elemento.</p></li>
+</ul>
+<ol>
+<li>Passo uno</li>
+<li>Passo due, richiama <a class="ref" href="#eq-soglia">eq. S1.1</a></li>
+</ol>
+<div class="box key"><b>Da ricordare</b>
+<p>Il <b>massimo</b> vince. Vale <a class="ref" href="#eq-soglia">eq. S1.1</a>.</p>
+</div>
+<div class="box warn"><b>Errore frequente</b>
+<p>Senza titolo: usa quello predefinito.</p>
+</div>
+<table>
+<caption>Valori di esempio inventati</caption>
+<tr><th scope="col">Nome</th><th scope="col">Valore</th></tr>
+<tr><td>alfa</td><td class="n">1,5·10⁴</td></tr>
+<tr><td>beta</td><td class="n">−3</td></tr>
+</table>
+<figure id="fig-barre">
+<img src="img/prova.svg" alt="Barre di esempio">
+<figcaption><b>Figura S1.1</b> Una figura inventata.</figcaption>
+</figure>
+<h2 id="testo-pericoloso">Testo pericoloso</h2>
+<p>Un tag &lt;script&gt;alert(1)&lt;/script&gt; deve restare testo, non codice.</p>
+<div class="privato" data-privato>
+<h2 id="contenuto-riservato">Contenuto riservato</h2>
+<p>Numero inventato 12345, solo per provare la rimozione.</p>
+</div>
+<h2 id="verifica">Verifica</h2>
+<details class="q"><summary>Che cosa decide la soglia?</summary><p>Il massimo fra le due tolleranze.</p></details>
+</main></div>
+</body></html>
