@@ -23,6 +23,7 @@ pub mod scan_filter;
 pub mod scan_format;
 pub mod scan_index;
 pub mod seq_row;
+pub mod srm_traces;
 pub mod status_log;
 
 pub use device::{DetectedInstrument, DeviceFamily};
@@ -36,4 +37,5 @@ pub use reader::{
     AnalogTrace, ControllerInfo, ControllerType, RawFileReader, ScanParams, StatusLogEntry,
 };
 pub use scan_format::ScanDataFormat;
+pub use srm_traces::SrmTrace;
 pub use types::*;
