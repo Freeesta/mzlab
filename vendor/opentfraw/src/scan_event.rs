@@ -309,7 +309,13 @@ impl ScanEvent {
         let at = r.position();
         let n = r.read_u32()? as usize;
         r.seek_to(at)?;
-        Self::read_v66(r, preamble, COUNTED_BASE + COUNTED_STEP * n.min(COUNTED_MAX), true, COUNTED_STEP)
+        Self::read_v66(
+            r,
+            preamble,
+            COUNTED_BASE + COUNTED_STEP * n.min(COUNTED_MAX),
+            true,
+            COUNTED_STEP,
+        )
     }
 
     /// `stride` is the distance between two reaction records of a tribrid event.
@@ -611,7 +617,13 @@ pub(crate) mod counted_tests {
         let got: Vec<f64> = ms8.reactions.iter().map(|x| x.precursor_mz).collect();
         assert_eq!(got, chain);
         assert_eq!(ms8.reactions[6].energy, 25.0);
-        assert_eq!((ms8.fraction_collectors[0].low_mz, ms8.fraction_collectors[0].high_mz), (50.0, 340.0));
+        assert_eq!(
+            (
+                ms8.fraction_collectors[0].low_mz,
+                ms8.fraction_collectors[0].high_mz
+            ),
+            (50.0, 340.0)
+        );
         assert_eq!(ms8.coefficients, vec![1.5]);
     }
 }

@@ -581,7 +581,8 @@ impl RawFileReader {
                     let ok = walk_events(&mut r, n, preamble_size, &body, start, stream_bytes);
                     ok
                 });
-                let counted = found.is_none() && walk_counted(&mut r, n, preamble_size, start, stream_bytes);
+                let counted =
+                    found.is_none() && walk_counted(&mut r, n, preamble_size, start, stream_bytes);
                 r.seek_to(start)?;
                 match found {
                     Some(l) => l.map(|x| (x as usize).saturating_sub(preamble_size)),
@@ -2168,7 +2169,12 @@ mod tests {
     #[test]
     fn walk_counted_follows_events_that_grow_with_their_reactions() {
         use crate::scan_event::counted_tests::counted_event;
-        let bytes = [counted_event(&[]), counted_event(&[1.0, 2.0]), counted_event(&[3.0; 7])].concat();
+        let bytes = [
+            counted_event(&[]),
+            counted_event(&[1.0, 2.0]),
+            counted_event(&[3.0; 7]),
+        ]
+        .concat();
         let n = bytes.len() as u64;
         let mut r = BinaryReader::new(Cursor::new(bytes));
         assert!(walk_counted(&mut r, 3, 136, 0, n));
@@ -2186,7 +2192,13 @@ mod tests {
 
 /// Whether `n` events of a v66 table are counted events (body = 96 + 56 bytes per reaction, the count opening the
 /// body) and the walk ends exactly `stream_bytes` after `start`.
-fn walk_counted<R: Read + Seek>(r: &mut BinaryReader<R>, n: u64, preamble_size: usize, start: u64, stream_bytes: u64) -> bool {
+fn walk_counted<R: Read + Seek>(
+    r: &mut BinaryReader<R>,
+    n: u64,
+    preamble_size: usize,
+    start: u64,
+    stream_bytes: u64,
+) -> bool {
     use crate::scan_event::{COUNTED_BASE, COUNTED_MAX, COUNTED_STEP};
     let mut at = start;
     for _ in 0..n {
