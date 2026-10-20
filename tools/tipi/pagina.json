@@ -59,6 +59,7 @@
     "../../mzlab/web/chrom-primo.js",
     "../../mzlab/web/explore.js",
     "../../mzlab/web/lista-file.js",
+    "../../mzlab/web/lista-file-menu.js",
     "../../mzlab/web/layout.js",
     "../../mzlab/web/fondo.js",
     "../../mzlab/web/fondo-spettro.js",
