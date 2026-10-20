@@ -11,8 +11,17 @@ crate-type = ["rlib"]
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
 mzlab-feat = { path = "../mzlab-feat", features = ["chem"] }
+mzlab-mol = { path = "../mzlab-mol", optional = true }
 nalgebra = { version = "0.32", default-features = false, features = ["std"] }
 sci-form = { version = "=0.15.2", default-features = false }
 
+[features]
+# `Mol3d::from_record`: the 3D molecule from a `mol/1` record (`mzlab-mol`). Off by default and in every .wasm.
+record = ["mzlab-feat/record", "dep:mzlab-mol"]
+
 [dev-dependencies]
 serde_json = { version = "1", features = ["float_roundtrip"] }
+
+[[test]]
+name = "mol3d_record"
+required-features = ["record"]
