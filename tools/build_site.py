@@ -88,11 +88,19 @@ def pack_mzfinder(static: Path) -> None:
     data.append("steps-1.json")
     for n in js:
         shutil.copy2(src / "js" / n, dst / n)
+    # Flow (administrator page, flow/): its tab is registered by flow/js, the rest is lazy; the lists of descriptors of the other two packages are fetched when the page opens
+    flow = ROOT / "flow"
+    for n in sorted((flow / "js").glob("*.js")):
+        shutil.copy2(n, dst / n.name)
+        js.append(n.name)
+    for n in ("steps-attributio-1.json", "steps-tabui-1.json"):
+        shutil.copy2(ROOT / "docs" / "schemi" / n, dst / n)
     lazy = [f.name for f in sorted((src / "lazy").glob("*.js"))] if (src / "lazy").is_dir() else []      # loaded on demand through TPLAZY.load, not at the start of Tabui
+    lazy += [f.name for f in sorted((flow / "lazy").glob("*.js"))]
     if lazy:
         (dst / "lazy").mkdir()
         for n in lazy:
-            shutil.copy2(src / "lazy" / n, dst / "lazy" / n)
+            shutil.copy2(src / "lazy" / n if (src / "lazy" / n).exists() else flow / "lazy" / n, dst / "lazy" / n)
     for n in files:
         shutil.copy2(src / "files" / n, dst / n)
     (dst / "indice.json").write_text(json.dumps({"js": js, "lazy": lazy, "files": files + data}, indent=1), encoding="utf-8")

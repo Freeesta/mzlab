@@ -181,6 +181,16 @@
     "../../TP_Mine/js/51_attributio_table.js",
     "../../TP_Mine/js/52_attributio_banco.js",
     "../../TP_Mine/js/53_attributio_export.js",
-    "../../TP_Mine/js/54_attributio_ms2.js"
+    "../../TP_Mine/js/54_attributio_ms2.js",
+    "../../flow/js/flow-tool.js",
+    "../../flow/lazy/flow-registry.js",
+    "../../flow/lazy/flow-check.js",
+    "../../flow/lazy/flow-plan.js",
+    "../../flow/lazy/flow-ui.js",
+    "../../flow/lazy/flow-palette.js",
+    "../../flow/lazy/flow-form.js",
+    "../../flow/lazy/flow-compare.js",
+    "../../flow/lazy/flow-chain.js",
+    "../../flow/lazy/flow-page.js"
   ]
 }
