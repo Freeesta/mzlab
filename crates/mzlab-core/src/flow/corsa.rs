@@ -222,6 +222,50 @@ fn counts(o: &mut Out, list: &[(String, u32)]) {
     o.raw("}");
 }
 
+fn param(o: &mut Out, p: &Param) {
+    o.raw("{\"name\":")
+        .str(&p.name)
+        .raw(",\"value\":")
+        .raw(&p.value)
+        .raw(",\"state\":")
+        .str(if p.proof.is_some() {
+            "estimated"
+        } else {
+            "fixed"
+        });
+    if let Some(proof) = &p.proof {
+        o.raw(",\"proof\":").raw(proof);
+    }
+    o.raw("}");
+}
+
+fn step(o: &mut Out, s: &Passo) {
+    o.raw("{\"instance\":")
+        .str(&s.instance)
+        .raw(",\"step\":")
+        .str(&s.step);
+    if let Some(a) = &s.algorithm {
+        o.raw(",\"algorithm\":").str(a);
+    }
+    if let Some(p) = &s.preset {
+        o.raw(",\"preset\":").str(p);
+    }
+    o.raw(",\"status\":").str(s.status);
+    if let Some(e) = &s.error_key {
+        o.raw(",\"error_key\":").str(e);
+    }
+    o.raw(",\"ms\":")
+        .num(s.ms)
+        .raw(",\"params_sha256\":")
+        .str(&s.params_sha256)
+        .raw(",\"params\":[");
+    for (j, p) in s.params.iter().enumerate() {
+        o.raw(if j > 0 { "," } else { "" });
+        param(o, p);
+    }
+    o.raw("]}");
+}
+
 impl Corsa {
     /// The `corsa/1` text: fixed key order, shortest numbers, one line and a newline; the same run gives the same bytes.
     pub fn json(&self) -> String {
@@ -243,46 +287,8 @@ impl Corsa {
         files(&mut o, &self.lists);
         o.raw(",\"steps\":[");
         for (k, s) in self.steps.iter().enumerate() {
-            o.raw(if k > 0 {
-                ",{\"instance\":"
-            } else {
-                "{\"instance\":"
-            })
-            .str(&s.instance)
-            .raw(",\"step\":")
-            .str(&s.step);
-            if let Some(a) = &s.algorithm {
-                o.raw(",\"algorithm\":").str(a);
-            }
-            if let Some(p) = &s.preset {
-                o.raw(",\"preset\":").str(p);
-            }
-            o.raw(",\"status\":").str(s.status);
-            if let Some(e) = &s.error_key {
-                o.raw(",\"error_key\":").str(e);
-            }
-            o.raw(",\"ms\":")
-                .num(s.ms)
-                .raw(",\"params_sha256\":")
-                .str(&s.params_sha256)
-                .raw(",\"params\":[");
-            for (j, p) in s.params.iter().enumerate() {
-                o.raw(if j > 0 { ",{\"name\":" } else { "{\"name\":" })
-                    .str(&p.name)
-                    .raw(",\"value\":")
-                    .raw(&p.value)
-                    .raw(",\"state\":")
-                    .str(if p.proof.is_some() {
-                        "estimated"
-                    } else {
-                        "fixed"
-                    });
-                if let Some(proof) = &p.proof {
-                    o.raw(",\"proof\":").raw(proof);
-                }
-                o.raw("}");
-            }
-            o.raw("]}");
+            o.raw(if k > 0 { "," } else { "" });
+            step(&mut o, s);
         }
         let total: f64 = self.steps.iter().map(|s| s.ms).sum();
         o.raw("],\"total_ms\":")
