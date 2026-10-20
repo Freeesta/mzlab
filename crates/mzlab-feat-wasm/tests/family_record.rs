@@ -50,7 +50,7 @@ fn the_record_equals_the_native_one_and_is_deterministic() {
     let fam = analyse_families(&mut ix, &mut f, &links, &r.detect, &r.fam).unwrap();
     let want = famrecord::record("degdma", &f, &fam);
     assert!(got.contains("\"schema\":\"famiglia/1\""));
-    assert!(fam.arcs.len() > 0, "the series has arcs to prove");
+    assert!(!fam.arcs.is_empty(), "the series has arcs to prove");
     assert_eq!(got, want, "wasm path and native path");
 
     // exactly what `examples/famiglie.rs` runs: default numbers, no recipe
