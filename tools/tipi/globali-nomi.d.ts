@@ -213,6 +213,7 @@ declare var UIP_KEY: any;
 declare var UNOPEN_RE: any;
 declare var UPBAR: any;
 declare var UPBUSY: any;
+declare var VIEW_ALIAS: any;
 declare var VIEW_HASH: any;
 declare var VIRIDIS: any;
 declare var VIRIDIS_DARK: any;

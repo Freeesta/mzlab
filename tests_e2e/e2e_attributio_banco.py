@@ -8,6 +8,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401
+from lib_flow import open_campaign
 
 steps = []
 TG15 = 'button.tpt-tg[aria-label^="Details of POS 15:"]'
@@ -58,10 +59,7 @@ try:
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "GL Driver" not in m.text else None)
         pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
-        pg.wait_for_selector("[data-v=attributio]", timeout=120000)
-        pg.click("[data-v=attributio]"); pg.wait_for_selector("#at-pick")
-        pg.set_input_files("#at-dir", str(FOLDER))
-        pg.wait_for_function("document.querySelectorAll('#at-table tbody tr.clk').length > 0", timeout=120000)
+        open_campaign(pg, FOLDER)
 
         def table():
             assert pg.evaluate("document.querySelectorAll('#at-table tbody tr.clk').length") == 16
