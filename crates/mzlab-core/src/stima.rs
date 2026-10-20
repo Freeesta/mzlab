@@ -76,6 +76,31 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_load_refused_at_192_mb_fits_with_the_high_budget() {
+        let scans = 1_000_000;
+        assert!(check_table(&MemBudget::mb(192.0), scans).is_err());
+        assert!(check_table(&MemBudget::mb(1024.0), scans).is_ok());
+        assert!(check_index(&MemBudget::mb(192.0), scans, 300 << 20, 48 << 20).is_err());
+        assert!(check_index(&MemBudget::mb(2048.0), scans, 300 << 20, 48 << 20).is_ok());
+    }
+
+    #[test]
+    fn absurd_counts_are_an_orderly_refusal_not_an_overflow() {
+        // 600 M scans would overflow a 32-bit usize if multiplied naively: the estimate saturates and the budget refuses
+        let b = MemBudget::mb(3072.0);
+        for scans in [600_000_000usize, usize::MAX] {
+            let e = check_table(&b, scans).unwrap_err();
+            assert_eq!(e.key, "error.memoryBudget");
+            assert!(check_index(&b, scans, usize::MAX, usize::MAX).is_err());
+        }
+        assert_eq!(table_bytes(usize::MAX), usize::MAX);
+        assert_eq!(
+            max_scans(&MemBudget::mb(3072.0)),
+            (3072 * MB - FIXED) / TABLE_PER_SCAN
+        );
+    }
+
+    #[test]
     fn small_tables_fit_and_big_ones_are_refused_with_the_numbers() {
         let b = MemBudget::mb(192.0);
         assert!(check_table(&b, 100_000).is_ok());

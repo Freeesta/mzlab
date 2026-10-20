@@ -22,6 +22,13 @@ pub struct ErrorRecord {
     pub params: Vec<(String, String)>,
 }
 
+/// The working memory a step asked for and the way it took: `memory`, `slabs` (same bytes in less memory) or `refused`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Mem {
+    pub mb: f64,
+    pub via: &'static str,
+}
+
 /// What one instance did.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Activity {
@@ -40,6 +47,8 @@ pub struct Activity {
     pub generated: Vec<String>,
     pub ms: f64,
     pub heap_peak_bytes: Option<u64>,
+    /// The estimate of the memory of the step, when it has one (feature alignment); it does not depend on the run, the way does on the budget.
+    pub mem: Option<Mem>,
     pub error: Option<ErrorRecord>,
     pub cached: bool,
     /// `citation_key` of the step and of the algorithm that ran.
@@ -89,6 +98,12 @@ fn activity(o: &mut Out, a: &Activity) {
     o.raw(",\"ms\":").num((a.ms * 10.0).round() / 10.0);
     if let Some(h) = a.heap_peak_bytes {
         o.raw(",\"heap_peak_bytes\":").int(h as i64);
+    }
+    if let Some(m) = &a.mem {
+        o.raw(",\"mem_mb\":")
+            .num((m.mb * 10.0).round() / 10.0)
+            .raw(",\"via\":")
+            .str(m.via);
     }
     if let Some(e) = &a.error {
         o.raw(",\"error\":{\"error_key\":")

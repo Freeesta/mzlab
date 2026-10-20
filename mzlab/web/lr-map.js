@@ -54,6 +54,11 @@ export async function statRoute(path, body, { rpc }) {
   // roles and times of the files (campioni/2): proponi, valida, ...
   // search box: what a typed number is compatible with (ricerca/1)
   if (path === "/api/ricerca") return { status: 200, text: (await rpc({ op: "lr_ricerca", body })).info };
+  if (path === "/api/flow/command") {
+    let r;
+    try { r = (await rpc({ op: "lr_flow_command", body })).info; } catch (e) { r = "E" + JSON.stringify({ error: String(e && e.message || e) }); }
+    return r[0] === "E" ? { status: 400, text: r.slice(1) } : { status: 200, text: r };
+  }
   if (path.startsWith("/api/campioni/")) return { status: 200, text: (await rpc({ op: "lr_campioni", cop: path.slice(14), body })).info };
   if (!/^\/api\/stat\/(profile|blank|reference|pca)$/.test(path)) return undefined;
   const r = (await rpc({ op: "lr_stat", path: path.slice(1), body })).info;

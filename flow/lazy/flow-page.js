@@ -1,10 +1,10 @@
 // @ts-check
-// Flow (administrator mode): the page. Loads the three lists of descriptors, keeps the plan (an mzflow/2 object), draws the palette, the inputs and the chain,
+// Flow (administrator mode): the page. Loads the four lists of descriptors, keeps the plan (an mzflow/2 object), draws the palette, the inputs and the chain,
 // validates after every change and exports / imports the plan. Running the chain is not here: the plan is run by the native runner (mzlab-cli, example `flow`).
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
-  const LISTS = ["steps-1.json", "steps-attributio-1.json", "steps-tabui-1.json"];
+  const LISTS = ["steps-1.json", "steps-attributio-1.json", "steps-tabui-1.json", "steps-cli-1.json"];
 
   /** every problem of the plan as the Rust checker would report it (F.validateExtra adds the checks of what the checker does not know yet) @param {any} plan @param {any} reg */
   F.validate = (plan, reg) => {
@@ -58,13 +58,15 @@
         : g.canReach ? `The chain does not reach the identification level yet.${g.next.length ? " Next: " + names(g.next) + "." : ""}`
           : `The chain cannot reach the identification level from these inputs. Add an input of type ${g.missing.join(" and ") || "…"}.`;
     };
+    let cliSeq = 0;
     const drawCli = () => {
       cli.textContent = "";
       if (!S.cli) return;
-      const text = F.cliCommand("flow.mzflow.json");
+      const mine = ++cliSeq, code = el("code", { text: "…" });
+      F.cliCommand(S.plan).catch((/** @type {Error} */ e) => "The command could not be built: " + e.message).then((/** @type {string} */ t) => { if (mine === cliSeq) code.textContent = t; });
       cli.append(el("div", { class: "fl-cli" }, el("strong", { text: "Run with the command line" }),
-        el("p", { text: "Flow does not run the chain. Download the plan, put it in a folder with the input files, and run it with the native runner:" }), el("code", { text }),
-        el("div", { class: "fl-meta" }, btn("export", "Download the plan", download, "Download plan"), btn("copy", "Copy the command", () => navigator.clipboard && navigator.clipboard.writeText(text), "Copy command")),
+        el("p", { text: "Flow does not run the chain. Download the plan, put it in a folder with the input files, and run it with the native runner:" }), code,
+        el("div", { class: "fl-meta" }, btn("export", "Download the plan", download, "Download plan"), btn("copy", "Copy the command", () => navigator.clipboard && navigator.clipboard.writeText(code.textContent || ""), "Copy command")),
         S.problems.length ? el("p", { class: "fl-note", text: `The plan has ${S.problems.length} problem(s); the runner refuses it until they are solved.` }) : null));
     };
     const note = el("span", { class: "fl-note", role: "status", id: "fl-msg" });

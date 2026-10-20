@@ -7,14 +7,16 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
 
+use mzlab_core::budget::MemBudget;
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::{Artifact, Job};
+use mzlab_core::flow::{Artifact, Job, Mem};
 use mzlab_core::idxread::Index;
 use mzlab_core::json::Value;
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
+use mzlab_feat::slabs::{self, Stored};
 use mzlab_feat::steps::recipe_map;
 use mzlab_feat_wasm::run;
 
@@ -68,7 +70,26 @@ fn recipe(job: &Job, mut base: Recipe) -> Result<(Recipe, Vec<Estimate>)> {
                 && !job.resolved.noresult.contains(k)
                 && resolved.iter().find(|x| x.0 == *k).map(|x| &x.1) != Some(v)
         })
-        .map(|(k, v)| (k, v, proof.clone()))
+        .map(|(k, v)| {
+            let why = match (k.as_str(), base.min_height_basis) {
+                ("min_height", Some((mode, sigma))) => Value::Obj(vec![
+                    (
+                        "basis".into(),
+                        Value::Str(
+                            "noise lump of the intensities of the first file of the series".into(),
+                        ),
+                    ),
+                    (
+                        "factor".into(),
+                        Value::Num(mzlab_feat::params_height::MIN_HEIGHT_FACTOR),
+                    ),
+                    ("mode".into(), Value::Num(mode)),
+                    ("sigma".into(), Value::Num(sigma)),
+                ]),
+                _ => proof.clone(),
+            };
+            (k, v, why)
+        })
         .collect();
     Ok((base, estimates))
 }
@@ -102,7 +123,7 @@ fn rebuild(lin: &Lineage) -> Result<Recipe> {
         .first
         .as_ref()
         .ok_or_else(|| Error::new("err.flow.lineage"))?;
-    let mut r = run::recipe_for("", &mut open(first)?)?;
+    let mut r = run::recipe_for_estimated("", &mut open(first)?)?;
     for (step, params) in &lin.layers {
         recipe_map::apply(&mut r, step, params)?;
     }
@@ -114,7 +135,7 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let input = &job.inputs[0].1[0];
     let path = r.path(input);
     let first = r.first_of_series(input).unwrap_or_else(|| path.clone());
-    let (recipe, estimates) = recipe(job, run::recipe_for("", &mut open(&first)?)?)?;
+    let (recipe, estimates) = recipe(job, run::recipe_for_estimated("", &mut open(&first)?)?)?;
     let name = r.source_name(input);
     let bytes = run::detect(&mut open(&path)?, &name, &recipe)?;
     let out = out_path(r, job, "mzfeatf");
@@ -136,15 +157,31 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     })
 }
 
-/// Aligns the peaks of `lin` with `recipe` and writes the table of `job`; the table hands on `lin` with the parameters of `job`.
+/// The `.mzfeatf` of a series on disk, one file at a time (the slabs of the alignment read them again).
+struct Files(Vec<PathBuf>);
+
+impl Stored for Files {
+    fn count(&self) -> usize {
+        self.0.len()
+    }
+    fn bytes(&mut self, k: usize) -> Result<Vec<u8>> {
+        std::fs::read(&self.0[k]).map_err(io)
+    }
+}
+
+/// Aligns the peaks of `lin` with `recipe` under the memory budget of the runner and writes the table of `job`; the table hands on `lin` with the
+/// parameters of `job`.
 fn table(r: &FileRunner, job: &Job, recipe: Recipe, mut lin: Lineage) -> Result<Made> {
-    let files: Vec<Vec<u8>> = lin
-        .peaks
-        .iter()
-        .map(|p| std::fs::read(p).map_err(io))
-        .collect::<Result<_>>()?;
-    let (tables, origin) = run::read_files(&files)?;
-    let bytes = run::align(&tables, &origin, &recipe, |k| open(&lin.index[k]))?;
+    let budget = MemBudget::mb(r.budget_mb);
+    let mut bytes = Vec::new();
+    let mut src = Files(lin.peaks.clone());
+    run::align_to(
+        &mut src,
+        &budget,
+        &recipe,
+        |k| open(&lin.index[k]),
+        &mut bytes,
+    )?;
     let out = out_path(r, job, "mzfeat");
     std::fs::write(&out, bytes).map_err(io)?;
     let a = r.keep(out, DataType::Table)?;
@@ -153,46 +190,61 @@ fn table(r: &FileRunner, job: &Job, recipe: Recipe, mut lin: Lineage) -> Result<
     Ok(Made::new("table", a))
 }
 
-/// `features.align`: the table of the series without gap filling (`features.gapfill` fills it).
-pub(crate) fn align_job(r: &FileRunner, job: &Job) -> Result<Made> {
-    let peaks: Vec<_> = job.inputs.iter().flat_map(|(_, v)| v).collect();
+/// The recipe, the lineage and the estimates a step of the alignment runs with: `features.align` reads the peaks it is given, `features.gapfill` the ones
+/// that made its table.
+fn align_setup(r: &FileRunner, job: &Job) -> Result<(Recipe, Lineage, Vec<Estimate>)> {
     let mut lin = Lineage::default();
-    for p in &peaks {
-        let l = r
-            .lineage(p)
+    let fill = job.step.id == "features.gapfill";
+    if fill {
+        let input = job
+            .inputs
+            .iter()
+            .find(|(p, _)| p == "table")
+            .and_then(|(_, v)| v.first());
+        lin = input
+            .and_then(|a| r.lineage(a))
+            .filter(|l| l.first.is_some() && !l.peaks.is_empty())
             .ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id))?;
-        if lin.first.is_none() {
-            (lin.first, lin.layers) = (l.first, l.layers);
+    } else {
+        for p in job.inputs.iter().flat_map(|(_, v)| v) {
+            let l = r
+                .lineage(p)
+                .ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id))?;
+            if lin.first.is_none() {
+                (lin.first, lin.layers) = (l.first, l.layers);
+            }
+            lin.index.extend(l.index);
+            lin.peaks.push(r.path(p));
         }
-        lin.index.extend(l.index);
-        lin.peaks.push(r.path(p));
     }
-    let (mut recipe, estimates) =
-        recipe(job, rebuild(&lin).map_err(|e| e.with("step", job.step.id))?)?;
-    recipe.fill_gaps = false;
+    let base = rebuild(&lin).map_err(|e| e.with("step", job.step.id))?;
+    let (mut recipe, estimates) = recipe(job, base)?;
+    recipe.fill_gaps = fill;
+    Ok((recipe, lin, estimates))
+}
+
+/// `features.align` (the table of the series without gap filling) and `features.gapfill` (the table of `features.align` with its gaps filled: the stored
+/// table is not filled after the fact, alignment and filling run again on the peaks of that table, which gives the bytes of the page's single call).
+pub(crate) fn align_job(r: &FileRunner, job: &Job) -> Result<Made> {
+    let (recipe, lin, estimates) = align_setup(r, job)?;
     Ok(Made {
         estimates,
         ..table(r, job, recipe, lin)?
     })
 }
 
-/// `features.gapfill`: the table of `features.align` with its gaps filled. The stored table is not filled after the fact: alignment and filling run
-/// again on the peaks of that table (same run), which gives the bytes of the page's single call.
-pub(crate) fn gapfill_job(r: &FileRunner, job: &Job) -> Result<Made> {
-    let input = job
-        .inputs
-        .iter()
-        .find(|(p, _)| p == "table")
-        .and_then(|(_, v)| v.first());
-    let lin = input
-        .and_then(|a| r.lineage(a))
-        .filter(|l| l.first.is_some() && !l.peaks.is_empty());
-    let lin = lin.ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id))?;
-    let (mut recipe, estimates) = recipe(job, rebuild(&lin)?)?;
-    recipe.fill_gaps = true;
-    Ok(Made {
-        estimates,
-        ..table(r, job, recipe, lin)?
+/// The memory the alignment of `job` asks for under the budget of the runner and the way it takes (`slabs::stima`); none for another step or when the
+/// inputs cannot be read yet (the step itself reports why).
+pub(crate) fn align_mem(r: &FileRunner, job: &Job) -> Option<Mem> {
+    if !matches!(job.step.id, "features.align" | "features.gapfill") {
+        return None;
+    }
+    let (recipe, lin, _) = align_setup(r, job).ok()?;
+    let rows = slabs::rows_of(&mut Files(lin.peaks)).ok()?;
+    let way = slabs::stima(&rows, &recipe, (r.budget_mb * 1048576.0) as usize);
+    Some(Mem {
+        mb: way.bytes as f64 / 1048576.0,
+        via: way.via.name(),
     })
 }
 

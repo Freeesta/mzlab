@@ -1,7 +1,7 @@
 // Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, XIC and single scans as
 // Float64Arrays that are moved (not copied) to the page. The page gives the arrays back ("recycle") once drawn, so a frame
 // allocates nothing. If this worker dies, rust-bridge.js starts a new one (the WASM instance cannot be reused after a trap).
-import init, { Engine, native_samples, native_to_mzml, native_srm, native_external, Passata, version, prepare_upload, budget_choice, formula_mz, provenance, composition, stat_post, campioni, mrm_diff_post, ricerca_numero } from "./wasm/mzlab_wasm.js";
+import init, { Engine, native_samples, native_to_mzml, native_srm, native_external, Passata, version, prepare_upload, budget_choice, formula_mz, provenance, composition, stat_post, campioni, flow_command, mrm_diff_post, ricerca_numero } from "./wasm/mzlab_wasm.js";
 import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
@@ -12,6 +12,7 @@ import { createLabOps } from "./rust-worker-lab.js";
 import { createNativo } from "./rust-nativo.js";
 import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
+import { msnGrafo } from "./rust-msngrafo.js";
 
 let engine = null, wasmMem = null;
 const pool = [];                       // ArrayBuffers handed back by the page, ready to be written again
@@ -292,6 +293,7 @@ async function lrOp(m) {
     case "lr_composition": return { info: composition(m.query || "") };                  // "" = Python's (it words the error)
     case "lr_stat": return { info: stat_post(m.path || "", m.body || "") };               // the statistics routes; "E" + JSON = an error, "" = not one of them
     case "lr_provenance": return { info: provenance(m.ctx || "") };
+    case "lr_flow_command": return { info: flow_command(m.body || "") };                            // the copyable shell command of a mzflow/2 plan; "E" + JSON = an error
     case "lr_campioni": return { info: campioni(m.cop || "", m.body || "") };                       // campioni/2 (proponi, valida, ...): JSON in, JSON out
     case "lr_ricerca": return { info: ricerca_numero(m.body || "") };
     case "lr_formula": return { info: formula_mz(m.f || "", m.adduct || "") };
@@ -328,7 +330,7 @@ async function natSame(/** @type {any} */ m) {
 // The memory budget of the engine in MB (0 = the default of the Rust side, 192): the rule that chooses it is `budget_choice`; the page keeps the log.
 let BUDGET_MB = 0;
 function applyPolicy(/** @type {any} */ m) {
-  const choice = JSON.parse(budget_choice(m.device_gb || 0, m.cores || 0, !!m.small, m.manual || 0));
+  const choice = JSON.parse(budget_choice(m.device_gb || 0, m.cores || 0, !!m.small, m.manual || 0, !!m.ios, m.probe_mb || 0));
   BUDGET_MB = choice.mb; engine.set_budget_mb(choice.mb);
   postMessage({ op: "budget-choice", choice });
 }
@@ -392,7 +394,7 @@ async function handle(ev) {
       case "diff": info = engine.diff_traces(m.path, m.query || ""); break;               // api/chrom, api/xic with ref: "" = Python's, "E" + JSON = the user's error
       case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error
       case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;        // api/mrm with ref, from the transitions of the files
-      case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;
+      case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;   case "msngrafo": info = await msnGrafo(tileName.get(m.slot) || "", m.blob, m.query || "", readerFor, !!m.esporta); break;   // api/msn_grafo over the .mzidx and the mzML of the slot
       case "budget": BUDGET_MB = m.mb; engine.set_budget_mb(m.mb); break;                                  // the supervisor lowers it after a death by lack of memory
       case "close": engine.close(m.slot); blobs.delete(m.slot); tileName.delete(m.slot); break;   case "reset": engine.close_all(); blobs.clear(); tileName.clear(); break;
       case "crash": if (m.grow) wasmMem.grow(m.grow * 16); engine.crash(); break;        // test hook: the supervisor must recover (grow = MB of memory taken first, the signature of a lack of memory)

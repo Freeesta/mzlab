@@ -15,6 +15,7 @@ limit_ms2=479232   # attributio-ms2 carries the sources of a campaign AND the MS
 limit_lr=741376   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 717874 (+3 %)
 limit_interp=512000   # interp: the interpretation of the rows (interp/1) with the MSn tree of the infusion; above 470000 the tree is built by finder_msn (docs/agenti/interp.md)
 limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)
+limit_msngrafo=512000   # msngrafo: the fragmentation graph of an MSn infusion (msngrafo/1), loaded by the worker of the engine on the first request of the graph; measured 312502
 limit_libro=159744   # libro: the Markdown converter, the preview edits and the search index of the Teoria editor; measured 152008 (+3 %)
 out=${1:-site/static}/wasm-feat
 R=target/wasm32-unknown-unknown/release
@@ -48,6 +49,9 @@ wasm_pack "$out/chem" $R/mzlab_chem_wasm.wasm $limit_chem "mzFinder chem"
 # the Libro converter (crates/mzlab-libro-wasm: Markdown chapter -> Teoria HTML), loaded only by the administrator Teoria editor
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-libro-wasm
 wasm_pack "$out/libro" $R/mzlab_libro_wasm.wasm $limit_libro "Libro converter"
+# the fragmentation graph of an MSn infusion (crates/mzlab-msngrafo-wasm: msngrafo/1), loaded by the worker of the engine on the first request of /api/msn_grafo
+cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-msngrafo-wasm
+wasm_pack "$out/msngrafo" $R/mzlab_msngrafo_wasm.wasm $limit_msngrafo "msngrafo"
 # the readers of the tables of other programs (mzMine, FBMN/GNPS2, MS-DIAL), loaded only when the user opens one: crates/mzlab-feat-import-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-import-wasm
 wasm_pack "$out/import" $R/mzlab_feat_import_wasm.wasm $limit "mzFinder import"
@@ -77,7 +81,8 @@ fi
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-finder-lr-wasm
 wasm_pack "$out/finder-lr" $R/mzlab_finder_lr_wasm.wasm $limit_lr "mzFinder finder-lr"
 # the readers module (crates/mzlab-lettori-wasm), loaded only when a file needs it: tools/build_lettori_wasm.sh (it has its own jobs: it overlaps with the ones above)
-tools/build_lettori_wasm.sh "${1:-site/static}"
+# part b leaves the readers to the job of the engine in sito-rust.yml (it balances the three jobs); all (pages, release) builds them here
+[ "$part" = b ] || tools/build_lettori_wasm.sh "${1:-site/static}"
 fi
 wasm_wait
 [ "$part" = all ] || [ "$part" = manifest ] || exit 0
@@ -105,6 +110,8 @@ m["chem"] = {"js": "chem/mzlab_chem_wasm.js", "wasm": "chem/mzlab_chem_wasm_bg.w
              "sha256": hashlib.sha256(open(f"{o}/chem/mzlab_chem_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["libro"] = {"js": "libro/mzlab_libro_wasm.js", "wasm": "libro/mzlab_libro_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/libro/mzlab_libro_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["msngrafo"] = {"js": "msngrafo/mzlab_msngrafo_wasm.js", "wasm": "msngrafo/mzlab_msngrafo_wasm_bg.wasm",
+              "sha256": hashlib.sha256(open(f"{o}/msngrafo/mzlab_msngrafo_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["import"] = {"js": "import/mzlab_feat_import_wasm.js", "wasm": "import/mzlab_feat_import_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/import/mzlab_feat_import_wasm_bg.wasm", "rb").read()).hexdigest()}
 def attributio(dirname):

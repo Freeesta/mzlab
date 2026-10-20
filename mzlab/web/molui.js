@@ -100,6 +100,8 @@
     }
     return out;
   }
-  const api = { parse, hill, hillOf, compare, mismatchText, cap, svg, css, LIGHT, DARK };
+  // OpenChemLib toSVG options: keep wedges and hashes, drop the «abs» flag and the CIP letters that read as stray text
+  const SVG_OPTS = { suppressChiralText: true, suppressCIPParity: true, suppressESR: true };
+  const api = { parse, hill, hillOf, compare, mismatchText, cap, svg, css, SVG_OPTS, LIGHT, DARK };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.MOLUI = api;
 })(typeof window !== "undefined" ? window : globalThis);
