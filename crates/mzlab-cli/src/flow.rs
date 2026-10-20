@@ -265,8 +265,17 @@ fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
 }
 
 fn inclusion_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let find = |name: &str| job.resolved.params.iter().find(|(k, _)| k == name).map(|(_, v)| v);
-    let adducts = find("adducts").and_then(|v| v.str()).unwrap_or("[M+H]+").to_string();
+    let find = |name: &str| {
+        job.resolved
+            .params
+            .iter()
+            .find(|(k, _)| k == name)
+            .map(|(_, v)| v)
+    };
+    let adducts = find("adducts")
+        .and_then(|v| v.str())
+        .unwrap_or("[M+H]+")
+        .to_string();
     let half = find("rt_window").and_then(|v| v.f64()).unwrap_or(0.5);
     let products = read_one(r, job, "tp")?;
     let text = crate::flow_inclusion::inclusion_text(&products.1, &adducts, half)?;
