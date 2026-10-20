@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema--><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Risoluzione e alta risoluzione · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 11</div>
 <h1>Risoluzione, accuratezza e analizzatori ad alta risoluzione</h1>
 <p class="lead">Il vostro triplo quadrupolo misura masse nominali; un Orbitrap o un Q-TOF distinguono ioni che differiscono di pochi millesimi di unità. Questo capitolo spiega che cosa vuol dire «alta risoluzione», come la si ottiene e che cosa cambia nel modo di ragionare sugli spettri.</p>
-
 <h2>Potere risolutivo e risoluzione</h2>
 <p>Il <b>potere risolutivo</b> R è il rapporto fra la massa di un picco e la sua larghezza Δm; la definizione più usata oggi prende Δm come larghezza a metà altezza (FWHM). Negli strumenti a settore magnetico si usa invece la definizione della «valle al 10%» (due picchi uguali si sovrappongono fino al 10% dell'altezza): a parità di strumento dà un numero circa la metà.</p>
 <span class="eq"><i>R</i> = <span class="frac"><span><i>m</i></span><span>Δ<i>m</i><sub>FWHM</sub></span></span><span class="no">(11.1)</span></span>
@@ -19,7 +19,6 @@
 <p>CO e C<sub>2</sub>H<sub>4</sub> differiscono di 36,4 mDa: R ≈ 28/0,0364 ≈ 800, alla portata anche di vecchi strumenti a settore. <sup>34</sup>S e <sup>13</sup>C<sub>2</sub> differiscono di 10,9 mDa: a m/z 300 serve R ≈ 27 500, cioè un Orbitrap o un buon TOF. Controlla con la figura (e prova la coppia <sup>18</sup>O/<sup>13</sup>C<sub>2</sub>, che chiede R &gt; 100 000).</p></details>
 <div class="sim" id="sim-res2"><h4>Due ioni vicini e il potere risolutivo</h4>
 <p class="note">Picchi gaussiani con FWHM = m/R. Il tratteggio mostra i due ioni, la linea piena ciò che registra lo strumento. Quando i picchi si fondono il centroide cade in mezzo: l'errore di massa che ne risulta non dipende dalla taratura.</p></div>
-
 <h2>Accuratezza di massa</h2>
 <p>L'<b>accuratezza</b> dice quanto il valore misurato si discosta da quello vero; la <b>precisione</b> quanto si ripetono misure successive. Si esprime in parti per milione (ppm) o in millidalton (mDa):</p>
 <span class="eq">errore (ppm) = <span class="frac"><span><i>m</i><sub>misurata</sub> − <i>m</i><sub>teorica</sub></span><span><i>m</i><sub>teorica</sub></span></span> × 10<sup>6</sup>, &nbsp;&nbsp; errore (mDa) = (<i>m</i><sub>misurata</sub> − <i>m</i><sub>teorica</sub>) × 1000<span class="no">(11.2)</span></span>
@@ -30,7 +29,6 @@
 <li>Valori tipici: Orbitrap e Q-TOF moderni 1-3 ppm; FT-ICR sotto 1 ppm; quadrupolo ±0,1-0,2 unità (e il vostro strumento ha uno scostamento di circa +0,3: capitolo 12).</li>
 <li>Accuratezza e risoluzione sono legate: un picco non risolto ha un centroide sbagliato (figura sopra), quindi senza risoluzione non c'è accuratezza.</li>
 </ul>
-
 <h2>Gli analizzatori</h2>
 <h3>Tempo di volo (TOF)</h3>
 <p>Gli ioni ricevono in un istante la stessa energia cinetica <i>zeU</i> e volano in un tubo senza campo: arrivano al rivelatore in un tempo che dipende da m/z.</p>
@@ -38,7 +36,6 @@
 <p>Con 10 kV e 1,5 m uno ione di m/z 300 arriva in circa 19 µs: si registrano decine di migliaia di spettri al secondo, poi sommati. La risoluzione è R = t/(2Δt): la limitano le differenze di energia e posizione iniziali degli ioni e la velocità dell'elettronica. Il <b>reflectron</b> (uno specchio elettrostatico) le compensa: gli ioni più veloci penetrano di più e fanno più strada. Gli strumenti moderni sono <b>a accelerazione ortogonale</b> (oa-TOF): il fascio continuo dalla sorgente passa davanti a un pulsatore che spinge pacchetti di ioni nel tubo. Il <b>Q-TOF</b> mette un quadrupolo e una cella di collisione davanti al TOF: MS2 con frammenti in alta risoluzione.</p>
 <div class="sim" id="sim-tof"><h4>TOF lineare e con reflectron</h4>
 <p class="note">Due ioni che differiscono di 1 unità di m/z; la dispersione di energia iniziale allarga i tempi di arrivo. Con il reflectron l'effetto al primo ordine sparisce e resta il limite dell'elettronica (0,5 ns).</p></div>
-
 <h3>Orbitrap</h3>
 <p>Una trappola elettrostatica (Makarov, 2000): un elettrodo centrale a fuso e uno esterno a botte creano un potenziale in cui gli ioni girano attorno al fuso e intanto <b>oscillano lungo l'asse</b> con una frequenza che dipende solo da m/z:</p>
 <span class="eq">ω<sub>z</sub> = √(<i>k</i> · <i>z</i>/<i>m</i>)<span class="no">(11.4)</span></span>
@@ -47,14 +44,12 @@
 <p>Il potere risolutivo è proporzionale alla durata: per dimezzare la larghezza dei picchi devi raddoppiare il transiente. Guarda anche l'inviluppo: due frequenze vicine «battono» con periodo 1/Δf, e per distinguerle bisogna registrare almeno un battimento.</p></details>
 <div class="sim" id="sim-orbi"><h4>Transiente e trasformata di Fourier in un Orbitrap</h4>
 <p class="note">Due ioni vicini. A sinistra l'inviluppo della corrente immagine (i battimenti), a destra lo spettro ottenuto dalla trasformata. Frequenza assiale e decadimento sono indicativi.</p></div>
-
 <h3>Trappola ionica e FT-ICR</h3>
 <ul>
 <li><b>Trappola ionica</b> (3D di Paul o lineare): un campo a radiofrequenza intrappola gli ioni, che vengono espulsi in ordine di m/z variando l'ampiezza. Risoluzione unitaria, grande sensibilità in full scan e possibilità di MS<sup>n</sup> (frammentare i frammenti). Troppi ioni insieme si respingono (carica spaziale) e spostano le masse. Il vostro 3200 QTRAP usa il terzo quadrupolo anche come trappola lineare (modi EMS ed EPI).</li>
 <li><b>FT-ICR</b>: gli ioni ruotano in un campo magnetico intenso con la frequenza di ciclotrone f = zeB/(2πm), misurata come nell'Orbitrap. Potere risolutivo oltre 10<sup>6</sup> e accuratezza sotto il ppm (petrolio, materia organica disciolta), ma servono magneti superconduttori costosi.</li>
 <li><b>Settore magnetico a doppia focalizzazione</b>: storico strumento ad alta risoluzione per l'EI (diossine, R = 10 000 valle al 10%).</li>
 </ul>
-
 <h2>Gli analizzatori a confronto</h2>
 <table>
 <tr><th>Analizzatore</th><th class="n">R tipico</th><th class="n">Accuratezza</th><th>Velocità</th><th>Punto di forza</th></tr>
@@ -67,23 +62,15 @@
 </table>
 <div class="box key"><b>Quale strumento per quale domanda</b>
 <p><b>Quanto c'è</b> di un composto noto, in tracce, in tanti campioni: triplo quadrupolo in MRM. <b>Che cos'è</b> un composto sconosciuto (un TP, un metabolita o contaminante emergente): alta risoluzione, full scan + MS2 (DDA o DIA, capitolo 19), formula dalla massa esatta e dagli isotopi (capitolo 13). Nella ricerca dei prodotti di degradazione si usano spesso entrambi: HRMS per scoprirli e identificarli, QqQ per quantificarli e seguirli nel tempo.</p></div>
-
 <h2>Il rivelatore</h2>
 <p>Quadrupoli, trappole e TOF contano gli ioni con un <b>moltiplicatore di elettroni</b> (dinodi discreti o canale continuo) o con <b>piastre a microcanali</b> (TOF): ogni ione che colpisce la superficie libera elettroni, moltiplicati a cascata fino a 10<sup>6</sup>-10<sup>8</sup> volte. Orbitrap e FT-ICR non «distruggono» gli ioni: misurano la corrente immagine che inducono. Dettagli sul rivelatore del QqQ nel capitolo 10.</p>
-
 <div class="box oral"><b>Concetti chiave e domande di ripasso</b>
 <p>Definire potere risolutivo (FWHM, valle al 10%), risoluzione, accuratezza in ppm (con un calcolo); spiegare perché serve l'alta risoluzione per gli isobari e per la formula; principio del TOF (equazione 11.3, reflectron), dell'Orbitrap (frequenza assiale, transiente, trasformata di Fourier, compromesso risoluzione-velocità), della trappola ionica e dell'FT-ICR; tabella di confronto; scegliere lo strumento per una domanda analitica.</p></div>
-
 <h2>Verifica</h2>
-<details class="q"><summary>Un Orbitrap misura 304,1532 per uno ione la cui massa teorica è 304,1543. Errore in ppm e in mDa?</summary>
-<p>−1,1 mDa; (304,1532 − 304,1543)/304,1543 × 10<sup>6</sup> = −3,6 ppm.</p></details>
-<details class="q"><summary>Con quale potere risolutivo separi due ioni a m/z 400,1000 e 400,1100?</summary>
-<p>Δm = 0,0100: R ≈ 400/0,01 = 40 000 per vederli appena separati, ~80 000 per una separazione netta. Un TOF di fascia alta ci arriva appena; un Orbitrap sì.</p></details>
-<details class="q"><summary>Perché nell'Orbitrap più risoluzione significa meno punti per picco cromatografico?</summary>
-<p>La risoluzione è proporzionale alla durata del transiente: se raddoppio la risoluzione, ogni scansione dura il doppio e in un picco largo 6 s entrano metà degli spettri. Con picchi stretti (UHPLC, GC) bisogna trovare un compromesso.</p></details>
-<details class="q"><summary>Uno spettrometro a risoluzione unitaria rileva un picco a m/z 216. Basta per dire che è atrazina protonata?</summary>
-<p>No: a risoluzione unitaria centinaia di formule hanno massa nominale 216 (capitolo 13). Servono tempo di ritenzione, isotopi (qui il cloro: M+2 al 32%), MS2 e, per una conferma vera, lo standard. Con l'alta risoluzione la massa entro 3 ppm restringe moltissimo le formule, ma non distingue gli isomeri.</p></details>
-
+<details class="q"><summary>Un Orbitrap misura 304,1532 per uno ione la cui massa teorica è 304,1543. Errore in ppm e in mDa?</summary><p>−1,1 mDa; (304,1532 − 304,1543)/304,1543 × 10<sup>6</sup> = −3,6 ppm.</p></details>
+<details class="q"><summary>Con quale potere risolutivo separi due ioni a m/z 400,1000 e 400,1100?</summary><p>Δm = 0,0100: R ≈ 400/0,01 = 40 000 per vederli appena separati, ~80 000 per una separazione netta. Un TOF di fascia alta ci arriva appena; un Orbitrap sì.</p></details>
+<details class="q"><summary>Perché nell'Orbitrap più risoluzione significa meno punti per picco cromatografico?</summary><p>La risoluzione è proporzionale alla durata del transiente: se raddoppio la risoluzione, ogni scansione dura il doppio e in un picco largo 6 s entrano metà degli spettri. Con picchi stretti (UHPLC, GC) bisogna trovare un compromesso.</p></details>
+<details class="q"><summary>Uno spettrometro a risoluzione unitaria rileva un picco a m/z 216. Basta per dire che è atrazina protonata?</summary><p>No: a risoluzione unitaria centinaia di formule hanno massa nominale 216 (capitolo 13). Servono tempo di ritenzione, isotopi (qui il cloro: M+2 al 32%), MS2 e, per una conferma vera, lo standard. Con l'alta risoluzione la massa entro 3 ppm restringe moltissimo le formule, ma non distingue gli isomeri.</p></details>
 <h2>Per approfondire</h2>
 <ul class="refs">
 <li><span class="tag">articolo</span>Murray K.K. et al. (2013) Definitions of terms relating to mass spectrometry (IUPAC Recommendations 2013). <i>Pure Appl. Chem.</i> 85, 1515-1609. <a href="https://doi.org/10.1351/PAC-REC-06-04-06" target="_blank" rel="noopener">doi:10.1351/PAC-REC-06-04-06</a></li>

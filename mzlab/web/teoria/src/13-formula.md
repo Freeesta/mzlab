@@ -1,0 +1,185 @@
+<!-- script-before: ../elements.js -->
+<!-- script: sim-hr.js -->
+<!-- title: Dalla massa alla formula -->
+# Dalla massa alla formula: isotopi, regole e massa esatta {kicker: Capitolo 13}
+
+{.lead} Prima di proporre una struttura bisogna sapere quali atomi ci sono. A risoluzione unitaria la formula si ricava dagli isotopi e da poche regole; ad alta risoluzione la massa esatta restringe molto i candidati. Sono gli stessi passaggi logici con cui si affronta l'interpretazione sistematica di uno spettro di massa (capitolo 15).
+
+## Tre masse diverse
+
+```html
+<table>
+<tr><th>Massa</th><th>Definizione</th><th>Esempio: atrazina C<sub>8</sub>H<sub>14</sub>ClN<sub>5</sub></th></tr>
+<tr><td><b>Nominale</b></td><td>Somma dei numeri di massa interi dell'isotopo più abbondante di ogni elemento</td><td class="n">215</td></tr>
+<tr><td><b>Monoisotopica</b></td><td>Somma delle masse esatte dell'isotopo più abbondante (<sup>12</sup>C = 12 esatto per definizione)</td><td class="n">215,0938</td></tr>
+<tr><td><b>Media</b> (massa molare)</td><td>Media pesata su tutti gli isotopi: quella della bilancia, non quella dello spettrometro</td><td class="n">215,68 g/mol</td></tr>
+</table>
+```
+
+In spettrometria di massa si usa la monoisotopica: lo ione che si misura è una singola molecola con una precisa composizione isotopica, non una media. Il picco «M» è per convenzione quello con l'isotopo più abbondante di ogni elemento.
+
+### Il difetto di massa
+
+Solo il ^12^C ha massa intera. L'idrogeno pesa un po' più di 1 (1,00783), l'ossigeno un po' meno di 16 (15,99491), il cloro molto meno di 35 (34,96885), il bromo ancora meno (78,91834). La parte decimale della massa (il **difetto di massa**) è quindi un'impronta della composizione:
+
+- molecole ricche di H hanno difetto positivo (un alcano C~20~H~42~: 282,3287);
+- molecole ricche di O, alogeni, fosforo hanno difetto basso o negativo (un PFAS come il PFOA, C~8~HF~15~O~2~: 413,9737);
+- a massa nominale uguale formule diverse hanno masse esatte diverse: CO 27,9949, N~2~ 28,0061, C~2~H~4~ 28,0313. È su questo che lavora l'alta risoluzione (capitolo 11).
+
+```html
+<p>Per gli <b>ioni</b> si toglie la massa dell'elettrone (0,00055) per ogni carica positiva: [M+H]<sup>+</sup> = M + 1,00728 (la massa del protone), M<sup>+•</sup> = M − 0,00055.</p>
+```
+
+## La regola dell'azoto
+
+Gli elementi comuni delle molecole organiche hanno massa e valenza entrambe pari (C 12, valenza 4; O 16, valenza 2; S 32, valenza 2) o entrambe dispari (H 1, Cl 35, Br 79, valenza 1; P 31, valenza 3 o 5). L'azoto no: massa 14 pari, valenza 3 dispari. Ne segue:
+
+```html
+<div class="box key"><b>Regola dell'azoto</b>
+<p>Una <b>molecola</b> (e ogni ione a elettroni dispari, come M<sup>+•</sup> in EI) con <b>numero pari di azoti</b> (anche zero) ha massa nominale <b>pari</b>; con numero dispari di azoti ha massa <b>dispari</b>. Per gli <b>ioni a elettroni pari</b> ([M+H]<sup>+</sup> in ESI, i frammenti delle scissioni semplici in EI) è il contrario: N pari → m/z dispari.</p></div>
+```
+
+```html
+<table>
+<tr><th>Ione</th><th>Tipo</th><th class="n">m/z</th><th>Azoti</th></tr>
+<tr><td>M<sup>+•</sup> del toluene, C<sub>7</sub>H<sub>8</sub><sup>+•</sup></td><td>dispari (EI)</td><td class="n">92 (pari)</td><td>0</td></tr>
+<tr><td>M<sup>+•</sup> della piridina, C<sub>5</sub>H<sub>5</sub>N<sup>+•</sup></td><td>dispari (EI)</td><td class="n">79 (dispari)</td><td>1</td></tr>
+<tr><td>Tropilio, C<sub>7</sub>H<sub>7</sub><sup>+</sup></td><td>pari (frammento EI)</td><td class="n">91 (dispari)</td><td>0</td></tr>
+<tr><td>Iminio, CH<sub>2</sub>=NH<sub>2</sub><sup>+</sup></td><td>pari (frammento EI delle ammine)</td><td class="n">30 (pari)</td><td>1</td></tr>
+<tr><td>[M+H]<sup>+</sup> dell'atrazina, C<sub>8</sub>H<sub>15</sub>ClN<sub>5</sub><sup>+</sup></td><td>pari (ESI)</td><td class="n">216 (pari)</td><td>5</td></tr>
+</table>
+```
+
+```html
+<div class="box warn"><b>Errore frequente</b>
+<p>Applicare la regola a [M+H]<sup>+</sup> come se fosse la molecola. In ESI un m/z <b>pari</b> indica un numero <b>dispari</b> di azoti, perché il protone aggiunge 1. Prima di usare la regola chiediti sempre: è M<sup>+•</sup>, [M+H]<sup>+</sup> o un frammento?</p></div>
+```
+
+## Anelli più doppi legami (RDB)
+
+Per una formula C~c~H~h~N~n~O~o~X~x~ (X = alogeni, contati come H; Si conta come C, P come N; O e S non contano):
+
+```html
+<span class="eq">RDB = <i>c</i> − <span class="frac"><span><i>h</i> + <i>x</i></span><span>2</span></span> + <span class="frac"><span><i>n</i></span><span>2</span></span> + 1<span class="no">(13.1)</span></span>
+```
+
+- RDB **intero**: molecola o ione a elettroni dispari (M^+•^, ioni da riarrangiamento in EI). Benzene C~6~H~6~: 6 − 3 + 1 = 4 (un anello + tre doppi legami).
+- RDB **semintero** (…,5): ione a elettroni pari. Benzoile C~7~H~5~O^+^: 7 − 2,5 + 1 = 5,5.
+- RDB negativo o non coerente con il tipo di ione: la formula è sbagliata.
+
+Un RDB ≥ 4 con pochi H suggerisce un anello aromatico; un triplo legame vale 2, un C=O vale 1. Il valore guida la scelta delle strutture.
+
+## Gli isotopi a risoluzione unitaria
+
+Ogni elemento ha isotopi con abbondanze naturali quasi costanti (IUPAC). Dal punto di vista dello spettro gli elementi si dividono in tre gruppi (McLafferty):
+
+```html
+<table>
+<tr><th>Gruppo</th><th>Elementi</th><th>Isotopi pesanti (relativi al più abbondante = 100)</th></tr>
+<tr><td><b>A</b> (un solo isotopo o quasi)</td><td>H, F, P, I</td><td><sup>2</sup>H 0,012 (trascurabile)</td></tr>
+<tr><td><b>A+1</b></td><td>C, N</td><td><sup>13</sup>C 1,08 (1,1 nelle tabelle classiche) per atomo; <sup>15</sup>N 0,37</td></tr>
+<tr><td><b>A+2</b></td><td>O, S, Si, Cl, Br</td><td><sup>18</sup>O 0,21; <sup>33</sup>S 0,79 e <sup>34</sup>S 4,47; <sup>29</sup>Si 5,08 e <sup>30</sup>Si 3,35; <sup>37</sup>Cl 32,0; <sup>81</sup>Br 97,3</td></tr>
+</table>
+```
+
+```html
+<p><b>Come si procede</b> (passi 1.x del procedimento del capitolo 15): si parte dal gruppo di picchi più alto e si guarda M+2. Un M+2 grande indica Cl o Br (o più di uno); un M+2 del 4-5% indica uno zolfo (o un silicio, che ha anche un M+1 alto); un M+2 inferiore al 3% del picco esclude Cl, Br, S e Si. Poi M+1 dà il numero di carboni:</p>
+```
+
+```html
+<span class="eq"><i>n</i><sub>C</sub> ≈ <span class="frac"><span>100 · <i>I</i>(M+1)/<i>I</i>(M) − 0,37 <i>n</i><sub>N</sub></span><span>1,1</span></span><span class="no">(13.2)</span></span>
+```
+
+```html
+<p>Precisione realistica: ±1 carbonio per ioni intensi, molto peggio per ioni deboli, saturati o con un picco M−1 o M+1 di altra origine (perdite di H, ioni [M+H]<sup>+</sup> per autoprotonazione).</p>
+```
+
+```html
+<table>
+<tr><th>Alogeni</th><th>M : M+2 : M+4 : M+6 (intensità relative)</th></tr>
+<tr><td>Cl</td><td class="n">100 : 32</td></tr>
+<tr><td>Cl<sub>2</sub></td><td class="n">100 : 64 : 10</td></tr>
+<tr><td>Cl<sub>3</sub></td><td class="n">100 : 96 : 31 : 3</td></tr>
+<tr><td>Br</td><td class="n">100 : 97</td></tr>
+<tr><td>Br<sub>2</sub></td><td class="n">51 : 100 : 49</td></tr>
+<tr><td>Cl Br</td><td class="n">77 : 100 : 24</td></tr>
+</table>
+```
+
+I gruppi si combinano come prodotti di binomi: con n atomi di un elemento A+2 le intensità seguono i coefficienti di (a + b)^n^. Nel programma, clic destro su uno spettro → «Profilo isotopico di una formula» sovrappone il profilo calcolato a quello misurato. Nella Pratica il gioco «Indovina gli alogeni» allena proprio questo passo.
+
+## La regola del 13
+
+Un modo sistematico per elencare le formule possibili di una massa nominale M (Bright e Chen, 1983): si divide M per 13 (la massa di CH).
+
+```html
+<span class="eq"><span class="frac"><span>M</span><span>13</span></span> = <i>n</i> + <span class="frac"><span><i>r</i></span><span>13</span></span> &nbsp;⇒&nbsp; formula di base C<sub><i>n</i></sub>H<sub><i>n</i>+<i>r</i></sub>, &nbsp; RDB = <span class="frac"><span><i>n</i> − <i>r</i> + 2</span><span>2</span></span><span class="no">(13.3)</span></span>
+```
+
+Poi si aggiungono gli eteroatomi sostituendo gruppi di pari massa: **O** al posto di CH~4~; **N** al posto di CH~2~; **Cl** al posto di C~2~H~11~; **S** al posto di C~2~H~8~; un **C** al posto di H~12~. Esempio, M = 128: 128 = 9·13 + 11 → C~9~H~20~ (RDB 0, il nonano); con un O: C~8~H~16~O (RDB 1, per esempio un ottanale o un ottanone); sostituendo H~12~ con C: C~10~H~8~ (RDB 7, il naftalene). Tre molecole diversissime con la stessa massa nominale: gli isotopi (M+1 ≈ 10% per C~9~, 11% per C~10~, 9% per C~8~…) e i frammenti decidono.
+
+## Ad alta risoluzione
+
+Con una massa esatta misurata entro pochi ppm il numero di formule compatibili crolla, ma non si azzera: cresce rapidamente con la massa e con gli elementi ammessi.
+
+```html
+<details class="poe"><summary>Prima di provare: quante formule CHNOSCl plausibili ha una molecola di massa 300,10 entro 5 ppm? E entro ±0,5 Da?</summary>
+<p>Per una massa di 300,10 Da, con le regole di plausibilità: oltre 500 formule entro ±0,5 Da, circa 7 entro 5 ppm, una o due entro 1-2 ppm. A 500 Da ne restano una ventina entro 5 ppm e qualcuna anche entro 1 ppm: servono gli isotopi e la frammentazione. Verifica muovendo i cursori (anche il difetto di massa).</p></details>
+```
+
+```html
+<div class="sim" id="sim-formule"><h4>Quante formule per una massa?</h4>
+<p class="note">Conta le formule neutre con C fino a 50, N fino a 6, O fino a 10, S fino a 2 e Cl fino a 3, con RDB intero e non negativo, entro ciascuna tolleranza. Le regole di plausibilità sono una parte delle «sette regole d'oro» di Kind e Fiehn (rapporti H/C, N/C, O/C). Scala logaritmica.</p></div>
+```
+
+Gli strumenti per restringere ancora:
+
+```html
+<ul>
+<li><b>Profilo isotopico</b>: il rapporto M+1/M misurato in alta risoluzione dà il numero di carboni con ±1 o meglio; la <b>struttura fine</b> separa <sup>34</sup>S da <sup>13</sup>C<sub>2</sub> (Δ = 10,9 mDa) e <sup>15</sup>N da <sup>13</sup>C (Δ = 6,3 mDa) e conta direttamente zolfo e azoto.</li>
+<li><b>Regole di plausibilità</b> (Kind e Fiehn, 2007): limiti sul numero di atomi per massa, regole di valenza (Lewis e Senior), rapporti H/C fra 0,2 e 3,1, rapporti di eteroatomi, probabilità di combinazioni (es. N e S molto alti insieme).</li>
+<li><b>Frammenti</b>: ogni frammento deve avere una formula contenuta in quella del precursore, entro la tolleranza (MS2 o frammenti EI ad alta risoluzione).</li>
+<li><b>Difetto di massa di Kendrick</b>: riscalando le masse in modo che CH<sub>2</sub> pesi esattamente 14 (massa di Kendrick = m × 14/14,01565), i composti di una serie omologa hanno lo stesso difetto e si allineano in orizzontale in un grafico difetto-massa. Con la base CF<sub>2</sub> si riconoscono le serie di PFAS nei campioni ambientali.</li>
+</ul>
+```
+
+```html
+<div class="duo"><div class="box lr"><b>Bassa risoluzione (risoluzione unitaria)</b>
+<p>Massa nominale, pattern isotopico, regola dell'azoto e calcolo degli RDB per le formule candidate. A risoluzione unitaria un m/z individua una rosa di candidati: la formula finale si stabilisce integrando l'analisi degli isotopi con lo spettro MS2 e le evidenze contestuali.</p></div>
+<div class="box hr"><b>Alta risoluzione</b>
+<p>Massa entro 1-5 ppm, struttura isotopica fine, formule molecolari dei frammenti. Si raggiunge un'elevata confidenza analitica (formula univoca) e, mediante MS2 e banche dati, si perviene a strutture altamente probabili. Gli isomeri strutturali richiedono comunque conferme cromatografiche o standard.</p></div></div>
+```
+
+```html
+<div class="box oral"><b>Concetti chiave e domande di ripasso</b>
+<p>Calcolare la massa nominale e monoisotopica di una formula; riconoscere gli alogeni da un cluster isotopico e stimare il numero di atomi di carbonio dal picco M+1; enunciare e applicare la regola dell'azoto (anche per [M+H]<sup>+</sup> e per i frammenti); calcolare il grado di insaturazione (RDB) e distinguere ioni a elettroni pari o dispari; applicare la regola del 13; spiegare il contributo della massa esatta e i limiti intrinseci nell'assegnazione degli isomeri.</p></div>
+```
+
+## Verifica
+
+??? Uno spettro EI mostra M^+•^ a m/z 156 con un picco a 158 di intensità quasi uguale. Che cosa contiene la molecola?
+Un atomo di bromo (100 : 97). M pari → nessun azoto o un numero pari. 156 − 79 = 77: C~6~H~5~Br, il bromobenzene (RDB = 6 − 3 + 1 = 4).
+
+??? M^+•^ = 100 (intensità 100), M+1 = 6,7. Quanti carboni? Proponi formule.
+n~C~ ≈ 6,7/1,1 ≈ 6. M pari: zero o due azoti. Con 6 C restano 100 − 72 = 28 unità: C~6~H~12~O (RDB 1: un chetone come il 2-esanone, un'aldeide, un alcol ciclico…). Se i carboni fossero 7 (M+1 ≈ 7,7%) sarebbe C~7~H~16~ (RDB 0, un eptano): la differenza fra 6,7 e 7,7% è piccola, quindi conviene guardare anche i frammenti (un 43 e un 58 indicano il chetone, capitolo 15).
+
+```html
+<details class="q"><summary>In ESI+ un ione [M+H]<sup>+</sup> è a m/z 230. Quanti azoti può avere la molecola?</summary>
+<p>[M+H]<sup>+</sup> è a elettroni pari: m/z pari → numero dispari di azoti (1, 3, 5…). La molecola neutra ha massa 229, dispari, coerente.</p></details>
+```
+
+??? Calcola l'RDB di C~8~H~14~ClN~5~ e commenta.
+8 − (14 + 1)/2 + 5/2 + 1 = 8 − 7,5 + 2,5 + 1 = 4: l'anello triazinico dell'atrazina (un anello + tre doppi legami C=N).
+
+## Per approfondire
+
+```html
+<ul class="refs">
+<li><span class="tag">libro</span>McLafferty F.W., Tureček F. <i>Interpretation of Mass Spectra</i>, 4ª ed., 1993: capitoli 2 (composizione elementare) e 3 (lo ione molecolare).</li>
+<li><span class="tag">articolo</span>Bright J.W., Chen E.C.M. (1983) Mass spectral interpretation using the "rule of 13". <i>J. Chem. Educ.</i> 60, 557. <a href="https://doi.org/10.1021/ed060p557" target="_blank" rel="noopener">doi:10.1021/ed060p557</a></li>
+<li><span class="tag">articolo</span>Kind T., Fiehn O. (2007) Seven Golden Rules for heuristic filtering of molecular formulas obtained by accurate mass spectrometry. <i>BMC Bioinformatics</i> 8, 105. <a href="https://doi.org/10.1186/1471-2105-8-105" target="_blank" rel="noopener">doi:10.1186/1471-2105-8-105</a></li>
+<li><span class="tag">articolo</span>Kendrick E. (1963) A mass scale based on CH<sub>2</sub> = 14.0000 for high resolution mass spectrometry of organic compounds. <i>Anal. Chem.</i> 35, 2146-2154. <a href="https://doi.org/10.1021/ac60206a048" target="_blank" rel="noopener">doi:10.1021/ac60206a048</a></li>
+<li><span class="tag">articolo</span>Hughey C.A. et al. (2001) Kendrick mass defect spectrum. <i>Anal. Chem.</i> 73, 4676-4681. <a href="https://doi.org/10.1021/ac010560w" target="_blank" rel="noopener">doi:10.1021/ac010560w</a></li>
+<li><span class="tag">articolo</span>Schymanski E.L. et al. (2014) Identifying small molecules via high resolution mass spectrometry: communicating confidence. <i>Environ. Sci. Technol.</i> 48, 2097-2098. <a href="https://doi.org/10.1021/es5002105" target="_blank" rel="noopener">doi:10.1021/es5002105</a></li>
+</ul>
+```

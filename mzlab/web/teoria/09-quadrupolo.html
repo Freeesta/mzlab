@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema--><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Il quadrupolo · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 9</div>
 <h1>Il quadrupolo: la teoria vera</h1>
 <p class="lead">Quattro barre, una tensione continua e una a radiofrequenza: perché solo gli ioni di un certo m/z attraversano il filtro, da dove viene il famoso triangolo di stabilità e che cosa decide risoluzione e sensibilità.</p>
-
 <h2>Un filtro, non una bilancia</h2>
 <p>Il quadrupolo non "pesa" gli ioni e non misura il tempo di volo: in ogni istante lascia passare solo gli ioni il cui m/z cade in una finestra stretta e scarica tutti gli altri sulle barre. Lo spettro si ottiene spostando la finestra nel tempo (<b>scansione</b>), oppure tenendola ferma su un m/z (<b>SIM</b>, e in MS/MS <b>MRM</b>). Ne seguono due proprietà che userete ogni giorno:</p>
 <ul>
@@ -14,7 +14,6 @@
 <li>la finestra ha una larghezza fissata dall'utente: con la <b>risoluzione unitaria</b> (≈ 0,7 Da a metà altezza) masse nominali adiacenti sono separate, ma 0,03 Da di differenza no.</li>
 </ul>
 <p>Il principio è dovuto a Wolfgang Paul (premio Nobel per la fisica 1989, condiviso, anche per la trappola ionica). La teoria è elegante e sorprendentemente completa: tutto discende da un'equazione differenziale nota dall'Ottocento.</p>
-
 <h2>Geometria e potenziale</h2>
 <p>Quattro barre parallele all'asse <i>z</i>, idealmente a sezione iperbolica, sono collegate a coppie opposte. A una coppia si applica +Φ<sub>0</sub>, all'altra −Φ<sub>0</sub>, con</p>
 <span class="eq">Φ<sub>0</sub>(<i>t</i>) = <i>U</i> − <i>V</i> cos Ω<i>t</i><span class="no">(9.1)</span></span>
@@ -50,7 +49,6 @@
 </figure>
 <div class="sim" id="sim-field"><h4>Il campo che oscilla e la traiettoria di uno ione</h4>
 <p class="note">A sinistra il potenziale nel piano x–y (arancione = positivo, blu = negativo) che si inverte a ogni mezzo ciclo, con la traiettoria di uno ione. A destra gli spostamenti x e y nel tempo. Il calcolo integra l'equazione di Mathieu (6.6) passo per passo. Provate q &gt; 0,908 con a = 0, oppure un punto appena sopra il vertice.</p></div>
-
 <h2>Le equazioni del moto</h2>
 <p>Dal potenziale si ricava il campo, <i>E</i><sub><i>x</i></sub> = −∂Φ/∂<i>x</i> = −2Φ<sub>0</sub><i>x</i>/<i>r</i><sub>0</sub><sup>2</sup> ed <i>E</i><sub><i>y</i></sub> = +2Φ<sub>0</sub><i>y</i>/<i>r</i><sub>0</sub><sup>2</sup>, e con <i>F</i> = <i>ze E</i> la seconda legge di Newton:</p>
 <span class="eq"><i>m</i> <span class="frac"><span>d<sup>2</sup><i>x</i></span><span>d<i>t</i><sup>2</sup></span></span> + <span class="frac"><span>2<i>ze</i></span><span><i>r</i><sub>0</sub><sup>2</sup></span></span>(<i>U</i> − <i>V</i> cos Ω<i>t</i>) <i>x</i> = 0, &nbsp;&nbsp; <i>m</i> <span class="frac"><span>d<sup>2</sup><i>y</i></span><span>d<i>t</i><sup>2</sup></span></span> − <span class="frac"><span>2<i>ze</i></span><span><i>r</i><sub>0</sub><sup>2</sup></span></span>(<i>U</i> − <i>V</i> cos Ω<i>t</i>) <i>y</i> = 0<span class="no">(9.3)</span></span>
@@ -62,7 +60,6 @@
 <p>Tutta la fisica (massa, carica, tensioni, dimensioni, frequenza) è riassunta in due numeri adimensionali, <i>a</i> e <i>q</i>. Due ioni con lo stesso (<i>a</i>, <i>q</i>) hanno traiettorie identiche in ξ, qualunque siano m/z e strumento. Notate anche che <i>a</i> e <i>q</i> sono entrambi proporzionali a <i>z</i>/<i>m</i>: a tensioni fissate, ioni più pesanti hanno <i>a</i> e <i>q</i> più piccoli. E il loro rapporto</p>
 <span class="eq"><span class="frac"><span><i>a</i></span><span><i>q</i></span></span> = <span class="frac"><span>2<i>U</i></span><span><i>V</i></span></span><span class="no">(9.7)</span></span>
 <p>non dipende dalla massa: a <i>U</i>/<i>V</i> fissato, tutti gli ioni stanno sulla stessa retta per l'origine del piano (<i>q</i>, <i>a</i>), ciascuno in un punto diverso (la <b>retta di lavoro</b> o <i>scan line</i>).</p></div>
-
 <h2>Stabilità: il diagramma</h2>
 <h3>Soluzioni stabili e instabili</h3>
 <p>Per la teoria di Floquet, le soluzioni dell'equazione 9.6 sono di due soli tipi, e quale dei due dipende <em>solo</em> da (<i>a</i>, <i>q</i>), non dalle condizioni iniziali:</p>
@@ -83,12 +80,11 @@
 <p class="note">Il diagramma è calcolato nel browser con la teoria di Floquet (traccia della matrice di trasferimento su un periodo). Lo strumento virtuale ha r<sub>0</sub> = 4 mm, f = 1 MHz e barre lunghe 20 cm. A destra, sei traiettorie (x/r<sub>0</sub>) di ioni con lo stesso m/z, entrati in punti e fasi RF casuali. Avvicinate U/V al vertice e spostate di 0,5 il m/z dello ione: guardate quando smette di passare.</p></div>
 <div class="box key"><b>Concetto chiave</b>
 <p>Tutti gli ioni stanno sulla retta di lavoro <i>a</i> = (2<i>U</i>/<i>V</i>)<i>q</i>, in posizioni inversamente proporzionali al loro m/z. Solo quelli che cadono nel tratto di retta interno al triangolo sono stabili. La pendenza della retta decide la larghezza della finestra (risoluzione); il valore di <i>V</i> decide dove la finestra si trova sulla scala delle masse.</p></div>
-
 <h2>Scansione, risoluzione, sensibilità</h2>
 <h3>Come si ottiene lo spettro</h3>
 <p>Dall'equazione 9.5, lo ione che sta in un certo punto <i>q</i>* della finestra ha</p>
 <span class="eq"><span class="frac"><span><i>m</i></span><span><i>z</i></span></span> = <span class="frac"><span>4 <i>e</i></span><span><i>q</i>* <i>r</i><sub>0</sub><sup>2</sup> Ω<sup>2</sup></span></span> <i>V</i><span class="no">(9.9)</span></span>
-<p>cioè il m/z trasmesso è <b>proporzionale a <i>V</i></b>. Aumentando linearmente <i>V</i> (e <i>U</i> insieme, per mantenere il rapporto) la finestra scorre lungo la scala delle masse: i diversi ioni diventano stabili uno dopo l'altro e il rivelatore registra lo spettro. Di qui una scala di massa lineare e una calibrazione semplice, fatta con ioni noti (per gli strumenti SCIEX, soluzioni di polipropilenglicoli, PPG).</p>
+<p>cioè il m/z trasmesso è <b>proporzionale a <i>V</b></i>. Aumentando linearmente <i>V</i> (e <i>U</i> insieme, per mantenere il rapporto) la finestra scorre lungo la scala delle masse: i diversi ioni diventano stabili uno dopo l'altro e il rivelatore registra lo spettro. Di qui una scala di massa lineare e una calibrazione semplice, fatta con ioni noti (per gli strumenti SCIEX, soluzioni di polipropilenglicoli, PPG).</p>
 <h3>Risoluzione e trasmissione</h3>
 <p>Più la retta si avvicina al vertice, più il tratto stabile è corto: la finestra in m/z si stringe (alta risoluzione) ma anche la trasmissione cala, perché vicino ai bordi del triangolo le oscillazioni stabili hanno ampiezze grandi e solo gli ioni entrati molto vicino all'asse sopravvivono. Abbassando la retta la finestra si allarga, la trasmissione sale, la risoluzione scende. Al limite <i>U</i> = 0 la "finestra" va da <i>q</i> = 0 a 0,908: nessuna selezione, solo trasmissione.</p>
 <p>A <i>U</i>/<i>V</i> costante la risoluzione relativa <i>R</i> = <i>m</i>/Δ<i>m</i> è costante, quindi Δ<i>m</i> cresce con la massa. Gli strumenti commerciali preferiscono invece <b>Δ<i>m</i> costante</b> su tutta la scala (≈ 0,7 Da FWHM, "risoluzione unitaria"): la retta non passa per l'origine, cioè <i>U</i> viene corretto in funzione della massa. Il prezzo è una trasmissione che cala alle masse alte.</p>
@@ -103,14 +99,12 @@
 </ul>
 <h3>Limite superiore di massa</h3>
 <p>Dall'equazione 9.9 con <i>q</i>* ≈ 0,706, la massa massima è fissata dalla <i>V</i> massima che l'elettronica può erogare: <i>m</i><sub>max</sub> ∝ <i>V</i><sub>max</sub>/(<i>r</i><sub>0</sub><sup>2</sup> Ω<sup>2</sup>). Si estende riducendo <i>r</i><sub>0</sub> o la frequenza, a spese di accettanza o risoluzione. Per i tripli quadrupoli tipici il limite è tra 1000 e 3000 m/z, più che sufficiente per le piccole molecole.</p>
-
 <h2>Il quadrupolo "solo RF"</h2>
 <p>Con <i>U</i> = 0 (<i>a</i> = 0) sono stabili tutti gli ioni con 0 &lt; <i>q</i> &lt; 0,908: il quadrupolo diventa un <b>filtro passa-alto</b> che perde solo gli ioni sotto il <b>taglio di bassa massa</b> (<i>m</i>/<i>z</i> per cui <i>q</i> = 0,908) e conduce tutti gli altri. Il moto medio è come in un pozzo di potenziale armonico (pseudopotenziale di Dehmelt), profondo, con le definizioni di questo capitolo,</p>
 <span class="eq"><i>D</i> ≈ <span class="frac"><span><i>q V</i></span><span>4</span></span> &nbsp;(in volt), &nbsp;&nbsp; valida per <i>q</i> ≲ 0,4<span class="no">(9.10)</span></span>
 <p>Ioni molto pesanti (<i>q</i> piccolo) sono confinati debolmente. Questo è il principio delle guide di ioni (Q0) e delle celle di collisione (q2): gli ioni, deviati dagli urti, vengono riportati verso l'asse invece di andare persi. È la "q" minuscola di QqQ.</p>
 <div class="box warn"><b>Conseguenza pratica: il taglio di bassa massa nella cella</b>
 <p>Nella cella di collisione il <i>q</i> è fissato per il precursore: frammenti molto più leggeri del precursore possono avere <i>q</i> &gt; 0,908 ed essere persi. Nei QqQ moderni il problema è contenuto (la RF della cella viene adattata), mentre è un limite noto delle trappole ioniche ("regola di un terzo").</p></div>
-
 <h2>Caratteristiche operative e particolarità pratiche</h2>
 <div class="box key"><b>Implicazioni per l'elaborazione dei dati</b>
 <ul>
@@ -119,17 +113,12 @@
 <li><b>Velocità di scansione</b>: una scansione completa da m/z 100 a 1000 dura tipicamente poche centinaia di millisecondi; il tempo effettivo dedicato a ciascuna frazione di m/z è solo una piccola quota del ciclo totale (capitolo 10).</li>
 <li><b>Configurazioni ibride (QTRAP)</b>: negli strumenti QTRAP, Q3 può funzionare alternativamente sia come quadrupolo a trasmissione sia come trappola ionica lineare (modalità "enhanced").</li>
 </ul></div>
-
 <h2>Verifica</h2>
-<details class="q"><summary>Raddoppiate V e U mantenendo il rapporto. Che cosa succede alla massa trasmessa?</summary>
-<p>Raddoppia (eq. 9.9): la finestra si sposta a m/z doppio. La larghezza relativa (R) non cambia perché la retta di lavoro è la stessa.</p></details>
+<details class="q"><summary>Raddoppiate V e U mantenendo il rapporto. Che cosa succede alla massa trasmessa?</summary><p>Raddoppia (eq. 9.9): la finestra si sposta a m/z doppio. La larghezza relativa (R) non cambia perché la retta di lavoro è la stessa.</p></details>
 <details class="q"><summary>Perché un quadrupolo "solo RF" non separa le masse ma è indispensabile nella cella di collisione?</summary>
 <p>Con a = 0 tutti gli ioni con q &lt; 0,908 sono stabili: nessuna selezione. Proprio per questo raccoglie e rifocalizza sull'asse precursori e frammenti diffusi in tutte le direzioni dagli urti.</p></details>
-<details class="q"><summary>Nel simulatore, con U/V al 97% del vertice, la finestra a m/z 300 è larga una decina di Da. Che cosa dovete fare per ottenere 0,7 Da? E che cosa perdete?</summary>
-<p>Avvicinare molto la retta al vertice (U/V intorno al 99,8% del valore al vertice). La finestra si stringe ma la trasmissione cala: più risoluzione, meno sensibilità.</p></details>
-<details class="q"><summary>Uno ione con (a, q) = (0,10; 0,95) è stabile?</summary>
-<p>No: per a ≥ 0 la prima regione di stabilità non va oltre q ≈ 0,908 (raggiunto per a = 0). Con a = 0,10 il limite destro è ancora più basso.</p></details>
-
+<details class="q"><summary>Nel simulatore, con U/V al 97% del vertice, la finestra a m/z 300 è larga una decina di Da. Che cosa dovete fare per ottenere 0,7 Da? E che cosa perdete?</summary><p>Avvicinare molto la retta al vertice (U/V intorno al 99,8% del valore al vertice). La finestra si stringe ma la trasmissione cala: più risoluzione, meno sensibilità.</p></details>
+<details class="q"><summary>Uno ione con (a, q) = (0,10; 0,95) è stabile?</summary><p>No: per a ≥ 0 la prima regione di stabilità non va oltre q ≈ 0,908 (raggiunto per a = 0). Con a = 0,10 il limite destro è ancora più basso.</p></details>
 <h2>Per approfondire</h2>
 <ul class="refs">
 <li><span class="tag">didattico</span>Miller P.E., Denton M.B. (1986) The quadrupole mass filter: basic operating concepts. <i>J. Chem. Educ.</i> 63, 617. <a href="https://doi.org/10.1021/ed063p617" target="_blank" rel="noopener">doi:10.1021/ed063p617</a> (la migliore introduzione, breve).</li>

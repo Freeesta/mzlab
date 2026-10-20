@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema--><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dalla massa alla formula · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 13</div>
 <h1>Dalla massa alla formula: isotopi, regole e massa esatta</h1>
 <p class="lead">Prima di proporre una struttura bisogna sapere quali atomi ci sono. A risoluzione unitaria la formula si ricava dagli isotopi e da poche regole; ad alta risoluzione la massa esatta restringe molto i candidati. Sono gli stessi passaggi logici con cui si affronta l'interpretazione sistematica di uno spettro di massa (capitolo 15).</p>
-
 <h2>Tre masse diverse</h2>
 <table>
 <tr><th>Massa</th><th>Definizione</th><th>Esempio: atrazina C<sub>8</sub>H<sub>14</sub>ClN<sub>5</sub></th></tr>
@@ -15,7 +15,6 @@
 <tr><td><b>Media</b> (massa molare)</td><td>Media pesata su tutti gli isotopi: quella della bilancia, non quella dello spettrometro</td><td class="n">215,68 g/mol</td></tr>
 </table>
 <p>In spettrometria di massa si usa la monoisotopica: lo ione che si misura è una singola molecola con una precisa composizione isotopica, non una media. Il picco «M» è per convenzione quello con l'isotopo più abbondante di ogni elemento.</p>
-
 <h3>Il difetto di massa</h3>
 <p>Solo il <sup>12</sup>C ha massa intera. L'idrogeno pesa un po' più di 1 (1,00783), l'ossigeno un po' meno di 16 (15,99491), il cloro molto meno di 35 (34,96885), il bromo ancora meno (78,91834). La parte decimale della massa (il <b>difetto di massa</b>) è quindi un'impronta della composizione:</p>
 <ul>
@@ -24,7 +23,6 @@
 <li>a massa nominale uguale formule diverse hanno masse esatte diverse: CO 27,9949, N<sub>2</sub> 28,0061, C<sub>2</sub>H<sub>4</sub> 28,0313. È su questo che lavora l'alta risoluzione (capitolo 11).</li>
 </ul>
 <p>Per gli <b>ioni</b> si toglie la massa dell'elettrone (0,00055) per ogni carica positiva: [M+H]<sup>+</sup> = M + 1,00728 (la massa del protone), M<sup>+•</sup> = M − 0,00055.</p>
-
 <h2>La regola dell'azoto</h2>
 <p>Gli elementi comuni delle molecole organiche hanno massa e valenza entrambe pari (C 12, valenza 4; O 16, valenza 2; S 32, valenza 2) o entrambe dispari (H 1, Cl 35, Br 79, valenza 1; P 31, valenza 3 o 5). L'azoto no: massa 14 pari, valenza 3 dispari. Ne segue:</p>
 <div class="box key"><b>Regola dell'azoto</b>
@@ -39,7 +37,6 @@
 </table>
 <div class="box warn"><b>Errore frequente</b>
 <p>Applicare la regola a [M+H]<sup>+</sup> come se fosse la molecola. In ESI un m/z <b>pari</b> indica un numero <b>dispari</b> di azoti, perché il protone aggiunge 1. Prima di usare la regola chiediti sempre: è M<sup>+•</sup>, [M+H]<sup>+</sup> o un frammento?</p></div>
-
 <h2>Anelli più doppi legami (RDB)</h2>
 <p>Per una formula C<sub>c</sub>H<sub>h</sub>N<sub>n</sub>O<sub>o</sub>X<sub>x</sub> (X = alogeni, contati come H; Si conta come C, P come N; O e S non contano):</p>
 <span class="eq">RDB = <i>c</i> − <span class="frac"><span><i>h</i> + <i>x</i></span><span>2</span></span> + <span class="frac"><span><i>n</i></span><span>2</span></span> + 1<span class="no">(13.1)</span></span>
@@ -49,7 +46,6 @@
 <li>RDB negativo o non coerente con il tipo di ione: la formula è sbagliata.</li>
 </ul>
 <p>Un RDB ≥ 4 con pochi H suggerisce un anello aromatico; un triplo legame vale 2, un C=O vale 1. Il valore guida la scelta delle strutture.</p>
-
 <h2>Gli isotopi a risoluzione unitaria</h2>
 <p>Ogni elemento ha isotopi con abbondanze naturali quasi costanti (IUPAC). Dal punto di vista dello spettro gli elementi si dividono in tre gruppi (McLafferty):</p>
 <table>
@@ -71,12 +67,10 @@
 <tr><td>Cl Br</td><td class="n">77 : 100 : 24</td></tr>
 </table>
 <p>I gruppi si combinano come prodotti di binomi: con n atomi di un elemento A+2 le intensità seguono i coefficienti di (a + b)<sup>n</sup>. Nel programma, clic destro su uno spettro → «Profilo isotopico di una formula» sovrappone il profilo calcolato a quello misurato. Nella Pratica il gioco «Indovina gli alogeni» allena proprio questo passo.</p>
-
 <h2>La regola del 13</h2>
 <p>Un modo sistematico per elencare le formule possibili di una massa nominale M (Bright e Chen, 1983): si divide M per 13 (la massa di CH).</p>
 <span class="eq"><span class="frac"><span>M</span><span>13</span></span> = <i>n</i> + <span class="frac"><span><i>r</i></span><span>13</span></span> &nbsp;⇒&nbsp; formula di base C<sub><i>n</i></sub>H<sub><i>n</i>+<i>r</i></sub>, &nbsp; RDB = <span class="frac"><span><i>n</i> − <i>r</i> + 2</span><span>2</span></span><span class="no">(13.3)</span></span>
 <p>Poi si aggiungono gli eteroatomi sostituendo gruppi di pari massa: <b>O</b> al posto di CH<sub>4</sub>; <b>N</b> al posto di CH<sub>2</sub>; <b>Cl</b> al posto di C<sub>2</sub>H<sub>11</sub>; <b>S</b> al posto di C<sub>2</sub>H<sub>8</sub>; un <b>C</b> al posto di H<sub>12</sub>. Esempio, M = 128: 128 = 9·13 + 11 → C<sub>9</sub>H<sub>20</sub> (RDB 0, il nonano); con un O: C<sub>8</sub>H<sub>16</sub>O (RDB 1, per esempio un ottanale o un ottanone); sostituendo H<sub>12</sub> con C: C<sub>10</sub>H<sub>8</sub> (RDB 7, il naftalene). Tre molecole diversissime con la stessa massa nominale: gli isotopi (M+1 ≈ 10% per C<sub>9</sub>, 11% per C<sub>10</sub>, 9% per C<sub>8</sub>…) e i frammenti decidono.</p>
-
 <h2>Ad alta risoluzione</h2>
 <p>Con una massa esatta misurata entro pochi ppm il numero di formule compatibili crolla, ma non si azzera: cresce rapidamente con la massa e con gli elementi ammessi.</p>
 <details class="poe"><summary>Prima di provare: quante formule CHNOSCl plausibili ha una molecola di massa 300,10 entro 5 ppm? E entro ±0,5 Da?</summary>
@@ -94,20 +88,14 @@
 <p>Massa nominale, pattern isotopico, regola dell'azoto e calcolo degli RDB per le formule candidate. A risoluzione unitaria un m/z individua una rosa di candidati: la formula finale si stabilisce integrando l'analisi degli isotopi con lo spettro MS2 e le evidenze contestuali.</p></div>
 <div class="box hr"><b>Alta risoluzione</b>
 <p>Massa entro 1-5 ppm, struttura isotopica fine, formule molecolari dei frammenti. Si raggiunge un'elevata confidenza analitica (formula univoca) e, mediante MS2 e banche dati, si perviene a strutture altamente probabili. Gli isomeri strutturali richiedono comunque conferme cromatografiche o standard.</p></div></div>
-
 <div class="box oral"><b>Concetti chiave e domande di ripasso</b>
 <p>Calcolare la massa nominale e monoisotopica di una formula; riconoscere gli alogeni da un cluster isotopico e stimare il numero di atomi di carbonio dal picco M+1; enunciare e applicare la regola dell'azoto (anche per [M+H]<sup>+</sup> e per i frammenti); calcolare il grado di insaturazione (RDB) e distinguere ioni a elettroni pari o dispari; applicare la regola del 13; spiegare il contributo della massa esatta e i limiti intrinseci nell'assegnazione degli isomeri.</p></div>
-
 <h2>Verifica</h2>
-<details class="q"><summary>Uno spettro EI mostra M<sup>+•</sup> a m/z 156 con un picco a 158 di intensità quasi uguale. Che cosa contiene la molecola?</summary>
-<p>Un atomo di bromo (100 : 97). M pari → nessun azoto o un numero pari. 156 − 79 = 77: C<sub>6</sub>H<sub>5</sub>Br, il bromobenzene (RDB = 6 − 3 + 1 = 4).</p></details>
-<details class="q"><summary>M<sup>+•</sup> = 100 (intensità 100), M+1 = 6,7. Quanti carboni? Proponi formule.</summary>
-<p>n<sub>C</sub> ≈ 6,7/1,1 ≈ 6. M pari: zero o due azoti. Con 6 C restano 100 − 72 = 28 unità: C<sub>6</sub>H<sub>12</sub>O (RDB 1: un chetone come il 2-esanone, un'aldeide, un alcol ciclico…). Se i carboni fossero 7 (M+1 ≈ 7,7%) sarebbe C<sub>7</sub>H<sub>16</sub> (RDB 0, un eptano): la differenza fra 6,7 e 7,7% è piccola, quindi conviene guardare anche i frammenti (un 43 e un 58 indicano il chetone, capitolo 15).</p></details>
+<details class="q"><summary>Uno spettro EI mostra M<sup>+•</sup> a m/z 156 con un picco a 158 di intensità quasi uguale. Che cosa contiene la molecola?</summary><p>Un atomo di bromo (100 : 97). M pari → nessun azoto o un numero pari. 156 − 79 = 77: C<sub>6</sub>H<sub>5</sub>Br, il bromobenzene (RDB = 6 − 3 + 1 = 4).</p></details>
+<details class="q"><summary>M<sup>+•</sup> = 100 (intensità 100), M+1 = 6,7. Quanti carboni? Proponi formule.</summary><p>n<sub>C</sub> ≈ 6,7/1,1 ≈ 6. M pari: zero o due azoti. Con 6 C restano 100 − 72 = 28 unità: C<sub>6</sub>H<sub>12</sub>O (RDB 1: un chetone come il 2-esanone, un'aldeide, un alcol ciclico…). Se i carboni fossero 7 (M+1 ≈ 7,7%) sarebbe C<sub>7</sub>H<sub>16</sub> (RDB 0, un eptano): la differenza fra 6,7 e 7,7% è piccola, quindi conviene guardare anche i frammenti (un 43 e un 58 indicano il chetone, capitolo 15).</p></details>
 <details class="q"><summary>In ESI+ un ione [M+H]<sup>+</sup> è a m/z 230. Quanti azoti può avere la molecola?</summary>
 <p>[M+H]<sup>+</sup> è a elettroni pari: m/z pari → numero dispari di azoti (1, 3, 5…). La molecola neutra ha massa 229, dispari, coerente.</p></details>
-<details class="q"><summary>Calcola l'RDB di C<sub>8</sub>H<sub>14</sub>ClN<sub>5</sub> e commenta.</summary>
-<p>8 − (14 + 1)/2 + 5/2 + 1 = 8 − 7,5 + 2,5 + 1 = 4: l'anello triazinico dell'atrazina (un anello + tre doppi legami C=N).</p></details>
-
+<details class="q"><summary>Calcola l'RDB di C<sub>8</sub>H<sub>14</sub>ClN<sub>5</sub> e commenta.</summary><p>8 − (14 + 1)/2 + 5/2 + 1 = 8 − 7,5 + 2,5 + 1 = 4: l'anello triazinico dell'atrazina (un anello + tre doppi legami C=N).</p></details>
 <h2>Per approfondire</h2>
 <ul class="refs">
 <li><span class="tag">libro</span>McLafferty F.W., Tureček F. <i>Interpretation of Mass Spectra</i>, 4ª ed., 1993: capitoli 2 (composizione elementare) e 3 (lo ione molecolare).</li>
