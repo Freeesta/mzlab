@@ -171,3 +171,125 @@ fn match_is_deterministic_and_obeys_its_parameters() {
     assert!(hits(&dir).get("hits").unwrap().arr().len() <= 1);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// An mzML of caffeine: one ion, [M+H]+ 195.08765 with its 13C and 2x13C peaks, a Gaussian peak at 3.0 min, and a flat noise floor.
+fn caffeine_mzml() -> Vec<u8> {
+    use mzlab_core::mzml::Spectrum;
+    use mzlab_core::mzmlwrite::{Header, MzmlWriter};
+    let mut w = MzmlWriter::new(
+        Vec::new(),
+        &Header {
+            run: "caffeine".into(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let n = 120;
+    w.open_spectra(n).unwrap();
+    for i in 0..n {
+        let rt = 0.5 + 0.05 * i as f64;
+        let a = 3.0e6 * (-0.5 * ((rt - 3.0) / 0.07f64).powi(2)).exp();
+        let mut peaks = vec![
+            (195.08765, a as f32),
+            (196.09100, (a * 0.101) as f32),
+            (197.09435, (a * 0.0065) as f32),
+            (150.0 + (i % 7) as f64, 2e3),
+        ];
+        peaks.retain(|p| p.1 > 100.0);
+        peaks.sort_by(|x, y| x.0.total_cmp(&y.0));
+        w.spectrum(&Spectrum {
+            index: i,
+            id: format!("scan={}", i + 1),
+            level: 1,
+            rt,
+            polarity: 1,
+            profile: false,
+            filter: "+ c ESI Full ms [100.000-400.000]".into(),
+            precursor: None,
+            mz: peaks.iter().map(|p| p.0).collect(),
+            intensity: peaks.iter().map(|p| p.1).collect(),
+            wide: None,
+        })
+        .unwrap();
+    }
+    w.close_spectra().unwrap();
+    w.finish().unwrap()
+}
+
+/// A MS2 spectrum of caffeine: the fragments of C8H10N4O2 and one peak no sub-formula explains.
+fn caffeine_mgf() -> String {
+    "BEGIN IONS\nTITLE=caf\nPEPMASS=195.08765\nCHARGE=1+\nIONMODE=Positive\n138.06619 1000\n110.07127 600\n83.06037 150\n123.05524 90\n163.5 400\nEND IONS\n".into()
+}
+
+fn formula_plan(ms2_alg: &str) -> String {
+    format!(
+        r#"{{"format":"mzflow/2","inputs":[{{"name":"caf.mzML","type":"mzml"}},{{"name":"caf.mgf","type":"spectra"}}],"steps":[
+        {{"id":"t","step":"features.table@1","in":{{"source":["file:caf.mzML"]}},"params":{{"polarity":1}}}},
+        {{"id":"f1","step":"formula.ms1@1","in":{{"features":"t.report","index":["file:caf.mzML"]}}}},
+        {{"id":"f2","step":"formula.ms2@1","in":{{"spectra":"file:caf.mgf","formulas":"f1.formulas"}},"algorithm":"{ms2_alg}"}}]}}"#
+    )
+}
+
+/// features.table -> formula.ms1 -> formula.ms2 on a synthetic caffeine file: the formula is among the candidates of the feature and explains the fragments.
+#[test]
+fn formula_chain_finds_the_formula_and_explains_the_fragments() {
+    let dir = fixture("formula");
+    std::fs::write(dir.join("caf.mzML"), caffeine_mzml()).unwrap();
+    std::fs::write(dir.join("caf.mgf"), caffeine_mgf()).unwrap();
+    for alg in ["subformula", "h_rearrangement"] {
+        let (run, prov) = crate::flow::run_plan(
+            formula_plan(alg).as_bytes(),
+            &dir,
+            &dir.join("work"),
+            1,
+            None,
+        )
+        .unwrap();
+        assert!(
+            run.skipped.is_empty() && !prov.contains("\"error\""),
+            "{prov}"
+        );
+        let f1 =
+            mzlab_core::json::parse(&std::fs::read(dir.join("work/f1.json")).unwrap()).unwrap();
+        let feats = f1.get("features").unwrap().arr();
+        assert_eq!(feats.len(), 1, "one feature");
+        let cands = feats[0]
+            .get("result")
+            .unwrap()
+            .get("candidates")
+            .unwrap()
+            .arr();
+        assert!(
+            cands
+                .iter()
+                .any(|c| c.get("neutral").and_then(|n| n.str()) == Some("C8H10N4O2")),
+            "{cands:?}"
+        );
+        let f2 =
+            mzlab_core::json::parse(&std::fs::read(dir.join("work/f2.json")).unwrap()).unwrap();
+        let sp = &f2.get("spectra").unwrap().arr()[0];
+        let c = sp
+            .get("candidates")
+            .unwrap()
+            .arr()
+            .iter()
+            .find(|c| c.get("formula").and_then(|n| n.str()) == Some("C8H10N4O2"))
+            .expect("candidate explains the precursor");
+        let frag = |m: f64| {
+            c.get("fragments")
+                .unwrap()
+                .arr()
+                .iter()
+                .find(|f| (f.get("mz").unwrap().f64().unwrap() - m).abs() < 1e-3)
+                .and_then(|f| f.get("formula").and_then(|x| x.str()).map(String::from))
+        };
+        assert_eq!(frag(138.06619).as_deref(), Some("C6H8N3O"), "{alg}");
+        assert_eq!(frag(110.07127).as_deref(), Some("C5H8N3"), "{alg}");
+        assert!(
+            frag(163.5).is_none(),
+            "{alg}: the odd peak stays unexplained"
+        );
+        assert_eq!(c.get("adduct").unwrap().str(), Some("[M+H]+"));
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}

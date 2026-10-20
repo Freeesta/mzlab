@@ -177,6 +177,34 @@ fn match_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     r.keep(out, DataType::Candidates)
 }
 
+fn all_inputs(r: &FileRunner, job: &Job, port: &str) -> Vec<PathBuf> {
+    let list = job
+        .inputs
+        .iter()
+        .filter(|(p, _)| p == port)
+        .flat_map(|(_, v)| v);
+    list.map(|a| r.path(a)).collect()
+}
+
+fn formula_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let text = if job.step.id == "formula.ms1" {
+        crate::flow_formula::ms1_text(
+            job,
+            &one_input(r, job, "features")?,
+            &all_inputs(r, job, "index"),
+        )?
+    } else {
+        crate::flow_formula::ms2_text(
+            job,
+            &one_input(r, job, "spectra")?,
+            &all_inputs(r, job, "formulas"),
+        )?
+    };
+    let out = r.work.join(format!("{}.json", job.instance.id));
+    std::fs::write(&out, text).map_err(io)?;
+    r.keep(out, DataType::Formulas)
+}
+
 impl Runner for FileRunner {
     fn run(&self, job: &Job) -> Result<Outcome> {
         if let Some(m) = self.meter {
@@ -187,6 +215,8 @@ impl Runner for FileRunner {
             "convert.mzml" => ("mzml", convert_job(self, job)?),
             "features.table" => ("report", table_job(self, job)?),
             "spectra.match" => ("hits", match_job(self, job)?),
+            "formula.ms1" => ("formulas", formula_job(self, job)?),
+            "formula.ms2" => ("formulas", formula_job(self, job)?),
             id => return Err(Error::new("err.flow.unknownStep").with("step", id)),
         };
         Ok(Outcome {

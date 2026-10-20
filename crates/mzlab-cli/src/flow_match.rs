@@ -20,7 +20,7 @@ fn io(e: std::io::Error) -> Error {
 }
 
 /// The spectra of a text file in any of the library formats.
-fn read_spectra(path: &Path) -> Result<Vec<Spectrum>> {
+pub(crate) fn read_spectra(path: &Path) -> Result<Vec<Spectrum>> {
     let bytes = std::fs::read(path).map_err(io)?;
     let name = path
         .file_name()
@@ -42,7 +42,7 @@ fn open_library(path: &Path) -> Result<Lib> {
     Library::open(bytes, CACHE_BYTES).map_err(|_| Error::new("err.flow.match.library"))
 }
 
-fn num(job: &Job, name: &str) -> f64 {
+pub(crate) fn num(job: &Job, name: &str) -> f64 {
     job.resolved
         .params
         .iter()
@@ -178,11 +178,7 @@ pub fn match_text(job: &Job, query: &Path, library: &Path) -> Result<String> {
         .raw(",\"hits\":[");
     let mut first = true;
     for (k, s) in read_spectra(query)?.iter().enumerate() {
-        let qid = if s.meta.accession.is_empty() {
-            format!("q{k}")
-        } else {
-            s.meta.accession.clone()
-        };
+        let qid = query_id(k, s);
         let Some(q) = Query::new(s.prec, s.pol, &s.mz, &s.it) else {
             continue;
         };
@@ -201,4 +197,13 @@ pub fn match_text(job: &Job, query: &Path, library: &Path) -> Result<String> {
     }
     o.raw("]}");
     Ok(o.0)
+}
+
+/// The identifier of the k-th query spectrum: its accession or title, else `q<k>`.
+pub(crate) fn query_id(k: usize, s: &Spectrum) -> String {
+    if s.meta.accession.is_empty() {
+        format!("q{k}")
+    } else {
+        s.meta.accession.clone()
+    }
 }

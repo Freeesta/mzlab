@@ -56,8 +56,12 @@ pub(super) fn ms1() -> Step {
     ];
     Step {
         ins: vec![
-            Port::new("features", DataType::Table, "Aligned feature table").requires(hr()),
-            Port::new("index", DataType::Mzidx, "Scan index (MS1 at the apex)").many(),
+            Port::new("features", DataType::Table, "Aligned feature table")
+                .accepts(&[DataType::Report])
+                .requires(hr()),
+            Port::new("index", DataType::Mzidx, "Scan index (MS1 at the apex)")
+                .many()
+                .accepts(&[DataType::Mzml]),
         ],
         outs: vec![Port::new("formulas", DataType::Formulas, "Ranked formulas per feature")],
         params,
@@ -68,7 +72,6 @@ pub(super) fn ms1() -> Step {
         },
         algorithms: vec![compose_isotopes()],
         default_algorithm: Some("compose_isotopes"),
-        per_item: true,
         errors: vec!["err.formulaId.param", "err.formulaId.finder", "err.comp.ion"],
         ..attributio_step(
             "formula.ms1",

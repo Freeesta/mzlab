@@ -18,6 +18,7 @@ They run in the `.wasm` `hr`, `interp` and `chem` with their ceilings written as
 - `step::core_steps()` (`step/core_steps.rs`): the descriptors of `import.raw`, `convert.mzml`, `index.mzidx`.
 - `mzlab_feat::steps::registry()` (`steps/mod.rs`, with `detect.rs` and `table.rs`): the ten descriptors in the order of the chain; the registry lives in `mzlab-feat` because `mzlab-core` cannot see the feature steps.
 
+- `formula.ms1` is not `per_item` (the table reads every file) and its ports accept `report` (the CSV of `features.table`) and `mzml` besides `table` and `mzidx`, the types the native runner passes.
 - `mzlab_feat::steps::attributio()` (`steps/ident.rs`, with `ident_spectra.rs`, `ident_formula.rs`, `ident_annot.rs`): the nine identification descriptors in the order of the chain, apart from `registry()` so that `steps-1.json` is unchanged; `Applicability` has `ms_levels` and `needs` (`internal_standards`, `ms2`, `blank`, `reference_sample`, `library`).
 - `mzlab_feat::steps::records::records()` and `records_json()`: the fields of the shared `candidates` and `annot` records with the struct they are read from; export `docs/schemi/records-1.json`.
 
