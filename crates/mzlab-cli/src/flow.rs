@@ -298,8 +298,15 @@ pub fn run_plan(
     let mut plan = parse(text)?;
     fill_inputs(&mut plan, dir)?;
     let reg = steps();
-    let plan = crate::flow_compare::expand(plan, &reg)?;
-    let problems = check(&plan, &reg, Platform::current());
+    // the comparisons are checked as written, then expanded and the whole plan is checked again
+    let mut problems = crate::flow_compare::check(&plan, &reg, Platform::current());
+    let plan = if problems.is_empty() {
+        let plan = crate::flow_compare::expand(plan, &reg)?;
+        problems = check(&plan, &reg, Platform::current());
+        plan
+    } else {
+        plan
+    };
     if !problems.is_empty() {
         let list: Vec<String> = problems
             .iter()

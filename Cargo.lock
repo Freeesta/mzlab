@@ -1999,6 +1999,7 @@ dependencies = [
  "mzlab-feat-wasm",
  "mzlab-lettori",
  "mzlab-lib",
+ "serde_json",
 ]
 
 [[package]]

@@ -10,6 +10,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 CASES = ROOT / "crates/mzlab-feat/tests/data/flow_check_cases.json"
+COMPARE_CASES = ROOT / "crates/mzlab-cli/tests/data/flow_compare_cases.json"
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
 
 
@@ -21,17 +22,26 @@ def node(script):
 
 def test_the_js_checker_gives_the_answers_of_the_rust_checker():
     cases = json.loads(CASES.read_text(encoding="utf-8"))
-    got = json.loads(node("flow_grafico_nodo.js"))
+    got = json.loads(node("flow_grafico_nodo.js"))["cases"]
     assert len(got) == len(cases) >= 10
     for case, g in zip(cases, got):
         assert g.get("parse_error") == case.get("parse_error"), case["name"]
         assert g.get("got") == case.get("expect"), case["name"]
 
 
+def test_the_js_checker_gives_the_answers_of_the_rust_checker_for_meta_compare():
+    # crates/mzlab-cli/src/flow_compare.rs `check` writes the answers (MZLAB_UPDATE_FLOW_CASES=1 cargo test -p mzlab-cli --lib the_shared_cases)
+    cases = json.loads(COMPARE_CASES.read_text(encoding="utf-8"))
+    got = json.loads(node("flow_grafico_nodo.js"))["compare"]
+    assert len(got) == len(cases) >= 10
+    for case, g in zip(cases, got):
+        assert g.get("got") == case["expect"], case["name"]
+
+
 def test_every_case_has_a_text():
     # the keys of the cases are the ones the page has a text for (flow-ui.js F.message)
     ui = (ROOT / "flow/lazy/flow-ui.js").read_text(encoding="utf-8")
-    for case in json.loads(CASES.read_text(encoding="utf-8")):
+    for case in json.loads(CASES.read_text(encoding="utf-8")) + json.loads(COMPARE_CASES.read_text(encoding="utf-8")):
         for key in [line.split("|")[2] for line in case.get("expect") or []] + [case.get("parse_error")]:
             assert key is None or f'"{key}"' in ui, key
 

@@ -1,0 +1,465 @@
+[
+  {
+    "expect": [],
+    "name": "a comparison of two algorithms with tolerances is valid",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "q.mgf",
+          "type": "spectra"
+        },
+        {
+          "name": "lib.msp",
+          "type": "library"
+        }
+      ],
+      "steps": [
+        {
+          "id": "cmp",
+          "in": {
+            "library": "file:lib.msp",
+            "query": "file:q.mgf"
+          },
+          "params": {
+            "mz_tolerance_ppm": 5,
+            "rt_tolerance_min": 0.2,
+            "step": "spectra.match@1",
+            "variants": [
+              {
+                "algorithm": "spectral_entropy"
+              },
+              {
+                "algorithm": "modified_cosine",
+                "label": "mod"
+              }
+            ]
+          },
+          "step": "meta.compare@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "lv|candidates|err.flow.ref.unknown|ref=cmp.comparison"
+    ],
+    "name": "a wire from a comparison is an unknown reference, as on the page",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "q.mgf",
+          "type": "spectra"
+        },
+        {
+          "name": "lib.msp",
+          "type": "library"
+        },
+        {
+          "name": "f.json",
+          "type": "formulas"
+        }
+      ],
+      "steps": [
+        {
+          "id": "cmp",
+          "in": {
+            "library": "file:lib.msp",
+            "query": "file:q.mgf"
+          },
+          "params": {
+            "step": "spectra.match@1",
+            "variants": [
+              {
+                "algorithm": "spectral_entropy"
+              },
+              {
+                "algorithm": "modified_cosine",
+                "label": "mod"
+              }
+            ]
+          },
+          "step": "meta.compare@1"
+        },
+        {
+          "id": "lv",
+          "in": {
+            "candidates": "cmp.comparison",
+            "formulas": "file:f.json"
+          },
+          "step": "annot.level@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "cmp||err.flow.step.unknown|step=nothing.here@1"
+    ],
+    "name": "the wrapped step is unknown",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "q.mgf",
+          "type": "spectra"
+        },
+        {
+          "name": "lib.msp",
+          "type": "library"
+        }
+      ],
+      "steps": [
+        {
+          "id": "cmp",
+          "in": {
+            "library": "file:lib.msp",
+            "query": "file:q.mgf"
+          },
+          "params": {
+            "step": "nothing.here@1",
+            "variants": [
+              {
+                "algorithm": "spectral_entropy"
+              },
+              {
+                "algorithm": "modified_cosine",
+                "label": "mod"
+              }
+            ]
+          },
+          "step": "meta.compare@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "cmp||err.flow.step.unknown|step="
+    ],
+    "name": "the wrapped step has no name",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "q.mgf",
+          "type": "spectra"
+        },
+        {
+          "name": "lib.msp",
+          "type": "library"
+        }
+      ],
+      "steps": [
+        {
+          "id": "cmp",
+          "in": {
+            "library": "file:lib.msp",
+            "query": "file:q.mgf"
+          },
+          "params": {
+            "variants": [
+              {
+                "algorithm": "spectral_entropy"
+              },
+              {
+                "algorithm": "modified_cosine",
+                "label": "mod"
+              }
+            ]
+          },
+          "step": "meta.compare@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "cmp||err.flow.step.version|step=spectra.match,version=2,available=1"
+    ],
+    "name": "the wrapped step has another version",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "q.mgf",
+          "type": "spectra"
+        },
+        {
+          "name": "lib.msp",
+          "type": "library"
+        }
+      ],
+      "steps": [
+        {
+          "id": "cmp",
+          "in": {
+            "library": "file:lib.msp",
+            "query": "file:q.mgf"
+          },
+          "params": {
+            "step": "spectra.match@2",
+            "variants": [
+              {
+                "algorithm": "spectral_entropy"
+              },
+              {
+                "algorithm": "modified_cosine",
+                "label": "mod"
+              }
+            ]
+          },
+          "step": "meta.compare@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "cmp||err.flow.compare.few|"
+    ],
+    "name": "a comparison of one variant",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "q.mgf",
+          "type": "spectra"
+        },
+        {
+          "name": "lib.msp",
+          "type": "library"
+        }
+      ],
+      "steps": [
+        {
+          "id": "cmp",
+          "in": {
+            "library": "file:lib.msp",
+            "query": "file:q.mgf"
+          },
+          "params": {
+            "step": "spectra.match@1",
+            "variants": [
+              {
+                "algorithm": "cosine"
+              }
+            ]
+          },
+          "step": "meta.compare@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "cmp||err.flow.compare.few|"
+    ],
+    "name": "a comparison with no variants",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "q.mgf",
+          "type": "spectra"
+        },
+        {
+          "name": "lib.msp",
+          "type": "library"
+        }
+      ],
+      "steps": [
+        {
+          "id": "cmp",
+          "in": {
+            "library": "file:lib.msp",
+            "query": "file:q.mgf"
+          },
+          "params": {
+            "step": "spectra.match@1"
+          },
+          "step": "meta.compare@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "cmp||err.flow.compare.sameVariant|",
+      "cmp||err.flow.compare.sameVariant|"
+    ],
+    "name": "two variants that differ only in the label, and a third",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "q.mgf",
+          "type": "spectra"
+        },
+        {
+          "name": "lib.msp",
+          "type": "library"
+        }
+      ],
+      "steps": [
+        {
+          "id": "cmp",
+          "in": {
+            "library": "file:lib.msp",
+            "query": "file:q.mgf"
+          },
+          "params": {
+            "step": "spectra.match@1",
+            "variants": [
+              {
+                "algorithm": "cosine"
+              },
+              {
+                "algorithm": "cosine",
+                "label": "again"
+              },
+              {
+                "algorithm": "cosine",
+                "label": "third"
+              }
+            ]
+          },
+          "step": "meta.compare@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [],
+    "name": "variants that differ in the preset or the parameters are different",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "q.mgf",
+          "type": "spectra"
+        },
+        {
+          "name": "lib.msp",
+          "type": "library"
+        }
+      ],
+      "steps": [
+        {
+          "id": "cmp",
+          "in": {
+            "library": "file:lib.msp",
+            "query": "file:q.mgf"
+          },
+          "params": {
+            "step": "spectra.match@1",
+            "variants": [
+              {
+                "algorithm": "cosine",
+                "params": {
+                  "top_n": 5
+                }
+              },
+              {
+                "algorithm": "cosine",
+                "label": "b",
+                "params": {
+                  "top_n": 10
+                }
+              },
+              {
+                "algorithm": "cosine",
+                "label": "c"
+              }
+            ]
+          },
+          "step": "meta.compare@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "cmp||err.flow.algorithm.unavailable|algorithm=centwave",
+      "cmp||err.flow.algorithm.unknown|algorithm=nope"
+    ],
+    "name": "an algorithm that is planned and one that does not exist",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "x.mzidx",
+          "type": "mzidx"
+        }
+      ],
+      "steps": [
+        {
+          "id": "cmp",
+          "in": {
+            "index": "file:x.mzidx"
+          },
+          "params": {
+            "step": "features.detect@1",
+            "variants": [
+              {
+                "algorithm": "masstrace"
+              },
+              {
+                "algorithm": "centwave",
+                "label": "b"
+              },
+              {
+                "algorithm": "nope",
+                "label": "c"
+              }
+            ]
+          },
+          "step": "meta.compare@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "zz||err.flow.step.unknown|step=nothing.here",
+      "cmp||err.flow.compare.few|"
+    ],
+    "name": "the problems of the comparison come after those of the other steps",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "q.mgf",
+          "type": "spectra"
+        },
+        {
+          "name": "lib.msp",
+          "type": "library"
+        }
+      ],
+      "steps": [
+        {
+          "id": "cmp",
+          "in": {
+            "library": "file:lib.msp",
+            "query": "file:q.mgf"
+          },
+          "params": {
+            "step": "spectra.match@1",
+            "variants": [
+              {
+                "algorithm": "cosine"
+              }
+            ]
+          },
+          "step": "meta.compare@1"
+        },
+        {
+          "id": "zz",
+          "step": "nothing.here@1"
+        }
+      ]
+    }
+  }
+]
