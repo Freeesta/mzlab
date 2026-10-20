@@ -30,7 +30,7 @@ try:
             tab("hdr"); pg.wait_for_function("document.querySelector('#hri-body').innerText.includes('ms level')", timeout=15000)
             t = body(); assert "Filtro" in t and "FTMS" in t and "Tutti i parametri" in t, t[:300]
             rt0 = pg.evaluate("[...document.querySelectorAll('#hri-body tr')].find(r=>r.innerText.startsWith('RT'))?.innerText")
-            pg.click("#hrbar [data-hb=next]"); pg.wait_for_timeout(1500); pg.wait_for_function("1")
+            pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(1500)
             rt1 = pg.evaluate("[...document.querySelectorAll('#hri-body tr')].find(r=>r.innerText.startsWith('RT'))?.innerText")
             assert rt0 and rt1 and rt0 != rt1, (rt0, rt1)
         step("tab 1: the header of the scan under the cursor, with every parameter of the file; it follows the next scan", hdr)

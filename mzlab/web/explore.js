@@ -134,6 +134,8 @@ function seqColor(u) {
   return "#" + A.map((v, k) => Math.round(v + (B[k] - v) * f).toString(16).padStart(2, "0")).join("");
 }
 const DASHES = [[], [6, 3], [2, 3], [10, 3, 2, 3]];
+/** The one back / forward arrow of the program (the same drawing as the file arrows of the header): a chevron. @param {number} d -1 = back, 1 = forward @param {number} [n] size in px */
+const chevron = (d, n = 16) => `<svg width="${n}" height="${n}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${d < 0 ? "M10 3L5 8l5 5" : "M6 3l5 5-5 5"}"/></svg>`;
 const LWX = () => PALS[UIP.pal].lw || 0;                      // extra line width (px) of the high contrast palette
 // line style of a file: solid, so that blanks and standards read as plain traces (neutral grey carries the distinction); with the colour-blind /
 // high-contrast palettes the files of the time scale are also told apart by line style (second code besides the colour)
