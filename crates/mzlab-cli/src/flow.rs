@@ -396,10 +396,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("index.mzidx", Exec::Made(crate::flow_base::index_job)),
     ("features.detect", Exec::Made(crate::flow_base::detect_job)),
     ("features.align", Exec::Made(crate::flow_base::align_job)),
-    (
-        "features.gapfill",
-        Exec::Made(crate::flow_base::gapfill_job),
-    ),
+    ("features.gapfill", Exec::Made(crate::flow_base::align_job)),
     (
         "features.table",
         Exec::File("report", crate::flow_base::table_job),
@@ -451,11 +448,13 @@ impl Runner for FileRunner {
             eprintln!("{line}");
         }
         let made = made?;
+        let mem = crate::flow_base::align_mem(self, job);
         Ok(Outcome {
             outputs: vec![(made.port.to_string(), made.artifact)],
             estimates: made.estimates,
             ms,
             heap_peak_bytes: self.meter.map(|m| (m.peak)()),
+            mem,
             cached,
         })
     }

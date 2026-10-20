@@ -11,7 +11,7 @@ use crate::flow_run::{fail, run_checked};
 use crate::Outcome;
 
 /// Runs `ready` (the checked, expanded form of `plan`) with the inputs `found` and writes the run folder `out`; the steps whose result is already in
-/// the cache of `out` are taken again, unless `fresh`.
+/// the cache of `out` are taken again, unless `fresh`; `budget_mb` fixes the memory of the alignment.
 pub(crate) fn write_run(
     plan: &Plan,
     ready: &Plan,
@@ -19,8 +19,7 @@ pub(crate) fn write_run(
     out: PathBuf,
     workers: usize,
     meter: Option<Meter>,
-    fresh: bool,
-    budget_mb: Option<f64>,
+    (fresh, budget_mb): (bool, Option<f64>),
 ) -> Outcome {
     if let Err(e) = std::fs::create_dir_all(&out) {
         return fail(

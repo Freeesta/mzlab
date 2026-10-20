@@ -447,16 +447,8 @@ pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
         };
     }
     let out = a.out.unwrap_or_default();
-    crate::flow_out::write_run(
-        &plan,
-        &ready,
-        found,
-        out,
-        a.workers,
-        meter,
-        a.fresh,
-        a.budget_mb,
-    )
+    let opts = (a.fresh, a.budget_mb);
+    crate::flow_out::write_run(&plan, &ready, found, out, a.workers, meter, opts)
 }
 
 /// The inputs of the plan that name no hash get it from the file `locate` gives; one that names a hash must match it.

@@ -124,6 +124,37 @@ pub fn manual(m: &Machine, mb: f64) -> Choice {
     }
 }
 
+/// RAM of this computer in MB, 0 when it cannot be read (no `/proc/meminfo` and no `sysctl`: Windows, WASI).
+#[cfg(not(target_arch = "wasm32"))]
+fn ram_mb() -> f64 {
+    if let Ok(t) = std::fs::read_to_string("/proc/meminfo") {
+        let kb = t.lines().find_map(|l| l.strip_prefix("MemTotal:"));
+        return kb
+            .and_then(|v| v.trim().trim_end_matches("kB").trim().parse::<f64>().ok())
+            .map_or(0.0, |kb| kb / 1024.0);
+    }
+    let out = std::process::Command::new("sysctl")
+        .args(["-n", "hw.memsize"])
+        .output();
+    out.ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .and_then(|t| t.trim().parse::<f64>().ok())
+        .map_or(0.0, |b| b / (1024.0 * 1024.0))
+}
+
+/// The automatic budget in MB of a native process (desktop app, `mzlab-cli`) on this computer.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn native_auto_mb() -> f64 {
+    let cores = std::thread::available_parallelism().map_or(0, |n| n.get() as u32);
+    let m = Machine {
+        native: true,
+        ram_mb: ram_mb(),
+        cores,
+        ..Default::default()
+    };
+    auto(&m).mb as f64
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -186,35 +217,4 @@ mod tests {
         let j = json(&c, &b, 100);
         assert!(j.starts_with("{\"mode\":\"manual\",\"mb\":128"));
     }
-}
-
-/// RAM of this computer in MB, 0 when it cannot be read (no `/proc/meminfo` and no `sysctl`: Windows, WASI).
-#[cfg(not(target_arch = "wasm32"))]
-fn ram_mb() -> f64 {
-    if let Ok(t) = std::fs::read_to_string("/proc/meminfo") {
-        let kb = t.lines().find_map(|l| l.strip_prefix("MemTotal:"));
-        return kb
-            .and_then(|v| v.trim().trim_end_matches("kB").trim().parse::<f64>().ok())
-            .map_or(0.0, |kb| kb / 1024.0);
-    }
-    let out = std::process::Command::new("sysctl")
-        .args(["-n", "hw.memsize"])
-        .output();
-    out.ok()
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .and_then(|t| t.trim().parse::<f64>().ok())
-        .map_or(0.0, |b| b / (1024.0 * 1024.0))
-}
-
-/// The automatic budget in MB of a native process (desktop app, `mzlab-cli`) on this computer.
-#[cfg(not(target_arch = "wasm32"))]
-pub fn native_auto_mb() -> f64 {
-    let cores = std::thread::available_parallelism().map_or(0, |n| n.get() as u32);
-    let m = Machine {
-        native: true,
-        ram_mb: ram_mb(),
-        cores,
-        ..Default::default()
-    };
-    auto(&m).mb as f64
 }

@@ -5,7 +5,7 @@
 use super::canon::{canonical, Resolved};
 use super::check::{check, Platform};
 use super::order::levels;
-use super::prov::{Activity, ErrorRecord};
+use super::prov::{Activity, ErrorRecord, Mem};
 use super::{Instance, Plan, Ref};
 use crate::error::{Error, Result};
 use crate::json::Value;
@@ -40,6 +40,8 @@ pub struct Outcome {
     pub estimates: Vec<(String, Value, Value)>,
     pub ms: f64,
     pub heap_peak_bytes: Option<u64>,
+    /// Memory the step asked for and the way it took (steps that estimate it).
+    pub mem: Option<Mem>,
     /// The output came from the cache key (`cache_key`), the step did not run.
     pub cached: bool,
 }
@@ -237,6 +239,7 @@ fn settle(
         generated: Vec::new(),
         ms: 0.0,
         heap_peak_bytes: None,
+        mem: None,
         error: None,
         cached: !results.is_empty(),
     };
@@ -264,6 +267,7 @@ fn settle(
         act.ms += o.ms;
         act.cached &= o.cached;
         act.heap_peak_bytes = act.heap_peak_bytes.max(o.heap_peak_bytes);
+        act.mem = merged(act.mem.take(), o.mem.clone());
         for (name, value, proof) in &o.estimates {
             if !act.estimates.iter().any(|e| e.0 == *name) {
                 act.estimates.push((name.clone(), proof.clone()));
@@ -276,6 +280,21 @@ fn settle(
     }
     crate::sortc::slice_by(&mut act.params, |a, b| a.0.cmp(&b.0));
     (act, Some(made))
+}
+
+/// The memory of two items of a per-item step: the larger estimate, and `slabs` if any item took it.
+fn merged(a: Option<Mem>, b: Option<Mem>) -> Option<Mem> {
+    match (a, b) {
+        (Some(a), Some(b)) => Some(Mem {
+            mb: a.mb.max(b.mb),
+            via: if a.via == "slabs" || b.via == "slabs" {
+                "slabs"
+            } else {
+                b.via
+            },
+        }),
+        (a, b) => a.or(b),
+    }
 }
 
 /// Runs `plan` with `workers` threads (1 = in order; the record is the same for any number). The plan is checked first; an instance that fails stops its
