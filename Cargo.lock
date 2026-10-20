@@ -1958,7 +1958,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-attributio-wasm"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "js-sys",
  "mzlab-core",
@@ -1969,7 +1969,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-chem"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "mzlab-core",
  "mzlab-feat",
@@ -1981,7 +1981,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-chem-wasm"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "getrandom 0.2.17",
  "mzlab-chem",
@@ -1991,7 +1991,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-cli"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "mzlab-chem",
  "mzlab-core",
@@ -2005,7 +2005,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-core"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "base64 0.23.1",
  "flate2",
@@ -2019,7 +2019,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-desktop"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "memmap2",
  "mzlab-chem",
@@ -2043,7 +2043,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-feat"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "libm",
  "mzlab-core",
@@ -2055,7 +2055,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-feat-grafo-wasm"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "mzlab-core",
  "mzlab-feat",
@@ -2064,7 +2064,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-feat-import-wasm"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "mzlab-core",
  "mzlab-feat",
@@ -2073,7 +2073,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-feat-table-wasm"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "js-sys",
  "mzlab-core",
@@ -2083,7 +2083,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-feat-wasm"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "js-sys",
  "mzlab-core",
@@ -2094,7 +2094,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-finder-lr-wasm"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "js-sys",
  "mzlab-core",
@@ -2106,7 +2106,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-lettori"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "base64 0.23.1",
  "flate2",
@@ -2117,7 +2117,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-lettori-wasm"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "js-sys",
  "mzlab-core",
@@ -2129,7 +2129,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-lib"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "mzlab-core",
  "ruzstd",
@@ -2138,7 +2138,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-lib-wasm"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "js-sys",
  "mzlab-lib",
@@ -2148,11 +2148,11 @@ dependencies = [
 
 [[package]]
 name = "mzlab-libro"
-version = "1.0.1"
+version = "1.0.0"
 
 [[package]]
 name = "mzlab-libro-wasm"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "mzlab-libro",
  "wasm-bindgen",
@@ -2160,7 +2160,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-mol"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -2169,7 +2169,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-target"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "mzlab-core",
  "serde",
@@ -2177,7 +2177,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-wasm"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "js-sys",
  "mzlab-core",
