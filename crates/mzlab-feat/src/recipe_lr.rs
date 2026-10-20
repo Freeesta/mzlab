@@ -64,17 +64,26 @@ impl Recipe {
             return Ok(base);
         };
         if index.hr1() {
-            let mut r = base;
-            // the minimum height follows the noise of the file (10 times its mode); an explicit value of the plan or of the panel replaces it later
-            if let Some((h, n)) = crate::params_height::estimated_min_height(index, si)? {
-                if h != r.detect.min_height {
-                    r.detect.min_height = h;
-                    r.min_height_basis = Some((n.mode, n.sigma));
-                }
-            }
-            return Ok(r);
+            return Ok(base);
         }
         let defect = estimate_defect(index, si, LR_FLOOR)?.unwrap_or(0.0);
         Ok(Recipe::lr(defect, LR_FLOOR, LR_MIN_HEIGHT))
+    }
+
+    /// `for_index` with the minimum height of a high-resolution file estimated from its noise (10 times the mode of the noise lump, to two figures, never
+    /// below the default; `min_height_basis` keeps the lump). Used by the Flow steps; an explicit value of the plan replaces it afterwards.
+    pub fn for_index_estimated<R: ReadAt>(index: &mut Index<R>) -> Result<Recipe> {
+        let mut r = Recipe::for_index(index)?;
+        if index.hr1() {
+            if let Some(si) = index.section_of(1, r.detect.polarity) {
+                if let Some((h, n)) = crate::params_height::estimated_min_height(index, si)? {
+                    if h != r.detect.min_height {
+                        r.detect.min_height = h;
+                        r.min_height_basis = Some((n.mode, n.sigma));
+                    }
+                }
+            }
+        }
+        Ok(r)
     }
 }

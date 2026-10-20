@@ -121,7 +121,7 @@ fn rebuild(lin: &Lineage) -> Result<Recipe> {
         .first
         .as_ref()
         .ok_or_else(|| Error::new("err.flow.lineage"))?;
-    let mut r = run::recipe_for("", &mut open(first)?)?;
+    let mut r = run::recipe_for_estimated("", &mut open(first)?)?;
     for (step, params) in &lin.layers {
         recipe_map::apply(&mut r, step, params)?;
     }
@@ -133,7 +133,7 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let input = &job.inputs[0].1[0];
     let path = r.path(input);
     let first = r.first_of_series(input).unwrap_or_else(|| path.clone());
-    let (recipe, estimates) = recipe(job, run::recipe_for("", &mut open(&first)?)?)?;
+    let (recipe, estimates) = recipe(job, run::recipe_for_estimated("", &mut open(&first)?)?)?;
     let name = r.source_name(input);
     let bytes = run::detect(&mut open(&path)?, &name, &recipe)?;
     let out = out_path(r, job, "mzfeatf");
