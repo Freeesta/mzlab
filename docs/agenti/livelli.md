@@ -14,19 +14,19 @@ Definizioni scelte da Federico. Valgono per Tabui (MS2 a bassa risoluzione), Att
 - **Tabui** (risoluzione unitaria): il programma non propone alcun livello di Schymanski (`level` null, colonna «Lvl» vuota) e mostra solo «Prev. N» della regola; il livello lo sceglie il chimico nella riga aperta (`TPDEC`, il 2b resta rifiutato senza livello proposto). `level_text` dice cosa reggono i dati: «Proposed formula» vuole un picco cromatografico vero, il progenitore che decade, un solo passo e una classe di ipotesi sopra il caso (`legacy/lr/summary.rs`, `docs/agenti/mzfinder-lr.md`). Una MS2 abbinata non cambia nulla (D6 = no).
 
 ## Livelli raggiungibili per risoluzione
-Principio: in bassa risoluzione (LR) il programma mostra solo i livelli che le prove possibili reggono, senza elencarli a priori; la regola resta `livelli.js` / `livelli-1.json` (parità `tests/livelli_casi.json`). La colonna «LR per definizione» deriva dalle definizioni di Schymanski; «LR oggi» da ciò che il codice emette.
+Principio: il programma non mostra mai un livello oltre il `tetto` del profilo; in bassa risoluzione (LR) tetto 4 (decisione D6 di Tabui), quindi L1-L3 non si emettono. La regola resta `livelli.js` / `livelli-1.json` (parità `tests/livelli_casi.json`).
 
-| Livello | Servono | LR per definizione | LR oggi |
-|---|---|---|---|
-| L1 | standard: massa, RT, MS2 | sì (standard misurato sullo stesso strumento) | no (profilo `lr` senza `standard`) |
-| L2a | MS2 sperimentale ad alta risoluzione + libreria | no (spettro HR) | no |
-| L2b | frammenti diagnostici / in silico / contesto, deciso dal chimico | solo con frammenti diagnostici misurati | no |
-| L3a/L3b | candidati posizionali o classe + MS2 o libreria | sì, come «tentativo» (libreria MS2 a massa nominale) | no (tetto 4) |
-| L4 | formula univoca | solo se l'accuratezza di massa la rende univoca: a massa nominale è un candidato | sì (tetto `lr`: formula nominale unica) |
-| L5 | massa esatta | massa nominale | sì (senza prove) |
-| L0 | rilevata, nessuna annotazione | sì | sì |
+| Livello | Servono | Emesso in LR |
+|---|---|---|
+| L1 | standard: massa, RT, MS2 | no (profilo `lr` senza `standard`, sopra il tetto) |
+| L2a | MS2 sperimentale ad alta risoluzione + libreria | no (spettro HR) |
+| L2b | frammenti diagnostici / in silico / contesto, deciso dal chimico | no (sopra il tetto) |
+| L3a/L3b | candidati posizionali o classe + MS2 o libreria | no (sopra il tetto) |
+| L4 | formula univoca | sì: la formula nominale basta a spiegare lo ione |
+| L5 | massa esatta | sì (senza prove) |
+| L0 | rilevata, nessuna annotazione | sì |
 
-Le righe «per definizione» ≠ «oggi» sono il lavoro dei livelli automatici; Tabui emette `level` null anche dove la tabella dice sì.
+Tabui emette `level` null anche dove la tabella dice sì: il livello lo sceglie il chimico (`TPDEC`).
 
 ## Due scale, due etichette
 - Scala di Schymanski: etichetta «L» + livello, sottolivello in minuscolo («L2a», «L3b»); in JS `LIVELLI.tag(lv)`, classi colore `.lv-2a`, `.lv-3a`, `.lv-3b`… (variabili `--lv*` in `app.css`). Nelle esportazioni (CSV, JSON) i valori restano senza «L» (`2a`, `3b`).
