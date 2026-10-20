@@ -1,0 +1,79 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "corsa/1",
+ "title": "corsa/1: the report of one run of a workflow plan",
+ "description": "Written by `mzlab-cli flow report RUNDIR` (code: crates/mzlab-core/src/flow/corsa.rs) from the `prov/1` record and the files beside it. Inputs, lists and steps come from `prov/1`; `levels` counts the rows of the `annot/1` files (rows with `auto: false` apart, all others `auto`); `report` is the `report/1` of the table, as it was written. No verdicts.",
+ "type": "object",
+ "required": ["schema", "engine", "inputs", "lists", "steps", "total_ms", "levels"],
+ "properties": {
+  "schema": {"const": "corsa/1"},
+  "engine": {
+   "type": "object",
+   "required": ["name", "version"],
+   "properties": {
+    "name": {"type": "string"},
+    "version": {"type": "string"},
+    "commit": {"type": "string"},
+    "platform": {"enum": ["wasm", "native"]}
+   }
+  },
+  "plan_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+  "inputs": {"type": "array", "items": {"$ref": "#/$defs/file"}},
+  "lists": {"type": "array", "items": {"$ref": "#/$defs/file"}},
+  "steps": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["instance", "step", "status", "ms", "params_sha256", "params"],
+    "properties": {
+     "instance": {"type": "string"},
+     "step": {"type": "string"},
+     "algorithm": {"type": "string"},
+     "preset": {"type": "string"},
+     "status": {"enum": ["ok", "cached", "error"]},
+     "error_key": {"type": "string"},
+     "ms": {"type": "number", "minimum": 0},
+     "params_sha256": {"type": "string"},
+     "params": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "required": ["name", "value", "state"],
+       "properties": {
+        "name": {"type": "string"},
+        "value": {},
+        "state": {"enum": ["estimated", "fixed"]},
+        "proof": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "total_ms": {"type": "number", "minimum": 0},
+  "levels": {
+   "type": "object",
+   "required": ["files", "rows", "auto", "other"],
+   "properties": {
+    "files": {"type": "integer", "minimum": 0},
+    "rows": {"type": "integer", "minimum": 0},
+    "auto": {"$ref": "#/$defs/counts"},
+    "other": {"$ref": "#/$defs/counts"}
+   }
+  },
+  "report": {"type": "object", "required": ["schema"], "properties": {"schema": {"const": "report/1"}}}
+ },
+ "$defs": {
+  "file": {
+   "type": "object",
+   "required": ["name", "bytes", "sha256", "type"],
+   "properties": {
+    "name": {"type": "string"},
+    "bytes": {"type": "integer", "minimum": 0},
+    "sha256": {"type": "string"},
+    "type": {"type": "string"}
+   }
+  },
+  "counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 1}}
+ }
+}
