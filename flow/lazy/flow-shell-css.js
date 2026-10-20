@@ -5,7 +5,7 @@
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
   const CSS = `
-.fl.flx{display:flex;flex-direction:column;gap:8px;min-width:0;padding:0}.flx *{box-sizing:border-box}
+.flw.flx{display:flex;flex-direction:column;gap:8px;min-width:0;padding:0}.flx *{box-sizing:border-box}
 .flx .flx-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.flx .flx-bar h2{margin:0;font-size:16px;margin-right:4px}
 .flx .flx-seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.flx .flx-seg button{border:0;background:var(--panel);color:var(--ink);min-height:28px;padding:2px 12px;cursor:pointer}
 .flx .flx-seg button[aria-pressed=true]{background:var(--accent);color:var(--bg)}.flx .flx-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
