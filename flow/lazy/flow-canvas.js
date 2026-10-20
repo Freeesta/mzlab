@@ -37,7 +37,7 @@
     };
     const fit = () => {
       const w = view.clientWidth || 800, h = view.clientHeight || 500;
-      v.k = Math.min(1, Math.max(0.3, Math.min(w / size.width, h / size.height))); v.x = Math.max(0, (w - size.width * v.k) / 2); v.y = Math.max(0, (h - size.height * v.k) / 2); apply(true);
+      v.k = Math.min(1, Math.max(0.3, Math.min(w / size.width, h / size.height))); v.x = Math.max(0, (w - size.width * v.k) / 2); v.y = Math.max(0, Math.min(48, (h - size.height * v.k) / 2)); apply(true);
     };
     const pan = (/** @type {number} */ dx, /** @type {number} */ dy) => { v.x += dx; v.y += dy; apply(false); };
     view.addEventListener("keydown", e => {
