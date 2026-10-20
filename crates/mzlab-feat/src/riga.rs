@@ -83,6 +83,7 @@ pub fn row(t: &Aligned, s: &[Sample], id: u32) -> Result<String> {
         None => o.raw("null"),
     };
     write_ident(&mut o, t, r);
+    write_family(&mut o, t, r);
     write_cells(&mut o, t, s, r);
     Ok(o.0)
 }
@@ -111,6 +112,31 @@ fn write_quality(o: &mut Out, q: Option<&RowQ>) {
         }
         None => o.raw("null"),
     };
+}
+
+/// `"family":{size, members}` (`null` in "per ion" mode): the ions the row is made of, the reference ion first, with the role they have most often.
+fn write_family(o: &mut Out, t: &Aligned, r: usize) {
+    o.raw(",\"family\":");
+    if t.member_start.is_empty() {
+        o.raw("null");
+        return;
+    }
+    o.raw("{\"size\":")
+        .int(t.family_size(r) as i64)
+        .raw(",\"members\":[");
+    for (k, m) in t.members(r).enumerate() {
+        if k > 0 {
+            o.raw(",");
+        }
+        o.raw("{\"mz\":")
+            .num(t.member_mz[m])
+            .raw(",\"rt\":")
+            .num(f64::from(t.member_rt[m]))
+            .raw(",\"role\":")
+            .str(crate::famrecord::role_name(t.member_role[m]))
+            .raw("}");
+    }
+    o.raw("]}");
 }
 
 /// `"ident":{...}` (`null` when the table has no identity).
