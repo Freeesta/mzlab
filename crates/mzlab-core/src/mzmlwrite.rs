@@ -461,3 +461,5 @@ mod indice;
 mod tests;
 #[cfg(test)]
 mod tests_indice;
+#[cfg(test)]
+mod tests_xsd;
