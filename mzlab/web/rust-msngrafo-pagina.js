@@ -5,7 +5,7 @@
 /**
  * @param {{ slots: any[], rpc: (msg: any) => Promise<any>, stats: { rust: number } }} c
  * @param {number} k @param {string} search the query string of the request @param {boolean} [esporta] the spectra as text (api/msn_grafo/export)
- * @returns {Promise<{ status: number, text: string } | null>}
+ * @returns {Promise<{ status: number, text: string, type?: string } | null>}
  */
 export async function grafoRoute({ slots, rpc, stats }, k, search, esporta = false) {
   const s = slots[k];
