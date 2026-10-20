@@ -211,3 +211,36 @@ fn i_cromatogrammi_numpress_si_leggono() {
     assert_eq!(c.time.len(), scan.len());
     assert!((c.time[1] - 0.75).abs() < 1e-3);
 }
+
+/// `convert.mzml` form (`indexedmzML`): reading it back gives the same scans as reading the plain mzML written from the same reader.
+#[test]
+fn the_indexed_mzml_of_the_convert_step_reads_back_like_the_plain_one() {
+    use mzlab_core::lettori_mzml;
+    use mzlab_core::mzmlwrite::Opzioni;
+    let mut src = apri(mzml_di(
+        &scansioni(),
+        Cod::Np {
+            intensita: Np::Slof,
+            zlib: true,
+        },
+        None,
+    ));
+    // this module opens an mzML only when it holds numpress arrays
+    let np = Opzioni {
+        numpress: true,
+        ..Opzioni::default()
+    };
+    let plain = lettori_mzml::scrivi_con(&mut *src, 0, Vec::new(), &mut |_, _| {}, np).unwrap();
+    let indexed =
+        lettori_mzml::scrivi_indicizzato(&mut *src, 0, Vec::new(), &mut |_, _| {}, np, &[])
+            .unwrap();
+    assert!(
+        indexed.starts_with(b"<?xml") && String::from_utf8_lossy(&indexed).contains("<indexedmzML")
+    );
+    let (mut a, mut b) = (apri(plain), apri(indexed));
+    assert_eq!(a.indice(0).unwrap().len(), b.indice(0).unwrap().len());
+    for k in 0..a.indice(0).unwrap().len() {
+        let (x, y) = (a.scansione(0, k).unwrap(), b.scansione(0, k).unwrap());
+        assert!(x.mz == y.mz && x.intensity == y.intensity && x.rt == y.rt && x.id == y.id);
+    }
+}

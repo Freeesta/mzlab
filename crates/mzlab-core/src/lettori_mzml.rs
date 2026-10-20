@@ -3,7 +3,7 @@ use std::io::Write;
 
 use crate::error::{Error, Result};
 use crate::lettori::Lettore;
-use crate::mzmlwrite::{Header, MzmlWriter, Opzioni};
+use crate::mzmlwrite::{Header, MzmlWriter, Opzioni, ProcStep};
 
 /// The header when the reader gives none: the run is the sample, the program is mzLab.
 fn semplice(l: &dyn Lettore, c: usize) -> Header {
@@ -46,10 +46,41 @@ pub fn scrivi_con<W: Write>(
     progress: &mut dyn FnMut(usize, usize),
     opz: Opzioni,
 ) -> Result<W> {
+    scrivi_in(l, c, out, progress, opz, None)
+}
+
+/// The mzML of the `convert.mzml` step: `indexedmzML` (PSI-MS 4.2.6, offsets, SHA-1 checksum) with one `processingMethod` per entry of `steps`
+/// after the conversion. The spectra and chromatograms are those of `scrivi_con`.
+pub fn scrivi_indicizzato<W: Write>(
+    l: &mut dyn Lettore,
+    c: usize,
+    out: W,
+    progress: &mut dyn FnMut(usize, usize),
+    opz: Opzioni,
+    steps: &[ProcStep],
+) -> Result<W> {
+    scrivi_in(l, c, out, progress, opz, Some(steps))
+}
+
+fn scrivi_in<W: Write>(
+    l: &mut dyn Lettore,
+    c: usize,
+    out: W,
+    progress: &mut dyn FnMut(usize, usize),
+    opz: Opzioni,
+    indexed: Option<&[ProcStep]>,
+) -> Result<W> {
     if c >= l.campioni().len() {
         return Err(Error::new("error.badIndex").with("c", c));
     }
-    let mut w = MzmlWriter::con_opzioni(out, &testata(l, c)?, opz)?;
+    let mut h = testata(l, c)?;
+    let mut w = match indexed {
+        Some(steps) => {
+            h.steps = steps.to_vec();
+            MzmlWriter::indicizzato(out, &h, opz)?
+        }
+        None => MzmlWriter::con_opzioni(out, &h, opz)?,
+    };
     let n = l.indice(c)?.len();
     if n > 0 {
         w.open_spectra(n)?;

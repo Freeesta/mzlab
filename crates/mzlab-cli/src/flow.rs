@@ -128,7 +128,14 @@ fn convert_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
         job.item.unwrap_or(0)
     ));
     let w = BufWriter::new(File::create(&out).map_err(io)?);
-    mzlab_core::lettori_mzml::scrivi(&mut *reader, 0, w, &mut |_, _| {})?;
+    mzlab_core::lettori_mzml::scrivi_indicizzato(
+        &mut *reader,
+        0,
+        w,
+        &mut |_, _| {},
+        mzlab_core::mzmlwrite::Opzioni::default(),
+        &[],
+    )?;
     r.keep(out, DataType::Mzml)
 }
 
