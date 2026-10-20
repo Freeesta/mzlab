@@ -1,0 +1,4 @@
+# sha256 of the canonical DOM (tools/libro/dom.py) of each chapter as it was before the Markdown import; delete a line when the chapter is deliberately edited.
+01-tp.html 4fccf55473372f4cedf2e53b57cf65d124427fb360583b2ebc865831250d82df
+08-vuoto.html 9e82942cc58bc6d19e5fc715706c4bccd00100c99b40d1e4cbe06a60cca3fea3
+17-origine.html 2484e48fed9fa311a5083c8e45ad10161a4d7f9eed8f65efa7862d905a429052

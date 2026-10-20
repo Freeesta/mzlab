@@ -1,2 +1,5 @@
 # Chapters (file names) where a raw ```html block is allowed: the ones imported from the old Teoria HTML.
 # New chapters never use it; remove a name here once its chapter no longer needs the block.
+08-vuoto.md
+01-tp.md
+17-origine.md
