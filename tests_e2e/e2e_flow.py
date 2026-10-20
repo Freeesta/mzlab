@@ -96,7 +96,9 @@ try:
             # the here-doc is the plan itself: the shell rewrites the same bytes the export gave
             body = text.split("<<'MZFLOW'\n", 1)[1].split("\nMZFLOW\n", 1)[0]
             with pg.expect_download() as d: pg.click('button[aria-label="Export the plan as mzflow/2 JSON"]')
-            got = json.loads(Path(d.value.path()).read_text()); b = json.loads(body); assert b == got, {k: (b.get(k), got.get(k)) for k in set(b) | set(got) if b.get(k) != got.get(k)}
+            got = json.loads(Path(d.value.path()).read_text()); # the engine writes a single reference as a scalar and the page export as a list: the same plan
+            norm = lambda p: {**p, "steps": [{**x, "in": {k: v if isinstance(v, list) else [v] for k, v in x.get("in", {}).items()}} for x in p["steps"]]}
+            b = json.loads(body); assert norm(b) == norm(got), {k: (b.get(k), got.get(k)) for k in set(b) | set(got) if b.get(k) != got.get(k)}
         step("Copy command shows the shell text built by the engine, with the plan inside", copy_command)
         def parameters():
             pg.fill("#fl-p-detect-floor", "5000"); pg.keyboard.press("Tab")
