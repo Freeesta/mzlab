@@ -278,7 +278,8 @@ html .clh[hidden]{display:none!important}
 dialog{border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);padding:14px 16px;max-width:520px}dialog::backdrop{background:rgba(60,45,10,.35)}
 dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justify-content:flex-end}
 .hint{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:4px;padding:6px 10px;margin-bottom:10px;color:var(--muted)}
-#v-draw{display:grid;grid-template-columns:1fr 330px;gap:10px;padding:10px 14px}@media (max-width:1000px){#v-draw{grid-template-columns:1fr}}@media (pointer:coarse) and (max-width:1500px){#v-draw{grid-template-columns:1fr}}   /* tablet: the editor takes the whole width (its top toolbar can be larger), the cards go below */
+#v-draw{display:grid;grid-template-columns:1fr 330px;gap:0;padding:0}/* the cards column is as tall as the editor and scrolls on its own; stacked layouts below let it flow */
+#v-draw aside{padding:10px 14px;box-sizing:border-box;position:sticky;top:var(--hh,48px);height:calc(100vh - var(--hh,48px));overflow:auto;border-left:1px solid var(--line)}@media (max-width:1000px){#v-draw{grid-template-columns:1fr}#v-draw aside{position:static;height:auto;border-left:0}}@media (pointer:coarse) and (max-width:1500px){#v-draw{grid-template-columns:1fr}#v-draw aside{position:static;height:auto;border-left:0}}   /* tablet: the editor takes the whole width (its top toolbar can be larger), the cards go below */
 /* two-finger swipe to the right on the trackpad must not go back in the browser history while drawing */
 html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-behavior:contain}
 #v-draw.noside{grid-template-columns:1fr}#v-draw.noside aside{display:none}#side-toggle{display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:4px 10px 4px 8px;border:1px solid var(--muted);border-radius:999px;background:var(--panel);color:var(--ink);font-size:13px;cursor:pointer}#side-toggle:hover{background:var(--soft);border-color:var(--accent)}#side-toggle .ti{display:inline-flex;color:var(--accent)}#side-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:1px}#side-row{text-align:right;margin-bottom:6px}#side-corner{position:absolute;top:6px;right:8px;z-index:2}#side-toggle.ico .tl{display:none}#side-toggle.ico{padding:4px 8px}
@@ -287,7 +288,8 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 #v-theory{padding:0}#tframe{display:block;width:100%;height:calc(100vh - 52px);border:0;background:var(--bg)}
 #busybar{position:fixed;left:0;right:0;top:0;height:3px;z-index:60;overflow:hidden;background:transparent}#busybar[hidden]{display:none}#busybar i{display:block;height:100%;width:30%;background:var(--accent);animation:busyslide 1.2s ease-in-out infinite}@keyframes busyslide{from{transform:translateX(-100%)}to{transform:translateX(340%)}}@media (prefers-reduced-motion:reduce){#busybar i{animation:none;width:100%}}:root[data-a11y-reduce] #busybar i{animation:none;width:100%}
 #kload{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;font-size:15px;z-index:1;pointer-events:none}#kld-dots span{display:inline-block;width:5px;visibility:hidden}
-#kframe{width:100%;height:max(calc(100vh - var(--hh,48px) - 24px),700px);min-height:520px;border:1px solid var(--line);border-radius:6px;background:#fff}
+/* the editor fills the page under the header: edge to edge, down to the window bottom */
+#kframe{display:block;width:100%;height:calc(100vh - var(--hh,48px));min-height:420px;border:0;border-radius:0;background:#fff}
 .sm{font-size:12px}
 #refdlg{max-width:min(1100px,96vw);width:96vw;max-height:92vh}#refbody{max-height:80vh;overflow:auto;margin:-3px;padding:3px}#refdlg h4{margin:12px 0 4px}
 #reftitle{margin:0;font-size:16px}
