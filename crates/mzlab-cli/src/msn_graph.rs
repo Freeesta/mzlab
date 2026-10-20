@@ -29,7 +29,8 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
   --riassunto          one line of numbers instead of the graph
   --export FORMAT      the spectra of the tree as csv, mgf or msp text instead of the graph
   --pulito             with --export: only the peaks a node of the graph explains
-  --nodo ID            with --export: only the spectra of that node of the tree
+  --nodo ID            with --export: nK = the spectra of which node nK of the graph is the precursor; msn:<id> or <id> = those of that node of
+                       the tree; tutto = all
   --out PATH           write there instead of the standard output";
 
 pub struct Args {

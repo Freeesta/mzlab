@@ -35,7 +35,9 @@ pub fn da_richiesta_export(
 
 /// m/z of the precursor of a spectrum (0 for an MS1-less root).
 fn precursore(g: &Grafo, s: &SpettroG) -> f64 {
-    s.precursore.map_or(0.0, |n| g.nodi[n].mz)
+    s.precursore
+        .and_then(|n| g.nodi.get(n))
+        .map_or(0.0, |n| n.mz)
 }
 
 fn picchi(s: &SpettroG, pulito: bool) -> impl Iterator<Item = &(f64, f64, Option<usize>)> {
@@ -80,13 +82,21 @@ fn blocchi(g: &Grafo, sel: &[&SpettroG], pulito: bool, mgf: bool) -> String {
     t
 }
 
-/// The text of the export; `nodo` keeps the spectra of that node of the tree (`SpettroG::albero`).
+/// Whether a spectrum is kept by `nodo`: `nK` (a node of the graph) = the spectra of which it is the precursor; `msn:<id>` or a bare tree id =
+/// the spectra of that node of the tree (`SpettroG::albero`); `tutto`, empty or absent = all.
+fn voluto(s: &SpettroG, nodo: Option<&str>) -> bool {
+    let Some(n) = nodo.filter(|n| !n.is_empty() && *n != "tutto") else {
+        return true;
+    };
+    if let Some(k) = n.strip_prefix('n').and_then(|k| k.parse::<usize>().ok()) {
+        return s.precursore == Some(k);
+    }
+    s.albero == n.strip_prefix("msn:").unwrap_or(n)
+}
+
+/// The text of the export; `nodo` as in `voluto`.
 pub fn esporta(g: &Grafo, formato: Formato, pulito: bool, nodo: Option<&str>) -> String {
-    let sel: Vec<&SpettroG> = g
-        .spettri
-        .iter()
-        .filter(|s| nodo.is_none_or(|n| s.albero == n))
-        .collect();
+    let sel: Vec<&SpettroG> = g.spettri.iter().filter(|s| voluto(s, nodo)).collect();
     match formato {
         Formato::Csv => csv(g, &sel, pulito),
         Formato::Mgf => blocchi(g, &sel, pulito, true),
@@ -101,7 +111,7 @@ mod tests {
     fn grafo() -> Grafo {
         let mut g = Grafo::default();
         g.spettri.push(SpettroG {
-            albero: "n1".into(),
+            albero: "195>138".into(),
             livello: 2,
             att: "hcd".into(),
             ce: 30.0,
@@ -122,6 +132,29 @@ mod tests {
         let msp = esporta(&g, Formato::Msp, true, None);
         assert!(msp.contains("Num Peaks: 1"));
         assert!(esporta(&g, Formato::Csv, false, Some("zz")).lines().count() == 1);
+    }
+
+    #[test]
+    fn the_node_is_a_graph_id_a_tree_id_or_everything() {
+        let mut g = grafo();
+        g.spettri[0].precursore = Some(2);
+        let righe = |n: Option<&str>| esporta(&g, Formato::Csv, false, n).lines().count();
+        // graph node: the spectra of which it is the precursor
+        assert_eq!((righe(Some("n2")), righe(Some("n1"))), (3, 1));
+        // tree node, bare or as `msn:<id>`
+        assert_eq!(
+            (
+                righe(Some("195>138")),
+                righe(Some("msn:195>138")),
+                righe(Some("msn:zz"))
+            ),
+            (3, 3, 1)
+        );
+        // everything
+        assert_eq!(
+            (righe(Some("tutto")), righe(Some("")), righe(None)),
+            (3, 3, 3)
+        );
     }
 
     #[test]
