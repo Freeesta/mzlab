@@ -178,44 +178,8 @@ pub fn assess(e: &Evidence, name: &str) -> Result<Assessment> {
         analog: None,
         gates: Vec::new(),
     };
-    if let Some(best) = list.first() {
-        let lead = margin(&list, &score);
-        let vals = |f: &str| match f {
-            "nScans" => Some(e.n_scans),
-            "margin" => lead,
-            f => field(best, f),
-        };
-        res.gates = p
-            .get("cancelli")
-            .map(Value::arr)
-            .unwrap_or(&[])
-            .iter()
-            .map(|g| gate(&p, g, &vals))
-            .collect();
-        let bad: Vec<&GateResult> = res.gates.iter().filter(|g| !g.ok).collect();
-        let source_bad = bad.iter().any(|g| g.role == "source");
-        if bad.is_empty() {
-            let cap = p.get("tetto").and_then(Value::str);
-            res.level = cap.unwrap_or("2a").to_string();
-            res.why = if cap.is_some() { "tetto" } else { "2a" };
-            return Ok(res);
-        }
-        if !source_bad {
-            res.level = "3a".into();
-            res.why = "confirm";
-            return Ok(res);
-        }
-        let prov = p.get("provvisorio");
-        let from = prov.and_then(|v| v.get("campo")).and_then(Value::str);
-        let at = prov
-            .and_then(|v| v.get("soglia"))
-            .and_then(Value::str)
-            .map_or(f64::NAN, |s| threshold(&p, s));
-        if from.and_then(|f| field(best, f)).is_some_and(|v| v >= at) {
-            res.level = "3a".into();
-            res.why = "provvisorio";
-            return Ok(res);
-        }
+    if by_best(&p, e, &list, &score, &mut res) {
+        return Ok(res);
     }
     let min = threshold(&p, "analogo_mcos_min");
     let top = e.analogs.iter().fold(None, |t: Option<&Analog>, a| {
@@ -234,6 +198,50 @@ pub fn assess(e: &Evidence, name: &str) -> Result<Assessment> {
     }
     res.why = if res.best.is_some() { "none" } else { "empty" };
     Ok(res)
+}
+
+/// The level the best library hit reaches on its own: true when it decides (2a, the cap, 3a), with the gates in `res`.
+fn by_best(p: &Value, e: &Evidence, list: &[Cand], score: &str, res: &mut Assessment) -> bool {
+    let Some(best) = list.first() else {
+        return false;
+    };
+    let lead = margin(list, score);
+    let vals = |f: &str| match f {
+        "nScans" => Some(e.n_scans),
+        "margin" => lead,
+        f => field(best, f),
+    };
+    res.gates = p
+        .get("cancelli")
+        .map(Value::arr)
+        .unwrap_or(&[])
+        .iter()
+        .map(|g| gate(p, g, &vals))
+        .collect();
+    let bad: Vec<&GateResult> = res.gates.iter().filter(|g| !g.ok).collect();
+    if bad.is_empty() {
+        let cap = p.get("tetto").and_then(Value::str);
+        res.level = cap.unwrap_or("2a").to_string();
+        res.why = if cap.is_some() { "tetto" } else { "2a" };
+        return true;
+    }
+    if !bad.iter().any(|g| g.role == "source") {
+        res.level = "3a".into();
+        res.why = "confirm";
+        return true;
+    }
+    let prov = p.get("provvisorio");
+    let from = prov.and_then(|v| v.get("campo")).and_then(Value::str);
+    let at = prov
+        .and_then(|v| v.get("soglia"))
+        .and_then(Value::str)
+        .map_or(f64::NAN, |s| threshold(p, s));
+    let provisional = from.and_then(|f| field(best, f)).is_some_and(|v| v >= at);
+    if provisional {
+        res.level = "3a".into();
+        res.why = "provvisorio";
+    }
+    provisional
 }
 
 fn read(path: &Path) -> Result<Value> {
