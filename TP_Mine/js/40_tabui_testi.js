@@ -114,6 +114,7 @@
     "ft.col.pol": "Polarity of the table: POS = positive ions, NEG = negative.",
     "ft.col.basis": "What the level rests on: spectral library, standard, predicted structure, the chemist's judgement.",
     "ft.col.reasons": "Why the level is this one: the checks passed or failed, in words.",
+    "ft.col.engine": "Best hit of the MS2 engine (name, score) and whether it names the same compound as the cascade. Evidence only: it never moves the level.",
     "ft.tab.members": "The features of the group, with the role of each in the neutral mass; a button opens the feature.",
     "ft.go.banco": "Opens Bench 2b on this feature, to review it and decide the level."
   }
