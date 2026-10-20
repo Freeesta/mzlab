@@ -77,6 +77,7 @@
     const root = document.getElementById("flx-root"), view = F.viewFor(item.type, item);
     if (!root || !view) return;
     root.querySelectorAll(".flx-res").forEach(n => n.remove());
+    if (F.select) F.select(null, "results");
     const { el } = F, host = el("div", { class: "flx-res-body" }), head = el("h3", { tabindex: -1, text: `${view.title}: ${item.label}` });
     const box = el("section", { class: "flx-res", "aria-label": "Results" }, el("div", { class: "fl-meta" }, head, F.btn("x", "Close the results", () => { box.remove(); /** @type {HTMLElement | null} */ (root.querySelector("#flx-run"))?.focus(); }, "Close")), host);
     root.append(box); head.focus({ preventScroll: false });
