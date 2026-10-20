@@ -1,8 +1,6 @@
 //! The native executor of `spectra.match@1`: the query spectra (MGF/MSP/MassBank/JSON) scored against a library (the same formats, or a `.mzlib`) with
 //! the engine of `mzlab-lib` (`search::identity`, `search::analogs`, `scores`), as the Library tab does. The `candidates` file it writes is JSON.
 
-use std::path::Path;
-
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
 use mzlab_core::json::{round, Out};
@@ -15,26 +13,21 @@ use mzlab_lib::spec::Spectrum;
 
 type Lib = Library<Vec<u8>>;
 
-fn io(e: std::io::Error) -> Error {
-    Error::new("err.flow.io").with("detail", e)
-}
+/// A file the executors read: its name (the format is told from it and the content) and its bytes.
+pub type Named<'a> = (&'a str, &'a [u8]);
 
 /// The spectra of a text file in any of the library formats.
-pub(crate) fn read_spectra(path: &Path) -> Result<Vec<Spectrum>> {
-    let bytes = std::fs::read(path).map_err(io)?;
-    let name = path
-        .file_name()
-        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    let fmt = detect(&name, &bytes[..bytes.len().min(4096)])
-        .map_err(|_| Error::new("err.flow.match.format").with("file", &name))?;
-    Ok(parse_all(fmt, &bytes).0)
+pub(crate) fn read_spectra((name, bytes): Named) -> Result<Vec<Spectrum>> {
+    let fmt = detect(name, &bytes[..bytes.len().min(4096)])
+        .map_err(|_| Error::new("err.flow.match.format").with("file", name))?;
+    Ok(parse_all(fmt, bytes).0)
 }
 
-fn open_library(path: &Path) -> Result<Lib> {
-    let bytes = if path.extension().is_some_and(|e| e == "mzlib") {
-        std::fs::read(path).map_err(io)?
+fn open_library(file: Named) -> Result<Lib> {
+    let bytes = if file.0.ends_with(".mzlib") {
+        file.1.to_vec()
     } else {
-        let spectra = read_spectra(path)?;
+        let spectra = read_spectra(file)?;
         build_in_memory(&spectra, BuildOpts::default())
             .map_err(|_| Error::new("err.flow.match.library"))?
             .0
@@ -145,13 +138,20 @@ fn write_cand(o: &mut Out, lib: &Lib, qid: &str, alg: &str, c: &Cand) -> Result<
         .meta(c.index)
         .map_err(|_| Error::new("err.flow.match.library"))?;
     let r = |v: f64| round(v, 6);
+    let peaks = lib
+        .peaks(c.index)
+        .map_err(|_| Error::new("err.flow.match.library"))?
+        .0
+        .len();
     o.raw("{\"query\":").str(qid);
     o.raw(",\"id\":").str(&m.accession);
     o.raw(",\"name\":").str(&m.name);
+    o.raw(",\"inchikey\":").str(&m.inchikey);
     o.raw(",\"smiles\":").str(&m.smiles);
     o.raw(",\"formula\":").str(&m.formula);
     o.raw(",\"score\":").num(r(c.score));
     o.raw(",\"shared\":").int(c.shared as i64);
+    o.raw(",\"library_peaks\":").int(peaks as i64);
     o.raw(",\"explained\":").rounded(&c.explained, 4);
     o.raw(",\"mass_ppm\":").num(round(c.mass_ppm, 3));
     o.raw(",\"precursor_delta\":").num(round(c.delta, 4));
@@ -163,7 +163,7 @@ fn write_cand(o: &mut Out, lib: &Lib, qid: &str, alg: &str, c: &Cand) -> Result<
 
 /// Runs the step of `job` on the query and library files and returns the text of the `candidates` file: one object per candidate, queries in file order,
 /// each query's candidates best score first, at most `top_n` of them.
-pub fn match_text(job: &Job, query: &Path, library: &Path) -> Result<String> {
+pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
     let alg = job
         .resolved
         .algorithm

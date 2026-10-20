@@ -17,7 +17,9 @@ use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
 
 pub mod flow;
+mod flow_compare;
 mod flow_formula;
+mod flow_level;
 mod flow_match;
 
 const HELP: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
@@ -236,4 +238,8 @@ pub fn execute(args: &[String]) -> Outcome {
 mod tests;
 
 #[cfg(test)]
+mod flow_compare_tests;
+#[cfg(test)]
 mod flow_ident_tests;
+#[cfg(test)]
+mod flow_level_tests;
