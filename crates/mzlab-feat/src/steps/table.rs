@@ -229,3 +229,25 @@ pub(super) fn export_inclusion() -> Step {
         )
     }
 }
+
+/// `export.mztab`: the table as mzTab-M 2.0 (`export_mztab`), a format that other programs read.
+pub(super) fn export_mztab() -> Step {
+    Step {
+        ins: vec![
+            Port::new("table", DataType::Table, "Feature table"),
+            Port::new("samples", DataType::Samples, "Roles and times of the files"),
+        ],
+        outs: vec![Port::new("report", DataType::Report, "Table as mzTab-M")],
+        runs_in: RunsIn {
+            wasm: Some("table"),
+            wasm_ceiling_bytes: Some(FEAT_CEILING),
+            native: true,
+        },
+        errors: vec!["error.badView", "error.badCampioni", "error.newerFormat"],
+        ..Step::core(
+            "export.mztab",
+            "Export table as mzTab-M",
+            "Writes the feature table, under the view of the filter step when one is wired, as an mzTab-M 2.0 file: one small molecule and one feature per row, areas per file and per group, and an evidence for a row whose identity names a hypothesis. Every row is reliability 4 (unknown compound): the export adds no identity and raises no level.",
+        )
+    }
+}
