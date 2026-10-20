@@ -1,4 +1,4 @@
-//! Memory contract of the WASM modules (one instance has a hard 256 MB and a working budget of 192 MB): a phase estimates what it needs before it
+//! Memory contract of the WASM modules (one instance may grow to 4 GiB; the working budget is chosen by `budget_auto`, 192 MB at the least): a phase estimates what it needs before it
 //! allocates, then takes one of three ways: in memory (the estimate fits in half of the budget), in slabs (same bytes, less memory) or an orderly refusal
 //! with the key `error.memoryBudget` (phase, estimate and budget in MB). Outputs do not come back as one `Vec`: they are written at offsets to a `WriteAt`
 //! (an OPFS handle in the browser) and the caller only gets the length and the SHA-256.
@@ -10,7 +10,7 @@ use sha2::{Digest, Sha256};
 use crate::error::{Error, Result};
 
 const MB: usize = 1 << 20;
-/// Working budget of one WASM instance, MB (75 % of the 256 MB of the linker).
+/// Smallest working budget of one WASM instance, MB (what a phone or a failed probe keeps); also the default when the page does not say.
 pub const WASM_BUDGET_MB: usize = 192;
 /// Budget of the native builds (desktop, tests): same code, other number.
 pub const NATIVE_BUDGET_MB: usize = 1024;
@@ -84,29 +84,35 @@ impl MemBudget {
         })
     }
 
-    /// The error of a phase that does not fit even in its smallest slab.
+    /// The error of a phase that does not fit even in its smallest slab; the excess is counted against what is free now.
     pub fn refuse(&self, phase: &'static str, estimate: usize) -> Error {
-        refusal(phase, estimate, self.cap)
+        refusal_free(phase, estimate, self.cap, self.left())
     }
 }
 
-/// `error.memoryBudget` with `{fase, stima_mb, budget_mb, eccesso_mb}` (the excess is what the phase asks above the budget, at least 1).
+/// `error.memoryBudget` with `{fase, stima_mb, budget_mb, libero_mb, eccesso_mb}` for a phase that has the whole budget free.
 pub fn refusal(phase: &'static str, estimate: usize, cap: usize) -> Error {
+    refusal_free(phase, estimate, cap, cap)
+}
+
+/// The same when part of the budget is already taken: `eccesso_mb` is what the phase asks above the free space (at least 1), so that "estimate 188,
+/// budget 192" never looks as if it fitted when only 178 are free.
+pub fn refusal_free(phase: &'static str, estimate: usize, cap: usize, free: usize) -> Error {
     Error::memory_budget()
         .with("fase", phase)
         .with("stima_mb", estimate.div_ceil(MB))
         .with("budget_mb", cap / MB)
+        .with("libero_mb", free / MB)
         .with(
             "eccesso_mb",
-            estimate.saturating_sub(cap).div_ceil(MB).max(1),
+            estimate.saturating_sub(free).div_ceil(MB).max(1),
         )
 }
 
 /// An empty `Vec` with room for `n` items, or the memory error (never a trap).
 pub fn try_vec<T>(n: usize) -> Result<Vec<T>> {
     let mut v = Vec::new();
-    v.try_reserve_exact(n)
-        .map_err(|_| Error::memory_budget())?;
+    v.try_reserve_exact(n).map_err(|_| Error::memory_budget())?;
     Ok(v)
 }
 
@@ -146,7 +152,12 @@ impl<W: WriteAt> Hashing<W> {
 
     /// The sink back, the bytes written and their SHA-256 (hex).
     pub fn finish(self) -> (W, u64, String) {
-        let hex = self.hash.finalize().iter().map(|b| format!("{b:02x}")).collect();
+        let hex = self
+            .hash
+            .finalize()
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
         (self.inner, self.pos, hex)
     }
 }
@@ -187,6 +198,25 @@ mod tests {
         }
         assert_eq!(b.used(), 0);
         assert!(b.in_memory(500_000) && !b.in_memory(600_000));
+    }
+
+    #[test]
+    fn the_excess_is_counted_against_the_free_space() {
+        let b = MemBudget::mb(192.0);
+        let _g = b.reserve("t", 14 * MB).unwrap();
+        let e = b.refuse("align", 188 * MB);
+        let p = |k: &str| {
+            e.params
+                .iter()
+                .find(|(n, _)| *n == k)
+                .map(|(_, v)| v.to_string())
+        };
+        assert_eq!(p("budget_mb").as_deref(), Some("192"));
+        assert_eq!(p("libero_mb").as_deref(), Some("178"));
+        assert_eq!(p("eccesso_mb").as_deref(), Some("10"));
+        // a size that would overflow a 32-bit usize when multiplied is still an orderly refusal
+        let big = MemBudget::mb(192.0).reserve("t", usize::MAX).unwrap_err();
+        assert_eq!(big.key, "error.memoryBudget");
     }
 
     #[test]
