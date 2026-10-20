@@ -40,16 +40,8 @@ def build_site(out: Path):
     (out / "wasm-feat/manifest.json").write_text(json.dumps({"libro": {"js": "libro/mzlab_libro_wasm.js", "wasm": "libro/mzlab_libro_wasm_bg.wasm", "sha256": sha}}))
 
 
-def main():
-    if not all(shutil.which(x) for x in ("cargo", "wasm-bindgen")):
-        print("SKIP e2e_teoria_editor: cargo or wasm-bindgen not available"); return 0
-    tmp = Path(tempfile.mkdtemp())
-    build_site(tmp)
-    md_path, html_path = f"mzlab/web/teoria/src/{CHAPTER}.md", f"mzlab/web/teoria/{CHAPTER}.html"
-    files = {md_path: {"text": (ROOT / md_path).read_text(encoding="utf-8"), "sha": "m1"}, html_path: {"text": (ROOT / html_path).read_text(encoding="utf-8"), "sha": "h1"},
-             "tools/libro/importati.txt": {"text": (ROOT / "tools/libro/importati.txt").read_text(encoding="utf-8"), "sha": "i1"}}
-    state = {"open": [], "writes": []}
-
+def mock_github(files, md_path, state):
+    """Route handler for api.github.com: serves the real chapter files and records every write in state['writes']."""
     def gh(route):
         r = route.request
         if r.method == "OPTIONS": return route.fulfill(status=204, headers=CORS)
@@ -69,7 +61,20 @@ def main():
         if r.method == "PUT": state["writes"].append(("put", p, json.loads(r.post_data))); return ok({"content": {"sha": "n"}, "commit": {"sha": "c"}})
         f = files.get(p)
         return ok({"content": base64.b64encode(f["text"].encode()).decode(), "sha": f["sha"]}) if f else ok({"message": "Not Found"}, 404)
+    return gh
 
+
+def main():
+    if not all(shutil.which(x) for x in ("cargo", "wasm-bindgen")):
+        print("SKIP e2e_teoria_editor: cargo or wasm-bindgen not available"); return 0
+    tmp = Path(tempfile.mkdtemp())
+    build_site(tmp)
+    md_path, html_path = f"mzlab/web/teoria/src/{CHAPTER}.md", f"mzlab/web/teoria/{CHAPTER}.html"
+    files = {md_path: {"text": (ROOT / md_path).read_text(encoding="utf-8"), "sha": "m1"}, html_path: {"text": (ROOT / html_path).read_text(encoding="utf-8"), "sha": "h1"},
+             "tools/libro/importati.txt": {"text": (ROOT / "tools/libro/importati.txt").read_text(encoding="utf-8"), "sha": "i1"}}
+    state = {"open": [], "writes": []}
+
+    gh = mock_github(files, md_path, state)
     handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(tmp))
     handler.log_message = lambda *a, **k: None
     srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -83,11 +88,15 @@ def main():
         pg.on("request", lambda r: other.append(r.url) if r.url.startswith("http") and not r.url.startswith(("http://127.0.0.1", "https://api.github.com")) else None)
         pg.route("https://api.github.com/**", gh)
         pg.goto(url)
+        step("the token dialog opens first, with the one-line hint", lambda: "passphrase is a word you invent" in pg.inner_text("#dlg-token") or (_ for _ in ()).throw(AssertionError("hint")))
+        pg.fill("#in-token", "my passphrase"); pg.click("#t-tab")
+        step("a text that is not a token is refused in red", lambda: "must start with github_pat_" in pg.inner_text("#t-msg") or (_ for _ in ()).throw(AssertionError(pg.inner_text("#t-msg"))))
         pg.fill("#in-token", TOKEN); pg.click("#t-tab")
         step("connects and lists the chapters", lambda: pg.wait_for_selector("#sections button") and None)
-        step("status names the converter", lambda: until(pg, "document.getElementById('status').textContent.includes('mzlab-libro/1')"))
+        step("the converter version is in the status tooltip", lambda: until(pg, "document.getElementById('status').title.includes('mzlab-libro/1')"))
         step("only the chapter files, not the guide", lambda: pg.locator("#sections button").count() == 1 or (_ for _ in ()).throw(AssertionError("buttons")))
-        pg.click("#sections button")
+        step("status says Connected", lambda: until(pg, "document.getElementById('status').textContent === 'Connected'"))
+        step("the first chapter opens by itself", lambda: until(pg, "document.getElementById('source').value.length > 100"))
         step("loads the source (the converter reproduces the page on main)", lambda: until(pg, "document.getElementById('source').value.length > 100 && !document.getElementById('source').disabled"))
         step("no message after the load", lambda: pg.inner_text("#msg") == "" or (_ for _ in ()).throw(AssertionError(pg.inner_text("#msg"))))
         src = pg.input_value("#source")
