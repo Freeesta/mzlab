@@ -199,3 +199,52 @@ fn opechemlib_reorders_atoms_when_a_hydrogen_is_explicit() {
         assert_eq!(ours == labels, c["order_kept"] == true, "{smiles}");
     }
 }
+
+/// `kind+atoms:status` of every stereo element of a record.
+fn statuses(rec: &Value) -> Vec<String> {
+    let mut out: Vec<String> = rec["stereo"]
+        .as_array()
+        .expect("stereo")
+        .iter()
+        .map(|s| {
+            let at = if s["t"] == "tetra" {
+                format!("t{}", s["c"])
+            } else {
+                format!("d{}-{}", s["a"], s["b"])
+            };
+            format!("{at}:{}", s["status"].as_str().unwrap_or_default())
+        })
+        .collect();
+    out.sort();
+    out
+}
+
+#[test]
+fn sites_of_a_molfile_are_defined_or_unknown_like_rdkit() {
+    let (mut checked, mut skipped) = (0, 0);
+    for f in molfiles() {
+        let (input, text) = (
+            f["input"].as_str().expect("input"),
+            f["mol"].as_str().expect("mol"),
+        );
+        if input.contains("[nH]") && text.contains(" 4  0") {
+            continue;
+        }
+        let (rec, _) = truth(input);
+        let mine = serde_json::to_value(read(text, input).with_stereo_sites()).expect("json");
+        // RDKit marks every site it cannot place from the file as unknown too, so statuses must agree site by site
+        if statuses(&mine) != statuses(&rec) {
+            skipped += 1;
+            eprintln!(
+                "{input}\n   mine {:?}\n   rdkit {:?}",
+                statuses(&mine),
+                statuses(&rec)
+            );
+        }
+        checked += 1;
+    }
+    assert!(
+        checked > 80 && skipped == 0,
+        "{skipped} of {checked} differ"
+    );
+}

@@ -167,6 +167,36 @@ SMILES_EXTRA = [
 ]
 
 
+def potential_sites(m):
+    """RDKit potential stereo elements as sorted site strings: `t<atom>` or `d<a>-<b>` (written atom order)."""
+    out = []
+    for si in Chem.FindPotentialStereo(m):
+        if si.type == Chem.StereoType.Atom_Tetrahedral:
+            out.append(f"t{si.centeredOn}")
+        elif si.type == Chem.StereoType.Bond_Double:
+            b = m.GetBondWithIdx(si.centeredOn)
+            x, y = sorted((b.GetBeginAtomIdx(), b.GetEndAtomIdx()))
+            out.append(f"d{x}-{y}")
+    return sorted(out)
+
+
+def stereo_golden(path):
+    """Golden data for the stereogenicity tests of crates/mzlab-mol: per SMILES (the 20 study cases, the extra cases, the rows of composti.csv)
+    the potential stereo elements RDKit finds, in the written atom order."""
+    import csv
+
+    smiles = [smi for _n, smi, _ in SET] + [x.split(" |")[0] for x in SMILES_EXTRA]
+    csv_path = pathlib.Path(__file__).resolve().parents[2] / "TP_Mine" / "data" / "composti.csv"
+    smiles += [row["smiles"] for row in csv.DictReader(open(csv_path, encoding="utf-8"))]
+    rows = []
+    for smi in smiles:
+        m = Chem.MolFromSmiles(smi)
+        if m is not None:
+            rows.append([smi, potential_sites(m)])
+    doc = {"generator": "tools/struttura_dato/confronto.py --golden-stereo", "rdkit": Chem.rdBase.rdkitVersion, "sites": rows}
+    pathlib.Path(path).write_text(json.dumps(doc, separators=(",", ":")) + "\n")
+
+
 def molfile_golden(path):
     """Golden molfiles for crates/mzlab-mol: per SMILES the 2D molblock RDKit writes (wedges; V3000 with STERAC/STEREL/STEABS when there are groups),
     the same V2000 with the bond stereo field zeroed (wedges lost), and with the aromatic bonds as type 4. Atom order = SMILES order."""
@@ -349,10 +379,14 @@ def main():
     ap.add_argument("--molfiles")
     ap.add_argument("--composti", help="TP_Mine/data/composti.csv")
     ap.add_argument("--golden-molfile", help="write the golden molfiles of crates/mzlab-mol (crates/mzlab-mol/tests/data/golden_molfile.json)")
+    ap.add_argument("--golden-stereo", help="write the stereogenicity golden data (crates/mzlab-mol/tests/data/golden_stereo.json)")
     ap.add_argument("--golden", help="write the golden data of crates/mzlab-mol (crates/mzlab-mol/tests/data/golden.json)")
     a = ap.parse_args()
     if a.golden:
         golden(a.golden)
+        return
+    if a.golden_stereo:
+        stereo_golden(a.golden_stereo)
         return
     if a.golden_molfile:
         molfile_golden(a.golden_molfile)
