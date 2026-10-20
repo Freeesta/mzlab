@@ -27,6 +27,22 @@
     return rows;
   };
 
+  /** what each column holds: filled and empty cells, and the range of a column that is all numbers (the whole file, not only the rows shown) @param {string[][]} rows @returns {{name: string, filled: number, empty: number, min?: number, max?: number}[]} */
+  F.tableSummary = rows => {
+    const head = rows[0] || [], body = rows.slice(1);
+    return head.map((name, c) => {
+      let filled = 0, min = Infinity, max = -Infinity, numeric = true;
+      for (const r of body) {
+        const v = (r[c] || "").trim();
+        if (!v) continue;
+        filled++;
+        const n = Number(v);
+        if (Number.isFinite(n)) { if (n < min) min = n; if (n > max) max = n; } else numeric = false;
+      }
+      return numeric && filled ? { name, filled, empty: body.length - filled, min, max } : { name, filled, empty: body.length - filled };
+    });
+  };
+
   F.registerView({ id: "table", title: "Table", types: ["table", "annot", "tp", "candidates", "formulas", "library"], open: async (host, item) => {
     const { el } = F;
     if (!/\.(csv|tsv|txt)$/i.test(item.label)) { host.append(el("p", { class: "fl-note", text: `${item.label} is not a text table, so there is nothing to show here.` })); return; }
@@ -34,7 +50,12 @@
     const table = el("table", { class: "flx-table" }, el("caption", { text: `${item.label}: ${body.length} of ${Math.max(rows.length - 1, 0)} rows, ${cols} of ${head.length} columns` }),
       el("thead", {}, el("tr", {}, ...head.slice(0, cols).map((/** @type {string} */ h) => el("th", { scope: "col", text: h })))),
       el("tbody", {}, ...body.map((/** @type {string[]} */ r) => el("tr", {}, ...r.slice(0, cols).map(c => el("td", { text: c }))))));
-    host.append(el("div", { class: "flx-tablewrap", tabindex: 0, role: "region", "aria-label": `Table ${item.label}` }, table));
+    const sum = F.tableSummary(rows), fmt = (/** @type {number | undefined} */ n) => n === undefined ? "" : String(Math.round(n * 1e6) / 1e6);
+    const qc = el("details", { class: "flx-qc" }, el("summary", { text: `Columns: what is filled in (${sum.length})` }),
+      el("div", { class: "flx-tablewrap", tabindex: 0, role: "region", "aria-label": "Column summary" }, el("table", { class: "flx-table" }, el("caption", { text: `${Math.max(rows.length - 1, 0)} rows in the file` }),
+        el("thead", {}, el("tr", {}, ...["Column", "Filled", "Empty", "Lowest", "Highest"].map(h => el("th", { scope: "col", text: h })))),
+        el("tbody", {}, ...sum.map(c => el("tr", {}, el("th", { scope: "row", text: c.name }), el("td", { text: String(c.filled) }), el("td", { text: String(c.empty) }), el("td", { text: fmt(c.min) }), el("td", { text: fmt(c.max) })))))));
+    host.append(qc, el("div", { class: "flx-tablewrap", tabindex: 0, role: "region", "aria-label": `Table ${item.label}` }, table));
   } });
 
   /** shows a result under the canvas, with a way back @param {any} item */

@@ -191,8 +191,12 @@ try:
         def results_from_disk():
             pg.click('.fln:has-text("Build feature table")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Build feature table'")
             pg.set_input_files('.fl-insp input[type=file]', files=[{"name": "peaks.csv", "mimeType": "text/csv", "buffer": b'mz,rt,area\n241.3,3.0,"1,5"\n257.3,4.2,7\n'}])
-            attendi(pg, "document.querySelectorAll('.flx-table tbody tr').length === 2")
-            assert pg.locator(".flx-table th").all_inner_texts() == ["mz", "rt", "area"] and pg.locator(".flx-table td").nth(2).inner_text() == "1,5"
+            attendi(pg, "document.querySelectorAll('.flx-res-body .flx-tablewrap')[1].querySelectorAll('tbody tr').length === 2")
+            data = '.flx-res-body > .flx-tablewrap:last-child .flx-table'
+            assert pg.locator(data + " th").all_inner_texts() == ["mz", "rt", "area"] and pg.locator(data + " td").nth(2).inner_text() == "1,5"
+            # the column summary: one row per column, numbers counted from the whole file
+            pg.click('.flx-qc summary'); qc = '.flx-qc .flx-table tbody tr'
+            got = pg.locator(qc).nth(0).inner_text().split(); assert pg.locator(qc).count() == 3 and got == ["mz", "2", "0", "241.3", "257.3"], got
             assert pg.locator(".flx-res").get_attribute("aria-label") == "Results" and pg.evaluate("document.activeElement.closest('.flx-res') !== null")
             pg.click('.flx-res button[aria-label="Close the results"]'); assert pg.locator(".flx-res").count() == 0
         step("results: a table chosen from disk opens under the canvas as a real table, readable by keyboard and closable", results_from_disk)
