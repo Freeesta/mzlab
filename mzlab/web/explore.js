@@ -419,22 +419,22 @@ async function bootSession0() {
   const seq = !!E._seq, waiting = !!(E.pending && E.pending.some(x => x.state === "wait"));
   E._seq = waiting; E._mem = waiting ? mem : null;
   // while a list is opened file by file the new ones follow the rules of the first load
-  const isFirstLoad = !oldNames.length || seq || waiting;
+  const isFirstLoad = !oldNames.length || seq || waiting, first = firstOpenK(j.session);
   const isHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr) || s.dda);
   // a low-resolution IDA file is not high resolution
   const trueHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr));
   E.files = j.session.map((s, k) => {
     let vis = true;
     if (oldVis[s.file]) {
-      vis = oldVis[s.file].vis;
+      vis = oldVis[s.file].vis && !(isFirstLoad && isBlankFile(s) && fileBase(s.file) !== fileBase(j.session[first].file));
     } else if (isFirstLoad && trueHr && new Set(j.session.map(x => fileBase(x.file))).size > 1) {
       // high resolution: only the first file (in the order of the list) is open, a click opens the others
-      vis = fileBase(s.file) === fileBase(j.session[0].file);
+      vis = fileBase(s.file) === fileBase(j.session[first].file);
     } else if (isFirstLoad && !isHr && j.session.length > 1) {
       // low resolution: only the first file of the list is open (also with mixed Full Scan / MS2 / MRM), the others wait in the list and a click opens them
-      vis = (k === 0);
+      vis = (k === first);
     }
-    return { ...s, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: oldVis[s.file] ? oldVis[s.file].label : s.dda ? String(s.label).replace(/ · Full Scan(?=[+−-]?$)/, "") : s.label, lv: s.kind === "ms2" ? 2 : 1 };
+    return { ...s, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: noFullScan(oldVis[s.file] ? oldVis[s.file].label : s.label, s.dda), lv: s.kind === "ms2" ? 2 : 1 };
   });
   paintFiles();
   if (window.HR) HR.notice(E.files);
@@ -451,13 +451,14 @@ async function bootSession0() {
     remap(E, "cur", 0);
     if (S.ref.k !== "auto") remap(S.ref, "k", 0);
     STATO.file(Math.min(E.cur, E.files.length - 1), "reload");
+    if (isFirstLoad && E.files[E.cur] && isBlankFile(E.files[E.cur]) && !isBlankFile(E.files[first])) activeFile(first);
     renderFileList();
     // @ts-ignore toolbar() below is also window.toolbar (a BarProp) for lib.dom
     toolbar(); E.panels.forEach(ctl); redrawAll();
     const added = E.files.filter(f => !oldNames.includes(f.file)); if (added.length && window.setTab && !seq && added[0].kind !== E.tab) setTab(added[0].kind); else if (added.length) { ensureLayout(); }
     return;
   }
-  renderFileList();
+  if (first > 0 && isFirstLoad) STATO.file(first, "first"); renderFileList();
   STATO.pannelli([], "clear"); Q("#dpanels").innerHTML = "";
   await nbLoad();
   CAMPIONI.restore(NB.session);
@@ -615,7 +616,7 @@ function bindFileRows() {
     const nm = row.querySelector(".nm"); if (!nm) return;
     row.onclick = e => {
       if (e.target.closest("input") || e.target.closest(".pr-tog")) return;
-      const f0 = E.files[+nm.dataset.k];
+      const f0 = E.files[+nm.dataset.k]; if (f0 && f0.kind !== "mrm") followSpectra(f0);
       // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
       if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {
         sibsOf(f0).forEach(f => { f.vis = true; }); STATO.file(f0.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
