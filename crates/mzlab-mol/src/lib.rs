@@ -3,8 +3,16 @@
 //! later, by every engine that needs a molecule; it links nothing beyond serde and sha2 and is not part of any site .wasm yet.
 
 mod codec;
+mod cxsmiles;
 mod elements;
+mod kekule;
 mod model;
+mod renumber;
+mod smiles;
+mod smiles_parse;
+mod smiles_stereo;
+mod smiles_write;
+mod valence;
 mod validate;
 
 pub use codec::{hex, MolError};

@@ -141,11 +141,72 @@ def golden(path):
                 "input": smi,
                 "rdkit_cx": cx(m),
                 "inchikey": Chem.MolToInchiKey(m),
+                "aromatic": aromatic_pairs(m),
+                "canonical_perm": canonical_perm(m),
                 "records": recs,
                 "core_sha256": {k: core_sha256(v) for k, v in recs.items()},
             }
         )
-    pathlib.Path(path).write_text(json.dumps({"generator": "tools/struttura_dato/confronto.py --golden", "rdkit": Chem.rdBase.rdkitVersion, "cases": out}, separators=(",", ":")) + "\n")
+    doc = {"generator": "tools/struttura_dato/confronto.py --golden", "rdkit": Chem.rdBase.rdkitVersion, "cases": out, "smiles_cases": smiles_cases()}
+    doc["composti"] = composti_rows(str(pathlib.Path(__file__).resolve().parents[2] / "TP_Mine" / "data" / "composti.csv"))
+    pathlib.Path(path).write_text(json.dumps(doc, separators=(",", ":")) + "\n")
+
+
+# SMILES reader cases beyond SET: aromatic systems, radicals, charges, isotopes, stereo written in many ways, enhanced-stereo groups
+SMILES_EXTRA = [
+    "c1ccccc1", "c1ccncc1", "c1cc[nH]c1", "c1ccoc1", "c1ccsc1", "c1cnc[nH]1", "c1nnn[nH]1", "c1ccc2[nH]ccc2c1", "c1ccc2ccccc2c1",
+    "Cn1cnc2c1c(=O)n(C)c(=O)n2C", "O=c1cccc[nH]1", "Cc1ccccc1-c1ccccc1", "c1cc[n+](C)cc1", "[nH]1cccc1", "C1=CC=CC=C1", "c1ccc2c(c1)cc[nH]2",
+    "[CH3]", "C[CH2]", "[NH4+]", "C[N+](=O)[O-]", "[O-][N+](=O)c1ccccc1", "[13CH4]", "[2H]O[2H]", "[Na+].[Cl-]", "CS(=O)(=O)C", "CP(=O)(O)O",
+    "[Fe+2]", "C[Si](C)(C)C", "[Se]1C=CC=C1", "OS(=O)(=O)O", "C#N", "C=C=C", "[Cl-]", "[OH-]", "[O]",
+    "C[C@H]1CC[C@@H](C)CC1", "F[C@](Cl)(Br)I", "F[C@@](Cl)(Br)I", "[C@H](F)(Cl)Br", "[C@@H](F)(Cl)Br", "[C@@H]1(C)CCCO1", "N[C@@]1(C)CCCO1",
+    "C[S@](=O)CC", "C[S@@](=O)CC", "C[C@H](N)C(=O)O", "C[C@@H](N)C(=O)O", "OC[C@H]1O[C@@H](O)[C@H](O)[C@@H](O)[C@@H]1O", "C[C@]12CC[C@H]3[C@@H](CCC4=CC(=O)CC[C@@]43C)[C@@H]1CC[C@@H]2O",
+    "F/C=C/F", "F/C=C\\F", "C(/F)=C/F", "F\\C=C\\F", "F/C=C/C=C/F", "F/C=C\\C=C/F", "C/C=C/C(=O)O", "C/C(CC)=C/C", "CC(/CC)=C/C",
+    "C1CCC/C=C/CC1", "C1CCC/C=C\\CC1", "C/1=C/CCCCCCC1", "C/C=C(/CC)C", "Cl/C=C/C=C\\Br", "c1ccccc1/C=C/c1ccccc1", "O/N=C/C", "O/N=C\\C",
+    "C[C@H](F)[C@@H](Cl)Br |a:1,3|", "C[C@H](F)[C@@H](Cl)Br |o1:1,3|", "C[C@H](F)[C@@H](Cl)Br |&1:1,3|", "C[C@H](F)[C@@H](Cl)Br |&1:1,&2:3|",
+    "C[C@H](F)[C@@H](Cl)Br |a:1,&1:3|", "C[C@H](F)[C@@H](Cl)Br |$;;;;;$,&1:1,3,r|", "C[C@H](F)[C@@H](Cl)Br",
+]
+
+
+def canonical_perm(m):
+    """new index of every atom when the atoms are put in RDKit canonical order (the permutation `to_record` applies)."""
+    order = list(Chem.CanonicalRankAtoms(m, breakTies=True))
+    by_rank = sorted(range(m.GetNumAtoms()), key=lambda i: order[i])
+    new = [0] * len(by_rank)
+    for j, old in enumerate(by_rank):
+        new[old] = j
+    return new
+
+
+def aromatic_pairs(m):
+    return sorted([min(b.GetBeginAtomIdx(), b.GetEndAtomIdx()), max(b.GetBeginAtomIdx(), b.GetEndAtomIdx())] for b in m.GetBonds() if b.GetIsAromatic())
+
+
+def smiles_cases():
+    """Per SMILES: the RDKit record in written atom order, its aromatic bonds (the reader's Kekulé choice may differ there) and the CXSMILES."""
+    out = []
+    for smi in SMILES_EXTRA:
+        m = Chem.MolFromSmiles(smi)
+        out.append({"input": smi, "record": to_record(m, renumber=False), "aromatic": aromatic_pairs(m)})
+    return out
+
+
+def composti_rows(path):
+    """Per row of composti.csv: short digests of the RDKit atoms and defined stereo elements (written atom order) and the counts of potential and
+    unspecified elements: the external truth for the reader on real data (the study quotes 286 rows with stereo elements, 111 with one unspecified)."""
+    import csv
+    import hashlib
+
+    def digest(v):
+        return hashlib.sha256(json.dumps(v, separators=(",", ":")).encode()).hexdigest()[:16]
+
+    rows = []
+    for row in csv.DictReader(open(path, encoding="utf-8")):
+        m = Chem.MolFromSmiles(row["smiles"])
+        rec = to_record(m, renumber=False)
+        defined = [s for s in rec["stereo"] if s["status"] == "defined"]
+        arom = sum(b.GetIsAromatic() for b in m.GetBonds())
+        rows.append([digest(rec["atoms"]), len(rec["bonds"]), digest(defined), len(rec["stereo"]), len(rec["stereo"]) - len(defined), arom])
+    return rows
 
 
 def cis_trans(m, ba, ea, r1, r2):
