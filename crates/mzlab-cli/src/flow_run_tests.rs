@@ -12,7 +12,7 @@ const BASE: &str = r#"{"format":"mzflow/2","inputs":[{"name":"s_t000.mzML","type
 {"id":"gap","step":"features.gapfill@1","in":{"table":"ali.table","index":["idx.index"]}}]}"#;
 
 /// A folder with the three files and `plan.json` (the base chain); the files as (name, bytes).
-fn fixture(tag: &str) -> (PathBuf, Vec<(String, Vec<u8>)>) {
+pub(crate) fn fixture(tag: &str) -> (PathBuf, Vec<(String, Vec<u8>)>) {
     let dir = std::env::temp_dir().join(format!("mzlab_cli_run_{tag}_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("data")).unwrap();
@@ -27,18 +27,18 @@ fn fixture(tag: &str) -> (PathBuf, Vec<(String, Vec<u8>)>) {
     (dir, files)
 }
 
-fn flow_run(args: &[&str]) -> crate::Outcome {
+pub(crate) fn flow_run(args: &[&str]) -> crate::Outcome {
     let mut a = vec!["flow".to_string(), "run".to_string()];
     a.extend(args.iter().map(|x| x.to_string()));
     crate::execute(&a)
 }
 
-fn p(path: &Path) -> &str {
+pub(crate) fn p(path: &Path) -> &str {
     path.to_str().unwrap()
 }
 
 /// The files of a run folder, `prov.json` and `corsa.json` without the times and the heap.
-fn folder(dir: &Path) -> Vec<(String, Vec<u8>)> {
+pub(crate) fn folder(dir: &Path) -> Vec<(String, Vec<u8>)> {
     let mut v: Vec<(String, Vec<u8>)> = std::fs::read_dir(dir)
         .unwrap()
         .map(|e| e.unwrap().path())
@@ -57,7 +57,7 @@ fn folder(dir: &Path) -> Vec<(String, Vec<u8>)> {
 }
 
 /// `text` with the numbers of `ms`, `total_ms` and `heap_peak_bytes` blanked.
-fn untimed(text: &str) -> String {
+pub(crate) fn untimed(text: &str) -> String {
     let mut out = String::new();
     let mut rest = text;
     while let Some(k) = ["\"ms\":", "\"total_ms\":", "\"heap_peak_bytes\":"]
