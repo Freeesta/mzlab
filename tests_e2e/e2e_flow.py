@@ -380,6 +380,26 @@ try:
             pg.click('.flx-res button[aria-label="Close the results"]')
         step("the Feature table has the column and the tab «Family»", family_hooks)
 
+        def report_and_network():
+            # a run report (corsa/1) opens in the Run report view; a product network (rete/1) opens with the network view and shares the one selection
+            pg.evaluate("""async () => {
+              const corsa = { schema: "corsa/1", engine: { name: "mzLab", version: "1.0", platform: "native" }, inputs: [], lists: [], steps: [], total_ms: 0, levels: { files: 0, rows: 0, auto: {}, other: {} } };
+              await FLOW.openResult({ type: "report", label: "corsa.json", text: async () => JSON.stringify(corsa) });
+            }""")
+            try: attendi(pg, "document.querySelector('.flx-res .rf h1') && /Flow run report/.test(document.querySelector('.flx-res .rf h1').textContent)", 15000)
+            except Exception: raise AssertionError("report view: " + pg.inner_text(".flx-res-body")[:300] + " base=" + str(pg.evaluate("String(QTOOLS.ctx.base)")))
+            pg.evaluate("""async () => { await FLOW.openResult({ type: "report", label: "other.json", text: async () => "{}" }); }""")
+            attendi(pg, "/not a run report/.test(document.querySelector('.flx-res-body').textContent)")
+            fx = (ROOT / "TP_Mine" / "tests" / "rete_fixture.json").read_text(encoding="utf-8")
+            pg.evaluate("""async (fx) => { window.__seen = []; await FLOW.openResult({ type: "transform", label: "network.json", text: async () => fx }); FLOW.onSelect((id, from) => window.__seen.push([id, from])); }""", fx)
+            attendi(pg, "document.querySelector('.flx-res .rv svg')")
+            first = pg.evaluate("document.querySelector('.flx-res .rv g.nd, .flx-res .rv [data-node]').getAttribute('data-node')")
+            pg.click('.flx-res .rv [data-node]:not([data-node="0"])')
+            attendi(pg, "window.__seen.length >= 1 && window.__seen[window.__seen.length - 1][1] === 'rete'")
+            pg.evaluate("() => FLOW.select(null, 'other')")
+            pg.click('.flx-res button[aria-label="Close the results"]')
+        step("a run report and a product network open in their views and the network joins the one selection", report_and_network)
+
         step("results: the Review screen asks for a note only when the level changes and moves to the next feature", review_view)
         def mgf_view():
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Check mixed spectra")')
