@@ -348,3 +348,61 @@ fn families_are_deterministic() {
     );
     let _ = std::fs::remove_dir_all(&out);
 }
+
+/// `famiglia/1` on the golden table: valid JSON, one family per M row, sizes that add up, every arc inside its family, same bytes twice.
+#[test]
+fn family_record_json() {
+    let doc = golden("famiglie_identita.json");
+    let p = FamParams::default();
+    let f = table(&doc["rows"]);
+    let n = f.len();
+    let sp: Vec<(usize, Spec)> = doc["spectra"]
+        .as_object()
+        .unwrap()
+        .iter()
+        .map(|(k, v)| (k.parse().unwrap(), spec(&p.rules, v).unwrap()))
+        .collect();
+    let spectra = Spectra::from_parts(n, sp);
+    let tr: Vec<(usize, u32, Vec<f64>)> = doc["traces"]
+        .as_object()
+        .unwrap()
+        .iter()
+        .map(|(k, v)| {
+            (
+                k.parse().unwrap(),
+                v[0].as_u64().unwrap() as u32,
+                f64s(&v[1]),
+            )
+        })
+        .collect();
+    let traces = Traces::from_parts(n, &tr);
+    let cand = candidates(&f, &spectra, 1, &p);
+    let pairs = correlate_traces(&f, cand, &traces, &p);
+    let fam = build_families(&f, &pairs, &spectra, |_, _| Ratio::Unavailable, 1, &p).unwrap();
+    let a = mzlab_feat::famrecord::record("identita", &f, &fam);
+    assert_eq!(a, mzlab_feat::famrecord::record("identita", &f, &fam));
+    let v: Value = serde_json::from_str(&a).unwrap();
+    assert_eq!(v["schema"], "famiglia/1");
+    let fams = v["families"].as_array().unwrap();
+    assert_eq!(fams.len(), fam.count());
+    let in_families: u64 = fams.iter().map(|x| x["size"].as_u64().unwrap()).sum();
+    assert_eq!(
+        in_families as usize,
+        fam.family_id.iter().filter(|&&i| i > 0).count()
+    );
+    let arcs: usize = fams
+        .iter()
+        .map(|x| x["arcs"].as_array().unwrap().len())
+        .sum();
+    assert_eq!(arcs, fam.arcs.len());
+    for x in fams {
+        assert_eq!(
+            x["size"].as_u64().unwrap() as usize,
+            x["members"].as_array().unwrap().len()
+        );
+        assert_eq!(x["members"][0]["role"], "M");
+        for arc in x["arcs"].as_array().unwrap() {
+            assert!(!arc["proofs"].as_array().unwrap().is_empty());
+        }
+    }
+}

@@ -203,3 +203,19 @@ fn a_loss_keeps_the_rest_and_a_region_highlights_its_best_class() {
     assert_eq!(d.highlight, [3, 4, 7, 8]);
     assert!(d.zones.is_empty());
 }
+
+#[test]
+fn a_substitution_site_is_drawn_as_a_structure_with_no_added_atom() {
+    // 4-butylchlorobenzene → 4-butylphenol: the only chlorine is the single candidate
+    let smiles = "CCCCc1ccc(Cl)cc1";
+    let p = peaks_of(smiles, "-Cl+OH", 8);
+    let r = report(smiles, "C10H13Cl", "C10H14O", &p, &FACTS);
+    assert_eq!((r.confidence, r.reasons.clone()), ("site", vec![]));
+    let d = drawing(smiles, &r);
+    assert_eq!(
+        (d.mode, d.atoms.as_slice(), d.added),
+        ("structure", &[8usize][..], None)
+    );
+    assert_eq!(d.kind.as_deref(), Some("dechloro_oh"));
+    assert!(d.label.contains("\u{2212}Cl+OH"));
+}

@@ -3033,7 +3033,6 @@ I18N.add("it", {
   "scorc.fileSucc": "File successivo",
   "scorc.file.tip": "Passa al file prima o dopo nell'elenco, come le frecce accanto al menu dei file.",
   "scorc.vista.tip": "Cambia vista: Alt+1 Dati, Alt+2 Disegno, Alt+3 Teoria.",
-  "storia.annulla": "Annulla",
   "storia.pannello": "pannello",
   "storia.marcature": "marcature",
   "storia.niente": "Niente da annullare",

@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema--><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Leggere i dati · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 12</div>
 <h1>Full scan, MS2 e MRM: leggere i dati</h1>
 <p class="lead">Che cosa contiene ciascun tipo di file, come si estrae l'informazione utile e quali trappole tipiche della risoluzione unitaria evitare.</p>
-
 <h2>Tre tipi di dato, tre forme</h2>
 <table>
 <tr><th>Esperimento</th><th>Che cosa registra</th><th>Forma del dato</th><th>Domanda a cui risponde</th></tr>
@@ -15,11 +15,9 @@
 <tr><td><b>MRM</b></td><td>Intensità di poche transizioni fisse</td><td>Un cromatogramma per transizione, nessuno spettro</td><td>Quanto ce n'è?</td></tr>
 </table>
 <p>In QqQ lab il programma riconosce da solo il tipo di file (full, ms2, mrm) e propone i pannelli adatti. Nei file mzML convertiti, full scan e MS2 sono serie di spettri; l'MRM è salvato come cromatogrammi (SRM).</p>
-
 <h2>I tre modi a confronto</h2>
 <p>Lo stesso testo compare nel punto interrogativo accanto a ciascuna scheda di QqQ lab. Legenda dello schema: scansiona, fisso, collisione, lascia passare.</p>
 <div id="modi-all"></div>
-
 <h2>Full scan: dal cubo di dati ai cromatogrammi</h2>
 <h3>TIC, BPC, XIC</h3>
 <ul>
@@ -38,7 +36,6 @@
 <li>Confrontare le altezze di TP diversi come se fossero concentrazioni: la risposta ESI cambia da molecola a molecola.</li>
 <li>Integrare XIC con picchi saturi (appiattiti in cima): l'area è sottostimata.</li>
 </ul></div>
-
 <h2>Spettri a risoluzione unitaria: che cosa si può dedurre</h2>
 <p>Qui un riassunto pratico per i vostri dati; la teoria completa (masse, isotopi, regola dell'azoto, RDB, regola del 13 e il confronto con l'alta risoluzione) è nel capitolo 13.</p>
 <h3>Pattern isotopici</h3>
@@ -59,7 +56,6 @@
 <li><b>Regola dell'azoto</b>: una molecola neutra con massa nominale dispari contiene un numero dispari di atomi di N. Per lo ione [M+H]<sup>+</sup> vale il contrario: m/z pari ⇒ numero dispari di N. Utile per scartare formule incompatibili e per capire se una trasformazione ha tolto o aggiunto azoto.</li>
 <li><b>RDBE</b> (anelli + doppi legami) = C − H/2 − X/2 + N/2 + 1 per la molecola neutra (X = alogeni). Deve essere intero e ≥ 0. Un'apertura d'anello o un'idratazione lo riducono; un'ossidazione a carbonile no.</li>
 </ul>
-
 <h2>Spettri MS2</h2>
 <p>Un product ion scan registra i frammenti di un precursore isolato in Q1 con risoluzione unitaria. Alcuni punti pratici:</p>
 <ul>
@@ -69,7 +65,6 @@
 <li><b>Spettri vuoti</b>: nei file MS2 molti scan sono vuoti (prima e dopo il picco). È normale; ciò che conta è lo spettro mediato sul picco.</li>
 <li><b>Confronto con il parent</b>: si registrano frammento per frammento le differenze. Frammenti uguali = porzione intatta; frammenti spostati di Δ = porzione modificata (capitolo 18).</li>
 </ul>
-
 <h2>MRM e quantificazione</h2>
 <h3>La retta di taratura</h3>
 <p class="sm">In QqQ lab si integrano i picchi MRM e si esporta la tabella delle integrazioni (aree e concentrazioni degli standard) in Excel: la retta la costruisci tu, lì.</p>
@@ -89,9 +84,7 @@
 <div class="box lab"><b>In QqQ lab</b>
 <p><p class="sm"><b>Figure del picco</b> (colonne facoltative della tabella delle integrazioni): <b>S/N</b> = altezza del picco sopra la linea di base diviso la deviazione standard del segnale in una zona senza picchi scelta da te (tolta la deriva); <b>w<sub>½</sub></b> = larghezza a metà altezza; <b>N</b> = 5,54 (t<sub>R</sub> / w<sub>½</sub>)<sup>2</sup> piatti teorici; <b>coda USP</b> T = W<sub>0,05</sub> / 2f, con W<sub>0,05</sub> la larghezza e f la parte anteriore del picco a 5% dell'altezza (T = 1 per un picco simmetrico). Il programma calcola, tu interpreti.</p>
 <p>La tabella delle integrazioni raccoglie le aree di ogni traccia in tutti i file e le ordina per tempo di campionamento: è il punto di partenza per i grafici cinetici e si esporta in Excel. Il menu «Correzione» offre tre modi (uno alla volta): sottrarre un <b>file bianco</b> (segue il tempo: utile quando il fondo cambia lungo la corsa), sottrarre il <b>fondo di un tratto</b> (un solo numero, la media di un tratto senza picchi: utile se il fondo è piatto) oppure la <b>linea di base automatica</b> (SNIP: toglie la base che sale sotto i picchi). Aiutano sui picchi piccoli, ma vanno usate con lo stesso criterio su tutti i tempi, altrimenti l'andamento è un artefatto.</p></div>
-
 <p class="note"><b>I tuoi file non lasciano il tuo computer.</b> Nella versione online i dati vengono letti dal browser e non sono inviati a nessun server; nella versione locale il programma risponde solo a questo computer.</p>
-
 <h2>Installare QqQ lab come app</h2>
 <ul>
 <li><b>Chrome o Edge (computer):</b> nella barra degli indirizzi compare l'icona "Installa" (un monitor con una freccia): clic, poi Installa. Oppure menu a tre puntini, Installa QqQ lab.</li>
@@ -100,7 +93,6 @@
 <li><b>Firefox:</b> non installa le pagine come app; funziona comunque anche senza rete dopo la prima visita.</li>
 </ul>
 <p>Dopo la prima visita QqQ lab funziona anche senza internet, installato o no.</p>
-
 <h2>Come il programma trova i bordi di un picco</h2>
 <p>Con l'integrazione automatica clicchi sul picco e il programma propone i due bordi; tu li puoi sempre correggere trascinando le barre. L'algoritmo ha quattro passi.</p>
 <ol>
@@ -109,16 +101,12 @@
 <li><b>Bordi.</b> Si cammina dall'apice verso i due lati e ci si ferma dove il segnale scende sotto la linea di base locale pi&ugrave; il 3% dell'altezza del picco (e comunque sopra 3 volte il rumore), oppure dove la derivata cambia segno per un tratto continuo: &egrave; la valle che separa dal picco vicino.</li>
 <li><b>Area.</b> Regola dei trapezi sui dati originali (non smussati), meno la linea di base retta tra i due bordi (ogni estremo &egrave; la media di 3 punti, per non dipendere da un solo punto rumoroso). L'etichetta mostra l'area con 3 decimali (2.243e+6); passando sopra compare il valore intero.</li>
 </ol>
-<p>Limiti: due picchi sovrapposti vengono separati solo se tra i due c'&egrave; una valle; una deriva della linea di base molto forte sposta i bordi. Guarda sempre i bordi proposti prima di fidarti dell'area.</p>
-
+<p>Limiti: due picchi sovrapposti vengono separati solo se tra i due c'è una valle; una deriva della linea di base molto forte sposta i bordi. Guarda sempre i bordi proposti prima di fidarti dell'area.</p>
 <h2>Verifica</h2>
-<details class="q"><summary>Un candidato TP ha cluster 100 : 12 : 33 : 4. Che cosa contiene probabilmente?</summary>
-<p>Un atomo di cloro (M+2 ≈ 32%) e circa 10–11 atomi di carbonio (M+1 ≈ 12%, tenendo conto del piccolo contributo dell'azoto).</p></details>
+<details class="q"><summary>Un candidato TP ha cluster 100 : 12 : 33 : 4. Che cosa contiene probabilmente?</summary><p>Un atomo di cloro (M+2 ≈ 32%) e circa 10–11 atomi di carbonio (M+1 ≈ 12%, tenendo conto del piccolo contributo dell'azoto).</p></details>
 <details class="q"><summary>Lo ione [M+H]<sup>+</sup> del parent è a m/z dispari. Un candidato TP ha [M+H]<sup>+</sup> pari. Che cosa è cambiato?</summary>
 <p>La parità del numero di atomi di azoto: il TP ha perso (o guadagnato) un numero dispari di N, oppure non è un TP del parent. Esempio: perdita di NH<sub>3</sub>, sostituzione di un gruppo amminico con OH.</p></details>
-<details class="q"><summary>La retta MRM ha R<sup>2</sup> = 0,995 ma i residui sono positivi in mezzo e negativi agli estremi. Che cosa fate?</summary>
-<p>La risposta è curva (probabilmente saturazione ai livelli alti). Restringete l'intervallo, o usate una regressione pesata/quadratica giustificata, e diluite i campioni che cadono nella zona alta.</p></details>
-
+<details class="q"><summary>La retta MRM ha R<sup>2</sup> = 0,995 ma i residui sono positivi in mezzo e negativi agli estremi. Che cosa fate?</summary><p>La risposta è curva (probabilmente saturazione ai livelli alti). Restringete l'intervallo, o usate una regressione pesata/quadratica giustificata, e diluite i campioni che cadono nella zona alta.</p></details>
 <h2>Per approfondire</h2>
 <ul class="refs">
 <li><span class="tag">terminologia</span>Murray K.K. et al. (2013) Definitions of terms relating to mass spectrometry (IUPAC Recommendations 2013). <i>Pure Appl. Chem.</i> 85, 1515–1609. <a href="https://doi.org/10.1351/PAC-REC-06-04-06" target="_blank" rel="noopener">doi:10.1351/PAC-REC-06-04-06</a></li>

@@ -12,3 +12,14 @@
 05-gc.md
 07-ei-ci.md
 10-qqq.md
+06-esi.md
+09-quadrupolo.md
+11-risoluzione.md
+13-formula.md
+14-frammentazione-esi.md
+15-ei-metodo.md
+16-ei-famiglie.md
+18-strategia.md
+21-glossario.md
+22-formulario.md
+12-dati.md

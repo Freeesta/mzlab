@@ -1,0 +1,239 @@
+<!-- script: sim-quad.js -->
+<!-- title: Il quadrupolo -->
+# Il quadrupolo: la teoria vera {kicker: Capitolo 9}
+
+{.lead} Quattro barre, una tensione continua e una a radiofrequenza: perché solo gli ioni di un certo m/z attraversano il filtro, da dove viene il famoso triangolo di stabilità e che cosa decide risoluzione e sensibilità.
+
+## Un filtro, non una bilancia
+
+Il quadrupolo non "pesa" gli ioni e non misura il tempo di volo: in ogni istante lascia passare solo gli ioni il cui m/z cade in una finestra stretta e scarica tutti gli altri sulle barre. Lo spettro si ottiene spostando la finestra nel tempo (**scansione**), oppure tenendola ferma su un m/z (**SIM**, e in MS/MS **MRM**). Ne seguono due proprietà che userete ogni giorno:
+
+- in scansione, mentre il filtro guarda un m/z, tutti gli altri ioni sono persi: il **duty cycle** è basso e la sensibilità del full scan è molto inferiore a quella di un SIM/MRM;
+- la finestra ha una larghezza fissata dall'utente: con la **risoluzione unitaria** (≈ 0,7 Da a metà altezza) masse nominali adiacenti sono separate, ma 0,03 Da di differenza no.
+
+Il principio è dovuto a Wolfgang Paul (premio Nobel per la fisica 1989, condiviso, anche per la trappola ionica). La teoria è elegante e sorprendentemente completa: tutto discende da un'equazione differenziale nota dall'Ottocento.
+
+## Geometria e potenziale
+
+Quattro barre parallele all'asse *z*, idealmente a sezione iperbolica, sono collegate a coppie opposte. A una coppia si applica +Φ~0~, all'altra −Φ~0~, con
+
+```html
+<span class="eq">Φ<sub>0</sub>(<i>t</i>) = <i>U</i> − <i>V</i> cos Ω<i>t</i><span class="no">(9.1)</span></span>
+```
+
+```html
+<p><i>U</i> è la tensione continua (DC), <i>V</i> l'ampiezza della radiofrequenza (RF, frequenza Ω/2π ≈ 1 MHz), con <i>V</i> sempre molto maggiore di <i>U</i>. Tra le barre, a distanza <i>r</i><sub>0</sub> dall'asse, il potenziale è</p>
+```
+
+```html
+<span class="eq">Φ(<i>x</i>, <i>y</i>, <i>t</i>) = Φ<sub>0</sub>(<i>t</i>) <span class="frac"><span><i>x</i><sup>2</sup> − <i>y</i><sup>2</sup></span><span><i>r</i><sub>0</sub><sup>2</sup></span></span><span class="no">(9.2)</span></span>
+```
+
+È un **potenziale a sella**: lungo *x* è una parabola rivolta verso l'alto, lungo *y* verso il basso (o viceversa, mezzo periodo RF dopo). Il campo è lineare nelle coordinate e non ha componente lungo *z*: lo ione viaggia lungo l'asse con l'energia cinetica con cui è entrato (pochi eV), mentre nel piano *x*–*y* viene spinto avanti e indietro.
+
+```html
+<figure>
+<svg viewBox="0 0 360 360" style="max-width:420px;margin:auto" role="img" aria-label="Sezione del quadrupolo: quattro barre iperboliche, due a +Φ₀ ai lati e due a −Φ₀ sopra e sotto, con linee equipotenziali" aria-describedby="fd-09-0">
+<style>.eqp{fill:none;stroke:#c2410c;stroke-opacity:.45;stroke-width:1.2}.eqn{fill:none;stroke:#2b5c8a;stroke-opacity:.45;stroke-width:1.2}.tx{font:600 13px system-ui,sans-serif;fill:#fff}.lb{font:12px system-ui,sans-serif;fill:#24231f}</style>
+<rect width="360" height="360" fill="#fff"/>
+<path d="M351.6,12.0 L348.9,14.8 L346.1,17.6 L343.4,20.4 L340.7,23.2 L337.9,26.0 L335.2,28.8 L332.5,31.6 L329.7,34.4 L327.0,37.2 L324.3,40.0 L321.6,42.8 L318.9,45.6 L316.2,48.4 L313.5,51.2 L310.8,54.0 L308.1,56.8 L305.4,59.6 L302.7,62.4 L300.0,65.2 L297.3,68.0 L294.7,70.8 L292.0,73.6 L289.4,76.4 L286.7,79.2 L284.1,82.0 L281.4,84.8 L278.8,87.6 L276.2,90.4 L273.6,93.2 L271.0,96.0 L268.4,98.8 L265.9,101.6 L263.3,104.4 L260.8,107.2 L258.3,110.0 L255.8,112.8 L253.3,115.6 L250.8,118.4 L248.4,121.2 L246.0,124.0 L243.7,126.8 L241.4,129.6 L239.1,132.4 L236.9,135.2 L234.7,138.0 L232.6,140.8 L230.5,143.6 L228.5,146.4 L226.6,149.2 L224.8,152.0 L223.1,154.8 L221.6,157.6 L220.1,160.4 L218.8,163.2 L217.7,166.0 L216.7,168.8 L216.0,171.6 L215.4,174.4 L215.1,177.2 L215.0,180.0 L215.1,182.8 L215.4,185.6 L216.0,188.4 L216.7,191.2 L217.7,194.0 L218.8,196.8 L220.1,199.6 L221.6,202.4 L223.1,205.2 L224.8,208.0 L226.6,210.8 L228.5,213.6 L230.5,216.4 L232.6,219.2 L234.7,222.0 L236.9,224.8 L239.1,227.6 L241.4,230.4 L243.7,233.2 L246.0,236.0 L248.4,238.8 L250.8,241.6 L253.3,244.4 L255.8,247.2 L258.3,250.0 L260.8,252.8 L263.3,255.6 L265.9,258.4 L268.4,261.2 L271.0,264.0 L273.6,266.8 L276.2,269.6 L278.8,272.4 L281.4,275.2 L284.1,278.0 L286.7,280.8 L289.4,283.6 L292.0,286.4 L294.7,289.2 L297.3,292.0 L300.0,294.8 L302.7,297.6 L305.4,300.4 L308.1,303.2 L310.8,306.0 L313.5,308.8 L316.2,311.6 L318.9,314.4 L321.6,317.2 L324.3,320.0 L327.0,322.8 L329.7,325.6 L332.5,328.4 L335.2,331.2 L337.9,334.0 L340.7,336.8 L343.4,339.6 L346.1,342.4 L348.9,345.2 L351.6,348.0" class="eqp"/>
+<path d="M12.0,351.6 L14.8,348.9 L17.6,346.1 L20.4,343.4 L23.2,340.7 L26.0,337.9 L28.8,335.2 L31.6,332.5 L34.4,329.7 L37.2,327.0 L40.0,324.3 L42.8,321.6 L45.6,318.9 L48.4,316.2 L51.2,313.5 L54.0,310.8 L56.8,308.1 L59.6,305.4 L62.4,302.7 L65.2,300.0 L68.0,297.3 L70.8,294.7 L73.6,292.0 L76.4,289.4 L79.2,286.7 L82.0,284.1 L84.8,281.4 L87.6,278.8 L90.4,276.2 L93.2,273.6 L96.0,271.0 L98.8,268.4 L101.6,265.9 L104.4,263.3 L107.2,260.8 L110.0,258.3 L112.8,255.8 L115.6,253.3 L118.4,250.8 L121.2,248.4 L124.0,246.0 L126.8,243.7 L129.6,241.4 L132.4,239.1 L135.2,236.9 L138.0,234.7 L140.8,232.6 L143.6,230.5 L146.4,228.5 L149.2,226.6 L152.0,224.8 L154.8,223.1 L157.6,221.6 L160.4,220.1 L163.2,218.8 L166.0,217.7 L168.8,216.7 L171.6,216.0 L174.4,215.4 L177.2,215.1 L180.0,215.0 L182.8,215.1 L185.6,215.4 L188.4,216.0 L191.2,216.7 L194.0,217.7 L196.8,218.8 L199.6,220.1 L202.4,221.6 L205.2,223.1 L208.0,224.8 L210.8,226.6 L213.6,228.5 L216.4,230.5 L219.2,232.6 L222.0,234.7 L224.8,236.9 L227.6,239.1 L230.4,241.4 L233.2,243.7 L236.0,246.0 L238.8,248.4 L241.6,250.8 L244.4,253.3 L247.2,255.8 L250.0,258.3 L252.8,260.8 L255.6,263.3 L258.4,265.9 L261.2,268.4 L264.0,271.0 L266.8,273.6 L269.6,276.2 L272.4,278.8 L275.2,281.4 L278.0,284.1 L280.8,286.7 L283.6,289.4 L286.4,292.0 L289.2,294.7 L292.0,297.3 L294.8,300.0 L297.6,302.7 L300.4,305.4 L303.2,308.1 L306.0,310.8 L308.8,313.5 L311.6,316.2 L314.4,318.9 L317.2,321.6 L320.0,324.3 L322.8,327.0 L325.6,329.7 L328.4,332.5 L331.2,335.2 L334.0,337.9 L336.8,340.7 L339.6,343.4 L342.4,346.1 L345.2,348.9 L348.0,351.6" class="eqn"/>
+<path d="M8.4,12.0 L11.1,14.8 L13.9,17.6 L16.6,20.4 L19.3,23.2 L22.1,26.0 L24.8,28.8 L27.5,31.6 L30.3,34.4 L33.0,37.2 L35.7,40.0 L38.4,42.8 L41.1,45.6 L43.8,48.4 L46.5,51.2 L49.2,54.0 L51.9,56.8 L54.6,59.6 L57.3,62.4 L60.0,65.2 L62.7,68.0 L65.3,70.8 L68.0,73.6 L70.6,76.4 L73.3,79.2 L75.9,82.0 L78.6,84.8 L81.2,87.6 L83.8,90.4 L86.4,93.2 L89.0,96.0 L91.6,98.8 L94.1,101.6 L96.7,104.4 L99.2,107.2 L101.7,110.0 L104.2,112.8 L106.7,115.6 L109.2,118.4 L111.6,121.2 L114.0,124.0 L116.3,126.8 L118.6,129.6 L120.9,132.4 L123.1,135.2 L125.3,138.0 L127.4,140.8 L129.5,143.6 L131.5,146.4 L133.4,149.2 L135.2,152.0 L136.9,154.8 L138.4,157.6 L139.9,160.4 L141.2,163.2 L142.3,166.0 L143.3,168.8 L144.0,171.6 L144.6,174.4 L144.9,177.2 L145.0,180.0 L144.9,182.8 L144.6,185.6 L144.0,188.4 L143.3,191.2 L142.3,194.0 L141.2,196.8 L139.9,199.6 L138.4,202.4 L136.9,205.2 L135.2,208.0 L133.4,210.8 L131.5,213.6 L129.5,216.4 L127.4,219.2 L125.3,222.0 L123.1,224.8 L120.9,227.6 L118.6,230.4 L116.3,233.2 L114.0,236.0 L111.6,238.8 L109.2,241.6 L106.7,244.4 L104.2,247.2 L101.7,250.0 L99.2,252.8 L96.7,255.6 L94.1,258.4 L91.6,261.2 L89.0,264.0 L86.4,266.8 L83.8,269.6 L81.2,272.4 L78.6,275.2 L75.9,278.0 L73.3,280.8 L70.6,283.6 L68.0,286.4 L65.3,289.2 L62.7,292.0 L60.0,294.8 L57.3,297.6 L54.6,300.4 L51.9,303.2 L49.2,306.0 L46.5,308.8 L43.8,311.6 L41.1,314.4 L38.4,317.2 L35.7,320.0 L33.0,322.8 L30.3,325.6 L27.5,328.4 L24.8,331.2 L22.1,334.0 L19.3,336.8 L16.6,339.6 L13.9,342.4 L11.1,345.2 L8.4,348.0" class="eqp"/>
+<path d="M12.0,8.4 L14.8,11.1 L17.6,13.9 L20.4,16.6 L23.2,19.3 L26.0,22.1 L28.8,24.8 L31.6,27.5 L34.4,30.3 L37.2,33.0 L40.0,35.7 L42.8,38.4 L45.6,41.1 L48.4,43.8 L51.2,46.5 L54.0,49.2 L56.8,51.9 L59.6,54.6 L62.4,57.3 L65.2,60.0 L68.0,62.7 L70.8,65.3 L73.6,68.0 L76.4,70.6 L79.2,73.3 L82.0,75.9 L84.8,78.6 L87.6,81.2 L90.4,83.8 L93.2,86.4 L96.0,89.0 L98.8,91.6 L101.6,94.1 L104.4,96.7 L107.2,99.2 L110.0,101.7 L112.8,104.2 L115.6,106.7 L118.4,109.2 L121.2,111.6 L124.0,114.0 L126.8,116.3 L129.6,118.6 L132.4,120.9 L135.2,123.1 L138.0,125.3 L140.8,127.4 L143.6,129.5 L146.4,131.5 L149.2,133.4 L152.0,135.2 L154.8,136.9 L157.6,138.4 L160.4,139.9 L163.2,141.2 L166.0,142.3 L168.8,143.3 L171.6,144.0 L174.4,144.6 L177.2,144.9 L180.0,145.0 L182.8,144.9 L185.6,144.6 L188.4,144.0 L191.2,143.3 L194.0,142.3 L196.8,141.2 L199.6,139.9 L202.4,138.4 L205.2,136.9 L208.0,135.2 L210.8,133.4 L213.6,131.5 L216.4,129.5 L219.2,127.4 L222.0,125.3 L224.8,123.1 L227.6,120.9 L230.4,118.6 L233.2,116.3 L236.0,114.0 L238.8,111.6 L241.6,109.2 L244.4,106.7 L247.2,104.2 L250.0,101.7 L252.8,99.2 L255.6,96.7 L258.4,94.1 L261.2,91.6 L264.0,89.0 L266.8,86.4 L269.6,83.8 L272.4,81.2 L275.2,78.6 L278.0,75.9 L280.8,73.3 L283.6,70.6 L286.4,68.0 L289.2,65.3 L292.0,62.7 L294.8,60.0 L297.6,57.3 L300.4,54.6 L303.2,51.9 L306.0,49.2 L308.8,46.5 L311.6,43.8 L314.4,41.1 L317.2,38.4 L320.0,35.7 L322.8,33.0 L325.6,30.3 L328.4,27.5 L331.2,24.8 L334.0,22.1 L336.8,19.3 L339.6,16.6 L342.4,13.9 L345.2,11.1 L348.0,8.4" class="eqn"/>
+<path d="M355.1,12.0 L352.5,14.8 L349.8,17.6 L347.1,20.4 L344.4,23.2 L341.8,26.0 L339.1,28.8 L336.4,31.6 L333.8,34.4 L331.1,37.2 L328.5,40.0 L325.9,42.8 L323.2,45.6 L320.6,48.4 L318.0,51.2 L315.4,54.0 L312.8,56.8 L310.2,59.6 L307.6,62.4 L305.0,65.2 L302.4,68.0 L299.9,70.8 L297.3,73.6 L294.8,76.4 L292.3,79.2 L289.8,82.0 L287.3,84.8 L284.8,87.6 L282.4,90.4 L279.9,93.2 L277.5,96.0 L275.1,98.8 L272.7,101.6 L270.4,104.4 L268.0,107.2 L265.7,110.0 L263.5,112.8 L261.2,115.6 L259.0,118.4 L256.9,121.2 L254.7,124.0 L252.7,126.8 L250.6,129.6 L248.7,132.4 L246.8,135.2 L244.9,138.0 L243.1,140.8 L241.4,143.6 L239.8,146.4 L238.3,149.2 L236.9,152.0 L235.5,154.8 L234.3,157.6 L233.2,160.4 L232.3,163.2 L231.4,166.0 L230.7,168.8 L230.2,171.6 L229.8,174.4 L229.6,177.2 L229.5,180.0 L229.6,182.8 L229.8,185.6 L230.2,188.4 L230.7,191.2 L231.4,194.0 L232.3,196.8 L233.2,199.6 L234.3,202.4 L235.5,205.2 L236.9,208.0 L238.3,210.8 L239.8,213.6 L241.4,216.4 L243.1,219.2 L244.9,222.0 L246.8,224.8 L248.7,227.6 L250.6,230.4 L252.7,233.2 L254.7,236.0 L256.9,238.8 L259.0,241.6 L261.2,244.4 L263.5,247.2 L265.7,250.0 L268.0,252.8 L270.4,255.6 L272.7,258.4 L275.1,261.2 L277.5,264.0 L279.9,266.8 L282.4,269.6 L284.8,272.4 L287.3,275.2 L289.8,278.0 L292.3,280.8 L294.8,283.6 L297.3,286.4 L299.9,289.2 L302.4,292.0 L305.0,294.8 L307.6,297.6 L310.2,300.4 L312.8,303.2 L315.4,306.0 L318.0,308.8 L320.6,311.6 L323.2,314.4 L325.9,317.2 L328.5,320.0 L331.1,322.8 L333.8,325.6 L336.4,328.4 L339.1,331.2 L341.8,334.0 L344.4,336.8 L347.1,339.6 L349.8,342.4 L352.5,345.2 L355.1,348.0" class="eqp"/>
+<path d="M12.0,355.1 L14.8,352.5 L17.6,349.8 L20.4,347.1 L23.2,344.4 L26.0,341.8 L28.8,339.1 L31.6,336.4 L34.4,333.8 L37.2,331.1 L40.0,328.5 L42.8,325.9 L45.6,323.2 L48.4,320.6 L51.2,318.0 L54.0,315.4 L56.8,312.8 L59.6,310.2 L62.4,307.6 L65.2,305.0 L68.0,302.4 L70.8,299.9 L73.6,297.3 L76.4,294.8 L79.2,292.3 L82.0,289.8 L84.8,287.3 L87.6,284.8 L90.4,282.4 L93.2,279.9 L96.0,277.5 L98.8,275.1 L101.6,272.7 L104.4,270.4 L107.2,268.0 L110.0,265.7 L112.8,263.5 L115.6,261.2 L118.4,259.0 L121.2,256.9 L124.0,254.7 L126.8,252.7 L129.6,250.6 L132.4,248.7 L135.2,246.8 L138.0,244.9 L140.8,243.1 L143.6,241.4 L146.4,239.8 L149.2,238.3 L152.0,236.9 L154.8,235.5 L157.6,234.3 L160.4,233.2 L163.2,232.3 L166.0,231.4 L168.8,230.7 L171.6,230.2 L174.4,229.8 L177.2,229.6 L180.0,229.5 L182.8,229.6 L185.6,229.8 L188.4,230.2 L191.2,230.7 L194.0,231.4 L196.8,232.3 L199.6,233.2 L202.4,234.3 L205.2,235.5 L208.0,236.9 L210.8,238.3 L213.6,239.8 L216.4,241.4 L219.2,243.1 L222.0,244.9 L224.8,246.8 L227.6,248.7 L230.4,250.6 L233.2,252.7 L236.0,254.7 L238.8,256.9 L241.6,259.0 L244.4,261.2 L247.2,263.5 L250.0,265.7 L252.8,268.0 L255.6,270.4 L258.4,272.7 L261.2,275.1 L264.0,277.5 L266.8,279.9 L269.6,282.4 L272.4,284.8 L275.2,287.3 L278.0,289.8 L280.8,292.3 L283.6,294.8 L286.4,297.3 L289.2,299.9 L292.0,302.4 L294.8,305.0 L297.6,307.6 L300.4,310.2 L303.2,312.8 L306.0,315.4 L308.8,318.0 L311.6,320.6 L314.4,323.2 L317.2,325.9 L320.0,328.5 L322.8,331.1 L325.6,333.8 L328.4,336.4 L331.2,339.1 L334.0,341.8 L336.8,344.4 L339.6,347.1 L342.4,349.8 L345.2,352.5 L348.0,355.1" class="eqn"/>
+<path d="M4.9,12.0 L7.5,14.8 L10.2,17.6 L12.9,20.4 L15.6,23.2 L18.2,26.0 L20.9,28.8 L23.6,31.6 L26.2,34.4 L28.9,37.2 L31.5,40.0 L34.1,42.8 L36.8,45.6 L39.4,48.4 L42.0,51.2 L44.6,54.0 L47.2,56.8 L49.8,59.6 L52.4,62.4 L55.0,65.2 L57.6,68.0 L60.1,70.8 L62.7,73.6 L65.2,76.4 L67.7,79.2 L70.2,82.0 L72.7,84.8 L75.2,87.6 L77.6,90.4 L80.1,93.2 L82.5,96.0 L84.9,98.8 L87.3,101.6 L89.6,104.4 L92.0,107.2 L94.3,110.0 L96.5,112.8 L98.8,115.6 L101.0,118.4 L103.1,121.2 L105.3,124.0 L107.3,126.8 L109.4,129.6 L111.3,132.4 L113.2,135.2 L115.1,138.0 L116.9,140.8 L118.6,143.6 L120.2,146.4 L121.7,149.2 L123.1,152.0 L124.5,154.8 L125.7,157.6 L126.8,160.4 L127.7,163.2 L128.6,166.0 L129.3,168.8 L129.8,171.6 L130.2,174.4 L130.4,177.2 L130.5,180.0 L130.4,182.8 L130.2,185.6 L129.8,188.4 L129.3,191.2 L128.6,194.0 L127.7,196.8 L126.8,199.6 L125.7,202.4 L124.5,205.2 L123.1,208.0 L121.7,210.8 L120.2,213.6 L118.6,216.4 L116.9,219.2 L115.1,222.0 L113.2,224.8 L111.3,227.6 L109.4,230.4 L107.3,233.2 L105.3,236.0 L103.1,238.8 L101.0,241.6 L98.8,244.4 L96.5,247.2 L94.3,250.0 L92.0,252.8 L89.6,255.6 L87.3,258.4 L84.9,261.2 L82.5,264.0 L80.1,266.8 L77.6,269.6 L75.2,272.4 L72.7,275.2 L70.2,278.0 L67.7,280.8 L65.2,283.6 L62.7,286.4 L60.1,289.2 L57.6,292.0 L55.0,294.8 L52.4,297.6 L49.8,300.4 L47.2,303.2 L44.6,306.0 L42.0,308.8 L39.4,311.6 L36.8,314.4 L34.1,317.2 L31.5,320.0 L28.9,322.8 L26.2,325.6 L23.6,328.4 L20.9,331.2 L18.2,334.0 L15.6,336.8 L12.9,339.6 L10.2,342.4 L7.5,345.2 L4.9,348.0" class="eqp"/>
+<path d="M12.0,4.9 L14.8,7.5 L17.6,10.2 L20.4,12.9 L23.2,15.6 L26.0,18.2 L28.8,20.9 L31.6,23.6 L34.4,26.2 L37.2,28.9 L40.0,31.5 L42.8,34.1 L45.6,36.8 L48.4,39.4 L51.2,42.0 L54.0,44.6 L56.8,47.2 L59.6,49.8 L62.4,52.4 L65.2,55.0 L68.0,57.6 L70.8,60.1 L73.6,62.7 L76.4,65.2 L79.2,67.7 L82.0,70.2 L84.8,72.7 L87.6,75.2 L90.4,77.6 L93.2,80.1 L96.0,82.5 L98.8,84.9 L101.6,87.3 L104.4,89.6 L107.2,92.0 L110.0,94.3 L112.8,96.5 L115.6,98.8 L118.4,101.0 L121.2,103.1 L124.0,105.3 L126.8,107.3 L129.6,109.4 L132.4,111.3 L135.2,113.2 L138.0,115.1 L140.8,116.9 L143.6,118.6 L146.4,120.2 L149.2,121.7 L152.0,123.1 L154.8,124.5 L157.6,125.7 L160.4,126.8 L163.2,127.7 L166.0,128.6 L168.8,129.3 L171.6,129.8 L174.4,130.2 L177.2,130.4 L180.0,130.5 L182.8,130.4 L185.6,130.2 L188.4,129.8 L191.2,129.3 L194.0,128.6 L196.8,127.7 L199.6,126.8 L202.4,125.7 L205.2,124.5 L208.0,123.1 L210.8,121.7 L213.6,120.2 L216.4,118.6 L219.2,116.9 L222.0,115.1 L224.8,113.2 L227.6,111.3 L230.4,109.4 L233.2,107.3 L236.0,105.3 L238.8,103.1 L241.6,101.0 L244.4,98.8 L247.2,96.5 L250.0,94.3 L252.8,92.0 L255.6,89.6 L258.4,87.3 L261.2,84.9 L264.0,82.5 L266.8,80.1 L269.6,77.6 L272.4,75.2 L275.2,72.7 L278.0,70.2 L280.8,67.7 L283.6,65.2 L286.4,62.7 L289.2,60.1 L292.0,57.6 L294.8,55.0 L297.6,52.4 L300.4,49.8 L303.2,47.2 L306.0,44.6 L308.8,42.0 L311.6,39.4 L314.4,36.8 L317.2,34.1 L320.0,31.5 L322.8,28.9 L325.6,26.2 L328.4,23.6 L331.2,20.9 L334.0,18.2 L336.8,15.6 L339.6,12.9 L342.4,10.2 L345.2,7.5 L348.0,4.9" class="eqn"/>
+<path d="M359.4,14.8 L356.8,17.6 L354.3,20.4 L351.7,23.2 L349.2,26.0 L346.6,28.8 L344.1,31.6 L341.6,34.4 L339.0,37.2 L336.5,40.0 L334.0,42.8 L331.5,45.6 L329.1,48.4 L326.6,51.2 L324.1,54.0 L321.7,56.8 L319.3,59.6 L316.9,62.4 L314.5,65.2 L312.1,68.0 L309.7,70.8 L307.4,73.6 L305.0,76.4 L302.7,79.2 L300.4,82.0 L298.2,84.8 L295.9,87.6 L293.7,90.4 L291.5,93.2 L289.3,96.0 L287.2,98.8 L285.1,101.6 L283.0,104.4 L281.0,107.2 L279.0,110.0 L277.0,112.8 L275.1,115.6 L273.2,118.4 L271.4,121.2 L269.6,124.0 L267.9,126.8 L266.3,129.6 L264.7,132.4 L263.1,135.2 L261.6,138.0 L260.2,140.8 L258.9,143.6 L257.6,146.4 L256.5,149.2 L255.4,152.0 L254.4,154.8 L253.5,157.6 L252.7,160.4 L252.0,163.2 L251.4,166.0 L250.9,168.8 L250.5,171.6 L250.2,174.4 L250.1,177.2 L250.0,180.0 L250.1,182.8 L250.2,185.6 L250.5,188.4 L250.9,191.2 L251.4,194.0 L252.0,196.8 L252.7,199.6 L253.5,202.4 L254.4,205.2 L255.4,208.0 L256.5,210.8 L257.6,213.6 L258.9,216.4 L260.2,219.2 L261.6,222.0 L263.1,224.8 L264.7,227.6 L266.3,230.4 L267.9,233.2 L269.6,236.0 L271.4,238.8 L273.2,241.6 L275.1,244.4 L277.0,247.2 L279.0,250.0 L281.0,252.8 L283.0,255.6 L285.1,258.4 L287.2,261.2 L289.3,264.0 L291.5,266.8 L293.7,269.6 L295.9,272.4 L298.2,275.2 L300.4,278.0 L302.7,280.8 L305.0,283.6 L307.4,286.4 L309.7,289.2 L312.1,292.0 L314.5,294.8 L316.9,297.6 L319.3,300.4 L321.7,303.2 L324.1,306.0 L326.6,308.8 L329.1,311.6 L331.5,314.4 L334.0,317.2 L336.5,320.0 L339.0,322.8 L341.6,325.6 L344.1,328.4 L346.6,331.2 L349.2,334.0 L351.7,336.8 L354.3,339.6 L356.8,342.4 L359.4,345.2" class="eqp"/>
+<path d="M14.8,359.4 L17.6,356.8 L20.4,354.3 L23.2,351.7 L26.0,349.2 L28.8,346.6 L31.6,344.1 L34.4,341.6 L37.2,339.0 L40.0,336.5 L42.8,334.0 L45.6,331.5 L48.4,329.1 L51.2,326.6 L54.0,324.1 L56.8,321.7 L59.6,319.3 L62.4,316.9 L65.2,314.5 L68.0,312.1 L70.8,309.7 L73.6,307.4 L76.4,305.0 L79.2,302.7 L82.0,300.4 L84.8,298.2 L87.6,295.9 L90.4,293.7 L93.2,291.5 L96.0,289.3 L98.8,287.2 L101.6,285.1 L104.4,283.0 L107.2,281.0 L110.0,279.0 L112.8,277.0 L115.6,275.1 L118.4,273.2 L121.2,271.4 L124.0,269.6 L126.8,267.9 L129.6,266.3 L132.4,264.7 L135.2,263.1 L138.0,261.6 L140.8,260.2 L143.6,258.9 L146.4,257.6 L149.2,256.5 L152.0,255.4 L154.8,254.4 L157.6,253.5 L160.4,252.7 L163.2,252.0 L166.0,251.4 L168.8,250.9 L171.6,250.5 L174.4,250.2 L177.2,250.1 L180.0,250.0 L182.8,250.1 L185.6,250.2 L188.4,250.5 L191.2,250.9 L194.0,251.4 L196.8,252.0 L199.6,252.7 L202.4,253.5 L205.2,254.4 L208.0,255.4 L210.8,256.5 L213.6,257.6 L216.4,258.9 L219.2,260.2 L222.0,261.6 L224.8,263.1 L227.6,264.7 L230.4,266.3 L233.2,267.9 L236.0,269.6 L238.8,271.4 L241.6,273.2 L244.4,275.1 L247.2,277.0 L250.0,279.0 L252.8,281.0 L255.6,283.0 L258.4,285.1 L261.2,287.2 L264.0,289.3 L266.8,291.5 L269.6,293.7 L272.4,295.9 L275.2,298.2 L278.0,300.4 L280.8,302.7 L283.6,305.0 L286.4,307.4 L289.2,309.7 L292.0,312.1 L294.8,314.5 L297.6,316.9 L300.4,319.3 L303.2,321.7 L306.0,324.1 L308.8,326.6 L311.6,329.1 L314.4,331.5 L317.2,334.0 L320.0,336.5 L322.8,339.0 L325.6,341.6 L328.4,344.1 L331.2,346.6 L334.0,349.2 L336.8,351.7 L339.6,354.3 L342.4,356.8 L345.2,359.4" class="eqn"/>
+<path d="M0.6,14.8 L3.2,17.6 L5.7,20.4 L8.3,23.2 L10.8,26.0 L13.4,28.8 L15.9,31.6 L18.4,34.4 L21.0,37.2 L23.5,40.0 L26.0,42.8 L28.5,45.6 L30.9,48.4 L33.4,51.2 L35.9,54.0 L38.3,56.8 L40.7,59.6 L43.1,62.4 L45.5,65.2 L47.9,68.0 L50.3,70.8 L52.6,73.6 L55.0,76.4 L57.3,79.2 L59.6,82.0 L61.8,84.8 L64.1,87.6 L66.3,90.4 L68.5,93.2 L70.7,96.0 L72.8,98.8 L74.9,101.6 L77.0,104.4 L79.0,107.2 L81.0,110.0 L83.0,112.8 L84.9,115.6 L86.8,118.4 L88.6,121.2 L90.4,124.0 L92.1,126.8 L93.7,129.6 L95.3,132.4 L96.9,135.2 L98.4,138.0 L99.8,140.8 L101.1,143.6 L102.4,146.4 L103.5,149.2 L104.6,152.0 L105.6,154.8 L106.5,157.6 L107.3,160.4 L108.0,163.2 L108.6,166.0 L109.1,168.8 L109.5,171.6 L109.8,174.4 L109.9,177.2 L110.0,180.0 L109.9,182.8 L109.8,185.6 L109.5,188.4 L109.1,191.2 L108.6,194.0 L108.0,196.8 L107.3,199.6 L106.5,202.4 L105.6,205.2 L104.6,208.0 L103.5,210.8 L102.4,213.6 L101.1,216.4 L99.8,219.2 L98.4,222.0 L96.9,224.8 L95.3,227.6 L93.7,230.4 L92.1,233.2 L90.4,236.0 L88.6,238.8 L86.8,241.6 L84.9,244.4 L83.0,247.2 L81.0,250.0 L79.0,252.8 L77.0,255.6 L74.9,258.4 L72.8,261.2 L70.7,264.0 L68.5,266.8 L66.3,269.6 L64.1,272.4 L61.8,275.2 L59.6,278.0 L57.3,280.8 L55.0,283.6 L52.6,286.4 L50.3,289.2 L47.9,292.0 L45.5,294.8 L43.1,297.6 L40.7,300.4 L38.3,303.2 L35.9,306.0 L33.4,308.8 L30.9,311.6 L28.5,314.4 L26.0,317.2 L23.5,320.0 L21.0,322.8 L18.4,325.6 L15.9,328.4 L13.4,331.2 L10.8,334.0 L8.3,336.8 L5.7,339.6 L3.2,342.4 L0.6,345.2" class="eqp"/>
+<path d="M14.8,0.6 L17.6,3.2 L20.4,5.7 L23.2,8.3 L26.0,10.8 L28.8,13.4 L31.6,15.9 L34.4,18.4 L37.2,21.0 L40.0,23.5 L42.8,26.0 L45.6,28.5 L48.4,30.9 L51.2,33.4 L54.0,35.9 L56.8,38.3 L59.6,40.7 L62.4,43.1 L65.2,45.5 L68.0,47.9 L70.8,50.3 L73.6,52.6 L76.4,55.0 L79.2,57.3 L82.0,59.6 L84.8,61.8 L87.6,64.1 L90.4,66.3 L93.2,68.5 L96.0,70.7 L98.8,72.8 L101.6,74.9 L104.4,77.0 L107.2,79.0 L110.0,81.0 L112.8,83.0 L115.6,84.9 L118.4,86.8 L121.2,88.6 L124.0,90.4 L126.8,92.1 L129.6,93.7 L132.4,95.3 L135.2,96.9 L138.0,98.4 L140.8,99.8 L143.6,101.1 L146.4,102.4 L149.2,103.5 L152.0,104.6 L154.8,105.6 L157.6,106.5 L160.4,107.3 L163.2,108.0 L166.0,108.6 L168.8,109.1 L171.6,109.5 L174.4,109.8 L177.2,109.9 L180.0,110.0 L182.8,109.9 L185.6,109.8 L188.4,109.5 L191.2,109.1 L194.0,108.6 L196.8,108.0 L199.6,107.3 L202.4,106.5 L205.2,105.6 L208.0,104.6 L210.8,103.5 L213.6,102.4 L216.4,101.1 L219.2,99.8 L222.0,98.4 L224.8,96.9 L227.6,95.3 L230.4,93.7 L233.2,92.1 L236.0,90.4 L238.8,88.6 L241.6,86.8 L244.4,84.9 L247.2,83.0 L250.0,81.0 L252.8,79.0 L255.6,77.0 L258.4,74.9 L261.2,72.8 L264.0,70.7 L266.8,68.5 L269.6,66.3 L272.4,64.1 L275.2,61.8 L278.0,59.6 L280.8,57.3 L283.6,55.0 L286.4,52.6 L289.2,50.3 L292.0,47.9 L294.8,45.5 L297.6,43.1 L300.4,40.7 L303.2,38.3 L306.0,35.9 L308.8,33.4 L311.6,30.9 L314.4,28.5 L317.2,26.0 L320.0,23.5 L322.8,21.0 L325.6,18.4 L328.4,15.9 L331.2,13.4 L334.0,10.8 L336.8,8.3 L339.6,5.7 L342.4,3.2 L345.2,0.6" class="eqn"/>
+<path d="M294.8,89.0 L293.0,91.3 L291.2,93.6 L289.5,95.8 L287.7,98.1 L286.0,100.4 L284.3,102.7 L282.6,104.9 L281.0,107.2 L279.4,109.5 L277.8,111.8 L276.2,114.0 L274.6,116.3 L273.1,118.6 L271.6,120.8 L270.2,123.1 L268.8,125.4 L267.4,127.7 L266.1,129.9 L264.7,132.2 L263.5,134.5 L262.3,136.8 L261.1,139.1 L260.0,141.3 L258.9,143.6 L257.9,145.9 L256.9,148.2 L256.0,150.4 L255.1,152.7 L254.3,155.0 L253.6,157.2 L252.9,159.5 L252.3,161.8 L251.8,164.1 L251.3,166.3 L250.9,168.6 L250.6,170.9 L250.3,173.2 L250.1,175.4 L250.0,177.7 L250.0,180.0 L250.0,182.3 L250.1,184.6 L250.3,186.8 L250.6,189.1 L250.9,191.4 L251.3,193.7 L251.8,195.9 L252.3,198.2 L252.9,200.5 L253.6,202.8 L254.3,205.0 L255.1,207.3 L256.0,209.6 L256.9,211.8 L257.9,214.1 L258.9,216.4 L260.0,218.7 L261.1,220.9 L262.3,223.2 L263.5,225.5 L264.7,227.8 L266.1,230.1 L267.4,232.3 L268.8,234.6 L270.2,236.9 L271.6,239.2 L273.1,241.4 L274.6,243.7 L276.2,246.0 L277.8,248.2 L279.4,250.5 L281.0,252.8 L282.6,255.1 L284.3,257.4 L286.0,259.6 L287.7,261.9 L289.5,264.2 L291.2,266.4 L293.0,268.7 L294.8,271.0 L355.0,271.0 L355.0,89.0Z" fill="#c2410c" fill-opacity=".85"/>
+<path d="M65.2,89.0 L67.0,91.3 L68.8,93.6 L70.5,95.8 L72.3,98.1 L74.0,100.4 L75.7,102.7 L77.4,104.9 L79.0,107.2 L80.6,109.5 L82.2,111.8 L83.8,114.0 L85.4,116.3 L86.9,118.6 L88.4,120.8 L89.8,123.1 L91.2,125.4 L92.6,127.7 L93.9,129.9 L95.3,132.2 L96.5,134.5 L97.7,136.8 L98.9,139.1 L100.0,141.3 L101.1,143.6 L102.1,145.9 L103.1,148.2 L104.0,150.4 L104.9,152.7 L105.7,155.0 L106.4,157.2 L107.1,159.5 L107.7,161.8 L108.2,164.1 L108.7,166.3 L109.1,168.6 L109.4,170.9 L109.7,173.2 L109.9,175.4 L110.0,177.7 L110.0,180.0 L110.0,182.3 L109.9,184.6 L109.7,186.8 L109.4,189.1 L109.1,191.4 L108.7,193.7 L108.2,195.9 L107.7,198.2 L107.1,200.5 L106.4,202.8 L105.7,205.0 L104.9,207.3 L104.0,209.6 L103.1,211.8 L102.1,214.1 L101.1,216.4 L100.0,218.7 L98.9,220.9 L97.7,223.2 L96.5,225.5 L95.3,227.8 L93.9,230.1 L92.6,232.3 L91.2,234.6 L89.8,236.9 L88.4,239.2 L86.9,241.4 L85.4,243.7 L83.8,246.0 L82.2,248.2 L80.6,250.5 L79.0,252.8 L77.4,255.1 L75.7,257.4 L74.0,259.6 L72.3,261.9 L70.5,264.2 L68.8,266.4 L67.0,268.7 L65.2,271.0 L5.0,271.0 L5.0,89.0Z" fill="#c2410c" fill-opacity=".85"/>
+<path d="M89.0,294.8 L91.3,293.0 L93.6,291.2 L95.8,289.5 L98.1,287.7 L100.4,286.0 L102.7,284.3 L104.9,282.6 L107.2,281.0 L109.5,279.4 L111.8,277.8 L114.0,276.2 L116.3,274.6 L118.6,273.1 L120.8,271.6 L123.1,270.2 L125.4,268.8 L127.7,267.4 L129.9,266.1 L132.2,264.7 L134.5,263.5 L136.8,262.3 L139.1,261.1 L141.3,260.0 L143.6,258.9 L145.9,257.9 L148.2,256.9 L150.4,256.0 L152.7,255.1 L155.0,254.3 L157.2,253.6 L159.5,252.9 L161.8,252.3 L164.1,251.8 L166.3,251.3 L168.6,250.9 L170.9,250.6 L173.2,250.3 L175.4,250.1 L177.7,250.0 L180.0,250.0 L182.3,250.0 L184.6,250.1 L186.8,250.3 L189.1,250.6 L191.4,250.9 L193.7,251.3 L195.9,251.8 L198.2,252.3 L200.5,252.9 L202.8,253.6 L205.0,254.3 L207.3,255.1 L209.6,256.0 L211.8,256.9 L214.1,257.9 L216.4,258.9 L218.7,260.0 L220.9,261.1 L223.2,262.3 L225.5,263.5 L227.8,264.7 L230.1,266.1 L232.3,267.4 L234.6,268.8 L236.9,270.2 L239.2,271.6 L241.4,273.1 L243.7,274.6 L246.0,276.2 L248.2,277.8 L250.5,279.4 L252.8,281.0 L255.1,282.6 L257.4,284.3 L259.6,286.0 L261.9,287.7 L264.2,289.5 L266.4,291.2 L268.7,293.0 L271.0,294.8 L271.0,355.0 L89.0,355.0Z" fill="#2b5c8a" fill-opacity=".85"/>
+<path d="M89.0,65.2 L91.3,67.0 L93.6,68.8 L95.8,70.5 L98.1,72.3 L100.4,74.0 L102.7,75.7 L104.9,77.4 L107.2,79.0 L109.5,80.6 L111.8,82.2 L114.0,83.8 L116.3,85.4 L118.6,86.9 L120.8,88.4 L123.1,89.8 L125.4,91.2 L127.7,92.6 L129.9,93.9 L132.2,95.3 L134.5,96.5 L136.8,97.7 L139.1,98.9 L141.3,100.0 L143.6,101.1 L145.9,102.1 L148.2,103.1 L150.4,104.0 L152.7,104.9 L155.0,105.7 L157.2,106.4 L159.5,107.1 L161.8,107.7 L164.1,108.2 L166.3,108.7 L168.6,109.1 L170.9,109.4 L173.2,109.7 L175.4,109.9 L177.7,110.0 L180.0,110.0 L182.3,110.0 L184.6,109.9 L186.8,109.7 L189.1,109.4 L191.4,109.1 L193.7,108.7 L195.9,108.2 L198.2,107.7 L200.5,107.1 L202.8,106.4 L205.0,105.7 L207.3,104.9 L209.6,104.0 L211.8,103.1 L214.1,102.1 L216.4,101.1 L218.7,100.0 L220.9,98.9 L223.2,97.7 L225.5,96.5 L227.8,95.3 L230.1,93.9 L232.3,92.6 L234.6,91.2 L236.9,89.8 L239.2,88.4 L241.4,86.9 L243.7,85.4 L246.0,83.8 L248.2,82.2 L250.5,80.6 L252.8,79.0 L255.1,77.4 L257.4,75.7 L259.6,74.0 L261.9,72.3 L264.2,70.5 L266.4,68.8 L268.7,67.0 L271.0,65.2 L271.0,5.0 L89.0,5.0Z" fill="#2b5c8a" fill-opacity=".85"/>
+<circle cx="180" cy="180" r="70" fill="none" stroke="#24231f" stroke-dasharray="3 4"/>
+<path d="M180 180 L242 147" stroke="#24231f"/><text class="lb" x="214" y="150">r₀</text>
+<text class="tx" x="306" y="185">+Φ₀</text><text class="tx" x="20" y="185">+Φ₀</text><text class="tx" x="166" y="30">−Φ₀</text><text class="tx" x="166" y="345">−Φ₀</text>
+<path d="M180 180 h40 M180 180 v-40" stroke="#24231f" stroke-width="1.2"/><text class="lb" x="222" y="194">x</text><text class="lb" x="186" y="140">y</text>
+</svg><details class="figdesc" id="fd-09-0"><summary>Descrizione della figura</summary><p>Quattro barre a profilo iperbolico intorno a un cerchio tratteggiato di raggio r₀; al centro gli assi x (orizzontale) e y (verticale). Le barre a sinistra e a destra, lungo x, sono a +Φ₀; quelle in alto e in basso, lungo y, a −Φ₀. Linee curve arancioni intorno alle barre +Φ₀ e azzurre intorno alle −Φ₀ mostrano le superfici equipotenziali.</p></details>
+<figcaption><b>Figura 9.1</b> Sezione di un quadrupolo ideale. Le superfici delle barre sono le iperboli <i>x</i><sup>2</sup> − <i>y</i><sup>2</sup> = ±<i>r</i><sub>0</sub><sup>2</sup>; le linee sottili sono equipotenziali (iperboli anch'esse). Le barre reali sono spesso cilindriche, con raggio ≈ 1,13–1,15 <i>r</i><sub>0</sub>, che approssima bene il campo vicino all'asse.</figcaption>
+</figure>
+```
+
+```html
+<div class="sim" id="sim-field"><h4>Il campo che oscilla e la traiettoria di uno ione</h4>
+<p class="note">A sinistra il potenziale nel piano x–y (arancione = positivo, blu = negativo) che si inverte a ogni mezzo ciclo, con la traiettoria di uno ione. A destra gli spostamenti x e y nel tempo. Il calcolo integra l'equazione di Mathieu (6.6) passo per passo. Provate q &gt; 0,908 con a = 0, oppure un punto appena sopra il vertice.</p></div>
+```
+
+## Le equazioni del moto
+
+Dal potenziale si ricava il campo, *E*~*x*~ = −∂Φ/∂*x* = −2Φ~0~*x*/*r*~0~^2^ ed *E*~*y*~ = +2Φ~0~*y*/*r*~0~^2^, e con *F* = *ze E* la seconda legge di Newton:
+
+```html
+<span class="eq"><i>m</i> <span class="frac"><span>d<sup>2</sup><i>x</i></span><span>d<i>t</i><sup>2</sup></span></span> + <span class="frac"><span>2<i>ze</i></span><span><i>r</i><sub>0</sub><sup>2</sup></span></span>(<i>U</i> − <i>V</i> cos Ω<i>t</i>) <i>x</i> = 0, &nbsp;&nbsp; <i>m</i> <span class="frac"><span>d<sup>2</sup><i>y</i></span><span>d<i>t</i><sup>2</sup></span></span> − <span class="frac"><span>2<i>ze</i></span><span><i>r</i><sub>0</sub><sup>2</sup></span></span>(<i>U</i> − <i>V</i> cos Ω<i>t</i>) <i>y</i> = 0<span class="no">(9.3)</span></span>
+```
+
+```html
+<p>I moti in <i>x</i> e in <i>y</i> sono <b>disaccoppiati</b> (si studiano separatamente) e differiscono solo per il segno. Con il cambio di variabile ξ = Ω<i>t</i>/2 (quindi d<sup>2</sup>/d<i>t</i><sup>2</sup> = (Ω<sup>2</sup>/4) d<sup>2</sup>/dξ<sup>2</sup>) e definendo</p>
+```
+
+```html
+<span class="eq"><i>a</i><sub><i>x</i></sub> = −<i>a</i><sub><i>y</i></sub> = <span class="frac"><span>8 <i>ze U</i></span><span><i>m</i> <i>r</i><sub>0</sub><sup>2</sup> Ω<sup>2</sup></span></span>, &nbsp;&nbsp;&nbsp; <i>q</i><sub><i>x</i></sub> = −<i>q</i><sub><i>y</i></sub> = <span class="frac"><span>4 <i>ze V</i></span><span><i>m</i> <i>r</i><sub>0</sub><sup>2</sup> Ω<sup>2</sup></span></span><span class="no">(9.4–9.5)</span></span>
+```
+
+entrambe le equazioni assumono la forma canonica dell'**equazione di Mathieu** (1868):
+
+```html
+<span class="eq"><span class="frac"><span>d<sup>2</sup><i>u</i></span><span>dξ<sup>2</sup></span></span> + (<i>a</i><sub><i>u</i></sub> − 2<i>q</i><sub><i>u</i></sub> cos 2ξ) <i>u</i> = 0, &nbsp;&nbsp; <i>u</i> = <i>x</i>, <i>y</i><span class="no">(9.6)</span></span>
+```
+
+```html
+<div class="box math"><b>Perché è un risultato potente</b>
+<p>Tutta la fisica (massa, carica, tensioni, dimensioni, frequenza) è riassunta in due numeri adimensionali, <i>a</i> e <i>q</i>. Due ioni con lo stesso (<i>a</i>, <i>q</i>) hanno traiettorie identiche in ξ, qualunque siano m/z e strumento. Notate anche che <i>a</i> e <i>q</i> sono entrambi proporzionali a <i>z</i>/<i>m</i>: a tensioni fissate, ioni più pesanti hanno <i>a</i> e <i>q</i> più piccoli. E il loro rapporto</p>
+<span class="eq"><span class="frac"><span><i>a</i></span><span><i>q</i></span></span> = <span class="frac"><span>2<i>U</i></span><span><i>V</i></span></span><span class="no">(9.7)</span></span>
+<p>non dipende dalla massa: a <i>U</i>/<i>V</i> fissato, tutti gli ioni stanno sulla stessa retta per l'origine del piano (<i>q</i>, <i>a</i>), ciascuno in un punto diverso (la <b>retta di lavoro</b> o <i>scan line</i>).</p></div>
+```
+
+## Stabilità: il diagramma
+
+### Soluzioni stabili e instabili
+
+Per la teoria di Floquet, le soluzioni dell'equazione 9.6 sono di due soli tipi, e quale dei due dipende _solo_ da (*a*, *q*), non dalle condizioni iniziali:
+
+```html
+<ul>
+<li><b>stabili</b>: oscillazioni limitate, somma di un moto lento (frequenza secolare ω = βΩ/2, con 0 &lt; β &lt; 1) e di una piccola oscillazione veloce alla frequenza RF (micromoto);</li>
+<li><b>instabili</b>: l'ampiezza cresce esponenzialmente e in pochi cicli lo ione raggiunge <i>r</i><sub>0</sub> e si scarica su una barra.</li>
+</ul>
+```
+
+Uno ione attraversa il filtro solo se è stabile _sia_ in *x* _sia_ in *y*. Sovrapponendo le regioni di stabilità per *x* (parametri *a*, *q*) e per *y* (parametri −*a*, −*q*) si ottengono le regioni di stabilità comune; quella usata in pratica è la prima, a forma di triangolo curvilineo, con il vertice in
+
+```html
+<span class="eq"><i>q</i> = 0,706, &nbsp;&nbsp; <i>a</i> = 0,237 &nbsp;&nbsp; (<i>U</i>/<i>V</i> = 0,168)<span class="no">(9.8)</span></span>
+```
+
+### L'intuizione fisica
+
+Prima della matematica, conviene capire perché il quadrupolo è un filtro _passa-banda_:
+
+```html
+<ul>
+<li><b>Piano x–z</b> (barre a +<i>U</i>, ioni positivi): la componente continua spinge gli ioni verso l'asse. Gli ioni pesanti, poco sensibili alla RF, restano focalizzati; gli ioni leggeri seguono la RF, oscillano con ampiezza crescente e vengono persi. È un filtro <b>passa-alto</b> in massa.</li>
+<li><b>Piano y–z</b> (barre a −<i>U</i>): la componente continua attira gli ioni verso le barre. Gli ioni leggeri vengono "salvati" dall'effetto focalizzante medio della RF; i pesanti, poco sensibili alla RF, finiscono sulle barre negative. È un filtro <b>passa-basso</b>.</li>
+<li>Insieme: passano solo gli ioni in una banda di m/z. Più <i>U</i>/<i>V</i> si avvicina a 0,168 (il vertice), più la banda è stretta.</li>
+</ul>
+```
+
+```html
+<div class="sim" id="sim-stab"><h4>Diagramma di stabilità e filtro di massa</h4>
+<p class="note">Il diagramma è calcolato nel browser con la teoria di Floquet (traccia della matrice di trasferimento su un periodo). Lo strumento virtuale ha r<sub>0</sub> = 4 mm, f = 1 MHz e barre lunghe 20 cm. A destra, sei traiettorie (x/r<sub>0</sub>) di ioni con lo stesso m/z, entrati in punti e fasi RF casuali. Avvicinate U/V al vertice e spostate di 0,5 il m/z dello ione: guardate quando smette di passare.</p></div>
+```
+
+```html
+<div class="box key"><b>Concetto chiave</b>
+<p>Tutti gli ioni stanno sulla retta di lavoro <i>a</i> = (2<i>U</i>/<i>V</i>)<i>q</i>, in posizioni inversamente proporzionali al loro m/z. Solo quelli che cadono nel tratto di retta interno al triangolo sono stabili. La pendenza della retta decide la larghezza della finestra (risoluzione); il valore di <i>V</i> decide dove la finestra si trova sulla scala delle masse.</p></div>
+```
+
+## Scansione, risoluzione, sensibilità
+
+### Come si ottiene lo spettro
+
+```html
+<p>Dall'equazione 9.5, lo ione che sta in un certo punto <i>q</i>* della finestra ha</p>
+```
+
+```html
+<span class="eq"><span class="frac"><span><i>m</i></span><span><i>z</i></span></span> = <span class="frac"><span>4 <i>e</i></span><span><i>q</i>* <i>r</i><sub>0</sub><sup>2</sup> Ω<sup>2</sup></span></span> <i>V</i><span class="no">(9.9)</span></span>
+```
+
+cioè il m/z trasmesso è **proporzionale a *V***. Aumentando linearmente *V* (e *U* insieme, per mantenere il rapporto) la finestra scorre lungo la scala delle masse: i diversi ioni diventano stabili uno dopo l'altro e il rivelatore registra lo spettro. Di qui una scala di massa lineare e una calibrazione semplice, fatta con ioni noti (per gli strumenti SCIEX, soluzioni di polipropilenglicoli, PPG).
+
+### Risoluzione e trasmissione
+
+Più la retta si avvicina al vertice, più il tratto stabile è corto: la finestra in m/z si stringe (alta risoluzione) ma anche la trasmissione cala, perché vicino ai bordi del triangolo le oscillazioni stabili hanno ampiezze grandi e solo gli ioni entrati molto vicino all'asse sopravvivono. Abbassando la retta la finestra si allarga, la trasmissione sale, la risoluzione scende. Al limite *U* = 0 la "finestra" va da *q* = 0 a 0,908: nessuna selezione, solo trasmissione.
+
+```html
+<p>A <i>U</i>/<i>V</i> costante la risoluzione relativa <i>R</i> = <i>m</i>/Δ<i>m</i> è costante, quindi Δ<i>m</i> cresce con la massa. Gli strumenti commerciali preferiscono invece <b>Δ<i>m</i> costante</b> su tutta la scala (≈ 0,7 Da FWHM, "risoluzione unitaria"): la retta non passa per l'origine, cioè <i>U</i> viene corretto in funzione della massa. Il prezzo è una trasmissione che cala alle masse alte.</p>
+```
+
+```html
+<div class="sim" id="sim-scan"><h4>Costruire uno spettro con il quadrupolo</h4>
+<p class="note">Spettro di ioni fittizi ottenuto scorrendo la finestra. Le finestre di stabilità sono calcolate esattamente; la forma del picco usa un modello semplice di accettanza (la trasmissione scende linearmente vicino ai bordi della finestra), quindi le altezze sono indicative.</p></div>
+```
+
+### Che cosa limita la risoluzione nella realtà
+
+```html
+<ul>
+<li><b>Numero di cicli RF</b>: la teoria di stabilità vale per tempi infiniti. Uno ione appena instabile ha bisogno di un certo numero di cicli perché l'ampiezza cresca fino a <i>r</i><sub>0</sub>; se esce prima, passa comunque. La risoluzione massima ottenibile cresce circa con il quadrato del numero <i>n</i> di cicli RF trascorsi nel filtro (Dawson: <i>R</i><sub>max</sub> ≈ <i>n</i><sup>2</sup>/12 circa). Ioni più lenti (energia assiale bassa) o barre più lunghe migliorano la risoluzione; nel simulatore potete verificarlo con l'energia assiale.</li>
+<li><b>Campi di bordo</b>: all'ingresso il campo cresce da zero al valore pieno e gli ioni attraversano zone instabili prima di arrivare nel filtro vero. Per questo davanti ai quadrupoli analitici si mettono corte barre alimentate solo in RF (prefiltri, "Brubaker lens").</li>
+<li><b>Barre cilindriche e imperfezioni meccaniche</b>: introducono componenti di ordine superiore del campo (esapolo, ottapolo) che creano sottili linee di instabilità e code nei picchi. Le tolleranze sono di pochi micrometri.</li>
+<li><b>Carica spaziale e contaminazione</b>: depositi isolanti sulle barre si caricano e distorcono il campo; picchi allargati e spostati sono un sintomo classico di strumento sporco o da ricalibrare.</li>
+</ul>
+```
+
+### Limite superiore di massa
+
+```html
+<p>Dall'equazione 9.9 con <i>q</i>* ≈ 0,706, la massa massima è fissata dalla <i>V</i> massima che l'elettronica può erogare: <i>m</i><sub>max</sub> ∝ <i>V</i><sub>max</sub>/(<i>r</i><sub>0</sub><sup>2</sup> Ω<sup>2</sup>). Si estende riducendo <i>r</i><sub>0</sub> o la frequenza, a spese di accettanza o risoluzione. Per i tripli quadrupoli tipici il limite è tra 1000 e 3000 m/z, più che sufficiente per le piccole molecole.</p>
+```
+
+## Il quadrupolo "solo RF"
+
+```html
+<p>Con <i>U</i> = 0 (<i>a</i> = 0) sono stabili tutti gli ioni con 0 &lt; <i>q</i> &lt; 0,908: il quadrupolo diventa un <b>filtro passa-alto</b> che perde solo gli ioni sotto il <b>taglio di bassa massa</b> (<i>m</i>/<i>z</i> per cui <i>q</i> = 0,908) e conduce tutti gli altri. Il moto medio è come in un pozzo di potenziale armonico (pseudopotenziale di Dehmelt), profondo, con le definizioni di questo capitolo,</p>
+```
+
+```html
+<span class="eq"><i>D</i> ≈ <span class="frac"><span><i>q V</i></span><span>4</span></span> &nbsp;(in volt), &nbsp;&nbsp; valida per <i>q</i> ≲ 0,4<span class="no">(9.10)</span></span>
+```
+
+Ioni molto pesanti (*q* piccolo) sono confinati debolmente. Questo è il principio delle guide di ioni (Q0) e delle celle di collisione (q2): gli ioni, deviati dagli urti, vengono riportati verso l'asse invece di andare persi. È la "q" minuscola di QqQ.
+
+```html
+<div class="box warn"><b>Conseguenza pratica: il taglio di bassa massa nella cella</b>
+<p>Nella cella di collisione il <i>q</i> è fissato per il precursore: frammenti molto più leggeri del precursore possono avere <i>q</i> &gt; 0,908 ed essere persi. Nei QqQ moderni il problema è contenuto (la RF della cella viene adattata), mentre è un limite noto delle trappole ioniche ("regola di un terzo").</p></div>
+```
+
+## Caratteristiche operative e particolarità pratiche
+
+```html
+<div class="box key"><b>Implicazioni per l'elaborazione dei dati</b>
+<ul>
+<li><b>Risoluzione unitaria</b>: Q1 e Q3 lavorano tipicamente a risoluzione unitaria (FWHM ≈ 0,7 Da). Ogni picco nello spettro ha una larghezza di quasi un'unità di massa: si risolvono M, M+1, M+2, ma non si ottiene la massa accurata necessaria per risalire direttamente alla formula elementare.</li>
+<li><b>Calibrazione dell'asse m/z</b>: può capitare che l'asse di massa mostri un lieve offset sperimentale rispetto al valore teorico esatto. È un fattore strumentale da considerare quando si estraggono i cromatogrammi XIC, impostando tolleranze adeguate (es. ±0,5 o ±1 Da).</li>
+<li><b>Velocità di scansione</b>: una scansione completa da m/z 100 a 1000 dura tipicamente poche centinaia di millisecondi; il tempo effettivo dedicato a ciascuna frazione di m/z è solo una piccola quota del ciclo totale (capitolo 10).</li>
+<li><b>Configurazioni ibride (QTRAP)</b>: negli strumenti QTRAP, Q3 può funzionare alternativamente sia come quadrupolo a trasmissione sia come trappola ionica lineare (modalità "enhanced").</li>
+</ul></div>
+```
+
+## Verifica
+
+??? Raddoppiate V e U mantenendo il rapporto. Che cosa succede alla massa trasmessa?
+Raddoppia (eq. 9.9): la finestra si sposta a m/z doppio. La larghezza relativa (R) non cambia perché la retta di lavoro è la stessa.
+
+```html
+<details class="q"><summary>Perché un quadrupolo "solo RF" non separa le masse ma è indispensabile nella cella di collisione?</summary>
+<p>Con a = 0 tutti gli ioni con q &lt; 0,908 sono stabili: nessuna selezione. Proprio per questo raccoglie e rifocalizza sull'asse precursori e frammenti diffusi in tutte le direzioni dagli urti.</p></details>
+```
+
+??? Nel simulatore, con U/V al 97% del vertice, la finestra a m/z 300 è larga una decina di Da. Che cosa dovete fare per ottenere 0,7 Da? E che cosa perdete?
+Avvicinare molto la retta al vertice (U/V intorno al 99,8% del valore al vertice). La finestra si stringe ma la trasmissione cala: più risoluzione, meno sensibilità.
+
+??? Uno ione con (a, q) = (0,10; 0,95) è stabile?
+No: per a ≥ 0 la prima regione di stabilità non va oltre q ≈ 0,908 (raggiunto per a = 0). Con a = 0,10 il limite destro è ancora più basso.
+
+## Per approfondire
+
+```html
+<ul class="refs">
+<li><span class="tag">didattico</span>Miller P.E., Denton M.B. (1986) The quadrupole mass filter: basic operating concepts. <i>J. Chem. Educ.</i> 63, 617. <a href="https://doi.org/10.1021/ed063p617" target="_blank" rel="noopener">doi:10.1021/ed063p617</a> (la migliore introduzione, breve).</li>
+<li><span class="tag">review</span>Douglas D.J. (2009) Linear quadrupoles in mass spectrometry. <i>Mass Spectrom. Rev.</i> 28, 937–960. <a href="https://doi.org/10.1002/mas.20249" target="_blank" rel="noopener">doi:10.1002/mas.20249</a></li>
+<li><span class="tag">storico</span>Paul W. (1990) Electromagnetic traps for charged and neutral particles (lezione Nobel). <i>Rev. Mod. Phys.</i> 62, 531. <a href="https://doi.org/10.1103/RevModPhys.62.531" target="_blank" rel="noopener">doi:10.1103/RevModPhys.62.531</a></li>
+<li><span class="tag">libro</span>Dawson P.H. (ed.) <i>Quadrupole Mass Spectrometry and its Applications</i>, Elsevier 1976 (ristampa AIP 1995): il trattato classico.</li>
+<li><span class="tag">web</span><a href="https://en.wikipedia.org/wiki/Quadrupole_mass_analyzer" target="_blank" rel="noopener">Quadrupole mass analyzer</a> e <a href="https://en.wikipedia.org/wiki/Mathieu_function" target="_blank" rel="noopener">Mathieu function</a> (Wikipedia).</li>
+<li><span class="tag">libro</span>De Hoffmann E., Stroobant V. <i>Mass Spectrometry: Principles and Applications</i>, 3ª ed., Wiley, 2007.</li>
+</ul>
+```

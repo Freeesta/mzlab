@@ -366,3 +366,29 @@ fn the_xic_keeps_the_maximum_of_every_group() {
     assert_eq!(ox.len(), riga::MAX_POINTS);
     assert!(oy.contains(&99.0) && ox[oy.iter().position(|&v| v == 99.0).unwrap()] == 503.0);
 }
+
+#[test]
+fn the_family_of_a_row_lists_its_ions_with_their_roles() {
+    let (mut t, s) = (table(), samples());
+    // row 0 = [M+H]+ with a sodium adduct, the other rows are alone
+    t.member_start = vec![0, 2, 3, 4, 5, 6];
+    t.member_mz = vec![200.0, 221.982, 212.5, 225.0, 237.5, 250.0];
+    t.member_rt = vec![3.0, 3.0, 4.0, 5.0, 6.0, 7.0];
+    t.member_role = vec![1, 3, 1, 1, 1, 1];
+    assert_eq!(t.family_size(0), 2);
+    let v = parse(riga::row(&t, &s, 1).unwrap().as_bytes()).unwrap();
+    let f = v.get("family").unwrap();
+    assert_eq!(f.get("size").unwrap().f64(), Some(2.0));
+    let roles: Vec<_> = f
+        .get("members")
+        .unwrap()
+        .arr()
+        .iter()
+        .map(|m| m.get("role").unwrap().str().unwrap().to_string())
+        .collect();
+    assert_eq!(roles, ["M", "adduct"]);
+    // a per-ion table has no family
+    t.member_start.clear();
+    let v = parse(riga::row(&t, &s, 1).unwrap().as_bytes()).unwrap();
+    assert!(v.get("family").unwrap().is_null());
+}

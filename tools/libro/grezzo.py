@@ -3,9 +3,14 @@ the ::: duo side-by-side boxes, and the {.lead}/{.note} paragraph classes. A mix
 import re
 from pathlib import Path
 
+from .snippet import POSITION
+
 UNSAFE = re.compile(r"<\s*(script|iframe|object|embed|link|meta|base|form)\b|\son\w+\s*=|javascript:", re.I)
 SCRIPT = re.compile(r"^(script|script-before): *([\w./-]+\.js)$")
 IMPORTATI = Path(__file__).with_name("importati.txt")
+HTMLATTR = re.compile(r"^html: *(data-[\w-]+)=([\w-]+)$")
+INLINE = re.compile(r"^inline: *([\w-]+)$")
+FULL = re.compile(r"^full-title: *(.+)$")
 TITLE = re.compile(r"^title: *(.+)$")
 PARA_CLASS = re.compile(r"^\{\.(lead|note)\} +")
 
@@ -47,7 +52,19 @@ class Grezzo:
             self.err(base + i, "multi-line HTML comments are not supported")
         if not self.ctx["titoli"]:
             m, t = SCRIPT.match(ln[4:-3].strip()), TITLE.match(ln[4:-3].strip())
-            if ln[4:-3].strip() == "no-appname":
+            a = HTMLATTR.match(ln[4:-3].strip())
+            if a:
+                self.html_attrs.append(a.groups())
+            elif ln[4:-3].strip() == "esteso":
+                self.esteso = True
+            elif INLINE.match(ln[4:-3].strip()):
+                name = INLINE.match(ln[4:-3].strip()).group(1)
+                if name not in POSITION:
+                    self.err(base + i, f"unknown inline snippet {name}")
+                self.snippets.append(name)
+            elif FULL.match(ln[4:-3].strip()):
+                self.full_title = FULL.match(ln[4:-3].strip()).group(1)
+            elif ln[4:-3].strip() == "no-appname":
                 self.no_appname = True
             elif t:
                 self.page_title = t.group(1)

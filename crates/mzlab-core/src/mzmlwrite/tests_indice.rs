@@ -32,12 +32,13 @@ pub(super) fn indexed_header(h: Header) -> (Vec<u8>, Vec<u8>) {
         profile: false,
         mz: vec![100.5 + i as f64, 200.25],
         intensity: vec![10.0, 20.0 + i as f32],
+        filter: "+ c ESI Full ms [100.00-200.00]".into(),
         ..Default::default()
     };
-    let ch = Chromatogram {
-        index: 0,
-        id: "TIC".into(),
-        kind: ChromKind::Tic,
+    let ch = |index: usize, id: &str, kind| Chromatogram {
+        index,
+        id: id.into(),
+        kind,
         q1: None,
         q3: None,
         unit: "number of detector counts".into(),
@@ -54,8 +55,9 @@ pub(super) fn indexed_header(h: Header) -> (Vec<u8>, Vec<u8>) {
         w.open_spectra(2).unwrap();
         (0..2).for_each(|i| w.spectrum(&sp(i)).unwrap());
         w.close_spectra().unwrap();
-        w.open_chromatograms(1).unwrap();
-        w.chromatogram(&ch).unwrap();
+        w.open_chromatograms(2).unwrap();
+        w.chromatogram(&ch(0, "TIC", ChromKind::Tic)).unwrap();
+        w.chromatogram(&ch(1, "UV 254", ChromKind::Pda)).unwrap();
         w.close_chromatograms().unwrap();
         w.finish().unwrap()
     };
@@ -135,6 +137,16 @@ fn indexed_offsets_checksum_and_read_back() {
         .iter()
         .zip(&b.spectra)
         .all(|(x, y)| x.id == y.id && x.mz == y.mz && x.intensity == y.intensity));
+}
+
+#[test]
+fn the_base_peak_intensity_has_its_unit() {
+    let (_, idx) = indexed_sample(Vec::new());
+    let t = String::from_utf8_lossy(&idx);
+    assert!(
+        t.contains("name=\"base peak intensity\"")
+            && t.contains("unitAccession=\"MS:1000131\" unitName=\"number of detector counts\"")
+    );
 }
 
 #[test]

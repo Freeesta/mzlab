@@ -391,7 +391,7 @@ pub(crate) fn spectrum_head(index: usize, sp: &Spectrum, extra: &SpectrumExtra) 
     s += &if sp.profile { cv("MS:1000128", "profile spectrum", "") } else { cv("MS:1000127", "centroid spectrum", "") };
     if let Some(b) = base {
         s += &mz_cv("MS:1000504", "base peak m/z", sp.mz[b]);
-        s += &cv("MS:1000505", "base peak intensity", sp.intensity_f64(b));
+        s += &unit_cv("MS:1000505", "base peak intensity", sp.intensity_f64(b), "MS:1000131", "number of detector counts");
     }
     s += &cv("MS:1000285", "total ion current", tic);
     if extra.sim {
@@ -404,10 +404,9 @@ pub(crate) fn spectrum_head(index: usize, sp: &Spectrum, extra: &SpectrumExtra) 
     for (k, v) in &extra.params { #[cfg(feature = "sciex")] if let Some(acc) = k.strip_prefix("cv:") { s += &cv(acc, v, ""); continue; }
         s += &format!("<userParam name=\"{}\" value=\"{}\"/>", esc(k), esc(v));
     }
-    if !sp.filter.is_empty() {
-        s += &cv("MS:1000512", "filter string", esc(&sp.filter));
-    }
-    s += &format!("<scanList count=\"1\">{}<scan><cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>{}</scan></scanList>", cv("MS:1000795", "no combination", ""), sp.rt, window_xml(extra.window));
+    // The filter string is a scan-level term: the CV only allows it under <scan>.
+    let filter = if sp.filter.is_empty() { String::new() } else { cv("MS:1000512", "filter string", esc(&sp.filter)) };
+    s += &format!("<scanList count=\"1\">{}<scan><cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>{}{}</scan></scanList>", cv("MS:1000795", "no combination", ""), sp.rt, filter, window_xml(extra.window));
     if let Some(p) = sp.precursor {
         s += &format!("<precursorList count=\"1\"><precursor><isolationWindow>{}</isolationWindow><selectedIonList count=\"1\"><selectedIon>{}</selectedIon></selectedIonList></precursor></precursorList>", mz_cv("MS:1000827", "isolation window target m/z", p), mz_cv("MS:1000744", "selected ion m/z", p));
     }
@@ -421,7 +420,7 @@ pub(crate) fn chromatogram_kind(c: &Chromatogram) -> Option<String> {
         ChromKind::Bpc => cv("MS:1000628", "basepeak chromatogram", ""),
         ChromKind::Srm => cv("MS:1001473", "selected reaction monitoring chromatogram", ""),
         ChromKind::Sic => cv("MS:1000627", "selected ion current chromatogram", ""),
-        ChromKind::Pda => cv("MS:1000813", "total wavelength chromatogram", ""),
+        ChromKind::Pda => cv("MS:1000812", "absorption chromatogram", ""),
         _ => return None,
     })
 }
@@ -438,7 +437,11 @@ fn window_xml(w: Option<(f64, f64)>) -> String {
 }
 
 fn mz_cv(acc: &str, name: &str, value: f64) -> String {
-    format!("<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\" unitCvRef=\"MS\" unitAccession=\"MS:1000040\" unitName=\"m/z\"/>")
+    unit_cv(acc, name, value, "MS:1000040", "m/z")
+}
+
+fn unit_cv(acc: &str, name: &str, value: f64, unit_acc: &str, unit_name: &str) -> String {
+    format!("<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\" unitCvRef=\"MS\" unitAccession=\"{unit_acc}\" unitName=\"{unit_name}\"/>")
 }
 
 /// The `sourceFileList` of the header; the schema wants at least one child, so no source means no list.

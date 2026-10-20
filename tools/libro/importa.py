@@ -12,6 +12,7 @@ from tools.libro.blocchi import Parser  # noqa: E402
 from tools.libro.dom import Node, normalizza, parse  # noqa: E402
 from tools.libro.errori import LibroError  # noqa: E402
 from tools.libro.pagina import converti  # noqa: E402
+from tools.libro.snippet import POSITION, testo  # noqa: E402
 
 SPECIAL = re.compile(r"[*`$\[\]@\\<]")
 LINE_START = re.compile(r"^([-*+>#|]|\d+[.)]|\$\$|`|:::|\?\?\?|<)")
@@ -125,7 +126,9 @@ def importa(src: str, nome: str):
     root = parse(src)
     main = find(root, "main")
     head = find(root, "head")
-    title = unescape(re.sub(r"\s*·\s*Teoria QqQ lab\s*$", "", find(head, "title").text()))
+    raw_title = unescape(find(head, "title").text())
+    foreign = not re.search(r"\s*·\s*Teoria QqQ lab\s*$", raw_title)
+    title = unescape(re.sub(r"\s*·\s*Teoria QqQ lab\s*$", "", raw_title))
     state = {"raw": 0}
     parts, kids = [], [k for k in main.kids if isinstance(k, Node)]
     if not kids or kids[0].attrs != {"class": "kicker"} or kids[1].tag != "h1":
@@ -133,12 +136,17 @@ def importa(src: str, nome: str):
     h1 = inline_md(kids[1])
     if h1 is None:
         raise LibroError(nome, 1, "the h1 holds markup the dialect cannot say")
-    srcs = [s.attrs["src"] for s in root_scripts(root) if "src" in s.attrs]
+    names, scripts = take_snippets(root_scripts(root), src)
+    srcs = [s.attrs["src"] for s in scripts if "src" in s.attrs]
     cut = srcs.index("teoria.js") if "teoria.js" in srcs else len(srcs)
     before = [x for x in srcs[:cut] if x != "../appname.js"]
-    meta = ["<!-- no-appname -->"] if "../appname.js" not in srcs else []
+    meta = [f"<!-- inline: {n} -->" for n in names]
+    meta += [f"<!-- html: {k}={v} -->" for k, v in find(root, "html").attrs.items() if k.startswith("data-")]
+    meta += ["<!-- no-appname -->"] if "../appname.js" not in srcs else []
     meta += [f"<!-- script-before: {x} -->" for x in before] + [f"<!-- script: {x} -->" for x in srcs[cut + 1:]]
-    if h1.strip() != title:
+    if foreign:
+        meta.append(f"<!-- full-title: {raw_title} -->")
+    elif h1.strip() != title:
         meta.append(f"<!-- title: {title} -->")
     parts.append("\n".join(meta + [f"# {h1.strip()} {{kicker: {kids[0].text().strip()}}}"]))
     for k in kids[2:]:
@@ -149,6 +157,21 @@ def importa(src: str, nome: str):
 def root_scripts(root: Node):
     body = find(root, "body")
     return [k for k in body.kids if isinstance(k, Node) and k.tag == "script"]
+
+
+def take_snippets(scripts: list[Node], src: str):
+    """Split off the scripts that spell one of the fixed snippets; return (names, remaining scripts)."""
+    own = [normalizza(src[s.start:s.end]) for s in scripts]
+    names = []
+    for name in POSITION:
+        text = "<body>" + testo(name) + "</body>"
+        want = [normalizza(text[s.start:s.end]) for s in root_scripts(parse(text))]
+        for i in range(len(own) - len(want) + 1):
+            if own[i:i + len(want)] == want:
+                names.append(name)
+                del scripts[i:i + len(want)], own[i:i + len(want)]
+                break
+    return names, scripts
 
 
 def con_viewport(src: str) -> str:

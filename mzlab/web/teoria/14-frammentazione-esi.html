@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="it" data-esempio="atrazina"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema--><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it" data-esempio="atrazina"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si frammentano gli ioni · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 14</div>
 <h1>Come si frammentano gli ioni in CID</h1>
 <p class="lead">Perché uno ione [M+H]<sup>+</sup> si rompe proprio in quel punto, dove resta la carica, quali reazioni sono tipiche e come si legge uno spettro MS2 per risalire alla struttura di un prodotto di trasformazione.</p>
-
 <h2>Dall'energia di collisione alla rottura</h2>
 <h3>Attivazione e ridistribuzione dell'energia</h3>
 <p>Nella cella di collisione (capitolo 10) ogni urto converte una piccola parte dell'energia cinetica dello ione in <b>energia interna</b>, soprattutto vibrazionale. Dopo decine di urti lo ione ha un'energia interna <i>E</i> distribuita su tutti i suoi modi vibrazionali: la ridistribuzione è molto più veloce della rottura (ipotesi ergodica). Lo ione "dimentica" dove è stato urtato e si rompe secondo la cinetica unimolecolare: tra tutte le reazioni possibili prevalgono quelle più veloci a quell'energia.</p>
@@ -36,7 +36,6 @@
 </svg><details class="figdesc" id="fd-14-0"><summary>Descrizione della figura</summary><p>Asse verticale: energia potenziale. Da [M+H]⁺, in basso a sinistra, una curva arancione sale a un picco basso, «TS stretto» (E₀ riarrangiamento), e scende a «ione + molecola neutra (H₂O, alchene…)». Una curva blu sale più lentamente a un massimo più alto, «TS lasco» (E₀ scissione diretta), e finisce in «due frammenti separati», a un livello più alto. Due linee tratteggiate segnano le E₀.</p></details>
 <figcaption><b>Figura 14.1</b> Schema qualitativo. Il riarrangiamento ha la barriera più bassa ma richiede una geometria precisa (pochi stati accessibili); la scissione diretta ha la barriera più alta ma, una volta superata, avviene in moltissimi modi. Per questo i frammenti "a bassa CE" sono spesso perdite di piccole molecole per riarrangiamento.</figcaption>
 </figure>
-
 <h2>Dove sta il protone</h2>
 <h3>Sito di protonazione e affinità protonica</h3>
 <p>In ESI positivo la molecola acquista un protone sul sito più basico (in soluzione, e in fase gas dopo la desolvatazione). La misura della basicità in fase gas è l'<b>affinità protonica</b> (PA), l'entalpia liberata da M + H<sup>+</sup> → [M+H]<sup>+</sup>.</p>
@@ -57,7 +56,6 @@
 <p>Quando lo ione viene attivato, il protone può migrare dal sito più basico ad altri siti meno basici (modello del <b>protone mobile</b>, nato per i peptidi ma utile per qualsiasi molecola con più eteroatomi). Il costo energetico della migrazione è circa la differenza di PA tra i due siti. Dove arriva il protone, indebolisce i legami vicini: la maggior parte delle frammentazioni degli ioni [M+H]<sup>+</sup> è <b>diretta dalla carica</b> (<i>charge-directed</i>) e avviene accanto a un eteroatomo protonato. Esistono anche frammentazioni <b>remote dalla carica</b> (<i>charge-remote</i>), tipiche di ioni con carica fissa o molto localizzata e di lunghe catene, che richiedono energie più alte.</p>
 <h3>Quale frammento tiene la carica</h3>
 <p>Quando [M+H]<sup>+</sup> si divide in due pezzi A e B, il protone resta preferibilmente sul pezzo con <b>affinità protonica più alta</b>; l'altro se ne va come molecola neutra e non si vede. Se le due PA sono simili, compaiono entrambi gli ioni. Conseguenza pratica: lo spettro MS2 mostra soprattutto le porzioni basiche della molecola. Una parte neutra e poco basica (per esempio un anello aromatico con soli sostituenti ossigenati) può comparire solo come <em>perdita neutra</em>, cioè come differenza tra due picchi.</p>
-
 <h2>Regole generali per gli ioni a elettroni pari</h2>
 <ul>
 <li><b>Regola degli elettroni pari</b> (Karni &amp; Mandelbaum, 1980): uno ione a elettroni pari, come [M+H]<sup>+</sup>, si frammenta preferibilmente in un altro ione a elettroni pari più una <b>molecola neutra stabile</b> (H<sub>2</sub>O, NH<sub>3</sub>, CO, alcheni…), non in uno ione radicale più un radicale. È una regola statistica: le eccezioni esistono e sono informative (vedi sotto). Per i pesticidi in ESI la sua validità è stata verificata su larga scala (Thurman et al., 2007).</li>
@@ -65,7 +63,6 @@
 <li><b>Contabilità degli idrogeni</b>: i frammenti reali raramente sono "il pezzo disegnato" tal quale. Nei riarrangiamenti un H passa da un frammento all'altro. Il modo più sicuro di ragionare è scrivere la <b>molecola neutra</b> persa (che deve essere una specie stabile a guscio chiuso) e calcolare lo ione come precursore − neutro. Nella scheda Disegno di QqQ lab, selezionando una parte della molecola si ottengono le ipotesi di ione con il giusto numero di H.</li>
 <li><b>RDBE</b>: calcolato sulla formula di uno ione a elettroni pari dà un valore semintero (x,5); un valore intero indica uno ione radicale.</li>
 </ul>
-
 <h2>Le reazioni tipiche</h2>
 <h3>1. Eliminazione di piccole molecole da un eteroatomo protonato</h3>
 <p>Il protone su un gruppo uscente (OH, NH<sub>2</sub>) lo trasforma in un'ottima molecola neutra che si stacca, lasciando un carbocatione (stabilizzato se benzilico, allilico, terziario o adiacente a un eteroatomo):</p>
@@ -115,12 +112,10 @@
 <tr><td class="n">57</td><td>CH<sub>3</sub>NCO</td><td>N-metilcarbammati</td></tr>
 <tr><td class="n">64</td><td>SO<sub>2</sub> / CH<sub>3</sub>SOH</td><td>sulfonammidi, solfoni / metilsolfossidi</td></tr>
 </table>
-
 <h3>Perdite con la stessa massa nominale, e perdite in cascata</h3>
 <p>Con la risoluzione unitaria dello strumento una perdita è solo un numero intero: <b>28</b> può essere CO oppure C<sub>2</sub>H<sub>4</sub> (che distano 0.036 Da), <b>42</b> chetene o propene, <b>46</b> acido formico o NO<sub>2</sub><sup>•</sup>, <b>80</b> HBr o SO<sub>3</sub>. Il numero non basta: servono altri indizi. Per esempio il bromo ha due isotopi quasi uguali (<sup>79</sup>Br e <sup>81</sup>Br): un precursore che perde HBr contiene bromo e mostra quindi un picco M+2 di intensità quasi uguale a M, mentre per un precursore che perde SO<sub>3</sub> non ci si aspetta (si controlli con il profilo isotopico nello spettro: clic destro sul picco); la formula del precursore (e la regola dell'azoto) esclude le perdite che contengono atomi che il precursore non ha; la stessa perdita a energie di collisione diverse, o la perdita successiva, aiuta a scegliere il gruppo. La finestra <em>Perdite neutre</em> di QqQ lab mette le perdite con la stessa massa nominale nello stesso riquadro proprio per ricordarlo, e il campo <em>Cerca Δm</em> elenca le combinazioni possibili: sono candidati da controllare sullo spettro, non attribuzioni.</p>
 <p>Le perdite possono anche <b>susseguirsi</b>: da [M+H]<sup>+</sup> si perde prima acqua (−18) e poi CO<sub>2</sub> (−44): sullo spettro compaiono i due frammenti a −18 e a −62 dal precursore, e −62 è la somma. Una differenza grande fra due picchi può quindi essere la somma di due perdite note (ed è una buona ragione per guardare anche il frammento intermedio); due perdite uguali di fila (per esempio 2 × HCl = −72) si leggono allo stesso modo.</p>
 <p>Lo stesso concetto sta dietro alla <b>Neutral Loss Scan</b> del triplo quadrupolo (cap. 10 e cap. 12): Q1 e Q3 scansionano insieme con una differenza di massa <i>fissa</i> (per esempio 42), e si registra un segnale solo per gli ioni che in q2 perdono proprio quella molecola neutra. È un modo per cercare, in un campione complesso, tutti i composti che condividono un gruppo (esempio: tutti i glicosidi con perdita di 162, oppure tutti i composti con un gruppo isopropile che perdono propene), senza conoscere in anticipo l'm/z del precursore.</p>
-
 <h2>Che cosa dice l'MS2 di un prodotto di trasformazione</h2>
 <p>Il confronto tra l'MS2 del parent e quello del TP è lo strumento strutturale più potente che avete. Il ragionamento:</p>
 <ol>
@@ -141,7 +136,6 @@
 <p>Isolando in Q1 il picco M+2 (con <sup>37</sup>Cl) invece del monoisotopico, tutti i frammenti che contengono il cloro si spostano di +2, quelli che lo hanno perso no. Con due product ion scan (M e M+2) si sa quali frammenti portano il cloro, e quindi se un TP declorurato ha perso il cloro dove ve lo aspettate.</p>
 <h3>Usare più energie di collisione</h3>
 <p>A CE bassa vedete le prime perdite (le più vicine alla struttura intatta: gruppi uscenti, catene laterali); a CE alta i frammenti del nucleo. Uno spettro a CE intermedia, o la somma di più CE, dà il quadro più completo. Due isomeri possono avere gli stessi frammenti ma in rapporti diversi a una data CE: le curve di breakdown li distinguono.</p>
-
 <h2>Un metodo per interpretare uno spettro MS2</h2>
 <ol>
 <li>Verificate il precursore: m/z, picco residuo nello spettro, parità (regola dell'azoto), cluster isotopico.</li>
@@ -154,7 +148,6 @@
 </ol>
 <div class="sim" id="sim-loss"><h4>Calcolatrice delle perdite neutre</h4>
 <p class="note">Inserite il precursore e i frammenti (m/z nominali). Per ogni frammento: perdita dal precursore, perdite da frammenti più pesanti che corrispondono a molecole neutre comuni, controllo della parità. L'esempio è lo spettro MS2 dell'atrazina, discusso qui sotto.</p></div>
-
 <h2>Esempio svolto: l'atrazina</h2>
 <p>[M+H]<sup>+</sup> = 216 (C<sub>8</sub>H<sub>15</sub>ClN<sub>5</sub><sup>+</sup>; m/z pari, 5 atomi di N ✓). I frammenti comunemente riportati in letteratura e una lettura coerente con le regole di questo capitolo:</p>
 <table>
@@ -170,17 +163,11 @@
 <li>Lo stesso Δ nominale (−42) può corrispondere a reazioni diverse: decidono la struttura e la sequenza delle perdite, non il numero.</li>
 <li>m/z 174 è sia un frammento dell'atrazina sia lo ione [M+H]<sup>+</sup> di un suo TP (la desisopropil-atrazina): nel full scan solo il tempo di ritenzione li distingue (capitolo 18).</li>
 </ul></div>
-
 <h2>Verifica</h2>
-<details class="q"><summary>Un TP con Δ = +16 rispetto al parent perde 18 in modo dominante a CE bassa, il parent no. Dove mettete l'ossigeno?</summary>
-<p>Più probabilmente su una porzione alifatica (OH alcolico), perché la perdita facile di H<sub>2</sub>O è tipica degli alcoli e poco tipica dei fenoli e degli N-ossidi. Resta un'ipotesi di livello 3.</p></details>
-<details class="q"><summary>Perché a CE bassa vedete soprattutto perdite di piccole molecole e a CE alta frammenti del nucleo?</summary>
-<p>A bassa energia interna prevalgono i canali con barriera bassa (riarrangiamenti che eliminano molecole stabili); ad alta energia diventano competitive le scissioni dirette e le frammentazioni consecutive dei primi frammenti (eq. 14.1).</p></details>
-<details class="q"><summary>Un frammento ha m/z dispari mentre il precursore, pari, contiene 3 atomi di N. Che cosa può essere successo?</summary>
-<p>Il frammento ha perso un numero dispari di azoti (es. NH<sub>3</sub> o HCN; non NH<sub>2</sub>CN, che ne contiene due) oppure è uno ione radicale (perdita di un radicale). La seconda ipotesi va giustificata con un gruppo che la favorisca.</p></details>
-<details class="q"><summary>Una porzione della molecola, un anello fenolico con un metossile, non compare mai come ione nell'MS2. Perché?</summary>
-<p>Ha affinità protonica più bassa della porzione azotata: nella rottura il protone resta sull'altro frammento e l'anello se ne va come molecola neutra. Lo vedete solo come perdita (differenza tra precursore e frammento).</p></details>
-
+<details class="q"><summary>Un TP con Δ = +16 rispetto al parent perde 18 in modo dominante a CE bassa, il parent no. Dove mettete l'ossigeno?</summary><p>Più probabilmente su una porzione alifatica (OH alcolico), perché la perdita facile di H<sub>2</sub>O è tipica degli alcoli e poco tipica dei fenoli e degli N-ossidi. Resta un'ipotesi di livello 3.</p></details>
+<details class="q"><summary>Perché a CE bassa vedete soprattutto perdite di piccole molecole e a CE alta frammenti del nucleo?</summary><p>A bassa energia interna prevalgono i canali con barriera bassa (riarrangiamenti che eliminano molecole stabili); ad alta energia diventano competitive le scissioni dirette e le frammentazioni consecutive dei primi frammenti (eq. 14.1).</p></details>
+<details class="q"><summary>Un frammento ha m/z dispari mentre il precursore, pari, contiene 3 atomi di N. Che cosa può essere successo?</summary><p>Il frammento ha perso un numero dispari di azoti (es. NH<sub>3</sub> o HCN; non NH<sub>2</sub>CN, che ne contiene due) oppure è uno ione radicale (perdita di un radicale). La seconda ipotesi va giustificata con un gruppo che la favorisca.</p></details>
+<details class="q"><summary>Una porzione della molecola, un anello fenolico con un metossile, non compare mai come ione nell'MS2. Perché?</summary><p>Ha affinità protonica più bassa della porzione azotata: nella rottura il protone resta sull'altro frammento e l'anello se ne va come molecola neutra. Lo vedete solo come perdita (differenza tra precursore e frammento).</p></details>
 <h2>Per approfondire</h2>
 <ul class="refs">
 <li><span class="tag">review</span>Levsen K., Schiebel H.-M., Terlouw J.K., Jobst K.J., Elend M., Preiss A., Thiele H., Ingendoh A. (2007) Even-electron ions: a systematic study of the neutral species lost in the dissociation of quasi-molecular ions. <i>J. Mass Spectrom.</i> 42, 1024–1044. <a href="https://pubmed.ncbi.nlm.nih.gov/17605143/" target="_blank" rel="noopener">PubMed 17605143</a></li>
