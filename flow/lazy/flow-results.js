@@ -9,6 +9,8 @@
   F.VIEWS = [];
   /** a view shows the files of some data types: open(host, item) fills host; item = {type, label, text: () => Promise<string>} @param {any} v */
   F.registerView = v => { F.VIEWS.push(v); };
+  /** blocks added to the «Results» of a node by other files: (S, node) → an element or null @type {((S: any, node: any) => HTMLElement | null)[]} */
+  F.extraResults = [];
   /** the view for a type; with the item, a view that accepts it wins, then one that takes any file of the type @param {string} type @param {any} [item] */
   F.viewFor = (type, item) => {
     const mine = F.VIEWS.filter((/** @type {any} */ v) => v.types.includes(type));
@@ -102,6 +104,7 @@
       } });
       box.append(pick, F.btn("import", `Open a ${port.title} file from disk`, () => pick.click(), `Open a ${port.title.toLowerCase()} file…`));
     }
+    for (const f of F.extraResults) { const b = f(S, node); if (b) box.append(b); }
     return box;
   };
 })();

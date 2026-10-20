@@ -141,5 +141,8 @@
     q("#at-xlsx").onclick = () => exportTable(sec, "xlsx");
   }
 
+  // the engine of this panel for the other tools of the package (Flow opens a campaign folder through it)
+  /** @type {any} */ (window).ATTRIBUTIO_CORE = { pool: getPool, walk, download, MAX_FILES };
+
   if (typeof uipAdminOn === "function" && uipAdminOn()) /** @type {any} */ (window).QTOOLS.register({ id: "attributio", nav: true, admin: true, name: "Attributio", desc: "Levels of identification of a campaign folder", open });
 })();

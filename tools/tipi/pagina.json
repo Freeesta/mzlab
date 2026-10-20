@@ -201,6 +201,7 @@
     "../../flow/lazy/flow-shell.js",
     "../../flow/lazy/flow-results.js",
     "../../flow/lazy/flow-views-attributio.js",
+    "../../flow/lazy/flow-campaign.js",
     "../../flow/lazy/flow-desktop.js"
   ]
 }

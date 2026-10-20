@@ -201,7 +201,7 @@ try:
         step("canvas: the plan view and the list view show the same plan", sheets)
         def results_from_disk():
             pg.click('.fln:has-text("Build feature table")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Build feature table'")
-            pg.set_input_files('.fl-insp input[type=file]', files=[{"name": "peaks.csv", "mimeType": "text/csv", "buffer": b'mz,rt,area\n241.3,3.0,"1,5"\n257.3,4.2,7\n'}])
+            pg.set_input_files('.fl-insp input[type=file][accept]', files=[{"name": "peaks.csv", "mimeType": "text/csv", "buffer": b'mz,rt,area\n241.3,3.0,"1,5"\n257.3,4.2,7\n'}])
             attendi(pg, "document.querySelectorAll('.flx-res-body .flx-tablewrap')[1].querySelectorAll('tbody tr').length === 2")
             data = '.flx-res-body > .flx-tablewrap:last-child .flx-table'
             assert pg.locator(data + " th").all_inner_texts() == ["mz", "rt", "area"] and pg.locator(data + " td").nth(2).inner_text() == "1,5"
@@ -216,22 +216,25 @@ try:
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Match to a spectral library")'); pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Confidence level")')
             pg.click('.fln:has-text("Match to library")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Match to library'")
             hits = b'{"format":"candidates/1","hits":[{"query":"q1","name":"Caffeine","formula":"C8H10N4O2","score":0.9123,"shared":5,"mass_ppm":1.2,"source":"lib","algorithm":"cosine"}]}'
-            pg.set_input_files('.fl-insp input[type=file]', files=[{"name": "hits.json", "mimeType": "application/json", "buffer": hits}])
+            pg.set_input_files('.fl-insp input[type=file][accept]', files=[{"name": "hits.json", "mimeType": "application/json", "buffer": hits}])
             attendi(pg, "document.querySelectorAll('.flx-res-body .flx-table tbody tr').length === 1")
             assert pg.locator(".flx-res-body .flx-table td").nth(1).inner_text() == "Caffeine" and pg.locator(".flx-res-body .flx-table td").nth(3).inner_text() == "0.9123"
             pg.click('.flx-res button[aria-label="Close the results"]')
             pg.click('.fln:has-text("Confidence level")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Confidence level'")
             lv = b'{"format":"annot/1","rows":[{"id":"q1","level":"3a","why":"provvisorio","name":"Caffeine","gates":[{"id":"score","ok":false,"value":0.5,"threshold":0.7}]}]}'
-            pg.set_input_files('.fl-insp input[type=file]', files=[{"name": "level.json", "mimeType": "application/json", "buffer": lv}])
+            pg.set_input_files('.fl-insp input[type=file][accept]', files=[{"name": "level.json", "mimeType": "application/json", "buffer": lv}])
             attendi(pg, "document.querySelectorAll('.flx-res-body .flx-table tbody tr').length === 1")
             assert "score 0.5 / 0.7 (not met)" in pg.inner_text(".flx-res-body .flx-table tbody")
             pg.click('.flx-res button[aria-label="Close the results"]')
+            pg.click('.fln:has-text("Confidence level")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Confidence level'")
+            # the campaign folder is offered next to the file picker (the cascade itself needs the attributio module)
+            assert pg.locator('.fl-insp input[type=file][webkitdirectory]').count() == 1 and pg.locator('.fl-insp button:has-text("Open a campaign folder")').count() == 1
         step("results: candidate and level JSON files open as tables", identification_views)
         def mgf_view():
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Check mixed spectra")')
             pg.click('.fln:has-text("Check mixed spectra")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Check mixed spectra'")
             mgf = b"BEGIN IONS\nTITLE=s1\nPEPMASS=195.09 1000\nCHARGE=1+\nRTINSECONDS=12.5\n138.07 40\n110.07 100\nEND IONS\nBEGIN IONS\nTITLE=s2\nPEPMASS=300.2\n100 5\nEND IONS\n"
-            pg.set_input_files('.fl-insp input[type=file]', files=[{"name": "ms2.mgf", "mimeType": "text/plain", "buffer": mgf}])
+            pg.set_input_files('.fl-insp input[type=file][accept]', files=[{"name": "ms2.mgf", "mimeType": "text/plain", "buffer": mgf}])
             attendi(pg, "document.querySelectorAll('.flx-sticks .flx-stick').length === 2")
             assert pg.locator(".flx-sticks").get_attribute("role") == "img" and "2 peaks" in pg.locator(".flx-sticks").get_attribute("aria-label")
             assert pg.locator(".flx-one .flx-table td").nth(2).inner_text() == "110.07"

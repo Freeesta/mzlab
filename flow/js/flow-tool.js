@@ -6,7 +6,7 @@
   const T = /** @type {any} */ (window).QTOOLS;
   if (!T) return;
   const ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="6" height="5" rx="1"/><rect x="15" y="15" width="6" height="5" rx="1"/><path d="M9 6.5h3a3 3 0 0 1 3 3v6"/></svg>';
-  const PARTS = ["flow-registry.js", "flow-check.js", "flow-plan.js", "flow-inputs.js", "flow-ui.js", "flow-palette.js", "flow-form.js", "flow-compare.js", "flow-chain.js", "flow-page.js", "flow-names.js", "flow-fix.js", "flow-canvas.js", "flow-inspect.js", "flow-shell-css.js", "flow-shell.js", "flow-results.js", "flow-views-attributio.js", "flow-desktop.js"];
+  const PARTS = ["flow-registry.js", "flow-check.js", "flow-plan.js", "flow-inputs.js", "flow-ui.js", "flow-palette.js", "flow-form.js", "flow-compare.js", "flow-chain.js", "flow-page.js", "flow-names.js", "flow-fix.js", "flow-canvas.js", "flow-inspect.js", "flow-shell-css.js", "flow-shell.js", "flow-results.js", "flow-views-attributio.js", "flow-campaign.js", "flow-desktop.js"];
   T.register({
     id: "flow", nav: true, admin: true, name: "Flow", icon: ICON, desc: "Build a chain of steps from the step descriptors and export it as an mzflow/2 plan",
     /** @param {HTMLElement} sec @param {any} ctx */
