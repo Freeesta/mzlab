@@ -178,7 +178,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       stats.rust++;
       return { status: 200, text: `{"files":[${parts.join(",")}]}`, ms: performance.now() - t0 };
     }
-    if (path === "/api/ms2tr" || path === "/api/fileinfo") return infoRoute(path, u, { slots, rpc, base, stats, t0 });
+    if (/^\/api\/(ms2tr|fileinfo|msn_grafo)$/.test(path)) return infoRoute(path, u, { slots, rpc, base, stats, t0 });
     if (path === "/api/scaninfo") {
       const s = slots[k0], sid = num(q, "sid", NaN);
       if (!s) return null;

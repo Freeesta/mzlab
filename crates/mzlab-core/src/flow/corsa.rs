@@ -40,6 +40,9 @@ pub struct Passo {
     pub status: &'static str,
     pub error_key: Option<String>,
     pub ms: f64,
+    /// Memory the step asked for in MB and the way it took (`memory`, `slabs`, `refused`), when the step estimates it.
+    pub mem_mb: Option<f64>,
+    pub via: Option<String>,
     pub params_sha256: String,
     pub params: Vec<Param>,
 }
@@ -116,6 +119,8 @@ fn passo(name: &str, a: &Value) -> Passo {
         },
         error_key,
         ms: a.get("ms").and_then(|m| m.f64()).unwrap_or(0.0),
+        mem_mb: a.get("mem_mb").and_then(|m| m.f64()),
+        via: text(a, "via"),
         params_sha256: text(a, "params_sha256").unwrap_or_default(),
         params,
     }
@@ -254,9 +259,11 @@ fn step(o: &mut Out, s: &Passo) {
     if let Some(e) = &s.error_key {
         o.raw(",\"error_key\":").str(e);
     }
-    o.raw(",\"ms\":")
-        .num(s.ms)
-        .raw(",\"params_sha256\":")
+    o.raw(",\"ms\":").num(s.ms);
+    if let (Some(mb), Some(via)) = (s.mem_mb, &s.via) {
+        o.raw(",\"mem_mb\":").num(mb).raw(",\"via\":").str(via);
+    }
+    o.raw(",\"params_sha256\":")
         .str(&s.params_sha256)
         .raw(",\"params\":[");
     for (j, p) in s.params.iter().enumerate() {

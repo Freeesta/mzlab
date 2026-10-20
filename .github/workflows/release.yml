@@ -255,7 +255,17 @@ jobs:
         run: |
           v="${TAG#v}"; p="mzLab-$v-"
           mkdir dist
-          one() { f=$(find "pezzi/$1" -type f -name "$2"); [ "$(printf '%s\n' "$f" | wc -l)" = 1 ] && cp "$f" "dist/$p$3" || { echo "::error::expected one $2 in $1"; exit 1; }; }
+          # Pick the file whose name carries the tag version; list what was found whenever the count is not 1.
+          one() {
+            all=$(find "pezzi/$1" -type f -name "$2")
+            f=$(printf '%s\n' "$all" | grep -F -- "$v" || true)
+            if [ -z "$f" ] || [ "$(printf '%s\n' "$f" | wc -l)" != 1 ]; then
+              echo "::error::expected exactly one $2 with version $v in $1; found:"
+              printf '%s\n' "$all"
+              exit 1
+            fi
+            cp "$f" "dist/$p$3"
+          }
           one mzlab-desktop-Windows '*.exe' Windows.exe
           one mzlab-desktop-macOS '*.dmg' Mac.dmg
           one mzlab-desktop-Linux '*.AppImage' Linux.AppImage

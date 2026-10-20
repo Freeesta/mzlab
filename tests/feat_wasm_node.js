@@ -9,7 +9,7 @@ const [pkg, out, ...rest] = process.argv.slice(2);
 const w = require(path.join(pkg, "mzlab_feat_wasm.js"));
 
 const files = [];
-const opt = { recipe: "", parent: "", rules: "", structure: "", "parent-mz": NaN, "parent-rt": NaN, "budget-mb": "" };
+const opt = { recipe: "", parent: "", rules: "", structure: "", "parent-mz": NaN, "parent-rt": NaN, "budget-mb": "", spill: "" };
 for (let i = 0; i < rest.length; i++) {
   if (rest[i].startsWith("--")) opt[rest[i].slice(2)] = rest[++i]; else files.push(rest[i]);
 }
@@ -38,7 +38,12 @@ if (budget !== null) {
     stored.push(new Uint8Array(fs.readFileSync(path.join(out, base(f) + ".mzfeatf"))));
   });
   const s = sink("series.mzfeat");
-  const done = JSON.parse(w.align_series_to(stored, read, sizes, opt.recipe, s.write, budget));
+  // --spill 1: the weak tables go to an array of this process (like the one of the worker), counted on stderr
+  const held = [];
+  let puts = 0;
+  const spill = opt.spill ? { put: (k, b) => { held[k] = b.slice(); puts++; }, get: k => held[k] } : undefined;
+  const done = JSON.parse(w.align_series_to(stored, read, sizes, opt.recipe, s.write, budget, spill));
+  if (spill) console.error(`spill puts ${puts}`);
   fs.closeSync(s.fd);
   console.log(`series.mzfeat ${done.sha256}`);
 } else {

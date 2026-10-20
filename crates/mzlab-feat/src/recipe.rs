@@ -37,6 +37,9 @@ pub struct Recipe {
     pub weak_files: usize,
     /// How the MS2 spectrum of a row is made for the proofs and the exports; not part of the text, so the `.mzfeatf` keep their fingerprint.
     pub ms2: crate::ms2spec::SpecOpts,
+    /// Mode and width (decades) of the noise lump that `detect.min_height` was estimated from (`Recipe::for_index`); `None` = the canonical value.
+    /// Not part of the text, so the `.mzfeatf` fingerprint is that of `detect.min_height` alone.
+    pub min_height_basis: Option<(f64, f64)>,
 }
 
 /// The weak tier goes down to this fraction of the minimum height (3 times the noise when the minimum is 10 times).
@@ -65,6 +68,7 @@ impl Default for Recipe {
             fill_gaps: true,
             weak_files: WEAK_FILES,
             ms2: crate::ms2spec::SpecOpts::default(),
+            min_height_basis: None,
         }
     }
 }
