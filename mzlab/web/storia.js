@@ -45,8 +45,8 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   };
   const fullscreen = () => E.panels.find((/** @type {any} */ q) => q.el && q.el.classList.contains("max"));
   /** Visible now: the panel is open, in the visible tab, and in full screen only that panel. @param {any} e */
-  // a removed file or closed panel belongs to a tab, not to a live panel
-  const visibile = e => { if (e.tipo === "tolto" && e.tab !== undefined) return !fullscreen() && e.tab === E.tab;
+  // a removed file or closed panel belongs to a tab (remove-all to none), not to a live panel
+  const visibile = e => { if (e.tipo === "tolto" && e.p === undefined) return !fullscreen() && (e.tab === undefined || e.tab === E.tab);
     if (!E.panels.includes(e.p)) return false; const m = fullscreen(); return m ? e.p === m : (e.p.tab || E.tab) === E.tab; };
   /** @param {any} p @param {string} tipo @param {any} [snap] */
   const cattura = (p, tipo, snap) => tipo === "int" ? (snap ?? intSnap(p))
@@ -83,22 +83,19 @@ const STORIA = typeof document === "undefined" ? null : (() => {
     if (!e) { if (!solo) say(T("storia.niente")); return false; }
     presa(e); say(T("storia.undone", { what: etichetta(e) })); sync(); return true;
   }
-  /** The undo of a removal is done: its notice goes away and the copy in the store is not freed. @param {any} e */
+  /** The undo of a removal is done: its timer stops and the copy in the store is not freed. @param {any} e */
   function presa(e) { if (e.tipo !== "tolto") return; e.scade = null; if (e.chiudi) e.chiudi(); }
   /** Takes back one removal (the button of its notice). @param {any} e */
   function annullaVoce(e) {
     const r = pila.annulla(x => x === e, ripristina); if (!r) return false;
     presa(r); say(T("storia.undone", { what: etichetta(r) })); sync(); return true;
   }
-  /** The notice «Removed: x · Undo» (6 s, role=status); when it closes by itself the removal is final: the entry leaves the stack and `scade` frees what the removal kept. @param {any} e */
+  /** A removal has no visible notice (the undo/redo buttons and Ctrl+Z are enough): it is announced to screen readers, and when it keeps something to free (`scade`) the removal becomes final after 6 s: the entry leaves the stack and `scade` frees what it kept. @param {any} e */
   function avviso(e) {
-    let box = document.getElementById("tolto-box");
-    if (!box) { box = document.createElement("div"); box.id = "tolto-box"; box.setAttribute("role", "status"); box.setAttribute("aria-live", "polite"); document.body.appendChild(box); }
-    const n = document.createElement("div"), b = document.createElement("button"), t = document.createElement("span");
-    n.className = "tolto"; t.textContent = T("storia.tolto", { what: e.what }); b.type = "button"; b.textContent = T("storia.annulla"); b.onclick = () => { annullaVoce(e); };
-    n.append(t, b); box.appendChild(n);
-    e.chiudi = window.avvisoAuto ? avvisoAuto(n, { ms: 6000, x: false, onClose: () => { e.chiudi = null; const f = e.scade; e.scade = null; if (f) { pila.togli(e); sync(); f(); } } }) : () => n.remove();
-    if (!window.avvisoAuto) setTimeout(() => { if (e.chiudi) e.chiudi(); }, 6000);
+    say(T("storia.tolto", { what: e.what }));
+    if (!e.scade) return;
+    const t = setTimeout(() => { e.chiudi = null; const f = e.scade; e.scade = null; if (f) { pila.togli(e); sync(); f(); } }, 6000);
+    e.chiudi = () => { clearTimeout(t); e.chiudi = null; };
   }
   /** Records a removal that can be taken back and shows its notice. o = { what, tab?, p?, dati, undo, redo, scade? }: `tab` ties it to a tab (a file, a closed panel), `p` to a live panel (the marks), `scade` runs once the notice has closed without an undo. @param {any} o */
   function tolto(o) {
@@ -126,6 +123,10 @@ const STORIA = typeof document === "undefined" ? null : (() => {
     // Disegno with the focus outside the editor
     if (kf && kf.offsetParent && window.TPDraw && TPDraw.undo) { e.preventDefault(); TPDraw.undo(redo); }
   });
+  // the buttons of the bar do what the keys do
+  const bu = document.getElementById("np-undo"), br = document.getElementById("np-redo");
+  if (bu) bu.addEventListener("click", () => { annulla(); });
+  if (br) br.addEventListener("click", () => { ripeti(); });
   return { registra, tolto, segui, annulla, ripeti, sync, svuota: () => { pila.svuota(); sync(); }, pila };
 })();
 
