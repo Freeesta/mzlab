@@ -237,7 +237,10 @@ impl ScanEvent {
     pub fn activation(&self) -> Option<crate::Activation> {
         let act = self.preamble.activation();
         let beam = self.preamble.analyzer() == Some(crate::Analyzer::FTMS)
-            && self.reactions.first().is_some_and(|r| r.unknown_long1 != CID_REACTION_FLAG);
+            && self
+                .reactions
+                .first()
+                .is_some_and(|r| r.unknown_long1 != CID_REACTION_FLAG);
         match act {
             Some(crate::Activation::CID) if beam => Some(crate::Activation::HCD),
             other => other,

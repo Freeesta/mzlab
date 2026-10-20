@@ -644,7 +644,11 @@ fn to_msc_record(
         precursor_native_id: p.master_scan_number.map(native_id_for),
         activation: convert_activation(p.activation),
         // The writer renders CID on an FTMS precursor as beam-type CID; a CID the event reports as such stays CID.
-        analyzer: if p.activation == Some(Activation::CID) { None } else { convert_analyzer(p.analyzer) },
+        analyzer: if p.activation == Some(Activation::CID) {
+            None
+        } else {
+            convert_analyzer(p.analyzer)
+        },
         ccs: None,
     });
     msc::SpectrumRecord {
