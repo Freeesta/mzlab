@@ -447,6 +447,21 @@ try:
             pg.click('button[aria-label="Fit all steps in view"]'); pg.click('.fln:has-text("Build feature table")'); pg.click('.fl-insp button[aria-label="Open t.csv"]')
             attendi(pg, "document.querySelector('.flx-table td') && document.querySelector('.flx-table td').textContent === '1'")
         step("desktop: «Run on this computer» says which file to open first, then lists each step as done", desktop_run)
+        def desktop_data_files():
+            # the files open in the Data tab become the scan inputs; the app holds a.mzML only, so b.mzML is left out and said so, the run goes on
+            pg.evaluate("""() => { if (typeof E === 'undefined') window.E = { files: [] }; E.files = [{ file: 'a.mzML' }, { file: 'b.mzML' }]; window.__sent = []; const real = window.fetch;
+              window.fetch = async (u, o) => { if (!String(u).includes('/rpc') || JSON.parse(o.body).op !== 'flow/run') return real(u, o);
+                const plan = JSON.parse(JSON.parse(o.body).plan); window.__sent.push(plan.inputs.map(i => i.name).join(','));
+                if (plan.inputs.some(i => i.name === 'b.mzML')) return new Response(JSON.stringify({ error_key: 'err.flow.input.missing', params: { input: 'b.mzML' } }), { status: 400 });
+                const activity = {}; plan.steps.forEach(x => { activity[x.id] = { step: x.step, ms: 5, used: [], generated: [] }; });
+                return new Response(JSON.stringify({ prov: JSON.stringify({ schema: 'prov/1', entity: {}, activity }), dir: '/tmp/mzlab-flow/out' }), { status: 200 }); }; }""")
+            pg.click('button[aria-label="Run the plan on this computer"]'); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.startsWith('Finished')")
+            note = pg.inner_text(".fl-cli .fl-note"); sent = pg.evaluate("window.__sent")
+            assert "1 file excluded" in note and "b.mzML" in note, note
+            assert len(sent) == 2 and "a.mzML" in sent[0] and "b.mzML" in sent[0] and "b.mzML" not in sent[1] and "a.mzML" in sent[1], sent
+            w = pg.evaluate("""() => { if (typeof ST === 'undefined') window.ST = { files: [] }; ST.files = [{ name: 'a.mzML', spectrum_mode: 'profile' }]; const none = FLOW.runPlanFromData(FLOW.current).warns, d = FLOW.current.plan.steps.find(x => x.step.startsWith('features.detect@')); d.algorithm = 'centwave'; const r = FLOW.runPlanFromData(FLOW.current); delete d.algorithm; ST.files = []; return none.length ? ['unexpected'] : r.warns; }""")
+            assert w and all("centroid" in x for x in w) and "a.mzML" in w[0], w
+        step("desktop: the files open in Data become the plan inputs, a file the app lacks is left out and listed", desktop_data_files)
         b.close()
 finally:
     srv.terminate()
