@@ -19,6 +19,8 @@ impl<'a> Parser<'a> {
             prefix: prefix.to_string(),
             pubblico: opt.pubblico,
             raw_ok: opt.raw_ok,
+            annotate: opt.annotate,
+            depth: 0,
             ctx: Ctx {
                 teoria: opt.teoria,
                 ..Ctx::default()
@@ -41,6 +43,24 @@ impl<'a> Parser<'a> {
 
     pub(crate) fn err<T>(&self, line: usize, msg: impl Into<String>) -> R<T> {
         Err(LibroError::new(self.file, line, msg))
+    }
+
+    /// `blocks` one level deeper (boxes, side-by-side boxes, private blocks, list items): nothing nested is editable from the preview.
+    pub(crate) fn nested(&mut self, lines: &[&str], base: usize) -> R<String> {
+        self.depth += 1;
+        let r = self.blocks(lines, base);
+        self.depth -= 1;
+        r
+    }
+
+    /// ` data-src="…"` for a block the preview can edit (top level only, preview build only).
+    pub(crate) fn src_attr(&self, key: &str, inner: &str) -> String {
+        // a block whose HTML the editor could not read back (misnested tags in the source) stays locked
+        if self.annotate && self.depth == 0 && crate::frag::parse(inner).is_ok() {
+            format!(" data-src=\"{key}\"")
+        } else {
+            String::new()
+        }
     }
 
     pub(crate) fn inl(&mut self, text: &str, line: usize) -> R<String> {
@@ -164,7 +184,9 @@ impl<'a> Parser<'a> {
             Some((c, r)) => (format!(" class=\"{c}\""), r),
             None => (String::new(), text),
         };
-        Ok((format!("<p{cls}>{}</p>", self.inl(&body, base + i)?), j))
+        let html = self.inl(&body, base + i)?;
+        let src = self.src_attr(&format!("{}-{}", base + i, base + j - 1), &html);
+        Ok((format!("<p{cls}{src}>{html}</p>"), j))
     }
 
     fn listing(&mut self, lines: &[&str], i: usize, base: usize) -> R<(String, usize)> {
@@ -214,12 +236,16 @@ impl<'a> Parser<'a> {
     }
 
     fn list_item(&mut self, body: &[&str], at: usize) -> R<String> {
-        let inner = self.blocks(body, at)?;
+        let inner = self.nested(body, at)?;
         let simple = inner.starts_with("<p>") && inner.matches("<p>").count() == 1;
-        Ok(format!(
-            "<li>{}</li>",
-            if simple { cut(&inner, 3, 4) } else { inner }
-        ))
+        // only a one-line item made of a single paragraph is editable from the preview
+        let inner = if simple { cut(&inner, 3, 4) } else { inner };
+        let src = if simple && body.len() == 1 {
+            self.src_attr(&at.to_string(), &inner)
+        } else {
+            String::new()
+        };
+        Ok(format!("<li{src}>{inner}</li>"))
     }
 
     fn raw(&mut self, lines: &[&str], i: usize, base: usize) -> R<(String, usize)> {
@@ -243,7 +269,7 @@ impl<'a> Parser<'a> {
         let Some(j) = (i + 1..lines.len()).find(|&k| lines[k].trim_end() == ":::") else {
             return self.err(base + i, "::: duo without closing :::");
         };
-        let inner = self.blocks(&lines[i + 1..j], base + i + 1)?;
+        let inner = self.nested(&lines[i + 1..j], base + i + 1)?;
         Ok((format!("<div class=\"duo\">{inner}\n</div>"), j + 1))
     }
 
@@ -262,7 +288,7 @@ impl<'a> Parser<'a> {
             } else {
                 format!(
                     "<div class=\"privato\" data-privato>\n{}\n</div>",
-                    self.blocks(&lines[i + 1..j], base + i + 1)?
+                    self.nested(&lines[i + 1..j], base + i + 1)?
                 )
             };
             return Ok((inner, j + 1));
@@ -331,6 +357,8 @@ pub struct Parser<'a> {
     pub(crate) prefix: String,
     pub(crate) pubblico: bool,
     pub(crate) raw_ok: bool,
+    pub(crate) annotate: bool,
+    pub(crate) depth: usize,
     pub ctx: Ctx,
     pub eq: HashMap<String, String>,
     pub fig: HashMap<String, String>,

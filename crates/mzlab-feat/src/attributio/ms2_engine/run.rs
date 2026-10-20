@@ -158,6 +158,7 @@ fn insilico(
     let opts = InSilicoOpts {
         db_ppm: num(v, "db_ppm", d.db_ppm),
         frag_ppm: num(v, "frag_ppm", d.frag_ppm),
+        terms: v.get("score_terms").and_then(Value::bool) == Some(true),
         ..d
     };
     let peaks: Vec<(f64, f64)> = m.into_iter().zip(i).collect();
@@ -176,6 +177,10 @@ fn insilico(
             .str(&r.candidate.formula)
             .raw(",\"score\":")
             .num(r.score);
+        if let Some(t) = &r.terms {
+            o.raw(",\"score_terms\":");
+            t.write(o);
+        }
         o.raw(",\"mass_ppm\":")
             .num(r.mass_ppm)
             .raw(",\"explained\":")

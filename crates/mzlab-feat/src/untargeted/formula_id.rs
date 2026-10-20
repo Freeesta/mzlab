@@ -6,6 +6,7 @@
 use mzlab_core::composition::{compose, parse_elements, Opts as ComposeOpts, Ranges};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, round, Out, Value};
+use mzlab_core::score_terms::ScoreTerms;
 
 use super::isofinder::auto::Found;
 use super::isofinder::select::{detect, Detection};
@@ -29,6 +30,8 @@ pub struct Opts {
     pub nitrogen: String,
     pub rdb_min: f64,
     pub max_results: usize,
+    /// Each candidate also carries its score as a weighted sum of named terms (`score_terms`); the scores do not change.
+    pub score_terms: bool,
     pub finder: Config,
 }
 
@@ -42,6 +45,7 @@ impl Default for Opts {
             nitrogen: "none".into(),
             rdb_min: 0.0,
             max_results: 10,
+            score_terms: false,
             finder: Config::default(),
         }
     }
@@ -70,6 +74,9 @@ impl Opts {
         }
         if let Some(x) = v.get("nitrogen") {
             o.nitrogen = x.str().ok_or_else(|| bad("nitrogen"))?.to_string();
+        }
+        if let Some(x) = v.get("score_terms") {
+            o.score_terms = x.bool().ok_or_else(|| bad("score_terms"))?;
         }
         if let Some(x) = v.get("rdb_min") {
             o.rdb_min = x.f64().ok_or_else(|| bad("rdb_min"))?;
@@ -127,6 +134,8 @@ pub struct Candidate {
     pub rules_failed: Vec<String>,
     pub rules_ok: usize,
     pub why: Vec<Reason>,
+    /// The score as a weighted sum of the mass term and the isotope term, when asked for.
+    pub score_terms: Option<ScoreTerms>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -245,6 +254,7 @@ fn search(mz: f64, z: i32, obs: Vec<(f64, f64)>, r: &Ranges, o: &Opts) -> Result
                 .collect(),
             rules_ok: num(x, "rules_ok").unwrap_or(0.0) as usize,
             why: Vec::new(),
+            score_terms: None,
         })
         .collect())
 }
@@ -314,6 +324,11 @@ pub fn identify(mz: &[f64], y: &[f64], feature_mz: f64, o: &Opts) -> Result<Iden
     let r = ranges(o, &found)?;
     let mut candidates = search(feature_mz, z, observed.clone(), &r, o)?;
     let (chosen, alternatives) = judge(&mut candidates, !observed.is_empty());
+    if o.score_terms {
+        for c in candidates.iter_mut() {
+            c.score_terms = Some(composition_terms(c));
+        }
+    }
     Ok(Identified {
         charge: z,
         charge_source: source,
@@ -324,6 +339,16 @@ pub fn identify(mz: &[f64], y: &[f64], feature_mz: f64, o: &Opts) -> Result<Iden
         chosen,
         alternatives,
     })
+}
+
+/// The combined score of `compose` as its weighted mean: the mass term and, with a pattern, the isotope term (the weights of `compose`).
+fn composition_terms(c: &Candidate) -> ScoreTerms {
+    let w = ComposeOpts::default().weights;
+    let mut parts = vec![("mass", c.mass_term, w.0)];
+    if let Some(i) = c.iso_term {
+        parts.push(("isotopes", i, w.1));
+    }
+    ScoreTerms::mean("composition", &parts, "score/composition")
 }
 
 fn write_candidate(out: &mut Out, c: &Candidate) {
@@ -349,6 +374,10 @@ fn write_candidate(out: &mut Out, c: &Candidate) {
         .raw(",\"isotopes\":")
         .opt(c.iso_term)
         .raw("}");
+    if let Some(t) = &c.score_terms {
+        out.raw(",\"score_terms\":");
+        t.write(out);
+    }
     out.raw(",\"rules_ok\":")
         .int(c.rules_ok as i64)
         .raw(",\"rules_failed\":[");

@@ -8,6 +8,7 @@ use crate::attributio::frame::Frame;
 use crate::attributio::review::fragmenter::fragment_molecule;
 use crate::chem::grafo::Mol;
 use mzlab_core::elements;
+use mzlab_core::score_terms::ScoreTerms;
 
 const PROTON: f64 = 1.00727646677;
 const W_MASS: f64 = 0.421;
@@ -29,6 +30,8 @@ pub struct InSilicoOpts {
     pub frag_ppm: f64,
     pub max_bonds: usize,
     pub top: usize,
+    /// Each ranked candidate also carries its score as a weighted sum of named terms (`score_terms`).
+    pub terms: bool,
 }
 
 impl Default for InSilicoOpts {
@@ -38,6 +41,7 @@ impl Default for InSilicoOpts {
             frag_ppm: 10.0,
             max_bonds: 200,
             top: 5,
+            terms: false,
         }
     }
 }
@@ -48,6 +52,7 @@ pub struct Ranked {
     pub score: f64,
     pub explained: Vec<f64>,
     pub mass_ppm: f64,
+    pub terms: Option<ScoreTerms>,
 }
 
 /// Candidates of a CSV list (`,` or `;`): `Identifier`, `CompoundName`/`Name`, `SMILES`, `MolecularFormula`/`Formula`, `MonoisotopicMass`/`ExactMass`.
@@ -124,6 +129,20 @@ pub fn fragmenter_score(peaks: &[(f64, f64)], explained: &[f64]) -> f64 {
     }
 }
 
+/// The fragmenter score is the sum, over the explained peaks, of the share `w(peak) / Σ w(all)`: `(m/z, share)` of each one.
+pub fn fragmenter_contributions(peaks: &[(f64, f64)], explained: &[f64]) -> Vec<(f64, f64)> {
+    let w = |mz: f64, it: f64| mz.powf(W_MASS) * it.powf(W_INT);
+    let all: f64 = peaks.iter().map(|&(m, i)| w(m, i)).sum();
+    if all <= 0.0 {
+        return Vec::new();
+    }
+    peaks
+        .iter()
+        .filter(|&&(m, _)| explained.contains(&m))
+        .map(|&(m, i)| (m, w(m, i) / all))
+        .collect()
+}
+
 /// Candidates within `db_ppm` of the neutral mass `precursor ∓ proton`, ranked by the fragmenter score (best first, ties by the candidate id); `peaks` are
 /// `(m/z, intensity)` of the experimental MS/MS.
 pub fn rank(
@@ -152,6 +171,16 @@ pub fn rank(
         out.push(Ranked {
             candidate: c.clone(),
             score: fragmenter_score(peaks, &explained),
+            terms: o.terms.then(|| {
+                let c = fragmenter_contributions(peaks, &explained);
+                ScoreTerms::over_pairs(
+                    "fragmenter_score",
+                    fragmenter_score(peaks, &explained),
+                    c,
+                    6,
+                    "score/fragmenter",
+                )
+            }),
             explained,
             mass_ppm: ppm,
         });

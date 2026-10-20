@@ -42,7 +42,7 @@ function orderFiles(list) { const c = fileComparator(list); return list.map((f, 
 
 // group of a high-resolution file in the file list (one place): a single scan or constant RT -> infusion; MS1 + the MS2 it triggered in the same
 // file (both parts of the file) -> dda; only scans with a precursor -> ms2; otherwise (no MS2, scans without precursor) -> full
-function hrGroup(f) { return f.infusion ? "infusion" : f.dda ? "dda" : f.kind === "ms2" ? "ms2" : "full"; }
+function hrGroup(f) { return f.ugrp ? "u:" + f.ugrp : f.infusion ? "infusion" : f.kind === "ms2" && !f.dda ? "ms2" : "full"; }
 // the physical file of an entry of the session ("x.mzML#MS2" is a part of "x.mzML")
 const fileBase = name => String(name).split("#")[0];
 

@@ -6,7 +6,7 @@ use super::libraries::LibraryIndex;
 use super::matching::Ms2;
 use super::proposal::{Proposal, J};
 use super::propose::MgfBlock;
-use super::rtlogp::{calibrate, check, organic_fraction, CalPoint, LogPValues, MIN_N};
+use super::rtlogp::{calibrate, check, check_terms, organic_fraction, CalPoint, LogPValues, MIN_N};
 use super::rules::{page_level, Current};
 use super::sources::{csi_top5, SourceTexts, StructureCandidate};
 use super::structures::GraphStructures;
@@ -53,7 +53,7 @@ pub(super) fn rt_logp(b: &Bench, f: &Feature) -> Option<(J, Option<bool>)> {
     let model = calibrate(&pts, s.rt_logp_k, floor, MIN_N);
     let y = f.rt.map(y_of);
     let c = check(&model, &values(f), y, s.rt_logp_k, floor);
-    let j = J::Obj(vec![
+    let mut j = J::Obj(vec![
         ("n_calibrants", J::Num(model.n as f64)),
         ("y", num_or_null(y)),
         (
@@ -74,6 +74,13 @@ pub(super) fn rt_logp(b: &Bench, f: &Feature) -> Option<(J, Option<bool>)> {
         ("ok", c.ok.map_or(J::Null, J::Bool)),
         ("note", J::Str(model.note.clone())),
     ]);
+    if let (true, Some(t), J::Obj(fields)) = (
+        s.rt_logp_terms >= 1.0,
+        check_terms(&model, &values(f), y),
+        &mut j,
+    ) {
+        fields.push(("score_terms", J::Raw(t.to_json())));
+    }
     Some((j, c.ok))
 }
 

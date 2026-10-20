@@ -27,6 +27,7 @@ KINDS = ("file", "funzioni", "doc_righe", "doc_kb")
 LABEL = {"file": "file", "funzioni": "funzione", "doc_righe": "documento (righe lunghe)", "doc_kb": "documento (byte)"}
 SLACK = 0.10          # growth tolerated on an entry that is already over the limit
 SLACK_MIN = 10        # ... but at least this many lines
+NEAR_TOL = 20         # warn when an entry over the limit is this close to its tolerance
 
 
 def misura() -> dict[str, dict[str, int]]:
@@ -57,6 +58,24 @@ def misura() -> dict[str, dict[str, int]]:
     return {"file": files, "funzioni": funcs, "doc_righe": long_lines, "doc_kb": big}
 
 
+def tolleranza(b: int) -> int:
+    return b + max(SLACK_MIN, int(b * SLACK))
+
+
+def vicini_tolleranza(now: dict[str, dict[str, int]], base: dict[str, dict[str, int]]) -> list[str]:
+    """Files and functions already over the limit that are within NEAR_TOL lines of their tolerance (base + 10%): a warning, since the next PR to grow them turns main red."""
+    out = []
+    for kind in ("file", "funzioni"):
+        for k, v in sorted(now[kind].items()):
+            b = base.get(kind, {}).get(k)
+            if b is None:
+                continue
+            m = tolleranza(b)
+            if 0 <= m - v < NEAR_TOL:
+                out.append(f"{k} is {m - v} lines from its tolerance (base {b}, max {m}): split it before adding more")
+    return out
+
+
 def vicini() -> list[str]:
     """Files within 25 lines of the 500-line limit and documents within 1.5 KB of 25 KB (but not over): a warning, so that two PRs growing the same file do not cross the limit together."""
     out = []
@@ -81,7 +100,7 @@ def peggiori(now: dict[str, dict[str, int]], base: dict[str, dict[str, int]]) ->
             b = base.get(kind, {}).get(k)
             if b is None:
                 bad.append(f"NEW {LABEL[kind]} over the limit: {k} ({v})")
-            elif v > b + (max(SLACK_MIN, int(b * SLACK)) if kind in ("file", "funzioni") else 0):
+            elif v > (tolleranza(b) if kind in ("file", "funzioni") else b):
                 bad.append(f"GREW {k}: {b} -> {v}")
     return bad
 
@@ -233,7 +252,7 @@ def main() -> int:
     print(f"WARN {len(now['file'])} files over {MAX_FILE} lines, {len(now['funzioni'])} functions over {MAX_FUNC} lines "
           f"(base: {len(base['file'])} / {len(base['funzioni'])}); documents: {len(now['doc_righe'])} with lines over "
           f"{MAX_DOC_LINE} characters, {len(now['doc_kb'])} over 25 KB")
-    for w in vicini():
+    for w in vicini() + vicini_tolleranza(now, base):
         print("WARN near the limit: " + w)
     if "--lista" in sys.argv:
         for kind in KINDS:

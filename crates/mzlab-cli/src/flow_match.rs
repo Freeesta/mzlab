@@ -4,7 +4,11 @@
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
 use mzlab_core::json::{round, Out};
+use mzlab_core::score_terms::ScoreTerms;
 use mzlab_lib::build::{build_in_memory, BuildOpts};
+use mzlab_lib::contrib::{
+    cosine_contributions, entropy_contributions, modified_cosine_contributions,
+};
 use mzlab_lib::decoy::{
     best_scores, fdr_note, is_decoy, lib_fdr, quantize, with_decoys, Best, DecoyKind, LibFdr,
     DEFAULT_SEED,
@@ -63,6 +67,22 @@ struct Cand {
     mass_ppm: f64,
     delta: f64,
     explained: Vec<f64>,
+    /// the score as a sum of terms, when the step is asked for it (`score_terms`)
+    terms: Option<ScoreTerms>,
+}
+
+/// Pairs named one by one in the terms of a score.
+const TERMS_SHOWN: usize = 6;
+
+fn mod_terms(m: &mzlab_lib::scores::ModCosine) -> ScoreTerms {
+    let c = modified_cosine_contributions(m);
+    ScoreTerms::over_pairs(
+        "modified_cosine",
+        m.cosine,
+        c,
+        TERMS_SHOWN,
+        "score/modified-cosine",
+    )
 }
 
 fn by_score(c: &mut Vec<Cand>, top: usize) {
@@ -70,7 +90,7 @@ fn by_score(c: &mut Vec<Cand>, top: usize) {
     c.truncate(top);
 }
 
-fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str) -> Result<Vec<Cand>> {
+fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str, terms: bool) -> Result<Vec<Cand>> {
     let ppm = if alg == "modified_cosine" {
         num(job, "exact_ppm")
     } else {
@@ -85,14 +105,31 @@ fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str) -> Result<Vec<Cand>> {
     let hits = identity(lib, q, &o).map_err(|_| Error::new("err.flow.match.library"))?;
     let mut out = Vec::new();
     for h in hits {
-        let (score, shared, pairs) = match alg {
-            "cosine" => (h.cosine, h.shared, h.pairs.clone()),
+        let (score, shared, pairs, t) = match alg {
+            "cosine" => (
+                h.cosine,
+                h.shared,
+                h.pairs.clone(),
+                terms.then(|| {
+                    let c = cosine_contributions(&q.spec, &h.spec, &h.pairs);
+                    ScoreTerms::over_pairs("cosine", h.cosine, c, TERMS_SHOWN, "score/cosine")
+                }),
+            ),
             "modified_cosine" => {
                 let m = modified_cosine(&q.spec, &h.spec, o.frag_da);
                 let p = m.pairs.iter().map(|&(i, j, _)| (i, j)).collect();
-                (m.cosine, m.matched, p)
+                (m.cosine, m.matched, p, terms.then(|| mod_terms(&m)))
             }
-            _ => (h.entropy, h.shared, h.pairs.clone()),
+            _ => (
+                h.entropy,
+                h.shared,
+                h.pairs.clone(),
+                terms.then(|| {
+                    let c = entropy_contributions(&q.spec, &h.spec, &h.pairs);
+                    let n = "entropy_similarity";
+                    ScoreTerms::over_pairs(n, h.entropy, c, TERMS_SHOWN, "score/entropy-similarity")
+                }),
+            ),
         };
         // the gates of the entropy algorithm; the other two rank everything inside the precursor window
         if alg == "spectral_entropy"
@@ -110,12 +147,13 @@ fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str) -> Result<Vec<Cand>> {
                 .iter()
                 .filter_map(|&(i, _)| q.spec.mz.get(i).copied())
                 .collect(),
+            terms: t,
         });
     }
     Ok(out)
 }
 
-fn analogues(lib: &Lib, q: &Query, job: &Job) -> Result<Vec<Cand>> {
+fn analogues(lib: &Lib, q: &Query, job: &Job, terms: bool) -> Result<Vec<Cand>> {
     let o = AnalogOpts {
         frag_da: num(job, "tol_da"),
         pol: q.pol,
@@ -140,6 +178,7 @@ fn analogues(lib: &Lib, q: &Query, job: &Job) -> Result<Vec<Cand>> {
                 .iter()
                 .filter_map(|&(i, _, _)| h.mc.a_top.mz.get(i).copied())
                 .collect(),
+            terms: terms.then(|| mod_terms(&h.mc)),
         })
         .collect())
 }
@@ -208,6 +247,10 @@ fn write_cand(
     o.raw(",\"smiles\":").str(&m.smiles);
     o.raw(",\"formula\":").str(&m.formula);
     o.raw(",\"score\":").num(r(c.score));
+    if let Some(t) = &c.terms {
+        o.raw(",\"score_terms\":");
+        t.write(o);
+    }
     o.raw(",\"shared\":").int(c.shared as i64);
     o.raw(",\"library_peaks\":").int(peaks as i64);
     o.raw(",\"explained\":").rounded(&c.explained, 4);
@@ -246,6 +289,11 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
     if decoys && alg != "spectral_entropy" {
         return Err(Error::new("err.flow.match.decoysAlgorithm"));
     }
+    let terms = job
+        .resolved
+        .params
+        .iter()
+        .any(|(k, v)| k == "score_terms" && v.bool() == Some(true));
     let lib = open_library(library, decoys)?;
     let top = num(job, "top_n").max(1.0) as usize;
     let mut o = Out::default();
@@ -272,9 +320,9 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         let Some(q) = &queries[k] else {
             continue;
         };
-        let mut c = exact(&lib, q, job, &alg)?;
+        let mut c = exact(&lib, q, job, &alg, terms)?;
         if alg == "modified_cosine" {
-            c.extend(analogues(&lib, q, job)?);
+            c.extend(analogues(&lib, q, job, terms)?);
         }
         if decoys {
             // the decoys are scored to count the errors, never listed

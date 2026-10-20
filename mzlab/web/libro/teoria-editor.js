@@ -109,7 +109,7 @@ async function openChapter(name, btn) {
     $("source").disabled = false;
     $("summary").value = "";
     $("path").textContent = `mzlab/web/teoria/src/${name}`;
-    $("preview").hidden = true;
+    preview();
     for (const b of document.querySelectorAll("#sections button")) b.removeAttribute("aria-current");
     btn.setAttribute("aria-current", "true");
     refresh();
@@ -118,14 +118,108 @@ async function openChapter(name, btn) {
   }
 }
 
+/** The source the preview on screen was made from: an edit in the page goes back into exactly this text. */
+let rendered = "";
+/** @type {ReturnType<typeof setTimeout> | undefined} */
+let timer;
+/** Scroll position of the page before it was made again, put back when the new one has loaded. */
+let pendingTop = 0;
+
+const EDIT_CSS = "[data-src]{cursor:text}[data-src]:hover{outline:1px dashed #0b5cad;outline-offset:2px}[data-src][contenteditable=true]{outline:2px solid #0b5cad;outline-offset:2px}a{pointer-events:none}";
+
 function preview() {
-  const r = convert();
-  if (r.error) return fail(r.error);
+  if (!conv || !cur) return;
+  const text = $("source").value;
+  let page;
+  try {
+    page = conv.preview(text, cur.name, cur.rawOk);
+  } catch (e) {
+    return fail(String(e));
+  }
   fail("");
-  // the page runs no script here (the sandbox has no allow-scripts): it shows the text and the styles; <base> makes teoria.css load from the Teoria folder
+  rendered = text;
   const frame = $("preview");
-  frame.srcdoc = /** @type {string} */ (r.html).replace("<head>", '<head><base href="../teoria/">');
+  pendingTop = frame.contentDocument?.scrollingElement?.scrollTop || 0;
+  // the page runs no script here (the sandbox has no allow-scripts); <base> makes teoria.css load from the Teoria folder
+  frame.srcdoc = page.replace("<head>", '<head><base href="../teoria/">');
   frame.hidden = false;
+}
+
+/** @param {HTMLIFrameElement} frame @param {number} top */
+function wirePreview(frame, top) {
+  const doc = frame.contentDocument;
+  if (!doc) return;
+  const st = doc.createElement("style");
+  st.textContent = EDIT_CSS;
+  doc.head.append(st);
+  if (doc.scrollingElement) doc.scrollingElement.scrollTop = top;
+  /** @type {{el: HTMLElement, html: string} | null} */
+  let editing = null;
+  /** @param {boolean} keep */
+  const finish = (keep) => {
+    if (!editing) return;
+    const { el, html } = editing;
+    editing = null;
+    el.contentEditable = "false";
+    if (keep && el.innerHTML !== html) applyEdit(el.getAttribute("data-src") || "", el.innerHTML);
+    else if (!keep) el.innerHTML = html;
+  };
+  doc.addEventListener("click", (ev) => {
+    const t = /** @type {HTMLElement} */ (ev.target);
+    ev.preventDefault();
+    const el = t.closest?.("[data-src]");
+    if (el) {
+      if (editing && editing.el === el) return;
+      finish(true);
+      editing = { el: /** @type {HTMLElement} */ (el), html: el.innerHTML };
+      editing.el.contentEditable = "true";
+      editing.el.focus();
+    } else if (t.closest?.("main")) {
+      finish(true);
+      fail("This block cannot be changed in the page: edit it in the source box below.");
+    }
+  });
+  doc.addEventListener("keydown", (ev) => {
+    if (!editing) return;
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      finish(true);
+    } else if (ev.key === "Escape") {
+      ev.preventDefault();
+      finish(false);
+    }
+  });
+  doc.addEventListener("paste", (ev) => {
+    if (!editing) return;
+    ev.preventDefault();
+    doc.execCommand("insertText", false, (ev.clipboardData?.getData("text/plain") || "").replace(/\s+/g, " "));
+  });
+  doc.addEventListener("focusout", () => finish(true));
+  for (const n of ["drop", "dragstart"]) doc.addEventListener(n, (ev) => ev.preventDefault());
+}
+
+/** An edit made in the page: the Rust converter puts it back into the source, or says why it cannot. @param {string} src @param {string} html */
+function applyEdit(src, html) {
+  if (!conv || !cur) return;
+  let err = "";
+  if ($("source").value !== rendered) {
+    err = "The source changed after this page was made. The page was refreshed: make the change again.";
+  } else {
+    try {
+      $("source").value = conv.edit(rendered, cur.name, cur.rawOk, src, html);
+      refresh();
+    } catch (e) {
+      err = String(e);
+    }
+  }
+  // the page is made again either way (a refused edit puts the old text back); the reason is shown after that
+  preview();
+  if (err) fail(err);
+}
+
+function schedulePreview() {
+  clearTimeout(timer);
+  timer = setTimeout(preview, 400);
 }
 
 async function send() {
@@ -143,6 +237,7 @@ async function send() {
     cur.md = { text: $("source").value, sha: "" };
     $("source").disabled = true;
     $("btn-preview").disabled = true;
+    $("preview").hidden = true;
     $("result").textContent = pr.autoMerge
       ? `Pull request #${pr.number} opened and set to merge by itself when the checks are green: ${pr.url}`
       : `Pull request #${pr.number} opened, but auto-merge could not be switched on (is it allowed in the repository settings?). Merge it by hand: ${pr.url}`;
@@ -162,7 +257,11 @@ function useToken(token) {
 }
 
 function wire() {
-  $("source").addEventListener("input", refresh);
+  $("preview").addEventListener("load", () => wirePreview($("preview"), pendingTop));
+  $("source").addEventListener("input", () => {
+    refresh();
+    schedulePreview();
+  });
   $("summary").addEventListener("input", refresh);
   $("btn-preview").addEventListener("click", preview);
   $("btn-send").addEventListener("click", send);
