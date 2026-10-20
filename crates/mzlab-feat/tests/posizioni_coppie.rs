@@ -34,9 +34,11 @@ fn pairs_are_distinct_atoms_with_one_product_formula() {
 fn a_carbonyl_pair_needs_a_ch2_and_another_atom() {
     let mol = Mol::parse(PHENOL).unwrap();
     let s = sites(&mol, "+2O−2H").unwrap();
-    assert!(s.iter().all(|x| x.kind == "carbonyl_oh" && x.atom == 1));
+    // the methyl-to-carboxyl site shares this net change and is counted apart
+    let pairs: Vec<_> = s.iter().filter(|x| x.kind == "carbonyl_oh").collect();
+    assert!(pairs.iter().all(|x| x.atom == 1));
     assert!(s.iter().all(|x| x.tp_formula == "C8H8O3"));
-    assert_eq!(s.len(), 5);
+    assert_eq!(pairs.len(), 5);
 }
 
 #[test]
