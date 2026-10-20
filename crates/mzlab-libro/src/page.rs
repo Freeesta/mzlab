@@ -77,63 +77,7 @@ pub fn convert(text: &str, nome: &str, opt: &Options) -> Result<String, LibroErr
         p.page_title.clone()
     };
     let page = if opt.teoria {
-        let mut head: String = p.head.iter().map(|h| format!("<!--{h}-->\n")).collect();
-        if p.esteso {
-            let number: String = nome.chars().take_while(|c| c.is_ascii_digit()).collect();
-            let lines: Vec<String> = p.head.iter().map(|h| h.replace("--", "-")).collect();
-            head = format!(
-                "<!--\nchapter: {number} {}\n{}\n-->\n<meta name=\"robots\" content=\"noindex\">\n",
-                title.replace("--", "-"),
-                lines.join("\n")
-            );
-            p.html_attrs
-                .push(("data-esteso".to_string(), String::new()));
-        }
-        let mut srcs: Vec<&str> = Vec::new();
-        if !p.no_appname {
-            srcs.push("../appname.js");
-        }
-        srcs.extend(p.scripts_before.iter().map(String::as_str));
-        srcs.push("teoria.js");
-        srcs.extend(p.scripts.iter().map(String::as_str));
-        let tags: String = srcs
-            .iter()
-            .map(|x| format!("<script src=\"{x}\"></script>"))
-            .collect();
-        let before: String = p
-            .snippets
-            .iter()
-            .filter(|n| snippet(n).is_some_and(|s| s.1))
-            .map(|n| format!("{}\n", snippet_text(n)))
-            .collect();
-        let after: String = p
-            .snippets
-            .iter()
-            .filter(|n| snippet(n).is_some_and(|s| !s.1))
-            .map(|n| format!("\n{}", snippet_text(n)))
-            .collect();
-        let attrs: String = p
-            .html_attrs
-            .iter()
-            .map(|(k, v)| {
-                if v.is_empty() {
-                    format!(" {k}")
-                } else {
-                    format!(" {k}=\"{v}\"")
-                }
-            })
-            .collect();
-        let full = if p.full_title.is_empty() {
-            format!("{} · Teoria QqQ lab", escape(&title, true))
-        } else {
-            p.full_title.clone()
-        };
-        TEORIA
-            .replace("@HTMLATTR@", &attrs)
-            .replace("@HEAD@", &head)
-            .replace("@TITLE@", &full)
-            .replace("@BODY@", &body)
-            .replace("@SCRIPTS@", &format!("{before}{tags}{after}"))
+        teoria_page(&mut p, &body, &title, nome)
     } else {
         let head: Vec<String> = p.head.iter().map(|h| h.replace("--", "-")).collect();
         SKELETON
@@ -142,6 +86,67 @@ pub fn convert(text: &str, nome: &str, opt: &Options) -> Result<String, LibroErr
             .replace("@BODY@", &body)
     };
     inject_tema(&page)
+}
+
+/// The published Teoria chapter: its own head, the scripts of `<!-- script: x.js -->` and the fixed inline snippets.
+fn teoria_page(p: &mut Parser, body: &str, title: &str, nome: &str) -> String {
+    let mut head: String = p.head.iter().map(|h| format!("<!--{h}-->\n")).collect();
+    if p.esteso {
+        let number: String = nome.chars().take_while(|c| c.is_ascii_digit()).collect();
+        let lines: Vec<String> = p.head.iter().map(|h| h.replace("--", "-")).collect();
+        head = format!(
+            "<!--\nchapter: {number} {}\n{}\n-->\n<meta name=\"robots\" content=\"noindex\">\n",
+            title.replace("--", "-"),
+            lines.join("\n")
+        );
+        p.html_attrs
+            .push(("data-esteso".to_string(), String::new()));
+    }
+    let mut srcs: Vec<&str> = Vec::new();
+    if !p.no_appname {
+        srcs.push("../appname.js");
+    }
+    srcs.extend(p.scripts_before.iter().map(String::as_str));
+    srcs.push("teoria.js");
+    srcs.extend(p.scripts.iter().map(String::as_str));
+    let tags: String = srcs
+        .iter()
+        .map(|x| format!("<script src=\"{x}\"></script>"))
+        .collect();
+    let before: String = p
+        .snippets
+        .iter()
+        .filter(|n| snippet(n).is_some_and(|s| s.1))
+        .map(|n| format!("{}\n", snippet_text(n)))
+        .collect();
+    let after: String = p
+        .snippets
+        .iter()
+        .filter(|n| snippet(n).is_some_and(|s| !s.1))
+        .map(|n| format!("\n{}", snippet_text(n)))
+        .collect();
+    let attrs: String = p
+        .html_attrs
+        .iter()
+        .map(|(k, v)| {
+            if v.is_empty() {
+                format!(" {k}")
+            } else {
+                format!(" {k}=\"{v}\"")
+            }
+        })
+        .collect();
+    let full = if p.full_title.is_empty() {
+        format!("{} · Teoria QqQ lab", escape(title, true))
+    } else {
+        p.full_title.clone()
+    };
+    TEORIA
+        .replace("@HTMLATTR@", &attrs)
+        .replace("@HEAD@", &head)
+        .replace("@TITLE@", &full)
+        .replace("@BODY@", body)
+        .replace("@SCRIPTS@", &format!("{before}{tags}{after}"))
 }
 
 /// `{{eq:id}}` / `{{fig:id}}` placeholders to their numbered labels, in a single pass.

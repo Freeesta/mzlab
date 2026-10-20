@@ -3,6 +3,8 @@
 mod blocks;
 mod inline;
 mod page;
+mod scan;
+mod special;
 
 pub use page::{convert, Options};
 
