@@ -45,6 +45,7 @@ impl<W: Write> MzmlWriter<W> {
     }
 
     fn avvia(out: W, h: &Header, opz: Opzioni, indexed: bool) -> Result<Self> {
+        let indexed = indexed && cfg!(not(target_family = "wasm"));
         let mut s = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
         if indexed { s += "<indexedmzML xmlns=\"http://psi.hupo.org/ms/mzml\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://psi.hupo.org/ms/mzml http://psi.hupo.org/ms/mzml/mzML1.1.2_idx.xsd\">\n"; }
         s += "<mzML xmlns=\"http://psi.hupo.org/ms/mzml\" version=\"1.1.0\" id=\"mzlab\">\n";
@@ -219,12 +220,14 @@ pub struct ProcStep {
 }
 
 /// The `software` elements of the steps, `step1`, `step2`, ... (the first id the methods refer to).
+#[cfg(not(target_family = "wasm"))]
 fn step_software(steps: &[ProcStep]) -> String {
     let one = |(i, p): (usize, &ProcStep)| format!("<software id=\"step{}\" version=\"{}\">{}</software>", i + 1, esc(&p.version), cv("MS:1000799", "custom unreleased software tool", esc(&p.software)));
     steps.iter().enumerate().map(one).collect()
 }
 
 /// The `processingMethod` elements of the steps; each closes the previous one, the caller closes the last.
+#[cfg(not(target_family = "wasm"))]
 fn step_methods(h: &Header) -> String {
     let first = 1 + h.centroided as usize;
     let mut s = String::new();
@@ -233,6 +236,16 @@ fn step_methods(h: &Header) -> String {
         s += &p.params.iter().map(|(k, v)| format!("<userParam name=\"{}\" value=\"{}\"/>", esc(k), esc(v))).collect::<String>();
     }
     s
+}
+
+// The browser build writes no workflow steps (the indexed mzML is native only).
+#[cfg(target_family = "wasm")]
+fn step_software(_: &[ProcStep]) -> String {
+    String::new()
+}
+#[cfg(target_family = "wasm")]
+fn step_methods(_: &Header) -> String {
+    String::new()
 }
 
 /// What a spectrum has besides `Spectrum`: kept apart so that the readers that do not need it do not change.
@@ -261,6 +274,7 @@ pub struct MzmlWriter<W: Write> {
     np: Vec<u8>,
     text: String,
     /// Positions and checksum, only for `MzmlWriter::indicizzato`.
+    #[cfg_attr(target_family = "wasm", allow(dead_code))]
     idx: Option<indice::Indice>,
 }
 

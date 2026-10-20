@@ -51,6 +51,7 @@ pub fn scrivi_con<W: Write>(
 
 /// The mzML of the `convert.mzml` step: `indexedmzML` (PSI-MS 4.2.6, offsets, SHA-1 checksum) with one `processingMethod` per entry of `steps`
 /// after the conversion. The spectra and chromatograms are those of `scrivi_con`.
+#[cfg(not(target_family = "wasm"))]
 pub fn scrivi_indicizzato<W: Write>(
     l: &mut dyn Lettore,
     c: usize,
