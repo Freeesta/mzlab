@@ -68,7 +68,26 @@ fn recipe(job: &Job, mut base: Recipe) -> Result<(Recipe, Vec<Estimate>)> {
                 && !job.resolved.noresult.contains(k)
                 && resolved.iter().find(|x| x.0 == *k).map(|x| &x.1) != Some(v)
         })
-        .map(|(k, v)| (k, v, proof.clone()))
+        .map(|(k, v)| {
+            let why = match (k.as_str(), base.min_height_basis) {
+                ("min_height", Some((mode, sigma))) => Value::Obj(vec![
+                    (
+                        "basis".into(),
+                        Value::Str(
+                            "noise lump of the intensities of the first file of the series".into(),
+                        ),
+                    ),
+                    (
+                        "factor".into(),
+                        Value::Num(mzlab_feat::params_height::MIN_HEIGHT_FACTOR),
+                    ),
+                    ("mode".into(), Value::Num(mode)),
+                    ("sigma".into(), Value::Num(sigma)),
+                ]),
+                _ => proof.clone(),
+            };
+            (k, v, why)
+        })
         .collect();
     Ok((base, estimates))
 }

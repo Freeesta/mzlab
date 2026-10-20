@@ -64,7 +64,15 @@ impl Recipe {
             return Ok(base);
         };
         if index.hr1() {
-            return Ok(base);
+            let mut r = base;
+            // the minimum height follows the noise of the file (10 times its mode); an explicit value of the plan or of the panel replaces it later
+            if let Some((h, n)) = crate::params_height::estimated_min_height(index, si)? {
+                if h != r.detect.min_height {
+                    r.detect.min_height = h;
+                    r.min_height_basis = Some((n.mode, n.sigma));
+                }
+            }
+            return Ok(r);
         }
         let defect = estimate_defect(index, si, LR_FLOOR)?.unwrap_or(0.0);
         Ok(Recipe::lr(defect, LR_FLOOR, LR_MIN_HEIGHT))
