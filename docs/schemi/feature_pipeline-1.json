@@ -246,11 +246,15 @@
        "bianco",
        "mz",
        "rt",
-       "ms2"
+       "ms2",
+       "qc_cv_max"
       ]
      },
      "valore": {
       "type": "number"
+     },
+     "qc_min_files": {
+      "type": "integer"
      },
      "da": {
       "type": "number"

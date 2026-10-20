@@ -135,6 +135,15 @@ pub(super) fn filter() -> Step {
             .min(0.0)
             .unit("fraction")
             .doc("The largest area of a sample is at least this many times the mean area of the blanks; needs a blank in the samples; left empty, the rule is off"),
+        Param::number("qc_cv_max", "Maximum QC CV")
+            .min(0.0)
+            .unit("percent")
+            .doc("CV of the areas over the files with the role qc is at most this; a row needs a peak in at least the minimum number of them; fewer qc files than that is the error error.qc.tooFew; left empty, the rule is off"),
+        Param::integer("qc_min_files", "Minimum QC files")
+            .min(2.0)
+            .default_num(3.0)
+            .unit("files")
+            .doc("QC files with a peak that the row needs for the QC rule, and QC files that the series needs"),
         Param::boolean("require_ms2", "Require MS2").doc("An MS2 is linked to the peak; left empty, the rule is off"),
         Param::choice("normalize", "Normalisation", &["none", "sum", "median"])
             .default_str("none")
@@ -152,7 +161,7 @@ pub(super) fn filter() -> Step {
             wasm_ceiling_bytes: Some(FEAT_CEILING),
             native: true,
         },
-        errors: vec!["error.badView", "error.badCampioni", "error.newerFormat"],
+        errors: vec!["error.badView", "error.badCampioni", "error.newerFormat", "error.qc.tooFew"],
         ..Step::core(
             "table.filter",
             "Filter table",

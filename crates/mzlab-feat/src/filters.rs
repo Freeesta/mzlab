@@ -27,10 +27,16 @@ pub enum Rule {
     Rt(f64, f64),
     /// An MS2 is linked to the peak.
     Ms2,
+    /// CV (%) of the areas over the `qc` files is at most `.0`; the row needs a peak in at least `.1` of them, and the series needs that many `qc` files
+    /// (`error.qc.tooFew` otherwise). The CV is the sample standard deviation over the mean of the cells `norm::measured` reads.
+    QcCv(f64, usize),
 }
 
+/// QC files needed when the rule does not say.
+pub const QC_MIN_FILES: usize = 3;
+
 /// Names of the rules in the `filtra` operation, in the order of `Rule`.
-const NAMES: [&str; 7] = ["min_rilevati", "min_area", "min_altezza", "bianco", "mz", "rt", "ms2"];
+const NAMES: [&str; 8] = ["min_rilevati", "min_area", "min_altezza", "bianco", "mz", "rt", "ms2", "qc_cv_max"];
 
 impl Rule {
     pub fn name(&self) -> &'static str {
@@ -42,12 +48,13 @@ impl Rule {
             Rule::Mz(..) => 4,
             Rule::Rt(..) => 5,
             Rule::Ms2 => 6,
+            Rule::QcCv(..) => 7,
         }]
     }
 }
 
 /// Whether `row` passes the rule (the blank mean is computed once by the caller).
-fn passes(t: &Aligned, samples: &[Sample], row: usize, rule: &Rule, blank: &[usize]) -> bool {
+fn passes(t: &Aligned, samples: &[Sample], row: usize, rule: &Rule, (blank, qc): (&[usize], &[usize])) -> bool {
     let files = || (0..t.n_files).filter(|&k| decides(&samples[k]));
     match *rule {
         Rule::MinDetected(n) => files().filter(|&k| t.state[row * t.n_files + k] == CELL_DETECTED).count() >= n,
@@ -64,7 +71,19 @@ fn passes(t: &Aligned, samples: &[Sample], row: usize, rule: &Rule, blank: &[usi
         Rule::Mz(lo, hi) => (lo..=hi).contains(&t.mz[row]),
         Rule::Rt(lo, hi) => (lo..=hi).contains(&t.rt[row]),
         Rule::Ms2 => t.meta.ms2_file[row] != NO_FILE,
+        Rule::QcCv(max, min_files) => qc_cv(t, row, qc, min_files).is_some_and(|cv| cv <= max),
     }
+}
+
+/// CV (%) of the areas of `row` over the QC files, `None` when fewer than `min_files` of them (and fewer than 2) have a peak or the mean is not positive.
+fn qc_cv(t: &Aligned, row: usize, qc: &[usize], min_files: usize) -> Option<f64> {
+    let a: Vec<f64> = qc.iter().filter_map(|&k| measured(t, row, k)).collect();
+    if a.len() < min_files.max(2) {
+        return None;
+    }
+    let mean = a.iter().sum::<f64>() / a.len() as f64;
+    let var = a.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (a.len() - 1) as f64;
+    (mean > 0.0).then(|| 100.0 * var.sqrt() / mean)
 }
 
 /// For every row 0 when it is kept, else the 1-based position in `rules` of the first rule it fails.
@@ -76,6 +95,10 @@ pub fn apply(t: &Aligned, samples: &[Sample], rules: &[Rule]) -> Result<Vec<u8>>
     if rules.iter().any(|r| matches!(r, Rule::Blank(_))) && blank.is_empty() {
         return Err(Error::new("error.filterNoBlank"));
     }
+    let qc: Vec<usize> = (0..t.n_files).filter(|&k| samples[k].kind == "qc").collect();
+    if rules.iter().any(|r| matches!(r, Rule::QcCv(_, n) if qc.len() < (*n).max(2))) {
+        return Err(Error::new("error.qc.tooFew").with("have", qc.len()));
+    }
     if rules.contains(&Rule::Ms2) && t.meta.len() != t.len() {
         return Err(Error::new("error.filterNoSummaries"));
     }
@@ -83,7 +106,7 @@ pub fn apply(t: &Aligned, samples: &[Sample], rules: &[Rule]) -> Result<Vec<u8>>
         .map(|row| {
             rules
                 .iter()
-                .position(|r| !passes(t, samples, row, r, &blank))
+                .position(|r| !passes(t, samples, row, r, (&blank, &qc)))
                 .map_or(0, |i| i as u8 + 1)
         })
         .collect())
@@ -100,6 +123,7 @@ pub fn to_json(rules: &[Rule]) -> String {
             Rule::MinArea(x) | Rule::MinHeight(x) | Rule::Blank(x) => j.raw(",\"valore\":").num(x),
             Rule::Mz(a, b) | Rule::Rt(a, b) => j.raw(",\"da\":").num(a).raw(",\"a\":").num(b),
             Rule::Ms2 => &mut j,
+            Rule::QcCv(x, n) => j.raw(",\"valore\":").num(x).raw(",\"qc_min_files\":").int(n as i64),
         };
         j.raw("}");
     }
@@ -120,6 +144,10 @@ pub fn from_json(v: &Value) -> Result<Vec<Rule>> {
                 Some("mz") => Rule::Mz(num(o, "da")?, num(o, "a")?),
                 Some("rt") => Rule::Rt(num(o, "da")?, num(o, "a")?),
                 Some("ms2") => Rule::Ms2,
+                Some("qc_cv_max") => {
+                    let n = o.get("qc_min_files").map_or(Ok(QC_MIN_FILES as f64), |_| num(o, "qc_min_files"))?;
+                    Rule::QcCv(num(o, "valore")?.max(0.0), n.max(0.0) as usize)
+                }
                 _ => return Err(bad()),
             })
         })
