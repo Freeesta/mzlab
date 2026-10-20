@@ -1,5 +1,5 @@
-//! `tp.link` and `tp.position`: the MS2 of a product row and the place of its modification. The parameters are the constants of `interp::ms2link` and
-//! `interp::sito`, compared with the code in `tests/steps_tabui_parity.rs` (feature `interp`).
+//! `tp.link`, `tp.position` and `tp.network`: the MS2 of a product row, the place of its modification and the network of the products. The parameters
+//! are the constants of `interp::ms2link`, `interp::sito` and `rete::ReteParams`, compared with the code in `tests/steps_tabui_parity.rs` (feature `interp`).
 
 use mzlab_core::step::{
     Algorithm, Applicability, DataType, Facets, Param, Port, Reference, Status, Step,
@@ -191,4 +191,48 @@ fn cleavage_likelihood() -> Algorithm {
             Status::Available,
         )
     }
+}
+
+/// `tp.network`: the parent and the accepted products as columns by step, with an arc for every rule that takes one ion formula to another (`rete/1`).
+pub(super) fn network() -> Step {
+    Step {
+        ins: vec![
+            Port::new("tp", DataType::Tp, "Rows with their modification and the MS2 compared with the parent (interp/1)").requires(hr()),
+            Port::new("table", DataType::Table, "Feature table with the view of the products (tp/1)").requires(hr()),
+            Port {
+                optional: true,
+                ..Port::new("samples", DataType::Samples, "Roles and times of the files (campioni/2), for the time course")
+            },
+        ],
+        outs: vec![Port::new("network", DataType::Transform, "Nodes in columns by step and arcs with the rule, the MS2 evidence and the reason")],
+        params: vec![
+            Param::number("ppm", "Mass tolerance of an arc")
+                .min(0.0)
+                .default_num(10.0)
+                .unit("ppm")
+                .doc("Largest error of the observed difference of m/z against the mass of the change of formula"),
+            Param::integer("min_fragments", "Fewest shared fragments")
+                .min(0.0)
+                .default_num(0.0)
+                .doc("An arc from the parent whose MS2 was compared is kept with at least this many fragments in common, equal or shifted; 0 keeps every arc"),
+        ],
+        algorithms: vec![rule_arcs()],
+        default_algorithm: Some("rule_arcs"),
+        ..tabui_step(
+            "tp.network",
+            "Network of the products",
+            "Draws the parent and the accepted products in columns by the number of steps from the parent, with an arc wherever a rule of the transformation table takes the ion formula of one to that of another. The source of an arc is the product that peaks first; an arc from the parent carries the fragments of the MS2 that are equal or shifted by the change. A network is evidence of kinship and never an identification: it raises no level.",
+            INTERP_WASM,
+            INTERP_CEILING,
+        )
+    }
+}
+
+fn rule_arcs() -> Algorithm {
+    algorithm(
+        "rule_arcs",
+        "Arcs by the rules of the table",
+        "One arc per pair of ions, from the one that peaks first, for the rule whose change of formula joins them (crates/mzlab-feat/src/rete/arcs.rs, shared with the network of mzFinder).",
+        Status::Available,
+    )
 }

@@ -1,4 +1,4 @@
-//! The defaults of `tp.link`, `tp.position` and `tp.filter` are the constants of `interp` (`ms2link`, `sito`, `filtri`, `modifica`), and those of
+//! The defaults of `tp.link`, `tp.position`, `tp.network` (`rete::ReteParams`) and `tp.filter` are the constants of `interp` (`ms2link`, `sito`, `filtri`, `modifica`), and those of
 //! `tp.generate` the fields of `HypoParams::default()`. A constant that moves in the code fails here until the descriptor follows.
 
 use mzlab_core::step::Step;
@@ -70,4 +70,11 @@ fn position() {
     ] {
         assert_eq!(num("tp.position", name), want, "{name}");
     }
+}
+
+#[test]
+fn network() {
+    let d = mzlab_feat::rete::ReteParams::default();
+    assert_eq!(num("tp.network", "ppm"), d.ppm);
+    assert_eq!(num("tp.network", "min_fragments"), d.min_fragments as f64);
 }

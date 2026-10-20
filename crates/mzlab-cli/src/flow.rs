@@ -53,11 +53,16 @@ pub fn table_step() -> Step {
     }
 }
 
-/// The steps a plan can use here: the registry of the flagship chain, `features.table`, the identification steps and `spectra.ms2`.
+/// The steps a plan can use here: the registry of the flagship chain, `features.table`, the identification steps, `tp.network` and `spectra.ms2`.
 pub fn steps() -> Vec<Step> {
     let mut all = mzlab_feat::steps::registry();
     all.push(table_step());
     all.extend(mzlab_feat::steps::attributio());
+    all.extend(
+        mzlab_feat::steps::tabui()
+            .into_iter()
+            .filter(|s| s.id == "tp.network"),
+    );
     all.push(crate::flow_ms2::ms2_step());
     all.push(crate::flow_compare::compare_step());
     all
@@ -338,6 +343,23 @@ fn compare_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     write_made(r, job, text, DataType::Comparison)
 }
 
+fn network_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let (tp, table) = (read_one(r, job, "tp")?, read_one(r, job, "table")?);
+    let has_samples = job.inputs.iter().any(|(p, _)| p == "samples");
+    let samples = if has_samples {
+        Some(read_one(r, job, "samples")?)
+    } else {
+        None
+    };
+    let text = crate::flow_network::network_json(
+        job,
+        &tp.1,
+        &table.1,
+        samples.as_ref().map(|s| s.1.as_slice()),
+    )?;
+    write_made(r, job, text, DataType::Transform)
+}
+
 fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let (hits, formulas) = (
         read_all(r, job, "candidates")?,
@@ -389,6 +411,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
     ("annot.level", Exec::File("annot", level_job)),
+    ("tp.network", Exec::File("network", network_job)),
     ("meta.compare", Exec::File("comparison", compare_job)),
     ("export.inclusion", Exec::File("report", inclusion_job)),
 ];

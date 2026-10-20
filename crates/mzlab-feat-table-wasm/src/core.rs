@@ -105,7 +105,7 @@ pub fn qc_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str) 
 }
 
 /// A table file: `kind` is `full` (CSV full for mzmine), `full_mzmine` (the same with mzmine's words for the filled and targeted cells), `quant` (FBMN),
-/// `csv_semicolon` (the sheet of features as text with `;`) or `xlsx_rows` (the same sheet as JSON rows for the page to zip).
+/// `csv_semicolon` (the sheet of features as text with `;`), `xlsx_rows` (the same sheet as JSON rows for the page to zip) or `mztab` (mzTab-M 2.0).
 pub fn table_file<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str, table_sha256: &str, polarity: i32, kind: &str) -> Result<String> {
     let (t, s) = load(r, size, samples_json)?;
     let v = view_of(&t, &s, spec)?;
@@ -116,6 +116,7 @@ pub fn table_file<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &st
         "quant" => Ok(export::quant(&c)),
         "csv_semicolon" => Ok(export::csv_semicolon(&c)),
         "xlsx_rows" => Ok(export::xlsx_rows(&c)),
+        "mztab" => Ok(mzlab_feat::export_mztab::mztab(&c)),
         _ => Err(Error::new("error.badView")),
     }
 }

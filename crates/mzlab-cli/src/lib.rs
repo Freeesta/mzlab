@@ -24,6 +24,7 @@ mod flow_inclusion;
 mod flow_level;
 mod flow_match;
 mod flow_ms2;
+mod flow_network;
 mod flow_out;
 mod flow_report;
 mod flow_run;
@@ -255,6 +256,8 @@ mod flow_ident_tests;
 mod flow_level_tests;
 #[cfg(test)]
 mod flow_ms2_tests;
+#[cfg(test)]
+mod flow_network_tests;
 #[cfg(test)]
 mod flow_report_tests;
 #[cfg(test)]
