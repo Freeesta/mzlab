@@ -60,10 +60,11 @@ fn measured_facts<O: ReadAt>(
     hypo: &HypoRun,
     parent: Option<(f64, f64)>,
     unit: bool,
+    spec: (&mzlab_feat::ms2spec::SpecOpts, Option<&TpRoles>),
     src: RowSources<O>,
     budget: &MemBudget,
 ) -> Result<(Vec<Facts>, Option<Vec<f64>>)> {
-    let RowSources { stored, open } = src;
+    let RowSources { stored, mut open } = src;
     let mut feats = Vec::new();
     let mut held = 0;
     for k in 0..stored.count() {
@@ -87,7 +88,10 @@ fn measured_facts<O: ReadAt>(
             -1.0
         }
     };
-    let spectra: Vec<Option<(Peaks, f32)>> = mzlab_feat::ms2spec::spectra(&ctx, open)?
+    let ms2 = mzlab_feat::ms2spec::SpecOpts { unit, ..spec.0.clone() };
+    let blanks = spec.1.map_or(&[][..], |x| &x.blank[..]);
+    let spectra: Vec<Option<(Peaks, f32)>> = mzlab_feat::ms2spec::spectra_with(&ctx, &mut open, &ms2, blanks)?
+        .0
         .into_iter()
         .enumerate()
         .map(|(row, m)| m.map(|m| (Peaks { mz: m.mz, it: m.it }, purity(row))))
@@ -139,7 +143,7 @@ pub fn evidence_sources_to<R: ReadAt, W: WriteAt, O: ReadAt>(
         pseudo: mzlab_feat::trace::FLOOR * 3.0,
     };
     let (facts, fragments) = match src {
-        Some(src) => measured_facts(&aligned, hypo, parent, is_unit(&meta), src, budget)?,
+        Some(src) => measured_facts(&aligned, hypo, parent, is_unit(&meta), (&r.ms2, roles), src, budget)?,
         None => (Vec::new(), None),
     };
     let inp = Inputs {

@@ -135,13 +135,41 @@ pub fn ms2_file<R: ReadAt, I: ReadAt>(
     let (t, s) = load(r, size, samples_json)?;
     let v = view_of(&t, &s, spec)?;
     let c = ctx(&t, &s, v.as_ref(), table_sha256, polarity);
-    let sp = ms2spec::spectra(&c, open)?;
-    match kind {
-        "mgf" => Ok(export_ms::mgf(&c, &sp)),
-        "mgf_unit" => Ok(export_ms::mgf_unit(&c, &sp)),
-        "sirius" => Ok(export_ms::sirius(&c, &sp)),
-        _ => Err(Error::new("error.badView")),
+    let (opts, blanks) = ms2_options(spec, kind, &s);
+    let (sp, info) = ms2spec::spectra_with(&c, &mut { open }, &opts, &blanks)?;
+    let text = match kind {
+        "mgf" => export_ms::mgf(&c, &sp),
+        "mgf_unit" => export_ms::mgf_unit(&c, &sp),
+        "sirius" => export_ms::sirius(&c, &sp),
+        _ => return Err(Error::new("error.badView")),
+    };
+    Ok(ms2_note(text, &info))
+}
+
+/// The choices of the spectrum from the keys `ms2_spectrum` (`best`, `consensus`) and `ms2_background` of the view spec, and the files with the role blank.
+fn ms2_options(spec: &str, kind: &str, samples: &[Sample]) -> (ms2spec::SpecOpts, Vec<usize>) {
+    let v = mzlab_core::json::parse(spec.as_bytes()).ok();
+    let get = |k: &str| v.as_ref().and_then(|v| v.get(k));
+    let opts = ms2spec::SpecOpts {
+        consensus: get("ms2_spectrum").and_then(|x| x.str()) == Some("consensus"),
+        background: get("ms2_background").and_then(|x| x.bool()) == Some(true),
+        unit: kind == "mgf_unit",
+    };
+    let blanks = (0..samples.len()).filter(|&k| samples[k].kind == "blank").collect();
+    (opts, blanks)
+}
+
+/// A `#` line after the header of the file that says what the background step did; nothing when it was off.
+fn ms2_note(text: String, info: &ms2spec::SpecInfo) -> String {
+    if info.bg.is_empty() {
+        return text;
     }
+    let lost: u32 = info.lost.iter().sum();
+    let note = format!("# MS2 background: {}, {} peaks removed\n", info.bg, lost);
+    let at = text.split_inclusive('\n').take_while(|l| l.starts_with('#')).map(str::len).sum();
+    let mut out = text;
+    out.insert_str(at, &note);
+    out
 }
 
 /// The `riga/1` of the row with `id` (`error.rowNotFound` when the table has none).
