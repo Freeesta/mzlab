@@ -1,6 +1,6 @@
 // @ts-check
 // Flow (administrator mode): a campaign folder opened from the «Confidence level» node. The folder is read by the engine of the Attributio panel (ATTRIBUTIO_CORE, the .wasm
-// `attributio` or the native route), and the table of levels it gives opens under the canvas with the table of the panel (ATTRIBUTIO_TABLE) and its CSV and XLSX exports.
+// `attributio` or the native route), and the table of levels it gives opens under the canvas with the table of the panel (ATTRIBUTIO_TABLE), its CSV and XLSX exports and the Banco 2b of a row (ATTRIBUTIO_BANCO).
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
@@ -33,7 +33,19 @@
     const out = (/** @type {"csv" | "xlsx"} */ kind) => () => exportTable(c, kind).then(() => { say.textContent = ""; }, (/** @type {any} */ e) => { say.textContent = "Export failed: " + (e && e.message || e); });
     host.append(el("div", { class: "fl-meta" }, F.btn("export", "Export the table as CSV", out("csv"), "CSV"), F.btn("export", "Export the table as XLSX", out("xlsx"), "XLSX")), say, box);
     if (c.summary && c.summary.warnings && c.summary.warnings.length) say.textContent = c.summary.warnings.join(" · ");
-    G.ATTRIBUTIO_TABLE.mount(box, c.data, {});
+    const bench = el("div", { class: "flw-bench" });
+    // a saved decision replaces the decisions file in memory, the cascade runs again and the table is drawn from the new levels
+    const review = async (/** @type {any[]} */ list, /** @type {number} */ index) => {
+      try {
+        await G.ATTRIBUTIO_BANCO.open({ pool: await G.ATTRIBUTIO_CORE.pool(), files: c.files, root: c.root, list, index, host: bench, onSaved: async (/** @type {string} */ text, /** @type {string} */ path) => {
+          const file = new File([text], path.split("/").pop() || "feature_decisions.csv", { type: "text/csv" }), at = c.files.findIndex((/** @type {any} */ f) => f.path === path);
+          if (at >= 0) c.files[at] = { path, file }; else c.files.push({ path, file });
+          Object.assign(c, await F.campaignRun(c.files, c.root)); draw();
+        } });
+      } catch (e) { say.textContent = "Bench 2b: " + ((/** @type {any} */ (e)).message || e); }
+    };
+    const draw = () => { box.textContent = ""; G.ATTRIBUTIO_TABLE.mount(box, c.data, { onReview: review }); };
+    draw(); host.append(bench);
     if (G.WORKFLOW && G.WORKFLOW.logOp) G.WORKFLOW.logOp("attributio", { attributio: { fingerprint: c.summary.fingerprint, settings: c.summary.settings, counts: c.summary.by_level } });
   } });
 
