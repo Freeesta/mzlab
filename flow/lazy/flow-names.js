@@ -52,9 +52,13 @@
   F.ADDONS = [
     { id: "formulas", name: "Molecular formulas", line: "Suggest formulas for each feature.", steps: ["formula.ms1"] },
     { id: "fragformulas", name: "Formulas from fragments", line: "Check formulas against measured fragments.", steps: ["formula.ms1", "formula.ms2"] },
+    { id: "chimeric", name: "Check mixed spectra", line: "Flag fragment spectra that contain more than one compound.", steps: ["spectra.chimeric"] },
     { id: "match", name: "Match to a spectral library", line: "Compare fragment spectra with known compounds.", steps: ["spectra.match"] },
+    { id: "insilico", name: "Predicted fragments", line: "Compare a candidate's predicted breakage with the measured spectrum.", steps: ["spectra.insilico"] },
+    { id: "rt", name: "Check retention time", line: "Ask whether the time a compound came out is plausible.", steps: ["rt.predict"] },
     { id: "level", name: "Confidence level", line: "Say how sure each identification is.", steps: ["annot.level"] },
     { id: "regulatory", name: "Regulatory lists", line: "Flag regulated and suspected substances.", steps: ["annot.regulatory"] },
+    { id: "hazard", name: "Aquatic hazard", line: "Estimate the hazard of each compound to water life.", steps: ["annot.hazard"] },
     { id: "tp", name: "Transformation products", line: "Predict and look for the products of a parent.", steps: ["tp.generate", "tp.link"] },
   ];
   F.TEMPLATES = [
