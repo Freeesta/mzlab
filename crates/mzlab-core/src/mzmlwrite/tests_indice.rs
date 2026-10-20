@@ -138,6 +138,16 @@ fn indexed_offsets_checksum_and_read_back() {
 }
 
 #[test]
+fn the_base_peak_intensity_has_its_unit() {
+    let (_, idx) = indexed_sample(Vec::new());
+    let t = String::from_utf8_lossy(&idx);
+    assert!(
+        t.contains("name=\"base peak intensity\"")
+            && t.contains("unitAccession=\"MS:1000131\" unitName=\"number of detector counts\"")
+    );
+}
+
+#[test]
 fn one_processing_method_per_step() {
     let step = |n: &str, acc: &str, name: &str| ProcStep {
         accession: acc.into(),

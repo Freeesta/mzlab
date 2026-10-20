@@ -391,7 +391,7 @@ pub(crate) fn spectrum_head(index: usize, sp: &Spectrum, extra: &SpectrumExtra) 
     s += &if sp.profile { cv("MS:1000128", "profile spectrum", "") } else { cv("MS:1000127", "centroid spectrum", "") };
     if let Some(b) = base {
         s += &mz_cv("MS:1000504", "base peak m/z", sp.mz[b]);
-        s += &cv("MS:1000505", "base peak intensity", sp.intensity_f64(b));
+        s += &unit_cv("MS:1000505", "base peak intensity", sp.intensity_f64(b), "MS:1000131", "number of detector counts");
     }
     s += &cv("MS:1000285", "total ion current", tic);
     if extra.sim {
@@ -438,7 +438,11 @@ fn window_xml(w: Option<(f64, f64)>) -> String {
 }
 
 fn mz_cv(acc: &str, name: &str, value: f64) -> String {
-    format!("<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\" unitCvRef=\"MS\" unitAccession=\"MS:1000040\" unitName=\"m/z\"/>")
+    unit_cv(acc, name, value, "MS:1000040", "m/z")
+}
+
+fn unit_cv(acc: &str, name: &str, value: f64, unit_acc: &str, unit_name: &str) -> String {
+    format!("<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\" unitCvRef=\"MS\" unitAccession=\"{unit_acc}\" unitName=\"{unit_name}\"/>")
 }
 
 /// The `sourceFileList` of the header; the schema wants at least one child, so no source means no list.
