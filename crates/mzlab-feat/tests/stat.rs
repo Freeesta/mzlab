@@ -28,14 +28,6 @@ fn grid(v: &Value) -> Vec<Vec<f64>> {
         .collect()
 }
 
-fn strs(v: &Value) -> Vec<String> {
-    v.as_array()
-        .unwrap()
-        .iter()
-        .map(|x| x.as_str().unwrap().to_string())
-        .collect()
-}
-
 fn close(a: f64, b: f64, tol: f64) {
     assert!((a - b).abs() <= tol, "{a} vs {b}");
 }

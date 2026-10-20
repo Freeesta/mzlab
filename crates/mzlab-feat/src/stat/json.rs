@@ -19,16 +19,6 @@ fn matrix_of(v: &Value) -> Result<Vec<Vec<f64>>> {
         .ok_or_else(bad)
 }
 
-fn strings(v: Option<&Value>) -> Vec<String> {
-    v.map(|a| {
-        a.arr()
-            .iter()
-            .map(|x| x.str().unwrap_or("").to_string())
-            .collect()
-    })
-    .unwrap_or_default()
-}
-
 fn num_or(v: &Value, key: &str, d: f64) -> f64 {
     v.get(key).and_then(Value::f64).unwrap_or(d)
 }
