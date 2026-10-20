@@ -27,7 +27,7 @@
       // with blanks in the list the filter «Not in blank» is on from the start
       const chip = /** @type {HTMLButtonElement | null} */ (box.querySelector('[data-fc="blank"]'));
       if (cs && chip && !chip.disabled && chip.getAttribute("aria-pressed") !== "true") chip.click();
-      box.append(F.legend({ levels: true }));
+      box.append(F.legend({ levels: true })); F.watchRows(box, "feattable");
     } catch (e) { say.textContent = "Feature table: " + ((/** @type {any} */ (e)).message || e); }
   } });
 })();
