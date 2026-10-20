@@ -23,6 +23,8 @@ const LONE_PAIR: usize = 1;
 
 struct Cand {
     site: Site,
+    /// (centre, x, y): two neighbours of the same constitution class on a centre of the site.
+    twins: Vec<(usize, usize, usize)>,
     /// All substituents differ already by constitution: no flip test needed.
     sure: bool,
 }
@@ -105,6 +107,7 @@ impl Mol {
                 if let Some(sure) = differ(&slots, 3) {
                     out.push(Cand {
                         site: Site::Tetra(c as u32),
+                        twins: twins(&adj, &cls, c, None),
                         sure,
                     });
                 }
@@ -112,12 +115,24 @@ impl Mol {
         }
         for b in self.bonds.iter().filter(|b| b.o == 2) {
             if let Some(sure) = db_sure(self, &adj, &cls, b.a, b.b) {
+                let mut t = twins(&adj, &cls, b.a as usize, Some(b.b));
+                t.extend(twins(&adj, &cls, b.b as usize, Some(b.a)));
                 out.push(Cand {
                     site: Site::Db(b.a, b.b),
+                    twins: t,
                     sure,
                 });
             }
         }
+        // twins that no stereo can tell apart make the swap of the two an automorphism, so the site cannot exist
+        let mut live = vec![false; self.atoms.len()];
+        for c in &out {
+            match c.site {
+                Site::Tetra(a) => live[a as usize] = true,
+                Site::Db(a, b) => (live[a as usize], live[b as usize]) = (true, true),
+            }
+        }
+        out.retain(|c| !c.twins.iter().any(|&(z, x, y)| dead_pair(&adj, &live, z, x, y)));
         out
     }
 
@@ -182,6 +197,42 @@ impl Mol {
             .collect();
         Mol::new(self.atoms.clone(), self.bonds.clone(), stereo, Vec::new())
     }
+}
+
+fn twins(adj: &[Vec<(u32, u8)>], cls: &[usize], c: usize, skip: Option<u32>) -> Vec<(usize, usize, usize)> {
+    let near: Vec<usize> = adj[c].iter().map(|&(x, _)| x as usize).filter(|&x| Some(x as u32) != skip).collect();
+    let mut out = Vec::new();
+    for (i, &x) in near.iter().enumerate() {
+        for &y in &near[i + 1..] {
+            if cls[x] == cls[y] {
+                out.push((c, x, y));
+            }
+        }
+    }
+    out
+}
+
+/// Whether the branches `x` and `y` of `c` are separate (not in one ring) and hold no atom of a possible site.
+fn dead_pair(adj: &[Vec<(u32, u8)>], live: &[bool], c: usize, x: usize, y: usize) -> bool {
+    let branch = |s: usize| {
+        let mut seen = vec![false; adj.len()];
+        seen[c] = true;
+        seen[s] = true;
+        let mut stack = vec![s];
+        let mut all = vec![s];
+        while let Some(u) = stack.pop() {
+            for &(v, _) in &adj[u] {
+                if !seen[v as usize] {
+                    seen[v as usize] = true;
+                    stack.push(v as usize);
+                    all.push(v as usize);
+                }
+            }
+        }
+        all
+    };
+    let (bx, by) = (branch(x), branch(y));
+    !bx.contains(&y) && !bx.iter().chain(&by).any(|&a| live[a])
 }
 
 fn unknown(site: Site) -> Stereo {

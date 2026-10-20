@@ -21,11 +21,15 @@ fn sites_match_rdkit() {
     let (mut bad, mut total) = (Vec::new(), 0);
     for row in g["sites"].as_array().expect("sites") {
         let smi = row[0].as_str().unwrap_or_default();
+        let t0 = std::time::Instant::now();
         let m = Mol::from_smiles(smi).unwrap_or_else(|e| panic!("{smi}: {e}"));
         let mut mine: Vec<String> = m.stereo_sites().into_iter().map(name).collect();
         mine.sort();
         let want: Vec<String> = row[1].as_array().expect("list").iter().map(|v| v.as_str().unwrap_or_default().to_string()).collect();
         total += 1;
+        if t0.elapsed().as_millis() > 200 {
+            eprintln!("slow {} ms: {smi}", t0.elapsed().as_millis());
+        }
         if mine != want {
             bad.push(format!("{smi}\n   mine {mine:?}\n   rdkit {want:?}"));
         }
