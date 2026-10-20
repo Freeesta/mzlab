@@ -12,9 +12,11 @@
   F.menu = (anchor, items, host) => {
     host.querySelectorAll(".flx-pop").forEach(n => n.remove());
     const pop = F.el("div", { class: "flx-pop", role: "menu" });
-    const close = () => { pop.remove(); document.removeEventListener("pointerdown", out, true); anchor.focus({ preventScroll: true }); };
-    const out = (/** @type {Event} */ e) => { if (!pop.contains(/** @type {Node} */ (e.target)) && e.target !== anchor) { pop.remove(); document.removeEventListener("pointerdown", out, true); } };
-    for (const it of items) pop.append(F.el("button", { type: "button", role: "menuitem", class: it.on ? "on" : "", onclick: () => { pop.remove(); document.removeEventListener("pointerdown", out, true); it.run(); } },
+    const shut = () => { pop.remove(); document.removeEventListener("pointerdown", out, true); anchor.setAttribute("aria-expanded", "false"); };
+    const close = () => { shut(); anchor.focus({ preventScroll: true }); };
+    const out = (/** @type {Event} */ e) => { if (!pop.contains(/** @type {Node} */ (e.target)) && e.target !== anchor) shut(); };
+    anchor.setAttribute("aria-haspopup", "menu"); anchor.setAttribute("aria-expanded", "true");
+    for (const it of items) pop.append(F.el("button", { type: "button", role: "menuitem", class: it.on ? "on" : "", onclick: () => { shut(); it.run(); } },
       F.el("span", { text: (it.on ? "✓ " : "") + it.label }), it.line ? F.el("small", { text: it.line }) : null));
     if (!items.length) pop.append(F.el("p", { class: "fl-note", text: "Nothing to add here." }));
     pop.addEventListener("keydown", e => { if (e.key === "Escape") close(); else if (e.key === "ArrowDown" || e.key === "ArrowUp") { const b = [...pop.querySelectorAll("button")], i = b.indexOf(/** @type {any} */ (document.activeElement)); b[(i + (e.key === "ArrowDown" ? 1 : -1) + b.length) % b.length].focus(); e.preventDefault(); } });
@@ -53,7 +55,8 @@
     const inspHost = el("aside", { class: "flx-insp", "aria-label": "Settings of the selected step" }), palHost = el("aside", { class: "flx-pal flx-adv-only", "aria-label": "All steps" });
     const pal = F.palette(reg0, (/** @type {string} */ id) => { let made = /** @type {any} */ (null); go(() => { made = F.addStep(S.plan, S.reg, id); }); selected = made.id; redraw(); cv.reveal(made.id); });
     palHost.append(pal.root); const pf = pal.root.querySelector("#fl-filter"); if (pf) pf.id = "flx-filter";
-    const tplBox = el("div", { class: "flx-tpl", role: "region", "aria-label": "Start from a template" });
+    const tplBox = el("div", { class: "flx-tpl", role: "dialog", "aria-label": "Start from a template" });
+    tplBox.addEventListener("keydown", e => { if (e.key === "Escape") { dismissed = true; redraw(); tplBtn.focus(); } });
     cv.root.append(tplBox);
     const planView = el("pre", { class: "flx-plan", tabindex: 0, "aria-label": "The plan as mzflow/2" });
     const status = el("span", { class: "fl-st", role: "status", id: "flx-status" });
@@ -76,6 +79,7 @@
       planView.textContent = F.exportText(S.plan);
       tplBox.classList.toggle("show", !F.hasAddons(S.plan) && tab === "canvas" && !dismissed);
       root.classList.toggle("flx-simple", simple);
+      const planTab = tabs[2]; planTab.hidden = simple; if (simple && tab === "plan") setTab("canvas");
       body.classList.toggle("flx-adv", !simple);
       for (const b of modeBtns) b.setAttribute("aria-pressed", String((b.dataset.mode === "simple") === simple));
     }
