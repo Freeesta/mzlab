@@ -51,26 +51,112 @@ fn the_variants_run_on_the_same_input_and_the_differences_are_counted() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// The checker of the comparisons runs before anything is expanded, so these come back as problems of the plan; only what the checker does not look at
+/// (the label of a variant, the type of the output) is refused by the expansion.
 #[test]
 fn a_bad_comparison_is_refused_before_anything_runs() {
     let dir = crate::flow_ident_tests::fixture("compare_bad");
+    let refused = |step: &str, variants: &str| {
+        let text = plan(step, variants);
+        crate::flow::run_plan(text.as_bytes(), &dir, &dir.join("work"), 1, None)
+            .map(|_| String::new())
+            .map_err(|e| {
+                let list = e
+                    .params
+                    .iter()
+                    .find(|(k, _)| *k == "problems")
+                    .map(|p| p.1.clone());
+                (e.key.to_string(), list.unwrap_or_default())
+            })
+    };
     let same = r#"[{"algorithm":"cosine"},{"label":"again","algorithm":"cosine"}]"#;
-    assert_eq!(
-        run(&dir, "spectra.match@1", same),
-        Err("err.flow.compare.sameVariant".into())
-    );
     let one = r#"[{"algorithm":"cosine"}]"#;
+    let want = |p: &str| Err(("err.flow.check".to_string(), p.to_string()));
     assert_eq!(
-        run(&dir, "spectra.match@1", one),
-        Err("err.flow.compare.variants".into())
+        refused("spectra.match@1", same),
+        want("cmp:err.flow.compare.sameVariant")
     );
     assert_eq!(
-        run(&dir, "formula.ms1@1", TWO),
-        Err("err.flow.compare.type".into())
+        refused("spectra.match@1", one),
+        want("cmp:err.flow.compare.few")
     );
     assert_eq!(
-        run(&dir, "nothing.here@1", TWO),
-        Err("err.flow.compare.step".into())
+        refused("nothing.here@1", TWO),
+        want("cmp:err.flow.step.unknown")
+    );
+    let blank = r#"[{"algorithm":"cosine"},{"label":"a,b","algorithm":"spectral_entropy"}]"#;
+    assert_eq!(
+        refused("spectra.match@1", blank),
+        Err(("err.flow.compare.variants".to_string(), String::new()))
+    );
+    let formulas = r#"[{"algorithm":"compose_isotopes"},{"label":"b","algorithm":"compose_isotopes","params":{"x":1}}]"#;
+    assert_eq!(
+        refused("formula.ms1@1", formulas),
+        Err(("err.flow.compare.type".to_string(), String::new()))
     );
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The tolerances the page writes on a comparison are parameters of the compare instance, so the expanded plan passes the check and the run goes on.
+#[test]
+fn the_tolerances_of_the_page_are_accepted() {
+    let dir = crate::flow_ident_tests::fixture("compare_tol");
+    let text = plan("spectra.match@1", TWO).replace(
+        r#""variants""#,
+        r#""mz_tolerance_ppm":5,"rt_tolerance_min":0.2,"variants""#,
+    );
+    crate::flow::run_plan(text.as_bytes(), &dir, &dir.join("work"), 1, None).unwrap();
+    let bad = plan("spectra.match@1", TWO)
+        .replace(r#""variants""#, r#""rt_tolerance_min":-1,"variants""#);
+    let e = crate::flow::run_plan(bad.as_bytes(), &dir, &dir.join("work"), 1, None).unwrap_err();
+    assert_eq!(e.key, "err.flow.check");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The answer of the checker for one case, as `flow_cases.rs` of `mzlab-feat` writes it: `instance|port|key|k=v,k=v` lines.
+fn answer(plan: &str) -> Result<Vec<String>, String> {
+    let plan = mzlab_core::flow::parse(plan.as_bytes()).map_err(|e| e.key.to_string())?;
+    let mut reg = crate::flow::steps();
+    reg.extend(mzlab_feat::steps::tabui());
+    Ok(
+        crate::flow_compare::check(&plan, &reg, mzlab_core::flow::Platform::Native)
+            .iter()
+            .map(|p| {
+                let params: Vec<String> =
+                    p.params.iter().map(|(k, v)| format!("{k}={v}")).collect();
+                format!(
+                    "{}|{}|{}|{}",
+                    p.instance,
+                    p.port,
+                    p.error_key,
+                    params.join(",")
+                )
+            })
+            .collect(),
+    )
+}
+
+/// The cases of `tests/data/flow_compare_cases.json` are also run through the checker of the page by `tests/test_flow_grafico.py`, so the two cannot drift
+/// apart. `MZLAB_UPDATE_FLOW_CASES=1` writes the answers of this checker into the file (review the diff: the answer is the contract).
+#[test]
+fn the_shared_cases_of_the_comparison_give_the_written_answers() {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/data/flow_compare_cases.json"
+    );
+    let mut cases: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    let update = std::env::var("MZLAB_UPDATE_FLOW_CASES").is_ok();
+    for case in cases.as_array_mut().unwrap() {
+        let name = case["name"].as_str().unwrap().to_string();
+        let lines = answer(&case["plan"].to_string()).unwrap();
+        if update {
+            case["expect"] = serde_json::json!(lines);
+        } else {
+            assert_eq!(serde_json::json!(lines), case["expect"], "{name}");
+        }
+    }
+    if update {
+        std::fs::write(path, serde_json::to_string_pretty(&cases).unwrap() + "\n").unwrap();
+    }
 }

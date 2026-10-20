@@ -3,9 +3,9 @@
 //! outputs differ (`comparison/1`). It only reports the differences; it never says which variant is right.
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::{Instance, Plan, Ref};
+use mzlab_core::flow::{check as check_core, Instance, Plan, Platform, Problem, Ref};
 use mzlab_core::json::{parse, round, Out, Value};
-use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
+use mzlab_core::step::{find as find_step, DataType, Param, Port, RunsIn, Status, Step};
 
 /// The descriptor of the compare instance an expanded plan holds: it reads the output of every variant, in the order of `labels`.
 pub fn compare_step() -> Step {
@@ -17,18 +17,128 @@ pub fn compare_step() -> Step {
         params: vec![
             Param::text("step", "Wrapped step"),
             Param::text("labels", "Labels of the variants, comma separated, in the order of the inputs"),
+            // written by the page and kept in the record; the comparison itself matches by key
+            Param {
+                min: Some(0.0),
+                ..Param::number("mz_tolerance_ppm", "m/z tolerance (ppm)")
+            },
+            Param {
+                min: Some(0.0),
+                ..Param::number("mz_tolerance_da", "m/z tolerance (unit resolution, Da)")
+            },
+            Param {
+                min: Some(0.0),
+                ..Param::number("rt_tolerance_min", "RT tolerance (min)")
+            },
         ],
         runs_in: RunsIn {
             native: true,
             ..RunsIn::default()
         },
-        errors: vec!["err.flow.compare.sameVariant", "err.flow.compare.variants", "err.flow.compare.type"],
+        errors: vec![
+            "err.flow.compare.few",
+            "err.flow.compare.sameVariant",
+            "err.flow.compare.variants",
+            "err.flow.compare.type",
+        ],
         ..Step::core(
             "meta.compare",
             "Compare algorithms",
             "Runs the wrapped step once per variant on the same inputs and measures how the outputs differ; it does not say which variant is right.",
         )
     }
+}
+
+fn problem(inst: &Instance, key: &'static str, params: &[(&'static str, &str)]) -> Problem {
+    Problem {
+        instance: inst.id.clone(),
+        port: String::new(),
+        error_key: key,
+        params: params.iter().map(|(k, v)| (*k, v.to_string())).collect(),
+    }
+}
+
+/// Algorithm, preset and sorted parameters: what makes two variants the same.
+type VariantKey<'a> = (Option<&'a str>, &'a str, Vec<(String, Value)>);
+
+/// The problems of one `meta.compare` as the page reports them (`F.validateExtra`): unknown step or version, fewer than two variants, an algorithm that is
+/// unknown or not available, a variant written twice. Ports and the other parameters of the instance are not looked at.
+fn compare_problems(inst: &Instance, registry: &[Step]) -> Vec<Problem> {
+    let get = |name: &str| inst.params.iter().find(|(k, _)| k == name).map(|(_, v)| v);
+    let written = get("step").and_then(Value::str).unwrap_or("");
+    let mut parts = written.split('@');
+    let (id, version) = (parts.next().unwrap_or(""), parts.next().unwrap_or(""));
+    let Some(step) = find_step(registry, id) else {
+        return vec![problem(inst, "err.flow.step.unknown", &[("step", written)])];
+    };
+    let mut out = Vec::new();
+    if version.trim().parse::<u32>().ok() != Some(step.version) {
+        let have = step.version.to_string();
+        out.push(problem(
+            inst,
+            "err.flow.step.version",
+            &[("step", id), ("version", version), ("available", &have)],
+        ));
+    }
+    let list = get("variants").map_or(&[][..], Value::arr);
+    if list.len() < 2 {
+        out.push(problem(inst, "err.flow.compare.few", &[]));
+    }
+    let mut seen: Vec<VariantKey> = Vec::new();
+    for v in list {
+        let algorithm = v.get("algorithm").and_then(Value::str);
+        let name = algorithm.unwrap_or("");
+        match step.algorithms.iter().find(|a| Some(a.id) == algorithm) {
+            None => out.push(problem(
+                inst,
+                "err.flow.algorithm.unknown",
+                &[("algorithm", name)],
+            )),
+            Some(a) if a.status != Status::Available => {
+                out.push(problem(
+                    inst,
+                    "err.flow.algorithm.unavailable",
+                    &[("algorithm", name)],
+                ));
+            }
+            Some(_) => {}
+        }
+        let mut params = match v.get("params") {
+            Some(Value::Obj(o)) => o.clone(),
+            _ => Vec::new(),
+        };
+        params.sort_by(|a, b| a.0.cmp(&b.0));
+        let key = (
+            algorithm,
+            v.get("preset").and_then(Value::str).unwrap_or(""),
+            params,
+        );
+        if seen.contains(&key) {
+            out.push(problem(inst, "err.flow.compare.sameVariant", &[]));
+        }
+        seen.push(key);
+    }
+    out
+}
+
+/// Every problem of a plan that may hold `meta.compare`: the plan without the comparisons goes through `flow::check` (so a wire from a comparison is an unknown
+/// reference, as on the page), then come the problems of the comparisons. Run before `expand`.
+pub fn check(plan: &Plan, registry: &[Step], platform: Platform) -> Vec<Problem> {
+    let is_compare = |i: &Instance| i.step == "meta.compare";
+    let rest = Plan {
+        steps: plan
+            .steps
+            .iter()
+            .filter(|i| !is_compare(i))
+            .cloned()
+            .collect(),
+        ..plan.clone()
+    };
+    let mut problems = check_core(&rest, registry, platform);
+    for inst in plan.steps.iter().filter(|i| is_compare(i)) {
+        problems.extend(compare_problems(inst, registry));
+    }
+    problems
 }
 
 /// One variant of the `variants` parameter.
