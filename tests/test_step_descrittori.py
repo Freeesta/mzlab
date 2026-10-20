@@ -13,7 +13,8 @@ CONTRACT = json.loads((ROOT / "docs/studi/workflow/contract.schema.json").read_t
 STEPS = json.loads((ROOT / "docs/schemi/steps-1.json").read_text())
 SKETCH = json.loads((ROOT / "docs/studi/workflow/step.features.detect.json").read_text())
 IDS = ["import.raw", "convert.mzml", "index.mzidx", "features.estimate", "features.detect", "features.align",
-       "features.gapfill", "table.filter", "features.ms2_link", "export.table_csv"]
+       "features.gapfill", "table.filter", "features.ms2_link", "export.table_csv",
+       "export.inclusion"]
 
 
 def validator(definition):

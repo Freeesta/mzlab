@@ -9,7 +9,7 @@ use mzlab_feat::axis::MassAxis;
 use mzlab_feat::recipe::{Mode, Recipe};
 use mzlab_feat::steps::registry;
 
-const IDS: [&str; 10] = [
+const IDS: [&str; 11] = [
     "import.raw",
     "convert.mzml",
     "index.mzidx",
@@ -20,6 +20,7 @@ const IDS: [&str; 10] = [
     "table.filter",
     "features.ms2_link",
     "export.table_csv",
+    "export.inclusion",
 ];
 
 fn default_of(p: &Param) -> Value {
@@ -117,7 +118,7 @@ fn apply_ms2(r: &mut Recipe, s: &Step) {
 }
 
 #[test]
-fn registry_lists_the_ten_steps_of_the_chain() {
+fn registry_lists_the_eleven_steps_of_the_chain() {
     let reg = registry();
     let ids: Vec<&str> = reg.iter().map(|s| s.id).collect();
     assert_eq!(ids, IDS);
