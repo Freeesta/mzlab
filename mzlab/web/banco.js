@@ -353,7 +353,8 @@ const BANCO = (() => {
     ["iso", I18N.t("bn.i9.iso"), svg('<path d="M3 13V8M6 13V4M9 13V7M12 13V10"/>')],
     ["idn", I18N.t("bn.i9.idn"), ICON.lib],
     ["disp", I18N.t("bn.i9.disp"), svg('<path d="M2.5 4h6M11.5 4h2M2.5 8h2M7.5 8h6M2.5 12h8"/>')],
-    ["alb", I18N.t("bn.i9.alb"), ICON.tree]];
+    ["alb", I18N.t("bn.i9.alb"), ICON.tree],
+    ["gra", I18N.t("bn.i9.gra"), svg('<rect x="1.5" y="6" width="4" height="4" rx=".8"/><rect x="10.5" y="2" width="4" height="4" rx=".8"/><rect x="10.5" y="10" width="4" height="4" rx=".8"/><path d="M5.5 8h2.5V4h2.5M8 8v4h2.5"/>')]];
   const IK = NOMI.KEY("banco.info");
   const ist = (() => { const o = lsObj(IK); return { tab: I9.some(x => x[0] === o.tab) ? o.tab : "hdr", h: o.h || 340 }; })();
   const isave = () => { try { localStorage.setItem(IK, JSON.stringify(ist)); } catch (e) { /* none */ } };
@@ -479,7 +480,7 @@ const BANCO = (() => {
     b.querySelector("#hri-s").onclick = () => { if (sp && sp.level === 2 && window.LIB) LIB.searchFrom(sp); else nearMsg(I18N.t("bn.idn.needMs2")); };
     b.querySelector("#hri-a").onclick = () => { const f2 = f && (f.kind === "ms2" ? f : E.files.find(x => !x.gone && baseOf(x) === baseOf(f) && x.kind === "ms2")); if (f2 && window.LIB) LIB.identifyAll(f2.k); else nearMsg(I18N.t("lib.noMs2")); };
   }
-  const BODY = { hdr: tHdr, lst: tLst, fil: tFil, cmp: tCmp, iso: tIso, idn: tIdn, disp: (b, p) => DISP.panel(b, p), alb: (b, p, tok) => INF.render(b, p, tok) };
+  const BODY = { hdr: tHdr, lst: tLst, fil: tFil, cmp: tCmp, iso: tIso, idn: tIdn, disp: (b, p) => DISP.panel(b, p), alb: (b, p, tok) => INF.render(b, p, tok), gra: async (b, p, tok) => { await carica("m:infusione-grafo.js"); return INFG.render(b, p, tok); } };
   let infoRaf = 0;
   function renderInfo() {
     const card = Q("#hrinfo"); if (!card || card.hidden) return;
@@ -516,7 +517,7 @@ const BANCO = (() => {
     }
     if (window.BARRA) {
       BARRA.syncMode();
-      c.hidden = !(BARRA.isOpen() && ["hdr", "lst", "fil", "cmp", "iso", "idn", "disp", "alb"].includes(BARRA.curTab));
+      c.hidden = !(BARRA.isOpen() && ["hdr", "lst", "fil", "cmp", "iso", "idn", "disp", "alb", "gra"].includes(BARRA.curTab));
     } else {
       c.hidden = false;
     }

@@ -1,0 +1,59 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "molecules/1",
+ "title": "molecules/1: the molecules database (catalogue, imported and user records)",
+ "description": "Written by mzlab-core `molecules`. Canonical JSON: keys in alphabetical order, records sorted by id, lists tidy; its SHA-256 enters prov/1. The mass is computed from formula and charge (electron included), never read. Field names in Italian, values in English, as liste/1.",
+ "type": "object",
+ "required": ["molecole", "schema"],
+ "properties": {
+  "schema": {"const": "molecules/1"},
+  "molecole": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["addotti", "carica", "classi", "esterni", "formula", "id", "inchikey", "massa", "nome", "note", "origine", "proprieta", "raccolte", "sinonimi", "smiles"],
+    "properties": {
+     "id": {"type": "string", "pattern": "^(ik:[A-Z]{14}-[A-Z]{10}-[A-Z]|u:[0-9a-f]{12})$", "description": "ik:<InChIKey> when there is one, else u:<first 12 hex of the SHA-256 of the record at birth>; never changes"},
+     "nome": {"type": "string", "minLength": 1},
+     "sinonimi": {"type": "array", "items": {"type": "string", "minLength": 1}, "description": "sorted, no repeats (case ignored), without nome"},
+     "formula": {"type": "string", "description": "Hill order, no charge sign"},
+     "carica": {"type": "integer", "description": "0 for a neutral molecule"},
+     "massa": {"type": "number", "description": "monoisotopic mass of the species in Da, 6 decimals, computed"},
+     "smiles": {"type": ["string", "null"]},
+     "inchikey": {"type": ["string", "null"], "pattern": "^[A-Z]{14}-[A-Z]{10}-[A-Z]$"},
+     "addotti": {"type": "array", "items": {"type": "string"}, "description": "preferred adducts by name, in order of preference"},
+     "raccolte": {"type": "array", "items": {"type": "string"}, "description": "groups of the user (sorted)"},
+     "classi": {"type": "array", "items": {"type": "string", "pattern": "^[^:]+:.+$"}, "description": "key:value labels (sorted)"},
+     "esterni": {"type": "object", "properties": {"cas": {"type": "string"}, "pubchem_cid": {"type": "string"}}, "additionalProperties": false},
+     "proprieta": {
+      "type": "array",
+      "description": "sorted by key; one value per key",
+      "items": {
+       "type": "object",
+       "required": ["chiave", "condizioni", "fonte", "unita", "valore"],
+       "properties": {
+        "chiave": {"type": "string", "minLength": 1},
+        "valore": {"type": "number"},
+        "unita": {"type": "string", "minLength": 1, "description": "1 for a dimensionless value"},
+        "fonte": {"type": "string", "minLength": 1},
+        "condizioni": {"type": "string"}
+       }
+      }
+     },
+     "note": {"type": "string"},
+     "origine": {
+      "type": "object",
+      "required": ["catalogo", "creato", "file", "modificato", "tipo"],
+      "properties": {
+       "tipo": {"enum": ["catalogo", "importata", "utente"]},
+       "catalogo": {"type": "array", "items": {"enum": ["tabui", "hrms"]}},
+       "file": {"type": ["string", "null"]},
+       "creato": {"type": ["string", "null"], "description": "ISO date"},
+       "modificato": {"type": ["string", "null"], "description": "ISO date"}
+      }
+     }
+    }
+   }
+  }
+ }
+}
