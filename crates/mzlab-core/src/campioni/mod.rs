@@ -4,10 +4,12 @@
 
 mod json;
 mod nomi;
+mod ricollega;
 mod valida;
 
-pub use json::{da_legacy, digest, from_json, to_json};
+pub use json::{da_legacy, digest, from_json, from_value, to_json};
 pub use nomi::{proponi, tipo_v1};
+pub use ricollega::{ricollega, ricollega_json, Abbinamento};
 pub use valida::{per_tp, per_tp_json, valida, valida_json, Avviso, PerTp};
 
 use crate::error::{Error, Result};
@@ -140,7 +142,7 @@ pub fn number_replicates(cs: &mut [Campione]) {
     }
 }
 
-/// The bindings: `op` is `proponi` (`{"files":[{"name","sha256","kind"}]}`), `valida`, `per_tp`, `canonico` or `digest` (a `campioni/2`) or `da_legacy`
+/// The bindings: `op` is `proponi` (`{"files":[{"name","sha256","kind"}]}`), `valida`, `per_tp`, `canonico` or `digest` (a `campioni/2`), `ricollega` (`{"campioni","file":[{"percorso","sha256"}]}`) or `da_legacy`
 /// (`{"session","qaqc","campioni1","mzflow"}`, see `json::da_legacy`); JSON in, JSON out.
 pub fn route(op: &str, input: &str) -> Result<String> {
     match op {
@@ -161,6 +163,22 @@ pub fn route(op: &str, input: &str) -> Result<String> {
         "valida" => Ok(valida_json(&valida(&from_json(input.as_bytes())?))),
         "per_tp" => Ok(per_tp_json(&per_tp(&from_json(input.as_bytes())?))),
         "da_legacy" => Ok(to_json(&da_legacy(input.as_bytes())?)),
+        "ricollega" => {
+            let v = crate::json::parse(input.as_bytes())?;
+            let bad = || Error::new("error.badCampioni");
+            let cs = from_value(v.get("campioni").ok_or_else(bad)?)?;
+            let cand: Vec<(String, String)> = v
+                .get("file")
+                .map(|a| a.arr())
+                .unwrap_or_default()
+                .iter()
+                .map(|f| {
+                    let t = |k: &str| f.get(k).and_then(|x| x.str()).unwrap_or("").to_string();
+                    (t("percorso"), t("sha256"))
+                })
+                .collect();
+            Ok(ricollega_json(&ricollega(&cs, &cand)))
+        }
         "canonico" => Ok(to_json(&from_json(input.as_bytes())?)),
         "digest" => Ok(digest(&from_json(input.as_bytes())?)),
         _ => Err(Error::new("error.badCampioni").with("op", op)),
