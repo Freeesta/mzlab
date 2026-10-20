@@ -59,3 +59,27 @@ def test_a_refused_auto_merge_is_reported_not_hidden(flow):
 
 def test_headings_guard_sees_levels_one_to_three_only(flow):
     assert flow["headings"] == ["# A", "## B {#b}", "### C"]
+
+
+@pytest.fixture(scope="module")
+def storia():
+    if not NODE:
+        pytest.skip("node not available")
+    return json.loads(subprocess.run([NODE, "tests/storia_node.mjs"], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout)
+
+
+def test_history_walks_back_and_forth_and_drops_redo_after_a_new_step(storia):
+    assert storia["same"] is False
+    assert storia["undo"] == ["b", "a", None] and storia["redo"] == ["b", "c", None]
+    assert storia["branch"] == {"canRedo": False, "now": "x", "back": "b"}
+    assert storia["limit"] == ["3", "2", None], "only the last states are kept"
+
+
+def test_draft_is_kept_per_chapter_and_never_holds_the_token(storia):
+    assert storia["saved"] is True and "github_pat_" not in storia["raw"] and "token" not in storia["raw"]
+    assert storia["loaded"] == {"text": "testo", "base": "sha1", "summary": "s", "saved": "2026-10-20T10:00:00Z"}
+    assert storia["other"] is None and storia["bad"] is None and storia["cleared"] is None
+
+
+def test_a_blocked_storage_does_not_break_the_editor(storia):
+    assert storia["blocked"] == [False, None]

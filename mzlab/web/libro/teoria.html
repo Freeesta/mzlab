@@ -14,6 +14,8 @@
   <h1>Teoria editor</h1>
   <span id="status" role="status" aria-live="polite">Not connected</span>
   <span class="grow"></span>
+  <button id="btn-undo" type="button" disabled aria-label="Undo the last change (Ctrl+Z)">&#x21B6; Undo</button>
+  <button id="btn-redo" type="button" disabled aria-label="Redo the change (Ctrl+Shift+Z)">&#x21B7; Redo</button>
   <button id="btn-preview" type="button" disabled aria-label="Show the page as it will be published">Preview</button>
   <button id="btn-send" type="button" class="primary" disabled aria-label="Send the change as a pull request">Send change</button>
   <button id="btn-token" type="button" aria-label="Change or forget the GitHub token">&#x1F511; Token</button>
@@ -22,6 +24,7 @@
   <nav id="sections" aria-label="Chapters of the Teoria"><p class="hint">Connect with your token to see the chapters.</p></nav>
   <main>
     <p id="path" class="hint"></p>
+    <div id="draft" class="draft" role="status" hidden></div>
     <label for="summary">What did you change? (one line, becomes the title of the pull request)</label>
     <input id="summary" type="text" maxlength="120" autocomplete="off">
     <p id="msg" class="err" role="alert"></p>

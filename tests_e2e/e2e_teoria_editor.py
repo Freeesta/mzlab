@@ -98,6 +98,54 @@ def edit_in_the_page(pg, src):
     step("text that would change meaning is refused", refused_text)
 
 
+def history_and_draft(pg, src):
+    """Undo/redo walk the changes made in the page, and an unsent draft survives a reload (restored, discarded, or only copyable when the chapter has moved on)."""
+    val = lambda: pg.input_value("#source")
+    until(pg, "!document.getElementById('btn-undo').disabled")
+    last = val()
+    def undo_redo():
+        pg.click("#btn-undo")
+        until(pg, "!document.getElementById('source').value.includes(' Eta.')")
+        assert " Zeta." in val() and val() != last
+        pg.click("#btn-redo")
+        until(pg, "document.getElementById('source').value.includes(' Eta.')")
+        assert val() == last
+    step("undo and redo walk the changes", undo_redo)
+    def keys():
+        pg.focus("#source"); pg.keyboard.press("Control+z")
+        until(pg, "!document.getElementById('source').value.includes(' Eta.')")
+        pg.keyboard.press("Control+Shift+z")
+        until(pg, "document.getElementById('source').value.includes(' Eta.')")
+    step("Ctrl+Z and Ctrl+Shift+Z do the same", keys)
+    def reload_offers_draft():
+        pg.reload()
+        until(pg, "!document.getElementById('draft').hidden")
+        assert "unsent draft" in pg.inner_text("#draft") and pg.is_visible("text=Restore the draft")
+    step("a reload offers the unsent draft", reload_offers_draft)
+    def restore():
+        pg.click("text=Restore the draft")
+        until(pg, "document.getElementById('source').value.includes(' Eta.')")
+        assert val() == last, "the draft is the last text"
+    step("the draft is restored as it was", restore)
+    def discard():
+        pg.reload()
+        until(pg, "!document.getElementById('draft').hidden")
+        pg.click("text=Discard the draft")
+        pg.reload()
+        until(pg, "document.getElementById('source').value.length > 100")
+        assert pg.is_hidden("#draft") and val() == src, ("no draft is offered after discarding", pg.is_hidden("#draft"), len(val()), len(src), pg.inner_text("#draft")[:80])
+    step("a discarded draft does not come back", discard)
+    def stale():
+        key = pg.evaluate("() => Object.keys(localStorage).find(k => k.startsWith('mzlab.libro.teoria.draft.')) || ('mzlab.libro.teoria.draft.' + document.querySelector('#sections button').textContent + '.md')")
+        pg.evaluate("([k, t]) => localStorage.setItem(k, JSON.stringify({text: t, base: 'old-sha', summary: '', saved: '2026-01-01T00:00:00Z'}))", [key, src + " Old."])
+        pg.reload()
+        until(pg, "!document.getElementById('draft').hidden")
+        assert "cannot be put back" in pg.inner_text("#draft") and pg.is_hidden("text=Restore the draft")
+        pg.click("text=Discard the draft")
+    step("a draft of an older chapter is only offered as a copy", stale)
+    step("the draft never holds the token", lambda: not pg.evaluate("() => Object.values(localStorage).some(v => v.includes('github_pat_'))") or (_ for _ in ()).throw(AssertionError("token in storage")))
+
+
 def main():
     if not all(shutil.which(x) for x in ("cargo", "wasm-bindgen")):
         print("SKIP e2e_teoria_editor: cargo or wasm-bindgen not available"); return 0
@@ -135,6 +183,7 @@ def main():
         step("no message after the load", lambda: pg.inner_text("#msg") == "" or (_ for _ in ()).throw(AssertionError(pg.inner_text("#msg"))))
         src = pg.input_value("#source")
         edit_in_the_page(pg, src)
+        history_and_draft(pg, src)
         pg.fill("#source", src)
         lines = src.split("\n")
         k = next(i for i, l in enumerate(lines) if l[:1].isalpha() and not l.startswith(("Tabella", "script")))
