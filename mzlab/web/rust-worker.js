@@ -329,7 +329,7 @@ async function natSame(/** @type {any} */ m) {
 // The memory budget of the engine in MB (0 = the default of the Rust side, 192): the rule that chooses it is `budget_choice`; the page keeps the log.
 let BUDGET_MB = 0;
 function applyPolicy(/** @type {any} */ m) {
-  const choice = JSON.parse(budget_choice(m.device_gb || 0, m.cores || 0, !!m.small, m.manual || 0));
+  const choice = JSON.parse(budget_choice(m.device_gb || 0, m.cores || 0, !!m.small, m.manual || 0, !!m.ios, m.probe_mb || 0));
   BUDGET_MB = choice.mb; engine.set_budget_mb(choice.mb);
   postMessage({ op: "budget-choice", choice });
 }
