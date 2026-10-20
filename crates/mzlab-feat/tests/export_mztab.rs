@@ -64,6 +64,10 @@ fn read(text: &str) -> Read {
     for l in text.lines().filter(|l| !l.is_empty()) {
         let f: Vec<&str> = l.split('\t').collect();
         match f[0] {
+            "COM" => assert_eq!(
+                f[1],
+                "This file carries quantification only; identification columns are not scored."
+            ),
             "MTD" => {
                 assert_eq!(f.len(), 3, "{l}");
                 r.mtd.insert(f[1].to_string(), f[2].to_string());

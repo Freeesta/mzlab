@@ -9,6 +9,9 @@ use crate::rowident::adduct_names;
 /// `null`: the value does not apply; `NaN`: it applies but was not measured.
 const NULL: &str = "null";
 const NAN: &str = "NaN";
+/// The comment line that opens the file: the identification columns carry no score.
+const COMMENT: &str =
+    "This file carries quantification only; identification columns are not scored.";
 /// Reliability of every small molecule in the default scheme of the format (1-4): unknown compound.
 const RELIABILITY: &str = "4";
 
@@ -298,6 +301,7 @@ fn features(body: &Body, out: &mut String) {
 pub fn mztab(c: &Ctx) -> String {
     let body = Body::new(c);
     let mut out = String::new();
+    line(&mut out, &["COM".into(), COMMENT.into()]);
     metadata(&mut out, c, &body.svs);
     out.push('\n');
     small_molecules(&body, &mut out);
