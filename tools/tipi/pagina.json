@@ -192,6 +192,12 @@
     "../../flow/lazy/flow-form.js",
     "../../flow/lazy/flow-compare.js",
     "../../flow/lazy/flow-chain.js",
-    "../../flow/lazy/flow-page.js"
+    "../../flow/lazy/flow-page.js",
+    "../../flow/lazy/flow-names.js",
+    "../../flow/lazy/flow-fix.js",
+    "../../flow/lazy/flow-canvas.js",
+    "../../flow/lazy/flow-inspect.js",
+    "../../flow/lazy/flow-shell-css.js",
+    "../../flow/lazy/flow-shell.js"
   ]
 }

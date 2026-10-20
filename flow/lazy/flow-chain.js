@@ -33,6 +33,8 @@
     return [name, el("span", { class: "fl-meta" }, ...chips, choose("Add a source", refs, ""))];
   };
 
+  F.portRow = portRow;
+
   /** the card of an instance @param {any} S state {plan, reg, problems} @param {any} inst @param {number} k position @param {(focus?: string) => void} done */
   const card = (S, inst, k, done) => {
     const { el, btn } = F, step = F.stepOf ? F.stepOf(S.reg, inst) : S.reg.byId.get(inst.step.split("@")[0]), mine = S.problems.filter((/** @type {any} */ p) => p.instance === inst.id);

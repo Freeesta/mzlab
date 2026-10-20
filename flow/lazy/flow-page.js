@@ -13,9 +13,9 @@
   };
 
   /** the page in `sec`; `lists` are the three parsed descriptor files @param {HTMLElement} sec @param {any[][]} lists */
-  F.mount = (sec, lists) => {
+  F.mount = (sec, lists, start) => {
     const { el, btn } = F, reg = F.registry(lists);
-    /** @type {any} */ const S = { plan: F.newPlan(), reg, problems: [], history: [], snap: "", cli: false, note: "" };
+    /** @type {any} */ const S = { plan: start || F.newPlan(), reg, problems: [], history: [], snap: "", cli: false, note: "" };
     const pal = F.palette(reg, stepId => { F.addStep(S.plan, reg, stepId); refresh(`fl-card-${S.plan.steps[S.plan.steps.length - 1].id}`); });
     const top = el("div", { class: "fl-top" }), inputs = el("div", { class: "fl-inputs" }), chain = el("div"), goal = el("div", { class: "fl-goal", role: "status" });
     const cli = el("div"), main = el("div", { class: "fl-main" }, inputs, goal, chain, cli);
@@ -33,7 +33,8 @@
       if (r.error) { S.note = F.message({ key: r.error.key, params: r.error.params }); refresh(); return; }
       S.plan = r.plan; S.note = `Opened ${f.name}.`; refresh();
     } });
-    const undo = btn("undo", "Undo", () => { const prev = S.history.pop(); if (prev) { S.plan = JSON.parse(prev); S.snap = prev; refresh(null, true); } });
+    const doUndo = () => { const prev = S.history.pop(); if (prev) { S.plan = JSON.parse(prev); S.snap = prev; refresh(null, true); } };
+    const undo = btn("undo", "Undo", doUndo);
     const status = el("span", { class: "fl-st", role: "status", id: "fl-status" });
 
     /** the inputs strip: one chip per file with its type, a resolution choice for scan data, and a choice to add one */
@@ -94,6 +95,7 @@
       if (key) { const t = root.querySelector(`[data-fk="${CSS.escape(key)}"], #${CSS.escape(key)}`); if (t instanceof HTMLElement) t.focus({ preventScroll: !key.startsWith("fl-card-") }); }
       sec.dispatchEvent(new CustomEvent("flow:changed", { bubbles: true }));
     }
+    S.refresh = refresh; S.undo = doUndo; S.download = download;
     /** @type {any} */ (sec).__flow = S;
     refresh(null);
   };

@@ -4,7 +4,7 @@ const fs = require("fs"), vm = require("vm"), path = require("path"), assert = r
 const eq = (a, b) => assert.strictEqual(JSON.stringify(a), JSON.stringify(b));
 const root = path.resolve(__dirname, "..");
 const ctx = vm.createContext({});
-for (const f of ["registry", "check", "plan", "inputs"]) vm.runInContext(fs.readFileSync(path.join(root, "flow/lazy/flow-" + f + ".js"), "utf8"), ctx);
+for (const f of ["registry", "check", "plan", "inputs", "names", "fix"]) vm.runInContext(fs.readFileSync(path.join(root, "flow/lazy/flow-" + f + ".js"), "utf8"), ctx);
 const F = ctx.FLOW;
 const reg = F.registry(["steps-1", "steps-attributio-1", "steps-tabui-1"].map(n => JSON.parse(fs.readFileSync(path.join(root, "docs/schemi", n + ".json"), "utf8"))));
 const problems = plan => F.check(F.normalize(F.exportPlan(plan)), reg, "native").map(F.problemLine);
@@ -60,4 +60,12 @@ g = F.goal(plan, reg);
 eq([g.reached, g.canReach], [false, true]);
 for (const s of ["index.mzidx", "features.detect", "features.align", "formula.ms1", "spectra.match", "annot.level"]) F.addStep(plan, reg, s);
 assert.strictEqual(F.goal(plan, reg).reached, true);
+// the canvas: the base alone is complete and valid; every template is valid and shows as nodes, in Simple mode the base folds into two
+eq(problems(F.basePlan(reg)), []);
+eq(F.basePlan(reg).steps.map(s => s.id), ["index", "detect", "align", "gapfill"]);
+for (const t of F.TEMPLATES) {
+  const p = F.templatePlan(reg, t);
+  eq(problems(p), []);
+  assert.ok(F.canvasModel({ plan: p, reg }, true).nodes.length < F.canvasModel({ plan: p, reg }, false).nodes.length || p.steps.length === 4, t.id);
+}
 console.log("ok");

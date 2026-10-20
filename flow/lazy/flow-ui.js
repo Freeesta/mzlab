@@ -23,7 +23,7 @@
     plus: "M12 5v14M5 12h14", up: "M6 15l6-6 6 6", down: "M6 9l6 6 6-6", x: "M6 6l12 12M18 6L6 18", compare: "M8 4v16M16 4v16M3 8l5-4 5 4M11 16l5 4 5-4",
     export: "M12 4v11M7 10l5 5 5-5M5 20h14", import: "M12 15V4M7 9l5-5 5 5M5 20h14", run: "M7 4l12 8-12 8z", undo: "M9 7L4 12l5 5M4 12h10a6 6 0 0 1 0 8", warn: "M12 4l9 16H3zM12 10v4M12 17v.01",
     ok: "M5 12l5 5 9-10", file: "M7 3h7l4 4v14H7zM14 3v5h5", flow: "M4 6h6v4H4zM14 14h6v4h-6zM10 8h2a2 2 0 0 1 2 2v4", copy: "M9 9h10v11H9zM5 15V4h10", search: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM16 16l5 5",
-    reset: "M4 12a8 8 0 1 0 2.6-5.9M4 4v5h5", info: "M12 8v.01M12 11v6M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z",
+    minus: "M5 12h14", fit: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5", one: "M9 8l3-2v12", reset: "M4 12a8 8 0 1 0 2.6-5.9M4 4v5h5", info: "M12 8v.01M12 11v6M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z",
   };
   /** an inline icon (decorative: the button around it has the name) @param {keyof typeof PATHS} name @param {number} [px] */
   F.icon = (name, px = 16) => {
