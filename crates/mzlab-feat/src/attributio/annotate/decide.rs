@@ -4,7 +4,7 @@
 
 use super::curate::Curation;
 use super::settings::AnnotationSettings;
-use super::types::Feature;
+use super::types::{AuditEntry, Feature};
 use crate::attributio::campaign::Campaign;
 use crate::attributio::readers::feature_decisions::{match_decisions, DecisionTable, FeatureKey};
 
@@ -50,6 +50,46 @@ pub fn feature_keys(feats: &[Feature]) -> Vec<FeatureKey> {
 
 type Before = (i32, String, String);
 
+/// `2a`, `3b`, `4`: the level as the table shows it.
+fn level_tag(f: &Feature) -> String {
+    format!("{}{}", f.level, level_sub(f))
+}
+
+/// The level, name and group of a feature as the table shows them: what `record_changes` compares after a decision.
+fn snapshot(f: &Feature) -> [String; 3] {
+    [
+        level_tag(f),
+        f.disp_name.clone().unwrap_or_default(),
+        f.decision.group_override.clone().unwrap_or_default(),
+    ]
+}
+
+/// Writes an audit entry for each field of `auto` that the decision just applied to `f` changed.
+fn record_changes(f: &mut Feature, auto: [String; 3], reason: &str) {
+    let now = snapshot(f);
+    for ((field, auto), chosen) in ["level", "name", "group"].into_iter().zip(auto).zip(now) {
+        record(f, field, auto, chosen, reason);
+    }
+}
+
+/// Keeps what the programme chose in the first decision of a field and moves `chosen` and `reason` to the last one; a decision that changes nothing leaves no entry.
+fn record(f: &mut Feature, field: &'static str, auto: String, chosen: String, reason: &str) {
+    match f.audit.iter_mut().find(|e| e.field == field) {
+        Some(e) => {
+            e.chosen = chosen;
+            e.reason = reason.to_string();
+        }
+        None if auto != chosen => f.audit.push(AuditEntry {
+            field,
+            auto,
+            chosen,
+            reason: reason.to_string(),
+        }),
+        None => {}
+    }
+    f.audit.retain(|e| e.auto != e.chosen);
+}
+
 fn undo_2b(f: &mut Feature, before: &mut Vec<(usize, Before)>, i: usize) {
     if let Some(n) = before.iter().position(|(k, _)| *k == i) {
         let (_, (level, basis, label)) = before.remove(n);
@@ -81,6 +121,7 @@ pub fn apply_decisions(
     for rec in matched {
         let i = rec.row;
         let f = &mut feats[i];
+        let auto = snapshot(f);
         if !rec.group.is_empty() {
             f.decision.group_override = Some(rec.group.clone());
         }
@@ -129,6 +170,8 @@ pub fn apply_decisions(
             }
         }
         f.decision.feature_decision = rec.justification.clone();
+        f.level_sub = level_sub(f).into();
+        record_changes(f, auto, &rec.justification);
     }
     for f in feats.iter_mut() {
         f.cec_headline = f.cec.as_ref().is_some_and(|c| cur.is_headline(&c.0));

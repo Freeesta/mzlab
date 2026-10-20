@@ -66,7 +66,7 @@ fn annot() -> Record {
     Record {
         data_type: "annot",
         source: "attributio/annotate/types.rs (Feature, Decision, RtInfo)",
-        doc: "The level a feature reaches with the basis and the reasons; level 2b is only the chemist's decision.",
+        doc: "The level a feature reaches with the basis and the reasons, and whether the programme or the chemist chose it.",
         fields: vec![
             f("pol", "string", "Polarity of the feature"),
             f("id", "integer", "Feature id"),
@@ -75,6 +75,7 @@ fn annot() -> Record {
             f("level_basis", "string", "Source the level rests on"),
             f("level_label", "string", "Label shown for the level"),
             f("level_flag", "string", "Caveat attached to the level"),
+            f("level_origin", "string", "auto when the programme chose, user when a decision of the chemist changed it (see the audit log)"),
             f("smiles", "string", "Structure of the identity, when it has one"),
             f("inchikey_skeleton", "string", "First block of the InChIKey"),
             f("rt_group", "integer", "Group of features of one identity separated in RT"),
