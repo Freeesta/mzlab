@@ -1,5 +1,5 @@
 """api/msn_grafo on the built site: the .wasm msngrafo (crates/mzlab-msngrafo-wasm, wasm-feat/msngrafo/) answers the graph of a synthetic MSn infusion from the .mzidx and the
-mzML in OPFS, with the same bytes as `mzlab-cli msn-graph` (only the SHA-256 of the index may differ), a bad number is a keyed error, the export route is not served yet,
+mzML in OPFS, with the same bytes as `mzlab-cli msn-graph` (only the SHA-256 of the index may differ), a bad number is a keyed error, the export route gives CSV, MGF or MSP text,
 MZLAB_LR_MISS stays empty and the .wasm is under 512000 bytes. Needs the site (python3 tools/prepara_sito.py); the module is built here when it is not in site/static/wasm-feat."""
 import hashlib, json, re, shutil, subprocess, sys
 sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
@@ -55,13 +55,17 @@ try:
             assert res[0] == 400 and res[1]["error_key"] == "err.request.badNumber", res
         step("a bad number is a keyed error", bad)
         def export():
-            res = pg.evaluate("fetch('api/msn_grafo/export?k=0&formato=csv').then(async r=>[r.status, await r.text()])")
-            assert res[0] != 200, res
-        step("the export is not served by this module", export)
+            res = pg.evaluate("fetch('api/msn_grafo/export?k=0&formato=msp&pulito=1').then(async r=>[r.status, r.headers.get('content-type'), await r.text()])")
+            assert res[0] == 200 and res[1] == "text/plain" and "Num Peaks:" in res[2], res[:2]
+            csv = pg.evaluate("fetch('api/msn_grafo/export?k=0&formato=csv').then(r=>r.text())")
+            assert csv.startswith("albero,livello,"), csv[:80]
+            bad = pg.evaluate("fetch('api/msn_grafo/export?k=0&formato=xls').then(r=>r.status)")
+            assert bad == 400, bad
+        step("the export gives CSV and MSP text and a bad format is a keyed error", export)
         errs = [e for e in r.errs if e[0] in ("pageerror",)]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
-        miss = pg.evaluate("(window.MZLAB_LR_MISS||[]).filter(u=>!/msn_grafo\\/export/.test(u))")
-        step("no request left unanswered by the engine (but the export)", lambda: (_ for _ in ()).throw(AssertionError(miss)) if miss else None)
+        miss = pg.evaluate("(window.MZLAB_LR_MISS||[]).slice()")
+        step("no request left unanswered by the engine", lambda: (_ for _ in ()).throw(AssertionError(miss)) if miss else None)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

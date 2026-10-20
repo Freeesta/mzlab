@@ -30,10 +30,11 @@ async function indexOf(name) {
 
 /**
  * The `msngrafo/1` of the file `name` (a JSON string); a failure is thrown as the JSON string `{error_key, params}` of the module.
- * @param {string} name @param {Blob} blob the mzML @param {string} query the query string of the request
+ * @param {string} name @param {Blob} blob the mzML @param {string} query the query string of the request @param {boolean} esporta the spectra as text
  * @param {(blob: Blob) => (offset: number, length: number) => Uint8Array} readerFor
  */
-export async function msnGrafo(name, blob, query, readerFor) {
+export async function msnGrafo(name, blob, query, readerFor, esporta = false) {
   const [m, idx] = await Promise.all([load(), indexOf(name)]);
-  return m.msn_grafo(readerFor(idx), idx.size, readerFor(blob), name, query);
+  const f = esporta ? m.msn_grafo_export : m.msn_grafo;
+  return f(readerFor(idx), idx.size, readerFor(blob), name, query);
 }
