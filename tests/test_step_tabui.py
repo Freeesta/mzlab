@@ -10,7 +10,7 @@ from jsonschema import Draft202012Validator
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = json.loads((ROOT / "docs/studi/workflow/contract.schema.json").read_text())
 STEPS = json.loads((ROOT / "docs/schemi/steps-tabui-1.json").read_text())
-IDS = ["tp.generate", "tp.filter", "tp.link", "tp.position", "structure.reactivity"]
+IDS = ["tp.generate", "tp.filter", "tp.link", "tp.position", "structure.render", "structure.draw", "structure.reactivity"]
 
 
 def refs(step):
@@ -24,7 +24,7 @@ def test_descriptor_validates_against_the_contract(step):
     assert not errors, [f"{list(e.path)}: {e.message}" for e in errors]
 
 
-def test_the_five_steps_in_order_and_in_the_tabui_package():
+def test_the_seven_steps_in_order_and_in_the_tabui_package():
     assert [s["id"] for s in STEPS] == IDS
     assert all(s["package"] == "tabui" and s["schema"] == "step/1" for s in STEPS)
 

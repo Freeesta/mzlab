@@ -1,4 +1,4 @@
-//! The `step/1` descriptors of the Tabui chain (`package: tabui`): `tp.generate` and `tp.filter` here, `tp.link` and `tp.position` in `tabui_link.rs`
+//! The `step/1` descriptors of the Tabui chain (`package: tabui`): `tp.generate` and `tp.filter` here, `tp.link` and `tp.position` in `tabui_link.rs`, `structure.render` and `structure.draw` in `tabui_draw.rs`
 //! (`structure.reactivity` is owned by `mzlab-chem`, which this crate cannot see). The defaults of `tp.generate` are read from `HypoParams::default()`;
 //! the constants of the `interp` feature are compared in `tests/steps_tabui_parity.rs`. Nothing here is called by a `.wasm`.
 
@@ -8,6 +8,7 @@ use mzlab_core::step::{
 
 use crate::hypo::HypoParams;
 
+pub(super) use super::tabui_draw::{draw, render};
 pub(super) use super::tabui_link::{link, position};
 
 /// The `.wasm` that runs the hypotheses (the `hr` group of mzFinder) and its fixed ceiling in bytes (`limit_hr` of `tools/build_feat_wasm.sh`).
@@ -19,7 +20,7 @@ pub(super) const INTERP_CEILING: u64 = 512_000;
 
 /// Every step of the Tabui chain of `mzlab-feat`, in the order of the chain.
 pub fn registry() -> Vec<Step> {
-    vec![generate(), filter(), link(), position()]
+    vec![generate(), filter(), link(), position(), render(), draw()]
 }
 
 /// A step of the `tabui` package that runs in the given `.wasm`.

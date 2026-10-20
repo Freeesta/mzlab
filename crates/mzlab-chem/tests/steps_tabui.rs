@@ -6,16 +6,18 @@ use mzlab_chem::step::tabui;
 use mzlab_core::step::json::registry_json;
 use mzlab_core::step::Kind;
 
-const IDS: [&str; 5] = [
+const IDS: [&str; 7] = [
     "tp.generate",
     "tp.filter",
     "tp.link",
     "tp.position",
+    "structure.render",
+    "structure.draw",
     "structure.reactivity",
 ];
 
 #[test]
-fn registry_lists_the_five_steps_in_the_order_of_the_chain() {
+fn registry_lists_the_seven_steps_in_the_order_of_the_chain() {
     let steps = tabui();
     assert_eq!(steps.iter().map(|s| s.id).collect::<Vec<_>>(), IDS);
     for s in &steps {
@@ -27,11 +29,10 @@ fn registry_lists_the_five_steps_in_the_order_of_the_chain() {
             "{} default algorithm",
             s.id
         );
-        assert!(
-            s.runs_in.wasm.is_some() && s.runs_in.wasm_ceiling_bytes.is_some(),
-            "{}",
-            s.id
-        );
+        // the editor runs in the page only, so it has no .wasm and no ceiling
+        let in_page = s.id == "structure.draw";
+        assert_eq!(s.runs_in.wasm.is_none(), in_page, "{}", s.id);
+        assert_eq!(s.runs_in.wasm_ceiling_bytes.is_none(), in_page, "{}", s.id);
     }
 }
 

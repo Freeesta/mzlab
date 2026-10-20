@@ -10,6 +10,7 @@ mod ident_spectra;
 pub mod records;
 mod table;
 mod tabui;
+mod tabui_draw;
 mod tabui_link;
 
 use mzlab_core::step::{core_steps, Step};
