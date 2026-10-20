@@ -35,5 +35,12 @@ def test_every_chapter_is_the_committed_html(converted):
 
 def test_version_and_error_message(converted):
     _, log = converted
-    assert log.splitlines()[0] == "mzlab-libro/1"
+    assert log.splitlines()[0] == "mzlab-libro/2"
     assert "error x.md:1: the section has no heading" in log
+
+
+def test_preview_and_edit_through_the_wasm(converted):
+    _, log = converted
+    assert "marked true" in log
+    assert 'edited "# T\\n\\nUno **tre**.\\n"' in log
+    assert "refused This text cannot be written in the source here" in log

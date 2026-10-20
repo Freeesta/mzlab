@@ -1,11 +1,14 @@
 //! Libro Markdown dialect -> Teoria HTML converter: a port of tools/libro (the Python reference) with byte-for-byte parity on every chapter.
 //! Used by the parity test today and by the Teoria editor preview; pure and deterministic (no clock, no I/O).
 mod blocks;
+mod edit;
+mod frag;
 mod inline;
 mod page;
 mod scan;
 mod special;
 
+pub use edit::{edit_block, preview};
 pub use page::{convert, Options};
 
 /// The one error type: always carries file and line, so an unsupported construct stops the build instead of being guessed.
