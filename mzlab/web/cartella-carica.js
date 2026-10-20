@@ -5,6 +5,8 @@
 // .wiff and its .wiff.scan are paired only inside the same folder, and two files with the same name in different folders are told apart.
 // The pure parts (dir, kind, split, pairKey, uniqueNames, readEntries) have no DOM and are tested in node (tests/test_cartella_carica.py).
 
+// members of a .D run (Agilent, Bruker): dropped without their folder they cannot be read as a run
+const LOOSE_D = /^(MSScan\.bin|MSPeak\.bin|MSProfile\.bin|analysis\.(tdf|tsf|baf)(_bin)?)$/i;
 const CartCarica = (() => {
   const OK = /\.(mzml|mzxml|cdf|nc|dam|raw|wiff|wiff\.scan)$/i;
   const HIDDEN = n => n[0] === "." || n === "__MACOSX";
@@ -76,7 +78,7 @@ const CartCarica = (() => {
   }
   function fromDrop(e, /** @type {(() => void) | undefined} */ done) {                // true when the drop was a folder (read and loaded here); the entries are taken before any await
     const es = entriesOf(e.dataTransfer);
-    if (!es) return false;
+    if (!es) { const n = [...(e.dataTransfer?.files || [])].filter(f => LOOSE_D.test(f.name)).length; if (n) note(I18N.t("cart.loose", { n })); return false; }
     note(I18N.t("cart.reading", { n: 0 }));
     readEntries(es, n => { if (n % 50 === 0) note(I18N.t("cart.reading", { n })); }).then(files => load(files, rootName(es, files)), x => note(String(x.message || x))).then(() => { if (done) done(); });
     return true;
