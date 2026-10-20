@@ -24,6 +24,7 @@ pub mod differenza;
 pub mod diffroute;
 pub mod elements;
 pub mod entropy;
+pub mod score_terms;
 pub mod fileroutes;
 pub mod hrroutes;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]

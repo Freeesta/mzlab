@@ -27,6 +27,11 @@
   F.templatePlan = (reg, tpl) => {
     const S = { plan: F.basePlan(reg), reg };
     for (const a of tpl.addons) F.addAddon(S, F.ADDONS.find((/** @type {any} */ x) => x.id === a));
+    // the settings a template starts with, by step id: {"table.filter": {blank_ratio: 3}}
+    for (const [stepId, values] of Object.entries(tpl.params || {})) {
+      const inst = F.findStep(S.plan, stepId), step = inst && reg.byId.get(stepId);
+      if (inst && step) for (const [name, v] of Object.entries(values)) F.setParam(inst, step, name, v);
+    }
     return S.plan;
   };
   /** has the plan anything beyond the base? @param {any} plan */

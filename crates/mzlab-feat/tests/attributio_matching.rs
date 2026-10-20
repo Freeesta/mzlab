@@ -376,17 +376,34 @@ fn same(a: &J, b: &J, k: &str) {
     }
 }
 
+/// Settings of the Rust program that the Python Attributio does not have: the golden does not carry them.
+const RUST_ONLY: &[&str] = &["rt_logp_terms"];
+
 #[test]
 fn settings_match_attributio() {
     let g = golden();
     let s = &g["impostazioni"];
+    for k in RUST_ONLY {
+        assert!(
+            s["defaults"].get(k).is_none(),
+            "{k} is in the golden: drop it from RUST_ONLY"
+        );
+    }
     let defaults = ReviewSettings::default();
-    for (k, v) in defaults.entries() {
+    for (k, v) in defaults
+        .entries()
+        .into_iter()
+        .filter(|(k, _)| !RUST_ONLY.contains(k))
+    {
         same(&to_json(&v), &s["defaults"][k], k);
     }
     let parsed =
         ReviewSettings::from_campaign_toml("campaign.toml", s["toml"].as_str().unwrap()).unwrap();
-    for (k, v) in parsed.entries() {
+    for (k, v) in parsed
+        .entries()
+        .into_iter()
+        .filter(|(k, _)| !RUST_ONLY.contains(k))
+    {
         same(&to_json(&v), &s["parsed"][k], k);
     }
     let err = ReviewSettings::from_campaign_toml("campaign.toml", "[review]\nppm_ionn = 3\n")
