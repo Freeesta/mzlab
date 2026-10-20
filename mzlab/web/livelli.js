@@ -60,7 +60,7 @@ const LIVELLI = (() => {
     return o ? list[0][field] - o[field] : Infinity;
   }
 
-  /** input: { cands: [{name, ik, ent, cos, shared, dprec (ppm), nlib, lib}], analogs: [{name, mcos, matched, delta}], nScans, std: {drt, ent, dprec, name} | null, formulaUnique }
+  /** input: { cands: [{name, ik, ent, cos, shared, dprec (ppm), nlib, lib, q (decoy q-value, optional)}], analogs: [{name, mcos, matched, delta}], nScans, std: {drt, ent, dprec, name} | null, formulaUnique }
    *  → { proposed, decided: null, why, best, gates, lines, decisive, std } */
   function assess(input, name, T) {
     const P = profile(name), TT = T || thresholds(name), inp = input || {};
@@ -76,6 +76,7 @@ const LIVELLI = (() => {
     if (best) {
       const vals = { ent: best.ent, cos: best.cos, shared: best.shared, ppm: best.dprec, nlib: best.nlib, nScans: inp.nScans ?? 1, margin: marginOf(list, "ent"), marginCos: marginOf(list, "cos") };
       res.gates = P.cancelli.map(g => evalGate(g, vals, TT)); res.lines = res.gates.map(g => g.txt);
+      if (best.q != null && isFinite(best.q)) res.lines.push(t("lv.decoyq", { q: num(best.q, 2) }));  // target-decoy q, always with its lower-bound note
       const bad = res.gates.filter(g => !g.ok), srcBad = bad.filter(g => g.ruolo === "source"), conf = bad.filter(g => g.ruolo === "confirm"), fl = g => g.map(x => x.txt).join("; ");
       if (!bad.length) return P.tetto ? fin(P.tetto, "tetto", t("lv.dec.tetto", { name: nm(best), lib: lb(best), lv: tag(P.tetto) })) : fin("2a", "2a", t("lv.dec.2a", { name: nm(best), lib: lb(best) }));
       if (!srcBad.length) return fin("3a", "confirm", t("lv.dec.3conf", { name: nm(best), lib: lb(best), gates: fl(conf) }));

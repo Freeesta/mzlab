@@ -293,3 +293,136 @@ fn formula_chain_finds_the_formula_and_explains_the_fragments() {
     }
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// A synthetic mix of standards: 80 library spectra and 90 queries (noisy copies of every library spectrum but the last ten, then wrong spectra at a
+/// library precursor), as MSP and MGF in a fresh folder.
+fn mix_fixture(tag: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("mzlab_cli_decoy_{tag}_{}", std::process::id()));
+    std::fs::create_dir_all(dir.join("work")).unwrap();
+    let mut seed = 42u64;
+    let mut next = move || {
+        seed = seed
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        ((seed >> 33) % 1_000_000) as f64 / 1_000_000.0
+    };
+    let (mut msp, mut mgf) = (String::new(), String::new());
+    let mut targets: Vec<(f64, Vec<(f64, f64)>)> = Vec::new();
+    for i in 0..80 {
+        let prec = ((200.0 + next() * 600.0) * 1e4).round() / 1e4;
+        let mut peaks = Vec::new();
+        let mut m = 60.0 + next() * 10.0;
+        while peaks.len() < 10 && m < prec - 5.0 {
+            peaks.push(((m * 1e4).round() / 1e4, 1.0 + (next() * 1000.0).round()));
+            m += 5.0 + next() * 40.0;
+        }
+        msp += &format!(
+            "Name: Synthetic {i}\nAccession: SYN{i:04}\nPrecursorMZ: {prec}\nIon_mode: Positive\nNum Peaks: {}\n",
+            peaks.len()
+        );
+        for (m, it) in &peaks {
+            msp += &format!("{m} {it}\n");
+        }
+        msp.push('\n');
+        targets.push((prec, peaks));
+    }
+    for k in 0..90 {
+        let (prec, own) = &targets[k % 70];
+        let src = if k >= 60 {
+            &targets[(k * 7 + 1) % 80].1
+        } else {
+            own
+        };
+        mgf += &format!("BEGIN IONS\nTITLE=q{k}\nPEPMASS={prec}\nCHARGE=1+\nIONMODE=Positive\n");
+        for (m, it) in src.iter().filter(|(m, _)| *m < prec - 4.0) {
+            let (m, it) = (m + (next() - 0.5) * 0.004, it * (0.7 + next() * 0.6));
+            mgf += &format!("{:.4} {:.2}\n", m, it);
+        }
+        mgf += "END IONS\n";
+    }
+    std::fs::write(dir.join("lib.msp"), msp).unwrap();
+    std::fs::write(dir.join("q.mgf"), mgf).unwrap();
+    dir
+}
+
+/// With `decoys=none` (the default) the hits are the same bytes as without the parameter and carry no decoy field.
+#[test]
+fn decoys_none_leaves_the_hits_as_they_are() {
+    let dir = fixture("decoy_none");
+    run(&dir, "spectral_entropy", "{}");
+    let plain = std::fs::read(dir.join("work/m.json")).unwrap();
+    run(&dir, "spectral_entropy", r#"{"decoys":"none"}"#);
+    assert_eq!(plain, std::fs::read(dir.join("work/m.json")).unwrap());
+    assert!(!String::from_utf8(plain).unwrap().contains("decoy"));
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// With `decoys=spectrum` the q-value of the best hit of each query is the one of `decoy::search_fdr` on the same library and queries; no decoy is listed.
+#[test]
+fn decoys_spectrum_gives_the_q_values_of_search_fdr() {
+    use mzlab_lib::build::{build_in_memory, BuildOpts};
+    use mzlab_lib::decoy::{search_fdr, with_decoys, DecoyKind, DEFAULT_SEED};
+    use mzlab_lib::read::{Library, CACHE_BYTES};
+    use mzlab_lib::search::{IdentityOpts, Query, Tol};
+    let dir = mix_fixture("parity");
+    run(&dir, "spectral_entropy", r#"{"decoys":"spectrum"}"#);
+    let h = hits(&dir);
+    assert_eq!(h.get("fdr_note").unwrap().str(), Some("lib.fdr.note"));
+    let list = h.get("hits").unwrap().arr();
+    assert!(list
+        .iter()
+        .all(|x| !x.get("id").unwrap().str().unwrap().starts_with("DECOY:")));
+
+    let read = |f: &str| std::fs::read(dir.join(f)).unwrap();
+    let (msp, mgf) = (read("lib.msp"), read("q.mgf"));
+    let targets = crate::flow_match::read_spectra(("lib.msp", &msp)).unwrap();
+    let queries = crate::flow_match::read_spectra(("q.mgf", &mgf)).unwrap();
+    let (bytes, _) = build_in_memory(
+        &with_decoys(&targets, DecoyKind::Fragments, DEFAULT_SEED),
+        BuildOpts::default(),
+    )
+    .unwrap();
+    let lib = Library::open(&bytes[..], CACHE_BYTES).unwrap();
+    let qs: Vec<Option<Query>> = queries
+        .iter()
+        .map(|s| Query::new(s.prec, s.pol, &s.mz, &s.it))
+        .collect();
+    let o = IdentityOpts {
+        prec_tol: Tol::Ppm(10.0),
+        frag_da: 0.02,
+        pol: 1,
+        top: 20,
+    };
+    let want = search_fdr(&lib, &qs, &o, DecoyKind::Fragments).unwrap();
+    let mut checked = 0;
+    for (k, w) in want.iter().enumerate() {
+        let id = format!("q{k}");
+        let best = list
+            .iter()
+            .find(|x| x.get("query").unwrap().str() == Some(&id) && !is_null(x, "decoy_q"));
+        let Some(best) = best else { continue };
+        let q = mzlab_core::json::round(w.fdr.q_value as f64, 6);
+        assert_eq!(best.get("decoy_q").unwrap().f64(), Some(q), "{id}");
+        assert_eq!(
+            best.get("decoy_ge").unwrap().f64(),
+            Some(w.fdr.n_decoy_ge as f64)
+        );
+        checked += 1;
+    }
+    assert!(checked >= 50, "{checked} queries checked");
+    // the other algorithms have no decoy score: refused, not silently ignored
+    let refused = crate::flow::run_plan(
+        plan("cosine", r#"{"decoys":"spectrum"}"#).as_bytes(),
+        &dir,
+        &dir.join("work"),
+        1,
+        None,
+    );
+    let prov = refused.map(|r| r.1).unwrap_or_else(|e| format!("{e:?}"));
+    assert!(prov.contains("decoysAlgorithm"), "{prov}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+fn is_null(x: &mzlab_core::json::Value, key: &str) -> bool {
+    x.get(key).is_none_or(|v| v.f64().is_none())
+}

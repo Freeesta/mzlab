@@ -439,6 +439,7 @@
   "lv.dec.3prov": "Frase decisiva del livello 3 provvisorio; {gates} = elenco delle prove non superate.",
   "lv.dec.3an": "Frase decisiva: solo un analogo; {cos} = coseno modificato, {delta} = differenza di massa con segno.",
   "lv.dec.none": "Frase decisiva quando nessuna fonte supera i cancelli; {name} = candidato più vicino, {gate} = prova non superata.",
+  "lv.decoyq": "Riga del motivo di un candidato di libreria con q-value da esche; {q} = q-value; sempre con la nota «limite inferiore», non è la probabilità che l'identità sia giusta.",
   "lv.refuse.2b": "Messaggio quando il chimico prova a scrivere 2b dove non si può; {lv} = livello proposto.",
   "lib.what.group": "Nota sotto una voce del risultato; {n} = numero di altre voci con lo stesso primo blocco dell'InChIKey (stessa struttura piana, stereoisomeri).",
   "lib.what.nl": "Sotto lo specchio; {list} = masse delle perdite neutre in comune, già formattate.",

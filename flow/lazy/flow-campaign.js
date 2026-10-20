@@ -29,7 +29,7 @@
   };
 
   F.registerView({ id: "campaign", title: "Levels of a campaign folder", types: ["annot"], accepts: (/** @type {any} */ item) => !!item.campaign, open: async (/** @type {HTMLElement} */ host, /** @type {any} */ item) => {
-    const { el } = F, c = item.campaign, say = el("p", { class: "fl-note", role: "status" }), box = el("div", { class: "tp" });
+    const { el } = F, c = item.campaign, say = el("p", { class: "fl-note", id: "flx-camp-say", role: "status" }), box = el("div", { class: "tp" });
     const out = (/** @type {"csv" | "xlsx"} */ kind) => () => exportTable(c, kind).then(() => { say.textContent = ""; }, (/** @type {any} */ e) => { say.textContent = "Export failed: " + (e && e.message || e); });
     const rv = el("div", { class: "flw-review" }), exp = el("span", { class: "flw-exp" }), digest = el("span", { class: "flw-digest-bar" });
     // the Review screen replaces the table; leaving it redraws the table when a decision was saved (the cascade runs again once)
@@ -43,6 +43,23 @@
     };
     host.append(el("div", { class: "fl-meta" }, F.btn("ok", "Review the features that wait for a decision, one at a time", startReview, "Review"), F.btn("export", "Export the table as CSV", out("csv"), "CSV"), F.btn("export", "Export the table as XLSX", out("xlsx"), "XLSX"), exp, digest), say, rv, box);
     F.digestMount(digest, c, say);
+    // the automatic 2b (off by default; any decision of the chemist overrules it): campaign.toml is rewritten in memory and the cascade runs again
+    const ct = c.files.find((/** @type {any} */ f) => f.path === "campaign.toml");
+    const auto = /** @type {HTMLInputElement} */ (el("input", { type: "checkbox", id: "flx-auto2b", "aria-label": "Automatic 2b" }));
+    if (ct) ct.file.text().then((/** @type {string} */ t) => { auto.checked = /^\s*auto_2b\s*=\s*true/m.test(t); });
+    else auto.disabled = true;
+    auto.onchange = async () => {
+      const at = c.files.findIndex((/** @type {any} */ f) => f.path === "campaign.toml");
+      if (at < 0) return;
+      try {
+        const text = withAuto2b(await c.files[at].file.text(), auto.checked);
+        c.files[at] = { path: "campaign.toml", file: new File([text], "campaign.toml", { type: "text/plain" }) };
+        say.textContent = "Running the cascade again…"; say.setAttribute("role", "status");
+        Object.assign(c, await F.campaignRun(c.files, c.root)); draw();
+        say.textContent = ((c.summary && c.summary.warnings) || []).join(" · ") || "Done.";
+      } catch (e) { say.textContent = "Attributio: " + ((/** @type {any} */ (e)) && (/** @type {any} */ (e)).message || e); say.setAttribute("role", "alert"); }
+    };
+    host.append(el("label", { class: "fl-meta" }, auto, " Automatic 2b: the programme sets 2b for the strongest proposals of the Bench 2b (off by default; any decision of yours overrules it)"));
     // the six engine exports of Attributio (evidence, Schymanski folder, publication table, quantification, gradient, SIRIUS) on the same campaign files
     G.ATTRIBUTIO_EXPORT.mount(exp, { pool: G.ATTRIBUTIO_CORE.pool, files: () => c.files, root: () => c.root, say: (/** @type {string} */ t, /** @type {boolean} */ err) => { say.textContent = t; if (err) say.setAttribute("role", "alert"); else say.setAttribute("role", "status"); } });
     // the MS2 panel (library search, in-silico ranking, hydrogen shifts, retention-time prediction, co-isolated features) is evidence only: it writes nothing into the campaign
@@ -66,6 +83,16 @@
     draw(); host.append(bench);
     if (G.WORKFLOW && G.WORKFLOW.logOp) G.WORKFLOW.logOp("attributio", { attributio: { fingerprint: c.summary.fingerprint, settings: c.summary.settings, counts: c.summary.by_level } });
   } });
+
+  /** `campaign.toml` with `[levels] auto_2b` set or removed: the files are in memory, so the choice never touches the folder @param {string} text @param {boolean} on */
+  function withAuto2b(text, on) {
+    const lines = text.split("\n").filter(l => !/^\s*auto_2b\s*=/.test(l));
+    if (!on) return lines.join("\n");
+    const at = lines.findIndex(l => /^\s*\[levels\]\s*$/.test(l));
+    if (at >= 0) lines.splice(at + 1, 0, "auto_2b = true");
+    else lines.push("", "[levels]", "auto_2b = true", "");
+    return lines.join("\n");
+  }
 
   // the block of the «Confidence level» node: choose a folder, the table opens under the canvas
   F.extraResults.push((S, node) => {

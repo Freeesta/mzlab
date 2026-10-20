@@ -79,12 +79,24 @@ try:
             except Exception: raise AssertionError("no rows: " + pg.inner_text(".fl-insp .fl-note") + " " + str(errs[:3]))
             pg.click(".flx-res .tpt-colm summary"); pg.check("[data-vc=basis]"); pg.check("[data-vc=id]")          # the optional columns, to compare with the expected levels
             rows = pg.evaluate("[...document.querySelectorAll('#at-table tbody tr.clk')].map(tr => [...tr.cells].map(c => c.querySelector('.lvb') ? c.querySelector('.lvb').textContent : c.textContent))")
-            assert len(rows) == 15, (len(rows), pg.inner_text(".flx-res .fl-note"))
+            assert len(rows) == 15, (len(rows), pg.inner_text("#flx-camp-say"))
             got = {(r[4], r[6]): (r[0][1:], r[5]) for r in rows}
             assert got == want, {k: (got.get(k), want.get(k)) for k in want if got.get(k) != want.get(k)}
             txt = pg.inner_text("#at-counts"); assert txt.startswith("15 features") and "L1 1" in txt, txt
             assert pg.evaluate("document.querySelector('#at-table').tagName") == "TABLE" and pg.evaluate("document.querySelectorAll('#at-table thead th[scope=col]').length") >= 5
         step("the synthetic folder gives 15 features with the levels of livelli_attesi.csv (rows of the component)", load)
+
+        def auto2b():
+            assert not pg.is_checked("#flx-auto2b"), "the automatic 2b is off by default"
+            pg.check("#flx-auto2b")
+            try: pg.wait_for_function("document.querySelector('#flx-camp-say').textContent === 'Done.'", timeout=60000)
+            except Exception: raise AssertionError("note: " + pg.inner_text("#flx-camp-say") + str(errs[:3]))
+            assert pg.inner_text("#flx-camp-say") == "Done.", pg.inner_text("#flx-camp-say")
+            # no Level 3 feature of the synthetic campaign has a strong proposal: the table is the same, nothing is set by the programme
+            txt = pg.inner_text("#at-counts"); assert txt.startswith("15 features") and "by the programme" not in txt, txt
+            pg.uncheck("#flx-auto2b")
+            pg.wait_for_function("document.querySelector('#flx-camp-say').textContent === 'Done.'", timeout=60000)
+        step("the automatic 2b is an option, off by default; on a campaign without strong proposals it changes nothing", auto2b)
 
         def chips():
             pg.click("[data-chip=l3]")

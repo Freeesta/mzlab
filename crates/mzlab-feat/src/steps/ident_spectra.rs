@@ -136,6 +136,9 @@ pub(super) fn match_spectra() -> Step {
                 .unit("ppm")
                 .doc("Library precursor against the precursor of the feature"),
             Param::integer("top_n", "Hits kept").min(1.0).default_num(5.0),
+            Param::choice("decoys", "Decoys", &["none", "spectrum"])
+                .default_str("none")
+                .doc("spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Needs a text library and the spectral entropy; none leaves the hits as they are"),
         ],
         runs_in: RunsIn {
             wasm: Some("lib"),
