@@ -8,7 +8,7 @@
   const sci = x => (x >= 1e4 || (x > 0 && x < 0.01) ? Number(x).toExponential(1).replace("e+", "e") : String(+Number(x).toPrecision(3)));
   const DEF = { ppm: 5, floor: 2e4, min_height: 2e5, min_points: 5, rt_tol: 0.1, fill: true };
   /** @type {any} */ const st = { pool: null, crate: "", gate: null, files: [], prev: null, auto: { floor: true, ppm: false }, proofs: null, busy: false };
-  let dlg = null;
+  let dlg = null, pform = null;
   const hooks = [];                       // called after the list of files was read again (the section «Run» refreshes its treatment times)
   const $ = q => dlg.querySelector(q);
   const say = (t, err) => { const e = $("#pipe-msg"); if (e) { e.textContent = t || ""; e.className = err ? "err" : "mut"; } };
@@ -68,6 +68,13 @@
     st.crate = await st.pool.crateVersion();
     return st.pool;
   }
+  /** the Auto / Reset button of a field: the value is back to the descriptor default and the estimate is followed again */
+  function onReset(id) {
+    if (id === "floor") st.auto.floor = true;
+    if (id === "ppm") st.auto.ppm = false;
+    if (st.prev && (id === "floor" || id === "ppm")) suggest(st.prev); else if (id === "floor") $("#pipe-floor-why").textContent = "default";
+  }
+  const sync = () => { if (pform) pform.sync(); };
   const msg = (key, params) => /** @type {any} */ (window).TE(key, params);
 
   /** puts the parameters of a recipe (the `parametri` of a record) into the form; a floor that is not in the recipe stays the estimated one */
@@ -78,6 +85,7 @@
     if ($("#pipe-engine")) { $("#pipe-engine").value = "finder"; engineChanged(); }
     if (typeof p.fill === "boolean") $("#pipe-fill").checked = p.fill;
     st.auto.floor = p.floor == null; if (p.floor != null) { $("#pipe-floor").value = p.floor; $("#pipe-floor-why").textContent = "chosen"; }
+    sync();
   }
   /** values of the six parameters (+ Advanced) from the form; `floor` is left out while it is the estimated one */
   function values() {
@@ -161,6 +169,7 @@
     if (st.auto.floor && p.noise) $("#pipe-floor").value = sci(p.noise.floor);
     if (!st.auto.ppm && p.ppm.value != null) $("#pipe-ppm").value = p.ppm.value.toFixed(1);
     $("#pipe-floor-why").textContent = st.auto.floor ? (p.noise ? "estimated from the histogram (see below)" : "default") : "chosen";
+    sync();
   }
   async function preview() {
     if (st.busy) return;
@@ -178,6 +187,9 @@
   const field = (id, label, val, extra = "", why = "") => `<label>${label}<input id="pipe-${id}" type="number" value="${esc(val)}" step="any" ${extra}><span class="why" id="pipe-${id}-why">${why}</span></label>`;
   const admin = () => typeof uipAdminOn === "function" && uipAdminOn();
   function build() {
+    const steps = /** @type {any} */ (window).PIPEFORM.load(window.QTOOLS.ctx.files);
+    if (!steps) throw new Error("steps-1.json (the step descriptors of the form) is missing");
+    const form = /** @type {any} */ (window).PIPEFORM.html(steps);
     dlg = document.createElement("dialog"); dlg.id = "pipe"; dlg.setAttribute("aria-label", "Pipeline"); document.body.appendChild(dlg);
     dlg.innerHTML = `<div class="top"><h3>Pipeline</h3><button type="button" id="pipe-x" aria-label="Close">&times;</button></div>
       <div class="row"><label>File <select id="pipe-file" aria-label="Index file"></select></label><button type="button" id="pipe-ref" aria-label="Refresh the list of files">&#8635;</button>
@@ -185,15 +197,13 @@
       <div id="pipe-msg" class="mut" role="status"></div>
       ${admin() ? `<div class="row"><label>Engine <select id="pipe-engine" aria-label="Engine of the pipeline"><option value="finder">mzFinder</option><option value="untargeted">mzmine-like (Attributio)</option></select></label></div>` : ""}
       <div id="pipe-unt" hidden><div class="par">${UNT.map(([id, , , label, d]) => field("u-" + id, label, d, 'min="0"')).join("")}</div></div>
-      <div id="pipe-fin" class="par">${field("ppm", "Mass tolerance (ppm)", DEF.ppm, 'min="0.5"')}${field("floor", "Noise floor (intensity)", DEF.floor, 'min="1"', "default")}
-        ${field("hmin", "Minimum height", DEF.min_height, 'min="1"')}${field("npts", "Minimum points", DEF.min_points, 'min="2" step="1"')}${field("rt", "RT tolerance of the alignment (min)", DEF.rt_tol, 'min="0.005"')}
-        <label>Fill the gaps<input id="pipe-fill" type="checkbox" checked style="width:24px;height:24px"></label></div>
-      <details><summary>Advanced</summary><div class="par"><label>Polarity<select id="pipe-pol"><option value="1">positive</option><option value="-1">negative</option></select></label>
-        <label>Rows<select id="pipe-mode"><option value="family">one per family of ions</option><option value="ion">one per ion</option></select></label></div></details>
+      <div id="pipe-fin" class="par">${form.main}</div>
+      <details><summary>More</summary><div class="par">${form.more}</div></details>
       <div id="pipe-proof"></div><div class="charts" id="pipe-hist"><div class="ch a"></div><div class="ch b"></div></div><div class="charts" id="pipe-ex"></div><div id="pipe-run"></div>`;
     $("#pipe-x").onclick = () => dlg.close();
     if ($("#pipe-engine")) $("#pipe-engine").onchange = engineChanged;
     $("#pipe-go").onclick = preview; $("#pipe-ref").onclick = refresh;
+    pform = /** @type {any} */ (window).PIPEFORM.mount(dlg, form.rs, { atDefault: id => (id === "floor" ? st.auto.floor : undefined), onReset });
     $("#pipe-floor").oninput = () => { st.auto.floor = false; $("#pipe-floor-why").textContent = "chosen"; };
     $("#pipe-ppm").oninput = () => { st.auto.ppm = true; };
     if (window.PIPER) window.PIPER.mount($("#pipe-run"), { q: s => dlg.querySelector(s), listIdx, onRefresh: fn => hooks.push(fn), gate: () => st.gate || { ok: true, table: true }, pool: getPool, recipe: () => recipe(values()), values, msg, chart, proofs: () => st.proofs, crate: () => st.crate, apply });
@@ -205,7 +215,7 @@
     if (!st.files.length) say("No .mzidx file: open an mzML in Data first, its index is made there.");
   }
   async function open() {
-    if (!document.getElementById("pipe-css")) { const s = document.createElement("style"); s.id = "pipe-css"; s.textContent = CSS + (/** @type {any} */ (window).PIPEV ? /** @type {any} */ (window).PIPEV.CSS : "") + (/** @type {any} */ (window).PIPEQC ? /** @type {any} */ (window).PIPEQC.css : "") + (/** @type {any} */ (window).PIPET ? /** @type {any} */ (window).PIPET.css : "") + (/** @type {any} */ (window).PIPEX ? /** @type {any} */ (window).PIPEX.css : ""); document.head.appendChild(s); }
+    if (!document.getElementById("pipe-css")) { const s = document.createElement("style"); s.id = "pipe-css"; s.textContent = CSS + (/** @type {any} */ (window).PIPEV ? /** @type {any} */ (window).PIPEV.CSS : "") + (/** @type {any} */ (window).PIPEQC ? /** @type {any} */ (window).PIPEQC.css : "") + (/** @type {any} */ (window).PIPEFORM ? /** @type {any} */ (window).PIPEFORM.css : "") + (/** @type {any} */ (window).PIPET ? /** @type {any} */ (window).PIPET.css : "") + (/** @type {any} */ (window).PIPEX ? /** @type {any} */ (window).PIPEX.css : ""); document.head.appendChild(s); }
     if (!dlg) build();
     if (!dlg.open) dlg.showModal();
     st.gate = gateState(readGate(window.QTOOLS.ctx.files), "");
