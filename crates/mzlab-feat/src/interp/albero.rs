@@ -168,3 +168,49 @@ pub fn tree_votes(
         retained: found.retained,
     })
 }
+
+/// The null distribution of the lead of the best site over the second (log-likelihood): `n` times the masks of the substructures are shuffled among
+/// their formulas, which cuts the link between a fragment and its atoms, and the votes are computed again. A real lead must stand out of it.
+#[allow(clippy::too_many_arguments)]
+pub fn null_margins(
+    ctx: &mut TreeCtx,
+    cand: &Candidates,
+    parent: &Parent,
+    change: &Candidate,
+    cons: &Consensus,
+    mz: f64,
+    n: usize,
+    seed: u64,
+) -> Vec<f64> {
+    let Some(original) = ctx.tree.subs.as_ref().map(|s| s.masks_copy()) else {
+        return vec![];
+    };
+    let mut state = seed | 1;
+    let mut next = move || {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        state
+    };
+    let mut out = vec![];
+    for _ in 0..n {
+        let mut masks = original.clone();
+        for i in (1..masks.len()).rev() {
+            masks.swap(i, (next() % (i as u64 + 1)) as usize);
+        }
+        if let Some(s) = ctx.tree.subs.as_mut() {
+            s.set_masks(masks);
+        }
+        if let Some(v) = tree_votes(ctx, cand, parent, change, cons, mz, 1) {
+            let mut ll = v.ll;
+            ll.sort_by(|a, b| b.total_cmp(a));
+            if ll.len() >= 2 {
+                out.push(ll[0] - ll[1]);
+            }
+        }
+    }
+    if let Some(s) = ctx.tree.subs.as_mut() {
+        s.set_masks(original);
+    }
+    out
+}

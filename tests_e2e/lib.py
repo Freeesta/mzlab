@@ -206,6 +206,15 @@ DAM = _find_dam()
 SH = str(HERE / "shots") + "/"
 os.makedirs(SH, exist_ok=True)
 def mz(f): return str(MZ / f"{f}.mzML")
+def wasm_cap(man: dict, key: str) -> int:
+    """Cap in bytes of the .wasm of the manifest key `key`, read from tools/build_feat_wasm.sh (the one place of the caps). Keys that name the same .wasm are one
+    fused module: its cap is the one of its group (`limit_hr`, `limit_attributio`)."""
+    import re
+    txt = (ROOT / "tools" / "build_feat_wasm.sh").read_text(encoding="utf-8")
+    shared = sum(1 for v in man.values() if isinstance(v, dict) and v.get("wasm") == man[key]["wasm"]) > 1
+    var = ("limit_attributio" if key.startswith("attributio") else "limit_hr") if shared else {"attributio_rev": "limit_rev", "attributio_export": "limit_export", "attributio_ms2": "limit_ms2"}.get(key, "limit")
+    return int(re.search(rf"^{var}=(\d+)", txt, re.M).group(1))
+
 def free_port() -> int:
     import socket
     with socket.socket() as so:

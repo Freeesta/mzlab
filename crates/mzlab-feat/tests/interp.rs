@@ -320,3 +320,23 @@ fn the_block_is_written_read_by_row_and_replaced() {
         read_table(&bytes).unwrap().0.to_bytes()
     );
 }
+
+#[test]
+fn decoys_stay_beyond_ten_ppm_of_every_rule_and_count_the_passing_matches() {
+    use mzlab_feat::interp::filtri::{
+        decoy_masses, registry_decoys, DECOY_K, DECOY_PPM, DECOY_STEP,
+    };
+    let rules = [333.1591, 349.1540, 303.1485];
+    let d = decoy_masses(&rules);
+    assert_eq!(d.len(), rules.len() * DECOY_K as usize);
+    assert!(d
+        .iter()
+        .all(|x| rules.iter().all(|r| (x - r).abs() / r * 1e6 > DECOY_PPM)));
+    // a rule that sits one step above another one: the decoy that lands on it is dropped
+    let close = decoy_masses(&[300.0, 300.0 + DECOY_STEP]);
+    assert!(close.len() < 2 * DECOY_K as usize);
+    // a row at a decoy mass passes or is hidden by the filters; a row elsewhere matches nothing
+    let rows = [(d[0], true), (d[1], false), (500.0, true)];
+    assert_eq!(registry_decoys(&rules, rows), Some((d.len(), 1)));
+    assert_eq!(registry_decoys(&[], rows), None);
+}

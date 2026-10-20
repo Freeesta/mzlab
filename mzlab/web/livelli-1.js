@@ -90,7 +90,7 @@ window.LIVELLI_DATI = {
     {"livello": "3a", "base": "RT isomer", "regola": "the user standard elutes at another RT: another isomer"},
     {"livello": "3a", "base": "expert review", "regola": "the chemist judges a 2a match insufficient"},
     {"livello": "3a", "base": "putative library", "regola": "OFF by default (putative_library_level3): a library entry named 'Spectral Match to ...' or propagated, that passes the gates of a source"},
-    {"livello": "3a", "base": "CSI:FingerID", "regola": "CSI:FingerID structure with COSMIC (ConfidenceScoreApproximate) >= cosmic_min (~10% FDR, Hoffmann et al. 2022); never downgrades a library match"},
+    {"livello": "3a", "base": "CSI:FingerID", "regola": "CSI:FingerID structure with COSMIC (ConfidenceScoreApproximate) >= cosmic_min (0.64 is roughly 10% FDR for the paper's confidence score, a guide with no guarantee; applied here to the Approximate score, Hoffmann et al. 2022); never downgrades a library match"},
     {"livello": "4", "base": "CANOPUS class", "regola": "CANOPUS class only (NPClassifier pathway or ClassyFire superclass) with probability >= canopus_prob_min"},
     {"livello": "0", "base": "suspect-RT", "regola": "standard found by mass + RT but MS/MS not confirmed: outside the counts"},
     {"livello": "0", "base": "none", "regola": "detected, no annotation"}

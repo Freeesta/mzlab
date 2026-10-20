@@ -141,7 +141,7 @@ impl Record for Canopus {
     }
 }
 
-/// CSI:FingerID top structure with the two confidence scores (Exact, Approximate = COSMIC).
+/// CSI:FingerID top structure with the two confidence scores (Exact, Approximate); `cosmic` holds the Approximate one and is the one gated by `cosmic_min`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Structure {
     pub pol: String,

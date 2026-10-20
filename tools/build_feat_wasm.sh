@@ -7,6 +7,7 @@ part=${2:-all}
 want() { [ "$part" = all ] || [ "$part" = "$1" ]; }
 # Limit of every other .wasm after wasm-opt -Oz, bytes (the rule of the project: it does not go up; measured: detect 418400, proofs 450711, finder 436274, attributio 432347, finder_msn 296579, mrm 226834, grafo 199697).
 limit=512000
+limit_hr=1212416   # hr: detect, proofs, mrm, finder, finder_edge and finder_msn in ONE .wasm (measured 1099407 (+10 %); the six separate ones measured 2037856 under 6 x 512000); the only cap of the group (docs/agenti/wasm-tetti.md)
 limit_rev=942080   # attributio-rev carries the table of levels AND the review of one feature (libraries, spectra, formulas, isotopes); measured 912955 (+3 %); the table of chemical classes is a file beside it
 limit_export=659456   # attributio-export carries the cascade AND the four spreadsheet exports (Schymanski folder, publication table, quantification, gradient); measured 636757 (+3 %)
 limit_ms2=479232   # attributio-ms2 carries the sources of a campaign AND the MS2 engine (library search, in-silico ranking, hydrogen rearrangements, RT forest); measured 464210 (+3 %)
@@ -17,7 +18,17 @@ out=${1:-site/static}/wasm-feat
 R=target/wasm32-unknown-unknown/release
 # the wasm-bindgen + wasm-opt of each module run in the background while cargo builds the next one (tools/wasm_paralleli.sh); wasm_wait below joins them
 . tools/wasm_paralleli.sh
-for which in detect proofs mrm finder finder_edge finder_msn untargeted interp; do
+# HR group (detect, proofs, mrm, finder, finder_edge, finder_msn): ONE .wasm "hr" (the manifest keys of the six name it; the workers load it once). MZLAB_WASM_SEPARATI=1 builds the six as before.
+if [ -z "${MZLAB_WASM_SEPARATI:-}" ]; then
+  if want a; then
+    cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features detect,proofs,mrm,finder,finder_edge,finder_msn
+    wasm_pack "$out/hr" $R/mzlab_feat_wasm.wasm $limit_hr "mzFinder hr"
+  fi
+  group="untargeted interp"
+else
+  group="detect proofs mrm finder finder_edge finder_msn untargeted interp"
+fi
+for which in $group; do
   case $which in detect|proofs|mrm|finder) want a || continue ;; *) want b || continue ;; esac
   cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features $which
   wasm_pack "$out/$([ $which = detect ] && echo feat || echo $which | tr _ -)" $R/mzlab_feat_wasm.wasm $([ $which = interp ] && echo $limit_interp || echo $limit) "mzFinder $which"
@@ -59,19 +70,21 @@ fi
 wasm_wait
 [ "$part" = all ] || [ "$part" = manifest ] || exit 0
 python3 - "$out" <<'P'
-import hashlib, json, sys
+import hashlib, json, os, sys
 o = sys.argv[1]
 sha = lambda d: hashlib.sha256(open(f"{o}/{d}/mzlab_feat_wasm_bg.wasm", "rb").read()).hexdigest()
-json.dump({"feat": {"js": "feat/mzlab_feat_wasm.js", "wasm": "feat/mzlab_feat_wasm_bg.wasm", "sha256": sha("feat")},
-           "proofs": {"js": "proofs/mzlab_feat_wasm.js", "wasm": "proofs/mzlab_feat_wasm_bg.wasm", "sha256": sha("proofs")}},
-          open(f"{o}/manifest.json", "w"), indent=1)
+# the six modules of the HR group: one entry each; fused, they all name the .wasm "hr" (same file and SHA-256, the workers load it once)
+fused = os.path.isdir(f"{o}/hr")
+dirs = {"feat": "feat", "proofs": "proofs", "mrm": "mrm", "finder": "finder", "finder_edge": "finder-edge", "finder_msn": "finder-msn"}
+hr = {k: {"js": f"{d}/mzlab_feat_wasm.js", "wasm": f"{d}/mzlab_feat_wasm_bg.wasm", "sha256": sha(d)} for k, d in ((k, "hr" if fused else v) for k, v in dirs.items())}
+json.dump({"feat": hr["feat"], "proofs": hr["proofs"]}, open(f"{o}/manifest.json", "w"), indent=1)
 m = json.load(open(f"{o}/manifest.json"))
 m["table"] = {"js": "table/mzlab_feat_table_wasm.js", "wasm": "table/mzlab_feat_table_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/table/mzlab_feat_table_wasm_bg.wasm", "rb").read()).hexdigest()}
-m["mrm"] = {"js": "mrm/mzlab_feat_wasm.js", "wasm": "mrm/mzlab_feat_wasm_bg.wasm", "sha256": sha("mrm")}
-m["finder"] = {"js": "finder/mzlab_feat_wasm.js", "wasm": "finder/mzlab_feat_wasm_bg.wasm", "sha256": sha("finder")}
-m["finder_edge"] = {"js": "finder-edge/mzlab_feat_wasm.js", "wasm": "finder-edge/mzlab_feat_wasm_bg.wasm", "sha256": sha("finder-edge")}
-m["finder_msn"] = {"js": "finder-msn/mzlab_feat_wasm.js", "wasm": "finder-msn/mzlab_feat_wasm_bg.wasm", "sha256": sha("finder-msn")}
+m["mrm"] = hr["mrm"]
+m["finder"] = hr["finder"]
+m["finder_edge"] = hr["finder_edge"]
+m["finder_msn"] = hr["finder_msn"]
 m["interp"] = {"js": "interp/mzlab_feat_wasm.js", "wasm": "interp/mzlab_feat_wasm_bg.wasm", "sha256": sha("interp")}
 m["untargeted"] = {"js": "untargeted/mzlab_feat_wasm.js", "wasm": "untargeted/mzlab_feat_wasm_bg.wasm", "sha256": sha("untargeted")}
 m["grafo"] = {"js": "grafo/mzlab_feat_grafo_wasm.js", "wasm": "grafo/mzlab_feat_grafo_wasm_bg.wasm",

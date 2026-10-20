@@ -23,7 +23,9 @@ pub struct AnnotationSettings {
     pub library_conflict_margin: f64,
     pub gnps_mass_tol_ppm: f64,
     pub mzlib_mass_tol_ppm: f64,
-    /// COSMIC confidence of the Level 3 gate (~10 % FDR).
+    /// COSMIC confidence of the Level 3 gate. 0.64 is the threshold Hoffmann et al. (Nat Biotechnol 40:411, 2022) use for their confidence score,
+    /// "roughly corresponding to FDR 10 %", a practical guide and "no guarantee in either direction". The paper does not define the exact/approximate
+    /// modes of SIRIUS; this tool applies the threshold to `ConfidenceScoreApproximate` (the reference tool's choice), so the 10 % is not verified for it.
     pub cosmic_min: f64,
     /// A CANOPUS class is shown (and gives Level 4) at or above this probability.
     pub canopus_min: f64,
@@ -32,11 +34,15 @@ pub struct AnnotationSettings {
 }
 
 /// The level that follows from a basis.
+///
+/// `CANOPUS class` (a class-only call, no structure and no formula) is Level 4 here, as in the Attributio reference tool, so it stays out of the
+/// publication tables. Schymanski et al. 2014 would call a class assignment Level 3 and keep Level 4 for a unique molecular formula; moving it
+/// changes every export and identity count that the reference goldens fix. MS2DeepScore is not computed (see `ms2_engine`), so it has no basis.
 pub fn basis_level(basis: &str) -> i32 {
     match basis {
         "reference standard" => 1,
         "spectral library" => 2,
-        "putative library" | "MS2DeepScore" | "CSI:FingerID" => 3,
+        "putative library" | "CSI:FingerID" => 3,
         "CANOPUS class" => 4,
         _ => 0,
     }
@@ -60,5 +66,34 @@ impl Default for AnnotationSettings {
             canopus_min: 0.70,
             rt_group_tol_min: 0.20,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn levels_of_the_bases_follow_the_documented_cascade() {
+        assert_eq!(basis_level("reference standard"), 1);
+        assert_eq!(basis_level("spectral library"), 2);
+        assert_eq!(basis_level("CSI:FingerID"), 3);
+        // class-only calls are Level 4 in this tool (deviation from Schymanski 2014, see `basis_level`)
+        assert_eq!(basis_level("CANOPUS class"), 4);
+        // MS2DeepScore is never computed: it has neither a level nor a label
+        assert_eq!(basis_level("MS2DeepScore"), 0);
+        let s = AnnotationSettings::default();
+        assert_eq!(s.label("MS2DeepScore"), s.label("none"));
+    }
+}
+
+#[cfg(test)]
+mod cosmic_tests {
+    use super::*;
+
+    // 0.64: the confidence-score threshold of Hoffmann et al. 2022 (roughly FDR 10 %)
+    #[test]
+    fn cosmic_default_is_the_published_threshold() {
+        assert_eq!(AnnotationSettings::default().cosmic_min, 0.64);
     }
 }

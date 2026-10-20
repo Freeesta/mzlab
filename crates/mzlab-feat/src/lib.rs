@@ -55,6 +55,7 @@ pub mod samples;
 pub mod series;
 pub mod slabs;
 pub use mzlab_core::sortc;
+pub mod steps;
 pub mod store;
 mod store_read;
 pub mod suspects;

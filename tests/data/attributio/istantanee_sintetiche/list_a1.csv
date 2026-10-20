@@ -1,0 +1,6 @@
+list_id;list_version;access_date;source;name;cas;pubchem_cid;inchikey;inchikey_skeleton;smiles;formula;mono_mass;list_attribute;is_tp;parent;tp_reference;lc_esi_amenable;amenability_rule;xlogp;resolved_by
+HHP_PAN;v1;2026-09-22;PAN;Alphazol  chloride;111-11-1;11;AAAAAAAAAAAAAA-UHFFFAOYSA-N;AAAAAAAAAAAAAA;CC1=CC=C(C=C1)N=C(N)O;C9H10N2O;162.0793;Highly hazardous;falso;;;vero;ESI+ amine;1.5;nome
+HHP_PAN;v1;2026-09-22;PAN;Alphazol;111-11-1;12;AAAAAAAAAAAAAA-OTHERKEYAA-N;AAAAAAAAAAAAAA;CC1=CC=C(C=C1)N=C(N)O;C9H10N2O;162.0793;Highly hazardous, Persistent;falso;;;vero;ESI+ amine;1.5;struttura della fonte
+HHP_PAN;v1;2026-09-22;PAN;nan;;13;BBBBBBBBBBBBBB-UHFFFAOYSA-N;BBBBBBBBBBBBBB;;;194.08;None;true;Parent X;Ref 1;doubtful;;;registro
+HHP_PAN;v1;2026-09-22;PAN;Short key;;14;SHORT-UHFFFAOYSA-N;SHORT;;;100;x;false;;;true;;;nome
+HHP_PAN;v1;2026-09-22;PAN;"Beta ""quoted""; with semicolon";;15;CCCCCCCCCCCCCC-UHFFFAOYSA-N;CCCCCCCCCCCCCC;;C5H5;70.1;Crit;false;;;true;;2;CID della fonte

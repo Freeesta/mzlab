@@ -23,6 +23,7 @@
     "../../mzlab/web/lang/en.js",
     "../../mzlab/web/tour.js",
     "../../mzlab/web/tour-dopo.js",
+    "../../mzlab/web/tema-morbido.js",
     "../../mzlab/web/avvio.js",
     "../../mzlab/web/carica.js",
     "../../mzlab/web/first-paint.js",

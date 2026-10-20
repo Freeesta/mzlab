@@ -22,3 +22,6 @@ details[open]>:not(summary){animation:tr-fade var(--t-med) var(--ease-out)}
 /* reduced motion or no animation on the first paint: nothing moves */
 @media (prefers-reduced-motion:reduce){#stmenu,#fpop,#colpop,#helppop,.sp-pop,.subpop,.cpop,.hmore,.corrm,dialog[open],dialog[open]::backdrop,#calcdlg,#paletta,#paletta .pal-b,section[id^="v-"],.pnl:not(.flash),details[open]>*{animation:none!important}}
 :root[data-a11y-reduce] :is(#stmenu,#fpop,#colpop,#helppop,.sp-pop,.subpop,.cpop,.hmore,.corrm,dialog[open],#calcdlg,#paletta,#paletta .pal-b,section[id^="v-"],.pnl:not(.flash),details[open]>*),:root[data-a11y-reduce] dialog[open]::backdrop,:root[data-a11y-reduce] #paletta{animation:none!important}
+/* soft theme change (tema-morbido.js): colours fade; the browser cross-fade of the page lasts the same */
+html.tema-tr,html.tema-tr *{transition:background-color .3s,color .3s,border-color .3s,fill .3s,stroke .3s!important}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.3s}

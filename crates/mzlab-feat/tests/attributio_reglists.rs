@@ -20,6 +20,7 @@ fn read(name: &str) -> String {
 use mzlab_feat::attributio::reglists::b1::{match_campaign, B1Config, IdentityIn, StructRow, B1};
 use mzlab_feat::attributio::reglists::catalog;
 use mzlab_feat::attributio::reglists::p3::{cross_table, CrossSummary};
+use mzlab_feat::attributio::reglists::schema::*;
 
 fn s(v: &Value) -> String {
     v.as_str().unwrap_or("").to_string()
@@ -218,7 +219,7 @@ fn check_cross(tag: &str, res: &[(&str, &B1)], want: &Value) {
     check_cross_summary(tag, res, &sm, want);
 }
 
-fn check_cross_summary(tag: &str, res: &[(&str, &B1)], sm: &[CrossSummary], want: &Value) {
+fn check_cross_summary(_tag: &str, res: &[(&str, &B1)], sm: &[CrossSummary], want: &Value) {
     let ws = want["summary"].as_array().unwrap();
     assert_eq!(sm.len(), ws.len());
     for (r, w) in sm.iter().zip(ws) {
@@ -266,4 +267,79 @@ fn p3_matches_the_golden_data() {
         &g["p3_three"],
     );
     check_cross("p3_one", &[("W", &w)], &g["p3_one"]);
+}
+
+fn row_json(r: &ListRow) -> Value {
+    Value::Object(
+        SCHEMA
+            .iter()
+            .map(|c| (c.to_string(), json!(r.get(c))))
+            .collect(),
+    )
+}
+
+#[test]
+fn schema_matches_the_golden_data() {
+    let g = golden("tox", "schema.json");
+    let raw = read_list(&read("list_a1.csv")).unwrap();
+    assert_eq!(Value::Array(raw.iter().map(row_json).collect()), g["read"]);
+    assert_eq!(
+        Value::Array(normalise(&raw).iter().map(row_json).collect()),
+        g["normalised"]
+    );
+    let col = collapse_by_skeleton(&raw);
+    assert_eq!(
+        Value::Array(col.iter().map(row_json).collect()),
+        g["collapsed"]
+    );
+    assert_eq!(json!(write_list(&raw)), g["written"]);
+    let who: Vec<ListRow> = col
+        .iter()
+        .map(|r| {
+            let mut o = r.clone();
+            o.set("list_id", "WHO_MIA".into());
+            o
+        })
+        .collect();
+    let groups = [("HHP_PAN", "pesticides"), ("WHO_MIA", "drugs")]
+        .map(|(a, b)| (a.to_string(), b.to_string()))
+        .into();
+    let long = membership(&[("HHP_PAN", &col), ("WHO_MIA", &who)], &groups);
+    assert_eq!(json!(write_membership(&long)), g["long_csv"]);
+    let wide = membership_wide(&long, &["WHO_MIA", "EU_X"]);
+    let want = g["wide"].as_array().unwrap();
+    assert_eq!(wide.rows.len(), want.len());
+    for (r, w) in wide.rows.iter().zip(want) {
+        assert_eq!(
+            json!([
+                &r.first_block,
+                r.n_lists,
+                &r.name,
+                &r.formula,
+                &r.mono_mass,
+                &r.lc_esi_amenable
+            ]),
+            json!([
+                w["inchikey_skeleton"],
+                w["n_lists"],
+                w["name"],
+                w["formula"],
+                w["mono_mass"],
+                w["lc_esi_amenable"]
+            ])
+        );
+        for (l, f) in wide.lists.iter().zip(&r.flags) {
+            assert_eq!(json!(f), w[l]);
+        }
+    }
+    let cols: Vec<&str> = g["wide_columns"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c.as_str().unwrap())
+        .collect();
+    assert_eq!(
+        &cols[1..1 + wide.lists.len()],
+        wide.lists.iter().map(String::as_str).collect::<Vec<_>>()
+    );
 }
