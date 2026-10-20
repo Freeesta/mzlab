@@ -5,7 +5,7 @@ use mzlab_core::json::{self, round, Out, Value};
 
 use super::confronto::{match_spectrum, Evidence, Peak, Pol, Report, Tol};
 use super::prior::{prior_of, write_prior, Prior};
-use super::siti::sites;
+use super::siti::{sites, Site};
 use crate::chem::grafo::Mol;
 
 /// Peaks as `[[mz, intensity], ..]` or `[{"mz", "i"}, ..]` (`"intensity"` is accepted for `"i"`).
@@ -55,6 +55,26 @@ fn ints(o: &mut Out, v: &[usize]) {
     o.raw("]");
 }
 
+/// The `sites` array items; the atoms of a multi-atom site (`partner`, `third`) are listed after its kind.
+fn sites_json(o: &mut Out, sites: &[Site]) {
+    for (i, s) in sites.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"atom\":")
+            .int(s.atom as i64)
+            .raw(",\"symmetry\":")
+            .int(s.class as i64)
+            .raw(",\"kind\":")
+            .str(s.kind);
+        if let (true, Some(p)) = (super::siti::is_multi(s.kind), s.partner) {
+            o.raw(",\"partner\":").int(p as i64);
+            if let Some(t) = s.third {
+                o.raw(",\"third\":").int(t as i64);
+            }
+        }
+        o.raw("}");
+    }
+}
+
 fn write(r: &Report, smiles: &str, transform: &str, prior: Option<&[Prior]>) -> String {
     let mut o = Out::default();
     o.raw("{\"format\":\"posiz\",\"version\":1,\"parent\":")
@@ -72,19 +92,7 @@ fn write(r: &Report, smiles: &str, transform: &str, prior: Option<&[Prior]>) -> 
         .raw(",\"tol_unit\":")
         .str(r.tol.unit())
         .raw(",\"sites\":[");
-    for (i, s) in r.sites.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"atom\":")
-            .int(s.atom as i64)
-            .raw(",\"symmetry\":")
-            .int(s.class as i64)
-            .raw(",\"kind\":")
-            .str(s.kind);
-        if let (true, Some(p)) = (super::siti::is_pair(s.kind), s.partner) {
-            o.raw(",\"partner\":").int(p as i64);
-        }
-        o.raw("}");
-    }
+    sites_json(&mut o, &r.sites);
     o.raw("],\"classes\":[");
     for (i, c) in r.classes.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })

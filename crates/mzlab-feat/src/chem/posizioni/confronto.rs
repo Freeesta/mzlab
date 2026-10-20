@@ -138,7 +138,7 @@ fn candidates(mol: &Mol, sites: &[Site], pol: Pol, used: &[Peak], tol: Tol) -> V
             let mut c = Cand {
                 sites: g
                     .iter()
-                    .flat_map(|s| std::iter::once(s.atom).chain(s.partner))
+                    .flat_map(|s| std::iter::once(s.atom).chain(s.partner).chain(s.third))
                     .collect(),
                 rep: g[0].clone(),
                 frags,

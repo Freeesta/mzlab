@@ -251,6 +251,7 @@ try:
             assert pg.locator('.flx-res .flw-digest button:has-text("Copy")').count() == 1
             # the engine exports of Attributio hang on the same campaign: six items, one file downloads
             assert pg.locator('.flx-res #at-export:not([disabled])').count() == 1 and pg.locator('.flx-res #at-export-menu button').count() == 6
+            assert pg.locator('.flx-res .flw-ms2 #ms2-insilico').count() == 1 and pg.locator('.flx-res .flw-ms2 #ms2-predict').count() == 1  # the MS2 panel
             pg.click('.flx-res #at-export')
             with pg.expect_download() as dl: pg.click('.flx-res #at-export-menu button[data-kind=schymanski]')
             assert dl.value.suggested_filename == "out_schymanski.csv"
