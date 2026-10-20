@@ -2,6 +2,7 @@
 //! The role and the minutes follow `project::guess_sample` (the same names give the same minutes), plus seconds (`90 s`), the replicate `(2)`,
 //! the infusion (`infusion`, `infusione`, `direct-infusion`, `FIA` or an MSn file), the dark control (`dark`, `buio`, `adsorption`) and the series.
 
+use super::posizioni::{self, Proposta};
 use super::{number_replicates, Campione};
 use crate::project::{guess_conc, guess_sample};
 
@@ -71,26 +72,30 @@ fn after_prefix(s: &[char]) -> Vec<usize> {
     v
 }
 
-/// The unit of the time that ends at `e` (`min` when none is written), or None when what follows is not a time.
-fn time_tail(s: &[char], e: usize) -> Option<&'static str> {
+/// The unit of the time that ends at `e` (`min` when none is written) and where the time ends, or None when what follows is not a time.
+fn time_tail(s: &[char], e: usize) -> Option<(&'static str, usize)> {
     let term = |j: usize| j >= s.len() || is_sep(s[j]);
     let k = skip_ws(s, e);
     for (w, unit) in TIME_WORDS {
         if starts(s, k, w) {
             let j = k + w.len();
-            if term(j) || (w == "day" && j < s.len() && s[j] == 's' && term(j + 1)) {
-                return Some(unit);
+            if term(j) {
+                return Some((unit, j));
+            }
+            if w == "day" && j < s.len() && s[j] == 's' && term(j + 1) {
+                return Some((unit, j + 1));
             }
         }
     }
-    (k > e || term(e)).then_some("min")
+    (k > e || term(e)).then_some(("min", e))
 }
 
-/// A time read from a name: the value as written, its unit and where the match starts.
+/// A time read from a name: the value as written, its unit and where the match starts and ends.
 struct Time {
     value: f64,
     unit: &'static str,
     start: usize,
+    end: usize,
 }
 
 /// `t?\d+([.,]\d+)?\s*unit?` after a separator, in the order of `guess_sample`.
@@ -98,7 +103,7 @@ fn time_of(s: &[char]) -> Option<Time> {
     for p in after_prefix(s) {
         let i = if p < s.len() && s[p] == 't' { p + 1 } else { p };
         for e in number_ends(s, i) {
-            if let Some(unit) = time_tail(s, e) {
+            if let Some((unit, end)) = time_tail(s, e) {
                 let text: String = s[i..e]
                     .iter()
                     .map(|c| if *c == ',' { '.' } else { *c })
@@ -107,6 +112,7 @@ fn time_of(s: &[char]) -> Option<Time> {
                     value: text.parse().unwrap_or(0.0),
                     unit,
                     start: p,
+                    end,
                 });
             }
         }
@@ -221,9 +227,18 @@ fn assign_series(out: &mut [Campione], prefixes: &[Option<String>]) {
 
 /// The metadata proposed for `files` (`(name, SHA-256, kind of the file)`, in the order of injection; kind `msn` = an infusion); an infusion and a QC have no time.
 pub fn proponi(files: &[(String, String, String)]) -> Vec<Campione> {
+    proponi_spiegato(files)
+        .into_iter()
+        .map(|p| p.campione)
+        .collect()
+}
+
+/// The same as `proponi`, each file with the parts of its name that decided its fields (`posizioni.rs`); the values are the ones of `proponi`.
+pub fn proponi_spiegato(files: &[(String, String, String)]) -> Vec<Proposta> {
     let mut out = Vec::with_capacity(files.len());
     let mut prefixes = Vec::with_capacity(files.len());
     let mut written = Vec::with_capacity(files.len());
+    let mut spans = Vec::with_capacity(files.len());
     for (i, (name, sha, file_kind)) in files.iter().enumerate() {
         let (stem, _, guess) = guess_sample(name);
         let lowc: Vec<char> = stem.to_lowercase().chars().collect();
@@ -249,16 +264,32 @@ pub fn proponi(files: &[(String, String, String)]) -> Vec<Campione> {
             c.conc = Some(v);
             c.unit = u;
         }
+        spans.push(posizioni::of_file(
+            name,
+            &c,
+            &stem,
+            time.as_ref().map(|t| (t.start, t.end)),
+        ));
         prefixes.push(time.map(|t| prefix_of(&stem, &lowc, t.start)));
         written.push(written_replicate(&stem));
         out.push(c);
     }
     assign_series(&mut out, &prefixes);
     number_replicates(&mut out);
-    for (c, w) in out.iter_mut().zip(written) {
+    for (c, w) in out.iter_mut().zip(&written) {
         if let Some(n) = w {
-            c.replicate = n;
+            c.replicate = *n;
         }
     }
-    out
+    out.into_iter()
+        .zip(spans)
+        .zip(written)
+        .map(|((c, sp), w)| {
+            let positions = sp.finish(&c, w.is_some());
+            Proposta {
+                campione: c,
+                positions,
+            }
+        })
+        .collect()
 }

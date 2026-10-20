@@ -439,21 +439,35 @@ fn num(v: f64) -> String {
     }
 }
 
+/// Header of the inclusion list.
+pub const INCLUSION_HEADER: &str = "m/z,charge,RT_start_min,RT_end_min,note";
+
+/// One row of the inclusion list: m/z, charge 1, RT window in minutes, formula and priority as the note.
+pub fn inclusion_row(mz: f64, rt_start: f64, rt_end: f64, formula: &str, priority: f64) -> String {
+    format!(
+        "{},1,{},{},\"{} priority {}\"",
+        num(round(mz, 4)),
+        num(round(rt_start, 2)),
+        num(round(rt_end, 2)),
+        formula,
+        num(round(priority, 1))
+    )
+}
+
 /// `inclusion_csv(n)`: m/z, charge, start and end RT, note.
 pub fn inclusion_csv(d: &Dig, n: usize) -> String {
-    let mut lines = vec!["m/z,charge,RT_start_min,RT_end_min,note".to_string()];
+    let mut lines = vec![INCLUSION_HEADER.to_string()];
     for c in inclusion(d)
         .into_iter()
         .take(if n == 0 { INCLUSION } else { n })
     {
         let (a, b) = rt_span(c);
-        lines.push(format!(
-            "{},1,{},{},\"{} priority {}\"",
-            num(round(c.mz, 4)),
-            num(round(a, 2)),
-            num(round(b, 2)),
+        lines.push(inclusion_row(
+            c.mz,
+            a,
+            b,
             c.formula.as_deref().unwrap_or(""),
-            num(round(c.score, 1))
+            c.score,
         ));
     }
     lines.join("\n")

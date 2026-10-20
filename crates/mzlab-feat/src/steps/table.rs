@@ -135,6 +135,15 @@ pub(super) fn filter() -> Step {
             .min(0.0)
             .unit("fraction")
             .doc("The largest area of a sample is at least this many times the mean area of the blanks; needs a blank in the samples; left empty, the rule is off"),
+        Param::number("qc_cv_max", "Maximum QC CV")
+            .min(0.0)
+            .unit("percent")
+            .doc("CV of the areas over the files with the role qc is at most this; a row needs a peak in at least the minimum number of them; fewer qc files than that is the error error.qc.tooFew; left empty, the rule is off"),
+        Param::integer("qc_min_files", "Minimum QC files")
+            .min(2.0)
+            .default_num(3.0)
+            .unit("files")
+            .doc("QC files with a peak that the row needs for the QC rule, and QC files that the series needs"),
         Param::boolean("require_ms2", "Require MS2").doc("An MS2 is linked to the peak; left empty, the rule is off"),
         Param::choice("normalize", "Normalisation", &["none", "sum", "median"])
             .default_str("none")
@@ -152,7 +161,7 @@ pub(super) fn filter() -> Step {
             wasm_ceiling_bytes: Some(FEAT_CEILING),
             native: true,
         },
-        errors: vec!["error.badView", "error.badCampioni", "error.newerFormat"],
+        errors: vec!["error.badView", "error.badCampioni", "error.newerFormat", "error.qc.tooFew"],
         ..Step::core(
             "table.filter",
             "Filter table",
@@ -187,6 +196,36 @@ pub(super) fn export_csv() -> Step {
             "export.table_csv",
             "Export table as CSV",
             "Writes the feature table, under the view of the filter step when one is wired, as a CSV file; the column names carry the file names, so equal names give equal bytes.",
+        )
+    }
+}
+
+/// `export.inclusion`: the inclusion list of the products expected in the plan, to inject the samples again in targeted MS2 (`export_inclusione`).
+pub(super) fn export_inclusion() -> Step {
+    let params = vec![
+        Param::text("adducts", "Adducts")
+            .default_str("[M+H]+")
+            .doc("Adducts of the ion table separated by commas; one row per product and adduct"),
+        Param::number("rt_window", "RT half window")
+            .min(0.0)
+            .default_num(0.5)
+            .unit("min")
+            .doc("Each row spans the expected RT of the product plus and minus this; the start is never below 0"),
+    ];
+    Step {
+        ins: vec![Port::new("tp", DataType::Tp, "Expected products with their RT")],
+        outs: vec![Port::new("report", DataType::Report, "Inclusion list as CSV")],
+        params,
+        runs_in: RunsIn {
+            wasm: Some("table"),
+            wasm_ceiling_bytes: Some(FEAT_CEILING),
+            native: true,
+        },
+        errors: vec!["error.export.adduct", "error.newerFormat"],
+        ..Step::core(
+            "export.inclusion",
+            "Export inclusion list",
+            "Writes the m/z and RT windows of the expected products as a CSV in the columns of the inclusion list of mzFinder, sorted by RT; it adds no level and no verdict.",
         )
     }
 }

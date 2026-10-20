@@ -39,3 +39,7 @@ Prima di aprire la PR: `python3 tools/pre_pr.py` (1-2 minuti: mappa, soglie, i18
 - Un test pytest che passa un percorso a `node -e` lo scrive con `.as_posix()` (i backslash di Windows finirebbero nella stringa JS) e ogni `subprocess.run` di node ha `text=True, encoding="utf-8"` (su Windows la decodifica predefinita è cp1252).
 - Il passo «wasm-bindgen CLI» di `rust.yml` (job `rust-wasm`) sta prima del salvataggio della cache: il binario in `~/.cargo/bin` entra nella cache e le guardie non lo ricompilano.
 - Teoria e Pratica leggono prima le chiavi `mzlab.*` e poi le vecchie `qqq.*` (le pagine standalone non caricano `nomi.js`); lo snippet del tema (`tools/tema_testa.py`) fa lo stesso per `prefs`.
+
+## Pull request che toccano solo la Teoria
+- `tools/ci_solo_teoria.py <sha base>` (primo passo, id `solo`, dei job `pytest` e `browser` di `test.yml`) scrive `solo=true` solo se OGNI file cambiato è `mzlab/web/teoria/src/NN-*.md`, `mzlab/web/teoria/NN-*.html` o `mzlab/web/teoria/indice-ricerca.js` (rinominati e cancellati contano con il vecchio percorso); un file fuori elenco, nessun file o un push su `main` danno `false`.
+- Con `solo=true` i job restano verdi ma saltano toolchain Rust, wasm-bindgen e cache e lanciano solo i test della lista `PYTEST` (capitoli, Libro, nomi vietati) e i 4 e2e `E2E` (`verifica.py --fumo --solo`); ogni altra PR esegue tutto. Prova: `tests/test_ci_solo_teoria.py`.

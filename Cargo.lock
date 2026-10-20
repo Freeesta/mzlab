@@ -2150,6 +2150,14 @@ name = "mzlab-libro"
 version = "1.0.1"
 
 [[package]]
+name = "mzlab-libro-wasm"
+version = "1.0.1"
+dependencies = [
+ "mzlab-libro",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-mol"
 version = "1.0.1"
 dependencies = [

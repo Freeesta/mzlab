@@ -8,7 +8,7 @@
 // The active cell (the last one clicked) has an outline. Nothing here exists in the low-resolution world: the functions return at once.
 const BANCO = (() => {
   const st = document.createElement("style");
-  st.textContent = `.hrw .pnl.act{box-shadow:0 0 0 2px var(--accent)}
+  st.textContent = `.hrw .pnl.act:not([data-pair]){box-shadow:inset 3px 0 0 var(--accent),0 1px 4px rgba(60,50,20,.08)}
 .bfw{display:inline-flex;align-items:center;gap:4px;margin-left:6px}.bfw select{max-width:21em;min-width:9em}.bfw .pin{padding:2px 5px}.bfw .pin.on{background:var(--sel);color:var(--accent);border-color:var(--accent)}
 .hrw #g-add,.hrw .pnl.spec [data-a="par"]{display:none}
 #hrbar{display:inline-flex;align-items:center;gap:var(--sp-4)}#hrbar[hidden]{display:none}

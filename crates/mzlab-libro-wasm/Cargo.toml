@@ -1,0 +1,13 @@
+[package]
+name = "mzlab-libro-wasm"
+description = "wasm-bindgen bridge of mzlab-libro (Libro Markdown dialect -> Teoria HTML); a .wasm of its own, loaded only by the administrator Teoria editor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+mzlab-libro = { path = "../mzlab-libro" }
+wasm-bindgen = "0.2"
