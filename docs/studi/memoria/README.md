@@ -1,11 +1,11 @@
 # Memoria elastica del motore nel browser (studio)
 
-Problema: 12 file `.raw` Orbitrap (≈4,2 milioni di picchi e ≈7950 scansioni ciascuno) fermano il Dig di Tabui in «Alignment and filters» con `error.memoryBudget {fase: align, stima_mb: 188, budget_mb: 192, eccesso_mb: 1}`. Questo studio dice dove va la memoria, perché la stima è 188 MB, come rendere il budget adattivo e in che ordine lavorare. Nessun dato reale: i numeri vengono dal codice, dalle guardie e da conti algebrici.
+Problema: 12 file `.raw` Orbitrap (≈4,2 milioni di picchi e ≈7950 scansioni ciascuno) fermano il Dig di Tabui in «Alignment and filters» con `error.memoryBudget {fase: align, stima_mb: 188, budget_mb: 192, eccesso_mb: 1}`. Questo studio dice dove va la memoria, perché la stima è 188 MB, come rendere il budget adattivo e in che ordine lavorare. Nessun dato reale: i numeri vengono dal codice, dalle guardie, da conti algebrici e dalle misure aggregate della chat locale (pipeline nativa, stessa ricetta).
 
 ## 0. Sintesi
 - La causa principale NON è il tetto: il Dig usa il modo «famiglia» (`Recipe::default`, `mode: Mode::Family`; `feat-worker.js` manda solo `{polarity, mode}`) e in `slabs::align_and_fill_stored` il modo famiglia è SEMPRE in memoria: le lastre esistono solo per il modo «ione». Rendere il modo famiglia divisibile in lastre (pacchetto M1) fa entrare la serie anche a 192 MB, con gli stessi byte.
 - Seconda causa: il Dig non riceve il budget adattivo: `feat-worker.js` usa `opts.budgetMb || 0` e nessun chiamante lo imposta, quindi ogni passo di Tabui gira a 192 MB anche sul computer che ne avrebbe di più.
-- Terza (da confermare con le misure del Mac): ≈145 000 feature per file sono tante per un Orbitrap; la soglia del Dig è fissa (`MIN_HEIGHT` 2e5) e la stima del rumore di `params.rs` non entra nella ricetta. Cambiarla cambia i risultati: decide Federico (pacchetto M7).
+- Causa a monte (misurata): 141 000-144 000 feature per file entrano in align (1,72 M righe) perché la soglia fissa (`MIN_HEIGHT` 2e5) sta sotto il rumore di questi dati (altezza mediana delle feature 4e5); con 5e5 le righe scendono a ≈50 000 per file e align passa, con 1e6 a ≈14 700. La soglia stimata dai dati (`params::noise_from_hist`) è in corso nella chat locale (M7): riduce il bisogno di memoria di circa 10 volte e vale più di qualunque tetto.
 - Il messaggio inganna: `eccesso_mb` è calcolato contro il tetto (192) e non contro lo spazio libero (≈177 MB), così «stima 188, budget 192» sembra entrare. Si corregge in M2.
 - Dopo M1 si alza il tetto (4 GiB) con un budget a livelli scelto in Rust dai fatti del dispositivo, una prova di crescita all'avvio, un solo worker «grande» alla volta, avviso prima e discesa a gradini dopo una morte.
 
@@ -32,7 +32,8 @@ Memoria della scheda: il motore Dati, fino a `min(core−1, 4)` worker di `feat-
 - Costo teorico delle sole righe lean: 39 B × 1,7 M ≈ 63 MB. La stima è 3× quel valore: 40 B/riga di lavoro (copie ordinate, logaritmi) e ≈60 MB di tabella stimata. Non è uno spreco della stima: `align_grouped` passa due volte su tutti i file e `link` tiene `group_of` per ogni riga.
 - Inefficienza strutturale: il modo famiglia ha bisogno di tutto solo per `famalign::link`, che per ogni riga usa `group_of`, `role`, `family_id`, `charge`, `rt`. I gruppi di ioni si formano per m/z: si possono fare a lastre come nel modo ione, tenendo solo la tabella allineata e `group_of` (4 B/riga), e poi contare voti e legami leggendo un file alla volta. Peso a lastre: tabella + 4 B/riga + una lastra + un file, ≈1/4 di oggi (M1).
 - Strato debole: se align passa, `finish` tiene insieme le tabelle deboli di tutti i file (29 B/riga, soglia `WEAK_RATIO` 0,3 × 2e5): con molte feature deboli è il prossimo rifiuto `align`. Si sposta fuori dalla memoria lineare e si allinea a lastre (M1, seconda parte).
-- Feature di rumore: 145 000 feature per file su ≈530 picchi per scansione indicano che la soglia assoluta 2e5 sta vicino al rumore di quello strumento. La misura del Mac deve dire, per file: righe del `.mzfeatf`, righe con altezza < 3 × rumore stimato (`params::estimate`), righe deboli. Se gran parte è rumore, la soglia proposta da `params.rs` riduce la stima più di qualunque tetto, ma è una scelta scientifica (M7).
+- Misura nativa (12 file, ricetta predefinita, `--budget-mb 192`): stesso rifiuto del sito (188/192). Senza tetto: detect 40 s, totale 74 s, align 0,4 s per ione e 0,9 s per famiglia; per ione a 192 MB passa già a lastre (71 s). Il rifiuto è solo del modo famiglia, come previsto dal conto sopra.
+- Feature di rumore: le 1,72 M righe sono quasi tutte sotto il rumore reale (altezza minima 1,3e5, mediana 4e5); un allineamento di riferimento con mzmine ne trova ≈7600 per file. La correzione a monte è la soglia stimata (M7); M1 resta necessario perché serie più lunghe o soglie più basse in modo famiglia arrivano allo stesso muro.
 
 ## 3. Contratto di memoria v2
 
@@ -91,7 +92,7 @@ Memoria della scheda: il motore Dati, fino a `min(core−1, 4)` worker di `feat-
 - Avanzamento a lastre: «Alignment, part 3 of 9» nella barra del passo (Tabui) e la fase con «parte N di M» nella barra di `progresso.js` (Dati).
 
 ## 5. Pacchetti DEV (in serie)
-Ordine: M1 e M2 in parallelo (file diversi); poi M3; poi M4; M5 dopo M4; M6 e M7 indipendenti. Ogni PR misura i `.wasm` prima e dopo (`tools/build_feat_wasm.sh`, `limit*`) e riporta i numeri: finder ≤ 512 000 B, gruppo HR 1 118 979 su 1 212 416, table 447 688 su 512 000, libro 152 008 su 159 744, motore principale ≈231 B di margine (un aumento sopra il tetto chiede l'assenso di Federico nella PR, mai un tetto alzato in silenzio).
+Ordine: M7 (chat locale) per prima; M1 e M2 in parallelo (file diversi); poi M3; poi M4; M5 dopo M4; M6 dopo M3. Ogni PR misura i `.wasm` prima e dopo (`tools/build_feat_wasm.sh`, `limit*`) e riporta i numeri: finder ≤ 512 000 B, gruppo HR 1 118 979 su 1 212 416, table 447 688 su 512 000, libro 152 008 su 159 744, motore principale ≈231 B di margine (un aumento sopra il tetto chiede l'assenso di Federico nella PR, mai un tetto alzato in silenzio).
 
 ### 5.1 M1 · Align «famiglia» e strato debole a lastre (nuova DEV, Rust)
 - Obiettivo: il modo famiglia (`famalign::align_families`) e lo strato debole (`series::finish`) seguono la regola di `slabs.rs`: in memoria se entra in metà del libero, altrimenti a lastre di m/z, con gli stessi byte del `.mzfeat`.
@@ -138,7 +139,6 @@ Ordine: M1 e M2 in parallelo (file diversi); poi M3; poi M4; M5 dopo M4; M6 e M7
 - Obiettivo: il motore Dati usa `sicuro_mb` (lavoro = budget − cache), il riciclo segue `sicuro_mb`; mappe e `subxic` invariati. Il permesso grande serve solo se una rotta stima oltre `sicuro` (oggi nessuna): solo il punto d'aggancio.
 - Prove: guardie `engine_*` invariate; `e2e_memoria_riduzioni.py`; misura della scheda prima/dopo.
 
-### 5.7 M7 · Soglia del rumore nel Dig (decisione di Federico, prima della DEV)
-- Domanda: usare `max(2e5, soglia stimata da params::estimate)` come altezza minima del Dig, mostrata nel passo «Features» e scritta nella ricetta (`.mzfeatf` con nuova impronta)? Cambia i risultati (meno feature di rumore), quindi serve un sì esplicito.
-- Prima, dalle misure del Mac: feature per file, quota sotto 3 × rumore, righe deboli. Se la quota supera metà, M7 vale più di M2-M4 per questi dati.
-- DEV (se sì): `crates/mzlab-feat/src/{params,recipe,trace}.rs`, `feat-worker.js` (ricetta), `docs/agenti/mzfeat.md`; prove di parità con soglia fissa invariate; serie sintetica con rumore: meno righe, stesse feature vere.
+### 5.7 M7 · Soglia del rumore nel Dig (in corso nella chat locale, fuori da questo studio)
+- La chat locale porta la soglia predefinita del Dig a quella stimata dai dati (`params::noise_from_hist`), aggiunge il ripiego «famiglia → ione» con avviso e un errore con i numeri. Questo studio non la ripete.
+- Coordinamento con M1: quando M1 è unito, il ripiego per ione non serve più per la memoria (la famiglia va a lastre); resta solo se la famiglia fallisce per altro. Con M2 l'errore riporta `libero_mb`: il testo della chat locale deve usare quei campi.
