@@ -55,6 +55,8 @@ export async function statRoute(path, body, { rpc }) {
   // search box: what a typed number is compatible with (ricerca/1)
   if (path === "/api/ricerca") return { status: 200, text: (await rpc({ op: "lr_ricerca", body })).info };
   if (path.startsWith("/api/campioni/")) return { status: 200, text: (await rpc({ op: "lr_campioni", cop: path.slice(14), body })).info };
+  // molecules database (molecules/1): carica, cerca, get, da_csv, a_csv, a_json, valida, digest
+  if (path.startsWith("/api/molecules/")) return { status: 200, text: (await rpc({ op: "lr_molecules", mop: path.slice(15), body })).info };
   if (!/^\/api\/stat\/(profile|blank|reference|pca)$/.test(path)) return undefined;
   const r = (await rpc({ op: "lr_stat", path: path.slice(1), body })).info;
   if (!r) return null;
