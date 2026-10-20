@@ -67,6 +67,7 @@ pub mod mzidx_lettore;
 mod mzidx_ordine;
 pub mod mzidx_spill;
 pub mod msnalbero;
+pub mod msngrafo;
 pub mod msnroute;
 pub mod msntree;
 pub mod methodcheck;
