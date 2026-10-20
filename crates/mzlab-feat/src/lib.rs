@@ -36,6 +36,7 @@ pub mod interp;
 pub mod isotopes;
 pub mod kinetic;
 pub mod legacy;
+pub mod liste;
 pub mod mrm;
 pub mod ms2;
 pub mod ms2spec;

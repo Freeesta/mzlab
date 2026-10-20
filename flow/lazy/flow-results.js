@@ -57,7 +57,7 @@
     });
   };
 
-  F.registerView({ id: "table", title: "Table", types: ["table", "annot", "tp", "candidates", "formulas", "library", "spectra"], accepts: item => /\.(csv|tsv|txt)$/i.test(item.label), open: async (host, item) => {
+  F.registerView({ id: "table", title: "Table", types: ["table", "annot", "tp", "candidates", "formulas", "library", "spectra", "report"], accepts: item => /\.(csv|tsv|txt)$/i.test(item.label), open: async (host, item) => {
     const { el } = F;
     if (!/\.(csv|tsv|txt)$/i.test(item.label)) { host.append(el("p", { class: "fl-note", text: `${item.label} is not a text table, so there is nothing to show here.` })); return; }
     const rows = F.parseCsv(await item.text()), head = rows[0] || [], body = rows.slice(1, MAX_ROWS + 1), cols = Math.min(head.length, MAX_COLS);
