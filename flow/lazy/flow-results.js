@@ -96,9 +96,9 @@
     for (const { id, port } of mine) {
       const made = (S.results[id] || []).filter((/** @type {any} */ r) => r.type === port.type);
       for (const r of made) box.append(F.btn("file", `Open ${r.label}`, () => F.openResult(r), r.label));
-      const pick = el("input", { type: "file", hidden: true, accept: ".csv,.tsv,.txt,.json,.mgf,.msp", "aria-label": `Choose a ${port.title} file`, onchange: (/** @type {any} */ e) => {
+      const pick = el("input", { type: "file", hidden: true, accept: ".csv,.tsv,.txt,.json,.mgf,.msp,.mzfeat", "aria-label": `Choose a ${port.title} file`, onchange: (/** @type {any} */ e) => {
         const f = e.target.files && e.target.files[0]; if (!f) return;
-        const item = { type: port.type, label: f.name, text: () => f.text() };
+        const item = { type: port.type, label: f.name, file: f, text: () => f.text() };
         S.results[id] = [...(S.results[id] || []).filter((/** @type {any} */ r) => r.label !== f.name), item];
         F.openResult(item); if (S.redraw) S.redraw();
       } });
