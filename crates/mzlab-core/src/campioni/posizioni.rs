@@ -156,6 +156,54 @@ fn conc_span(s: &[char], conc: f64, unit: Option<&str>) -> Option<(usize, usize)
     None
 }
 
+/// The span that decided the role: its word, or the time for a time zero.
+fn kind_span(
+    low: &[char],
+    c: &Campione,
+    by_time: Option<(usize, usize)>,
+) -> Option<(usize, usize)> {
+    let words: &[&str] = match c.kind.as_str() {
+        "infusion" => &["infusion", "infusione", "fia"],
+        "dark" => &["dark", "buio", "adsorption"],
+        "qc" => &["qc"],
+        "blank" => &BLANK_WORDS,
+        "calibration" => &[
+            "cal",
+            "calib",
+            "calibr",
+            "calibrazione",
+            "taratura",
+            "curva",
+        ],
+        "std" => &STD_WORDS,
+        "t0" => return by_time,
+        _ => return None,
+    };
+    word_span(low, words)
+}
+
+/// The word that gave the kind of blank (`solv…` or `proc…`).
+fn blank_span(low: &[char], c: &Campione) -> Option<(usize, usize)> {
+    let pre = if c.blank_kind.as_deref() == Some("solvent") {
+        "solv"
+    } else {
+        "proc"
+    };
+    c.blank_kind.as_ref()?;
+    let mut i = 0;
+    while i < low.len() {
+        let mut e = i;
+        while e < low.len() && low[e].is_ascii_alphanumeric() {
+            e += 1;
+        }
+        if e > i && low[i..e].iter().collect::<String>().starts_with(pre) {
+            return Some((i, e));
+        }
+        i = e.max(i + 1);
+    }
+    None
+}
+
 /// The spans of the role, the blank kind, the time and the concentration of a file; `time` is the span of the time in the stem.
 pub fn of_file(name: &str, c: &Campione, stem: &str, time: Option<(usize, usize)>) -> Spans {
     let chars: Vec<char> = name.chars().collect();
@@ -174,46 +222,12 @@ pub fn of_file(name: &str, c: &Campione, stem: &str, time: Option<(usize, usize)
             items,
         };
     }
-    let words = |w: &[&str]| word_span(&low, w);
     let by_time = time.map(|(a, b)| (a + off, b + off));
-    let kind_span = match c.kind.as_str() {
-        "infusion" => words(&["infusion", "infusione", "fia"]),
-        "dark" => words(&["dark", "buio", "adsorption"]),
-        "qc" => words(&["qc"]),
-        "blank" => words(&BLANK_WORDS),
-        "calibration" => words(&[
-            "cal",
-            "calib",
-            "calibr",
-            "calibrazione",
-            "taratura",
-            "curva",
-        ]),
-        "std" => words(&STD_WORDS),
-        "t0" => by_time,
-        _ => None,
-    };
-    if let Some((a, b)) = kind_span {
+    if let Some((a, b)) = kind_span(&low, c, by_time) {
         push(&mut items, "tipo", a, b);
     }
-    if c.blank_kind.is_some() {
-        let pre = if c.blank_kind.as_deref() == Some("solvent") {
-            "solv"
-        } else {
-            "proc"
-        };
-        let mut i = 0;
-        while i < low.len() {
-            let mut e = i;
-            while e < low.len() && low[e].is_ascii_alphanumeric() {
-                e += 1;
-            }
-            if e > i && low[i..e].iter().collect::<String>().starts_with(pre) {
-                push(&mut items, "tipo_bianco", i, e);
-                break;
-            }
-            i = e.max(i + 1);
-        }
+    if let Some((a, b)) = blank_span(&low, c) {
+        push(&mut items, "tipo_bianco", a, b);
     }
     if let Some((a, b)) = by_time {
         push(&mut items, "tempo", a, b);
