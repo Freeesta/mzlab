@@ -27,11 +27,9 @@ class Parser(Speciali, Liste, Grezzo):
         self.ctx: dict = {"eq": {}, "fig": {}, "titoli": []}
         self.head: list[str] = []
         self.caption = None
-        self.scripts: list[str] = []
-        self.scripts_before: list[str] = []
-        self.page_title = ""
+        self.scripts, self.scripts_before, self.html_attrs, self.snippets = [], [], [], []
+        self.page_title = self.full_title = ""
         self.no_appname = False
-        self.html_attrs = []
 
     def err(self, line: int, msg: str):
         raise LibroError(self.file, line, msg)

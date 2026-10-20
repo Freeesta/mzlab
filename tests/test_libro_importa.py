@@ -59,3 +59,13 @@ def test_import_native_and_raw_fallback(monkeypatch):
 def test_imported_chapter_is_equivalent_to_the_original(pagina, digest):
     atteso = hashlib.sha256(normalizza((TEORIA / pagina).read_text(encoding="utf-8")).encode()).hexdigest()
     assert atteso == digest, f"{pagina}: the page differs from the chapter that was imported (edit on purpose? delete its line in equivalenza.txt)"
+
+
+def test_inline_snippet_names_are_a_closed_list():
+    from tools.libro.errori import LibroError
+    from tools.libro.pagina import converti
+
+    ok = converti("<!-- inline: modi -->\n# T {kicker: K}\n", "99-x.md", pubblico=True, teoria=True)
+    assert "QMODI.all()" in ok
+    with pytest.raises(LibroError):
+        converti("<!-- inline: nope -->\n# T {kicker: K}\n", "99-x.md", pubblico=True, teoria=True)

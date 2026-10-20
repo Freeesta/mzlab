@@ -1,0 +1,14 @@
+<script>
+"use strict";
+(function () {
+  // retrieval practice: the formulas are hidden until clicked (the text and the equation numbers stay visible)
+  const b = document.getElementById("hide");
+  if (!b) return;
+  b.onclick = () => {
+    const on = document.body.classList.toggle("quiz");
+    b.textContent = on ? "Mostra tutte le formule" : "Nascondi le formule (mettiti alla prova)";
+    document.querySelectorAll("main .eq").forEach(e => e.classList.toggle("shut", on));
+  };
+  document.querySelector("main").addEventListener("click", e => { const q = e.target.closest(".eq.shut"); if (q) q.classList.remove("shut"); });
+})();
+</script>

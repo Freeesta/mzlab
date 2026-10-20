@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema--><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Strategia per i TP · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 18</div>
 <h1>Strategia per trovare (e non inventare) i TP</h1>
 <p class="lead">Il metodo di lavoro sistematico, passo per passo, dalla caratterizzazione del precursore all'identificazione dei prodotti di trasformazione. Include un esempio pratico dettagliato e criteri rigorosi per stabilire il livello di confidenza di ciascun candidato.</p>
-
 <h2>Il flusso di lavoro</h2>
 <figure>
 <svg viewBox="0 0 880 210" role="img" aria-label="Flusso di lavoro in cinque passi: dal parent ai candidati confermati in MS2" aria-describedby="fd-18-0">
@@ -24,7 +24,6 @@
 </svg><details class="figdesc" id="fd-18-0"><summary>Descrizione della figura</summary><p>Cinque riquadri in sequenza: 1 Conoscere il parent ([M+H]⁺, addotti, RT, isotopi, MS2 a più CE, transizioni MRM); 2 Quantificare il parent (MRM, retta di taratura, C/C₀ e k nel tempo; t0–t60); 3 Trovare i candidati (full scan t0 vs tₙ, bianco, XIC di ipotesi, mappa RT–m/z); 4 Filtrare e ipotizzare (Δm, isotopi, regola dell'azoto, RT); 5 Confermare in MS2 (frammenti condivisi o spostati rispetto al parent).</p></details>
 <figcaption><b>Figura 18.1</b> Il percorso dall'esperimento alla proposta strutturale. I passi 3–5 si ripetono: ogni MS2 può suggerire nuove masse da cercare nel full scan.</figcaption>
 </figure>
-
 <h2>1. Conoscere il parent</h2>
 <p>Tutto il lavoro successivo è un confronto con il parent, quindi la sua caratterizzazione deve essere completa:</p>
 <ul>
@@ -33,10 +32,8 @@
 <li>spettro MS2 a più energie: frammenti principali, perdite neutre, a che porzione della molecola corrispondono;</li>
 <li>tempo di ritenzione e forma del picco.</li>
 </ul>
-
 <h2>2. Quantificare il parent</h2>
 <p>Retta MRM, concentrazioni nei campioni, grafico di scomparsa e costante pseudo-primo ordine (capitoli 2 e 12). Confrontate t0 con lo standard per stimare l'adsorbimento sul TiO<sub>2</sub>.</p>
-
 <h2>3. Trovare i candidati nel full scan</h2>
 <p>Due approcci complementari:</p>
 <ul>
@@ -45,7 +42,6 @@
 </ul>
 <div class="sim" id="sim-dm"><h4>Calcolatrice di differenze di massa</h4>
 <p class="note">Inserite l'm/z del parent e quello di un candidato (stesso tipo di ione, ad esempio entrambi [M+H]<sup>+</sup>). Vengono elencate le trasformazioni, singole o in coppia, con la stessa differenza nominale. Sono ipotesi da verificare: a risoluzione unitaria molte coincidono.</p></div>
-
 <h2>4. Filtrare i candidati</h2>
 <p>Un segnale diventa un candidato TP credibile se supera questi criteri; ognuno va opportunamente verificato e documentato.</p>
 <table>
@@ -58,7 +54,6 @@
 <tr><td>Regola dell'azoto, RDBE</td><td>La formula ipotizzata è possibile?</td><td>Formula impossibile</td></tr>
 <tr><td>Ritenzione plausibile</td><td>Un TP ossidato/dealchilato esce prima del parent?</td><td>Non escludente, ma da discutere</td></tr>
 </table>
-
 <h2>5. Confermare in MS2</h2>
 <p>Al tempo in cui il candidato è più abbondante si registra il suo product ion scan e lo si confronta con quello del parent, frammento per frammento:</p>
 <ul>
@@ -68,7 +63,6 @@
 <li><b>perdita neutra scomparsa</b> → quel gruppo è stato rimosso o trasformato.</li>
 </ul>
 <p>Con questi vincoli si disegnano le strutture candidate (scheda Disegno di QqQ lab), si verifica che formula e m/z tornino (calcolatrice m/z) e si propone una via di trasformazione.</p>
-
 <h2>Esempio svolto: l'atrazina</h2>
 <p>L'atrazina (C<sub>8</sub>H<sub>14</sub>ClN<sub>5</sub>, erbicida triazinico, vietato nell'UE dal 2004 ma ancora presente nelle acque sotterranee) è un caso di scuola della fotocatalisi su TiO<sub>2</sub>, studiato a fondo anche a Torino. I numeri sono teorici; gli m/z osservati su uno strumento con offset sarebbero spostati di qualche decimo.</p>
 <table>
@@ -91,7 +85,6 @@
 </ol>
 <div class="box warn"><b>Livello di confidenza</b>
 <p>Senza standard, tutte queste attribuzioni restano al livello 3 di Schymanski: per esempio, l'idrossilazione al posto del cloro è la spiegazione più ragionevole di Δ = −18 con perdita del cloro, ma non è l'unica formula con quella massa nominale. Con gli standard commerciali di DEA, DIA e HA (stesso RT e stesso MS2) si arriverebbe al livello 1.</p></div>
-
 <h2>Checklist di sintesi analitica</h2>
 <ul>
 <li>Parent: [M+H]<sup>+</sup> osservato e teorico, addotti, RT, cluster isotopico, MS2 con frammenti assegnati, transizioni MRM scelte e perché.</li>
@@ -101,15 +94,10 @@
 <li>Via di trasformazione proposta, con le strutture disegnate e le ambiguità dichiarate (isomeri di posizione, Δ con più interpretazioni).</li>
 <li>Limiti: risoluzione unitaria, solo ESI positivo, nessuno standard per i TP, bilancio di massa non chiuso.</li>
 </ul>
-
 <h2>Verifica</h2>
-<details class="q"><summary>Un candidato ha Δ = +16, RT maggiore del parent e lo stesso andamento nel tempo del parent. Che ne pensate?</summary>
-<p>È sospetto: un'idrossilazione di solito riduce la ritenzione e un TP non segue il parent ma cresce mentre il parent cala. Verificate che non sia un'impurezza dello standard o un addotto/cluster; se sopravvive ai controlli, va discusso esplicitamente.</p></details>
-<details class="q"><summary>Due picchi a RT diversi nell'XIC di (parent + 16), entrambi in crescita. Come li riportate?</summary>
-<p>Come due candidati distinti (isomeri), ciascuno con RT, andamento e MS2. Se gli MS2 differiscono, i frammenti indicano in quale porzione si trova l'ossigeno; la posizione esatta resta di solito indeterminata (livello 3).</p></details>
-<details class="q"><summary>Perché è utile ripetere la ricerca nel full scan dopo aver visto gli MS2?</summary>
-<p>Perché gli MS2 suggeriscono nuove ipotesi (per esempio una seconda generazione di prodotti che combina due trasformazioni già osservate) e permettono di riconoscere i frammenti in sorgente da non confondere con TP.</p></details>
-
+<details class="q"><summary>Un candidato ha Δ = +16, RT maggiore del parent e lo stesso andamento nel tempo del parent. Che ne pensate?</summary><p>È sospetto: un'idrossilazione di solito riduce la ritenzione e un TP non segue il parent ma cresce mentre il parent cala. Verificate che non sia un'impurezza dello standard o un addotto/cluster; se sopravvive ai controlli, va discusso esplicitamente.</p></details>
+<details class="q"><summary>Due picchi a RT diversi nell'XIC di (parent + 16), entrambi in crescita. Come li riportate?</summary><p>Come due candidati distinti (isomeri), ciascuno con RT, andamento e MS2. Se gli MS2 differiscono, i frammenti indicano in quale porzione si trova l'ossigeno; la posizione esatta resta di solito indeterminata (livello 3).</p></details>
+<details class="q"><summary>Perché è utile ripetere la ricerca nel full scan dopo aver visto gli MS2?</summary><p>Perché gli MS2 suggeriscono nuove ipotesi (per esempio una seconda generazione di prodotti che combina due trasformazioni già osservate) e permettono di riconoscere i frammenti in sorgente da non confondere con TP.</p></details>
 <h2>Per approfondire</h2>
 <ul class="refs">
 <li><span class="tag">metodo</span>Schymanski E.L. et al. (2014), livelli di confidenza: <a href="https://doi.org/10.1021/es5002105" target="_blank" rel="noopener">doi:10.1021/es5002105</a></li>
