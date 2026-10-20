@@ -14,7 +14,7 @@ pub(super) fn dependencies(plan: &Plan) -> Vec<Vec<usize>> {
                 .iter()
                 .filter_map(|id| plan.steps.iter().position(|x| x.id == *id))
                 .collect();
-            d.sort_unstable();
+            crate::sortc::slice_ord(&mut d);
             d
         })
         .collect()

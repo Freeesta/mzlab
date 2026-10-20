@@ -48,7 +48,7 @@ fn write(o: &mut Out, v: &Value) {
 }
 
 fn object(o: &mut Out, mut kv: Vec<(&str, &Value)>) {
-    kv.sort_by(|a, b| a.0.cmp(b.0));
+    crate::sortc::slice_by(&mut kv, |a, b| a.0.cmp(b.0));
     o.raw("{");
     for (i, (k, x)) in kv.into_iter().enumerate() {
         if i > 0 {
@@ -176,7 +176,7 @@ pub fn canonical(inst: &Instance, step: &Step) -> Result<Resolved> {
     for (k, v) in &inst.params {
         set(&mut params, k, v.clone());
     }
-    params.sort_by(|a, b| a.0.cmp(&b.0));
+    crate::sortc::slice_by(&mut params, |a, b| a.0.cmp(&b.0));
     Ok(Resolved {
         algorithm: algorithm.map(|a| (a.id.to_string(), a.version)),
         preset: preset.map(|p| p.id.to_string()),

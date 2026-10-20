@@ -48,11 +48,7 @@ pub struct Problem {
 }
 
 /// The shortest chain of registered conversion steps that turns `from` into `to` (empty when they are the same type); None when there is none.
-pub fn conversion_path<'a>(
-    registry: &'a [Step],
-    from: DataType,
-    to: DataType,
-) -> Option<Vec<&'a Step>> {
+pub fn conversion_path(registry: &[Step], from: DataType, to: DataType) -> Option<Vec<&Step>> {
     let mut seen = vec![(from, Vec::<&Step>::new())];
     let mut at = 0;
     while at < seen.len() {
@@ -171,7 +167,7 @@ impl Ctx<'_> {
         match r {
             Ref::File(name) => {
                 let Some(f) = self.plan.input(name) else {
-                    self.add(i, &port.name, "err.flow.input.unknown", &[("ref", name)]);
+                    self.add(i, port.name, "err.flow.input.unknown", &[("ref", name)]);
                     return None;
                 };
                 Some((f.ty.as_deref().and_then(DataType::from_name)?, false))
@@ -357,7 +353,9 @@ pub fn check(plan: &Plan, registry: &[Step], platform: Platform) -> Vec<Problem>
         .into_iter()
         .chain(by_instance.into_iter().flatten())
         .collect();
-    all.sort_by_key(|p| plan.steps.iter().position(|x| x.id == p.instance));
+    crate::sortc::slice_by_key(&mut all, |p| {
+        plan.steps.iter().position(|x| x.id == p.instance)
+    });
     c.problems = all;
     for k in cyclic(plan) {
         let i = &plan.steps[k];

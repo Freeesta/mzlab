@@ -56,7 +56,7 @@ fn strs(o: &mut Out, a: &[String]) {
 
 fn object(o: &mut Out, kv: &[(String, Value)]) {
     let mut kv: Vec<&(String, Value)> = kv.iter().collect();
-    kv.sort_by(|a, b| a.0.cmp(&b.0));
+    crate::sortc::slice_by(&mut kv, |a, b| a.0.cmp(&b.0));
     o.raw("{");
     for (k, (key, v)) in kv.into_iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" })

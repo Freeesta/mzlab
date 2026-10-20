@@ -59,6 +59,8 @@ pub struct Run {
 
 /// An artifact with the key of its entity.
 type Keyed = (String, Artifact);
+/// Output port and what it holds, keyed.
+type Made = Vec<(String, Vec<Keyed>)>;
 
 fn run_all(runner: &dyn Runner, jobs: &[Job], workers: usize) -> Vec<Result<Outcome>> {
     #[cfg(not(target_family = "wasm"))]
@@ -89,12 +91,7 @@ fn run_all(runner: &dyn Runner, jobs: &[Job], workers: usize) -> Vec<Result<Outc
 }
 
 /// What the instance reads on each port, keyed; `done` holds what the instances before it made.
-fn read(
-    plan: &Plan,
-    step: &Step,
-    inst: &Instance,
-    done: &[Option<Vec<(String, Vec<Keyed>)>>],
-) -> Vec<(String, Vec<Keyed>)> {
+fn read(plan: &Plan, step: &Step, inst: &Instance, done: &[Option<Made>]) -> Made {
     let mut all = Vec::new();
     for (port, refs) in &inst.ins {
         let mut got: Vec<Keyed> = Vec::new();
@@ -200,7 +197,7 @@ fn settle(
     resolved: &Resolved,
     used: Vec<String>,
     results: Vec<Result<Outcome>>,
-) -> (Activity, Option<Vec<(String, Vec<Keyed>)>>) {
+) -> (Activity, Option<Made>) {
     let algorithm = resolved
         .algorithm
         .as_ref()
@@ -239,7 +236,7 @@ fn settle(
             }
         }
     }
-    let mut made: Vec<(String, Vec<Keyed>)> = Vec::new();
+    let mut made: Made = Vec::new();
     for port in &step.outs {
         let mut list: Vec<Keyed> = Vec::new();
         for o in &outcomes {
@@ -269,7 +266,7 @@ fn settle(
             }
         }
     }
-    act.params.sort_by(|a, b| a.0.cmp(&b.0));
+    crate::sortc::slice_by(&mut act.params, |a, b| a.0.cmp(&b.0));
     (act, Some(made))
 }
 
@@ -284,7 +281,7 @@ pub fn execute(plan: &Plan, registry: &[Step], runner: &dyn Runner, workers: usi
             .with("error_key", p.error_key));
     }
     let mut run = Run::default();
-    let mut done: Vec<Option<Vec<(String, Vec<Keyed>)>>> = vec![None; plan.steps.len()];
+    let mut done: Vec<Option<Made>> = vec![None; plan.steps.len()];
     for wave in levels(plan)? {
         // resolve and read in file order, run the whole wave together, settle in file order
         let mut ready = Vec::new();
