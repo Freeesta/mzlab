@@ -21,7 +21,7 @@
   };
   const PATHS = {
     plus: "M12 5v14M5 12h14", up: "M6 15l6-6 6 6", down: "M6 9l6 6 6-6", x: "M6 6l12 12M18 6L6 18", compare: "M8 4v16M16 4v16M3 8l5-4 5 4M11 16l5 4 5-4",
-    export: "M12 4v11M7 10l5 5 5-5M5 20h14", import: "M12 15V4M7 9l5-5 5 5M5 20h14", run: "M7 4l12 8-12 8z", undo: "M9 7L4 12l5 5M4 12h10a6 6 0 0 1 0 8", warn: "M12 4l9 16H3zM12 10v4M12 17v.01",
+    export: "M12 4v11M7 10l5 5 5-5M5 20h14", import: "M12 15V4M7 9l5-5 5 5M5 20h14", run: "M7 4l12 8-12 8z", undo: "M9 7L4 12l5 5M4 12h10a6 6 0 0 1 0 8", redo: "M15 7l5 5-5 5M20 12H10a6 6 0 0 0 0 8", warn: "M12 4l9 16H3zM12 10v4M12 17v.01",
     ok: "M5 12l5 5 9-10", file: "M7 3h7l4 4v14H7zM14 3v5h5", flow: "M4 6h6v4H4zM14 14h6v4h-6zM10 8h2a2 2 0 0 1 2 2v4", copy: "M9 9h10v11H9zM5 15V4h10", search: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM16 16l5 5",
     minus: "M5 12h14", fit: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5", one: "M9 8l3-2v12", reset: "M4 12a8 8 0 1 0 2.6-5.9M4 4v5h5", info: "M12 8v.01M12 11v6M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z",
   };
@@ -39,7 +39,7 @@
   /** the mark of a data type: colour, shape (by family) and the letter; the name is in the title and the accessible text @param {string} type */
   F.mark = type => {
     const t = F.TYPES[type] || { family: "end", letter: "?" };
-    return F.el("span", { class: `fl-mk fl-f-${t.family}`, style: `--c:var(--t-${type})`, title: type, role: "img", "aria-label": `type ${type}` }, F.el("span", { "aria-hidden": "true", text: t.letter }));
+    return F.el("span", { class: `fl-mk fl-f-${t.family} fl-t-${type}`, style: `--c:var(--t-${type})`, title: type, role: "img", "aria-label": `type ${type}` }, F.el("span", { "aria-hidden": "true", text: t.letter }));
   };
 
   /** the text of a problem; the keys are the err.flow.* of the Rust checker (docs/agenti/rust-flow.md) @param {any} p {instance, port, key, params} */
@@ -91,7 +91,7 @@
 .flw .fl-pal details{margin:4px 0}.flw .fl-pal summary{cursor:pointer;font-weight:600;padding:3px 0}.flw .fl-pal h4{margin:6px 0 2px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 .flw .fl-it{display:flex;width:100%;gap:6px;align-items:center;text-align:left;min-height:28px;padding:3px 6px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);cursor:pointer;font:inherit}
 .flw .fl-it:hover{background:var(--sel);border-color:var(--line)}.flw .fl-it:focus-visible{outline:2px solid var(--accent)}.flw .fl-it.fl-dim{color:var(--muted)}.flw .fl-it .fl-ti{flex:1;min-width:0}.flw .fl-it small{color:var(--muted)}
-.flw .fl-mk{display:inline-grid;place-items:center;flex:none;width:18px;height:18px;background:var(--c);color:#000;font-size:10px;font-weight:700;line-height:1;border:1px solid var(--ink)}
+.flw .fl-t-mzidx,.flw .fl-t-library{color:#fff!important}.flw .fl-mk{display:inline-grid;place-items:center;flex:none;width:18px;height:18px;background:var(--c);color:#000;font-size:10px;font-weight:700;line-height:1;border:1px solid var(--ink)}
 .flw .fl-f-file{border-radius:2px}.flw .fl-f-trace{border-radius:50%}.flw .fl-f-peak{border-radius:2px;transform:rotate(45deg) scale(.78)}.flw .fl-f-peak span{transform:rotate(-45deg)}.flw .fl-f-table{clip-path:polygon(50% 0,100% 100%,0 100%);border:0;padding-top:5px}.flw .fl-f-chem{clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);border:0}.flw .fl-f-end{border-radius:50%;background:transparent;color:var(--ink);border:2px solid var(--c)}
 .flw .fl-main{display:flex;flex-direction:column;gap:8px;min-width:0}.flw .fl-inputs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;border:1px dashed var(--line);border-radius:8px}
 .flw .fl-chip{display:inline-flex;gap:5px;align-items:center;padding:2px 4px 2px 6px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
