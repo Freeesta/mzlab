@@ -211,6 +211,33 @@ try:
             assert pg.locator(".flx-res").get_attribute("aria-label") == "Results" and pg.evaluate("document.activeElement.closest('.flx-res') !== null")
             pg.click('.flx-res button[aria-label="Close the results"]'); assert pg.locator(".flx-res").count() == 0
         step("results: a table chosen from disk opens under the canvas as a real table, readable by keyboard and closable", results_from_disk)
+        def identification_views():
+            # JSON results of the identification steps become tables; an MGF file gets a list, a stick chart and its peak table
+            pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Match to a spectral library")'); pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Confidence level")')
+            pg.click('.fln:has-text("Match to library")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Match to library'")
+            hits = b'{"format":"candidates/1","hits":[{"query":"q1","name":"Caffeine","formula":"C8H10N4O2","score":0.9123,"shared":5,"mass_ppm":1.2,"source":"lib","algorithm":"cosine"}]}'
+            pg.set_input_files('.fl-insp input[type=file]', files=[{"name": "hits.json", "mimeType": "application/json", "buffer": hits}])
+            attendi(pg, "document.querySelectorAll('.flx-res-body .flx-table tbody tr').length === 1")
+            assert pg.locator(".flx-res-body .flx-table td").nth(1).inner_text() == "Caffeine" and pg.locator(".flx-res-body .flx-table td").nth(3).inner_text() == "0.9123"
+            pg.click('.flx-res button[aria-label="Close the results"]')
+            pg.click('.fln:has-text("Confidence level")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Confidence level'")
+            lv = b'{"format":"annot/1","rows":[{"id":"q1","level":"3a","why":"provvisorio","name":"Caffeine","gates":[{"id":"score","ok":false,"value":0.5,"threshold":0.7}]}]}'
+            pg.set_input_files('.fl-insp input[type=file]', files=[{"name": "level.json", "mimeType": "application/json", "buffer": lv}])
+            attendi(pg, "document.querySelectorAll('.flx-res-body .flx-table tbody tr').length === 1")
+            assert "score 0.5 / 0.7 (not met)" in pg.inner_text(".flx-res-body .flx-table tbody")
+            pg.click('.flx-res button[aria-label="Close the results"]')
+        step("results: candidate and level JSON files open as tables", identification_views)
+        def mgf_view():
+            pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Check mixed spectra")')
+            pg.click('.fln:has-text("Check mixed spectra")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Check mixed spectra'")
+            mgf = b"BEGIN IONS\nTITLE=s1\nPEPMASS=195.09 1000\nCHARGE=1+\nRTINSECONDS=12.5\n138.07 40\n110.07 100\nEND IONS\nBEGIN IONS\nTITLE=s2\nPEPMASS=300.2\n100 5\nEND IONS\n"
+            pg.set_input_files('.fl-insp input[type=file]', files=[{"name": "ms2.mgf", "mimeType": "text/plain", "buffer": mgf}])
+            attendi(pg, "document.querySelectorAll('.flx-sticks .flx-stick').length === 2")
+            assert pg.locator(".flx-sticks").get_attribute("role") == "img" and "2 peaks" in pg.locator(".flx-sticks").get_attribute("aria-label")
+            assert pg.locator(".flx-one .flx-table td").nth(2).inner_text() == "110.07"
+            pg.select_option('.flx-res select[aria-label="Spectrum to draw"]', "1"); attendi(pg, "document.querySelectorAll('.flx-sticks .flx-stick').length === 1")
+            pg.click('.flx-res button[aria-label="Close the results"]')
+        step("results: an MGF file lists its spectra, draws one as sticks and gives its peak table", mgf_view)
         def desktop_run():
             # the app is faked: the page asks the native route flow/run and lists what each step did from the prov/1 it answers
             pg.evaluate("""() => { window.MZLAB_DESKTOP = true; window.__runs = 0; const real = window.fetch.bind(window);
