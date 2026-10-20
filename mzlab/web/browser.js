@@ -106,7 +106,7 @@
     const rb = await rustReady;
     if (rb && method === "GET" && RUST_ROUTES.test(url)) {
       const r = await rb.handle(method, url);
-      if (r) return new Response(r.buf || r.text, { status: r.status, headers: { "Content-Type": r.buf ? "application/octet-stream" : r.type || "application/json", "X-Py-Ms": String(r.ms || 0), "X-Engine": "rust" } });
+      if (r) return new Response(r.buf || r.text, { status: r.status, headers: { "Content-Type": r.buf ? "application/octet-stream" : r.type || "application/json", "X-Py-Ms": String(r.ms || 0), "X-Engine": "rust", ...(r.disposition ? { "Content-Disposition": r.disposition } : {}) } });
     }
     const a = await lr.handle(method, url, init);
     if (a) return new Response(a.text, { status: a.status, headers: { "Content-Type": "application/json", "X-Engine": "rust" } });

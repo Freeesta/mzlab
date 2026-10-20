@@ -55,8 +55,8 @@ try:
             assert res[0] == 400 and res[1]["error_key"] == "err.request.badNumber", res
         step("a bad number is a keyed error", bad)
         def export():
-            res = pg.evaluate("fetch('api/msn_grafo/export?k=0&formato=msp&pulito=1').then(async r=>[r.status, r.headers.get('content-type'), await r.text()])")
-            assert res[0] == 200 and res[1] == "text/plain" and "Num Peaks:" in res[2], res[:2]
+            res = pg.evaluate("fetch('api/msn_grafo/export?k=0&formato=msp&pulito=1').then(async r=>[r.status, r.headers.get('content-type'), await r.text(), r.headers.get('content-disposition')])")
+            assert res[0] == 200 and res[1] == "text/plain" and "Num Peaks:" in res[2] and res[3] == 'attachment; filename="msn-graph.msp"', res[:2] + res[3:]
             csv = pg.evaluate("fetch('api/msn_grafo/export?k=0&formato=csv').then(r=>r.text())")
             assert csv.startswith("albero,livello,"), csv[:80]
             bad = pg.evaluate("fetch('api/msn_grafo/export?k=0&formato=xls').then(r=>r.status)")

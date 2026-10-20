@@ -5,7 +5,7 @@
 /**
  * @param {{ slots: any[], rpc: (msg: any) => Promise<any>, stats: { rust: number } }} c
  * @param {number} k @param {string} search the query string of the request @param {boolean} [esporta] the spectra as text (api/msn_grafo/export)
- * @returns {Promise<{ status: number, text: string, type?: string } | null>}
+ * @returns {Promise<{ status: number, text: string, type?: string, disposition?: string } | null>}
  */
 export async function grafoRoute({ slots, rpc, stats }, k, search, esporta = false) {
   const s = slots[k];
@@ -23,5 +23,6 @@ export async function grafoRoute({ slots, rpc, stats }, k, search, esporta = fal
   stats.rust++;
   if (!esporta) return { status: 200, text: r.info };
   const f = new URLSearchParams(search).get("formato");
-  return { status: 200, text: r.info, type: f === "csv" ? "text/csv" : "text/plain" };
+  const ext = f === "csv" || f === "mgf" || f === "msp" ? f : "txt";
+  return { status: 200, text: r.info, type: f === "csv" ? "text/csv" : "text/plain", disposition: `attachment; filename="msn-graph.${ext}"` };
 }
