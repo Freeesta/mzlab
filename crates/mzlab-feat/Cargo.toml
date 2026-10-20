@@ -125,5 +125,9 @@ name = "interp_sito"
 required-features = ["interp"]
 
 [[test]]
+name = "steps_tabui_parity"
+required-features = ["interp"]
+
+[[test]]
 name = "steps_attributio_parity"
 required-features = ["attributio", "untargeted"]
