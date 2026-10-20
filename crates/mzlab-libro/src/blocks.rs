@@ -115,7 +115,7 @@ impl<'a> Parser<'a> {
             return self.question(lines, i, base);
         }
         if let Some(c) = ln.strip_prefix("Tabella: ") {
-            self.caption = Some(c.trim().to_string());
+            self.caption = Some((c.trim().to_string(), at));
             return Ok((String::new(), i + 1));
         }
         if item(ln).is_some() {
@@ -364,7 +364,7 @@ pub struct Parser<'a> {
     pub fig: HashMap<String, String>,
     pub titoli: Vec<(usize, String)>,
     pub head: Vec<String>,
-    pub(crate) caption: Option<String>,
+    pub(crate) caption: Option<(String, usize)>,
     pub scripts: Vec<String>,
     pub scripts_before: Vec<String>,
     pub html_attrs: Vec<(String, String)>,

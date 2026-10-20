@@ -71,7 +71,15 @@ impl State {
             None,
             Some(fresh),
         )?;
+        // the folder is a run folder for `flow/report`: prov.json beside the files of the steps
+        std::fs::write(work.join("prov.json"), &prov).map_err(|e| crate::rpc::io_error(&e))?;
         text(json!({ "prov": prov, "dir": work.to_string_lossy() }).to_string())
+    }
+
+    /// `{}` -> the `corsa/1` report (`mzlab-cli flow report`) of the last run of `flow/run`, for the report page of the Flow.
+    pub(crate) fn flow_report(&self, _p: &Value) -> Result<Answer> {
+        let dir = std::env::temp_dir().join("mzlab-flow").join("out");
+        text(mzlab_cli::flow_report::report(&dir)?)
     }
 }
 
@@ -114,6 +122,19 @@ fn to_base64(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_run_folder_gives_the_corsa_report() {
+        let dir = std::env::temp_dir().join(format!("mzlab-flow-rep-{}", std::process::id()));
+        let work = dir.join("work");
+        std::fs::create_dir_all(&work).unwrap();
+        let plan = r#"{"format":"mzflow/2","inputs":[],"steps":[]}"#;
+        let (_, prov) = mzlab_cli::flow::run_plan(plan.as_bytes(), &dir, &work, 1, None).unwrap();
+        std::fs::write(work.join("prov.json"), prov).unwrap();
+        let text = mzlab_cli::flow_report::report(&work).unwrap();
+        assert!(text.contains("\"corsa/1\""), "{text}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn base64_matches_the_rfc_vectors() {

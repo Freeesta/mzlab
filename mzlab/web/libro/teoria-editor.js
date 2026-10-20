@@ -4,6 +4,7 @@
 import { GhError } from "./gh.js";
 import { BRANCH_PREFIX, headings, makePrClient } from "./pr.js";
 import * as vault from "./vault.js";
+import { clearDraft, loadDraft, makeHistory, saveDraft } from "./storia.js";
 import { loadConverter } from "./wasm.js";
 
 const SLOT = "mzlab.libro.teoria.token";
@@ -16,6 +17,10 @@ let client = null;
 let conv = null;
 /** @type {{name: string, md: {text: string, sha: string}, html: {text: string, sha: string}, rawOk: boolean} | null} */
 let cur = null;
+/** @type {ReturnType<typeof makeHistory> | null} */
+let hist = null;
+/** @type {ReturnType<typeof setTimeout> | undefined} */
+let commitTimer;
 
 /** @param {string} t @param {boolean} [err] */
 const say = (t, err = false) => {
@@ -50,6 +55,8 @@ function convert() {
 function refresh() {
   const dirty = !!cur && $("source").value !== cur.md.text;
   $("btn-preview").disabled = !cur;
+  $("btn-undo").disabled = !hist || !hist.canUndo();
+  $("btn-redo").disabled = !hist || !hist.canRedo();
   $("btn-send").disabled = !cur || !dirty || !$("summary").value.trim();
 }
 
@@ -108,6 +115,8 @@ async function openChapter(name, btn) {
     $("source").value = l.md.text;
     $("source").disabled = false;
     $("summary").value = "";
+    hist = makeHistory(l.md.text);
+    offerDraft(name, l.md);
     $("path").textContent = `mzlab/web/teoria/src/${name}`;
     preview();
     for (const b of document.querySelectorAll("#sections button")) b.removeAttribute("aria-current");
@@ -141,7 +150,8 @@ function preview() {
   const frame = $("preview");
   pendingTop = frame.contentDocument?.scrollingElement?.scrollTop || 0;
   // the page runs no script here (the sandbox has no allow-scripts); <base> makes teoria.css load from the Teoria folder
-  frame.srcdoc = page.replace("<head>", '<head><base href="../teoria/">');
+  // questions are shown open so the answer can be edited too
+  frame.srcdoc = page.replace("<head>", '<head><base href="../teoria/">').replaceAll('<details class="q">', '<details class="q" open>');
   frame.hidden = false;
 }
 
@@ -187,7 +197,15 @@ function wirePreview(frame, top) {
     } else if (ev.key === "Escape") {
       ev.preventDefault();
       finish(false);
+    } else if (ev.key === " " && editing.el.tagName === "SUMMARY") {
+      // a space in a summary would fold it instead of being typed
+      ev.preventDefault();
+      doc.execCommand("insertText", false, " ");
     }
+  });
+  // a space typed in the summary of a question would fold it
+  doc.addEventListener("keyup", (ev) => {
+    if (editing && ev.key === " ") ev.preventDefault();
   });
   doc.addEventListener("paste", (ev) => {
     if (!editing) return;
@@ -207,7 +225,7 @@ function applyEdit(src, html) {
   } else {
     try {
       $("source").value = conv.edit(rendered, cur.name, cur.rawOk, src, html);
-      refresh();
+      commitText();
     } catch (e) {
       err = String(e);
     }
@@ -215,6 +233,73 @@ function applyEdit(src, html) {
   // the page is made again either way (a refused edit puts the old text back); the reason is shown after that
   preview();
   if (err) fail(err);
+}
+
+/** The text in the box is a new step of the history, and the draft is kept (a draft equal to the chapter is dropped). */
+function commitText() {
+  clearTimeout(commitTimer);
+  if (!cur || !hist) return;
+  const text = $("source").value;
+  hist.record(text);
+  if (text === cur.md.text) clearDraft(cur.name);
+  else saveDraft(cur.name, { text, base: cur.md.sha, summary: $("summary").value, saved: new Date().toISOString() });
+  refresh();
+}
+
+/** @param {string | null} text a state of the history, or null when there is none */
+function goTo(text) {
+  if (text === null) return;
+  $("source").value = text;
+  commitText();
+  preview();
+}
+
+const undo = () => hist && goTo(hist.undo());
+const redo = () => hist && goTo(hist.redo());
+
+/** A draft of this chapter found in the browser: restored when it starts from the chapter as it is now, else only offered as a copy. @param {string} name @param {{text: string, sha: string}} md */
+function offerDraft(name, md) {
+  const box = $("draft");
+  box.replaceChildren();
+  const d = loadDraft(name);
+  if (!d || d.text === md.text) {
+    box.hidden = true;
+    return;
+  }
+  const fresh = d.base === md.sha;
+  const when = d.saved ? new Date(d.saved).toLocaleString() : "earlier";
+  const label = document.createElement("span");
+  label.textContent = fresh ? `An unsent draft of this chapter (${when}) was found.` : `A draft from ${when} was found, but the chapter has changed since: it cannot be put back, only copied.`;
+  /** @param {string} t @param {() => void} f */
+  const btn = (t, f) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = t;
+    b.addEventListener("click", f);
+    box.append(b);
+  };
+  box.append(label);
+  if (fresh) {
+    btn("Restore the draft", () => {
+      $("source").value = d.text;
+      $("summary").value = d.summary;
+      commitText();
+      preview();
+      box.hidden = true;
+    });
+  } else {
+    btn("Copy the draft", () => navigator.clipboard?.writeText(d.text).then(() => (label.textContent = "Copied.")));
+  }
+  btn("Discard the draft", () => {
+    clearDraft(name);
+    box.hidden = true;
+  });
+  box.hidden = false;
+}
+
+function scheduleCommit() {
+  clearTimeout(commitTimer);
+  commitTimer = setTimeout(commitText, 600);
 }
 
 function schedulePreview() {
@@ -234,6 +319,8 @@ async function send() {
   say("Sending…");
   try {
     const pr = await client.submit({ name: cur.name, md: $("source").value, html: /** @type {string} */ (r.html), loaded: { md: cur.md, html: cur.html }, summary: $("summary").value.trim() });
+    clearTimeout(commitTimer);
+    clearDraft(cur.name);
     cur.md = { text: $("source").value, sha: "" };
     $("source").disabled = true;
     $("btn-preview").disabled = true;
@@ -261,8 +348,23 @@ function wire() {
   $("source").addEventListener("input", () => {
     refresh();
     schedulePreview();
+    scheduleCommit();
   });
-  $("summary").addEventListener("input", refresh);
+  $("summary").addEventListener("input", () => {
+    refresh();
+    scheduleCommit();
+  });
+  $("btn-undo").addEventListener("click", undo);
+  $("btn-redo").addEventListener("click", redo);
+  document.addEventListener("keydown", (ev) => {
+    const el = /** @type {HTMLElement} */ (ev.target);
+    if (!(ev.ctrlKey || ev.metaKey) || (el.tagName === "INPUT" && el.id !== "source")) return;
+    const k = ev.key.toLowerCase();
+    if (k === "z" && !ev.shiftKey) undo();
+    else if ((k === "z" && ev.shiftKey) || k === "y") redo();
+    else return;
+    ev.preventDefault();
+  });
   $("btn-preview").addEventListener("click", preview);
   $("btn-send").addEventListener("click", send);
   $("btn-token").addEventListener("click", () => $("dlg-token").showModal());

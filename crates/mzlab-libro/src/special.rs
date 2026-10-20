@@ -120,7 +120,7 @@ impl Parser<'_> {
                 "a table needs a header row and a |---| separator row",
             );
         }
-        let Some(cap) = self.caption.take() else {
+        let Some((cap, cap_line)) = self.caption.take() else {
             return self.err(
                 base + i,
                 "a table needs a caption: put 'Tabella: ...' on the line before",
@@ -150,9 +150,10 @@ impl Parser<'_> {
             body.push(format!("<tr>{cells}</tr>"));
         }
         let capt = self.inl(&cap, base + i)?;
+        let capsrc = self.src_attr(&format!("t{cap_line}"), &capt);
         Ok((
             format!(
-                "<table>\n<caption>{capt}</caption>\n<tr>{head}</tr>\n{}\n</table>",
+                "<table>\n<caption{capsrc}>{capt}</caption>\n<tr>{head}</tr>\n{}\n</table>",
                 body.join("\n")
             ),
             j,
@@ -176,7 +177,12 @@ impl Parser<'_> {
         }
         let num = format!("{}.{}", self.prefix, self.fig.len() + 1);
         self.fig.insert(fid.clone(), num.clone());
-        let c = self.inl(cap.as_deref().unwrap_or(""), at)?;
+        let mut c = self.inl(cap.as_deref().unwrap_or(""), at)?;
+        // the caption text (not the label) is editable from the preview when the figure has one
+        let capsrc = self.src_attr(&format!("f{at}"), &c);
+        if cap.is_some() && !capsrc.is_empty() {
+            c = format!("<span{capsrc}>{c}</span>");
+        }
         Ok(format!("<figure id=\"fig-{fid}\">\n<img src=\"{src}\" alt=\"{}\">\n<figcaption><b>Figura {num}</b> {c}</figcaption>\n</figure>", escape(&alt, true)))
     }
 
@@ -198,8 +204,12 @@ impl Parser<'_> {
             .join(" ");
         let ans = self.inl(&joined, base + i + 1)?;
         let q = self.inl(lines[i][4..].trim(), base + i)?;
+        let qsrc = self.src_attr(&format!("qs{}", base + i), &q);
+        let asrc = self.src_attr(&format!("qa{}-{}", base + i + 1, base + j - 1), &ans);
         Ok((
-            format!("<details class=\"q\"><summary>{q}</summary><p>{ans}</p></details>"),
+            format!(
+                "<details class=\"q\"><summary{qsrc}>{q}</summary><p{asrc}>{ans}</p></details>"
+            ),
             j,
         ))
     }

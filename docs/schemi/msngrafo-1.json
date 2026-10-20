@@ -1,0 +1,334 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "msngrafo/1",
+ "title": "msngrafo/1: the fragmentation graph of an MSn infusion",
+ "description": "Format «msngrafo/1» (crates/mzlab-core/src/msngrafo/, docs/agenti/msn-grafo.md): one node per ion seen at any level, energy or path, one arc per precursor → fragment with the neutral loss. Masses only: every formula is null until the graph proposes them. Same input, same bytes.",
+ "type": "object",
+ "required": [
+  "formato",
+  "motore",
+  "sorgente",
+  "opzioni",
+  "polarita",
+  "radici",
+  "ione",
+  "calibrazione",
+  "conteggi",
+  "avvisi",
+  "nodi",
+  "archi"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "formato": {
+   "const": "msngrafo/1"
+  },
+  "motore": {
+   "type": "string"
+  },
+  "sorgente": {
+   "type": [
+    "object",
+    "null"
+   ],
+   "properties": {
+    "nome": {
+     "type": "string"
+    },
+    "sha256_idx": {
+     "type": "string"
+    }
+   }
+  },
+  "opzioni": {
+   "type": "object",
+   "required": [
+    "ppm",
+    "da_min",
+    "min_rel",
+    "max_picchi",
+    "isotopi",
+    "attivazione"
+   ],
+   "properties": {
+    "ppm": {
+     "type": "number",
+     "default": 5
+    },
+    "da_min": {
+     "type": "number",
+     "default": 0.002
+    },
+    "min_rel": {
+     "type": "number",
+     "default": 2
+    },
+    "max_picchi": {
+     "type": "integer",
+     "default": 120
+    },
+    "isotopi": {
+     "type": "boolean",
+     "default": false
+    },
+    "attivazione": {
+     "type": [
+      "string",
+      "null"
+     ]
+    }
+   }
+  },
+  "polarita": {
+   "enum": [
+    1,
+    -1
+   ]
+  },
+  "radici": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "ione": {
+   "type": "null"
+  },
+  "calibrazione": {
+   "type": "null"
+  },
+  "conteggi": {
+   "type": "object",
+   "required": [
+    "nodi",
+    "archi",
+    "scartati_pesanti",
+    "scartati_isotopi",
+    "scartati_deboli"
+   ],
+   "properties": {
+    "nodi": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "archi": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "scartati_pesanti": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "scartati_isotopi": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "scartati_deboli": {
+     "type": "integer",
+     "minimum": 0
+    }
+   }
+  },
+  "avvisi": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "chiave",
+     "albero"
+    ],
+    "properties": {
+     "chiave": {
+      "enum": [
+       "warn.msngrafo.isolation",
+       "warn.msngrafo.precNotFound"
+      ]
+     },
+     "albero": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "nodi": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "id",
+     "mz",
+     "dev_ppm",
+     "livello",
+     "isolato",
+     "albero",
+     "osservazioni",
+     "rel_max",
+     "isotopo_di",
+     "pos",
+     "formula"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "type": "string",
+      "pattern": "^n[0-9]+$"
+     },
+     "mz": {
+      "type": "number"
+     },
+     "dev_ppm": {
+      "type": "number",
+      "minimum": 0
+     },
+     "livello": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "MS level of the first spectrum in which the ion is seen; 1 = a root ion"
+     },
+     "isolato": {
+      "type": "boolean"
+     },
+     "albero": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Nodes of the precursor tree whose precursor this ion is"
+     },
+     "osservazioni": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "rel_max": {
+      "type": "number"
+     },
+     "isotopo_di": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "pos": {
+      "type": "object",
+      "required": [
+       "col",
+       "riga"
+      ],
+      "properties": {
+       "col": {
+        "type": "integer"
+       },
+       "riga": {
+        "type": "integer"
+       }
+      }
+     },
+     "formula": {
+      "type": "null",
+      "description": "The proposed formula of the fragment (not yet filled)"
+     }
+    }
+   }
+  },
+  "archi": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "da",
+     "a",
+     "perdita",
+     "isolamento",
+     "misure"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "da": {
+      "type": "string"
+     },
+     "a": {
+      "type": "string"
+     },
+     "perdita": {
+      "type": "object",
+      "required": [
+       "da_massa",
+       "formula",
+       "ppm",
+       "compatibile"
+      ],
+      "properties": {
+       "da_massa": {
+        "type": "number",
+        "exclusiveMinimum": 0
+       },
+       "formula": {
+        "type": "null"
+       },
+       "ppm": {
+        "type": "null"
+       },
+       "compatibile": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        },
+        "description": "Known neutral losses within the tolerance, by mass only"
+       }
+      }
+     },
+     "isolamento": {
+      "type": "boolean",
+      "description": "The step belongs to an isolated path (the fragment is the precursor of a child of the spectrum)"
+     },
+     "misure": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+       "type": "object",
+       "required": [
+        "albero",
+        "livello",
+        "att",
+        "ce",
+        "n_scansioni",
+        "rel"
+       ],
+       "additionalProperties": false,
+       "properties": {
+        "albero": {
+         "type": "string",
+         "description": "Node id of the precursor tree (msn_albero/1), the filter msn:<id>"
+        },
+        "livello": {
+         "type": "integer",
+         "minimum": 2
+        },
+        "att": {
+         "type": "string",
+         "description": "Activation of the last stage, lower case"
+        },
+        "ce": {
+         "type": [
+          "number",
+          "null"
+         ],
+         "description": "Collision energy; null when the energies are merged"
+        },
+        "n_scansioni": {
+         "type": "integer",
+         "minimum": 1
+        },
+        "rel": {
+         "type": "number",
+         "minimum": 0,
+         "description": "% of the base peak of the spectrum; 0 for an isolated precursor not found there"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

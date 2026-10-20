@@ -70,6 +70,9 @@ fn replace(lines: &[&str], src: &str, md: &str) -> Result<(Vec<String>, String),
             .copied()
             .ok_or_else(|| "Unknown block.".to_string())
     };
+    if src.starts_with(|c: char| c.is_ascii_alphabetic()) {
+        return replace_text(lines, src, md);
+    }
     if let Some((l, c)) = src.split_once(':') {
         let (l, c) = (
             num(l)?,
@@ -111,7 +114,50 @@ fn cell_line(line: &str, c: usize, md: &str) -> Result<String, String> {
     Ok(format!("{}{lead}{md}{trail}{}", &line[..a + 1], &line[b..]))
 }
 
-/// The inner HTML of the element that carries `data-src="key"`.
+/// Blocks whose key starts with a letter: `t<n>` table caption, `f<n>` figure caption, `qs<n>` question, `qa<a>-<b>` its answer.
+fn replace_text(lines: &[&str], src: &str, md: &str) -> Result<(Vec<String>, String), String> {
+    let mut out: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
+    let unknown = || "Unknown block.".to_string();
+    let at = |n: usize| lines.get(n - 1).copied().ok_or_else(unknown);
+    if let Some(r) = src.strip_prefix("qa") {
+        let (a, b) = r.split_once('-').ok_or_else(unknown)?;
+        let (a, b) = (num(a)?, num(b)?);
+        at(a)?;
+        out.splice(a - 1..b.min(lines.len()), [md.to_string()]);
+        return Ok((out, format!("qa{a}-{a}")));
+    }
+    let (kind, n) = match src.strip_prefix("qs") {
+        Some(r) => ("qs", r),
+        None => (&src[..1], &src[1..]),
+    };
+    let l = num(n)?;
+    let line = at(l)?;
+    out[l - 1] = match kind {
+        "qs" if line.starts_with("??? ") => format!("??? {md}"),
+        "t" if line.starts_with("Tabella: ") => format!("Tabella: {md}"),
+        "f" => figure_line(line, md)?,
+        _ => return Err(unknown()),
+    };
+    Ok((out, src.to_string()))
+}
+
+/// The figure line with the text of its quoted title replaced.
+fn figure_line(line: &str, md: &str) -> Result<String, String> {
+    if md.contains('"') {
+        return Err("A figure caption cannot contain the \" character.".into());
+    }
+    let open = line
+        .find("](")
+        .and_then(|p| line[p..].find(" \"").map(|q| p + q + 2))
+        .ok_or_else(|| "Unknown block.".to_string())?;
+    let close = open
+        + line[open..]
+            .find('"')
+            .ok_or_else(|| "Unknown block.".to_string())?;
+    Ok(format!("{}{md}{}", &line[..open], &line[close..]))
+}
+
+/// The inner HTML of the element that carries `data-src="key"` (nested elements of the same tag are counted).
 fn find_inner(page: &str, key: &str) -> Option<String> {
     let mark = format!("data-src=\"{key}\"");
     let at = page.find(&mark)?;
@@ -121,6 +167,16 @@ fn find_inner(page: &str, key: &str) -> Option<String> {
         .take_while(|c| c.is_ascii_alphanumeric())
         .collect();
     let start = at + page[at..].find('>')? + 1;
-    let end = start + page[start..].find(&format!("</{tag}>"))?;
-    Some(page[start..end].to_string())
+    let (open_tag, close_tag) = (format!("<{tag}"), format!("</{tag}>"));
+    let (mut depth, mut pos) = (1, start);
+    loop {
+        let close = pos + page[pos..].find(&close_tag)?;
+        let nested = page[pos..close].matches(&open_tag).count();
+        depth += nested;
+        depth -= 1;
+        if depth == 0 {
+            return Some(page[start..close].to_string());
+        }
+        pos = close + close_tag.len();
+    }
 }

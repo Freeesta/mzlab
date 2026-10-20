@@ -1,0 +1,28 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "liste/1",
+ "title": "liste/1: a list of the user (transformations, adducts or suspects)",
+ "description": "Written by mzlab-feat `liste` from a CSV with an error for every wrong row. Canonical JSON: keys in alphabetical order, items sorted by name and change; its SHA-256 enters prov/1. Field names in Italian, values in English, as disegno/1.",
+ "type": "object",
+ "required": ["elementi", "schema", "tipo"],
+ "properties": {
+  "schema": {"const": "liste/1"},
+  "tipo": {"enum": ["transformations", "adducts", "suspects"]},
+  "elementi": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["commento", "nome"],
+    "properties": {
+     "nome": {"type": "string", "minLength": 1},
+     "commento": {"type": "string"},
+     "delta": {"type": "object", "description": "transformations and adducts: element -> signed count of the change of formula (never 0)", "additionalProperties": {"type": "integer", "not": {"const": 0}}},
+     "ripetizioni_max": {"type": ["integer", "null"], "minimum": 1, "maximum": 10, "description": "transformations: times the change may repeat; null = the default of the rules"},
+     "carica": {"type": "integer", "enum": [-3, -2, -1, 1, 2, 3], "description": "adducts: charge of the ion"},
+     "formula": {"type": ["string", "null"], "description": "suspects: neutral formula"},
+     "massa": {"type": ["number", "null"], "exclusiveMinimum": 0, "description": "suspects: monoisotopic mass; formula or massa is set"}
+    }
+   }
+  }
+ }
+}

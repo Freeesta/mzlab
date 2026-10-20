@@ -1,7 +1,7 @@
 //! Editing from the preview: which blocks carry `data-src`, how an edited block goes back into the source, and what is refused.
 use mzlab_libro::{edit_block, preview, Options};
 
-const MD: &str = "# Titolo\n\n{.lead} Un paragrafo con **grassetto** e H~2~O.\n\nSecondo paragrafo semplice.\n\n- voce uno\n- voce due\n\n1. primo\n\nTabella: Prova\n| A | B |\n|---|---|\n| 1 |  testo |\n\n> [!nota] Riquadro\n> Dentro il riquadro.\n";
+const MD: &str = "# Titolo\n\n{.lead} Un paragrafo con **grassetto** e H~2~O.\n\nSecondo paragrafo semplice.\n\n- voce uno\n- voce due\n\n1. primo\n\nTabella: Prova\n| A | B |\n|---|---|\n| 1 |  testo |\n\n> [!nota] Riquadro\n> Dentro il riquadro.\n\n![Schema del metodo](img/schema.svg \"Didascalia **forte**\") {#fig:s}\n\n??? Che cosa misura?\nMisura la massa\nsu carica.\n";
 
 fn opt() -> Options {
     Options {
@@ -17,7 +17,10 @@ fn edit(src: &str, html: &str) -> Result<String, String> {
 #[test]
 fn only_simple_top_level_blocks_are_editable() {
     let p = preview(MD, "01-prova.md", &opt()).unwrap();
-    for key in ["3-3", "5-5", "7", "8", "10", "13:0", "13:1", "15:0", "15:1"] {
+    for key in [
+        "3-3", "5-5", "7", "8", "10", "13:0", "13:1", "15:0", "15:1", "t12", "f20", "qs22",
+        "qa23-24",
+    ] {
         assert!(
             p.contains(&format!("data-src=\"{key}\"")),
             "{key} missing in {p}"
@@ -25,7 +28,7 @@ fn only_simple_top_level_blocks_are_editable() {
     }
     assert_eq!(
         p.matches("data-src").count(),
-        9,
+        13,
         "headings, the box and its paragraph stay locked"
     );
     assert!(!p.contains("<h1 data-src"));
@@ -40,6 +43,11 @@ fn a_preview_without_the_marks_is_the_real_page() {
         let end = a + 11 + stripped[a + 11..].find('"').unwrap() + 1;
         stripped.replace_range(a..end, "");
     }
+    // the preview wraps a figure caption in a bare <span>
+    let w = stripped.find("<span>").unwrap();
+    stripped.replace_range(w..w + 6, "");
+    let w = stripped[w..].find("</span>").unwrap() + w;
+    stripped.replace_range(w..w + 7, "");
     assert_eq!(stripped, real);
 }
 
@@ -126,4 +134,39 @@ fn unknown_markup_and_empty_blocks_are_refused() {
     assert!(edit("5-5", "<b>  </b>").is_err());
     assert!(edit("15:1", "a | b").unwrap_err().contains("| character"));
     assert!(edit("99-99", "x").is_err());
+}
+
+#[test]
+fn captions_and_questions_are_edited_in_place() {
+    let r = edit("t12", "Tabella <b>nuova</b>").unwrap();
+    assert!(r.contains("\nTabella: Tabella **nuova**\n| A | B |"), "{r}");
+    let r = edit("f20", "Un'altra <i>didascalia</i>").unwrap();
+    assert!(
+        r.contains("![Schema del metodo](img/schema.svg \"Un'altra *didascalia*\") {#fig:s}"),
+        "{r}"
+    );
+    let r = edit("qs22", "Cosa misura il rivelatore?").unwrap();
+    assert!(
+        r.contains("\n??? Cosa misura il rivelatore?\nMisura la massa\n"),
+        "{r}"
+    );
+    let r = edit(
+        "qa23-24",
+        "Misura la <b>massa</b> su carica, <em>sempre</em>.",
+    )
+    .unwrap();
+    assert!(
+        r.ends_with("??? Che cosa misura?\nMisura la **massa** su carica, _sempre_.\n"),
+        "answer lines collapse into one: {r}"
+    );
+}
+
+#[test]
+fn a_caption_that_cannot_be_written_back_is_refused() {
+    assert!(edit("f20", "dice \"ciao\"")
+        .unwrap_err()
+        .contains("\" character"));
+    assert!(edit("t12", "a *b* c").unwrap_err().contains("source box"));
+    assert!(edit("qs22", "").is_err() && edit("qa23-24", "<b> </b>").is_err());
+    assert!(edit("f21", "x").is_err(), "a key that is not a figure line");
 }

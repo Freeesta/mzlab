@@ -27,7 +27,7 @@ mod flow_match;
 mod flow_ms2;
 mod flow_network;
 mod flow_out;
-mod flow_report;
+pub mod flow_report;
 mod flow_run;
 
 const HELP: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
