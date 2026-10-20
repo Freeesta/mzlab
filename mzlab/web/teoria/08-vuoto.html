@@ -1,19 +1,18 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema--><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dalla sorgente al vuoto · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 8</div>
 <h1>Dalla sorgente al vuoto</h1>
 <p class="lead">Gli ioni nascono a pressione atmosferica, ma un quadrupolo funziona solo se lo ione lo attraversa senza urtare nulla. In pochi centimetri la pressione scende di otto ordini di grandezza.</p>
-
 <h2>Perché serve il vuoto</h2>
 <p>La separazione in massa di un quadrupolo si basa sulla traiettoria di uno ione in un campo elettrico (capitolo 9). Ogni urto con una molecola di gas cambia velocità e direzione dello ione: se gli urti sono frequenti, la traiettoria non dipende più da m/z e la separazione si perde. La grandezza che decide è il <b>libero cammino medio</b>, la distanza media percorsa tra due urti:</p>
 <span class="eq"><i>λ</i> = <span class="frac"><span><i>k</i><sub>B</sub><i>T</i></span><span>√2 π <i>d</i><sup>2</sup> <i>p</i></span></span><span class="no">(8.1)</span></span>
 <p>dove <i>d</i> è il diametro di collisione (per N<sub>2</sub> circa 0,37 nm; per uno ione organico il diametro, e quindi la sezione d'urto, è maggiore: i valori calcolati sono un limite superiore). Un quadrupolo è lungo circa 20 cm: per attraversarlo senza urti serve <i>λ</i> di metri, cioè pressioni intorno a 10<sup>−5</sup> Torr.</p>
 <div class="sim" id="sim-mfp"><h4>Libero cammino medio e pressione</h4>
 <p class="note">Equazione 5.1 per N<sub>2</sub> a 25 °C. I punti arancioni indicano gli stadi di pressione tipici di uno strumento API.</p></div>
-
 <h2>Gli stadi di pompaggio</h2>
 <p>Il passaggio da 760 Torr all'alto vuoto avviene con <b>vuoto differenziale</b>: piccoli orifizi separano camere pompate in modo indipendente (pompa primaria rotativa o scroll sugli stadi a pressione alta, turbomolecolare a più stadi sull'analizzatore). Ogni orifizio lascia passare un flusso di gas limitato, ma gli ioni, guidati da campi elettrici, passano con efficienza molto maggiore delle molecole neutre.</p>
 <table>
@@ -24,7 +23,6 @@
 <tr><td>Q1, Q3</td><td class="n">~10<sup>−5</sup> Torr</td><td class="n">metri</td><td>Traiettorie senza urti: filtro di massa</td></tr>
 <tr><td>q2, cella di collisione</td><td class="n">mTorr di N<sub>2</sub></td><td class="n">mm</td><td>Urti voluti, ad energia controllata: CID (capitolo 10)</td></tr>
 </table>
-
 <h2>Il gas di tenda e il declustering</h2>
 <p>Nella geometria SCIEX una corrente di N<sub>2</sub> puro (curtain gas, CUR) esce dallo spazio tra piastra di tenda e orifizio verso la sorgente. Gli ioni la attraversano perché sono spinti dal campo elettrico; goccioline, solvente e neutri vengono respinti. Si riduce così l'ingresso di acqua nel vuoto, la formazione di cluster ione–solvente e la contaminazione dell'orifizio.</p>
 <p>Il <b>declustering potential</b> (DP) è la differenza di potenziale tra orifizio e la regione successiva. Accelera gli ioni nella zona a ~1 Torr, dove gli urti con il gas strappano le molecole di solvente ancora legate ([M+H(H<sub>2</sub>O)<sub><i>n</i></sub>]<sup>+</sup> → [M+H]<sup>+</sup>). È un compromesso:</p>
@@ -34,16 +32,11 @@
 </ul>
 <div class="box lab"><b>Nei metodi del laboratorio</b>
 <p>Il DP fa parte dei parametri "di composto" (si ottimizza per ogni analita, come la CE); nel metodo full scan è un valore unico per tutti gli ioni, quindi non ottimale per ciascuno. Un TP fragile può mostrare in full scan frammenti in sorgente: tenetelo presente quando un "nuovo" m/z ha esattamente lo stesso RT e la stessa forma di picco di un altro.</p></div>
-
 <h2>Ottiche ioniche a radiofrequenza</h2>
 <p>Tra gli stadi gli ioni sono guidati da multipoli alimentati solo in radiofrequenza (quadrupoli, esapoli, ottapoli "RF-only"). Senza componente continua, un multipolo non separa le masse ma crea un pozzo di potenziale efficace che confina sull'asse tutti gli ioni sopra una certa massa (capitolo 9, regione <i>a</i> = 0). In presenza di gas, gli urti dissipano l'energia degli ioni, che si concentrano sull'asse del pozzo: la trasmissione verso Q1 aumenta molto. Lo stesso principio, con energia più alta, tiene insieme i frammenti nella cella di collisione.</p>
-
 <h2>Verifica</h2>
-<details class="q"><summary>Perché un quadrupolo non funzionerebbe a 1 mTorr?</summary>
-<p>A 1 mTorr il libero cammino medio è di qualche centimetro: in 20 cm lo ione subirebbe molti urti e la sua traiettoria non dipenderebbe più solo da m/z e dai campi applicati; risoluzione e trasmissione crollerebbero.</p></details>
-<details class="q"><summary>Aumentando il CUR il segnale cala leggermente ma il fondo cala molto. Perché?</summary>
-<p>Più gas di tenda respinge meglio neutri, cluster e goccioline (fonte di rumore chimico), ma rallenta anche parte degli ioni. Il rapporto segnale/rumore spesso migliora.</p></details>
-
+<details class="q"><summary>Perché un quadrupolo non funzionerebbe a 1 mTorr?</summary><p>A 1 mTorr il libero cammino medio è di qualche centimetro: in 20 cm lo ione subirebbe molti urti e la sua traiettoria non dipenderebbe più solo da m/z e dai campi applicati; risoluzione e trasmissione crollerebbero.</p></details>
+<details class="q"><summary>Aumentando il CUR il segnale cala leggermente ma il fondo cala molto. Perché?</summary><p>Più gas di tenda respinge meglio neutri, cluster e goccioline (fonte di rumore chimico), ma rallenta anche parte degli ioni. Il rapporto segnale/rumore spesso migliora.</p></details>
 <h2>Per approfondire</h2>
 <ul class="refs">
 <li><span class="tag">libro</span>Gross J.H. (2017) <i>Mass Spectrometry: A Textbook</i>, 3ª ed., Springer, capitoli sull'interfaccia API e sul vuoto. <a href="https://doi.org/10.1007/978-3-319-54398-7" target="_blank" rel="noopener">doi:10.1007/978-3-319-54398-7</a></li>

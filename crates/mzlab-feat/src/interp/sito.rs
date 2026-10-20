@@ -97,6 +97,8 @@ fn transform_of(parent: &Formula, tp: &Formula) -> Result<&'static str, &'static
         [("Cl", 1), ("H", -1)] => "+Cl-H",
         [("Br", 1), ("H", -1)] => "+Br-H",
         [("O", 2)] => "+2O",
+        [("O", 3)] => "+3O",
+        [("C", -2), ("H", -4)] => "-C2H4",
         [("H", -2), ("O", 2)] => "+2O-2H",
         _ if d.iter().any(|x| x.0 == "O" && x.1 >= 2) => return Err("multiple_changes"),
         _ => return Err("unsupported_change"),
@@ -144,13 +146,17 @@ pub fn candidates_record(
 /// The atoms of each site as a mask (the bond of a `-2H` takes both carbons), for `localize_sites`; None above 64 atoms.
 pub fn masks(c: &Candidates) -> Option<Vec<u64>> {
     // A pair of changes has no tree vote: a fragment holding one atom of the pair is not evidence for the pair.
-    if c.mol.atoms.len() > 64 || c.sites.iter().any(|s| posizioni::is_pair(s.kind)) {
+    if c.mol.atoms.len() > 64 || c.sites.iter().any(|s| posizioni::is_multi(s.kind)) {
         return None;
     }
     Some(
         c.sites
             .iter()
-            .map(|s| (1u64 << s.atom) | s.partner.map_or(0, |p| 1u64 << p))
+            .map(|s| {
+                (1u64 << s.atom)
+                    | s.partner.map_or(0, |p| 1u64 << p)
+                    | s.third.map_or(0, |t| 1u64 << t)
+            })
             .collect(),
     )
 }
@@ -343,7 +349,7 @@ fn decide(
     };
     // Two changes are never reported as a single position: the best case is the region that holds both.
     let alone = within.len() == 1
-        && !sites.iter().any(|s| posizioni::is_pair(s.kind))
+        && !sites.iter().any(|s| posizioni::is_multi(s.kind))
         && alive[0].status == "supported"
         && alive[0].n_against == 0
         && same(alive[0]);

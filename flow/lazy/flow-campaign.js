@@ -31,7 +31,7 @@
   F.registerView({ id: "campaign", title: "Levels of a campaign folder", types: ["annot"], accepts: (/** @type {any} */ item) => !!item.campaign, open: async (/** @type {HTMLElement} */ host, /** @type {any} */ item) => {
     const { el } = F, c = item.campaign, say = el("p", { class: "fl-note", role: "status" }), box = el("div", { class: "tp" });
     const out = (/** @type {"csv" | "xlsx"} */ kind) => () => exportTable(c, kind).then(() => { say.textContent = ""; }, (/** @type {any} */ e) => { say.textContent = "Export failed: " + (e && e.message || e); });
-    const rv = el("div", { class: "flw-review" }), exp = el("span", { class: "flw-exp" });
+    const rv = el("div", { class: "flw-review" }), exp = el("span", { class: "flw-exp" }), digest = el("span", { class: "flw-digest-bar" });
     // the Review screen replaces the table; leaving it redraws the table when a decision was saved (the cascade runs again once)
     const startReview = () => {
       box.hidden = true; bench.textContent = "";
@@ -41,9 +41,14 @@
         close: async (/** @type {boolean} */ changed) => { rv.textContent = ""; box.hidden = false; if (changed) { Object.assign(c, await F.campaignRun(c.files, c.root)); draw(); } },
       });
     };
-    host.append(el("div", { class: "fl-meta" }, F.btn("ok", "Review the features that wait for a decision, one at a time", startReview, "Review"), F.btn("export", "Export the table as CSV", out("csv"), "CSV"), F.btn("export", "Export the table as XLSX", out("xlsx"), "XLSX"), exp), say, rv, box);
+    host.append(el("div", { class: "fl-meta" }, F.btn("ok", "Review the features that wait for a decision, one at a time", startReview, "Review"), F.btn("export", "Export the table as CSV", out("csv"), "CSV"), F.btn("export", "Export the table as XLSX", out("xlsx"), "XLSX"), exp, digest), say, rv, box);
+    F.digestMount(digest, c, say);
     // the six engine exports of Attributio (evidence, Schymanski folder, publication table, quantification, gradient, SIRIUS) on the same campaign files
     G.ATTRIBUTIO_EXPORT.mount(exp, { pool: G.ATTRIBUTIO_CORE.pool, files: () => c.files, root: () => c.root, say: (/** @type {string} */ t, /** @type {boolean} */ err) => { say.textContent = t; if (err) say.setAttribute("role", "alert"); else say.setAttribute("role", "status"); } });
+    // the MS2 panel (library search, in-silico ranking, hydrogen shifts, retention-time prediction, co-isolated features) is evidence only: it writes nothing into the campaign
+    const ms2 = el("div", { class: "flw-ms2" });
+    G.ATTRIBUTIO_MS2.mount(ms2, { pool: G.ATTRIBUTIO_CORE.pool, files: () => c.files, root: () => c.root, say: (/** @type {string} */ t, /** @type {boolean} */ err) => { say.textContent = t; say.setAttribute("role", err ? "alert" : "status"); } });
+    host.append(ms2);
     for (const b of exp.querySelectorAll("#at-export")) /** @type {HTMLButtonElement} */ (b).disabled = false;
     if (c.summary && c.summary.warnings && c.summary.warnings.length) say.textContent = c.summary.warnings.join(" · ");
     const bench = el("div", { class: "flw-bench" });
