@@ -139,8 +139,7 @@ impl Search<'_> {
             for (old, &l) in first.iter().enumerate() {
                 by_label[l as usize] = old;
             }
-            self.autos
-                .push(perm.iter().map(|&p| by_label[p]).collect());
+            self.autos.push(perm.iter().map(|&p| by_label[p]).collect());
             return;
         }
         if self.best.as_ref().is_none_or(|(b, _)| cert < *b) {
@@ -156,7 +155,11 @@ impl Search<'_> {
         while i < seen.len() {
             let x = seen[i];
             i += 1;
-            for g in self.autos.iter().filter(|g| prefix.iter().all(|&p| g[p] == p)) {
+            for g in self
+                .autos
+                .iter()
+                .filter(|g| prefix.iter().all(|&p| g[p] == p))
+            {
                 if g[x] == v {
                     return true;
                 }

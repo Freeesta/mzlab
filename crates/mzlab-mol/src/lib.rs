@@ -23,8 +23,8 @@ mod validate;
 
 pub use canon::CAN_VERSION;
 pub use codec::{hex, MolError};
-pub use sites::Site;
 pub use model::{
     Atom, Bond, Cfg, Coords, GroupKind, Ids, Mol, Parity, Prop, Region, RegionKind, Status, Stereo,
     StereoGroup, FORMAT,
 };
+pub use sites::Site;

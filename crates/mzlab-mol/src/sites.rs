@@ -5,15 +5,6 @@
 
 use crate::model::{Cfg, Mol, Parity, Status, Stereo, StereoGroup};
 
-/// A place in a record where stereo can exist.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Site {
-    /// Tetrahedral centre.
-    Tetra(u32),
-    /// Double bond `a`-`b` with `a < b`.
-    Db(u32, u32),
-}
-
 /// Number of random assignments of the other sites tried before a site is declared not stereogenic.
 const TRIES: usize = 64;
 /// Smallest ring that holds a stereogenic double bond.
@@ -21,16 +12,8 @@ const MIN_RING: usize = 8;
 const H: usize = 0;
 const LONE_PAIR: usize = 1;
 
-struct Cand {
-    site: Site,
-    /// (centre, x, y): two neighbours of the same constitution class on a centre of the site.
-    twins: Vec<(usize, usize, usize)>,
-    /// All substituents differ already by constitution: no flip test needed.
-    sure: bool,
-}
-
 impl Mol {
-    /// The sites of the molecule, tetrahedral centres first, each group in ascending order. Whatever stereo the record carries is ignored.
+    /// The sites of the molecule, tetrahedral centres first, then double bonds, each in ascending order. Whatever stereo the record carries is ignored.
     pub fn stereo_sites(&self) -> Vec<Site> {
         let base = self.stripped();
         let cands = base.candidates();
@@ -83,7 +66,12 @@ impl Mol {
     }
 
     fn stripped(&self) -> Mol {
-        Mol::new(self.atoms.clone(), self.bonds.clone(), Vec::new(), Vec::new())
+        Mol::new(
+            self.atoms.clone(),
+            self.bonds.clone(),
+            Vec::new(),
+            Vec::new(),
+        )
     }
 
     fn neighbours(&self) -> Vec<Vec<(u32, u8)>> {
@@ -104,7 +92,7 @@ impl Mol {
         let mut out = Vec::new();
         for c in 0..self.atoms.len() {
             if let Some(slots) = tetra_slots(self, &adj, &cls, c) {
-                if let Some(sure) = differ(&slots, 3) {
+                if let Some(sure) = differ(&slots, 2) {
                     out.push(Cand {
                         site: Site::Tetra(c as u32),
                         twins: twins(&adj, &cls, c, None),
@@ -132,7 +120,11 @@ impl Mol {
                 Site::Db(a, b) => (live[a as usize], live[b as usize]) = (true, true),
             }
         }
-        out.retain(|c| !c.twins.iter().any(|&(z, x, y)| dead_pair(&adj, &live, z, x, y)));
+        out.retain(|c| {
+            !c.twins
+                .iter()
+                .any(|&(z, x, y)| dead_pair(&adj, &live, z, x, y))
+        });
         out
     }
 
@@ -140,7 +132,11 @@ impl Mol {
     fn flips(&self, cands: &[Cand], i: usize) -> bool {
         let others: Vec<usize> = (0..cands.len()).filter(|&j| j != i).collect();
         let mut state = 0x9E37_79B9_7F4A_7C15u64;
-        let total = if others.len() <= 5 { 1 << others.len() } else { TRIES };
+        let total = if others.len() <= 5 {
+            1 << others.len()
+        } else {
+            TRIES
+        };
         for t in 0..total {
             let bits: Vec<bool> = (0..others.len())
                 .map(|j| match (others.len() <= 5, t) {
@@ -199,8 +195,17 @@ impl Mol {
     }
 }
 
-fn twins(adj: &[Vec<(u32, u8)>], cls: &[usize], c: usize, skip: Option<u32>) -> Vec<(usize, usize, usize)> {
-    let near: Vec<usize> = adj[c].iter().map(|&(x, _)| x as usize).filter(|&x| Some(x as u32) != skip).collect();
+fn twins(
+    adj: &[Vec<(u32, u8)>],
+    cls: &[usize],
+    c: usize,
+    skip: Option<u32>,
+) -> Vec<(usize, usize, usize)> {
+    let near: Vec<usize> = adj[c]
+        .iter()
+        .map(|&(x, _)| x as usize)
+        .filter(|&x| Some(x as u32) != skip)
+        .collect();
     let mut out = Vec::new();
     for (i, &x) in near.iter().enumerate() {
         for &y in &near[i + 1..] {
@@ -281,12 +286,17 @@ fn tetra_slots(m: &Mol, adj: &[Vec<(u32, u8)>], cls: &[usize], c: usize) -> Opti
         return None;
     }
     let total = near.len() + a.h as usize;
+    if a.h > 1 {
+        return None;
+    }
     let fit = match (a.el.as_str(), a.chg) {
         ("C" | "Si" | "Ge" | "Sn", 0) => doubles == 0 && total == 4,
         ("N" | "P" | "As", 1) | ("B", -1) => doubles == 0 && total == 4,
         ("N", 0) => doubles == 0 && near.len() == 3 && a.h == 0 && strained_n(adj, c),
         ("P" | "As", 0) => (doubles == 0 && total == 3 && a.h == 0) || (doubles <= 1 && total == 4),
-        ("S" | "Se", 0) => a.h == 0 && ((near.len() == 3 && doubles == 1) || (near.len() == 4 && doubles == 2)),
+        ("S" | "Se", 0) => {
+            a.h == 0 && ((near.len() == 3 && doubles == 1) || (near.len() == 4 && doubles == 2))
+        }
         ("S" | "Se", 1) => doubles == 0 && near.len() == 3 && a.h == 0,
         _ => false,
     };
@@ -319,7 +329,12 @@ fn strained_n(adj: &[Vec<(u32, u8)>], n: usize) -> bool {
 }
 
 /// Length of the shortest path `s` to `t` that uses no edge `(u, v)` for which `blocked(u, v)`.
-fn path(adj: &[Vec<(u32, u8)>], s: usize, t: usize, blocked: &dyn Fn(usize, usize) -> bool) -> Option<usize> {
+fn path(
+    adj: &[Vec<(u32, u8)>],
+    s: usize,
+    t: usize,
+    blocked: &dyn Fn(usize, usize) -> bool,
+) -> Option<usize> {
     let mut dist = vec![usize::MAX; adj.len()];
     dist[s] = 0;
     let mut queue = std::collections::VecDeque::from([s]);
@@ -341,9 +356,17 @@ fn path(adj: &[Vec<(u32, u8)>], s: usize, t: usize, blocked: &dyn Fn(usize, usiz
 /// Slots of one end `x` of the double bond to `y`: its other substituents, plus H or a lone pair when only one is written.
 fn end_slots(m: &Mol, adj: &[Vec<(u32, u8)>], cls: &[usize], x: u32, y: u32) -> Option<Vec<usize>> {
     let a = &m.atoms[x as usize];
-    let others: Vec<(u32, u8)> = adj[x as usize].iter().copied().filter(|&(z, _)| z != y).collect();
-    if !matches!(a.el.as_str(), "C" | "N") || a.rad != 0 || others.is_empty() || others.iter().any(|&(_, o)| o != 1) {
+    let others: Vec<(u32, u8)> = adj[x as usize]
+        .iter()
+        .copied()
+        .filter(|&(z, _)| z != y)
+        .collect();
+    if !matches!(a.el.as_str(), "C" | "N") || a.rad != 0 || others.iter().any(|&(_, o)| o != 1) {
         return None;
+    }
+    // an imine N-H has no neighbour to name in a defined element, but it is a site (unknown) all the same
+    if others.is_empty() {
+        return (a.el == "N" && a.h == 1).then(|| vec![H, LONE_PAIR]);
     }
     let mut slots: Vec<usize> = others.iter().map(|&(z, _)| cls[z as usize] + 2).collect();
     match (others.len(), a.h, a.el.as_str(), a.chg) {
@@ -364,5 +387,24 @@ fn db_sure(m: &Mol, adj: &[Vec<(u32, u8)>], cls: &[usize], a: u32, b: u32) -> Op
         return None;
     }
     let (sa, sb) = (end_slots(m, adj, cls, a, b)?, end_slots(m, adj, cls, b, a)?);
-    Some(sa[0] != sa[1] && sb[0] != sb[1])
+    let sure = sa[0] != sa[1] && sb[0] != sb[1];
+    let blind = |x: u32, y: u32| adj[x as usize].iter().all(|&(z, _)| z == y);
+    (sure || !(blind(a, b) || blind(b, a))).then_some(sure)
+}
+
+struct Cand {
+    site: Site,
+    /// (centre, x, y): two neighbours of the same constitution class on a centre of the site.
+    twins: Vec<(usize, usize, usize)>,
+    /// All substituents differ already by constitution: no flip test needed.
+    sure: bool,
+}
+
+/// A place in a record where stereo can exist.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Site {
+    /// Tetrahedral centre.
+    Tetra(u32),
+    /// Double bond `a`-`b` with `a < b`.
+    Db(u32, u32),
 }

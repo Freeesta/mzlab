@@ -15,24 +15,115 @@ fn name(s: Site) -> String {
     }
 }
 
+/// Where RDKit flags more than is chemically possible: a linear azide N=N+=N- has no cis/trans, and a phosphate triester with three
+/// identical arms that each hold a centre has only two kinds of arm (R, S), so two arms always match and the phosphorus is not stereogenic.
+const EXCEPTIONS: [&str; 3] = [
+    "CC1=CN(C(=O)NC1=O)[C@H]2C[C@@H]([C@H](O2)CO)N=[N+]=[N-]",
+    "CC(COP(=O)(OCC(C)Cl)OCC(C)Cl)Cl",
+    "CCCCC(CC)COP(=O)(OCC(CC)CCCC)OCC(CC)CCCC",
+];
+
 #[test]
 fn sites_match_rdkit() {
     let g = truth();
     let (mut bad, mut total) = (Vec::new(), 0);
     for row in g["sites"].as_array().expect("sites") {
         let smi = row[0].as_str().unwrap_or_default();
-        let t0 = std::time::Instant::now();
         let m = Mol::from_smiles(smi).unwrap_or_else(|e| panic!("{smi}: {e}"));
         let mut mine: Vec<String> = m.stereo_sites().into_iter().map(name).collect();
         mine.sort();
-        let want: Vec<String> = row[1].as_array().expect("list").iter().map(|v| v.as_str().unwrap_or_default().to_string()).collect();
+        let want: Vec<String> = row[1]
+            .as_array()
+            .expect("list")
+            .iter()
+            .map(|v| v.as_str().unwrap_or_default().to_string())
+            .collect();
         total += 1;
-        if t0.elapsed().as_millis() > 200 {
-            eprintln!("slow {} ms: {smi}", t0.elapsed().as_millis());
+        if EXCEPTIONS.contains(&smi) {
+            continue;
         }
         if mine != want {
             bad.push(format!("{smi}\n   mine {mine:?}\n   rdkit {want:?}"));
         }
     }
-    assert!(bad.is_empty(), "{} of {total} differ:\n{}", bad.len(), bad.join("\n"));
+    assert!(
+        bad.is_empty(),
+        "{} of {total} differ:\n{}",
+        bad.len(),
+        bad.join("\n")
+    );
+}
+
+fn molecules() -> Vec<Mol> {
+    truth()["sites"]
+        .as_array()
+        .expect("sites")
+        .iter()
+        .map(|r| Mol::from_smiles(r[0].as_str().unwrap_or_default()).expect("smiles"))
+        .collect()
+}
+
+/// A permutation of `0..n` from a seed (Fisher-Yates over a small LCG).
+fn shuffled(n: usize, mut seed: u64) -> Vec<u32> {
+    let mut p: Vec<u32> = (0..n as u32).collect();
+    for i in (1..n).rev() {
+        seed = seed
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        p.swap(i, (seed >> 33) as usize % (i + 1));
+    }
+    p
+}
+
+#[test]
+fn two_writings_give_the_same_record() {
+    for m in molecules() {
+        for rec in [m.clone(), m.with_stereo_sites()] {
+            let want = rec.canonical().to_json();
+            for seed in 1..=3 {
+                let other = rec
+                    .renumbered(&shuffled(rec.atoms.len(), seed))
+                    .expect("permutation");
+                assert_eq!(
+                    other.canonical().to_json(),
+                    want,
+                    "seed {seed}: {}",
+                    rec.to_json()
+                );
+                assert_eq!(other.can(), rec.can());
+            }
+        }
+    }
+}
+
+#[test]
+fn stereo_and_status_are_part_of_the_identity() {
+    let can = |s: &str| {
+        Mol::from_smiles(s)
+            .expect("smiles")
+            .with_stereo_sites()
+            .can()
+    };
+    assert_ne!(
+        can("C[C@H](N)C(=O)O"),
+        can("C[C@@H](N)C(=O)O"),
+        "enantiomers"
+    );
+    assert_ne!(
+        can("C[C@H](N)C(=O)O"),
+        can("CC(N)C(=O)O"),
+        "defined and unknown"
+    );
+    assert_ne!(can("F/C=C/F"), can("F/C=C\\F"), "E and Z");
+    assert_eq!(can("OC(=O)[C@@H](C)N"), can("N[C@H](C)C(=O)O"));
+    assert_eq!(
+        can("C[C@H]1CC[C@@H](C)CC1"),
+        can("C[C@@H]1CC[C@H](C)CC1"),
+        "trans written two ways"
+    );
+    assert_ne!(
+        can("C[C@H]1CC[C@@H](C)CC1"),
+        can("C[C@H]1CC[C@H](C)CC1"),
+        "cis and trans"
+    );
 }
