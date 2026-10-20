@@ -25,6 +25,15 @@ try:
             g = pg.evaluate(GROUPS)
             assert sorted(g) == sorted(["DDA|1", "Full Scan|1", "MS2 (Product Ion)|1", "Infusione|1"]), g
         step("groups DDA (one row for both parts), Full Scan, MS2, Infusione", groups)
+        def dda_name():
+            assert pg.evaluate("E.files.filter(f=>f.dda).every(f=>!/Full Scan/.test(f.label))"), "a DDA file is named after the file only"
+            assert "Full Scan" not in pg.inner_text("#flst .fl:has-text('HR_DDA') .nm")
+        step("the DDA row has no '· Full Scan' suffix", dda_name)
+        def auto_width():
+            w = pg.evaluate("BARRA.width"); assert 280 <= w <= 340, w
+            pg.evaluate("renderFileList()"); assert pg.evaluate("BARRA.width") == w
+            assert pg.evaluate("Q('#flst .fl .nm').scrollWidth <= Q('#flst .fl .nm').clientWidth + 1"), "the names fit in the list"
+        step("the side bar width follows the names (never above the default)", auto_width)
         def click_opens():
             if not pg.is_visible("#flst"): pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(500)       # the side bar starts folded
             pg.click("#flst .fl:has-text('HR_inf')"); pg.wait_for_timeout(500)
