@@ -16,4 +16,6 @@ pub use frammenti::{expected_fragments, Frag};
 pub use prior::{prior_of, Prior, HALOGEN_CAVEAT, TIE};
 pub use simmetria::symmetry_classes;
 pub use siti::{check_formulas, sites, Site};
+#[cfg(feature = "record")]
+pub use uscita::positions_record_json;
 pub use uscita::{positions_json, positions_prior_json};

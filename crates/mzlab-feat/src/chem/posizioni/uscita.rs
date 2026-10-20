@@ -152,18 +152,55 @@ pub fn positions_prior_json(
     positive: bool,
     reatt_json: &str,
 ) -> Result<String> {
+    let mol = Mol::parse(smiles)?;
+    report(
+        &mol, smiles, transform, peaks_json, tol, ppm, positive, reatt_json,
+    )
+}
+
+/// The report for an already built graph; `parent` is only the label written in the `parent` field.
+#[allow(clippy::too_many_arguments)]
+fn report(
+    mol: &Mol,
+    parent: &str,
+    transform: &str,
+    peaks_json: &str,
+    tol: f64,
+    ppm: bool,
+    positive: bool,
+    reatt_json: &str,
+) -> Result<String> {
     if !(tol.is_finite() && tol > 0.0) {
         return Err(Error::new("error.posiz.tol"));
     }
-    let mol = Mol::parse(smiles)?;
     let peaks = parse_peaks(peaks_json)?;
-    let all = sites(&mol, transform)?;
+    let all = sites(mol, transform)?;
     let prior = match reatt_json.trim() {
         "" => None,
         t => Some(prior_of(&all, mol.atoms.len(), t)?),
     };
     let tol = if ppm { Tol::Ppm(tol) } else { Tol::Da(tol) };
     let pol = if positive { Pol::Pos } else { Pol::Neg };
-    let r = match_spectrum(&mol, &all, &peaks, tol, pol)?;
-    Ok(write(&r, smiles, transform, prior.as_deref()))
+    let r = match_spectrum(mol, &all, &peaks, tol, pol)?;
+    Ok(write(&r, parent, transform, prior.as_deref()))
+}
+
+/// `positions_prior_json` for a `mol/1` record instead of a SMILES (feature `record`): the graph is `Mol::from_record(rec, true)`, aromaticity perceived
+/// from the Kekulé form, so a Kekulé parent finds its aromatic sites too. `parent` is the label of the `parent` field (the caller's SMILES).
+#[cfg(feature = "record")]
+#[allow(clippy::too_many_arguments)]
+pub fn positions_record_json(
+    rec: &mzlab_mol::Mol,
+    parent: &str,
+    transform: &str,
+    peaks_json: &str,
+    tol: f64,
+    ppm: bool,
+    positive: bool,
+    reatt_json: &str,
+) -> Result<String> {
+    let mol = Mol::from_record(rec, true)?;
+    report(
+        &mol, parent, transform, peaks_json, tol, ppm, positive, reatt_json,
+    )
 }
