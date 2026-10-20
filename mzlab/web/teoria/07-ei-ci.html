@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema--><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ionizzazione elettronica (EI) e chimica (CI) · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 7</div>
 <h1>Ionizzazione elettronica (EI) e chimica (CI)</h1>
 <p class="lead">Nella GC-MS le molecole arrivano già in fase gas e nel vuoto: si ionizzano bombardandole con elettroni. Ne nascono radicali cationi con molta energia interna, che si frammentano in modo riproducibile. È l'origine degli spettri EI che imparerete a risolvere nei capitoli 15 e 16.</p>
-
 <h2>La sorgente EI</h2>
 <figure>
 <svg viewBox="0 0 860 260" role="img" aria-label="Schema di una sorgente a impatto elettronico: camera di ionizzazione, filamento, fascio di elettroni, repeller e lenti" aria-describedby="fd-07-0">
@@ -30,7 +30,6 @@
 <figcaption><b>Figura 7.1</b> Sorgente a impatto elettronico (schema non in scala). Gli elettroni emessi dal filamento caldo sono accelerati da una differenza di potenziale di 70 V e attraversano la camera fino alla trappola; le molecole che escono dalla colonna li incontrano, una piccola frazione (circa una su mille o meno) si ionizza e gli ioni sono spinti verso l'analizzatore.</figcaption>
 </figure>
 <p>Tutto avviene nel <b>vuoto</b> (10<sup>−5</sup>-10<sup>−6</sup> Torr): il cammino libero medio è di metri (capitolo 8), quindi uno ione non urta altre molecole prima di uscire. Le reazioni che vede sono solo <b>unimolecolari</b>: lo ione si frammenta da solo, con l'energia che ha ricevuto. È il motivo per cui gli spettri EI sono «firme» della molecola e si possono raccogliere in librerie.</p>
-
 <h2>Che cosa succede alla molecola</h2>
 <span class="eq">M + e<sup>−</sup> (70 eV) → M<sup>+•</sup> + 2 e<sup>−</sup><span class="no">(7.1)</span></span>
 <p>L'elettrone non «colpisce» la molecola: le passa vicino in circa 10<sup>−16</sup> s e il suo campo elettrico perturba gli elettroni molecolari. Se l'energia trasferita supera l'<b>energia di ionizzazione</b> (IE, 7-12 eV per la maggior parte delle molecole organiche) un elettrone viene espulso. In quel tempo i nuclei non si muovono (principio di Franck-Condon: una vibrazione dura ~10<sup>−13</sup> s).</p>
@@ -39,7 +38,6 @@
 <li>Si perde di preferenza l'elettrone meno legato: quello di un doppietto libero su un eteroatomo (n), poi di un legame π, infine di un legame σ. Il sito dove si trova la carica e il radicale guida la frammentazione.</li>
 <li>Insieme alla ionizzazione la molecola riceve energia: il trasferimento medio è di qualche eV, con una coda fino a 10-20 eV. Un legame C–C vale circa 3,6 eV (83 kcal/mol): molti ioni hanno energia per rompersi.</li>
 </ul>
-
 <h3>Perché proprio 70 eV</h3>
 <p>Un elettrone ha una lunghezza d'onda di de Broglie λ = <i>h</i>/(<i>m</i><sub>e</sub><i>v</i>), cioè λ (nm) ≈ 1,226/√<i>E</i>(eV). A 70 eV λ ≈ 1,5 Å, confrontabile con le distanze di legame: è la condizione in cui il trasferimento di energia è più efficace. La resa di ionizzazione cresce dalla soglia, ha un massimo largo fra 50 e 100 eV e poi scende lentamente.</p>
 <ul>
@@ -48,7 +46,6 @@
 </ul>
 <div class="sim" id="sim-ei-eff"><h4>Efficienza di ionizzazione e lunghezza d'onda dell'elettrone</h4>
 <p class="note">La fascia verde è il plateau dove si lavora. Sotto l'energia di ionizzazione non si forma nessuno ione.</p></div>
-
 <h3>Energia interna e frammentazione</h3>
 <p>Gli ioni M<sup>+•</sup> nascono con una <b>distribuzione</b> di energie interne P(E), non con un valore unico. L'energia si ridistribuisce in tutte le vibrazioni in meno di un picosecondo; poi lo ione si comporta come una molecola «calda» isolata e si rompe dove è più probabile, con velocità k(E) che dipendono dall'energia in eccesso sopra la soglia e dalla struttura dello stato di transizione (teoria quasi-equilibrio, QET, o RRKM, la stessa della CID nel capitolo 14):</p>
 <ul>
@@ -61,7 +58,6 @@
 <p>Lo ione molecolare, e fra i frammenti quello del riarrangiamento a soglia più bassa (m/z 58 del 2-esanone), mentre le scissioni semplici (m/z 43, 85) calano. È il principio della «EI a bassa energia» e del perché i riarrangiamenti sono più importanti negli ioni «freddi».</p></details>
 <div class="sim" id="sim-ei-frag"><h4>Dall'energia interna allo spettro: un chetone modello</h4>
 <p class="note">A sinistra la distribuzione dell'energia interna degli ioni M<sup>+•</sup> del 2-esanone (m/z 100) e le soglie di tre canali; a destra lo spettro che ne risulta dopo 1 µs nella sorgente. Le scissioni α e il riarrangiamento di McLafferty sono spiegati nel capitolo 15.</p></div>
-
 <h3>Che cosa si vede in uno spettro EI</h3>
 <ul>
 <li><b>Ione molecolare</b> M<sup>+•</sup>: intenso per molecole stabili (aromatici, sistemi coniugati), debole o assente per alcoli terziari, alcani molto ramificati, molecole con legami deboli.</li>
@@ -69,10 +65,8 @@
 <li><b>Picchi isotopici</b> di ogni ione (capitolo 13) e, per molecole con alogeni, gruppi caratteristici.</li>
 <li>Ioni a <b>carica doppia</b> (m/z dimezzato, anche semi-intero) negli aromatici policiclici; ioni metastabili come piccoli picchi larghi a m/z non interi negli strumenti a settore.</li>
 </ul>
-
 <h2>Le librerie di spettri EI</h2>
 <p>Poiché a 70 eV gli spettri sono riproducibili, esistono raccolte di centinaia di migliaia di spettri di riferimento: la libreria NIST/EPA/NIH (oltre 300 000 composti, con gli indici di ritenzione del capitolo 5) e la Wiley Registry. Il software confronta lo spettro misurato con ogni spettro di libreria e calcola un punteggio di somiglianza (prodotto scalare delle intensità pesate per la massa; «match factor» da 0 a 999). Un punteggio alto <b>non è un'identificazione</b>: isomeri di posizione hanno spettri quasi uguali, lo spettro può contenere ioni di un coeluito o del fondo, e il composto può non essere in libreria. Si conferma con l'indice di ritenzione e, quando possibile, con lo standard. Le librerie aperte (MassBank, che fornisce gli spettri della Pratica) sono più piccole ma liberamente consultabili.</p>
-
 <h2>Ionizzazione chimica (CI)</h2>
 <p>Nella sorgente si introduce un <b>gas reagente</b> a pressione relativamente alta (~1 Torr), mille volte più dell'analita. Gli elettroni ionizzano il gas; gli ioni del gas reagiscono fra loro e formano <b>ioni reagenti</b> stabili, che a loro volta ionizzano l'analita con reazioni ione-molecola a bassa energia:</p>
 <span class="eq">CH<sub>4</sub><sup>+•</sup> + CH<sub>4</sub> → CH<sub>5</sub><sup>+</sup> + CH<sub>3</sub><sup>•</sup>, &nbsp;&nbsp; CH<sub>5</sub><sup>+</sup> + M → [M+H]<sup>+</sup> + CH<sub>4</sub><span class="no">(7.2)</span></span>
@@ -88,7 +82,6 @@
 <p><b>CI negativa (NCI o ECNI)</b>: il gas reagente (metano) rallenta gli elettroni fino all'energia termica; molecole molto elettronegative (polialogenate, nitroaromatiche) li catturano formando M<sup>−•</sup> o ioni come Cl<sup>−</sup>. È estremamente sensibile e selettiva (fg) per pesticidi organoclorurati, PCB e ritardanti di fiamma bromurati: lo stesso principio del rivelatore ECD (capitolo 5).</p>
 <div class="box key"><b>EI e CI insieme</b>
 <p>Lo spettro EI dice <em>com'è fatta</em> la molecola (frammenti), ma lo ione molecolare può mancare; lo spettro CI dice <em>quanto pesa</em> (M+1, M+29, M+41 con il metano: tre picchi distanziati di 28 e 12 confermano M). Il procedimento di McLafferty (capitolo 15, passo 2) suggerisce proprio questo controllo.</p></div>
-
 <h2>Tutte le sorgenti a confronto</h2>
 <table>
 <tr><th>Sorgente</th><th>Dove</th><th>Ione tipico</th><th>Energia</th><th>Accoppiata a</th><th>Per che cosa</th></tr>
@@ -103,20 +96,15 @@
 <p>Lo spettro EI dà masse nominali: 43 può essere C<sub>3</sub>H<sub>7</sub><sup>+</sup> o C<sub>2</sub>H<sub>3</sub>O<sup>+</sup>. La formula si deduce da isotopi, regole e contesto (capitoli 13 e 15).</p></div>
 <div class="box hr"><b>Ad alta risoluzione (GC-TOF, GC-Orbitrap)</b>
 <p>Ogni frammento EI ha la sua massa esatta: 43,0542 (C<sub>3</sub>H<sub>7</sub><sup>+</sup>) e 43,0178 (C<sub>2</sub>H<sub>3</sub>O<sup>+</sup>) sono picchi diversi. Le formule dei frammenti si verificano in ppm (capitolo 11), il che rende molto più sicura l'interpretazione.</p></div></div>
-
 <div class="box oral"><b>Concetti chiave e domande di ripasso</b>
 <p>Descrivere la geometria di una sorgente EI e il processo di ionizzazione; comprendere perché si usano 70 eV e perché gli spettri EI sono storicamente riproducibili e confrontabili in libreria; definire lo ione radicale molecolare (elettroni dispari); spiegare perché lo ione molecolare può essere debole o assente e quali strategie permettono di osservarlo (CI, EI a bassa energia); principi di funzionamento della CI e criteri di scelta del gas reagente; ionizzazione chimica negativa (NCI) per analiti alogenati ed elettrofili; confronto tra le diverse sorgenti di ionizzazione in funzione della natura chimica dell'analita.</p></div>
-
 <h2>Verifica</h2>
-<details class="q"><summary>Perché in EI conta solo la frammentazione unimolecolare, mentre in CI ci sono reazioni ione-molecola?</summary>
-<p>In EI la pressione è ~10<sup>−5</sup> Torr: il cammino libero medio è molto più lungo della sorgente e lo ione non incontra altre molecole. In CI il gas reagente è a ~1 Torr: cammino libero medio di decine di micrometri, migliaia di urti, e la ionizzazione stessa è una reazione ione-molecola.</p></details>
+<details class="q"><summary>Perché in EI conta solo la frammentazione unimolecolare, mentre in CI ci sono reazioni ione-molecola?</summary><p>In EI la pressione è ~10<sup>−5</sup> Torr: il cammino libero medio è molto più lungo della sorgente e lo ione non incontra altre molecole. In CI il gas reagente è a ~1 Torr: cammino libero medio di decine di micrometri, migliaia di urti, e la ionizzazione stessa è una reazione ione-molecola.</p></details>
 <details class="q"><summary>Nello spettro CI (metano) di un composto vedi m/z 151, 179 e 191. Qual è la massa molecolare?</summary>
 <p>150: [M+H]<sup>+</sup> = 151, [M+C<sub>2</sub>H<sub>5</sub>]<sup>+</sup> = 179 (M+29), [M+C<sub>3</sub>H<sub>5</sub>]<sup>+</sup> = 191 (M+41).</p></details>
 <details class="q"><summary>L'analita ha PA = 800 kJ/mol. Con quale gas reagente ottieni lo spettro più semplice?</summary>
 <p>Con l'isobutano: PA(isobutene) = 802 kJ/mol, la protonazione è appena endotermica o quasi termoneutra, quindi dà [M+H]<sup>+</sup> con poca energia (o l'addotto); con il metano (543) sarebbe esotermica di ~260 kJ/mol (~2,7 eV) e darebbe frammenti; con l'ammoniaca (854) non si protona e si vedrebbe al più [M+NH<sub>4</sub>]<sup>+</sup>.</p></details>
-<details class="q"><summary>Si propone di analizzare in GC-EI un prodotto di trasformazione polare senza derivatizzazione né preparazione. Quali sono le criticità?</summary>
-<p>I prodotti polari e idrofili sono tipicamente poco volatili e termolabili (presenza di gruppi –OH, –NH, carbossilici): possono non attraversare la colonna GC, produrre forte asimmetria (code) o decomporsi termicamente nell'iniettore. Senza derivatizzazione (capitolo 5), la tecnica d'elezione per queste specie è la LC-ESI.</p></details>
-
+<details class="q"><summary>Si propone di analizzare in GC-EI un prodotto di trasformazione polare senza derivatizzazione né preparazione. Quali sono le criticità?</summary><p>I prodotti polari e idrofili sono tipicamente poco volatili e termolabili (presenza di gruppi –OH, –NH, carbossilici): possono non attraversare la colonna GC, produrre forte asimmetria (code) o decomporsi termicamente nell'iniettore. Senza derivatizzazione (capitolo 5), la tecnica d'elezione per queste specie è la LC-ESI.</p></details>
 <h2>Per approfondire</h2>
 <ul class="refs">
 <li><span class="tag">libro</span>McLafferty F.W., Tureček F. <i>Interpretation of Mass Spectra</i>, 4ª ed., University Science Books, 1993: capitoli 1, 6 e 7.</li>

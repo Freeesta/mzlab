@@ -6,3 +6,9 @@
 20-disegno.md
 19-hr-dda.md
 23-tempi.md
+02-fotocatalisi.md
+03-cromatografia.md
+04-lc.md
+05-gc.md
+07-ei-ci.md
+10-qqq.md

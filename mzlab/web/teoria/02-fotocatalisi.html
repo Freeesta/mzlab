@@ -1,17 +1,16 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema--><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fotocatalisi con TiO2 · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 2</div>
 <h1>Fotocatalisi con TiO<sub>2</sub></h1>
 <p class="lead">Come un semiconduttore illuminato genera ossidanti fortissimi in acqua, quali reazioni subisce una molecola organica e che forma hanno le curve concentrazione–tempo dei prodotti.</p>
-
 <h2>Il semiconduttore e la luce</h2>
 <p>Il biossido di titanio è un semiconduttore: tra la <b>banda di valenza</b> (BV), piena, e la <b>banda di conduzione</b> (BC), vuota, c'è una banda proibita (<i>band gap</i>) <i>E</i><sub>g</sub> di circa 3,2 eV per l'anatasio e 3,0 eV per il rutilo. Un fotone con energia ≥ <i>E</i><sub>g</sub> promuove un elettrone in BC e lascia una <b>lacuna</b> (h<sup>+</sup>) in BV. La lunghezza d'onda massima utile si ricava da</p>
 <span class="eq"><i>λ</i><sub>max</sub> (nm) ≈ <span class="frac"><span>1240</span><span><i>E</i><sub>g</sub> (eV)</span></span> &nbsp;→&nbsp; anatasio: ≈ 387 nm; &nbsp;rutilo: ≈ 413 nm<span class="no">(2.1)</span></span>
 <p>Serve quindi radiazione UV-A: la lampada del laboratorio, o circa il 4–5% dello spettro solare. Il materiale commerciale più usato come riferimento (P25) è una miscela di anatasio e rutilo, in cui il contatto tra le due fasi aiuta a separare le cariche.</p>
-
 <figure>
 <svg viewBox="0 0 860 360" role="img" aria-label="Diagramma a bande del TiO₂: un fotone porta un elettrone dalla banda di valenza a quella di conduzione; reazioni dei radicali" aria-describedby="fd-02-0">
 <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#24231f"/></marker>
@@ -37,7 +36,6 @@
 </svg><details class="figdesc" id="fd-02-0"><summary>Descrizione della figura</summary><p>Due riquadri: in alto la banda di conduzione (circa −0,5 V vs NHE, pH 7), in basso la banda di valenza (circa +2,7 V). Una freccia ondulata, hν con λ &lt; 387 nm, arriva da sinistra; una freccia verso l'alto porta l'elettrone e⁻ dalla valenza alla conduzione (Eg ≈ 3,2 eV); una freccia tratteggiata indica la ricombinazione. Dalla conduzione parte O2 + e⁻ → O2•⁻ → HO2• → H2O2 → •OH; dalla valenza le reazioni di h⁺ con H2O/OH⁻ e con R adsorbito.</p></details>
 <figcaption><b>Figura 2.1</b> Schema a bande del TiO<sub>2</sub> illuminato. La lacuna è un ossidante molto forte: ossida acqua e ossidrili di superficie a radicale •OH, o direttamente il substrato adsorbito. L'elettrone riduce l'ossigeno disciolto; senza O<sub>2</sub> (accettore di elettroni) la ricombinazione prevale e la reazione rallenta.</figcaption>
 </figure>
-
 <h2>Le specie reattive</h2>
 <table>
 <tr><th>Specie</th><th>Origine</th><th>Carattere</th></tr>
@@ -47,7 +45,6 @@
 <tr><td><b>e<sup>−</sup></b></td><td>BC</td><td>Riduzioni (es. alogenuri di alchile, metalli): di solito minori in presenza di O<sub>2</sub></td></tr>
 </table>
 <p>Il TiO<sub>2</sub> resta inalterato (è un catalizzatore), ma la reazione avviene <b>sulla superficie o vicino a essa</b>. Per questo contano l'adsorbimento e la carica superficiale: il punto di carica zero del TiO<sub>2</sub> è intorno a pH 6–7, quindi a pH più basso la superficie è positiva e attrae anioni, a pH più alto il contrario. Un inquinante ionizzabile può degradarsi a velocità molto diverse a seconda del pH.</p>
-
 <h2>Che cosa succede alla molecola</h2>
 <p>Il radicale •OH reagisce in tre modi principali, che si traducono in variazioni di massa riconoscibili nello spettro:</p>
 <table>
@@ -63,7 +60,6 @@
 <p>Le reazioni si susseguono: un TP di prima generazione viene a sua volta attaccato (idrossilazioni multiple, dealchilazioni successive, apertura dell'anello aromatico fino ad acidi carbossilici a catena corta). Non tutte le strutture arrivano rapidamente a CO<sub>2</sub>: l'anello s-triazinico, per esempio, è notoriamente refrattario e la fotocatalisi delle triazine si ferma all'acido cianurico, come mostrato già negli anni '90 dal gruppo di chimica ambientale di Torino (Pelizzetti, Minero e collaboratori).</p>
 <div class="box warn"><b>Errore frequente</b>
 <p>Pensare che ogni Δm corrisponda a un solo meccanismo. A risoluzione unitaria −28 può essere −C<sub>2</sub>H<sub>4</sub> (28,031 Da) oppure −CO (27,995 Da): la differenza è 0,036 Da, invisibile per un quadrupolo. +16 può essere un OH aromatico, un N-ossido o un solfossido: stesso m/z, strutture e tempi di ritenzione diversi.</p></div>
-
 <h2>Cinetica</h2>
 <h3>Il parent: pseudo-primo ordine</h3>
 <p>La velocità di degradazione su un catalizzatore si descrive spesso con il modello di Langmuir–Hinshelwood, in cui la reazione avviene tra specie adsorbite:</p>
@@ -71,17 +67,14 @@
 <p>Per concentrazioni basse (<i>KC</i> ≪ 1, il caso tipico in tracce) si riduce a una cinetica di pseudo-primo ordine:</p>
 <span class="eq"><i>C</i>(<i>t</i>) = <i>C</i><sub>0</sub> e<sup>−<i>k</i><sub>app</sub><i>t</i></sup> &nbsp;&nbsp;⇔&nbsp;&nbsp; ln(<i>C</i><sub>0</sub>/<i>C</i>) = <i>k</i><sub>app</sub> <i>t</i>, &nbsp;&nbsp; <i>t</i><sub>1/2</sub> = ln 2 / <i>k</i><sub>app</sub><span class="no">(2.3)</span></span>
 <p>Con i dati MRM del parent si costruisce il grafico ln(<i>C</i><sub>0</sub>/<i>C</i>) contro <i>t</i>: se è lineare, la pendenza è <i>k</i><sub>app</sub>. <i>k</i><sub>app</sub> dipende da intensità della luce, carico di catalizzatore, ossigeno, pH e matrice: non è una costante della molecola, ma del sistema.</p>
-
 <h3>Gli intermedi: crescono e poi calano</h3>
 <p>Per una sequenza A → B → C con costanti di primo ordine <i>k</i><sub>1</sub> e <i>k</i><sub>2</sub>, l'intermedio B segue</p>
 <span class="eq">[B](<i>t</i>) = [A]<sub>0</sub> <span class="frac"><span><i>k</i><sub>1</sub></span><span><i>k</i><sub>2</sub> − <i>k</i><sub>1</sub></span></span> (e<sup>−<i>k</i><sub>1</sub><i>t</i></sup> − e<sup>−<i>k</i><sub>2</sub><i>t</i></sup>), &nbsp;&nbsp; <i>t</i><sub>max</sub> = <span class="frac"><span>ln(<i>k</i><sub>2</sub>/<i>k</i><sub>1</sub>)</span><span><i>k</i><sub>2</sub> − <i>k</i><sub>1</sub></span></span><span class="no">(2.4)</span></span>
 <p>Il profilo a campana è la firma di un intermedio. Un TP di seconda generazione (C, se a sua volta degradabile) parte con pendenza nulla: compare in ritardo. Nella figura potete variare le costanti e vedere come la frequenza dei campionamenti influisce sulla risoluzione temporale della cinetica.</p>
 <div class="sim" id="sim-kin"><h4>Cinetica A → B → C → D</h4>
 <p class="note">Concentrazioni relative ad [A]<sub>0</sub>. I punti rappresentano tempi di campionamento tipici in uno studio cinetico. Nella realtà ogni TP ha anche altre vie di formazione e scomparsa: il modello serve a capire la forma delle curve, non a fittare i dati.</p></div>
-
 <div class="box key"><b>Dal modello cinetico ai dati strumentali</b>
 <p>Per i prodotti di trasformazione spesso non sono disponibili standard analitici puri, quindi non si misurano concentrazioni assolute dirette ma <b>aree</b> dei picchi XIC. L'area di un TP è proporzionale alla concentrazione solo a parità di risposta di ionizzazione ESI, che varia sensibilmente tra composti diversi (capitolo 6). Si può quindi confrontare l'andamento nel tempo dello stesso TP, mentre il confronto quantitativo tra TP differenti richiede cautela. Nel software la tabella delle integrazioni temporali serve proprio a tracciare queste cinetiche relative.</p></div>
-
 <h2>Aspetti operativi e pratici</h2>
 <ul>
 <li><b>Carico di catalizzatore</b>: all'aumentare della concentrazione di TiO<sub>2</sub> aumenta la frazione di luce assorbita, ma oltre una concentrazione ottimale la torbidità della sospensione diffonde la radiazione (scattering) e la velocità di reazione satura.</li>
@@ -90,15 +83,10 @@
 <li><b>Filtrazione 0,45 µm</b>: rimuove le particelle solide di catalizzatore (che danneggerebbero colonna e sorgente) e arresta la reazione. È opportuno verificare che la membrana filtrante non adsorba il composto analizzato iniettando uno standard di controllo pre e post-filtrazione.</li>
 <li><b>Controlli in bianco</b>: fotolisi diretta senza catalizzatore (per quantificare la degradazione per sola luce) e adsorbimento con TiO<sub>2</sub> al buio.</li>
 </ul>
-
 <h2>Verifica</h2>
-<details class="q"><summary>Perché la reazione rallenta se la soluzione viene degasata con azoto?</summary>
-<p>Manca l'O<sub>2</sub> che cattura gli elettroni di banda di conduzione: le coppie e<sup>−</sup>/h<sup>+</sup> ricombinano prima di reagire, si formano meno lacune libere e meno •OH.</p></details>
-<details class="q"><summary>Un TP raggiunge il massimo a 10 min e uno a 45 min. Che cosa suggerisce?</summary>
-<p>Il primo è probabilmente di prima generazione e viene degradato in fretta (<i>k</i><sub>2</sub> grande); il secondo può essere di seconda generazione o un prodotto più resistente. Con l'equazione 2.4, un <i>t</i><sub>max</sub> lungo corrisponde a <i>k</i><sub>2</sub> piccolo o a una formazione ritardata.</p></details>
-<details class="q"><summary>Con una lampada a 450 nm il TiO<sub>2</sub> anatasio funziona?</summary>
-<p>No: 450 nm corrispondono a circa 2,76 eV, meno del band gap (3,2 eV). Servono lunghezze d'onda inferiori a circa 387 nm (o materiali modificati/drogati).</p></details>
-
+<details class="q"><summary>Perché la reazione rallenta se la soluzione viene degasata con azoto?</summary><p>Manca l'O<sub>2</sub> che cattura gli elettroni di banda di conduzione: le coppie e<sup>−</sup>/h<sup>+</sup> ricombinano prima di reagire, si formano meno lacune libere e meno •OH.</p></details>
+<details class="q"><summary>Un TP raggiunge il massimo a 10 min e uno a 45 min. Che cosa suggerisce?</summary><p>Il primo è probabilmente di prima generazione e viene degradato in fretta (<i>k</i><sub>2</sub> grande); il secondo può essere di seconda generazione o un prodotto più resistente. Con l'equazione 2.4, un <i>t</i><sub>max</sub> lungo corrisponde a <i>k</i><sub>2</sub> piccolo o a una formazione ritardata.</p></details>
+<details class="q"><summary>Con una lampada a 450 nm il TiO<sub>2</sub> anatasio funziona?</summary><p>No: 450 nm corrispondono a circa 2,76 eV, meno del band gap (3,2 eV). Servono lunghezze d'onda inferiori a circa 387 nm (o materiali modificati/drogati).</p></details>
 <h2>Per approfondire</h2>
 <ul class="refs">
 <li><span class="tag">review</span>Hoffmann M.R., Martin S.T., Choi W., Bahnemann D.W. (1995) Environmental applications of semiconductor photocatalysis. <i>Chem. Rev.</i> 95, 69–96. <a href="https://doi.org/10.1021/cr00033a004" target="_blank" rel="noopener">doi:10.1021/cr00033a004</a></li>
