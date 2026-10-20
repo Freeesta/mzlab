@@ -29,6 +29,9 @@ const BUCHI: &[&str] = &[
     "tp.position",
     "structure.render",
     "structure.reactivity",
+    "table.stats",
+    "table.pca",
+    "table.kmd",
 ];
 
 fn default_num(p: &Param) -> Option<f64> {

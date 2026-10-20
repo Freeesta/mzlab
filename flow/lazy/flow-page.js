@@ -1,10 +1,10 @@
 // @ts-check
-// Flow (administrator mode): the page. Loads the three lists of descriptors, keeps the plan (an mzflow/2 object), draws the palette, the inputs and the chain,
+// Flow (administrator mode): the page. Loads the four lists of descriptors, keeps the plan (an mzflow/2 object), draws the palette, the inputs and the chain,
 // validates after every change and exports / imports the plan. Running the chain is not here: the plan is run by the native runner (mzlab-cli, example `flow`).
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
-  const LISTS = ["steps-1.json", "steps-attributio-1.json", "steps-tabui-1.json"];
+  const LISTS = ["steps-1.json", "steps-attributio-1.json", "steps-tabui-1.json", "steps-cli-1.json"];
 
   /** every problem of the plan as the Rust checker would report it (F.validateExtra adds the checks of what the checker does not know yet) @param {any} plan @param {any} reg */
   F.validate = (plan, reg) => {
