@@ -23,10 +23,7 @@ pub struct Ctx<'a> {
 impl Ctx<'_> {
     /// Rows to write, ascending.
     pub fn rows(&self) -> Vec<usize> {
-        self.view.map_or_else(
-            || (0..self.table.len()).collect(),
-            |v| v.rows.iter().map(|&r| r as usize).collect(),
-        )
+        self.view.map_or_else(|| (0..self.table.len()).collect(), |v| v.rows.iter().map(|&r| r as usize).collect())
     }
 
     /// Area of a cell: normalised when there is a view, else as measured; None where the file has no peak.
@@ -58,9 +55,7 @@ pub(crate) fn sig8(v: f64) -> String {
     if v == 0.0 || !v.is_finite() {
         return "0".into();
     }
-    format!("{:.7e}", v)
-        .parse::<f64>()
-        .map_or_else(|_| "0".into(), |x| format!("{x}"))
+    format!("{:.7e}", v).parse::<f64>().map_or_else(|_| "0".into(), |x| format!("{x}"))
 }
 
 fn quote(s: &str) -> String {
@@ -96,9 +91,7 @@ fn write_line(out: &mut String, cells: Vec<String>) {
 /// `mzmine_states` writes `ESTIMATED` for the filled and targeted cells, for readers that know only mzmine's words; without it they keep their own.
 pub fn csv_full(c: &Ctx, mzmine_states: bool) -> String {
     let t = c.table;
-    let mut head: Vec<String> = ["id", "mz", "rt", "rt_range:min", "rt_range:max", "charge"]
-        .map(String::from)
-        .to_vec();
+    let mut head: Vec<String> = ["id", "mz", "rt", "rt_range:min", "rt_range:max", "charge"].map(String::from).to_vec();
     for s in c.samples {
         for col in ["area", "height", "feature_state"] {
             head.push(format!("datafile:{}:{col}", stem(&s.file)));
@@ -108,10 +101,7 @@ pub fn csv_full(c: &Ctx, mzmine_states: bool) -> String {
     write_line(&mut out, head);
     for r in c.rows() {
         let q = (!t.meta.is_empty()).then(|| t.meta.get(r));
-        let edge = |v: Option<f32>| {
-            v.filter(|x| x.is_finite())
-                .map_or(String::new(), |x| fix(f64::from(x), 4))
-        };
+        let edge = |v: Option<f32>| v.filter(|x| x.is_finite()).map_or(String::new(), |x| fix(f64::from(x), 4));
         let mut row = vec![
             t.id(r).to_string(),
             fix(t.mz[r], 5),
@@ -125,17 +115,7 @@ pub fn csv_full(c: &Ctx, mzmine_states: bool) -> String {
             let a = c.area(r, k);
             row.push(a.map_or(String::new(), sig8));
             row.push(a.map_or(String::new(), |_| sig8(f64::from(t.height[cell]))));
-            row.push(
-                state_word(
-                    if a.is_some() {
-                        t.state[cell]
-                    } else {
-                        CELL_ABSENT
-                    },
-                    mzmine_states,
-                )
-                .into(),
-            );
+            row.push(state_word(if a.is_some() { t.state[cell] } else { CELL_ABSENT }, mzmine_states).into());
         }
         write_line(&mut out, row);
     }
@@ -147,34 +127,14 @@ pub fn csv_full(c: &Ctx, mzmine_states: bool) -> String {
 pub fn quant(c: &Ctx) -> String {
     let t = c.table;
     let names = crate::rowident::adduct_names();
-    let mut head: Vec<String> = [
-        "row ID",
-        "row m/z",
-        "row retention time",
-        "correlation group ID",
-        "annotation network number",
-        "best ion",
-        "neutral M mass",
-    ]
-    .map(String::from)
-    .to_vec();
-    head.extend(
-        c.samples
-            .iter()
-            .map(|s| format!("{}.mzML Peak area", stem(&s.file))),
-    );
+    let mut head: Vec<String> =
+        ["row ID", "row m/z", "row retention time", "correlation group ID", "annotation network number", "best ion", "neutral M mass"].map(String::from).to_vec();
+    head.extend(c.samples.iter().map(|s| format!("{}.mzML Peak area", stem(&s.file))));
     let mut out = String::new();
     write_line(&mut out, head);
     for r in c.rows() {
         let named = !t.ident.is_empty() && t.ident.src[r] >> 1 != 0;
-        let ion = if named {
-            names
-                .get(usize::from(t.ident.ion[r]).wrapping_sub(1))
-                .copied()
-                .unwrap_or("")
-        } else {
-            ""
-        };
+        let ion = if named { names.get(usize::from(t.ident.ion[r]).wrapping_sub(1)).copied().unwrap_or("") } else { "" };
         let mut row = vec![
             t.id(r).to_string(),
             fix(t.mz[r], 5),
@@ -182,11 +142,7 @@ pub fn quant(c: &Ctx) -> String {
             "-1".into(),
             "-1".into(),
             ion.into(),
-            if named {
-                fix(t.ident.neutral[r], 5)
-            } else {
-                String::new()
-            },
+            if named { fix(t.ident.neutral[r], 5) } else { String::new() },
         ];
         row.extend((0..t.n_files).map(|k| c.area(r, k).map_or("0".into(), sig8)));
         write_line(&mut out, row);
@@ -198,9 +154,7 @@ pub fn quant(c: &Ctx) -> String {
 /// `<F> area` and `<F> state`. Cells are None where there is nothing to write; the rows are those of the view and the areas the ones of `Ctx::area`.
 fn sheet(c: &Ctx) -> (Vec<String>, Vec<Vec<Option<Cell>>>) {
     let t = c.table;
-    let mut head: Vec<String> = ["id", "mz", "rt", "rt_range:min", "rt_range:max", "charge"]
-        .map(String::from)
-        .to_vec();
+    let mut head: Vec<String> = ["id", "mz", "rt", "rt_range:min", "rt_range:max", "charge"].map(String::from).to_vec();
     for s in c.samples {
         head.push(format!("{} area", stem(&s.file)));
         head.push(format!("{} state", stem(&s.file)));
@@ -210,30 +164,12 @@ fn sheet(c: &Ctx) -> (Vec<String>, Vec<Vec<Option<Cell>>>) {
         .into_iter()
         .map(|r| {
             let q = (!t.meta.is_empty()).then(|| t.meta.get(r));
-            let edge =
-                |v: Option<f32>| v.filter(|x| x.is_finite()).map(|x| Cell::Num(f64::from(x)));
-            let mut row = vec![
-                Some(Cell::Num(f64::from(t.id(r)))),
-                Some(Cell::Num(t.mz[r])),
-                Some(Cell::Num(t.rt[r])),
-                edge(q.map(|q| q.rt_lo)),
-                edge(q.map(|q| q.rt_hi)),
-                q.map(|q| Cell::Num(f64::from(q.charge))),
-            ];
+            let edge = |v: Option<f32>| v.filter(|x| x.is_finite()).map(|x| Cell::Num(f64::from(x)));
+            let mut row = vec![Some(Cell::Num(f64::from(t.id(r)))), Some(Cell::Num(t.mz[r])), Some(Cell::Num(t.rt[r])), edge(q.map(|q| q.rt_lo)), edge(q.map(|q| q.rt_hi)), q.map(|q| Cell::Num(f64::from(q.charge)))];
             for k in 0..t.n_files {
                 let a = c.area(r, k);
                 row.push(a.map(Cell::Num));
-                row.push(Some(Cell::Text(
-                    state_word(
-                        if a.is_some() {
-                            t.state[r * t.n_files + k]
-                        } else {
-                            CELL_ABSENT
-                        },
-                        false,
-                    )
-                    .into(),
-                )));
+                row.push(Some(Cell::Text(state_word(if a.is_some() { t.state[r * t.n_files + k] } else { CELL_ABSENT }, false).into())));
             }
             row
         })
@@ -276,13 +212,7 @@ pub fn xlsx_rows(c: &Ctx) -> String {
 /// The same sheet as text for a spreadsheet: UTF-8, `;` between cells, a cell with `;`, quote or line break between quotes, numbers as `fix`/`sig8` would.
 pub fn csv_semicolon(c: &Ctx) -> String {
     let (head, rows) = sheet(c);
-    let q = |s: &str| {
-        if s.contains([';', '"', '\r', '\n']) {
-            format!("\"{}\"", s.replace('"', "\"\""))
-        } else {
-            s.to_string()
-        }
-    };
+    let q = |s: &str| if s.contains([';', '"', '\r', '\n']) { format!("\"{}\"", s.replace('"', "\"\"")) } else { s.to_string() };
     let mut out = head.iter().map(|h| q(h)).collect::<Vec<_>>().join(";");
     out.push('\n');
     for row in rows {
