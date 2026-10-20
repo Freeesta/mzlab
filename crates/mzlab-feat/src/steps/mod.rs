@@ -1,8 +1,13 @@
 //! The `step/1` descriptors of the feature steps of the flagship chain (`mzlab_core::step`) and the whole registry of the core package.
 //! The parameters are the fields of `recipe::Recipe` that each step reads, with their defaults written out; `tests/steps.rs` builds the recipe
-//! from these defaults and compares its fingerprint with `Recipe::default()`.
+//! from these defaults and compares its fingerprint with `Recipe::default()`. The identification chain is in `ident*.rs` (`attributio()`).
 
 mod detect;
+mod ident;
+mod ident_annot;
+mod ident_formula;
+mod ident_spectra;
+pub mod records;
 mod table;
 
 use mzlab_core::step::{core_steps, Step};
@@ -10,6 +15,11 @@ use mzlab_core::step::{core_steps, Step};
 /// The `.wasm` of mzFinder that runs detection, alignment and filling, and its fixed size ceiling in bytes.
 pub(crate) const FEAT_WASM: &str = "feat (detect)";
 pub(crate) const FEAT_CEILING: u64 = 512_000;
+
+/// The steps of the identification chain (package `attributio`), apart from `registry` so that the export of the core package stays as it is.
+pub fn attributio() -> Vec<Step> {
+    ident::registry()
+}
 
 /// Every `core` step of the flagship chain, in the order of the chain: the ones of `mzlab-core` first, then the feature steps.
 pub fn registry() -> Vec<Step> {

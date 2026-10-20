@@ -98,6 +98,7 @@ fn param_error(p: &Param, v: &Value) -> Option<&'static str> {
             Some(_) => None,
         },
         Kind::Bool => v.bool().is_none().then_some("err.flow.param.type"),
+        Kind::Text => v.str().is_none().then_some("err.flow.param.type"),
         Kind::Pair(min) => match (v.at(0).and_then(num), v.at(1).and_then(num), v.arr().len()) {
             (Some(a), Some(b), 2) if a >= *min && b >= a => None,
             (Some(_), Some(_), 2) => Some("err.flow.param.range"),

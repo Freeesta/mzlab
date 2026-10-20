@@ -123,3 +123,7 @@ required-features = ["interp"]
 [[test]]
 name = "interp_sito"
 required-features = ["interp"]
+
+[[test]]
+name = "steps_attributio_parity"
+required-features = ["attributio", "untargeted"]

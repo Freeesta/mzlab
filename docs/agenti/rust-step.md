@@ -2,15 +2,20 @@
 
 Each core step of the flagship chain describes itself as Rust data next to the code that runs it; the contract is `docs/studi/workflow/contract.schema.json`, the study `docs/studi/WORKFLOW_MODULARI.md`. A descriptor changes no result and is not shown in the UI yet (titles are English data for the future generated form). Ten steps, all `package: core`, `id@1`: `import.raw`, `convert.mzml`, `index.mzidx` (owned by `mzlab-core`), `features.estimate`, `features.detect`, `features.align`, `features.gapfill`, `table.filter`, `features.ms2_link`, `export.table_csv` (owned by `mzlab-feat`).
 
+Nine more, `package: attributio`, all requiring `hr` (principle 1: no formula, match or level at unit resolution): `spectra.chimeric`, `formula.ms1`, `formula.ms2`, `spectra.match`, `spectra.insilico`, `rt.predict`, `annot.level`, `annot.regulatory`, `annot.hazard` (`steps/ident*.rs`). Their defaults are those of `ReviewSettings`, `AnnotationSettings`, `InSilicoOpts`, `SearchOpts` and `formula_id::Opts`; constants of the code appear only in the text. Planned: `spectra.chimeric` `library_deconvolution`. CANOPUS stays Level 4 as in `livelli.md`.
+
 ## Functions
 - `step::Step`, `Port`, `Param`, `Algorithm`, `Preset`, `Reference`, `Applicability`, `Facets`, `RunsIn`, `DataType`: plain structs of `step/1` (`mzlab-core/src/step/mod.rs`); no serde, the JSON is written with `json::Out`.
 - `Step::core(id, title, doc)`: a `core` step at version 1 with empty ports and parameters; descriptors fill the rest with struct update syntax.
 - `Port::new(name, type, title)` with `.many()`, `.accepts(types)`, `.requires(facets)`: an input or output port.
-- `Param::number|integer|boolean|choice|choice_num|pair(name, title, ..)` with `.default_num|default_bool|default_str|default_pair`, `.min`, `.max`, `.unit`, `.doc`, `.advanced`, `.estimate`, `.noresult`: a property of a `paramSchema`; no default means the step estimates the value or the rule is off.
+- `Param::number|integer|boolean|text|choice|choice_num|pair(name, title, ..)` with `.default_num|default_bool|default_str|default_pair`, `.min`, `.max`, `.unit`, `.doc`, `.advanced`, `.estimate`, `.noresult`: a property of a `paramSchema`; no default means the step estimates the value or the rule is off.
 - `Step::param(name)` and `Step::algorithm_param(algorithm, name)`: look a parameter up; `Param::default_f64()` reads its default as a number; `step::find(registry, id)` finds a descriptor.
 - `step::json::step_json(&Step)` and `registry_json(&[Step])`: the `step/1` JSON, keys in the order of `step.features.detect.json`; the registry has one step per line.
 - `step::core_steps()` (`step/core_steps.rs`): the descriptors of `import.raw`, `convert.mzml`, `index.mzidx`.
 - `mzlab_feat::steps::registry()` (`steps/mod.rs`, with `detect.rs` and `table.rs`): the ten descriptors in the order of the chain; the registry lives in `mzlab-feat` because `mzlab-core` cannot see the feature steps.
+
+- `mzlab_feat::steps::attributio()` (`steps/ident.rs`, with `ident_spectra.rs`, `ident_formula.rs`, `ident_annot.rs`): the nine identification descriptors in the order of the chain, apart from `registry()` so that `steps-1.json` is unchanged; `Applicability` has `ms_levels` and `needs` (`internal_standards`, `ms2`, `blank`, `reference_sample`, `library`).
+- `mzlab_feat::steps::records::records()` and `records_json()`: the fields of the shared `candidates` and `annot` records with the struct they are read from; export `docs/schemi/records-1.json`.
 
 ## The `convert.mzml` file
 - `lettori_mzml::scrivi_indicizzato(reader, sample, out, progress, Opzioni, &[ProcStep])` (`mzmlwrite::MzmlWriter::indicizzato`, `mzmlwrite/indice.rs`) is what `mzlab_cli::flow::FileRunner` runs for `convert.mzml`: `indexedmzML` (`mzML1.1.2_idx.xsd`), PSI-MS CV 4.2.6, byte `<offset>` of every spectrum and chromatogram, `indexListOffset`, SHA-1 `fileChecksum` (all bytes up to the opening tag).
@@ -22,6 +27,9 @@ Each core step of the flagship chain describes itself as Rust data next to the c
 - `cargo test -p mzlab-feat --test steps`: the recipe rebuilt from the descriptor defaults (starting from a perturbed recipe) has the same `file_hash`, `table_hash` and `file_text` as `Recipe::default()`; every default lies inside its limits; the export equals `docs/schemi/steps-1.json`. `MZLAB_UPDATE_STEPS=1` rewrites that file after a descriptor changes.
 - `cargo test -p mzlab-feat --lib steps` (presets `hr` and `lr` equal the constants of `Recipe::default` and `Recipe::lr`) and `cargo test -p mzlab-core --lib step` (defaults of `convert.mzml` and `index.mzidx` equal `Opzioni::default()` and `DEFAULT_BUDGET`).
 - `tests/test_step_descrittori.py`: every descriptor of `docs/schemi/steps-1.json` validates against `$defs/step` of the contract (`jsonschema`, a test-only dependency in `pyproject.toml`), agrees with the study sketch, and every error key is a string of the code.
+
+- `cargo test -p mzlab-feat --test steps_attributio`: order and package of the nine steps, defaults inside their limits, export equal to `docs/schemi/steps-attributio-1.json` and `records-1.json` (same `MZLAB_UPDATE_STEPS=1`). `--features attributio,untargeted --test steps_attributio_parity` compares every default with the engine structs.
+- `tests/test_step_identificazione.py`: the nine descriptors validate against `$defs/step`, DOI and `citation_key` have the shape of the study, the only `planned` algorithm is `library_deconvolution`, every error key is a string of the code.
 
 ## Traps
 - The parameter names are those of the engine structs (`rt_gap`, `rt_tol`, `tol_ppm`), not the keys of the Pipeline panel (`apply_params` in `mzlab-feat-wasm/src/run.rs`, where `rt_tol` sets two fields); the mapping belongs to the plan reader.
