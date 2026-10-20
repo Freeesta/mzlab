@@ -98,6 +98,31 @@ def edit_in_the_page(pg, src):
     step("text that would change meaning is refused", refused_text)
 
 
+def edit_questions(pg, src):
+    """The question and the answer of a ??? block are written in the page; the answer stays open while typing."""
+    fr = pg.frame_locator("#preview")
+    until(pg, "document.getElementById('preview').contentDocument.querySelector('summary[data-src]')")
+    def question():
+        s1 = fr.locator("summary[data-src]").first
+        before = pg.input_value("#source")
+        s1.click(); pg.keyboard.press("Control+End"); pg.keyboard.type(" con spazi")
+        pg.keyboard.press("Enter")
+        until(pg, "document.getElementById('source').value.includes(' con spazi')")
+        now = pg.input_value("#source")
+        line = next(l for l in now.split("\n") if l.endswith(" con spazi"))
+        assert line.startswith("??? ") and len(now.split("\n")) == len(before.split("\n")), line
+    step("a question is written in the page", question)
+    def answer():
+        until(pg, "document.getElementById('preview').contentDocument.querySelector('details[open] p[data-src]')")
+        a1 = fr.locator("details p[data-src]").first
+        a1.click(); pg.keyboard.press("Control+End"); pg.keyboard.type(" e anche qui")
+        pg.keyboard.press("Enter")
+        until(pg, "document.getElementById('source').value.includes(' e anche qui')")
+        assert pg.inner_text("#msg") == "", pg.inner_text("#msg")
+    step("the answer of the question is written in the page", answer)
+    pg.fill("#source", src)
+
+
 def history_and_draft(pg, src):
     """Undo/redo walk the changes made in the page, and an unsent draft survives a reload (restored, discarded, or only copyable when the chapter has moved on)."""
     val = lambda: pg.input_value("#source")
@@ -184,6 +209,7 @@ def main():
         src = pg.input_value("#source")
         edit_in_the_page(pg, src)
         history_and_draft(pg, src)
+        edit_questions(pg, src)
         pg.fill("#source", src)
         lines = src.split("\n")
         k = next(i for i, l in enumerate(lines) if l[:1].isalpha() and not l.startswith(("Tabella", "script")))

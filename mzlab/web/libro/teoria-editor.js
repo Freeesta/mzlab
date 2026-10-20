@@ -150,7 +150,8 @@ function preview() {
   const frame = $("preview");
   pendingTop = frame.contentDocument?.scrollingElement?.scrollTop || 0;
   // the page runs no script here (the sandbox has no allow-scripts); <base> makes teoria.css load from the Teoria folder
-  frame.srcdoc = page.replace("<head>", '<head><base href="../teoria/">');
+  // questions are shown open so the answer can be edited too
+  frame.srcdoc = page.replace("<head>", '<head><base href="../teoria/">').replaceAll('<details class="q">', '<details class="q" open>');
   frame.hidden = false;
 }
 
@@ -196,7 +197,15 @@ function wirePreview(frame, top) {
     } else if (ev.key === "Escape") {
       ev.preventDefault();
       finish(false);
+    } else if (ev.key === " " && editing.el.tagName === "SUMMARY") {
+      // a space in a summary would fold it instead of being typed
+      ev.preventDefault();
+      doc.execCommand("insertText", false, " ");
     }
+  });
+  // a space typed in the summary of a question would fold it
+  doc.addEventListener("keyup", (ev) => {
+    if (editing && ev.key === " ") ev.preventDefault();
   });
   doc.addEventListener("paste", (ev) => {
     if (!editing) return;
