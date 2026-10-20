@@ -65,5 +65,7 @@
     on("inf-ce", v => INF.setOpt("ce", v === "1"));
     on("inf-sum", v => INF.setOpt("sum", v === "1"));
   }
-  Object.assign(INF, { render });
+  /** The only file loaded when it is an infusion: the «Fragmentation graph» (infusione-grafo.js) belongs to that case. */
+  const single = () => { const l = E.files.filter((/** @type {any} */ f) => !f.gone); return l.length === 1 && INF.isInf(l[0]); };
+  Object.assign(INF, { render, target, single });
 })();
