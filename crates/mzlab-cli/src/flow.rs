@@ -53,11 +53,16 @@ pub fn table_step() -> Step {
     }
 }
 
-/// The steps a plan can use here: the registry of the flagship chain, `features.table`, the identification steps and `spectra.ms2`.
+/// The steps a plan can use here: the registry of the flagship chain, `features.table`, the identification steps, `tp.network` and `spectra.ms2`.
 pub fn steps() -> Vec<Step> {
     let mut all = mzlab_feat::steps::registry();
     all.push(table_step());
     all.extend(mzlab_feat::steps::attributio());
+    all.extend(
+        mzlab_feat::steps::tabui()
+            .into_iter()
+            .filter(|s| s.id == "tp.network"),
+    );
     all.push(crate::flow_ms2::ms2_step());
     all.push(crate::flow_compare::compare_step());
     all
@@ -255,6 +260,23 @@ fn compare_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     write_made(r, job, text, DataType::Comparison)
 }
 
+fn network_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let (tp, table) = (read_one(r, job, "tp")?, read_one(r, job, "table")?);
+    let has_samples = job.inputs.iter().any(|(p, _)| p == "samples");
+    let samples = if has_samples {
+        Some(read_one(r, job, "samples")?)
+    } else {
+        None
+    };
+    let text = crate::flow_network::network_json(
+        job,
+        &tp.1,
+        &table.1,
+        samples.as_ref().map(|s| s.1.as_slice()),
+    )?;
+    write_made(r, job, text, DataType::Transform)
+}
+
 fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let (hits, formulas) = (
         read_all(r, job, "candidates")?,
@@ -262,6 +284,26 @@ fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     );
     let text = crate::flow_level::level_text(&blobs(&hits), &blobs(&formulas))?;
     write_made(r, job, text, DataType::Annot)
+}
+
+fn inclusion_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let find = |name: &str| {
+        job.resolved
+            .params
+            .iter()
+            .find(|(k, _)| k == name)
+            .map(|(_, v)| v)
+    };
+    let adducts = find("adducts")
+        .and_then(|v| v.str())
+        .unwrap_or("[M+H]+")
+        .to_string();
+    let half = find("rt_window").and_then(|v| v.f64()).unwrap_or(0.5);
+    let products = read_one(r, job, "tp")?;
+    let text = crate::flow_inclusion::inclusion_text(&products.1, &adducts, half)?;
+    let out = r.work.join(format!("{}.csv", job.instance.id));
+    std::fs::write(&out, text).map_err(io)?;
+    r.keep(out, DataType::Report)
 }
 
 impl Runner for FileRunner {
@@ -278,7 +320,9 @@ impl Runner for FileRunner {
             "formula.ms2" => ("formulas", formula_job(self, job)?),
             "spectra.ms2" => ("spectra", ms2_job(self, job)?),
             "annot.level" => ("annot", level_job(self, job)?),
+            "tp.network" => ("network", network_job(self, job)?),
             "meta.compare" => ("comparison", compare_job(self, job)?),
+            "export.inclusion" => ("report", inclusion_job(self, job)?),
             id => return Err(Error::new("err.flow.unknownStep").with("step", id)),
         };
         Ok(Outcome {

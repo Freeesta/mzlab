@@ -40,6 +40,8 @@ pub fn registry() -> Vec<Step> {
         table::filter(),
         detect::ms2_link(),
         table::export_csv(),
+        table::export_inclusion(),
+        table::export_mztab(),
     ]);
     all
 }

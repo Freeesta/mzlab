@@ -3,22 +3,19 @@
 //! fragments) is that of the parent against the product; the precursors of two steps or related by MS2 are not drawn.
 
 use crate::sortc::SortC;
-use std::collections::BTreeMap;
 
-use mzlab_core::elements::{mass, parse_formula};
 use mzlab_core::json::{round, Out};
 
 use super::dig::{Cand, Dig};
 use super::network_pred::{predecessors, related};
 use crate::hypo::{Counts, Rules};
+use crate::rete::arcs::{best_pairs, counts, neutral_mass};
 
 #[cfg(test)]
 mod golden;
 
 /// The most edges of the network that the page receives; the strongest (with shifted fragments) first.
 const MAX_EDGES: usize = 1500;
-/// Sampling step of the kinetics (min): a source may peak this much after its product and still be consistent.
-const STEP: f64 = 5.0;
 
 struct Edge {
     from: usize,
@@ -30,71 +27,24 @@ struct Edge {
     name: Option<String>,
 }
 
-fn counts(f: &str) -> Counts {
-    let mut c = Counts::new();
-    for (e, n) in parse_formula(f).unwrap_or_default() {
-        *c.entry(e).or_insert(0) += n as i64;
-    }
-    c
-}
-
-fn same_change(a: &Counts, b: &Counts, delta: &Counts) -> bool {
-    a.keys().chain(b.keys()).chain(delta.keys()).all(|e| {
-        let g = |c: &Counts| c.get(e).copied().unwrap_or(0);
-        g(b) - g(a) == g(delta)
-    })
-}
-
-fn neutral_mass(c: &Counts) -> f64 {
-    mass(
-        &c.iter()
-            .map(|(e, n)| (e.clone(), *n as u64))
-            .collect::<Vec<_>>(),
-    )
-}
-
 fn shifted(c: &Cand) -> Option<(usize, f64)> {
     let s = &c.ms2.as_ref()?.sim;
     Some((s.n[1] + s.n[2], s.cos[1] + s.cos[2]))
 }
 
-/// Best edge of every pair of ions (kinetics, then from the parent) over all the rules. Node 0 is the parent.
+/// The mass-difference edges of the pairs of ions; node 0 is the parent.
 fn best_edges(forms: &[Counts], tmax: &[Option<f64>], rules: &Rules) -> Vec<Edge> {
-    let mut best: BTreeMap<(usize, usize), ((u8, u8), Edge)> = BTreeMap::new();
-    for a in 0..forms.len() {
-        for (ri, r) in rules.rules.iter().enumerate() {
-            for b in
-                (1..forms.len()).filter(|&b| b != a && same_change(&forms[a], &forms[b], &r.delta))
-            {
-                let kinetic = match (tmax[a], tmax[b]) {
-                    (Some(ta), Some(tb)) if ta <= tb + STEP => "consistent",
-                    (Some(_), Some(_)) => "against",
-                    _ => "n/a",
-                };
-                let rank = (
-                    match kinetic {
-                        "consistent" => 2,
-                        "n/a" => 1,
-                        _ => 0,
-                    },
-                    u8::from(a == 0),
-                );
-                let key = (a.min(b), a.max(b));
-                if best.get(&key).is_none_or(|e| rank > e.0) {
-                    let edge = Edge {
-                        from: a,
-                        to: b,
-                        rule: ri,
-                        kinetic,
-                        kind: "mass",
-                        name: None,
-                    };
-                    best.insert(key, (rank, edge));
-                }
-            }
-        }
-    }
-    best.into_values().map(|e| e.1).collect()
+    best_pairs(forms, tmax, rules)
+        .into_iter()
+        .map(|p| Edge {
+            from: p.from,
+            to: p.to,
+            rule: p.rule,
+            kinetic: p.kinetic,
+            kind: "mass",
+            name: None,
+        })
+        .collect()
 }
 
 /// The predecessors of the candidates: the edge of a predecessor that is also a mass difference becomes «both», the others are added as «network».

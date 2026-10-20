@@ -127,7 +127,7 @@
   const KINDS = [["rilevati", "D", "detected"], ["mirati", "T", "targeted"], ["riempiti", "F", "filled"], ["assenti", "A", "absent"]];
   const fmt = (/** @type {any} */ v) => (v == null ? "" : Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 0.01) ? Number(v).toExponential(2) : String(+Number(v).toPrecision(4)));
   /** the reason of each rule of the filters, in words (the number of rows is the engine's) */
-  const WHY = /** @type {Record<string, string>} */ ({ min_rilevati: "detected in too few files", min_area: "area below the minimum", min_altezza: "height below the minimum", bianco: "not above the blank", mz: "m/z out of range", rt: "RT out of range", ms2: "no MS2" });
+  const WHY = /** @type {Record<string, string>} */ ({ min_rilevati: "detected in too few files", min_area: "area below the minimum", min_altezza: "height below the minimum", bianco: "not above the blank", mz: "m/z out of range", rt: "RT out of range", ms2: "no MS2", qc_cv_max: "QC CV above the maximum" });
   const W = 360, ROW = 22, M = { l: 120, r: 8, t: 6, b: 6 };
 
   /** stacked bars of the cells of each file (D, T, F, A) */

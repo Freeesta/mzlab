@@ -1,12 +1,13 @@
-"""Voice «Attributio» of the administrator mode (TP_Mine/js/50_attributio.js, 51_attributio_table.js, feat-worker.js, the .wasm `attributio`). Without `mzlab.admin` there is no entry; with it the
-synthetic campaign folder (tests/data/attributio/campagna_sintetica) is loaded with set_input_files, the table has 15 features with the levels of livelli_attesi.csv, the filters and the sort
-work, CSV and XLSX are downloaded, the result and its fingerprint reach the notebook, the controls are at least 24 x 24 px and MZLAB_LR_MISS stays empty. Builds the site and the .wasm
+"""Campaign table of Attributio inside Flow (flow/lazy/flow-campaign.js, TP_Mine/js/51_attributio_table.js, feat-worker.js, the .wasm `attributio`). Without `mzlab.admin` there is no entry; with it the
+synthetic campaign folder (tests/data/attributio/campagna_sintetica) goes through the node «Confidence level» with set_input_files, the table has 15 features with the levels of livelli_attesi.csv, the filters and the sort
+work, CSV and XLSX are downloaded, the result and its fingerprint reach the notebook, the old view name «attributio» leads to Flow, the controls are at least 24 x 24 px and MZLAB_LR_MISS stays empty. Builds the site and the .wasm
 (SKIP without cargo and wasm-bindgen); MZLAB_PIPE_SITE=<built site with static/wasm-feat> reuses a site. Run from the repo root: python3 tests_e2e/e2e_attributio.py"""
 import csv, io, json, os, re, shutil, subprocess, sys, tempfile, threading, urllib.request, zipfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401
+from lib_flow import open_campaign
 
 steps = []
 AXE = lib.axe_path()
@@ -62,26 +63,23 @@ try:
         b = p.chromium.launch()
         pg0 = new_page(b, False)
         lib.attendi(pg0, "typeof uipAdminOn === 'function' && typeof QTOOLS !== 'undefined'")
-        step("without the administrator mode there is no entry", lambda: (_ for _ in ()).throw(AssertionError("entry found")) if pg0.locator("[data-v=attributio], #v-attributio").count() else None)
+        step("without the administrator mode there is no entry", lambda: (_ for _ in ()).throw(AssertionError("entry found")) if pg0.locator("[data-v=attributio], #v-attributio, [data-v=flow]").count() else None)
         pg0.close()
 
         pg = new_page(b, True)
-        pg.wait_for_selector("[data-v=attributio]", timeout=120000)
-        pg.click("[data-v=attributio]"); pg.wait_for_selector("#at-pick")
 
         def small():
-            bad = pg.evaluate("""[...document.querySelectorAll('#v-attributio button, #v-attributio select')].filter(e => e.offsetParent)
+            bad = pg.evaluate("""[...document.querySelectorAll('.flx-res button, .flx-res select')].filter(e => e.offsetParent)
                 .map(e => [e, e.getBoundingClientRect()]).filter(([e, r]) => r.width < 24 || r.height < 24).map(([e, r]) => (e.id || e.textContent) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height))""")
             assert not bad, bad
         step("the controls are at least 24 x 24 px and have a name", small)
 
         def load():
-            pg.set_input_files("#at-dir", str(FOLDER))
-            try: pg.wait_for_function("document.querySelectorAll('#at-table tbody tr.clk').length > 0", timeout=120000)
-            except Exception: raise AssertionError("no rows: " + pg.inner_text("#at-msg") + " " + str(errs[:3]))
-            pg.click("#at-out .tpt-colm summary"); pg.check("[data-vc=basis]"); pg.check("[data-vc=id]")          # the optional columns, to compare with the expected levels
+            try: open_campaign(pg, FOLDER)
+            except Exception: raise AssertionError("no rows: " + pg.inner_text(".fl-insp .fl-note") + " " + str(errs[:3]))
+            pg.click(".flx-res .tpt-colm summary"); pg.check("[data-vc=basis]"); pg.check("[data-vc=id]")          # the optional columns, to compare with the expected levels
             rows = pg.evaluate("[...document.querySelectorAll('#at-table tbody tr.clk')].map(tr => [...tr.cells].map(c => c.querySelector('.lvb') ? c.querySelector('.lvb').textContent : c.textContent))")
-            assert len(rows) == 15, (len(rows), pg.inner_text("#at-msg"))
+            assert len(rows) == 15, (len(rows), pg.inner_text("#flx-camp-say"))
             got = {(r[4], r[6]): (r[0][1:], r[5]) for r in rows}
             assert got == want, {k: (got.get(k), want.get(k)) for k in want if got.get(k) != want.get(k)}
             txt = pg.inner_text("#at-counts"); assert txt.startswith("15 features") and "L1 1" in txt, txt
@@ -89,14 +87,16 @@ try:
         step("the synthetic folder gives 15 features with the levels of livelli_attesi.csv (rows of the component)", load)
 
         def auto2b():
-            assert not pg.is_checked("#at-auto2b"), "the automatic 2b is off by default"
-            pg.check("#at-auto2b")
-            pg.wait_for_function("document.querySelector('#at-msg').textContent === 'Done.' || document.querySelector('#at-msg').className === 'err'", timeout=60000)
-            assert pg.inner_text("#at-msg") == "Done.", pg.inner_text("#at-msg")
+            assert not pg.is_checked("#flx-auto2b"), "the automatic 2b is off by default"
+            pg.check("#flx-auto2b")
+            try: pg.wait_for_function("/^(Done\\.|feature decision not applied)/.test(document.querySelector('#flx-camp-say').textContent)", timeout=60000)
+            except Exception: raise AssertionError("note: " + pg.inner_text("#flx-camp-say") + str(errs[:3]))
+            # the synthetic folder carries one decision on purpose that matches no feature: its warning is the expected end of the run
+            assert not pg.inner_text("#flx-camp-say").startswith("Attributio:"), pg.inner_text("#flx-camp-say")
             # no Level 3 feature of the synthetic campaign has a strong proposal: the table is the same, nothing is set by the programme
             txt = pg.inner_text("#at-counts"); assert txt.startswith("15 features") and "by the programme" not in txt, txt
-            pg.uncheck("#at-auto2b")
-            pg.wait_for_function("document.querySelector('#at-msg').textContent === 'Done.'", timeout=60000)
+            pg.uncheck("#flx-auto2b")
+            pg.wait_for_function("/^(Done\\.|feature decision not applied)/.test(document.querySelector('#flx-camp-say').textContent)", timeout=60000)
         step("the automatic 2b is an option, off by default; on a campaign without strong proposals it changes nothing", auto2b)
 
         def chips():
@@ -106,7 +106,7 @@ try:
             assert pg.get_attribute("[data-chip=l3]", "aria-pressed") == "true"
             pg.click("[data-chip=l3]"); pg.click("[data-chip=neg]")
             assert pg.evaluate("document.querySelectorAll('#at-table tbody tr.clk').length") == 2
-            assert "2 of 15 rows" in pg.inner_text("#at-out .tpt-n")
+            assert "2 of 15 rows" in pg.inner_text(".flx-res .tpt-n")
             pg.click("[data-chip=neg]")
             assert pg.evaluate("document.querySelectorAll('#at-table tbody tr.clk').length") == 15
         step("the chips of level and polarity filter the rows", chips)
@@ -137,7 +137,7 @@ try:
                 pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", theme)
                 pg.click("#at-table tr.clk .tpt-tg >> nth=0")
                 if not pg.evaluate("typeof axe") == "object": pg.add_script_tag(path=AXE)
-                v = pg.evaluate(RUN % "document.getElementById('at-out')")
+                v = pg.evaluate(RUN % "document.querySelector('.flx-res')")
                 assert not v, v
                 pg.keyboard.press("Escape")
             return f
@@ -145,13 +145,18 @@ try:
         step("axe: no serious violation in the table and the open row, dark theme", axe("dark"))
 
         def exports():
-            with pg.expect_download() as d: pg.click("#at-csv")
+            with pg.expect_download() as d: pg.click('.flx-res button[aria-label="Export the table as CSV"]')
             text = Path(d.value.path()).read_text(encoding="utf-8")
             rows = list(csv.reader(io.StringIO(text), delimiter=";"))
             assert rows[0][:5] == ["pol", "id", "mz", "rt", "level"] and len(rows) == 16, (rows[0], len(rows))
-            with pg.expect_download() as d: pg.click("#at-xlsx")
+            with pg.expect_download() as d: pg.click('.flx-res button[aria-label="Export the table as XLSX"]')
             assert d.value.suggested_filename.endswith(".xlsx") and Path(d.value.path()).read_bytes()[:2] == b"PK"
         step("Export CSV and Export XLSX download the table", exports)
+
+        def alias():
+            pg.evaluate("setView('attributio')")
+            assert pg.evaluate("S.view") == "flow" and pg.locator("#v-flow:not([hidden])").count() == 1
+        step("the old view name «attributio» leads to Flow", alias)
 
         def notebook():
             op = pg.evaluate("(NB.ops || []).filter(o => o.op === 'attributio').pop() || null")
@@ -162,9 +167,8 @@ try:
             # the exports need the calibration, the curation and the Level 1-3 decisions of the export campaign laid over the synthetic one
             merged = tmp / "merged"; merged.mkdir()
             for part in ("campagna_sintetica", "campagna_esportazione"): shutil.copytree(ROOT / "tests" / "data" / "attributio" / part, merged, dirs_exist_ok=True)
-            pg.set_input_files("#at-dir", str(merged))
-            pg.wait_for_function("!document.querySelector('#at-export').disabled || document.querySelector('#at-msg').className === 'err'", timeout=120000)
-            assert pg.get_attribute("#at-msg", "class") != "err", pg.inner_text("#at-msg")
+            open_campaign(pg, merged)
+            pg.wait_for_selector("#at-export:not([disabled])")
             pg.click("#at-export"); assert pg.get_attribute("#at-export", "aria-expanded") == "true"
             items = pg.evaluate("[...document.querySelectorAll('#at-export-menu button')].map(b => [b.dataset.kind, b.getBoundingClientRect().height])")
             assert [k for k, _ in items] == ["evidence", "schymanski", "publication", "quantify", "gradient", "sirius"] and all(h >= 24 for _, h in items), items

@@ -19,9 +19,11 @@ use mzlab_feat_wasm::run;
 pub mod flow;
 mod flow_compare;
 mod flow_formula;
+mod flow_inclusion;
 mod flow_level;
 mod flow_match;
 mod flow_ms2;
+mod flow_network;
 mod flow_report;
 
 const HELP: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
@@ -256,5 +258,7 @@ mod flow_ident_tests;
 mod flow_level_tests;
 #[cfg(test)]
 mod flow_ms2_tests;
+#[cfg(test)]
+mod flow_network_tests;
 #[cfg(test)]
 mod flow_report_tests;

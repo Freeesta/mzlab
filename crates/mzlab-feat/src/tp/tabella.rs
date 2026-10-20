@@ -41,7 +41,7 @@ pub fn role_of(s: &Sample) -> Role {
 }
 
 /// The area of the cell when the file has a peak there.
-fn measured(t: &Aligned, row: usize, file: usize) -> f64 {
+pub(crate) fn measured(t: &Aligned, row: usize, file: usize) -> f64 {
     let c = t.cell(row, file);
     if t.state[c] != CELL_ABSENT && t.area[c].is_finite() && t.area[c] > 0.0 {
         t.area[c]

@@ -6,6 +6,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401
+from lib_flow import open_campaign
 
 steps = []
 AXE = lib.axe_path()
@@ -56,16 +57,13 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch()
         pg = new_page(b, True)
-        pg.wait_for_selector("[data-v=attributio]", timeout=120000)
-        pg.click("[data-v=attributio]"); pg.wait_for_selector("#at-pick")
         LIBF = tmp / "lib.msp"
         LIBF.write_text("Name: Test compound\nPRECURSORMZ: 301.1234\nPrecursor_type: [M+H]+\nIonMode: Positive\nNum Peaks: 4\n100.0 10\n150.0 40\n200.0 100\n250.0 30\n\n")
-        pg.set_input_files("#at-dir", str(FOLDER))
-        pg.wait_for_function("document.querySelectorAll('#at-table tbody tr.clk').length > 0", timeout=120000)
-        pg.click("#at-ms2-host summary")
+        open_campaign(pg, FOLDER)
+        pg.click(".flx-res .flw-ms2 summary")
 
         def small():
-            bad = pg.evaluate("""[...document.querySelectorAll('#at-ms2-host button, #at-ms2-host select, #at-ms2-host input')].filter(e => e.offsetParent)
+            bad = pg.evaluate("""[...document.querySelectorAll('.flx-res .flw-ms2 button, .flx-res .flw-ms2 select, .flx-res .flw-ms2 input')].filter(e => e.offsetParent)
                 .map(e => [e, e.getBoundingClientRect()]).filter(([e, r]) => r.height < 24).map(([e, r]) => (e.id || e.textContent) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height))""")
             assert not bad, bad
         step("the controls are at least 24 px high and have a name", small)
@@ -74,7 +72,7 @@ try:
             pg.set_input_files("#ms2-lib", str(LIBF)); pg.click("#ms2-run")
             pg.wait_for_selector("#ms2-out table", timeout=120000)
             cells = pg.evaluate("[...document.querySelectorAll('#ms2-out tbody td')].map(c => c.textContent)")
-            assert cells[0] == "1" and len(cells) == 4, (cells, pg.inner_text("#at-msg"))
+            assert cells[0] == "1" and len(cells) == 4, (cells, pg.inner_text(".flx-res .fl-note"))
         step("the library run answers with a table", engine)
 
         def chim():
@@ -90,7 +88,7 @@ try:
         def axe():
             if not AXE: print("SKIP axe-core not available"); return
             pg.add_script_tag(path=AXE)
-            v = pg.evaluate(RUN % "document.getElementById('at-ms2-host')")
+            v = pg.evaluate(RUN % "document.querySelector('.flx-res .flw-ms2')")
             assert not v, v
         step("axe: no serious violation in the panel", axe)
 

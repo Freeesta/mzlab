@@ -93,6 +93,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | vista «Compare conditions» di Tabui (`TP_Mine/lazy/gruppi-vista.js`: matrice TP × condizione, UpSet, grafici, esportazioni; contratto `gruppi/1`) | `docs/agenti/gruppi-vista.md` (studio: `docs/studi/TABUI_GRUPPI_ESPERIMENTI.md`) |
 | motore MS2 sperimentale, frammentazione in silico alla MetFrag, attribuzione dei frammenti alla MS-FINDER, previsione dell'RT (`attributio/ms2_engine/`) | `docs/agenti/attributio-ms2.md` |
 | interpretazione per riga dei TP (`crates/mzlab-feat/src/interp/`, `interp/1`, `filtri/1`, blocco `interp` nel `.mzfeat`, `.wasm` `interp`, rotte `table_interp`) | `docs/agenti/interp.md` |
+| rete dei prodotti (`crates/mzlab-feat/src/rete/`, `rete/1`: archi per regola su `tp/1`, passi, coordinate, motivo dell'arco) | `docs/agenti/rete.md` |
 | posizione della sostituzione negli isomeri dei TP (classi compatibili con la MS2, `chem/posizioni.rs`, `posiz/1`) | `docs/agenti/posizioni.md` |
 | motore di reattività del genitore (crates/mzlab-chem, .wasm chem, reatt/1, viewer 3D di Tabui) | `docs/agenti/reattivita.md` (validazione sui siti sperimentali ed esperimenti scartati: `reattivita-studi.md`) |
 | classi chimiche da regole (`crates/mzlab-feat/src/classi/`, tabella `data/classi-1.json`, `classi/1`: frammenti diagnostici e perdite neutre) | `docs/agenti/classi.md` |
