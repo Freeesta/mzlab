@@ -53,7 +53,7 @@ def converti(text: str, nome: str, pubblico: bool = False, teoria: bool = False)
     title = p.page_title or re.sub(r"[`*$]", "", p.ctx["titoli"][0][1])
     if teoria:
         head = "".join(f"<!--{h}-->\n" for h in p.head)
-        scripts = "".join(f'<script src="{x}"></script>' for x in ["../appname.js", "teoria.js", *p.scripts])
+        scripts = "".join(f'<script src="{x}"></script>' for x in [*([] if p.no_appname else ["../appname.js"]), "teoria.js", *p.scripts])
         page = TEORIA.replace("@HEAD@", head).replace("@TITLE@", escape(title)).replace("@BODY@", body).replace("@SCRIPTS@", scripts)
         return tema_testa.inject(page, "teoria")
     page = SKELETON.replace("@HEAD@", "\n".join(h.replace("--", "-") for h in p.head)).replace("@TITLE@", escape(title)).replace("@BODY@", body)

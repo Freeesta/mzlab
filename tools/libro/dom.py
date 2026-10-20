@@ -101,7 +101,7 @@ def _clean(kids):
     out = []
     for k in kids:
         if isinstance(k, str):
-            k = re.sub(r"\s+", " ", k)
+            k = re.sub(r"\s+", " ", out.pop() + k if out and isinstance(out[-1], str) else k)
             if not k.strip() and not out:
                 continue
         out.append(k)

@@ -47,7 +47,9 @@ class Grezzo:
             self.err(base + i, "multi-line HTML comments are not supported")
         if not self.ctx["titoli"]:
             m, t = SCRIPT.match(ln[4:-3].strip()), TITLE.match(ln[4:-3].strip())
-            if t:
+            if ln[4:-3].strip() == "no-appname":
+                self.no_appname = True
+            elif t:
                 self.page_title = t.group(1)
             elif m:
                 self.scripts.append(m.group(1))
