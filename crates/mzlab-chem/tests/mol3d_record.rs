@@ -3,6 +3,7 @@
 //! sorts its bonds), over textbook molecules; a Kekulé parent through the record gets the aromatic flags of its lower-case twin.
 
 use mzlab_chem::mol3d::Mol3d;
+use mzlab_chem::mol3d_record::mol3d_from_record;
 use mzlab_feat::chem::grafo::Mol;
 
 const SMILES: [&str; 10] = [
@@ -43,7 +44,7 @@ fn shape(m: &Mol3d) -> Shape {
 }
 
 fn via_record(smiles: &str) -> Mol3d {
-    Mol3d::from_record(&mzlab_mol::Mol::from_smiles(smiles).unwrap()).unwrap()
+    mol3d_from_record(&mzlab_mol::Mol::from_smiles(smiles).unwrap()).unwrap()
 }
 
 #[test]
@@ -67,5 +68,5 @@ fn an_unsupported_element_is_refused() {
     let s = "C[Se]C";
     assert!(Mol::parse(s).is_err());
     let rec = mzlab_mol::Mol::from_smiles(s).unwrap();
-    assert!(Mol3d::from_record(&rec).is_err());
+    assert!(mol3d_from_record(&rec).is_err());
 }

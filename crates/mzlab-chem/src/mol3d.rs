@@ -152,12 +152,3 @@ impl Mol3d {
         s
     }
 }
-
-#[cfg(feature = "record")]
-impl Mol3d {
-    /// The atoms of a `mol/1` record plus their hydrogens, no coordinates yet: `from_mol` of `Mol::from_record(rec, true)` (aromaticity perceived from
-    /// the Kekulé form, bonds sorted by atom pair).
-    pub fn from_record(rec: &mzlab_mol::Mol) -> Result<Mol3d> {
-        Mol3d::from_mol(&Mol::from_record(rec, true)?)
-    }
-}
