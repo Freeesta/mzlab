@@ -96,9 +96,8 @@ try:
             # the here-doc is the plan itself: the shell rewrites the same bytes the export gave
             body = text.split("<<'MZFLOW'\n", 1)[1].split("\nMZFLOW\n", 1)[0]
             with pg.expect_download() as d: pg.click('button[aria-label="Export the plan as mzflow/2 JSON"]')
-            got = json.loads(Path(d.value.path()).read_text()); # the engine writes a single reference as a scalar and leaves out an empty sha256, the page export does not: the same plan
-            norm = lambda p: {**p, "inputs": [{k: v for k, v in i.items() if not (k == "sha256" and v == "")} for i in p["inputs"]], "steps": [{**x, "in": {k: v if isinstance(v, list) else [v] for k, v in x.get("in", {}).items()}} for x in p["steps"]]}
-            b = json.loads(body); assert norm(b) == norm(got), {k: (b.get(k), got.get(k)) for k in set(b) | set(got) if b.get(k) != got.get(k)}
+            got = json.loads(Path(d.value.path()).read_text())      # engine: scalar references and no empty sha256; page export: lists and ""; the same plan
+            norm = lambda p: {**p, "inputs": [{k: v for k, v in i.items() if not (k == "sha256" and v == "")} for i in p["inputs"]], "steps": [{**x, "in": {k: v if isinstance(v, list) else [v] for k, v in x.get("in", {}).items()}} for x in p["steps"]]}; b = json.loads(body); assert norm(b) == norm(got), {k: (b.get(k), got.get(k)) for k in set(b) | set(got) if b.get(k) != got.get(k)}
         step("Copy command shows the shell text built by the engine, with the plan inside", copy_command)
         def parameters():
             pg.fill("#fl-p-detect-floor", "5000"); pg.keyboard.press("Tab")
@@ -142,7 +141,6 @@ try:
             assert c["params"]["step"] == "spectra.match@1" and c["params"]["mz_tolerance_ppm"] == 7 and set(c["in"]) == set(next(x for x in plan["steps"] if x["id"] == "match")["in"]), c
         step("a comparison of algorithms is offered where two are available, checked on the page and exported", compare)
         def cli():
-            # the box was opened by the step «Copy command» and stays open
             attendi(pg, "document.querySelector('.fl-cli code') && document.querySelector('.fl-cli code').textContent.includes('mzlab-cli flow run')")
         step("«Run with the CLI» shows the command of the native runner", cli)
 
@@ -193,8 +191,7 @@ try:
             pg.click('button[aria-label="Redo the change you undid"]'); attendi(pg, "document.querySelectorAll('.fln').length === 7")
             pg.click('button[aria-label="Undo the last change"]'); attendi(pg, "document.querySelectorAll('.fln').length === 8")
             pg.keyboard.press("Control+z"); attendi(pg, "document.querySelectorAll('.fln').length === 7")
-            pg.keyboard.press("Control+y"); attendi(pg, "document.querySelectorAll('.fln').length === 8")
-            assert pg.locator('button[aria-label="Redo the change you undid"]').is_enabled()
+            pg.keyboard.press("Control+y"); attendi(pg, "document.querySelectorAll('.fln').length === 8 && !document.querySelector('button[aria-label=\"Redo the change you undid\"]').disabled")
             pg.click('button[aria-label="Start from a template"]'); pg.click('.flx-tc[data-tpl="table"]'); attendi(pg, "document.querySelectorAll('.fln').length === 2")
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Confidence level")'); attendi(pg, "document.querySelectorAll('.fln').length === 3")
             pg.click('.fln:has-text("Confidence level")')
@@ -472,9 +469,7 @@ try:
             slots = ".fl-slots li"; assert pg.locator(slots).count() >= 3 and "waiting" in pg.inner_text(slots + ":first-child")
             go = 'button[aria-label="Run the plan on this computer"]'
             pg.click(go); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.includes('Data tab')")
-            pg.click(go)
-            # while the run goes the first step already says it is done and the others wait
-            attendi(pg, "document.querySelector('.fl-slots li').textContent.includes('done in 0.9 s')")
+            pg.click(go); attendi(pg, "document.querySelector('.fl-slots li').textContent.includes('done in 0.9 s')")      # while the run goes: the first step is done, the others wait
             assert "Running" in pg.inner_text(".fl-cli .fl-note") and "waiting" in pg.inner_text(slots + ":last-child")
             attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.startsWith('Finished')")
             assert "done in 1.2 s" in pg.inner_text(slots + ":first-child") and "reused" in pg.inner_text(slots + ":last-child") and "1 steps reused" in pg.inner_text(".fl-cli .fl-note") and "/tmp/mzlab-flow/out" in pg.inner_text(".fl-cli .fl-note")

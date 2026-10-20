@@ -15,7 +15,8 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_cache::Cache;
 use crate::flow_match::Named;
-pub use crate::flow_run::{fill_inputs, run_plan, run_plan_cached, run_plan_notify};
+pub use crate::flow_out::{run_plan_cached, run_plan_notify};
+pub use crate::flow_run::{fill_inputs, run_plan};
 
 pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)
