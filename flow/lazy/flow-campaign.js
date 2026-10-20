@@ -31,7 +31,17 @@
   F.registerView({ id: "campaign", title: "Levels of a campaign folder", types: ["annot"], accepts: (/** @type {any} */ item) => !!item.campaign, open: async (/** @type {HTMLElement} */ host, /** @type {any} */ item) => {
     const { el } = F, c = item.campaign, say = el("p", { class: "fl-note", role: "status" }), box = el("div", { class: "tp" });
     const out = (/** @type {"csv" | "xlsx"} */ kind) => () => exportTable(c, kind).then(() => { say.textContent = ""; }, (/** @type {any} */ e) => { say.textContent = "Export failed: " + (e && e.message || e); });
-    host.append(el("div", { class: "fl-meta" }, F.btn("export", "Export the table as CSV", out("csv"), "CSV"), F.btn("export", "Export the table as XLSX", out("xlsx"), "XLSX")), say, box);
+    const rv = el("div", { class: "flw-review" });
+    // the Review screen replaces the table; leaving it redraws the table when a decision was saved (the cascade runs again once)
+    const startReview = () => {
+      box.hidden = true; bench.textContent = "";
+      F.reviewMount(rv, c, {
+        onSaved: (/** @type {string} */ text, /** @type {string} */ path) => { const at = c.files.findIndex((/** @type {any} */ f) => f.path === path), file = { path, file: new File([text], path.split("/").pop() || "feature_decisions.csv", { type: "text/csv" }) }; if (at >= 0) c.files[at] = file; else c.files.push(file); },
+        expert: (/** @type {any[]} */ list, /** @type {number} */ i) => review(list, i),
+        close: async (/** @type {boolean} */ changed) => { rv.textContent = ""; box.hidden = false; if (changed) { Object.assign(c, await F.campaignRun(c.files, c.root)); draw(); } },
+      });
+    };
+    host.append(el("div", { class: "fl-meta" }, F.btn("ok", "Review the features that wait for a decision, one at a time", startReview, "Review"), F.btn("export", "Export the table as CSV", out("csv"), "CSV"), F.btn("export", "Export the table as XLSX", out("xlsx"), "XLSX")), say, rv, box);
     if (c.summary && c.summary.warnings && c.summary.warnings.length) say.textContent = c.summary.warnings.join(" · ");
     const bench = el("div", { class: "flw-bench" });
     // a saved decision replaces the decisions file in memory, the cascade runs again and the table is drawn from the new levels
