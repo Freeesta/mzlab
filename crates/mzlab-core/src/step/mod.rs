@@ -20,6 +20,7 @@ pub enum DataType {
     Rtmap,
     Table,
     Samples,
+    Design,
     Spectra,
     Library,
     Formulas,
@@ -34,7 +35,7 @@ pub enum DataType {
 }
 
 impl DataType {
-    pub const ALL: [DataType; 19] = [
+    pub const ALL: [DataType; 20] = [
         DataType::Raw,
         DataType::Mzml,
         DataType::Mzidx,
@@ -43,6 +44,7 @@ impl DataType {
         DataType::Rtmap,
         DataType::Table,
         DataType::Samples,
+        DataType::Design,
         DataType::Spectra,
         DataType::Library,
         DataType::Formulas,
@@ -69,6 +71,7 @@ impl DataType {
             DataType::Rtmap => "rtmap",
             DataType::Table => "table",
             DataType::Samples => "samples",
+            DataType::Design => "design",
             DataType::Spectra => "spectra",
             DataType::Library => "library",
             DataType::Formulas => "formulas",

@@ -23,6 +23,7 @@ pub mod export_ms;
 pub mod facts;
 pub mod famalign;
 pub mod family;
+pub mod famrecord;
 pub mod filters;
 pub mod gapfill;
 pub mod gruppi;

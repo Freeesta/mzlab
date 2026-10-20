@@ -100,6 +100,11 @@ impl Aligned {
         self.member_start[row] as usize..self.member_start[row + 1] as usize
     }
 
+    /// Number of ions in the family of `row` (0 in "per ion" mode).
+    pub fn family_size(&self, row: usize) -> usize {
+        self.members(row).len()
+    }
+
     /// Bytes of the heap held by the columns.
     pub fn heap_bytes(&self) -> usize {
         self.mz.capacity() * 8
