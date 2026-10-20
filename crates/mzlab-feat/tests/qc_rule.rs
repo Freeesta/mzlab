@@ -17,17 +17,11 @@ fn series(n_qc: usize) -> (Aligned, Vec<Sample>) {
         x.kind = if k < n_qc { "qc" } else { "sample" }.into();
     }
     let area = |row: usize, k: usize| -> f64 {
-        let wiggle = if k % 2 == 0 { 1.0 } else { -1.0 };
+        let wiggle = if k.is_multiple_of(2) { 1.0 } else { -1.0 };
         match row {
             0 => 1e6 * (1.0 + 0.02 * wiggle),
             1 => 1e6 * (1.0 + 0.5 * wiggle),
-            2 => {
-                if k == 0 {
-                    1e6
-                } else {
-                    0.0
-                }
-            }
+            2 if k == 0 => 1e6,
             _ => 0.0,
         }
     };
