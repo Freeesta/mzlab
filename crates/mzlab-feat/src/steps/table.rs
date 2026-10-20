@@ -170,6 +170,41 @@ pub(super) fn filter() -> Step {
     }
 }
 
+/// `table.drift`: the correction of the drift of the areas along the order of injection (`drift::correct`), a view over the table.
+pub(super) fn drift() -> Step {
+    let params = vec![
+        Param::choice("method", "Curve", &["linear", "loess"])
+            .default_str("linear")
+            .doc("Line or local line (LOESS) through the areas of the QC files of each batch, against the position of the injection"),
+        Param::number("span", "LOESS span")
+            .min(0.1)
+            .max(1.0)
+            .default_num(0.75)
+            .unit("fraction")
+            .doc("Share of the QC files of a batch in the neighbourhood of each fit; used by the local line only"),
+    ];
+    Step {
+        ins: vec![
+            Port::new("table", DataType::Table, "Feature table"),
+            Port::new("samples", DataType::Samples, "Roles and injection order of the files"),
+            Port::new("design", DataType::Design, "Batches of the files"),
+        ],
+        outs: vec![Port::new("table", DataType::Table, "Table view with a factor for every cell")],
+        params,
+        runs_in: RunsIn {
+            wasm: Some("table"),
+            wasm_ceiling_bytes: Some(FEAT_CEILING),
+            native: true,
+        },
+        errors: vec!["error.badView", "error.drift.tooFewQc", "error.drift.qcNotAtEnds"],
+        ..Step::core(
+            "table.drift",
+            "Correct drift",
+            "Brings the areas of each batch to the level of the QC files along the order of injection; refused with fewer than 5 QC files in a batch or QC files that are not at the start and the end of it. The measured areas are never overwritten.",
+        )
+    }
+}
+
 /// `export.table_csv`: the table file of `export::csv_full` and its siblings.
 pub(super) fn export_csv() -> Step {
     let params = vec![Param::choice(
@@ -226,6 +261,28 @@ pub(super) fn export_inclusion() -> Step {
             "export.inclusion",
             "Export inclusion list",
             "Writes the m/z and RT windows of the expected products as a CSV in the columns of the inclusion list of mzFinder, sorted by RT; it adds no level and no verdict.",
+        )
+    }
+}
+
+/// `export.mztab`: the table as mzTab-M 2.0 (`export_mztab`), a format that other programs read.
+pub(super) fn export_mztab() -> Step {
+    Step {
+        ins: vec![
+            Port::new("table", DataType::Table, "Feature table"),
+            Port::new("samples", DataType::Samples, "Roles and times of the files"),
+        ],
+        outs: vec![Port::new("report", DataType::Report, "Table as mzTab-M")],
+        runs_in: RunsIn {
+            wasm: Some("table"),
+            wasm_ceiling_bytes: Some(FEAT_CEILING),
+            native: true,
+        },
+        errors: vec!["error.badView", "error.badCampioni", "error.newerFormat"],
+        ..Step::core(
+            "export.mztab",
+            "Export table as mzTab-M",
+            "Writes the feature table, under the view of the filter step when one is wired, as an mzTab-M 2.0 file: one small molecule and one feature per row, areas per file and per group, and an evidence for a row whose identity names a hypothesis. Every row is reliability 4 (unknown compound): the export adds no identity and raises no level.",
         )
     }
 }

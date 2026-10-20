@@ -124,3 +124,13 @@ function migrateBrowse(/** @type {any} */ u) {
   const keep = new Set(Object.values(E.curBy || {}).concat(u.cur || 0));
   E.files.forEach(f => { if (f.vis && !keep.has(f.k) && E.files.some(g => g.kind === f.kind && keep.has(g.k) && g.vis)) f.vis = false; });
 }
+
+/** Side bar width that holds the longest file name (label + box, colour square and padding); the default width when no file is open. */
+let _nameCtx = /** @type {CanvasRenderingContext2D | null} */ (null);
+function namesWidth(/** @type {number} */ dflt) {
+  const names = E.files.filter((/** @type {any} */ f) => !f.gone).map((/** @type {any} */ f) => String(f.label || ""));
+  if (!names.length) return dflt;
+  const g = (_nameCtx ||= /** @type {CanvasRenderingContext2D} */ (document.createElement("canvas").getContext("2d"))), nm = document.querySelector("#flst .nm");
+  g.font = nm ? getComputedStyle(nm).font : "600 13px system-ui, sans-serif";
+  return Math.ceil(Math.max(...names.map(n => g.measureText(n).width)) + 110);
+}
