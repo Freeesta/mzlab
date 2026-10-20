@@ -36,6 +36,8 @@
       box.append(F.compareBody && inst.step.startsWith("meta.compare@") ? F.compareBody(S, inst, c.done) : F.form(inst, step, c.done));
       if (!c.simple && F.compareButton) box.append(F.compareButton(S, inst, step, c.done));
     }
+    const results = F.resultsCard ? F.resultsCard(S, node) : null;
+    if (results) box.append(results);
     const near = c.model.edges.filter((/** @type {string[]} */ e) => e.includes(node.key)), byKey = new Map(c.model.nodes.map((/** @type {any} */ n) => [n.key, n]));
     const chips = (/** @type {string} */ label, /** @type {string[]} */ keys) => keys.length ? el("div", { class: "fl-meta" }, el("span", { class: "fl-note", text: label }),
       ...keys.map(k => el("button", { type: "button", class: "fl-chip fl-link", onclick: () => c.select(k) }, el("span", { text: /** @type {any} */ (byKey.get(k)).title })))) : null;

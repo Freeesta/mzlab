@@ -127,6 +127,6 @@
     listHost.addEventListener("flow:changed", () => { undoBtn.disabled = !S.history.length; redraw(); });
     tplCards(); planView.hidden = true; undoBtn.disabled = true;
     redraw(); requestAnimationFrame(() => cv.fit());
-    /** @type {any} */ (sec).__flow = S; /** @type {any} */ (sec).__shell = { select: cvUi.select, model };
+    S.redraw = redraw; /** @type {any} */ (sec).__flow = S; /** @type {any} */ (sec).__shell = { select: cvUi.select, model };
   };
 })();

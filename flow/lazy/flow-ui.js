@@ -73,6 +73,7 @@
       "err.flow.compare.sameVariant": "Two variants of the comparison are identical.",
       "err.flow.input.missing": `Open the file ${q.input} in the Data tab first, then run again.`,
       "err.flow.check": `The plan has problems: ${q.problems}.`,
+      "err.flow.read.big": `${q.name} is too big to show here.`,
       "err.flow.run": "The run could not start.",
       "err.flow.compare.few": "A comparison needs at least two variants.",
     };
