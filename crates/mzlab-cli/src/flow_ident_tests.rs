@@ -173,7 +173,7 @@ fn match_is_deterministic_and_obeys_its_parameters() {
 }
 
 /// An mzML of caffeine: one ion, [M+H]+ 195.08765 with its 13C and 2x13C peaks, a Gaussian peak at 3.0 min, and a flat noise floor.
-fn caffeine_mzml() -> Vec<u8> {
+pub(crate) fn caffeine_mzml() -> Vec<u8> {
     use mzlab_core::mzml::Spectrum;
     use mzlab_core::mzmlwrite::{Header, MzmlWriter};
     let mut w = MzmlWriter::new(
@@ -217,7 +217,7 @@ fn caffeine_mzml() -> Vec<u8> {
 }
 
 /// A MS2 spectrum of caffeine: the fragments of C8H10N4O2 and one peak no sub-formula explains.
-fn caffeine_mgf() -> String {
+pub(crate) fn caffeine_mgf() -> String {
     "BEGIN IONS\nTITLE=caf\nPEPMASS=195.08765\nCHARGE=1+\nIONMODE=Positive\n138.06619 1000\n110.07127 600\n83.06037 150\n123.05524 90\n163.5 400\nEND IONS\n".into()
 }
 

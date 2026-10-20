@@ -205,6 +205,16 @@ fn formula_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     r.keep(out, DataType::Formulas)
 }
 
+fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let text = crate::flow_level::level_text(
+        &all_inputs(r, job, "candidates"),
+        &all_inputs(r, job, "formulas"),
+    )?;
+    let out = r.work.join(format!("{}.json", job.instance.id));
+    std::fs::write(&out, text).map_err(io)?;
+    r.keep(out, DataType::Annot)
+}
+
 impl Runner for FileRunner {
     fn run(&self, job: &Job) -> Result<Outcome> {
         if let Some(m) = self.meter {
@@ -217,6 +227,7 @@ impl Runner for FileRunner {
             "spectra.match" => ("hits", match_job(self, job)?),
             "formula.ms1" => ("formulas", formula_job(self, job)?),
             "formula.ms2" => ("formulas", formula_job(self, job)?),
+            "annot.level" => ("annot", level_job(self, job)?),
             id => return Err(Error::new("err.flow.unknownStep").with("step", id)),
         };
         Ok(Outcome {
