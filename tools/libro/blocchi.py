@@ -29,7 +29,7 @@ class Parser(Speciali, Liste, Grezzo):
         self.caption = None
         self.scripts, self.scripts_before, self.html_attrs, self.snippets = [], [], [], []
         self.page_title = self.full_title = ""
-        self.no_appname = False
+        self.no_appname = self.esteso = False
 
     def err(self, line: int, msg: str):
         raise LibroError(self.file, line, msg)

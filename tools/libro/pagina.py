@@ -54,9 +54,14 @@ def converti(text: str, nome: str, pubblico: bool = False, teoria: bool = False)
     title = p.page_title or re.sub(r"[`*$]", "", p.ctx["titoli"][0][1])
     if teoria:
         head = "".join(f"<!--{h}-->\n" for h in p.head)
+        if p.esteso:
+            number = re.match(r"\d+", nome).group(0)
+            lines = "\n".join(h.replace("--", "-") for h in p.head)
+            head = f'<!--\nchapter: {number} {title.replace("--", "-")}\n{lines}\n-->\n<meta name="robots" content="noindex">\n'
+            p.html_attrs.append(("data-esteso", ""))
         tags = "".join(f'<script src="{x}"></script>' for x in [*([] if p.no_appname else ["../appname.js"]), *p.scripts_before, "teoria.js", *p.scripts])
         scripts = "".join(testo(n) + "\n" for n in p.snippets if POSITION[n] == "before") + tags + "".join("\n" + testo(n) for n in p.snippets if POSITION[n] == "after")
-        page = TEORIA.replace("@HTMLATTR@", "".join(f' {k}="{v}"' for k, v in p.html_attrs)).replace("@HEAD@", head).replace("@TITLE@", p.full_title or escape(title) + " · Teoria QqQ lab").replace("@BODY@", body).replace("@SCRIPTS@", scripts)
+        page = TEORIA.replace("@HTMLATTR@", "".join(f' {k}="{v}"' if v else f" {k}" for k, v in p.html_attrs)).replace("@HEAD@", head).replace("@TITLE@", p.full_title or escape(title) + " · Teoria QqQ lab").replace("@BODY@", body).replace("@SCRIPTS@", scripts)
         return tema_testa.inject(page, "teoria")
     page = SKELETON.replace("@HEAD@", "\n".join(h.replace("--", "-") for h in p.head)).replace("@TITLE@", escape(title)).replace("@BODY@", body)
     return tema_testa.inject(page, "teoria")
