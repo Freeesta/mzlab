@@ -60,11 +60,12 @@ impl Disegno {
     /// Sorts what has no meaningful order, so that equal designs give equal bytes.
     fn normalize(&mut self) {
         for c in &mut self.conditions {
-            c.levels.sort();
+            crate::sortc::slice_ord(&mut c.levels);
         }
-        self.factors.sort_by(|a, b| a.name.cmp(&b.name));
-        self.batches
-            .sort_by(|a, b| (&a.sha256, &a.file, &a.batch).cmp(&(&b.sha256, &b.file, &b.batch)));
+        crate::sortc::slice_by(&mut self.factors, |a, b| a.name.cmp(&b.name));
+        crate::sortc::slice_by(&mut self.batches, |a, b| {
+            (&a.sha256, &a.file, &a.batch).cmp(&(&b.sha256, &b.file, &b.batch))
+        });
     }
 }
 
@@ -101,7 +102,9 @@ fn guess_reference(names: &[String]) -> Option<String> {
 /// The design the names suggest: conditions from `serie` in order of injection, the likely reference with "all against the reference", one batch.
 pub fn proponi(cs: &[Campione]) -> Disegno {
     let mut ordered: Vec<&Campione> = samples_all(cs);
-    ordered.sort_by(|a, b| (a.order, &a.file).cmp(&(b.order, &b.file)));
+    crate::sortc::slice_by(&mut ordered, |a, b| {
+        (a.order, &a.file).cmp(&(b.order, &b.file))
+    });
     let mut names: Vec<String> = Vec::new();
     for c in ordered.iter().filter(|c| !c.series.is_empty()) {
         if !names.contains(&c.series) {
@@ -204,7 +207,9 @@ pub fn valida(d: &Disegno, cs: &[Campione]) -> Vec<Avviso> {
     }
     for b in names {
         let mut files: Vec<&Campione> = cs.iter().filter(|c| batch_of(d, c) == b).collect();
-        files.sort_by(|x, y| (x.order, &x.file).cmp(&(y.order, &y.file)));
+        crate::sortc::slice_by(&mut files, |x, y| {
+            (x.order, &x.file).cmp(&(y.order, &y.file))
+        });
         if !qc_at_both_ends(&files) {
             push(&mut out, "batchNoQc", "warning", b);
         }
