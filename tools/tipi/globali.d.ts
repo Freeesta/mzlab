@@ -86,6 +86,7 @@ declare var QQRESET: any;
 declare var QQ_RESETTING: any;
 declare var QTOOLS: any;
 declare var QUALITA: any;
+declare var RAPPORTO_FLOW: any;
 declare var REGISTRO: any;
 declare var SCARICA: any;
 declare var SCORCIATOIE: any;

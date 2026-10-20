@@ -96,6 +96,7 @@
     "../../mzlab/web/banco.js",
     "../../mzlab/web/settings.js",
     "../../mzlab/web/aggiorna.js",
+    "../../mzlab/web/rapporto-flow.js",
     "../../mzlab/web/livelli-1.js",
     "../../mzlab/web/livelli.js",
     "../../mzlab/web/libreria.js",
