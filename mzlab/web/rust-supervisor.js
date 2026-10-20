@@ -17,27 +17,49 @@ export function oomSign(/** @type {{ panic?: string | null, text?: string, mem?:
   return /unreachable|rust_oom|out of memory|memory access|memoryBudget/i.test(String((info && (info.panic || info.text)) || "")) && Math.max(peak, (info && info.mem) || 0) > 64 * 1048576;
 }
 
-// Orders the messages to a worker: the compiled module goes first (null = it compiles by itself), then the policy of the memory budget (what the engine decides it from), then the budget when the supervisor lowered it, then everything else in the order sent.
-export function ordered(/** @type {any} */ w, /** @type {() => Promise<WebAssembly.Module | null>} */ compile, /** @type {() => number} */ budget, /** @type {() => number} */ nextId, /** @type {() => object | null} */ policy = () => null) {
+// Orders the messages to a worker: the compiled module goes first (null = it compiles by itself), then the policy of the memory budget (what the engine decides it from),
+// then the budget when the supervisor lowered it (the level of the session), then the step down after a death by lack of memory (`down()`: {current, strikes} or null,
+// asked once from Rust's `budget_down`), then everything else in the order sent. `ready` resolves when the growth probe is known, so the policy carries it.
+export function ordered(/** @type {any} */ w, /** @type {() => Promise<WebAssembly.Module | null>} */ compile, /** @type {() => number} */ budget, /** @type {() => number} */ nextId, /** @type {() => object | null} */ policy = () => null, /** @type {() => Promise<unknown>} */ ready = () => Promise.resolve(), /** @type {() => object | null} */ down = () => null) {
   let sent = false;
-  const first = compile().then(module => { w.postMessage({ op: "module", module }); const p = policy(); if (p) w.postMessage({ op: "policy", ...p }); if (budget()) w.postMessage({ op: "budget", mb: budget(), id: nextId() }); sent = true; });
+  const first = Promise.all([compile(), ready()]).then(([module]) => {
+    w.postMessage({ op: "module", module }); const p = policy(); if (p) w.postMessage({ op: "policy", ...p });
+    if (budget()) w.postMessage({ op: "budget", mb: budget(), id: nextId() });
+    const d = down(); if (d) w.postMessage({ op: "down", ...d });
+    sent = true;
+  });
   return (/** @type {any} */ msg, /** @type {Transferable[] | undefined} */ transfer) => { if (sent) w.postMessage(msg, transfer); else first.then(() => w.postMessage(msg, transfer)); };
 }
 
-// What to do after a death of the worker: "restart" (the first one in a minute), "halve" (the second with the signature of a lack of memory: once more with half the
-// budget), "oom" (the next one: off with error.memoryBudget) or "fault" (the second of another kind: off, the page asks to reload). `state.restarts` = the times of the deaths.
+// What to do after a death of the worker. With the signature of a lack of memory: "down" (the first and the second within a minute: the engine restarts one level lower, the
+// level comes from Rust's `budget_down`) or "oom" (the third: off with error.memoryBudget, no loop of restarts). Another kind of death: "restart" (the first in a minute) or
+// "fault" (the second: off, the page asks to reload). `state.restarts` and `state.ooms` = the times of the deaths; `api.strikes` = the deaths for memory in the last minute.
 export function judgeDeath(/** @type {any} */ state, /** @type {any} */ info, /** @type {number} */ peak) {
-  const { api, stats } = state, now = Date.now();
+  const { api, stats } = state, now = Date.now(), recent = (/** @type {number[]} */ l) => l.filter(t => now - t < 60000);
   if (info && info.panic) api.lastPanic = String(info.panic);
-  state.restarts = state.restarts.filter((/** @type {number} */ t) => now - t < 60000); state.restarts.push(now); stats.restarts++;
-  if (state.restarts.length < 2) return "restart";
-  if (!oomSign(info, peak)) return "fault";
-  if (api.halved) return "oom";
-  api.halved = true; api.budgetMb = 96; stats.halved = (stats.halved || 0) + 1;
-  return "halve";
+  state.restarts = recent(state.restarts); state.restarts.push(now); stats.restarts++;
+  if (!oomSign(info, peak)) return state.restarts.length < 2 ? "restart" : "fault";
+  state.ooms = recent(state.ooms || []); state.ooms.push(now); api.strikes = state.ooms.length;
+  return api.strikes >= 3 ? "oom" : "down";
+}
+
+// The step down after a death for lack of memory: the new worker is asked once for the level below (`budget_down` in Rust) before it opens the files.
+export function stepDown(/** @type {any} */ api) { api.pendingDown = { current: api.budgetMb || (api.choice && api.choice.mb) || 0, strikes: api.strikes }; }
+export function takeDown(/** @type {any} */ api) { const d = api.pendingDown; api.pendingDown = null; return d; }
+
+// Rust's answer to the step down (`m.mb`, 0 = there is no level below): the engine works at that level (true), or there is none (false: the engine is off).
+export function lowerTo(/** @type {any} */ api, /** @type {any} */ stats, /** @type {{ mb: number }} */ m, /** @type {(api: any) => void} */ onLowered) {
+  if (!(m.mb > 0)) return false;
+  api.budgetMb = m.mb; stats.lowered = (stats.lowered || 0) + 1; onLowered(api);
+  return true;
 }
 
 // Test hook: the count of deaths and the lowered budget start again.
 export function forgetFaults(/** @type {any} */ state) {
-  const { api, stats } = state; state.restarts = []; stats.restarts = 0; stats.halved = 0; api.halved = false; api.budgetMb = 0; api.disabled = false; api.lastPanic = null;
+  const { api, stats } = state; state.restarts = []; state.ooms = []; stats.restarts = 0; stats.lowered = 0; api.strikes = 0; api.pendingDown = null; api.budgetMb = 0; api.disabled = false; api.lastPanic = null;
+}
+
+// The engine stops for good: every file is marked bad and the page is told why (`key`).
+export function off(/** @type {any} */ api, /** @type {any[]} */ slots, /** @type {(key: string) => void} */ notify, /** @type {string} */ key) {
+  api.disabled = true; slots.forEach(s => { if (s) s.bad = true; }); notify(key);
 }

@@ -71,6 +71,7 @@
     "../../mzlab/web/rust-metodo.js",
     "../../mzlab/web/rust-opfs.js",
     "../../mzlab/web/rust-recycle.js",
+    "../../mzlab/web/rust-sonda.js",
     "../../mzlab/web/rust-supervisor.js",
     "../../mzlab/web/rust-budget.js",
     "../../mzlab/web/rust-scans.js",
