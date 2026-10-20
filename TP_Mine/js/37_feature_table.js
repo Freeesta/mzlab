@@ -152,6 +152,39 @@
     return { model, loadRow, loadTr };
   }
 
+  /** «Compare with library» under the MS2 of the open row: the search runs on request in the installed libraries (LIB, the same call as the untargeted detail), the best 5 are picked by a button group and drawn by LIB.mirror.
+   * Only the drawing is here; the pairing of the peaks is the engine's. A mirror is not an identification and changes no level. `st` keeps the answer per row, as the tab is drawn again when the row data arrive
+   * @param {HTMLElement} panel @param {FtRow} r @param {any} m the row model @param {any} o @param {Map<number, any>} cmp */
+  function compare(panel, r, m, o, cmp) {
+    if (!document.getElementById("ft-cmp-css")) { const c = document.createElement("style"); c.id = "ft-cmp-css"; c.textContent = `.ft-cmp{margin:8px 0;width:100%;box-sizing:border-box;min-width:0;display:flex;flex-direction:column;gap:6px}.ft-cmp[hidden],.ft-cmp button[hidden]{display:none}.ft-cmp button{min-height:28px;min-width:28px;align-self:flex-start;text-align:left}.ft-cmp-p{display:flex;gap:6px;flex-wrap:wrap}.ft-cmp-b[aria-pressed=true]{outline:2px solid var(--accent);font-weight:600}.ft-cmp canvas{max-width:100%}@media (pointer:coarse){.ft-cmp button{min-height:40px}}`; document.head.appendChild(c); }
+    const sp = m.spectrum2, L = G.LIB;
+    if (!L || !sp || !sp.mz || !sp.mz.length) return;
+    const box = document.createElement("div"); box.className = "ft-cmp"; panel.appendChild(box);
+    const st = cmp.get(r.id) || { sel: 0 }; cmp.set(r.id, st);
+    const say = (/** @type {string} */ t) => { const el = box.querySelector(".ft-cmp-m"); if (el) el.textContent = t; };
+    const paint = () => {
+      const R = st.res, cv = /** @type {HTMLCanvasElement} */ (box.querySelector("canvas")), pick = /** @type {HTMLElement} */ (box.querySelector(".ft-cmp-p"));
+      if (!R || !R.results.length) { cv.hidden = true; pick.hidden = true; say("No library spectrum within the tolerances"); return; }
+      const top = R.results.slice(0, 5), x = top[st.sel] || top[0];
+      pick.hidden = false; pick.innerHTML = top.map((/** @type {any} */ q, /** @type {number} */ i) => `<button type="button" class="ft-cmp-b" data-i="${i}" aria-pressed="${i === st.sel}">${i + 1}. ${String(q.name || "").replace(/[&<>"]/g, c => /** @type {any} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c])} · ${(+q.ent).toFixed(3)}</button>`).join("");
+      cv.hidden = false; L.mirror(cv, { mz: R.query.mz, it: R.query.it, hr: true, prec: r.mz, frag: 0.01 }, x);
+      say(`${x.name} · entropy ${(+x.ent).toFixed(3)} · ${x.shared} shared peaks`);
+    };
+    box.innerHTML = `<button type="button" class="ft-cmp-go" hidden>Compare with library</button><div class="ft-cmp-p" role="group" aria-label="Best library matches" hidden></div><canvas hidden style="width:100%;height:240px"></canvas><div class="ft-cmp-m mut" aria-live="polite"></div>`;
+    const go = /** @type {HTMLButtonElement} */ (box.querySelector(".ft-cmp-go"));
+    box.addEventListener("click", e => { const b = /** @type {HTMLElement} */ (e.target).closest(".ft-cmp-b"); if (b) { st.sel = +(/** @type {HTMLElement} */ (b).dataset.i || 0); paint(); const nb = box.querySelector(`.ft-cmp-b[data-i="${st.sel}"]`); if (nb) /** @type {HTMLElement} */ (nb).focus(); } });
+    go.onclick = async () => {
+      go.disabled = true; say("Searching the libraries...");
+      try {
+        const top = Math.max(...sp.y) || 1, peaks = sp.mz.map((/** @type {number} */ v, /** @type {number} */ j) => [v, sp.y[j] / top]).filter((/** @type {number[]} */ q) => q[1] > 0), pol = o.pol ? Math.sign(o.pol()) : 0;
+        st.res = await L.call("search", { peaks, prec: r.mz, pol, tol: { v: o.ppm(), unit: "ppm" }, frag: 0.01 }); st.sel = 0;
+      } catch (/** @type {any} */ e) { st.res = null; go.disabled = false; say(String((e && e.message) || e)); return; }
+      go.disabled = false; paint();
+    };
+    // the button shows only with an installed library
+    Promise.resolve(L.call("list")).then((/** @type {any} */ l) => { if (l && l.libs && l.libs.length) { go.hidden = false; if (st.res) paint(); } }, () => { /* no library module: no button */ });
+  }
+
   /** mounts the step in `box`. o = { session (PIPEQC.open), names, gate, say, cs (campioni/2 or null), ppm(), levels (Map id → level, or null), identsOf(id) → [identity of evid/1] } */
   function mount(/** @type {HTMLElement} */ box, /** @type {any} */ o) {
     box.innerHTML = html();
@@ -162,6 +195,7 @@
     const TT = G.TPTAB, { cols, identText, levelOf } = columns(o, n, esc);
     const { model, loadRow, loadTr } = rowModels(o, cols, identText, levelOf, t => { q("#ft-why").textContent = t; });
     const hook = G.TPRIGA.hook(model);
+    /** @type {Map<number, any>} */ const cmp = new Map();
     /** @type {any} */ let T = null;
     const draw = (/** @type {FtRow} */ r, /** @type {() => void} */ again) => { loadRow(r.id).then(() => { if (T && T.openId === r.id) again(); }); };
     T = TT.mount(q("#ft-host"), {
@@ -169,8 +203,9 @@
       tabs: hook.tabs,
       head: (/** @type {FtRow} */ r, /** @type {HTMLElement} */ box) => { hook.head(r, box); draw(r, () => hook.head(r, box)); },
       onOpen: (/** @type {FtRow} */ r, /** @type {HTMLElement} */ p, /** @type {string} */ tab) => {
-        hook.onOpen(r, p, tab);
-        const again = () => { if (T.openId === r.id && T.tab === tab && p.isConnected) hook.onOpen(r, p, tab); };
+        const open = () => { hook.onOpen(r, p, tab); if (tab === "overview") compare(p, r, model(r), o, cmp); };
+        open();
+        const again = () => { if (T.openId === r.id && T.tab === tab && p.isConnected) open(); };
         loadRow(r.id).then(again); if (tab === "overview") loadTr(r.id).then(again);
       },
     });
