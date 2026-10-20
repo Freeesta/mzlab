@@ -114,6 +114,10 @@ fn round_trip_of_the_table() {
         polarity: 1,
     };
     let text = mztab(&c);
+    // `MZLAB_MZTAB_OUT=<path>` keeps the synthetic file for the official validator (run by hand).
+    if let Ok(path) = std::env::var("MZLAB_MZTAB_OUT") {
+        std::fs::write(path, &text).unwrap();
+    }
     let r = read(&text);
 
     assert_eq!(r.mtd["mzTab-version"], "2.0.0-M");
