@@ -14,6 +14,7 @@ mod feat_import;
 mod feat_msn;
 mod feat_untargeted;
 mod flow_run;
+mod flow_stage;
 pub mod idxbuild;
 mod idxbuild_nat;
 pub mod librerie;
