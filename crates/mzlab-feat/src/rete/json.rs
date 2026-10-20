@@ -2,7 +2,7 @@
 
 use mzlab_core::json::{round, Out};
 
-use super::{Ms2Share, Rete};
+use super::{Arc, Ms2Share, Node, Rete};
 use crate::hypo::Counts;
 
 pub const SCHEMA: &str = "rete/1";
@@ -36,6 +36,86 @@ fn signed(v: f64) -> String {
     format!("{}{t}", if v < 0.0 { '\u{2212}' } else { '+' })
 }
 
+fn write_nodes(o: &mut Out, nodes: &[Node]) {
+    for (i, n) in nodes.iter().enumerate() {
+        o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
+            .int(i64::from(n.row.id));
+        o.raw(",\"row\":").int(n.row.row as i64);
+        o.raw(",\"mz\":")
+            .num(round(n.row.mz, 4))
+            .raw(",\"rt\":")
+            .num(round(n.row.rt, 2));
+        o.raw(",\"neutral_formula\":").str(&n.row.neutral_formula);
+        o.raw(",\"ion_formula\":").str(&n.row.ion_formula);
+        o.raw(",\"kinship\":").int(i64::from(n.kinship));
+        o.raw(",\"step\":")
+            .int(i64::from(n.step))
+            .raw(",\"pos\":")
+            .int(i64::from(n.pos))
+            .raw("}");
+    }
+}
+
+fn write_arcs(o: &mut Out, arcs: &[Arc]) {
+    for (i, a) in arcs.iter().enumerate() {
+        o.raw(if i > 0 { ",{\"from\":" } else { "{\"from\":" })
+            .int(i64::from(a.from));
+        o.raw(",\"to\":")
+            .int(i64::from(a.to))
+            .raw(",\"rule\":")
+            .str(&a.rule)
+            .raw(",\"scope\":")
+            .str(a.scope);
+        o.raw(",\"delta\":")
+            .str(&a.delta)
+            .raw(",\"dm\":")
+            .num(round(a.dm, 5));
+        o.raw(",\"ppm\":")
+            .num(round(a.ppm, 2) + 0.0)
+            .raw(",\"delta_rt\":")
+            .num(round(a.delta_rt, 2));
+        o.raw(",\"kinetic\":").str(a.kinetic).raw(",\"ms2\":");
+        match &a.ms2 {
+            Some(m) => {
+                o.raw("{\"equal\":")
+                    .rounded(&m.equal, 4)
+                    .raw(",\"shifted\":")
+                    .rounded(&m.shifted, 4);
+                o.raw(",\"n_equal\":")
+                    .int(m.equal.len() as i64)
+                    .raw(",\"n_shifted\":")
+                    .int(m.shifted.len() as i64)
+                    .raw("}");
+            }
+            None => {
+                o.raw("null");
+            }
+        }
+        o.raw(",\"reason\":").str(&a.reason).raw("}");
+    }
+}
+
+impl Rete {
+    /// The network as `rete/1`. Numbers are rounded as in the other views (m/z 4 decimals, RT 2, ppm 2, Δm 5).
+    pub fn to_json(&self) -> String {
+        let mut o = Out::default();
+        o.raw("{\"schema\":\"rete/1\",\"params\":{\"ppm\":")
+            .num(self.params.ppm)
+            .raw(",\"min_fragments\":")
+            .int(self.params.min_fragments as i64)
+            .raw("},\"parent\":")
+            .int(i64::from(self.parent))
+            .raw(",\"columns\":")
+            .int(i64::from(self.columns()))
+            .raw(",\"nodes\":[");
+        write_nodes(&mut o, &self.nodes);
+        o.raw("],\"arcs\":[");
+        write_arcs(&mut o, &self.arcs);
+        o.raw("],\"n_arcs\":").int(self.arcs.len() as i64).raw("}");
+        o.0
+    }
+}
+
 /// The reason of an arc: the evidence of the MS2 when there is one, then the order in time.
 pub(super) fn reason(
     delta: &str,
@@ -63,76 +143,4 @@ pub(super) fn reason(
         _ => "; no time course to order them",
     });
     s
-}
-
-impl Rete {
-    /// The network as `rete/1`. Numbers are rounded as in the other views (m/z 4 decimals, RT 2, ppm 2, Δm 5).
-    pub fn to_json(&self) -> String {
-        let mut o = Out::default();
-        o.raw("{\"schema\":\"rete/1\",\"params\":{\"ppm\":")
-            .num(self.params.ppm)
-            .raw(",\"min_fragments\":")
-            .int(self.params.min_fragments as i64)
-            .raw("},\"parent\":")
-            .int(i64::from(self.parent))
-            .raw(",\"columns\":")
-            .int(i64::from(self.columns()))
-            .raw(",\"nodes\":[");
-        for (i, n) in self.nodes.iter().enumerate() {
-            o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
-                .int(i64::from(n.row.id));
-            o.raw(",\"row\":").int(n.row.row as i64);
-            o.raw(",\"mz\":")
-                .num(round(n.row.mz, 4))
-                .raw(",\"rt\":")
-                .num(round(n.row.rt, 2));
-            o.raw(",\"neutral_formula\":").str(&n.row.neutral_formula);
-            o.raw(",\"ion_formula\":").str(&n.row.ion_formula);
-            o.raw(",\"kinship\":").int(i64::from(n.kinship));
-            o.raw(",\"step\":")
-                .int(i64::from(n.step))
-                .raw(",\"pos\":")
-                .int(i64::from(n.pos))
-                .raw("}");
-        }
-        o.raw("],\"arcs\":[");
-        for (i, a) in self.arcs.iter().enumerate() {
-            o.raw(if i > 0 { ",{\"from\":" } else { "{\"from\":" })
-                .int(i64::from(a.from));
-            o.raw(",\"to\":")
-                .int(i64::from(a.to))
-                .raw(",\"rule\":")
-                .str(&a.rule)
-                .raw(",\"scope\":")
-                .str(a.scope);
-            o.raw(",\"delta\":")
-                .str(&a.delta)
-                .raw(",\"dm\":")
-                .num(round(a.dm, 5));
-            o.raw(",\"ppm\":")
-                .num(round(a.ppm, 2) + 0.0)
-                .raw(",\"delta_rt\":")
-                .num(round(a.delta_rt, 2));
-            o.raw(",\"kinetic\":").str(a.kinetic).raw(",\"ms2\":");
-            match &a.ms2 {
-                Some(m) => {
-                    o.raw("{\"equal\":")
-                        .rounded(&m.equal, 4)
-                        .raw(",\"shifted\":")
-                        .rounded(&m.shifted, 4);
-                    o.raw(",\"n_equal\":")
-                        .int(m.equal.len() as i64)
-                        .raw(",\"n_shifted\":")
-                        .int(m.shifted.len() as i64)
-                        .raw("}");
-                }
-                None => {
-                    o.raw("null");
-                }
-            }
-            o.raw(",\"reason\":").str(&a.reason).raw("}");
-        }
-        o.raw("],\"n_arcs\":").int(self.arcs.len() as i64).raw("}");
-        o.0
-    }
 }
