@@ -8,6 +8,7 @@ pub mod minimize;
 pub mod mol3d;
 pub mod protomer;
 pub mod reatt;
+pub mod step;
 pub mod xtb;
 
 pub use embed::{embed, Conf, DEFAULT_CONFORMERS};

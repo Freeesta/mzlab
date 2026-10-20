@@ -9,6 +9,8 @@ mod ident_formula;
 mod ident_spectra;
 pub mod records;
 mod table;
+mod tabui;
+mod tabui_link;
 
 use mzlab_core::step::{core_steps, Step};
 
@@ -19,6 +21,11 @@ pub(crate) const FEAT_CEILING: u64 = 512_000;
 /// The steps of the identification chain (package `attributio`), apart from `registry` so that the export of the core package stays as it is.
 pub fn attributio() -> Vec<Step> {
     ident::registry()
+}
+
+/// The steps of the Tabui chain that `mzlab-feat` owns (package `tabui`); `mzlab_chem::step::tabui()` adds `structure.reactivity`.
+pub fn tabui() -> Vec<Step> {
+    tabui::registry()
 }
 
 /// Every `core` step of the flagship chain, in the order of the chain: the ones of `mzlab-core` first, then the feature steps.

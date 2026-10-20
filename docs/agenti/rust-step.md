@@ -4,6 +4,9 @@ Each core step of the flagship chain describes itself as Rust data next to the c
 
 Nine more, `package: attributio`, all requiring `hr` (principle 1: no formula, match or level at unit resolution): `spectra.chimeric`, `formula.ms1`, `formula.ms2`, `spectra.match`, `spectra.insilico`, `rt.predict`, `annot.level`, `annot.regulatory`, `annot.hazard` (`steps/ident*.rs`). Their defaults are those of `ReviewSettings`, `AnnotationSettings`, `InSilicoOpts`, `SearchOpts` and `formula_id::Opts`; constants of the code appear only in the text. Planned: `spectra.chimeric` `library_deconvolution`. CANOPUS stays Level 4 as in `livelli.md`.
 
+Five more, `package: tabui`: `tp.generate` (`hypo::generate`, `ipotesi/1`; its defaults are read from `HypoParams::default()`), `tp.filter` (F1-F5 and the decoys of `interp::filtri`), `tp.link` (`interp::ms2link`, `modifica`; algorithms `pooled_ms2`, `isomer_traces`), `tp.position` (`interp::sito`; algorithms `msn_tree`, `cleavage_likelihood`) and `structure.reactivity` (`mzlab-chem`, defaults read from `Opts::parse("")`; algorithms `gfn2_xtb`, `extended_huckel` as the engine fallback).
+They run in the `.wasm` `hr`, `interp` and `chem` with their ceilings written as data. Not yet described: `structure.render`, `structure.draw` (interface only).
+
 ## Functions
 - `step::Step`, `Port`, `Param`, `Algorithm`, `Preset`, `Reference`, `Applicability`, `Facets`, `RunsIn`, `DataType`: plain structs of `step/1` (`mzlab-core/src/step/mod.rs`); no serde, the JSON is written with `json::Out`.
 - `Step::core(id, title, doc)`: a `core` step at version 1 with empty ports and parameters; descriptors fill the rest with struct update syntax.
@@ -16,6 +19,8 @@ Nine more, `package: attributio`, all requiring `hr` (principle 1: no formula, m
 
 - `mzlab_feat::steps::attributio()` (`steps/ident.rs`, with `ident_spectra.rs`, `ident_formula.rs`, `ident_annot.rs`): the nine identification descriptors in the order of the chain, apart from `registry()` so that `steps-1.json` is unchanged; `Applicability` has `ms_levels` and `needs` (`internal_standards`, `ms2`, `blank`, `reference_sample`, `library`).
 - `mzlab_feat::steps::records::records()` and `records_json()`: the fields of the shared `candidates` and `annot` records with the struct they are read from; export `docs/schemi/records-1.json`.
+
+- `mzlab_feat::steps::tabui()` (`steps/tabui.rs`, `tabui_link.rs`): `tp.generate`, `tp.filter`, `tp.link`, `tp.position`; `mzlab_chem::step::tabui()` (`mzlab-chem/src/step.rs`) adds `structure.reactivity` and is the whole family; `mzlab-feat` cannot see `mzlab-chem`.
 
 ## The `convert.mzml` file
 - `lettori_mzml::scrivi_indicizzato(reader, sample, out, progress, Opzioni, &[ProcStep])` (`mzmlwrite::MzmlWriter::indicizzato`, `mzmlwrite/indice.rs`) is what `mzlab_cli::flow::FileRunner` runs for `convert.mzml`: `indexedmzML` (`mzML1.1.2_idx.xsd`), PSI-MS CV 4.2.6, byte `<offset>` of every spectrum and chromatogram, `indexListOffset`, SHA-1 `fileChecksum` (all bytes up to the opening tag).
@@ -31,8 +36,12 @@ Nine more, `package: attributio`, all requiring `hr` (principle 1: no formula, m
 - `cargo test -p mzlab-feat --test steps_attributio`: order and package of the nine steps, defaults inside their limits, export equal to `docs/schemi/steps-attributio-1.json` and `records-1.json` (same `MZLAB_UPDATE_STEPS=1`). `--features attributio,untargeted --test steps_attributio_parity` compares every default with the engine structs.
 - `tests/test_step_identificazione.py`: the nine descriptors validate against `$defs/step`, DOI and `citation_key` have the shape of the study, the only `planned` algorithm is `library_deconvolution`, every error key is a string of the code.
 
+- `cargo test -p mzlab-chem --test steps_tabui`: order and package of the five steps, defaults inside their limits, export equal to `docs/schemi/steps-tabui-1.json` (same `MZLAB_UPDATE_STEPS=1`). `cargo test -p mzlab-feat --features interp --test steps_tabui_parity` compares the defaults of `tp.generate`, `tp.filter`, `tp.link` and `tp.position` with the engine.
+- `tests/test_step_tabui.py`: the five descriptors validate against `$defs/step`, DOI and `citation_key` have the shape of the study and agree with the identification chain, every error key is a string of the code.
+
 ## Traps
 - The parameter names are those of the engine structs (`rt_gap`, `rt_tol`, `tol_ppm`), not the keys of the Pipeline panel (`apply_params` in `mzlab-feat-wasm/src/run.rs`, where `rt_tol` sets two fields); the mapping belongs to the plan reader.
 - `ppm` fields read a negative value as Da at unit resolution (rule 4 of the study forbids it in the contract); the descriptors say so and the `lr` preset of `features.detect` carries only the detection part of `Recipe::lr`.
 - `features.align`, `features.gapfill` and `features.ms2_link` run today inside one call each of `series::align_and_fill` and `pipeline::analyse`; the descriptors are the contract of the steps the plan will call separately.
 - `features.detect` polarity default is 1 (`Recipe::default`); `recipe_on` reads an absent key as all MS1 scans.
+- `tp.generate` merges all its sources in one pass (the absent inputs switch a source off), so it has one algorithm; the alternatives of `meta.compare` are parameter variants (`max_steps`, `nominal`). The `citation_key` takes the first letters-only word of the title (`bannwarth2019gfn` for «GFN2-xTB…»).
