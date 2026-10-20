@@ -18,6 +18,7 @@ use mzlab_feat_wasm::run;
 
 pub mod flow;
 mod flow_base;
+mod flow_cache;
 mod flow_compare;
 mod flow_formula;
 mod flow_inclusion;
@@ -248,6 +249,8 @@ pub fn execute(args: &[String]) -> Outcome {
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod flow_cache_tests;
 #[cfg(test)]
 mod flow_compare_tests;
 #[cfg(test)]

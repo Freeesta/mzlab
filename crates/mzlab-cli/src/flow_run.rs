@@ -12,12 +12,12 @@ use mzlab_core::flow::{
 use mzlab_core::json::Value;
 use mzlab_core::step::{Kind, Step};
 
-use crate::flow::{executable, fill_inputs, steps, FileRunner, Meter};
+use crate::flow::{executable, steps, FileRunner, Meter};
 use crate::Outcome;
 
 pub(crate) const HELP: &str = "mzlab-cli flow run: runs a whole mzflow/2 plan (the plan of the Flow page) on files.
 
-usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set INSTANCE.NAME=VALUE...] [--workers N] [--dry-run]
+usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set INSTANCE.NAME=VALUE...] [--workers N] [--dry-run] [--fresh]
 
   PLAN.json                the plan; its inputs are files named in it
   --in FILE|FOLDER...      where the inputs are: a file is matched by its name, a folder holds files with those names (default: the folder of the plan)
@@ -26,6 +26,8 @@ usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set 
                            NAME may also be `algorithm` or `preset`; repeat for more
   --workers N              threads for the steps of a level and the files of a per-file step (default 1; the outputs do not depend on it)
   --dry-run                checks the plan, the settings and the inputs and prints what would run; writes nothing
+  --fresh                  computes every step again; without it a step whose inputs, parameters and program are those of a run already in
+                           FOLDER is reused (`... reused`, `cached` in prov.json)
   --help                   this text
 
 exit codes: 0 done, 1 a step failed (the others are written), 2 usage, 3 the plan is not valid, 4 an input is missing or does not match";
@@ -39,6 +41,7 @@ struct Args {
     sets: Vec<String>,
     workers: usize,
     dry: bool,
+    fresh: bool,
 }
 
 fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
@@ -62,6 +65,7 @@ fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
                     .ok_or(format!("--workers {n}: not a positive number"))?;
             }
             "--dry-run" => a.dry = true,
+            "--fresh" => a.fresh = true,
             "--in" => {
                 a.ins.push(value("a file or a folder")?.into());
                 while let Some(more) = it.next_if(|n| !n.starts_with("--")) {
@@ -272,15 +276,18 @@ pub(crate) fn run_checked(
     workers: usize,
 ) -> mzlab_core::Result<(Run, String)> {
     let run = execute(plan, &steps(), runner, workers)?;
+    runner.save_cache()?;
     let prov = prov_json(&agent(), Some(&sha256_hex(text)), &run);
     Ok((run, prov))
 }
 
-/// The progress line of one job: `[3/9] features.table (feat) ... done in 12.4 s` (`item 2` for a per-file step), or the error.
+/// The progress line of one job: `[3/9] features.table (feat) ... done in 12.4 s` (`item 2` for a per-file step), `... reused` when it came from
+/// the cache, or the error.
 pub(crate) fn progress_line(
     order: &[String],
     job: &Job,
     ms: f64,
+    cached: bool,
     err: Option<&mzlab_core::Error>,
 ) -> String {
     let n = order
@@ -298,6 +305,7 @@ pub(crate) fn progress_line(
         job.instance.id
     );
     match err {
+        None if cached => format!("{what} ... reused"),
         None => format!("{what} ... done in {:.1} s", ms / 1e3),
         Some(e) => format!("{what} ... failed: {e}"),
     }
@@ -427,5 +435,50 @@ pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
         };
     }
     let out = a.out.unwrap_or_default();
-    crate::flow_out::write_run(&plan, &ready, found, out, a.workers, meter)
+    crate::flow_out::write_run(&plan, &ready, found, out, a.workers, meter, a.fresh)
+}
+
+/// The inputs of the plan that name no hash get it from the file `locate` gives; one that names a hash must match it.
+pub fn fill_inputs(plan: &mut Plan, locate: impl Fn(&str) -> PathBuf) -> mzlab_core::Result<()> {
+    for f in &mut plan.inputs {
+        let bytes = std::fs::read(locate(&f.name))
+            .map_err(|e| crate::flow::io(e).with("input", &f.name))?;
+        let sha = sha256_hex(&bytes);
+        if !f.sha256.is_empty() && f.sha256 != sha {
+            return Err(mzlab_core::Error::new("err.flow.input.sha").with("input", &f.name));
+        }
+        f.sha256 = sha;
+        f.bytes = Some(bytes.len() as u64);
+    }
+    Ok(())
+}
+
+/// Reads, checks and runs a workflow file; returns the run and its `prov/1` text. Files of the plan are read from `dir`, outputs written to `work`.
+pub fn run_plan(
+    text: &[u8],
+    dir: &Path,
+    work: &Path,
+    workers: usize,
+    meter: Option<Meter>,
+) -> mzlab_core::Result<(Run, String)> {
+    run_plan_cached(text, dir, work, workers, meter, None)
+}
+
+/// `run_plan` that keeps the cache of `work` (`Some(fresh)`; `fresh` recomputes every step): a step whose key is there is taken again (`cached`).
+pub fn run_plan_cached(
+    text: &[u8],
+    dir: &Path,
+    work: &Path,
+    workers: usize,
+    meter: Option<Meter>,
+    fresh: Option<bool>,
+) -> mzlab_core::Result<(Run, String)> {
+    let mut plan = parse(text)?;
+    fill_inputs(&mut plan, |n| dir.join(n))?;
+    let plan = prepare(plan, &steps())?.map_err(|problems| {
+        let list: Vec<String> = problems.iter().map(problem_text).collect();
+        mzlab_core::Error::new("err.flow.check").with("problems", list.join(" "))
+    })?;
+    let runner = FileRunner::cached(dir, work, meter, fresh);
+    run_checked(&plan, text, &runner, workers)
 }
