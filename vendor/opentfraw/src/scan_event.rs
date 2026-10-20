@@ -228,6 +228,9 @@ fn srm_ranges(
         .collect()
 }
 
+/// `unknown_long1` of a reaction whose activation is CID (an HCD reaction carries 11).
+pub(crate) const CID_REACTION_FLAG: u32 = 1;
+
 /// Marks `sizes` of `ScanEvent::read` for a v66 table of counted events (see `read_counted`).
 pub(crate) const COUNTED_BODY: usize = usize::MAX;
 /// Body of an event without reactions (an MS1 scan) and bytes added by each reaction.
@@ -237,6 +240,21 @@ pub(crate) const COUNTED_STEP: usize = 56;
 pub(crate) const COUNTED_MAX: usize = 16;
 
 impl ScanEvent {
+    /// Activation of the scan. Code 4 on an FTMS scan is CID (collisions in the ion trap) when the first reaction's
+    /// `unknown_long1` is 1 and beam-type HCD otherwise (11 in the Fusion and Exploris files that mix both).
+    pub fn activation(&self) -> Option<crate::Activation> {
+        let act = self.preamble.activation();
+        let beam = self.preamble.analyzer() == Some(crate::Analyzer::FTMS)
+            && self
+                .reactions
+                .first()
+                .is_some_and(|r| r.unknown_long1 != CID_REACTION_FLAG);
+        match act {
+            Some(crate::Activation::CID) if beam => Some(crate::Activation::HCD),
+            other => other,
+        }
+    }
+
     /// Read one scan event.
     ///
     /// For v66 files, `body_primary` is the body size for primary (MS1) scans
@@ -578,6 +596,45 @@ impl FractionCollector {
         let low_mz = r.read_f64()?;
         let high_mz = r.read_f64()?;
         Ok(Self { low_mz, high_mz })
+    }
+}
+
+#[cfg(test)]
+mod activation_tests {
+    use super::*;
+    use crate::{Activation, Analyzer};
+
+    fn event(analyzer: u8, code: u8, flag: u32) -> ScanEvent {
+        let mut bytes = vec![0u8; 136];
+        bytes[6] = 2;
+        bytes[24] = code;
+        bytes[40] = analyzer;
+        let reaction = Reaction {
+            precursor_mz: 243.1,
+            unknown_double: 0.0,
+            energy: 5.0,
+            unknown_long1: flag,
+            unknown_long2: 0,
+        };
+        ScanEvent {
+            preamble: ScanEventPreamble { bytes },
+            reactions: vec![reaction],
+            fraction_collectors: Vec::new(),
+            coefficients: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn ftms_code_4_is_cid_or_hcd_by_the_reaction_flag() {
+        assert_eq!(Analyzer::from_byte(4), Some(Analyzer::FTMS));
+        assert_eq!(event(4, 4, 1).activation(), Some(Activation::CID));
+        assert_eq!(event(4, 4, 11).activation(), Some(Activation::HCD));
+        assert_eq!(event(4, 1, 11).activation(), Some(Activation::HCD));
+    }
+
+    #[test]
+    fn ion_trap_cid_stays_cid() {
+        assert_eq!(event(0, 4, 11).activation(), Some(Activation::CID));
     }
 }
 

@@ -26,17 +26,10 @@ use crate::scan_index::ScanIndexEntry;
 use crate::types::{Activation, Analyzer, MsPower, ScanType};
 
 /// Resolve the activation filter-string token for a given activation code and
-/// analyzer. On FTMS instruments, both `CID` (code 4) and `HCD` (code 1) render
-/// as "hcd" because they are all beam-type collisions; on ITMS, code 4 renders
-/// as "cid".
-pub fn activation_str(analyzer: Option<Analyzer>, act: Activation) -> &'static str {
-    match act {
-        Activation::CID => match analyzer {
-            Some(Analyzer::FTMS) => "hcd",
-            _ => "cid",
-        },
-        other => other.as_str(),
-    }
+/// analyzer. `ScanEvent::activation` already tells CID from beam-type HCD on FTMS scans, so
+/// the token is the activation's own.
+pub fn activation_str(_analyzer: Option<Analyzer>, act: Activation) -> &'static str {
+    act.as_str()
 }
 
 /// Build the canonical Thermo scan filter string for a single scan event.
@@ -126,7 +119,7 @@ pub fn build_filter(
 
     // Precursor chain (only for MSn scans)
     if n >= 2 {
-        let act = p.activation();
+        let act = event.activation();
         let reactions = &event.reactions;
 
         // Detect EThcD from tribrid instruments (Eclipse, Fusion Lumos).
