@@ -1,0 +1,61 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "disegno/1",
+ "title": "disegno/1: the experimental design of a series",
+ "description": "Conditions, reference, comparisons, factors and batches as data of the plan (mzlab-core disegno). Proposed from a campioni/2 by `proponi`, confirmed by the user, checked by `valida` (codes only). Canonical JSON: keys in alphabetical order, factors sorted by name, batches sorted by sha256 then file; its SHA-256 enters prov/1. Field names in Italian, values in English, as campioni/2.",
+ "type": "object",
+ "required": ["condizioni", "confronti", "fattori", "lotti", "riferimento", "schema"],
+ "properties": {
+  "schema": {"const": "disegno/1"},
+  "condizioni": {
+   "type": "array",
+   "description": "the distinct serie of the sample files, in the order of injection ('' = the only series)",
+   "items": {
+    "type": "object",
+    "required": ["livelli", "nome", "repliche"],
+    "properties": {
+     "nome": {"type": "string"},
+     "repliche": {"type": "integer", "minimum": 0, "description": "the fewest sample files over the time points of the condition (derived)"},
+     "livelli": {"type": "object", "description": "factor name -> value of that factor for this condition"}
+    }
+   }
+  },
+  "riferimento": {"type": ["string", "null"], "description": "the reference condition; null = none"},
+  "confronti": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["tipo"],
+    "properties": {
+     "tipo": {"enum": ["pair", "vs_reference"], "description": "pair: a against b; vs_reference: every condition against the reference"},
+     "a": {"type": "string"},
+     "b": {"type": "string"}
+    }
+   }
+  },
+  "fattori": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["nome", "valori"],
+    "properties": {
+     "nome": {"type": "string"},
+     "valori": {"type": "array", "items": {"type": "string"}}
+    }
+   }
+  },
+  "lotti": {
+   "type": "array",
+   "description": "the batch of each file; the default is one batch called '1'",
+   "items": {
+    "type": "object",
+    "required": ["file", "lotto", "sha256"],
+    "properties": {
+     "file": {"type": "string"},
+     "sha256": {"type": "string", "description": "the key when known (as in campioni/2); empty otherwise"},
+     "lotto": {"type": "string"}
+    }
+   }
+  }
+ }
+}

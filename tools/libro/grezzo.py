@@ -55,6 +55,8 @@ class Grezzo:
             a = HTMLATTR.match(ln[4:-3].strip())
             if a:
                 self.html_attrs.append(a.groups())
+            elif ln[4:-3].strip() == "esteso":
+                self.esteso = True
             elif INLINE.match(ln[4:-3].strip()):
                 name = INLINE.match(ln[4:-3].strip()).group(1)
                 if name not in POSITION:

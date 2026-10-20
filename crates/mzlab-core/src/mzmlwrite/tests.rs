@@ -21,6 +21,27 @@ fn what_is_written_is_read_back() {
     assert_eq!((c.kind, c.q1, c.q3, c.time.clone(), c.intensity.clone()), (ChromKind::Srm, Some(300.5), Some(100.25), ch.time.clone(), ch.intensity.clone()));
 }
 
+#[test]
+fn filter_string_sits_in_the_scan_and_uv_is_an_absorption_chromatogram() {
+    let sp = Spectrum { index: 0, id: "scan=1".into(), level: 1, rt: 1.0, polarity: 1, mz: vec![100.5], intensity: vec![1.0], filter: "+ c ESI Full ms [100-200]".into(), ..Default::default() };
+    let uv = Chromatogram { index: 0, id: "UV 254".into(), kind: ChromKind::Pda, q1: None, q3: None, unit: "number of detector counts".into(), time: vec![0.5], intensity: vec![2.0] };
+    let mut w = MzmlWriter::new(Vec::new(), &Header { run: "x".into(), ..Default::default() }).unwrap();
+    w.open_spectra(1).unwrap();
+    w.spectrum(&sp).unwrap();
+    w.close_spectra().unwrap();
+    w.open_chromatograms(1).unwrap();
+    w.chromatogram(&uv).unwrap();
+    w.close_chromatograms().unwrap();
+    let xml = String::from_utf8(w.finish().unwrap()).unwrap();
+    let spectrum = &xml[xml.find("<spectrum ").unwrap()..xml.find("</spectrum>").unwrap()];
+    let (scan, rest) = (spectrum.find("<scan>").unwrap(), spectrum.find("MS:1000512").unwrap());
+    assert!(scan < rest && rest < spectrum.find("</scan>").unwrap(), "filter string must be inside <scan>");
+    assert_eq!(spectrum.matches("MS:1000512").count(), 1);
+    assert!(xml.contains("accession=\"MS:1000812\" name=\"absorption chromatogram\""));
+    assert!(!xml.contains("MS:1000813"));
+    assert_eq!(mzml::read(xml.as_bytes()).unwrap().chromatograms[0].kind, ChromKind::Pda);
+}
+
 fn write_one(sp: &Spectrum, opz: Opzioni) -> Vec<u8> {
     let mut w = MzmlWriter::con_opzioni(Vec::new(), &Header { run: "x".into(), ..Default::default() }, opz).unwrap();
     w.open_spectra(1).unwrap();

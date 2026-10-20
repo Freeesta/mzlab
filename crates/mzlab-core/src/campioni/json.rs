@@ -133,7 +133,11 @@ fn read_one(v: &Value) -> Result<Campione> {
 /// Reads a `campioni/2` document: the roles, kinds of blank and units must be the ones of the schema; `tempo_min` is derived again from
 /// `tempo` and `unita_tempo` (a time zero without a time has 0 minutes).
 pub fn from_json(bytes: &[u8]) -> Result<Vec<Campione>> {
-    let doc = parse(bytes)?;
+    from_value(&parse(bytes)?)
+}
+
+/// The same as `from_json` on a document already parsed (a part of a larger document).
+pub fn from_value(doc: &Value) -> Result<Vec<Campione>> {
     if doc.get("schema").and_then(|v| v.str()) != Some(SCHEMA) {
         return Err(bad());
     }

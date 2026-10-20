@@ -96,8 +96,19 @@ pub fn run_with(
     };
     let list = |d: &str| files.list(d);
     let io = Io::new(&read, &list);
-    table::run(&io, &files.root)
+    run_table(&io, &files.root)
         .map_err(|e| Error::new("error.attributio").with("detail", e.to_string()))
+}
+
+/// The table, with the automatic 2b of `[levels] auto_2b` where the module carries the review.
+#[cfg(feature = "rev")]
+fn run_table(io: &Io, root: &str) -> mzlab_feat::attributio::error::Result<Run> {
+    mzlab_feat::attributio::review::auto2b::table_with_auto(io, root)
+}
+
+#[cfg(not(feature = "rev"))]
+fn run_table(io: &Io, root: &str) -> mzlab_feat::attributio::error::Result<Run> {
+    table::run(io, root)
 }
 
 /// Runs `f` on the folder (`fetch` as in `run_with`).

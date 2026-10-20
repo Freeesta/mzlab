@@ -69,3 +69,9 @@ def test_inline_snippet_names_are_a_closed_list():
     assert "QMODI.all()" in ok
     with pytest.raises(LibroError):
         converti("<!-- inline: nope -->\n# T {kicker: K}\n", "99-x.md", pubblico=True, teoria=True)
+
+
+def test_esteso_chapter_is_hidden_and_noindex():
+    page = converti("<!-- esteso -->\n<!-- verification: draft -->\n# T {kicker: Capitolo 61}\n", "61-x.md", pubblico=True, teoria=True)
+    assert '<html lang="it" data-esteso>' in page
+    assert 'name="robots" content="noindex"' in page and "chapter: 61 T" in page

@@ -193,3 +193,39 @@ fn decoys_do_not_reach_2b_strong_and_genuine_features_do() {
         "the rule is too strict for genuine features"
     );
 }
+
+#[test]
+fn the_table_carries_the_automatic_2b_apart_and_is_unchanged_without_it() {
+    use mzlab_feat::attributio::review::auto2b::table_with_auto;
+    use mzlab_feat::attributio::table;
+    let fx = fixture("campagna_sintetica");
+    with_io!(fx, io);
+    let root = "campagna_sintetica";
+    let plain = table::run(&io, root).expect("table");
+    // without `auto_2b` the entry of the app is the plain table
+    let same = table_with_auto(&io, root).expect("table");
+    let (mut a, mut b) = (String::new(), String::new());
+    plain.csv_to(&mut |t| a.push_str(t));
+    same.csv_to(&mut |t| b.push_str(t));
+    assert_eq!(a, b);
+    assert!(plain.features.iter().all(|f| f.origin() != "auto-2b"));
+    // a row of the programme on a Level 3 feature: marked, counted apart and in the audit log
+    let t = plain
+        .features
+        .iter()
+        .find(|f| f.level == 3 && f.level_sub != "b" && f.origin() == "auto")
+        .expect("a Level 3 feature without decision");
+    let w = why();
+    let auto = auto_rows(&[(t, "2b-strong", &w)]);
+    let run = table::run_auto(&io, root, Some(&auto)).expect("table");
+    let f = run
+        .features
+        .iter()
+        .find(|f| f.pol == t.pol && f.id == t.id)
+        .expect("feature");
+    assert_eq!(f.origin(), "auto-2b");
+    assert_eq!(run.counts.get("2b-auto"), Some(&1));
+    let mut log = String::new();
+    run.audit_csv_to(&mut |t| log.push_str(t));
+    assert!(log.contains(";level;"), "{log}");
+}
