@@ -7,9 +7,9 @@
 //! 2. spectral library (2a): cosine ≥ `spec_sim_min` and ≥ `spec_peaks_min` shared ions on SIRIUS spectral, GNPS2 (exact) or mzMine (exact); libraries that
 //!    name different structures are one library: the best match names the feature and stays 2a if it is ahead by the margin, else Level 3 `name conflict`
 //!    (`naming`); 2b exists only as the chemist's decision (`decide`);
-//! 3. CSI:FingerID structure with COSMIC ≥ `cosmic_min`; 4. CANOPUS class ≥ `canopus_min`; 0. none, or a standard matched on mass + RT only (`suspect-RT`).
+//! 3. CSI:FingerID structure with COSMIC ≥ `cosmic_min`; 0. none, or a standard matched on mass + RT only (`suspect-RT`).
 //!
-//! Then the retention-time rule (`rt`) and the explanation of each level (`reasons`). The curation of names is read through `Curation` (`curate`).
+//! A CANOPUS class (`canopus_min`) is shown as a column of its own and gives no level: Level 4 is a unique formula (`docs/agenti/livelli.md`). Then the retention-time rule (`rt`) and the explanation of each level (`reasons`). The curation of names is read through `Curation` (`curate`).
 
 pub mod curate;
 pub mod decide;

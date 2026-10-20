@@ -1,8 +1,8 @@
 {
 "NEG:1": [
-4,
+0,
 "",
-"CANOPUS class"
+"none"
 ],
 "NEG:2": [
 0,
@@ -60,9 +60,9 @@
 "CSI:FingerID"
 ],
 "POS:5": [
-4,
+0,
 "",
-"CANOPUS class"
+"none"
 ],
 "POS:6": [
 0,

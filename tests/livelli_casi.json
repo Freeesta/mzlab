@@ -1,6 +1,6 @@
 {
  "format": "livelli-casi/1",
- "note": "Cases of the level rule run by tests/test_livelli_schymanski.py (JS) and by crates/mzlab-cli (Rust); native=false: not in the native executor.",
+ "note": "Cases of the level rule run by tests/test_livelli_schymanski.py (JS) and by crates/mzlab-cli (Rust); native=false: not in the native executor. A `canopus` class is separate information: it is in some inputs to prove it moves no level.",
  "cases": [
   {
    "name": "reference standard",
@@ -244,6 +244,58 @@
    },
    "level": "4",
    "why": "formula"
+  },
+  {
+   "name": "CANOPUS class and unique formula",
+   "profile": "mzlab",
+   "input": {
+    "cands": [],
+    "formulaUnique": true,
+    "canopus": {
+     "cls": "Benzenoids",
+     "prob": 0.95
+    }
+   },
+   "level": "4",
+   "why": "formula"
+  },
+  {
+   "name": "CANOPUS class without formula",
+   "profile": "mzlab",
+   "input": {
+    "cands": [],
+    "canopus": {
+     "cls": "Benzenoids",
+     "prob": 0.95
+    }
+   },
+   "level": "5",
+   "why": "empty"
+  },
+  {
+   "name": "CANOPUS class beside a library spectrum",
+   "profile": "mzlab",
+   "input": {
+    "cands": [
+     {
+      "name": "A",
+      "ik": "AAAAAAAAAAAAAA-X",
+      "ent": 0.9,
+      "cos": 0.85,
+      "shared": 8,
+      "dprec": 2,
+      "lib": "LIB",
+      "nlib": 30
+     }
+    ],
+    "nScans": 3,
+    "canopus": {
+     "cls": "Benzenoids",
+     "prob": 0.95
+    }
+   },
+   "level": "2a",
+   "why": "2a"
   }
  ]
 }

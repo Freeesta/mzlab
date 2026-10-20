@@ -41,7 +41,7 @@ pub(super) fn level() -> Step {
             .min(0.0)
             .max(1.0)
             .default_num(0.70)
-            .doc("A CANOPUS class is shown, and gives Level 4, at or above this probability"),
+            .doc("A CANOPUS class is shown, as an annotation of its own that gives no level, at or above this probability"),
         Param::number("rt_group_tol_min", "RT group")
             .min(0.0)
             .default_num(0.20)
@@ -71,7 +71,7 @@ pub(super) fn level() -> Step {
         ..attributio_step(
             "annot.level",
             "Identification level",
-            "Gives each feature the level its evidence reaches (1, 2a, 2b, 3a, 3b, 4, 5; 0 = detected, not annotated), with the basis and the reasons. Level 2b is never given by the program: the chemist decides it. A CANOPUS class-only call is Level 4 here, as in the reference tool, where the 2014 paper would say Level 3.",
+            "Gives each feature the level its evidence reaches (1, 2a, 2b, 3a, 3b, 4, 5; 0 = detected, not annotated), with the basis and the reasons. Level 2b is never given by the program: the chemist decides it. A CANOPUS class gives no level: it is a separate annotation.",
         )
     }
 }
@@ -91,7 +91,7 @@ fn cascade() -> Algorithm {
         ..algorithm(
             "cascade",
             "Cascade of the sources",
-            "Reference standard, spectral library, CSI:FingerID with COSMIC, CANOPUS class, formula, mass, in this order of basis (basis_level in crates/mzlab-feat/src/attributio/annotate/settings.rs; gates in gates.rs, reasons in reasons.rs).",
+            "Reference standard, spectral library, CSI:FingerID with COSMIC, formula, mass, in this order of basis (basis_level in crates/mzlab-feat/src/attributio/annotate/settings.rs; gates in gates.rs, reasons in reasons.rs).",
             Status::Available,
         )
     }
