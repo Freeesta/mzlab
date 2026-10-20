@@ -39,6 +39,7 @@ declare var LISTE_TARGET: any;
 declare var LISTE_TARGET_CORE: any;
 declare var LIVELLI: any;
 declare var LIVELLI_DATI: any;
+declare var LOOSE_D: any;
 declare var LOSSES: any;
 declare var LOSS_RAD: any;
 declare var MAPEX: any;
