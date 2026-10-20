@@ -50,8 +50,8 @@
   const csvCell = (/** @type {any} */ v) => { const s = v == null ? "" : String(v); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const HEAD = ["From m/z", "To m/z", "Rule", "Scope", "Δ ion formula", "Δm (Da)", "Δ ppm", "ΔRT (min)", "Time order", "Equal fragments", "Shifted fragments", "Reason"];
 
-  function mount(/** @type {HTMLElement} */ el, /** @type {Rete} */ g, /** @type {{ onSelect?: (rowId: number) => void }} */ opts = {}) {
-    if (!document.getElementById("rv-css")) { const s = document.createElement("style"); s.id = "rv-css"; s.textContent = CSS; document.head.appendChild(s); }
+  /** the DOM and the drawing of one network: what is chosen (`st`), the SVG, the legend, the reason and the list of arcs */
+  function painter(/** @type {HTMLElement} */ el, /** @type {Rete} */ g) {
     const nodes = g.nodes, byId = new Map(nodes.map(n => [n.id, n]));
     const st = { node: /** @type {number | null} */ (null), arc: /** @type {number | null} */ (null) };
     const name = (/** @type {number} */ id) => { const n = byId.get(id); return n ? mzText(n) : String(id); };
@@ -120,6 +120,12 @@
       arcList(); why();
     }
     function csv() { return [HEAD, ...g.arcs.map(arcRow)].map(r => r.map(csvCell).join(",")).join("\r\n") + "\r\n"; }
+    return { st, nodes, byId, Q, draw, csv, legend };
+  }
+
+  function mount(/** @type {HTMLElement} */ el, /** @type {Rete} */ g, /** @type {{ onSelect?: (rowId: number) => void }} */ opts = {}) {
+    if (!document.getElementById("rv-css")) { const s = document.createElement("style"); s.id = "rv-css"; s.textContent = CSS; document.head.appendChild(s); }
+    const { st, nodes, byId, Q, draw, csv, legend } = painter(el, g);
     function select(/** @type {number | null} */ id, /** @type {boolean} */ notify) {
       const keep = el.contains(document.activeElement);
       st.node = id; st.arc = null; draw();
