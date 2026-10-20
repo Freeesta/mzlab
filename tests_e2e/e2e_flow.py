@@ -436,14 +436,14 @@ try:
                 if (JSON.parse(o.body).op === 'flow/read') return new Response('a,b\\n1,2\\n', { status: 200 });
                 const plan = JSON.parse(JSON.parse(o.body).plan || '{"steps":[]}'); window.__runs++;
                 if (window.__runs === 1) return new Response(JSON.stringify({ error_key: 'err.flow.input.missing', params: { input: 'a.mzML' } }), { status: 400 });
-                const activity = {}; plan.steps.forEach(x => { activity[x.id] = { step: x.step, ms: 1200, used: [], generated: ['k'] }; });
+                const activity = {}; plan.steps.forEach((x, i) => { activity[x.id] = { step: x.step, ms: 1200, used: [], generated: ['k'], ...(i === plan.steps.length - 1 ? { cached: true } : {}) }; });
                 return new Response(JSON.stringify({ prov: JSON.stringify({ schema: 'prov/1', entity: { k: { type: 'table', label: 't.csv' } }, activity }), dir: '/tmp/mzlab-flow/out' }), { status: 200 }); }; }""")
             pg.click('button[aria-label="Export the plan and run it"]')
             slots = ".fl-slots li"; assert pg.locator(slots).count() >= 3 and "waiting" in pg.inner_text(slots + ":first-child")
             go = 'button[aria-label="Run the plan on this computer"]'
             pg.click(go); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.includes('Data tab')")
             pg.click(go); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.startsWith('Finished')")
-            assert "done in 1.2 s" in pg.inner_text(slots + ":first-child") and "/tmp/mzlab-flow/out" in pg.inner_text(".fl-cli .fl-note")
+            assert "done in 1.2 s" in pg.inner_text(slots + ":first-child") and "reused" in pg.inner_text(slots + ":last-child") and "1 steps reused" in pg.inner_text(".fl-cli .fl-note") and "/tmp/mzlab-flow/out" in pg.inner_text(".fl-cli .fl-note")
             pg.click('button[aria-label="Fit all steps in view"]'); pg.click('.fln:has-text("Build feature table")'); pg.click('.fl-insp button[aria-label="Open t.csv"]')
             attendi(pg, "document.querySelector('.flx-table td') && document.querySelector('.flx-table td').textContent === '1'")
         step("desktop: «Run on this computer» says which file to open first, then lists each step as done", desktop_run)
