@@ -1557,7 +1557,11 @@ impl<'a> ScanParams<'a> {
             .or_else(|| self.0.get_f64("MS2 Isolation M/Z:"))
             .or_else(|| self.0.get_f64("Isolation Center M/Z:"))
             .or_else(|| self.0.get_f64("Precursor M/Z:"))?;
-        if v > 0.0 { Some(v) } else { None }
+        if v > 0.0 {
+            Some(v)
+        } else {
+            None
+        }
     }
 
     /// Number of micro-scans averaged into this scan.
