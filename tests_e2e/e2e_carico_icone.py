@@ -47,6 +47,15 @@ try:
             assert pg.evaluate(PANEL) == "none"
             c.close()
         step("reduced motion: the rings do not turn", still)
+        def loose():
+            c, pg = opened(b, "reduce")
+            assert pg.evaluate("document.querySelector('#drop .fmt-i').getAttribute('title').length > 10")
+            pg.evaluate("""() => { const dt = new DataTransfer(); dt.items.add(new File([new Uint8Array(4)], "MSScan.bin")); dt.items.add(new File([new Uint8Array(4)], "MSPeak.bin"));
+                document.getElementById("drop").dispatchEvent(new DragEvent("drop", { dataTransfer: dt, bubbles: true, cancelable: true })); }""")
+            pg.wait_for_function("(document.getElementById('cartinfo').textContent || '').includes('.D')", timeout=10000)
+            assert not pg.evaluate("document.getElementById('cartinfo').hidden")
+            c.close()
+        step("a .D folder dropped as loose files: the ⓘ hint on the drop area and a notice after the drop", loose)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

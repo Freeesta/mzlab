@@ -117,6 +117,7 @@ declare var LISTE: any;
 declare var LIVELLI: any;
 declare var LOADS: any;
 declare var LOCALE: any;
+declare var LOOSE_D: any;
 declare var LOSSES: any;
 declare var LOSS_RAD: any;
 declare var LUTS_SEQ: any;
