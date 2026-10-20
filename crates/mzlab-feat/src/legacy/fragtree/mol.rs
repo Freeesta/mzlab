@@ -100,6 +100,15 @@ pub struct Subs {
 }
 
 impl Subs {
+    /// The masks of the substructures, to be put back with `set_masks` (the null distribution of the position shuffles them).
+    pub fn masks_copy(&self) -> Vec<u64> {
+        self.masks.clone()
+    }
+
+    pub fn set_masks(&mut self, masks: Vec<u64>) {
+        self.masks = masks;
+    }
+
     /// `candidates(ion)`: substructures with the heavy atoms of the ion and |H + 1 - H_ion| <= 3, weighted exp(-3 (cuts - min) - |dH|).
     pub(crate) fn candidates(&self, ion: &[i64]) -> (Vec<usize>, Vec<f64>) {
         if ion.len() != self.els.len() {

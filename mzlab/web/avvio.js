@@ -72,7 +72,7 @@ function ldRefresh() {
   clearInterval(ldDotTimer); const pct = cur.pct == null ? null : Math.max(0, Math.min(100, Math.round(cur.pct)));
   el.setAttribute("aria-live", "polite"); el.textContent = "";
   const ic = document.createElementNS("http://www.w3.org/2000/svg", "svg"); ic.setAttribute("class", "ldic"); ic.setAttribute("viewBox", "0 0 24 24"); ic.setAttribute("aria-hidden", "true"); ic.setAttribute("focusable", "false");
-  ic.innerHTML = '<path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3"/>'; el.appendChild(ic); el.appendChild(document.createTextNode(cur.text));
+  ic.innerHTML = '<circle cx="12" cy="12" r="9" opacity=".25"/><path d="M12 3a9 9 0 0 1 9 9"/>'; el.appendChild(ic); el.appendChild(document.createTextNode(cur.text));
   // the percentage is shown, not announced at every tick
   if (pct != null) { const s = document.createElement("span"); s.setAttribute("aria-hidden", "true"); s.textContent = ` ${pct}%`; el.appendChild(s); }
 }

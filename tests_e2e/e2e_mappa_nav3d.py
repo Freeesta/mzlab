@@ -21,7 +21,7 @@ try:
         pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
         pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); pg.wait_for_timeout(800)
         pg.click("#opbtn"); ready(pg)
-        pg.click("#np-map"); ready(pg); pg.wait_for_timeout(600)
+        pg.click("#np-map"); ready(pg)
         npan = lambda t: pg.evaluate(f"E.panels.filter(q=>q.type==='{t}').length")
         def open3d():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.wait_for_timeout(300)

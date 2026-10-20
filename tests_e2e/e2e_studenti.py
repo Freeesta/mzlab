@@ -150,7 +150,7 @@ def sizes():
         try:
             with sync_playwright() as p:
                 pg = rr.page(p); pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(400)
-                pg.set_input_files("#pick", [mz(f) for f in FILES[:3]]); pg.wait_for_timeout(1200); pg.click("text=Carica dati"); ready(pg)
+                pg.set_input_files("#pick", [mz(f) for f in FILES[:3]]); pg.click("text=Carica dati"); ready(pg)
                 c = pg.evaluate("[...document.querySelectorAll('#dpanels .pnl')].filter(e=>e.style.display!=='none').slice(0,2).map(e=>{const r=e.getBoundingClientRect();return [Math.round(r.top),Math.round(r.bottom)]})")
                 assert len(c) == 2 and c[1][1] <= h + 2 and pg.evaluate("scrollY") == 0, (w, h, c)
                 print(f"   {w}x{h}: panels", c)

@@ -2,6 +2,8 @@
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
+def until(pg, js, t=10000): pg.wait_for_function(js, timeout=t)       # wait for the state the next assertion reads
+SUM = "document.querySelector('#calcsum').innerText.replace(/ /g, '')"
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e:
@@ -11,7 +13,7 @@ r = Run(port=8879, wd="/tmp/wd79")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
         pg.click("text=Carica dati"); ready(pg)
         def open_below():
             pg.click("#np-calc2"); pg.wait_for_timeout(300)
@@ -35,20 +37,20 @@ try:
             assert pg.evaluate("E.panels.find(q=>q.type==='chrom'&&q.tab==='full').cur") is not None
         step("the graphs stay usable with the calculator open", usable)
         def lower():
-            pg.fill("#calcin", "c14h13f4n3o2s"); pg.wait_for_timeout(900)
+            pg.fill("#calcin", "c14h13f4n3o2s"); until(pg, "document.querySelector('#calcsum').innerText.includes('interpretata come')")
             assert "interpretata come" in pg.inner_text("#calcsum") and "C14H13F4N3O2S" in pg.inner_text("#calcsum").replace(" ", "")
             t = pg.inner_text("#calcout"); assert "364.07" in t and "1 decimale" not in t and "spostato di qualche decimo" not in t, t
-            pg.fill("#calcin", "C9h10Cl2n2O"); pg.wait_for_timeout(900); assert "C9H10Cl2N2O" in pg.inner_text("#calcsum").replace(" ", "")
-            pg.fill("#calcin", "co"); pg.wait_for_timeout(900); assert "CO" in pg.inner_text("#calcsum"), pg.inner_text("#calcsum")
+            pg.fill("#calcin", "C9h10Cl2n2O"); until(pg, SUM + ".includes('C9H10Cl2N2O')"); assert "C9H10Cl2N2O" in pg.inner_text("#calcsum").replace(" ", "")
+            pg.fill("#calcin", "co"); until(pg, SUM + ".includes('CO')"); assert "CO" in pg.inner_text("#calcsum"), pg.inner_text("#calcsum")
         step("lower-case formula: interpreted line, no extra column / sentence", lower)
         def arithmetic():
             pg.click("#np-calc2") if pg.evaluate("document.querySelector('#calcdlg').hidden") else None
-            pg.fill("#calcin", "364.4-194.2"); pg.wait_for_timeout(200)
+            pg.fill("#calcin", "364.4-194.2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '170.2'")
             assert pg.inner_text("#calcres").strip() == "170.2" and not pg.evaluate("document.querySelector('#calcpad').hidden")
             assert pg.is_visible("#calc-nl") and "170.2" in pg.get_attribute("#calc-nl", "title")
             pg.fill("#calcin", "364,4 \u2212 194,2"); pg.wait_for_timeout(200); assert pg.inner_text("#calcres").strip() == "170.2", pg.inner_text("#calcres")
-            pg.fill("#calcin", "(229.1-171.2)*2"); pg.wait_for_timeout(200); assert pg.inner_text("#calcres").strip() == "115.8"
-            pg.click("#calc-nl"); pg.wait_for_timeout(400)
+            pg.fill("#calcin", "(229.1-171.2)*2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '115.8'"); assert pg.inner_text("#calcres").strip() == "115.8"
+            pg.click("#calc-nl"); until(pg, "window.BARRA.curTab === 'losses' && !document.querySelector('#sb-panel-losses').hidden")
             assert pg.evaluate("window.BARRA.curTab === 'losses' && !document.querySelector('#sb-panel-losses').hidden")
             assert pg.input_value("#nl-q") == "115.8"
             pg.click("#np-calc2"); pg.wait_for_timeout(200)
@@ -57,22 +59,22 @@ try:
             pg.fill("#calcin", ""); pg.wait_for_timeout(100)
             for k in ("1", "+", "2"): pg.click(f"#calcpad [data-k='{k}']")
             assert pg.inner_text("#calcres").strip() == "3"
-            pg.click("#calcpad [data-k='=']"); pg.wait_for_timeout(200)
+            pg.click("#calcpad [data-k='=']"); until(pg, "document.querySelector('#calcin').value === '3'")
             assert pg.input_value("#calcin") == "3" and pg.locator("#calctape div").count() == 1 and "1 + 2" in pg.inner_text("#calctape")
         step("keypad: 1 + 2 = 3 and the tape", keypad)
         def keyboard():
-            pg.fill("#calcin", ""); pg.click("#calcin"); pg.keyboard.type("5*4"); pg.keyboard.press("Enter"); pg.wait_for_timeout(200)
+            pg.fill("#calcin", ""); pg.click("#calcin"); pg.keyboard.type("5*4"); pg.keyboard.press("Enter"); until(pg, "document.querySelector('#calcin').value === '20'")
             assert pg.input_value("#calcin") == "20" and pg.locator("#calctape div").count() == 2, (pg.input_value("#calcin"), pg.locator("#calctape div").count())
             pg.keyboard.type("5"); assert pg.input_value("#calcin") == "5", "a digit after = starts a new calculation"
-            pg.fill("#calcin", "Ans+1"); pg.keyboard.press("Enter"); pg.wait_for_timeout(200); assert pg.input_value("#calcin") == "21", pg.input_value("#calcin")
-            pg.locator("#calctape div").nth(2).click(); pg.wait_for_timeout(150); assert pg.input_value("#calcin") == "3", "a row of the tape puts its result back in the field"
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(150); assert pg.input_value("#calcin") == "" and not pg.evaluate("document.querySelector('#calcdlg').hidden"), "Esc clears first"
+            pg.fill("#calcin", "Ans+1"); pg.keyboard.press("Enter"); until(pg, "document.querySelector('#calcin').value === '21'"); assert pg.input_value("#calcin") == "21", pg.input_value("#calcin")
+            pg.locator("#calctape div").nth(2).click(); until(pg, "document.querySelector('#calcin').value === '3'"); assert pg.input_value("#calcin") == "3", "a row of the tape puts its result back in the field"
+            pg.keyboard.press("Escape"); until(pg, "document.querySelector('#calcin').value === ''"); assert pg.input_value("#calcin") == "" and not pg.evaluate("document.querySelector('#calcdlg').hidden"), "Esc clears first"
         step("keyboard: Enter = result, a new digit starts again, Ans, tape row, Esc clears", keyboard)
         def formula_hides_pad():
-            pg.fill("#calcin", "C9H10Cl2N2O"); pg.wait_for_timeout(900)
+            pg.fill("#calcin", "C9H10Cl2N2O"); until(pg, "document.querySelector('#calcpad').hidden")
             assert pg.evaluate("document.querySelector('#calcpad').hidden") and "C9H10Cl2N2O" in pg.inner_text("#calcout").replace(" ", "") and pg.locator("#calcout table").count() == 1
             assert pg.evaluate("document.querySelector('#calcres').hidden")
-            pg.fill("#calcin", ""); pg.wait_for_timeout(200); assert not pg.evaluate("document.querySelector('#calcpad').hidden")
+            pg.fill("#calcin", ""); until(pg, "!document.querySelector('#calcpad').hidden")
         step("a formula: adduct table as before, no keypad", formula_hides_pad)
         def closes():
             pg.click("#nav [data-v=draw]"); pg.wait_for_timeout(300)

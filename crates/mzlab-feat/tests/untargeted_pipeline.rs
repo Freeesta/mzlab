@@ -15,7 +15,7 @@ use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::upload::prepare;
 use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_FILLED};
 use mzlab_feat::untargeted::pipeline::{
-    from_file_features, run_file, run_series, to_file_features, UntParams,
+    from_file_features, run_file, run_series, to_file_features, BaselineParams, UntParams,
 };
 
 type Rec = BTreeMap<String, String>;
@@ -188,4 +188,67 @@ fn adjust_edges_is_on_by_default_and_the_recipe_can_turn_it_off() {
     let off = UntParams::from_json(r#"{"resolve":{"adjust_edges":false}}"#).unwrap();
     assert!(!off.resolve.adjust_edges);
     assert!(UntParams::from_json(r#"{"resolve":{"adjust_edges":3}}"#).is_err());
+}
+
+#[test]
+fn baseline_is_off_by_default_and_the_recipe_turns_it_on() {
+    // mzmine 4.10 gold batches have no baseline step, so parity needs it off
+    assert!(UntParams::default().baseline.is_none());
+    assert!(UntParams::from_json(r#"{"baseline":null}"#)
+        .unwrap()
+        .baseline
+        .is_none());
+    assert!(UntParams::from_json(r#"{"baseline":false}"#)
+        .unwrap()
+        .baseline
+        .is_none());
+    let d = BaselineParams::default();
+    assert_eq!((d.lambda, d.max_iter, d.exclude_peaks), (1e5, 50, false));
+    assert_eq!(
+        UntParams::from_json(r#"{"baseline":true}"#)
+            .unwrap()
+            .baseline,
+        Some(d)
+    );
+    let p = UntParams::from_json(r#"{"baseline":{"lambda":1e4,"exclude_peaks":true}}"#).unwrap();
+    assert_eq!(
+        p.baseline.map(|b| (b.lambda, b.max_iter, b.exclude_peaks)),
+        Some((1e4, 50, true))
+    );
+    for bad in [
+        r#"{"baseline":{"lambda":0}}"#,
+        r#"{"baseline":{"exclude_peaks":2}}"#,
+    ] {
+        assert!(UntParams::from_json(bad).is_err(), "{bad}");
+    }
+}
+
+#[test]
+fn baseline_apply_is_the_arpls_correction_of_the_trace() {
+    // a flat offset of 100 under a triangular peak: arPLS removes the offset (Baek et al. 2015)
+    let x: Vec<f64> = (0..60).map(|i| i as f64 * 0.05).collect();
+    let y: Vec<f64> = (0..60)
+        .map(|i| 100.0 + (50.0 - 10.0 * (i as f64 - 30.0).abs()).max(0.0))
+        .collect();
+    let b = BaselineParams::default();
+    assert_eq!(
+        b.apply(&x, &y),
+        mzlab_feat::untargeted::arpls::correct(&y, 1e5, 50)
+    );
+    let out = b.apply(&x, &y);
+    assert!(out[0] < 1.0 && out[59] < 1.0, "offset removed at the edges");
+    assert!(out[30] > 40.0, "the peak stays");
+}
+
+#[test]
+fn baseline_in_the_recipe_changes_the_features_of_the_synthetic_files() {
+    let Some(mut ixs) = synthetic() else { return };
+    let off = run_file(&mut ixs[0], &UntParams::default()).unwrap();
+    let on = UntParams::from_json(r#"{"baseline":true}"#).unwrap();
+    let with = run_file(&mut ixs[0], &on).unwrap();
+    assert!(!off.is_empty());
+    assert_ne!(
+        off.iter().map(|f| f.height).collect::<Vec<_>>(),
+        with.iter().map(|f| f.height).collect::<Vec<_>>()
+    );
 }
