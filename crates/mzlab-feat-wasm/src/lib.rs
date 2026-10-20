@@ -25,6 +25,8 @@ use mzlab_core::json::Out;
 use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
 
+#[cfg(feature = "detect")]
+pub mod family;
 #[cfg(feature = "finder")]
 pub mod finder;
 #[cfg(feature = "finder_edge")]
