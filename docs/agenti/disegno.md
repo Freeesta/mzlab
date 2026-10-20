@@ -1,6 +1,7 @@
 # Disegno (`draw.js`, Ketcher in `vendor/ketcher`)
 Il nucleo è in AGENTS.md.
 
+- L'editor occupa tutta la larghezza e l'altezza sotto l'intestazione (`#kframe` senza bordo né margini, `calc(100vh - var(--hh))`); i riquadri stanno a destra o, su schermi stretti, sotto.
 - Ketcher si carica solo aprendo la scheda; OpenChemLib al primo calcolo delle proprietà. Lo `<style>` iniettato da `hideMacro` adatta le barre e nasconde aiuto e informazioni di Ketcher; zoom iniziale 100% (`fitZoom`). Tasto destro: «Copia SMILES», «Centra disegno».
 - **Zoom** nella barra alta, dopo ingranaggio, schermo intero e mirino (solo centra): «Ingrandisci», «Riduci» (×1,25 / ×0,8, 0,2-4) e «Ripristina» (100 % e centrato, `fitZoom`), `data-testid` `zoom-*-tp` (`addZoomButtons`); senza tasti +/−/0 perché Ketcher li usa per la carica.
 - **Strumenti dell'editor** (`TOOLS`; scelta in `qqq.disegno.strumenti`): accesi anelli, frecce, catene, riordino, file; forme e immagini sempre; spenti aromaticità, stereochimica, gruppi S/R, verifica/3D, mappatura, atomi generici, biologia. Gruppo nuovo = una riga di `TOOLS` con i `data-testid`. `applyTools` nasconde un gruppo delle barre solo se nessun suo pulsante ha un riquadro (`getClientRects`); un pulsante nudo (tavola periodica) è gruppo di se stesso. `fit()` ingrandisce le barre fino a 1,2 (laterali) e 1,05 (alta), al tocco fino a 1,55 e 1,3 (40 px).
