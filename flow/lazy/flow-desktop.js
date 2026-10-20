@@ -29,7 +29,7 @@
     if (!a || typeof a.base64 !== "string") throw new Error("not base64");
     return new File([Uint8Array.from(atob(a.base64), c => c.charCodeAt(0))], name);
   };
-  F.runners.desktop = { name: "This computer", available, run };
+  F.runners.desktop = { name: "This computer", available, run, report: () => post("flow/report", {}) };
 
   /** the run box of the desktop: a button and one slot per step (waiting, done with its time, or the reason it failed) @param {any} S */
   F.desktopRunUi = S => {
@@ -38,6 +38,10 @@
     const title = (/** @type {any} */ inst) => F.nameOf(String(inst.step).split("@")[0])[0];
     const slot = (/** @type {any} */ inst, /** @type {string} */ text) => el("li", {}, el("strong", { text: title(inst) }), el("span", { text: ` — ${text}` }));
     const waiting = () => { list.textContent = ""; for (const inst of S.plan.steps) list.append(slot(inst, "waiting")); };
+    const rep = btn("file", "Open the report of the last run", async () => {
+      try { F.openResult(await F.lastRunReport()); } catch (e) { note.textContent = F.message(/** @type {any} */ (e)); }
+    }, "Report");
+    rep.disabled = true;
     const go = btn("run", "Run the plan on this computer", async () => {
       go.disabled = true; note.textContent = "Running…"; waiting();
       try {
@@ -47,11 +51,12 @@
         if (S.redraw) S.redraw();
         for (const inst of S.plan.steps) { const s = /** @type {any} */ (by.get(inst.id)); list.append(slot(inst, !s ? "skipped" : s.error ? F.message({ key: s.error.key, params: s.error.params }) : `done in ${(s.ms / 1000).toFixed(1)} s`)); }
         note.textContent = `Finished. The results are in ${res.dir}.`;
+        rep.disabled = false;
         await F.afterRun(S);
       } catch (e) { list.textContent = ""; note.textContent = F.message(/** @type {any} */ (e)); }
       go.disabled = false;
     }, "Run on this computer");
     waiting();
-    return el("div", { class: "fl-meta" }, go, note, list);
+    return el("div", { class: "fl-meta" }, go, rep, note, list);
   };
 })();
