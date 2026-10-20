@@ -5,9 +5,7 @@
 use std::io::{Read, Seek, SeekFrom};
 
 use opentfraw::extra::scan_extras_with;
-use opentfraw::mzml::{
-    extract_arrays, extract_spectrum, scan_metadata, scan_metadata_with, ScanMetadata,
-};
+use opentfraw::mzml::{extract_arrays, extract_spectrum, scan_metadata, ScanMetadata};
 use opentfraw::{ExtraFields, RawFileReader, ScanParams};
 
 use crate::error::{Error, Result};
@@ -19,6 +17,8 @@ use crate::lettori::{
 use crate::metodo::{self, sha1_hex};
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
 use crate::mzmlwrite::Header;
+
+mod extra;
 
 const MAGIC: [u8; 18] = [
     0x01, 0xA1, b'F', 0, b'i', 0, b'n', 0, b'n', 0, b'i', 0, b'g', 0, b'a', 0, b'n', 0,
@@ -342,15 +342,7 @@ impl Lettore for LettoreRaw {
     }
 
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        self.one(c)?;
-        let idx = self.row(k)?;
-        let first = self.raw.run_header.sample_info.first_scan_number;
-        let params = self.raw.scan_params(&mut self.src, first + idx);
-        let m = scan_metadata_with(&self.raw, idx, params.as_ref().map(|p| p.borrowed()))
-            .ok_or_else(|| raw_error("scan metadata"))?;
-        let mut out = header_fields(&self.raw, params, &m);
-        out.extend(noise_fields(&self.raw, &mut self.src, k as u32));
-        Ok(out)
+        extra::intestazione(self, c, k)
     }
 
     fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
@@ -372,47 +364,15 @@ impl Lettore for LettoreRaw {
         self.one(c)?;
         Ok(Some(testata(self)))
     }
-}
 
-fn median(mut v: Vec<f32>) -> f32 {
-    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
-    #[allow(clippy::disallowed_methods)]
-    v.sort_by(f32::total_cmp);
-    v[v.len() / 2]
-}
-
-/// The noise and the baseline an FT scan carries (a piecewise-linear function of m/z, a few dozen nodes): `thermo:noise_function` holds every node as
-/// `m/z,noise,baseline` joined by `;` (nothing is lost: the value at a peak is the interpolation), `thermo:noise` and `thermo:baseline` the median of the nodes
-/// for a quick read. A scan without them (ion trap, SRM) gives nothing. The peaks are not touched.
-fn noise_fields(raw: &RawFileReader, src: &mut Stream, idx: u32) -> Vec<Campo> {
-    let scan = raw.run_header.sample_info.first_scan_number + idx;
-    let Ok(p) = raw.read_scan_labels(src, scan) else {
-        return Vec::new();
-    };
-    let nodes = &p.noise_nodes;
-    if nodes.is_empty() {
-        return Vec::new();
+    fn extra_scansione(
+        &mut self,
+        c: usize,
+        k: usize,
+        s: &Spectrum,
+    ) -> crate::mzmlwrite::SpectrumExtra {
+        extra::di_scansione(self, c, k, s)
     }
-    let function = nodes
-        .iter()
-        .map(|n| format!("{},{},{}", n.mz, n.noise, n.baseline))
-        .collect::<Vec<_>>()
-        .join(";");
-    vec![
-        field(
-            "thermo:noise",
-            median(nodes.iter().map(|n| n.noise).collect()),
-            None,
-            None,
-        ),
-        field(
-            "thermo:baseline",
-            median(nodes.iter().map(|n| n.baseline).collect()),
-            None,
-            None,
-        ),
-        field("thermo:noise_function", function, None, None),
-    ]
 }
 
 /// The header fields of a scan: what the isolation and the activation say, the injection time, and every `opentfraw.*` value of the scan (the trailer).
