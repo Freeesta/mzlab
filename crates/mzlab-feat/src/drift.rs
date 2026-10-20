@@ -44,6 +44,60 @@ pub struct Drift {
     pub cv_after: Vec<f64>,
 }
 
+impl Drift {
+    /// `deriva/1`: the method, the batches with their QC files, the rows corrected and the median CV of the QC before and after. Numbers only.
+    pub fn summary_json(&self, samples: &[Sample]) -> String {
+        let n = self.n_files;
+        let mut labels: Vec<&String> = self.batch.iter().collect();
+        labels.sort();
+        labels.dedup();
+        let mut o = Out::default();
+        o.raw("{\"schema\":").str(SCHEMA).raw(",\"method\":");
+        match self.method {
+            Method::Linear => o.str("linear").raw(",\"span\":null"),
+            Method::Loess(s) => o.str("loess").raw(",\"span\":").num(s),
+        };
+        o.raw(",\"batches\":[");
+        for (i, b) in labels.iter().enumerate() {
+            if i > 0 {
+                o.raw(",");
+            }
+            let files = (0..n).filter(|&k| self.batch[k] == **b);
+            let qc = files.clone().filter(|&k| samples[k].kind == "qc").count();
+            o.raw("{\"batch\":")
+                .str(b)
+                .raw(",\"files\":")
+                .int(files.count() as i64)
+                .raw(",\"qc\":")
+                .int(qc as i64)
+                .raw("}");
+        }
+        let rows = self.reference.len();
+        let corrected = (0..rows)
+            .filter(|&r| (0..n).any(|k| self.factor[r * n + k].is_finite()))
+            .count();
+        let both: Vec<usize> = (0..rows)
+            .filter(|&r| self.cv_before[r].is_finite() && self.cv_after[r].is_finite())
+            .collect();
+        let med = |v: Vec<f64>| median(v);
+        o.raw("],\"rows\":")
+            .int(rows as i64)
+            .raw(",\"rows_corrected\":")
+            .int(corrected as i64);
+        o.raw(",\"rows_with_cv\":").int(both.len() as i64);
+        o.raw(",\"median_cv_before\":").num(round(
+            med(both.iter().map(|&r| self.cv_before[r]).collect()),
+            4,
+        ));
+        o.raw(",\"median_cv_after\":").num(round(
+            med(both.iter().map(|&r| self.cv_after[r]).collect()),
+            4,
+        ));
+        o.raw("}");
+        o.0
+    }
+}
+
 /// The batch of every file: the one the design gives (by SHA-256 when known, else by name), else the default batch.
 pub fn batches_of(samples: &[Sample], d: &Disegno) -> Vec<String> {
     samples
@@ -66,6 +120,45 @@ fn median(mut v: Vec<f64>) -> f64 {
         0 => f64::NAN,
         n if n % 2 == 1 => v[n / 2],
         n => (v[n / 2 - 1] + v[n / 2]) / 2.0,
+    }
+}
+
+impl Drift {
+    /// The curve of one row, for the chart: one point per file with its batch, injection position, QC flag, measured area, curve and factor (`null` where there is none).
+    pub fn curve_json(&self, t: &Aligned, samples: &[Sample], row: usize) -> String {
+        let n = self.n_files;
+        let mut o = Out::default();
+        o.raw("{\"schema\":\"deriva_curva/1\",\"row\":")
+            .int(row as i64)
+            .raw(",\"reference\":")
+            .num(round(self.reference[row], 6));
+        o.raw(",\"cv_before\":")
+            .num(round(self.cv_before[row], 4))
+            .raw(",\"cv_after\":")
+            .num(round(self.cv_after[row], 4))
+            .raw(",\"points\":[");
+        for (k, (batch, sample)) in self.batch.iter().zip(samples).enumerate() {
+            if k > 0 {
+                o.raw(",");
+            }
+            o.raw("{\"file\":")
+                .int(k as i64)
+                .raw(",\"batch\":")
+                .str(batch)
+                .raw(",\"order\":")
+                .int(i64::from(sample.order));
+            o.raw(",\"qc\":")
+                .raw(if sample.kind == "qc" { "true" } else { "false" });
+            o.raw(",\"area\":")
+                .opt(measured(t, row, k))
+                .raw(",\"curve\":")
+                .num(self.curve[row * n + k])
+                .raw(",\"factor\":")
+                .num(self.factor[row * n + k])
+                .raw("}");
+        }
+        o.raw("]}");
+        o.0
     }
 }
 
@@ -161,6 +254,74 @@ fn check(samples: &[Sample], batch: &[String]) -> Result<()> {
     Ok(())
 }
 
+impl Drift {
+    /// The corrected area of a cell, `None` where the file has no peak or the cell has no factor.
+    pub fn area(&self, t: &Aligned, row: usize, file: usize) -> Option<f64> {
+        let f = self.factor[row * self.n_files + file];
+        measured(t, row, file)
+            .filter(|_| f.is_finite())
+            .map(|a| a * f)
+    }
+}
+
+/// What `correct` reads for every row: the table, the files, the QC files of each batch in the order of injection.
+struct Ctx<'a> {
+    t: &'a Aligned,
+    samples: &'a [Sample],
+    batch: &'a [String],
+    labels: Vec<&'a String>,
+    qc: Vec<Vec<usize>>,
+    method: Method,
+}
+
+/// Fits the QC peaks of row `r` batch by batch and writes the curve, the factors and the CVs of the row.
+fn fit_row(c: &Ctx, r: usize, out: &mut Drift) {
+    let (t, n) = (c.t, c.t.n_files);
+    let min_points = match c.method {
+        Method::Linear => MIN_POINTS_LINE,
+        Method::Loess(_) => MIN_POINTS_LOESS,
+    };
+    let all: Vec<f64> =
+        c.qc.iter()
+            .flatten()
+            .filter_map(|&k| measured(t, r, k))
+            .collect();
+    let reference = median(all.clone());
+    out.reference[r] = reference;
+    out.cv_before[r] = cv(&all);
+    for (bi, files) in c.qc.iter().enumerate() {
+        let pts: Vec<(f64, f64)> = files
+            .iter()
+            .filter_map(|&k| measured(t, r, k).map(|a| (f64::from(c.samples[k].order), a)))
+            .collect();
+        if pts.len() < min_points || !pts.windows(2).any(|w| w[0].0 != w[1].0) {
+            continue;
+        }
+        let (x, y): (Vec<f64>, Vec<f64>) = pts.into_iter().unzip();
+        for k in (0..n).filter(|&k| c.batch[k] == *c.labels[bi]) {
+            let at = f64::from(c.samples[k].order);
+            let curve = match c.method {
+                Method::Linear => line_at(&x, &y, at),
+                Method::Loess(span) => loess_at(&x, &y, span, at),
+            };
+            out.curve[r * n + k] = curve;
+            if curve > 0.0 && reference.is_finite() {
+                out.factor[r * n + k] = reference / curve;
+            }
+        }
+    }
+    let after: Vec<f64> =
+        c.qc.iter()
+            .flatten()
+            .filter_map(|&k| measured(t, r, k).map(|a| a * out.factor[r * n + k]))
+            .collect();
+    out.cv_after[r] = if after.iter().all(|v| v.is_finite()) {
+        cv(&after)
+    } else {
+        f64::NAN
+    };
+}
+
 /// The correction of `t` under `method`. `batch` has one label per file (`batches_of`).
 pub fn correct(t: &Aligned, samples: &[Sample], batch: &[String], method: Method) -> Result<Drift> {
     let n = t.n_files;
@@ -174,7 +335,6 @@ pub fn correct(t: &Aligned, samples: &[Sample], batch: &[String], method: Method
     let mut labels: Vec<&String> = batch.iter().collect();
     labels.sort();
     labels.dedup();
-    // QC files of each batch in the order of injection
     let qc: Vec<Vec<usize>> = labels
         .iter()
         .map(|b| {
@@ -185,11 +345,6 @@ pub fn correct(t: &Aligned, samples: &[Sample], batch: &[String], method: Method
             v
         })
         .collect();
-    let min_points = if matches!(method, Method::Linear) {
-        MIN_POINTS_LINE
-    } else {
-        MIN_POINTS_LOESS
-    };
     let rows = t.len();
     let mut out = Drift {
         method,
@@ -201,147 +356,16 @@ pub fn correct(t: &Aligned, samples: &[Sample], batch: &[String], method: Method
         cv_before: vec![f64::NAN; rows],
         cv_after: vec![f64::NAN; rows],
     };
+    let ctx = Ctx {
+        t,
+        samples,
+        batch,
+        labels,
+        qc,
+        method,
+    };
     for r in 0..rows {
-        let all: Vec<f64> = qc
-            .iter()
-            .flatten()
-            .filter_map(|&k| measured(t, r, k))
-            .collect();
-        let reference = median(all.clone());
-        out.reference[r] = reference;
-        out.cv_before[r] = cv(&all);
-        for (bi, files) in qc.iter().enumerate() {
-            let pts: Vec<(f64, f64)> = files
-                .iter()
-                .filter_map(|&k| measured(t, r, k).map(|a| (f64::from(samples[k].order), a)))
-                .collect();
-            let distinct = pts.windows(2).any(|w| w[0].0 != w[1].0);
-            if pts.len() < min_points || !distinct {
-                continue;
-            }
-            let (x, y): (Vec<f64>, Vec<f64>) = pts.into_iter().unzip();
-            for k in (0..n).filter(|&k| batch[k] == *labels[bi]) {
-                let at = f64::from(samples[k].order);
-                let c = match method {
-                    Method::Linear => line_at(&x, &y, at),
-                    Method::Loess(span) => loess_at(&x, &y, span, at),
-                };
-                let cell = r * n + k;
-                out.curve[cell] = c;
-                if c > 0.0 && reference.is_finite() {
-                    out.factor[cell] = reference / c;
-                }
-            }
-        }
-        let after: Vec<f64> = qc
-            .iter()
-            .flatten()
-            .filter_map(|&k| measured(t, r, k).map(|a| a * out.factor[r * n + k]))
-            .collect();
-        out.cv_after[r] = if after.iter().all(|v| v.is_finite()) {
-            cv(&after)
-        } else {
-            f64::NAN
-        };
+        fit_row(&ctx, r, &mut out);
     }
     Ok(out)
-}
-
-impl Drift {
-    /// The corrected area of a cell, `None` where the file has no peak or the cell has no factor.
-    pub fn area(&self, t: &Aligned, row: usize, file: usize) -> Option<f64> {
-        let f = self.factor[row * self.n_files + file];
-        measured(t, row, file)
-            .filter(|_| f.is_finite())
-            .map(|a| a * f)
-    }
-
-    /// `deriva/1`: the method, the batches with their QC files, the rows corrected and the median CV of the QC before and after. Numbers only.
-    pub fn summary_json(&self, samples: &[Sample]) -> String {
-        let n = self.n_files;
-        let mut labels: Vec<&String> = self.batch.iter().collect();
-        labels.sort();
-        labels.dedup();
-        let mut o = Out::default();
-        o.raw("{\"schema\":").str(SCHEMA).raw(",\"method\":");
-        match self.method {
-            Method::Linear => o.str("linear").raw(",\"span\":null"),
-            Method::Loess(s) => o.str("loess").raw(",\"span\":").num(s),
-        };
-        o.raw(",\"batches\":[");
-        for (i, b) in labels.iter().enumerate() {
-            if i > 0 {
-                o.raw(",");
-            }
-            let files = (0..n).filter(|&k| self.batch[k] == **b);
-            let qc = files.clone().filter(|&k| samples[k].kind == "qc").count();
-            o.raw("{\"batch\":")
-                .str(b)
-                .raw(",\"files\":")
-                .int(files.count() as i64)
-                .raw(",\"qc\":")
-                .int(qc as i64)
-                .raw("}");
-        }
-        let rows = self.reference.len();
-        let corrected = (0..rows)
-            .filter(|&r| (0..n).any(|k| self.factor[r * n + k].is_finite()))
-            .count();
-        let both: Vec<usize> = (0..rows)
-            .filter(|&r| self.cv_before[r].is_finite() && self.cv_after[r].is_finite())
-            .collect();
-        let med = |v: Vec<f64>| median(v);
-        o.raw("],\"rows\":")
-            .int(rows as i64)
-            .raw(",\"rows_corrected\":")
-            .int(corrected as i64);
-        o.raw(",\"rows_with_cv\":").int(both.len() as i64);
-        o.raw(",\"median_cv_before\":").num(round(
-            med(both.iter().map(|&r| self.cv_before[r]).collect()),
-            4,
-        ));
-        o.raw(",\"median_cv_after\":").num(round(
-            med(both.iter().map(|&r| self.cv_after[r]).collect()),
-            4,
-        ));
-        o.raw("}");
-        o.0
-    }
-
-    /// The curve of one row, for the chart: one point per file with its batch, injection position, QC flag, measured area, curve and factor (`null` where there is none).
-    pub fn curve_json(&self, t: &Aligned, samples: &[Sample], row: usize) -> String {
-        let n = self.n_files;
-        let mut o = Out::default();
-        o.raw("{\"schema\":\"deriva_curva/1\",\"row\":")
-            .int(row as i64)
-            .raw(",\"reference\":")
-            .num(round(self.reference[row], 6));
-        o.raw(",\"cv_before\":")
-            .num(round(self.cv_before[row], 4))
-            .raw(",\"cv_after\":")
-            .num(round(self.cv_after[row], 4))
-            .raw(",\"points\":[");
-        for (k, (batch, sample)) in self.batch.iter().zip(samples).enumerate() {
-            if k > 0 {
-                o.raw(",");
-            }
-            o.raw("{\"file\":")
-                .int(k as i64)
-                .raw(",\"batch\":")
-                .str(batch)
-                .raw(",\"order\":")
-                .int(i64::from(sample.order));
-            o.raw(",\"qc\":")
-                .raw(if sample.kind == "qc" { "true" } else { "false" });
-            o.raw(",\"area\":")
-                .opt(measured(t, row, k))
-                .raw(",\"curve\":")
-                .num(self.curve[row * n + k])
-                .raw(",\"factor\":")
-                .num(self.factor[row * n + k])
-                .raw("}");
-        }
-        o.raw("]}");
-        o.0
-    }
 }
