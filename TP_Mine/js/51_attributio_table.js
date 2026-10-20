@@ -10,7 +10,7 @@
   const LEVELS = ["1", "2a", "2b", "3a", "3b", "4", "0"];
   /** the order of the levels, best first (L0 = detected without annotation is the last) */
   const RANK = /** @type {Record<string, number>} */ ({ "1": 0, "2a": 1, "2b": 2, "3a": 3, "3b": 4, "4": 5, "0": 6 });
-  /** @typedef {{ i: number, pol: string, id: string, mz: number | null, rt: number | null, key: string, basis: string, name: string, identity: string, reasons: string, engine: string, engineScore: number | null, engineAgrees: boolean | null }} Row */
+  /** @typedef {{ i: number, pol: string, id: string, mz: number | null, rt: number | null, key: string, basis: string, name: string, identity: string, reasons: string, engine: string, engineScore: number | null, engineAgrees: boolean | null, origin: string }} Row */
 
   /** the level of a row as the key of the profile («2a», «3b», «4», «0») @param {any[]} r */
   const key = r => String(r[4]) + (r[5] || "");
@@ -24,10 +24,11 @@
   /** the line of text above the table: «15 features · L1 1 · L2a 3 …» @param {any[][]} rows */
   function summary(rows) {
     const c = counts(rows);
-    return `${rows.length} features` + LEVELS.filter(l => c[l]).map(l => ` · L${l} ${c[l]}`).join("");
+    const auto = rows.filter(r => r[13] === "auto-2b").length;
+    return `${rows.length} features` + LEVELS.filter(l => c[l]).map(l => ` · L${l} ${c[l]}`).join("") + (auto ? ` · ${auto} set to 2b by the programme (auto)` : "");
   }
-  /** the model of a row of the engine (`columns` of the table: pol, id, mz, rt, level, sub, basis, name, identity, reasons, engine_name, engine_score, engine_agrees) @param {any[]} r @param {number} i @returns {Row} */
-  const model = (r, i) => ({ i, pol: String(r[0] ?? ""), id: String(r[1] ?? ""), mz: r[2] == null ? null : Number(r[2]), rt: r[3] == null ? null : Number(r[3]), key: key(r), basis: String(r[6] ?? ""), name: String(r[7] ?? ""), identity: String(r[8] ?? ""), reasons: String(r[9] ?? ""), engine: String(r[10] ?? ""), engineScore: r[11] == null ? null : Number(r[11]), engineAgrees: r[12] == null ? null : Boolean(r[12]) });
+  /** the model of a row of the engine (`columns` of the table: pol, id, mz, rt, level, sub, basis, name, identity, reasons, engine_name, engine_score, engine_agrees, origin) @param {any[]} r @param {number} i @returns {Row} */
+  const model = (r, i) => ({ i, pol: String(r[0] ?? ""), id: String(r[1] ?? ""), mz: r[2] == null ? null : Number(r[2]), rt: r[3] == null ? null : Number(r[3]), key: key(r), basis: String(r[6] ?? ""), name: String(r[7] ?? ""), identity: String(r[8] ?? ""), reasons: String(r[9] ?? ""), engine: String(r[10] ?? ""), engineScore: r[11] == null ? null : Number(r[11]), engineAgrees: r[12] == null ? null : Boolean(r[12]), origin: String(r[13] ?? "") });
   const fix = (/** @type {number | null} */ v, /** @type {number} */ d) => v == null || !Number.isFinite(v) ? "" : v.toFixed(d);
   /** the MS2 engine hit of a row for a cell or a line: the name, the score and whether it agrees with the cascade (empty without a hit) @param {Row} r */
   const engineText = r => !r.engine ? "" : `${r.engine}${r.engineScore == null ? "" : " (" + fix(r.engineScore, 2) + ")"}${r.engineAgrees == null ? "" : r.engineAgrees ? " · agrees" : " · differs"}`;
@@ -57,6 +58,7 @@
       { key: "ident", off: true, label: "Identity", help: "ft.col.identity", sort: (/** @type {Row} */ r) => r.identity.toLowerCase(), cell: (/** @type {Row} */ r) => esc(r.identity) },
       { key: "reasons", off: true, label: "Reasons", help: "ft.col.reasons", cell: (/** @type {Row} */ r) => esc(r.reasons.split("\n")[0]) },
       { key: "engine", off: true, label: "MS2 engine", help: "ft.col.engine", sort: (/** @type {Row} */ r) => r.engine.toLowerCase(), cell: (/** @type {Row} */ r) => esc(engineText(r)) },
+      { key: "origin", off: true, label: "Set by", help: "ft.col.origin", sort: (/** @type {Row} */ r) => r.origin, cell: (/** @type {Row} */ r) => esc(r.origin) },
       { key: "id", off: true, label: "ID", help: "ft.col.id", num: true, sort: (/** @type {Row} */ r) => Number(r.id), cell: (/** @type {Row} */ r) => esc(r.id) },
     ];
     /** the head of the open row: level, the words (the first reason) and the button of the Banco 2b @param {Row} r @param {HTMLElement} h */
@@ -72,7 +74,7 @@
     /** the tab Identity: the basis and the reasons of the level, in words @param {Row} r @param {HTMLElement} body */
     const fill = (r, body) => {
       const why = r.reasons.split("\n").filter(Boolean);
-      body.innerHTML = `<dl class="tpr-q"><dt>Level</dt><dd>L${esc(r.key)}</dd><dt>Basis</dt><dd>${esc(r.basis || "–")}</dd><dt>Name</dt><dd>${esc(r.name || "–")}</dd><dt>Identity</dt><dd>${esc(r.identity || "–")}</dd>`
+      body.innerHTML = `<dl class="tpr-q"><dt>Level</dt><dd>L${esc(r.key)}</dd><dt>Basis</dt><dd>${esc(r.basis || "–")}</dd><dt>Set by</dt><dd>${esc(r.origin || "–")}</dd><dt>Name</dt><dd>${esc(r.name || "–")}</dd><dt>Identity</dt><dd>${esc(r.identity || "–")}</dd>`
         + `${r.engine ? `<dt>MS2 engine</dt><dd>${esc(engineText(r))}</dd>` : ""}<dt><i>m/z</i> · RT · polarity</dt><dd>${esc(fix(r.mz, 4) || "–")} · ${esc(fix(r.rt, 2) || "–")} min · ${esc(r.pol)}</dd></dl>`
         + (why.length ? `<p class="tpr-id"><b>Reasons</b></p><ul class="tpr-pf">${why.map(x => `<li><span>${esc(x)}</span></li>`).join("")}</ul>` : `<p class="tpr-none">Reasons: none given for this row.</p>`);
     };
