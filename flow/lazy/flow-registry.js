@@ -1,6 +1,6 @@
 // @ts-check
 // Flow (administrator mode): the step/1 descriptors as a registry, the data types of the ports and the rules of fit between them. Plain JS with no DOM:
-// the same file runs in the page and under node (tests/test_flow_grafico.py). Descriptors: docs/schemi/steps-1.json, steps-attributio-1.json, steps-tabui-1.json.
+// the same file runs in the page and under node (tests/test_flow_grafico.py). Descriptors: docs/schemi/steps-1.json, steps-attributio-1.json, steps-tabui-1.json, steps-cli-1.json.
 /** @typedef {{name: string, type: string, many: boolean, optional: boolean, title: string, accepts: string[], requires: any}} FlowPort */
 (() => {
   "use strict";
@@ -31,7 +31,8 @@
 
   /** @param {any[][]} lists step/1 arrays (any package order) @returns {{steps: any[], byId: Map<string, any>}} */
   F.registry = lists => {
-    const steps = lists.flat();
+    // an id listed twice keeps its first descriptor; meta.compare is made by the page (F.stepOf), not a step to pick
+    const steps = lists.flat().filter((s, k, all) => s.id !== "meta.compare" && all.findIndex(o => o.id === s.id) === k);
     return { steps, byId: new Map(steps.map(s => [s.id, s])) };
   };
   /** the presets of a step (an object by id in the descriptor) as a list @param {any} step @returns {any[]} */

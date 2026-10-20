@@ -13,7 +13,7 @@
     async open(sec, ctx) {
       sec.textContent = "Loading Flow…";
       try {
-        const lists = await Promise.all(["steps-1.json", "steps-attributio-1.json", "steps-tabui-1.json"].map(async n => { const r = await fetch(new URL("mzfinder/" + n, ctx.base)); if (!r.ok) throw new Error(n); return r.json(); }));
+        const lists = await Promise.all(["steps-1.json", "steps-attributio-1.json", "steps-tabui-1.json", "steps-cli-1.json"].map(async n => { const r = await fetch(new URL("mzfinder/" + n, ctx.base)); if (!r.ok) throw new Error(n); return r.json(); }));
         await /** @type {any} */ (window).TPLAZY.load(...PARTS);
         /** @type {any} */ (globalThis).FLOW.injectCss();
         /** @type {any} */ (globalThis).FLOW.shell(sec, lists);
