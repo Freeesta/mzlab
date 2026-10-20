@@ -1,0 +1,6 @@
+# Misure dei clic (regola 26: pochi clic)
+## Flusso Tabui dai file alla tabella TP (`python3 tests_e2e/e2e_clic_flusso.py`, riga «MISURA», Chromium headless, serie HR sintetica `lc_synth` + `msn_synth`)
+- Conteggio con ascoltatori in cattura nella pagina (clic fidati, tasti senza i soli modificatori). Il dialogo di sistema dei file (clic su «Choose files...», Ctrl+A, Invio) e l'incolla dello SMILES (clic sul campo, Ctrl+V) non si pilotano con Playwright: sono costanti dichiarate nel test.
+- **Risultato: 4 clic + 3 tasti = 7 azioni**: scheda Tabui (1 clic), file (1 clic + 2 tasti), SMILES del genitore (1 clic + 1 tasto), «Dig» (1 clic). Con i 5 clic sul logo che mostrano Tabui (una volta per browser) sono 12.
+- Il test fallisce oltre 10 azioni (senza il logo): un passo in più fra i file e la tabella è una regressione. Nessuna conferma, nessun pulsante «Compute» in mezzo; la Pipeline non serve per questo percorso.
+- Termine di confronto (test 4 dello studio `WORKFLOW_MODULARI.md`: mzLab ≤ metà dei clic di mzmine 4.10, stesso risultato): si misura sul Mac con la registrazione dello schermo di mzmine, batch caricato e batch costruito; il numero va aggiunto qui. I 13 `.raw` veri non sono nel repository: la misura qui è sulla serie sintetica, che ha gli stessi passi dell'utente.
