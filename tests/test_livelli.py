@@ -178,3 +178,8 @@ def test_points_section_shape():
 def test_rust_json_is_generated_from_the_data_file():
     out = subprocess.run(["python3", str(WEB.parent.parent / "tools" / "esporta_livelli.py"), "--controlla"], capture_output=True, encoding="utf-8")
     assert out.returncode == 0, out.stderr
+
+
+def test_decoy_q_of_the_best_candidate_is_a_line_of_the_reason_with_its_note():
+    d = lv("const a = L.assess({ cands: [c(0.9, 6, 2, 'A', 'AAAAAAAAAAAAAA-X', { q: 0.0333 })], nScans: 3 }), b = L.assess({ cands: [c(0.9, 6, 2)], nScans: 3 }); return { a: a.lines, b: b.lines, pa: a.proposed, pb: b.proposed };")
+    assert d["a"][-1].startswith("decoy q 0.03 (") and d["a"][:-1] == d["b"] and d["pa"] == d["pb"]   # a line only: the level does not move
