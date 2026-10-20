@@ -61,6 +61,7 @@ pub mod rtmap;
 pub mod samples;
 pub mod series;
 pub mod slabs;
+pub mod spill;
 pub use mzlab_core::sortc;
 pub mod stat;
 pub mod steps;

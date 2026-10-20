@@ -94,36 +94,44 @@ struct Votes {
 }
 
 /// Counts how often each group is a root of a family or a lone ion and which role it has, and collects the links (group, group of the root of its
-/// family) that pass the RT and charge checks, sorted and with repeated links merged.
-fn collect(
-    files: &[&FileFeatures],
-    ions: &Aligned,
-    group_of: &[Vec<u32>],
-    p: &FamAlignParams,
-) -> Result<(Votes, Vec<(u32, u32)>)> {
-    let mut votes = Votes {
-        base: filled(ions.len(), 0)?,
-        role: filled(ions.len(), [0; 7])?,
-    };
-    let mut links = Vec::new();
-    // The last file that voted for each group as a base: a split ion votes once per file.
-    let mut last: Vec<u32> = filled(ions.len(), u32::MAX)?;
-    for (k, f) in files.iter().enumerate() {
+/// family) that pass the RT and charge checks. The files are added one at a time, in order, so a series can be read file by file.
+pub(crate) struct Collector {
+    votes: Votes,
+    links: Vec<(u32, u32)>,
+    /// The last file that voted for each group as a base: a split ion votes once per file.
+    last: Vec<u32>,
+}
+
+impl Collector {
+    pub(crate) fn new(groups: usize) -> Result<Collector> {
+        Ok(Collector {
+            votes: Votes {
+                base: filled(groups, 0)?,
+                role: filled(groups, [0; 7])?,
+            },
+            links: Vec::new(),
+            last: filled(groups, u32::MAX)?,
+        })
+    }
+
+    /// File `k` (columns `role`, `family_id`, `charge`, `rt`) with the group of each of its rows.
+    pub(crate) fn add(&mut self, k: usize, f: &FileFeatures, group_of: &[u32], p: &FamAlignParams) {
         for i in 0..f.len() {
-            let g = group_of[k][i];
+            let g = group_of[i];
             if g == u32::MAX {
                 continue;
             }
-            votes.role[g as usize][f.role[i].min(6) as usize] += 1;
-            if (f.role[i] == ROLE_M || f.role[i] == ROLE_NONE) && last[g as usize] != k as u32 {
-                last[g as usize] = k as u32;
-                votes.base[g as usize] += 1;
+            self.votes.role[g as usize][f.role[i].min(6) as usize] += 1;
+            if (f.role[i] == ROLE_M || f.role[i] == ROLE_NONE) && self.last[g as usize] != k as u32
+            {
+                self.last[g as usize] = k as u32;
+                self.votes.base[g as usize] += 1;
             }
             if f.family_id[i] == 0 {
                 continue;
             }
             let root = f.family_id[i] as usize - 1;
-            let gr = group_of[k][root];
+            let gr = group_of[root];
             let same_charge =
                 f.charge[i] == 0 || f.charge[root] == 0 || f.charge[i] == f.charge[root];
             if gr != u32::MAX
@@ -131,23 +139,22 @@ fn collect(
                 && same_charge
                 && (f.rt[i] - f.rt[root]).abs() as f64 <= p.link_rt
             {
-                links.push((g, gr));
+                self.links.push((g, gr));
             }
         }
     }
-    sortc::ord(&mut links);
-    Ok((votes, links))
+
+    /// The votes and the links, sorted and with repeated links merged.
+    fn done(mut self) -> (Votes, Vec<(u32, u32)>) {
+        sortc::ord(&mut self.links);
+        (self.votes, self.links)
+    }
 }
 
 /// Joins each group with the group of the root it follows most often. An ion that is mostly the base of its own family joins only when it follows
 /// one root and was a dependent in `min_dependent` files: a fragment shared by two compounds would otherwise join their families.
-fn link(
-    files: &[&FileFeatures],
-    ions: &Aligned,
-    group_of: &[Vec<u32>],
-    p: &FamAlignParams,
-) -> Result<(Sets, Votes)> {
-    let (votes, links) = collect(files, ions, group_of, p)?;
+fn link(ions: &Aligned, c: Collector, p: &FamAlignParams) -> (Sets, Votes) {
+    let (votes, links) = c.done();
     let mut sets = Sets::new(&ions.rt);
     for chunk in links.chunk_by(|a, b| a.0 == b.0) {
         let g = chunk[0].0;
@@ -166,7 +173,7 @@ fn link(
         }
         sets.join(g, best.1, p.max_span);
     }
-    Ok((sets, votes))
+    (sets, votes)
 }
 
 /// Reference ion of a set of groups: the ones that are mostly a base come first; then most votes as the root of a family, the largest total area
@@ -262,18 +269,32 @@ fn rows(mut t: Aligned, sets: &mut Sets, votes: &Votes) -> Aligned {
     t
 }
 
+/// The map of RT of the first alignment, or none when the parameters ask for none or the map is not usable.
+pub(crate) fn rt_map(first: &Aligned, p: &FamAlignParams) -> RtMap {
+    if p.use_rtmap {
+        build(first, &p.rt)
+    } else {
+        RtMap::default()
+    }
+}
+
+/// Last step of "per family" mode: joins the groups of `ions` with the votes of the files and gives one row per set.
+pub(crate) fn assemble(ions: Aligned, c: Collector, p: &FamAlignParams) -> Aligned {
+    let (mut sets, votes) = link(&ions, c, p);
+    rows(ions, &mut sets, &votes)
+}
+
 /// Aligns the files in "per family" mode (each file must carry `family_id`, `role` and `charge`).
 pub fn align_families(files: &[&FileFeatures], p: &FamAlignParams) -> Result<Aligned> {
     let first = align_grouped(files, &p.ion, None, false)?.table;
-    let map: RtMap = if p.use_rtmap {
-        build(&first, &p.rt)
-    } else {
-        RtMap::default()
-    };
+    let map = rt_map(&first, p);
     drop(first);
     let adj = map.ok().then_some(&map);
     let g = align_grouped(files, &p.ion, adj, true)?;
-    let (mut sets, votes) = link(files, &g.table, &g.group_of, p)?;
+    let mut c = Collector::new(g.table.len())?;
+    for (k, f) in files.iter().enumerate() {
+        c.add(k, f, &g.group_of[k], p);
+    }
     drop(g.group_of);
-    Ok(rows(g.table, &mut sets, &votes))
+    Ok(assemble(g.table, c, p))
 }
