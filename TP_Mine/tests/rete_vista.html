@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Network of the products test page</title>
+<style>:root{--ink:#1d1d1f;--muted:#5f6368;--line:#d0d4d9;--panel:#fff;--sel:#e8f0fe;--accent:#0072B2}body{background:var(--panel);font-family:system-ui,sans-serif;margin:16px}</style></head>
+<body><div id="host"></div>
+<script src="../lazy/rete-vista.js"></script>
+<script>
+// Test page: mounts the view on a fixture (?f=rete_fixture.json to change it). Serve the repository root, e.g. python3 -m http.server.
+fetch(new URLSearchParams(location.search).get("f") || "rete_fixture.json").then(r => r.json()).then(g => window.TPRETE_VIEW.mount(document.getElementById("host"), g, {}));
+</script></body></html>

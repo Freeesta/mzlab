@@ -70,6 +70,8 @@
       { key: "edges", label: "Peak edges", help: "ft.peak.borders", num: true, off: true, sort: (/** @type {FtRow} */ r) => r.lo, cell: (/** @type {FtRow} */ r) => (r.lo == null || r.hi == null ? "" : `${r.lo.toFixed(2)}–${r.hi.toFixed(2)}`), text: (/** @type {FtRow} */ r) => (r.lo == null || r.hi == null ? "" : `${r.lo.toFixed(2)}-${r.hi.toFixed(2)}`) },
     ];
 
+    // columns added by the caller (`o.extraCols`, same shape as the ones above: key, label, cell(row), optional sort/text/num/off), after the built-in ones
+    if (o.extraCols) cols.push(...o.extraCols);
     return { cols, identText, levelOf };
   }
 
@@ -186,7 +188,7 @@
     Promise.resolve(L.call("list")).then((/** @type {any} */ l) => { if (l && l.libs && l.libs.length) { go.hidden = false; if (st.res) paint(); } }, () => { /* no library module: no button */ });
   }
 
-  /** mounts the step in `box`. o = { session (PIPEQC.open), names, gate, say, cs (campioni/2 or null), ppm(), levels (Map id → level, or null), identsOf(id) → [identity of evid/1] } */
+  /** mounts the step in `box`. o = { extraCols (columns added after the built-in ones), extraTabs ([{key, label, fill(panel, row)}] tabs added to the open row; `redraw()` of the result draws the rows again), session (PIPEQC.open), names, gate, say, cs (campioni/2 or null), ppm(), levels (Map id → level, or null), identsOf(id) → [identity of evid/1] } */
   function mount(/** @type {HTMLElement} */ box, /** @type {any} */ o) {
     box.innerHTML = html();
     const q = (/** @type {string} */ s) => /** @type {any} */ (box.querySelector(s)), chips = /** @type {Set<string>} */ (new Set()), n = o.names.length;
@@ -195,9 +197,10 @@
     if (!hasBlank) { const b = q('[data-fc="blank"]'); b.disabled = true; b.setAttribute("aria-disabled", "true"); }
     const TT = G.TPTAB, { cols, identText, levelOf } = columns(o, n, esc);
     const { model, loadRow, loadTr } = rowModels(o, cols, identText, levelOf, t => { q("#ft-why").textContent = t; });
-    const hook = G.TPRIGA.hook(model);
+    const hook = G.TPRIGA.hook(model, o.extraTabs);
     /** @type {Map<number, any>} */ const cmp = new Map();
     /** @type {any} */ let T = null;
+    /** @type {FtRow[]} */ let last = [];
     const draw = (/** @type {FtRow} */ r, /** @type {() => void} */ again) => { loadRow(r.id).then(() => { if (T && T.openId === r.id) again(); }); };
     T = TT.mount(q("#ft-host"), {
       id: "ft-t", cols, rowId: (/** @type {FtRow} */ r) => r.id, name: (/** @type {FtRow} */ r) => identText(r), esc, label: "Feature table", columns: true, decide: decisions(o, levelOf) || undefined, exportName: "feature_table_view", virtual: 300, height: 520,
@@ -219,7 +222,8 @@
       try {
         const s = spec(), v = await o.session.view(s), c = v.conteggi, rej = (await o.session.qc(s)).scartate, rows = (await o.session.rows(s)).slice(1);
         if (mine !== seq) return;
-        T.setRows(rows.map((/** @type {any[]} */ r) => rowOf(r, n)));
+        last = rows.map((/** @type {any[]} */ r) => rowOf(r, n));
+        T.setRows(last);
         q("#ft-n").textContent = `${c.tenute.toLocaleString("en")} of ${c.righe.toLocaleString("en")} rows`;
         q("#ft-why").textContent = rej.length ? "Rejected by each filter, in order: " + rej.map((/** @type {any} */ r) => `${G.PIPEQC.WHY[r.regola] || r.regola} (${r.righe.toLocaleString("en")})`).join(", ") : "";
       } catch (/** @type {any} */ e) { if (mine !== seq) return; q("#ft-n").textContent = ""; q("#ft-why").textContent = o.say ? o.say(e) : String(e.message || e); }
@@ -232,7 +236,7 @@
     }));
     q("#ft-moreb").addEventListener("click", () => { const m = q("#ft-more"), open = m.hidden; m.hidden = !open; q("#ft-moreb").setAttribute("aria-expanded", String(open)); });
     update();
-    return { update, spec, table: T };
+    return { update, spec, table: T, redraw: () => T.setRows(last) };
   }
 
   G.PIPET = { mount, specOf, css };
