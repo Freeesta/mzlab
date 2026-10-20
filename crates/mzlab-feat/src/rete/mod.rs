@@ -7,10 +7,14 @@ pub mod arcs;
 mod interp_in;
 mod json;
 mod layout;
+#[cfg(feature = "interp")]
+mod run;
 
 #[cfg(feature = "interp")]
 pub use interp_in::rows_from_interp;
 pub use json::SCHEMA;
+#[cfg(feature = "interp")]
+pub use run::network_text;
 
 use crate::hypo::Rules;
 use crate::tp::{TpBlock, ST_TP};
