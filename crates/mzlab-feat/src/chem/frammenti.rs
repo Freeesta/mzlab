@@ -41,7 +41,10 @@ fn side_json(o: &mut Out, m: &Mol, keep: &[bool], h: u64) {
 /// `frag/1`: the cuts of a molfile as `{"cuts":[{"a","b","order","kind","sides":[{atoms,formula,mass,mz},..]}]}`. `a`, `b` are atom positions of the
 /// file (0-based); with both >= 0 only the bond between them, otherwise every bond outside the rings. A ring bond gives `error.grafo.ring`.
 pub fn fragments_json(molfile: &str, a: i32, b: i32) -> Result<String> {
-    let m = Mol::from_molfile(molfile)?;
+    cuts_json(&Mol::from_molfile(molfile)?, a, b)
+}
+
+fn cuts_json(m: &Mol, a: i32, b: i32) -> Result<String> {
     let on_ring = m.ring_bonds();
     let one = a >= 0 && b >= 0;
     let ks: Vec<usize> = (0..m.bonds.len())
@@ -71,11 +74,11 @@ pub fn fragments_json(molfile: &str, a: i32, b: i32) -> Result<String> {
         o.raw(",\"order\":")
             .num(bd.order as f64)
             .raw(",\"kind\":")
-            .str(hydrolysable(&m, k));
+            .str(hydrolysable(m, k));
         o.raw(",\"sides\":[");
-        side_json(&mut o, &m, &reach(&m, bd.a, k), h);
+        side_json(&mut o, m, &reach(m, bd.a, k), h);
         o.raw(",");
-        side_json(&mut o, &m, &reach(&m, bd.b, k), h);
+        side_json(&mut o, m, &reach(m, bd.b, k), h);
         o.raw("]}");
     }
     o.raw("]}");
@@ -135,7 +138,10 @@ pub fn apply_delta(f: &Formula, d: &[(i64, Formula)]) -> Result<Formula> {
 /// `parz/1`: a partial structure (a drawn piece whose exact position of a change is unknown) as `{"format","formula","mass","mz","delta","level":"3b"}`:
 /// the formula of the molfile plus the delta, its neutral mass and the m/z of [M+H]+. Level 3b of Schymanski: a generic class with many plausible isomers, never one structure.
 pub fn partial_json(molfile: &str, delta: &str) -> Result<String> {
-    let m = Mol::from_molfile(molfile)?;
+    partial_of(&Mol::from_molfile(molfile)?, delta)
+}
+
+fn partial_of(m: &Mol, delta: &str) -> Result<String> {
     let d = parse_delta(delta)?;
     let f = apply_delta(&m.formula(), &d)?;
     let mass = elements::mass(&f);
@@ -149,6 +155,19 @@ pub fn partial_json(molfile: &str, delta: &str) -> Result<String> {
         .str(&fmt_delta(&d))
         .raw(",\"level\":\"3b\"}");
     Ok(o.0)
+}
+
+/// `fragments_json` for a `mol/1` record (feature `record`): atoms are the record's, bonds are sorted by atom pair (so the cuts come in that order),
+/// aromaticity is perceived from the Kekulé form.
+#[cfg(feature = "record")]
+pub fn fragments_record_json(rec: &mzlab_mol::Mol, a: i32, b: i32) -> Result<String> {
+    cuts_json(&Mol::from_record(rec, true)?, a, b)
+}
+
+/// `partial_json` for a `mol/1` record (feature `record`).
+#[cfg(feature = "record")]
+pub fn partial_record_json(rec: &mzlab_mol::Mol, delta: &str) -> Result<String> {
+    partial_of(&Mol::from_record(rec, true)?, delta)
 }
 
 #[cfg(test)]
