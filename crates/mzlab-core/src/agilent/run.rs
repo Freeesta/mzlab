@@ -203,6 +203,7 @@ impl AgilentD {
             components,
             software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
             centroided: false,
+            ..Header::default()
         }
     }
 

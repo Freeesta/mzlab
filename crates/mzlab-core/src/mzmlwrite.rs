@@ -1,7 +1,7 @@
 //! mzML writer over any `Write`, spectrum by spectrum, for readers of vendor files that have no mzML writer of their own (`wiff::to_mzml`).
 //! What it writes is what `mzml::read` and `mzlab/reader/mzml.py` read: spectra (level, polarity, profile or centroid, RT in minutes, precursor,
 //! m/z as 64-bit floats, intensities as 64-bit when the spectrum has `wide`, otherwise 32-bit, both zlib), and TIC, BPC and SRM chromatograms
-//! (the SRM masses are in the `id`, as msconvert writes them, and as isolation windows). No index. Numpress only when asked (`Opzioni::numpress`: lossy).
+//! (the SRM masses are in the `id`, as msconvert writes them, and as isolation windows). No index unless `MzmlWriter::indicizzato`. Numpress only when asked (`Opzioni::numpress`: lossy).
 
 use std::borrow::Cow;
 use std::fmt::Write as _;
@@ -40,9 +40,16 @@ impl<W: Write> MzmlWriter<W> {
     }
 
     /// As `new`, with the zlib level and the numpress choice of `opz`.
-    pub fn con_opzioni(mut out: W, h: &Header, opz: Opzioni) -> Result<Self> {
-        let mut s = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<mzML xmlns=\"http://psi.hupo.org/ms/mzml\" version=\"1.1.0\" id=\"mzlab\">\n");
-        s += "<cvList count=\"2\"><cv id=\"MS\" fullName=\"Proteomics Standards Initiative Mass Spectrometry Ontology\" version=\"4.1.163\" URI=\"https://raw.githubusercontent.com/HUPO-PSI/psi-ms-CV/master/psi-ms.obo\"/><cv id=\"UO\" fullName=\"Unit Ontology\" version=\"09:04:2014\" URI=\"https://raw.githubusercontent.com/bio-ontology-research-group/unit-ontology/master/unit.obo\"/></cvList>\n";
+    pub fn con_opzioni(out: W, h: &Header, opz: Opzioni) -> Result<Self> {
+        Self::avvia(out, h, opz, false)
+    }
+
+    fn avvia(out: W, h: &Header, opz: Opzioni, indexed: bool) -> Result<Self> {
+        let indexed = indexed && cfg!(not(target_family = "wasm"));
+        let mut s = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+        if indexed { s += "<indexedmzML xmlns=\"http://psi.hupo.org/ms/mzml\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://psi.hupo.org/ms/mzml http://psi.hupo.org/ms/mzml/mzML1.1.2_idx.xsd\">\n"; }
+        s += "<mzML xmlns=\"http://psi.hupo.org/ms/mzml\" version=\"1.1.0\" id=\"mzlab\">\n";
+        s += &format!("<cvList count=\"2\"><cv id=\"MS\" fullName=\"Proteomics Standards Initiative Mass Spectrometry Ontology\" version=\"{}\" URI=\"https://raw.githubusercontent.com/HUPO-PSI/psi-ms-CV/master/psi-ms.obo\"/><cv id=\"UO\" fullName=\"Unit Ontology\" version=\"09:04:2014\" URI=\"https://raw.githubusercontent.com/bio-ontology-research-group/unit-ontology/master/unit.obo\"/></cvList>\n", if indexed { "4.2.6" } else { "4.1.163" });
         let content = cv("MS:1000579", "MS1 spectrum", "") + &h.content.iter().map(|(a, n)| cv(a, n, "")).collect::<String>();
         s += &format!("<fileDescription><fileContent>{}</fileContent><sourceFileList count=\"{}\">", content, h.sources.len());
         for (i, f) in h.sources.iter().enumerate() {
@@ -56,8 +63,8 @@ impl<W: Write> MzmlWriter<W> {
         if let Some((id, name)) = &h.sample {
             s += &format!("<sampleList count=\"1\"><sample id=\"{}\" name=\"{}\"/></sampleList>\n", esc(id), esc(name));
         }
-        s += &format!("<softwareList count=\"{}\"><software id=\"mzlab\" version=\"{}\">{}</software>{}</softwareList>\n", 1 + h.centroided as usize + h.extra_software.len(), esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", esc(&h.software.0)),
-            h.extra_software.iter().enumerate().map(|(i, (a, n, v))| format!("<software id=\"acq{}\" version=\"{}\">{}</software>", i + 1, esc(v), cv(a, n, ""))).collect::<String>() + &if h.centroided { format!("<software id=\"mzlab-centroidi\" version=\"{}\">{}</software>", esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", "mzLab centroidi")) } else { String::new() });
+        s += &format!("<softwareList count=\"{}\"><software id=\"mzlab\" version=\"{}\">{}</software>{}</softwareList>\n", 1 + h.centroided as usize + h.extra_software.len() + h.steps.len(), esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", esc(&h.software.0)),
+            h.extra_software.iter().enumerate().map(|(i, (a, n, v))| format!("<software id=\"acq{}\" version=\"{}\">{}</software>", i + 1, esc(v), cv(a, n, ""))).collect::<String>() + &if h.centroided { format!("<software id=\"mzlab-centroidi\" version=\"{}\">{}</software>", esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", "mzLab centroidi")) } else { String::new() } + &step_software(&h.steps));
         s += "<instrumentConfigurationList count=\"1\"><instrumentConfiguration id=\"IC1\">";
         if let Some((acc, name)) = &h.instrument {
             s += &cv(acc, name, "");
@@ -75,28 +82,31 @@ impl<W: Write> MzmlWriter<W> {
         if h.centroided {
             s += &format!("</processingMethod><processingMethod order=\"1\" softwareRef=\"mzlab-centroidi\">{}", cv("MS:1000035", "peak picking", ""));
         }
+        s += &step_methods(h);
         s += &format!("</processingMethod></dataProcessing></dataProcessingList>\n<run id=\"{}\" defaultInstrumentConfigurationRef=\"IC1\"{}>\n", esc(&h.run), h.acquired.as_ref().map(|t| format!(" startTimeStamp=\"{}\"", esc(t))).unwrap_or_default());
         for (k, v) in &h.run_params {
             s += &format!("<userParam name=\"{}\" value=\"{}\"/>\n", esc(k), esc(v));
         }
-        out.write_all(s.as_bytes()).map_err(io)?;
-        Ok(MzmlWriter { out, spectra: 0, chroms: 0, opz, z: Compress::new(Compression::new(opz.livello.min(9)), true), raw: Vec::new(), packed: Vec::new(), np: Vec::new(), text: String::new() })
+        let mut w = MzmlWriter { out, spectra: 0, chroms: 0, opz, z: Compress::new(Compression::new(opz.livello.min(9)), true), raw: Vec::new(), packed: Vec::new(), np: Vec::new(), text: String::new(), idx: indexed.then(indice::Indice::new) };
+        w.put(s.as_bytes())?;
+        Ok(w)
     }
 
+
     pub fn open_spectra(&mut self, count: usize) -> Result<()> {
-        self.out.write_all(format!("<spectrumList count=\"{count}\" defaultDataProcessingRef=\"conversion\">\n").as_bytes()).map_err(io)
+        self.put(format!("<spectrumList count=\"{count}\" defaultDataProcessingRef=\"conversion\">\n").as_bytes())
     }
 
     pub fn close_spectra(&mut self) -> Result<()> {
-        self.out.write_all(b"</spectrumList>\n").map_err(io)
+        self.put(b"</spectrumList>\n")
     }
 
     pub fn open_chromatograms(&mut self, count: usize) -> Result<()> {
-        self.out.write_all(format!("<chromatogramList count=\"{count}\" defaultDataProcessingRef=\"conversion\">\n").as_bytes()).map_err(io)
+        self.put(format!("<chromatogramList count=\"{count}\" defaultDataProcessingRef=\"conversion\">\n").as_bytes())
     }
 
     pub fn close_chromatograms(&mut self) -> Result<()> {
-        self.out.write_all(b"</chromatogramList>\n").map_err(io)
+        self.put(b"</chromatogramList>\n")
     }
 
     pub fn spectrum(&mut self, sp: &Spectrum) -> Result<()> {
@@ -112,7 +122,8 @@ impl<W: Write> MzmlWriter<W> {
         let res = self.arrays(&mut s, sp);
         s += "</binaryDataArrayList></spectrum>\n";
         self.spectra += 1;
-        let w = self.out.write_all(s.as_bytes()).map_err(io);
+        self.mark(true, &sp.id);
+        let w = self.put(s.as_bytes());
         self.text = s;
         res.and(w)
     }
@@ -149,11 +160,13 @@ impl<W: Write> MzmlWriter<W> {
         self.array(&mut s, "intensity", "counts", Data::F64(&c.intensity))?;
         s += "</binaryDataArrayList></chromatogram>\n";
         self.chroms += 1;
-        self.out.write_all(s.as_bytes()).map_err(io)
+        self.mark(false, &c.id);
+        self.put(s.as_bytes())
     }
 
     pub fn finish(mut self) -> Result<W> {
-        self.out.write_all(b"</run>\n</mzML>\n").map_err(io)?;
+        self.put(b"</run>\n</mzML>\n")?;
+        self.close_index()?;
         Ok(self.out)
     }
 }
@@ -189,6 +202,50 @@ pub struct Header {
     pub extra_software: Vec<(String, String, String)>,
     /// The spectra were reduced to one point per peak by mzLab (adds the `MS:1000035` processing step).
     pub centroided: bool,
+    /// Steps of a workflow that changed the spectra after the conversion, one `processingMethod` each (written in order).
+    pub steps: Vec<ProcStep>,
+}
+
+/// One workflow step as an mzML `processingMethod`: a PSI-MS term, the program that ran it and its parameters.
+#[derive(Debug, Clone, Default)]
+pub struct ProcStep {
+    /// PSI-MS accession and name of the processing term, e.g. ("MS:1000035", "peak picking").
+    pub accession: String,
+    pub name: String,
+    /// Program (the step id, e.g. `features.detect@1`) and its version.
+    pub software: String,
+    pub version: String,
+    /// userParams: (name, value).
+    pub params: Vec<(String, String)>,
+}
+
+/// The `software` elements of the steps, `step1`, `step2`, ... (the first id the methods refer to).
+#[cfg(not(target_family = "wasm"))]
+fn step_software(steps: &[ProcStep]) -> String {
+    let one = |(i, p): (usize, &ProcStep)| format!("<software id=\"step{}\" version=\"{}\">{}</software>", i + 1, esc(&p.version), cv("MS:1000799", "custom unreleased software tool", esc(&p.software)));
+    steps.iter().enumerate().map(one).collect()
+}
+
+/// The `processingMethod` elements of the steps; each closes the previous one, the caller closes the last.
+#[cfg(not(target_family = "wasm"))]
+fn step_methods(h: &Header) -> String {
+    let first = 1 + h.centroided as usize;
+    let mut s = String::new();
+    for (i, p) in h.steps.iter().enumerate() {
+        s += &format!("</processingMethod><processingMethod order=\"{}\" softwareRef=\"step{}\">{}", first + i, i + 1, cv(&p.accession, &p.name, ""));
+        s += &p.params.iter().map(|(k, v)| format!("<userParam name=\"{}\" value=\"{}\"/>", esc(k), esc(v))).collect::<String>();
+    }
+    s
+}
+
+// The browser build writes no workflow steps (the indexed mzML is native only).
+#[cfg(target_family = "wasm")]
+fn step_software(_: &[ProcStep]) -> String {
+    String::new()
+}
+#[cfg(target_family = "wasm")]
+fn step_methods(_: &Header) -> String {
+    String::new()
 }
 
 /// What a spectrum has besides `Spectrum`: kept apart so that the readers that do not need it do not change.
@@ -216,6 +273,9 @@ pub struct MzmlWriter<W: Write> {
     /// The numpress bytes of the array being written, and the text of the spectrum (both kept from one spectrum to the next).
     np: Vec<u8>,
     text: String,
+    /// Positions and checksum, only for `MzmlWriter::indicizzato`.
+    #[cfg_attr(target_family = "wasm", allow(dead_code))]
+    idx: Option<indice::Indice>,
 }
 
 /// The values of one binary array: 64-bit or 32-bit floats.
@@ -226,7 +286,7 @@ enum Data<'a> {
     Np(Np, Cow<'a, [f64]>),
 }
 
-fn io(_: std::io::Error) -> Error {
+pub(crate) fn io(_: std::io::Error) -> Error {
     Error::new("err.file.mzmlWrite")
 }
 
@@ -392,5 +452,12 @@ fn mz_cv(acc: &str, name: &str, value: f64) -> String {
     format!("<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\" unitCvRef=\"MS\" unitAccession=\"MS:1000040\" unitName=\"m/z\"/>")
 }
 
+#[cfg(not(target_family = "wasm"))]
+mod indice;
+#[cfg(target_family = "wasm")]
+#[path = "mzmlwrite/indice_wasm.rs"]
+mod indice;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_indice;

@@ -97,6 +97,53 @@ fn page_csv(files: &[(String, Vec<u8>)], params: &str) -> String {
     .unwrap()
 }
 
+/// `convert.mzml` writes `indexedmzML` and the table step reads it.
+#[test]
+fn the_convert_step_writes_an_indexed_mzml_the_table_step_reads() {
+    use mzlab_core::mzmlwrite::Opzioni;
+    let dir = std::env::temp_dir().join(format!("mzlab_cli_conv_{}", std::process::id()));
+    let work = dir.join("work");
+    std::fs::create_dir_all(&work).unwrap();
+    // an mzML whose arrays are numpress: the one open format `import.raw` accepts without a vendor file
+    let src = mzml(10.0);
+    let mut sample = mzlab_core::mzml::read(&src[..]).unwrap();
+    let mut w = MzmlWriter::con_opzioni(
+        Vec::new(),
+        &Header::default(),
+        Opzioni {
+            numpress: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    w.open_spectra(sample.spectra.len()).unwrap();
+    for s in &mut sample.spectra {
+        // numpress needs three points in an array: add flat noise above the ions
+        s.mz.extend([310.0, 320.0, 330.0]);
+        s.intensity.extend([2e3, 2e3, 2e3]);
+        s.wide = None;
+        w.spectrum(s).unwrap();
+    }
+    w.close_spectra().unwrap();
+    std::fs::write(dir.join("a.mzML"), w.finish().unwrap()).unwrap();
+    let plan = br#"{"format":"mzflow/2","inputs":[{"name":"a.mzML","type":"raw"}],"steps":[
+        {"id":"c","step":"convert.mzml@1","in":{"raw":"file:a.mzML"}},
+        {"id":"t","step":"features.table@1","in":{"source":["c.mzml"]},"params":{"polarity":1}}]}"#;
+    let (run, prov) = crate::flow::run_plan(plan, &dir, &work, 1, None).unwrap();
+    assert!(
+        run.skipped.is_empty() && !prov.contains("\"error\""),
+        "{prov}"
+    );
+    let out = std::fs::read(work.join("c-0.mzML")).unwrap();
+    let t = String::from_utf8_lossy(&out);
+    assert!(t.contains("<indexedmzML ") && t.contains("version=\"4.2.6\""));
+    let back = mzlab_core::mzml::read(&out[..]).unwrap();
+    assert_eq!(back.spectra.len(), sample.spectra.len());
+    // the table step reads the converted file; (`cli` is not used here: it shares a temporary folder per process with the other test)
+    assert!(std::fs::metadata(work.join("t.csv")).unwrap().len() > 0);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// The command of `main.rs`, run in this process (a binary built for the test would be a second build of the engine with another panic profile).
 fn cli(args: &[&str]) -> crate::Outcome {
     let a: Vec<String> = args.iter().map(|x| x.to_string()).collect();

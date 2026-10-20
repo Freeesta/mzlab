@@ -12,6 +12,12 @@ Each core step of the flagship chain describes itself as Rust data next to the c
 - `step::core_steps()` (`step/core_steps.rs`): the descriptors of `import.raw`, `convert.mzml`, `index.mzidx`.
 - `mzlab_feat::steps::registry()` (`steps/mod.rs`, with `detect.rs` and `table.rs`): the ten descriptors in the order of the chain; the registry lives in `mzlab-feat` because `mzlab-core` cannot see the feature steps.
 
+## The `convert.mzml` file
+- `lettori_mzml::scrivi_indicizzato(reader, sample, out, progress, Opzioni, &[ProcStep])` (`mzmlwrite::MzmlWriter::indicizzato`, `mzmlwrite/indice.rs`) is what `mzlab_cli::flow::FileRunner` runs for `convert.mzml`: `indexedmzML` (`mzML1.1.2_idx.xsd`), PSI-MS CV 4.2.6, byte `<offset>` of every spectrum and chromatogram, `indexListOffset`, SHA-1 `fileChecksum` (all bytes up to the opening tag).
+  One `processingMethod` (with its own `software`, user parameters from `ProcStep::params`) after the conversion for each entry of `Header::steps`. Spectra and chromatograms are the bytes of `scrivi_con`; the same bytes on every run. `scrivi` and `scrivi_con` (site, desktop, golden tests) still write the plain file with CV 4.1.163 and one conversion method.
+- Tests: `cargo test -p mzlab-core --lib mzmlwrite` (offsets, checksum, read back, steps), `--test lettori_mzml` (Agilent synthetic), `cargo test -p mzlab-lettori --features aperti --test aperti_numpress` (indexed file reopened by the reader of open mzML), `cargo test -p mzlab-cli --lib` (plan `convert.mzml` then `features.table`).
+- Checks on real files, outside CI: `docs/studi/workflow/PROVE_W3.md`.
+
 ## Tests
 - `cargo test -p mzlab-feat --test steps`: the recipe rebuilt from the descriptor defaults (starting from a perturbed recipe) has the same `file_hash`, `table_hash` and `file_text` as `Recipe::default()`; every default lies inside its limits; the export equals `docs/schemi/steps-1.json`. `MZLAB_UPDATE_STEPS=1` rewrites that file after a descriptor changes.
 - `cargo test -p mzlab-feat --lib steps` (presets `hr` and `lr` equal the constants of `Recipe::default` and `Recipe::lr`) and `cargo test -p mzlab-core --lib step` (defaults of `convert.mzml` and `index.mzidx` equal `Opzioni::default()` and `DEFAULT_BUDGET`).

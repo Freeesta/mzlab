@@ -261,6 +261,7 @@ impl RisposteTracce {
                 .map(|c| (testo(c.at(0)), testo(c.at(1)), testo(c.at(2))))
                 .collect(),
             centroided: v.get("centroided").and_then(Value::bool).unwrap_or(false),
+            ..Header::default()
         }))
     }
 }
