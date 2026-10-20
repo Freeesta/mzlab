@@ -110,6 +110,7 @@ function activeFile(k) {
   const f = E.files[k]; if (!f) return;
   const alone = E.browse; if (alone) tabFiles(f.kind).forEach(g => { g.vis = false; });
   sibsOf(f).forEach(g => { g.vis = true; }); STATO.file(f.k, "file");
+  followSpectra(f);
   if (f.kind !== E.tab) setTab(f.kind);
   cleanupOrphanPanels(); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave();
 }
@@ -142,4 +143,18 @@ function namesWidth(/** @type {number} */ dflt) {
   const g = (_nameCtx ||= /** @type {CanvasRenderingContext2D} */ (document.createElement("canvas").getContext("2d"))), nm = document.querySelector("#flst .nm");
   g.font = nm ? getComputedStyle(nm).font : "600 13px system-ui, sans-serif";
   return Math.ceil(Math.max(...names.map(n => g.measureText(n).width)) + 110);
+}
+
+// index of the file opened first: the first one that is not a blank (the list order stays), the first of all when every file is a blank
+const isBlankFile = (/** @type {any} */ s) => s.type === "blank" || /(^|[^a-z0-9])(blk|blank|bianco)([^a-z0-9]|$)/i.test(String(s.file));
+function firstOpenK(/** @type {any[]} */ session) {
+  const i = session.findIndex(s => !isBlankFile(s));
+  return i < 0 ? 0 : i;
+}
+// a DDA file is named after the file only: its engine label ends with «· Full Scan»
+const noFullScan = (/** @type {string} */ label, /** @type {any} */ dda) => dda ? String(label).replace(/ · Full Scan(?=[+−-]?$)/, "") : label;
+
+// the live spectrum of a chromatogram shows the file the user picked in the list (unless the spectrum's own file menu was used)
+function followSpectra(/** @type {any} */ f) {
+  E.panels.forEach(q => { if (q.type === "spec" && q.link != null && q.dda == null && !q.all && !q.kSet && q.tab === f.kind && q.k !== f.k) { q.k = f.k; if (q.el && f.vis) { ctl(q); draw(q); } } });
 }
