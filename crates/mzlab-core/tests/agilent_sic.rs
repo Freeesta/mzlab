@@ -1,11 +1,13 @@
-//! SIC per SIM ion: built from the SIM scans of a synthetic `.D` and written to mzML.
+//! SIC per SIM ion: built from the SIM scans of a synthetic `.D`; the mzML of the registry writes the TIC and the scans.
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 mod agilent_synth;
+mod conv_aiuto;
 
 use agilent_synth::*;
 use mzlab_core::agilent::{AgilentD, Files};
+use mzlab_core::lettori::FileSet;
 use mzlab_core::mzml;
 
 #[test]
@@ -40,17 +42,19 @@ fn sim_scans_give_one_sic_per_ion_and_it_is_written() {
         (sic[0].intensity.clone(), sic[1].time.len()),
         (vec![10.0, 20.0, 30.0], 3)
     );
-    let mut out = Vec::new();
-    d.to_mzml(&mut peak.clone(), peak.len() as u64, &mut out)
-        .unwrap();
+    let out = conv_aiuto::mzml(FileSet {
+        membri: vec![
+            conv_aiuto::membro("x.D/AcqData/MSScan.bin", &idx),
+            conv_aiuto::membro("x.D/AcqData/MSPeak.bin", &peak),
+        ],
+    });
+    // through the registry the SICs are the ones of the SIM groups of the method: this folder has none, the TIC and the scans are written
     let back = mzml::read(&out[..]).unwrap();
-    assert_eq!(
-        back.chromatograms
-            .iter()
-            .filter(|c| c.kind == mzml::ChromKind::Sic)
-            .count(),
-        2
-    );
+    assert_eq!(back.spectra.len(), 3);
+    assert!(back
+        .chromatograms
+        .iter()
+        .any(|c| c.kind == mzml::ChromKind::Tic));
 }
 
 impl Scan {

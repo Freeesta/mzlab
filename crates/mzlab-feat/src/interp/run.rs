@@ -5,6 +5,7 @@ use mzlab_core::budget::WriteAt;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 
+use super::ms2link::LinkParams;
 use super::{build, json, store, Inputs};
 use crate::legacy::series;
 use crate::store_read::read_table_from;
@@ -29,6 +30,29 @@ pub fn run_to<R: ReadAt, I: ReadAt, W: WriteAt>(
     infusion: Option<&mut Index<I>>,
     sink: &mut W,
 ) -> Result<()> {
+    let link = LinkParams::default();
+    run_to_with(
+        table,
+        size,
+        (parent_json, registry, polarity),
+        &link,
+        open,
+        infusion,
+        sink,
+    )
+}
+
+/// `run_to` with the thresholds of the link; `what` = the parent, the registry and the polarity.
+pub fn run_to_with<R: ReadAt, I: ReadAt, W: WriteAt>(
+    table: &mut R,
+    size: u64,
+    what: (&str, &str, i8),
+    link: &LinkParams,
+    open: &mut dyn FnMut(usize) -> Result<Index<I>>,
+    infusion: Option<&mut Index<I>>,
+    sink: &mut W,
+) -> Result<()> {
+    let (parent_json, registry, polarity) = what;
     let (t, _) = read_table_from(table, size)?;
     let parent = series::parent(parent_json).map_err(user)?;
     let (hyps, _, _) = series::registry(registry).map_err(user)?;
@@ -40,6 +64,7 @@ pub fn run_to<R: ReadAt, I: ReadAt, W: WriteAt>(
         parent: &parent,
         hyps: &hyps,
         polarity,
+        link,
     };
     let mut fail = None;
     let out = build(

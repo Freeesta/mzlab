@@ -7,20 +7,28 @@ use mzlab_core::step::{
 
 use super::tabui::{algorithm, hr, tabui_step, INTERP_CEILING, INTERP_WASM};
 
-/// `tp.link`: every DDA MS2 of the series linked to a row, with the purity of the isolation, and the comparison with the parent (`interp/1`).
+/// `tp.link` (version 2): the series searched for the hypotheses, the view of the products (`tp/1`) and the interpretation of each row (`interp/1`):
+/// every DDA MS2 of the series linked to a row, with the purity of the isolation, and the comparison with the parent. Version 1 took the MS2 as an MGF
+/// and could not run: the engine reads the `.mzidx` of the series, the roles of the files and the parent.
 pub(super) fn link() -> Step {
     Step {
+        version: 2,
         ins: vec![
-            Port::new("table", DataType::Table, "Rows that pass the filters").requires(hr()),
-            Port::new("spectra", DataType::Spectra, "DDA MS2 of the series").many().requires(Facets {
+            Port::new("table", DataType::Table, "Aligned feature table of the series, made by this plan").requires(hr()),
+            Port::new("samples", DataType::Samples, "Roles and times of the files (treated, t0, blanks, infusion)"),
+            Port::new("parent", DataType::Structure, "Parent compound: formula or SMILES, with its retention time"),
+            Port::new("index", DataType::Mzidx, "Scan index of each file of the series, in the order of the table").many().requires(Facets {
                 resolution: vec!["hr"],
                 ms_levels: vec![2],
                 ..Facets::default()
             }),
-            Port::new("hypotheses", DataType::Transform, "Modification of each row (best hypothesis)"),
+            Port::new("hypotheses", DataType::Transform, "Hypotheses of the parent (tp.generate)"),
         ],
-        outs: vec![Port::new("tp", DataType::Tp, "Rows with their modification, linked MS2 and comparison with the parent")],
+        outs: vec![Port::new("tp", DataType::Tp, "Table with the view of the products and, for each row, its modification, linked MS2 and comparison with the parent")],
         params: vec![
+            Param::choice_num("polarity", "Polarity", &[1.0, -1.0])
+                .default_num(1.0)
+                .doc("Polarity of the series: the adduct of the parent and the MS1 scans read for the purity"),
             Param::number("select_ppm", "Isolation centre")
                 .min(0.0)
                 .default_num(10.0)
@@ -45,7 +53,6 @@ pub(super) fn link() -> Step {
         ],
         algorithms: vec![pooled_ms2(), isomer_traces()],
         default_algorithm: Some("pooled_ms2"),
-        per_item: true,
         references: vec![Reference {
             doi: "10.1186/s13321-020-00477-w",
             citation_key: "helmus2021patroon",

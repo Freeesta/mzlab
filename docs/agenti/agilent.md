@@ -102,7 +102,7 @@ Scansioni numerate 1…N, tempi crescenti, blocchi che coprono `MSPeak.bin` da 6
 - Metodo GC (`AcqMethod::gc`, `method::parse_gc`): forno (iniziale, attesa, rampe, equilibrazione), iniettore (modo, riscaldatore, pressione, flusso totale), colonna (descrizione con il seriale: campo di identità, dimensioni, flusso, modo, velocità, holdup), linea di trasferimento, volume iniettato. L'audit con msconvert è `tests/agilent_cv.rs`: ogni accessione CV di msconvert sta anche nel nostro mzML, salvo le eccezioni elencate nel test con il motivo.
 
 ## `metodo/1` (`src/agilent/doc.rs`, `tests/agilent_metodo.rs`)
-- `AgilentD::metodo(&Source)` dà il documento `metodo/1` della corsa (sezioni e mappatura in `docs/agenti/metodo.md`); `to_mzml` lo scrive nel `<run>` come `userParam`. Il lettore dei metodi del sito (`mzml_metodo`) lo trova quindi in ogni mzML di una `.D` convertita.
+- `AgilentD::metodo(&Source)` dà il documento `metodo/1` della corsa (sezioni e mappatura in `docs/agenti/metodo.md`); `lettori_mzml::Conversione` lo scrive nel `<run>` come `userParam`. Il lettore dei metodi del sito (`mzml_metodo`) lo trova quindi in ogni mzML di una `.D` convertita.
 - Prove sui dati veri: le chiavi del documento e delle sue sezioni sono quelle di `metodo-1.json`, ogni nome/valore dei file laterali sta in `campi` (conteggio e uno per uno), i testi interi sono in `grezzo`, e l'mzML porta lo stesso documento con il SHA-1 di `MSPeak.bin`.
 
 ## Come `Lettore` (`src/agilent/lettore.rs`, `tests/agilent_lettore.rs`)
@@ -111,7 +111,7 @@ Scansioni numerate 1…N, tempi crescenti, blocchi che coprono `MSPeak.bin` da 6
 - `indice`: le scansioni con punti, con `Posizione` in `MSPeak.bin`; il filtro delle SIM non ha gli ioni (stanno nello spettro). `intestazione`: ogni campo del record (anche quelli extra dell'xsd) con il CV dove c'è. `cromatogrammi`: TIC, BPC e un SIC per ogni ione dei gruppi SIM del metodo; il SIC si calcola leggendo le scansioni SIM alla richiesta. `metodo`: il documento `metodo/1` senza il SHA-1 di `MSPeak.bin` (non si legge tutto per calcolarlo).
 
 ## Come diventa `Run`/mzML
-- `AgilentD::open(nome, &Files)` (record, segmenti, dispositivo, contenuti, albero, metodo), `run(&mut ReadAt)`, `visit`, `to_mzml_progress`. Uno spettro per scansione con punti (le vuote si saltano), `id = scan=<ScanID>`, centroide.
+- `AgilentD::open(nome, &Files)` (record, segmenti, dispositivo, contenuti, albero, metodo), `run(&mut ReadAt)`, `visit`. Uno spettro per scansione con punti (le vuote si saltano), `id = scan=<ScanID>`, centroide.
 - Livello = `MSLevel`, precursore = `MzOfInterest` solo se livello ≥ 2 e > 0, polarità: codice 0 → +1, 1 → −1 (non visto), altro → 0; filtro «EI Scan» o «EI SIM 95.1,108.1,135.1» (EI se `Contents.xml` dice GC). TIC = `TIC` dei record di livello 1. Gli errori sono `err.file.notAgilentD` (manca `MSScan.bin`) e `err.file.agilent` con `detail` (dimensione del record, formato dello spettro, spettro fuori da `MSPeak.bin`, valore non numerico): mai un'ipotesi.
 
 ## Nel sito (lettura nativa, come il `.wiff`)

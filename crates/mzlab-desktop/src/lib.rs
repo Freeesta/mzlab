@@ -2,6 +2,7 @@
 //! Files are memory-mapped from the disk (`memmap2` lives only in this crate, never in the WASM graph); the answers are binary
 //! (little-endian `f64` arrays with the layout of `mzlab-wasm`, no JSON) except errors and file summaries.
 
+pub mod apertura;
 pub mod cartella;
 #[cfg(feature = "app")]
 pub mod dialogo;
@@ -13,6 +14,7 @@ mod feat_grafo;
 mod feat_import;
 mod feat_msn;
 mod feat_untargeted;
+mod flow_progress;
 mod flow_run;
 mod flow_stage;
 pub mod idxbuild;

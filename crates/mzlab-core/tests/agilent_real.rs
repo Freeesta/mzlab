@@ -5,6 +5,7 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 mod agilent_folder;
+mod conv_aiuto;
 
 use agilent_folder::*;
 use mzlab_core::agilent::scan::Layout;
@@ -165,15 +166,8 @@ fn check_metadata(d: &AgilentD) {
     );
 }
 
-fn check_mzml_round_trip(
-    d: &AgilentD,
-    run: &mzlab_core::mzml::Run,
-    peak: &mut Vec<u8>,
-    label: &str,
-) {
-    let mut out = Vec::new();
-    let n = peak.len() as u64;
-    d.to_mzml(peak, n, &mut out).unwrap();
+fn check_mzml_round_trip(folder: &std::path::Path, run: &mzlab_core::mzml::Run, label: &str) {
+    let out = conv_aiuto::mzml_cartella(folder);
     let back = mzml::read(&out[..]).unwrap();
     assert_eq!(back.spectra.len(), run.spectra.len(), "{label}");
     for (a, b) in back.spectra.iter().zip(&run.spectra) {
@@ -206,7 +200,7 @@ fn real_runs_agree_with_their_own_numbers() {
         let run = d.run(&mut fo.peak).unwrap();
         check_index_and_points(&d, &run, fo.peak.len() as u64, &label);
         check_method(&d, &run, &label);
-        check_mzml_round_trip(&d, &run, &mut fo.peak, &label);
+        check_mzml_round_trip(&f, &run, &label);
         eprintln!(
             "{label}: {} scans, {} segments, {}",
             d.records.len(),
@@ -280,8 +274,9 @@ fn data_ms_agrees_with_acqdata_and_opens_alone() {
                 b.id
             );
         }
-        let mut out = Vec::new();
-        alone.to_mzml(&mut none, 0, &mut out).unwrap();
+        let out = conv_aiuto::mzml(mzlab_core::lettori::FileSet {
+            membri: vec![conv_aiuto::membro("x.D/data.ms", &bytes)],
+        });
         assert_eq!(
             mzml::read(&out[..]).unwrap().spectra.len(),
             run.spectra.len(),

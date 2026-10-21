@@ -25,7 +25,7 @@ use crate::flow::{io, FileRunner, Lineage, Made};
 /// A value the plan leaves out: name, value, proof.
 type Estimate = (String, Value, Value);
 
-fn open(path: &PathBuf) -> Result<Index<File>> {
+pub(crate) fn open(path: &PathBuf) -> Result<Index<File>> {
     let f = File::open(path).map_err(io)?;
     let size = f.metadata().map_err(io)?.len();
     Index::open(f, size)
@@ -118,7 +118,7 @@ pub(crate) fn index_job(r: &FileRunner, job: &Job) -> Result<Made> {
 }
 
 /// The recipe a lineage means: the one of the panel on its first index, then the parameters of each feature step.
-fn rebuild(lin: &Lineage) -> Result<Recipe> {
+pub(crate) fn rebuild(lin: &Lineage) -> Result<Recipe> {
     let first = lin
         .first
         .as_ref()
@@ -158,7 +158,7 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
 }
 
 /// The `.mzfeatf` of a series on disk, one file at a time (the slabs of the alignment read them again).
-struct Files(Vec<PathBuf>);
+pub(crate) struct Files(pub(crate) Vec<PathBuf>);
 
 impl Stored for Files {
     fn count(&self) -> usize {

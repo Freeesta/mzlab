@@ -74,6 +74,11 @@ try:
               return { sha: await SHA(r.table), tried: r.tried, found: r.found, ms: Math.round(performance.now() - t0) }; }""", [idx, RECIPE])
             assert r["sha"] == native["series_evid.mzfeat"], (r, native["series_evid.mzfeat"]); print("   proofs", r["ms"], "ms;", r["tried"], "tried,", r["found"], "found")
         step("hypotheses and graph of the proofs: the .mzfeat with the evid section is the native one", proofs)
+        def family():
+            r = pg.evaluate("""async ([n, recipe]) => { const rec = await POOL.family({ name: n, path: "idx/" + n }, recipe);
+              const bad = await POOL.family({ name: n, path: "idx/" + n }, "{not json").then(() => "", e => e.key); return { schema: rec.schema, n: rec.families.length, arcs: rec.families.every(f => Array.isArray(f.arcs)), bad }; }""", [idx[0], RECIPE])
+            assert r["schema"] == "famiglia/1" and r["n"] > 0 and r["arcs"] and r["bad"] == "error.badRecipe", r
+        step("the record famiglia/1 of a file on demand, and error.badRecipe for a recipe that is not JSON", family)
         def killed():
             pg.evaluate("window.NOTES.length = 0")
             r = pg.evaluate("""async ([names, recipe]) => { const pr = POOL.detectAll(names.map(n => ({ name: n, path: "idx/" + n })), recipe);

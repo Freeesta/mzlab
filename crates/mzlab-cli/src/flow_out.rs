@@ -4,10 +4,10 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use mzlab_core::flow::{plan_json, plan_order, Plan, Run};
+use mzlab_core::flow::{parse, plan_json, plan_order, Plan, Run};
 
-use crate::flow::{FileRunner, Meter};
-use crate::flow_run::{fail, run_checked};
+use crate::flow::{steps, DoneFn, FileRunner, Meter};
+use crate::flow_run::{fail, fill_inputs, prepare, problem_text, run_checked};
 use crate::Outcome;
 
 /// Runs `ready` (the checked, expanded form of `plan`) with the inputs `found` and writes the run folder `out`; the steps whose result is already in
@@ -98,4 +98,36 @@ fn summary(run: &Run, steps: usize, out: &Path) -> Outcome {
         stdout: Vec::new(),
         stderr,
     }
+}
+
+/// `run_plan` that keeps the cache of `work` (`Some(fresh)`; `fresh` recomputes every step): a step whose key is there is taken again (`cached`).
+pub fn run_plan_cached(
+    text: &[u8],
+    dir: &Path,
+    work: &Path,
+    workers: usize,
+    meter: Option<Meter>,
+    fresh: Option<bool>,
+) -> mzlab_core::Result<(Run, String)> {
+    run_plan_notify(text, dir, work, workers, meter, fresh, None)
+}
+
+/// `run_plan_cached` that also calls `done` after each job, for a caller that shows the run while it goes.
+pub fn run_plan_notify(
+    text: &[u8],
+    dir: &Path,
+    work: &Path,
+    workers: usize,
+    meter: Option<Meter>,
+    fresh: Option<bool>,
+    done: Option<DoneFn>,
+) -> mzlab_core::Result<(Run, String)> {
+    let mut plan = parse(text)?;
+    fill_inputs(&mut plan, |n| dir.join(n))?;
+    let plan = prepare(plan, &steps())?.map_err(|problems| {
+        let list: Vec<String> = problems.iter().map(problem_text).collect();
+        mzlab_core::Error::new("err.flow.check").with("problems", list.join(" "))
+    })?;
+    let runner = FileRunner::cached(dir, work, meter, fresh).with_done(done);
+    run_checked(&plan, text, &runner, workers)
 }

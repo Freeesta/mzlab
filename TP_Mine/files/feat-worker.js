@@ -4,18 +4,16 @@
 //   - started as a module Worker (the same URL): the worker below. It reads the .mzidx files with OPFS synchronous handles (`createSyncAccessHandle`: the only reads the
 //     .wasm can do while it runs, no SharedArrayBuffer) and hands the page byte arrays that are transferred, never views on the memory of the .wasm.
 // One worker = one file at a time (detection) or one series (alignment, hypotheses, proofs: sequential, in the same worker); at most min(cores - 1, 4) workers (2 on iPad);
-// 256 MB of WebAssembly memory each (.cargo/config.toml). A worker that dies (a trap of the .wasm, out of memory, a crash) is terminated and replaced, the job runs again once
+// the .wasm of each works within the budget of its step (`budgetMb`). A worker that dies (a trap of the .wasm, out of memory, a crash) is terminated and replaced, the job runs again once
 // and the page is told (`notify`); a second death rejects the job. The OPFS files written here have the name of a finished file only when complete (written as `.part`).
 // Messages of the worker: { op, id, ... } -> { id, ok: true, ...result } | { id, error: { key, params, text }, fatal }. Errors of the .wasm are JSON { error_key, params } (a recipe the engine refuses is "error.badRecipe").
-
 const IN_WORKER = typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope;
-
 // ---------------------------------------------------------------- page side
 export const poolSize = (small, cores) => { const n = Math.max(1, Math.min((cores || 2) - 1, 4)); return small ? Math.min(n, 2) : n; };
-// The memory of a .wasm never shrinks: a pool idle for this long closes its workers (the next job starts one again, a few tens of ms)
-const IDLE_MS = 20000;
+const IDLE_MS = 20000;      // the memory of a .wasm never shrinks: a pool idle for this long closes its workers (the next job starts one again, a few tens of ms)
+// Working memory of a step in MB: `budgetMb` of the pool (a number or a function), else the safe budget of the engine of the page (`MZLAB_RUST`: its choice, or the level the supervisor lowered it to), else 0 (= 192)
+export const budgetOf = o => (typeof o.budgetMb === "function" ? o.budgetMb() : o.budgetMb) || (globalThis.MZLAB_RUST && (globalThis.MZLAB_RUST.budgetMb || (globalThis.MZLAB_RUST.choice && globalThis.MZLAB_RUST.choice.mb))) || 0;
 const fail = (key, params, text) => Object.assign(new Error(text || key), { key, params: params || {} });
-
 // nothing queued, nothing running, no call to the archive worker for `idleMs`: the workers go (the state of a job lives in the page, never in an idle worker)
 function idleRest(idleMs, st, slots, queue, kill) {
   let idle = null;
@@ -31,7 +29,7 @@ function idleRest(idleMs, st, slots, queue, kill) {
   return rest;
 }
 
-// opts: { workerUrl, wasm: { feat: { jsUrl, wasmUrl, sha256? }, proofs: { ... }, table: { ... } }, size, budgetMb (working memory of a step of the .wasm, MB; 0 = 192), idleMs (a pool with nothing to do for this long closes its workers, 0 = never; IDLE_MS), notify(key, params), onProgress(info), WorkerClass }
+// opts: { workerUrl, wasm: { feat: { jsUrl, wasmUrl, sha256? }, proofs: { ... }, table: { ... } }, size, budgetMb (working memory of a step of the .wasm, MB, a number or a function; 0 = the safe budget of the engine of the page, else 192; `setBudget(mb)` changes it and returns the old one), idleMs (a pool with nothing to do for this long closes its workers, 0 = never; IDLE_MS), notify(key, params), onProgress(info), WorkerClass }
 // The recipe is a JSON string: {"polarity": 1 | -1 | null, "mode": "ion" | "family"}.
 // the supervisor: the workers alive, the queue of jobs, the replacement of a worker that dies
 function createCore(opts) {
@@ -135,9 +133,8 @@ function exportOps(submit, call) {
     }),
   };
 }
-
 // crateVersion(): the version of the crate mzlab-feat inside the .wasm (compared with cancello.json); preview(file, recipe): the estimates with their proofs, the histograms and three XIC
-// of one file (JSON of mzlab_feat::params::preview_json); `recipe` may carry the 6 numbers of the panel.
+// of one file (JSON of mzlab_feat::params::preview_json); `recipe` may carry the 6 numbers of the panel; family(file, recipe): the `famiglia/1` record with the proofs of the arcs (family_record).
 function previewOps(submit, call, opts) {
   return {
     crateVersion() { return submit(async (slot, load) => { await load("feat"); return slot.crate; }); },
@@ -150,6 +147,7 @@ function previewOps(submit, call, opts) {
         return { ...JSON.parse(r.json), ms: Math.round(performance.now() - t0), crate: slot.crate };
       });
     },
+    family(file, recipe) { return submit(async (slot, load) => { await load("feat"); return JSON.parse((await call(slot, { op: "family", path: file.path, name: file.name, recipe })).json); }); },
   };
 }
 
@@ -185,7 +183,7 @@ function proofOps(submit, call, copy, opts) {
       return submit(async (slot, load) => {
         await load("proofs");
         const t0 = performance.now();
-        const e = await call(slot, { op: "evidence", table: table.slice(), state: state.slice(), minutes, parentMz, parentRt, recipe, budgetMb: opts.budgetMb || 0 });
+        const e = await call(slot, { op: "evidence", table: table.slice(), state: state.slice(), minutes, parentMz, parentRt, recipe, budgetMb: budgetOf(opts) });
         slot.recycle = true;
         if (opts.onProgress) opts.onProgress({ phase: "proofs", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: e.mem / 1048576 });
         return { table: e.bytes };
@@ -255,7 +253,7 @@ export function createFeatPool(opts) {
       return submit(async (slot, load) => {
         await load("untargeted");
         const t0 = performance.now();
-        const r = await call(slot, { op: "align_unt", files: copy(stored), paths, params, budgetMb: opts.budgetMb || 0 });
+        const r = await call(slot, { op: "align_unt", files: copy(stored), paths, params, budgetMb: budgetOf(opts) });
         if (opts.onProgress) opts.onProgress({ phase: "align", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
       });
@@ -298,7 +296,7 @@ export function createFeatPool(opts) {
       return submit(async (slot, load) => {
         await load("feat");
         const t0 = performance.now();
-        const r = await call(slot, { op: "align", files: copy(stored), paths, recipe, budgetMb: opts.budgetMb || 0 });
+        const r = await call(slot, { op: "align", files: copy(stored), paths, recipe, budgetMb: budgetOf(opts) });
         if (opts.onProgress) opts.onProgress({ phase: "align", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
       });
@@ -327,6 +325,7 @@ export function createFeatPool(opts) {
       if (st.archive) { try { st.archive.w.terminate(); } catch (_) { /* gone */ } st.archive = null; }
     },
     resume() { st.cancelled = false; },
+    setBudget(mb) { const was = opts.budgetMb; opts.budgetMb = mb; return was; },
     get onProgress() { return opts.onProgress; },
     set onProgress(f) { opts.onProgress = f; },
     get workers() { return slots.size; },
@@ -413,6 +412,7 @@ const OPS = {
     const f = await openAll([m.path]);
     try { return { json: mods.feat.preview_file(f.read, f.sizes[0], m.recipe || "") }; } finally { f.close(); }
   },
+  async family(m) { const f = await openAll([m.path]); try { return { json: mods.feat.family_record(f.read, f.sizes[0], m.name, m.recipe || "") }; } finally { f.close(); } },
   async drift(m) {
     return { json: mods.feat.drift_series(arrays(m.files), m.parentMz, m.baseRtTol) };
   },

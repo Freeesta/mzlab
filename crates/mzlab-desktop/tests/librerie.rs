@@ -174,6 +174,7 @@ fn the_default_folder_and_the_configuration() {
         cartella: Some("/x/y".into()),
         esterne: true,
         dati: Some("/d".into()),
+        ..Config::default()
     };
     write_config(t.path(), &c).unwrap();
     assert_eq!(read_config(t.path()), c);

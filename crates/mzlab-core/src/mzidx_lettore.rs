@@ -98,7 +98,7 @@ fn cromatogrammi_scritti(l: &mut dyn Lettore, c: usize) -> Result<usize> {
     let mut n_chromatograms = 0;
     for v in l.cromatogrammi(c)? {
         let t = l.cromatogramma(c, &v.id)?;
-        if !t.time.is_empty() && mzmlwrite::chromatogram_kind(&t).is_some() {
+        if !t.time.is_empty() {
             n_chromatograms += 1;
         }
     }

@@ -322,6 +322,7 @@ impl State {
             "natsamples" => return self.nat_samples(p),                                     // reading a container takes its time: it does not hold the engine either
             "nat2mzml" => return self.nat_to_mzml(p),
             "flow/read" => return self.flow_read(p),
+            "flow/progress" => return self.flow_progress(p),
             "flow/report" => return self.flow_report(p),
             "flow/run" => return self.flow_run(p),                                      // a whole plan: it does not hold the engine
             _ => {}

@@ -16,9 +16,9 @@
     else {
       const u = (/** @type {string} */ p) => new URL("wasm-feat/" + p, c.base).href, man = await (await fetch(u("manifest.json"))).json();
       if (!man.attributio) throw new Error("This site has no engine for Attributio");
-      const url = blob("feat-worker.js"), w = man.attributio, r = man.attributio_rev, x = man.attributio_export, y = man.attributio_ms2;
+      const url = blob("feat-worker.js"), w = man.attributio, f = man.feat, r = man.attributio_rev, x = man.attributio_export, y = man.attributio_ms2;
       // the .wasm `attributio_rev` (the Banco 2b) is fetched by the worker only when the Banco opens
-      st.pool = (await import(url)).createFeatPool({ workerUrl: url, size: 1, wasm: { attributio: { jsUrl: u(w.js), wasmUrl: u(w.wasm), sha256: w.sha256 }, ...(r ? { attributio_rev: { jsUrl: u(r.js), wasmUrl: u(r.wasm), sha256: r.sha256, classesUrl: r.classes ? u(r.classes) : "" } } : {}), ...(x ? { attributio_export: { jsUrl: u(x.js), wasmUrl: u(x.wasm), sha256: x.sha256 } } : {}), ...(y ? { attributio_ms2: { jsUrl: u(y.js), wasmUrl: u(y.wasm), sha256: y.sha256 } } : {}) } });
+      st.pool = (await import(url)).createFeatPool({ workerUrl: url, size: 1, wasm: { ...(f ? { feat: { jsUrl: u(f.js), wasmUrl: u(f.wasm), sha256: f.sha256 } } : {}), attributio: { jsUrl: u(w.js), wasmUrl: u(w.wasm), sha256: w.sha256 }, ...(r ? { attributio_rev: { jsUrl: u(r.js), wasmUrl: u(r.wasm), sha256: r.sha256, classesUrl: r.classes ? u(r.classes) : "" } } : {}), ...(x ? { attributio_export: { jsUrl: u(x.js), wasmUrl: u(x.wasm), sha256: x.sha256 } } : {}), ...(y ? { attributio_ms2: { jsUrl: u(y.js), wasmUrl: u(y.wasm), sha256: y.sha256 } } : {}) } });
     }
     return st.pool;
   }

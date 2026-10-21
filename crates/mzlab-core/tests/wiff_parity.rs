@@ -7,6 +7,8 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod conv_aiuto;
+
 use mzlab_core::mzml::{self, Run};
 use mzlab_core::wiff::{container, samples, Wiff};
 use serde_json::Value;
@@ -52,7 +54,7 @@ fn synthetic_pairs_match_the_reference() {
         let ole = container(std::fs::read(dir.join(format!("{name}.wiff"))).unwrap(), name).unwrap();
         let all = samples(&ole);
         assert_eq!(all.len(), want[name].as_object().unwrap().len(), "{name}: samples");
-        for s in all {
+        for (ci, s) in all.iter().copied().enumerate() {
             let (w, mut scan) = open(&dir, name, s);
             let run = w.run(&mut scan).unwrap();
             let r = &want[name][s.to_string()];
@@ -71,8 +73,7 @@ fn synthetic_pairs_match_the_reference() {
                 }
             }
             // the mzML written from the sample reads back as the same run
-            let mut bytes = Vec::new();
-            w.to_mzml(&mut scan, &mut bytes, &format!("{name}.wiff")).unwrap();
+            let bytes = conv_aiuto::mzml_wiff(&dir, name, ci, false);
             let back = mzml::read(&bytes[..]).unwrap();
             assert_eq!(back.spectra.len(), run.spectra.len(), "{name}/{s}: mzML spectra");
             for (b, g) in back.spectra.iter().zip(&run.spectra) {
@@ -160,10 +161,10 @@ fn the_mzml_of_a_sample_reads_back_the_same() {
     let Some((dir, _)) = reference() else { return };
     for name in ["one", "two", "serie"] {
         let ole = container(std::fs::read(dir.join(format!("{name}.wiff"))).unwrap(), name).unwrap();
-        for s in samples(&ole) {
+        for (ci, s) in samples(&ole).into_iter().enumerate() {
             let (w, mut scan) = open(&dir, name, s);
-            let (want, mut xml) = (w.run(&mut scan).unwrap(), Vec::new());
-            w.to_mzml(&mut scan, &mut xml, &format!("{name}.wiff")).unwrap();
+            let want = w.run(&mut scan).unwrap();
+            let xml = conv_aiuto::mzml_wiff(&dir, name, ci, false);
             let got = mzml::read(&xml[..]).unwrap();
             assert_eq!(got.spectra.len(), want.spectra.len(), "{name}/{s}: spectra");
             for (g, e) in got.spectra.iter().zip(&want.spectra) {
@@ -181,8 +182,9 @@ fn the_centroid_mzml_keeps_the_scans_and_reduces_the_points() {
     let Some((dir, _)) = reference() else { return };
     let (w, mut scan) = open(&dir, "serie", 1);
     let want = w.run(&mut scan).unwrap();
-    let mut xml = Vec::new();
-    w.to_mzml_progress(&mut scan, &mut xml, "serie.wiff", true, &mut |_, _| {}).unwrap();
+    let ole = container(std::fs::read(dir.join("serie.wiff")).unwrap(), "serie").unwrap();
+    let ci = samples(&ole).iter().position(|&s| s == 1).unwrap();
+    let xml = conv_aiuto::mzml_wiff(&dir, "serie", ci, true);
     let text = String::from_utf8_lossy(&xml);
     assert!(text.contains("MS:1000035") && text.contains("mzLab centroidi"));
     let got = mzml::read(&xml[..]).unwrap();
@@ -208,8 +210,7 @@ fn the_header_of_a_real_file_carries_model_time_and_hashes() {
     let s = samples(&ole)[0];
     let mut w = Wiff::open(&ole, "MRM.wiff", Some(scan.len() as u64), s).unwrap();
     w.wiff_sha1 = Some(ole.sha1_hex());
-    let mut xml = Vec::new();
-    w.to_mzml(&mut scan, &mut xml, "MRM.wiff").unwrap();
+    let xml = conv_aiuto::mzml_wiff(&folder, "MRM", 0, false);
     let head = String::from_utf8_lossy(&xml[..xml.len().min(20000)]).to_string();
     assert!(w.model.as_deref().is_some_and(|m| m.replace(' ', "").contains("QTRAP")), "{:?}", w.model);
     assert!(head.contains("MS:1000651") && head.contains("startTimeStamp=\"20"), "{head}");
