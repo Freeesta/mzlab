@@ -6,18 +6,21 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use mzlab_core::budget::sha256_hex;
+use mzlab_core::error::Error;
 use mzlab_core::flow::{
     canonical, execute, parse, plan_order, prov_json, Agent, Job, Plan, Platform, Problem, Run,
 };
-use mzlab_core::json::Value;
-use mzlab_core::step::{Kind, Step};
+use mzlab_core::step::Step;
 
 use crate::flow::{executable, steps, FileRunner, Meter};
+pub(crate) use crate::flow_apply::apply_set;
+use crate::flow_json::{fail as jfail, invalid, Style, JSONL_MARK};
 use crate::Outcome;
 
 pub(crate) const HELP: &str = "mzlab-cli flow run: runs a whole mzflow/2 plan (the plan of the Flow page) on files.
 
 usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set INSTANCE.NAME=VALUE...] [--workers N] [--budget-mb N] [--dry-run] [--fresh]
+                          [--json] [--progress text|jsonl]
 
   PLAN.json                the plan; its inputs are files named in it
   --in FILE|FOLDER...      where the inputs are: a file is matched by its name, a folder holds files with those names (default: the folder of the plan)
@@ -30,6 +33,8 @@ usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set 
   --dry-run                checks the plan, the settings and the inputs and prints what would run; writes nothing
   --fresh                  computes every step again; without it a step whose inputs, parameters and program are those of a run already in
                            FOLDER is reused (`... reused`, `cached` in prov.json)
+  --json                   one JSON document on stdout, flowrun/1 (flowdry/1 with --dry-run; errore/1 when the command stops); stderr and files are the same
+  --progress jsonl         one JSON line per job on stderr instead of `[3/9] ...`: {\"job\", \"of\", \"instance\", \"item\", \"status\", \"ms\"} (default: text)
   --help                   this text
 
 exit codes: 0 done, 1 a step failed (the others are written), 2 usage, 3 the plan is not valid, 4 an input is missing or does not match";
@@ -45,6 +50,7 @@ struct Args {
     dry: bool,
     fresh: bool,
     budget_mb: Option<f64>,
+    style: Style,
 }
 
 fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
@@ -77,6 +83,12 @@ fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
                 );
             }
             "--dry-run" => a.dry = true,
+            "--json" => a.style.json = true,
+            "--progress" => match value("text or jsonl")?.as_str() {
+                "text" => a.style.jsonl = false,
+                "jsonl" => a.style.jsonl = true,
+                p => return Err(format!("--progress {p}: expected text or jsonl")),
+            },
             "--fresh" => a.fresh = true,
             "--in" => {
                 a.ins.push(value("a file or a folder")?.into());
@@ -98,103 +110,12 @@ fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
     Ok(Some(a))
 }
 
-/// The value of `text` read with the type of `kind`.
-fn typed(kind: &Kind, text: &str) -> Option<Value> {
-    let num = |s: &str| s.trim().parse::<f64>().ok().map(Value::Num);
-    match kind {
-        Kind::Number | Kind::Integer => num(text),
-        Kind::Bool => match text {
-            "true" => Some(Value::Bool(true)),
-            "false" => Some(Value::Bool(false)),
-            _ => None,
-        },
-        Kind::Text => Some(Value::Str(text.into())),
-        Kind::Pair(_) => {
-            let (a, b) = text.split_once(',')?;
-            Some(Value::Arr(vec![num(a)?, num(b)?]))
-        }
-        Kind::Choice(list) => {
-            let as_num = list.iter().any(|v| matches!(v, Value::Num(_)));
-            if as_num {
-                num(text)
-            } else {
-                Some(Value::Str(text.into()))
-            }
-        }
-    }
-}
-
-/// The instance `who` names: its id, or the id of a step the plan has once.
-fn instance_index(plan: &Plan, who: &str) -> Result<usize, String> {
-    if let Some(k) = plan.steps.iter().position(|s| s.id == who) {
-        return Ok(k);
-    }
-    let of_step: Vec<usize> = (0..plan.steps.len())
-        .filter(|&k| plan.steps[k].step == who)
-        .collect();
-    match of_step.as_slice() {
-        [k] => Ok(*k),
-        [] => {
-            let ids: Vec<&str> = plan.steps.iter().map(|s| s.id.as_str()).collect();
-            Err(format!(
-                "--set {who}: no instance or step of that name (instances: {})",
-                ids.join(", ")
-            ))
-        }
-        _ => Err(format!(
-            "--set {who}: the plan has more than one instance of that step; use the instance id"
-        )),
-    }
-}
-
-/// Applies one `--set` (`INSTANCE.NAME=VALUE`) to `plan`, its value typed by the descriptor.
-pub(crate) fn apply_set(plan: &mut Plan, reg: &[Step], set: &str) -> Result<(), String> {
-    let bad = || format!("--set {set}: expected INSTANCE.NAME=VALUE");
-    let (lhs, text) = set.split_once('=').ok_or_else(bad)?;
-    let (who, name) = lhs.rsplit_once('.').ok_or_else(bad)?;
-    let k = instance_index(plan, who)?;
-    let inst = &mut plan.steps[k];
-    match name {
-        "algorithm" => inst.algorithm = Some(text.into()),
-        "preset" => inst.preset = Some(text.into()),
-        _ => {
-            let step = reg
-                .iter()
-                .find(|s| s.id == inst.step && s.version == inst.version);
-            let step = step.ok_or(format!("--set {set}: unknown step {}", inst.step_ref()))?;
-            let alg = inst.algorithm.as_deref().or(step.default_algorithm);
-            let param = step
-                .param(name)
-                .or_else(|| alg.and_then(|a| step.algorithm_param(a, name)));
-            let Some(param) = param else {
-                let own = step.params.iter().map(|p| p.name);
-                let of_alg = step
-                    .algorithms
-                    .iter()
-                    .filter(|a| Some(a.id) == alg)
-                    .flat_map(|a| a.params.iter().map(|p| p.name));
-                let names: Vec<&str> = own.chain(of_alg).collect();
-                return Err(format!(
-                    "--set {set}: {} has no parameter {name} (parameters: {})",
-                    inst.id,
-                    names.join(", ")
-                ));
-            };
-            let v = typed(&param.kind, text)
-                .ok_or(format!("--set {set}: {text} is not a value of {name}"))?;
-            inst.params.retain(|(n, _)| n != name);
-            inst.params.push((name.into(), v));
-        }
-    }
-    Ok(())
-}
-
 /// Where each input of `plan` is: a `--in` file of that name, else a `--in` folder that has it, else the folder of the plan.
 fn locate(
     plan: &Plan,
     ins: &[PathBuf],
     plan_dir: &Path,
-) -> Result<HashMap<String, PathBuf>, String> {
+) -> Result<HashMap<String, PathBuf>, (Error, String)> {
     let mut found = HashMap::new();
     for f in &plan.inputs {
         let files = ins.iter().filter(|p| {
@@ -212,25 +133,21 @@ fn locate(
         match hits.len() {
             1 => found.insert(f.name.clone(), hits.remove(0)),
             0 => {
-                return Err(format!(
-                    "input {} not found{}",
-                    f.name,
-                    if ins.is_empty() {
-                        " beside the plan"
-                    } else {
-                        " in the --in paths"
-                    }
-                ))
+                let place = if ins.is_empty() {
+                    " beside the plan"
+                } else {
+                    " in the --in paths"
+                };
+                let err = Error::new("err.cli.input.missing").with("input", &f.name);
+                return Err((err, format!("input {} not found{place}", f.name)));
             }
             _ => {
-                return Err(format!(
-                    "input {} found more than once: {}",
-                    f.name,
-                    hits.iter()
-                        .map(|p| p.display().to_string())
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                ))
+                let at: Vec<String> = hits.iter().map(|p| p.display().to_string()).collect();
+                let err = Error::new("err.cli.input.twice").with("input", &f.name);
+                return Err((
+                    err,
+                    format!("input {} found more than once: {}", f.name, at.join(", ")),
+                ));
             }
         };
     }
@@ -302,6 +219,9 @@ pub(crate) fn progress_line(
     cached: bool,
     err: Option<&mzlab_core::Error>,
 ) -> String {
+    if order.last().is_some_and(|x| x == JSONL_MARK) {
+        return crate::flow_json::progress_jsonl(order, job, ms, cached, err);
+    }
     let n = order
         .iter()
         .position(|id| *id == job.instance.id)
@@ -367,61 +287,55 @@ fn dry_text(plan: &Plan, reg: &[Step], found: &HashMap<String, PathBuf>) -> Stri
 type Ready = (Plan, Plan, HashMap<String, PathBuf>);
 
 fn ready(a: &Args, reg: &[Step]) -> Result<Ready, Outcome> {
-    let usage = "mzlab-cli flow run --help";
-    let fix = "fix the plan in the Flow page or with --set";
+    let st = a.style;
     let plan_path = a.plan.clone().unwrap_or_default();
     let text = std::fs::read(&plan_path).map_err(|e| {
-        fail(
-            4,
-            &format!("{}: {e}", plan_path.display()),
-            "check the path of the plan",
-        )
+        let err = Error::new("err.cli.file").with("path", plan_path.display());
+        let msg = format!("{}: {e}", plan_path.display());
+        jfail(st, 4, &err, &msg, "check the path of the plan")
     })?;
-    let mut plan = parse(&text).map_err(|e| {
-        fail(
-            3,
-            &e.to_string(),
-            "the plan must be the mzflow/2 file the Flow page downloads",
-        )
-    })?;
+    let hint = "the plan must be the mzflow/2 file the Flow page downloads";
+    let mut plan = parse(&text).map_err(|e| jfail(st, 3, &e, &e.to_string(), hint))?;
     let (setting, plain): (Vec<&String>, Vec<&String>) = a
         .sets
         .iter()
         .partition(|s| s.contains(".algorithm=") || s.contains(".preset="));
     for s in setting.into_iter().chain(plain) {
-        apply_set(&mut plan, reg, s).map_err(|e| fail(2, &e, usage))?;
+        let err = Error::new("err.cli.set").with("set", s);
+        apply_set(&mut plan, reg, s)
+            .map_err(|e| jfail(st, 2, &err, &e, "mzlab-cli flow run --help"))?;
     }
     let plan_dir = plan_path
         .parent()
         .map_or(PathBuf::from("."), Path::to_path_buf);
-    let found = locate(&plan, &a.ins, &plan_dir).map_err(|e| {
-        fail(
+    let found = locate(&plan, &a.ins, &plan_dir).map_err(|(err, msg)| {
+        jfail(
+            st,
             4,
-            &e,
+            &err,
+            &msg,
             "pass the file, or the folder that holds it, with --in",
         )
     })?;
     let hint = "the file differs from the one the plan names (sha256); remove the sha256 from the plan to accept it";
-    fill_inputs(&mut plan, |n| found[n].clone()).map_err(|e| fail(4, &e.to_string(), hint))?;
+    fill_inputs(&mut plan, |n| found[n].clone())
+        .map_err(|e| jfail(st, 4, &e, &e.to_string(), hint))?;
     match prepare(plan.clone(), reg) {
         Ok(Ok(r)) => Ok((plan, r, found)),
-        Ok(Err(problems)) => {
-            let list: Vec<String> = problems
-                .iter()
-                .map(|p| format!("  {}", problem_text(p)))
-                .collect();
-            Err(fail(
-                3,
-                &format!("the plan is not valid:\n{}", list.join("\n")),
-                fix,
-            ))
-        }
-        Err(e) => Err(fail(3, &e.to_string(), fix)),
+        Ok(Err(problems)) => Err(invalid(st, &problems)),
+        Err(e) => Err(jfail(
+            st,
+            3,
+            &e,
+            &e.to_string(),
+            "fix the plan in the Flow page or with --set",
+        )),
     }
 }
 
 /// `mzlab-cli flow run ARGS...` (the arguments after `flow run`).
 pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
+    let json = args.iter().any(|x| x == "--json");
     let a = match parse_args(args) {
         Ok(Some(a)) => a,
         Ok(None) => {
@@ -431,7 +345,11 @@ pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
                 stderr: String::new(),
             }
         }
-        Err(e) => return fail(2, &e, "mzlab-cli flow run --help"),
+        Err(e) => {
+            let err = Error::new("err.cli.usage").with("detail", &e);
+            let st = Style { json, jsonl: false };
+            return jfail(st, 2, &err, &e, "mzlab-cli flow run --help");
+        }
     };
     let reg = steps();
     let (plan, ready, found) = match ready(&a, &reg) {
@@ -439,15 +357,19 @@ pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
         Err(o) => return o,
     };
     if a.dry {
-        let stdout = dry_text(&ready, &reg, &found).into_bytes();
+        let text = if a.style.json {
+            crate::flow_json::dry_json(&ready, &reg, &found)
+        } else {
+            dry_text(&ready, &reg, &found)
+        };
         return Outcome {
             code: 0,
-            stdout,
+            stdout: text.into_bytes(),
             stderr: String::new(),
         };
     }
     let out = a.out.unwrap_or_default();
-    let opts = (a.fresh, a.budget_mb);
+    let opts = (a.fresh, a.budget_mb, a.style);
     crate::flow_out::write_run(&plan, &ready, found, out, a.workers, meter, opts)
 }
 
