@@ -278,6 +278,7 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
             .params
             .iter()
             .any(|(k, v)| k == "numpress" && v.bool() == Some(true)),
+        ..Opzioni::default()
     };
     let out = r
         .work
