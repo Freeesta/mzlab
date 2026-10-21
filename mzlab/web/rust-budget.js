@@ -126,3 +126,6 @@ export function wire(/** @type {any} */ api, /** @type {() => any} */ worker) {
   api.budgetRow = () => row(api);
   api.setBudget = (/** @type {number} */ mb) => { setManual(mb); const w = worker(); if (w) w.send({ op: "policy", ...policy() }); };
 }
+
+/** feat-run.js asks the user through `window.mzlabAskMore` when a phase refused at the safe budget fits in the high one: the dialog (`memoria-avviso.js`) is loaded on the first need. */
+if (typeof window !== "undefined" && !(/** @type {any} */ (window)).mzlabAskMore) /** @type {any} */ (window).mzlabAskMore = (/** @type {any} */ info) => import("./memoria-avviso.js").then(m => m.ask(info));
