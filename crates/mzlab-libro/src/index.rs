@@ -30,6 +30,11 @@ const SINONIMI: &[(&str, &[&str])] = &[
     ("tic", &["cromatogramma totale"]),
 ];
 
+/// The synonym table of the search index: normalised key (matched at the start of a word) -> words that make an entry findable by another name.
+pub fn sinonimi() -> &'static [(&'static str, &'static [&'static str])] {
+    SINONIMI
+}
+
 /// The letter a precomposed Latin letter has after NFD (and its combining marks dropped); other characters are unchanged.
 fn base_letter(c: char) -> char {
     const FROM: &str =
@@ -51,7 +56,7 @@ fn lower_base(s: &str) -> String {
 }
 
 /// Python `norm`: lower case, accents dropped, white space collapsed.
-fn norm(s: &str) -> String {
+pub fn norm(s: &str) -> String {
     lower_base(s)
         .split_whitespace()
         .collect::<Vec<_>>()
@@ -59,7 +64,7 @@ fn norm(s: &str) -> String {
 }
 
 /// The id `teoria.js` gives a heading at run time.
-fn slug(s: &str) -> String {
+pub fn slug(s: &str) -> String {
     let mut out = String::new();
     for ch in lower_base(s).chars() {
         if ch.is_ascii_lowercase() || ch.is_ascii_digit() {

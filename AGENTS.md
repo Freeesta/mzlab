@@ -1,6 +1,6 @@
 # AGENTS.md - mzLab (repository Freeesta/mzlab, pacchetto mzlab)
 
-Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rileggerlo. Leggi il file d'area del tuo lavoro (§5). Per trovare un file o una funzione: `python3 tools/indice.py` poi `grep -n '<nome>' docs/agenti/mappa.md`, o il subagente `cercatore`.
+Questo file è già nel tuo contesto: non rileggerlo. Leggi il file d'area del tuo lavoro (§5). Per trovare un file o una funzione: `python3 tools/indice.py` poi `grep -n '<nome>' docs/agenti/mappa.md`, o `cercatore`.
 
 **Non leggere** (bloccati da `.claude/settings.json`; grep resta permesso): `mzlab/web/vendor/`, `mzlab/web/teoria/pratica/ei-dati.js`, `mzlab/web/elements.js`, `mzlab/web/teoria/glossario-dati.js`, `mzlab/web/esempi/`, `.git/`, `.verifica/` (anche `cache_massbank`), `docs/agenti/misure-diario.md`, `tests_e2e/shots/`, `__pycache__/`, `.pytest_cache/`, `*.egg-info/`, `site/`.
 
@@ -18,14 +18,14 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 
 ## 2. Regole di lavoro
 - **Consegna = sito pubblicato**: il lavoro è finito quando è in `main` e il workflow «pages» di quel commit è riuscito.
-- **Flusso**: ramo `claude/<argomento>` da `origin/main` → PR → unione con merge commit (mai rebase né push forzato). Se la PR è già unita, ricrea il ramo da `origin/main`. Prima di unire: `git merge origin/main`, risolvi i conflitti tenendo il lavoro di tutti, verifica di nuovo. Se scegliere fa perdere un comportamento: PR aperta e domanda al Coordinatore.
+- **Flusso**: ramo `claude/<argomento>` da `origin/main` → PR → unione con merge commit (mai rebase né push forzato). Se la PR è già unita, ricrea il ramo da `origin/main`. Prima di unire: `git merge origin/main`, risolvi i conflitti tenendo il lavoro di tutti, riverifica. Se scegliere fa perdere un comportamento: PR aperta e domanda al Coordinatore.
 - **Perimetro**: ogni chat tocca solo ciò che dice il suo prompt; a fine lavoro UN messaggio al Coordinatore (max 5 righe: PR, CI, pages, cosa resta). Rosso o decisione da prendere: PR aperta con la spiegazione, niente merge.
 - **Commenti**: in inglese come tutto il codice e i nomi; brevi e sul perché; intestazione di modulo di 2-4 righe (cosa fa, chi lo usa); niente codice commentato; JSDoc/rustdoc/docstring solo sulle API usate da altri file; un commento si aggiorna con il codice; commento sopra la riga, non in coda a righe lunghe. I testi per l'utente stanno solo in lang/.
 - **Commit**: titolo breve in italiano + 1-3 righe + attribuzione dell'ambiente. Mai nomi di modelli.
 - **Documenti**: AGENTS.md e `docs/agenti/` descrivono solo lo stato attuale. Quando cambi un comportamento, RISCRIVI la riga che lo descrive (niente «ora…», «prima era…», numeri di PR, date); una funzione nuova = una riga nel file della sua area; una riga di documento ≤ 600 caratteri, un file d'area ≤ 25 KB (oltre si divide per argomento).
 - **Consumo di token**: ogni turno rilegge tutto il contesto, quindi una chat lunga costa più di due chat corte. Una sessione per pacchetto; leggi solo il file d'area che ti serve; `grep -n` e letture a intervalli; niente screenshot nel contesto salvo un giudizio visivo; raggruppa le modifiche e prova una volta alla fine.
   **Consegna**: alla fine della PR in corso, se il contesto supera 250k token (mai oltre 300k), manda al Coordinatore il blocco di consegna (≤15 righe: prompt, ramo, PR e CI, fatto, da fare con il prossimo passo esatto, decisioni, trappole file:riga, comandi di prova con atteso, cosa non rileggere) e fermati. I lavori piccoli e separati vanno in chat NUOVE: costano meno che riusare chat da 250k+.
-- **Subagenti Haiku** (`.claude/agents/`): le mani, non la testa; compiti meccanici con ingresso esatto, lanciati insieme in un solo messaggio se indipendenti: `verificatore`, `controllo-github`, `cercatore` (`file:riga`), `inventario-testi`, `sostituzioni` (vecchio → nuovo), `archivista` (`git mv`), `estrattore` (passaggi su un argomento), `stato-sessioni`. Non usare il predefinito Explore (gira sul modello principale): usa `cercatore`. Controlla sempre il risultato; due errori = lo fa la chat.
+- **Subagenti Haiku** (`.claude/agents/`): le mani, non la testa; compiti meccanici con ingresso esatto, lanciati insieme in un solo messaggio se indipendenti: `verificatore`, `controllo-github`, `cercatore` (`file:riga`), `inventario-testi`, `sostituzioni` (vecchio → nuovo), `archivista` (`git mv`), `estrattore` (passaggi su un argomento), `stato-sessioni`. Non usare Explore (modello principale): usa `cercatore`. Controlla sempre il risultato; due errori = lo fa la chat.
   Mai a un subagente: decisioni, codice nuovo, testi di Teoria, asserzioni dei test, commit, push, merge.
 - **Agente locale** (Mac di Federico, `~/mzLab/`): può fare commit e push su `main`; non cancella file, li sposta in `~/mzLab/_cestino/<data>_<motivo>/`.
 - **Regola Tutto in Rust**: ogni calcolo, elaborazione numerica o logica di motore sta solo in Rust (`crates/`, anche `.wasm`), con il suo test di parità; Python solo per test, `tools/` e riferimento; JS solo interfaccia. `tests/test_guardie_regole.py` e `tests/test_regola_rust.py` rifiutano script Python di calcolo runtime non autorizzati in `mzlab/` (lista chiusa, si accorcia soltanto); cosa resta da migrare: `docs/inventari/PYTHON_DA_MIGRARE.md`.
@@ -127,6 +127,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | Flow grafico (scheda amministratore: palette dei passi `step/1`, catena, moduli dei parametri, confronto `meta.compare`, esportazione/importazione `mzflow/2`; `flow/`) | `docs/agenti/flow-grafica.md` (corrispondenza con i passi di mzmine: `flow-mzmine.md`) |
 | esecutore web del Flow («This browser»: `flow/lazy/flow-web-{run,ui,worker}.js`, eventi `flow:web-step`, stima `stima_series`, avviso su telefono/tablet, Run spento oltre il livello alto) | `docs/agenti/flow-web.md` |
 | Libro: convertitore (`tools/libro/`, dialetto Markdown, fixture CC0, `--pubblico`) e pagina editor admin (`mzlab/web/libro/`, token, salvataggio nel repository privato) | `docs/agenti/libro.md` |
+| tutor sulla Teoria (`mzlab-tutor`: blocchi, BM25) | `docs/agenti/tutor.md` |
 | lanciare la verifica nel container cloud (Chromium, `--setup`, test che costruiscono il sito) | `docs/agenti/ambiente-cloud.md` |
 
 ## 6. Trappole generali

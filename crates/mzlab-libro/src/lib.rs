@@ -11,7 +11,7 @@ mod special;
 mod titles;
 
 pub use edit::{edit_block, preview};
-pub use index::{heading_anchor, reindex};
+pub use index::{heading_anchor, norm, reindex, sinonimi, slug};
 pub use page::{convert, Options};
 pub use titles::retitled;
 
