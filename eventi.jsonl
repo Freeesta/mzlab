@@ -85,3 +85,4 @@
 {"ts_utc":"2026-10-21T17:49:07Z","tipo":"conflitto_risolto","pr":1353,"sha":"99beed647ebaa594a869a31b7018f9cdb0633497"}
 {"ts_utc":"2026-10-21T17:52:16Z","tipo":"run","workflow":"test","esito":"success","main":false,"durata_s":1325,"attivo_s":1873,"coda_s":2,"jobs":{"browser (ubuntu-latest, chromium)":165,"javascript":33,"pytest (ubuntu-latest, 3.14)":315,"tipi (tsc)":39,"pytest (ubuntu-latest, 3.11)":1321},"pr":1344,"sha":"3e9b5ed2a24713ceed0d2557a1d28f0c2cc053db","run_id":39644355650,"run_attempt":1}
 {"ts_utc":"2026-10-21T17:52:22Z","tipo":"run","workflow":"test","esito":"cancelled","main":true,"durata_s":246,"attivo_s":0,"coda_s":0,"jobs":{},"pr":null,"sha":"99beed647ebaa594a869a31b7018f9cdb0633497","run_id":39647034302,"run_attempt":1}
+{"tipo":"pr","pr":1371,"sha":"ec3af6433f2514958c706ccb2a4d34564c1a82f6","ts_utc":"2026-10-21T17:52:18Z","azione":"unita","aperta_s":3527,"merge_main":1,"verde_a_unione_s":null}
