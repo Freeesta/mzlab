@@ -9,7 +9,7 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 use mzlab_feat::samples::{self, KINDS};
 use mzlab_feat::store::Slice;
 use mzlab_feat::store::{origin_from_meta, read_table_from};
-use mzlab_feat::table::CELL_ABSENT;
+use mzlab_feat::table::{Aligned, CELL_ABSENT};
 
 use crate::flow::{io, read_one, FileRunner, Made};
 use crate::flow_table::samples_text;
@@ -86,6 +86,64 @@ fn fields(line: &str, d: char) -> Vec<String> {
     out
 }
 
+/// Positions of the columns of the curves file.
+struct Cols {
+    name: usize,
+    mz: usize,
+    rt: usize,
+    slope: usize,
+    intercept: usize,
+    unit: Option<usize>,
+    lo: Option<usize>,
+    hi: Option<usize>,
+    dilution: Option<usize>,
+}
+
+/// One curve from the fields of line `n`; `d` is the delimiter (a decimal comma is read when it is not `,`).
+fn curve_row(f: &[String], d: char, n: usize, c: &Cols) -> Result<Curve> {
+    let cell = |c: usize| f.get(c).map(String::as_str).unwrap_or("");
+    let row = |what: &str| {
+        Error::new("err.flow.quant.curveRow").with("detail", format!("line {n}: {what}"))
+    };
+    let num = |s: &str| -> Option<f64> {
+        let s = if d == ',' {
+            s.to_string()
+        } else {
+            s.replace(',', ".")
+        };
+        s.parse::<f64>().ok().filter(|v| v.is_finite())
+    };
+    let req = |c: usize, what: &str| num(cell(c)).ok_or_else(|| row(what));
+    let opt = |c: Option<usize>, what: &str| match c.map(cell) {
+        None | Some("") => Ok(None),
+        Some(s) => num(s).map(Some).ok_or_else(|| row(what)),
+    };
+    let curve = Curve {
+        name: cell(c.name).to_string(),
+        mz: req(c.mz, "mz")?,
+        rt: req(c.rt, "rt")?,
+        slope: req(c.slope, "slope")?,
+        intercept: req(c.intercept, "intercept")?,
+        unit: c.unit.map(cell).unwrap_or("").to_string(),
+        lo: opt(c.lo, "range_min")?,
+        hi: opt(c.hi, "range_max")?,
+        dilution: opt(c.dilution, "dilution")?.unwrap_or(1.0),
+    };
+    if curve.name.is_empty() {
+        return Err(row("name"));
+    }
+    if curve.slope == 0.0 {
+        return Err(row("slope is zero"));
+    }
+    if curve.dilution <= 0.0 {
+        return Err(row("dilution"));
+    }
+    if matches!((curve.lo, curve.hi), (Some(a), Some(b)) if a > b) {
+        return Err(row("range_min above range_max"));
+    }
+    Ok(curve)
+}
+
 /// The curves of the CSV; the delimiter is the one of the header (`;` and tab read a decimal comma, as a spreadsheet writes it). The columns come in any order;
 /// `range_min`, `range_max`, `dilution` and `unit` may be empty.
 fn parse_curves(bytes: &[u8]) -> Result<Vec<Curve>> {
@@ -104,62 +162,20 @@ fn parse_curves(bytes: &[u8]) -> Result<Vec<Curve>> {
     let names: Vec<String> = fields(head, d).iter().map(|h| h.to_lowercase()).collect();
     let col = |n: &str| names.iter().position(|h| h == n);
     let need = |n: &str| col(n).ok_or_else(|| bad(format!("no column {n}")));
-    let (c_name, c_mz, c_rt, c_slope, c_int) = (
-        need("name")?,
-        need("mz")?,
-        need("rt")?,
-        need("slope")?,
-        need("intercept")?,
-    );
-    let (c_unit, c_lo, c_hi, c_dil) = (
-        col("unit"),
-        col("range_min"),
-        col("range_max"),
-        col("dilution"),
-    );
+    let cols = Cols {
+        name: need("name")?,
+        mz: need("mz")?,
+        rt: need("rt")?,
+        slope: need("slope")?,
+        intercept: need("intercept")?,
+        unit: col("unit"),
+        lo: col("range_min"),
+        hi: col("range_max"),
+        dilution: col("dilution"),
+    };
     let mut out: Vec<Curve> = Vec::new();
     for (n, line) in lines {
-        let f = fields(line, d);
-        let cell = |c: usize| f.get(c).map(String::as_str).unwrap_or("");
-        let row = |what: &str| {
-            Error::new("err.flow.quant.curveRow").with("detail", format!("line {n}: {what}"))
-        };
-        let num = |s: &str| -> Option<f64> {
-            let s = if d == ',' {
-                s.to_string()
-            } else {
-                s.replace(',', ".")
-            };
-            s.parse::<f64>().ok().filter(|v| v.is_finite())
-        };
-        let req = |c: usize, what: &str| num(cell(c)).ok_or_else(|| row(what));
-        let opt = |c: Option<usize>, what: &str| match c.map(cell) {
-            None | Some("") => Ok(None),
-            Some(s) => num(s).map(Some).ok_or_else(|| row(what)),
-        };
-        let curve = Curve {
-            name: cell(c_name).to_string(),
-            mz: req(c_mz, "mz")?,
-            rt: req(c_rt, "rt")?,
-            slope: req(c_slope, "slope")?,
-            intercept: req(c_int, "intercept")?,
-            unit: c_unit.map(cell).unwrap_or("").to_string(),
-            lo: opt(c_lo, "range_min")?,
-            hi: opt(c_hi, "range_max")?,
-            dilution: opt(c_dil, "dilution")?.unwrap_or(1.0),
-        };
-        if curve.name.is_empty() {
-            return Err(row("name"));
-        }
-        if curve.slope == 0.0 {
-            return Err(row("slope is zero"));
-        }
-        if curve.dilution <= 0.0 {
-            return Err(row("dilution"));
-        }
-        if matches!((curve.lo, curve.hi), (Some(a), Some(b)) if a > b) {
-            return Err(row("range_min above range_max"));
-        }
+        let curve = curve_row(&fields(line, d), d, n, &cols)?;
         if out.iter().any(|c| c.name == curve.name) {
             return Err(Error::new("err.flow.quant.duplicate").with("name", curve.name));
         }
@@ -187,6 +203,70 @@ fn quoted(s: &str) -> String {
     }
 }
 
+/// The row nearest to the curve inside both tolerances, the first one on a tie.
+fn nearest_row(t: &Aligned, c: &Curve, mz_tol: f64, rt_tol: f64) -> Option<usize> {
+    let mut best: Option<(f64, usize)> = None;
+    for row in 0..t.mz.len() {
+        let (dm, dr) = ((t.mz[row] - c.mz).abs(), (t.rt[row] - c.rt).abs());
+        if dm > mz_tol || dr > rt_tol {
+            continue;
+        }
+        let d = dm / mz_tol.max(1e-9) + dr / rt_tol.max(1e-9);
+        if best.is_none_or(|b| d < b.0) {
+            best = Some((d, row));
+        }
+    }
+    best.map(|b| b.1)
+}
+
+/// The flag of a concentration read from the curve (before the dilution).
+fn flag_of(measured: f64, c: &Curve) -> &'static str {
+    if measured < 0.0 {
+        "negative"
+    } else if c.lo.is_some_and(|lo| measured < lo) {
+        "below_range"
+    } else if c.hi.is_some_and(|hi| measured > hi) {
+        "above_range"
+    } else {
+        "ok"
+    }
+}
+
+/// The sample types to quantify, each one a type of `campioni/1`.
+fn kinds_of(job: &Job) -> Result<Vec<String>> {
+    let kinds: Vec<String> = param(job, "kinds")
+        .and_then(|v| v.str())
+        .unwrap_or("sample")
+        .split(',')
+        .map(|k| k.trim().to_string())
+        .filter(|k| !k.is_empty())
+        .collect();
+    match kinds.iter().find(|k| !KINDS.contains(&k.as_str())) {
+        Some(k) => Err(Error::new("err.flow.quant.kind").with("kind", k.clone())),
+        None => Ok(kinds),
+    }
+}
+
+/// The columns to quantify, in the order of the table, and whether every file of the table has a role.
+fn quantified_columns<'a>(
+    files: &'a [(String, String)],
+    roles: &[samples::Sample],
+    kinds: &[String],
+) -> (Vec<(usize, &'a str)>, bool) {
+    let cols = files
+        .iter()
+        .enumerate()
+        .filter_map(|(i, (name, _))| {
+            let role = roles.iter().find(|s| &s.file == name)?;
+            kinds.contains(&role.kind).then_some((i, name.as_str()))
+        })
+        .collect();
+    let listed = files
+        .iter()
+        .all(|(n, _)| roles.iter().any(|s| &s.file == n));
+    (cols, listed)
+}
+
 /// The CSV `compound,mz,rt,sample,signal,concentration,unit,flag` and the warnings. `flag` is `ok`, `not_detected`, `below_range`, `above_range` or `negative`;
 /// the range is checked on the concentration read from the curve, the dilution factor is applied after it.
 pub(crate) fn quant_text(
@@ -203,52 +283,21 @@ pub(crate) fn quant_text(
         .and_then(|v| v.f64())
         .unwrap_or(DEFAULT_RT_TOL);
     let by_height = param(job, "signal").and_then(|v| v.str()) == Some("height");
-    let kinds: Vec<String> = param(job, "kinds")
-        .and_then(|v| v.str())
-        .unwrap_or("sample")
-        .split(',')
-        .map(|k| k.trim().to_string())
-        .filter(|k| !k.is_empty())
-        .collect();
-    if let Some(k) = kinds.iter().find(|k| !KINDS.contains(&k.as_str())) {
-        return Err(Error::new("err.flow.quant.kind").with("kind", k.clone()));
-    }
+    let kinds = kinds_of(job)?;
     let (t, meta) = read_table_from(&mut Slice(table), table.len() as u64)?;
     let files = origin_from_meta(&meta).inputs;
     let roles = samples::from_json(samples_text(samples)?.as_bytes())?;
     let mut warnings: Vec<String> = Vec::new();
-    // the columns to quantify, in the order of the table
-    let cols: Vec<(usize, &str)> = files
-        .iter()
-        .enumerate()
-        .filter_map(|(i, (name, _))| {
-            let role = roles.iter().find(|s| &s.file == name)?;
-            kinds.contains(&role.kind).then_some((i, name.as_str()))
-        })
-        .collect();
-    if files
-        .iter()
-        .any(|(n, _)| !roles.iter().any(|s| &s.file == n))
-    {
+    let (cols, listed) = quantified_columns(&files, &roles, &kinds);
+    if !listed {
         warnings.push("warn.flow.quant.unlisted".into());
     }
     let mut out = String::from("compound,mz,rt,sample,signal,concentration,unit,flag\n");
     let (mut no_row, mut shared, mut range, mut negative) = (false, false, false, false);
     let mut taken: Vec<usize> = Vec::new();
     for c in &curves {
-        // the nearest row inside both tolerances, the first one on a tie
-        let mut best: Option<(f64, usize)> = None;
-        for row in 0..t.mz.len() {
-            let (dm, dr) = ((t.mz[row] - c.mz).abs(), (t.rt[row] - c.rt).abs());
-            if dm > mz_tol || dr > rt_tol {
-                continue;
-            }
-            let d = dm / mz_tol.max(1e-9) + dr / rt_tol.max(1e-9);
-            if best.is_none_or(|b| d < b.0) {
-                best = Some((d, row));
-            }
-        }
-        let Some((_, row)) = best else {
+        let best = nearest_row(&t, c, mz_tol, rt_tol);
+        let Some(row) = best else {
             no_row = true;
             continue;
         };
@@ -275,18 +324,9 @@ pub(crate) fn quant_text(
                 t.area[cell]
             };
             let measured = (signal - c.intercept) / c.slope;
-            let flag = if measured < 0.0 {
-                negative = true;
-                "negative"
-            } else if c.lo.is_some_and(|lo| measured < lo) {
-                range = true;
-                "below_range"
-            } else if c.hi.is_some_and(|hi| measured > hi) {
-                range = true;
-                "above_range"
-            } else {
-                "ok"
-            };
+            let flag = flag_of(measured, c);
+            negative |= flag == "negative";
+            range |= flag.ends_with("_range");
             out += &format!(
                 "{head}{signal},{:.6e},{},{flag}\n",
                 measured * c.dilution,
