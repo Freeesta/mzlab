@@ -70,7 +70,7 @@ fn row(id: u32, p: &[Peak]) -> (u32, String) {
     (id, o.0)
 }
 
-fn tp_file() -> Vec<u8> {
+fn tp_file(recipe: &Recipe) -> Vec<u8> {
     let mut t = Aligned::with_capacity(1, 2);
     for r in 0..2 {
         t.mz.push(100.0 + r as f64);
@@ -81,7 +81,7 @@ fn tp_file() -> Vec<u8> {
         t.width.push(0.1);
         t.state.push(CELL_DETECTED);
     }
-    let bytes = write_table(&t, &Recipe::default(), &Origin::default());
+    let bytes = write_table(&t, recipe, &Origin::default());
     let rows = [row(1, &peaks(1)), row(2, &peaks(3))];
     let mut out = Vec::new();
     let meta = "{\"version\":1}";
@@ -97,10 +97,14 @@ fn tp_file() -> Vec<u8> {
 }
 
 fn dir(tag: &str, parent: &str) -> std::path::PathBuf {
+    dir_with(tag, parent, &Recipe::default())
+}
+
+fn dir_with(tag: &str, parent: &str, recipe: &Recipe) -> std::path::PathBuf {
     let d = std::env::temp_dir().join(format!("mzlab_cli_position_{tag}_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(d.join("work")).unwrap();
-    std::fs::write(d.join("tp.mzfeat"), tp_file()).unwrap();
+    std::fs::write(d.join("tp.mzfeat"), tp_file(recipe)).unwrap();
     std::fs::write(d.join("parent.txt"), parent).unwrap();
     d
 }
@@ -150,4 +154,19 @@ fn a_parent_without_a_structure_is_refused() {
     let d = dir("nosmiles", "C8H10O");
     assert!(run(&d, "{}").is_err());
     let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn the_polarity_of_the_recipe_reaches_the_sites() {
+    let mut recipe = Recipe::default();
+    recipe.detect.polarity = Some(-1);
+    let neg = dir_with("neg", PHENOL, &recipe);
+    let pos = dir("pos", PHENOL);
+    // a recomputation: the expected fragments of the two polarities are not the same ions
+    let params = r#"{"min_informative":1000}"#;
+    let (n, p) = (run(&neg, params).unwrap(), run(&pos, params).unwrap());
+    assert_ne!(n, p);
+    assert_eq!(n, run(&neg, params).unwrap());
+    let _ = std::fs::remove_dir_all(&neg);
+    let _ = std::fs::remove_dir_all(&pos);
 }

@@ -29,12 +29,15 @@ def pkg(tmp_path_factory):
     ("", []),
     ("formula=C14H15N3O5%2B&ppm_formula=10", ["--formula", "C14H15N3O5+"]),
     ("formula=C14H15N3O5%2B&scelte=%5B%7B%22mz%22%3A177.0546%2C%22formula%22%3A%22C9H8NO2%2B%22%7D%5D", ["--formula", "C14H15N3O5+", "--scelta", "177.0546=C9H8NO2+"]),
+    ("formula=C14H15N3O5%2B&smiles=CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12&strutture=n3", ["--formula", "C14H15N3O5+", "--smiles", "CCOC(=O)c1c[nH]c2ccccc12", "--strutture", "n3"]),
+    ("formula=C14H15N3O5%2B&smiles=CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12&strutture=3&ppm_struttura=5", ["--formula", "C14H15N3O5+", "--smiles", "CCOC(=O)c1c[nH]c2ccccc12", "--strutture", "3", "--ppm-struttura", "5"]),
 ])
 def test_wasm_and_cli_give_the_same_graph(pkg, query, args):
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), query).stdout
     want = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(MZML), *args).stdout
     assert got + "\n" == want  # the command line ends its output with a newline
     assert '"formato":"msngrafo/1"' in got
+    assert ('"strutture":{' in got) == ("strutture=" in query)
 
 
 def test_a_bad_number_is_a_keyed_error(pkg):
@@ -78,3 +81,14 @@ def test_a_graph_without_an_ion_or_a_foreign_file_is_a_keyed_error(pkg, tmp_path
     bad.write_text("[1]", encoding="utf-8")
     r = subprocess.run(node + ["formula=C14H15N3O5%2B", "lib", str(bad)], capture_output=True, encoding="utf-8")
     assert r.returncode != 0 and "err.msnlib.bad" in r.stderr
+
+
+@pytest.mark.parametrize("query,key", [
+    ("strutture=n3", "err.msngrafo.noSmiles"),
+    ("smiles=CCO&strutture=n99", "err.msngrafo.badNode"),
+    ("smiles=C%28%28&strutture=n3", "err.msngrafo.badSmiles"),
+    ("smiles=CCO&strutture=n3&ppm_struttura=abc", "err.request.badNumber"),
+])
+def test_the_cleavages_errors_are_keyed(pkg, query, key):
+    r = subprocess.run(["node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), query], capture_output=True, encoding="utf-8")
+    assert r.returncode != 0 and key in r.stderr

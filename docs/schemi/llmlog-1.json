@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "llmlog-1",
+  "title": "llmlog/1: one line per event of a conversation (JSON Lines, keys sorted); a line that looks like it holds an API key is refused",
+  "type": "object",
+  "required": ["ev", "schema", "seq", "turn"],
+  "properties": {
+    "schema": {"const": "llmlog/1"},
+    "seq": {"type": "integer", "minimum": 0},
+    "turn": {"type": "integer", "minimum": 0},
+    "ev": {"enum": ["text_delta", "tool_call_start", "tool_call_delta", "tool_call_end", "usage", "stop", "error"]},
+    "text": {"type": "string"},
+    "id": {"type": "string"},
+    "name": {"type": "string"},
+    "json": {"type": "string"},
+    "in": {"type": "integer"},
+    "out": {"type": "integer"},
+    "cache_read": {"type": "integer"},
+    "reason": {"enum": ["end", "tool", "length", "refusal"]},
+    "key": {"type": "string", "pattern": "^err\\.llm\\."},
+    "params": {"type": "object", "additionalProperties": {"type": "string"}}
+  }
+}
