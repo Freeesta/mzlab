@@ -141,18 +141,25 @@ fn properties(m: &mut Molecola) -> Result<(), Bad> {
 }
 
 /// Puts a record in its one form: trimmed text, lists tidy, formula in Hill order, mass computed from formula and charge (and checked against `control`
-/// when the file had one), the InChIKey valid, the `id` assigned when empty (never changed after).
+/// when the file had one), the InChIKey valid, the `id` assigned when empty (never changed after). A record without a formula is a mass-only entry: its
+/// mass is `control` (a positive number), taken as it is.
 pub fn finalizza(m: &mut Molecola, control: Option<f64>) -> Result<(), Bad> {
     m.nome = m.nome.trim().to_string();
     if m.nome.is_empty() {
         return Err(("error.molecules.noName", String::new()));
     }
-    let f =
-        parse_formula(&m.formula).map_err(|_| ("error.molecules.badFormula", m.formula.clone()))?;
-    m.formula = fmt(&f);
-    m.massa = round(mass(&f) - f64::from(m.carica) * ELECTRON, 6);
-    if let Some(c) = control.filter(|c| (c - m.massa).abs() > MASS_TOL) {
-        return Err(("error.molecules.massMismatch", format!("{c} / {}", m.massa)));
+    m.formula = m.formula.trim().to_string();
+    match control.filter(|c| m.formula.is_empty() && *c > 0.0) {
+        Some(c) => m.massa = round(c, 6),
+        None => {
+            let f = parse_formula(&m.formula)
+                .map_err(|_| ("error.molecules.badFormula", m.formula.clone()))?;
+            m.formula = fmt(&f);
+            m.massa = round(mass(&f) - f64::from(m.carica) * ELECTRON, 6);
+            if let Some(c) = control.filter(|c| (c - m.massa).abs() > MASS_TOL) {
+                return Err(("error.molecules.massMismatch", format!("{c} / {}", m.massa)));
+            }
+        }
     }
     m.inchikey = text_or_none(m.inchikey.take()).map(|k| k.to_uppercase());
     if let Some(k) = m.inchikey.as_deref().filter(|k| !is_inchikey(k)) {

@@ -24,6 +24,9 @@ mod flow_base;
 mod flow_cache;
 mod flow_compare;
 mod flow_estimate;
+mod flow_export;
+#[cfg(test)]
+mod flow_export_tests;
 mod flow_formula;
 mod flow_generate;
 mod flow_inclusion;
@@ -67,6 +70,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli llm tools [--out FILE]   the catalog strumenti/1 of the assistant tools (llm tools --help)
+       mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the events a recording gives for a conversation, one per line
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli msn-lib add|build|export ...                the library of MSn trees (msn-lib --help)
        mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
@@ -408,6 +412,8 @@ mod flow_rule_tests;
 mod flow_run_tests;
 #[cfg(test)]
 mod flow_stats_tests;
+#[cfg(test)]
+mod llm_replay_tests;
 #[cfg(test)]
 mod llm_tools_tests;
 #[cfg(test)]

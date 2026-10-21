@@ -1,0 +1,2 @@
+{"events":[{"ev":"text_delta","text":"Let me check the plan."},{"ev":"tool_call_start","id":"t1","name":"flow_check"},{"ev":"tool_call_delta","json":"{\"plan\":"},{"ev":"tool_call_delta","json":"\"p\"}"},{"ev":"tool_call_end","id":"t1"},{"cache_read":0,"ev":"usage","in":120,"out":30},{"ev":"stop","reason":"tool"}],"schema":"llmreg/1","turn":0}
+{"events":[{"ev":"text_delta","text":"The plan is valid."},{"cache_read":0,"ev":"usage","in":180,"out":8},{"ev":"stop","reason":"end"}],"schema":"llmreg/1","turn":1}

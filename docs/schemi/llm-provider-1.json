@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "llm-provider-1",
+  "title": "llm-provider/1: descriptor of a model vendor (crates/mzlab-llm/data/fornitori-1.json holds a list of them)",
+  "type": "object",
+  "required": ["schema", "id", "adapter", "base_url", "auth", "models"],
+  "properties": {
+    "schema": {"const": "llm-provider/1"},
+    "id": {"type": "string"},
+    "adapter": {"enum": ["anthropic", "openai_compat", "gemini"]},
+    "base_url": {"type": "string"},
+    "auth": {
+      "type": "object",
+      "description": "Where the transport puts the key: header = prefix + key. An empty header means no key.",
+      "required": ["header", "prefix"],
+      "properties": {"header": {"type": "string"}, "prefix": {"type": "string"}}
+    },
+    "extra_headers": {"type": "object", "additionalProperties": {"type": "string"}},
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "context_tokens", "max_output_tokens", "tools", "price_per_mtok"],
+        "properties": {
+          "id": {"type": "string"},
+          "context_tokens": {"type": "integer", "minimum": 0},
+          "max_output_tokens": {"type": "integer", "minimum": 0},
+          "tools": {"enum": ["native", "prompted", "none"]},
+          "vision": {"type": "boolean"},
+          "price_per_mtok": {
+            "type": "object",
+            "description": "An estimate shown to the user; 0 = unknown.",
+            "required": ["in", "out"],
+            "properties": {"in": {"type": "number", "minimum": 0}, "out": {"type": "number", "minimum": 0}, "as_of": {"type": "string"}, "currency": {"type": "string"}}
+          }
+        }
+      }
+    },
+    "local": {"type": "boolean"},
+    "site_allowed": {"type": "boolean"}
+  }
+}
