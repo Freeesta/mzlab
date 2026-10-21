@@ -98,6 +98,15 @@ fn not_a_raw_file_is_an_error_with_a_key() {
 }
 
 #[test]
+fn an_unknown_thermo_version_has_its_own_key() {
+    let e = mzlab_core::raw::thermo_error(&opentfraw::Error::UnsupportedVersion(99));
+    assert_eq!(
+        (e.key, e.params),
+        ("err.file.rawVersion", vec![("version", "99".to_string())])
+    );
+}
+
+#[test]
 fn the_instrument_method_text_of_a_raw_is_text() {
     let Some(d) = dati_percorsi::percorso("dati/HRMS") else {
         eprintln!("skipped: no data repository (MZLAB_DATI)");

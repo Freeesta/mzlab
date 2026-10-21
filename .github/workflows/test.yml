@@ -49,6 +49,7 @@ jobs:
         run: |
           rustup show
           rustup target add wasm32-unknown-unknown
+      # Only the 3.11 job saves the cache: it is the one that runs the release builds of the slow tests (tools/pytest_solo_311.txt), which 3.14 skips.
       # Every run restores the newest cache; only main saves one (a pull request too, but only while the newest cache has no tree record, tools/ci_cargo_mtime.py), keyed by the Rust sources (crates/, vendor/), so a pull request finds the crates of main
       # already compiled and rebuilds only what it changed. A cache saved on a pull request is seen by no other pull request.
       - id: rcache
@@ -60,7 +61,7 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: pytest-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-${{ hashFiles('tools/ci_cargo_mtime.py') }}
+          key: pytest-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-${{ hashFiles('tools/ci_cargo_mtime.py') }}-rel
           restore-keys: pytest-wasm-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones
       - id: mtime
@@ -99,10 +100,10 @@ jobs:
           MZLAB_NOMI_VIETATI: ${{ secrets.MZLAB_NOMI_VIETATI }}
         run: python -m pytest -q -n auto --dist loadfile $(python tools/ci_solo_teoria.py --pytest)
       - name: Record the tree of the cache
-        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.14' && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true' || github.head_ref == 'claude/ci-pytest-veloce') }}
         run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.14' && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true' || github.head_ref == 'claude/ci-pytest-veloce') }}
         with:
           path: |
             ~/.cargo/registry
