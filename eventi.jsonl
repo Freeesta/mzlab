@@ -180,3 +180,4 @@
 {"ts_utc":"2026-10-21T21:17:30Z","tipo":"run","workflow":"pages","esito":"success","main":true,"durata_s":598,"attivo_s":592,"coda_s":3,"jobs":{"build":551,"deploy":41},"pr":null,"sha":"ce46e29b2340b37549576895bc364f4b873cd49f","run_id":39676193106,"run_attempt":1}
 {"ts_utc":"2026-10-21T21:27:34Z","tipo":"run","workflow":"test","esito":"success","main":true,"durata_s":1202,"attivo_s":1595,"coda_s":2,"jobs":{"javascript":22,"pytest (ubuntu-latest, 3.11)":1199,"browser (ubuntu-latest, chromium)":164,"tipi (tsc)":41,"pytest (ubuntu-latest, 3.14)":169},"pr":null,"sha":"ce46e29b2340b37549576895bc364f4b873cd49f","run_id":39676193146,"run_attempt":1}
 {"ts_utc":"2026-10-21T21:32:43Z","azione":"aperta","tipo":"pr","pr":1375,"sha":"2582e1ad27381ce1b76c906fc131024eae4ceeb0"}
+{"ts_utc":"2026-10-21T21:33:43Z","azione":"aperta","tipo":"pr","pr":1376,"sha":"11d31ec1859a97840c9e12c7a39417c55924421e"}
