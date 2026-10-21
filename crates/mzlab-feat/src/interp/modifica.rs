@@ -101,12 +101,7 @@ pub fn candidates(mz: f64, parent: &Formula, hyps: &[&Hyp]) -> Vec<Candidate> {
 }
 
 /// `candidates` within `match_ppm` instead of `MATCH_PPM`.
-pub fn candidates_with(
-    mz: f64,
-    parent: &Formula,
-    hyps: &[&Hyp],
-    match_ppm: f64,
-) -> Vec<Candidate> {
+pub fn candidates_with(mz: f64, parent: &Formula, hyps: &[&Hyp], match_ppm: f64) -> Vec<Candidate> {
     let mut out: Vec<Candidate> = Vec::new();
     for h in hyps {
         let ppm = (mz - h.mz) / h.mz * 1e6;
