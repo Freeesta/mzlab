@@ -37,6 +37,9 @@ mod flow_ms2;
 mod flow_msngraph;
 mod flow_network;
 mod flow_out;
+mod flow_pca;
+#[cfg(test)]
+mod flow_pca_tests;
 mod flow_position;
 #[cfg(test)]
 mod flow_position_tests;

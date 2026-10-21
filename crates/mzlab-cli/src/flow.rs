@@ -395,6 +395,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "table.stats",
         Exec::File("report", crate::flow_stats::stats_job),
     ),
+    ("table.pca", Exec::File("report", crate::flow_pca::pca_job)),
     ("spectra.match", Exec::File("hits", match_job)),
     ("formula.ms1", Exec::File("formulas", formula_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),

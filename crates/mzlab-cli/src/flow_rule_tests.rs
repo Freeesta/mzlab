@@ -24,7 +24,6 @@ const BUCHI: &[&str] = &[
     "annot.hazard",
     "structure.render",
     "structure.reactivity",
-    "table.pca",
     "table.kmd",
 ];
 
