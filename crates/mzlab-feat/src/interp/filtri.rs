@@ -75,13 +75,36 @@ pub const DECOY_K: u32 = 5;
 /// A decoy must lie beyond this many ppm of every true delta, and a row matches a decoy within it.
 pub const DECOY_PPM: f64 = 10.0;
 
+/// The thresholds of the decoys (`tp.filter`): `Default` is the three constants above.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DecoyParams {
+    pub step: f64,
+    pub k: u32,
+    pub ppm: f64,
+}
+
+impl Default for DecoyParams {
+    fn default() -> Self {
+        DecoyParams {
+            step: DECOY_STEP,
+            k: DECOY_K,
+            ppm: DECOY_PPM,
+        }
+    }
+}
+
 /// The decoy m/z: the ion m/z of each rule shifted by `DECOY_STEP` x k, dropping the ones within `DECOY_PPM` of any rule (a true match).
 pub fn decoy_masses(rule_mz: &[f64]) -> Vec<f64> {
-    let near = |a: f64, b: f64| (a - b).abs() / b.abs().max(1.0) * 1e6 <= DECOY_PPM;
+    decoy_masses_with(rule_mz, &DecoyParams::default())
+}
+
+/// `decoy_masses` with the thresholds of `p`.
+pub fn decoy_masses_with(rule_mz: &[f64], p: &DecoyParams) -> Vec<f64> {
+    let near = |a: f64, b: f64| (a - b).abs() / b.abs().max(1.0) * 1e6 <= p.ppm;
     let mut out: Vec<f64> = vec![];
     for &m in rule_mz {
-        for k in 1..=DECOY_K {
-            let d = m + DECOY_STEP * f64::from(k);
+        for k in 1..=p.k {
+            let d = m + p.step * f64::from(k);
             if !rule_mz.iter().any(|&r| near(d, r)) && !out.iter().any(|&o| near(d, o)) {
                 out.push(d);
             }
@@ -95,10 +118,22 @@ pub fn registry_decoys(
     rule_mz: &[f64],
     rows: impl IntoIterator<Item = (f64, bool)>,
 ) -> Option<(usize, usize)> {
-    let (masses, rows) = (decoy_masses(rule_mz), rows.into_iter().collect::<Vec<_>>());
+    registry_decoys_with(rule_mz, rows, &DecoyParams::default())
+}
+
+/// `registry_decoys` with the thresholds of `p`.
+pub fn registry_decoys_with(
+    rule_mz: &[f64],
+    rows: impl IntoIterator<Item = (f64, bool)>,
+    p: &DecoyParams,
+) -> Option<(usize, usize)> {
+    let (masses, rows) = (
+        decoy_masses_with(rule_mz, p),
+        rows.into_iter().collect::<Vec<_>>(),
+    );
     let hit = |d: f64| {
         rows.iter()
-            .any(|&(mz, ok)| ok && (mz - d).abs() / d * 1e6 <= DECOY_PPM)
+            .any(|&(mz, ok)| ok && (mz - d).abs() / d * 1e6 <= p.ppm)
     };
     (!masses.is_empty()).then(|| (masses.len(), masses.iter().filter(|&&d| hit(d)).count()))
 }
@@ -110,11 +145,23 @@ pub fn table_decoys(
     status: &[u8],
     facts: &[RowFacts],
 ) -> Option<(usize, usize)> {
+    table_decoys_with(hyps, mz, status, facts, &DecoyParams::default())
+}
+
+/// `table_decoys` with the thresholds of `p`.
+pub fn table_decoys_with(
+    hyps: &[Hyp],
+    mz: &[f64],
+    status: &[u8],
+    facts: &[RowFacts],
+    p: &DecoyParams,
+) -> Option<(usize, usize)> {
     let rule_mz: Vec<f64> = hyps.iter().map(|h| h.mz).collect();
     let rows = (0..mz.len()).filter(|&r| status[r] != ST_PARENT);
-    registry_decoys(
+    registry_decoys_with(
         &rule_mz,
         rows.map(|r| (mz[r], first_hidden(&facts[r]).is_none())),
+        p,
     )
 }
 
