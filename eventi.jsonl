@@ -265,3 +265,5 @@
 {"ts_utc":"2026-10-21T22:13:26Z","tipo":"conflitto","pr":1377,"sha":"9ffdaaa81dce390bbeecbf23c4c5f64b8b4ed2c4","pr_unita":1380,"file_comuni":["crates/mzlab-cli/src/flow.rs","crates/mzlab-cli/src/flow_base.rs","crates/mzlab-cli/src/lib.rs","docs/agenti/rust-flow.md","docs/schemi/strumenti-1.json"],"n_file_comuni":5}
 {"ts_utc":"2026-10-21T22:13:33Z","tipo":"conflitto","pr":1379,"sha":"8539874ab323c5204ed66b0edda19b5d930ee6ed","pr_unita":1378,"file_comuni":["crates/mzlab-cli/src/lib.rs","docs/agenti/flow-copertura-tabui.md"],"n_file_comuni":2}
 {"ts_utc":"2026-10-21T22:13:33Z","tipo":"conflitto","pr":1377,"sha":"8539874ab323c5204ed66b0edda19b5d930ee6ed","pr_unita":1378,"file_comuni":["crates/mzlab-cli/src/lib.rs","docs/agenti/flow-copertura-tabui.md"],"n_file_comuni":2}
+{"ts_utc":"2026-10-21T22:13:23Z","tipo":"conflitto","pr":1379,"sha":"46c1c46390d7269f09d05665e105dada40d51cfa","pr_unita":1381,"file_comuni":[],"n_file_comuni":0}
+{"ts_utc":"2026-10-21T22:13:26Z","tipo":"conflitto","pr":1377,"sha":"46c1c46390d7269f09d05665e105dada40d51cfa","pr_unita":1381,"file_comuni":[],"n_file_comuni":0}
