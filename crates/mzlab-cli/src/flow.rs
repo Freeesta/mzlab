@@ -61,6 +61,7 @@ pub fn steps() -> Vec<Step> {
     all.extend(mzlab_feat::steps::attributio());
     all.extend(mzlab_chem::step::tabui());
     all.push(crate::flow_ms2::ms2_step());
+    all.push(crate::flow_msngraph::msn_graph_step());
     all.push(crate::flow_compare::compare_step());
     all
 }
@@ -336,6 +337,15 @@ fn ms2_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     r.keep(out, DataType::Spectra)
 }
 
+fn msn_graph_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let file = one_input(r, job, "source")?;
+    let tmp = r.work.join(format!("{}-msn", job.instance.id));
+    std::fs::create_dir_all(&tmp).map_err(io)?;
+    let text = crate::flow_msngraph::msn_graph_text(job, &file, &tmp);
+    let _ = std::fs::remove_dir_all(&tmp);
+    write_made(r, job, text?, DataType::Report)
+}
+
 fn compare_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let text_of = |name: &str| {
         let found = job.resolved.params.iter().find(|(k, _)| k == name);
@@ -362,6 +372,12 @@ fn network_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
         &table.1,
         samples.as_ref().map(|s| s.1.as_slice()),
     )?;
+    write_made(r, job, text, DataType::Transform)
+}
+
+fn generate_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let parent = read_one(r, job, "parent")?;
+    let text = crate::flow_generate::generate_text(job, &parent.1)?;
     write_made(r, job, text, DataType::Transform)
 }
 
@@ -418,8 +434,10 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("formula.ms1", Exec::File("formulas", formula_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
+    ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),
     ("annot.level", Exec::File("annot", level_job)),
     ("tp.network", Exec::File("network", network_job)),
+    ("tp.generate", Exec::File("hypotheses", generate_job)),
     ("meta.compare", Exec::File("comparison", compare_job)),
     ("export.inclusion", Exec::File("report", inclusion_job)),
 ];
