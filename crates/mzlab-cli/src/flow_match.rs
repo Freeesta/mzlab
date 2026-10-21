@@ -98,6 +98,11 @@ fn dprec_ppm(tol: Tol, d: f64, prec: f64) -> f64 {
     }
 }
 
+fn text_param<'a>(job: &'a Job, name: &str) -> &'a str {
+    let found = job.resolved.params.iter().find(|(k, _)| k == name);
+    found.and_then(|(_, v)| v.str()).unwrap_or("")
+}
+
 pub(crate) fn num(job: &Job, name: &str) -> f64 {
     job.resolved
         .params
@@ -346,14 +351,7 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         .iter()
         .any(|(k, v)| k == "score_terms" && v.bool() == Some(true));
     let lib = open_library(library, decoys)?;
-    let name = job
-        .resolved
-        .params
-        .iter()
-        .find(|(k, _)| k == "name_contains")
-        .and_then(|(_, v)| v.str())
-        .unwrap_or("")
-        .to_lowercase();
+    let name = text_param(job, "name_contains").to_lowercase();
     let top = num(job, "top_n").max(1.0) as usize;
     let mut o = Out::default();
     o.raw("{\"format\":\"candidates/1\",\"step\":\"spectra.match@1\",\"algorithm\":")
