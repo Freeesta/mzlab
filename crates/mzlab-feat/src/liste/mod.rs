@@ -1,5 +1,5 @@
 //! The lists of the user, `liste/1` (`docs/schemi/liste-1.json`): the transformations (a change of formula and how many times it may repeat), the adducts (a
-//! change of formula and a charge) and the suspect lists (a name and a formula or a mass). A list is read from a CSV with an error for every wrong row
+//! change of formula and a charge). A list is read from a CSV with an error for every wrong row
 //! (`csv.rs`), written as canonical JSON (`json.rs`: keys in alphabetical order, items sorted by name and change) whose SHA-256 enters `prov/1`, and read back
 //! to the same bytes. The transformation list of mzFinder (`name;change[;comment]` per line) is the header-less form of the same CSV and goes through here
 //! (`transformation_rows`), so that its results do not change.
@@ -22,7 +22,6 @@ pub const MAX_REPEAT: u32 = 10;
 pub enum Kind {
     Transformations,
     Adducts,
-    Suspects,
 }
 
 impl Kind {
@@ -30,12 +29,11 @@ impl Kind {
         match self {
             Kind::Transformations => "transformations",
             Kind::Adducts => "adducts",
-            Kind::Suspects => "suspects",
         }
     }
 
     pub fn from_name(s: &str) -> Option<Kind> {
-        [Kind::Transformations, Kind::Adducts, Kind::Suspects]
+        [Kind::Transformations, Kind::Adducts]
             .into_iter()
             .find(|k| k.name() == s)
     }
@@ -59,20 +57,10 @@ pub struct Adduct {
     pub comment: String,
 }
 
-/// A suspect: a neutral formula, a monoisotopic mass, or both.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Suspect {
-    pub name: String,
-    pub formula: Option<String>,
-    pub mass: Option<f64>,
-    pub comment: String,
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Liste {
     Transformations(Vec<Transformation>),
     Adducts(Vec<Adduct>),
-    Suspects(Vec<Suspect>),
 }
 
 /// A wrong row of a CSV: the 1-based line, an `error.liste.*` key and the text that explains it.
@@ -88,7 +76,6 @@ impl Liste {
         match self {
             Liste::Transformations(_) => Kind::Transformations,
             Liste::Adducts(_) => Kind::Adducts,
-            Liste::Suspects(_) => Kind::Suspects,
         }
     }
 
@@ -96,7 +83,6 @@ impl Liste {
         match self {
             Liste::Transformations(v) => v.len(),
             Liste::Adducts(v) => v.len(),
-            Liste::Suspects(v) => v.len(),
         }
     }
 

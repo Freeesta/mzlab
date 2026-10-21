@@ -387,6 +387,48 @@ fn search_gives_what_the_name_box_of_tabui_gave() {
     );
 }
 
+/// A suspect list (`name;formula;mass;comment`) is imported as a collection named like the file; a row with a mass but no formula is refused with its row error.
+#[test]
+fn a_suspect_list_becomes_a_collection() {
+    let dir = root().join("tests/dati");
+    let csv = std::fs::read_to_string(dir.join("sospetti_sintetici.csv")).unwrap();
+    let want = parse(&std::fs::read(dir.join("sospetti_sintetici_attesi.json")).unwrap()).unwrap();
+    let coll = want.get("raccolta").unwrap().str().unwrap();
+    let ask = |csv: &str| {
+        let body = format!(
+            "{{\"csv\":{},\"file\":\"x.csv\",\"raccolta\":\"{coll}\"}}",
+            quoted(csv)
+        );
+        parse(route("da_csv", &body).unwrap().as_bytes()).unwrap()
+    };
+    let bad = ask(&csv);
+    let e = &bad.get("errori").unwrap().arr()[0];
+    let w = &want.get("errori").unwrap().arr()[0];
+    assert_eq!(e.get("riga").unwrap().f64(), w.get("riga").unwrap().f64());
+    assert_eq!(
+        e.get("chiave").unwrap().str(),
+        w.get("chiave").unwrap().str()
+    );
+    let kept: String = csv
+        .lines()
+        .filter(|l| !l.starts_with("Provolone"))
+        .map(|l| format!("{l}\n"))
+        .collect();
+    let ok = ask(&kept);
+    let got = ok.get("molecole").unwrap().arr();
+    let exp = want.get("molecole").unwrap().arr();
+    assert_eq!(got.len(), exp.len());
+    for (g, x) in got.iter().zip(exp) {
+        assert_eq!(g.get("nome").unwrap().str(), x.get("nome").unwrap().str());
+        assert_eq!(
+            g.get("formula").unwrap().str(),
+            x.get("formula").unwrap().str()
+        );
+        assert_eq!(g.get("note").unwrap().str(), x.get("note").unwrap().str());
+        assert_eq!(g.get("raccolte").unwrap().arr()[0].str(), Some(coll));
+    }
+}
+
 /// The screening list (`elenca` on the `hrms` catalogue) has, for every row of the gold file made from the old CSV, a molecule with the same m/z (<= 1e-5).
 #[test]
 fn hrms_list_keeps_the_mz_of_the_old_csv() {

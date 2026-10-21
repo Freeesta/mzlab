@@ -15,6 +15,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_infusione_grafo.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 FX = json.loads((Path(__file__).parent / "fixtures" / "msngrafo_esempio.json").read_text())
+SX = json.loads((Path(__file__).parent / "fixtures" / "msngrafo_strutture.json").read_text())
 D = synth("infgrafo")
 F = write_msn(D / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
 F2 = write_msn(D / "MSn_synth_t02.mzML", caffeine_nodes(), n_scans=12)
@@ -29,6 +30,7 @@ STAND_IN = """(fx) => {
       const j = JSON.parse(JSON.stringify(fx));
       if (!q.get("formula")) { j.ione = null; j.nodi.forEach(n => { n.formula = null; }); }
       (JSON.parse(q.get("scelte") || "[]")).forEach(c => { const n = j.nodi.find(x => Math.abs(x.mz - c.mz) < 1e-3); if (n && n.formula) { n.formula.scelta = c.formula; n.formula.fonte = "utente"; } });
+      const sx = j._sx; delete j._sx; if (sx && q.get("strutture")) j.strutture = Object.assign({}, sx, { nodo: q.get("strutture") });
       j.avvisi = [{ chiave: "warn.msngrafo.isolation", albero: "x", nodo: "n1" }];
       return Promise.resolve(jr(j));
     }
@@ -49,7 +51,7 @@ try:
         fx = json.loads(json.dumps(FX))
         for n, tid in zip([n for n in fx["nodi"] if n["isolato"]], ids): n["albero"] = [tid]
         pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
-        pg.evaluate(STAND_IN, fx)
+        fx["_sx"] = SX; pg.evaluate(STAND_IN, fx)
         def appears():
             assert pg.evaluate("INF.single()") is True
             drawer(pg, "gra"); pg.wait_for_selector(".ig-node", timeout=30000)
@@ -94,6 +96,24 @@ try:
             drawer(pg, "gra"); pg.click(".ig-node[data-id=n0]"); pg.click("[data-a=save]")
             pg.wait_for_selector(".ig-pic svg", timeout=20000)
         step("the drawing box opens Draw from the SMILES and keeps the user's fragment", draw)
+        def cuts():
+            pg.click(".ig-node[data-id=n0]"); pg.wait_for_selector(".ig-draw", timeout=10000)
+            assert pg.locator(".ig-cuts").count() == 0
+            pg.click(".ig-node[data-id=n2]"); pg.wait_for_selector(".ig-cuts .ig-cut", timeout=10000)
+            assert any("strutture=n2" in r[1] and "smiles=" in r[1] for r in pg.evaluate("window.__REQ")), pg.evaluate("window.__REQ.map(r=>r[1])")
+            txt = pg.inner_text(".ig-str")
+            assert "C2-O3" in txt and "-0.35 ppm" in txt.replace("−", "-") and "226.0499" in txt and "hypothesis" in txt or pg.evaluate("I18N.lang") != "en", txt
+            assert pg.locator(".ig-cuts caption").count() == 1 and pg.locator(".ig-cuts th[scope=col]").count() == 6
+            assert pg.get_attribute(".ig-cut", "aria-label")
+            sizes = pg.evaluate("[...document.querySelectorAll('.ig-cut')].map(b=>{const r=b.getBoundingClientRect();return Math.min(r.width,r.height)})")
+            assert min(sizes) >= 24, sizes
+            pg.focus(".ig-cut"); pg.keyboard.press("Enter")
+            pg.wait_for_function("S.view==='draw'", timeout=15000)
+            pg.wait_for_function("window.TPDraw && TPDraw.ready()", timeout=90000)
+            attendi(pg, "TPDraw.smiles().then(s => s.length > 5)", 30000)
+            assert pg.evaluate("TPDraw.mark([[1, 2]])") == 1 and pg.evaluate("TPDraw.mark([[0, 9]])") == 0
+            pg.evaluate("setView('data')"); drawer(pg, "gra"); pg.wait_for_selector(".ig-node", timeout=15000)
+        step("a node with a SMILES lists the cut candidates with ppm; one opens Draw and marks the bond", cuts)
         def exports():
             pg.click(".ig-node[data-id=n2]")
             got = []

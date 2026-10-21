@@ -2,9 +2,7 @@
 //! The header names the columns (`name`, `delta`, `max_repeat`, `charge`, `formula`, `mass`, `comment`, in any order); a transformation list may have no header
 //! (`name;change[;comment]`, the text of mzFinder). Every wrong row gives its own error and the list is refused if there is one.
 
-use mzlab_core::elements::parse_formula;
-
-use super::{Adduct, Kind, Liste, RowError, Suspect, Transformation, MAX_REPEAT};
+use super::{Adduct, Kind, Liste, RowError, Transformation, MAX_REPEAT};
 use crate::legacy::transf::{parse_delta, Delta};
 
 fn err(line: usize, key: &'static str, detail: impl Into<String>) -> RowError {
@@ -51,7 +49,6 @@ fn columns(kind: Kind) -> &'static [&'static str] {
     match kind {
         Kind::Transformations => &["name", "delta", "max_repeat", "comment"],
         Kind::Adducts => &["name", "delta", "charge", "comment"],
-        Kind::Suspects => &["name", "formula", "mass", "comment"],
     }
 }
 
@@ -116,30 +113,6 @@ fn row(kind: Kind, line: usize, cells: &Cells) -> Result<Liste, RowError> {
                 comment,
             }])
         }
-        Kind::Suspects => {
-            let (formula, mass) = (cells.get("formula"), cells.get("mass"));
-            if !formula.is_empty() {
-                parse_formula(formula).map_err(|e| err(line, "error.liste.badFormula", e.key))?;
-            }
-            let mass = match mass {
-                "" => None,
-                m => Some(
-                    m.parse::<f64>()
-                        .ok()
-                        .filter(|x| x.is_finite() && *x > 0.0)
-                        .ok_or_else(|| err(line, "error.liste.badMass", m))?,
-                ),
-            };
-            if formula.is_empty() && mass.is_none() {
-                return Err(err(line, "error.liste.noMass", ""));
-            }
-            Liste::Suspects(vec![Suspect {
-                name,
-                formula: (!formula.is_empty()).then(|| formula.to_string()),
-                mass,
-                comment,
-            }])
-        }
     })
 }
 
@@ -147,7 +120,6 @@ fn push(into: &mut Liste, one: Liste) {
     match (into, one) {
         (Liste::Transformations(a), Liste::Transformations(mut b)) => a.append(&mut b),
         (Liste::Adducts(a), Liste::Adducts(mut b)) => a.append(&mut b),
-        (Liste::Suspects(a), Liste::Suspects(mut b)) => a.append(&mut b),
         _ => unreachable!("one row of the same kind"),
     }
 }
@@ -156,7 +128,6 @@ fn empty(kind: Kind) -> Liste {
     match kind {
         Kind::Transformations => Liste::Transformations(Vec::new()),
         Kind::Adducts => Liste::Adducts(Vec::new()),
-        Kind::Suspects => Liste::Suspects(Vec::new()),
     }
 }
 

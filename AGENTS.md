@@ -111,7 +111,7 @@ Questo file è già nel tuo contesto: non rileggerlo. Leggi il file d'area del t
 | formato `.mzidx` | `docs/agenti/mzidx.md` |
 | cosa i file grezzi contengono e non estraiamo ancora (regola «nessuna perdita») | `docs/agenti/grezzi-non-estratti.md` |
 | errori di lettura dei file: causa breve, «Dettagli», «Copia diagnosi» (`diagnosi.js`), mzML sintetico stile msconvert | `docs/agenti/diagnosi.md` |
-| assistente LLM: catalogo `strumenti/1`, `mzlab-cli llm` | `docs/agenti/llm.md` |
+| assistente LLM: catalogo `strumenti/1` | `docs/agenti/llm.md` |
 | riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature table in CSV dallo stesso motore e dalla stessa ricetta della pagina) | `docs/agenti/cli.md` |
 | agenti esterni (Claude Code, Cowork) che usano `mzlab-cli` dalla shell: sequenza, codici, esempi di piani | `docs/agenti/per-agenti.md` |
 | lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, fasi di avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
@@ -124,7 +124,7 @@ Questo file è già nel tuo contesto: non rileggerlo. Leggi il file d'area del t
 | modulo «aperti» (mzML con numpress, mzXML: `crates/mzlab-lettori/src/aperti/`, `numpress.rs`) | `docs/agenti/lettori-aperti.md` |
 | modulo «andi» (netCDF/ANDI `.cdf`: `crates/mzlab-lettori/src/andi/`) | `docs/agenti/lettori-andi.md` |
 | moduli lettori, uno per famiglia (`crates/mzlab-lettori*`, `.wasm` a parte in `wasm-lettori/<famiglia>/`, feature `estesi`, `LETTORI_FAM`, regola R in `shell.js`, `LETTORI_MOD`, `?lettori=modulo`, tetti) | `docs/agenti/lettori-modulo.md` |
-| rilascio: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, versione unica, SBOM | `docs/agenti/rilascio.md` |
+| rilascio: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, versione unica, SBOM, cancello (`cancello_rilascio.py`) | `docs/agenti/rilascio.md` |
 | Flow grafico (scheda amministratore: palette dei passi `step/1`, catena, moduli dei parametri, confronto `meta.compare`, esportazione/importazione `mzflow/2`; `flow/`) | `docs/agenti/flow-grafica.md` (corrispondenza con i passi di mzmine: `flow-mzmine.md`) |
 | esecutore web del Flow («This browser»: `flow/lazy/flow-web-{run,ui,worker}.js`, eventi `flow:web-step`, stima `stima_series`, avviso su telefono/tablet, Run spento oltre il livello alto) | `docs/agenti/flow-web.md` |
 | Libro: convertitore (`tools/libro/`, dialetto Markdown, fixture CC0, `--pubblico`) e pagina editor admin (`mzlab/web/libro/`, token, salvataggio nel repository privato) | `docs/agenti/libro.md` |

@@ -97,7 +97,7 @@ export async function elimina(/** @type {string} */ id) {
 }
 
 /**
- * Imports a CSV or JSON file as records of the level «imported». A molecule whose id the user already owns (own level) is kept as it is and counted in `tenute`;
+ * Imports a CSV or JSON file as records of the level «imported» (a CSV also as a collection named like the file; the short suspect columns name, formula, mass, comment are read). A molecule whose id the user already owns (own level) is kept as it is and counted in `tenute`;
  * a wrong row refuses the whole file with one error per row.
  * @returns {Promise<{ errori: ErroreRiga[] } | { n: number, sostituite: number, tenute: number }>}
  */
@@ -109,7 +109,7 @@ export async function importa(/** @type {string} */ nome, /** @type {string} */ 
     try { j = JSON.parse(contenuto); } catch (_) { return { errori: [{ riga: 0, chiave: "error.molecules.badJson", testo: "json" }] }; }
     for (const r of (j && Array.isArray(j.molecole) ? j.molecole : [])) if (r && typeof r === "object") r.origine = { tipo: "importata", file: nome };
     doc = await json("a_json", j);
-  } else doc = await json("da_csv", { csv: contenuto, file: nome, livello: "importata" });
+  } else doc = await json("da_csv", { csv: contenuto, file: nome, livello: "importata", raccolta: nome.replace(/\.[^.]*$/, "") });
   if (conErrori(doc)) return { errori: doc.errori };
   const nuove = /** @type {Molecola[]} */ (doc.molecole);
   const tenuteId = new Set(nuove.filter(m => mie.some(x => x.id === m.id && x.origine.tipo === "utente")).map(m => m.id));

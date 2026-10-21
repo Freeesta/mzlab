@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "errore/1",
+  "title": "errore/1: why `mzlab-cli` stopped, with --json",
+  "description": "On stdout next to the text of stderr, which does not change. `code` is the exit code (1 some steps failed to write, 2 usage, 3 plan not valid, 4 input missing or different); `error_key` and `params` are those of the error (`err.flow.*` of the engine, `err.cli.*` of the command line); `problems` only for a plan that is not valid. Code: crates/mzlab-cli/src/flow_json.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "code",
+    "error_key",
+    "params",
+    "message",
+    "hint"
+  ],
+  "properties": {
+    "schema": {
+      "const": "errore/1"
+    },
+    "code": {
+      "enum": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "error_key": {
+      "type": "string"
+    },
+    "params": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "message": {
+      "type": "string"
+    },
+    "hint": {
+      "type": "string"
+    },
+    "problems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "instance",
+          "port",
+          "error_key",
+          "params"
+        ],
+        "properties": {
+          "instance": {
+            "type": "string"
+          },
+          "port": {
+            "type": "string"
+          },
+          "error_key": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

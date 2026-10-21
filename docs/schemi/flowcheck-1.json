@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "flowcheck/1",
+  "title": "flowcheck/1: the answer of `mzlab-cli flow check --json`",
+  "description": "Whether a plan is valid (as `flow run` checks it, inputs apart) and every problem, in the order of `flow::check`. Exit code 0 valid, 3 not valid. Code: crates/mzlab-cli/src/flow_json.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "valid",
+    "problems"
+  ],
+  "properties": {
+    "schema": {
+      "const": "flowcheck/1"
+    },
+    "valid": {
+      "type": "boolean"
+    },
+    "problems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "instance",
+          "port",
+          "error_key",
+          "params"
+        ],
+        "properties": {
+          "instance": {
+            "type": "string"
+          },
+          "port": {
+            "type": "string"
+          },
+          "error_key": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

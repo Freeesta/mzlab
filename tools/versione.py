@@ -2,6 +2,7 @@
 
     python3 tools/versione.py                  # all the files say the same version
     python3 tools/versione.py --tag v0.2.0     # ... and it is the one of the tag
+    python3 tools/versione.py --tag v0.2.0 also runs the release gate (tools/cancello_rilascio.py); there is no way to skip it
     python3 tools/versione.py --nota v0.2.0    # prints the notes of that version from CHANGELOG.md (fails if missing or empty)
 Stdlib only. Used by tests/test_versione.py (required pytest job) and by .github/workflows/release.yml."""
 from __future__ import annotations
@@ -72,6 +73,12 @@ def main(argv: list[str] | None = None) -> int:
     errors = controlla(tag=a.tag)
     for e in errors:
         print("ERROR", e, file=sys.stderr)
+    if a.tag and not errors:
+        import cancello_rilascio
+
+        if cancello_rilascio.run(ROOT, a.tag.lstrip("v"), out=lambda m: print(m, file=sys.stderr)):
+            errors.append("release gate failed: fix the FAIL lines above (docs/agenti/rilascio.md)")
+            print("ERROR", errors[-1], file=sys.stderr)
     if not errors:
         print("version", next(iter(versioni().values())))
     return 1 if errors else 0
