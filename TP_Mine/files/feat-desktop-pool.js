@@ -45,6 +45,11 @@ function withPolpair(pool) {
   pool.crossPolarity = async (/** @type {{ pol: number }} */ a) => (await call("feat/polpair", { step: "pair", pol: a.pol })).text();
   return pool;
 }
+/** the `famiglia/1` record of one file with the proofs of its arcs @param {any} pool */
+function withFamily(pool) {
+  pool.family = (/** @type {{ name: string }} */ file, /** @type {any} */ recipe) => json("feat/family", { name: nameOf(file.name), recipe: recipeText(recipe) });
+  return pool;
+}
 /** @param {{ notify?: (key: string, params?: any) => void }} [opts] */
 export function createDesktopPool(opts = {}) {
   const pool = {
@@ -163,5 +168,5 @@ export function createDesktopPool(opts = {}) {
     cancel() {},
     resume() {},
   };
-  return withPolpair(pool);
+  return withFamily(withPolpair(pool));
 }

@@ -34,8 +34,8 @@
     };
   };
 
-  /** the column «Family» (ions in the row's family) and the tab «Family» (the ions with m/z, RT and role, the reference ion first) for PIPET.mount @param {any} fam the loader of F.familyLoader */
-  F.familyHooks = fam => ({
+  /** the column «Family» (ions in the row's family) and the tab «Family» (the ions with m/z, RT and role, the reference ion first) for PIPET.mount @param {any} fam the loader of F.familyLoader @param {{ names: string[], pol: number } | undefined} proofs the files and polarity of the table: with them the tab has the button «Show proofs» */
+  F.familyHooks = (fam, proofs) => ({
     extraCols: [{ key: "family", label: "Family", num: true, sort: (/** @type {any} */ r) => fam.size(r.id) ?? -1, cell: (/** @type {any} */ r) => { const n = fam.size(r.id); return n == null ? "" : String(n); }, text: (/** @type {any} */ r) => { const n = fam.size(r.id); return n == null ? "" : String(n); } }],
     extraTabs: [{ key: "family", label: "Family", fill: (/** @type {HTMLElement} */ panel, /** @type {any} */ r) => {
       const { el } = F;
@@ -47,6 +47,7 @@
           el("div", { class: "flx-tablewrap", tabindex: 0, role: "region", "aria-label": "Ions of the family" }, el("table", { class: "flx-table" }, el("caption", { text: `Family of row ${r.id}` }),
             el("thead", {}, el("tr", {}, ...["m/z", "RT (min)", "Role"].map(h => el("th", { scope: "col", text: h })))),
             el("tbody", {}, ...f.members.map((/** @type {any} */ m) => el("tr", {}, el("td", { text: Number(m.mz).toFixed(4) }), el("td", { text: Number(m.rt).toFixed(2) }), el("td", { text: String(m.role) })))))));
+        if (proofs && F.familyProofs) F.familyProofs(panel, { ...proofs, ions: f.members });
       }, (/** @type {any} */ e) => { panel.textContent = ""; panel.append(el("p", { class: "fl-note", role: "alert", text: "The family could not be read: " + (e && e.message || e) })); });
     } }],
   });
@@ -63,7 +64,7 @@
       const session = await G.PIPEQC.open({ base: G.QTOOLS.ctx.base, bytes, names, inputs, campioni: cs, pol, pool: G.ATTRIBUTIO_CORE.pool });
       say.textContent = `${data.rows.toLocaleString("en")} rows in ${data.files} files.${note ? " " + note : ""}`;
       /** @type {any} */ let table = null;
-      const fam = F.familyLoader(session, () => { if (table) table.redraw(); }), hooks = F.familyHooks(fam);
+      const fam = F.familyLoader(session, () => { if (table) table.redraw(); }), hooks = F.familyHooks(fam, { names, pol });
       table = G.PIPET.mount(box, { ...hooks, session, names, gate: { ok: true, table: true }, say: (/** @type {any} */ e) => { say.textContent = String((e && (e.message || e.key)) || e); }, cs, ppm: () => 5, pol: () => pol, formula: "", levels: null, identsOf: () => [] });
       // with blanks in the list the filter «Not in blank» is on from the start
       const chip = /** @type {HTMLButtonElement | null} */ (box.querySelector('[data-fc="blank"]'));
