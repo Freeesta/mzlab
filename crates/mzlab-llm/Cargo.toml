@@ -1,0 +1,9 @@
+[package]
+name = "mzlab-llm"
+description = "mzLab language-model support in pure Rust: the catalog of tools generated from the step registry (native and WASM, no network, no external dependency)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+mzlab-core = { path = "../mzlab-core" }

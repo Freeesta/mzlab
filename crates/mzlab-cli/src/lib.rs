@@ -46,6 +46,7 @@ mod flow_set;
 mod flow_table;
 #[cfg(test)]
 mod flow_table_tests;
+pub mod llm;
 pub mod msn_graph;
 mod msn_graph_compare;
 mod msn_lib;
@@ -58,6 +59,7 @@ const HELP: &str = "mzlab-cli features: the feature table of one or more LC-MS f
 usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params FILE.json]
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
+       mzlab-cli llm tools [--out FILE]   the catalog strumenti/1 of the assistant tools (llm tools --help)
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli msn-lib add|build|export ...                the library of MSn trees (msn-lib --help)
        mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
@@ -344,6 +346,7 @@ pub fn execute(args: &[String]) -> Outcome {
     match args.next().as_deref() {
         Some("features") => {}
         Some("flow") => return flow_cmd(args),
+        Some("llm") => return llm::run(args.collect()),
         Some("msn-graph") => return msn_graph_cmd(args),
         Some("msn-lib") => return msn_lib_cmd(args.collect()),
         Some("convert") => return convert::run(args.collect()),
@@ -390,6 +393,8 @@ mod flow_report_tests;
 mod flow_rule_tests;
 #[cfg(test)]
 mod flow_run_tests;
+#[cfg(test)]
+mod llm_tools_tests;
 #[cfg(test)]
 mod msn_graph_compare_tests;
 #[cfg(test)]

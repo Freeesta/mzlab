@@ -1,6 +1,6 @@
 # AGENTS.md - mzLab (repository Freeesta/mzlab, pacchetto mzlab)
 
-Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rileggerlo. Leggi il file d'area del tuo lavoro (§5). Per trovare un file o una funzione: `python3 tools/indice.py` poi `grep -n '<nome>' docs/agenti/mappa.md`, o il subagente `cercatore`.
+Questo file è già nel tuo contesto: non rileggerlo. Leggi il file d'area del tuo lavoro (§5). Per trovare un file o una funzione: `python3 tools/indice.py` poi `grep -n '<nome>' docs/agenti/mappa.md`, o `cercatore`.
 
 **Non leggere** (bloccati da `.claude/settings.json`; grep resta permesso): `mzlab/web/vendor/`, `mzlab/web/teoria/pratica/ei-dati.js`, `mzlab/web/elements.js`, `mzlab/web/teoria/glossario-dati.js`, `mzlab/web/esempi/`, `.git/`, `.verifica/` (anche `cache_massbank`), `docs/agenti/misure-diario.md`, `tests_e2e/shots/`, `__pycache__/`, `.pytest_cache/`, `*.egg-info/`, `site/`.
 
@@ -111,8 +111,9 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | formato `.mzidx` | `docs/agenti/mzidx.md` |
 | cosa i file grezzi contengono e non estraiamo ancora (regola «nessuna perdita») | `docs/agenti/grezzi-non-estratti.md` |
 | errori di lettura dei file: causa breve, «Dettagli», «Copia diagnosi» (`diagnosi.js`), mzML sintetico stile msconvert | `docs/agenti/diagnosi.md` |
+| assistente LLM: catalogo `strumenti/1`, `mzlab-cli llm` | `docs/agenti/llm.md` |
 | riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature table in CSV dallo stesso motore e dalla stessa ricetta della pagina) | `docs/agenti/cli.md` |
-| agenti esterni (Claude Code, Cowork, altri) che usano `mzlab-cli` dalla shell: sequenza, codici, esempi di piani | `docs/agenti/per-agenti.md` |
+| agenti esterni (Claude Code, Cowork) che usano `mzlab-cli` dalla shell: sequenza, codici, esempi di piani | `docs/agenti/per-agenti.md` |
 | lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, fasi di avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`, `rust-mzidx.md`, `rust-step.md`: descrittori `step/1`, `rust-flow.md`: piani `mzflow/2`, controllo e `prov/1`) |
 | record della struttura chimica `mol/1` (`crates/mzlab-mol`: tipi, JSON, hash del nucleo; lettori SMILES/molfile) | `docs/agenti/mol.md` (studio: `docs/studi/STRUTTURA_DATO.md`) |
