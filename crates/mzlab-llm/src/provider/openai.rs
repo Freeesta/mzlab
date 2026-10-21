@@ -151,6 +151,43 @@ impl Dec {
     fn close(&mut self, out: &mut Vec<Event>) {
         out.extend(self.open.drain(..).map(|(_, id)| Event::ToolCallEnd { id }));
     }
+
+    fn tool_calls(&mut self, d: Option<&Value>, out: &mut Vec<Event>) {
+        for tc in d
+            .and_then(|d| d.get("tool_calls"))
+            .map_or(&[][..], Value::arr)
+        {
+            let index = tc.get("index").and_then(Value::f64).unwrap_or(0.0) as u64;
+            let f = tc.get("function");
+            if let Some(id) = tc.get("id").and_then(Value::str).filter(|i| !i.is_empty()) {
+                self.open.push((index, id.to_string()));
+                out.push(Event::ToolCallStart {
+                    id: id.to_string(),
+                    name: f
+                        .and_then(|f| f.get("name"))
+                        .and_then(Value::str)
+                        .unwrap_or("")
+                        .to_string(),
+                });
+            }
+            if let Some(a) = f
+                .and_then(|f| f.get("arguments"))
+                .and_then(Value::str)
+                .filter(|a| !a.is_empty())
+            {
+                out.push(Event::ToolCallDelta(a.to_string()));
+            }
+        }
+    }
+}
+
+fn stop_reason(r: &str) -> StopReason {
+    match r {
+        "tool_calls" | "function_call" => StopReason::Tool,
+        "length" => StopReason::Length,
+        "content_filter" => StopReason::Refusal,
+        _ => StopReason::End,
+    }
 }
 
 impl Decoder for Dec {
@@ -180,39 +217,10 @@ impl Decoder for Dec {
             {
                 out.push(Event::TextDelta(t.to_string()));
             }
-            for tc in d
-                .and_then(|d| d.get("tool_calls"))
-                .map_or(&[][..], Value::arr)
-            {
-                let index = tc.get("index").and_then(Value::f64).unwrap_or(0.0) as u64;
-                let f = tc.get("function");
-                if let Some(id) = tc.get("id").and_then(Value::str).filter(|i| !i.is_empty()) {
-                    self.open.push((index, id.to_string()));
-                    out.push(Event::ToolCallStart {
-                        id: id.to_string(),
-                        name: f
-                            .and_then(|f| f.get("name"))
-                            .and_then(Value::str)
-                            .unwrap_or("")
-                            .to_string(),
-                    });
-                }
-                if let Some(a) = f
-                    .and_then(|f| f.get("arguments"))
-                    .and_then(Value::str)
-                    .filter(|a| !a.is_empty())
-                {
-                    out.push(Event::ToolCallDelta(a.to_string()));
-                }
-            }
+            self.tool_calls(d, out);
             if let Some(r) = c.get("finish_reason").and_then(Value::str) {
                 self.close(out);
-                self.reason = Some(match r {
-                    "tool_calls" | "function_call" => StopReason::Tool,
-                    "length" => StopReason::Length,
-                    "content_filter" => StopReason::Refusal,
-                    _ => StopReason::End,
-                });
+                self.reason = Some(stop_reason(r));
             }
         }
         if let Some(u) = v.get("usage").filter(|u| !u.is_null()) {

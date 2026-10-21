@@ -416,7 +416,19 @@ impl Stream {
         }
         self.post(out)
     }
+}
 
+/// `{"tool":NAME,"args":{...}}` in the first ```json block of `text`, as (name, args JSON text).
+fn first_json_call(text: &str) -> Option<(String, String)> {
+    let start = text.find("```json")? + "```json".len();
+    let block = &text[start..start + text[start..].find("```")?];
+    let v = parse(block.trim().as_bytes()).ok()?;
+    let name = v.get("tool")?.str()?.to_string();
+    let args = v.get("args").cloned().unwrap_or(Value::Obj(Vec::new()));
+    Some((name, json_text(&args)))
+}
+
+impl Stream {
     fn post(&mut self, events: Vec<Event>) -> Vec<Event> {
         let mut out = Vec::new();
         for e in events {
@@ -446,14 +458,4 @@ impl Stream {
         }
         out
     }
-}
-
-/// `{"tool":NAME,"args":{...}}` in the first ```json block of `text`, as (name, args JSON text).
-fn first_json_call(text: &str) -> Option<(String, String)> {
-    let start = text.find("```json")? + "```json".len();
-    let block = &text[start..start + text[start..].find("```")?];
-    let v = parse(block.trim().as_bytes()).ok()?;
-    let name = v.get("tool")?.str()?.to_string();
-    let args = v.get("args").cloned().unwrap_or(Value::Obj(Vec::new()));
-    Some((name, json_text(&args)))
 }

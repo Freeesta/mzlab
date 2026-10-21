@@ -19,29 +19,6 @@ pub struct Replay {
     next: usize,
 }
 
-/// The hash a recording keeps for a request: the SHA-256 of the body (the URL and the headers are the descriptor's, the key is not there).
-pub fn request_sha256(r: &Request) -> String {
-    sha256_hex(r.body.as_bytes())
-}
-
-/// One recording line for a turn.
-pub fn record_line(turn: usize, req: &Request, events: &[Event]) -> String {
-    let mut o = Out::default();
-    o.raw("{\"events\":[");
-    for (i, e) in events.iter().enumerate() {
-        if i > 0 {
-            o.raw(",");
-        }
-        o.raw(&e.to_json());
-    }
-    o.raw("],\"request_sha256\":")
-        .str(&request_sha256(req))
-        .raw(",\"schema\":\"llmreg/1\",\"turn\":")
-        .int(turn as i64)
-        .raw("}");
-    o.0
-}
-
 impl Replay {
     pub fn parse(text: &str, strict: bool) -> Result<Replay> {
         let bad = |line: usize, f: &str| {
@@ -93,7 +70,14 @@ impl Replay {
     pub fn reset(&mut self) {
         self.next = 0;
     }
+}
 
+/// The hash a recording keeps for a request: the SHA-256 of the body (the URL and the headers are the descriptor's, the key is not there).
+pub fn request_sha256(r: &Request) -> String {
+    sha256_hex(r.body.as_bytes())
+}
+
+impl Replay {
     /// The events of the next turn.
     pub fn respond(&mut self, req: &Request) -> Result<Vec<Event>> {
         let e = self.at(self.next, req)?;
@@ -118,4 +102,22 @@ impl Replay {
         }
         Ok(t.events.clone())
     }
+}
+
+/// One recording line for a turn.
+pub fn record_line(turn: usize, req: &Request, events: &[Event]) -> String {
+    let mut o = Out::default();
+    o.raw("{\"events\":[");
+    for (i, e) in events.iter().enumerate() {
+        if i > 0 {
+            o.raw(",");
+        }
+        o.raw(&e.to_json());
+    }
+    o.raw("],\"request_sha256\":")
+        .str(&request_sha256(req))
+        .raw(",\"schema\":\"llmreg/1\",\"turn\":")
+        .int(turn as i64)
+        .raw("}");
+    o.0
 }

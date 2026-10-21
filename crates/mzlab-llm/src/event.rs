@@ -105,7 +105,22 @@ impl Event {
     pub fn to_json(&self) -> String {
         join(&self.fields())
     }
+}
 
+/// `{"k":v,...}` from fields whose values are already JSON text.
+pub(crate) fn join(f: &[(&str, String)]) -> String {
+    let parts: Vec<String> = f
+        .iter()
+        .map(|(k, v)| {
+            let mut o = Out::default();
+            o.str(k).raw(":").raw(v);
+            o.0
+        })
+        .collect();
+    format!("{{{}}}", parts.join(","))
+}
+
+impl Event {
     pub fn from_value(v: &Value) -> Result<Event> {
         let bad = |w: &str| Error::new("err.llm.replay.format").with("field", w);
         let text = |k: &str| {
@@ -156,17 +171,4 @@ impl Event {
             _ => return Err(bad("ev")),
         })
     }
-}
-
-/// `{"k":v,...}` from fields whose values are already JSON text.
-pub(crate) fn join(f: &[(&str, String)]) -> String {
-    let parts: Vec<String> = f
-        .iter()
-        .map(|(k, v)| {
-            let mut o = Out::default();
-            o.str(k).raw(":").raw(v);
-            o.0
-        })
-        .collect();
-    format!("{{{}}}", parts.join(","))
 }

@@ -106,6 +106,42 @@ pub(super) struct Dec {
     stopped: bool,
 }
 
+impl Dec {
+    fn parts(&mut self, c: &Value, out: &mut Vec<Event>) {
+        for p in c
+            .get("content")
+            .and_then(|c| c.get("parts"))
+            .map_or(&[][..], Value::arr)
+        {
+            if let Some(t) = p.get("text").and_then(Value::str).filter(|t| !t.is_empty()) {
+                out.push(Event::TextDelta(t.to_string()));
+            }
+            if let Some(f) = p.get("functionCall") {
+                self.calls += 1;
+                let id = format!("gemini-{}", self.calls);
+                out.push(Event::ToolCallStart {
+                    id: id.clone(),
+                    name: f.get("name").and_then(Value::str).unwrap_or("").to_string(),
+                });
+                out.push(Event::ToolCallDelta(
+                    f.get("args").map_or_else(|| "{}".to_string(), json_text),
+                ));
+                out.push(Event::ToolCallEnd { id });
+            }
+        }
+    }
+}
+
+fn stop_reason(r: &str) -> StopReason {
+    match r {
+        "MAX_TOKENS" => StopReason::Length,
+        "SAFETY" | "RECITATION" | "BLOCKLIST" | "PROHIBITED_CONTENT" | "SPII" => {
+            StopReason::Refusal
+        }
+        _ => StopReason::End,
+    }
+}
+
 impl Decoder for Dec {
     fn frame(&mut self, _name: &str, data: &str, out: &mut Vec<Event>) {
         let Ok(v) = parse(data.as_bytes()) else {
@@ -122,35 +158,9 @@ impl Decoder for Dec {
             return;
         }
         if let Some(c) = v.get("candidates").and_then(|c| c.at(0)) {
-            for p in c
-                .get("content")
-                .and_then(|c| c.get("parts"))
-                .map_or(&[][..], Value::arr)
-            {
-                if let Some(t) = p.get("text").and_then(Value::str).filter(|t| !t.is_empty()) {
-                    out.push(Event::TextDelta(t.to_string()));
-                }
-                if let Some(f) = p.get("functionCall") {
-                    self.calls += 1;
-                    let id = format!("gemini-{}", self.calls);
-                    out.push(Event::ToolCallStart {
-                        id: id.clone(),
-                        name: f.get("name").and_then(Value::str).unwrap_or("").to_string(),
-                    });
-                    out.push(Event::ToolCallDelta(
-                        f.get("args").map_or_else(|| "{}".to_string(), json_text),
-                    ));
-                    out.push(Event::ToolCallEnd { id });
-                }
-            }
+            self.parts(c, out);
             if let Some(r) = c.get("finishReason").and_then(Value::str) {
-                self.reason = Some(match r {
-                    "MAX_TOKENS" => StopReason::Length,
-                    "SAFETY" | "RECITATION" | "BLOCKLIST" | "PROHIBITED_CONTENT" | "SPII" => {
-                        StopReason::Refusal
-                    }
-                    _ => StopReason::End,
-                });
+                self.reason = Some(stop_reason(r));
             }
         }
         if let Some(u) = v.get("usageMetadata") {

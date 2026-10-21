@@ -95,6 +95,76 @@ pub(super) struct Dec {
     open: Vec<(u64, String)>,
 }
 
+impl Dec {
+    fn block_start(&mut self, v: &Value, index: u64, out: &mut Vec<Event>) {
+        let b = v.get("content_block");
+        if b.and_then(|b| b.get("type")).and_then(Value::str) != Some("tool_use") {
+            return;
+        }
+        let s = |k: &str| {
+            b.and_then(|b| b.get(k))
+                .and_then(Value::str)
+                .unwrap_or("")
+                .to_string()
+        };
+        self.open.push((index, s("id")));
+        out.push(Event::ToolCallStart {
+            id: s("id"),
+            name: s("name"),
+        });
+    }
+
+    fn block_delta(v: &Value, out: &mut Vec<Event>) {
+        let d = v.get("delta");
+        let s = |k: &str| {
+            d.and_then(|d| d.get(k))
+                .and_then(Value::str)
+                .unwrap_or("")
+                .to_string()
+        };
+        match d.and_then(|d| d.get("type")).and_then(Value::str) {
+            Some("text_delta") => out.push(Event::TextDelta(s("text"))),
+            Some("input_json_delta") => out.push(Event::ToolCallDelta(s("partial_json"))),
+            _ => {}
+        }
+    }
+
+    fn message_delta(&mut self, v: &Value, out: &mut Vec<Event>) {
+        if let Some(n) = v
+            .get("usage")
+            .and_then(|u| u.get("output_tokens"))
+            .and_then(Value::f64)
+        {
+            self.usage.output = n as u64;
+        }
+        self.reason = Some(stop_reason(v));
+        out.push(Event::Usage(self.usage));
+    }
+
+    fn message_start(&mut self, v: &Value) {
+        let u = v.get("message").and_then(|m| m.get("usage"));
+        let n = |k: &str| u.and_then(|u| u.get(k)).and_then(Value::f64).unwrap_or(0.0) as u64;
+        self.usage = Usage {
+            input: n("input_tokens"),
+            output: n("output_tokens"),
+            cache_read: n("cache_read_input_tokens"),
+        };
+    }
+}
+
+fn stop_reason(v: &Value) -> StopReason {
+    match v
+        .get("delta")
+        .and_then(|d| d.get("stop_reason"))
+        .and_then(Value::str)
+    {
+        Some("tool_use") => StopReason::Tool,
+        Some("max_tokens") => StopReason::Length,
+        Some("refusal") => StopReason::Refusal,
+        _ => StopReason::End,
+    }
+}
+
 impl Decoder for Dec {
     fn frame(&mut self, _name: &str, data: &str, out: &mut Vec<Event>) {
         let Ok(v) = parse(data.as_bytes()) else {
@@ -106,46 +176,9 @@ impl Decoder for Dec {
         };
         let index = v.get("index").and_then(Value::f64).unwrap_or(0.0) as u64;
         match v.get("type").and_then(Value::str) {
-            Some("message_start") => {
-                let u = v.get("message").and_then(|m| m.get("usage"));
-                let n =
-                    |k: &str| u.and_then(|u| u.get(k)).and_then(Value::f64).unwrap_or(0.0) as u64;
-                self.usage = Usage {
-                    input: n("input_tokens"),
-                    output: n("output_tokens"),
-                    cache_read: n("cache_read_input_tokens"),
-                };
-            }
-            Some("content_block_start") => {
-                let b = v.get("content_block");
-                if b.and_then(|b| b.get("type")).and_then(Value::str) == Some("tool_use") {
-                    let s = |k: &str| {
-                        b.and_then(|b| b.get(k))
-                            .and_then(Value::str)
-                            .unwrap_or("")
-                            .to_string()
-                    };
-                    self.open.push((index, s("id")));
-                    out.push(Event::ToolCallStart {
-                        id: s("id"),
-                        name: s("name"),
-                    });
-                }
-            }
-            Some("content_block_delta") => {
-                let d = v.get("delta");
-                let s = |k: &str| {
-                    d.and_then(|d| d.get(k))
-                        .and_then(Value::str)
-                        .unwrap_or("")
-                        .to_string()
-                };
-                match d.and_then(|d| d.get("type")).and_then(Value::str) {
-                    Some("text_delta") => out.push(Event::TextDelta(s("text"))),
-                    Some("input_json_delta") => out.push(Event::ToolCallDelta(s("partial_json"))),
-                    _ => {}
-                }
-            }
+            Some("message_start") => self.message_start(&v),
+            Some("content_block_start") => self.block_start(&v, index, out),
+            Some("content_block_delta") => Dec::block_delta(&v, out),
             Some("content_block_stop") => {
                 if let Some(p) = self.open.iter().position(|(i, _)| *i == index) {
                     out.push(Event::ToolCallEnd {
@@ -153,25 +186,7 @@ impl Decoder for Dec {
                     });
                 }
             }
-            Some("message_delta") => {
-                let u = v.get("usage");
-                if let Some(n) = u.and_then(|u| u.get("output_tokens")).and_then(Value::f64) {
-                    self.usage.output = n as u64;
-                }
-                self.reason = Some(
-                    match v
-                        .get("delta")
-                        .and_then(|d| d.get("stop_reason"))
-                        .and_then(Value::str)
-                    {
-                        Some("tool_use") => StopReason::Tool,
-                        Some("max_tokens") => StopReason::Length,
-                        Some("refusal") => StopReason::Refusal,
-                        _ => StopReason::End,
-                    },
-                );
-                out.push(Event::Usage(self.usage));
-            }
+            Some("message_delta") => self.message_delta(&v, out),
             Some("message_stop") => out.push(Event::Stop(self.reason.unwrap_or(StopReason::End))),
             Some("error") => {
                 let e = v.get("error");
