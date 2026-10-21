@@ -15,15 +15,15 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_base::table_job;
 use crate::flow_cache::Cache;
-use crate::flow_compare::compare_job;
+use crate::flow_drift::drift_job;
 use crate::flow_estimate::estimate_job;
-use crate::flow_inclusion::inclusion_job;
+use crate::flow_level::level_job;
 use crate::flow_msngraph::job as msn_graph_job;
 pub use crate::flow_out::{run_plan_cached, run_plan_notify};
 use crate::flow_reactivity::reactivity_job;
 use crate::flow_read::{blobs, load, named, Loaded};
-use crate::flow_render::render_job;
 pub use crate::flow_run::{fill_inputs, run_plan};
+use crate::flow_stats::stats_job;
 
 pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)
@@ -177,7 +177,7 @@ impl FileRunner {
         made.get(&a.sha256)
             .or_else(|| self.inputs.get(&label))
             .cloned()
-            .unwrap_or_else(|| self.dir.join(label))
+            .unwrap_or_else(|| self.dir.join(crate::flow_set::dataset_name(&label)))
     }
 
     pub(crate) fn keep(&self, path: PathBuf, ty: DataType) -> Result<Artifact> {
@@ -341,6 +341,7 @@ enum Exec {
 
 /// The steps that run natively, the one list: `executable` and the runner read it.
 const EXECUTORS: &[(&str, Exec)] = &[
+    ("import.raw", Exec::Made(crate::flow_import::import_job)),
     ("convert.mzml", Exec::Made(crate::flow_base::convert_job)),
     ("spectra.centroid", Exec::Made(crate::flow_centroid::job)),
     ("index.mzidx", Exec::Made(crate::flow_base::index_job)),
@@ -349,26 +350,17 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("features.gapfill", Exec::Made(crate::flow_base::align_job)),
     ("features.table", Exec::File("report", table_job)),
     ("features.estimate", Exec::File("estimates", estimate_job)),
-    (
-        "table.stats",
-        Exec::File("report", crate::flow_stats::stats_job),
-    ),
+    ("table.stats", Exec::File("report", stats_job)),
     ("table.kmd", Exec::File("report", crate::flow_kmd::kmd_job)),
     ("table.pca", Exec::File("report", crate::flow_pca::pca_job)),
-    (
-        "table.drift",
-        Exec::File("table", crate::flow_drift::drift_job),
-    ),
+    ("table.drift", Exec::File("table", drift_job)),
     ("spectra.match", Exec::File("hits", match_job)),
     ("formula.ms1", Exec::File("formulas", formula_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
     ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),
     ("tp.dig_lr", Exec::File("dig", crate::flow_digl::dig_job)),
-    (
-        "annot.level",
-        Exec::File("annot", crate::flow_level::level_job),
-    ),
+    ("annot.level", Exec::File("annot", level_job)),
     (
         "tp.network",
         Exec::File("network", crate::flow_network::network_job),
@@ -390,14 +382,23 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "tp.position",
         Exec::File("sites", crate::flow_position::position_job),
     ),
-    ("structure.render", Exec::File("drawing", render_job)),
+    (
+        "structure.render",
+        Exec::File("drawing", crate::flow_render::render_job),
+    ),
     (
         "structure.reactivity",
         Exec::File("reactivity", reactivity_job),
     ),
-    ("meta.compare", Exec::File("comparison", compare_job)),
+    (
+        "meta.compare",
+        Exec::File("comparison", crate::flow_compare::compare_job),
+    ),
     ("quant.calibrate", Exec::Made(crate::flow_quant::quant_job)),
-    ("export.inclusion", Exec::File("report", inclusion_job)),
+    (
+        "export.inclusion",
+        Exec::File("report", crate::flow_inclusion::inclusion_job),
+    ),
     (
         "export.table_csv",
         Exec::File("report", crate::flow_export::csv_job),
