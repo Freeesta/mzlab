@@ -2,8 +2,12 @@
 //! (`formulas/1`). The rule is `mzlab/web/livelli.js` (`assess`) read from the same data (`mzlab-feat/data/livelli-1.json`, profile `mzlab`), so the
 //! thresholds are never typed twice; `tests/livelli_casi.json` runs the same cases through both. Level 2b is never given: the chemist decides it.
 
+use crate::flow::{read_all, write_made, FileRunner};
+use crate::flow_read::blobs;
 use mzlab_core::error::{Error, Result};
+use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::json::{self, round, Out, Value};
+use mzlab_core::step::DataType;
 
 const DATA: &str = include_str!("../../mzlab-feat/data/livelli-1.json");
 
@@ -379,4 +383,13 @@ pub fn level_text(hits: &[&[u8]], formulas: &[&[u8]]) -> Result<String> {
 
 fn cmp_opt(a: Option<f64>, b: Option<f64>) -> std::cmp::Ordering {
     a.unwrap_or(f64::NAN).total_cmp(&b.unwrap_or(f64::NAN))
+}
+
+pub(crate) fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let (hits, formulas) = (
+        read_all(r, job, "candidates")?,
+        read_all(r, job, "formulas")?,
+    );
+    let text = level_text(&blobs(&hits), &blobs(&formulas))?;
+    write_made(r, job, text, DataType::Annot)
 }

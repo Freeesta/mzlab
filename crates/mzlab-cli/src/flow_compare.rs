@@ -2,8 +2,11 @@
 //! the algorithm, preset and parameters of the variant, on the same inputs) and a compare instance that reads their outputs. `compare_text` measures how the
 //! outputs differ (`comparison/1`). It only reports the differences; it never says which variant is right.
 
+use crate::flow::{read_all, write_made, FileRunner};
+use crate::flow_read::blobs;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{check as check_core, Instance, Plan, Platform, Problem, Ref};
+use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::json::{parse, round, Out, Value};
 use mzlab_core::step::{find as find_step, DataType, Param, Port, RunsIn, Status, Step};
 
@@ -429,4 +432,16 @@ pub fn compare_text(wrapped: &str, labels: &[&str], files: &[&[u8]]) -> Result<S
     }
     o.raw("]}");
     Ok(o.0)
+}
+
+pub(crate) fn compare_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let text_of = |name: &str| {
+        let found = job.resolved.params.iter().find(|(k, _)| k == name);
+        found.and_then(|(_, v)| v.str()).unwrap_or("").to_string()
+    };
+    let (step, labels) = (text_of("step"), text_of("labels"));
+    let files = read_all(r, job, "variants")?;
+    let labels: Vec<&str> = labels.split(',').collect();
+    let text = compare_text(&step, &labels, &blobs(&files))?;
+    write_made(r, job, text, DataType::Comparison)
 }

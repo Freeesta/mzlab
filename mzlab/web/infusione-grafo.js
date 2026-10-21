@@ -8,10 +8,8 @@ import { drawGraph } from "./infusione-grafo-svg.js";
 import { nodePanel } from "./infusione-grafo-nodo.js";
 import { exportRow } from "./infusione-grafo-esporta.js";
 
-const CSS = `.ig-field{align-items:flex-end;gap:8px}.ig-field input[type=text]{min-width:14ch}.ig-sug{list-style:none;margin:2px 0;padding:0;border:1px solid var(--line);background:var(--panel);border-radius:6px;max-width:42ch}.ig-sug[hidden]{display:none}
-.ig-sugb{display:block;width:100%;min-height:28px;text-align:left;border:0;background:none;color:var(--ink);padding:2px 8px;cursor:pointer}.ig-sugb:hover,.ig-sugb:focus-visible{background:var(--sel)}
-.ig-set summary{cursor:pointer;min-height:24px}.ig-set input[type=number]{width:7ch}.ig-bar{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:6px 0}.ig-bar .bt{min-width:28px;min-height:28px}.ig-cut{min-height:28px}.ig-cuts{border-collapse:collapse}.ig-cuts th,.ig-cuts td{padding:2px 6px;text-align:left}
-@media (pointer:coarse){.ig-bar .bt,.ig-use,.ig-cut,.ig-sugb{min-width:40px;min-height:40px}}
+const CSS = `.ig-field{align-items:flex-end;gap:8px}.ig-field input[type=text]{min-width:14ch}.ig-set summary{cursor:pointer;min-height:24px}.ig-set input[type=number]{width:7ch}.ig-bar{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:6px 0}.ig-bar .bt{min-width:28px;min-height:28px}.ig-cut{min-height:28px}.ig-cuts{border-collapse:collapse}.ig-cuts th,.ig-cuts td{padding:2px 6px;text-align:left}
+@media (pointer:coarse){.ig-bar .bt,.ig-use,.ig-cut{min-width:40px;min-height:40px}}
 .ig-wrap{overflow:auto;border:1px solid var(--line);border-radius:6px;max-height:min(60vh,520px);background:var(--bg)}.ig-svg{display:block}
 .ig-box{fill:var(--panel);stroke:var(--line);stroke-width:1.5}.ig-node{cursor:pointer;outline:none}.ig-node:focus-visible .ig-box,.ig-node.sel .ig-box{stroke:var(--accent);stroke-width:3}.ig-node.hot .ig-box{stroke:var(--accent2)}
 .ig-node.sel .ig-box{fill:var(--sel)}.ig-mz{font:700 12px sans-serif;fill:var(--ink)}.ig-cand{font:11px sans-serif;fill:var(--muted)}.ig-cand.on{fill:var(--ink);font-weight:700}
