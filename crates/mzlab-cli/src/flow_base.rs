@@ -104,7 +104,8 @@ pub(crate) fn index_job(r: &FileRunner, job: &Job) -> Result<Made> {
         .and_then(|p| p.1.f64())
         .map_or(DEFAULT_BUDGET, |b| b as usize);
     let out = out_path(r, job, "mzidx");
-    crate::build_index(&source, &out, budget)?;
+    let label = job.inputs[0].1[0].label.clone().unwrap_or_default();
+    crate::build_index_of(&source, &label, &out, budget)?;
     let name = r.source_name(&job.inputs[0].1[0]);
     let a = r.keep(out, DataType::Mzidx)?;
     r.trace(

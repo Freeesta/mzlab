@@ -10,7 +10,7 @@ use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::Index;
 use mzlab_core::json::Out;
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::Limiti;
 use mzlab_core::mzidx::{build_mzml_spill, DEFAULT_BUDGET};
 use mzlab_core::upload::{impronte, indicizza_lettore, prepare};
 use mzlab_feat_table_wasm::core::{samples_json, table_file};
@@ -36,6 +36,9 @@ mod flow_export;
 mod flow_export_tests;
 mod flow_formula;
 mod flow_generate;
+mod flow_import;
+#[cfg(test)]
+mod flow_import_tests;
 mod flow_inclusion;
 mod flow_json;
 mod flow_kmd;
@@ -108,15 +111,15 @@ fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
 }
 
-/// The `.mzidx` of `path` written to `idx` with `budget` bytes of working memory: an mzML through its scan table, any other file through the reader of
-/// the registry.
-pub(crate) fn build_index(path: &Path, idx: &Path, budget: usize) -> Result<()> {
+/// The `.mzidx` of `path` written to `idx` with `budget` bytes of working memory: an mzML through its scan table, any other file or dataset (a `.wiff` with
+/// its `.wiff.scan`, a `.D`/`.d`/`.raw` folder) through the reader of the registry. `label` is the plan input (`NAME@ID` names the sample `ID`).
+pub(crate) fn build_index_of(path: &Path, label: &str, idx: &Path, budget: usize) -> Result<()> {
     let name = path
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    let size = std::fs::metadata(path).map_err(io)?.len();
     let mut out = File::create(idx).map_err(io)?;
-    if name.to_lowercase().ends_with(".mzml") {
+    if !path.is_dir() && name.to_lowercase().ends_with(".mzml") {
+        let size = std::fs::metadata(path).map_err(io)?.len();
         let p = prepare(&mut File::open(path).map_err(io)?, size, &name)?;
         build_mzml_spill(
             &p.table,
@@ -126,19 +129,18 @@ pub(crate) fn build_index(path: &Path, idx: &Path, budget: usize) -> Result<()> 
             None,
         )?;
     } else {
-        let mut fs = FileSet {
-            membri: vec![Membro {
-                nome: name.clone(),
-                dim: size,
-                dati: Box::new(File::open(path).map_err(io)?),
-                sha1: None,
-            }],
-        };
+        let mut fs = flow_set::file_set(path)?;
         let imp = impronte(&mut fs)?;
         let mut l = mzlab_lettori::apri(fs, &Limiti::desktop())?;
-        indicizza_lettore(&mut *l, 0, &imp, &name, &mut out, budget, &mut |_| {})?;
+        let ids: Vec<u32> = l.campioni().iter().map(|s| s.id).collect();
+        let sample = flow_set::sample_index(label, &ids)?;
+        indicizza_lettore(&mut *l, sample, &imp, &name, &mut out, budget, &mut |_| {})?;
     }
     Ok(())
+}
+
+pub(crate) fn build_index(path: &Path, idx: &Path, budget: usize) -> Result<()> {
+    build_index_of(path, "", idx, budget)
 }
 
 pub(crate) fn open(idx: &Path) -> Result<Index<File>> {

@@ -172,7 +172,7 @@ impl FileRunner {
         made.get(&a.sha256)
             .or_else(|| self.inputs.get(&label))
             .cloned()
-            .unwrap_or_else(|| self.dir.join(label))
+            .unwrap_or_else(|| self.dir.join(crate::flow_set::dataset_name(&label)))
     }
 
     pub(crate) fn keep(&self, path: PathBuf, ty: DataType) -> Result<Artifact> {
@@ -345,6 +345,7 @@ enum Exec {
 
 /// The steps that run natively, the one list: `executable` and the runner read it.
 const EXECUTORS: &[(&str, Exec)] = &[
+    ("import.raw", Exec::Made(crate::flow_import::import_job)),
     ("convert.mzml", Exec::Made(crate::flow_base::convert_job)),
     ("spectra.centroid", Exec::Made(crate::flow_centroid::job)),
     ("index.mzidx", Exec::Made(crate::flow_base::index_job)),
