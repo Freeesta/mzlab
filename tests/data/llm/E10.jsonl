@@ -1,0 +1,1 @@
+{"events":[{"ev":"text_delta","text":"RT is the retention time: when a compound leaves the column."},{"cache_read":0,"ev":"usage","in":100,"out":20},{"ev":"stop","reason":"end"}],"schema":"llmreg/1","turn":0}

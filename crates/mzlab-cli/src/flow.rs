@@ -379,6 +379,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
         Exec::File("report", crate::flow_stats::stats_job),
     ),
     ("table.kmd", Exec::File("report", crate::flow_kmd::kmd_job)),
+    ("table.pca", Exec::File("report", crate::flow_pca::pca_job)),
     (
         "table.drift",
         Exec::File("table", crate::flow_drift::drift_job),
