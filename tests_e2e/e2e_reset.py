@@ -102,7 +102,7 @@ try:
             pg.goto(base + "?reset=files"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)
             load_files(); pg.evaluate("STATO.aggiunta(true, 'adding'); applyView()"); pg.wait_for_selector("#clearall")
             assert pg.inner_text("#clearall") == "Clear loaded data" and pg.inner_text("#loaded").startswith("Files already loaded ("), pg.inner_text("#loaded")
-            pg.evaluate("location.hash = '#/dati'")                                               # a hash in the address must not stop the reload
+            pg.evaluate("location.hash = '#/data'")                                               # a hash in the address must not stop the reload
             pg.click("#clearall"); assert "Clear the" in pg.inner_text("#clearall") and pg.evaluate("E.files.length") >= 2, "the first press only asks"
             pg.click("#clearall"); pg.wait_for_function("location.search === '' && window.qqReady && typeof E !== 'undefined' && E.files.length === 0", timeout=60000)
             attendi(pg, "(async () => { const n = []; for await (const [k] of (await navigator.storage.getDirectory()).entries()) n.push(k); return n.includes('librerie') && !S.sess; })()", 30000)   # settled: the reset finished writing

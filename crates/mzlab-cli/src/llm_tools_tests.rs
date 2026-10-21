@@ -87,10 +87,12 @@ fn every_step_is_in_the_add_step_enum() {
         .unwrap()
         .arr();
     let got: Vec<&str> = list.iter().map(|v| v.str().unwrap()).collect();
-    let want: Vec<String> = steps()
+    let mut want: Vec<String> = steps()
         .iter()
         .map(|s| format!("{}@{}", s.id, s.version))
         .collect();
+    // The catalog lists the steps sorted by id.
+    want.sort();
     assert_eq!(got, want);
 }
 

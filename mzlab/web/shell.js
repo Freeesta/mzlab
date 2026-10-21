@@ -1,7 +1,7 @@
 // @ts-strict
 // Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views.
 const $=s=>document.querySelector(s);
-// addresses of the views: #/dati, #/disegno (and #/teoria, which the head script above sends to the standalone Teoria on a cold start)
+// addresses of the views: #/data, #/draw (and #/theory, which the head script above sends to the standalone Teoria on a cold start)
 const fmt=v=>v===0?"0":(Math.abs(v)>=1e4||Math.abs(v)<.01)?v.toExponential(1):(+v.toPrecision(3)).toString();
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -49,7 +49,7 @@ window.hdrH=()=>document.querySelector("header").offsetHeight;
 // Back and Forward walk through the views
 function setView(v,fromHistory){v=VIEW_ALIAS[v]||v;STATO.vista(v,"view");applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);}
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.dataset.v));
-// Back/Forward and typed addresses: the view follows the hash (a cold #/teoria never gets here: the head script leaves the page)
+// Back/Forward and typed addresses: the view follows the hash (a cold #/theory never gets here: the head script leaves the page)
 addEventListener("popstate",()=>{const v=hashView()||"data";if(v!==S.view)setView(v,true)});
 // a direct address shows its view at once, without waiting for the engine (the loading veil stays until the program is ready)
 if(S.view!=="data"){$("#v-draw").hidden=S.view!=="draw";$("#v-theory").hidden=S.view!=="theory";document.documentElement.classList.toggle("in-draw",S.view==="draw");document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.view))}
