@@ -22,7 +22,6 @@ const BUCHI: &[&str] = &[
     "rt.predict",
     "annot.regulatory",
     "annot.hazard",
-    "structure.render",
     "structure.reactivity",
     "table.stats",
     "table.pca",

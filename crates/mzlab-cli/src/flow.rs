@@ -419,6 +419,10 @@ const EXECUTORS: &[(&str, Exec)] = &[
         Exec::File("sites", crate::flow_position::position_job),
     ),
     (
+        "structure.render",
+        Exec::File("drawing", crate::flow_render::render_job),
+    ),
+    (
         "meta.compare",
         Exec::File("comparison", crate::flow_compare::compare_job),
     ),

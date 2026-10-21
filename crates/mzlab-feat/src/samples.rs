@@ -3,9 +3,9 @@
 //! Changing a metadatum does not change the detection (the `.mzfeat` is the same): only the views and the identities read it.
 
 use mzlab_core::budget::sha256_hex;
+use mzlab_core::campioni;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out, Value};
-use mzlab_core::campioni;
 use mzlab_core::project::guess_sample;
 
 pub const SCHEMA: &str = "campioni/1";
@@ -35,7 +35,10 @@ pub struct Sample {
 /// The metadata proposed for `files` (`(name, SHA-256)` in the order of injection, as in the table): the roles and times of
 /// `mzlab_core::campioni::proponi` in the vocabulary of `campioni/1` (an infusion takes the type and time of the old rules, a QC its time; no series; replicates by type, time and concentration).
 pub fn propose(files: &[(String, String)]) -> Vec<Sample> {
-    let named: Vec<(String, String, String)> = files.iter().map(|(n, s)| (n.clone(), s.clone(), String::new())).collect();
+    let named: Vec<(String, String, String)> = files
+        .iter()
+        .map(|(n, s)| (n.clone(), s.clone(), String::new()))
+        .collect();
     let mut out: Vec<Sample> = Vec::with_capacity(files.len());
     for c in campioni::proponi(&named) {
         let (kind, time_min) = match c.kind.as_str() {
@@ -47,7 +50,11 @@ pub fn propose(files: &[(String, String)]) -> Vec<Sample> {
             .iter()
             .filter(|s| s.kind == kind && s.time_min == time_min && s.conc == c.conc)
             .count() as u32;
-        let group = if matches!(kind, "sample" | "std" | "calibration") { "" } else { kind };
+        let group = if matches!(kind, "sample" | "std" | "calibration") {
+            ""
+        } else {
+            kind
+        };
         out.push(Sample {
             kind: kind.to_string(),
             time_min,
@@ -77,14 +84,22 @@ pub fn to_json(samples: &[Sample]) -> String {
     let mut j = Out::default();
     j.raw("{\"schema\":").str(SCHEMA).raw(",\"campioni\":[");
     for (i, s) in samples.iter().enumerate() {
-        j.raw(if i > 0 { ",{\"file\":" } else { "{\"file\":" }).str(&s.file);
-        j.raw(",\"sha256\":").str(&s.sha256).raw(",\"tipo\":").str(&s.kind);
+        j.raw(if i > 0 { ",{\"file\":" } else { "{\"file\":" })
+            .str(&s.file);
+        j.raw(",\"sha256\":")
+            .str(&s.sha256)
+            .raw(",\"tipo\":")
+            .str(&s.kind);
         j.raw(",\"tempo_min\":").opt(s.time_min);
-        j.raw(",\"replica\":").int(s.replicate as i64).raw(",\"gruppo\":").str(&s.group);
+        j.raw(",\"replica\":")
+            .int(s.replicate as i64)
+            .raw(",\"gruppo\":")
+            .str(&s.group);
         j.raw(",\"concentrazione\":").opt(s.conc).raw(",\"unita\":");
         opt_str(&mut j, s.unit.as_deref());
         j.raw(",\"ordine_iniezione\":").int(s.order as i64);
-        j.raw(",\"istd\":").raw(if s.istd { "true" } else { "false" });
+        j.raw(",\"istd\":")
+            .raw(if s.istd { "true" } else { "false" });
         j.raw(",\"note\":").str(&s.note).raw("}");
     }
     j.raw("]}");
@@ -147,7 +162,9 @@ pub fn from_json(bytes: &[u8]) -> Result<Vec<Sample>> {
         let kind = text(v, "tipo")?;
         let whole = |k: &str| -> Result<u32> {
             let x = number(v, k)?.ok_or_else(bad)?;
-            (x >= 1.0 && x.fract() == 0.0 && x < 4e9).then_some(x as u32).ok_or_else(bad)
+            (x >= 1.0 && x.fract() == 0.0 && x < 4e9)
+                .then_some(x as u32)
+                .ok_or_else(bad)
         };
         if !KINDS.contains(&kind.as_str()) {
             return Err(bad());

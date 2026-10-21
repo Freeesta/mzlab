@@ -19,7 +19,7 @@ Per ogni passo: (1) registra il descrittore nel registro del CLI (`flow::steps()
 - `flow-copertura-tabui.md` e `cli.md` descrivono lo stato; l'elenco dei buchi qui sotto è quello che resta.
 
 ## Buchi per modulo (oggi)
-- **Senza esecutore, Tabui**: `features.ms2_link` (incluso in `features.detect`, non separabile senza cambiare i byte), `structure.render`, `structure.reactivity`; `tp.position` non rifà i voti dell'albero MSn (le righe con `source: tree` tengono il loro `site`).
+- **Senza esecutore, Tabui**: `features.ms2_link` (incluso in `features.detect`, non separabile senza cambiare i byte), `structure.reactivity`; `tp.position` non rifà i voti dell'albero MSn (le righe con `source: tree` tengono il loro `site`).
 - **Senza esecutore** (`err.flow.step.native`): `table.drift`, `table.stats`, `table.pca`, `table.kmd` (motori in `crates/mzlab-feat/src/stat/`, `drift.rs`), `export.table_csv`, `export.mztab` (`export_mztab.rs`), `import.raw`, `spectra.chimeric`, `spectra.insilico`, `rt.predict`, `annot.regulatory`, `annot.hazard` (il registro di pericolosità non è in Rust).
 - **Mancano come passi**: albero/grafo MSn (`msngrafo/1`), centroidazione prima di `features.detect` (`lettori_centroidi.rs`), ricerca per nome del composto, avanzamento in diretta.
 - **Sito**: nessun passo è eseguibile dal browser (manca la terza voce di `F.runners`); il sito costruisce il piano e dà il comando da copiare.
