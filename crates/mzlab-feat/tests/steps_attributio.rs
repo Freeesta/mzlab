@@ -46,8 +46,9 @@ fn registry_lists_the_nine_steps_in_the_order_of_the_chain() {
 fn every_port_requires_high_resolution_and_the_package_is_attributio() {
     for s in attributio() {
         assert_eq!(s.package, "attributio", "{}", s.id);
+        // spectra.match also runs on unit-resolution spectra (precursor_da)
         assert!(
-            s.ins.iter().any(|p| p.requires.resolution == ["hr"]),
+            s.id == "spectra.match" || s.ins.iter().any(|p| p.requires.resolution == ["hr"]),
             "{} has no hr input",
             s.id
         );
