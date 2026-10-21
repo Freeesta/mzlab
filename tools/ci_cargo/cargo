@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """`cargo` of the CI pytest jobs (first in PATH, see test.yml): `cargo run ...` becomes `cargo build ...` plus the exec of the binary that was built.
 The real `cargo run` holds the lock of the build directory until the program ends, so every other worker that calls cargo waits for it; here the lock is
-released as soon as the build is done. Any other command, or a target this script cannot find, goes to the real cargo untouched."""
+released as soon as the build is done. Any other command, or a target this script cannot find, goes to the real cargo untouched.
+Builds also get a target directory per feature family (target/fam/<name>): the same crate built with other features in a shared directory is compiled again
+at every alternation and the builds queue on one lock. The built files are hard-linked back to target/ so the paths written in the tests keep working."""
 import json
 import os
 import shutil
@@ -27,8 +29,58 @@ def valore(args, nome):
     return None
 
 
+def famiglia(args):
+    """Name of the feature family of a build/run command, or None to leave it in target/."""
+    if args[0] not in ("build", "run", "check", "test") or any(a.startswith("--target-dir") for a in args):
+        return None
+    triple = valore(args, "--target")
+    if triple:
+        return "wasm"
+    pacchetti = [args[i + 1] for i, a in enumerate(args[:-1]) if a in ("-p", "--package")]
+    if "mzlab-cli" in pacchetti:
+        return "cli"
+    funzioni = valore(args, "--features")
+    if funzioni:
+        return "feat-" + "".join(c if c.isalnum() else "_" for c in funzioni)
+    if any(p in ("mzlab-feat-wasm", "mzlab-feat-table-wasm", "mzlab-feat") for p in pacchetti):
+        return "feat"
+    return None
+
+
+def rispecchia(radice, fam_dir):
+    """Hard-link the binaries, examples and .wasm of a family directory to the same paths under target/."""
+    for rel in ("release", "release/examples", "wasm32-unknown-unknown/release", "wasm32-wasip1/release/examples", "wasm32-wasip1/release"):
+        da, a = os.path.join(fam_dir, rel), os.path.join(radice, rel)
+        if not os.path.isdir(da):
+            continue
+        os.makedirs(a, exist_ok=True)
+        for nome in os.listdir(da):
+            sorgente = os.path.join(da, nome)
+            if os.path.isfile(sorgente) and not nome.endswith(".d"):
+                destino = os.path.join(a, nome)
+                tmp = destino + ".tmp"
+                try:
+                    if os.path.exists(tmp):
+                        os.remove(tmp)
+                    os.link(sorgente, tmp)
+                    os.replace(tmp, destino)
+                except OSError:
+                    shutil.copy2(sorgente, destino)
+
+
 def main():
+    global ENV
     args = sys.argv[1:]
+    fam = famiglia(args) if args and not os.environ.get("CARGO_TARGET_DIR") else None
+    if fam:
+        radice = os.path.join(os.getcwd(), "target")
+        fam_dir = os.path.join(radice, "fam", fam)
+        ENV = {**ENV, "CARGO_TARGET_DIR": fam_dir}
+        if args[0] != "run":
+            r = subprocess.run([REALE, *args], env=ENV)
+            if r.returncode == 0:
+                rispecchia(radice, fam_dir)
+            sys.exit(r.returncode)
     if not args or args[0] != "run":
         reale(args)
     resto = []
@@ -60,4 +112,5 @@ def main():
     os.execve(scelti[0][3], [scelti[0][3], *resto], ENV)
 
 
-main()
+if __name__ == "__main__":
+    main()
