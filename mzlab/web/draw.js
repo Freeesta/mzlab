@@ -755,7 +755,7 @@ Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
 window.TPDraw = { when: async () => { await start(); return true; }, load: async smi => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async pairs => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await K.getSmiles()); }, partial: async () => { await start(); return partialExport(K, undefined, ids => pieceMolfile(ids)); }, ready: () => !!K, undo: redo => { const ed = K && K.editor; if (ed && typeof ed.undo === "function" && typeof ed.redo === "function") redo ? ed.redo() : ed.undo(); } };
 document.addEventListener("tpview", e => { if (/** @type {any} */ (e).detail.view === "draw") start(); });
-try { if (S.view === "draw") start(); } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/disegno, Cmd+Shift+R): the editor starts without waiting for the engine
+try { if (S.view === "draw") start(); } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/draw, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
 // "Nuova sessione": the drawing and its controls go back to the start (the notebook was already emptied)
 document.addEventListener("nbreset", () => {

@@ -54,7 +54,7 @@ try:
             pg.click("#side-toggle"); pg.wait_for_timeout(300)
         step("hidden panels are shown for their steps and hidden again; Escape closes", hidden_panels)
         def english():
-            pg.goto(f"http://127.0.0.1:{r.port}/?lang=en#/disegno"); pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000); pg.wait_for_timeout(1500)
+            pg.goto(f"http://127.0.0.1:{r.port}/?lang=en#/draw"); pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000); pg.wait_for_timeout(1500)
             pg.evaluate("TOUR.disegno()"); pg.wait_for_timeout(400)
             g = pg.evaluate(GEO); assert g["hd"].endswith("Drawing") and g["ttl"] == "The canvas", g
             pg.keyboard.press("Escape")
