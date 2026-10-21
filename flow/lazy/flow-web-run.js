@@ -163,7 +163,8 @@
       else emit(o, { ...ev, stato: "skipped", via: "computer" });
       steps.push(inst.id);
     }
-    return { steps, table };
+    // a run launched by the assistant keeps who launched it (llm of prov/1: S.llmRef = {log_sha256, turn, provider, model, level})
+    return { steps, table, llm: S.llmRef || null };
   };
 
   /** the estimate of the alignment when every detection is already kept in OPFS, else null: lets the page refuse a series that no level of memory holds before it starts @param {any} S */

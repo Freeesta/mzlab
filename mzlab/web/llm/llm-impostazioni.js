@@ -31,7 +31,7 @@ export async function mount(box, ui, startOn = false) {
   /** @type {Provider[]} */ let provs = [], hosts = [];
   let replayOn = false;
   const api = { replay: async (/** @type {string} */ text, strict = false) => { if (!client || client.kind !== "site") throw new Error("replay needs the site client"); await /** @type {SiteClient} */ (client).replay(text, strict); replayOn = true; } };
-  /** @type {any} */ (window).MZLAB_LLM = api;
+  /** @type {any} */ (window).MZLAB_LLM = Object.defineProperty(api, "client", { get: () => client, enumerable: false });
 
   const status = (/** @type {string} */ k, /** @type {any} */ p = {}) => { const el = box.querySelector("#llm-st"); if (el) el.textContent = k ? T(k, p) : ""; };
   const errText = (/** @type {{key: string, params?: any}} */ e) => { const k = String(e.key || "err.llm.module"); return k.startsWith("err.llm.") ? I18N.t(`err.llm.${k.slice(8)}`, e.params || {}) : T("err.llm.module"); };

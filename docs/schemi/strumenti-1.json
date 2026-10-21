@@ -197,7 +197,12 @@
       "input_schema":{
         "type":"object",
         "additionalProperties":false,
-        "properties":{"instance":{"type":"string","description":"Instance id in the plan."}},
+        "properties":{
+          "instance":{"type":"string","description":"Instance id in the plan."},
+          "step":{"type":"string"},
+          "name":{"type":"string"},
+          "value":{}
+        },
         "required":["instance"],
         "oneOf":[
           {

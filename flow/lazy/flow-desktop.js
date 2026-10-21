@@ -19,7 +19,7 @@
     const { plan, names, warns } = F.runPlanFromData(S), excluded = /** @type {string[]} */ ([]);
     let out;
     for (;;) {
-      try { out = JSON.parse(await post("flow/run", { plan: F.exportText(plan), files: S.samplesJson || {} })); break; }
+      try { out = JSON.parse(await post("flow/run", { plan: F.exportText(plan), files: S.samplesJson || {}, ...(S.llmRef ? { llm: S.llmRef } : {}) })); break; }
       catch (e) {
         const x = /** @type {any} */ (e), bad = x && x.key === "err.flow.input.missing" ? x.params.input : null;
         if (!bad || !names.includes(bad) || names.length < 2) throw e;
