@@ -26,6 +26,7 @@ mod flow_level;
 mod flow_link;
 mod flow_match;
 mod flow_ms2;
+mod flow_msngraph;
 mod flow_network;
 mod flow_out;
 pub mod flow_report;
@@ -307,6 +308,8 @@ mod flow_level_tests;
 mod flow_link_tests;
 #[cfg(test)]
 mod flow_ms2_tests;
+#[cfg(test)]
+mod flow_msngraph_tests;
 #[cfg(test)]
 mod flow_network_tests;
 #[cfg(test)]

@@ -14,7 +14,7 @@ import { makeConvertCentroids } from "./rust-centroidi.js";
 import { wiffApi } from "./rust-convert.js";
 import { makeNativo } from "./rust-nativo-pagina.js";
 import { makeRecycler } from "./rust-recycle.js";
-import { compileOnce, ordered, judgeDeath, forgetFaults } from "./rust-supervisor.js";
+import { compileOnce, ordered, judgeDeath, forgetFaults, stepDown, takeDown, lowerTo, off } from "./rust-supervisor.js";
 import * as BUD from "./rust-budget.js";
 
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
@@ -23,18 +23,16 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   let worker = null, seq = 0, peakMem = 0;
   const pending = new Map();               // id -> { res, worker }
   const stats = { rust: 0, python: 0, restarts: 0, mzml: 0 };       // mzml: how many times a file was read as an mzML (not from its index)
-  const api = BUD.attach({ enabled: true, disabled: false, stats, budgetMb: 0, halved: false, lastPanic: /** @type {string | null} */ (null) });
-  const death = { restarts: /** @type {number[]} */ ([]), api, stats };       // for judgeDeath
+  const api = BUD.attach({ enabled: true, disabled: false, stats, budgetMb: BUD.sessionLevel(), strikes: 0, pendingDown: /** @type {{ current: number, strikes: number } | null} */ (null), lastPanic: /** @type {string | null} */ (null) }); const death = { restarts: /** @type {number[]} */ ([]), ooms: /** @type {number[]} */ ([]), api, stats };       // for judgeDeath
   const base = n => String(n || "").split(/[\\/]/).pop() || "";
-  const recycler = api.recycler = makeRecycler({ pending, worker: () => worker, recycleNow: () => { stop(worker, { dead: true }); stats.recycled = (stats.recycled || 0) + 1; respawn(); }, disabled: () => api.disabled });
+  const recycler = api.recycler = makeRecycler({ pending, worker: () => worker, recycleNow: () => { stop(worker, { dead: true }); stats.recycled = (stats.recycled || 0) + 1; respawn(); }, disabled: () => api.disabled, limitMb: () => api.budgetMb || (api.choice && api.choice.mb) || 0 });
   const wasmModule = compileOnce(new URL("wasm/mzlab_wasm_bg.wasm", workerUrl));
   function spawn() {
-    const w = /** @type {Worker & { send?: any }} */ (new Worker(workerUrl, { type: "module" })); peakMem = 0; w.send = ordered(w, wasmModule, () => api.budgetMb, () => ++seq, BUD.policy);
+    const w = /** @type {Worker & { send?: any }} */ (new Worker(workerUrl, { type: "module" })); peakMem = 0; w.send = ordered(w, wasmModule, () => api.budgetMb, () => ++seq, BUD.policy, BUD.whenProbed, () => takeDown(api));
     w.onmessage = ev => {
       const m = ev.data;
-      if (m.op === "ready") return;
-      if (m.op === "blocked") { onBlocked(); return; }                                                     // the saved files are held by another tab
-      if (m.op === "notice") { notify(m.key); return; }  if (m.op === "budget-choice") { BUD.chosen(api, m.choice); return; }   // notice: e.g. error.memoryBudget from the pool of the indexes
+      if (m.op === "ready") return; if (m.op === "blocked") { onBlocked(); return; }                                                     // the saved files are held by another tab
+      if (m.op === "notice") { notify(m.key); return; }  if (m.op === "budget-choice") { BUD.chosen(api, m.choice); return; } if (m.op === "budget-down") { if (lowerTo(api, stats, m, BUD.lowered)) notify("error.engineLowered"); else { stop(worker, { dead: true }); off(api, slots, notify, "error.memoryBudget"); } return; }   // notice: e.g. error.memoryBudget from the pool of the indexes
       if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);
       if (!p) { if (m.buf) recycle(m.buf); return; }
@@ -64,9 +62,10 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   function died(w, info) {
     if (w !== worker) return;
     stop(w, { dead: true });
-    const act = judgeDeath(death, info, peakMem); if (act === "halve") BUD.halved(api);
-    if (act === "restart" || act === "halve") { respawn(); notify("error.engineRestarted"); return; }
-    api.disabled = true; slots.forEach(s => { if (s) s.bad = true; }); notify(act === "oom" ? "error.memoryBudget" : "error.engineFallback");
+    const act = judgeDeath(death, info, peakMem);
+    if (act === "down") { stepDown(api); respawn(); return; }       // a death for lack of memory: the new worker asks Rust for the level below
+    if (act === "restart") { respawn(); notify("error.engineRestarted"); return; }
+    off(api, slots, notify, act === "oom" ? "error.memoryBudget" : "error.engineFallback");
   }
   // A file has ONE reader: its .mzidx (OPFS), which answers TIC, XIC, scan lists and filters without reading the mzML. The mzML itself is opened
   // only for what needs the spectra (single scans), the first time they are asked, or at once when the file has no index (no OPFS).
@@ -118,7 +117,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     return ks.every(k => slots[k] && slots[k].idx && !slots[k].bad);
   };
   api.crash = grow => rpc({ op: "crash", grow: grow || 0 });
-  api.forgetFaults = () => { forgetFaults(death); if (!worker) respawn(); };      // test hook: starts the count of deaths again and brings a stopped engine back
+  api.forgetFaults = () => { forgetFaults(death); BUD.forgetLevel(); if (!worker) respawn(); };      // test hook: starts the count of deaths again and brings a stopped engine back
   api.stop = () => { if (worker) { worker.terminate(); worker = null; } };                // reset.js: the worker holds sync handles on the files
   api.rpc = rpc;                                                       // for lr.js (the engine of the page)
 

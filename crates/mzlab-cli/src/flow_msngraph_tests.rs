@@ -1,0 +1,77 @@
+//! `spectra.msn_graph@1`: the plan gives the bytes of `mzlab-cli msn-graph` on the synthetic infusion of the route `/api/msntree`.
+
+use std::path::{Path, PathBuf};
+
+fn msn() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/ref/msntree_rotta/msn.mzML")
+}
+
+fn dir(tag: &str) -> PathBuf {
+    let d = std::env::temp_dir().join(format!("mzlab_msngraph_{tag}_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(&d).unwrap();
+    std::fs::copy(msn(), d.join("msn.mzML")).unwrap();
+    d
+}
+
+fn graph(d: &Path, params: &str) -> mzlab_core::Result<String> {
+    let plan = format!(
+        r#"{{"format":"mzflow/2","inputs":[{{"name":"msn.mzML","type":"mzml"}}],"steps":[
+        {{"id":"g","step":"spectra.msn_graph@1","in":{{"source":"file:msn.mzML"}},"params":{params}}}]}}"#
+    );
+    let (run, prov) = crate::flow::run_plan(plan.as_bytes(), d, &d.join("work"), 1, None)?;
+    assert!(
+        run.skipped.is_empty() && !prov.contains("\"error\""),
+        "{prov}"
+    );
+    Ok(std::fs::read_to_string(d.join("work/g.json")).unwrap())
+}
+
+fn cli(args: &[&str]) -> String {
+    let mut a = vec!["msn-graph".to_string(), msn().to_str().unwrap().to_string()];
+    a.extend(args.iter().map(|s| s.to_string()));
+    let o = crate::execute(&a);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    String::from_utf8(o.stdout).unwrap()
+}
+
+#[test]
+fn the_step_gives_the_bytes_of_the_command() {
+    let d = dir("a");
+    let got = graph(&d, r#"{"formula":"C14H15N3O5+"}"#).unwrap();
+    assert_eq!(got, cli(&["--formula", "C14H15N3O5+"]));
+    // masses only
+    assert_eq!(graph(&d, "{}").unwrap(), cli(&[]));
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn every_option_of_the_command_is_a_parameter() {
+    let d = dir("b");
+    let got = graph(
+        &d,
+        r#"{"formula":"C14H15N3O5+","smiles":"CC","ppm_formula":5,"mz_basso":100,"ppm_basso":15,"prove_min":2,"attivazione":"cid","isotopi":true,"scelte":"305.1=C14H15N3O5"}"#,
+    )
+    .unwrap();
+    let want = cli(&[
+        "--formula",
+        "C14H15N3O5+",
+        "--smiles",
+        "CC",
+        "--ppm-formula",
+        "5",
+        "--mz-basso",
+        "100",
+        "--ppm-basso",
+        "15",
+        "--prove-min",
+        "2",
+        "--attivazione",
+        "cid",
+        "--isotopi",
+        "--scelta",
+        "305.1=C14H15N3O5",
+    ]);
+    assert_eq!(got, want);
+    let _ = std::fs::remove_dir_all(&d);
+}
