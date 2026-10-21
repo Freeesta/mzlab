@@ -1,2 +1,3 @@
 {"ts_utc":"2026-10-21T17:11:14Z","tipo":"run","workflow":"test","esito":"cancelled","main":true,"durata_s":293,"attivo_s":0,"coda_s":0,"jobs":{},"pr":null,"sha":"9fbdb833f7d9bf3dfaf51aceb402e248d2ffad1a","run_id":39640792928,"run_attempt":1}
 {"ts_utc":"2026-10-21T17:11:14Z","tipo":"run","workflow":"rust","esito":"cancelled","main":true,"durata_s":293,"attivo_s":0,"coda_s":0,"jobs":{},"pr":null,"sha":"9fbdb833f7d9bf3dfaf51aceb402e248d2ffad1a","run_id":39640792834,"run_attempt":1}
+{"tipo":"pr","pr":1370,"sha":"2f56bf1e3f80a3c5a26244040112fdeaf479bd76","ts_utc":"2026-10-21T17:11:09Z","azione":"unita","aperta_s":1341,"merge_main":0,"verde_a_unione_s":null}
