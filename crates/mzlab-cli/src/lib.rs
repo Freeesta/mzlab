@@ -16,7 +16,7 @@ use mzlab_core::upload::{impronte, indicizza_lettore, prepare};
 use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
 
-mod convert;
+pub mod convert;
 mod convert_report;
 pub mod flow;
 mod flow_base;

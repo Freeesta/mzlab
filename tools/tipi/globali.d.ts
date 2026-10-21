@@ -11,6 +11,7 @@ declare var CARTELLA: any;
 declare var CMD: any;
 declare var CONC_MGL: any;
 declare var CONV: any;
+declare var CONVQ: any;
 declare var CONVROWS: any;
 declare var CONV_FINAL: any;
 declare var CONV_QUIET: any;

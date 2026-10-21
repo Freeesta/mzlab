@@ -81,6 +81,8 @@ pub struct State {
     pub(crate) store: Mutex<crate::store::Store>,
     /// what the steps of mzFinder leave between two calls (`feat.rs`): the `.mzfeatf`, the table, the hypotheses, the Dig
     pub(crate) feat: Mutex<crate::feat::FeatState>,
+    /// the background conversion of the maker's files to mzML (`conv_coda.rs`)
+    pub(crate) coda: crate::conv_coda::Coda,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

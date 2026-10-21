@@ -165,6 +165,7 @@ impl IdxBuilder {
         name: &str,
         f: impl FnOnce(&mut File, &mut File) -> Result<Stats, Error> + Send,
     ) -> Result<Stats, Error> {
+        let _indexing = crate::conv_coda::Indexing::new();
         let dest = self.path(name)?;
         let part = self.dir.join(format!("{}.mzidx.part", clean(name)?));
         let sp = self.dir.join(format!("{}.mzidx.sp.part", clean(name)?));

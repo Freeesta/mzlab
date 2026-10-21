@@ -204,7 +204,10 @@ export function createLr({ rb }) {
       return null;
     } catch (e) {
       let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ }
-      return j && j.error_key ? json({ error: j.error || j.error_key, error_key: j.error_key, params: j.params || {} }, 400) : fail("err.route.unavailable", {}, String(e && e.message || e), 500);
+      if (j && j.error_key) return json({ error: j.error || j.error_key, error_key: j.error_key, params: j.params || {} }, 400);
+      // not an engine error: a JS exception while serving a route that exists. It is a failure of the data (cause and original text in the diagnosis), never "route unavailable"
+      const raw = String(e && e.message || e).slice(0, 600);
+      return fail("err.load.failed", { fase: "decode", raw }, raw, 500);
     }
   };
   return api;
