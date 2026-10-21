@@ -197,14 +197,14 @@ Costruito in Rust (`mzlab_llm::context::build(sources, budget_tokens)`) da rispo
 
 | Chat | PR in ordine | Zona | Dopo |
 |---|---|---|---|
-| DEV LLM-core (Rust) | D1 → D2 → D3 | `crates/mzlab-llm`, `crates/mzlab-cli/src/llm*.rs`, `docs/schemi/` | – |
+| DEV LLM-core (Rust) | D0 → D1 → D2 → D3 → D7 | `crates/mzlab-llm`, `crates/mzlab-cli/src/llm*.rs`, `docs/schemi/` | – |
 | DEV LLM-app (pagina e desktop) | D4 → D5 → D6 | `mzlab/web/llm/`, `flow/lazy/flow-llm*.js`, `crates/mzlab-llm-wasm`, `crates/mzlab-desktop/src/llm.rs`, `lang/` | D4 dopo D2; D5 dopo D3 e D4; D6 dopo D5 |
 
 Conflitti caldi comuni: `docs/agenti/cli.md` (una riga per comando, niente riscritture), `crates/mzlab-cli/src/lib.rs::execute` (≤ 80 righe: una sola riga `Some("llm")`), `crates/mzlab-cli/src/flow.rs` (499 righe su 500: **non si tocca**), `mzlab/web/rust-worker.js` (non si tocca: l'LLM ha il suo worker), `flow/lazy/flow-shell.js` (una riga per il pulsante), `tools/build_feat_wasm.sh` (un blocco come `libro`).
 
 ## 13. Prompt DEV
 
-Ogni prompt è completo: il Coordinatore lo copia così com'è nel repository privato.
+Ogni prompt è completo: il Coordinatore lo copia così com'è nel repository privato. D0 (`steps --json`, `flow check`, `--json` di `flow run`) e D7 (pagina per agenti, `mzlab cli` nell'app, MCP dietro «via») stanno in `agenti-esterni.md` §6: agenti esterni che usano `mzlab-cli` senza la pagina.
 
 ### D1 — Catalogo `strumenti/1` generato dal registro (chat DEV LLM-core, PR 1 di 6)
 Scrivi SOLO al Coordinatore (`send_message`, sessione indicata da Federico); mai a Federico; UN messaggio a fine PR (max 5 righe: PR, SHA, CI, pages, cosa resta) o su un blocco vero (una riga con le 2 opzioni, poi continua con altro).
