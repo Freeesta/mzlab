@@ -18,7 +18,7 @@ pub use command::{command, route as command_route};
 pub use corsa::{build as corsa_build, Corsa, Uscita};
 pub use order::{levels, plan_order};
 pub use parse::parse;
-pub use prov::{prov_json, Activity, Agent, ErrorRecord, Mem};
+pub use prov::{prov_json, prov_json_llm, Activity, Agent, ErrorRecord, LlmRef, Mem};
 pub use run::{execute, Artifact, Job, Outcome, Run, Runner};
 pub use write::plan_json;
 

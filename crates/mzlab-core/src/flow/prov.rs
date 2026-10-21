@@ -133,8 +133,28 @@ fn activity(o: &mut Out, a: &Activity) {
     o.raw("}");
 }
 
+/// The assistant that launched a run: the key `llm` of `prov/1`, absent for a run the user started.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LlmRef {
+    pub log_sha256: String,
+    pub turn: u32,
+    pub provider: String,
+    pub model: String,
+    pub level: String,
+}
+
 /// The `prov/1` text of a run; `plan_sha256` is the SHA-256 of the file that was run.
 pub fn prov_json(agent: &Agent, plan_sha256: Option<&str>, run: &Run) -> String {
+    prov_json_llm(agent, plan_sha256, run, None)
+}
+
+/// `prov_json` plus, when an assistant launched the run, `llm{log_sha256, turn, provider, model, level}`; with `None` the bytes are those of `prov_json`.
+pub fn prov_json_llm(
+    agent: &Agent,
+    plan_sha256: Option<&str>,
+    run: &Run,
+    llm: Option<&LlmRef>,
+) -> String {
     let mut o = Out::default();
     o.raw("{\"schema\":\"prov/1\",\"agent\":{\"name\":")
         .str(&agent.name);
@@ -164,6 +184,14 @@ pub fn prov_json(agent: &Agent, plan_sha256: Option<&str>, run: &Run) -> String 
         o.raw(if k > 0 { "," } else { "" });
         activity(&mut o, a);
     }
-    o.raw("}}\n");
+    o.raw("}");
+    if let Some(l) = llm {
+        o.raw(",\"llm\":{\"log_sha256\":").str(&l.log_sha256);
+        o.raw(",\"turn\":").int(i64::from(l.turn));
+        o.raw(",\"provider\":").str(&l.provider);
+        o.raw(",\"model\":").str(&l.model);
+        o.raw(",\"level\":").str(&l.level).raw("}");
+    }
+    o.raw("}\n");
     o.0
 }
