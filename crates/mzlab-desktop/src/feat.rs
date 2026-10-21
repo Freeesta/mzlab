@@ -89,6 +89,19 @@ impl State {
         text(run::preview(&mut ix, &r, run::floor_given(recipe))?)
     }
 
+    /// `feat/family {name, recipe}`: the `famiglia/1` record of one file with the proofs of its arcs (`family_record` of the `.wasm`).
+    fn feat_family(&self, p: &Value) -> Result<Answer> {
+        let mut ix = self.open_idx(p["name"].as_str().unwrap_or(""))?;
+        let r = run::recipe_for(p["recipe"].as_str().unwrap_or(""), &mut ix)?;
+        let budget = MemBudget::mb(mzlab_core::budget::NATIVE_BUDGET_MB as f64);
+        text(mzlab_feat_wasm::family::record(
+            &mut ix,
+            p["name"].as_str().unwrap_or(""),
+            &r,
+            &budget,
+        )?)
+    }
+
     fn feat_align(&self, p: &Value) -> Result<Answer> {
         let ns = names(p);
         let first = ns.first().ok_or_else(|| Error::new("error.featState"))?;
@@ -359,6 +372,7 @@ impl State {
             "feat/polpair" => self.feat_polpair(p),
             "feat/version" => text(format!("\"{}\"", mzlab_feat::CRATE_VERSION)),
             "feat/preview" => self.feat_preview(p),
+            "feat/family" => self.feat_family(p),
             "feat/files" => self.feat_files(),
             "feat/import" => self.op_import(p),
             "feat/attributio/annotate" => self.feat_attributio(p),

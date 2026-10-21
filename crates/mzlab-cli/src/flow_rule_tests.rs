@@ -13,7 +13,6 @@ use crate::flow_run::apply_set;
 const BUCHI: &[&str] = &[
     "import.raw",
     "features.estimate",
-    "table.filter",
     "table.drift",
     // included in features.detect (pipeline::analyse links the MS2 in the same pass), not separable without changing the bytes
     "features.ms2_link",
