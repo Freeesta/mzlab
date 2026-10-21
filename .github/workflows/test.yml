@@ -27,7 +27,8 @@ jobs:
       matrix:
         python: ["3.11", "3.14"]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # safety net only: the run lasts far less since the crates of the cache are reused (tools/ci_cargo_mtime.py)
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # pull request only: is every changed file a Teoria chapter? (a push to main gets no base, so solo=false)
@@ -48,7 +49,7 @@ jobs:
         run: |
           rustup show
           rustup target add wasm32-unknown-unknown
-      # Every run restores the newest cache; only main saves one, keyed by the Rust sources (crates/, vendor/), so a pull request finds the crates of main
+      # Every run restores the newest cache; only main saves one (a pull request too, but only while the newest cache has no tree record, tools/ci_cargo_mtime.py), keyed by the Rust sources (crates/, vendor/), so a pull request finds the crates of main
       # already compiled and rebuilds only what it changed. A cache saved on a pull request is seen by no other pull request.
       - id: rcache
         if: steps.solo.outputs.solo != 'true'
@@ -59,8 +60,13 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: pytest-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          key: pytest-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-${{ hashFiles('tools/ci_cargo_mtime.py') }}
           restore-keys: pytest-wasm-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        if: steps.solo.outputs.solo != 'true'
+        run: python3 tools/ci_cargo_mtime.py restore
       - name: wasm-bindgen-cli (same version as Cargo.lock)
         if: steps.solo.outputs.solo != 'true'
         run: |
@@ -75,15 +81,18 @@ jobs:
         if: steps.solo.outputs.solo != 'true'
         env:
           MZLAB_NOMI_VIETATI: ${{ secrets.MZLAB_NOMI_VIETATI }}
-        run: python -m pytest -q -n auto --dist loadfile tests
+        run: python -m pytest -q -n auto --dist loadfile --durations=25 tests
       # Teoria-only pull request: the chapter, Libro and forbidden-names tests (the list is in tools/ci_solo_teoria.py)
       - name: Unit tests (Teoria only)
         if: steps.solo.outputs.solo == 'true'
         env:
           MZLAB_NOMI_VIETATI: ${{ secrets.MZLAB_NOMI_VIETATI }}
         run: python -m pytest -q -n auto --dist loadfile $(python tools/ci_solo_teoria.py --pytest)
+      - name: Record the tree of the cache
+        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.14' && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && matrix.python == '3.14' && steps.rcache.outputs.cache-hit != 'true' }}
+        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.14' && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry

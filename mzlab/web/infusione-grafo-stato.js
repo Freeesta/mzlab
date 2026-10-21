@@ -34,7 +34,6 @@ export const G = {
   /** @type {any} */ j: null,
   /** @type {string | null} */ sel: null,
   /** @type {string | null} */ error: null,
-  namesOff: false,
   /** The answer is for the request with this key. */
   key: "",
 };

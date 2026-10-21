@@ -280,7 +280,7 @@ pub(crate) fn read_one(r: &FileRunner, job: &Job, port: &str) -> Result<Loaded> 
     load(one_input(r, job, port)?)
 }
 
-fn read_all(r: &FileRunner, job: &Job, port: &str) -> Result<Vec<Loaded>> {
+pub(crate) fn read_all(r: &FileRunner, job: &Job, port: &str) -> Result<Vec<Loaded>> {
     all_inputs(r, job, port).into_iter().map(load).collect()
 }
 
@@ -288,7 +288,7 @@ fn named(v: &[Loaded]) -> Vec<Named<'_>> {
     v.iter().map(|f| (f.0.as_str(), f.1.as_slice())).collect()
 }
 
-fn blobs(v: &[Loaded]) -> Vec<&[u8]> {
+pub(crate) fn blobs(v: &[Loaded]) -> Vec<&[u8]> {
     v.iter().map(|f| f.1.as_slice()).collect()
 }
 
@@ -353,18 +353,6 @@ fn msn_graph_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     write_made(r, job, text?, DataType::Report)
 }
 
-fn compare_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let text_of = |name: &str| {
-        let found = job.resolved.params.iter().find(|(k, _)| k == name);
-        found.and_then(|(_, v)| v.str()).unwrap_or("").to_string()
-    };
-    let (step, labels) = (text_of("step"), text_of("labels"));
-    let files = read_all(r, job, "variants")?;
-    let labels: Vec<&str> = labels.split(',').collect();
-    let text = crate::flow_compare::compare_text(&step, &labels, &blobs(&files))?;
-    write_made(r, job, text, DataType::Comparison)
-}
-
 fn network_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let (tp, table) = (read_one(r, job, "tp")?, read_one(r, job, "table")?);
     let has_samples = job.inputs.iter().any(|(p, _)| p == "samples");
@@ -380,15 +368,6 @@ fn network_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
         samples.as_ref().map(|s| s.1.as_slice()),
     )?;
     write_made(r, job, text, DataType::Transform)
-}
-
-fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let (hits, formulas) = (
-        read_all(r, job, "candidates")?,
-        read_all(r, job, "formulas")?,
-    );
-    let text = crate::flow_level::level_text(&blobs(&hits), &blobs(&formulas))?;
-    write_made(r, job, text, DataType::Annot)
 }
 
 /// How a step runs natively: an executor that makes one file for `port`, or one that says itself what it made.
@@ -408,12 +387,19 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "features.table",
         Exec::File("report", crate::flow_base::table_job),
     ),
+    (
+        "features.estimate",
+        Exec::File("estimates", crate::flow_estimate::estimate_job),
+    ),
     ("spectra.match", Exec::File("hits", match_job)),
     ("formula.ms1", Exec::File("formulas", formula_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
     ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),
-    ("annot.level", Exec::File("annot", level_job)),
+    (
+        "annot.level",
+        Exec::File("annot", crate::flow_level::level_job),
+    ),
     ("tp.network", Exec::File("network", network_job)),
     ("tp.link", Exec::File("tp", crate::flow_link::link_job)),
     (
@@ -432,7 +418,10 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "tp.position",
         Exec::File("sites", crate::flow_position::position_job),
     ),
-    ("meta.compare", Exec::File("comparison", compare_job)),
+    (
+        "meta.compare",
+        Exec::File("comparison", crate::flow_compare::compare_job),
+    ),
     (
         "export.inclusion",
         Exec::File("report", crate::flow_inclusion::inclusion_job),
