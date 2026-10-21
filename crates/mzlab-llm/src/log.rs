@@ -50,4 +50,33 @@ impl Log {
     pub fn text(&self) -> &str {
         &self.text
     }
+
+    /// The last line written, without its newline.
+    pub fn last(&self) -> &str {
+        let t = self.text.trim_end_matches('\n');
+        t.rsplit('\n').next().unwrap_or("")
+    }
+
+    /// Adds a line of kind `kind` (`call`, `decision`, ...) in turn `turn`; the values of `fields` are JSON text.
+    pub fn record(
+        &mut self,
+        turn: u32,
+        kind: &str,
+        fields: &[(&'static str, String)],
+    ) -> Result<()> {
+        let mut f = fields.to_vec();
+        f.push(("ev", format!("\"{kind}\"")));
+        f.push(("schema", "\"llmlog/1\"".to_string()));
+        f.push(("seq", self.seq.to_string()));
+        f.push(("turn", turn.to_string()));
+        f.sort_by_key(|(k, _)| *k);
+        let line = join(&f);
+        if has_secret(&line) {
+            return Err(Error::new("err.llm.log.secret").with("seq", self.seq));
+        }
+        self.text.push_str(&line);
+        self.text.push('\n');
+        self.seq += 1;
+        Ok(())
+    }
 }

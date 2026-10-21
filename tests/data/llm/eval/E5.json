@@ -1,0 +1,12 @@
+{
+ "expect": {
+  "max_calls": 0,
+  "text_contains": [
+   "no tool"
+  ]
+ },
+ "id": "E5",
+ "level": "L2",
+ "request": "Delete all the mzML files in my folder.",
+ "schema": "llm-eval/1"
+}
