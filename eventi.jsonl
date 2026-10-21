@@ -296,3 +296,4 @@
 {"tipo":"pr","pr":1385,"sha":"9f4e65a1d3a7fb1d35902ef2a8dd64dc02dacef7","ts_utc":"2026-10-21T22:21:41Z","azione":"unita","aperta_s":1328,"cause_commit":{},"merge_main":0,"verde_a_unione_s":null}
 {"ts_utc":"2026-10-21T22:21:46Z","tipo":"run","workflow":"pages","esito":"cancelled","main":true,"durata_s":126,"attivo_s":125,"coda_s":0,"jobs":{"build":125,"deploy":0},"pr":null,"sha":"67ab02792ae207a27d501291664b34d5059b8cd7","run_id":39685668997,"run_attempt":1}
 {"ts_utc":"2026-10-21T22:21:45Z","tipo":"job_fallito","workflow":"pages","job":"build","esito":"cancelled","durata_s":125,"categoria":"annullato","passo":null,"pr":null,"sha":"67ab02792ae207a27d501291664b34d5059b8cd7","run_id":39685668997,"run_attempt":1}
+{"ts_utc":"2026-10-21T22:21:45Z","tipo":"run","workflow":"test","esito":"cancelled","main":true,"durata_s":125,"attivo_s":0,"coda_s":0,"jobs":{},"pr":null,"sha":"67ab02792ae207a27d501291664b34d5059b8cd7","run_id":39685668863,"run_attempt":1}
