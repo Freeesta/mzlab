@@ -3,9 +3,10 @@
 
     python3 tools/pre_pr.py            # all the steps
     python3 tools/pre_pr.py --senza-e2e  # skip `verifica.py --cambiati` (the e2e of the changed files)
+    python3 tools/pre_pr.py --veloce     # only the cheap checks (well under 2 minutes, never clippy or e2e): adds the CSP hash and prints which e2e would run
 
 Steps: code map, size limits, i18n, Teoria, JS syntax (only when `mzlab/web/` differs from origin/main), generated globals, tsc, Rust format, clippy and machete (only when the Rust paths of the CI differ from origin/main), e2e of the changed files.
-When the e2e cannot run (no browser) the summary says so and the exit code is 2: the CI will run them.
+Every step prints its name before it starts, so a long one is never silent. When the e2e cannot run (no browser) the summary says so and the exit code is 2: the CI will run them.
 Merge `origin/main` first (`git merge origin/main`): the checks compare with the files as the merge leaves them.
 """
 from __future__ import annotations
@@ -32,7 +33,11 @@ def cambiato(*prefissi: str) -> bool:
     return r.returncode != 0 or bool(r.stdout.strip())
 
 
-def passi(con_e2e: bool) -> list[tuple[str, list[str]]]:
+# prints the e2e that `verifica.py --cambiati` would run, without running them
+SELEZIONE_E2E = [PY, "-c", "import sys; sys.path.insert(0, 'tools'); import verifica as v; sel, why = v.changed_tests(); print(why)"]
+
+
+def passi(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
     p = [
         ("mappa del codice", [PY, "tools/indice.py", "--controlla"]),
         ("soglie di dimensione", [PY, "tools/controlla.py"]),
@@ -47,6 +52,12 @@ def passi(con_e2e: bool) -> list[tuple[str, list[str]]]:
     ]
     if (ROOT / "tools" / "controlla_import.py").exists():
         p.append(("import degli e2e", [PY, "tools/controlla_import.py"]))
+    if veloce:
+        p.append(("hash CSP", [PY, "tools/csp_hash.py", "--check"]))
+        if cambiato(*RUST):
+            p.append(("cargo fmt", ["cargo", "fmt", "--all", "--check"]))
+        p.append(("e2e che verrebbero eseguiti", SELEZIONE_E2E))
+        return p
     if cambiato(*RUST):
         p += [("fmt e clippy contro la base", [PY, "tools/controlla_rust.py"])]
         if shutil.which("cargo-machete"):
@@ -58,7 +69,10 @@ def passi(con_e2e: bool) -> list[tuple[str, list[str]]]:
 
 def main() -> int:
     saltati = False
-    for nome, cmd in passi("--senza-e2e" not in sys.argv):
+    veloce = "--veloce" in sys.argv
+    elenco = passi("--senza-e2e" not in sys.argv and not veloce, veloce)
+    for i, (nome, cmd) in enumerate(elenco, 1):
+        print(f"...  [{i}/{len(elenco)}] {nome}", flush=True)
         t0 = time.time()
         r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
         dt = time.time() - t0
@@ -70,7 +84,7 @@ def main() -> int:
             saltati = True
             print(f"SKIP {nome} ({dt:.0f} s)")
         else:
-            print(f"ok   {nome} ({dt:.0f} s)")
+            print(f"ok   {nome} ({dt:.0f} s)" + (f": {r.stdout.strip()[:300]}" if veloce and "e2e" in nome else ""), flush=True)
     if saltati:
         print("E2E SALTATI: Chromium non trovato, la CI li eseguirà (gli altri passi sono verdi, ma questo NON è «tutto verde»).")
         return 2
