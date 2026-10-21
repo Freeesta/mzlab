@@ -16,6 +16,8 @@ use mzlab_core::upload::{impronte, indicizza_lettore, prepare};
 use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
 
+mod convert;
+mod convert_report;
 pub mod flow;
 mod flow_base;
 mod flow_cache;
@@ -34,6 +36,7 @@ mod flow_network;
 mod flow_out;
 pub mod flow_report;
 mod flow_run;
+mod flow_set;
 mod flow_table;
 #[cfg(test)]
 mod flow_table_tests;
@@ -47,6 +50,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli msn-lib add|build|export ...                the library of MSn trees (msn-lib --help)
+       mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
 
   FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
   --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
@@ -316,6 +320,7 @@ pub fn execute(args: &[String]) -> Outcome {
         }
         Some("msn-graph") => return msn_graph_cmd(args),
         Some("msn-lib") => return msn_lib_cmd(args.collect()),
+        Some("convert") => return convert::run(args.collect()),
         Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Some(c) => return Outcome::fail(&format!("unknown command {c}")),
     }
@@ -355,3 +360,9 @@ mod flow_run_tests;
 mod msn_graph_tests;
 #[cfg(test)]
 mod msn_lib_tests;
+
+#[cfg(test)]
+mod convert_fixtures;
+
+#[cfg(test)]
+mod convert_tests;

@@ -156,6 +156,12 @@ impl FileRunner {
         }
     }
 
+    /// The runner with no progress line of its own, for a caller that reports the jobs through `with_done`.
+    pub(crate) fn without_progress(mut self) -> FileRunner {
+        self.progress = None;
+        self
+    }
+
     /// The runner with the working memory of the alignment set to `mb` (None: the automatic budget).
     pub(crate) fn with_budget(mut self, mb: Option<f64>) -> FileRunner {
         if let Some(mb) = mb {
