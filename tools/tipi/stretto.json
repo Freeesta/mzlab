@@ -67,6 +67,7 @@
     "../../mzlab/web/banco.js",
     "../../mzlab/web/settings.js",
     "../../mzlab/web/aggiorna.js",
+    "../../mzlab/web/predefinito.js",
     "../../mzlab/web/livelli-1.js",
     "../../mzlab/web/libreria.js",
     "../../mzlab/web/touch.js",
