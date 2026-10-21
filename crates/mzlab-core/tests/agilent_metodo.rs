@@ -4,6 +4,7 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 mod agilent_folder;
+mod conv_aiuto;
 
 use agilent_folder::*;
 use mzlab_core::agilent::AgilentD;
@@ -141,11 +142,7 @@ fn no_field_of_the_side_files_is_left_out_of_campi() {
 #[test]
 fn the_mzml_carries_the_same_document() {
     let Some(all) = folders() else { return };
-    let mut fo = Folder::load(&all[0]);
-    let d = fo.open();
-    let mut out = Vec::new();
-    let n = fo.peak.len() as u64;
-    d.to_mzml(&mut fo.peak, n, &mut out).unwrap();
+    let out = conv_aiuto::mzml_cartella(&all[0]);
     let text = String::from_utf8(out).unwrap();
     let head = &text[text.find("<run ").unwrap()..];
     let doc = from_userparam(head).expect("the mzML has the document");

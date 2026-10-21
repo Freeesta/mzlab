@@ -3,6 +3,8 @@
 //! repository (MZLAB_DATI, or `mzlab-dati` beside this one): without it the test is skipped; no `.raw` lives in this repository.
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
+mod conv_aiuto;
+
 use std::fs::File;
 use std::io::BufReader;
 
@@ -83,8 +85,7 @@ fn raw_matches_msconvert_mzml() {
     assert!(worst_mz <= 1e-6 && worst_y <= 1e-4);
 
     // the mzML written from the .raw reads back to the same spectra
-    let mut buf = Vec::new();
-    raw::to_mzml(File::open(&rawp).unwrap(), &mut buf, "example.raw").unwrap();
+    let buf = conv_aiuto::mzml_file(&rawp, "example.raw");
     let back = mzml::read(&buf[..]).unwrap();
     assert_eq!(back.spectra.len(), from_raw.spectra.len());
     assert_eq!(back.spectra[4000].mz, from_raw.spectra[4000].mz);

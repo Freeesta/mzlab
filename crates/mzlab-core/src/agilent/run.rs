@@ -1,7 +1,6 @@
 //! A run as the `Run` that the rest of the program reads: one centroid spectrum per scan (empty ones left out) and the TIC from the index.
 
 use std::collections::BTreeMap;
-use std::io::Write;
 
 use super::peak::read_points;
 use super::scan::ScanRec;
@@ -10,8 +9,7 @@ use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::metodo::{self, Source, SrcFile};
 use crate::mzml::{ChromKind, Chromatogram, Run, Spectrum};
-use crate::mzmlwrite::{Header, MzmlWriter, SpectrumExtra};
-use crate::window::Windowed;
+use crate::mzmlwrite::{Header, SpectrumExtra};
 
 impl AgilentD {
     /// Spectra and the TIC.
@@ -205,55 +203,6 @@ impl AgilentD {
             centroided: false,
             ..Header::default()
         }
-    }
-
-    /// Writes the run as mzML, one spectrum at a time; `MSPeak.bin` is read front to back through a 1 MB window.
-    pub fn to_mzml<R: ReadAt, W: Write>(&self, peak: &mut R, peak_len: u64, out: W) -> Result<()> {
-        self.to_mzml_progress(peak, peak_len, out, &mut |_, _| {})
-    }
-
-    /// As `to_mzml`; `progress(done, total)` is called every 32 spectra with the spectra written and the spectra to write.
-    pub fn to_mzml_progress<R: ReadAt, W: Write>(
-        &self,
-        peak: &mut R,
-        peak_len: u64,
-        out: W,
-        progress: &mut dyn FnMut(usize, usize),
-    ) -> Result<()> {
-        let mut peak = Windowed::new(peak, peak_len);
-        let sha = if self.inline.is_some() {
-            String::new()
-        } else {
-            sha1_of(&mut peak, peak_len)?
-        };
-        let mut w = MzmlWriter::new(out, &self.header(&sha))?;
-        let count = self.spectrum_count();
-        if count > 0 {
-            w.open_spectra(count)?;
-        }
-        let mut done = 0;
-        progress(0, count);
-        let chroms = self.visit(&mut peak, &mut |s| {
-            w.spectrum_with(&s, &self.extra_of(&s))?;
-            done += 1;
-            if done % 32 == 0 {
-                progress(done, count);
-            }
-            Ok(())
-        })?;
-        progress(count, count);
-        if count > 0 {
-            w.close_spectra()?;
-        }
-        if chroms.iter().any(|c| !c.time.is_empty()) {
-            w.open_chromatograms(chroms.len())?;
-            for c in &chroms {
-                w.chromatogram(c)?;
-            }
-            w.close_chromatograms()?;
-        }
-        w.finish()?;
-        Ok(())
     }
 }
 

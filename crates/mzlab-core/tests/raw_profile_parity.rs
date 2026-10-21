@@ -1,6 +1,6 @@
 #![cfg(feature = "thermo")]
 //! A Thermo `.raw` in PROFILE against the mzML msconvert made from it (profile, 64-bit, zlib, no peak picking), scan by scan, on the mzML
-//! that `raw::to_mzml_progress` writes: MS level, polarity, scan time, TIC, base peak, precursor (selected m/z, isolation window, energy,
+//! that `Conversione` with `Picchi::Profilo` writes: MS level, polarity, scan time, TIC, base peak, precursor (selected m/z, isolation window, energy,
 //! the scan it comes from), number of points, m/z and intensity. Needs the private data repository (MZLAB_DATI, or `mzlab-dati` beside
 //! this one) with `dati/HRMS/Profile raw/`: without it the test is skipped; no `.raw` lives in this repository.
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
@@ -9,7 +9,9 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufReader;
 
-use mzlab_core::{mzml, raw};
+use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori_mzml::{Conversione, Picchi};
+use mzlab_core::mzml;
 use quick_xml::events::Event;
 use quick_xml::Reader;
 
@@ -284,15 +286,21 @@ fn compare() -> Option<Report> {
         CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
     ));
     {
-        let mut out = std::io::BufWriter::new(File::create(&ours_p).unwrap());
-        raw::to_mzml_progress(
-            BufReader::new(File::open(&rawp).unwrap()),
-            &mut out,
-            "profile.raw",
-            true,
-            &mut |_, _| {},
-        )
-        .unwrap();
+        let out = std::io::BufWriter::new(File::create(&ours_p).unwrap());
+        let set = FileSet {
+            membri: vec![Membro {
+                nome: "profile.raw".into(),
+                dim: std::fs::metadata(&rawp).unwrap().len(),
+                dati: Box::new(File::open(&rawp).unwrap()),
+                sha1: None,
+            }],
+        };
+        let mut l = lettori::apri(set, &Limiti::sito()).unwrap();
+        let conv = Conversione {
+            peaks: Picchi::Profilo,
+            ..Conversione::default()
+        };
+        conv.scrivi(&mut *l, 0, out, &mut |_, _| {}).unwrap();
     }
     // msconvert was asked for the scan times 0-600 s only: those scans of the whole file are compared
     let (all, b) = (heads(&ours_p), heads(&refp));

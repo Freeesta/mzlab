@@ -413,6 +413,10 @@ impl Lettore for LettoreAgilent {
         Formato::AgilentD
     }
 
+    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+        crate::conv::AGILENT_EXT
+    }
+
     fn campioni(&self) -> &[Campione] {
         &self.campioni
     }

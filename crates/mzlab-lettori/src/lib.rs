@@ -10,6 +10,7 @@ pub mod andi;
 pub mod aperti;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
 pub mod bruker;
+pub mod non_portati;
 #[cfg(any(feature = "shimadzu", feature = "tutte"))]
 pub mod shimadzu;
 pub mod srm;
