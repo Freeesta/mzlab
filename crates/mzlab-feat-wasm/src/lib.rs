@@ -24,7 +24,6 @@ use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::Out;
 use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
-
 #[cfg(feature = "detect")]
 pub mod family;
 #[cfg(feature = "finder")]
@@ -38,6 +37,7 @@ pub mod msn;
 pub mod run;
 pub mod spill_js;
 pub mod run_evid;
+pub mod stima;
 #[cfg(feature = "proofs")]
 pub mod state;
 #[cfg(feature = "untargeted")]

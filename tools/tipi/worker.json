@@ -28,6 +28,7 @@
     "../../TP_Mine/files/finder-desktop.js",
     "../../TP_Mine/files/feat-desktop-pool.js",
     "../../TP_Mine/files/tpmine-worker.js",
+    "../../flow/lazy/flow-web-worker.js",
     "../../TP_Mine/files/finder-lr.js",
     "../../mzlab/web/libreria-cartella.js",
     "../../mzlab/web/libreria-scarica.js"
