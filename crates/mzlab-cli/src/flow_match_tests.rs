@@ -51,9 +51,7 @@ fn decoys_work_on_an_mzlib_library() {
     )
     .unwrap();
     let on = |lib: &str| {
-        let p = plan("spectral_entropy", r#"{"decoys":"spectrum"}"#)
-            .replace("lib.msp", lib)
-            .replace("\"library\"}", "\"library\"}");
+        let p = plan("spectral_entropy", r#"{"decoys":"spectrum"}"#).replace("lib.msp", lib);
         crate::flow::run_plan(p.as_bytes(), &dir, &dir.join("work"), 1, None).unwrap();
         std::fs::read_to_string(dir.join("work/m.json")).unwrap()
     };

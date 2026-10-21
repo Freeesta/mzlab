@@ -30,8 +30,6 @@ mod flow_digl;
 mod flow_drift;
 #[cfg(test)]
 mod flow_drift_tests;
-#[cfg(test)]
-mod flow_match_tests;
 mod flow_estimate;
 mod flow_export;
 #[cfg(test)]
@@ -53,6 +51,8 @@ mod flow_link_tests;
 #[cfg(test)]
 mod flow_lr_tests;
 mod flow_match;
+#[cfg(test)]
+mod flow_match_tests;
 mod flow_ms2;
 mod flow_msngraph;
 #[cfg(test)]
