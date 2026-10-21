@@ -1,6 +1,8 @@
 //! wasm-bindgen bridge of `mzlab-llm` for the assistant of the site: the catalog in, a conversation in, the request out; the response bytes in, normalized
 //! events out (one JSON line each); a recording `llmreg/1` for the transport `replay`. No network and no key here: the iframe `llm/trasporto.html` does the fetch.
 //! An error is a JSON text `{"error", "error_key", "params"}` (the same shape as the routes of the engine). Loaded by `mzlab/web/llm/llm-worker.js`.
+mod agent;
+
 use mzlab_core::error::Error;
 use mzlab_llm::conv::Conversation;
 use mzlab_llm::fake::Replay;
@@ -26,7 +28,13 @@ pub fn http_error(status: u16, body: &str) -> String {
     provider::http_error(status, body).to_json()
 }
 
-fn fail(e: Error) -> String {
+/// The `contesto/1` text for sources collected by the page (`mzlab_llm::context::build_text`), within `budget_tokens`.
+#[wasm_bindgen]
+pub fn context_build(sources_json: &str, budget_tokens: u32) -> Result<String, String> {
+    mzlab_llm::context::build_text(sources_json, u64::from(budget_tokens)).map_err(fail)
+}
+
+pub(crate) fn fail(e: Error) -> String {
     let mut o = mzlab_core::json::Out::default();
     o.raw("{\"error\":")
         .str(e.key)
@@ -43,7 +51,7 @@ fn fail(e: Error) -> String {
     o.0
 }
 
-fn find(id: &str) -> Result<Provider, String> {
+pub(crate) fn find(id: &str) -> Result<Provider, String> {
     provider::builtin()
         .into_iter()
         .find(|p| p.id == id)
