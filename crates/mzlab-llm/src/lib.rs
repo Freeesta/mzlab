@@ -5,6 +5,7 @@
 //! No network, no key, no dependency beyond `mzlab-core`.
 
 pub mod agent;
+pub mod compact;
 pub mod context;
 pub mod conv;
 pub mod cost;
