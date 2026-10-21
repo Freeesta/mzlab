@@ -19,8 +19,10 @@ use mzlab_feat::store::{read_table_from, Slice};
 use mzlab_feat::tp::TpRoles;
 use mzlab_feat_wasm::run::{self, RowSources};
 
-use crate::flow::{FileRunner, Lineage};
+use crate::flow::{all_inputs, io, read_one, FileRunner, Lineage};
 use crate::flow_base::{open, rebuild, Files};
+use mzlab_core::flow::Artifact;
+use mzlab_core::step::DataType;
 
 const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
 
@@ -264,4 +266,31 @@ pub fn link_bytes(
         &mut out,
     )?;
     Ok(out)
+}
+
+/// `tp.link`: the `.mzfeat` of the series with `tp/1` and `interp/1`, written next to the other outputs of the run.
+pub(crate) fn link_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let table_in = job
+        .inputs
+        .iter()
+        .find(|(p, _)| p == "table")
+        .and_then(|(_, v)| v.first());
+    let lineage = table_in
+        .and_then(|a| r.lineage(a))
+        .filter(|l| !l.peaks.is_empty())
+        .ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id))?;
+    let indexes = all_inputs(r, job, "index");
+    let (table, samples) = (read_one(r, job, "table")?, read_one(r, job, "samples")?);
+    let (parent, hypotheses) = (read_one(r, job, "parent")?, read_one(r, job, "hypotheses")?);
+    let series = Series { lineage, indexes };
+    let files = [
+        &table.1[..],
+        &samples.1[..],
+        &parent.1[..],
+        &hypotheses.1[..],
+    ];
+    let bytes = link_bytes(r, job, &series, files)?;
+    let out = r.work.join(format!("{}.mzfeat", job.instance.id));
+    std::fs::write(&out, bytes).map_err(io)?;
+    r.keep(out, DataType::Tp)
 }

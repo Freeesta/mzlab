@@ -24,7 +24,6 @@ const BUCHI: &[&str] = &[
     "annot.regulatory",
     "annot.hazard",
     "tp.generate",
-    "tp.filter",
     "tp.position",
     "structure.render",
     "structure.reactivity",
