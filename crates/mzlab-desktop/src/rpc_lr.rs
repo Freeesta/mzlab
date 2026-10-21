@@ -158,6 +158,7 @@ impl State {
                 Some(Err(j)) => text(format!("E{j}")),
             },
             "lr_campioni" => text(mzlab_core::campioni::route(s("cop"), s("body"))?),
+            "lr_molecole_archivio" => text(self.store.lock().unwrap_or_else(|e| e.into_inner()).molecules(s("mop"), s("body"))?),
             "lr_molecules" => text(mzlab_core::molecules::route(s("mop"), s("body"))?),
             "lr_formula" => {
                 let ad = s("adduct");
