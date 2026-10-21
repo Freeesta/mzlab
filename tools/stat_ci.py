@@ -1,0 +1,331 @@
+#!/usr/bin/env python3
+"""Statistics of the CI bottlenecks: one JSONL line per event, no log text, no personal data.
+
+Used by .github/workflows/stat-ci.yml (the `registra-*` commands, one event per call) and by hand (`riepilogo`).
+Standard library only. The data file `eventi.jsonl` lives on the orphan branch `stat-ci` (docs/agenti/ci-veloce.md).
+
+    python3 tools/stat_ci.py registra-run --evento E.json --nuovi N.jsonl   # workflow_run completed: run + failed jobs
+    python3 tools/stat_ci.py registra-pr --evento E.json --nuovi N.jsonl    # pull_request_target: opened/push/merged/closed
+    python3 tools/stat_ci.py registra-conflitti --evento E.json --dati D.jsonl --nuovi N.jsonl   # push to main: new `dirty` PRs
+    python3 tools/stat_ci.py accoda N.jsonl --dati D.jsonl                  # append without duplicates
+    python3 tools/stat_ci.py riepilogo [--dati D.jsonl] [--da YYYY-MM-DD]   # default data: git show origin/stat-ci:eventi.jsonl
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+import urllib.request
+from collections import Counter, defaultdict
+from datetime import datetime, timezone
+
+# Estimated minutes lost for the events that have no measured duration (printed with the summary).
+CONFLITTO_S = 900
+FUSIONE_S = 300
+OK = ("success", "skipped", "neutral")
+CHIAVE = ("tipo", "run_id", "run_attempt", "job", "pr", "azione", "sha")
+
+# Category of a failed job from the name of its failed step (no log is read).
+CATEGORIE = [
+    ("soglia", r"soglie|controlla\.py|size limit|limits|threshold"),
+    ("lint", r"lint|clippy|fmt|format|tsc|syntax|machete|deny|globals|i18n|sources"),
+    ("test", r"test|e2e|smoke|pytest|guards|parity|verifica|determinism"),
+]
+
+
+def api_get(path: str):
+    base = os.environ.get("GITHUB_API_URL", "https://api.github.com")
+    repo = os.environ.get("GITHUB_REPOSITORY", "Freeesta/mzlab")
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "mzlab-stat-ci"}
+    if os.environ.get("GITHUB_TOKEN"):
+        headers["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
+    req = urllib.request.Request(f"{base}/repos/{repo}{path}", headers=headers)
+    for i in range(4):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.load(r)
+        except Exception:
+            if i == 3:
+                raise
+            time.sleep(2**i)
+
+
+def ts(iso: str | None) -> datetime | None:
+    return datetime.fromisoformat(iso.replace("Z", "+00:00")) if iso else None
+
+
+def secs(a: str | None, b: str | None) -> int | None:
+    if not a or not b:
+        return None
+    return max(0, int((ts(b) - ts(a)).total_seconds()))
+
+
+def adesso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def categoria(job: dict) -> tuple[str, str | None]:
+    """(category, failed step name) of a job that did not succeed."""
+    if job.get("conclusion") == "timed_out":
+        return "timeout", None
+    passo = next((s["name"] for s in job.get("steps", []) if s.get("conclusion") in ("failure", "timed_out")), None)
+    if job.get("conclusion") == "cancelled":
+        return "annullato", passo
+    for nome, rx in CATEGORIE:
+        if passo and re.search(rx, passo, re.I):
+            return nome, passo
+    return "altro", passo
+
+
+def righe_run(evento: dict, api=api_get) -> list[dict]:
+    run = evento["workflow_run"]
+    jobs = api(f"/actions/runs/{run['id']}/jobs?per_page=100")["jobs"]
+    pr = ((run.get("pull_requests") or [{}])[0]).get("number")
+    base = {"pr": pr, "sha": run["head_sha"], "run_id": run["id"], "run_attempt": run.get("run_attempt", 1)}
+    durate = {j["name"]: secs(j["started_at"], j["completed_at"]) or 0 for j in jobs}
+    code = [secs(j["created_at"], j["started_at"]) or 0 for j in jobs]
+    out = [{"ts_utc": run["updated_at"], "tipo": "run", "workflow": run["name"], "esito": run["conclusion"],
+            "main": run.get("head_branch") == "main", "durata_s": secs(run.get("run_started_at"), run["updated_at"]),
+            "attivo_s": sum(durate.values()), "coda_s": max(code, default=0), "jobs": durate, **base}]
+    for j in jobs:
+        if j.get("status") == "completed" and j.get("conclusion") not in OK:
+            cat, passo = categoria(j)
+            out.append({"ts_utc": j["completed_at"], "tipo": "job_fallito", "workflow": run["name"], "job": j["name"],
+                        "esito": j["conclusion"], "durata_s": durate[j["name"]], "categoria": cat, "passo": passo, **base})
+    return out
+
+
+def fusioni_main(n: int, api) -> int:
+    commits = api(f"/pulls/{n}/commits?per_page=100")
+    return sum(len(c.get("parents", [])) > 1 and bool(re.match(r"Merge .*\bmain\b", c["commit"]["message"].split("\n")[0]))
+               and not c["commit"]["message"].startswith("Merge pull request") for c in commits)
+
+
+def verde_il(sha: str, api) -> str | None:
+    """Time at which the last check of `sha` finished, when all the latest checks passed; None otherwise."""
+    latest = {}
+    for c in sorted(api(f"/commits/{sha}/check-runs?per_page=100")["check_runs"], key=lambda c: c["id"]):
+        latest[c["name"]] = c
+    if not latest or any(c["status"] != "completed" or c["conclusion"] not in OK for c in latest.values()):
+        return None
+    return max(c["completed_at"] for c in latest.values())
+
+
+def righe_pr(evento: dict, api=api_get) -> list[dict]:
+    pr, azione = evento["pull_request"], evento["action"]
+    riga = {"tipo": "pr", "pr": pr["number"], "sha": pr["head"]["sha"]}
+    if azione in ("opened", "reopened"):
+        return [{"ts_utc": pr["created_at"] if azione == "opened" else adesso(), "azione": "aperta" if azione == "opened" else "riaperta", **riga}]
+    if azione == "synchronize":
+        return [{"ts_utc": adesso(), "azione": "push", **riga}]
+    if azione != "closed":
+        return []
+    fine = pr.get("merged_at") or pr["closed_at"]
+    riga |= {"ts_utc": fine, "azione": "unita" if pr.get("merged") else "chiusa", "aperta_s": secs(pr["created_at"], fine),
+             "merge_main": fusioni_main(pr["number"], api)}
+    if pr.get("merged"):
+        riga["verde_a_unione_s"] = secs(verde_il(pr["head"]["sha"], api), fine)
+    return [riga]
+
+
+def stato_conflitti(dati: str) -> dict[int, bool]:
+    stato: dict[int, bool] = {}
+    for r in leggi(dati):
+        if r["tipo"] in ("conflitto", "conflitto_risolto"):
+            stato[r["pr"]] = r["tipo"] == "conflitto"
+    return stato
+
+
+def file_pr(n: int, api) -> set[str]:
+    out: set[str] = set()
+    for pagina in (1, 2, 3):
+        fs = api(f"/pulls/{n}/files?per_page=100&page={pagina}")
+        out |= {f["filename"] for f in fs}
+        if len(fs) < 100:
+            break
+    return out
+
+
+def righe_conflitti(evento: dict, dati: str, api=api_get, attesa=time.sleep) -> list[dict]:
+    if evento.get("ref") != "refs/heads/main":
+        return []
+    sha = evento["after"]
+    commit = api(f"/commits/{sha}")
+    main_file = {f["filename"] for f in commit.get("files", [])}
+    m = re.search(r"Merge pull request #(\d+)|\(#(\d+)\)", commit["commit"]["message"])
+    unita = int(m.group(1) or m.group(2)) if m else None
+    prima = stato_conflitti(dati)
+    out = []
+    for p in api("/pulls?state=open&per_page=100"):
+        n = p["number"]
+        for _ in range(4):
+            d = api(f"/pulls/{n}")
+            if d.get("mergeable") is not None:
+                break
+            attesa(2)
+        sporco = d.get("mergeable_state") == "dirty"
+        if sporco and not prima.get(n):
+            comuni = sorted(file_pr(n, api) & main_file)
+            out.append({"ts_utc": adesso(), "tipo": "conflitto", "pr": n, "sha": sha, "pr_unita": unita,
+                        "file_comuni": comuni[:5], "n_file_comuni": len(comuni)})
+        elif not sporco and prima.get(n):
+            out.append({"ts_utc": adesso(), "tipo": "conflitto_risolto", "pr": n, "sha": sha})
+    return out
+
+
+def leggi(path: str) -> list[dict]:
+    if not os.path.exists(path):
+        return []
+    with open(path, encoding="utf-8") as f:
+        return [json.loads(riga) for riga in f if riga.strip()]
+
+
+def chiave(r: dict) -> tuple:
+    return tuple(r.get(k) for k in CHIAVE)
+
+
+def accoda(righe: list[dict], dati: str) -> int:
+    visti = {chiave(r) for r in leggi(dati)}
+    nuove = [r for r in righe if chiave(r) not in visti]
+    with open(dati, "a", encoding="utf-8") as f:
+        for r in nuove:
+            f.write(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n")
+    return len(nuove)
+
+
+def hm(s: float) -> str:
+    s = int(s)
+    return f"{s // 3600}h{s % 3600 // 60:02d}"
+
+
+def media(v: list) -> float:
+    v = [x for x in v if x is not None]
+    return sum(v) / len(v) if v else 0
+
+
+def colli(ev: list[dict]) -> list[tuple[str, int, int]]:
+    """(label, count, estimated seconds lost) per bottleneck."""
+    voci: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+
+    def somma(nome, n, perso):
+        voci[nome][0] += n
+        voci[nome][1] += perso
+
+    runs = [r for r in ev if r["tipo"] == "run"]
+    for r in ev:
+        if r["tipo"] == "job_fallito":
+            somma(f"job failed: {r['job']} [{r['categoria']}]", 1, r.get("durata_s") or 0)
+    for r in runs:
+        if r.get("run_attempt", 1) > 1:
+            somma(f"re-run of {r['workflow']}", 1, r.get("durata_s") or 0)
+        if r.get("coda_s"):
+            somma(f"queue wait: {r['workflow']}", 1, r["coda_s"])
+    per_pr = defaultdict(list)
+    for r in runs:
+        if r["workflow"] == "test" and r.get("pr") and r.get("run_attempt", 1) == 1:
+            per_pr[r["pr"]].append(r.get("durata_s") or 0)
+    for durate in per_pr.values():
+        if len(durate) > 1:
+            somma("CI redone (test runs after the first, per PR)", len(durate) - 1, sum(sorted(durate)[:-1]))
+    for r in ev:
+        if r["tipo"] == "conflitto":
+            fs = r.get("file_comuni") or []
+            for f in fs or ["(no file in common)"]:
+                somma(f"conflicts: {f}", 1, CONFLITTO_S // max(1, len(fs)))
+        if r["tipo"] == "pr" and r.get("merge_main"):
+            somma("merges of main into the PR branch", r["merge_main"], r["merge_main"] * FUSIONE_S)
+        if r["tipo"] == "pr" and r.get("verde_a_unione_s"):
+            somma("wait between green CI and merge", 1, r["verde_a_unione_s"])
+    return sorted(((k, v[0], v[1]) for k, v in voci.items()), key=lambda x: -x[2])
+
+
+def riepilogo(ev: list[dict], da: str | None = None, out=print) -> None:
+    if da:
+        ev = [r for r in ev if r["ts_utc"][:10] >= da]
+    if not ev:
+        out("no events")
+        return
+    out(f"events: {len(ev)}, from {min(r['ts_utc'] for r in ev)} to {max(r['ts_utc'] for r in ev)} (UTC)")
+    prs = [r for r in ev if r["tipo"] == "pr"]
+    unite = [r for r in prs if r["azione"] == "unita"]
+    pr_visti = {r["pr"] for r in prs}
+    push = Counter(r["pr"] for r in prs if r["azione"] == "push")
+    runs = [r for r in ev if r["tipo"] == "run"]
+    ci_pr = defaultdict(lambda: [0, 0, 0])
+    for r in runs:
+        if r.get("pr"):
+            ci_pr[r["pr"]][0] += r.get("durata_s") or 0
+            ci_pr[r["pr"]][1] += r.get("coda_s") or 0
+            ci_pr[r["pr"]][2] += r["workflow"] == "test" and r.get("run_attempt", 1) == 1
+    out("\nPull requests")
+    out(f"  opened {sum(r['azione'] in ('aperta', 'riaperta') for r in prs)}, merged {len(unite)}, closed unmerged {sum(r['azione'] == 'chiusa' for r in prs)}")
+    out(f"  open to merge: mean {hm(media([r['aperta_s'] for r in unite]))}; green CI to merge: mean {hm(media([r.get('verde_a_unione_s') for r in unite]))}")
+    out(f"  pushes per PR: mean {media(list(push.values())):.1f}; test runs per PR: mean {media([v[2] for v in ci_pr.values()]):.1f}; "
+        f"CI duration per PR: mean {hm(media([v[0] for v in ci_pr.values()]))}, of which queue {hm(media([v[1] for v in ci_pr.values()]))}")
+    out(f"  merges of main per PR (closed PRs): mean {media([r.get('merge_main') for r in prs if r['azione'] in ('unita', 'chiusa')]):.1f}; PRs seen {len(pr_visti)}")
+    fall = [r for r in ev if r["tipo"] == "job_fallito"]
+    out("\nJobs failing most often")
+    for (job, cat), n in Counter((r["job"], r["categoria"]) for r in fall).most_common(10):
+        out(f"  {n:4d}  {job} [{cat}]")
+    tempi = defaultdict(list)
+    for r in runs:
+        for nome, d in (r.get("jobs") or {}).items():
+            tempi[nome].append(d)
+    out("\nMean job time")
+    for nome, d in sorted(tempi.items(), key=lambda x: -media(x[1]))[:10]:
+        out(f"  {hm(media(d))}  {nome} ({len(d)} runs)")
+    conf = [r for r in ev if r["tipo"] == "conflitto"]
+    out(f"\nConflicts with main: {len(conf)} (PR becoming dirty)")
+    for giorno, n in sorted(Counter(r["ts_utc"][:10] for r in conf).items()):
+        out(f"  {giorno}  {n}")
+    for pr, n in Counter(r["pr"] for r in conf).most_common(5):
+        out(f"  PR #{pr}: {n}")
+    out("\nReds per hour of the day (UTC) and per day")
+    ore = Counter(r["ts_utc"][11:13] for r in fall)
+    out("  hours: " + (", ".join(f"{h}h:{n}" for h, n in ore.most_common(5)) or "-"))
+    out("  days:  " + (", ".join(f"{g}:{n}" for g, n in Counter(r["ts_utc"][:10] for r in fall).most_common(5)) or "-"))
+    out(f"\nTop 10 bottlenecks by estimated time lost (conflict = {CONFLITTO_S // 60} min, merge of main = {FUSIONE_S // 60} min; the others are measured)")
+    for nome, n, perso in colli(ev)[:10]:
+        out(f"  {hm(perso):>7}  x{n:<4d} {nome}")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("comando", choices=["registra-run", "registra-pr", "registra-conflitti", "accoda", "riepilogo"])
+    ap.add_argument("file", nargs="?", help="accoda: JSONL with the new lines")
+    ap.add_argument("--evento", default=os.environ.get("GITHUB_EVENT_PATH"))
+    ap.add_argument("--dati", help="events file (default: eventi.jsonl; riepilogo: origin/stat-ci)")
+    ap.add_argument("--nuovi", help="write the new lines here instead of appending to --dati")
+    ap.add_argument("--da")
+    a = ap.parse_args()
+    if a.comando == "riepilogo":
+        if a.dati:
+            ev = leggi(a.dati)
+        else:
+            txt = subprocess.run(["git", "show", "origin/stat-ci:eventi.jsonl"], capture_output=True, text=True).stdout
+            ev = [json.loads(x) for x in txt.splitlines() if x.strip()]
+        riepilogo(ev, a.da)
+        return 0
+    dati = a.dati or "eventi.jsonl"
+    if a.comando == "accoda":
+        print(f"{accoda(leggi(a.file), dati)} new lines")
+        return 0
+    with open(a.evento, encoding="utf-8") as f:
+        evento = json.load(f)
+    righe = {"registra-run": lambda: righe_run(evento), "registra-pr": lambda: righe_pr(evento),
+             "registra-conflitti": lambda: righe_conflitti(evento, dati)}[a.comando]()
+    if a.nuovi:
+        with open(a.nuovi, "w", encoding="utf-8") as f:
+            f.writelines(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n" for r in righe)
+    else:
+        accoda(righe, dati)
+    print(f"{len(righe)} events")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
