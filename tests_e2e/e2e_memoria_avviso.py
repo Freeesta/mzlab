@@ -27,7 +27,7 @@ try:
         pg.goto(f"http://127.0.0.1:{PORT}/?lang=en")
         pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_function("typeof window.mzlabAskMore === 'function'", timeout=60000)
-        def ask(): pg.evaluate(f"window.__r = undefined; window.mzlabAskMore({INFO}).then(v => window.__r = v)"); pg.wait_for_selector("#memmore")
+        def ask(): pg.evaluate(f"(() => {{ window.__r = undefined; window.mzlabAskMore({INFO}).then(v => {{ window.__r = v; }}); }})()"); pg.wait_for_selector("#memmore")
         def text():
             t = pg.inner_text("#memmore")
             for s in ("1400", "512", "3072", "300", "Use more memory", "Cancel"): assert s in t, (s, t)
