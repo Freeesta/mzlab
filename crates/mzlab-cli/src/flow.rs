@@ -16,6 +16,7 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 use crate::flow_base::table_job;
 use crate::flow_cache::Cache;
 use crate::flow_estimate::estimate_job;
+use crate::flow_msngraph::job as msn_graph_job;
 pub use crate::flow_out::{run_plan_cached, run_plan_notify};
 use crate::flow_read::{blobs, load, named, Loaded};
 pub use crate::flow_run::{fill_inputs, run_plan};
@@ -358,10 +359,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("formula.ms1", Exec::File("formulas", formula_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
-    (
-        "spectra.msn_graph",
-        Exec::File("graph", crate::flow_msngraph::job),
-    ),
+    ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),
     ("tp.dig_lr", Exec::File("dig", crate::flow_digl::dig_job)),
     (
         "annot.level",
