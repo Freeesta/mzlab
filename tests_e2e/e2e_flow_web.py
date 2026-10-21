@@ -93,24 +93,26 @@ try:
 
         def second_run():
             r = pg.evaluate(RUN); assert r["err"] is None, r["err"]
-            assert all(e["modo"] == "reused" for e in of(r, "detect", "running")), r["ev"]
+            assert all(e["modo"] == "reused" for e in of(r, "detect", "running") if e["parte"]), r["ev"]
             assert of(r, "align", "reused") and not of(r, "align", "running"), r["ev"]
         step("a second run reuses what is kept (nothing is computed again)", second_run)
 
         def refused():
             pg.evaluate(CLEAR)
-            pg.evaluate("window.__rust = window.MZLAB_RUST; window.MZLAB_RUST = { budgetMb: 1 }")
+            # a budget a quarter of what the first run asked for: below the table in memory and in slabs
+            est = of(state["first"], "align", "running")[0]["mb"]
+            pg.evaluate("window.__rust = window.MZLAB_RUST; window.MZLAB_RUST = { budgetMb: %r }" % (est / 4))
             r = pg.evaluate(RUN)
             pg.evaluate("window.MZLAB_RUST = window.__rust")
-            assert r["err"] and r["err"]["key"] == "error.featMemory", r["err"]
-            assert of(r, "align", "refused") and r["err"]["params"]["stima_mb"] > 1, r
+            assert r["err"] and r["err"]["key"] == "error.featMemory", (est, r["err"], r["ev"][-3:])
+            assert of(r, "align", "refused") and r["err"]["params"]["stima_mb"] > est / 4, r
         step("a series the budget does not hold is refused with its numbers", refused)
 
         def phone_note():
             pg.evaluate("window.MZLAB_PHONE = true")
             pg.click("#flx-run"); pg.wait_for_selector("#flx-web-why")
             assert "made for computers" in pg.inner_text("#flx-web-why"), pg.inner_text("#flx-web-why")
-            btn = pg.locator('.fl-cli button[aria-label="Run in this browser"]'); assert btn.count() == 1
+            btn = pg.locator('.fl-cli button[aria-label="Run in this browser"]'); assert btn.count() == 1, pg.inner_html(".fl-cli")[:600]
             box = btn.bounding_box(); assert box["height"] >= 24 and box["width"] >= 24, box
             pg.evaluate("window.MZLAB_PHONE = false")
         step("a phone or tablet reads the note for computers; the Run button is a reachable target", phone_note)
