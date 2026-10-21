@@ -373,6 +373,13 @@ function breakBonds(ids) {
 window.breakBonds = breakBonds;
 const fragHelpers = { pieces: () => pieces(), pieceMolfile: ids => pieceMolfile(ids), t: (k, p) => I18N.t(k, p), copy: s => { navigator.clipboard.writeText(s).catch(() => {}); if (window.toast) toast(I18N.t("draw.copy.done")); },
   num: v => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: o => window.TDATI.table(o), ask: (q, d) => ask(EH(q), d), note: s => (window.toast ? toast(s) : dnote(s)) };
+// selects the bonds between the given pairs of atoms (ids as in the SMILES just loaded) so Ketcher highlights them; returns how many were found
+function markBonds(pairs) {
+  const ids = []; K.editor.struct().bonds.forEach((b, id) => { if (pairs.some(([a, c]) => (b.begin === a && b.end === c) || (b.begin === c && b.end === a))) ids.push(id); });
+  K.editor.selection(ids.length ? { bonds: ids } : null);
+  return ids.length;
+}
+
 // cut bonds of a piece selection: bonds between a selected and an unselected atom
 function cutBonds(set) { let n = 0; K.editor.struct().bonds.forEach(b => { if (set.has(b.begin) !== set.has(b.end)) n++; }); return n; }
 const copyBtn = (text, label) => `<button class="sm" data-cp="${EH(text)}" title="${EH(I18N.t("draw.copy.title"))}">${label || EH(I18N.t("draw.copy.button"))}</button>`;
@@ -744,7 +751,7 @@ Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!
   catch (e) { dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
-window.TPDraw = { when: async () => { await start(); return true; }, load: async smi => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await K.getSmiles()); }, partial: async () => { await start(); return partialExport(K, undefined, ids => pieceMolfile(ids)); }, ready: () => !!K, undo: redo => { const ed = K && K.editor; if (ed && typeof ed.undo === "function" && typeof ed.redo === "function") redo ? ed.redo() : ed.undo(); } };
+window.TPDraw = { when: async () => { await start(); return true; }, load: async smi => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async pairs => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await K.getSmiles()); }, partial: async () => { await start(); return partialExport(K, undefined, ids => pieceMolfile(ids)); }, ready: () => !!K, undo: redo => { const ed = K && K.editor; if (ed && typeof ed.undo === "function" && typeof ed.redo === "function") redo ? ed.redo() : ed.undo(); } };
 document.addEventListener("tpview", e => { if (/** @type {any} */ (e).detail.view === "draw") start(); });
 try { if (S.view === "draw") start(); } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/disegno, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
