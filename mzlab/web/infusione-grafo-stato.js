@@ -7,6 +7,8 @@
 export const TXT = {
   prove: { perdita: "msngrafo.prove.perdita", isotopi: "msngrafo.prove.isotopi", msn: "msngrafo.prove.msn" },
   elettroni: { pari: "msngrafo.e.pari", dispari: "msngrafo.e.dispari" },
+  // Errors of the library route, named by the engine through error_key.
+  err: { noIon: "err.msnlib.noIon", bad: "err.msnlib.bad" },
   warn: {
     "warn.msngrafo.isolation": "warn.msngrafo.isolation", "warn.msngrafo.precNotFound": "warn.msngrafo.precNotFound", "warn.msngrafo.polarity": "warn.msngrafo.polarity",
     "warn.msngrafo.badFormula": "warn.msngrafo.badFormula", "warn.msngrafo.rootMissing": "warn.msngrafo.rootMissing", "warn.msngrafo.fixedNotFound": "warn.msngrafo.fixedNotFound",
