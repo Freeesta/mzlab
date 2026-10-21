@@ -38,3 +38,14 @@ export async function msnGrafo(name, blob, query, readerFor, esporta = false) {
   const f = esporta ? m.msn_grafo_export : m.msn_grafo;
   return f(readerFor(idx), idx.size, readerFor(blob), name, query);
 }
+
+/**
+ * The library text with the entry of `molecola` and the graph of the query added: the JSON string `{libreria, doppione}` of the module.
+ * @param {string} name @param {Blob} blob the mzML @param {string} query the parameters of the graph as a query string
+ * @param {string} libreria the library file of the user ("" = none) @param {string} molecola
+ * @param {(blob: Blob) => (offset: number, length: number) => Uint8Array} readerFor
+ */
+export async function msnLibAggiungi(name, blob, query, libreria, molecola, readerFor) {
+  const [m, idx] = await Promise.all([load(), indexOf(name)]);
+  return m.msnlib_aggiungi(readerFor(idx), idx.size, readerFor(blob), name, query, libreria, molecola);
+}
