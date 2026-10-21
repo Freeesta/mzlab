@@ -28,6 +28,7 @@
           "meta.compare",
           "quant.calibrate",
           "spectra.centroid",
+          "spectra.insilico",
           "spectra.match",
           "spectra.ms2",
           "spectra.msn_graph",

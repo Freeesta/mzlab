@@ -42,6 +42,9 @@ mod flow_import;
 #[cfg(test)]
 mod flow_import_tests;
 mod flow_inclusion;
+mod flow_insilico;
+#[cfg(test)]
+mod flow_insilico_tests;
 mod flow_json;
 mod flow_kmd;
 mod flow_level;
