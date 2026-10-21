@@ -21,10 +21,12 @@ mod flow_base;
 mod flow_cache;
 mod flow_compare;
 mod flow_formula;
+mod flow_generate;
 mod flow_inclusion;
 mod flow_level;
 mod flow_match;
 mod flow_ms2;
+mod flow_msngraph;
 mod flow_network;
 mod flow_out;
 pub mod flow_report;
@@ -299,11 +301,15 @@ mod flow_command_tests;
 #[cfg(test)]
 mod flow_compare_tests;
 #[cfg(test)]
+mod flow_generate_tests;
+#[cfg(test)]
 mod flow_ident_tests;
 #[cfg(test)]
 mod flow_level_tests;
 #[cfg(test)]
 mod flow_ms2_tests;
+#[cfg(test)]
+mod flow_msngraph_tests;
 #[cfg(test)]
 mod flow_network_tests;
 #[cfg(test)]

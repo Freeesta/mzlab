@@ -1,7 +1,7 @@
 // Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, XIC and single scans as
 // Float64Arrays that are moved (not copied) to the page. The page gives the arrays back ("recycle") once drawn, so a frame
 // allocates nothing. If this worker dies, rust-bridge.js starts a new one (the WASM instance cannot be reused after a trap).
-import init, { Engine, native_samples, native_to_mzml, native_srm, native_external, Passata, version, prepare_upload, budget_choice, formula_mz, provenance, composition, stat_post, campioni, molecules, flow_command, mrm_diff_post, ricerca_numero } from "./wasm/mzlab_wasm.js";
+import init, { Engine, native_samples, native_to_mzml, native_srm, native_external, Passata, version, prepare_upload, budget_choice, budget_down, formula_mz, provenance, composition, stat_post, campioni, molecules, flow_command, mrm_diff_post, ricerca_numero } from "./wasm/mzlab_wasm.js";
 import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
@@ -12,7 +12,7 @@ import { createLabOps } from "./rust-worker-lab.js";
 import { createNativo } from "./rust-nativo.js";
 import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
-import { msnGrafo } from "./rust-msngrafo.js";
+import { msnGrafo, msnLibAggiungi } from "./rust-msngrafo.js";
 
 let engine = null, wasmMem = null;
 const pool = [];                       // ArrayBuffers handed back by the page, ready to be written again
@@ -336,6 +336,12 @@ function applyPolicy(/** @type {any} */ m) {
   postMessage({ op: "budget-choice", choice });
 }
 
+function lowerBudget(/** @type {any} */ m) {                                              // one level down by Rust's rule (0 = none lower); the answer tells the supervisor
+  const mb = budget_down(m.current || BUDGET_MB || 0, m.strikes || 1);
+  if (mb > 0) { BUDGET_MB = mb; engine.set_budget_mb(mb); }
+  postMessage({ op: "budget-down", mb, current: m.current, strikes: m.strikes });
+}
+
 async function handle(ev) {
   const m = ev.data;
   if (m.op === "module") { startInit(m.module); return; } startInit(null); if (m.op === "policy") { await ready; applyPolicy(m); return; }
@@ -395,8 +401,8 @@ async function handle(ev) {
       case "diff": info = engine.diff_traces(m.path, m.query || ""); break;               // api/chrom, api/xic with ref: "" = Python's, "E" + JSON = the user's error
       case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error
       case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;        // api/mrm with ref, from the transitions of the files
-      case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;   case "msngrafo": info = await msnGrafo(tileName.get(m.slot) || "", m.blob, m.query || "", readerFor, !!m.esporta); break;   // api/msn_grafo over the .mzidx and the mzML of the slot
-      case "budget": BUDGET_MB = m.mb; engine.set_budget_mb(m.mb); break;                                  // the supervisor lowers it after a death by lack of memory
+      case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;   case "msngrafo": info = await (m.libreria == null ? msnGrafo(tileName.get(m.slot) || "", m.blob, m.query || "", readerFor, !!m.esporta) : msnLibAggiungi(tileName.get(m.slot) || "", m.blob, m.query || "", m.libreria, m.molecola || "", readerFor)); break;   // api/msn_grafo over the .mzidx and the mzML of the slot
+      case "down": lowerBudget(m); break; case "budget": BUDGET_MB = m.mb; engine.set_budget_mb(m.mb); break;   // down: one level lower by Rust's rule; budget: the value the supervisor sends at startup
       case "close": engine.close(m.slot); blobs.delete(m.slot); tileName.delete(m.slot); break;   case "reset": engine.close_all(); blobs.clear(); tileName.clear(); break;
       case "crash": if (m.grow) wasmMem.grow(m.grow * 16); engine.crash(); break;        // test hook: the supervisor must recover (grow = MB of memory taken first, the signature of a lack of memory)
       case "tic": out = take(2 * engine.count(m.slot, m.level)); n = engine.tic(m.slot, m.level, m.px || 0, out); break;
