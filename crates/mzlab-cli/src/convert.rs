@@ -20,7 +20,7 @@ use crate::Outcome;
 
 pub(crate) const HELP: &str = "mzlab-cli convert: vendor files to indexed mzML, the step convert.mzml of the Flow page.
 
-usage: mzlab-cli convert INPUT... --out FOLDER [--zlib N] [--numpress] [--workers N] [--report FILE.json] [--fresh] [--set conv.NAME=VALUE...]
+usage: mzlab-cli convert INPUT... --out FOLDER [--zlib N] [--numpress] [--peaks WHICH] [--workers N] [--report FILE.json] [--fresh] [--set conv.NAME=VALUE...]
 
   INPUT...             a file, a maker's folder (.D, .d, .raw) or a folder to look through; a .wiff is taken with its .wiff.scan, and a dataset
                        with several samples gives one mzML per sample
@@ -28,11 +28,13 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--zlib N] [--numpress] [--worker
                        FOLDER/.convert
   --zlib N             zlib level of the binary arrays, 0 (none) to 9 (smallest); default 1
   --numpress           lossy MS-Numpress linear prediction of m/z and short logged float of intensities, smaller files
+  --peaks WHICH        the peaks written: file (those of the file, default; a profile file keeps its points and the run warns), profile (the
+                       points of the profile) or mzlab (centroids of mzLab)
   --workers N          files converted at once (default 1; the bytes written do not depend on it)
   --report FILE.json   one object per input: ingresso, uscita, sha256, spettri, secondi, saltato, conv/1; or ingresso, errore, causa
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
-  --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress); the options above are the short forms
+  --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks); the options above are the short forms
   --help               this text
 
 progress goes to stderr, one line per file; stdout lists the mzML files, one per line
@@ -67,6 +69,13 @@ fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
                 .sets
                 .push(format!("conv.zlib_level={}", value(&mut it, &x)?)),
             "--numpress" => a.sets.push("conv.numpress=true".into()),
+            "--peaks" => {
+                let v = value(&mut it, &x)?;
+                if !["file", "profile", "mzlab"].contains(&v.as_str()) {
+                    return Err(format!("--peaks {v}: expected file, profile or mzlab"));
+                }
+                a.sets.push(format!("conv.peaks={v}"));
+            }
             "--set" => a.sets.push(value(&mut it, &x)?),
             "--fresh" => a.fresh = true,
             "--workers" => {
