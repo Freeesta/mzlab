@@ -5,8 +5,8 @@
 // Every transition fires "stato:cambiato" on document ({motivo, ...}); STATO.verifica() lists the broken invariants (tests_e2e/lib.py ready()).
 const E = { files: /** @type {any[]} */ ([]), panels: /** @type {any[]} */ ([]), seq: 1, key: "", cur: 0, browse: false, z: 10, tab: "full" };
 const NB = { ui: null, session: null };   // notebook: state of the interface (+ drawing, see draw.js)
-// addresses of the views: #/dati, #/disegno (and #/teoria, which the head script of index.html sends to the standalone Teoria on a cold start)
-const VIEW_HASH = { data: "dati", draw: "disegno", theory: "teoria" }, HASH_VIEW = { dati: "data", disegno: "draw", teoria: "theory" };
+// addresses of the views: #/data, #/draw (and #/theory, which the head script of index.html sends to the standalone Teoria on a cold start)
+const VIEW_HASH = { data: "data", draw: "draw", theory: "theory" }, HASH_VIEW = { data: "data", draw: "draw", theory: "theory" };
 // views that moved into another one: the old name still works (Attributio is now a step of Flow)
 const VIEW_ALIAS = { attributio: "flow" };
 const hashView = () => { const m = /^#\/(\w+)/.exec(location.hash); return m && HASH_VIEW[m[1]] || null; };

@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+"""`cargo` of the CI pytest jobs (first in PATH, see test.yml): `cargo run ...` becomes `cargo build ...` plus the exec of the binary that was built.
+The real `cargo run` holds the lock of the build directory until the program ends, so every other worker that calls cargo waits for it; here the lock is
+released as soon as the build is done. Any other command, or a target this script cannot find, goes to the real cargo untouched."""
+import json
+import os
+import shutil
+import subprocess
+import sys
+
+AQUI = os.path.dirname(os.path.abspath(__file__))
+PATH = os.pathsep.join(p for p in os.environ.get("PATH", "").split(os.pathsep) if os.path.abspath(p or ".") != AQUI)
+REALE = shutil.which("cargo", path=PATH)
+ENV = {**os.environ, "PATH": PATH}
+
+
+def reale(args):
+    os.execve(REALE, [REALE, *args], ENV)
+
+
+def valore(args, nome):
+    for i, a in enumerate(args):
+        if a == nome and i + 1 < len(args):
+            return args[i + 1]
+        if a.startswith(nome + "="):
+            return a.split("=", 1)[1]
+    return None
+
+
+def main():
+    args = sys.argv[1:]
+    if not args or args[0] != "run":
+        reale(args)
+    resto = []
+    if "--" in args:
+        i = args.index("--")
+        args, resto = args[:i], args[i + 1:]
+    esempio, binario = valore(args, "--example"), valore(args, "--bin")
+    pacchetto = valore(args, "-p") or valore(args, "--package")
+    b = subprocess.run([REALE, "build", *args[1:], "--message-format=json-render-diagnostics"], env=ENV, stdout=subprocess.PIPE, text=True)
+    if b.returncode:
+        sys.exit(b.returncode)
+    eseguibili = []
+    for riga in b.stdout.splitlines():
+        try:
+            m = json.loads(riga)
+        except ValueError:
+            continue
+        kind = m.get("target", {}).get("kind", [])
+        if m.get("reason") == "compiler-artifact" and m.get("executable") and ("example" in kind or "bin" in kind):
+            eseguibili.append((m["target"]["name"], "example" in kind, m["package_id"], m["executable"]))
+    if esempio:
+        scelti = [e for e in eseguibili if e[0] == esempio and e[1]]
+    elif binario:
+        scelti = [e for e in eseguibili if e[0] == binario and not e[1]]
+    else:
+        scelti = [e for e in eseguibili if not e[1] and (pacchetto is None or pacchetto in e[2])]
+    if len(scelti) != 1:
+        reale(sys.argv[1:])
+    os.execve(scelti[0][3], [scelti[0][3], *resto], ENV)
+
+
+main()

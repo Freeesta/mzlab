@@ -1,5 +1,5 @@
-"""Separate addresses: #/dati and #/disegno open the right view from cold (title per view, Back/Forward walk the views); #/teoria, #/teoria/5 and
-#/pratica leave for the standalone Teoria without fetching the engine or the Dati/Disegno scripts; teoria/#5, #cap-12, #A and #09-quadrupolo
+"""Separate addresses: #/data and #/draw open the right view from cold (title per view, Back/Forward walk the views); #/theory, #/theory/5 and
+#/practice leave for the standalone Teoria without fetching the engine or the Dati/Disegno scripts; theory/#5, #cap-12, #A and #09-quadrupolo
 forward to the chapter; the Dati tab returns to the program; every internal link of the Teoria answers (small crawler)."""
 import sys, os, re; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -30,24 +30,24 @@ try:
             c.close()
 
         def dati():
-            c, q = fresh(); q.goto(U + "#/dati"); q.wait_for_function("window.qqReady===true", timeout=60000)
+            c, q = fresh(); q.goto(U + "#/data"); q.wait_for_function("window.qqReady===true", timeout=60000)
             assert q.is_visible("#start") or q.is_visible("#v-data")
             assert q.locator("#nav button.on").get_attribute("data-v") == "data" and "Analisi" in q.title(), q.title()
             shut(c, q)
-        step("cold #/dati: data view, title", dati)
+        step("cold #/data: data view, title", dati)
 
         def disegno():
-            c, q = fresh(); q.goto(U + "#/disegno"); q.wait_for_selector("#v-draw:not([hidden])", timeout=60000)
+            c, q = fresh(); q.goto(U + "#/draw"); q.wait_for_selector("#v-draw:not([hidden])", timeout=60000)
             assert q.locator("#nav button.on").get_attribute("data-v") == "draw"
             q.wait_for_function("window.qqReady===true", timeout=60000)
             assert q.title().startswith("Disegno") and q.is_hidden("#v-data"), q.title()
             shut(c, q)
-        step("cold #/disegno: drawing view at once, title", disegno)
+        step("cold #/draw: drawing view at once, title", disegno)
 
         def history():
             c, q = fresh(); q.goto(U); q.wait_for_function("window.qqReady===true", timeout=60000)
-            q.click("#nav button[data-v=draw]"); assert q.url.endswith("#/disegno") and q.title().startswith("Disegno")
-            q.click("#nav button[data-v=theory]"); assert q.url.endswith("#/teoria") and q.title().startswith("Teoria") and q.is_visible("#tframe")
+            q.click("#nav button[data-v=draw]"); assert q.url.endswith("#/draw") and q.title().startswith("Disegno")
+            q.click("#nav button[data-v=theory]"); assert q.url.endswith("#/theory") and q.title().startswith("Teoria") and q.is_visible("#tframe")
             q.go_back(); q.wait_for_timeout(300); assert q.locator("#nav button.on").get_attribute("data-v") == "draw" and q.is_visible("#v-draw")
             q.go_back(); q.wait_for_timeout(300); assert q.locator("#nav button.on").get_attribute("data-v") == "data" and "Analisi" in q.title()
             q.go_forward(); q.wait_for_timeout(300); assert q.locator("#nav button.on").get_attribute("data-v") == "draw"
@@ -55,30 +55,40 @@ try:
         step("Back/Forward walk through Dati, Disegno and Teoria; title follows", history)
 
         def cold_teoria():
-            for h, end in (("#/teoria", "static/teoria/index.html"), ("#/pratica", "static/teoria/pratica.html"), ("#/teoria/5", "static/teoria/05-gc.html")):
+            for h, end in (("#/theory", "static/teoria/index.html"), ("#/practice", "static/teoria/pratica.html"), ("#/theory/5", "static/teoria/05-gc.html")):
                 c, q = fresh(); q.goto(U + h); q.wait_for_url("**/" + end.split("/")[-1], timeout=20000); q.wait_for_selector("h1"); q.wait_for_timeout(500)
                 assert "/" + end in q.url, q.url
                 heavy = [u for u in q.reqs if any(k in u for k in HEAVY)]
                 assert not heavy, (h, heavy)
                 print(f"MEASURE cold {h}: {q.bytes[0] / 1024:.0f} kB in {len(q.reqs)} requests")
                 shut(c, q)
-        step("#/teoria, #/teoria/5 and #/pratica open the standalone Teoria; no engine, no Dati/Disegno scripts fetched", cold_teoria)
+        step("#/theory, #/theory/5 and #/practice open the standalone Teoria; no engine, no Dati/Disegno scripts fetched", cold_teoria)
 
         def alias():
             T = U + "static/teoria/index.html"
             for h, end in (("#5", "05-gc.html"), ("#cap-12", "12-dati.html"), ("#1", "01-tp.html"), ("#09-quadrupolo", "09-quadrupolo.html"), ("#p2", "pratica-orale.html")):
                 c, q = fresh(); q.goto(T + h); q.wait_for_url("**/" + end, timeout=10000); shut(c, q)
             c, q = fresh(); q.goto(T + "#i-capitoli"); q.wait_for_timeout(500); assert q.url.endswith("index.html#i-capitoli"); shut(c, q)
-        step("teoria/#5, #cap-12, #1, #09-quadrupolo, #p2 forward to the chapter; section anchors stay", alias)
+        step("theory/#5, #cap-12, #1, #09-quadrupolo, #p2 forward to the chapter; section anchors stay", alias)
+
+        def old_italian():
+            for h in ("#/dati", "#/disegno", "#/teoria", "#/teoria/5", "#/pratica"):
+                c, q = fresh(); q.goto(U + h); q.wait_for_function("window.qqReady===true", timeout=60000)
+                assert "static/teoria" not in q.url and q.url.endswith(h), (h, q.url)            # no alias: the old address does not forward anywhere
+                assert q.locator("#nav button.on").get_attribute("data-v") == "data", h             # and it is just the start view
+                shut(c, q)
+            c, q = fresh(); assert q.goto(U + "teoria/").status == 404; shut(c, q)
+            c, q = fresh(); q.goto(U + "theory/#5"); q.wait_for_url("**/05-gc.html", timeout=10000); shut(c, q)
+        step("old Italian addresses are gone (no alias); theory/ is the short path of the Teoria", old_italian)
 
         def toapp():
             c, q = fresh(); q.goto(U + "static/teoria/12-dati.html"); q.wait_for_selector("#tab-dati")
-            q.click("#tab-dati"); q.wait_for_url("**/#/dati"); q.wait_for_function("window.qqReady===true", timeout=60000)
+            q.click("#tab-dati"); q.wait_for_url("**/#/data"); q.wait_for_function("window.qqReady===true", timeout=60000)
             assert q.locator("#nav button.on").get_attribute("data-v") == "data"
             q.click("#nav button[data-v=theory]"); q.wait_for_selector("#tframe"); q.wait_for_timeout(800)
             fr = q.frame_locator("#tframe"); assert fr.locator("#tabs").count() == 0, "no second header inside the program"
             shut(c, q)
-        step("the «Dati» tab leads to #/dati; inside the program the Teoria has no second header", toapp)
+        step("the «Dati» tab leads to #/data; inside the program the Teoria has no second header", toapp)
 
         def crawl():
             c, q = fresh(); q.goto(U + "static/teoria/index.html")
