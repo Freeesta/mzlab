@@ -11,6 +11,9 @@ use std::time::UNIX_EPOCH;
 use mzlab_core::Error;
 use serde_json::{json, Value};
 
+const MOLECULES_FILE: &str = "molecole.json";
+const EMPTY_MOLECULES: &str = "{\"molecole\":[],\"schema\":\"molecules/1\"}";
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl Store {
@@ -177,6 +180,24 @@ impl Store {
         self.kv.insert(key.to_string(), value.to_string());
         self.save_kv();
     }
+
+    /// The molecules of the user, one canonical `molecules/1` document in `molecole.json` (the same bytes as `a_json`): `leggi` gives it (an empty one when there
+    /// is none yet), `scrivi` checks the document, writes it in canonical form and keeps nothing else. Not touched by `clear`: they are not part of a session.
+    pub fn molecules(&mut self, op: &str, body: &str) -> Result<String> {
+        let dir = self.dir();
+        match op {
+            "leggi" => Ok(std::fs::read_to_string(dir.join(MOLECULES_FILE)).unwrap_or_else(|_| EMPTY_MOLECULES.to_string())),
+            "scrivi" => {
+                let canonical = mzlab_core::molecules::route("a_json", body)?;
+                if canonical.starts_with("{\"errori\"") {
+                    return Err(Error::new("error.molecules.badJson"));
+                }
+                write_atomic(&dir, MOLECULES_FILE, &canonical);
+                Ok("{}".to_string())
+            }
+            _ => Err(Error::new("error.badMolecules").with("op", op)),
+        }
+    }
 }
 
 /// A name that is only a file name (the page never chooses a path).
@@ -288,6 +309,25 @@ mod tests {
         assert!(t.list()[0].2, "a changed file is flagged");
         std::fs::remove_file(&f).unwrap();
         assert!(t.list().is_empty(), "a file that is gone is forgotten");
+    }
+
+    #[test]
+    fn molecules_of_the_user_survive_a_new_run_and_a_clear() {
+        let d = tempfile::tempdir().unwrap();
+        let mut s = Store::default();
+        s.set_dir(d.path().join("data"));
+        assert!(s.molecules("leggi", "").unwrap().contains("\"molecole\":[]"));
+        let doc = "{\"schema\":\"molecules/1\",\"molecole\":[{\"nome\":\"Esempina\",\"formula\":\"NC10H15O\"}]}";
+        s.molecules("scrivi", doc).unwrap();
+        s.clear();
+        let mut t = Store::default();
+        t.set_dir(d.path().join("data"));
+        let back = t.molecules("leggi", "").unwrap();
+        assert!(back.contains("\"nome\":\"Esempina\"") && back.contains("\"formula\":\"C10H15NO\"") && back.contains("\"id\":\"u:"), "{back}");
+        assert_eq!(t.molecules("scrivi", &back).unwrap(), "{}");
+        assert_eq!(t.molecules("leggi", "").unwrap(), back, "canonical bytes stay the same");
+        assert!(t.molecules("scrivi", "{\"schema\":\"molecules/1\",\"molecole\":[{\"nome\":\"X\",\"formula\":\"Xx9\"}]}").is_err());
+        assert_eq!(t.molecules("leggi", "").unwrap(), back, "a wrong document changes nothing");
     }
 
     #[test]
