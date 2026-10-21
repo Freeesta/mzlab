@@ -89,19 +89,18 @@ pub fn refilter<R: ReadAt>(
     let (meta, ids) = store::read_meta(r, size)?.ok_or_else(|| Error::new("error.interp.noTp"))?;
     let mut facts = filtri::row_facts(&t);
     let mut reg = Registry::default();
-    for row in 0..t.len() {
-        let status = t.tp.status[row];
-        match first_hidden(&facts[row]) {
+    for (row, (fact, &status)) in facts.iter_mut().zip(&t.tp.status).enumerate() {
+        match first_hidden(fact) {
             Some(i) if status != ST_PARENT => reg.hidden[i].push(t.id(row)),
             None if status == ST_TP || status == ST_UNEXPLAINED => {
                 let id = t.id(row);
-                let Ok(_) = ids.binary_search(&id) else {
+                if ids.binary_search(&id).is_err() {
                     continue;
-                };
+                }
                 let text = store::read_row(r, size, id)?.ok_or_else(bad)?;
                 let doc = parse(text.as_bytes()).map_err(|_| bad())?;
                 if mass_error(&doc, t.mz[row], hyps, &meta, p) {
-                    facts[row].mass_error = true;
+                    fact.mass_error = true;
                     reg.hidden[4].push(id);
                 }
             }
