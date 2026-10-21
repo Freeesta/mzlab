@@ -13,7 +13,6 @@ use crate::flow_run::apply_set;
 const BUCHI: &[&str] = &[
     "import.raw",
     "features.estimate",
-    "table.filter",
     "table.drift",
     "features.ms2_link",
     "export.table_csv",
@@ -23,7 +22,6 @@ const BUCHI: &[&str] = &[
     "rt.predict",
     "annot.regulatory",
     "annot.hazard",
-    "tp.generate",
     "tp.filter",
     "tp.link",
     "tp.position",
