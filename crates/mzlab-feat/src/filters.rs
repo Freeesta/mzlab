@@ -36,16 +36,7 @@ pub enum Rule {
 pub const QC_MIN_FILES: usize = 3;
 
 /// Names of the rules in the `filtra` operation, in the order of `Rule`.
-const NAMES: [&str; 8] = [
-    "min_rilevati",
-    "min_area",
-    "min_altezza",
-    "bianco",
-    "mz",
-    "rt",
-    "ms2",
-    "qc_cv_max",
-];
+const NAMES: [&str; 8] = ["min_rilevati", "min_area", "min_altezza", "bianco", "mz", "rt", "ms2", "qc_cv_max"];
 
 impl Rule {
     pub fn name(&self) -> &'static str {
@@ -63,44 +54,19 @@ impl Rule {
 }
 
 /// Whether `row` passes the rule (the blank mean is computed once by the caller).
-fn passes(
-    t: &Aligned,
-    samples: &[Sample],
-    row: usize,
-    rule: &Rule,
-    (blank, qc): (&[usize], &[usize]),
-) -> bool {
+fn passes(t: &Aligned, samples: &[Sample], row: usize, rule: &Rule, (blank, qc): (&[usize], &[usize])) -> bool {
     let files = || (0..t.n_files).filter(|&k| decides(&samples[k]));
     match *rule {
-        Rule::MinDetected(n) => {
-            files()
-                .filter(|&k| t.state[row * t.n_files + k] == CELL_DETECTED)
-                .count()
-                >= n
-        }
-        Rule::MinArea(x) => {
-            files()
-                .filter_map(|k| measured(t, row, k))
-                .fold(0.0, f64::max)
-                >= x
-        }
-        Rule::MinHeight(x) => {
-            files()
-                .filter(|&k| measured(t, row, k).is_some())
-                .map(|k| f64::from(t.height[row * t.n_files + k]))
-                .fold(0.0, f64::max)
-                >= x
-        }
+        Rule::MinDetected(n) => files().filter(|&k| t.state[row * t.n_files + k] == CELL_DETECTED).count() >= n,
+        Rule::MinArea(x) => files().filter_map(|k| measured(t, row, k)).fold(0.0, f64::max) >= x,
+        Rule::MinHeight(x) => files()
+            .filter(|&k| measured(t, row, k).is_some())
+            .map(|k| f64::from(t.height[row * t.n_files + k]))
+            .fold(0.0, f64::max)
+            >= x,
         Rule::Blank(ratio) => {
-            let b = blank
-                .iter()
-                .map(|&k| measured(t, row, k).unwrap_or(0.0))
-                .sum::<f64>()
-                / blank.len() as f64;
-            files()
-                .filter_map(|k| measured(t, row, k))
-                .fold(0.0, f64::max)
-                >= ratio * b
+            let b = blank.iter().map(|&k| measured(t, row, k).unwrap_or(0.0)).sum::<f64>() / blank.len() as f64;
+            files().filter_map(|k| measured(t, row, k)).fold(0.0, f64::max) >= ratio * b
         }
         Rule::Mz(lo, hi) => (lo..=hi).contains(&t.mz[row]),
         Rule::Rt(lo, hi) => (lo..=hi).contains(&t.rt[row]),
@@ -125,19 +91,12 @@ pub fn apply(t: &Aligned, samples: &[Sample], rules: &[Rule]) -> Result<Vec<u8>>
     if samples.len() != t.n_files || rules.len() > 250 {
         return Err(bad());
     }
-    let blank: Vec<usize> = (0..t.n_files)
-        .filter(|&k| samples[k].kind == "blank")
-        .collect();
+    let blank: Vec<usize> = (0..t.n_files).filter(|&k| samples[k].kind == "blank").collect();
     if rules.iter().any(|r| matches!(r, Rule::Blank(_))) && blank.is_empty() {
         return Err(Error::new("error.filterNoBlank"));
     }
-    let qc: Vec<usize> = (0..t.n_files)
-        .filter(|&k| samples[k].kind == "qc")
-        .collect();
-    if rules
-        .iter()
-        .any(|r| matches!(r, Rule::QcCv(_, n) if qc.len() < (*n).max(2)))
-    {
+    let qc: Vec<usize> = (0..t.n_files).filter(|&k| samples[k].kind == "qc").collect();
+    if rules.iter().any(|r| matches!(r, Rule::QcCv(_, n) if qc.len() < (*n).max(2))) {
         return Err(Error::new("error.qc.tooFew").with("have", qc.len()));
     }
     if rules.contains(&Rule::Ms2) && t.meta.len() != t.len() {
@@ -158,22 +117,13 @@ pub fn to_json(rules: &[Rule]) -> String {
     let mut j = Out::default();
     j.raw("[");
     for (i, r) in rules.iter().enumerate() {
-        j.raw(if i > 0 {
-            ",{\"regola\":"
-        } else {
-            "{\"regola\":"
-        })
-        .str(r.name());
+        j.raw(if i > 0 { ",{\"regola\":" } else { "{\"regola\":" }).str(r.name());
         match *r {
             Rule::MinDetected(n) => j.raw(",\"valore\":").int(n as i64),
             Rule::MinArea(x) | Rule::MinHeight(x) | Rule::Blank(x) => j.raw(",\"valore\":").num(x),
             Rule::Mz(a, b) | Rule::Rt(a, b) => j.raw(",\"da\":").num(a).raw(",\"a\":").num(b),
             Rule::Ms2 => &mut j,
-            Rule::QcCv(x, n) => j
-                .raw(",\"valore\":")
-                .num(x)
-                .raw(",\"qc_min_files\":")
-                .int(n as i64),
+            Rule::QcCv(x, n) => j.raw(",\"valore\":").num(x).raw(",\"qc_min_files\":").int(n as i64),
         };
         j.raw("}");
     }
@@ -182,12 +132,7 @@ pub fn to_json(rules: &[Rule]) -> String {
 }
 
 pub fn from_json(v: &Value) -> Result<Vec<Rule>> {
-    let num = |o: &Value, k: &str| {
-        o.get(k)
-            .and_then(Value::f64)
-            .filter(|x| x.is_finite())
-            .ok_or_else(bad)
-    };
+    let num = |o: &Value, k: &str| o.get(k).and_then(Value::f64).filter(|x| x.is_finite()).ok_or_else(bad);
     v.arr()
         .iter()
         .map(|o| {
@@ -200,9 +145,7 @@ pub fn from_json(v: &Value) -> Result<Vec<Rule>> {
                 Some("rt") => Rule::Rt(num(o, "da")?, num(o, "a")?),
                 Some("ms2") => Rule::Ms2,
                 Some("qc_cv_max") => {
-                    let n = o
-                        .get("qc_min_files")
-                        .map_or(Ok(QC_MIN_FILES as f64), |_| num(o, "qc_min_files"))?;
+                    let n = o.get("qc_min_files").map_or(Ok(QC_MIN_FILES as f64), |_| num(o, "qc_min_files"))?;
                     Rule::QcCv(num(o, "valore")?.max(0.0), n.max(0.0) as usize)
                 }
                 _ => return Err(bad()),

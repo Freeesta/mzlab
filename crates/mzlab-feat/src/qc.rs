@@ -34,13 +34,7 @@ pub struct GroupQc {
 pub fn per_file(t: &Aligned) -> Vec<FileQc> {
     (0..t.n_files)
         .map(|k| {
-            let mut q = FileQc {
-                detected: 0,
-                targeted: 0,
-                filled: 0,
-                absent: 0,
-                total: 0.0,
-            };
+            let mut q = FileQc { detected: 0, targeted: 0, filled: 0, absent: 0, total: 0.0 };
             for r in 0..t.len() {
                 match t.state[r * t.n_files + k] {
                     CELL_DETECTED => q.detected += 1,
@@ -73,14 +67,7 @@ fn median(mut v: Vec<f64>) -> f64 {
 /// Conditions with at least two replicates, in the order of their first file. Areas are the ones of the view (normalised) when there is one.
 pub fn groups(t: &Aligned, samples: &[Sample], view: Option<&View>) -> Vec<GroupQc> {
     let mut out: Vec<GroupQc> = Vec::new();
-    let key = |s: &Sample| {
-        (
-            s.kind.clone(),
-            s.group.clone(),
-            s.time_min.map(f64::to_bits),
-            s.conc.map(f64::to_bits),
-        )
-    };
+    let key = |s: &Sample| (s.kind.clone(), s.group.clone(), s.time_min.map(f64::to_bits), s.conc.map(f64::to_bits));
     let mut seen: Vec<_> = Vec::new();
     for s in samples {
         let id = key(s);
@@ -88,39 +75,22 @@ pub fn groups(t: &Aligned, samples: &[Sample], view: Option<&View>) -> Vec<Group
             continue;
         }
         seen.push(id.clone());
-        let files: Vec<usize> = (0..samples.len())
-            .filter(|&j| key(&samples[j]) == id)
-            .collect();
+        let files: Vec<usize> = (0..samples.len()).filter(|&j| key(&samples[j]) == id).collect();
         if files.len() < 2 {
             continue;
         }
-        let rows = view.map_or_else(
-            || (0..t.len() as u32).collect::<Vec<_>>(),
-            |v| v.rows.clone(),
-        );
+        let rows = view.map_or_else(|| (0..t.len() as u32).collect::<Vec<_>>(), |v| v.rows.clone());
         let cvs: Vec<f64> = rows
             .iter()
             .filter_map(|&r| {
                 let vals: Option<Vec<f64>> = files
                     .iter()
-                    .map(|&j| {
-                        view.map_or_else(
-                            || measured(t, r as usize, j),
-                            |v| v.area_at(t, r as usize, j),
-                        )
-                    })
+                    .map(|&j| view.map_or_else(|| measured(t, r as usize, j), |v| v.area_at(t, r as usize, j)))
                     .collect();
                 vals.map(|v| cv(&v))
             })
             .collect();
-        out.push(GroupQc {
-            kind: s.kind.clone(),
-            group: s.group.clone(),
-            time_min: s.time_min,
-            files,
-            rows: cvs.len(),
-            cv_median: median(cvs),
-        });
+        out.push(GroupQc { kind: s.kind.clone(), group: s.group.clone(), time_min: s.time_min, files, rows: cvs.len(), cv_median: median(cvs) });
     }
     out
 }
@@ -130,38 +100,17 @@ pub fn standard_cv(t: &Aligned, samples: &[Sample], method: &Method) -> Option<f
     let Method::Istd(r) = method else { return None };
     let row = match r {
         Reference::Id(id) => t.row_of_id(*id),
-        Reference::Nearest {
-            mz,
-            rt,
-            ppm,
-            rt_tol,
-        } => (0..t.len())
-            .find(|&i| (t.mz[i] - mz).abs() <= mz * ppm * 1e-6 && (t.rt[i] - rt).abs() <= *rt_tol),
+        Reference::Nearest { mz, rt, ppm, rt_tol } => (0..t.len()).find(|&i| (t.mz[i] - mz).abs() <= mz * ppm * 1e-6 && (t.rt[i] - rt).abs() <= *rt_tol),
     }?;
-    let v: Vec<f64> = (0..t.n_files)
-        .filter(|&k| crate::norm::decides(&samples[k]))
-        .filter_map(|k| measured(t, row, k))
-        .collect();
+    let v: Vec<f64> = (0..t.n_files).filter(|&k| crate::norm::decides(&samples[k])).filter_map(|k| measured(t, row, k)).collect();
     (v.len() >= 2).then(|| cv(&v))
 }
 
 /// Rows that have a peak in at least one blank: (blank files, rows considered, rows with a peak in a blank). The rows are those of the view, or all of the table.
 pub fn blank_share(t: &Aligned, samples: &[Sample], view: Option<&View>) -> (usize, usize, usize) {
-    let blanks: Vec<usize> = (0..t.n_files)
-        .filter(|&k| samples[k].kind == "blank")
-        .collect();
-    let rows = view.map_or_else(
-        || (0..t.len() as u32).collect::<Vec<_>>(),
-        |v| v.rows.clone(),
-    );
-    let hit = rows
-        .iter()
-        .filter(|&&r| {
-            blanks
-                .iter()
-                .any(|&k| measured(t, r as usize, k).is_some_and(|a| a > 0.0))
-        })
-        .count();
+    let blanks: Vec<usize> = (0..t.n_files).filter(|&k| samples[k].kind == "blank").collect();
+    let rows = view.map_or_else(|| (0..t.len() as u32).collect::<Vec<_>>(), |v| v.rows.clone());
+    let hit = rows.iter().filter(|&&r| blanks.iter().any(|&k| measured(t, r as usize, k).is_some_and(|a| a > 0.0))).count();
     (blanks.len(), rows.len(), hit)
 }
 
@@ -170,22 +119,12 @@ pub fn isotope_ratio(t: &Aligned, view: Option<&View>) -> Option<(usize, f64, f6
     if t.meta.is_empty() {
         return None;
     }
-    let rows = view.map_or_else(
-        || (0..t.len() as u32).collect::<Vec<_>>(),
-        |v| v.rows.clone(),
-    );
-    let v: Vec<f64> = rows
-        .iter()
-        .map(|&r| f64::from(t.meta.iso_m1[r as usize]))
-        .filter(|x| x.is_finite())
-        .collect();
+    let rows = view.map_or_else(|| (0..t.len() as u32).collect::<Vec<_>>(), |v| v.rows.clone());
+    let v: Vec<f64> = rows.iter().map(|&r| f64::from(t.meta.iso_m1[r as usize])).filter(|x| x.is_finite()).collect();
     if v.is_empty() {
         return None;
     }
-    let (lo, hi) = (
-        v.iter().copied().fold(f64::INFINITY, f64::min),
-        v.iter().copied().fold(f64::NEG_INFINITY, f64::max),
-    );
+    let (lo, hi) = (v.iter().copied().fold(f64::INFINITY, f64::min), v.iter().copied().fold(f64::NEG_INFINITY, f64::max));
     Some((v.len(), lo, median(v), hi))
 }
 
@@ -194,72 +133,33 @@ pub fn to_json(t: &Aligned, samples: &[Sample], view: Option<&View>) -> String {
     let mut j = Out::default();
     j.raw("{\"schema\":\"qc/1\",\"file\":[");
     for (k, q) in per_file(t).iter().enumerate() {
-        j.raw(if k > 0 { ",{\"file\":" } else { "{\"file\":" })
-            .str(&samples[k].file);
-        j.raw(",\"rilevati\":")
-            .int(q.detected as i64)
-            .raw(",\"mirati\":")
-            .int(q.targeted as i64);
-        j.raw(",\"riempiti\":")
-            .int(q.filled as i64)
-            .raw(",\"assenti\":")
-            .int(q.absent as i64);
+        j.raw(if k > 0 { ",{\"file\":" } else { "{\"file\":" }).str(&samples[k].file);
+        j.raw(",\"rilevati\":").int(q.detected as i64).raw(",\"mirati\":").int(q.targeted as i64);
+        j.raw(",\"riempiti\":").int(q.filled as i64).raw(",\"assenti\":").int(q.absent as i64);
         j.raw(",\"area_totale\":").num(q.total).raw("}");
     }
     j.raw("],\"gruppi\":[");
     for (i, g) in groups(t, samples, view).iter().enumerate() {
-        j.raw(if i > 0 { ",{\"tipo\":" } else { "{\"tipo\":" })
-            .str(&g.kind);
-        j.raw(",\"gruppo\":")
-            .str(&g.group)
-            .raw(",\"tempo_min\":")
-            .opt(g.time_min);
-        j.raw(",\"file\":")
-            .int(g.files.len() as i64)
-            .raw(",\"righe\":")
-            .int(g.rows as i64);
-        j.raw(",\"cv_mediano\":")
-            .opt(Some(g.cv_median).filter(|x| x.is_finite()))
-            .raw("}");
+        j.raw(if i > 0 { ",{\"tipo\":" } else { "{\"tipo\":" }).str(&g.kind);
+        j.raw(",\"gruppo\":").str(&g.group).raw(",\"tempo_min\":").opt(g.time_min);
+        j.raw(",\"file\":").int(g.files.len() as i64).raw(",\"righe\":").int(g.rows as i64);
+        j.raw(",\"cv_mediano\":").opt(Some(g.cv_median).filter(|x| x.is_finite())).raw("}");
     }
     j.raw("],\"standard_cv\":");
     let method = view.map(|v| v.method.clone());
     j.opt(method.and_then(|m| standard_cv(t, samples, &m)));
     let (nb, n, hit) = blank_share(t, samples, view);
-    j.raw(",\"bianchi\":{\"file\":")
-        .int(nb as i64)
-        .raw(",\"righe\":")
-        .int(n as i64)
-        .raw(",\"righe_con_picco\":")
-        .int(hit as i64)
-        .raw("}");
+    j.raw(",\"bianchi\":{\"file\":").int(nb as i64).raw(",\"righe\":").int(n as i64).raw(",\"righe_con_picco\":").int(hit as i64).raw("}");
     j.raw(",\"m1_su_m\":");
     match isotope_ratio(t, view) {
-        Some((n, lo, med, hi)) => j
-            .raw("{\"righe\":")
-            .int(n as i64)
-            .raw(",\"min\":")
-            .num(lo)
-            .raw(",\"mediana\":")
-            .num(med)
-            .raw(",\"max\":")
-            .num(hi)
-            .raw("}"),
+        Some((n, lo, med, hi)) => j.raw("{\"righe\":").int(n as i64).raw(",\"min\":").num(lo).raw(",\"mediana\":").num(med).raw(",\"max\":").num(hi).raw("}"),
         None => j.raw("null"),
     };
     j.raw(",\"scartate\":[");
     if let Some(v) = view {
         for (i, r) in v.rules.iter().enumerate() {
             let n = v.why.iter().filter(|&&w| w as usize == i + 1).count();
-            j.raw(if i > 0 {
-                ",{\"regola\":"
-            } else {
-                "{\"regola\":"
-            })
-            .str(r.name())
-            .raw(",\"righe\":")
-            .int(n as i64)
-            .raw("}");
+            j.raw(if i > 0 { ",{\"regola\":" } else { "{\"regola\":" }).str(r.name()).raw(",\"righe\":").int(n as i64).raw("}");
         }
     }
     j.raw("]}");

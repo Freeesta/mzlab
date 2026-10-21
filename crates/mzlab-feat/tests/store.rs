@@ -187,43 +187,27 @@ fn ids_are_positions_and_counts_come_from_the_states() {
     assert_eq!(t.row_of_id(0), None);
     assert_eq!(t.row_of_id(t.len() as u32 + 1), None);
     assert!((0..t.len()).all(|r| t.row_of_id(t.id(r)) == Some(r)));
-    let k = (0..t.state.len())
-        .find(|&i| t.state[i] == CELL_DETECTED)
-        .unwrap();
+    let k = (0..t.state.len()).find(|&i| t.state[i] == CELL_DETECTED).unwrap();
     let before = t.state_counts(k / t.n_files);
     t.state[k] = CELL_FILLED;
     let after = t.state_counts(k / t.n_files);
     assert_eq!((after.0 + 1, after.2), (before.0, before.2 + 1));
-    let total: usize = (0..t.len())
-        .map(|r| t.state_counts(r))
-        .map(|c| (c.0 + c.1 + c.2) as usize)
-        .sum();
+    let total: usize = (0..t.len()).map(|r| t.state_counts(r)).map(|c| (c.0 + c.1 + c.2) as usize).sum();
     assert!(total <= t.state.len());
 }
 
 #[test]
 fn sorting_the_rows_keeps_every_row_whole() {
     let (_, t) = series();
-    assert!(
-        !t.is_id_ordered(),
-        "the test series must start out of order"
-    );
+    assert!(!t.is_id_ordered(), "the test series must start out of order");
     let mut s = t.clone();
     s.sort_rows();
     assert!(s.is_id_ordered());
-    assert_eq!(
-        (s.len(), s.state.len(), s.member_mz.len()),
-        (t.len(), t.state.len(), t.member_mz.len())
-    );
+    assert_eq!((s.len(), s.state.len(), s.member_mz.len()), (t.len(), t.state.len(), t.member_mz.len()));
     // every row of the sorted table is a row of the original: its reference ion, its cells and its members
     let key = |a: &Aligned, r: usize| {
-        let ms: Vec<(u64, u32)> = a
-            .members(r)
-            .map(|m| (a.member_mz[m].to_bits(), a.member_rt[m].to_bits()))
-            .collect();
-        let cells: Vec<(u64, u8)> = (0..a.n_files)
-            .map(|k| (a.area[a.cell(r, k)].to_bits(), a.state[a.cell(r, k)]))
-            .collect();
+        let ms: Vec<(u64, u32)> = a.members(r).map(|m| (a.member_mz[m].to_bits(), a.member_rt[m].to_bits())).collect();
+        let cells: Vec<(u64, u8)> = (0..a.n_files).map(|k| (a.area[a.cell(r, k)].to_bits(), a.state[a.cell(r, k)])).collect();
         (a.mz[r].to_bits(), a.rt[r].to_bits(), cells, ms)
     };
     let mut before: Vec<_> = (0..t.len()).map(|r| key(&t, r)).collect();
