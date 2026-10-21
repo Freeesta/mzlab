@@ -3,10 +3,10 @@
 //! (little-endian `f64` arrays with the layout of `mzlab-wasm`, no JSON) except errors and file summaries.
 
 pub mod apertura;
+pub mod cartella;
 mod conv_coda;
 #[cfg(test)]
 mod conv_coda_tests;
-pub mod cartella;
 #[cfg(feature = "app")]
 pub mod dialogo;
 pub mod engine;
