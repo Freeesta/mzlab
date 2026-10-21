@@ -13,6 +13,10 @@ use mzlab_feat_table_wasm::core::table_file;
 const NAMES: [&str; 3] = ["blank.mzML", "s_t0.mzML", "s_t10.mzML"];
 
 fn table() -> Vec<u8> {
+    table_in(Recipe::default())
+}
+
+fn table_in(recipe: Recipe) -> Vec<u8> {
     let rows: [(f64, f64, [f64; 3]); 3] = [
         (200.0, 5.0, [1e6, 1e6, 2e6]),
         (250.1, 6.0, [0.0, 5e5, 9e5]),
@@ -31,7 +35,7 @@ fn table() -> Vec<u8> {
                 .push(if a > 0.0 { CELL_DETECTED } else { CELL_ABSENT });
         }
     }
-    write_table(&t, &Recipe::default(), &Origin::default())
+    write_table(&t, &recipe, &Origin::default())
 }
 
 fn samples_text() -> String {
@@ -65,18 +69,21 @@ fn run(d: &Path, step: &str, params: &str, file: &str) -> Result<String, String>
     Ok(std::fs::read_to_string(d.join("work").join(file)).unwrap())
 }
 
-fn page(kind: &str) -> String {
-    let t = table();
+fn page_of(t: &[u8], pol: i32, kind: &str) -> String {
     table_file(
-        &mut Slice(&t),
+        &mut Slice(t),
         t.len() as u64,
         &samples_text(),
         "",
-        &sha256_hex(&t),
-        1,
+        &sha256_hex(t),
+        pol,
         kind,
     )
     .unwrap()
+}
+
+fn page(kind: &str) -> String {
+    page_of(&table(), 1, kind)
 }
 
 #[test]
@@ -130,5 +137,18 @@ fn a_view_of_a_filter_is_refused_with_its_key() {
     )
     .unwrap();
     assert!(run(&d, "export.mztab@1", "{}", "e.mzTab").is_err());
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn the_polarity_of_the_recipe_reaches_the_file() {
+    let d = dir("neg");
+    let mut recipe = Recipe::default();
+    recipe.detect.polarity = Some(-1);
+    let t = table_in(recipe);
+    std::fs::write(d.join("table.mzfeat"), &t).unwrap();
+    let got = run(&d, "export.mztab@1", "{}", "e.mzTab").unwrap();
+    assert_eq!(got, page_of(&t, -1, "mztab"));
+    assert_ne!(got, page_of(&t, 1, "mztab"));
     let _ = std::fs::remove_dir_all(&d);
 }

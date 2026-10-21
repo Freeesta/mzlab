@@ -9,16 +9,15 @@ use mzlab_core::step::DataType;
 use mzlab_feat::store::{read_table_from, Slice};
 use mzlab_feat_table_wasm::core::table_file;
 
-/// Polarity the detection of the table ran in (the recipe in its meta); positive when the recipe names none, as the page does.
+/// Polarity the detection of the table ran in: the recipe in its meta is text (`detect=Params { .. polarity: Some(-1) .. }`); positive when it names none.
 fn polarity(table: &[u8]) -> Result<i32> {
     let (_, meta) = read_table_from(&mut Slice(table), table.len() as u64)?;
-    let pol = meta
-        .get("recipe")
-        .and_then(|r| r.get("detect"))
-        .and_then(|d| d.get("polarity"));
-    Ok(pol
-        .and_then(|p| p.f64())
-        .map_or(1, |p| if p < 0.0 { -1 } else { 1 }))
+    let recipe = meta.get("recipe").and_then(|r| r.str()).unwrap_or("");
+    Ok(if recipe.contains("polarity: Some(-1)") {
+        -1
+    } else {
+        1
+    })
 }
 
 /// The text of the file `kind` of the table, whole (no view: a filter view keeps no reference to its table).
