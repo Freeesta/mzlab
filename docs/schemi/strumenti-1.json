@@ -23,6 +23,7 @@
           "features.table",
           "formula.ms1",
           "formula.ms2",
+          "import.raw",
           "index.mzidx",
           "meta.compare",
           "msn.library_export",

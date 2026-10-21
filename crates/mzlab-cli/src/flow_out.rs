@@ -142,7 +142,7 @@ pub fn run_plan_notify(
     done: Option<DoneFn>,
 ) -> mzlab_core::Result<(Run, String)> {
     let mut plan = parse(text)?;
-    fill_inputs(&mut plan, |n| dir.join(n))?;
+    fill_inputs(&mut plan, |n| dir.join(crate::flow_set::dataset_name(n)))?;
     let plan = prepare(plan, &steps())?.map_err(|problems| {
         let list: Vec<String> = problems.iter().map(problem_text).collect();
         mzlab_core::Error::new("err.flow.check").with("problems", list.join(" "))
