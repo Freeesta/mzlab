@@ -21,7 +21,7 @@ fn full(dir: &Path) -> Result<(), String> {
         &base[..cut]
     );
     let (done, prov) = crate::flow::run_plan(text.as_bytes(), dir, &dir.join("work"), 2, None)
-        .map_err(|e| e.key.to_string())?;
+        .map_err(|e| format!("{} {:?}", e.key, e.params))?;
     if !done.skipped.is_empty() || prov.contains("\"error\"") {
         return Err(prov);
     }
@@ -44,11 +44,8 @@ fn the_chain_runs_from_files_to_the_network_with_the_hypotheses_of_the_plan() {
     );
     let net = std::fs::read_to_string(w.join("net.json")).unwrap();
     assert!(net.starts_with("{\"schema\":\"rete/1\""), "{net}");
-    let n = parse(net.as_bytes()).unwrap();
-    println!(
-        "arcs={:?}",
-        n.get("n_arcs").and_then(|v| v.f64())
-    );
+    // the synthetic parent has no pair of accepted products joined by a rule: the network is valid and may have no arcs
+    assert!(parse(net.as_bytes()).unwrap().get("n_arcs").is_some());
     let flt = std::fs::read_to_string(w.join("flt.json")).unwrap();
     assert!(flt.starts_with("{\"schema\":\"filtri/1\""), "{flt}");
     let _ = std::fs::remove_dir_all(&out);
