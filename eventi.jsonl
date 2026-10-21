@@ -3,3 +3,7 @@
 {"tipo":"pr","pr":1370,"sha":"2f56bf1e3f80a3c5a26244040112fdeaf479bd76","ts_utc":"2026-10-21T17:11:09Z","azione":"unita","aperta_s":1341,"merge_main":0,"verde_a_unione_s":null}
 {"ts_utc":"2026-10-21T17:11:14Z","tipo":"run","workflow":"pages","esito":"cancelled","main":true,"durata_s":293,"attivo_s":291,"coda_s":0,"jobs":{"build":291,"deploy":0},"pr":null,"sha":"9fbdb833f7d9bf3dfaf51aceb402e248d2ffad1a","run_id":39640792825,"run_attempt":1}
 {"ts_utc":"2026-10-21T17:11:13Z","tipo":"job_fallito","workflow":"pages","job":"build","esito":"cancelled","durata_s":291,"categoria":"annullato","passo":null,"pr":null,"sha":"9fbdb833f7d9bf3dfaf51aceb402e248d2ffad1a","run_id":39640792825,"run_attempt":1}
+{"ts_utc":"2026-10-21T17:11:30Z","tipo":"conflitto","pr":1371,"sha":"2a5ff0e48ffd091db0b5a49d66c28061c02cb0df","pr_unita":1370,"file_comuni":["docs/agenti/ci-veloce.md"],"n_file_comuni":1}
+{"ts_utc":"2026-10-21T17:11:45Z","tipo":"conflitto","pr":1356,"sha":"2a5ff0e48ffd091db0b5a49d66c28061c02cb0df","pr_unita":1370,"file_comuni":[],"n_file_comuni":0}
+{"ts_utc":"2026-10-21T17:11:55Z","tipo":"conflitto","pr":1350,"sha":"2a5ff0e48ffd091db0b5a49d66c28061c02cb0df","pr_unita":1370,"file_comuni":[],"n_file_comuni":0}
+{"ts_utc":"2026-10-21T17:11:55Z","tipo":"conflitto","pr":1344,"sha":"2a5ff0e48ffd091db0b5a49d66c28061c02cb0df","pr_unita":1370,"file_comuni":[],"n_file_comuni":0}
