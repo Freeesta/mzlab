@@ -5,7 +5,7 @@
 use mzlab_core::elements::parse_formula;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
-use mzlab_core::json::{parse, Out, Value};
+use mzlab_core::json::{Out, Value};
 use mzlab_core::step::DataType;
 use mzlab_feat::chem::posizioni::Pol;
 use mzlab_feat::interp::reposition::reposition;
@@ -36,15 +36,15 @@ pub fn site_params(job: &Job) -> SiteParams {
     }
 }
 
-/// The polarity of the series, from the recipe in the meta of the table (positive when it does not say).
+/// The polarity of the series, from the recipe in the meta of the table: the recipe is text (`detect=Params { .. polarity: Some(-1) .. }`), positive when it names none.
 fn polarity_of(tp: &[u8]) -> Result<Pol> {
     let (_, meta) = read_table_from(&mut Slice(tp), tp.len() as u64)?;
-    let recipe = meta.get("recipe").and_then(Value::str);
-    let value = recipe.and_then(|t| parse(t.as_bytes()).ok());
-    let negative = value
-        .and_then(|v| v.get("polarity").and_then(Value::f64))
-        .is_some_and(|p| p < 0.0);
-    Ok(if negative { Pol::Neg } else { Pol::Pos })
+    let recipe = meta.get("recipe").and_then(Value::str).unwrap_or("");
+    Ok(if recipe.contains("polarity: Some(-1)") {
+        Pol::Neg
+    } else {
+        Pol::Pos
+    })
 }
 
 /// `sites/1` text of the `.mzfeat` `tp` (with the block `interp`) for the parent file `parent`.

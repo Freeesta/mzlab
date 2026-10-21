@@ -293,7 +293,7 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 #busybar{position:fixed;left:0;right:0;top:0;height:3px;z-index:60;overflow:hidden;background:transparent}#busybar[hidden]{display:none}#busybar i{display:block;height:100%;width:30%;background:var(--accent);animation:busyslide 1.2s ease-in-out infinite}@keyframes busyslide{from{transform:translateX(-100%)}to{transform:translateX(340%)}}@media (prefers-reduced-motion:reduce){#busybar i{animation:none;width:100%}}:root[data-a11y-reduce] #busybar i{animation:none;width:100%}
 #kload{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;font-size:15px;z-index:1;pointer-events:none}#kld-dots span{display:inline-block;width:5px;visibility:hidden}
 /* the editor fills the page under the header: edge to edge, down to the window bottom */
-#kframe{display:block;width:100%;height:calc(100vh - var(--hh,48px));min-height:420px;border:0;border-radius:0;background:#fff}
+#kframe.kwait{visibility:hidden}#kframe{display:block;width:100%;height:calc(100vh - var(--hh,48px));min-height:420px;border:0;border-radius:0;background:#fff}
 .sm{font-size:12px}
 #refdlg{max-width:min(1100px,96vw);width:96vw;max-height:92vh}#refbody{max-height:80vh;overflow:auto;margin:-3px;padding:3px}#refdlg h4{margin:12px 0 4px}
 #reftitle{margin:0;font-size:16px}
