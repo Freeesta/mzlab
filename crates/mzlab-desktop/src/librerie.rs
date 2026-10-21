@@ -42,6 +42,11 @@ pub struct Config {
     /// the folder of the data pointed at by the user (`cartella.rs`)
     #[serde(default)]
     pub dati: Option<String>,
+    /// the notice «make mzLab the default app?» (`apertura.rs`): files opened from outside so far, and the answer that ends the notice
+    #[serde(default)]
+    pub aperture: u32,
+    #[serde(default)]
+    pub risposta: Option<crate::apertura::Risposta>,
 }
 
 pub fn read_config(data_dir: &Path) -> Config {

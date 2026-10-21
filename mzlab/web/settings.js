@@ -130,7 +130,7 @@ function uipOpen(btn) {
       + fld(T("settings.hrPpm"), T("settings.hrPpm.title"), `<input type="number" id="uip-ppm" min="1" max="50" step="1" value="${UIP.hrPpm}" style="width:64px" aria-label="${esc(T("settings.hrPpm"))}">`)
       + fld(T("settings.hrDec"), T("settings.hrDec.title"), `<input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:56px" aria-label="${esc(T("settings.hrDec"))}">`) : "") + cen;
   const tourOn = !(window.BANCO && BANCO.on());
-  const app = (window.DESKUPD ? DESKUPD.row() : "") + (window.MZLAB_DESKTOP ? C.sw(T("settings.ext"), T("settings.ext.title"), 'id="uip-ext"', false, "ext") : "")
+  const app = (window.DESKUPD ? DESKUPD.row() : "") + (window.DESKDEF ? DESKDEF.row() : "") + (window.MZLAB_DESKTOP ? C.sw(T("settings.ext"), T("settings.ext.title"), 'id="uip-ext"', false, "ext") : "")
     + (tourOn ? `<div class="imp-fld"><button id="uip-tour" type="button"><span class="ic">${C.GICON.play}</span>${T(files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>` : "");
   const grp = (id, icon, title, body, dflt) => body ? C.group(id, icon, T(title), body, uipGroupOpen(id, dflt)) : "";
   d.innerHTML = `<div class="a-hd"><h2>${T("settings.title")}</h2><button type="button" class="x" id="uip-x" aria-label="${esc(T("settings.close"))}">&times;</button></div>`
@@ -141,6 +141,7 @@ function uipOpen(btn) {
   document.body.appendChild(d);
   d.querySelectorAll("details.imp-g").forEach(g => g.addEventListener("toggle", () => { try { localStorage.setItem(UIP_GROUP_KEY(g.id), /** @type {HTMLDetailsElement} */ (g).open ? "1" : "0"); } catch (_) { /* not remembered */ } }));
   if (window.DESKUPD) DESKUPD.bind(d);
+  if (window.DESKDEF) DESKDEF.bind(d);
   if (mem) mem.bind(d);
   const on = (/** @type {string} */ sel, /** @type {string} */ ev, /** @type {(e: any) => void} */ fn) => { const el = d.querySelector(sel); if (el) el.addEventListener(ev, fn); };
   const radio = (/** @type {string} */ name, /** @type {(v: string) => void} */ fn) => d.querySelectorAll(`input[name="${name}"]`).forEach(r => r.addEventListener("change", e => { if (/** @type {HTMLInputElement} */ (e.target).checked) fn(/** @type {HTMLInputElement} */ (e.target).value); }));

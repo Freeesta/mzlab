@@ -24,6 +24,9 @@ mod flow_formula;
 mod flow_generate;
 mod flow_inclusion;
 mod flow_level;
+mod flow_link;
+#[cfg(test)]
+mod flow_link_tests;
 mod flow_match;
 mod flow_ms2;
 mod flow_msngraph;
