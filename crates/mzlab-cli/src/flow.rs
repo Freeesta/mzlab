@@ -20,6 +20,7 @@ use crate::flow_estimate::estimate_job;
 use crate::flow_level::level_job;
 use crate::flow_msngraph::job as msn_graph_job;
 pub use crate::flow_out::{run_plan_cached, run_plan_notify};
+use crate::flow_reactivity::reactivity_job;
 use crate::flow_read::{blobs, load, named, Loaded};
 pub use crate::flow_run::{fill_inputs, run_plan};
 use crate::flow_stats::stats_job;
@@ -384,6 +385,10 @@ const EXECUTORS: &[(&str, Exec)] = &[
     (
         "structure.render",
         Exec::File("drawing", crate::flow_render::render_job),
+    ),
+    (
+        "structure.reactivity",
+        Exec::File("reactivity", reactivity_job),
     ),
     (
         "meta.compare",
