@@ -317,3 +317,4 @@
 {"ts_utc":"2026-10-21T22:25:27Z","azione":"aperta","tipo":"pr","pr":1390,"sha":"12585aa248ffaac2578f8e545b8768f3bc3f1d17"}
 {"ts_utc":"2026-10-21T22:25:47Z","tipo":"run","workflow":"rust","esito":"success","main":false,"durata_s":18,"attivo_s":14,"coda_s":1,"jobs":{"changes":11,"rust-ok":3,"rust-core":0,"rust":0,"rust-misc":0,"deny":0,"rust-lint":0,"rust-wasm":0},"pr":1390,"sha":"12585aa248ffaac2578f8e545b8768f3bc3f1d17","run_id":39686380834,"run_attempt":1}
 {"ts_utc":"2026-10-21T22:25:44Z","azione":"aperta","tipo":"pr","pr":1391,"sha":"a14dd7c3a70e7c86fd2a1bce1d83c8b2b6706c75"}
+{"ts_utc":"2026-10-21T22:26:06Z","tipo":"run","workflow":"rust","esito":"success","main":false,"durata_s":18,"attivo_s":14,"coda_s":2,"jobs":{"changes":11,"rust-ok":3,"rust-misc":0,"rust-wasm":0,"rust-core":0,"deny":0,"rust":0,"rust-lint":0},"pr":1391,"sha":"a14dd7c3a70e7c86fd2a1bce1d83c8b2b6706c75","run_id":39686420126,"run_attempt":1}
