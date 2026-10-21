@@ -1,11 +1,12 @@
 //! The cleavages of the structure of the user that explain the m/z of one node of an `msngrafo/1`: the fragmenter of mzLab (`fragmenter`) run on the
 //! node's m/z and on the peaks of its own spectrum, the cuts whose piece gives the m/z of the node grouped by that m/z. Used by `mzlab-cli msn-graph
-//! --strutture`; the types of the answer are in `mzlab_core::msngrafo`. Candidates, never identifications.
+//! --strutture` and the `.wasm` `msngrafo` (`strutture_testo`, the same bytes); the types of the answer are in `mzlab_core::msngrafo`. Candidates, never identifications.
 
 use super::fragmenter::{fragment_molecule, FragMatch, FragmentSide};
 use super::grafo::Mol;
+use mzlab_core::error::{Error, Result as CoreResult};
 use mzlab_core::msngrafo::{
-    CandidatoStruttura, IngressoStrutture, PiccoSpiegato, Strutture, Taglio,
+    con_strutture, CandidatoStruttura, Grafo, IngressoStrutture, PiccoSpiegato, Strutture, Taglio,
 };
 
 /// Cleavable bonds taken at most (the fragmenter cuts the first ones in the order of the SMILES).
@@ -50,6 +51,23 @@ fn taglio(
         ppm: m.ppm,
         picchi,
     }
+}
+
+/// The graph text `j` of `g` with the key `strutture` of node `nodo` (`nK` or `K`): the cleavages of `smiles` that give its m/z within `ppm`.
+pub fn strutture_testo(
+    g: &Grafo,
+    j: &str,
+    smiles: Option<&str>,
+    (nodo, ppm): (&str, f64),
+) -> CoreResult<String> {
+    let smiles = smiles.filter(|s| !s.trim().is_empty());
+    let smiles = smiles.ok_or_else(|| Error::new("err.msngrafo.noSmiles"))?;
+    let bad = || Error::new("err.msngrafo.badNode").with("node", nodo);
+    let k: usize = nodo.trim_start_matches('n').parse().map_err(|_| bad())?;
+    let ing = g.ingresso_strutture(k).ok_or_else(bad)?;
+    let s = strutture(smiles, &ing, ppm)
+        .map_err(|e| Error::new("err.msngrafo.badSmiles").with("detail", e))?;
+    Ok(con_strutture(j, &s))
 }
 
 /// The cleavages of `smiles` that give the m/z of the node `ing` within `ppm`. `Err` = the SMILES cannot be read.

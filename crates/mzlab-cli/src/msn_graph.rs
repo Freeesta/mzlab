@@ -9,7 +9,7 @@ use mzlab_core::elements::{fmt, parse_formula};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out};
 use mzlab_core::msnalbero::Raggruppa;
-use mzlab_core::msngrafo::{con_strutture, esporta, grafo_json, Formato, Grafo, Opzioni};
+use mzlab_core::msngrafo::{esporta, grafo_json, Formato, Grafo, Opzioni};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 
 pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/1) of an MSn infusion.
@@ -244,14 +244,7 @@ pub fn strutture_testo(
     o: &Opzioni,
     (nodo, ppm): (&str, f64),
 ) -> Result<String> {
-    let smiles = o.smiles.as_deref().filter(|s| !s.trim().is_empty());
-    let smiles = smiles.ok_or_else(|| Error::new("err.msngrafo.noSmiles"))?;
-    let bad = || Error::new("err.msngrafo.badNode").with("node", nodo);
-    let k: usize = nodo.trim_start_matches('n').parse().map_err(|_| bad())?;
-    let ing = g.ingresso_strutture(k).ok_or_else(bad)?;
-    let s = mzlab_feat::chem::strutture::strutture(smiles, &ing, ppm)
-        .map_err(|e| Error::new("err.msngrafo.badSmiles").with("detail", e))?;
-    Ok(con_strutture(j, &s))
+    mzlab_feat::chem::strutture::strutture_testo(g, j, o.smiles.as_deref(), (nodo, ppm))
 }
 
 /// The text the command prints: the graph, or the line of numbers.
