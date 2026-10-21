@@ -36,7 +36,7 @@ impl State {
         )?)
     }
 
-    /// `{plan: "<mzflow/2 text>", fresh?: bool, files?: {name: text}}` (`files`: inputs the page holds as text, the sample lists, which need no registering) -> `{prov: "<prov/1 text>", dir: "<folder of the outputs>"}`; the steps of the last runs whose key is
+    /// `{plan: "<mzflow/2 text>", fresh?: bool, files?: {name: text}}` (`files`: inputs the page holds as text, the sample lists, which need no registering; `llm`: `{log_sha256, turn, provider, model, level}` when the assistant launched the run) -> `{prov: "<prov/1 text>", dir: "<folder of the outputs>"}`; the steps of the last runs whose key is
     /// unchanged are taken again (`cached` in `prov/1`) unless `fresh`. A file the plan names that is not registered is `err.flow.input.missing`.
     pub(crate) fn flow_run(&self, p: &Value) -> Result<Answer> {
         let plan_text = p["plan"]
@@ -75,6 +75,11 @@ impl State {
             Some(fresh),
             Some(done),
         )?;
+        // a run launched by the assistant carries `llm` in its `prov/1`
+        let prov = match llm_ref(&p["llm"]) {
+            Some(l) => mzlab_core::flow::prov_with_llm(&prov, &l),
+            None => prov,
+        };
         // the folder is a run folder for `flow/report`: prov.json beside the files of the steps
         std::fs::write(work.join("prov.json"), &prov).map_err(|e| crate::rpc::io_error(&e))?;
         text(json!({ "prov": prov, "dir": work.to_string_lossy() }).to_string())
@@ -85,6 +90,18 @@ impl State {
         let dir = std::env::temp_dir().join("mzlab-flow").join("out");
         text(mzlab_cli::flow_report::report(&dir)?)
     }
+}
+
+/// `{log_sha256, turn, provider, model, level}` of the page's assistant, or `None` when the field is absent or incomplete.
+fn llm_ref(v: &Value) -> Option<mzlab_core::flow::LlmRef> {
+    let s = |k: &str| v[k].as_str().map(str::to_string);
+    Some(mzlab_core::flow::LlmRef {
+        log_sha256: s("log_sha256")?,
+        turn: u32::try_from(v["turn"].as_u64()?).ok()?,
+        provider: s("provider")?,
+        model: s("model")?,
+        level: s("level")?,
+    })
 }
 
 /// The file `name` of `dir` as the answer of `flow/read`: its text, or with `base64` a JSON object holding its bytes.

@@ -1,7 +1,7 @@
 //! The loop of the assistant as a pure state machine: no I/O, no clock. The transport feeds `Input`s (the user's message, the events of the stream,
 //! the results of tools, confirmations, stop) and executes the `Output`s (a request to send, a tool to call, a confirmation to ask). The policy
 //! decides every call, the arguments are checked against the schema of the tool, a proposed plan goes through `flow::check`, and every step is a line
-//! of `llmlog/1`. Used by the transport of the page and the desktop and by `mzlab-cli llm eval`.
+//! of `llmlog/1`. `external_check`: the page checks the plans (the `.wasm` of the site); `usage`: tokens (in, out) reported. Used by the transport of the page and the desktop and by `mzlab-cli llm eval`.
 
 use std::collections::VecDeque;
 
@@ -15,7 +15,8 @@ use crate::event::{Event, StopReason};
 use crate::log::Log;
 use crate::plan::problems;
 use crate::policy::{decide, Counters, Decision, Level, Profile};
-use crate::provider::{request, Provider, Request};
+use crate::provider::{request, Provider};
+use crate::text::quoted;
 use crate::tools::{value, Class, Tool};
 
 /// The system text, English, versioned by its SHA-256 in the log.
@@ -24,38 +25,7 @@ pub const SYSTEM: &str = include_str!("../data/sistema-1.md");
 pub use crate::compact::{compact, estimate};
 pub const MAX_PLAN_TRIES: u32 = 3;
 
-pub enum Input {
-    User(String),
-    Event(Event),
-    ToolResult {
-        id: String,
-        ok: bool,
-        content: Value,
-    },
-    Confirm {
-        id: String,
-        yes: bool,
-    },
-    Stop,
-}
-
-pub enum Output {
-    Send(Request),
-    CallTool {
-        id: String,
-        name: String,
-        args: Value,
-    },
-    AskConfirm {
-        id: String,
-        summary: String,
-    },
-    /// A piece of the model's text for the user.
-    Show(String),
-    /// A complete `llmlog/1` line.
-    Log(String),
-    Done,
-}
+pub use crate::moves::{Input, Output};
 
 #[derive(Clone)]
 struct Call {
@@ -84,6 +54,8 @@ pub struct State {
     confirming: Option<Call>,
     tries: u32,
     stopping: bool,
+    pub external_check: bool,
+    pub usage: (u64, u64),
     over: bool,
     outcome: Option<String>,
     context: Option<Value>,
@@ -131,6 +103,8 @@ impl State {
             confirming: None,
             tries: 0,
             stopping: false,
+            external_check: false,
+            usage: (0, 0),
             over: true,
             outcome: None,
             context: None,
@@ -159,12 +133,6 @@ impl State {
     pub fn outcome(&self) -> Option<&str> {
         self.outcome.as_deref()
     }
-}
-
-fn quoted(s: &str) -> String {
-    let mut o = Out::default();
-    o.str(s);
-    o.0
 }
 
 fn finish(s: &mut State, out: &mut Vec<Output>) {
@@ -270,7 +238,10 @@ fn event(s: &mut State, e: Event, out: &mut Vec<Output>) {
             }
         }
         Event::ToolCallEnd { .. } => close_call(s),
-        Event::Usage(_) => {}
+        Event::Usage(u) => {
+            s.usage.0 += u.input;
+            s.usage.1 += u.output;
+        }
         Event::Stop(r) => stopped(s, r, out),
         Event::Error { key, .. } => fail(s, out, &key),
     }
@@ -398,7 +369,7 @@ fn run_call(s: &mut State, c: Call, tool: &Tool, out: &mut Vec<Output>) {
     if tool.class == Class::Run {
         s.counters.runs += 1;
     }
-    if c.name != "flow_check" && c.name != "flow_propose_plan" {
+    if s.external_check || (c.name != "flow_check" && c.name != "flow_propose_plan") {
         return call_page(s, c, out);
     }
     match problems(&c.args, &s.registry, s.platform) {
@@ -428,7 +399,7 @@ fn result(s: &mut State, id: &str, ok: bool, content: Value, out: &mut Vec<Outpu
     if s.waiting.as_ref().is_none_or(|c| c.id != id) {
         return;
     }
-    s.waiting = None;
+    let call = s.waiting.take();
     s.results.push(Part::ToolResult {
         id: id.to_string(),
         ok,
@@ -440,6 +411,12 @@ fn result(s: &mut State, id: &str, ok: bool, content: Value, out: &mut Vec<Outpu
         "result",
         &[("id", quoted(id)), ("ok", ok.to_string())],
     );
+    if !ok && s.external_check && call.is_some_and(|c| c.name == "flow_propose_plan") {
+        s.tries += 1;
+        if s.tries >= MAX_PLAN_TRIES {
+            return fail(s, out, "err.llm.plan.tries");
+        }
+    }
     advance(s, out);
 }
 
