@@ -76,6 +76,8 @@ Fonti: API Actions, con 700 run di `test.yml` e 700 di `rust.yml` (20-21/10: 179
 - **Causa misurata**: lanciati da soli a target caldo, `test_msngrafo_wasm` dura 7 s, `test_valida_lr` 16 s, `test_valida_hr` 25 s e `test_cancello` 14 s. Insieme con `-n 4` durano 794, 968, 615 e 535 s: tutto pytest 18 min 33 s in locale, quanto in CI. Senza `wasm-bindgen` (i test wasm saltati) il run da zero dura 8 min 42 s.
   `mzlab-feat-wasm` è `cdylib`+`rlib`: la sua libreria ha un nome fisso e ogni famiglia di feature la sovrascrive. Le famiglie sono `-p mzlab-cli` (che lo usa senza default, con detect, proofs, finder e untargeted), `-p mzlab-feat-wasm` (default) e `--features untargeted`. Ogni alternanza ricompila: cli 65 s → nativo_mrm 12 s → cli 66 s, a target caldo, in fila dietro il lock di cargo.
   Rischio in più: un test può eseguire un binario compilato da un altro worker con feature diverse.
+  Si sovrascrivono solo i prodotti finali con nome fisso (binari e `cdylib`): le `rlib` di ogni insieme di feature restano accanto, con il loro hash. Prova a target caldo: `cargo test --no-run -p mzlab-feat` 70 s, `--features record` 47 s, `record,interp` 51 s, di nuovo senza feature 0 s.
+- `rust.yml` non ha questo difetto: ogni job chiama cargo in fila, mai due processi insieme, e i suoi cambi di feature toccano solo `rlib` o la foglia `mzlab-feat-wasm` (wasm32: detect 48 s, ancora detect 0 s, proofs 3 s, di nuovo detect 3 s). Ogni insieme di feature costa una compilazione sola, e resta nella cache.
 - Doppioni: `test_guardie_memoria.py`, `test_feat_wasm.py` e `test_flow_determinismo.py` girano sia nel 3.11 sia in `rust-wasm` (`rust.yml`, righe 137-146).
 - Controlli obbligatori del ruleset: `javascript`, `pytest (ubuntu-latest, 3.11)`, `pytest (ubuntu-latest, 3.14)`, `browser (ubuntu-latest, chromium)`, `rust-ok`, `tipi (tsc)`. «Strict» è spento: la PR non deve essere aggiornata a main.
 
@@ -98,7 +100,7 @@ Fonti: API Actions, con 700 run di `test.yml` e 700 di `rust.yml` (20-21/10: 179
 **Prova esterna chiesta a ogni prompt**:
 - (a) la simulazione sopra rifatta con i tempi nuovi;
 - (b) unione delle selezioni o degli shard uguale a `pytest --collect-only -q tests`, con un test pytest;
-- (c) tempi veri via API su 3 PR reali dopo l'unione;
+- (c) tempi veri via API su 3 PR reali dopo l'unione: `pytest 3.11`, passo Unit tests, prima (mediana 925-1040 s) e dopo, con `tools/stat_ci.py riepilogo`;
 - (d) un errore messo apposta in un ramo di prova: una costante in `mzlab-feat` e una riga in `flow_*.rs`. Deve essere preso dalla CI veloce o da `notte.yml`, e il ramo non si unisce.
 
 **P8 · CI: una target-dir per famiglia di feature** (via già dato per `test.yml`; niente Cargo).
