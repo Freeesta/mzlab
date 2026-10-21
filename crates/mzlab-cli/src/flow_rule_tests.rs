@@ -23,7 +23,6 @@ const BUCHI: &[&str] = &[
     "annot.regulatory",
     "annot.hazard",
     "tp.filter",
-    "tp.link",
     "tp.position",
     "structure.render",
     "structure.reactivity",

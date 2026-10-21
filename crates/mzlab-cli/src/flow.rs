@@ -254,7 +254,7 @@ impl FileRunner {
     }
 }
 
-fn one_input(r: &FileRunner, job: &Job, port: &str) -> Result<PathBuf> {
+pub(crate) fn one_input(r: &FileRunner, job: &Job, port: &str) -> Result<PathBuf> {
     let a = job
         .inputs
         .iter()
@@ -302,7 +302,7 @@ fn match_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     write_made(r, job, text, DataType::Candidates)
 }
 
-fn all_inputs(r: &FileRunner, job: &Job, port: &str) -> Vec<PathBuf> {
+pub(crate) fn all_inputs(r: &FileRunner, job: &Job, port: &str) -> Vec<PathBuf> {
     let list = job
         .inputs
         .iter()
@@ -423,6 +423,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),
     ("annot.level", Exec::File("annot", level_job)),
     ("tp.network", Exec::File("network", network_job)),
+    ("tp.link", Exec::File("tp", crate::flow_link::link_job)),
     ("table.filter", Exec::File("table", filter_job)),
     ("tp.generate", Exec::File("hypotheses", generate_job)),
     ("meta.compare", Exec::File("comparison", compare_job)),

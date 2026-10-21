@@ -248,11 +248,11 @@ pub fn meta_json(out: &Output, parent: &Parent) -> String {
     o.raw(",\"mz\":")
         .num(round(parent.mz, 5))
         .raw("},\"params\":{\"select_ppm\":")
-        .num(ms2link::SELECT_PPM);
+        .num(out.link.select_ppm);
     o.raw(",\"purity_min\":")
-        .num(ms2link::PURITY_MIN)
+        .num(out.link.purity_min)
         .raw(",\"iso_corr\":")
-        .num(ms2link::ISO_CORR)
+        .num(out.link.iso_corr)
         .raw("},\"calibration\":[");
     for (i, c) in out.cals.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })

@@ -22,6 +22,33 @@ pub const ISO_MIN_SCANS: usize = 4;
 /// Fragments whose traces are compared.
 pub const ISO_FRAGMENTS: usize = 5;
 
+/// The thresholds of the link (`tp.link`): `Default` is the constants above and `modifica::MATCH_PPM`, which the page always uses.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LinkParams {
+    pub select_ppm: f64,
+    pub purity_ppm: f64,
+    pub purity_min: f64,
+    /// Tolerance of the modification (neutral formula change), ppm.
+    pub match_ppm: f64,
+    pub iso_corr: f64,
+    pub iso_min_scans: usize,
+    pub iso_fragments: usize,
+}
+
+impl Default for LinkParams {
+    fn default() -> Self {
+        LinkParams {
+            select_ppm: SELECT_PPM,
+            purity_ppm: PURITY_PPM,
+            purity_min: PURITY_MIN,
+            match_ppm: super::modifica::MATCH_PPM,
+            iso_corr: ISO_CORR,
+            iso_min_scans: ISO_MIN_SCANS,
+            iso_fragments: ISO_FRAGMENTS,
+        }
+    }
+}
+
 /// One MS2 scan linked to a row.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ms2Scan {
@@ -70,8 +97,19 @@ pub fn interpolate(t: f64, before: Option<(f64, f64)>, after: Option<(f64, f64)>
 
 /// The scans of file `k` that belong to the row (`select` with the edges of the peak in this file), without peaks and purity yet.
 pub fn pick_scans<R: ReadAt>(ix: &Index<R>, k: usize, mz: f64, limits: (f64, f64)) -> Vec<Ms2Scan> {
+    pick_scans_with(ix, k, mz, limits, &LinkParams::default())
+}
+
+/// `pick_scans` with the thresholds of `p`.
+pub fn pick_scans_with<R: ReadAt>(
+    ix: &Index<R>,
+    k: usize,
+    mz: f64,
+    limits: (f64, f64),
+    p: &LinkParams,
+) -> Vec<Ms2Scan> {
     let m2 = Ms2Index::of(ix);
-    select(&[m2], mz, &[limits], SELECT_PPM)
+    select(&[m2], mz, &[limits], p.select_ppm)
         .into_iter()
         .map(|(_, g, rt)| {
             let s = &ix.scans[g];
@@ -103,6 +141,16 @@ pub fn fill_purity<R: ReadAt>(
     polarity: i8,
     scans: &mut [Ms2Scan],
 ) -> Result<()> {
+    fill_purity_with(ix, polarity, scans, &LinkParams::default())
+}
+
+/// `fill_purity` with the thresholds of `p`.
+pub fn fill_purity_with<R: ReadAt>(
+    ix: &mut Index<R>,
+    polarity: i8,
+    scans: &mut [Ms2Scan],
+    p: &LinkParams,
+) -> Result<()> {
     let Some(si) = ix.section_of(1, Some(polarity)) else {
         return Ok(());
     };
@@ -123,7 +171,7 @@ pub fn fill_purity<R: ReadAt>(
     windows(ix, si, &ranges, 1 << 20, |k, a, b, slab| {
         let (_, _, i, before, pos) = asks[k];
         let prec = scans[i].precursor;
-        let tol = half(prec, PURITY_PPM);
+        let tol = half(prec, p.purity_ppm);
         let (mut own, mut total) = (0.0, 0.0);
         for j in (a..b).filter(|&j| slab.pos[j] == pos) {
             total += slab.it[j];
@@ -144,7 +192,7 @@ pub fn fill_purity<R: ReadAt>(
             pos.and_then(|p| rt.get(p)).map(|&t| (t, v))
         };
         s.purity = interpolate(s.rt, at(true), at(false));
-        s.chimeric = s.purity.is_nan() || s.purity < PURITY_MIN;
+        s.chimeric = s.purity.is_nan() || s.purity < p.purity_min;
     }
     Ok(())
 }
@@ -197,12 +245,17 @@ fn at(s: &Ms2Scan, mz: f64, tol_ppm: f64) -> f64 {
 /// Splits the clean scans (given in time order) into isomers by the traces of the strongest fragments of their consensus `cons`:
 /// two groups of fragments whose traces correlate below `ISO_CORR`, and the scans each group dominates. Returns indices into `scans`.
 pub fn separate(scans: &[&Ms2Scan], cons: &Consensus) -> Isomers {
-    if scans.len() < ISO_MIN_SCANS || cons.mz.len() < 2 {
+    separate_with(scans, cons, &LinkParams::default())
+}
+
+/// `separate` with the thresholds of `p`.
+pub fn separate_with(scans: &[&Ms2Scan], cons: &Consensus, p: &LinkParams) -> Isomers {
+    if scans.len() < p.iso_min_scans || cons.mz.len() < 2 {
         return Isomers::Single;
     }
     let mut order: Vec<usize> = (0..cons.mz.len()).collect();
     order.sort_by(|&a, &b| cons.rel[b].total_cmp(&cons.rel[a]));
-    order.truncate(ISO_FRAGMENTS);
+    order.truncate(p.iso_fragments);
     let traces: Vec<Vec<f64>> = order
         .iter()
         .map(|&f| scans.iter().map(|s| at(s, cons.mz[f], 8.0)).collect())
@@ -216,7 +269,7 @@ pub fn separate(scans: &[&Ms2Scan], cons: &Consensus) -> Isomers {
             }
         }
     }
-    if seed.2 >= ISO_CORR {
+    if seed.2 >= p.iso_corr {
         return Isomers::Single;
     }
     let sum = |idx: &[usize]| -> Vec<f64> {
@@ -237,7 +290,7 @@ pub fn separate(scans: &[&Ms2Scan], cons: &Consensus) -> Isomers {
         }
     }
     let (ta, tb) = (sum(&ga), sum(&gb));
-    if pearson(&ta, &tb) >= ISO_CORR {
+    if pearson(&ta, &tb) >= p.iso_corr {
         return Isomers::Single;
     }
     let (ma, mb) = (
@@ -263,12 +316,17 @@ pub struct Pooled {
 }
 
 pub fn pool(scans: &[Ms2Scan]) -> Pooled {
+    pool_with(scans, &LinkParams::default())
+}
+
+/// `pool` with the thresholds of `p`.
+pub fn pool_with(scans: &[Ms2Scan], p: &LinkParams) -> Pooled {
     let mut clean: Vec<&Ms2Scan> = scans.iter().filter(|s| !s.chimeric).collect();
     clean.sort_by_key(|s| (s.file, s.rt.to_bits()));
     let spectra: Vec<(Vec<f64>, Vec<f64>)> =
         clean.iter().map(|s| (s.mz.clone(), s.it.clone())).collect();
     let cons = consensus(&spectra);
-    let isomers = separate(&clean, &cons);
+    let isomers = separate_with(&clean, &cons, p);
     let groups = match &isomers {
         Isomers::Separated(g) => g
             .iter()

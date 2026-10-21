@@ -32,6 +32,26 @@ pub struct RowFacts {
     pub mass_error: bool,
 }
 
+/// The facts of every row of the table that the filters read.
+pub fn row_facts(t: &crate::table::Aligned) -> Vec<RowFacts> {
+    let mut first: std::collections::HashMap<u32, usize> = Default::default();
+    if !t.iso.is_empty() {
+        for (r, &g) in t.iso.group.iter().enumerate() {
+            if g != 0 {
+                first.entry(g).or_insert(r);
+            }
+        }
+    }
+    (0..t.len())
+        .map(|r| RowFacts {
+            bad_quality: !t.meta.is_empty() && t.meta.get(r).qreason != 0,
+            isotope: !t.iso.is_empty() && t.iso.group[r] != 0 && first[&t.iso.group[r]] != r,
+            tp_status: t.tp.status[r],
+            mass_error: false,
+        })
+        .collect()
+}
+
 /// The first filter that hides the row, 0-based index into `STAGES`; `None` = the row passes.
 pub fn first_hidden(f: &RowFacts) -> Option<usize> {
     if f.bad_quality {

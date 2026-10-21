@@ -45,6 +45,12 @@ fn filters() {
 
 #[test]
 fn link() {
+    assert_eq!(
+        step("tp.link").version,
+        2,
+        "version 1 took an MGF and could not run"
+    );
+    assert_eq!(num("tp.link", "polarity"), 1.0);
     for (name, want) in [
         ("select_ppm", ms2link::SELECT_PPM),
         ("purity_ppm", ms2link::PURITY_PPM),
