@@ -1,0 +1,2 @@
+{"events":[{"ev":"text_delta","text":"{\"intent\":\"iniezione\",\"keywords_it\":[],\"pick\":[]}"},{"cache_read":0,"ev":"usage","in":2500,"out":100},{"ev":"stop","reason":"end"}],"schema":"llmreg/1","turn":0}
+{"events":[{"ev":"text_delta","text":"La Teoria non tratta questo punto."},{"cache_read":0,"ev":"usage","in":3200,"out":800},{"ev":"stop","reason":"end"}],"schema":"llmreg/1","turn":1}
