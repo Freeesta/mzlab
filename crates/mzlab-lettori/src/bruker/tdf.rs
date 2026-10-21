@@ -287,6 +287,15 @@ impl Lettore for LettoreBruker {
         Formato::Altro(if self.tsf { "bruker-tsf" } else { "bruker-tdf" })
     }
 
+    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+        use mzlab_core::conv::{FUORI_MODELLO, NON_DECODIFICATO};
+        &[
+            ("inverse mobility 1/K0 of each point", NON_DECODIFICATO),
+            ("image positions, regions and tables beyond Frames and GlobalMetadata (TSF)", FUORI_MODELLO),
+            ("chromatography-data.sqlite, .mcf and .baf next to the data", FUORI_MODELLO),
+        ]
+    }
+
     fn campioni(&self) -> &[Campione] {
         &self.campioni
     }

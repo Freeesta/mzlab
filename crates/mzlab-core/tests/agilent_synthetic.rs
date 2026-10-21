@@ -5,9 +5,11 @@
 
 use mzlab_core::agilent::scan::Layout;
 use mzlab_core::agilent::{AgilentD, Files};
+use mzlab_core::lettori::FileSet;
 use mzlab_core::mzml;
 
 mod agilent_synth;
+mod conv_aiuto;
 use agilent_synth::*;
 
 #[test]
@@ -41,9 +43,12 @@ fn synthetic_folder_reads_back() {
     assert_eq!(tic.time, vec![3.0, 3.01, 3.02, 3.03]);
     assert_eq!(tic.intensity[1], 1661.0);
     // mzML written and read back
-    let mut out = Vec::new();
-    d.to_mzml(&mut peak.clone(), peak.len() as u64, &mut out)
-        .unwrap();
+    let out = conv_aiuto::mzml(FileSet {
+        membri: vec![
+            conv_aiuto::membro("x.D/AcqData/MSScan.bin", &idx),
+            conv_aiuto::membro("x.D/AcqData/MSPeak.bin", &peak),
+        ],
+    });
     let back = mzml::read(&out[..]).unwrap();
     assert_eq!(back.spectra.len(), 3);
     for (a, b) in back.spectra.iter().zip(&run.spectra) {
@@ -378,8 +383,9 @@ fn a_run_with_only_data_ms_opens() {
             .any(|i| i.origin == "data.ms#after-records" && i.name == "undecoded sha1"),
         "the bytes after the records are declared"
     );
-    let mut mzml = Vec::new();
-    d.to_mzml(&mut Vec::new(), 0, &mut mzml).unwrap();
+    let mzml = conv_aiuto::mzml(FileSet {
+        membri: vec![conv_aiuto::membro("old.D/data.ms", &bytes)],
+    });
     assert_eq!(mzlab_core::mzml::read(&mzml[..]).unwrap().spectra.len(), 2);
     // another record length is an error that names the numbers
     let mut odd = bytes.clone();

@@ -299,6 +299,18 @@ impl Lettore for LettoreRaw {
         Formato::ThermoRaw
     }
 
+    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+        use crate::conv::{IN_METODO, NON_DECODIFICATO, NON_PROVATO};
+        &[
+            ("UV 3D field of a PDA detector (spectra per instant)", NON_DECODIFICATO),
+            ("analog channels other than the pump pressure", IN_METODO),
+            ("status log series and error log", IN_METODO),
+            ("tune block of LTQ and TSQ files", NON_PROVATO),
+            ("embedded LC method of Dionex, EASY-nLC, Accela, Surveyor and ACQUITY", IN_METODO),
+            ("ion trap experiment settings (Scan Event N)", IN_METODO),
+        ]
+    }
+
     fn campioni(&self) -> &[Campione] {
         &self.campioni
     }
@@ -314,6 +326,14 @@ impl Lettore for LettoreRaw {
         let rec = extract_spectrum(&self.raw, &mut self.src, idx, false)
             .ok_or_else(|| raw_error("scan cannot be decoded"))?;
         Ok(crate::raw::spectrum(rec))
+    }
+
+    fn scansione_profilo(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
+        self.one(c)?;
+        let idx = self.row(k)?;
+        let rec = extract_spectrum(&self.raw, &mut self.src, idx, true)
+            .ok_or_else(|| raw_error("scan cannot be decoded"))?;
+        Ok(Some(crate::raw::spectrum(rec)))
     }
 
     /// The points of the scan and the rest from the row of the index: no trailer, no filter, no precursors read again.

@@ -1,4 +1,4 @@
-//! The single mzML writer on top of `Lettore` gives the file the Agilent converter wrote before it (synthetic folder, no laboratory data).
+//! The single mzML writer on top of `Lettore` gives the spectra of the run (synthetic folder, no laboratory data).
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
@@ -10,9 +10,9 @@ use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
 use mzlab_core::lettori_mzml;
 
 #[test]
-fn agilent_through_lettore_equals_the_direct_converter() {
+fn agilent_through_lettore_gives_the_spectra_of_the_run() {
     let (idx, peak) = encode(&sample());
-    let direct = {
+    let want = {
         let d = AgilentD::open(
             "x.D",
             &Files {
@@ -22,10 +22,7 @@ fn agilent_through_lettore_equals_the_direct_converter() {
             },
         )
         .unwrap();
-        let mut out = Vec::new();
-        d.to_mzml(&mut peak.clone(), peak.len() as u64, &mut out)
-            .unwrap();
-        out
+        d.run(&mut peak.clone()).unwrap()
     };
     let member = |nome: &str, b: &[u8]| Membro {
         nome: nome.into(),
@@ -43,10 +40,12 @@ fn agilent_through_lettore_equals_the_direct_converter() {
     let mut passi = 0;
     let via = lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| passi += 1).unwrap();
     assert!(passi >= 2);
-    assert_eq!(
-        String::from_utf8_lossy(&via),
-        String::from_utf8_lossy(&direct)
-    );
+    let back = mzlab_core::mzml::read(&via[..]).unwrap();
+    assert_eq!(back.spectra.len(), want.spectra.len());
+    for (a, b) in back.spectra.iter().zip(&want.spectra) {
+        assert_eq!((&a.id, a.level, a.polarity, &a.mz), (&b.id, b.level, b.polarity, &b.mz));
+        assert!((0..a.mz.len()).all(|i| a.intensity_f64(i) == b.intensity_f64(i)));
+    }
     assert!(lettori_mzml::scrivi(&mut *l, 1, Vec::new(), &mut |_, _| {}).is_err());
 }
 

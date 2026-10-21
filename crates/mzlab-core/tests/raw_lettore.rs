@@ -99,6 +99,24 @@ fn a_real_raw_reads_the_same_through_the_registry() {
     }
 }
 
+/// `scansione_profilo`: the same scan as `scansione` (id, level, RT, precursor) with the profile points of the file, never fewer than the centroids.
+#[test]
+fn the_profile_scan_is_the_same_scan_with_the_points_of_the_file() {
+    let files = raw_files();
+    let Some(f) = files.first() else {
+        eprintln!("SKIP raw_lettore: no data repository (MZLAB_DATI)");
+        return;
+    };
+    let mut l = lettori::apri(set(f), &Limiti::sito()).unwrap();
+    let n = l.indice(0).unwrap().len();
+    for k in (0..n).step_by((n / 20).max(1)) {
+        let a = l.scansione(0, k).unwrap();
+        let b = l.scansione_profilo(0, k).unwrap().expect("a .raw has a profile");
+        assert_eq!((&a.id, a.level, a.rt, a.precursor), (&b.id, b.level, b.rt, b.precursor));
+        assert!(b.mz.len() >= a.mz.len() || !b.profile, "scan {k}");
+    }
+}
+
 #[test]
 fn not_a_raw_is_refused() {
     let mut fs = FileSet {

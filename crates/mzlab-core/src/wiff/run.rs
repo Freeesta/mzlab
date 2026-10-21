@@ -1,18 +1,14 @@
 //! A sample as the `Run` that the rest of the program reads: scans become spectra (profile, empty ones left out as msconvert does)
 //! and the MRM blocks become a TIC and one SRM chromatogram per transition.
 
-use std::io::Write;
 
-use super::window::Window;
 use super::{scan, Wiff};
-use crate::centroidi::{self, Buf};
 use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::methodinfo::Kind;
-use crate::metodo::sha1_hex;
 #[cfg_attr(feature = "estesi", allow(unused_imports))]
 use crate::mzml::{ChromKind, Chromatogram, Run, Spectrum};
-use crate::mzmlwrite::{Header, MzmlWriter};
+use crate::mzmlwrite::Header;
 
 impl Wiff {
     fn mrm_transitions(&self, experiment: usize) -> Vec<(Option<f64>, Option<f64>)> {
@@ -137,89 +133,6 @@ impl Wiff {
         Ok(n)
     }
 
-    /// Writes the sample as mzML (`name`: the `.wiff`), one spectrum at a time; the `.wiff.scan` is read block by block.
-    pub fn to_mzml<R: ReadAt, W: Write>(&self, scan: &mut R, out: W, name: &str) -> Result<()> {
-        self.to_mzml_progress(scan, out, name, false, &mut |_, _| {})
-    }
-
-    /// Parameters of the centroids from at most 64 equally spaced scans (read and dropped), as `centroidi::estimate`.
-    fn centroid_params<R: ReadAt>(&self, scan: &mut R) -> Result<centroidi::Params> {
-        let mut good = Vec::new();
-        for r in &self.records {
-            if scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some_and(|c| c > 0) {
-                good.push((r.at, r.end));
-            }
-        }
-        let n = good.len().min(64);
-        let pick = (0..n).filter_map(|i| good.get(i * good.len() / n).copied());
-        let mut scans = Vec::new();
-        for (at, end) in pick {
-            if let Some(p) = scan::read_scan(scan, self.scan_len, at, end)? {
-                scans.push((p.mz, p.intensity));
-            }
-        }
-        let refs: Vec<(&[f64], &[f64])> = scans
-            .iter()
-            .map(|(a, b)| (a.as_slice(), b.as_slice()))
-            .collect();
-        Ok(centroidi::estimate(&refs, 0.7).params)
-    }
-
-    /// As `to_mzml`; with `centroid` every spectrum is reduced to one point per peak (`centroidi`, MS:1000035). `progress(done, total)` is called every few spectra with the spectra written and the spectra to write.
-    pub fn to_mzml_progress<R: ReadAt, W: Write>(
-        &self,
-        scan: &mut R,
-        out: W,
-        name: &str,
-        centroid: bool,
-        progress: &mut dyn FnMut(usize, usize),
-    ) -> Result<()> {
-        let mut scan = Window::new(scan, self.scan_len);
-        let header = self.header(name, sha1_hex(&mut scan, self.scan_len).ok(), centroid);
-        let cp = if centroid {
-            Some(self.centroid_params(&mut scan)?)
-        } else {
-            None
-        };
-        let mut buf = Buf::default();
-        let mut w = MzmlWriter::new(out, &header)?;
-        let count = self.spectrum_count(&mut scan)?;
-        if count > 0 {
-            w.open_spectra(count)?;
-        }
-        let mut done = 0;
-        progress(0, count);
-        let chroms = self.visit(&mut scan, &mut |mut s| {
-            if let Some(p) = &cp {
-                let c = centroidi::centroids(&s.mz, s.wide.as_deref().unwrap_or(&[]), p, &mut buf);
-                s.mz = c.iter().map(|c| c.mz).collect();
-                let v: Vec<f64> = c.iter().map(|c| c.value).collect();
-                s.intensity = v.iter().map(|&x| narrow(x)).collect();
-                s.wide = Some(v);
-                s.profile = false;
-            }
-            w.spectrum(&s)?;
-            done += 1;
-            if done % 32 == 0 {
-                progress(done, count);
-            }
-            Ok(())
-        })?;
-        progress(count, count);
-        if count > 0 {
-            w.close_spectra()?;
-        }
-        if !chroms.is_empty() {
-            w.open_chromatograms(chroms.len())?;
-            for c in &chroms {
-                w.chromatogram(c)?;
-            }
-            w.close_chromatograms()?;
-        }
-        w.finish()?;
-        Ok(())
-    }
-
     /// The header of the mzML of `name` (the `.wiff`); `scan_sha1`: SHA-1 of the `.wiff.scan` when it could be read.
     pub(crate) fn header(&self, name: &str, scan_sha1: Option<String>, centroid: bool) -> Header {
         let (instrument, run_params) = self.instrument_terms();
@@ -316,12 +229,6 @@ struct Mrm {
     time: Vec<f64>,
     tic: Vec<f64>,
     cols: Vec<Vec<f64>>,
-}
-
-/// The f32 copy of a value written as f64 (`Spectrum::intensity` next to `wide`).
-#[allow(clippy::cast_possible_truncation)]
-fn narrow(x: f64) -> f32 {
-    x as f32
 }
 
 #[cfg(feature = "estesi")]

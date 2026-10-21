@@ -236,6 +236,14 @@ impl Lettore for LettoreNumpress {
         Formato::Altro("mzml-numpress")
     }
 
+    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+        use mzlab_core::conv::{FUORI_MODELLO, SENZA_TERMINE};
+        &[
+            ("dataProcessing, referenceableParamGroup and scanSettings of the source", FUORI_MODELLO),
+            ("cvParams the writer does not know (carried as userParam)", SENZA_TERMINE),
+        ]
+    }
+
     fn campioni(&self) -> &[Campione] {
         &self.campioni
     }
