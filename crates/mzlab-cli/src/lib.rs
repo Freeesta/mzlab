@@ -421,6 +421,8 @@ mod flow_estimate_tests;
 #[cfg(test)]
 mod flow_generate_tests;
 #[cfg(test)]
+mod flow_hr_tests;
+#[cfg(test)]
 mod flow_ident_tests;
 #[cfg(test)]
 mod flow_json_tests;
