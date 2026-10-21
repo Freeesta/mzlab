@@ -22,6 +22,21 @@ Studio e piano a PR: `docs/studi/llm/README.md`. Il crate `mzlab-llm` (membro de
 - `cost::estimate(&Usage, &Model) -> Option<f64>`: nella valuta del prezzo; `None` se `in` o `out` è 0.
 - `mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]`: gli eventi di un turno, una riga per evento (`docs/agenti/cli.md`).
 
+## Profilo, impostazioni, consenso (`mzlab/web/llm/`)
+- Profilo `mzlab.profilo` (`settings.js`, `uipProfile()`): `corso` (predefinito nel sito) o `ricerca` (predefinito nell'app). Con `corso` non c'è alcun elemento LLM nel DOM e non si scarica alcun file di `llm/`; con `ricerca` e interruttore spento c'è solo l'interruttore: `llm-impostazioni.js` si importa quando `mzlab.llm.on` è vero o l'interruttore viene acceso.
+- `llm-impostazioni.js` (`mount`): fornitore e modello da `fornitori-1.json`, livello (L0 predefinito, L1, L2), limite L2, tetto di spesa, «Hide file names», revoca, area della chiave, messaggio di prova con anteprima «What will be sent» (la richiesta senza chiave). Impostazioni in `mzlab.llm`; il gancio di prova `window.MZLAB_LLM.replay(testo, strict)` carica una registrazione `llmreg/1`.
+- `llm-consenso.js`: `<dialog>` modale (fuoco su «Cancel», Esc chiude solo il dialogo, testi `llm.consenso.*`); il consenso è per fornitore e classe (`plan`, `summary`, `names`) in `localStorage mzlab.llm.consenso` ed è revocabile.
+
+## Trasporto nel sito
+- Dopo il consenso la pagina crea l'iframe `llm/trasporto.html` con una CSP propria (`default-src 'none'`, `connect-src 'self' http://localhost:* http://127.0.0.1:*`): la chiave vive solo lì (memoria; «Remember on this device» la cifra con AES-GCM in IndexedDB `mzlab_llm`, chiave non estraibile; «Forget key» la cancella).
+- I byte della risposta passano al worker `llm-worker.js` su un `MessageChannel` (controllo dell'origine alla consegna della porta); il worker carica `wasm-feat/llm/` (`crates/mzlab-llm-wasm`, `limit_llm` 180 224 B, misurato 160 179 B) alla prima richiesta e decodifica con `LlmStream`; `strumenti-1.json` sta accanto (`tools/build_site.py`).
+- Nessun host esterno nella CSP del trasporto: dal sito si raggiunge solo `localhost`/`127.0.0.1` (modello locale) e il trasporto `replay` (registrazione servita da 'self'); i fornitori nel cloud sono raggiungibili solo dall'app. Aggiungere un host è una decisione esplicita (`tests/test_llm_csp.py` elenca le sorgenti ammesse). CORS di un fornitore e di `localhost`: non misurati (nessuna richiesta a fornitori veri, nessun server locale in CI); `site_allowed` resta com'è.
+- `index.html` e `tauri.conf.json` non cambiano: l'iframe ha la sua CSP.
+
+## Trasporto nell'app (`crates/mzlab-desktop/src/llm.rs`)
+- Rotte `llm/providers` (fornitori + `has_key` per fornitore, mai la chiave), `llm/request` (la richiesta senza chiave), `llm/send` (apre la richiesta con `ureq` su un thread, ritorna `{id}`), `llm/poll` (`{events, done}`: eventi normalizzati, una riga JSON ciascuno), `llm/abort`, `llm/key/set`, `llm/key/forget`; l'instradamento sta in `rpc.rs`.
+- La chiave sta in `llm-chiavi.json` nella cartella dei dati (0600 su Unix), la legge solo Rust; non compare in piani, `prov/1`, esportazioni o diagnosi (`tests/test_llm_chiavi.py`).
+
 ## Agente, permessi, contesto e valutazione
 - `agent::step(&mut State, Input) -> Vec<Output>` è il ciclo come macchina a stati pura (nessun I/O, nessun orologio): `Input` = `User`, `Event`, `ToolResult`, `Confirm`, `Stop`; `Output` = `Send(Request)`, `CallTool`, `AskConfirm`, `Show`, `Log(riga)`, `Done`. Il trasporto (pagina, app) esegue le uscite; `State::outcome()` = `end|length|refusal|stopped|error:<chiave>`. Il testo di sistema è `data/sistema-1.md` (`agent::SYSTEM`, in inglese).
 - `policy::decide(&Tool, &args, Level, &Counters, Profile) -> Allow|Confirm|Deny{key}`: profilo `corso` → `err.llm.profile.course`; L0 nega `edit|run|ui` (`err.llm.level.denied`), L1 chiede conferma per `edit|run|ui`, L2 consente ma dal 4° `run` chiede conferma; `read` e `propose` sempre consentiti; argomenti fuori da `input_schema` (`schema::validate`) → `err.llm.tool.args`; L2 a 20 chiamate (`MAX_CALLS`) → `err.llm.limit.calls` e il turno finisce.
@@ -32,6 +47,7 @@ Studio e piano a PR: `docs/studi/llm/README.md`. Il crate `mzlab-llm` (membro de
 - `flow::prov_json_llm(agent, plan_sha256, run, Option<&LlmRef>)` aggiunge a `prov/1` il blocco facoltativo `llm{log_sha256,turn,provider,model,level}` (`$defs/prov1`); con `None` i byte sono quelli di `prov_json`.
 
 ## Prove
+- `tests/test_llm_csp.py` (CSP della pagina, della finestra e del trasporto), `tests/test_llm_chiavi.py` (nessuna forma di chiave nei cataloghi, negli schemi e nel campione di log), `tests_e2e/e2e_llm_consenso.py` (corso e spento: nessuna richiesta a `llm/`; consenso, anteprima, replay da 'self', nessun host esterno, axe), `cargo test -p mzlab-llm-wasm`, `cargo test -p mzlab-desktop --lib llm`.
 - `cargo test -p mzlab-cli --lib llm_tools` (`llm_tools_tests.rs`): ogni passo nell'enum, nomi di `flow_set_param` = nomi di `--set` (stesso giro di `flow_rule_tests.rs`), default dentro i limiti, file = esportazione, byte stabili.
 - `cargo test -p mzlab-llm` (`tests/adattatori.rs`, file in `tests/data/`): corpo di ogni richiesta = `req_*.json`; ogni `*.sse` e `*.http` sintetico = `*.events`, anche spezzato a 1, 2, 7 byte; `Replay`, `strict`, `Log`, `cost`. `MZLAB_UPDATE_LLM=1` riscrive i file attesi. `cargo test -p mzlab-cli --lib llm_replay` prova il sottocomando su `tests/data/llm/`.
 - `tests/test_strumenti.py`: JSON Schema valido, id di `ui_show` registrati in `mzlab/web`, nessuna parola italiana.

@@ -100,6 +100,10 @@ function uipReset(d) {
 // Administrator mode (5 clicks on the logo): the exit row shows only while it is on; the flag is shared with the Teoria
 function uipAdminOn() { try { return localStorage.getItem(NOMI.KEY("admin")) === "1" || localStorage.getItem(NOMI.KEY("teoria.esteso")) === "1"; } catch (_) { return false; } }
 
+// Profile of the program (`mzlab.profilo`): «corso» (students; the assistant does not exist: no element, nothing downloaded) or «ricerca» (the assistant can be turned on in the settings).
+// A didactic setting, not a lock. The site starts as «corso», the desktop app as «ricerca».
+function uipProfile() { let v = null; try { v = localStorage.getItem(NOMI.KEY("profilo")); } catch (_) { /* blocked */ } return v === "corso" || v === "ricerca" ? v : (window.MZLAB_DESKTOP ? "ricerca" : "corso"); }
+
 // known contaminants on HR spectra: off by default; on only if explicitly turned on (read from the same key as liste.js, which may not be loaded yet)
 function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.on")) === "true"; } catch (_) { return false; } }
 
@@ -130,13 +134,16 @@ function uipOpen(btn) {
       + fld(T("settings.hrPpm"), T("settings.hrPpm.title"), `<input type="number" id="uip-ppm" min="1" max="50" step="1" value="${UIP.hrPpm}" style="width:64px" aria-label="${esc(T("settings.hrPpm"))}">`)
       + fld(T("settings.hrDec"), T("settings.hrDec.title"), `<input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:56px" aria-label="${esc(T("settings.hrDec"))}">`) : "") + cen;
   const tourOn = !(window.BANCO && BANCO.on());
-  const app = (window.DESKUPD ? DESKUPD.row() : "") + (window.DESKDEF ? DESKDEF.row() : "") + (window.MZLAB_DESKTOP ? C.sw(T("settings.ext"), T("settings.ext.title"), 'id="uip-ext"', false, "ext") : "")
+  const prof = uipProfile();
+  const profile = C.section(T("settings.profile.label"), C.opts("seg2", C.radios("uip-prof", [["corso", T("settings.profile.corso"), T("settings.profile.title")], ["ricerca", T("settings.profile.ricerca"), T("settings.profile.title")]], prof, "seg")));
+  const app = profile + (window.DESKUPD ? DESKUPD.row() : "") + (window.DESKDEF ? DESKDEF.row() : "") + (window.MZLAB_DESKTOP ? C.sw(T("settings.ext"), T("settings.ext.title"), 'id="uip-ext"', false, "ext") : "")
     + (tourOn ? `<div class="imp-fld"><button id="uip-tour" type="button"><span class="ic">${C.GICON.play}</span>${T(files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>` : "");
   const grp = (id, icon, title, body, dflt) => body ? C.group(id, icon, T(title), body, uipGroupOpen(id, dflt)) : "";
   d.innerHTML = `<div class="a-hd"><h2>${T("settings.title")}</h2><button type="button" class="x" id="uip-x" aria-label="${esc(T("settings.close"))}">&times;</button></div>`
     + C.section(T("settings.language.label"), C.opts("seg2", C.radios("uip-lang", [["it", "Italiano", T("settings.language.title"), C.GICON.lang], ["en", "English", T("settings.language.title"), C.GICON.lang]], I18N.lang, "seg")))
     + grp("uip-g-look", "look", "settings.g.look", look, true) + grp("uip-a11y", "read", "settings.g.read", read, false) + grp("uip-g-data", "data", "settings.g.data", data, false)
-    + grp("uip-g-app", "app", "settings.g.app", app, false) + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false)
+    + grp("uip-g-app", "app", "settings.g.app", app, false)
+    + (prof === "ricerca" ? grp("uip-g-llm", "app", "llm.g", '<div id="uip-llm"></div>', false) : "") + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false)
     + `<div class="row"><button type="button" id="uip-reset" title="${esc(T("settings.reset.title"))}">${T("settings.reset")}</button></div>`;
   document.body.appendChild(d);
   d.querySelectorAll("details.imp-g").forEach(g => g.addEventListener("toggle", () => { try { localStorage.setItem(UIP_GROUP_KEY(g.id), /** @type {HTMLDetailsElement} */ (g).open ? "1" : "0"); } catch (_) { /* not remembered */ } }));
@@ -145,6 +152,16 @@ function uipOpen(btn) {
   if (mem) mem.bind(d);
   const on = (/** @type {string} */ sel, /** @type {string} */ ev, /** @type {(e: any) => void} */ fn) => { const el = d.querySelector(sel); if (el) el.addEventListener(ev, fn); };
   const radio = (/** @type {string} */ name, /** @type {(v: string) => void} */ fn) => d.querySelectorAll(`input[name="${name}"]`).forEach(r => r.addEventListener("change", e => { if (/** @type {HTMLInputElement} */ (e.target).checked) fn(/** @type {HTMLInputElement} */ (e.target).value); }));
+  radio("uip-prof", v => { try { localStorage.setItem(NOMI.KEY("profilo"), v); } catch (_) { /* not remembered */ } d.remove(); uipOpen(btn); });
+  const llmBox = /** @type {HTMLElement | null} */ (d.querySelector("#uip-llm"));
+  if (llmBox) {         // only in the profile «ricerca», and only a switch: the module llm/ is fetched when the assistant is on or the user turns it on
+    const go = (/** @type {boolean} */ turnOn) => import("./llm/llm-impostazioni.js").then(m => m.mount(llmBox, { C, T }, turnOn)).catch(() => { llmBox.textContent = T("err.llm.module"); });
+    const wasOn = lsObj(NOMI.KEY("llm")).on === true;
+    const html = C.sw(T("llm.on.label"), T("llm.on.title"), 'id="llm-on"', wasOn, "") + `<div class="hint" role="status">${T("llm.off.hint")}</div>`;
+    llmBox.innerHTML = html;
+    if (wasOn) go(false);
+    else on("#llm-on", "change", e => { if (e.target.checked) go(true); });
+  }
   radio("uip-lang", v => I18N.set(v));                                  // remembered in qqq.lang, then the page reloads (open files come back with the session)
   radio("uip-th", v => { UIP.theme = v; uipSave(); TEMASOFT.run(uipApply); });
   radio("uip-font", v => { const c = QA11Y.read(); c.font = v; QA11Y.write(c); });
@@ -181,7 +198,7 @@ function uipOpen(btn) {
   const close = () => { d.remove(); if (btn.isConnected) btn.focus(); };
   on("#uip-x", "click", close);
   document.addEventListener("keydown", function esc(e) { if (!d.isConnected) return document.removeEventListener("keydown", esc); if (e.key === "Escape") { close(); document.removeEventListener("keydown", esc); } });       // Esc closes the settings and gives the focus back to the gear
-  setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.isConnected) return document.removeEventListener("mousedown", h); if (!d.contains(/** @type {Node} */ (e.target)) && e.target !== btn && !btn.contains(e.target)) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
+  setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.isConnected) return document.removeEventListener("mousedown", h); if (!d.contains(/** @type {Node} */ (e.target)) && e.target !== btn && !btn.contains(e.target) && !/** @type {Element} */ (e.target).closest("dialog")) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
   (d.querySelector("input:checked") || d.querySelector("input,button")).focus();
 }
 

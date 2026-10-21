@@ -23,6 +23,7 @@ mod flow_stage;
 pub mod idxbuild;
 mod idxbuild_nat;
 pub mod librerie;
+mod llm;
 pub mod mapped;
 mod nativi;
 mod nativi_slots;

@@ -176,6 +176,8 @@ def main() -> None:
     ver = ver_match.group(1) if ver_match else "0.1.0"
     (static / "version.js").write_text(f'window.MZLAB_VERSION = "{ver}";\nwindow.MZLAB_COMMIT = "{commit}";\n', encoding="utf-8")
     pack_mzfinder(static)
+    # the catalog of assistant tools beside its page (the module `llm/` reads it on first use)
+    shutil.copy2(ROOT / "docs" / "schemi" / "strumenti-1.json", static / "llm" / "strumenti-1.json")
     bad = python_files(out)
     if bad:
         raise SystemExit(f"the site must not carry Python: {bad[:5]}")
