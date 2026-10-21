@@ -1,12 +1,14 @@
 // @ts-check
 // Worker of the assistant (module worker): loads the Rust module `wasm-feat/llm/` (manifest, SHA-256 checked) on the first message and only then. Builds each request and decodes
 // each answer with it; the bytes travel over a MessagePort to/from the iframe `llm/trasporto.html`, which owns the key. The transport `replay` answers from a recording and never uses the iframe.
-// Page -> worker: init, port, request, send, abort, replay.load, replay.reset. Worker -> page: {id, ok, ...} per call and {id, event} per normalized event.
+// Page -> worker: init, port, request, send, abort, replay.load, replay.reset, agent.new, agent.in (the loop of the assistant: llm-agente.js). Worker -> page: {id, ok, ...} per call and {id, event} per normalized event.
 /** @typedef {{request: (conv: string) => string, replay_load: (text: string, strict: boolean) => number, replay_respond: (conv: string) => string, replay_reset: () => void}} Llm */
 /** @typedef {{push: (b: Uint8Array) => string, finish: () => string}} Dec */
 
 /** @type {any} */ let mod = null;
 /** @type {Llm | null} */ let llm = null;
+let toolsText = "";
+/** @type {any} */ let agent = null;
 /** @type {MessagePort | null} */ let port = null;
 /** @type {Map<string, {dec: Dec, status: number, body: string[]}>} */
 const live = new Map();
@@ -26,7 +28,8 @@ const load = async () => {
   await mod.default({ module_or_path: bytes });
   const tools = await fetch(new URL("strumenti-1.json", import.meta.url));
   if (!tools.ok) throw { key: "err.llm.module", params: { reason: "tools" } };
-  llm = new mod.Llm(await tools.text());
+  toolsText = await tools.text();
+  llm = new mod.Llm(toolsText);
 };
 
 /** a Rust error is a JSON text {error_key, params}; anything else is a failure of the module @param {any} e */
@@ -64,6 +67,20 @@ const onPort = ev => {
   }
 };
 
+/** one move of the loop of the assistant; the lines are the outputs of the machine (`send`, `call`, `ask`, `show`, `log`, `done`) @param {any} m */
+const agentIn = m => {
+  if (!agent) throw { key: "err.llm.module", params: { reason: "agent" } };
+  const out = (/** @type {string} */ lines) => ({ lines, outcome: agent.outcome(), usage: Array.from(agent.usage()) });
+  if (m.kind === "user") return out(agent.user(m.text, m.context || ""));
+  if (m.kind === "event") return out(agent.event(m.line));
+  if (m.kind === "result") return out(agent.result(m.callId, !!m.ok, m.content));
+  if (m.kind === "confirm") return out(agent.confirm(m.callId, !!m.yes));
+  if (m.kind === "stop") return out(agent.stop());
+  if (m.kind === "conv") return { ...out(""), conv: agent.conversation() };
+  if (m.kind === "log") return { ...out(""), log: agent.log() };
+  throw { key: "err.llm.module", params: { reason: "kind" } };
+};
+
 onmessage = async ev => {
   const m = ev.data || {};
   try {
@@ -75,6 +92,12 @@ onmessage = async ev => {
     else if (m.op === "replay.load") postMessage({ id: m.id, ok: true, turns: llm.replay_load(m.text, !!m.strict) });
     else if (m.op === "replay.reset") { llm.replay_reset(); postMessage({ id: m.id, ok: true }); }
     else if (m.op === "send") await send(m);
+    else if (m.op === "context") postMessage({ id: m.id, ok: true, context: mod.context_build(m.sources, m.budget || 4000) });
+    else if (m.op === "agent.new") {
+      agent = new mod.Agent(toolsText, m.provider, m.model, m.level, !!m.research);
+      if (m.replay) agent.replay_load(m.replay, !!m.strict);
+      postMessage({ id: m.id, ok: true });
+    } else if (m.op === "agent.in") postMessage({ id: m.id, ok: true, ...agentIn(m) });
     else if (m.op === "abort") { live.delete(m.id); if (port) port.postMessage({ t: "abort", id: m.id }); postMessage({ id: m.id, done: true }); }
   } catch (e) {
     const x = wrap(e);

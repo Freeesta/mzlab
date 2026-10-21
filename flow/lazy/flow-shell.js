@@ -141,6 +141,11 @@
       if (k === "z" && !e.shiftKey) { e.preventDefault(); S.undo(); } else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); S.redo(); }
     });
     sec.textContent = ""; sec.append(root);
+    // the assistant: nothing of it is downloaded unless the profile is «ricerca» and it is switched on (settings) with a consent
+    if (F.llmOn()) {
+      const L = /** @type {any} */ (window).TPLAZY;
+      L.load("flow-llm-tools.js", "flow-llm.js").then(() => F.llmMount({ S, bar, body, root, redraw, select: cvUi.select, setTab })).catch(() => { /* the assistant is optional */ });
+    }
     listHost.addEventListener("flow:changed", () => { undoBtn.disabled = !S.history.length; redoBtn.disabled = !S.future.length; redraw(); });
     tplCards(); planView.hidden = true; undoBtn.disabled = true; redoBtn.disabled = true;
     selected = tableKey(); redraw(); requestAnimationFrame(() => cv.fit());
