@@ -6,7 +6,7 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use mzlab_core::agilent::{AgilentD, Files};
+mod conv_aiuto;
 
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
@@ -56,37 +56,7 @@ fn slice<'a>(x: &'a str, from: &str, to: &str) -> &'a str {
 }
 
 fn ours(folder: &Path) -> String {
-    let acq = folder.join("AcqData");
-    let rd = |p: &Path| std::fs::read(p).ok();
-    let (scan, xsd, ts, dev, con) = (
-        rd(&acq.join("MSScan.bin")).unwrap(),
-        rd(&acq.join("MSScan.xsd")),
-        rd(&acq.join("MSTS.xml")),
-        rd(&acq.join("Devices.xml")),
-        rd(&acq.join("Contents.xml")),
-    );
-    let (meth, seq) = (
-        rd(&folder.join("acqmeth.txt")),
-        rd(&acq.join("sequence.xml")),
-    );
-    let mut peak = std::fs::read(acq.join("MSPeak.bin")).unwrap();
-    let others = [("AcqData/sequence.xml", seq.as_deref().unwrap_or(&[]))];
-    let files = Files {
-        ms_scan: &scan,
-        ms_scan_xsd: xsd.as_deref(),
-        ms_peak_len: peak.len() as u64,
-        ms_ts: ts.as_deref(),
-        devices: dev.as_deref(),
-        contents: con.as_deref(),
-        acqmeth: meth.as_deref(),
-        others: &others,
-        ..Default::default()
-    };
-    let d = AgilentD::open(&folder.file_name().unwrap().to_string_lossy(), &files).unwrap();
-    let mut out = Vec::new();
-    let n = peak.len() as u64;
-    d.to_mzml(&mut peak, n, &mut out).unwrap();
-    String::from_utf8(out).unwrap()
+    String::from_utf8(conv_aiuto::mzml_cartella(folder)).unwrap()
 }
 
 #[test]

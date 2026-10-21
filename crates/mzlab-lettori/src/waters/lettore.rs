@@ -98,6 +98,16 @@ impl Lettore for LettoreWaters {
         Formato::Altro("waters-raw")
     }
 
+    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+        use mzlab_core::conv::{FUORI_MODELLO, IDENTITA, NON_DECODIFICATO};
+        &[
+            ("drift time and mobility calibration", NON_DECODIFICATO),
+            ("lock mass correction of the m/z", FUORI_MODELLO),
+            ("FUNC rows beyond Set Mass and Collision Energy, _HISTORY.INF, ramp parameters beyond _extern.inf, MALDI functions", NON_DECODIFICATO),
+            ("User Name, Submitter, Laboratory Name and computer paths", IDENTITA),
+        ]
+    }
+
     fn campioni(&self) -> &[Campione] {
         &self.campioni
     }

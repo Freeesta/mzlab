@@ -152,6 +152,10 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
 
 #[rustfmt::skip] impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { self.parti.get(c).is_some_and(|p| p.w.variante()) } #[cfg(feature = "estesi")] fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) }
     fn formato(&self) -> Formato { Formato::SciexWiff }
+    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+        use crate::conv::{IDENTITA, NON_DECODIFICATO};
+        &[("device traces (Devices/Device_N/DevData), DDERealTimeData, TripleTOF and ZenoTOF blocks, MSConfigInfo, MassSpecMethod, ExperimentHeader, PeriodStream and CycleDepParam binaries", NON_DECODIFICATO), ("log state at start and end, CFR audit, acquisition time per sample", NON_DECODIFICATO), ("user, computer, site and paths", IDENTITA)]
+    }
     fn mancanti(&mut self, c: usize) -> usize {
         let n = self.scan_len;
         self.parti.get(c).map_or(0, |p| p.w.records.iter().filter(|r| r.end > n || r.at >= n).count())
