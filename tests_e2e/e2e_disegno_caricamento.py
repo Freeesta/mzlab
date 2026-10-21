@@ -14,10 +14,8 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1300, "height": 900})
         pg.evaluate("() => { window.__s = []; const t0 = performance.now(); window.__iv = setInterval(() => { try { const v = (%s)(); if (v) window.__s.push([Math.round(performance.now() - t0), v, !document.getElementById('side-toggle')?.closest('[hidden]'), getComputedStyle(document.getElementById('side-toggle')).display]); } catch (_) {} }, 30); }" % SAMPLE)
         pg.click("#nav [data-v=draw]")
-        for _ in range(300):
-            if pg.evaluate("() => !!(window.TPDraw && TPDraw.ready())"): break
-            pg.wait_for_timeout(100)
-        pg.wait_for_timeout(2500)
+        attendi(pg, "document.getElementById('kframe').classList.contains('kwait') === false && !!(window.TPDraw && TPDraw.ready())", timeout=60000)
+        frames(pg, 30)       # the samples after the reveal
         s = pg.evaluate("() => { clearInterval(window.__iv); return window.__s; }")
         if not s: fail.append("the editor never became visible")
         else:
