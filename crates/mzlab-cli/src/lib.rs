@@ -26,6 +26,7 @@ mod flow_centroid;
 #[cfg(test)]
 mod flow_centroid_tests;
 mod flow_compare;
+mod flow_digl;
 mod flow_drift;
 #[cfg(test)]
 mod flow_drift_tests;
@@ -42,6 +43,8 @@ mod flow_level;
 mod flow_link;
 #[cfg(test)]
 mod flow_link_tests;
+#[cfg(test)]
+mod flow_lr_tests;
 mod flow_match;
 mod flow_ms2;
 mod flow_msngraph;

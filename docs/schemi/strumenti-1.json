@@ -34,6 +34,7 @@
           "table.kmd",
           "table.pca",
           "table.stats",
+          "tp.dig_lr",
           "tp.filter",
           "tp.generate",
           "tp.link",
@@ -85,6 +86,7 @@
               "table.kmd@1",
               "table.pca@1",
               "table.stats@1",
+              "tp.dig_lr@1",
               "tp.filter@2",
               "tp.generate@1",
               "tp.link@2",
@@ -170,6 +172,7 @@
               "table.kmd@1",
               "table.pca@1",
               "table.stats@1",
+              "tp.dig_lr@1",
               "tp.filter@2",
               "tp.generate@1",
               "tp.link@2",
@@ -1205,6 +1208,48 @@
                     "default":1000,
                     "description":"Smallest estimated pseudocount, and the one used when no file gives a noise level"
                   }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"tp.dig_lr@1"},
+              "name":{
+                "enum":[
+                  "tol_da",
+                  "rt_tol_min",
+                  "max_steps",
+                  "rt_min",
+                  "discover",
+                  "max_unexpected",
+                  "auto_offset",
+                  "min_files",
+                  "frag_min_rel",
+                  "min_snr",
+                  "max_fwhm_s",
+                  "min_points",
+                  "dead_factor",
+                  "parent_decay"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"type":"number","minimum":0,"default":0.35,"description":"m/z tolerance"},
+                  {"type":"number","minimum":0,"default":0.25,"description":"RT tolerance"},
+                  {"type":"number","minimum":1,"default":2,"description":"Steps of the rules"},
+                  {"type":"number","minimum":0,"default":0.5,"description":"End of the dead volume"},
+                  {"type":"boolean","default":true,"description":"Look for unexpected ions"},
+                  {"type":"integer","minimum":0,"default":40,"description":"Unexpected ions kept"},
+                  {"type":"boolean","default":true,"description":"Calibrate on the parent"},
+                  {"type":"integer","minimum":0,"default":3,"description":"Min. samples"},
+                  {"type":"number","minimum":0,"maximum":100,"default":5,"description":"Fragments from"},
+                  {"type":"number","minimum":0,"default":5,"description":"Min. S/N of a peak"},
+                  {"type":"number","minimum":0,"default":60,"description":"Max. FWHM of a peak"},
+                  {"type":"integer","minimum":1,"default":5,"description":"Min. scans of a peak"},
+                  {"type":"number","minimum":0,"default":1.5,"description":"Dead-volume factor"},
+                  {"type":"boolean","default":true,"description":"Parent must fall over time"}
                 ]
               }
             },

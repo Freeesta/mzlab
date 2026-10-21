@@ -13,7 +13,9 @@ use mzlab_core::flow::{Artifact, Job, Outcome, Runner};
 use mzlab_core::json::Value;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
+use crate::flow_base::table_job;
 use crate::flow_cache::Cache;
+use crate::flow_estimate::estimate_job;
 pub use crate::flow_out::{run_plan_cached, run_plan_notify};
 use crate::flow_read::{blobs, load, named, Loaded};
 pub use crate::flow_run::{fill_inputs, run_plan};
@@ -61,9 +63,7 @@ pub fn steps() -> Vec<Step> {
     all.extend(mzlab_feat::steps::attributio());
     all.extend(mzlab_chem::step::tabui());
     all.push(crate::flow_centroid::centroid_step());
-    all.push(crate::flow_ms2::ms2_step());
-    all.push(crate::flow_msngraph::msn_graph_step());
-    all.push(crate::flow_compare::compare_step());
+    all.extend(crate::flow_digl::cli_steps());
     all
 }
 
@@ -350,14 +350,8 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("features.detect", Exec::Made(crate::flow_base::detect_job)),
     ("features.align", Exec::Made(crate::flow_base::align_job)),
     ("features.gapfill", Exec::Made(crate::flow_base::align_job)),
-    (
-        "features.table",
-        Exec::File("report", crate::flow_base::table_job),
-    ),
-    (
-        "features.estimate",
-        Exec::File("estimates", crate::flow_estimate::estimate_job),
-    ),
+    ("features.table", Exec::File("report", table_job)),
+    ("features.estimate", Exec::File("estimates", estimate_job)),
     (
         "table.stats",
         Exec::File("report", crate::flow_stats::stats_job),
@@ -373,6 +367,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
     ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),
+    ("tp.dig_lr", Exec::File("dig", crate::flow_digl::dig_job)),
     (
         "annot.level",
         Exec::File("annot", crate::flow_level::level_job),

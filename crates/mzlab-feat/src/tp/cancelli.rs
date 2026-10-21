@@ -12,12 +12,17 @@ const LOSSES: [f64; 8] = [
     18.010565, 17.026549, 27.994915, 36.02113, 43.989829, 32.026215, 28.0313, 46.005479,
 ];
 
-/// Window of the parent in the table: 5 ppm and 0.3 min, the nearest in m/z.
+/// Window of the parent in the table: 5 ppm (on the unit axis, `params.ppm < 0`, the offset the Dig accepts, in Da) and 0.3 min, the nearest in m/z.
 pub(super) fn parent_row(inp: &TpInputs) -> Option<usize> {
     let (mz, rt) = inp.parent;
     let t = inp.aligned;
+    let tol = if inp.params.ppm < 0.0 {
+        crate::legacy::lr::rows::OFFSET_MAX
+    } else {
+        mz * 5e-6
+    };
     (0..t.len())
-        .filter(|&r| (t.mz[r] - mz).abs() <= mz * 5e-6 && (t.rt[r] - rt).abs() <= 0.3)
+        .filter(|&r| (t.mz[r] - mz).abs() <= tol && (t.rt[r] - rt).abs() <= 0.3)
         .min_by(|&a, &b| (t.mz[a] - mz).abs().total_cmp(&(t.mz[b] - mz).abs()))
 }
 
@@ -134,7 +139,7 @@ fn constant(inp: &TpInputs, r: &[f64]) -> bool {
 fn in_ms2(inp: &TpInputs, mz: f64) -> bool {
     inp.fragments.is_none_or(|f| {
         f.iter()
-            .any(|&x| (x - mz).abs() <= mz * inp.params.ppm * 1e-6)
+            .any(|&x| (x - mz).abs() <= crate::axis::half(mz, inp.params.ppm))
     })
 }
 
@@ -164,7 +169,7 @@ pub(super) fn not_in_source(inp: &TpInputs, parent: usize, b: &mut TpBlock) {
     for &r in &accepted {
         let found = LOSSES.iter().any(|&loss| {
             let want = t.mz[r] + loss;
-            let tol = want * inp.params.ppm * 1e-6;
+            let tol = crate::axis::half(want, inp.params.ppm);
             let from = accepted.partition_point(|&p| t.mz[p] < want - tol);
             accepted[from..]
                 .iter()

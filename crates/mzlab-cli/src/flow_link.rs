@@ -14,6 +14,7 @@ use mzlab_feat::chem::grafo::analyse_json;
 use mzlab_feat::hypo::{generate, HypoParams, Inputs, Rules, Structure};
 use mzlab_feat::interp::ms2link::LinkParams;
 use mzlab_feat::interp::run::run_to_with;
+use mzlab_feat::legacy::lr::rows::OFFSET_MAX;
 use mzlab_feat::legacy::series;
 use mzlab_feat::store::{read_table_from, Slice};
 use mzlab_feat::tp::TpRoles;
@@ -129,10 +130,16 @@ fn parent_json(p: &Parent, polarity: i8, rt: f64) -> String {
     o.0
 }
 
-/// The retention time of the parent when the file does not say it: the strongest row of the table within 5 ppm of its ion.
+/// The retention time of the parent when the file does not say it: the strongest row of the table within 5 ppm of its ion (on a unit-resolution
+/// table, within the offset the low-resolution Dig accepts for the parent, `OFFSET_MAX` Da).
 fn parent_rt(table: &[u8], mz: f64) -> Result<f64> {
-    let (t, _) = read_table_from(&mut Slice(table), table.len() as u64)?;
-    let near = (0..t.len()).filter(|&r| (t.mz[r] - mz).abs() <= mz * 5e-6);
+    let (t, meta) = read_table_from(&mut Slice(table), table.len() as u64)?;
+    let unit = meta
+        .get("recipe")
+        .and_then(Value::str)
+        .is_some_and(mzlab_feat::recipe::is_unit_text);
+    let tol = if unit { OFFSET_MAX } else { mz * 5e-6 };
+    let near = (0..t.len()).filter(|&r| (t.mz[r] - mz).abs() <= tol);
     let total = |r: usize| {
         t.area[r * t.n_files..(r + 1) * t.n_files]
             .iter()
