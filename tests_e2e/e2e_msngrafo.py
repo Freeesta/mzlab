@@ -1,5 +1,5 @@
 """api/msn_grafo on the built site: the .wasm msngrafo (crates/mzlab-msngrafo-wasm, wasm-feat/msngrafo/) answers the graph of a synthetic MSn infusion from the .mzidx and the
-mzML in OPFS, with the same bytes as `mzlab-cli msn-graph` (only the SHA-256 of the index may differ), a bad number is a keyed error, the export route gives CSV, MGF or MSP text,
+mzML in OPFS, with the same bytes as `mzlab-cli msn-graph` (only the SHA-256 of the index may differ), a bad number is a keyed error, the export route gives CSV, MGF or MSP text, api/msnlib/aggiungi adds an entry to the library once,
 MZLAB_LR_MISS stays empty and the .wasm is under 512000 bytes. Needs the site (python3 tools/prepara_sito.py); the module is built here when it is not in site/static/wasm-feat."""
 import hashlib, json, re, shutil, subprocess, sys
 sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
@@ -62,6 +62,16 @@ try:
             bad = pg.evaluate("fetch('api/msn_grafo/export?k=0&formato=xls').then(r=>r.status)")
             assert bad == 400, bad
         step("the export gives CSV and MSP text and a bad format is a keyed error", export)
+        def library():
+            post = "(b)=>fetch('api/msnlib/aggiungi',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(async r=>[r.status,await r.json()])"
+            body = {"libreria": "", "molecola_id": "STD-1", "k": 0, "formula": "C8H11N4O2+", "tol": "nom", "ce": 1, "scelte": []}
+            st, a = pg.evaluate(post, body)
+            assert st == 200 and a["doppione"] is False and a["libreria"].startswith('{"formato":"msnlib/1"'), (st, str(a)[:200])
+            st, again = pg.evaluate(post, {**body, "libreria": a["libreria"]})
+            assert st == 200 and again["doppione"] is True and again["libreria"] == a["libreria"], (st, str(again)[:200])
+            st, err = pg.evaluate(post, {"libreria": "", "molecola_id": "STD-1", "k": 0})
+            assert st == 400 and err["error_key"] == "err.msnlib.noIon", (st, err)
+        step("the library gets an entry once, the same one is a duplicate and a graph without ion is a keyed error", library)
         errs = [e for e in r.errs if e[0] in ("pageerror",)]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
         miss = pg.evaluate("(window.MZLAB_LR_MISS||[]).slice()")
