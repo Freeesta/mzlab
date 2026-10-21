@@ -241,7 +241,7 @@ impl FileRunner {
     }
 }
 
-fn one_input(r: &FileRunner, job: &Job, port: &str) -> Result<PathBuf> {
+pub(crate) fn one_input(r: &FileRunner, job: &Job, port: &str) -> Result<PathBuf> {
     let a = job
         .inputs
         .iter()
@@ -261,7 +261,7 @@ fn load(path: PathBuf) -> Result<Loaded> {
     Ok((name, std::fs::read(&path).map_err(io)?))
 }
 
-fn read_one(r: &FileRunner, job: &Job, port: &str) -> Result<Loaded> {
+pub(crate) fn read_one(r: &FileRunner, job: &Job, port: &str) -> Result<Loaded> {
     load(one_input(r, job, port)?)
 }
 
@@ -289,7 +289,7 @@ fn match_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     write_made(r, job, text, DataType::Candidates)
 }
 
-fn all_inputs(r: &FileRunner, job: &Job, port: &str) -> Vec<PathBuf> {
+pub(crate) fn all_inputs(r: &FileRunner, job: &Job, port: &str) -> Vec<PathBuf> {
     let list = job
         .inputs
         .iter()
@@ -362,32 +362,6 @@ fn network_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     write_made(r, job, text, DataType::Transform)
 }
 
-fn link_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let table_in = job
-        .inputs
-        .iter()
-        .find(|(p, _)| p == "table")
-        .and_then(|(_, v)| v.first());
-    let lineage = table_in
-        .and_then(|a| r.lineage(a))
-        .filter(|l| !l.peaks.is_empty())
-        .ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id))?;
-    let indexes = all_inputs(r, job, "index");
-    let (table, samples) = (read_one(r, job, "table")?, read_one(r, job, "samples")?);
-    let (parent, hypotheses) = (read_one(r, job, "parent")?, read_one(r, job, "hypotheses")?);
-    let series = crate::flow_link::Series { lineage, indexes };
-    let files = [
-        &table.1[..],
-        &samples.1[..],
-        &parent.1[..],
-        &hypotheses.1[..],
-    ];
-    let bytes = crate::flow_link::link_bytes(r, job, &series, files)?;
-    let out = r.work.join(format!("{}.mzfeat", job.instance.id));
-    std::fs::write(&out, bytes).map_err(io)?;
-    r.keep(out, DataType::Tp)
-}
-
 fn generate_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let parent = read_one(r, job, "parent")?;
     let text = crate::flow_generate::generate_text(job, &parent.1)?;
@@ -450,7 +424,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),
     ("annot.level", Exec::File("annot", level_job)),
     ("tp.network", Exec::File("network", network_job)),
-    ("tp.link", Exec::File("tp", link_job)),
+    ("tp.link", Exec::File("tp", crate::flow_link::link_job)),
     ("tp.generate", Exec::File("hypotheses", generate_job)),
     ("meta.compare", Exec::File("comparison", compare_job)),
     ("export.inclusion", Exec::File("report", inclusion_job)),
