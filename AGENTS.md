@@ -1,6 +1,6 @@
 # AGENTS.md - mzLab (repository Freeesta/mzlab, pacchetto mzlab)
 
-Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rileggerlo. Leggi il file d'area del tuo lavoro (§5). Per trovare un file o una funzione: `python3 tools/indice.py` poi `grep -n '<nome>' docs/agenti/mappa.md`, o il subagente `cercatore`.
+Questo file è già nel tuo contesto: non rileggerlo. Leggi il file d'area del tuo lavoro (§5). Per trovare un file o una funzione: `python3 tools/indice.py` poi `grep -n '<nome>' docs/agenti/mappa.md`, o il subagente `cercatore`.
 
 **Non leggere** (bloccati da `.claude/settings.json`; grep resta permesso): `mzlab/web/vendor/`, `mzlab/web/teoria/pratica/ei-dati.js`, `mzlab/web/elements.js`, `mzlab/web/teoria/glossario-dati.js`, `mzlab/web/esempi/`, `.git/`, `.verifica/` (anche `cache_massbank`), `docs/agenti/misure-diario.md`, `tests_e2e/shots/`, `__pycache__/`, `.pytest_cache/`, `*.egg-info/`, `site/`.
 
@@ -127,6 +127,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | Flow grafico (scheda amministratore: palette dei passi `step/1`, catena, moduli dei parametri, confronto `meta.compare`, esportazione/importazione `mzflow/2`; `flow/`) | `docs/agenti/flow-grafica.md` (corrispondenza con i passi di mzmine: `flow-mzmine.md`) |
 | esecutore web del Flow («This browser»: `flow/lazy/flow-web-{run,ui,worker}.js`, eventi `flow:web-step`, stima `stima_series`, avviso su telefono/tablet, Run spento oltre il livello alto) | `docs/agenti/flow-web.md` |
 | Libro: convertitore (`tools/libro/`, dialetto Markdown, fixture CC0, `--pubblico`) e pagina editor admin (`mzlab/web/libro/`, token, salvataggio nel repository privato) | `docs/agenti/libro.md` |
+| tutor sulla Teoria (`mzlab-tutor`: blocchi, BM25) | `docs/agenti/tutor.md` |
 | lanciare la verifica nel container cloud (Chromium, `--setup`, test che costruiscono il sito) | `docs/agenti/ambiente-cloud.md` |
 
 ## 6. Trappole generali

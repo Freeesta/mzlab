@@ -2185,6 +2185,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-tutor"
+version = "1.0.0"
+dependencies = [
+ "mzlab-core",
+ "mzlab-libro",
+ "serde_json",
+]
+
+[[package]]
 name = "mzlab-wasm"
 version = "1.0.0"
 dependencies = [
