@@ -23,6 +23,9 @@ mod flow_apply;
 mod flow_base;
 mod flow_cache;
 mod flow_compare;
+mod flow_drift;
+#[cfg(test)]
+mod flow_drift_tests;
 mod flow_estimate;
 mod flow_export;
 #[cfg(test)]
