@@ -15,10 +15,13 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_base::table_job;
 use crate::flow_cache::Cache;
+use crate::flow_drift::drift_job;
 use crate::flow_estimate::estimate_job;
+use crate::flow_level::level_job;
 pub use crate::flow_out::{run_plan_cached, run_plan_notify};
 use crate::flow_read::{blobs, load, named, Loaded};
 pub use crate::flow_run::{fill_inputs, run_plan};
+use crate::flow_stats::stats_job;
 
 pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)
@@ -354,26 +357,17 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("features.gapfill", Exec::Made(crate::flow_base::align_job)),
     ("features.table", Exec::File("report", table_job)),
     ("features.estimate", Exec::File("estimates", estimate_job)),
-    (
-        "table.stats",
-        Exec::File("report", crate::flow_stats::stats_job),
-    ),
+    ("table.stats", Exec::File("report", stats_job)),
     ("table.kmd", Exec::File("report", crate::flow_kmd::kmd_job)),
     ("table.pca", Exec::File("report", crate::flow_pca::pca_job)),
-    (
-        "table.drift",
-        Exec::File("table", crate::flow_drift::drift_job),
-    ),
+    ("table.drift", Exec::File("table", drift_job)),
     ("spectra.match", Exec::File("hits", match_job)),
     ("formula.ms1", Exec::File("formulas", formula_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
     ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),
     ("tp.dig_lr", Exec::File("dig", crate::flow_digl::dig_job)),
-    (
-        "annot.level",
-        Exec::File("annot", crate::flow_level::level_job),
-    ),
+    ("annot.level", Exec::File("annot", level_job)),
     (
         "tp.network",
         Exec::File("network", crate::flow_network::network_job),
