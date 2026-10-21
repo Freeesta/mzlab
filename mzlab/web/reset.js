@@ -82,7 +82,7 @@ const RESET = (function () {
     if (opt.mark) { try { sessionStorage.setItem(RUN_KEY, "1"); sessionStorage.setItem(RUN_KEY_OLD, "1"); } catch (e) { /* none */ } }
     if (opt.reload === false) return rep;
     const u = new URL(location.href); if (mode === "all") { u.search = "?riparti=1"; u.hash = ""; } else { u.searchParams.delete("reset"); u.searchParams.delete("riparti"); if (rep.blocked.length || mode !== "files") u.searchParams.set("riparti", "1"); }
-    // the same address (a "#/dati" hash and no parameter to drop) would only be a same-page jump: reload for real
+    // the same address (a "#/data" hash and no parameter to drop) would only be a same-page jump: reload for real
     if (u.href === location.href) location.reload(); else location.replace(u.href);
     return rep;
   }

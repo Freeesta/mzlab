@@ -123,8 +123,8 @@ def write_manifest(out: Path, version: str) -> None:
     (out / "static" / "manifest.json").write_text(json.dumps(doc, indent=1, sort_keys=True), encoding="utf-8")
 
 
-def teoria_entry() -> str:
-    """site/teoria/index.html: the short address of the Teoria (teoria/, teoria/#5 for a chapter). It only forwards to static/teoria/, the real
+def theory_entry() -> str:
+    """site/theory/index.html: the short address of the Teoria (theory/, theory/#5 for a chapter). It only forwards to static/teoria/, the real
     page (no second copy to download, same files in the service-worker cache); teoria.js turns #5, #cap-5 or #09-quadrupolo into the chapter."""
     return (
         '<!doctype html>\n<html lang="it"><head><meta charset="utf-8">' + tema_testa.snippet("teoria") + '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
@@ -163,8 +163,8 @@ def main() -> None:
     (out / "manifest.webmanifest").write_text(json.dumps(MANIFEST, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "index.html").write_text(html, encoding="utf-8")
     (static / "index.html").unlink()
-    (out / "teoria").mkdir()
-    (out / "teoria" / "index.html").write_text(teoria_entry(), encoding="utf-8")
+    (out / "theory").mkdir()
+    (out / "theory" / "index.html").write_text(theory_entry(), encoding="utf-8")
     (out / ".nojekyll").write_text("", encoding="utf-8")
     # program version and git commit for reproducibility (.mzflow)
     try:

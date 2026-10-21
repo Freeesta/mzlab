@@ -32,7 +32,7 @@ try:
                 b = a.bounding_box(); assert b and b["height"] >= 32 and b["width"] >= 32 and b["x"] >= 0 and b["x"] + b["width"] <= w, (a.inner_text(), b)
             assert q.evaluate("document.documentElement.scrollWidth") <= w, "horizontal scroll"
             assert q.evaluate("document.querySelector('#top').getBoundingClientRect().height") < 80
-            assert q.get_attribute("#tab-dati", "href") == "../../#/dati" and q.get_attribute("#tab-disegno", "href") == "../../#/disegno"
+            assert q.get_attribute("#tab-dati", "href") == "../../#/data" and q.get_attribute("#tab-disegno", "href") == "../../#/draw"
         def widths():
             for w in (360, 768, 1280):
                 c, q = ctx(w); go(q, T + "06-esi.html"); tabs_ok(q, w)
@@ -52,13 +52,13 @@ try:
                 q.keyboard.press("Tab"); ids.append(q.evaluate("document.activeElement.id"))
             assert "tab-dati" in ids and "tab-disegno" in ids and "tab-teoria" in ids, ids
             q.evaluate("document.querySelector('#tab-disegno').focus()"); idle(q); q.keyboard.press("Enter")
-            q.wait_for_url("**/#/disegno"); idle(q); c.close()
+            q.wait_for_url("**/#/draw"); idle(q); c.close()
         step("keyboard: Tab reaches the three tabs, Enter on Disegno opens it", keyboard)
         def everywhere():
             c, q = ctx(1280)
             for pgname in PAGES:
                 go(q, T + pgname); q.wait_for_selector("#tabs")
-                assert q.get_attribute("#tab-dati", "href") == "../../#/dati" and q.get_attribute("#tab-disegno", "href") == "../../#/disegno", pgname
+                assert q.get_attribute("#tab-dati", "href") == "../../#/data" and q.get_attribute("#tab-disegno", "href") == "../../#/draw", pgname
                 assert q.is_visible("#tab-dati") and q.is_visible("#tab-disegno"), pgname
             idle(q); c.close()
         step("every page of the Teoria and of the Pratica has the tabs", everywhere)
@@ -67,10 +67,10 @@ try:
                 c, q = ctx(1280); go(q, T + "pratica-formula.html"); q.wait_for_selector("#" + tab)
                 idle(q); q.click("#" + tab); q.wait_for_function("window.qqReady===true", timeout=60000)
                 assert q.locator(ready_sel).get_attribute("data-v") == h, (tab, q.url)
-                go(q, T + "08-vuoto.html"); idle(q); q.click("#tab-dati"); q.wait_for_url("**/#/dati"); q.wait_for_function("window.qqReady===true", timeout=60000); idle(q); c.close()
+                go(q, T + "08-vuoto.html"); idle(q); q.click("#tab-dati"); q.wait_for_url("**/#/data"); q.wait_for_function("window.qqReady===true", timeout=60000); idle(q); c.close()
         step("one click from a page to Dati and to Disegno", reach)
         def session():
-            c, q = ctx(1500, 1000); go(q, U + "#/dati"); q.wait_for_function("window.qqReady===true", timeout=60000)
+            c, q = ctx(1500, 1000); go(q, U + "#/data"); q.wait_for_function("window.qqReady===true", timeout=60000)
             stage(q, [mz(f) for f in FILES[:1]]); q.click("text=Carica dati"); ready(q)
             n = q.evaluate("E.files.length"); assert n >= 1, n
             q.click("#nav button[data-v=theory]"); q.wait_for_selector("#tframe"); q.wait_for_timeout(800)

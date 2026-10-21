@@ -66,7 +66,7 @@ try:
             pg.click(TAB); pg.wait_for_selector("#tp-go")
             assert not pg.evaluate("document.getElementById('v-draw').offsetParent")
             pg.click('#nav button[data-v="theory"]'); assert pg.evaluate("document.getElementById('v-tpmine').hidden")
-            pg.click('#nav button[data-v="data"]')                           # back to Dati: a reload on #/teoria opens the standalone Teoria page
+            pg.click('#nav button[data-v="data"]')                           # back to Dati: a reload on #/theory opens the standalone Teoria page
         step("with mzlab.admin the Tabui tab is in the header at once", visible)
         def reload_on():
             pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
