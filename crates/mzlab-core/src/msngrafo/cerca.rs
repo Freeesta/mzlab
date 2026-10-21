@@ -128,7 +128,7 @@ fn read_graph(g: &Value) -> Result<G> {
 /// The peaks of a spectrum as sorted m/z and intensities.
 fn columns(s: &Sp) -> (Vec<f64>, Vec<f64>) {
     let mut p: Vec<(f64, f64)> = s.peaks.iter().map(|x| (x.0, x.1)).collect();
-    p.sort_by(|a, b| a.0.total_cmp(&b.0));
+    crate::sortc::slice_by(&mut p, |a, b| a.0.total_cmp(&b.0));
     (
         p.iter().map(|x| x.0).collect(),
         p.iter().map(|x| x.1).collect(),
@@ -286,7 +286,7 @@ fn hits(lib: &Value, u: &G, o: &Opzioni) -> Result<Vec<Hit>> {
             s,
         });
     }
-    out.sort_by(|a, b| {
+    crate::sortc::slice_by(&mut out, |a, b| {
         rank(&a.s.tree, &b.s.tree)
             .then(rank(&a.s.ms2, &b.s.ms2))
             .then(rank(&a.s.losses, &b.s.losses))
