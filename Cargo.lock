@@ -2001,6 +2001,7 @@ dependencies = [
  "mzlab-lettori",
  "mzlab-lib",
  "mzlab-llm",
+ "mzlab-tutor",
  "serde_json",
 ]
 
@@ -2199,6 +2200,7 @@ version = "1.0.0"
 dependencies = [
  "mzlab-core",
  "mzlab-libro",
+ "mzlab-llm",
  "serde_json",
 ]
 
