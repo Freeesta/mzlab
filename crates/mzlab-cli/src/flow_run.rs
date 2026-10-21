@@ -118,17 +118,19 @@ fn locate(
 ) -> Result<HashMap<String, PathBuf>, (Error, String)> {
     let mut found = HashMap::new();
     for f in &plan.inputs {
-        let files = ins.iter().filter(|p| {
-            p.is_file() && p.file_name().is_some_and(|n| n.to_string_lossy() == f.name)
-        });
+        // `NAME@ID` is the sample ID of the dataset NAME (`convert.mzml`, `index.mzidx`): the file or folder is NAME
+        let name = crate::flow_set::dataset_name(&f.name);
+        let files = ins
+            .iter()
+            .filter(|p| p.is_file() && p.file_name().is_some_and(|n| n.to_string_lossy() == name));
         let dirs = ins
             .iter()
             .filter(|p| p.is_dir())
-            .map(|d| d.join(&f.name))
+            .map(|d| d.join(name))
             .filter(|p| p.exists());
         let mut hits: Vec<PathBuf> = files.cloned().chain(dirs).collect();
-        if ins.is_empty() && plan_dir.join(&f.name).exists() {
-            hits.push(plan_dir.join(&f.name));
+        if ins.is_empty() && plan_dir.join(name).exists() {
+            hits.push(plan_dir.join(name));
         }
         match hits.len() {
             1 => found.insert(f.name.clone(), hits.remove(0)),
