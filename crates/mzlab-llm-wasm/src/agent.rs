@@ -91,36 +91,76 @@ impl Agent {
             let c = parse(context_json.as_bytes()).map_err(fail)?;
             self.st.add_context(c);
         }
-        Ok(self.go(Input::User(text.to_string())))
+        Ok(go(self, Input::User(text.to_string())))
     }
+}
 
+/// The lines of the outputs; with a recording, every `send` is answered at once by the next turn of it.
+fn drive(a: &mut Agent, first: Vec<Output>) -> String {
+    let mut text = String::new();
+    let mut work: VecDeque<Output> = first.into();
+    while let Some(o) = work.pop_front() {
+        text.push_str(&line(&o, a.st.outcome().unwrap_or("")));
+        let (Output::Send(req), Some(r)) = (&o, a.replay.as_mut()) else {
+            continue;
+        };
+        let events = r.respond(req).unwrap_or_else(|e| {
+            vec![Event::Error {
+                key: e.key.to_string(),
+                params: e
+                    .params
+                    .iter()
+                    .map(|(k, v)| (k.to_string(), v.to_string()))
+                    .collect(),
+            }]
+        });
+        for e in events {
+            work.extend(step(&mut a.st, Input::Event(e)));
+        }
+    }
+    text
+}
+
+fn go(a: &mut Agent, input: Input) -> String {
+    let out = step(&mut a.st, input);
+    drive(a, out)
+}
+
+#[wasm_bindgen]
+impl Agent {
     /// One normalized event line of the answer (`LlmStream`, `http_error`, the routes of the app).
     pub fn event(&mut self, event_line: &str) -> Result<String, String> {
         let v = parse(event_line.as_bytes()).map_err(fail)?;
         let e = Event::from_value(&v).map_err(fail)?;
-        Ok(self.go(Input::Event(e)))
+        Ok(go(self, Input::Event(e)))
     }
 
     /// What the page answers to a `call`.
     pub fn result(&mut self, id: &str, ok: bool, content_json: &str) -> Result<String, String> {
         let content = parse(content_json.as_bytes()).unwrap_or(Value::Null);
-        Ok(self.go(Input::ToolResult {
-            id: id.to_string(),
-            ok,
-            content,
-        }))
+        Ok(go(
+            self,
+            Input::ToolResult {
+                id: id.to_string(),
+                ok,
+                content,
+            },
+        ))
     }
 
     /// What the user answers to an `ask`.
     pub fn confirm(&mut self, id: &str, yes: bool) -> String {
-        self.go(Input::Confirm {
-            id: id.to_string(),
-            yes,
-        })
+        go(
+            self,
+            Input::Confirm {
+                id: id.to_string(),
+                yes,
+            },
+        )
     }
 
     pub fn stop(&mut self) -> String {
-        self.go(Input::Stop)
+        go(self, Input::Stop)
     }
 
     /// The conversation as `llm-conv/1`, what the routes of the app take.
@@ -142,38 +182,5 @@ impl Agent {
     pub fn usage(&self) -> Vec<f64> {
         let (i, o) = self.st.usage;
         vec![i as f64, o as f64]
-    }
-}
-
-impl Agent {
-    fn go(&mut self, input: Input) -> String {
-        let out = step(&mut self.st, input);
-        self.drive(out)
-    }
-
-    /// The lines of the outputs; with a recording, every `send` is answered at once by the next turn of it.
-    fn drive(&mut self, first: Vec<Output>) -> String {
-        let mut text = String::new();
-        let mut work: VecDeque<Output> = first.into();
-        while let Some(o) = work.pop_front() {
-            text.push_str(&line(&o, self.st.outcome().unwrap_or("")));
-            let (Output::Send(req), Some(r)) = (&o, self.replay.as_mut()) else {
-                continue;
-            };
-            let events = r.respond(req).unwrap_or_else(|e| {
-                vec![Event::Error {
-                    key: e.key.to_string(),
-                    params: e
-                        .params
-                        .iter()
-                        .map(|(k, v)| (k.to_string(), v.to_string()))
-                        .collect(),
-                }]
-            });
-            for e in events {
-                work.extend(step(&mut self.st, Input::Event(e)));
-            }
-        }
-        text
     }
 }

@@ -9,7 +9,7 @@
   const good = (/** @type {any} */ content) => ({ ok: true, content });
 
   /** what changes between two plans, for the card of «Apply»: steps added and removed, parameters and wiring changed, inputs added and removed @param {any} a the plan now @param {any} b the proposed one */
-  F.llmDiff = (a, b) => {
+  const llmDiff = (a, b) => {
     const byId = (/** @type {any} */ p) => new Map((p.steps || []).map((/** @type {any} */ s) => [s.id, s]));
     const A = byId(a), B = byId(b), out = /** @type {{kind: string, text: string}[]} */ ([]);
     for (const [id, s] of B) {
@@ -25,9 +25,45 @@
     for (const n of names(a)) if (!names(b).has(n)) out.push({ kind: "remove", text: `Remove input ${n}` });
     return out;
   };
+  F.llmDiff = llmDiff;
+
+  /** runs the plan where the call says (web or this computer) and reports the state of each step @param {any} ctx @param {any} a @param {(plan: any) => any[]} problems */
+  const runTool = async (ctx, a, problems) => {
+    const S = ctx.S;
+    const desk = F.runners.desktop, web = F.runners.web;
+    const where = a.executor === "web" ? "web" : a.executor === "native" ? "desktop" : desk && desk.available() ? "desktop" : "web";
+    const runner = where === "desktop" ? desk : web;
+    if (!runner || !runner.available()) return bad("err.flow.unavailable", { executor: where });
+    const found = problems(S.plan);
+    if (found.length) return bad("err.flow.check", { count: found.length, first: found[0].error_key, instance: found[0].instance });
+    ctx.runs.running = true; ctx.runs.states = {};
+    S.llmRef = await ctx.llmRef();
+    try {
+      const r = await runner.run(S, { onEvent: (/** @type {any} */ e) => { ctx.runs.states[e.passo] = e.stato; } });
+      if (where === "desktop") for (const s of r.steps) ctx.runs.states[s.id] = s.error ? "error" : s.cached ? "reused" : "done";
+      else for (const id of r.steps) ctx.runs.states[id] = ctx.runs.states[id] || "done";
+      return good({ executor: where, steps: ctx.runs.states });
+    } catch (e) {
+      const x = /** @type {any} */ (e);
+      return bad(x && x.key || "err.flow.run", x && x.params);
+    } finally { delete S.llmRef; ctx.runs.running = false; }
+  };
+
+  /** shows something to the user: selects a node or runs a UI action @param {any} ctx @param {any} a */
+  const showTool = (ctx, a) => {
+    if (a.show === "select_node") {
+      const inst = F.instanceOf(S.plan, a.args.instance);
+      if (!inst) return bad("err.llm.tool.args", { field: "instance" });
+      ctx.select(inst.id);
+      return good({ shown: "select_node", instance: inst.id });
+    }
+    const AZ = /** @type {any} */ (globalThis).AZIONI, id = { show_xic: "spec.xic", show_spectrum_at_rt: "chrom.specAtRt", show_row: "table.showRow" }[/** @type {"show_xic"} */ (a.show)];
+    if (!AZ || !id || typeof AZ.esegui !== "function") return bad("err.llm.tool.unavailable", { tool: a.show });
+    try { AZ.esegui(id, a.args); return good({ shown: a.show }); } catch (_) { return bad("err.llm.tool.unavailable", { tool: a.show }); }
+  };
 
   /** the tools bound to one Flow page; `ctx`: {S, select(instance), propose(plan, note), edited(label)}, `ctx.runs` the states of the steps of the last run @param {any} ctx */
-  F.llmTools = ctx => {
+  const llmTools = ctx => {
     const S = ctx.S;
     const problems = (/** @type {any} */ plan) => F.validate(plan, S.reg).map((/** @type {any} */ p) => ({ error_key: p.key, instance: p.instance || "", port: p.port || "", params: p.params || {} }));
     const stepOf = (/** @type {string} */ ref) => S.reg.byId.get(String(ref).split("@")[0]);
@@ -90,37 +126,9 @@
       return good({ applied: await ctx.propose(r.plan, String(a.note || "")) });
     };
 
-    T.flow_run = async a => {
-      const desk = F.runners.desktop, web = F.runners.web;
-      const where = a.executor === "web" ? "web" : a.executor === "native" ? "desktop" : desk && desk.available() ? "desktop" : "web";
-      const runner = where === "desktop" ? desk : web;
-      if (!runner || !runner.available()) return bad("err.flow.unavailable", { executor: where });
-      const found = problems(S.plan);
-      if (found.length) return bad("err.flow.check", { count: found.length, first: found[0].error_key, instance: found[0].instance });
-      ctx.runs.running = true; ctx.runs.states = {};
-      S.llmRef = await ctx.llmRef();
-      try {
-        const r = await runner.run(S, { onEvent: (/** @type {any} */ e) => { ctx.runs.states[e.passo] = e.stato; } });
-        if (where === "desktop") for (const s of r.steps) ctx.runs.states[s.id] = s.error ? "error" : s.cached ? "reused" : "done";
-        else for (const id of r.steps) ctx.runs.states[id] = ctx.runs.states[id] || "done";
-        return good({ executor: where, steps: ctx.runs.states });
-      } catch (e) {
-        const x = /** @type {any} */ (e);
-        return bad(x && x.key || "err.flow.run", x && x.params);
-      } finally { delete S.llmRef; ctx.runs.running = false; }
-    };
+    T.flow_run = a => runTool(ctx, a, problems);
 
-    T.ui_show = a => {
-      if (a.show === "select_node") {
-        const inst = F.instanceOf(S.plan, a.args.instance);
-        if (!inst) return bad("err.llm.tool.args", { field: "instance" });
-        ctx.select(inst.id);
-        return good({ shown: "select_node", instance: inst.id });
-      }
-      const AZ = /** @type {any} */ (globalThis).AZIONI, id = { show_xic: "spec.xic", show_spectrum_at_rt: "chrom.specAtRt", show_row: "table.showRow" }[/** @type {"show_xic"} */ (a.show)];
-      if (!AZ || !id || typeof AZ.esegui !== "function") return bad("err.llm.tool.unavailable", { tool: a.show });
-      try { AZ.esegui(id, a.args); return good({ shown: a.show }); } catch (_) { return bad("err.llm.tool.unavailable", { tool: a.show }); }
-    };
+    T.ui_show = a => showTool(ctx, a);
     for (const n of ["data_summary", "chart_make", "code_export"]) T[n] = () => bad("err.llm.tool.unavailable", { tool: n });
 
     return {
@@ -133,4 +141,5 @@
       base,
     };
   };
+  F.llmTools = llmTools;
 })();

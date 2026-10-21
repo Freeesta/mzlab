@@ -9,12 +9,6 @@ import { hasConsent } from "./llm-consenso.js";
 /** @typedef {{show: (text: string) => void, log: (line: any) => void, sending: (request: any) => void, call: (id: string, name: string, args: any) => Promise<{ok: boolean, content: any}>,
  *   ask: (id: string, summary: string, name: string, args: any) => Promise<boolean>, done: (outcome: string) => void}} Host */
 
-/** whether the assistant is on for this page: profile «ricerca», switched on in the settings and a consent for the provider (no file of llm/ is read before this is true) */
-export function assistantOn() {
-  const s = readSettings();
-  return s.on && !!s.provider && hasConsent(s.provider);
-}
-
 /** a recording for tests: `MZLAB_LLM_AGENT.replay(text, strict)` answers the requests of the next conversation */
 /** @type {{text: string, strict: boolean} | null} */ let recording = null;
 /** @type {any} */ (window).MZLAB_LLM_AGENT = { replay: (/** @type {string} */ text, strict = false) => { recording = { text, strict }; } };
@@ -106,4 +100,10 @@ export class AgentRun {
   /** @param {string} sources JSON of the sources of the page @param {number} [budget] @returns {Promise<string>} a contesto/1 text */
   async context(sources, budget = 4000) { return (await this.rpc({ op: "context", sources, budget })).context; }
   close() { this.worker.terminate(); if (this.client && this.client.close) this.client.close(); }
+}
+
+/** whether the assistant is on for this page: profile «ricerca», switched on in the settings and a consent for the provider (no file of llm/ is read before this is true) */
+export function assistantOn() {
+  const s = readSettings();
+  return s.on && !!s.provider && hasConsent(s.provider);
 }
