@@ -85,14 +85,18 @@
       for (const b of modeBtns) b.setAttribute("aria-pressed", String((b.dataset.mode === "simple") === simple));
     }
     let dismissed = false;
+    // the node of the feature table: open from the first drawing, so its settings are at hand without choosing a template
+    const tableKey = () => { const n = nodeOfStep("features.detect"); return n ? n.key : ""; };
+    const tplCard = (/** @type {any} */ t) => el("button", { type: "button", class: "flx-tc", "data-tpl": t.id, onclick: () => applyTemplate(t) },
+      el("span", { class: "flx-pre", "aria-hidden": "true", style: "--cc:" + F.CATS.input.color }, el("i"), el("b"), el("i", { style: "--cc:" + F.CATS.process.color }), ...t.addons.flatMap((/** @type {string} */ _) => [el("b"), el("i", { style: "--cc:" + F.CATS.search.color })])),
+      el("strong", { text: t.name }), el("small", { text: t.good }));
     const tplCards = () => {
       tplBox.replaceChildren(el("h3", { text: "Start from a template" }), el("p", { class: "fl-note", text: "The base is already here. A template adds analyses to it; you can change everything afterwards." }),
-        el("div", { class: "flx-tpls" }, ...F.TEMPLATES.map((/** @type {any} */ t) => el("button", { type: "button", class: "flx-tc", "data-tpl": t.id, onclick: () => applyTemplate(t) },
-          el("span", { class: "flx-pre", "aria-hidden": "true", style: "--cc:" + F.CATS.input.color }, el("i"), el("b"), el("i", { style: "--cc:" + F.CATS.process.color }), ...t.addons.flatMap((/** @type {string} */ _) => [el("b"), el("i", { style: "--cc:" + F.CATS.search.color })])),
-          el("strong", { text: t.name }), el("small", { text: t.good })))),
+        el("div", { class: "flx-tpls" }, ...F.TEMPLATES.filter((/** @type {any} */ t) => !t.more).map(tplCard)),
+        el("details", { class: "flx-more" }, el("summary", { text: "More templates" }), el("div", { class: "flx-tpls" }, ...F.TEMPLATES.filter((/** @type {any} */ t) => t.more).map(tplCard))),
         el("div", { class: "fl-meta" }, btn("x", "Start from the base only", () => { dismissed = true; redraw(); }, "Start from scratch")));
     };
-    const applyTemplate = (/** @type {any} */ t) => { go(() => { S.plan = F.templatePlan(reg0, t); }); selected = ""; dismissed = true; redraw(); cv.fit(); say(`Template “${t.name}” loaded. Undo goes back.`, S.undo); };
+    const applyTemplate = (/** @type {any} */ t) => { go(() => { S.plan = F.templatePlan(reg0, t); }); selected = tableKey(); dismissed = true; redraw(); cv.fit(); say(`Template “${t.name}” loaded. Undo goes back.`, S.undo); };
 
     const modeBtns = ["simple", "advanced"].map(m => el("button", { type: "button", "data-mode": m, "aria-pressed": String((m === "simple") === simple), onclick: () => { simple = m === "simple"; try { localStorage.setItem("mzlab.flow.mode", m); } catch (_) { /* ignore */ } selected = ""; redraw(); cv.fit(); } }, el("span", { text: m === "simple" ? "Simple" : "Advanced" })));
     const tplBtn = btn("flow", "Start from a template", () => { dismissed = false; tplCards(); tplBox.classList.add("show"); const f = tplBox.querySelector("button"); if (f) /** @type {HTMLElement} */ (f).focus(); }, "Templates");
@@ -137,7 +141,7 @@
     sec.textContent = ""; sec.append(root);
     listHost.addEventListener("flow:changed", () => { undoBtn.disabled = !S.history.length; redoBtn.disabled = !S.future.length; redraw(); });
     tplCards(); planView.hidden = true; undoBtn.disabled = true; redoBtn.disabled = true;
-    redraw(); requestAnimationFrame(() => cv.fit());
+    selected = tableKey(); redraw(); requestAnimationFrame(() => cv.fit());
     S.redraw = redraw; /** @type {any} */ (sec).__flow = S; /** @type {any} */ (sec).__shell = { select: cvUi.select, model };
   };
 })();
