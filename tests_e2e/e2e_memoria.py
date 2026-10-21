@@ -1,5 +1,5 @@
 """Saved memory (localStorage + notebook) survives a reload, a damaged copy never stops the page, two tabs do not overwrite each other,
-and a direct address (#/disegno, Cmd+Shift+R) shows the editor with the saved options (formula and mass under the structure)."""
+and a direct address (#/draw, Cmd+Shift+R) shows the editor with the saved options (formula and mass under the structure)."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -29,7 +29,7 @@ try:
             assert pg.is_checked("#lb-f") and not pg.is_checked("#lb-m"), "the saved options are applied at start"
             assert pg.evaluate(f"{KJ}.editor.struct().atoms.size") == 3, "the drawing is back"
             assert pg.evaluate(LAB) == 1, pg.evaluate(LAB)                   # one structure, one line (formula only)
-        step("reload on #/disegno: editor, drawing, saved options and labels are back", drawing_back)
+        step("reload on #/draw: editor, drawing, saved options and labels are back", drawing_back)
         def quick_draw_labels():
             pg.evaluate(f"{KJ}.setMolecule('')"); pg.wait_for_timeout(800)
             pg.check("#lb-m"); pg.fill("#ex-smi", "CCO"); pg.click("#ex-load"); pg.wait_for_timeout(1500)
@@ -56,7 +56,7 @@ try:
             ctx = r.b.new_context(viewport={"width": 1440, "height": 900})
             ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             a, q = ctx.new_page(), ctx.new_page()
-            for t in (a, q): t.goto(f"http://127.0.0.1:{r.port}/#/disegno"); t.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
+            for t in (a, q): t.goto(f"http://127.0.0.1:{r.port}/#/draw"); t.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
             a.fill("#ex-name", "tab_a"); a.dispatch_event("#ex-name", "change"); a.wait_for_timeout(1500)
             q.select_option("#lb-dec", "2"); q.wait_for_timeout(1500)       # the second tab never saw the name written by the first
             nb = a.evaluate("fetch('api/notebook').then(r=>r.json())")

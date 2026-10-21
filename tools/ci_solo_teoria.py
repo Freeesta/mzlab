@@ -14,7 +14,7 @@ ALLOWED = [re.compile(p) for p in (
 )]
 # the unit tests that guard the chapters, the Libro converter and the names that must never appear in the public repository
 PYTEST = ["test_controlla_teoria", "test_esempi_anonimi", "test_composti", "test_indice_teoria", "test_libro", "test_libro_generato", "test_libro_importa",
-          "test_nuovo_capitolo", "test_teoria_entry", "test_server_teoria", "test_strumenti_teoria"]
+          "test_nuovo_capitolo", "test_theory_entry", "test_server_teoria", "test_strumenti_teoria"]
 E2E = ["e2e_teoria_nav", "e2e_teoria_cerca", "e2e_teoria_barra", "e2e_teoria_scura"]
 
 
