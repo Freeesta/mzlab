@@ -58,7 +58,7 @@ fn twelve_files_and_a_big_table_fit_and_the_bytes_are_stable() {
     let files = v.get("files").unwrap().arr();
     assert_eq!(files.len(), 12);
     assert!(
-        v.get("truncated").map_or(true, |t| t.arr().is_empty()),
+        v.get("truncated").is_none_or(|t| t.arr().is_empty()),
         "nothing is cut at 8000"
     );
     assert_eq!(
@@ -69,7 +69,7 @@ fn twelve_files_and_a_big_table_fit_and_the_bytes_are_stable() {
     );
     assert!(files.iter().all(|f| f
         .get("tic")
-        .map_or(true, |t| t.get("rt").unwrap().arr().len() <= TIC_POINTS)));
+        .is_none_or(|t| t.get("rt").unwrap().arr().len() <= TIC_POINTS)));
     let got = a + "\n";
     if std::env::var("MZLAB_UPDATE_LLM").is_ok() {
         std::fs::write(golden(), &got).unwrap();

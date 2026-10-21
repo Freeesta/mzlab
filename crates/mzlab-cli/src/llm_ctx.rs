@@ -184,7 +184,7 @@ pub(crate) fn eval(args: Vec<String>) -> Outcome {
             code: u8::from(p != t),
             stdout: format!(
                 "{text}total {p}/{t} ({}%)\n",
-                if t == 0 { 0 } else { 100 * p / t }
+                (100 * p).checked_div(t).unwrap_or(0)
             )
             .into_bytes(),
             stderr: String::new(),
