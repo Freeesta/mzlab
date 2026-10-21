@@ -53,6 +53,9 @@ mod flow_lr_tests;
 mod flow_match;
 mod flow_ms2;
 mod flow_msngraph;
+mod flow_msnlib;
+#[cfg(test)]
+mod flow_msnlib_tests;
 #[cfg(test)]
 mod flow_msnraw_tests;
 mod flow_network;

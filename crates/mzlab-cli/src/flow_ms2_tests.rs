@@ -154,6 +154,8 @@ fn descriptor_export_is_up_to_date() {
         crate::flow_centroid::centroid_step(),
         crate::flow_ms2::ms2_step(),
         crate::flow_msngraph::msn_graph_step(),
+        crate::flow_msnlib::library_step(),
+        crate::flow_msnlib::table_step(),
         crate::flow_compare::compare_step(),
         crate::flow_digl::dig_lr_step(),
         crate::flow_quant::quant_step(),
