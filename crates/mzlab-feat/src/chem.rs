@@ -2,6 +2,7 @@
 //! the user gives the SMILES of the parent.
 
 pub mod frammenti;
+pub mod fragmenter;
 pub mod grafo;
 #[cfg(feature = "record")]
 mod grafo_record;

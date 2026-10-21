@@ -149,13 +149,7 @@ pub fn pattern(ion: &Formula, pol: &str, min_rel: f64) -> Vec<(f64, f64)> {
         .collect()
 }
 
-/// Python-like `round(x, nd)`: correctly rounded on the exact binary value, ties to even (the decimal formatting of Rust does the same).
-pub fn round_to(x: f64, nd: i32) -> f64 {
-    if !x.is_finite() || nd < 0 {
-        return x;
-    }
-    format!("{:.*}", nd as usize, x).parse().unwrap_or(x)
-}
+pub use crate::chem::fragmenter::round_to;
 
 /// One nominal cluster A, A+1, ...
 #[derive(Clone, Debug)]
