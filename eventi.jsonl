@@ -367,3 +367,4 @@
 {"v":1,"ts_utc":"2026-10-21T23:02:52Z","azione":"aperta","tipo":"pr","pr":1392,"sha":"313940cc81f19d44c69bbe323df584d3d731c6d6"}
 {"v":1,"ts_utc":"2026-10-21T23:05:36Z","azione":"push","titolo":"Fondo main in claude/flow-reattivita","merge_main":false,"aree":{"workflow":2,"docs":8,"rust":9,"test":2,"tools":3},"tipo":"pr","pr":1379,"sha":"8e3ca8f3276bcef22abec8b1b85693b06da6d2cd"}
 {"v":1,"ts_utc":"2026-10-21T23:07:32Z","azione":"push","titolo":"Fusione di main","merge_main":false,"aree":{"workflow":2,"docs":8,"rust":9,"test":2,"tools":3},"tipo":"pr","pr":1387,"sha":"d6dceaf77310a00ba6197c20a99af1e037f31fd5"}
+{"v":1,"ts_utc":"2026-10-21T23:09:06Z","azione":"push","titolo":"Studio del processo: rust.yml senza thrash, misure delle feature","merge_main":false,"aree":{"docs":1},"tipo":"pr","pr":1392,"sha":"fe2365f65b6103eeee9d01e35867537e77136d2c"}
