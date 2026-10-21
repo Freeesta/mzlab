@@ -16,7 +16,7 @@ Per ogni passo: (1) registra il descrittore nel registro del CLI (`flow::steps()
 
 ## Quando finisce il pacchetto
 - Stato: cinque passi su sei hanno l'esecutore nativo (`table.filter`, `tp.generate`, `tp.link@2`, `tp.filter@2`, `tp.position`); `features.ms2_link` resta senza esecutore proprio, con il motivo scritto in `BUCHI`. Il piano del modello «TP time series» (`tp.generate` → `tp.link` → `tp.filter` → `table.filter` → `tp.network`) gira con `flow run` (test di cache e di rigioco come in `flow_run_tests.rs`).
-- Catena HR: La catena dai file alla rete è provata su una serie HR sintetica (`flow_hr_tests.rs`: `tp.network` legge il `.mzfeat` di `tp.link@2` sulla porta `table`); sulla serie sintetica la rete ha solo il nodo del genitore (0 archi): i prodotti accettati dai cancelli non entrano nei nodi, causa non ancora trovata.
+- Catena HR: La catena dai file alla rete è provata su una serie HR sintetica (`flow_hr_tests.rs`: `tp.network` legge il `.mzfeat` di `tp.link@2` sulla porta `table`); sulla serie sintetica la rete ha solo il nodo del genitore e 0 archi per costruzione (l'unico prodotto accettato con una formula non dista un passo di regola dal genitore; una rete senza archi è il solo genitore), non per un difetto del Flow.
 - `flow-copertura-tabui.md` e `cli.md` descrivono lo stato; l'elenco dei buchi qui sotto è quello che resta.
 
 ## Buchi per modulo (oggi)
