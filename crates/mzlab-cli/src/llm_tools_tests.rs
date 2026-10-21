@@ -197,8 +197,11 @@ fn the_file_is_the_export_and_the_bytes_are_stable() {
 fn a_set_param_call_of_the_catalog_passes_its_own_schema() {
     let c = catalog();
     let s = schema(&c, "flow_set_param");
-    let ok = parse(br#"{"instance":"s","step":"spectra.ms2@1","name":"min_intensity","value":100}"#).unwrap();
+    let ok =
+        parse(br#"{"instance":"s","step":"spectra.ms2@1","name":"min_intensity","value":100}"#)
+            .unwrap();
     assert_eq!(mzlab_llm::schema::validate(s, &ok), Ok(()));
-    let wrong = parse(br#"{"instance":"s","step":"spectra.ms2@1","name":"nope","value":1}"#).unwrap();
+    let wrong =
+        parse(br#"{"instance":"s","step":"spectra.ms2@1","name":"nope","value":1}"#).unwrap();
     assert!(mzlab_llm::schema::validate(s, &wrong).is_err());
 }
