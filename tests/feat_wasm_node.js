@@ -1,6 +1,6 @@
 // Runs the pipeline of the mzFinder .wasm (wasm-bindgen --target nodejs, both features) on .mzidx files and prints what the native example `nativo` prints:
 // the SHA-256 of every .mzfeatf and of the .mzfeat (see tests/test_feat_wasm.py). The reads come from files, as the worker's come from OPFS.
-// usage: node feat_wasm_node.js <pkg dir> <out dir> <file.mzidx>... [--recipe JSON] [--budget-mb N] [--parent FORMULA --rules regole_tp_2.json [--structure grafo.json] --parent-mz M --parent-rt R]
+// usage: node feat_wasm_node.js <pkg dir> <out dir> <file.mzidx>... [--recipe JSON] [--budget-mb N [--spill 1|fail]] [--parent FORMULA --rules regole_tp_2.json [--structure grafo.json] --parent-mz M --parent-rt R]
 // With --budget-mb the steps run on the sink API (outputs written at offsets, the series read by offsets, slabs and streams under that budget).
 const fs = require("fs");
 const path = require("path");
@@ -38,12 +38,12 @@ if (budget !== null) {
     stored.push(new Uint8Array(fs.readFileSync(path.join(out, base(f) + ".mzfeatf"))));
   });
   const s = sink("series.mzfeat");
-  // --spill 1: the weak tables go to an array of this process (like the one of the worker), counted on stderr
+  // --spill 1: the weak tables go to an array of this process (like the one of the worker), counted on stderr; --spill fail: the `get` throws
   const held = [];
-  let puts = 0;
-  const spill = opt.spill ? { put: (k, b) => { held[k] = b.slice(); puts++; }, get: k => held[k] } : undefined;
+  let puts = 0, gets = 0;
+  const spill = opt.spill ? { put: (k, b) => { held[k] = b.slice(); puts++; }, get: k => { gets++; if (opt.spill === "fail") throw new Error("get"); return held[k]; } } : undefined;
   const done = JSON.parse(w.align_series_to(stored, read, sizes, opt.recipe, s.write, budget, spill));
-  if (spill) console.error(`spill puts ${puts}`);
+  if (spill) console.error(`spill puts ${puts} gets ${gets}`);
   fs.closeSync(s.fd);
   console.log(`series.mzfeat ${done.sha256}`);
 } else {
