@@ -1,0 +1,14 @@
+{
+ "expect": {
+  "no_steps": [
+   "features.detect"
+  ],
+  "text_contains": [
+   "advise"
+  ]
+ },
+ "id": "E7",
+ "level": "L0",
+ "request": "Add a feature detection step.",
+ "schema": "llm-eval/1"
+}

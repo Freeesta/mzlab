@@ -1,0 +1,35 @@
+{
+ "context": {
+  "files": [
+   {
+    "instrument": "synthetic",
+    "mode": "centroid",
+    "ms_levels": [
+     1,
+     2
+    ],
+    "name": "dda.mzML",
+    "polarity": 1,
+    "resolution": "high",
+    "rt_min": [
+     0.5,
+     30.0
+    ],
+    "scans": 100
+   }
+  ]
+ },
+ "expect": {
+  "accepted": true,
+  "has_steps": [
+   "spectra.ms2",
+   "spectra.match",
+   "annot.level"
+  ],
+  "tries": 1
+ },
+ "id": "E1",
+ "level": "L2",
+ "request": "Find library matches for the MS2 spectra of dda.mzML and level the annotations.",
+ "schema": "llm-eval/1"
+}

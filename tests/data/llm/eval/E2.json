@@ -1,0 +1,56 @@
+{
+ "context": {
+  "files": [
+   {
+    "instrument": "synthetic",
+    "mode": "centroid",
+    "ms_levels": [
+     1
+    ],
+    "name": "S01.mzML",
+    "polarity": 1,
+    "resolution": "unit",
+    "rt_min": [
+     0.5,
+     30.0
+    ],
+    "scans": 100
+   },
+   {
+    "instrument": "synthetic",
+    "mode": "centroid",
+    "ms_levels": [
+     1
+    ],
+    "name": "S02.mzML",
+    "polarity": 1,
+    "resolution": "unit",
+    "rt_min": [
+     0.5,
+     30.0
+    ],
+    "scans": 100
+   }
+  ]
+ },
+ "expect": {
+  "has_steps": [
+   "features.detect"
+  ],
+  "no_steps": [
+   "spectra.ms2",
+   "spectra.match",
+   "formula.ms1",
+   "formula.ms2",
+   "spectra.insilico",
+   "spectra.msn_graph"
+  ],
+  "text_contains": [
+   "candidate"
+  ]
+ },
+ "id": "E2",
+ "level": "L2",
+ "request": "Look at the full scan files and find candidate ions.",
+ "schema": "llm-eval/1"
+}

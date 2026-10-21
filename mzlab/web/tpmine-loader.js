@@ -66,6 +66,24 @@
     bar.innerHTML = floating.map(t => `<button data-t="${esc(t.id)}" title="${esc(t.desc || t.name)}">${t.icon || ""}${esc(t.name)}</button>`).join("");
     bar.querySelectorAll("button").forEach(b => b.onclick = () => openTool(tools.find(t => t.id === b.dataset.t)));
   }
+  // a tab can be clicked before the page shell (shell.js) has run: the view is then shown here, and told to the shell as soon as it exists
+  let early = /** @type {string | null} */ (null);
+  const shellReady = () => typeof setView === "function" && typeof S !== "undefined" && typeof STATO !== "undefined";
+  function syncView() {
+    if (early === null) return;
+    if (shellReady()) { const id = early; early = null; setView(id); } else setTimeout(syncView, 50);
+  }
+  /** @param {string} id */
+  function openView(id) {
+    if (shellReady()) { setView(id); return; }
+    const first = early === null;
+    early = id;
+    for (const s of document.querySelectorAll("section[id^='v-']")) /** @type {HTMLElement} */ (s).hidden = s.id !== "v-" + id;
+    for (const k of ["start", "cancadd"]) { const e = document.getElementById(k); if (e) e.hidden = true; }
+    document.querySelectorAll("#nav button").forEach(x => x.classList.toggle("on", /** @type {HTMLElement} */ (x).dataset.v === id));
+    document.dispatchEvent(new CustomEvent("tpview", { detail: { view: id } }));
+    if (first) syncView();
+  }
   // tool with its own tab: button in #nav + full page section after the other views; opened lazily on the first visit
   const tabs = new Map();         // id -> {b, sec, fn}
   /** the text of the tab button: icon and name */
@@ -84,7 +102,7 @@
     nav.appendChild(b);
     const sec = document.createElement("section"); sec.id = "v-" + t.id; sec.hidden = true; anchor.after(sec);
     /** @type {any} */ const x = { b, sec, fn: null, t, ph: !!t.ph, opened: false };
-    b.onclick = () => setView(t.id);
+    b.onclick = () => openView(t.id);
     x.fn = ev => {
       const show = ev.detail.view === t.id; sec.hidden = !show;
       if (show && !x.opened) { x.opened = true; openIn(x); }
@@ -109,7 +127,9 @@
     const files = {};
     reg.ctx = { base: BASE, meta: idx.meta || {}, files };
     const warm = [...early, ...js].map(n => fetch(DIR + n).catch(() => null));     // starts all downloads now (early ones first); the script tags below then hit the cache
-    for (const n of early) await runScript(n);                    // scripts that need neither the data files nor the other scripts (the Flow tab): they draw while the rest downloads
+    try { for (const n of early) await runScript(n); }             // scripts that need neither the data files nor the other scripts (the Flow tab): they draw while the rest downloads
+    finally { document.dispatchEvent(new Event("tpmine:early")); }   // carica.js starts the Dati scripts on this in administrator mode
+    if (on) showTabs();                                           // their tabs (Flow) appear now, not after the whole package
     const texts = await Promise.all(names.map(n => get(n, "text")));
     names.forEach((n, i) => { files[n] = texts[i]; });
     await Promise.all(warm);
@@ -117,6 +137,10 @@
   }
   // the tab appears at once with a short loading note; the real tool takes its place when its script registers
   const PLACEHOLDER = { id: "tpmine", nav: true, admin: true, ph: true, name: "Tabui", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading…</p>'; } };
+  function showTabs() {
+    for (const t of tools) if (t.nav && shown(t)) addTab(t);
+    render();
+  }
   async function turnOn() {
     on = true; ensureUi();
     if (!loaded) loaded = load();
@@ -127,8 +151,7 @@
       return;
     }
     if (!on) return;
-    for (const t of tools) if (t.nav && shown(t)) addTab(t);
-    render();
+    showTabs();
   }
   const start = () => { if ((window.MZLAB_BROWSER || window.MZLAB_DESKTOP) && !on && adminOn()) turnOn(); };      // only in the built site and the desktop app (the plain web folder has no static/mzfinder/), only for the administrator
   document.addEventListener("mzlab:admin", start);
