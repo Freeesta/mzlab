@@ -346,6 +346,14 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         .iter()
         .any(|(k, v)| k == "score_terms" && v.bool() == Some(true));
     let lib = open_library(library, decoys)?;
+    let name = job
+        .resolved
+        .params
+        .iter()
+        .find(|(k, _)| k == "name_contains")
+        .and_then(|(_, v)| v.str())
+        .unwrap_or("")
+        .to_lowercase();
     let top = num(job, "top_n").max(1.0) as usize;
     let mut o = Out::default();
     o.raw("{\"format\":\"candidates/1\",\"step\":\"spectra.match@1\",\"algorithm\":")
@@ -374,6 +382,12 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         let mut c = exact(&lib, q, job, &alg, terms)?;
         if alg == "modified_cosine" {
             c.extend(analogues(&lib, q, job, terms)?);
+        }
+        if !name.is_empty() {
+            c.retain(|h| {
+                lib.meta(h.index)
+                    .is_ok_and(|m| m.name.to_lowercase().contains(&name))
+            });
         }
         if decoys {
             // the decoys are scored to count the errors, never listed

@@ -555,3 +555,34 @@ fn decoys_work_on_an_mzlib_library() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// `name_contains` keeps only the library entries whose name has the text, in any case.
+#[test]
+fn name_contains_filters_the_candidates() {
+    let dir = fixture("name");
+    run(
+        &dir,
+        "cosine",
+        r#"{"precursor_da":150,"tol_da":0.5,"top_n":10}"#,
+    );
+    let names = |h: &mzlab_core::json::Value| -> Vec<String> {
+        h.get("hits")
+            .unwrap()
+            .arr()
+            .iter()
+            .map(|x| x.get("name").unwrap().str().unwrap().to_string())
+            .collect()
+    };
+    assert!(names(&hits(&dir)).len() > 1);
+    run(
+        &dir,
+        "cosine",
+        r#"{"precursor_da":150,"tol_da":0.5,"top_n":10,"name_contains":"ALPH"}"#,
+    );
+    let only = names(&hits(&dir));
+    assert!(
+        !only.is_empty() && only.iter().all(|n| n == "Alpha"),
+        "{only:?}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}

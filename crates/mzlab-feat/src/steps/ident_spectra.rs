@@ -150,6 +150,8 @@ pub(super) fn match_spectra() -> Step {
                 .default_num(0.0)
                 .unit("Da")
                 .doc("Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window"),
+            Param::text("name_contains", "Library name contains")
+                .doc("Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"),
             Param::integer("top_n", "Hits kept").min(1.0).default_num(5.0),
             Param::choice("decoys", "Decoys", &["none", "spectrum"])
                 .default_str("none")

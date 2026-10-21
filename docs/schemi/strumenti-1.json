@@ -815,6 +815,7 @@
                   "tol_da",
                   "precursor_ppm",
                   "precursor_da",
+                  "name_contains",
                   "top_n",
                   "decoys",
                   "score_terms",
@@ -847,6 +848,10 @@
                     "minimum":0,
                     "default":0,
                     "description":"Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"
                   },
                   {"type":"integer","minimum":1,"default":5,"description":"Hits kept"},
                   {
