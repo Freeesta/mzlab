@@ -649,5 +649,18 @@
   "warn.msngrafo.isolatedUnexplained": "Avviso: un precursore isolato non ha formule candidate ed è stato tolto; {node} = m/z.",
   "warn.msngrafo.isolation": "Avviso: più picchi nella finestra d'isolamento; {node} = m/z del nodo.",
   "warn.msngrafo.precNotFound": "Avviso: il precursore non c'è nello spettro del genitore; {node} = m/z del nodo.",
-  "warn.msngrafo.userConflict": "Avviso: la formula scelta dall'utente contrasta con il precursore; {node} = m/z del nodo."
+  "warn.msngrafo.userConflict": "Avviso: la formula scelta dall'utente contrasta con il precursore; {node} = m/z del nodo.",
+  "mol.edit.aria": "Nome accessibile del pulsante «Modifica» di una riga della finestra Molecole; {name} = nome della molecola.",
+  "mol.delete.aria": "Nome accessibile del pulsante «Elimina» di una riga della finestra Molecole; {name} = nome della molecola.",
+  "mol.delete.confirm": "Domanda prima di eliminare una molecola dell'utente; {name} = nome della molecola.",
+  "mol.deleted": "Annuncio dopo l'eliminazione; {name} = nome della molecola.",
+  "mol.saved": "Annuncio dopo il salvataggio; {name} = nome della molecola.",
+  "mol.exported": "Annuncio dopo l'esportazione; {file} = nome del file scaricato.",
+  "mol.cap.mine": "Titolo della tabella senza ricerca; {n} = numero di molecole dell'utente.",
+  "mol.cap.results": "Titolo della tabella con una ricerca; {n} = numero di risultati.",
+  "mol.form.edit": "Titolo del modulo di modifica; {name} = nome della molecola.",
+  "mol.import.done": "Esito di un'importazione; {n} = molecole importate, {replaced} = quelle che ne hanno sostituita una già importata, {kept} = quelle che l'utente aveva modificato e restano come sono.",
+  "mol.import.errors": "Titolo dell'elenco di errori di un file di molecole rifiutato; {n} = numero di errori.",
+  "mol.err.row": "Inizio di una riga di errore di importazione; {riga} = numero della riga del file (o posizione del record nel JSON).",
+  "mol.err.more": "Chiusura dell'elenco di errori troncato; {n} = errori non mostrati."
 }
