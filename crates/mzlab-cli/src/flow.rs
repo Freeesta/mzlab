@@ -431,6 +431,14 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "export.inclusion",
         Exec::File("report", crate::flow_inclusion::inclusion_job),
     ),
+    (
+        "export.table_csv",
+        Exec::File("report", crate::flow_export::csv_job),
+    ),
+    (
+        "export.mztab",
+        Exec::File("report", crate::flow_export::mztab_job),
+    ),
 ];
 
 /// Does the native runner execute the step `id`?
