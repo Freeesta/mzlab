@@ -12,6 +12,9 @@ use mzlab_feat::recipe::Recipe;
 use mzlab_feat::store::{write_table, Origin};
 use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_DETECTED};
 
+/// A file of the series: kind, order of injection, batch.
+type File = (String, u32, String);
+
 fn golden() -> Value {
     let p = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/feat/deriva.json");
     parse(&std::fs::read(p).unwrap()).unwrap()
@@ -23,7 +26,7 @@ fn ident(k: usize) -> (String, String) {
 }
 
 /// The files of the series as (kind, order, batch) and the areas of its rows.
-fn series() -> (Vec<(String, u32, String)>, Vec<Vec<f64>>) {
+fn series() -> (Vec<File>, Vec<Vec<f64>>) {
     let g = golden();
     let files = g.get("files").unwrap().arr();
     let text = |f: &Value, k: &str| f.get(k).and_then(Value::str).unwrap().to_string();
@@ -66,7 +69,7 @@ fn table(areas: &[Vec<f64>]) -> Vec<u8> {
     write_table(&t, &Recipe::default(), &origin)
 }
 
-fn campioni_2(files: &[(String, u32, String)]) -> Vec<Campione> {
+fn campioni_2(files: &[File]) -> Vec<Campione> {
     files
         .iter()
         .enumerate()
@@ -79,7 +82,7 @@ fn campioni_2(files: &[(String, u32, String)]) -> Vec<Campione> {
         .collect()
 }
 
-fn design(files: &[(String, u32, String)]) -> Disegno {
+fn design(files: &[File]) -> Disegno {
     Disegno {
         conditions: Vec::new(),
         reference: None,
@@ -97,7 +100,7 @@ fn design(files: &[(String, u32, String)]) -> Disegno {
     }
 }
 
-fn dir(tag: &str, files: &[(String, u32, String)], areas: &[Vec<f64>]) -> std::path::PathBuf {
+fn dir(tag: &str, files: &[File], areas: &[Vec<f64>]) -> std::path::PathBuf {
     let d = std::env::temp_dir().join(format!("mzlab_cli_drift_{tag}_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(d.join("work")).unwrap();
@@ -129,7 +132,7 @@ fn run(d: &Path, params: &str) -> String {
 }
 
 /// The engine called by hand on the same series: its summary and the factors of every cell.
-fn engine(files: &[(String, u32, String)], areas: &[Vec<f64>], method: Method) -> String {
+fn engine(files: &[File], areas: &[Vec<f64>], method: Method) -> String {
     let (_, meta) = mzlab_feat::store::read_table(&table(areas)).unwrap();
     let inputs = mzlab_feat::store::origin_from_meta(&meta).inputs;
     let json = campioni::to_json(&campioni_2(files));
@@ -196,7 +199,7 @@ fn method_and_span_reach_the_engine() {
 }
 
 /// The error key the provenance records for the step when the correction is refused, and no output file.
-fn refused(tag: &str, edit: impl Fn(&mut Vec<(String, u32, String)>)) -> String {
+fn refused(tag: &str, edit: impl Fn(&mut Vec<File>)) -> String {
     let (mut files, areas) = series();
     edit(&mut files);
     let d = dir(tag, &files, &areas);
