@@ -26,6 +26,8 @@
           "import.raw",
           "index.mzidx",
           "meta.compare",
+          "msn.library_export",
+          "msn.table_export",
           "quant.calibrate",
           "spectra.centroid",
           "spectra.match",
@@ -74,6 +76,8 @@
               "import.raw@1",
               "index.mzidx@1",
               "meta.compare@1",
+              "msn.library_export@1",
+              "msn.table_export@1",
               "quant.calibrate@1",
               "rt.predict@1",
               "spectra.centroid@1",
@@ -161,6 +165,8 @@
               "import.raw@1",
               "index.mzidx@1",
               "meta.compare@1",
+              "msn.library_export@1",
+              "msn.table_export@1",
               "quant.calibrate@1",
               "rt.predict@1",
               "spectra.centroid@1",
@@ -667,6 +673,59 @@
                   {"type":"number","minimum":0,"description":"m/z tolerance (ppm)"},
                   {"type":"number","minimum":0,"description":"m/z tolerance (unit resolution, Da)"},
                   {"type":"number","minimum":0,"description":"RT tolerance (min)"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"msn.library_export@1"},
+              "name":{"enum":["format","levels","clean","annotate","id"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "enum":["msp","massbank"],
+                    "default":"msp",
+                    "description":"MSP, or MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)"
+                  },
+                  {
+                    "enum":["all","ms2"],
+                    "default":"all",
+                    "description":"all: one record per spectrum of the tree, MS2 and deeper; ms2: only the spectra of the first fragmentation"
+                  },
+                  {"type":"boolean","default":false,"description":"Keep only the peaks a node of the graph explains"},
+                  {
+                    "type":"boolean",
+                    "default":true,
+                    "description":"Write the sub-formula of each explained peak and the neutral loss from its precursor (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT)"
+                  },
+                  {
+                    "type":"string",
+                    "default":"",
+                    "description":"Name of the records; empty = the formula of the ion of the root, or MSN"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"msn.table_export@1"},
+              "name":{"enum":["view","clean"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "enum":["modifications","nodes","peaks"],
+                    "default":"modifications",
+                    "description":"modifications: one row per neutral loss between two ions of the tree (mass, formula, ppm, measures); nodes: one row per ion with its proposed sub-formula; peaks: one row per peak of every spectrum with its node"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"peaks table only: keep the peaks a node of the graph explains"
+                  }
                 ]
               }
             },
