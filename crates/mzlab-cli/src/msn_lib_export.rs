@@ -1,5 +1,6 @@
 //! Text export of an `msnlib/1` library for `mzlab-cli msn-lib export`: one record per spectrum of every entry, as MSP or as MassBank `.txt` (MS_TYPE MS2, MS3, ...,
-//! the path of precursors in the comment). Used by `msn_lib`.
+//! the path of precursors in the comment). With `annota` each peak a node explains carries its formula and the neutral loss from the precursor. Used by
+//! `msn_lib` and by the Flow step `msn.library_export`.
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Value};
@@ -23,6 +24,28 @@ impl Formato {
     }
 }
 
+/// A peak with what the annotation needs: the formula of its node and the loss that leads to it from the precursor of the spectrum.
+struct Pk {
+    mz: f64,
+    rel: f64,
+    formula: Option<(String, f64, f64)>,
+    loss: Option<(String, f64)>,
+}
+
+impl Pk {
+    /// `C12H15N3O; loss C2O4 (87.98002)`, empty when the peak has neither.
+    fn note(&self) -> String {
+        let mut parts = Vec::new();
+        if let Some((f, ..)) = &self.formula {
+            parts.push(f.clone());
+        }
+        if let Some((f, m)) = &self.loss {
+            parts.push(format!("loss {f} ({m:.5})"));
+        }
+        parts.join("; ")
+    }
+}
+
 /// One spectrum of one entry, with what both formats need.
 struct Rec {
     id: String,
@@ -33,15 +56,55 @@ struct Rec {
     act: String,
     ce: f64,
     mz: f64,
-    peaks: Vec<(f64, f64)>,
+    peaks: Vec<Pk>,
 }
 
-fn peaks(s: &Value, pulito: bool) -> Vec<(f64, f64)> {
+/// The peaks of a spectrum `s` of the graph `g`; with `annota` the formula of the node of each peak and the loss of the arc that comes from the precursor.
+fn peaks(g: &Value, s: &Value, pulito: bool, annota: bool) -> Vec<Pk> {
     let all = s.get("picchi").map_or(&[][..], |p| p.arr());
-    let keep = |p: &&Value| !pulito || p.get("nodo").is_some_and(|n| n.str().is_some());
+    let by_id = |list: &str, id: &str, key: &str| {
+        g.get(list)
+            .map_or(&[][..], |x| x.arr())
+            .iter()
+            .find(|n| n.get(key).and_then(|v| v.str()) == Some(id))
+    };
+    let precursor = s.get("precursore").and_then(|p| p.str()).unwrap_or("");
     all.iter()
-        .filter(keep)
-        .filter_map(|p| Some((p.get("mz")?.f64()?, p.get("rel")?.f64()?)))
+        .filter(|p| !pulito || p.get("nodo").is_some_and(|n| n.str().is_some()))
+        .filter_map(|p| {
+            let node = p.get("nodo").and_then(|n| n.str()).filter(|_| annota);
+            let formula = node.and_then(|id| {
+                let f = by_id("nodi", id, "id")?.get("formula")?;
+                let name = f.get("scelta")?.str()?;
+                let c = f
+                    .get("candidati")?
+                    .arr()
+                    .iter()
+                    .find(|c| c.get("formula").and_then(|v| v.str()) == Some(name))?;
+                Some((
+                    name.to_string(),
+                    c.get("mz_teorico")?.f64()?,
+                    c.get("ppm")?.f64()?,
+                ))
+            });
+            let loss = node.and_then(|id| {
+                let a = g.get("archi")?.arr().iter().find(|a| {
+                    a.get("da").and_then(|v| v.str()) == Some(precursor)
+                        && a.get("a").and_then(|v| v.str()) == Some(id)
+                })?;
+                let l = a.get("perdita")?;
+                Some((
+                    l.get("formula")?.str()?.to_string(),
+                    l.get("da_massa")?.f64()?,
+                ))
+            });
+            Some(Pk {
+                mz: p.get("mz")?.f64()?,
+                rel: p.get("rel")?.f64()?,
+                formula,
+                loss,
+            })
+        })
         .collect()
 }
 
@@ -60,7 +123,7 @@ fn precursor_mz(s: &Value, nodi: &[Value], tree: &str) -> f64 {
     .unwrap_or(0.0)
 }
 
-fn records(lib: &str, pulito: bool, tutti: bool) -> Result<Vec<Rec>> {
+fn records(lib: &str, pulito: bool, tutti: bool, annota: bool) -> Result<Vec<Rec>> {
     let v = parse(lib.as_bytes())?;
     let mut out = Vec::new();
     for e in v.get("voci").map_or(&[][..], |x| x.arr()) {
@@ -86,7 +149,7 @@ fn records(lib: &str, pulito: bool, tutti: bool) -> Result<Vec<Rec>> {
                 mz: precursor_mz(s, nodi, &tree),
                 act: text(s.get("att")),
                 ce: s.get("ce").and_then(|x| x.f64()).unwrap_or(0.0),
-                peaks: peaks(s, pulito),
+                peaks: peaks(g, s, pulito, annota),
                 tree,
             });
         }
@@ -101,8 +164,13 @@ fn msp(r: &Rec) -> String {
         r.id, r.tree, r.level, r.act, r.ce, r.mz, r.ion
     );
     t += &format!("Collision_energy: {}\nNum Peaks: {}\n", r.ce, r.peaks.len());
-    for (m, i) in &r.peaks {
-        t += &format!("{m:.5} {i:.2}\n");
+    for p in &r.peaks {
+        t += &format!("{:.5} {:.2}", p.mz, p.rel);
+        match p.note() {
+            n if n.is_empty() => {}
+            n => t += &format!(" \"{n}\""),
+        }
+        t.push('\n');
     }
     t.push('\n');
     t
@@ -133,20 +201,41 @@ fn massbank(r: &Rec, n: usize) -> String {
         r.act.to_uppercase(),
         r.ce
     );
+    for p in r.peaks.iter().filter(|p| p.loss.is_some()) {
+        let (f, m) = p.loss.as_ref().expect("filtered");
+        t += &format!("COMMENT: peak {:.5} neutral loss {f} {m:.5}\n", p.mz);
+    }
+    t += &format!("MS$FOCUSED_ION: PRECURSOR_M/Z {:.5}\n", r.mz);
+    if r.peaks.iter().any(|p| p.formula.is_some()) {
+        t += "PK$ANNOTATION: m/z tentative_formula formula_count mass error(ppm)\n";
+        for p in &r.peaks {
+            if let Some((f, mass, ppm)) = &p.formula {
+                t += &format!("  {:.5} {f} 1 {mass:.5} {ppm:.2}\n", p.mz);
+            }
+        }
+    }
     t += &format!(
-        "MS$FOCUSED_ION: PRECURSOR_M/Z {:.5}\nPK$NUM_PEAK: {}\nPK$PEAK: m/z int. rel.int.\n",
-        r.mz,
+        "PK$NUM_PEAK: {}\nPK$PEAK: m/z int. rel.int.\n",
         r.peaks.len()
     );
-    for (m, i) in &r.peaks {
-        t += &format!("  {m:.5} {i:.2} {}\n", (i * 9.99).round().max(1.0) as i64);
+    for p in &r.peaks {
+        t += &format!(
+            "  {:.5} {:.2} {}\n",
+            p.mz,
+            p.rel,
+            (p.rel * 9.99).round().max(1.0) as i64
+        );
     }
     t + "//\n\n"
 }
 
-/// The text of a library: one record per spectrum (MS2 only unless `tutti`) of every entry.
-pub fn export_text(lib: &str, formato: Formato, pulito: bool, tutti: bool) -> Result<String> {
-    let recs = records(lib, pulito, tutti)?;
+/// The text of a library: one record per spectrum (MS2 only unless `tutti`) of every entry; `annota` writes the formula and the loss of each explained peak.
+pub fn export_text(
+    lib: &str,
+    formato: Formato,
+    (pulito, tutti, annota): (bool, bool, bool),
+) -> Result<String> {
+    let recs = records(lib, pulito, tutti, annota)?;
     Ok(match formato {
         Formato::Msp => recs.iter().map(msp).collect(),
         Formato::MassBank => recs
