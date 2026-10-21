@@ -133,7 +133,8 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let input = &job.inputs[0].1[0];
     let path = r.path(input);
     let first = r.first_of_series(input).unwrap_or_else(|| path.clone());
-    let (recipe, estimates) = recipe(job, run::recipe_for_estimated("", &mut open(&first)?)?)?;
+    // Each file takes its own base recipe, as the page does (`detect_file`): on the unit axis the mass defect and the floor come from the file.
+    let (recipe, estimates) = recipe(job, run::recipe_for_estimated("", &mut open(&path)?)?)?;
     let name = r.source_name(input);
     let bytes = run::detect(&mut open(&path)?, &name, &recipe)?;
     let out = out_path(r, job, "mzfeatf");
