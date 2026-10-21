@@ -371,3 +371,4 @@
 {"v":1,"ts_utc":"2026-10-21T23:10:03Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/ci-pytest-veloce2","merge_main":true,"aree":{"docs":7,"rust":9,"test":1,"tools":1},"tipo":"pr","pr":1391,"sha":"4c612f24e641c290d4f85d6d8a47386b5d486191"}
 {"v":1,"ts_utc":"2026-10-21T23:11:45Z","azione":"aperta","tipo":"pr","pr":1393,"sha":"411a01f069081b3fb8db6f21fa2f18f7ed7f07a1"}
 {"v":1,"ts_utc":"2026-10-21T23:13:52Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/flow-tabui-parita-hr2","merge_main":true,"aree":{"docs":7,"rust":9,"test":1,"tools":1},"tipo":"pr","pr":1388,"sha":"61352957f3834c9a92b4de9d5462e69108e6ebc6"}
+{"v":1,"ts_utc":"2026-10-21T23:14:01Z","azione":"aperta","tipo":"pr","pr":1394,"sha":"a4afe59ad9bfb11acd7802b6ab282eca3022979a"}
