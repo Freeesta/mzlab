@@ -35,6 +35,43 @@ pub fn recipe_for_estimated<R: ReadAt>(text: &str, index: &mut Index<R>) -> Resu
     recipe_on(text, Recipe::for_index_estimated(index)?)
 }
 
+/// The parameters one feature step writes: its id and the (name, value) pairs.
+pub type Layer = (String, Vec<(String, Value)>);
+
+/// The recipe of a Flow run: the one of the panel on the first index, then the parameters of each feature step in order (`steps::recipe_map`). The native
+/// `flow run` and the browser runner both build it here, so the same plan gives the same bytes.
+pub fn recipe_of_layers<R: ReadAt>(
+    first: &mut Index<R>,
+    layers: &[Layer],
+) -> Result<Recipe> {
+    let mut r = recipe_for_estimated("", first)?;
+    for (step, params) in layers {
+        mzlab_feat::steps::recipe_map::apply(&mut r, step, params)?;
+    }
+    Ok(r)
+}
+
+/// `[{"step": "features.detect", "params": {"min_height": 5e4}}, ...]` as layers; anything else is `error.badRecipe`.
+pub fn layers_from_json(text: &str) -> Result<Vec<Layer>> {
+    let bad = || Error::new("error.badRecipe");
+    let v = json::parse(text.as_bytes()).map_err(|_| bad())?;
+    if !matches!(v, Value::Arr(_)) {
+        return Err(bad());
+    }
+    v.arr()
+        .iter()
+        .map(|l| {
+            let step = l.get("step").and_then(Value::str).ok_or_else(bad)?;
+            let params = match l.get("params") {
+                Some(Value::Obj(o)) => o.clone(),
+                None | Some(Value::Null) => Vec::new(),
+                _ => return Err(bad()),
+            };
+            Ok((step.to_string(), params))
+        })
+        .collect()
+}
+
 fn recipe_on(text: &str, base: Recipe) -> Result<Recipe> {
     let v = if text.trim().is_empty() {
         Value::Null
