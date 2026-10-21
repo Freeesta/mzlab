@@ -186,12 +186,26 @@ pub fn prov_json_llm(
     }
     o.raw("}");
     if let Some(l) = llm {
-        o.raw(",\"llm\":{\"log_sha256\":").str(&l.log_sha256);
-        o.raw(",\"turn\":").int(i64::from(l.turn));
-        o.raw(",\"provider\":").str(&l.provider);
-        o.raw(",\"model\":").str(&l.model);
-        o.raw(",\"level\":").str(&l.level).raw("}");
+        llm_block(&mut o, l);
     }
+    o.raw("}\n");
+    o.0
+}
+
+fn llm_block(o: &mut Out, l: &LlmRef) {
+    o.raw(",\"llm\":{\"log_sha256\":").str(&l.log_sha256);
+    o.raw(",\"turn\":").int(i64::from(l.turn));
+    o.raw(",\"provider\":").str(&l.provider);
+    o.raw(",\"model\":").str(&l.model);
+    o.raw(",\"level\":").str(&l.level).raw("}");
+}
+
+/// A `prov/1` text that was written without the assistant, with `llm` added: the same bytes as `prov_json_llm` with `Some`. Used where the text comes from the runner.
+pub fn prov_with_llm(prov: &str, llm: &LlmRef) -> String {
+    let mut o = Out::default();
+    let t = prov.trim_end();
+    o.raw(t.strip_suffix('}').unwrap_or(t));
+    llm_block(&mut o, llm);
     o.raw("}\n");
     o.0
 }
