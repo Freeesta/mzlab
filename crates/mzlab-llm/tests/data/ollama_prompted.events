@@ -1,0 +1,7 @@
+{"ev":"text_delta","text":"I will check.\n```js"}
+{"ev":"text_delta","text":"on\n{\"tool\":\"flow_check\","}
+{"ev":"text_delta","text":"\"args\":{\"plan\":\"p\"}}\n```\n"}
+{"ev":"tool_call_start","id":"prompted-1","name":"flow_check"}
+{"ev":"tool_call_delta","json":"{\"plan\":\"p\"}"}
+{"ev":"tool_call_end","id":"prompted-1"}
+{"ev":"stop","reason":"tool"}

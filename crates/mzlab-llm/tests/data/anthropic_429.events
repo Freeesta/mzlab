@@ -1,0 +1,1 @@
+{"ev":"error","key":"err.llm.rate","params":{"status":"429","message":"Number of request tokens has exceeded your rate limit"}}
