@@ -7,18 +7,32 @@ const LISTE_TARGET = (function() {
 
   const EH = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-  let builtinCache = null;
-  async function loadBuiltinList() {
-    if (builtinCache) return builtinCache;
-    try {
-      const resp = await fetch("sostanze_hrms.csv");
-      if (resp.ok) {
-        const text = await resp.text();
-        builtinCache = (CORE.parseTargetCsv || parseTargetCsv)(text);
-        return builtinCache;
-      }
-    } catch (_) {}
-    return [];
+  const ROUTE = "api/molecules/";
+
+  /**
+   * The molecules of the HRMS list (or of a document just read from a file) with the m/z of the adducts, computed by the molecules engine.
+   * @param {string[]} adducts
+   * @param {any} [doc] a molecules/1 document; without it the `hrms` catalogue of the archive
+   */
+  async function listMolecules(adducts, doc) {
+    if (!doc) await (await import("./molecole-archivio.js")).pronto();
+    const body = doc ? { molecole: doc, addotti: adducts } : { catalogo: "hrms", addotti: adducts };
+    const r = await fetch(ROUTE + "elenca", { method: "POST", body: JSON.stringify(body) });
+    if (!r.ok) throw new Error("elenca: " + r.status);
+    const j = await r.json();
+    if (!Array.isArray(j)) throw new Error((j.errori && j.errori[0] && j.errori[0].testo) || "elenca");
+    return j.map((/** @type {any} */ m) => ({
+      id: m.id, name_en: m.nome, name_it: m.nome, neutral_formula: m.formula, monoisotopic_mass: m.massa,
+      mz: Object.fromEntries(adducts.map((a, i) => [a, m.mz[i]]))
+    }));
+  }
+
+  /** Reads a molecules CSV with the engine and returns the document (or throws the first error). */
+  async function readCsv(/** @type {string} */ csv, /** @type {string} */ file) {
+    const r = await fetch(ROUTE + "da_csv", { method: "POST", body: JSON.stringify({ csv, file }) });
+    const j = await r.json();
+    if (j.errori && j.errori.length) throw new Error(`line ${j.errori[0].riga}: ${j.errori[0].testo}`);
+    return j;
   }
 
   function showMatch(m) {
@@ -188,13 +202,16 @@ const LISTE_TARGET = (function() {
     fileIn.onchange = async () => {
       const file = fileIn.files && fileIn.files[0];
       if (!file) return;
-      const text = await file.text();
-      const fn = CORE.parseTargetCsv || parseTargetCsv;
-      const customList = fn(text);
-      let opt = sel.querySelector('option[value="upload"]');
-      if (opt) opt.textContent = `${file.name} (${customList.length} substances)`;
-      sel.value = "upload";
-      onCustomLoaded(customList);
+      try {
+        const doc = await readCsv(await file.text(), file.name);
+        const opt = sel.querySelector('option[value="upload"]');
+        if (opt) opt.textContent = `${file.name} (${doc.molecole.length} substances)`;
+        sel.value = "upload";
+        onCustomLoaded(doc);
+      } catch (e) {
+        const st = container.querySelector("#ts-status");
+        if (st) { st.style.display = "block"; st.textContent = `Cannot read ${file.name}: ${e.message}`; }
+      }
     };
   }
 
@@ -252,7 +269,7 @@ const LISTE_TARGET = (function() {
     if (!container) return;
     container.innerHTML = panelHtml();
 
-    let allMatches = [], customList = [], abortScreening = false;
+    let allMatches = [], customDoc = null, abortScreening = false;
     const elTbody = container.querySelector("#ts-tbody");
     const elCount = container.querySelector("#ts-count");
     const elStatus = container.querySelector("#ts-status");
@@ -284,13 +301,22 @@ const LISTE_TARGET = (function() {
       btnStart.style.display = "none"; btnStop.style.display = "inline-block";
       elStatus.style.display = "block"; elStatus.textContent = "Loading substance list and spectra...";
       const mode = elListSel?.value;
-      const entries = mode === "upload" ? customList : (mode === "keller" ? getKellerEntries() : await loadBuiltinList());
       const opts = {
         tolerance_ppm: parseFloat(container.querySelector("#ts-tol-ppm")?.value) || 5.0,
         min_sn: parseFloat(container.querySelector("#ts-min-sn")?.value) || 3.0,
         min_area: 1000.0,
         adducts: getSelectedAdducts(container)
       };
+      let entries;
+      try {
+        if (mode === "upload" && !customDoc) throw new Error("no file loaded");
+        entries = mode === "keller" ? getKellerEntries()
+          : await listMolecules(opts.adducts, mode === "upload" ? customDoc : null);
+      } catch (e) {
+        elStatus.textContent = `Cannot load the substance list: ${e.message}`;
+        btnStart.style.display = "inline-block"; btnStop.style.display = "none";
+        return;
+      }
       const callbacks = {
         shouldAbort: () => abortScreening,
         onProgress: (done, tot, hits) => {
@@ -310,7 +336,7 @@ const LISTE_TARGET = (function() {
     btnStop.onclick = () => { abortScreening = true; };
     setupExport(btnExport, () => allMatches);
     setupFilterEvents(container, renderMatches);
-    setupUploadHandler(container, list => { customList = list; });
+    setupUploadHandler(container, doc => { customDoc = doc; });
     renderMatches();
   }
 
@@ -328,7 +354,6 @@ const LISTE_TARGET = (function() {
   }
 
   // Fallbacks forwarding to CORE
-  const parseTargetCsv = (t) => CORE.parseTargetCsv ? CORE.parseTargetCsv(t) : [];
   const calcTargetMz = (e, a) => CORE.calcTargetMz ? CORE.calcTargetMz(e, a) : NaN;
   const estimateNoise = (y) => CORE.estimateNoise ? CORE.estimateNoise(y) : 1.0;
   const detectChromPeaks = (rt, y, s, a, n) => CORE.detectChromPeaks ? CORE.detectChromPeaks(rt, y, s, a, n) : [];
@@ -340,10 +365,9 @@ const LISTE_TARGET = (function() {
 
   return {
     mount,
-    loadBuiltinList,
+    listMolecules,
     showMatch,
     cercaTargets,
-    parseTargetCsv,
     csvExport,
     calcTargetMz,
     estimateNoise,

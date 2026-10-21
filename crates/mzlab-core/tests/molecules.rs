@@ -25,6 +25,9 @@ fn sorted_by_id(mut v: Vec<Molecola>) -> Vec<Molecola> {
     v
 }
 
+/// The archive of the engine is one for the whole process: the tests that load it take turns.
+static ARCHIVE: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 fn root() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
@@ -191,6 +194,7 @@ fn search_by_text_formula_and_mass() {
 
 #[test]
 fn levels_replace_by_id_and_come_back() {
+    let _g = ARCHIVE.lock().unwrap_or_else(|e| e.into_inner());
     let cat = from_csv(SEARCH, "catalogo", None).unwrap();
     let mut mine = cat[1].clone();
     mine.nome = "Esempinolo mio".into();
@@ -381,4 +385,49 @@ fn search_gives_what_the_name_box_of_tabui_gave() {
         qs.len(),
         diff.iter().take(20).cloned().collect::<Vec<_>>().join("\n")
     );
+}
+
+/// The screening list (`elenca` on the `hrms` catalogue) has, for every row of the gold file made from the old CSV, a molecule with the same m/z (<= 1e-5).
+#[test]
+fn hrms_list_keeps_the_mz_of_the_old_csv() {
+    let (text, _) = catalogue();
+    let _g = ARCHIVE.lock().unwrap_or_else(|e| e.into_inner());
+    route("carica", &format!("{{\"catalogo\":{}}}", quoted(&text))).unwrap();
+    let gold =
+        parse(&std::fs::read(root().join("tests/dati/molecole_hrms_oro.json")).unwrap()).unwrap();
+    let ads: Vec<String> = gold
+        .get("adducts")
+        .unwrap()
+        .arr()
+        .iter()
+        .map(|a| format!("{:?}", a.str().unwrap()))
+        .collect();
+    let out = route(
+        "elenca",
+        &format!("{{\"catalogo\":\"hrms\",\"addotti\":[{}]}}", ads.join(",")),
+    )
+    .unwrap();
+    let list = parse(out.as_bytes()).unwrap();
+    let mols: Vec<Vec<f64>> = list
+        .arr()
+        .iter()
+        .map(|m| {
+            m.get("mz")
+                .unwrap()
+                .arr()
+                .iter()
+                .map(|x| x.f64().unwrap_or(f64::NAN))
+                .collect()
+        })
+        .collect();
+    let rows = gold.get("rows").unwrap().arr();
+    assert!(mols.len() >= rows.len());
+    for r in rows {
+        let r: Vec<f64> = r.arr().iter().map(|x| x.f64().unwrap()).collect();
+        assert!(
+            mols.iter()
+                .any(|m| m.iter().zip(&r[1..]).all(|(a, b)| (a - b).abs() <= 1e-5)),
+            "no molecule with the m/z of {r:?}"
+        );
+    }
 }
