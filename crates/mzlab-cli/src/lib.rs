@@ -32,6 +32,8 @@ mod flow_out;
 pub mod flow_report;
 mod flow_run;
 pub mod msn_graph;
+#[cfg(not(target_family = "wasm"))]
+mod validate;
 
 const HELP: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
 
@@ -39,6 +41,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
+       mzlab-cli validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1 (validate --help)
 
   FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
   --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
@@ -240,22 +243,25 @@ fn flow_command(args: Vec<String>) -> Outcome {
     }
 }
 
+/// `mzlab-cli flow <run|report|command> ...`.
+fn flow_cmd(mut args: impl Iterator<Item = String>) -> Outcome {
+    match args.next().as_deref() {
+        Some("report") => flow_report::run(args).map_or_else(|e| Outcome::fail(&e), Outcome::ok),
+        Some("run") => flow_run::run(args.collect(), None),
+        Some("command") => flow_command(args.collect()),
+        _ => Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow command PLAN.json"),
+    }
+}
+
 /// `mzlab-cli <args>`: `args` without the program name.
 pub fn execute(args: &[String]) -> Outcome {
     let mut args = args.iter().cloned();
     match args.next().as_deref() {
         Some("features") => {}
-        Some("flow") => {
-            return match args.next().as_deref() {
-                Some("report") => {
-                    flow_report::run(args).map_or_else(|e| Outcome::fail(&e), Outcome::ok)
-                }
-                Some("run") => flow_run::run(args.collect(), None),
-                Some("command") => flow_command(args.collect()),
-                _ => Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow command PLAN.json"),
-            }
-        }
+        Some("flow") => return flow_cmd(args),
         Some("msn-graph") => return msn_graph_cmd(args),
+        #[cfg(not(target_family = "wasm"))]
+        Some("validate") => return validate::run(args),
         Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Some(c) => return Outcome::fail(&format!("unknown command {c}")),
     }
@@ -320,3 +326,5 @@ mod flow_rule_tests;
 mod flow_run_tests;
 #[cfg(test)]
 mod msn_graph_tests;
+#[cfg(all(test, not(target_family = "wasm")))]
+mod validate_tests;

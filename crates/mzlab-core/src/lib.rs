@@ -91,6 +91,8 @@ pub mod mzmlhead;
 pub mod numarray;
 pub mod numpress;
 pub mod mzmlwrite;
+#[cfg(not(target_family = "wasm"))]
+pub mod mzmlvalida;
 pub mod peakq;
 pub mod peaks;
 pub mod peakext;
