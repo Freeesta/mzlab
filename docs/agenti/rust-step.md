@@ -30,6 +30,12 @@ They run in the `.wasm` `hr`, `interp` and `chem` with their ceilings written as
 ## The `convert.mzml` file
 - `lettori_mzml::scrivi_indicizzato(reader, sample, out, progress, Opzioni, &[ProcStep])` (`mzmlwrite::MzmlWriter::indicizzato`, `mzmlwrite/indice.rs`) is what `mzlab_cli::flow::FileRunner` runs for `convert.mzml`: `indexedmzML` (`mzML1.1.2_idx.xsd`), PSI-MS CV 4.2.6, byte `<offset>` of every spectrum and chromatogram, `indexListOffset`, SHA-1 `fileChecksum` (all bytes up to the opening tag).
   One `processingMethod` (with its own `software`, user parameters from `ProcStep::params`) after the conversion for each entry of `Header::steps`. Spectra and chromatograms are the bytes of `scrivi_con`; the same bytes on every run. `scrivi` and `scrivi_con` (site, desktop, golden tests) still write the plain file with CV 4.1.163 and one conversion method.
+- Parameter `peaks` (`file` default, `profile`, `mzlab`) is `lettori_mzml::Picchi`.
+  `file`: the scans of the reader; a profile sample stays profile and the run records `warn.flow.profile` in `warnings` of `prov/1` and `corsa/1` (also when taken from the cache), the next step picks the peaks.
+  `profile`: the profile points (`scansione_profilo`, else the profile scans of the reader, else `err.conv.noProfile`).
+  `mzlab`: our centroids (`lettori_centroidi::stima` on at most 64 scans, then `picchi` scan by scan); the file says `MS:1000035` and the estimated parameters in the userParam `mzLab centroids` of the run.
+  The warning key is shown as it is by `rapporto-flow.js` (no `lang/` text until a screen shows it).
+- Tests of `peaks`: `cargo test -p mzlab-core --test lettori_mzml_picchi` (gaussian profile at known centres), `cargo test -p mzlab-cli picchi` (`--set c.peaks=…`, the warning).
 - Tests: `cargo test -p mzlab-core --lib mzmlwrite` (offsets, checksum, read back, steps; `tests_xsd.rs` validates the indexed file against `mzML1.1.2_idx.xsd` with `xmllint`, schema fetched into `MZLAB_XSD_DIR` or the temp folder, skipped without `xmllint`, `curl` or network), `--test lettori_mzml` (Agilent synthetic), `cargo test -p mzlab-lettori --features aperti --test aperti_numpress` (indexed file reopened by the reader of open mzML), `cargo test -p mzlab-cli --lib` (plan `convert.mzml` then `features.table`).
 - A header with no source file or no components leaves out `sourceFileList` or `componentList` (the schema wants at least one child); the XSD test covers an empty and a full header.
 - Checks on real files, outside CI: `docs/studi/workflow/PROVE_W3.md`.

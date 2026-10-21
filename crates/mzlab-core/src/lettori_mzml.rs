@@ -1,8 +1,10 @@
 //! The one mzML writer on top of `Lettore`: any reader of the registry gives the same file layout (spectra, then chromatograms).
 use std::io::Write;
 
+use crate::centroidi::{Buf, Params};
 use crate::error::{Error, Result};
 use crate::lettori::Lettore;
+use crate::lettori_centroidi::{picchi, stima};
 use crate::mzmlwrite::{Header, MzmlWriter, Opzioni, ProcStep};
 
 /// The header when the reader gives none: the run is the sample, the program is mzLab.
@@ -34,8 +36,28 @@ pub enum Picchi {
     /// The scans as the reader gives them (the centroids of the maker where it has them).
     #[default]
     File,
-    /// The profile points of the file (`Lettore::scansione_profilo`); a reader without them refuses (`err.conv.noProfile`).
+    /// The profile points of the file (`Lettore::scansione_profilo`, else the scans of the reader that are profile); a file without them refuses (`err.conv.noProfile`).
     Profilo,
+    /// Our own centroids (`lettori_centroidi`): the profile scans are reduced to one point per peak with parameters estimated on the sample, a scan
+    /// already centroided stays as it is; the file says so (`MS:1000035`, the parameters in a userParam of the run).
+    Mzlab,
+}
+
+/// The parameters of our own centroids when the first scan of sample `c` is profile; the header then says so (`MS:1000035`, the parameters in a userParam).
+fn centroidi_di(l: &mut dyn Lettore, c: usize, h: &mut Header) -> Result<Option<Params>> {
+    if l.indice(c)?.is_empty() || !l.scansione(c, 0)?.profile {
+        return Ok(None);
+    }
+    let p = stima(l, c)?;
+    h.centroided = true;
+    h.run_params.push((
+        "mzLab centroids".into(),
+        format!(
+            "mode={:?}; unit={}; step={}; w={}; k={}",
+            p.mode, p.unit, p.step, p.w, p.k
+        ),
+    ));
+    Ok(Some(p))
 }
 
 /// A conversion of one sample to mzML: the one entry of every route (`scrivi*` are its short forms).
@@ -60,6 +82,11 @@ impl Conversione<'_> {
             return Err(Error::new("error.badIndex").with("c", c));
         }
         let mut h = testata(l, c)?;
+        let params = match self.peaks {
+            Picchi::Mzlab => centroidi_di(l, c, &mut h)?,
+            _ => None,
+        };
+        let mut buf = Buf::default();
         h.run_params
             .push(("mzLab conv/1".into(), crate::conv::resoconto(l, c)?));
         let mut w = match self.steps {
@@ -77,9 +104,20 @@ impl Conversione<'_> {
         for k in 0..n {
             let s = match self.peaks {
                 Picchi::File => l.scansione(c, k)?,
-                Picchi::Profilo => l
-                    .scansione_profilo(c, k)?
-                    .ok_or_else(|| Error::new("err.conv.noProfile"))?,
+                Picchi::Mzlab => {
+                    let mut s = l.scansione(c, k)?;
+                    if let Some(p) = &params {
+                        picchi(&mut s, p, &mut buf);
+                    }
+                    s
+                }
+                Picchi::Profilo => match l.scansione_profilo(c, k)? {
+                    Some(s) => s,
+                    // a reader whose scans are the file's own (mzML) has the profile in them
+                    None => Some(l.scansione(c, k)?)
+                        .filter(|s| s.profile)
+                        .ok_or_else(|| Error::new("err.conv.noProfile"))?,
+                },
             };
             let extra = l.extra_scansione(c, k, &s);
             w.spectrum_with(&s, &extra)?;

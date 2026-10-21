@@ -13,6 +13,7 @@ use mzlab_core::flow::{Artifact, Job, Mem};
 use mzlab_core::idxread::Index;
 use mzlab_core::json::Value;
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori_mzml::{Conversione, Picchi};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
@@ -249,7 +250,7 @@ pub(crate) fn align_mem(r: &FileRunner, job: &Job) -> Option<Mem> {
 }
 
 /// `convert.mzml`: one file of a reader of the registry written as indexed mzML.
-pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let input = r.path(&job.inputs[0].1[0]);
     let name = input
         .file_name()
@@ -269,16 +270,27 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
         job.instance.id,
         job.item.unwrap_or(0)
     ));
+    let peaks = job.resolved.params.iter().find(|p| p.0 == "peaks");
+    let peaks = match peaks.and_then(|p| p.1.str()) {
+        Some("profile") => Picchi::Profilo,
+        Some("mzlab") => Picchi::Mzlab,
+        _ => Picchi::File,
+    };
+    // The file keeps its profile points: the index of the next step picks the peaks, and the run says so.
+    let profile =
+        peaks == Picchi::File && !reader.indice(0)?.is_empty() && reader.scansione(0, 0)?.profile;
+    let conv = Conversione {
+        peaks,
+        steps: Some(&[]),
+        ..Conversione::default()
+    };
     let w = BufWriter::new(File::create(&out).map_err(io)?);
-    mzlab_core::lettori_mzml::scrivi_indicizzato(
-        &mut *reader,
-        0,
-        w,
-        &mut |_, _| {},
-        mzlab_core::mzmlwrite::Opzioni::default(),
-        &[],
-    )?;
-    r.keep(out, DataType::Mzml)
+    conv.scrivi(&mut *reader, 0, w, &mut |_, _| {})?;
+    let mut made = Made::new("mzml", r.keep(out, DataType::Mzml)?);
+    if profile {
+        made.warnings.push("warn.flow.profile".into());
+    }
+    Ok(made)
 }
 
 /// `features.table`: the chain of `mzlab-cli features` on the files of the series, as CSV.

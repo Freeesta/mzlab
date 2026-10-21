@@ -346,6 +346,8 @@ mod flow_msngraph_tests;
 #[cfg(test)]
 mod flow_network_tests;
 #[cfg(test)]
+mod flow_picchi_tests;
+#[cfg(test)]
 mod flow_report_tests;
 #[cfg(test)]
 mod flow_rule_tests;

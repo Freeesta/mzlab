@@ -212,6 +212,8 @@ pub(crate) struct Made {
     pub port: &'static str,
     pub artifact: Artifact,
     pub estimates: Vec<(String, Value, Value)>,
+    /// `warn.*` keys of what the step noticed and went on with.
+    pub warnings: Vec<String>,
 }
 
 impl Made {
@@ -220,6 +222,7 @@ impl Made {
             port,
             artifact,
             estimates: Vec::new(),
+            warnings: Vec::new(),
         }
     }
 }
@@ -404,10 +407,7 @@ enum Exec {
 
 /// The steps that run natively, the one list: `executable` and the runner read it.
 const EXECUTORS: &[(&str, Exec)] = &[
-    (
-        "convert.mzml",
-        Exec::File("mzml", crate::flow_base::convert_job),
-    ),
+    ("convert.mzml", Exec::Made(crate::flow_base::convert_job)),
     ("index.mzidx", Exec::Made(crate::flow_base::index_job)),
     ("features.detect", Exec::Made(crate::flow_base::detect_job)),
     ("features.align", Exec::Made(crate::flow_base::align_job)),
@@ -486,6 +486,7 @@ impl Runner for FileRunner {
             ms,
             heap_peak_bytes: self.meter.map(|m| (m.peak)()),
             mem,
+            warnings: made.warnings,
             cached,
         })
     }
