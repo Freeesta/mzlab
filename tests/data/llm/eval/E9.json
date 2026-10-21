@@ -1,0 +1,15 @@
+{
+ "expect": {
+  "has_steps": [
+   "features.detect"
+  ],
+  "max_calls": 3,
+  "text_contains": [
+   "minimum"
+  ]
+ },
+ "id": "E9",
+ "level": "L2",
+ "request": "Detect features with a minimum height of -5.",
+ "schema": "llm-eval/1"
+}

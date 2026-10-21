@@ -1,0 +1,256 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "contesto/1",
+ "title": "contesto/1: what the assistant sees of the open work",
+ "description": "Format «contesto/1» (crates/mzlab-llm/src/context.rs, docs/agenti/llm.md): summaries of what the engine already produced, cut to a token budget (ceil(bytes/3)). Never spectra, profile points, file bytes or paths. Numbers that are not whole are rounded to four significant digits; `truncated` names the sections dropped to fit. Only the «ricerca» profile has it.",
+ "type": "object",
+ "required": [
+  "schema",
+  "profile",
+  "budget_tokens",
+  "truncated"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "schema": {
+   "const": "contesto/1"
+  },
+  "profile": {
+   "const": "ricerca"
+  },
+  "budget_tokens": {
+   "type": "integer",
+   "minimum": 1
+  },
+  "truncated": {
+   "type": "array",
+   "items": {
+    "enum": [
+     "features",
+     "msn",
+     "run",
+     "annot",
+     "tic"
+    ]
+   }
+  },
+  "files": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "alias"
+    ],
+    "properties": {
+     "alias": {
+      "type": "string",
+      "pattern": "^f[0-9]+$"
+     },
+     "name": {
+      "type": "string",
+      "description": "absent when the page hides names"
+     },
+     "instrument": {
+      "type": "string"
+     },
+     "resolution": {
+      "type": "string"
+     },
+     "polarity": {
+      "type": "integer"
+     },
+     "ms_levels": {
+      "type": "array",
+      "items": {
+       "type": "integer"
+      }
+     },
+     "scans": {
+      "type": "integer"
+     },
+     "rt_min": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2
+     },
+     "mode": {
+      "type": "string"
+     },
+     "warnings": {
+      "type": "array"
+     },
+     "tic": {
+      "type": "object",
+      "required": [
+       "rt",
+       "i",
+       "sig"
+      ],
+      "properties": {
+       "rt": {
+        "type": "array",
+        "items": {
+         "type": "number"
+        },
+        "maxItems": 200
+       },
+       "i": {
+        "type": "array",
+        "items": {
+         "type": "number"
+        },
+        "maxItems": 200
+       },
+       "sig": {
+        "const": 4
+       }
+      },
+      "additionalProperties": false
+     }
+    },
+    "additionalProperties": false
+   }
+  },
+  "plan": {
+   "type": "object",
+   "required": [
+    "sha256",
+    "instances",
+    "problems"
+   ],
+   "properties": {
+    "sha256": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "instances": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "step": {
+        "type": "string"
+       },
+       "params": {
+        "type": "object"
+       }
+      }
+     }
+    },
+    "problems": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "properties": {
+       "error_key": {
+        "type": "string"
+       },
+       "instance": {},
+       "port": {}
+      }
+     }
+    }
+   },
+   "additionalProperties": false
+  },
+  "run": {
+   "type": "object",
+   "properties": {
+    "steps": {
+     "type": "array",
+     "items": {
+      "type": "object"
+     }
+    },
+    "total_ms": {
+     "type": "number"
+    },
+    "levels": {}
+   },
+   "required": [
+    "steps"
+   ]
+  },
+  "features": {
+   "type": "object",
+   "required": [
+    "rows",
+    "columns",
+    "top"
+   ],
+   "properties": {
+    "rows": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "columns": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "object",
+      "required": [
+       "filled"
+      ],
+      "properties": {
+       "filled": {
+        "type": "integer"
+       },
+       "min": {
+        "type": "number"
+       },
+       "max": {
+        "type": "number"
+       }
+      }
+     }
+    },
+    "top": {
+     "type": "array",
+     "maxItems": 50,
+     "items": {
+      "type": "object"
+     }
+    }
+   },
+   "additionalProperties": false
+  },
+  "msn": {
+   "type": "object",
+   "required": [
+    "nodes",
+    "edges"
+   ],
+   "properties": {
+    "nodes": {
+     "type": "number"
+    },
+    "edges": {
+     "type": "number"
+    }
+   },
+   "additionalProperties": false
+  },
+  "annot": {
+   "type": "object",
+   "required": [
+    "levels"
+   ],
+   "properties": {
+    "levels": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "integer"
+     }
+    }
+   },
+   "additionalProperties": false
+  }
+ }
+}
