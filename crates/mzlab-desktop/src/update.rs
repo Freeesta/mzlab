@@ -11,6 +11,8 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::mpsc;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -89,8 +91,8 @@ pub struct Progress {
     pub total_bytes: u64,
 }
 
-/// Where the files come from (the site, or a map in the tests).
-pub trait Source {
+/// Where the files come from (the site, or a map in the tests). `Sync`: the worker threads of `apply` share it.
+pub trait Source: Sync {
     fn get(&self, rel: &str) -> Result<Vec<u8>, UpdateError>;
 }
 
@@ -308,6 +310,103 @@ fn write_check(root: &Path) -> Result<(), UpdateError> {
     write_file(root, CHECK, &json)
 }
 
+/// Download threads: the time of an update is the latency of hundreds of small requests, not their bytes.
+const THREADS: usize = 8;
+
+/// Fetches one changed file, checks size and SHA-256 and writes it into `next` (`index.html` is patched first).
+fn fetch_one(next: &Path, rel: &str, want: &Entry, src: &dyn Source) -> Result<u64, UpdateError> {
+    let mut body = src.get(rel)?;
+    if body.len() as u64 != want.size || sha256_hex(&body) != want.sha256 {
+        return Err(UpdateError::new("update.error.hash", rel));
+    }
+    if rel == "index.html" {
+        body = patch_index(&String::from_utf8_lossy(&body))?.into_bytes();
+    }
+    write_file(next, rel, &body)?;
+    Ok(want.size)
+}
+
+/// Downloads `files` with up to `THREADS` workers; `on` is called from this thread after each file.
+/// At the first error no new file is started, the requests already in flight finish and the error is returned.
+fn download_all(
+    next: &Path,
+    files: &[String],
+    remote: &Manifest,
+    src: &dyn Source,
+    on: &mut impl FnMut(Progress),
+) -> Result<(), UpdateError> {
+    let total_bytes: u64 = files.iter().map(|f| remote.files[f].size).sum();
+    let (cursor, abort) = (AtomicUsize::new(0), AtomicBool::new(false));
+    let (tx, rx) = mpsc::channel::<Result<u64, UpdateError>>();
+    let (mut done, mut bytes, mut first_err) = (0usize, 0u64, None);
+    std::thread::scope(|scope| {
+        for _ in 0..THREADS.min(files.len()) {
+            let tx = tx.clone();
+            let (cursor, abort) = (&cursor, &abort);
+            scope.spawn(move || loop {
+                let i = cursor.fetch_add(1, Ordering::Relaxed);
+                if i >= files.len() || abort.load(Ordering::Relaxed) {
+                    break;
+                }
+                let r = fetch_one(next, &files[i], &remote.files[&files[i]], src);
+                if r.is_err() {
+                    abort.store(true, Ordering::Relaxed);
+                }
+                if tx.send(r).is_err() {
+                    break;
+                }
+            });
+        }
+        drop(tx);
+        for r in rx {
+            match r {
+                Ok(size) => {
+                    done += 1;
+                    bytes += size;
+                    on(Progress {
+                        done,
+                        total: files.len(),
+                        bytes,
+                        total_bytes,
+                    });
+                }
+                Err(e) => {
+                    first_err.get_or_insert(e);
+                }
+            }
+        }
+    });
+    first_err.map_or(Ok(()), Err)
+}
+
+/// Fills `next` with the new files, the new manifest and the hashes of the whole folder.
+fn build_next(
+    next: &Path,
+    files: &[String],
+    remote: &Manifest,
+    src: &dyn Source,
+    on: &mut impl FnMut(Progress),
+) -> Result<(), UpdateError> {
+    download_all(next, files, remote, src, on)?;
+    let json = serde_json::to_vec(remote).map_err(UpdateError::io)?;
+    write_file(next, MANIFEST, &json)?;
+    write_check(next)
+}
+
+/// Replaces `web` with `next`; if the last rename fails the old folder comes back.
+fn swap_dirs(web: &Path, next: &Path, old: &Path) -> Result<(), UpdateError> {
+    let _ = fs::remove_dir_all(old);
+    if web.is_dir() {
+        fs::rename(web, old).map_err(UpdateError::io)?;
+    }
+    if let Err(e) = fs::rename(next, web) {
+        let _ = fs::rename(old, web);
+        return Err(UpdateError::io(e));
+    }
+    let _ = fs::remove_dir_all(old);
+    Ok(())
+}
+
 /// Downloads the changed files, verifies them and swaps `<data>/web` for the new folder. Returns the number of files downloaded.
 /// Nothing visible changes until the last rename: on any error the current folder stays as it was.
 pub fn apply(
@@ -337,44 +436,11 @@ pub fn apply(
     } else {
         fs::create_dir_all(&next).map_err(UpdateError::io)?;
     }
-    let mut run = || -> Result<(), UpdateError> {
-        let total_bytes: u64 = files.iter().map(|f| remote.files[f].size).sum();
-        let mut bytes = 0u64;
-        for (i, rel) in files.iter().enumerate() {
-            let want = &remote.files[rel];
-            let mut body = src.get(rel)?;
-            if body.len() as u64 != want.size || sha256_hex(&body) != want.sha256 {
-                return Err(UpdateError::new("update.error.hash", rel.clone()));
-            }
-            if rel == "index.html" {
-                body = patch_index(&String::from_utf8_lossy(&body))?.into_bytes();
-            }
-            write_file(&next, rel, &body)?;
-            bytes += want.size;
-            on(Progress {
-                done: i + 1,
-                total: files.len(),
-                bytes,
-                total_bytes,
-            });
-        }
-        let json = serde_json::to_vec(remote).map_err(UpdateError::io)?;
-        write_file(&next, MANIFEST, &json)?;
-        write_check(&next)
-    };
-    if let Err(e) = run() {
+    if let Err(e) = build_next(&next, &files, remote, src, &mut on) {
         let _ = fs::remove_dir_all(&next);
         return Err(e);
     }
-    let _ = fs::remove_dir_all(&old);
-    if web.is_dir() {
-        fs::rename(&web, &old).map_err(UpdateError::io)?;
-    }
-    if let Err(e) = fs::rename(&next, &web) {
-        let _ = fs::rename(&old, &web);
-        return Err(UpdateError::io(e));
-    }
-    let _ = fs::remove_dir_all(&old);
+    swap_dirs(&web, &next, &old)?;
     Ok(files.len())
 }
 
@@ -464,12 +530,12 @@ pub fn serve_override(web: &Path, req_path: &str) -> Option<(Vec<u8>, &'static s
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::cell::RefCell;
+    use std::sync::Mutex;
 
-    struct Mem(BTreeMap<String, Vec<u8>>, RefCell<Vec<String>>);
+    struct Mem(BTreeMap<String, Vec<u8>>, Mutex<Vec<String>>);
     impl Source for Mem {
         fn get(&self, rel: &str) -> Result<Vec<u8>, UpdateError> {
-            self.1.borrow_mut().push(rel.to_string());
+            self.1.lock().unwrap().push(rel.to_string());
             self.0
                 .get(rel)
                 .cloned()
@@ -501,7 +567,7 @@ mod tests {
                 .iter()
                 .map(|(n, b)| (n.to_string(), b.to_vec()))
                 .collect(),
-            RefCell::new(vec![]),
+            Mutex::new(vec![]),
         )
     }
 
@@ -627,8 +693,10 @@ mod tests {
         })
         .unwrap();
         assert_eq!(n, 2);
+        let mut asked = src.1.lock().unwrap().clone();
+        asked.sort();
         assert_eq!(
-            *src.1.borrow(),
+            asked,
             vec!["static/a.js".to_string(), "static/n.js".to_string()]
         ); // the big file is not asked for
         assert_eq!(seen, vec![(1, 2), (2, 2)]);

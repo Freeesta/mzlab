@@ -637,6 +637,7 @@
   "method.reg.go": "Nome accessibile del pulsante di una voce del registro errori nella finestra del metodo: porta il cursore al suo tempo; {t} = tempo in minuti.",
   "settings.mem.status": "Riga di stato del budget di memoria nelle impostazioni; {mb} = budget in MB, {scans} = scansioni massime circa, {reason} = motivo della scelta, {conf} = affidabilità.",
   "settings.mem.inputs": "Dati della macchina usati per scegliere il budget; {gb} = memoria del dispositivo in GB, {cores} = core logici, {hard} = limite massimo in MB.",
+  "msngrafo.mol.count": "Stato letto dallo screen reader sotto il campo di ricerca delle molecole: numero di molecole trovate ({n}).",
   "msngrafo.counts": "Riga sotto il campo: numero di ioni ({nodes}) e di perdite ({arcs}) del grafo.",
   "msngrafo.draw.aria": "Nome accessibile del disegno del frammento; {smi} = SMILES.",
   "msngrafo.ion.line": "Riga sotto il campo: formula dello ione {f}, m/z teorico {mz}, scarto in ppm {ppm} dal valore osservato.",

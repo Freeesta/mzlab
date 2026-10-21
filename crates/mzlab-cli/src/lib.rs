@@ -23,6 +23,7 @@ mod flow_apply;
 mod flow_base;
 mod flow_cache;
 mod flow_compare;
+mod flow_estimate;
 mod flow_formula;
 mod flow_generate;
 mod flow_inclusion;
@@ -381,6 +382,8 @@ mod flow_cache_tests;
 mod flow_command_tests;
 #[cfg(test)]
 mod flow_compare_tests;
+#[cfg(test)]
+mod flow_estimate_tests;
 #[cfg(test)]
 mod flow_generate_tests;
 #[cfg(test)]
