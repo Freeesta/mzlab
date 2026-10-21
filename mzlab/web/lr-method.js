@@ -39,7 +39,7 @@ export function createMethodRoutes({ rpc, json, items }) {
       if (path === "/api/metodo") return raw(await rpc({ op: "lr_metodo", name }));
       if (path === "/api/analog") return raw(await rpc({ op: "lr_analog", name, i: num(q, "i", NaN), n: Math.max(10, Math.min(Math.trunc(num(q, "n", 2000)), 20000)) }));
       // a series of the instrument log of a .raw: {id, kind, unit, time, intensity}
-      if (path === "/api/registro") return raw(await rpc({ op: "natregistro", name, id: q.get("id") || "" }));
+      if (path === "/api/registro") return raw(await rpc({ op: "natregistro", name, serie: q.get("id") || "" }));
       if (path === "/api/chrom") return raw(await rpc({ op: "lr_pda", name }));
       if (path === "/api/map") return raw(await rpc({ op: "lr_pda_map", name }));
       // a part of a mixed file with a PDA reads its own scans: not served (null)

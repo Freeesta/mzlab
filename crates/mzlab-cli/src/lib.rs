@@ -24,6 +24,9 @@ mod flow_base;
 mod flow_cache;
 mod flow_compare;
 mod flow_digl;
+mod flow_drift;
+#[cfg(test)]
+mod flow_drift_tests;
 mod flow_estimate;
 mod flow_export;
 #[cfg(test)]
@@ -32,6 +35,7 @@ mod flow_formula;
 mod flow_generate;
 mod flow_inclusion;
 mod flow_json;
+mod flow_kmd;
 mod flow_level;
 mod flow_link;
 #[cfg(test)]
@@ -43,6 +47,9 @@ mod flow_ms2;
 mod flow_msngraph;
 mod flow_network;
 mod flow_out;
+mod flow_pca;
+#[cfg(test)]
+mod flow_pca_tests;
 mod flow_position;
 #[cfg(test)]
 mod flow_position_tests;
@@ -57,6 +64,7 @@ mod flow_table;
 #[cfg(test)]
 mod flow_table_tests;
 pub mod llm;
+mod llm_ctx;
 pub mod msn_graph;
 mod msn_graph_compare;
 mod msn_lib;
@@ -74,6 +82,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli llm tools [--out FILE]   the catalog strumenti/1 of the assistant tools (llm tools --help)
        mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the events a recording gives for a conversation, one per line
+       mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli msn-lib add|build|export ...                the library of MSn trees (msn-lib --help)
        mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
@@ -398,6 +407,8 @@ mod flow_ident_tests;
 #[cfg(test)]
 mod flow_json_tests;
 #[cfg(test)]
+mod flow_kmd_tests;
+#[cfg(test)]
 mod flow_level_tests;
 #[cfg(test)]
 mod flow_ms2_tests;
@@ -415,6 +426,10 @@ mod flow_rule_tests;
 mod flow_run_tests;
 #[cfg(test)]
 mod flow_stats_tests;
+#[cfg(test)]
+mod llm_agent_tests;
+#[cfg(test)]
+mod llm_eval_tests;
 #[cfg(test)]
 mod llm_replay_tests;
 #[cfg(test)]
