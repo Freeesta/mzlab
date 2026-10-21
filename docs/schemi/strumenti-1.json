@@ -25,6 +25,7 @@
           "formula.ms2",
           "index.mzidx",
           "meta.compare",
+          "quant.calibrate",
           "spectra.centroid",
           "spectra.match",
           "spectra.ms2",
@@ -72,6 +73,7 @@
               "import.raw@1",
               "index.mzidx@1",
               "meta.compare@1",
+              "quant.calibrate@1",
               "rt.predict@1",
               "spectra.centroid@1",
               "spectra.chimeric@1",
@@ -158,6 +160,7 @@
               "import.raw@1",
               "index.mzidx@1",
               "meta.compare@1",
+              "quant.calibrate@1",
               "rt.predict@1",
               "spectra.centroid@1",
               "spectra.chimeric@1",
@@ -658,6 +661,21 @@
                   {"type":"number","minimum":0,"description":"m/z tolerance (ppm)"},
                   {"type":"number","minimum":0,"description":"m/z tolerance (unit resolution, Da)"},
                   {"type":"number","minimum":0,"description":"RT tolerance (min)"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"quant.calibrate@1"},
+              "name":{"enum":["mz_tol","rt_tol","signal","kinds"]},
+              "value":{
+                "anyOf":[
+                  {"type":"number","minimum":0,"default":0.5,"description":"m/z tolerance to match a curve to a row"},
+                  {"type":"number","minimum":0,"default":0.3,"description":"RT tolerance to match a curve to a row"},
+                  {"enum":["area","height"],"default":"area","description":"Signal the curve was made with"},
+                  {"type":"string","default":"sample","description":"Sample types to quantify, comma separated"}
                 ]
               }
             },

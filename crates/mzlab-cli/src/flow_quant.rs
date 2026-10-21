@@ -360,3 +360,7 @@ pub(crate) fn quant_job(r: &FileRunner, job: &Job) -> Result<Made> {
     made.warnings = warnings;
     Ok(made)
 }
+
+#[cfg(test)]
+#[path = "flow_quant_tests.rs"]
+mod tests;
