@@ -36,6 +36,8 @@ mod flow_export;
 mod flow_export_tests;
 mod flow_formula;
 mod flow_generate;
+#[cfg(test)]
+mod flow_hr_tests;
 mod flow_inclusion;
 mod flow_json;
 mod flow_kmd;
@@ -71,8 +73,6 @@ mod flow_stats;
 mod flow_table;
 #[cfg(test)]
 mod flow_table_tests;
-#[cfg(test)]
-mod flow_hr_tests;
 pub mod llm;
 mod llm_ctx;
 pub mod msn_graph;
