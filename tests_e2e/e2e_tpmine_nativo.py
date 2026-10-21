@@ -40,7 +40,7 @@ try:
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
         pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
-        pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+        pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
         pg.set_input_files("#pick", [str(D / n) for n in ["two.wiff", "two.wiff.scan", "serie.wiff", "serie.wiff.scan", "prodotto.wiff", "prodotto.wiff.scan", "one.wiff", "one.wiff.scan"]])
         shown(pg, 6)
         pg.evaluate("""async () => { const rb = await window.MZLAB_RUST_READY, f = rb.nativeToMzml; window.__made = []; rb.nativeToMzml = (n, ...a) => { window.__made.push(n); return f.call(rb, n, ...a); }; }""")

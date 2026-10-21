@@ -11,7 +11,7 @@ use mzlab_feat::stat::{compare, stats_json, write_stats, Layout, StatsOpts};
 use mzlab_feat::store::{write_table, Origin};
 use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_DETECTED};
 
-const NAMES: [&str; 7] = [
+pub(crate) const NAMES: [&str; 7] = [
     "blank.mzML",
     "ref_1.mzML",
     "ref_2.mzML",
@@ -22,7 +22,7 @@ const NAMES: [&str; 7] = [
 ];
 
 /// Areas of the features over the seven files: a few up in the treatment, one equal, one only in the blank, one barely detected.
-fn rows() -> Vec<Vec<f64>> {
+pub(crate) fn rows() -> Vec<Vec<f64>> {
     vec![
         vec![0.0, 1.0e6, 1.1e6, 0.9e6, 4.2e6, 3.9e6, 4.4e6],
         vec![0.0, 2.0e6, 2.2e6, 2.1e6, 2.0e6, 2.3e6, 1.9e6],
@@ -32,7 +32,7 @@ fn rows() -> Vec<Vec<f64>> {
     ]
 }
 
-fn table() -> Vec<u8> {
+pub(crate) fn table() -> Vec<u8> {
     let rows = rows();
     let mut t = Aligned::with_capacity(NAMES.len(), rows.len());
     for (i, areas) in rows.iter().enumerate() {
@@ -57,7 +57,7 @@ fn table() -> Vec<u8> {
     write_table(&t, &Recipe::default(), &origin)
 }
 
-fn campioni_2() -> Vec<Campione> {
+pub(crate) fn campioni_2() -> Vec<Campione> {
     NAMES
         .iter()
         .enumerate()

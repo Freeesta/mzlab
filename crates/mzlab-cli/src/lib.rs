@@ -23,6 +23,9 @@ mod flow_apply;
 mod flow_base;
 mod flow_cache;
 mod flow_compare;
+mod flow_drift;
+#[cfg(test)]
+mod flow_drift_tests;
 mod flow_estimate;
 mod flow_export;
 #[cfg(test)]
@@ -41,6 +44,9 @@ mod flow_ms2;
 mod flow_msngraph;
 mod flow_network;
 mod flow_out;
+mod flow_pca;
+#[cfg(test)]
+mod flow_pca_tests;
 mod flow_position;
 #[cfg(test)]
 mod flow_position_tests;
