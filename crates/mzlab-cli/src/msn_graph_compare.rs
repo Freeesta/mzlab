@@ -168,17 +168,7 @@ fn forti(g: &Grafo) -> Vec<&Arco> {
     g.archi.iter().filter(|a| a.rel >= REL_ARCO).collect()
 }
 
-/// The comparison text for two graph texts.
-pub fn confronta(a: &str, b: &str) -> Result<String> {
-    let (ga, gb) = (carica(a)?, carica(b)?);
-    let mut o = Out::default();
-    let mut tutti = true;
-    let mut ok_di = |ok: bool| {
-        tutti &= ok;
-        ok
-    };
-    let mut corpo = Out::default();
-
+fn c_nodi(ga: &Grafo, gb: &Grafo, corpo: &mut Out) -> bool {
     let (ia, ib): (Vec<&Nodo>, Vec<&Nodo>) = (
         ga.nodi.iter().filter(|n| n.isolato).collect(),
         gb.nodi.iter().filter(|n| n.isolato).collect(),
@@ -188,19 +178,18 @@ pub fn confronta(a: &str, b: &str) -> Result<String> {
         (!ia[i].path.is_empty() && ia[i].path == ib[j].path && m <= PPM).then_some(m)
     })
     .len();
-    let ok = ok_di(comuni == ia.len() && comuni == ib.len());
-    criterio(
-        &mut corpo,
-        "nodi_isolati",
-        ok,
-        &[
-            ("a", ia.len() as f64),
-            ("b", ib.len() as f64),
-            ("comuni", comuni as f64),
-        ],
-    );
+    let ok = comuni == ia.len() && comuni == ib.len();
+    let campi = [
+        ("a", ia.len() as f64),
+        ("b", ib.len() as f64),
+        ("comuni", comuni as f64),
+    ];
+    criterio(corpo, "nodi_isolati", ok, &campi);
+    ok
+}
 
-    let (fa, fb) = (forti(&ga), forti(&gb));
+fn c_archi(ga: &Grafo, gb: &Grafo, corpo: &mut Out) -> bool {
+    let (fa, fb) = (forti(ga), forti(gb));
     let comuni = accoppia(fa.len(), fb.len(), |i, j| {
         let m = ppm(fa[i].da, fb[j].da)
             .abs()
@@ -208,38 +197,39 @@ pub fn confronta(a: &str, b: &str) -> Result<String> {
         (m <= PPM).then_some(m)
     })
     .len();
-    let ok = ok_di(comuni == fa.len() && comuni == fb.len());
-    criterio(
-        &mut corpo,
-        "archi",
-        ok,
-        &[
-            ("forti_a", fa.len() as f64),
-            ("forti_b", fb.len() as f64),
-            ("comuni", comuni as f64),
-        ],
-    );
+    let ok = comuni == fa.len() && comuni == fb.len();
+    let campi = [
+        ("forti_a", fa.len() as f64),
+        ("forti_b", fb.len() as f64),
+        ("comuni", comuni as f64),
+    ];
+    criterio(corpo, "archi", ok, &campi);
+    ok
+}
 
-    let coppie = accoppia(ga.nodi.len(), gb.nodi.len(), |i, j| {
+/// Nodes paired by m/z, shared by the formula and the shift checks.
+fn coppie_nodi(ga: &Grafo, gb: &Grafo) -> Vec<(usize, usize, f64)> {
+    accoppia(ga.nodi.len(), gb.nodi.len(), |i, j| {
         let m = ppm(ga.nodi[i].mz, gb.nodi[j].mz).abs();
         (m <= PPM).then_some(m)
-    });
+    })
+}
+
+fn c_formule(ga: &Grafo, gb: &Grafo, coppie: &[(usize, usize, f64)], corpo: &mut Out) -> bool {
     let (mut visti, mut diversi) = (0, 0);
-    for &(i, j, _) in &coppie {
+    for &(i, j, _) in coppie {
         let (x, y) = (&ga.nodi[i].formula, &gb.nodi[j].formula);
         if x.is_some() || y.is_some() {
             visti += 1;
             diversi += usize::from(x != y);
         }
     }
-    let ok = ok_di(diversi == 0);
-    criterio(
-        &mut corpo,
-        "formule",
-        ok,
-        &[("confrontati", visti as f64), ("diversi", diversi as f64)],
-    );
+    let campi = [("confrontati", visti as f64), ("diversi", diversi as f64)];
+    criterio(corpo, "formule", diversi == 0, &campi);
+    diversi == 0
+}
 
+fn c_entropia(ga: &Grafo, gb: &Grafo, corpo: &mut Out) -> bool {
     let sp = accoppia(ga.spettri.len(), gb.spettri.len(), |i, j| {
         let (x, y) = (&ga.spettri[i], &gb.spettri[j]);
         (x.path == y.path && x.att == y.att && (x.ce - y.ce).abs() < 0.01).then_some(0.0)
@@ -250,32 +240,44 @@ pub fn confronta(a: &str, b: &str) -> Result<String> {
         .collect();
     let minimo = ent.iter().copied().fold(1.0, f64::min);
     let senza = ga.spettri.len() + gb.spettri.len() - 2 * sp.len();
-    let ok = ok_di(senza == 0 && minimo >= ENTROPIA_MIN);
-    criterio(
-        &mut corpo,
-        "entropia_ms2",
-        ok,
-        &[
-            ("minimo", minimo),
-            ("soglia", ENTROPIA_MIN),
-            ("coppie", sp.len() as f64),
-            ("senza_controparte", senza as f64),
-        ],
-    );
+    let ok = senza == 0 && minimo >= ENTROPIA_MIN;
+    let campi = [
+        ("minimo", minimo),
+        ("soglia", ENTROPIA_MIN),
+        ("coppie", sp.len() as f64),
+        ("senza_controparte", senza as f64),
+    ];
+    criterio(corpo, "entropia_ms2", ok, &campi);
+    ok
+}
 
+fn c_scarto(coppie: &[(usize, usize, f64)], corpo: &mut Out) -> bool {
     let massimo = coppie.iter().map(|c| c.2).fold(0.0, f64::max);
-    let ok = ok_di(massimo <= SCARTO_MAX);
-    criterio(
-        &mut corpo,
-        "scarto_ppm",
-        ok,
-        &[
-            ("massimo", massimo),
-            ("soglia", SCARTO_MAX),
-            ("coppie", coppie.len() as f64),
-        ],
-    );
+    let ok = massimo <= SCARTO_MAX;
+    let campi = [
+        ("massimo", massimo),
+        ("soglia", SCARTO_MAX),
+        ("coppie", coppie.len() as f64),
+    ];
+    criterio(corpo, "scarto_ppm", ok, &campi);
+    ok
+}
 
+/// The comparison text for two graph texts.
+pub fn confronta(a: &str, b: &str) -> Result<String> {
+    let (ga, gb) = (carica(a)?, carica(b)?);
+    let mut corpo = Out::default();
+    let coppie = coppie_nodi(&ga, &gb);
+    // Every criterion is evaluated (no short-circuit) so the outcome lists all numbers.
+    let oks = [
+        c_nodi(&ga, &gb, &mut corpo),
+        c_archi(&ga, &gb, &mut corpo),
+        c_formule(&ga, &gb, &coppie, &mut corpo),
+        c_entropia(&ga, &gb, &mut corpo),
+        c_scarto(&coppie, &mut corpo),
+    ];
+    let tutti = oks.iter().all(|&k| k);
+    let mut o = Out::default();
     o.raw("{\"formato\":\"msnconfronto/1\",\"ppm\":").num(PPM);
     o.raw(",\"convalidata\":")
         .raw(if tutti { "true" } else { "false" });
