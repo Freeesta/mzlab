@@ -25,6 +25,30 @@ pub const MARGIN: f64 = 2.0;
 pub const LL_SUPPORT: f64 = 1.0;
 pub const LL_AGAINST: f64 = 2.0;
 
+/// The thresholds of the position (`tp.position`): `Default` is the constants above, which the page always uses.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SiteParams {
+    pub match_ppm: f64,
+    pub min_rel: f64,
+    pub min_informative: usize,
+    pub margin: f64,
+    pub ll_support: f64,
+    pub ll_against: f64,
+}
+
+impl Default for SiteParams {
+    fn default() -> Self {
+        SiteParams {
+            match_ppm: MATCH_PPM,
+            min_rel: MIN_REL,
+            min_informative: MIN_INFORMATIVE,
+            margin: MARGIN,
+            ll_support: LL_SUPPORT,
+            ll_against: LL_AGAINST,
+        }
+    }
+}
+
 /// What the pass knows about the MS2 of the row.
 pub struct Facts {
     pub scans: usize,
@@ -198,7 +222,7 @@ fn early_reasons(f: &Facts) -> Vec<&'static str> {
 }
 
 /// Distinct fragments of the evidences that are informative: strong enough and with a formula that fits.
-fn informative(rep: &Report, peaks: &[Peak]) -> usize {
+fn informative(rep: &Report, peaks: &[Peak], p: &SiteParams) -> usize {
     let top = peaks.iter().map(|p| p.inten).fold(0.0, f64::max).max(1e-12);
     let mut seen: Vec<f64> = vec![];
     for c in &rep.classes {
@@ -211,7 +235,7 @@ fn informative(rep: &Report, peaks: &[Peak]) -> usize {
                 .ok()
                 .and_then(|f| elements::ion_mz(elements::mass(&f), rep.pol.adduct()));
             let fits = theo.is_some_and(|t| (e.mz - t).abs() <= t * INFO_PPM * 1e-6);
-            if rel >= MIN_REL && fits && !seen.contains(&e.mz) {
+            if rel >= p.min_rel && fits && !seen.contains(&e.mz) {
                 seen.push(e.mz);
             }
         }
@@ -226,7 +250,7 @@ fn group_of(atoms: &[usize], groups: &[(String, BTreeSet<usize>)]) -> Option<Str
         .map(|g| g.0.clone())
 }
 
-fn class_ll(c: &Class, sites: &[Site], tree: Option<&TreeVotes>) -> f64 {
+fn class_ll(c: &Class, sites: &[Site], tree: Option<&TreeVotes>, p: &SiteParams) -> f64 {
     match tree {
         Some(t) if t.ll.len() == sites.len() => sites
             .iter()
@@ -234,7 +258,7 @@ fn class_ll(c: &Class, sites: &[Site], tree: Option<&TreeVotes>) -> f64 {
             .filter(|(s, _)| c.atoms.contains(&s.atom))
             .map(|(_, l)| *l)
             .fold(f64::NEG_INFINITY, f64::max),
-        _ => LL_SUPPORT * c.support.len() as f64 - LL_AGAINST * c.against.len() as f64,
+        _ => p.ll_support * c.support.len() as f64 - p.ll_against * c.against.len() as f64,
     }
 }
 
@@ -242,6 +266,7 @@ fn votes_of(
     rep: &Report,
     tree: Option<&TreeVotes>,
     groups: &[(String, BTreeSet<usize>)],
+    p: &SiteParams,
 ) -> Vec<Vote> {
     let mut votes: Vec<Vote> = rep
         .classes
@@ -253,7 +278,7 @@ fn votes_of(
             status: c.status,
             n_support: c.support.len(),
             n_against: c.against.len(),
-            ll: class_ll(c, &rep.sites, tree),
+            ll: class_ll(c, &rep.sites, tree, p),
             support: 0.0,
             group: group_of(&c.atoms, groups),
         })
@@ -283,18 +308,30 @@ pub fn analyse(
     facts: &Facts,
     tree: Option<TreeVotes>,
 ) -> SiteReport {
+    analyse_with(c, peaks, pol, facts, tree, &SiteParams::default())
+}
+
+/// `analyse` with the thresholds of `p`.
+pub fn analyse_with(
+    c: &Candidates,
+    peaks: &[Peak],
+    pol: Pol,
+    facts: &Facts,
+    tree: Option<TreeVotes>,
+    p: &SiteParams,
+) -> SiteReport {
     let early = early_reasons(facts);
     if !early.is_empty() {
         return undetermined(c.transform, early);
     }
-    let Ok(rep) = posizioni::match_spectrum(&c.mol, &c.sites, peaks, Tol::Ppm(MATCH_PPM), pol)
+    let Ok(rep) = posizioni::match_spectrum(&c.mol, &c.sites, peaks, Tol::Ppm(p.match_ppm), pol)
     else {
         return undetermined(c.transform, vec!["unsupported_change"]);
     };
     let groups = Graph::parse(&c.smiles).map_or(vec![], |g| default_groups_en(&g));
-    let votes = votes_of(&rep, tree.as_ref(), &groups);
-    let informative = informative(&rep, peaks);
-    let mut out = decide(votes, informative, facts, &groups, &c.sites);
+    let votes = votes_of(&rep, tree.as_ref(), &groups, p);
+    let informative = informative(&rep, peaks, p);
+    let mut out = decide(votes, informative, facts, (&groups, &c.sites), p);
     out.transform = c.transform.to_string();
     out.source = if tree.as_ref().is_some_and(|t| t.ll.len() == c.sites.len()) {
         "tree"
@@ -317,15 +354,15 @@ fn decide(
     votes: Vec<Vote>,
     informative: usize,
     facts: &Facts,
-    groups: &[(String, BTreeSet<usize>)],
-    sites: &[Site],
+    (groups, sites): (&[(String, BTreeSet<usize>)], &[Site]),
+    p: &SiteParams,
 ) -> SiteReport {
     let mut out = undetermined("", vec![]);
     out.informative = informative;
     let mut alive: Vec<&Vote> = votes.iter().filter(|v| v.status != "excluded").collect();
     alive.sort_by(|a, b| b.ll.total_cmp(&a.ll));
     let reasons = &mut out.reasons;
-    if informative < MIN_INFORMATIVE {
+    if informative < p.min_informative {
         reasons.push("few_fragments");
     }
     if alive.iter().all(|v| v.n_support == 0) {
@@ -338,7 +375,7 @@ fn decide(
     out.margin = alive.get(1).map(|v| alive[0].ll - v.ll);
     let within: Vec<&&Vote> = alive
         .iter()
-        .filter(|v| v.ll >= alive[0].ll - MARGIN)
+        .filter(|v| v.ll >= alive[0].ll - p.margin)
         .collect();
     let atoms: Vec<usize> = within.iter().flat_map(|v| v.atoms.clone()).collect();
     // One class is not enough: its atoms must also be the same position by symmetry (ring positions the fragments cannot tell apart are not).

@@ -429,6 +429,10 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "tp.filter",
         Exec::File("table", crate::flow_refilter::refilter_job),
     ),
+    (
+        "tp.position",
+        Exec::File("sites", crate::flow_position::position_job),
+    ),
     ("meta.compare", Exec::File("comparison", compare_job)),
     (
         "export.inclusion",
