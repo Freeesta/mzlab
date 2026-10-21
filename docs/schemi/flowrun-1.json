@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "flowrun/1",
+  "title": "flowrun/1: the answer of `mzlab-cli flow run --json`",
+  "description": "How a run ended: the exit code, the run folder and per instance the status, the milliseconds and the files it wrote with their SHA-256 (as in prov/1). Instances that did not run (skipped after a failure) come last. Code: crates/mzlab-cli/src/flow_json.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "code",
+    "out",
+    "plan_sha256",
+    "steps"
+  ],
+  "properties": {
+    "schema": {
+      "const": "flowrun/1"
+    },
+    "code": {
+      "enum": [
+        0,
+        1
+      ]
+    },
+    "out": {
+      "type": "string"
+    },
+    "plan_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "instance",
+          "status",
+          "ms",
+          "outputs"
+        ],
+        "properties": {
+          "instance": {
+            "type": "string"
+          },
+          "step": {
+            "type": "string",
+            "description": "id@version; absent for a skipped instance"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "cached",
+              "error",
+              "skipped"
+            ]
+          },
+          "ms": {
+            "type": "number",
+            "minimum": 0
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "port",
+                "file",
+                "sha256",
+                "bytes"
+              ],
+              "properties": {
+                "port": {
+                  "type": "string",
+                  "description": "output port, `port[i]` for one file of a per-file step"
+                },
+                "file": {
+                  "type": "string",
+                  "description": "file name in the --out folder"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "bytes": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "error": {
+            "type": "object",
+            "required": [
+              "error_key",
+              "params"
+            ],
+            "properties": {
+              "error_key": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

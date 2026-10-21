@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "flowdry/1",
+  "title": "flowdry/1: the answer of `mzlab-cli flow run --dry-run --json`",
+  "description": "What a run would do: the inputs where they were found and every instance in the order it runs, with its canonical parameters and their SHA-256. Nothing is written. Code: crates/mzlab-cli/src/flow_json.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "inputs",
+    "steps"
+  ],
+  "properties": {
+    "schema": {
+      "const": "flowdry/1"
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "path",
+          "bytes",
+          "sha256"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "n",
+          "of",
+          "instance",
+          "step",
+          "params",
+          "params_sha256"
+        ],
+        "properties": {
+          "n": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "of": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "instance": {
+            "type": "string"
+          },
+          "step": {
+            "type": "string",
+            "description": "id@version"
+          },
+          "params": {
+            "type": "object"
+          },
+          "params_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  }
+}

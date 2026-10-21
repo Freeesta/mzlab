@@ -19,12 +19,14 @@ use mzlab_feat_wasm::run;
 pub mod convert;
 mod convert_report;
 pub mod flow;
+mod flow_apply;
 mod flow_base;
 mod flow_cache;
 mod flow_compare;
 mod flow_formula;
 mod flow_generate;
 mod flow_inclusion;
+mod flow_json;
 mod flow_level;
 mod flow_link;
 #[cfg(test)]
@@ -50,6 +52,7 @@ pub mod msn_graph;
 mod msn_graph_compare;
 mod msn_lib;
 mod msn_lib_export;
+mod steps_cmd;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
 
@@ -57,6 +60,8 @@ const HELP: &str = "mzlab-cli features: the feature table of one or more LC-MS f
 
 usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params FILE.json]
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)
+       mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
+       mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli msn-lib add|build|export ...                the library of MSn trees (msn-lib --help)
@@ -328,13 +333,14 @@ fn features_cmd(args: impl Iterator<Item = String>) -> Outcome {
     }
 }
 
-/// `mzlab-cli flow <run|report|command> ...`.
+/// `mzlab-cli flow <run|check|report|command> ...`.
 fn flow_cmd(mut args: impl Iterator<Item = String>) -> Outcome {
     match args.next().as_deref() {
         Some("report") => flow_report::run(args).map_or_else(|e| Outcome::fail(&e), Outcome::ok),
         Some("run") => flow_run::run(args.collect(), None),
         Some("command") => flow_command(args.collect()),
-        _ => Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow command PLAN.json"),
+        Some("check") => flow_json::check(args.collect()),
+        _ => Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow check PLAN.json | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow command PLAN.json"),
     }
 }
 
@@ -344,6 +350,7 @@ pub fn execute(args: &[String]) -> Outcome {
     match args.next().as_deref() {
         Some("features") => {}
         Some("flow") => return flow_cmd(args),
+        Some("steps") => return steps_cmd::run(args.collect()),
         Some("msn-graph") => return msn_graph_cmd(args),
         Some("msn-lib") => return msn_lib_cmd(args.collect()),
         Some("convert") => return convert::run(args.collect()),
@@ -374,6 +381,8 @@ mod flow_compare_tests;
 mod flow_generate_tests;
 #[cfg(test)]
 mod flow_ident_tests;
+#[cfg(test)]
+mod flow_json_tests;
 #[cfg(test)]
 mod flow_level_tests;
 #[cfg(test)]

@@ -7,7 +7,11 @@ use std::path::{Path, PathBuf};
 use mzlab_core::flow::{parse, plan_json, plan_order, Plan, Run};
 
 use crate::flow::{steps, DoneFn, FileRunner, Meter};
-use crate::flow_run::{fail, fill_inputs, prepare, problem_text, run_checked};
+use mzlab_core::budget::sha256_hex;
+use mzlab_core::error::Error;
+
+use crate::flow_json::{fail, Style, JSONL_MARK};
+use crate::flow_run::{fill_inputs, prepare, problem_text, run_checked};
 use crate::Outcome;
 
 /// Runs `ready` (the checked, expanded form of `plan`) with the inputs `found` and writes the run folder `out`; the steps whose result is already in
@@ -19,22 +23,29 @@ pub(crate) fn write_run(
     out: PathBuf,
     workers: usize,
     meter: Option<Meter>,
-    (fresh, budget_mb): (bool, Option<f64>),
+    (fresh, budget_mb, st): (bool, Option<f64>, Style),
 ) -> Outcome {
     if let Err(e) = std::fs::create_dir_all(&out) {
+        let err = Error::new("err.cli.out").with("path", out.display());
+        let msg = format!("{}: {e}", out.display());
         return fail(
+            st,
             2,
-            &format!("{}: {e}", out.display()),
+            &err,
+            &msg,
             "--out must be a folder that can be written",
         );
     }
     let text = plan_json(plan);
-    let order: Vec<String> = plan_order(ready)
+    let mut order: Vec<String> = plan_order(ready)
         .unwrap_or_default()
         .into_iter()
         .map(|k| ready.steps[k].id.clone())
         .collect();
     let steps = order.len();
+    if st.jsonl {
+        order.push(JSONL_MARK.into());
+    }
     let runner = FileRunner::located(&out, found, order, meter, fresh).with_budget(budget_mb);
     let written = std::fs::write(out.join("plan.json"), &text);
     let (run, prov) = match written
@@ -44,15 +55,20 @@ pub(crate) fn write_run(
         Ok(r) => r,
         Err(e) => {
             return fail(
+                st,
                 3,
+                &e,
                 &e.to_string(),
                 "fix the plan in the Flow page or with --set",
             )
         }
     };
     if let Err(e) = std::fs::write(out.join("prov.json"), &prov) {
+        let err = Error::new("err.cli.out").with("path", out.join("prov.json").display());
         return fail(
+            st,
             2,
+            &err,
             &format!("prov.json: {e}"),
             "--out must be a folder that can be written",
         );
@@ -60,13 +76,16 @@ pub(crate) fn write_run(
     let corsa = crate::flow_report::report(&out)
         .and_then(|c| std::fs::write(out.join("corsa.json"), c).map_err(crate::flow::io));
     if let Err(e) = corsa {
-        return fail(
-            1,
-            &format!("corsa.json: {e}"),
-            "prov.json and the files of the steps are written",
-        );
+        let err = Error::new("err.cli.out").with("path", out.join("corsa.json").display());
+        let hint = "prov.json and the files of the steps are written";
+        return fail(st, 1, &err, &format!("corsa.json: {e}"), hint);
     }
-    summary(&run, steps, &out)
+    let mut o = summary(&run, steps, &out);
+    if st.json {
+        let plan_sha = sha256_hex(text.as_bytes());
+        o.stdout = crate::flow_json::run_json(o.code, &out, &plan_sha, &run).into_bytes();
+    }
+    o
 }
 
 /// The exit code and the last lines on stderr: every step done, or the ones that failed or did not run.
