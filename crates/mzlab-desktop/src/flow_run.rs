@@ -62,13 +62,15 @@ impl State {
         let fresh = p["fresh"].as_bool().unwrap_or(false);
         let workers = std::thread::available_parallelism()
             .map_or(1, |n| n.get().saturating_sub(1).clamp(1, 4));
-        let (_, prov) = mzlab_cli::flow::run_plan_cached(
+        let done = crate::flow_progress::start();
+        let (_, prov) = mzlab_cli::flow::run_plan_notify(
             plan_text.as_bytes(),
             &inputs,
             &work,
             workers,
             None,
             Some(fresh),
+            Some(done),
         )?;
         // the folder is a run folder for `flow/report`: prov.json beside the files of the steps
         std::fs::write(work.join("prov.json"), &prov).map_err(|e| crate::rpc::io_error(&e))?;

@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use mzlab_core::budget::sha256_hex;
@@ -15,7 +15,8 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_cache::Cache;
 use crate::flow_match::Named;
-pub use crate::flow_run::{fill_inputs, run_plan, run_plan_cached};
+pub use crate::flow_out::{run_plan_cached, run_plan_notify};
+pub use crate::flow_run::{fill_inputs, run_plan};
 
 pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)
@@ -97,6 +98,12 @@ impl FileRunner {
         }
     }
 
+    /// The runner that calls `done` after each job.
+    pub(crate) fn with_done(mut self, done: Option<DoneFn>) -> FileRunner {
+        self.done = done;
+        self
+    }
+
     /// Writes the index of the cache, when the runner keeps one.
     pub(crate) fn save_cache(&self) -> Result<()> {
         self.cache
@@ -112,6 +119,9 @@ pub struct Meter {
     pub peak: fn() -> u64,
 }
 
+/// Told after each job of a run: instance id, item of a per-file step, milliseconds, taken from the cache, and the error text when it failed.
+pub type DoneFn = Arc<dyn Fn(&str, Option<usize>, f64, bool, Option<String>) + Send + Sync>;
+
 /// Runs the steps of this crate on files: inputs are found by name in `inputs`, else in `dir`; what steps make is written to `work`.
 pub struct FileRunner {
     dir: PathBuf,
@@ -122,6 +132,8 @@ pub struct FileRunner {
     lineage: Mutex<HashMap<String, Lineage>>,
     /// Instance ids in the order of the run: one line per job on stderr when set.
     progress: Option<Vec<String>>,
+    /// Called after each job (the desktop app shows the steps as they finish).
+    done: Option<DoneFn>,
     /// The cache of `work` (`flow_cache.rs`); none: every job runs and nothing is kept.
     cache: Option<crate::flow_cache::Cache>,
     /// Working memory in MB of the alignment (`--budget-mb`; else the automatic one of this computer). The bytes written do not depend on it.
@@ -138,6 +150,7 @@ impl FileRunner {
             made: Mutex::new(HashMap::new()),
             lineage: Mutex::new(HashMap::new()),
             progress: None,
+            done: None,
             cache: None,
             budget_mb: mzlab_core::budget_auto::native_auto_mb(),
         }
@@ -261,7 +274,7 @@ fn load(path: PathBuf) -> Result<Loaded> {
     Ok((name, std::fs::read(&path).map_err(io)?))
 }
 
-fn read_one(r: &FileRunner, job: &Job, port: &str) -> Result<Loaded> {
+pub(crate) fn read_one(r: &FileRunner, job: &Job, port: &str) -> Result<Loaded> {
     load(one_input(r, job, port)?)
 }
 
@@ -383,26 +396,6 @@ fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     write_made(r, job, text, DataType::Annot)
 }
 
-fn inclusion_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let find = |name: &str| {
-        job.resolved
-            .params
-            .iter()
-            .find(|(k, _)| k == name)
-            .map(|(_, v)| v)
-    };
-    let adducts = find("adducts")
-        .and_then(|v| v.str())
-        .unwrap_or("[M+H]+")
-        .to_string();
-    let half = find("rt_window").and_then(|v| v.f64()).unwrap_or(0.5);
-    let products = read_one(r, job, "tp")?;
-    let text = crate::flow_inclusion::inclusion_text(&products.1, &adducts, half)?;
-    let out = r.work.join(format!("{}.csv", job.instance.id));
-    std::fs::write(&out, text).map_err(io)?;
-    r.keep(out, DataType::Report)
-}
-
 /// How a step runs natively: an executor that makes one file for `port`, or one that says itself what it made.
 enum Exec {
     File(&'static str, fn(&FileRunner, &Job) -> Result<Artifact>),
@@ -433,7 +426,10 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("table.filter", Exec::File("table", filter_job)),
     ("tp.generate", Exec::File("hypotheses", generate_job)),
     ("meta.compare", Exec::File("comparison", compare_job)),
-    ("export.inclusion", Exec::File("report", inclusion_job)),
+    (
+        "export.inclusion",
+        Exec::File("report", crate::flow_inclusion::inclusion_job),
+    ),
 ];
 
 /// Does the native runner execute the step `id`?
@@ -471,6 +467,15 @@ impl Runner for FileRunner {
         if let Some(order) = &self.progress {
             let line = crate::flow_run::progress_line(order, job, ms, cached, made.as_ref().err());
             eprintln!("{line}");
+        }
+        if let Some(done) = &self.done {
+            done(
+                &job.instance.id,
+                job.item,
+                ms,
+                cached,
+                made.as_ref().err().map(|e| e.to_string()),
+            );
         }
         let made = made?;
         let mem = crate::flow_base::align_mem(self, job);

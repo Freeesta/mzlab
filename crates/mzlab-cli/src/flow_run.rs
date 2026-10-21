@@ -474,24 +474,5 @@ pub fn run_plan(
     workers: usize,
     meter: Option<Meter>,
 ) -> mzlab_core::Result<(Run, String)> {
-    run_plan_cached(text, dir, work, workers, meter, None)
-}
-
-/// `run_plan` that keeps the cache of `work` (`Some(fresh)`; `fresh` recomputes every step): a step whose key is there is taken again (`cached`).
-pub fn run_plan_cached(
-    text: &[u8],
-    dir: &Path,
-    work: &Path,
-    workers: usize,
-    meter: Option<Meter>,
-    fresh: Option<bool>,
-) -> mzlab_core::Result<(Run, String)> {
-    let mut plan = parse(text)?;
-    fill_inputs(&mut plan, |n| dir.join(n))?;
-    let plan = prepare(plan, &steps())?.map_err(|problems| {
-        let list: Vec<String> = problems.iter().map(problem_text).collect();
-        mzlab_core::Error::new("err.flow.check").with("problems", list.join(" "))
-    })?;
-    let runner = FileRunner::cached(dir, work, meter, fresh);
-    run_checked(&plan, text, &runner, workers)
+    crate::flow_out::run_plan_cached(text, dir, work, workers, meter, None)
 }
