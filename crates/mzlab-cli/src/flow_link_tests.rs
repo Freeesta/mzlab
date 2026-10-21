@@ -19,7 +19,7 @@ use mzlab_feat_wasm::run::{self, RowSources};
 
 use crate::flow_base::Files;
 
-const FORMULA: &str = "C22H31N3O4S";
+pub(crate) const FORMULA: &str = "C22H31N3O4S";
 const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
 const NAMES: [&str; 6] = [
     "SIN_blank",
@@ -30,7 +30,7 @@ const NAMES: [&str; 6] = [
     "SIN_t20min",
 ];
 
-fn series(tag: &str) -> Option<PathBuf> {
+pub(crate) fn series(tag: &str) -> Option<PathBuf> {
     let out = std::env::temp_dir().join(format!("mzlab_cli_link_{tag}_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&out);
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
@@ -51,7 +51,7 @@ fn series(tag: &str) -> Option<PathBuf> {
     ok.then_some(out)
 }
 
-fn hypotheses() -> String {
+pub(crate) fn hypotheses() -> String {
     let inp = Inputs {
         parent: FORMULA,
         suspects: None,
@@ -67,7 +67,7 @@ fn hypotheses() -> String {
 }
 
 /// The folder of the run: the six mzML, the samples, the parent (with its time) and the hypotheses of `tp.generate`.
-fn fixture(out: &Path, parent: &str, hyp: &str) -> PathBuf {
+pub(crate) fn fixture(out: &Path, parent: &str, hyp: &str) -> PathBuf {
     let dir = out.join("run");
     std::fs::create_dir_all(dir.join("work")).unwrap();
     for n in NAMES {
@@ -87,7 +87,7 @@ fn fixture(out: &Path, parent: &str, hyp: &str) -> PathBuf {
     dir
 }
 
-fn plan(params: &str) -> String {
+pub(crate) fn plan(params: &str) -> String {
     let raw: Vec<String> = NAMES
         .iter()
         .map(|n| format!(r#"{{"name":"{n}.mzML","type":"raw"}}"#))
@@ -108,7 +108,7 @@ fn plan(params: &str) -> String {
     )
 }
 
-fn run(dir: &Path, params: &str) -> Result<Vec<u8>, String> {
+pub(crate) fn run(dir: &Path, params: &str) -> Result<Vec<u8>, String> {
     let (done, prov) =
         crate::flow::run_plan(plan(params).as_bytes(), dir, &dir.join("work"), 2, None)
             .map_err(|e| e.key.to_string())?;

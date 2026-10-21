@@ -32,6 +32,9 @@ mod flow_ms2;
 mod flow_msngraph;
 mod flow_network;
 mod flow_out;
+mod flow_refilter;
+#[cfg(test)]
+mod flow_refilter_tests;
 pub mod flow_report;
 mod flow_run;
 mod flow_table;

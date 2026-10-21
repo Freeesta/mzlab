@@ -290,7 +290,12 @@ fn blobs(v: &[Loaded]) -> Vec<&[u8]> {
     v.iter().map(|f| f.1.as_slice()).collect()
 }
 
-fn write_made(r: &FileRunner, job: &Job, text: String, ty: DataType) -> Result<Artifact> {
+pub(crate) fn write_made(
+    r: &FileRunner,
+    job: &Job,
+    text: String,
+    ty: DataType,
+) -> Result<Artifact> {
     let out = r.work.join(format!("{}.json", job.instance.id));
     std::fs::write(&out, text).map_err(io)?;
     r.keep(out, ty)
@@ -426,6 +431,10 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("tp.link", Exec::File("tp", crate::flow_link::link_job)),
     ("table.filter", Exec::File("table", filter_job)),
     ("tp.generate", Exec::File("hypotheses", generate_job)),
+    (
+        "tp.filter",
+        Exec::File("table", crate::flow_refilter::refilter_job),
+    ),
     ("meta.compare", Exec::File("comparison", compare_job)),
     (
         "export.inclusion",
