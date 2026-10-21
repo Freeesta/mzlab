@@ -36,11 +36,11 @@ mod flow_export;
 mod flow_export_tests;
 mod flow_formula;
 mod flow_generate;
+#[cfg(test)]
+mod flow_hr_tests;
 mod flow_import;
 #[cfg(test)]
 mod flow_import_tests;
-#[cfg(test)]
-mod flow_hr_tests;
 mod flow_inclusion;
 mod flow_json;
 mod flow_kmd;
