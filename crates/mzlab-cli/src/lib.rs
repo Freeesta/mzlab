@@ -39,6 +39,8 @@ mod flow_generate;
 mod flow_import;
 #[cfg(test)]
 mod flow_import_tests;
+#[cfg(test)]
+mod flow_hr_tests;
 mod flow_inclusion;
 mod flow_json;
 mod flow_kmd;
@@ -51,6 +53,8 @@ mod flow_lr_tests;
 mod flow_match;
 mod flow_ms2;
 mod flow_msngraph;
+#[cfg(test)]
+mod flow_msnraw_tests;
 mod flow_network;
 mod flow_out;
 mod flow_pca;
