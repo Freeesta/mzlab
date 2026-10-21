@@ -1,5 +1,6 @@
 """The msngrafo .wasm gives the same bytes as `mzlab-cli msn-graph` (the same core functions) on the public synthetic infusion, through Node.
 Skipped without cargo, wasm-bindgen or node."""
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -47,3 +48,33 @@ def test_wasm_and_cli_give_the_same_export(pkg, fmt, clean):
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q, "export").stdout
     want = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(MZML), "--export", fmt, *(["--pulito"] if clean else [])).stdout
     assert got == want and got.strip()
+
+
+def lib_call(pkg, query, lib):
+    node = ["node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), query, "lib", lib]
+    return json.loads(run(*node).stdout)
+
+
+def test_the_library_gets_an_entry_once(pkg, tmp_path):
+    import json as _j
+    q = "formula=C14H15N3O5%2B&ppm_formula=10"
+    a = lib_call(pkg, q, "-")
+    assert a["doppione"] is False and a["libreria"].startswith('{"formato":"msnlib/1"')
+    f = tmp_path / "msnlib.json"
+    f.write_text(a["libreria"], encoding="utf-8")
+    again = lib_call(pkg, q, str(f))
+    assert again["doppione"] is True and again["libreria"] == a["libreria"]
+    # the file is valid JSON and its entry holds the graph the route gives
+    doc = _j.loads(a["libreria"])
+    got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q).stdout
+    assert doc["voci"][0]["grafo"] == _j.loads(got) and doc["voci"][0]["id"] == "STD-0001"
+
+
+def test_a_graph_without_an_ion_or_a_foreign_file_is_a_keyed_error(pkg, tmp_path):
+    node = ["node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML)]
+    r = subprocess.run(node + ["", "lib", "-"], capture_output=True, encoding="utf-8")
+    assert r.returncode != 0 and "err.msnlib.noIon" in r.stderr
+    bad = tmp_path / "x.json"
+    bad.write_text("[1]", encoding="utf-8")
+    r = subprocess.run(node + ["formula=C14H15N3O5%2B", "lib", str(bad)], capture_output=True, encoding="utf-8")
+    assert r.returncode != 0 and "err.msnlib.bad" in r.stderr

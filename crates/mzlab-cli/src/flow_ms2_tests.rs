@@ -152,6 +152,7 @@ fn descriptor_export_is_up_to_date() {
     let text = mzlab_core::step::json::registry_json(&[
         crate::flow::table_step(),
         crate::flow_ms2::ms2_step(),
+        crate::flow_msngraph::msn_graph_step(),
         crate::flow_compare::compare_step(),
     ]);
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/schemi/steps-cli-1.json");
