@@ -189,3 +189,7 @@ fn entity(name: &str) -> Option<char> {
 pub(crate) fn squash(s: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
 }
+
+pub(crate) fn has_class(classes: &str, c: &str) -> bool {
+    classes.split_whitespace().any(|x| x == c)
+}
