@@ -15,7 +15,7 @@ Per ogni passo: (1) registra il descrittore nel registro del CLI (`flow::steps()
 6. **`features.ms2_link`** (NON FATTO per scelta: incluso in `features.detect`, non separabile senza cambiare i byte; resta in `BUCHI` con il motivo) (ingressi `index`, `peaks`; uscita `peaks`): `crates/mzlab-feat/src/ms2.rs` (`link`) e, per la bassa risoluzione, `crates/mzlab-finder-lr-wasm/src/ms2link.rs`; parità con `tests/lr_ms2link.rs`.
 
 ## Quando finisce il pacchetto
-- Stato: cinque passi su sei hanno l'esecutore nativo (`table.filter`, `tp.generate`, `tp.link@2`, `tp.filter@2`, `tp.position`); `features.ms2_link` resta senza esecutore proprio, con il motivo scritto in `BUCHI`. Il piano del modello «TP time series» (`tp.generate` → `tp.link` → `tp.filter` → `table.filter` → `tp.network`) gira con `flow run` (test di cache e di rigioco come in `flow_run_tests.rs`).
+- Stato: cinque passi su sei hanno l'esecutore nativo (`table.filter`, `tp.generate`, `tp.link@2`, `tp.filter@2`, `tp.position`); `features.ms2_link` resta senza esecutore proprio, con il motivo scritto in `BUCHI`. Il piano del modello «TP time series» (`tp.generate` → `tp.link` → `tp.filter` → `table.filter` → `tp.network`) gira con `flow run` (test di cache e di rigioco come in `flow_run_tests.rs`). La catena dai file alla rete è provata su una serie HR sintetica (`flow_hr_tests.rs`: `tp.network` legge il `.mzfeat` di `tp.link@2` sulla porta `table`); sulla serie sintetica la rete ha 0 archi.
 - `flow-copertura-tabui.md` e `cli.md` descrivono lo stato; l'elenco dei buchi qui sotto è quello che resta.
 
 ## Buchi per modulo (oggi)
