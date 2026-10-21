@@ -310,3 +310,5 @@
 {"ts_utc":"2026-10-21T22:22:32Z","tipo":"run","workflow":"rust","esito":"success","main":true,"durata_s":571,"attivo_s":1766,"coda_s":2,"jobs":{"changes":11,"deny":56,"rust-core":431,"rust-misc":471,"rust":165,"rust-lint":81,"rust-wasm":547,"rust-ok":4},"pr":null,"sha":"9ffdaaa81dce390bbeecbf23c4c5f64b8b4ed2c4","run_id":39684854855,"run_attempt":1}
 {"ts_utc":"2026-10-21T22:22:34Z","tipo":"conflitto_risolto","pr":1379,"sha":"240317d1a1b1ebbf14d0371451b2598c3da7d9c4"}
 {"ts_utc":"2026-10-21T22:22:44Z","tipo":"conflitto_risolto","pr":1377,"sha":"240317d1a1b1ebbf14d0371451b2598c3da7d9c4"}
+{"ts_utc":"2026-10-21T22:22:34Z","tipo":"conflitto_risolto","pr":1379,"sha":"bce3d564d6aafebed455d8c805dde8cffcc5cd67"}
+{"ts_utc":"2026-10-21T22:22:44Z","tipo":"conflitto_risolto","pr":1377,"sha":"bce3d564d6aafebed455d8c805dde8cffcc5cd67"}
