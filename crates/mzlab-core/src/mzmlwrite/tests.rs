@@ -1,5 +1,6 @@
 use super::*;
 use crate::mzml;
+use crate::numpress;
 
 #[test]
 fn what_is_written_is_read_back() {

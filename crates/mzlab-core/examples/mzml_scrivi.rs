@@ -47,6 +47,7 @@ fn main() {
             Opzioni {
                 livello: 1,
                 numpress: false,
+                ..Opzioni::default()
             },
         ),
         (
@@ -54,6 +55,7 @@ fn main() {
             Opzioni {
                 livello: 3,
                 numpress: false,
+                ..Opzioni::default()
             },
         ),
         (
@@ -61,6 +63,7 @@ fn main() {
             Opzioni {
                 livello: 6,
                 numpress: false,
+                ..Opzioni::default()
             },
         ),
         (
@@ -68,6 +71,7 @@ fn main() {
             Opzioni {
                 livello: 1,
                 numpress: true,
+                ..Opzioni::default()
             },
         ),
     ] {
