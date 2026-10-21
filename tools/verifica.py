@@ -104,7 +104,7 @@ def setup() -> None:
 def browser_ok() -> bool:
     if not has("playwright"):
         return False
-    code = "from playwright.sync_api import sync_playwright\nwith sync_playwright() as p: p.%s.launch().close()" % browser_name()
+    code = "import sys; sys.path.insert(0, %r)\nimport chromium_cloud; chromium_cloud.abilita()\nfrom playwright.sync_api import sync_playwright\nwith sync_playwright() as p: p.%s.launch().close()" % (str(ROOT / "tools"), browser_name())
     return subprocess.run([sys.executable, "-c", code], capture_output=True, timeout=120).returncode == 0
 
 

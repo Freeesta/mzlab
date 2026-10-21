@@ -184,6 +184,8 @@ FILES = ["B_FullMass-t0", "B_FullMass-t15", "B_FullMass-t60", "B_MS2-t15", "B_MR
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools"))
+import chromium_cloud  # noqa: E402
+chromium_cloud.abilita()
 from dati_percorsi import percorso  # noqa: E402
 
 def _find_mz():
