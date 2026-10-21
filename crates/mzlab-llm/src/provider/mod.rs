@@ -79,6 +79,24 @@ fn bad(field: &str) -> Error {
     Error::new("err.llm.provider").with("field", field)
 }
 
+impl Request {
+    /// `{url, headers: [[name, value]], body, auth: {header, prefix}}`: what the transport sends; the key is added by the transport at `auth`.
+    pub fn to_json(&self) -> String {
+        let mut o = Out::default();
+        o.raw("{\"url\":").str(&self.url).raw(",\"headers\":[");
+        for (i, (k, v)) in self.headers.iter().enumerate() {
+            if i > 0 {
+                o.raw(",");
+            }
+            o.raw("[").str(k).raw(",").str(v).raw("]");
+        }
+        o.raw("],\"body\":").str(&self.body);
+        o.raw(",\"auth\":{\"header\":").str(&self.auth.header);
+        o.raw(",\"prefix\":").str(&self.auth.prefix).raw("}}");
+        o.0
+    }
+}
+
 impl Provider {
     pub fn from_value(v: &Value) -> Result<Provider> {
         let s = |v: &Value, k: &str| {
@@ -170,10 +188,12 @@ fn model(v: &Value) -> Result<Model> {
     })
 }
 
+/// The text of `data/fornitori-1.json`, for a page that lists the providers and models without parsing them again.
+pub const BUILTIN_JSON: &str = include_str!("../../data/fornitori-1.json");
+
 /// The providers shipped with the program (`data/fornitori-1.json`).
 pub fn builtin() -> Vec<Provider> {
-    let v = parse(include_str!("../../data/fornitori-1.json").as_bytes())
-        .expect("fornitori-1.json is JSON");
+    let v = parse(BUILTIN_JSON.as_bytes()).expect("fornitori-1.json is JSON");
     v.get("providers")
         .map_or(&[][..], Value::arr)
         .iter()
