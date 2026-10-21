@@ -370,15 +370,6 @@ fn network_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     write_made(r, job, text, DataType::Transform)
 }
 
-fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let (hits, formulas) = (
-        read_all(r, job, "candidates")?,
-        read_all(r, job, "formulas")?,
-    );
-    let text = crate::flow_level::level_text(&blobs(&hits), &blobs(&formulas))?;
-    write_made(r, job, text, DataType::Annot)
-}
-
 /// How a step runs natively: an executor that makes one file for `port`, or one that says itself what it made.
 enum Exec {
     File(&'static str, fn(&FileRunner, &Job) -> Result<Artifact>),
@@ -396,12 +387,19 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "features.table",
         Exec::File("report", crate::flow_base::table_job),
     ),
+    (
+        "features.estimate",
+        Exec::File("estimates", crate::flow_estimate::estimate_job),
+    ),
     ("spectra.match", Exec::File("hits", match_job)),
     ("formula.ms1", Exec::File("formulas", formula_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
     ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),
-    ("annot.level", Exec::File("annot", level_job)),
+    (
+        "annot.level",
+        Exec::File("annot", crate::flow_level::level_job),
+    ),
     ("tp.network", Exec::File("network", network_job)),
     ("tp.link", Exec::File("tp", crate::flow_link::link_job)),
     (

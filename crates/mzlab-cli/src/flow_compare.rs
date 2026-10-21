@@ -4,9 +4,8 @@
 
 use crate::flow::{blobs, read_all, write_made, FileRunner};
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::{
-    check as check_core, Artifact, Instance, Job, Plan, Platform, Problem, Ref,
-};
+use mzlab_core::flow::{check as check_core, Instance, Plan, Platform, Problem, Ref};
+use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::json::{parse, round, Out, Value};
 use mzlab_core::step::{find as find_step, DataType, Param, Port, RunsIn, Status, Step};
 
@@ -434,7 +433,6 @@ pub fn compare_text(wrapped: &str, labels: &[&str], files: &[&[u8]]) -> Result<S
     Ok(o.0)
 }
 
-/// The executor: the wrapped step and the labels come from the parameters, the outputs of the variants from the port `variants`.
 pub(crate) fn compare_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let text_of = |name: &str| {
         let found = job.resolved.params.iter().find(|(k, _)| k == name);

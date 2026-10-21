@@ -12,7 +12,6 @@ use crate::flow_run::apply_set;
 /// Steps that say `native: true` and have no executor yet. A step leaves this list when its executor lands; nothing is added.
 const BUCHI: &[&str] = &[
     "import.raw",
-    "features.estimate",
     "table.drift",
     // included in features.detect (pipeline::analyse links the MS2 in the same pass), not separable without changing the bytes
     "features.ms2_link",
