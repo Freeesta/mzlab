@@ -64,6 +64,7 @@ pub fn steps() -> Vec<Step> {
     all.extend(mzlab_chem::step::tabui());
     all.push(crate::flow_centroid::centroid_step());
     all.extend(crate::flow_digl::cli_steps());
+    all.push(crate::flow_quant::quant_step());
     all
 }
 
@@ -401,6 +402,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "meta.compare",
         Exec::File("comparison", crate::flow_compare::compare_job),
     ),
+    ("quant.calibrate", Exec::Made(crate::flow_quant::quant_job)),
     (
         "export.inclusion",
         Exec::File("report", crate::flow_inclusion::inclusion_job),
