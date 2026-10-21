@@ -38,9 +38,15 @@ def git(root: Path, *args: str, check: bool = True) -> subprocess.CompletedProce
 def fondi(root: Path = ROOT, generati: dict[str, list[str]] = GENERATI, out=print) -> int:
     """0 merged (conflicts in generated files resolved), 1 conflicts left in human files."""
     git(root, "fetch", "-q", "origin", "main")
-    if git(root, "merge", "--no-edit", "origin/main", check=False).returncode == 0:
+    # a runner has no git identity: use a placeholder one only when none is configured
+    ident = [] if git(root, "config", "user.email", check=False).stdout.strip() else ["-c", "user.name=fondi_main", "-c", "user.email=fondi_main@invalid"]
+    m = git(root, *ident, "merge", "--no-edit", "origin/main", check=False)
+    if m.returncode == 0:
         return 0
     conflitti = git(root, "diff", "--name-only", "--diff-filter=U").stdout.split()
+    if not conflitti:
+        out("merge failed without conflicts: " + (m.stderr or m.stdout).strip()[:300])
+        return 1
     umani = [f for f in conflitti if f not in generati]
     if umani:
         out("conflicts in files to resolve by hand (merge left open):")
@@ -53,7 +59,7 @@ def fondi(root: Path = ROOT, generati: dict[str, list[str]] = GENERATI, out=prin
         out("regenerating: " + " ".join(cmd))
         subprocess.run(cmd, cwd=root, check=True)
     git(root, "add", "--", *conflitti)
-    git(root, "-c", "core.editor=true", "commit", "--no-edit")
+    git(root, *ident, "-c", "core.editor=true", "commit", "--no-edit")
     out("generated files taken from main and regenerated: " + ", ".join(conflitti))
     return 0
 
