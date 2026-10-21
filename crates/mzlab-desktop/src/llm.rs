@@ -20,6 +20,83 @@ use crate::rpc::{text, Answer};
 
 const KEYS_FILE: &str = "llm-chiavi.json";
 
+impl State {
+    fn keys_path(&self) -> Result<PathBuf> {
+        Ok(self
+            .store
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .data_dir()?
+            .join(KEYS_FILE))
+    }
+
+    /// `llm/providers`, `llm/request`, `llm/send`, `llm/poll`, `llm/abort`, `llm/key/set`, `llm/key/forget`: see `docs/agenti/llm.md`.
+    pub(crate) fn op_llm(&self, op: &str, p: &Value) -> Result<Answer> {
+        let s = |k: &str| p[k].as_str().unwrap_or("");
+        match op {
+            "llm/providers" => {
+                let keys = read_keys(&self.keys_path()?);
+                let has: HashMap<String, bool> = provider::builtin()
+                    .iter()
+                    .map(|x| (x.id.clone(), keys.contains_key(&x.id)))
+                    .collect();
+                text(json!({ "providers": provider::BUILTIN_JSON, "has_key": has }).to_string())
+            }
+            "llm/request" => text(build(s("conv"))?.2.to_json()),
+            "llm/send" => {
+                let (prov, conv, req) = build(s("conv"))?;
+                let key = read_keys(&self.keys_path()?).remove(&prov.id);
+                let prompted = prov
+                    .model(&conv.model)
+                    .is_some_and(|m| m.tools == ToolMode::Prompted);
+                let abort = Arc::new(AtomicBool::new(false));
+                let id = with_jobs(|n, m| {
+                    *n += 1;
+                    m.insert(
+                        *n,
+                        Job {
+                            abort: abort.clone(),
+                            ..Job::default()
+                        },
+                    );
+                    *n
+                });
+                std::thread::spawn(move || run(id, prov, prompted, req, key, abort));
+                text(json!({ "id": id.to_string() }).to_string())
+            }
+            "llm/poll" => {
+                let id: u64 = s("id")
+                    .parse()
+                    .map_err(|_| err("err.llm.conversation", "field", "id"))?;
+                let (events, done) = with_jobs(|_, m| match m.get_mut(&id) {
+                    Some(j) => {
+                        let ev = std::mem::take(&mut j.events);
+                        let done = j.done;
+                        if done {
+                            m.remove(&id);
+                        }
+                        (ev, done)
+                    }
+                    None => (Vec::new(), true),
+                });
+                text(json!({ "events": events, "done": done }).to_string())
+            }
+            "llm/abort" => {
+                if let Ok(id) = s("id").parse::<u64>() {
+                    with_jobs(|_, m| {
+                        if let Some(j) = m.get(&id) {
+                            j.abort.store(true, Ordering::Relaxed);
+                        }
+                    });
+                }
+                text("{}")
+            }
+            "llm/key/set" | "llm/key/forget" => key_route(&self.keys_path()?, op, p),
+            _ => Err(Error::new("rpc.unknown")),
+        }
+    }
+}
+
 #[derive(Default)]
 struct Job {
     events: Vec<String>,
@@ -116,6 +193,24 @@ fn finish_job(id: u64) {
     });
 }
 
+/// `llm/key/set` stores the key of a provider, `llm/key/forget` drops it; the file is the only place a key lives.
+fn key_route(path: &PathBuf, op: &str, p: &Value) -> Result<Answer> {
+    let s = |k: &str| p[k].as_str().unwrap_or("");
+    let mut keys = read_keys(path);
+    if op == "llm/key/set" {
+        let prov = find(s("provider"))?;
+        let key = s("key").trim();
+        if key.is_empty() {
+            return Err(err("err.llm.auth", "reason", "nokey"));
+        }
+        keys.insert(prov.id, key.to_string());
+    } else {
+        keys.remove(s("provider"));
+    }
+    write_keys(path, &keys)?;
+    text("{}")
+}
+
 /// Runs one request to its end: the bytes of the answer go through the decoder of the provider, whatever the split.
 fn run(
     id: u64,
@@ -192,153 +287,6 @@ fn run(
     finish_job(id);
 }
 
-impl State {
-    fn keys_path(&self) -> Result<PathBuf> {
-        Ok(self
-            .store
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .data_dir()?
-            .join(KEYS_FILE))
-    }
-
-    /// `llm/providers`, `llm/request`, `llm/send`, `llm/poll`, `llm/abort`, `llm/key/set`, `llm/key/forget`: see `docs/agenti/llm.md`.
-    pub(crate) fn op_llm(&self, op: &str, p: &Value) -> Result<Answer> {
-        let s = |k: &str| p[k].as_str().unwrap_or("");
-        match op {
-            "llm/providers" => {
-                let keys = read_keys(&self.keys_path()?);
-                let has: HashMap<String, bool> = provider::builtin()
-                    .iter()
-                    .map(|x| (x.id.clone(), keys.contains_key(&x.id)))
-                    .collect();
-                text(json!({ "providers": provider::BUILTIN_JSON, "has_key": has }).to_string())
-            }
-            "llm/request" => text(build(s("conv"))?.2.to_json()),
-            "llm/send" => {
-                let (prov, conv, req) = build(s("conv"))?;
-                let key = read_keys(&self.keys_path()?).remove(&prov.id);
-                let prompted = prov
-                    .model(&conv.model)
-                    .is_some_and(|m| m.tools == ToolMode::Prompted);
-                let abort = Arc::new(AtomicBool::new(false));
-                let id = with_jobs(|n, m| {
-                    *n += 1;
-                    m.insert(
-                        *n,
-                        Job {
-                            abort: abort.clone(),
-                            ..Job::default()
-                        },
-                    );
-                    *n
-                });
-                std::thread::spawn(move || run(id, prov, prompted, req, key, abort));
-                text(json!({ "id": id.to_string() }).to_string())
-            }
-            "llm/poll" => {
-                let id: u64 = s("id")
-                    .parse()
-                    .map_err(|_| err("err.llm.conversation", "field", "id"))?;
-                let (events, done) = with_jobs(|_, m| match m.get_mut(&id) {
-                    Some(j) => {
-                        let ev = std::mem::take(&mut j.events);
-                        let done = j.done;
-                        if done {
-                            m.remove(&id);
-                        }
-                        (ev, done)
-                    }
-                    None => (Vec::new(), true),
-                });
-                text(json!({ "events": events, "done": done }).to_string())
-            }
-            "llm/abort" => {
-                if let Ok(id) = s("id").parse::<u64>() {
-                    with_jobs(|_, m| {
-                        if let Some(j) = m.get(&id) {
-                            j.abort.store(true, Ordering::Relaxed);
-                        }
-                    });
-                }
-                text("{}")
-            }
-            "llm/key/set" => {
-                let prov = find(s("provider"))?;
-                let key = s("key").trim();
-                if key.is_empty() {
-                    return Err(err("err.llm.auth", "reason", "nokey"));
-                }
-                let path = self.keys_path()?;
-                let mut keys = read_keys(&path);
-                keys.insert(prov.id, key.to_string());
-                write_keys(&path, &keys)?;
-                text("{}")
-            }
-            "llm/key/forget" => {
-                let path = self.keys_path()?;
-                let mut keys = read_keys(&path);
-                keys.remove(s("provider"));
-                write_keys(&path, &keys)?;
-                text("{}")
-            }
-            _ => Err(Error::new("rpc.unknown")),
-        }
-    }
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn key_file_is_private_and_roundtrips() {
-        let d = tempfile::tempdir().unwrap();
-        let path = d.path().join(KEYS_FILE);
-        let mut k = HashMap::new();
-        k.insert("anthropic".to_string(), "secret-test-value".to_string());
-        write_keys(&path, &k).unwrap();
-        assert_eq!(read_keys(&path), k);
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            assert_eq!(
-                std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
-                0o600
-            );
-        }
-    }
-
-    #[test]
-    fn providers_route_never_returns_a_key() {
-        let st = State::default();
-        let d = tempfile::tempdir().unwrap();
-        st.store.lock().unwrap().set_dir(d.path().to_path_buf());
-        st.op_llm(
-            "llm/key/set",
-            &json!({"provider": "anthropic", "key": "secret-test-value"}),
-        )
-        .unwrap();
-        let Answer::Text(t) = st.op_llm("llm/providers", &json!({})).unwrap() else {
-            panic!()
-        };
-        assert!(!t.contains("secret-test-value"));
-        assert!(t.contains("\"anthropic\":true"), "{t}");
-        st.op_llm("llm/key/forget", &json!({"provider": "anthropic"}))
-            .unwrap();
-        let Answer::Text(t) = st.op_llm("llm/providers", &json!({})).unwrap() else {
-            panic!()
-        };
-        assert!(t.contains("\"anthropic\":false"), "{t}");
-    }
-
-    #[test]
-    fn unknown_provider_is_a_conversation_error() {
-        let st = State::default();
-        let e = st
-            .op_llm("llm/key/set", &json!({"provider": "nobody", "key": "x"}))
-            .err()
-            .unwrap();
-        assert_eq!(e.key, "err.llm.conversation");
-    }
-}
+#[path = "llm_tests.rs"]
+mod tests;

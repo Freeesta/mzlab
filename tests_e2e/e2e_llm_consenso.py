@@ -25,7 +25,7 @@ try:
             assert not llm_urls(), llm_urls()
         step("corso: no LLM element and no llm/ file", corso)
         def ricerca_spento():
-            pg.evaluate("localStorage.setItem('mzlab.profilo','ricerca'); localStorage.setItem('mzlab.lang','en')"); pg.reload(); pg.wait_for_timeout(1200)
+            pg.evaluate("localStorage.setItem('mzlab.profilo','ricerca'); localStorage.setItem('mzlab.lang','en')"); pg.reload(); ready(pg)
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             pg.evaluate("document.getElementById('uip-g-llm').open = true")
             pg.wait_for_selector("#uip-llm #llm-on")
@@ -38,7 +38,7 @@ try:
             assert pg.evaluate("document.querySelector('dialog[open]').contains(document.activeElement)"), "focus inside the dialog"
             t = pg.inner_text("dialog[open]")
             assert "raw files never leave this computer" in t.lower() or "never leave" in t.lower(), t
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+            pg.keyboard.press("Escape"); attendi(pg, "document.querySelectorAll('dialog[open]').length === 0")
             assert pg.locator("dialog[open]").count() == 0 and not pg.is_checked("#llm-on")
             pg.click("#uip-llm label:has(#llm-on)"); pg.wait_for_selector("dialog[open]"); pg.click("#llm-c-ok")
             pg.wait_for_selector("#llm-prev", timeout=10000)
