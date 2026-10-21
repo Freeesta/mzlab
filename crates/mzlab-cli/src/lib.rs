@@ -23,6 +23,8 @@ mod flow_apply;
 mod flow_base;
 mod flow_cache;
 mod flow_centroid;
+#[cfg(test)]
+mod flow_centroid_tests;
 mod flow_compare;
 mod flow_drift;
 #[cfg(test)]
@@ -393,8 +395,6 @@ mod convert_tests;
 mod flow_budget_tests;
 #[cfg(test)]
 mod flow_cache_tests;
-#[cfg(test)]
-mod flow_centroid_tests;
 #[cfg(test)]
 mod flow_command_tests;
 #[cfg(test)]
