@@ -3643,7 +3643,7 @@ I18N.add("en", {
   "error.featWorker": "A worker of the pipeline stopped working. Try again; if it happens again, close other tabs to free memory.",
   "error.featWasmHash": "The pipeline engine did not download correctly (its checksum is wrong). Reload the page.",
   "error.featNoHypotheses": "The hypotheses of the parent must be searched before the proofs are built.",
-  "error.featMemory": "Not enough memory for the «{fase}» phase on {files} files (about {stima_mb} MB needed of {budget_mb} MB). The phases already finished are saved; split the series into smaller groups.",
+  "error.featMemory": "Not enough memory for the «{fase}» phase on {files} files (about {stima_mb} MB needed, {libero_mb} MB free of {budget_mb} MB). The phases already finished are saved; split the series into smaller groups.",
   "error.featState": "The state of the hypotheses is not valid: search the hypotheses again.",
   "error.featFailed": "The pipeline failed.",
   "error.badRecipe": "The parameters of the pipeline are not valid.",
