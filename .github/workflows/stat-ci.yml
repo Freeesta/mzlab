@@ -3,15 +3,21 @@
 # pull_request_target and workflow_run run the file from main and check out main only: code of a pull request is never run with the write token.
 name: stat-ci
 
+# The runs of test/rust/pages are read by a poll every 10 minutes (cursor in cursore.json on stat-ci), not one job per completed run.
 on:
-  workflow_run:
-    workflows: [test, rust, pages]
-    types: [completed]
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request_target:
     types: [opened, reopened, synchronize, closed]
     branches: [main]
+
+# One poll at a time; the events of pull requests and pushes have a group each, so none is dropped.
+concurrency:
+  group: stat-ci-${{ github.event_name == 'schedule' && 'poll' || github.run_id }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -22,7 +28,7 @@ permissions:
 jobs:
   registra:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     env:
       GITHUB_TOKEN: ${{ github.token }}
     steps:
@@ -39,18 +45,21 @@ jobs:
       - name: Record the event
         run: |
           case "$GITHUB_EVENT_NAME" in
-            workflow_run) cmd=registra-run ;;
+            schedule|workflow_dispatch) cmd=registra-recenti ;;
             pull_request_target) cmd=registra-pr ;;
-            push) cmd=registra-conflitti ;;
+            push) cmd=registra-conflitti
+              # history without file contents: enough for the read-only trial merge (git merge-tree) of the conflicting pull requests
+              git fetch -q --filter=blob:none --unshallow origin main || true ;;
             *) exit 0 ;;
           esac
-          python3 tools/stat_ci.py "$cmd" --dati dati/eventi.jsonl --nuovi nuovi.jsonl
+          python3 tools/stat_ci.py "$cmd" --dati dati/eventi.jsonl --nuovi nuovi.jsonl --cursore cursore-nuovo.json
       - name: Publish on stat-ci
         working-directory: dati
         run: |
           for i in 1 2 3 4 5; do
-            python3 ../tools/stat_ci.py accoda ../nuovi.jsonl --dati eventi.jsonl
-            git add eventi.jsonl
+            python3 ../tools/stat_ci.py accoda ../nuovi.jsonl --dati eventi.jsonl --cursore ../cursore-nuovo.json
+            [ "$(stat -c%s eventi.jsonl)" -gt 4000000 ] && python3 ../tools/stat_ci.py compatta --dati eventi.jsonl
+            git add -A
             git diff --cached --quiet && exit 0
             git commit -qm "stat-ci: events"
             git push origin HEAD:stat-ci && exit 0
