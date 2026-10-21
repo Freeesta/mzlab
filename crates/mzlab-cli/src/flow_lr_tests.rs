@@ -1,5 +1,5 @@
 //! mzFlow against the Dig of mzFinder on the five demo full-scan files of the site (`mzlab/web/esempi/FullScan_t*.mzML`, unit resolution): the base
-//! chain gives the table of the page byte for byte and `tp.dig_lr` the JSON of `lr::dig` over it. `tp.link@2` has no unit-axis mode yet: its error is pinned.
+//! chain gives the table of the page byte for byte and `tp.dig_lr` the JSON of `lr::dig` over it. `tp.link@2` reads the same table through the gates of `tp/1` in Da.
 
 use std::path::{Path, PathBuf};
 
@@ -140,14 +140,31 @@ fn the_base_chain_and_the_lr_dig_give_what_the_page_gives_on_the_demo_files() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
+/// `tp.link@2` reads the unit-resolution table: the gates look for the parent within the Dig's offset and compare fragments in Da, so the view of the
+/// products has the parent and accepted products, among them the m/z the Dig proposes.
 #[test]
-fn tp_link_does_not_read_a_unit_resolution_table_yet() {
+fn tp_link_reads_a_unit_resolution_table() {
     let d = fixture("link");
     let tail = r#",{"id":"gen","step":"tp.generate@1","in":{"parent":"file:parent.json"}},
         {"id":"lnk","step":"tp.link@2","in":{"table":"gap.table","samples":"file:samples.json","parent":"file:parent.json","index":["idx.index"],"hypotheses":"gen.hypotheses"}}"#;
     let (_, prov) =
         crate::flow::run_plan(plan(tail).as_bytes(), &d, &d.join("work"), 2, None).unwrap();
-    // the gates of `tp/1` look for the parent within 5 ppm: no row at unit resolution, hence no products
-    assert!(prov.contains("error.interp.noTp"), "{prov}");
+    assert!(!prov.contains("\"error\""), "{prov}");
+    let bytes = std::fs::read(d.join("work/lnk.mzfeat")).unwrap();
+    let (t, _) = mzlab_feat::store::read_table_from(
+        &mut mzlab_feat::store::Slice(&bytes),
+        bytes.len() as u64,
+    )
+    .unwrap();
+    assert_eq!(
+        t.tp.status
+            .iter()
+            .filter(|&&s| s == mzlab_feat::tp::ST_PARENT)
+            .count(),
+        1
+    );
+    assert!(t.tp.status.contains(&mzlab_feat::tp::ST_TP));
+    let parent = t.tp.parent_row as usize;
+    assert!((t.mz[parent] - 364.074).abs() < 0.6, "{}", t.mz[parent]);
     let _ = std::fs::remove_dir_all(&d);
 }

@@ -182,7 +182,6 @@ pub fn evidence_sources_to<R: ReadAt, W: WriteAt, O: ReadAt>(
         }),
         parent,
     };
-    let rules = hypo.rules()?;
     let tp = tp_block(
         &inp,
         minutes,
@@ -190,21 +189,22 @@ pub fn evidence_sources_to<R: ReadAt, W: WriteAt, O: ReadAt>(
         &hypo.registry.hyps,
         parent,
         fragments.as_deref(),
-        rules.as_ref(),
+        hypo.rules()?.as_ref(),
+        is_unit(&meta),
     );
-    let rows = aligned.len();
     let held = aligned.heap_bytes() + tp.heap_bytes();
-    if budget.in_memory(held + rows * IDENTITY_BYTES) {
+    if budget.in_memory(held + aligned.len() * IDENTITY_BYTES) {
         let json = graph_json(&build_graph(&inp), &points);
         return write_table_tp(sink, &aligned, &tp, r, &origin, &mut json.as_bytes());
     }
-    let need = held + rows * GraphStream::bytes_per_row();
+    let need = held + aligned.len() * GraphStream::bytes_per_row();
     let _g = budget.reserve("proofs", need)?;
     let mut graph = GraphStream::new(&inp);
     write_table_tp(sink, &aligned, &tp, r, &origin, &mut graph)
 }
 
 /// The view of the products of the table (`tp/1`): empty without a parent in the table or without controls to read the gates against.
+#[allow(clippy::too_many_arguments)]
 fn tp_block(
     inp: &Inputs,
     minutes: &[f64],
@@ -213,11 +213,20 @@ fn tp_block(
     parent: Option<(f64, f64)>,
     fragments: Option<&[f64]>,
     rules: Option<&Rules>,
+    unit: bool,
 ) -> TpBlock {
     let Some(parent) = parent else {
         return TpBlock::default();
     };
     let signs = row_signs(inp);
+    let params = TpParams {
+        ppm: if unit {
+            -mzlab_feat::axis::LR_TOL
+        } else {
+            TpParams::default().ppm
+        },
+        ..TpParams::default()
+    };
     let tp = TpInputs {
         aligned: inp.aligned,
         minutes,
@@ -225,7 +234,7 @@ fn tp_block(
         signs: &signs,
         parent,
         fragments,
-        params: &TpParams::default(),
+        params: &params,
         rules,
     };
     match roles {
