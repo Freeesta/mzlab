@@ -319,3 +319,4 @@
 {"ts_utc":"2026-10-21T22:25:44Z","azione":"aperta","tipo":"pr","pr":1391,"sha":"a14dd7c3a70e7c86fd2a1bce1d83c8b2b6706c75"}
 {"ts_utc":"2026-10-21T22:26:06Z","tipo":"run","workflow":"rust","esito":"success","main":false,"durata_s":18,"attivo_s":14,"coda_s":2,"jobs":{"changes":11,"rust-ok":3,"rust-misc":0,"rust-wasm":0,"rust-core":0,"deny":0,"rust":0,"rust-lint":0},"pr":1391,"sha":"a14dd7c3a70e7c86fd2a1bce1d83c8b2b6706c75","run_id":39686420126,"run_attempt":1}
 {"ts_utc":"2026-10-21T22:26:25Z","azione":"push","tipo":"pr","pr":1377,"sha":"5b8765940dc4a1e7574e35ce1a15ff140b25c972"}
+{"ts_utc":"2026-10-21T22:26:34Z","azione":"push","tipo":"pr","pr":1389,"sha":"7d2c261c4a57c0b0af73bfe426e0852c4b0b770b"}
