@@ -4,6 +4,8 @@ Il crate interno taglia le pagine della Teoria in blocchi citabili (`teoria-bloc
 
 ## Funzioni
 
+Moduli: `blocchi.rs` (blocchi, JSON), `pagina.rs` (lettore di una pagina), `html.rs` (token e entità), `cerca.rs` (BM25).
+
 - `blocchi::build(&[(nome, html)]) -> Result<Value>`: legge `<main>` di ogni pagina in ordine di nome; salta i rimandi (`http-equiv="refresh"`), `index.html` e le pagine `pratica*`; ignora script, stili, `nav`, `svg`, `.sim`, `.eispec`; chiavi ordinate, stessi byte a ogni corsa.
 - Blocco: paragrafi consecutivi sotto lo stesso h2/h3 fino a ~800 caratteri (un paragrafo più lungo si taglia a fine frase, mai oltre 1 100 + parola); tabelle come righe `a | b`; `<sup>` dopo una cifra diventa `^`; l'etichetta in grassetto di un riquadro (`div.box`) apre il suo paragrafo.
 - `id = file#ancora.k` (k = ordine sotto l'ancora), `anchor` = id scritto nel titolo o `slug` del testo (lo stesso che dà `teoria.js` a run time), vuoto prima del primo h2; `chapter` = kicker («Capitolo 12»); `sha` = primi 12 esadecimali di SHA-256 del testo normalizzato.

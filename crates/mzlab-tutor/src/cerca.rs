@@ -49,6 +49,46 @@ struct Doc {
     len: f64,
 }
 
+/// The query as weighted stems: its own words at weight 1, the synonyms of the matching keys at half.
+fn query_terms(query: &str) -> BTreeMap<String, f64> {
+    let mut q: BTreeMap<String, f64> = BTreeMap::new();
+    for t in terms(query) {
+        q.insert(t, 1.0);
+    }
+    let key = mzlab_libro::norm(query);
+    for (k, syn) in mzlab_libro::sinonimi() {
+        if key.starts_with(k) || key.contains(&format!(" {k}")) {
+            for t in syn.iter().flat_map(|w| terms(w)) {
+                q.entry(t).or_insert(SYNONYM_WEIGHT);
+            }
+        }
+    }
+    q
+}
+
+/// The weighted words of one block.
+fn doc_of(b: &Value) -> Doc {
+    let s = |k: &str| b[k].as_str().unwrap_or("").to_string();
+    let mut tf: HashMap<String, f64> = HashMap::new();
+    let mut len = 0.0;
+    // the title counts twice: a section named like the question is the best place to look
+    for t in terms(&s("text"))
+        .into_iter()
+        .chain(terms(&s("title")))
+        .chain(terms(&s("title")))
+    {
+        *tf.entry(t).or_insert(0.0) += 1.0;
+        len += 1.0;
+    }
+    Doc {
+        id: s("id"),
+        section: format!("{}#{}", s("file"), s("anchor")),
+        file: s("file"),
+        tf,
+        len,
+    }
+}
+
 /// The search index: built once from the blocks value, then queried.
 pub struct Index {
     docs: Vec<Doc>,
@@ -61,53 +101,19 @@ impl Index {
         let mut docs = Vec::new();
         let mut df: HashMap<String, usize> = HashMap::new();
         for b in blocks["blocks"].as_array().into_iter().flatten() {
-            let s = |k: &str| b[k].as_str().unwrap_or("").to_string();
-            let mut tf: HashMap<String, f64> = HashMap::new();
-            let mut len = 0.0;
-            // the title counts twice: a section named like the question is the best place to look
-            for t in terms(&s("text"))
-                .into_iter()
-                .chain(terms(&s("title")))
-                .chain(terms(&s("title")))
-            {
-                *tf.entry(t).or_insert(0.0) += 1.0;
-                len += 1.0;
-            }
-            for t in tf.keys() {
+            let d = doc_of(b);
+            for t in d.tf.keys() {
                 *df.entry(t.clone()).or_insert(0) += 1;
             }
-            docs.push(Doc {
-                id: s("id"),
-                section: format!("{}#{}", s("file"), s("anchor")),
-                file: s("file"),
-                tf,
-                len,
-            });
+            docs.push(d);
         }
         let avg = docs.iter().map(|d| d.len).sum::<f64>() / docs.len().max(1) as f64;
         Index { docs, df, avg }
     }
 
-    /// The query as weighted stems: its own words at weight 1, the synonyms of the matching keys at half.
-    fn query_terms(query: &str) -> BTreeMap<String, f64> {
-        let mut q: BTreeMap<String, f64> = BTreeMap::new();
-        for t in terms(query) {
-            q.insert(t, 1.0);
-        }
-        let key = mzlab_libro::norm(query);
-        for (k, syn) in mzlab_libro::sinonimi() {
-            if key.starts_with(k) || key.contains(&format!(" {k}")) {
-                for t in syn.iter().flat_map(|w| terms(w)) {
-                    q.entry(t).or_insert(SYNONYM_WEIGHT);
-                }
-            }
-        }
-        q
-    }
-
     /// The best `k` blocks `(id, score)` for the question; `where_` is the section the student has open (`file#anchor`, or just `file`).
     pub fn search(&self, query: &str, where_: Option<&str>, k: usize) -> Vec<(String, f64)> {
-        let q = Self::query_terms(query);
+        let q = query_terms(query);
         let n = self.docs.len() as f64;
         let mut hits: Vec<(usize, f64)> = Vec::new();
         for (i, d) in self.docs.iter().enumerate() {
@@ -137,7 +143,9 @@ impl Index {
             .map(|(i, s)| (self.docs[i].id.clone(), s))
             .collect()
     }
+}
 
+impl Index {
     /// `file#anchor` of a block id.
     fn section_of(&self, id: &str) -> Option<&str> {
         self.docs

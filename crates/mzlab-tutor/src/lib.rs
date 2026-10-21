@@ -2,6 +2,8 @@
 //! Used by the `teoria-blocchi` binary at build time and, later, by the tutor Worker; pure and deterministic (no clock, no I/O in the library).
 pub mod blocchi;
 pub mod cerca;
+mod html;
+mod pagina;
 
 /// Schema name written in the blocks file.
 pub const SCHEMA: &str = "teoria-blocchi/1";
