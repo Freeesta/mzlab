@@ -1,0 +1,97 @@
+[
+ {
+  "question": "What is a transformation product?",
+  "lang": "en",
+  "expect_anchors": [
+   "01-tp#che-cos-e-un-tp"
+  ],
+  "intent": "concetto"
+ },
+ {
+  "question": "How does electrospray ionization produce gas-phase ions?",
+  "lang": "en",
+  "expect_anchors": [
+   "06-esi#dal-liquido-alle-gocce-il-cono-di-taylor",
+   "06-esi#dalle-ultime-gocce-agli-ioni-in-fase-gas",
+   "06-esi#il-problema-dell-interfaccia",
+   "06-esi#la-sorgente",
+   "06-esi#la-vita-di-una-goccia-limite-di-rayleigh-e-fissi"
+  ],
+  "intent": "concetto"
+ },
+ {
+  "question": "What is the nitrogen rule?",
+  "lang": "en",
+  "expect_anchors": [
+   "12-dati#regola-dell-azoto-e-insaturazioni",
+   "13-formula#la-regola-dell-azoto"
+  ],
+  "intent": "concetto"
+ },
+ {
+  "question": "How does a quadrupole mass filter work?",
+  "lang": "en",
+  "expect_anchors": [
+   "09-quadrupolo#come-si-ottiene-lo-spettro",
+   "09-quadrupolo#soluzioni-stabili-e-instabili",
+   "09-quadrupolo#un-filtro-non-una-bilancia"
+  ],
+  "intent": "concetto"
+ },
+ {
+  "question": "What is mass accuracy in ppm?",
+  "lang": "en",
+  "expect_anchors": [
+   "11-risoluzione#accuratezza-di-massa"
+  ],
+  "intent": "concetto"
+ },
+ {
+  "question": "What is the difference between TIC and XIC?",
+  "lang": "en",
+  "expect_anchors": [
+   "12-dati#tic-bpc-xic"
+  ],
+  "intent": "concetto"
+ },
+ {
+  "question": "How do I choose MRM transitions?",
+  "lang": "en",
+  "expect_anchors": [
+   "10-qqq#scegliere-le-transizioni"
+  ],
+  "intent": "concetto"
+ },
+ {
+  "question": "What is the McLafferty rearrangement?",
+  "lang": "en",
+  "expect_anchors": [
+   "15-ei-metodo#riarrangiamento-di-mclafferty"
+  ],
+  "intent": "concetto"
+ },
+ {
+  "question": "How does reversed phase HPLC retain compounds?",
+  "lang": "en",
+  "expect_anchors": [
+   "04-lc#il-meccanismo-di-ritenzione"
+  ],
+  "intent": "concetto"
+ },
+ {
+  "question": "How does the Orbitrap analyzer work?",
+  "lang": "en",
+  "expect_anchors": [
+   "11-risoluzione#orbitrap"
+  ],
+  "intent": "concetto"
+ },
+ {
+  "question": "What is data dependent acquisition?",
+  "lang": "en",
+  "expect_anchors": [
+   "19-hr-dda#dda-lo-strumento-sceglie-cosa-frammentare"
+  ],
+  "intent": "concetto"
+ }
+]
