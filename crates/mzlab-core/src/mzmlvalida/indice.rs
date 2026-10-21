@@ -74,51 +74,6 @@ pub(super) struct Idx {
     pub present: bool,
 }
 
-fn problem(path: &str, code: &'static str, message: String) -> Problem {
-    Problem {
-        severity: Severity::Error,
-        path: path.to_string(),
-        code,
-        message,
-    }
-}
-
-fn compare(
-    seen: &[(String, u64)],
-    listed: &[(String, u64)],
-    what: &str,
-    path: &str,
-    out: &mut Vec<Problem>,
-) {
-    if seen.len() != listed.len() {
-        out.push(problem(
-            path,
-            "index.count",
-            format!(
-                "the index lists {} {what} entries and the file holds {}",
-                listed.len(),
-                seen.len()
-            ),
-        ));
-    }
-    let at: HashMap<&str, u64> = seen.iter().map(|(i, p)| (i.as_str(), *p)).collect();
-    for (id, off) in listed {
-        match at.get(id.as_str()) {
-            None => out.push(problem(
-                path,
-                "index.unknownId",
-                format!("the index lists a {what} \"{id}\" that the file does not hold"),
-            )),
-            Some(p) if p != off => out.push(problem(
-                path,
-                "index.offset",
-                format!("the offset of {what} \"{id}\" is {off} and it starts at {p}"),
-            )),
-            _ => {}
-        }
-    }
-}
-
 impl Idx {
     /// The findings of the index once the whole file has been read.
     pub fn check(&self, out: &mut Vec<Problem>) {
@@ -169,5 +124,44 @@ impl Idx {
             )),
             _ => {}
         }
+    }
+}
+
+fn problem(path: &str, code: &'static str, message: String) -> Problem {
+    Problem {
+        severity: Severity::Error,
+        path: path.to_string(),
+        code,
+        message,
+    }
+}
+
+fn compare(
+    seen: &[(String, u64)],
+    listed: &[(String, u64)],
+    what: &str,
+    path: &str,
+    out: &mut Vec<Problem>,
+) {
+    if seen.len() != listed.len() {
+        let (l, n) = (listed.len(), seen.len());
+        let m = format!("the index lists {l} {what} entries and the file holds {n}");
+        out.push(problem(path, "index.count", m));
+    }
+    let at: HashMap<&str, u64> = seen.iter().map(|(i, p)| (i.as_str(), *p)).collect();
+    for (id, off) in listed {
+        out.extend(match at.get(id.as_str()) {
+            None => Some(problem(
+                path,
+                "index.unknownId",
+                format!("the index lists a {what} \"{id}\" that the file lacks"),
+            )),
+            Some(p) if p != off => Some(problem(
+                path,
+                "index.offset",
+                format!("offset of {what} \"{id}\" is {off}, it starts at {p}"),
+            )),
+            _ => None,
+        });
     }
 }

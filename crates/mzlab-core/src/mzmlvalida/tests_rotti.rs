@@ -67,116 +67,101 @@ fn blank(mut b: Vec<u8>, from: &str, to: &str) -> Vec<u8> {
     b
 }
 
+/// How a case breaks the file (`Swap`, `Bump` and `Blank` keep the length and the checksum right).
+enum Edit {
+    Swap(&'static str, &'static str),
+    Bump(&'static str),
+    Blank(&'static str, &'static str),
+    FlipChecksum,
+    Unsorted,
+    CutShort,
+}
+
+fn broken(e: &Edit) -> Vec<u8> {
+    match e {
+        Edit::Swap(a, b) => rehash(swap(indexed(), a, b)),
+        Edit::Bump(key) => rehash(bump(indexed(), key)),
+        Edit::Blank(a, b) => rehash(blank(indexed(), a, b)),
+        Edit::FlipChecksum => flip_checksum(indexed()),
+        Edit::Unsorted => written(true, Opzioni::default(), false),
+        Edit::CutShort => indexed()[..4000].to_vec(),
+    }
+}
+
 #[test]
 fn twelve_broken_files_each_with_its_own_error() {
-    let cases: Vec<(&str, Vec<u8>, &str)> = vec![
+    use Edit::*;
+    let unit = (
+        "unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"",
+        "unitCvRef=\"MS\" unitAccession=\"MS:1000040\" unitName=\"m/z\"   ",
+    );
+    let cases = [
         (
             "offset of a spectrum",
-            rehash(bump(indexed(), "<offset idRef=\"scan=2\">")),
             "index.offset",
+            Bump("<offset idRef=\"scan=2\">"),
         ),
-        (
-            "SHA-1 of the file",
-            flip_checksum(indexed()),
-            "index.checksum",
-        ),
+        ("SHA-1 of the file", "index.checksum", FlipChecksum),
         (
             "indexListOffset",
-            rehash(bump(indexed(), "<indexListOffset>")),
             "index.listOffset",
+            Bump("<indexListOffset>"),
         ),
         (
             "invented accession",
-            rehash(swap(indexed(), "MS:1000285", "MS:1999285")),
             "accession",
+            Swap("MS:1000285", "MS:1999285"),
         ),
         (
             "name that does not match",
-            rehash(swap(
-                indexed(),
-                "name=\"total ion current\"",
-                "name=\"total ion curreNt\"",
-            )),
             "name",
+            Swap("name=\"total ion current\"", "name=\"total ion curreNt\""),
         ),
         (
             "false count",
-            rehash(swap(
-                indexed(),
-                "<spectrumList count=\"3\"",
-                "<spectrumList count=\"4\"",
-            )),
             "count",
+            Swap("<spectrumList count=\"3\"", "<spectrumList count=\"4\""),
         ),
         (
             "false defaultArrayLength",
-            rehash(swap(
-                indexed(),
-                "defaultArrayLength=\"3\"",
-                "defaultArrayLength=\"4\"",
-            )),
             "arrayLength",
+            Swap("defaultArrayLength=\"3\"", "defaultArrayLength=\"4\""),
         ),
-        (
-            "m/z not in order",
-            written(true, Opzioni::default(), false),
-            "mz.order",
-        ),
+        ("m/z not in order", "mz.order", Unsorted),
         (
             "no profile or centroid term",
-            rehash(blank(
-                indexed(),
-                "<cvParam cvRef=\"MS\" accession=\"MS:1000127\"",
-                "/>",
-            )),
             "required.term",
+            Blank("<cvParam cvRef=\"MS\" accession=\"MS:1000127\"", "/>"),
         ),
         (
             "unit the term does not take",
-            rehash(swap(
-                indexed(),
-                "unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"",
-                "unitCvRef=\"MS\" unitAccession=\"MS:1000040\" unitName=\"m/z\"   ",
-            )),
             "unit.notAllowed",
+            Swap(unit.0, unit.1),
         ),
         (
             "cvRef not in the cvList",
-            rehash(swap(
-                indexed(),
+            "cvRef",
+            Swap(
                 "cvRef=\"MS\" accession=\"MS:1000285\"",
                 "cvRef=\"XS\" accession=\"MS:1000285\"",
-            )),
-            "cvRef",
+            ),
         ),
         (
             "a required element missing",
-            rehash(blank(
-                indexed(),
-                "<dataProcessingList",
-                "</dataProcessingList>",
-            )),
             "required",
+            Blank("<dataProcessingList", "</dataProcessingList>"),
         ),
-        (
-            "encodedLength",
-            rehash(bump(indexed(), "encodedLength=\"")),
-            "encodedLength",
-        ),
+        ("encodedLength", "encodedLength", Bump("encodedLength=\"")),
         (
             "index that does not count",
-            rehash(swap(
-                indexed(),
-                "<spectrum index=\"1\"",
-                "<spectrum index=\"2\"",
-            )),
             "index",
+            Swap("<spectrum index=\"1\"", "<spectrum index=\"2\""),
         ),
-        ("file cut short", indexed()[..4000].to_vec(), "xml"),
+        ("file cut short", "xml", CutShort),
     ];
     assert!(cases.len() >= 12);
-    for (what, bytes, code) in cases {
-        let r = report(&bytes);
-        assert_eq!(errors(&r), [code], "{what}:\n{}", show_all(&r));
+    for (what, code, edit) in &cases {
+        let r = report(&broken(edit));
+        assert_eq!(errors(&r), [*code], "{what}:\n{}", show_all(&r));
     }
 }
