@@ -1,0 +1,2 @@
+{"events":[{"ev":"tool_call_start","id":"c1","name":"flow_add_step"},{"ev":"tool_call_delta","json":"{\"step\":\"featu"},{"ev":"tool_call_delta","json":"res.detect@1\"}"},{"ev":"tool_call_end","id":"c1"},{"cache_read":0,"ev":"usage","in":100,"out":20},{"ev":"stop","reason":"tool"}],"schema":"llmreg/1","turn":0}
+{"events":[{"ev":"text_delta","text":"At unit resolution an m/z is a candidate, so the plan only detects features; it does not search high-resolution steps."},{"cache_read":0,"ev":"usage","in":101,"out":20},{"ev":"stop","reason":"end"}],"schema":"llmreg/1","turn":1}

@@ -182,5 +182,5 @@
     return stima(stored, recipe);
   };
 
-  F.runners.web = { name: "This browser", available, run, preflight, small, highMb };
+  F.runners.web = { name: "This browser", available, run, preflight, small, highMb, recipeOf };
 })();
