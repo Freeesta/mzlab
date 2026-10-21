@@ -114,7 +114,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         len: m.dim,
     };
     let sha1 = m.sha1.take().map(Some);
-    let raw = RawFileReader::open(&mut src).map_err(raw_error)?;
+    let raw = RawFileReader::open(&mut src).map_err(|e| crate::raw::thermo_error(&e))?;
     limiti.voci_ok(u64::from(raw.num_scans))?;
     let indice: Vec<VoceScansione> = (0..raw.num_scans)
         .filter_map(|k| scan_metadata(&raw, &mut src, k))
