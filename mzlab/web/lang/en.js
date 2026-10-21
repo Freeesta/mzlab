@@ -3647,7 +3647,7 @@ I18N.add("en", {
   "mem.more.text": "The «{fase}» phase needs about {stima_mb} MB of memory; the browser safely gives {budget_mb} MB ({libero_mb} free). With more memory (up to {high_mb} MB) the tab might close: the phases already finished stay saved.",
   "mem.more.yes": "Use more memory",
   "mem.more.no": "Cancel",
-  "error.featMemory": "Not enough memory for the «{fase}» phase on {files} files (about {stima_mb} MB needed of {budget_mb} MB). The phases already finished are saved; split the series into smaller groups.",
+  "error.featMemory": "Not enough memory for the «{fase}» phase on {files} files (about {stima_mb} MB needed, {libero_mb} MB free of {budget_mb} MB). The phases already finished are saved; split the series into smaller groups.",
   "error.featState": "The state of the hypotheses is not valid: search the hypotheses again.",
   "error.featFailed": "The pipeline failed.",
   "error.badRecipe": "The parameters of the pipeline are not valid.",
