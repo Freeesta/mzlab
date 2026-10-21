@@ -14,3 +14,5 @@
 {"tipo":"pr","pr":1363,"sha":"9500798d3496881ee46ceb6720796526dd41feb8","ts_utc":"2026-10-21T17:12:40Z","azione":"unita","aperta_s":4566,"merge_main":1,"verde_a_unione_s":null}
 {"ts_utc":"2026-10-21T17:12:48Z","tipo":"run","workflow":"rust","esito":"cancelled","main":true,"durata_s":6,"attivo_s":0,"coda_s":0,"jobs":{},"pr":null,"sha":"f23824a51132c6973134325a0a977252ff8b19c0","run_id":39641750643,"run_attempt":1}
 {"tipo":"pr","pr":1361,"sha":"30b2ba5908833e4d18c964dacdb3bbd1f4f20d94","ts_utc":"2026-10-21T17:12:44Z","azione":"unita","aperta_s":5383,"merge_main":1,"verde_a_unione_s":null}
+{"ts_utc":"2026-10-21T17:12:48Z","tipo":"run","workflow":"pages","esito":"cancelled","main":true,"durata_s":6,"attivo_s":4,"coda_s":0,"jobs":{"build":4,"deploy":0},"pr":null,"sha":"f23824a51132c6973134325a0a977252ff8b19c0","run_id":39641750503,"run_attempt":1}
+{"ts_utc":"2026-10-21T17:12:47Z","tipo":"job_fallito","workflow":"pages","job":"build","esito":"cancelled","durata_s":4,"categoria":"annullato","passo":null,"pr":null,"sha":"f23824a51132c6973134325a0a977252ff8b19c0","run_id":39641750503,"run_attempt":1}
