@@ -173,12 +173,13 @@ try:
             assert pg.evaluate("[...document.querySelectorAll('#ig-add option')].map(o=>o.value).join()") == "[M+H]+,[M+Na]+,[M+NH4]+,[M+K]+"
         step("positive file: the positive adducts", pol)
         def names():
-            pg.fill("#ig-ion", "Exam"); pg.wait_for_selector(".ig-sugb", timeout=5000)
-            pg.click(".ig-sugb"); pg.wait_for_function("INFG.G.mol && INFG.G.mol.id==='ik:TESTONLY'", timeout=5000)
+            pg.fill("#ig-mol input", "Exam"); pg.wait_for_selector("#ig-mol [role=option]", timeout=5000)
+            pg.click("#ig-mol [role=option]"); pg.wait_for_function("INFG.G.mol && INFG.G.mol.id==='ik:TESTONLY'", timeout=5000)
             attendi(pg, "window.__REQ.filter(r=>r[0]==='api/msn_grafo').slice(-1)[0][1].includes('smiles=')")
             last = pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msn_grafo').slice(-1)[0][1]")
             assert "formula=C14H15N3O5+%5BM%2BH%5D%2B" in last.replace("%20", "+") and "smiles=" in last, last
-        step("a name fills the ion formula with the adduct and the SMILES; the id is kept", names)
+        step("a molecule chosen in the search box fills the ion formula with the adduct and the SMILES; the id is kept", names)
+        step("the ion field shows formula and adduct", lambda: (_ for _ in ()).throw(AssertionError(pg.input_value("#ig-ion"))) if pg.input_value("#ig-ion") != "C14H15N3O5 [M+H]+" else None)
         # the real engine (the .wasm msngrafo of the site, no stand-in): the cut table of a node of the synthetic file
         pg4 = r.b.new_page(viewport={"width": 1500, "height": 1900}); pg4.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg4, "window.qqReady === true")
         load(pg4, [F], 6000, 1)

@@ -23,6 +23,7 @@ mod flow_apply;
 mod flow_base;
 mod flow_cache;
 mod flow_compare;
+mod flow_estimate;
 mod flow_formula;
 mod flow_generate;
 mod flow_inclusion;
@@ -48,6 +49,7 @@ mod flow_set;
 mod flow_table;
 #[cfg(test)]
 mod flow_table_tests;
+pub mod llm;
 pub mod msn_graph;
 mod msn_graph_compare;
 mod msn_lib;
@@ -63,6 +65,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
        mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
+       mzlab-cli llm tools [--out FILE]   the catalog strumenti/1 of the assistant tools (llm tools --help)
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli msn-lib add|build|export ...                the library of MSn trees (msn-lib --help)
        mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
@@ -350,6 +353,7 @@ pub fn execute(args: &[String]) -> Outcome {
     match args.next().as_deref() {
         Some("features") => {}
         Some("flow") => return flow_cmd(args),
+        Some("llm") => return llm::run(args.collect()),
         Some("steps") => return steps_cmd::run(args.collect()),
         Some("msn-graph") => return msn_graph_cmd(args),
         Some("msn-lib") => return msn_lib_cmd(args.collect()),
@@ -378,6 +382,8 @@ mod flow_command_tests;
 #[cfg(test)]
 mod flow_compare_tests;
 #[cfg(test)]
+mod flow_estimate_tests;
+#[cfg(test)]
 mod flow_generate_tests;
 #[cfg(test)]
 mod flow_ident_tests;
@@ -399,6 +405,8 @@ mod flow_report_tests;
 mod flow_rule_tests;
 #[cfg(test)]
 mod flow_run_tests;
+#[cfg(test)]
+mod llm_tools_tests;
 #[cfg(test)]
 mod msn_graph_compare_tests;
 #[cfg(test)]
