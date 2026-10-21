@@ -47,16 +47,6 @@ pub enum Picchi {
 
 /// The parameters of our own centroids when the first scan of sample `c` is profile; the header then says so (`MS:1000035`, the parameters in a userParam).
 #[cfg(not(target_family = "wasm"))]
-fn riduci(s: &mut Spectrum, p: Option<&Params>, buf: &mut Buf) {
-    if let Some(p) = p {
-        picchi(s, p, buf);
-    }
-}
-
-#[cfg(target_family = "wasm")]
-fn riduci(_: &mut Spectrum, _: Option<&Params>, _: &mut Buf) {}
-
-#[cfg(not(target_family = "wasm"))]
 fn centroidi_di(l: &mut dyn Lettore, c: usize, h: &mut Header) -> Result<Option<Params>> {
     if l.indice(c)?.is_empty() || !l.scansione(c, 0)?.profile {
         return Ok(None);
@@ -95,6 +85,48 @@ fn mzlab_params(
     _: &mut Header,
 ) -> Result<Option<Params>> {
     Ok(None)
+}
+
+/// Scan `(c, k)` as `peaks` says; the browser build has no peak picking and no profile of a reader that does not keep one apart.
+#[cfg(not(target_family = "wasm"))]
+fn scansione_di(
+    peaks: Picchi,
+    l: &mut dyn Lettore,
+    (c, k): (usize, usize),
+    (p, buf): (Option<&Params>, &mut Buf),
+) -> Result<Spectrum> {
+    match peaks {
+        Picchi::File => l.scansione(c, k),
+        Picchi::Mzlab => {
+            let mut s = l.scansione(c, k)?;
+            if let Some(p) = p {
+                picchi(&mut s, p, buf);
+            }
+            Ok(s)
+        }
+        Picchi::Profilo => match l.scansione_profilo(c, k)? {
+            Some(s) => Ok(s),
+            // a reader whose scans are the file's own (mzML) has the profile in them
+            None => Some(l.scansione(c, k)?)
+                .filter(|s| s.profile)
+                .ok_or_else(|| Error::new("err.conv.noProfile")),
+        },
+    }
+}
+
+#[cfg(target_family = "wasm")]
+fn scansione_di(
+    peaks: Picchi,
+    l: &mut dyn Lettore,
+    (c, k): (usize, usize),
+    _: (Option<&Params>, &mut Buf),
+) -> Result<Spectrum> {
+    match peaks {
+        Picchi::Profilo => l
+            .scansione_profilo(c, k)?
+            .ok_or_else(|| Error::new("err.conv.noProfile")),
+        _ => l.scansione(c, k),
+    }
 }
 
 /// A conversion of one sample to mzML: the one entry of every route (`scrivi*` are its short forms).
@@ -136,21 +168,7 @@ impl Conversione<'_> {
         }
         progress(0, n);
         for k in 0..n {
-            let s = match self.peaks {
-                Picchi::File => l.scansione(c, k)?,
-                Picchi::Mzlab => {
-                    let mut s = l.scansione(c, k)?;
-                    riduci(&mut s, params.as_ref(), &mut buf);
-                    s
-                }
-                Picchi::Profilo => match l.scansione_profilo(c, k)? {
-                    Some(s) => s,
-                    // a reader whose scans are the file's own (mzML) has the profile in them
-                    None => Some(l.scansione(c, k)?)
-                        .filter(|s| s.profile)
-                        .ok_or_else(|| Error::new("err.conv.noProfile"))?,
-                },
-            };
+            let s = scansione_di(self.peaks, l, (c, k), (params.as_ref(), &mut buf))?;
             let extra = l.extra_scansione(c, k, &s);
             w.spectrum_with(&s, &extra)?;
             if (k + 1) % 32 == 0 {
