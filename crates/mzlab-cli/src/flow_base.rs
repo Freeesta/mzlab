@@ -5,7 +5,7 @@
 
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use mzlab_core::budget::MemBudget;
 use mzlab_core::error::{Error, Result};
@@ -104,7 +104,8 @@ pub(crate) fn index_job(r: &FileRunner, job: &Job) -> Result<Made> {
         .and_then(|p| p.1.f64())
         .map_or(DEFAULT_BUDGET, |b| b as usize);
     let out = out_path(r, job, "mzidx");
-    crate::build_index(&source, &out, budget)?;
+    let label = job.inputs[0].1[0].label.clone().unwrap_or_default();
+    crate::build_index_of(&source, &label, &out, budget)?;
     let name = r.source_name(&job.inputs[0].1[0]);
     let a = r.keep(out, DataType::Mzidx)?;
     r.trace(
@@ -262,12 +263,6 @@ fn number(job: &Job, name: &str, default: f64) -> f64 {
 /// the input `NAME@ID` names the sample `ID`, else the first one is written.
 pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let input = &job.inputs[0].1[0];
-    let mut reader = mzlab_lettori::apri(
-        crate::flow_set::file_set(&r.path(input))?,
-        &Limiti::desktop(),
-    )?;
-    let ids: Vec<u32> = reader.campioni().iter().map(|s| s.id).collect();
-    let sample = crate::flow_set::sample_index(input.label.as_deref().unwrap_or(""), &ids)?;
     let opz = Opzioni {
         livello: number(job, "zlib_level", f64::from(LIVELLO_ZLIB)) as u32,
         numpress: job
@@ -291,6 +286,26 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
         Some("mzlab") => Picchi::Mzlab,
         _ => Picchi::File,
     };
+    let profile = write_mzml(&r.path(input), input.label.as_deref(), &out, peaks, opz)?;
+    let mut made = Made::new("mzml", r.keep(out, DataType::Mzml)?);
+    if profile {
+        made.warnings.push("warn.flow.profile".into());
+    }
+    Ok(made)
+}
+
+/// Writes the sample `label` (`ID` of a `NAME@ID` input; the first when empty) of the dataset at `path` to `out` as indexed mzML; true when the file keeps
+/// its profile points. A failed write leaves no file.
+pub(crate) fn write_mzml(
+    path: &Path,
+    label: Option<&str>,
+    out: &Path,
+    peaks: Picchi,
+    opz: Opzioni,
+) -> Result<bool> {
+    let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limiti::desktop())?;
+    let ids: Vec<u32> = reader.campioni().iter().map(|s| s.id).collect();
+    let sample = crate::flow_set::sample_index(label.unwrap_or(""), &ids)?;
     // The file keeps its profile points: the index of the next step picks the peaks, and the run says so.
     let profile = peaks == Picchi::File
         && !reader.indice(sample)?.is_empty()
@@ -300,19 +315,15 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
         opz,
         steps: Some(&[]),
     };
-    let written = File::create(&out).map_err(io).and_then(|f| {
+    let written = File::create(out).map_err(io).and_then(|f| {
         conv.scrivi(&mut *reader, sample, BufWriter::new(f), &mut |_, _| {})
             .and_then(|mut w| w.flush().map_err(io))
     });
     if let Err(e) = written {
-        let _ = std::fs::remove_file(&out);
+        let _ = std::fs::remove_file(out);
         return Err(e);
     }
-    let mut made = Made::new("mzml", r.keep(out, DataType::Mzml)?);
-    if profile {
-        made.warnings.push("warn.flow.profile".into());
-    }
-    Ok(made)
+    Ok(profile)
 }
 
 /// `features.table`: the chain of `mzlab-cli features` on the files of the series, as CSV.

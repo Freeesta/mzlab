@@ -8,11 +8,13 @@ use mzlab_core::budget::sha256_hex;
 use mzlab_core::elements::{fmt, parse_formula};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out};
+use mzlab_core::lettori_mzml::Picchi;
 use mzlab_core::msnalbero::Raggruppa;
 use mzlab_core::msngrafo::{esporta, grafo_json, Formato, Grafo, Opzioni};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
+use mzlab_core::mzmlwrite::Opzioni as MzmlOpzioni;
 
-pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/1) of an MSn infusion.
+pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/1) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
 
 usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
        mzlab-cli msn-graph FILE.mzML --formula ION --verita TRUTH.json --riassunto
@@ -99,7 +101,7 @@ pub fn parse_args(
             f => return Err(format!("unknown argument {f}")),
         }
     }
-    let file = file.ok_or("an mzML file is needed")?;
+    let file = file.ok_or("an infusion file is needed")?;
     if riassunto && verita.is_none() {
         return Err("--riassunto needs --verita".into());
     }
@@ -120,16 +122,24 @@ fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
 }
 
-/// The graph of `file` (an mzML), its index built in `tmp`.
+/// The graph of `file`, its index built in `tmp`: an mzML is read as it is, any other dataset a reader takes (a Thermo `.raw`, ...) is first written to
+/// `tmp` as mzML with the peaks of the file.
 pub fn grafo(file: &Path, o: &Opzioni, tmp: &Path) -> Result<(Grafo, String)> {
-    let idx = tmp.join("0.mzidx");
-    crate::build_index(file, &idx, DEFAULT_BUDGET)?;
-    let sha = sha256_hex(&std::fs::read(&idx).map_err(io)?);
-    let scans = crate::open(&idx)?.scans;
-    let mut m = std::fs::File::open(file).map_err(io)?;
     let nome = file
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
+    let converted = tmp.join("0.mzML");
+    let is_mzml = nome.to_lowercase().ends_with(".mzml");
+    if !is_mzml {
+        let (peaks, opz) = (Picchi::File, MzmlOpzioni::default());
+        crate::flow_base::write_mzml(file, None, &converted, peaks, opz)?;
+    }
+    let source = if is_mzml { file } else { &converted };
+    let idx = tmp.join("0.mzidx");
+    crate::build_index(source, &idx, DEFAULT_BUDGET)?;
+    let sha = sha256_hex(&std::fs::read(&idx).map_err(io)?);
+    let scans = crate::open(&idx)?.scans;
+    let mut m = std::fs::File::open(source).map_err(io)?;
     grafo_json(&scans, &mut m, (&nome, &sha), (o, &Raggruppa::default()))
 }
 

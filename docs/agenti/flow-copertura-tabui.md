@@ -4,7 +4,7 @@ Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzion
 
 ## Prove fatte sul codice
 - Il registro del CLI (`flow::steps()`) contiene la catena di base, `features.table`, `spectra.centroid`, Attributio, `spectra.ms2`, `meta.compare` e tutta la famiglia di Tabui (`mzlab_chem::step::tabui()`); un passo senza esecutore dà `err.flow.step.native` (`tp.generate` ora si esegue).
-- I passi nel registro ma senza esecutore (`features.ms2_link`, `import.raw`, `spectra.chimeric`, `spectra.insilico`, `rt.predict`, `annot.regulatory`, `annot.hazard`) danno `err.flow.step.native`.
+- I passi nel registro ma senza esecutore (`features.ms2_link`, `spectra.chimeric`, `spectra.insilico`, `rt.predict`, `annot.regulatory`, `annot.hazard`) danno `err.flow.step.native`.
 - Esecutori oggi (29, più `quant.calibrate`, fuori dal flusso di Tabui, e con `tp.dig_lr`, lo Scavo LR di Tabui: JSON uguale byte per byte sui 5 demo FullScan): `convert.mzml`, `spectra.centroid`, `index.mzidx`, `features.detect`, `features.align`, `features.gapfill`,
   `features.estimate`, `features.table`, `table.drift`, `table.stats`, `table.pca`, `table.kmd`, `export.table_csv`, `export.mztab`, `spectra.match`, `formula.ms1`, `formula.ms2`, `spectra.ms2`, `spectra.msn_graph`, `annot.level`, `tp.generate`, `table.filter`, `tp.link@2`, `tp.filter@2`, `tp.position`, `tp.network` (con un `tp/1` dato come file), `tp.dig_lr`, `meta.compare`, `export.inclusion` (vuole un `tp/1`).
 - Non provato a mano nel sito costruito: la sola prova nel browser è `e2e_flow.py` (piano, modelli, viste dei file); nessun piano è stato eseguito dal sito perché non può.
@@ -12,7 +12,7 @@ Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzion
 ## Tabella
 | Funzione di Tabui | Passo / modello di mzFlow | Stato | Cosa serve |
 |---|---|---|---|
-| File e ruoli dei campioni (1 · Files, tempi, bianchi) | `convert.mzml`, `index.mzidx`, ingresso `samples` (`campioni/2`) | Coperta ed eseguibile (app, CLI); `import.raw` ha il passo ma non l'esecutore (gli ingressi li leggono i lettori del CLI) | Sito: esecutore web. Il passo `table.filter` che usa `samples` ora si esegue (`flow_table.rs`) |
+| File e ruoli dei campioni (1 · Files, tempi, bianchi) | `convert.mzml`, `index.mzidx`, ingresso `samples` (`campioni/2`) | Coperta ed eseguibile (app, CLI); `import.raw` riconosce il set con il lettore del registro e lo passa invariato | Sito: esecutore web. Il passo `table.filter` che usa `samples` ora si esegue (`flow_table.rs`) |
 | Campi del genitore (nome, formula neutra, SMILES) | Ingresso `parent` di `tp.generate`, `tp.position`, `structure.*` | `tp.generate` eseguibile (formula, SMILES o JSON); gli altri passi no | Registrare i passi di Tabui nel CLI e scrivere gli esecutori |
 | Ricerca per nome (`composti.csv`, PubChem) | Nessun passo | Manca (è interfaccia) | Un campo nell'ispettore del genitore; il motore non cambia |
 | Struttura / SMILES / Disegno | `structure.draw`, `structure.render` | `draw`: non eseguibile per natura (editor, `native: false`); `render`: eseguibile (`drawings/1` da `sites/1` e genitore) | Per `draw` serve un ingresso file |
@@ -23,7 +23,7 @@ Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzion
 | Abbinamento ipotesi ↔ feature con MS2 | `tp.link`, `features.ms2_link`, `spectra.ms2` | `spectra.ms2` e `tp.link@2` eseguibili (CLI e app); `features.ms2_link` non ha esecutore proprio | `features.ms2_link` resta in `BUCHI` con il motivo: incluso in `features.detect` (`pipeline::analyse` lega l'MS2 nello stesso passaggio sull'indice), non separabile senza cambiare i byte dei file delle feature |
 | MS2, libreria, albero MSn del genitore | `spectra.match` (eseguibile), grafo `msngrafo/1` e albero (`frag_tree`) | Ricerca in libreria coperta; albero e grafo mancano come passi | Un passo che produca `msngrafo/1`; oggi è solo vista di un file |
 | Posizione della sostituzione | `tp.position` | Eseguibile (`flow_position.rs`): rilegge il `site` di `interp/1` con le soglie del passo | Buco: i voti dell'albero MSn non stanno nel file (una riga votata dall'albero tiene il suo `site`); il sito non lo esegue |
-| Rete dei prodotti | `tp.network` (nodo «Product network») | Eseguibile solo con un `tp/1` già pronto; nessun passo eseguibile lo produce | Esecutore di `tp.link` (`tp.link@2` c'è; `tp.link@1`, che prendeva un MGF, non esiste più: `err.flow.step.version`; `tp.generate` c'è già) |
+| Rete dei prodotti | `tp.network` (nodo «Product network») | Eseguibile con il `.mzfeat` di `tp.link@2` (la porta `table` accetta `Tp`) o con un `tp/1` dato come file; la catena dai file alla rete è provata su serie HR sintetiche (`flow_hr_tests.rs`) | Dalla serie sintetica escono 0 archi (nessuna coppia di prodotti accettati unita da una regola): l'uguaglianza con la pagina vale per costruzione, non è provata su archi reali |
 | Reattività del genitore | `structure.reactivity` | Passo c'è ma non eseguibile (nel sito la vista legge un `reatt/1` da disco) | Esecutore (il motore `chem` è nel `.wasm`) |
 | Confronto fra condizioni / gruppi | `meta.compare`, `table.stats` | `meta.compare` e `table.stats` eseguibili | I grafici sono già viste di Flow |
 | Modalità diretta («Dig» con avanzamento in diretta) | Nessun passo; l'avanzamento di Flow è solo a fine corsa | Manca | Avanzamento per passo (debito 6) |

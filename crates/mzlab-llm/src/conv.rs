@@ -1,7 +1,9 @@
 //! The vendor-neutral conversation (`llm-conv/1`) the adapters read: roles, parts (text, context, image, tool call, tool result) and the system text.
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::json::{parse, Value};
+use mzlab_core::json::{parse, Out, Value};
+
+use crate::tools::value;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Role {
@@ -87,6 +89,73 @@ impl Conversation {
                 .map(|x| x as u32),
             messages,
         })
+    }
+}
+
+/// The text of a conversation (`llm-conv/1`), the form `Conversation::parse` reads back.
+impl Conversation {
+    pub fn to_json(&self) -> String {
+        let mut o = Out::default();
+        o.raw("{\"schema\":\"llm-conv/1\",\"provider\":")
+            .str(&self.provider);
+        o.raw(",\"model\":")
+            .str(&self.model)
+            .raw(",\"system\":")
+            .str(&self.system);
+        if let Some(n) = self.max_output_tokens {
+            o.raw(",\"max_output_tokens\":").int(i64::from(n));
+        }
+        o.raw(",\"messages\":[");
+        for (i, m) in self.messages.iter().enumerate() {
+            let role = match m.role {
+                Role::User => "user",
+                Role::Assistant => "assistant",
+                Role::Tool => "tool",
+            };
+            o.raw(if i > 0 { "," } else { "" })
+                .raw("{\"role\":")
+                .str(role)
+                .raw(",\"parts\":[");
+            for (k, p) in m.parts.iter().enumerate() {
+                o.raw(if k > 0 { "," } else { "" });
+                write_part(&mut o, p);
+            }
+            o.raw("]}");
+        }
+        o.raw("]}");
+        o.0
+    }
+}
+
+fn write_part(o: &mut Out, p: &Part) {
+    match p {
+        Part::Text(t) => {
+            o.raw("{\"text\":").str(t).raw("}");
+        }
+        Part::Context(c) => {
+            o.raw("{\"context\":");
+            value(o, c);
+            o.raw("}");
+        }
+        Part::Image { png_b64 } => {
+            o.raw("{\"image\":{\"png_b64\":").str(png_b64).raw("}}");
+        }
+        Part::ToolCall { id, name, args } => {
+            o.raw("{\"tool_call\":{\"id\":")
+                .str(id)
+                .raw(",\"name\":")
+                .str(name)
+                .raw(",\"args\":");
+            value(o, args);
+            o.raw("}}");
+        }
+        Part::ToolResult { id, ok, content } => {
+            o.raw("{\"tool_result\":{\"id\":")
+                .str(id)
+                .raw(&format!(",\"ok\":{ok},\"content\":"));
+            value(o, content);
+            o.raw("}}");
+        }
     }
 }
 
