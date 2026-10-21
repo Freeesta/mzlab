@@ -4,7 +4,7 @@
 //! top (`steps::recipe_map`); a value the plan leaves out that differs from the canonical one is reported as an estimate. Called by `flow.rs`.
 
 use std::fs::File;
-use std::io::BufWriter;
+use std::io::{BufWriter, Write};
 use std::path::PathBuf;
 
 use mzlab_core::budget::MemBudget;
@@ -12,9 +12,10 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job, Mem};
 use mzlab_core::idxread::Index;
 use mzlab_core::json::Value;
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::Limiti;
 use mzlab_core::lettori_mzml::{Conversione, Picchi};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
+use mzlab_core::mzmlwrite::{Opzioni, LIVELLO_ZLIB};
 use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::{self, Stored};
@@ -249,43 +250,66 @@ pub(crate) fn align_mem(r: &FileRunner, job: &Job) -> Option<Mem> {
     })
 }
 
-/// `convert.mzml`: one file of a reader of the registry written as indexed mzML.
+/// The file `convert.mzml` writes in the work folder for item `item` of the instance `instance`.
+pub(crate) fn convert_file(instance: &str, item: usize) -> String {
+    format!("{instance}-{item}.mzML")
+}
+
+/// A parameter of the job as a number, `default` when the plan does not carry it.
+fn number(job: &Job, name: &str, default: f64) -> f64 {
+    let found = job.resolved.params.iter().find(|(k, _)| k == name);
+    found.and_then(|(_, v)| v.f64()).unwrap_or(default)
+}
+
+/// `convert.mzml`: one sample of a dataset of the registry (a file, a `.wiff` with its `.wiff.scan`, a `.D`/`.d`/`.raw` folder) written as indexed mzML;
+/// the input `NAME@ID` names the sample `ID`, else the first one is written.
 pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
-    let input = r.path(&job.inputs[0].1[0]);
-    let name = input
-        .file_name()
-        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    let dim = std::fs::metadata(&input).map_err(io)?.len();
-    let fs = FileSet {
-        membri: vec![Membro {
-            nome: name,
-            dim,
-            dati: Box::new(File::open(&input).map_err(io)?),
-            sha1: None,
-        }],
+    let input = &job.inputs[0].1[0];
+    let mut reader = mzlab_lettori::apri(
+        crate::flow_set::file_set(&r.path(input))?,
+        &Limiti::desktop(),
+    )?;
+    let ids: Vec<u32> = reader.campioni().iter().map(|s| s.id).collect();
+    let sample = crate::flow_set::sample_index(input.label.as_deref().unwrap_or(""), &ids)?;
+    let opz = Opzioni {
+        livello: number(job, "zlib_level", f64::from(LIVELLO_ZLIB)) as u32,
+        numpress: job
+            .resolved
+            .params
+            .iter()
+            .any(|(k, v)| k == "numpress" && v.bool() == Some(true)),
     };
-    let mut reader = mzlab_lettori::apri(fs, &Limiti::desktop())?;
-    let out = r.work.join(format!(
-        "{}-{}.mzML",
-        job.instance.id,
-        job.item.unwrap_or(0)
-    ));
-    let peaks = job.resolved.params.iter().find(|p| p.0 == "peaks");
-    let peaks = match peaks.and_then(|p| p.1.str()) {
+    let out = r
+        .work
+        .join(convert_file(&job.instance.id, job.item.unwrap_or(0)));
+    let peaks = match job
+        .resolved
+        .params
+        .iter()
+        .find(|p| p.0 == "peaks")
+        .and_then(|p| p.1.str())
+    {
         Some("profile") => Picchi::Profilo,
         Some("mzlab") => Picchi::Mzlab,
         _ => Picchi::File,
     };
     // The file keeps its profile points: the index of the next step picks the peaks, and the run says so.
-    let profile =
-        peaks == Picchi::File && !reader.indice(0)?.is_empty() && reader.scansione(0, 0)?.profile;
+    let profile = peaks == Picchi::File
+        && !reader.indice(sample)?.is_empty()
+        && reader.scansione(sample, 0)?.profile;
     let conv = Conversione {
         peaks,
+        opz,
         steps: Some(&[]),
-        ..Conversione::default()
     };
-    let w = BufWriter::new(File::create(&out).map_err(io)?);
-    conv.scrivi(&mut *reader, 0, w, &mut |_, _| {})?;
+    let written = File::create(&out).map_err(io).and_then(|f| {
+        conv.scrivi(&mut *reader, sample, BufWriter::new(f), &mut |_, _| {})
+            .and_then(|mut w| w.flush().map_err(io))
+    });
+    if let Err(e) = written {
+        let _ = std::fs::remove_file(&out);
+        return Err(e);
+    }
     let mut made = Made::new("mzml", r.keep(out, DataType::Mzml)?);
     if profile {
         made.warnings.push("warn.flow.profile".into());
