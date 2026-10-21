@@ -1,0 +1,6 @@
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"Hel"}]}}],"usageMetadata":{"promptTokenCount":20}}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"lo, è fatto"}]}}],"usageMetadata":{"promptTokenCount":29,"candidatesTokenCount":5}}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"."}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":29,"candidatesTokenCount":12,"cachedContentTokenCount":4}}
+

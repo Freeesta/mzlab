@@ -1,0 +1,1 @@
+{"ev":"error","key":"err.llm.auth","params":{"status":"401","message":"invalid x-api-key"}}

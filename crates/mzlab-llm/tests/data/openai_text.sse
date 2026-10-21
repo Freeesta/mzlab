@@ -1,0 +1,12 @@
+data: {"choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+
+data: {"choices":[{"index":0,"delta":{"content":"Hel"},"finish_reason":null}]}
+
+data: {"choices":[{"index":0,"delta":{"content":"lo, è fatto"},"finish_reason":null}]}
+
+data: {"choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: {"choices":[],"usage":{"prompt_tokens":29,"completion_tokens":12,"prompt_tokens_details":{"cached_tokens":4}}}
+
+data: [DONE]
+

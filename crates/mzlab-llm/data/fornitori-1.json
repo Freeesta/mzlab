@@ -1,0 +1,12 @@
+{"schema":"llm-providers/1","providers":[
+{"schema":"llm-provider/1","id":"anthropic","adapter":"anthropic","base_url":"https://api.anthropic.com","auth":{"header":"x-api-key","prefix":""},"extra_headers":{"anthropic-version":"2023-06-01"},"models":[
+{"id":"claude-sonnet-5-5","context_tokens":200000,"max_output_tokens":8192,"tools":"native","vision":true,"price_per_mtok":{"in":0,"out":0,"as_of":"","currency":"USD"}},
+{"id":"claude-opus-5-5","context_tokens":200000,"max_output_tokens":8192,"tools":"native","vision":true,"price_per_mtok":{"in":0,"out":0,"as_of":"","currency":"USD"}},
+{"id":"claude-haiku-5-5","context_tokens":200000,"max_output_tokens":8192,"tools":"native","vision":true,"price_per_mtok":{"in":0,"out":0,"as_of":"","currency":"USD"}}],"local":false,"site_allowed":true},
+{"schema":"llm-provider/1","id":"openai","adapter":"openai_compat","base_url":"https://api.openai.com/v1","auth":{"header":"authorization","prefix":"Bearer "},"extra_headers":{},"models":[
+{"id":"gpt-4o-mini","context_tokens":128000,"max_output_tokens":16384,"tools":"native","vision":true,"price_per_mtok":{"in":0,"out":0,"as_of":"","currency":"USD"}}],"local":false,"site_allowed":true},
+{"schema":"llm-provider/1","id":"gemini","adapter":"gemini","base_url":"https://generativelanguage.googleapis.com","auth":{"header":"x-goog-api-key","prefix":""},"extra_headers":{},"models":[
+{"id":"gemini-2.0-flash","context_tokens":1048576,"max_output_tokens":8192,"tools":"native","vision":true,"price_per_mtok":{"in":0,"out":0,"as_of":"","currency":"USD"}}],"local":false,"site_allowed":true},
+{"schema":"llm-provider/1","id":"ollama","adapter":"openai_compat","base_url":"http://localhost:11434/v1","auth":{"header":"","prefix":""},"extra_headers":{},"models":[
+{"id":"llama3.1","context_tokens":8192,"max_output_tokens":2048,"tools":"prompted","vision":false,"price_per_mtok":{"in":0,"out":0,"as_of":"","currency":"USD"}}],"local":true,"site_allowed":false}
+]}

@@ -1,0 +1,6 @@
+{"ev":"text_delta","text":"Let me look."}
+{"ev":"tool_call_start","id":"gemini-1","name":"flow_describe_step"}
+{"ev":"tool_call_delta","json":"{\"step\":\"a.b@1\",\"x\":1}"}
+{"ev":"tool_call_end","id":"gemini-1"}
+{"cache_read":0,"ev":"usage","in":40,"out":30}
+{"ev":"stop","reason":"tool"}
