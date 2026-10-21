@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 # Estimated minutes lost for the events that have no measured duration (printed with the summary).
 CONFLITTO_S = 900
 FUSIONE_S = 300
+RILETTURA_S = 60
 OK = ("success", "skipped", "neutral")
 CHIAVE = ("tipo", "run_id", "run_attempt", "job", "pr", "azione", "sha")
 
@@ -99,10 +100,19 @@ def righe_run(evento: dict, api=api_get) -> list[dict]:
     return out
 
 
-def fusioni_main(n: int, api) -> int:
-    commits = api(f"/pulls/{n}/commits?per_page=100")
-    return sum(len(c.get("parents", [])) > 1 and bool(re.match(r"Merge .*\bmain\b", c["commit"]["message"].split("\n")[0]))
-               and not c["commit"]["message"].startswith("Merge pull request") for c in commits)
+CAUSE_COMMIT = [("merge di main", r"Merge .*\bmain\b"), ("limite", r"limit|soglia|tetto|size|budget"),
+                ("fmt/clippy", r"fmt|clippy|format|lint")]
+
+
+def cause_commit(n: int, api) -> dict[str, int]:
+    """Commits after the first of PR `n`, counted by cause from the title only."""
+    out: Counter = Counter()
+    for c in api(f"/pulls/{n}/commits?per_page=100")[1:]:
+        titolo = c["commit"]["message"].split("\n")[0]
+        if titolo.startswith("Merge pull request"):
+            continue
+        out[next((k for k, rx in CAUSE_COMMIT if re.search(rx, titolo, re.I)), "altro")] += 1
+    return dict(out)
 
 
 def verde_il(sha: str, api) -> str | None:
@@ -126,7 +136,7 @@ def righe_pr(evento: dict, api=api_get) -> list[dict]:
         return []
     fine = pr.get("merged_at") or pr["closed_at"]
     riga |= {"ts_utc": fine, "azione": "unita" if pr.get("merged") else "chiusa", "aperta_s": secs(pr["created_at"], fine),
-             "merge_main": fusioni_main(pr["number"], api)}
+             "cause_commit": (cause := cause_commit(pr["number"], api)), "merge_main": cause.get("merge di main", 0)}
     if pr.get("merged"):
         riga["verde_a_unione_s"] = secs(verde_il(pr["head"]["sha"], api), fine)
     return [riga]
@@ -159,21 +169,35 @@ def righe_conflitti(evento: dict, dati: str, api=api_get, attesa=time.sleep) -> 
     m = re.search(r"Merge pull request #(\d+)|\(#(\d+)\)", commit["commit"]["message"])
     unita = int(m.group(1) or m.group(2)) if m else None
     prima = stato_conflitti(dati)
-    out = []
-    for p in api("/pulls?state=open&per_page=100"):
-        n = p["number"]
+
+    def sporco(n: int) -> bool:
         for _ in range(4):
             d = api(f"/pulls/{n}")
             if d.get("mergeable") is not None:
                 break
             attesa(2)
-        sporco = d.get("mergeable_state") == "dirty"
-        if sporco and not prima.get(n):
+        return d.get("mergeable_state") == "dirty"
+
+    def riga(n: int, comuni: list[str]) -> dict:
+        return {"ts_utc": adesso(), "tipo": "conflitto", "pr": n, "sha": sha, "pr_unita": unita,
+                "file_comuni": comuni[:5], "n_file_comuni": len(comuni)}
+
+    out, dubbi = [], []
+    for p in api("/pulls?state=open&per_page=100"):
+        n = p["number"]
+        dirty = sporco(n)
+        if dirty and not prima.get(n):
             comuni = sorted(file_pr(n, api) & main_file)
-            out.append({"ts_utc": adesso(), "tipo": "conflitto", "pr": n, "sha": sha, "pr_unita": unita,
-                        "file_comuni": comuni[:5], "n_file_comuni": len(comuni)})
-        elif not sporco and prima.get(n):
+            if comuni:
+                out.append(riga(n, comuni))
+            else:
+                dubbi.append(n)
+        elif not dirty and prima.get(n):
             out.append({"ts_utc": adesso(), "tipo": "conflitto_risolto", "pr": n, "sha": sha})
+    # Dirty with no file in common may be a transient GitHub state: it counts only if still dirty a minute later.
+    if dubbi:
+        attesa(RILETTURA_S)
+        out += [riga(n, []) for n in dubbi if sporco(n)]
     return out
 
 
@@ -266,6 +290,11 @@ def riepilogo(ev: list[dict], da: str | None = None, out=print) -> None:
     out(f"  open to merge: mean {hm(media([r['aperta_s'] for r in unite]))}; green CI to merge: mean {hm(media([r.get('verde_a_unione_s') for r in unite]))}")
     out(f"  pushes per PR: mean {media(list(push.values())):.1f}; test runs per PR: mean {media([v[2] for v in ci_pr.values()]):.1f}; "
         f"CI duration per PR: mean {hm(media([v[0] for v in ci_pr.values()]))}, of which queue {hm(media([v[1] for v in ci_pr.values()]))}")
+    cause: Counter = Counter()
+    for r in prs:
+        cause.update(r.get("cause_commit") or {})
+    chiusi = [r for r in prs if r["azione"] in ("unita", "chiusa")]
+    out("  pushes per PR by cause (commits after the first): " + (", ".join(f"{k} {v / len(chiusi):.1f}" for k, v in cause.most_common()) if chiusi else "-"))
     out(f"  merges of main per PR (closed PRs): mean {media([r.get('merge_main') for r in prs if r['azione'] in ('unita', 'chiusa')]):.1f}; PRs seen {len(pr_visti)}")
     fall = [r for r in ev if r["tipo"] == "job_fallito"]
     out("\nJobs failing most often")

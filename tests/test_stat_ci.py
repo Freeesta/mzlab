@@ -34,12 +34,14 @@ def test_pr_unita():
 
     def api(p):
         if "/commits?" in p:
-            return [{"parents": [1, 2], "commit": {"message": "Merge branch 'main' into claude/x"}},
-                    {"parents": [1], "commit": {"message": "fix"}}]
+            return [{"parents": [1], "commit": {"message": "start"}},
+                    {"parents": [1, 2], "commit": {"message": "Merge branch 'main' into claude/x"}},
+                    {"parents": [1], "commit": {"message": "fix"}}, {"parents": [1], "commit": {"message": "cargo fmt"}}]
         return {"check_runs": [{"id": 1, "name": "a", "status": "completed", "conclusion": "success", "completed_at": "2026-10-21T10:30:00Z"},
                                {"id": 2, "name": "a", "status": "completed", "conclusion": "success", "completed_at": "2026-10-21T10:40:00Z"}]}
     r = s.righe_pr({"action": "closed", "pull_request": pr}, api)[0]
     assert (r["azione"], r["aperta_s"], r["merge_main"], r["verde_a_unione_s"]) == ("unita", 10800, 1, 1200)
+    assert r["cause_commit"] == {"merge di main": 1, "altro": 1, "fmt/clippy": 1}
     assert s.righe_pr({"action": "synchronize", "pull_request": pr}, api)[0]["azione"] == "push"
 
 
@@ -50,15 +52,21 @@ def test_conflitti_e_dedup(tmp_path):
         if p == "/commits/m1":
             return {"commit": {"message": "Merge pull request #9 from x"}, "files": [{"filename": f} for f in ("a.js", "b.js", "c.js")]}
         if p.startswith("/pulls?state=open"):
-            return [{"number": 1}, {"number": 2}, {"number": 3}]
+            return [{"number": 1}, {"number": 2}, {"number": 3}, {"number": 4}, {"number": 5}]
         if p.startswith("/pulls/") and "/files" in p:
-            return [{"filename": f} for f in (("a.js", "b.js", "z.js") if "/1/" in p else ("c.js",))]
+            return [{"filename": f} for f in (("a.js", "b.js", "z.js") if "/1/" in p else ("c.js",) if "/2/" in p else ("q.js",))]
         n = int(p.split("/")[2])
-        return {"mergeable": None if n == 3 else True, "mergeable_state": "dirty" if n in (1, 2) else "clean"}
+        letture[n] = letture.get(n, 0) + 1
+        # 4: dirty only at the first read (false conflict); 5: dirty at both reads (real, no file in common)
+        sporco = n in (1, 2, 5) or (n == 4 and letture[n] == 1)
+        return {"mergeable": None if n == 3 else True, "mergeable_state": "dirty" if sporco else "clean"}
+    letture: dict = {}
+    pause = []
     ev = {"ref": "refs/heads/main", "after": "m1"}
-    righe = s.righe_conflitti(ev, str(dati), api, lambda _: None)
-    assert [(r["pr"], r["file_comuni"], r["pr_unita"]) for r in righe] == [(1, ["a.js", "b.js"], 9), (2, ["c.js"], 9)]
-    assert s.accoda(righe, str(dati)) == 2 and s.accoda(righe, str(dati)) == 0
+    righe = s.righe_conflitti(ev, str(dati), api, pause.append)
+    assert [(r["pr"], r["file_comuni"], r["pr_unita"]) for r in righe] == [(1, ["a.js", "b.js"], 9), (2, ["c.js"], 9), (5, [], 9)]
+    assert s.RILETTURA_S in pause
+    assert s.accoda(righe, str(dati)) == 3 and s.accoda(righe, str(dati)) == 0
     assert s.righe_conflitti(ev, str(dati), api, lambda _: None) == []
     assert s.righe_conflitti({"ref": "refs/heads/x", "after": "m1"}, str(dati), api) == []
 
