@@ -394,15 +394,11 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
     ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),
-<<<<<<< HEAD
     ("tp.dig_lr", Exec::File("dig", crate::flow_digl::dig_job)),
-    ("annot.level", Exec::File("annot", level_job)),
-=======
     (
         "annot.level",
         Exec::File("annot", crate::flow_level::level_job),
     ),
->>>>>>> origin/main
     ("tp.network", Exec::File("network", network_job)),
     ("tp.link", Exec::File("tp", crate::flow_link::link_job)),
     (
