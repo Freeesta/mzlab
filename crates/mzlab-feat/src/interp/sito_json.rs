@@ -97,6 +97,13 @@ fn site(o: &mut Out, s: &SiteReport) {
         .raw("}}");
 }
 
+/// The JSON of a `Drawing` alone, as it stands in the key `drawing` of a row.
+pub fn drawing_json(d: &Drawing) -> String {
+    let mut o = Out::default();
+    drawing(&mut o, d);
+    o.0
+}
+
 fn drawing(o: &mut Out, d: &Drawing) {
     o.raw("{\"mode\":").str(d.mode).raw(",\"atoms\":");
     atoms(o, &d.atoms);

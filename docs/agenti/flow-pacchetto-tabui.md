@@ -19,7 +19,7 @@ Per ogni passo: (1) registra il descrittore nel registro del CLI (`flow::steps()
 - `flow-copertura-tabui.md` e `cli.md` descrivono lo stato; l'elenco dei buchi qui sotto è quello che resta.
 
 ## Buchi per modulo (oggi)
-- **Senza esecutore, Tabui**: `features.ms2_link` (incluso in `features.detect`, non separabile senza cambiare i byte), `structure.render`, `structure.reactivity`; `tp.position` non rifà i voti dell'albero MSn (le righe con `source: tree` tengono il loro `site`).
+- **Senza esecutore, Tabui**: `features.ms2_link` (incluso in `features.detect`, non separabile senza cambiare i byte), `structure.reactivity`; `tp.position` non rifà i voti dell'albero MSn (le righe con `source: tree` tengono il loro `site`).
 - **Senza esecutore** (`err.flow.step.native`): `import.raw`, `spectra.chimeric`, `spectra.insilico`, `rt.predict`, `annot.regulatory`, `annot.hazard` (il registro di pericolosità non è in Rust).
 - **Bassa risoluzione**: lo Scavo è il passo `tp.dig_lr`; i cancelli di `tp/1` usano il Da quando la tabella è a risoluzione unitaria (`TpParams.ppm < 0`), quindi `tp.link@2` gira; `tp.generate` usa ancora le regole di HR (`regole_tp_2.json`), diverse dal Dig.
 - **Mancano come passi**: albero/grafo MSn (`msngrafo/1`), ricerca per nome del composto, avanzamento in diretta.

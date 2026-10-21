@@ -60,6 +60,9 @@ mod flow_read;
 mod flow_refilter;
 #[cfg(test)]
 mod flow_refilter_tests;
+mod flow_render;
+#[cfg(test)]
+mod flow_render_tests;
 pub mod flow_report;
 mod flow_run;
 mod flow_set;
