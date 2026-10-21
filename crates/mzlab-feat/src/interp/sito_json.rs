@@ -47,6 +47,13 @@ fn votes(o: &mut Out, s: &SiteReport) {
     o.raw("]");
 }
 
+/// The JSON of a `SiteReport` alone, as it stands in the key `site` of a row.
+pub fn site_json(s: &SiteReport) -> String {
+    let mut o = Out::default();
+    site(&mut o, s);
+    o.0
+}
+
 fn site(o: &mut Out, s: &SiteReport) {
     o.raw("{\"transform\":")
         .str(&s.transform)

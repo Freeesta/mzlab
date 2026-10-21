@@ -20,7 +20,7 @@ Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzion
 | Confronto HR: rivelazione, allineamento, riempimento | `features.detect`, `features.align`, `features.gapfill`, `features.table` (modello «Just build the feature table») | Coperta ed eseguibile (app, CLI) | Sito: esecutore web |
 | Abbinamento ipotesi ↔ feature con MS2 | `tp.link`, `features.ms2_link`, `spectra.ms2` | `spectra.ms2` e `tp.link@2` eseguibili (CLI e app); `features.ms2_link` no | `features.ms2_link` è incluso in `features.detect` e non si separa senza cambiare i byte |
 | MS2, libreria, albero MSn del genitore | `spectra.match` (eseguibile), grafo `msngrafo/1` e albero (`frag_tree`) | Ricerca in libreria coperta; albero e grafo mancano come passi | Un passo che produca `msngrafo/1`; oggi è solo vista di un file |
-| Posizione della sostituzione | `tp.position` | Passo c'è ma non eseguibile | Esecutore e registrazione nel CLI |
+| Posizione della sostituzione | `tp.position` | Eseguibile (`flow_position.rs`): rilegge il `site` di `interp/1` con le soglie del passo | Buco: i voti dell'albero MSn non stanno nel file (una riga votata dall'albero tiene il suo `site`); il sito non lo esegue |
 | Rete dei prodotti | `tp.network` (nodo «Product network») | Eseguibile solo con un `tp/1` già pronto; nessun passo eseguibile lo produce | Esecutore di `tp.link` (`tp.link@2` c'è; `tp.link@1`, che prendeva un MGF, non esiste più: `err.flow.step.version`; `tp.generate` c'è già) |
 | Reattività del genitore | `structure.reactivity` | Passo c'è ma non eseguibile (nel sito la vista legge un `reatt/1` da disco) | Esecutore (il motore `chem` è nel `.wasm`) |
 | Confronto fra condizioni / gruppi | `meta.compare`, `table.stats` | `meta.compare` eseguibile; `table.stats` no | Esecutore di `table.stats`; i grafici sono già viste di Flow |
@@ -34,7 +34,7 @@ Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzion
 
 ## Conclusione
 - Il modello più vicino a «usare Tabui» è «TP time series» (`tp.generate`, `tp.link`, `tp.filter`, `table.filter`, `tp.network` sopra la catena di base): ha lo stesso percorso di Tabui (genitore → ipotesi → abbinamento → filtri → rete), ma oggi non si esegue da nessuna parte. Il più vicino fra quelli che si eseguono davvero in app è «Find and identify compounds in my samples», che non cerca prodotti.
-- Per renderlo eseguibile nell'app e nel CLI: registrare nel CLI i passi di Tabui oltre a `tp.network` e scrivere gli esecutori di `tp.filter` e `table.filter` (`tp.generate` e `tp.link` ci sono già) (più `tp.position` e `features.ms2_link` per la parità con Tabui), tutti sopra motori già in Rust.
+- Per renderlo eseguibile nell'app e nel CLI: registrare nel CLI i passi di Tabui oltre a `tp.network` e scrivere gli esecutori di `tp.filter` e `table.filter` (`tp.generate` e `tp.link` ci sono già) (`tp.position` c'è; `features.ms2_link` resta fuori: incluso in `features.detect`), tutti sopra motori già in Rust.
 - Per il sito: serve un esecutore web (terza voce di `F.runners`, oggi parcheggiato) che chiami gli stessi esecutori compilati in `.wasm`; finché non c'è, il sito costruisce e controlla il piano e non lo esegue.
 - Non coperte e senza passo: ricerca per nome del composto, albero di frammentazione come passo, avanzamento in diretta.
 

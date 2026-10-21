@@ -12,9 +12,10 @@ pub mod json;
 pub mod modifica;
 pub mod ms2link;
 pub mod refilter;
+pub mod reposition;
 pub mod run;
 pub mod sito;
-mod sito_json;
+pub mod sito_json;
 pub mod store;
 
 pub use build::{build, Inputs, Output, RowInterp};
