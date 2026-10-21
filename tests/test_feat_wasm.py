@@ -1,6 +1,7 @@
 """The pipeline of mzFinder in WebAssembly (crates/mzlab-feat-wasm) gives the same bytes as the native engine: the `.mzfeatf` of every file, the `.mzfeat` of the
 series and the one with the graph of the proofs have the same SHA-256 whether the example `nativo` or the `.wasm` (through Node) makes them. The series is the
-synthetic one of tools/feat_mirato.py (profile `piccolo`). Skipped without cargo, the wasm32 target, wasm-bindgen, node or numpy."""
+synthetic one of tools/feat_mirato.py (profile `piccolo`; the tests of the `Spill` of the page use the profile `debole`). Skipped without cargo, the wasm32 target, wasm-bindgen, node or numpy."""
+import re
 import shutil
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
@@ -73,20 +74,53 @@ def test_a_reduced_budget_gives_the_same_sha256_native_and_in_node(built, mode):
         assert got == ref, f"wasm, {mb} MB"
 
 
-@pytest.mark.parametrize("mb", [1.5, 0.5])
-def test_the_weak_tables_in_a_spill_of_the_page_give_the_same_sha256(built, mb):
-    """The optional `spill` of `align_series_to` (an object of the page with `put` and `get`) changes where the weak tables wait, not the bytes."""
-    root, idx, pkg = built
-    recipe = ("--recipe", '{"mode":"family"}')
-    ref, _ = native(root, idx, f"ref-spill", *recipe)
-    out = root / f"spill-{mb}"
+@pytest.fixture(scope="module")
+def weak(built):
+    """The series `debole` (tools/feat_mirato.py: `piccolo` plus thousands of weak features in every file) and the bytes of the native engine in memory."""
+    root, _, _ = built
+    ser = root / "ser-debole"
+    run("python3", "tools/feat_mirato.py", "--seme", "2", "--profilo", "debole", "--out", str(ser))
+    idx = sorted(str(p) for p in ser.glob("*.mzidx"))
+    assert len(idx) == 6
+    ref, _ = native(root, idx, "ref-debole", "--recipe", '{"mode":"family"}')
+    return idx, ref
+
+
+def spilling(built, idx, name, mb, spill):
+    root, _, pkg = built
+    out = root / name
     out.mkdir(exist_ok=True)
-    p = subprocess.run(["node", str(ROOT / "tests" / "feat_wasm_node.js"), str(pkg), str(out), *idx, *PARENT, *recipe, "--budget-mb", str(mb), "--spill", "1"],
-                       cwd=ROOT, capture_output=True, encoding="utf-8")
+    args = ["--budget-mb", str(mb)] + (["--spill", spill] if spill else [])
+    return subprocess.run(["node", str(ROOT / "tests" / "feat_wasm_node.js"), str(pkg), str(out), *idx, *PARENT, "--recipe", '{"mode":"family"}', *args],
+                          cwd=ROOT, capture_output=True, encoding="utf-8")
+
+
+@pytest.mark.parametrize("mb", [1.5, 0.5])
+def test_the_weak_tables_in_a_spill_of_the_page_give_the_same_sha256(built, weak, mb):
+    """The optional `spill` of `align_series_to` (an object of the page with `put` and `get`) changes where the weak tables wait, not the bytes: with the
+    series `debole` the weak tables do not fit in half of what is free, so each of the 6 files goes to `put` and every slab reads all the files with `get`."""
+    idx, ref = weak
+    p = spilling(built, idx, f"spill-{mb}", mb, "1")
     assert p.returncode == 0, p.stderr
     assert p.stdout == ref, f"{mb} MB"
-    # the synthetic weak tables are small: the object is accepted and the plumbing is exercised even when nothing needs to wait outside
-    assert "spill puts" in p.stderr
+    puts, gets = map(int, re.search(r"spill puts (\d+) gets (\d+)", p.stderr).groups())
+    assert puts == len(idx)
+    assert gets >= 2 * len(idx) and gets % len(idx) == 0       # more than one slab, each reading every file
+
+
+def test_a_budget_where_the_weak_tables_do_not_fit_is_refused_without_a_spill(built, weak):
+    idx, _ = weak
+    p = spilling(built, idx, "no-spill", 1.5, None)
+    assert p.returncode != 0
+    assert '"error_key":"error.memoryBudget"' in p.stderr and '"fase":"align"' in p.stderr
+
+
+def test_a_get_that_throws_is_a_refusal_with_the_key_and_not_a_panic(built, weak):
+    idx, _ = weak
+    p = spilling(built, idx, "get-fails", 1.5, "fail")
+    assert p.returncode != 0
+    assert '"error_key":"error.memoryBudget"' in p.stderr and '"fase":"align"' in p.stderr
+    assert "panick" not in p.stderr and "unreachable" not in p.stderr
 
 
 def test_a_budget_that_fits_nothing_is_refused_with_the_key_and_the_files_saved(built):
