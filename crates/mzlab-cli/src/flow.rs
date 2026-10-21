@@ -18,6 +18,7 @@ use crate::flow_cache::Cache;
 use crate::flow_compare::compare_job;
 use crate::flow_estimate::estimate_job;
 use crate::flow_inclusion::inclusion_job;
+use crate::flow_msngraph::job as msn_graph_job;
 pub use crate::flow_out::{run_plan_cached, run_plan_notify};
 use crate::flow_reactivity::reactivity_job;
 use crate::flow_read::{blobs, load, named, Loaded};
@@ -330,15 +331,6 @@ fn ms2_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let out = r.work.join(format!("{}.mgf", job.instance.id));
     std::fs::write(&out, text).map_err(io)?;
     r.keep(out, DataType::Spectra)
-}
-
-fn msn_graph_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let file = one_input(r, job, "source")?;
-    let tmp = r.work.join(format!("{}-msn", job.instance.id));
-    std::fs::create_dir_all(&tmp).map_err(io)?;
-    let text = crate::flow_msngraph::msn_graph_text(job, &file, &tmp);
-    let _ = std::fs::remove_dir_all(&tmp);
-    write_made(r, job, text?, DataType::Report)
 }
 
 /// How a step runs natively: an executor that makes one file for `port`, or one that says itself what it made.
