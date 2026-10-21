@@ -32,11 +32,24 @@ pub(super) struct Codifica {
 
 impl Codifica {
     pub fn new(opz: Opzioni) -> Self {
-        Codifica { opz, z: Compress::new(Compression::new(opz.livello.min(9)), true), raw: Vec::new(), packed: Vec::new(), np: Vec::new(), blocco: vec![0; 32 * 1024] }
+        Codifica {
+            opz,
+            z: Compress::new(Compression::new(opz.livello.min(9)), true),
+            raw: Vec::new(),
+            packed: Vec::new(),
+            np: Vec::new(),
+            blocco: vec![0; 32 * 1024],
+        }
     }
 
     /// Appends to `s` the whole `<spectrum>` number `index`: head, the m/z and intensity arrays, closing tags.
-    pub fn spettro(&mut self, index: usize, sp: &Spectrum, extra: &SpectrumExtra, s: &mut String) -> Result<()> {
+    pub fn spettro(
+        &mut self,
+        index: usize,
+        sp: &Spectrum,
+        extra: &SpectrumExtra,
+        s: &mut String,
+    ) -> Result<()> {
         s.push_str(&spectrum_head(index, sp, extra));
         *s += "<binaryDataArrayList count=\"2\">\n";
         let res = self.arrays(s, sp);
@@ -54,7 +67,12 @@ impl Codifica {
         match (&sp.wide, np) {
             (Some(w), false) => self.array(s, "intensity", "counts", Data::F64(w)),
             (None, false) => self.array(s, "intensity", "counts", Data::F32(&sp.intensity)),
-            (Some(w), true) => self.array(s, "intensity", "counts", Data::Np(Np::Slof, Cow::Borrowed(w))),
+            (Some(w), true) => self.array(
+                s,
+                "intensity",
+                "counts",
+                Data::Np(Np::Slof, Cow::Borrowed(w)),
+            ),
             (None, true) => {
                 let v: Vec<f64> = sp.intensity.iter().map(|&x| f64::from(x)).collect();
                 self.array(s, "intensity", "counts", Data::Np(Np::Slof, Cow::Owned(v)))
@@ -70,8 +88,14 @@ impl Codifica {
         let mut fatto = 0;
         loop {
             let (dentro, fuori) = (self.z.total_in(), self.z.total_out());
-            let stato = self.z.compress(&self.raw[fatto..], &mut self.blocco, FlushCompress::Finish).map_err(|_| io(std::io::ErrorKind::Other.into()))?;
-            let (letti, scritti) = ((self.z.total_in() - dentro) as usize, (self.z.total_out() - fuori) as usize);
+            let stato = self
+                .z
+                .compress(&self.raw[fatto..], &mut self.blocco, FlushCompress::Finish)
+                .map_err(|_| io(std::io::ErrorKind::Other.into()))?;
+            let (letti, scritti) = (
+                (self.z.total_in() - dentro) as usize,
+                (self.z.total_out() - fuori) as usize,
+            );
             fatto += letti;
             self.packed.extend_from_slice(&self.blocco[..scritti]);
             if stato == flate2::Status::StreamEnd {

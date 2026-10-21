@@ -52,18 +52,29 @@ impl Pozzo {
             rx.iter().for_each(|b| h.update(&b));
             h
         });
-        Pozzo { tx: Some(tx), sha: Some(sha), byte: 0 }
+        Pozzo {
+            tx: Some(tx),
+            sha: Some(sha),
+            byte: 0,
+        }
     }
     fn fine(mut self) -> (String, u64) {
         drop(self.tx.take());
         let h = self.sha.take().expect("sha").join().expect("join");
-        (h.finalize().iter().map(|x| format!("{x:02x}")).collect(), self.byte)
+        (
+            h.finalize().iter().map(|x| format!("{x:02x}")).collect(),
+            self.byte,
+        )
     }
 }
 impl Write for Pozzo {
     fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
         self.byte += b.len() as u64;
-        self.tx.as_ref().expect("open").send(b.to_vec()).map_err(|_| std::io::ErrorKind::BrokenPipe)?;
+        self.tx
+            .as_ref()
+            .expect("open")
+            .send(b.to_vec())
+            .map_err(|_| std::io::ErrorKind::BrokenPipe)?;
         Ok(b.len())
     }
     fn flush(&mut self) -> std::io::Result<()> {
@@ -80,9 +91,31 @@ struct DaMzml {
 
 impl DaMzml {
     fn nuovo(run: mzml::Run) -> Self {
-        let indice = run.spectra.iter().map(|s| VoceScansione { id: s.id.clone(), rt: s.rt, livello: s.level, polarita: s.polarity, tic: 0.0, picco_base: None, filtro: s.filter.clone(), precursore: s.precursor, posizione: None }).collect();
-        let campioni = vec![Campione { id: 1, nome: "sintetico".into(), scansioni: run.spectra.len() }];
-        DaMzml { run, campioni, indice }
+        let indice = run
+            .spectra
+            .iter()
+            .map(|s| VoceScansione {
+                id: s.id.clone(),
+                rt: s.rt,
+                livello: s.level,
+                polarita: s.polarity,
+                tic: 0.0,
+                picco_base: None,
+                filtro: s.filter.clone(),
+                precursore: s.precursor,
+                posizione: None,
+            })
+            .collect();
+        let campioni = vec![Campione {
+            id: 1,
+            nome: "sintetico".into(),
+            scansioni: run.spectra.len(),
+        }];
+        DaMzml {
+            run,
+            campioni,
+            indice,
+        }
     }
 }
 
@@ -97,7 +130,11 @@ impl Lettore for DaMzml {
         Ok(&self.indice)
     }
     fn scansione(&mut self, _: usize, k: usize) -> Result<Spectrum> {
-        self.run.spectra.get(k).cloned().ok_or_else(|| Error::new("error.badIndex"))
+        self.run
+            .spectra
+            .get(k)
+            .cloned()
+            .ok_or_else(|| Error::new("error.badIndex"))
     }
     fn intestazione(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
         Ok(Vec::new())
@@ -116,7 +153,11 @@ impl Lettore for DaMzml {
 /// Peak resident set of the process so far, in MB (`VmHWM`).
 fn rss_max() -> f64 {
     let s = std::fs::read_to_string("/proc/self/status").unwrap_or_default();
-    let kb = s.lines().find(|l| l.starts_with("VmHWM:")).and_then(|l| l.split_whitespace().nth(1)).and_then(|v| v.parse::<f64>().ok());
+    let kb = s
+        .lines()
+        .find(|l| l.starts_with("VmHWM:"))
+        .and_then(|l| l.split_whitespace().nth(1))
+        .and_then(|v| v.parse::<f64>().ok());
     kb.unwrap_or(0.0) / 1024.0
 }
 
@@ -137,13 +178,22 @@ fn main() {
         Some("mzlab") => Picchi::Mzlab,
         Some(x) => panic!("--peaks file|profile|mzlab, not {x}"),
     };
-    let run = mzml::read(std::io::BufReader::new(std::fs::File::open(file).expect("open"))).expect("read mzML");
+    let run = mzml::read(std::io::BufReader::new(
+        std::fs::File::open(file).expect("open"),
+    ))
+    .expect("read mzML");
     let mut l = DaMzml::nuovo(run);
     let base = VIVI.load(Ordering::Relaxed);
     PICCO.store(base, Ordering::Relaxed);
     let t = Instant::now();
-    let conv = Conversione { peaks, opz, ..Conversione::default() };
-    let pozzo = conv.scrivi(&mut l, 0, Pozzo::nuovo(), &mut |_, _| {}).expect("convert");
+    let conv = Conversione {
+        peaks,
+        opz,
+        ..Conversione::default()
+    };
+    let pozzo = conv
+        .scrivi(&mut l, 0, Pozzo::nuovo(), &mut |_, _| {})
+        .expect("convert");
     let s = t.elapsed().as_secs_f64();
     let picco = PICCO.load(Ordering::Relaxed).saturating_sub(base) as f64 / 1048576.0;
     let (sha, byte) = pozzo.fine();

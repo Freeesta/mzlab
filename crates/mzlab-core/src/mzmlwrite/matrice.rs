@@ -16,12 +16,14 @@ impl Codifica {
         let (acc, name, zlib): (&str, &str, bool) = match &data {
             Data::F64(v) => {
                 self.raw.reserve(v.len() * 8);
-                v.iter().for_each(|x| self.raw.extend_from_slice(&x.to_le_bytes()));
+                v.iter()
+                    .for_each(|x| self.raw.extend_from_slice(&x.to_le_bytes()));
                 ("MS:1000523", "64-bit float", true)
             }
             Data::F32(v) => {
                 self.raw.reserve(v.len() * 4);
-                v.iter().for_each(|x| self.raw.extend_from_slice(&x.to_le_bytes()));
+                v.iter()
+                    .for_each(|x| self.raw.extend_from_slice(&x.to_le_bytes()));
                 ("MS:1000521", "32-bit float", true)
             }
             Data::Np(np, v) => {
@@ -30,7 +32,15 @@ impl Codifica {
                     _ => numpress::encode_linear(v, numpress::linear_fixed_point(v)),
                 };
                 self.raw.extend_from_slice(&self.np);
-                (if *np == Np::Slof { "MS:1002314" } else { "MS:1002312" }, "", false)
+                (
+                    if *np == Np::Slof {
+                        "MS:1002314"
+                    } else {
+                        "MS:1002312"
+                    },
+                    "",
+                    false,
+                )
             }
         };
         let is_np = matches!(data, Data::Np(..));
@@ -61,10 +71,18 @@ impl Codifica {
         if is_np {
             // the values are 64-bit floats once decoded; the codec (and zlib with it) replaces the compression term
             let (acc, name) = match (acc, zlib) {
-                ("MS:1002314", false) => ("MS:1002314", "MS-Numpress short logged float compression"),
-                ("MS:1002314", true) => ("MS:1002748", "MS-Numpress short logged float compression followed by zlib compression"),
+                ("MS:1002314", false) => {
+                    ("MS:1002314", "MS-Numpress short logged float compression")
+                }
+                ("MS:1002314", true) => (
+                    "MS:1002748",
+                    "MS-Numpress short logged float compression followed by zlib compression",
+                ),
                 (_, false) => ("MS:1002312", "MS-Numpress linear prediction compression"),
-                (_, true) => ("MS:1002746", "MS-Numpress linear prediction compression followed by zlib compression"),
+                (_, true) => (
+                    "MS:1002746",
+                    "MS-Numpress linear prediction compression followed by zlib compression",
+                ),
             };
             let _ = write!(s, "<cvParam cvRef=\"MS\" accession=\"MS:1000523\" name=\"64-bit float\" value=\"\"/><cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"\"/>");
         } else {
