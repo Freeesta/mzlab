@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "llmreg-1",
+  "title": "llmreg/1: a recording of model answers, one JSON line per turn, replayed by fake::Replay",
+  "type": "object",
+  "required": ["schema", "events"],
+  "properties": {
+    "schema": {"const": "llmreg/1"},
+    "turn": {"type": "integer", "minimum": 0},
+    "request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the request body; compared in strict mode."},
+    "events": {"type": "array", "items": {"$ref": "llmlog-1#"}}
+  }
+}
