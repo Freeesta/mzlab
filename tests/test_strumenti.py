@@ -23,7 +23,8 @@ def ui_actions():
 
 def test_header_and_tools():
     assert CATALOG["schema"] == "strumenti/1"
-    assert re.fullmatch(r"[0-9a-f]{64}", CATALOG["registry_sha256"])
+    # the file carries no hash of the registry: it would be rewritten by every change of the registry
+    assert set(CATALOG) == {"schema", "tools"}
     assert len(CATALOG["tools"]) == 15
     for t in CATALOG["tools"]:
         assert set(t) == {"name", "class", "description", "input_schema"}
