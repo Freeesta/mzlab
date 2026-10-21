@@ -1,6 +1,7 @@
 //! The one mzML writer on top of `Lettore`: any reader of the registry gives the same file layout (spectra, then chromatograms).
 use std::io::Write;
 
+#[cfg(not(target_family = "wasm"))]
 use crate::centroidi::{Buf, Params};
 use crate::error::{Error, Result};
 use crate::lettori::Lettore;
@@ -63,28 +64,25 @@ fn centroidi_di(l: &mut dyn Lettore, c: usize, h: &mut Header) -> Result<Option<
     Ok(Some(p))
 }
 
-/// The parameters of our own centroids, when `peaks` asks for them and the sample is profile (the browser build has no peak picking here).
+/// What the peak picking of our own centroids needs while the scans go by (nothing in the browser build, which has none).
 #[cfg(not(target_family = "wasm"))]
-fn mzlab_params(
-    peaks: Picchi,
-    l: &mut dyn Lettore,
-    c: usize,
-    h: &mut Header,
-) -> Result<Option<Params>> {
-    match peaks {
-        Picchi::Mzlab => centroidi_di(l, c, h),
-        _ => Ok(None),
-    }
+struct Pick(Option<Params>, Buf);
+#[cfg(target_family = "wasm")]
+struct Pick;
+
+/// The `Pick` of a conversion: the parameters only when `peaks` asks for our centroids and the sample is profile.
+#[cfg(not(target_family = "wasm"))]
+fn pick_di(peaks: Picchi, l: &mut dyn Lettore, c: usize, h: &mut Header) -> Result<Pick> {
+    let p = match peaks {
+        Picchi::Mzlab => centroidi_di(l, c, h)?,
+        _ => None,
+    };
+    Ok(Pick(p, Buf::default()))
 }
 
 #[cfg(target_family = "wasm")]
-fn mzlab_params(
-    _: Picchi,
-    _: &mut dyn Lettore,
-    _: usize,
-    _: &mut Header,
-) -> Result<Option<Params>> {
-    Ok(None)
+fn pick_di(_: Picchi, _: &mut dyn Lettore, _: usize, _: &mut Header) -> Result<Pick> {
+    Ok(Pick)
 }
 
 /// Scan `(c, k)` as `peaks` says; the browser build has no peak picking and no profile of a reader that does not keep one apart.
@@ -93,14 +91,14 @@ fn scansione_di(
     peaks: Picchi,
     l: &mut dyn Lettore,
     (c, k): (usize, usize),
-    (p, buf): (Option<&Params>, &mut Buf),
+    pick: &mut Pick,
 ) -> Result<Spectrum> {
     match peaks {
         Picchi::File => l.scansione(c, k),
         Picchi::Mzlab => {
             let mut s = l.scansione(c, k)?;
-            if let Some(p) = p {
-                picchi(&mut s, p, buf);
+            if let Some(p) = &pick.0 {
+                picchi(&mut s, p, &mut pick.1);
             }
             Ok(s)
         }
@@ -119,7 +117,7 @@ fn scansione_di(
     peaks: Picchi,
     l: &mut dyn Lettore,
     (c, k): (usize, usize),
-    _: (Option<&Params>, &mut Buf),
+    _: &mut Pick,
 ) -> Result<Spectrum> {
     match peaks {
         Picchi::Profilo => l
@@ -151,8 +149,7 @@ impl Conversione<'_> {
             return Err(Error::new("error.badIndex").with("c", c));
         }
         let mut h = testata(l, c)?;
-        let params = mzlab_params(self.peaks, l, c, &mut h)?;
-        let mut buf = Buf::default();
+        let mut pick = pick_di(self.peaks, l, c, &mut h)?;
         h.run_params
             .push(("mzLab conv/1".into(), crate::conv::resoconto(l, c)?));
         let mut w = match self.steps {
@@ -168,7 +165,7 @@ impl Conversione<'_> {
         }
         progress(0, n);
         for k in 0..n {
-            let s = scansione_di(self.peaks, l, (c, k), (params.as_ref(), &mut buf))?;
+            let s = scansione_di(self.peaks, l, (c, k), &mut pick)?;
             let extra = l.extra_scansione(c, k, &s);
             w.spectrum_with(&s, &extra)?;
             if (k + 1) % 32 == 0 {
