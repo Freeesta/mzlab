@@ -43,7 +43,10 @@ fn agilent_through_lettore_gives_the_spectra_of_the_run() {
     let back = mzlab_core::mzml::read(&via[..]).unwrap();
     assert_eq!(back.spectra.len(), want.spectra.len());
     for (a, b) in back.spectra.iter().zip(&want.spectra) {
-        assert_eq!((&a.id, a.level, a.polarity, &a.mz), (&b.id, b.level, b.polarity, &b.mz));
+        assert_eq!(
+            (&a.id, a.level, a.polarity, &a.mz),
+            (&b.id, b.level, b.polarity, &b.mz)
+        );
         assert!((0..a.mz.len()).all(|i| a.intensity_f64(i) == b.intensity_f64(i)));
     }
     assert!(lettori_mzml::scrivi(&mut *l, 1, Vec::new(), &mut |_, _| {}).is_err());

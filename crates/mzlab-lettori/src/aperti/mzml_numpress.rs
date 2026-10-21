@@ -237,11 +237,7 @@ impl Lettore for LettoreNumpress {
     }
 
     fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
-        use mzlab_core::conv::{FUORI_MODELLO, SENZA_TERMINE};
-        &[
-            ("dataProcessing, referenceableParamGroup and scanSettings of the source", FUORI_MODELLO),
-            ("cvParams the writer does not know (carried as userParam)", SENZA_TERMINE),
-        ]
+        crate::non_portati::NUMPRESS
     }
 
     fn campioni(&self) -> &[Campione] {

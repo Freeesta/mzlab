@@ -48,8 +48,15 @@ pub fn mzml_cartella(folder: &Path) -> Vec<u8> {
                 stack.push(p);
                 continue;
             }
-            let rel = p.strip_prefix(folder).unwrap().to_string_lossy().replace('\\', "/");
-            membri.push(membro(&format!("{base}/{rel}"), &std::fs::read(&p).unwrap()));
+            let rel = p
+                .strip_prefix(folder)
+                .unwrap()
+                .to_string_lossy()
+                .replace('\\', "/");
+            membri.push(membro(
+                &format!("{base}/{rel}"),
+                &std::fs::read(&p).unwrap(),
+            ));
         }
     }
     mzml(FileSet { membri })

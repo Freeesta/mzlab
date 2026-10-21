@@ -414,11 +414,7 @@ impl Lettore for LettoreAgilent {
     }
 
     fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
-        use crate::conv::{IN_METODO, NON_DECODIFICATO};
-        &[
-            ("sample type, GC method, effective values, quantification method and audit trail", NON_DECODIFICATO),
-            ("DAD1 files, module traces (pressure, flow, temperature) and MSActual.bin", IN_METODO),
-        ]
+        crate::conv::AGILENT_EXT
     }
 
     fn campioni(&self) -> &[Campione] {

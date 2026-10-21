@@ -96,7 +96,10 @@ fn same(dir: &Path, name: &str) -> usize {
         let via = mzlab_core::lettori_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
         let back = mzlab_core::mzml::read(&via[..]).unwrap();
         assert_eq!(back.spectra.len(), run.spectra.len(), "{name}/{s}: mzML");
-        assert_eq!(back.chromatograms, run.chromatograms, "{name}/{s}: mzML chromatograms");
+        assert_eq!(
+            back.chromatograms, run.chromatograms,
+            "{name}/{s}: mzML chromatograms"
+        );
         let doc = l.metodo(c).unwrap();
         assert!(
             doc.contains("sciex-wiff") && doc.contains(&format!("{name}.wiff")),

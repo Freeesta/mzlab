@@ -12,9 +12,33 @@ pub const IN_METODO: &str = "kept in metodo/1, not in the mzML";
 pub const NON_PROVATO: &str = "no file at hand to validate";
 pub const FUORI_MODELLO: &str = "outside the mzML model";
 
-fn esc(s: &str) -> String {
-    s.replace('\\', "\\\\").replace('"', "\\\"")
-}
+/// Gaps of the Thermo readers.
+pub const THERMO: &[(&str, &str)] = &[
+    (
+        "UV 3D field of a PDA detector (spectra per instant)",
+        NON_DECODIFICATO,
+    ),
+    ("analog channels other than the pump pressure", IN_METODO),
+    ("status log series and error log", IN_METODO),
+    ("tune block of LTQ and TSQ files", NON_PROVATO),
+    (
+        "embedded LC method of Dionex, EASY-nLC, Accela, Surveyor and ACQUITY",
+        IN_METODO,
+    ),
+    ("ion trap experiment settings (Scan Event N)", IN_METODO),
+];
+
+/// Gaps of the Agilent LC/MS readers.
+pub const AGILENT_EXT: &[(&str, &str)] = &[
+    (
+        "sample type, GC method, effective values, quantification method and audit trail",
+        NON_DECODIFICATO,
+    ),
+    (
+        "DAD1 files, module traces (pressure, flow, temperature) and MSActual.bin",
+        IN_METODO,
+    ),
+];
 
 /// Scans looked at to count the fields: the first MS1 and the first MSn among the first rows.
 const RIGHE: usize = 64;
@@ -34,22 +58,33 @@ pub(crate) fn resoconto(l: &mut dyn Lettore, c: usize) -> Result<String> {
     for k in ks {
         campi.extend(l.intestazione(c, k)?);
     }
-    let mut nomi: Vec<&str> = campi.iter().map(|f| f.nome.as_str()).collect();
-    nomi.sort_unstable();
-    nomi.dedup();
+    let mut nomi: Vec<&str> = Vec::new();
+    for f in &campi {
+        if !nomi.contains(&f.nome.as_str()) {
+            nomi.push(&f.nome);
+        }
+    }
     let con_cv = |n: &str| campi.iter().any(|f| f.nome == n && f.cv.is_some());
     let cv = nomi.iter().filter(|n| con_cv(n)).count();
-    let mut s = format!(
-        "{{\"schema\":\"conv/1\",\"lettore\":\"{}\",\"versione\":\"{}\",\"campi_cv\":{cv},\"campi_user\":{},\"non_portati\":[",
-        l.formato().id(),
-        env!("CARGO_PKG_VERSION"),
-        nomi.len() - cv
-    );
+    let mut s = String::from("{\"schema\":\"conv/1\",\"lettore\":\"");
+    s += l.formato().id();
+    s += "\",\"versione\":\"";
+    s += env!("CARGO_PKG_VERSION");
+    s += "\",\"campi_cv\":";
+    s += &cv.to_string();
+    s += ",\"campi_user\":";
+    s += &(nomi.len() - cv).to_string();
+    s += ",\"non_portati\":[";
     for (i, (campo, motivo)) in l.non_portati().iter().enumerate() {
         if i > 0 {
             s.push(',');
         }
-        s += &format!("{{\"campo\":\"{}\",\"motivo\":\"{}\"}}", esc(campo), esc(motivo));
+        // The texts are static and carry no quote or backslash.
+        s += "{\"campo\":\"";
+        s += campo;
+        s += "\",\"motivo\":\"";
+        s += motivo;
+        s += "\"}";
     }
     s += "]}";
     Ok(s)

@@ -140,8 +140,7 @@ impl<W: Write> MzmlWriter<W> {
 
     /// Every trace of a reader: the mass-spectrometer kinds with their term, the other ones (pressure, detector, device) as `chromatogram type` with the unit in a userParam.
     pub fn chromatogram(&mut self, c: &Chromatogram) -> Result<()> {
-        let kind = chromatogram_kind(c);
-        let mut s = format!("<chromatogram index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">{kind}", self.chroms, esc(&c.id), c.time.len());
+        let mut s = format!("<chromatogram index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">{}", self.chroms, esc(&c.id), c.time.len(), chromatogram_kind(c));
         if matches!(c.kind, ChromKind::Pressure | ChromKind::Analog | ChromKind::Other) && !c.unit.is_empty() {
             s += &format!("<userParam name=\"unità\" value=\"{}\"/>", esc(&c.unit));
         }
@@ -392,7 +391,6 @@ impl<W: Write> MzmlWriter<W> {
         Ok(())
     }
 }
-
 
 /// The kind element of a chromatogram: the PSI-MS term of its kind, `chromatogram type` for a trace without a more precise one.
 pub(crate) fn chromatogram_kind(c: &Chromatogram) -> String {

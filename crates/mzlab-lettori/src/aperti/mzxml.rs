@@ -196,7 +196,7 @@ impl Lettore for LettoreMzxml {
     }
 
     fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
-        use mzlab_core::conv::{FUORI_MODELLO};
+        use mzlab_core::conv::FUORI_MODELLO;
         &[
             ("text of the header elements, scanOrigin, maldi, separation, spotting and processingOperation", FUORI_MODELLO),
         ]

@@ -24,5 +24,6 @@ fn main() {
         },
         ..Conversione::default()
     };
-    conv.scrivi(&mut *l, 0, out, &mut |_, _| {}).expect("convert");
+    conv.scrivi(&mut *l, 0, out, &mut |_, _| {})
+        .expect("convert");
 }

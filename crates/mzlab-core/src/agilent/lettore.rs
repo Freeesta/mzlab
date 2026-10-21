@@ -369,10 +369,11 @@ impl Lettore for LettoreAgilent {
     }
 
     fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
-        use crate::conv::{NON_DECODIFICATO};
-        &[
-            ("sample type, GC method, effective values, quantification method and audit trail", NON_DECODIFICATO),
-        ]
+        use crate::conv::NON_DECODIFICATO;
+        &[(
+            "sample type, GC method, effective values, quantification method and audit trail",
+            NON_DECODIFICATO,
+        )]
     }
 
     fn campioni(&self) -> &[Campione] {
