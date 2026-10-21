@@ -5,7 +5,8 @@
 use std::collections::BTreeSet;
 
 use mzlab_core::budget::sha256_hex;
-use mzlab_core::json::{Out, Value};
+use mzlab_core::error::{Error, Result};
+use mzlab_core::json::{parse, Out, Value};
 use mzlab_core::step::json::registry_json;
 use mzlab_core::step::{Kind, Param, Step};
 
@@ -377,4 +378,42 @@ pub fn catalog_json(steps: &[Step], ui: &[UiTool], executable: &dyn Fn(&str) -> 
     }
     o.raw("\n]}\n");
     o.0
+}
+
+/// The tools of a catalog text (`strumenti/1`, the file the site ships): the page of the site has no step registry, so it hands the text to the
+/// `.wasm` once. The names and texts are leaked to keep `Tool` `'static`: call it once per page, never per request.
+pub fn parse_catalog(text: &str) -> Result<Vec<Tool>> {
+    let bad = |f: &str| Error::new("err.llm.tools").with("field", f);
+    let v = parse(text.as_bytes()).map_err(|_| bad("json"))?;
+    if v.get("schema").and_then(Value::str) != Some("strumenti/1") {
+        return Err(bad("schema"));
+    }
+    let leak = |s: &str| -> &'static str { Box::leak(s.to_string().into_boxed_str()) };
+    v.get("tools")
+        .map_or(&[][..], Value::arr)
+        .iter()
+        .map(|t| {
+            let name = t
+                .get("name")
+                .and_then(Value::str)
+                .ok_or_else(|| bad("name"))?;
+            let class = match t.get("class").and_then(Value::str) {
+                Some("read") => Class::Read,
+                Some("propose") => Class::Propose,
+                Some("edit") => Class::Edit,
+                Some("run") => Class::Run,
+                Some("ui") => Class::Ui,
+                _ => return Err(bad("class")),
+            };
+            let schema = t.get("input_schema").ok_or_else(|| bad("input_schema"))?;
+            let mut o = Out::default();
+            value(&mut o, schema);
+            Ok(Tool {
+                name: leak(name),
+                class,
+                description: leak(t.get("description").and_then(Value::str).unwrap_or("")),
+                input_schema: o.0,
+            })
+        })
+        .collect()
 }

@@ -666,5 +666,14 @@
   "mol.import.done": "Esito di un'importazione; {n} = molecole importate, {replaced} = quelle che ne hanno sostituita una già importata, {kept} = quelle che l'utente aveva modificato e restano come sono.",
   "mol.import.errors": "Titolo dell'elenco di errori di un file di molecole rifiutato; {n} = numero di errori.",
   "mol.err.row": "Inizio di una riga di errore di importazione; {riga} = numero della riga del file (o posizione del record nel JSON).",
-  "mol.err.more": "Chiusura dell'elenco di errori troncato; {n} = errori non mostrati."
+  "mol.err.more": "Chiusura dell'elenco di errori troncato; {n} = errori non mostrati.",
+  "llm.consent.state": "Riga delle impostazioni dell'assistente; {n} = numero di fornitori per cui l'utente ha dato il consenso.",
+  "llm.consenso.where": "Finestra di consenso; {host} = nome del servizio esterno a cui andrebbero le richieste (es. un fornitore di modelli).",
+  "llm.consenso.where.local": "Finestra di consenso per un modello locale; {host} = indirizzo sul computer dell'utente (es. localhost:11434).",
+  "llm.consenso.model": "Finestra di consenso; {model} = identificatore del modello, {provider} = fornitore.",
+  "llm.consenso.cost.price": "Prezzo del modello per milione di token; {in} = ingresso, {out} = uscita, {cur} = valuta, {date} = data del prezzo.",
+  "err.llm.network": "Errore di rete verso il modello; {reason} = motivo breve in inglese (es. truncated, fetch).",
+  "err.llm.replay.mismatch": "La richiesta non coincide con la registrazione; {turn} = numero del turno.",
+  "err.llm.conversation": "Conversazione non valida; {field} = campo che manca o è sbagliato.",
+  "err.llm.tools": "Catalogo degli strumenti non valido; {field} = campo che manca o è sbagliato."
 }
