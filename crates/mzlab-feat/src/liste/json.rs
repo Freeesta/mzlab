@@ -4,7 +4,7 @@
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out, Value};
 
-use super::{Adduct, Kind, Liste, RowError, Suspect, Transformation, SCHEMA};
+use super::{Adduct, Kind, Liste, RowError, Transformation, SCHEMA};
 use crate::legacy::transf::Delta;
 
 fn bad() -> Error {
@@ -29,7 +29,7 @@ fn delta_key(d: &Delta) -> String {
     d.iter().map(|(e, n)| format!("{e}{n}")).collect()
 }
 
-/// `{"elementi":[...],"schema":"liste/1","tipo":"transformations"|"adducts"|"suspects"}`.
+/// `{"elementi":[...],"schema":"liste/1","tipo":"transformations"|"adducts"}`.
 pub fn to_json(l: &Liste) -> String {
     let mut o = Out::default();
     o.raw("{\"elementi\":[");
@@ -73,31 +73,6 @@ pub fn to_json(l: &Liste) -> String {
                 .raw(",\"delta\":");
                 delta(&mut o, &a.delta);
                 o.raw(",\"nome\":").str(&a.name).raw("}");
-            }
-        }
-        Liste::Suspects(v) => {
-            for (i, s) in sorted(v, |s| {
-                (s.name.clone(), s.formula.clone().unwrap_or_default())
-            })
-            .iter()
-            .enumerate()
-            {
-                o.raw(if i > 0 {
-                    ",{\"commento\":"
-                } else {
-                    "{\"commento\":"
-                })
-                .str(&s.comment)
-                .raw(",\"formula\":");
-                match &s.formula {
-                    Some(f) => o.str(f),
-                    None => o.raw("null"),
-                };
-                o.raw(",\"massa\":")
-                    .opt(s.mass)
-                    .raw(",\"nome\":")
-                    .str(&s.name)
-                    .raw("}");
             }
         }
     }
@@ -179,24 +154,6 @@ pub fn from_json(b: &[u8]) -> Result<Liste> {
                         name: text(i, "nome")?,
                         delta: delta_of(i)?,
                         charge: charge as i8,
-                        comment: text(i, "commento")?,
-                    })
-                })
-                .collect::<Result<_>>()?,
-        ),
-        Kind::Suspects => Liste::Suspects(
-            items
-                .iter()
-                .map(|i| {
-                    let formula = i
-                        .get("formula")
-                        .filter(|f| !f.is_null())
-                        .map(|_| text(i, "formula"))
-                        .transpose()?;
-                    Ok(Suspect {
-                        name: text(i, "nome")?,
-                        formula,
-                        mass: number(i, "massa")?,
                         comment: text(i, "commento")?,
                     })
                 })
