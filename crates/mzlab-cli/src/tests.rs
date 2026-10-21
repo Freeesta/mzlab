@@ -82,8 +82,8 @@ pub(crate) fn page_table(
     )
 }
 
-/// The align-only table of the browser runner: the recipe of `layers` (`run::layers_from_json`) over indexes built in memory, as `flow run` writes `ali.mzfeat`.
-pub(crate) fn layered_table(files: &[(String, Vec<u8>)], layers: &str) -> Vec<u8> {
+/// The align-only table of the browser runner: the recipe of `layers` (`run::layers_from_json`, or the text of the pool with `as_text`) over indexes built in memory, as `flow run` writes `ali.mzfeat`.
+pub(crate) fn layered_table(files: &[(String, Vec<u8>)], layers: &str, as_text: bool) -> Vec<u8> {
     let idxs: Vec<Vec<u8>> = files
         .iter()
         .map(|(name, b)| {
@@ -93,8 +93,13 @@ pub(crate) fn layered_table(files: &[(String, Vec<u8>)], layers: &str) -> Vec<u8
         })
         .collect();
     let open = |k: usize| Index::open(idxs[k].clone(), idxs[k].len() as u64);
-    let layers = run::layers_from_json(layers).unwrap();
-    let mut r = run::recipe_of_layers(&mut open(0).unwrap(), &layers).unwrap();
+    // as_text: the recipe text the browser sends to the pool, `{"layers": [...]}`
+    let mut r = if as_text {
+        run::recipe_for(&format!("{{\"layers\":{layers}}}"), &mut open(0).unwrap()).unwrap()
+    } else {
+        let layers = run::layers_from_json(layers).unwrap();
+        run::recipe_of_layers(&mut open(0).unwrap(), &layers).unwrap()
+    };
     r.fill_gaps = false;
     let det: Vec<Vec<u8>> = files
         .iter()
