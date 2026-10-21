@@ -274,7 +274,7 @@ fn load(path: PathBuf) -> Result<Loaded> {
     Ok((name, std::fs::read(&path).map_err(io)?))
 }
 
-fn read_one(r: &FileRunner, job: &Job, port: &str) -> Result<Loaded> {
+pub(crate) fn read_one(r: &FileRunner, job: &Job, port: &str) -> Result<Loaded> {
     load(one_input(r, job, port)?)
 }
 
@@ -390,26 +390,6 @@ fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     write_made(r, job, text, DataType::Annot)
 }
 
-fn inclusion_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let find = |name: &str| {
-        job.resolved
-            .params
-            .iter()
-            .find(|(k, _)| k == name)
-            .map(|(_, v)| v)
-    };
-    let adducts = find("adducts")
-        .and_then(|v| v.str())
-        .unwrap_or("[M+H]+")
-        .to_string();
-    let half = find("rt_window").and_then(|v| v.f64()).unwrap_or(0.5);
-    let products = read_one(r, job, "tp")?;
-    let text = crate::flow_inclusion::inclusion_text(&products.1, &adducts, half)?;
-    let out = r.work.join(format!("{}.csv", job.instance.id));
-    std::fs::write(&out, text).map_err(io)?;
-    r.keep(out, DataType::Report)
-}
-
 /// How a step runs natively: an executor that makes one file for `port`, or one that says itself what it made.
 enum Exec {
     File(&'static str, fn(&FileRunner, &Job) -> Result<Artifact>),
@@ -439,7 +419,10 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("tp.network", Exec::File("network", network_job)),
     ("tp.generate", Exec::File("hypotheses", generate_job)),
     ("meta.compare", Exec::File("comparison", compare_job)),
-    ("export.inclusion", Exec::File("report", inclusion_job)),
+    (
+        "export.inclusion",
+        Exec::File("report", crate::flow_inclusion::inclusion_job),
+    ),
 ];
 
 /// Does the native runner execute the step `id`?
