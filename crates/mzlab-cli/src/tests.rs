@@ -82,6 +82,29 @@ pub(crate) fn page_table(
     )
 }
 
+/// The align-only table of the browser runner: the recipe of `layers` (`run::layers_from_json`) over indexes built in memory, as `flow run` writes `ali.mzfeat`.
+pub(crate) fn layered_table(files: &[(String, Vec<u8>)], layers: &str) -> Vec<u8> {
+    let idxs: Vec<Vec<u8>> = files
+        .iter()
+        .map(|(name, b)| {
+            let mut src = b.clone();
+            let p = prepare(&mut src, b.len() as u64, name).unwrap();
+            build_mzml_to_vec(&p.table, b, 64 << 20).unwrap().0
+        })
+        .collect();
+    let open = |k: usize| Index::open(idxs[k].clone(), idxs[k].len() as u64);
+    let layers = run::layers_from_json(layers).unwrap();
+    let mut r = run::recipe_of_layers(&mut open(0).unwrap(), &layers).unwrap();
+    r.fill_gaps = false;
+    let det: Vec<Vec<u8>> = files
+        .iter()
+        .enumerate()
+        .map(|(k, (n, _))| run::detect(&mut open(k).unwrap(), n, &r).unwrap())
+        .collect();
+    let (tables, origin) = run::read_files(&det).unwrap();
+    run::align(&tables, &origin, &r, open).unwrap()
+}
+
 /// The CSV of the app on `files`: the export "full" of `page_table`.
 fn page_csv(files: &[(String, Vec<u8>)], params: &str) -> String {
     let (table, inputs) = page_table(files, params);

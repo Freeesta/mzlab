@@ -58,3 +58,5 @@ Reads a workflow file, checks the whole plan against the `step/1` descriptors be
 - The features of `features.table` and the queries of `spectra.match` have different ids (`q<k>`, the query accession or the `<file>.<scan>` of `spectra.ms2`): `annot.level` joins on the query id, so a feature row with no spectrum of that id gets only its formula level; `spectra.ms2` with a `features` port gives the scans the id of their feature.
 - The heap peak of `FileRunner` is the one of the process: exact with one worker only.
 - A fact the inputs do not declare (`facets`, `type`) is not checked by the plan; the step checks it when it starts.
+
+- **Ricetta dai livelli del piano**: `run::recipe_of_layers(primo_indice, livelli)` (`mzlab-feat-wasm`) costruisce la ricetta di una corsa Flow (ricetta del profilo con minimo stimato + `steps::recipe_map::apply` per ogni passo); `flow run` (`flow_base::rebuild`) e l'esecutore web usano la stessa funzione, `run::layers_from_json` legge i livelli `[{"step","params"}]`. Parità: `flow_run_tests::the_recipe_of_the_layers_gives_the_bytes_of_flow_run`.
