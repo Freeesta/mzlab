@@ -4,7 +4,7 @@ Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzion
 
 ## Prove fatte sul codice
 - Il registro del CLI (`flow::steps()`) contiene la catena di base, `features.table`, Attributio, `spectra.ms2`, `meta.compare` e tutta la famiglia di Tabui (`mzlab_chem::step::tabui()`); un passo senza esecutore dà `err.flow.step.native` (`tp.generate` ora si esegue).
-- I passi nel registro ma senza esecutore (`table.drift`, `table.stats`, `table.pca`, `table.kmd`, `features.ms2_link`, `export.table_csv`, `export.mztab`, `import.raw`, `spectra.chimeric`, `spectra.insilico`, `rt.predict`, `annot.regulatory`, `annot.hazard`) danno `err.flow.step.native` (provato con `table.kmd`).
+- I passi nel registro ma senza esecutore (`table.drift`, `table.stats`, `table.pca`, `table.kmd`, `features.ms2_link`, `import.raw`, `spectra.chimeric`, `spectra.insilico`, `rt.predict`, `annot.regulatory`, `annot.hazard`) danno `err.flow.step.native` (provato con `table.kmd`).
 - Esecutori oggi (20): `convert.mzml`, `index.mzidx`, `features.detect`, `features.align`, `features.gapfill`, `features.table`, `spectra.match`, `formula.ms1`, `formula.ms2`, `spectra.ms2`, `spectra.msn_graph`, `annot.level`, `tp.generate`, `table.filter`, `tp.link@2`, `tp.filter@2`, `tp.position`, `tp.network` (con un `tp/1` dato come file), `meta.compare`, `export.inclusion` (vuole un `tp/1`).
 - Non provato a mano nel sito costruito: la sola prova nel browser è `e2e_flow.py` (piano, modelli, viste dei file); nessun piano è stato eseguito dal sito perché non può.
 
@@ -29,7 +29,7 @@ Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzion
 | Pipeline: stima parametri, QC, deriva, PCA, KMD | `features.estimate`, `table.filter`, `table.drift`, `table.pca`, `table.kmd` (modelli «Standards check», «Blank-corrected table») | `features.estimate` e `table.filter` eseguibili; gli altri ci sono ma non si eseguono | Esecutori dei passi `table.*` |
 | Attributio: MS2 in silico, RT, cimeriche, liste regolatorie, pericolosità | `spectra.insilico`, `rt.predict`, `spectra.chimeric`, `annot.regulatory`, `annot.hazard` | Passi ci sono ma non eseguibili; il registro di pericolosità non è in Rust | Esecutori; per `annot.hazard` anche il registro in Rust |
 | Revisione e decisioni (livelli 2b/3, difficoltà) | Vista Review di Flow sul risultato di `annot.level` | Coperta come vista di un file; nessuna decisione è un passo | Nulla di bloccante: le decisioni restano del chimico |
-| Esportazioni (CSV, mzTab-M, lista d'inclusione, Schymanski) | `export.inclusion` (eseguibile), `export.table_csv`, `export.mztab`; menu «Export» della campagna | Una su tre eseguibile; la cartella di Schymanski e le altre sono del pannello della campagna | Esecutori di `export.table_csv` e `export.mztab` |
+| Esportazioni (CSV, mzTab-M, lista d'inclusione, Schymanski) | `export.inclusion` (eseguibile), `export.table_csv`, `export.mztab`; menu «Export» della campagna | Tre su tre eseguibili (CSV e mzTab-M solo sulla tabella intera, non sotto la vista di `table.filter`); la cartella di Schymanski e le altre sono del pannello della campagna | Export sotto la vista di un filtro |
 | Viste dei risultati (tabella dei prodotti `tptab/1`, gruppi, UpSet, rete, 3D) | Viste registrate con `F.registerView` | Coperta (sito e app) per file già prodotti | Nulla; senza passi eseguibili i file vengono ancora da Tabui |
 
 ## Conclusione

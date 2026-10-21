@@ -212,7 +212,8 @@ fn compare_heads(a: &BTreeMap<u32, Head>, b: &BTreeMap<u32, Head>) -> (usize, us
         pol += (x.polarity != y.polarity) as usize;
         prof += (x.profile != y.profile) as usize;
         pts += (x.points != y.points) as usize;
-        parent += (x.parent != y.parent) as usize;
+        // msconvert writes no spectrumRef for Thermo; ours does, so compare only where the reference has one
+        parent += (y.parent.is_some() && x.parent != y.parent) as usize;
         rt.add(*s, x.rt_min + 1.0, y.rt_min + 1.0, 1e-6); // absolute 1e-6 min: the writer keeps 6 decimals
         tic.add(*s, x.tic, y.tic, 1e-4);
         bpm.add(*s, x.bp_mz, y.bp_mz, 1e-6);

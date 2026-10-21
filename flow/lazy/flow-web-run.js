@@ -10,6 +10,7 @@
   const LOCK = "mzlab-mem-grande", BIG_MB = 512, DIR = "mzlab/flow/";
   /** the steps this runner knows, and the ones that need a computer */
   const KNOWN = ["index.mzidx", "features.detect", "features.align", "features.gapfill"];
+  const LAYERED = ["features.detect", "features.align", "features.gapfill"];
   /** @type {any} */ let pool = null;
   /** @type {any} */ let estimator = null;
 
@@ -132,10 +133,21 @@
     }
   };
 
+  /** the recipe text the pool reads for the steps of `plan` up to `upto` (all when none): the layers of the feature steps, which the Rust side applies as `flow run` does, and no gap filling when the plan has no `features.gapfill` @param {any} plan @param {any} [upto] */
+  const recipeOf = (plan, upto) => {
+    const layers = [];
+    for (const inst of plan.steps) {
+      const id = base(inst);
+      if (LAYERED.includes(id)) layers.push({ step: id, params: inst.params || {} });
+      if (inst === upto) break;
+    }
+    return JSON.stringify({ fill: plan.steps.some((/** @type {any} */ i) => base(i) === "features.gapfill"), layers });
+  };
+
   /** runs the plan of S: the steps this runner knows, in the order of the plan; the others are left out with `via: "computer"`. Resolves with { steps: [{id, stato}], table }, rejects with {key, params}
    * @param {any} S @param {{ onEvent?: (e: any) => void, askMore?: (i: any) => Promise<boolean> }} [opts] */
   const run = async (S, opts = {}) => {
-    const o = { askMore: G.mzlabAskMore, ...opts }, plan = S.plan, recipe = "";
+    const o = { askMore: G.mzlabAskMore, ...opts }, plan = S.plan;
     const files = await listIdx();
     if (!files.length) throw Object.assign(new Error("err.flow.input.missing"), { key: "err.flow.input.missing", params: {} });
     for (const inst of plan.steps) emit(o, { passo: inst.id, stato: "waiting", via: KNOWN.includes(base(inst)) ? "browser" : "computer", parte: 0, di: 0, mb: null, modo: null });
@@ -145,8 +157,8 @@
     for (const inst of plan.steps) {
       const id = base(inst), ev = { passo: inst.id, via: "browser", parte: 0, di: 0, mb: null, modo: null };
       if (id === "index.mzidx") emit(o, { ...ev, stato: "reused", parte: files.length, di: files.length });
-      else if (id === "features.detect") stored = await detect(o, inst, files, recipe);
-      else if (id === "features.align") table = await align(o, inst, files, stored, recipe);
+      else if (id === "features.detect") stored = await detect(o, inst, files, recipeOf(plan, inst));
+      else if (id === "features.align") table = await align(o, inst, files, stored, recipeOf(plan));
       else if (id === "features.gapfill") emit(o, { ...ev, stato: table ? "reused" : "skipped", parte: 1, di: 1 });
       else emit(o, { ...ev, stato: "skipped", via: "computer" });
       steps.push(inst.id);
@@ -154,15 +166,17 @@
     return { steps, table };
   };
 
-  /** the estimate of the alignment when every detection is already kept in OPFS, else null: lets the page refuse a series that no level of memory holds before it starts @param {string} recipe */
-  const preflight = async (recipe = "") => {
+  /** the estimate of the alignment when every detection is already kept in OPFS, else null: lets the page refuse a series that no level of memory holds before it starts @param {any} S */
+  const preflight = async (S) => {
     if (!available()) return null;
+    const detectInst = S.plan.steps.find((/** @type {any} */ i) => base(i) === "features.detect");
+    const detectRecipe = recipeOf(S.plan, detectInst), recipe = recipeOf(S.plan);
     const files = await listIdx(), p = await getPool();
     if (!files.length) return null;
     const stored = /** @type {Uint8Array[]} */ ([]);
     for (const f of files) {
       const path = DIR + f.name + ".mzfeatf";
-      if (!await fresh(p, path, f.key + "|" + recipe)) return null;
+      if (!await fresh(p, path, f.key + "|" + detectRecipe)) return null;
       stored.push(await p.fs.read(path));
     }
     return stima(stored, recipe);

@@ -1,0 +1,2 @@
+{"schema":"llm-conv/1","provider":"anthropic","model":"claude-sonnet-5-5","system":"You are the mzLab assistant.","messages":[
+{"role":"user","parts":[{"text":"Is my plan valid?"}]}]}

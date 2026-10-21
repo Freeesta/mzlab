@@ -1,0 +1,4 @@
+{"schema":"llm-conv/1","provider":"anthropic","model":"claude-sonnet-5-5","system":"You are the mzLab assistant.","messages":[
+{"role":"user","parts":[{"text":"Is my plan valid?"}]},
+{"role":"assistant","parts":[{"text":"Let me check the plan."},{"tool_call":{"id":"t1","name":"flow_check","args":{"plan":"p"}}}]},
+{"role":"tool","parts":[{"tool_result":{"id":"t1","ok":true,"content":{"errors":0}}}]}]}

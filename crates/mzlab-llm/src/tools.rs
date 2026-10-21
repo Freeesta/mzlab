@@ -85,7 +85,7 @@ const OBJ: &str = "{\"type\":\"object\",\"additionalProperties\":false";
 const ANY_OBJECT: &str = "{\"type\":\"object\"}";
 const INSTANCE: &str = "{\"type\":\"string\",\"description\":\"Instance id in the plan.\"}";
 
-fn value(o: &mut Out, v: &Value) {
+pub(crate) fn value(o: &mut Out, v: &Value) {
     match v {
         Value::Null => {
             o.raw("null");

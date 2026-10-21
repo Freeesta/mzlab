@@ -1,0 +1,4 @@
+{"ev":"text_delta","text":"Hel"}
+{"ev":"text_delta","text":"lo, è fatto"}
+{"cache_read":4,"ev":"usage","in":25,"out":12}
+{"ev":"stop","reason":"end"}

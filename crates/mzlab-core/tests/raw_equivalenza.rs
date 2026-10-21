@@ -70,9 +70,9 @@ const PRIMA: &[(&str, [&str; 4])] = &[
     (
         "LAB-A",
         [
-            "c8ca0a6568a025ed1c9533edb02f39dd28b1088788e94b98e3e9e3a05d3760df",
-            "d749c8f9331701663d46ac4562a6c208a3e503804d10d0d07373a25deba965b7",
-            "6ac0e6ce68d207d42ac94eb35bbb3e21060657bb878b84fa3bc13a223dd36e76",
+            "a4ac51c69f03843d300e6ad21a984c71d9077b6c3eff7cf12c2e47c3f941b468",
+            "0b6d6c7bb20c07d1b684e929b26baa32340e48e6ed3237df3ab98007edc2a58f",
+            "bbd8e719a87d0e85ef64d731a8d68b65d1cc55f777fae707fa44e1995edeae32",
             "fdb802dc4346660bdeba3cddf1d7cbb8a23d4b99d3e6d3d57a3253d61d9517d4",
         ],
     ),
@@ -80,8 +80,8 @@ const PRIMA: &[(&str, [&str; 4])] = &[
         "PXD077492",
         [
             "1516465e726f8ab470f4f6e2e3655bc6ac2dd63a16b57824caa05e7d7530e09f",
-            "13f991a1a8f1d019ceb6790215e031a8a02fbf29270af759aebf939e31a39a03",
-            "1006c10f52ddcfcf4bc358ce4cd7773e6bb4e5257865e9aaa72e159c022d81a3",
+            "97df227f539ec3928e5f6c2d71a36d84f75ca2407c7a8f40a9a7a0c6e3810200",
+            "783ea8ef3683eb2914a5912a71ed0b45da92ed5889f9f2bdb572de21367bb840",
             "41be13e4d786327c12cbb8e8ce7c5af7b539ec228957534da5473d1169544d6b",
         ],
     ),
