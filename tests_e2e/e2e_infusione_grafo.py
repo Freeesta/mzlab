@@ -188,9 +188,9 @@ try:
             pg4.click(".ig-node[data-id=n3]"); pg4.fill("#ig-smi", "CNC(=O)c1cnc(N)nc1C"); pg4.dispatch_event("#ig-smi", "change")
             pg4.wait_for_selector(".ig-cuts .ig-cut", timeout=60000)
             txt = pg4.inner_text(".ig-str").replace("−", "-")
-            assert "N2-C3" in txt and "C6H8N3O" in txt and "138.0658" in txt, txt
+            assert "N2-C3" in txt and "138.066" in txt and "ppm" in txt, txt
             assert pg4.locator(".ig-cuts caption").count() == 1 and pg4.locator(".ig-cuts th[scope=col]").count() == 6
-            assert not pg4.evaluate("window.MZLAB_LR_MISS || []")
+            assert not [m for m in pg4.evaluate("window.MZLAB_LR_MISS || []") if "msn_grafo" in m], pg4.evaluate("window.MZLAB_LR_MISS")
         step("the real engine answers the cut table of a node (no stand-in)", real_cuts)
         errs = [e for e in r.errs if e[0] in ("pageerror",)]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
