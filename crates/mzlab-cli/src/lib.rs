@@ -71,6 +71,8 @@ mod flow_stats;
 mod flow_table;
 #[cfg(test)]
 mod flow_table_tests;
+#[cfg(test)]
+mod flow_hr_tests;
 pub mod llm;
 mod llm_ctx;
 pub mod msn_graph;
@@ -420,8 +422,6 @@ mod flow_compare_tests;
 mod flow_estimate_tests;
 #[cfg(test)]
 mod flow_generate_tests;
-#[cfg(test)]
-mod flow_hr_tests;
 #[cfg(test)]
 mod flow_ident_tests;
 #[cfg(test)]
