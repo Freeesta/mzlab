@@ -59,6 +59,7 @@ pub mod riga;
 pub mod rowident;
 pub mod rowmeta;
 pub mod rtmap;
+pub mod rtwarp;
 pub mod samples;
 pub mod series;
 pub mod slabs;

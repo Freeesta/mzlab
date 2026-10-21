@@ -19,7 +19,7 @@ Tabella di lavoro del Flow grafico (`docs/agenti/flow-grafica.md`). Dice cosa es
 | Deisotoping: isotope grouper | `isotopes.rs` dentro `features.detect` (gruppo isotopico, mai scarta); `untargeted/isotopes.rs` | motore |
 | Deisotoping: isotope finder 4.10 | `untargeted/isofinder.rs` | motore |
 | Alignment: join aligner | `features.align`, modalità «per ione» e «per famiglia»; `untargeted/join.rs` | step, motore |
-| Alignment: RANSAC | nessuna implementazione | nessuno |
+| Alignment: RANSAC, correzione dell'RT tra campioni | `features.align`, parametro `rt_warp` (`piecewise`, `loess`, `ransac`; `crates/mzlab-feat/src/rtwarp.rs`): ancore da un allineamento grossolano (`rt_coarse_gap`), curva per file, RT riportato a quello comune prima del raggruppamento; `off` di default | step |
 | Gap filling (stesso RT e m/z) | `features.gapfill`; `untargeted/gapfill.rs` | step, motore |
 | Duplicate feature filter | nessuno; l'allineamento scarta i lobi FT | nessuno |
 | Feature list rows filter | `table.filter` (campioni minimi, area, altezza, rapporto al bianco, MS2 richiesta) | step |

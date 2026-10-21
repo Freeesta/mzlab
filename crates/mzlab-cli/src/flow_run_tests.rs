@@ -188,6 +188,22 @@ fn set_reaches_the_parameters_and_the_plan_as_run_keeps_them() {
 }
 
 #[test]
+fn the_rt_correction_is_a_parameter_of_the_alignment() {
+    let (dir, _) = fixture("warp");
+    let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
+    let run = |value: &str| {
+        let set = format!("ali.rt_warp={value}");
+        flow_run(&[p(&plan), "--in", p(&data), "--out", p(&out), "--set", &set])
+    };
+    let o = run("loess");
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let as_run = std::fs::read_to_string(out.join("plan.json")).unwrap();
+    assert!(as_run.contains("\"rt_warp\":\"loess\""), "{as_run}");
+    assert_eq!(run("cubic").code, 3, "a value the descriptor does not list");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn dry_run_writes_nothing_and_the_exit_codes_say_what_is_wrong() {
     let (dir, _) = fixture("dry");
     let plan = dir.join("plan.json");

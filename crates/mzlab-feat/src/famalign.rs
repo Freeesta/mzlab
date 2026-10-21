@@ -20,6 +20,8 @@ pub struct FamAlignParams {
     pub rt: RtParams,
     /// Correct the RT of every feature with the map before grouping.
     pub use_rtmap: bool,
+    /// Correction of the RT between files from a coarse alignment (`rtwarp`); off keeps the map of `rtmap` in "per family" mode and nothing in "per ion".
+    pub warp: crate::rtwarp::WarpParams,
     /// Largest RT distance (minutes) between an ion and the root of its family in the same file.
     pub link_rt: f64,
     /// Largest RT span (minutes) of the groups joined in one row.
@@ -35,6 +37,7 @@ impl Default for FamAlignParams {
             ion: AlignParams::default(),
             rt: RtParams::default(),
             use_rtmap: true,
+            warp: crate::rtwarp::WarpParams::default(),
             link_rt: 0.2,
             max_span: 0.5,
             min_dependent: 1,
@@ -284,11 +287,23 @@ pub(crate) fn assemble(ions: Aligned, c: Collector, p: &FamAlignParams) -> Align
     rows(ions, &mut sets, &votes)
 }
 
+/// Aligns the files in "per ion" mode, with the RT corrected between files when the parameters ask for it; `rt` picks the anchors (the `rt` of the recipe).
+pub fn align_ions(files: &[&FileFeatures], p: &FamAlignParams, rt: &RtParams) -> Result<Aligned> {
+    if p.warp.on() {
+        crate::rtwarp::align_warped(files, &p.ion, rt, &p.warp)
+    } else {
+        crate::align::align(files, &p.ion)
+    }
+}
+
 /// Aligns the files in "per family" mode (each file must carry `family_id`, `role` and `charge`).
 pub fn align_families(files: &[&FileFeatures], p: &FamAlignParams) -> Result<Aligned> {
-    let first = align_grouped(files, &p.ion, None, false)?.table;
-    let map = rt_map(&first, p);
-    drop(first);
+    let map = if p.warp.on() {
+        crate::rtwarp::warp_map(files, &p.ion, &p.rt, &p.warp)?
+    } else {
+        let first = align_grouped(files, &p.ion, None, false)?.table;
+        rt_map(&first, p)
+    };
     let adj = map.ok().then_some(&map);
     let g = align_grouped(files, &p.ion, adj, true)?;
     let mut c = Collector::new(g.table.len())?;
