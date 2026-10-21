@@ -160,6 +160,25 @@ fn expected_hypotheses(p: &Parent, polarity: i8) -> Result<String> {
     Ok(generate(&rules, &inp, &hp)?.to_json())
 }
 
+/// The polarity of the link: the one the plan sets, else the one of the detection (a detection that took both polarities, 0, or none is read as
+/// positive, like a form left at its default).
+fn polarity_of(job: &Job, recipe: &mzlab_feat::recipe::Recipe) -> i8 {
+    let given = job.instance.params.iter().any(|(k, _)| k == "polarity");
+    match param(job, "polarity") {
+        Some(v) if given => v.signum() as i8,
+        _ => recipe.detect.polarity.filter(|&p| p != 0).unwrap_or(1),
+    }
+}
+
+/// The m/z of the ion of the parent in the polarity.
+fn parent_mz(p: &Parent, polarity: i8) -> Result<f64> {
+    let json = parent_json(p, polarity, 0.0);
+    let parent = series::parent(&json);
+    Ok(parent
+        .map_err(|e| Error::new("error.interp.failed").with("detail", e))?
+        .mz)
+}
+
 /// What `link` needs of the job, read from the files.
 pub struct Series {
     pub lineage: Lineage,
@@ -182,32 +201,20 @@ pub fn link_bytes(
             .with("index", series_of.indexes.len()));
     }
     let mut recipe = rebuild(lin)?;
-    let given = job.instance.params.iter().any(|(k, _)| k == "polarity");
-    let polarity: i8 = match param(job, "polarity") {
-        Some(v) if given => v.signum() as i8,
-        // a detection that took both polarities (0) or none is read as positive, like a form left at its default
-        _ => recipe.detect.polarity.filter(|&p| p != 0).unwrap_or(1),
-    };
+    let polarity = polarity_of(job, &recipe);
     recipe.detect.polarity = Some(polarity);
     let p = parent_of(parent)?;
     if String::from_utf8_lossy(hypotheses).trim() != expected_hypotheses(&p, polarity)? {
         return Err(Error::new("err.flow.link.hypotheses").with("parent", &p.formula));
     }
     let roles = TpRoles::from_json(&String::from_utf8_lossy(samples))?;
-    let json0 = parent_json(&p, polarity, 0.0);
-    let mz = series::parent(&json0)
-        .map_err(|e| Error::new("error.interp.failed").with("detail", e))?
-        .mz;
-    let rt = match p.rt {
-        Some(t) => t,
-        None => parent_rt(table, mz)?,
-    };
+    let mz = parent_mz(&p, polarity)?;
+    let rt = p.rt.map_or_else(|| parent_rt(table, mz), Ok)?;
     let mut ix = series_of
         .indexes
         .iter()
         .map(open)
         .collect::<Result<Vec<_>>>()?;
-    let rt_hint = p.rt;
     let mut stored = Files(lin.peaks.clone());
     let hypo = run::hypotheses_stored(
         &mut ix,
@@ -215,7 +222,7 @@ pub fn link_bytes(
         RULES,
         &p.structure,
         &p.formula,
-        rt_hint,
+        p.rt,
         &recipe,
     )?;
     let budget = MemBudget::mb(r.budget_mb);
@@ -237,13 +244,12 @@ pub fn link_bytes(
         }),
         &mut with_tp,
     )?;
-    let infusion = roles
+    let mut infusion = roles
         .infusion
         .first()
         .map(|&k| open(&series_of.indexes[k]))
         .transpose()?;
     let mut out = Vec::new();
-    let mut infusion = infusion;
     run_to_with(
         &mut Slice(&with_tp),
         with_tp.len() as u64,

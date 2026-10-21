@@ -71,25 +71,6 @@ struct Work {
     iso: Option<([f64; 3], f64)>,
 }
 
-fn row_facts(t: &Aligned) -> Vec<RowFacts> {
-    let mut first: std::collections::HashMap<u32, usize> = Default::default();
-    if !t.iso.is_empty() {
-        for (r, &g) in t.iso.group.iter().enumerate() {
-            if g != 0 {
-                first.entry(g).or_insert(r);
-            }
-        }
-    }
-    (0..t.len())
-        .map(|r| RowFacts {
-            bad_quality: !t.meta.is_empty() && t.meta.get(r).qreason != 0,
-            isotope: !t.iso.is_empty() && t.iso.group[r] != 0 && first[&t.iso.group[r]] != r,
-            tp_status: t.tp.status[r],
-            mass_error: false,
-        })
-        .collect()
-}
-
 /// The window of the peak of `row` in file `k`: the edges of the row around the apex of that file; `NaN` where the row has no peak there.
 fn limits(t: &Aligned, row: usize, k: usize) -> (f64, f64) {
     let cell = row * t.n_files + k;
@@ -261,7 +242,7 @@ pub fn build<R: ReadAt>(
     if t.tp.is_empty() {
         return Err("error.interp.noTp".into());
     }
-    let mut facts = row_facts(t);
+    let mut facts = filtri::row_facts(t);
     let mut registry = filtri::Registry::default();
     let mut work: Vec<Work> = vec![];
     for (r, f) in facts.iter().enumerate() {
