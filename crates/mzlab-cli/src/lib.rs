@@ -23,6 +23,7 @@ mod flow_apply;
 mod flow_base;
 mod flow_cache;
 mod flow_compare;
+mod flow_digl;
 mod flow_formula;
 mod flow_generate;
 mod flow_inclusion;
@@ -31,6 +32,8 @@ mod flow_level;
 mod flow_link;
 #[cfg(test)]
 mod flow_link_tests;
+#[cfg(test)]
+mod flow_lr_tests;
 mod flow_match;
 mod flow_ms2;
 mod flow_msngraph;
