@@ -46,6 +46,15 @@ try:
             assert got["t"].startswith('{"formato":"msngrafo/1"'), got["t"][:200]
             assert mask(got["t"]) == mask(cli), "the site and the command line differ"
         step("the graph of the site is the one of the command line", same)
+        def cuts():
+            smi, q = "CNC(=O)c1cnc(N)nc1C", "k=0&formula=C8H11N4O2%2B&smiles=CNC%28%3DO%29c1cnc%28N%29nc1C&strutture=n3"
+            want = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(F), "--formula", ION, "--smiles", smi, "--strutture", "n3"], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout.rstrip("\n")
+            t = pg.evaluate(f"fetch('api/msn_grafo?{q}').then(r=>r.text())")
+            assert mask(t) == mask(want) and '"strutture":{' in t, "the site and the command line differ"
+            assert '"strutture"' not in pg.evaluate("fetch('api/msn_grafo?k=0&formula=C8H11N4O2%2B&smiles=CCO').then(r=>r.text())")
+            res = pg.evaluate("fetch('api/msn_grafo?k=0&strutture=n3').then(async r=>[r.status, await r.json()])")
+            assert res[0] == 400 and res[1]["error_key"] == "err.msngrafo.noSmiles", res
+        step("the cleavages of a node (strutture=) are the ones of the command line; without the key the graph is unchanged", cuts)
         def masses():
             j = json.loads(pg.evaluate("fetch('api/msn_grafo?k=0').then(r=>r.text())"))
             assert j["ione"] is None and len(j["nodi"]) > 3, (j["ione"], len(j["nodi"]))

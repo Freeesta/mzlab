@@ -180,6 +180,19 @@ try:
             assert "formula=C14H15N3O5+%5BM%2BH%5D%2B" in last.replace("%20", "+") and "smiles=" in last, last
         step("a molecule chosen in the search box fills the ion formula with the adduct and the SMILES; the id is kept", names)
         step("the ion field shows formula and adduct", lambda: (_ for _ in ()).throw(AssertionError(pg.input_value("#ig-ion"))) if pg.input_value("#ig-ion") != "C14H15N3O5 [M+H]+" else None)
+        # the real engine (the .wasm msngrafo of the site, no stand-in): the cut table of a node of the synthetic file
+        pg4 = r.b.new_page(viewport={"width": 1500, "height": 1900}); pg4.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg4, "window.qqReady === true")
+        load(pg4, [F], 6000, 1)
+        def real_cuts():
+            drawer(pg4, "gra"); pg4.wait_for_selector(".ig-node", timeout=60000)
+            pg4.fill("#ig-ion", "C8H11N4O2+"); pg4.click("#ig-go"); pg4.wait_for_selector(".ig-node[data-id=n3]", timeout=30000)
+            pg4.click(".ig-node[data-id=n3]"); pg4.fill("#ig-smi", "CNC(=O)c1cnc(N)nc1C"); pg4.dispatch_event("#ig-smi", "change")
+            pg4.wait_for_selector(".ig-cuts .ig-cut", timeout=60000)
+            txt = pg4.inner_text(".ig-str").replace("−", "-")
+            assert "N2-C3" in txt and "138.066" in txt and "ppm" in txt, txt
+            assert pg4.locator(".ig-cuts caption").count() == 1 and pg4.locator(".ig-cuts th[scope=col]").count() == 6
+            assert not [m for m in pg4.evaluate("window.MZLAB_LR_MISS || []") if "msn_grafo" in m], pg4.evaluate("window.MZLAB_LR_MISS")
+        step("the real engine answers the cut table of a node (no stand-in)", real_cuts)
         errs = [e for e in r.errs if e[0] in ("pageerror",)]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
         # two files loaded: no tab

@@ -67,14 +67,15 @@
     { id: "position", name: "Where it changed", line: "Propose which part of the molecule was modified.", steps: ["tp.position"] },
     { id: "reactivity", name: "Where it reacts", line: "Estimate which parts of the parent are most reactive.", steps: ["structure.reactivity"] },
   ];
+  // `more`: kept under «More templates» instead of on the first row
   F.TEMPLATES = [
-    { id: "identify", name: "Find and identify compounds in my samples", good: "Good for: unknown compounds in real samples.", addons: ["formulas", "match", "level"] },
-    { id: "targeted", name: "Targeted check", good: "Good for: a list of compounds you already suspect.", addons: ["formulas", "match", "level", "regulatory"] },
     { id: "tp", name: "Find transformation products", good: "Good for: degradation or metabolism studies.", addons: ["tp"] },
-    { id: "table", name: "Just build the feature table", good: "Good for: a first look at your data.", addons: [] },
-    { id: "tpseries", name: "TP time series", good: "Good for: how products rise and fall over the minutes of a treatment (needs a sample list with times).", addons: ["tp", "tpfilter", "reliable", "network"] },
-    { id: "standards", name: "Standards check", good: "Good for: checking that the standards and the blanks behave before you trust a table (needs a sample list).", addons: ["reliable"], params: { "table.filter": { qc_cv_max: 30 } } },
-    { id: "blankfree", name: "Blank-corrected table", good: "Good for: a table without what the blanks also show (needs a sample list with blanks).", addons: ["reliable"], params: { "table.filter": { blank_ratio: 3 } } },
+    { id: "table", name: "Feature table", good: "Good for: a first look at your data.", addons: [] },
+    { id: "identify", name: "Untargeted analysis", good: "Good for: unknown compounds in real samples, with formulas and library matches.", addons: ["formulas", "match", "level"] },
+    { id: "targeted", name: "Targeted check", good: "Good for: a list of compounds you already suspect.", addons: ["formulas", "match", "level", "regulatory"], more: true },
+    { id: "tpseries", name: "TP time series", good: "Good for: how products rise and fall over the minutes of a treatment (needs a sample list with times).", addons: ["tp", "tpfilter", "reliable", "network"], more: true },
+    { id: "standards", name: "Standards check", good: "Good for: checking that the standards and the blanks behave before you trust a table (needs a sample list).", addons: ["reliable"], params: { "table.filter": { qc_cv_max: 30 } }, more: true },
+    { id: "blankfree", name: "Blank-corrected table", good: "Good for: a table without what the blanks also show (needs a sample list with blanks).", addons: ["reliable"], params: { "table.filter": { blank_ratio: 3 } }, more: true },
   ];
   /** @param {string} id */
   F.nameOf = id => (F.NAMES[id] || [id, "process", ""]);

@@ -2181,6 +2181,7 @@ version = "1.0.0"
 dependencies = [
  "js-sys",
  "mzlab-core",
+ "mzlab-feat",
  "wasm-bindgen",
 ]
 
