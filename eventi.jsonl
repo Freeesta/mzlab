@@ -314,3 +314,4 @@
 {"ts_utc":"2026-10-21T22:22:44Z","tipo":"conflitto_risolto","pr":1377,"sha":"bce3d564d6aafebed455d8c805dde8cffcc5cd67"}
 {"ts_utc":"2026-10-21T22:22:55Z","tipo":"conflitto_risolto","pr":1379,"sha":"ff101d15c9fe4f00f49d0ae7378b8c9f0b92759b"}
 {"ts_utc":"2026-10-21T22:23:05Z","tipo":"conflitto_risolto","pr":1377,"sha":"ff101d15c9fe4f00f49d0ae7378b8c9f0b92759b"}
+{"ts_utc":"2026-10-21T22:25:27Z","azione":"aperta","tipo":"pr","pr":1390,"sha":"12585aa248ffaac2578f8e545b8768f3bc3f1d17"}
