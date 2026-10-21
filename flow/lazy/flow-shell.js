@@ -111,9 +111,10 @@
     const showRun = async () => {
       const r = await F.runners.cli.run(S);
       planView.hidden = false;
-      const box = el("div", { class: "fl-cli" }, el("strong", { text: r.title }), el("p", { text: F.runners.desktop.available() ? "Run it here, or download the plan and use the command line:" : "On the web Flow exports the plan. Download it, put it in a folder with your files and run it with the native runner:" }), el("code", { text: r.text }),
+      const box = el("div", { class: "fl-cli" }, el("strong", { text: r.title }), el("p", { text: F.runners.desktop.available() || F.runners.web.available() ? "Run it here, or download the plan and use the command line:" : "On the web Flow exports the plan. Download it, put it in a folder with your files and run it with the native runner:" }), el("code", { text: r.text }),
         el("div", { class: "fl-meta" }, btn("export", "Download the plan", S.download, "Download plan"), btn("copy", "Copy the command", () => navigator.clipboard && navigator.clipboard.writeText(r.text), "Copy command"), btn("x", "Close", () => box.remove(), "Close")));
       if (F.runners.desktop.available()) box.append(F.desktopRunUi(S));
+      else if (F.runners.web.available()) box.append(F.webRunUi(S));
       root.querySelectorAll(".fl-cli").forEach(n => n.remove()); bar.after(box);
     };
     const open = btn("import", "Open a plan (mzflow/2)", () => { const f = listHost.querySelector("#fl-file"); if (f) /** @type {HTMLElement} */ (f).click(); }, "Open");
