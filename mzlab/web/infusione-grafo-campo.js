@@ -29,7 +29,7 @@ export function drawField(/** @type {HTMLElement} */ host, /** @type {any} */ fi
   campo(/** @type {HTMLElement} */ (host.querySelector("#ig-mol")), {
     testi: { label: I18N.t("msngrafo.mol"), placeholder: I18N.t("msngrafo.mol.ph"), none: I18N.t("msngrafo.mol.none"), count: n => I18N.t("msngrafo.mol.count", { n }), manage: I18N.t("msngrafo.mol.manage") },
     onScegli: async row => {
-      const m = (await prendi(row.id)) || row;
+      const m = /** @type {Molecola} */ (/** @type {unknown} */ ((await prendi(row.id)) || row));
       G.mol = m; G.text = ""; G.smiles = m.smiles || ""; G.adduct = startAdduct(polarityOf(E.files.find(INF.isInf)), m);
       ion.value = ionOf(); add.value = G.adduct; smi.value = G.smiles;
       go();
