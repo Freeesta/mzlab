@@ -32,6 +32,8 @@
       return { id, ms: x.ms, cached: !!x.cached, made, error: x.error ? { key: x.error.error_key, params: x.error.params } : null }; });
     return { dir: out.dir, steps, excluded, warns };
   };
+  /** the jobs finished so far in the run in progress: [{id, item, ms, cached, error}] */
+  const progress = async () => JSON.parse(await post("flow/progress", {})).jobs;
   /** the text of a file the last run wrote @param {string} name */
   const read = name => post("flow/read", { name });
   /** the bytes of a binary file the last run wrote (a .mzfeat): the route answers {base64}; any other answer is an error, so the file stays a button of the Results @param {string} name @returns {Promise<File>} */
@@ -49,14 +51,25 @@
     const title = (/** @type {any} */ inst) => F.nameOf(String(inst.step).split("@")[0])[0];
     const slot = (/** @type {any} */ inst, /** @type {string} */ text) => el("li", {}, el("strong", { text: title(inst) }), el("span", { text: ` — ${text}` }));
     const waiting = () => { list.textContent = ""; for (const inst of S.plan.steps) list.append(slot(inst, "waiting")); };
+    // while the run goes: a step with a finished job says so (a per-file step counts its files), the others keep waiting
+    const live = (/** @type {any[]} */ jobs) => {
+      list.textContent = "";
+      for (const inst of S.plan.steps) {
+        const mine = jobs.filter(j => j.id === inst.id), bad = mine.find(j => j.error);
+        const text = !mine.length ? "waiting" : bad ? bad.error : mine.some(j => j.item != null) ? `working, ${mine.length} ${mine.length === 1 ? "file" : "files"} done` : mine[0].cached ? "reused (nothing changed)" : `done in ${(mine[0].ms / 1000).toFixed(1)} s`;
+        list.append(slot(inst, text));
+      }
+    };
     const rep = btn("file", "Open the report of the last run", async () => {
       try { F.openResult(await F.lastRunReport()); } catch (e) { note.textContent = F.message(/** @type {any} */ (e)); }
     }, "Report");
     rep.disabled = true;
     const go = btn("run", "Run the plan on this computer", async () => {
       go.dataset.busy = "1"; go.disabled = true; note.textContent = "Running…"; waiting();
+      let polling = false, active = true;
+      const tick = window.setInterval(async () => { if (polling) return; polling = true; try { const jobs = await progress(); if (active) live(jobs); } catch (_) { /* the run answers for itself */ } polling = false; }, 700);
       try {
-        const res = await run(S), by = new Map(res.steps.map((/** @type {any} */ s) => [s.id, s]));
+        const res = await run(S).finally(() => { active = false; }), by = new Map(res.steps.map((/** @type {any} */ s) => [s.id, s]));
         list.textContent = ""; S.results = {};
         for (const s of res.steps) S.results[s.id] = s.made.map((/** @type {any} */ m) => ({ ...m, text: () => read(m.label), load: /\.mzfeat$/i.test(m.label) ? () => readFile(m.label) : undefined }));
         if (S.redraw) S.redraw();
@@ -67,6 +80,7 @@
         rep.disabled = false;
         await F.afterRun(S);
       } catch (e) { list.textContent = ""; note.textContent = F.message(/** @type {any} */ (e)); }
+      clearInterval(tick);
       go.dataset.busy = ""; go.disabled = S.problems.length > 0;
     }, "Run on this computer");
     waiting();

@@ -6,6 +6,8 @@
 
 use mzlab_core::json::{self, Value};
 use mzlab_core::{chromeleon, metodo, mzml, raw};
+mod conv_aiuto;
+
 use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
@@ -113,13 +115,7 @@ fn the_conversion_carries_the_document() {
     };
     for (raw_path, _) in pairs(&d) {
         let full = doc(&raw_path);
-        let mut out = Vec::new();
-        raw::to_mzml(
-            BufReader::new(File::open(&raw_path).unwrap()),
-            &mut out,
-            "sample.raw",
-        )
-        .unwrap();
+        let out = conv_aiuto::mzml_file(&raw_path, "sample.raw");
         let head = String::from_utf8_lossy(&out[..out.len().min(2 << 20)]).into_owned();
         assert_eq!(
             metodo::from_userparam(&head).as_deref(),
@@ -150,13 +146,7 @@ fn the_pump_pressure_is_the_one_msconvert_wrote_in_the_unit_of_the_file() {
     };
     let mut checked = 0;
     for (raw_path, mzml_path) in pairs(&d) {
-        let mut out = Vec::new();
-        raw::to_mzml(
-            BufReader::new(File::open(&raw_path).unwrap()),
-            &mut out,
-            "sample.raw",
-        )
-        .unwrap();
+        let out = conv_aiuto::mzml_file(&raw_path, "sample.raw");
         let ours = mzml::read(&out[..]).unwrap();
         let theirs = mzml::read(BufReader::new(File::open(&mzml_path).unwrap())).unwrap();
         let pressure = |r: &mzml::Run| {

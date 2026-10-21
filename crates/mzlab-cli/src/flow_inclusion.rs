@@ -2,8 +2,12 @@
 //! of `mzlab_feat::export_inclusione`, in the columns of the list of mzFinder.
 
 use mzlab_core::error::{Error, Result};
+use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::json;
+use mzlab_core::step::DataType;
 use mzlab_feat::export_inclusione::{inclusion_expected, Expected};
+
+use crate::flow::{io, read_one, FileRunner};
 
 /// The CSV of the list from the products, the adducts (comma separated) and the half window of RT in minutes.
 pub(crate) fn inclusion_text(products: &[u8], adducts: &str, half_window: f64) -> Result<String> {
@@ -28,6 +32,27 @@ pub(crate) fn inclusion_text(products: &[u8], adducts: &str, half_window: f64) -
         .filter(|a| !a.is_empty())
         .collect();
     inclusion_expected(&list, &adducts, half_window)
+}
+
+/// The executor: the adducts and the half window come from the parameters, the products from the port `tp`.
+pub(crate) fn inclusion_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let find = |name: &str| {
+        job.resolved
+            .params
+            .iter()
+            .find(|(k, _)| k == name)
+            .map(|(_, v)| v)
+    };
+    let adducts = find("adducts")
+        .and_then(|v| v.str())
+        .unwrap_or("[M+H]+")
+        .to_string();
+    let half = find("rt_window").and_then(|v| v.f64()).unwrap_or(0.5);
+    let products = read_one(r, job, "tp")?;
+    let text = inclusion_text(&products.1, &adducts, half)?;
+    let out = r.work.join(format!("{}.csv", job.instance.id));
+    std::fs::write(&out, text).map_err(io)?;
+    r.keep(out, DataType::Report)
 }
 
 #[cfg(test)]

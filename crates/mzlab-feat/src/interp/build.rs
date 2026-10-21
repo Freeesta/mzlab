@@ -9,7 +9,7 @@ use super::confronto::{self, VsParent};
 use super::disegno::{self, Drawing};
 use super::filtri::{self, FileCal, RowFacts};
 use super::modifica::{self, Candidate, IsoCheck};
-use super::ms2link::{self, Isomers, Ms2Scan, Pooled};
+use super::ms2link::{self, Isomers, LinkParams, Ms2Scan, Pooled};
 use super::sito::{self, SiteReport};
 use crate::axis::half;
 use crate::chem::posizioni::{Peak, Pol};
@@ -28,6 +28,8 @@ pub struct Inputs<'a> {
     /// The registry `ipotesi/1` as a list.
     pub hyps: &'a [Hyp],
     pub polarity: i8,
+    /// The thresholds of the link (`LinkParams::default()` is the page's).
+    pub link: &'a LinkParams,
 }
 
 /// The interpretation of one row.
@@ -57,6 +59,7 @@ pub struct Output {
     pub nodes: Vec<LibNode>,
     pub entries: Vec<LibNode>,
     pub n_files: usize,
+    pub link: LinkParams,
 }
 
 /// A row worth interpreting and where its peak lies in each file.
@@ -66,25 +69,6 @@ struct Work {
     best: usize,
     scans: Vec<Ms2Scan>,
     iso: Option<([f64; 3], f64)>,
-}
-
-fn row_facts(t: &Aligned) -> Vec<RowFacts> {
-    let mut first: std::collections::HashMap<u32, usize> = Default::default();
-    if !t.iso.is_empty() {
-        for (r, &g) in t.iso.group.iter().enumerate() {
-            if g != 0 {
-                first.entry(g).or_insert(r);
-            }
-        }
-    }
-    (0..t.len())
-        .map(|r| RowFacts {
-            bad_quality: !t.meta.is_empty() && t.meta.get(r).qreason != 0,
-            isotope: !t.iso.is_empty() && t.iso.group[r] != 0 && first[&t.iso.group[r]] != r,
-            tp_status: t.tp.status[r],
-            mass_error: false,
-        })
-        .collect()
 }
 
 /// The window of the peak of `row` in file `k`: the edges of the row around the apex of that file; `NaN` where the row has no peak there.
@@ -210,14 +194,14 @@ fn read_file<R: ReadAt>(
         };
         if lim.0.is_finite() {
             all.extend(
-                ms2link::pick_scans(ix, k, t.mz[r], lim)
+                ms2link::pick_scans_with(ix, k, t.mz[r], lim, inp.link)
                     .into_iter()
                     .map(|s| (wi, s)),
             );
         }
     }
     let mut scans: Vec<Ms2Scan> = all.iter().map(|x| x.1.clone()).collect();
-    ms2link::fill_purity(ix, inp.polarity, &mut scans).map_err(|e| e.to_string())?;
+    ms2link::fill_purity_with(ix, inp.polarity, &mut scans, inp.link).map_err(|e| e.to_string())?;
     ms2link::fill_peaks(ix, &mut scans).map_err(|e| e.to_string())?;
     let mut parent_scans = vec![];
     for ((wi, _), s) in all.iter().zip(scans) {
@@ -258,7 +242,7 @@ pub fn build<R: ReadAt>(
     if t.tp.is_empty() {
         return Err("error.interp.noTp".into());
     }
-    let mut facts = row_facts(t);
+    let mut facts = filtri::row_facts(t);
     let mut registry = filtri::Registry::default();
     let mut work: Vec<Work> = vec![];
     for (r, f) in facts.iter().enumerate() {
@@ -285,7 +269,7 @@ pub fn build<R: ReadAt>(
         *slot = pe;
     }
     let all_parent: Vec<Ms2Scan> = parent_scans.iter().flatten().cloned().collect();
-    let dda = ms2link::pool(&all_parent).consensus;
+    let dda = ms2link::pool_with(&all_parent, inp.link).consensus;
     let (nodes, entries, ctx) = albero::library_of(infusion, inp.parent, &dda)?;
     let cals: Vec<FileCal> = (0..t.n_files)
         .map(|k| {
@@ -320,6 +304,7 @@ pub fn build<R: ReadAt>(
         nodes,
         entries,
         n_files: t.n_files,
+        link: inp.link.clone(),
     })
 }
 
@@ -338,7 +323,7 @@ fn interpret(
 ) -> RowInterp {
     let t = inp.table;
     let mz = t.mz[w.row];
-    let change = modifica::candidates(mz, &inp.parent.neutral, hyps);
+    let change = modifica::candidates_with(mz, &inp.parent.neutral, hyps, inp.link.match_ppm);
     let iso = change
         .first()
         .and_then(|c| w.iso.and_then(|i| modifica::iso_check(&c.ion_formula, i.0)));
@@ -361,7 +346,7 @@ fn interpret(
     if hidden.is_some() {
         registry.hidden[4].push(t.id(w.row));
     }
-    let pooled = ms2link::pool(&w.scans);
+    let pooled = ms2link::pool_with(&w.scans, inp.link);
     let files_with_ms2 = w
         .scans
         .iter()

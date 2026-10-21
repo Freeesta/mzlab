@@ -76,5 +76,16 @@ fn a_second_run_in_the_same_folder_reuses_every_step() {
         !prov.contains("\"error\"") && prov.matches("\"cached\":true").count() == 4,
         "{prov}"
     );
+
+    // a caller told after each job sees every job once, all of them reused here
+    let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::<(String, bool)>::new()));
+    let log = seen.clone();
+    let done: crate::flow::DoneFn = std::sync::Arc::new(move |id, _, _, cached, err| {
+        assert!(err.is_none());
+        log.lock().unwrap().push((id.to_string(), cached));
+    });
+    crate::flow::run_plan_notify(&text, &data, &out, 1, None, Some(false), Some(done)).unwrap();
+    let seen = seen.lock().unwrap();
+    assert!(seen.len() >= 4 && seen.iter().all(|x| x.1), "{seen:?}");
     let _ = std::fs::remove_dir_all(&dir);
 }
