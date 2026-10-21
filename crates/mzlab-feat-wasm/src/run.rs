@@ -26,8 +26,31 @@ pub fn recipe_from_json(text: &str) -> Result<Recipe> {
 }
 
 /// `recipe_from_json` on the recipe that fits the index: the default one for high resolution, the unit-resolution one (m/z axis in Da) otherwise.
+///
+/// A `"layers"` key (`layers_from_json`) switches to the recipe of a Flow run: the estimated one of `recipe_of_layers`, then the layers on top of the other keys.
 pub fn recipe_for<R: ReadAt>(text: &str, index: &mut Index<R>) -> Result<Recipe> {
-    recipe_on(text, Recipe::for_index(index)?)
+    let Some(layers) = layers_in(text)? else {
+        return recipe_on(text, Recipe::for_index(index)?);
+    };
+    let mut r = recipe_on(text, Recipe::for_index_estimated(index)?)?;
+    apply_layers(&mut r, &layers)?;
+    Ok(r)
+}
+
+/// The layers under `"layers"` of a recipe text, if it has them.
+fn layers_in(text: &str) -> Result<Option<Vec<Layer>>> {
+    if !text.contains("\"layers\"") {
+        return Ok(None);
+    }
+    let v = json::parse(text.as_bytes()).map_err(|_| Error::new("error.badRecipe"))?;
+    v.get("layers").map(layers_of).transpose()
+}
+
+fn apply_layers(r: &mut Recipe, layers: &[Layer]) -> Result<()> {
+    for (step, params) in layers {
+        mzlab_feat::steps::recipe_map::apply(r, step, params)?;
+    }
+    Ok(())
 }
 
 /// `recipe_for` with the minimum height estimated from the noise of the file (`Recipe::for_index_estimated`): the recipe of the Flow steps.
@@ -45,16 +68,18 @@ pub fn recipe_of_layers<R: ReadAt>(
     layers: &[Layer],
 ) -> Result<Recipe> {
     let mut r = recipe_for_estimated("", first)?;
-    for (step, params) in layers {
-        mzlab_feat::steps::recipe_map::apply(&mut r, step, params)?;
-    }
+    apply_layers(&mut r, layers)?;
     Ok(r)
 }
 
 /// `[{"step": "features.detect", "params": {"min_height": 5e4}}, ...]` as layers; anything else is `error.badRecipe`.
 pub fn layers_from_json(text: &str) -> Result<Vec<Layer>> {
+    let v = json::parse(text.as_bytes()).map_err(|_| Error::new("error.badRecipe"))?;
+    layers_of(&v)
+}
+
+fn layers_of(v: &Value) -> Result<Vec<Layer>> {
     let bad = || Error::new("error.badRecipe");
-    let v = json::parse(text.as_bytes()).map_err(|_| bad())?;
     if !matches!(v, Value::Arr(_)) {
         return Err(bad());
     }
