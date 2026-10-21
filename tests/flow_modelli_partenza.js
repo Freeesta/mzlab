@@ -11,8 +11,14 @@ const problems = plan => F.check(F.normalize(F.exportPlan(plan)), reg, "native")
 // every template of the start screen gives a valid plan; the new ones carry their sample list and their starting settings
 for (const t of F.TEMPLATES) { const p = F.templatePlan(reg, t); eq(problems(p), []); assert.ok(/^Good for: /.test(t.good), t.id); }
 assert.ok(F.TEMPLATES.length >= 7);
+// the first row: Tabui, the feature table, Attributio; the others sit under «More templates»
+eq(F.TEMPLATES.filter(t => !t.more).map(t => t.id), ["tp", "table", "identify"]);
+eq(F.TEMPLATES.filter(t => t.more).map(t => t.id), ["targeted", "tpseries", "standards", "blankfree"]);
 {
   const by = id => F.templatePlan(reg, F.TEMPLATES.find(t => t.id === id));
+  eq(["formula.ms1", "spectra.match", "annot.level"].every(x => F.findStep(by("identify"), x)), true);
+  eq(["tp.generate", "tp.link"].every(x => F.findStep(by("tp"), x)), true);
+  eq(F.hasAddons(by("table")), false);
   const series = by("tpseries");
   eq(["tp.generate", "tp.filter", "table.filter", "tp.network"].every(s => F.findStep(series, s)), true);
   assert.ok(series.inputs.some(f => f.type === "samples"));
