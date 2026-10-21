@@ -387,7 +387,8 @@ fn search_gives_what_the_name_box_of_tabui_gave() {
     );
 }
 
-/// A suspect list (`name;formula;mass;comment`) is imported as a collection named like the file; a row with a mass but no formula is refused with its row error.
+/// A suspect list (`name;formula;mass;comment`) is imported as a collection named like the file; a row with a mass but no formula is a mass-only entry, and a
+/// row with neither is refused with its row error.
 #[test]
 fn a_suspect_list_becomes_a_collection() {
     let dir = root().join("tests/dati");
@@ -401,32 +402,40 @@ fn a_suspect_list_becomes_a_collection() {
         );
         parse(route("da_csv", &body).unwrap().as_bytes()).unwrap()
     };
-    let bad = ask(&csv);
-    let e = &bad.get("errori").unwrap().arr()[0];
-    let w = &want.get("errori").unwrap().arr()[0];
-    assert_eq!(e.get("riga").unwrap().f64(), w.get("riga").unwrap().f64());
-    assert_eq!(
-        e.get("chiave").unwrap().str(),
-        w.get("chiave").unwrap().str()
-    );
-    let kept: String = csv
-        .lines()
-        .filter(|l| !l.starts_with("Provolone"))
-        .map(|l| format!("{l}\n"))
-        .collect();
-    let ok = ask(&kept);
+    let ok = ask(&csv);
     let got = ok.get("molecole").unwrap().arr();
     let exp = want.get("molecole").unwrap().arr();
     assert_eq!(got.len(), exp.len());
-    for (g, x) in got.iter().zip(exp) {
-        assert_eq!(g.get("nome").unwrap().str(), x.get("nome").unwrap().str());
-        assert_eq!(
-            g.get("formula").unwrap().str(),
-            x.get("formula").unwrap().str()
-        );
-        assert_eq!(g.get("note").unwrap().str(), x.get("note").unwrap().str());
+    // the answer is ordered by id, so every expected record is looked up by name
+    for x in exp {
+        let name = x.get("nome").unwrap().str();
+        let g = got
+            .iter()
+            .find(|g| g.get("nome").unwrap().str() == name)
+            .unwrap();
+        for k in ["formula", "note"] {
+            assert_eq!(g.get(k).unwrap().str(), x.get(k).unwrap().str(), "{k}");
+        }
         assert_eq!(g.get("raccolte").unwrap().arr()[0].str(), Some(coll));
+        // the mass of a mass-only entry is the one of the file; with a formula it is computed
+        if x.get("formula").unwrap().str() == Some("") {
+            assert_eq!(g.get("massa").unwrap().f64(), x.get("massa").unwrap().f64());
+        }
     }
+    let none = ask(&format!("{csv}Senzanulla;;;no formula\n"));
+    let e = &none.get("errori").unwrap().arr()[0];
+    assert_eq!(e.get("riga").unwrap().f64(), Some(6.0));
+    assert_eq!(
+        e.get("chiave").unwrap().str(),
+        Some("error.molecules.badFormula")
+    );
+    // a mass-only entry goes through the canonical JSON and the search by mass
+    let _g = ARCHIVE.lock().unwrap_or_else(|e| e.into_inner());
+    let json = to_json(&from_csv(&csv, "utente", None).unwrap());
+    let back = from_json(json.as_bytes()).unwrap();
+    assert_eq!(to_json(&back), json);
+    let hits = cerca(&back, "234.1012", 8, 5.0);
+    assert_eq!(back[hits[0].0].nome, "Provolone B");
 }
 
 /// The screening list (`elenca` on the `hrms` catalogue) has, for every row of the gold file made from the old CSV, a molecule with the same m/z (<= 1e-5).
