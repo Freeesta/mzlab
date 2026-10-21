@@ -144,3 +144,4 @@
 {"ts_utc":"2026-10-21T20:16:22Z","tipo":"job_fallito","workflow":"rust","job":"rust-core","esito":"cancelled","durata_s":90,"categoria":"annullato","passo":null,"pr":1374,"sha":"97c0e591e722f96639c06d05e31f5b88ef603ef2","run_id":39668584636,"run_attempt":1}
 {"ts_utc":"2026-10-21T20:16:23Z","tipo":"job_fallito","workflow":"rust","job":"rust-wasm","esito":"cancelled","durata_s":91,"categoria":"annullato","passo":null,"pr":1374,"sha":"97c0e591e722f96639c06d05e31f5b88ef603ef2","run_id":39668584636,"run_attempt":1}
 {"ts_utc":"2026-10-21T20:16:28Z","tipo":"job_fallito","workflow":"rust","job":"rust-ok","esito":"failure","durata_s":3,"categoria":"altro","passo":"Every Rust job passed, or all were skipped because no Rust path changed","pr":1374,"sha":"97c0e591e722f96639c06d05e31f5b88ef603ef2","run_id":39668584636,"run_attempt":1}
+{"ts_utc":"2026-10-21T20:18:28Z","azione":"push","tipo":"pr","pr":1374,"sha":"cba2b6f08848115a2f6dd0cd0310e297fb810e14"}
