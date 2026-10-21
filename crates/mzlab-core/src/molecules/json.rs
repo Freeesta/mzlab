@@ -191,7 +191,7 @@ fn read_properties(v: &Value) -> Vec<Proprieta> {
         .collect()
 }
 
-/// One record from its JSON; `massa` is ignored (computed again). A charge that is not a whole number is refused.
+/// One record from its JSON; `massa` is ignored (computed again) unless the record has no formula (a mass-only entry). A charge that is not a whole number is refused.
 fn read_one(v: &Value) -> Result<Molecola, (&'static str, String)> {
     let charge = v.get("carica").and_then(|x| x.f64()).unwrap_or(0.0);
     if charge.fract() != 0.0 || charge.abs() > 1e6 {
@@ -223,7 +223,11 @@ fn read_one(v: &Value) -> Result<Molecola, (&'static str, String)> {
         creato: opt(&o, "creato"),
         modificato: opt(&o, "modificato"),
     };
-    finalizza(&mut m, None)?;
+    let control = v
+        .get("massa")
+        .and_then(|x| x.f64())
+        .filter(|_| m.formula.trim().is_empty());
+    finalizza(&mut m, control)?;
     Ok(m)
 }
 

@@ -1,0 +1,8 @@
+data: {"choices":[{"index":0,"delta":{"content":"I will check.\n```js"},"finish_reason":null}]}
+
+data: {"choices":[{"index":0,"delta":{"content":"on\n{\"tool\":\"flow_check\","},"finish_reason":null}]}
+
+data: {"choices":[{"index":0,"delta":{"content":"\"args\":{\"plan\":\"p\"}}\n```\n"},"finish_reason":"stop"}]}
+
+data: [DONE]
+

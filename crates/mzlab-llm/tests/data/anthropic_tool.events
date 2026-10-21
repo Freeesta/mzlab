@@ -1,0 +1,8 @@
+{"ev":"text_delta","text":"Let me look."}
+{"ev":"tool_call_start","id":"toolu_1","name":"flow_describe_step"}
+{"ev":"tool_call_delta","json":"{\"ste"}
+{"ev":"tool_call_delta","json":"p\":\"a.b@1\","}
+{"ev":"tool_call_delta","json":"\"x\":1}"}
+{"ev":"tool_call_end","id":"toolu_1"}
+{"cache_read":0,"ev":"usage","in":40,"out":30}
+{"ev":"stop","reason":"tool"}

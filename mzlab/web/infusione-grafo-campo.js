@@ -30,7 +30,8 @@ export function drawField(/** @type {HTMLElement} */ host, /** @type {any} */ fi
     testi: { label: I18N.t("msngrafo.mol"), placeholder: I18N.t("msngrafo.mol.ph"), none: I18N.t("msngrafo.mol.none"), count: n => I18N.t("msngrafo.mol.count", { n }), manage: I18N.t("msngrafo.mol.manage") },
     onScegli: async row => {
       const m = /** @type {Molecola} */ (/** @type {unknown} */ ((await prendi(row.id)) || row));
-      G.mol = m; G.text = ""; G.smiles = m.smiles || ""; G.adduct = startAdduct(polarityOf(E.files.find(INF.isInf)), m);
+      // a mass-only entry has no formula to write: the graph then shows masses only
+      G.mol = m.formula ? m : null; G.text = ""; G.smiles = m.smiles || ""; G.adduct = startAdduct(polarityOf(E.files.find(INF.isInf)), m);
       ion.value = ionOf(); add.value = G.adduct; smi.value = G.smiles;
       go();
     },
