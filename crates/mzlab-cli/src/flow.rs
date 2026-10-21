@@ -380,18 +380,6 @@ fn network_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     write_made(r, job, text, DataType::Transform)
 }
 
-fn filter_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let (table, samples) = (read_one(r, job, "table")?, read_one(r, job, "samples")?);
-    let text = crate::flow_table::filter_text(job, &table.1, &samples.1)?;
-    write_made(r, job, text, DataType::Table)
-}
-
-fn generate_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let parent = read_one(r, job, "parent")?;
-    let text = crate::flow_generate::generate_text(job, &parent.1)?;
-    write_made(r, job, text, DataType::Transform)
-}
-
 fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let (hits, formulas) = (
         read_all(r, job, "candidates")?,
@@ -429,8 +417,14 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("annot.level", Exec::File("annot", level_job)),
     ("tp.network", Exec::File("network", network_job)),
     ("tp.link", Exec::File("tp", crate::flow_link::link_job)),
-    ("table.filter", Exec::File("table", filter_job)),
-    ("tp.generate", Exec::File("hypotheses", generate_job)),
+    (
+        "table.filter",
+        Exec::File("table", crate::flow_table::filter_job),
+    ),
+    (
+        "tp.generate",
+        Exec::File("hypotheses", crate::flow_generate::generate_job),
+    ),
     (
         "tp.filter",
         Exec::File("table", crate::flow_refilter::refilter_job),
