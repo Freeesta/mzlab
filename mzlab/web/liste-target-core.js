@@ -11,95 +11,6 @@ const LISTE_TARGET_CORE = (function() {
     "[M+Cl]-": 34.969402
   };
 
-  function csvSplit(line, sep) {
-    const out = [];
-    let cur = "", q = false;
-    for (let i = 0; i < line.length; i++) {
-      const c = line[i];
-      if (q) {
-        if (c === '"' && line[i + 1] === '"') { cur += '"'; i++; }
-        else if (c === '"') q = false;
-        else cur += c;
-      } else if (c === '"') q = true;
-      else if (c === sep) { out.push(cur); cur = ""; }
-      else cur += c;
-    }
-    out.push(cur);
-    return out.map(s => s.trim());
-  }
-
-  function matchCol(head, candidates) {
-    const clean = s => s.toLowerCase().replace(/[\s_\-\/]/g, "");
-    const clHead = head.map(clean);
-    for (const cand of candidates) {
-      const idx = clHead.indexOf(clean(cand));
-      if (idx >= 0) return idx;
-    }
-    return -1;
-  }
-
-  function parseRow(cols, headIndices, idx) {
-    const [cId, cName, cNameIt, cFormula, cMass, cMh, cMna, cMnh4, cSmiles, cInchi, cEffect, cChem] = headIndices;
-    const name = cName >= 0 && cols[cName] ? cols[cName].replace(/^"|"$/g, "") : `Compound_${idx}`;
-    const id = cId >= 0 && cols[cId] ? cols[cId] : name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    const neutral_formula = cFormula >= 0 && cols[cFormula] ? cols[cFormula].trim() : "";
-    let mass = cMass >= 0 && cols[cMass] ? parseFloat(cols[cMass].replace(",", ".")) : NaN;
-    let mzMh = cMh >= 0 && cols[cMh] ? parseFloat(cols[cMh].replace(",", ".")) : NaN;
-    let mzMna = cMna >= 0 && cols[cMna] ? parseFloat(cols[cMna].replace(",", ".")) : NaN;
-    let mzMnh4 = cMnh4 >= 0 && cols[cMnh4] ? parseFloat(cols[cMnh4].replace(",", ".")) : NaN;
-
-    if (!isFinite(mass) && isFinite(mzMh)) mass = mzMh - ADDUCT_DELTAS["[M+H]+"];
-    if (isFinite(mass)) {
-      if (!isFinite(mzMh)) mzMh = mass + ADDUCT_DELTAS["[M+H]+"];
-      if (!isFinite(mzMna)) mzMna = mass + ADDUCT_DELTAS["[M+Na]+"];
-      if (!isFinite(mzMnh4)) mzMnh4 = mass + ADDUCT_DELTAS["[M+NH4]+"];
-    }
-
-    return {
-      id,
-      name_en: name,
-      name_it: cNameIt >= 0 && cols[cNameIt] ? cols[cNameIt] : name,
-      neutral_formula,
-      monoisotopic_mass: mass,
-      mz_mh: mzMh,
-      mz_mna: mzMna,
-      mz_mnh4: mzMnh4,
-      smiles: cSmiles >= 0 ? cols[cSmiles] : "",
-      inchikey: cInchi >= 0 ? cols[cInchi] : "",
-      effect_class: cEffect >= 0 ? cols[cEffect] : "",
-      chemical_class: cChem >= 0 ? cols[cChem] : ""
-    };
-  }
-
-  function parseTargetCsv(text) {
-    const lines = String(text).replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim() && !l.startsWith("#"));
-    if (!lines.length) return [];
-    const sep = (lines[0].match(/;/g) || []).length > (lines[0].match(/,/g) || []).length ? ";" : ",";
-    const head = csvSplit(lines[0], sep);
-
-    const headIndices = [
-      matchCol(head, ["id", "identifier", "slug"]),
-      matchCol(head, ["name_en", "name", "compound_name", "substance", "nome"]),
-      matchCol(head, ["name_it", "nome_it"]),
-      matchCol(head, ["neutral_formula", "molecular_formula", "neutralformula", "formula"]),
-      matchCol(head, ["monoisotopic_mass", "exact_mass", "mass", "monoisotopicmass", "exactmass"]),
-      matchCol(head, ["mz_mh", "mz_h", "m+h", "mh"]),
-      matchCol(head, ["mz_mna", "mz_na", "m+na", "mna"]),
-      matchCol(head, ["mz_mnh4", "mz_nh4", "m+nh4", "mnh4"]),
-      matchCol(head, ["smiles"]),
-      matchCol(head, ["inchikey"]),
-      matchCol(head, ["effect_class", "effect", "classe"]),
-      matchCol(head, ["chemical_class", "class"])
-    ];
-
-    const entries = [];
-    for (let i = 1; i < lines.length; i++) {
-      const cols = csvSplit(lines[i], sep);
-      if (cols.length >= 2) entries.push(parseRow(cols, headIndices, i));
-    }
-    return entries;
-  }
-
   function parseFormulaCounts(formula) {
     const counts = {};
     if (!formula) return counts;
@@ -115,6 +26,7 @@ const LISTE_TARGET_CORE = (function() {
   }
 
   function calcTargetMz(entry, adduct) {
+    if (entry.mz && isFinite(entry.mz[adduct])) return entry.mz[adduct];
     if (adduct === "[M+H]+" && isFinite(entry.mz_mh)) return entry.mz_mh;
     if (adduct === "[M+Na]+" && isFinite(entry.mz_mna)) return entry.mz_mna;
     if (adduct === "[M+NH4]+" && isFinite(entry.mz_mnh4)) return entry.mz_mnh4;
@@ -361,9 +273,6 @@ const LISTE_TARGET_CORE = (function() {
 
   return {
     ADDUCT_DELTAS,
-    csvSplit,
-    matchCol,
-    parseTargetCsv,
     parseFormulaCounts,
     calcTargetMz,
     estimateNoise,

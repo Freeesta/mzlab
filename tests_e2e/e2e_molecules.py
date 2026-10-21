@@ -15,6 +15,8 @@ try:
         cat = pg.evaluate("fetch('static/molecole/catalogo.csv').then(r => r.text())")
         loaded = json.loads(call("carica", {"catalogo": cat}))
         assert loaded["errori"] == [] and loaded["totale"] == 1228, loaded
+        hrms = json.loads(call("elenca", {"catalogo": "hrms", "addotti": ["[M+H]+", "[M+Na]+"]}))
+        assert len(hrms) >= 645 and all(len(m["mz"]) == 2 for m in hrms)
         hit = json.loads(call("cerca", {"q": "paracetamol"}))
         assert hit and hit[0]["nome"] == "acetaminophen" and hit[0]["formula"] == "C8H9NO2", hit[:1]
         assert any(h["nome"] == "acetaminophen" for h in json.loads(call("cerca", {"q": "C8H9NO2"})))

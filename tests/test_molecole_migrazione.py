@@ -1,5 +1,5 @@
 """The catalogue of the molecules database (mzlab/web/molecole/catalogo.csv) loses nothing of the two lists it replaces: TP_Mine/data/composti.csv and
-mzlab/web/sostanze_hrms.csv. Every row has its record (names as a set, formula, SMILES, InChIKey, CAS, CID, classes, notes; the mass within 0.0005 Da);
+tests/data/liste/sostanze_hrms.csv. Every row has its record (names as a set, formula, SMILES, InChIKey, CAS, CID, classes, notes; the mass within 0.0005 Da);
 the 43 molecules of both lists are one record, found by the whole InChIKey. The adducts are not copied (derived): the hrms records say which they prefer.
 """
 import csv
@@ -34,7 +34,7 @@ def hill(f):
 
 def test_counts_and_order():
     rows, by_key = catalogue()
-    tabui, hrms = read("TP_Mine/data/composti.csv"), read("mzlab/web/sostanze_hrms.csv")
+    tabui, hrms = read("TP_Mine/data/composti.csv"), read("tests/data/liste/sostanze_hrms.csv")
     # the last record (timolol) was added after the two old lists
     assert (len(tabui), len(hrms), len(rows)) == (625, 645, 625 + 645 - 43 + 1)
     assert len(by_key) == len(rows)
@@ -59,7 +59,7 @@ def test_composti_rows_are_all_there():
 
 def test_hrms_rows_are_all_there():
     _, by_key = catalogue()
-    for h in read("mzlab/web/sostanze_hrms.csv"):
+    for h in read("tests/data/liste/sostanze_hrms.csv"):
         r = by_key[h["inchikey"]]
         assert {n.strip().lower() for n in [h["name_en"], h["name_it"]] + h["synonyms"].split("|") if n.strip()} <= names(r), h["id"]
         assert r["molecular_formula"] == hill(h["neutral_formula"])

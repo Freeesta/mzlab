@@ -1,7 +1,7 @@
 """Integration and unit tests for the HRMS target screening module (mzlab/web/liste-target.js).
 
 Tests:
-- Parsing of psychoactive substances list (sostanze_hrms.csv).
+- Target m/z (values of the molecules engine, else mass + adduct delta).
 - Target screening engine (XIC extraction, peak detection, S/N threshold, M+1 isotope pattern scoring, MS2 precursor matching).
 - Identification proposal assignment: Prev. 1 (MS1 + isotope + MS2), Prev. 2 (MS1 + isotope), Prev. 3 (accurate mass).
 - Sorting by proposal rank (Prev. 1 > Prev. 2 > Prev. 3) and descending S/N.
@@ -23,40 +23,19 @@ sys.path.insert(0, str(ROOT))
 NODE = shutil.which("node")
 TARGET_JS = ROOT / "mzlab" / "web" / "liste-target.js"
 LISTE_JS = ROOT / "mzlab" / "web" / "liste.js"
-CSV_PATH = ROOT / "tests" / "data" / "liste" / "sostanze_hrms.csv"
 
 
 @pytest.mark.skipif(not NODE, reason="node non disponibile")
-def test_parse_target_csv():
+def test_target_mz_uses_the_engine_values():
     code = r"""
-const fs = require('fs');
 const LT = require(process.argv[1]);
-const csvText = fs.readFileSync(process.argv[2], 'utf8');
-
-const entries = LT.parseTargetCsv(csvText);
-const out = {
-  count: entries.length,
-  dmaa: entries.find(x => x.id === '1-3-dimethylamylamine'),
-  lsd: entries.find(x => x.id === '1p-lsd'),
-  pseudo: entries.find(x => x.id === '1s-2s-pseudoephedrine')
-};
-console.log(JSON.stringify(out));
+const e = { monoisotopic_mass: 115.1361, mz: { '[M+H]+': 116.143376 } };
+console.log(JSON.stringify([LT.calcTargetMz(e, '[M+H]+'), LT.calcTargetMz(e, '[M+Na]+')]));
 """
-    res = subprocess.run([NODE, "-e", code, str(TARGET_JS), str(CSV_PATH)], capture_output=True, text=True, encoding="utf-8", check=True)
-    data = json.loads(res.stdout)
-
-    assert data["count"] == 645
-    assert data["dmaa"]["name_en"] == "DMAA"
-    assert data["dmaa"]["neutral_formula"] == "C7H17N"
-    assert abs(data["dmaa"]["monoisotopic_mass"] - 115.1361) < 1e-4
-    assert abs(data["dmaa"]["mz_mh"] - 116.143376) < 1e-4
-    assert abs(data["dmaa"]["mz_mna"] - 138.12532) < 1e-4
-
-    assert data["lsd"]["name_en"] == "1P-LSD"
-    assert data["lsd"]["neutral_formula"] == "C23H29N3O2"
-
-    assert data["pseudo"]["name_en"] == "Pseudoephedrine"
-    assert data["pseudo"]["neutral_formula"] == "C10H15NO"
+    res = subprocess.run([NODE, "-e", code, str(TARGET_JS)], capture_output=True, text=True, encoding="utf-8", check=True)
+    mh, mna = json.loads(res.stdout)
+    assert mh == 116.143376
+    assert abs(mna - 138.12532) < 1e-4  # no value from the engine: mass + adduct delta
 
 
 def _run_screening_js():
