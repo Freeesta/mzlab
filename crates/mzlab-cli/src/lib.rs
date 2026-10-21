@@ -46,6 +46,7 @@ mod flow_table_tests;
 pub mod msn_graph;
 mod msn_graph_compare;
 mod msn_lib;
+mod msn_lib_export;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
 
