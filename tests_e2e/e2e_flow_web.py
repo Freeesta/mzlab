@@ -1,5 +1,5 @@
 """Flow «This browser» runner (flow/lazy/flow-web-run.js, flow-web-ui.js, worker-flow-web.js): the base plan (index, detect, align, gapfill) over three synthetic .mzidx in OPFS emits
-{passo, stato, mb, via, parte, di, modo} for every step, keeps each result in OPFS (mzlab/flow/), starts again from the first step not finished (a second run reuses everything), refuses a
+{passo, stato, mb, via, parte, di, modo} for every step, keeps each result in OPFS (mzlab/flow/), starts again from the first step not finished (a second run reuses everything), has the SHA-256 of the native run with the same recipe (layers), refuses a
 series the budget does not hold with its numbers, and writes the note for phones and tablets. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and numpy: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_web.py"""
 import json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
@@ -77,6 +77,19 @@ try:
             assert of(r, "gapfill", "reused") and of(r, "index", "reused"), r["ev"]
             assert pg.evaluate("(async () => { const d = await navigator.storage.getDirectory(); const m = await d.getDirectoryHandle('mzlab'); const f = await m.getDirectoryHandle('flow'); return (await (await f.getFileHandle('series.mzfeat')).getFile()).size })()") > 0
         step("the base plan runs: events of every step, the table is kept in OPFS", first_run)
+
+        def same_bytes_as_native():
+            recipe = pg.evaluate("FLOW.runners.web.recipeOf(document.querySelector('.flx-list').__flow.plan)")
+            assert '"layers"' in recipe, recipe
+            got = pg.evaluate("""(async () => { const d = await navigator.storage.getDirectory(), f = await (await d.getDirectoryHandle('mzlab')).getDirectoryHandle('flow');
+              const b = await (await (await f.getFileHandle('series.mzfeat')).getFile()).arrayBuffer();
+              return [...new Uint8Array(await crypto.subtle.digest('SHA-256', b))].map(x => x.toString(16).padStart(2, '0')).join('') })()""")
+            nat = tmp / "nat"; nat.mkdir()
+            out = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo", "--", str(nat), *[str(data / n) for n in names], "--recipe", recipe],
+                                 cwd=ROOT, check=True, capture_output=True, text=True).stdout
+            native = dict(l.split(" ")[:2] for l in out.splitlines() if len(l.split(" ")) == 2 and len(l.split(" ")[1]) == 64)
+            assert native.get("series.mzfeat") == got, (native, got)
+        step("the table of the browser has the SHA-256 of the native run with the same layers", same_bytes_as_native)
 
         def second_run():
             r = pg.evaluate(RUN); assert r["err"] is None, r["err"]
