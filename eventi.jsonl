@@ -62,3 +62,4 @@
 {"ts_utc":"2026-10-21T17:31:11Z","tipo":"job_fallito","workflow":"test","job":"pytest (ubuntu-latest, 3.11)","esito":"cancelled","durata_s":466,"categoria":"annullato","passo":null,"pr":1372,"sha":"98a8ff9c26937706b5ba9bd8c130632fb2abe1c7","run_id":39643350668,"run_attempt":1}
 {"ts_utc":"2026-10-21T17:23:44Z","tipo":"job_fallito","workflow":"test","job":"javascript","esito":"failure","durata_s":19,"categoria":"soglia","passo":"Map of the code and size limits","pr":1372,"sha":"98a8ff9c26937706b5ba9bd8c130632fb2abe1c7","run_id":39643350668,"run_attempt":1}
 {"ts_utc":"2026-10-21T17:31:10Z","tipo":"job_fallito","workflow":"test","job":"pytest (ubuntu-latest, 3.14)","esito":"cancelled","durata_s":465,"categoria":"annullato","passo":null,"pr":1372,"sha":"98a8ff9c26937706b5ba9bd8c130632fb2abe1c7","run_id":39643350668,"run_attempt":1}
+{"ts_utc":"2026-10-21T17:32:10Z","azione":"push","tipo":"pr","pr":1371,"sha":"ec3af6433f2514958c706ccb2a4d34564c1a82f6"}
