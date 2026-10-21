@@ -77,7 +77,7 @@ fn bad(op: &str) -> Error {
 }
 
 /// `op` is `carica` (`{"catalogo": csv, "utente": document}`, each optional: what is missing stays), `cerca` (`{"q","limite","ppm"}`), `get` (`{"id"}`),
-/// `da_csv` (`{"csv","file","livello"}` to a document), `valida` (`{"csv"}`), or, on a `molecules/1` document, `a_csv`, `a_json`, `digest`.
+/// `da_csv` (`{"csv","file","livello","raccolta"}` to a document), `valida` (`{"csv"}`), or, on a `molecules/1` document, `a_csv`, `a_json`, `digest`.
 pub fn route(op: &str, input: &str) -> Result<String> {
     let v = || parse(input.as_bytes()).map_err(|_| bad(op));
     let docs = || from_json(input.as_bytes());
@@ -92,7 +92,16 @@ pub fn route(op: &str, input: &str) -> Result<String> {
                 .filter(|l| !l.is_empty())
                 .unwrap_or("importata");
             Ok(match from_csv(s("csv").unwrap_or(""), tipo, s("file")) {
-                Ok(ms) if op == "da_csv" => to_json(&ms),
+                Ok(mut ms) if op == "da_csv" => {
+                    if let Some(c) = s("raccolta").filter(|c| !c.is_empty()) {
+                        for m in &mut ms {
+                            if !m.raccolte.iter().any(|x| x == c) {
+                                m.raccolte.push(c.to_string());
+                            }
+                        }
+                    }
+                    to_json(&ms)
+                }
                 Ok(ms) => format!("{{\"errori\":[],\"n\":{}}}", ms.len()),
                 Err(e) => errors_doc(&e),
             })

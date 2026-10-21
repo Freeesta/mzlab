@@ -8,7 +8,6 @@ use mzlab_feat::liste::{errors_json, from_csv, from_json, from_legacy_text, to_j
 const TRANSF: &str = "name;delta;max_repeat;comment\nhydroxylation;+O;3;lit: ref one\ndemethylation;-CH2;;\n\"loss, water\";-H2O;2;\"a \"\"quoted\"\" note\"\n";
 const ADDUCTS: &str =
     "name,delta,charge,comment\n[M+Na]+,+Na,1,\n[M+NH4]+,+NH4,1,\n[M-H]-,-H,-1,negative\n";
-const SUSPECTS: &str = "# invented\nname;formula;mass;comment\nsuspect A;C10H12N2O;;from a list\nsuspect B;;234.1012;mass only\nsuspect C;C8H10O2;138.0681;both\n";
 
 fn round(kind: Kind, csv: &str) -> (Liste, String) {
     let list = from_csv(kind, csv).unwrap_or_else(|e| panic!("{e:?}"));
@@ -24,7 +23,6 @@ fn every_kind_goes_from_csv_to_json_and_back_to_the_same_bytes() {
     for (kind, csv, n) in [
         (Kind::Transformations, TRANSF, 3),
         (Kind::Adducts, ADDUCTS, 3),
-        (Kind::Suspects, SUSPECTS, 3),
     ] {
         let (list, json) = round(kind, csv);
         assert_eq!(list.len(), n);
@@ -93,15 +91,6 @@ fn every_wrong_row_has_its_own_error() {
             "error.liste.badDelta"
         ]
     );
-    let s = from_csv(Kind::Suspects, "name;formula;mass\na;;\nb;Xx2;\nc;;-5\n").unwrap_err();
-    assert_eq!(
-        s.iter().map(|r| (r.line, r.key)).collect::<Vec<_>>(),
-        [
-            (2, "error.liste.noMass"),
-            (3, "error.liste.badFormula"),
-            (4, "error.liste.badMass")
-        ]
-    );
 }
 
 #[test]
@@ -111,10 +100,10 @@ fn a_header_is_required_except_for_the_text_of_mzfinder() {
         "error.liste.noHeader"
     );
     assert_eq!(
-        from_csv(Kind::Suspects, "name;colour\na;b\n").unwrap_err()[0].key,
+        from_csv(Kind::Adducts, "name;colour\na;b\n").unwrap_err()[0].key,
         "error.liste.badColumn"
     );
-    assert!(from_csv(Kind::Suspects, "").unwrap().is_empty());
+    assert!(from_csv(Kind::Adducts, "").unwrap().is_empty());
     // the header-less form is `name;change[;comment]`
     let l = from_csv(Kind::Transformations, "# list\nhydroxylation;+O;note\n").unwrap();
     assert_eq!(l.len(), 1);
@@ -136,17 +125,4 @@ fn the_text_of_mzfinder_gives_the_same_rows_through_the_list() {
         from_legacy_text("one;").is_err(),
         "the errors are those of the text"
     );
-}
-
-/// Today's `liste/1` reading of the synthetic suspects file; M6 turns the same file into a molecules collection named like the file.
-#[test]
-fn synthetic_suspects_fixture_reads_today() {
-    let csv = std::fs::read_to_string(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../tests/dati/sospetti_sintetici.csv"
-    ))
-    .unwrap();
-    let (list, json) = round(Kind::Suspects, &csv);
-    assert_eq!(list.len(), 3);
-    assert!(json.contains("\"nome\":\"Esempina\"") && json.contains("\"massa\":234.1012"));
 }
