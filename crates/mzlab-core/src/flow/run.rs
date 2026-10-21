@@ -42,6 +42,8 @@ pub struct Outcome {
     pub heap_peak_bytes: Option<u64>,
     /// Memory the step asked for and the way it took (steps that estimate it).
     pub mem: Option<Mem>,
+    /// `warn.*` keys of what the step noticed and went on with.
+    pub warnings: Vec<String>,
     /// The output came from the cache key (`cache_key`), the step did not run.
     pub cached: bool,
 }
@@ -240,6 +242,7 @@ fn settle(
         ms: 0.0,
         heap_peak_bytes: None,
         mem: None,
+        warnings: Vec::new(),
         error: None,
         cached: !results.is_empty(),
     };
@@ -268,6 +271,11 @@ fn settle(
         act.cached &= o.cached;
         act.heap_peak_bytes = act.heap_peak_bytes.max(o.heap_peak_bytes);
         act.mem = merged(act.mem.take(), o.mem.clone());
+        for w in &o.warnings {
+            if !act.warnings.contains(w) {
+                act.warnings.push(w.clone());
+            }
+        }
         for (name, value, proof) in &o.estimates {
             if !act.estimates.iter().any(|e| e.0 == *name) {
                 act.estimates.push((name.clone(), proof.clone()));

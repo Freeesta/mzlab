@@ -43,6 +43,8 @@ pub struct Passo {
     /// Memory the step asked for in MB and the way it took (`memory`, `slabs`, `refused`), when the step estimates it.
     pub mem_mb: Option<f64>,
     pub via: Option<String>,
+    /// `warn.*` keys of the step.
+    pub warnings: Vec<String>,
     pub params_sha256: String,
     pub params: Vec<Param>,
 }
@@ -121,6 +123,13 @@ fn passo(name: &str, a: &Value) -> Passo {
         ms: a.get("ms").and_then(|m| m.f64()).unwrap_or(0.0),
         mem_mb: a.get("mem_mb").and_then(|m| m.f64()),
         via: text(a, "via"),
+        warnings: a
+            .get("warnings")
+            .map(Value::arr)
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|w| w.str().map(str::to_string))
+            .collect(),
         params_sha256: text(a, "params_sha256").unwrap_or_default(),
         params,
     }
@@ -244,6 +253,20 @@ fn param(o: &mut Out, p: &Param) {
     o.raw("}");
 }
 
+/// The memory and the warnings of a step, when it has any.
+fn notes(o: &mut Out, s: &Passo) {
+    if let (Some(mb), Some(via)) = (s.mem_mb, &s.via) {
+        o.raw(",\"mem_mb\":").num(mb).raw(",\"via\":").str(via);
+    }
+    if !s.warnings.is_empty() {
+        o.raw(",\"warnings\":[");
+        for (j, w) in s.warnings.iter().enumerate() {
+            o.raw(if j > 0 { "," } else { "" }).str(w);
+        }
+        o.raw("]");
+    }
+}
+
 fn step(o: &mut Out, s: &Passo) {
     o.raw("{\"instance\":")
         .str(&s.instance)
@@ -260,9 +283,7 @@ fn step(o: &mut Out, s: &Passo) {
         o.raw(",\"error_key\":").str(e);
     }
     o.raw(",\"ms\":").num(s.ms);
-    if let (Some(mb), Some(via)) = (s.mem_mb, &s.via) {
-        o.raw(",\"mem_mb\":").num(mb).raw(",\"via\":").str(via);
-    }
+    notes(o, s);
     o.raw(",\"params_sha256\":")
         .str(&s.params_sha256)
         .raw(",\"params\":[");

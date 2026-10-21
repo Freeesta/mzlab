@@ -43,26 +43,48 @@ impl Centroidato {
         if let Some(Some(p)) = self.params.get(c) {
             return Ok(p.clone());
         }
-        let len = self.l.indice(c)?.len();
-        let n = len.min(64);
-        let mut scans = Vec::new();
-        for i in 0..n {
-            let s = self.l.scansione(c, i * len / n)?;
-            let y = s
-                .wide
-                .unwrap_or_else(|| s.intensity.iter().map(|&v| f64::from(v)).collect());
-            scans.push((s.mz, y));
-        }
-        let refs: Vec<(&[f64], &[f64])> = scans
-            .iter()
-            .map(|(a, b)| (a.as_slice(), b.as_slice()))
-            .collect();
-        let p = centroidi::estimate(&refs, 0.7).params;
+        let p = stima(&mut *self.l, c)?;
         if let Some(slot) = self.params.get_mut(c) {
             *slot = Some(p.clone());
         }
         Ok(p)
     }
+}
+
+/// The parameters of the peak picking of sample `c`, estimated on at most 64 equally spaced scans of its index.
+pub(crate) fn stima(l: &mut dyn Lettore, c: usize) -> Result<Params> {
+    let len = l.indice(c)?.len();
+    let n = len.min(64);
+    let mut scans = Vec::new();
+    for i in 0..n {
+        let s = l.scansione(c, i * len / n)?;
+        let y = s
+            .wide
+            .unwrap_or_else(|| s.intensity.iter().map(|&v| f64::from(v)).collect());
+        scans.push((s.mz, y));
+    }
+    let refs: Vec<(&[f64], &[f64])> = scans
+        .iter()
+        .map(|(a, b)| (a.as_slice(), b.as_slice()))
+        .collect();
+    Ok(centroidi::estimate(&refs, 0.7).params)
+}
+
+/// `s` as centroids when it is a profile scan, with the parameters `p`; a scan already centroided stays as it is.
+pub(crate) fn picchi(s: &mut Spectrum, p: &Params, buf: &mut Buf) {
+    if !s.profile {
+        return;
+    }
+    let y = s
+        .wide
+        .take()
+        .unwrap_or_else(|| s.intensity.iter().map(|&v| f64::from(v)).collect());
+    let cs = centroidi::centroids(&s.mz, &y, p, buf);
+    s.mz = cs.iter().map(|c| c.mz).collect();
+    let v: Vec<f64> = cs.iter().map(|c| c.value).collect();
+    s.intensity = v.iter().map(|&x| narrow(x)).collect();
+    s.wide = Some(v);
+    s.profile = false;
 }
 
 /// The intensity kept in 32 bits, as the mzML of the conversion writes it.
@@ -86,20 +108,10 @@ impl Lettore for Centroidato {
             Some((cc, kk, s)) if cc == c && kk == k => s,
             _ => self.l.scansione(c, k)?,
         };
-        if !s.profile {
-            return Ok(s);
+        if s.profile {
+            let p = self.params(c)?;
+            picchi(&mut s, &p, &mut self.buf);
         }
-        let p = self.params(c)?;
-        let y = s
-            .wide
-            .take()
-            .unwrap_or_else(|| s.intensity.iter().map(|&v| f64::from(v)).collect());
-        let cs = centroidi::centroids(&s.mz, &y, &p, &mut self.buf);
-        s.mz = cs.iter().map(|c| c.mz).collect();
-        let v: Vec<f64> = cs.iter().map(|c| c.value).collect();
-        s.intensity = v.iter().map(|&x| narrow(x)).collect();
-        s.wide = Some(v);
-        s.profile = false;
         Ok(s)
     }
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {

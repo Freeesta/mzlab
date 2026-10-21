@@ -1,8 +1,13 @@
 //! The one mzML writer on top of `Lettore`: any reader of the registry gives the same file layout (spectra, then chromatograms).
 use std::io::Write;
 
+#[cfg(not(target_family = "wasm"))]
+use crate::centroidi::{Buf, Params};
 use crate::error::{Error, Result};
 use crate::lettori::Lettore;
+#[cfg(not(target_family = "wasm"))]
+use crate::lettori_centroidi::{picchi, stima};
+use crate::mzml::Spectrum;
 use crate::mzmlwrite::{Header, MzmlWriter, Opzioni, ProcStep};
 
 /// The header when the reader gives none: the run is the sample, the program is mzLab.
@@ -34,8 +39,92 @@ pub enum Picchi {
     /// The scans as the reader gives them (the centroids of the maker where it has them).
     #[default]
     File,
-    /// The profile points of the file (`Lettore::scansione_profilo`); a reader without them refuses (`err.conv.noProfile`).
+    /// The profile points of the file (`Lettore::scansione_profilo`, else the scans of the reader that are profile); a file without them refuses (`err.conv.noProfile`).
     Profilo,
+    /// Our own centroids (`lettori_centroidi`): the profile scans are reduced to one point per peak with parameters estimated on the sample, a scan
+    /// already centroided stays as it is; the file says so (`MS:1000035`, the parameters in a userParam of the run).
+    Mzlab,
+}
+
+/// The parameters of our own centroids when the first scan of sample `c` is profile; the header then says so (`MS:1000035`, the parameters in a userParam).
+#[cfg(not(target_family = "wasm"))]
+fn centroidi_di(l: &mut dyn Lettore, c: usize, h: &mut Header) -> Result<Option<Params>> {
+    if l.indice(c)?.is_empty() || !l.scansione(c, 0)?.profile {
+        return Ok(None);
+    }
+    let p = stima(l, c)?;
+    h.centroided = true;
+    h.run_params.push((
+        "mzLab centroids".into(),
+        format!(
+            "mode={:?}; unit={}; step={}; w={}; k={}",
+            p.mode, p.unit, p.step, p.w, p.k
+        ),
+    ));
+    Ok(Some(p))
+}
+
+/// What the peak picking of our own centroids needs while the scans go by (nothing in the browser build, which has none).
+#[cfg(not(target_family = "wasm"))]
+struct Pick(Option<Params>, Buf);
+#[cfg(target_family = "wasm")]
+struct Pick;
+
+/// The `Pick` of a conversion: the parameters only when `peaks` asks for our centroids and the sample is profile.
+#[cfg(not(target_family = "wasm"))]
+fn pick_di(peaks: Picchi, l: &mut dyn Lettore, c: usize, h: &mut Header) -> Result<Pick> {
+    let p = match peaks {
+        Picchi::Mzlab => centroidi_di(l, c, h)?,
+        _ => None,
+    };
+    Ok(Pick(p, Buf::default()))
+}
+
+#[cfg(target_family = "wasm")]
+fn pick_di(_: Picchi, _: &mut dyn Lettore, _: usize, _: &mut Header) -> Result<Pick> {
+    Ok(Pick)
+}
+
+/// Scan `(c, k)` as `peaks` says; the browser build has no peak picking and no profile of a reader that does not keep one apart.
+#[cfg(not(target_family = "wasm"))]
+fn scansione_di(
+    peaks: Picchi,
+    l: &mut dyn Lettore,
+    (c, k): (usize, usize),
+    pick: &mut Pick,
+) -> Result<Spectrum> {
+    match peaks {
+        Picchi::File => l.scansione(c, k),
+        Picchi::Mzlab => {
+            let mut s = l.scansione(c, k)?;
+            if let Some(p) = &pick.0 {
+                picchi(&mut s, p, &mut pick.1);
+            }
+            Ok(s)
+        }
+        Picchi::Profilo => match l.scansione_profilo(c, k)? {
+            Some(s) => Ok(s),
+            // a reader whose scans are the file's own (mzML) has the profile in them
+            None => Some(l.scansione(c, k)?)
+                .filter(|s| s.profile)
+                .ok_or_else(|| Error::new("err.conv.noProfile")),
+        },
+    }
+}
+
+#[cfg(target_family = "wasm")]
+fn scansione_di(
+    peaks: Picchi,
+    l: &mut dyn Lettore,
+    (c, k): (usize, usize),
+    _: &mut Pick,
+) -> Result<Spectrum> {
+    match peaks {
+        Picchi::Profilo => l
+            .scansione_profilo(c, k)?
+            .ok_or_else(|| Error::new("err.conv.noProfile")),
+        _ => l.scansione(c, k),
+    }
 }
 
 /// A conversion of one sample to mzML: the one entry of every route (`scrivi*` are its short forms).
@@ -60,6 +149,7 @@ impl Conversione<'_> {
             return Err(Error::new("error.badIndex").with("c", c));
         }
         let mut h = testata(l, c)?;
+        let mut pick = pick_di(self.peaks, l, c, &mut h)?;
         h.run_params
             .push(("mzLab conv/1".into(), crate::conv::resoconto(l, c)?));
         let mut w = match self.steps {
@@ -75,12 +165,7 @@ impl Conversione<'_> {
         }
         progress(0, n);
         for k in 0..n {
-            let s = match self.peaks {
-                Picchi::File => l.scansione(c, k)?,
-                Picchi::Profilo => l
-                    .scansione_profilo(c, k)?
-                    .ok_or_else(|| Error::new("err.conv.noProfile"))?,
-            };
+            let s = scansione_di(self.peaks, l, (c, k), &mut pick)?;
             let extra = l.extra_scansione(c, k, &s);
             w.spectrum_with(&s, &extra)?;
             if (k + 1) % 32 == 0 {

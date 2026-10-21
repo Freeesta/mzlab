@@ -35,6 +35,7 @@
      "ms": {"type": "number", "minimum": 0},
      "mem_mb": {"type": "number", "minimum": 0},
      "via": {"enum": ["memory", "slabs", "refused"]},
+     "warnings": {"type": "array", "items": {"type": "string"}},
      "params_sha256": {"type": "string"},
      "params": {
       "type": "array",

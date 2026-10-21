@@ -29,6 +29,9 @@ fn import_raw() -> Step {
 
 fn convert_mzml() -> Step {
     let params = vec![
+        Param::choice("peaks", "Peaks", &["file", "profile", "mzlab"])
+            .default_str("file")
+            .doc("file: the points the file holds (the centroids of the maker where it has them, else the profile, which the next step reduces to peaks and the run reports); profile: the profile points of the file, an error where it has none; mzlab: our own centroids, with parameters estimated on the sample and written in the mzML (MS:1000035)"),
         Param::integer("zlib_level", "Compression level")
             .min(0.0)
             .max(9.0)

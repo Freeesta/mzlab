@@ -4,7 +4,7 @@
 window.RAPPORTO_FLOW = (() => {
   /** @typedef {{name:string,bytes:number,sha256:string,type:string}} RFFile */
   /** @typedef {{name:string,value:unknown,state:string,proof?:unknown}} RFParam */
-  /** @typedef {{instance:string,step:string,algorithm?:string,preset?:string,status:string,error_key?:string,ms:number,params_sha256:string,params:RFParam[]}} RFStep */
+  /** @typedef {{instance:string,step:string,algorithm?:string,preset?:string,status:string,error_key?:string,warnings?:string[],ms:number,params_sha256:string,params:RFParam[]}} RFStep */
   /** @typedef {{schema:string,engine:Record<string,string>,plan_sha256?:string,inputs:RFFile[],lists:RFFile[],steps:RFStep[],total_ms:number,levels:{files:number,rows:number,auto:Record<string,number>,other:Record<string,number>},report?:any}} Corsa */
 
   const SECTIONS = [
@@ -68,7 +68,7 @@ window.RAPPORTO_FLOW = (() => {
     return c.steps.map(s => {
       const head = `${esc(s.instance)} — ${esc(s.step)}${s.algorithm ? " · " + esc(s.algorithm) : ""}${s.preset ? " · preset " + esc(s.preset) : ""}`;
       const rows = s.params.map(p => [esc(p.name), `<code>${esc(val(p.value))}</code>`, p.state === "estimated" ? "estimated" : "fixed", p.proof === undefined ? "" : `<code>${esc(val(p.proof))}</code>`]);
-      return `<h3>${head}</h3><p>Status ${esc(s.status)}${s.error_key ? " (" + esc(s.error_key) + ")" : ""} · parameters SHA-256 <span class="h">${esc(s.params_sha256)}</span></p>` +
+      return `<h3>${head}</h3><p>Status ${esc(s.status)}${s.error_key ? " (" + esc(s.error_key) + ")" : ""}${s.warnings && s.warnings.length ? ", warnings " + s.warnings.map(esc).join(", ") : ""} · parameters SHA-256 <span class="h">${esc(s.params_sha256)}</span></p>` +
         (rows.length ? table(["Parameter", "Value", "State", "Proof of the estimate"], rows, "Parameters of " + s.instance) : "<p>No parameters.</p>");
     }).join("") || "<p>No steps.</p>";
   }

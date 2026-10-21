@@ -49,6 +49,8 @@ pub struct Activity {
     pub heap_peak_bytes: Option<u64>,
     /// The estimate of the memory of the step, when it has one (feature alignment); it does not depend on the run, the way does on the budget.
     pub mem: Option<Mem>,
+    /// `warn.*` keys: what the step noticed and went on with.
+    pub warnings: Vec<String>,
     pub error: Option<ErrorRecord>,
     pub cached: bool,
     /// `citation_key` of the step and of the algorithm that ran.
@@ -104,6 +106,10 @@ fn activity(o: &mut Out, a: &Activity) {
             .num((m.mb * 10.0).round() / 10.0)
             .raw(",\"via\":")
             .str(m.via);
+    }
+    if !a.warnings.is_empty() {
+        o.raw(",\"warnings\":");
+        strs(o, &a.warnings);
     }
     if let Some(e) = &a.error {
         o.raw(",\"error\":{\"error_key\":")

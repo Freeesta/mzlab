@@ -21,6 +21,7 @@ struct Entry {
     sha256: String,
     ty: DataType,
     estimates: Vec<(String, Value, Value)>,
+    warnings: Vec<String>,
     lineage: Option<Lineage>,
 }
 
@@ -98,6 +99,7 @@ impl Cache {
             port,
             artifact: a,
             estimates: e.estimates.clone(),
+            warnings: e.warnings.clone(),
         })
     }
 }
@@ -117,6 +119,7 @@ impl Cache {
             sha256: made.artifact.sha256.clone(),
             ty: made.artifact.ty,
             estimates: made.estimates.clone(),
+            warnings: made.warnings.clone(),
             lineage,
         };
         self.now
@@ -225,6 +228,10 @@ fn write_entry(work: &Path, key: &str, e: &Entry) -> Value {
         ("type".into(), s(e.ty.name())),
         ("estimates".into(), Value::Arr(estimates)),
         (
+            "warnings".into(),
+            Value::Arr(e.warnings.iter().map(|w| s(w)).collect()),
+        ),
+        (
             "lineage".into(),
             e.lineage
                 .as_ref()
@@ -253,6 +260,13 @@ fn read_entry(work: &Path, v: &Value) -> Option<(String, Entry)> {
         sha256: text("sha256")?,
         ty: DataType::from_name(&text("type")?)?,
         estimates: estimates.iter().filter_map(estimate).collect(),
+        warnings: v
+            .get("warnings")
+            .map(Value::arr)
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|w| w.str().map(str::to_string))
+            .collect(),
         lineage,
     };
     Some((text("key")?, e))

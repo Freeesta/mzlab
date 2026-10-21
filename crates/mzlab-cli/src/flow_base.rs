@@ -13,6 +13,7 @@ use mzlab_core::flow::{Artifact, Job, Mem};
 use mzlab_core::idxread::Index;
 use mzlab_core::json::Value;
 use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori_mzml::{Conversione, Picchi};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::mzmlwrite::{Opzioni, LIVELLO_ZLIB};
 use mzlab_core::step::DataType;
@@ -262,7 +263,7 @@ fn number(job: &Job, name: &str, default: f64) -> f64 {
 
 /// `convert.mzml`: one sample of a dataset of the registry (a file, a `.wiff` with its `.wiff.scan`, a `.D`/`.d`/`.raw` folder) written as indexed mzML;
 /// the input `NAME@ID` names the sample `ID`, else the first one is written.
-pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let input = &job.inputs[0].1[0];
     let mut reader = mzlab_lettori::apri(
         crate::flow_set::file_set(&r.path(input))?,
@@ -281,22 +282,39 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let out = r
         .work
         .join(convert_file(&job.instance.id, job.item.unwrap_or(0)));
+    let peaks = match job
+        .resolved
+        .params
+        .iter()
+        .find(|p| p.0 == "peaks")
+        .and_then(|p| p.1.str())
+    {
+        Some("profile") => Picchi::Profilo,
+        Some("mzlab") => Picchi::Mzlab,
+        _ => Picchi::File,
+    };
+    // The file keeps its profile points: the index of the next step picks the peaks, and the run says so.
+    let profile = peaks == Picchi::File
+        && !reader.indice(sample)?.is_empty()
+        && reader.scansione(sample, 0)?.profile;
+    let conv = Conversione {
+        peaks,
+        opz,
+        steps: Some(&[]),
+    };
     let written = File::create(&out).map_err(io).and_then(|f| {
-        mzlab_core::lettori_mzml::scrivi_indicizzato(
-            &mut *reader,
-            sample,
-            BufWriter::new(f),
-            &mut |_, _| {},
-            opz,
-            &[],
-        )
-        .and_then(|mut w| w.flush().map_err(io))
+        conv.scrivi(&mut *reader, sample, BufWriter::new(f), &mut |_, _| {})
+            .and_then(|mut w| w.flush().map_err(io))
     });
     if let Err(e) = written {
         let _ = std::fs::remove_file(&out);
         return Err(e);
     }
-    r.keep(out, DataType::Mzml)
+    let mut made = Made::new("mzml", r.keep(out, DataType::Mzml)?);
+    if profile {
+        made.warnings.push("warn.flow.profile".into());
+    }
+    Ok(made)
 }
 
 /// `features.table`: the chain of `mzlab-cli features` on the files of the series, as CSV.
