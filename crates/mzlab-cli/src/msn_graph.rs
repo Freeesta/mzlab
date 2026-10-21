@@ -16,6 +16,7 @@ pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/1
 
 usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
        mzlab-cli msn-graph FILE.mzML --formula ION --verita TRUTH.json --riassunto
+       mzlab-cli msn-graph compare A.json B.json [--out PATH]
 
   --formula ION        the ion of the root: C13H25N4O3S+, C13H24N4O3S+H or \"C13H24N4O3S [M+H]+\"; without it, masses only
   --smiles TEXT        written back in the JSON
@@ -31,7 +32,10 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
   --pulito             with --export: only the peaks a node of the graph explains
   --nodo ID            with --export: nK = the spectra of which node nK of the graph is the precursor; msn:<id> or <id> = those of that node of
                        the tree; tutto = all
-  --out PATH           write there instead of the standard output";
+  --out PATH           write there instead of the standard output
+
+  compare              validates a tree measured twice: two msngrafo/1 files in, a JSON (msnconfronto/1) out with the numbers of the five criteria
+                       (isolated nodes, arcs of rel >= 10 %, formulas, MS2 entropy >= 0.8 per energy, m/z shift <= 3 ppm) and `convalidata`";
 
 pub struct Args {
     pub(crate) file: PathBuf,

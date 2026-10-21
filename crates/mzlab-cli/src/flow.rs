@@ -131,7 +131,7 @@ pub struct FileRunner {
     made: Mutex<HashMap<String, PathBuf>>,
     lineage: Mutex<HashMap<String, Lineage>>,
     /// Instance ids in the order of the run: one line per job on stderr when set.
-    progress: Option<Vec<String>>,
+    pub(crate) progress: Option<Vec<String>>,
     /// Called after each job (the desktop app shows the steps as they finish).
     done: Option<DoneFn>,
     /// The cache of `work` (`flow_cache.rs`); none: every job runs and nothing is kept.
@@ -154,12 +154,6 @@ impl FileRunner {
             cache: None,
             budget_mb: mzlab_core::budget_auto::native_auto_mb(),
         }
-    }
-
-    /// The runner with no progress line of its own, for a caller that reports the jobs through `with_done`.
-    pub(crate) fn without_progress(mut self) -> FileRunner {
-        self.progress = None;
-        self
     }
 
     /// The runner with the working memory of the alignment set to `mb` (None: the automatic budget).
@@ -296,7 +290,12 @@ fn blobs(v: &[Loaded]) -> Vec<&[u8]> {
     v.iter().map(|f| f.1.as_slice()).collect()
 }
 
-fn write_made(r: &FileRunner, job: &Job, text: String, ty: DataType) -> Result<Artifact> {
+pub(crate) fn write_made(
+    r: &FileRunner,
+    job: &Job,
+    text: String,
+    ty: DataType,
+) -> Result<Artifact> {
     let out = r.work.join(format!("{}.json", job.instance.id));
     std::fs::write(&out, text).map_err(io)?;
     r.keep(out, ty)
@@ -381,18 +380,6 @@ fn network_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     write_made(r, job, text, DataType::Transform)
 }
 
-fn filter_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let (table, samples) = (read_one(r, job, "table")?, read_one(r, job, "samples")?);
-    let text = crate::flow_table::filter_text(job, &table.1, &samples.1)?;
-    write_made(r, job, text, DataType::Table)
-}
-
-fn generate_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let parent = read_one(r, job, "parent")?;
-    let text = crate::flow_generate::generate_text(job, &parent.1)?;
-    write_made(r, job, text, DataType::Transform)
-}
-
 fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let (hits, formulas) = (
         read_all(r, job, "candidates")?,
@@ -430,8 +417,18 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("annot.level", Exec::File("annot", level_job)),
     ("tp.network", Exec::File("network", network_job)),
     ("tp.link", Exec::File("tp", crate::flow_link::link_job)),
-    ("table.filter", Exec::File("table", filter_job)),
-    ("tp.generate", Exec::File("hypotheses", generate_job)),
+    (
+        "table.filter",
+        Exec::File("table", crate::flow_table::filter_job),
+    ),
+    (
+        "tp.generate",
+        Exec::File("hypotheses", crate::flow_generate::generate_job),
+    ),
+    (
+        "tp.filter",
+        Exec::File("table", crate::flow_refilter::refilter_job),
+    ),
     ("meta.compare", Exec::File("comparison", compare_job)),
     (
         "export.inclusion",

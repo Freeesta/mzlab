@@ -457,9 +457,10 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     let ended = Arc::new(Mutex::new(vec![None; list.len()]));
     let names = list.iter().map(|e| e.label.clone()).collect();
-    let runner = FileRunner::located(&work, found, Vec::new(), None, a.fresh)
-        .without_progress()
-        .with_done(Some(progress(names, ended.clone())));
+    let mut runner = FileRunner::located(&work, found, Vec::new(), None, a.fresh);
+    // The jobs are reported through `with_done`, not as progress lines.
+    runner.progress = None;
+    let runner = runner.with_done(Some(progress(names, ended.clone())));
     let text = plan_json(&plan);
     if let Err(e) = run_checked(&ready, text.as_bytes(), &runner, a.workers) {
         return fail(3, &e.to_string(), "this is a bug of mzlab-cli convert");

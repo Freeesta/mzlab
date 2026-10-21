@@ -147,11 +147,17 @@ fn rule_chain() -> Algorithm {
     }
 }
 
-/// `tp.filter`: the five filters that hide a row of the table of the products, and the decoys that count the matches by chance (`interp::filtri`).
+/// `tp.filter` (version 2): the five filters that hide a row of the table of the products, and the decoys that count the matches by chance
+/// (`interp::filtri`), read again under the thresholds of the plan from the table that `tp.link` interpreted (`interp::refilter`). Version 1 took the
+/// feature table alone, which does not hold what F5 and the decoys read.
 fn filter() -> Step {
     Step {
-        ins: vec![Port::new("table", DataType::Table, "Feature table of the treated samples and the controls").requires(hr())],
-        outs: vec![Port::new("table", DataType::Table, "Rows that pass F1-F5, with the filter that hid the others")],
+        version: 2,
+        ins: vec![
+            Port::new("tp", DataType::Tp, "Table of the products with the interpretation of its rows (tp.link)").requires(hr()),
+            Port::new("hypotheses", DataType::Transform, "Hypotheses of the parent (tp.generate): the rule masses of the decoys and the masses F5 compares with"),
+        ],
+        outs: vec![Port::new("table", DataType::Table, "Registry filtri/1: the rows hidden by each of F1-F5 and the decoys that passed")],
         params: vec![
             Param::number("tol_min", "Lowest formula tolerance")
                 .min(0.0)
@@ -180,7 +186,6 @@ fn filter() -> Step {
         ],
         algorithms: vec![stages()],
         default_algorithm: Some("stages"),
-        per_item: true,
         references: vec![Reference {
             doi: "10.1038/nmeth1019",
             citation_key: "elias2007target",
