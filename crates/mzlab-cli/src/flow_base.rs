@@ -37,7 +37,7 @@ fn item_path(r: &FileRunner, job: &Job) -> PathBuf {
     r.path(&job.inputs[0].1[0])
 }
 
-fn out_path(r: &FileRunner, job: &Job, ext: &str) -> PathBuf {
+pub(crate) fn out_path(r: &FileRunner, job: &Job, ext: &str) -> PathBuf {
     match job.item {
         Some(k) => r.work.join(format!("{}-{k}.{ext}", job.instance.id)),
         None => r.work.join(format!("{}.{ext}", job.instance.id)),
