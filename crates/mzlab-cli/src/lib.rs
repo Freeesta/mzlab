@@ -24,6 +24,9 @@ mod flow_base;
 mod flow_cache;
 mod flow_compare;
 mod flow_estimate;
+mod flow_export;
+#[cfg(test)]
+mod flow_export_tests;
 mod flow_formula;
 mod flow_generate;
 mod flow_inclusion;
