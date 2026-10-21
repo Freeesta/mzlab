@@ -84,7 +84,7 @@ const OBJ: &str = "{\"type\":\"object\",\"additionalProperties\":false";
 const ANY_OBJECT: &str = "{\"type\":\"object\"}";
 const INSTANCE: &str = "{\"type\":\"string\",\"description\":\"Instance id in the plan.\"}";
 
-pub(crate) fn value(o: &mut Out, v: &Value) {
+pub fn value(o: &mut Out, v: &Value) {
     match v {
         Value::Null => {
             o.raw("null");
@@ -225,6 +225,8 @@ fn set_param_schema(steps: &[&Step]) -> String {
     o.raw(OBJ)
         .raw(",\"properties\":{\"instance\":")
         .raw(INSTANCE);
+    // the branches below narrow these three; the root names them so that additionalProperties:false lets them through
+    o.raw(",\"step\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"value\":{}");
     o.raw("},\"required\":[\"instance\"],\"oneOf\":[");
     let mut first = true;
     for s in steps.iter().copied() {
