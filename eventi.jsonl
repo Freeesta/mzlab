@@ -227,3 +227,4 @@
 {"ts_utc":"2026-10-21T21:49:26Z","azione":"aperta","tipo":"pr","pr":1379,"sha":"7788bb08e9d9dea5cd4cd9e7c6f7c8b93c9304fc"}
 {"ts_utc":"2026-10-21T21:49:38Z","azione":"aperta","tipo":"pr","pr":1380,"sha":"d9dc00b584cbe4efdf5654ae1cb3c8cdb853ac41"}
 {"ts_utc":"2026-10-21T21:50:30Z","azione":"aperta","tipo":"pr","pr":1381,"sha":"0d77e151d946ea04166b45bfd8f544366e6a8cbd"}
+{"ts_utc":"2026-10-21T21:51:26Z","tipo":"run","workflow":"rust","esito":"success","main":false,"durata_s":52,"attivo_s":15,"coda_s":19,"jobs":{"changes":12,"rust-ok":3,"rust-core":0,"rust-wasm":0,"deny":0,"rust-misc":0,"rust-lint":0,"rust":0},"pr":1381,"sha":"0d77e151d946ea04166b45bfd8f544366e6a8cbd","run_id":39681990752,"run_attempt":1}
