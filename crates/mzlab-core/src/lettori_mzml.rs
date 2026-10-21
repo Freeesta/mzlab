@@ -28,6 +28,74 @@ pub(crate) fn testata(l: &mut dyn Lettore, c: usize) -> Result<Header> {
     })
 }
 
+/// Which points of a scan the file gets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Picchi {
+    /// The scans as the reader gives them (the centroids of the maker where it has them).
+    #[default]
+    File,
+    /// The profile points of the file (`Lettore::scansione_profilo`); a reader without them refuses (`err.conv.noProfile`).
+    Profilo,
+}
+
+/// A conversion of one sample to mzML: the one entry of every route (`scrivi*` are its short forms).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Conversione<'a> {
+    pub peaks: Picchi,
+    pub opz: Opzioni,
+    /// `Some`: the `indexedmzML` form with one `processingMethod` per step after the conversion.
+    pub steps: Option<&'a [ProcStep]>,
+}
+
+impl Conversione<'_> {
+    /// Writes sample `c` of `l` to `out`; `progress(done, total)` counts the spectra.
+    pub fn scrivi<W: Write>(
+        &self,
+        l: &mut dyn Lettore,
+        c: usize,
+        out: W,
+        progress: &mut dyn FnMut(usize, usize),
+    ) -> Result<W> {
+        if c >= l.campioni().len() {
+            return Err(Error::new("error.badIndex").with("c", c));
+        }
+        let mut h = testata(l, c)?;
+        h.run_params
+            .push(("mzLab conv/1".into(), crate::conv::resoconto(l, c)?));
+        let mut w = match self.steps {
+            Some(steps) => {
+                h.steps = steps.to_vec();
+                MzmlWriter::indicizzato(out, &h, self.opz)?
+            }
+            None => MzmlWriter::con_opzioni(out, &h, self.opz)?,
+        };
+        let n = l.indice(c)?.len();
+        if n > 0 {
+            w.open_spectra(n)?;
+        }
+        progress(0, n);
+        for k in 0..n {
+            let s = match self.peaks {
+                Picchi::File => l.scansione(c, k)?,
+                Picchi::Profilo => l
+                    .scansione_profilo(c, k)?
+                    .ok_or_else(|| Error::new("err.conv.noProfile"))?,
+            };
+            let extra = l.extra_scansione(c, k, &s);
+            w.spectrum_with(&s, &extra)?;
+            if (k + 1) % 32 == 0 {
+                progress(k + 1, n);
+            }
+        }
+        progress(n, n);
+        if n > 0 {
+            w.close_spectra()?;
+        }
+        cromatogrammi(l, c, &mut w)?;
+        w.finish()
+    }
+}
+
 /// Writes sample `c` of `l` as mzML to `out`; `progress(done, total)` counts the spectra.
 pub fn scrivi<W: Write>(
     l: &mut dyn Lettore,
@@ -35,7 +103,7 @@ pub fn scrivi<W: Write>(
     out: W,
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<W> {
-    scrivi_con(l, c, out, progress, Opzioni::default())
+    Conversione::default().scrivi(l, c, out, progress)
 }
 
 /// `scrivi` with the zlib level and the numpress choice of `opz` (`mzmlwrite::Opzioni`).
@@ -46,7 +114,11 @@ pub fn scrivi_con<W: Write>(
     progress: &mut dyn FnMut(usize, usize),
     opz: Opzioni,
 ) -> Result<W> {
-    scrivi_in(l, c, out, progress, opz, None)
+    let conv = Conversione {
+        opz,
+        ..Conversione::default()
+    };
+    conv.scrivi(l, c, out, progress)
 }
 
 /// The mzML of the `convert.mzml` step: `indexedmzML` (PSI-MS 4.2.6, offsets, SHA-1 checksum) with one `processingMethod` per entry of `steps`
@@ -59,47 +131,12 @@ pub fn scrivi_indicizzato<W: Write>(
     opz: Opzioni,
     steps: &[ProcStep],
 ) -> Result<W> {
-    scrivi_in(l, c, out, progress, opz, Some(steps))
-}
-
-fn scrivi_in<W: Write>(
-    l: &mut dyn Lettore,
-    c: usize,
-    out: W,
-    progress: &mut dyn FnMut(usize, usize),
-    opz: Opzioni,
-    indexed: Option<&[ProcStep]>,
-) -> Result<W> {
-    if c >= l.campioni().len() {
-        return Err(Error::new("error.badIndex").with("c", c));
-    }
-    let mut h = testata(l, c)?;
-    let mut w = match indexed {
-        Some(steps) => {
-            h.steps = steps.to_vec();
-            MzmlWriter::indicizzato(out, &h, opz)?
-        }
-        None => MzmlWriter::con_opzioni(out, &h, opz)?,
+    let conv = Conversione {
+        opz,
+        steps: Some(steps),
+        ..Conversione::default()
     };
-    let n = l.indice(c)?.len();
-    if n > 0 {
-        w.open_spectra(n)?;
-    }
-    progress(0, n);
-    for k in 0..n {
-        let s = l.scansione(c, k)?;
-        let extra = l.extra_scansione(c, k, &s);
-        w.spectrum_with(&s, &extra)?;
-        if (k + 1) % 32 == 0 {
-            progress(k + 1, n);
-        }
-    }
-    progress(n, n);
-    if n > 0 {
-        w.close_spectra()?;
-    }
-    cromatogrammi(l, c, &mut w)?;
-    w.finish()
+    conv.scrivi(l, c, out, progress)
 }
 
 /// The chromatograms of sample `c` that hold points, numbered again from 0 as `scrivi` writes them.

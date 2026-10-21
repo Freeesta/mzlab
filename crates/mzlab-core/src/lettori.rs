@@ -194,6 +194,10 @@ pub trait Lettore {
     fn scansione_dati(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.scansione(c, k)
     }
+    /// Scan `k` with the profile points of the file where the reader keeps them next to the vendor's centroids; `None` when it has no profile of its own.
+    fn scansione_profilo(&mut self, _c: usize, _k: usize) -> Result<Option<Spectrum>> {
+        Ok(None)
+    }
     /// The header fields of scan `k` (collision energy, isolation, trailer): `nome`, `valore`, `unita`, `cv`.
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>>;
     fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>>;
@@ -216,6 +220,10 @@ pub trait Lettore {
     /// writer asks this one; the index builders ask `extra_mzml` (cheap, no read), so what only this one gives is in the mzML and not in the rows of an index.
     fn extra_scansione(&mut self, _c: usize, _k: usize, s: &Spectrum) -> SpectrumExtra {
         self.extra_mzml(s)
+    }
+    /// What the format holds and the mzML of the conversion does not carry, as (field, reason) with the reasons of `conv`: the account `conv/1` gives.
+    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+        &[]
     }
     /// The scans the index of sample `c` lists but that lie beyond the end of the data file (a truncated copy): they are not in the index.
     fn mancanti(&mut self, _c: usize) -> usize {

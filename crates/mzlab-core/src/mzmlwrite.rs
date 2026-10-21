@@ -138,12 +138,12 @@ impl<W: Write> MzmlWriter<W> {
         }
     }
 
-    /// TIC, BPC, SIC and SRM chromatograms; other kinds are not written.
+    /// Every trace of a reader: the mass-spectrometer kinds with their term, the other ones (pressure, detector, device) as `chromatogram type` with the unit in a userParam.
     pub fn chromatogram(&mut self, c: &Chromatogram) -> Result<()> {
-        let Some(kind) = chromatogram_kind(c) else {
-            return Ok(());
-        };
-        let mut s = format!("<chromatogram index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">{kind}", self.chroms, esc(&c.id), c.time.len());
+        let mut s = format!("<chromatogram index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">{}", self.chroms, esc(&c.id), c.time.len(), chromatogram_kind(c));
+        if matches!(c.kind, ChromKind::Pressure | ChromKind::Analog | ChromKind::Other) && !c.unit.is_empty() {
+            s += &format!("<userParam name=\"unità\" value=\"{}\"/>", esc(&c.unit));
+        }
         if let (Some(q1), Some(q3)) = (c.q1, c.q3) {
             s += &format!("<precursor><isolationWindow>{}</isolationWindow></precursor><product><isolationWindow>{}</isolationWindow></product>", mz_cv("MS:1000827", "isolation window target m/z", q1), mz_cv("MS:1000827", "isolation window target m/z", q3));
         }
@@ -392,17 +392,17 @@ impl<W: Write> MzmlWriter<W> {
     }
 }
 
-
-/// The kind element of a chromatogram the writer writes, `None` for the kinds it leaves out.
-pub(crate) fn chromatogram_kind(c: &Chromatogram) -> Option<String> {
-    Some(match c.kind {
+/// The kind element of a chromatogram: the PSI-MS term of its kind, `chromatogram type` for a trace without a more precise one.
+pub(crate) fn chromatogram_kind(c: &Chromatogram) -> String {
+    match c.kind {
         ChromKind::Tic => cv("MS:1000235", "total ion current chromatogram", ""),
         ChromKind::Bpc => cv("MS:1000628", "basepeak chromatogram", ""),
         ChromKind::Srm => cv("MS:1001473", "selected reaction monitoring chromatogram", ""),
         ChromKind::Sic => cv("MS:1000627", "selected ion current chromatogram", ""),
         ChromKind::Pda => cv("MS:1000812", "absorption chromatogram", ""),
-        _ => return None,
-    })
+        ChromKind::Pressure => cv("MS:1003019", "pressure chromatogram", ""),
+        ChromKind::Analog | ChromKind::Other => cv("MS:1000626", "chromatogram type", ""),
+    }
 }
 
 fn cv(acc: &str, name: &str, value: impl std::fmt::Display) -> String {
