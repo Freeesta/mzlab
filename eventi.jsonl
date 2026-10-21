@@ -17,3 +17,7 @@
 {"ts_utc":"2026-10-21T17:12:48Z","tipo":"run","workflow":"pages","esito":"cancelled","main":true,"durata_s":6,"attivo_s":4,"coda_s":0,"jobs":{"build":4,"deploy":0},"pr":null,"sha":"f23824a51132c6973134325a0a977252ff8b19c0","run_id":39641750503,"run_attempt":1}
 {"ts_utc":"2026-10-21T17:12:47Z","tipo":"job_fallito","workflow":"pages","job":"build","esito":"cancelled","durata_s":4,"categoria":"annullato","passo":null,"pr":null,"sha":"f23824a51132c6973134325a0a977252ff8b19c0","run_id":39641750503,"run_attempt":1}
 {"ts_utc":"2026-10-21T17:13:53Z","tipo":"run","workflow":"pages","esito":"success","main":true,"durata_s":527,"attivo_s":518,"coda_s":4,"jobs":{"build":480,"deploy":38},"pr":null,"sha":"5d59230d7e5e1dd7a174019cd09156c888fe9c4c","run_id":39640601633,"run_attempt":1}
+{"ts_utc":"2026-10-21T17:13:06Z","tipo":"conflitto_risolto","pr":1371,"sha":"f23824a51132c6973134325a0a977252ff8b19c0"}
+{"ts_utc":"2026-10-21T17:13:37Z","tipo":"conflitto_risolto","pr":1356,"sha":"f23824a51132c6973134325a0a977252ff8b19c0"}
+{"ts_utc":"2026-10-21T17:13:56Z","tipo":"conflitto_risolto","pr":1350,"sha":"f23824a51132c6973134325a0a977252ff8b19c0"}
+{"ts_utc":"2026-10-21T17:14:05Z","tipo":"conflitto_risolto","pr":1344,"sha":"f23824a51132c6973134325a0a977252ff8b19c0"}
