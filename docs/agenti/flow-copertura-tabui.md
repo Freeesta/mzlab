@@ -4,7 +4,7 @@ Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzion
 
 ## Prove fatte sul codice
 - Il registro del CLI (`flow::steps()`) contiene la catena di base, `features.table`, Attributio, `spectra.ms2`, `meta.compare` e tutta la famiglia di Tabui (`mzlab_chem::step::tabui()`); un passo senza esecutore dà `err.flow.step.native` (`tp.generate` ora si esegue).
-- I passi nel registro ma senza esecutore (`table.drift`, `table.stats`, `table.pca`, `table.kmd`, `features.ms2_link`, `export.table_csv`, `export.mztab`, `import.raw`, `spectra.chimeric`, `spectra.insilico`, `rt.predict`, `annot.regulatory`, `annot.hazard`) danno `err.flow.step.native` (provato con `table.kmd`).
+- I passi nel registro ma senza esecutore (`table.drift`, `table.pca`, `table.kmd`, `features.ms2_link`, `export.table_csv`, `export.mztab`, `import.raw`, `spectra.chimeric`, `spectra.insilico`, `rt.predict`, `annot.regulatory`, `annot.hazard`) danno `err.flow.step.native` (provato con `table.kmd`).
 - Esecutori oggi (20): `convert.mzml`, `index.mzidx`, `features.detect`, `features.align`, `features.gapfill`, `features.table`, `spectra.match`, `formula.ms1`, `formula.ms2`, `spectra.ms2`, `spectra.msn_graph`, `annot.level`, `tp.generate`, `table.filter`, `tp.link@2`, `tp.filter@2`, `tp.position`, `tp.network` (con un `tp/1` dato come file), `meta.compare`, `export.inclusion` (vuole un `tp/1`).
 - Non provato a mano nel sito costruito: la sola prova nel browser è `e2e_flow.py` (piano, modelli, viste dei file); nessun piano è stato eseguito dal sito perché non può.
 
@@ -23,7 +23,7 @@ Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzion
 | Posizione della sostituzione | `tp.position` | Eseguibile (`flow_position.rs`): rilegge il `site` di `interp/1` con le soglie del passo | Buco: i voti dell'albero MSn non stanno nel file (una riga votata dall'albero tiene il suo `site`); il sito non lo esegue |
 | Rete dei prodotti | `tp.network` (nodo «Product network») | Eseguibile solo con un `tp/1` già pronto; nessun passo eseguibile lo produce | Esecutore di `tp.link` (`tp.link@2` c'è; `tp.link@1`, che prendeva un MGF, non esiste più: `err.flow.step.version`; `tp.generate` c'è già) |
 | Reattività del genitore | `structure.reactivity` | Passo c'è ma non eseguibile (nel sito la vista legge un `reatt/1` da disco) | Esecutore (il motore `chem` è nel `.wasm`) |
-| Confronto fra condizioni / gruppi | `meta.compare`, `table.stats` | `meta.compare` eseguibile; `table.stats` no | Esecutore di `table.stats`; i grafici sono già viste di Flow |
+| Confronto fra condizioni / gruppi | `meta.compare`, `table.stats` | `meta.compare` e `table.stats` eseguibili | I grafici sono già viste di Flow |
 | Modalità diretta («Dig» con avanzamento in diretta) | Nessun passo; l'avanzamento di Flow è solo a fine corsa | Manca | Avanzamento per passo (debito 6) |
 | Untargeted (formule da MS1, abbinamento, identità) | `formula.ms1`, `formula.ms2`, `spectra.match`, `annot.level` (modelli «Find and identify…», «Targeted check») | Coperta ed eseguibile (app, CLI) | Sito: esecutore web |
 | Pipeline: stima parametri, QC, deriva, PCA, KMD | `features.estimate`, `table.filter`, `table.drift`, `table.pca`, `table.kmd` (modelli «Standards check», «Blank-corrected table») | `features.estimate` e `table.filter` eseguibili; gli altri ci sono ma non si eseguono | Esecutori dei passi `table.*` |
