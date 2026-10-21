@@ -1,7 +1,7 @@
 """Build mzlab/web/molecole/catalogo.csv (the catalogue of the molecules database, `molecules/1`) from the two lists of before.
 
 Run by hand, once:  python3 tools/genera_molecole.py
-Reads TP_Mine/data/composti.csv (catalog `tabui`, in its order) and mzlab/web/sostanze_hrms.csv (catalog `hrms`; the 43 molecules in both are one record,
+Reads TP_Mine/data/composti.csv (catalog `tabui`, in its order) and tests/data/liste/sostanze_hrms.csv (catalog `hrms`; the 43 molecules in both are one record,
 joined by the whole InChIKey, with the name of composti.csv and every other name as a synonym). The file is written in the canonical form of the Rust writer
 (`molecules::to_csv`): the test `crates/mzlab-core/tests/molecules.rs` checks that reading it and writing it back gives the same bytes.
 """
@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 from mzlab.chem import elements  # noqa: E402  (the reference of the Rust masses)
 
 COMPOSTI = ROOT / "TP_Mine" / "data" / "composti.csv"
-HRMS = ROOT / "mzlab" / "web" / "sostanze_hrms.csv"
+HRMS = ROOT / "tests" / "data" / "liste" / "sostanze_hrms.csv"
 OUT = ROOT / "mzlab" / "web" / "molecole" / "catalogo.csv"
 COLUMNS = ["id", "name", "synonyms", "molecular_formula", "charge", "monoisotopic_mass", "smiles", "inchikey", "adducts", "collections", "classes", "cas",
            "pubchem_cid", "notes", "origin", "catalog"]

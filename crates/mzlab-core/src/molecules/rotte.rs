@@ -6,8 +6,9 @@ use super::{
     cerca, digest, errors_json, from_csv, from_json, hits_json, record_json, to_csv, to_json,
     Molecola, RowError,
 };
+use crate::elements::ion_mz;
 use crate::error::{Error, Result};
-use crate::json::{parse, Value};
+use crate::json::{parse, round, Out, Value};
 
 fn errors_doc(e: &[RowError]) -> String {
     format!("{{\"errori\":{}}}", errors_json(e))
@@ -72,11 +73,57 @@ fn one(v: &Value) -> String {
     })
 }
 
+/// `{"catalogo": "hrms"}` (the catalogue it comes from), `{"raccolta": name}` (a collection) or `{"molecole": document}` (records that are not in the archive,
+/// e.g. a file just read) plus `{"addotti": [..]}`: the molecules of that set with the m/z of every adduct asked for (`null` where the adduct is unknown).
+fn list(v: &Value) -> std::result::Result<String, Vec<RowError>> {
+    let want = |k: &str| v.get(k).and_then(|x| x.str()).filter(|s| !s.is_empty());
+    let (cat, col) = (want("catalogo"), want("raccolta"));
+    let ads: Vec<&str> = v
+        .get("addotti")
+        .map(|a| a.arr())
+        .unwrap_or(&[])
+        .iter()
+        .filter_map(|x| x.str())
+        .collect();
+    let own = v.get("molecole").map(doc_of).transpose()?;
+    let pick = |all: &[Molecola]| -> String {
+        let mut j = Out::default();
+        j.raw("[");
+        let sel = all.iter().filter(|m| {
+            own.is_some()
+                || (cat.is_some() || col.is_some())
+                    && cat.is_none_or(|c| m.origine.catalogo.iter().any(|x| x == c))
+                    && col.is_none_or(|c| m.raccolte.iter().any(|x| x == c))
+        });
+        for (i, m) in sel.enumerate() {
+            j.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" });
+            j.str(&m.id).raw(",\"nome\":").str(&m.nome);
+            j.raw(",\"sinonimi\":[");
+            for (k, s) in m.sinonimi.iter().enumerate() {
+                j.raw(if k > 0 { "," } else { "" }).str(s);
+            }
+            j.raw("],\"formula\":").str(&m.formula);
+            j.raw(",\"massa\":").num(m.massa).raw(",\"mz\":[");
+            for (k, ad) in ads.iter().enumerate() {
+                j.raw(if k > 0 { "," } else { "" });
+                j.opt(ion_mz(m.massa, ad).map(|x| round(x, 6)));
+            }
+            j.raw("]}");
+        }
+        j.raw("]");
+        j.0
+    };
+    Ok(match &own {
+        Some(ms) => pick(ms),
+        None => con(|a| pick(&a.tutte)),
+    })
+}
+
 fn bad(op: &str) -> Error {
     Error::new("error.badMolecules").with("op", op)
 }
 
-/// `op` is `carica` (`{"catalogo": csv, "utente": document}`, each optional: what is missing stays), `cerca` (`{"q","limite","ppm"}`), `get` (`{"id"}`),
+/// `op` is `carica` (`{"catalogo": csv, "utente": document}`, each optional: what is missing stays), `cerca` (`{"q","limite","ppm"}`), `get` (`{"id"}`), `elenca` (`{"catalogo"|"raccolta","addotti"}`),
 /// `da_csv` (`{"csv","file","livello","raccolta"}` to a document), `valida` (`{"csv"}`), or, on a `molecules/1` document, `a_csv`, `a_json`, `digest`.
 pub fn route(op: &str, input: &str) -> Result<String> {
     let v = || parse(input.as_bytes()).map_err(|_| bad(op));
@@ -85,6 +132,7 @@ pub fn route(op: &str, input: &str) -> Result<String> {
         "carica" => carica(&v()?),
         "cerca" => Ok(search(&v()?)),
         "get" => Ok(one(&v()?)),
+        "elenca" => Ok(list(&v()?).unwrap_or_else(|e| errors_doc(&e))),
         "da_csv" | "valida" => {
             let v = v()?;
             let s = |k: &str| v.get(k).and_then(|x| x.str());
