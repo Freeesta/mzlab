@@ -340,7 +340,9 @@ fn component_list(h: &Header) -> String {
 }
 
 mod codifica;
-pub use codifica::thread_predefinito;
+mod matrice;
+mod thread;
+pub use thread::thread_predefinito;
 use codifica::{Codifica, Data};
 #[cfg(not(target_family = "wasm"))]
 mod pool;
