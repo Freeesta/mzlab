@@ -27,3 +27,4 @@
 {"ts_utc":"2026-10-21T17:13:57Z","tipo":"conflitto_risolto","pr":1350,"sha":"59b14353cff86e269252da5345c261e9bcdf8b23"}
 {"ts_utc":"2026-10-21T17:14:07Z","tipo":"conflitto_risolto","pr":1344,"sha":"59b14353cff86e269252da5345c261e9bcdf8b23"}
 {"ts_utc":"2026-10-21T17:14:46Z","tipo":"run","workflow":"rust","esito":"success","main":false,"durata_s":620,"attivo_s":2002,"coda_s":3,"jobs":{"changes":20,"rust-misc":460,"rust":240,"rust-wasm":588,"rust-lint":146,"rust-core":489,"deny":55,"rust-ok":4},"pr":1365,"sha":"5de507005e95b58d45a10460871fa45299db6ce3","run_id":39640499034,"run_attempt":1}
+{"ts_utc":"2026-10-21T17:15:44Z","tipo":"run","workflow":"rust","esito":"success","main":true,"durata_s":638,"attivo_s":2012,"coda_s":2,"jobs":{"changes":12,"rust-lint":143,"rust-wasm":614,"deny":49,"rust":242,"rust-misc":489,"rust-core":459,"rust-ok":4},"pr":null,"sha":"5d59230d7e5e1dd7a174019cd09156c888fe9c4c","run_id":39640601549,"run_attempt":1}
