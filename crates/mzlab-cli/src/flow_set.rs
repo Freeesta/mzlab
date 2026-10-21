@@ -127,6 +127,11 @@ pub(crate) fn split_sample(label: &str) -> (&str, Option<u32>) {
         .unwrap_or((label, None))
 }
 
+/// The dataset a plan input names: `NAME@ID` is the sample `ID` of `NAME`, anything else is its own name.
+pub(crate) fn dataset_name(label: &str) -> &str {
+    split_sample(label).0
+}
+
 /// Index of the sample the label `label` names among the `ids` of the reader.
 pub(crate) fn sample_index(label: &str, ids: &[u32]) -> Result<usize> {
     match split_sample(label).1 {
