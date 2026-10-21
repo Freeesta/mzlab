@@ -378,3 +378,4 @@
 {"v":1,"ts_utc":"2026-10-21T23:14:42Z","tipo":"conflitto_risolto","pr":1379,"sha":"2f323097a62e85da5ee8340b75b13c81c2657c98"}
 {"v":1,"ts_utc":"2026-10-21T23:14:46Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/ci-target-famiglie","merge_main":true,"aree":{"workflow":1,"docs":1,"test":1,"tools":1},"tipo":"pr","pr":1393,"sha":"4f346de7bdff0361b89c0994a51a9bd00d0cfe30"}
 {"v":1,"ts_utc":"2026-10-21T23:15:03Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/ci-pytest-veloce2","merge_main":true,"aree":{"workflow":1,"docs":1,"test":1,"tools":1},"tipo":"pr","pr":1391,"sha":"a3360c2cb75081a3536f5c971af38cffbe6c247b"}
+{"v":1,"ts_utc":"2026-10-21T23:22:12Z","azione":"push","titolo":"Match: catalogo attributio e prova HR aggiornati","merge_main":false,"aree":{"rust":1,"docs":1},"tipo":"pr","pr":1394,"sha":"1da1f320ac9b09272e1a252b6a826a37a11e9ca9"}
