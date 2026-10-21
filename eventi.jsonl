@@ -257,3 +257,4 @@
 {"tipo":"pr","pr":1380,"sha":"d9dc00b584cbe4efdf5654ae1cb3c8cdb853ac41","ts_utc":"2026-10-21T22:12:58Z","azione":"unita","aperta_s":1400,"merge_main":1,"verde_a_unione_s":null}
 {"tipo":"pr","pr":1381,"sha":"0d77e151d946ea04166b45bfd8f544366e6a8cbd","ts_utc":"2026-10-21T22:13:01Z","azione":"unita","aperta_s":1351,"merge_main":0,"verde_a_unione_s":null}
 {"tipo":"pr","pr":1378,"sha":"440af43bfc2299ced3bd60550aa291036c39a74f","ts_utc":"2026-10-21T22:13:10Z","azione":"unita","aperta_s":2123,"merge_main":1,"verde_a_unione_s":null}
+{"ts_utc":"2026-10-21T22:13:15Z","tipo":"run","workflow":"test","esito":"cancelled","main":true,"durata_s":12,"attivo_s":0,"coda_s":0,"jobs":{},"pr":null,"sha":"46c1c46390d7269f09d05665e105dada40d51cfa","run_id":39684858555,"run_attempt":1}
