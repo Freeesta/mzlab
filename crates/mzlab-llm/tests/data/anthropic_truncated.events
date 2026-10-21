@@ -1,0 +1,2 @@
+{"ev":"text_delta","text":"Half an ans"}
+{"ev":"error","key":"err.llm.network","params":{"reason":"truncated"}}

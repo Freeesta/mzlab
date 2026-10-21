@@ -1,0 +1,7 @@
+{"schema":"llm-conv/1","provider":"anthropic","model":"m","system":"You are the mzLab assistant.","max_output_tokens":1024,"messages":[
+{"role":"user","parts":[{"text":"Check the plan."},{"context":{"schema":"contesto/1","plan":{"steps":2}}},{"image":{"png_b64":"iVBORw0KGgo=","consent":"c3"}}]},
+{"role":"assistant","parts":[{"text":"Checking."},{"tool_call":{"id":"t1","name":"flow_check","args":{"plan":"p"}}}]},
+{"role":"tool","parts":[{"tool_result":{"id":"t1","ok":true,"content":{"errors":0}}}]},
+{"role":"assistant","parts":[{"tool_call":{"id":"t2","name":"flow_run","args":{}}}]},
+{"role":"tool","parts":[{"tool_result":{"id":"t2","ok":false,"content":"not allowed"}}]},
+{"role":"user","parts":[{"text":"And now?"}]}]}

@@ -1,8 +1,10 @@
 //! The native executor of `tp.network@1`: the network of the products (`rete/1`) of a `.mzfeat` with the blocks `tp/1` and `interp/1`. The rules are the
 //! transformation table of mzFinder; the engine is `mzlab_feat::rete::network_text`, the one the `.wasm` `interp` runs.
 
+use crate::flow::{read_one, write_made, FileRunner};
 use mzlab_core::error::Result;
-use mzlab_core::flow::Job;
+use mzlab_core::flow::{Artifact, Job};
+use mzlab_core::step::DataType;
 use mzlab_feat::rete::{network_text, ReteParams};
 use mzlab_feat::store::Slice;
 
@@ -28,4 +30,21 @@ pub fn network_json(job: &Job, tp: &[u8], table: &[u8], samples: Option<&[u8]>) 
         RULES,
         &params,
     )
+}
+
+pub(crate) fn network_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let (tp, table) = (read_one(r, job, "tp")?, read_one(r, job, "table")?);
+    let has_samples = job.inputs.iter().any(|(p, _)| p == "samples");
+    let samples = if has_samples {
+        Some(read_one(r, job, "samples")?)
+    } else {
+        None
+    };
+    let text = network_json(
+        job,
+        &tp.1,
+        &table.1,
+        samples.as_ref().map(|s| s.1.as_slice()),
+    )?;
+    write_made(r, job, text, DataType::Transform)
 }
