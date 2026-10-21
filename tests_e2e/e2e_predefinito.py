@@ -39,7 +39,7 @@ try:
             assert dlg() is None
         step("a file opened from outside goes into the Data view, no question when it is not due", opened_into_data)
         def nothing():
-            arrive([], True); pg.wait_for_timeout(200)
+            arrive([], True)             # take() has finished when evaluate returns
             assert pg.evaluate("window.__ups") == [] and dlg() is None
         step("an empty queue does nothing, not even the dialog", nothing)
         def event():
