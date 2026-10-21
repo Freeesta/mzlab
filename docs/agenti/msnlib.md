@@ -23,8 +23,7 @@ Obiettivo: misurare in laboratorio gli alberi MSn degli standard disponibili (id
 - **Dove**: grezzi in `dati/HRMS/standard_msn/<AAAA>/<id>/` di mzlab-dati con il manifest; libreria costruita in `librerie/msnlib/` dello stesso repository dalla CLI (mai a mano). Nel pubblico solo formato, codice e file sintetici; nessun nome di composto, grezzo o voce finché Federico non dà il «via» esplicito; dopo il «via» un sottoinsieme pubblico come `unito-standard` (licenza da decidere).
 - **Cosa serve al motore**: il lettore Thermo corretto per gli scan event a 3+ reazioni e l'etichetta CID/HCD per scansione (chat Mac); l'energia e l'attivazione di ogni stadio dal filtro (già in `msnalbero`); `msngrafo` (PR 1-3); `msn-lib add/build/export` (PR 6).
 - **Convalida di un albero**: due giorni (`d1`, `d2`) → due grafi con le stesse opzioni → `msn-graph compare`: stessi nodi isolati (cammini di precursori entro ppm), archi con `rel` ≥ 10 % presenti in entrambi, formule proposte uguali, entropia MS2 ≥ 0,8 per energia, scarto di m/z ≤ 3 ppm dopo la calibrazione. Esito e numeri in `convalida`; una voce non convalidata resta nella libreria con `convalida: null` e la ricerca lo dice.
-
+- **`msn-graph compare A.json B.json`** (`crates/mzlab-cli/src/msn_graph_compare.rs`): JSON `msnconfronto/1` con i numeri di ogni criterio e `convalidata`; finestra di accoppiamento 5 ppm; un nodo isolato è lo stesso se hanno le stesse etichette del cammino (arrotondate) e l'm/z preciso entro i ppm; scarto massimo sui nodi accoppiati.
 
 ## Pezzi ancora da fare (codice da toccare)
-- `mzlab-cli msn-graph compare A.json B.json`: `crates/mzlab-cli/src/msn_graph.rs` e `msn-grafo.md` §6.
 - `candidati_radice` in `msngrafo/`; chiavi `lang/` `err.msnlib.noIon` e `err.msnlib.bad` (lato pagina).
