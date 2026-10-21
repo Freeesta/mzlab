@@ -25,7 +25,7 @@ Le righe valgono per ogni crate che gira in WASM: tetto di costruzione 4 GiB per
 - Guardie, serie grandi: `completo_blocchi` è `completo` con budget di 24 MB (`BUDGET_MB`): align e prove vanno a lastre e il test controlla che i due `.mzfeat` abbiano lo stesso SHA-256 della via in memoria. Quasi tutti i valori sono la memoria iniziale di 32 MB (pavimento); `completo` alle prove sale a 43 MB, a lastre resta a 32 MB. Il test dura circa 3 minuti.
 - `memory_bytes()` è esportata da `mzlab-wasm` e `mzlab-feat-wasm`.
 - `tools/controlla.py` rifiuta una funzione WASM esportata che torna un `Vec<u8>` intero se non è in `tools/api_byte_ammesse.txt`, e `indexedDB.open` fuori dai file noti.
-- Persistenza: `qqq-db.js` ha `SCHEMA` (versione dell'archivio intero) e `DB_VER` 3 nel database `NOMI.DB` (`mzlab_lab`, in precedenza `qqq_lab`) con lo store `manifest` (una riga per file di OPFS: `{path, tipo, bytes, creato, usato, formato, versione_formato, crate, sorgente_sha256}`; i campi non ancora noti sono `null`).
+- Persistenza: `qqq-db.js` ha `SCHEMA` (versione dell'archivio intero) e `DB_VER` 4 nel database `NOMI.DB` (`mzlab_lab`, in precedenza `qqq_lab`) con lo store `manifest` (una riga per file di OPFS: `{path, tipo, bytes, creato, usato, formato, versione_formato, crate, sorgente_sha256}`; i campi non ancora noti sono `null`).
 - `migra.js` esegue passi numerati, idempotenti e ripetibili sotto il lock esclusivo `mzlab-migra`, prima che il motore apra i file (`rust-worker.js`, attesa massima 5 s se un'altra scheda tiene il database); `kv.schema` dice a che passo sono i dati.
 - Passo 3: riempie il manifesto dai file in OPFS (`files/`, `idx/`, `feat/`).
 - `archivio.js` avvisa di ogni scrittura e rimozione (`watch`) e il manifesto le segue.

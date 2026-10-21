@@ -54,3 +54,22 @@ fn register_index_open_and_route() {
     assert_eq!(text(st2.rpc("lr_boot", &json!({}), &[]).unwrap()), "[]");
     assert!(ex.exists(), "the file of the student is never touched");
 }
+
+#[test]
+fn molecules_of_the_user_are_a_canonical_file_that_a_session_clear_leaves_alone() {
+    let data = tempfile::tempdir().unwrap();
+    let st = State::new();
+    st.set_data_folder(data.path().join("app"));
+    let r = |op: &str, p: serde_json::Value| text(st.rpc(op, &p, &[]).unwrap());
+    assert!(r("lr_molecole_archivio", json!({"mop": "leggi", "body": ""})).contains("\"molecole\":[]"));
+    let doc = r#"{"schema":"molecules/1","molecole":[{"nome":"Esempina","formula":"C10H15NO"}]}"#;
+    assert_eq!(r("lr_molecole_archivio", json!({"mop": "scrivi", "body": doc})), "{}");
+    r("lr_clear", json!({}));
+    let file = std::fs::read_to_string(data.path().join("app/molecole.json")).unwrap();
+    assert_eq!(r("lr_molecole_archivio", json!({"mop": "leggi", "body": ""})), file, "the page gets the bytes of the file");
+    assert!(file.starts_with("{\"molecole\":[{") && file.contains("\"id\":\"u:") && file.ends_with("\"schema\":\"molecules/1\"}"), "{file}");
+    let st2 = State::new();
+    st2.set_data_folder(data.path().join("app"));
+    assert_eq!(text(st2.rpc("lr_molecole_archivio", &json!({"mop": "leggi", "body": ""}), &[]).unwrap()), file, "a new run reads it back");
+    assert!(st2.rpc("lr_molecole_archivio", &json!({"mop": "scrivi", "body": "{}"}), &[]).is_err(), "a document that is not molecules/1 is refused");
+}

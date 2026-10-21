@@ -119,6 +119,11 @@ const tx = async (store, mode, fn) => {
 };
 const safe = async f => { try { return await f(); } catch (_) { return undefined; } };
 const kvGet = key => safe(() => tx("kv", "readonly", s => s.get(key)));
+// the molecules of the user (store "molecole"): "leggi" gives a molecules/1 document, "scrivi" replaces every record with the ones of the document
+const molecole = async (op, body) => {
+  if (op === "scrivi") { const ms = JSON.parse(body).molecole || []; await tx("molecole", "readwrite", s => { s.clear(); ms.forEach(r => s.put(r)); }); return "{}"; }
+  return JSON.stringify({ schema: "molecules/1", molecole: (await safe(() => tx("molecole", "readonly", s => s.getAll()))) || [] });
+};
 // the archive: its schema is brought up to date before any file is opened, and the manifest follows every change of the folders of OPFS
 const infoOf = async (kind, name, fresh) => {
   const i = kind === "files" ? null : await safe(async () => infoDi(kind, await ARCH.get(kind, name)));
@@ -296,6 +301,7 @@ async function lrOp(m) {
     case "lr_flow_command": return { info: flow_command(m.body || "") };                            // the copyable shell command of a mzflow/2 plan; "E" + JSON = an error
     case "lr_campioni": return { info: campioni(m.cop || "", m.body || "") };                       // campioni/2 (proponi, valida, ...): JSON in, JSON out
     case "lr_molecules": return { info: molecules(m.mop || "", m.body || "") };                     // molecules/1 (carica, cerca, get, da_csv, ...): JSON in, JSON out
+    case "lr_molecole_archivio": return { info: await molecole(m.mop || "", m.body || "") };     // the molecules of the user, kept in the browser (IndexedDB) or, in the app, in a file
     case "lr_ricerca": return { info: ricerca_numero(m.body || "") };
     case "lr_formula": return { info: formula_mz(m.f || "", m.adduct || "") };
     case "lr_remove": {
