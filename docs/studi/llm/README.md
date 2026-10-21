@@ -11,7 +11,7 @@ Obiettivo (decisione di Federico, 21/10): mzLab non sarà solo per studenti; chi
 - **Azioni dell'interfaccia**: registro JS `azioni/1` (`mzlab/web/azioni.js`, `AZIONI.registra`, `AZIONI.esegui(id, c)`); pila unica `STORIA` con voci `tolto` annullabili (`storia-tolto.md`).
 - **Rete**: sito con CSP `connect-src 'self' blob:` (`mzlab/web/index.html`); il desktop aggiunge solo `mzlab:` e `ipc:` (`tests/test_csp_desktop.py`). Precedente utile: le pagine amministratore `mzlab/web/libro/editor.html` e l'editor della Teoria hanno **una CSP propria** con un solo host esterno (`https://api.github.com`, `tests/test_libro_editor.py:33`, `tests/test_teoria_editor.py:22`). Unico codice di rete nativo: `ureq` 2 nel desktop (`update.rs`), mai nel grafo WASM.
 - **JSON in Rust**: `mzlab_core::json::{Value, parse, Out}` e `jsonb` (niente serde nel grafo WASM); SHA-256 in `mzlab_core::budget::sha256_hex`.
-- **Studio collegato**: `docs/agenti/assistente-teoria.md` (assistente RAG della Teoria, quattro strade, proxy di Federico). Questo studio non lo sostituisce: ne riusa il contratto del fornitore (§3), non il proxy.
+- **Studio collegato**: `docs/studi/tutor-teoria/README.md` (tutor sulla Teoria per gli studenti: Worker con la chiave, blocchi della Teoria, prompt T1-T5). Riusa `llm-provider/1` e gli adattatori di D2 di questo studio; non il trasporto né `llmlog/1`.
 - **Nessuna riga di codice LLM** nel repository: nessuna chiamata, nessuna chiave, nessuna dipendenza.
 
 ## 2. Principi (vincolanti per tutti i prompt)
@@ -147,6 +147,7 @@ Costruito in Rust (`mzlab_llm::context::build(sources, budget_tokens)`) da rispo
 
 - `localStorage mzlab.profilo` = `corso` | `ricerca`. Raccomandazione: predefinito `corso` sul sito finché Federico non decide (oggi gli utenti sono studenti), `ricerca` nel desktop; la scelta sta in Impostazioni. Non è una barriera di sicurezza ma un'impostazione didattica: lo si scrive così.
 - `corso`: nessun pulsante, nessun modulo `llm` scaricato, `contesto/1` rifiutato, il catalogo non si carica. `ricerca`: l'LLM esiste spento; il prompt di sistema (`crates/mzlab-llm/data/sistema-1.md`, inglese, versionato con SHA-256 nel registro) ripete i principi 1 e 4: candidati, mai identificazioni a risoluzione unitaria, mai rette di taratura spacciate per risultati.
+- **Eccezione del tutor**: nel profilo `corso` il solo LLM ammesso è il tutor sulla Teoria (`docs/studi/tutor-teoria/README.md` §3.3), che non dipende dal profilo ma dall'interruttore del corso nel Worker e dall'avviso letto.
 - Dove vive il pannello: nel Flow (oggi solo amministratore, quindi l'LLM è oggi solo amministratore). Testi del pannello in inglese come il Flow (`flow-grafica.md`); finestra di consenso e impostazioni sono dell'app: chiavi in `lang/it.js` e `lang/en.js`.
 
 ## 9. Decisione 7 e 8: test e tetti

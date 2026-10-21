@@ -25,6 +25,17 @@ pub const COLUMNS: [&str; 16] = [
     "catalog",
 ];
 
+/// The short column names of the suspect lists (`name;formula;mass;comment`) are read as the canonical ones.
+fn alias(h: &str) -> String {
+    match h {
+        "formula" => "molecular_formula",
+        "mass" => "monoisotopic_mass",
+        "comment" => "notes",
+        _ => h,
+    }
+    .to_string()
+}
+
 fn delimiter(text: &str) -> char {
     let head = text
         .lines()
@@ -121,7 +132,7 @@ fn header(line: usize, names: &[String]) -> Result<Header, RowError> {
     let mut props: Vec<Prop> = Vec::new();
     let mut extra: Vec<(usize, String, Option<String>, u8)> = Vec::new();
     for (i, raw) in names.iter().enumerate() {
-        let h = raw.to_lowercase();
+        let h = alias(&raw.to_lowercase());
         if let Some(k) = COLUMNS.iter().position(|c| *c == h) {
             if cols[k].replace(i).is_some() {
                 return Err(err(line, "error.molecules.badColumn", h));
