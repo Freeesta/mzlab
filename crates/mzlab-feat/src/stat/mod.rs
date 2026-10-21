@@ -13,7 +13,7 @@ pub use compare::{
     benjamini_hochberg, compare, pseudocount, Anova, AnovaRow, Comparison, Row, StatsOpts,
     StatsOut, Warning, FLOOR, NOISE_FACTOR,
 };
-pub use json::{kmd_json, pca_json, stats_json};
+pub use json::{kmd_json, pca_json, stats_json, write_stats};
 pub use kmd::{
     analyse, kendrick, spearman, unit_by_id, units, Ion, KmdOpts, KmdOut, KmdRow, Series, Unit,
 };
