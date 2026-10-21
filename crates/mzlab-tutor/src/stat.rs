@@ -50,19 +50,15 @@ struct Day {
     cost_micros: u64,
 }
 
+fn bump(m: &mut BTreeMap<String, u64>, k: &str) {
+    *m.entry(k.to_string()).or_insert(0) += 1;
+}
+
 /// The counters of one course.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Stat {
     pub course: String,
     days: BTreeMap<String, Day>,
-}
-
-fn bump(m: &mut BTreeMap<String, u64>, k: &str) {
-    *m.entry(k.to_string()).or_insert(0) += 1;
-}
-
-fn map(m: &BTreeMap<String, u64>) -> Value {
-    Value::Object(m.iter().map(|(k, v)| (k.clone(), json!(v))).collect())
 }
 
 impl Stat {
@@ -117,24 +113,29 @@ impl Stat {
             }
         }
     }
+}
 
-    /// The `tutorstat/1` value; keys sorted.
+fn counts(m: &BTreeMap<String, u64>) -> Value {
+    Value::Object(m.iter().map(|(k, v)| (k.clone(), json!(v))).collect())
+}
+
+impl Stat {
     pub fn to_json(&self) -> Value {
         let mut days = Map::new();
         for (k, d) in &self.days {
             days.insert(
                 k.clone(),
                 json!({
-                    "blocks": map(&d.blocks),
+                    "blocks": counts(&d.blocks),
                     "cost_micros": d.cost_micros,
-                    "down_blocks": map(&d.down_blocks),
-                    "intents": map(&d.intents),
+                    "down_blocks": counts(&d.down_blocks),
+                    "intents": counts(&d.intents),
                     "passi": d.passi,
                     "questions": d.questions,
                     "tokens_in": d.tokens_in,
                     "tokens_out": d.tokens_out,
                     "uncovered": d.uncovered,
-                    "votes_down": map(&d.votes_down),
+                    "votes_down": counts(&d.votes_down),
                     "votes_up": d.votes_up,
                 }),
             );

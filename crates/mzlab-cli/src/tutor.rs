@@ -113,6 +113,32 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
     }
 }
 
+fn recall_lines(corpus: &Corpus, cases: &[mzlab_tutor::eval::Case]) -> String {
+    let mut out = String::new();
+    for lang in ["it", "en"] {
+        let (r, n) = corpus.recall(cases, Some(lang), 5);
+        out.push_str(&format!(
+            "{{\"cases\":{n},\"lang\":\"{lang}\",\"recall_at_5\":{r:.3}}}\n"
+        ));
+    }
+    out
+}
+
+/// The key of a real run, after the cost estimate and the `--yes` check.
+fn live_key(o: &Opts, n: usize, prices: &Prices) -> Result<String, String> {
+    let micros =
+        estimate_micros(n as u64, &o.pick, &o.answer, prices).map_err(|e| e.to_string())?;
+    eprintln!(
+        "estimated cost of {n} questions: about {:.2} USD",
+        micros as f64 / DOLLAR as f64
+    );
+    if !o.yes {
+        return Err("this calls the provider for real: add --yes to go on".into());
+    }
+    let key = read(Path::new(o.key_file.as_deref().unwrap_or("")))?;
+    Ok(key.trim().to_string())
+}
+
 fn eval(o: &Opts) -> Result<Outcome, String> {
     let texts = case_files(&o.cases)?
         .iter()
@@ -120,15 +146,8 @@ fn eval(o: &Opts) -> Result<Outcome, String> {
         .collect::<Result<Vec<_>, _>>()?;
     let cases = load_cases(&texts).map_err(|e| e.to_string())?;
     let corpus = Corpus::parse(&read(Path::new(&o.blocchi))?).map_err(|e| e.to_string())?;
-    let mut out = String::new();
     if o.recall_only {
-        for lang in ["it", "en"] {
-            let (r, n) = corpus.recall(&cases, Some(lang), 5);
-            out.push_str(&format!(
-                "{{\"cases\":{n},\"lang\":\"{lang}\",\"recall_at_5\":{r:.3}}}\n"
-            ));
-        }
-        return Ok(Outcome::ok(out.into_bytes()));
+        return Ok(Outcome::ok(recall_lines(&corpus, &cases).into_bytes()));
     }
     let prices = match &o.prices {
         Some(p) => Prices::parse(&read(Path::new(p))?),
@@ -150,22 +169,12 @@ fn eval(o: &Opts) -> Result<Outcome, String> {
         level: Level::Base,
         prices: &prices,
     };
-    let mut live = None;
-    if o.provider.is_some() {
-        let micros = estimate_micros(cases.len() as u64, &o.pick, &o.answer, &prices)
-            .map_err(|e| e.to_string())?;
-        eprintln!(
-            "estimated cost of {} questions: about {:.2} USD",
-            cases.len(),
-            micros as f64 / DOLLAR as f64
-        );
-        if !o.yes {
-            return Err("this calls the provider for real: add --yes to go on".into());
-        }
-        let key = read(Path::new(o.key_file.as_deref().unwrap_or("")))?;
-        live = Some(key.trim().to_string());
-    }
+    let live = match o.provider {
+        Some(_) => Some(live_key(o, cases.len(), &prices)?),
+        None => None,
+    };
     let (mut scored, mut passed, mut skipped, mut cost) = (0u32, 0u32, 0u32, 0u64);
+    let mut out = String::new();
     for c in &cases {
         let mut recorded = None;
         if let Some(dir) = &o.replay {
