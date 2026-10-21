@@ -37,3 +37,7 @@
 {"ts_utc":"2026-10-21T17:22:21Z","tipo":"run","workflow":"test","esito":"success","main":false,"durata_s":927,"attivo_s":1915,"coda_s":2,"jobs":{"browser (ubuntu-latest, chromium)":164,"javascript":30,"pytest (ubuntu-latest, 3.14)":923,"tipi (tsc)":36,"pytest (ubuntu-latest, 3.11)":762},"pr":1366,"sha":"267026b24809ca5eef50c145d92f0c82cba800ae","run_id":39640872660,"run_attempt":1}
 {"ts_utc":"2026-10-21T17:23:30Z","azione":"push","tipo":"pr","pr":1372,"sha":"98a8ff9c26937706b5ba9bd8c130632fb2abe1c7"}
 {"tipo":"pr","pr":1369,"sha":"33cb12a717139e60933b7280c2e8bbd3784f63b8","ts_utc":"2026-10-21T17:23:34Z","azione":"unita","aperta_s":2508,"merge_main":0,"verde_a_unione_s":null}
+{"ts_utc":"2026-10-21T17:23:55Z","tipo":"conflitto","pr":1371,"sha":"0a9f1585655d6e88628b6851b1514fc3ad27377c","pr_unita":1369,"file_comuni":[],"n_file_comuni":0}
+{"ts_utc":"2026-10-21T17:24:05Z","tipo":"conflitto","pr":1356,"sha":"0a9f1585655d6e88628b6851b1514fc3ad27377c","pr_unita":1369,"file_comuni":[],"n_file_comuni":0}
+{"ts_utc":"2026-10-21T17:24:11Z","tipo":"conflitto","pr":1350,"sha":"0a9f1585655d6e88628b6851b1514fc3ad27377c","pr_unita":1369,"file_comuni":[],"n_file_comuni":0}
+{"ts_utc":"2026-10-21T17:24:15Z","tipo":"conflitto","pr":1344,"sha":"0a9f1585655d6e88628b6851b1514fc3ad27377c","pr_unita":1369,"file_comuni":[],"n_file_comuni":0}
