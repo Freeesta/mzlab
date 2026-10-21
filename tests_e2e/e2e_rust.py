@@ -113,12 +113,20 @@ try:
             assert not pg.evaluate("(document.querySelector('#rust-note') || {}).textContent || ''").strip(), "a recycle must be silent"
         step("a recycled worker (large and idle) is replaced silently: files reopened, no fault counted", recycled)
         def die_oom():
-            pg.evaluate("window.MZLAB_RUST.crash(80)")
-            pg.wait_for_function("window.MZLAB_RUST.stats.restarts === 1", timeout=30000)
-            pg.evaluate("window.MZLAB_RUST.crash(80)")        # the second death within a minute with the signature of a lack of memory: not retried as it is, half the budget
-            pg.wait_for_function("window.MZLAB_RUST.stats.halved === 1", timeout=30000)
-            assert pg.evaluate("window.MZLAB_RUST.disabled") is False and pg.evaluate("window.MZLAB_RUST.budgetMb") == 96
+            lv = pg.evaluate("window.MZLAB_RUST.choice.levels"); cur = pg.evaluate("window.MZLAB_RUST.choice.mb")
+            below = lambda c: max([l for l in lv if l < c], default=0)      # the rule of Rust's budget_down, written out to check it end to end
+            first, second = below(cur), min(192, below(below(cur)))
+            assert first > 0 and second > 0, (cur, lv)
+            pg.evaluate("window.MZLAB_RUST.crash(80)")        # a death with the signature of a lack of memory: not retried as it is, one level lower
+            pg.wait_for_function("window.MZLAB_RUST.stats.lowered === 1", timeout=30000)
+            assert pg.evaluate("window.MZLAB_RUST.disabled") is False and pg.evaluate("window.MZLAB_RUST.budgetMb") == first, (cur, first)
             r = pg.evaluate(GET, "api/chrom?k=0&kind=tic&level=1"); assert r["eng"] == "rust", r["eng"]      # the engine works with the smaller budget
+            pg.evaluate("window.MZLAB_RUST.crash(80)")        # the second within a minute: 192 MB at most
+            pg.wait_for_function("window.MZLAB_RUST.stats.lowered === 2", timeout=30000)
+            assert pg.evaluate("window.MZLAB_RUST.budgetMb") == second, (first, second)
+            log = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.memBudget.log') || '[]')")
+            assert [e["mb"] for e in log if e["by"] == "supervisor"][-2:] == [first, second], log
+            r = pg.evaluate(GET, "api/chrom?k=0&kind=tic&level=1"); assert r["eng"] == "rust", r["eng"]
             pg.evaluate("window.MZLAB_RUST.crash(80)")        # a third: the engine is off with the key of the memory, no loop of restarts
             pg.wait_for_function("window.MZLAB_RUST.disabled === true", timeout=30000)
             assert pg.evaluate("window.MZLAB_RUST.stats.restarts") == 3, "restarts must stop at the third death"
@@ -126,7 +134,7 @@ try:
             pg.evaluate("window.MZLAB_RUST.forgetFaults()")      # brings the engine back for the steps that follow
             pg.wait_for_function("window.MZLAB_RUST.stats.restarts === 0 && window.MZLAB_RUST.disabled === false", timeout=30000)
             r = pg.evaluate(GET, "api/chrom?k=0&kind=tic&level=1"); assert r["eng"] == "rust", r["eng"]
-        step("deaths with the signature of a lack of memory: first restart, then half the budget, then off with error.memoryBudget (no loop)", die_oom)
+        step("deaths with the signature of a lack of memory: one level lower, then 192 MB at most, then off with error.memoryBudget (no loop)", die_oom)
         def die_once():
             pg.evaluate("window.MZLAB_RUST.crash()")
             pg.wait_for_function("window.MZLAB_RUST.stats.restarts === 1", timeout=30000)
