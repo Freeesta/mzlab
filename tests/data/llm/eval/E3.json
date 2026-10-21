@@ -1,0 +1,13 @@
+{
+ "expect": {
+  "has_steps": [
+   "tp.generate",
+   "tp.link"
+  ],
+  "max_calls": 3
+ },
+ "id": "E3",
+ "level": "L2",
+ "request": "The parent compound is caffeine: generate its transformation products and link them to the features.",
+ "schema": "llm-eval/1"
+}

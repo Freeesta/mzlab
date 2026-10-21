@@ -25,10 +25,10 @@ import socket
 for _ in range(2000):
     try: socket.create_connection(("127.0.0.1", PORT), timeout=1).close(); break
     except OSError: pass
-errs = []; held = {"core": [], "late": [], "lists": [], "wasm": []}; gate = {"core": True, "late": True, "lists": True, "wasm": True}; seen = []
+errs = []; held = {"core": [], "late": [], "lists": [], "wasm": [], "shell": []}; gate = {"core": True, "late": True, "lists": True, "wasm": True, "shell": True}; seen = []
 def route(r):
     u = r.request.url; name = u.split("?")[0].rsplit("/", 1)[-1]
-    kind = "wasm" if u.endswith(".wasm") else "lists" if name.startswith("steps-") else "late" if "/lazy/" in u and name in LATE else "core" if "/lazy/" in u and name in CORE else None
+    kind = "shell" if name == "shell.js" else "wasm" if u.endswith(".wasm") else "lists" if name.startswith("steps-") else "late" if "/lazy/" in u and name in LATE else "core" if "/lazy/" in u and name in CORE else None
     seen.append((kind, name))
     if kind and gate[kind]: held[kind].append(r)
     else: r.continue_()
@@ -39,10 +39,10 @@ def release(kind):
 try:
     with sync_playwright() as p:
         b = p.chromium.launch()
-        c = b.new_context(viewport={"width": 1400, "height": 1000}); pg = c.new_page()
+        c = b.new_context(service_workers="block", viewport={"width": 1400, "height": 1000}); pg = c.new_page()
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
-        c.route(re.compile(r"/mzfinder/(lazy/.*\.js|steps-.*\.json)(\?.*)?$|\.wasm(\?.*)?$"), route)
+        c.route(re.compile(r"/mzfinder/(lazy/.*\.js|steps-.*\.json)(\?.*)?$|\.wasm(\?.*)?$|/static/shell\.js(\?.*)?$"), route)
         pg.goto(f"http://127.0.0.1:{PORT}/")
         pg.wait_for_selector(TAB, timeout=120000)
         def early():
@@ -90,6 +90,17 @@ try:
             attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Confidence level'")
             assert pg.locator('.fl-insp input[type=file][webkitdirectory]').count() == 1
         step("after everything arrived the shell works as before (add an analysis, open its inspector)", works)
+        def shell_late():
+            assert pg.evaluate("typeof setView") == "undefined", "the page shell must still be held at this point"
+            assert pg.evaluate("document.getElementById('v-flow').hidden") is False and pg.evaluate("document.getElementById('v-data').hidden") is True
+            release("shell")
+            attendi(pg, "typeof S !== 'undefined' && S.view === 'flow'", 60000)
+            assert pg.evaluate("document.getElementById('v-flow').hidden") is False and pg.locator("#flx-root").count() == 1
+            pg.click('#nav button[data-v="data"]')
+            attendi(pg, "S.view === 'data' && document.getElementById('v-flow').hidden === true")
+            pg.click(TAB)
+            attendi(pg, "S.view === 'flow' && document.getElementById('v-flow').hidden === false")
+        step("the tab works before the page shell (shell.js) has run; the shell then takes over (Dati and back)", shell_late)
         def axe():
             path = axe_path()
             if not path: print("SKIP axe: axe-core not available"); return
