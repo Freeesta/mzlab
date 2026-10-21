@@ -32,22 +32,70 @@ pub(crate) fn read_spectra((name, bytes): Named) -> Result<Vec<Spectrum>> {
 }
 
 /// The library of the step; with `decoys` every entry gets a decoy beside it (text libraries only: an `.mzlib` is read as it is).
+fn bad<E>(_: E) -> Error {
+    Error::new("err.flow.match.library")
+}
+
 fn open_library(file: Named, decoys: bool) -> Result<Lib> {
     let bytes = if file.0.ends_with(".mzlib") {
-        if decoys {
-            return Err(Error::new("err.flow.match.decoysLibrary"));
+        if !decoys {
+            file.1.to_vec()
+        } else {
+            // an `.mzlib` is read back to spectra, so the decoys are made as for a text library
+            let lib = Library::open(file.1.to_vec(), CACHE_BYTES).map_err(bad)?;
+            let spectra = lib_spectra(&lib).map_err(bad)?;
+            let spectra = with_decoys(&spectra, DecoyKind::Fragments, DEFAULT_SEED);
+            build_in_memory(&spectra, BuildOpts::default())
+                .map_err(bad)?
+                .0
         }
-        file.1.to_vec()
     } else {
         let mut spectra = read_spectra(file)?;
         if decoys {
             spectra = with_decoys(&spectra, DecoyKind::Fragments, DEFAULT_SEED);
         }
         build_in_memory(&spectra, BuildOpts::default())
-            .map_err(|_| Error::new("err.flow.match.library"))?
+            .map_err(bad)?
             .0
     };
-    Library::open(bytes, CACHE_BYTES).map_err(|_| Error::new("err.flow.match.library"))
+    Library::open(bytes, CACHE_BYTES).map_err(bad)
+}
+
+/// The target spectra of a built library (decoys it may already hold are dropped, to be made again).
+fn lib_spectra(lib: &Lib) -> mzlab_lib::error::Result<Vec<Spectrum>> {
+    let mut out = Vec::new();
+    for i in 0..lib.n_spectra() {
+        let meta = lib.meta(i)?;
+        if is_decoy(&meta.accession) {
+            continue;
+        }
+        let (mz, it) = lib.peaks(i)?;
+        let rec = lib.rec(i)?;
+        out.push(Spectrum {
+            prec: rec.prec,
+            pol: rec.pol,
+            mz,
+            it,
+            meta,
+        });
+    }
+    Ok(out)
+}
+
+/// The precursor window of the step: `precursor_da` when set (low resolution), else `ppm_name` in ppm.
+fn prec_tol(job: &Job, ppm_name: &str) -> Tol {
+    match num(job, "precursor_da") {
+        da if da > 0.0 => Tol::Da(da),
+        _ => Tol::Ppm(num(job, ppm_name)),
+    }
+}
+
+/// The precursor error in ppm, whichever unit the window had (`Hit.dprec` is in the unit of the window).
+fn dprec_ppm(tol: Tol, d: f64, prec: f64) -> f64 {
+    match tol {
+        Tol::Ppm(_) => d,
+        Tol::Da(_) => d / prec * 1e6,
+    }
 }
 
 pub(crate) fn num(job: &Job, name: &str) -> f64 {
@@ -91,13 +139,16 @@ fn by_score(c: &mut Vec<Cand>, top: usize) {
 }
 
 fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str, terms: bool) -> Result<Vec<Cand>> {
-    let ppm = if alg == "modified_cosine" {
-        num(job, "exact_ppm")
-    } else {
-        num(job, "precursor_ppm")
-    };
+    let tol = prec_tol(
+        job,
+        if alg == "modified_cosine" {
+            "exact_ppm"
+        } else {
+            "precursor_ppm"
+        },
+    );
     let o = IdentityOpts {
-        prec_tol: Tol::Ppm(ppm),
+        prec_tol: tol,
         frag_da: num(job, "tol_da"),
         pol: q.pol,
         top: usize::MAX,
@@ -141,7 +192,7 @@ fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str, terms: bool) -> Result<Vec<
             index: h.index,
             score,
             shared,
-            mass_ppm: h.dprec,
+            mass_ppm: dprec_ppm(tol, h.dprec, q.prec),
             delta: 0.0,
             explained: pairs
                 .iter()
@@ -196,7 +247,7 @@ fn batch_fdr(lib: &Lib, queries: &[Option<Query>], job: &Job) -> Result<Vec<Fdr>
         best.push(match q {
             Some(q) => {
                 let o = IdentityOpts {
-                    prec_tol: Tol::Ppm(num(job, "precursor_ppm")),
+                    prec_tol: prec_tol(job, "precursor_ppm"),
                     frag_da: num(job, "tol_da"),
                     pol: q.pol,
                     top: usize::MAX,

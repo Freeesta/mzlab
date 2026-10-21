@@ -5,6 +5,8 @@ use mzlab_core::step::{
     Algorithm, Applicability, DataType, Param, Port, Reference, RunsIn, Status, Step,
 };
 
+use mzlab_core::step::Facets;
+
 use super::ident::{algorithm, attributio_step, hr, hr_ms2};
 
 /// `spectra.chimeric`: co-isolated ions of each MS2 spectrum (`fill_purity`, `ms2_engine::chimeric::intruders`, `review::raw::ms1_metrics`).
@@ -116,11 +118,19 @@ fn library_deconvolution() -> Algorithm {
     }
 }
 
+/// MS2 spectra of any resolution.
+fn ms2() -> Facets {
+    Facets {
+        ms_levels: vec![2],
+        ..Facets::default()
+    }
+}
+
 /// `spectra.match`: scores each query spectrum against a library (`mzlab_lib::search`, `scores.rs`, `ms2_engine::matcher`).
 pub(super) fn match_spectra() -> Step {
     Step {
         ins: vec![
-            Port::new("query", DataType::Spectra, "Query spectra").requires(hr_ms2()),
+            Port::new("query", DataType::Spectra, "Query spectra").requires(ms2()),
             Port::new("library", DataType::Library, "Spectral library"),
         ],
         outs: vec![Port::new("hits", DataType::Candidates, "Library candidates per feature")],
@@ -135,10 +145,15 @@ pub(super) fn match_spectra() -> Step {
                 .default_num(10.0)
                 .unit("ppm")
                 .doc("Library precursor against the precursor of the feature"),
+            Param::number("precursor_da", "Precursor window (low resolution)")
+                .min(0.0)
+                .default_num(0.0)
+                .unit("Da")
+                .doc("Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window"),
             Param::integer("top_n", "Hits kept").min(1.0).default_num(5.0),
             Param::choice("decoys", "Decoys", &["none", "spectrum"])
                 .default_str("none")
-                .doc("spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Needs a text library and the spectral entropy; none leaves the hits as they are"),
+                .doc("spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Needs the spectral entropy (an .mzlib is read back to spectra and rebuilt with the decoys); none leaves the hits as they are"),
             Param::boolean("score_terms", "Score terms")
                 .default_bool(false)
                 .advanced()
