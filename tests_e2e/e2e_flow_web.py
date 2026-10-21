@@ -1,4 +1,4 @@
-"""Flow «This browser» runner (flow/lazy/flow-web-run.js, flow-web-ui.js, flow-web-worker.js): the base plan (index, detect, align, gapfill) over three synthetic .mzidx in OPFS emits
+"""Flow «This browser» runner (flow/lazy/flow-web-run.js, flow-web-ui.js, worker-flow-web.js): the base plan (index, detect, align, gapfill) over three synthetic .mzidx in OPFS emits
 {passo, stato, mb, via, parte, di, modo} for every step, keeps each result in OPFS (mzlab/flow/), starts again from the first step not finished (a second run reuses everything), refuses a
 series the budget does not hold with its numbers, and writes the note for phones and tablets. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and numpy: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_web.py"""

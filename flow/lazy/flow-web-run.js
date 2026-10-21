@@ -56,7 +56,7 @@
   /** what aligning `stored` (.mzfeatf bytes) asks for: { mb, via, files, rows } from the Rust rule, computed in a worker of its own @param {Uint8Array[]} stored @param {string} recipe */
   const stima = async (stored, recipe) => {
     const p = await getPool();
-    if (!estimator) estimator = new Worker(new URL("mzfinder/lazy/flow-web-worker.js", G.QTOOLS.ctx.base), { type: "module" });
+    if (!estimator) estimator = new Worker(new URL("mzfinder/lazy/worker-flow-web.js", G.QTOOLS.ctx.base), { type: "module" });
     const w = estimator, copy = stored.map(b => b.slice().buffer);
     return new Promise((resolve, reject) => {
       const done = (/** @type {MessageEvent} */ ev) => {
