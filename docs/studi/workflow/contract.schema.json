@@ -697,6 +697,39 @@
        }
       }
      }
+    },
+    "llm": {
+     "type": "object",
+     "description": "Present only when an assistant launched the run (llmlog/1 reference).",
+     "required": [
+      "log_sha256",
+      "turn",
+      "provider",
+      "model",
+      "level"
+     ],
+     "properties": {
+      "log_sha256": {
+       "type": "string"
+      },
+      "turn": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "provider": {
+       "type": "string"
+      },
+      "model": {
+       "type": "string"
+      },
+      "level": {
+       "enum": [
+        "L0",
+        "L1",
+        "L2"
+       ]
+      }
+     }
     }
    }
   },

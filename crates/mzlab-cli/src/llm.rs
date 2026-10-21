@@ -14,7 +14,9 @@ use crate::{emit, Outcome};
 
 const HELP: &str = "mzlab-cli llm tools [--out FILE]   the catalog strumenti/1 of the assistant tools (stdout, or FILE)
 mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the normalized events of a recording, one JSON line per event (stdout);
-  the turn defaults to the number of assistant messages of the conversation; --strict also compares the SHA-256 of the request";
+  the turn defaults to the number of assistant messages of the conversation; --strict also compares the SHA-256 of the request
+mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 the assistant gets from a run folder (stdout)
+mzlab-cli llm eval CASES_DIR --replay DIR   score the evaluation cases against their recordings DIR/<id>.jsonl (exit 1 if one fails)";
 
 /// The catalog text, the one `docs/schemi/strumenti-1.json` holds.
 pub fn tools_json() -> String {
@@ -26,6 +28,8 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
     match it.next().as_deref() {
         Some("tools") => {}
         Some("replay") => return replay(it.collect()),
+        Some("context") => return crate::llm_ctx::context(it.collect()),
+        Some("eval") => return crate::llm_ctx::eval(it.collect()),
         _ => return Outcome::fail(&format!("usage: {HELP}")),
     }
     let mut out: Option<PathBuf> = None;
