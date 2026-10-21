@@ -1,0 +1,28 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tutor-ask/1",
+ "title": "tutor-ask/1: the request of a student to the tutor",
+ "description": "Read by `mzlab_tutor::ask::parse` (crates/mzlab-tutor). Unknown keys are refused. Errors are keys: err.tutor.request (malformed field) and err.tutor.too_long (question over 600 characters, more than 2 earlier turns, or earlier turns over 1 500 characters together).",
+ "type": "object",
+ "required": ["course", "client", "lang", "question"],
+ "additionalProperties": false,
+ "properties": {
+  "course": {"type": "string", "minLength": 1, "maxLength": 64, "description": "course code told in the classroom; the Worker keeps only its HMAC"},
+  "client": {"type": "string", "pattern": "^[0-9a-f]{32}$", "description": "128 random bits made in the browser at first use"},
+  "lang": {"enum": ["it", "en"]},
+  "question": {"type": "string", "minLength": 1, "maxLength": 600},
+  "where": {"type": "string", "maxLength": 80, "pattern": "^[A-Za-z0-9_#-]+$", "description": "the section the student has open: file#anchor, or file"},
+  "history": {
+   "type": "array",
+   "maxItems": 2,
+   "description": "earlier turns; all the questions and answers together at most 1 500 characters",
+   "items": {
+    "type": "object",
+    "required": ["q", "a"],
+    "additionalProperties": false,
+    "properties": {"q": {"type": "string"}, "a": {"type": "string"}}
+   }
+  },
+  "share": {"type": "boolean", "default": false, "description": "level b: the student agrees to share this question, anonymously"}
+ }
+}

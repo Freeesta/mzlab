@@ -1,6 +1,6 @@
 [package]
 name = "mzlab-tutor"
-description = "Tutor on the Teoria: the pages cut into blocks (teoria-blocchi/1) and the BM25 search over them"
+description = "Tutor on the Teoria: the pages cut into blocks (teoria-blocchi/1), the BM25 search over them and the logic from the question to the checked answer"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,4 +11,5 @@ crate-type = ["rlib"]
 [dependencies]
 mzlab-libro = { path = "../mzlab-libro" }
 mzlab-core = { path = "../mzlab-core", default-features = false }
+mzlab-llm = { path = "../mzlab-llm" }
 serde_json = { version = "1", features = ["float_roundtrip"] }

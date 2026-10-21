@@ -17,6 +17,7 @@ limit_interp=512000   # interp: the interpretation of the rows (interp/1) with t
 limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)
 limit_msngrafo=512000   # msngrafo: the fragmentation graph of an MSn infusion (msngrafo/1), loaded by the worker of the engine on the first request of the graph; measured 407036 (with the structure cleavages of mzlab-feat, feature chem only)
 limit_libro=159744   # libro: the Markdown converter, the preview edits and the search index of the Teoria editor; measured 152008 (+3 %)
+limit_llm=180224   # llm: requests, normalized streams and recordings of the assistant, loaded only after the user turned it on and agreed; measured 160179 (+10 %, multiple of 4 KiB)
 out=${1:-site/static}/wasm-feat
 R=target/wasm32-unknown-unknown/release
 # the wasm-bindgen + wasm-opt of each module run in the background while cargo builds the next one (tools/wasm_paralleli.sh); wasm_wait below joins them
@@ -52,6 +53,9 @@ wasm_pack "$out/libro" $R/mzlab_libro_wasm.wasm $limit_libro "Libro converter"
 # the fragmentation graph of an MSn infusion (crates/mzlab-msngrafo-wasm: msngrafo/1), loaded by the worker of the engine on the first request of /api/msn_grafo
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-msngrafo-wasm
 wasm_pack "$out/msngrafo" $R/mzlab_msngrafo_wasm.wasm $limit_msngrafo "msngrafo"
+# the assistant (crates/mzlab-llm-wasm: llm-provider/1 requests, answer streams, recordings), loaded by mzlab/web/llm/llm-worker.js only after the opt-in; never fused with another module
+cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-llm-wasm
+wasm_pack "$out/llm" $R/mzlab_llm_wasm.wasm $limit_llm "assistant"
 # the readers of the tables of other programs (mzMine, FBMN/GNPS2, MS-DIAL), loaded only when the user opens one: crates/mzlab-feat-import-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-import-wasm
 wasm_pack "$out/import" $R/mzlab_feat_import_wasm.wasm $limit "mzFinder import"
@@ -110,6 +114,8 @@ m["chem"] = {"js": "chem/mzlab_chem_wasm.js", "wasm": "chem/mzlab_chem_wasm_bg.w
              "sha256": hashlib.sha256(open(f"{o}/chem/mzlab_chem_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["libro"] = {"js": "libro/mzlab_libro_wasm.js", "wasm": "libro/mzlab_libro_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/libro/mzlab_libro_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["llm"] = {"js": "llm/mzlab_llm_wasm.js", "wasm": "llm/mzlab_llm_wasm_bg.wasm",
+            "sha256": hashlib.sha256(open(f"{o}/llm/mzlab_llm_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["msngrafo"] = {"js": "msngrafo/mzlab_msngrafo_wasm.js", "wasm": "msngrafo/mzlab_msngrafo_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/msngrafo/mzlab_msngrafo_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["import"] = {"js": "import/mzlab_feat_import_wasm.js", "wasm": "import/mzlab_feat_import_wasm_bg.wasm",

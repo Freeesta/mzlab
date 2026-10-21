@@ -76,7 +76,7 @@ pub struct TpParams {
     pub isf_rt: f64,
     /// Fewest times with both ions measured to judge a ratio.
     pub isf_points: usize,
-    /// Tolerance of the fragments of the parent's MS2 and of the neutral losses, ppm.
+    /// Tolerance of the fragments of the parent's MS2 and of the neutral losses: ppm, or Da when negative (the unit axis, `axis::half`).
     pub ppm: f64,
     /// An MS2 with a purity of isolation below this does not count as a proof.
     pub purity_min: f64,

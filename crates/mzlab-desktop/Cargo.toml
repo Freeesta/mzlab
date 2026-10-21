@@ -16,7 +16,7 @@ required-features = ["app"]
 
 [features]
 # The window (Tauri). Off by default so that `cargo test` of the workspace needs no webview library.
-app = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-build"]
+app = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-plugin-single-instance", "dep:tauri-build"]
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
@@ -28,6 +28,8 @@ mzlab-feat-wasm = { path = "../mzlab-feat-wasm", default-features = false, featu
 mzlab-feat-table-wasm = { path = "../mzlab-feat-table-wasm" }
 # the engine of the plans of the graphical Flow (`flow/run`): the same one as `cargo run -p mzlab-cli --example flow`
 mzlab-cli = { path = "../mzlab-cli" }
+# the assistant: providers, request and answer decoding (the key and the network stay in this crate)
+mzlab-llm = { path = "../mzlab-llm" }
 memmap2 = "0.9"
 # the builds of the .mzidx of several files run on a thread pool (native only, never in the WASM graph)
 rayon = "1"
@@ -38,6 +40,8 @@ sha2 = "0.11"
 ureq = { version = "2", default-features = false, features = ["tls"] }
 tauri = { version = "2", optional = true }
 tauri-plugin-dialog = { version = "2", optional = true }
+# a second launch (double click on a file with the app open) hands its arguments to the running window instead of opening another one
+tauri-plugin-single-instance = { version = "2.5.4", optional = true }
 
 [build-dependencies]
 tauri-build = { version = "2", optional = true }

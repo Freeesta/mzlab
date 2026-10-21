@@ -46,6 +46,20 @@ fn only_single_mzml_and_raw_files_are_taken() {
 }
 
 #[test]
+fn second_launch_argv_skips_the_program_and_resolves_against_its_cwd() {
+    let t = tempfile::tempdir().unwrap();
+    let d = t.path();
+    std::fs::write(d.join("x.mzML"), b"x").unwrap();
+    // what the single-instance plugin hands over: the program name first, then the relative file
+    let argv: Vec<String> = ["mzlab", "x.mzML"].iter().map(|x| x.to_string()).collect();
+    assert_eq!(
+        paths_from_args(argv.get(1..).unwrap_or_default(), Some(d)),
+        vec![d.join("x.mzML")]
+    );
+    assert!(paths_from_args([].as_slice(), Some(d)).is_empty());
+}
+
+#[test]
 fn pending_queue_keeps_order_and_is_emptied_once() {
     let q = Pending::default();
     q.push(["/x/a.mzML".into(), "/x/b.mzML".into()]);

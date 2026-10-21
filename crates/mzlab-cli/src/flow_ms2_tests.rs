@@ -151,9 +151,11 @@ fn threshold_and_isolation_window_filter_the_scans() {
 fn descriptor_export_is_up_to_date() {
     let text = mzlab_core::step::json::registry_json(&[
         crate::flow::table_step(),
+        crate::flow_centroid::centroid_step(),
         crate::flow_ms2::ms2_step(),
         crate::flow_msngraph::msn_graph_step(),
         crate::flow_compare::compare_step(),
+        crate::flow_digl::dig_lr_step(),
     ]);
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/schemi/steps-cli-1.json");
     if std::env::var_os("MZLAB_UPDATE_STEPS").is_some() {
