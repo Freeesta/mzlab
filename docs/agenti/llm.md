@@ -1,5 +1,5 @@
-# LLM: catalogo degli strumenti (`crates/mzlab-llm`)
-Studio e piano a PR: `docs/studi/llm/README.md`. Il crate `mzlab-llm` (membro del workspace, dipende solo da `mzlab-core`, nessuna rete, nessuna chiave) è usato da `mzlab-cli llm`; nessun `.wasm` lo include.
+# LLM: strumenti, fornitori e registrazioni (`crates/mzlab-llm`)
+Studio e piano a PR: `docs/studi/llm/README.md`. Il crate `mzlab-llm` (membro del workspace, dipende solo da `mzlab-core`, nessuna rete, nessuna chiave) è usato da `mzlab-cli llm`; nessun `.wasm` lo include (arriva con il trasporto).
 
 ## Catalogo `strumenti/1`
 - `mzlab_llm::tools::catalog(&[Step], &[UiTool], &dyn Fn(&str)->bool) -> Vec<Tool>` e `catalog_json(..) -> String`: 15 meta-strumenti fissi (`flow_list_steps`, `flow_describe_step`, `flow_get_plan`, `flow_check`, `flow_propose_plan`, `flow_add_step`, `flow_set_param`, `flow_remove_step`, `flow_run`, `flow_status`, `flow_read_result`, `data_summary`, `chart_make`, `code_export`, `ui_show`), ognuno con `class` (`read|propose|edit|run|ui`) e `input_schema` JSON Schema 2020-12.
@@ -7,6 +7,21 @@ Studio e piano a PR: `docs/studi/llm/README.md`. Il crate `mzlab-llm` (membro de
 - `registry_sha256` = SHA-256 di `registry_json(steps)`. `UI_TOOLS` è l'elenco chiuso di `ui_show` (`show_xic` → `spec.xic`, `show_spectrum_at_rt` → `chrom.specAtRt`, `show_row` → `table.showRow`, `select_node` → `flow.selectNode`; gli ultimi due id si registrano nelle PR della pagina, elenco `NOT_YET` in `tests/test_strumenti.py`, che si accorcia soltanto).
 - `mzlab-cli llm tools [--out FILE]` (`crates/mzlab-cli/src/llm.rs`) stampa il catalogo; `docs/schemi/strumenti-1.json` è la sua esportazione (`MZLAB_UPDATE_STEPS=1 cargo test -p mzlab-cli --lib llm_tools` la riscrive).
 
+## Fornitori `llm-provider/1` e adattatori (`provider/`)
+- `provider::builtin()` legge `data/fornitori-1.json` (anthropic, openai, gemini, ollama locale): i prezzi `price_per_mtok` sono 0 = sconosciuto, nessun numero inventato (un test lo vieta). `Provider::parse` legge un descrittore dell'utente. Schemi: `docs/schemi/{llm-provider-1,llm-conv-1,llmlog-1,llmreg-1}.json`.
+- `provider::request(&Provider, &Conversation, &[Tool]) -> Result<Request>`: `{url, headers, body, auth: AuthSlot{header, prefix}}`, mai la chiave (header vuoto = nessuna chiave, server locali). `tools: native` manda gli schemi nel campo del fornitore, `prompted` li mette nel testo di sistema, `none` non li manda; un'immagine verso un modello senza `vision` e un fornitore o modello sconosciuto danno `err.llm.conversation`.
+- `Conversation` (`conv.rs`, `llm-conv/1`; il testo di sistema è il campo `system`); adattatori `anthropic`, `openai` (Chat Completions e compatibili), `gemini` (schema in `parametersJsonSchema`; il risultato di uno strumento porta il nome dalla chiamata con lo stesso id).
+- `provider::Stream::new(Adapter)` con `push(&[u8]) -> Vec<Event>` e `finish() -> Vec<Event>`: le righe SSE (`sse.rs`) e i byte UTF-8 possono essere spezzati ovunque, il JSON di una tool-call esce a pezzi in `tool_call_delta`. Uno stream finito senza `stop` dà `err.llm.network` (`reason=truncated`). `.prompted()` legge il primo blocco ```json `{"tool":NOME,"args":{}}` della risposta e lo emette come tool-call (id `prompted-1`, `stop` = `tool`); i `text_delta` già emessi restano.
+- `provider::http_error(status, body) -> Event`: 401/403 `auth`, 429/529 `rate`, 413 o parole di contesto `context`, 408/5xx `network`, altro `bad_response` (`err.llm.*`); un messaggio che somiglia a una chiave si scarta.
+- `event.rs`: `Event` = `text_delta`, `tool_call_start/delta/end`, `usage{in,out,cache_read}`, `stop{end|tool|length|refusal}`, `error{key,params}`; `to_json()` una riga a chiavi ordinate.
+
+## Registrazioni, log, costo
+- `fake::Replay::parse(testo, strict)` legge `llmreg/1` (una riga per turno: `events`, `request_sha256`); `respond(&Request)` dà il turno successivo, `at(n, &Request)` il turno n, `reset()` ricomincia. `strict` confronta lo SHA-256 del corpo (`err.llm.replay.mismatch`); `record_line` scrive una riga. Errori: `replay.exhausted`, `replay.format`.
+- `log::Log::event(turn, &Event)` costruisce `llmlog/1` in memoria (chi chiama scrive il file); `log::has_secret` rifiuta `sk-`, `sk-ant-`, `AIza` a inizio parola seguiti da un carattere (`err.llm.log.secret`).
+- `cost::estimate(&Usage, &Model) -> Option<f64>`: nella valuta del prezzo; `None` se `in` o `out` è 0.
+- `mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]`: gli eventi di un turno, una riga per evento (`docs/agenti/cli.md`).
+
 ## Prove
 - `cargo test -p mzlab-cli --lib llm_tools` (`llm_tools_tests.rs`): ogni passo nell'enum, nomi di `flow_set_param` = nomi di `--set` (stesso giro di `flow_rule_tests.rs`), default dentro i limiti, file = esportazione, byte stabili.
+- `cargo test -p mzlab-llm` (`tests/adattatori.rs`, file in `tests/data/`): corpo di ogni richiesta = `req_*.json`; ogni `*.sse` e `*.http` sintetico = `*.events`, anche spezzato a 1, 2, 7 byte; `Replay`, `strict`, `Log`, `cost`. `MZLAB_UPDATE_LLM=1` riscrive i file attesi. `cargo test -p mzlab-cli --lib llm_replay` prova il sottocomando su `tests/data/llm/`.
 - `tests/test_strumenti.py`: JSON Schema valido, id di `ui_show` registrati in `mzlab/web`, nessuna parola italiana.
