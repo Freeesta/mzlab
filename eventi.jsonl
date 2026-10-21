@@ -198,3 +198,4 @@
 {"ts_utc":"2026-10-21T21:39:29Z","tipo":"job_fallito","workflow":"test","job":"browser (ubuntu-latest, chromium)","esito":"cancelled","durata_s":89,"categoria":"annullato","passo":null,"pr":1378,"sha":"d09b922d3e92309438c03d5c2bab28888ab3ffb4","run_id":39680339640,"run_attempt":1}
 {"ts_utc":"2026-10-21T21:39:34Z","tipo":"job_fallito","workflow":"test","job":"pytest (ubuntu-latest, 3.11)","esito":"cancelled","durata_s":90,"categoria":"annullato","passo":null,"pr":1378,"sha":"d09b922d3e92309438c03d5c2bab28888ab3ffb4","run_id":39680339640,"run_attempt":1}
 {"ts_utc":"2026-10-21T21:39:29Z","tipo":"job_fallito","workflow":"test","job":"pytest (ubuntu-latest, 3.14)","esito":"cancelled","durata_s":80,"categoria":"annullato","passo":null,"pr":1378,"sha":"d09b922d3e92309438c03d5c2bab28888ab3ffb4","run_id":39680339640,"run_attempt":1}
+{"ts_utc":"2026-10-21T21:41:12Z","azione":"push","tipo":"pr","pr":1378,"sha":"916d57f24c87edf90898dbcf234791c886894152"}
