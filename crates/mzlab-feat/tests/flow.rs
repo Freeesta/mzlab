@@ -5,7 +5,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{
-    canonical, check, execute, parse, prov_json, Agent, Artifact, Job, Outcome, Platform, Runner,
+    canonical, check, execute, parse, prov_json, prov_json_llm, Agent, Artifact, Job, LlmRef,
+    Outcome, Platform, Runner,
 };
 use mzlab_feat::steps::registry;
 
@@ -354,4 +355,22 @@ fn a_plan_with_problems_does_not_start() {
     )
     .unwrap_err();
     assert_eq!(e.key, "err.flow.check");
+}
+
+#[test]
+fn prov_json_llm_adds_only_the_llm_block() {
+    let run = mzlab_core::flow::Run::default();
+    let plain = prov_json(&agent(), Some("p"), &run);
+    assert_eq!(prov_json_llm(&agent(), Some("p"), &run, None), plain);
+    let llm = LlmRef {
+        log_sha256: "ab".repeat(32),
+        turn: 2,
+        provider: "anthropic".into(),
+        model: "m".into(),
+        level: "L1".into(),
+    };
+    let with = prov_json_llm(&agent(), Some("p"), &run, Some(&llm));
+    let head = plain.trim_end().trim_end_matches('}');
+    assert!(with.starts_with(head) && with.contains(",\"llm\":{\"log_sha256\":\""));
+    assert!(with.trim_end().ends_with("\"level\":\"L1\"}}"));
 }

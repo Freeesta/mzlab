@@ -143,8 +143,8 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const hasRef = q => !!q.get("ref");
   // Returns { status, text } or null (the route is unavailable: browser.js answers err.route.unavailable).
   api.handle = async (method, url, init) => {
-    if (!api.enabled || api.disabled || (method !== "GET" && !(method === "POST" && /\/api\/msnlib\/aggiungi$/.test(url))) || !worker) return null;
-    const u = new URL(url, "http://x/"), q = u.searchParams, path = u.pathname;
+    const u = new URL(url, "http://x/"), q = u.searchParams, path = u.pathname;   // the page asks with a relative url ("api/..."): the checks use the resolved path
+    if (!api.enabled || api.disabled || (method !== "GET" && !(method === "POST" && path === "/api/msnlib/aggiungi")) || !worker) return null;
     const level = num(q, "level", 1), px = Math.max(0, num(q, "px", 0) | 0);
     const t0 = performance.now();
     const k0 = num(q, "k", -1);

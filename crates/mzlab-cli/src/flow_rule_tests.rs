@@ -22,7 +22,6 @@ const BUCHI: &[&str] = &[
     "annot.hazard",
     "structure.render",
     "structure.reactivity",
-    "table.pca",
 ];
 
 fn default_num(p: &Param) -> Option<f64> {

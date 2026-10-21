@@ -1,0 +1,12 @@
+{
+ "expect": {
+  "max_calls": 0,
+  "text_contains": [
+   "retention"
+  ]
+ },
+ "id": "E10",
+ "level": "L2",
+ "request": "What does RT mean?",
+ "schema": "llm-eval/1"
+}
