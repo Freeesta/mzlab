@@ -280,7 +280,7 @@ pub(crate) fn read_one(r: &FileRunner, job: &Job, port: &str) -> Result<Loaded> 
     load(one_input(r, job, port)?)
 }
 
-fn read_all(r: &FileRunner, job: &Job, port: &str) -> Result<Vec<Loaded>> {
+pub(crate) fn read_all(r: &FileRunner, job: &Job, port: &str) -> Result<Vec<Loaded>> {
     all_inputs(r, job, port).into_iter().map(load).collect()
 }
 
@@ -288,7 +288,7 @@ fn named(v: &[Loaded]) -> Vec<Named<'_>> {
     v.iter().map(|f| (f.0.as_str(), f.1.as_slice())).collect()
 }
 
-fn blobs(v: &[Loaded]) -> Vec<&[u8]> {
+pub(crate) fn blobs(v: &[Loaded]) -> Vec<&[u8]> {
     v.iter().map(|f| f.1.as_slice()).collect()
 }
 
@@ -351,18 +351,6 @@ fn msn_graph_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let text = crate::flow_msngraph::msn_graph_text(job, &file, &tmp);
     let _ = std::fs::remove_dir_all(&tmp);
     write_made(r, job, text?, DataType::Report)
-}
-
-fn compare_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let text_of = |name: &str| {
-        let found = job.resolved.params.iter().find(|(k, _)| k == name);
-        found.and_then(|(_, v)| v.str()).unwrap_or("").to_string()
-    };
-    let (step, labels) = (text_of("step"), text_of("labels"));
-    let files = read_all(r, job, "variants")?;
-    let labels: Vec<&str> = labels.split(',').collect();
-    let text = crate::flow_compare::compare_text(&step, &labels, &blobs(&files))?;
-    write_made(r, job, text, DataType::Comparison)
 }
 
 fn network_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
@@ -432,10 +420,21 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "tp.position",
         Exec::File("sites", crate::flow_position::position_job),
     ),
-    ("meta.compare", Exec::File("comparison", compare_job)),
+    (
+        "meta.compare",
+        Exec::File("comparison", crate::flow_compare::compare_job),
+    ),
     (
         "export.inclusion",
         Exec::File("report", crate::flow_inclusion::inclusion_job),
+    ),
+    (
+        "export.table_csv",
+        Exec::File("report", crate::flow_export::csv_job),
+    ),
+    (
+        "export.mztab",
+        Exec::File("report", crate::flow_export::mztab_job),
     ),
 ];
 

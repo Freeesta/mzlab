@@ -16,8 +16,6 @@ const BUCHI: &[&str] = &[
     "table.drift",
     // included in features.detect (pipeline::analyse links the MS2 in the same pass), not separable without changing the bytes
     "features.ms2_link",
-    "export.table_csv",
-    "export.mztab",
     "spectra.chimeric",
     "spectra.insilico",
     "rt.predict",
