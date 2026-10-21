@@ -261,7 +261,7 @@ pub(super) fn ms2_link() -> Step {
         ..Step::core(
             "features.ms2_link",
             "Link MS2 scans",
-            "Attaches to each peak the MS2 scans whose precursor lies in the peak and in the isolation window, with the purity of the precursor.",
+            "Attaches to each peak the MS2 scans whose precursor lies in the peak and in the isolation window, with the purity of the precursor. Today this runs inside `features.detect` (one pass over the index), so it has no executor of its own: taking it out would change the bytes of the feature files.",
         )
     }
 }

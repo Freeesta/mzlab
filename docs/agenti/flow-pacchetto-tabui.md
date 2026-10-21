@@ -12,7 +12,7 @@ Per ogni passo: (1) registra il descrittore nel registro del CLI (`flow::steps()
 3. **`tp.link`** (ingressi `table`, `spectra`, `hypotheses`; uscita `tp`): abbinamento ipotesi ↔ feature in `crates/mzlab-feat/src/steps/tabui_link.rs` (descrittore) e nel codice che costruisce `tp/1` (`interp/`, `evid.rs`); l'uscita `tp/1` è l'ingresso già accettato da `tp.network` (`flow_network.rs`).
 4. **`tp.filter`** (ingresso `table`; uscita `table`): filtri dei prodotti di `crates/mzlab-feat/src/interp/filtri.rs` (`filtri/1`), stessa forma di `table.filter` ma sulle righe `tp/1`.
 5. **`tp.position`** (ingressi `tp`, `parent`; uscita `sites`): `posiz/1`, vedi `docs/agenti/posizioni.md` (`chem/posizioni.rs`); prova: classi compatibili con la MS2 identiche a quelle della pagina.
-6. **`features.ms2_link`** (ingressi `index`, `peaks`; uscita `peaks`): `crates/mzlab-feat/src/ms2.rs` (`link`) e, per la bassa risoluzione, `crates/mzlab-finder-lr-wasm/src/ms2link.rs`; parità con `tests/lr_ms2link.rs`.
+6. **`features.ms2_link`** (NON FATTO per scelta: incluso in `features.detect`, non separabile senza cambiare i byte; resta in `BUCHI` con il motivo) (ingressi `index`, `peaks`; uscita `peaks`): `crates/mzlab-feat/src/ms2.rs` (`link`) e, per la bassa risoluzione, `crates/mzlab-finder-lr-wasm/src/ms2link.rs`; parità con `tests/lr_ms2link.rs`.
 
 ## Quando finisce il pacchetto
 - Il piano del modello «TP time series» (`tp.generate` → `tp.link` → `tp.filter` → `table.filter` → `tp.network`) gira con `flow run` e rifà la corsa con gli stessi byte (test di cache e di rigioco come in `flow_run_tests.rs`).
