@@ -13,6 +13,7 @@ export const TXT = {
     "warn.msngrafo.isolation": "warn.msngrafo.isolation", "warn.msngrafo.precNotFound": "warn.msngrafo.precNotFound", "warn.msngrafo.polarity": "warn.msngrafo.polarity",
     "warn.msngrafo.badFormula": "warn.msngrafo.badFormula", "warn.msngrafo.rootMissing": "warn.msngrafo.rootMissing", "warn.msngrafo.fixedNotFound": "warn.msngrafo.fixedNotFound",
     "warn.msngrafo.userConflict": "warn.msngrafo.userConflict", "warn.msngrafo.isolatedUnexplained": "warn.msngrafo.isolatedUnexplained",
+    "warn.msngrafo.structMixture": "warn.msngrafo.structMixture",
   },
 };
 
@@ -92,6 +93,20 @@ export async function fetchGraph(/** @type {number} */ k) {
     G.error = /** @type {any} */ (e).message || String(e);
   }
   return true;
+}
+
+/** @type {Map<string, any>} */
+const cuts = new Map();
+
+/**
+ * The cleavages of the SMILES of the tab that explain a node (the key `strutture` of msngrafo/1): the graph request plus `strutture=<id>`.
+ * Null when there is no SMILES, no ion, the node is a root, the engine answers without the key or the request fails.
+ */
+export async function fetchStrutture(/** @type {any} */ n) {
+  if (!G.smiles || !G.j || !ionText() || n.livello < 2) return null;
+  const url = graphUrl(G.k) + "&strutture=" + n.id;
+  if (!cuts.has(url)) cuts.set(url, J(url).then((/** @type {any} */ j) => j.strutture || null).catch(() => null));
+  return cuts.get(url);
 }
 
 /** The node of the answer by id. */

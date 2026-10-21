@@ -647,6 +647,7 @@
   "msngrafo.node.title": "Titolo del pannello di uno ione: livello MS {level} e m/z {mz}.",
   "msngrafo.unexp": "Quanti picchi degli spettri dello ione il grafo non ha spiegato ({n}); segue l'elenco dei più intensi.",
   "msngrafo.use.tip": "Suggerimento del pulsante «Usa»: {f} = formula candidata scelta per lo ione.",
+  "msngrafo.str.show.tip": "Suggerimento del pulsante «Mostra» di un taglio candidato: {bond} = etichetta del legame, per esempio C2-O3.",
   "warn.msngrafo.fixedNotFound": "Avviso: la formula scelta dall'utente non è tra i candidati del nodo; {node} = m/z del nodo.",
   "warn.msngrafo.isolatedUnexplained": "Avviso: un precursore isolato non ha formule candidate ed è stato tolto; {node} = m/z.",
   "warn.msngrafo.isolation": "Avviso: più picchi nella finestra d'isolamento; {node} = m/z del nodo.",

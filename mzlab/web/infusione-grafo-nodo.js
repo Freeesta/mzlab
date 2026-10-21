@@ -1,7 +1,7 @@
 // @ts-check
 // The panel of the selected ion of the «Fragmentation graph»: its candidate formulas (error, evidences, «Use»), the isolation window, the peaks of its spectra
 // the graph could not explain, the warnings of the node and a drawing box (the fragment the user draws, kept next to the node: a hypothesis, not a result).
-import { G, TXT, ionText, useCandidate } from "./infusione-grafo-stato.js";
+import { G, TXT, ionText, useCandidate, fetchStrutture } from "./infusione-grafo-stato.js";
 
 const ST = "mzlab.infg.frag";
 /** @returns {Record<string, { smiles: string, svg: string }>} */
@@ -50,7 +50,43 @@ const warnings = (/** @type {any} */ n) => G.j.avvisi.filter((/** @type {any} */
 function drawBox(/** @type {any} */ n) {
   const v = savedFrag(n);
   const pic = v ? `<div class="ig-pic" role="img" aria-label="${EH(I18N.t("msngrafo.draw.aria", { smi: v.smiles }))}">${window.MOLUI ? MOLUI.svg(v.svg) : ""}</div><code class="sm">${EH(v.smiles)}</code>` : `<p class="muted sm">${EH(I18N.t("msngrafo.draw.none"))}</p>`;
-  return `<div class="ig-draw"><b class="sm">${EH(I18N.t("msngrafo.draw.title"))}</b>${pic}<div class="row"><button type="button" class="bt" data-a="draw" title="${EH(I18N.t("msngrafo.draw.go.tip"))}">${EH(I18N.t("msngrafo.draw.go"))}</button><button type="button" class="bt" data-a="save" title="${EH(I18N.t("msngrafo.draw.save.tip"))}">${EH(I18N.t("msngrafo.draw.save"))}</button>${v ? `<button type="button" class="bt" data-a="del">${EH(I18N.t("msngrafo.draw.del"))}</button>` : ""}</div><p class="muted sm">${EH(I18N.t("msngrafo.draw.hyp"))}</p></div>`;
+  return `<div class="ig-draw"><b class="sm">${EH(I18N.t("msngrafo.draw.title"))}</b>${pic}<div class="row"><button type="button" class="bt" data-a="draw" title="${EH(I18N.t("msngrafo.draw.go.tip"))}">${EH(I18N.t("msngrafo.draw.go"))}</button><button type="button" class="bt" data-a="save" title="${EH(I18N.t("msngrafo.draw.save.tip"))}">${EH(I18N.t("msngrafo.draw.save"))}</button>${v ? `<button type="button" class="bt" data-a="del">${EH(I18N.t("msngrafo.draw.del"))}</button>` : ""}</div><p class="muted sm">${EH(I18N.t("msngrafo.draw.hyp"))}</p><div class="ig-str"></div></div>`;
+}
+
+/** One row per cut of the cleavage candidates (the candidates are ordered by error): bond, atoms of the piece that carries the charge, m/z, error, explained peaks. */
+function cutsTable(/** @type {any} */ s) {
+  const rows = [];
+  s.candidati.forEach((/** @type {any} */ c, /** @type {number} */ i) => c.tagli.forEach((/** @type {any} */ t, /** @type {number} */ k) => rows.push({ i, k, t })));
+  if (!rows.length) return h`<p class="muted sm">${I18N.t("msngrafo.str.none")}</p>`;
+  const body = rows.slice(0, 20).map(({ i, k, t }) => {
+    const peaks = t.picchi.map((/** @type {any} */ p) => p.mz.toFixed(4)).join(", ") || "—";
+    return h`<tr><th scope="row">${t.legame.etichetta}</th><td class="num">${t.pezzo.length}</td><td class="num">${t.mz_teorico.toFixed(5)}</td><td class="num">${ppmTxt(t.ppm)}</td><td>${peaks}</td><td><button type="button" class="bt ig-cut" data-i="${i}" data-k="${k}" title="${I18N.t("msngrafo.str.show.tip", { bond: t.legame.etichetta })}" aria-label="${I18N.t("msngrafo.str.show.tip", { bond: t.legame.etichetta })}">${I18N.t("msngrafo.str.show")}</button></td></tr>`;
+  });
+  const head = ["msngrafo.str.col.bond", "msngrafo.str.col.atoms", "msngrafo.col.mz", "msngrafo.col.err", "msngrafo.str.col.peaks", ""].map(k => raw(h`<th scope="col">${k ? I18N.t(k) : ""}</th>`));
+  const more = rows.length > 20 ? h`<p class="muted sm">${I18N.t("msngrafo.more", { n: rows.length - 20 })}</p>` : "";
+  return h`<table class="ig-cuts"><caption class="sr-only">${I18N.t("msngrafo.str.cap")}</caption><thead><tr>${head}</tr></thead><tbody>${body.map((/** @type {string} */ r) => raw(r))}</tbody></table>${raw(more)}`;
+}
+
+/** Fills `.ig-str` of a node panel with the cleavage candidates, if the engine gives them; a click shows the broken bond in the drawing. */
+async function fillCuts(/** @type {HTMLElement} */ host, /** @type {any} */ n) {
+  const box = host.querySelector(".ig-str"); if (!box) return;
+  const s = await fetchStrutture(n);
+  if (!s || !box.isConnected) return;
+  const warn = s.avvisi.map((/** @type {string} */ a) => h`<p class="sm ig-warn">${I18N.t(/** @type {any} */ (TXT.warn)[a])}</p>`).join("");
+  box.innerHTML = h`<b class="sm">${I18N.t("msngrafo.str.title")}</b>` + warn + cutsTable(s) + h`<p class="muted sm">${I18N.t("msngrafo.str.hyp")}</p>`;
+  box.querySelectorAll(".ig-cut").forEach(b => b.addEventListener("click", () => {
+    const d = /** @type {HTMLElement} */ (b).dataset;
+    showCut(s.candidati[+(d.i || 0)].tagli[+(d.k || 0)].legame.atomi);
+  }));
+}
+
+/** Opens Draw with the SMILES of the tab and marks the bond between two atoms (their order in the SMILES). */
+async function showCut(/** @type {number[]} */ atoms) {
+  if (typeof setView === "function") setView("draw");
+  try {
+    await TPDraw.load(G.smiles);
+    if (!(await TPDraw.mark([atoms]))) nearMsg(I18N.t("msngrafo.str.nomark"));
+  } catch (e) { console.info("INFG cut", e); nearMsg(I18N.t("msngrafo.draw.notReady")); }
 }
 
 async function openDraw(/** @type {any} */ n) {
@@ -72,6 +108,7 @@ async function saveDrawing(/** @type {any} */ n) {
 export function nodePanel(/** @type {HTMLElement} */ host, /** @type {any} */ n, /** @type {{ redo: () => void, again: () => void }} */ cb) {
   if (!n) { host.innerHTML = h`<p class="muted sm">${I18N.t("msngrafo.pick")}</p>`; return; }
   host.innerHTML = h`<h4>${I18N.t("msngrafo.node.title", { level: n.livello, mz: n.mz.toFixed(4) })}</h4>` + candidates(n) + isolation(n) + unexplained(n) + warnings(n) + drawBox(n);
+  fillCuts(host, n);
   host.querySelectorAll(".ig-use").forEach(b => b.addEventListener("click", () => {
     useCandidate(n, /** @type {string} */ (/** @type {HTMLElement} */ (b).dataset.f)); cb.redo();
   }));
