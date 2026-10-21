@@ -26,6 +26,25 @@ const CSS = `.molc{position:relative;display:flex;flex-direction:column;gap:4px;
 
 let seq = 0;
 
+/** The elements of the box: label, input, listbox and the status line that the screen readers hear; `-i`, `-b`, `-l` ids tie them with ARIA. */
+function costruisci(/** @type {string} */ id, /** @type {TestiCampo} */ testi) {
+  const el = (/** @type {string} */ tag, /** @type {Record<string, string>} */ attr) => {
+    const e = document.createElement(tag);
+    for (const k in attr) e.setAttribute(k, attr[k]);
+    return e;
+  };
+  const root = el("div", { class: "molc" });
+  const label = el("label", { id: id + "-l", for: id + "-i" });
+  label.textContent = testi.label;
+  const input = /** @type {HTMLInputElement} */ (el("input", { id: id + "-i", type: "text", role: "combobox", "aria-autocomplete": "list", "aria-expanded": "false", "aria-controls": id + "-b", autocomplete: "off", spellcheck: "false" }));
+  if (testi.placeholder) input.placeholder = testi.placeholder;
+  const lista = el("ul", { id: id + "-b", role: "listbox", "aria-labelledby": id + "-l" });
+  lista.hidden = true;
+  const stato = el("span", { class: "molc-sr", role: "status", "aria-live": "polite" });
+  root.append(label, input, lista, stato);
+  return { root, input, lista, stato };
+}
+
 /**
  * Builds the search box inside `host`. Returns `input` (for the caller's focus), `set` (writes the text without searching) and `destroy`.
  * @param {HTMLElement} host
@@ -34,13 +53,7 @@ let seq = 0;
 export function campo(host, opz) {
   if (!document.getElementById(STYLE_ID)) { const st = document.createElement("style"); st.id = STYLE_ID; st.textContent = CSS; document.head.appendChild(st); }
   const { testi } = opz, id = "molc" + ++seq;
-  const root = document.createElement("div");
-  root.className = "molc";
-  root.innerHTML = `<label id="${id}-l" for="${id}-i"></label><input id="${id}-i" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${id}-b" autocomplete="off" spellcheck="false"><ul id="${id}-b" role="listbox" aria-labelledby="${id}-l" hidden></ul><span class="molc-sr" role="status" aria-live="polite"></span>`;
-  const q = (/** @type {string} */ s) => /** @type {HTMLElement} */ (root.querySelector(s));
-  const input = /** @type {HTMLInputElement} */ (q("input")), lista = q("ul"), stato = q(".molc-sr");
-  q("label").textContent = testi.label;
-  if (testi.placeholder) input.placeholder = testi.placeholder;
+  const { root, input, lista, stato } = costruisci(id, testi);
   if (opz.valore) input.value = opz.valore;
   if (opz.gestisci !== null && testi.manage) {
     const b = document.createElement("button");
