@@ -190,12 +190,22 @@
    "maxItems": 8,
    "items": {
     "type": "object",
-    "required": ["formula", "mz_teorico", "ppm"],
+    "required": [
+     "formula",
+     "mz_teorico",
+     "ppm"
+    ],
     "additionalProperties": false,
     "properties": {
-     "formula": { "type": "string" },
-     "mz_teorico": { "type": "number" },
-     "ppm": { "type": "number" }
+     "formula": {
+      "type": "string"
+     },
+     "mz_teorico": {
+      "type": "number"
+     },
+     "ppm": {
+      "type": "number"
+     }
     }
    }
   },
@@ -694,6 +704,212 @@
           "null"
          ],
          "pattern": "^n[0-9]+$"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "strutture": {
+   "type": "object",
+   "additionalProperties": false,
+   "description": "Present only when asked (mzlab-cli msn-graph --strutture NODO): the cleavages of the structure (opzioni.smiles) of ONE node whose piece gives its m/z. Candidates with their evidence, never identifications: the broken bond is a hypothesis. The rest of the document keeps its bytes without it.",
+   "required": [
+    "nodo",
+    "smiles",
+    "mz",
+    "ppm_tol",
+    "atomi",
+    "legami",
+    "avvisi",
+    "candidati"
+   ],
+   "properties": {
+    "nodo": {
+     "type": "string",
+     "pattern": "^n[0-9]+$"
+    },
+    "smiles": {
+     "type": "string"
+    },
+    "mz": {
+     "type": "number"
+    },
+    "ppm_tol": {
+     "type": "number"
+    },
+    "atomi": {
+     "type": "integer",
+     "minimum": 0,
+     "description": "Heavy atoms of the structure (0 for a mixture)"
+    },
+    "legami": {
+     "type": "integer",
+     "minimum": 0,
+     "description": "Bonds that can be cleaved (acyclic single bonds, at most 400)"
+    },
+    "avvisi": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "enum": [
+       "warn.msngrafo.structMixture"
+      ]
+     }
+    },
+    "candidati": {
+     "type": "array",
+     "description": "Ordered by |ppm|, then m/z",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "formula",
+       "mz_teorico",
+       "ppm",
+       "tagli"
+      ],
+      "properties": {
+       "formula": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "description": "The candidate formula of the node with this m/z, null when the node has none"
+       },
+       "mz_teorico": {
+        "type": "number"
+       },
+       "ppm": {
+        "type": "number",
+        "description": "Smallest distance of a cleavage from the m/z of the node"
+       },
+       "tagli": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "required": [
+          "legame",
+          "lato",
+          "pezzo",
+          "resto",
+          "formula",
+          "variante",
+          "perdita",
+          "mz_teorico",
+          "ppm",
+          "picchi"
+         ],
+         "properties": {
+          "legame": {
+           "type": "object",
+           "additionalProperties": false,
+           "required": [
+            "idx",
+            "atomi",
+            "etichetta"
+           ],
+           "properties": {
+            "idx": {
+             "type": "integer",
+             "minimum": 0,
+             "description": "Index of the bond in the structure graph"
+            },
+            "atomi": {
+             "type": "array",
+             "minItems": 2,
+             "maxItems": 2,
+             "items": {
+              "type": "integer",
+              "minimum": 0
+             },
+             "description": "The two atoms of the bond, 0-based as the atoms of the SMILES"
+            },
+            "etichetta": {
+             "type": "string",
+             "description": "For example C2-O3 (element and 1-based atom number)"
+            }
+           }
+          },
+          "lato": {
+           "type": "integer",
+           "enum": [
+            1,
+            2
+           ],
+           "description": "The side of the bond that carries the charge"
+          },
+          "pezzo": {
+           "type": "array",
+           "items": {
+            "type": "integer",
+            "minimum": 0
+           },
+           "description": "Atoms of the piece that carries the charge"
+          },
+          "resto": {
+           "type": "array",
+           "items": {
+            "type": "integer",
+            "minimum": 0
+           },
+           "description": "Atoms of the other piece"
+          },
+          "formula": {
+           "type": "string",
+           "description": "Neutral formula of the piece, with the hydrogen that replaces the bond"
+          },
+          "variante": {
+           "type": "string",
+           "description": "ion, radical, -H2O, -2H2O, -CO, -CO2 or -NH3: the form that gives the m/z of the node"
+          },
+          "perdita": {
+           "type": "string"
+          },
+          "mz_teorico": {
+           "type": "number"
+          },
+          "ppm": {
+           "type": "number"
+          },
+          "picchi": {
+           "type": "array",
+           "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+             "mz",
+             "rel",
+             "ppm",
+             "formula",
+             "perdita"
+            ],
+            "properties": {
+             "mz": {
+              "type": "number"
+             },
+             "rel": {
+              "type": "number",
+              "description": "% of the base peak of the spectrum of the node"
+             },
+             "ppm": {
+              "type": "number"
+             },
+             "formula": {
+              "type": "string",
+              "description": "Form of the piece that gives this peak (with the loss)"
+             },
+             "perdita": {
+              "type": "string",
+              "description": "Neutral loss of the form, \"\" for the ion itself"
+             }
+            }
+           },
+           "description": "Peaks of the spectrum of the node that the same piece also explains"
+          }
+         }
         }
        }
       }

@@ -9,3 +9,4 @@ mod grafo_record;
 mod gruppi;
 pub mod posizioni;
 mod smiles;
+pub mod strutture;

@@ -9,7 +9,7 @@ use mzlab_core::elements::{fmt, parse_formula};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out};
 use mzlab_core::msnalbero::Raggruppa;
-use mzlab_core::msngrafo::{esporta, grafo_json, Formato, Grafo, Opzioni};
+use mzlab_core::msngrafo::{con_strutture, esporta, grafo_json, Formato, Grafo, Opzioni};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 
 pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/1) of an MSn infusion.
@@ -19,7 +19,10 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
        mzlab-cli msn-graph compare A.json B.json [--out PATH]
 
   --formula ION        the ion of the root: C13H25N4O3S+, C13H24N4O3S+H or \"C13H24N4O3S [M+H]+\"; without it, masses only
-  --smiles TEXT        written back in the JSON
+  --smiles TEXT        written back in the JSON; with --strutture, the structure that is cleaved
+  --strutture NODO     add to the JSON the key `strutture`: the bonds of --smiles whose cleavage gives the m/z of the node nK of the graph (candidates, with the
+                       ppm and the peaks of its spectrum that the same piece explains)
+  --ppm-struttura N    window of those cleavages, ppm (10)
   --ppm-formula N      window of the sub-formulas, ppm (10)
   --mz-basso N         below this m/z the window may widen (150)
   --ppm-basso N        the wider window, ppm (20), for a candidate with --prove-min evidences (1)
@@ -37,12 +40,16 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
   compare              validates a tree measured twice: two msngrafo/1 files in, a JSON (msnconfronto/1) out with the numbers of the five criteria
                        (isolated nodes, arcs of rel >= 10 %, formulas, MS2 entropy >= 0.8 per energy, m/z shift <= 3 ppm) and `convalidata`";
 
+/// Default window of the cleavages of `--strutture`, ppm.
+pub const PPM_STRUTTURA: f64 = 10.0;
+
 pub struct Args {
     pub(crate) file: PathBuf,
     pub(crate) o: Opzioni,
     verita: Option<PathBuf>,
     riassunto: bool,
     export: Option<(Formato, bool, Option<String>)>,
+    strutture: Option<(String, f64)>,
     pub out: Option<PathBuf>,
 }
 
@@ -58,6 +65,7 @@ pub fn parse_args(
     let (mut file, mut o) = (None, Opzioni::default());
     let (mut verita, mut riassunto, mut out) = (None, false, None);
     let (mut export, mut pulito, mut nodo) = (None, false, None);
+    let (mut strutture, mut ppm_struttura) = (None, PPM_STRUTTURA);
     while let Some(x) = a.next() {
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
@@ -84,6 +92,8 @@ pub fn parse_args(
             }
             "--pulito" => pulito = true,
             "--nodo" => nodo = a.next(),
+            "--strutture" => strutture = a.next(),
+            "--ppm-struttura" => ppm_struttura = numero(a.next(), &x)?,
             "--out" => out = a.next().map(PathBuf::from),
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),
             f => return Err(format!("unknown argument {f}")),
@@ -94,12 +104,14 @@ pub fn parse_args(
         return Err("--riassunto needs --verita".into());
     }
     let export = export.map(|f| (f, pulito, nodo));
+    let strutture = strutture.map(|n| (n, ppm_struttura));
     Ok(Some(Args {
         file,
         o,
         verita,
         riassunto,
         export,
+        strutture,
         out,
     }))
 }
@@ -225,11 +237,31 @@ pub fn riassunto(g: &Grafo, verita: &str) -> Result<String> {
     Ok(o.0)
 }
 
+/// The graph text `j` of `g` with the key `strutture` of node `nodo` (`nK` or `K`): the cleavages of `o.smiles` that give its m/z within `ppm`.
+pub fn strutture_testo(
+    g: &Grafo,
+    j: &str,
+    o: &Opzioni,
+    (nodo, ppm): (&str, f64),
+) -> Result<String> {
+    let smiles = o.smiles.as_deref().filter(|s| !s.trim().is_empty());
+    let smiles = smiles.ok_or_else(|| Error::new("err.msngrafo.noSmiles"))?;
+    let bad = || Error::new("err.msngrafo.badNode").with("node", nodo);
+    let k: usize = nodo.trim_start_matches('n').parse().map_err(|_| bad())?;
+    let ing = g.ingresso_strutture(k).ok_or_else(bad)?;
+    let s = mzlab_feat::chem::strutture::strutture(smiles, &ing, ppm)
+        .map_err(|e| Error::new("err.msngrafo.badSmiles").with("detail", e))?;
+    Ok(con_strutture(j, &s))
+}
+
 /// The text the command prints: the graph, or the line of numbers.
 pub fn esegui(a: &Args, tmp: &Path) -> Result<String> {
     let (g, j) = grafo(&a.file, &a.o, tmp)?;
     if let Some((f, pulito, nodo)) = &a.export {
         return Ok(esporta(&g, *f, *pulito, nodo.as_deref()));
+    }
+    if let Some((nodo, ppm)) = &a.strutture {
+        return Ok(strutture_testo(&g, &j, &a.o, (nodo, *ppm))? + "\n");
     }
     if !a.riassunto {
         return Ok(j + "\n");

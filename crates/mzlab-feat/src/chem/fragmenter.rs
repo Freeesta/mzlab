@@ -47,6 +47,8 @@ pub struct FragmentSide {
 #[derive(Clone, Debug, PartialEq)]
 pub struct BondCut {
     pub bond_idx: usize,
+    /// The two atoms of the bond (0-based, as the atoms of the SMILES).
+    pub atoms: (usize, usize),
     pub label: String,
     pub atom1: String,
     pub atom2: String,
@@ -250,6 +252,7 @@ pub fn fragment_molecule(
         let f2 = side_of(&m, second, &ctx, &label, &mut out.explained);
         out.bonds.push(BondCut {
             bond_idx: k,
+            atoms: (a, b),
             label,
             atom1: atom_label(&m, a),
             atom2: atom_label(&m, b),
