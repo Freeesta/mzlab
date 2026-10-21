@@ -5,9 +5,8 @@ use std::borrow::Cow;
 
 use flate2::{Compress, Compression, FlushCompress};
 
-use super::{io, spectrum_head, Opzioni, SpectrumExtra};
+use super::{io, Opzioni};
 use crate::error::Result;
-use crate::mzml::Spectrum;
 use crate::numpress::Np;
 
 /// The values of one binary array: 64-bit or 32-bit floats.
@@ -39,44 +38,6 @@ impl Codifica {
             packed: Vec::new(),
             np: Vec::new(),
             blocco: vec![0; 32 * 1024],
-        }
-    }
-
-    /// Appends to `s` the whole `<spectrum>` number `index`: head, the m/z and intensity arrays, closing tags.
-    pub fn spettro(
-        &mut self,
-        index: usize,
-        sp: &Spectrum,
-        extra: &SpectrumExtra,
-        s: &mut String,
-    ) -> Result<()> {
-        s.push_str(&spectrum_head(index, sp, extra));
-        *s += "<binaryDataArrayList count=\"2\">\n";
-        let res = self.arrays(s, sp);
-        *s += "</binaryDataArrayList></spectrum>\n";
-        res
-    }
-
-    fn arrays(&mut self, s: &mut String, sp: &Spectrum) -> Result<()> {
-        let np = self.opz.numpress && sp.mz.len() >= 3;
-        if np {
-            self.array(s, "mz", "mz", Data::Np(Np::Linear, Cow::Borrowed(&sp.mz)))?;
-        } else {
-            self.array(s, "mz", "mz", Data::F64(&sp.mz))?;
-        }
-        match (&sp.wide, np) {
-            (Some(w), false) => self.array(s, "intensity", "counts", Data::F64(w)),
-            (None, false) => self.array(s, "intensity", "counts", Data::F32(&sp.intensity)),
-            (Some(w), true) => self.array(
-                s,
-                "intensity",
-                "counts",
-                Data::Np(Np::Slof, Cow::Borrowed(w)),
-            ),
-            (None, true) => {
-                let v: Vec<f64> = sp.intensity.iter().map(|&x| f64::from(x)).collect();
-                self.array(s, "intensity", "counts", Data::Np(Np::Slof, Cow::Owned(v)))
-            }
         }
     }
 
