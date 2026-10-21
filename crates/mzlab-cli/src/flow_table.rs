@@ -57,7 +57,7 @@ pub fn spec_text(job: &Job) -> String {
 }
 
 /// The samples as `campioni/1` text, whichever of the two schemas the file has.
-fn samples_text(bytes: &[u8]) -> Result<String> {
+pub(crate) fn samples_text(bytes: &[u8]) -> Result<String> {
     let doc = parse(bytes)?;
     if doc.get("schema").and_then(|v| v.str()) != Some("campioni/2") {
         return Ok(String::from_utf8_lossy(bytes).into_owned());

@@ -63,6 +63,7 @@ pub fn steps() -> Vec<Step> {
     all.push(crate::flow_ms2::ms2_step());
     all.push(crate::flow_msngraph::msn_graph_step());
     all.push(crate::flow_compare::compare_step());
+    all.push(crate::flow_quant::quant_step());
     all
 }
 
@@ -422,6 +423,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "meta.compare",
         Exec::File("comparison", crate::flow_compare::compare_job),
     ),
+    ("quant.calibrate", Exec::Made(crate::flow_quant::quant_job)),
     (
         "export.inclusion",
         Exec::File("report", crate::flow_inclusion::inclusion_job),

@@ -40,6 +40,7 @@ mod flow_out;
 mod flow_position;
 #[cfg(test)]
 mod flow_position_tests;
+mod flow_quant;
 mod flow_refilter;
 #[cfg(test)]
 mod flow_refilter_tests;
@@ -399,6 +400,8 @@ mod flow_msngraph_tests;
 mod flow_network_tests;
 #[cfg(test)]
 mod flow_picchi_tests;
+#[cfg(test)]
+mod flow_quant_tests;
 #[cfg(test)]
 mod flow_report_tests;
 #[cfg(test)]
