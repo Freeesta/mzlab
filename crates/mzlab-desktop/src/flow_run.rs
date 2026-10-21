@@ -51,12 +51,15 @@ impl State {
             std::fs::create_dir_all(d).map_err(|e| crate::rpc::io_error(&e))?;
         }
         let names: Vec<&str> = plan.inputs.iter().map(|f| f.name.as_str()).collect();
+        // a maker's file whose mzML the background queue has already made is staged as that mzML
         let held = |name: &str| {
-            self.store
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .get(name)
-                .map(|e| e.path)
+            self.conv_ready(name).or_else(|| {
+                self.store
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .get(name)
+                    .map(|e| e.path)
+            })
         };
         stage_inputs(&names, &p["files"], &held, &inputs)?;
         let fresh = p["fresh"].as_bool().unwrap_or(false);

@@ -18,6 +18,7 @@ pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
         let _ = app
             .state::<Arc<State>>()
             .set_index_folder(cache.join("mzidx"));
+        app.state::<Arc<State>>().set_convert_folder(cache.join("mzml"));
     }
     // the list of the files, the notebook and the files the app makes itself: the data folder of the app
     if let Ok(d) = data_dir(app.handle()) {

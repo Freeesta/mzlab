@@ -468,6 +468,8 @@
   "conv.row.done": "Esito che resta sulla riga di un campione caricato; {scans} = scansioni del campione, {secs} = secondi impiegati.",
   "conv.row.cached": "Esito sulla riga di un campione già caricato con lo stesso .wiff e .wiff.scan (stessi nomi, dimensioni e date): non si copia né si rilegge nulla; {scans} = scansioni del campione.",
   "conv.row.missing": "Avviso sulla riga di un campione caricato da una copia troncata del .wiff.scan; {n} = scansioni elencate dal .wiff ma oltre la fine del .wiff.scan.",
+  "conv.q.fail": "Accanto al file nell'elenco, nell'app desktop: la conversione in secondo piano in mzML non è riuscita; {msg} = causa breve.",
+  "conv.q.saved": "Avviso dopo «Salva gli mzML…» nell'app desktop; {n} = mzML messi nella cartella scelta.",
   "conv.sum.head": "Riga di totali sotto i file caricati, a caricamento finito; {n} = file finiti, {parts} = l'elenco dei conteggi (chiavi conv.sum.*), {time} = tempo dal primo inizio all'ultima fine (m:ss).",
   "conv.sum.full": "Conteggio nel riepilogo: {n} = file full scan caricati.",
   "conv.sum.ms2": "Conteggio nel riepilogo: {n} = file MS2 (product ion) caricati.",

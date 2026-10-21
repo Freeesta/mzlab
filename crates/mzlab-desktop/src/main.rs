@@ -95,6 +95,22 @@ async fn save_mzml(
     Ok(Some(path.to_string_lossy().into_owned()))
 }
 
+/// «Save the mzML files…»: system folder dialog, then the mzML files the background queue has ready go there; None if the user cancels, else how many.
+#[tauri::command]
+async fn save_mzml_folder(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, Arc<State>>,
+) -> Result<Option<usize>, String> {
+    let dlg = dialogo::at_desktop(&app);
+    let picked = tauri::async_runtime::spawn_blocking(move || dlg.blocking_pick_folder())
+        .await
+        .map_err(|e| e.to_string())?;
+    let Some(path) = picked.and_then(|f| f.into_path().ok()) else {
+        return Ok(None);
+    };
+    state.conv_save(&path).map(Some).map_err(|e| e.to_string())
+}
+
 /// Files dropped on the window (the webview gives paths, not `File` objects).
 #[tauri::command]
 fn register_paths(state: tauri::State<'_, Arc<State>>, paths: Vec<String>) -> Vec<PickedFile> {
@@ -412,6 +428,7 @@ fn main() {
             pick_files,
             register_paths,
             save_mzml,
+            save_mzml_folder,
             update_check,
             update_apply,
             update_restart,
