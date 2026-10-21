@@ -14,8 +14,10 @@ use mzlab_core::json::Value;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_cache::Cache;
-use crate::flow_match::Named;
+use crate::flow_export::{csv_job, mztab_job};
+use crate::flow_match::{match_job, Named};
 pub use crate::flow_out::{run_plan_cached, run_plan_notify};
+use crate::flow_render::render_job;
 pub use crate::flow_run::{fill_inputs, run_plan};
 
 pub(crate) fn io(e: std::io::Error) -> Error {
@@ -378,10 +380,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "table.drift",
         Exec::File("table", crate::flow_drift::drift_job),
     ),
-    (
-        "spectra.match",
-        Exec::File("hits", crate::flow_match::match_job),
-    ),
+    ("spectra.match", Exec::File("hits", match_job)),
     ("formula.ms1", Exec::File("formulas", formula_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
@@ -411,10 +410,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "tp.position",
         Exec::File("sites", crate::flow_position::position_job),
     ),
-    (
-        "structure.render",
-        Exec::File("drawing", crate::flow_render::render_job),
-    ),
+    ("structure.render", Exec::File("drawing", render_job)),
     (
         "meta.compare",
         Exec::File("comparison", crate::flow_compare::compare_job),
@@ -423,14 +419,8 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "export.inclusion",
         Exec::File("report", crate::flow_inclusion::inclusion_job),
     ),
-    (
-        "export.table_csv",
-        Exec::File("report", crate::flow_export::csv_job),
-    ),
-    (
-        "export.mztab",
-        Exec::File("report", crate::flow_export::mztab_job),
-    ),
+    ("export.table_csv", Exec::File("report", csv_job)),
+    ("export.mztab", Exec::File("report", mztab_job)),
 ];
 
 /// Does the native runner execute the step `id`?
