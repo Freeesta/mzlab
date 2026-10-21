@@ -256,3 +256,4 @@
 {"ts_utc":"2026-10-21T22:10:32Z","tipo":"run","workflow":"test","esito":"success","main":false,"durata_s":1356,"attivo_s":1771,"coda_s":2,"jobs":{"pytest (ubuntu-latest, 3.11)":1296,"pytest (ubuntu-latest, 3.14)":245,"browser (ubuntu-latest, chromium)":172,"tipi (tsc)":39,"javascript":19},"pr":1378,"sha":"440af43bfc2299ced3bd60550aa291036c39a74f","run_id":39681654156,"run_attempt":1}
 {"tipo":"pr","pr":1380,"sha":"d9dc00b584cbe4efdf5654ae1cb3c8cdb853ac41","ts_utc":"2026-10-21T22:12:58Z","azione":"unita","aperta_s":1400,"merge_main":1,"verde_a_unione_s":null}
 {"tipo":"pr","pr":1381,"sha":"0d77e151d946ea04166b45bfd8f544366e6a8cbd","ts_utc":"2026-10-21T22:13:01Z","azione":"unita","aperta_s":1351,"merge_main":0,"verde_a_unione_s":null}
+{"tipo":"pr","pr":1378,"sha":"440af43bfc2299ced3bd60550aa291036c39a74f","ts_utc":"2026-10-21T22:13:10Z","azione":"unita","aperta_s":2123,"merge_main":1,"verde_a_unione_s":null}
