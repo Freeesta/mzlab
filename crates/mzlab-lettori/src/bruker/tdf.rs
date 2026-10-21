@@ -1,29 +1,18 @@
 //! A Bruker timsTOF `.d` folder as a `Lettore` (docs/agenti/bruker.md): `analysis.tdf` + `analysis.tdf_bin` (TIMS on) and `analysis.tsf` + `analysis.tsf_bin` (TIMS off, MALDI).
 //! The tables come from `sqlite_min`, the peaks of a frame from `blocco` (TDF) or `tsf`, the cut of a frame into spectra from `spettri`.
-
 use super::blocco::{decodifica, leggi_blocco, Picchi};
-
 use super::spettri::{costruisci, somma, Desc};
-
 use super::sqlite_min::Sqlite;
-
 use super::tabelle::Dati;
-
 use super::testata::Testata;
-
 use super::tsf;
-
 use mzlab_core::error::{Error, Result};
-
 use mzlab_core::idxread::ReadAt;
-
 use mzlab_core::lettori::{
     Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, VoceCromatogramma, VoceLettore,
     VoceScansione, CONTRATTO,
 };
-
 use mzlab_core::metodo::SrcFile;
-
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 
 use mzlab_core::mzmlwrite::{Header, Precursore, SpectrumExtra};
@@ -285,6 +274,10 @@ impl LettoreBruker {
 impl Lettore for LettoreBruker {
     fn formato(&self) -> Formato {
         Formato::Altro(if self.tsf { "bruker-tsf" } else { "bruker-tdf" })
+    }
+
+    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+        crate::non_portati::BRUKER
     }
 
     fn campioni(&self) -> &[Campione] {

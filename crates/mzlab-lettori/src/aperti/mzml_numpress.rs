@@ -236,6 +236,10 @@ impl Lettore for LettoreNumpress {
         Formato::Altro("mzml-numpress")
     }
 
+    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+        crate::non_portati::NUMPRESS
+    }
+
     fn campioni(&self) -> &[Campione] {
         &self.campioni
     }

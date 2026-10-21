@@ -283,6 +283,15 @@ impl LettoreRaw {
             .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
         u32::try_from(k).map_err(|_| raw_error("scan number"))
     }
+
+    /// Scan `k` of sample `c` decoded, with the profile points when `profilo` and otherwise the centroids the file holds.
+    fn decodificata(&mut self, c: usize, k: usize, profilo: bool) -> Result<Spectrum> {
+        self.one(c)?;
+        let idx = self.row(k)?;
+        let rec = extract_spectrum(&self.raw, &mut self.src, idx, profilo)
+            .ok_or_else(|| raw_error("scan cannot be decoded"))?;
+        Ok(crate::raw::spectrum(rec))
+    }
 }
 
 fn field(nome: &str, valore: impl ToString, unita: Option<&str>, cv: Option<&str>) -> Campo {
@@ -299,6 +308,10 @@ impl Lettore for LettoreRaw {
         Formato::ThermoRaw
     }
 
+    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+        crate::conv::THERMO
+    }
+
     fn campioni(&self) -> &[Campione] {
         &self.campioni
     }
@@ -309,11 +322,11 @@ impl Lettore for LettoreRaw {
     }
 
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        self.one(c)?;
-        let idx = self.row(k)?;
-        let rec = extract_spectrum(&self.raw, &mut self.src, idx, false)
-            .ok_or_else(|| raw_error("scan cannot be decoded"))?;
-        Ok(crate::raw::spectrum(rec))
+        self.decodificata(c, k, false)
+    }
+
+    fn scansione_profilo(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
+        self.decodificata(c, k, true).map(Some)
     }
 
     /// The points of the scan and the rest from the row of the index: no trailer, no filter, no precursors read again.
