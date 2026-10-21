@@ -41,7 +41,7 @@ try:
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
         pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
-        pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+        pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
         def alone():
             pg.set_input_files("#pick", [str(D / "one.wiff")])
             pg.wait_for_function("document.querySelector('#unopen') && !document.querySelector('#unopen').hidden", timeout=60000)
@@ -109,7 +109,7 @@ try:
             c2 = b.new_context(viewport={"width": 1500, "height": 1800}); c2.set_default_timeout(120000); pg = c2.new_page()          # a clean session of its own
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
-            pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+            pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
             pg.set_input_files("#pick", [str(D / "prodotto.wiff"), str(D / "prodotto.wiff.scan")])
             pg.wait_for_function("Array.from(document.querySelectorAll('#flist tr:not(.grp)')).filter(tr => /^prodotto/.test(tr.children[1].textContent.trim())).length === 2", timeout=120000)
             pg.click("#opbtn"); pg.wait_for_function("E.files.length === 2 && E.pending.length === 0 && E.panels.some(q => q.type === 'spec')", timeout=120000); pg.wait_for_timeout(1500)
@@ -133,7 +133,7 @@ try:
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
-            pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+            pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
             pg.set_input_files("#pick", [str(D / "variante.wiff"), str(D / "variante.wiff.scan")])
             shown(pg, 1)
             assert names(pg) == ["variante.mzML"], names(pg)
