@@ -83,3 +83,65 @@ fn a_bare_header_is_refused_with_a_key() {
         }
     }
 }
+
+/// A header as the reader expects it (1356 bytes: magic, "Finnigan" in UTF-16, version at byte 38) for any version number, followed by `tail`.
+fn con_versione(version: u32, tail: &[u8]) -> Vec<u8> {
+    let mut b = vec![0x01, 0xA1];
+    b.extend("Finnigan".encode_utf16().flat_map(u16::to_le_bytes));
+    b.extend([0u8; 2]);
+    b.extend([0u8; 16]);
+    b.extend(version.to_le_bytes());
+    b.resize(1356, 0);
+    b.extend(tail);
+    b
+}
+
+fn pseudocasuali(n: usize, mut x: u64) -> Vec<u8> {
+    (0..n)
+        .map(|_| {
+            x = x
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            (x >> 33) as u8
+        })
+        .collect()
+}
+
+#[test]
+fn every_version_number_is_read_or_refused_with_a_key() {
+    const DICHIARATE: [u32; 8] = [8, 47, 57, 60, 62, 63, 64, 66];
+    for v in (0..=80).chain([255, 65_536, u32::MAX]) {
+        for (k, tail) in [
+            vec![],
+            vec![0; 4096],
+            vec![0xFF; 4096],
+            pseudocasuali(65_536, u64::from(v) + 1),
+        ]
+        .iter()
+        .enumerate()
+        {
+            match mzlab_lettori::apri(insieme(con_versione(v, tail)), &Limiti::sito()) {
+                Ok(_) => assert!(DICHIARATE.contains(&v), "version {v} (tail {k}) opened"),
+                Err(e) => {
+                    assert!(e.key.starts_with("err."), "{}", e.key);
+                    if !DICHIARATE.contains(&v) {
+                        assert_eq!(e.key, "err.file.rawVersion", "version {v}");
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn a_declared_version_with_a_random_body_never_panics() {
+    for v in [8u32, 47, 57, 60, 62, 63, 64, 66] {
+        for seed in 0..40u64 {
+            let n = [0usize, 7, 300, 1500, 20_000][seed as usize % 5];
+            tutto(con_versione(
+                v,
+                &pseudocasuali(n, seed * 977 + u64::from(v)),
+            ));
+        }
+    }
+}
