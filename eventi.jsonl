@@ -237,3 +237,4 @@
 {"ts_utc":"2026-10-21T21:58:24Z","tipo":"run","workflow":"rust","esito":"success","main":false,"durata_s":524,"attivo_s":1673,"coda_s":31,"jobs":{"changes":10,"rust-wasm":396,"deny":46,"rust":227,"rust-lint":73,"rust-core":444,"rust-misc":474,"rust-ok":3},"pr":1380,"sha":"d9dc00b584cbe4efdf5654ae1cb3c8cdb853ac41","run_id":39681872051,"run_attempt":1}
 {"ts_utc":"2026-10-21T21:58:25Z","azione":"aperta","tipo":"pr","pr":1382,"sha":"147a244a6132a3268583f68fee6fadf78187c665"}
 {"ts_utc":"2026-10-21T21:58:47Z","tipo":"run","workflow":"rust","esito":"success","main":false,"durata_s":19,"attivo_s":14,"coda_s":2,"jobs":{"changes":10,"rust-ok":4,"rust-lint":0,"rust-misc":0,"rust-core":0,"rust-wasm":0,"rust":0,"deny":0},"pr":1382,"sha":"147a244a6132a3268583f68fee6fadf78187c665","run_id":39682998961,"run_attempt":1}
+{"ts_utc":"2026-10-21T21:59:11Z","azione":"aperta","tipo":"pr","pr":1383,"sha":"d4cb42053e4f8f3108ddb6012e0f7e887132c38a"}
