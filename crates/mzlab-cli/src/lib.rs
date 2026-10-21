@@ -261,26 +261,8 @@ fn flow_command(args: Vec<String>) -> Outcome {
     }
 }
 
-/// `mzlab-cli <args>`: `args` without the program name.
-pub fn execute(args: &[String]) -> Outcome {
-    let mut args = args.iter().cloned();
-    match args.next().as_deref() {
-        Some("features") => {}
-        Some("flow") => {
-            return match args.next().as_deref() {
-                Some("report") => {
-                    flow_report::run(args).map_or_else(|e| Outcome::fail(&e), Outcome::ok)
-                }
-                Some("run") => flow_run::run(args.collect(), None),
-                Some("command") => flow_command(args.collect()),
-                _ => Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow command PLAN.json"),
-            }
-        }
-        Some("msn-graph") => return msn_graph_cmd(args),
-        Some("msn-lib") => return msn_lib_cmd(args.collect()),
-        Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),
-        Some(c) => return Outcome::fail(&format!("unknown command {c}")),
-    }
+/// `mzlab-cli features ...`: the feature table in CSV on the standard output or at `--out`.
+fn features_cmd(args: impl Iterator<Item = String>) -> Outcome {
     let a = match parse(args) {
         Ok(Some(a)) => a,
         Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
@@ -309,6 +291,29 @@ pub fn execute(args: &[String]) -> Outcome {
             )
         }
     }
+}
+
+/// `mzlab-cli <args>`: `args` without the program name.
+pub fn execute(args: &[String]) -> Outcome {
+    let mut args = args.iter().cloned();
+    match args.next().as_deref() {
+        Some("features") => {}
+        Some("flow") => {
+            return match args.next().as_deref() {
+                Some("report") => {
+                    flow_report::run(args).map_or_else(|e| Outcome::fail(&e), Outcome::ok)
+                }
+                Some("run") => flow_run::run(args.collect(), None),
+                Some("command") => flow_command(args.collect()),
+                _ => Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow command PLAN.json"),
+            }
+        }
+        Some("msn-graph") => return msn_graph_cmd(args),
+        Some("msn-lib") => return msn_lib_cmd(args.collect()),
+        Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),
+        Some(c) => return Outcome::fail(&format!("unknown command {c}")),
+    }
+    features_cmd(args)
 }
 
 #[cfg(test)]
