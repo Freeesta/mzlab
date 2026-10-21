@@ -16,7 +16,7 @@ required-features = ["app"]
 
 [features]
 # The window (Tauri). Off by default so that `cargo test` of the workspace needs no webview library.
-app = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-build"]
+app = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-plugin-single-instance", "dep:tauri-build"]
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
@@ -40,6 +40,8 @@ sha2 = "0.11"
 ureq = { version = "2", default-features = false, features = ["tls"] }
 tauri = { version = "2", optional = true }
 tauri-plugin-dialog = { version = "2", optional = true }
+# a second launch (double click on a file with the app open) hands its arguments to the running window instead of opening another one
+tauri-plugin-single-instance = { version = "2.5.4", optional = true }
 
 [build-dependencies]
 tauri-build = { version = "2", optional = true }
