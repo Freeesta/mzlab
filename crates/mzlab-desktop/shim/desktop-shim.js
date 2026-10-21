@@ -17,6 +17,7 @@
     Object.defineProperty(file, "size", { value: f.size });
     return file;
   }
+  window.MZLAB_TOFILE = toFile;                                                       // for the files opened from outside (predefinito.js)
   async function deliver(files, into) {
     if (!files.length || typeof window.upload !== "function") return;
     window.upload(files.map(toFile), into);

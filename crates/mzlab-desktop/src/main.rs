@@ -8,10 +8,14 @@
     windows_subsystem = "windows"
 )]
 
+mod apri;
+mod avvio;
+
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+use mzlab_desktop::apertura::Pending;
 use mzlab_desktop::{cartella, dialogo};
 use mzlab_desktop::librerie::{self, Config};
 use mzlab_desktop::release;
@@ -19,9 +23,8 @@ use mzlab_desktop::scarica::{self, Policy};
 use mzlab_desktop::update::{self, Http, Source, UpdateError};
 use mzlab_desktop::{handle_body, State};
 use serde::Serialize;
-use std::borrow::Cow;
-use tauri::http::{header, Response, StatusCode};
-use tauri::{AppHandle, Emitter, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
+use tauri::http::{header, Response};
+use tauri::{AppHandle, Emitter, Manager, RunEvent};
 use tauri_plugin_dialog::DialogExt;
 
 #[derive(Serialize)]
@@ -401,8 +404,10 @@ fn main() {
     let state = Arc::new(State::new());
     let for_protocol = state.clone();
     let app = tauri::Builder::default()
+        .plugin(apri::single_instance())
         .plugin(tauri_plugin_dialog::init())
         .manage(state.clone())
+        .manage(Pending::default())
         .manage(Cancel(Arc::new(AtomicBool::new(false))))
         .invoke_handler(tauri::generate_handler![
             pick_files,
@@ -423,51 +428,13 @@ fn main() {
             lib_catalog,
             lib_download,
             lib_download_external,
-            lib_cancel
+            lib_cancel,
+            apri::take_opened,
+            apri::assoc_get,
+            apri::assoc_answer,
+            apri::assoc_reset
         ])
-        .setup(|app| {
-            // the indexes (.mzidx) built natively live in the cache folder of the app, where the system may clear them (they are rebuilt)
-            if let Ok(cache) = app.path().app_cache_dir() {
-                let _ = app
-                    .state::<Arc<State>>()
-                    .set_index_folder(cache.join("mzidx"));
-            }
-            // the list of the files, the notebook and the files the app makes itself: the data folder of the app
-            if let Ok(d) = data_dir(app.handle()) {
-                app.state::<Arc<State>>().set_data_folder(d.join("sessione"));
-            }
-            if let Some(dir) = data_dir(app.handle())
-                .ok()
-                .and_then(|d| librerie::read_config(&d).cartella)
-            {
-                app.state::<Arc<State>>().libs.set_root(PathBuf::from(dir));
-            }
-            // the updated web part (if any) answers before the embedded copy; a damaged folder is set aside first
-            let web = data_dir(app.handle()).map(|d| {
-                update::recover(&d);
-                d.join("web")
-            });
-            let mut win = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
-                .title("mzlab")
-                .inner_size(1400.0, 900.0)
-                .min_inner_size(900.0, 600.0);
-            if let Ok(web) = web {
-                win = win.on_web_resource_request(move |request, response| {
-                    if let Some((body, ctype)) = update::serve_override(&web, request.uri().path())
-                    {
-                        *response.status_mut() = StatusCode::OK;
-                        response.headers_mut().remove(header::CONTENT_LENGTH);
-                        response.headers_mut().insert(
-                            header::CONTENT_TYPE,
-                            header::HeaderValue::from_static(ctype),
-                        );
-                        *response.body_mut() = Cow::Owned(body);
-                    }
-                });
-            }
-            win.build()?;
-            Ok(())
-        })
+        .setup(avvio::setup)
         .register_asynchronous_uri_scheme_protocol("mzlab", move |_ctx, request, responder| {
             let state = for_protocol.clone();
             // the engine can take long on a big file: never on the thread of the webview
@@ -491,7 +458,8 @@ fn main() {
         })
         .build(tauri::generate_context!())
         .expect("mzlab: the window could not start");
-    app.run(move |_handle, event| {
+    app.run(move |handle, event| {
+        apri::run_event(handle, &event);
         if let RunEvent::Exit = event {
             state.cleanup();
         }
