@@ -1,9 +1,9 @@
 // @ts-strict
 // IndexedDB for mzLab ("mzlab_lab", migrated from legacy "qqq_lab"):
-// manages stores (files, kv, liste_utente, manifest), connection lifecycle, and transparent migration.
+// manages stores (files, kv, liste_utente, manifest, molecole), connection lifecycle, and transparent migration.
 export const DB_NAME = typeof NOMI !== "undefined" ? NOMI.DB : "mzlab_lab";
 export const DB_OLD = typeof NOMI !== "undefined" && NOMI.DB_OLD ? NOMI.DB_OLD : "qqq_lab";
-export const DB_VER = 3;
+export const DB_VER = 4;
 export const SCHEMA = 3;
 
 /**
@@ -15,6 +15,8 @@ export function upgrade(db) {
   if (!db.objectStoreNames.contains("kv")) db.createObjectStore("kv");
   if (!db.objectStoreNames.contains("liste_utente")) db.createObjectStore("liste_utente", { keyPath: "id" });
   if (!db.objectStoreNames.contains("manifest")) db.createObjectStore("manifest", { keyPath: "path" });
+  // the molecules of the user (molecules/1 records, one per id); added in version 4, nothing else is touched
+  if (!db.objectStoreNames.contains("molecole")) db.createObjectStore("molecole", { keyPath: "id" });
 }
 
 export function openOldDatabase(name) {

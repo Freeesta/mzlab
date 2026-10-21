@@ -61,6 +61,8 @@ export async function statRoute(path, body, { rpc }) {
   }
   if (path.startsWith("/api/campioni/")) return { status: 200, text: (await rpc({ op: "lr_campioni", cop: path.slice(14), body })).info };
   // molecules database (molecules/1): carica, cerca, get, da_csv, a_csv, a_json, valida, digest
+  // the molecules of the user kept between sessions: archivio/leggi gives a molecules/1 document, archivio/scrivi (the document as body) replaces them
+  if (path === "/api/molecules/archivio/leggi" || path === "/api/molecules/archivio/scrivi") return { status: 200, text: (await rpc({ op: "lr_molecole_archivio", mop: path.slice(24), body })).info };
   if (path.startsWith("/api/molecules/")) return { status: 200, text: (await rpc({ op: "lr_molecules", mop: path.slice(15), body })).info };
   if (!/^\/api\/stat\/(profile|blank|reference|pca)$/.test(path)) return undefined;
   const r = (await rpc({ op: "lr_stat", path: path.slice(1), body })).info;
