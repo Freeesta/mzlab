@@ -67,6 +67,39 @@ pub(crate) struct Coda {
     workers: usize,
 }
 
+impl Coda {
+    #[cfg(test)]
+    pub(crate) fn with_workers(n: usize) -> Coda {
+        Coda {
+            workers: n,
+            ..Coda::default()
+        }
+    }
+
+    fn limit(&self) -> usize {
+        if self.workers > 0 {
+            self.workers
+        } else {
+            std::thread::available_parallelism()
+                .map_or(1, |n| n.get())
+                .saturating_sub(1)
+                .max(1)
+        }
+    }
+
+    pub(crate) fn set_folder(&self, dir: PathBuf) {
+        *self.folder.lock().unwrap_or_else(|e| e.into_inner()) = Some(dir);
+    }
+
+    fn base(&self) -> PathBuf {
+        self.folder
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+            .unwrap_or_else(|| std::env::temp_dir().join("mzlab-mzml"))
+    }
+}
+
 fn lock(m: &Mutex<Inner>) -> std::sync::MutexGuard<'_, Inner> {
     m.lock().unwrap_or_else(|e| e.into_inner())
 }
@@ -80,6 +113,61 @@ fn stamp(p: &Path) -> Option<(u64, u64)> {
         .ok()?
         .as_millis() as u64;
     Some((m.len(), t))
+}
+
+impl Coda {
+    /// Queues the dataset `root` for the page file `name` (sample `id`); a dataset already queued, running or ready only learns the name again.
+    pub(crate) fn add(&self, name: &str, id: u32, root: &Path) {
+        let key = Sha256::digest(root.to_string_lossy().as_bytes());
+        let out = self.base().join(
+            key[..8]
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect::<String>(),
+        );
+        let st = stamp(root);
+        let spawn = {
+            let mut g = lock(&self.inner);
+            let again =
+                |j: &Job| j.root == root && j.stamp == st && !matches!(j.phase, Phase::Cancelled);
+            match g.jobs.iter().position(again) {
+                Some(k) => {
+                    if !g.jobs[k].names.iter().any(|(n, _)| n == name) {
+                        g.jobs[k].names.push((name.to_string(), id));
+                    }
+                    false
+                }
+                None => {
+                    g.jobs.retain(|j| j.root != root);
+                    g.jobs.push(Job {
+                        root: root.to_path_buf(),
+                        out,
+                        stamp: st,
+                        names: vec![(name.to_string(), id)],
+                        phase: Phase::Queued,
+                        files: Vec::new(),
+                    });
+                    g.threads < self.limit() && {
+                        g.threads += 1;
+                        true
+                    }
+                }
+            }
+        };
+        if spawn {
+            let inner = self.inner.clone();
+            std::thread::spawn(move || work(inner));
+        }
+    }
+
+    /// Stops what has not started (one page file's dataset with `name`, else everything queued); the running conversion ends and keeps its files.
+    pub(crate) fn cancel(&self, name: Option<&str>) {
+        for j in lock(&self.inner).jobs.iter_mut().filter(|j| {
+            j.phase == Phase::Queued && name.is_none_or(|n| j.names.iter().any(|(m, _)| m == n))
+        }) {
+            j.phase = Phase::Cancelled;
+        }
+    }
 }
 
 /// The dataset a sample belongs to: the first member that is not a `.wiff.scan`, taken back up to the folder of a `.D`.
@@ -98,6 +186,50 @@ pub(crate) fn dataset_root(members: &[(String, PathBuf)]) -> Option<PathBuf> {
         root = root.parent()?.to_path_buf();
     }
     Some(root)
+}
+
+impl State {
+    pub fn set_convert_folder(&self, dir: PathBuf) {
+        self.coda.set_folder(dir);
+    }
+
+    /// `conv_add {name}`: queues the maker's file `name` of the list (nothing for a file that is already an mzML).
+    pub(crate) fn conv_add(&self, p: &Value) -> Result<Answer> {
+        let name = p["name"].as_str().unwrap_or("");
+        let nat = self
+            .store
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(name)
+            .and_then(|e| e.nat);
+        if let Some(nat) = nat {
+            if let Some(root) = dataset_root(&nat.members) {
+                self.coda.add(name, nat.id, &root);
+            }
+        }
+        text(self.coda.list().to_string())
+    }
+
+    /// `conv_list {}`: `{"jobs": [{name, state: queued|run|done|failed|cancelled, error}]}`.
+    pub(crate) fn conv_list(&self, _p: &Value) -> Result<Answer> {
+        text(self.coda.list().to_string())
+    }
+
+    /// `conv_cancel {name?}`: stops the files that have not started.
+    pub(crate) fn conv_cancel(&self, p: &Value) -> Result<Answer> {
+        self.coda.cancel(p["name"].as_str());
+        text(self.coda.list().to_string())
+    }
+
+    /// `conv_save {dest}`: the ready mzML files in the folder `dest`; `{"saved": n}`.
+    pub fn conv_save(&self, dest: &Path) -> Result<usize> {
+        self.coda.save(dest)
+    }
+
+    /// The ready mzML of the page file `name`, for `flow/run`.
+    pub(crate) fn conv_ready(&self, name: &str) -> Option<PathBuf> {
+        self.coda.ready(name)
+    }
 }
 
 /// What `mzlab-cli convert` does with one dataset: its mzML files in `out` (the cache of its folder makes a second run free).
@@ -157,104 +289,21 @@ fn work(inner: Arc<Mutex<Inner>>) {
     }
 }
 
+/// The file of a finished job that holds sample `id`.
+fn file_of(job: &Job, id: u32) -> Option<PathBuf> {
+    match job.files.as_slice() {
+        [one] => Some(one.clone()),
+        many => many
+            .iter()
+            .find(|f| {
+                f.file_name()
+                    .is_some_and(|n| n.to_string_lossy().ends_with(&format!("-{id}.mzML")))
+            })
+            .cloned(),
+    }
+}
+
 impl Coda {
-    #[cfg(test)]
-    pub(crate) fn with_workers(n: usize) -> Coda {
-        Coda {
-            workers: n,
-            ..Coda::default()
-        }
-    }
-
-    fn limit(&self) -> usize {
-        if self.workers > 0 {
-            self.workers
-        } else {
-            std::thread::available_parallelism()
-                .map_or(1, |n| n.get())
-                .saturating_sub(1)
-                .max(1)
-        }
-    }
-
-    pub(crate) fn set_folder(&self, dir: PathBuf) {
-        *self.folder.lock().unwrap_or_else(|e| e.into_inner()) = Some(dir);
-    }
-
-    fn base(&self) -> PathBuf {
-        self.folder
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .clone()
-            .unwrap_or_else(|| std::env::temp_dir().join("mzlab-mzml"))
-    }
-
-    /// Queues the dataset `root` for the page file `name` (sample `id`); a dataset already queued, running or ready only learns the name again.
-    pub(crate) fn add(&self, name: &str, id: u32, root: &Path) {
-        let key = Sha256::digest(root.to_string_lossy().as_bytes());
-        let out = self.base().join(
-            key[..8]
-                .iter()
-                .map(|b| format!("{b:02x}"))
-                .collect::<String>(),
-        );
-        let st = stamp(root);
-        let spawn = {
-            let mut g = lock(&self.inner);
-            let again =
-                |j: &Job| j.root == root && j.stamp == st && !matches!(j.phase, Phase::Cancelled);
-            match g.jobs.iter().position(again) {
-                Some(k) => {
-                    if !g.jobs[k].names.iter().any(|(n, _)| n == name) {
-                        g.jobs[k].names.push((name.to_string(), id));
-                    }
-                    false
-                }
-                None => {
-                    g.jobs.retain(|j| j.root != root);
-                    g.jobs.push(Job {
-                        root: root.to_path_buf(),
-                        out,
-                        stamp: st,
-                        names: vec![(name.to_string(), id)],
-                        phase: Phase::Queued,
-                        files: Vec::new(),
-                    });
-                    g.threads < self.limit() && {
-                        g.threads += 1;
-                        true
-                    }
-                }
-            }
-        };
-        if spawn {
-            let inner = self.inner.clone();
-            std::thread::spawn(move || work(inner));
-        }
-    }
-
-    /// Stops what has not started (one page file's dataset with `name`, else everything queued); the running conversion ends and keeps its files.
-    pub(crate) fn cancel(&self, name: Option<&str>) {
-        for j in lock(&self.inner).jobs.iter_mut().filter(|j| {
-            j.phase == Phase::Queued && name.is_none_or(|n| j.names.iter().any(|(m, _)| m == n))
-        }) {
-            j.phase = Phase::Cancelled;
-        }
-    }
-
-    fn file_of(job: &Job, id: u32) -> Option<PathBuf> {
-        match job.files.as_slice() {
-            [one] => Some(one.clone()),
-            many => many
-                .iter()
-                .find(|f| {
-                    f.file_name()
-                        .is_some_and(|n| n.to_string_lossy().ends_with(&format!("-{id}.mzML")))
-                })
-                .cloned(),
-        }
-    }
-
     /// The ready mzML of the page file `name`, if its dataset is unchanged since it was converted.
     pub(crate) fn ready(&self, name: &str) -> Option<PathBuf> {
         let g = lock(&self.inner);
@@ -265,7 +314,7 @@ impl Coda {
                 .map(|(_, id)| (j, *id))
         })?;
         (j.phase == Phase::Done && stamp(&j.root) == j.stamp)
-            .then(|| Self::file_of(j, id))
+            .then(|| file_of(j, id))
             .flatten()
             .filter(|f| f.is_file())
     }
@@ -278,7 +327,7 @@ impl Coda {
                 let (state, error) = match &j.phase {
                     Phase::Queued => ("queued", String::new()),
                     Phase::Running => ("run", String::new()),
-                    Phase::Done if Self::file_of(j, *id).is_some() => ("done", String::new()),
+                    Phase::Done if file_of(j, *id).is_some() => ("done", String::new()),
                     Phase::Done => ("failed", "no mzML for this sample".into()),
                     Phase::Failed(e) => ("failed", e.clone()),
                     Phase::Cancelled => ("cancelled", String::new()),
@@ -309,49 +358,5 @@ impl Coda {
             n += 1;
         }
         Ok(n)
-    }
-}
-
-impl State {
-    pub fn set_convert_folder(&self, dir: PathBuf) {
-        self.coda.set_folder(dir);
-    }
-
-    /// `conv_add {name}`: queues the maker's file `name` of the list (nothing for a file that is already an mzML).
-    pub(crate) fn conv_add(&self, p: &Value) -> Result<Answer> {
-        let name = p["name"].as_str().unwrap_or("");
-        let nat = self
-            .store
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .get(name)
-            .and_then(|e| e.nat);
-        if let Some(nat) = nat {
-            if let Some(root) = dataset_root(&nat.members) {
-                self.coda.add(name, nat.id, &root);
-            }
-        }
-        text(self.coda.list().to_string())
-    }
-
-    /// `conv_list {}`: `{"jobs": [{name, state: queued|run|done|failed|cancelled, error}]}`.
-    pub(crate) fn conv_list(&self, _p: &Value) -> Result<Answer> {
-        text(self.coda.list().to_string())
-    }
-
-    /// `conv_cancel {name?}`: stops the files that have not started.
-    pub(crate) fn conv_cancel(&self, p: &Value) -> Result<Answer> {
-        self.coda.cancel(p["name"].as_str());
-        text(self.coda.list().to_string())
-    }
-
-    /// `conv_save {dest}`: the ready mzML files in the folder `dest`; `{"saved": n}`.
-    pub fn conv_save(&self, dest: &Path) -> Result<usize> {
-        self.coda.save(dest)
-    }
-
-    /// The ready mzML of the page file `name`, for `flow/run`.
-    pub(crate) fn conv_ready(&self, name: &str) -> Option<PathBuf> {
-        self.coda.ready(name)
     }
 }
