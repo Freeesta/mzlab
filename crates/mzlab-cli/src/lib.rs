@@ -38,6 +38,7 @@ mod flow_table;
 #[cfg(test)]
 mod flow_table_tests;
 pub mod msn_graph;
+mod msn_graph_compare;
 mod msn_lib;
 
 const HELP: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
@@ -213,6 +214,13 @@ impl Outcome {
 
 /// `mzlab-cli msn-graph ...`: the graph (or the line of numbers) to the standard output or `--out`.
 fn msn_graph_cmd(args: impl Iterator<Item = String>) -> Outcome {
+    let mut args = args.peekable();
+    if args.next_if(|a| a == "compare").is_some() {
+        return match msn_graph_compare::esegui(args) {
+            Ok((t, out)) => emit(t, &out),
+            Err(e) => Outcome::fail(&e.to_string()),
+        };
+    }
     let a = match msn_graph::parse_args(args) {
         Ok(Some(a)) => a,
         Ok(None) => return Outcome::ok(format!("{}\n", msn_graph::HELP).into_bytes()),
@@ -226,10 +234,17 @@ fn msn_graph_cmd(args: impl Iterator<Item = String>) -> Outcome {
         .map_err(io)
         .and_then(|_| msn_graph::esegui(&a, &tmp));
     let _ = std::fs::remove_dir_all(&tmp);
-    match (r, &a.out) {
-        (Err(e), _) => Outcome::fail(&e.to_string()),
-        (Ok(t), None) => Outcome::ok(t.into_bytes()),
-        (Ok(t), Some(p)) => std::fs::write(p, t).map_or_else(
+    match r {
+        Err(e) => Outcome::fail(&e.to_string()),
+        Ok(t) => emit(t, &a.out),
+    }
+}
+
+/// The text to the standard output, or to the file of `--out`.
+fn emit(t: String, out: &Option<PathBuf>) -> Outcome {
+    match out {
+        None => Outcome::ok(t.into_bytes()),
+        Some(p) => std::fs::write(p, t).map_or_else(
             |e| Outcome::fail(&e.to_string()),
             |_| Outcome::ok(Vec::new()),
         ),
@@ -351,6 +366,8 @@ mod flow_report_tests;
 mod flow_rule_tests;
 #[cfg(test)]
 mod flow_run_tests;
+#[cfg(test)]
+mod msn_graph_compare_tests;
 #[cfg(test)]
 mod msn_graph_tests;
 #[cfg(test)]
