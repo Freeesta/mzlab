@@ -1,5 +1,5 @@
-//! Files opened from outside the window and the notice «make mzLab the default app?»: the glue between Tauri and `apertura.rs` (the command line,
-//! `RunEvent::Opened` on macOS) and the commands the page calls (`predefinito.js`). The rules are in `apertura.rs`.
+//! Files opened from outside the window and the notice «make mzLab the default app?»: the glue between Tauri and `apertura.rs` (single instance,
+//! the command line, `RunEvent::Opened` on macOS) and the commands the page calls (`predefinito.js`). The rules are in `apertura.rs`.
 
 use super::{data_dir, register, save_config, PickedFile};
 use mzlab_desktop::apertura::{self, Pending, Risposta};
@@ -67,6 +67,14 @@ pub fn assoc_answer(app: AppHandle, answer: String) -> Result<(), String> {
 #[tauri::command]
 pub fn assoc_reset(app: AppHandle) -> Result<(), String> {
     save_config(&app, apertura::rifai)
+}
+
+/// Registered first: a second launch (double click on a file with the app open) gives its arguments to this window and exits.
+pub fn single_instance() -> tauri::plugin::TauriPlugin<tauri::Wry> {
+    tauri_plugin_single_instance::init(|app, args, cwd| {
+        let cwd = PathBuf::from(cwd);
+        hand_over(app, apertura::paths_from_args(args.get(1..).unwrap_or_default(), Some(&cwd)));
+    })
 }
 
 /// A file given on the command line (Windows, Linux: double click with the app closed) waits for the page.
