@@ -303,12 +303,6 @@ pub(crate) fn write_made(
     r.keep(out, ty)
 }
 
-fn match_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let (query, library) = (read_one(r, job, "query")?, read_one(r, job, "library")?);
-    let text = crate::flow_match::match_text(job, (&query.0, &query.1), (&library.0, &library.1))?;
-    write_made(r, job, text, DataType::Candidates)
-}
-
 pub(crate) fn all_inputs(r: &FileRunner, job: &Job, port: &str) -> Vec<PathBuf> {
     let list = job
         .inputs
@@ -391,7 +385,10 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "features.estimate",
         Exec::File("estimates", crate::flow_estimate::estimate_job),
     ),
-    ("spectra.match", Exec::File("hits", match_job)),
+    (
+        "spectra.match",
+        Exec::File("hits", crate::flow_match::match_job),
+    ),
     ("formula.ms1", Exec::File("formulas", formula_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),

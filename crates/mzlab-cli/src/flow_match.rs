@@ -2,9 +2,10 @@
 //! the engine of `mzlab-lib` (`search::identity`, `search::analogs`, `scores`), as the Library tab does. The `candidates` file it writes is JSON.
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::Job;
+use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::json::{round, Out};
 use mzlab_core::score_terms::ScoreTerms;
+use mzlab_core::step::DataType;
 use mzlab_lib::build::{build_in_memory, BuildOpts};
 use mzlab_lib::contrib::{
     cosine_contributions, entropy_contributions, modified_cosine_contributions,
@@ -18,6 +19,8 @@ use mzlab_lib::read::{Library, CACHE_BYTES};
 use mzlab_lib::scores::modified_cosine;
 use mzlab_lib::search::{analogs, identity, AnalogOpts, IdentityOpts, Query, Tol};
 use mzlab_lib::spec::Spectrum;
+
+use crate::flow::{read_one, write_made, FileRunner};
 
 type Lib = Library<Vec<u8>>;
 
@@ -348,4 +351,11 @@ pub(crate) fn query_id(k: usize, s: &Spectrum) -> String {
     } else {
         s.meta.accession.clone()
     }
+}
+
+/// `spectra.match`: the `candidates` file of the step, written next to the other outputs of the run.
+pub(crate) fn match_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let (query, library) = (read_one(r, job, "query")?, read_one(r, job, "library")?);
+    let text = match_text(job, (&query.0, &query.1), (&library.0, &library.1))?;
+    write_made(r, job, text, DataType::Candidates)
 }
