@@ -163,6 +163,7 @@ declare var fmtTime: any;
 declare var hdrH: any;
 declare var hi: any;
 declare var hrGroup: any;
+declare var id: any;
 declare var innerHTML: any;
 declare var lossCombos: any;
 declare var lsObj: any;
