@@ -821,6 +821,7 @@ declare var uipContOn: any;
 declare var uipGroupOpen: any;
 declare var uipLoad: any;
 declare var uipOpen: any;
+declare var uipProfile: any;
 declare var uipRead: any;
 declare var uipReset: any;
 declare var uipRestore: any;

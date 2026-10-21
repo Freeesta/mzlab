@@ -64,18 +64,40 @@ fn params_of<R: Read>(reader: R) -> Result<(Option<Params>, usize)> {
     Ok((Some(estimate(&refs, 0.7).params), count))
 }
 
+/// Values that replace what the estimate finds from the file; `None` keeps the estimate (the `spectra.centroid` step of the Flow).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Over {
+    /// FWHM of a peak, Da.
+    pub fwhm: Option<f64>,
+    /// Threshold in sigma.
+    pub threshold: Option<f64>,
+}
+
 /// Writes `name` as a centroid mzML. `open()` gives the file from its start (called twice: parameters and count, then the spectra); `progress(done, total)` after every few spectra, `total` = spectra of the file.
 /// Returns false when the file has no profile spectrum (nothing was written).
 pub fn mzml_to_centroids<R: Read, W: Write>(
-    mut open: impl FnMut() -> Result<R>,
+    open: impl FnMut() -> Result<R>,
     out: W,
     name: &str,
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<bool> {
+    Ok(mzml_to_centroids_with(open, out, name, Over::default(), progress)?.is_some())
+}
+
+/// `mzml_to_centroids` with `over` applied to the estimated parameters; returns the parameters used, `None` when the file has no profile spectrum.
+pub fn mzml_to_centroids_with<R: Read, W: Write>(
+    mut open: impl FnMut() -> Result<R>,
+    out: W,
+    name: &str,
+    over: Over,
+    progress: &mut dyn FnMut(usize, usize),
+) -> Result<Option<Params>> {
     let (p, count) = params_of(open()?)?;
-    let Some(p) = p else {
-        return Ok(false);
+    let Some(mut p) = p else {
+        return Ok(None);
     };
+    p.w = over.fwhm.unwrap_or(p.w);
+    p.k = over.threshold.unwrap_or(p.k);
     let header = Header {
         run: name
             .trim_end_matches(".mzML")
@@ -137,5 +159,5 @@ pub fn mzml_to_centroids<R: Read, W: Write>(
         w.close_chromatograms()?;
     }
     w.finish()?;
-    Ok(true)
+    Ok(Some(p))
 }

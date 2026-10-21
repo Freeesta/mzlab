@@ -29,6 +29,13 @@ impl Store {
         self.dir.get_or_insert_with(|| std::env::temp_dir().join("mzlab-data")).clone()
     }
 
+    /// The data folder of the app (created when needed): where the files of the app and the key file of the assistant live.
+    pub fn data_dir(&mut self) -> Result<PathBuf> {
+        let d = self.dir();
+        std::fs::create_dir_all(&d).map_err(|e| io_error(&e))?;
+        Ok(d)
+    }
+
     /// The folder of the files made by the app (created when needed).
     pub fn own_dir(&mut self) -> Result<PathBuf> {
         let d = self.dir().join("files");

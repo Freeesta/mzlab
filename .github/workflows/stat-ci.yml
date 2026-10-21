@@ -1,0 +1,59 @@
+# Statistics of the CI bottlenecks (tools/stat_ci.py, docs/agenti/ci-veloce.md): one JSONL line per event on the orphan branch `stat-ci`.
+# No secret and no third-party action; GITHUB_TOKEN only reads the API and pushes to `stat-ci` (a push with GITHUB_TOKEN starts no workflow).
+# pull_request_target and workflow_run run the file from main and check out main only: code of a pull request is never run with the write token.
+name: stat-ci
+
+on:
+  workflow_run:
+    workflows: [test, rust, pages]
+    types: [completed]
+  push:
+    branches: [main]
+  pull_request_target:
+    types: [opened, reopened, synchronize, closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  actions: read
+  checks: read
+  pull-requests: read
+
+jobs:
+  registra:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Data branch
+        run: |
+          git config user.name "stat-ci"
+          git config user.email "stat-ci@users.noreply.github.com"
+          if git fetch --depth=1 origin stat-ci; then
+            git worktree add -B stat-ci dati FETCH_HEAD
+          else
+            git worktree add --orphan -b stat-ci dati
+          fi
+      - name: Record the event
+        run: |
+          case "$GITHUB_EVENT_NAME" in
+            workflow_run) cmd=registra-run ;;
+            pull_request_target) cmd=registra-pr ;;
+            push) cmd=registra-conflitti ;;
+            *) exit 0 ;;
+          esac
+          python3 tools/stat_ci.py "$cmd" --dati dati/eventi.jsonl --nuovi nuovi.jsonl
+      - name: Publish on stat-ci
+        working-directory: dati
+        run: |
+          for i in 1 2 3 4 5; do
+            python3 ../tools/stat_ci.py accoda ../nuovi.jsonl --dati eventi.jsonl
+            git add eventi.jsonl
+            git diff --cached --quiet && exit 0
+            git commit -qm "stat-ci: events"
+            git push origin HEAD:stat-ci && exit 0
+            git fetch --depth=1 origin stat-ci && git reset -q --hard FETCH_HEAD
+          done
+          exit 1

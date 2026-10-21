@@ -43,7 +43,7 @@
   }
 
   if (window.self === window.top && location.protocol !== "file:") {   // standalone page: the way back to the program is in the sheet too
-    const g = document.createElement("a"); g.className = "resume"; g.href = "../../#/dati"; g.textContent = "Apri il programma"; g.style.marginTop = "14px"; side.appendChild(g);
+    const g = document.createElement("a"); g.className = "resume"; g.href = "../../#/data"; g.textContent = "Apri il programma"; g.style.marginTop = "14px"; side.appendChild(g);
   }
 
   let opener = null;

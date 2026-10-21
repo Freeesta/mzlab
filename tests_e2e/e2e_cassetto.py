@@ -1,4 +1,4 @@
-"""The toolbar drawer (#dfiles) is really visible from a cold start: with and without #/dati, at 1280, 1440 and on an iPad,
+"""The toolbar drawer (#dfiles) is really visible from a cold start: with and without #/data, at 1280, 1440 and on an iPad,
 also with saved sidebar states (side right, open) and a stale width. Visible = non-empty box inside the viewport, on top."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -28,7 +28,7 @@ def cold(p, vw, vh, hash_="", saved=None, touch=False):
 try:
     with sync_playwright() as p:
         for vw, vh, tag, touch in ((1280, 800, "1280", False), (1440, 900, "1440", False), (1024, 1366, "iPad", True)):
-            for h in ("", "#/dati"):
+            for h in ("", "#/data"):
                 step(f"{tag} {h or 'no hash'}: the drawer opens and is visible", lambda vw=vw, vh=vh, h=h, touch=touch: cold(p, vw, vh, h, touch=touch))
         step("side right saved", lambda: cold(p, 1440, 900, saved={"mzlab.barra.lato": "right"}))
         step("open saved", lambda: cold(p, 1440, 900, saved={"mzlab.barra.lr": '{"tab":"file","open":true}'}))

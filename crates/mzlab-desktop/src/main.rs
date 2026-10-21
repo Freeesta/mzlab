@@ -420,6 +420,7 @@ fn main() {
     let state = Arc::new(State::new());
     let for_protocol = state.clone();
     let app = tauri::Builder::default()
+        .plugin(apri::single_instance())
         .plugin(tauri_plugin_dialog::init())
         .manage(state.clone())
         .manage(Pending::default())

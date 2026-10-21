@@ -2,7 +2,8 @@
 //! the algorithm, preset and parameters of the variant, on the same inputs) and a compare instance that reads their outputs. `compare_text` measures how the
 //! outputs differ (`comparison/1`). It only reports the differences; it never says which variant is right.
 
-use crate::flow::{blobs, read_all, write_made, FileRunner};
+use crate::flow::{read_all, write_made, FileRunner};
+use crate::flow_read::blobs;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{check as check_core, Instance, Plan, Platform, Problem, Ref};
 use mzlab_core::flow::{Artifact, Job};
