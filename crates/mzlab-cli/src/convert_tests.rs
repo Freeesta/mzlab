@@ -231,6 +231,33 @@ fn usage_errors_and_a_missing_input_have_their_codes() {
 }
 
 #[test]
+fn peaks_take_three_values_and_the_short_form_is_the_parameter() {
+    let dir = folder("peaks");
+    let src = makers(&dir, false);
+    assert_eq!(
+        convert(&[p(&src), "--out", p(&dir.join("o")), "--peaks", "x"]).code,
+        2
+    );
+    for which in ["file", "mzlab"] {
+        let (short, long) = (
+            dir.join(format!("s-{which}")),
+            dir.join(format!("l-{which}")),
+        );
+        let o = convert(&[p(&src), "--out", p(&short), "--peaks", which]);
+        assert_eq!(o.code, 0, "{which}: {}", o.stderr);
+        let set = format!("conv.peaks={which}");
+        let o = convert(&[p(&src), "--out", p(&long), "--set", &set]);
+        assert_eq!(o.code, 0, "{which}: {}", o.stderr);
+        assert_eq!(mzmls(&short), mzmls(&long), "{which}");
+    }
+    // the synthetic files hold centroids only: the profile is asked in vain, and the cause is named
+    let o = convert(&[p(&src), "--out", p(&dir.join("pr")), "--peaks", "profile"]);
+    assert_eq!(o.code, 1, "{}", o.stderr);
+    assert!(o.stderr.contains("err.conv.noProfile"), "{}", o.stderr);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn help_lists_every_option() {
     let o = convert(&["--help"]);
     assert_eq!(o.code, 0);
@@ -239,6 +266,7 @@ fn help_lists_every_option() {
         "--out",
         "--zlib",
         "--numpress",
+        "--peaks",
         "--workers",
         "--report",
         "--fresh",
