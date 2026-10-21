@@ -1,0 +1,14 @@
+[package]
+name = "mzlab-tutor"
+description = "Tutor on the Teoria: the pages cut into blocks (teoria-blocchi/1) and the BM25 search over them"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+mzlab-libro = { path = "../mzlab-libro" }
+mzlab-core = { path = "../mzlab-core", default-features = false }
+serde_json = { version = "1", features = ["float_roundtrip"] }

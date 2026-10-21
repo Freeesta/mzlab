@@ -18,14 +18,14 @@ Questo file è già nel tuo contesto: non rileggerlo. Leggi il file d'area del t
 
 ## 2. Regole di lavoro
 - **Consegna = sito pubblicato**: il lavoro è finito quando è in `main` e il workflow «pages» di quel commit è riuscito.
-- **Flusso**: ramo `claude/<argomento>` da `origin/main` → PR → unione con merge commit (mai rebase né push forzato). Se la PR è già unita, ricrea il ramo da `origin/main`. Prima di unire: `git merge origin/main`, risolvi i conflitti tenendo il lavoro di tutti, verifica di nuovo. Se scegliere fa perdere un comportamento: PR aperta e domanda al Coordinatore.
+- **Flusso**: ramo `claude/<argomento>` da `origin/main` → PR → unione con merge commit (mai rebase né push forzato). Se la PR è già unita, ricrea il ramo da `origin/main`. Prima di unire: `git merge origin/main`, risolvi i conflitti tenendo il lavoro di tutti, riverifica. Se scegliere fa perdere un comportamento: PR aperta e domanda al Coordinatore.
 - **Perimetro**: ogni chat tocca solo ciò che dice il suo prompt; a fine lavoro UN messaggio al Coordinatore (max 5 righe: PR, CI, pages, cosa resta). Rosso o decisione da prendere: PR aperta con la spiegazione, niente merge.
 - **Commenti**: in inglese come tutto il codice e i nomi; brevi e sul perché; intestazione di modulo di 2-4 righe (cosa fa, chi lo usa); niente codice commentato; JSDoc/rustdoc/docstring solo sulle API usate da altri file; un commento si aggiorna con il codice; commento sopra la riga, non in coda a righe lunghe. I testi per l'utente stanno solo in lang/.
 - **Commit**: titolo breve in italiano + 1-3 righe + attribuzione dell'ambiente. Mai nomi di modelli.
 - **Documenti**: AGENTS.md e `docs/agenti/` descrivono solo lo stato attuale. Quando cambi un comportamento, RISCRIVI la riga che lo descrive (niente «ora…», «prima era…», numeri di PR, date); una funzione nuova = una riga nel file della sua area; una riga di documento ≤ 600 caratteri, un file d'area ≤ 25 KB (oltre si divide per argomento).
 - **Consumo di token**: ogni turno rilegge tutto il contesto, quindi una chat lunga costa più di due chat corte. Una sessione per pacchetto; leggi solo il file d'area che ti serve; `grep -n` e letture a intervalli; niente screenshot nel contesto salvo un giudizio visivo; raggruppa le modifiche e prova una volta alla fine.
   **Consegna**: alla fine della PR in corso, se il contesto supera 250k token (mai oltre 300k), manda al Coordinatore il blocco di consegna (≤15 righe: prompt, ramo, PR e CI, fatto, da fare con il prossimo passo esatto, decisioni, trappole file:riga, comandi di prova con atteso, cosa non rileggere) e fermati. I lavori piccoli e separati vanno in chat NUOVE: costano meno che riusare chat da 250k+.
-- **Subagenti Haiku** (`.claude/agents/`): le mani, non la testa; compiti meccanici con ingresso esatto, lanciati insieme in un solo messaggio se indipendenti: `verificatore`, `controllo-github`, `cercatore` (`file:riga`), `inventario-testi`, `sostituzioni` (vecchio → nuovo), `archivista` (`git mv`), `estrattore` (passaggi su un argomento), `stato-sessioni`. Non usare il predefinito Explore (gira sul modello principale): usa `cercatore`. Controlla sempre il risultato; due errori = lo fa la chat.
+- **Subagenti Haiku** (`.claude/agents/`): le mani, non la testa; compiti meccanici con ingresso esatto, lanciati insieme in un solo messaggio se indipendenti: `verificatore`, `controllo-github`, `cercatore` (`file:riga`), `inventario-testi`, `sostituzioni` (vecchio → nuovo), `archivista` (`git mv`), `estrattore` (passaggi su un argomento), `stato-sessioni`. Non usare Explore (modello principale): usa `cercatore`. Controlla sempre il risultato; due errori = lo fa la chat.
   Mai a un subagente: decisioni, codice nuovo, testi di Teoria, asserzioni dei test, commit, push, merge.
 - **Agente locale** (Mac di Federico, `~/mzLab/`): può fare commit e push su `main`; non cancella file, li sposta in `~/mzLab/_cestino/<data>_<motivo>/`.
 - **Regola Tutto in Rust**: ogni calcolo, elaborazione numerica o logica di motore sta solo in Rust (`crates/`, anche `.wasm`), con il suo test di parità; Python solo per test, `tools/` e riferimento; JS solo interfaccia. `tests/test_guardie_regole.py` e `tests/test_regola_rust.py` rifiutano script Python di calcolo runtime non autorizzati in `mzlab/` (lista chiusa, si accorcia soltanto); cosa resta da migrare: `docs/inventari/PYTHON_DA_MIGRARE.md`.
@@ -51,7 +51,7 @@ Questo file è già nel tuo contesto: non rileggerlo. Leggi il file d'area del t
 - **Dati utente nel browser, nomi attuali e migrazione**: IndexedDB `"mzlab_lab"`, localStorage `mzlab.*` e `mzlab-labels`, cache `mzlab-app-*`, `mzlab-big-*`, `mzlab-libs`; i vecchi nomi `qqq.*` (IndexedDB `"qqq_lab"`, localStorage `qqq.*`, cache `qqq-app/big-*`) si leggono solo per la migrazione retrocompatibile.
 - **Smartphone** (`telefono.js`): su telefono (`?telefono=1|0` forza) non si scaricano Dati, Disegno, Pratica né motore: arriva `telefono-scheda.js`. Un file di script nuovo di Dati va aggiunto nella lista `L` di `carica.js` (`docs/agenti/dati.md`).
 
-## 5. File d'area (leggi solo quello del tuo lavoro)
+## 5. File d'area
 | Se tocchi… | Leggi |
 |---|---|
 | vista Dati in bassa risoluzione: caricamento, schede, TIC/XIC/spettro, integrazione | `docs/agenti/dati.md` |
@@ -73,7 +73,7 @@ Questo file è già nel tuo contesto: non rileggerlo. Leggi il file d'area del t
 | statistica in HR: tabella delle feature, bianco, differenza dal riferimento, PCA | `docs/agenti/alta-risoluzione-statistica.md` |
 | formato `.mzlib`, parser delle librerie, indici e punteggi (`crates/mzlab-lib`) | `docs/agenti/librerie.md` |
 | Disegno (Ketcher) | `docs/agenti/disegno.md` |
-| Teoria e Pratica (`mzlab/web/teoria/`) | `docs/agenti/teoria.md` (assistente alla teoria: `assistente-teoria.md`; `teoria/LEGGIMI.md` se scrivi capitoli) |
+| Teoria e Pratica (`mzlab/web/teoria/`) | `docs/agenti/teoria.md` (assistente: `assistente-teoria.md`; `teoria/LEGGIMI.md` se scrivi capitoli) |
 | accessibilità dell'intera applicazione (WCAG 2.1/2.2 AA, axe-core, controlli) | `docs/agenti/accessibilita.md` (lacune note: `a11y-da-sistemare.md`) |
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
 | metodo di acquisizione (`metodo/1`, `metodo.rs`, `metodo_wiff`, `metodo_raw`, schema) | `docs/agenti/metodo.md` |
@@ -112,9 +112,9 @@ Questo file è già nel tuo contesto: non rileggerlo. Leggi il file d'area del t
 | cosa i file grezzi contengono e non estraiamo ancora (regola «nessuna perdita») | `docs/agenti/grezzi-non-estratti.md` |
 | errori di lettura dei file: causa breve, «Dettagli», «Copia diagnosi» (`diagnosi.js`), mzML sintetico stile msconvert | `docs/agenti/diagnosi.md` |
 | assistente LLM: catalogo `strumenti/1` | `docs/agenti/llm.md` |
-| riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature table in CSV dallo stesso motore e dalla stessa ricetta della pagina) | `docs/agenti/cli.md` |
+| riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature table in CSV, stesso motore e ricetta della pagina) | `docs/agenti/cli.md` |
 | agenti esterni (Claude Code, Cowork) che usano `mzlab-cli` dalla shell: sequenza, codici, esempi di piani | `docs/agenti/per-agenti.md` |
-| lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, fasi di avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
+| lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`, `rust-mzidx.md`, `rust-step.md`: descrittori `step/1`, `rust-flow.md`: piani `mzflow/2`, controllo e `prov/1`) |
 | record della struttura chimica `mol/1` (`crates/mzlab-mol`: tipi, JSON, hash del nucleo; lettori SMILES/molfile) | `docs/agenti/mol.md` (studio: `docs/studi/STRUTTURA_DATO.md`) |
 | misure dei motori (ultima misura per sezione) | `docs/agenti/misure.md` (clic del flusso Tabui: `misure-clic.md`) |
@@ -128,7 +128,8 @@ Questo file è già nel tuo contesto: non rileggerlo. Leggi il file d'area del t
 | Flow grafico (scheda amministratore: palette dei passi `step/1`, catena, moduli dei parametri, confronto `meta.compare`, esportazione/importazione `mzflow/2`; `flow/`) | `docs/agenti/flow-grafica.md` (corrispondenza con i passi di mzmine: `flow-mzmine.md`) |
 | esecutore web del Flow («This browser»: `flow/lazy/flow-web-{run,ui,worker}.js`, eventi `flow:web-step`, stima `stima_series`, avviso su telefono/tablet, Run spento oltre il livello alto) | `docs/agenti/flow-web.md` |
 | Libro: convertitore (`tools/libro/`, dialetto Markdown, fixture CC0, `--pubblico`) e pagina editor admin (`mzlab/web/libro/`, token, salvataggio nel repository privato) | `docs/agenti/libro.md` |
-| lanciare la verifica nel container cloud (Chromium, `--setup`, test che costruiscono il sito) | `docs/agenti/ambiente-cloud.md` |
+| tutor sulla Teoria (`mzlab-tutor`: blocchi, BM25) | `docs/agenti/tutor.md` |
+| lanciare la verifica nel container cloud (Chromium, `--setup`, test col sito costruito) | `docs/agenti/ambiente-cloud.md` |
 
 ## 6. Trappole generali
 - Service worker, anteprime dei link, `title` su iframe, `ask()`: in fondo a `docs/agenti/dati.md`.
