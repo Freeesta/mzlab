@@ -24,6 +24,9 @@ VARIANTI = {
 NS = "http://psi.hupo.org/ms/mzml"
 UN_MZ = ' unitCvRef="MS" unitAccession="MS:1000040" unitName="m/z"'
 UN_MIN = ' unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"'
+UN_CNT = ' unitCvRef="MS" unitAccession="MS:1000131" unitName="number of detector counts"'
+# the unit msconvert writes on a 64-bit array, by the array type (m/z, time, intensity)
+UNITA_ARRAY = {"MS:1000514": UN_MZ, "MS:1000595": UN_MIN, "MS:1000515": UN_CNT}
 
 
 def _cv(acc: str, name: str, value="", unit: str = "") -> str:
@@ -34,7 +37,7 @@ def _array(values: np.ndarray, f64: bool, acc: str, name: str) -> str:
     raw = np.asarray(values, dtype="<f8" if f64 else "<f4").tobytes()
     b64 = base64.b64encode(zlib.compress(raw, 1)).decode()
     bits = _cv("MS:1000523", "64-bit float") if f64 else _cv("MS:1000521", "32-bit float")
-    unit = UN_MZ if f64 else ""
+    unit = UNITA_ARRAY.get(acc, "") if f64 else ""
     return f'<binaryDataArray encodedLength="{len(b64)}">{bits}{_cv("MS:1000574", "zlib compression")}{_cv(acc, name, "", unit)}<binary>{b64}</binary></binaryDataArray>'
 
 

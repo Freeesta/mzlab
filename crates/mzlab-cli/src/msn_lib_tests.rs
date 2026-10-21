@@ -98,3 +98,62 @@ fn usage_errors_are_exit_2_and_help_is_printed() {
     let h = run(&["msn-lib", "--help"]);
     assert!(String::from_utf8(h.stdout).unwrap().contains("msnlib/1"));
 }
+
+#[test]
+fn massbank_export_reads_back_like_the_msp_one_and_carries_ms_type_and_path() {
+    use mzlab_lib::parse::{parse_all, Format};
+    let d = dir("massbank");
+    let lib = d.join("lib.json");
+    let f = msn();
+    let a = run(&[
+        "msn-lib",
+        "add",
+        lib.to_str().unwrap(),
+        f.to_str().unwrap(),
+        "--id",
+        "STD-1",
+        "--formula",
+        "C14H15N3O5+",
+    ]);
+    assert_eq!(a.code, 0, "{}", a.stderr);
+    let export = |fmt: &str, extra: &[&str]| {
+        let mut args = vec!["msn-lib", "export", lib.to_str().unwrap(), "--formato", fmt];
+        args.extend_from_slice(extra);
+        let o = run(&args);
+        assert_eq!(o.code, 0, "{}", o.stderr);
+        String::from_utf8(o.stdout).unwrap()
+    };
+    let (msp, mb) = (
+        export("msp", &["--tutti"]),
+        export("massbank", &["--tutti"]),
+    );
+    assert!(
+        mb.contains("MS_TYPE MS3") && mb.contains("precursor path 305@cid35 > 261@cid35"),
+        "{mb}"
+    );
+    assert!(
+        mb.contains("ACCESSION: MZLAB-STD-1-0001") && mb.contains("ION_MODE POSITIVE"),
+        "{mb}"
+    );
+    let (a, _) = parse_all(Format::Msp, msp.as_bytes());
+    let (b, _) = parse_all(Format::MassBank, mb.as_bytes());
+    assert!(
+        !a.is_empty() && a.len() == b.len(),
+        "{} vs {}",
+        a.len(),
+        b.len()
+    );
+    for (x, y) in a.iter().zip(&b) {
+        assert!((x.prec - y.prec).abs() < 1e-4 && x.pol == y.pol && x.mz.len() == y.mz.len());
+        assert!(
+            y.prec > 0.0,
+            "a spectrum without a node still has its precursor from the path"
+        );
+    }
+    assert!(!export("massbank", &[]).contains("MS_TYPE MS3"));
+    assert_eq!(
+        run(&["msn-lib", "export", lib.to_str().unwrap(), "--formato", "x"]).code,
+        2
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}

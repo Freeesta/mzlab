@@ -1,0 +1,43 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "msnlib/1",
+ "title": "msnlib/1: the library of MSn trees of standards",
+ "description": "Format «msnlib/1» (crates/mzlab-core/src/msngrafo/libreria.rs, docs/agenti/msnlib.md): one entry per standard, ion, polarity and set of activations, sorted by that key so the same entries give the same bytes. The graph of an entry is a full msngrafo/1 (docs/schemi/msngrafo-1.json) and is validated against that schema by the tests.",
+ "type": "object",
+ "required": ["formato", "voci"],
+ "additionalProperties": false,
+ "properties": {
+  "formato": { "const": "msnlib/1" },
+  "voci": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["id", "ione", "attivazione", "grafo"],
+    "additionalProperties": false,
+    "properties": {
+     "id": { "type": "string", "minLength": 1 },
+     "ione": {
+      "type": "object",
+      "required": ["formula", "mz_teorico", "polarita"],
+      "additionalProperties": false,
+      "properties": {
+       "formula": { "type": "string", "minLength": 1 },
+       "mz_teorico": { "type": "number" },
+       "polarita": { "type": "integer", "enum": [-1, 1] }
+      }
+     },
+     "attivazione": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+     },
+     "grafo": {
+      "type": "object",
+      "required": ["formato"],
+      "properties": { "formato": { "const": "msngrafo/1" } }
+     }
+    }
+   }
+  }
+ }
+}

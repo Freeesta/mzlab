@@ -7,10 +7,12 @@ use std::process::Command;
 
 use mzlab_core::error::Result;
 use mzlab_core::idxread::Index;
-use mzlab_core::json::parse;
+use mzlab_core::json::{parse, Value};
 use mzlab_feat::famalign::align_families;
 use mzlab_feat::family::{analyse_families, FamParams};
+use mzlab_feat::interp::refilter::{refilter, FilterParams};
 use mzlab_feat::interp::{run::run_to, store};
+use mzlab_feat::legacy::series;
 use mzlab_feat::pipeline::{analyse, Steps};
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::store::{read_table, write_table, Origin, Slice};
@@ -79,6 +81,41 @@ fn table_of(open: &dyn Fn(usize) -> Result<Index<std::fs::File>>) -> (Aligned, u
     (t, parent, product)
 }
 
+/// The registry of the filters read again from the file: the stored one under the default thresholds, and F5 hides the product when the tolerance is
+/// zero (its error against the calibration of the file is not exactly nothing).
+fn refiltered(sink: &[u8], meta: &Value, product: u32) {
+    let hyps: Vec<_> = series::registry(REGISTRY)
+        .unwrap()
+        .0
+        .into_values()
+        .collect();
+    let size = sink.len() as u64;
+    let reg = refilter(&mut Slice(sink), size, &hyps, &FilterParams::default()).unwrap();
+    let stored = meta.get("filtri").unwrap();
+    let ids = |v: &[u32]| v.iter().map(|&i| f64::from(i)).collect::<Vec<_>>();
+    for (i, stage) in stored.get("stages").unwrap().arr().iter().enumerate() {
+        let want: Vec<f64> = stage
+            .get("ids")
+            .unwrap()
+            .arr()
+            .iter()
+            .filter_map(|x| x.f64())
+            .collect();
+        assert_eq!(ids(&reg.hidden[i]), want, "stage {i}");
+    }
+    let tight = FilterParams {
+        tol_min: 0.0,
+        tol_max: 0.0,
+        ..FilterParams::default()
+    };
+    let hidden = refilter(&mut Slice(sink), size, &hyps, &tight).unwrap();
+    assert!(hidden.hidden[4].len() >= reg.hidden[4].len());
+    assert!(
+        hidden.hidden[4].contains(&product),
+        "F5 hides the product at zero tolerance"
+    );
+}
+
 #[test]
 fn the_block_is_built_from_the_dda_of_the_series_and_read_by_row() {
     let Some(out) = series() else { return };
@@ -142,6 +179,7 @@ fn the_block_is_built_from_the_dda_of_the_series_and_read_by_row() {
                 .and_then(|p| p.f64())
                 .is_some_and(|p| p > 0.9))
     );
+    refiltered(&sink, &meta, t.id(product));
     // a second pass replaces the block instead of adding a second one
     let mut again = Vec::new();
     run_to(
