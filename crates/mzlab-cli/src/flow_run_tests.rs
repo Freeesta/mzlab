@@ -273,13 +273,16 @@ fn the_recipe_of_the_layers_gives_the_bytes_of_flow_run() {
     ]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let layers = r#"[{"step":"features.detect","params":{"min_height":50000}},{"step":"features.align","params":{"drop_artefacts":false}}]"#;
-    assert!(
-        std::fs::read(out.join("ali.mzfeat")).unwrap() == layered_table(&files, layers),
-        "different bytes"
-    );
+    let flow = std::fs::read(out.join("ali.mzfeat")).unwrap();
+    for as_text in [false, true] {
+        assert!(
+            flow == layered_table(&files, layers, as_text),
+            "different bytes (as text: {as_text})"
+        );
+    }
     assert_ne!(
-        layered_table(&files, layers),
-        layered_table(&files, "[]"),
+        flow,
+        layered_table(&files, "[]", true),
         "the layers change the table"
     );
     assert!(mzlab_feat_wasm::run::layers_from_json(r#"{"step":1}"#).is_err());

@@ -113,6 +113,8 @@
     const run = btn("run", "Export the plan and run it", () => showRun(), "Run");
     run.classList.add("flx-run"); run.id = "flx-run";
     const showRun = async () => {
+      // the runners come with the late modules: wait here, with a small mark on this one button
+      if (F.whenLate) { run.setAttribute("aria-busy", "true"); try { await F.whenLate; } catch (_) { return; } finally { run.removeAttribute("aria-busy"); } }
       const r = await F.runners.cli.run(S);
       planView.hidden = false;
       const box = el("div", { class: "fl-cli" }, el("strong", { text: r.title }), el("p", { text: F.runners.desktop.available() || F.runners.web.available() ? "Run it here, or download the plan and use the command line:" : "On the web Flow exports the plan. Download it, put it in a folder with your files and run it with the native runner:" }), el("code", { text: r.text }),
@@ -142,6 +144,8 @@
     listHost.addEventListener("flow:changed", () => { undoBtn.disabled = !S.history.length; redoBtn.disabled = !S.future.length; redraw(); });
     tplCards(); planView.hidden = true; undoBtn.disabled = true; redoBtn.disabled = true;
     selected = tableKey(); redraw(); requestAnimationFrame(() => cv.fit());
+    // the late modules (results, review, runners) arrive after the first draw: draw again so the inspector gets its result cards
+    if (F.whenLate) F.whenLate.then(() => { if (root.isConnected) redraw(); }, () => say("Some parts of Flow could not be loaded. Reload the page.", null));
     S.redraw = redraw; /** @type {any} */ (sec).__flow = S; /** @type {any} */ (sec).__shell = { select: cvUi.select, model };
   };
 })();
