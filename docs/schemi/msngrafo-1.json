@@ -12,6 +12,7 @@
   "polarita",
   "radici",
   "ione",
+  "candidati_radice",
   "conteggi",
   "avvisi",
   "nodi",
@@ -182,6 +183,21 @@
      }
     }
    ]
+  },
+  "candidati_radice": {
+   "description": "Without opzioni.formula: up to 8 formulas of the ion of the first root that fit its m/z (candidates, never an identification); empty otherwise.",
+   "type": "array",
+   "maxItems": 8,
+   "items": {
+    "type": "object",
+    "required": ["formula", "mz_teorico", "ppm"],
+    "additionalProperties": false,
+    "properties": {
+     "formula": { "type": "string" },
+     "mz_teorico": { "type": "number" },
+     "ppm": { "type": "number" }
+    }
+   }
   },
   "conteggi": {
    "type": "object",

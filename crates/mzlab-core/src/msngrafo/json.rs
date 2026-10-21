@@ -86,6 +86,21 @@ fn ione(o: &mut Out, g: &Grafo) {
     };
 }
 
+fn candidati(o: &mut Out, g: &Grafo) {
+    o.raw(",\"candidati_radice\":[");
+    for (i, c) in g.candidati_radice.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"formula\":")
+            .str(&c.formula)
+            .raw(",\"mz_teorico\":")
+            .num(round(c.mz_teorico, 5))
+            .raw(",\"ppm\":")
+            .num(round(c.ppm, 2))
+            .raw("}");
+    }
+    o.raw("]");
+}
+
 fn testa(o: &mut Out, g: &Grafo, op: &Opzioni, sorgente: Option<(&str, &str)>) {
     o.raw("{\"formato\":\"msngrafo/1\",\"motore\":")
         .str(env!("CARGO_PKG_VERSION"))
@@ -108,6 +123,7 @@ fn testa(o: &mut Out, g: &Grafo, op: &Opzioni, sorgente: Option<(&str, &str)>) {
     }
     o.raw("]");
     ione(o, g);
+    candidati(o, g);
     o.raw(",\"conteggi\":{\"nodi\":").int(g.nodi.len() as i64);
     o.raw(",\"archi\":")
         .int(g.archi.len() as i64)
