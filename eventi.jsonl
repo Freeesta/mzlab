@@ -182,3 +182,4 @@
 {"ts_utc":"2026-10-21T21:32:43Z","azione":"aperta","tipo":"pr","pr":1375,"sha":"2582e1ad27381ce1b76c906fc131024eae4ceeb0"}
 {"ts_utc":"2026-10-21T21:33:43Z","azione":"aperta","tipo":"pr","pr":1376,"sha":"11d31ec1859a97840c9e12c7a39417c55924421e"}
 {"tipo":"pr","pr":1374,"sha":"be2697212985ce544cfd807c4ed09af43a05e218","ts_utc":"2026-10-21T21:35:13Z","azione":"unita","aperta_s":4853,"merge_main":1,"verde_a_unione_s":null}
+{"ts_utc":"2026-10-21T21:36:30Z","azione":"aperta","tipo":"pr","pr":1377,"sha":"5c59ab3d705f8d40b15d28e29b5dda222f18f2e8"}
