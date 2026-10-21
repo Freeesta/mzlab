@@ -10,8 +10,15 @@ use opentfraw::{iter_spectra, Polarity, RawFileReader, ScanMode, SpectrumRecord}
 use crate::error::{Error, Result};
 use crate::mzml::{Run, Spectrum};
 
-fn raw_error(e: impl std::fmt::Display) -> Error {
-    Error::new("err.file.raw").with("detail", e)
+/// Maps an OpenTFRaw error to the key the page shows: a format version the reader does not know has its own message (`err.file.rawVersion`); anything else
+/// keeps the generic `err.file.raw` with the reader's text.
+pub fn thermo_error(e: &opentfraw::Error) -> Error {
+    match e {
+        opentfraw::Error::UnsupportedVersion(v) => {
+            Error::new("err.file.rawVersion").with("version", v)
+        }
+        _ => Error::new("err.file.raw").with("detail", e),
+    }
 }
 
 pub(crate) fn spectrum(r: SpectrumRecord) -> Spectrum {
@@ -40,7 +47,7 @@ pub(crate) fn spectrum(r: SpectrumRecord) -> Spectrum {
 
 /// Opens the container (indexes only: no scan is read).
 pub fn open<R: Read + Seek>(source: R) -> Result<RawFileReader> {
-    RawFileReader::open(source).map_err(raw_error)
+    RawFileReader::open(source).map_err(|e| thermo_error(&e))
 }
 
 /// The text of the instrument method stored in the `.raw` (the Chromeleon script with the gradient), or `None` when the file has none.
