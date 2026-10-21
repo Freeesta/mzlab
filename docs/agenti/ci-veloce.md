@@ -28,7 +28,9 @@
 - **Tagli valutati e scartati**: dividere `rust-wasm` (meno di 60 s), un quarto gruppo di test fra `rust-core` e `rust-misc` (circa 0) e un job `sito-wasm-lettori` a parte (costruzione di `sito-rust` da 254 a circa 190 s per un runner in più, con la coda dei runner che pesa di più).
 
 ## Dieci regole pratiche prima di aprire una PR
-Prima di aprire la PR: `python3 tools/pre_pr.py` (1-2 minuti: mappa, soglie, i18n, Teoria, globali, tsc, import degli e2e, `cargo fmt` e clippy se hai toccato `crates/`, poi `verifica.py --cambiati`; `--senza-e2e` salta l'ultimo passo).
+Prima di aprire la PR: `python3 tools/pre_pr.py` (1-2 minuti: mappa, soglie, i18n, Teoria, sintassi JS se hai toccato `mzlab/web/`, globali, tsc, import degli e2e, fmt, clippy e `cargo machete` se cambiano i percorsi Rust di `rust.yml`, poi `verifica.py --cambiati`; `--senza-e2e` salta l'ultimo passo).
+  Se gli e2e non partono (browser assente) il riepilogo dice «E2E SALTATI: Chromium non trovato, la CI li eseguirà» e l'uscita è 2, non «Tutto verde». Nel cloud `tools/chromium_cloud.py` (usato da `tests_e2e/lib.py` e `verifica.py`) ripiega su `/opt/pw-browsers/chromium` se il Chromium cercato da Playwright manca; mai `playwright install`.
+  I dati d'oro `tests/golden/e2e/*.json.gz` contengono la versione del prodotto (`"version"`): un cambio di versione li tocca e va rigenerato con `MZLAB_REGEN_GOLDEN=1 python3 tools/verifica.py --solo <test>` (`tests_e2e/golden_ref.py`), non con `--setup`.
 1. **File nuovo = indicizzato subito**: `python3 tools/indice.py` e il file sta in un gruppo (la CI lo controlla con `--controlla`).
 2. **Tagli**: funzione ≤ 80 righe, file ≤ 500 righe, documento ≤ 25 KB, riga di documento ≤ 600 caratteri; `controlla.py` avvisa (WARN) da 475 righe e da 23,5 KB: dividi prima di sforare, perché due PR parallele sul medesimo file sforano insieme.
 3. **HTML dal codice** sempre con il tag `h` dei template (`h\`...\``), che esegue l'escape; mai concatenare testi dei file nell'HTML.
