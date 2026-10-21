@@ -2000,6 +2000,7 @@ dependencies = [
  "mzlab-feat-wasm",
  "mzlab-lettori",
  "mzlab-lib",
+ "mzlab-llm",
  "serde_json",
 ]
 
@@ -2156,6 +2157,13 @@ version = "1.0.0"
 dependencies = [
  "mzlab-libro",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "mzlab-llm"
+version = "1.0.0"
+dependencies = [
+ "mzlab-core",
 ]
 
 [[package]]
