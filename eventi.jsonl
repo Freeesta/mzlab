@@ -100,3 +100,4 @@
 {"ts_utc":"2026-10-21T18:19:48Z","azione":"push","tipo":"pr","pr":1353,"sha":"a875912f7969bb57291056699d6649111e82c799"}
 {"tipo":"pr","pr":1372,"sha":"d9852262ac09c9fd31e4c3414347f0cf99cd83df","ts_utc":"2026-10-21T18:22:46Z","azione":"unita","aperta_s":3663,"merge_main":0,"verde_a_unione_s":null}
 {"ts_utc":"2026-10-21T18:23:08Z","tipo":"conflitto","pr":1356,"sha":"70aaacaed86c219a59cb147e935ca5f4b59ad10f","pr_unita":1372,"file_comuni":[],"n_file_comuni":0}
+{"ts_utc":"2026-10-21T18:24:52Z","tipo":"run","workflow":"test","esito":"success","main":false,"durata_s":1194,"attivo_s":1947,"coda_s":8,"jobs":{"browser (ubuntu-latest, chromium)":165,"tipi (tsc)":46,"javascript":23,"pytest (ubuntu-latest, 3.11)":1184,"pytest (ubuntu-latest, 3.14)":529},"pr":1344,"sha":"ae78070724a2617c668e89ca8eb0741d182385d4","run_id":39649503978,"run_attempt":1}
