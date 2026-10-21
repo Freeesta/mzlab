@@ -60,7 +60,7 @@ try:
             assert pg.locator("#flx-sk .flx-sk-cv").count() == 1
         step("the skeleton (bar, tabs, canvas) is there while NOTHING of CORE, the lists or the .wasm has arrived", skeleton)
         def nothing_heavy():
-            pg.wait_for_timeout(300)
+            attendi(pg, "!!document.querySelector('#flx-sk')")      # a round trip to the page: the route handler has seen the requests by now
             done = pg.evaluate("[...performance.getEntriesByType('resource')].map(e => e.name).filter(n => /mzfinder\\/(lazy\\/flow-|steps-)/.test(n))")
             assert not done, done
             assert pg.evaluate("typeof FLOW") == "undefined", "no Flow module has run yet"
