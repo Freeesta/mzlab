@@ -7,7 +7,7 @@ Before putting the tag `vX.Y.Z`: move the entries of «Unreleased» below into t
 ## [Unreleased]
 
 ### Added
-- Desktop app: a double click on an `.mzML` or Thermo `.raw` file opens it in the Data view (file associations of the installers). Agilent `.D`, Bruker `.d` and Waters `.raw` folders cannot be associated: drag them onto the window or use «Open».
+- Desktop app: a double click on an `.mzML` or Thermo `.raw` file opens it in the Data view (file associations of the installers); with the app already open the file goes into the same window, no second copy starts. Agilent `.D`, Bruker `.d` and Waters `.raw` folders cannot be associated: drag them onto the window or use «Open».
 - Desktop app: when a file is opened this way, every other time the app asks whether to make mzLab the default app for these files (with the steps for Windows, Mac and Linux) until you answer «Yes» or «Don't ask again»; Settings → «Default app» asks again.
 
 ### Changed
