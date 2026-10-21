@@ -205,7 +205,7 @@ pub(super) fn network() -> Step {
     Step {
         ins: vec![
             Port::new("tp", DataType::Tp, "Rows with their modification and the MS2 compared with the parent (interp/1)").requires(hr()),
-            Port::new("table", DataType::Table, "Feature table with the view of the products (tp/1)").requires(hr()),
+            Port::new("table", DataType::Table, "Feature table with the view of the products (tp/1)").requires(hr()).accepts(&[DataType::Tp]),
             Port {
                 optional: true,
                 ..Port::new("samples", DataType::Samples, "Roles and times of the files (campioni/2), for the time course")

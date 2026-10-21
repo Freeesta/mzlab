@@ -15,10 +15,14 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_base::table_job;
 use crate::flow_cache::Cache;
+use crate::flow_drift::drift_job;
 use crate::flow_estimate::estimate_job;
+use crate::flow_level::level_job;
+use crate::flow_msngraph::job as msn_graph_job;
 pub use crate::flow_out::{run_plan_cached, run_plan_notify};
 use crate::flow_read::{blobs, load, named, Loaded};
 pub use crate::flow_run::{fill_inputs, run_plan};
+use crate::flow_stats::stats_job;
 
 pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)
@@ -172,7 +176,7 @@ impl FileRunner {
         made.get(&a.sha256)
             .or_else(|| self.inputs.get(&label))
             .cloned()
-            .unwrap_or_else(|| self.dir.join(label))
+            .unwrap_or_else(|| self.dir.join(crate::flow_set::dataset_name(&label)))
     }
 
     pub(crate) fn keep(&self, path: PathBuf, ty: DataType) -> Result<Artifact> {
@@ -328,15 +332,6 @@ fn ms2_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     r.keep(out, DataType::Spectra)
 }
 
-fn msn_graph_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let file = one_input(r, job, "source")?;
-    let tmp = r.work.join(format!("{}-msn", job.instance.id));
-    std::fs::create_dir_all(&tmp).map_err(io)?;
-    let text = crate::flow_msngraph::msn_graph_text(job, &file, &tmp);
-    let _ = std::fs::remove_dir_all(&tmp);
-    write_made(r, job, text?, DataType::Report)
-}
-
 /// How a step runs natively: an executor that makes one file for `port`, or one that says itself what it made.
 enum Exec {
     File(&'static str, fn(&FileRunner, &Job) -> Result<Artifact>),
@@ -345,6 +340,7 @@ enum Exec {
 
 /// The steps that run natively, the one list: `executable` and the runner read it.
 const EXECUTORS: &[(&str, Exec)] = &[
+    ("import.raw", Exec::Made(crate::flow_import::import_job)),
     ("convert.mzml", Exec::Made(crate::flow_base::convert_job)),
     ("spectra.centroid", Exec::Made(crate::flow_centroid::job)),
     ("index.mzidx", Exec::Made(crate::flow_base::index_job)),
@@ -353,26 +349,17 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("features.gapfill", Exec::Made(crate::flow_base::align_job)),
     ("features.table", Exec::File("report", table_job)),
     ("features.estimate", Exec::File("estimates", estimate_job)),
-    (
-        "table.stats",
-        Exec::File("report", crate::flow_stats::stats_job),
-    ),
+    ("table.stats", Exec::File("report", stats_job)),
     ("table.kmd", Exec::File("report", crate::flow_kmd::kmd_job)),
     ("table.pca", Exec::File("report", crate::flow_pca::pca_job)),
-    (
-        "table.drift",
-        Exec::File("table", crate::flow_drift::drift_job),
-    ),
+    ("table.drift", Exec::File("table", drift_job)),
     ("spectra.match", Exec::File("hits", match_job)),
     ("formula.ms1", Exec::File("formulas", formula_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
     ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),
     ("tp.dig_lr", Exec::File("dig", crate::flow_digl::dig_job)),
-    (
-        "annot.level",
-        Exec::File("annot", crate::flow_level::level_job),
-    ),
+    ("annot.level", Exec::File("annot", level_job)),
     (
         "tp.network",
         Exec::File("network", crate::flow_network::network_job),

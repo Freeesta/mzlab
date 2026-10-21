@@ -8,7 +8,7 @@ import stat_ci as s  # noqa: E402
 
 
 def job(nome, concl, t0, t1, steps=()):
-    return {"name": nome, "status": "completed", "conclusion": concl, "created_at": t0, "started_at": "2026-10-21T10:00:30Z",
+    return {"id": abs(hash(nome)) % 10**6, "name": nome, "status": "completed", "conclusion": concl, "created_at": t0, "started_at": "2026-10-21T10:00:30Z",
             "completed_at": t1, "steps": [{"name": n, "conclusion": c} for n, c in steps]}
 
 
@@ -23,9 +23,9 @@ RUN = {"workflow_run": {"id": 7, "name": "test", "conclusion": "failure", "head_
 def test_run_con_job_falliti():
     righe = s.righe_run(RUN, lambda p: {"jobs": JOBS})
     assert righe[0]["tipo"] == "run" and righe[0]["pr"] == 5 and righe[0]["coda_s"] == 30 and righe[0]["jobs"]["pytest (3.11)"] == 600
-    cat = {r["job"]: r["categoria"] for r in righe[1:]}
+    cat = {r["job"]: r["categoria"] for r in righe if r["tipo"] == "job_fallito"}
     assert cat == {"tipi (tsc)": "lint", "browser": "test", "rust": "timeout"}
-    assert all(r["run_attempt"] == 2 for r in righe)
+    assert all(r["run_attempt"] == 2 for r in righe) and sum(r["tipo"] == "job" for r in righe) == 4
 
 
 def test_pr_unita():
@@ -33,14 +33,24 @@ def test_pr_unita():
           "merged": True, "head": {"sha": "abc"}}
 
     def api(p):
+        if p.startswith("/commits/") and "check-runs" not in p:
+            return {"commit": {"message": "Merge branch 'main' into x"}, "parents": [1, 2], "files": [{"filename": "docs/a.md"}]}
+        if "/files" in p:
+            return [{"filename": "docs/a.md"}, {"filename": "crates/x/src/lib.rs"}]
+        if "/reviews" in p:
+            return [{"submitted_at": "2026-10-21T09:00:00Z"}]
         if "/commits?" in p:
-            return [{"parents": [1, 2], "commit": {"message": "Merge branch 'main' into claude/x"}},
-                    {"parents": [1], "commit": {"message": "fix"}}]
+            return [{"parents": [1], "commit": {"message": "start"}},
+                    {"parents": [1, 2], "commit": {"message": "Merge branch 'main' into claude/x"}},
+                    {"parents": [1], "commit": {"message": "fix"}}, {"parents": [1], "commit": {"message": "cargo fmt"}}]
         return {"check_runs": [{"id": 1, "name": "a", "status": "completed", "conclusion": "success", "completed_at": "2026-10-21T10:30:00Z"},
                                {"id": 2, "name": "a", "status": "completed", "conclusion": "success", "completed_at": "2026-10-21T10:40:00Z"}]}
     r = s.righe_pr({"action": "closed", "pull_request": pr}, api)[0]
     assert (r["azione"], r["aperta_s"], r["merge_main"], r["verde_a_unione_s"]) == ("unita", 10800, 1, 1200)
-    assert s.righe_pr({"action": "synchronize", "pull_request": pr}, api)[0]["azione"] == "push"
+    assert r["cause_commit"] == {"merge di main": 1, "altro": 1, "fmt/clippy": 1}
+    assert (r["file_n"], r["aree"], r["solo_doc"], r["prima_review_s"]) == (2, {"docs": 1, "rust": 1}, False, 3600)
+    p = s.righe_pr({"action": "synchronize", "pull_request": pr}, api)[0]
+    assert (p["azione"], p["merge_main"], p["aree"]) == ("push", True, {"docs": 1})
 
 
 def test_conflitti_e_dedup(tmp_path):
@@ -50,15 +60,21 @@ def test_conflitti_e_dedup(tmp_path):
         if p == "/commits/m1":
             return {"commit": {"message": "Merge pull request #9 from x"}, "files": [{"filename": f} for f in ("a.js", "b.js", "c.js")]}
         if p.startswith("/pulls?state=open"):
-            return [{"number": 1}, {"number": 2}, {"number": 3}]
+            return [{"number": 1}, {"number": 2}, {"number": 3}, {"number": 4}, {"number": 5}]
         if p.startswith("/pulls/") and "/files" in p:
-            return [{"filename": f} for f in (("a.js", "b.js", "z.js") if "/1/" in p else ("c.js",))]
+            return [{"filename": f} for f in (("a.js", "b.js", "z.js") if "/1/" in p else ("c.js",) if "/2/" in p else ("q.js",))]
         n = int(p.split("/")[2])
-        return {"mergeable": None if n == 3 else True, "mergeable_state": "dirty" if n in (1, 2) else "clean"}
+        letture[n] = letture.get(n, 0) + 1
+        # 4: dirty only at the first read (false conflict); 5: dirty at both reads (real, no file in common)
+        sporco = n in (1, 2, 5) or (n == 4 and letture[n] == 1)
+        return {"mergeable": None if n == 3 else True, "mergeable_state": "dirty" if sporco else "clean"}
+    letture: dict = {}
+    pause = []
     ev = {"ref": "refs/heads/main", "after": "m1"}
-    righe = s.righe_conflitti(ev, str(dati), api, lambda _: None)
-    assert [(r["pr"], r["file_comuni"], r["pr_unita"]) for r in righe] == [(1, ["a.js", "b.js"], 9), (2, ["c.js"], 9)]
-    assert s.accoda(righe, str(dati)) == 2 and s.accoda(righe, str(dati)) == 0
+    righe = s.righe_conflitti(ev, str(dati), api, pause.append)
+    assert [(r["pr"], r["file_comuni"], r["pr_unita"]) for r in righe] == [(1, ["a.js", "b.js"], 9), (2, ["c.js"], 9), (5, [], 9)]
+    assert s.RILETTURA_S in pause
+    assert s.accoda(righe, str(dati)) == 3 and s.accoda(righe, str(dati)) == 0
     assert s.righe_conflitti(ev, str(dati), api, lambda _: None) == []
     assert s.righe_conflitti({"ref": "refs/heads/x", "after": "m1"}, str(dati), api) == []
 
@@ -72,3 +88,92 @@ def test_riepilogo(tmp_path, capsys):
     txt = "\n".join(out)
     assert "tipi (tsc) [lint]" in txt and "conflicts: a.js" in txt and "Top 10 bottlenecks" in txt
     assert s.colli(ev)[0][0].startswith("job failed: rust") or s.colli(ev)[0][2] >= s.colli(ev)[-1][2]
+
+
+def test_job_passi_cache_e_annullo():
+    j = {"id": 11, "name": "pytest (3.11)", "status": "completed", "conclusion": "cancelled", "created_at": "2026-10-21T10:00:00Z",
+         "started_at": "2026-10-21T10:00:20Z", "completed_at": "2026-10-21T10:05:20Z",
+         "steps": [{"name": "Run actions/cache/restore@v4", "conclusion": "success", "started_at": "2026-10-21T10:00:30Z", "completed_at": "2026-10-21T10:01:30Z"}]}
+    run = dict(RUN["workflow_run"], conclusion="cancelled", created_at="2026-10-21T10:00:00Z")
+    log = ("2026-10-21T10:01:00Z Cache not found for input keys: k-abc, k-\n2026-10-21T10:04:00Z Cache saved with key: k-abc\n"
+           "2026-10-21T10:04:01Z Cache Size: ~272 MB (285212672 B)\n").encode()
+
+    def api(p):
+        if "/jobs" in p:
+            return {"jobs": [j]}
+        if "branch=" in p:
+            return {"workflow_runs": [{"name": "test", "head_sha": "new", "created_at": "2026-10-21T10:02:00Z"}, {"name": "test", "head_sha": "abc", "created_at": "2026-10-21T10:03:00Z"}]}
+        return {}
+    righe = s.righe_run_obj(run, api, lambda p: log if "/logs" in p else None)
+    por_tipo = {r["tipo"]: r for r in righe}
+    assert por_tipo["job"]["passi"] == [["Run actions/cache/restore@v4", 60, "success"]] and por_tipo["job"]["coda_s"] == 20
+    assert (por_tipo["cache"]["esito_cache"], por_tipo["cache"]["mb"], por_tipo["cache"]["salvata"]) == ("miss", 272, "k-abc")
+    assert (por_tipo["annullamento"]["minuti_runner"], por_tipo["annullamento"]["sostituito_da"]) == (5.0, "new")
+
+
+def test_junit_per_file():
+    import io
+    import zipfile
+    xml = ('<testsuites><testsuite><testcase classname="tests.test_a.T" name="x" time="1.5"/><testcase classname="tests.test_a" name="y" time="7"/>'
+           '<testcase classname="tests.test_b" name="z" time="0.5"/></testsuite></testsuites>')
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("junit-3.11.xml", xml)
+    api = lambda p: {"artifacts": [{"id": 5, "name": "junit-3.11"}, {"id": 6, "name": "other"}]}  # noqa: E731
+    r = s.dati_ci.righe_junit(RUN["workflow_run"], {"sha": "abc"}, api, lambda p: buf.getvalue())[0]
+    assert r["file"] == {"tests/test_a.py": [2, 8.5], "tests/test_b.py": [1, 0.5]} and r["lenti"] == [["tests.test_a::y", 7.0]] and r["python"] == "3.11"
+
+
+def test_recenti_cursore_carico_compatta_esporta(tmp_path):
+    dati = tmp_path / "eventi.jsonl"
+    vecchio = dict(RUN["workflow_run"], id=1, updated_at="2026-10-21T09:00:00Z")
+    nuovo = dict(RUN["workflow_run"], id=2, updated_at="2026-10-21T10:30:30Z")
+    altro = dict(RUN["workflow_run"], id=3, name="x", updated_at="2026-10-21T10:31:00Z")
+
+    def api(p):
+        if "status=completed" in p:
+            return {"workflow_runs": [vecchio, nuovo, altro]}
+        if "status=queued" in p or "status=in_progress" in p:
+            return {"workflow_runs": [{"id": 9}]}
+        if "/runs/9/jobs" in p:
+            return {"jobs": [{"status": "queued"}, {"status": "in_progress"}, {"status": "completed"}]}
+        return {"jobs": JOBS}
+    (tmp_path / "cursore.json").write_text('{"ultimo": "2026-10-21T10:00:00Z"}')
+    righe, cur = s.righe_recenti(str(dati), api, lambda p: None, s.datetime(2026, 10, 21, 11, 0, tzinfo=s.timezone.utc))
+    assert cur == "2026-10-21T10:30:30Z" and {r["run_id"] for r in righe if r["tipo"] == "run"} == {2}
+    car = [r for r in righe if r["tipo"] == "carico"][0]
+    assert (car["job_in_coda"], car["job_in_corso"]) == (2, 2)
+    assert s.accoda(righe, str(dati)) == len(righe) and s.leggi(str(dati))[0]["v"] == 1
+    ev = s.leggi(str(dati))
+    comp = s.dati_ci.compatta(ev, s.datetime(2026, 12, 1, tzinfo=s.timezone.utc))
+    assert all("passi" not in r for r in comp) and any("passi_n" in r for r in comp)
+    files = s.dati_ci.esporta(ev, str(tmp_path / "csv"))
+    assert any(f.endswith("job.csv") for f in files) and "tipo" in (tmp_path / "csv" / "run.csv").read_text().splitlines()[0]
+    out = []
+    s.riepilogo(ev, out=out.append)
+    assert any("Runner load" in o for o in out) and any("Jobs: queue" in o for o in out)
+
+
+def test_file_conflitto_merge_tree(tmp_path):
+    import subprocess
+
+    def sh(cwd, *a):
+        return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=cwd, capture_output=True, text=True, check=True).stdout
+    o, c = tmp_path / "o.git", tmp_path / "c"
+    sh(tmp_path, "init", "-q", "--bare", "-b", "main", str(o))
+    sh(tmp_path, "clone", "-q", str(o), str(c))
+    for f in ("a.txt", "b.txt"):
+        (c / f).write_text("base\n")
+    sh(c, "add", "-A")
+    sh(c, "commit", "-qm", "base")
+    sh(c, "push", "-q", "origin", "HEAD:main")
+    sh(c, "checkout", "-q", "-b", "pr")
+    (c / "a.txt").write_text("pr\n")
+    (c / "b.txt").write_text("pr\n")
+    sh(c, "commit", "-qam", "pr")
+    sh(c, "push", "-q", "origin", "HEAD:refs/pull/3/head")
+    sh(c, "checkout", "-q", "main")
+    (c / "a.txt").write_text("main\n")
+    sh(c, "commit", "-qam", "main")
+    sh(c, "push", "-q", "origin", "HEAD:main")
+    assert s.dati_ci.file_conflitto(3, str(c)) == ["a.txt"]

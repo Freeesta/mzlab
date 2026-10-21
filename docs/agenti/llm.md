@@ -29,7 +29,7 @@ Studio e piano a PR: `docs/studi/llm/README.md`. Il crate `mzlab-llm` (membro de
 
 ## Trasporto nel sito
 - Dopo il consenso la pagina crea l'iframe `llm/trasporto.html` con una CSP propria (`default-src 'none'`, `connect-src 'self' http://localhost:* http://127.0.0.1:*`): la chiave vive solo lì (memoria; «Remember on this device» la cifra con AES-GCM in IndexedDB `mzlab_llm`, chiave non estraibile; «Forget key» la cancella).
-- I byte della risposta passano al worker `llm-worker.js` su un `MessageChannel` (controllo dell'origine alla consegna della porta); il worker carica `wasm-feat/llm/` (`crates/mzlab-llm-wasm`, `limit_llm` 180 224 B, misurato 160 179 B) alla prima richiesta e decodifica con `LlmStream`; `strumenti-1.json` sta accanto (`tools/build_site.py`).
+- I byte della risposta passano al worker `llm-worker.js` su un `MessageChannel` (controllo dell'origine alla consegna della porta); il worker carica `wasm-feat/llm/` (`crates/mzlab-llm-wasm`, `limit_llm` 286 720 B, misurato 258 709 B) alla prima richiesta e decodifica con `LlmStream`; `strumenti-1.json` sta accanto (`tools/build_site.py`).
 - Nessun host esterno nella CSP del trasporto: dal sito si raggiunge solo `localhost`/`127.0.0.1` (modello locale) e il trasporto `replay` (registrazione servita da 'self'); i fornitori nel cloud sono raggiungibili solo dall'app. Aggiungere un host è una decisione esplicita (`tests/test_llm_csp.py` elenca le sorgenti ammesse). CORS di un fornitore e di `localhost`: non misurati (nessuna richiesta a fornitori veri, nessun server locale in CI); `site_allowed` resta com'è.
 - `index.html` e `tauri.conf.json` non cambiano: l'iframe ha la sua CSP.
 
@@ -45,6 +45,16 @@ Studio e piano a PR: `docs/studi/llm/README.md`. Il crate `mzlab-llm` (membro de
 - `context::build(&sources, budget) -> Result<String>` fa il `contesto/1` (schema `docs/schemi/contesto-1.json`): solo profilo «ricerca»; TIC ≤200 punti (massimo per intervallo), numeri a 4 cifre significative, `alias` f1.. con `hide_names`, `table_summary` (righe, per colonna riempite/min/max, prime 50 righe per `area`); `truncated` elenca le sezioni tolte (features, msn, run, annot, poi tic), `err.llm.context.budget` se non basta.
 - `eval`: casi `llm-eval/1` (`tests/data/llm/eval/E1..E10.json`: `request`, `level`, `context`, `tool_results`, `expect`) contro le registrazioni `tests/data/llm/<id>.jsonl`; `mzlab-cli llm eval DIR --replay DIR` esce 1 se un controllo fallisce, `--provider/--key-file` dà `err.llm.network` (nessun trasporto in questa build). `mzlab-cli llm context RUNDIR [--budget N] [--hide-names]` stampa il contesto di una cartella di corsa.
 - `flow::prov_json_llm(agent, plan_sha256, run, Option<&LlmRef>)` aggiunge a `prov/1` il blocco facoltativo `llm{log_sha256,turn,provider,model,level}` (`$defs/prov1`); con `None` i byte sono quelli di `prov_json`.
+
+## Pannello nel Flow (D5)
+- `crates/mzlab-llm-wasm/src/agent.rs`: classe `Agent` (la macchina `agent::State` + un `Replay` interno per le prove) che parla in righe JSON `{"o":"send|call|ask|show|log|done"}`; il controllo del piano è fuori dalla macchina (`external_plan_check`: la pagina ha il registro dei passi, `Agent::result` conta i piani rifiutati, 3 al massimo). `context_build(sources, budget)` espone `context::build`.
+- `llm-worker.js`: operazioni `agent.new`, `agent.in`, `context`.
+- `mzlab/web/llm/llm-agente.js` (`AgentRun`) esegue ciò che la macchina chiede (mostrare, chiamare uno strumento, chiedere conferma, inviare la richiesta con `MZLAB_LLM.client` o `DesktopClient`); nessuna decisione. `window.MZLAB_LLM_AGENT.replay(testo, strict)` mette una registrazione per la prossima conversazione (test, nessuna rete).
+- `flow/lazy/flow-llm.js` (pannello a destra della tela: livello, costo stimato, «What will be sent», carte «Apply»/«Discard» con la differenza del piano e i problemi con `F.message`, carte «Allow»/«Deny» (stima di `preflight`), registro «by assistant» con «Undo», «Stop», Esc chiude e il fuoco torna al pulsante, larghezza da tastiera con Alt+←/→) e `flow/lazy/flow-llm-tools.js` (strumenti: stesse funzioni dei clic, ogni modifica è una voce di `S.undo`).
+- `flow-shell.js` li scarica solo se profilo «ricerca», assistente acceso e consenso dato. `data_summary`, `chart_make`, `code_export` rispondono `err.llm.tool.unavailable`.
+- Al livello L2 il tetto `l2max` delle modifiche per turno è applicato dalla pagina.
+- Ogni corsa lanciata dall'assistente porta `llm` in `prov/1`: nell'app `flow/run` accetta il campo `llm` (`flow::prov_with_llm`), nel sito `run` dell'esecutore web ritorna `llm` nel suo record (`S.llmRef`).
+- Prova: `tests_e2e/e2e_llm.py` (registrazioni da `tests/data/llm/`, nessuna rete).
 
 ## Prove
 - `tests/test_llm_csp.py` (CSP della pagina, della finestra e del trasporto), `tests/test_llm_chiavi.py` (nessuna forma di chiave nei cataloghi, negli schemi e nel campione di log), `tests_e2e/e2e_llm_consenso.py` (corso e spento: nessuna richiesta a `llm/`; consenso, anteprima, replay da 'self', nessun host esterno, axe), `cargo test -p mzlab-llm-wasm`, `cargo test -p mzlab-desktop --lib llm`.

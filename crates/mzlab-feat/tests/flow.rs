@@ -373,4 +373,5 @@ fn prov_json_llm_adds_only_the_llm_block() {
     let head = plain.trim_end().trim_end_matches('}');
     assert!(with.starts_with(head) && with.contains(",\"llm\":{\"log_sha256\":\""));
     assert!(with.trim_end().ends_with("\"level\":\"L1\"}}"));
+    assert_eq!(mzlab_core::flow::prov_with_llm(&plain, &llm), with);
 }
