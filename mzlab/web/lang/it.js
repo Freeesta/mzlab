@@ -3643,7 +3643,7 @@ I18N.add("it", {
   "error.featWorker": "Un processo della pipeline ha smesso di funzionare. Riprova; se succede ancora, chiudi le altre schede per liberare memoria.",
   "error.featWasmHash": "Il motore della pipeline non è stato scaricato bene (la somma di controllo non torna). Ricarica la pagina.",
   "error.featNoHypotheses": "Le ipotesi del progenitore vanno cercate prima di costruire le prove.",
-  "error.featMemory": "Memoria insufficiente per la fase «{fase}» su {files} file (servono circa {stima_mb} MB su {budget_mb} MB). Le fasi già finite sono salvate; dividi la serie in gruppi più piccoli.",
+  "error.featMemory": "Memoria insufficiente per la fase «{fase}» su {files} file (servono circa {stima_mb} MB, liberi {libero_mb} MB su {budget_mb} MB). Le fasi già finite sono salvate; dividi la serie in gruppi più piccoli.",
   "error.featState": "Lo stato delle ipotesi non è valido: rifai la ricerca delle ipotesi.",
   "error.featFailed": "La pipeline non è riuscita.",
   "error.badRecipe": "I parametri della pipeline non sono validi.",
