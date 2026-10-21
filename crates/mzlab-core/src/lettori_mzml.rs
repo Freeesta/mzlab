@@ -73,6 +73,30 @@ fn centroidi_di(l: &mut dyn Lettore, c: usize, h: &mut Header) -> Result<Option<
     Ok(Some(p))
 }
 
+/// The parameters of our own centroids, when `peaks` asks for them and the sample is profile (the browser build has no peak picking here).
+#[cfg(not(target_family = "wasm"))]
+fn mzlab_params(
+    peaks: Picchi,
+    l: &mut dyn Lettore,
+    c: usize,
+    h: &mut Header,
+) -> Result<Option<Params>> {
+    match peaks {
+        Picchi::Mzlab => centroidi_di(l, c, h),
+        _ => Ok(None),
+    }
+}
+
+#[cfg(target_family = "wasm")]
+fn mzlab_params(
+    _: Picchi,
+    _: &mut dyn Lettore,
+    _: usize,
+    _: &mut Header,
+) -> Result<Option<Params>> {
+    Ok(None)
+}
+
 /// A conversion of one sample to mzML: the one entry of every route (`scrivi*` are its short forms).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Conversione<'a> {
@@ -83,30 +107,6 @@ pub struct Conversione<'a> {
 }
 
 impl Conversione<'_> {
-    /// The parameters of our own centroids, when the conversion asks for them and the sample is profile (the browser build has no peak picking here).
-    #[cfg(not(target_family = "wasm"))]
-    fn mzlab_params(
-        &self,
-        l: &mut dyn Lettore,
-        c: usize,
-        h: &mut Header,
-    ) -> Result<Option<Params>> {
-        match self.peaks {
-            Picchi::Mzlab => centroidi_di(l, c, h),
-            _ => Ok(None),
-        }
-    }
-
-    #[cfg(target_family = "wasm")]
-    fn mzlab_params(
-        &self,
-        _: &mut dyn Lettore,
-        _: usize,
-        _: &mut Header,
-    ) -> Result<Option<Params>> {
-        Ok(None)
-    }
-
     /// Writes sample `c` of `l` to `out`; `progress(done, total)` counts the spectra.
     pub fn scrivi<W: Write>(
         &self,
@@ -119,7 +119,7 @@ impl Conversione<'_> {
             return Err(Error::new("error.badIndex").with("c", c));
         }
         let mut h = testata(l, c)?;
-        let params = self.mzlab_params(l, c, &mut h)?;
+        let params = mzlab_params(self.peaks, l, c, &mut h)?;
         let mut buf = Buf::default();
         h.run_params
             .push(("mzLab conv/1".into(), crate::conv::resoconto(l, c)?));

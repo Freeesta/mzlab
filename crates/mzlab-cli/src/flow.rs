@@ -212,7 +212,7 @@ pub(crate) struct Made {
     pub port: &'static str,
     pub artifact: Artifact,
     pub estimates: Vec<(String, Value, Value)>,
-    /// `warn.*` keys of what the step noticed and went on with.
+    /// `warn.*` keys the step noticed.
     pub warnings: Vec<String>,
 }
 
