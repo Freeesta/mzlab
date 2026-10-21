@@ -26,3 +26,4 @@
 {"ts_utc":"2026-10-21T17:13:47Z","tipo":"conflitto","pr":1353,"sha":"59b14353cff86e269252da5345c261e9bcdf8b23","pr_unita":1361,"file_comuni":[],"n_file_comuni":0}
 {"ts_utc":"2026-10-21T17:13:57Z","tipo":"conflitto_risolto","pr":1350,"sha":"59b14353cff86e269252da5345c261e9bcdf8b23"}
 {"ts_utc":"2026-10-21T17:14:07Z","tipo":"conflitto_risolto","pr":1344,"sha":"59b14353cff86e269252da5345c261e9bcdf8b23"}
+{"ts_utc":"2026-10-21T17:14:46Z","tipo":"run","workflow":"rust","esito":"success","main":false,"durata_s":620,"attivo_s":2002,"coda_s":3,"jobs":{"changes":20,"rust-misc":460,"rust":240,"rust-wasm":588,"rust-lint":146,"rust-core":489,"deny":55,"rust-ok":4},"pr":1365,"sha":"5de507005e95b58d45a10460871fa45299db6ce3","run_id":39640499034,"run_attempt":1}
