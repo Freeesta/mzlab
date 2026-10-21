@@ -282,12 +282,8 @@ usage: mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]
 
 exit codes: 0 valid, 2 usage, 3 the plan is not valid (also a step that has no native executor: err.flow.step.native), 4 the plan cannot be read";
 
-/// `mzlab-cli flow check ARGS...` (the arguments after `flow check`).
-pub(crate) fn check(args: Vec<String>) -> Outcome {
-    let st = Style {
-        json: args.iter().any(|a| a == "--json"),
-        jsonl: false,
-    };
+/// The plan file and the `--set` texts of `flow check`; the outcome to return when the arguments are not usable (or `--help`).
+fn check_args(args: Vec<String>, st: Style) -> Result<(String, Vec<String>), Outcome> {
     let usage = |msg: &str| {
         let err = Error::new("err.cli.usage").with("detail", msg);
         fail(st, 2, &err, msg, "mzlab-cli flow check --help")
@@ -297,68 +293,81 @@ pub(crate) fn check(args: Vec<String>) -> Outcome {
     while let Some(x) = it.next() {
         match x.as_str() {
             "--help" | "-h" => {
-                return Outcome {
+                let help = format!("{CHECK_HELP}\n").into_bytes();
+                return Err(Outcome {
                     code: 0,
-                    stdout: format!("{CHECK_HELP}\n").into_bytes(),
+                    stdout: help,
                     stderr: String::new(),
-                }
+                });
             }
             "--json" => {}
             "--set" => match it.next() {
                 Some(s) => sets.push(s),
-                None => return usage("--set needs INSTANCE.NAME=VALUE"),
+                None => return Err(usage("--set needs INSTANCE.NAME=VALUE")),
             },
-            s if s.starts_with("--") => return usage(&format!("unknown option {s}")),
+            s if s.starts_with("--") => return Err(usage(&format!("unknown option {s}"))),
             _ if plan_path.is_none() => plan_path = Some(x),
-            _ => return usage(&format!("one plan only ({x})")),
+            _ => return Err(usage(&format!("one plan only ({x})"))),
         }
     }
-    let Some(plan_path) = plan_path else {
-        return usage("no plan file");
-    };
-    let reg = steps();
-    let text = match std::fs::read(&plan_path) {
-        Ok(t) => t,
-        Err(e) => {
-            let err = Error::new("err.cli.file").with("path", &plan_path);
-            return fail(
-                st,
-                4,
-                &err,
-                &format!("{plan_path}: {e}"),
-                "check the path of the plan",
-            );
-        }
-    };
+    plan_path
+        .map(|p| (p, sets))
+        .ok_or_else(|| usage("no plan file"))
+}
+
+/// The plan of `path` read and with the `--set` texts applied, or the outcome that says why not.
+fn check_plan(path: &str, sets: &[String], reg: &[Step], st: Style) -> Result<Plan, Outcome> {
+    let text = std::fs::read(path).map_err(|e| {
+        let err = Error::new("err.cli.file").with("path", path);
+        fail(
+            st,
+            4,
+            &err,
+            &format!("{path}: {e}"),
+            "check the path of the plan",
+        )
+    })?;
     let hint = "the plan must be the mzflow/2 file the Flow page downloads";
-    let mut plan = match parse(&text) {
-        Ok(p) => p,
-        Err(e) => return fail(st, 3, &e, &e.to_string(), hint),
-    };
+    let mut plan = parse(&text).map_err(|e| fail(st, 3, &e, &e.to_string(), hint))?;
     let (setting, plain): (Vec<&String>, Vec<&String>) = sets
         .iter()
         .partition(|s| s.contains(".algorithm=") || s.contains(".preset="));
     for s in setting.into_iter().chain(plain) {
-        if let Err(e) = apply_set(&mut plan, &reg, s) {
-            return fail(
-                st,
-                2,
-                &Error::new("err.cli.set").with("set", s),
-                &e,
-                "mzlab-cli flow check --help",
-            );
-        }
+        let err = Error::new("err.cli.set").with("set", s);
+        apply_set(&mut plan, reg, s)
+            .map_err(|e| fail(st, 2, &err, &e, "mzlab-cli flow check --help"))?;
     }
+    Ok(plan)
+}
+
+/// `mzlab-cli flow check ARGS...` (the arguments after `flow check`).
+pub(crate) fn check(args: Vec<String>) -> Outcome {
+    let st = Style {
+        json: args.iter().any(|a| a == "--json"),
+        jsonl: false,
+    };
+    let (path, sets) = match check_args(args, st) {
+        Ok(r) => r,
+        Err(o) => return o,
+    };
+    let reg = steps();
+    let plan = match check_plan(&path, &sets, &reg, st) {
+        Ok(p) => p,
+        Err(o) => return o,
+    };
     match prepare(plan, &reg) {
-        Ok(Ok(_)) => Outcome {
-            code: 0,
-            stdout: if st.json {
+        Ok(Ok(_)) => {
+            let stdout = if st.json {
                 check_json(&[]).into_bytes()
             } else {
                 Vec::new()
-            },
-            stderr: "ok: the plan is valid\n".into(),
-        },
+            };
+            Outcome {
+                code: 0,
+                stdout,
+                stderr: "ok: the plan is valid\n".into(),
+            }
+        }
         Ok(Err(problems)) => {
             let mut o = invalid(Style::default(), &problems);
             if st.json {

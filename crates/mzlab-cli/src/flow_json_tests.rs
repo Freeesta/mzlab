@@ -160,29 +160,42 @@ fn flow_check_says_what_is_wrong_without_the_input_files() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// `flow run` of the plan of `dir` into `out` with the `extra` arguments.
+fn run_into(dir: &Path, out: &Path, extra: &[&str]) -> crate::Outcome {
+    let (plan, data) = (dir.join("plan.json"), dir.join("data"));
+    let mut args = vec![p(&plan), "--in", p(&data), "--out", p(out)];
+    args.extend(extra);
+    flow_run(&args)
+}
+
+/// Every output of a `flowrun/1` document is a file of `out` with the SHA-256 and the size it says; returns how many.
+fn outputs_match_files(v: &Value, out: &Path) -> usize {
+    let mut files = 0;
+    for s in v.get("steps").unwrap().arr() {
+        for o in s.get("outputs").unwrap().arr() {
+            let bytes = std::fs::read(out.join(str_of(o, "file"))).unwrap();
+            assert_eq!(
+                str_of(o, "sha256"),
+                sha256_hex(&bytes),
+                "{}",
+                str_of(o, "file")
+            );
+            assert_eq!(
+                o.get("bytes").and_then(Value::f64),
+                Some(bytes.len() as f64)
+            );
+            files += 1;
+        }
+    }
+    files
+}
+
 #[test]
 fn flow_run_json_gives_flowrun_with_the_hashes_of_the_files_and_changes_nothing_else() {
     let (dir, _) = fixture("json");
-    let (plan, data) = (dir.join("plan.json"), dir.join("data"));
     let (a, b) = (dir.join("a"), dir.join("b"));
-    let args = |out: &Path, extra: &[&str]| {
-        let mut v = vec![
-            p(&plan).to_string(),
-            "--in".into(),
-            p(&data).into(),
-            "--out".into(),
-            p(out).into(),
-        ];
-        v.extend(extra.iter().map(|x| x.to_string()));
-        v
-    };
-    let plain = flow_run(&args(&a, &[]).iter().map(String::as_str).collect::<Vec<_>>());
-    let with = flow_run(
-        &args(&b, &["--json"])
-            .iter()
-            .map(String::as_str)
-            .collect::<Vec<_>>(),
-    );
+    let plain = run_into(&dir, &a, &[]);
+    let with = run_into(&dir, &b, &["--json"]);
     assert_eq!((plain.code, with.code), (0, 0), "{}", with.stderr);
     assert!(plain.stdout.is_empty());
     assert_eq!(
@@ -204,49 +217,25 @@ fn flow_run_json_gives_flowrun_with_the_hashes_of_the_files_and_changes_nothing_
         str_of(&v, "plan_sha256"),
         sha256_hex(&std::fs::read(b.join("plan.json")).unwrap())
     );
-    let steps = v.get("steps").unwrap().arr();
-    assert_eq!(steps.len(), 4);
-    let mut files = 0;
-    for s in steps {
-        assert_eq!(str_of(s, "status"), "ok");
-        for o in s.get("outputs").unwrap().arr() {
-            let bytes = std::fs::read(b.join(str_of(o, "file"))).unwrap();
-            assert_eq!(
-                str_of(o, "sha256"),
-                sha256_hex(&bytes),
-                "{}",
-                str_of(o, "file")
-            );
-            assert_eq!(
-                o.get("bytes").and_then(Value::f64),
-                Some(bytes.len() as f64)
-            );
-            files += 1;
-        }
-    }
-    assert!(files >= 4, "{files} files");
+    assert_eq!(v.get("steps").unwrap().arr().len(), 4);
+    assert!(v
+        .get("steps")
+        .unwrap()
+        .arr()
+        .iter()
+        .all(|s| str_of(s, "status") == "ok"));
+    assert!(outputs_match_files(&v, &b) >= 4);
     sample("flowrun.json", &with.stdout);
 
     // the same bytes the second time, the clock apart; the folder reused: every step cached
     std::fs::remove_dir_all(&b).unwrap();
-    let again = flow_run(
-        &args(&b, &["--json"])
-            .iter()
-            .map(String::as_str)
-            .collect::<Vec<_>>(),
-    );
+    let again = run_into(&dir, &b, &["--json"]);
     assert_eq!(
         untimed(&String::from_utf8(again.stdout).unwrap()),
         untimed(&String::from_utf8(with.stdout).unwrap())
     );
-    let cached = flow_run(
-        &args(&b, &["--json"])
-            .iter()
-            .map(String::as_str)
-            .collect::<Vec<_>>(),
-    );
-    let v = json(&cached.stdout);
-    assert!(v
+    let cached = json(&run_into(&dir, &b, &["--json"]).stdout);
+    assert!(cached
         .get("steps")
         .unwrap()
         .arr()
@@ -278,7 +267,13 @@ fn dry_run_json_writes_nothing_and_errors_come_as_errore() {
     assert_eq!(str_of(&steps[3], "instance"), "gap");
     assert_eq!(str_of(&steps[3], "params_sha256").len(), 64);
     sample("flowdry.json", &dry.stdout);
+    let _ = std::fs::remove_dir_all(&dir);
+}
 
+#[test]
+fn errors_come_as_errore_with_the_code_and_stderr_of_the_text_form() {
+    let (dir, _) = fixture("errore");
+    let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
     // a malformed --set (2) and a missing input (4): the code and stderr of the text form, the document on stdout
     let text = |args: &[&str]| flow_run(args);
     let set = ["--set", "gap"];
