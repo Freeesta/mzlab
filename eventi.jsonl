@@ -306,3 +306,4 @@
 {"ts_utc":"2026-10-21T22:22:05Z","tipo":"run","workflow":"pages","esito":"cancelled","main":true,"durata_s":18,"attivo_s":17,"coda_s":0,"jobs":{"build":17,"deploy":0},"pr":null,"sha":"bce3d564d6aafebed455d8c805dde8cffcc5cd67","run_id":39685930417,"run_attempt":1}
 {"ts_utc":"2026-10-21T22:22:04Z","tipo":"job_fallito","workflow":"pages","job":"build","esito":"cancelled","durata_s":17,"categoria":"annullato","passo":null,"pr":null,"sha":"bce3d564d6aafebed455d8c805dde8cffcc5cd67","run_id":39685930417,"run_attempt":1}
 {"ts_utc":"2026-10-21T22:22:04Z","tipo":"run","workflow":"test","esito":"cancelled","main":true,"durata_s":17,"attivo_s":0,"coda_s":0,"jobs":{},"pr":null,"sha":"bce3d564d6aafebed455d8c805dde8cffcc5cd67","run_id":39685930873,"run_attempt":1}
+{"ts_utc":"2026-10-21T22:22:30Z","azione":"push","tipo":"pr","pr":1383,"sha":"131321baedbb2346c2dac42ea695aeff8d9131b1"}
