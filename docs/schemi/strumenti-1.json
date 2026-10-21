@@ -940,6 +940,8 @@
               "name":{
                 "enum":[
                   "formula",
+                  "molecule",
+                  "adduct",
                   "smiles",
                   "ppm_formula",
                   "mz_basso",
@@ -958,6 +960,16 @@
                     "type":"string",
                     "default":"",
                     "description":"C13H25N4O3S+, C13H24N4O3S+H or \"C13H24N4O3S [M+H]+\"; empty = masses only, no sub-formulas"
+                  },
+                  {
+                    "type":"string",
+                    "default":"",
+                    "description":"Name, synonym, id or formula looked up in the molecules list of the port `molecules`; it gives the formula (and the SMILES) of the root with `adduct`. `formula` wins when both are given"
+                  },
+                  {
+                    "type":"string",
+                    "default":"[M+H]+",
+                    "description":"Adduct written after the formula of `molecule`, e.g. [M+H]+ or [M-H]-"
                   },
                   {
                     "type":"string",

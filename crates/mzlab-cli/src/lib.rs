@@ -433,6 +433,8 @@ mod flow_ms2_tests;
 #[cfg(test)]
 mod flow_msngraph_tests;
 #[cfg(test)]
+mod flow_msnraw_tests;
+#[cfg(test)]
 mod flow_network_tests;
 #[cfg(test)]
 mod flow_picchi_tests;
