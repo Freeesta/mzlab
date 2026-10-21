@@ -4,7 +4,9 @@ use std::io::Write;
 use crate::centroidi::{Buf, Params};
 use crate::error::{Error, Result};
 use crate::lettori::Lettore;
+#[cfg(not(target_family = "wasm"))]
 use crate::lettori_centroidi::{picchi, stima};
+use crate::mzml::Spectrum;
 use crate::mzmlwrite::{Header, MzmlWriter, Opzioni, ProcStep};
 
 /// The header when the reader gives none: the run is the sample, the program is mzLab.
@@ -44,6 +46,17 @@ pub enum Picchi {
 }
 
 /// The parameters of our own centroids when the first scan of sample `c` is profile; the header then says so (`MS:1000035`, the parameters in a userParam).
+#[cfg(not(target_family = "wasm"))]
+fn riduci(s: &mut Spectrum, p: Option<&Params>, buf: &mut Buf) {
+    if let Some(p) = p {
+        picchi(s, p, buf);
+    }
+}
+
+#[cfg(target_family = "wasm")]
+fn riduci(_: &mut Spectrum, _: Option<&Params>, _: &mut Buf) {}
+
+#[cfg(not(target_family = "wasm"))]
 fn centroidi_di(l: &mut dyn Lettore, c: usize, h: &mut Header) -> Result<Option<Params>> {
     if l.indice(c)?.is_empty() || !l.scansione(c, 0)?.profile {
         return Ok(None);
@@ -70,6 +83,30 @@ pub struct Conversione<'a> {
 }
 
 impl Conversione<'_> {
+    /// The parameters of our own centroids, when the conversion asks for them and the sample is profile (the browser build has no peak picking here).
+    #[cfg(not(target_family = "wasm"))]
+    fn mzlab_params(
+        &self,
+        l: &mut dyn Lettore,
+        c: usize,
+        h: &mut Header,
+    ) -> Result<Option<Params>> {
+        match self.peaks {
+            Picchi::Mzlab => centroidi_di(l, c, h),
+            _ => Ok(None),
+        }
+    }
+
+    #[cfg(target_family = "wasm")]
+    fn mzlab_params(
+        &self,
+        _: &mut dyn Lettore,
+        _: usize,
+        _: &mut Header,
+    ) -> Result<Option<Params>> {
+        Ok(None)
+    }
+
     /// Writes sample `c` of `l` to `out`; `progress(done, total)` counts the spectra.
     pub fn scrivi<W: Write>(
         &self,
@@ -82,10 +119,7 @@ impl Conversione<'_> {
             return Err(Error::new("error.badIndex").with("c", c));
         }
         let mut h = testata(l, c)?;
-        let params = match self.peaks {
-            Picchi::Mzlab => centroidi_di(l, c, &mut h)?,
-            _ => None,
-        };
+        let params = self.mzlab_params(l, c, &mut h)?;
         let mut buf = Buf::default();
         h.run_params
             .push(("mzLab conv/1".into(), crate::conv::resoconto(l, c)?));
@@ -106,9 +140,7 @@ impl Conversione<'_> {
                 Picchi::File => l.scansione(c, k)?,
                 Picchi::Mzlab => {
                     let mut s = l.scansione(c, k)?;
-                    if let Some(p) = &params {
-                        picchi(&mut s, p, &mut buf);
-                    }
+                    riduci(&mut s, params.as_ref(), &mut buf);
                     s
                 }
                 Picchi::Profilo => match l.scansione_profilo(c, k)? {
