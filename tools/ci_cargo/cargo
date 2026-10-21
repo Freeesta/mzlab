@@ -58,14 +58,19 @@ def rispecchia(radice, fam_dir):
             sorgente = os.path.join(da, nome)
             if os.path.isfile(sorgente) and not nome.endswith(".d"):
                 destino = os.path.join(a, nome)
-                tmp = destino + ".tmp"
+                # a name per process: workers mirror the same files at the same time
+                tmp = f"{destino}.{os.getpid()}.tmp"
                 try:
-                    if os.path.exists(tmp):
-                        os.remove(tmp)
-                    os.link(sorgente, tmp)
+                    if os.path.exists(destino) and os.path.samefile(sorgente, destino):
+                        continue
+                    try:
+                        os.link(sorgente, tmp)
+                    except OSError:
+                        shutil.copy2(sorgente, tmp)
                     os.replace(tmp, destino)
                 except OSError:
-                    shutil.copy2(sorgente, destino)
+                    # a file rebuilt by another worker meanwhile: its own mirror run takes it
+                    continue
 
 
 def main():
