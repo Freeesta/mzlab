@@ -10,7 +10,7 @@ pub mod evidence_svg;
 pub mod explain;
 pub mod feature;
 mod fields;
-pub mod fragmenter;
+pub use crate::chem::fragmenter;
 pub mod isotopes;
 pub mod libraries;
 pub mod matching;

@@ -1,11 +1,18 @@
-// Ported from Attributio src/attributio/review/fragmenter.py.
+// Ported from Attributio src/attributio/review/fragmenter.py. Lives in `chem` so a module without Attributio can cleave a structure; `attributio::review::fragmenter` re-exports it.
 //! In-silico systematic bond cleavage: every acyclic single bond of a candidate structure is cut, each side takes a hydrogen, and the ion forms and neutral-loss
 //! variants of both sides are matched against the experimental MS/MS peaks within a ppm tolerance. Built on the molecular graph of mzLab (`chem::grafo`), no
 //! RDKit; the drawing of a fragment is not made here (the page draws the atoms listed in `atoms`).
 
-use super::isotopes::round_to;
-use crate::chem::grafo::Mol;
+use super::grafo::Mol;
 use mzlab_core::elements::{self, Formula};
+
+/// Python-like `round(x, nd)`: correctly rounded on the exact binary value, ties to even (the decimal formatting of Rust does the same).
+pub fn round_to(x: f64, nd: i32) -> f64 {
+    if !x.is_finite() || nd < 0 {
+        return x;
+    }
+    format!("{:.*}", nd as usize, x).parse().unwrap_or(x)
+}
 
 const ION_H: f64 = 1.00727646677;
 const LOSS_H2O: f64 = 18.010564684;
