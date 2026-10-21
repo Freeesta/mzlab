@@ -23,6 +23,7 @@ mod flow_compare;
 mod flow_formula;
 mod flow_inclusion;
 mod flow_level;
+mod flow_link;
 mod flow_match;
 mod flow_ms2;
 mod flow_network;
@@ -302,6 +303,8 @@ mod flow_compare_tests;
 mod flow_ident_tests;
 #[cfg(test)]
 mod flow_level_tests;
+#[cfg(test)]
+mod flow_link_tests;
 #[cfg(test)]
 mod flow_ms2_tests;
 #[cfg(test)]

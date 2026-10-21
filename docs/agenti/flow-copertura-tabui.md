@@ -18,10 +18,10 @@ Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzion
 | Previsione dei prodotti di trasformazione | `tp.generate` (modelli «Find transformation products», «TP time series») | Passo c'è ma non eseguibile (sito, app, CLI) | Esecutore Rust di `tp.generate` nel CLI (il motore `hr` esiste già nel `.wasm`) |
 | Filtri dei prodotti (tolleranze, criteri) | `tp.filter` (nodo «Filter products») | Passo c'è ma non eseguibile | Come sopra |
 | Confronto HR: rivelazione, allineamento, riempimento | `features.detect`, `features.align`, `features.gapfill`, `features.table` (modello «Just build the feature table») | Coperta ed eseguibile (app, CLI) | Sito: esecutore web |
-| Abbinamento ipotesi ↔ feature con MS2 | `tp.link`, `features.ms2_link`, `spectra.ms2` | `spectra.ms2` eseguibile; `tp.link` e `features.ms2_link` no | Esecutori di `tp.link` e `features.ms2_link` |
+| Abbinamento ipotesi ↔ feature con MS2 | `tp.link`, `features.ms2_link`, `spectra.ms2` | `spectra.ms2` e `tp.link@2` eseguibili (CLI e app); `features.ms2_link` no | `features.ms2_link` è incluso in `features.detect` e non si separa senza cambiare i byte |
 | MS2, libreria, albero MSn del genitore | `spectra.match` (eseguibile), grafo `msngrafo/1` e albero (`frag_tree`) | Ricerca in libreria coperta; albero e grafo mancano come passi | Un passo che produca `msngrafo/1`; oggi è solo vista di un file |
 | Posizione della sostituzione | `tp.position` | Passo c'è ma non eseguibile | Esecutore e registrazione nel CLI |
-| Rete dei prodotti | `tp.network` (nodo «Product network») | Eseguibile solo con un `tp/1` già pronto; nessun passo eseguibile lo produce | Esecutori di `tp.generate` e `tp.link` |
+| Rete dei prodotti | `tp.network` (nodo «Product network») | Eseguibile solo con un `tp/1` già pronto; nessun passo eseguibile lo produce | Esecutori di `tp.generate` e `tp.link` (`tp.link@2` c'è; `tp.link@1`, che prendeva un MGF, non esiste più: `err.flow.step.version`) |
 | Reattività del genitore | `structure.reactivity` | Passo c'è ma non eseguibile (nel sito la vista legge un `reatt/1` da disco) | Esecutore (il motore `chem` è nel `.wasm`) |
 | Confronto fra condizioni / gruppi | `meta.compare`, `table.stats` | `meta.compare` eseguibile; `table.stats` no | Esecutore di `table.stats`; i grafici sono già viste di Flow |
 | Modalità diretta («Dig» con avanzamento in diretta) | Nessun passo; l'avanzamento di Flow è solo a fine corsa | Manca | Avanzamento per passo (debito 6) |

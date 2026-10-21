@@ -97,13 +97,23 @@ fn protonated(neutral: &Formula) -> String {
 /// The hypotheses whose ion m/z is within `MATCH_PPM` of `mz`, best first (fewest steps is not known here: smallest |ppm|, then the label).
 /// The first is the modification; the others are the alternatives. `None` formulas that do not parse are skipped.
 pub fn candidates(mz: f64, parent: &Formula, hyps: &[&Hyp]) -> Vec<Candidate> {
+    candidates_with(mz, parent, hyps, MATCH_PPM)
+}
+
+/// `candidates` within `match_ppm` instead of `MATCH_PPM`.
+pub fn candidates_with(
+    mz: f64,
+    parent: &Formula,
+    hyps: &[&Hyp],
+    match_ppm: f64,
+) -> Vec<Candidate> {
     let mut out: Vec<Candidate> = Vec::new();
     for h in hyps {
         let ppm = (mz - h.mz) / h.mz * 1e6;
         let Ok(f) = parse_formula(&h.formula) else {
             continue;
         };
-        if !ppm.is_finite() || ppm.abs() > MATCH_PPM {
+        if !ppm.is_finite() || ppm.abs() > match_ppm {
             continue;
         }
         let c = Candidate {
