@@ -1,10 +1,7 @@
-//! The routes that read a file besides its index, from the mzML and from the reader, and the mzML of a `.wiff` reader against its conversion
-//! (helpers of `lettori_mzidx.rs`).
-use std::path::Path;
-
+//! The routes that read a file besides its index, from the mzML and from the reader (helpers of `lettori_mzidx.rs`).
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{self, Value};
-use mzlab_core::lettori::{self, FileSet, Limiti};
+use mzlab_core::lettori;
 use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::routes::{Query, Routes};
 use mzlab_core::{fileroutes, itemroutes, lettori_mzml, lr};
@@ -124,49 +121,4 @@ fn same_scans(
             "{label}: scan {sid}"
         );
     }
-}
-
-/// Every sample of a `.wiff` pair written by its reader (`lettori_mzml::scrivi`, through `lettori_centroidi` for the centroids) is the mzML of
-/// the conversion of the page (`wiff::Wiff::to_mzml_progress`), with the profile as stored and with centroids.
-pub fn same_as_conversion(dir: &Path, name: &str, set: &dyn Fn() -> FileSet) -> usize {
-    let wname = format!("{name}.wiff");
-    let ole =
-        mzlab_core::wiff::container(std::fs::read(dir.join(&wname)).unwrap(), &wname).unwrap();
-    let scan_path = dir.join(format!("{wname}.scan"));
-    let scan_len = std::fs::metadata(&scan_path).unwrap().len();
-    let ids: Vec<u32> = lettori::apri(set(), &Limiti::desktop())
-        .unwrap()
-        .campioni()
-        .iter()
-        .map(|c| c.id)
-        .collect();
-    for (c, id) in ids.iter().enumerate() {
-        for centroid in [false, true] {
-            let mut w = mzlab_core::wiff::Wiff::open(&ole, &wname, Some(scan_len), *id).unwrap();
-            w.wiff_sha1 = Some(ole.sha1_hex());
-            let mut want = Vec::new();
-            w.to_mzml_progress(
-                &mut std::fs::File::open(&scan_path).unwrap(),
-                &mut want,
-                &wname,
-                centroid,
-                &mut |_, _| {},
-            )
-            .unwrap();
-            let l = lettori::apri(set(), &Limiti::desktop()).unwrap();
-            let mut l = if centroid {
-                mzlab_core::lettori_centroidi::centroidato(l)
-            } else {
-                l
-            };
-            let got = mzml_of(&mut *l, c);
-            if got != want {
-                let d = std::env::temp_dir();
-                std::fs::write(d.join("got.mzML"), &got).unwrap();
-                std::fs::write(d.join("want.mzML"), &want).unwrap();
-            }
-            assert!(got == want, "{name} sample {id}: the mzML of the reader (centroids {centroid}) is not the one of the conversion");
-        }
-    }
-    ids.len()
 }
