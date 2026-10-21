@@ -26,6 +26,8 @@
   // «Scarica mzML»: the native save dialog for a converted mzML (by its number on the disk); resolves to the chosen path or null
   window.MZLAB_SAVE_MZML = (id, name) => T.core.invoke("save_mzml", { id, name });
   window.QQQ_SAVE_MZML = window.MZLAB_SAVE_MZML;
+  // «Save the mzML files…»: the system folder dialog, then every mzML the background queue has ready is put there; resolves to how many, null if the user cancelled
+  window.MZLAB_SAVE_MZML_DIR = () => T.core.invoke("save_mzml_folder");
 
   document.addEventListener("click", async e => {
     const t = e.target.closest && e.target.closest("#drop, #dropdam");

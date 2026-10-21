@@ -4,6 +4,9 @@
 
 pub mod apertura;
 pub mod cartella;
+mod conv_coda;
+#[cfg(test)]
+mod conv_coda_tests;
 #[cfg(feature = "app")]
 pub mod dialogo;
 pub mod engine;

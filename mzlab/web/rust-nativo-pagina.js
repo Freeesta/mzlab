@@ -42,6 +42,12 @@ export function makeNativo(h) {
       const r = await h.rpc({ op: "lr_index_cen", name: h.base(name) });
       if (r.dead || r.error) throw fail(r, "err.engine.index");
     },
+    /** desktop app: the background conversion queue (`conv_add` / `conv_list` / `conv_cancel`); `{jobs: [{name, state, error}]}` or null */
+    async convQueue(/** @type {string} */ op, /** @type {string | undefined} */ name) {
+      if (!window.MZLAB_DESKTOP) return null;
+      const r = await h.rpc({ op, name: name == null ? undefined : h.base(name) });
+      return r.dead || r.error || !r.info ? null : JSON.parse(r.info);
+    },
     /** the mzML of the sample `name` as a File of OPFS (a Blob without OPFS; in the desktop app an empty Blob that carries `mzlabId`, the number of the mzML on the disk); `onProgress({ scans, scansTotal, written })`; `signal` cancels it (the worker is stopped and started again) */
     async nativeToMzml(/** @type {string} */ name, /** @type {number} */ size, /** @type {((p: any) => void) | undefined} */ onProgress, /** @type {AbortSignal | undefined} */ signal, /** @type {boolean | undefined} */ numpress) {
       const w = h.current(), cancelled = () => Object.assign(new Error("cancelled"), { cancelled: true });

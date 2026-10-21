@@ -53,6 +53,12 @@ try:
                 txt = pg.evaluate("navigator.clipboard.readText()")
                 assert "phase:" in txt and "error:" in txt and "troncato" not in txt and "nonxml" not in txt, txt
             step(f"{lang}: «{copy}» puts the diagnosis on the clipboard, without file names", copied)
+            def exception_has_cause():
+                # a JS exception inside a route that exists (here the body of the request throws) is a failure of the data with its original text, not "route unavailable"
+                r = pg.evaluate("""async () => { const r = await window.MZLAB_LR.handle("POST", "api/explore", { get body() { throw new Error("injected-boom"); } }); return { status: r.status, j: JSON.parse(r.text), miss: window.MZLAB_LR_MISS || [] }; }""")
+                assert r["j"]["error_key"] == "err.load.failed" and r["j"]["params"]["fase"] == "decode" and "injected-boom" in r["j"]["params"]["raw"], r
+                assert r["miss"] == [], r
+            step(f"{lang}: an exception of a route gives err.load.failed with the original text, MZLAB_LR_MISS stays empty", exception_has_cause)
             c.close()
         assert not errs, errs
         b.close()

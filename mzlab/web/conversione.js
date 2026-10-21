@@ -39,6 +39,45 @@ const CONV = {
   async downloadAll() { for (const n of new Set([...this.files.keys(), ...this.native()])) { await this.download(n); if (!window.MZLAB_DESKTOP) await new Promise(r => setTimeout(r, 400)); } },
 };
 
+// desktop app: the mzML files the background queue (conv_coda.rs) makes of the maker's files of the list. State of each file: queued | run | done | failed | cancelled.
+const CONVQ = {
+  st: /** @type {Map<string, { state: string, error: string }>} */ (new Map()),
+  timer: /** @type {any} */ (0),
+  on() { return typeof window !== "undefined" && !!window.MZLAB_DESKTOP && !!window.MZLAB_RUST && !!window.MZLAB_RUST.convQueue; },
+  async call(op, name) {
+    let j = null; try { j = await window.MZLAB_RUST.convQueue(op, name); } catch (_) { /* the queue is optional: the file loads without it */ }
+    if (!j) return;
+    const before = JSON.stringify([...this.st]);
+    this.st = new Map(j.jobs.map(x => [x.name, { state: x.state, error: x.error }]));
+    if (JSON.stringify([...this.st]) !== before) CONVROWS.paint();
+  },
+  // a maker's file was loaded: its mzML is made in the background
+  add(name) {
+    if (!this.on() || !window.MZLAB_RUST.isNative(name)) return;
+    this.call("conv_add", name).then(() => this.poll());
+  },
+  poll() {
+    if (this.timer) return;
+    this.timer = setInterval(async () => {
+      await this.call("conv_list");
+      if (![...this.st.values()].some(x => x.state === "queued" || x.state === "run")) { clearInterval(this.timer); this.timer = 0; }
+    }, 1500);
+  },
+  stop() { return this.call("conv_cancel"); },
+  ready() { return [...this.st.values()].some(x => x.state === "done"); },
+  // the text beside a file of the list; "" while nothing is known
+  label(name) {
+    const s = this.st.get(name); if (!s) return "";
+    return s.state === "done" ? I18N.t("conv.q.done") : s.state === "failed" ? I18N.t("conv.q.fail", { msg: DIAG.pulisci(s.error, 160) }) : s.state === "cancelled" ? "" : I18N.t(s.state === "run" ? "conv.q.run" : "conv.q.wait");
+  },
+  // one folder, one click: every ready mzML goes there
+  async saveAll() {
+    const f = typeof window !== "undefined" && /** @type {any} */ (window).MZLAB_SAVE_MZML_DIR; if (!f) return;
+    try { const n = await f(); if (n != null) { const box = document.getElementById("up"); if (box) { const d = document.createElement("div"); d.className = "note"; d.setAttribute("role", "status"); d.textContent = I18N.t("conv.q.saved", { n }); box.appendChild(d); setTimeout(() => d.remove(), 8000); } } }
+    catch (e) { const box = document.getElementById("up"); if (box) { const d = document.createElement("div"); d.className = "note"; d.textContent = I18N.t("conv.dl.needsApp"); box.appendChild(d); setTimeout(() => d.remove(), 12000); } }
+  },
+};
+
 // the files being read, converted and indexed (the samples of a maker's file, the files a module converts), as rows of the list of the files (index.html renderFiles) from the moment
 // they are known until the user closes them (the running ones in the table, the ended ones in a list under it): { name, state, pc, sub, t0, seen, ... }. Running states: "open" (pair found, reading its .wiff), "wait" (queued), "run" (converting, pc),
 // "conv" (converted, waits for the index), "index" / "nread" / "nopen" / "nscan" / "nchrom" (indexing, pc; sub = {done, total} scans). Final states, which stay: "done" (scans, secs),
@@ -78,6 +117,7 @@ const CONVROWS = {
     const r = this.find(name); if (!r || CONV_FINAL.includes(r.state)) return;
     const now = Date.now(); r.secs = (now - (r.t0 || now)) / 1000; Object.assign(r, extra || {});
     (r.tr = r.tr || []).push(`${r.secs.toFixed(1)} s ${state}`); r.state = state; r.seen = now;
+    if (state === "done") CONVQ.add(name);
     if (r.diag) r.diag.dettagli.trace = this.trace([r]);
     this.paint();
   },

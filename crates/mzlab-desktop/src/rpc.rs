@@ -321,6 +321,9 @@ impl State {
         match op {
             "natsamples" => return self.nat_samples(p),                                     // reading a container takes its time: it does not hold the engine either
             "nat2mzml" => return self.nat_to_mzml(p),
+            "conv_add" => return self.conv_add(p),
+            "conv_list" => return self.conv_list(p),
+            "conv_cancel" => return self.conv_cancel(p),
             "flow/read" => return self.flow_read(p),
             "flow/progress" => return self.flow_progress(p),
             "flow/report" => return self.flow_report(p),
