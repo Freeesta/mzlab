@@ -5,6 +5,7 @@
 
 mod annota;
 mod candidati;
+mod cerca;
 mod esporta;
 mod formule;
 mod json;
@@ -16,6 +17,7 @@ mod rotta;
 mod strutture;
 mod unisci;
 
+pub use cerca::{cerca, Opzioni as OpzioniCerca};
 pub use esporta::{da_richiesta_export, esporta, Formato};
 pub use json::json;
 pub use leggi::{leggi, Letto};
@@ -286,5 +288,7 @@ pub fn costruisci(ing: &Ingresso, o: &Opzioni) -> Grafo {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_cerca;
 #[cfg(test)]
 mod tests_formule;
