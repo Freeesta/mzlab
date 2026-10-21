@@ -17,7 +17,7 @@ mod smooth;
 #[cfg(test)]
 mod tests;
 
-pub use convert::mzml_to_centroids;
+pub use convert::{mzml_to_centroids, mzml_to_centroids_with, Over};
 pub use params::{estimate, Estimate};
 
 /// How the intensities of the file are made: whole multiples of one unit (detector counts) or continuous values.

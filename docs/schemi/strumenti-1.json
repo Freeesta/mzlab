@@ -25,6 +25,7 @@
           "formula.ms2",
           "index.mzidx",
           "meta.compare",
+          "spectra.centroid",
           "spectra.match",
           "spectra.ms2",
           "spectra.msn_graph",
@@ -70,6 +71,7 @@
               "index.mzidx@1",
               "meta.compare@1",
               "rt.predict@1",
+              "spectra.centroid@1",
               "spectra.chimeric@1",
               "spectra.insilico@1",
               "spectra.match@1",
@@ -154,6 +156,7 @@
               "index.mzidx@1",
               "meta.compare@1",
               "rt.predict@1",
+              "spectra.centroid@1",
               "spectra.chimeric@1",
               "spectra.insilico@1",
               "spectra.match@1",
@@ -686,6 +689,27 @@
                     "minimum":0,
                     "default":42,
                     "description":"Seed of the bootstrap; 100 trees over a 2048-bit fingerprint of radius 2 (N_TREES, N_BITS)"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"spectra.centroid@1"},
+              "name":{"enum":["fwhm","threshold"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"FWHM of a peak; left out, it is measured on the isolated peaks of the file"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"A peak is kept when it stands this many sigma over the background (Poisson Z for counts); left out, the value of the mode of the file"
                   }
                 ]
               }

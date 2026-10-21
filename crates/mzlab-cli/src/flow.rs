@@ -14,8 +14,8 @@ use mzlab_core::json::Value;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_cache::Cache;
-use crate::flow_match::Named;
 pub use crate::flow_out::{run_plan_cached, run_plan_notify};
+use crate::flow_read::{blobs, load, named, Loaded};
 pub use crate::flow_run::{fill_inputs, run_plan};
 
 pub(crate) fn io(e: std::io::Error) -> Error {
@@ -60,6 +60,7 @@ pub fn steps() -> Vec<Step> {
     all.push(table_step());
     all.extend(mzlab_feat::steps::attributio());
     all.extend(mzlab_chem::step::tabui());
+    all.push(crate::flow_centroid::centroid_step());
     all.push(crate::flow_ms2::ms2_step());
     all.push(crate::flow_msngraph::msn_graph_step());
     all.push(crate::flow_compare::compare_step());
@@ -266,30 +267,12 @@ pub(crate) fn one_input(r: &FileRunner, job: &Job, port: &str) -> Result<PathBuf
         .ok_or_else(|| Error::new("err.flow.port.missing").with("port", port))
 }
 
-/// A file read whole: its name and its bytes (the executors take names and bytes, never paths).
-type Loaded = (String, Vec<u8>);
-
-fn load(path: PathBuf) -> Result<Loaded> {
-    let name = path
-        .file_name()
-        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    Ok((name, std::fs::read(&path).map_err(io)?))
-}
-
 pub(crate) fn read_one(r: &FileRunner, job: &Job, port: &str) -> Result<Loaded> {
     load(one_input(r, job, port)?)
 }
 
 pub(crate) fn read_all(r: &FileRunner, job: &Job, port: &str) -> Result<Vec<Loaded>> {
     all_inputs(r, job, port).into_iter().map(load).collect()
-}
-
-fn named(v: &[Loaded]) -> Vec<Named<'_>> {
-    v.iter().map(|f| (f.0.as_str(), f.1.as_slice())).collect()
-}
-
-pub(crate) fn blobs(v: &[Loaded]) -> Vec<&[u8]> {
-    v.iter().map(|f| f.1.as_slice()).collect()
 }
 
 pub(crate) fn write_made(
@@ -362,6 +345,7 @@ enum Exec {
 /// The steps that run natively, the one list: `executable` and the runner read it.
 const EXECUTORS: &[(&str, Exec)] = &[
     ("convert.mzml", Exec::Made(crate::flow_base::convert_job)),
+    ("spectra.centroid", Exec::Made(crate::flow_centroid::job)),
     ("index.mzidx", Exec::Made(crate::flow_base::index_job)),
     ("features.detect", Exec::Made(crate::flow_base::detect_job)),
     ("features.align", Exec::Made(crate::flow_base::align_job)),
