@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::tests::{mzml, page_table};
+use crate::tests::{layered_table, mzml, page_table};
 
 const BASE: &str = r#"{"format":"mzflow/2","inputs":[{"name":"s_t000.mzML","type":"raw"},{"name":"s_t010.mzML","type":"raw"},{"name":"s_t030.mzML","type":"raw"}],"steps":[
 {"id":"idx","step":"index.mzidx@1","in":{"source":["file:s_t000.mzML","file:s_t010.mzML","file:s_t030.mzML"]}},
@@ -252,5 +252,36 @@ fn dry_run_writes_nothing_and_the_exit_codes_say_what_is_wrong() {
     assert!(String::from_utf8(flow_run(&["--help"]).stdout)
         .unwrap()
         .contains("--set INSTANCE.NAME=V"));
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The browser runner builds its recipe from the layers of the plan with the same function as `flow run`: with parameters set, the table is byte for byte the same.
+#[test]
+fn the_recipe_of_the_layers_gives_the_bytes_of_flow_run() {
+    let (dir, files) = fixture("layers");
+    let out = dir.join("out");
+    let o = flow_run(&[
+        p(&dir.join("plan.json")),
+        "--in",
+        p(&dir.join("data")),
+        "--out",
+        p(&out),
+        "--set",
+        "features.detect.min_height=50000",
+        "--set",
+        "ali.drop_artefacts=false",
+    ]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let layers = r#"[{"step":"features.detect","params":{"min_height":50000}},{"step":"features.align","params":{"drop_artefacts":false}}]"#;
+    assert!(
+        std::fs::read(out.join("ali.mzfeat")).unwrap() == layered_table(&files, layers),
+        "different bytes"
+    );
+    assert_ne!(
+        layered_table(&files, layers),
+        layered_table(&files, "[]"),
+        "the layers change the table"
+    );
+    assert!(mzlab_feat_wasm::run::layers_from_json(r#"{"step":1}"#).is_err());
     let _ = std::fs::remove_dir_all(&dir);
 }

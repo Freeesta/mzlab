@@ -125,11 +125,7 @@ pub(crate) fn rebuild(lin: &Lineage) -> Result<Recipe> {
         .first
         .as_ref()
         .ok_or_else(|| Error::new("err.flow.lineage"))?;
-    let mut r = run::recipe_for_estimated("", &mut open(first)?)?;
-    for (step, params) in &lin.layers {
-        recipe_map::apply(&mut r, step, params)?;
-    }
-    Ok(r)
+    run::recipe_of_layers(&mut open(first)?, &lin.layers)
 }
 
 /// `features.detect`: the features of one indexed file (`.mzfeatf`), named after the file the index was made from.
