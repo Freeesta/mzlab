@@ -11,3 +11,4 @@
 7. Ogni release successiva crea una nuova versione con DOI proprio; il concept DOI resta lo stesso.
 
 Nota: il contenuto di una release non si può cambiare dopo la pubblicazione; controlla `CITATION.cff` prima di ogni release.
+
