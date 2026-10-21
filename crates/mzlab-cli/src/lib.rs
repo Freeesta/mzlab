@@ -32,6 +32,7 @@ mod flow_formula;
 mod flow_generate;
 mod flow_inclusion;
 mod flow_json;
+mod flow_kmd;
 mod flow_level;
 mod flow_link;
 #[cfg(test)]
@@ -51,6 +52,7 @@ mod flow_refilter_tests;
 pub mod flow_report;
 mod flow_run;
 mod flow_set;
+mod flow_stats;
 mod flow_table;
 #[cfg(test)]
 mod flow_table_tests;
@@ -398,6 +400,8 @@ mod flow_ident_tests;
 #[cfg(test)]
 mod flow_json_tests;
 #[cfg(test)]
+mod flow_kmd_tests;
+#[cfg(test)]
 mod flow_level_tests;
 #[cfg(test)]
 mod flow_ms2_tests;
@@ -413,6 +417,8 @@ mod flow_report_tests;
 mod flow_rule_tests;
 #[cfg(test)]
 mod flow_run_tests;
+#[cfg(test)]
+mod flow_stats_tests;
 #[cfg(test)]
 mod llm_replay_tests;
 #[cfg(test)]

@@ -36,7 +36,9 @@ function start() {
     clearTimeout(startTimeout);
     startTimeout = setTimeout(() => { removeEventListener("message", on); starting = null; reject(new Error(I18N.t("draw.error.ketcherNotStarted"))); }, 60000);
   });
-  starting.finally(() => { clearInterval(kldTimer); Q("#kload").hidden = true; }).catch(() => {});
+  // the editor stays invisible (.kwait) until hideMacro and the first fit are done: Ketcher's native bars would otherwise show and then jump
+  fr.classList.add("kwait");
+  starting.finally(() => { clearInterval(kldTimer); }).catch(() => {});
   starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); });
     k.editor.subscribe("selectionChange", () => FRAME.next(showInfo));
     hideMacro(fr); applyFont(k); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); dnote("");
@@ -64,6 +66,7 @@ function start() {
     
     return k; });
   starting.catch(e => dnote(e.message));
+  starting.finally(() => FRAME.next(() => FRAME.next(() => { fr.classList.remove("kwait"); Q("#kload").hidden = true; }))).catch(() => {});
   return starting;
 }
 // Ketcher's macromolecule mode (peptides, RNA, DNA) is not needed here and confuses: its switch is hidden
@@ -263,7 +266,6 @@ function applyTools() {
     });
     if (kBar) kBar.update(ch);
     kFit();
-    const kl = Q("#kload"); if (kl) kl.hidden = true;
   } catch (_) { /* editor not loaded yet: applied when it starts */ }
 }
 function toolCard() {
