@@ -53,6 +53,7 @@ mod flow_table;
 #[cfg(test)]
 mod flow_table_tests;
 pub mod llm;
+mod llm_ctx;
 pub mod msn_graph;
 mod msn_graph_compare;
 mod msn_lib;
@@ -70,6 +71,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli llm tools [--out FILE]   the catalog strumenti/1 of the assistant tools (llm tools --help)
        mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the events a recording gives for a conversation, one per line
+       mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli msn-lib add|build|export ...                the library of MSn trees (msn-lib --help)
        mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
@@ -409,6 +411,10 @@ mod flow_report_tests;
 mod flow_rule_tests;
 #[cfg(test)]
 mod flow_run_tests;
+#[cfg(test)]
+mod llm_agent_tests;
+#[cfg(test)]
+mod llm_eval_tests;
 #[cfg(test)]
 mod llm_replay_tests;
 #[cfg(test)]
