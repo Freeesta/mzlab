@@ -388,6 +388,12 @@ fn link_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     r.keep(out, DataType::Tp)
 }
 
+fn generate_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    let parent = read_one(r, job, "parent")?;
+    let text = crate::flow_generate::generate_text(job, &parent.1)?;
+    write_made(r, job, text, DataType::Transform)
+}
+
 fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let (hits, formulas) = (
         read_all(r, job, "candidates")?,
@@ -445,6 +451,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("annot.level", Exec::File("annot", level_job)),
     ("tp.network", Exec::File("network", network_job)),
     ("tp.link", Exec::File("tp", link_job)),
+    ("tp.generate", Exec::File("hypotheses", generate_job)),
     ("meta.compare", Exec::File("comparison", compare_job)),
     ("export.inclusion", Exec::File("report", inclusion_job)),
 ];
