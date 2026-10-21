@@ -31,6 +31,7 @@ mod flow_out;
 pub mod flow_report;
 mod flow_run;
 pub mod msn_graph;
+mod msn_lib;
 
 const HELP: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
 
@@ -38,6 +39,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
+       mzlab-cli msn-lib add|build|export ...                the library of MSn trees (msn-lib --help)
 
   FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
   --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
@@ -227,6 +229,25 @@ fn msn_graph_cmd(args: impl Iterator<Item = String>) -> Outcome {
     }
 }
 
+/// `mzlab-cli msn-lib ...`: the library of MSn trees; the data on stdout, the notices on stderr.
+fn msn_lib_cmd(args: Vec<String>) -> Outcome {
+    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-lib{k}", std::process::id()));
+    let r = std::fs::create_dir_all(&tmp)
+        .map_err(io)
+        .and_then(|_| msn_lib::run(args, &tmp));
+    let _ = std::fs::remove_dir_all(&tmp);
+    match r {
+        Ok((data, note)) => Outcome {
+            code: 0,
+            stdout: data,
+            stderr: note,
+        },
+        Err(e) => Outcome::fail(&e.to_string()),
+    }
+}
+
 /// `mzlab-cli flow command PLAN.json`: the script that reruns the plan, on stdout.
 fn flow_command(args: Vec<String>) -> Outcome {
     let [path] = args.as_slice() else {
@@ -255,6 +276,7 @@ pub fn execute(args: &[String]) -> Outcome {
             }
         }
         Some("msn-graph") => return msn_graph_cmd(args),
+        Some("msn-lib") => return msn_lib_cmd(args.collect()),
         Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Some(c) => return Outcome::fail(&format!("unknown command {c}")),
     }
@@ -317,3 +339,5 @@ mod flow_rule_tests;
 mod flow_run_tests;
 #[cfg(test)]
 mod msn_graph_tests;
+#[cfg(test)]
+mod msn_lib_tests;

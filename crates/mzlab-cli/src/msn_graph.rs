@@ -34,8 +34,8 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
   --out PATH           write there instead of the standard output";
 
 pub struct Args {
-    file: PathBuf,
-    o: Opzioni,
+    pub(crate) file: PathBuf,
+    pub(crate) o: Opzioni,
     verita: Option<PathBuf>,
     riassunto: bool,
     export: Option<(Formato, bool, Option<String>)>,
