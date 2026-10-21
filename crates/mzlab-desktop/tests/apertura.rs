@@ -1,6 +1,8 @@
 //! Files opened from outside (`src/apertura.rs`): which arguments count, the queue, and the alternate notice «make mzLab the default app?».
 
-use mzlab_desktop::apertura::{paths_from_args, registra_apertura, rifai, rispondi, Pending, Risposta};
+use mzlab_desktop::apertura::{
+    paths_from_args, registra_apertura, rifai, rispondi, Pending, Risposta,
+};
 use mzlab_desktop::librerie::{read_config, write_config, Config};
 
 fn s(x: &std::path::Path) -> String {
@@ -16,15 +18,30 @@ fn only_single_mzml_and_raw_files_are_taken() {
     }
     // a Waters/Agilent-like folder named like a file cannot be associated
     std::fs::create_dir(d.join("w.raw")).unwrap();
-    let args: Vec<String> = ["--flag", "a.mzML", "b.mzml", "c.RAW", "d.txt", "e.dam", "w.raw", "missing.mzML"]
-        .iter()
-        .map(|x| x.to_string())
-        .collect();
+    let args: Vec<String> = [
+        "--flag",
+        "a.mzML",
+        "b.mzml",
+        "c.RAW",
+        "d.txt",
+        "e.dam",
+        "w.raw",
+        "missing.mzML",
+    ]
+    .iter()
+    .map(|x| x.to_string())
+    .collect();
     let got = paths_from_args(&args, Some(d));
-    assert_eq!(got, vec![d.join("a.mzML"), d.join("b.mzml"), d.join("c.RAW")]);
+    assert_eq!(
+        got,
+        vec![d.join("a.mzML"), d.join("b.mzml"), d.join("c.RAW")]
+    );
     // an absolute path wins over the working directory
     let abs = vec![s(&d.join("a.mzML"))];
-    assert_eq!(paths_from_args(&abs, Some(std::path::Path::new("/nowhere"))), vec![d.join("a.mzML")]);
+    assert_eq!(
+        paths_from_args(&abs, Some(std::path::Path::new("/nowhere"))),
+        vec![d.join("a.mzML")]
+    );
     assert!(paths_from_args(&[], None).is_empty());
 }
 

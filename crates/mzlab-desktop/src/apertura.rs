@@ -12,7 +12,9 @@ const EXT: [&str; 2] = ["mzml", "raw"];
 
 /// Does the path name a file (not a folder) with an extension of `EXT`?
 pub fn is_openable(p: &Path) -> bool {
-    let ext = p.extension().map(|e| e.to_string_lossy().to_ascii_lowercase());
+    let ext = p
+        .extension()
+        .map(|e| e.to_string_lossy().to_ascii_lowercase());
     ext.is_some_and(|e| EXT.contains(&e.as_str())) && p.is_file()
 }
 
@@ -58,7 +60,7 @@ pub enum Risposta {
 /// Counts one batch of files opened from outside and says whether the notice is due: at every other opening (the first, the third, …)
 /// until the user answers for good. «No (not now)» changes nothing, so the next opening is skipped and the one after asks again.
 pub fn registra_apertura(c: &mut Config) -> bool {
-    let ask = c.risposta.is_none() && c.aperture % 2 == 0;
+    let ask = c.risposta.is_none() && c.aperture.is_multiple_of(2);
     c.aperture = c.aperture.saturating_add(1);
     ask
 }

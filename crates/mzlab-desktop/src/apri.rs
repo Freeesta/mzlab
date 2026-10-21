@@ -19,7 +19,11 @@ pub struct Opened {
 
 /// The page empties the queue when it is ready (`desktop-shim.js`): the files get their numbers like those of the system dialog.
 #[tauri::command]
-pub fn take_opened(app: AppHandle, state: tauri::State<'_, Arc<State>>, pending: tauri::State<'_, Pending>) -> Opened {
+pub fn take_opened(
+    app: AppHandle,
+    state: tauri::State<'_, Arc<State>>,
+    pending: tauri::State<'_, Pending>,
+) -> Opened {
     let files = register(&state, pending.take());
     let ask = !files.is_empty()
         && data_dir(&app).is_ok_and(|d| {
@@ -47,7 +51,9 @@ fn hand_over(app: &AppHandle, paths: Vec<PathBuf>) {
 /// The notice and the setting: `{answer, count}` as kept in `config.json` (the answer is "si", "mai" or null).
 #[tauri::command]
 pub fn assoc_get(app: AppHandle) -> serde_json::Value {
-    let c = data_dir(&app).map(|d| librerie::read_config(&d)).unwrap_or_default();
+    let c = data_dir(&app)
+        .map(|d| librerie::read_config(&d))
+        .unwrap_or_default();
     serde_json::json!({ "answer": c.risposta, "count": c.aperture })
 }
 
@@ -72,7 +78,8 @@ pub fn assoc_reset(app: AppHandle) -> Result<(), String> {
 /// A file given on the command line (Windows, Linux: double click with the app closed) waits for the page.
 pub fn queue_command_line(app: &AppHandle) {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    app.state::<Pending>().push(apertura::paths_from_args(&args, None));
+    app.state::<Pending>()
+        .push(apertura::paths_from_args(&args, None));
 }
 
 /// macOS gives the files of a double click (or «Open with») as events, also with the app already open.
@@ -80,6 +87,12 @@ pub fn queue_command_line(app: &AppHandle) {
 pub fn run_event(app: &AppHandle, event: &tauri::RunEvent) {
     #[cfg(target_os = "macos")]
     if let tauri::RunEvent::Opened { urls } = event {
-        hand_over(app, urls.iter().filter_map(|u| u.to_file_path().ok()).filter(|p| apertura::is_openable(p)).collect());
+        hand_over(
+            app,
+            urls.iter()
+                .filter_map(|u| u.to_file_path().ok())
+                .filter(|p| apertura::is_openable(p))
+                .collect(),
+        );
     }
 }

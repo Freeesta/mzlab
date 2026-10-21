@@ -21,7 +21,8 @@ pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     }
     // the list of the files, the notebook and the files the app makes itself: the data folder of the app
     if let Ok(d) = data_dir(app.handle()) {
-        app.state::<Arc<State>>().set_data_folder(d.join("sessione"));
+        app.state::<Arc<State>>()
+            .set_data_folder(d.join("sessione"));
     }
     if let Some(dir) = data_dir(app.handle())
         .ok()
@@ -40,8 +41,7 @@ pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
         .min_inner_size(900.0, 600.0);
     if let Ok(web) = web {
         win = win.on_web_resource_request(move |request, response| {
-            if let Some((body, ctype)) = update::serve_override(&web, request.uri().path())
-            {
+            if let Some((body, ctype)) = update::serve_override(&web, request.uri().path()) {
                 *response.status_mut() = StatusCode::OK;
                 response.headers_mut().remove(header::CONTENT_LENGTH);
                 response.headers_mut().insert(
