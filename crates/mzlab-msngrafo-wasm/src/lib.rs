@@ -8,7 +8,7 @@ use mzlab_core::error::Error;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
 use mzlab_core::msngrafo::Grafo;
-use mzlab_core::msngrafo::{da_richiesta, da_richiesta_export, esporta, grafo_json};
+use mzlab_core::msngrafo::{aggiungi, da_richiesta, da_richiesta_export, esporta, grafo_json};
 use mzlab_core::routes::Query;
 use wasm_bindgen::prelude::*;
 
@@ -107,4 +107,25 @@ pub fn msn_grafo_export(
     let (f, pulito, nodo) = da_richiesta_export(&|k| q.get(k).map(String::from)).map_err(js_err)?;
     let (g, _) = calcola(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
     Ok(esporta(&g, f, pulito, nodo.as_deref()))
+}
+
+/// `api/msnlib/aggiungi`: the library text `libreria` ("" = none yet) with the entry of `molecola_id` for the graph of the query added;
+/// `{"libreria": text, "doppione": bool}` (the text unchanged when the same entry was already there).
+#[wasm_bindgen]
+pub fn msnlib_aggiungi(
+    read_idx: Function,
+    idx_size: f64,
+    read_file: Function,
+    nome: &str,
+    query: &str,
+    libreria: &str,
+    molecola_id: &str,
+) -> Result<String, JsValue> {
+    let q = Query::parse(query);
+    let (g, j) = calcola(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+    let (l, doppione) = aggiungi(libreria, molecola_id, &g, &j).map_err(js_err)?;
+    let mut o = Out::default();
+    o.raw("{\"libreria\":").str(&l).raw(",\"doppione\":");
+    o.raw(if doppione { "true}" } else { "false}" });
+    Ok(o.0)
 }
