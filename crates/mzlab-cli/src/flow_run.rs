@@ -454,14 +454,13 @@ pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
 /// The inputs of the plan that name no hash get it from the file `locate` gives; one that names a hash must match it.
 pub fn fill_inputs(plan: &mut Plan, locate: impl Fn(&str) -> PathBuf) -> mzlab_core::Result<()> {
     for f in &mut plan.inputs {
-        let bytes = std::fs::read(locate(&f.name))
-            .map_err(|e| crate::flow::io(e).with("input", &f.name))?;
-        let sha = sha256_hex(&bytes);
+        let (bytes, sha) =
+            crate::flow_set::digest(&locate(&f.name)).map_err(|e| e.with("input", &f.name))?;
         if !f.sha256.is_empty() && f.sha256 != sha {
             return Err(mzlab_core::Error::new("err.flow.input.sha").with("input", &f.name));
         }
         f.sha256 = sha;
-        f.bytes = Some(bytes.len() as u64);
+        f.bytes = Some(bytes);
     }
     Ok(())
 }

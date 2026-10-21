@@ -1,0 +1,139 @@
+//! The datasets of vendor files on disk as `convert.mzml` and `mzlab-cli convert` take them: a file, a `.wiff` with its `.wiff.scan`, or the files of a
+//! `.D`/`.d`/`.raw` folder (the `FileSet` of a reader of the registry), their SHA-256, and the sample a plan input names (`NAME@ID`).
+
+use std::fs::File;
+use std::io::Read;
+use std::path::{Path, PathBuf};
+
+use mzlab_core::budget::{sha256_hex, Hashing, WriteAt};
+use mzlab_core::lettori::{FileSet, Membro};
+use mzlab_core::{Error, Result};
+
+use crate::flow::io;
+
+fn lower(p: &Path) -> String {
+    p.file_name()
+        .map_or(String::new(), |n| n.to_string_lossy().to_lowercase())
+}
+
+/// Is the folder `p` one dataset of a maker (`.D` of Agilent, `.d` of Bruker, `.raw` of Waters) and not a folder to look through?
+pub(crate) fn is_set_folder(p: &Path) -> bool {
+    let n = lower(p);
+    p.is_dir() && [".d", ".raw"].iter().any(|e| n.ends_with(e))
+}
+
+fn walk(dir: &Path, prefix: &str, out: &mut Vec<(String, PathBuf)>) -> Result<()> {
+    let mut entries: Vec<PathBuf> = std::fs::read_dir(dir)
+        .map_err(io)?
+        .flatten()
+        .map(|e| e.path())
+        .collect();
+    entries.sort();
+    for p in entries {
+        let name = format!(
+            "{prefix}/{}",
+            p.file_name().unwrap_or_default().to_string_lossy()
+        );
+        if p.is_dir() {
+            walk(&p, &name, out)?;
+        } else {
+            out.push((name, p));
+        }
+    }
+    Ok(())
+}
+
+/// The members of the dataset at `path` as (logical name, file): the folder name leads the names of a folder, a `.wiff` brings the `.wiff.scan` beside it.
+pub(crate) fn members(path: &Path) -> Result<Vec<(String, PathBuf)>> {
+    let name = path
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .into_owned();
+    let mut out = Vec::new();
+    if path.is_dir() {
+        walk(path, &name, &mut out)?;
+    } else {
+        out.push((name.clone(), path.to_path_buf()));
+        if lower(path).ends_with(".wiff") {
+            let scan = path.with_file_name(format!("{name}.scan"));
+            if scan.is_file() {
+                out.push((format!("{name}.scan"), scan));
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// The `FileSet` of the dataset at `path`, its members opened on the disk.
+pub(crate) fn file_set(path: &Path) -> Result<FileSet> {
+    let mut membri = Vec::new();
+    for (nome, p) in members(path)? {
+        let f = File::open(&p).map_err(io)?;
+        membri.push(Membro {
+            nome,
+            dim: f.metadata().map_err(io)?.len(),
+            dati: Box::new(f),
+            sha1: None,
+        });
+    }
+    Ok(FileSet { membri })
+}
+
+struct Sink;
+
+impl WriteAt for Sink {
+    fn write_at(&mut self, _: u64, _: &[u8]) -> Result<()> {
+        Ok(())
+    }
+}
+
+fn hash_file(p: &Path) -> Result<(u64, String)> {
+    let mut f = File::open(p).map_err(io)?;
+    let mut h = Hashing::new(Sink);
+    let (mut buf, mut at) = (vec![0u8; 1 << 16], 0u64);
+    loop {
+        let n = f.read(&mut buf).map_err(io)?;
+        if n == 0 {
+            break;
+        }
+        h.write_at(at, &buf[..n])?;
+        at += n as u64;
+    }
+    let (_, bytes, hex) = h.finish();
+    Ok((bytes, hex))
+}
+
+/// Bytes and SHA-256 of the dataset at `path`: a lone file hashes as its own bytes, a dataset of several members as the list of their names and hashes.
+pub(crate) fn digest(path: &Path) -> Result<(u64, String)> {
+    let list = members(path)?;
+    if !path.is_dir() && list.len() == 1 {
+        return hash_file(path);
+    }
+    let (mut bytes, mut text) = (0, String::new());
+    for (name, p) in &list {
+        let (n, hex) = hash_file(p)?;
+        bytes += n;
+        text += &format!("{name}\0{hex}\n");
+    }
+    Ok((bytes, sha256_hex(text.as_bytes())))
+}
+
+/// The sample a plan input names: `NAME@ID` is the sample `ID` of the dataset `NAME`, a name without that ending is the first sample.
+pub(crate) fn split_sample(label: &str) -> (&str, Option<u32>) {
+    label
+        .rsplit_once('@')
+        .and_then(|(n, id)| id.parse().ok().map(|id| (n, Some(id))))
+        .unwrap_or((label, None))
+}
+
+/// Index of the sample the label `label` names among the `ids` of the reader.
+pub(crate) fn sample_index(label: &str, ids: &[u32]) -> Result<usize> {
+    match split_sample(label).1 {
+        None => Ok(0),
+        Some(id) => ids
+            .iter()
+            .position(|&s| s == id)
+            .ok_or_else(|| Error::new("error.badIndex").with("c", id)),
+    }
+}

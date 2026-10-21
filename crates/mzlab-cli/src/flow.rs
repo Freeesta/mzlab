@@ -131,7 +131,7 @@ pub struct FileRunner {
     made: Mutex<HashMap<String, PathBuf>>,
     lineage: Mutex<HashMap<String, Lineage>>,
     /// Instance ids in the order of the run: one line per job on stderr when set.
-    progress: Option<Vec<String>>,
+    pub(crate) progress: Option<Vec<String>>,
     /// Called after each job (the desktop app shows the steps as they finish).
     done: Option<DoneFn>,
     /// The cache of `work` (`flow_cache.rs`); none: every job runs and nothing is kept.

@@ -16,6 +16,8 @@ use mzlab_core::upload::{impronte, indicizza_lettore, prepare};
 use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
 
+mod convert;
+mod convert_report;
 pub mod flow;
 mod flow_base;
 mod flow_cache;
@@ -40,6 +42,7 @@ mod flow_refilter;
 mod flow_refilter_tests;
 pub mod flow_report;
 mod flow_run;
+mod flow_set;
 mod flow_table;
 #[cfg(test)]
 mod flow_table_tests;
@@ -57,6 +60,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli msn-lib add|build|export ...                the library of MSn trees (msn-lib --help)
+       mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
        mzlab-cli validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1 (validate --help)
 
   FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
@@ -342,6 +346,7 @@ pub fn execute(args: &[String]) -> Outcome {
         Some("flow") => return flow_cmd(args),
         Some("msn-graph") => return msn_graph_cmd(args),
         Some("msn-lib") => return msn_lib_cmd(args.collect()),
+        Some("convert") => return convert::run(args.collect()),
         #[cfg(not(target_family = "wasm"))]
         Some("validate") => return validate::run(args),
         Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),
@@ -353,6 +358,10 @@ pub fn execute(args: &[String]) -> Outcome {
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod convert_fixtures;
+#[cfg(test)]
+mod convert_tests;
 #[cfg(test)]
 mod flow_budget_tests;
 #[cfg(test)]
