@@ -53,7 +53,7 @@
     }
     reset();
     const box = el("div", { class: "fl-meta" }, go, why, note, list);
-    R.preflight().then((/** @type {any} */ x) => { est = x; gate(); }).catch(() => { /* no estimate yet: the run decides */ });
+    R.preflight(S).then((/** @type {any} */ x) => { est = x; gate(); }).catch(() => { /* no estimate yet: the run decides */ });
     document.addEventListener("flow:changed", gate); gate();
     return box;
   };

@@ -11,4 +11,6 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 js-sys = "0.3.106"
 mzlab-core = { path = "../mzlab-core" }
+# only the structure cleavages of a node (`strutture=<id>`): no feature besides `chem`
+mzlab-feat = { path = "../mzlab-feat", default-features = false, features = ["chem"] }
 wasm-bindgen = "0.2"

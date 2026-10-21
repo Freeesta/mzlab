@@ -90,9 +90,11 @@ def pack_mzfinder(static: Path) -> None:
         shutil.copy2(src / "js" / n, dst / n)
     # Flow (administrator page, flow/): its tab is registered by flow/js, the rest is lazy; the lists of descriptors of the other two packages are fetched when the page opens
     flow = ROOT / "flow"
+    # the tab script is `early`: the loader runs it before the data files and the other scripts (it needs none of them), so Flow can draw while the rest of Tabui downloads
+    early = []
     for n in sorted((flow / "js").glob("*.js")):
         shutil.copy2(n, dst / n.name)
-        js.append(n.name)
+        early.append(n.name)
     for n in ("steps-attributio-1.json", "steps-tabui-1.json", "steps-cli-1.json"):
         shutil.copy2(ROOT / "docs" / "schemi" / n, dst / n)
     lazy = [f.name for f in sorted((src / "lazy").glob("*.js"))] if (src / "lazy").is_dir() else []      # loaded on demand through TPLAZY.load, not at the start of Tabui
@@ -103,7 +105,7 @@ def pack_mzfinder(static: Path) -> None:
             shutil.copy2(src / "lazy" / n if (src / "lazy" / n).exists() else flow / "lazy" / n, dst / "lazy" / n)
     for n in files:
         shutil.copy2(src / "files" / n, dst / n)
-    (dst / "indice.json").write_text(json.dumps({"js": js, "lazy": lazy, "files": files + data}, indent=1), encoding="utf-8")
+    (dst / "indice.json").write_text(json.dumps({"early": early, "js": js, "lazy": lazy, "files": files + data}, indent=1), encoding="utf-8")
 
 
 def write_manifest(out: Path, version: str) -> None:
