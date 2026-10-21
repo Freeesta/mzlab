@@ -325,3 +325,39 @@ fn a_precursor_missing_from_its_parent_is_noted() {
     let a = g.archi.iter().find(|x| x.a == n156).unwrap();
     assert!(a.isolamento && a.misure[0].rel == 0.0);
 }
+
+#[test]
+fn without_the_ion_formula_the_root_gets_candidates_and_with_it_none() {
+    let (g, json) = grafo(&Opzioni::default(), &[0, 1, 2, 3], false);
+    assert!(g.ione.is_none() && !g.candidati_radice.is_empty() && g.candidati_radice.len() <= 8);
+    let c = g
+        .candidati_radice
+        .iter()
+        .find(|c| c.formula == "C8H11N4O2+");
+    assert!(
+        c.is_some_and(|c| c.ppm.abs() < 5.0),
+        "{:?}",
+        g.candidati_radice
+    );
+    assert!(
+        json.contains("\"candidati_radice\":[{\"formula\":"),
+        "{json}"
+    );
+    let o = Opzioni {
+        formula: Some("C8H11N4O2+".into()),
+        ..Opzioni::default()
+    };
+    let (g, json) = grafo(&o, &[0, 1, 2, 3], false);
+    assert!(g.candidati_radice.is_empty() && json.contains("\"candidati_radice\":[]"));
+    let (g, _) = grafo_con(
+        &Opzioni::default(),
+        &[0, 1, 2, 3],
+        false,
+        0.0,
+        &Strumento {
+            negativo: true,
+            ..Strumento::default()
+        },
+    );
+    assert!(g.candidati_radice.iter().all(|c| c.formula.ends_with('-')));
+}
