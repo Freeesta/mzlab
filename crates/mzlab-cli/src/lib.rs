@@ -39,6 +39,7 @@ mod flow_table;
 mod flow_table_tests;
 pub mod msn_graph;
 mod msn_lib;
+mod msn_lib_export;
 
 const HELP: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
 
