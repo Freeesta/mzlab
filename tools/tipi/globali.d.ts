@@ -164,6 +164,7 @@ declare var hrGroup: any;
 declare var innerHTML: any;
 declare var lossCombos: any;
 declare var lsObj: any;
+declare var mzlabAskMore: any;
 declare var mzlabHardReset: any;
 declare var naturalCmp: any;
 declare var nbEnsure: any;

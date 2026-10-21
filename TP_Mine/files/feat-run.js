@@ -1,3 +1,16 @@
+// A phase the memory refuses (`error.featMemory`) whose estimate fits in the high budget of the engine of the page (`MZLAB_RUST.choice.high_mb`, or the level it was lowered to) asks
+// the user once (`askMore({ fase, stima_mb, budget_mb, libero_mb, high_mb })` resolves true = use more memory) and runs again with that budget, for the rest of the run. Without an
+// answer, or beyond the high budget, the refusal goes on with its numbers.
+async function withMore(pool, askMore, raised, run) {
+  try { return await run(); } catch (e) {
+    const p = e && e.key === "error.featMemory" && e.params, rb = globalThis.MZLAB_RUST, high = rb ? rb.budgetMb || (rb.choice && rb.choice.high_mb) || 0 : 0, need = p ? Number(p.stima_mb) : NaN;
+    if (!p || !askMore || !pool.setBudget || !(need <= high) || !(high > Number(p.budget_mb))) throw e;
+    if (!await askMore({ fase: p.fase, stima_mb: need, budget_mb: Number(p.budget_mb), libero_mb: Number(p.libero_mb), high_mb: high })) throw e;
+    raised.push(pool.setBudget(high));
+    return run();
+  }
+}
+
 // Runs the pipeline of mzFinder on a series of .mzidx files in OPFS with a pool of feat-worker.js (see docs/agenti/mzfeat-wasm.md):
 //   detect  = L1-L3 of every file, in parallel (one job per file)
 //   align   = L4-L6 of the series (alignment, gap filling) in one worker
@@ -6,7 +19,8 @@
 // The .mzfeatf and the .mzfeat are written to OPFS (`mzlab/feat/`) by the archive worker when `save` is true, each as soon as its phase ends, so a phase that the
 // memory refuses (`error.featMemory`) leaves the earlier ones saved: the hypotheses or the proofs refused give the table without proofs and the warning
 // `tpmine.feat.degraded` (`degraded` = the phase), the detection or the alignment refused stop the run with the error (and `params.files`).
-export async function runFeatPipeline(pool, { files, recipe, parent, save = false, onPhase = () => {} }) {
+export async function runFeatPipeline(pool, { files, recipe, parent, save = false, onPhase = () => {}, askMore = globalThis.mzlabAskMore }) {
+  const raised = [], more = run => withMore(pool, askMore, raised, run);      // the budget the pool had is given back at the end of the run
   const timings = [], t00 = performance.now();
   const phase = async (name, fn) => {
     onPhase({ phase: name, state: "start" });
@@ -32,7 +46,7 @@ export async function runFeatPipeline(pool, { files, recipe, parent, save = fals
     row.files = files.length; row.perFileMs = perFile.slice(); row.peakMB = mem;
     if (save) await phase("save", putFiles);
     let arow;
-    try { [table, arow] = await phase("align", () => (unt ? pool.alignUnt : pool.align)(stored, files.map(f => f.path), recipe)); }
+    try { [table, arow] = await phase("align", () => more(() => (unt ? pool.alignUnt : pool.align)(stored, files.map(f => f.path), recipe))); }
     catch (e) { if (refused(e)) e.params = { ...e.params, files: files.length }; throw e; }
     arow.peakMB = peaks.align;
     if (save) await phase("save", () => putTable(table));
@@ -42,7 +56,7 @@ export async function runFeatPipeline(pool, { files, recipe, parent, save = fals
       try {
         const [h, hrow] = await phase("hypotheses", () => pool.hypotheses(args));
         hrow.peakMB = peaks.hypotheses;
-        const [r, prow] = await phase("proofs", () => pool.evidence({ ...args, state: h.state }));
+        const [r, prow] = await phase("proofs", () => more(() => pool.evidence({ ...args, state: h.state })));
         Object.assign(out, { evid: r.table, tried: h.tried, found: h.found, registry: h.registry }); prow.peakMB = peaks.proofs; prow.hypothesesMs = h.ms;
         if (save) await phase("save", () => putTable(out.evid));
       } catch (e) {
@@ -53,5 +67,5 @@ export async function runFeatPipeline(pool, { files, recipe, parent, save = fals
     }
     out.totalMs = Math.round(performance.now() - t00);
     return out;
-  } finally { pool.onProgress = prev; }
+  } finally { pool.onProgress = prev; if (raised.length) pool.setBudget(raised[0]); }
 }
