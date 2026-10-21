@@ -22,6 +22,7 @@ pub mod flow;
 mod flow_apply;
 mod flow_base;
 mod flow_cache;
+mod flow_centroid;
 mod flow_compare;
 mod flow_formula;
 mod flow_generate;
@@ -39,6 +40,7 @@ mod flow_out;
 mod flow_position;
 #[cfg(test)]
 mod flow_position_tests;
+mod flow_read;
 mod flow_refilter;
 #[cfg(test)]
 mod flow_refilter_tests;
@@ -376,6 +378,8 @@ mod convert_tests;
 mod flow_budget_tests;
 #[cfg(test)]
 mod flow_cache_tests;
+#[cfg(test)]
+mod flow_centroid_tests;
 #[cfg(test)]
 mod flow_command_tests;
 #[cfg(test)]

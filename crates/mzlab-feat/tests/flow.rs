@@ -38,7 +38,7 @@ fn problems(plan: &str, platform: Platform) -> Vec<String> {
 
 #[test]
 fn paper_block_a_mzmine() {
-    // spectra.centroid, features.resolve and features.isotopes are not steps; the tolerances of the sketch are Da + ppm pairs, which our steps do not take
+    // spectra.centroid (a step of mzlab-cli, not of this registry), features.resolve and features.isotopes are not steps here; the tolerances of the sketch are Da + ppm pairs, which our steps do not take
     let want = [
         "imp|raw|err.flow.port.unknown|port=raw",
         "imp|files|err.flow.port.missing|port=files",

@@ -39,7 +39,7 @@
     const prof = (typeof ST !== "undefined" && Array.isArray(ST.files) ? ST.files : []).filter((/** @type {any} */ f) => names.includes(f.name) && f.spectrum_mode === "profile");
     if (prof.length) for (const s of plan.steps) {
       const step = F.stepOf(S.reg, s), alg = step && F.effective(s, step).algorithm, mode = alg && alg.applicability?.spectrum_mode;
-      if (Array.isArray(mode) && !mode.includes("profile")) warns.push(`${prof.length} profile file${prof.length > 1 ? "s" : ""} (${prof.map((/** @type {any} */ f) => f.name).slice(0, 3).join(", ")}${prof.length > 3 ? "…" : ""}) reach ${s.id} with ${alg.id}, which needs centroided data. Flow has no centroiding step yet; centroid the files before opening them, or pick an algorithm that takes profile data.`);
+      if (Array.isArray(mode) && !mode.includes("profile")) warns.push(`${prof.length} profile file${prof.length > 1 ? "s" : ""} (${prof.map((/** @type {any} */ f) => f.name).slice(0, 3).join(", ")}${prof.length > 3 ? "…" : ""}) reach ${s.id} with ${alg.id}, which needs centroided data. Add a spectra.centroid step before index.mzidx, or pick an algorithm that takes profile data.`);
     }
     return { plan, names, warns };
   };
