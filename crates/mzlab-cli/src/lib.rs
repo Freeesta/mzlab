@@ -57,6 +57,9 @@ mod flow_position;
 #[cfg(test)]
 mod flow_position_tests;
 mod flow_quant;
+mod flow_reactivity;
+#[cfg(test)]
+mod flow_reactivity_tests;
 mod flow_read;
 mod flow_refilter;
 #[cfg(test)]

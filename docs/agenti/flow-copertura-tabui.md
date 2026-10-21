@@ -24,7 +24,7 @@ Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzion
 | MS2, libreria, albero MSn del genitore | `spectra.match` (eseguibile), grafo `msngrafo/1` e albero (`frag_tree`) | Ricerca in libreria coperta; albero e grafo mancano come passi | Un passo che produca `msngrafo/1`; oggi è solo vista di un file |
 | Posizione della sostituzione | `tp.position` | Eseguibile (`flow_position.rs`): rilegge il `site` di `interp/1` con le soglie del passo | Buco: i voti dell'albero MSn non stanno nel file (una riga votata dall'albero tiene il suo `site`); il sito non lo esegue |
 | Rete dei prodotti | `tp.network` (nodo «Product network») | Eseguibile solo con un `tp/1` già pronto; nessun passo eseguibile lo produce | Esecutore di `tp.link` (`tp.link@2` c'è; `tp.link@1`, che prendeva un MGF, non esiste più: `err.flow.step.version`; `tp.generate` c'è già) |
-| Reattività del genitore | `structure.reactivity` | Passo c'è ma non eseguibile (nel sito la vista legge un `reatt/1` da disco) | Esecutore (il motore `chem` è nel `.wasm`) |
+| Reattività del genitore | `structure.reactivity` | Eseguibile (`reatt/1` dal SMILES del genitore, stessi byte del `.wasm` `chem`) | Le opzioni si danno con `--set` |
 | Confronto fra condizioni / gruppi | `meta.compare`, `table.stats` | `meta.compare` e `table.stats` eseguibili | I grafici sono già viste di Flow |
 | Modalità diretta («Dig» con avanzamento in diretta) | Nessun passo; l'avanzamento di Flow è solo a fine corsa | Manca | Avanzamento per passo (debito 6) |
 | Untargeted (formule da MS1, abbinamento, identità) | `formula.ms1`, `formula.ms2`, `spectra.match`, `annot.level` (modelli «Find and identify…», «Targeted check») | Coperta ed eseguibile (app, CLI) | Sito: esecutore web |

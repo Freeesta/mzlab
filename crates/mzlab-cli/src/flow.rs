@@ -15,9 +15,13 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_base::table_job;
 use crate::flow_cache::Cache;
+use crate::flow_compare::compare_job;
 use crate::flow_estimate::estimate_job;
+use crate::flow_inclusion::inclusion_job;
 pub use crate::flow_out::{run_plan_cached, run_plan_notify};
+use crate::flow_reactivity::reactivity_job;
 use crate::flow_read::{blobs, load, named, Loaded};
+use crate::flow_render::render_job;
 pub use crate::flow_run::{fill_inputs, run_plan};
 
 pub(crate) fn io(e: std::io::Error) -> Error {
@@ -394,19 +398,14 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "tp.position",
         Exec::File("sites", crate::flow_position::position_job),
     ),
+    ("structure.render", Exec::File("drawing", render_job)),
     (
-        "structure.render",
-        Exec::File("drawing", crate::flow_render::render_job),
+        "structure.reactivity",
+        Exec::File("reactivity", reactivity_job),
     ),
-    (
-        "meta.compare",
-        Exec::File("comparison", crate::flow_compare::compare_job),
-    ),
+    ("meta.compare", Exec::File("comparison", compare_job)),
     ("quant.calibrate", Exec::Made(crate::flow_quant::quant_job)),
-    (
-        "export.inclusion",
-        Exec::File("report", crate::flow_inclusion::inclusion_job),
-    ),
+    ("export.inclusion", Exec::File("report", inclusion_job)),
     (
         "export.table_csv",
         Exec::File("report", crate::flow_export::csv_job),

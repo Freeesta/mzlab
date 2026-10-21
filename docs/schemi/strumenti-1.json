@@ -30,6 +30,7 @@
           "spectra.match",
           "spectra.ms2",
           "spectra.msn_graph",
+          "structure.reactivity",
           "structure.render",
           "table.drift",
           "table.filter",
