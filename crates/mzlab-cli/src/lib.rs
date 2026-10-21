@@ -393,6 +393,8 @@ mod flow_run_tests;
 #[cfg(test)]
 mod msn_graph_compare_tests;
 #[cfg(test)]
+mod msn_graph_strutture_tests;
+#[cfg(test)]
 mod msn_graph_tests;
 #[cfg(test)]
 mod msn_lib_tests;

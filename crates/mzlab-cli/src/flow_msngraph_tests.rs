@@ -75,3 +75,26 @@ fn every_option_of_the_command_is_a_parameter() {
     assert_eq!(got, want);
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn the_cleavages_of_a_node_are_a_parameter_of_the_step() {
+    let d = dir("c");
+    let got = graph(
+        &d,
+        r#"{"formula":"C14H15N3O5+","smiles":"CCOC(=O)c1c[nH]c2ccccc12","strutture_nodo":"n3","ppm_struttura":5}"#,
+    )
+    .unwrap();
+    let want = cli(&[
+        "--formula",
+        "C14H15N3O5+",
+        "--smiles",
+        "CCOC(=O)c1c[nH]c2ccccc12",
+        "--strutture",
+        "n3",
+        "--ppm-struttura",
+        "5",
+    ]);
+    assert_eq!(got, want);
+    assert!(got.contains("\"strutture\":{"));
+    let _ = std::fs::remove_dir_all(&d);
+}

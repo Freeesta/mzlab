@@ -13,6 +13,7 @@ mod libreria;
 mod posa;
 mod radice;
 mod rotta;
+mod strutture;
 mod unisci;
 
 pub use esporta::{da_richiesta_export, esporta, Formato};
@@ -21,6 +22,10 @@ pub use leggi::{leggi, Letto};
 pub use libreria::aggiungi;
 pub use radice::{candidati_radice, CandidatoRadice};
 pub use rotta::{da_richiesta, grafo_json};
+pub use strutture::{
+    con_strutture, strutture_json, CandidatoStruttura, IngressoStrutture, PiccoSpiegato, Strutture,
+    Taglio,
+};
 
 use crate::msnalbero::Albero;
 

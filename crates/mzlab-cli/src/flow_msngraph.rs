@@ -45,6 +45,14 @@ pub fn msn_graph_step() -> Step {
             Param::boolean("isotopi", "Keep M+1 peaks")
                 .default_bool(d.isotopi)
                 .doc("The M+1 peaks of the fragments become nodes with their monoisotopic peak"),
+            Param::text("strutture_nodo", "Node for the structure cleavages")
+                .default_str("")
+                .doc("Node nK of the graph: adds the key `strutture`, the bonds of the structure whose cleavage gives its m/z (needs the structure); empty = none"),
+            Param::number("ppm_struttura", "Cleavage window")
+                .min(0.0)
+                .default_num(crate::msn_graph::PPM_STRUTTURA)
+                .unit("ppm")
+                .doc("Distance of a cleaved piece from the m/z of the node"),
             Param::text("scelte", "Chosen formulas")
                 .default_str("")
                 .doc("MZ=ION pairs separated by commas: the formula chosen for the node at that m/z"),
@@ -104,6 +112,13 @@ fn opzioni(job: &Job) -> Result<Opzioni> {
 
 /// The text of the graph of the mzML at `file`, its index built in `tmp`: what the command prints.
 pub fn msn_graph_text(job: &Job, file: &Path, tmp: &Path) -> Result<String> {
-    let (_, json) = crate::msn_graph::grafo(file, &opzioni(job)?, tmp)?;
-    Ok(json + "\n")
+    let o = opzioni(job)?;
+    let (g, json) = crate::msn_graph::grafo(file, &o, tmp)?;
+    match text(job, "strutture_nodo") {
+        Some(nodo) => {
+            let ppm = number(job, "ppm_struttura", crate::msn_graph::PPM_STRUTTURA);
+            Ok(crate::msn_graph::strutture_testo(&g, &json, &o, (&nodo, ppm))? + "\n")
+        }
+        None => Ok(json + "\n"),
+    }
 }
