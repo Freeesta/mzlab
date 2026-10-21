@@ -330,6 +330,9 @@ impl State {
             "flow/run" => return self.flow_run(p),                                      // a whole plan: it does not hold the engine
             _ => {}
         }
+        if op.starts_with("llm/") {
+            return self.op_llm(op, p);                                                  // the assistant: network on a thread of its own, the key never leaves Rust
+        }
         if op.starts_with("feat/") || op.starts_with("finder/") {
             return self.op_feat(op, p);                                              // mzFinder: long jobs of their own, they do not hold the engine
         }

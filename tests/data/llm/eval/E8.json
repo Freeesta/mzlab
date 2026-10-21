@@ -1,0 +1,11 @@
+{
+ "expect": {
+  "has_steps": [
+   "features.estimate"
+  ]
+ },
+ "id": "E8",
+ "level": "L1",
+ "request": "Estimate the parameters of the files.",
+ "schema": "llm-eval/1"
+}

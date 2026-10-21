@@ -1,5 +1,5 @@
 """Flow «This browser» runner (flow/lazy/flow-web-run.js, flow-web-ui.js, worker-flow-web.js): the base plan (index, detect, align, gapfill) over three synthetic .mzidx in OPFS emits
-{passo, stato, mb, via, parte, di, modo} for every step, keeps each result in OPFS (mzlab/flow/), starts again from the first step not finished (a second run reuses everything), refuses a
+{passo, stato, mb, via, parte, di, modo} for every step, keeps each result in OPFS (mzlab/flow/), starts again from the first step not finished (a second run reuses everything), has the SHA-256 of the native run with the same recipe (layers), refuses a
 series the budget does not hold with its numbers, and writes the note for phones and tablets. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and numpy: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_web.py"""
 import json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
@@ -78,26 +78,41 @@ try:
             assert pg.evaluate("(async () => { const d = await navigator.storage.getDirectory(); const m = await d.getDirectoryHandle('mzlab'); const f = await m.getDirectoryHandle('flow'); return (await (await f.getFileHandle('series.mzfeat')).getFile()).size })()") > 0
         step("the base plan runs: events of every step, the table is kept in OPFS", first_run)
 
+        def same_bytes_as_native():
+            recipe = pg.evaluate("FLOW.runners.web.recipeOf(document.querySelector('.flx-list').__flow.plan)")
+            assert '"layers"' in recipe, recipe
+            got = pg.evaluate("""(async () => { const d = await navigator.storage.getDirectory(), f = await (await d.getDirectoryHandle('mzlab')).getDirectoryHandle('flow');
+              const b = await (await (await f.getFileHandle('series.mzfeat')).getFile()).arrayBuffer();
+              return [...new Uint8Array(await crypto.subtle.digest('SHA-256', b))].map(x => x.toString(16).padStart(2, '0')).join('') })()""")
+            nat = tmp / "nat"; nat.mkdir()
+            out = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo", "--", str(nat), *[str(data / n) for n in names], "--recipe", recipe],
+                                 cwd=ROOT, check=True, capture_output=True, text=True).stdout
+            native = dict(l.split(" ")[:2] for l in out.splitlines() if len(l.split(" ")) == 2 and len(l.split(" ")[1]) == 64)
+            assert native.get("series.mzfeat") == got, (native, got)
+        step("the table of the browser has the SHA-256 of the native run with the same layers", same_bytes_as_native)
+
         def second_run():
             r = pg.evaluate(RUN); assert r["err"] is None, r["err"]
-            assert all(e["modo"] == "reused" for e in of(r, "detect", "running")), r["ev"]
+            assert all(e["modo"] == "reused" for e in of(r, "detect", "running") if e["parte"]), r["ev"]
             assert of(r, "align", "reused") and not of(r, "align", "running"), r["ev"]
         step("a second run reuses what is kept (nothing is computed again)", second_run)
 
         def refused():
             pg.evaluate(CLEAR)
-            pg.evaluate("window.__rust = window.MZLAB_RUST; window.MZLAB_RUST = { budgetMb: 1 }")
+            # a budget below what even the slabs need (the estimate counts whole megabytes)
+            est = 0.001
+            pg.evaluate("window.__rust = window.MZLAB_RUST; window.MZLAB_RUST = { budgetMb: %r }" % est)
             r = pg.evaluate(RUN)
             pg.evaluate("window.MZLAB_RUST = window.__rust")
-            assert r["err"] and r["err"]["key"] == "error.featMemory", r["err"]
-            assert of(r, "align", "refused") and r["err"]["params"]["stima_mb"] > 1, r
+            assert r["err"] and r["err"]["key"] == "error.featMemory", (est, r["err"], r["ev"][-3:])
+            assert of(r, "align", "refused") and r["err"]["params"]["stima_mb"] > est, r
         step("a series the budget does not hold is refused with its numbers", refused)
 
         def phone_note():
             pg.evaluate("window.MZLAB_PHONE = true")
             pg.click("#flx-run"); pg.wait_for_selector("#flx-web-why")
             assert "made for computers" in pg.inner_text("#flx-web-why"), pg.inner_text("#flx-web-why")
-            btn = pg.locator('.fl-cli button[aria-label="Run in this browser"]'); assert btn.count() == 1
+            btn = pg.locator('.fl-meta button', has_text="Run in this browser"); assert btn.count() == 1
             box = btn.bounding_box(); assert box["height"] >= 24 and box["width"] >= 24, box
             pg.evaluate("window.MZLAB_PHONE = false")
         step("a phone or tablet reads the note for computers; the Run button is a reachable target", phone_note)

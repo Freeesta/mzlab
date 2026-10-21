@@ -4,9 +4,8 @@
 
 use std::collections::BTreeSet;
 
-use mzlab_core::budget::sha256_hex;
-use mzlab_core::json::{Out, Value};
-use mzlab_core::step::json::registry_json;
+use mzlab_core::error::{Error, Result};
+use mzlab_core::json::{parse, Out, Value};
 use mzlab_core::step::{Kind, Param, Step};
 
 /// What a tool may do, read by the policy of the autonomy level.
@@ -168,7 +167,7 @@ fn strs(items: impl IntoIterator<Item = String>) -> String {
     o.0
 }
 
-fn step_refs(steps: &[Step]) -> String {
+fn step_refs(steps: &[&Step]) -> String {
     strs(steps.iter().map(|s| format!("{}@{}", s.id, s.version)))
 }
 
@@ -221,14 +220,14 @@ pub fn settable(step: &Step) -> Vec<(String, String)> {
     names.into_iter().map(|(n, s)| (n, any_of(s))).collect()
 }
 
-fn set_param_schema(steps: &[Step]) -> String {
+fn set_param_schema(steps: &[&Step]) -> String {
     let mut o = Out::default();
     o.raw(OBJ)
         .raw(",\"properties\":{\"instance\":")
         .raw(INSTANCE);
     o.raw("},\"required\":[\"instance\"],\"oneOf\":[");
     let mut first = true;
-    for s in steps {
+    for s in steps.iter().copied() {
         let set = settable(s);
         if set.is_empty() {
             continue;
@@ -290,6 +289,10 @@ fn quote(t: &str) -> String {
 /// The tools of the catalog, in a fixed order. `executable` says whether a step id has a native executor.
 pub fn catalog(steps: &[Step], ui: &[UiTool], executable: &dyn Fn(&str) -> bool) -> Vec<Tool> {
     use Class::*;
+    // Sorted by id so a step added to the registry lands in a different place of each list of the exported file.
+    let mut sorted: Vec<&Step> = steps.iter().collect();
+    sorted.sort_by_key(|s| (s.id, s.version));
+    let steps = sorted.as_slice();
     let refs = step_refs(steps);
     let step_enum = format!("{{\"enum\":{refs}}}");
     let none = object(&[], &[]);
@@ -358,15 +361,80 @@ pub fn catalog(steps: &[Step], ui: &[UiTool], executable: &dyn Fn(&str) -> bool)
     ]
 }
 
-/// The catalog as the file `strumenti/1`.
+/// Containers whose compact form is at most this long stay on one line in the exported file.
+const INLINE: usize = 100;
+
+/// End of the JSON value that starts at `i` in `s` (compact, no whitespace).
+fn value_end(s: &[u8], mut i: usize) -> usize {
+    match s[i] {
+        b'"' => {
+            i += 1;
+            while s[i] != b'"' {
+                i += if s[i] == b'\\' { 2 } else { 1 };
+            }
+            i + 1
+        }
+        b'[' | b'{' => {
+            let close = if s[i] == b'[' { b']' } else { b'}' };
+            i += 1;
+            while s[i] != close {
+                if s[i] == b',' || s[i] == b':' {
+                    i += 1;
+                } else {
+                    i = value_end(s, i);
+                }
+            }
+            i + 1
+        }
+        _ => {
+            while !matches!(s[i], b',' | b']' | b'}') {
+                i += 1;
+            }
+            i
+        }
+    }
+}
+
+/// Writes the value at `i` with one element or member per line, except short containers; returns the end of the value.
+fn spread(s: &[u8], i: usize, depth: usize, out: &mut String) -> usize {
+    let end = value_end(s, i);
+    let text = std::str::from_utf8(&s[i..end]).expect("UTF-8");
+    if !matches!(s[i], b'[' | b'{') || end - i <= INLINE {
+        out.push_str(text);
+        return end;
+    }
+    let close = if s[i] == b'[' { ']' } else { '}' };
+    out.push(s[i] as char);
+    let mut at = i + 1;
+    let pad = "  ".repeat(depth + 1);
+    while s[at] != close as u8 {
+        out.push('\n');
+        out.push_str(&pad);
+        if s[at] == b'"' && s[i] == b'{' {
+            let key_end = value_end(s, at);
+            out.push_str(std::str::from_utf8(&s[at..=key_end]).expect("UTF-8"));
+            at = key_end + 1;
+        }
+        at = spread(s, at, depth + 1, out);
+        if s[at] == b',' {
+            out.push(',');
+            at += 1;
+        }
+    }
+    out.push('\n');
+    out.push_str(&"  ".repeat(depth));
+    out.push(close);
+    at + 1
+}
+
+/// The catalog as the file `strumenti/1`: one element per line in every long list, so the diff of a new step touches only its own lines, and without
+/// the hash of the registry, which any change of the registry would rewrite on its own line.
 pub fn catalog_json(steps: &[Step], ui: &[UiTool], executable: &dyn Fn(&str) -> bool) -> String {
     let mut o = Out::default();
-    o.raw("{\"schema\":\"strumenti/1\",\"registry_sha256\":")
-        .str(&sha256_hex(registry_json(steps).as_bytes()))
-        .raw(",\"tools\":[\n");
+    o.raw("{\"schema\":\"strumenti/1\",\"tools\":[");
     for (i, t) in catalog(steps, ui, executable).iter().enumerate() {
         if i > 0 {
-            o.raw(",\n");
+            o.raw(",");
         }
         o.raw("{\"name\":")
             .str(t.name)
@@ -375,6 +443,47 @@ pub fn catalog_json(steps: &[Step], ui: &[UiTool], executable: &dyn Fn(&str) -> 
         o.raw(",\"description\":").str(t.description);
         o.raw(",\"input_schema\":").raw(&t.input_schema).raw("}");
     }
-    o.raw("\n]}\n");
-    o.0
+    o.raw("]}");
+    let mut out = String::new();
+    spread(o.0.as_bytes(), 0, 0, &mut out);
+    out.push('\n');
+    out
+}
+
+/// The tools of a catalog text (`strumenti/1`, the file the site ships): the page of the site has no step registry, so it hands the text to the
+/// `.wasm` once. The names and texts are leaked to keep `Tool` `'static`: call it once per page, never per request.
+pub fn parse_catalog(text: &str) -> Result<Vec<Tool>> {
+    let bad = |f: &str| Error::new("err.llm.tools").with("field", f);
+    let v = parse(text.as_bytes()).map_err(|_| bad("json"))?;
+    if v.get("schema").and_then(Value::str) != Some("strumenti/1") {
+        return Err(bad("schema"));
+    }
+    let leak = |s: &str| -> &'static str { Box::leak(s.to_string().into_boxed_str()) };
+    v.get("tools")
+        .map_or(&[][..], Value::arr)
+        .iter()
+        .map(|t| {
+            let name = t
+                .get("name")
+                .and_then(Value::str)
+                .ok_or_else(|| bad("name"))?;
+            let class = match t.get("class").and_then(Value::str) {
+                Some("read") => Class::Read,
+                Some("propose") => Class::Propose,
+                Some("edit") => Class::Edit,
+                Some("run") => Class::Run,
+                Some("ui") => Class::Ui,
+                _ => return Err(bad("class")),
+            };
+            let schema = t.get("input_schema").ok_or_else(|| bad("input_schema"))?;
+            let mut o = Out::default();
+            value(&mut o, schema);
+            Ok(Tool {
+                name: leak(name),
+                class,
+                description: leak(t.get("description").and_then(Value::str).unwrap_or("")),
+                input_schema: o.0,
+            })
+        })
+        .collect()
 }

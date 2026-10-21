@@ -1,0 +1,13 @@
+{
+ "expect": {
+  "accepted": true,
+  "has_steps": [
+   "features.table"
+  ],
+  "tries": 2
+ },
+ "id": "E4",
+ "level": "L2",
+ "request": "Make the feature table of a.mzML.",
+ "schema": "llm-eval/1"
+}

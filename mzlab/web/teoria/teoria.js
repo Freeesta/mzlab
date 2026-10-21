@@ -68,7 +68,7 @@ const TP = (() => {
   const $ = (q, el = document) => el.querySelector(q);
   const here = location.pathname.split("/").pop() || "index.html";
   const idx = Math.max(0, CHAPTERS.findIndex(c => c[0] === here));
-  // teoria/#5, teoria/#cap-5, teoria/#A, teoria/#09-quadrupolo: the index page forwards to that chapter (one address per chapter without rewriting URLs)
+  // theory/#5, theory/#cap-5, theory/#A, theory/#09-quadrupolo: the index page forwards to that chapter (one address per chapter without rewriting URLs)
   if (here === "index.html") {
     const k = location.hash.slice(1).toLowerCase().replace(/^cap-?/, "");
     const hit = k && CHAPTERS.find(c => c[0] !== "index.html" && (c[1].toLowerCase() === k || c[0].replace(".html", "") === k));
@@ -101,10 +101,10 @@ const TP = (() => {
     const prog = location.protocol !== "file:";
     const TAB = window.TEORIA.lang === "en" ? { dati: "Data", disegno: "Drawing", teoria: "Theory", sez: "Sections of" } : { dati: "Dati", disegno: "Disegno", teoria: "Teoria", sez: "Sezioni di" };
     const tabs = `<nav id="tabs" aria-label="${TAB.sez} ${APP}">` +
-      (!prog || PHONE ? "" : `<a id="tab-dati" href="../../#/dati">${TAB.dati}</a><a id="tab-disegno" href="../../#/disegno">${TAB.disegno}</a>`) +
+      (!prog || PHONE ? "" : `<a id="tab-dati" href="../../#/data">${TAB.dati}</a><a id="tab-disegno" href="../../#/draw">${TAB.disegno}</a>`) +
       `<a id="tab-teoria" href="index.html" class="on" aria-current="page">${TAB.teoria}</a></nav>`;
     top.innerHTML = `<button id="menu" type="button" aria-label="Indice" aria-expanded="false" aria-controls="side">&#9776;</button>` + (embedded ? "" :
-      `<a id="logo" href="${!prog ? "index.html" : PHONE ? "../../" : "../../#/dati"}" aria-label="${!prog ? "Teoria: introduzione" : PHONE ? APP : APP + ": Dati"}"><img src="../logo-64.png" alt="m/z" width="28" height="28"></a>` + tabs + `<span class="sp"></span>`);
+      `<a id="logo" href="${!prog ? "index.html" : PHONE ? "../../" : "../../#/data"}" aria-label="${!prog ? "Teoria: introduzione" : PHONE ? APP : APP + ": Dati"}"><img src="../logo-64.png" alt="m/z" width="28" height="28"></a>` + tabs + `<span class="sp"></span>`);
     document.body.prepend(top);
     const side = $("#side"); side.setAttribute("aria-label", "Indice dei capitoli e della pagina");
     // «Salta al contenuto»: first thing reached with Tab, visible only on focus

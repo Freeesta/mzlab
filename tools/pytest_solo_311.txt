@@ -1,0 +1,16 @@
+tests/test_msngrafo_wasm.py
+tests/test_feat_wasm.py
+tests/test_feat_grafo_wasm.py
+tests/test_guardie_memoria.py
+tests/test_flow_determinismo.py
+tests/test_corsa_schema.py
+tests/test_msnlib_schema.py
+tests/test_verita_identificazione.py
+tests/test_bench.py
+tests/test_cancello.py
+tests/test_pipeline_contract.py
+tests/test_valida_lr.py::test_native_run_on_the_synthetic_series
+tests/test_valida_lr.py::test_native_run_a_broken_growth_and_a_flat_transition_fail_the_growth_criterion
+tests/test_valida_hr.py::test_robustness_end_to_end_on_files_named_like_the_dda_ones
+tests/test_valida_hr.py::test_native_run_and_d5_on_a_mini_series
+tests/test_valida_tp.py::test_native_run_on_the_synthetic_v1x_series
