@@ -31,7 +31,7 @@ Pacchetto RM-6 del convertitore Thermo `.raw` → mzML di mzLab. Leggi prima `do
    - soglia dal rumore interpolato dai nodi del file invece di una soglia unica;
    - limiti di δ e FWHM che dichiarano i fit cattivi invece di nasconderli.
    
-   Il rilevatore SIMD a blocchi entra solo dopo che lo scalare passa C1, con la via scalare uguale al bit e il guadagno ≥ 10 %.
+   Il rilevatore SIMD a blocchi entra solo dopo che lo scalare passa C1, con la via scalare uguale al bit e il guadagno misurato oltre il rumore (regole comuni).
 
 ## Accettazione
 Tabella C1-C4 con tutti i numeri, anche quelli che falliscono; per ogni fallimento la causa e una proposta (un parametro nuovo spento di base). Nessun byte dell'uscita di base cambia (F10).

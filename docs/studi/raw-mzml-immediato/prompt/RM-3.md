@@ -22,7 +22,7 @@ Pacchetto RM-3 del convertitore Thermo `.raw` → mzML di mzLab. Leggi prima `do
 4. **Indicizzato di base** (decisione 3): offset raccolti dallo scrittore ordinato e SHA-1 dell'uscita in un thread dedicato che consuma i byte in ordine.
 5. **Back-pressure in byte**: canale limitato a un budget in MB (non in spettri) fra i worker e lo scrittore. V6 sul denso da 2 GB e da 8 GB.
 
-6. **Dalla valutazione Gemini** (`VALUTAZIONE_GEMINI.md` G15, G17-G19, G22): livello di compressione scelto dalla dimensione dell'array (stored o livello 0 sotto una soglia misurata); zlib-ng escluso (C, niente `.wasm`, byte diversi); ryu escluso (cambia i byte); base64-simd solo se il denso mostra un guadagno ≥ 10 %.
+6. **Dalla valutazione Gemini** (`VALUTAZIONE_GEMINI.md` G15, G17-G19, G22): livello di compressione scelto dalla dimensione dell'array (stored o livello 0 sotto una soglia misurata); zlib-ng escluso (C, niente `.wasm`, byte diversi); ryu escluso (cambia i byte); base64-simd (dipendenza nuova) solo se il denso mostra un guadagno ≥ 3 %; ogni altro passo entra con il suo guadagno oltre il rumore.
 
 ## Accettazione
 - Con il solo scrittore (produttore di oggi), sul container a 4 core:
