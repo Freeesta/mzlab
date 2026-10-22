@@ -4283,3 +4283,4 @@
 {"v":1,"ts_utc":"2026-10-22T10:33:20Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/flow-live-4","merge_main":true,"aree":{"rust":4,"docs":1},"tipo":"pr","pr":1477,"sha":"35638d2b1e31a86768041283aeabc209c2ef88a4"}
 {"v":1,"ts_utc":"2026-10-22T10:40:00Z","azione":"push","titolo":"Fondi main","merge_main":false,"aree":{"rust":30,"docs":6,"test":2,"tools":2},"tipo":"pr","pr":1483,"sha":"185dbb4b5a1b92dc916e342814f1c9f8ffe8dad7"}
 {"v":1,"ts_utc":"2026-10-22T10:42:31Z","azione":"aperta","tipo":"pr","pr":1485,"sha":"b89653f43dcb379a72d12ba2599c8b4e69f6d04f"}
+{"v":1,"ts_utc":"2026-10-22T10:45:46Z","azione":"aperta","tipo":"pr","pr":1486,"sha":"54c7510020c85236838c5d5002568432be7ea6f2"}
