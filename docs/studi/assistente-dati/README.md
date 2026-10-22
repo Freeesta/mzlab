@@ -17,6 +17,7 @@ Questo studio non contiene codice di prodotto e non ha fatto chiamate all'API. C
 | `07-mappa-codice.md` | cosa riusare, cosa inventare, tetti `.wasm`, piano di PR |
 | `08-prompt-dev.md` | un prompt per chat DEV, in ordine |
 | `09-worker.md` | Worker portabile per la chiave condivisa: invito, riserva e saldo, contatori per persona, cosa non registra |
+| `10-opzioni.md` | Copilot, server MCP, sandbox (D6), Worker e corse in cloud come opzioni: uso, vantaggi, rischi, alternativa locale, scheda per chiedere il sì di Federico |
 | `prompt/` | i prompt per l'API (sistema, router, subagenti, valutazione) e `00_esecuzione-test.md` |
 
 ## Cosa farebbe un professionista (e non era chiesto)
@@ -47,7 +48,7 @@ Questo studio non contiene codice di prodotto e non ha fatto chiamate all'API. C
 - Client: CLI (`mzlab-cli assist`, chiave da file, come `tutor eval`) e app desktop (trasporto `llm/*` esistente) subito; sito con la chiave dell'utente (V1a) o con un codice d'invito verso il Worker (V2a, `09-worker.md`).
 - Modelli: `claude-sonnet-5-5` a effort `medium` per analisi e dialogo; `claude-haiku-5-5` per instradamento e specifiche dei grafici; Opus mai nel prodotto, solo come giudice facoltativo nel test.
 - Niente codice libero: il modello propone piani `mzflow/2`, parametri e `grafico/1`, Rust valida, la pagina esegue e disegna.
-- Nessuna modifica a `Cargo.toml`, workflow, `pages.yml` in A1–A8: i moduli nuovi stanno in `mzlab-llm` e `mzlab-cli`. Worker e CSP in PR separate (W0–W2) con via del Coordinatore.
+- Nessuna modifica a `Cargo.toml`, workflow, `pages.yml` in A1–A8: i moduli nuovi stanno in `mzlab-llm` e `mzlab-cli`. Worker e CSP in PR separate (W0–W2) con via del Coordinatore. Copilot, server MCP, sandbox e corse in cloud sono opzioni spente (`10-opzioni.md`): ognuna si usa solo dopo la scheda al Coordinatore e il sì di Federico.
 
 ## Host per le prove del Worker (gratuiti, letti il 22/10/2026)
 
