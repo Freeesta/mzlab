@@ -4,7 +4,7 @@ Studio ARCH per la richiesta di Federico: «mzFlow deve poter permettere di lavo
 
 Tradotto in requisiti: (R1) ogni nodo parte appena ingressi e parametri sono pronti; (R2) a livello di FILE: il file 1 avanza nella catena mentre il file 5 si converte; (R3) il grafo resta modificabile mentre gira; (R4) ogni box mostra stato (in attesa / in corso / fatto / obsoleto / errore), % e tempo; (R5) una modifica invalida solo i nodi a valle toccati, riusa la cache per impronta (ingressi + parametri + versione del passo) e annulla/riavvia solo i lavori obsoleti, senza bloccare l'interfaccia; (R6) l'interfaccia compare subito (regola di avvio rapido, `docs/agenti/avvio-rapido.md` con #1444); (R7) stesso modello sul web (Worker + `.wasm`, tetti di `docs/agenti/wasm-tetti.md`) e su desktop/CLI; (R8) deterministico: stessi byte per stessi ingressi, qualunque sia l'ordine in cui i lavori finiscono; (R9) memoria limitata (contropressione).
 
-Prompt delle chat DEV: `PROMPTS.md` (stessa cartella). Bozza dello schema degli eventi: `flowlive-1.draft.json`.
+Prompt delle chat DEV: `PROMPTS.md` (stessa cartella). Bozza dello schema degli eventi: `flowlive-1.draft.md`.
 
 ## 1. Stato attuale (main `b496f6b`)
 
@@ -69,7 +69,7 @@ Un lavoro annullato che l'esecutore non riesce a fermare (un passo lungo dentro 
 - **Risorse esclusive** («hot file»): un lavoro dichiara le risorse che tiene (`dataset:<percorso>` per un `.wiff` condiviso fra iniezioni o una cartella `.D`; `opfs:<file>` per un SyncAccessHandle; il Web Lock `mzlab-mem-grande` per i passi > 512 MB); due lavori con la stessa risorsa esclusiva non partono insieme. Sul desktop la coda di conversione continua a cedere i core all'indice di Dati (`conv_coda.rs`, `INDEXING`).
 
 ### 2.7 Eventi `flowlive/1` (schema versionato)
-Bozza in `flowlive-1.draft.json`; la versione finale va in `docs/schemi/flowlive-1.json` con la PR L1. Un evento per cambio di stato di un lavoro e uno per nodo, più gli eventi di avanzamento (al più uno ogni 250 ms per lavoro, filtrati dall'esecutore):
+Bozza in `flowlive-1.draft.md`; la versione finale va in `docs/schemi/flowlive-1.json` con la PR L1. Un evento per cambio di stato di un lavoro e uno per nodo, più gli eventi di avanzamento (al più uno ogni 250 ms per lavoro, filtrati dall'esecutore):
 ```json
 {"format":"flowlive/1","seq":42,"rev":7,"kind":"job","instance":"detect","item":"S01.raw","state":"running","frac":0.4,"ms":null,"mb":180,"via":"browser","key":"9f2c…","error":null}
 {"format":"flowlive/1","seq":43,"rev":7,"kind":"node","instance":"detect","state":"running","frac":0.55,"parte":3,"di":6,"ms":5120,"via":"browser"}

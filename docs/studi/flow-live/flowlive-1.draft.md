@@ -1,3 +1,8 @@
+# flowlive/1, bozza dello schema
+
+Bozza per lo studio `README.md` §2.7; la PR L1 la porta in `docs/schemi/flowlive-1.json`.
+
+```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://freeesta.github.io/mzlab/schemi/flowlive-1.json",
@@ -29,3 +34,4 @@
     }
   }
 }
+```
