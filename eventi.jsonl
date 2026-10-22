@@ -869,3 +869,4 @@
 {"v":1,"ts_utc":"2026-10-22T04:57:07Z","azione":"aperta","tipo":"pr","pr":1429,"sha":"04b6d41f49c8e20066ab5b15ca15306ffb7f27ec"}
 {"v":1,"ts_utc":"2026-10-22T04:58:06Z","azione":"aperta","tipo":"pr","pr":1430,"sha":"3dc75cad7daf36099837e753d67097a168465ebc"}
 {"v":1,"ts_utc":"2026-10-22T05:00:27Z","azione":"aperta","tipo":"pr","pr":1431,"sha":"9d582d335e7309b95cf98f69e5135eaf980afaf5"}
+{"v":1,"ts_utc":"2026-10-22T05:01:24Z","azione":"push","titolo":"Aggiorna l'elenco dei passi CLI nel test con table.match","merge_main":false,"aree":{"test":1},"tipo":"pr","pr":1427,"sha":"5b1530d82fd95f68b64d191f85dff42b8e2d3d8e"}
