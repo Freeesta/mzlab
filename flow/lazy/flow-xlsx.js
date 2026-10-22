@@ -21,7 +21,7 @@
         const raw = u.subarray(body, body + size);
         if (method === 0) return raw;
         if (method !== 8) throw new Error("The xlsx uses a compression this reader does not know.");
-        return new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+        return new Uint8Array(await new Response(new Blob([/** @type {BlobPart} */ (raw)]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
       });
       p += 46 + nameLen + extra + note;
     }

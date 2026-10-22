@@ -82,8 +82,7 @@
       el("p", { class: "fl-note", text: "Generate them from the files in Data, upload a CSV, TSV or XLSX table (first sheet; columns File, Role, Time, Series, Replicate), then fix what is missing in the table." }),
       el("div", { class: "fl-meta" }, F.btn("import", "Upload a CSV, TSV or XLSX metadata table", () => upload.click(), "Upload table"), upload), say, table);
     drawTable();
-    // the files are added by the Data loaders, which tell nobody: look for a change while the card is on the page
-    let seen = F.dataFiles().join("\n");
+    let seen = F.dataFiles().join("\n");   // the Data loaders tell nobody: look for a change while the card is on the page
     const timer = setInterval(() => {
       if (!box.isConnected) { clearInterval(timer); return; }
       const now = F.dataFiles().join("\n");
