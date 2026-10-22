@@ -466,6 +466,7 @@ async function drawSpec(p, snapped) {
     lbls.push({ m, x: px - w / 2 - 3, y: y < 0 ? Y(y) + 3 : Y(y) - 4 - up - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: I18N.t("tip.peakLabel", { mz: m.toFixed(DEC) }) + (cont ? cont.tip(m) : "") }); }
   g.font = fpx(12);
   contMarks(p, g, X, Y, W, data, cst, hidOf, x0, x1, ymax);
+  if (window.XICBTN) XICBTN.mark(p, g, X, Y, W, d0);   // the peak chosen for the XIC button
   drawMeas(p, g, X, Y, W);                                 // ruler: reference and measured differences (before the annotations: a label hides the dashed line under it)
   for (const a of p.anns) {                                        // the point is the top of the nearest observed peak
     let ay = 0, bd = 0.7; d0.mz.forEach((m, j) => { const dd = Math.abs(m - a.x); if (dd < bd) { bd = dd; ay = d0.y[j]; } });
@@ -510,6 +511,7 @@ async function drawSpec(p, snapped) {
     return `<span><i style="background:${color}"></i>${EH(lab)}${legPol(x.f)}${x.multi ? ` (prec. ${x.prec})` : ""}</span>`;
   }).join("") : "") + isoNote;
   contLegend(p);
+  if (window.XICBTN) XICBTN.sync(p);                         // the XIC under this spectrum follows its scan
 }
 
 // Known contaminants on a high-resolution spectrum: a small diamond over the peaks whose m/z is COMPATIBLE with an entry of the lists (a sign, not a verdict).

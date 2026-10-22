@@ -842,6 +842,7 @@ declare var xOf: any;
 declare var xicDirect: any;
 declare var xicName: any;
 declare var xicNominal: any;
+declare var xicTraceFor: any;
 declare var xicWin: any;
 declare var xlsxBuild: any;
 declare var xlsxCrc32: any;

@@ -373,3 +373,7 @@ html:not(.phone) #avvio-copia,html:not(.phone) #avvio-reset,html:not(.phone) #de
 #tour-later.on{opacity:1}
 #tour-later::before{content:"";position:absolute;top:-6px;right:var(--tip,16px);width:10px;height:10px;background:var(--panel);border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg)}
 @media (prefers-reduced-motion:reduce){#tour-later{transition:none}}
+.xbb{min-width:24px;min-height:24px}.xbl{min-height:24px;font-variant-numeric:tabular-nums;white-space:nowrap}.xbl[hidden]{display:none}.xbb.on{background:var(--accent);color:var(--on-accent)}
+.xb-pop{display:flex;flex-direction:column;gap:6px;padding:8px 10px}.xb-pop label{display:flex;gap:6px;align-items:center;justify-content:space-between}.xb-pop input{width:9em;min-height:24px}.xb-pop input[aria-invalid="true"]{border-color:var(--bad);outline:1px solid var(--bad)}.xb-pop .xb-err{min-height:1em;color:var(--bad)}.xb-pop .xb-row{display:flex;gap:6px;justify-content:flex-end}
+.pnl .xb-info{position:absolute;left:78px;bottom:38px;z-index:2;max-width:55%;padding:2px 8px;font-size:11px;font-variant-numeric:tabular-nums;color:var(--muted);background:color-mix(in srgb,var(--panel) 86%,transparent);border:1px solid var(--line);border-radius:6px;pointer-events:none}.pnl .xb-info:empty{display:none}
+@media (pointer:coarse){.xbb,.xbl,.xb-pop .bt,.xb-pop input{min-height:40px;min-width:40px}}

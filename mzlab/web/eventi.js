@@ -533,6 +533,7 @@ function pendHint(p, e) {
 // the next click of a two-step action on this panel, as the i18n key of the cursor label (null: nothing pending)
 function pendKey(p) {
   if (p.type === "spec" && p.meas && p.meas.ref != null) return "pend.peak";
+  if (p.type === "spec" && window.XICBTN && XICBTN.pending(p)) return "xicbtn.pend";
   if (p._ibkA) return "pend.span";
   return null;
 }
