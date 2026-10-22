@@ -61,11 +61,10 @@ try:
         step("a sample read twice (again, or with a doubled .mzML) is one row, shown once without the extension", unique)
 
         def settle():
-            last = None
-            for _ in range(40):
-                cur = names()
-                if cur == last: return
-                last = cur; pg.wait_for_timeout(750)
+            # the order of the rows is final once the names have not changed for three checks (the sample times arrive after the rows)
+            pg.evaluate("""new Promise(ok => { let last = "", n = 0; const t = setInterval(() => {
+                const c = [...document.querySelectorAll("#tp-files .tp-fn")].map(x => x.textContent).join("|");
+                if (c === last) { if (++n >= 3) { clearInterval(t); ok(); } } else { last = c; n = 0; } }, 300); })""")
 
         def one():
             settle()
@@ -83,9 +82,9 @@ try:
             settle()
             before = names(); pg.click("#tp-rmall")
             assert pg.is_hidden("#tp-rmall") and pg.locator("#tp-files tr").count() == 0
-            pg.wait_for_timeout(200)
+            lib.attendi(pg, f"(document.querySelector('.sr-only[role=status]') || {{ textContent: '' }}).textContent.includes('{N} files')")
             assert f"{N} files" in pg.inner_text(".sr-only[role=status]"), pg.inner_text(".sr-only[role=status]")
-            pg.keyboard.press("Control+z"); pg.wait_for_timeout(300)
+            pg.keyboard.press("Control+z"); lib.attendi(pg, f"document.querySelectorAll('#tp-files tr').length === {N + 1}")
             assert names() == before and pg.is_visible("#tp-rmall")
         step("«Remove all» empties the list and Ctrl+Z brings all the files back", allgone)
 
