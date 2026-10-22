@@ -5,7 +5,7 @@ use std::time::Instant;
 
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::rawlettore;
-use serde_json::json;
+use serde_json::{json, Value};
 
 fn fileset(name: &str, bytes: Vec<u8>) -> FileSet {
     FileSet {
@@ -91,6 +91,46 @@ fn lap(name: &str, bytes: &[u8]) -> (Lap, usize) {
     )
 }
 
+/// Median, fastest lap and noise of the laps, as the `median`, `best` and `noise` objects of `banco/1`; also the median open and read-all times.
+fn stats(laps: &[Lap]) -> (Value, Value, Value, f64, f64) {
+    let med = |f: &dyn Fn(&Lap) -> f64| {
+        let mut v: Vec<f64> = laps.iter().map(f).collect();
+        quantile(&mut v, 0.5)
+    };
+    let mut random: Vec<f64> = laps.iter().flat_map(|l| l.random.iter().copied()).collect();
+    let (r50, r95) = (
+        quantile(&mut random.clone(), 0.5),
+        quantile(&mut random, 0.95),
+    );
+    // noise of the measure: (max - min) / median and the standard deviation / mean over the laps, in %
+    let noise = |f: &dyn Fn(&Lap) -> f64| {
+        let v: Vec<f64> = laps.iter().map(f).collect();
+        let mean = v.iter().sum::<f64>() / v.len() as f64;
+        let sd = (v.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / v.len() as f64).sqrt();
+        let (lo, hi) = v
+            .iter()
+            .fold((f64::MAX, 0.0f64), |(l, h), &x| (l.min(x), h.max(x)));
+        json!({"range_pct": 100.0 * (hi - lo) / med(f), "cv_pct": 100.0 * sd / mean})
+    };
+    // the fastest lap: the least disturbed by the other load of the machine
+    let best = |f: &dyn Fn(&Lap) -> f64| laps.iter().map(f).fold(f64::MAX, f64::min);
+    let (open, read_all) = (med(&|l| l.open), med(&|l| l.read_all));
+    (
+        json!({
+            "open_ms": open,
+            "tic_bpc_ms": med(&|l| l.tic_bpc),
+            "first_scan_ms": med(&|l| l.first_scan),
+            "read_all_ms": read_all,
+            "random_scan_ms_median": r50,
+            "random_scan_ms_p95": r95,
+        }),
+        json!({"open_ms": best(&|l| l.open), "tic_bpc_ms": best(&|l| l.tic_bpc), "read_all_ms": best(&|l| l.read_all)}),
+        json!({"open": noise(&|l| l.open), "tic_bpc": noise(&|l| l.tic_bpc), "read_all": noise(&|l| l.read_all)}),
+        open,
+        read_all,
+    )
+}
+
 fn main() {
     std::panic::set_hook(Box::new(|i| {
         eprintln!("thermo_banco: {i}");
@@ -116,17 +156,7 @@ fn main() {
         n_scans = n;
         laps.push(l);
     }
-    let med = |f: &dyn Fn(&Lap) -> f64| {
-        let mut v: Vec<f64> = laps.iter().map(f).collect();
-        quantile(&mut v, 0.5)
-    };
-    let mut random: Vec<f64> = laps.iter().flat_map(|l| l.random.iter().copied()).collect();
-    let (r50, r95) = (
-        quantile(&mut random.clone(), 0.5),
-        quantile(&mut random, 0.95),
-    );
-    let read_all = med(&|l| l.read_all);
-    let open = med(&|l| l.open);
+    let (median, best, noise, open, read_all) = stats(&laps);
     let first = &laps[0];
     println!(
         "{}",
@@ -145,14 +175,9 @@ fn main() {
             "file_read_ms": file_read,
             // first lap, with the cache as the run left it; the medians below are the warm laps
             "first_lap": {"open_ms": first.open, "tic_bpc_ms": first.tic_bpc, "first_scan_ms": first.first_scan, "read_all_ms": first.read_all},
-            "median": {
-                "open_ms": open,
-                "tic_bpc_ms": med(&|l| l.tic_bpc),
-                "first_scan_ms": med(&|l| l.first_scan),
-                "read_all_ms": read_all,
-                "random_scan_ms_median": r50,
-                "random_scan_ms_p95": r95,
-            },
+            "median": median,
+            "best": best,
+            "noise": noise,
             "open_mb_s": mb / (open / 1e3),
             "read_all_mb_s": mb / (read_all / 1e3),
             "read_all_scans_s": n_scans as f64 / (read_all / 1e3),
