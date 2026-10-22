@@ -60,6 +60,26 @@ struct G {
     losses: Vec<Loss>,
 }
 
+/// The options of the search from a request (`ppm_prec`, `tol_mz`, `min_prove`, `top`, `delta_max`; the route `api/msnlib/cerca`): absent = the default, not a number = `err.request.badNumber`.
+pub fn opzioni_da_richiesta(get: &dyn Fn(&str) -> Option<String>) -> Result<Opzioni> {
+    let num = |k: &str, por: f64| match get(k).filter(|v| !v.is_empty()) {
+        None => Ok(por),
+        Some(v) => v
+            .parse::<f64>()
+            .ok()
+            .filter(|x| x.is_finite() && *x >= 0.0)
+            .ok_or_else(|| Error::new("err.request.badNumber").with("name", k)),
+    };
+    let d = Opzioni::default();
+    Ok(Opzioni {
+        ppm_prec: num("ppm_prec", d.ppm_prec)?,
+        tol_mz: num("tol_mz", d.tol_mz)?,
+        min_prove: num("min_prove", d.min_prove as f64)? as usize,
+        top: num("top", d.top as f64)? as usize,
+        delta_max: num("delta_max", d.delta_max)?,
+    })
+}
+
 fn bad() -> Error {
     Error::new("err.msnlib.bad")
 }
