@@ -174,7 +174,7 @@ fn match_params() -> Vec<Param> {
             Param::integer("top_n", "Hits kept").min(1.0).default_num(5.0),
             Param::choice("decoys", "Decoys", &["none", "spectrum"])
                 .default_str("none")
-                .doc("spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Needs the spectral entropy (an .mzlib is read back to spectra and rebuilt with the decoys); none leaves the hits as they are"),
+                .doc("spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Works with the entropy, cosine and modified cosine scores (not tree; the q-value counts the candidates inside the precursor window; an .mzlib is read back to spectra and rebuilt with the decoys); none leaves the hits as they are"),
             Param::boolean("score_terms", "Score terms")
                 .default_bool(false)
                 .advanced()
