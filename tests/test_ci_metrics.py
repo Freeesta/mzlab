@@ -245,3 +245,20 @@ def test_percorso_critico_per_tipo():
     assert r["docs"]["mediana"] == 1.0 and r["rust"]["mediana"] == 8.0
     assert r["rust"]["lenti"][0] == ("rust-wasm", 7.8)
     assert s.dati_ci.percorso_critico(ev, "2026-10-23") == {}
+
+
+def test_riempi_verde_una_volta_sola():
+    righe = [{"tipo": "pr", "azione": "unita", "pr": 1, "sha": "a", "ts_utc": "2026-10-21T11:00:00Z", "verde_a_unione_s": None},
+             {"tipo": "pr", "azione": "unita", "pr": 2, "sha": "b", "ts_utc": "2026-10-21T11:00:00Z", "verde_a_unione_s": 5},
+             {"tipo": "pr", "azione": "unita", "pr": 3, "sha": "c", "ts_utc": "2026-10-21T11:00:00Z", "verde_a_unione_s": None}]
+    chiamate = []
+
+    def api(p):
+        chiamate.append(p)
+        if "/commits/c/" in p:
+            raise OSError("gone")
+        return {"check_runs": [{"id": 1, "name": "a", "status": "completed", "conclusion": "success", "completed_at": "2026-10-21T10:30:00Z"},
+                               {"id": 2, "name": "registra", "status": "in_progress", "conclusion": None, "completed_at": None}]}
+    assert s.riempi_verde(righe, api) == 2
+    assert [r["verde_a_unione_s"] for r in righe] == [1800, 5, None] and righe[2]["verde_provato"]
+    assert s.riempi_verde(righe, api) == 0 and len(chiamate) == 2

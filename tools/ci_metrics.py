@@ -9,6 +9,7 @@ Standard library only. The data file `eventi.jsonl` lives on the orphan branch `
     python3 tools/ci_metrics.py registra-conflitti --evento E.json --dati D.jsonl --nuovi N.jsonl   # push to main: new `dirty` PRs
     python3 tools/ci_metrics.py registra-recenti --dati D.jsonl --nuovi N.jsonl --cursore C.json   # scheduled: runs completed after the cursor + runner load
     python3 tools/ci_metrics.py accoda N.jsonl --dati D.jsonl [--cursore C.json]   # append without duplicates (every line gets `v`)
+    python3 tools/ci_metrics.py riempi-verde --dati D.jsonl [--massimo 30]    # best-effort backfill of verde_a_unione_s (rewrites D in place)
     python3 tools/ci_metrics.py compatta --dati D.jsonl [--giorni 14]          # drop the heavy fields of old rows
     python3 tools/ci_metrics.py esporta [--dati D.jsonl] [--out DIR]           # one CSV per row type
     python3 tools/ci_metrics.py percorso [--dati D.jsonl] [--da YYYY-MM-DD]    # push -> last required check of merged PRs, by PR type
@@ -187,6 +188,24 @@ def righe_pr(evento: dict, api=api_get) -> list[dict]:
     if pr.get("merged"):
         riga["verde_a_unione_s"] = secs(verde_il(pr["head"]["sha"], api), fine)
     return [riga]
+
+
+def riempi_verde(righe: list[dict], api=api_get, massimo: int = 30) -> int:
+    """Best effort: fill `verde_a_unione_s` of merged-PR rows that lack it, at most `massimo` rows per call (one API call each).
+    A row is tried once: `verde_provato` marks it, whether or not the checks of its head are still readable."""
+    fatte = 0
+    for r in righe:
+        if fatte >= massimo:
+            break
+        if r.get("tipo") != "pr" or r.get("azione") != "unita" or r.get("verde_a_unione_s") is not None or r.get("verde_provato") or not r.get("sha"):
+            continue
+        fatte += 1
+        r["verde_provato"] = True
+        try:
+            r["verde_a_unione_s"] = secs(verde_il(r["sha"], api), r["ts_utc"])
+        except Exception:
+            pass
+    return fatte
 
 
 def stato_conflitti(dati: str) -> dict[int, bool]:
@@ -391,7 +410,7 @@ def scrivi_righe(path: str, righe: list[dict]) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("comando", choices=["registra-run", "registra-pr", "registra-conflitti", "registra-recenti", "accoda", "compatta", "esporta", "riepilogo", "percorso"])
+    ap.add_argument("comando", choices=["registra-run", "registra-pr", "registra-conflitti", "registra-recenti", "accoda", "compatta", "riempi-verde", "esporta", "riepilogo", "percorso"])
     ap.add_argument("file", nargs="?", help="accoda: JSONL with the new lines")
     ap.add_argument("--evento", default=os.environ.get("GITHUB_EVENT_PATH"))
     ap.add_argument("--dati", help="events file (default: eventi.jsonl; riepilogo and esporta: origin/stat-ci)")
@@ -400,6 +419,7 @@ def main() -> int:
     ap.add_argument("--out", default="stat-ci-csv", help="esporta: folder of the CSV files")
     ap.add_argument("--giorni", type=int, default=14, help="compatta: rows older than this lose their heavy fields")
     ap.add_argument("--da")
+    ap.add_argument("--massimo", type=int, default=30, help="riempi-verde: rows tried per call")
     a = ap.parse_args()
     if a.comando in ("riepilogo", "esporta", "percorso"):
         if a.dati:
@@ -423,6 +443,11 @@ def main() -> int:
         return 0
     if a.comando == "compatta":
         scrivi_righe(dati, dati_ci.compatta(leggi(dati), dati_ci.adesso_dt(), a.giorni))
+        return 0
+    if a.comando == "riempi-verde":
+        righe = leggi(dati)
+        print(f"{riempi_verde(righe, massimo=a.massimo)} rows tried")
+        scrivi_righe(dati, righe)
         return 0
     if a.comando == "registra-recenti":
         righe, cursore = righe_recenti(dati)
