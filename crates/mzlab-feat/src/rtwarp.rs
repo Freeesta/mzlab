@@ -239,7 +239,7 @@ fn loess_curve(pts: &[(f64, f64)], grid: &[f64], span: f64) -> Vec<f64> {
             .map(|p| p.1 - local(&thin, &rw, p.0, q))
             .collect();
         let s = nanmedian(res.iter().map(|e| e.abs()));
-        if !(s > 1e-9) {
+        if s.is_nan() || s <= 1e-9 {
             break;
         }
         rw = res

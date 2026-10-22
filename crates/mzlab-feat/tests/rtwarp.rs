@@ -128,7 +128,7 @@ fn the_curve_follows_the_drift_put_in() {
 #[test]
 fn ransac_ignores_the_anchors_with_a_wrong_rt() {
     // one compound in five has the wrong RT in file 3
-    let wrong = |c: usize, k: usize| k == 3 && c % 5 == 0;
+    let wrong = |c: usize, k: usize| k == 3 && c.is_multiple_of(5);
     let files = series(line_drift, &wrong);
     let refs: Vec<&FileFeatures> = files.iter().collect();
     let p = FamAlignParams::default();
