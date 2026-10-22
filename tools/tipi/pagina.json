@@ -209,6 +209,7 @@
     "../../flow/lazy/flow-campaign.js",
     "../../flow/lazy/flow-digest.js",
     "../../flow/lazy/flow-run-end.js",
+    "../../flow/lazy/flow-import.js",
     "../../flow/lazy/flow-samples.js",
     "../../flow/lazy/flow-issues.js",
     "../../flow/lazy/flow-report.js",
