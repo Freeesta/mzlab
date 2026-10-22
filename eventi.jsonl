@@ -7322,3 +7322,4 @@
 {"v":1,"ts_utc":"2026-10-22T18:23:45Z","tipo":"wasm","k":"wasm-dimensioni","workflow":"test","moduli":{"static/wasm/mzlab_wasm_bg.wasm":[3843938,null]},"byte_totali":3843938,"margine_min_pct":null,"pr":null,"sha":"ae27311839922f1786463893d9d6f7fb8065acef","run_id":39830292994,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T18:23:55Z","tipo":"carico","k":"2026-10-22T18:2","job_in_coda":1,"job_in_corso":19}
 {"v":1,"ts_utc":"2026-10-22T18:31:14Z","azione":"aperta","tipo":"pr","pr":1520,"sha":"55b8820d0adbbc1323c8d9a63e65bacb613cc502"}
+{"v":1,"ts_utc":"2026-10-22T18:33:22Z","azione":"push","titolo":"stat-ci: best-effort backfill of the green-to-merge time","merge_main":false,"aree":{"workflow":1,"docs":1,"test":1,"tools":1},"tipo":"pr","pr":1520,"sha":"d55ac6ddc95479753234822de09d6a89bcaca23c"}
