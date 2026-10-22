@@ -23,7 +23,7 @@ Scartati: attivazione non letta 10897, ione non supportato 250, SMILES non leggi
 | qtof | − | 1618 | 405 | 0.952 | 0.079 | 0.044 | 0.074 | 0.079 | sì |
 | qtof | + | 5058 | 949 | 0.938 | 0.17 | 0.113 | 0.169 | 0.17 | sì |
 
-La prova passa in ogni strato; nello strato `fascio` (c) vale al più 0,05, quindi la prova è quasi vuota. Dove (c) è alta (CID su trappola, 0,22-0,28) i decoy `dp` e `dl` la azzerano e `ds` la riduce a circa 0,4.
+La prova passa in ogni strato; nello strato `fascio` (c) vale al più 0,05: dati insufficienti, non regola respinta. Dove (c) è alta (CID su trappola, 0,22-0,28) i decoy `dp` e `dl` la azzerano e `ds` la riduce a circa 0,4.
 
 ## Regole declassate a priorità 3
 
