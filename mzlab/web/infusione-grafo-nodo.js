@@ -44,6 +44,19 @@ function unexplained(/** @type {any} */ n) {
   return h`<p class="sm ig-unexp">${I18N.t("msngrafo.unexp", { n: u.n })} ${top}</p>`;
 }
 
+/** The neutral loss that led to the node (`interpretazione` of the graph, when the engine gives it): name, formula, mass, error, confidence, activations; evidence, never a verdict. */
+function lossLine(/** @type {any} */ n) {
+  const it = G.j.interpretazione; if (!it) return "";
+  const arcs = it.archi.filter((/** @type {any} */ a) => a.a === n.id && a.perdita);
+  if (!arcs.length) return "";
+  const rows = arcs.map((/** @type {any} */ a) => {
+    const p = a.perdita, name = p.nome || p.formula || I18N.t("msngrafo.int.unnamed");
+    const alt = p.alternative.length ? " · " + I18N.t("msngrafo.int.alt", { list: p.alternative.join(", ") }) : "";
+    return h`<li>${I18N.t("msngrafo.int.line", { name, f: p.formula || "–", mass: p.massa.toFixed(4), ppm: ppmTxt(p.errore_ppm), conf: I18N.t(/** @type {any} */ (TXT.conf)[p.confidenza]), act: a.attivazioni.map((/** @type {string} */ x) => x.toUpperCase()).join("/") })}${alt}</li>`;
+  });
+  return h`<div class="ig-int"><b class="sm">${I18N.t("msngrafo.int.title")}</b><ul class="sm">${rows.map((/** @type {string} */ r) => raw(r))}</ul><p class="muted sm">${I18N.t("msngrafo.int.hyp")}</p></div>`;
+}
+
 const warnings = (/** @type {any} */ n) => G.j.avvisi.filter((/** @type {any} */ a) => a.nodo === n.id).map((/** @type {any} */ a) => h`<p class="sm ig-warn">${I18N.t(/** @type {any} */ (TXT.warn)[a.chiave], { node: n.mz.toFixed(4) })}</p>`).join("");
 
 /** The drawing box: the saved fragment (picture from MOLUI) with Draw / Save drawing / Remove. */
@@ -107,7 +120,7 @@ async function saveDrawing(/** @type {any} */ n) {
 /** Fills the panel of a node. `redo` asks for the graph again (a candidate was chosen), `again` draws the panel again. */
 export function nodePanel(/** @type {HTMLElement} */ host, /** @type {any} */ n, /** @type {{ redo: () => void, again: () => void }} */ cb) {
   if (!n) { host.innerHTML = h`<p class="muted sm">${I18N.t("msngrafo.pick")}</p>`; return; }
-  host.innerHTML = h`<h4>${I18N.t("msngrafo.node.title", { level: n.livello, mz: n.mz.toFixed(4) })}</h4>` + candidates(n) + isolation(n) + unexplained(n) + warnings(n) + drawBox(n);
+  host.innerHTML = h`<h4>${I18N.t("msngrafo.node.title", { level: n.livello, mz: n.mz.toFixed(4) })}</h4>` + candidates(n) + lossLine(n) + isolation(n) + unexplained(n) + warnings(n) + drawBox(n);
   fillCuts(host, n);
   host.querySelectorAll(".ig-use").forEach(b => b.addEventListener("click", () => {
     useCandidate(n, /** @type {string} */ (/** @type {HTMLElement} */ (b).dataset.f)); cb.redo();
