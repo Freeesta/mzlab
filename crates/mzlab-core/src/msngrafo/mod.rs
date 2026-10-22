@@ -20,7 +20,9 @@ mod strutture;
 mod tabelle;
 mod unisci;
 
-pub use cerca::{cerca, opzioni_da_richiesta as opzioni_cerca, Opzioni as OpzioniCerca};
+pub use cerca::{
+    cerca, cerca_ms2, opzioni_da_richiesta as opzioni_cerca, Ms2Hit, Opzioni as OpzioniCerca,
+};
 pub use esporta::{da_richiesta_export, esporta, Formato};
 pub use interpreta::{
     con_interpretazione, interpreta, interpretazione_json, perdite_note, InterpArco, PerditaArco,
