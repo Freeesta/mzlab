@@ -131,7 +131,7 @@ impl<'a> Cx<'a> {
             .filter(|&r| t.tp.status.get(r) == Some(&0))
             .collect();
         let mut rank = vec![[None; KEYS]; t.len()];
-        for k in 0..KEYS {
+        (0..KEYS).for_each(|k| {
             let mut o = rows.clone();
             o.sort_by(|&x, &y| {
                 let (a, b) = (key(t, x, k), key(t, y, k));
@@ -144,7 +144,7 @@ impl<'a> Cx<'a> {
             for (i, &r) in o.iter().enumerate() {
                 rank[r][k] = Some(i + 1);
             }
-        }
+        });
         Cx {
             t,
             facts: row_facts(t),
