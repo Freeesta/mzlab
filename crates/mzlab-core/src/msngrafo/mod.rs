@@ -7,6 +7,7 @@ mod annota;
 mod candidati;
 mod cerca;
 mod cerca_ms2;
+mod da_picchi;
 mod esporta;
 mod formule;
 mod interpreta;
@@ -26,6 +27,7 @@ mod unisci;
 
 pub use cerca::{cerca, opzioni_da_richiesta as opzioni_cerca, Opzioni as OpzioniCerca};
 pub use cerca_ms2::{cerca_ms2, Ms2Hit};
+pub use da_picchi::grafo_da_picchi;
 pub use esporta::{da_richiesta_export, esporta, Formato};
 pub use interpreta::{
     con_interpretazione, interpreta, interpretazione_json, perdite_note, InterpArco, PerditaArco,

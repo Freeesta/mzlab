@@ -215,3 +215,30 @@ fn the_request_reads_the_rules_and_their_numbers() {
     );
     assert!(q("regole=1&cutoff_q=x").is_err());
 }
+
+#[test]
+fn a_single_spectrum_is_a_graph_of_one_level_with_the_precursor_as_root() {
+    let prec = super::tests::ion("C8H11N4O2");
+    let frammento = super::tests::ion("C6H8N3O");
+    let o = Opzioni {
+        formula: Some("C8H10N4O2+H".into()),
+        ..Opzioni::default()
+    };
+    let g = grafo_da_picchi(
+        (prec, 1),
+        ("HCD", 30.0),
+        &[(frammento, 800.0), (prec, 200.0)],
+        &o,
+    );
+    assert_eq!(g.radici.len(), 1);
+    assert_eq!(g.archi.len(), 1);
+    assert_eq!(g.spettri.len(), 1);
+    let s = &g.spettri[0];
+    assert_eq!(s.precursore, Some(g.radici[0]));
+    // the base peak is 100 %, the peak of the precursor is a node of its own (the root)
+    assert!(s
+        .picchi
+        .iter()
+        .any(|p| (p.1 - 100.0).abs() < 1e-9 && p.2.is_some()));
+    assert!(g.nodi[g.archi[0].a].formula.is_some());
+}
