@@ -69,7 +69,28 @@ impl Prices {
     pub fn list() -> Prices {
         Prices::from_providers(&crate::provider::builtin())
     }
+}
 
+fn bad(field: &str) -> Error {
+    Error::new("err.llm.prices").with("field", field)
+}
+
+/// USD per million tokens to micro-dollars per million tokens.
+fn micro(usd: f64) -> u64 {
+    (usd * 1e6).round() as u64
+}
+
+fn rates_of(p: &Price) -> Rates {
+    Rates {
+        input: micro(p.input),
+        output: micro(p.output),
+        cache_read: micro(p.cache_read),
+        write_5m: micro(p.write_5m),
+        write_1h: micro(p.write_1h),
+    }
+}
+
+impl Prices {
     /// `{"model-id": {"in": 0.1, "out": 0.5, "cache_read": 0.01, "write_5m": 0.125, "write_1h": 0.2, "over": {"above_tokens": 100000, "in": ..}}}`,
     /// USD per million tokens. `cache_read` defaults to `in`, the writes to 1.25× and 2× `in` (Anthropic's multipliers); `over` repeats the same keys.
     pub fn parse(text: &str) -> Result<Prices> {
@@ -125,25 +146,6 @@ impl Prices {
         let total = u128::from(est_input) * u128::from(input)
             + u128::from(max_tokens) * u128::from(r.output);
         Ok(total.div_ceil(1_000_000) as u64)
-    }
-}
-
-fn bad(field: &str) -> Error {
-    Error::new("err.llm.prices").with("field", field)
-}
-
-/// USD per million tokens to micro-dollars per million tokens.
-fn micro(usd: f64) -> u64 {
-    (usd * 1e6).round() as u64
-}
-
-fn rates_of(p: &Price) -> Rates {
-    Rates {
-        input: micro(p.input),
-        output: micro(p.output),
-        cache_read: micro(p.cache_read),
-        write_5m: micro(p.write_5m),
-        write_1h: micro(p.write_1h),
     }
 }
 
