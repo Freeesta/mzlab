@@ -892,12 +892,13 @@
                   "analog_prefilter",
                   "analog_min_shift_da",
                   "exact_ppm",
-                  "delta_formula_mda"
+                  "delta_formula_mda",
+                  "min_prove"
                 ]
               },
               "value":{
                 "anyOf":[
-                  {"enum":["spectral_entropy","cosine","modified_cosine"]},
+                  {"enum":["spectral_entropy","cosine","modified_cosine","tree"]},
                   {
                     "type":"number",
                     "minimum":0,
@@ -973,6 +974,12 @@
                     "minimum":0,
                     "default":5,
                     "description":"Free search of a CHNOPS formula for the precursor difference"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":1,
+                    "description":"A candidate needs this many peaks shared with the unknown in its best MS2 pair"
                   }
                 ]
               }

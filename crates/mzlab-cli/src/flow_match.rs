@@ -4,6 +4,7 @@
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
 use mzlab_core::json::{round, Out};
+use mzlab_core::msngrafo::{cerca, OpzioniCerca as Opzioni};
 use mzlab_core::score_terms::ScoreTerms;
 use mzlab_lib::build::{build_in_memory, BuildOpts};
 use mzlab_lib::contrib::{
@@ -350,6 +351,9 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         .params
         .iter()
         .any(|(k, v)| k == "score_terms" && v.bool() == Some(true));
+    if alg == "tree" {
+        return tree_text(job, query, library);
+    }
     let lib = open_library(library, decoys)?;
     let name = text_param(job, "name_contains").to_lowercase();
     let top = num(job, "top_n").max(1.0) as usize;
@@ -402,6 +406,21 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
     }
     o.raw("]}");
     Ok(o.0)
+}
+
+/// The `tree` algorithm: the graph `msngrafo/1` in `query` against the library `msnlib/1`, written as the `msncerca/1` text of the engine.
+fn tree_text(job: &Job, query: Named, library: Named) -> Result<String> {
+    let o = Opzioni {
+        ppm_prec: num(job, "precursor_ppm"),
+        tol_mz: num(job, "tol_da"),
+        min_prove: num(job, "min_prove").max(0.0) as usize,
+        top: num(job, "top_n").max(1.0) as usize,
+    };
+    cerca(text(library)?, text(query)?, &o)
+}
+
+fn text(f: Named) -> Result<&str> {
+    std::str::from_utf8(f.1).map_err(|_| Error::new("err.flow.match.format").with("file", f.0))
 }
 
 /// The identifier of the k-th query spectrum: its accession or title, else `q<k>`.
