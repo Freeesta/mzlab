@@ -1,6 +1,6 @@
 """Run on the Fragmentation tree template of Flow (the Run button opens the box, one click in it runs): the infusion is open in Data, the molecule is typed in the box of the first step (ion, adduct and SMILES arrive by themselves) and a single click
 on «Run the plan in this browser» gives the graph with the interpretation, the library as MSP, the table of the modifications and, with the library of the user in OPFS, the library search (msncerca/1);
-the four texts are saved as links. File of TP_Mine/tests/msn_synth.py (no real data). Needs the site with the .wasm msngrafo. Run from the repo root: python3 tests_e2e/e2e_msn_un_clic.py"""
+the texts are saved as links. File of TP_Mine/tests/msn_synth.py (no real data). Needs the site with the .wasm msngrafo. Run from the repo root: python3 tests_e2e/e2e_msn_un_clic.py"""
 import json, sys
 sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
 from lib import *
@@ -22,7 +22,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.evaluate("localStorage.setItem('mzlab.admin','1')"); pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
-        pg.wait_for_timeout(8000)   # the start screen takes a file only once its scripts are in
+        attendi(pg, "document.getElementById('pick').onchange !== null", 120000)   # the start screen takes a file only once its shell has bound the input
         load(pg, [F], 6000, 1)
         attendi(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
         pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
