@@ -16,7 +16,7 @@ pub const HELP: &str = "mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--p
   --rt-tol MIN   RT window in minutes (default 0.3)
 output: one CSV line per expected product: id, mz, rt, rows_mz (rows within the mass window), rows_in (also within the RT window), best_ppm, best_drt,
   detected, filled (cells of the best row), max_height, max_area, tp_status, stage (view | F1..F5 | no_row_mz | rt_off), nearest_ppm, nearest_drt,
-  kinship (0-4), q_shape, q_snr (peak quality of the best row), rank_now (place of the best row in the view: kinship, then largest area), view_size";
+  kinship (0-4), q_shape, q_snr (peak quality of the best row), rank_now (place of the best row in the view: kinship, then largest area), view_size, q_reason (bits 1 shape, 2 S/N, 4 points: why F1 hides the row)";
 
 struct Args {
     table: String,
@@ -176,8 +176,10 @@ fn explain(cx: &Cx, id: &str, mz: f64, rt: f64, a: &Args) -> String {
             let (sh, sn) = q.map_or((f32::NAN, f32::NAN), |q| (q.q_shape, q.q_snr));
             let rank = cx.rank[b.row].map_or(String::new(), |r| r.to_string());
             let _ = write!(s, ",{},{sh:.2},{sn:.1},{rank},{}", kin(t, b.row), cx.view);
+            // the bits of `quality::Q_*` that made F1 hide the row: 1 shape, 2 signal-to-noise, 4 points
+            let _ = write!(s, ",{}", q.map_or(0, |q| q.qreason));
         }
-        None => s.push_str(&format!(",,,,,{}", cx.view)),
+        None => s.push_str(&format!(",,,,,{},", cx.view)),
     }
     s
 }
@@ -192,7 +194,7 @@ pub fn report(t: &Aligned, expected: &[(String, f64, f64)], ppm: f64, rt_tol: f6
         out: None,
     };
     let cx = Cx::new(t);
-    let mut out = String::from("id,mz,rt,rows_mz,rows_in,best_ppm,best_drt,detected,filled,max_height,max_area,tp_status,stage,nearest_ppm,nearest_drt,kinship,q_shape,q_snr,rank_now,view_size\n");
+    let mut out = String::from("id,mz,rt,rows_mz,rows_in,best_ppm,best_drt,detected,filled,max_height,max_area,tp_status,stage,nearest_ppm,nearest_drt,kinship,q_shape,q_snr,rank_now,view_size,q_reason\n");
     for (id, mz, rt) in expected {
         out.push_str(&explain(&cx, id, *mz, *rt, &a));
         out.push('\n');
