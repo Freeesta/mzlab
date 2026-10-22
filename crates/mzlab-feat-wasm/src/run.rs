@@ -191,10 +191,8 @@ pub fn detect<R: ReadAt>(index: &mut Index<R>, name: &str, r: &Recipe) -> Result
 /// The weak candidates of one file as `weakfile` bytes, to store beside its `.mzfeatf`: the alignment of the series reads them instead of detecting the
 /// file again (the same table, whatever makes it).
 pub fn detect_weak<R: ReadAt>(index: &mut Index<R>, r: &Recipe) -> Result<Vec<u8>> {
-    Ok(weakfile::to_bytes(
-        &weak_candidates(index, r)?,
-        &r.weak_hash(),
-    ))
+    let weak = mzlab_feat::prof::time("detect: weak candidates", || weak_candidates(index, r))?;
+    Ok(weakfile::to_bytes(&weak, &r.weak_hash()))
 }
 
 /// The per-file tables and the origin of a list of `.mzfeatf` (name and SHA-256 from their meta).
