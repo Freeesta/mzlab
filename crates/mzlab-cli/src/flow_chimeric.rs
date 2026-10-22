@@ -71,6 +71,9 @@ fn param(job: &Job, name: &str) -> Option<f64> {
 
 /// What the MS1 around every block says: the purity of its precursor (`None` where no index file has the scan or no MS1 lies around it) and, with
 /// `chim_rel` (the `ms1_window` algorithm), the ions co-isolated in its window.
+/// The same two lists, borrowed.
+type Seen<'a> = (&'a [Option<(f64, bool)>], &'a [Option<Ms1Metrics>]);
+
 type Found = (Vec<Option<(f64, bool)>>, Vec<Option<Ms1Metrics>>);
 
 fn purities(r: &FileRunner, job: &Job, blocks: &[Block], chim_rel: Option<f64>) -> Result<Found> {
@@ -159,7 +162,7 @@ fn points(table: &[u8]) -> Result<Vec<FeaturePoint>> {
 pub(crate) fn chimeric_text(
     (window, rt_tol): (f64, f64),
     spectra: &[u8],
-    (pure, ms1): (&[Option<(f64, bool)>], &[Option<Ms1Metrics>]),
+    (pure, ms1): Seen,
     chim_cap: f64,
     table: Option<&[FeaturePoint]>,
 ) -> String {
