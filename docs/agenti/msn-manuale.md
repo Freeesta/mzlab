@@ -7,7 +7,7 @@ Per chi lancia il lavoro dalla shell o da un piano Flow; il progetto del grafo �
 - **Libreria**: `mzlab-cli msn-lib add lib.json INFUSIONE.raw --id ID --formula ION` aggiunge la voce (la stessa voce due volte resta com'è); `msn-lib build MANIFEST.tsv` ne scrive una per riga (`id`, `formula_neutra`, `addotto_atteso`, `file`).
 - **Esportazione come libreria**: `mzlab-cli msn-lib export lib.json --formato msp|massbank [--pulito] [--tutti] [--annota]` (`--pulito` tiene i picchi spiegati da un nodo; `--tutti` ogni livello MS; `--annota` scrive formula e perdita neutra di ogni picco).
 - **Esportazione come tabella**: `mzlab-cli msn-graph INFUSIONE.raw --formula ION --export csv|mgf|msp [--pulito] [--nodo nK|tutto]`.
-- **Cerca**: `mzlab-cli msn-lib search lib.json grafo.json [--ppm 10] [--tol 0.01] [--min-prove 1] [--top 10]` dà `msncerca/1`: tre punteggi separati (entropia MS2, albero, perdite condivise) con le prove, senza verdetto.
+- **Cerca**: `mzlab-cli msn-lib search lib.json grafo.json [--ppm 10] [--tol 0.01] [--min-prove 1] [--top 10] [--delta Da]` dà `msncerca/1`: tre punteggi separati (entropia MS2, albero, perdite condivise) con le prove, senza verdetto.
 
 ## 2. Passi del Flow
 Piano `mzflow/2` con l'ingresso `.raw` (o mzML) e, in ordine:

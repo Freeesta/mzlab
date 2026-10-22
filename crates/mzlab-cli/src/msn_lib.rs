@@ -14,7 +14,7 @@ pub const HELP: &str = "mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
 usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
        mzlab-cli msn-lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
        mzlab-cli msn-lib export LIB.json [--pulito] [--tutti] [--annota] [--formato msp|massbank] [--out PATH]
-       mzlab-cli msn-lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-prove N] [--top N] [--out PATH]
+       mzlab-cli msn-lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-prove N] [--top N] [--delta N] [--out PATH]
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
           The options are those of `msn-graph` (--help of that command)
@@ -25,7 +25,8 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
           --formato massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
   search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
           msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
-          --min-prove: peaks shared in the best MS2 pair (1); --top: candidates kept (10)";
+          --min-prove: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
+          --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not";
 
 fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
@@ -180,6 +181,7 @@ fn search(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
             "--tol" => o.tol_mz = number()?,
             "--min-prove" => o.min_prove = number()? as usize,
             "--top" => o.top = number()? as usize,
+            "--delta" => o.delta_max = number()?,
             "--out" => out = it.next().map(PathBuf::from),
             _ if !x.starts_with("--") => files.push(PathBuf::from(x)),
             _ => return Err(bad(&format!("unknown argument {x}"))),

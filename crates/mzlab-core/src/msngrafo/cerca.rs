@@ -19,6 +19,8 @@ pub struct Opzioni {
     pub min_prove: usize,
     /// The candidates kept.
     pub top: usize,
+    /// Analogues: entries whose precursor is up to this many Da away (0 = not searched), with the fragments split in shifted and not shifted.
+    pub delta_max: f64,
 }
 
 impl Default for Opzioni {
@@ -28,6 +30,7 @@ impl Default for Opzioni {
             tol_mz: 0.01,
             min_prove: 1,
             top: 10,
+            delta_max: 0.0,
         }
     }
 }
@@ -242,6 +245,47 @@ fn score(u: &G, e: &G, tol: f64) -> Scores {
     }
 }
 
+/// The peaks of the unknown explained by the entry in the best MS2 pair: at the same m/z (`unshifted`) or moved by the precursor difference (`shifted`).
+struct Analog {
+    delta: f64,
+    shifted: usize,
+    unshifted: usize,
+    cover: f64,
+}
+
+fn analog(u: &G, e: &G, tol: f64) -> Option<Analog> {
+    let delta = u.mz - e.mz;
+    let mut best: Option<Analog> = None;
+    for s in u.spectra.iter().filter(|s| s.level == 2) {
+        let same = e.spectra.iter().filter(|x| x.level == 2 && x.act == s.act);
+        let Some(x) = same.min_by(|a, b| (a.ce - s.ce).abs().total_cmp(&(b.ce - s.ce).abs()))
+        else {
+            continue;
+        };
+        let (mut shifted, mut unshifted, mut got, mut all) = (0, 0, 0.0, 0.0);
+        for p in &s.peaks {
+            all += p.1;
+            if x.peaks.iter().any(|y| (y.0 - p.0).abs() <= tol) {
+                unshifted += 1;
+                got += p.1;
+            } else if x.peaks.iter().any(|y| (y.0 + delta - p.0).abs() <= tol) {
+                shifted += 1;
+                got += p.1;
+            }
+        }
+        let cover = if all > 0.0 { got / all } else { 0.0 };
+        if best.as_ref().is_none_or(|b| cover > b.cover) {
+            best = Some(Analog {
+                delta,
+                shifted,
+                unshifted,
+                cover,
+            });
+        }
+    }
+    best
+}
+
 /// A candidate: the entry, its distance in precursor and its scores.
 struct Hit {
     id: String,
@@ -249,6 +293,7 @@ struct Hit {
     act: Vec<String>,
     ppm: f64,
     s: Scores,
+    analog: Option<Analog>,
 }
 
 fn rank(a: &Option<f64>, b: &Option<f64>) -> std::cmp::Ordering {
@@ -266,13 +311,23 @@ fn hits(lib: &Value, u: &G, o: &Opzioni) -> Result<Vec<Hit>> {
     for v in lib.get("voci").map_or(&[][..], |x| x.arr()) {
         let e = read_graph(v.get("grafo").ok_or_else(bad)?)?;
         let ppm = (e.mz - u.mz) / u.mz * 1e6;
-        if ppm.abs() > o.ppm_prec || (e.pol < 0.0) != (u.pol < 0.0) {
+        if (e.pol < 0.0) != (u.pol < 0.0) {
             continue;
         }
         let s = score(u, &e, o.tol_mz);
-        if s.shared < o.min_prove {
+        let analog = if ppm.abs() <= o.ppm_prec {
+            if s.shared < o.min_prove {
+                continue;
+            }
+            None
+        } else if o.delta_max > 0.0 && (u.mz - e.mz).abs() <= o.delta_max {
+            match analog(u, &e, o.tol_mz) {
+                Some(a) if a.shifted + a.unshifted >= o.min_prove && a.shifted > 0 => Some(a),
+                _ => continue,
+            }
+        } else {
             continue;
-        }
+        };
         let act = v.get("attivazione").map_or(&[][..], |a| a.arr());
         out.push(Hit {
             id: text(v.get("id")),
@@ -284,10 +339,18 @@ fn hits(lib: &Value, u: &G, o: &Opzioni) -> Result<Vec<Hit>> {
                 .collect(),
             ppm,
             s,
+            analog,
         });
     }
     crate::sortc::slice_by(&mut out, |a, b| {
-        rank(&a.s.tree, &b.s.tree)
+        a.analog
+            .is_some()
+            .cmp(&b.analog.is_some())
+            .then_with(|| match (&a.analog, &b.analog) {
+                (Some(x), Some(y)) => y.cover.total_cmp(&x.cover),
+                _ => std::cmp::Ordering::Equal,
+            })
+            .then(rank(&a.s.tree, &b.s.tree))
             .then(rank(&a.s.ms2, &b.s.ms2))
             .then(rank(&a.s.losses, &b.s.losses))
             .then(a.id.cmp(&b.id))
@@ -322,7 +385,19 @@ fn write(o: &mut Out, h: &Hit) {
     o.raw(",\"nodi_ignoto\":").int(h.s.total as i64);
     o.raw(",\"perdite_comuni\":").int(h.s.common as i64);
     o.raw(",\"perdite_ignoto\":").int(h.s.unknown as i64);
-    o.raw("},\"analogo\":null}");
+    match &h.analog {
+        None => o.raw("},\"analogo\":null}"),
+        Some(a) => o
+            .raw("},\"analogo\":{\"delta_da\":")
+            .num(round(a.delta, 4))
+            .raw(",\"spostati\":")
+            .int(a.shifted as i64)
+            .raw(",\"non_spostati\":")
+            .int(a.unshifted as i64)
+            .raw(",\"copertura\":")
+            .num(round(a.cover, 4))
+            .raw("}}"),
+    };
 }
 
 /// The candidates of the library text `libreria` (`msnlib/1`) for the graph text `ignoto` (`msngrafo/1`), as the JSON `msncerca/1`.
@@ -336,8 +411,9 @@ pub fn cerca(libreria: &str, ignoto: &str, o: &Opzioni) -> Result<String> {
         .num(o.ppm_prec);
     out.raw(",\"tol_mz\":").num(o.tol_mz);
     out.raw(",\"min_prove\":").int(o.min_prove as i64);
-    out.raw(",\"top\":")
-        .int(o.top as i64)
+    out.raw(",\"top\":").int(o.top as i64);
+    out.raw(",\"delta_max\":")
+        .num(o.delta_max)
         .raw("},\"candidati\":[");
     for (i, h) in found.iter().enumerate() {
         out.raw(if i > 0 { "," } else { "" });

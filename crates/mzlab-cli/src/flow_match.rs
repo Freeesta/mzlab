@@ -415,6 +415,7 @@ fn tree_text(job: &Job, query: Named, library: Named) -> Result<String> {
         tol_mz: num(job, "tol_da"),
         min_prove: num(job, "min_prove").max(0.0) as usize,
         top: num(job, "top_n").max(1.0) as usize,
+        ..Opzioni::default()
     };
     cerca(text(library)?, text(query)?, &o)
 }
