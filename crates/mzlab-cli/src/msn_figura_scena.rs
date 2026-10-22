@@ -225,7 +225,7 @@ fn leggi_archi(j: &Value) -> Result<Vec<Arco>> {
                 .iter()
                 .filter_map(|c| c.str().map(str::to_string))
                 .collect(),
-            regola: regola_di(&j, &da, &to),
+            regola: regola_di(j, &da, &to),
             da,
             a: to,
         });

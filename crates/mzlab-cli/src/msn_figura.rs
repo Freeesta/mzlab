@@ -173,12 +173,11 @@ fn su_anello(
         .collect()
 }
 
+/// The boxes, the centre and the ring radii of the radial view.
+type Radiale = (HashMap<String, Box_>, (f64, f64), Vec<(f64, f64)>);
+
 /// The radial view: one ring per step, the rings widened until no box touches another. Returns the boxes, the centre and the ring radii.
-fn dispone_radiale(
-    sc: &Scena,
-    vis: &[usize],
-    size: &HashMap<&str, (f64, f64)>,
-) -> (HashMap<String, Box_>, (f64, f64), Vec<(f64, f64)>) {
+fn dispone_radiale(sc: &Scena, vis: &[usize], size: &HashMap<&str, (f64, f64)>) -> Radiale {
     let mut caselle = HashMap::new();
     let mut anelli = Vec::new();
     let max_ring = vis
