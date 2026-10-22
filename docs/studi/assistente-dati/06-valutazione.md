@@ -68,3 +68,10 @@ Servono due aggiunte al generatore (PR A2): una serie con 3 QC e 2 bianchi (rumo
 3. TTL della cache dell'orchestratore: 1 h o 5 min? (T10–T19, lettura e scrittura misurate)
 4. Il catalogo intero (≈ 20 000 token) serve all'orchestratore o basta un sottoinsieme fisso? (T10–T19, piani validi e costo)
 5. Sonnet a effort `medium` contro Opus a `low` sugli stessi ruoli aperti: solo se Sonnet manca una soglia.
+
+## 6. Formato dei dati
+
+- `tests/data/assist/insiemi.json` (`assist-insiemi/1`): `generator` (comando di `tools/dati_sintetici.py`) e `sets`, un insieme per nome con `files` (nomi creati dal generatore), `truth` (verità in una riga), facoltativi `patch` (es. `truncate_fraction`) e `needs` (pacchetto che deve esistere prima, es. A2).
+- `tests/data/assist/oro/{G,U,R,fumo}.jsonl` (`assist-caso/1`, un caso per riga): `id`, `role`, `expect`; poi `set` (G, R), `state` e `message` (U), `category`, `inject` e `user` (R), `model` e `calls` (fumo). `expect` dà valori, intervalli o liste `flags_expected` / `flags_forbidden`; R è scritto in ASCII con escape perché l'Unicode invisibile resti visibile nel diff.
+- `tests/data/assist/copioni/T10.json` … `T19.json` (`assist-copione/1`): `set`, `hide_names`, `policy`, `cap_usd`, `answers` (per id o testo della domanda, con almeno un «not sure»), `messages`, `confirm`, `run`, `expect`.
+- Tutti i file sono solo dati sintetici: niente nomi di composti, campioni o persone; A7 li legge senza cambiarli.

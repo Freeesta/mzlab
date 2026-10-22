@@ -1,0 +1,115 @@
+{
+ "schema": "assist-insiemi/1",
+ "generator": "tools/dati_sintetici.py",
+ "sets": {
+  "fs_pos": {
+   "files": [
+    "B_FullMass-t0.mzML",
+    "B_FullMass-t5.mzML",
+    "B_FullMass-t10.mzML",
+    "B_FullMass-t15.mzML",
+    "B_FullMass-t30 (2).mzML",
+    "B_FullMass-t45.mzML",
+    "B_FullMass-t60.mzML"
+   ],
+   "truth": "full scan MS1, ESI+, unit resolution, LC, RT 0.51-20.01 min, 1111 scans, cycle 1.05 s, peak sigma 0.06 min (FWHM about 8.5 s)"
+  },
+  "fs_neg": {
+   "files": [
+    "B_FullMass-neg-t0.mzML"
+   ],
+   "truth": "as fs_pos t0 in ESI-, every m/z 2.0146 lower"
+  },
+  "polalt": {
+   "files": [
+    "C_POLALT-t0.mzML"
+   ],
+   "truth": "full scan, positive and negative scans alternating in one file"
+  },
+  "ida": {
+   "files": [
+    "C_IDA-t0.mzML"
+   ],
+   "truth": "DDA at unit resolution: one survey scan and two product-ion scans per cycle, CE 25"
+  },
+  "mrm_epi": {
+   "files": [
+    "C_MRM-EPI-t0.mzML"
+   ],
+   "truth": "MRM 364.1>194.1 (Quant) and 364.1>152.1 (Qual) plus 20 product-ion scans triggered at RT 14.0-14.7"
+  },
+  "mrm_std": {
+   "files": [
+    "B_MRM-t0.mzML",
+    "B_MRM-t5.mzML",
+    "B_MRM-t10.mzML",
+    "B_MRM-t15.mzML",
+    "B_MRM-t30.mzML",
+    "B_MRM-t45.mzML",
+    "B_MRM-t60.mzML",
+    "B_MRM-STD_0_06ppm.mzML",
+    "B_MRM-STD_0_6ppm.mzML",
+    "B_MRM-STD_2_4ppm.mzML",
+    "B_MRM-STD_7_2ppm.mzML",
+    "B_MRM-STD_12ppm.mzML",
+    "B_MRM-STD_18ppm.mzML"
+   ],
+   "truth": "MRM only, 7 samples and 6 standards; roles proposed from names"
+  },
+  "ms2": {
+   "files": [
+    "B_MS2-t15.mzML",
+    "B_MS2-t45.mzML",
+    "B_MS2-t60.mzML"
+   ],
+   "truth": "product-ion scans of precursors 229.1 and 305.0, CE 10, many empty scans"
+  },
+  "hr": {
+   "files": [
+    "HR_DDA-Exploris-t30.mzML",
+    "HR_DDA-Fusion-t30.mzML"
+   ],
+   "truth": "Orbitrap DDA; Exploris HCD NCE 30 isolation 0.75, Fusion CID 35 ion trap MS2 isolation 1.5 and +3 ppm systematic MS1 error"
+  },
+  "hr_broken": {
+   "files": [
+    "HR_rotto-t30.mzML"
+   ],
+   "truth": "Orbitrap DDA without spectrumRef, isolation window, resolution or known model"
+  },
+  "trunc": {
+   "files": [
+    "B_FullMass-t0.mzML"
+   ],
+   "patch": {
+    "truncate_fraction": 0.5
+   },
+   "truth": "file cut at half its bytes: unreadable"
+  },
+  "sub": {
+   "files": [
+    "SUB_t0.mzML",
+    "SUB_t10.mzML",
+    "SUB_t20.mzML",
+    "SUB_blank.mzML"
+   ],
+   "truth": "parent 253.3 (RT 5.2) decays, product 301.3 (RT 6.4) appears, background 150.2 (RT 3.0) in every file including the blank, RT drift 0.05 min in t10 and t20, gain 1.3 in t20"
+  },
+  "profile": {
+   "files": [
+    "P_FullMass-t0.mzML",
+    "P_FullMass-t15.mzML",
+    "P_FullMass-t60.mzML"
+   ],
+   "truth": "full scan in profile mode"
+  },
+  "qc": {
+   "needs": "A2",
+   "truth": "series with 3 QC and 2 blanks, linear RT drift 0.05 min from first to last QC, contaminant only in blanks"
+  },
+  "dia": {
+   "needs": "A2",
+   "truth": "one DIA file with fixed isolation windows"
+  }
+ }
+}

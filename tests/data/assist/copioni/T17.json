@@ -1,0 +1,27 @@
+{
+ "schema": "assist-copione/1",
+ "id": "T17",
+ "set": "qc",
+ "hide_names": true,
+ "policy": "L1",
+ "cap_usd": 10,
+ "answers": {
+  "goal": "quality of the series",
+  "roles": "confirm"
+ },
+ "messages": [
+  "Which files are these?",
+  "Are the QC stable?",
+  "Build the workflow.",
+  "What does the table say?"
+ ],
+ "confirm": "yes",
+ "run": "after_plan",
+ "expect": {
+  "plan_valid_within": 3,
+  "numbers_faithful": true,
+  "identity_lr": 0,
+  "max_useless_questions": 1
+ },
+ "needs": "A2"
+}
