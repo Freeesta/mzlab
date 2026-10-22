@@ -244,7 +244,7 @@ const affRowOf = (/** @type {any} */ q) => `${q.num ?? ""} \u00b7 ${q.el.querySe
 function affRipristina() {
   const l = tabPanels().filter(q => q.full); affSnap();
   l.forEach(q => { q.riga = null; q.quota = null; q.x = 0; q.w = hostWidth(); });
-  affRelay(null); numberPanels(); affSay(AFF_T("aff.reset.done")); affBar(AFF_T("aff.reset.done"));
+  affRelay(null); numberPanels(); affSay(AFF_T("aff.reset.done"));
 }
 const affSplit = () => tabPanels().filter(q => q.full).some(q => q.riga != null && tabPanels().some(o => o !== q && o.full && o.riga === q.riga) || (q.quota != null && q.quota !== 1));
 if (typeof AZIONI !== "undefined") {
