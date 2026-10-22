@@ -42,10 +42,6 @@ impl ModelPrice {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Prices(Vec<(String, ModelPrice)>);
 
-fn bad(field: &str) -> Error {
-    Error::new("err.llm.prices").with("field", field)
-}
-
 impl Prices {
     /// The models of the providers that have a price (input and output above 0); unknown prices are left out, so they never count as free.
     pub fn from_providers(all: &[Provider]) -> Prices {
@@ -130,6 +126,10 @@ impl Prices {
             + u128::from(max_tokens) * u128::from(r.output);
         Ok(total.div_ceil(1_000_000) as u64)
     }
+}
+
+fn bad(field: &str) -> Error {
+    Error::new("err.llm.prices").with("field", field)
 }
 
 /// USD per million tokens to micro-dollars per million tokens.
