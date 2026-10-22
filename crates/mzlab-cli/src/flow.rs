@@ -3,12 +3,10 @@
 //! `mzlab-cli flow run`, the route `flow/run` of the desktop app, `examples/flow.rs` and the tests; native and WASI.
 
 use std::collections::HashMap;
-use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use mzlab_core::budget::{Hashing, WriteAt};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job, Outcome, Runner};
 use mzlab_core::json::Value;
@@ -16,6 +14,7 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_base::table_job;
 use crate::flow_cache::Cache;
+use crate::flow_hash::file_sha256;
 use crate::flow_drift::drift_job;
 use crate::flow_estimate::estimate_job;
 use crate::flow_level::level_job;
@@ -195,34 +194,6 @@ impl FileRunner {
             label,
         })
     }
-}
-
-/// A sink that keeps nothing: `Hashing` over it gives the size and SHA-256 of a stream.
-struct Discard;
-
-impl WriteAt for Discard {
-    fn write_at(&mut self, _: u64, _: &[u8]) -> Result<()> {
-        Ok(())
-    }
-}
-
-/// Size and SHA-256 (hex) of a file, read in pieces so that a large file is never in memory.
-fn file_sha256(path: &Path) -> Result<(u64, String)> {
-    use std::io::Read;
-    let mut f = File::open(path).map_err(io)?;
-    let mut sink = Hashing::new(Discard);
-    let mut buf = vec![0u8; 1 << 20];
-    let mut at = 0u64;
-    loop {
-        let n = f.read(&mut buf).map_err(io)?;
-        if n == 0 {
-            break;
-        }
-        sink.write_at(at, &buf[..n])?;
-        at += n as u64;
-    }
-    let (_, bytes, sha) = sink.finish();
-    Ok((bytes, sha))
 }
 
 /// Where a file made by the run comes from: what the next feature step needs and the plan does not carry. The recipe is kept as the way to make it

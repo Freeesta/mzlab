@@ -14,120 +14,6 @@ use std::sync::{Condvar, Mutex, MutexGuard};
 /// Results by job.
 pub(super) type Results = HashMap<JobId, Result<Outcome>>;
 
-struct Core {
-    sched: Sched,
-    results: Results,
-    running: usize,
-}
-
-struct Ctx<'a> {
-    plan: &'a Plan,
-    steps: Vec<&'a Step>,
-    resolved: Vec<Resolved>,
-    /// The jobs of each instance, in the order of its items.
-    ids: Vec<Vec<JobId>>,
-    roots: Vec<String>,
-}
-
-fn locked(m: &Mutex<Core>) -> MutexGuard<'_, Core> {
-    m.lock().unwrap_or_else(|e| e.into_inner())
-}
-
-/// The characters of a file name that stay in a file-name root.
-fn clean(name: &str) -> String {
-    // `NAME@ID` names a sample of a dataset: the root keeps the id
-    if let Some((base, id)) = name.rsplit_once('@') {
-        return format!("{}-{}", clean(base), clean(id));
-    }
-    let stem = name.rsplit_once('.').map_or(name, |s| s.0);
-    let root: String = stem
-        .chars()
-        .map(|c| {
-            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
-                c
-            } else {
-                '_'
-            }
-        })
-        .collect();
-    if root.is_empty() {
-        "x".into()
-    } else {
-        root
-    }
-}
-
-/// A file-name root for every input of the plan: its name without extension; when two inputs share a root, both get a short hash of their full name.
-pub fn file_roots(plan: &Plan) -> Vec<String> {
-    let roots: Vec<String> = plan.inputs.iter().map(|f| clean(&f.name)).collect();
-    plan.inputs
-        .iter()
-        .zip(&roots)
-        .map(|(f, r)| {
-            if roots.iter().filter(|x| *x == r).count() > 1 {
-                format!("{r}-{}", &sha256_hex(f.name.as_bytes())[..8])
-            } else {
-                r.clone()
-            }
-        })
-        .collect()
-}
-
-/// Runs every job of `plan` that can run; returns the jobs of each instance and what they made or how they failed.
-pub(super) fn run_jobs(
-    plan: &Plan,
-    registry: &[Step],
-    runner: &dyn Runner,
-    workers: usize,
-) -> Result<(Vec<Vec<JobId>>, Results)> {
-    let sched = Sched::new(plan, registry, env!("CARGO_PKG_VERSION"), &[]);
-    let all = sched.jobs();
-    let mut steps = Vec::new();
-    let mut resolved = Vec::new();
-    let mut ids = Vec::new();
-    for inst in &plan.steps {
-        let step = registry
-            .iter()
-            .find(|s| s.id == inst.step && s.version == inst.version)
-            .ok_or_else(|| Error::new("err.flow.step.unknown"))?;
-        steps.push(step);
-        resolved.push(canonical(inst, step)?);
-        ids.push(
-            all.iter()
-                .filter(|(j, _)| j.instance == inst.id)
-                .map(|(j, _)| j.clone())
-                .collect(),
-        );
-    }
-    let ctx = Ctx {
-        plan,
-        steps,
-        resolved,
-        ids,
-        roots: file_roots(plan),
-    };
-    let core = Mutex::new(Core {
-        sched,
-        results: HashMap::new(),
-        running: 0,
-    });
-    let cv = Condvar::new();
-    #[cfg(not(target_family = "wasm"))]
-    if workers > 1 {
-        std::thread::scope(|s| {
-            for _ in 0..workers {
-                s.spawn(|| ctx.work(runner, &core, &cv));
-            }
-        });
-        let results = locked(&core).results.drain().collect();
-        return Ok((ctx.ids, results));
-    }
-    let _ = workers;
-    ctx.work(runner, &core, &cv);
-    let results = locked(&core).results.drain().collect();
-    Ok((ctx.ids, results))
-}
-
 impl Ctx<'_> {
     fn position(&self, instance: &str) -> Option<usize> {
         self.plan.steps.iter().position(|x| x.id == instance)
@@ -197,7 +83,9 @@ impl Ctx<'_> {
             item_root: root,
         }
     }
+}
 
+impl Ctx<'_> {
     /// What the job reads on each port written in the file; the driving port of a `per_item` job holds its one item.
     fn inputs(&self, id: &JobId, results: &Results) -> Vec<(String, Vec<Artifact>)> {
         let k = self.position(&id.instance).unwrap_or(0);
@@ -253,9 +141,123 @@ impl Ctx<'_> {
     }
 }
 
+struct Core {
+    sched: Sched,
+    results: Results,
+    running: usize,
+}
+
+struct Ctx<'a> {
+    plan: &'a Plan,
+    steps: Vec<&'a Step>,
+    resolved: Vec<Resolved>,
+    /// The jobs of each instance, in the order of its items.
+    ids: Vec<Vec<JobId>>,
+    roots: Vec<String>,
+}
+
+fn locked(m: &Mutex<Core>) -> MutexGuard<'_, Core> {
+    m.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// The characters of a file name that stay in a file-name root.
+fn clean(name: &str) -> String {
+    // `NAME@ID` names a sample of a dataset: the root keeps the id
+    if let Some((base, id)) = name.rsplit_once('@') {
+        return format!("{}-{}", clean(base), clean(id));
+    }
+    let stem = name.rsplit_once('.').map_or(name, |s| s.0);
+    let root: String = stem
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    if root.is_empty() {
+        "x".into()
+    } else {
+        root
+    }
+}
+
+/// A file-name root for every input of the plan: its name without extension; when two inputs share a root, both get a short hash of their full name.
+pub fn file_roots(plan: &Plan) -> Vec<String> {
+    let roots: Vec<String> = plan.inputs.iter().map(|f| clean(&f.name)).collect();
+    plan.inputs
+        .iter()
+        .zip(&roots)
+        .map(|(f, r)| {
+            if roots.iter().filter(|x| *x == r).count() > 1 {
+                format!("{r}-{}", &sha256_hex(f.name.as_bytes())[..8])
+            } else {
+                r.clone()
+            }
+        })
+        .collect()
+}
+
 fn refs_of<'a>(inst: &'a Instance, port: &str) -> &'a [Ref] {
     inst.ins
         .iter()
         .find(|(p, _)| p == port)
         .map_or(&[][..], |(_, r)| r.as_slice())
+}
+
+/// Runs every job of `plan` that can run; returns the jobs of each instance and what they made or how they failed.
+pub(super) fn run_jobs(
+    plan: &Plan,
+    registry: &[Step],
+    runner: &dyn Runner,
+    workers: usize,
+) -> Result<(Vec<Vec<JobId>>, Results)> {
+    let sched = Sched::new(plan, registry, env!("CARGO_PKG_VERSION"), &[]);
+    let all = sched.jobs();
+    let mut steps = Vec::new();
+    let mut resolved = Vec::new();
+    let mut ids = Vec::new();
+    for inst in &plan.steps {
+        let step = registry
+            .iter()
+            .find(|s| s.id == inst.step && s.version == inst.version)
+            .ok_or_else(|| Error::new("err.flow.step.unknown"))?;
+        steps.push(step);
+        resolved.push(canonical(inst, step)?);
+        ids.push(
+            all.iter()
+                .filter(|(j, _)| j.instance == inst.id)
+                .map(|(j, _)| j.clone())
+                .collect(),
+        );
+    }
+    let ctx = Ctx {
+        plan,
+        steps,
+        resolved,
+        ids,
+        roots: file_roots(plan),
+    };
+    let core = Mutex::new(Core {
+        sched,
+        results: HashMap::new(),
+        running: 0,
+    });
+    let cv = Condvar::new();
+    #[cfg(not(target_family = "wasm"))]
+    if workers > 1 {
+        std::thread::scope(|s| {
+            for _ in 0..workers {
+                s.spawn(|| ctx.work(runner, &core, &cv));
+            }
+        });
+        let results = locked(&core).results.drain().collect();
+        return Ok((ctx.ids, results));
+    }
+    let _ = workers;
+    ctx.work(runner, &core, &cv);
+    let results = locked(&core).results.drain().collect();
+    Ok((ctx.ids, results))
 }

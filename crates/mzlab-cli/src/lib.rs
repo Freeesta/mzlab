@@ -19,6 +19,7 @@ pub mod flow;
 mod flow_apply;
 mod flow_base;
 mod flow_cache;
+mod flow_hash;
 mod flow_centroid;
 #[cfg(test)]
 mod flow_centroid_tests;

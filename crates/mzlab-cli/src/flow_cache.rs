@@ -88,13 +88,9 @@ impl Cache {
         }
         if let Some(l) = &e.lineage {
             // the position of the file in the plan may have changed since the entry was made
-            r.trace(
-                &a,
-                Lineage {
-                    item: job.item,
-                    ..l.clone()
-                },
-            );
+            let mut l = l.clone();
+            l.item = job.item;
+            r.trace(&a, l);
         }
         let port = job.step.outs.iter().find(|p| p.name == e.port)?.name;
         self.now
