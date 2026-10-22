@@ -1,4 +1,4 @@
-# Statistics of the CI bottlenecks (tools/stat_ci.py, docs/agenti/ci-veloce.md): one JSONL line per event on the orphan branch `stat-ci`.
+# Statistics of the CI bottlenecks (tools/ci_metrics.py, docs/agenti/ci-veloce.md): one JSONL line per event on the orphan branch `stat-ci`.
 # No secret and no third-party action; GITHUB_TOKEN only reads the API and pushes to `stat-ci` (a push with GITHUB_TOKEN starts no workflow).
 # pull_request_target and workflow_run run the file from main and check out main only: code of a pull request is never run with the write token.
 name: stat-ci
@@ -52,13 +52,13 @@ jobs:
               git fetch -q --filter=blob:none --unshallow origin main || true ;;
             *) exit 0 ;;
           esac
-          python3 tools/stat_ci.py "$cmd" --dati dati/eventi.jsonl --nuovi nuovi.jsonl --cursore cursore-nuovo.json
+          python3 tools/ci_metrics.py "$cmd" --dati dati/eventi.jsonl --nuovi nuovi.jsonl --cursore cursore-nuovo.json
       - name: Publish on stat-ci
         working-directory: dati
         run: |
           for i in 1 2 3 4 5; do
-            python3 ../tools/stat_ci.py accoda ../nuovi.jsonl --dati eventi.jsonl --cursore ../cursore-nuovo.json
-            [ "$(stat -c%s eventi.jsonl)" -gt 4000000 ] && python3 ../tools/stat_ci.py compatta --dati eventi.jsonl
+            python3 ../tools/ci_metrics.py accoda ../nuovi.jsonl --dati eventi.jsonl --cursore ../cursore-nuovo.json
+            [ "$(stat -c%s eventi.jsonl)" -gt 4000000 ] && python3 ../tools/ci_metrics.py compatta --dati eventi.jsonl
             git add -A
             git diff --cached --quiet && exit 0
             git commit -qm "stat-ci: events"

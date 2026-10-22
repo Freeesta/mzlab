@@ -1,10 +1,10 @@
-"""tools/stat_ci.py with synthetic events and a fake API: failed run, PR events, push to main with two dirty PRs, summary."""
+"""tools/ci_metrics.py with synthetic events and a fake API: failed run, PR events, push to main with two dirty PRs, summary."""
 import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
-import stat_ci as s  # noqa: E402
+import ci_metrics as s  # noqa: E402
 
 
 def job(nome, concl, t0, t1, steps=()):
