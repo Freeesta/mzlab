@@ -208,3 +208,36 @@ fn the_index_after_the_step_holds_centroids_and_the_one_without_it_profile() {
     assert!(!profile_of("b"));
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn two_aligns_on_the_same_peaks_give_the_family_table_and_the_ion_table() {
+    let files: Vec<(String, Vec<u8>)> = [0.0, 10.0]
+        .iter()
+        .map(|&t| (format!("s_t{:03}.mzML", t as u32), centroid_mzml(t)))
+        .collect();
+    let refs: Vec<(&str, Vec<u8>)> = files.iter().map(|(n, b)| (n.as_str(), b.clone())).collect();
+    let d = dir("fi", &refs);
+    let inputs: Vec<String> = files
+        .iter()
+        .map(|(n, _)| format!(r#"{{"name":"{n}","type":"raw"}}"#))
+        .collect();
+    let sources: Vec<String> = files
+        .iter()
+        .map(|(n, _)| format!(r#""file:{n}""#))
+        .collect();
+    let plan = format!(
+        r#"{{"format":"mzflow/2","inputs":[{}],"steps":[
+        {{"id":"idx","step":"index.mzidx@1","in":{{"source":[{}]}}}},
+        {{"id":"det","step":"features.detect@1","in":{{"index":["idx.index"]}}}},
+        {{"id":"fam","step":"features.align@1","in":{{"peaks":["det.peaks"]}}}},
+        {{"id":"ion","step":"features.align@1","in":{{"peaks":["det.peaks"]}},"params":{{"mode":"ion"}}}}]}}"#,
+        inputs.join(","),
+        sources.join(",")
+    );
+    run(&d, &plan, "w");
+    // the detection is shared; the family table keeps the members of each row, the ion table has one row per ion
+    let fam = std::fs::read(d.join("w/fam.mzfeat")).unwrap();
+    let ion = std::fs::read(d.join("w/ion.mzfeat")).unwrap();
+    assert!(!fam.is_empty() && !ion.is_empty() && fam != ion);
+    let _ = std::fs::remove_dir_all(&d);
+}

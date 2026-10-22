@@ -1,10 +1,10 @@
-"""tools/stat_ci.py with synthetic events and a fake API: failed run, PR events, push to main with two dirty PRs, summary."""
+"""tools/ci_metrics.py with synthetic events and a fake API: failed run, PR events, push to main with two dirty PRs, summary."""
 import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
-import stat_ci as s  # noqa: E402
+import ci_metrics as s  # noqa: E402
 
 
 def job(nome, concl, t0, t1, steps=()):
@@ -218,3 +218,14 @@ def test_timeout_tipizzato_e_giornaliero():
 def test_rust_ok_e_aggregato():
     ok = job("rust-ok", "failure", "2026-10-21T10:00:00Z", "2026-10-21T10:00:34Z", [("Every Rust job passed, or all were skipped because no Rust path changed", "failure")])
     assert s.categoria(ok)[0] == "aggregato"
+
+
+def test_cursore_non_arretra(tmp_path):
+    vecchio, nuovo = tmp_path / "a.json", tmp_path / "b.json"
+    vecchio.write_text('{"ultimo": "2026-10-22T05:00:00Z"}')
+    nuovo.write_text('{"ultimo": "2026-10-22T03:00:00Z"}')
+    s.avanza_cursore(str(nuovo), str(vecchio))
+    assert "05:00" in vecchio.read_text()
+    nuovo.write_text('{"ultimo": "2026-10-22T06:00:00Z"}')
+    s.avanza_cursore(str(nuovo), str(vecchio))
+    assert "06:00" in vecchio.read_text()

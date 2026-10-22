@@ -1,4 +1,4 @@
-"""Size of every built .wasm against its cap, for tools/stat_ci.py: `python3 tools/ci_wasm_dimensioni.py <site-dir> [out.json]` writes
+"""Size of every built .wasm against its cap, for tools/ci_metrics.py: `python3 tools/ci_wasm_dimensioni.py <site-dir> [out.json]` writes
 {"<file>": {"byte": N, "tetto": N|null}}. Caps are the `limit_*` variables of tools/build_*_wasm.sh (docs/agenti/wasm-tetti.md); no cap = null."""
 import json
 import re

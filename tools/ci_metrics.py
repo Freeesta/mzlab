@@ -4,14 +4,14 @@
 Used by .github/workflows/stat-ci.yml (the `registra-*` commands, one event per call) and by hand (`riepilogo`).
 Standard library only. The data file `eventi.jsonl` lives on the orphan branch `stat-ci` (docs/agenti/ci-veloce.md).
 
-    python3 tools/stat_ci.py registra-run --evento E.json --nuovi N.jsonl   # workflow_run completed: run + failed jobs
-    python3 tools/stat_ci.py registra-pr --evento E.json --nuovi N.jsonl    # pull_request_target: opened/push/merged/closed
-    python3 tools/stat_ci.py registra-conflitti --evento E.json --dati D.jsonl --nuovi N.jsonl   # push to main: new `dirty` PRs
-    python3 tools/stat_ci.py registra-recenti --dati D.jsonl --nuovi N.jsonl --cursore C.json   # scheduled: runs completed after the cursor + runner load
-    python3 tools/stat_ci.py accoda N.jsonl --dati D.jsonl [--cursore C.json]   # append without duplicates (every line gets `v`)
-    python3 tools/stat_ci.py compatta --dati D.jsonl [--giorni 14]          # drop the heavy fields of old rows
-    python3 tools/stat_ci.py esporta [--dati D.jsonl] [--out DIR]           # one CSV per row type
-    python3 tools/stat_ci.py riepilogo [--dati D.jsonl] [--da YYYY-MM-DD]   # default data: git show origin/stat-ci:eventi.jsonl
+    python3 tools/ci_metrics.py registra-run --evento E.json --nuovi N.jsonl   # workflow_run completed: run + failed jobs
+    python3 tools/ci_metrics.py registra-pr --evento E.json --nuovi N.jsonl    # pull_request_target: opened/push/merged/closed
+    python3 tools/ci_metrics.py registra-conflitti --evento E.json --dati D.jsonl --nuovi N.jsonl   # push to main: new `dirty` PRs
+    python3 tools/ci_metrics.py registra-recenti --dati D.jsonl --nuovi N.jsonl --cursore C.json   # scheduled: runs completed after the cursor + runner load
+    python3 tools/ci_metrics.py accoda N.jsonl --dati D.jsonl [--cursore C.json]   # append without duplicates (every line gets `v`)
+    python3 tools/ci_metrics.py compatta --dati D.jsonl [--giorni 14]          # drop the heavy fields of old rows
+    python3 tools/ci_metrics.py esporta [--dati D.jsonl] [--out DIR]           # one CSV per row type
+    python3 tools/ci_metrics.py riepilogo [--dati D.jsonl] [--da YYYY-MM-DD]   # default data: git show origin/stat-ci:eventi.jsonl
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ import urllib.request
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
-import stat_ci_dati as dati_ci
+import ci_metrics_data as dati_ci
 
 # Estimated minutes lost for the events that have no measured duration (printed with the summary).
 CONFLITTO_S = 900
@@ -265,6 +265,19 @@ def accoda(righe: list[dict], dati: str) -> int:
     return len(nuove)
 
 
+def avanza_cursore(nuovo: str, attuale: str) -> None:
+    """Copy cursor file `nuovo` over `attuale` unless it is older: polls on push and on schedule run concurrently."""
+    try:
+        with open(attuale, encoding="utf-8") as f:
+            vecchio = json.load(f)["ultimo"]
+        with open(nuovo, encoding="utf-8") as f:
+            if vecchio >= json.load(f)["ultimo"]:
+                return
+    except (OSError, KeyError, ValueError):
+        pass
+    shutil.copyfile(nuovo, attuale)
+
+
 def hm(s: float) -> str:
     s = int(s)
     return f"{s // 3600}h{s % 3600 // 60:02d}"
@@ -399,7 +412,7 @@ def main() -> int:
     if a.comando == "accoda":
         print(f"{accoda(leggi(a.file), dati)} new lines")
         if a.cursore and os.path.exists(a.cursore):
-            shutil.copyfile(a.cursore, os.path.join(os.path.dirname(dati) or ".", "cursore.json"))
+            avanza_cursore(a.cursore, os.path.join(os.path.dirname(dati) or ".", "cursore.json"))
         return 0
     if a.comando == "compatta":
         scrivi_righe(dati, dati_ci.compatta(leggi(dati), dati_ci.adesso_dt(), a.giorni))
