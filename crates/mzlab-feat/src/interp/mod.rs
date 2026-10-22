@@ -11,6 +11,7 @@ pub mod filtri;
 pub mod json;
 pub mod modifica;
 pub mod ms2link;
+mod prof;
 pub mod redraw;
 pub mod refilter;
 pub mod reposition;
