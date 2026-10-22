@@ -113,6 +113,8 @@ pub mod raw;
 pub mod rawfilter;
 #[cfg(feature = "thermo")]
 pub mod rawlettore;
+#[cfg(feature = "thermo")]
+mod rawlettore_reazioni;
 pub mod rng;
 pub mod rois;
 pub mod roi_cluster;

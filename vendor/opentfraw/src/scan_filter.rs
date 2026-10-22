@@ -415,4 +415,59 @@ mod tests {
             "FTMS + c NSI d Full ms2 649.1200@etd35.00@hcd28.00 [150.0000-2000.0000]"
         );
     }
+    fn rxn(mz: f64, energy: f64, flags: u32) -> Reaction {
+        Reaction {
+            precursor_mz: mz,
+            unknown_double: 1.0,
+            energy,
+            unknown_long1: flags,
+            unknown_long2: 0,
+        }
+    }
+
+    fn ftms_event(power: u8, code: u8, reactions: Vec<Reaction>) -> ScanEvent {
+        let mut pre = make_preamble(1, 0, power, 0);
+        pre.bytes[10] = 1; // dependent
+        pre.bytes[24] = code;
+        ScanEvent {
+            preamble: pre,
+            reactions,
+            fraction_collectors: vec![],
+            coefficients: vec![],
+        }
+    }
+
+    /// The filter carries one activation per scan (that of the first reaction on FTMS) whatever the reactions say; the per-reaction view is in `reaction`.
+    #[test]
+    fn filters_of_the_reaction_chains_do_not_change() {
+        let idx = make_index(50.0, 500.0);
+        let ms3 = ftms_event(3, 4, vec![rxn(500.0, 35.0, 1), rxn(300.0, 0.0, 11)]);
+        assert_eq!(
+            build_filter(&ms3, &idx, Some(300.0), Some(40.0), None),
+            "FTMS + c NSI d Full ms3 500.0000@cid35.00 300.0000@cid40.00 [50.0000-500.0000]"
+        );
+        let hcd = ftms_event(2, 1, vec![rxn(300.5, 0.0, 11)]);
+        assert_eq!(
+            build_filter(&hcd, &idx, Some(300.5), Some(30.0), None),
+            "FTMS + c NSI d Full ms2 300.5000@hcd30.00 [50.0000-500.0000]"
+        );
+        let ms8 = ftms_event(
+            8,
+            4,
+            [317.0, 261.0, 244.0, 200.0, 172.0, 145.0, 112.0]
+                .map(|m| rxn(m, 25.0, 1))
+                .to_vec(),
+        );
+        let f = build_filter(&ms8, &idx, Some(112.0), Some(25.0), None);
+        assert!(
+            f.starts_with("FTMS + c NSI d Full ms8 317.0000@cid25.00 261.0000@cid25.00 "),
+            "{f}"
+        );
+        assert!(f.ends_with(" 112.0000@cid25.00 [50.0000-500.0000]"), "{f}");
+        let tri = ftms_event(2, 1, vec![rxn(649.1, 0.0, 0), rxn(0.0, 0.0, 11)]);
+        assert_eq!(
+            build_filter(&tri, &idx, Some(649.1), Some(28.0), None),
+            "FTMS + c NSI d Full ms2 649.1000@etd@hcd28.00 [50.0000-500.0000]"
+        );
+    }
 }

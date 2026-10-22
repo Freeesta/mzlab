@@ -43,6 +43,8 @@ pub struct PrecursorInfo {
     /// Analyzer used for the precursor scan; needed by mzML CV mapping to
     /// disambiguate CID vs beam-type CID on FTMS instruments.
     pub analyzer: Option<crate::Analyzer>,
+    /// The whole chain of reactions (MS2: one, MS3: two, ... ), `collision_energy` and `activation` above being those of the final one.
+    pub reactions: Vec<crate::ReactionInfo>,
 }
 
 /// One fully-decoded spectrum with all metadata needed to emit mzML or
@@ -203,6 +205,7 @@ pub fn scan_metadata_with(
                 master_scan_number: None,
                 activation: event.and_then(|e| e.activation()),
                 analyzer: event.and_then(|e| e.preamble.analyzer()),
+                reactions: Vec::new(),
             }
         } else {
             let reaction = event.and_then(|e| e.reactions.first());
@@ -242,6 +245,22 @@ pub fn scan_metadata_with(
                 .and_then(|p| p.master_scan_number())
                 .filter(|&n| n > 0)
                 .map(|n| n as u32);
+            let reactions = event.map_or_else(Vec::new, |e| {
+                crate::reaction::chain(
+                    e,
+                    &crate::reaction::FinalReaction {
+                        isolation_width: iw,
+                        energy: ae_from_params,
+                        energy_is_nce: ae_is_nce,
+                        energy_steps: params
+                            .as_ref()
+                            .map_or_else(Vec::new, |p| p.activation_energy_steps()),
+                        supplemental_energy: params
+                            .as_ref()
+                            .and_then(|p| p.supplemental_activation_energy()),
+                    },
+                )
+            });
             PrecursorInfo {
                 target_mz: tm,
                 selected_mz: sm,
@@ -252,6 +271,7 @@ pub fn scan_metadata_with(
                 master_scan_number: master,
                 activation: event.and_then(|e| e.activation()),
                 analyzer: event.and_then(|e| e.preamble.analyzer()),
+                reactions,
             }
         };
         Some(info)

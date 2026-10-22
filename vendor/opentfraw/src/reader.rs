@@ -1687,6 +1687,23 @@ impl<'a> ScanParams<'a> {
             .filter(|&v| v > 0.0)
     }
 
+    /// Every step of a stepped NCE (`"20,35,60"`) in the NCE labels; empty for a single value, which `activation_energy` reads.
+    pub fn activation_energy_steps(&self) -> Vec<f64> {
+        for label in &["HCD Energy:", "HCD Energy V:", "CE:"] {
+            let steps: Vec<f64> = self
+                .0
+                .get_string(label)
+                .into_iter()
+                .flat_map(|s| s.split([',', ';', '/', ' ']))
+                .filter_map(|t| t.trim().trim_end_matches('%').parse().ok())
+                .collect();
+            if steps.len() > 1 {
+                return steps;
+            }
+        }
+        Vec::new()
+    }
+
     /// Whether the value returned by [`activation_energy`] is a normalized
     /// collision energy (NCE, dimensionless %) rather than an absolute eV value.
     ///
