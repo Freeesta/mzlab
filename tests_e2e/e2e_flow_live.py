@@ -188,8 +188,8 @@ try:
         step("the cards and the table of files say what the steps did, by keyboard, with no axe violation", cards)
 
         # --- C. a mixed series: a profile file, a centroid file, a profile file whose centroid index Data holds
-        MODES = """(names) => { const rows = names.map((n, k) => ({ name: n.replace(/\\.mzidx$/, '.mzML'), spectrum_mode: k === 1 ? 'centroid' : 'profile' }));
-          ST.files = rows; E.files = rows.map(r => ({ file: r.name, name: r.name })); return rows.map(r => r.name); }"""
+        MODES = """(names) => { const rows = names.map((n, k) => ({ name: n.replace(/\\.mzidx$/, '.mzML'), spectrum_mode: k === 1 ? 'centroid' : 'profile', group: 'sample', kind: 'full', use: true }));
+          ST.files = rows; E.files = rows.map(r => ({ file: r.name, name: r.name, type: 'sample', kind: 'full', group: 'sample' })); return rows.map(r => r.name); }"""
         PUT_CEN = """async (n) => { let d = await navigator.storage.getDirectory(); for (const p of ["mzlab", "idx"]) d = await d.getDirectoryHandle(p, { create: true });
           const h = await d.getFileHandle(n.replace('.mzidx', '.cen.mzidx') + '.part', { create: true }); await (await fetch("static/dati_flow_live/" + n)).body.pipeTo(await h.createWritable()); await h.move(n.replace('.mzidx', '.cen.mzidx')); }"""
         JOBS = """async (id) => (await (await fetch('api/flow/sched/jobs', { method: 'POST', body: '{}' })).json()).filter(j => j.instance === id).map(j => [j.item, j.state])"""
