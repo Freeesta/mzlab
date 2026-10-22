@@ -10026,3 +10026,4 @@
 {"v":1,"ts_utc":"2026-10-22T22:14:54Z","tipo":"wasm","k":"wasm-dimensioni","workflow":"test","moduli":{"static/wasm/mzlab_wasm_bg.wasm":[3844229,null]},"byte_totali":3844229,"margine_min_pct":null,"pr":1542,"sha":"521334107c8e8e2ff2450256a8526bfeb1f1b72d","run_id":39861930237,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T22:15:17Z","tipo":"carico","k":"2026-10-22T22:1","job_in_coda":0,"job_in_corso":39}
 {"v":1,"ts_utc":"2026-10-22T22:14:45Z","tipo":"conflitto_risolto","pr":1550,"sha":"8956267cced7b63908893040832dd7323557758c"}
+{"v":1,"ts_utc":"2026-10-22T22:18:02Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/raw-mzml-banco","merge_main":true,"aree":{"rust":28,"docs":41,"altro":15,"web":27,"test":24,"tools":8,"generati":2},"tipo":"pr","pr":1550,"sha":"04cefa4dbfc55aa7bf706b2387541dbd0da10e7d"}
