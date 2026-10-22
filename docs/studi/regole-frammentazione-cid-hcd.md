@@ -25,16 +25,17 @@ Le regole danno PROPOSTE con prove e citazione, mai identificazioni (principio 1
 12. **Pubblicherebbe la convalida**: i numeri (copertura, decoy, per classe e per strumento) in un documento ripetibile, con la release di MassBank e lo SHA-256 del file, così chiunque rifà la misura.
 
 ## 2. Materiale grezzo da cui partire
-- **Review di base (le regole stanno qui)**: Holčapek et al. 2010 [HOL10] (regole di interpretazione API, perdite neutre per gruppo funzionale); Demarque et al. 2016 [DEM16] (reazioni di frammentazione ESI-MS/MS in positivo e negativo, carica-diretta, riarrangiamenti); Levsen et al. 2007 [LEV07] (121 composti modello in trappola ionica: perdite caratteristiche e specifiche per gruppo, eccezioni alla regola dell'elettrone pari); Karni & Mandelbaum 1980 [KAR80] (la regola dell'elettrone pari); Bowie 1990 [BOW90] (ioni negativi a elettroni pari, da verificare).
+- **Review di base (le regole stanno qui)**: Holčapek et al. 2010 [HOL10] (regole di interpretazione API, perdite neutre per gruppo funzionale); Demarque et al. 2016 [DEM16] (reazioni di frammentazione ESI-MS/MS in positivo e negativo, carica-diretta, riarrangiamenti); Levsen et al. 2007 [LEV07] (121 composti modello in trappola ionica: perdite caratteristiche e specifiche per gruppo, eccezioni alla regola dell'elettrone pari); Karni & Mandelbaum 1980 [KAR80] (la regola dell'elettrone pari); Bowie 1990 [BOW90] (frammentazione degli ioni negativi a elettroni pari).
 - **Attivazione**: Sleno & Volmer 2004 [SLE04] (CID a bassa e alta energia, collisioni singole e multiple, energia interna); McLuckey & Goeringer 1997 [MCL97] (riscaldamento lento in trappola); March 1997 [MAR97] (trappola quadrupolare, parametro q, stabilità); Schwartz et al. 2002 [SCH02] (trappola lineare: risonanza, isolamento e attivazione per MSn).
 - **Attivazione a fascio ed energia**: Olsen et al. 2007 [OLS07] (HCD, intervallo di massa completo); Diedrich et al. 2013 [DIE13] (energia a gradini, peptidi); Kertesz et al. 2009 [KER09] (CE50 e curve di sopravvivenza per molecole piccole); Hopfgartner et al. 2004 [HOP04] (QqLIT per molecole piccole).
-- **Meccanismi**: Wysocki et al. 2000 [WYS00] (protone mobile e localizzato); Cheng & Gross 2000 [CHE00] (frammentazione carica-remota); Tian & Kass 2008 [TIA08] (il protomere dipende dal solvente); Fabre et al. 2001 [FAB01] (retro-Diels-Alder in negativo in trappola); McLafferty 1959 [MCL59] (riarrangiamento, da verificare).
+- **Meccanismi**: Wysocki et al. 2000 [WYS00] (protone mobile e localizzato); Cheng & Gross 2000 [CHE00] (frammentazione carica-remota); Tian & Kass 2008 [TIA08] (il protomere dipende dal solvente); Fabre et al. 2001 [FAB01] (retro-Diels-Alder in negativo in trappola); McLafferty 1959 [MCL59] (riarrangiamento).
 - **Strumenti di calcolo, letti come articoli (non come codice)**: alberi di frammentazione [BOC08][RAS11][DUH19]; MetFrag [WOL10][RUT16]; CFM-ID [ALL15][WAN21] (con regole scritte a mano per alcune classi); MS-FINDER e le nove regole di riarrangiamento dell'idrogeno [TSU16]; MAGMa per alberi MSn [RID12]; ChemFrag (regole + chimica quantistica) [SCU18]; MS2Analyzer (147 perdite neutre dalla letteratura con le sottostrutture) [MA14].
 - **Spettri con SMILES noto e licenza aperta**: MassBank Europe [HOR10][NEU26] (record versionati con DOI della release; tipo di strumento, `FRAGMENTATION_MODE` CID/HCD, energia e livello MS nel record; licenza per record); GNPS [WAN16]; MoNA (licenza per record, da verificare); mzCloud solo come riferimento pubblicato, mai scaricato né copiato.
 - **Valutazione**: CASMI 2016 [SCY17]; FDR con decoy per la ricerca spettrale [SCB17]; entropia spettrale [LI21]; scala di confidenza [SCY14]; review sulla ricerca MS/MS ad alta risoluzione [KIN18].
 
 ## 3. Principi (a)
-- **Regola dell'elettrone pari**: uno ione a elettroni pari ([M+H]+, [M−H]−) si rompe di preferenza in uno ione a elettroni pari e una molecola neutra, non in un radicale e uno ione radicale [KAR80][LEV07]. Eccezioni documentate: aromatici con gruppi nitro (perdita di NO• o NO2•), sistemi coniugati che stabilizzano il radicale [LEV07]; altre (CH3• da metossiaromatici, X• da alogenoaromatici, chinoni) sono riportate in [HOL10][DEM16], da verificare sul testo caso per caso. Nel grafo: `elettroni` del candidato è già calcolato; una perdita radicale è ammessa solo se una regola la dichiara.
+- **Regola dell'elettrone pari**: uno ione a elettroni pari ([M+H]+, [M−H]−) si rompe di preferenza in uno ione a elettroni pari e una molecola neutra, non in un radicale e uno ione radicale [KAR80][LEV07]. Eccezioni documentate: aromatici con gruppi nitro (perdita di NO• o NO2•), sistemi coniugati che stabilizzano il radicale [LEV07]; CH3• da metossiaromatici in positivo e in negativo [JIA24][VES11][MEN13]; altre (X• da alogenoaromatici, chinoni) sono riportate in [HOL10][DEM16], da verificare sul testo caso per caso.
+- **Elettrone pari nel grafo**: `elettroni` del candidato è già calcolato; una perdita radicale è ammessa solo se una regola la dichiara.
 - **Perdite neutre per gruppo funzionale** (tabella completa in `regole-frammentazione-schema.md`): H2O da alcoli alifatici, acidi carbossilici, idrossili vicini a un sito basico; NH3 da ammine e ammidi primarie; CO dopo una prima perdita da acidi, esteri e ammidi (ione acilio → −CO) e, in negativo, da anelli fenolici condensati [FAB01]; CO2 da acidi carbossilici in negativo [LEV07][HOL10]; HCOOH (CH2O2) da acidi in positivo (caratteristica ma non specifica [LEV07]).
 - **Altre perdite**: CH3OH da esteri metilici e metossili vicini alla carica; SO2 da solfonammidi aromatiche (riarrangiamento) e solfoni; SO3 da solfati e acidi solfonici in negativo [LEV07]; HF, HCl, HBr da alogenuri vicini a un H mobile; alcheni (C2H4, C3H6, C4H8) da N-etil, N-isopropil, N-terbutil ammine e ammidi e da esteri alchilici [HOL10][DEM16]. OH e NH2 aromatici non danno perdite che li rivelino [LEV07].
 - **Retro-Diels-Alder (RDA)**: un anello cicloesenico (o eterociclo a sei termini con un doppio legame) si apre in un diene e un dienofilo; ioni diagnostici dei due anelli, in positivo e in negativo, con canali propri del negativo [FAB01][DEM16].
@@ -55,7 +56,7 @@ Le regole danno PROPOSTE con prove e citazione, mai identificazioni (principio 1
 | Energia | «normalizzata» in % sulla m/z del precursore, poco legata agli eV | NCE in % (Orbitrap) o eV (Q-TOF, QqQ); la relazione NCE-m/z è del costruttore: da verificare | [LOP99] da verificare, [DIE13] |
 | Energia a gradini | non usata | stepped NCE: tre energie sommate in un solo spettro (più tipi di frammenti) | [DIE13] |
 | MSn | naturale (MS3…MS8): il grafo `msngrafo/1` nasce da qui | MS2 (in Orbitrap Tribrid, HCD anche come ultimo stadio dopo CID) | [SCH02][OLS07] |
-| QqQ e QTRAP del corso | — | Q2 è CID a fascio (come HCD, a risoluzione unitaria); nel QTRAP l'MS3 si fa in Q3 come trappola lineare (cut-off di nuovo) | [HOP04][HAG02] da verificare |
+| QqQ e QTRAP del corso | — | Q2 è CID a fascio (come HCD, a risoluzione unitaria); nel QTRAP l'MS3 si fa in Q3 come trappola lineare (cut-off di nuovo) | [HOP04][HAG02] |
 - **Conseguenze per il valutatore**: (1) cut-off solo per `att = cid` di trappola: soglia `0,275 × m/z del precursore` modificabile (il q d'attivazione può essere letto dal file quando c'è; altrimenti 0,25), e i frammenti attesi sotto soglia sono «non osservabili», non «assenti»; (2) in HCD una perdita composta su un arco (H2O + CO) è spiegata come catena di due regole, con la regola intermedia marcata «non isolata»; (3) uno spettro stepped è una SOMMA: niente curva di breakdown da esso, l'arco riceve l'insieme delle energie.
 - **Similitudine fra spettri**: spettri HCD e CID a fascio di un QqQ si somigliano più fra loro che con la CID in trappola [GRA11] (misurato sui peptidi; per le molecole piccole da verificare); una libreria CID di trappola non va cercata con spettri HCD senza dirlo.
 
@@ -77,25 +78,25 @@ Le regole danno PROPOSTE con prove e citazione, mai identificazioni (principio 1
 - **Fatti pubblicati**: le perdite neutre e i meccanismi descritti negli articoli sono fatti chimici; li scriviamo con parole e formule nostre, ricalcoliamo ogni massa con `mzlab-core::elements` e citiamo DOI/PMID.
 - **Dati**: MassBank per record (CC0, CC BY, CC BY-SA, CC BY-NC…: il campo `LICENSE` del record decide); nel repo pubblico solo accessioni e conteggi, mai spettri NC o SA; gli spettri CC BY già in `tests/data/pubblici_gemini/` restano con la loro `FONTE.md`. GNPS e MoNA: licenza per libreria/record, da verificare. mzCloud: mai.
 
-## 8. Bibliografia (PMID e DOI verificati su PubMed salvo «da verificare»)
+## 8. Bibliografia (PMID da PubMed, DOI da PubMed o Crossref; un riferimento verificato non vuol dire contenuto letto: lo dice `check` nello schema)
 - [HOL10] Holčapek M, Jirásko R, Lísa M. J Chromatogr A 2010;1217:3908-21. PMID 20303090, doi:10.1016/j.chroma.2010.02.049
 - [DEM16] Demarque DP et al. Nat Prod Rep 2016;33:432-55. PMID 26673733, doi:10.1039/c5np00073d
 - [LEV07] Levsen K et al. J Mass Spectrom 2007;42:1024-44. PMID 17605143, doi:10.1002/jms.1234
-- [KAR80] Karni M, Mandelbaum A. Org Mass Spectrom 1980;15:53-64. doi:10.1002/oms.1210150202 (DOI da fonti secondarie: da verificare)
-- [BOW90] Bowie JH. Mass Spectrom Rev 1990;9:349-79 (da verificare)
-- [MCL59] McLafferty FW. Anal Chem 1959;31:82-87 (da verificare)
-- [RYL57] Rylander PN, Meyerson S, Grubb HM. J Am Chem Soc 1957;79:842 (da verificare)
+- [KAR80] Karni M, Mandelbaum A. Org Mass Spectrom 1980;15:53-64. doi:10.1002/oms.1210150202 (Crossref)
+- [BOW90] Bowie JH. Mass Spectrom Rev 1990;9:349-79. doi:10.1002/mas.1280090305 (Crossref)
+- [MCL59] McLafferty FW. Anal Chem 1959;31:82-87. doi:10.1021/ac60145a015 (Crossref)
+- [RYL57] Rylander PN, Meyerson S, Grubb HM. J Am Chem Soc 1957;79:842-6. doi:10.1021/ja01561a016 (Crossref)
 - [KIN07] Kind T, Fiehn O. BMC Bioinformatics 2007;8:105. PMID 17389044, doi:10.1186/1471-2105-8-105
 - [SLE04] Sleno L, Volmer DA. J Mass Spectrom 2004;39:1091-112. PMID 15481084, doi:10.1002/jms.703
-- [MCL97] McLuckey SA, Goeringer DE. J Mass Spectrom 1997;32:461-74 (volume e pagine confermati, DOI da verificare)
-- [MAR97] March RE. J Mass Spectrom 1997;32:351-69 (da verificare)
-- [LOP99] Lopez LL et al. Rapid Commun Mass Spectrom 1999;13:663-8 (energia normalizzata in trappola: da verificare)
+- [MCL97] McLuckey SA, Goeringer DE. J Mass Spectrom 1997;32:461-74. doi:10.1002/(SICI)1096-9888(199705)32:5<461::AID-JMS515>3.0.CO;2-H (Crossref)
+- [MAR97] March RE. J Mass Spectrom 1997;32:351-69. doi:10.1002/(SICI)1096-9888(199704)32:4<351::AID-JMS512>3.0.CO;2-Y (Crossref)
+- [LOP99] Lopez LL et al. Rapid Commun Mass Spectrom 1999;13:663-8. doi:10.1002/(SICI)1097-0231(19990430)13:8<663::AID-RCM538>3.0.CO;2-H (Crossref; la relazione NCE-m/z va letta sul testo)
 - [SCH02] Schwartz JC, Senko MW, Syka JEP. J Am Soc Mass Spectrom 2002;13:659-69. PMID 12056566, doi:10.1016/S1044-0305(02)00384-7
 - [OLS07] Olsen JV et al. Nat Methods 2007;4:709-12. PMID 17721543, doi:10.1038/nmeth1060
 - [DIE13] Diedrich JK, Pinto AFM, Yates JR. J Am Soc Mass Spectrom 2013;24:1690-9. PMID 23963813, doi:10.1007/s13361-013-0709-7
 - [KER09] Kertesz TM et al. J Am Soc Mass Spectrom 2009;20:1759-67. PMID 19616966, doi:10.1016/j.jasms.2009.06.002
 - [HOP04] Hopfgartner G et al. J Mass Spectrom 2004;39:845-55. PMID 15329837
-- [HAG02] Hager JW. Rapid Commun Mass Spectrom 2002;16:512-26 (da verificare)
+- [HAG02] Hager JW. Rapid Commun Mass Spectrom 2002;16:512-26. doi:10.1002/rcm.607 (Crossref)
 - [WYS00] Wysocki VH et al. J Mass Spectrom 2000;35:1399-406. PMID 11180630
 - [CHE00] Cheng C, Gross ML. Mass Spectrom Rev 2000;19:398-420. PMID 11199379
 - [TIA08] Tian Z, Kass SR. J Am Chem Soc 2008;130:10842-3. PMID 18661998, doi:10.1021/ja802088u
@@ -120,3 +121,8 @@ Le regole danno PROPOSTE con prove e citazione, mai identificazioni (principio 1
 - [WAN16] Wang M et al. Nat Biotechnol 2016;34:828-37. PMID 27504778, doi:10.1038/nbt.3597
 - [GRA11] de Graaf EL et al. J Proteome Res 2011;10:4334-41. PMID 21726076, doi:10.1021/pr200156b
 - [KIN18] Kind T et al. Mass Spectrom Rev 2018;37:513-32. PMID 28436590, doi:10.1002/mas.21535
+- [JIA24] Jiang C, Gates PJ. Molecules 2024;29:5246. PMID 39598635, doi:10.3390/molecules29225246 (CC BY 4.0)
+- [VES11] Vessecchi R et al. Rapid Commun Mass Spectrom 2011;25:2020-6. PMID 21698684, doi:10.1002/rcm.5075
+- [MEN13] Menezes JC et al. Rapid Commun Mass Spectrom 2013;27:1303-10. PMID 23681807, doi:10.1002/rcm.6577
+- [HAO09] Hao G et al. J Am Soc Mass Spectrom 2009;20:723-7. PMID 19200748, doi:10.1016/j.jasms.2008.12.012
+- [ZHO18] Zhou Y et al. Molecules 2018;23:2496. PMID 30274254, doi:10.3390/molecules23102496 (CC BY 4.0)
