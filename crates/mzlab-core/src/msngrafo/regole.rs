@@ -62,6 +62,15 @@ pub struct Regola {
 }
 
 impl Regola {
+    /// The rule has a condition on the structure (groups, excluded groups or a site): without a structure it is not decided.
+    pub fn legge_struttura(&self) -> bool {
+        !self.all_groups.is_empty()
+            || !self.any_groups.is_empty()
+            || self.site.is_some()
+            || !self.excludes.is_empty()
+            || self.tipo == Tipo::Cleavage
+    }
+
     /// The rule needs no structure: only the formula, the adduct and the polarity decide.
     pub fn solo_formula(&self) -> bool {
         self.all_groups.is_empty()
