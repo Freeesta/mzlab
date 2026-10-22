@@ -3,23 +3,34 @@
 // wasm-feat/manifest.json (crates/mzlab-msngrafo-wasm) is fetched on the first request, checked against its SHA-256, and reads the .mzidx of
 // OPFS and the mzML of the file through `readerFor`. The engine itself is not touched. docs/agenti/msn-grafo.md.
 
-/** @type {any} */ let mod = null;
-/** @type {Promise<any> | null} */ let loading = null;
+/** @type {Record<string, Promise<any>>} */ const loading = {};
 
-async function load() {
-  if (mod) return mod;
-  if (!loading) loading = (async () => {
+/** the module `key` of wasm-feat/manifest.json, fetched on first use and checked against its SHA-256 @param {string} key */
+function load(key) {
+  if (!loading[key]) loading[key] = (async () => {
     const base = new URL("./wasm-feat/", import.meta.url);
-    const man = (await (await fetch(new URL("manifest.json", base))).json()).msngrafo;
+    const man = (await (await fetch(new URL("manifest.json", base))).json())[key];
     if (!man) throw JSON.stringify({ error_key: "err.route.unavailable", params: {} });
     const bytes = await (await fetch(new URL(man.wasm, base))).arrayBuffer();
     const hex = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map(x => x.toString(16).padStart(2, "0")).join("");
     if (hex !== man.sha256) throw JSON.stringify({ error_key: "error.featWasmHash", params: {} });
     const m = await import(new URL(man.js, base).href);
     await m.default({ module_or_path: bytes });
-    return (mod = m);
-  })().catch(e => { loading = null; throw e; });
-  return loading;
+    return m;
+  })().catch(e => { delete loading[key]; throw e; });
+  return loading[key];
+}
+
+/**
+ * The query with the expectations of the structure rules (`attese`) when it asks for the rules with a SMILES: the .wasm `msnregole` computes them,
+ * so `msngrafo` does not carry the chemistry. A SMILES that does not parse is left to the graph, which reports it.
+ * @param {string} query
+ */
+async function conAttese(query) {
+  const q = new URLSearchParams(query);
+  if (q.get("regole") !== "1" || !q.get("smiles") || q.get("attese")) return query;
+  try { q.set("attese", (await load("msnregole")).attese(q.get("smiles"))); } catch { return query; }
+  return q.toString();
 }
 
 /** the .mzidx of a file, where the index builder put it in OPFS @param {string} name */
@@ -34,9 +45,9 @@ async function indexOf(name) {
  * @param {(blob: Blob) => (offset: number, length: number) => Uint8Array} readerFor
  */
 export async function msnGrafo(name, blob, query, readerFor, esporta = false) {
-  const [m, idx] = await Promise.all([load(), indexOf(name)]);
+  const [m, idx] = await Promise.all([load("msngrafo"), indexOf(name)]);
   const f = esporta ? m.msn_grafo_export : m.msn_grafo;
-  return f(readerFor(idx), idx.size, readerFor(blob), name, query);
+  return f(readerFor(idx), idx.size, readerFor(blob), name, await conAttese(query));
 }
 
 /**
@@ -46,8 +57,8 @@ export async function msnGrafo(name, blob, query, readerFor, esporta = false) {
  * @param {(blob: Blob) => (offset: number, length: number) => Uint8Array} readerFor
  */
 export async function msnLibAggiungi(name, blob, query, libreria, molecola, readerFor) {
-  const [m, idx] = await Promise.all([load(), indexOf(name)]);
-  return m.msnlib_aggiungi(readerFor(idx), idx.size, readerFor(blob), name, query, libreria, molecola);
+  const [m, idx] = await Promise.all([load("msngrafo"), indexOf(name)]);
+  return m.msnlib_aggiungi(readerFor(idx), idx.size, readerFor(blob), name, await conAttese(query), libreria, molecola);
 }
 
 /**
@@ -56,6 +67,6 @@ export async function msnLibAggiungi(name, blob, query, libreria, molecola, read
  * @param {(blob: Blob) => (offset: number, length: number) => Uint8Array} readerFor
  */
 export async function msnLibCerca(name, blob, query, libreria, readerFor) {
-  const [m, idx] = await Promise.all([load(), indexOf(name)]);
-  return m.msnlib_cerca(readerFor(idx), idx.size, readerFor(blob), name, query, libreria);
+  const [m, idx] = await Promise.all([load("msngrafo"), indexOf(name)]);
+  return m.msnlib_cerca(readerFor(idx), idx.size, readerFor(blob), name, await conAttese(query), libreria);
 }

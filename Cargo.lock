@@ -2417,6 +2417,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-msnregole-wasm"
+version = "1.0.0"
+dependencies = [
+ "mzlab-core",
+ "mzlab-feat",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-target"
 version = "1.0.0"
 dependencies = [
