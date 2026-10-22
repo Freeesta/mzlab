@@ -31,6 +31,7 @@ mod flow_drift;
 #[cfg(test)]
 mod flow_drift_tests;
 mod flow_estimate;
+mod flow_explain;
 mod flow_export;
 #[cfg(test)]
 mod flow_export_tests;
@@ -111,6 +112,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli tutor eval CASES --blocchi F (--replay DIR | --solo-recupero)   score the Teoria tutor on the eval cases (tutor --help)
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
+       mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
        mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
        mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
        mzlab-cli validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1 (validate --help)
@@ -391,10 +393,13 @@ fn flow_cmd(mut args: impl Iterator<Item = String>) -> Outcome {
 }
 
 /// The subcommands that take their arguments as a plain list.
+const PLAIN: [&str; 4] = ["llm", "steps", "tutor", "explain-missing"];
+
 fn run_plain(command: &str, args: Vec<String>) -> Outcome {
     match command {
         "llm" => llm::run(args),
         "steps" => steps_cmd::run(args),
+        "explain-missing" => flow_explain::run(args),
         _ => tutor::run(args),
     }
 }
@@ -405,7 +410,7 @@ pub fn execute(args: &[String]) -> Outcome {
     match args.next().as_deref() {
         Some("features") => {}
         Some("flow") => return flow_cmd(args),
-        Some(c @ ("llm" | "steps" | "tutor")) => return run_plain(c, args.collect()),
+        Some(c) if PLAIN.contains(&c) => return run_plain(c, args.collect()),
         Some("msn-graph") => return msn_graph_cmd(args),
         Some("msn-lib") => return msn_lib_cmd(args.collect()),
         Some("convert") => return convert::run(args.collect()),
