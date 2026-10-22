@@ -22,11 +22,13 @@ Oracolo RFR (RawFileReader di Thermo, solo sul Mac, mai nel repository) e nostro
 - `chromatogram`: `id`, `kind` (tic, bpc, pressure, analog, pda, ...), `unit`, `time[]`, `values[]`.
 - `status`: `scan`, `rt`, `values{etichetta: testo}`, campionata (al massimo 16 istanti).
 - `error`: `rt`, `message` (una per voce del registro errori).
+- `sequence`: la riga di sequenza (`row_number`, `injection_vial`, `injection_volume`, `sample_weight`, `sample_volume`, `istd_amount`, `dilution_factor`, `id`, `comment`, `instrument_method`, `processing_method`, `raw_file_name`, `path`, `vial`, `user_text[]`).
+  Il nostro lettore aggiunge `unknown_numbers{}` e `unknown_texts{}` per posizione (campi di cui non si conosce il significato, extra per il comparatore: servono ad accoppiarli con Sample Type, Level, calibrazione del dump RFR). `asinfo`: `preamble` (24 byte in esadecimale), `text`.
 - `method`: `block` (indice del blocco di testo), `length`, `sha256`, e `text` solo con `--text`.
-- `tune`: `values{etichetta: testo}` (il nostro lettore non la espone ancora: omessa).
+- `tune`: `values{etichetta: testo}` (il nostro lettore non la espone ancora: omessa; il punto del file con i valori di tune per segmento non è stato trovato senza un dump RFR).
 
 ## Soglie del confronto (F.2)
-RT 1e-4 min; m/z 0,5 ppm (`--tol hr`) o 1e-3 Da (`--tol lr`); intensità 1e-5 relativo; testo uguale dopo normalizzazione (spazi, maiuscole, due punti finali delle etichette). Un campo presente solo in B (nostro) è `extra`, non un errore.
+RT 1e-4 min; m/z 0,5 ppm (`--tol hr`) o 1e-3 Da (`--tol lr`); intensità 1e-5 relativo; testo uguale dopo normalizzazione (spazi, maiuscole, due punti finali delle etichette). Un campo presente solo in B (nostro) è `extra`, non un errore. Le righe che non sono scansioni (`sequence`, `asinfo`, `error`, `status`, `tune`) si confrontano chiave per chiave come il trailer (`<tipo>.<chiave>`; `status` per istante campionato).
 
 ## Comandi
 ```

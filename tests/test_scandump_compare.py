@@ -136,3 +136,38 @@ def test_verita_from_dump():
     assert d["scansioni"][0]["profilo"] is True and d["scansioni"][0]["bpi_mz"] == 500.0
     assert d["punti"] == {"0": {"mz": [100.0, 500.0, 900.0], "intensita": [1000.0, 250000.0, 5000.0]}}
     assert d["oracolo"]["nome"] == "rfr"
+
+
+def _dump(path: Path, rows: list) -> Path:
+    head = {"type": "file", "schema": "scandump/1", "name": "x", "producer": "t", "instrument": "Q Exactive", "controller": 0, "n_scans": 0}
+    path.write_text("\n".join(json.dumps(r) for r in [head, *rows]), encoding="utf-8")
+    return path
+
+
+def test_rows_that_are_not_scans_are_compared_field_by_field(tmp_path):
+    """Sequence, autosampler text, error log, status log and tune: equal / different / only theirs / only ours."""
+    oracle = _dump(tmp_path / "a.jsonl", [
+        {"type": "sequence", "row_number": 4, "sample_type": "Unknown", "id": "S1", "user_text": ["a", ""]},
+        {"type": "asinfo", "text": "Autosampler"},
+        {"type": "error", "rt": 1.5, "message": "Warning: spray"},
+        {"type": "status", "scan": 0, "rt": 0.1, "values": {"Vacuum:": "1e-5", "Temp": "30"}},
+        {"type": "tune", "values": {"Spray Voltage": "2000"}},
+    ])
+    ours = _dump(tmp_path / "b.jsonl", [
+        {"type": "sequence", "row_number": 4, "id": "S2", "user_text": ["a", ""], "unknown_numbers": {"unk1": 1}},
+        {"type": "asinfo", "text": "autosampler", "preamble": "00"},
+        {"type": "error", "rt": 1.5, "message": "Warning: spray"},
+        {"type": "status", "scan": 0, "rt": 0.1, "values": {"Vacuum": "1.0e-5", "Temp": "31"}},
+    ])
+    f = compare.compare(oracle, ours)["fields"]
+    cells = lambda k: (f[k]["compared"], f[k]["equal"], f[k]["different"], f[k]["absent_a"], f[k]["absent_b"])
+    assert cells("sequence.row_number") == (1, 1, 0, 0, 0)
+    assert cells("sequence.id") == (1, 0, 1, 0, 0)
+    assert cells("sequence.user_text") == (1, 1, 0, 0, 0)
+    assert cells("sequence.sample_type") == (0, 0, 0, 0, 1)  # only RFR has it
+    assert cells("sequence.unknown_numbers") == (0, 0, 0, 1, 0)  # only ours (extra)
+    assert cells("asinfo.text") == (1, 1, 0, 0, 0)
+    assert cells("error.message") == (1, 1, 0, 0, 0)
+    assert cells("status.vacuum") == (1, 1, 0, 0, 0)  # 1e-5 against 1.0e-5
+    assert cells("status.temp") == (1, 0, 1, 0, 0)
+    assert cells("tune.spray voltage") == (0, 0, 0, 0, 1)
