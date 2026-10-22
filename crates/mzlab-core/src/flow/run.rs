@@ -176,6 +176,15 @@ fn gather(
     (made, generated)
 }
 
+/// Why an instance stopped, as the record writes it.
+fn error_record(e: &Error) -> ErrorRecord {
+    let params = e.params.iter().map(|(k, v)| (k.to_string(), v.clone()));
+    ErrorRecord {
+        error_key: e.key.to_string(),
+        params: params.collect(),
+    }
+}
+
 /// The activity of an instance and, when it did not fail, what it made.
 fn settle(
     inst: &Instance,
@@ -217,24 +226,15 @@ fn settle(
             }
             Err(e) => {
                 act.cached = false;
-                act.error = Some(ErrorRecord {
-                    error_key: e.key.to_string(),
-                    params: e
-                        .params
-                        .iter()
-                        .map(|(k, v)| (k.to_string(), v.clone()))
-                        .collect(),
-                });
+                act.error = Some(error_record(&e));
                 return (act, None);
             }
         }
     }
     let (made, generated) = gather(inst, step, &outcomes, &names);
     act.generated = generated;
-    for (o, name) in outcomes.iter().zip(&names) {
-        if let Some(v) = &o.file {
-            act.files.push((name.clone().unwrap_or_default(), v.clone()));
-        }
+    act.files = file_notes(&outcomes, &names);
+    for o in &outcomes {
         act.ms += o.ms;
         act.cached &= o.cached;
         act.heap_peak_bytes = act.heap_peak_bytes.max(o.heap_peak_bytes);
@@ -271,6 +271,17 @@ fn merged(a: Option<Mem>, b: Option<Mem>) -> Option<Mem> {
         }),
         (a, b) => a.or(b),
     }
+}
+
+/// What each per-file job said of its file, by the name of the input (a job with no name says nothing under one).
+fn file_notes(outcomes: &[Outcome], names: &[Option<String>]) -> Vec<(String, Value)> {
+    let said = outcomes.iter().zip(names);
+    said.filter_map(|(o, n)| {
+        o.file
+            .as_ref()
+            .map(|v| (n.clone().unwrap_or_default(), v.clone()))
+    })
+    .collect()
 }
 
 /// Runs `plan` with `workers` threads (1 = in order; the record is the same for any number). The plan is checked first; an instance that fails stops its

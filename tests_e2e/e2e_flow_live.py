@@ -179,13 +179,62 @@ try:
             assert st == ["stale", "dashed", "out of date"], st
             heads = pg.evaluate("[...document.querySelectorAll('.fl-insp .fln-files thead th')].map(h => h.textContent)")
             rows = pg.evaluate("[...document.querySelectorAll('.fl-insp .fln-files tbody th')].map(h => h.textContent)")
-            assert heads == ["File", "State", "Share", "Time", "Memory"] and all(any(n.rsplit(".", 1)[0] in r for r in rows) for n in names), (heads, rows, names)
+            assert heads == ["File", "Mode", "State", "Share", "Time", "Memory"] and all(any(n.rsplit(".", 1)[0] in r for r in rows) for n in names), (heads, rows, names)
             path = lib.axe_path()
             if not path: print("SKIP axe: axe-core not available"); return
             pg.add_script_tag(path=path)
             r = pg.evaluate("axe.run('#v-flow', {runOnly: {type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag22aa']}}).then(x => x.violations.map(v => v.id + ': ' + v.nodes.length))")
             assert not r, r
         step("the cards and the table of files say what the steps did, by keyboard, with no axe violation", cards)
+
+        # --- C. a mixed series: a profile file, a centroid file, a profile file whose centroid index Data holds
+        MODES = """(names) => { const rows = names.map((n, k) => ({ name: n.replace(/\\.mzidx$/, '.mzML'), spectrum_mode: k === 1 ? 'centroid' : 'profile' }));
+          ST.files = rows; E.files = rows.map(r => ({ file: r.name, name: r.name })); return rows.map(r => r.name); }"""
+        PUT_CEN = """async (n) => { let d = await navigator.storage.getDirectory(); for (const p of ["mzlab", "idx"]) d = await d.getDirectoryHandle(p, { create: true });
+          const h = await d.getFileHandle(n.replace('.mzidx', '.cen.mzidx') + '.part', { create: true }); await (await fetch("static/dati_flow_live/" + n)).body.pipeTo(await h.createWritable()); await h.move(n.replace('.mzidx', '.cen.mzidx')); }"""
+        JOBS = """async (id) => (await (await fetch('api/flow/sched/jobs', { method: 'POST', body: '{}' })).json()).filter(j => j.instance === id).map(j => [j.item, j.state])"""
+        STEP = """(base) => { const S = document.querySelector('.flx-list').__flow, i = S.plan.steps.find(s => String(s.step).split('@')[0] === base); return i ? i.id : null; }"""
+        def jobs_until(pg, step_id, cond, timeout=60):
+            """the jobs [item, state] of an instance, polled in the scheduler until `cond` (an expression on `j`) holds"""
+            until(pg, "async (id) => { const j = await (" + JOBS + ")(id); return " + cond + "; }", step_id, timeout)
+        pg = page(); inputs = pg.evaluate(MODES, names); pg.evaluate(PUT, names); pg.evaluate(PUT_CEN, names[2]); open_flow(pg)
+        cen = pg.evaluate(STEP, "spectra.centroid"); det = pg.evaluate(STEP, "features.detect")
+        def mixed():
+            assert cen and pg.evaluate(STEP, "index.mzidx"), "the base plan holds the centroid step"
+            until(pg, "([c]) => /1 of 3 files centroided, 1 already centroided/.test((document.querySelector(c + ' .fln-lw') || {}).textContent || '')", [CARD % cen])
+            # the profile file without a centroid index stays with the computer: its detection does not run, the other two are detected
+            jobs_until(pg, det, "j.filter(x => x[1] === 'done' || x[1] === 'reused').length >= 2")
+            states = dict(pg.evaluate(JOBS, det))
+            assert states.get(inputs[0]) not in ("done", "reused", "running"), states
+            pg.focus(CARD % cen); pg.keyboard.press("Enter")
+            until(pg, "() => { const t = document.querySelector('.fl-insp .fln-files'); return t && !t.hidden && t.querySelectorAll('tbody tr').length > 0; }")
+            rows = pg.evaluate("[...document.querySelectorAll('.fl-insp .fln-files tbody tr')].map(r => [...r.children].map(c => c.textContent))")
+            second = [r for r in rows if r[0] == inputs[1]]
+            assert second and second[0][1] == "centroid" and "already centroided" in second[0][2], rows
+        step("a mixed series: the card says 1 of 3 centroided and 1 already, the file table says the mode, the profile file waits", mixed)
+
+        def old_plan():
+            # a plan from before the node (the node taken out, the index reads the files): Issues offers the two remedies, nothing is inserted, and the detection of the profile files waits
+            pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, c = S.plan.steps.find(s => String(s.step).split('@')[0] === 'spectra.centroid'), i = S.plan.steps.find(s => String(s.step).split('@')[0] === 'index.mzidx'), took = c.in.source;
+              FLOW.removeStep(S.plan, c.id); i.in.source = took; S.refresh(); }""")
+            until(pg, "() => [...document.querySelectorAll('.flx-issues button')].some(b => /Centroid the profile files/.test(b.textContent)) && [...document.querySelectorAll('.flx-issues button')].some(b => /Run on profile anyway/.test(b.textContent))")
+            assert not pg.evaluate(STEP, "spectra.centroid"), "the check does not insert the step"
+            jobs_until(pg, det, "j.some(x => x[1] === 'blocked')")
+            pg.evaluate("""() => [...document.querySelectorAll('.flx-issues button')].find(b => /Run on profile anyway/.test(b.textContent)).click()""")
+            assert pg.evaluate("document.querySelector('.flx-list').__flow.plan.profile") == "as_is"
+            assert '"profile": "as_is"' in pg.evaluate("FLOW.exportText(document.querySelector('.flx-list').__flow.plan)")
+            jobs_until(pg, det, "j.length === 3 && j.every(x => x[1] === 'done' || x[1] === 'reused')", 180)
+        step("a plan without the node: Issues offers both remedies, inserts nothing, and «Run on profile anyway» is written in the plan and lets the detections go", old_plan)
+
+        def remedy():
+            pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow; delete S.plan.profile; S.refresh(); }""")
+            until(pg, "() => [...document.querySelectorAll('.flx-issues button')].some(b => /Centroid the profile files/.test(b.textContent))")
+            pg.evaluate("""() => [...document.querySelectorAll('.flx-issues button')].find(b => /Centroid the profile files/.test(b.textContent)).click()""")
+            r = pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, k = S.plan.steps.findIndex(s => String(s.step).split('@')[0] === 'spectra.centroid'), i = S.plan.steps.findIndex(s => String(s.step).split('@')[0] === 'index.mzidx');
+              return [k >= 0 && k < i, JSON.stringify(S.plan.steps[i].in.source), S.plan.steps[k] && S.plan.steps[k].id]; }""")
+            assert r[0] and r[1] == json.dumps([r[2] + ".mzml"]), r
+        step("«Centroid the profile files» puts the node before the index and wires the index to it", remedy)
+        pg.context.close()
         b.close()
 finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)
