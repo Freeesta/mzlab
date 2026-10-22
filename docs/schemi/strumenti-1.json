@@ -30,6 +30,7 @@
           "msn.table_export",
           "quant.calibrate",
           "spectra.centroid",
+          "spectra.chimeric",
           "spectra.insilico",
           "spectra.match",
           "spectra.ms2",
