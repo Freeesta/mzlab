@@ -1,6 +1,6 @@
 //! The native executor of `spectra.chimeric@1`: for every MS2 spectrum of an MGF, the purity of its precursor in the MS1 scans around it (`fill_purity`,
 //! the one of `tp.link`) and, with a feature table, the features co-isolated in its window (`ms2_engine::chimeric::intruders`). The spectrum is written
-//! as it came, with the header lines `PURITY`, `CHIMERIC` and `INTRUDERS` added; nothing is removed from it.
+//! as it came, with the header lines `PURITY`, `CHIMERIC`, `INTRUDERS` and, for the `ms1_window` algorithm, `MS1_COISOLATED*` added; nothing is removed from it.
 
 use std::fmt::Write as _;
 
@@ -9,7 +9,8 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::step::DataType;
 use mzlab_feat::attributio::ms2_engine::chimeric::{default_window, intruders, FeaturePoint};
-use mzlab_feat::interp::ms2link::{fill_purity, Ms2Scan};
+use mzlab_feat::attributio::review::raw::Ms1Metrics;
+use mzlab_feat::interp::ms2link::{fill_purity, ms1_window_metrics, Ms2Scan};
 use mzlab_feat::legacy::ms2::Ms2Index;
 use mzlab_feat::store::{read_table_from, Slice};
 
@@ -68,8 +69,14 @@ fn param(job: &Job, name: &str) -> Option<f64> {
     found.and_then(|(_, v)| v.f64())
 }
 
-/// The purity of the precursor of every block, `None` where no index file has the scan or no MS1 lies around it.
-fn purities(r: &FileRunner, job: &Job, blocks: &[Block]) -> Result<Vec<Option<(f64, bool)>>> {
+/// What the MS1 around every block says: the purity of its precursor (`None` where no index file has the scan or no MS1 lies around it) and, with
+/// `chim_rel` (the `ms1_window` algorithm), the ions co-isolated in its window.
+/// The same two lists, borrowed.
+type Seen<'a> = (&'a [Option<(f64, bool)>], &'a [Option<Ms1Metrics>]);
+
+type Found = (Vec<Option<(f64, bool)>>, Vec<Option<Ms1Metrics>>);
+
+fn purities(r: &FileRunner, job: &Job, blocks: &[Block], chim_rel: Option<f64>) -> Result<Found> {
     let paths = all_inputs(r, job, "index");
     let mut files = paths
         .iter()
@@ -88,6 +95,7 @@ fn purities(r: &FileRunner, job: &Job, blocks: &[Block]) -> Result<Vec<Option<(f
         });
     }
     let mut out = vec![None; blocks.len()];
+    let mut ms1 = vec![None; blocks.len()];
     for (k, file) in files.iter_mut().enumerate() {
         for polarity in [1i8, -1] {
             let mut mine: Vec<usize> = (0..blocks.len())
@@ -121,9 +129,17 @@ fn purities(r: &FileRunner, job: &Job, blocks: &[Block]) -> Result<Vec<Option<(f
             for (&i, s) in mine.iter().zip(&scans) {
                 out[i] = Some((s.purity, s.chimeric));
             }
+            if let Some(rel) = chim_rel {
+                for (&i, m) in mine
+                    .iter()
+                    .zip(ms1_window_metrics(file, polarity, &scans, rel)?)
+                {
+                    ms1[i] = m;
+                }
+            }
         }
     }
-    Ok(out)
+    Ok((out, ms1))
 }
 
 /// The feature rows of the `.mzfeat` as points: id, m/z and RT (min).
@@ -146,7 +162,8 @@ fn points(table: &[u8]) -> Result<Vec<FeaturePoint>> {
 pub(crate) fn chimeric_text(
     (window, rt_tol): (f64, f64),
     spectra: &[u8],
-    pure: &[Option<(f64, bool)>],
+    (pure, ms1): Seen,
+    chim_cap: f64,
     table: Option<&[FeaturePoint]>,
 ) -> String {
     let text = String::from_utf8_lossy(spectra);
@@ -155,8 +172,18 @@ pub(crate) fn chimeric_text(
     for l in loose.iter().filter(|l| l.starts_with('#')) {
         let _ = writeln!(out, "{l}");
     }
-    for (b, p) in blocks.iter().zip(pure) {
+    for (n, (b, p)) in blocks.iter().zip(pure).enumerate() {
         out.push_str("BEGIN IONS\n");
+        if let Some(Some(m)) = ms1.get(n) {
+            let list: Vec<String> = m
+                .chim
+                .iter()
+                .map(|(mz, rel)| format!("{mz:.4}:{rel:.3}"))
+                .collect();
+            let _ = writeln!(out, "MS1_COISOLATED={}", list.join(";"));
+            let _ = writeln!(out, "MS1_COISOLATED_N={}", m.chim_n);
+            let _ = writeln!(out, "MS1_CAPPED={}", m.chim_max >= chim_cap);
+        }
         if let Some((purity, chimeric)) = p {
             if purity.is_finite() {
                 let _ = writeln!(out, "PURITY={purity:.4}");
@@ -191,7 +218,9 @@ fn chimeric_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     }
     let text = String::from_utf8_lossy(&spectra.1);
     let (_, blocks) = parse(&text);
-    let pure = purities(r, job, &blocks)?;
+    let ms1_mode = job.instance.algorithm.as_deref() == Some("ms1_window");
+    let chim_rel = ms1_mode.then(|| param(job, "chim_rel").unwrap_or(0.10));
+    let (pure, ms1) = purities(r, job, &blocks, chim_rel)?;
     let has_table = job.inputs.iter().any(|(p, _)| p == "features");
     let all = if has_table {
         Some(points(&read_one(r, job, "features")?.1)?)
@@ -202,7 +231,13 @@ fn chimeric_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
         param(job, "window").unwrap_or_else(|| default_window("")),
         param(job, "rt_tol").unwrap_or(0.1),
     );
-    let text = chimeric_text(tol, &spectra.1, &pure, all.as_deref());
+    let text = chimeric_text(
+        tol,
+        &spectra.1,
+        (&pure, &ms1),
+        param(job, "chim_cap").unwrap_or(0.50),
+        all.as_deref(),
+    );
     let out = r.work.join(format!("{}.mgf", job.instance.id));
     std::fs::write(&out, text).map_err(io)?;
     r.keep(out, DataType::Spectra)

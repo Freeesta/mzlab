@@ -214,7 +214,7 @@ def wasm_cap(man: dict, key: str) -> int:
     import re
     txt = (ROOT / "tools" / "build_feat_wasm.sh").read_text(encoding="utf-8")
     shared = sum(1 for v in man.values() if isinstance(v, dict) and v.get("wasm") == man[key]["wasm"]) > 1
-    var = ("limit_attributio" if key.startswith("attributio") else "limit_hr") if shared else {"attributio_rev": "limit_rev", "attributio_export": "limit_export", "attributio_ms2": "limit_ms2"}.get(key, "limit")
+    var = ("limit_attributio" if key.startswith("attributio") else "limit_hr") if shared else {"attributio_rev": "limit_rev", "attributio_export": "limit_export", "attributio_ms2": "limit_ms2", "table": "limit_table"}.get(key, "limit")
     return int(re.search(rf"^{var}=(\d+)", txt, re.M).group(1))
 
 def free_port() -> int:
