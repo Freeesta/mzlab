@@ -118,7 +118,7 @@ fn thread_elenco(a: &Args) -> Vec<usize> {
     }
     let n = std::thread::available_parallelism().map_or(1, |n| n.get());
     let mut v = vec![1, 2, 4, n];
-    v.sort_unstable();
+    mzlab_core::sortc::slice_ord(&mut v);
     v.dedup();
     v
 }
@@ -321,29 +321,29 @@ fn sezioni_sorgente(
 ) {
     doc.insert("ingresso".into(), json!({"etichetta": src.etichetta, "peaks": format!("{:?}", src.picchi()), "origine": info}));
     let mut prima = Map::new();
-    prima.insert("apertura".into(), fasi::apertura(&src, a.giri));
-    let (th, h) = fasi::testata(&src, a.giri);
+    prima.insert("apertura".into(), fasi::apertura(src, a.giri));
+    let (th, h) = fasi::testata(src, a.giri);
     let testata_s = th["misura"]["mediana_s"].as_f64().unwrap_or(f64::NAN);
     prima.insert("testata".into(), th);
     if voglio("fasi") {
         let tmp = a
             .tmp
             .join(format!("raw_mzml_banco_{}.fasi.mzML", std::process::id()));
-        let f = fasi::fasi(&src, a.giri, &h, &tmp);
-        prima.insert("tmin".into(), tmin(&f, testata_s, src.byte, &a, micro_json));
+        let f = fasi::fasi(src, a.giri, &h, &tmp);
+        prima.insert("tmin".into(), tmin(&f, testata_s, src.byte, a, micro_json));
         prima.insert("fasi".into(), f);
     }
     if voglio("scala") {
         let mut s = vec![fasi::scala(
-            &src,
+            src,
             a.giri,
             "scrivi_con",
-            &thread,
+            thread,
             &[0, 1, 6],
             a.impronte,
         )];
         s.push(fasi::scala(
-            &src,
+            src,
             a.giri,
             "indicizzato",
             &[1, *thread.last().unwrap_or(&1)],
@@ -353,7 +353,7 @@ fn sezioni_sorgente(
         prima.insert("scala".into(), json!(s));
     }
     if voglio("cli") {
-        prima.insert("cli".into(), cli(&src, &a, testata_s));
+        prima.insert("cli".into(), cli(src, a, testata_s));
     }
     for (k, v) in prima {
         doc.insert(k, v);

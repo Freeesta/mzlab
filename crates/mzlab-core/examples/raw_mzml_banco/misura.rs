@@ -21,7 +21,7 @@ pub fn mediana(v: &[f64]) -> f64 {
     if x.is_empty() {
         return f64::NAN;
     }
-    x.sort_by(f64::total_cmp);
+    mzlab_core::sortc::slice_by(&mut x, f64::total_cmp);
     let n = x.len();
     if n % 2 == 1 {
         x[n / 2]
@@ -33,7 +33,7 @@ pub fn mediana(v: &[f64]) -> f64 {
 /// Interquartile range (linear interpolation between order statistics).
 pub fn iqr(v: &[f64]) -> f64 {
     let mut x: Vec<f64> = v.to_vec();
-    x.sort_by(f64::total_cmp);
+    mzlab_core::sortc::slice_by(&mut x, f64::total_cmp);
     let q = |p: f64| {
         let r = p * (x.len().saturating_sub(1)) as f64;
         let (a, b) = (r.floor() as usize, r.ceil() as usize);

@@ -38,7 +38,7 @@ pub fn ns_per_op(mut f: impl FnMut()) -> f64 {
                 }
                 v.push(t.elapsed().as_secs_f64() / n as f64);
             }
-            v.sort_by(f64::total_cmp);
+            mzlab_core::sortc::slice_by(&mut v, f64::total_cmp);
             return v[1] * 1e9;
         }
         n *= 2;

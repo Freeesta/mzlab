@@ -218,13 +218,12 @@ pub fn pacchetto(out: &mut Vec<u8>, p: &Parametri, k: usize, mut verita: Option<
     out.extend_from_slice(&nodi);
 }
 
+/// The offset table (offset, length), the bytes written and the SHA-256 of the file when asked.
+pub type Generato = (Vec<(u64, u32)>, u64, Option<String>);
+
 /// Writes the case to `path`: a table of (offset, length) of the packets, then the packets. Returns the table, the bytes and the SHA-256 of the file
 /// (`con_sha`: it costs a pass of the file).
-pub fn genera(
-    path: &Path,
-    p: &Parametri,
-    con_sha: bool,
-) -> std::io::Result<(Vec<(u64, u32)>, u64, Option<String>)> {
+pub fn genera(path: &Path, p: &Parametri, con_sha: bool) -> std::io::Result<Generato> {
     let mut f = BufWriter::with_capacity(4 << 20, File::create(path)?);
     let mut sha = Sha256::new();
     let mut scrivi = |f: &mut BufWriter<File>, b: &[u8]| -> std::io::Result<()> {
