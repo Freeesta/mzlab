@@ -10,13 +10,26 @@ use opentfraw::{iter_spectra, Polarity, RawFileReader, ScanMode, SpectrumRecord}
 use crate::error::{Error, Result};
 use crate::mzml::{Run, Spectrum};
 
-/// Maps an OpenTFRaw error to the key the page shows: a format version the reader does not know has its own message (`err.file.rawVersion`); anything else
-/// keeps the generic `err.file.raw` with the reader's text.
+/// Maps an OpenTFRaw error to the key the page shows: a format version the reader does not know has its own message (`err.file.rawVersion`), so has a file that
+/// stops before its scans (`err.file.rawTruncated`); anything else keeps the generic `err.file.raw` with the reader's text, which names the structure, the
+/// format version and the file size.
 pub fn thermo_error(e: &opentfraw::Error) -> Error {
     match e {
         opentfraw::Error::UnsupportedVersion(v) => {
             Error::new("err.file.rawVersion").with("version", v)
         }
+        opentfraw::Error::Truncated {
+            stage,
+            file_len,
+            needed,
+            readable,
+            declared,
+        } => Error::new("err.file.rawTruncated")
+            .with("stage", stage)
+            .with("size", file_len)
+            .with("needed", needed)
+            .with("readable", readable)
+            .with("declared", declared),
         _ => Error::new("err.file.raw").with("detail", e),
     }
 }

@@ -171,6 +171,24 @@ fn trailer_warning(raw: &RawFileReader) -> Vec<Option<V>> {
         .collect()
 }
 
+/// What `RawFileReader::open` left out or assumed: a cut file, a version that was read with another layout, a structure that could not be read.
+fn open_warnings(raw: &RawFileReader) -> Vec<Option<V>> {
+    raw.warnings
+        .iter()
+        .map(|w| {
+            let key = match w {
+                opentfraw::Warning::Truncated { .. } => "meta.troncato",
+                opentfraw::Warning::UnverifiedVersion { .. } => "meta.versioneNonVerificata",
+                opentfraw::Warning::Skipped { .. } => "meta.nonDecodificato",
+            };
+            obj(vec![
+                ("chiave", Some(V::s(key))),
+                ("dove", Some(V::s(w.text()))),
+            ])
+        })
+        .collect()
+}
+
 /// The warning that the status log is there and was not decoded.
 fn status_warning(raw: &RawFileReader) -> Vec<Option<V>> {
     let missing = raw.status_log.is_none() && raw.run_header.sample_info.inst_log_length > 0;
@@ -295,6 +313,7 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
     });
     warn.extend(status_warning(raw));
     warn.extend(trailer_warning(raw));
+    warn.extend(open_warnings(raw));
     let (exps, settings) = experiments_of(&blocks, &items, &mut warn);
     if rivelatori::has_3d_field(&blocks) {
         warn.push(obj(vec![

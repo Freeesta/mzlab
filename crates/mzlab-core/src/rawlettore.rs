@@ -368,6 +368,21 @@ impl Lettore for LettoreRaw {
         cromatogramma_di(self, id)
     }
 
+    fn mancanti(&mut self, _c: usize) -> usize {
+        self.raw
+            .warnings
+            .iter()
+            .map(|w| match w {
+                opentfraw::Warning::Truncated {
+                    scans_declared,
+                    scans_readable,
+                    ..
+                } => scans_declared.saturating_sub(*scans_readable) as usize,
+                _ => 0,
+            })
+            .sum()
+    }
+
     fn metodo(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
         Ok(crate::raw::metodo_of(&self.raw, &mut self.src, &self.nome))
