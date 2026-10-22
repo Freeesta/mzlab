@@ -36,7 +36,7 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1900})
         pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); attendi(pg, "window.qqReady === true")
         pg.set_input_files("#pick", [str(F)]); attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=1", 180000)
-        pg.click("text=Load data"); attendi(pg, "E.files.length>=1", 90000); pg.wait_for_timeout(1500)
+        pg.click("text=Load data"); attendi(pg, "E.files.length>=1", 90000)
         attendi(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
         pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
         pg.evaluate(STAND_IN, [FX, RX]); drawer(pg, "gra"); pg.wait_for_selector(".ig-node", timeout=30000)
