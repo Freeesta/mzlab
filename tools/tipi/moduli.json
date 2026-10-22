@@ -58,6 +58,7 @@
     "../../mzlab/web/infusione-grafo-svg.js",
     "../../mzlab/web/infusione-grafo-mol.js",
     "../../mzlab/web/msngrafo-vista.js",
+    "../../mzlab/web/msngrafo-immagine.js",
     "../../mzlab/web/lr-map.js",
     "../../mzlab/web/lr-method.js",
     "../../mzlab/web/lr-origin.js",

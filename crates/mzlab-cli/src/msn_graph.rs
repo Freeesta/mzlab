@@ -22,6 +22,7 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
        mzlab-cli msn-graph FILE.mzML --formula ION --verita TRUTH.json --riassunto
        mzlab-cli msn-graph compare A.json B.json [--out PATH]
        mzlab-cli msn-graph complete IN.json [--out PATH]
+       mzlab-cli msn-graph figure IN.json [--figura svg,html,png] [--vista albero|radiale] [--out STEM]
 
   --formula ION        the ion of the root: C13H25N4O3S+, C13H24N4O3S+H or \"C13H24N4O3S [M+H]+\"; without it, masses only
   --smiles TEXT        written back in the JSON; with --strutture, the structure that is cleaved
@@ -49,8 +50,12 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
   --pulito             with --export: only the peaks a node of the graph explains
   --nodo ID            with --export: nK = the spectra of which node nK of the graph is the precursor; msn:<id> or <id> = those of that node of
                        the tree; tutto = all
+  --figura LIST        with --out: also write the figures of the graph next to it (g.json → g.svg, g.html, g.png): svg, html (one file, no external
+                       resource, two views, data table) and png (only in a build with the cargo feature `png`)
+  --vista V            the view the figures open on: albero (default) or radiale
   --out PATH           write there instead of the standard output
 
+  figure               the figures of a graph already made (after `complete` if it has no `vista`): STEM.svg and STEM.html, STEM.png with --figura
   complete             adds the key `vista` (levels, best path, tree and radial layout) to an msngrafo/1 that has not got it, with the bytes the engine writes
   compare              validates a tree measured twice: two msngrafo/1 files in, a JSON (msnconfronto/1) out with the numbers of the five criteria
                        (isolated nodes, arcs of rel >= 10 %, formulas, MS2 entropy >= 0.8 per energy, m/z shift <= 3 ppm) and `convalidata`";
@@ -66,6 +71,8 @@ pub struct Args {
     export: Option<(Formato, bool, Option<String>)>,
     strutture: Option<(String, f64)>,
     interpreta: Option<f64>,
+    figura: Vec<crate::msn_uscite::Formato>,
+    vista: crate::msn_figura::Vista,
     pub out: Option<PathBuf>,
 }
 
@@ -84,6 +91,7 @@ pub fn parse_args(
     let (mut strutture, mut ppm_struttura) = (None, PPM_STRUTTURA);
     let (mut interpreta, mut ppm_perdita) = (false, PPM_PERDITA);
     let (mut regole, mut regole_p) = (false, ParamRegole::default());
+    let (mut figura, mut vista) = (Vec::new(), crate::msn_figura::Vista::Albero);
     while let Some(x) = a.next() {
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
@@ -121,12 +129,20 @@ pub fn parse_args(
             "--cutoff-q" => regole_p.cutoff_q = numero(a.next(), &x)?,
             "--toll-perdita-mda" => regole_p.toll_mda = numero(a.next(), &x)?,
             "--ppm-struttura" => ppm_struttura = numero(a.next(), &x)?,
+            "--figura" => figura = crate::msn_uscite::formati(&a.next().unwrap_or_default())?,
+            "--vista" => {
+                vista = crate::msn_figura::Vista::da_nome(&a.next().unwrap_or_default())
+                    .ok_or("--vista needs albero or radiale")?
+            }
             "--out" => out = a.next().map(PathBuf::from),
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),
             f => return Err(format!("unknown argument {f}")),
         }
     }
     let file = file.ok_or("an infusion file is needed")?;
+    if !figura.is_empty() && (out.is_none() || riassunto || export.is_some() || strutture.is_some()) {
+        return Err("--figura needs --out and the graph itself (not --riassunto, --export or --strutture)".into());
+    }
     if riassunto && verita.is_none() {
         return Err("--riassunto needs --verita".into());
     }
@@ -142,6 +158,8 @@ pub fn parse_args(
         export,
         strutture,
         interpreta,
+        figura,
+        vista,
         out,
     }))
 }
@@ -322,4 +340,13 @@ pub fn esegui(a: &Args, tmp: &Path) -> Result<String> {
     let v =
         std::fs::read_to_string(a.verita.as_ref().expect("checked by parse_args")).map_err(io)?;
     riassunto(&g, &v)
+}
+
+/// With `--figura`: writes the figures of the graph text `graph` next to the file of `--out`; the lines for the standard output (the files made).
+pub fn figure_files(a: &Args, graph: &str) -> std::result::Result<String, String> {
+    let Some(out) = a.out.as_ref().filter(|_| !a.figura.is_empty()) else {
+        return Ok(String::new());
+    };
+    let made = crate::msn_uscite::scrivi(graph, &a.figura, a.vista, &out.with_extension("")).map_err(|e| e.to_string())?;
+    Ok(made.iter().map(|p| format!("{}\n", p.display())).collect())
 }

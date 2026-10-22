@@ -63,6 +63,7 @@ mod flow_match;
 mod flow_match_tests;
 mod flow_match_tree;
 mod flow_ms2;
+mod flow_msnfigura;
 mod flow_msngraph;
 mod flow_msnlib;
 #[cfg(test)]
@@ -103,7 +104,11 @@ mod flow_tablematch;
 mod flow_tablematch_tests;
 pub mod llm;
 mod llm_ctx;
+pub mod msn_figura;
 pub mod msn_graph;
+pub mod msn_html;
+mod msn_png;
+pub mod msn_uscite;
 mod msn_graph_compare;
 mod msn_lib;
 mod msn_rules;
@@ -283,6 +288,12 @@ fn msn_graph_cmd(args: impl Iterator<Item = String>) -> Outcome {
             Err(e) => Outcome::fail(&e),
         };
     }
+    if args.next_if(|a| a == "figure").is_some() {
+        return match msn_uscite::figure_cmd(args) {
+            Ok(t) => Outcome::ok(t.into_bytes()),
+            Err(e) => Outcome::fail(&e),
+        };
+    }
     let a = match msn_graph::parse_args(args) {
         Ok(Some(a)) => a,
         Ok(None) => return Outcome::ok(format!("{}\n", msn_graph::HELP).into_bytes()),
@@ -298,7 +309,14 @@ fn msn_graph_cmd(args: impl Iterator<Item = String>) -> Outcome {
     let _ = std::fs::remove_dir_all(&tmp);
     match r {
         Err(e) => Outcome::fail(&e.to_string()),
-        Ok(t) => emit(t, &a.out),
+        Ok(t) => match msn_graph::figure_files(&a, &t) {
+            Err(e) => Outcome::fail(&e),
+            Ok(files) => {
+                let mut o = emit(t, &a.out);
+                o.stdout.extend(files.into_bytes());
+                o
+            }
+        },
     }
 }
 
@@ -475,6 +493,8 @@ mod msn_graph_compare_tests;
 mod msn_graph_strutture_tests;
 #[cfg(test)]
 mod msn_graph_tests;
+#[cfg(test)]
+mod msn_figura_tests;
 #[cfg(test)]
 mod msn_lib_tests;
 #[cfg(test)]
