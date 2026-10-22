@@ -6220,3 +6220,4 @@
 {"v":1,"ts_utc":"2026-10-22T15:35:08Z","tipo":"conflitto","pr":1509,"sha":"5afdd1ee042ef060124b0884e08ef2e9cd4b050a","pr_unita":1506,"file_comuni":["flow/js/flow-tool.js","tools/tipi/pagina.json"],"n_file_comuni":2,"file_conflitto":["flow/js/flow-tool.js"]}
 {"v":1,"ts_utc":"2026-10-22T15:35:11Z","tipo":"carico","k":"2026-10-22T15:3","job_in_coda":0,"job_in_corso":18}
 {"v":1,"ts_utc":"2026-10-22T15:36:50Z","azione":"push","titolo":"Fondi main in flow-ui-xlsx","merge_main":false,"aree":{"altro":6,"rust":5,"docs":3,"test":1,"tools":1},"tipo":"pr","pr":1509,"sha":"9b83d20e38ccfbd28dcf82046ff2eb573a19749d"}
+{"v":1,"ts_utc":"2026-10-22T15:41:02Z","azione":"aperta","tipo":"pr","pr":1510,"sha":"512796bf4475cf60fdd20eee80b58f03c9ca70de"}
