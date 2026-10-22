@@ -35,11 +35,17 @@
     };
   };
 
-  /** the tables of a graph under `host` @param {HTMLElement} host @param {any} g @param {string} label */
+  /** the graph (when the page can draw it) and its tables under `host`, one view at a time @param {HTMLElement} host @param {any} g @param {string} label */
   F.openMsnGraph = (host, g, label) => {
+    const { el } = F, graph = el("div"), tables = el("div"), bar = el("div", { class: "flx-seg" });
+    const show = (/** @type {boolean} */ gr) => { graph.hidden = !gr; tables.hidden = gr; for (const b of bar.children) b.setAttribute("aria-pressed", String((b.textContent === "Graph") === gr)); };
+    for (const [name, gr] of /** @type {[string, boolean][]} */ ([["Graph", true], ["Tables", false]])) bar.append(el("button", { type: "button", "aria-pressed": "false", onclick: () => show(gr), text: name }));
+    host.append(bar, graph, tables);
+    if (F.msnGraphView) F.msnGraphView(graph, g, label);
+    show(!!F.msnGraphView);
     const t = F.readMsnGraph(g);
-    if (!t.modifications.rows.length) host.append(F.el("p", { class: "fl-note", text: `${label} has no modifications: the graph has no neutral loss between its ions.` }));
-    else F.drawTable(host, { caption: `${label}, modifications`, head: t.modifications.head, rows: t.modifications.rows, label: `Modifications of ${label}` });
-    if (t.nodes.rows.length) F.drawTable(host, { caption: `${label}, ions`, head: t.nodes.head, rows: t.nodes.rows, label: `Ions of ${label}` });
+    if (!t.modifications.rows.length) tables.append(el("p", { class: "fl-note", text: `${label} has no modifications: the graph has no neutral loss between its ions.` }));
+    else F.drawTable(tables, { caption: `${label}, modifications`, head: t.modifications.head, rows: t.modifications.rows, label: `Modifications of ${label}` });
+    if (t.nodes.rows.length) F.drawTable(tables, { caption: `${label}, ions`, head: t.nodes.head, rows: t.nodes.rows, label: `Ions of ${label}` });
   };
 })();

@@ -21,6 +21,8 @@ pub(crate) const JSONL_MARK: &str = "\u{1}jsonl";
 pub(crate) struct Style {
     pub json: bool,
     pub jsonl: bool,
+    /// `--jsonl`: the `flowlive/1` events of the run on stdout.
+    pub events: bool,
 }
 
 fn params_obj(o: &mut Out, params: &[(&str, String)]) {
@@ -344,7 +346,7 @@ fn check_plan(path: &str, sets: &[String], reg: &[Step], st: Style) -> Result<Pl
 pub(crate) fn check(args: Vec<String>) -> Outcome {
     let st = Style {
         json: args.iter().any(|a| a == "--json"),
-        jsonl: false,
+        ..Style::default()
     };
     let (path, sets) = match check_args(args, st) {
         Ok(r) => r,

@@ -9,13 +9,14 @@ use super::order::levels;
 use super::prov::{Activity, ErrorRecord, Mem};
 use super::{FileInput, Instance, Plan, Ref};
 use crate::error::{Error, Result};
+use crate::flow::sched::JobId;
 use crate::json::Value;
 use crate::step::{DataType, Step};
 
 #[path = "run_sched.rs"]
 mod live;
 
-pub use live::file_roots;
+pub use live::{file_roots, work, Core, Ctx, Hooks, Results};
 
 /// A file the plan reads or a step made, identified by its content.
 #[derive(Debug, Clone, PartialEq)]
@@ -276,8 +277,19 @@ pub fn execute(plan: &Plan, registry: &[Step], runner: &dyn Runner, workers: usi
             .with("instance", &p.instance)
             .with("error_key", p.error_key));
     }
+    let (ids, results) = live::run_jobs(plan, registry, runner, workers)?;
+    record(plan, registry, &ids, results)
+}
+
+/// The record of a run: what the jobs `results` made, written level by level in the order of the plan, so it does not depend on who finished first.
+/// `ids` are the jobs of each instance, in the order of its items.
+pub fn record(
+    plan: &Plan,
+    registry: &[Step],
+    ids: &[Vec<JobId>],
+    mut results: Results,
+) -> Result<Run> {
     let waves = levels(plan)?;
-    let (ids, mut results) = live::run_jobs(plan, registry, runner, workers)?;
     let mut run = Run::default();
     let mut done: Vec<Option<Made>> = vec![None; plan.steps.len()];
     for wave in waves {
