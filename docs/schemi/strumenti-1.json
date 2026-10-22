@@ -499,6 +499,7 @@
                   "min_points",
                   "max_gap",
                   "long_trace",
+                  "merge_overlap",
                   "ppm",
                   "peak_width_s",
                   "snr",
@@ -530,6 +531,13 @@
                     "minimum":1,
                     "default":400,
                     "description":"A trace longer than this is background and is not taken"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0,
+                    "description":"Two rows of the two grids within the mass tolerance are one ion when their scans overlap by this share of the shorter trace; 0 keeps only the test of apex and edges"
                   },
                   {"type":"number","minimum":0,"default":25,"description":"m/z deviation"},
                   {

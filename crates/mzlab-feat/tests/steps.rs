@@ -56,6 +56,7 @@ fn perturbed() -> Recipe {
     r.detect.min_points += 1;
     r.detect.max_gap += 1;
     r.detect.long_trace += 1;
+    r.detect.merge_overlap = 0.5;
     r.detect.axis = MassAxis::Da { defect: 0.25 };
     r.mode = Mode::Ion;
     r.align.ion.ppm *= 3.0;
