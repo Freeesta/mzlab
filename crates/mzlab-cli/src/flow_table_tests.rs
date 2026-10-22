@@ -128,3 +128,20 @@ fn campioni_2_gives_the_same_view_and_a_rule_that_cannot_be_read_fails() {
     assert!(run(&d, r#"{"blank_ratio":3}"#).is_err());
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn the_duplicate_window_keeps_the_strongest_row_and_matches_the_page() {
+    let d = dir("dup");
+    let (t, s) = (table(), samples::to_json(&propose(&files())));
+    std::fs::write(d.join("table.mzfeat"), &t).unwrap();
+    std::fs::write(d.join("samples.json"), &s).unwrap();
+    // a window wide enough to hold the four rows leaves the row with the largest area
+    let got = run(&d, r#"{"dup_ppm":1000000,"dup_rt":10}"#).unwrap();
+    let spec = r#"{"filtra":[{"regola":"duplicati","ppm":1000000,"rt_min":10}]}"#;
+    assert_eq!(got, page(&t, &s, spec));
+    assert!(got.contains("\"tenute\":1"), "{got}");
+    // the window alone, with the default RT distance of 0.1 min, drops nothing here
+    let few = run(&d, r#"{"dup_ppm":5}"#).unwrap();
+    assert!(few.contains("\"tenute\":4"), "{few}");
+    let _ = std::fs::remove_dir_all(&d);
+}
