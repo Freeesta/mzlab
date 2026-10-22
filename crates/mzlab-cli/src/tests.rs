@@ -173,7 +173,7 @@ fn the_convert_step_writes_an_indexed_mzml_the_table_step_reads() {
         run.skipped.is_empty() && !prov.contains("\"error\""),
         "{prov}"
     );
-    let out = std::fs::read(work.join("c-0.mzML")).unwrap();
+    let out = std::fs::read(work.join("c-a.mzML")).unwrap();
     let t = String::from_utf8_lossy(&out);
     assert!(t.contains("<indexedmzML ") && t.contains("version=\"4.2.6\""));
     let back = mzlab_core::mzml::read(&out[..]).unwrap();

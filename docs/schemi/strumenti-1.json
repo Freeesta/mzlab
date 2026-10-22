@@ -32,6 +32,7 @@
           "spectra.centroid",
           "spectra.chimeric",
           "spectra.insilico",
+          "spectra.lookup",
           "spectra.match",
           "spectra.ms2",
           "spectra.msn_graph",
@@ -87,6 +88,7 @@
               "spectra.centroid@1",
               "spectra.chimeric@1",
               "spectra.insilico@1",
+              "spectra.lookup@1",
               "spectra.match@1",
               "spectra.ms2@1",
               "spectra.msn_graph@1",
@@ -177,6 +179,7 @@
               "spectra.centroid@1",
               "spectra.chimeric@1",
               "spectra.insilico@1",
+              "spectra.lookup@1",
               "spectra.match@1",
               "spectra.ms2@1",
               "spectra.msn_graph@1",
@@ -952,6 +955,40 @@
                     "type":"boolean",
                     "default":false,
                     "description":"On: every candidate also carries score_terms, its score as the share of each explained peak and the key of its formula in the Theory; the scores themselves do not change"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"spectra.lookup@1"},
+              "name":{"enum":["by","value","exact","ppm","top_n"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "enum":["name","formula","inchikey","accession","precursor_mz"],
+                    "default":"name",
+                    "description":"The field of the library entries that value is compared with; precursor_mz takes a number and the window ppm"
+                  },
+                  {"type":"string","description":"The text to find (for precursor_mz, the m/z); required"},
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"By name: the name must be the whole value, not only contain it (any case); the other fields are always compared whole"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"By precursor_mz: the entries whose precursor is this close to the value"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":50,
+                    "description":"The first entries in the order of the library; the rest are not written"
                   }
                 ]
               }

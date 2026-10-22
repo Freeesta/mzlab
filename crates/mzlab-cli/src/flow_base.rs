@@ -38,7 +38,7 @@ fn item_path(r: &FileRunner, job: &Job) -> PathBuf {
 }
 
 pub(crate) fn out_path(r: &FileRunner, job: &Job, ext: &str) -> PathBuf {
-    match job.item {
+    match &job.item_root {
         Some(k) => r.work.join(format!("{}-{k}.{ext}", job.instance.id)),
         None => r.work.join(format!("{}.{ext}", job.instance.id)),
     }
@@ -270,9 +270,9 @@ pub(crate) fn align_mem(r: &FileRunner, job: &Job) -> Option<Mem> {
     })
 }
 
-/// The file `convert.mzml` writes in the work folder for item `item` of the instance `instance`.
-pub(crate) fn convert_file(instance: &str, item: usize) -> String {
-    format!("{instance}-{item}.mzML")
+/// The file `convert.mzml` writes in the work folder for the input whose file-name root is `root` (`Job::item_root`) of the instance `instance`.
+pub(crate) fn convert_file(instance: &str, root: &str) -> String {
+    format!("{instance}-{root}.mzML")
 }
 
 /// A parameter of the job as a number, `default` when the plan does not carry it.
@@ -294,9 +294,10 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
             .any(|(k, v)| k == "numpress" && v.bool() == Some(true)),
         ..Opzioni::default()
     };
-    let out = r
-        .work
-        .join(convert_file(&job.instance.id, job.item.unwrap_or(0)));
+    let out = r.work.join(convert_file(
+        &job.instance.id,
+        job.item_root.as_deref().unwrap_or("0"),
+    ));
     let peaks = match job
         .resolved
         .params
@@ -325,6 +326,19 @@ pub(crate) fn write_mzml(
     peaks: Picchi,
     opz: Opzioni,
 ) -> Result<bool> {
+    write_mzml_with(path, label, out, peaks, opz, &mut |_, _| {})
+}
+
+/// `write_mzml` telling `step(done, total)` how many scans it has written, at most once per 1 %; the file is the same with any `step`.
+pub(crate) fn write_mzml_with(
+    path: &Path,
+    label: Option<&str>,
+    out: &Path,
+    peaks: Picchi,
+    opz: Opzioni,
+    step: &mut dyn FnMut(usize, usize),
+) -> Result<bool> {
+    let mut pace = mzlab_core::pace::Pace::new(step);
     let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limiti::desktop())?;
     let ids: Vec<u32> = reader.campioni().iter().map(|s| s.id).collect();
     let sample = crate::flow_set::sample_index(label.unwrap_or(""), &ids)?;
@@ -338,8 +352,10 @@ pub(crate) fn write_mzml(
         steps: Some(&[]),
     };
     let written = File::create(out).map_err(io).and_then(|f| {
-        conv.scrivi(&mut *reader, sample, BufWriter::new(f), &mut |_, _| {})
-            .and_then(|mut w| w.flush().map_err(io))
+        conv.scrivi(&mut *reader, sample, BufWriter::new(f), &mut |d, t| {
+            pace.at(d, t)
+        })
+        .and_then(|mut w| w.flush().map_err(io))
     });
     if let Err(e) = written {
         let _ = std::fs::remove_file(out);
