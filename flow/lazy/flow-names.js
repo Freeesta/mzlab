@@ -16,7 +16,7 @@
   F.NAMES = {
     "import.raw": ["Import raw files", "input", "Reads the instrument files you chose."],
     "convert.mzml": ["Convert to mzML", "input", "Writes the spectra in an open format other tools can read."],
-    "index.mzidx": ["Import data", "input", "Reads your files once and keeps a fast index, so later steps open only the scans they need."],
+    "index.mzidx": ["Import data", "input", "Reads your files once and keeps a fast index."],
     "features.estimate": ["Estimate settings", "process", "Measures the noise and peak width of your files and proposes settings."],
     "features.detect": ["Find features", "process", "Finds the peaks that rise above the noise in each file."],
     "features.align": ["Align samples", "process", "Lines up the same compound across files, correcting small shifts in time."],
@@ -47,7 +47,7 @@
   /** the base: always present, configurable, never removable. The first entry is also the node that holds the raw files */
   F.BASE = [
     { key: "import", title: "Import data", why: F.NAMES["index.mzidx"][2], steps: ["index.mzidx"] },
-    { key: "table", title: "Build feature table", why: "Finds the peaks in every file, lines them up across files and fills the gaps: one table, one row per compound.", steps: ["features.detect", "features.align", "features.gapfill"] },
+    { key: "table", title: "Build feature table", why: "Finds peaks in every file, aligns them and fills gaps: one row per compound.", steps: ["features.detect", "features.align", "features.gapfill"] },
   ];
   /** the analyses a user adds to the base */
   F.ADDONS = [

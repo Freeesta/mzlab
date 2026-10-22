@@ -12,6 +12,14 @@
     return ports.children.length ? ports : null;
   };
 
+  /** the files open in the Data tab, as the Import data card shows them: «No file loaded» with a way to Data, or the count and the first names @param {any} el */
+  const dataState = el => {
+    const open = typeof E !== "undefined" && Array.isArray(E.files) ? E.files.filter((/** @type {any} */ f) => f && !f.gone && f.file) : [];
+    if (!open.length) return el("p", { class: "fl-note fl-data" }, el("span", { text: "No file loaded. " }), F.btn("import", "Go to the Data tab to open files", () => { const b = document.querySelector('#nav [data-v="data"]'); if (b) /** @type {HTMLElement} */ (b).click(); }, "Open Data"));
+    const names = [...new Set(open.map((/** @type {any} */ f) => String(f.file).split("#")[0]))];
+    return el("p", { class: "fl-note fl-data", text: `${names.length} file${names.length > 1 ? "s" : ""} in Data: ${names.slice(0, 3).join(", ")}${names.length > 3 ? ", …" : ""}` });
+  };
+
   /** @param {any} S state {plan, reg, problems} @param {any | null} node @param {{simple: boolean, done: (focus?: string) => void, select: (key: string) => void, remove: (node: any) => void, model: any}} c */
   F.inspector = (S, node, c) => {
     const { el, icon } = F;
@@ -19,13 +27,14 @@
     const cat = F.CATS[node.cat], probs = F.nodeProblems(S, node);
     const box = el("div", { class: "fl-insp", style: `--cc:${cat.color}` },
       el("div", { class: "fl-insp-hd" }, el("span", { class: "fln-ic" }, icon(cat.icon, 20)), el("h3", { text: node.title }), el("span", { class: "fl-pk", text: cat.word }), (node.ids || []).length && F.theoryLink ? F.theoryLink(((F.instanceOf(S.plan, node.ids[0]) || {}).step) || "") : null),
-      el("p", { class: "fl-insp-why" }, el("strong", { text: "What this step does. " }), node.why));
+      el("p", { class: "fl-insp-why", text: node.why }));
     if (probs.length) {
       const ul = el("ul", { class: "fl-needs", "aria-label": "What this step needs" });
       probs.forEach((/** @type {any} */ p) => ul.append(el("li", {}, icon("warn", 14), el("span", { text: p.text }),
         p.fix ? el("button", { type: "button", class: "fl-b fl-fix", onclick: () => { p.fix.run(); c.done(); } }, icon("plus", 14), el("span", { text: p.fix.label })) : null)));
       box.append(ul);
-    } else box.append(el("p", { class: "fl-ready" }, icon("ok", 14), " Ready."));
+    }
+    if (node.key === "import") box.append(dataState(el));
     if (node.kind === "input") { box.append(node.file && node.file.type === "samples" && F.samplesEditor ? F.samplesEditor(S, node.file) : el("p", { class: "fl-note", text: "The file is chosen when the plan is run." }));
       if (!c.simple) box.append(F.btn("x", `Remove ${node.title}`, () => c.remove(node), "Remove")); return box; }
     for (const id of node.ids) {
@@ -41,9 +50,8 @@
     const near = c.model.edges.filter((/** @type {string[]} */ e) => e.includes(node.key)), byKey = new Map(c.model.nodes.map((/** @type {any} */ n) => [n.key, n]));
     const chips = (/** @type {string} */ label, /** @type {string[]} */ keys) => keys.length ? el("div", { class: "fl-meta" }, el("span", { class: "fl-note", text: label }),
       ...keys.map(k => el("button", { type: "button", class: "fl-chip fl-link", onclick: () => c.select(k) }, el("span", { text: /** @type {any} */ (byKey.get(k)).title })))) : null;
-    box.append(chips("Uses:", near.filter((/** @type {string[]} */ e) => e[1] === node.key).map((/** @type {string[]} */ e) => e[0])), chips("Feeds into:", near.filter((/** @type {string[]} */ e) => e[0] === node.key).map((/** @type {string[]} */ e) => e[1])));
-    if (node.locked) box.append(el("p", { class: "fl-note", text: "This is part of the base. You can change its settings but not remove it." }));
-    else box.append(F.btn("x", `Remove ${node.title}`, () => c.remove(node), "Remove step"));
+    for (const row of [chips("From", near.filter((/** @type {string[]} */ e) => e[1] === node.key).map((/** @type {string[]} */ e) => e[0])), chips("To", near.filter((/** @type {string[]} */ e) => e[0] === node.key).map((/** @type {string[]} */ e) => e[1]))]) if (row) box.append(row);
+    if (!node.locked) box.append(F.btn("x", `Remove ${node.title}`, () => c.remove(node), "Remove step"));
     return box;
   };
 })();

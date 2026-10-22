@@ -176,9 +176,16 @@ try:
         def inspector():
             pg.click('.fln:has-text("Match to library")')
             attendi(pg, "document.querySelector('.fl-insp h3') && document.querySelector('.fl-insp h3').textContent === 'Match to library'")
-            assert "What this step does" in pg.inner_text(".fl-insp") and pg.locator(".fl-insp button:has-text('Remove step')").count() == 1
+            assert "What this step does" not in pg.inner_text(".fl-insp") and "Ready." not in pg.inner_text(".fl-insp") and pg.locator(".fl-insp button:has-text('Remove step')").count() == 1
             pg.click('.fln:has-text("Import data")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Import data'")
-            assert pg.locator(".fl-insp button:has-text('Remove')").count() == 0 and "cannot remove" not in pg.inner_text(".fl-insp") and "part of the base" in pg.inner_text(".fl-insp")
+            assert pg.locator(".fl-insp button:has-text('Remove')").count() == 0 and "cannot remove" not in pg.inner_text(".fl-insp") and "part of the base" not in pg.inner_text(".fl-insp")
+            # no stray «null» (an empty neighbour row), and the Import card says what Data holds
+            txt = pg.inner_text(".fl-insp"); assert "null" not in txt.lower().split() and "Ready." not in txt and "No file loaded" in txt, txt
+            assert pg.locator(".fl-insp button:has-text('Open Data')").count() == 1
+            pg.evaluate("E.files.push({file: 'a.mzML', name: 'a'}, {file: 'b.mzML', name: 'b'})"); pg.click('.fln:has-text("Build feature table")'); pg.click('.fln:has-text("Import data")')
+            attendi(pg, "document.querySelector('.fl-insp .fl-data') && /files? in Data/.test(document.querySelector('.fl-insp .fl-data').textContent)")
+            assert "2 files in Data: a.mzML, b.mzML" in pg.inner_text(".fl-insp"), pg.inner_text(".fl-insp")
+            pg.evaluate("E.files.length = 0")
         step("canvas: the inspector explains the step; the base cannot be removed", inspector)
         def needs_and_fix():
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Regulatory lists")')
