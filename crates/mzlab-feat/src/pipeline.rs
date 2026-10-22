@@ -5,6 +5,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 
 use crate::isotopes::{group, IsoParams};
 use crate::ms2::{link, Ms2Links, Ms2Params};
+use crate::prof::time;
 use crate::quality::{assess, QParams};
 use crate::resolve::{assess_and_resolve, mark_mixtures, ResolveParams};
 use crate::table::FileFeatures;
@@ -49,15 +50,19 @@ pub fn analyse_with<R: ReadAt>(
     s: &Steps,
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<(FileFeatures, Ms2Links)> {
-    let mut f = detect_with(index, p, progress)?;
-    let multi = if s.split {
-        assess_and_resolve(index, &mut f, p, &s.quality, &s.resolve)?.multi
-    } else {
-        assess(index, &mut f, p, &s.quality)?;
-        Vec::new()
-    };
-    group(&mut f, &s.iso)?;
-    let links = link(index, &mut f, p, &s.ms2)?;
-    mark_mixtures(index, &mut f, &links, &multi, p, &s.resolve)?;
+    let mut f = time("detect: traces", || detect_with(index, p, progress))?;
+    let multi = time("detect: quality + resolve", || {
+        if s.split {
+            Ok(assess_and_resolve(index, &mut f, p, &s.quality, &s.resolve)?.multi)
+        } else {
+            assess(index, &mut f, p, &s.quality)?;
+            Ok::<_, mzlab_core::error::Error>(Vec::new())
+        }
+    })?;
+    time("detect: isotopes", || group(&mut f, &s.iso))?;
+    let links = time("detect: ms2 links", || link(index, &mut f, p, &s.ms2))?;
+    time("detect: mixtures", || {
+        mark_mixtures(index, &mut f, &links, &multi, p, &s.resolve)
+    })?;
     Ok((f, links))
 }

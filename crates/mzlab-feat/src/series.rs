@@ -31,7 +31,9 @@ pub fn analyse_file_with<R: ReadAt>(
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<FileFeatures> {
     let (mut f, links) = analyse_with(index, &r.detect, &r.steps, progress)?;
-    analyse_families(index, &mut f, &links, &r.detect, &r.fam)?;
+    crate::prof::time("detect: families", || {
+        analyse_families(index, &mut f, &links, &r.detect, &r.fam)
+    })?;
     Ok(f)
 }
 
