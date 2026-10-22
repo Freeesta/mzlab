@@ -6,7 +6,7 @@ use mzlab_core::step::{Algorithm, Applicability, Facets, RunsIn, Status, Step};
 
 pub(super) use super::ident_annot::{hazard, level, regulatory};
 pub(super) use super::ident_formula::{ms1, ms2, rt_predict};
-pub(super) use super::ident_spectra::{chimeric, insilico, match_spectra};
+pub(super) use super::ident_spectra::{chimeric, insilico, match_spectra, table_match};
 
 /// The fused `.wasm` of Attributio (manifest entries `attributio`, `attributio_rev`, `attributio_export`, `attributio_ms2`) and its fixed ceiling in
 /// bytes (`limit_attributio` of `tools/build_feat_wasm.sh`).
