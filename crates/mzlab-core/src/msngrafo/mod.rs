@@ -6,19 +6,25 @@
 mod annota;
 mod candidati;
 mod cerca;
+mod cerca_ms2;
 mod esporta;
 mod formule;
 mod interpreta;
 mod json;
 mod leggi;
+mod lib_export;
 mod libreria;
 mod posa;
 mod radice;
+mod regole;
+mod regole_valuta;
 mod rotta;
 mod strutture;
+mod tabelle;
 mod unisci;
 
 pub use cerca::{cerca, opzioni_da_richiesta as opzioni_cerca, Opzioni as OpzioniCerca};
+pub use cerca_ms2::{cerca_ms2, Ms2Hit};
 pub use esporta::{da_richiesta_export, esporta, Formato};
 pub use interpreta::{
     con_interpretazione, interpreta, interpretazione_json, perdite_note, InterpArco, PerditaArco,
@@ -26,13 +32,19 @@ pub use interpreta::{
 };
 pub use json::json;
 pub use leggi::{leggi, Letto};
+pub use lib_export::{export_text, Formato as LibFormato};
 pub use libreria::aggiungi;
 pub use radice::{candidati_radice, CandidatoRadice};
+pub use regole::{leggi_tabella, tabella as tabella_regole, Regola, Tabella};
+pub use regole_valuta::{
+    con_regole, regole_json, valuta as valuta_regole, ParamRegole, Valutazione,
+};
 pub use rotta::{da_richiesta, grafo_json};
 pub use strutture::{
     con_strutture, strutture_json, CandidatoStruttura, IngressoStrutture, PiccoSpiegato, Strutture,
     Taglio,
 };
+pub use tabelle::{library_text, table_text};
 
 use crate::msnalbero::Albero;
 
@@ -63,6 +75,8 @@ pub struct Opzioni {
     pub prove_min: usize,
     /// Formulas chosen by the user among the candidates: (m/z of the node, formula of the ion).
     pub scelte: Vec<(f64, String)>,
+    /// The rules of `fragrules/1` (key `regole` and the evidence `regola` of the candidates); `None` = off.
+    pub regole: Option<ParamRegole>,
 }
 
 impl Default for Opzioni {
@@ -81,6 +95,7 @@ impl Default for Opzioni {
             ppm_basso: 20.0,
             prove_min: 1,
             scelte: vec![],
+            regole: None,
         }
     }
 }
@@ -299,3 +314,5 @@ mod tests_cerca;
 mod tests_formule;
 #[cfg(test)]
 mod tests_interpreta;
+#[cfg(test)]
+mod tests_regole;

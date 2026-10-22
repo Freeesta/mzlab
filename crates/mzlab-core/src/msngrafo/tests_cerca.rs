@@ -227,3 +227,23 @@ fn a_tree_scores_one_against_itself_when_two_spectra_share_shape_and_energy() {
     );
     assert!((score(c, "ms2").unwrap() - 1.0).abs() < 1e-9);
 }
+
+#[test]
+fn an_ms2_of_a_feature_finds_the_entry_at_its_precursor() {
+    let lib = library(&[
+        ("A", &graph(305.1, 1, &MS2, &[]), 1),
+        ("B", &graph(350.2, 1, &MS2, &[]), 1),
+        ("N", &graph(305.1, -1, &MS2, &[]), -1),
+    ]);
+    let hits = super::cerca_ms2(&lib, 305.1, true, &MS2, 10.0, 0.01, 3).unwrap();
+    // B is at another precursor, N has the other polarity
+    assert_eq!(hits.len(), 1);
+    assert_eq!((hits[0].id.as_str(), hits[0].shared), ("A", 3));
+    assert!(hits[0].entropy > 0.99);
+    // too few shared peaks: nothing
+    assert!(
+        super::cerca_ms2(&lib, 305.1, true, &[(100.0, 1.0)], 10.0, 0.01, 3)
+            .unwrap()
+            .is_empty()
+    );
+}

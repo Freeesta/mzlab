@@ -98,3 +98,50 @@ fn the_cleavages_of_a_node_are_a_parameter_of_the_step() {
     assert!(got.contains("\"strutture\":{"));
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn the_interpretation_of_the_losses_is_a_parameter_of_the_step() {
+    let d = dir("d");
+    let got = graph(
+        &d,
+        r#"{"formula":"C14H15N3O5+","interpreta":true,"ppm_perdita":5}"#,
+    )
+    .unwrap();
+    let want = cli(&[
+        "--formula",
+        "C14H15N3O5+",
+        "--interpreta",
+        "--ppm-perdita",
+        "5",
+    ]);
+    assert_eq!(got, want);
+    assert!(got.contains("\"interpretazione\":{\"versione\":1,\"ppm\":5,"));
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn the_rules_are_a_parameter_of_the_step_and_without_them_the_bytes_do_not_change() {
+    let d = dir("r");
+    let got = graph(
+        &d,
+        r#"{"formula":"C14H15N3O5+","regole":true,"cutoff_q":0.3,"toll_perdita_mda":2}"#,
+    )
+    .unwrap();
+    let want = cli(&[
+        "--formula",
+        "C14H15N3O5+",
+        "--regole",
+        "--cutoff-q",
+        "0.3",
+        "--toll-perdita-mda",
+        "2",
+    ]);
+    assert_eq!(got, want);
+    assert!(
+        got.contains("\"regole\":{\"versione\":1,\"tabella\":\"fragrules/1\",\"cutoff_q\":0.3,")
+    );
+    let senza = graph(&d, r#"{"formula":"C14H15N3O5+"}"#).unwrap();
+    assert_eq!(senza, cli(&["--formula", "C14H15N3O5+"]));
+    assert!(!senza.contains("\"regole\""));
+    let _ = std::fs::remove_dir_all(&d);
+}

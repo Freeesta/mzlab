@@ -1,6 +1,6 @@
 //! Plans of `spectra.match` beyond the first algorithms (unit-resolution window, decoys on an `.mzlib`, name filter) on the synthetic fixtures of `flow_ident_tests`.
 
-use crate::flow_ident_tests::{fixture, hits, is_null, mix_fixture, plan, run};
+use crate::flow_ident_tests::{fixture, hits, mix_fixture, plan, run};
 
 /// Unit-resolution query: the precursor is 0.3 Da off the library one, so the ppm window finds nothing and `precursor_da` finds Alpha, with the error in ppm.
 #[test]

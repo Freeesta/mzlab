@@ -779,6 +779,9 @@
     const idLabel = r => r.kind === "unexpected" && !r.ms2_target ? `m/z ${r.mz.toFixed(2)} (unexpected)` : MOLUI.cap(r.name);
     /** a hypothesis of the rules with no peak in any sample: searched, not detected (no TP name, no area) */
     const notFound = r => r.status === "Searched, not detected";
+    /** the row an unexpected ion co-elutes with: its m/z, the m/z difference and the RT difference (a measurement, not a verdict) */
+    const coelText = c => `m/z ${c.mz.toFixed(2)} (Δm/z ${c.delta_mz.toFixed(2)}, ΔRT ${c.delta_rt >= 0 ? "+" : ""}${c.delta_rt.toFixed(2)} min)`;
+    const coelCell = c => esc(coelText(c));
     const cellStates = r => (r.kinetics || []).map(p => p.area > 0 ? "detected" : "absent");
     const rowNum = r => r.id >= 100000 ? "n" + (r.id - 100000) : String(r.id);
     /** the row of gruppi/1 of a row of the table (comparison of conditions), null without it */
@@ -814,6 +817,7 @@
         { key: "trend", label: "Trend", help: "ft.col.trend", cell: r => (r.kinetics || []).length ? TPTAB.spark(r.kinetics.map(p => p.area), "area") : "", text: r => (r.kinetics || []).map(p => Math.round(p.area)).join(" ") },
         ...(s.gruppi ? [{ key: "conds", label: "Conditions", help: "ft.col.conds", sort: (/** @type {any} */ r) => { const g = gRow(r); return g ? g.present_in.length : -1; }, cell: (/** @type {any} */ r) => { const g = gRow(r); return g ? TPTAB.dots(g.cond.map((/** @type {any} */ c) => ({ id: c.id, present: c.present }))) : ""; },
           text: (/** @type {any} */ r) => { const g = gRow(r); return g ? g.present_in.join("; ") : ""; } }] : []),
+        { key: "coel", label: "Co-elutes with", help: "ft.col.coel", sort: r => r.coelutes ? r.coelutes.mz : 0, cell: r => r.coelutes ? coelCell(r.coelutes) : "", text: r => r.coelutes ? coelText(r.coelutes) : "" },
         { key: "cells", label: "Cells", help: "ft.col.cells", cell: r => cellStates(r).length ? TPTAB.cells(cellStates(r), 12, r.kinetics.map(p => ({ time: p.time, area: p.area }))) : TPTAB.state("na"), text: r => cellStates(r).map(x => x[0]).join("") },
         { key: "max", label: "Max area", help: "ft.col.maxarea", num: true, sort: r => r.max_area, cell: r => notFound(r) ? "—" : fmtA(r.max_area), text: r => notFound(r) ? "—" : fmtA(r.max_area), value: r => notFound(r) ? null : r.max_area },
         { key: "score", off: true, label: "Score", help: "ft.col.score", num: true, sort: r => r.score, cell: r => r.score == null ? "" : `<span class="badge b-${r.label}">${r.score} ${LAB[r.label]}</span>`, text: r => r.score == null ? "" : String(r.score) },
