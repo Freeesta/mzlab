@@ -31,10 +31,12 @@ function start() {
         [...dots.children].forEach((d, i) => { d.style.visibility = i < kldN ? "visible" : "hidden"; });
       }, 400);
     }
-    fr.src = "static/vendor/ketcher/index.html";
+    // first-paint.js already started the frame on a direct #/draw address (and may have seen the ready message before this listener existed)
+    if (!fr.getAttribute("src")) fr.src = "static/vendor/ketcher/index.html";
     // a slow first download must not break the editor for good: after the wait the attempt is dropped and the next call (Quick draw, export, the tab) starts it again
     clearTimeout(startTimeout);
     startTimeout = setTimeout(() => { removeEventListener("message", on); starting = null; reject(new Error(I18N.t("draw.error.ketcherNotStarted"))); }, 60000);
+    if (/** @type {any} */ (window).MZLAB_KETCHER_READY && fr.contentWindow.ketcher) { removeEventListener("message", on); clearTimeout(startTimeout); K = fr.contentWindow.ketcher; resolve(K); }
   });
   // the editor stays invisible (.kwait) until hideMacro and the first fit are done: Ketcher's native bars would otherwise show and then jump
   fr.classList.add("kwait");
