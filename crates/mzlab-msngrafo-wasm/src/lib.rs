@@ -1,6 +1,6 @@
 //! wasm-bindgen bridge of `mzlab_core::msngrafo`: the `.mzidx` of an infusion and its mzML (both read through `read(offset, length)`) give the
 //! `msngrafo/1` of a request, with the same functions as `mzlab-cli msn-graph` (same bytes). A `.wasm` of its own, loaded by the worker of the
-//! engine on the first request of the graph; `strutture=<id>` (and `ppm_struttura`) adds the cleavages of the SMILES that explain a node. Memory: the index is read once for its SHA-256 and once to open it; the output is one JSON string,
+//! engine on the first request of the graph; `strutture=<id>` (and `ppm_struttura`) adds the cleavages of the SMILES that explain a node; `interpreta=1` adds the interpretation of the losses. Memory: the index is read once for its SHA-256 and once to open it; the output is one JSON string,
 //! no offsets (`docs/agenti/memoria.md`). Errors are JSON `{"error_key", "params"}` strings.
 use js_sys::{Function, Uint8Array};
 use mzlab_core::budget::sha256_hex;
@@ -10,7 +10,7 @@ use mzlab_core::json::Out;
 use mzlab_core::msngrafo::{
     aggiungi, cerca, da_richiesta, da_richiesta_export, esporta, grafo_json, opzioni_cerca,
 };
-use mzlab_core::msngrafo::{Grafo, Opzioni};
+use mzlab_core::msngrafo::{con_interpretazione, Grafo, Opzioni, PPM_PERDITA};
 use mzlab_core::routes::Query;
 use mzlab_feat::chem::strutture::strutture_testo;
 use wasm_bindgen::prelude::*;
@@ -107,7 +107,21 @@ pub fn msn_grafo(
     query: &str,
 ) -> Result<String, JsValue> {
     let q = Query::parse(query);
-    let (g, j, o) = calcola_con(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+    let (g, mut j, o) = calcola_con(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+    // `interpreta=1` (and `ppm_perdita`) adds the key `interpretazione`, as `mzlab-cli msn-graph --interpreta` does
+    if q.get("interpreta").is_some_and(|v| v == "1") {
+        let ppm = match q.get("ppm_perdita").filter(|v| !v.is_empty()) {
+            None => PPM_PERDITA,
+            Some(v) => v
+                .parse::<f64>()
+                .ok()
+                .filter(|p| p.is_finite() && *p > 0.0)
+                .ok_or_else(|| {
+                    js_err(Error::new("err.request.badNumber").with("name", "ppm_perdita"))
+                })?,
+        };
+        j = con_interpretazione(&j, &g, ppm);
+    }
     match q.get("strutture").filter(|n| !n.is_empty()) {
         None => Ok(j),
         Some(nodo) => {
