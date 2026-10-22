@@ -10,4 +10,5 @@
   Una stringa è una chiave solo se ha forma `a.b.c` senza spazi.
 - **`#drop` dopo un fallimento** resta visibile solo per mostrare l'errore: `upload()` non accoda e non lancia (`pronto()` → `false`).
 - **Casi** (messaggi `load.err.*`): browser vecchio `oldBrowser`; motore assente o WASM che non scarica `engineMissing`/`engineStart`; archivio bloccato da un'altra scheda `load.blocked` (riga di stato) poi `resumeTimeout` (banner); `?riparti=1` cancella i file salvati prima del riavvio.
+- **Ordine dell'avvio**: `index.html` chiede subito stili e `preload` degli script della catena di avvio (la scansione anticipata non vede quelli scritti con `document.write` o dopo uno script inline). `browser.js` avvia il motore (moduli `rust-bridge.js` e `.wasm`) solo a `DOMContentLoaded`, per non contendere banda e CPU alla prima pittura. Prova: `e2e_avvio_shell`.
 - **Test**: `tests/test_avvio_progressivo.py`, `tests/test_avvio_fase3.py` (Node con DOM finto), `tests_e2e/e2e_avvio.py`, `e2e_avvio_lingua.py`.

@@ -58,6 +58,7 @@ try:
             })""")
             pg = ctx.new_page(); pg.goto(URL + "?riparti=1")
             pg.wait_for_selector("#drop", timeout=120000)
+            pg.wait_for_function("window.qqReady === true", timeout=120000)     # the shell is drawn before the engine; the clean slate is done by the engine
             left = pg.evaluate("""() => new Promise(res => { const r = indexedDB.open("mzlab_lab"); r.onsuccess = () => { const db = r.result, t = db.transaction(["files", "kv"]);
               const a = t.objectStore("files").count(), n = t.objectStore("kv").get("notebook"); t.oncomplete = () => { db.close(); res([a.result, n.result]); }; }; })""")
             assert left[0] == 0 and left[1] is None, left
