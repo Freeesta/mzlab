@@ -31,6 +31,11 @@ impl Lcg {
 
 /// The `.mzidx` of a run with one ion made of Gaussians `(centre in seconds, amplitude)` of width `SIGMA`, over noise peaks far below the floor.
 fn index_of(peaks: &[(f64, f64)]) -> Vec<u8> {
+    index_with(peaks, SIGMA, 0.0)
+}
+
+/// As `index_of`, with the width of the Gaussians and a multiplicative jitter of the intensities (a fraction of them).
+fn index_with(peaks: &[(f64, f64)], sigma: f64, jitter: f64) -> Vec<u8> {
     let mut rng = Lcg(5);
     let mut w = MzmlWriter::new(
         Vec::new(),
@@ -53,8 +58,9 @@ fn index_of(peaks: &[(f64, f64)]) -> Vec<u8> {
             .collect();
         let v: f64 = peaks
             .iter()
-            .map(|&(c, a)| a * (-0.5 * ((rt - c) / SIGMA).powi(2)).exp())
-            .sum();
+            .map(|&(c, a)| a * (-0.5 * ((rt - c) / sigma).powi(2)).exp())
+            .sum::<f64>()
+            * (1.0 + jitter * (2.0 * rng.next() - 1.0));
         if v > 100.0 {
             p.push((MZ * (1.0 + 1e-6 * (rng.next() - 0.5)), v as f32));
         }
@@ -133,6 +139,24 @@ fn an_isolated_peak_keeps_its_apex_and_its_area() {
         seen > 0.5 * whole && seen < 1.5 * whole,
         "{seen} vs {whole}"
     );
+}
+
+/// A noisy peak wider than the narrowest wavelet in a series that holds little else: the flanks that the narrow wavelet leaves out are not noise.
+#[test]
+fn a_noisy_wide_peak_in_a_short_series_is_one_peak_with_its_height() {
+    let idx = index_with(&[(150.0, 1.0e6)], 6.0, 0.08);
+    let mut index = Index::open(idx.clone(), idx.len() as u64).unwrap();
+    let p = Params {
+        peak: wavelet(),
+        ..Params::default()
+    };
+    let f = detect(&mut index, &p).unwrap();
+    let rows: Vec<usize> = (0..f.len())
+        .filter(|&i| (f.mz[i] - MZ).abs() < 0.01)
+        .collect();
+    assert_eq!(rows.len(), 1, "{:?}", apexes(&f));
+    let h = f64::from(f.height[rows[0]]);
+    assert!(h > 0.9e6 && h < 1.1e6, "{h}");
 }
 
 #[test]
