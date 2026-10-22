@@ -205,7 +205,7 @@ try:
             assert "Issues (1)" in pg.inner_text(".flx-issues h3")
             pg.click('.flx-issues li button:has-text("Show")'); attendi(pg, "document.querySelector('.fln.sel')")
             pg.click('.flx-issues button:has-text("Add “Match to library”")'); attendi(pg, "document.querySelectorAll('.flx-issues li').length === 0")
-            assert "Nothing needs attention" in pg.inner_text(".flx-issues")
+            assert pg.locator(".flx-issues").is_hidden(), "no needs: the Issues box is not shown"
             pg.click('.fln:has-text("Build feature table")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Build feature table'")
             q = pg.locator(".fl-insp-hd a.flx-q"); assert q.count() == 1 and q.get_attribute("href").startswith("teoria/21-glossario.html#g-"), q.count()
             for m in pg.locator('.fl-insp summary:has-text("More")').all(): m.click()
