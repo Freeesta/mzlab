@@ -326,6 +326,19 @@ pub(crate) fn write_mzml(
     peaks: Picchi,
     opz: Opzioni,
 ) -> Result<bool> {
+    write_mzml_with(path, label, out, peaks, opz, &mut |_, _| {})
+}
+
+/// `write_mzml` telling `step(done, total)` how many scans it has written, at most once per 1 %; the file is the same with any `step`.
+pub(crate) fn write_mzml_with(
+    path: &Path,
+    label: Option<&str>,
+    out: &Path,
+    peaks: Picchi,
+    opz: Opzioni,
+    step: &mut dyn FnMut(usize, usize),
+) -> Result<bool> {
+    let mut pace = mzlab_core::pace::Pace::new(step);
     let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limiti::desktop())?;
     let ids: Vec<u32> = reader.campioni().iter().map(|s| s.id).collect();
     let sample = crate::flow_set::sample_index(label.unwrap_or(""), &ids)?;
@@ -339,8 +352,10 @@ pub(crate) fn write_mzml(
         steps: Some(&[]),
     };
     let written = File::create(out).map_err(io).and_then(|f| {
-        conv.scrivi(&mut *reader, sample, BufWriter::new(f), &mut |_, _| {})
-            .and_then(|mut w| w.flush().map_err(io))
+        conv.scrivi(&mut *reader, sample, BufWriter::new(f), &mut |d, t| {
+            pace.at(d, t)
+        })
+        .and_then(|mut w| w.flush().map_err(io))
     });
     if let Err(e) = written {
         let _ = std::fs::remove_file(out);

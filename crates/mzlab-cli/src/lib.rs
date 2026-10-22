@@ -72,6 +72,8 @@ mod flow_msnraw_tests;
 mod flow_network;
 mod flow_out;
 mod flow_pace;
+#[cfg(test)]
+mod flow_pace_tests;
 mod flow_pca;
 #[cfg(test)]
 mod flow_pca_tests;
